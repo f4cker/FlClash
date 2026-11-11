@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/core/method.dart';
+import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -95,6 +97,9 @@ void main() {
   setUp(() async {
     core = _MockCore();
     await mockPreferences();
+    final testDatabase = db.Database(NativeDatabase.memory());
+    db.database = testDatabase;
+    addTearDown(testDatabase.close);
     _FakeSetupAction.result = true;
     _FakeSetupAction.applied = 0;
     _FakeSetupAction.seenAtApply = null;

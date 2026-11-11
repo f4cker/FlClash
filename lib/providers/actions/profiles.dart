@@ -20,8 +20,12 @@ class ProfilesAction extends _$ProfilesAction {
   }
 
   /// Leaves the profile in place when its Tailscale accounts cannot be
-  /// unbound.
+  /// unbound. Throws [MountSourceInUse] for a source still mounted, which
+  /// [MountAction.deleteSource] unmounts first.
   Future<TailscaleUnlinkOutcome> deleteProfile(int id) async {
+    if (await database.mountsDao.isMounted(id)) {
+      throw const MountSourceInUse();
+    }
     final outcome = await ref
         .read(tailscaleActionProvider.notifier)
         .unlinkProfile(id, () => ref.read(profilesProvider.notifier).del(id));

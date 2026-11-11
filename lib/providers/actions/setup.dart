@@ -734,6 +734,22 @@ class SetupAction extends _$SetupAction {
     return '';
   }
 
+  /// The profile a mount reads its groups from and is checked against: the
+  /// base for one built on it, the built text for any other.
+  Future<({SetupBase? base, String? config})> mountTargetInput(
+    int profileId,
+  ) async {
+    final setupState = await ref.read(setupStateProvider(profileId).future);
+    final built = await getProfile(
+      setupState: setupState,
+      patchConfig: _effectivePatchConfig(ref.read(patchClashConfigProvider)),
+    );
+    return switch (built.base) {
+      final base? => (base: base, config: null),
+      null => (base: null, config: built.yaml),
+    };
+  }
+
   PatchClashConfig _effectivePatchConfig(PatchClashConfig patchConfig) {
     if (ref.read(safeModeProvider)) {
       return patchConfig.copyWith(

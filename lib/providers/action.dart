@@ -44,4 +44,5 @@ part 'actions/geo_resource.dart';
 part 'actions/resources.dart';
 part 'actions/updating.dart';
 part 'actions/tailscale.dart';
+part 'actions/mounts.dart';
 part 'generated/action.g.dart';

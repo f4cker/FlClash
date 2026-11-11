@@ -91,7 +91,7 @@ final class SetupActionProvider extends $NotifierProvider<SetupAction, void> {
   }
 }
 
-String _$setupActionHash() => r'430ae6828094c67cc9be51ca2567e801c8d61acf';
+String _$setupActionHash() => r'944ee1460b2ca70ef5582dc5c90c5ca54ce6b4ef';
 
 abstract class _$SetupAction extends $Notifier<void> {
   void build();
@@ -450,7 +450,7 @@ final class ProfilesActionProvider
   }
 }
 
-String _$profilesActionHash() => r'b31fdf7bc124776ead2bceb5ac361c56a7d96398';
+String _$profilesActionHash() => r'286fc4be2dba9d98354a7d1e729e8595ab16bc8b';
 
 abstract class _$ProfilesAction extends $Notifier<void> {
   void build();
@@ -870,6 +870,71 @@ final class TailscaleActionProvider
 String _$tailscaleActionHash() => r'8f738fbe43c2d59bdd965dae396d212cf07cab2c';
 
 abstract class _$TailscaleAction extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Mount operations run one at a time. Each save writes the relation with a
+/// pending record first, and only a readback, or a target that is not
+/// running, clears it; an unknown outcome keeps the target locked.
+
+@ProviderFor(MountAction)
+final mountActionProvider = MountActionProvider._();
+
+/// Mount operations run one at a time. Each save writes the relation with a
+/// pending record first, and only a readback, or a target that is not
+/// running, clears it; an unknown outcome keeps the target locked.
+final class MountActionProvider extends $NotifierProvider<MountAction, void> {
+  /// Mount operations run one at a time. Each save writes the relation with a
+  /// pending record first, and only a readback, or a target that is not
+  /// running, clears it; an unknown outcome keeps the target locked.
+  MountActionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mountActionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mountActionHash();
+
+  @$internal
+  @override
+  MountAction create() => MountAction();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$mountActionHash() => r'57d48f981bbb1b8df902f827eee7f22eb4f75583';
+
+/// Mount operations run one at a time. Each save writes the relation with a
+/// pending record first, and only a readback, or a target that is not
+/// running, clears it; an unknown outcome keeps the target locked.
+
+abstract class _$MountAction extends $Notifier<void> {
   void build();
   @$mustCallSuper
   @override
