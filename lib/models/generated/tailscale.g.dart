@@ -204,6 +204,14 @@ _TailscaleLegacyIdentity _$TailscaleLegacyIdentityFromJson(
       : TailscaleLegacyMigration.fromJson(
           json['migrated-to'] as Map<String, dynamic>,
         ),
+  eligibility:
+      $enumDecodeNullable(
+        _$TailscaleLegacyEligibilityEnumMap,
+        json['eligibility'],
+        unknownValue: TailscaleLegacyEligibility.unconfirmed,
+      ) ??
+      TailscaleLegacyEligibility.unconfirmed,
+  offerToken: json['offer-token'] as String?,
 );
 
 Map<String, dynamic> _$TailscaleLegacyIdentityToJson(
@@ -215,26 +223,62 @@ Map<String, dynamic> _$TailscaleLegacyIdentityToJson(
   'control-url': instance.controlUrl,
   'fingerprint': instance.fingerprint,
   'migrated-to': instance.migratedTo,
+  'eligibility': _$TailscaleLegacyEligibilityEnumMap[instance.eligibility]!,
+  'offer-token': instance.offerToken,
+};
+
+const _$TailscaleLegacyEligibilityEnumMap = {
+  TailscaleLegacyEligibility.eligible: 'eligible',
+  TailscaleLegacyEligibility.hasIdentity: 'has-identity',
+  TailscaleLegacyEligibility.controlMismatch: 'control-mismatch',
+  TailscaleLegacyEligibility.inUse: 'in-use',
+  TailscaleLegacyEligibility.migrated: 'migrated',
+  TailscaleLegacyEligibility.notIsolated: 'not-isolated',
+  TailscaleLegacyEligibility.dirInUse: 'dir-in-use',
+  TailscaleLegacyEligibility.unreadable: 'unreadable',
+  TailscaleLegacyEligibility.unconfirmed: 'unconfirmed',
 };
 
 _TailscaleMigrateResult _$TailscaleMigrateResultFromJson(
   Map<String, dynamic> json,
 ) => _TailscaleMigrateResult(
   generation: (json['generation'] as num).toInt(),
+  outcome:
+      $enumDecodeNullable(
+        _$TailscaleMigrateOutcomeEnumMap,
+        json['outcome'],
+        unknownValue: TailscaleMigrateOutcome.unknown,
+      ) ??
+      TailscaleMigrateOutcome.unknown,
   migration: TailscaleLegacyMigration.fromJson(
     json['migration'] as Map<String, dynamic>,
   ),
   node: TailscaleNode.fromJson(json['node'] as Map<String, dynamic>),
   reapplyRequired: json['reapply-required'] as bool? ?? false,
+  targetUntouched: json['target-untouched'] as bool? ?? false,
+  archiveIntact: json['archive-intact'] as bool? ?? false,
+  error: json['error'] == null
+      ? null
+      : TailscaleError.fromJson(json['error'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$TailscaleMigrateResultToJson(
   _TailscaleMigrateResult instance,
 ) => <String, dynamic>{
   'generation': instance.generation,
+  'outcome': _$TailscaleMigrateOutcomeEnumMap[instance.outcome]!,
   'migration': instance.migration,
   'node': instance.node,
   'reapply-required': instance.reapplyRequired,
+  'target-untouched': instance.targetUntouched,
+  'archive-intact': instance.archiveIntact,
+  'error': instance.error,
+};
+
+const _$TailscaleMigrateOutcomeEnumMap = {
+  TailscaleMigrateOutcome.migrated: 'migrated',
+  TailscaleMigrateOutcome.failed: 'failed',
+  TailscaleMigrateOutcome.unknown: 'unknown',
 };
 
 _TailscaleUser _$TailscaleUserFromJson(Map<String, dynamic> json) =>

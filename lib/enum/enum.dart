@@ -241,6 +241,42 @@ enum TailscalePrefsOutcome {
 
 enum TailscaleSetPrefsOutcome { applied, saved, applyFailed, unknown, failed }
 
+enum TailscaleLegacyEligibility {
+  eligible,
+  @JsonValue('has-identity')
+  hasIdentity,
+  @JsonValue('control-mismatch')
+  controlMismatch,
+  @JsonValue('in-use')
+  inUse,
+  migrated,
+  @JsonValue('not-isolated')
+  notIsolated,
+  @JsonValue('dir-in-use')
+  dirInUse,
+  unreadable,
+  unconfirmed,
+}
+
+enum TailscaleMigrateOutcome { migrated, failed, unknown }
+
+enum TailscaleLegacyNotice {
+  none,
+
+  migrated,
+
+  failed,
+
+  archiveError,
+
+  changed,
+  unreadable,
+  unconfirmed,
+
+  /// The target may hold part of a copy; only a read that settles it clears this.
+  unknown,
+}
+
 enum FindProcessMode { always, off }
 
 enum InterfaceNameMode { clear, follow, custom }

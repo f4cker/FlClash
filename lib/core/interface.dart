@@ -495,11 +495,16 @@ abstract class CoreHandlerInterface {
     );
   }
 
-  Future<TailscaleMigrateResult> migrateTailscaleLegacy(TailscaleNodeRef node) {
+  /// [offerToken] is the one the confirmation showed; the Core refuses it once
+  /// the node or the legacy login changed.
+  Future<TailscaleMigrateResult> migrateTailscaleLegacy(
+    TailscaleNodeRef node, {
+    required String offerToken,
+  }) {
     return _query(
       CoreMethod.tailscaleMigrateLegacy,
       _model(TailscaleMigrateResult.fromJson),
-      arguments: node.toJson(),
+      arguments: {...node.toJson(), 'offer-token': offerToken},
       timeout: tailscaleCoreGuard,
     );
   }

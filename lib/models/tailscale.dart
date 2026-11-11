@@ -147,6 +147,10 @@ abstract class TailscaleLegacyIdentity with _$TailscaleLegacyIdentity {
     @JsonKey(name: 'control-url') @Default('') String controlUrl,
     @Default('') String fingerprint,
     @JsonKey(name: 'migrated-to') TailscaleLegacyMigration? migratedTo,
+    @JsonKey(unknownEnumValue: TailscaleLegacyEligibility.unconfirmed)
+    @Default(TailscaleLegacyEligibility.unconfirmed)
+    TailscaleLegacyEligibility eligibility,
+    @JsonKey(name: 'offer-token') String? offerToken,
   }) = _TailscaleLegacyIdentity;
 
   factory TailscaleLegacyIdentity.fromJson(Map<String, Object?> json) =>
@@ -157,9 +161,15 @@ abstract class TailscaleLegacyIdentity with _$TailscaleLegacyIdentity {
 abstract class TailscaleMigrateResult with _$TailscaleMigrateResult {
   const factory TailscaleMigrateResult({
     required int generation,
+    @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown)
+    @Default(TailscaleMigrateOutcome.unknown)
+    TailscaleMigrateOutcome outcome,
     required TailscaleLegacyMigration migration,
     required TailscaleNode node,
     @JsonKey(name: 'reapply-required') @Default(false) bool reapplyRequired,
+    @JsonKey(name: 'target-untouched') @Default(false) bool targetUntouched,
+    @JsonKey(name: 'archive-intact') @Default(false) bool archiveIntact,
+    TailscaleError? error,
   }) = _TailscaleMigrateResult;
 
   factory TailscaleMigrateResult.fromJson(Map<String, Object?> json) =>
@@ -381,4 +391,16 @@ abstract class TailscaleSetPrefsResult with _$TailscaleSetPrefsResult {
     TailscalePrefs? prefs,
     TailscaleError? error,
   }) = _TailscaleSetPrefsResult;
+}
+
+/// Kept per node for the app's lifetime, so a pending outcome outlives the page.
+@freezed
+abstract class TailscaleLegacyState with _$TailscaleLegacyState {
+  const factory TailscaleLegacyState({
+    @Default(false) bool offered,
+    @Default(false) bool migrating,
+    @Default(TailscaleLegacyNotice.none) TailscaleLegacyNotice notice,
+
+    @Default(true) bool archiveIntact,
+  }) = _TailscaleLegacyState;
 }

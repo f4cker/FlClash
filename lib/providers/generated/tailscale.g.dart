@@ -131,6 +131,77 @@ abstract class _$TailscaleLegacyMigrated
   }
 }
 
+@ProviderFor(TailscaleLegacyStates)
+final tailscaleLegacyStatesProvider = TailscaleLegacyStatesProvider._();
+
+final class TailscaleLegacyStatesProvider
+    extends
+        $NotifierProvider<
+          TailscaleLegacyStates,
+          Map<TailscaleNodeKey, TailscaleLegacyState>
+        > {
+  TailscaleLegacyStatesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tailscaleLegacyStatesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tailscaleLegacyStatesHash();
+
+  @$internal
+  @override
+  TailscaleLegacyStates create() => TailscaleLegacyStates();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(
+    Map<TailscaleNodeKey, TailscaleLegacyState> value,
+  ) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride:
+          $SyncValueProvider<Map<TailscaleNodeKey, TailscaleLegacyState>>(
+            value,
+          ),
+    );
+  }
+}
+
+String _$tailscaleLegacyStatesHash() =>
+    r'9ae2242c1d17aa3f2b14b6a39cce999d54954798';
+
+abstract class _$TailscaleLegacyStates
+    extends $Notifier<Map<TailscaleNodeKey, TailscaleLegacyState>> {
+  Map<TailscaleNodeKey, TailscaleLegacyState> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref
+            as $Ref<
+              Map<TailscaleNodeKey, TailscaleLegacyState>,
+              Map<TailscaleNodeKey, TailscaleLegacyState>
+            >;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                Map<TailscaleNodeKey, TailscaleLegacyState>,
+                Map<TailscaleNodeKey, TailscaleLegacyState>
+              >,
+              Map<TailscaleNodeKey, TailscaleLegacyState>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(tailscaleSetup)
 final tailscaleSetupProvider = TailscaleSetupProvider._();
 

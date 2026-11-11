@@ -82,6 +82,26 @@ class TailscaleLegacyMigrated extends _$TailscaleLegacyMigrated
   }
 }
 
+@Riverpod(keepAlive: true)
+class TailscaleLegacyStates extends _$TailscaleLegacyStates
+    with AutoDisposeNotifierMixin {
+  @override
+  Map<TailscaleNodeKey, TailscaleLegacyState> build() => const {};
+
+  TailscaleLegacyState of(TailscaleNodeKey key) =>
+      state[key] ?? const TailscaleLegacyState();
+
+  void change(
+    TailscaleNodeKey key,
+    TailscaleLegacyState Function(TailscaleLegacyState state) update,
+  ) {
+    final next = update(of(key));
+    if (next != of(key)) {
+      value = {...state, key: next};
+    }
+  }
+}
+
 @riverpod
 TailscaleSetup? tailscaleSetup(Ref ref) {
   final profile = ref.watch(

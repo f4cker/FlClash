@@ -201,6 +201,10 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
         'migration': _tailscaleMigration,
         'node': _tailscaleNode,
         'reapply-required': true,
+        'outcome': 'failed',
+        'target-untouched': true,
+        'archive-intact': false,
+        'error': {'code': 'tailscale_migrate_failed', 'message': 'x'},
       },
       CoreMethod.routeWatch => {'core-epoch': 1, 'route-version': 0},
       CoreMethod.routeCheck => {
@@ -278,6 +282,8 @@ const _tailscaleNode = {
     'tailnet': 'example.test',
     'control-url': 'https://controlplane.tailscale.com',
     'fingerprint': 'f1',
+    'eligibility': 'control-mismatch',
+    'offer-token': 't1',
   },
 };
 
@@ -320,6 +326,54 @@ void main() {
     expect({for (final method in CoreMethod.values) method.wireName}, goNames);
   });
 
+  test('the legacy eligibilities and outcomes match the Go names', () async {
+    final source = [
+      await File('core/tailscale.go').readAsString(),
+      await File('core/tailscale_legacy.go').readAsString(),
+    ].join();
+    String? valueOf(String name) =>
+        RegExp('$name\\s*=\\s*"([a-z-]+)"').firstMatch(source)?.group(1);
+    const eligibilities = {
+      'tailscaleLegacyEligible': TailscaleLegacyEligibility.eligible,
+      'tailscaleLegacyHasIdentity': TailscaleLegacyEligibility.hasIdentity,
+      'tailscaleLegacyControlMismatch':
+          TailscaleLegacyEligibility.controlMismatch,
+      'tailscaleLegacyInUse': TailscaleLegacyEligibility.inUse,
+      'tailscaleLegacyMigrated': TailscaleLegacyEligibility.migrated,
+      'tailscaleLegacyNotIsolated': TailscaleLegacyEligibility.notIsolated,
+      'tailscaleLegacyDirInUse': TailscaleLegacyEligibility.dirInUse,
+      'tailscaleLegacyUnreadable': TailscaleLegacyEligibility.unreadable,
+      'tailscaleLegacyUnconfirmed': TailscaleLegacyEligibility.unconfirmed,
+    };
+    expect(eligibilities.values.toSet(), TailscaleLegacyEligibility.values);
+    for (final MapEntry(:key, :value) in eligibilities.entries) {
+      expect(valueOf(key), isNotNull, reason: key);
+      final decoded = TailscaleLegacyIdentity.fromJson({
+        'eligibility': valueOf(key),
+      });
+      expect(decoded.eligibility, value, reason: key);
+    }
+    const outcomes = {
+      'tailscaleMigrateMigrated': TailscaleMigrateOutcome.migrated,
+      'tailscaleMigrateFailed': TailscaleMigrateOutcome.failed,
+      'tailscaleMigrateUnknown': TailscaleMigrateOutcome.unknown,
+    };
+    for (final MapEntry(:key, :value) in outcomes.entries) {
+      final decoded = TailscaleMigrateResult.fromJson(
+        json.decode(
+              json.encode({
+                'generation': 1,
+                'outcome': valueOf(key),
+                'migration': _tailscaleMigration,
+                'node': _tailscaleNode,
+              }),
+            )
+            as Map<String, Object?>,
+      );
+      expect(decoded.outcome, value, reason: key);
+    }
+  });
+
   test('the Dart and Go event tables name the same events', () async {
     final protocol = await File('core/protocol.go').readAsString();
     final goNames = {
@@ -347,7 +401,10 @@ void main() {
     final login = await handler.loginTailscale(node, reauth: true);
     final logout = await handler.logoutTailscale(node);
     final prefs = await handler.setTailscalePrefs(node, exitNode: '');
-    final migrated = await handler.migrateTailscaleLegacy(node);
+    final migrated = await handler.migrateTailscaleLegacy(
+      node,
+      offerToken: 't1',
+    );
 
     expect(nodes.single.ref, node);
     expect(nodes.single.stateDirMode, TailscaleStateDirMode.derived);
@@ -355,6 +412,11 @@ void main() {
     expect(nodes.single.legacySharedStatePresent, isTrue);
     expect(nodes.single.legacy?.loginName, 'old@example.test');
     expect(nodes.single.legacy?.migratedTo, isNull);
+    expect(
+      nodes.single.legacy?.eligibility,
+      TailscaleLegacyEligibility.controlMismatch,
+    );
+    expect(nodes.single.legacy?.offerToken, 't1');
     expect(
       nodes.single.settings.exitNode,
       const TailscaleExitNodeSetting(
@@ -370,10 +432,14 @@ void main() {
       CoreMethod.tailscaleStatus,
       CoreMethod.tailscaleStart,
       CoreMethod.tailscaleLogout,
-      CoreMethod.tailscaleMigrateLegacy,
     ]) {
       expect(handler.calls[method], {'name': 'ts', 'generation': 3});
     }
+    expect(handler.calls[CoreMethod.tailscaleMigrateLegacy], {
+      'name': 'ts',
+      'generation': 3,
+      'offer-token': 't1',
+    });
     expect(handler.calls[CoreMethod.tailscaleLogin], {
       'name': 'ts',
       'generation': 3,
@@ -394,6 +460,10 @@ void main() {
     expect(logout.error?.code, 'tailscale_logout_failed');
     expect(prefs.outcome, TailscalePrefsOutcome.notRunning);
     expect(migrated.reapplyRequired, isTrue);
+    expect(migrated.outcome, TailscaleMigrateOutcome.failed);
+    expect(migrated.targetUntouched, isTrue);
+    expect(migrated.archiveIntact, isFalse);
+    expect(migrated.error?.code, 'tailscale_migrate_failed');
     expect(
       migrated.migration,
       const TailscaleLegacyMigration(

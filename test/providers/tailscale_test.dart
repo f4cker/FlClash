@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
@@ -189,68 +190,241 @@ void main() {
     verify(() => core.setTailscalePrefs(any(), exitNode: 'x')).called(1);
   });
 
-  test('a migrated legacy login is marked and lifts the guard', () async {
+  group('legacy migration', () {
     const migration = TailscaleLegacyMigration(
       fingerprint: 'f1',
       profileId: 42,
       name: 'ts',
       controlUrl: 'https://controlplane.tailscale.com',
     );
-    final container = build(
-      records: [
-        TailscaleNodeRecord(
-          profileId: 42,
-          name: 'ts',
-          controlUrl: _node.controlUrl,
-          loggedOut: true,
-        ),
-      ],
+    const offer = TailscaleLegacyIdentity(
+      loginName: 'old@example.test',
+      controlUrl: 'https://controlplane.tailscale.com',
+      fingerprint: 'f1',
+      eligibility: TailscaleLegacyEligibility.eligible,
+      offerToken: 'token-1',
     );
-    when(() => core.getTailscaleNodes()).thenAnswer((_) async => [_node]);
-    container.listen(tailscaleNodesProvider, (_, _) {});
-    await container.read(tailscaleNodesProvider.future);
-    when(() => core.migrateTailscaleLegacy(any())).thenAnswer(
-      (_) async => TailscaleMigrateResult(
-        generation: 3,
-        migration: migration,
-        node: _node.copyWith(hasIdentity: true),
-      ),
-    );
-
-    final result = await action(container).migrateLegacy(_node);
-
-    expect(result.migration, migration);
-    expect(container.read(tailscaleLegacyMigratedProvider), migration);
-    expect(
-      (await SharedPreferences.getInstance()).getString(
-        tailscaleLegacyMigrationKey,
-      ),
-      json.encode(migration),
-    );
-    expect(records(container), isEmpty);
-    expect(
-      container.read(tailscaleNodesProvider).value?.single.hasIdentity,
-      isTrue,
-    );
-  });
-
-  test('a refused migration keeps no marker and the guard', () async {
+    final offered = _node.copyWith(legacy: offer);
     final guarded = TailscaleNodeRecord(
       profileId: 42,
       name: 'ts',
       controlUrl: _node.controlUrl,
       loggedOut: true,
     );
-    final container = build(records: [guarded]);
-    const refused = CoreMethodException(
-      code: 'tailscale_legacy_already_migrated',
-      message: 'moved',
-    );
-    when(() => core.migrateTailscaleLegacy(any())).thenThrow(refused);
 
-    await expectLater(action(container).migrateLegacy(_node), throwsA(refused));
-    expect(container.read(tailscaleLegacyMigratedProvider), isNull);
-    expect(records(container), [guarded]);
+    TailscaleMigrateResult result(
+      TailscaleMigrateOutcome outcome, {
+      bool targetUntouched = false,
+      bool archiveIntact = true,
+    }) => TailscaleMigrateResult(
+      generation: 3,
+      outcome: outcome,
+      migration: migration,
+      node: _node.copyWith(
+        hasIdentity: outcome == TailscaleMigrateOutcome.migrated,
+      ),
+      targetUntouched: targetUntouched,
+      archiveIntact: archiveIntact,
+    );
+
+    TailscaleLegacyState legacyOf(ProviderContainer container) =>
+        container.read(tailscaleLegacyStatesProvider)[_node.key] ??
+        const TailscaleLegacyState();
+
+    Future<ProviderContainer> buildWithNodes(List<TailscaleNode> nodes) async {
+      final container = build(records: [guarded]);
+      when(() => core.getTailscaleNodes()).thenAnswer((_) async => nodes);
+      container.listen(tailscaleNodesProvider, (_, _) {});
+      await container.read(tailscaleNodesProvider.future);
+      return container;
+    }
+
+    test(
+      'sends the confirmed token; a copy marks and lifts the guard',
+      () async {
+        final container = await buildWithNodes([offered]);
+        when(
+          () => core.migrateTailscaleLegacy(any(), offerToken: 'token-1'),
+        ).thenAnswer((_) async => result(TailscaleMigrateOutcome.migrated));
+
+        final notice = await action(container).migrateLegacy(offered, offer);
+
+        expect(notice, TailscaleLegacyNotice.migrated);
+        expect(container.read(tailscaleLegacyMigratedProvider), migration);
+        expect(
+          (await SharedPreferences.getInstance()).getString(
+            tailscaleLegacyMigrationKey,
+          ),
+          json.encode(migration),
+        );
+        expect(records(container), isEmpty);
+        expect(
+          container.read(tailscaleNodesProvider).value?.single.hasIdentity,
+          isTrue,
+        );
+        expect(legacyOf(container).migrating, isFalse);
+      },
+    );
+
+    test('an offer without a token is refused without a call', () async {
+      final container = build();
+      final notice = await action(
+        container,
+      ).migrateLegacy(_node, offer.copyWith(offerToken: null));
+      expect(notice, TailscaleLegacyNotice.changed);
+      verifyNever(
+        () => core.migrateTailscaleLegacy(
+          any(),
+          offerToken: any(named: 'offerToken'),
+        ),
+      );
+    });
+
+    for (final (code, want) in [
+      ('tailscale_legacy_changed', TailscaleLegacyNotice.changed),
+      ('tailscale_stale_generation', TailscaleLegacyNotice.changed),
+      ('tailscale_has_identity', TailscaleLegacyNotice.changed),
+      ('tailscale_legacy_already_migrated', TailscaleLegacyNotice.changed),
+      ('tailscale_legacy_unreadable', TailscaleLegacyNotice.unreadable),
+      ('tailscale_legacy_unconfirmed', TailscaleLegacyNotice.unconfirmed),
+      ('transport_error', TailscaleLegacyNotice.unknown),
+    ]) {
+      test('a refusal $code keeps no marker and the guard', () async {
+        final container = build(records: [guarded]);
+        when(
+          () => core.migrateTailscaleLegacy(
+            any(),
+            offerToken: any(named: 'offerToken'),
+          ),
+        ).thenThrow(CoreMethodException(code: code, message: 'x'));
+
+        final notice = await action(container).migrateLegacy(offered, offer);
+
+        expect(notice, want);
+        expect(legacyOf(container).notice, want);
+        expect(container.read(tailscaleLegacyMigratedProvider), isNull);
+        expect(records(container), [guarded]);
+      });
+    }
+
+    test('a failure tells an intact archive from one with an error', () async {
+      final container = build();
+      when(
+        () => core.migrateTailscaleLegacy(
+          any(),
+          offerToken: any(named: 'offerToken'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            result(TailscaleMigrateOutcome.failed, targetUntouched: true),
+      );
+      expect(
+        await action(container).migrateLegacy(offered, offer),
+        TailscaleLegacyNotice.failed,
+      );
+      when(
+        () => core.migrateTailscaleLegacy(
+          any(),
+          offerToken: any(named: 'offerToken'),
+        ),
+      ).thenAnswer(
+        (_) async => result(
+          TailscaleMigrateOutcome.failed,
+          targetUntouched: true,
+          archiveIntact: false,
+        ),
+      );
+      expect(
+        await action(container).migrateLegacy(offered, offer),
+        TailscaleLegacyNotice.archiveError,
+      );
+      expect(legacyOf(container).archiveIntact, isFalse);
+    });
+
+    test('an unanswered migration stays pending through reads that do not '
+        'settle it', () async {
+      final container = await buildWithNodes([offered]);
+      when(
+        () => core.migrateTailscaleLegacy(
+          any(),
+          offerToken: any(named: 'offerToken'),
+        ),
+      ).thenThrow(TimeoutException('no answer'));
+      expect(
+        await action(container).migrateLegacy(offered, offer),
+        TailscaleLegacyNotice.unknown,
+      );
+
+      when(() => core.getTailscaleNodes()).thenThrow(
+        const CoreMethodException(code: 'tailscale_unsupported', message: 'x'),
+      );
+      expect(
+        await action(container).recheckLegacy(_node.key),
+        TailscaleLegacyNotice.unknown,
+      );
+
+      final ambiguous = _node.copyWith(
+        legacy: offer.copyWith(
+          eligibility: TailscaleLegacyEligibility.unconfirmed,
+          offerToken: null,
+        ),
+      );
+      when(() => core.getTailscaleNodes()).thenAnswer((_) async => [ambiguous]);
+      expect(
+        await action(container).recheckLegacy(_node.key),
+        TailscaleLegacyNotice.unknown,
+      );
+      expect(legacyOf(container).notice, TailscaleLegacyNotice.unknown);
+      verify(
+        () => core.migrateTailscaleLegacy(
+          any(),
+          offerToken: any(named: 'offerToken'),
+        ),
+      ).called(1);
+    });
+
+    test('a read showing the target untouched and still eligible settles it '
+        'as not migrated', () async {
+      final container = await buildWithNodes([offered]);
+      container
+          .read(tailscaleLegacyStatesProvider.notifier)
+          .change(
+            _node.key,
+            (state) => state.copyWith(notice: TailscaleLegacyNotice.unknown),
+          );
+      expect(
+        await action(container).recheckLegacy(_node.key),
+        TailscaleLegacyNotice.failed,
+      );
+    });
+
+    test('a read showing the target with its own login settles it as '
+        'migrated and keeps the marker', () async {
+      final container = await buildWithNodes([offered]);
+      container
+          .read(tailscaleLegacyStatesProvider.notifier)
+          .change(
+            _node.key,
+            (state) => state.copyWith(notice: TailscaleLegacyNotice.unknown),
+          );
+      when(() => core.getTailscaleNodes()).thenAnswer(
+        (_) async => [
+          _node.copyWith(
+            hasIdentity: true,
+            legacy: offer.copyWith(
+              eligibility: TailscaleLegacyEligibility.hasIdentity,
+              migratedTo: migration,
+            ),
+          ),
+        ],
+      );
+      expect(
+        await action(container).recheckLegacy(_node.key),
+        TailscaleLegacyNotice.migrated,
+      );
+      expect(container.read(tailscaleLegacyMigratedProvider), migration);
+      expect(records(container), isEmpty);
+    });
   });
 
   test('the setup payload holds the records of the current profile', () {
