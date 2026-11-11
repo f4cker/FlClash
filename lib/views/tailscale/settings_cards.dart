@@ -509,7 +509,7 @@ class TailscaleRulesCard extends StatelessWidget {
           ),
           TonalButton(
             label: appLocalizations.tsGoToRules,
-            glyph: AppGlyphs.chevronForward,
+            trailingGlyph: AppGlyphs.chevronForward,
             onPressed: onGoToRules,
           ),
         ],
