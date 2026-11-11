@@ -73,18 +73,33 @@ class TailscaleAction extends _$TailscaleAction {
       );
     }
     final previous = _records.recordOf(node.key);
-    final saved = await _records.modify(
-      node.key,
-      (record) => record.copyWith(
-        exitNode: exitNode ?? record.exitNode,
-        exitNodeName: exitNode == null
-            ? record.exitNodeName
-            : exitNode.isEmpty
-            ? null
-            : exitNodeName,
-        acceptRoutes: acceptRoutes ?? record.acceptRoutes,
-      ),
-    );
+    final previousManaged = _managedRecordOf(node);
+    final saved = node.managed
+        ? await _managed.change(
+            node.profileId,
+            node.managedId,
+            (record) => record.copyWith(
+              exitNode: exitNode ?? record.exitNode,
+              exitNodeName: exitNode == null
+                  ? record.exitNodeName
+                  : exitNode.isEmpty
+                  ? null
+                  : exitNodeName,
+              acceptRoutes: acceptRoutes ?? record.acceptRoutes,
+            ),
+          )
+        : await _records.modify(
+            node.key,
+            (record) => record.copyWith(
+              exitNode: exitNode ?? record.exitNode,
+              exitNodeName: exitNode == null
+                  ? record.exitNodeName
+                  : exitNode.isEmpty
+                  ? null
+                  : exitNodeName,
+              acceptRoutes: acceptRoutes ?? record.acceptRoutes,
+            ),
+          );
     if (!saved) {
       return const TailscaleSetPrefsResult(
         outcome: TailscaleSetPrefsOutcome.failed,
@@ -110,7 +125,15 @@ class TailscaleAction extends _$TailscaleAction {
     } on CoreMethodException catch (error) {
       final cause = TailscaleError(code: error.code, message: error.message);
       if (error.code == 'tailscale_override_ambiguous') {
-        await _records.modify(node.key, (_) => previous);
+        if (previousManaged != null) {
+          await _managed.change(
+            node.profileId,
+            node.managedId,
+            (_) => previousManaged,
+          );
+        } else {
+          await _records.modify(node.key, (_) => previous);
+        }
         return TailscaleSetPrefsResult(
           outcome: TailscaleSetPrefsOutcome.failed,
           error: cause,
@@ -601,10 +624,16 @@ class TailscaleAction extends _$TailscaleAction {
   }
 
   Future<bool> _setLoggedOut(TailscaleNode node, bool loggedOut) async {
-    final saved = await _records.modify(
-      node.key,
-      (record) => record.copyWith(loggedOut: loggedOut),
-    );
+    final saved = node.managed
+        ? await _managed.change(
+            node.profileId,
+            node.managedId,
+            (record) => record.copyWith(loggedOut: loggedOut),
+          )
+        : await _records.modify(
+            node.key,
+            (record) => record.copyWith(loggedOut: loggedOut),
+          );
     if (!saved) {
       commonPrint.log(
         'tailscale ${node.name}: logged-out=$loggedOut not saved',
@@ -612,6 +641,362 @@ class TailscaleAction extends _$TailscaleAction {
       );
     }
     return saved;
+  }
+
+  TailscaleManagedRecords get _managed =>
+      ref.read(tailscaleManagedRecordsProvider.notifier);
+
+  TailscaleManagedPanels get _managedPanel =>
+      ref.read(tailscaleManagedPanelsProvider.notifier);
+
+  TailscaleManagedRecord? _managedRecordOf(TailscaleNode node) =>
+      node.managed ? _managed.recordOf(node.profileId, node.managedId) : null;
+
+  bool _adding = false;
+
+  /// Creates a panel-added draft in the current profile, a local one first
+  /// when there is none, and returns its node once the Core lists it. The
+  /// sign-in itself starts only from the user's tap that called this.
+  Future<TailscaleNode?> addManaged({
+    required String newProfileLabel,
+    void Function()? onPreparingProfile,
+  }) async {
+    if (_adding) {
+      return null;
+    }
+    _adding = true;
+    try {
+      var profileId = ref.read(currentProfileIdProvider);
+      if (profileId == null) {
+        onPreparingProfile?.call();
+        profileId = ref
+            .read(profilesActionProvider.notifier)
+            .addCustomProfile(newProfileLabel);
+      }
+      final id = tailscaleManagedId();
+      final key = tailscaleManagedNodeKey(profileId, id);
+      final saved = await _managed.modify(
+        (records) => [
+          ...records,
+          TailscaleManagedRecord(id: id, profileId: profileId!),
+        ],
+      );
+      if (!saved) {
+        _managedPanel.change(
+          tailscaleManagedNodeKey(profileId, ''),
+          (state) =>
+              state.copyWith(notice: TailscaleManagedNotice.prepareFailed),
+        );
+        return null;
+      }
+      _managedPanel.change(key, (state) => state.copyWith(preparing: true));
+      final applied = await reapply();
+      final (read, node) = await _readNode(key);
+      final notice = node != null
+          ? null
+          : read && applied
+          ? TailscaleManagedNotice.prepareFailed
+          : TailscaleManagedNotice.prepareUnknown;
+      _managedPanel.change(
+        key,
+        (state) => state.copyWith(preparing: false, notice: notice),
+      );
+      // The page has no node to show this on; it reads the profile's slot.
+      _managedPanel.change(
+        tailscaleManagedNodeKey(profileId, ''),
+        (state) => state.copyWith(notice: notice),
+      );
+      _refreshNodes();
+      return node;
+    } finally {
+      _adding = false;
+    }
+  }
+
+  /// Another panel-added entry of the profile holding the same account.
+  TailscaleNode? duplicateOf(TailscaleNode node, List<TailscaleNode> nodes) {
+    final account = node.account;
+    if (!node.managed || account == null) {
+      return null;
+    }
+    return nodes
+        .where(
+          (other) =>
+              other.managed &&
+              other.managedId != node.managedId &&
+              other.profileId == node.profileId &&
+              other.account != null &&
+              other.account!.sameAs(account),
+        )
+        .firstOrNull;
+  }
+
+  /// Puts a signed-in account into the profile's routing; only a list read
+  /// after the apply that shows it attached confirms it.
+  Future<TailscaleAttachState> attachManaged(
+    TailscaleNode node,
+    List<TailscaleNode> nodes,
+  ) async {
+    final key = node.key;
+    final current = _managedPanel.of(key).attach;
+    if (!node.managed ||
+        node.attached ||
+        current == TailscaleAttachState.attaching ||
+        current == TailscaleAttachState.unknown) {
+      return current;
+    }
+    if (duplicateOf(node, nodes) != null) {
+      _managedPanel.change(
+        key,
+        (state) => state.copyWith(attach: TailscaleAttachState.duplicate),
+      );
+      return TailscaleAttachState.duplicate;
+    }
+    _managedPanel.change(
+      key,
+      (state) => state.copyWith(attach: TailscaleAttachState.attaching),
+    );
+    var attach = TailscaleAttachState.unknown;
+    try {
+      final saved = await _managed.change(
+        node.profileId,
+        node.managedId,
+        (record) => record.copyWith(attached: true),
+      );
+      if (!saved) {
+        attach = TailscaleAttachState.failed;
+        return attach;
+      }
+      final applied = await reapply();
+      final (read, fresh) = await _readNode(key);
+      attach = switch ((read, fresh)) {
+        (_, TailscaleNode(attached: true)) => TailscaleAttachState.attached,
+        (true, _) when applied => TailscaleAttachState.failed,
+        _ => TailscaleAttachState.unknown,
+      };
+      if (attach == TailscaleAttachState.failed) {
+        await _managed.change(
+          node.profileId,
+          node.managedId,
+          (record) => record.copyWith(attached: false),
+        );
+      }
+      return attach;
+    } finally {
+      _managedPanel.change(key, (state) => state.copyWith(attach: attach));
+      _refreshRoutes();
+    }
+  }
+
+  /// Read only: settles an unknown attach or removal as far as a list read
+  /// proves it, and never writes again on its own.
+  Future<void> recheckManaged(TailscaleNode node) async {
+    final key = node.key;
+    final (read, fresh) = await _readNode(key);
+    if (!read) {
+      return;
+    }
+    final record = _managedRecordOf(node);
+    final panel = _managedPanel.of(key);
+    if (fresh == null) {
+      if (record == null) {
+        _managedPanel.change(key, (_) => const TailscaleManagedPanel());
+      }
+      _refreshNodes();
+      return;
+    }
+    if (record != null && record.removing) {
+      await _managed.change(
+        node.profileId,
+        node.managedId,
+        (record) => record.copyWith(removing: false),
+      );
+    }
+    _managedPanel.change(
+      key,
+      (state) => state.copyWith(
+        attach: switch (panel.attach) {
+          TailscaleAttachState.unknown when fresh.attached =>
+            TailscaleAttachState.attached,
+          TailscaleAttachState.unknown => TailscaleAttachState.failed,
+          final attach => attach,
+        },
+        notice: switch (panel.notice) {
+          TailscaleManagedNotice.removeLogoutUnknown ||
+          TailscaleManagedNotice.removeIncomplete ||
+          TailscaleManagedNotice.removeUnknown ||
+          TailscaleManagedNotice.prepareUnknown ||
+          TailscaleManagedNotice.addUnconfirmed => null,
+          final notice => notice,
+        },
+      ),
+    );
+    await readStatus(fresh);
+    _refreshRoutes();
+  }
+
+  /// Plain sign-out: the record, its guard and its targets stay.
+  Future<bool> signOutManaged(TailscaleNode node) async {
+    final done = await logoutFromPanel(node);
+    if (done) {
+      _managedPanel.change(
+        node.key,
+        (state) => state.copyWith(notice: TailscaleManagedNotice.signedOut),
+      );
+      _refreshRoutes();
+    }
+    return done;
+  }
+
+  /// Sign-out, then the record; null once both are confirmed. The guard and
+  /// the pending mark are saved before anything is sent, and only a read
+  /// lifts the mark again.
+  Future<TailscaleManagedNotice?> removeManaged(TailscaleNode node) async {
+    final key = node.key;
+    final record = _managedRecordOf(node);
+    if (record == null) {
+      return null;
+    }
+    if (record.removing || _managedPanel.of(key).removing) {
+      return TailscaleManagedNotice.removeUnknown;
+    }
+    _managedPanel.change(
+      key,
+      (state) => state.copyWith(removing: true, notice: null),
+    );
+    TailscaleManagedNotice? notice = TailscaleManagedNotice.removeUnknown;
+    try {
+      final guarded = await _managed.change(
+        node.profileId,
+        node.managedId,
+        (record) => record.copyWith(loggedOut: true, removing: true),
+      );
+      if (!guarded) {
+        _panel.change(
+          key,
+          (state) => state.copyWith(notice: TailscaleCardNotice.logoutFailed),
+        );
+        notice = null;
+        return TailscaleManagedNotice.removeIncomplete;
+      }
+      try {
+        final result = await _core.logoutTailscale(node.ref);
+        if (result.outcome != TailscaleLogoutOutcome.confirmed) {
+          notice = TailscaleManagedNotice.removeLogoutUnknown;
+          return notice;
+        }
+      } catch (error) {
+        commonPrint.log(
+          'tailscale ${node.name} remove logout error ${_codeOf(error) ?? error.runtimeType}',
+          logLevel: LogLevel.warning,
+        );
+        notice = TailscaleManagedNotice.removeLogoutUnknown;
+        return notice;
+      }
+      final last = _managed.ofProfile(node.profileId).length == 1;
+      if (last) {
+        try {
+          final forgot = await _core.forgetTailscaleRoutes(node.profileId);
+          if (forgot.outcome != 'confirmed') {
+            notice = TailscaleManagedNotice.removeIncomplete;
+            return notice;
+          }
+        } catch (_) {
+          notice = TailscaleManagedNotice.removeIncomplete;
+          return notice;
+        }
+      }
+      final dropped = await _managed.modify(
+        (records) => [
+          for (final item in records)
+            if (!(item.profileId == node.profileId &&
+                item.id == node.managedId))
+              item,
+        ],
+      );
+      if (!dropped) {
+        notice = TailscaleManagedNotice.removeIncomplete;
+        return notice;
+      }
+      final applied = await reapply();
+      final (read, fresh) = await _readNode(key);
+      notice = read && fresh == null && applied
+          ? null
+          : TailscaleManagedNotice.removeUnknown;
+      return notice;
+    } finally {
+      _managedPanel.change(
+        key,
+        (state) => state.copyWith(removing: false, notice: notice),
+      );
+      _refreshNodes();
+      _refreshRoutes();
+    }
+  }
+
+  /// Saves the user's choices; [TailscaleAssignNotice.updated] only once a
+  /// read of the routes shows each one in force.
+  Future<TailscaleAssignNotice> assignRoutes(
+    int profileId,
+    List<TailscaleRouteAssignment> assignments,
+  ) async {
+    try {
+      final result = await _core.assignTailscaleRoutes(profileId, assignments);
+      if (result.outcome != 'applied') {
+        return TailscaleAssignNotice.failed;
+      }
+      final routes = await _core.getTailscaleRoutes(profileId);
+      if (ref.exists(tailscaleRoutesReportProvider)) {
+        ref.read(tailscaleRoutesReportProvider.notifier).put(routes);
+      }
+      final inForce = assignments.every(
+        (item) =>
+            routes.targetOf(item.target.kind, item.target.value)?.owner ==
+            item.owner,
+      );
+      return inForce
+          ? TailscaleAssignNotice.updated
+          : TailscaleAssignNotice.saved;
+    } on CoreMethodException catch (error) {
+      if (error.code == 'tailscale_assign_invalid' ||
+          error.code == 'tailscale_profile_not_current') {
+        return TailscaleAssignNotice.failed;
+      }
+      return TailscaleAssignNotice.unknown;
+    } catch (_) {
+      return TailscaleAssignNotice.unknown;
+    }
+  }
+
+  /// A profile with an unsettled removal cannot be deleted.
+  bool hasPendingManaged(int profileId) =>
+      _managed.ofProfile(profileId).any((record) => record.removing);
+
+  /// Unbinds the profile's accounts; the sign-in archives stay on disk.
+  Future<void> forgetProfile(int profileId) async {
+    if (_managed.ofProfile(profileId).isEmpty) {
+      return;
+    }
+    try {
+      await _core.forgetTailscaleRoutes(profileId);
+    } catch (error) {
+      commonPrint.log(
+        'tailscale forget routes error ${_codeOf(error) ?? error.runtimeType}',
+        logLevel: LogLevel.warning,
+      );
+    }
+    await _managed.modify(
+      (records) => [
+        for (final record in records)
+          if (record.profileId != profileId) record,
+      ],
+    );
+  }
+
+  void _refreshRoutes() {
+    if (ref.exists(tailscaleRoutesReportProvider)) {
+      ref.invalidate(tailscaleRoutesReportProvider);
+    }
   }
 
   void _publish(TailscaleNode node) {

@@ -466,6 +466,7 @@ const _$CoreEventTypeEnumMap = {
   CoreEventType.routeChanged: 'routeChanged',
   CoreEventType.dialerLoop: 'dialerLoop',
   CoreEventType.tailscaleState: 'tailscaleState',
+  CoreEventType.tailscaleRoutes: 'tailscaleRoutes',
 };
 
 _TestDelayParams _$TestDelayParamsFromJson(Map<String, dynamic> json) =>

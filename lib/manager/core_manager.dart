@@ -219,6 +219,15 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   }
 
   @override
+  void onTailscaleRoutes(TailscaleRoutesEvent event) {
+    if (ref.exists(tailscaleRoutesReportProvider) &&
+        event.profileId == ref.read(currentProfileIdProvider)) {
+      ref.invalidate(tailscaleRoutesReportProvider);
+    }
+    super.onTailscaleRoutes(event);
+  }
+
+  @override
   void onRouteChanged(RouteSnapshot snapshot) {
     ref.read(routeTrackerProvider.notifier).applySnapshot(snapshot);
     super.onRouteChanged(snapshot);

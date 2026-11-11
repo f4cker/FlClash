@@ -764,7 +764,11 @@ class SetupAction extends _$SetupAction {
       _ => null,
     };
     final yamlString = realProfile?.yaml ?? '';
-    final yamlMd5 = realProfile?.md5 ?? '';
+    // The panel-added accounts are not in the YAML, yet change what runs.
+    final managed = setupParams.tailscale?.managed ?? const [];
+    final yamlMd5 = managed.isEmpty || realProfile == null
+        ? realProfile?.md5 ?? ''
+        : '${realProfile.md5}${json.encode(managed)}'.toMd5();
     if (!profileFailed && yamlMd5 == globalState.lastConfigMd5 && !force) {
       _appliedInputs = inputs;
       globalState.lastConfigCounts = realProfile.counts;

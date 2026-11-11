@@ -218,6 +218,40 @@ class Preferences {
         false;
   }
 
+  /// Null when the stored records cannot be read, so nothing overwrites them.
+  Future<List<TailscaleManagedRecord>?> getTailscaleManagedRecords() async {
+    try {
+      final sharedPreferencesIns = await _store.value;
+      final raw = sharedPreferencesIns?.getString(tailscaleManagedRecordsKey);
+      if (raw == null) {
+        return const [];
+      }
+      return [
+        for (final item in json.decode(raw) as List)
+          TailscaleManagedRecord.fromJson(
+            Map<String, Object?>.from(item as Map),
+          ),
+      ];
+    } catch (e) {
+      commonPrint.log(
+        'getTailscaleManagedRecords error ${e.toString()}',
+        logLevel: LogLevel.warning,
+      );
+      return null;
+    }
+  }
+
+  Future<bool> saveTailscaleManagedRecords(
+    List<TailscaleManagedRecord> records,
+  ) async {
+    final sharedPreferencesIns = await _store.value;
+    return await sharedPreferencesIns?.setString(
+          tailscaleManagedRecordsKey,
+          json.encode(records),
+        ) ??
+        false;
+  }
+
   Future<TailscaleLegacyMigration?> getTailscaleLegacyMigration() async {
     try {
       final sharedPreferencesIns = await _store.value;

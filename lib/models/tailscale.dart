@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:fl_clash/enum/enum.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -67,6 +69,9 @@ abstract class TailscaleNode with _$TailscaleNode {
   const factory TailscaleNode({
     @JsonKey(name: 'profile-id') @Default(0) int profileId,
     required String name,
+    @JsonKey(name: 'managed-id') @Default('') String managedId,
+    @Default(false) bool attached,
+    TailscaleAccount? account,
     required int generation,
     @JsonKey(name: 'control-url') @Default('') String controlUrl,
     @Default('') String hostname,
@@ -102,11 +107,57 @@ abstract class TailscaleNode with _$TailscaleNode {
 
   bool get stateDirInUse => warnings.contains(tailscaleStateDirInUseWarning);
 
-  TailscaleNodeKey get key =>
-      (profileId: profileId, name: name, controlUrl: controlUrl);
+  bool get managed => managedId.isNotEmpty;
 
-  TailscaleNodeRef get ref =>
-      TailscaleNodeRef(name: name, generation: generation);
+  /// A panel-added node is known by its ID, whatever name the Core gave it.
+  TailscaleNodeKey get key => managed
+      ? tailscaleManagedNodeKey(profileId, managedId)
+      : (profileId: profileId, name: name, controlUrl: controlUrl);
+
+  TailscaleNodeRef get ref => TailscaleNodeRef(
+    name: name,
+    managedId: managed ? managedId : null,
+    generation: generation,
+  );
+}
+
+/// A random binding for a new panel-added account; never derived from a name
+/// or an email.
+String tailscaleManagedId() {
+  final random = Random.secure();
+  return [
+    for (var i = 0; i < 16; i++)
+      random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ].join();
+}
+
+const _managedKeyPrefix = '\u0001managed:';
+
+TailscaleNodeKey tailscaleManagedNodeKey(int profileId, String id) =>
+    (profileId: profileId, name: '$_managedKeyPrefix$id', controlUrl: '');
+
+/// The identity a node's own state holds; [userId], [tailnet] and
+/// [controlUrl] tell one account from another, never the login name.
+@freezed
+abstract class TailscaleAccount with _$TailscaleAccount {
+  const TailscaleAccount._();
+
+  const factory TailscaleAccount({
+    @JsonKey(name: 'user-id') @Default('') String userId,
+    @JsonKey(name: 'login-name') @Default('') String loginName,
+    @JsonKey(name: 'display-name') @Default('') String displayName,
+    @Default('') String tailnet,
+    @JsonKey(name: 'control-url') @Default('') String controlUrl,
+  }) = _TailscaleAccount;
+
+  factory TailscaleAccount.fromJson(Map<String, Object?> json) =>
+      _$TailscaleAccountFromJson(json);
+
+  bool sameAs(TailscaleAccount other) =>
+      userId.isNotEmpty &&
+      userId == other.userId &&
+      tailnet == other.tailnet &&
+      controlUrl == other.controlUrl;
 }
 
 /// A node as the Core ran it when it was read: an action on a later instance
@@ -115,6 +166,7 @@ abstract class TailscaleNode with _$TailscaleNode {
 abstract class TailscaleNodeRef with _$TailscaleNodeRef {
   const factory TailscaleNodeRef({
     required String name,
+    @JsonKey(name: 'managed-id', includeIfNull: false) String? managedId,
     required int generation,
   }) = _TailscaleNodeRef;
 
@@ -372,6 +424,58 @@ abstract class TailscaleNodeSetup with _$TailscaleNodeSetup {
       _$TailscaleNodeSetupFromJson(json);
 }
 
+/// A panel-added account the app keeps, in sign-in order. [id] is the
+/// binding; nothing else ties it to a node or a sign-in.
+@freezed
+abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
+  const TailscaleManagedRecord._();
+
+  const factory TailscaleManagedRecord({
+    required String id,
+    @JsonKey(name: 'profile-id') required int profileId,
+    @JsonKey(name: 'control-url') @Default('') String controlUrl,
+    @JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,
+    @JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,
+    @JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,
+    @JsonKey(name: 'logged-out') @Default(false) bool loggedOut,
+    @Default(false) bool attached,
+
+    /// A removal was started and its outcome is not known yet; it blocks a
+    /// new sign-in, a second removal and deleting the profile.
+    @Default(false) bool removing,
+  }) = _TailscaleManagedRecord;
+
+  factory TailscaleManagedRecord.fromJson(Map<String, Object?> json) =>
+      _$TailscaleManagedRecordFromJson(json);
+
+  TailscaleNodeKey get key => tailscaleManagedNodeKey(profileId, id);
+
+  TailscaleManagedSetup get setup => TailscaleManagedSetup(
+    id: id,
+    controlUrl: controlUrl,
+    exitNode: exitNode,
+    acceptRoutes: acceptRoutes,
+    loggedOut: loggedOut,
+    attached: attached,
+  );
+}
+
+@freezed
+abstract class TailscaleManagedSetup with _$TailscaleManagedSetup {
+  const factory TailscaleManagedSetup({
+    required String id,
+    @Default('') String name,
+    @JsonKey(name: 'control-url') @Default('') String controlUrl,
+    @JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,
+    @JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,
+    @JsonKey(name: 'logged-out') @Default(false) bool loggedOut,
+    @Default(false) bool attached,
+  }) = _TailscaleManagedSetup;
+
+  factory TailscaleManagedSetup.fromJson(Map<String, Object?> json) =>
+      _$TailscaleManagedSetupFromJson(json);
+}
+
 @freezed
 abstract class TailscaleSetup with _$TailscaleSetup {
   const factory TailscaleSetup({
@@ -381,6 +485,7 @@ abstract class TailscaleSetup with _$TailscaleSetup {
     @Default([]) List<TailscaleNodeSetup> nodes,
     @JsonKey(name: 'legacy-migration', includeIfNull: false)
     TailscaleLegacyMigration? legacyMigration,
+    @Default([]) List<TailscaleManagedSetup> managed,
   }) = _TailscaleSetup;
 
   factory TailscaleSetup.fromJson(Map<String, Object?> json) =>
@@ -444,4 +549,194 @@ abstract class TailscalePanelNode with _$TailscalePanelNode {
     /// start it again.
     int? prewarmed,
   }) = _TailscalePanelNode;
+}
+
+@freezed
+abstract class TailscaleRouteTarget with _$TailscaleRouteTarget {
+  const factory TailscaleRouteTarget({
+    required String kind,
+    required String value,
+  }) = _TailscaleRouteTarget;
+
+  factory TailscaleRouteTarget.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRouteTargetFromJson(json);
+}
+
+const tailscaleTargetIp = 'ip';
+const tailscaleOwnerManaged = 'managed';
+const tailscaleOwnerProfile = 'profile';
+
+@freezed
+abstract class TailscaleRouteOwner with _$TailscaleRouteOwner {
+  const factory TailscaleRouteOwner({
+    required String kind,
+    required String id,
+  }) = _TailscaleRouteOwner;
+
+  factory TailscaleRouteOwner.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRouteOwnerFromJson(json);
+}
+
+@freezed
+abstract class TailscaleRouteIdentity with _$TailscaleRouteIdentity {
+  const factory TailscaleRouteIdentity({
+    @JsonKey(name: 'user-id') @Default('') String userId,
+    @Default('') String tailnet,
+    @JsonKey(name: 'control-url') @Default('') String controlUrl,
+    @JsonKey(name: 'login-name') @Default('') String loginName,
+  }) = _TailscaleRouteIdentity;
+
+  factory TailscaleRouteIdentity.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRouteIdentityFromJson(json);
+}
+
+@freezed
+abstract class TailscaleRouteCandidate with _$TailscaleRouteCandidate {
+  const factory TailscaleRouteCandidate({
+    required TailscaleRouteOwner owner,
+    @Default('') String device,
+    @Default('') String label,
+    @Default('') String tailnet,
+    @Default('') String rule,
+    @Default(false) bool removed,
+  }) = _TailscaleRouteCandidate;
+
+  factory TailscaleRouteCandidate.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRouteCandidateFromJson(json);
+}
+
+@freezed
+abstract class TailscaleRouteTargetReport with _$TailscaleRouteTargetReport {
+  const factory TailscaleRouteTargetReport({
+    required TailscaleRouteTarget target,
+    @JsonKey(unknownEnumValue: TailscaleRouteState.unconfirmed)
+    @Default(TailscaleRouteState.unconfirmed)
+    TailscaleRouteState state,
+    TailscaleRouteOwner? owner,
+    @Default([]) List<TailscaleRouteCandidate> candidates,
+  }) = _TailscaleRouteTargetReport;
+
+  factory TailscaleRouteTargetReport.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRouteTargetReportFromJson(json);
+}
+
+@freezed
+abstract class TailscaleRouteAccountReport with _$TailscaleRouteAccountReport {
+  const factory TailscaleRouteAccountReport({
+    required String id,
+    @Default('') String proxy,
+    TailscaleRouteIdentity? identity,
+    @Default(false) bool fresh,
+    @Default(false) bool available,
+    @JsonKey(name: 'logged-out') @Default(false) bool loggedOut,
+    @Default('') String domain,
+    @Default(0) int addresses,
+  }) = _TailscaleRouteAccountReport;
+
+  factory TailscaleRouteAccountReport.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRouteAccountReportFromJson(json);
+}
+
+/// What the Core routes for the profile's panel-added accounts.
+@freezed
+abstract class TailscaleRoutes with _$TailscaleRoutes {
+  const TailscaleRoutes._();
+
+  const factory TailscaleRoutes({
+    @JsonKey(name: 'profile-id') @Default(0) int profileId,
+    @Default(false) bool active,
+    @Default(false) bool complete,
+    @Default(false) bool saved,
+    @Default(false) bool unreadable,
+    @Default(0) int revision,
+    @Default([]) List<TailscaleRouteAccountReport> accounts,
+    @Default([]) List<TailscaleRouteTargetReport> targets,
+    @JsonKey(name: 'protected-prefixes')
+    @Default([])
+    List<String> protectedPrefixes,
+    @JsonKey(name: 'protected-suffixes')
+    @Default([])
+    List<String> protectedSuffixes,
+  }) = _TailscaleRoutes;
+
+  factory TailscaleRoutes.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRoutesFromJson(json);
+
+  TailscaleRouteAccountReport? accountOf(String id) =>
+      accounts.where((account) => account.id == id).firstOrNull;
+
+  /// Targets still blocked for want of a choice: what the banner counts.
+  List<TailscaleRouteTargetReport> get pending => [
+    for (final target in targets)
+      if (target.state == TailscaleRouteState.conflict ||
+          target.state == TailscaleRouteState.reconfirm)
+        target,
+  ];
+
+  List<TailscaleRouteTargetReport> get assigned => [
+    for (final target in targets)
+      if (target.state == TailscaleRouteState.assigned) target,
+  ];
+
+  TailscaleRouteTargetReport? targetOf(String kind, String value) => targets
+      .where(
+        (target) => target.target.kind == kind && target.target.value == value,
+      )
+      .firstOrNull;
+}
+
+@freezed
+abstract class TailscaleRouteAssignment with _$TailscaleRouteAssignment {
+  const factory TailscaleRouteAssignment({
+    required TailscaleRouteTarget target,
+    required TailscaleRouteOwner owner,
+  }) = _TailscaleRouteAssignment;
+
+  factory TailscaleRouteAssignment.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRouteAssignmentFromJson(json);
+}
+
+@freezed
+abstract class TailscaleAssignResult with _$TailscaleAssignResult {
+  const factory TailscaleAssignResult({
+    @Default('') String outcome,
+    TailscaleRoutes? routes,
+    TailscaleError? error,
+  }) = _TailscaleAssignResult;
+
+  factory TailscaleAssignResult.fromJson(Map<String, Object?> json) =>
+      _$TailscaleAssignResultFromJson(json);
+}
+
+@freezed
+abstract class TailscaleForgetResult with _$TailscaleForgetResult {
+  const factory TailscaleForgetResult({
+    @Default('') String outcome,
+    TailscaleError? error,
+  }) = _TailscaleForgetResult;
+
+  factory TailscaleForgetResult.fromJson(Map<String, Object?> json) =>
+      _$TailscaleForgetResultFromJson(json);
+}
+
+@freezed
+abstract class TailscaleRoutesEvent with _$TailscaleRoutesEvent {
+  const factory TailscaleRoutesEvent({
+    @JsonKey(name: 'profile-id') @Default(0) int profileId,
+    @Default(0) int revision,
+  }) = _TailscaleRoutesEvent;
+
+  factory TailscaleRoutesEvent.fromJson(Map<String, Object?> json) =>
+      _$TailscaleRoutesEventFromJson(json);
+}
+
+/// The panel's view of a panel-added account beyond the Core's list.
+@freezed
+abstract class TailscaleManagedPanel with _$TailscaleManagedPanel {
+  const factory TailscaleManagedPanel({
+    @Default(TailscaleAttachState.none) TailscaleAttachState attach,
+    TailscaleManagedNotice? notice,
+    @Default(false) bool removing,
+    @Default(false) bool preparing,
+  }) = _TailscaleManagedPanel;
 }

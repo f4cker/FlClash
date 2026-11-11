@@ -508,6 +508,40 @@ abstract class CoreHandlerInterface {
       timeout: tailscaleCoreGuard,
     );
   }
+
+  Future<TailscaleRoutes> getTailscaleRoutes(int profileId) {
+    return _query(
+      CoreMethod.tailscaleRoutes,
+      _model(TailscaleRoutes.fromJson),
+      arguments: {'profile-id': profileId},
+      timeout: tailscaleCoreGuard,
+    );
+  }
+
+  Future<TailscaleAssignResult> assignTailscaleRoutes(
+    int profileId,
+    List<TailscaleRouteAssignment> assignments,
+  ) {
+    return _query(
+      CoreMethod.tailscaleAssign,
+      _model(TailscaleAssignResult.fromJson),
+      arguments: {
+        'profile-id': profileId,
+        'assignments': [for (final item in assignments) item.toJson()],
+      },
+      timeout: tailscaleCoreGuard,
+    );
+  }
+
+  /// Only for an explicit removal of the last account or of the profile.
+  Future<TailscaleForgetResult> forgetTailscaleRoutes(int profileId) {
+    return _query(
+      CoreMethod.tailscaleForgetRoutes,
+      _model(TailscaleForgetResult.fromJson),
+      arguments: {'profile-id': profileId},
+      timeout: tailscaleCoreGuard,
+    );
+  }
 }
 
 T _cast<T>(Object data) => data as T;

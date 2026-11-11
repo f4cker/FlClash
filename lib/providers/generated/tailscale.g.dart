@@ -69,6 +69,161 @@ abstract class _$TailscaleNodeRecords
   }
 }
 
+/// Panel-added accounts of every profile, seeded from preferences; null when
+/// the stored list could not be read, which refuses every write.
+
+@ProviderFor(TailscaleManagedRecords)
+final tailscaleManagedRecordsProvider = TailscaleManagedRecordsProvider._();
+
+/// Panel-added accounts of every profile, seeded from preferences; null when
+/// the stored list could not be read, which refuses every write.
+final class TailscaleManagedRecordsProvider
+    extends
+        $NotifierProvider<
+          TailscaleManagedRecords,
+          List<TailscaleManagedRecord>?
+        > {
+  /// Panel-added accounts of every profile, seeded from preferences; null when
+  /// the stored list could not be read, which refuses every write.
+  TailscaleManagedRecordsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tailscaleManagedRecordsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tailscaleManagedRecordsHash();
+
+  @$internal
+  @override
+  TailscaleManagedRecords create() => TailscaleManagedRecords();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<TailscaleManagedRecord>? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<TailscaleManagedRecord>?>(
+        value,
+      ),
+    );
+  }
+}
+
+String _$tailscaleManagedRecordsHash() =>
+    r'ea80c4d457f1d9a5f8d0c552b0eba0b57a3031b3';
+
+/// Panel-added accounts of every profile, seeded from preferences; null when
+/// the stored list could not be read, which refuses every write.
+
+abstract class _$TailscaleManagedRecords
+    extends $Notifier<List<TailscaleManagedRecord>?> {
+  List<TailscaleManagedRecord>? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref
+            as $Ref<
+              List<TailscaleManagedRecord>?,
+              List<TailscaleManagedRecord>?
+            >;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                List<TailscaleManagedRecord>?,
+                List<TailscaleManagedRecord>?
+              >,
+              List<TailscaleManagedRecord>?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// The panel's view of each panel-added account, by its node key.
+
+@ProviderFor(TailscaleManagedPanels)
+final tailscaleManagedPanelsProvider = TailscaleManagedPanelsProvider._();
+
+/// The panel's view of each panel-added account, by its node key.
+final class TailscaleManagedPanelsProvider
+    extends
+        $NotifierProvider<
+          TailscaleManagedPanels,
+          Map<TailscaleNodeKey, TailscaleManagedPanel>
+        > {
+  /// The panel's view of each panel-added account, by its node key.
+  TailscaleManagedPanelsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tailscaleManagedPanelsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tailscaleManagedPanelsHash();
+
+  @$internal
+  @override
+  TailscaleManagedPanels create() => TailscaleManagedPanels();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(
+    Map<TailscaleNodeKey, TailscaleManagedPanel> value,
+  ) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride:
+          $SyncValueProvider<Map<TailscaleNodeKey, TailscaleManagedPanel>>(
+            value,
+          ),
+    );
+  }
+}
+
+String _$tailscaleManagedPanelsHash() =>
+    r'bd38acfaa8f29892c3535383df9e6aa7bc4a3178';
+
+/// The panel's view of each panel-added account, by its node key.
+
+abstract class _$TailscaleManagedPanels
+    extends $Notifier<Map<TailscaleNodeKey, TailscaleManagedPanel>> {
+  Map<TailscaleNodeKey, TailscaleManagedPanel> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref
+            as $Ref<
+              Map<TailscaleNodeKey, TailscaleManagedPanel>,
+              Map<TailscaleNodeKey, TailscaleManagedPanel>
+            >;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                Map<TailscaleNodeKey, TailscaleManagedPanel>,
+                Map<TailscaleNodeKey, TailscaleManagedPanel>
+              >,
+              Map<TailscaleNodeKey, TailscaleManagedPanel>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// The node the legacy shared login went to; seeded with the node records.
 
 @ProviderFor(TailscaleLegacyMigrated)
@@ -319,7 +474,64 @@ final class TailscaleSetupProvider
   }
 }
 
-String _$tailscaleSetupHash() => r'7f4c9f8b03c48c9b78fe30fdb98800489db70d4a';
+String _$tailscaleSetupHash() => r'cff9b9465e2fe3613d88db60a03b20c13a44c860';
+
+/// The Core's routing for the current profile's panel-added accounts; null
+/// while it has none.
+
+@ProviderFor(TailscaleRoutesReport)
+final tailscaleRoutesReportProvider = TailscaleRoutesReportProvider._();
+
+/// The Core's routing for the current profile's panel-added accounts; null
+/// while it has none.
+final class TailscaleRoutesReportProvider
+    extends $AsyncNotifierProvider<TailscaleRoutesReport, TailscaleRoutes?> {
+  /// The Core's routing for the current profile's panel-added accounts; null
+  /// while it has none.
+  TailscaleRoutesReportProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tailscaleRoutesReportProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tailscaleRoutesReportHash();
+
+  @$internal
+  @override
+  TailscaleRoutesReport create() => TailscaleRoutesReport();
+}
+
+String _$tailscaleRoutesReportHash() =>
+    r'cce43c387eb6a68cdf333c9267632e6397f44a28';
+
+/// The Core's routing for the current profile's panel-added accounts; null
+/// while it has none.
+
+abstract class _$TailscaleRoutesReport
+    extends $AsyncNotifier<TailscaleRoutes?> {
+  FutureOr<TailscaleRoutes?> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<TailscaleRoutes?>, TailscaleRoutes?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<TailscaleRoutes?>, TailscaleRoutes?>,
+              AsyncValue<TailscaleRoutes?>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
 
 @ProviderFor(TailscaleNodes)
 final tailscaleNodesProvider = TailscaleNodesProvider._();

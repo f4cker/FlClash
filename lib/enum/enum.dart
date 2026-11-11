@@ -198,6 +198,7 @@ enum CoreEventType {
   routeChanged,
   dialerLoop,
   tailscaleState,
+  tailscaleRoutes,
 }
 
 /// `ipn.State` as tsnet names it; [none] is a node that has not started.
@@ -228,7 +229,7 @@ enum TailscaleSettingSource {
   coreDefault,
 }
 
-enum TailscaleStateDirMode { derived, explicit, shared }
+enum TailscaleStateDirMode { derived, explicit, shared, managed }
 
 enum TailscaleLogoutOutcome { confirmed, unknown }
 
@@ -289,6 +290,43 @@ enum TailscaleCardNotice {
 
 /// The outcome of an exit node or subnet routes change, per design.md §3.2.
 enum TailscaleSettingNotice { updated, saved, applyFailed, failed, unknown }
+
+/// Where a panel-added account stands in the current profile, apart from its
+/// connection.
+enum TailscaleAttachState {
+  none,
+  attaching,
+  attached,
+  failed,
+  unknown,
+
+  /// Another entry already holds this account; this sign-in stays unrouted.
+  duplicate,
+  checking,
+}
+
+/// The last sign-out or removal of a panel-added account.
+enum TailscaleManagedNotice {
+  signedOut,
+  removeLogoutUnknown,
+  removeIncomplete,
+  removeUnknown,
+  prepareFailed,
+  prepareUnknown,
+  duplicate,
+  addUnconfirmed,
+}
+
+enum TailscaleRouteState {
+  bound,
+  assigned,
+  conflict,
+  unconfirmed,
+  reconfirm,
+  unavailable,
+}
+
+enum TailscaleAssignNotice { updated, saved, failed, unknown }
 
 enum FindProcessMode { always, off }
 

@@ -514,6 +514,15 @@ void main() {
         TailscaleNodeSetup(name: 'b', loggedOut: true),
       ],
       legacyMigration: TailscaleLegacyMigration(fingerprint: 'f1', name: 'b'),
+      managed: [
+        TailscaleManagedSetup(
+          id: 'm1',
+          name: 'tailscale-m1',
+          acceptRoutes: true,
+          attached: true,
+        ),
+        TailscaleManagedSetup(id: 'm2', loggedOut: true),
+      ],
     );
     final sent = json.decode(
       json.encode(
@@ -538,6 +547,23 @@ void main() {
         'name': 'b',
         'control-url': '',
       },
+      'managed': [
+        {
+          'id': 'm1',
+          'name': 'tailscale-m1',
+          'control-url': '',
+          'accept-routes': true,
+          'logged-out': false,
+          'attached': true,
+        },
+        {
+          'id': 'm2',
+          'name': '',
+          'control-url': '',
+          'logged-out': true,
+          'attached': false,
+        },
+      ],
     });
   });
 

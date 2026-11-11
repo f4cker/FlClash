@@ -5,6 +5,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'config.dart';
 import 'core.dart';
 import 'state.dart';
 
@@ -54,6 +55,97 @@ class TailscaleNodeRecords extends _$TailscaleNodeRecords
       }
       return saved;
     });
+  }
+}
+
+/// Panel-added accounts of every profile, seeded from preferences; null when
+/// the stored list could not be read, which refuses every write.
+@Riverpod(keepAlive: true)
+class TailscaleManagedRecords extends _$TailscaleManagedRecords
+    with AutoDisposeNotifierMixin {
+  final _writes = SerialTaskScheduler();
+
+  @override
+  List<TailscaleManagedRecord>? build() => const [];
+
+  List<TailscaleManagedRecord> ofProfile(int profileId) => [
+    for (final record in state ?? const <TailscaleManagedRecord>[])
+      if (record.profileId == profileId) record,
+  ];
+
+  TailscaleManagedRecord? recordOf(int profileId, String id) =>
+      state?.firstWhereOrNull(
+        (record) => record.profileId == profileId && record.id == id,
+      );
+
+  /// [update] returns null to drop the record; the state follows the write.
+  Future<bool> modify(
+    List<TailscaleManagedRecord>? Function(List<TailscaleManagedRecord> records)
+    update,
+  ) {
+    return _writes.run(() async {
+      final current = state;
+      if (current == null) {
+        return false;
+      }
+      final next = update(current);
+      if (next == null) {
+        return false;
+      }
+      final bool saved;
+      try {
+        saved = await preferences.saveTailscaleManagedRecords(next);
+      } catch (error) {
+        commonPrint.log(
+          'saveTailscaleManagedRecords error $error',
+          logLevel: LogLevel.warning,
+        );
+        return false;
+      }
+      if (saved && ref.mounted) {
+        state = next;
+      }
+      return saved;
+    });
+  }
+
+  Future<bool> change(
+    int profileId,
+    String id,
+    TailscaleManagedRecord Function(TailscaleManagedRecord record) update,
+  ) {
+    return modify((records) {
+      if (!records.any((r) => r.profileId == profileId && r.id == id)) {
+        return null;
+      }
+      return [
+        for (final record in records)
+          record.profileId == profileId && record.id == id
+              ? update(record)
+              : record,
+      ];
+    });
+  }
+}
+
+/// The panel's view of each panel-added account, by its node key.
+@Riverpod(keepAlive: true)
+class TailscaleManagedPanels extends _$TailscaleManagedPanels
+    with AutoDisposeNotifierMixin {
+  @override
+  Map<TailscaleNodeKey, TailscaleManagedPanel> build() => const {};
+
+  TailscaleManagedPanel of(TailscaleNodeKey key) =>
+      state[key] ?? const TailscaleManagedPanel();
+
+  void change(
+    TailscaleNodeKey key,
+    TailscaleManagedPanel Function(TailscaleManagedPanel state) update,
+  ) {
+    final next = update(of(key));
+    if (next != of(key)) {
+      value = {...state, key: next};
+    }
   }
 }
 
@@ -137,6 +229,7 @@ TailscaleSetup? tailscaleSetup(Ref ref) {
   }
   final records = ref.watch(tailscaleNodeRecordsProvider);
   final legacyMigration = ref.watch(tailscaleLegacyMigratedProvider);
+  final managed = ref.watch(tailscaleManagedRecordsProvider) ?? const [];
   return TailscaleSetup(
     legacyMigration: legacyMigration,
     profileId: profile.id,
@@ -147,7 +240,41 @@ TailscaleSetup? tailscaleSetup(Ref ref) {
       for (final record in records)
         if (record.profileId == profile.id) record.setup,
     ],
+    managed: [
+      for (final record in managed)
+        if (record.profileId == profile.id) record.setup,
+    ],
   );
+}
+
+/// The Core's routing for the current profile's panel-added accounts; null
+/// while it has none.
+@riverpod
+class TailscaleRoutesReport extends _$TailscaleRoutesReport {
+  @override
+  Future<TailscaleRoutes?> build() async {
+    final profileId = ref.watch(currentProfileIdProvider);
+    if (profileId == null) {
+      return null;
+    }
+    final managed = ref.watch(
+      tailscaleManagedRecordsProvider.select(
+        (records) =>
+            records?.where((record) => record.profileId == profileId).length ??
+            0,
+      ),
+    );
+    if (managed == 0) {
+      return null;
+    }
+    return ref.read(coreHandlerProvider).getTailscaleRoutes(profileId);
+  }
+
+  void put(TailscaleRoutes routes) {
+    if (routes.profileId == ref.read(currentProfileIdProvider)) {
+      state = AsyncData(routes);
+    }
+  }
 }
 
 @riverpod

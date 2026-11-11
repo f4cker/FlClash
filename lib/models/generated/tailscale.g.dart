@@ -88,6 +88,11 @@ _TailscaleNode _$TailscaleNodeFromJson(
 ) => _TailscaleNode(
   profileId: (json['profile-id'] as num?)?.toInt() ?? 0,
   name: json['name'] as String,
+  managedId: json['managed-id'] as String? ?? '',
+  attached: json['attached'] as bool? ?? false,
+  account: json['account'] == null
+      ? null
+      : TailscaleAccount.fromJson(json['account'] as Map<String, dynamic>),
   generation: (json['generation'] as num).toInt(),
   controlUrl: json['control-url'] as String? ?? '',
   hostname: json['hostname'] as String? ?? '',
@@ -131,6 +136,9 @@ Map<String, dynamic> _$TailscaleNodeToJson(_TailscaleNode instance) =>
     <String, dynamic>{
       'profile-id': instance.profileId,
       'name': instance.name,
+      'managed-id': instance.managedId,
+      'attached': instance.attached,
+      'account': instance.account,
       'generation': instance.generation,
       'control-url': instance.controlUrl,
       'hostname': instance.hostname,
@@ -152,6 +160,7 @@ const _$TailscaleStateDirModeEnumMap = {
   TailscaleStateDirMode.derived: 'derived',
   TailscaleStateDirMode.explicit: 'explicit',
   TailscaleStateDirMode.shared: 'shared',
+  TailscaleStateDirMode.managed: 'managed',
 };
 
 const _$TailscaleBackendStateEnumMap = {
@@ -165,14 +174,37 @@ const _$TailscaleBackendStateEnumMap = {
   TailscaleBackendState.unknown: 'unknown',
 };
 
+_TailscaleAccount _$TailscaleAccountFromJson(Map<String, dynamic> json) =>
+    _TailscaleAccount(
+      userId: json['user-id'] as String? ?? '',
+      loginName: json['login-name'] as String? ?? '',
+      displayName: json['display-name'] as String? ?? '',
+      tailnet: json['tailnet'] as String? ?? '',
+      controlUrl: json['control-url'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$TailscaleAccountToJson(_TailscaleAccount instance) =>
+    <String, dynamic>{
+      'user-id': instance.userId,
+      'login-name': instance.loginName,
+      'display-name': instance.displayName,
+      'tailnet': instance.tailnet,
+      'control-url': instance.controlUrl,
+    };
+
 _TailscaleNodeRef _$TailscaleNodeRefFromJson(Map<String, dynamic> json) =>
     _TailscaleNodeRef(
       name: json['name'] as String,
+      managedId: json['managed-id'] as String?,
       generation: (json['generation'] as num).toInt(),
     );
 
 Map<String, dynamic> _$TailscaleNodeRefToJson(_TailscaleNodeRef instance) =>
-    <String, dynamic>{'name': instance.name, 'generation': instance.generation};
+    <String, dynamic>{
+      'name': instance.name,
+      'managed-id': ?instance.managedId,
+      'generation': instance.generation,
+    };
 
 _TailscaleLegacyMigration _$TailscaleLegacyMigrationFromJson(
   Map<String, dynamic> json,
@@ -597,6 +629,58 @@ Map<String, dynamic> _$TailscaleNodeSetupToJson(_TailscaleNodeSetup instance) =>
       'logged-out': instance.loggedOut,
     };
 
+_TailscaleManagedRecord _$TailscaleManagedRecordFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleManagedRecord(
+  id: json['id'] as String,
+  profileId: (json['profile-id'] as num).toInt(),
+  controlUrl: json['control-url'] as String? ?? '',
+  exitNode: json['exit-node'] as String?,
+  exitNodeName: json['exit-node-name'] as String?,
+  acceptRoutes: json['accept-routes'] as bool?,
+  loggedOut: json['logged-out'] as bool? ?? false,
+  attached: json['attached'] as bool? ?? false,
+  removing: json['removing'] as bool? ?? false,
+);
+
+Map<String, dynamic> _$TailscaleManagedRecordToJson(
+  _TailscaleManagedRecord instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'profile-id': instance.profileId,
+  'control-url': instance.controlUrl,
+  'exit-node': ?instance.exitNode,
+  'exit-node-name': ?instance.exitNodeName,
+  'accept-routes': ?instance.acceptRoutes,
+  'logged-out': instance.loggedOut,
+  'attached': instance.attached,
+  'removing': instance.removing,
+};
+
+_TailscaleManagedSetup _$TailscaleManagedSetupFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleManagedSetup(
+  id: json['id'] as String,
+  name: json['name'] as String? ?? '',
+  controlUrl: json['control-url'] as String? ?? '',
+  exitNode: json['exit-node'] as String?,
+  acceptRoutes: json['accept-routes'] as bool?,
+  loggedOut: json['logged-out'] as bool? ?? false,
+  attached: json['attached'] as bool? ?? false,
+);
+
+Map<String, dynamic> _$TailscaleManagedSetupToJson(
+  _TailscaleManagedSetup instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'name': instance.name,
+  'control-url': instance.controlUrl,
+  'exit-node': ?instance.exitNode,
+  'accept-routes': ?instance.acceptRoutes,
+  'logged-out': instance.loggedOut,
+  'attached': instance.attached,
+};
+
 _TailscaleSetup _$TailscaleSetupFromJson(Map<String, dynamic> json) =>
     _TailscaleSetup(
       profileId: (json['profile-id'] as num).toInt(),
@@ -616,6 +700,14 @@ _TailscaleSetup _$TailscaleSetupFromJson(Map<String, dynamic> json) =>
           : TailscaleLegacyMigration.fromJson(
               json['legacy-migration'] as Map<String, dynamic>,
             ),
+      managed:
+          (json['managed'] as List<dynamic>?)
+              ?.map(
+                (e) =>
+                    TailscaleManagedSetup.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$TailscaleSetupToJson(_TailscaleSetup instance) =>
@@ -624,4 +716,246 @@ Map<String, dynamic> _$TailscaleSetupToJson(_TailscaleSetup instance) =>
       'config-source': _$TailscaleSettingSourceEnumMap[instance.configSource]!,
       'nodes': instance.nodes,
       'legacy-migration': ?instance.legacyMigration,
+      'managed': instance.managed,
     };
+
+_TailscaleRouteTarget _$TailscaleRouteTargetFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleRouteTarget(
+  kind: json['kind'] as String,
+  value: json['value'] as String,
+);
+
+Map<String, dynamic> _$TailscaleRouteTargetToJson(
+  _TailscaleRouteTarget instance,
+) => <String, dynamic>{'kind': instance.kind, 'value': instance.value};
+
+_TailscaleRouteOwner _$TailscaleRouteOwnerFromJson(Map<String, dynamic> json) =>
+    _TailscaleRouteOwner(
+      kind: json['kind'] as String,
+      id: json['id'] as String,
+    );
+
+Map<String, dynamic> _$TailscaleRouteOwnerToJson(
+  _TailscaleRouteOwner instance,
+) => <String, dynamic>{'kind': instance.kind, 'id': instance.id};
+
+_TailscaleRouteIdentity _$TailscaleRouteIdentityFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleRouteIdentity(
+  userId: json['user-id'] as String? ?? '',
+  tailnet: json['tailnet'] as String? ?? '',
+  controlUrl: json['control-url'] as String? ?? '',
+  loginName: json['login-name'] as String? ?? '',
+);
+
+Map<String, dynamic> _$TailscaleRouteIdentityToJson(
+  _TailscaleRouteIdentity instance,
+) => <String, dynamic>{
+  'user-id': instance.userId,
+  'tailnet': instance.tailnet,
+  'control-url': instance.controlUrl,
+  'login-name': instance.loginName,
+};
+
+_TailscaleRouteCandidate _$TailscaleRouteCandidateFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleRouteCandidate(
+  owner: TailscaleRouteOwner.fromJson(json['owner'] as Map<String, dynamic>),
+  device: json['device'] as String? ?? '',
+  label: json['label'] as String? ?? '',
+  tailnet: json['tailnet'] as String? ?? '',
+  rule: json['rule'] as String? ?? '',
+  removed: json['removed'] as bool? ?? false,
+);
+
+Map<String, dynamic> _$TailscaleRouteCandidateToJson(
+  _TailscaleRouteCandidate instance,
+) => <String, dynamic>{
+  'owner': instance.owner,
+  'device': instance.device,
+  'label': instance.label,
+  'tailnet': instance.tailnet,
+  'rule': instance.rule,
+  'removed': instance.removed,
+};
+
+_TailscaleRouteTargetReport _$TailscaleRouteTargetReportFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleRouteTargetReport(
+  target: TailscaleRouteTarget.fromJson(json['target'] as Map<String, dynamic>),
+  state:
+      $enumDecodeNullable(
+        _$TailscaleRouteStateEnumMap,
+        json['state'],
+        unknownValue: TailscaleRouteState.unconfirmed,
+      ) ??
+      TailscaleRouteState.unconfirmed,
+  owner: json['owner'] == null
+      ? null
+      : TailscaleRouteOwner.fromJson(json['owner'] as Map<String, dynamic>),
+  candidates:
+      (json['candidates'] as List<dynamic>?)
+          ?.map(
+            (e) => TailscaleRouteCandidate.fromJson(e as Map<String, dynamic>),
+          )
+          .toList() ??
+      const [],
+);
+
+Map<String, dynamic> _$TailscaleRouteTargetReportToJson(
+  _TailscaleRouteTargetReport instance,
+) => <String, dynamic>{
+  'target': instance.target,
+  'state': _$TailscaleRouteStateEnumMap[instance.state]!,
+  'owner': instance.owner,
+  'candidates': instance.candidates,
+};
+
+const _$TailscaleRouteStateEnumMap = {
+  TailscaleRouteState.bound: 'bound',
+  TailscaleRouteState.assigned: 'assigned',
+  TailscaleRouteState.conflict: 'conflict',
+  TailscaleRouteState.unconfirmed: 'unconfirmed',
+  TailscaleRouteState.reconfirm: 'reconfirm',
+  TailscaleRouteState.unavailable: 'unavailable',
+};
+
+_TailscaleRouteAccountReport _$TailscaleRouteAccountReportFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleRouteAccountReport(
+  id: json['id'] as String,
+  proxy: json['proxy'] as String? ?? '',
+  identity: json['identity'] == null
+      ? null
+      : TailscaleRouteIdentity.fromJson(
+          json['identity'] as Map<String, dynamic>,
+        ),
+  fresh: json['fresh'] as bool? ?? false,
+  available: json['available'] as bool? ?? false,
+  loggedOut: json['logged-out'] as bool? ?? false,
+  domain: json['domain'] as String? ?? '',
+  addresses: (json['addresses'] as num?)?.toInt() ?? 0,
+);
+
+Map<String, dynamic> _$TailscaleRouteAccountReportToJson(
+  _TailscaleRouteAccountReport instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'proxy': instance.proxy,
+  'identity': instance.identity,
+  'fresh': instance.fresh,
+  'available': instance.available,
+  'logged-out': instance.loggedOut,
+  'domain': instance.domain,
+  'addresses': instance.addresses,
+};
+
+_TailscaleRoutes _$TailscaleRoutesFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleRoutes(
+  profileId: (json['profile-id'] as num?)?.toInt() ?? 0,
+  active: json['active'] as bool? ?? false,
+  complete: json['complete'] as bool? ?? false,
+  saved: json['saved'] as bool? ?? false,
+  unreadable: json['unreadable'] as bool? ?? false,
+  revision: (json['revision'] as num?)?.toInt() ?? 0,
+  accounts:
+      (json['accounts'] as List<dynamic>?)
+          ?.map(
+            (e) =>
+                TailscaleRouteAccountReport.fromJson(e as Map<String, dynamic>),
+          )
+          .toList() ??
+      const [],
+  targets:
+      (json['targets'] as List<dynamic>?)
+          ?.map(
+            (e) =>
+                TailscaleRouteTargetReport.fromJson(e as Map<String, dynamic>),
+          )
+          .toList() ??
+      const [],
+  protectedPrefixes:
+      (json['protected-prefixes'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+  protectedSuffixes:
+      (json['protected-suffixes'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+);
+
+Map<String, dynamic> _$TailscaleRoutesToJson(_TailscaleRoutes instance) =>
+    <String, dynamic>{
+      'profile-id': instance.profileId,
+      'active': instance.active,
+      'complete': instance.complete,
+      'saved': instance.saved,
+      'unreadable': instance.unreadable,
+      'revision': instance.revision,
+      'accounts': instance.accounts,
+      'targets': instance.targets,
+      'protected-prefixes': instance.protectedPrefixes,
+      'protected-suffixes': instance.protectedSuffixes,
+    };
+
+_TailscaleRouteAssignment _$TailscaleRouteAssignmentFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleRouteAssignment(
+  target: TailscaleRouteTarget.fromJson(json['target'] as Map<String, dynamic>),
+  owner: TailscaleRouteOwner.fromJson(json['owner'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$TailscaleRouteAssignmentToJson(
+  _TailscaleRouteAssignment instance,
+) => <String, dynamic>{'target': instance.target, 'owner': instance.owner};
+
+_TailscaleAssignResult _$TailscaleAssignResultFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleAssignResult(
+  outcome: json['outcome'] as String? ?? '',
+  routes: json['routes'] == null
+      ? null
+      : TailscaleRoutes.fromJson(json['routes'] as Map<String, dynamic>),
+  error: json['error'] == null
+      ? null
+      : TailscaleError.fromJson(json['error'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$TailscaleAssignResultToJson(
+  _TailscaleAssignResult instance,
+) => <String, dynamic>{
+  'outcome': instance.outcome,
+  'routes': instance.routes,
+  'error': instance.error,
+};
+
+_TailscaleForgetResult _$TailscaleForgetResultFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleForgetResult(
+  outcome: json['outcome'] as String? ?? '',
+  error: json['error'] == null
+      ? null
+      : TailscaleError.fromJson(json['error'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$TailscaleForgetResultToJson(
+  _TailscaleForgetResult instance,
+) => <String, dynamic>{'outcome': instance.outcome, 'error': instance.error};
+
+_TailscaleRoutesEvent _$TailscaleRoutesEventFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleRoutesEvent(
+  profileId: (json['profile-id'] as num?)?.toInt() ?? 0,
+  revision: (json['revision'] as num?)?.toInt() ?? 0,
+);
+
+Map<String, dynamic> _$TailscaleRoutesEventToJson(
+  _TailscaleRoutesEvent instance,
+) => <String, dynamic>{
+  'profile-id': instance.profileId,
+  'revision': instance.revision,
+};
