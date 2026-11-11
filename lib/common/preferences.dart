@@ -7,6 +7,7 @@ import 'package:fl_clash/common/system_dns.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
+import 'package:proxy/proxy.dart' show SystemProxySnapshot;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Preferences {
@@ -163,6 +164,36 @@ class Preferences {
   Future<void> clearSystemDnsRecord() async {
     final sharedPreferencesIns = await _store.value;
     await sharedPreferencesIns?.remove(systemDnsRecordKey);
+  }
+
+  Future<SystemProxySnapshot?> getSystemProxySnapshot() async {
+    try {
+      final sharedPreferencesIns = await _store.value;
+      final raw = sharedPreferencesIns?.getString(systemProxySnapshotKey);
+      if (raw == null) {
+        return null;
+      }
+      return SystemProxySnapshot.fromJson(json.decode(raw));
+    } catch (e) {
+      commonPrint.log(
+        'getSystemProxySnapshot error ${e.toString()}',
+        logLevel: LogLevel.warning,
+      );
+      return null;
+    }
+  }
+
+  Future<void> saveSystemProxySnapshot(SystemProxySnapshot snapshot) async {
+    final sharedPreferencesIns = await _store.value;
+    await sharedPreferencesIns?.setString(
+      systemProxySnapshotKey,
+      json.encode(snapshot.toJson()),
+    );
+  }
+
+  Future<void> clearSystemProxySnapshot() async {
+    final sharedPreferencesIns = await _store.value;
+    await sharedPreferencesIns?.remove(systemProxySnapshotKey);
   }
 
   Future<BootRecord?> getBootRecord() async {

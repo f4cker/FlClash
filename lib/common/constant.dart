@@ -36,6 +36,11 @@ const watchExecution = false;
 
 const safeModeBuild = bool.fromEnvironment('SAFE_MODE');
 
+/// A test process on a developer's machine must never rewrite that machine's
+/// system proxy or DNS.
+final hostNetworkWritable =
+    !safeModeBuild && !Platform.environment.containsKey('FLUTTER_TEST');
+
 /// The bundled core has no MITM, so this stays off until one that has it ships.
 /// Not const so tests can cover both states.
 bool mitmFeature = const bool.fromEnvironment('FEATURE_MITM');
@@ -135,6 +140,7 @@ const localhost = '127.0.0.1';
 const clashConfigKey = 'clash_config';
 const configKey = 'config';
 const systemDnsRecordKey = 'system_dns_record';
+const systemProxySnapshotKey = 'system_proxy_snapshot';
 const bootRecordKey = 'boot_record';
 const tailscaleNodeRecordsKey = 'tailscale_node_records';
 const tailscaleLegacyMigrationKey = 'tailscale_legacy_migration';
