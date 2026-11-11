@@ -1,6 +1,7 @@
 package core
 
 import (
+	"cmp"
 	"os"
 	"strings"
 	"sync"
@@ -38,8 +39,25 @@ func runningBlocked() bool {
 	return runningConfigBlocked
 }
 
+// Panel-added Tailscale nodes are named after the parse, so a mount node of
+// the same name is the one that takes a suffix.
+func mountSetupOf(params *SetupParams) *MountSetup {
+	if params.Mounts == nil {
+		return nil
+	}
+	setup := *params.Mounts
+	if params.Tailscale != nil {
+		for _, managed := range params.Tailscale.Managed {
+			if managed.ID != "" {
+				setup.reserved = append(setup.reserved, cmp.Or(managed.Name, tailscaleManagedBaseName))
+			}
+		}
+	}
+	return &setup
+}
+
 func checkMountedSetup(params *SetupParams) error {
-	document, _, err := mountedDocument(params.Base, runningConfigPath(), params.Mounts)
+	document, _, err := mountedDocument(params.Base, runningConfigPath(), mountSetupOf(params))
 	if err != nil {
 		return err
 	}

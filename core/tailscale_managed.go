@@ -23,8 +23,6 @@ import (
 	"github.com/metacubex/tailscale/ipn"
 )
 
-const tailscaleManagedBaseName = "Tailscale"
-
 const tailscaleWatchRetry = 5 * time.Second
 
 type tailscaleManagedNode struct {

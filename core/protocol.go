@@ -157,6 +157,8 @@ type TailscaleSetup struct {
 	ManagedUnknown bool `json:"managed-unknown,omitempty"`
 }
 
+const tailscaleManagedBaseName = "Tailscale"
+
 // A node the panel added; ID is the binding, Name only a label the Core may
 // suffix to keep it unique.
 type TailscaleManagedSetup struct {

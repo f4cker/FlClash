@@ -34,6 +34,7 @@ type MountSetup struct {
 	Revision string        `json:"revision"`
 	Sources  []MountSource `json:"sources"`
 	Groups   []string      `json:"groups,omitempty"`
+	reserved []string
 }
 
 const (
@@ -352,7 +353,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		return report, nil
 	}
 	taken := map[string]struct{}{}
-	for _, name := range reservedProxyNames {
+	for _, name := range slices.Concat(reservedProxyNames, setup.reserved) {
 		taken[name] = struct{}{}
 	}
 	proxyTypes, err := proxyTypesOf(root)

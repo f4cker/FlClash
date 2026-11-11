@@ -282,6 +282,36 @@ func TestMountsReachAutoAndChosenGroupsWithSuffixesOnlyOnClashes(t *testing.T) {
 	}
 }
 
+func TestMountNodeTakesTheSuffixWhenItSharesAManagedTailscaleName(t *testing.T) {
+	home := withMountHome(t)
+	source := writeMountFile(t, home, "1.yaml", `proxies:
+  - {name: hk, type: socks5, server: 127.0.0.1, port: 1080}
+  - {name: Tailscale, type: socks5, server: 127.0.0.1, port: 1081}
+  - {name: us, type: socks5, server: 127.0.0.1, port: 1082}
+`)
+	params := &SetupParams{
+		Mounts: &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}},
+		Tailscale: &TailscaleSetup{Managed: []TailscaleManagedSetup{
+			{ID: "a", Name: "hk"},
+			{ID: "b"},
+			{Name: "us"},
+		}},
+	}
+
+	report, err := applyMountOverrides(rootOf(t, "proxy-groups:\n  - {name: G, type: select, include-all: true}\n"), mountSetupOf(params))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []MountNode{{"hk (S)", "hk"}, {"Tailscale (S)", "Tailscale"}, {"us", "us"}}
+	if !reflect.DeepEqual(report.Sources[0].Nodes, want) {
+		t.Errorf("nodes = %+v, want %+v", report.Sources[0].Nodes, want)
+	}
+	if params.Mounts.reserved != nil {
+		t.Error("the setup the host sent was changed")
+	}
+}
+
 func TestMountSuffixKeepsMetacharactersLiteral(t *testing.T) {
 	home := withMountHome(t)
 	const base = `proxies:

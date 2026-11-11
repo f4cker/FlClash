@@ -155,9 +155,9 @@ func runningConfigPath() string {
 func loadSetupConfig(params *SetupParams) (*config.Config, *MountReport, error) {
 	path := runningConfigPath()
 	if params.Base != nil {
-		return loadConfigWithBase(params.Base, path, params.Mounts)
+		return loadConfigWithBase(params.Base, path, mountSetupOf(params))
 	}
-	return loadMountedConfig(path, params.Mounts)
+	return loadMountedConfig(path, mountSetupOf(params))
 }
 
 // A failed profile with mounts keeps the running config, or blocks; the
