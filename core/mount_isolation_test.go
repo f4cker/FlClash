@@ -362,11 +362,11 @@ func TestMountLeavesOutNodesThatRelayThroughTailscale(t *testing.T) {
 		t.Errorf("relay = %v, want %v", target.Relay, want)
 	}
 	inspected := handleInspectMountSource(MountInspectSourceParams{Path: path, Relay: target.Relay, Managed: []string{"", "Work"}})
-	if inspected.Count != 2 || inspected.RelayExcluded != 9 || inspected.TailscaleExcluded != 1 || inspected.InterfaceExcluded != 1 {
+	if inspected.Count != 2 || inspected.RelayExcluded != 9 || inspected.TailscaleExcluded != 1 || inspected.UnsupportedExcluded != 1 {
 		t.Errorf("inspection = %+v, want plain and chained, and the nodes added later left out", inspected)
 	}
 	unchecked := handleInspectMountSource(MountInspectSourceParams{Path: path})
-	if unchecked.RelayExcluded != 0 || unchecked.Count != 11 || unchecked.InterfaceExcluded != 1 {
+	if unchecked.RelayExcluded != 0 || unchecked.Count != 11 || unchecked.UnsupportedExcluded != 1 {
 		t.Errorf("inspection without a target = %+v, want nothing checked", unchecked)
 	}
 }

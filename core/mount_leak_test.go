@@ -168,7 +168,7 @@ dns:
 // M-3. A node whose endpoints are not its server is never mounted: a
 // WireGuard node given peers, OpenVPN, ZeroTier, EasyTier, MASQUE, VLESS
 // with an XHTTP download server and Hysteria2 with a realm on. The
-// inspection counts each as relay-excluded, as the provider drops it.
+// inspection counts each as unsupported, as the provider drops it.
 func TestMountSourceExcludesNodesWithUncheckedEndpoints(t *testing.T) {
 	home := withMountHome(t)
 	source := writeMountFile(t, home, "1.yaml", `proxies:
@@ -188,8 +188,8 @@ func TestMountSourceExcludesNodesWithUncheckedEndpoints(t *testing.T) {
 `)
 	kept := []string{"wg", "xh", "hy", "plain"}
 	got := handleInspectMountSource(MountInspectSourceParams{Path: source})
-	if got.Status != mountSourceNodes || got.Count != 4 || got.RelayExcluded != 9 || got.Listed != 13 || !reflect.DeepEqual(got.names, kept) {
-		t.Errorf("inspection = %+v, want %v kept, nine relay-excluded", got, kept)
+	if got.Status != mountSourceNodes || got.Count != 4 || got.UnsupportedExcluded != 9 || got.RelayExcluded != 0 || got.Listed != 13 || !reflect.DeepEqual(got.names, kept) {
+		t.Errorf("inspection = %+v, want %v kept, nine unsupported", got, kept)
 	}
 	const profile = `proxy-groups:
   - {name: Auto, type: url-test, include-all-providers: true}
@@ -200,8 +200,8 @@ rules:
 	if !reflect.DeepEqual(members["Auto"], kept) {
 		t.Errorf("Auto = %v, want only %v", members["Auto"], kept)
 	}
-	if source := report.Sources[0]; source.RelayExcluded != 9 || len(source.Nodes) != 4 {
-		t.Errorf("report = %+v, want nine relay-excluded and four nodes", source)
+	if source := report.Sources[0]; source.UnsupportedExcluded != 9 || source.RelayExcluded != 0 || len(source.Nodes) != 4 {
+		t.Errorf("report = %+v, want nine unsupported and four nodes", source)
 	}
 }
 

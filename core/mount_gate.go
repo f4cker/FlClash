@@ -133,12 +133,22 @@ func takeMountRuntimeError() error {
 	return err
 }
 
+// The gate refuses before the provider swaps its content, so what it held
+// stays loaded.
+type mountUpdateRefused struct {
+	name, what string
+}
+
+func (e *mountUpdateRefused) Error() string {
+	return fmt.Sprintf("%s now %s while subscription nodes are mounted; apply the profile again to take it", e.name, e.what)
+}
+
 func refuseMountUpdate(name, what string) error {
 	if !slices.Contains(mountGateRefused, name) {
 		mountGateRefused = append(mountGateRefused, name)
 		slices.Sort(mountGateRefused)
 	}
-	return fmt.Errorf("%s now %s while subscription nodes are mounted; apply the profile again to take it", name, what)
+	return &mountUpdateRefused{name: name, what: what}
 }
 
 // Every dialer-proxy the entries name, under any spelling, and the built

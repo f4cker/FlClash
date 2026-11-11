@@ -186,7 +186,7 @@ func TestMountProviderDropsNodesThatBindAnInterface(t *testing.T) {
 `)
 	got := handleInspectMountSource(MountInspectSourceParams{Path: only})
 	got.names = nil
-	if want := (MountSourceInspection{Status: mountSourceNodes, Listed: 2, InterfaceExcluded: 2}); !reflect.DeepEqual(got, want) {
+	if want := (MountSourceInspection{Status: mountSourceNodes, Listed: 2, UnsupportedExcluded: 2}); !reflect.DeepEqual(got, want) {
 		t.Errorf("inspection = %+v, want %+v", got, want)
 	}
 	const profile = `proxies:
@@ -200,7 +200,7 @@ rules:
 	if !reflect.DeepEqual(members["Auto"], []string{"REJECT"}) {
 		t.Errorf("Auto = %v, want only its REJECT fallback", members["Auto"])
 	}
-	if source := report.Sources[0]; source.InterfaceExcluded != 2 || len(source.Nodes) != 0 {
+	if source := report.Sources[0]; source.UnsupportedExcluded != 2 || len(source.Nodes) != 0 {
 		t.Errorf("source = %+v, want both nodes counted out", source)
 	}
 }
@@ -418,7 +418,7 @@ func TestMountSourceDropsNodesWhoseServerIsOnTailscaleOrLocal(t *testing.T) {
   - {name: plain, type: socks5, server: 192.0.2.1, port: 2}
 `)
 	got := handleInspectMountSource(MountInspectSourceParams{Path: source})
-	if got.Count != 1 || got.RelayExcluded != 3 || got.InterfaceExcluded != 1 || !reflect.DeepEqual(got.names, []string{"plain"}) {
+	if got.Count != 1 || got.RelayExcluded != 3 || got.UnsupportedExcluded != 1 || !reflect.DeepEqual(got.names, []string{"plain"}) {
 		t.Errorf("inspection = %+v, want plain kept, three relays and one mark counted out", got)
 	}
 	const profile = `proxies:

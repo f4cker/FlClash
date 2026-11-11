@@ -49,15 +49,15 @@ const (
 )
 
 // Count is what the mount provider would hold: Listed less Tailscale nodes,
-// nameless entries and repeated names.
+// nameless entries and repeated names; Unsupported, paths it cannot check.
 type MountSourceInspection struct {
-	Status            string `json:"status"`
-	Count             int    `json:"count"`
-	Listed            int    `json:"listed"`
-	TailscaleExcluded int    `json:"tailscale-excluded"`
-	RelayExcluded     int    `json:"relay-excluded"`
-	InterfaceExcluded int    `json:"interface-excluded"`
-	names             []string
+	Status              string `json:"status"`
+	Count               int    `json:"count"`
+	Listed              int    `json:"listed"`
+	TailscaleExcluded   int    `json:"tailscale-excluded"`
+	RelayExcluded       int    `json:"relay-excluded"`
+	UnsupportedExcluded int    `json:"unsupported-excluded"`
+	names               []string
 }
 
 func mountProviderName(id int64) string {
@@ -148,7 +148,7 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 		// tell whether one is on Tailscale: never built, as the provider.
 		if flashguard.UncheckedEndpoints(mapping) {
 			seen[name] = struct{}{}
-			inspection.RelayExcluded++
+			inspection.UnsupportedExcluded++
 			continue
 		}
 		proxy, err := adapter.ParseProxy(mapping)
@@ -161,7 +161,7 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 		switch {
 		case slices.ContainsFunc(proxyOptionValues(mapping, "interface-name"), func(value string) bool { return value != "" }),
 			slices.ContainsFunc(proxyOptionValues(mapping, "routing-mark"), func(value string) bool { return value != "" && value != "0" }):
-			inspection.InterfaceExcluded++
+			inspection.UnsupportedExcluded++
 		case slices.ContainsFunc(proxyOptionValues(mapping, "dialer-proxy"), relay.reaches),
 			splitErr == nil && flashguard.ProtectedServer(host):
 			// A server on Tailscale, or a local one, is a relay through it.
@@ -171,7 +171,7 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 		}
 	}
 	inspection.Count = len(inspection.names)
-	if inspection.Count == 0 && inspection.TailscaleExcluded+inspection.RelayExcluded+inspection.InterfaceExcluded < inspection.Listed {
+	if inspection.Count == 0 && inspection.TailscaleExcluded+inspection.RelayExcluded+inspection.UnsupportedExcluded < inspection.Listed {
 		return MountSourceInspection{Status: mountSourceInvalid, Listed: len(mappings)}
 	}
 	return inspection
@@ -344,13 +344,13 @@ type MountNode struct {
 }
 
 type MountSourceReport struct {
-	ID                int64       `json:"id"`
-	Provider          string      `json:"provider"`
-	Status            string      `json:"status"`
-	TailscaleExcluded int         `json:"tailscale-excluded"`
-	RelayExcluded     int         `json:"relay-excluded"`
-	InterfaceExcluded int         `json:"interface-excluded"`
-	Nodes             []MountNode `json:"nodes"`
+	ID                  int64       `json:"id"`
+	Provider            string      `json:"provider"`
+	Status              string      `json:"status"`
+	TailscaleExcluded   int         `json:"tailscale-excluded"`
+	RelayExcluded       int         `json:"relay-excluded"`
+	UnsupportedExcluded int         `json:"unsupported-excluded"`
+	Nodes               []MountNode `json:"nodes"`
 }
 
 // Original is a group that also holds base proxies, left with mihomo's
@@ -444,13 +444,13 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		nodes, renames := mountNodeNames(source, inspection.names, taken, reserved)
 		report.Renamed += len(renames)
 		report.Sources = append(report.Sources, MountSourceReport{
-			ID:                source.ID,
-			Provider:          name,
-			Status:            inspection.Status,
-			TailscaleExcluded: inspection.TailscaleExcluded,
-			RelayExcluded:     inspection.RelayExcluded,
-			InterfaceExcluded: inspection.InterfaceExcluded,
-			Nodes:             nodes,
+			ID:                  source.ID,
+			Provider:            name,
+			Status:              inspection.Status,
+			TailscaleExcluded:   inspection.TailscaleExcluded,
+			RelayExcluded:       inspection.RelayExcluded,
+			UnsupportedExcluded: inspection.UnsupportedExcluded,
+			Nodes:               nodes,
 		})
 		definition, err := mountProviderNode(source.Path, renames, relay)
 		if err != nil {

@@ -229,6 +229,20 @@ func providerError(code, providerName string, err error) *MethodError {
 	}
 }
 
+// Kept: the refused provider is still the loaded one, on its old content.
+func mountRefusedError(providerName string, updated cp.Provider, err error) *MethodError {
+	var refused *mountUpdateRefused
+	if !errors.As(err, &refused) {
+		return nil
+	}
+	current, loaded := lookupExternalProvider(providerName)
+	return &MethodError{
+		Code:    "provider_update_refused_mount",
+		Message: err.Error(),
+		Details: map[string]any{"providerName": providerName, "kept": loaded && current == updated},
+	}
+}
+
 func providerUpdateError(providerName string, err error) *MethodError {
 	if methodErr := requestMethodError(err, map[string]any{"providerName": providerName}); methodErr != nil {
 		return methodErr
@@ -271,6 +285,9 @@ func handleUpdateExternalProvider(params NameParams) error {
 	name := params.Name
 	return updateExternalProvider(name, func(p cp.Provider) *MethodError {
 		if err := p.Update(); err != nil {
+			if refused := mountRefusedError(name, p, err); refused != nil {
+				return refused
+			}
 			return providerUpdateError(name, err)
 		}
 		return nil
@@ -281,6 +298,9 @@ func handleSideLoadExternalProvider(params *SideLoadParams) error {
 	name := params.Name
 	return updateExternalProvider(name, func(p cp.Provider) *MethodError {
 		if err := sideUpdateExternalProvider(p, []byte(params.Data)); err != nil {
+			if refused := mountRefusedError(name, p, err); refused != nil {
+				return refused
+			}
 			return providerError("provider_update_error", name, err)
 		}
 		return nil
