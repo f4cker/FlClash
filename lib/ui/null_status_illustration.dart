@@ -22,6 +22,8 @@ enum NullStatusIllustration implements Illustration {
   fonts,
   permission,
   camera,
+  devices,
+  core,
   error;
 
   @override
@@ -44,6 +46,8 @@ enum NullStatusIllustration implements Illustration {
     fonts => AppGlyphs.font,
     permission => AppGlyphs.lock,
     camera => AppGlyphs.camera,
+    devices => AppGlyphs.devices,
+    core => AppGlyphs.bolt,
     error => AppGlyphs.error,
   };
 

@@ -32,6 +32,12 @@ class Navigation implements NavigationPort {
         builder: (_) => const ProfilesView(),
       ),
       NavigationItem(
+        glyph: AppGlyphs.devices,
+        label: PageLabel.tailscale,
+        builder: (_) => const TailscaleView(),
+        modes: [NavigationItemMode.desktop],
+      ),
+      NavigationItem(
         glyph: AppGlyphs.requests,
         label: PageLabel.requests,
         builder: (_) => const RequestsView(),

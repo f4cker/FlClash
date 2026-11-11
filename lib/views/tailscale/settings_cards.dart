@@ -1,0 +1,515 @@
+import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
+import 'package:fl_clash/views/dashboard/widgets/card.dart';
+import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/widgets.dart';
+
+import 'state.dart';
+import 'widgets.dart';
+
+/// Why a settings card takes no change now; null when it does.
+String? tailscaleSettingsLock(
+  BuildContext context, {
+  required TailscaleNode node,
+  required TailscalePhase phase,
+}) {
+  final appLocalizations = context.appLocalizations;
+  if (phase == TailscalePhase.connected) {
+    return node.overridable ? null : appLocalizations.tsNotOverridable;
+  }
+  return switch (phase) {
+    TailscalePhase.signedOut ||
+    TailscalePhase.preparing ||
+    TailscalePhase.waitingBrowser ||
+    TailscalePhase.needsReauth => appLocalizations.tsAfterLoginSelectable,
+    _ => appLocalizations.tsAfterConnectSelectable,
+  };
+}
+
+String? tailscaleSourceLabel(
+  BuildContext context,
+  TailscaleSettingSource source,
+) {
+  final appLocalizations = context.appLocalizations;
+  return switch (source) {
+    TailscaleSettingSource.subscription => appLocalizations.tsFromSubscription,
+    TailscaleSettingSource.profile => appLocalizations.tsFromProfile,
+    TailscaleSettingSource.override => appLocalizations.tsFromLocal,
+    TailscaleSettingSource.coreDefault => null,
+  };
+}
+
+/// The small inset tag after a secondary line, design.md §9.
+class TailscaleTag extends StatelessWidget {
+  const TailscaleTag({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      alignment: Alignment.center,
+      decoration: ShapeDecoration(
+        color: DashboardColors.of(context).tone2,
+        shape: AppShape.all(AppCorner.full),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        style: AppTextStyle.caption2
+            .of(context, emphasized: true)
+            .copyWith(color: context.colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+class _CardFootnote extends StatelessWidget {
+  const _CardFootnote(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: AppTextStyle.caption1
+          .of(context)
+          .copyWith(color: context.colorScheme.onSurfaceVariant),
+    );
+  }
+}
+
+/// A settings block row: a title over a secondary line, then [trailing].
+class _SettingBlock extends StatelessWidget {
+  const _SettingBlock({
+    required this.title,
+    required this.subtitle,
+    this.tag,
+    this.trailing,
+    this.onTap,
+    this.dimmed = false,
+    this.semanticLabel,
+  });
+
+  final String title;
+  final String subtitle;
+  final String? tag;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final bool dimmed;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final tag = this.tag;
+    final content = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Row(
+        spacing: 12,
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 2,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DashboardText.rowTitle(context).copyWith(
+                    color: dimmed ? colorScheme.onSurfaceVariant : null,
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(subtitle, style: DashboardText.label(context)),
+                    if (tag != null) TailscaleTag(label: tag),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          ?trailing,
+        ],
+      ),
+    );
+    return Semantics(
+      button: onTap != null,
+      enabled: onTap != null,
+      label: semanticLabel,
+      child: DashboardBlock(
+        radius: AppCorner.md,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        onTap: onTap,
+        child: content,
+      ),
+    );
+  }
+}
+
+class TailscaleExitCard extends StatelessWidget {
+  const TailscaleExitCard({
+    super.key,
+    required this.node,
+    required this.status,
+    required this.phase,
+    required this.panel,
+    required this.onSelect,
+    required this.onReadSettings,
+    this.onRetry,
+  });
+
+  final TailscaleNode node;
+  final TailscaleStatus? status;
+  final TailscalePhase phase;
+  final TailscalePanelNode panel;
+
+  /// Null is the explicit choice of no exit node.
+  final ValueChanged<TailscalePeer?> onSelect;
+  final VoidCallback onReadSettings;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final lock = tailscaleSettingsLock(context, node: node, phase: phase);
+    final current = tailscaleCurrentExitPeer(node, status);
+    final currentValue = tailscaleExitValue(node, status);
+    final hasExit = current != null || currentValue != null;
+    final candidates =
+        [
+          for (final peer in status?.peers ?? const <TailscalePeer>[])
+            if (peer.exitNodeOption) peer,
+        ]..sort((a, b) {
+          if (a.online != b.online) {
+            return a.online ? -1 : 1;
+          }
+          return (a.hostName).toLowerCase().compareTo(b.hostName.toLowerCase());
+        });
+    final stale = panel.readFailed;
+    final applying = panel.applyingExit;
+    final source = tailscaleSourceLabel(context, node.settings.exitNode.source);
+    final Widget block;
+    if (lock != null) {
+      block = _SettingBlock(
+        title: lock,
+        subtitle: hasExit
+            ? _exitName(context, current, currentValue)
+            : appLocalizations.tsNoExitNode,
+        dimmed: true,
+        semanticLabel: '${appLocalizations.tsExitNode}，$lock',
+      );
+    } else {
+      final canChoose = !stale && candidates.isNotEmpty;
+      final canTurnOff = hasExit;
+      final String title;
+      final String subtitle;
+      var dimmed = false;
+      if (hasExit) {
+        title = _exitName(context, current, currentValue);
+        subtitle = current == null
+            ? appLocalizations.tsStatusUnknown
+            : [
+                ?tailscaleAddressOf(current),
+                current.online
+                    ? appLocalizations.tsOnline
+                    : appLocalizations.tsOffline,
+              ].join(' · ');
+      } else if (candidates.isEmpty && !stale) {
+        title = appLocalizations.tsNoExitCandidates;
+        subtitle = appLocalizations.tsNoExitCandidatesTip;
+        dimmed = true;
+      } else {
+        title = appLocalizations.tsNoExitNode;
+        subtitle = appLocalizations.tsNoExitNodeTip;
+      }
+      final menuItems = [
+        PopupMenuItem(
+          label: appLocalizations.tsNoExitNode,
+          checked: !hasExit,
+          section: PopupMenuSection(title: appLocalizations.tsChooseExitNode),
+          onPressed: hasExit ? () => onSelect(null) : null,
+        ),
+        if (canChoose)
+          for (final (index, peer) in candidates.indexed)
+            PopupMenuItem(
+              label: [
+                tailscaleDeviceName(context, peer),
+                ?tailscaleAddressOf(peer),
+              ].join(' · '),
+              subtitle: peer.online
+                  ? null
+                  : appLocalizations.tsOfflineNotSelectable,
+              checked: current?.id == peer.id,
+              section: index == 0 ? const PopupMenuSection() : null,
+              onPressed: peer.online && current?.id != peer.id
+                  ? () => onSelect(peer)
+                  : null,
+            ),
+      ];
+      final interactive = !applying && (canChoose || canTurnOff);
+      final staleSubtitle = stale ? appLocalizations.tsExitStale : null;
+      block = PopupAnchor(
+        targetBuilder: (open) => _SettingBlock(
+          title: title,
+          subtitle: applying
+              ? appLocalizations.tsExitApplying
+              : staleSubtitle ?? subtitle,
+          tag: applying || stale ? null : source,
+          dimmed: dimmed,
+          semanticLabel: '${appLocalizations.tsExitNode}，$title',
+          onTap: interactive ? open : null,
+          trailing: applying
+              ? const ActivityIndicator(size: 16)
+              : interactive
+              ? GlyphIcon(
+                  AppGlyphs.chevronDown,
+                  size: 16,
+                  color: context.colorScheme.onSurfaceVariant,
+                )
+              : null,
+        ),
+        popupBuilder: (_) => PopupMenu(items: menuItems, maxVisibleItems: 8),
+      );
+    }
+    return TailscaleCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 12,
+        children: [
+          DashboardCardHeader(
+            glyph: AppGlyphs.vpn,
+            title: appLocalizations.tsExitNode,
+          ),
+          block,
+          ?_noticeBanner(context),
+          _CardFootnote(appLocalizations.tsExitNodeTip),
+          if (lock == null &&
+              node.settings.exitNode.source == TailscaleSettingSource.override)
+            _CardFootnote(appLocalizations.tsOverrideTip),
+        ],
+      ),
+    );
+  }
+
+  String _exitName(
+    BuildContext context,
+    TailscalePeer? current,
+    String? value,
+  ) {
+    if (current != null) {
+      return tailscaleDeviceName(context, current);
+    }
+    return value ?? context.appLocalizations.tsNoExitNode;
+  }
+
+  Widget? _noticeBanner(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return switch (panel.exitNotice) {
+      null || TailscaleSettingNotice.updated => null,
+      TailscaleSettingNotice.saved => TailscaleBanner(
+        level: TailscaleBannerLevel.warn,
+        text: appLocalizations.tsSettingsSaved,
+        actionLabel: appLocalizations.tsReadSettings,
+        onAction: panel.reading ? null : onReadSettings,
+      ),
+      TailscaleSettingNotice.applyFailed => TailscaleBanner(
+        level: TailscaleBannerLevel.error,
+        text: appLocalizations.tsSettingsApplyFailed,
+        actionLabel: appLocalizations.tsReadSettings,
+        onAction: panel.reading ? null : onReadSettings,
+      ),
+      TailscaleSettingNotice.failed => TailscaleBanner(
+        level: TailscaleBannerLevel.error,
+        text: appLocalizations.tsExitFailed,
+        actionLabel: onRetry == null ? null : appLocalizations.retry,
+        onAction: onRetry,
+      ),
+      TailscaleSettingNotice.unknown => TailscaleBanner(
+        level: TailscaleBannerLevel.warn,
+        text: appLocalizations.tsExitUnknown,
+        actionLabel: appLocalizations.tsReadSettings,
+        onAction: panel.reading ? null : onReadSettings,
+      ),
+    };
+  }
+}
+
+class TailscaleRoutesCard extends StatelessWidget {
+  const TailscaleRoutesCard({
+    super.key,
+    required this.node,
+    required this.status,
+    required this.phase,
+    required this.panel,
+    required this.onChanged,
+    required this.onReadSettings,
+    this.onRetry,
+  });
+
+  final TailscaleNode node;
+  final TailscaleStatus? status;
+  final TailscalePhase phase;
+  final TailscalePanelNode panel;
+  final ValueChanged<bool> onChanged;
+  final VoidCallback onReadSettings;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final lock = tailscaleSettingsLock(context, node: node, phase: phase);
+    final value = tailscaleAcceptsRoutes(node, status);
+    final applying = panel.applyingRoutes;
+    final enabled = lock == null && !applying;
+    final source = tailscaleSourceLabel(
+      context,
+      node.settings.acceptRoutes.source,
+    );
+    final subtitle =
+        lock ??
+        (applying
+            ? appLocalizations.tsRoutesApplying
+            : value
+            ? appLocalizations.tsOn
+            : appLocalizations.tsOff);
+    return TailscaleCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 12,
+        children: [
+          DashboardCardHeader(
+            glyph: AppGlyphs.split,
+            title: appLocalizations.tsSubnetRoutes,
+          ),
+          _SettingBlock(
+            title: appLocalizations.tsAcceptRoutes,
+            subtitle: subtitle,
+            tag: lock == null && !applying ? source : null,
+            dimmed: lock != null,
+            semanticLabel: appLocalizations.tsAcceptRoutes,
+            onTap: enabled ? () => onChanged(!value) : null,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                if (applying) const ActivityIndicator(size: 16),
+                DashboardSwitch(
+                  value: lock == null && value,
+                  onChanged: enabled ? onChanged : null,
+                  semanticLabel: appLocalizations.tsAcceptRoutes,
+                ),
+              ],
+            ),
+          ),
+          ?_noticeBanner(context),
+          _CardFootnote(appLocalizations.tsAcceptRoutesTip),
+          if (lock == null &&
+              node.settings.acceptRoutes.source ==
+                  TailscaleSettingSource.override)
+            _CardFootnote(appLocalizations.tsOverrideTip),
+        ],
+      ),
+    );
+  }
+
+  Widget? _noticeBanner(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return switch (panel.routesNotice) {
+      null || TailscaleSettingNotice.updated => null,
+      TailscaleSettingNotice.saved => TailscaleBanner(
+        level: TailscaleBannerLevel.warn,
+        text: appLocalizations.tsSettingsSaved,
+        actionLabel: appLocalizations.tsReadSettings,
+        onAction: panel.reading ? null : onReadSettings,
+      ),
+      TailscaleSettingNotice.applyFailed => TailscaleBanner(
+        level: TailscaleBannerLevel.error,
+        text: appLocalizations.tsSettingsApplyFailed,
+        actionLabel: appLocalizations.tsReadSettings,
+        onAction: panel.reading ? null : onReadSettings,
+      ),
+      TailscaleSettingNotice.failed => TailscaleBanner(
+        level: TailscaleBannerLevel.error,
+        text: appLocalizations.tsRoutesFailed,
+        actionLabel: onRetry == null ? null : appLocalizations.retry,
+        onAction: onRetry,
+      ),
+      TailscaleSettingNotice.unknown => TailscaleBanner(
+        level: TailscaleBannerLevel.warn,
+        text: appLocalizations.tsRoutesUnknown,
+        actionLabel: appLocalizations.tsReadSettings,
+        onAction: panel.reading ? null : onReadSettings,
+      ),
+    };
+  }
+}
+
+/// Goes to the existing rules entry; the panel never edits rules itself.
+class TailscaleRulesCard extends StatelessWidget {
+  const TailscaleRulesCard({super.key, required this.onGoToRules});
+
+  final VoidCallback onGoToRules;
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    return TailscaleCard(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+      child: Row(
+        spacing: 12,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: ShapeDecoration(
+              color: DashboardColors.of(context).tone,
+              shape: AppShape.all(8),
+            ),
+            child: GlyphIcon(
+              AppGlyphs.rules,
+              size: 16,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 2,
+              children: [
+                Text(
+                  appLocalizations.rules,
+                  style: AppTextStyle.subheadline.of(context, emphasized: true),
+                ),
+                Text(
+                  appLocalizations.tsBoundaryTip,
+                  style: AppTextStyle.footnote
+                      .of(context)
+                      .copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          TonalButton(
+            label: appLocalizations.tsGoToRules,
+            glyph: AppGlyphs.chevronForward,
+            onPressed: onGoToRules,
+          ),
+        ],
+      ),
+    );
+  }
+}

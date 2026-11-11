@@ -431,7 +431,7 @@ class DashboardConnectedButton extends StatelessWidget {
   }
 }
 
-enum DashboardChipTone { idle, ok, warn }
+enum DashboardChipTone { idle, ok, warn, error }
 
 class DashboardChip extends StatelessWidget {
   const DashboardChip({
@@ -455,6 +455,10 @@ class DashboardChip extends StatelessWidget {
       DashboardChipTone.idle => (colors.tone, colorScheme.onSurfaceVariant),
       DashboardChipTone.ok => (colors.okContainer, colors.onOkContainer),
       DashboardChipTone.warn => (colors.warnContainer, colors.onWarnContainer),
+      DashboardChipTone.error => (
+        colorScheme.errorContainer,
+        colorScheme.onErrorContainer,
+      ),
     };
     return Container(
       height: large ? 28 : 24,

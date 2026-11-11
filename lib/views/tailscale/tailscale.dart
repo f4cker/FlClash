@@ -1,0 +1,749 @@
+import 'dart:async';
+
+import 'package:collection/collection.dart';
+import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/core/core.dart';
+import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/config/rules.dart';
+import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'device_card.dart';
+import 'device_list.dart';
+import 'settings_cards.dart';
+import 'state.dart';
+
+/// Below this the exit and subnet cards stack, design.md §2.
+const tailscaleTwoColumnWidth = 720.0;
+
+const tailscalePollInterval = Duration(seconds: 3);
+
+/// Opens the auth URL; swapped in tests so nothing reaches a browser.
+typedef TailscaleUrlLauncher = Future<bool> Function(Uri url);
+
+Future<bool> _launch(Uri url) =>
+    launchUrl(url, mode: LaunchMode.externalApplication);
+
+class TailscaleView extends ConsumerStatefulWidget {
+  const TailscaleView({super.key, this.launcher = _launch, this.clock});
+
+  final TailscaleUrlLauncher launcher;
+
+  /// The time the expiry reminder is measured from; now when null.
+  final DateTime Function()? clock;
+
+  @override
+  ConsumerState<TailscaleView> createState() => _TailscaleViewState();
+}
+
+class _HeldUrl {
+  const _HeldUrl(this.generation, this.url);
+
+  final int generation;
+  final String url;
+}
+
+/// The last change asked of a card, so 重试 repeats exactly that one.
+class _Retry {
+  const _Retry({this.exitPeer, this.acceptRoutes});
+
+  final TailscalePeer? exitPeer;
+  final bool? acceptRoutes;
+}
+
+class _TailscaleViewState extends ConsumerState<TailscaleView> {
+  String? _selected;
+  TailscaleNodeKey? _shownKey;
+
+  /// Only this page's own login answers, never persisted or logged.
+  final Map<TailscaleNodeKey, _HeldUrl> _urls = {};
+  final Map<TailscaleNodeKey, _Retry> _exitRetries = {};
+  final Map<TailscaleNodeKey, _Retry> _routesRetries = {};
+
+  /// Instances this page read on its own once; a later read is the user's.
+  final Set<(TailscaleNodeKey, int)> _autoRead = {};
+  final _searchController = TextEditingController();
+  String? _ownerKey;
+  String _query = '';
+  Timer? _poll;
+
+  TailscaleAction get _action => ref.read(tailscaleActionProvider.notifier);
+
+  TailscalePanelNodes get _panel =>
+      ref.read(tailscalePanelNodesProvider.notifier);
+
+  DateTime get _now => widget.clock?.call() ?? DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _poll = Timer.periodic(tailscalePollInterval, (_) => _tick());
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool get _visible =>
+      ref.read(currentPageLabelProvider) == PageLabel.tailscale &&
+      ref.read(coreStatusProvider) == CoreStatus.connected;
+
+  /// Read only, every few seconds while a state waits on something else.
+  void _tick() {
+    if (!mounted || !_visible) {
+      return;
+    }
+    final node = _currentNode(ref.read(tailscaleNodesProvider).value);
+    if (node == null) {
+      return;
+    }
+    final panel = _panel.of(node.key);
+    if (panel.reading) {
+      return;
+    }
+    if (tailscalePolledPhases.contains(_phaseOf(node, panel))) {
+      unawaited(_action.readStatus(node));
+    }
+  }
+
+  TailscaleNode? _currentNode(List<TailscaleNode>? nodes) {
+    if (nodes == null || nodes.isEmpty) {
+      return null;
+    }
+    final selected = _selected;
+    if (selected == null) {
+      return nodes.first;
+    }
+    final node = nodes.firstWhereOrNull((node) => node.name == selected);
+    if (node == null && nodes.length == 1) {
+      return nodes.first;
+    }
+    return node;
+  }
+
+  TailscaleStatus? _statusOf(TailscaleNode node, TailscalePanelNode panel) {
+    final status = panel.status;
+    if (status == null || status.node.generation != node.generation) {
+      return null;
+    }
+    return status;
+  }
+
+  TailscalePhase _phaseOf(TailscaleNode node, TailscalePanelNode panel) {
+    return deriveTailscalePhase(
+      node: node,
+      status: _statusOf(node, panel),
+      readFailed: panel.readFailed,
+      loginInFlight: panel.loggingIn,
+      startInFlight: panel.starting || panel.restarting,
+      startCallFailed: panel.startFailed && panel.prewarmed == node.generation,
+      holdsAuthUrl: _urls[node.key]?.generation == node.generation,
+      unconfirmed: panel.unconfirmed,
+      now: _now,
+    );
+  }
+
+  /// A new node shows nothing of the one before: no URL, filter or search.
+  void _onShown(TailscaleNode node) {
+    final key = node.key;
+    if (_shownKey == key) {
+      return;
+    }
+    final previous = _shownKey;
+    _shownKey = key;
+    if (previous != null) {
+      _urls.remove(previous);
+      _ownerKey = null;
+      _query = '';
+      if (_searchController.text.isNotEmpty) {
+        _searchController.clear();
+      }
+    }
+  }
+
+  /// Once per instance the page opens on: read it, and start one that holds
+  /// a login of its own and was not logged out.
+  void _ensureRead(TailscaleNode node) {
+    final mark = (node.key, node.generation);
+    if (_autoRead.contains(mark)) {
+      return;
+    }
+    _autoRead.add(mark);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        return;
+      }
+      if (!node.started &&
+          node.hasIdentity &&
+          !node.loggedOut &&
+          node.startError == null) {
+        await _action.prewarm(node);
+      } else {
+        await _action.readStatus(node);
+      }
+    });
+  }
+
+  void _select(String name) {
+    setState(() {
+      _selected = name;
+    });
+  }
+
+  Future<void> _refresh(TailscaleNode node, {bool settings = false}) async {
+    await _action.refresh(node, settings: settings);
+  }
+
+  Future<void> _openUrl(TailscaleNode node, String url) async {
+    var opened = false;
+    try {
+      opened = await widget.launcher(Uri.parse(url));
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened) {
+      _panel.change(
+        node.key,
+        (state) => state.copyWith(notice: TailscaleCardNotice.browserFailed),
+      );
+    }
+  }
+
+  Future<void> _login(TailscaleNode node, {bool reauth = false}) async {
+    final key = node.key;
+    _urls.remove(key);
+    final url = await _action.loginFromPanel(node, reauth: reauth);
+    if (url == null || !mounted) {
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+    final current = _currentNode(ref.read(tailscaleNodesProvider).value);
+    if (current == null || current.key != key) {
+      // The page moved on; the URL is not shown on another node.
+      return;
+    }
+    setState(() {
+      _urls[key] = _HeldUrl(current.generation, url);
+    });
+    await _openUrl(current, url);
+  }
+
+  Future<void> _reopen(TailscaleNode node) async {
+    final held = _urls[node.key];
+    if (held == null || held.generation != node.generation) {
+      return _login(node);
+    }
+    _panel.change(node.key, (state) => state.copyWith(notice: null));
+    await _openUrl(node, held.url);
+  }
+
+  Future<void> _confirmLogout(TailscaleNode node) async {
+    final appLocalizations = context.appLocalizations;
+    final confirmed = await dialogs.showMessage(
+      title: appLocalizations.tsLogoutTitle,
+      message: TextSpan(
+        text: [
+          appLocalizations.tsLogoutBody(node.name),
+          if (node.authKey) appLocalizations.tsLogoutAuthKeyNote,
+        ].join('\n'),
+      ),
+      confirmText: appLocalizations.tsLogout,
+      destructive: true,
+    );
+    if (confirmed != true) {
+      return;
+    }
+    final done = await _action.logoutFromPanel(node);
+    if (done) {
+      dialogs.showBanner(
+        currentAppLocalizations.tsLoggedOutReceipt,
+        level: BannerLevel.success,
+      );
+    }
+  }
+
+  Future<void> _selectExit(TailscaleNode node, TailscalePeer? peer) async {
+    final appLocalizations = context.appLocalizations;
+    final confirmed = await dialogs.showMessage(
+      title: peer == null
+          ? appLocalizations.tsExitOffTitle
+          : appLocalizations.tsExitChangeTitle,
+      message: TextSpan(
+        text: peer == null
+            ? appLocalizations.tsExitOffBody(node.name)
+            : appLocalizations.tsExitChangeBody(
+                node.name,
+                tailscalePeerName(peer) ?? appLocalizations.tsNameMissing,
+              ),
+      ),
+      confirmText: peer == null
+          ? appLocalizations.tsNoExitNode
+          : appLocalizations.tsExitChangeConfirm,
+    );
+    if (confirmed != true) {
+      return;
+    }
+    await _applyExit(node, peer);
+  }
+
+  Future<void> _applyExit(TailscaleNode node, TailscalePeer? peer) async {
+    final value = peer == null ? '' : tailscaleAddressOf(peer) ?? peer.id;
+    _exitRetries[node.key] = _Retry(exitPeer: peer);
+    final notice = await _action.setPrefsFromPanel(node, exitNode: value);
+    if (notice == TailscaleSettingNotice.updated) {
+      _exitRetries.remove(node.key);
+      dialogs.showBanner(
+        currentAppLocalizations.tsExitUpdated,
+        level: BannerLevel.success,
+      );
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _changeRoutes(TailscaleNode node, bool accept) async {
+    final appLocalizations = context.appLocalizations;
+    final confirmed = await dialogs.showMessage(
+      title: accept
+          ? appLocalizations.tsRoutesOnTitle
+          : appLocalizations.tsRoutesOffTitle,
+      message: TextSpan(
+        text: accept
+            ? appLocalizations.tsRoutesOnBody
+            : appLocalizations.tsRoutesOffBody,
+      ),
+      confirmText: accept
+          ? appLocalizations.tsAcceptRoutes
+          : appLocalizations.tsRoutesOffConfirm,
+    );
+    if (confirmed != true) {
+      return;
+    }
+    await _applyRoutes(node, accept);
+  }
+
+  Future<void> _applyRoutes(TailscaleNode node, bool accept) async {
+    _routesRetries[node.key] = _Retry(acceptRoutes: accept);
+    final notice = await _action.setPrefsFromPanel(node, acceptRoutes: accept);
+    if (notice == TailscaleSettingNotice.updated) {
+      _routesRetries.remove(node.key);
+      dialogs.showBanner(
+        currentAppLocalizations.tsRoutesUpdated,
+        level: BannerLevel.success,
+      );
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  /// The dialog shows the offer as read; the Core takes the migration only
+  /// while that offer's token still describes the node.
+  Future<void> _confirmMigrate(TailscaleNode node) async {
+    final offer = node.legacy;
+    if (offer == null || offer.offerToken == null) {
+      return;
+    }
+    final appLocalizations = context.appLocalizations;
+    final profile = ref.read(currentProfileProvider);
+    final account = offer.loginName.takeFirstValid([
+      offer.displayName,
+      appLocalizations.tsLegacyAccountUnconfirmed,
+    ]);
+    final control = tailscaleControlHost(
+      offer.controlUrl.takeFirstValid([node.controlUrl]),
+    );
+    final confirmed = await dialogs.showMessage(
+      title: appLocalizations.tsLegacyConfirmTitle,
+      message: TextSpan(
+        text: [
+          appLocalizations.tsLegacyConfirmProfile(profile?.realLabel ?? ''),
+          appLocalizations.tsLegacyConfirmNode(node.name),
+          appLocalizations.tsLegacyConfirmAccount(account),
+          appLocalizations.tsLegacyConfirmControl(control),
+          '',
+          appLocalizations.tsLegacyConfirmBody,
+        ].join('\n'),
+      ),
+      confirmText: appLocalizations.tsLegacyConfirm,
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    await _action.migrateLegacy(node, offer);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _recheckLegacy(TailscaleNode node) async {
+    await _action.recheckLegacy(node.key);
+    final current = _currentNode(ref.read(tailscaleNodesProvider).value);
+    if (current != null && current.key == node.key) {
+      await _action.readStatus(current);
+    }
+  }
+
+  Future<void> _copy(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    dialogs.showBanner(
+      currentAppLocalizations.tsAddressCopied,
+      level: BannerLevel.success,
+    );
+  }
+
+  void _goToProfiles() {
+    ref.read(currentPageLabelProvider.notifier).toProfiles();
+  }
+
+  void _goToRules() {
+    showInSheet<void>(context, builder: (_) => const AddedRulesView());
+  }
+
+  void _showHelp() {
+    final appLocalizations = context.appLocalizations;
+    dialogs.showAlert(
+      title: appLocalizations.tsHelp,
+      message: TextSpan(
+        text: [
+          appLocalizations.tsHelpBody,
+          appLocalizations.tsNetworkNameTip,
+        ].join('\n\n'),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final coreStatus = ref.watch(coreStatusProvider);
+    ref.watch(currentPageLabelProvider);
+    if (coreStatus != CoreStatus.connected) {
+      return _page(
+        context,
+        body: coreStatus == CoreStatus.connecting
+            ? const Center(child: ActivityIndicator())
+            : _coreStopped(context),
+      );
+    }
+    final nodesValue = ref.watch(tailscaleNodesProvider);
+    final panels = ref.watch(tailscalePanelNodesProvider);
+    final legacyStates = ref.watch(tailscaleLegacyStatesProvider);
+    final nodes = nodesValue.value;
+    if (nodes == null) {
+      if (nodesValue.hasError) {
+        final error = nodesValue.error;
+        if (error is CoreMethodException && error.isCoreUnavailable) {
+          return _page(context, body: _coreStopped(context));
+        }
+        return _page(context, body: _nodesFailed(context));
+      }
+      return _page(context, body: const Center(child: ActivityIndicator()));
+    }
+    if (nodes.isEmpty) {
+      return _page(context, body: _noNodes(context));
+    }
+    final node = _currentNode(nodes);
+    if (node == null) {
+      return _page(context, nodes: nodes, body: _nodeGone(context, nodes));
+    }
+    _onShown(node);
+    _ensureRead(node);
+    final panel = panels[node.key] ?? const TailscalePanelNode();
+    final legacyState = legacyStates[node.key] ?? const TailscaleLegacyState();
+    final status = _statusOf(node, panel);
+    final phase = _phaseOf(node, panel);
+    final legacyView = tailscaleLegacyViewOf(
+      node: node,
+      state: legacyState,
+      phase: phase,
+    );
+    if (legacyView == TailscaleLegacyView.offer && !legacyState.offered) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _action.markLegacyOffered(node);
+        }
+      });
+    }
+    final now = _now;
+    final actions = TailscaleCardActions(
+      onLogin: () => _login(node),
+      onRelogin: () => _login(node, reauth: true),
+      onReopen: () => _reopen(node),
+      onRead: () => _refresh(node),
+      onLogout: () => _confirmLogout(node),
+      onRetryStart: () => _action.retryStart(node),
+      onGoToProfiles: _goToProfiles,
+      onCopy: _copy,
+      onMigrate: () => _confirmMigrate(node),
+      onRecheckLegacy: () => _recheckLegacy(node),
+    );
+    final exitRetry = _exitRetries[node.key];
+    final routesRetry = _routesRetries[node.key];
+    final body = LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= tailscaleTwoColumnWidth + 48;
+        final exitCard = TailscaleExitCard(
+          node: node,
+          status: status,
+          phase: phase,
+          panel: panel,
+          onSelect: (peer) => _selectExit(node, peer),
+          onReadSettings: () => _refresh(node, settings: true),
+          onRetry: exitRetry == null
+              ? null
+              : () => _applyExit(node, exitRetry.exitPeer),
+        );
+        final routesCard = TailscaleRoutesCard(
+          node: node,
+          status: status,
+          phase: phase,
+          panel: panel,
+          onChanged: (accept) => _changeRoutes(node, accept),
+          onReadSettings: () => _refresh(node, settings: true),
+          onRetry: routesRetry?.acceptRoutes == null
+              ? null
+              : () => _applyRoutes(node, routesRetry!.acceptRoutes!),
+        );
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: context.sectionsTopPadding,
+            bottom: 24 + context.bottomInset,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              TailscaleDeviceCard(
+                node: node,
+                phase: phase,
+                status: status,
+                actions: actions,
+                legacyView: legacyView,
+                legacyState: legacyState,
+                now: now,
+                stale: status != null && panel.readFailed,
+                notice: panel.notice,
+                loggingIn: panel.loggingIn,
+                loggingOut: panel.loggingOut,
+                reading: panel.reading,
+                restarting: panel.restarting,
+                wide: constraints.maxWidth >= 560,
+              ),
+              if (wide)
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 16,
+                    children: [
+                      Expanded(child: exitCard),
+                      Expanded(child: routesCard),
+                    ],
+                  ),
+                )
+              else ...[
+                exitCard,
+                routesCard,
+              ],
+              TailscaleRulesCard(onGoToRules: _goToRules),
+              if (phase == TailscalePhase.connected)
+                TailscaleDeviceSection(
+                  status: status,
+                  readFailed: panel.readFailed,
+                  reading: panel.reading,
+                  ownerKey: _ownerKey,
+                  query: _query,
+                  searchController: _searchController,
+                  onOwnerChanged: (key) => setState(() => _ownerKey = key),
+                  onQueryChanged: (query) => setState(() => _query = query),
+                  onRefresh: () => _refresh(node),
+                  onCopy: _copy,
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    return _page(
+      context,
+      nodes: nodes,
+      node: node,
+      panels: panels,
+      phase: phase,
+      reading: panel.reading,
+      body: body,
+    );
+  }
+
+  Widget _page(
+    BuildContext context, {
+    required Widget body,
+    List<TailscaleNode> nodes = const [],
+    TailscaleNode? node,
+    Map<TailscaleNodeKey, TailscalePanelNode> panels = const {},
+    TailscalePhase? phase,
+    bool reading = false,
+  }) {
+    final appLocalizations = context.appLocalizations;
+    return Scaffold(
+      title: PageLabel.tailscale.label,
+      actions: [
+        if (nodes.length >= 2) _nodePicker(context, nodes, node, panels),
+      ],
+      iconActions: [
+        if (node != null)
+          IconButtonData(
+            glyph: AppGlyphs.refresh,
+            tooltip: appLocalizations.tsRefresh,
+            isLoading: reading,
+            onPressed: reading ? null : () => _refresh(node),
+          ),
+      ],
+      menuItems: [
+        if (node != null && tailscaleLogoutPhases.contains(phase))
+          PopupMenuItem(
+            label: appLocalizations.tsLogout,
+            danger: true,
+            onPressed: () => _confirmLogout(node),
+          ),
+        if (node != null)
+          PopupMenuItem(
+            label: appLocalizations.tsHelp,
+            glyph: AppGlyphs.info,
+            onPressed: _showHelp,
+          ),
+      ],
+      body: body,
+    );
+  }
+
+  Widget _nodePicker(
+    BuildContext context,
+    List<TailscaleNode> nodes,
+    TailscaleNode? current,
+    Map<TailscaleNodeKey, TailscalePanelNode> panels,
+  ) {
+    final appLocalizations = context.appLocalizations;
+    return PopupAnchor(
+      targetBuilder: (open) => TonalButton(
+        label: current == null
+            ? appLocalizations.tsChooseNode
+            : appLocalizations.tsCurrentNodeOf(current.name),
+        glyph: AppGlyphs.chevronDown,
+        onPressed: open,
+      ),
+      popupBuilder: (_) => PopupMenu(
+        items: [
+          for (final (index, node) in nodes.indexed)
+            PopupMenuItem(
+              label: node.name,
+              subtitle: tailscalePhaseLabel(
+                context,
+                _phaseOf(node, panels[node.key] ?? const TailscalePanelNode()),
+              ),
+              checked: node.key == current?.key,
+              section: index == 0
+                  ? PopupMenuSection(title: appLocalizations.tsNodesInProfile)
+                  : null,
+              onPressed: () => _select(node.name),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _coreStopped(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return NullStatus(
+      illustration: NullStatusIllustration.core,
+      label: appLocalizations.tsCoreStopped,
+      description: appLocalizations.tsCoreStoppedTip,
+      action: FilledButton(
+        onPressed: () => ref.read(coreActionProvider.notifier).restartCore(),
+        child: Text(appLocalizations.tsStartCore),
+      ),
+    );
+  }
+
+  Widget _noNodes(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return NullStatus(
+      illustration: NullStatusIllustration.devices,
+      label: appLocalizations.tsNoNodes,
+      description: appLocalizations.tsNoNodesTip,
+      action: FilledButton(
+        onPressed: _goToProfiles,
+        child: Text(appLocalizations.tsGoToProfiles),
+      ),
+    );
+  }
+
+  /// The node list itself could not be read: a state of its own, never the
+  /// empty one.
+  Widget _nodesFailed(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return NullStatus(
+      illustration: NullStatusIllustration.error,
+      label: appLocalizations.tsStateLoadFailed,
+      description: appLocalizations.tsLoadFailedTip,
+      action: FilledButton(
+        onPressed: () => ref.invalidate(tailscaleNodesProvider),
+        child: Text(appLocalizations.tsReadStatus),
+      ),
+    );
+  }
+
+  Widget _nodeGone(BuildContext context, List<TailscaleNode> nodes) {
+    final appLocalizations = context.appLocalizations;
+    return NullStatus(
+      illustration: NullStatusIllustration.devices,
+      label: appLocalizations.tsNodeGone,
+      description: appLocalizations.tsNodeGoneTip,
+      action: PopupAnchor(
+        targetBuilder: (open) => FilledButton(
+          onPressed: open,
+          child: Text(appLocalizations.tsChooseNode),
+        ),
+        popupBuilder: (_) => PopupMenu(
+          items: [
+            for (final node in nodes)
+              PopupMenuItem(
+                label: node.name,
+                onPressed: () => _select(node.name),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String tailscalePhaseLabel(BuildContext context, TailscalePhase phase) {
+  final appLocalizations = context.appLocalizations;
+  return switch (phase) {
+    TailscalePhase.loadFailed => appLocalizations.tsStateLoadFailed,
+    TailscalePhase.preparing => appLocalizations.tsStatePreparing,
+    TailscalePhase.starting => appLocalizations.tsStateStarting,
+    TailscalePhase.signedOut => appLocalizations.tsStateSignedOut,
+    TailscalePhase.waitingBrowser => appLocalizations.tsStateWaitingBrowser,
+    TailscalePhase.needsApproval => appLocalizations.tsStateNeedsApproval,
+    TailscalePhase.connected => appLocalizations.tsStateConnected,
+    TailscalePhase.needsReauth => appLocalizations.tsStateNeedsReauth,
+    TailscalePhase.stopped => appLocalizations.tsStateStopped,
+    TailscalePhase.startFailed => appLocalizations.tsStateStartFailed,
+    TailscalePhase.unconfirmed => appLocalizations.tsStateUnconfirmed,
+  };
+}
