@@ -467,6 +467,7 @@ class TailscaleRoutesCard extends StatelessWidget {
                       value,
                   onChanged: enabled ? onChanged : null,
                   semanticLabel: appLocalizations.tsAcceptRoutes,
+                  fadeWhenDisabled: true,
                 ),
               ],
             ),

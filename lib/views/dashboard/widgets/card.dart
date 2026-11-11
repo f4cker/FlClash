@@ -630,11 +630,13 @@ class DashboardSwitch extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.semanticLabel,
+    this.fadeWhenDisabled = false,
   });
 
   final bool value;
   final ValueChanged<bool>? onChanged;
   final String? semanticLabel;
+  final bool fadeWhenDisabled;
 
   /// A switch lays out past its track, which would set every row's height.
   static const trackWidth = Switch.trackWidth;
@@ -651,6 +653,7 @@ class DashboardSwitch extends StatelessWidget {
           value: value,
           onChanged: onChanged,
           semanticLabel: semanticLabel,
+          fadeWhenDisabled: fadeWhenDisabled,
         ),
       ),
     );
