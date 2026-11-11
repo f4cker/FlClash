@@ -558,4 +558,15 @@ void main() {
     await tester.tap(find.textContaining('+'));
     await shoot(tester, '30b-device-owners-menu-520');
   });
+
+  shot('30c-device-owner-checked-520', (tester) async {
+    serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+    await pumpPanel(tester, size: const Size(520, 1500));
+    await tester.tap(find.textContaining('+'));
+    await settle(tester);
+    await tester.tap(find.text('归属未知 1'));
+    await settle(tester);
+    await tester.tap(find.textContaining('+'));
+    await shoot(tester, '30c-device-owner-checked-520');
+  });
 }

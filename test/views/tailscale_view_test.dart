@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
@@ -15,9 +16,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:prism_ui/icons/icons.dart' show GlyphIcon;
+import 'package:prism_ui/icons/icons.dart' show GlyphIcon, Glyphs;
 import 'package:prism_ui/prism_ui.dart'
-    show Chip, SearchField, Switch, TonalButton;
+    show Chip, PopupAnchor, PopupMenuCard, SearchField, Switch, TonalButton;
 
 import '../helpers/preferences.dart';
 import '../helpers/test_app.dart';
@@ -1134,6 +1135,34 @@ void main() {
       });
     }
 
+    Finder checkIn(Finder menu) => find.descendant(
+      of: menu,
+      matching: find.byWidgetPredicate(
+        (widget) => widget is GlyphIcon && widget.glyph == Glyphs.check,
+      ),
+    );
+
+    void expectMenuUnderChip(WidgetTester tester) {
+      final chip = tester.getRect(
+        find.ancestor(of: moreChip, matching: find.byType(PopupAnchor)),
+      );
+      final menu = tester.getRect(find.byType(PopupMenuCard));
+      final content = tester.getRect(
+        find
+            .ancestor(
+              of: find.text('Tailscale 地址'),
+              matching: find.byType(TailscaleCard),
+            )
+            .first,
+      );
+      expect(menu.top - chip.bottom, moreOrLessEquals(4, epsilon: 0.5));
+      expect(
+        menu.left,
+        moreOrLessEquals(math.min(chip.left, content.right - menu.width)),
+      );
+      expect(menu.right, lessThanOrEqualTo(content.right + 0.5));
+    }
+
     testWidgets('owners that do not fit open from +N and stay in view once '
         'chosen', (tester) async {
       serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
@@ -1147,6 +1176,8 @@ void main() {
       await tester.tap(moreChip);
       await settle(tester);
       expect(find.text('归属未知 1'), findsOneWidget);
+      expectMenuUnderChip(tester);
+      expect(checkIn(find.byType(PopupMenuCard)), findsNothing);
 
       await tester.tap(find.text('归属未知 1'));
       await settle(tester);
@@ -1161,6 +1192,20 @@ void main() {
         tester.getRect(chosen).center.dy,
         moreOrLessEquals(tester.getRect(moreChip).center.dy),
       );
+
+      await tester.tap(moreChip);
+      await settle(tester);
+      expectMenuUnderChip(tester);
+      final menu = find.byType(PopupMenuCard);
+      final checked = find.descendant(of: menu, matching: find.text('归属未知 1'));
+      expect(checked, findsOneWidget);
+      expect(checkIn(menu), findsOneWidget);
+      expect(
+        tester.getRect(checkIn(menu)).center.dy,
+        moreOrLessEquals(tester.getRect(checked).center.dy, epsilon: 1),
+      );
+      await tester.tapAt(const Offset(5, 5));
+      await settle(tester);
 
       await tester.enterText(find.byType(EditableText), 'printer');
       await settle(tester);

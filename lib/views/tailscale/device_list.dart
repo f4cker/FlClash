@@ -382,7 +382,7 @@ class TailscaleDeviceSection extends StatelessWidget {
     );
     return LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth < _compactMaxWidth
-          ? compactOf(constraints.maxWidth)
+          ? PopupBounds(child: compactOf(constraints.maxWidth))
           : wide,
     );
   }
@@ -407,7 +407,8 @@ const _moreGap = 6.0;
 
 /// The owner chips on one line: 全部 and 我的, then the owners that fit and a
 /// "+N" chip for the rest. A chosen owner from the rest takes the last slot,
-/// as the proxies page brings its current group into view.
+/// as the proxies page brings its current group into view, and stays checked
+/// in the menu.
 class _OwnerStrip extends StatelessWidget {
   const _OwnerStrip({
     required this.choices,
@@ -473,9 +474,14 @@ class _OwnerStrip extends StatelessWidget {
         }
         final visible = visibleFor(shownOthers);
         final fits = spanOf(visible) <= constraints.maxWidth;
+        final swapped = chosen >= pinned + shownOthers;
         final hidden = [
           for (var i = 0; i < choices.length; i++)
             if (!visible.contains(i)) choices[i],
+        ];
+        final menu = [
+          for (var i = 0; i < choices.length; i++)
+            if (!visible.contains(i) || (swapped && i == chosen)) choices[i],
         ];
         return Row(
           spacing: _chipSpacing,
@@ -487,6 +493,7 @@ class _OwnerStrip extends StatelessWidget {
                 chipOf(choices[i]),
             if (hidden.isNotEmpty)
               PopupAnchor(
+                placement: PopupPlacement.belowAnchorStart,
                 targetBuilder: (open) => Tooltip(
                   message: context.appLocalizations.tsOwnerFilter,
                   child: _MoreOwnersChip(count: hidden.length, onPressed: open),
@@ -494,9 +501,10 @@ class _OwnerStrip extends StatelessWidget {
                 popupBuilder: (_) => PopupMenu(
                   maxVisibleItems: 7,
                   items: [
-                    for (final choice in hidden)
+                    for (final choice in menu)
                       PopupMenuItem(
                         label: choice.label,
+                        checked: choice.key == selected,
                         onPressed: () => onSelected(choice.key),
                       ),
                   ],
