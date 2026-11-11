@@ -3,6 +3,8 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/profiles/mount.dart';
+import 'package:fl_clash/views/profiles/mount_delete.dart';
 import 'package:fl_clash/views/profiles/profiles.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -47,8 +49,29 @@ class _FakeMountAction extends MountAction {
   final List<MountSourceDeletion> results;
   final deleted = <int>[];
   final rechecked = <int>[];
+  final opened = <int>[];
+  bool pending;
 
-  _FakeMountAction(this.targets, [this.results = const []]);
+  _FakeMountAction(
+    this.targets, [
+    this.results = const [],
+    this.pending = false,
+  ]);
+
+  @override
+  Future<bool> hasPendingRemoval(int sourceId) async => pending;
+
+  @override
+  Future<MountPanel> loadPanel(int targetId) async {
+    opened.add(targetId);
+    return MountPanel(
+      target: ref.read(profilesProvider).getProfile(targetId)!,
+      groups: const MountTarget(),
+    );
+  }
+
+  @override
+  Future<MountRuntimeState?> readRuntime(int targetId) async => null;
 
   @override
   Future<List<Profile>> sourceTargets(int sourceId) async => targets;
@@ -74,6 +97,7 @@ Future<ProviderContainer> pumpProfiles(
   ValueListenable<bool>? isActive,
   bool picker = false,
   List<Override> overrides = const [],
+  Map<int, Future<MountCardSummary?> Function()> summaries = const {},
 }) async {
   tester.view.physicalSize = const Size(900, 800);
   tester.view.devicePixelRatio = 1;
@@ -86,6 +110,11 @@ Future<ProviderContainer> pumpProfiles(
       currentProfileIdProvider.overrideWithBuild(
         (_, _) => currentProfileId ?? profiles.first.id,
       ),
+      for (final profile in profiles)
+        if (profile.type != ProfileType.custom)
+          mountCardSummaryProvider(profile.id).overrideWith(
+            (_) => summaries[profile.id]?.call() ?? Future.value(null),
+          ),
       ...overrides,
     ],
   );
@@ -346,17 +375,233 @@ void main() {
 
     expect(find.text(l10n.mountDeleteSourceTitle), findsOneWidget);
     expect(find.textContaining('mounted on the following 1 profile'), findsOne);
-    expect(find.textContaining('deleted.\n\nBase'), findsOneWidget);
+    expect(find.text('Base'), findsNWidgets(2));
     await tester.tap(find.text(l10n.mountDeleteSourceConfirm));
     await tester.pumpAndSettle();
 
+    // Locked: the only way on is a readback.
     expect(find.text(l10n.mountDeleteSourceUnknown), findsOneWidget);
+    expect(find.text(l10n.mountDeleteSourceConfirm), findsNothing);
     await tester.tap(find.text(l10n.mountReadStatus));
     await tester.pumpAndSettle();
 
     expect(mounts.rechecked, [base.id]);
+    expect(mounts.deleted, [air.id]);
+    await tester.tap(find.text(l10n.mountDeleteSourceConfirm));
+    await tester.pumpAndSettle();
+
     expect(mounts.deleted, [air.id, air.id]);
+    expect(find.text(l10n.mountDeleteSourceTitle), findsNothing);
     expect(action.deleted, isEmpty);
+  });
+
+  testWidgets('a source whose targets have an operation pending cannot be '
+      'deleted until it is read back', (tester) async {
+    final base = Profile.normal(label: 'Base');
+    final air = urlProfile('Air');
+    final mounts = _FakeMountAction([base], const [], true);
+    await pumpProfiles(
+      tester,
+      profiles: [base, air],
+      overrides: [mountActionProvider.overrideWith(() => mounts)],
+    );
+    final l10n = currentAppLocalizations;
+
+    await openProfileMenu(tester, 'Air');
+    await tester.tap(find.text(l10n.delete));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.mountDeleteSourceBlocked), findsOneWidget);
+    final confirm = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, l10n.mountDeleteSourceConfirm),
+    );
+    expect(confirm.onPressed, isNull);
+
+    mounts.pending = false;
+    await tester.tap(find.text(l10n.mountReadStatus));
+    await tester.pumpAndSettle();
+    expect(mounts.rechecked, [base.id]);
+    expect(find.text(l10n.mountDeleteSourceBlocked), findsNothing);
+    expect(
+      tester
+          .widget<TextButton>(
+            find.widgetWithText(TextButton, l10n.mountDeleteSourceConfirm),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('same-name targets are told apart in the delete dialog', (
+    tester,
+  ) async {
+    final l10n = currentAppLocalizations;
+    final names = mountTargetNames([
+      Profile.normal(label: 'Home'),
+      urlProfile('Home'),
+      Profile.normal(label: 'Work'),
+    ], l10n);
+    expect(names, ['Home · ${l10n.local}', 'Home · ${l10n.remote}', 'Work']);
+    final twins = mountTargetNames([
+      Profile.normal(label: 'Home'),
+      Profile.normal(label: 'Home'),
+    ], l10n);
+    expect(twins, ['Home · ${l10n.local} · 1', 'Home · ${l10n.local} · 2']);
+  });
+
+  group('the mount pill', () {
+    Finder pillOf(String label) => find.descendant(
+      of: find.ancestor(
+        of: find.text(label),
+        matching: find.byType(ProfileItem),
+      ),
+      matching: find.byType(MountPill),
+    );
+
+    testWidgets('shows on the current profile and on mounted ones, never on '
+        'custom profiles', (tester) async {
+      final l10n = currentAppLocalizations;
+      final current = Profile.normal(label: 'current');
+      final mounted = Profile.normal(label: 'mounted');
+      final plain = urlProfile('plain');
+      final custom = Profile.custom(label: 'mine');
+      await pumpProfiles(
+        tester,
+        profiles: [current, mounted, plain, custom],
+        currentProfileId: current.id,
+        summaries: {
+          mounted.id: () async => const MountCardSummary(mounted: 2, failed: 0),
+        },
+      );
+      await tester.pump();
+
+      expect(pillOf('current'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: pillOf('current'),
+          matching: find.text(l10n.mountEntry),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: pillOf('mounted'),
+          matching: find.text(l10n.mountedCount(2)),
+        ),
+        findsOneWidget,
+      );
+      expect(pillOf('plain'), findsNothing);
+      expect(pillOf('mine'), findsNothing);
+    });
+
+    testWidgets('warns of failed updates and of an unreadable status', (
+      tester,
+    ) async {
+      final l10n = currentAppLocalizations;
+      final failing = Profile.normal(label: 'failing');
+      final unknown = Profile.normal(label: 'unknown');
+      await pumpProfiles(
+        tester,
+        profiles: [failing, unknown],
+        summaries: {
+          failing.id: () async => const MountCardSummary(mounted: 3, failed: 2),
+          unknown.id: () async => throw StateError('unreadable'),
+        },
+      );
+      await tester.pump();
+
+      expect(
+        find.text('${l10n.local} · ${l10n.mountCardFailed(2)}'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('${l10n.local} · ${l10n.mountCardUnreadable}'),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: pillOf('unknown'),
+          matching: find.text(l10n.mountEntry),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(
+          RegExp(RegExp.escape(l10n.mountPillFailedSemantics)),
+        ),
+        findsNWidgets(2),
+      );
+    });
+
+    testWidgets('opens the sheet of its own profile without switching to it', (
+      tester,
+    ) async {
+      final mounts = _FakeMountAction(const []);
+      final current = Profile.normal(label: 'current');
+      final other = Profile.normal(label: 'other');
+      final container = await pumpProfiles(
+        tester,
+        profiles: [current, other],
+        currentProfileId: current.id,
+        summaries: {
+          other.id: () async => const MountCardSummary(mounted: 1, failed: 0),
+        },
+        overrides: [mountActionProvider.overrideWith(() => mounts)],
+      );
+      await tester.pump();
+
+      await tester.tap(pillOf('other'));
+      await tester.pumpAndSettle();
+
+      expect(mounts.opened, [other.id]);
+      expect(container.read(currentProfileIdProvider), current.id);
+      expect(
+        find.text(currentAppLocalizations.mountTarget('other')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('moves under the subtitle when the card is narrow', (
+      tester,
+    ) async {
+      final current = Profile.normal(label: 'current');
+      await pumpProfiles(tester, profiles: [current]);
+      tester.view.physicalSize = const Size(380, 600);
+      await tester.pump();
+
+      final pill = tester.getRect(pillOf('current'));
+      final title = tester.getRect(find.text('current'));
+      final subtitle = tester.getRect(find.text(currentAppLocalizations.local));
+      expect(pill.top, greaterThan(subtitle.bottom));
+      expect(pill.left, title.left);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  testWidgets('the menu of a non-custom profile opens the mount sheet', (
+    tester,
+  ) async {
+    final l10n = currentAppLocalizations;
+    final mounts = _FakeMountAction(const []);
+    final file = Profile.normal(label: 'file');
+    await pumpProfiles(
+      tester,
+      profiles: [
+        file,
+        Profile.custom(label: 'mine'),
+      ],
+      overrides: [mountActionProvider.overrideWith(() => mounts)],
+    );
+
+    await openProfileMenu(tester, 'mine');
+    expect(find.text(l10n.mountEntryMenu), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    await openProfileMenu(tester, 'file');
+    await tester.tap(find.text(l10n.mountEntryMenu));
+    await tester.pumpAndSettle();
+    expect(mounts.opened, [file.id]);
   });
 
   group('the selected profile is revealed', () {

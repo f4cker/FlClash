@@ -453,12 +453,17 @@ class ProfilesAction extends _$ProfilesAction {
     ref.read(currentPageLabelProvider.notifier).value = PageLabel.profiles;
   }
 
+  /// [showProfiles] false leaves the routes open, for an import made from a
+  /// sheet the user returns to.
   Future<void> addProfileFromLink(
     String link, {
     String? label,
     String ageSecretKey = '',
+    bool showProfiles = true,
   }) async {
-    _showProfiles();
+    if (showProfiles) {
+      _showProfiles();
+    }
     final profile = await globalState.loadingRun(
       tag: LoadingTag.profiles,
       () => link.isShareLink
@@ -479,8 +484,13 @@ class ProfilesAction extends _$ProfilesAction {
 
   /// Ids are taken up front so the list keeps the order of [links]; the share
   /// links among them make up one profile, in the place of the first.
-  Future<void> addProfilesFromLinks(List<String> links) async {
-    _showProfiles();
+  Future<void> addProfilesFromLinks(
+    List<String> links, {
+    bool showProfiles = true,
+  }) async {
+    if (showProfiles) {
+      _showProfiles();
+    }
     final shareLinks = [
       for (final link in links)
         if (link.isShareLink) link,

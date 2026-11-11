@@ -11714,6 +11714,847 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Mount subscription nodes`
+  String get mountEntry {
+    return Intl.message(
+      'Mount subscription nodes',
+      name: 'mountEntry',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mount subscription nodes…`
+  String get mountEntryMenu {
+    return Intl.message(
+      'Mount subscription nodes…',
+      name: 'mountEntryMenu',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 subscription mounted} other{{count} subscriptions mounted}}`
+  String mountedCount(num count) {
+    return Intl.plural(
+      count,
+      one: '1 subscription mounted',
+      other: '$count subscriptions mounted',
+      name: 'mountedCount',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count, plural, =1{1 subscription update failed} other{{count} subscription updates failed}}`
+  String mountCardFailed(num count) {
+    return Intl.plural(
+      count,
+      one: '1 subscription update failed',
+      other: '$count subscription updates failed',
+      name: 'mountCardFailed',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Could not read mount status`
+  String get mountCardUnreadable {
+    return Intl.message(
+      'Could not read mount status',
+      name: 'mountCardUnreadable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{label}, target profile {profileName}`
+  String mountPillSemantics(Object label, Object profileName) {
+    return Intl.message(
+      '$label, target profile $profileName',
+      name: 'mountPillSemantics',
+      desc: '',
+      args: [label, profileName],
+    );
+  }
+
+  /// `a subscription update failed`
+  String get mountPillFailedSemantics {
+    return Intl.message(
+      'a subscription update failed',
+      name: 'mountPillFailedSemantics',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Target profile: {profileName}`
+  String mountTarget(Object profileName) {
+    return Intl.message(
+      'Target profile: $profileName',
+      name: 'mountTarget',
+      desc: '',
+      args: [profileName],
+    );
+  }
+
+  /// `Choose imported subscriptions to add their nodes to this profile. Its rules, DNS, and group structure stay unchanged, as does dedicated Tailscale routing. Original files are not rewritten.`
+  String get mountDescription {
+    return Intl.message(
+      'Choose imported subscriptions to add their nodes to this profile. Its rules, DNS, and group structure stay unchanged, as does dedicated Tailscale routing. Original files are not rewritten.',
+      name: 'mountDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose subscriptions`
+  String get mountChooseSources {
+    return Intl.message(
+      'Choose subscriptions',
+      name: 'mountChooseSources',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mounted`
+  String get mountMountedTag {
+    return Intl.message('Mounted', name: 'mountMountedTag', desc: '', args: []);
+  }
+
+  /// `Not mounted`
+  String get mountNotMounted {
+    return Intl.message(
+      'Not mounted',
+      name: 'mountNotMounted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No subscriptions to mount`
+  String get mountEmptyTitle {
+    return Intl.message(
+      'No subscriptions to mount',
+      name: 'mountEmptyTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Import a subscription from a link, then choose it as a node source for this profile.`
+  String get mountEmptyDesc {
+    return Intl.message(
+      'Import a subscription from a link, then choose it as a node source for this profile.',
+      name: 'mountEmptyDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Import subscription`
+  String get mountImport {
+    return Intl.message(
+      'Import subscription',
+      name: 'mountImport',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Return here after importing to choose the subscription. Your active profile will not change.`
+  String get mountImportHint {
+    return Intl.message(
+      'Return here after importing to choose the subscription. Your active profile will not change.',
+      name: 'mountImportHint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 node} other{{count} nodes}}`
+  String mountNodeCount(num count) {
+    return Intl.plural(
+      count,
+      one: '1 node',
+      other: '$count nodes',
+      name: 'mountNodeCount',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Last updated: {time}`
+  String mountLastUpdated(Object time) {
+    return Intl.message(
+      'Last updated: $time',
+      name: 'mountLastUpdated',
+      desc: '',
+      args: [time],
+    );
+  }
+
+  /// `Nodes not fetched yet`
+  String get mountNotFetched {
+    return Intl.message(
+      'Nodes not fetched yet',
+      name: 'mountNotFetched',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not load subscriptions. Try again.`
+  String get mountListFailed {
+    return Intl.message(
+      'Could not load subscriptions. Try again.',
+      name: 'mountListFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Read again`
+  String get mountReadAgain {
+    return Intl.message(
+      'Read again',
+      name: 'mountReadAgain',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Save mounts`
+  String get mountSave {
+    return Intl.message('Save mounts', name: 'mountSave', desc: '', args: []);
+  }
+
+  /// `Saving mounts…`
+  String get mountSaving {
+    return Intl.message(
+      'Saving mounts…',
+      name: 'mountSaving',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mounts saved. Applying…`
+  String get mountApplying {
+    return Intl.message(
+      'Mounts saved. Applying…',
+      name: 'mountApplying',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subscription node mounts updated`
+  String get mountUpdated {
+    return Intl.message(
+      'Subscription node mounts updated',
+      name: 'mountUpdated',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mounts saved; application is not yet confirmed.`
+  String get mountSavedUnconfirmed {
+    return Intl.message(
+      'Mounts saved; application is not yet confirmed.',
+      name: 'mountSavedUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mounts were not changed. Try again.`
+  String get mountUnchanged {
+    return Intl.message(
+      'Mounts were not changed. Try again.',
+      name: 'mountUnchanged',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mounts were saved but could not be applied to the running profile.`
+  String get mountApplyFailed {
+    return Intl.message(
+      'Mounts were saved but could not be applied to the running profile.',
+      name: 'mountApplyFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The mount result is unconfirmed. Read the status again before saving or unmounting.`
+  String get mountUnknown {
+    return Intl.message(
+      'The mount result is unconfirmed. Read the status again before saving or unmounting.',
+      name: 'mountUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update nodes`
+  String get mountUpdateNodes {
+    return Intl.message(
+      'Update nodes',
+      name: 'mountUpdateNodes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update nodes of {name}`
+  String mountUpdateNodesOf(Object name) {
+    return Intl.message(
+      'Update nodes of $name',
+      name: 'mountUpdateNodesOf',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Updating nodes…`
+  String get mountUpdatingNodes {
+    return Intl.message(
+      'Updating nodes…',
+      name: 'mountUpdatingNodes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Nodes updated`
+  String get mountNodesUpdated {
+    return Intl.message(
+      'Nodes updated',
+      name: 'mountNodesUpdated',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update failed. The last successfully fetched nodes are still in use.`
+  String get mountUpdateFailedInUse {
+    return Intl.message(
+      'Update failed. The last successfully fetched nodes are still in use.',
+      name: 'mountUpdateFailedInUse',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.`
+  String get mountUpdateFailedKept {
+    return Intl.message(
+      'Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.',
+      name: 'mountUpdateFailedKept',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not fetch nodes from this subscription. Try again.`
+  String get mountFetchFailed {
+    return Intl.message(
+      'Could not fetch nodes from this subscription. Try again.',
+      name: 'mountFetchFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subscription updated. It currently has no nodes.`
+  String get mountSourceEmpty {
+    return Intl.message(
+      'Subscription updated. It currently has no nodes.',
+      name: 'mountSourceEmpty',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The original subscription is unavailable. Choose a node source again.`
+  String get mountSourceGone {
+    return Intl.message(
+      'The original subscription is unavailable. Choose a node source again.',
+      name: 'mountSourceGone',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The previously selected node is no longer in this subscription. Choose another node.`
+  String get mountSelectionLost {
+    return Intl.message(
+      'The previously selected node is no longer in this subscription. Choose another node.',
+      name: 'mountSelectionLost',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tailscale nodes were excluded from ordinary mounts.`
+  String get mountTailscaleExcluded {
+    return Intl.message(
+      'Tailscale nodes were excluded from ordinary mounts.',
+      name: 'mountTailscaleExcluded',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `When node names conflict across sources, the subscription name is added as a suffix. This may affect exact-match or end-of-name filters. Check the group results.`
+  String get mountSameName {
+    return Intl.message(
+      'When node names conflict across sources, the subscription name is added as a suffix. This may affect exact-match or end-of-name filters. Check the group results.',
+      name: 'mountSameName',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Groups for these nodes`
+  String get mountGroupsTitle {
+    return Intl.message(
+      'Groups for these nodes',
+      name: 'mountGroupsTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Use existing group collection settings`
+  String get mountAutoSubtitle {
+    return Intl.message(
+      'Use existing group collection settings',
+      name: 'mountAutoSubtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `These groups collect and filter subscription nodes using their existing settings. Choose additional proxy groups below if needed.`
+  String get mountAutoDesc {
+    return Intl.message(
+      'These groups collect and filter subscription nodes using their existing settings. Choose additional proxy groups below if needed.',
+      name: 'mountAutoDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Collects nodes automatically`
+  String get mountHintCollectsAll {
+    return Intl.message(
+      'Collects nodes automatically',
+      name: 'mountHintCollectsAll',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Collects subscription nodes automatically`
+  String get mountHintCollectsProviders {
+    return Intl.message(
+      'Collects subscription nodes automatically',
+      name: 'mountHintCollectsProviders',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Auto-collected · Group filters apply`
+  String get mountHintFiltered {
+    return Intl.message(
+      'Auto-collected · Group filters apply',
+      name: 'mountHintFiltered',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Additional groups (optional)`
+  String get mountExtraTitle {
+    return Intl.message(
+      'Additional groups (optional)',
+      name: 'mountExtraTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You can also add these subscription nodes to other proxy groups. Leave this unselected to use only the collection settings above. This choice applies to all subscriptions mounted on this profile.`
+  String get mountExtraDesc {
+    return Intl.message(
+      'You can also add these subscription nodes to other proxy groups. Leave this unselected to use only the collection settings above. This choice applies to all subscriptions mounted on this profile.',
+      name: 'mountExtraDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose target groups`
+  String get mountPickTitle {
+    return Intl.message(
+      'Choose target groups',
+      name: 'mountPickTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This profile has no group that automatically collects subscription nodes. Choose the proxy groups that should receive them. Only the effective profile is updated; the original file is not rewritten.`
+  String get mountPickDesc {
+    return Intl.message(
+      'This profile has no group that automatically collects subscription nodes. Choose the proxy groups that should receive them. Only the effective profile is updated; the original file is not rewritten.',
+      name: 'mountPickDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose at least one target group.`
+  String get mountPickRequired {
+    return Intl.message(
+      'Choose at least one target group.',
+      name: 'mountPickRequired',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This profile has no proxy group that can receive subscription nodes. Mounting cannot be completed yet.`
+  String get mountNoGroupTitle {
+    return Intl.message(
+      'This profile has no proxy group that can receive subscription nodes. Mounting cannot be completed yet.',
+      name: 'mountNoGroupTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No group will be created and routing rules will not be changed automatically.`
+  String get mountNoGroupDesc {
+    return Intl.message(
+      'No group will be created and routing rules will not be changed automatically.',
+      name: 'mountNoGroupDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not read this profile’s groups. Read them again.`
+  String get mountGroupsFailed {
+    return Intl.message(
+      'Could not read this profile’s groups. Read them again.',
+      name: 'mountGroupsFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Target groups have changed. Read and confirm them before saving.`
+  String get mountGroupsChanged {
+    return Intl.message(
+      'Target groups have changed. Read and confirm them before saving.',
+      name: 'mountGroupsChanged',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Manual selection`
+  String get mountTypeSelect {
+    return Intl.message(
+      'Manual selection',
+      name: 'mountTypeSelect',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You choose which node to use.`
+  String get mountTypeSelectDesc {
+    return Intl.message(
+      'You choose which node to use.',
+      name: 'mountTypeSelectDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Latency selection`
+  String get mountTypeUrlTest {
+    return Intl.message(
+      'Latency selection',
+      name: 'mountTypeUrlTest',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This group sends connectivity checks and selects a node automatically based on the results.`
+  String get mountTypeUrlTestDesc {
+    return Intl.message(
+      'This group sends connectivity checks and selects a node automatically based on the results.',
+      name: 'mountTypeUrlTestDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Failover`
+  String get mountTypeFallback {
+    return Intl.message(
+      'Failover',
+      name: 'mountTypeFallback',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This group sends connectivity checks and switches nodes when needed, following the original profile settings.`
+  String get mountTypeFallbackDesc {
+    return Intl.message(
+      'This group sends connectivity checks and switches nodes when needed, following the original profile settings.',
+      name: 'mountTypeFallbackDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Load balancing`
+  String get mountTypeLoadBalance {
+    return Intl.message(
+      'Load balancing',
+      name: 'mountTypeLoadBalance',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This group checks nodes and distributes connections according to the original profile settings.`
+  String get mountTypeLoadBalanceDesc {
+    return Intl.message(
+      'This group checks nodes and distributes connections according to the original profile settings.',
+      name: 'mountTypeLoadBalanceDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Behavior follows the original group settings`
+  String get mountTypeUnknownDesc {
+    return Intl.message(
+      'Behavior follows the original group settings',
+      name: 'mountTypeUnknownDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This group’s existing inclusion and exclusion filters also apply to mounted nodes. The filters will not be changed.`
+  String get mountFilterNotice {
+    return Intl.message(
+      'This group’s existing inclusion and exclusion filters also apply to mounted nodes. The filters will not be changed.',
+      name: 'mountFilterNotice',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Block when empty`
+  String get mountBlockTag {
+    return Intl.message(
+      'Block when empty',
+      name: 'mountBlockTag',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `If this group has no selectable nodes, its connections are blocked instead of sent directly.`
+  String get mountBlockDesc {
+    return Intl.message(
+      'If this group has no selectable nodes, its connections are blocked instead of sent directly.',
+      name: 'mountBlockDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Empty-group handling comes from the original profile: {target}.`
+  String mountBaseFallback(Object target) {
+    return Intl.message(
+      'Empty-group handling comes from the original profile: $target.',
+      name: 'mountBaseFallback',
+      desc: '',
+      args: [target],
+    );
+  }
+
+  /// `When no nodes are selectable, this group uses a direct connection as specified by the original profile.`
+  String get mountBaseDirect {
+    return Intl.message(
+      'When no nodes are selectable, this group uses a direct connection as specified by the original profile.',
+      name: 'mountBaseDirect',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Group “{group}” has no selectable nodes. Check the subscriptions and group filters.`
+  String mountGroupEmpty(Object group) {
+    return Intl.message(
+      'Group “$group” has no selectable nodes. Check the subscriptions and group filters.',
+      name: 'mountGroupEmpty',
+      desc: '',
+      args: [group],
+    );
+  }
+
+  /// `Nodes were fetched, but the selected groups’ filters leave no selectable options. Check their filters.`
+  String get mountGroupFiltered {
+    return Intl.message(
+      'Nodes were fetched, but the selected groups’ filters leave no selectable options. Check their filters.',
+      name: 'mountGroupFiltered',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Selected`
+  String get mountGroupSelected {
+    return Intl.message(
+      'Selected',
+      name: 'mountGroupSelected',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not selected`
+  String get mountGroupNotSelected {
+    return Intl.message(
+      'Not selected',
+      name: 'mountGroupNotSelected',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unmount this subscription?`
+  String get mountUnmountTitle {
+    return Intl.message(
+      'Unmount this subscription?',
+      name: 'mountUnmountTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This removes nodes from “{subscriptionName}” from “{profileName}”. Connections using those nodes may be interrupted. The subscription, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.`
+  String mountUnmountBody(Object subscriptionName, Object profileName) {
+    return Intl.message(
+      'This removes nodes from “$subscriptionName” from “$profileName”. Connections using those nodes may be interrupted. The subscription, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.',
+      name: 'mountUnmountBody',
+      desc: '',
+      args: [subscriptionName, profileName],
+    );
+  }
+
+  /// `Unmount these subscriptions?`
+  String get mountUnmountManyTitle {
+    return Intl.message(
+      'Unmount these subscriptions?',
+      name: 'mountUnmountManyTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This removes nodes provided by the following {count, plural, =1{1 subscription} other{{count} subscriptions}} from “{profileName}”. Connections using those nodes may be interrupted. The subscriptions, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.`
+  String mountUnmountManyBody(num count, Object profileName) {
+    return Intl.message(
+      'This removes nodes provided by the following ${Intl.plural(count, one: '1 subscription', other: '$count subscriptions')} from “$profileName”. Connections using those nodes may be interrupted. The subscriptions, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.',
+      name: 'mountUnmountManyBody',
+      desc: '',
+      args: [count, profileName],
+    );
+  }
+
+  /// `Unmount`
+  String get mountUnmount {
+    return Intl.message('Unmount', name: 'mountUnmount', desc: '', args: []);
+  }
+
+  /// `Unmounting…`
+  String get mountUnmounting {
+    return Intl.message(
+      'Unmounting…',
+      name: 'mountUnmounting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unmounted`
+  String get mountUnmounted {
+    return Intl.message(
+      'Unmounted',
+      name: 'mountUnmounted',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unmounting is unconfirmed. Read the status again first.`
+  String get mountUnmountUnknown {
+    return Intl.message(
+      'Unmounting is unconfirmed. Read the status again first.',
+      name: 'mountUnmountUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update subscription mounts?`
+  String get mountUpdateTitle {
+    return Intl.message(
+      'Update subscription mounts?',
+      name: 'mountUpdateTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This save also mounts {count, plural, =1{1 subscription} other{{count} subscriptions}}.`
+  String mountAlsoMounts(num count) {
+    return Intl.message(
+      'This save also mounts ${Intl.plural(count, one: '1 subscription', other: '$count subscriptions')}.',
+      name: 'mountAlsoMounts',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `You can mount imported remote Clash/mihomo subscriptions and remote subscriptions successfully converted by Flash’s existing importer. Only nodes are included, not subscription rules or DNS settings.`
+  String get mountFormatHelp {
+    return Intl.message(
+      'You can mount imported remote Clash/mihomo subscriptions and remote subscriptions successfully converted by Flash’s existing importer. Only nodes are included, not subscription rules or DNS settings.',
+      name: 'mountFormatHelp',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -11,6 +11,52 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// The link import of [AddProfileMenu]; it completes once the profiles are
+/// added. [showProfiles] false keeps the caller's route open.
+Future<void> importProfilesFromLinks(
+  BuildContext context,
+  WidgetRef ref, {
+  bool showProfiles = true,
+}) async {
+  final profilesAction = ref.read(profilesActionProvider.notifier);
+  final appLocalizations = context.appLocalizations;
+  final res = await showNamedUrlsForm(
+    context,
+    title: appLocalizations.importFromLink,
+    urlLabel: appLocalizations.link,
+    batchTip: appLocalizations.batchLinkInputTip,
+    urlValidator: (value) {
+      if (value == null || value.isEmpty) {
+        return appLocalizations.emptyTip(appLocalizations.link);
+      }
+      if (!value.isUrl && !value.isShareLink) {
+        return appLocalizations.invalidLinkTip;
+      }
+      return null;
+    },
+    existingUrls: {
+      for (final profile in ref.read(profilesProvider))
+        if (profile.url.isNotEmpty) profile.url,
+    },
+    withAgeSecretKey: true,
+  );
+  switch (res) {
+    case null:
+      return;
+    case [final single]:
+      await profilesAction.addProfileFromLink(
+        single.url,
+        label: single.label,
+        ageSecretKey: single.ageSecretKey,
+        showProfiles: showProfiles,
+      );
+    default:
+      await profilesAction.addProfilesFromLinks([
+        for (final item in res) item.url,
+      ], showProfiles: showProfiles);
+  }
+}
+
 /// The ways to add a profile, in a menu out of the control [builder] makes.
 class AddProfileMenu extends ConsumerWidget {
   const AddProfileMenu({super.key, required this.builder});
@@ -40,46 +86,7 @@ class AddProfileMenu extends ConsumerWidget {
   }
 
   Future<void> _toAdd(BuildContext context, WidgetRef ref) async {
-    final profilesAction = ref.read(profilesActionProvider.notifier);
-    final appLocalizations = context.appLocalizations;
-    final res = await showNamedUrlsForm(
-      context,
-      title: appLocalizations.importFromLink,
-      urlLabel: appLocalizations.link,
-      batchTip: appLocalizations.batchLinkInputTip,
-      urlValidator: (value) {
-        if (value == null || value.isEmpty) {
-          return appLocalizations.emptyTip(appLocalizations.link);
-        }
-        if (!value.isUrl && !value.isShareLink) {
-          return appLocalizations.invalidLinkTip;
-        }
-        return null;
-      },
-      existingUrls: {
-        for (final profile in ref.read(profilesProvider))
-          if (profile.url.isNotEmpty) profile.url,
-      },
-      withAgeSecretKey: true,
-    );
-    switch (res) {
-      case null:
-        return;
-      case [final single]:
-        unawaited(
-          profilesAction.addProfileFromLink(
-            single.url,
-            label: single.label,
-            ageSecretKey: single.ageSecretKey,
-          ),
-        );
-      default:
-        unawaited(
-          profilesAction.addProfilesFromLinks([
-            for (final item in res) item.url,
-          ]),
-        );
-    }
+    unawaited(importProfilesFromLinks(context, ref));
   }
 
   Future<void> _toSendFromPhone(WidgetRef ref) async {

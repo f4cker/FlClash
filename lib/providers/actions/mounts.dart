@@ -76,15 +76,17 @@ class MountAction extends _$MountAction {
 
   /// [expectedVersion] is the version the choice was made on, null for a
   /// target never mounted. A save that drops every source is never held up
-  /// by its groups.
+  /// by its groups. [onStored] runs once the relation is written and its
+  /// apply begins.
   Future<MountSaveResult> save(
     int targetId, {
     required int? expectedVersion,
     required List<int> sourceIds,
     required List<String> groups,
+    VoidCallback? onStored,
   }) {
     return _scheduler.run(
-      () => _save(targetId, expectedVersion, sourceIds, groups),
+      () => _save(targetId, expectedVersion, sourceIds, groups, onStored),
     );
   }
 
@@ -93,6 +95,7 @@ class MountAction extends _$MountAction {
     int? expectedVersion,
     List<int> sourceIds,
     List<String> groups,
+    VoidCallback? onStored,
   ) async {
     final MountTargetState? current;
     try {
@@ -166,6 +169,7 @@ class MountAction extends _$MountAction {
       return const MountSaveResult(outcome: MountSaveOutcome.unchanged);
     }
     ref.invalidate(setupStateProvider(targetId));
+    onStored?.call();
     return _applyAndSettle(saved);
   }
 
@@ -206,6 +210,16 @@ class MountAction extends _$MountAction {
       state: saved,
       lostSelections: setup.lostMountSelections,
     );
+  }
+
+  /// What the Core runs for [targetId], null when it runs another profile
+  /// or cannot be read.
+  Future<MountRuntimeState?> readRuntime(int targetId) async {
+    if (!_isRunning(targetId)) {
+      return null;
+    }
+    final state = await _readState();
+    return state?.report?.target == targetId ? state : null;
   }
 
   bool _isRunning(int targetId) =>
@@ -342,6 +356,21 @@ class MountAction extends _$MountAction {
     final ids = await database.mountsDao.targetsOf(sourceId);
     final profiles = ref.read(profilesProvider);
     return [for (final id in ids) ?profiles.getProfile(id)];
+  }
+
+  /// Whether a profile mounting [sourceId] has an operation whose outcome is
+  /// not yet known; an unreadable record counts as one.
+  Future<bool> hasPendingRemoval(int sourceId) async {
+    try {
+      for (final id in await database.mountsDao.targetsOf(sourceId)) {
+        if ((await database.mountsDao.target(id))?.pending != null) {
+          return true;
+        }
+      }
+      return false;
+    } catch (_) {
+      return true;
+    }
   }
 
   /// Unmounts [sourceId] from every target, applies the current one, then

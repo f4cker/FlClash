@@ -25,14 +25,17 @@ class _RecordingProfilesAction extends ProfilesAction {
     String link, {
     String? label,
     String ageSecretKey = '',
+    bool showProfiles = true,
   }) async {
     singles.add(link);
     ageSecretKeys.add(ageSecretKey);
   }
 
   @override
-  Future<void> addProfilesFromLinks(List<String> links) async =>
-      batches.add(links);
+  Future<void> addProfilesFromLinks(
+    List<String> links, {
+    bool showProfiles = true,
+  }) async => batches.add(links);
 }
 
 Finder _field(String title) => find.descendant(

@@ -15,9 +15,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'add.dart';
 import 'edit.dart';
+import 'mount.dart';
+import 'mount_delete.dart';
 import 'preview.dart';
 
 const _infoGap = 4.0;
+
+/// What the compact update time takes in the trailing row, at most.
+const _lastUpdateWidth = 64.0;
 
 double get _profileItemHeight {
   final measure = globalState.measure;
@@ -204,6 +209,21 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
     minItemWidth: profileItemMinWidth.ap(context),
   );
 
+  /// Whether a card [width] wide leaves its title under 96 dp beside a
+  /// mount pill, which then moves under the subtitle, design §1.1.
+  bool _pillBelowFor(double width) {
+    final columns = _columnsFor(width);
+    final item =
+        (width - _horizontalPadding * 2 - widget.spacing * (columns - 1)) /
+        columns;
+    const rowPadding = 16.0 * 2 + 16;
+    const trailingRest = 8 + _lastUpdateWidth + 8 + 24;
+    return item - rowPadding - trailingRest - mountPillMaxWidth(context) < 96;
+  }
+
+  double _extentFor(double width) =>
+      _profileItemHeight + (_pillBelowFor(width) ? mountPillBelowExtent : 0);
+
   void _revealSelected() {
     if (!mounted || !_controller.hasClients) {
       return;
@@ -216,7 +236,7 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
     }
     final position = _controller.position;
     final padding = _padding;
-    final height = _profileItemHeight;
+    final height = _extentFor(context.size!.width);
     final row = index ~/ _columnsFor(context.size!.width);
     final atTop = row * (height + widget.spacing);
     final atBottom =
@@ -237,6 +257,7 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
     final profiles = widget.profiles;
     return WidthBuilder(
       builder: (_, width) {
+        final pillBelow = _pillBelowFor(width);
         return GridView.builder(
           key: profilesStoreKey,
           controller: _controller,
@@ -245,7 +266,8 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
             crossAxisCount: _columnsFor(width),
             mainAxisSpacing: widget.spacing,
             crossAxisSpacing: widget.spacing,
-            mainAxisExtent: _profileItemHeight,
+            mainAxisExtent:
+                _profileItemHeight + (pillBelow ? mountPillBelowExtent : 0),
           ),
           itemCount: profiles.length,
           itemBuilder: (context, index) {
@@ -254,6 +276,7 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
               key: ValueKey(profile.id),
               profile: profile,
               groupValue: widget.currentProfileId,
+              pillBelow: pillBelow,
               onChanged: (profileId) {
                 ref.read(currentProfileIdProvider.notifier).value = profileId;
               },
@@ -270,11 +293,15 @@ class ProfileItem extends ConsumerWidget {
   final int? groupValue;
   final void Function(int? value) onChanged;
 
+  /// The mount pill sits under the subtitle instead of in the trailing row.
+  final bool pillBelow;
+
   const ProfileItem({
     super.key,
     required this.profile,
     required this.groupValue,
     required this.onChanged,
+    this.pillBelow = false,
   });
 
   Future<void> _handleDeleteProfile(BuildContext context, WidgetRef ref) async {
@@ -304,7 +331,11 @@ class ProfileItem extends ConsumerWidget {
       return;
     }
     if (targets.isNotEmpty) {
+      if (!context.mounted) {
+        return;
+      }
       return _deleteMountedSource(
+        context,
         profilesAction,
         mounts,
         tailscale,
@@ -339,67 +370,30 @@ class ProfileItem extends ConsumerWidget {
 
   /// A mounted source is unmounted from [targets] before it is deleted.
   Future<void> _deleteMountedSource(
+    BuildContext context,
     ProfilesAction profilesAction,
     MountAction mounts,
     TailscaleAction tailscale,
     List<Profile> targets,
     int managed,
   ) async {
-    var appLocalizations = currentAppLocalizations;
-    final res = await dialogs.showMessage(
-      title: appLocalizations.mountDeleteSourceTitle,
-      message: TextSpan(
-        text: [
-          appLocalizations.mountDeleteSourceBody(
-            profile.realLabel,
-            targets.length,
-          ),
-          targets.map((item) => item.realLabel).join('\n'),
-          if (managed > 0) appLocalizations.tsDeleteProfileManaged(managed),
-        ].join('\n\n'),
-      ),
-      cancelText: appLocalizations.cancel,
-      destructive: true,
-      confirmText: appLocalizations.mountDeleteSourceConfirm,
+    final deletion = await showMountDeleteDialog(
+      context,
+      source: profile,
+      targets: targets,
+      managed: managed,
+      mounts: mounts,
     );
-    if (res != true) {
-      return;
-    }
-    dialogs.showBanner(appLocalizations.mountDeleteSourceProgress);
-    var deletion = await mounts.deleteSource(profile.id);
-    while (deletion.result == MountSourceDeletion.unknown) {
-      appLocalizations = currentAppLocalizations;
-      final again = await dialogs.showMessage(
-        title: appLocalizations.tip,
-        message: TextSpan(text: appLocalizations.mountDeleteSourceUnknown),
-        confirmText: appLocalizations.mountReadStatus,
-      );
-      if (again != true) {
-        return;
-      }
-      var resolved = true;
-      for (final target in targets) {
-        final result = await mounts.recheck(target.id);
-        resolved &= result.outcome != MountSaveOutcome.unknown;
-      }
-      if (resolved) {
-        deletion = await mounts.deleteSource(profile.id);
-      }
-    }
-    appLocalizations = currentAppLocalizations;
     switch (deletion) {
       case (result: MountSourceDeletion.deleted, unlink: _):
         dialogs.showBanner(
-          appLocalizations.mountDeleteSourceDone,
+          currentAppLocalizations.mountDeleteSourceDone,
           level: BannerLevel.success,
         );
       case (result: MountSourceDeletion.keptProfile, :final unlink?):
         await _followUnlink(profilesAction, tailscale, () async => unlink);
       default:
-        dialogs.showBanner(
-          appLocalizations.mountDeleteSourceBlocked,
-          level: BannerLevel.error,
-        );
+        break;
     }
   }
 
@@ -596,7 +590,7 @@ class ProfileItem extends ConsumerWidget {
             _handlePreview(context);
           },
         ),
-      ] else
+      ] else ...[
         PopupMenuItem(
           glyph: AppGlyphs.puzzle,
           label: appLocalizations.extend,
@@ -604,6 +598,14 @@ class ProfileItem extends ConsumerWidget {
             _handlePushGenProfilePage(context, profile.id);
           },
         ),
+        PopupMenuItem(
+          glyph: mountGlyph,
+          label: appLocalizations.mountEntryMenu,
+          onPressed: () {
+            showMountSheet(context, profile);
+          },
+        ),
+      ],
       if (isUrl)
         PopupMenuItem(
           glyph: AppGlyphs.sync,
@@ -669,6 +671,23 @@ class ProfileItem extends ConsumerWidget {
     final isUpdating = ref.watch(isUpdatingProvider(profile.updatingKey));
     final subscriptionInfo = _subscriptionInfo;
     final isSelected = profile.id == groupValue;
+    final isCustom = profile.type == ProfileType.custom;
+    final mountSummary = isCustom
+        ? null
+        : ref.watch(mountCardSummaryProvider(profile.id));
+    final unreadable = mountSummary?.hasError ?? false;
+    final summary = unreadable ? null : mountSummary?.value;
+    final showPill =
+        !isCustom && (isSelected || unreadable || (summary?.mounted ?? 0) > 0);
+    final pill = showPill
+        ? MountPill(profile: profile, summary: summary, unreadable: unreadable)
+        : null;
+    final appLocalizations = context.appLocalizations;
+    final subtitleWarning = unreadable
+        ? appLocalizations.mountCardUnreadable
+        : (summary?.failed ?? 0) > 0
+        ? appLocalizations.mountCardFailed(summary!.failed)
+        : null;
     return ContextMenuRegion(
       menuItems: isUpdating ? null : _menuItems(context, ref),
       child: Card(
@@ -686,6 +705,7 @@ class ProfileItem extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: 8,
             children: [
+              if (pill != null && !pillBelow) pill,
               if (profile.type == ProfileType.custom)
                 _GroupsCountChip(profileId: profile.id)
               else
@@ -697,6 +717,8 @@ class ProfileItem extends ConsumerWidget {
             profile: profile,
             expire: subscriptionInfo?.expireDate,
             subtitle: _subtitle(context),
+            subtitleWarning: subtitleWarning,
+            below: pillBelow ? pill : null,
           ),
         ),
       ),
@@ -709,11 +731,19 @@ class _ProfileCardTitle extends StatelessWidget {
     required this.profile,
     required this.expire,
     required this.subtitle,
+    this.subtitleWarning,
+    this.below,
   });
 
   final Profile profile;
   final DateTime? expire;
   final String subtitle;
+
+  /// Appended to [subtitle] in the warning colour.
+  final String? subtitleWarning;
+
+  /// Under the subtitle, left-aligned with the title.
+  final Widget? below;
 
   @override
   Widget build(BuildContext context) {
@@ -727,12 +757,22 @@ class _ProfileCardTitle extends StatelessWidget {
           style: AppTextStyle.headline.of(context),
         ),
         const SizedBox(height: _infoGap),
-        Text(
-          subtitle,
+        Text.rich(
+          TextSpan(
+            text: subtitle,
+            children: [
+              if (subtitleWarning case final warning?)
+                TextSpan(
+                  text: ' · $warning',
+                  style: TextStyle(color: context.colorScheme.warning),
+                ),
+            ],
+          ),
           style: AppTextStyle.footnote.of(context).toLighter,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        if (below case final below?) ...[const SizedBox(height: 8), below],
       ],
     );
   }
