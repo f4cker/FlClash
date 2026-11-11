@@ -222,7 +222,18 @@ func applyConfig(params *SetupParams) error {
 		replaced = tailscaleGenerationMark()
 	}
 	closeTailscaleUpTo(replaced)
+	installMountGate(report)
 	hub.ApplyConfig(cfg)
+	if runtimeErr := takeMountRuntimeError(); runtimeErr != nil {
+		logError("mounted profile reaches Tailscale through a mounted node, every connection is rejected: %v", runtimeErr)
+		if blocking, blockingErr := blockingConfig(); blockingErr == nil {
+			clearTailscaleManaged()
+			installMountGate(nil)
+			currentConfig, err, blocked = blocking, runtimeErr, true
+			setMountState(report, true, false)
+			hub.ApplyConfig(blocking)
+		}
+	}
 	publishTailscaleManaged()
 	startTailscaleManaged()
 	patchSelectGroup(followMountSelections(params.SelectedMap, report))

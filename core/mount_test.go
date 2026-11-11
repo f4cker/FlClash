@@ -120,10 +120,10 @@ func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
 	for name, want := range map[string]MountGroupInfo{
 		"Proxy":  {Name: "Proxy", Type: "select", Kind: mountGroupCandidate, Probe: "none"},
 		"Auto":   {Name: "Auto", Type: "url-test", Kind: mountGroupAuto, Collects: "providers", Filter: true, Probe: "probes"},
-		"All":    {Name: "All", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Hidden: true, Probe: "none"},
+		"All":    {Name: "All", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Reason: reachHolds, Hidden: true, Probe: "none"},
 		"Lazy":   {Name: "Lazy", Type: "fallback", Kind: mountGroupCandidate, Probe: "unknown"},
 		"Hidden": {Name: "Hidden", Type: "select", Kind: mountGroupExcluded, Excluded: "hidden", Hidden: true, Probe: "none"},
-		"Office": {Name: "Office", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Probe: "none"},
+		"Office": {Name: "Office", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Reason: reachHolds, Probe: "none"},
 		"Chain":  {Name: "Chain", Type: "relay", Kind: mountGroupExcluded, Excluded: "type", Probe: "probes"},
 		"Direct": {Name: "Direct", Type: "select", Kind: mountGroupCandidate, ExcludeFilter: true, EmptyFallback: "DIRECT", Probe: "none"},
 		"GLOBAL": {Name: "GLOBAL", Type: "select", Kind: mountGroupExcluded, Excluded: "builtin", Probe: "none"},

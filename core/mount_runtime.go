@@ -327,8 +327,11 @@ type MountRuntimeGroup struct {
 }
 
 // Moved and Lost: the selections the last apply followed or dropped.
+// Refused: base providers and rule sets whose update was refused because it
+// would reach Tailscale where the mount check saw nothing.
 type MountRuntimeState struct {
 	Blocked bool                 `json:"blocked"`
+	Refused []string             `json:"refused,omitempty"`
 	Report  *MountReport         `json:"report,omitempty"`
 	Sources []MountRuntimeSource `json:"sources"`
 	Groups  []MountRuntimeGroup  `json:"groups"`
@@ -341,7 +344,7 @@ func handleMountState() MountRuntimeState {
 	report, blocked := appliedMountReport, runningConfigBlocked
 	moved, lost := mountSelectionMoved, mountSelectionLost
 	mountStateMu.Unlock()
-	state := MountRuntimeState{Blocked: blocked, Report: report, Sources: []MountRuntimeSource{}, Groups: []MountRuntimeGroup{}, Moved: moved, Lost: lost}
+	state := MountRuntimeState{Blocked: blocked, Refused: mountGateState(), Report: report, Sources: []MountRuntimeSource{}, Groups: []MountRuntimeGroup{}, Moved: moved, Lost: lost}
 	if report == nil {
 		return state
 	}

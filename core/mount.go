@@ -53,8 +53,8 @@ type MountSourceInspection struct {
 	Listed            int    `json:"listed"`
 	TailscaleExcluded int    `json:"tailscale-excluded"`
 	RelayExcluded     int    `json:"relay-excluded"`
+	InterfaceExcluded int    `json:"interface-excluded"`
 	names             []string
-	relayed           []string
 }
 
 func mountProviderName(id int64) string {
@@ -71,10 +71,11 @@ type MountInspectSourceParams struct {
 func handleInspectMountSource(params MountInspectSourceParams) MountSourceInspection {
 	var relay *mountRelay
 	if params.Relay != nil || params.Managed != nil {
-		relay = &mountRelay{names: map[string]bool{}, managed: managedBases(params.Managed)}
+		names := map[string]bool{}
 		for _, name := range params.Relay {
-			relay.names[name] = true
+			names[name] = true
 		}
+		relay = newMountRelay(names, managedBases(params.Managed))
 	}
 	return inspectMountSource(params.Path, params.AgeSecretKey, relay)
 }
@@ -139,22 +140,23 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 		if _, dup := seen[name]; dup {
 			continue
 		}
-		if dialer, _ := mapping["dialer-proxy"].(string); relay.reaches(dialer) {
-			inspection.RelayExcluded++
-			inspection.relayed = append(inspection.relayed, name)
-			seen[name] = struct{}{}
-			continue
-		}
 		proxy, err := adapter.ParseProxy(mapping)
 		if err != nil {
 			return MountSourceInspection{Status: mountSourceInvalid, Listed: len(mappings)}
 		}
 		_ = proxy.Close()
 		seen[name] = struct{}{}
-		inspection.names = append(inspection.names, name)
+		switch {
+		case len(proxyOptionValues(mapping, "interface-name")) > 0:
+			inspection.InterfaceExcluded++
+		case slices.ContainsFunc(proxyOptionValues(mapping, "dialer-proxy"), relay.reaches):
+			inspection.RelayExcluded++
+		default:
+			inspection.names = append(inspection.names, name)
+		}
 	}
 	inspection.Count = len(inspection.names)
-	if inspection.Count == 0 && inspection.TailscaleExcluded+inspection.RelayExcluded < inspection.Listed {
+	if inspection.Count == 0 && inspection.TailscaleExcluded+inspection.RelayExcluded+inspection.InterfaceExcluded < inspection.Listed {
 		return MountSourceInspection{Status: mountSourceInvalid, Listed: len(mappings)}
 	}
 	return inspection
@@ -173,6 +175,7 @@ type MountGroupInfo struct {
 	Type          string `json:"type"`
 	Kind          string `json:"kind"`
 	Excluded      string `json:"excluded,omitempty"`
+	Reason        string `json:"reason,omitempty"`
 	Collects      string `json:"collects,omitempty"`
 	Hidden        bool   `json:"hidden,omitempty"`
 	Filter        bool   `json:"filter,omitempty"`
@@ -243,18 +246,19 @@ func inspectMountTarget(root *yaml.Node) (MountTarget, error) {
 		return MountTarget{}, err
 	}
 	target := MountTarget{Groups: []MountGroupInfo{}, Relay: []string{}}
-	reach := base.tailscaleGroups(tailnetSuffixes())
+	reach := base.tailscaleGroups(newRuleReader(base))
 	for _, mapping := range base.groups {
 		target.Groups = append(target.Groups, mountGroupInfo(mapping, reach[groupString(mapping, "name")]))
 	}
-	for name := range base.relayNames(reach) {
+	for name := range newMountRelay(base.relayNames(base.holding()), nil).names {
 		target.Relay = append(target.Relay, name)
 	}
 	slices.Sort(target.Relay)
 	return target, nil
 }
 
-func mountGroupInfo(mapping map[string]any, reachesTailscale bool) MountGroupInfo {
+func mountGroupInfo(mapping map[string]any, reach string) MountGroupInfo {
+	reachesTailscale := reach != ""
 	kind := strings.ToLower(groupString(mapping, "type"))
 	info := MountGroupInfo{
 		Name:          groupString(mapping, "name"),
@@ -280,7 +284,7 @@ func mountGroupInfo(mapping map[string]any, reachesTailscale bool) MountGroupInf
 	case info.Name == globalProxyName:
 		info.Kind, info.Excluded = mountGroupExcluded, "builtin"
 	case collectsProviders(mapping) && reachesTailscale:
-		info.Kind, info.Excluded = mountGroupExcluded, "tailscale"
+		info.Kind, info.Excluded, info.Reason = mountGroupExcluded, "tailscale", reach
 	case collectsProviders(mapping):
 		info.Kind, info.Collects = mountGroupAuto, "providers"
 		if includeAll || groupFlag(mapping, "include-all-proxies") {
@@ -289,7 +293,7 @@ func mountGroupInfo(mapping map[string]any, reachesTailscale bool) MountGroupInf
 	case info.Hidden:
 		info.Kind, info.Excluded = mountGroupExcluded, "hidden"
 	case reachesTailscale:
-		info.Kind, info.Excluded = mountGroupExcluded, "tailscale"
+		info.Kind, info.Excluded, info.Reason = mountGroupExcluded, "tailscale", reach
 	default:
 		info.Kind = mountGroupCandidate
 	}
@@ -311,6 +315,7 @@ type MountSourceReport struct {
 	Status            string      `json:"status"`
 	TailscaleExcluded int         `json:"tailscale-excluded"`
 	RelayExcluded     int         `json:"relay-excluded"`
+	InterfaceExcluded int         `json:"interface-excluded"`
 	Nodes             []MountNode `json:"nodes"`
 }
 
@@ -336,6 +341,7 @@ type MountReport struct {
 	Sources  []MountSourceReport `json:"sources"`
 	Groups   []MountGroupReport  `json:"groups"`
 	Renamed  int                 `json:"renamed"`
+	gate     *mountGate
 }
 
 func errMountGroupChanged(name string) error {
@@ -389,8 +395,10 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		}
 	}
 	slices.Sort(baseProviders)
-	reach := base.tailscaleGroups(tailnetSuffixes())
-	relay := &mountRelay{names: base.relayNames(reach), managed: managed}
+	reader := newRuleReader(base)
+	reach := base.tailscaleGroups(reader)
+	relay := newMountRelay(base.relayNames(base.holding()), managed)
+	report.gate = newMountGate(base, reader, relay, reach)
 	names := make([]string, 0, len(setup.Sources))
 	for _, source := range setup.Sources {
 		name := mountProviderName(source.ID)
@@ -406,9 +414,10 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 			Status:            inspection.Status,
 			TailscaleExcluded: inspection.TailscaleExcluded,
 			RelayExcluded:     inspection.RelayExcluded,
+			InterfaceExcluded: inspection.InterfaceExcluded,
 			Nodes:             nodes,
 		})
-		definition, err := mountProviderNode(source.Path, renames, inspection, relay)
+		definition, err := mountProviderNode(source.Path, renames, relay)
 		if err != nil {
 			return nil, err
 		}
@@ -477,18 +486,17 @@ func mountNodeNames(source MountSource, originals []string, taken map[string]str
 	return nodes, renames
 }
 
-// Left with relays only, a source is an empty inline list: a file may not.
-func mountProviderNode(path string, renames []MountNode, inspection MountSourceInspection, relay *mountRelay) (*yaml.Node, error) {
+// The provider drops what the inspection counts out, by the same reading.
+func mountProviderNode(path string, renames []MountNode, relay *mountRelay) (*yaml.Node, error) {
 	definition := map[string]any{
-		"type":              "file",
-		"path":              path,
-		"flash-allow-empty": true,
-		"exclude-type":      "tailscale",
+		"type":                    "file",
+		"path":                    path,
+		"flash-allow-empty":       true,
+		"flash-exclude-interface": true,
+		"exclude-type":            "tailscale",
 	}
-	if inspection.Count == 0 && inspection.RelayExcluded > 0 {
-		definition = map[string]any{"type": "inline", "payload": []any{}, "flash-allow-empty": true}
-	} else if len(inspection.relayed) > 0 {
-		definition["exclude-filter"] = exactNamesFilter(inspection.relayed)
+	if !relay.empty() {
+		definition["flash-exclude-dialer"] = relay.pattern()
 	}
 	override := map[string]any{}
 	if len(renames) > 0 {
@@ -501,9 +509,6 @@ func mountProviderNode(path string, renames []MountNode, inspection MountSourceI
 		}
 		override["proxy-name"] = rules
 	}
-	if !relay.empty() && definition["type"] == "file" {
-		override["override-expr"] = []string{relay.backstop()}
-	}
 	if len(override) > 0 {
 		definition["override"] = override
 	}
@@ -514,13 +519,13 @@ func mountProviderNode(path string, renames []MountNode, inspection MountSourceI
 	return &node, nil
 }
 
-func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, reach map[string]bool, chosen []string, providers []string, baseProviders []string) ([]MountGroupReport, error) {
+func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, reach map[string]string, chosen []string, providers []string, baseProviders []string) ([]MountGroupReport, error) {
 	reports := []MountGroupReport{}
 	found := map[string]bool{}
 	for i, mapping := range mappings {
 		node := resolveAlias(groupsNode.Content[i])
 		info := mountGroupInfo(mapping, reach[groupString(mapping, "name")])
-		if reach[info.Name] && collectsProviders(mapping) {
+		if reach[info.Name] != "" && collectsProviders(mapping) {
 			pinned, err := pinBaseProviders(node, mapping, baseProviders)
 			if err != nil {
 				return nil, err

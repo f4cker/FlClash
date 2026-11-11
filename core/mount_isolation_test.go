@@ -341,32 +341,32 @@ func TestMountLeavesOutNodesThatRelayThroughTailscale(t *testing.T) {
 	if err != nil || chained["dialer-proxy"] != "base" {
 		t.Errorf("chained = %v, %v; want its own dialer-proxy kept", chained, err)
 	}
-	if relayed, err := provider.ProxyMapping(pd, definition, "via-node"); err != nil || relayed != nil {
-		t.Errorf("via-node = %v, %v; want it left out", relayed, err)
-	}
 
-	writeMountFile(t, home, "1.yaml", relaySource+"  - {name: late, type: socks5, server: 127.0.0.1, port: 9, dialer-proxy: \"Tailscale (Flash)\"}\n")
-	late, err := provider.ProxyMapping(pd, definition, "late")
-	if err != nil || late["dialer-proxy"] != "REJECT" {
-		t.Errorf("a node the file gained later = %v, %v; want its dial to fail", late, err)
-	}
-	if kept, _ := provider.ProxyMapping(pd, definition, "chained"); kept["dialer-proxy"] != "base" {
-		t.Errorf("chained after the change = %v", kept)
+	// The provider drops by the same reading when it loads the file, so a
+	// node the file gains after the check never becomes a member.
+	writeMountFile(t, home, "1.yaml", relaySource+
+		"  - {name: late, type: socks5, server: 127.0.0.1, port: 9, dialer-proxy: \"Tailscale (Flash)\"}\n"+
+		"  - {name: spelled, type: socks5, server: 127.0.0.1, port: 10, Dialer_Proxy: Hops}\n"+
+		"  - {name: global, type: socks5, server: 127.0.0.1, port: 11, dialer-proxy: GLOBAL}\n"+
+		"  - {name: bound, type: socks5, server: 127.0.0.1, port: 12, interface-name: utun4}\n")
+	reloaded := checkOnlyConfig(t, &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}})
+	if got := memberNames(t, reloaded, "Auto"); !reflect.DeepEqual(got, []string{"plain", "chained"}) {
+		t.Errorf("Auto after the file changed = %v, want only plain and chained", got)
 	}
 
 	target, err := inspectMountTarget(rootOf(t, relayProfile))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := []string{"Hops", "Office", "hop", "ts-office"}; !reflect.DeepEqual(target.Relay, want) {
+	if want := []string{"GLOBAL", "Hops", "Office", "hop", "ts-office"}; !reflect.DeepEqual(target.Relay, want) {
 		t.Errorf("relay = %v, want %v", target.Relay, want)
 	}
 	inspected := handleInspectMountSource(MountInspectSourceParams{Path: path, Relay: target.Relay, Managed: []string{"", "Work"}})
-	if inspected.Count != 2 || inspected.RelayExcluded != 7 || inspected.TailscaleExcluded != 1 {
-		t.Errorf("inspection = %+v, want plain and chained, and the late node left out", inspected)
+	if inspected.Count != 2 || inspected.RelayExcluded != 9 || inspected.TailscaleExcluded != 1 || inspected.InterfaceExcluded != 1 {
+		t.Errorf("inspection = %+v, want plain and chained, and the nodes added later left out", inspected)
 	}
 	unchecked := handleInspectMountSource(MountInspectSourceParams{Path: path})
-	if unchecked.RelayExcluded != 0 || unchecked.Count != 9 {
+	if unchecked.RelayExcluded != 0 || unchecked.Count != 11 || unchecked.InterfaceExcluded != 1 {
 		t.Errorf("inspection without a target = %+v, want nothing checked", unchecked)
 	}
 }
@@ -387,7 +387,7 @@ func TestMountSourceWhoseNodesAllRelayThroughTailscaleIsNoEmptyList(t *testing.T
 		mixed: {Status: mountSourceNodes, Listed: 2, RelayExcluded: 1, TailscaleExcluded: 1},
 	} {
 		got := handleInspectMountSource(MountInspectSourceParams{Path: path, Relay: relay})
-		got.names, got.relayed = nil, nil
+		got.names = nil
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("inspection = %+v, want %+v", got, want)
 		}

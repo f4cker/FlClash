@@ -6,12 +6,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
+	"slices"
 	"testing"
 
 	"github.com/metacubex/mihomo/adapter/outbound"
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
-	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/dns"
 	"github.com/metacubex/mihomo/tunnel"
 	D "github.com/miekg/dns"
@@ -150,79 +149,123 @@ rules:
   - MATCH,Main
 `
 
+// Rule sets (an overlay section, as the host sends them), a LAN rule on a direct-or-proxy switch, and relays spelled as
+// the proxy decoder still reads them.
+const mountTailscaleRuleSetProviders = `proxy-providers:
+  own: {type: inline, payload: [{name: own-node, type: socks5, server: 127.0.0.9, port: 1081}]}
+  chain: {type: inline, dialer-proxy: ts-office, payload: [{name: chain-node, type: socks5, server: 127.0.0.9, port: 1083}]}
+rule-providers:
+  tailnet: {type: inline, behavior: ipcidr, payload: [100.100.0.0/16]}
+  names: {type: inline, behavior: domain, payload: ['+.ts.net']}
+  office: {type: inline, behavior: classical, payload: ['DOMAIN-SUFFIX,ts.net']}
+`
+
+const mountTailscaleRuleSetProfile = `proxies:
+  - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
+  - {name: ts-office, type: tailscale}
+  - {name: hop, type: socks5, server: 127.0.0.9, port: 1082, Dialer_Proxy: ts-office}
+proxy-groups:
+  - {name: Main, type: select, proxies: [Auto, base]}
+  - {name: Direct, type: select, proxies: [DIRECT, Proxy]}
+  - {name: Proxy, type: select, proxies: [Pool, base]}
+  - {name: Pool, type: url-test, include-all-providers: true}
+  - {name: Names, type: url-test, include-all-providers: true}
+  - {name: Office, type: select, proxies: [ts-office, Pool]}
+  - {name: Hops, type: select, proxies: [hop, base]}
+  - {name: Auto, type: url-test, include-all-providers: true}
+rules:
+  - RULE-SET,tailnet,Direct
+  - RULE-SET,names,Names
+  - RULE-SET,office,Office
+  - GEOIP,LAN,Direct,no-resolve
+  - MATCH,Main
+`
+
+const mountTailscaleInvariantRelays = `  - {name: relay, type: socks5, server: 127.0.0.2, port: 2, dialer-proxy: ts-office}
+  - {name: spelled, type: socks5, server: 127.0.0.2, port: 3, DIALER_PROXY: Office}
+  - {name: global, type: socks5, server: 127.0.0.2, port: 4, dialer-proxy: GLOBAL}
+  - {name: bound, type: socks5, server: 127.0.0.2, port: 5, interface-name: utun9}
+`
+
 // What a Tailscale route can end up on, followed through every group, must
 // never be a mounted node. GLOBAL holds everything and serves global mode
 // only, where no rule routes.
 func TestMountedConfigNeverRoutesTailscaleThroughAMountedNode(t *testing.T) {
-	for _, attached := range []bool{false, true} {
-		t.Run(fmt.Sprintf("attached=%v", attached), func(t *testing.T) {
-			home := withMountHome(t)
-			source := writeMountFile(t, home, "1.yaml", mountSourceB+"  - {name: relay, type: socks5, server: 127.0.0.2, port: 2, dialer-proxy: ts-office}\n")
-			setup := &TailscaleSetup{ProfileID: 9}
-			if attached {
-				setup.Managed = []TailscaleManagedSetup{{ID: "m1", Name: "Work", Attached: true}}
-			}
-			mounts := &MountSetup{Target: 9, Revision: "r", Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
-			applyMountedTailscale(t, home, mountTailscaleInvariantProfile, mountTailscaleInvariantProviders, mounts, setup)
-
-			proxies := tunnel.Proxies()
-			own, reach := tailscaleProfileAdapters(proxies)
-			delete(reach, globalProxyName)
-			routes, _ := tailscaleProfileRoutes(tunnel.Rules(), own, reach)
-			base, err := readMountBase(rootOf(t, mountTailscaleInvariantProfile+mountTailscaleInvariantProviders))
-			if err != nil {
-				t.Fatal(err)
-			}
-			static := base.tailscaleGroups(tailnetSuffixes())
-			guarded := map[string]bool{}
-			for name := range reach {
-				guarded[name] = true
-				if _, group := adapterAs[outboundgroup.ProxyGroup](proxies[name]); group && !static[name] {
-					t.Errorf("%s reaches Tailscale at runtime but the mount check missed it", name)
-				}
-			}
-			for _, route := range routes {
-				guarded[route.Proxy] = true
-			}
-			for name := range static {
-				guarded[name] = true
-			}
-			if table := runningTailscaleTable(); table != nil {
-				for _, decision := range table.ips {
-					guarded[decision.Proxy] = true
-				}
-				for _, decision := range table.suffixes {
-					guarded[decision.decision.Proxy] = true
-				}
-			}
-			for name := range guarded {
-				if member := mountedMemberOf(proxies, name, map[string]bool{}); member != "" {
-					t.Errorf("Tailscale traffic through %s can reach the mounted node %s", name, member)
-				}
-			}
-			if member := mountedMemberOf(proxies, "Main", map[string]bool{}); member == "" {
-				t.Error("the main group has no mounted node; the mount did nothing")
-			}
-			if member := mountedMemberOf(proxies, "Auto", map[string]bool{}); member == "relay" {
-				t.Error("a node relaying through Tailscale was mounted")
-			}
-		})
+	profiles := map[string][3]string{
+		"groups": {mountTailscaleInvariantProfile, mountTailscaleInvariantProviders, ""},
+		"rule-set": {mountTailscaleRuleSetProfile, mountTailscaleRuleSetProviders,
+			"  - {name: hopper, type: socks5, server: 127.0.0.2, port: 6, Dialer-Proxy: Hops}\n" +
+				"  - {name: chained, type: socks5, server: 127.0.0.2, port: 7, dialer_proxy: Auto}\n"},
+	}
+	for _, kind := range []string{"groups", "rule-set"} {
+		for _, attached := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/attached=%v", kind, attached), func(t *testing.T) {
+				checkMountedTailscaleInvariant(t, profiles[kind][0], profiles[kind][1], profiles[kind][2], attached)
+			})
+		}
 	}
 }
 
-func mountedMemberOf(proxies map[string]C.Proxy, name string, seen map[string]bool) string {
-	group, ok := adapterAs[outboundgroup.ProxyGroup](proxies[name])
-	if !ok || seen[name] {
-		return ""
+func checkMountedTailscaleInvariant(t *testing.T, profile, providers, relays string, attached bool) {
+	home := withMountHome(t)
+	source := writeMountFile(t, home, "1.yaml", mountSourceB+mountTailscaleInvariantRelays+relays)
+	setup := &TailscaleSetup{ProfileID: 9}
+	if attached {
+		setup.Managed = []TailscaleManagedSetup{{ID: "m1", Name: "Work", Attached: true}}
 	}
-	seen[name] = true
-	for _, member := range group.Proxies() {
-		if strings.HasPrefix(member.ProxyInfo().ProviderName, mountProviderPrefix) {
-			return member.Name()
-		}
-		if found := mountedMemberOf(proxies, member.Name(), seen); found != "" {
-			return found
+	mounts := &MountSetup{Target: 9, Revision: "r", Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
+	applyMountedTailscale(t, home, profile, providers, mounts, setup)
+
+	proxies := tunnel.Proxies()
+	own, reach := tailscaleProfileAdapters(proxies)
+	delete(reach, globalProxyName)
+	routes, _ := tailscaleProfileRoutes(tunnel.Rules(), own, reach)
+	base, err := readMountBase(rootOf(t, profile+providers))
+	if err != nil {
+		t.Fatal(err)
+	}
+	static := base.tailscaleGroups(newRuleReader(base))
+	guarded := map[string]bool{}
+	for name := range reach {
+		guarded[name] = true
+		if _, group := adapterAs[outboundgroup.ProxyGroup](proxies[name]); group && static[name] == "" {
+			t.Errorf("%s reaches Tailscale at runtime but the mount check missed it", name)
 		}
 	}
-	return ""
+	for _, route := range routes {
+		guarded[route.Proxy] = true
+	}
+	for name := range static {
+		guarded[name] = true
+	}
+	if table := runningTailscaleTable(); table != nil {
+		for _, decision := range table.ips {
+			guarded[decision.Proxy] = true
+		}
+		for _, decision := range table.suffixes {
+			guarded[decision.decision.Proxy] = true
+		}
+	}
+	for name := range guarded {
+		if member := mountedMemberOf(proxies, name, map[string]bool{}); member != "" {
+			t.Errorf("Tailscale traffic through %s can reach the mounted node %s", name, member)
+		}
+	}
+	if member := mountedMemberOf(proxies, "Main", map[string]bool{}); member == "" {
+		t.Error("the main group has no mounted node; the mount did nothing")
+	}
+	for name, proxy := range proxies {
+		group, ok := adapterAs[outboundgroup.ProxyGroup](proxy)
+		if !ok {
+			continue
+		}
+		for _, member := range group.Proxies() {
+			if slices.Contains([]string{"relay", "spelled", "global", "bound", "hopper", "chained"}, member.Name()) {
+				t.Errorf("%s holds %s, which relays through Tailscale or binds an interface", name, member.Name())
+			}
+		}
+	}
+	if state := handleMountState(); state.Blocked || len(state.Refused) > 0 {
+		t.Errorf("state = blocked %v, refused %v; want the mounted profile running", state.Blocked, state.Refused)
+	}
 }

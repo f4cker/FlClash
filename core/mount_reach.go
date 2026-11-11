@@ -5,34 +5,52 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/dlclark/regexp2"
+	"github.com/metacubex/mihomo/adapter/provider"
 	"github.com/metacubex/mihomo/common/convert"
 	mihomoYaml "github.com/metacubex/mihomo/common/yaml"
 	"github.com/metacubex/mihomo/component/age"
 	"github.com/metacubex/mihomo/constant"
+	cp "github.com/metacubex/mihomo/constant/provider"
 	RC "github.com/metacubex/mihomo/rules/common"
+	"github.com/metacubex/mihomo/rules/logic"
+	rp "github.com/metacubex/mihomo/rules/provider"
 	"go.yaml.in/yaml/v3"
+	"go4.org/netipx"
+)
+
+// Why a group may not take mounted nodes. Unknown is a provider or rule set
+// whose content cannot be read, which is never taken to hold nothing.
+const (
+	reachHolds       = "holds"
+	reachProviderUnk = "provider-unknown"
+	reachRule        = "rule"
+	reachRuleUnk     = "rule-unknown"
+	reachMember      = "member"
 )
 
 // A base as the mount checks read it, before any mount is added.
 type mountBase struct {
 	proxyTypes   map[string]string
-	proxyDialers map[string]string
+	proxyDialers map[string][]string
 	groups       []map[string]any
 	providers    map[string]baseProvider
+	ruleSets     map[string]ruleSetContent
 	rules        []string
 }
 
-// What a base provider holds, from its payload or cache. Filters are not
+// What a base provider holds, from its payload and cache. Filters are not
 // applied, so a Tailscale node they would drop still counts.
 type baseProvider struct {
 	names     []string
 	tailscale bool
+	unknown   bool
+	gated     bool
+	dialers   []string
 }
 
 func readMountBase(root *yaml.Node) (*mountBase, error) {
@@ -44,16 +62,20 @@ func readMountBase(root *yaml.Node) (*mountBase, error) {
 	if err != nil {
 		return nil, err
 	}
-	base := &mountBase{proxyTypes: map[string]string{}, proxyDialers: map[string]string{}, groups: groups}
+	base := &mountBase{proxyTypes: map[string]string{}, proxyDialers: map[string][]string{}, groups: groups}
 	for _, mapping := range proxies {
 		name := groupString(mapping, "name")
 		base.proxyTypes[name] = strings.ToLower(groupString(mapping, "type"))
-		if dialer := groupString(mapping, "dialer-proxy"); dialer != "" {
-			base.proxyDialers[name] = dialer
+		if dialers := proxyOptionValues(mapping, "dialer-proxy"); len(dialers) > 0 {
+			base.proxyDialers[name] = dialers
 		}
 	}
 	if providers := resolveAlias(mappingValue(root, "proxy-providers")); providers != nil && providers.Kind == yaml.MappingNode {
 		base.providers = readBaseProviders(providers)
+	}
+	base.ruleSets = map[string]ruleSetContent{}
+	if ruleSets := resolveAlias(mappingValue(root, "rule-providers")); ruleSets != nil && ruleSets.Kind == yaml.MappingNode {
+		base.ruleSets = readBaseRuleSets(ruleSets)
 	}
 	base.rules = ruleLines(mappingValue(root, "rules"))
 	if subRules := resolveAlias(mappingValue(root, "sub-rules")); subRules != nil && subRules.Kind == yaml.MappingNode {
@@ -77,60 +99,115 @@ func ruleLines(node *yaml.Node) []string {
 	return lines
 }
 
+// Every value a proxy option is given under any spelling the proxy decoder
+// accepts: case ignored and _ read as -.
+func proxyOptionValues(mapping map[string]any, key string) []string {
+	var values []string
+	for name, value := range mapping {
+		if strings.EqualFold(strings.ReplaceAll(name, "_", "-"), key) {
+			if text := provider.WeakString(value); text != "" {
+				values = append(values, text)
+			}
+		}
+	}
+	slices.Sort(values)
+	return values
+}
+
+func providerOption(mapping map[string]any, key string) any {
+	if value, ok := mapping[key]; ok {
+		return value
+	}
+	for name, value := range mapping {
+		if strings.EqualFold(name, key) {
+			return value
+		}
+	}
+	return nil
+}
+
+func providerString(mapping map[string]any, key string) string {
+	value, _ := providerOption(mapping, key).(string)
+	return value
+}
+
 // An override-expr renaming is not followed.
 func readBaseProviders(providers *yaml.Node) map[string]baseProvider {
 	read := map[string]baseProvider{}
 	for i := 0; i+1 < len(providers.Content); i += 2 {
 		var mapping map[string]any
 		if resolveAlias(providers.Content[i+1]).Decode(&mapping) != nil {
-			read[providers.Content[i].Value] = baseProvider{}
+			read[providers.Content[i].Value] = baseProvider{unknown: true}
 			continue
 		}
-		var nodes []map[string]any
-		switch groupString(mapping, "type") {
-		case "inline":
-			payload, _ := mapping["payload"].([]any)
-			for _, item := range payload {
-				if node, ok := item.(map[string]any); ok {
-					nodes = append(nodes, node)
-				}
-			}
-		case "file", "http":
-			path := groupString(mapping, "path")
-			if path == "" && groupString(mapping, "type") == "http" {
-				path = constant.Path.GetPathByHash("proxies", groupString(mapping, "url"))
-			}
-			nodes = cachedProxies(constant.Path.Resolve(path), groupString(mapping, "age-secret-key"))
-		}
-		override, _ := mapping["override"].(map[string]any)
-		excluded := typeExcluded(groupString(mapping, "exclude-type"), "tailscale")
-		var provider baseProvider
-		for _, node := range nodes {
-			provider.names = append(provider.names, overriddenName(groupString(node, "name"), override))
-			if !excluded && strings.EqualFold(groupString(node, "type"), "tailscale") {
-				provider.tailscale = true
-			}
-		}
-		read[providers.Content[i].Value] = provider
+		read[providers.Content[i].Value] = readBaseProvider(mapping)
 	}
 	return read
 }
 
-func cachedProxies(path, ageSecretKey string) []map[string]any {
+func readBaseProvider(mapping map[string]any) baseProvider {
+	var p baseProvider
+	var nodes []map[string]any
+	payload, _ := providerOption(mapping, "payload").([]any)
+	for _, item := range payload {
+		if node, ok := item.(map[string]any); ok {
+			nodes = append(nodes, node)
+		}
+	}
+	switch kind := providerString(mapping, "type"); kind {
+	case "inline":
+	case "file", "http":
+		p.gated = true
+		path := providerString(mapping, "path")
+		if path == "" && kind == "http" {
+			path = constant.Path.GetPathByHash("proxies", providerString(mapping, "url"))
+		}
+		cached, ok := cachedProxies(constant.Path.Resolve(path), providerString(mapping, "age-secret-key"))
+		p.unknown = !ok
+		nodes = append(nodes, cached...)
+	default:
+		p.unknown = true
+	}
+	override, _ := providerOption(mapping, "override").(map[string]any)
+	excluded := typeExcluded(providerString(mapping, "exclude-type"), "tailscale")
+	for _, chain := range []string{providerString(mapping, "dialer-proxy"), providerString(override, "dialer-proxy")} {
+		if chain != "" {
+			p.dialers = append(p.dialers, chain)
+		}
+	}
+	if expressions := providerOption(override, "override-expr"); expressions != nil && strings.Contains(strings.ToLower(provider.WeakString(expressions)), "dialer") {
+		p.unknown = true
+	}
+	for _, node := range nodes {
+		if excluded && strings.EqualFold(groupString(node, "type"), "tailscale") {
+			continue
+		}
+		p.names = append(p.names, overriddenName(groupString(node, "name"), override))
+		p.tailscale = p.tailscale || strings.EqualFold(groupString(node, "type"), "tailscale")
+		p.dialers = append(p.dialers, proxyOptionValues(node, "dialer-proxy")...)
+	}
+	return p
+}
+
+func cachedProxies(path, ageSecretKey string) ([]map[string]any, bool) {
 	buf, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		return nil, false
 	}
 	if buf, err = age.DecryptBytes(buf, ageKeys(ageSecretKey)...); err != nil {
-		return nil
+		return nil, false
 	}
 	var document struct {
 		Proxies []map[string]any `yaml:"proxies"`
 	}
 	if mihomoYaml.Unmarshal(buf, &document) != nil || document.Proxies == nil {
-		document.Proxies, _ = convert.ConvertsV2Ray(buf)
+		converted, err := convert.ConvertsV2Ray(buf)
+		if err != nil {
+			return nil, false
+		}
+		return converted, true
 	}
-	return document.Proxies
+	return document.Proxies, true
 }
 
 // As mihomo reads exclude-type: a | list, each compared ignoring case.
@@ -157,46 +234,71 @@ func (b *mountBase) groupProviders(group map[string]any) []string {
 		for name := range b.providers {
 			names = append(names, name)
 		}
+		slices.Sort(names)
 		return names
 	}
 	return groupList(group, "use")
 }
 
-// The groups mounts must stay out of: those holding a Tailscale node, those
-// a rule sends Tailscale ranges or tailnet names to, and every group inside
-// one of them. The final MATCH alone never counts: it is the main group.
-func (b *mountBase) tailscaleGroups(suffixes []string) map[string]bool {
+// The groups holding a Tailscale node, or perhaps one through an unread provider.
+func (b *mountBase) holding() map[string]string {
 	hasTailscale := false
 	for _, kind := range b.proxyTypes {
 		hasTailscale = hasTailscale || kind == "tailscale"
 	}
-	reach := map[string]bool{}
-	holds := func(group map[string]any) bool {
+	reach := map[string]string{}
+	holds := func(group map[string]any) string {
 		excluded := typeExcluded(groupString(group, "exclude-type"), "tailscale")
-		if !excluded {
-			if hasTailscale && (groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies")) {
-				return true
-			}
-			if slices.ContainsFunc(b.groupProviders(group), func(name string) bool { return b.providers[name].tailscale }) {
-				return true
+		if !excluded && hasTailscale && (groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies")) {
+			return reachHolds
+		}
+		reason := ""
+		for _, name := range b.groupProviders(group) {
+			switch p := b.providers[name]; {
+			case p.unknown:
+				reason = reachProviderUnk
+			case p.tailscale && !excluded:
+				return reachHolds
 			}
 		}
-		return slices.ContainsFunc(groupList(group, "proxies"), func(member string) bool {
-			return reach[member] || !excluded && b.proxyTypes[member] == "tailscale"
-		})
+		for _, member := range groupList(group, "proxies") {
+			if reach[member] == reachHolds || !excluded && b.proxyTypes[member] == "tailscale" {
+				return reachHolds
+			}
+			if reach[member] != "" {
+				reason = reach[member]
+			}
+		}
+		return reason
 	}
 	for changed := true; changed; {
 		changed = false
 		for _, group := range b.groups {
-			if name := groupString(group, "name"); !reach[name] && holds(group) {
-				reach[name], changed = true, true
+			name := groupString(group, "name")
+			if reason := holds(group); reason != "" && reason != reach[name] && reach[name] != reachHolds {
+				reach[name], changed = reason, true
 			}
 		}
 	}
+	return reach
+}
+
+// The groups mounts must stay out of: those holding a Tailscale node, those a
+// rule other than the final MATCH (the main group) sends Tailscale ranges or
+// tailnet names to, and every group inside one, whatever is selected now.
+func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
+	reach := b.holding()
 	groups := b.groupNames()
 	for _, line := range b.rules {
-		if target, ok := tailscaleRuleTarget(line, suffixes); ok && groups[target] {
-			reach[target] = true
+		target, kind := reader.ruleTarget(line)
+		if !groups[target] || reach[target] != "" {
+			continue
+		}
+		switch kind {
+		case ruleReaches:
+			reach[target] = reachRule
+		case ruleUnknown:
+			reach[target] = reachRuleUnk
 		}
 	}
 	byName := make(map[string]map[string]any, len(b.groups))
@@ -207,12 +309,13 @@ func (b *mountBase) tailscaleGroups(suffixes []string) map[string]bool {
 	for name := range reach {
 		queue = append(queue, name)
 	}
+	slices.Sort(queue)
 	for len(queue) > 0 {
 		name := queue[0]
 		queue = queue[1:]
 		for _, member := range groupList(byName[name], "proxies") {
-			if groups[member] && !reach[member] {
-				reach[member] = true
+			if groups[member] && reach[member] == "" {
+				reach[member] = reachMember
 				queue = append(queue, member)
 			}
 		}
@@ -221,22 +324,23 @@ func (b *mountBase) tailscaleGroups(suffixes []string) map[string]bool {
 }
 
 // The names a mount node's dialer-proxy must not lead to: a Tailscale node,
-// a group reaching one, and a base proxy or group that relays through those.
-func (b *mountBase) relayNames(reach map[string]bool) map[string]bool {
+// a group holding one, and a base proxy or group that relays through those.
+// Only holding counts: a group a rule targets or one inside it relays nowhere.
+func (b *mountBase) relayNames(holding map[string]string) map[string]bool {
 	relay := map[string]bool{}
 	for name, kind := range b.proxyTypes {
 		if kind == "tailscale" {
 			relay[name] = true
 		}
 	}
-	for name := range reach {
+	for name := range holding {
 		relay[name] = true
 	}
 	for changed := true; changed; {
 		changed = false
 		chained := false
-		for name, dialer := range b.proxyDialers {
-			if relay[dialer] && !relay[name] {
+		for name, dialers := range b.proxyDialers {
+			if !relay[name] && slices.ContainsFunc(dialers, func(dialer string) bool { return relay[dialer] }) {
 				relay[name], changed = true, true
 			}
 			chained = chained || relay[name] && b.proxyTypes[name] != "tailscale"
@@ -247,7 +351,8 @@ func (b *mountBase) relayNames(reach map[string]bool) map[string]bool {
 				continue
 			}
 			all := groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies")
-			if all && chained || slices.ContainsFunc(groupList(group, "proxies"), func(member string) bool { return relay[member] }) {
+			if all && chained || slices.ContainsFunc(groupList(group, "proxies"), func(member string) bool { return relay[member] }) ||
+				slices.ContainsFunc(b.groupProviders(group), func(p string) bool { return b.providerRelays(p, relay) }) {
 				relay[name], changed = true, true
 			}
 		}
@@ -255,62 +360,280 @@ func (b *mountBase) relayNames(reach map[string]bool) map[string]bool {
 	return relay
 }
 
-// Whether a rule other than MATCH sends something of the Tailscale ranges or
-// a tailnet suffix to its target. Only rules whose payload names exactly
-// what they match are read; a rule set or GEOIP is not opened.
-func tailscaleRuleTarget(line string, suffixes []string) (string, bool) {
+func (b *mountBase) providerRelays(name string, relay map[string]bool) bool {
+	p := b.providers[name]
+	return p.unknown || slices.ContainsFunc(p.dialers, func(dialer string) bool { return relay[dialer] })
+}
+
+const (
+	ruleMisses = iota
+	ruleUnknown
+	ruleReaches
+)
+
+type ruleSetContent struct {
+	reaches bool
+	unknown bool
+	gated   bool
+}
+
+func readBaseRuleSets(ruleSets *yaml.Node) map[string]ruleSetContent {
+	read := map[string]ruleSetContent{}
+	reader := &ruleReader{suffixes: tailnetSuffixes()}
+	for i := 0; i+1 < len(ruleSets.Content); i += 2 {
+		var mapping map[string]any
+		if resolveAlias(ruleSets.Content[i+1]).Decode(&mapping) != nil {
+			read[ruleSets.Content[i].Value] = ruleSetContent{unknown: true}
+			continue
+		}
+		read[ruleSets.Content[i].Value] = reader.readRuleSet(mapping)
+	}
+	return read
+}
+
+func (r *ruleReader) readRuleSet(mapping map[string]any) ruleSetContent {
+	behavior, err := cp.ParseBehavior(providerString(mapping, "behavior"))
+	if err != nil {
+		return ruleSetContent{unknown: true}
+	}
+	var payload []string
+	items, _ := providerOption(mapping, "payload").([]any)
+	for _, item := range items {
+		if line, ok := item.(string); ok {
+			payload = append(payload, line)
+		}
+	}
+	var strategy any
+	switch kind := providerString(mapping, "type"); kind {
+	case "inline":
+		strategy = rp.ParseInlineRuleSet(payload, behavior, recordRule)
+	case "file", "http":
+		format, err := cp.ParseRuleFormat(providerString(mapping, "format"))
+		if err != nil {
+			return ruleSetContent{unknown: true}
+		}
+		path := providerString(mapping, "path")
+		if path == "" && kind == "http" {
+			path = constant.Path.GetPathByHash("rules", providerString(mapping, "url"))
+		}
+		buf, err := os.ReadFile(constant.Path.Resolve(path))
+		if err != nil {
+			return ruleSetContent{unknown: true}
+		}
+		if strategy, err = rp.ParseRuleSet(buf, behavior, format, recordRule); err != nil {
+			return ruleSetContent{unknown: true}
+		}
+		content := r.ruleSetReach(strategy)
+		// A payload is what the set holds until its file loads.
+		if len(payload) > 0 {
+			inline := r.ruleSetReach(rp.ParseInlineRuleSet(payload, behavior, recordRule))
+			content.reaches = content.reaches || inline.reaches
+			content.unknown = content.unknown || inline.unknown
+		}
+		content.gated = true
+		return content
+	default:
+		return ruleSetContent{unknown: true}
+	}
+	return r.ruleSetReach(strategy)
+}
+
+func (r *ruleReader) ruleSetReach(strategy any) ruleSetContent {
+	switch r.strategyReach(strategy) {
+	case ruleReaches:
+		return ruleSetContent{reaches: true}
+	case ruleUnknown:
+		return ruleSetContent{unknown: true}
+	}
+	return ruleSetContent{}
+}
+
+func (r *ruleReader) strategyReach(strategy any) int {
+	switch typed := strategy.(type) {
+	case interface{ ToIpCidr() *netipx.IPSet }:
+		set := typed.ToIpCidr()
+		if set != nil && slices.ContainsFunc(tailscaleProtectedPrefixes, set.OverlapsPrefix) {
+			return ruleReaches
+		}
+	case interface{ Rules() []constant.Rule }:
+		reach := ruleMisses
+		for _, rule := range typed.Rules() {
+			if recorded, ok := rule.(*recordedRule); ok {
+				reach = max(reach, r.condition(recorded.tp, recorded.payload, recorded.params))
+			}
+		}
+		return reach
+	case interface {
+		Match(*constant.Metadata, constant.RuleMatchHelper) bool
+		DumpMrs(func(string) bool)
+	}:
+		for _, suffix := range r.suffixes {
+			for _, host := range []string{suffix, "host." + suffix} {
+				if typed.Match(&constant.Metadata{Host: host}, constant.RuleMatchHelper{}) {
+					return ruleReaches
+				}
+			}
+		}
+		reach := ruleMisses
+		typed.DumpMrs(func(key string) bool {
+			key = strings.TrimLeft(strings.TrimPrefix(key, "+"), "*.")
+			if slices.ContainsFunc(r.suffixes, func(suffix string) bool { return key == suffix || strings.HasSuffix(key, "."+suffix) }) {
+				reach = ruleReaches
+				return false
+			}
+			return true
+		})
+		return reach
+	case nil:
+		return ruleUnknown
+	}
+	return ruleMisses
+}
+
+// A classical or logic sub-rule as written, read without being built: a
+// GEOIP or GEOSITE built here would load or download its database.
+type recordedRule struct {
+	tp      string
+	payload string
+	params  []string
+}
+
+func (r *recordedRule) RuleType() constant.RuleType { return constant.MATCH }
+
+func (r *recordedRule) Match(*constant.Metadata, constant.RuleMatchHelper) (bool, string) {
+	return false, ""
+}
+
+func (r *recordedRule) Adapter() string { return "" }
+
+func (r *recordedRule) Payload() string { return r.payload }
+
+func (r *recordedRule) ProviderNames() []string { return nil }
+
+func recordRule(tp, payload, _ string, params []string, _ map[string][]constant.Rule) (constant.Rule, error) {
+	return &recordedRule{tp: tp, payload: payload, params: params}, nil
+}
+
+type ruleReader struct {
+	suffixes []string
+	ruleSets map[string]ruleSetContent
+	// The rule sets a rule reads to send something to a group.
+	used map[string]bool
+}
+
+func newRuleReader(base *mountBase) *ruleReader {
+	return &ruleReader{suffixes: tailnetSuffixes(), ruleSets: base.ruleSets, used: map[string]bool{}}
+}
+
+func (r *ruleReader) ruleTarget(line string) (string, int) {
 	tp, payload, target, params := RC.ParseRulePayload(line, true)
-	if isSrc, _ := RC.ParseParams(params); isSrc || target == "" {
-		return "", false
+	if target == "" || tp == "MATCH" || tp == "SUB-RULE" {
+		return "", ruleMisses
+	}
+	return target, r.condition(tp, payload, params)
+}
+
+func (r *ruleReader) condition(tp, payload string, params []string) int {
+	if isSrc, _ := RC.ParseParams(params); isSrc {
+		return ruleMisses
 	}
 	switch tp {
 	case "IP-CIDR", "IP-CIDR6":
 		prefix, err := netip.ParsePrefix(payload)
 		if err != nil {
-			return "", false
+			return ruleUnknown
 		}
-		return target, slices.ContainsFunc(tailscaleProtectedPrefixes, prefix.Masked().Overlaps)
+		return reachIf(slices.ContainsFunc(tailscaleProtectedPrefixes, prefix.Masked().Overlaps))
 	case "IP-SUFFIX":
-		rule, err := RC.NewIPSuffix(payload, target, false, true)
-		if err != nil {
-			return "", false
+		return r.ipSuffix(payload)
+	case "GEOIP":
+		return reachIf(strings.EqualFold(payload, "lan") || strings.EqualFold(payload, "private"))
+	case "RULE-SET":
+		if r.used != nil {
+			r.used[payload] = true
 		}
-		suffix, _ := netip.ParsePrefix(payload)
-		return target, slices.ContainsFunc(tailscaleProtectedPrefixes, func(prefix netip.Prefix) bool {
-			candidate, ok := joinPrefixBits(prefix, suffix.Addr())
-			if !ok {
-				return false
-			}
-			matched, _ := rule.Match(&constant.Metadata{DstIP: candidate}, constant.RuleMatchHelper{})
-			return matched
-		})
+		content, ok := r.ruleSets[payload]
+		switch {
+		case !ok || content.unknown:
+			return ruleUnknown
+		case content.reaches:
+			return ruleReaches
+		}
+		return ruleMisses
+	case "NOT":
+		return ruleReaches
+	case "AND", "OR":
+		reach := ruleMisses
+		sub := func(tp, payload, _ string, params []string, _ map[string][]constant.Rule) (constant.Rule, error) {
+			reach = max(reach, r.condition(tp, payload, params))
+			return &recordedRule{tp: tp, payload: payload}, nil
+		}
+		var err error
+		if tp == "AND" {
+			_, err = logic.NewAND(payload, "", sub)
+		} else {
+			_, err = logic.NewOR(payload, "", sub)
+		}
+		if err != nil {
+			return ruleUnknown
+		}
+		return reach
 	}
+	return r.domain(tp, payload)
+}
+
+func reachIf(reaches bool) int {
+	if reaches {
+		return ruleReaches
+	}
+	return ruleMisses
+}
+
+func (r *ruleReader) ipSuffix(payload string) int {
+	rule, err := RC.NewIPSuffix(payload, "", false, true)
+	if err != nil {
+		return ruleUnknown
+	}
+	suffix, _ := netip.ParsePrefix(payload)
+	return reachIf(slices.ContainsFunc(tailscaleProtectedPrefixes, func(prefix netip.Prefix) bool {
+		candidate, ok := joinPrefixBits(prefix, suffix.Addr())
+		if !ok {
+			return false
+		}
+		matched, _ := rule.Match(&constant.Metadata{DstIP: candidate}, constant.RuleMatchHelper{})
+		return matched
+	}))
+}
+
+// Destination-agnostic rules (ports, processes, networks) and GEOSITE are
+// not read: like MATCH they are the profile's own catch-alls.
+func (r *ruleReader) domain(tp, payload string) int {
 	var rule constant.Rule
 	var err error
 	switch tp {
 	case "DOMAIN":
-		rule = RC.NewDomain(payload, target)
+		rule = RC.NewDomain(payload, "")
 	case "DOMAIN-SUFFIX":
-		rule = RC.NewDomainSuffix(payload, target)
+		rule = RC.NewDomainSuffix(payload, "")
 	case "DOMAIN-KEYWORD":
-		rule = RC.NewDomainKeyword(payload, target)
+		rule = RC.NewDomainKeyword(payload, "")
 	case "DOMAIN-REGEX":
-		rule, err = RC.NewDomainRegex(payload, target)
+		rule, err = RC.NewDomainRegex(payload, "")
 	case "DOMAIN-WILDCARD":
-		rule, err = RC.NewDomainWildcard(payload, target)
+		rule, err = RC.NewDomainWildcard(payload, "")
 	default:
-		return "", false
+		return ruleMisses
 	}
 	if err != nil {
-		return "", false
+		return ruleUnknown
 	}
-	return target, slices.ContainsFunc(suffixes, func(suffix string) bool {
+	return reachIf(slices.ContainsFunc(r.suffixes, func(suffix string) bool {
 		if tailscaleProfileRuleMatches(rule, TailscaleRouteTarget{Kind: tailscaleTargetSuffix, Value: suffix}, nil) {
 			return true
 		}
 		matched, _ := rule.Match(&constant.Metadata{Host: "host." + suffix}, constant.RuleMatchHelper{})
 		return matched
-	})
+	}))
 }
 
 // The address of prefix whose host bits are taken from addr.
@@ -388,6 +711,18 @@ type mountRelay struct {
 	managed []string
 }
 
+// GLOBAL holds every proxy and group, so once anything relays it does too.
+func newMountRelay(names map[string]bool, managed []string) *mountRelay {
+	relay := &mountRelay{names: names, managed: managed}
+	if relay.names == nil {
+		relay.names = map[string]bool{}
+	}
+	if !relay.empty() {
+		relay.names[globalProxyName] = true
+	}
+	return relay
+}
+
 func (r *mountRelay) reaches(name string) bool {
 	return r != nil && name != "" && (r.names[name] || managedNameFamily(name, r.managed))
 }
@@ -396,30 +731,15 @@ func (r *mountRelay) empty() bool {
 	return r == nil || len(r.names) == 0 && len(r.managed) == 0
 }
 
-// The yq-style test pattern for every name a dialer-proxy must not lead to.
+// What the mount provider drops a dialer-proxy by: exactly what reaches holds.
 func (r *mountRelay) pattern() string {
 	var parts []string
 	for name := range r.names {
-		parts = append(parts, regexp.QuoteMeta(name))
+		parts = append(parts, regexp2.Escape(name))
 	}
 	slices.Sort(parts)
 	for _, base := range r.managed {
-		parts = append(parts, regexp.QuoteMeta(base)+`( \(Flash( [0-9]+)?\))?`)
+		parts = append(parts, regexp2.Escape(base)+`(?: \(Flash(?: (?:[2-9]|[1-9][0-9]+))?\))?`)
 	}
-	return "^(" + strings.Join(parts, "|") + ")$"
-}
-
-// A node the file gains after this apply, before the next one, keeps its
-// chain into Tailscale only as a dial that fails.
-func (r *mountRelay) backstop() string {
-	quoted := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`).Replace(r.pattern())
-	return `(select((."dialer-proxy" // "") | test("` + quoted + `")) | ."dialer-proxy") = "REJECT"`
-}
-
-func exactNamesFilter(names []string) string {
-	quoted := make([]string, 0, len(names))
-	for _, name := range names {
-		quoted = append(quoted, regexp2.Escape(name))
-	}
-	return "^(?:" + strings.Join(quoted, "|") + ")$"
+	return "^(?:" + strings.Join(parts, "|") + ")$"
 }
