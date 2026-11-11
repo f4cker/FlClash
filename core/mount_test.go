@@ -269,13 +269,18 @@ func TestMountsReachAutoAndChosenGroupsWithSuffixesOnlyOnClashes(t *testing.T) {
 		t.Errorf("sources = %+v, want %+v", report.Sources, wantSources)
 	}
 	wantGroups := []MountGroupReport{
-		{Name: "Proxy", Via: "use", Protection: mountProtectionReject, EmptyFallback: "REJECT"},
+		{Name: "Proxy", Via: "use", Protection: mountProtectionOriginal},
 		{Name: "Auto", Via: "auto", Protection: mountProtectionReject, EmptyFallback: "REJECT"},
-		{Name: "All", Via: "auto", Protection: mountProtectionReject, EmptyFallback: "REJECT"},
+		{Name: "All", Via: "auto", Protection: mountProtectionOriginal},
 		{Name: "Direct", Via: "use", Protection: mountProtectionBase, EmptyFallback: "DIRECT"},
 	}
 	if !reflect.DeepEqual(report.Groups, wantGroups) {
 		t.Errorf("groups = %+v, want %+v", report.Groups, wantGroups)
+	}
+	for group, want := range map[string]string{"Proxy": "COMPATIBLE", "All": "COMPATIBLE", "Auto": "REJECT"} {
+		if got := mountRuntimeGroup(cfg.Proxies[group], group, nil).Fallback; got != want {
+			t.Errorf("%s empty-fallback = %s, want %s", group, got, want)
+		}
 	}
 	if got := memberNames(t, cfg, "All"); slices.Contains(got, "ts") || !slices.Contains(got, "hk") {
 		t.Errorf("All members = %v, want mounted nodes and no Tailscale node from a mount", got)

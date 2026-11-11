@@ -212,6 +212,7 @@ const _$MountGroupViaEnumMap = {
 const _$MountProtectionEnumMap = {
   MountProtection.reject: 'reject',
   MountProtection.base: 'base',
+  MountProtection.original: 'original',
 };
 
 _MountReport _$MountReportFromJson(Map<String, dynamic> json) => _MountReport(

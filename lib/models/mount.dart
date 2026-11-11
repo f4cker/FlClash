@@ -210,8 +210,9 @@ abstract class MountSourceReport with _$MountSourceReport {
 }
 
 /// [reject] is the block-when-empty Flash set; [base] is the base profile's
-/// own empty-fallback, kept as written.
-enum MountProtection { reject, base }
+/// own empty-fallback, kept as written; [original] is a group that also
+/// holds base proxies and keeps mihomo's default.
+enum MountProtection { reject, base, original }
 
 enum MountGroupVia { auto, use }
 

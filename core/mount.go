@@ -313,9 +313,12 @@ type MountSourceReport struct {
 	Nodes             []MountNode `json:"nodes"`
 }
 
+// Original is a group that also holds base proxies, left with mihomo's
+// default empty behaviour as before the mount.
 const (
-	mountProtectionReject = "reject"
-	mountProtectionBase   = "base"
+	mountProtectionReject   = "reject"
+	mountProtectionBase     = "base"
+	mountProtectionOriginal = "original"
 )
 
 // Via is auto for a group that collects every provider, use for a chosen one.
@@ -344,7 +347,7 @@ func errMountGroupChanged(name string) error {
 var reservedProxyNames = []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", globalProxyName}
 
 // Each source becomes a file provider over the cache Flash keeps; chosen
-// groups gain a use of every one, and a group that now takes mounted nodes
+// groups gain a use of every one, and a group left with provider nodes only
 // rejects when empty unless the base names its own empty-fallback. Names
 // that clash with the base or an earlier source get "(label)" appended.
 func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, error) {
@@ -503,7 +506,10 @@ func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, proxyTyp
 			setMappingValue(&copied, "use", &useNode)
 		}
 		report := MountGroupReport{Name: info.Name, Via: via, Protection: mountProtectionBase, EmptyFallback: info.EmptyFallback}
-		if info.EmptyFallback == "" {
+		holdsBase := len(groupList(mapping, "proxies")) > 0 || groupFlag(mapping, "include-all") || groupFlag(mapping, "include-all-proxies")
+		if info.EmptyFallback == "" && holdsBase {
+			report.Protection = mountProtectionOriginal
+		} else if info.EmptyFallback == "" {
 			report.Protection, report.EmptyFallback = mountProtectionReject, "REJECT"
 			setMappingValue(&copied, "empty-fallback", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "REJECT"})
 		}
