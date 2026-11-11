@@ -264,17 +264,19 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m108(name) => "Node ${name}";
 
-  static String m109(name) => "Shared by: ${name}";
+  static String m109(value) => "Saved: ${value}";
 
-  static String m110(label) => "Status: ${label}";
+  static String m110(name) => "Shared by: ${name}";
 
-  static String m111(label) => "${label}はURLである必要があります";
+  static String m111(label) => "Status: ${label}";
 
-  static String m112(date) => "有効期限 ${date}";
+  static String m112(label) => "${label}はURLである必要があります";
 
-  static String m113(count) => "${count} 年前";
+  static String m113(date) => "有効期限 ${date}";
 
   static String m114(count) => "${count} 年前";
+
+  static String m115(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1825,14 +1827,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsAfterLogin": MessageLookupByLibrary.simpleMessage(
       "Available after login",
     ),
-    "tsAfterLoginSelectable": MessageLookupByLibrary.simpleMessage(
-      "Available after login",
-    ),
     "tsBoundaryTip": MessageLookupByLibrary.simpleMessage(
       "Only traffic that FlClash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.",
     ),
     "tsBrowserFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t open the login page. Try again.",
+    ),
+    "tsChangeAfterSignIn": MessageLookupByLibrary.simpleMessage(
+      "Sign in and connect to change",
     ),
     "tsChooseExitNode": MessageLookupByLibrary.simpleMessage(
       "Choose exit node",
@@ -2130,6 +2132,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRoutesUpdated": MessageLookupByLibrary.simpleMessage(
       "Subnet routes updated",
     ),
+    "tsSavedValue": m109,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the search",
     ),
@@ -2143,7 +2146,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Saved, but not yet confirmed in effect. Read the current settings again.",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("Shared in"),
-    "tsSharedBy": m109,
+    "tsSharedBy": m110,
     "tsSignedOutTip": MessageLookupByLibrary.simpleMessage(
       "Log in in your browser to authenticate this node.",
     ),
@@ -2177,7 +2180,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Waiting for browser login",
     ),
     "tsStatus": MessageLookupByLibrary.simpleMessage("Status"),
-    "tsStatusOf": m110,
+    "tsStatusOf": m111,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("Status unknown"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "This node has stopped and can\'t reach the Tailscale network for now.",
@@ -2248,14 +2251,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("アップロード帯域幅"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 書き換え"),
-    "urlTip": m111,
+    "urlTip": m112,
     "useHosts": MessageLookupByLibrary.simpleMessage("Hostsを使用"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("システムのHostsを使用"),
     "usedShort": MessageLookupByLibrary.simpleMessage("使用済み"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("使用済みトラフィック"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("ユーザー名"),
-    "validUntil": m112,
+    "validUntil": m113,
     "value": MessageLookupByLibrary.simpleMessage("値"),
     "view": MessageLookupByLibrary.simpleMessage("表示"),
     "viewAll": MessageLookupByLibrary.simpleMessage("すべて表示"),
@@ -2270,8 +2273,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "システムに書き込むを有効にするとシステムクロックも設定します。Android では無視されます。",
     ),
-    "yearsAgo": m113,
-    "yearsAgoShort": m114,
+    "yearsAgo": m114,
+    "yearsAgoShort": m115,
     "yes": MessageLookupByLibrary.simpleMessage("はい"),
     "zhCN": MessageLookupByLibrary.simpleMessage("簡体字中国語"),
   };

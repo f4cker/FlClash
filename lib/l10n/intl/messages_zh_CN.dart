@@ -258,17 +258,19 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m108(name) => "节点 ${name}";
 
-  static String m109(name) => "分享来源：${name}";
+  static String m109(value) => "已保存：${value}";
 
-  static String m110(label) => "状态：${label}";
+  static String m110(name) => "分享来源：${name}";
 
-  static String m111(label) => "${label}必须为URL";
+  static String m111(label) => "状态：${label}";
 
-  static String m112(date) => "有效期至 ${date}";
+  static String m112(label) => "${label}必须为URL";
 
-  static String m113(count) => "${count} 年前";
+  static String m113(date) => "有效期至 ${date}";
 
   static String m114(count) => "${count} 年前";
+
+  static String m115(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1645,11 +1647,11 @@ class MessageLookup extends MessageLookupByLibrary {
       "此节点连接后可更改设置。",
     ),
     "tsAfterLogin": MessageLookupByLibrary.simpleMessage("登录后可查看"),
-    "tsAfterLoginSelectable": MessageLookupByLibrary.simpleMessage("登录后可选"),
     "tsBoundaryTip": MessageLookupByLibrary.simpleMessage(
       "只有由 FlClash 规则转到此节点的流量才会使用 Tailscale。登录不会自动修改规则、系统代理或虚拟网卡设置。",
     ),
     "tsBrowserFailed": MessageLookupByLibrary.simpleMessage("无法打开登录页，请重试。"),
+    "tsChangeAfterSignIn": MessageLookupByLibrary.simpleMessage("登录并连接后可更改"),
     "tsChooseExitNode": MessageLookupByLibrary.simpleMessage("选择出口节点"),
     "tsChooseNode": MessageLookupByLibrary.simpleMessage("选择节点"),
     "tsClearOwnerFilter": MessageLookupByLibrary.simpleMessage("清除归属筛选"),
@@ -1870,6 +1872,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "子网路由设置的更改结果待确认，请重新读取当前设置。",
     ),
     "tsRoutesUpdated": MessageLookupByLibrary.simpleMessage("子网路由设置已更新"),
+    "tsSavedValue": m109,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage("没有符合搜索条件的设备"),
     "tsSearchHint": MessageLookupByLibrary.simpleMessage("搜索名称或地址"),
     "tsSettingsApplyFailed": MessageLookupByLibrary.simpleMessage(
@@ -1879,7 +1882,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "设置已保存，但尚未确认生效。请重新读取当前设置。",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("来自共享"),
-    "tsSharedBy": m109,
+    "tsSharedBy": m110,
     "tsSignedOutTip": MessageLookupByLibrary.simpleMessage("在浏览器中登录，完成此节点的认证。"),
     "tsStartCore": MessageLookupByLibrary.simpleMessage("启动内核"),
     "tsStartFailedTip": MessageLookupByLibrary.simpleMessage("此节点未能启动，请重试。"),
@@ -1895,7 +1898,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsStateUnconfirmed": MessageLookupByLibrary.simpleMessage("状态待确认"),
     "tsStateWaitingBrowser": MessageLookupByLibrary.simpleMessage("等待浏览器登录"),
     "tsStatus": MessageLookupByLibrary.simpleMessage("状态"),
-    "tsStatusOf": m110,
+    "tsStatusOf": m111,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("状态未知"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "此节点已停止，暂时无法通过它访问 Tailscale 网络。",
@@ -1958,14 +1961,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("上行带宽"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 重写"),
-    "urlTip": m111,
+    "urlTip": m112,
     "useHosts": MessageLookupByLibrary.simpleMessage("使用Hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("使用系统Hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("已用"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("已用流量"),
     "userAgent": MessageLookupByLibrary.simpleMessage("用户代理"),
     "username": MessageLookupByLibrary.simpleMessage("用户名"),
-    "validUntil": m112,
+    "validUntil": m113,
     "value": MessageLookupByLibrary.simpleMessage("值"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
     "viewAll": MessageLookupByLibrary.simpleMessage("查看全部"),
@@ -1980,8 +1983,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "写入系统会同时设置系统时钟，Android 上不生效。",
     ),
-    "yearsAgo": m113,
-    "yearsAgoShort": m114,
+    "yearsAgo": m114,
+    "yearsAgoShort": m115,
     "yes": MessageLookupByLibrary.simpleMessage("是"),
     "zhCN": MessageLookupByLibrary.simpleMessage("中文简体"),
   };

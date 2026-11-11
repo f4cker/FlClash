@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -24,7 +25,7 @@ String? tailscaleSettingsLock(
     TailscalePhase.signedOut ||
     TailscalePhase.preparing ||
     TailscalePhase.waitingBrowser ||
-    TailscalePhase.needsReauth => appLocalizations.tsAfterLoginSelectable,
+    TailscalePhase.needsReauth => appLocalizations.tsChangeAfterSignIn,
     _ => appLocalizations.tsAfterConnectSelectable,
   };
 }
@@ -93,7 +94,8 @@ class _CardFootnote extends StatelessWidget {
 class _SettingBlock extends StatelessWidget {
   const _SettingBlock({
     required this.title,
-    required this.subtitle,
+    this.subtitle,
+    this.detail,
     this.tag,
     this.trailing,
     this.onTap,
@@ -102,7 +104,10 @@ class _SettingBlock extends StatelessWidget {
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
+
+  /// A further line under [subtitle], without a tag.
+  final String? detail;
   final String? tag;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -113,6 +118,8 @@ class _SettingBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     final tag = this.tag;
+    final subtitle = this.subtitle;
+    final detail = this.detail;
     final content = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 48),
       child: Row(
@@ -132,15 +139,18 @@ class _SettingBlock extends StatelessWidget {
                     color: dimmed ? colorScheme.onSurfaceVariant : null,
                   ),
                 ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(subtitle, style: DashboardText.label(context)),
-                    if (tag != null) TailscaleTag(label: tag),
-                  ],
-                ),
+                if (subtitle != null)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(subtitle, style: DashboardText.label(context)),
+                      if (tag != null) TailscaleTag(label: tag),
+                    ],
+                  ),
+                if (detail != null)
+                  Text(detail, style: DashboardText.label(context)),
               ],
             ),
           ),
@@ -205,14 +215,46 @@ class TailscaleExitCard extends StatelessWidget {
     final applying = panel.applyingExit;
     final source = tailscaleSourceLabel(context, node.settings.exitNode.source);
     final Widget block;
-    if (lock != null) {
+    if (lock != null && phase == TailscalePhase.connected) {
+      // The running node's exit is real; only changing it is refused.
+      final title = hasExit
+          ? _exitName(context, current, currentValue)
+          : appLocalizations.tsNoExitNode;
+      block = _SettingBlock(
+        title: title,
+        subtitle: lock,
+        dimmed: true,
+        semanticLabel: '${appLocalizations.tsExitNode}，$title，$lock',
+      );
+    } else if (lock != null) {
+      final saved = node.settings.exitNode;
+      String? savedLine;
+      // Only a saved choice the Core reports is named, and never as live.
+      if (saved.source == TailscaleSettingSource.override) {
+        final peer = saved.value.isEmpty
+            ? null
+            : status?.peers.firstWhereOrNull(
+                (peer) =>
+                    peer.addresses.contains(saved.value) ||
+                    peer.id == saved.value,
+              );
+        savedLine = appLocalizations.tsSavedValue(
+          saved.value.isEmpty
+              ? appLocalizations.tsNoExitNode
+              : peer == null
+              ? saved.value
+              : tailscaleDeviceName(context, peer),
+        );
+      }
       block = _SettingBlock(
         title: lock,
-        subtitle: hasExit
-            ? _exitName(context, current, currentValue)
-            : appLocalizations.tsNoExitNode,
+        subtitle: savedLine,
         dimmed: true,
-        semanticLabel: '${appLocalizations.tsExitNode}，$lock',
+        semanticLabel: [
+          appLocalizations.tsExitNode,
+          lock,
+          ?savedLine,
+        ].join('，'),
       );
     } else {
       final canChoose = !stale && candidates.isNotEmpty;
@@ -388,6 +430,15 @@ class TailscaleRoutesCard extends StatelessWidget {
             : value
             ? appLocalizations.tsOn
             : appLocalizations.tsOff);
+    final saved = node.settings.acceptRoutes;
+    final savedLine =
+        lock != null &&
+            phase != TailscalePhase.connected &&
+            saved.source == TailscaleSettingSource.override
+        ? appLocalizations.tsSavedValue(
+            saved.value ? appLocalizations.tsOn : appLocalizations.tsOff,
+          )
+        : null;
     return TailscaleCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,6 +451,7 @@ class TailscaleRoutesCard extends StatelessWidget {
           _SettingBlock(
             title: appLocalizations.tsAcceptRoutes,
             subtitle: subtitle,
+            detail: savedLine,
             tag: lock == null && !applying ? source : null,
             dimmed: lock != null,
             semanticLabel: appLocalizations.tsAcceptRoutes,
@@ -410,7 +462,9 @@ class TailscaleRoutesCard extends StatelessWidget {
               children: [
                 if (applying) const ActivityIndicator(size: 16),
                 DashboardSwitch(
-                  value: lock == null && value,
+                  value:
+                      (lock == null || phase == TailscalePhase.connected) &&
+                      value,
                   onChanged: enabled ? onChanged : null,
                   semanticLabel: appLocalizations.tsAcceptRoutes,
                 ),

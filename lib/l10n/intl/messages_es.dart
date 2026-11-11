@@ -298,18 +298,20 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m108(name) => "Node ${name}";
 
-  static String m109(name) => "Shared by: ${name}";
+  static String m109(value) => "Saved: ${value}";
 
-  static String m110(label) => "Status: ${label}";
+  static String m110(name) => "Shared by: ${name}";
 
-  static String m111(label) => "${label} debe ser una URL";
+  static String m111(label) => "Status: ${label}";
 
-  static String m112(date) => "Válido hasta el ${date}";
+  static String m112(label) => "${label} debe ser una URL";
 
-  static String m113(count) =>
-      "${Intl.plural(count, one: 'hace 1 año', other: 'hace ${count} años')}";
+  static String m113(date) => "Válido hasta el ${date}";
 
   static String m114(count) =>
+      "${Intl.plural(count, one: 'hace 1 año', other: 'hace ${count} años')}";
+
+  static String m115(count) =>
       "${Intl.plural(count, other: 'hace ${count} a')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -2288,14 +2290,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsAfterLogin": MessageLookupByLibrary.simpleMessage(
       "Available after login",
     ),
-    "tsAfterLoginSelectable": MessageLookupByLibrary.simpleMessage(
-      "Available after login",
-    ),
     "tsBoundaryTip": MessageLookupByLibrary.simpleMessage(
       "Only traffic that FlClash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.",
     ),
     "tsBrowserFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t open the login page. Try again.",
+    ),
+    "tsChangeAfterSignIn": MessageLookupByLibrary.simpleMessage(
+      "Sign in and connect to change",
     ),
     "tsChooseExitNode": MessageLookupByLibrary.simpleMessage(
       "Choose exit node",
@@ -2593,6 +2595,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRoutesUpdated": MessageLookupByLibrary.simpleMessage(
       "Subnet routes updated",
     ),
+    "tsSavedValue": m109,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the search",
     ),
@@ -2606,7 +2609,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Saved, but not yet confirmed in effect. Read the current settings again.",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("Shared in"),
-    "tsSharedBy": m109,
+    "tsSharedBy": m110,
     "tsSignedOutTip": MessageLookupByLibrary.simpleMessage(
       "Log in in your browser to authenticate this node.",
     ),
@@ -2640,7 +2643,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Waiting for browser login",
     ),
     "tsStatus": MessageLookupByLibrary.simpleMessage("Status"),
-    "tsStatusOf": m110,
+    "tsStatusOf": m111,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("Status unknown"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "This node has stopped and can\'t reach the Tailscale network for now.",
@@ -2719,7 +2722,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("Reescritura de URL"),
-    "urlTip": m111,
+    "urlTip": m112,
     "useHosts": MessageLookupByLibrary.simpleMessage("Usar hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage(
       "Usar hosts del sistema",
@@ -2728,7 +2731,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "usedTraffic": MessageLookupByLibrary.simpleMessage("Tráfico usado"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("Usuario"),
-    "validUntil": m112,
+    "validUntil": m113,
     "value": MessageLookupByLibrary.simpleMessage("Valor"),
     "view": MessageLookupByLibrary.simpleMessage("Ver"),
     "viewAll": MessageLookupByLibrary.simpleMessage("Ver todo"),
@@ -2747,8 +2750,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Escribir en el sistema también ajusta el reloj del sistema; Android lo ignora.",
     ),
-    "yearsAgo": m113,
-    "yearsAgoShort": m114,
+    "yearsAgo": m114,
+    "yearsAgoShort": m115,
     "yes": MessageLookupByLibrary.simpleMessage("Sí"),
     "zhCN": MessageLookupByLibrary.simpleMessage("Chino simplificado"),
   };

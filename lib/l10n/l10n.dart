@@ -10123,13 +10123,23 @@ class AppLocalizations {
     );
   }
 
-  /// `Available after login`
-  String get tsAfterLoginSelectable {
+  /// `Sign in and connect to change`
+  String get tsChangeAfterSignIn {
     return Intl.message(
-      'Available after login',
-      name: 'tsAfterLoginSelectable',
+      'Sign in and connect to change',
+      name: 'tsChangeAfterSignIn',
       desc: '',
       args: [],
+    );
+  }
+
+  /// `Saved: {value}`
+  String tsSavedValue(Object value) {
+    return Intl.message(
+      'Saved: $value',
+      name: 'tsSavedValue',
+      desc: '',
+      args: [value],
     );
   }
 
