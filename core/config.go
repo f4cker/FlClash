@@ -105,6 +105,27 @@ func handleDecryptConfig(params DecryptConfigParams) (string, error) {
 var systemTimeWritable = runtime.GOOS != "android"
 
 func loadConfig(path string) (*config.Config, error) {
+	cfg, _, err := loadMountedConfig(path, nil)
+	return cfg, err
+}
+
+func loadMountedConfig(path string, mounts *MountSetup) (*config.Config, *MountReport, error) {
+	var report *MountReport
+	if mounts != nil {
+		document, mounted, err := mountedDocument(nil, path, mounts)
+		if err != nil {
+			return nil, nil, err
+		}
+		if err := writeConfigDocument(path, document); err != nil {
+			return nil, nil, err
+		}
+		report = mounted
+	}
+	cfg, err := loadConfigFile(path)
+	return cfg, report, err
+}
+
+func loadConfigFile(path string) (*config.Config, error) {
 	buf, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -131,28 +152,51 @@ func runningConfigPath() string {
 	return filepath.Join(constant.Path.HomeDir(), "config.yaml")
 }
 
-func loadSetupConfig(params *SetupParams) (*config.Config, error) {
+func loadSetupConfig(params *SetupParams) (*config.Config, *MountReport, error) {
 	path := runningConfigPath()
 	if params.Base != nil {
-		return loadConfigWithBase(params.Base, path)
+		return loadConfigWithBase(params.Base, path, params.Mounts)
 	}
-	return loadConfig(path)
+	return loadMountedConfig(path, params.Mounts)
 }
 
+// A failed profile with mounts keeps the running config, or blocks; the
+// mihomo default would send every connection direct.
 func applyConfig(params *SetupParams) error {
 	runtime.GC()
 	configMu.Lock()
 	defer configMu.Unlock()
 
+	var err error
+	if params.Mounts != nil {
+		err = checkMountedSetup(params)
+		if err != nil && currentConfig != nil && !runningBlocked() {
+			logError("mounted profile rejected, the running config stays: %v", err)
+			return mountRejected(err, mountOutcomeKept)
+		}
+	}
 	applyOptions(params.Options)
 	setTailscaleSetup(params.Tailscale)
 	replaced := tailscaleGenerationMark()
 	markTailscaleReplaced(replaced)
-	cfg, err := loadSetupConfig(params)
+	var cfg *config.Config
+	var report *MountReport
+	if err == nil {
+		cfg, report, err = loadSetupConfig(params)
+	}
 	if err == nil {
 		injectTailscaleManaged(cfg)
 	}
-	if err != nil {
+	blocked := false
+	if err != nil && params.Mounts != nil {
+		logError("mounted profile rejected, every connection is rejected: %v", err)
+		blocking, blockingErr := blockingConfig()
+		if blockingErr != nil {
+			return err
+		}
+		cfg, blocked = blocking, true
+		clearTailscaleManaged()
+	} else if err != nil {
 		// The fallback is what keeps the listeners serving while the host
 		// reports the error, but it applies a config with no proxies in it.
 		// From the UI that is indistinguishable from a subscription that went
@@ -171,6 +215,7 @@ func applyConfig(params *SetupParams) error {
 	}
 
 	currentConfig = cfg
+	setMountState(report, blocked)
 	// The new instances must not start beside the old ones on one identity;
 	// the fallback holds none, so a failed load closes what it built too.
 	if err != nil {
@@ -185,6 +230,9 @@ func applyConfig(params *SetupParams) error {
 	updateListeners(cfg)
 	reconcileGeoUpdater()
 	scheduleLoadMemoryRelease()
+	if blocked {
+		return mountRejected(err, mountOutcomeBlocked)
+	}
 	if err != nil {
 		// The host tells this apart from a call that failed: the default config runs.
 		return &MethodError{Code: "config_rejected", Message: err.Error()}

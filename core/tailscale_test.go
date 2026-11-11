@@ -118,7 +118,7 @@ func TestTailscaleOverridesMergeAfterProxies(t *testing.T) {
 			{Name: "b", ControlURL: "https://hs.example.com/", AcceptRoutes: &acceptRoutes},
 		},
 	})
-	document, err := mergeProfileBase(&SetupBase{Path: path, Overlay: `{"mixed-port": 7890}`}, true)
+	document, _, err := mergeProfileBase(&SetupBase{Path: path, Overlay: `{"mixed-port": 7890}`}, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestTailscaleOverridesMergeAfterProxies(t *testing.T) {
 		t.Fatal("a proxy of a provider counted as one of the proxies section")
 	}
 
-	built, err := mergeProfileBase(&SetupBase{Path: path, Overlay: `{}`}, false)
+	built, _, err := mergeProfileBase(&SetupBase{Path: path, Overlay: `{}`}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestTailscaleOverrideOfAnotherControlServerIsIgnored(t *testing.T) {
 		ProfileID: 3,
 		Nodes:     []TailscaleNodeSetup{{Name: "b", AcceptRoutes: &acceptRoutes}},
 	})
-	document, err := mergeProfileBase(&SetupBase{Path: path, Overlay: `{}`}, true)
+	document, _, err := mergeProfileBase(&SetupBase{Path: path, Overlay: `{}`}, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

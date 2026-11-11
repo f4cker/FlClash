@@ -74,9 +74,9 @@ func outboundsOf(mappings []map[string]any) []ProfileOutbound {
 
 // The merged config goes to the spill directory, so the host reads it as text
 // and never decodes it.
-func handleBuildProfile(base *SetupBase) (string, error) {
+func handleBuildProfile(params *BuildProfileParams) (string, error) {
 	defer scheduleLoadMemoryRelease()
-	document, err := mergeProfileBase(base, false)
+	document, _, err := mergeProfileBase(&params.SetupBase, false, params.Mounts)
 	if err != nil {
 		return "", err
 	}
@@ -98,49 +98,50 @@ func isMatchRule(rule string) bool {
 	return strings.EqualFold(strings.TrimSpace(kind), "MATCH")
 }
 
-func loadConfigWithBase(base *SetupBase, configPath string) (*config.Config, error) {
-	document, err := mergeProfileBase(base, true)
+func loadConfigWithBase(base *SetupBase, configPath string, mounts *MountSetup) (*config.Config, *MountReport, error) {
+	document, report, err := mergeProfileBase(base, true, mounts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	raw := config.DefaultRawConfig()
 	if err := document.Decode(raw); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := writeConfigDocument(configPath, document); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	cfg, err := config.ParseRawConfig(raw)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return withPlatformLimits(cfg), nil
+	return withPlatformLimits(cfg), report, nil
 }
 
 // Only the config being applied takes the Tailscale overrides of the setup.
-func mergeProfileBase(base *SetupBase, withTailscale bool) (*yaml.Node, error) {
+// Mounts go in first, so those overrides see the groups mihomo will build.
+func mergeProfileBase(base *SetupBase, withTailscale bool, mounts *MountSetup) (*yaml.Node, *MountReport, error) {
 	buf, err := os.ReadFile(base.Path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if buf, err = age.DecryptBytes(buf); err != nil {
-		return nil, fmt.Errorf("decrypt config error: %w", err)
+		return nil, nil, fmt.Errorf("decrypt config error: %w", err)
 	}
 	retag := bytes.Contains(buf, []byte("short-id"))
 	var profileDocument, overlayDocument yaml.Node
 	if err := yaml.Unmarshal(buf, &profileDocument); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := yaml.Unmarshal([]byte(base.Overlay), &overlayDocument); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	profile, err := documentMapping(&profileDocument)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	root, err := documentMapping(&overlayDocument)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, key := range profileBaseSections {
 		if value := mappingValue(profile, key); value != nil {
@@ -149,10 +150,16 @@ func mergeProfileBase(base *SetupBase, withTailscale bool) (*yaml.Node, error) {
 	}
 	rules, err := appendRules(mappingValue(root, "rules"), mappingValue(profile, "rules"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if rules != nil {
 		setMappingValue(root, "rules", rules)
+	}
+	var report *MountReport
+	if mounts != nil {
+		if report, err = applyMountOverrides(root, mounts); err != nil {
+			return nil, nil, err
+		}
 	}
 	if withTailscale {
 		applyTailscaleOverrides(root)
@@ -160,7 +167,7 @@ func mergeProfileBase(base *SetupBase, withTailscale bool) (*yaml.Node, error) {
 	if retag {
 		retagShortIDs(root)
 	}
-	return &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}}, nil
+	return &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}}, report, nil
 }
 
 func documentMapping(document *yaml.Node) (*yaml.Node, error) {

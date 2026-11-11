@@ -198,6 +198,11 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	profileBuildMethod:       withFallible(handleBuildProfile),
 	profileClearEffectMethod: command(handleClearEffect),
 
+	mountInspectSourceMethod: withArguments(handleInspectMountSource),
+	mountInspectTargetMethod: withFallible(handleInspectMountTarget),
+	mountPreflightMethod:     withFallible(handleMountPreflight),
+	mountStateMethod:         withoutArguments(handleMountState),
+
 	proxyListMethod:       withoutArguments(handleGetProxies),
 	proxySelectMethod:     withArguments(handleChangeProxy),
 	proxyDefinitionMethod: withFallible(handleGetProxyDefinition),

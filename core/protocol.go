@@ -33,6 +33,11 @@ const (
 	profileBuildMethod       CoreMethod = "profile.build"
 	profileClearEffectMethod CoreMethod = "profile.clearEffect"
 
+	mountInspectSourceMethod CoreMethod = "mount.inspectSource"
+	mountInspectTargetMethod CoreMethod = "mount.inspectTarget"
+	mountPreflightMethod     CoreMethod = "mount.preflight"
+	mountStateMethod         CoreMethod = "mount.state"
+
 	proxyListMethod       CoreMethod = "proxy.list"
 	proxySelectMethod     CoreMethod = "proxy.select"
 	proxyDefinitionMethod CoreMethod = "proxy.definition"
@@ -135,6 +140,9 @@ type SetupParams struct {
 	SelectedMap map[string]string `json:"selected-map"`
 	Options     CoreOptions       `json:"options"`
 	Tailscale   *TailscaleSetup   `json:"tailscale,omitempty"`
+	// Set for a profile with mounts, even none left: its failure must not
+	// fall back to mihomo's direct-only default.
+	Mounts *MountSetup `json:"mounts,omitempty"`
 }
 
 type TailscaleSetup struct {
@@ -223,6 +231,11 @@ type CoreOptions struct {
 type SetupBase struct {
 	Path    string `json:"path"`
 	Overlay string `json:"overlay"`
+}
+
+type BuildProfileParams struct {
+	SetupBase
+	Mounts *MountSetup `json:"mounts,omitempty"`
 }
 
 type ProfileBase struct {

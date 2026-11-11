@@ -137,7 +137,7 @@ func TestHandleBuildProfileWritesTheMergedConfigWhereTheHostReadsSpills(t *testi
 	}
 	overlay := overlayOf(t, base, []string{"DOMAIN,added.test,DIRECT"}, nil)
 
-	built, err := handleBuildProfile(&SetupBase{Path: path, Overlay: overlay})
+	built, err := handleBuildProfile(&BuildProfileParams{SetupBase: SetupBase{Path: path, Overlay: overlay}})
 
 	if err != nil {
 		t.Fatalf("handleBuildProfile = %v", err)
@@ -166,7 +166,7 @@ func TestLoadConfigWithBasePutsTheAddedRulesFirstAndTheOverlayOverTheRest(t *tes
 	})
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
 
-	cfg, err := loadConfigWithBase(&SetupBase{Path: path, Overlay: overlay}, configPath)
+	cfg, _, err := loadConfigWithBase(&SetupBase{Path: path, Overlay: overlay}, configPath, nil)
 
 	if err != nil {
 		t.Fatalf("loadConfigWithBase = %v", err)
@@ -205,9 +205,10 @@ func TestLoadConfigWithBaseWritesAConfigThatLoadsAlone(t *testing.T) {
 		t.Fatalf("handleGetProfileBase = %v", err)
 	}
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
-	cfg, err := loadConfigWithBase(
+	cfg, _, err := loadConfigWithBase(
 		&SetupBase{Path: path, Overlay: overlayOf(t, base, []string{"DOMAIN,added.test,DIRECT"}, nil)},
 		configPath,
+		nil,
 	)
 	if err != nil {
 		t.Fatalf("loadConfigWithBase = %v", err)
@@ -241,9 +242,10 @@ func TestLoadConfigWithBaseWritesAConfigThatLoadsAlone(t *testing.T) {
 func TestLoadConfigWithBaseKeepsAnEmptyProfileOnTheDefaults(t *testing.T) {
 	path := writeBaseProfile(t, "")
 
-	cfg, err := loadConfigWithBase(
+	cfg, _, err := loadConfigWithBase(
 		&SetupBase{Path: path, Overlay: `{"rules": ["MATCH,DIRECT"]}`},
 		filepath.Join(t.TempDir(), "config.yaml"),
+		nil,
 	)
 
 	if err != nil {
@@ -258,7 +260,7 @@ func TestLoadConfigWithBaseRejectsAProfileThatIsNotAMapping(t *testing.T) {
 	path := writeBaseProfile(t, "- a\n- b\n")
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
 
-	if _, err := loadConfigWithBase(&SetupBase{Path: path, Overlay: "{}"}, configPath); err == nil {
+	if _, _, err := loadConfigWithBase(&SetupBase{Path: path, Overlay: "{}"}, configPath, nil); err == nil {
 		t.Fatal("loadConfigWithBase accepted a list as a config")
 	}
 	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
@@ -276,7 +278,7 @@ func TestLoadSetupConfigReadsConfigYamlWithoutABase(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
-	cfg, err := loadSetupConfig(&SetupParams{})
+	cfg, _, err := loadSetupConfig(&SetupParams{})
 
 	if err != nil {
 		t.Fatalf("loadSetupConfig = %v", err)
