@@ -241,11 +241,14 @@ void main() {
     });
 
     test(
-      'a readback that differs settles as saved, a blocked one says so',
+      'a readback that differs settles unverified, a blocked one says so',
       () async {
         final container = build(running: true);
         readsBack(matches: false);
-        expect((await mountAir(container)).outcome, MountSaveOutcome.saved);
+        expect(
+          (await mountAir(container)).outcome,
+          MountSaveOutcome.appliedUnverified,
+        );
 
         readsBack(blocked: true);
         _FakeSetupAction.result = false;

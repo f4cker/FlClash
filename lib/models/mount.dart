@@ -337,8 +337,11 @@ abstract class MountPanel with _$MountPanel {
   }) = _MountPanel;
 }
 
+/// [appliedUnverified]: the Core runs this revision but its nodes or groups
+/// differ from the report; [saved]: stored, no readback possible.
 enum MountSaveOutcome {
   applied,
+  appliedUnverified,
   saved,
   unchanged,
   groupsChanged,
@@ -409,7 +412,9 @@ MountSaveOutcome? confirmMounts(MountRuntimeState state, String revision) {
   final consistent =
       report.sources.every((source) => sources[source.id]?.matches ?? false) &&
       report.groups.every((group) => groups[group.name]?.present ?? false);
-  return consistent ? MountSaveOutcome.applied : MountSaveOutcome.saved;
+  return consistent
+      ? MountSaveOutcome.applied
+      : MountSaveOutcome.appliedUnverified;
 }
 
 MountSourceItem mountSourceItem(

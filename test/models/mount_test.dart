@@ -219,7 +219,7 @@ void main() {
       );
       expect(
         confirmMounts(consistent.copyWith(groups: const []), 'r2'),
-        MountSaveOutcome.saved,
+        MountSaveOutcome.appliedUnverified,
       );
       expect(
         confirmMounts(
@@ -228,7 +228,7 @@ void main() {
           ),
           'r2',
         ),
-        MountSaveOutcome.saved,
+        MountSaveOutcome.appliedUnverified,
       );
     });
 
