@@ -109,6 +109,8 @@ rules:
 		"proxy-server-nameserver-policy": "  proxy-server-nameserver-policy: {'+.example.com': 'tls://1.1.1.1#Free'}\n",
 		"proxy-server-nameserver list":   "  proxy-server-nameserver-policy: {'geosite:cn': ['tls://1.1.1.1#Free', 223.5.5.5]}\n",
 		"default-nameserver":             "  default-nameserver: ['tls://1.1.1.1#Free']\n",
+		"percent-encoded nameserver":     "  nameserver: ['https://1.1.1.1/dns-query#%46%72%65%65']\n",
+		"percent-encoded with params":    "  proxy-server-nameserver: ['1.1.1.1#%46ree&h3=true']\n",
 	} {
 		reasons := groupReasons(t, rootOf(t, base+"dns:\n"+dns))
 		if reasons["Free"] != "excluded/dns" || reasons["Main"] != "candidate/" {
@@ -117,8 +119,38 @@ rules:
 	}
 }
 
+// L-1. mihomo reads the proxy of a nameserver from its URL's fragment,
+// percent decoded: an encoded group name is that group.
+func TestDNSThroughAPercentEncodedGroupKeepsMountsOut(t *testing.T) {
+	withMountHome(t)
+	const base = `proxies:
+  - {name: hk, type: socks5, server: 127.0.0.9, port: 1080}
+proxy-groups:
+  - {name: 节点选择, type: select, proxies: [hk]}
+  - {name: Main, type: select, proxies: [hk]}
+rules:
+  - MATCH,Main
+dns:
+  nameserver: ['https://1.1.1.1/dns-query#%E8%8A%82%E7%82%B9%E9%80%89%E6%8B%A9']
+`
+	if reasons := groupReasons(t, rootOf(t, base)); reasons["节点选择"] != "excluded/dns" || reasons["Main"] != "candidate/" {
+		t.Errorf("reasons = %v, want 节点选择 excluded for DNS and Main a candidate", reasons)
+	}
+	for server, want := range map[string]string{
+		"https://1.1.1.1/dns-query#%E8%8A%82%E7%82%B9%E9%80%89%E6%8B%A9": "节点选择",
+		"tls://1.1.1.1#Free&h3=true":                                    "Free&h3=true",
+		"1.1.1.1#A%20B":                                                 "A B",
+		"1.1.1.1":                                                       "",
+	} {
+		if got := dnsFragment(server); got != want {
+			t.Errorf("dnsFragment(%q) = %q, want %q", server, got, want)
+		}
+	}
+}
+
 // M-3. A node whose endpoints are not its server is never mounted: a
-// WireGuard node given peers, OpenVPN, ZeroTier, EasyTier and MASQUE. The
+// WireGuard node given peers, OpenVPN, ZeroTier, EasyTier, MASQUE, VLESS
+// with an XHTTP download server and Hysteria2 with a realm on. The
 // inspection counts each as relay-excluded, as the provider drops it.
 func TestMountSourceExcludesNodesWithUncheckedEndpoints(t *testing.T) {
 	home := withMountHome(t)
@@ -129,11 +161,16 @@ func TestMountSourceExcludesNodesWithUncheckedEndpoints(t *testing.T) {
   - {name: et, type: easytier}
   - {name: mq, type: masque, server: 192.0.2.1, port: 443}
   - {name: wg, type: wireguard, server: 192.0.2.1, port: 51820, private-key: zC6Kbw8IgU2If+FmAXfCxeTVpa4Ue9i6nLgEJq8Mtrs=, public-key: x7sR/MNsxJyOT0M84m1UYlOgFTPnUfdA9afSqzFJAFA=, ip: 10.0.0.2, udp: true}
+  - {name: dl, type: vless, server: 203.0.113.5, port: 443, uuid: 4d1e2f6a-0f5c-4b3e-9f7a-2c1d0e9b8a71, network: xhttp, xhttp-opts: {path: /x, Download_Settings: {server: 100.101.1.1, path: /admin/x, headers: {X-A: b}}}}
+  - {name: realm, type: hysteria2, server: 203.0.113.6, port: 443, password: synthetic, realm_opts: {enable: true, server-url: "http://100.101.1.1/r"}}
+  - {name: xh, type: vless, server: 203.0.113.5, port: 443, uuid: 4d1e2f6a-0f5c-4b3e-9f7a-2c1d0e9b8a71, network: xhttp, xhttp-opts: {path: /x}}
+  - {name: hy, type: hysteria2, server: 203.0.113.6, port: 443, password: synthetic, realm-opts: {enable: false, server-url: "http://100.101.1.1/r"}}
   - {name: plain, type: socks5, server: 192.0.2.1, port: 2}
 `)
+	kept := []string{"wg", "xh", "hy", "plain"}
 	got := handleInspectMountSource(MountInspectSourceParams{Path: source})
-	if got.Status != mountSourceNodes || got.Count != 2 || got.RelayExcluded != 5 || got.Listed != 7 || !reflect.DeepEqual(got.names, []string{"wg", "plain"}) {
-		t.Errorf("inspection = %+v, want wg and plain kept, five relay-excluded", got)
+	if got.Status != mountSourceNodes || got.Count != 4 || got.RelayExcluded != 7 || got.Listed != 11 || !reflect.DeepEqual(got.names, kept) {
+		t.Errorf("inspection = %+v, want %v kept, seven relay-excluded", got, kept)
 	}
 	const profile = `proxy-groups:
   - {name: Auto, type: url-test, include-all-providers: true}
@@ -141,11 +178,11 @@ rules:
   - MATCH,Auto
 `
 	members, report := mountedMembers(t, profile, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
-	if !reflect.DeepEqual(members["Auto"], []string{"wg", "plain"}) {
-		t.Errorf("Auto = %v, want only wg and plain", members["Auto"])
+	if !reflect.DeepEqual(members["Auto"], kept) {
+		t.Errorf("Auto = %v, want only %v", members["Auto"], kept)
 	}
-	if source := report.Sources[0]; source.RelayExcluded != 5 || len(source.Nodes) != 2 {
-		t.Errorf("report = %+v, want five relay-excluded and two nodes", source)
+	if source := report.Sources[0]; source.RelayExcluded != 7 || len(source.Nodes) != 4 {
+		t.Errorf("report = %+v, want seven relay-excluded and four nodes", source)
 	}
 }
 

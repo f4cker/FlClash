@@ -20,6 +20,8 @@ import (
 	"github.com/metacubex/mihomo/adapter/inbound"
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	"github.com/metacubex/mihomo/component/flashguard"
+	"github.com/metacubex/mihomo/component/resolver"
+	"github.com/metacubex/mihomo/component/trie"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
 	LT "github.com/metacubex/mihomo/listener/tunnel"
@@ -426,68 +428,94 @@ func (p *fakeUDPPacket) Drop() {}
 
 func (p *fakeUDPPacket) LocalAddr() net.Addr { return p.local }
 
+// A mounted node m1 (SOCKS5 over UDP) reached through a recording egress,
+// built by hand past every mount check: only the guard stands between a
+// datagram and the recorder, which sees each one that leaves through m1.
+func reusedFlowThroughRecorder(t *testing.T) *socksRecorder {
+	t.Helper()
+	home := withMountHome(t)
+	mount := newSocksRecorder(t, hopMountServer)
+	writeMountFile(t, home, "mount-1.yaml", hopMountSource)
+	cfg := checkOnlyConfig(t, &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{rootOf(t, strings.Replace(`proxies:
+  - {name: egress, type: socks5, server: 127.0.0.1, port: MOUNT, udp: true}
+proxy-providers:
+  flash-mount-1: {type: file, path: mount-1.yaml}
+proxy-groups:
+  - {name: Udp, type: select, use: [flash-mount-1]}
+rules:
+  - MATCH,Udp
+`, "MOUNT", mount.port(), 1))}})
+	runInTunnel(t, cfg, tunnel.Rule)
+	return mount
+}
+
+// The packets m1 carried, by their destination.
+func carriedPackets(r *socksRecorder) []string {
+	_, _, packets := r.seen()
+	var carried []string
+	for _, packet := range packets {
+		if destination, ok := strings.CutPrefix(packet, hopMountServer+">"); ok {
+			carried = append(carried, destination)
+		}
+	}
+	return carried
+}
+
 // The tunnel keys a UDP mapping by source alone, so a second destination
 // from one source reuses the connection the first opened. A mounted node's
 // connection refuses each datagram to a Tailscale address; ordinary ones go
-// on. The node here is a direct one, so the positive control is a real
-// datagram to a loopback echo.
+// on. Shown by the recorder: the ordinary datagrams before and after leave
+// through m1, the Tailscale one never does.
 func TestMountedNodeRefusesATailscaleDatagramOnAReusedConnection(t *testing.T) {
-	home := withMountHome(t)
-	writeMountFile(t, home, "mount-2.yaml", "proxies:\n  - {name: u1, type: direct, udp: true}\n")
-	cfg := checkOnlyConfig(t, &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{rootOf(t, `proxy-providers:
-  flash-mount-2: {type: file, path: mount-2.yaml}
-proxy-groups:
-  - {name: Udp, type: select, use: [flash-mount-2]}
-rules:
-  - MATCH,Udp
-`)}})
+	mount := reusedFlowThroughRecorder(t)
 	refused := recordRefusals(t)
-	runInTunnel(t, cfg, tunnel.Rule)
-	echo, err := net.ListenPacket("udp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
+	sendDatagram(t, 40001, "first", "203.0.113.53:53")
+	waitUntil(t, "the first datagram through m1", func() bool { return len(carriedPackets(mount)) >= 1 })
+	sendDatagram(t, 40001, "second", "100.100.1.1:41641")
+	sendDatagram(t, 40001, "second", "[fd7a:115c:a1e0::1]:41641")
+	sendDatagram(t, 40001, "third", "203.0.113.54:53")
+	waitUntil(t, "the third datagram through m1", func() bool { return len(carriedPackets(mount)) >= 2 })
+	time.Sleep(300 * time.Millisecond)
+	if got := carriedPackets(mount); !slices.Equal(got, []string{"203.0.113.53:53", "203.0.113.54:53"}) {
+		t.Errorf("m1 carried %v, want only the two ordinary datagrams", got)
 	}
-	defer echo.Close()
-	received := make(chan string, 4)
-	go func() {
-		buf := make([]byte, 64)
-		for {
-			n, _, err := echo.ReadFrom(buf)
-			if err != nil {
-				return
-			}
-			received <- string(buf[:n])
-		}
-	}()
-	source := &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 40001}
-	send := func(payload, target string) {
-		metadata := &constant.Metadata{NetWork: constant.UDP, Type: constant.SOCKS5, SrcIP: netip.MustParseAddr("127.0.0.1"), SrcPort: 40001}
-		if err := metadata.SetRemoteAddress(target); err != nil {
+	if got := refused.waitFor(t, 2); len(got) != 2 {
+		t.Errorf("refusals = %v, want both Tailscale datagrams", got)
+	}
+}
+
+// L-2. A reused flow resolves a datagram's name before it writes to the
+// address: a tailnet name resolving to an address that is not (a Funnel
+// host, say) is refused by its name. A name that is no tailnet one still
+// resolves and leaves through m1.
+func TestMountedNodeRefusesATailnetNameOnAReusedConnection(t *testing.T) {
+	hosts := trie.New[resolver.HostValue]()
+	for name, ip := range map[string]string{"funnel.tail1.ts.net": "203.0.113.77", "ordinary.example": "203.0.113.78"} {
+		value, err := resolver.NewHostValueByIPs([]netip.Addr{netip.MustParseAddr(ip)})
+		if err != nil {
 			t.Fatal(err)
 		}
-		tunnel.Tunnel.HandleUDPPacket(&fakeUDPPacket{data: []byte(payload), local: source}, metadata)
-	}
-	send("first", echo.LocalAddr().String())
-	select {
-	case got := <-received:
-		if got != "first" {
-			t.Errorf("echo received %q", got)
+		if err := hosts.Insert(name, value); err != nil {
+			t.Fatal(err)
 		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("an ordinary datagram through the mounted node never arrived")
 	}
-	send("second", "100.100.1.1:41641")
-	if got := refused.waitFor(t, 1); len(got) != 1 || !strings.Contains(got[0], "100.100.1.1:41641") {
-		t.Errorf("refusals = %v, want the datagram to 100.100.1.1 refused", got)
+	previous := resolver.DefaultHosts
+	resolver.DefaultHosts = resolver.NewHosts(hosts)
+	t.Cleanup(func() { resolver.DefaultHosts = previous })
+
+	mount := reusedFlowThroughRecorder(t)
+	refused := recordRefusals(t)
+	sendDatagram(t, 40002, "first", "203.0.113.53:53")
+	waitUntil(t, "the first datagram through m1", func() bool { return len(carriedPackets(mount)) >= 1 })
+	sendDatagram(t, 40002, "second", "funnel.tail1.ts.net:41641")
+	sendDatagram(t, 40002, "third", "ordinary.example:53")
+	waitUntil(t, "the named datagram through m1", func() bool { return len(carriedPackets(mount)) >= 2 })
+	time.Sleep(300 * time.Millisecond)
+	if got := carriedPackets(mount); !slices.Equal(got, []string{"203.0.113.53:53", "203.0.113.78:53"}) {
+		t.Errorf("m1 carried %v, want the ordinary datagram and the ordinary name's", got)
 	}
-	send("third", echo.LocalAddr().String())
-	select {
-	case got := <-received:
-		if got != "third" {
-			t.Errorf("echo received %q, want only ordinary datagrams", got)
-		}
-	case <-time.After(5 * time.Second):
-		t.Error("the reused connection stopped carrying ordinary datagrams")
+	if got := refused.waitFor(t, 1); !slices.Equal(got, []string{"m1: a packet to the name funnel.tail1.ts.net"}) {
+		t.Errorf("refusals = %v, want the tailnet name refused", got)
 	}
 }
 

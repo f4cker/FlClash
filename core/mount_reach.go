@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/netip"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -161,11 +162,7 @@ func (b *mountBase) readDNS(node *yaml.Node) {
 		}
 	}
 	for _, server := range servers {
-		_, fragment, ok := strings.Cut(server, "#")
-		if !ok {
-			continue
-		}
-		for _, part := range strings.Split(fragment, "&") {
+		for _, part := range strings.Split(dnsFragment(server), "&") {
 			if part = strings.TrimSpace(part); part != "" && !strings.Contains(part, "=") {
 				if part == "RULES" {
 					b.dnsRules = true
@@ -175,6 +172,24 @@ func (b *mountBase) readDNS(node *yaml.Node) {
 			}
 		}
 	}
+}
+
+// The fragment of a nameserver as mihomo reads it: the URL's, percent
+// decoded. One that does not parse fails mihomo's config; it is read from
+// the raw text here, decoded where it can be, all the same.
+func dnsFragment(server string) string {
+	pure := server
+	if !strings.Contains(server, "://") {
+		pure = "udp://" + server
+	}
+	if u, err := url.Parse(pure); err == nil {
+		return u.Fragment
+	}
+	_, fragment, _ := strings.Cut(server, "#")
+	if decoded, err := url.PathUnescape(fragment); err == nil {
+		return decoded
+	}
+	return fragment
 }
 
 // As mihomo reads a tunnel: "network,address,target,proxy" or a mapping.
