@@ -4701,11 +4701,21 @@ class AppLocalizations {
     );
   }
 
-  /// `Port {port} could not be opened, another app may be using it. Flash stopped and left the system proxy as it was.`
+  /// `Could not open port {port}. Another app may be using it. The proxy service did not start.`
   String mixedPortUnavailable(Object port) {
     return Intl.message(
-      'Port $port could not be opened, another app may be using it. Flash stopped and left the system proxy as it was.',
+      'Could not open port $port. Another app may be using it. The proxy service did not start.',
       name: 'mixedPortUnavailable',
+      desc: '',
+      args: [port],
+    );
+  }
+
+  /// `Could not open port {port}. Another app may be using it. The proxy service did not start. System proxy settings were not changed.`
+  String mixedPortUnavailableProxyUnchanged(Object port) {
+    return Intl.message(
+      'Could not open port $port. Another app may be using it. The proxy service did not start. System proxy settings were not changed.',
+      name: 'mixedPortUnavailableProxyUnchanged',
       desc: '',
       args: [port],
     );

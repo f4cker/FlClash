@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/preferences.dart';
 import 'package:fl_clash/common/print.dart';
@@ -51,6 +53,11 @@ class SystemProxyQueue {
   bool _closed = false;
   bool _recovered = false;
   SystemProxySnapshot? _snapshot;
+  int _starts = 0;
+
+  /// How many times this queue has gone on to set the system proxy. A caller
+  /// takes it when a run begins and hands it to [unchangedSince] later.
+  int get startCount => _starts;
 
   SystemProxyQueue(this._proxy, {SystemProxyStore? store}) : _store = store;
 
@@ -76,6 +83,27 @@ class SystemProxyQueue {
     });
   }
 
+  /// True only when it is certain that nothing has set the system proxy
+  /// since [startCount] was [mark]: every change queued so far has run, none
+  /// of them was a start, and no snapshot of an earlier start is still held,
+  /// in memory or left on disk by a run that has not been recovered yet.
+  /// A queue that does not settle within [wait] cannot tell, so it is false.
+  Future<bool> unchangedSince(
+    int mark, {
+    Duration wait = const Duration(seconds: 3),
+  }) async {
+    var unchanged = false;
+    try {
+      await _enqueue(() async {
+        final leftOver = !_recovered && await _store?.read() != null;
+        unchanged = !leftOver && _starts == mark && _snapshot == null;
+      }).timeout(wait);
+    } on TimeoutException {
+      return false;
+    }
+    return unchanged;
+  }
+
   Future<void> _recover() async {
     if (_recovered) {
       return;
@@ -91,6 +119,7 @@ class SystemProxyQueue {
   }
 
   Future<void> _start(int port, List<String> bypassDomain) async {
+    _starts++;
     final snapshot = _snapshot != null
         ? _snapshot!.applying(port, bypassDomain)
         : await _proxy.snapshotProxy(port, bypassDomain);

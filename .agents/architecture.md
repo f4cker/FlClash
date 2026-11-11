@@ -1768,7 +1768,8 @@ NDK version stands in for the hook's cache.
   listening on that port. In the app `SystemProxyQueue` sets the system proxy only once the user turned it on
   (`NetworkProps.systemProxy` starts off), the run is up, and the Core confirmed it holds the mixed port
   (`listener.mixedPort`, kept in `listeningMixedPortProvider` by `SetupAction.checkMixedListener`; a port the Core
-  could not bind ends the run with a banner). On macOS it first reads every network service's web, secure web and
+  could not bind ends the run with a banner, which adds that the system proxy was not changed only when
+  `SystemProxyQueue.unchangedSince` proves no start ran and no snapshot is held since the run began). On macOS it first reads every network service's web, secure web and
   SOCKS proxy and bypass list into a `SystemProxySnapshot`, stored in the preferences before anything is written. A
   stop, exit or the next launch after a crash restores a service only while it still holds exactly what Flash wrote;
   a service someone else changed, or one that cannot be read, is left as it is, and the PAC and auto-detect settings

@@ -104,6 +104,9 @@ class SetupAction extends _$SetupAction {
       return;
     }
 
+    if (_startTime == null) {
+      _systemProxyMark = systemProxyStartCount();
+    }
     _startTime ??= DateTime.now();
     _updateRunTime();
     _syncRuntimeTicker();
@@ -263,12 +266,29 @@ class SetupAction extends _$SetupAction {
       logLevel: LogLevel.error,
     );
     await globalState.safeRun(() => setRunning(false));
+    // Saying the system proxy was not changed needs proof: an earlier part
+    // of this run may have pointed it at Flash, and a restore may not have
+    // finished or may have left a service alone.
+    final unchanged = await systemProxyUnchangedSince(_systemProxyMark);
     dialogs.showBanner(
-      currentAppLocalizations.mixedPortUnavailable('$port'),
+      unchanged
+          ? currentAppLocalizations.mixedPortUnavailableProxyUnchanged('$port')
+          : currentAppLocalizations.mixedPortUnavailable('$port'),
       level: BannerLevel.error,
     );
     return false;
   }
+
+  /// [SystemProxyQueue.startCount] when the current run began.
+  int _systemProxyMark = 0;
+
+  @protected
+  int systemProxyStartCount() => systemProxyQueue?.startCount ?? 0;
+
+  /// Without a queue Flash never writes the system proxy at all.
+  @protected
+  Future<bool> systemProxyUnchangedSince(int mark) =>
+      systemProxyQueue?.unchangedSince(mark) ?? Future.value(true);
 
   bool get _mixedListenerExpected =>
       system.isDesktop &&

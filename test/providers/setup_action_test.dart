@@ -133,6 +133,22 @@ class TestSetupAction extends SetupAction {
     return listening ?? ref.read(patchClashConfigProvider).mixedPort;
   }
 
+  /// Stands in for [SystemProxyQueue.startCount].
+  int proxyStarts = 0;
+
+  /// Null answers from [proxyStarts]; false is a queue that cannot tell.
+  bool? proxyUnchanged;
+  final List<int> proxyMarksAsked = [];
+
+  @override
+  int systemProxyStartCount() => proxyStarts;
+
+  @override
+  Future<bool> systemProxyUnchangedSince(int mark) async {
+    proxyMarksAsked.add(mark);
+    return proxyUnchanged ?? proxyStarts == mark;
+  }
+
   @override
   Future<bool> applyProfile({
     bool silence = false,
@@ -304,6 +320,96 @@ void main() {
       expect(action.coreRunningCalls, [true, false]);
       expect(container.read(listeningMixedPortProvider), isNull);
       expect(container.read(proxyStateProvider).isStart, isFalse);
+    });
+
+    group('the banner says what happened to the system proxy', () {
+      late List<String> printed;
+
+      setUp(() {
+        printed = [];
+        final original = debugPrint;
+        debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+        addTearDown(() => debugPrint = original);
+      });
+
+      String bannerOf(int port, {required bool unchanged}) =>
+          '[APP] banner: ${unchanged ? currentAppLocalizations.mixedPortUnavailableProxyUnchanged('$port') : currentAppLocalizations.mixedPortUnavailable('$port')}';
+
+      test('a start that never set it says it was not changed', () async {
+        if (!system.isDesktop) return;
+        markInitialized();
+        action.proxyStarts = 4;
+        action.listening = 0;
+        final port = container.read(patchClashConfigProvider).mixedPort;
+
+        await container.read(setupActionProvider.notifier).setRunning(true);
+
+        expect(action.proxyMarksAsked, [4]);
+        expect(printed, contains(bannerOf(port, unchanged: true)));
+        expect(printed, isNot(contains(bannerOf(port, unchanged: false))));
+        expect(
+          bannerOf(port, unchanged: true),
+          endsWith('System proxy settings were not changed.'),
+        );
+      });
+
+      test('a run that had set it does not claim it was unchanged', () async {
+        if (!system.isDesktop) return;
+        markInitialized();
+        action.proxyStarts = 4;
+        await container.read(setupActionProvider.notifier).setRunning(true);
+        // The system proxy went on while the run was healthy.
+        action.proxyStarts = 5;
+        container
+            .read(patchClashConfigProvider.notifier)
+            .update((state) => state.copyWith(mixedPort: 7999));
+        action.listening = 0;
+
+        await container.read(setupActionProvider.notifier).checkMixedListener();
+
+        expect(action.proxyMarksAsked, [4]);
+        expect(printed, contains(bannerOf(7999, unchanged: false)));
+        expect(printed, isNot(contains(bannerOf(7999, unchanged: true))));
+        expect(
+          bannerOf(7999, unchanged: false),
+          endsWith('The proxy service did not start.'),
+        );
+      });
+
+      test('a queue that cannot tell gets the shorter message', () async {
+        if (!system.isDesktop) return;
+        markInitialized();
+        action.proxyUnchanged = false;
+        action.listening = 0;
+        final port = container.read(patchClashConfigProvider).mixedPort;
+
+        await container.read(setupActionProvider.notifier).setRunning(true);
+
+        expect(printed, contains(bannerOf(port, unchanged: false)));
+      });
+
+      test('a new run takes a new mark', () async {
+        if (!system.isDesktop) return;
+        markInitialized();
+        action.proxyStarts = 2;
+        await container.read(setupActionProvider.notifier).setRunning(true);
+        action.proxyStarts = 3;
+        await container.read(setupActionProvider.notifier).setRunning(false);
+        action.listening = 0;
+
+        await container.read(setupActionProvider.notifier).setRunning(true);
+
+        expect(action.proxyMarksAsked, [3]);
+        expect(
+          printed,
+          contains(
+            bannerOf(
+              container.read(patchClashConfigProvider).mixedPort,
+              unchanged: true,
+            ),
+          ),
+        );
+      });
     });
 
     test('an initializing start checks after the profile applied', () async {

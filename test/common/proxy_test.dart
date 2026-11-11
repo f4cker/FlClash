@@ -286,6 +286,96 @@ void main() {
     expect(proxy.calls, ['snapshot', 'start 7890', 'restore 7890']);
     expect(store.calls, ['read']);
   });
+
+  group('unchangedSince', () {
+    test('a run that never set the proxy left it unchanged', () async {
+      final proxy = _FakeProxy();
+      final queue = SystemProxyQueue(proxy, store: _FakeStore());
+      final mark = queue.startCount;
+
+      await queue.apply(_state(isStart: false));
+      await queue.apply(_state(isStart: true, systemProxy: false));
+
+      expect(await queue.unchangedSince(mark), isTrue);
+      expect(proxy.calls, isEmpty);
+    });
+
+    test('a start earlier in the run counts even once restored', () async {
+      final proxy = _FakeProxy();
+      final queue = SystemProxyQueue(proxy, store: _FakeStore());
+      final mark = queue.startCount;
+
+      await queue.apply(_state(isStart: true));
+      await queue.apply(_state(isStart: false));
+
+      expect(proxy.calls, ['snapshot', 'start 7890', 'restore 7890']);
+      expect(await queue.unchangedSince(mark), isFalse);
+      expect(await queue.unchangedSince(queue.startCount), isTrue);
+    });
+
+    test('a start it could not read first still counts', () async {
+      final proxy = _FakeProxy()..readable = false;
+      final queue = SystemProxyQueue(proxy);
+      final mark = queue.startCount;
+
+      await queue.apply(_state(isStart: true));
+
+      expect(await queue.unchangedSince(mark), isFalse);
+    });
+
+    test('a snapshot still held is not unchanged', () async {
+      final proxy = _FakeProxy()..restoreSucceeds = false;
+      final queue = SystemProxyQueue(proxy, store: _FakeStore());
+      await queue.apply(_state(isStart: true));
+      await queue.apply(_state(isStart: false));
+      final mark = queue.startCount;
+
+      expect(await queue.unchangedSince(mark), isFalse);
+    });
+
+    test('a record a crashed run left is not unchanged', () async {
+      final store = _FakeStore(
+        SystemProxySnapshot(
+          services: {'Wi-Fi': _clashMac},
+          port: 7890,
+          bypassDomain: const ['localhost'],
+        ),
+      );
+      final proxy = _FakeProxy();
+      final queue = SystemProxyQueue(proxy, store: store);
+
+      expect(await queue.unchangedSince(queue.startCount), isFalse);
+      expect(proxy.calls, isEmpty);
+      expect(store.snapshot, isNotNull);
+    });
+
+    test('waits for a pending start before it answers', () async {
+      final proxy = _FakeProxy();
+      final queue = SystemProxyQueue(proxy, store: _FakeStore());
+      final mark = queue.startCount;
+      final inFlight = Completer<bool>();
+      proxy.held = inFlight.future;
+
+      unawaited(queue.apply(_state(isStart: true)));
+      final answer = queue.unchangedSince(mark);
+      inFlight.complete(true);
+
+      expect(await answer, isFalse);
+    });
+
+    test('a queue that does not settle cannot tell', () async {
+      final proxy = _FakeProxy();
+      final queue = SystemProxyQueue(proxy, store: _FakeStore());
+      proxy.held = Completer<bool>().future;
+
+      unawaited(queue.apply(_state(isStart: true)));
+
+      expect(
+        await queue.unchangedSince(0, wait: const Duration(milliseconds: 20)),
+        isFalse,
+      );
+    });
+  });
 }
 
 class _NonRestorableProxy extends _FakeProxy {
