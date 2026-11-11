@@ -109,7 +109,10 @@ func rootOf(t *testing.T, content string) *yaml.Node {
 }
 
 func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
-	target := inspectMountTarget(rootOf(t, mountTargetProfile))
+	target, err := inspectMountTarget(rootOf(t, mountTargetProfile))
+	if err != nil {
+		t.Fatal(err)
+	}
 	got := map[string]MountGroupInfo{}
 	for _, group := range target.Groups {
 		got[group.Name] = group
@@ -128,6 +131,31 @@ func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
 		if got[name] != want {
 			t.Errorf("%s = %+v, want %+v", name, got[name], want)
 		}
+	}
+}
+
+func TestMountGroupsThatCannotBeReadAreAnErrorNotFewerGroups(t *testing.T) {
+	home := withMountHome(t)
+	source := writeMountFile(t, home, "1.yaml", mountSourceB)
+	for name, profile := range map[string]string{
+		"groups not a list":   "proxy-groups: {G: {type: select}}\n",
+		"group not a mapping": "proxy-groups:\n  - G\n  - {name: H, type: select, include-all: true}\n",
+		"null group":          "proxy-groups:\n  -\n  - {name: H, type: select, include-all: true}\n",
+		"proxies not a list":  "proxies: x\nproxy-groups:\n  - {name: H, type: select, include-all: true}\n",
+		"proxy not a mapping": "proxies: [x]\nproxy-groups:\n  - {name: H, type: select, include-all: true}\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			if target, err := inspectMountTarget(rootOf(t, profile)); err == nil {
+				t.Errorf("inspect = %+v, want an error", target)
+			}
+			setup := &MountSetup{Sources: []MountSource{{ID: 1, Path: source}}}
+			if report, err := applyMountOverrides(rootOf(t, profile), setup); err == nil {
+				t.Errorf("apply = %+v, want an error", report)
+			}
+		})
+	}
+	if target, err := inspectMountTarget(rootOf(t, "proxy-groups:\n")); err != nil || len(target.Groups) != 0 {
+		t.Errorf("null groups = %+v, %v; want none and no error", target, err)
 	}
 }
 

@@ -185,35 +185,52 @@ func groupList(mapping map[string]any, key string) []string {
 	return names
 }
 
-func decodeMappings(node *yaml.Node) []map[string]any {
+// A list that cannot be read is an error, never fewer groups or proxies.
+func decodeMappings(node *yaml.Node, key string) ([]map[string]any, error) {
 	node = resolveAlias(node)
-	if node == nil || node.Kind != yaml.SequenceNode {
-		return nil
+	if node == nil || isNull(node) {
+		return nil, nil
+	}
+	if node.Kind != yaml.SequenceNode {
+		return nil, fmt.Errorf("%s is not a list", key)
 	}
 	mappings := make([]map[string]any, 0, len(node.Content))
-	for _, item := range node.Content {
+	for i, item := range node.Content {
 		var mapping map[string]any
-		if err := resolveAlias(item).Decode(&mapping); err != nil {
-			mapping = nil
+		if err := resolveAlias(item).Decode(&mapping); err != nil || mapping == nil {
+			return nil, fmt.Errorf("%s entry %d cannot be read", key, i+1)
 		}
 		mappings = append(mappings, mapping)
 	}
-	return mappings
+	return mappings, nil
 }
 
-func inspectMountTarget(root *yaml.Node) MountTarget {
+func proxyTypesOf(root *yaml.Node) (map[string]string, error) {
+	proxies, err := decodeMappings(mappingValue(root, "proxies"), "proxies")
+	if err != nil {
+		return nil, err
+	}
 	proxyTypes := map[string]string{}
-	for _, mapping := range decodeMappings(mappingValue(root, "proxies")) {
+	for _, mapping := range proxies {
 		proxyTypes[groupString(mapping, "name")] = strings.ToLower(groupString(mapping, "type"))
 	}
+	return proxyTypes, nil
+}
+
+func inspectMountTarget(root *yaml.Node) (MountTarget, error) {
+	proxyTypes, err := proxyTypesOf(root)
+	if err != nil {
+		return MountTarget{}, err
+	}
+	groups, err := decodeMappings(mappingValue(root, "proxy-groups"), "proxy-groups")
+	if err != nil {
+		return MountTarget{}, err
+	}
 	target := MountTarget{Groups: []MountGroupInfo{}}
-	for _, mapping := range decodeMappings(mappingValue(root, "proxy-groups")) {
-		if mapping == nil {
-			continue
-		}
+	for _, mapping := range groups {
 		target.Groups = append(target.Groups, mountGroupInfo(mapping, proxyTypes))
 	}
-	return target
+	return target, nil
 }
 
 func mountGroupInfo(mapping map[string]any, proxyTypes map[string]string) MountGroupInfo {
@@ -326,11 +343,19 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	for _, name := range reservedProxyNames {
 		taken[name] = struct{}{}
 	}
-	for _, mapping := range decodeMappings(mappingValue(root, "proxies")) {
-		taken[groupString(mapping, "name")] = struct{}{}
+	proxyTypes, err := proxyTypesOf(root)
+	if err != nil {
+		return nil, err
+	}
+	for name := range proxyTypes {
+		taken[name] = struct{}{}
 	}
 	groupsNode := resolveAlias(mappingValue(root, "proxy-groups"))
-	for _, mapping := range decodeMappings(groupsNode) {
+	groupMappings, err := decodeMappings(groupsNode, "proxy-groups")
+	if err != nil {
+		return nil, err
+	}
+	for _, mapping := range groupMappings {
 		taken[groupString(mapping, "name")] = struct{}{}
 	}
 
@@ -364,7 +389,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		setMappingValue(providers, name, definition)
 		names = append(names, name)
 	}
-	groups, err := applyMountGroups(groupsNode, setup.Groups, names, root)
+	groups, err := applyMountGroups(groupsNode, groupMappings, proxyTypes, setup.Groups, names)
 	if err != nil {
 		return nil, err
 	}
@@ -434,52 +459,42 @@ func mountProviderNode(path string, renames []MountNode) (*yaml.Node, error) {
 	return &node, nil
 }
 
-func applyMountGroups(groupsNode *yaml.Node, chosen []string, providers []string, root *yaml.Node) ([]MountGroupReport, error) {
-	proxyTypes := map[string]string{}
-	for _, mapping := range decodeMappings(mappingValue(root, "proxies")) {
-		proxyTypes[groupString(mapping, "name")] = strings.ToLower(groupString(mapping, "type"))
-	}
+func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, proxyTypes map[string]string, chosen []string, providers []string) ([]MountGroupReport, error) {
 	reports := []MountGroupReport{}
 	found := map[string]bool{}
-	if groupsNode != nil && groupsNode.Kind == yaml.SequenceNode {
-		for i, item := range groupsNode.Content {
-			node := resolveAlias(item)
-			var mapping map[string]any
-			if node.Kind != yaml.MappingNode || node.Decode(&mapping) != nil {
-				continue
-			}
-			info := mountGroupInfo(mapping, proxyTypes)
-			via := ""
-			switch {
-			case info.Kind == mountGroupAuto:
-				via = "auto"
-			case slices.Contains(chosen, info.Name) && info.Kind == mountGroupCandidate:
-				via = "use"
-			}
-			if slices.Contains(chosen, info.Name) && via != "" {
-				found[info.Name] = true
-			}
-			if via == "" {
-				continue
-			}
-			copied := *node
-			copied.Content = append([]*yaml.Node(nil), node.Content...)
-			if via == "use" {
-				uses := append(groupList(mapping, "use"), providers...)
-				var useNode yaml.Node
-				if err := useNode.Encode(uniqueStrings(uses)); err != nil {
-					return nil, err
-				}
-				setMappingValue(&copied, "use", &useNode)
-			}
-			report := MountGroupReport{Name: info.Name, Via: via, Protection: mountProtectionBase, EmptyFallback: info.EmptyFallback}
-			if info.EmptyFallback == "" {
-				report.Protection, report.EmptyFallback = mountProtectionReject, "REJECT"
-				setMappingValue(&copied, "empty-fallback", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "REJECT"})
-			}
-			groupsNode.Content[i] = &copied
-			reports = append(reports, report)
+	for i, mapping := range mappings {
+		node := resolveAlias(groupsNode.Content[i])
+		info := mountGroupInfo(mapping, proxyTypes)
+		via := ""
+		switch {
+		case info.Kind == mountGroupAuto:
+			via = "auto"
+		case slices.Contains(chosen, info.Name) && info.Kind == mountGroupCandidate:
+			via = "use"
 		}
+		if slices.Contains(chosen, info.Name) && via != "" {
+			found[info.Name] = true
+		}
+		if via == "" {
+			continue
+		}
+		copied := *node
+		copied.Content = append([]*yaml.Node(nil), node.Content...)
+		if via == "use" {
+			uses := append(groupList(mapping, "use"), providers...)
+			var useNode yaml.Node
+			if err := useNode.Encode(uniqueStrings(uses)); err != nil {
+				return nil, err
+			}
+			setMappingValue(&copied, "use", &useNode)
+		}
+		report := MountGroupReport{Name: info.Name, Via: via, Protection: mountProtectionBase, EmptyFallback: info.EmptyFallback}
+		if info.EmptyFallback == "" {
+			report.Protection, report.EmptyFallback = mountProtectionReject, "REJECT"
+			setMappingValue(&copied, "empty-fallback", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "REJECT"})
+		}
+		groupsNode.Content[i] = &copied
+		reports = append(reports, report)
 	}
 	for _, name := range chosen {
 		if !found[name] {

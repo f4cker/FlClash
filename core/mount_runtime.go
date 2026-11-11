@@ -204,7 +204,10 @@ func handleInspectMountTarget(params MountTargetParams) (*MountTarget, error) {
 		}
 		root = mapping
 	}
-	target := inspectMountTarget(root)
+	target, err := inspectMountTarget(root)
+	if err != nil {
+		return nil, err
+	}
 	return &target, nil
 }
 
