@@ -207,7 +207,9 @@ class TailscaleDeviceSection extends StatelessWidget {
     } else if (shown.isEmpty) {
       body = ownerKey != null
           ? _Empty(
-              title: appLocalizations.tsOwnerFilterEmpty,
+              title: query.trim().isEmpty
+                  ? appLocalizations.tsOwnerFilterEmpty
+                  : appLocalizations.tsFilterEmpty,
               actionLabel: appLocalizations.tsClearOwnerFilter,
               onAction: () => onOwnerChanged(null),
             )

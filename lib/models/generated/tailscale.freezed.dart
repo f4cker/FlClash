@@ -2401,7 +2401,7 @@ $TailscaleLegacyMigrationCopyWith<$Res>? get migratedTo {
 /// @nodoc
 mixin _$TailscaleMigrateResult {
 
- int get generation;@JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown) TailscaleMigrateOutcome get outcome; TailscaleLegacyMigration get migration; TailscaleNode get node;@JsonKey(name: 'reapply-required') bool get reapplyRequired;@JsonKey(name: 'target-untouched') bool get targetUntouched;@JsonKey(name: 'archive-intact') bool get archiveIntact; TailscaleError? get error;
+ int get generation;@JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown) TailscaleMigrateOutcome get outcome; TailscaleLegacyMigration get migration; TailscaleNode get node;@JsonKey(name: 'reapply-required') bool get reapplyRequired;@JsonKey(name: 'target-untouched') bool get targetUntouched;@JsonKey(name: 'archive-intact') bool get archiveIntact;@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) TailscaleMigrateStage? get stage; TailscaleError? get error;
 /// Create a copy of TailscaleMigrateResult
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2415,20 +2415,20 @@ $TailscaleMigrateResultCopyWith<TailscaleMigrateResult> get copyWith => _$Tailsc
 @override
 bool operator ==(Object other) {
   final _this = this as TailscaleMigrateResult;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleMigrateResult&&(identical(other.generation, _this.generation) || other.generation == _this.generation)&&(identical(other.outcome, _this.outcome) || other.outcome == _this.outcome)&&(identical(other.migration, _this.migration) || other.migration == _this.migration)&&(identical(other.node, _this.node) || other.node == _this.node)&&(identical(other.reapplyRequired, _this.reapplyRequired) || other.reapplyRequired == _this.reapplyRequired)&&(identical(other.targetUntouched, _this.targetUntouched) || other.targetUntouched == _this.targetUntouched)&&(identical(other.archiveIntact, _this.archiveIntact) || other.archiveIntact == _this.archiveIntact)&&(identical(other.error, _this.error) || other.error == _this.error));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleMigrateResult&&(identical(other.generation, _this.generation) || other.generation == _this.generation)&&(identical(other.outcome, _this.outcome) || other.outcome == _this.outcome)&&(identical(other.migration, _this.migration) || other.migration == _this.migration)&&(identical(other.node, _this.node) || other.node == _this.node)&&(identical(other.reapplyRequired, _this.reapplyRequired) || other.reapplyRequired == _this.reapplyRequired)&&(identical(other.targetUntouched, _this.targetUntouched) || other.targetUntouched == _this.targetUntouched)&&(identical(other.archiveIntact, _this.archiveIntact) || other.archiveIntact == _this.archiveIntact)&&(identical(other.stage, _this.stage) || other.stage == _this.stage)&&(identical(other.error, _this.error) || other.error == _this.error));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TailscaleMigrateResult;
-  return Object.hash(runtimeType,_this.generation,_this.outcome,_this.migration,_this.node,_this.reapplyRequired,_this.targetUntouched,_this.archiveIntact,_this.error);
+  return Object.hash(runtimeType,_this.generation,_this.outcome,_this.migration,_this.node,_this.reapplyRequired,_this.targetUntouched,_this.archiveIntact,_this.stage,_this.error);
 }
 
 @override
 String toString() {
   final _this = this as TailscaleMigrateResult;
-  return 'TailscaleMigrateResult(generation: ${_this.generation}, outcome: ${_this.outcome}, migration: ${_this.migration}, node: ${_this.node}, reapplyRequired: ${_this.reapplyRequired}, targetUntouched: ${_this.targetUntouched}, archiveIntact: ${_this.archiveIntact}, error: ${_this.error})';
+  return 'TailscaleMigrateResult(generation: ${_this.generation}, outcome: ${_this.outcome}, migration: ${_this.migration}, node: ${_this.node}, reapplyRequired: ${_this.reapplyRequired}, targetUntouched: ${_this.targetUntouched}, archiveIntact: ${_this.archiveIntact}, stage: ${_this.stage}, error: ${_this.error})';
 }
 
 
@@ -2439,7 +2439,7 @@ abstract mixin class $TailscaleMigrateResultCopyWith<$Res>  {
   factory $TailscaleMigrateResultCopyWith(TailscaleMigrateResult value, $Res Function(TailscaleMigrateResult) _then) = _$TailscaleMigrateResultCopyWithImpl;
 @useResult
 $Res call({
- int generation,@JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown) TailscaleMigrateOutcome outcome, TailscaleLegacyMigration migration, TailscaleNode node,@JsonKey(name: 'reapply-required') bool reapplyRequired,@JsonKey(name: 'target-untouched') bool targetUntouched,@JsonKey(name: 'archive-intact') bool archiveIntact, TailscaleError? error
+ int generation,@JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown) TailscaleMigrateOutcome outcome, TailscaleLegacyMigration migration, TailscaleNode node,@JsonKey(name: 'reapply-required') bool reapplyRequired,@JsonKey(name: 'target-untouched') bool targetUntouched,@JsonKey(name: 'archive-intact') bool archiveIntact,@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) TailscaleMigrateStage? stage, TailscaleError? error
 });
 
 
@@ -2456,7 +2456,7 @@ class _$TailscaleMigrateResultCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleMigrateResult
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? generation = null,Object? outcome = null,Object? migration = null,Object? node = null,Object? reapplyRequired = null,Object? targetUntouched = null,Object? archiveIntact = null,Object? error = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? generation = null,Object? outcome = null,Object? migration = null,Object? node = null,Object? reapplyRequired = null,Object? targetUntouched = null,Object? archiveIntact = null,Object? stage = freezed,Object? error = freezed,}) {
   return _then(TailscaleMigrateResult(
 generation: null == generation ? _self.generation : generation // ignore: cast_nullable_to_non_nullable
 as int,outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
@@ -2465,7 +2465,8 @@ as TailscaleLegacyMigration,node: null == node ? _self.node : node // ignore: ca
 as TailscaleNode,reapplyRequired: null == reapplyRequired ? _self.reapplyRequired : reapplyRequired // ignore: cast_nullable_to_non_nullable
 as bool,targetUntouched: null == targetUntouched ? _self.targetUntouched : targetUntouched // ignore: cast_nullable_to_non_nullable
 as bool,archiveIntact: null == archiveIntact ? _self.archiveIntact : archiveIntact // ignore: cast_nullable_to_non_nullable
-as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as bool,stage: freezed == stage ? _self.stage : stage // ignore: cast_nullable_to_non_nullable
+as TailscaleMigrateStage?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as TailscaleError?,
   ));
 }
@@ -2581,10 +2582,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int generation, @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown)  TailscaleMigrateOutcome outcome,  TailscaleLegacyMigration migration,  TailscaleNode node, @JsonKey(name: 'reapply-required')  bool reapplyRequired, @JsonKey(name: 'target-untouched')  bool targetUntouched, @JsonKey(name: 'archive-intact')  bool archiveIntact,  TailscaleError? error)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int generation, @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown)  TailscaleMigrateOutcome outcome,  TailscaleLegacyMigration migration,  TailscaleNode node, @JsonKey(name: 'reapply-required')  bool reapplyRequired, @JsonKey(name: 'target-untouched')  bool targetUntouched, @JsonKey(name: 'archive-intact')  bool archiveIntact, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  TailscaleMigrateStage? stage,  TailscaleError? error)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TailscaleMigrateResult() when $default != null:
-return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.reapplyRequired,_that.targetUntouched,_that.archiveIntact,_that.error);case _:
+return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.reapplyRequired,_that.targetUntouched,_that.archiveIntact,_that.stage,_that.error);case _:
   return orElse();
 
 }
@@ -2602,10 +2603,10 @@ return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int generation, @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown)  TailscaleMigrateOutcome outcome,  TailscaleLegacyMigration migration,  TailscaleNode node, @JsonKey(name: 'reapply-required')  bool reapplyRequired, @JsonKey(name: 'target-untouched')  bool targetUntouched, @JsonKey(name: 'archive-intact')  bool archiveIntact,  TailscaleError? error)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int generation, @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown)  TailscaleMigrateOutcome outcome,  TailscaleLegacyMigration migration,  TailscaleNode node, @JsonKey(name: 'reapply-required')  bool reapplyRequired, @JsonKey(name: 'target-untouched')  bool targetUntouched, @JsonKey(name: 'archive-intact')  bool archiveIntact, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  TailscaleMigrateStage? stage,  TailscaleError? error)  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleMigrateResult():
-return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.reapplyRequired,_that.targetUntouched,_that.archiveIntact,_that.error);case _:
+return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.reapplyRequired,_that.targetUntouched,_that.archiveIntact,_that.stage,_that.error);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2622,10 +2623,10 @@ return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int generation, @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown)  TailscaleMigrateOutcome outcome,  TailscaleLegacyMigration migration,  TailscaleNode node, @JsonKey(name: 'reapply-required')  bool reapplyRequired, @JsonKey(name: 'target-untouched')  bool targetUntouched, @JsonKey(name: 'archive-intact')  bool archiveIntact,  TailscaleError? error)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int generation, @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown)  TailscaleMigrateOutcome outcome,  TailscaleLegacyMigration migration,  TailscaleNode node, @JsonKey(name: 'reapply-required')  bool reapplyRequired, @JsonKey(name: 'target-untouched')  bool targetUntouched, @JsonKey(name: 'archive-intact')  bool archiveIntact, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  TailscaleMigrateStage? stage,  TailscaleError? error)?  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleMigrateResult() when $default != null:
-return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.reapplyRequired,_that.targetUntouched,_that.archiveIntact,_that.error);case _:
+return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.reapplyRequired,_that.targetUntouched,_that.archiveIntact,_that.stage,_that.error);case _:
   return null;
 
 }
@@ -2637,7 +2638,7 @@ return $default(_that.generation,_that.outcome,_that.migration,_that.node,_that.
 @JsonSerializable()
 
 class _TailscaleMigrateResult implements TailscaleMigrateResult {
-  const _TailscaleMigrateResult({required this.generation, @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown) this.outcome = TailscaleMigrateOutcome.unknown, required this.migration, required this.node, @JsonKey(name: 'reapply-required') this.reapplyRequired = false, @JsonKey(name: 'target-untouched') this.targetUntouched = false, @JsonKey(name: 'archive-intact') this.archiveIntact = false, this.error});
+  const _TailscaleMigrateResult({required this.generation, @JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown) this.outcome = TailscaleMigrateOutcome.unknown, required this.migration, required this.node, @JsonKey(name: 'reapply-required') this.reapplyRequired = false, @JsonKey(name: 'target-untouched') this.targetUntouched = false, @JsonKey(name: 'archive-intact') this.archiveIntact = false, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) this.stage, this.error});
   factory _TailscaleMigrateResult.fromJson(Map<String, dynamic> json) => _$TailscaleMigrateResultFromJson(json);
 
 @override final  int generation;
@@ -2647,6 +2648,7 @@ class _TailscaleMigrateResult implements TailscaleMigrateResult {
 @override@JsonKey(name: 'reapply-required') final  bool reapplyRequired;
 @override@JsonKey(name: 'target-untouched') final  bool targetUntouched;
 @override@JsonKey(name: 'archive-intact') final  bool archiveIntact;
+@override@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) final  TailscaleMigrateStage? stage;
 @override final  TailscaleError? error;
 
 /// Create a copy of TailscaleMigrateResult
@@ -2662,18 +2664,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleMigrateResult&&(identical(other.generation, generation) || other.generation == generation)&&(identical(other.outcome, outcome) || other.outcome == outcome)&&(identical(other.migration, migration) || other.migration == migration)&&(identical(other.node, node) || other.node == node)&&(identical(other.reapplyRequired, reapplyRequired) || other.reapplyRequired == reapplyRequired)&&(identical(other.targetUntouched, targetUntouched) || other.targetUntouched == targetUntouched)&&(identical(other.archiveIntact, archiveIntact) || other.archiveIntact == archiveIntact)&&(identical(other.error, error) || other.error == error));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleMigrateResult&&(identical(other.generation, generation) || other.generation == generation)&&(identical(other.outcome, outcome) || other.outcome == outcome)&&(identical(other.migration, migration) || other.migration == migration)&&(identical(other.node, node) || other.node == node)&&(identical(other.reapplyRequired, reapplyRequired) || other.reapplyRequired == reapplyRequired)&&(identical(other.targetUntouched, targetUntouched) || other.targetUntouched == targetUntouched)&&(identical(other.archiveIntact, archiveIntact) || other.archiveIntact == archiveIntact)&&(identical(other.stage, stage) || other.stage == stage)&&(identical(other.error, error) || other.error == error));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,generation,outcome,migration,node,reapplyRequired,targetUntouched,archiveIntact,error);
+    return Object.hash(runtimeType,generation,outcome,migration,node,reapplyRequired,targetUntouched,archiveIntact,stage,error);
 }
 
 @override
 String toString() {
-    return 'TailscaleMigrateResult(generation: $generation, outcome: $outcome, migration: $migration, node: $node, reapplyRequired: $reapplyRequired, targetUntouched: $targetUntouched, archiveIntact: $archiveIntact, error: $error)';
+    return 'TailscaleMigrateResult(generation: $generation, outcome: $outcome, migration: $migration, node: $node, reapplyRequired: $reapplyRequired, targetUntouched: $targetUntouched, archiveIntact: $archiveIntact, stage: $stage, error: $error)';
 }
 
 
@@ -2684,7 +2686,7 @@ abstract mixin class _$TailscaleMigrateResultCopyWith<$Res> implements $Tailscal
   factory _$TailscaleMigrateResultCopyWith(_TailscaleMigrateResult value, $Res Function(_TailscaleMigrateResult) _then) = __$TailscaleMigrateResultCopyWithImpl;
 @override @useResult
 $Res call({
- int generation,@JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown) TailscaleMigrateOutcome outcome, TailscaleLegacyMigration migration, TailscaleNode node,@JsonKey(name: 'reapply-required') bool reapplyRequired,@JsonKey(name: 'target-untouched') bool targetUntouched,@JsonKey(name: 'archive-intact') bool archiveIntact, TailscaleError? error
+ int generation,@JsonKey(unknownEnumValue: TailscaleMigrateOutcome.unknown) TailscaleMigrateOutcome outcome, TailscaleLegacyMigration migration, TailscaleNode node,@JsonKey(name: 'reapply-required') bool reapplyRequired,@JsonKey(name: 'target-untouched') bool targetUntouched,@JsonKey(name: 'archive-intact') bool archiveIntact,@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) TailscaleMigrateStage? stage, TailscaleError? error
 });
 
 
@@ -2701,7 +2703,7 @@ class __$TailscaleMigrateResultCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleMigrateResult
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? generation = null,Object? outcome = null,Object? migration = null,Object? node = null,Object? reapplyRequired = null,Object? targetUntouched = null,Object? archiveIntact = null,Object? error = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? generation = null,Object? outcome = null,Object? migration = null,Object? node = null,Object? reapplyRequired = null,Object? targetUntouched = null,Object? archiveIntact = null,Object? stage = freezed,Object? error = freezed,}) {
   return _then(_TailscaleMigrateResult(
 generation: null == generation ? _self.generation : generation // ignore: cast_nullable_to_non_nullable
 as int,outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
@@ -2710,7 +2712,8 @@ as TailscaleLegacyMigration,node: null == node ? _self.node : node // ignore: ca
 as TailscaleNode,reapplyRequired: null == reapplyRequired ? _self.reapplyRequired : reapplyRequired // ignore: cast_nullable_to_non_nullable
 as bool,targetUntouched: null == targetUntouched ? _self.targetUntouched : targetUntouched // ignore: cast_nullable_to_non_nullable
 as bool,archiveIntact: null == archiveIntact ? _self.archiveIntact : archiveIntact // ignore: cast_nullable_to_non_nullable
-as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as bool,stage: freezed == stage ? _self.stage : stage // ignore: cast_nullable_to_non_nullable
+as TailscaleMigrateStage?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as TailscaleError?,
   ));
 }
@@ -6723,8 +6726,9 @@ $TailscaleErrorCopyWith<$Res>? get error {
 /// @nodoc
 mixin _$TailscaleLegacyState {
 
- bool get offered; bool get migrating; TailscaleLegacyNotice get notice; bool get archiveIntact;/// The Core's cause, without a path, when the archive was not intact.
- String? get archiveError;
+ bool get offered; bool get migrating; TailscaleLegacyNotice get notice;/// The Core read the archive back unchanged after the last attempt.
+ bool get archiveIntact;/// Where the last attempt stopped; null when no result came back.
+ TailscaleMigrateStage? get stage;
 /// Create a copy of TailscaleLegacyState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -6736,20 +6740,20 @@ $TailscaleLegacyStateCopyWith<TailscaleLegacyState> get copyWith => _$TailscaleL
 @override
 bool operator ==(Object other) {
   final _this = this as TailscaleLegacyState;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleLegacyState&&(identical(other.offered, _this.offered) || other.offered == _this.offered)&&(identical(other.migrating, _this.migrating) || other.migrating == _this.migrating)&&(identical(other.notice, _this.notice) || other.notice == _this.notice)&&(identical(other.archiveIntact, _this.archiveIntact) || other.archiveIntact == _this.archiveIntact)&&(identical(other.archiveError, _this.archiveError) || other.archiveError == _this.archiveError));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleLegacyState&&(identical(other.offered, _this.offered) || other.offered == _this.offered)&&(identical(other.migrating, _this.migrating) || other.migrating == _this.migrating)&&(identical(other.notice, _this.notice) || other.notice == _this.notice)&&(identical(other.archiveIntact, _this.archiveIntact) || other.archiveIntact == _this.archiveIntact)&&(identical(other.stage, _this.stage) || other.stage == _this.stage));
 }
 
 
 @override
 int get hashCode {
   final _this = this as TailscaleLegacyState;
-  return Object.hash(runtimeType,_this.offered,_this.migrating,_this.notice,_this.archiveIntact,_this.archiveError);
+  return Object.hash(runtimeType,_this.offered,_this.migrating,_this.notice,_this.archiveIntact,_this.stage);
 }
 
 @override
 String toString() {
   final _this = this as TailscaleLegacyState;
-  return 'TailscaleLegacyState(offered: ${_this.offered}, migrating: ${_this.migrating}, notice: ${_this.notice}, archiveIntact: ${_this.archiveIntact}, archiveError: ${_this.archiveError})';
+  return 'TailscaleLegacyState(offered: ${_this.offered}, migrating: ${_this.migrating}, notice: ${_this.notice}, archiveIntact: ${_this.archiveIntact}, stage: ${_this.stage})';
 }
 
 
@@ -6760,7 +6764,7 @@ abstract mixin class $TailscaleLegacyStateCopyWith<$Res>  {
   factory $TailscaleLegacyStateCopyWith(TailscaleLegacyState value, $Res Function(TailscaleLegacyState) _then) = _$TailscaleLegacyStateCopyWithImpl;
 @useResult
 $Res call({
- bool offered, bool migrating, TailscaleLegacyNotice notice, bool archiveIntact, String? archiveError
+ bool offered, bool migrating, TailscaleLegacyNotice notice, bool archiveIntact, TailscaleMigrateStage? stage
 });
 
 
@@ -6777,14 +6781,14 @@ class _$TailscaleLegacyStateCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleLegacyState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? offered = null,Object? migrating = null,Object? notice = null,Object? archiveIntact = null,Object? archiveError = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? offered = null,Object? migrating = null,Object? notice = null,Object? archiveIntact = null,Object? stage = freezed,}) {
   return _then(TailscaleLegacyState(
 offered: null == offered ? _self.offered : offered // ignore: cast_nullable_to_non_nullable
 as bool,migrating: null == migrating ? _self.migrating : migrating // ignore: cast_nullable_to_non_nullable
 as bool,notice: null == notice ? _self.notice : notice // ignore: cast_nullable_to_non_nullable
 as TailscaleLegacyNotice,archiveIntact: null == archiveIntact ? _self.archiveIntact : archiveIntact // ignore: cast_nullable_to_non_nullable
-as bool,archiveError: freezed == archiveError ? _self.archiveError : archiveError // ignore: cast_nullable_to_non_nullable
-as String?,
+as bool,stage: freezed == stage ? _self.stage : stage // ignore: cast_nullable_to_non_nullable
+as TailscaleMigrateStage?,
   ));
 }
 
@@ -6869,10 +6873,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  String? archiveError)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  TailscaleMigrateStage? stage)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TailscaleLegacyState() when $default != null:
-return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.archiveError);case _:
+return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.stage);case _:
   return orElse();
 
 }
@@ -6890,10 +6894,10 @@ return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  String? archiveError)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  TailscaleMigrateStage? stage)  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleLegacyState():
-return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.archiveError);case _:
+return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.stage);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -6910,10 +6914,10 @@ return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  String? archiveError)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  TailscaleMigrateStage? stage)?  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleLegacyState() when $default != null:
-return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.archiveError);case _:
+return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.stage);case _:
   return null;
 
 }
@@ -6925,15 +6929,16 @@ return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_
 
 
 class _TailscaleLegacyState implements TailscaleLegacyState {
-  const _TailscaleLegacyState({this.offered = false, this.migrating = false, this.notice = TailscaleLegacyNotice.none, this.archiveIntact = true, this.archiveError});
+  const _TailscaleLegacyState({this.offered = false, this.migrating = false, this.notice = TailscaleLegacyNotice.none, this.archiveIntact = false, this.stage});
   
 
 @override@JsonKey() final  bool offered;
 @override@JsonKey() final  bool migrating;
 @override@JsonKey() final  TailscaleLegacyNotice notice;
+/// The Core read the archive back unchanged after the last attempt.
 @override@JsonKey() final  bool archiveIntact;
-/// The Core's cause, without a path, when the archive was not intact.
-@override final  String? archiveError;
+/// Where the last attempt stopped; null when no result came back.
+@override final  TailscaleMigrateStage? stage;
 
 /// Create a copy of TailscaleLegacyState
 /// with the given fields replaced by the non-null parameter values.
@@ -6945,18 +6950,18 @@ _$TailscaleLegacyStateCopyWith<_TailscaleLegacyState> get copyWith => __$Tailsca
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleLegacyState&&(identical(other.offered, offered) || other.offered == offered)&&(identical(other.migrating, migrating) || other.migrating == migrating)&&(identical(other.notice, notice) || other.notice == notice)&&(identical(other.archiveIntact, archiveIntact) || other.archiveIntact == archiveIntact)&&(identical(other.archiveError, archiveError) || other.archiveError == archiveError));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleLegacyState&&(identical(other.offered, offered) || other.offered == offered)&&(identical(other.migrating, migrating) || other.migrating == migrating)&&(identical(other.notice, notice) || other.notice == notice)&&(identical(other.archiveIntact, archiveIntact) || other.archiveIntact == archiveIntact)&&(identical(other.stage, stage) || other.stage == stage));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,offered,migrating,notice,archiveIntact,archiveError);
+    return Object.hash(runtimeType,offered,migrating,notice,archiveIntact,stage);
 }
 
 @override
 String toString() {
-    return 'TailscaleLegacyState(offered: $offered, migrating: $migrating, notice: $notice, archiveIntact: $archiveIntact, archiveError: $archiveError)';
+    return 'TailscaleLegacyState(offered: $offered, migrating: $migrating, notice: $notice, archiveIntact: $archiveIntact, stage: $stage)';
 }
 
 
@@ -6967,7 +6972,7 @@ abstract mixin class _$TailscaleLegacyStateCopyWith<$Res> implements $TailscaleL
   factory _$TailscaleLegacyStateCopyWith(_TailscaleLegacyState value, $Res Function(_TailscaleLegacyState) _then) = __$TailscaleLegacyStateCopyWithImpl;
 @override @useResult
 $Res call({
- bool offered, bool migrating, TailscaleLegacyNotice notice, bool archiveIntact, String? archiveError
+ bool offered, bool migrating, TailscaleLegacyNotice notice, bool archiveIntact, TailscaleMigrateStage? stage
 });
 
 
@@ -6984,14 +6989,14 @@ class __$TailscaleLegacyStateCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleLegacyState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? offered = null,Object? migrating = null,Object? notice = null,Object? archiveIntact = null,Object? archiveError = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? offered = null,Object? migrating = null,Object? notice = null,Object? archiveIntact = null,Object? stage = freezed,}) {
   return _then(_TailscaleLegacyState(
 offered: null == offered ? _self.offered : offered // ignore: cast_nullable_to_non_nullable
 as bool,migrating: null == migrating ? _self.migrating : migrating // ignore: cast_nullable_to_non_nullable
 as bool,notice: null == notice ? _self.notice : notice // ignore: cast_nullable_to_non_nullable
 as TailscaleLegacyNotice,archiveIntact: null == archiveIntact ? _self.archiveIntact : archiveIntact // ignore: cast_nullable_to_non_nullable
-as bool,archiveError: freezed == archiveError ? _self.archiveError : archiveError // ignore: cast_nullable_to_non_nullable
-as String?,
+as bool,stage: freezed == stage ? _self.stage : stage // ignore: cast_nullable_to_non_nullable
+as TailscaleMigrateStage?,
   ));
 }
 

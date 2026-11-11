@@ -257,6 +257,11 @@ _TailscaleMigrateResult _$TailscaleMigrateResultFromJson(
   reapplyRequired: json['reapply-required'] as bool? ?? false,
   targetUntouched: json['target-untouched'] as bool? ?? false,
   archiveIntact: json['archive-intact'] as bool? ?? false,
+  stage: $enumDecodeNullable(
+    _$TailscaleMigrateStageEnumMap,
+    json['stage'],
+    unknownValue: JsonKey.nullForUndefinedEnumValue,
+  ),
   error: json['error'] == null
       ? null
       : TailscaleError.fromJson(json['error'] as Map<String, dynamic>),
@@ -272,6 +277,7 @@ Map<String, dynamic> _$TailscaleMigrateResultToJson(
   'reapply-required': instance.reapplyRequired,
   'target-untouched': instance.targetUntouched,
   'archive-intact': instance.archiveIntact,
+  'stage': _$TailscaleMigrateStageEnumMap[instance.stage],
   'error': instance.error,
 };
 
@@ -279,6 +285,12 @@ const _$TailscaleMigrateOutcomeEnumMap = {
   TailscaleMigrateOutcome.migrated: 'migrated',
   TailscaleMigrateOutcome.failed: 'failed',
   TailscaleMigrateOutcome.unknown: 'unknown',
+};
+
+const _$TailscaleMigrateStageEnumMap = {
+  TailscaleMigrateStage.claim: 'claim',
+  TailscaleMigrateStage.copy: 'copy',
+  TailscaleMigrateStage.verify: 'verify',
 };
 
 _TailscaleUser _$TailscaleUserFromJson(Map<String, dynamic> json) =>

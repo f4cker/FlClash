@@ -194,10 +194,11 @@ void main() {
 
       await tester.enterText(find.byType(EditableText), 'no-such-device');
       await settle(tester);
-      expect(find.text('没有符合当前归属的设备'), findsOneWidget);
+      expect(find.text('没有符合当前筛选条件的设备'), findsOneWidget);
+      expect(find.text('没有符合当前归属的设备'), findsNothing);
       await tester.tap(find.text('清除归属筛选'));
       await settle(tester);
-      expect(find.text('没有符合当前归属的设备'), findsNothing);
+      expect(find.text('没有符合当前筛选条件的设备'), findsNothing);
       await teardownView(tester);
     });
 
@@ -622,48 +623,123 @@ void main() {
       await teardownView(tester);
     });
 
-    testWidgets('an explicit failure keeps both choices', (tester) async {
-      serve([tsLegacyNode()], TailscaleStatus(node: tsLegacyNode()));
-      when(
-        () => core.migrateTailscaleLegacy(
-          any(),
-          offerToken: any(named: 'offerToken'),
-        ),
-      ).thenAnswer(
-        (_) async => tsMigrateResult(
-          TailscaleMigrateOutcome.failed,
-          targetUntouched: true,
-          archiveIntact: true,
-        ),
-      );
-      await migrate(tester);
+    for (final (stage, text) in [
+      (TailscaleMigrateStage.copy, '登录记录未迁移，原记录仍保留。请重试，或选择重新登录。'),
+      (TailscaleMigrateStage.claim, '登录记录未迁移，迁移信息未能保存。请重试，或选择重新登录。'),
+    ]) {
+      testWidgets('an explicit failure at ${stage.name} keeps both choices', (
+        tester,
+      ) async {
+        serve([tsLegacyNode()], TailscaleStatus(node: tsLegacyNode()));
+        when(
+          () => core.migrateTailscaleLegacy(
+            any(),
+            offerToken: any(named: 'offerToken'),
+          ),
+        ).thenAnswer(
+          (_) async => tsMigrateResult(
+            TailscaleMigrateOutcome.failed,
+            targetUntouched: true,
+            archiveIntact: true,
+            stage: stage,
+            error: 'permission denied',
+          ),
+        );
+        await migrate(tester);
 
-      expect(find.text('登录记录未迁移，原记录仍保留。请重试，或选择重新登录。'), findsOneWidget);
-      expect(find.text('重试迁移'), findsOneWidget);
-      expect(find.text('重新登录'), findsOneWidget);
-      await teardownView(tester);
-    });
+        expect(find.text(text), findsOneWidget);
+        expect(find.textContaining('permission denied'), findsNothing);
+        expect(find.text('重试迁移'), findsOneWidget);
+        expect(find.text('重新登录'), findsOneWidget);
+        await teardownView(tester);
+      });
+    }
 
-    testWidgets('an archive error reports the cause and never says the '
-        'original is kept', (tester) async {
-      serve([tsLegacyNode()], TailscaleStatus(node: tsLegacyNode()));
-      when(
-        () => core.migrateTailscaleLegacy(
-          any(),
-          offerToken: any(named: 'offerToken'),
-        ),
-      ).thenAnswer(
-        (_) async => tsMigrateResult(
+    for (final (name, answer, text) in [
+      (
+        'a failure whose archive no longer verifies',
+        () async => tsMigrateResult(
           TailscaleMigrateOutcome.failed,
           targetUntouched: true,
           archiveIntact: false,
-          error: 'read back differs',
+          stage: TailscaleMigrateStage.copy,
+          error: 'disk full',
+        ),
+        '迁移结果待确认，原登录记录暂时无法核验。请先重新读取状态，确认前请勿重复迁移或重新登录。',
+      ),
+      (
+        'a copy that did not read back',
+        () async => tsMigrateResult(
+          TailscaleMigrateOutcome.unknown,
+          archiveIntact: true,
+          stage: TailscaleMigrateStage.verify,
+          error: 'the copy did not read back as written',
+        ),
+        '迁移结果待确认，尚未确认目标节点的登录记录。请先重新读取状态，确认前请勿重复迁移或重新登录。',
+      ),
+      (
+        'a failed copy write with the target left',
+        () async => tsMigrateResult(
+          TailscaleMigrateOutcome.unknown,
+          archiveIntact: true,
+          stage: TailscaleMigrateStage.copy,
+          error: 'sync failed',
+        ),
+        '迁移结果待确认，迁移信息未能保存。请先重新读取状态，确认前请勿重复迁移或重新登录。',
+      ),
+      (
+        'an unconfirmed copy whose archive changed',
+        () async => tsMigrateResult(
+          TailscaleMigrateOutcome.unknown,
+          archiveIntact: false,
+          stage: TailscaleMigrateStage.verify,
+        ),
+        '迁移结果待确认，原登录记录暂时无法核验。请先重新读取状态，确认前请勿重复迁移或重新登录。',
+      ),
+      (
+        'no answer',
+        () async => throw TimeoutException('migrate'),
+        '迁移结果待确认。请先重新读取状态，确认前请勿重复迁移或重新登录。',
+      ),
+    ]) {
+      testWidgets('$name names only what the Core proved', (tester) async {
+        serve([tsLegacyNode()], TailscaleStatus(node: tsLegacyNode()));
+        when(
+          () => core.migrateTailscaleLegacy(
+            any(),
+            offerToken: any(named: 'offerToken'),
+          ),
+        ).thenAnswer((_) => answer());
+        await migrate(tester);
+
+        expect(find.text(text), findsOneWidget);
+        expect(find.textContaining('原记录仍保留'), findsNothing);
+        expect(find.text('重新读取状态'), findsOneWidget);
+        expect(find.text('重试迁移'), findsNothing);
+        expect(find.text('重新登录'), findsNothing);
+        await teardownView(tester);
+      });
+    }
+
+    testWidgets('an archive unreadable at the migration says nothing moved', (
+      tester,
+    ) async {
+      serve([tsLegacyNode()], TailscaleStatus(node: tsLegacyNode()));
+      when(
+        () => core.migrateTailscaleLegacy(
+          any(),
+          offerToken: any(named: 'offerToken'),
+        ),
+      ).thenThrow(
+        const CoreMethodException(
+          code: 'tailscale_legacy_unreadable',
+          message: 'decode',
         ),
       );
       await migrate(tester);
 
-      expect(find.text('登录记录未迁移。旧登录记录出错：read back differs'), findsOneWidget);
-      expect(find.textContaining('原记录仍保留'), findsNothing);
+      expect(find.text('登录记录未迁移，无法读取旧登录记录。请重新核对。'), findsOneWidget);
+      expect(find.textContaining('decode'), findsNothing);
       await teardownView(tester);
     });
 

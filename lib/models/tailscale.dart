@@ -169,6 +169,8 @@ abstract class TailscaleMigrateResult with _$TailscaleMigrateResult {
     @JsonKey(name: 'reapply-required') @Default(false) bool reapplyRequired,
     @JsonKey(name: 'target-untouched') @Default(false) bool targetUntouched,
     @JsonKey(name: 'archive-intact') @Default(false) bool archiveIntact,
+    @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)
+    TailscaleMigrateStage? stage,
     TailscaleError? error,
   }) = _TailscaleMigrateResult;
 
@@ -400,10 +402,12 @@ abstract class TailscaleLegacyState with _$TailscaleLegacyState {
     @Default(false) bool offered,
     @Default(false) bool migrating,
     @Default(TailscaleLegacyNotice.none) TailscaleLegacyNotice notice,
-    @Default(true) bool archiveIntact,
 
-    /// The Core's cause, without a path, when the archive was not intact.
-    String? archiveError,
+    /// The Core read the archive back unchanged after the last attempt.
+    @Default(false) bool archiveIntact,
+
+    /// Where the last attempt stopped; null when no result came back.
+    TailscaleMigrateStage? stage,
   }) = _TailscaleLegacyState;
 }
 

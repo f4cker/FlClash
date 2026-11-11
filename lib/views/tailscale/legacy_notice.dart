@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
@@ -30,7 +31,6 @@ class TailscaleLegacyBlock extends StatelessWidget {
     required this.view,
     required this.state,
     required this.reading,
-    required this.onRecheck,
     required this.onRead,
   });
 
@@ -38,9 +38,6 @@ class TailscaleLegacyBlock extends StatelessWidget {
   final TailscaleLegacyView view;
   final TailscaleLegacyState state;
   final bool reading;
-
-  /// Settles a pending migration outcome; never migrates again.
-  final VoidCallback onRecheck;
   final VoidCallback onRead;
 
   @override
@@ -57,7 +54,9 @@ class TailscaleLegacyBlock extends StatelessWidget {
         notice: switch (view) {
           TailscaleLegacyView.failed => TailscaleBanner(
             level: TailscaleBannerLevel.error,
-            text: appLocalizations.tsLegacyFailed,
+            text: state.stage == TailscaleMigrateStage.claim
+                ? appLocalizations.tsLegacyClaimFailed
+                : appLocalizations.tsLegacyFailed,
           ),
           TailscaleLegacyView.changed => TailscaleBanner(
             level: TailscaleBannerLevel.warn,
@@ -70,12 +69,6 @@ class TailscaleLegacyBlock extends StatelessWidget {
       TailscaleLegacyView.unknown => TailscaleBanner(
         level: TailscaleBannerLevel.warn,
         text: _unknownText(context),
-      ),
-      TailscaleLegacyView.archiveError => TailscaleBanner(
-        level: TailscaleBannerLevel.error,
-        text: _archiveErrorText(context),
-        actionLabel: appLocalizations.tsReadStatus,
-        onAction: reading ? null : onRecheck,
       ),
       TailscaleLegacyView.migrated => TailscaleBanner(
         level: TailscaleBannerLevel.info,
@@ -102,7 +95,9 @@ class TailscaleLegacyBlock extends StatelessWidget {
       ),
       TailscaleLegacyView.unreadable => TailscaleBanner(
         level: TailscaleBannerLevel.warn,
-        text: appLocalizations.tsLegacyUnreadable,
+        text: state.notice == TailscaleLegacyNotice.unreadable
+            ? appLocalizations.tsLegacyUnreadableNotMigrated
+            : appLocalizations.tsLegacyUnreadable,
         actionLabel: appLocalizations.tsReadStatus,
         onAction: reading ? null : onRead,
       ),
@@ -115,24 +110,16 @@ class TailscaleLegacyBlock extends StatelessWidget {
     };
   }
 
-  /// "原记录仍保留" only while nothing says the archive changed.
+  /// Names only the step the Core reported; with no result, nothing more.
   String _unknownText(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    if (state.archiveIntact) {
-      return appLocalizations.tsLegacyUnknown;
-    }
-    final cause = state.archiveError ?? '';
-    return cause.isEmpty
-        ? appLocalizations.tsLegacyUnknownArchiveError
-        : appLocalizations.tsLegacyUnknownArchiveErrorOf(cause);
-  }
-
-  String _archiveErrorText(BuildContext context) {
-    final appLocalizations = context.appLocalizations;
-    final cause = state.archiveError ?? '';
-    return cause.isEmpty
-        ? appLocalizations.tsLegacyArchiveError
-        : appLocalizations.tsLegacyArchiveErrorOf(cause);
+    return switch (state.stage) {
+      null => appLocalizations.tsLegacyUnknown,
+      _ when !state.archiveIntact => appLocalizations.tsLegacyUnknownArchive,
+      TailscaleMigrateStage.verify => appLocalizations.tsLegacyUnknownTarget,
+      TailscaleMigrateStage.copy => appLocalizations.tsLegacyUnknownUnsaved,
+      TailscaleMigrateStage.claim => appLocalizations.tsLegacyUnknown,
+    };
   }
 }
 

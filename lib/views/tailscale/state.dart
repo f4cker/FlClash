@@ -120,7 +120,6 @@ enum TailscaleLegacyView {
   hidden,
   offer,
   failed,
-  archiveError,
   changed,
   migrated,
   unknown,
@@ -150,10 +149,6 @@ TailscaleLegacyView tailscaleLegacyViewOf({
     return phase == TailscalePhase.starting
         ? TailscaleLegacyView.migrated
         : TailscaleLegacyView.hidden;
-  }
-  if (notice == TailscaleLegacyNotice.archiveError &&
-      phase == TailscalePhase.signedOut) {
-    return TailscaleLegacyView.archiveError;
   }
   final legacy = node.legacy;
   if (legacy == null || phase != TailscalePhase.signedOut) {

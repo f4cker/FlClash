@@ -10123,10 +10123,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Available once the node is connected`
+  /// `Settings can be changed once this node connects.`
   String get tsAfterConnectSelectable {
     return Intl.message(
-      'Available once the node is connected',
+      'Settings can be changed once this node connects.',
       name: 'tsAfterConnectSelectable',
       desc: '',
       args: [],
@@ -10353,6 +10353,16 @@ class AppLocalizations {
     );
   }
 
+  /// `No devices match the current filters`
+  String get tsFilterEmpty {
+    return Intl.message(
+      'No devices match the current filters',
+      name: 'tsFilterEmpty',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Clear owner filter`
   String get tsClearOwnerFilter {
     return Intl.message(
@@ -10458,6 +10468,16 @@ class AppLocalizations {
     );
   }
 
+  /// `The login record was not moved; the move details couldn't be saved. Try again, or log in again.`
+  String get tsLegacyClaimFailed {
+    return Intl.message(
+      'The login record was not moved; the move details couldn\'t be saved. Try again, or log in again.',
+      name: 'tsLegacyClaimFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `The move details have changed. Check them again before confirming.`
   String get tsLegacyChanged {
     return Intl.message(
@@ -10468,53 +10488,43 @@ class AppLocalizations {
     );
   }
 
-  /// `The move result is unconfirmed; the original is kept. Read the status again first, and don't move or log in again until confirmed.`
+  /// `The move result is unconfirmed. Read the status again first, and don't move or log in again until confirmed.`
   String get tsLegacyUnknown {
     return Intl.message(
-      'The move result is unconfirmed; the original is kept. Read the status again first, and don\'t move or log in again until confirmed.',
+      'The move result is unconfirmed. Read the status again first, and don\'t move or log in again until confirmed.',
       name: 'tsLegacyUnknown',
       desc: '',
       args: [],
     );
   }
 
-  /// `The move result is unconfirmed, and reading or saving the earlier login record failed, so it may not be intact. Read the status again first, and don't move or log in again until confirmed.`
-  String get tsLegacyUnknownArchiveError {
+  /// `The move result is unconfirmed; the login record on the target node isn't confirmed yet. Read the status again first, and don't move or log in again until confirmed.`
+  String get tsLegacyUnknownTarget {
     return Intl.message(
-      'The move result is unconfirmed, and reading or saving the earlier login record failed, so it may not be intact. Read the status again first, and don\'t move or log in again until confirmed.',
-      name: 'tsLegacyUnknownArchiveError',
+      'The move result is unconfirmed; the login record on the target node isn\'t confirmed yet. Read the status again first, and don\'t move or log in again until confirmed.',
+      name: 'tsLegacyUnknownTarget',
       desc: '',
       args: [],
     );
   }
 
-  /// `The move result is unconfirmed, and the earlier login record failed: {error}. Read the status again first, and don't move or log in again until confirmed.`
-  String tsLegacyUnknownArchiveErrorOf(Object error) {
+  /// `The move result is unconfirmed, and the original login record can't be verified for now. Read the status again first, and don't move or log in again until confirmed.`
+  String get tsLegacyUnknownArchive {
     return Intl.message(
-      'The move result is unconfirmed, and the earlier login record failed: $error. Read the status again first, and don\'t move or log in again until confirmed.',
-      name: 'tsLegacyUnknownArchiveErrorOf',
-      desc: '',
-      args: [error],
-    );
-  }
-
-  /// `The login record was not moved. Reading or saving the earlier record failed, so it may not be intact.`
-  String get tsLegacyArchiveError {
-    return Intl.message(
-      'The login record was not moved. Reading or saving the earlier record failed, so it may not be intact.',
-      name: 'tsLegacyArchiveError',
+      'The move result is unconfirmed, and the original login record can\'t be verified for now. Read the status again first, and don\'t move or log in again until confirmed.',
+      name: 'tsLegacyUnknownArchive',
       desc: '',
       args: [],
     );
   }
 
-  /// `The login record was not moved. The earlier record failed: {error}`
-  String tsLegacyArchiveErrorOf(Object error) {
+  /// `The move result is unconfirmed; the move details couldn't be saved. Read the status again first, and don't move or log in again until confirmed.`
+  String get tsLegacyUnknownUnsaved {
     return Intl.message(
-      'The login record was not moved. The earlier record failed: $error',
-      name: 'tsLegacyArchiveErrorOf',
+      'The move result is unconfirmed; the move details couldn\'t be saved. Read the status again first, and don\'t move or log in again until confirmed.',
+      name: 'tsLegacyUnknownUnsaved',
       desc: '',
-      args: [error],
+      args: [],
     );
   }
 
@@ -10573,6 +10583,16 @@ class AppLocalizations {
     return Intl.message(
       'Can\'t read the earlier login record. Check again.',
       name: 'tsLegacyUnreadable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The login record was not moved; the earlier login record can't be read. Check again.`
+  String get tsLegacyUnreadableNotMigrated {
+    return Intl.message(
+      'The login record was not moved; the earlier login record can\'t be read. Check again.',
+      name: 'tsLegacyUnreadableNotMigrated',
       desc: '',
       args: [],
     );

@@ -245,35 +245,30 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m102(time) => "认证将于 ${time} 到期，请在到期前重新登录。";
 
-  static String m103(error) => "登录记录未迁移。旧登录记录出错：${error}";
+  static String m103(account) => "登录账号：${account}";
 
-  static String m104(account) => "登录账号：${account}";
+  static String m104(server) => "控制服务器：${server}";
 
-  static String m105(server) => "控制服务器：${server}";
+  static String m105(name) => "节点：${name}";
 
-  static String m106(name) => "节点：${name}";
+  static String m106(name) => "配置：${name}";
 
-  static String m107(name) => "配置：${name}";
-
-  static String m108(error) =>
-      "迁移结果待确认，旧登录记录出错：${error}。请先重新读取状态，确认前请勿重复迁移或重新登录。";
-
-  static String m109(name) =>
+  static String m107(name) =>
       "将退出“${name}”，并清除本机保存的该节点登录身份。经过此节点的连接可能中断，其他节点不受影响。";
 
-  static String m110(name) => "节点 ${name}";
+  static String m108(name) => "节点 ${name}";
 
-  static String m111(name) => "分享来源：${name}";
+  static String m109(name) => "分享来源：${name}";
 
-  static String m112(label) => "状态：${label}";
+  static String m110(label) => "状态：${label}";
 
-  static String m113(label) => "${label}必须为URL";
+  static String m111(label) => "${label}必须为URL";
 
-  static String m114(date) => "有效期至 ${date}";
+  static String m112(date) => "有效期至 ${date}";
 
-  static String m115(count) => "${count} 年前";
+  static String m113(count) => "${count} 年前";
 
-  static String m116(count) => "${count} 年前";
+  static String m114(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1646,7 +1641,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsAddress": MessageLookupByLibrary.simpleMessage("Tailscale 地址"),
     "tsAddressCopied": MessageLookupByLibrary.simpleMessage("地址已复制"),
     "tsAddressMissing": MessageLookupByLibrary.simpleMessage("地址未提供"),
-    "tsAfterConnectSelectable": MessageLookupByLibrary.simpleMessage("节点连接后可选"),
+    "tsAfterConnectSelectable": MessageLookupByLibrary.simpleMessage(
+      "此节点连接后可更改设置。",
+    ),
     "tsAfterLogin": MessageLookupByLibrary.simpleMessage("登录后可查看"),
     "tsAfterLoginSelectable": MessageLookupByLibrary.simpleMessage("登录后可选"),
     "tsBoundaryTip": MessageLookupByLibrary.simpleMessage(
@@ -1696,6 +1693,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tsExitUpdated": MessageLookupByLibrary.simpleMessage("出口节点已更新"),
     "tsExpiryTip": m102,
+    "tsFilterEmpty": MessageLookupByLibrary.simpleMessage("没有符合当前筛选条件的设备"),
     "tsFromLocal": MessageLookupByLibrary.simpleMessage("本机设置"),
     "tsFromProfile": MessageLookupByLibrary.simpleMessage("来自当前配置"),
     "tsFromSubscription": MessageLookupByLibrary.simpleMessage("来自订阅"),
@@ -1709,10 +1707,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLegacyAccountUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "账号信息未确认",
     ),
-    "tsLegacyArchiveError": MessageLookupByLibrary.simpleMessage(
-      "登录记录未迁移。读取或保存旧登录记录时出错，无法确认原记录是否完好。",
-    ),
-    "tsLegacyArchiveErrorOf": m103,
     "tsLegacyAuthKeyNote": MessageLookupByLibrary.simpleMessage(
       "此节点配置了登录密钥，重新登录将使用该密钥注册新的设备身份，旧登录记录仍保留。",
     ),
@@ -1722,14 +1716,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLegacyChanged": MessageLookupByLibrary.simpleMessage(
       "迁移信息已变化，请重新核对后确认。",
     ),
+    "tsLegacyClaimFailed": MessageLookupByLibrary.simpleMessage(
+      "登录记录未迁移，迁移信息未能保存。请重试，或选择重新登录。",
+    ),
     "tsLegacyConfirm": MessageLookupByLibrary.simpleMessage("确认迁移"),
-    "tsLegacyConfirmAccount": m104,
+    "tsLegacyConfirmAccount": m103,
     "tsLegacyConfirmBody": MessageLookupByLibrary.simpleMessage(
       "将复制这份登录记录供上述节点使用，原记录保留不动。同一份旧记录不能再迁移给其他节点。迁移完成后仍需检查此节点的真实连接状态。",
     ),
-    "tsLegacyConfirmControl": m105,
-    "tsLegacyConfirmNode": m106,
-    "tsLegacyConfirmProfile": m107,
+    "tsLegacyConfirmControl": m104,
+    "tsLegacyConfirmNode": m105,
+    "tsLegacyConfirmProfile": m106,
     "tsLegacyConfirmTitle": MessageLookupByLibrary.simpleMessage("将旧登录迁移到此节点？"),
     "tsLegacyControlMismatch": MessageLookupByLibrary.simpleMessage(
       "旧登录记录的控制服务器与此节点不一致，无法迁移。",
@@ -1755,14 +1752,22 @@ class MessageLookup extends MessageLookupByLibrary {
       "旧登录记录的可用状态尚未确认，请重新读取状态。",
     ),
     "tsLegacyUnknown": MessageLookupByLibrary.simpleMessage(
-      "迁移结果待确认，原记录仍保留。请先重新读取状态，确认前请勿重复迁移或重新登录。",
+      "迁移结果待确认。请先重新读取状态，确认前请勿重复迁移或重新登录。",
     ),
-    "tsLegacyUnknownArchiveError": MessageLookupByLibrary.simpleMessage(
-      "迁移结果待确认，读取或保存旧登录记录时出错，无法确认原记录是否完好。请先重新读取状态，确认前请勿重复迁移或重新登录。",
+    "tsLegacyUnknownArchive": MessageLookupByLibrary.simpleMessage(
+      "迁移结果待确认，原登录记录暂时无法核验。请先重新读取状态，确认前请勿重复迁移或重新登录。",
     ),
-    "tsLegacyUnknownArchiveErrorOf": m108,
+    "tsLegacyUnknownTarget": MessageLookupByLibrary.simpleMessage(
+      "迁移结果待确认，尚未确认目标节点的登录记录。请先重新读取状态，确认前请勿重复迁移或重新登录。",
+    ),
+    "tsLegacyUnknownUnsaved": MessageLookupByLibrary.simpleMessage(
+      "迁移结果待确认，迁移信息未能保存。请先重新读取状态，确认前请勿重复迁移或重新登录。",
+    ),
     "tsLegacyUnreadable": MessageLookupByLibrary.simpleMessage(
       "无法读取旧登录记录，请重新核对。",
+    ),
+    "tsLegacyUnreadableNotMigrated": MessageLookupByLibrary.simpleMessage(
+      "登录记录未迁移，无法读取旧登录记录。请重新核对。",
     ),
     "tsLoadFailedTip": MessageLookupByLibrary.simpleMessage(
       "暂时无法读取此节点的状态，请重试。",
@@ -1782,7 +1787,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLogoutAuthKeyNote": MessageLookupByLibrary.simpleMessage(
       "再次点击登录时，将使用配置中的登录密钥注册新的设备身份。",
     ),
-    "tsLogoutBody": m109,
+    "tsLogoutBody": m107,
     "tsLogoutFailed": MessageLookupByLibrary.simpleMessage(
       "退出失败，请重新读取节点状态后重试。",
     ),
@@ -1819,7 +1824,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tsNodeGone": MessageLookupByLibrary.simpleMessage("此节点已不在当前配置中"),
     "tsNodeGoneTip": MessageLookupByLibrary.simpleMessage("请重新选择节点。"),
-    "tsNodeOf": m110,
+    "tsNodeOf": m108,
     "tsNodesInProfile": MessageLookupByLibrary.simpleMessage(
       "当前配置中的 Tailscale 节点",
     ),
@@ -1873,7 +1878,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "设置已保存，但尚未确认生效。请重新读取当前设置。",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("来自共享"),
-    "tsSharedBy": m111,
+    "tsSharedBy": m109,
     "tsSignedOutTip": MessageLookupByLibrary.simpleMessage("在浏览器中登录，完成此节点的认证。"),
     "tsStartCore": MessageLookupByLibrary.simpleMessage("启动内核"),
     "tsStartFailedTip": MessageLookupByLibrary.simpleMessage("此节点未能启动，请重试。"),
@@ -1889,7 +1894,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsStateUnconfirmed": MessageLookupByLibrary.simpleMessage("状态待确认"),
     "tsStateWaitingBrowser": MessageLookupByLibrary.simpleMessage("等待浏览器登录"),
     "tsStatus": MessageLookupByLibrary.simpleMessage("状态"),
-    "tsStatusOf": m112,
+    "tsStatusOf": m110,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("状态未知"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "此节点已停止，暂时无法通过它访问 Tailscale 网络。",
@@ -1952,14 +1957,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("上行带宽"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 重写"),
-    "urlTip": m113,
+    "urlTip": m111,
     "useHosts": MessageLookupByLibrary.simpleMessage("使用Hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("使用系统Hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("已用"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("已用流量"),
     "userAgent": MessageLookupByLibrary.simpleMessage("用户代理"),
     "username": MessageLookupByLibrary.simpleMessage("用户名"),
-    "validUntil": m114,
+    "validUntil": m112,
     "value": MessageLookupByLibrary.simpleMessage("值"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
     "viewAll": MessageLookupByLibrary.simpleMessage("查看全部"),
@@ -1974,8 +1979,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "写入系统会同时设置系统时钟，Android 上不生效。",
     ),
-    "yearsAgo": m115,
-    "yearsAgoShort": m116,
+    "yearsAgo": m113,
+    "yearsAgoShort": m114,
     "yes": MessageLookupByLibrary.simpleMessage("是"),
     "zhCN": MessageLookupByLibrary.simpleMessage("中文简体"),
   };

@@ -260,11 +260,13 @@ enum TailscaleLegacyEligibility {
 
 enum TailscaleMigrateOutcome { migrated, failed, unknown }
 
+/// The migration step that failed or could not be confirmed.
+enum TailscaleMigrateStage { claim, copy, verify }
+
 enum TailscaleLegacyNotice {
   none,
   migrated,
   failed,
-  archiveError,
   changed,
   unreadable,
   unconfirmed,

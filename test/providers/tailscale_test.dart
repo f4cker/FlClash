@@ -216,6 +216,7 @@ void main() {
       TailscaleMigrateOutcome outcome, {
       bool targetUntouched = false,
       bool archiveIntact = true,
+      TailscaleMigrateStage? stage,
     }) => TailscaleMigrateResult(
       generation: 3,
       outcome: outcome,
@@ -225,6 +226,7 @@ void main() {
       ),
       targetUntouched: targetUntouched,
       archiveIntact: archiveIntact,
+      stage: stage,
     );
 
     TailscaleLegacyState legacyOf(ProviderContainer container) =>
@@ -307,37 +309,58 @@ void main() {
       });
     }
 
-    test('a failure tells an intact archive from one with an error', () async {
+    test('only a failure with an intact archive is a failure', () async {
+      final container = build();
+      Future<TailscaleLegacyNotice> migrateWith(TailscaleMigrateResult answer) {
+        when(
+          () => core.migrateTailscaleLegacy(
+            any(),
+            offerToken: any(named: 'offerToken'),
+          ),
+        ).thenAnswer((_) async => answer);
+        return action(container).migrateLegacy(offered, offer);
+      }
+
+      expect(
+        await migrateWith(
+          result(
+            TailscaleMigrateOutcome.failed,
+            targetUntouched: true,
+            stage: TailscaleMigrateStage.claim,
+          ),
+        ),
+        TailscaleLegacyNotice.failed,
+      );
+      expect(legacyOf(container).stage, TailscaleMigrateStage.claim);
+      expect(legacyOf(container).archiveIntact, isTrue);
+      expect(
+        await migrateWith(
+          result(
+            TailscaleMigrateOutcome.failed,
+            targetUntouched: true,
+            archiveIntact: false,
+            stage: TailscaleMigrateStage.copy,
+          ),
+        ),
+        TailscaleLegacyNotice.unknown,
+      );
+      expect(legacyOf(container).archiveIntact, isFalse);
+      expect(legacyOf(container).stage, TailscaleMigrateStage.copy);
+    });
+
+    test('no answer leaves no stage and no proof of the archive', () async {
       final container = build();
       when(
         () => core.migrateTailscaleLegacy(
           any(),
           offerToken: any(named: 'offerToken'),
         ),
-      ).thenAnswer(
-        (_) async =>
-            result(TailscaleMigrateOutcome.failed, targetUntouched: true),
-      );
+      ).thenThrow(TimeoutException('migrate'));
       expect(
         await action(container).migrateLegacy(offered, offer),
-        TailscaleLegacyNotice.failed,
+        TailscaleLegacyNotice.unknown,
       );
-      when(
-        () => core.migrateTailscaleLegacy(
-          any(),
-          offerToken: any(named: 'offerToken'),
-        ),
-      ).thenAnswer(
-        (_) async => result(
-          TailscaleMigrateOutcome.failed,
-          targetUntouched: true,
-          archiveIntact: false,
-        ),
-      );
-      expect(
-        await action(container).migrateLegacy(offered, offer),
-        TailscaleLegacyNotice.archiveError,
-      );
+      expect(legacyOf(container).stage, isNull);
       expect(legacyOf(container).archiveIntact, isFalse);
     });
 

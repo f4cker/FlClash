@@ -458,30 +458,26 @@ class TailscaleAction extends _$TailscaleAction {
       (state) => state.copyWith(
         migrating: true,
         notice: TailscaleLegacyNotice.none,
-        archiveIntact: true,
-        archiveError: null,
+        archiveIntact: false,
+        stage: null,
       ),
     );
     var notice = TailscaleLegacyNotice.unknown;
-    var archiveIntact = true;
-    String? archiveError;
+    var archiveIntact = false;
+    TailscaleMigrateStage? stage;
     try {
       final result = await _core.migrateTailscaleLegacy(
         node.ref,
         offerToken: token,
       );
       archiveIntact = result.archiveIntact;
-      if (!archiveIntact) {
-        archiveError = result.error?.message ?? '';
-      }
+      stage = result.stage;
       notice = switch (result.outcome) {
         TailscaleMigrateOutcome.migrated => TailscaleLegacyNotice.migrated,
-        TailscaleMigrateOutcome.failed when !result.targetUntouched =>
-          TailscaleLegacyNotice.unknown,
-        TailscaleMigrateOutcome.failed =>
-          archiveIntact
-              ? TailscaleLegacyNotice.failed
-              : TailscaleLegacyNotice.archiveError,
+        TailscaleMigrateOutcome.failed
+            when result.targetUntouched && archiveIntact =>
+          TailscaleLegacyNotice.failed,
+        TailscaleMigrateOutcome.failed ||
         TailscaleMigrateOutcome.unknown => TailscaleLegacyNotice.unknown,
       };
       if (notice == TailscaleLegacyNotice.migrated) {
@@ -512,7 +508,7 @@ class TailscaleAction extends _$TailscaleAction {
           migrating: false,
           notice: notice,
           archiveIntact: archiveIntact,
-          archiveError: archiveError,
+          stage: stage,
         ),
       );
     }

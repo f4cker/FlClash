@@ -140,6 +140,7 @@ TailscaleMigrateResult tsMigrateResult(
   TailscaleMigrateOutcome outcome, {
   bool targetUntouched = false,
   bool archiveIntact = true,
+  TailscaleMigrateStage? stage,
   String? error,
   TailscaleNode? node,
 }) => TailscaleMigrateResult(
@@ -154,6 +155,7 @@ TailscaleMigrateResult tsMigrateResult(
   node: node ?? tsLegacyNode(),
   targetUntouched: targetUntouched,
   archiveIntact: archiveIntact,
+  stage: stage,
   error: error == null
       ? null
       : TailscaleError(code: 'tailscale_migrate_failed', message: error),

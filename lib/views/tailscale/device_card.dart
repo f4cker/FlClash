@@ -88,7 +88,6 @@ class TailscaleDeviceCard extends StatelessWidget {
           view: legacyView,
           state: legacyState,
           reading: reading,
-          onRecheck: actions.onRecheckLegacy,
           onRead: actions.onRead,
         )
       else
@@ -508,15 +507,6 @@ class TailscaleDeviceCard extends StatelessWidget {
         onLogin: actions.onLogin,
         onRecheck: actions.onRecheckLegacy,
       );
-    }
-    if (legacyView == TailscaleLegacyView.archiveError) {
-      return [
-        _filled(
-          context,
-          label: appLocalizations.tsRelogin,
-          onPressed: actions.onLogin,
-        ),
-      ];
     }
     if (legacyView == TailscaleLegacyView.migrated) {
       return const [];

@@ -279,37 +279,31 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m102(time) =>
       "Authentication expires at ${time}. Log in again before then.";
 
-  static String m103(error) =>
-      "The login record was not moved. The earlier record failed: ${error}";
+  static String m103(account) => "Account: ${account}";
 
-  static String m104(account) => "Account: ${account}";
+  static String m104(server) => "Control server: ${server}";
 
-  static String m105(server) => "Control server: ${server}";
+  static String m105(name) => "Node: ${name}";
 
-  static String m106(name) => "Node: ${name}";
+  static String m106(name) => "Profile: ${name}";
 
-  static String m107(name) => "Profile: ${name}";
-
-  static String m108(error) =>
-      "The move result is unconfirmed, and the earlier login record failed: ${error}. Read the status again first, and don\'t move or log in again until confirmed.";
-
-  static String m109(name) =>
+  static String m107(name) =>
       "This logs out of “${name}” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.";
 
-  static String m110(name) => "Node ${name}";
+  static String m108(name) => "Node ${name}";
 
-  static String m111(name) => "Shared by: ${name}";
+  static String m109(name) => "Shared by: ${name}";
 
-  static String m112(label) => "Status: ${label}";
+  static String m110(label) => "Status: ${label}";
 
-  static String m113(label) => "${label} must be a URL";
+  static String m111(label) => "${label} must be a URL";
 
-  static String m114(date) => "Valid until ${date}";
+  static String m112(date) => "Valid until ${date}";
 
-  static String m115(count) =>
+  static String m113(count) =>
       "${Intl.plural(count, one: '1 year ago', other: '${count} years ago')}";
 
-  static String m116(count) => "${Intl.plural(count, other: '${count}y ago')}";
+  static String m114(count) => "${Intl.plural(count, other: '${count}y ago')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -2122,7 +2116,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Address not provided",
     ),
     "tsAfterConnectSelectable": MessageLookupByLibrary.simpleMessage(
-      "Available once the node is connected",
+      "Settings can be changed once this node connects.",
     ),
     "tsAfterLogin": MessageLookupByLibrary.simpleMessage(
       "Available after login",
@@ -2201,6 +2195,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tsExitUpdated": MessageLookupByLibrary.simpleMessage("Exit node updated"),
     "tsExpiryTip": m102,
+    "tsFilterEmpty": MessageLookupByLibrary.simpleMessage(
+      "No devices match the current filters",
+    ),
     "tsFromLocal": MessageLookupByLibrary.simpleMessage("Set on this Mac"),
     "tsFromProfile": MessageLookupByLibrary.simpleMessage(
       "From current profile",
@@ -2220,10 +2217,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLegacyAccountUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Account not confirmed",
     ),
-    "tsLegacyArchiveError": MessageLookupByLibrary.simpleMessage(
-      "The login record was not moved. Reading or saving the earlier record failed, so it may not be intact.",
-    ),
-    "tsLegacyArchiveErrorOf": m103,
     "tsLegacyAuthKeyNote": MessageLookupByLibrary.simpleMessage(
       "This node has an auth key; logging in again registers a new device identity with it, and the earlier login record is kept.",
     ),
@@ -2233,14 +2226,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLegacyChanged": MessageLookupByLibrary.simpleMessage(
       "The move details have changed. Check them again before confirming.",
     ),
+    "tsLegacyClaimFailed": MessageLookupByLibrary.simpleMessage(
+      "The login record was not moved; the move details couldn\'t be saved. Try again, or log in again.",
+    ),
     "tsLegacyConfirm": MessageLookupByLibrary.simpleMessage("Confirm move"),
-    "tsLegacyConfirmAccount": m104,
+    "tsLegacyConfirmAccount": m103,
     "tsLegacyConfirmBody": MessageLookupByLibrary.simpleMessage(
       "This copies the login record for the node above and leaves the original untouched. The same record can\'t move to another node afterwards. Check the node\'s real connection status after the move.",
     ),
-    "tsLegacyConfirmControl": m105,
-    "tsLegacyConfirmNode": m106,
-    "tsLegacyConfirmProfile": m107,
+    "tsLegacyConfirmControl": m104,
+    "tsLegacyConfirmNode": m105,
+    "tsLegacyConfirmProfile": m106,
     "tsLegacyConfirmTitle": MessageLookupByLibrary.simpleMessage(
       "Move the earlier login to this node?",
     ),
@@ -2276,14 +2272,22 @@ class MessageLookup extends MessageLookupByLibrary {
       "Whether the earlier login record can be used is unconfirmed. Read the status again.",
     ),
     "tsLegacyUnknown": MessageLookupByLibrary.simpleMessage(
-      "The move result is unconfirmed; the original is kept. Read the status again first, and don\'t move or log in again until confirmed.",
+      "The move result is unconfirmed. Read the status again first, and don\'t move or log in again until confirmed.",
     ),
-    "tsLegacyUnknownArchiveError": MessageLookupByLibrary.simpleMessage(
-      "The move result is unconfirmed, and reading or saving the earlier login record failed, so it may not be intact. Read the status again first, and don\'t move or log in again until confirmed.",
+    "tsLegacyUnknownArchive": MessageLookupByLibrary.simpleMessage(
+      "The move result is unconfirmed, and the original login record can\'t be verified for now. Read the status again first, and don\'t move or log in again until confirmed.",
     ),
-    "tsLegacyUnknownArchiveErrorOf": m108,
+    "tsLegacyUnknownTarget": MessageLookupByLibrary.simpleMessage(
+      "The move result is unconfirmed; the login record on the target node isn\'t confirmed yet. Read the status again first, and don\'t move or log in again until confirmed.",
+    ),
+    "tsLegacyUnknownUnsaved": MessageLookupByLibrary.simpleMessage(
+      "The move result is unconfirmed; the move details couldn\'t be saved. Read the status again first, and don\'t move or log in again until confirmed.",
+    ),
     "tsLegacyUnreadable": MessageLookupByLibrary.simpleMessage(
       "Can\'t read the earlier login record. Check again.",
+    ),
+    "tsLegacyUnreadableNotMigrated": MessageLookupByLibrary.simpleMessage(
+      "The login record was not moved; the earlier login record can\'t be read. Check again.",
     ),
     "tsLoadFailedTip": MessageLookupByLibrary.simpleMessage(
       "Can\'t read this node\'s status right now. Try again.",
@@ -2303,7 +2307,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLogoutAuthKeyNote": MessageLookupByLibrary.simpleMessage(
       "When you log in again, the auth key in the profile registers a new device identity.",
     ),
-    "tsLogoutBody": m109,
+    "tsLogoutBody": m107,
     "tsLogoutFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t log out. Read the node status again, then retry.",
     ),
@@ -2350,7 +2354,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNodeGoneTip": MessageLookupByLibrary.simpleMessage(
       "Choose a node again.",
     ),
-    "tsNodeOf": m110,
+    "tsNodeOf": m108,
     "tsNodesInProfile": MessageLookupByLibrary.simpleMessage(
       "Tailscale nodes in the current profile",
     ),
@@ -2432,7 +2436,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Saved, but not yet confirmed in effect. Read the current settings again.",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("Shared in"),
-    "tsSharedBy": m111,
+    "tsSharedBy": m109,
     "tsSignedOutTip": MessageLookupByLibrary.simpleMessage(
       "Log in in your browser to authenticate this node.",
     ),
@@ -2466,7 +2470,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Waiting for browser login",
     ),
     "tsStatus": MessageLookupByLibrary.simpleMessage("Status"),
-    "tsStatusOf": m112,
+    "tsStatusOf": m110,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("Status unknown"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "This node has stopped and can\'t reach the Tailscale network for now.",
@@ -2541,14 +2545,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("Upload bandwidth"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL rewrite"),
-    "urlTip": m113,
+    "urlTip": m111,
     "useHosts": MessageLookupByLibrary.simpleMessage("Use hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("Use system hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("used"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("Used traffic"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("Username"),
-    "validUntil": m114,
+    "validUntil": m112,
     "value": MessageLookupByLibrary.simpleMessage("Value"),
     "view": MessageLookupByLibrary.simpleMessage("View"),
     "viewAll": MessageLookupByLibrary.simpleMessage("View all"),
@@ -2565,8 +2569,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Write to system also sets the system clock; Android ignores it.",
     ),
-    "yearsAgo": m115,
-    "yearsAgoShort": m116,
+    "yearsAgo": m113,
+    "yearsAgoShort": m114,
     "yes": MessageLookupByLibrary.simpleMessage("Yes"),
     "zhCN": MessageLookupByLibrary.simpleMessage("Simplified Chinese"),
   };
