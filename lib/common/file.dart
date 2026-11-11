@@ -54,6 +54,20 @@ extension FileExt on File {
     }
   }
 
+  /// Copies to [target] through a temporary sibling, so a watcher of
+  /// [target] never reads half of it.
+  Future<void> copyAtomically(String target) async {
+    final temp = File('$target.$pid.tmp');
+    try {
+      await temp.parent.create(recursive: true);
+      await copy(temp.path);
+      await temp._renameRetryingWhileHeldOpen(target);
+    } catch (_) {
+      await temp.delete().then((_) {}, onError: (_) {});
+      rethrow;
+    }
+  }
+
   Future<void> _renameRetryingWhileHeldOpen(String target) async {
     for (var attempt = 1; ; attempt++) {
       try {

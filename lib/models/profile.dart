@@ -209,8 +209,8 @@ extension ProfileExtension on Profile {
     if (await validate(path, ageSecretKey) case final issue?) {
       throw MessageException(issue);
     }
-    final mFile = await file;
-    await tempFile.copy(mFile.path);
+    final mFile = await _getFile(false);
+    await tempFile.copyAtomically(mFile.path);
     await tempFile.safeDelete();
     return copyWith(lastUpdateDate: DateTime.now());
   }

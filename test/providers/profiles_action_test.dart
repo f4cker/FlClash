@@ -1,8 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
+import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
@@ -217,6 +221,128 @@ void main() {
       );
       expect(container.read(profilesProvider), isEmpty);
       verifyNever(() => core.validateConfig(any()));
+    });
+  });
+
+  group('fetchSource', () {
+    late db.Database testDatabase;
+    const target = Profile(
+      id: 1,
+      label: 'Base',
+      autoUpdateDuration: Duration.zero,
+    );
+    const source = Profile(
+      id: 2,
+      label: 'Air',
+      type: ProfileType.url,
+      url: 'https://example.invalid/sub',
+      autoUpdateDuration: Duration.zero,
+    );
+
+    setUp(() async {
+      testDatabase = db.Database(NativeDatabase.memory());
+      db.database = testDatabase;
+      addTearDown(testDatabase.close);
+      await testDatabase.profilesDao.putAll([
+        target.toCompanion(),
+        source.toCompanion(),
+      ]);
+      final cache = File(await appPath.getProfilePath('2'));
+      await cache.parent.create(recursive: true);
+      await cache.writeAsString('proxies: [old]');
+    });
+
+    Future<void> mount() => testDatabase.mountsDao.save(
+      targetId: 1,
+      expectedVersion: null,
+      sourceIds: [2],
+      groups: const [],
+      pending: (version) =>
+          MountOperation(kind: MountOperationKind.save, version: version),
+    );
+
+    void inspectsAs(MountSourceStatus status) {
+      when(
+        () => core.inspectMountSource(any()),
+      ).thenAnswer((_) async => MountSourceInspection(status: status));
+    }
+
+    Future<Profile?> save(String body) {
+      return container
+          .read(profilesActionProvider.notifier)
+          .fetchSource(
+            2,
+            (validate) => source.saveFile(
+              Uint8List.fromList(utf8.encode(body)),
+              validate: validate,
+            ),
+          );
+    }
+
+    Future<String> cache() async =>
+        File(await appPath.getProfilePath('2')).readAsString();
+
+    test('a mounted source keeps its cache on content without nodes', () async {
+      await mount();
+      inspectsAs(MountSourceStatus.unsupported);
+
+      await expectLater(
+        save('{}'),
+        throwsA(
+          isA<MessageException>().having(
+            (error) => error.message,
+            'message',
+            currentAppLocalizations.mountSourceNoNodeList,
+          ),
+        ),
+      );
+
+      expect(await cache(), 'proxies: [old]');
+      final status = (await testDatabase.mountsDao.statuses())[2]!;
+      expect(status.failure, MountSourceFailure.unsupported);
+    });
+
+    test(
+      'a mounted source takes a real empty list and clears its failure',
+      () async {
+        await mount();
+        await testDatabase.mountsDao.recordSourceResult(
+          2,
+          failure: MountSourceFailure.fetch,
+          at: DateTime(2026),
+        );
+        inspectsAs(MountSourceStatus.nodes);
+
+        expect(await save('proxies: []'), isNotNull);
+
+        expect(await cache(), 'proxies: []');
+        final status = (await testDatabase.mountsDao.statuses())[2]!;
+        expect(status.failure, isNull);
+        expect(status.succeededAt, isNotNull);
+      },
+    );
+
+    test('a failed download of a mounted source is recorded', () async {
+      await mount();
+
+      await expectLater(
+        container
+            .read(profilesActionProvider.notifier)
+            .fetchSource(2, (_) async => throw const SocketException('down')),
+        throwsA(isA<SocketException>()),
+      );
+
+      expect(await cache(), 'proxies: [old]');
+      final status = (await testDatabase.mountsDao.statuses())[2]!;
+      expect(status.failure, MountSourceFailure.fetch);
+    });
+
+    test('a source nobody mounts is neither inspected nor recorded', () async {
+      expect(await save('{}'), isNotNull);
+
+      expect(await cache(), '{}');
+      verifyNever(() => core.inspectMountSource(any()));
+      expect(await testDatabase.mountsDao.statuses(), isEmpty);
     });
   });
 }

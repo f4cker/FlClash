@@ -152,9 +152,10 @@ class ProfilesAction extends _$ProfilesAction {
         : null;
     try {
       ref.read(profilesProvider.notifier).put(profile);
-      final updated = await profile.update(
-        validate: (path, key) => _core.validateProfile(path, key),
-      );
+      final updated = (await fetchSource(
+        profile.id,
+        (validate) => profile.update(validate: validate),
+      ))!;
       // The download can take minutes; edits and deletes made meanwhile win.
       final latest = ref.read(profilesProvider).getProfile(profile.id);
       if (latest == null) {
@@ -167,7 +168,9 @@ class ProfilesAction extends _$ProfilesAction {
         lastUpdateDate: updated.lastUpdateDate,
       );
       ref.read(profilesProvider.notifier).put(newProfile);
-      if (profile.id == ref.read(currentProfileIdProvider)) {
+      final currentId = ref.read(currentProfileIdProvider);
+      if (profile.id == currentId ||
+          await _mountedBy(profile.id).then((ids) => ids.contains(currentId))) {
         ref
             .read(setupActionProvider.notifier)
             .applyProfileDebounce(silence: true);
@@ -190,6 +193,92 @@ class ProfilesAction extends _$ProfilesAction {
             .read(updatingKeysProvider.notifier)
             .stop(profile.updatingKey, operation);
       }
+    }
+  }
+
+  Future<List<int>> _mountedBy(int sourceId) async {
+    try {
+      return await database.mountsDao.targetsOf(sourceId);
+    } catch (error) {
+      commonPrint.log(
+        'mount lookup failed: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+      return const [];
+    }
+  }
+
+  /// Runs a download of [sourceId]. A mounted source must still hold a node
+  /// list, or its cache stays as it was; its outcome is recorded either way.
+  /// A null result is a download that did not run.
+  Future<Profile?> fetchSource(
+    int sourceId,
+    Future<Profile?> Function(ValidateConfig validate) fetch,
+  ) async {
+    // Asked only once a download runs: most calls fetch nothing.
+    bool? mounted;
+    Future<bool> isMounted() async {
+      try {
+        return mounted ??= await database.mountsDao.isMounted(sourceId);
+      } catch (_) {
+        return mounted = true;
+      }
+    }
+
+    var unsupported = false;
+    Future<String?> validate(String path, String key) async {
+      final issue = await _core.validateProfile(path, key);
+      if (!await isMounted()) {
+        return issue;
+      }
+      if (issue != null) {
+        unsupported = true;
+        return issue;
+      }
+      final inspection = await _core.inspectMountSource(path);
+      switch (inspection.status) {
+        case MountSourceStatus.nodes:
+          return null;
+        case MountSourceStatus.unsupported || MountSourceStatus.invalid:
+          unsupported = true;
+          return currentAppLocalizations.mountSourceNoNodeList;
+        case MountSourceStatus.missing || MountSourceStatus.readError:
+          throw const FileSystemException('downloaded file unreadable');
+      }
+    }
+
+    final Profile? fetched;
+    try {
+      fetched = await fetch(validate);
+    } catch (_) {
+      if (await isMounted()) {
+        await _recordSource(
+          sourceId,
+          unsupported
+              ? MountSourceFailure.unsupported
+              : MountSourceFailure.fetch,
+        );
+      }
+      rethrow;
+    }
+    if (fetched != null && await isMounted()) {
+      await _recordSource(sourceId, null);
+    }
+    return fetched;
+  }
+
+  Future<void> _recordSource(int sourceId, MountSourceFailure? failure) async {
+    try {
+      await database.mountsDao.recordSourceResult(
+        sourceId,
+        failure: failure,
+        at: DateTime.now(),
+      );
+    } catch (error) {
+      commonPrint.log(
+        'mount source status not saved: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
     }
   }
 

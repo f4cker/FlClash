@@ -76,4 +76,21 @@ void main() {
       expect(file.readAsStringSync(), 'mode: rule');
     });
   });
+
+  group('copyAtomically', () {
+    test('replaces the target and leaves only the two files', () async {
+      final source = File(join(root.path, 'new.yaml'))
+        ..writeAsStringSync('proxies: []');
+      final target = File(join(root.path, 'profiles', '2.yaml'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('proxies: [old]');
+
+      await source.copyAtomically(target.path);
+
+      expect(target.readAsStringSync(), 'proxies: []');
+      expect(target.parent.listSync().map((entry) => basename(entry.path)), [
+        '2.yaml',
+      ]);
+    });
+  });
 }
