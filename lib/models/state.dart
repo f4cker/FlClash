@@ -215,6 +215,9 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
     @Default({}) Map<String, dynamic> injectedRuleProviders,
     String? matchTarget,
     @Default(false) bool safeMode,
+
+    /// Pins the only inbound to a mixed listener on 127.0.0.1 at this port.
+    int? loopbackPort,
     @Default([]) List<MitmModuleSource> mitmModules,
   }) = _MakeRealProfileState;
 }

@@ -160,7 +160,9 @@ class SetupAction extends _$SetupAction {
     if (_isRunning) {
       globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
       await _run(true, initialize: true, resume: true);
-    } else if (ref.read(appSettingProvider).autoRun) {
+    } else if (ref.read(appSettingProvider).autoRun ||
+        loopbackTestBuild &&
+            Platform.environment['LOOPBACK_TEST_AUTOSTART'] == '1') {
       await setRunning(true, initialize: true);
     } else {
       await globalState.safeRun(() => applyProfile(force: true));
@@ -341,7 +343,7 @@ class SetupAction extends _$SetupAction {
     return _listenerScheduler.run(() async {
       if (!_isCurrent(request) ||
           request.running && ref.read(suspendProvider) ||
-          ref.read(safeModeProvider)) {
+          ref.read(safeModeProvider) && !loopbackTestBuild) {
         return;
       }
       await _setListening(request.running);
@@ -372,7 +374,8 @@ class SetupAction extends _$SetupAction {
   void syncSuspend() {
     debouncer.call(FunctionTag.suspend, () {
       return _listenerScheduler.run(() async {
-        if (!ref.read(isStartProvider) || ref.read(safeModeProvider)) {
+        if (!ref.read(isStartProvider) ||
+            ref.read(safeModeProvider) && !loopbackTestBuild) {
           return;
         }
         final running = !ref.read(suspendProvider);
@@ -651,6 +654,7 @@ class SetupAction extends _$SetupAction {
             ? setupState.matchTarget
             : lastMatchTarget(profileBase.base.matchRules),
         safeMode: ref.read(safeModeProvider),
+        loopbackPort: loopbackTestBuild ? loopbackTestPort : null,
         mitmModules: setupState.mitmModules,
       ),
     );
@@ -848,10 +852,21 @@ class SetupAction extends _$SetupAction {
 
   PatchClashConfig _effectivePatchConfig(PatchClashConfig patchConfig) {
     if (ref.read(safeModeProvider)) {
-      return patchConfig.copyWith(
+      final safe = patchConfig.copyWith(
         tun: patchConfig.tun.copyWith(enable: false),
         externalController: ExternalControllerStatus.close,
       );
+      // A live port or allow-lan patch reaches the Core without the profile.
+      return loopbackTestBuild
+          ? safe.copyWith(
+              mixedPort: loopbackTestPort,
+              port: 0,
+              socksPort: 0,
+              redirPort: 0,
+              tproxyPort: 0,
+              allowLan: false,
+            )
+          : safe;
     }
     final authorized =
         ref.read(authorizedTunEnableProvider) ==
