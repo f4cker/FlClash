@@ -157,6 +157,7 @@ const _$MountGroupReasonEnumMap = {
   MountGroupReason.carrier: 'carrier',
   MountGroupReason.global: 'global',
   MountGroupReason.dns: 'dns',
+  MountGroupReason.dialer: 'dialer',
 };
 
 const _$MountGroupCollectsEnumMap = {

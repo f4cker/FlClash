@@ -172,6 +172,10 @@ enum MountGroupReason {
 
   /// DNS lookups, tailnet names among them, go out through it.
   dns,
+
+  /// Another proxy dials through it (dialer-proxy) and may keep a session
+  /// there that later carries Tailscale traffic unchecked.
+  dialer,
 }
 
 /// [all] collects base proxies and providers, [providers] providers only.

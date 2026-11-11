@@ -94,6 +94,7 @@ void main() {
       ('carrier', MountGroupReason.carrier),
       ('global', MountGroupReason.global),
       ('dns', MountGroupReason.dns),
+      ('dialer', MountGroupReason.dialer),
       ('later', null),
     ]) {
       final group = MountGroupInfo.fromJson({
