@@ -331,7 +331,10 @@ class TailscaleAction extends _$TailscaleAction {
     if (fresh.generation != node.generation) {
       url = null;
     }
-    await readStatus(fresh);
+    // A pending result stays until the user reads; this read would settle it.
+    if (!unconfirmed) {
+      await readStatus(fresh);
+    }
     return url;
   }
 
@@ -375,7 +378,9 @@ class TailscaleAction extends _$TailscaleAction {
       );
     }
     final (_, fresh) = await _readNode(key);
-    if (fresh != null && fresh.generation == node.generation) {
+    if (fresh != null &&
+        fresh.generation == node.generation &&
+        notice != TailscaleCardNotice.logoutUnknown) {
       await readStatus(fresh);
     }
     return confirmed;

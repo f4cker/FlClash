@@ -5,7 +5,6 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
-import 'package:intl/intl.dart' show DateFormat;
 
 import 'legacy_notice.dart';
 import 'state.dart';
@@ -464,7 +463,7 @@ class TailscaleDeviceCard extends StatelessWidget {
           level: TailscaleBannerLevel.warn,
           glyph: AppGlyphs.key,
           text: appLocalizations.tsExpiryTip(
-            DateFormat('yyyy-MM-dd HH:mm').format(expiry.toLocal()),
+            tailscaleDateTime(expiry.toLocal()),
           ),
           actionLabel: appLocalizations.tsRelogin,
           onAction: loggingIn ? null : actions.onRelogin,

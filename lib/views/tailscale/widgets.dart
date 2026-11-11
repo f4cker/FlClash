@@ -232,3 +232,10 @@ Widget tailscaleBusyIcon(BuildContext context, {Color? color}) =>
 
 String tailscaleDeviceName(BuildContext context, TailscalePeer peer) =>
     tailscalePeerName(peer) ?? context.appLocalizations.tsNameMissing;
+
+/// A date and time without locale data, as 2026-11-14 12:00.
+String tailscaleDateTime(DateTime time) {
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${time.year}-${two(time.month)}-${two(time.day)} '
+      '${two(time.hour)}:${two(time.minute)}';
+}
