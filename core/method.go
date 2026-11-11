@@ -237,12 +237,13 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	probeOutboundIPMethod: withArguments(handleOutboundIp),
 	probeServicesMethod:   withArguments(handleServiceCheck),
 
-	tailscaleNodesMethod:    withoutArguments(handleTailscaleNodes),
-	tailscaleStatusMethod:   withFallible(handleTailscaleStatus),
-	tailscaleStartMethod:    withFallible(handleTailscaleStart),
-	tailscaleLoginMethod:    withFallible(handleTailscaleLogin),
-	tailscaleLogoutMethod:   withFallible(handleTailscaleLogout),
-	tailscaleSetPrefsMethod: withFallible(handleTailscaleSetPrefs),
+	tailscaleNodesMethod:         withoutArguments(handleTailscaleNodes),
+	tailscaleStatusMethod:        withFallible(handleTailscaleStatus),
+	tailscaleStartMethod:         withFallible(handleTailscaleStart),
+	tailscaleLoginMethod:         withFallible(handleTailscaleLogin),
+	tailscaleLogoutMethod:        withFallible(handleTailscaleLogout),
+	tailscaleSetPrefsMethod:      withFallible(handleTailscaleSetPrefs),
+	tailscaleMigrateLegacyMethod: withFallible(handleTailscaleMigrateLegacy),
 }
 
 func watchRouteHandler(call *MethodCall) (any, error) {

@@ -22,3 +22,7 @@ func handleTailscaleLogin(TailscaleLoginParams) (any, error) { return nil, errTa
 func handleTailscaleLogout(TailscaleNodeParams) (any, error) { return nil, errTailscaleUnsupported }
 
 func handleTailscaleSetPrefs(TailscalePrefsParams) (any, error) { return nil, errTailscaleUnsupported }
+
+func handleTailscaleMigrateLegacy(TailscaleNodeParams) (any, error) {
+	return nil, errTailscaleUnsupported
+}

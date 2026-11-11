@@ -5,6 +5,7 @@ package core
 import (
 	"context"
 	"errors"
+	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -188,22 +189,23 @@ func lockTailscaleNode(name string) func() {
 }
 
 type TailscaleNode struct {
-	ProfileID    int64             `json:"profile-id"`
-	Name         string            `json:"name"`
-	Generation   uint64            `json:"generation"`
-	ControlURL   string            `json:"control-url"`
-	Hostname     string            `json:"hostname"`
-	StateDirMode string            `json:"state-dir-mode"`
-	Started      bool              `json:"started"`
-	BackendState string            `json:"backend-state"`
-	LoggedOut    bool              `json:"logged-out"`
-	HasIdentity  bool              `json:"has-identity"`
-	AuthKey      bool              `json:"auth-key"`
-	Ephemeral    bool              `json:"ephemeral"`
-	Overridable  bool              `json:"overridable"`
-	StartError   *MethodError      `json:"start-error,omitempty"`
-	Settings     TailscaleSettings `json:"settings"`
-	Warnings     []string          `json:"warnings"`
+	ProfileID    int64                    `json:"profile-id"`
+	Name         string                   `json:"name"`
+	Generation   uint64                   `json:"generation"`
+	ControlURL   string                   `json:"control-url"`
+	Hostname     string                   `json:"hostname"`
+	StateDirMode string                   `json:"state-dir-mode"`
+	Started      bool                     `json:"started"`
+	BackendState string                   `json:"backend-state"`
+	LoggedOut    bool                     `json:"logged-out"`
+	HasIdentity  bool                     `json:"has-identity"`
+	AuthKey      bool                     `json:"auth-key"`
+	Ephemeral    bool                     `json:"ephemeral"`
+	Overridable  bool                     `json:"overridable"`
+	StartError   *MethodError             `json:"start-error,omitempty"`
+	Settings     TailscaleSettings        `json:"settings"`
+	Warnings     []string                 `json:"warnings"`
+	Legacy       *TailscaleLegacyIdentity `json:"legacy,omitempty"`
 }
 
 func describeTailscale(t *outbound.Tailscale, nodes []*outbound.Tailscale) TailscaleNode {
@@ -233,8 +235,11 @@ func describeTailscale(t *outbound.Tailscale, nodes []*outbound.Tailscale) Tails
 		Settings:     tailscaleSettings(t.Name(), option.ControlURL),
 		Warnings:     []string{},
 	}
-	if !t.ExplicitStateDir() && tailscaleLegacyStatePresent() {
-		node.Warnings = append(node.Warnings, tailscaleWarningLegacyState)
+	if !t.ExplicitStateDir() {
+		if legacy := readTailscaleLegacyIdentity(); legacy != nil {
+			node.Warnings = append(node.Warnings, tailscaleWarningLegacyState)
+			node.Legacy = legacy
+		}
 	}
 	var inUse *outbound.TailscaleStateDirInUseError
 	sharesDir := slices.ContainsFunc(nodes, func(other *outbound.Tailscale) bool {
@@ -712,4 +717,70 @@ func tailscalePrefsMatch(want *ipn.MaskedPrefs, read *TailscalePrefs) bool {
 		return read.ExitNodeIP == "" && read.ExitNodeID == ""
 	}
 	return read.ExitNodeIP == want.ExitNodeIP.String()
+}
+
+var tailscaleDirLive = func(dir string, except *outbound.Tailscale) bool {
+	return slices.ContainsFunc(outbound.TailscaleInstances(), func(t *outbound.Tailscale) bool {
+		return t != except && !t.Closed() && t.Started() && t.Option().StateDir == dir
+	})
+}
+
+type TailscaleMigrateResult struct {
+	Generation uint64                   `json:"generation"`
+	Migration  TailscaleLegacyMigration `json:"migration"`
+	Node       TailscaleNode            `json:"node"`
+	// A running node closed; the copy is read once the config is applied again.
+	ReapplyRequired bool `json:"reapply-required"`
+}
+
+// The marker goes down before the copy so no second node gets the node key.
+func handleTailscaleMigrateLegacy(params TailscaleNodeParams) (*TailscaleMigrateResult, error) {
+	t, err := boundTailscale(params.Name, params.Generation)
+	if err != nil {
+		return nil, err
+	}
+	defer lockTailscaleNode(t.Name())()
+	option := t.Option()
+	if t.ExplicitStateDir() || !strings.Contains(option.StateDir, tailscaleNodesDir) {
+		return nil, errTailscaleNotIsolated
+	}
+	legacy := readTailscaleLegacyIdentity()
+	switch {
+	case legacy == nil:
+		return nil, errTailscaleLegacyNotFound
+	case legacy.MigratedTo != nil:
+		return nil, errTailscaleLegacyMigrated
+	case legacy.ControlURL != normalizeControlURL(option.ControlURL):
+		return nil, errTailscaleLegacyControlMismatch
+	case tailscaleStateHasIdentity(option.StateDir):
+		return nil, errTailscaleHasIdentity
+	case tailscaleDirLive(tailscaleLegacyStateDir(), nil):
+		return nil, errTailscaleLegacyInUse
+	case tailscaleDirLive(option.StateDir, t):
+		return nil, errTailscaleStateDirBusy
+	}
+	marker := TailscaleLegacyMigration{
+		Fingerprint: legacy.Fingerprint,
+		ProfileID:   tailscaleProfileID(),
+		Name:        t.Name(),
+		ControlURL:  normalizeControlURL(option.ControlURL),
+	}
+	if err := writeTailscaleLegacyMarker(marker); err != nil {
+		return nil, &MethodError{Code: "tailscale_migrate_failed", Message: err.Error()}
+	}
+	result := &TailscaleMigrateResult{Generation: t.Generation(), Migration: marker}
+	if t.Started() {
+		closeTailscaleConnections(t.Name())
+		_ = t.Close()
+		finishTailscaleReapply(t)
+		result.ReapplyRequired = true
+	}
+	if err := copyTailscaleLegacyState(option.StateDir); err != nil {
+		_ = os.Remove(tailscaleLegacyMarkerPath())
+		return nil, &MethodError{Code: "tailscale_migrate_failed", Message: err.Error()}
+	}
+	loggedOut := false
+	pinTailscale(t.Name(), option.ControlURL, func(pin *tailscalePin) { pin.loggedOut = &loggedOut })
+	result.Node = describeTailscale(t, currentTailscaleNodes())
+	return result, nil
 }

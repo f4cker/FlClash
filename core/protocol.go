@@ -81,12 +81,13 @@ const (
 	mitmExchangeMethod            CoreMethod = "mitm.exchange"
 	mitmBodyMethod                CoreMethod = "mitm.body"
 
-	tailscaleNodesMethod    CoreMethod = "tailscale.nodes"
-	tailscaleStatusMethod   CoreMethod = "tailscale.status"
-	tailscaleStartMethod    CoreMethod = "tailscale.start"
-	tailscaleLoginMethod    CoreMethod = "tailscale.login"
-	tailscaleLogoutMethod   CoreMethod = "tailscale.logout"
-	tailscaleSetPrefsMethod CoreMethod = "tailscale.setPrefs"
+	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
+	tailscaleStatusMethod        CoreMethod = "tailscale.status"
+	tailscaleStartMethod         CoreMethod = "tailscale.start"
+	tailscaleLoginMethod         CoreMethod = "tailscale.login"
+	tailscaleLogoutMethod        CoreMethod = "tailscale.logout"
+	tailscaleSetPrefsMethod      CoreMethod = "tailscale.setPrefs"
+	tailscaleMigrateLegacyMethod CoreMethod = "tailscale.migrateLegacy"
 
 	// The envelope of a batch of events, which the Core sends and never receives.
 	messageMethod CoreMethod = "message"
@@ -134,6 +135,8 @@ type TailscaleSetup struct {
 	ProfileID    int64                `json:"profile-id"`
 	ConfigSource string               `json:"config-source"`
 	Nodes        []TailscaleNodeSetup `json:"nodes"`
+	// What the host keeps of a legacy login already moved to a node.
+	LegacyMigration *TailscaleLegacyMigration `json:"legacy-migration,omitempty"`
 }
 
 type TailscaleNodeSetup struct {

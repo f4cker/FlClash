@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +25,8 @@ const (
 	tailscaleDefaultControlURL = "https://controlplane.tailscale.com"
 	tailscaleNodesDir          = "tailscale-nodes"
 	tailscaleLegacyDir         = "tailscale"
+	tailscaleLegacyMarker      = "legacy-migration.json"
+	tailscaleStateFile         = "tailscaled.state"
 
 	tailscaleSourceOverride     = "override"
 	tailscaleSourceProfile      = "profile"
@@ -57,6 +61,34 @@ var (
 	errTailscaleNotOverridable = &MethodError{
 		Code:    "tailscale_not_overridable",
 		Message: "tailscale node comes from a proxy provider; its settings cannot be saved",
+	}
+	errTailscaleLegacyNotFound = &MethodError{
+		Code:    "tailscale_legacy_not_found",
+		Message: "no login is left in the shared tailscale directory",
+	}
+	errTailscaleLegacyMigrated = &MethodError{
+		Code:    "tailscale_legacy_already_migrated",
+		Message: "the shared login was already moved to another node",
+	}
+	errTailscaleLegacyInUse = &MethodError{
+		Code:    "tailscale_legacy_in_use",
+		Message: "a running node still uses the shared tailscale directory",
+	}
+	errTailscaleLegacyControlMismatch = &MethodError{
+		Code:    "tailscale_legacy_control_mismatch",
+		Message: "the shared login belongs to another control server",
+	}
+	errTailscaleNotIsolated = &MethodError{
+		Code:    "tailscale_not_isolated",
+		Message: "tailscale node has no directory of its own; set by state-dir or without a host payload",
+	}
+	errTailscaleHasIdentity = &MethodError{
+		Code:    "tailscale_has_identity",
+		Message: "tailscale node already has a login of its own",
+	}
+	errTailscaleStateDirBusy = &MethodError{
+		Code:    "tailscale_state_dir_in_use",
+		Message: "another running node holds this node's directory",
 	}
 	errTailscaleAuthURLRejected = &MethodError{
 		Code:    "tailscale_auth_url_rejected",
@@ -416,12 +448,8 @@ func validateTailscaleAuthURL(authURL, controlURL string) error {
 // A FileStore keeps the login profiles under _profiles; an empty map means the
 // node never registered or has logged out.
 func tailscaleStateHasIdentity(dir string) bool {
-	buf, err := os.ReadFile(filepath.Join(dir, "tailscaled.state"))
+	state, err := readTailscaleState(dir)
 	if err != nil {
-		return false
-	}
-	var state map[string][]byte
-	if err := json.Unmarshal(buf, &state); err != nil {
 		return false
 	}
 	var profiles map[string]json.RawMessage
@@ -431,9 +459,157 @@ func tailscaleStateHasIdentity(dir string) bool {
 	return len(profiles) > 0
 }
 
-// The dir every node shared before isolation; it is left as it is.
-func tailscaleLegacyStatePresent() bool {
-	return tailscaleStateHasIdentity(filepath.Join(constant.Path.HomeDir(), tailscaleLegacyDir))
+func tailscaleLegacyStateDir() string {
+	return filepath.Join(constant.Path.HomeDir(), tailscaleLegacyDir)
+}
+
+// The login the shared dir held before isolation, read without touching it.
+type TailscaleLegacyIdentity struct {
+	LoginName   string `json:"login-name"`
+	DisplayName string `json:"display-name"`
+	Tailnet     string `json:"tailnet"`
+	ControlURL  string `json:"control-url"`
+	// A hash of the machine key: which login this is, without the key itself.
+	Fingerprint string                    `json:"fingerprint"`
+	MigratedTo  *TailscaleLegacyMigration `json:"migrated-to,omitempty"`
+}
+
+// The one node the legacy login went to; a second copy would put one node
+// key on two devices.
+type TailscaleLegacyMigration struct {
+	Fingerprint string `json:"fingerprint"`
+	ProfileID   int64  `json:"profile-id"`
+	Name        string `json:"name"`
+	ControlURL  string `json:"control-url"`
+}
+
+type tailscaleLoginProfile struct {
+	Key            string
+	ControlURL     string
+	NetworkProfile struct {
+		DomainName  string
+		DisplayName string
+	}
+	UserProfile struct {
+		LoginName   string
+		DisplayName string
+	}
+}
+
+func readTailscaleState(dir string) (map[string][]byte, error) {
+	buf, err := os.ReadFile(filepath.Join(dir, tailscaleStateFile))
+	if err != nil {
+		return nil, err
+	}
+	var state map[string][]byte
+	if err := json.Unmarshal(buf, &state); err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func readTailscaleLegacyIdentity() *TailscaleLegacyIdentity {
+	state, err := readTailscaleState(tailscaleLegacyStateDir())
+	if err != nil {
+		return nil
+	}
+	var profiles map[string]tailscaleLoginProfile
+	if json.Unmarshal(state["_profiles"], &profiles) != nil || len(profiles) == 0 {
+		return nil
+	}
+	profile, ok := profiles[string(state["_current-profile"])]
+	if !ok {
+		ids := make([]string, 0, len(profiles))
+		for id := range profiles {
+			ids = append(ids, id)
+		}
+		slices.Sort(ids)
+		profile = profiles[ids[0]]
+	}
+	controlURL := profile.ControlURL
+	if controlURL == "" {
+		var prefs struct{ ControlURL string }
+		if json.Unmarshal(state[profile.Key], &prefs) == nil {
+			controlURL = prefs.ControlURL
+		}
+	}
+	fingerprint := sha256.Sum256(state["_machinekey"])
+	identity := &TailscaleLegacyIdentity{
+		LoginName:   profile.UserProfile.LoginName,
+		DisplayName: profile.UserProfile.DisplayName,
+		Tailnet:     cmp.Or(profile.NetworkProfile.DisplayName, profile.NetworkProfile.DomainName),
+		ControlURL:  normalizeControlURL(controlURL),
+		Fingerprint: hex.EncodeToString(fingerprint[:16]),
+	}
+	identity.MigratedTo = tailscaleLegacyMigratedTo(identity.Fingerprint)
+	return identity
+}
+
+func tailscaleLegacyMarkerPath() string {
+	return filepath.Join(constant.Path.HomeDir(), tailscaleNodesDir, tailscaleLegacyMarker)
+}
+
+// The Core's marker and the one the host keeps both count, so losing either
+// cannot hand the login to a second node.
+func tailscaleLegacyMigratedTo(fingerprint string) *TailscaleLegacyMigration {
+	if buf, err := os.ReadFile(tailscaleLegacyMarkerPath()); err == nil {
+		var marker TailscaleLegacyMigration
+		if json.Unmarshal(buf, &marker) == nil && marker.Fingerprint == fingerprint {
+			return &marker
+		}
+	}
+	tailscaleMu.Lock()
+	defer tailscaleMu.Unlock()
+	if tailscaleSetup != nil {
+		if marker := tailscaleSetup.LegacyMigration; marker != nil && marker.Fingerprint == fingerprint {
+			copied := *marker
+			return &copied
+		}
+	}
+	return nil
+}
+
+func writeTailscaleLegacyMarker(marker TailscaleLegacyMigration) error {
+	buf, err := json.Marshal(marker)
+	if err != nil {
+		return err
+	}
+	return writeTailscaleFile(tailscaleLegacyMarkerPath(), buf)
+}
+
+// Copies the legacy state file into dir; the original stays as it was.
+func copyTailscaleLegacyState(dir string) error {
+	buf, err := os.ReadFile(filepath.Join(tailscaleLegacyStateDir(), tailscaleStateFile))
+	if err != nil {
+		return err
+	}
+	return writeTailscaleFile(filepath.Join(dir, tailscaleStateFile), buf)
+}
+
+func writeTailscaleFile(path string, buf []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	temporary, err := os.CreateTemp(filepath.Dir(path), ".tailscale-*")
+	if err != nil {
+		return err
+	}
+	_, err = temporary.Write(buf)
+	if closeErr := temporary.Close(); err == nil {
+		err = closeErr
+	}
+	if err == nil {
+		err = os.Chmod(temporary.Name(), 0o600)
+	}
+	if err == nil {
+		err = os.Rename(temporary.Name(), path)
+	}
+	if err != nil {
+		_ = os.Remove(temporary.Name())
+		return err
+	}
+	scheduleReclaimOwnership()
+	return nil
 }
 
 func tailscaleStartError(err error) *MethodError {
