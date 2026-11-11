@@ -2,6 +2,7 @@
 //   TS_SCREENSHOTS=<dir> flutter test test/views/tailscale_screenshots_test.dart
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:fl_clash/core/controller.dart';
@@ -29,12 +30,47 @@ import 'tailscale_fixtures.dart';
 class _MockCore extends Mock implements CoreHandlerInterface {}
 
 final _outDir = Platform.environment['TS_SCREENSHOTS'];
-const _cjkFont = '/System/Library/Fonts/Supplemental/Arial Unicode.ttf';
+// Hiragino Sans GB holds a W3 and a W6 face, so emphasized text renders bold.
+const _cjkCollection = '/System/Library/Fonts/Hiragino Sans GB.ttc';
 
-Future<void> _loadFont(String family, String path) async {
-  final bytes = await File(path).readAsBytes();
-  final loader = FontLoader(family)
-    ..addFont(Future.value(ByteData.sublistView(bytes)));
+/// Each face of a TrueType collection as a font of its own, since the engine
+/// reads only the first face of a collection.
+List<ByteData> _collectionFaces(Uint8List bytes) {
+  final data = ByteData.sublistView(bytes);
+  final faces = <ByteData>[];
+  for (var face = 0; face < data.getUint32(8); face++) {
+    final header = data.getUint32(12 + face * 4);
+    final tables = data.getUint16(header + 4);
+    final out = BytesBuilder()..add(bytes.sublist(header, header + 12));
+    final body = BytesBuilder();
+    var at = 12 + tables * 16;
+    for (var i = 0; i < tables; i++) {
+      final entry = header + 12 + i * 16;
+      final offset = data.getUint32(entry + 8);
+      final length = data.getUint32(entry + 12);
+      final record = ByteData(16)
+        ..setUint32(0, data.getUint32(entry))
+        ..setUint32(4, data.getUint32(entry + 4))
+        ..setUint32(8, at)
+        ..setUint32(12, length);
+      out.add(record.buffer.asUint8List());
+      final padded = (length + 3) & ~3;
+      body
+        ..add(bytes.sublist(offset, offset + length))
+        ..add(Uint8List(padded - length));
+      at += padded;
+    }
+    out.add(body.takeBytes());
+    faces.add(ByteData.sublistView(out.takeBytes()));
+  }
+  return faces;
+}
+
+Future<void> _loadFont(String family, List<ByteData> fonts) async {
+  final loader = FontLoader(family);
+  for (final font in fonts) {
+    loader.addFont(Future.value(font));
+  }
   await loader.load();
 }
 
@@ -49,9 +85,16 @@ void main() {
     if (skip != null) {
       return;
     }
-    // The test platform draws with Roboto; a CJK font stands in for it.
-    await _loadFont('Roboto', _cjkFont);
-    await _loadFont('JetBrainsMono', 'assets/fonts/JetBrainsMono-Regular.ttf');
+    // The test platform draws with Roboto; a CJK family stands in for it.
+    await _loadFont(
+      'Roboto',
+      _collectionFaces(File(_cjkCollection).readAsBytesSync()),
+    );
+    await _loadFont('JetBrainsMono', [
+      ByteData.sublistView(
+        File('assets/fonts/JetBrainsMono-Regular.ttf').readAsBytesSync(),
+      ),
+    ]);
     Directory(_outDir!).createSync(recursive: true);
   });
 
@@ -387,6 +430,7 @@ void main() {
         TailscaleMigrateOutcome.failed,
         targetUntouched: true,
         archiveIntact: false,
+        stage: TailscaleMigrateStage.copy,
         error: 'read back differs',
       ),
     );
@@ -398,7 +442,11 @@ void main() {
   shot('22-legacy-unknown', (tester) async {
     serve([tsLegacyNode()], TailscaleStatus(node: tsLegacyNode()));
     migrateAnswers(
-      tsMigrateResult(TailscaleMigrateOutcome.unknown, archiveIntact: true),
+      tsMigrateResult(
+        TailscaleMigrateOutcome.unknown,
+        archiveIntact: true,
+        stage: TailscaleMigrateStage.verify,
+      ),
     );
     await pumpPanel(tester);
     await confirmMigration(tester);
@@ -443,5 +491,50 @@ void main() {
     ], tsConnectedStatus());
     await pumpPanel(tester, size: const Size(760, 1700));
     await shoot(tester, '25-two-nodes-narrow');
+  });
+
+  shot('26-signed-out-saved', (tester) async {
+    final node = tsSignedOutNode.copyWith(
+      settings: const TailscaleSettings(
+        exitNode: TailscaleExitNodeSetting(
+          value: '100.88.12.4',
+          source: TailscaleSettingSource.override,
+        ),
+        acceptRoutes: TailscaleAcceptRoutesSetting(
+          value: true,
+          source: TailscaleSettingSource.override,
+        ),
+      ),
+    );
+    serve([node], TailscaleStatus(node: node));
+    await pumpPanel(tester);
+    await shoot(tester, '26-signed-out-saved');
+  });
+
+  shot('27-provider-node', (tester) async {
+    final node = tsConnectedNode.copyWith(
+      settings: const TailscaleSettings(
+        acceptRoutes: TailscaleAcceptRoutesSetting(
+          value: true,
+          source: TailscaleSettingSource.provider,
+        ),
+      ),
+    );
+    serve([node], tsConnectedStatus(node: node));
+    await pumpPanel(tester);
+    await shoot(tester, '27-provider-node');
+  });
+
+  shot('28-override-ambiguous', (tester) async {
+    final node = tsConnectedNode.copyWith(overridable: false);
+    serve([node], tsConnectedStatus(node: node));
+    await pumpPanel(tester);
+    await shoot(tester, '28-override-ambiguous');
+  });
+
+  shot('29-device-names-narrow', (tester) async {
+    serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+    await pumpPanel(tester, size: const Size(640, 1500));
+    await shoot(tester, '29-device-names-narrow');
   });
 }

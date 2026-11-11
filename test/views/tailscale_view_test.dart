@@ -8,10 +8,14 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/tailscale/tailscale.dart';
+import 'package:fl_clash/views/tailscale/state.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:prism_ui/icons/icons.dart' show GlyphIcon;
+import 'package:prism_ui/prism_ui.dart' show Switch, TonalButton;
 
 import '../helpers/preferences.dart';
 import '../helpers/test_app.dart';
@@ -158,10 +162,36 @@ void main() {
       expect(find.text('未登录'), findsWidgets);
       expect(find.text('在浏览器中登录，完成此节点的认证。'), findsOneWidget);
       expect(find.text('登录 Tailscale'), findsOneWidget);
-      expect(find.text('登录后可选'), findsNWidgets(2));
+      expect(find.text('登录并连接后可更改'), findsNWidgets(2));
+      expect(find.textContaining('已保存'), findsNothing);
+      expect(find.text('不使用出口节点'), findsNothing);
       expect(find.text('登录后可查看'), findsOneWidget);
       expect(find.text('设备'), findsNothing);
       expect(find.text('前往规则'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('未登录 names a saved choice as saved, never as in effect', (
+      tester,
+    ) async {
+      final node = tsSignedOutNode.copyWith(
+        settings: const TailscaleSettings(
+          exitNode: TailscaleExitNodeSetting(
+            source: TailscaleSettingSource.override,
+          ),
+          acceptRoutes: TailscaleAcceptRoutesSetting(
+            value: true,
+            source: TailscaleSettingSource.override,
+          ),
+        ),
+      );
+      serve([node], TailscaleStatus(node: node));
+      await pumpPanel(tester);
+
+      expect(find.text('登录并连接后可更改'), findsNWidgets(2));
+      expect(find.text('已保存：不使用出口节点'), findsOneWidget);
+      expect(find.text('已保存：已开启'), findsOneWidget);
+      expect(find.text('本机设置'), findsNothing);
       await teardownView(tester);
     });
 
@@ -869,6 +899,79 @@ void main() {
       await pumpPanel(tester);
 
       expect(find.text('旧登录记录的可用状态尚未确认，请重新读取状态。'), findsOneWidget);
+      await teardownView(tester);
+    });
+  });
+
+  group('design review', () {
+    test('a system reads as its vendor writes it', () {
+      expect(tailscaleSystemName('linux'), 'Linux');
+      expect(tailscaleSystemName('darwin'), 'macOS');
+      expect(tailscaleSystemName('iOS'), 'iOS');
+      expect(tailscaleSystemName('ipados'), 'iPadOS');
+      expect(tailscaleSystemName('tvos'), 'tvOS');
+      expect(tailscaleSystemName('freebsd'), 'FreeBSD');
+      expect(tailscaleSystemName('haiku'), 'Haiku');
+    });
+
+    testWidgets('the table names systems properly', (tester) async {
+      serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+      await pumpPanel(tester);
+
+      expect(find.text('Linux'), findsWidgets);
+      expect(find.text('Android'), findsOneWidget);
+      expect(find.text('linux'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('a long name keeps its line and the tag goes under it', (
+      tester,
+    ) async {
+      const name = 'nas-sg-exit-01';
+      final status = tsConnectedStatus();
+      serve([
+        tsConnectedNode,
+      ], status.copyWith(peers: [status.peers[1].copyWith(hostName: name)]));
+      await pumpPanel(tester);
+
+      final nameBox = tester.getRect(find.text(name));
+      final tagBox = tester.getRect(find.text('可作出口节点'));
+      expect(tagBox.top, greaterThanOrEqualTo(nameBox.bottom));
+      expect(
+        tester.renderObject<RenderParagraph>(find.text(name)).didExceedMaxLines,
+        isFalse,
+      );
+      await teardownView(tester);
+    });
+
+    testWidgets('a locked switch keeps its look and fades as a whole', (
+      tester,
+    ) async {
+      serve([tsSignedOutNode], const TailscaleStatus(node: tsSignedOutNode));
+      await pumpPanel(tester);
+
+      final opacity = tester.widget<Opacity>(
+        find.descendant(
+          of: find.byType(Switch),
+          matching: find.byType(Opacity),
+        ),
+      );
+      expect(opacity.opacity, 0.45);
+      await teardownView(tester);
+    });
+
+    testWidgets('前往规则 puts its chevron after the label', (tester) async {
+      serve([tsSignedOutNode], const TailscaleStatus(node: tsSignedOutNode));
+      await pumpPanel(tester);
+
+      final button = find.byType(TonalButton);
+      final label = tester.getRect(
+        find.descendant(of: button, matching: find.text('前往规则')),
+      );
+      final glyph = tester.getRect(
+        find.descendant(of: button, matching: find.byType(GlyphIcon)),
+      );
+      expect(glyph.left - label.right, moreOrLessEquals(4, epsilon: 0.5));
       await teardownView(tester);
     });
   });
