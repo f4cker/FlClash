@@ -194,6 +194,9 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     }
   }
 
+  bool get _blockSettled =>
+      !_blockUnread && _panel?.stored?.pending == null && !_saving;
+
   bool get _locked =>
       _result == _Result.unknown ||
       _result == _Result.applyBlocked && _blockUnread;
@@ -641,6 +644,8 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       _Result.needsGroup => appLocalizations.mountPickRequired,
       _Result.applyFailed => appLocalizations.mountApplyFailed,
       _Result.applyKept => appLocalizations.mountApplyKept,
+      _Result.applyBlocked when _blockSettled =>
+        appLocalizations.mountApplyBlockedConfirmed,
       _Result.applyBlocked => appLocalizations.mountApplyBlocked,
       _Result.unknown =>
         _removal

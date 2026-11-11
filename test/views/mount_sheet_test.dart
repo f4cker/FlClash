@@ -1244,12 +1244,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(mounts.rechecks, 1);
     expectBlockedLock(tester);
+    expect(find.text(l10n.mountApplyBlocked), findsOneWidget);
+    expect(find.text(l10n.mountApplyBlockedConfirmed), findsNothing);
 
     mounts.recheckOutcome = MountSaveOutcome.applyFailedBlocked;
     await tester.tap(find.text(l10n.mountReadStatus));
     await tester.pumpAndSettle();
     expect(mounts.rechecks, 2);
-    expect(find.text(l10n.mountApplyBlocked), findsOneWidget);
+    expect(find.text(l10n.mountApplyBlocked), findsNothing);
+    final confirmed = find.ancestor(
+      of: find.text(l10n.mountApplyBlockedConfirmed),
+      matching: find.byType(MountBanner),
+    );
+    expect(tester.widget<MountBanner>(confirmed).level, MountBannerLevel.error);
     expect(find.text(l10n.mountSave), findsOneWidget);
     expect(find.text(l10n.mountReadStatus), findsNothing);
   });
@@ -1295,6 +1302,33 @@ void main() {
       inRow('Air', find.text(l10n.mountUpdateFailedKeptBlocked)),
     );
     expect(line.style?.color, colorScheme.error);
+
+    final stored = mounts.panel!.stored!;
+    mounts
+      ..recheckOutcome = MountSaveOutcome.applyFailedBlocked
+      ..panel = mounts.panel!.copyWith(
+        stored: stored.copyWith(
+          pending: MountOperation(
+            kind: MountOperationKind.save,
+            version: stored.version,
+          ),
+        ),
+      );
+    await tester.tap(find.text(l10n.mountReadStatus));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.mountApplyBlockedConfirmed), findsNothing);
+    expect(find.text(l10n.mountSave), findsNothing);
+
+    mounts.panel = mounts.panel!.copyWith(stored: stored);
+    await tester.tap(find.text(l10n.mountReadStatus));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.mountApplyBlockedConfirmed), findsOneWidget);
+    expect(find.text(l10n.mountApplyBlocked), findsNothing);
+    expect(find.text(l10n.mountSave), findsOneWidget);
+    expect(
+      inRow('Air', find.text(l10n.mountUpdateFailedKeptBlocked)),
+      findsOne,
+    );
   });
 
   testWidgets('a failed source is in use only while the running config is '

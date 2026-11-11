@@ -1344,6 +1344,7 @@
   "tsCancel": "Cancel",
   "mountApplyKept": "Mounts could not be applied. The last confirmed running profile is still in use.",
   "mountApplyBlocked": "Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.",
+  "mountApplyBlockedConfirmed": "Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.",
   "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format.",
   "mountDeleteSourceTitle": "Delete subscription and unmount?",
   "mountDeleteSourceBody": "“{subscriptionName}” is mounted on the following {profileCount, plural, =1{1 profile} other{{profileCount} profiles}}. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.",

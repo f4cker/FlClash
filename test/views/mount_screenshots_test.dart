@@ -619,6 +619,37 @@ void main() {
     });
   }
 
+  shot('26-blocked-confirmed', (tester) async {
+    // The readback reloads the panel with what the update read.
+    final read = [
+      for (final source in sources)
+        source.profile.id == sea.id
+            ? source.copyWith(count: 21, tailscaleExcluded: 0)
+            : source,
+    ];
+    final mounts = sheetMounts(groups: autoGroups, items: read)
+      ..recheckOutcome = MountSaveOutcome.applyFailedBlocked
+      ..refreshResult = MountSourceRefresh(
+        updated: true,
+        item: item(sea, mounted: true, count: 21),
+        application: MountSaveOutcome.applyFailedBlocked,
+      );
+    await pumpProfiles(tester, mounts);
+    await openSheet(tester);
+    await tester.tap(
+      find.descendant(
+        of: find.ancestor(
+          of: inSheet(sea.label),
+          matching: find.byType(MountSourceRow),
+        ),
+        matching: find.byTooltip(currentAppLocalizations.mountUpdateNodes),
+      ),
+    );
+    await settle(tester);
+    await tester.tap(inSheet(currentAppLocalizations.mountReadStatus));
+    await shoot(tester, '26-blocked-confirmed');
+  });
+
   Future<void> openDelete(WidgetTester tester) async {
     await tester.tap(
       find.text(air.label),

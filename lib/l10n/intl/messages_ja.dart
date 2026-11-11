@@ -1332,6 +1332,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountApplyBlocked": MessageLookupByLibrary.simpleMessage(
       "Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.",
     ),
+    "mountApplyBlockedConfirmed": MessageLookupByLibrary.simpleMessage(
+      "Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.",
+    ),
     "mountApplyFailed": MessageLookupByLibrary.simpleMessage(
       "Mounts were saved but could not be applied to the running profile.",
     ),

@@ -7718,8 +7718,7 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one:
-          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -11620,6 +11619,16 @@ class AppLocalizations {
     return Intl.message(
       'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.',
       name: 'mountApplyBlocked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.`
+  String get mountApplyBlockedConfirmed {
+    return Intl.message(
+      'Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.',
+      name: 'mountApplyBlockedConfirmed',
       desc: '',
       args: [],
     );

@@ -1205,6 +1205,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountApplyBlocked": MessageLookupByLibrary.simpleMessage(
       "未能应用挂载。Flash 当前会拒绝所有经它转发的连接。请先重新读取状态，确认结果后再解除挂载或重新应用配置。",
     ),
+    "mountApplyBlockedConfirmed": MessageLookupByLibrary.simpleMessage(
+      "已确认挂载未能应用。Flash 当前仍会拒绝所有经它转发的连接。你可以解除挂载或重新应用配置。",
+    ),
     "mountApplyFailed": MessageLookupByLibrary.simpleMessage(
       "挂载已保存，但未能应用到当前运行配置。",
     ),
