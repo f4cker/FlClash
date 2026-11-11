@@ -464,7 +464,9 @@ class _DeviceRow extends StatelessWidget {
     );
     final ownerCell = _OwnerCell(device: device);
     final osCell = Text(
-      peer.os.isEmpty ? appLocalizations.tsSystemMissing : peer.os,
+      peer.os.isEmpty
+          ? appLocalizations.tsSystemMissing
+          : tailscaleSystemName(peer.os),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: muted,

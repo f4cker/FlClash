@@ -418,3 +418,32 @@ String tailscaleControlHost(String controlUrl) {
   final host = Uri.tryParse(controlUrl)?.host ?? '';
   return host.isEmpty ? controlUrl : host;
 }
+
+const _tailscaleSystemNames = {
+  'linux': 'Linux',
+  'android': 'Android',
+  'windows': 'Windows',
+  'ios': 'iOS',
+  'ipados': 'iPadOS',
+  'macos': 'macOS',
+  'darwin': 'macOS',
+  'tvos': 'tvOS',
+  'freebsd': 'FreeBSD',
+  'openbsd': 'OpenBSD',
+  'netbsd': 'NetBSD',
+  'dragonfly': 'DragonFly BSD',
+  'illumos': 'illumos',
+  'solaris': 'Solaris',
+  'plan9': 'Plan 9',
+  'js': 'JS',
+};
+
+/// A peer's OS as its vendor writes it; anything else capitalised.
+String tailscaleSystemName(String os) {
+  final value = os.trim();
+  if (value.isEmpty) {
+    return value;
+  }
+  return _tailscaleSystemNames[value.toLowerCase()] ??
+      value[0].toUpperCase() + value.substring(1);
+}
