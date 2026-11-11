@@ -700,7 +700,7 @@ func (r *tailscaleManagedRule) RuleType() C.RuleType {
 	return C.IPCIDR
 }
 
-func (r *tailscaleManagedRule) Adapter() string { return "Tailscale (FlClash)" }
+func (r *tailscaleManagedRule) Adapter() string { return "Tailscale (Flash)" }
 
 func (r *tailscaleManagedRule) Payload() string {
 	if r.kind == tailscaleRuleHost {

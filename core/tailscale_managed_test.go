@@ -109,7 +109,7 @@ func TestTailscaleManagedNodeIsInjectedAfterParse(t *testing.T) {
 
 	proxies := tunnel.Proxies()
 	first, second := managedNode(t, "a1"), managedNode(t, "b2")
-	if first.Name() != "Tailscale (FlClash)" || second.Name() != "Tailscale (FlClash 2)" {
+	if first.Name() != "Tailscale (Flash)" || second.Name() != "Tailscale (Flash 2)" {
 		t.Fatalf("names = %q, %q", first.Name(), second.Name())
 	}
 	if proxies["Tailscale"].Type() != C.Selector {
@@ -358,17 +358,17 @@ func TestTailscaleManagedNameIsStableAndAvoidsProviderNodes(t *testing.T) {
   Sub:
     type: inline
     payload:
-      - {name: "Tailscale (FlClash)", type: socks5, server: 127.0.0.1, port: 3}
+      - {name: "Tailscale (Flash)", type: socks5, server: 127.0.0.1, port: 3}
 `
 	setup := &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{
-		{ID: "a1", Name: "Tailscale (FlClash)", Attached: true},
-		{ID: "b2", Name: "Tailscale (FlClash 2)", Attached: true},
+		{ID: "a1", Name: "Tailscale (Flash)", Attached: true},
+		{ID: "b2", Name: "Tailscale (Flash 2)", Attached: true},
 	}}
 	applyManagedProfileText(t, profile, setup)
 	if err := applyConfig(&SetupParams{Tailscale: setup}); err != nil {
 		t.Fatal(err)
 	}
-	if name := managedNode(t, "b2").Name(); name != "Tailscale (FlClash 2)" {
+	if name := managedNode(t, "b2").Name(); name != "Tailscale (Flash 2)" {
 		t.Fatalf("b2 = %q, want the name the host keeps for it", name)
 	}
 	first := managedNode(t, "a1").Name()

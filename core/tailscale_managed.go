@@ -126,9 +126,9 @@ func tailscaleManagedName(cfg *config.Config, base string) string {
 		return base
 	}
 	for i := 1; ; i++ {
-		name := base + " (FlClash)"
+		name := base + " (Flash)"
 		if i > 1 {
-			name = base + " (FlClash " + strconv.Itoa(i) + ")"
+			name = base + " (Flash " + strconv.Itoa(i) + ")"
 		}
 		if !tailscaleProxyNameTaken(cfg, name) {
 			return name
