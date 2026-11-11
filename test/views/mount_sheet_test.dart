@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/manager/theme_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -11,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/preferences.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
 import 'mount_fixtures.dart';
@@ -19,7 +21,11 @@ Future<void> pumpSheet(
   WidgetTester tester,
   FakeMounts mounts, {
   List<Profile> profiles = const [],
+  Brightness? brightness,
 }) async {
+  if (brightness != null) {
+    await mockPreferences();
+  }
   tester.view.physicalSize = const Size(560, 1600);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -36,7 +42,18 @@ Future<void> pumpSheet(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: TestApp(child: MountSheet(targetId: target.id)),
+      child: brightness == null
+          ? TestApp(child: MountSheet(targetId: target.id))
+          : Consumer(
+              builder: (context, ref, _) => TestApp(
+                theme: watchAppTheme(ref, Brightness.light),
+                darkTheme: watchAppTheme(ref, Brightness.dark),
+                themeMode: brightness == Brightness.dark
+                    ? ThemeMode.dark
+                    : ThemeMode.light,
+                child: MountSheet(targetId: target.id),
+              ),
+            ),
     ),
   );
   await tester.pumpAndSettle();
@@ -213,6 +230,97 @@ void main() {
     expect(mounts.saves.single.groups, isEmpty);
     expect(find.text(l10n.mountSavedUnconfirmed), findsOneWidget);
   });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('a box one can check is outlined in ${brightness.name}, one '
+        'that cannot is a faint fill, a checked one is filled', (tester) async {
+      final mounts = FakeMounts(
+        panelOf(
+          [
+            item(air, mounted: true),
+            item(sea),
+            item(odd, state: MountSourceState.unsupported, count: 0),
+          ],
+          stored: MountTargetState(
+            targetId: target.id,
+            sourceIds: [air.id],
+            version: 1,
+          ),
+          groups: MountTarget(
+            groups: [
+              groupInfo('All', kind: MountGroupKind.auto),
+              groupInfo('Pick'),
+            ],
+          ),
+        ),
+      );
+      await pumpSheet(
+        tester,
+        mounts,
+        profiles: [air, sea, odd],
+        brightness: brightness,
+      );
+      final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
+
+      ({Color? color, BorderSide side}) boxOf(Finder row) {
+        final decoration =
+            tester
+                    .widget<AnimatedContainer>(
+                      find.descendant(
+                        of: row,
+                        matching: find.byType(AnimatedContainer),
+                      ),
+                    )
+                    .decoration!
+                as ShapeDecoration;
+        return (
+          color: decoration.color,
+          side: (decoration.shape as OutlinedBorder).side,
+        );
+      }
+
+      Color fillOf(Finder finder) =>
+          (tester.widget<DecoratedBox>(finder.first).decoration
+                  as ShapeDecoration)
+              .color!;
+      double contrast(Color a, Color b) {
+        final (hi, lo) = (
+          a.computeLuminance() > b.computeLuminance() ? a : b,
+          a.computeLuminance() > b.computeLuminance() ? b : a,
+        );
+        return (hi.computeLuminance() + 0.05) / (lo.computeLuminance() + 0.05);
+      }
+
+      final checked = boxOf(rowOf('Air'));
+      expect(checked.color, colorScheme.primary);
+      expect(checked.side.color.a, 0);
+
+      final rowFill = fillOf(
+        find.descendant(of: rowOf('Sea'), matching: find.byType(DecoratedBox)),
+      );
+      final blockFill = fillOf(
+        find.descendant(
+          of: find.byType(MountGroupsBlock),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      for (final (box, background) in [
+        (boxOf(rowOf('Sea')), rowFill),
+        (boxOf(candidateOf('Pick')), blockFill),
+      ]) {
+        expect(box.color!.a, 0);
+        expect(box.side.width, 1.5);
+        expect(box.side.color, colorScheme.onSurfaceVariant);
+        final ratio = contrast(box.side.color, background);
+        printOnFailure('${brightness.name} stroke contrast $ratio');
+        expect(ratio, greaterThanOrEqualTo(3));
+      }
+
+      final disabled = boxOf(rowOf('Odd'));
+      expect(disabled.color, SurfaceLevel.inset.colorOf(colorScheme));
+      expect(disabled.side.color.a, 0);
+    });
+  }
 
   testWidgets('the groups area has a section label like the sources, and '
       'its sub-headings are row-sized', (tester) async {

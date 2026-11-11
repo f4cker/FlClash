@@ -1247,15 +1247,18 @@ class MountTag extends StatelessWidget {
   }
 }
 
-/// The 20 dp box of the mount sheet, design §3.
+/// The 20 dp box of the mount sheet, design §3: an empty box one can
+/// check is outlined, one that cannot be checked is a faint fill.
 class MountCheckbox extends StatelessWidget {
-  const MountCheckbox({super.key, required this.value});
+  const MountCheckbox({super.key, required this.value, this.enabled = true});
 
   final bool value;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
+    final outlined = !value && enabled;
     return AnimatedContainer(
       duration: context.motionDuration(commonDuration),
       width: 20,
@@ -1263,8 +1266,17 @@ class MountCheckbox extends StatelessWidget {
       decoration: ShapeDecoration(
         color: value
             ? colorScheme.primary
+            : outlined
+            ? colorScheme.primary.opacity0
             : SurfaceLevel.inset.colorOf(colorScheme),
-        shape: AppShape.all(6),
+        shape: AppShape.all(6).copyWith(
+          side: BorderSide(
+            color: outlined
+                ? colorScheme.onSurfaceVariant
+                : colorScheme.onSurfaceVariant.opacity0,
+            width: 1.5,
+          ),
+        ),
       ),
       child: value
           ? GlyphIcon(AppGlyphs.check, size: 16, color: colorScheme.onPrimary)
@@ -1441,7 +1453,10 @@ class MountSourceRow extends StatelessWidget {
                       children: [
                         Opacity(
                           opacity: _faded ? 0.4 : 1,
-                          child: MountCheckbox(value: checked),
+                          child: MountCheckbox(
+                            value: checked,
+                            enabled: _checkable,
+                          ),
                         ),
                         Expanded(child: text),
                       ],
