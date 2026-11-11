@@ -152,6 +152,14 @@ Stream<Map<int, MountSourceRecord>> mountSourceStatuses(Ref ref) {
   return database.mountsDao.watchStatuses();
 }
 
+/// An error here is a status that could not be read, never zero failures.
+@riverpod
+Future<MountCardSummary?> mountCardSummary(Ref ref, int targetId) async {
+  final target = await ref.watch(mountTargetProvider(targetId).future);
+  final records = await ref.watch(mountSourceStatusesProvider.future);
+  return mountCardSummaryOf(target, records);
+}
+
 @Riverpod(keepAlive: true)
 class Profiles extends _$Profiles {
   late final _writes = _Writes(_reread);

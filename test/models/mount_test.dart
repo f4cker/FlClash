@@ -174,4 +174,146 @@ void main() {
     );
     expect(mountRejectedOutcome(Exception('x')), isNull);
   });
+
+  group('mount results', () {
+    const report = MountReport(
+      revision: 'r2',
+      sources: [
+        MountSourceReport(
+          id: 2,
+          provider: 'flash-mount-2',
+          status: MountSourceStatus.nodes,
+          nodes: [MountNode(name: 'HK (Air)', original: 'HK')],
+        ),
+      ],
+      groups: [
+        MountGroupReport(
+          name: 'Proxy',
+          via: MountGroupVia.use,
+          protection: MountProtection.reject,
+        ),
+      ],
+    );
+    const consistent = MountRuntimeState(
+      report: report,
+      sources: [
+        MountRuntimeSource(
+          id: 2,
+          provider: 'flash-mount-2',
+          present: true,
+          count: 1,
+          matches: true,
+        ),
+      ],
+      groups: [MountRuntimeGroup(name: 'Proxy', present: true, members: 1)],
+    );
+
+    test('only a readback of the same revision proves an apply', () {
+      expect(confirmMounts(consistent, 'r2'), MountSaveOutcome.applied);
+      expect(confirmMounts(consistent, 'r1'), isNull);
+      expect(confirmMounts(const MountRuntimeState(), 'r2'), isNull);
+      expect(
+        confirmMounts(consistent.copyWith(blocked: true), 'r1'),
+        MountSaveOutcome.applyFailedBlocked,
+      );
+      expect(
+        confirmMounts(consistent.copyWith(groups: const []), 'r2'),
+        MountSaveOutcome.saved,
+      );
+      expect(
+        confirmMounts(
+          consistent.copyWith(
+            sources: [consistent.sources.single.copyWith(matches: false)],
+          ),
+          'r2',
+        ),
+        MountSaveOutcome.saved,
+      );
+    });
+
+    test('a mounted selection follows its source and original name', () {
+      const before = MountReport(
+        sources: [
+          MountSourceReport(
+            id: 2,
+            provider: 'flash-mount-2',
+            status: MountSourceStatus.nodes,
+            nodes: [
+              MountNode(name: 'HK', original: 'HK'),
+              MountNode(name: 'JP', original: 'JP'),
+            ],
+          ),
+        ],
+      );
+      expect(remapMountedSelection('HK', before, report), 'HK (Air)');
+      expect(remapMountedSelection('JP', before, report), isNull);
+      expect(remapMountedSelection('DIRECT', before, report), 'DIRECT');
+      expect(remapMountedSelection('HK', null, report), 'HK');
+    });
+
+    test('a source item names what its cache holds', () {
+      const profile = Profile(id: 2, autoUpdateDuration: Duration.zero);
+      MountSourceState stateOf(MountSourceInspection? inspection) =>
+          mountSourceItem(profile, inspection).state;
+      expect(stateOf(null), MountSourceState.unreadable);
+      expect(
+        stateOf(const MountSourceInspection(status: MountSourceStatus.missing)),
+        MountSourceState.notFetched,
+      );
+      expect(
+        stateOf(
+          const MountSourceInspection(status: MountSourceStatus.unsupported),
+        ),
+        MountSourceState.unsupported,
+      );
+      expect(
+        stateOf(
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            count: 3,
+          ),
+        ),
+        MountSourceState.nodes,
+      );
+      expect(
+        stateOf(
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            tailscaleExcluded: 1,
+          ),
+        ),
+        MountSourceState.tailscaleOnly,
+      );
+      expect(
+        stateOf(const MountSourceInspection(status: MountSourceStatus.nodes)),
+        MountSourceState.empty,
+      );
+    });
+
+    test('the card counts only failures no later update cleared', () {
+      const target = MountTargetState(
+        targetId: 1,
+        sourceIds: [2, 3, 4],
+        groups: ['Proxy'],
+        version: 1,
+      );
+      final summary = mountCardSummaryOf(target, {
+        2: const MountSourceRecord(
+          sourceId: 2,
+          failure: MountSourceFailure.fetch,
+        ),
+        3: MountSourceRecord(sourceId: 3, succeededAt: DateTime(2026)),
+        9: const MountSourceRecord(
+          sourceId: 9,
+          failure: MountSourceFailure.unsupported,
+        ),
+      });
+      expect(summary, const MountCardSummary(mounted: 3, failed: 1));
+      expect(mountCardSummaryOf(null, const {}), isNull);
+      expect(
+        mountCardSummaryOf(target.copyWith(sourceIds: const []), const {}),
+        isNull,
+      );
+    });
+  });
 }

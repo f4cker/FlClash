@@ -247,6 +247,92 @@ final class MountSourceStatusesProvider
 String _$mountSourceStatusesHash() =>
     r'6c18041261a275ddd4acf49c5c2e785d5ca21eff';
 
+/// An error here is a status that could not be read, never zero failures.
+
+@ProviderFor(mountCardSummary)
+final mountCardSummaryProvider = MountCardSummaryFamily._();
+
+/// An error here is a status that could not be read, never zero failures.
+
+final class MountCardSummaryProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<MountCardSummary?>,
+          MountCardSummary?,
+          FutureOr<MountCardSummary?>
+        >
+    with
+        $FutureModifier<MountCardSummary?>,
+        $FutureProvider<MountCardSummary?> {
+  /// An error here is a status that could not be read, never zero failures.
+  MountCardSummaryProvider._({
+    required MountCardSummaryFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'mountCardSummaryProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$mountCardSummaryHash();
+
+  @override
+  String toString() {
+    return r'mountCardSummaryProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<MountCardSummary?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<MountCardSummary?> create(Ref ref) {
+    final argument = this.argument as int;
+    return mountCardSummary(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MountCardSummaryProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$mountCardSummaryHash() => r'655d9e64c6ebc6209bcce177f4b241848f8af037';
+
+/// An error here is a status that could not be read, never zero failures.
+
+final class MountCardSummaryFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<MountCardSummary?>, int> {
+  MountCardSummaryFamily._()
+    : super(
+        retry: null,
+        name: r'mountCardSummaryProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// An error here is a status that could not be read, never zero failures.
+
+  MountCardSummaryProvider call(int targetId) =>
+      MountCardSummaryProvider._(argument: targetId, from: this);
+
+  @override
+  String toString() => r'mountCardSummaryProvider';
+}
+
 @ProviderFor(Profiles)
 final profilesProvider = ProfilesProvider._();
 

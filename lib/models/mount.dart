@@ -294,3 +294,163 @@ abstract class MountRuntimeState with _$MountRuntimeState {
   factory MountRuntimeState.fromJson(Map<String, Object?> json) =>
       _$MountRuntimeStateFromJson(json);
 }
+
+enum MountSourceState {
+  nodes,
+  empty,
+  tailscaleOnly,
+  notFetched,
+  unsupported,
+  unreadable,
+}
+
+@freezed
+abstract class MountSourceItem with _$MountSourceItem {
+  const factory MountSourceItem({
+    required Profile profile,
+    required MountSourceState state,
+    @Default(0) int count,
+    @Default(0) int tailscaleExcluded,
+    @Default(false) bool mounted,
+    MountSourceRecord? record,
+  }) = _MountSourceItem;
+}
+
+/// [groups] is null when they could not be read, which is not the same as a
+/// profile without groups.
+@freezed
+abstract class MountPanel with _$MountPanel {
+  const factory MountPanel({
+    required Profile target,
+    MountTargetState? stored,
+    @Default([]) List<MountSourceItem> sources,
+    MountTarget? groups,
+  }) = _MountPanel;
+}
+
+enum MountSaveOutcome {
+  applied,
+  saved,
+  unchanged,
+  groupsChanged,
+  needsGroup,
+  locked,
+  applyFailedKept,
+  applyFailedBlocked,
+  applyFailed,
+  unknown,
+}
+
+@freezed
+abstract class MountSaveResult with _$MountSaveResult {
+  const factory MountSaveResult({
+    required MountSaveOutcome outcome,
+    String? message,
+    MountTargetState? state,
+    @Default([]) List<String> lostSelections,
+  }) = _MountSaveResult;
+}
+
+@freezed
+abstract class MountSourceRefresh with _$MountSourceRefresh {
+  const factory MountSourceRefresh({
+    required bool updated,
+    MountSourceItem? item,
+    String? message,
+    MountSaveOutcome? application,
+  }) = _MountSourceRefresh;
+}
+
+enum MountSourceDeletion { deleted, blocked, unchanged, keptProfile, unknown }
+
+@freezed
+abstract class MountCardSummary with _$MountCardSummary {
+  const factory MountCardSummary({required int mounted, required int failed}) =
+      _MountCardSummary;
+}
+
+/// Null for a target that mounts nothing. A failure counts only while no
+/// later update of that source succeeded.
+MountCardSummary? mountCardSummaryOf(
+  MountTargetState? target,
+  Map<int, MountSourceRecord> records,
+) {
+  if (target == null || target.sourceIds.isEmpty) {
+    return null;
+  }
+  return MountCardSummary(
+    mounted: target.sourceIds.length,
+    failed: target.sourceIds.where((id) => records[id]?.failure != null).length,
+  );
+}
+
+/// What [state] proves about the apply of [revision]; null when the Core
+/// runs another revision.
+MountSaveOutcome? confirmMounts(MountRuntimeState state, String revision) {
+  if (state.blocked) {
+    return MountSaveOutcome.applyFailedBlocked;
+  }
+  final report = state.report;
+  if (report == null || report.revision != revision) {
+    return null;
+  }
+  final sources = {for (final source in state.sources) source.id: source};
+  final groups = {for (final group in state.groups) group.name: group};
+  final consistent =
+      report.sources.every((source) => sources[source.id]?.matches ?? false) &&
+      report.groups.every((group) => groups[group.name]?.present ?? false);
+  return consistent ? MountSaveOutcome.applied : MountSaveOutcome.saved;
+}
+
+/// A mounted node is followed by source and original name; null once that
+/// source no longer provides it.
+String? remapMountedSelection(
+  String selected,
+  MountReport? before,
+  MountReport after,
+) {
+  for (final source in before?.sources ?? const <MountSourceReport>[]) {
+    for (final node in source.nodes) {
+      if (node.name != selected) continue;
+      final next = after.sources.where((item) => item.id == source.id);
+      for (final candidate in next.expand((item) => item.nodes)) {
+        if (candidate.original == node.original) {
+          return candidate.name;
+        }
+      }
+      return null;
+    }
+  }
+  return selected;
+}
+
+MountSourceItem mountSourceItem(
+  Profile profile,
+  MountSourceInspection? inspection, {
+  bool mounted = false,
+  MountSourceRecord? record,
+}) {
+  final state = switch (inspection?.status) {
+    null || MountSourceStatus.readError => MountSourceState.unreadable,
+    MountSourceStatus.missing => MountSourceState.notFetched,
+    MountSourceStatus.unsupported ||
+    MountSourceStatus.invalid => MountSourceState.unsupported,
+    MountSourceStatus.nodes when inspection!.count > 0 =>
+      MountSourceState.nodes,
+    MountSourceStatus.nodes when inspection!.tailscaleExcluded > 0 =>
+      MountSourceState.tailscaleOnly,
+    MountSourceStatus.nodes => MountSourceState.empty,
+  };
+  return MountSourceItem(
+    profile: profile,
+    state: state,
+    count: inspection?.count ?? 0,
+    tailscaleExcluded: inspection?.tailscaleExcluded ?? 0,
+    mounted: mounted,
+    record: record,
+  );
+}
+
+class MountSourceInUse implements Exception {
+  const MountSourceInUse();
+}

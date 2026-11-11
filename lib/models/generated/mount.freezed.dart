@@ -4614,4 +4614,1537 @@ $MountReportCopyWith<$Res>? get report {
 }
 }
 
+/// @nodoc
+mixin _$MountSourceItem {
+
+ Profile get profile; MountSourceState get state; int get count; int get tailscaleExcluded; bool get mounted; MountSourceRecord? get record;
+/// Create a copy of MountSourceItem
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MountSourceItemCopyWith<MountSourceItem> get copyWith => _$MountSourceItemCopyWithImpl<MountSourceItem>(this as MountSourceItem, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MountSourceItem;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceItem&&(identical(other.profile, _this.profile) || other.profile == _this.profile)&&(identical(other.state, _this.state) || other.state == _this.state)&&(identical(other.count, _this.count) || other.count == _this.count)&&(identical(other.tailscaleExcluded, _this.tailscaleExcluded) || other.tailscaleExcluded == _this.tailscaleExcluded)&&(identical(other.mounted, _this.mounted) || other.mounted == _this.mounted)&&(identical(other.record, _this.record) || other.record == _this.record));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as MountSourceItem;
+  return Object.hash(runtimeType,_this.profile,_this.state,_this.count,_this.tailscaleExcluded,_this.mounted,_this.record);
+}
+
+@override
+String toString() {
+  final _this = this as MountSourceItem;
+  return 'MountSourceItem(profile: ${_this.profile}, state: ${_this.state}, count: ${_this.count}, tailscaleExcluded: ${_this.tailscaleExcluded}, mounted: ${_this.mounted}, record: ${_this.record})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MountSourceItemCopyWith<$Res>  {
+  factory $MountSourceItemCopyWith(MountSourceItem value, $Res Function(MountSourceItem) _then) = _$MountSourceItemCopyWithImpl;
+@useResult
+$Res call({
+ Profile profile, MountSourceState state, int count, int tailscaleExcluded, bool mounted, MountSourceRecord? record
+});
+
+
+$ProfileCopyWith<$Res> get profile;$MountSourceRecordCopyWith<$Res>? get record;
+
+}
+/// @nodoc
+class _$MountSourceItemCopyWithImpl<$Res>
+    implements $MountSourceItemCopyWith<$Res> {
+  _$MountSourceItemCopyWithImpl(this._self, this._then);
+
+  final MountSourceItem _self;
+  final $Res Function(MountSourceItem) _then;
+
+/// Create a copy of MountSourceItem
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? profile = null,Object? state = null,Object? count = null,Object? tailscaleExcluded = null,Object? mounted = null,Object? record = freezed,}) {
+  return _then(MountSourceItem(
+profile: null == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
+as Profile,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
+as MountSourceState,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,tailscaleExcluded: null == tailscaleExcluded ? _self.tailscaleExcluded : tailscaleExcluded // ignore: cast_nullable_to_non_nullable
+as int,mounted: null == mounted ? _self.mounted : mounted // ignore: cast_nullable_to_non_nullable
+as bool,record: freezed == record ? _self.record : record // ignore: cast_nullable_to_non_nullable
+as MountSourceRecord?,
+  ));
+}
+/// Create a copy of MountSourceItem
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ProfileCopyWith<$Res> get profile {
+  
+  return $ProfileCopyWith<$Res>(_self.profile, (value) {
+    return _then(_self.copyWith(profile: value));
+  });
+}/// Create a copy of MountSourceItem
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountSourceRecordCopyWith<$Res>? get record {
+    if (_self.record == null) {
+    return null;
+  }
+
+  return $MountSourceRecordCopyWith<$Res>(_self.record!, (value) {
+    return _then(_self.copyWith(record: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [MountSourceItem].
+extension MountSourceItemPatterns on MountSourceItem {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MountSourceItem value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MountSourceItem() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MountSourceItem value)  $default,){
+final _that = this;
+switch (_that) {
+case _MountSourceItem():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MountSourceItem value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MountSourceItem() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  bool mounted,  MountSourceRecord? record)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MountSourceItem() when $default != null:
+return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.mounted,_that.record);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  bool mounted,  MountSourceRecord? record)  $default,) {final _that = this;
+switch (_that) {
+case _MountSourceItem():
+return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.mounted,_that.record);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  bool mounted,  MountSourceRecord? record)?  $default,) {final _that = this;
+switch (_that) {
+case _MountSourceItem() when $default != null:
+return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.mounted,_that.record);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _MountSourceItem implements MountSourceItem {
+  const _MountSourceItem({required this.profile, required this.state, this.count = 0, this.tailscaleExcluded = 0, this.mounted = false, this.record});
+  
+
+@override final  Profile profile;
+@override final  MountSourceState state;
+@override@JsonKey() final  int count;
+@override@JsonKey() final  int tailscaleExcluded;
+@override@JsonKey() final  bool mounted;
+@override final  MountSourceRecord? record;
+
+/// Create a copy of MountSourceItem
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MountSourceItemCopyWith<_MountSourceItem> get copyWith => __$MountSourceItemCopyWithImpl<_MountSourceItem>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceItem&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.state, state) || other.state == state)&&(identical(other.count, count) || other.count == count)&&(identical(other.tailscaleExcluded, tailscaleExcluded) || other.tailscaleExcluded == tailscaleExcluded)&&(identical(other.mounted, mounted) || other.mounted == mounted)&&(identical(other.record, record) || other.record == record));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,profile,state,count,tailscaleExcluded,mounted,record);
+}
+
+@override
+String toString() {
+    return 'MountSourceItem(profile: $profile, state: $state, count: $count, tailscaleExcluded: $tailscaleExcluded, mounted: $mounted, record: $record)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MountSourceItemCopyWith<$Res> implements $MountSourceItemCopyWith<$Res> {
+  factory _$MountSourceItemCopyWith(_MountSourceItem value, $Res Function(_MountSourceItem) _then) = __$MountSourceItemCopyWithImpl;
+@override @useResult
+$Res call({
+ Profile profile, MountSourceState state, int count, int tailscaleExcluded, bool mounted, MountSourceRecord? record
+});
+
+
+@override $ProfileCopyWith<$Res> get profile;@override $MountSourceRecordCopyWith<$Res>? get record;
+
+}
+/// @nodoc
+class __$MountSourceItemCopyWithImpl<$Res>
+    implements _$MountSourceItemCopyWith<$Res> {
+  __$MountSourceItemCopyWithImpl(this._self, this._then);
+
+  final _MountSourceItem _self;
+  final $Res Function(_MountSourceItem) _then;
+
+/// Create a copy of MountSourceItem
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? profile = null,Object? state = null,Object? count = null,Object? tailscaleExcluded = null,Object? mounted = null,Object? record = freezed,}) {
+  return _then(_MountSourceItem(
+profile: null == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
+as Profile,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
+as MountSourceState,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,tailscaleExcluded: null == tailscaleExcluded ? _self.tailscaleExcluded : tailscaleExcluded // ignore: cast_nullable_to_non_nullable
+as int,mounted: null == mounted ? _self.mounted : mounted // ignore: cast_nullable_to_non_nullable
+as bool,record: freezed == record ? _self.record : record // ignore: cast_nullable_to_non_nullable
+as MountSourceRecord?,
+  ));
+}
+
+/// Create a copy of MountSourceItem
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ProfileCopyWith<$Res> get profile {
+  
+  return $ProfileCopyWith<$Res>(_self.profile, (value) {
+    return _then(_self.copyWith(profile: value));
+  });
+}/// Create a copy of MountSourceItem
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountSourceRecordCopyWith<$Res>? get record {
+    if (_self.record == null) {
+    return null;
+  }
+
+  return $MountSourceRecordCopyWith<$Res>(_self.record!, (value) {
+    return _then(_self.copyWith(record: value));
+  });
+}
+}
+
+/// @nodoc
+mixin _$MountPanel {
+
+ Profile get target; MountTargetState? get stored; List<MountSourceItem> get sources; MountTarget? get groups;
+/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MountPanelCopyWith<MountPanel> get copyWith => _$MountPanelCopyWithImpl<MountPanel>(this as MountPanel, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MountPanel;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountPanel&&(identical(other.target, _this.target) || other.target == _this.target)&&(identical(other.stored, _this.stored) || other.stored == _this.stored)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&(identical(other.groups, _this.groups) || other.groups == _this.groups));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as MountPanel;
+  return Object.hash(runtimeType,_this.target,_this.stored,const DeepCollectionEquality().hash(_this.sources),_this.groups);
+}
+
+@override
+String toString() {
+  final _this = this as MountPanel;
+  return 'MountPanel(target: ${_this.target}, stored: ${_this.stored}, sources: ${_this.sources}, groups: ${_this.groups})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MountPanelCopyWith<$Res>  {
+  factory $MountPanelCopyWith(MountPanel value, $Res Function(MountPanel) _then) = _$MountPanelCopyWithImpl;
+@useResult
+$Res call({
+ Profile target, MountTargetState? stored, List<MountSourceItem> sources, MountTarget? groups
+});
+
+
+$ProfileCopyWith<$Res> get target;$MountTargetStateCopyWith<$Res>? get stored;$MountTargetCopyWith<$Res>? get groups;
+
+}
+/// @nodoc
+class _$MountPanelCopyWithImpl<$Res>
+    implements $MountPanelCopyWith<$Res> {
+  _$MountPanelCopyWithImpl(this._self, this._then);
+
+  final MountPanel _self;
+  final $Res Function(MountPanel) _then;
+
+/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? target = null,Object? stored = freezed,Object? sources = null,Object? groups = freezed,}) {
+  return _then(MountPanel(
+target: null == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
+as Profile,stored: freezed == stored ? _self.stored : stored // ignore: cast_nullable_to_non_nullable
+as MountTargetState?,sources: null == sources ? _self.sources : sources // ignore: cast_nullable_to_non_nullable
+as List<MountSourceItem>,groups: freezed == groups ? _self.groups : groups // ignore: cast_nullable_to_non_nullable
+as MountTarget?,
+  ));
+}
+/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ProfileCopyWith<$Res> get target {
+  
+  return $ProfileCopyWith<$Res>(_self.target, (value) {
+    return _then(_self.copyWith(target: value));
+  });
+}/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountTargetStateCopyWith<$Res>? get stored {
+    if (_self.stored == null) {
+    return null;
+  }
+
+  return $MountTargetStateCopyWith<$Res>(_self.stored!, (value) {
+    return _then(_self.copyWith(stored: value));
+  });
+}/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountTargetCopyWith<$Res>? get groups {
+    if (_self.groups == null) {
+    return null;
+  }
+
+  return $MountTargetCopyWith<$Res>(_self.groups!, (value) {
+    return _then(_self.copyWith(groups: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [MountPanel].
+extension MountPanelPatterns on MountPanel {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MountPanel value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MountPanel() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MountPanel value)  $default,){
+final _that = this;
+switch (_that) {
+case _MountPanel():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MountPanel value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MountPanel() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MountPanel() when $default != null:
+return $default(_that.target,_that.stored,_that.sources,_that.groups);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups)  $default,) {final _that = this;
+switch (_that) {
+case _MountPanel():
+return $default(_that.target,_that.stored,_that.sources,_that.groups);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups)?  $default,) {final _that = this;
+switch (_that) {
+case _MountPanel() when $default != null:
+return $default(_that.target,_that.stored,_that.sources,_that.groups);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _MountPanel implements MountPanel {
+  const _MountPanel({required this.target, this.stored,  List<MountSourceItem> sources = const [], this.groups}): _sources = sources;
+  
+
+@override final  Profile target;
+@override final  MountTargetState? stored;
+ final  List<MountSourceItem> _sources;
+@override@JsonKey() List<MountSourceItem> get sources {
+  if (_sources is EqualUnmodifiableListView) return _sources;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_sources);
+}
+
+@override final  MountTarget? groups;
+
+/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MountPanelCopyWith<_MountPanel> get copyWith => __$MountPanelCopyWithImpl<_MountPanel>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountPanel&&(identical(other.target, target) || other.target == target)&&(identical(other.stored, stored) || other.stored == stored)&&const DeepCollectionEquality().equals(other.sources, _sources)&&(identical(other.groups, groups) || other.groups == groups));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,target,stored,const DeepCollectionEquality().hash(_sources),groups);
+}
+
+@override
+String toString() {
+    return 'MountPanel(target: $target, stored: $stored, sources: $sources, groups: $groups)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MountPanelCopyWith<$Res> implements $MountPanelCopyWith<$Res> {
+  factory _$MountPanelCopyWith(_MountPanel value, $Res Function(_MountPanel) _then) = __$MountPanelCopyWithImpl;
+@override @useResult
+$Res call({
+ Profile target, MountTargetState? stored, List<MountSourceItem> sources, MountTarget? groups
+});
+
+
+@override $ProfileCopyWith<$Res> get target;@override $MountTargetStateCopyWith<$Res>? get stored;@override $MountTargetCopyWith<$Res>? get groups;
+
+}
+/// @nodoc
+class __$MountPanelCopyWithImpl<$Res>
+    implements _$MountPanelCopyWith<$Res> {
+  __$MountPanelCopyWithImpl(this._self, this._then);
+
+  final _MountPanel _self;
+  final $Res Function(_MountPanel) _then;
+
+/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? target = null,Object? stored = freezed,Object? sources = null,Object? groups = freezed,}) {
+  return _then(_MountPanel(
+target: null == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
+as Profile,stored: freezed == stored ? _self.stored : stored // ignore: cast_nullable_to_non_nullable
+as MountTargetState?,sources: null == sources ? _self._sources : sources // ignore: cast_nullable_to_non_nullable
+as List<MountSourceItem>,groups: freezed == groups ? _self.groups : groups // ignore: cast_nullable_to_non_nullable
+as MountTarget?,
+  ));
+}
+
+/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ProfileCopyWith<$Res> get target {
+  
+  return $ProfileCopyWith<$Res>(_self.target, (value) {
+    return _then(_self.copyWith(target: value));
+  });
+}/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountTargetStateCopyWith<$Res>? get stored {
+    if (_self.stored == null) {
+    return null;
+  }
+
+  return $MountTargetStateCopyWith<$Res>(_self.stored!, (value) {
+    return _then(_self.copyWith(stored: value));
+  });
+}/// Create a copy of MountPanel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountTargetCopyWith<$Res>? get groups {
+    if (_self.groups == null) {
+    return null;
+  }
+
+  return $MountTargetCopyWith<$Res>(_self.groups!, (value) {
+    return _then(_self.copyWith(groups: value));
+  });
+}
+}
+
+/// @nodoc
+mixin _$MountSaveResult {
+
+ MountSaveOutcome get outcome; String? get message; MountTargetState? get state; List<String> get lostSelections;
+/// Create a copy of MountSaveResult
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MountSaveResultCopyWith<MountSaveResult> get copyWith => _$MountSaveResultCopyWithImpl<MountSaveResult>(this as MountSaveResult, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MountSaveResult;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSaveResult&&(identical(other.outcome, _this.outcome) || other.outcome == _this.outcome)&&(identical(other.message, _this.message) || other.message == _this.message)&&(identical(other.state, _this.state) || other.state == _this.state)&&const DeepCollectionEquality().equals(other.lostSelections, _this.lostSelections));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as MountSaveResult;
+  return Object.hash(runtimeType,_this.outcome,_this.message,_this.state,const DeepCollectionEquality().hash(_this.lostSelections));
+}
+
+@override
+String toString() {
+  final _this = this as MountSaveResult;
+  return 'MountSaveResult(outcome: ${_this.outcome}, message: ${_this.message}, state: ${_this.state}, lostSelections: ${_this.lostSelections})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MountSaveResultCopyWith<$Res>  {
+  factory $MountSaveResultCopyWith(MountSaveResult value, $Res Function(MountSaveResult) _then) = _$MountSaveResultCopyWithImpl;
+@useResult
+$Res call({
+ MountSaveOutcome outcome, String? message, MountTargetState? state, List<String> lostSelections
+});
+
+
+$MountTargetStateCopyWith<$Res>? get state;
+
+}
+/// @nodoc
+class _$MountSaveResultCopyWithImpl<$Res>
+    implements $MountSaveResultCopyWith<$Res> {
+  _$MountSaveResultCopyWithImpl(this._self, this._then);
+
+  final MountSaveResult _self;
+  final $Res Function(MountSaveResult) _then;
+
+/// Create a copy of MountSaveResult
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? outcome = null,Object? message = freezed,Object? state = freezed,Object? lostSelections = null,}) {
+  return _then(MountSaveResult(
+outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
+as MountSaveOutcome,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String?,state: freezed == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
+as MountTargetState?,lostSelections: null == lostSelections ? _self.lostSelections : lostSelections // ignore: cast_nullable_to_non_nullable
+as List<String>,
+  ));
+}
+/// Create a copy of MountSaveResult
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountTargetStateCopyWith<$Res>? get state {
+    if (_self.state == null) {
+    return null;
+  }
+
+  return $MountTargetStateCopyWith<$Res>(_self.state!, (value) {
+    return _then(_self.copyWith(state: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [MountSaveResult].
+extension MountSaveResultPatterns on MountSaveResult {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MountSaveResult value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MountSaveResult() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MountSaveResult value)  $default,){
+final _that = this;
+switch (_that) {
+case _MountSaveResult():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MountSaveResult value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MountSaveResult() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( MountSaveOutcome outcome,  String? message,  MountTargetState? state,  List<String> lostSelections)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MountSaveResult() when $default != null:
+return $default(_that.outcome,_that.message,_that.state,_that.lostSelections);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( MountSaveOutcome outcome,  String? message,  MountTargetState? state,  List<String> lostSelections)  $default,) {final _that = this;
+switch (_that) {
+case _MountSaveResult():
+return $default(_that.outcome,_that.message,_that.state,_that.lostSelections);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( MountSaveOutcome outcome,  String? message,  MountTargetState? state,  List<String> lostSelections)?  $default,) {final _that = this;
+switch (_that) {
+case _MountSaveResult() when $default != null:
+return $default(_that.outcome,_that.message,_that.state,_that.lostSelections);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _MountSaveResult implements MountSaveResult {
+  const _MountSaveResult({required this.outcome, this.message, this.state,  List<String> lostSelections = const []}): _lostSelections = lostSelections;
+  
+
+@override final  MountSaveOutcome outcome;
+@override final  String? message;
+@override final  MountTargetState? state;
+ final  List<String> _lostSelections;
+@override@JsonKey() List<String> get lostSelections {
+  if (_lostSelections is EqualUnmodifiableListView) return _lostSelections;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_lostSelections);
+}
+
+
+/// Create a copy of MountSaveResult
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MountSaveResultCopyWith<_MountSaveResult> get copyWith => __$MountSaveResultCopyWithImpl<_MountSaveResult>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSaveResult&&(identical(other.outcome, outcome) || other.outcome == outcome)&&(identical(other.message, message) || other.message == message)&&(identical(other.state, state) || other.state == state)&&const DeepCollectionEquality().equals(other.lostSelections, _lostSelections));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,outcome,message,state,const DeepCollectionEquality().hash(_lostSelections));
+}
+
+@override
+String toString() {
+    return 'MountSaveResult(outcome: $outcome, message: $message, state: $state, lostSelections: $lostSelections)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MountSaveResultCopyWith<$Res> implements $MountSaveResultCopyWith<$Res> {
+  factory _$MountSaveResultCopyWith(_MountSaveResult value, $Res Function(_MountSaveResult) _then) = __$MountSaveResultCopyWithImpl;
+@override @useResult
+$Res call({
+ MountSaveOutcome outcome, String? message, MountTargetState? state, List<String> lostSelections
+});
+
+
+@override $MountTargetStateCopyWith<$Res>? get state;
+
+}
+/// @nodoc
+class __$MountSaveResultCopyWithImpl<$Res>
+    implements _$MountSaveResultCopyWith<$Res> {
+  __$MountSaveResultCopyWithImpl(this._self, this._then);
+
+  final _MountSaveResult _self;
+  final $Res Function(_MountSaveResult) _then;
+
+/// Create a copy of MountSaveResult
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? outcome = null,Object? message = freezed,Object? state = freezed,Object? lostSelections = null,}) {
+  return _then(_MountSaveResult(
+outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
+as MountSaveOutcome,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String?,state: freezed == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
+as MountTargetState?,lostSelections: null == lostSelections ? _self._lostSelections : lostSelections // ignore: cast_nullable_to_non_nullable
+as List<String>,
+  ));
+}
+
+/// Create a copy of MountSaveResult
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountTargetStateCopyWith<$Res>? get state {
+    if (_self.state == null) {
+    return null;
+  }
+
+  return $MountTargetStateCopyWith<$Res>(_self.state!, (value) {
+    return _then(_self.copyWith(state: value));
+  });
+}
+}
+
+/// @nodoc
+mixin _$MountSourceRefresh {
+
+ bool get updated; MountSourceItem? get item; String? get message; MountSaveOutcome? get application;
+/// Create a copy of MountSourceRefresh
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MountSourceRefreshCopyWith<MountSourceRefresh> get copyWith => _$MountSourceRefreshCopyWithImpl<MountSourceRefresh>(this as MountSourceRefresh, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MountSourceRefresh;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceRefresh&&(identical(other.updated, _this.updated) || other.updated == _this.updated)&&(identical(other.item, _this.item) || other.item == _this.item)&&(identical(other.message, _this.message) || other.message == _this.message)&&(identical(other.application, _this.application) || other.application == _this.application));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as MountSourceRefresh;
+  return Object.hash(runtimeType,_this.updated,_this.item,_this.message,_this.application);
+}
+
+@override
+String toString() {
+  final _this = this as MountSourceRefresh;
+  return 'MountSourceRefresh(updated: ${_this.updated}, item: ${_this.item}, message: ${_this.message}, application: ${_this.application})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MountSourceRefreshCopyWith<$Res>  {
+  factory $MountSourceRefreshCopyWith(MountSourceRefresh value, $Res Function(MountSourceRefresh) _then) = _$MountSourceRefreshCopyWithImpl;
+@useResult
+$Res call({
+ bool updated, MountSourceItem? item, String? message, MountSaveOutcome? application
+});
+
+
+$MountSourceItemCopyWith<$Res>? get item;
+
+}
+/// @nodoc
+class _$MountSourceRefreshCopyWithImpl<$Res>
+    implements $MountSourceRefreshCopyWith<$Res> {
+  _$MountSourceRefreshCopyWithImpl(this._self, this._then);
+
+  final MountSourceRefresh _self;
+  final $Res Function(MountSourceRefresh) _then;
+
+/// Create a copy of MountSourceRefresh
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? updated = null,Object? item = freezed,Object? message = freezed,Object? application = freezed,}) {
+  return _then(MountSourceRefresh(
+updated: null == updated ? _self.updated : updated // ignore: cast_nullable_to_non_nullable
+as bool,item: freezed == item ? _self.item : item // ignore: cast_nullable_to_non_nullable
+as MountSourceItem?,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String?,application: freezed == application ? _self.application : application // ignore: cast_nullable_to_non_nullable
+as MountSaveOutcome?,
+  ));
+}
+/// Create a copy of MountSourceRefresh
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountSourceItemCopyWith<$Res>? get item {
+    if (_self.item == null) {
+    return null;
+  }
+
+  return $MountSourceItemCopyWith<$Res>(_self.item!, (value) {
+    return _then(_self.copyWith(item: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [MountSourceRefresh].
+extension MountSourceRefreshPatterns on MountSourceRefresh {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MountSourceRefresh value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MountSourceRefresh() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MountSourceRefresh value)  $default,){
+final _that = this;
+switch (_that) {
+case _MountSourceRefresh():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MountSourceRefresh value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MountSourceRefresh() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MountSourceRefresh() when $default != null:
+return $default(_that.updated,_that.item,_that.message,_that.application);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application)  $default,) {final _that = this;
+switch (_that) {
+case _MountSourceRefresh():
+return $default(_that.updated,_that.item,_that.message,_that.application);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application)?  $default,) {final _that = this;
+switch (_that) {
+case _MountSourceRefresh() when $default != null:
+return $default(_that.updated,_that.item,_that.message,_that.application);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _MountSourceRefresh implements MountSourceRefresh {
+  const _MountSourceRefresh({required this.updated, this.item, this.message, this.application});
+  
+
+@override final  bool updated;
+@override final  MountSourceItem? item;
+@override final  String? message;
+@override final  MountSaveOutcome? application;
+
+/// Create a copy of MountSourceRefresh
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MountSourceRefreshCopyWith<_MountSourceRefresh> get copyWith => __$MountSourceRefreshCopyWithImpl<_MountSourceRefresh>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceRefresh&&(identical(other.updated, updated) || other.updated == updated)&&(identical(other.item, item) || other.item == item)&&(identical(other.message, message) || other.message == message)&&(identical(other.application, application) || other.application == application));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,updated,item,message,application);
+}
+
+@override
+String toString() {
+    return 'MountSourceRefresh(updated: $updated, item: $item, message: $message, application: $application)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MountSourceRefreshCopyWith<$Res> implements $MountSourceRefreshCopyWith<$Res> {
+  factory _$MountSourceRefreshCopyWith(_MountSourceRefresh value, $Res Function(_MountSourceRefresh) _then) = __$MountSourceRefreshCopyWithImpl;
+@override @useResult
+$Res call({
+ bool updated, MountSourceItem? item, String? message, MountSaveOutcome? application
+});
+
+
+@override $MountSourceItemCopyWith<$Res>? get item;
+
+}
+/// @nodoc
+class __$MountSourceRefreshCopyWithImpl<$Res>
+    implements _$MountSourceRefreshCopyWith<$Res> {
+  __$MountSourceRefreshCopyWithImpl(this._self, this._then);
+
+  final _MountSourceRefresh _self;
+  final $Res Function(_MountSourceRefresh) _then;
+
+/// Create a copy of MountSourceRefresh
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? updated = null,Object? item = freezed,Object? message = freezed,Object? application = freezed,}) {
+  return _then(_MountSourceRefresh(
+updated: null == updated ? _self.updated : updated // ignore: cast_nullable_to_non_nullable
+as bool,item: freezed == item ? _self.item : item // ignore: cast_nullable_to_non_nullable
+as MountSourceItem?,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String?,application: freezed == application ? _self.application : application // ignore: cast_nullable_to_non_nullable
+as MountSaveOutcome?,
+  ));
+}
+
+/// Create a copy of MountSourceRefresh
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountSourceItemCopyWith<$Res>? get item {
+    if (_self.item == null) {
+    return null;
+  }
+
+  return $MountSourceItemCopyWith<$Res>(_self.item!, (value) {
+    return _then(_self.copyWith(item: value));
+  });
+}
+}
+
+/// @nodoc
+mixin _$MountCardSummary {
+
+ int get mounted; int get failed;
+/// Create a copy of MountCardSummary
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MountCardSummaryCopyWith<MountCardSummary> get copyWith => _$MountCardSummaryCopyWithImpl<MountCardSummary>(this as MountCardSummary, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MountCardSummary;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountCardSummary&&(identical(other.mounted, _this.mounted) || other.mounted == _this.mounted)&&(identical(other.failed, _this.failed) || other.failed == _this.failed));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as MountCardSummary;
+  return Object.hash(runtimeType,_this.mounted,_this.failed);
+}
+
+@override
+String toString() {
+  final _this = this as MountCardSummary;
+  return 'MountCardSummary(mounted: ${_this.mounted}, failed: ${_this.failed})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MountCardSummaryCopyWith<$Res>  {
+  factory $MountCardSummaryCopyWith(MountCardSummary value, $Res Function(MountCardSummary) _then) = _$MountCardSummaryCopyWithImpl;
+@useResult
+$Res call({
+ int mounted, int failed
+});
+
+
+
+
+}
+/// @nodoc
+class _$MountCardSummaryCopyWithImpl<$Res>
+    implements $MountCardSummaryCopyWith<$Res> {
+  _$MountCardSummaryCopyWithImpl(this._self, this._then);
+
+  final MountCardSummary _self;
+  final $Res Function(MountCardSummary) _then;
+
+/// Create a copy of MountCardSummary
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? mounted = null,Object? failed = null,}) {
+  return _then(MountCardSummary(
+mounted: null == mounted ? _self.mounted : mounted // ignore: cast_nullable_to_non_nullable
+as int,failed: null == failed ? _self.failed : failed // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MountCardSummary].
+extension MountCardSummaryPatterns on MountCardSummary {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MountCardSummary value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MountCardSummary() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MountCardSummary value)  $default,){
+final _that = this;
+switch (_that) {
+case _MountCardSummary():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MountCardSummary value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MountCardSummary() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int mounted,  int failed)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MountCardSummary() when $default != null:
+return $default(_that.mounted,_that.failed);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int mounted,  int failed)  $default,) {final _that = this;
+switch (_that) {
+case _MountCardSummary():
+return $default(_that.mounted,_that.failed);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int mounted,  int failed)?  $default,) {final _that = this;
+switch (_that) {
+case _MountCardSummary() when $default != null:
+return $default(_that.mounted,_that.failed);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _MountCardSummary implements MountCardSummary {
+  const _MountCardSummary({required this.mounted, required this.failed});
+  
+
+@override final  int mounted;
+@override final  int failed;
+
+/// Create a copy of MountCardSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MountCardSummaryCopyWith<_MountCardSummary> get copyWith => __$MountCardSummaryCopyWithImpl<_MountCardSummary>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountCardSummary&&(identical(other.mounted, mounted) || other.mounted == mounted)&&(identical(other.failed, failed) || other.failed == failed));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,mounted,failed);
+}
+
+@override
+String toString() {
+    return 'MountCardSummary(mounted: $mounted, failed: $failed)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MountCardSummaryCopyWith<$Res> implements $MountCardSummaryCopyWith<$Res> {
+  factory _$MountCardSummaryCopyWith(_MountCardSummary value, $Res Function(_MountCardSummary) _then) = __$MountCardSummaryCopyWithImpl;
+@override @useResult
+$Res call({
+ int mounted, int failed
+});
+
+
+
+
+}
+/// @nodoc
+class __$MountCardSummaryCopyWithImpl<$Res>
+    implements _$MountCardSummaryCopyWith<$Res> {
+  __$MountCardSummaryCopyWithImpl(this._self, this._then);
+
+  final _MountCardSummary _self;
+  final $Res Function(_MountCardSummary) _then;
+
+/// Create a copy of MountCardSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? mounted = null,Object? failed = null,}) {
+  return _then(_MountCardSummary(
+mounted: null == mounted ? _self.mounted : mounted // ignore: cast_nullable_to_non_nullable
+as int,failed: null == failed ? _self.failed : failed // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
 // dart format on
