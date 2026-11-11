@@ -22,6 +22,19 @@ Future<YamlMap> _tunOf({
   ProfileOverrides overrides = _overrides,
   bool bypassPrivateRoute = false,
 }) async {
+  final config = await _configOf(
+    rawConfig: rawConfig,
+    overrides: overrides,
+    bypassPrivateRoute: bypassPrivateRoute,
+  );
+  return config['tun'] as YamlMap;
+}
+
+Future<YamlMap> _configOf({
+  required Map<String, dynamic> rawConfig,
+  ProfileOverrides overrides = _overrides,
+  bool bypassPrivateRoute = false,
+}) async {
   final result = await makeRealProfileTask(
     MakeRealProfileState(
       profilesPath: '/profiles',
@@ -37,11 +50,32 @@ Future<YamlMap> _tunOf({
       defaultUA: 'FlClash-Test',
     ),
   );
-  final config = loadYaml(result.yaml) as YamlMap;
-  return config['tun'] as YamlMap;
+  return loadYaml(result.yaml) as YamlMap;
 }
 
 void main() {
+  test('a profile cannot take over the network on its own', () async {
+    final config = await _configOf(
+      rawConfig: {
+        'tun': {'enable': true, 'auto-route': true},
+        'external-controller': '0.0.0.0:9090',
+        'secret': 'from-profile',
+        'mixed-port': 7893,
+        'port': 7891,
+        'socks-port': 7892,
+        'allow-lan': true,
+      },
+    );
+
+    const app = PatchClashConfig();
+    expect((config['tun'] as YamlMap)['enable'], isFalse);
+    expect(config['external-controller'], '');
+    expect(config['mixed-port'], app.mixedPort);
+    expect(config['port'], app.port);
+    expect(config['socks-port'], app.socksPort);
+    expect(config['allow-lan'], app.allowLan);
+  });
+
   test('writes the selected keys beside the network settings', () async {
     final tun = await _tunOf(rawConfig: {});
 
