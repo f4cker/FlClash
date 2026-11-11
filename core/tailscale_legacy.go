@@ -20,6 +20,10 @@ const (
 	tailscaleMigrateMigrated = "migrated"
 	tailscaleMigrateFailed   = "failed"
 	tailscaleMigrateUnknown  = "unknown"
+
+	tailscaleMigrateStageClaim  = "claim"
+	tailscaleMigrateStageCopy   = "copy"
+	tailscaleMigrateStageVerify = "verify"
 )
 
 var (
@@ -41,12 +45,16 @@ var (
 // checks; the marker link backs it up across anything that bypasses it.
 var tailscaleLegacyMu sync.Mutex
 
-var readTailscaleCopy = os.ReadFile
+var (
+	readTailscaleCopy  = os.ReadFile
+	writeTailscaleCopy = writeTailscaleFile
+)
 
 type TailscaleMigrateResult struct {
 	Generation uint64 `json:"generation"`
 	// failed only with the target confirmed untouched; anything else unclear is unknown.
 	Outcome         string                   `json:"outcome"`
+	Stage           string                   `json:"stage,omitempty"`
 	Migration       TailscaleLegacyMigration `json:"migration"`
 	Node            TailscaleNode            `json:"node"`
 	ReapplyRequired bool                     `json:"reapply-required"`
@@ -170,10 +178,10 @@ func handleTailscaleMigrateLegacy(params TailscaleMigrateParams) (*TailscaleMigr
 				return nil, errTailscaleLegacyMigrated
 			}
 			result.Outcome = tailscaleMigrateFailed
+			result.Stage = tailscaleMigrateStageClaim
 			result.TargetUntouched = true
 			result.Error = tailscaleMigrateError(err)
-			result.Node = describeTailscale(t, currentTailscaleNodes())
-			return result, nil
+			return settleTailscaleMigration(t, result, archive), nil
 		}
 	}
 	if t.Started() {
@@ -183,22 +191,29 @@ func handleTailscaleMigrateLegacy(params TailscaleMigrateParams) (*TailscaleMigr
 		result.ReapplyRequired = true
 	}
 	target := filepath.Join(option.StateDir, tailscaleStateFile)
-	if err := writeTailscaleFile(target, archive); err != nil {
+	if err := writeTailscaleCopy(target, archive); err != nil {
+		result.Stage = tailscaleMigrateStageCopy
 		settleFailedTailscaleCopy(result, target)
 		result.Error = tailscaleMigrateError(err)
 	} else if copied, err := readTailscaleCopy(target); err != nil || !bytes.Equal(copied, archive) {
 		result.Outcome = tailscaleMigrateUnknown
+		result.Stage = tailscaleMigrateStageVerify
 		result.Error = &MethodError{Code: "tailscale_migrate_unconfirmed", Message: "the copy did not read back as written"}
 	} else {
 		result.Outcome = tailscaleMigrateMigrated
 		loggedOut := false
 		pinTailscale(t.Name(), option.ControlURL, func(pin *tailscalePin) { pin.loggedOut = &loggedOut })
 	}
+	return settleTailscaleMigration(t, result, archive), nil
+}
+
+// The archive is never written; reading it again is what proves it intact.
+func settleTailscaleMigration(t *outbound.Tailscale, result *TailscaleMigrateResult, archive []byte) *TailscaleMigrateResult {
 	if now, err := os.ReadFile(filepath.Join(tailscaleLegacyStateDir(), tailscaleStateFile)); err != nil || !bytes.Equal(now, archive) {
 		result.ArchiveIntact = false
 	}
 	result.Node = describeTailscale(t, currentTailscaleNodes())
-	return result, nil
+	return result
 }
 
 // A failed write is a failure only once the target is seen without a state

@@ -23,10 +23,10 @@ func setupLegacyMigration(t *testing.T) []byte {
 	constant.SetHomeDir(t.TempDir())
 	setTailscaleSetup(&TailscaleSetup{ProfileID: 1})
 	live := tailscaleDirLive
-	readCopy := readTailscaleCopy
+	readCopy, writeCopy := readTailscaleCopy, writeTailscaleCopy
 	t.Cleanup(func() {
 		tailscaleDirLive = live
-		readTailscaleCopy = readCopy
+		readTailscaleCopy, writeTailscaleCopy = readCopy, writeCopy
 	})
 	tailscaleDirLive = func(string, *outbound.Tailscale) bool { return false }
 	return writeTailscaleStateFile(t, tailscaleLegacyStateDir(), "https://login.tailscale.com")
@@ -402,7 +402,8 @@ func TestTailscaleMigrateLegacyFailedCopyLeavesTargetUntouched(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Outcome != tailscaleMigrateFailed || !result.TargetUntouched || !result.ArchiveIntact ||
+	if result.Outcome != tailscaleMigrateFailed || result.Stage != tailscaleMigrateStageCopy ||
+		!result.TargetUntouched || !result.ArchiveIntact ||
 		result.Error == nil || result.Error.Code != "tailscale_migrate_failed" {
 		t.Fatalf("result = %+v", result)
 	}
@@ -434,7 +435,8 @@ func TestTailscaleMigrateLegacyUnconfirmedCopyKeepsTheClaim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Outcome != tailscaleMigrateUnknown || result.TargetUntouched {
+	if result.Outcome != tailscaleMigrateUnknown || result.Stage != tailscaleMigrateStageVerify ||
+		result.TargetUntouched || !result.ArchiveIntact {
 		t.Fatalf("result = %+v", result)
 	}
 	if _, err := os.Stat(tailscaleLegacyMarkerPath()); err != nil {
@@ -458,7 +460,72 @@ func TestTailscaleMigrateLegacyReportsAnArchiveThatChanged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Outcome != tailscaleMigrateMigrated || result.ArchiveIntact {
+	if result.Outcome != tailscaleMigrateMigrated || result.Stage != "" || result.ArchiveIntact {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestTailscaleMigrateLegacyFailedClaimLeavesTargetUntouched(t *testing.T) {
+	original := setupLegacyMigration(t)
+	node := newMigrationTarget(t, outbound.TailscaleOption{Name: "home"})
+	nodes := filepath.Dir(tailscaleLegacyMarkerPath())
+	if err := os.MkdirAll(nodes, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(nodes, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(nodes, 0o700) })
+	result, err := migrateShown(t, node)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Outcome != tailscaleMigrateFailed || result.Stage != tailscaleMigrateStageClaim ||
+		!result.TargetUntouched || !result.ArchiveIntact {
+		t.Fatalf("result = %+v", result)
+	}
+	if _, err := os.Stat(filepath.Join(node.Option().StateDir, tailscaleStateFile)); !os.IsNotExist(err) {
+		t.Fatalf("a failed claim wrote the target: %v", err)
+	}
+	assertNoMarker(t)
+	assertLegacyUnchanged(t, original)
+}
+
+func TestTailscaleMigrateLegacyFailedWriteWithATargetLeftIsUnknown(t *testing.T) {
+	setupLegacyMigration(t)
+	node := newMigrationTarget(t, outbound.TailscaleOption{Name: "home"})
+	writeTailscaleCopy = func(path string, buf []byte) error {
+		if err := writeTailscaleFile(path, buf[:len(buf)/2]); err != nil {
+			t.Fatal(err)
+		}
+		return errors.New("sync failed")
+	}
+	result, err := migrateShown(t, node)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Outcome != tailscaleMigrateUnknown || result.Stage != tailscaleMigrateStageCopy ||
+		result.TargetUntouched || !result.ArchiveIntact {
+		t.Fatalf("result = %+v", result)
+	}
+	if _, err := os.Stat(tailscaleLegacyMarkerPath()); err != nil {
+		t.Fatalf("the claim was dropped with a target left: %v", err)
+	}
+}
+
+func TestTailscaleMigrateLegacyFailedCopyReportsAnArchiveThatChanged(t *testing.T) {
+	setupLegacyMigration(t)
+	node := newMigrationTarget(t, outbound.TailscaleOption{Name: "home"})
+	writeTailscaleCopy = func(string, []byte) error {
+		rewriteLegacyArchive(t, func(state map[string][]byte) { state["extra"] = []byte("1") })
+		return errors.New("disk full")
+	}
+	result, err := migrateShown(t, node)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Outcome != tailscaleMigrateFailed || result.Stage != tailscaleMigrateStageCopy ||
+		!result.TargetUntouched || result.ArchiveIntact {
 		t.Fatalf("result = %+v", result)
 	}
 }
