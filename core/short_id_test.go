@@ -3,7 +3,10 @@ package core
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
+
+	"github.com/metacubex/mihomo/config"
 )
 
 func TestHandleGetConfigKeepsAnUnquotedShortIDAsWritten(t *testing.T) {
@@ -75,5 +78,42 @@ func TestHandleGetConfigLeavesProfilesWithoutShortIDsToMihomo(t *testing.T) {
 	}
 	if raw.MixedPort != 7899 || raw.Mode.String() == "" {
 		t.Errorf("raw config = port %d mode %q, want 7899 and the default mode", raw.MixedPort, raw.Mode)
+	}
+}
+
+func TestUnmarshalRawConfigWithoutRetaggingMatchesMihomo(t *testing.T) {
+	profiles := []string{
+		`# short-id
+mixed-port: 7899
+`,
+		`# short-id
+`,
+		`x-defaults: &defaults {type: vless, reality-opts: {short-id: "0123"}}
+proxies:
+  - {<<: *defaults, name: a}
+rules: ["MATCH,DIRECT"]
+`,
+		`proxies: [{name: a, reality-opts: {short-id: abcdef}}]`,
+		`# short-id
+mixed-port: invalid
+`,
+		`# short-id
+mixed-port: 1
+mixed-port: 2
+`,
+		`# short-id
+proxies: [`,
+	}
+	for _, profile := range profiles {
+		t.Run(profile, func(t *testing.T) {
+			got, err := unmarshalRawConfig([]byte(profile))
+			want, wantErr := config.UnmarshalRawConfig([]byte(profile))
+			if (err == nil) != (wantErr == nil) {
+				t.Fatalf("error = %v, want %v", err, wantErr)
+			}
+			if err == nil && !reflect.DeepEqual(got, want) {
+				t.Error("decoded configuration differs from mihomo")
+			}
+		})
 	}
 }

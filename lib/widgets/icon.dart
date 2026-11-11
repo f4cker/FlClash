@@ -250,6 +250,8 @@ Future<void> _decodeAhead(Uint8List bytes) {
   return completer.future;
 }
 
+final _iconPrecachePool = TaskPool(maxConcurrentIconLoads);
+
 Future<void> precacheTargetIcons(Iterable<String> srcs) async {
   final pending = srcs
       .toSet()
@@ -259,17 +261,22 @@ Future<void> precacheTargetIcons(Iterable<String> srcs) async {
             !src.contains('base64,') &&
             !_remoteIcons.contains(src),
       )
-      .map((src) async {
-        try {
-          await for (final bytes in _loadRemoteIcon(src)) {
-            if (!src.isSvg) {
-              await _decodeAhead(bytes);
-            }
+      .map(
+        (src) => _iconPrecachePool.run(() async {
+          if (_remoteIcons.contains(src)) {
+            return;
           }
-        } catch (error) {
-          commonPrint.log('Failed to precache icon $src: $error');
-        }
-      });
+          try {
+            await for (final bytes in _loadRemoteIcon(src)) {
+              if (!src.isSvg) {
+                await _decodeAhead(bytes);
+              }
+            }
+          } catch (error) {
+            commonPrint.log('Failed to precache icon $src: $error');
+          }
+        }),
+      );
   await Future.wait(pending);
 }
 
