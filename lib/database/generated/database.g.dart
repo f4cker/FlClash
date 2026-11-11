@@ -5241,6 +5241,916 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
   }
 }
 
+class $ProfileMountsTable extends ProfileMounts
+    with TableInfo<$ProfileMountsTable, ProfileMountRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ProfileMountsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _targetIdMeta = const VerificationMeta(
+    'targetId',
+  );
+  @override
+  late final GeneratedColumn<int> targetId = GeneratedColumn<int>(
+    'target_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<int> sourceId = GeneratedColumn<int>(
+    'source_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [targetId, sourceId, position];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'profile_mounts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ProfileMountRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('target_id')) {
+      context.handle(
+        _targetIdMeta,
+        targetId.isAcceptableOrUnknown(data['target_id']!, _targetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_targetIdMeta);
+    }
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {targetId, sourceId};
+  @override
+  ProfileMountRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProfileMountRow(
+      targetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_id'],
+      )!,
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+    );
+  }
+
+  @override
+  $ProfileMountsTable createAlias(String alias) {
+    return $ProfileMountsTable(attachedDatabase, alias);
+  }
+}
+
+class ProfileMountRow extends DataClass implements Insertable<ProfileMountRow> {
+  final int targetId;
+  final int sourceId;
+  final int position;
+  const ProfileMountRow({
+    required this.targetId,
+    required this.sourceId,
+    required this.position,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['target_id'] = Variable<int>(targetId);
+    map['source_id'] = Variable<int>(sourceId);
+    map['position'] = Variable<int>(position);
+    return map;
+  }
+
+  ProfileMountsCompanion toCompanion(bool nullToAbsent) {
+    return ProfileMountsCompanion(
+      targetId: Value(targetId),
+      sourceId: Value(sourceId),
+      position: Value(position),
+    );
+  }
+
+  factory ProfileMountRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProfileMountRow(
+      targetId: serializer.fromJson<int>(json['targetId']),
+      sourceId: serializer.fromJson<int>(json['sourceId']),
+      position: serializer.fromJson<int>(json['position']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'targetId': serializer.toJson<int>(targetId),
+      'sourceId': serializer.toJson<int>(sourceId),
+      'position': serializer.toJson<int>(position),
+    };
+  }
+
+  ProfileMountRow copyWith({int? targetId, int? sourceId, int? position}) =>
+      ProfileMountRow(
+        targetId: targetId ?? this.targetId,
+        sourceId: sourceId ?? this.sourceId,
+        position: position ?? this.position,
+      );
+  ProfileMountRow copyWithCompanion(ProfileMountsCompanion data) {
+    return ProfileMountRow(
+      targetId: data.targetId.present ? data.targetId.value : this.targetId,
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      position: data.position.present ? data.position.value : this.position,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileMountRow(')
+          ..write('targetId: $targetId, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('position: $position')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(targetId, sourceId, position);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProfileMountRow &&
+          other.targetId == this.targetId &&
+          other.sourceId == this.sourceId &&
+          other.position == this.position);
+}
+
+class ProfileMountsCompanion extends UpdateCompanion<ProfileMountRow> {
+  final Value<int> targetId;
+  final Value<int> sourceId;
+  final Value<int> position;
+  final Value<int> rowid;
+  const ProfileMountsCompanion({
+    this.targetId = const Value.absent(),
+    this.sourceId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ProfileMountsCompanion.insert({
+    required int targetId,
+    required int sourceId,
+    required int position,
+    this.rowid = const Value.absent(),
+  }) : targetId = Value(targetId),
+       sourceId = Value(sourceId),
+       position = Value(position);
+  static Insertable<ProfileMountRow> custom({
+    Expression<int>? targetId,
+    Expression<int>? sourceId,
+    Expression<int>? position,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (targetId != null) 'target_id': targetId,
+      if (sourceId != null) 'source_id': sourceId,
+      if (position != null) 'position': position,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ProfileMountsCompanion copyWith({
+    Value<int>? targetId,
+    Value<int>? sourceId,
+    Value<int>? position,
+    Value<int>? rowid,
+  }) {
+    return ProfileMountsCompanion(
+      targetId: targetId ?? this.targetId,
+      sourceId: sourceId ?? this.sourceId,
+      position: position ?? this.position,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (targetId.present) {
+      map['target_id'] = Variable<int>(targetId.value);
+    }
+    if (sourceId.present) {
+      map['source_id'] = Variable<int>(sourceId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProfileMountsCompanion(')
+          ..write('targetId: $targetId, ')
+          ..write('sourceId: $sourceId, ')
+          ..write('position: $position, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MountTargetsTable extends MountTargets
+    with TableInfo<$MountTargetsTable, MountTargetRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MountTargetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _targetIdMeta = const VerificationMeta(
+    'targetId',
+  );
+  @override
+  late final GeneratedColumn<int> targetId = GeneratedColumn<int>(
+    'target_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String> groups =
+      GeneratedColumn<String>(
+        'groups',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<List<String>>($MountTargetsTable.$convertergroups);
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<MountOperation?, String> pending =
+      GeneratedColumn<String>(
+        'pending',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      ).withConverter<MountOperation?>($MountTargetsTable.$converterpending);
+  @override
+  List<GeneratedColumn> get $columns => [targetId, groups, version, pending];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mount_targets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MountTargetRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('target_id')) {
+      context.handle(
+        _targetIdMeta,
+        targetId.isAcceptableOrUnknown(data['target_id']!, _targetIdMeta),
+      );
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_versionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {targetId};
+  @override
+  MountTargetRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MountTargetRow(
+      targetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_id'],
+      )!,
+      groups: $MountTargetsTable.$convertergroups.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}groups'],
+        )!,
+      ),
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      pending: $MountTargetsTable.$converterpending.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}pending'],
+        ),
+      ),
+    );
+  }
+
+  @override
+  $MountTargetsTable createAlias(String alias) {
+    return $MountTargetsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<List<String>, String> $convertergroups =
+      const StringListConverter();
+  static TypeConverter<MountOperation?, String?> $converterpending =
+      const MountOperationConverter();
+}
+
+class MountTargetRow extends DataClass implements Insertable<MountTargetRow> {
+  final int targetId;
+  final List<String> groups;
+  final int version;
+  final MountOperation? pending;
+  const MountTargetRow({
+    required this.targetId,
+    required this.groups,
+    required this.version,
+    this.pending,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['target_id'] = Variable<int>(targetId);
+    {
+      map['groups'] = Variable<String>(
+        $MountTargetsTable.$convertergroups.toSql(groups),
+      );
+    }
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || pending != null) {
+      map['pending'] = Variable<String>(
+        $MountTargetsTable.$converterpending.toSql(pending),
+      );
+    }
+    return map;
+  }
+
+  MountTargetsCompanion toCompanion(bool nullToAbsent) {
+    return MountTargetsCompanion(
+      targetId: Value(targetId),
+      groups: Value(groups),
+      version: Value(version),
+      pending: pending == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pending),
+    );
+  }
+
+  factory MountTargetRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MountTargetRow(
+      targetId: serializer.fromJson<int>(json['targetId']),
+      groups: serializer.fromJson<List<String>>(json['groups']),
+      version: serializer.fromJson<int>(json['version']),
+      pending: serializer.fromJson<MountOperation?>(json['pending']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'targetId': serializer.toJson<int>(targetId),
+      'groups': serializer.toJson<List<String>>(groups),
+      'version': serializer.toJson<int>(version),
+      'pending': serializer.toJson<MountOperation?>(pending),
+    };
+  }
+
+  MountTargetRow copyWith({
+    int? targetId,
+    List<String>? groups,
+    int? version,
+    Value<MountOperation?> pending = const Value.absent(),
+  }) => MountTargetRow(
+    targetId: targetId ?? this.targetId,
+    groups: groups ?? this.groups,
+    version: version ?? this.version,
+    pending: pending.present ? pending.value : this.pending,
+  );
+  MountTargetRow copyWithCompanion(MountTargetsCompanion data) {
+    return MountTargetRow(
+      targetId: data.targetId.present ? data.targetId.value : this.targetId,
+      groups: data.groups.present ? data.groups.value : this.groups,
+      version: data.version.present ? data.version.value : this.version,
+      pending: data.pending.present ? data.pending.value : this.pending,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MountTargetRow(')
+          ..write('targetId: $targetId, ')
+          ..write('groups: $groups, ')
+          ..write('version: $version, ')
+          ..write('pending: $pending')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(targetId, groups, version, pending);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MountTargetRow &&
+          other.targetId == this.targetId &&
+          other.groups == this.groups &&
+          other.version == this.version &&
+          other.pending == this.pending);
+}
+
+class MountTargetsCompanion extends UpdateCompanion<MountTargetRow> {
+  final Value<int> targetId;
+  final Value<List<String>> groups;
+  final Value<int> version;
+  final Value<MountOperation?> pending;
+  const MountTargetsCompanion({
+    this.targetId = const Value.absent(),
+    this.groups = const Value.absent(),
+    this.version = const Value.absent(),
+    this.pending = const Value.absent(),
+  });
+  MountTargetsCompanion.insert({
+    this.targetId = const Value.absent(),
+    required List<String> groups,
+    required int version,
+    this.pending = const Value.absent(),
+  }) : groups = Value(groups),
+       version = Value(version);
+  static Insertable<MountTargetRow> custom({
+    Expression<int>? targetId,
+    Expression<String>? groups,
+    Expression<int>? version,
+    Expression<String>? pending,
+  }) {
+    return RawValuesInsertable({
+      if (targetId != null) 'target_id': targetId,
+      if (groups != null) 'groups': groups,
+      if (version != null) 'version': version,
+      if (pending != null) 'pending': pending,
+    });
+  }
+
+  MountTargetsCompanion copyWith({
+    Value<int>? targetId,
+    Value<List<String>>? groups,
+    Value<int>? version,
+    Value<MountOperation?>? pending,
+  }) {
+    return MountTargetsCompanion(
+      targetId: targetId ?? this.targetId,
+      groups: groups ?? this.groups,
+      version: version ?? this.version,
+      pending: pending ?? this.pending,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (targetId.present) {
+      map['target_id'] = Variable<int>(targetId.value);
+    }
+    if (groups.present) {
+      map['groups'] = Variable<String>(
+        $MountTargetsTable.$convertergroups.toSql(groups.value),
+      );
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (pending.present) {
+      map['pending'] = Variable<String>(
+        $MountTargetsTable.$converterpending.toSql(pending.value),
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MountTargetsCompanion(')
+          ..write('targetId: $targetId, ')
+          ..write('groups: $groups, ')
+          ..write('version: $version, ')
+          ..write('pending: $pending')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MountSourceStatusesTable extends MountSourceStatuses
+    with TableInfo<$MountSourceStatusesTable, MountSourceStatusRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MountSourceStatusesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sourceIdMeta = const VerificationMeta(
+    'sourceId',
+  );
+  @override
+  late final GeneratedColumn<int> sourceId = GeneratedColumn<int>(
+    'source_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<MountSourceFailure?, String>
+  failure =
+      GeneratedColumn<String>(
+        'failure',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      ).withConverter<MountSourceFailure?>(
+        $MountSourceStatusesTable.$converterfailuren,
+      );
+  static const VerificationMeta _failedAtMeta = const VerificationMeta(
+    'failedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> failedAt = GeneratedColumn<DateTime>(
+    'failed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _succeededAtMeta = const VerificationMeta(
+    'succeededAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> succeededAt = GeneratedColumn<DateTime>(
+    'succeeded_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    sourceId,
+    failure,
+    failedAt,
+    succeededAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mount_source_statuses';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MountSourceStatusRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('source_id')) {
+      context.handle(
+        _sourceIdMeta,
+        sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    }
+    if (data.containsKey('failed_at')) {
+      context.handle(
+        _failedAtMeta,
+        failedAt.isAcceptableOrUnknown(data['failed_at']!, _failedAtMeta),
+      );
+    }
+    if (data.containsKey('succeeded_at')) {
+      context.handle(
+        _succeededAtMeta,
+        succeededAt.isAcceptableOrUnknown(
+          data['succeeded_at']!,
+          _succeededAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {sourceId};
+  @override
+  MountSourceStatusRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MountSourceStatusRow(
+      sourceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_id'],
+      )!,
+      failure: $MountSourceStatusesTable.$converterfailuren.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}failure'],
+        ),
+      ),
+      failedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}failed_at'],
+      ),
+      succeededAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}succeeded_at'],
+      ),
+    );
+  }
+
+  @override
+  $MountSourceStatusesTable createAlias(String alias) {
+    return $MountSourceStatusesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<MountSourceFailure, String, String>
+  $converterfailure = const EnumNameConverter<MountSourceFailure>(
+    MountSourceFailure.values,
+  );
+  static JsonTypeConverter2<MountSourceFailure?, String?, String?>
+  $converterfailuren = JsonTypeConverter2.asNullable($converterfailure);
+}
+
+class MountSourceStatusRow extends DataClass
+    implements Insertable<MountSourceStatusRow> {
+  final int sourceId;
+  final MountSourceFailure? failure;
+  final DateTime? failedAt;
+  final DateTime? succeededAt;
+  const MountSourceStatusRow({
+    required this.sourceId,
+    this.failure,
+    this.failedAt,
+    this.succeededAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['source_id'] = Variable<int>(sourceId);
+    if (!nullToAbsent || failure != null) {
+      map['failure'] = Variable<String>(
+        $MountSourceStatusesTable.$converterfailuren.toSql(failure),
+      );
+    }
+    if (!nullToAbsent || failedAt != null) {
+      map['failed_at'] = Variable<DateTime>(failedAt);
+    }
+    if (!nullToAbsent || succeededAt != null) {
+      map['succeeded_at'] = Variable<DateTime>(succeededAt);
+    }
+    return map;
+  }
+
+  MountSourceStatusesCompanion toCompanion(bool nullToAbsent) {
+    return MountSourceStatusesCompanion(
+      sourceId: Value(sourceId),
+      failure: failure == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failure),
+      failedAt: failedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failedAt),
+      succeededAt: succeededAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(succeededAt),
+    );
+  }
+
+  factory MountSourceStatusRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MountSourceStatusRow(
+      sourceId: serializer.fromJson<int>(json['sourceId']),
+      failure: $MountSourceStatusesTable.$converterfailuren.fromJson(
+        serializer.fromJson<String?>(json['failure']),
+      ),
+      failedAt: serializer.fromJson<DateTime?>(json['failedAt']),
+      succeededAt: serializer.fromJson<DateTime?>(json['succeededAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'sourceId': serializer.toJson<int>(sourceId),
+      'failure': serializer.toJson<String?>(
+        $MountSourceStatusesTable.$converterfailuren.toJson(failure),
+      ),
+      'failedAt': serializer.toJson<DateTime?>(failedAt),
+      'succeededAt': serializer.toJson<DateTime?>(succeededAt),
+    };
+  }
+
+  MountSourceStatusRow copyWith({
+    int? sourceId,
+    Value<MountSourceFailure?> failure = const Value.absent(),
+    Value<DateTime?> failedAt = const Value.absent(),
+    Value<DateTime?> succeededAt = const Value.absent(),
+  }) => MountSourceStatusRow(
+    sourceId: sourceId ?? this.sourceId,
+    failure: failure.present ? failure.value : this.failure,
+    failedAt: failedAt.present ? failedAt.value : this.failedAt,
+    succeededAt: succeededAt.present ? succeededAt.value : this.succeededAt,
+  );
+  MountSourceStatusRow copyWithCompanion(MountSourceStatusesCompanion data) {
+    return MountSourceStatusRow(
+      sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      failure: data.failure.present ? data.failure.value : this.failure,
+      failedAt: data.failedAt.present ? data.failedAt.value : this.failedAt,
+      succeededAt: data.succeededAt.present
+          ? data.succeededAt.value
+          : this.succeededAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MountSourceStatusRow(')
+          ..write('sourceId: $sourceId, ')
+          ..write('failure: $failure, ')
+          ..write('failedAt: $failedAt, ')
+          ..write('succeededAt: $succeededAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(sourceId, failure, failedAt, succeededAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MountSourceStatusRow &&
+          other.sourceId == this.sourceId &&
+          other.failure == this.failure &&
+          other.failedAt == this.failedAt &&
+          other.succeededAt == this.succeededAt);
+}
+
+class MountSourceStatusesCompanion
+    extends UpdateCompanion<MountSourceStatusRow> {
+  final Value<int> sourceId;
+  final Value<MountSourceFailure?> failure;
+  final Value<DateTime?> failedAt;
+  final Value<DateTime?> succeededAt;
+  const MountSourceStatusesCompanion({
+    this.sourceId = const Value.absent(),
+    this.failure = const Value.absent(),
+    this.failedAt = const Value.absent(),
+    this.succeededAt = const Value.absent(),
+  });
+  MountSourceStatusesCompanion.insert({
+    this.sourceId = const Value.absent(),
+    this.failure = const Value.absent(),
+    this.failedAt = const Value.absent(),
+    this.succeededAt = const Value.absent(),
+  });
+  static Insertable<MountSourceStatusRow> custom({
+    Expression<int>? sourceId,
+    Expression<String>? failure,
+    Expression<DateTime>? failedAt,
+    Expression<DateTime>? succeededAt,
+  }) {
+    return RawValuesInsertable({
+      if (sourceId != null) 'source_id': sourceId,
+      if (failure != null) 'failure': failure,
+      if (failedAt != null) 'failed_at': failedAt,
+      if (succeededAt != null) 'succeeded_at': succeededAt,
+    });
+  }
+
+  MountSourceStatusesCompanion copyWith({
+    Value<int>? sourceId,
+    Value<MountSourceFailure?>? failure,
+    Value<DateTime?>? failedAt,
+    Value<DateTime?>? succeededAt,
+  }) {
+    return MountSourceStatusesCompanion(
+      sourceId: sourceId ?? this.sourceId,
+      failure: failure ?? this.failure,
+      failedAt: failedAt ?? this.failedAt,
+      succeededAt: succeededAt ?? this.succeededAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (sourceId.present) {
+      map['source_id'] = Variable<int>(sourceId.value);
+    }
+    if (failure.present) {
+      map['failure'] = Variable<String>(
+        $MountSourceStatusesTable.$converterfailuren.toSql(failure.value),
+      );
+    }
+    if (failedAt.present) {
+      map['failed_at'] = Variable<DateTime>(failedAt.value);
+    }
+    if (succeededAt.present) {
+      map['succeeded_at'] = Variable<DateTime>(succeededAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MountSourceStatusesCompanion(')
+          ..write('sourceId: $sourceId, ')
+          ..write('failure: $failure, ')
+          ..write('failedAt: $failedAt, ')
+          ..write('succeededAt: $succeededAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$Database extends GeneratedDatabase {
   _$Database(QueryExecutor e) : super(e);
   $DatabaseManager get managers => $DatabaseManager(this);
@@ -5256,6 +6166,10 @@ abstract class _$Database extends GeneratedDatabase {
   late final $ProxyDialersTable proxyDialers = $ProxyDialersTable(this);
   late final $IpQualitiesTable ipQualities = $IpQualitiesTable(this);
   late final $MitmModulesTable mitmModules = $MitmModulesTable(this);
+  late final $ProfileMountsTable profileMounts = $ProfileMountsTable(this);
+  late final $MountTargetsTable mountTargets = $MountTargetsTable(this);
+  late final $MountSourceStatusesTable mountSourceStatuses =
+      $MountSourceStatusesTable(this);
   late final Index idxRuleTarget = Index(
     'idx_rule_target',
     'CREATE INDEX idx_rule_target ON rules (rule_target)',
@@ -5289,6 +6203,7 @@ abstract class _$Database extends GeneratedDatabase {
   );
   late final IpQualitiesDao ipQualitiesDao = IpQualitiesDao(this as Database);
   late final MitmModulesDao mitmModulesDao = MitmModulesDao(this as Database);
+  late final MountsDao mountsDao = MountsDao(this as Database);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5306,6 +6221,9 @@ abstract class _$Database extends GeneratedDatabase {
     proxyDialers,
     ipQualities,
     mitmModules,
+    profileMounts,
+    mountTargets,
+    mountSourceStatuses,
     idxRuleTarget,
     idxRulesProfileOrder,
     idxProxyGroupsProfileOrder,
@@ -5354,6 +6272,34 @@ abstract class _$Database extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('proxy_dialers', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('profile_mounts', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('profile_mounts', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('mount_targets', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('mount_source_statuses', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -5471,6 +6417,83 @@ final class $$ProfilesTableReferences
     ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_proxyDialersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ProfileMountsTable, List<ProfileMountRow>>
+  _mountsAsTargetTable(_$Database db) => MultiTypedResultKey.fromTable(
+    db.profileMounts,
+    aliasName: 'profiles__id__profile_mounts__target_id',
+  );
+
+  $$ProfileMountsTableProcessedTableManager get mountsAsTarget {
+    final manager = $$ProfileMountsTableTableManager(
+      $_db,
+      $_db.profileMounts,
+    ).filter((f) => f.targetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_mountsAsTargetTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ProfileMountsTable, List<ProfileMountRow>>
+  _mountsAsSourceTable(_$Database db) => MultiTypedResultKey.fromTable(
+    db.profileMounts,
+    aliasName: 'profiles__id__profile_mounts__source_id',
+  );
+
+  $$ProfileMountsTableProcessedTableManager get mountsAsSource {
+    final manager = $$ProfileMountsTableTableManager(
+      $_db,
+      $_db.profileMounts,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_mountsAsSourceTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$MountTargetsTable, List<MountTargetRow>>
+  _mountTargetsRefsTable(_$Database db) => MultiTypedResultKey.fromTable(
+    db.mountTargets,
+    aliasName: 'profiles__id__mount_targets__target_id',
+  );
+
+  $$MountTargetsTableProcessedTableManager get mountTargetsRefs {
+    final manager = $$MountTargetsTableTableManager(
+      $_db,
+      $_db.mountTargets,
+    ).filter((f) => f.targetId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_mountTargetsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $MountSourceStatusesTable,
+    List<MountSourceStatusRow>
+  >
+  _mountSourceStatusesRefsTable(_$Database db) => MultiTypedResultKey.fromTable(
+    db.mountSourceStatuses,
+    aliasName: 'profiles__id__mount_source_statuses__source_id',
+  );
+
+  $$MountSourceStatusesTableProcessedTableManager get mountSourceStatusesRefs {
+    final manager = $$MountSourceStatusesTableTableManager(
+      $_db,
+      $_db.mountSourceStatuses,
+    ).filter((f) => f.sourceId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _mountSourceStatusesRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -5672,6 +6695,106 @@ class $$ProfilesTableFilterComposer
           }) => $$ProxyDialersTableFilterComposer(
             $db: $db,
             $table: $db.proxyDialers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> mountsAsTarget(
+    Expression<bool> Function($$ProfileMountsTableFilterComposer f) f,
+  ) {
+    final $$ProfileMountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.profileMounts,
+      getReferencedColumn: (t) => t.targetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfileMountsTableFilterComposer(
+            $db: $db,
+            $table: $db.profileMounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> mountsAsSource(
+    Expression<bool> Function($$ProfileMountsTableFilterComposer f) f,
+  ) {
+    final $$ProfileMountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.profileMounts,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfileMountsTableFilterComposer(
+            $db: $db,
+            $table: $db.profileMounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> mountTargetsRefs(
+    Expression<bool> Function($$MountTargetsTableFilterComposer f) f,
+  ) {
+    final $$MountTargetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.mountTargets,
+      getReferencedColumn: (t) => t.targetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MountTargetsTableFilterComposer(
+            $db: $db,
+            $table: $db.mountTargets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> mountSourceStatusesRefs(
+    Expression<bool> Function($$MountSourceStatusesTableFilterComposer f) f,
+  ) {
+    final $$MountSourceStatusesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.mountSourceStatuses,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MountSourceStatusesTableFilterComposer(
+            $db: $db,
+            $table: $db.mountSourceStatuses,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5957,6 +7080,107 @@ class $$ProfilesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> mountsAsTarget<T extends Object>(
+    Expression<T> Function($$ProfileMountsTableAnnotationComposer a) f,
+  ) {
+    final $$ProfileMountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.profileMounts,
+      getReferencedColumn: (t) => t.targetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfileMountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profileMounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> mountsAsSource<T extends Object>(
+    Expression<T> Function($$ProfileMountsTableAnnotationComposer a) f,
+  ) {
+    final $$ProfileMountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.profileMounts,
+      getReferencedColumn: (t) => t.sourceId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfileMountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profileMounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> mountTargetsRefs<T extends Object>(
+    Expression<T> Function($$MountTargetsTableAnnotationComposer a) f,
+  ) {
+    final $$MountTargetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.mountTargets,
+      getReferencedColumn: (t) => t.targetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MountTargetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.mountTargets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> mountSourceStatusesRefs<T extends Object>(
+    Expression<T> Function($$MountSourceStatusesTableAnnotationComposer a) f,
+  ) {
+    final $$MountSourceStatusesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.mountSourceStatuses,
+          getReferencedColumn: (t) => t.sourceId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$MountSourceStatusesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.mountSourceStatuses,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$ProfilesTableTableManager
@@ -5977,6 +7201,10 @@ class $$ProfilesTableTableManager
             bool disabledRulesRefs,
             bool proxyGroupsRefs,
             bool proxyDialersRefs,
+            bool mountsAsTarget,
+            bool mountsAsSource,
+            bool mountTargetsRefs,
+            bool mountSourceStatusesRefs,
           })
         > {
   $$ProfilesTableTableManager(_$Database db, $ProfilesTable table)
@@ -6082,6 +7310,10 @@ class $$ProfilesTableTableManager
                 disabledRulesRefs = false,
                 proxyGroupsRefs = false,
                 proxyDialersRefs = false,
+                mountsAsTarget = false,
+                mountsAsSource = false,
+                mountTargetsRefs = false,
+                mountSourceStatusesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -6090,6 +7322,10 @@ class $$ProfilesTableTableManager
                     if (disabledRulesRefs) db.disabledRules,
                     if (proxyGroupsRefs) db.proxyGroups,
                     if (proxyDialersRefs) db.proxyDialers,
+                    if (mountsAsTarget) db.profileMounts,
+                    if (mountsAsSource) db.profileMounts,
+                    if (mountTargetsRefs) db.mountTargets,
+                    if (mountSourceStatusesRefs) db.mountSourceStatuses,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -6178,6 +7414,90 @@ class $$ProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (mountsAsTarget)
+                        await $_getPrefetchedData<
+                          RawProfile,
+                          $ProfilesTable,
+                          ProfileMountRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._mountsAsTargetTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).mountsAsTarget,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.targetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (mountsAsSource)
+                        await $_getPrefetchedData<
+                          RawProfile,
+                          $ProfilesTable,
+                          ProfileMountRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._mountsAsSourceTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).mountsAsSource,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (mountTargetsRefs)
+                        await $_getPrefetchedData<
+                          RawProfile,
+                          $ProfilesTable,
+                          MountTargetRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._mountTargetsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).mountTargetsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.targetId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (mountSourceStatusesRefs)
+                        await $_getPrefetchedData<
+                          RawProfile,
+                          $ProfilesTable,
+                          MountSourceStatusRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._mountSourceStatusesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).mountSourceStatusesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sourceId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6203,6 +7523,10 @@ typedef $$ProfilesTableProcessedTableManager =
         bool disabledRulesRefs,
         bool proxyGroupsRefs,
         bool proxyDialersRefs,
+        bool mountsAsTarget,
+        bool mountsAsSource,
+        bool mountTargetsRefs,
+        bool mountSourceStatusesRefs,
       })
     >;
 typedef $$ScriptsTableCreateCompanionBuilder =
@@ -9412,6 +10736,989 @@ typedef $$MitmModulesTableProcessedTableManager =
       RawMitmModule,
       PrefetchHooks Function()
     >;
+typedef $$ProfileMountsTableCreateCompanionBuilder =
+    ProfileMountsCompanion Function({
+      required int targetId,
+      required int sourceId,
+      required int position,
+      Value<int> rowid,
+    });
+typedef $$ProfileMountsTableUpdateCompanionBuilder =
+    ProfileMountsCompanion Function({
+      Value<int> targetId,
+      Value<int> sourceId,
+      Value<int> position,
+      Value<int> rowid,
+    });
+
+final class $$ProfileMountsTableReferences
+    extends BaseReferences<_$Database, $ProfileMountsTable, ProfileMountRow> {
+  $$ProfileMountsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ProfilesTable _targetIdTable(_$Database db) =>
+      db.profiles.createAlias('profile_mounts__target_id__profiles__id');
+
+  $$ProfilesTableProcessedTableManager get targetId {
+    final $_column = $_itemColumn<int>('target_id')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_targetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ProfilesTable _sourceIdTable(_$Database db) =>
+      db.profiles.createAlias('profile_mounts__source_id__profiles__id');
+
+  $$ProfilesTableProcessedTableManager get sourceId {
+    final $_column = $_itemColumn<int>('source_id')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ProfileMountsTableFilterComposer
+    extends Composer<_$Database, $ProfileMountsTable> {
+  $$ProfileMountsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get targetId {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProfilesTableFilterComposer get sourceId {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ProfileMountsTableOrderingComposer
+    extends Composer<_$Database, $ProfileMountsTable> {
+  $$ProfileMountsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get targetId {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProfilesTableOrderingComposer get sourceId {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ProfileMountsTableAnnotationComposer
+    extends Composer<_$Database, $ProfileMountsTable> {
+  $$ProfileMountsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  $$ProfilesTableAnnotationComposer get targetId {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProfilesTableAnnotationComposer get sourceId {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ProfileMountsTableTableManager
+    extends
+        RootTableManager<
+          _$Database,
+          $ProfileMountsTable,
+          ProfileMountRow,
+          $$ProfileMountsTableFilterComposer,
+          $$ProfileMountsTableOrderingComposer,
+          $$ProfileMountsTableAnnotationComposer,
+          $$ProfileMountsTableCreateCompanionBuilder,
+          $$ProfileMountsTableUpdateCompanionBuilder,
+          (ProfileMountRow, $$ProfileMountsTableReferences),
+          ProfileMountRow,
+          PrefetchHooks Function({bool targetId, bool sourceId})
+        > {
+  $$ProfileMountsTableTableManager(_$Database db, $ProfileMountsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ProfileMountsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ProfileMountsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ProfileMountsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> targetId = const Value.absent(),
+                Value<int> sourceId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ProfileMountsCompanion(
+                targetId: targetId,
+                sourceId: sourceId,
+                position: position,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int targetId,
+                required int sourceId,
+                required int position,
+                Value<int> rowid = const Value.absent(),
+              }) => ProfileMountsCompanion.insert(
+                targetId: targetId,
+                sourceId: sourceId,
+                position: position,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ProfileMountsTable, ProfileMountRow>(table),
+                  $$ProfileMountsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({targetId = false, sourceId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (targetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.targetId,
+                                referencedTable: $$ProfileMountsTableReferences
+                                    ._targetIdTable(db),
+                                referencedColumn: $$ProfileMountsTableReferences
+                                    ._targetIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (sourceId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.sourceId,
+                                referencedTable: $$ProfileMountsTableReferences
+                                    ._sourceIdTable(db),
+                                referencedColumn: $$ProfileMountsTableReferences
+                                    ._sourceIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ProfileMountsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$Database,
+      $ProfileMountsTable,
+      ProfileMountRow,
+      $$ProfileMountsTableFilterComposer,
+      $$ProfileMountsTableOrderingComposer,
+      $$ProfileMountsTableAnnotationComposer,
+      $$ProfileMountsTableCreateCompanionBuilder,
+      $$ProfileMountsTableUpdateCompanionBuilder,
+      (ProfileMountRow, $$ProfileMountsTableReferences),
+      ProfileMountRow,
+      PrefetchHooks Function({bool targetId, bool sourceId})
+    >;
+typedef $$MountTargetsTableCreateCompanionBuilder =
+    MountTargetsCompanion Function({
+      Value<int> targetId,
+      required List<String> groups,
+      required int version,
+      Value<MountOperation?> pending,
+    });
+typedef $$MountTargetsTableUpdateCompanionBuilder =
+    MountTargetsCompanion Function({
+      Value<int> targetId,
+      Value<List<String>> groups,
+      Value<int> version,
+      Value<MountOperation?> pending,
+    });
+
+final class $$MountTargetsTableReferences
+    extends BaseReferences<_$Database, $MountTargetsTable, MountTargetRow> {
+  $$MountTargetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProfilesTable _targetIdTable(_$Database db) =>
+      db.profiles.createAlias('mount_targets__target_id__profiles__id');
+
+  $$ProfilesTableProcessedTableManager get targetId {
+    final $_column = $_itemColumn<int>('target_id')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_targetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MountTargetsTableFilterComposer
+    extends Composer<_$Database, $MountTargetsTable> {
+  $$MountTargetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+  get groups => $composableBuilder(
+    column: $table.groups,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<MountOperation?, MountOperation, String>
+  get pending => $composableBuilder(
+    column: $table.pending,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get targetId {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MountTargetsTableOrderingComposer
+    extends Composer<_$Database, $MountTargetsTable> {
+  $$MountTargetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get groups => $composableBuilder(
+    column: $table.groups,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get pending => $composableBuilder(
+    column: $table.pending,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get targetId {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MountTargetsTableAnnotationComposer
+    extends Composer<_$Database, $MountTargetsTable> {
+  $$MountTargetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<List<String>, String> get groups =>
+      $composableBuilder(column: $table.groups, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<MountOperation?, String> get pending =>
+      $composableBuilder(column: $table.pending, builder: (column) => column);
+
+  $$ProfilesTableAnnotationComposer get targetId {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MountTargetsTableTableManager
+    extends
+        RootTableManager<
+          _$Database,
+          $MountTargetsTable,
+          MountTargetRow,
+          $$MountTargetsTableFilterComposer,
+          $$MountTargetsTableOrderingComposer,
+          $$MountTargetsTableAnnotationComposer,
+          $$MountTargetsTableCreateCompanionBuilder,
+          $$MountTargetsTableUpdateCompanionBuilder,
+          (MountTargetRow, $$MountTargetsTableReferences),
+          MountTargetRow,
+          PrefetchHooks Function({bool targetId})
+        > {
+  $$MountTargetsTableTableManager(_$Database db, $MountTargetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MountTargetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MountTargetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MountTargetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> targetId = const Value.absent(),
+                Value<List<String>> groups = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<MountOperation?> pending = const Value.absent(),
+              }) => MountTargetsCompanion(
+                targetId: targetId,
+                groups: groups,
+                version: version,
+                pending: pending,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> targetId = const Value.absent(),
+                required List<String> groups,
+                required int version,
+                Value<MountOperation?> pending = const Value.absent(),
+              }) => MountTargetsCompanion.insert(
+                targetId: targetId,
+                groups: groups,
+                version: version,
+                pending: pending,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MountTargetsTable, MountTargetRow>(table),
+                  $$MountTargetsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({targetId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (targetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.targetId,
+                                referencedTable: $$MountTargetsTableReferences
+                                    ._targetIdTable(db),
+                                referencedColumn: $$MountTargetsTableReferences
+                                    ._targetIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MountTargetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$Database,
+      $MountTargetsTable,
+      MountTargetRow,
+      $$MountTargetsTableFilterComposer,
+      $$MountTargetsTableOrderingComposer,
+      $$MountTargetsTableAnnotationComposer,
+      $$MountTargetsTableCreateCompanionBuilder,
+      $$MountTargetsTableUpdateCompanionBuilder,
+      (MountTargetRow, $$MountTargetsTableReferences),
+      MountTargetRow,
+      PrefetchHooks Function({bool targetId})
+    >;
+typedef $$MountSourceStatusesTableCreateCompanionBuilder =
+    MountSourceStatusesCompanion Function({
+      Value<int> sourceId,
+      Value<MountSourceFailure?> failure,
+      Value<DateTime?> failedAt,
+      Value<DateTime?> succeededAt,
+    });
+typedef $$MountSourceStatusesTableUpdateCompanionBuilder =
+    MountSourceStatusesCompanion Function({
+      Value<int> sourceId,
+      Value<MountSourceFailure?> failure,
+      Value<DateTime?> failedAt,
+      Value<DateTime?> succeededAt,
+    });
+
+final class $$MountSourceStatusesTableReferences
+    extends
+        BaseReferences<
+          _$Database,
+          $MountSourceStatusesTable,
+          MountSourceStatusRow
+        > {
+  $$MountSourceStatusesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ProfilesTable _sourceIdTable(_$Database db) =>
+      db.profiles.createAlias('mount_source_statuses__source_id__profiles__id');
+
+  $$ProfilesTableProcessedTableManager get sourceId {
+    final $_column = $_itemColumn<int>('source_id')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MountSourceStatusesTableFilterComposer
+    extends Composer<_$Database, $MountSourceStatusesTable> {
+  $$MountSourceStatusesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnWithTypeConverterFilters<
+    MountSourceFailure?,
+    MountSourceFailure,
+    String
+  >
+  get failure => $composableBuilder(
+    column: $table.failure,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<DateTime> get failedAt => $composableBuilder(
+    column: $table.failedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get succeededAt => $composableBuilder(
+    column: $table.succeededAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get sourceId {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MountSourceStatusesTableOrderingComposer
+    extends Composer<_$Database, $MountSourceStatusesTable> {
+  $$MountSourceStatusesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get failure => $composableBuilder(
+    column: $table.failure,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get failedAt => $composableBuilder(
+    column: $table.failedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get succeededAt => $composableBuilder(
+    column: $table.succeededAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get sourceId {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MountSourceStatusesTableAnnotationComposer
+    extends Composer<_$Database, $MountSourceStatusesTable> {
+  $$MountSourceStatusesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumnWithTypeConverter<MountSourceFailure?, String> get failure =>
+      $composableBuilder(column: $table.failure, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get failedAt =>
+      $composableBuilder(column: $table.failedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get succeededAt => $composableBuilder(
+    column: $table.succeededAt,
+    builder: (column) => column,
+  );
+
+  $$ProfilesTableAnnotationComposer get sourceId {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MountSourceStatusesTableTableManager
+    extends
+        RootTableManager<
+          _$Database,
+          $MountSourceStatusesTable,
+          MountSourceStatusRow,
+          $$MountSourceStatusesTableFilterComposer,
+          $$MountSourceStatusesTableOrderingComposer,
+          $$MountSourceStatusesTableAnnotationComposer,
+          $$MountSourceStatusesTableCreateCompanionBuilder,
+          $$MountSourceStatusesTableUpdateCompanionBuilder,
+          (MountSourceStatusRow, $$MountSourceStatusesTableReferences),
+          MountSourceStatusRow,
+          PrefetchHooks Function({bool sourceId})
+        > {
+  $$MountSourceStatusesTableTableManager(
+    _$Database db,
+    $MountSourceStatusesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MountSourceStatusesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MountSourceStatusesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$MountSourceStatusesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> sourceId = const Value.absent(),
+                Value<MountSourceFailure?> failure = const Value.absent(),
+                Value<DateTime?> failedAt = const Value.absent(),
+                Value<DateTime?> succeededAt = const Value.absent(),
+              }) => MountSourceStatusesCompanion(
+                sourceId: sourceId,
+                failure: failure,
+                failedAt: failedAt,
+                succeededAt: succeededAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> sourceId = const Value.absent(),
+                Value<MountSourceFailure?> failure = const Value.absent(),
+                Value<DateTime?> failedAt = const Value.absent(),
+                Value<DateTime?> succeededAt = const Value.absent(),
+              }) => MountSourceStatusesCompanion.insert(
+                sourceId: sourceId,
+                failure: failure,
+                failedAt: failedAt,
+                succeededAt: succeededAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MountSourceStatusesTable, MountSourceStatusRow>(
+                    table,
+                  ),
+                  $$MountSourceStatusesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({sourceId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (sourceId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.sourceId,
+                                referencedTable:
+                                    $$MountSourceStatusesTableReferences
+                                        ._sourceIdTable(db),
+                                referencedColumn:
+                                    $$MountSourceStatusesTableReferences
+                                        ._sourceIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MountSourceStatusesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$Database,
+      $MountSourceStatusesTable,
+      MountSourceStatusRow,
+      $$MountSourceStatusesTableFilterComposer,
+      $$MountSourceStatusesTableOrderingComposer,
+      $$MountSourceStatusesTableAnnotationComposer,
+      $$MountSourceStatusesTableCreateCompanionBuilder,
+      $$MountSourceStatusesTableUpdateCompanionBuilder,
+      (MountSourceStatusRow, $$MountSourceStatusesTableReferences),
+      MountSourceStatusRow,
+      PrefetchHooks Function({bool sourceId})
+    >;
 
 class $DatabaseManager {
   final _$Database _db;
@@ -9440,6 +11747,12 @@ class $DatabaseManager {
       $$IpQualitiesTableTableManager(_db, _db.ipQualities);
   $$MitmModulesTableTableManager get mitmModules =>
       $$MitmModulesTableTableManager(_db, _db.mitmModules);
+  $$ProfileMountsTableTableManager get profileMounts =>
+      $$ProfileMountsTableTableManager(_db, _db.profileMounts);
+  $$MountTargetsTableTableManager get mountTargets =>
+      $$MountTargetsTableTableManager(_db, _db.mountTargets);
+  $$MountSourceStatusesTableTableManager get mountSourceStatuses =>
+      $$MountSourceStatusesTableTableManager(_db, _db.mountSourceStatuses);
 }
 
 mixin _$ProfilesDaoMixin on DatabaseAccessor<Database> {
@@ -9590,4 +11903,29 @@ class MitmModulesDaoManager {
   MitmModulesDaoManager(this._db);
   $$MitmModulesTableTableManager get mitmModules =>
       $$MitmModulesTableTableManager(_db.attachedDatabase, _db.mitmModules);
+}
+
+mixin _$MountsDaoMixin on DatabaseAccessor<Database> {
+  $ProfilesTable get profiles => attachedDatabase.profiles;
+  $ProfileMountsTable get profileMounts => attachedDatabase.profileMounts;
+  $MountTargetsTable get mountTargets => attachedDatabase.mountTargets;
+  $MountSourceStatusesTable get mountSourceStatuses =>
+      attachedDatabase.mountSourceStatuses;
+  MountsDaoManager get managers => MountsDaoManager(this);
+}
+
+class MountsDaoManager {
+  final _$MountsDaoMixin _db;
+  MountsDaoManager(this._db);
+  $$ProfilesTableTableManager get profiles =>
+      $$ProfilesTableTableManager(_db.attachedDatabase, _db.profiles);
+  $$ProfileMountsTableTableManager get profileMounts =>
+      $$ProfileMountsTableTableManager(_db.attachedDatabase, _db.profileMounts);
+  $$MountTargetsTableTableManager get mountTargets =>
+      $$MountTargetsTableTableManager(_db.attachedDatabase, _db.mountTargets);
+  $$MountSourceStatusesTableTableManager get mountSourceStatuses =>
+      $$MountSourceStatusesTableTableManager(
+        _db.attachedDatabase,
+        _db.mountSourceStatuses,
+      );
 }

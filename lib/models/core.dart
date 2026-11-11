@@ -13,6 +13,7 @@ abstract class SetupParams with _$SetupParams {
     @JsonKey(name: 'selected-map') required Map<String, String> selectedMap,
     required CoreOptions options,
     @JsonKey(includeIfNull: false) TailscaleSetup? tailscale,
+    @JsonKey(includeIfNull: false) MountSetup? mounts,
   }) = _SetupParams;
 
   factory SetupParams.fromJson(Map<String, dynamic> json) =>

@@ -15,6 +15,9 @@ _SetupParams _$SetupParamsFromJson(Map<String, dynamic> json) => _SetupParams(
   tailscale: json['tailscale'] == null
       ? null
       : TailscaleSetup.fromJson(json['tailscale'] as Map<String, dynamic>),
+  mounts: json['mounts'] == null
+      ? null
+      : MountSetup.fromJson(json['mounts'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$SetupParamsToJson(_SetupParams instance) =>
@@ -23,6 +26,7 @@ Map<String, dynamic> _$SetupParamsToJson(_SetupParams instance) =>
       'selected-map': instance.selectedMap,
       'options': instance.options,
       'tailscale': ?instance.tailscale,
+      'mounts': ?instance.mounts,
     };
 
 _CoreOptions _$CoreOptionsFromJson(Map<String, dynamic> json) => _CoreOptions(

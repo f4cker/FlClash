@@ -1004,3 +1004,8 @@ enum CoreStatus { connecting, connected, disconnected }
 enum RequestFeed { recent, live }
 
 enum UpdatingScope { core, local }
+
+/// Why the last update of a mounted subscription did not land.
+enum MountSourceFailure { fetch, unsupported }
+
+enum MountOperationKind { save, deleteSource, unknown }

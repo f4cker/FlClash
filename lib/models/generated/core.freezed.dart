@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SetupParams {
 
-@JsonKey(includeIfNull: false) SetupBase? get base;@JsonKey(name: 'selected-map') Map<String, String> get selectedMap; CoreOptions get options;@JsonKey(includeIfNull: false) TailscaleSetup? get tailscale;
+@JsonKey(includeIfNull: false) SetupBase? get base;@JsonKey(name: 'selected-map') Map<String, String> get selectedMap; CoreOptions get options;@JsonKey(includeIfNull: false) TailscaleSetup? get tailscale;@JsonKey(includeIfNull: false) MountSetup? get mounts;
 /// Create a copy of SetupParams
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $SetupParamsCopyWith<SetupParams> get copyWith => _$SetupParamsCopyWithImpl<Setu
 @override
 bool operator ==(Object other) {
   final _this = this as SetupParams;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SetupParams&&(identical(other.base, _this.base) || other.base == _this.base)&&const DeepCollectionEquality().equals(other.selectedMap, _this.selectedMap)&&(identical(other.options, _this.options) || other.options == _this.options)&&(identical(other.tailscale, _this.tailscale) || other.tailscale == _this.tailscale));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SetupParams&&(identical(other.base, _this.base) || other.base == _this.base)&&const DeepCollectionEquality().equals(other.selectedMap, _this.selectedMap)&&(identical(other.options, _this.options) || other.options == _this.options)&&(identical(other.tailscale, _this.tailscale) || other.tailscale == _this.tailscale)&&(identical(other.mounts, _this.mounts) || other.mounts == _this.mounts));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as SetupParams;
-  return Object.hash(runtimeType,_this.base,const DeepCollectionEquality().hash(_this.selectedMap),_this.options,_this.tailscale);
+  return Object.hash(runtimeType,_this.base,const DeepCollectionEquality().hash(_this.selectedMap),_this.options,_this.tailscale,_this.mounts);
 }
 
 @override
 String toString() {
   final _this = this as SetupParams;
-  return 'SetupParams(base: ${_this.base}, selectedMap: ${_this.selectedMap}, options: ${_this.options}, tailscale: ${_this.tailscale})';
+  return 'SetupParams(base: ${_this.base}, selectedMap: ${_this.selectedMap}, options: ${_this.options}, tailscale: ${_this.tailscale}, mounts: ${_this.mounts})';
 }
 
 
@@ -54,11 +54,11 @@ abstract mixin class $SetupParamsCopyWith<$Res>  {
   factory $SetupParamsCopyWith(SetupParams value, $Res Function(SetupParams) _then) = _$SetupParamsCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(includeIfNull: false) SetupBase? base,@JsonKey(name: 'selected-map') Map<String, String> selectedMap, CoreOptions options,@JsonKey(includeIfNull: false) TailscaleSetup? tailscale
+@JsonKey(includeIfNull: false) SetupBase? base,@JsonKey(name: 'selected-map') Map<String, String> selectedMap, CoreOptions options,@JsonKey(includeIfNull: false) TailscaleSetup? tailscale,@JsonKey(includeIfNull: false) MountSetup? mounts
 });
 
 
-$SetupBaseCopyWith<$Res>? get base;$CoreOptionsCopyWith<$Res> get options;$TailscaleSetupCopyWith<$Res>? get tailscale;
+$SetupBaseCopyWith<$Res>? get base;$CoreOptionsCopyWith<$Res> get options;$TailscaleSetupCopyWith<$Res>? get tailscale;$MountSetupCopyWith<$Res>? get mounts;
 
 }
 /// @nodoc
@@ -71,13 +71,14 @@ class _$SetupParamsCopyWithImpl<$Res>
 
 /// Create a copy of SetupParams
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? base = freezed,Object? selectedMap = null,Object? options = null,Object? tailscale = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? base = freezed,Object? selectedMap = null,Object? options = null,Object? tailscale = freezed,Object? mounts = freezed,}) {
   return _then(SetupParams(
 base: freezed == base ? _self.base : base // ignore: cast_nullable_to_non_nullable
 as SetupBase?,selectedMap: null == selectedMap ? _self.selectedMap : selectedMap // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
 as CoreOptions,tailscale: freezed == tailscale ? _self.tailscale : tailscale // ignore: cast_nullable_to_non_nullable
-as TailscaleSetup?,
+as TailscaleSetup?,mounts: freezed == mounts ? _self.mounts : mounts // ignore: cast_nullable_to_non_nullable
+as MountSetup?,
   ));
 }
 /// Create a copy of SetupParams
@@ -112,6 +113,18 @@ $TailscaleSetupCopyWith<$Res>? get tailscale {
 
   return $TailscaleSetupCopyWith<$Res>(_self.tailscale!, (value) {
     return _then(_self.copyWith(tailscale: value));
+  });
+}/// Create a copy of SetupParams
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountSetupCopyWith<$Res>? get mounts {
+    if (_self.mounts == null) {
+    return null;
+  }
+
+  return $MountSetupCopyWith<$Res>(_self.mounts!, (value) {
+    return _then(_self.copyWith(mounts: value));
   });
 }
 }
@@ -195,10 +208,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SetupParams() when $default != null:
-return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale);case _:
+return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts);case _:
   return orElse();
 
 }
@@ -216,10 +229,10 @@ return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale);case
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts)  $default,) {final _that = this;
 switch (_that) {
 case _SetupParams():
-return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale);case _:
+return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -236,10 +249,10 @@ return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale);case
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts)?  $default,) {final _that = this;
 switch (_that) {
 case _SetupParams() when $default != null:
-return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale);case _:
+return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts);case _:
   return null;
 
 }
@@ -251,7 +264,7 @@ return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale);case
 @JsonSerializable()
 
 class _SetupParams implements SetupParams {
-  const _SetupParams({@JsonKey(includeIfNull: false) this.base, @JsonKey(name: 'selected-map') required  Map<String, String> selectedMap, required this.options, @JsonKey(includeIfNull: false) this.tailscale}): _selectedMap = selectedMap;
+  const _SetupParams({@JsonKey(includeIfNull: false) this.base, @JsonKey(name: 'selected-map') required  Map<String, String> selectedMap, required this.options, @JsonKey(includeIfNull: false) this.tailscale, @JsonKey(includeIfNull: false) this.mounts}): _selectedMap = selectedMap;
   factory _SetupParams.fromJson(Map<String, dynamic> json) => _$SetupParamsFromJson(json);
 
 @override@JsonKey(includeIfNull: false) final  SetupBase? base;
@@ -264,6 +277,7 @@ class _SetupParams implements SetupParams {
 
 @override final  CoreOptions options;
 @override@JsonKey(includeIfNull: false) final  TailscaleSetup? tailscale;
+@override@JsonKey(includeIfNull: false) final  MountSetup? mounts;
 
 /// Create a copy of SetupParams
 /// with the given fields replaced by the non-null parameter values.
@@ -278,18 +292,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _SetupParams&&(identical(other.base, base) || other.base == base)&&const DeepCollectionEquality().equals(other.selectedMap, _selectedMap)&&(identical(other.options, options) || other.options == options)&&(identical(other.tailscale, tailscale) || other.tailscale == tailscale));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _SetupParams&&(identical(other.base, base) || other.base == base)&&const DeepCollectionEquality().equals(other.selectedMap, _selectedMap)&&(identical(other.options, options) || other.options == options)&&(identical(other.tailscale, tailscale) || other.tailscale == tailscale)&&(identical(other.mounts, mounts) || other.mounts == mounts));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,base,const DeepCollectionEquality().hash(_selectedMap),options,tailscale);
+    return Object.hash(runtimeType,base,const DeepCollectionEquality().hash(_selectedMap),options,tailscale,mounts);
 }
 
 @override
 String toString() {
-    return 'SetupParams(base: $base, selectedMap: $selectedMap, options: $options, tailscale: $tailscale)';
+    return 'SetupParams(base: $base, selectedMap: $selectedMap, options: $options, tailscale: $tailscale, mounts: $mounts)';
 }
 
 
@@ -300,11 +314,11 @@ abstract mixin class _$SetupParamsCopyWith<$Res> implements $SetupParamsCopyWith
   factory _$SetupParamsCopyWith(_SetupParams value, $Res Function(_SetupParams) _then) = __$SetupParamsCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(includeIfNull: false) SetupBase? base,@JsonKey(name: 'selected-map') Map<String, String> selectedMap, CoreOptions options,@JsonKey(includeIfNull: false) TailscaleSetup? tailscale
+@JsonKey(includeIfNull: false) SetupBase? base,@JsonKey(name: 'selected-map') Map<String, String> selectedMap, CoreOptions options,@JsonKey(includeIfNull: false) TailscaleSetup? tailscale,@JsonKey(includeIfNull: false) MountSetup? mounts
 });
 
 
-@override $SetupBaseCopyWith<$Res>? get base;@override $CoreOptionsCopyWith<$Res> get options;@override $TailscaleSetupCopyWith<$Res>? get tailscale;
+@override $SetupBaseCopyWith<$Res>? get base;@override $CoreOptionsCopyWith<$Res> get options;@override $TailscaleSetupCopyWith<$Res>? get tailscale;@override $MountSetupCopyWith<$Res>? get mounts;
 
 }
 /// @nodoc
@@ -317,13 +331,14 @@ class __$SetupParamsCopyWithImpl<$Res>
 
 /// Create a copy of SetupParams
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? base = freezed,Object? selectedMap = null,Object? options = null,Object? tailscale = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? base = freezed,Object? selectedMap = null,Object? options = null,Object? tailscale = freezed,Object? mounts = freezed,}) {
   return _then(_SetupParams(
 base: freezed == base ? _self.base : base // ignore: cast_nullable_to_non_nullable
 as SetupBase?,selectedMap: null == selectedMap ? _self._selectedMap : selectedMap // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
 as CoreOptions,tailscale: freezed == tailscale ? _self.tailscale : tailscale // ignore: cast_nullable_to_non_nullable
-as TailscaleSetup?,
+as TailscaleSetup?,mounts: freezed == mounts ? _self.mounts : mounts // ignore: cast_nullable_to_non_nullable
+as MountSetup?,
   ));
 }
 
@@ -359,6 +374,18 @@ $TailscaleSetupCopyWith<$Res>? get tailscale {
 
   return $TailscaleSetupCopyWith<$Res>(_self.tailscale!, (value) {
     return _then(_self.copyWith(tailscale: value));
+  });
+}/// Create a copy of SetupParams
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MountSetupCopyWith<$Res>? get mounts {
+    if (_self.mounts == null) {
+    return null;
+  }
+
+  return $MountSetupCopyWith<$Res>(_self.mounts!, (value) {
+    return _then(_self.copyWith(mounts: value));
   });
 }
 }

@@ -165,6 +165,43 @@ abstract class CoreHandlerInterface {
     );
   }
 
+  Future<MountSourceInspection> inspectMountSource(String path) {
+    return _query(
+      CoreMethod.mountInspectSource,
+      _model(MountSourceInspection.fromJson),
+      arguments: {'path': path},
+    );
+  }
+
+  /// [base] for a custom profile, [config] for the built text of any other.
+  Future<MountTarget> inspectMountTarget({SetupBase? base, String? config}) {
+    return _query(
+      CoreMethod.mountInspectTarget,
+      _model(MountTarget.fromJson),
+      arguments: {'base': ?base?.toJson(), 'config': ?config},
+    );
+  }
+
+  Future<MountPreflight> preflightMounts({
+    SetupBase? base,
+    String? config,
+    required MountSetup mounts,
+  }) {
+    return _query(
+      CoreMethod.mountPreflight,
+      _model(MountPreflight.fromJson),
+      arguments: {
+        'base': ?base?.toJson(),
+        'config': ?config,
+        'mounts': mounts.toJson(),
+      },
+    );
+  }
+
+  Future<MountRuntimeState> getMountState() {
+    return _query(CoreMethod.mountState, _model(MountRuntimeState.fromJson));
+  }
+
   Future<ProxiesData> getProxies() {
     return _query(CoreMethod.proxyList, _model(ProxiesData.fromJson));
   }
