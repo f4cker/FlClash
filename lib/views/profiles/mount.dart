@@ -733,6 +733,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
             refreshUnconfirmed: _refreshUnconfirmed.contains(item.profile.id),
             refusal: _refused[item.profile.id],
             run: run,
+            blockSettled: _result == _Result.applyBlocked && _blockSettled,
             onChanged: interactive
                 ? (value) => _toggleSource(item, value)
                 : null,
@@ -1380,6 +1381,7 @@ class MountSourceRow extends StatelessWidget {
     required this.onRefresh,
     this.refusal,
     this.run = MountRunState.confirmed,
+    this.blockSettled = false,
   });
 
   final MountSourceItem item;
@@ -1391,6 +1393,7 @@ class MountSourceRow extends StatelessWidget {
   final VoidCallback? onRefresh;
   final MountRefreshRefusal? refusal;
   final MountRunState run;
+  final bool blockSettled;
 
   bool get _faded => !item.state.mountable && !item.mounted;
 
@@ -1440,9 +1443,12 @@ class MountSourceRow extends StatelessWidget {
     return switch (item.state) {
       MountSourceState.nodes => [
         (
-          blocked
-              ? appLocalizations.mountUpdateReadNotAppliedBlocked
-              : appLocalizations.mountUpdateReadNotAppliedKept,
+          switch ((blocked, blockSettled)) {
+            (true, true) =>
+              appLocalizations.mountUpdateReadNotAppliedBlockedConfirmed,
+            (true, false) => appLocalizations.mountUpdateReadNotAppliedBlocked,
+            _ => appLocalizations.mountUpdateReadNotAppliedKept,
+          },
           blocked,
         ),
       ],
@@ -1455,9 +1461,11 @@ class MountSourceRow extends StatelessWidget {
   }
 
   (String, bool) _running(AppLocalizations appLocalizations, bool blocked) => (
-    blocked
-        ? appLocalizations.mountRunningBlocked
-        : appLocalizations.mountRunningKept,
+    switch ((blocked, blockSettled)) {
+      (true, true) => appLocalizations.mountRunningBlockedConfirmed,
+      (true, false) => appLocalizations.mountRunningBlocked,
+      _ => appLocalizations.mountRunningKept,
+    },
     blocked,
   );
 

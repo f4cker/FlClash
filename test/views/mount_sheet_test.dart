@@ -1252,6 +1252,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(mounts.rechecks, 2);
     expect(find.text(l10n.mountApplyBlocked), findsNothing);
+    expect(find.text(l10n.mountUpdateReadNotAppliedBlocked), findsNothing);
+    final settled = tester.widget<Text>(
+      find.descendant(
+        of: rowOf('Air'),
+        matching: find.text(l10n.mountUpdateReadNotAppliedBlockedConfirmed),
+      ),
+    );
+    expect(settled.style?.color, colorScheme.error);
     final confirmed = find.ancestor(
       of: find.text(l10n.mountApplyBlockedConfirmed),
       matching: find.byType(MountBanner),
@@ -1388,6 +1396,41 @@ void main() {
     expect(inRow(find.text(l10n.mountRunningKept)), findsOne);
     expect(inRow(find.text(l10n.mountSourceEmpty)), findsNothing);
     expect(inRow(find.text(readDetail(tester, 0))), findsOne);
+  });
+
+  testWidgets('an empty list read under a block says the block is confirmed '
+      'only once a status read settles it', (tester) async {
+    final empty = item(
+      air,
+      state: MountSourceState.empty,
+      count: 0,
+      mounted: true,
+    );
+    final mounts = await refreshWith(
+      tester,
+      MountSourceRefresh(
+        updated: true,
+        item: empty,
+        application: MountSaveOutcome.applyFailedBlocked,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = currentAppLocalizations;
+    Finder inRow(Finder matching) =>
+        find.descendant(of: rowOf('Air'), matching: matching);
+
+    expect(inRow(find.text(l10n.mountUpdateReadEmptyNotApplied)), findsOne);
+    expect(inRow(find.text(l10n.mountRunningBlocked)), findsOne);
+    expect(inRow(find.text(l10n.mountRunningBlockedConfirmed)), findsNothing);
+
+    mounts
+      ..panel = mounts.panel!.copyWith(sources: [empty])
+      ..recheckOutcome = MountSaveOutcome.applyFailedBlocked;
+    await tester.tap(find.text(l10n.mountReadStatus));
+    await tester.pumpAndSettle();
+    expect(inRow(find.text(l10n.mountUpdateReadEmptyNotApplied)), findsOne);
+    expect(inRow(find.text(l10n.mountRunningBlockedConfirmed)), findsOne);
+    expect(inRow(find.text(l10n.mountRunningBlocked)), findsNothing);
   });
 
   testWidgets('a failed fetch is no read-but-not-applied state', (

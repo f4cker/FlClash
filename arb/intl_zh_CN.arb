@@ -1452,9 +1452,11 @@
   "mountNodesReadAt": "节点读取时间：{time}",
   "mountUpdateReadNotAppliedKept": "新节点已读取，但尚未应用。仍使用上次确认的运行配置。",
   "mountUpdateReadNotAppliedBlocked": "新节点已读取，但尚未应用。Flash 当前会拒绝所有经它转发的连接，请重新读取状态。",
+  "mountUpdateReadNotAppliedBlockedConfirmed": "新节点已读取，但尚未应用。Flash 当前仍会拒绝所有经它转发的连接。",
   "mountUpdateReadEmptyNotApplied": "订阅已读取，目前没有节点。新结果尚未应用。",
   "mountRunningKept": "仍使用上次确认的运行配置。",
   "mountRunningBlocked": "Flash 当前会拒绝所有经它转发的连接，请重新读取状态。",
+  "mountRunningBlockedConfirmed": "Flash 当前仍会拒绝所有经它转发的连接。",
   "mountProviderUpdateRefused": "“{name}”的新内容已读取，但未通过挂载隔离检查，未应用；仍使用此前确认的内容。",
   "mountProviderUpdateRefusedUnconfirmed": "“{name}”的新内容已读取，但未通过挂载隔离检查，未应用；当前使用状态待确认，请重新读取状态。",
   "mountUnsupportedExcluded": "为保持 Tailscale 分流隔离，已排除 {count} 个暂不支持挂载的订阅节点，原设置未更改。"

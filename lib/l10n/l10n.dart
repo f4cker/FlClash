@@ -12692,6 +12692,16 @@ class AppLocalizations {
     );
   }
 
+  /// `New nodes were read but have not been applied. Flash still rejects every connection routed through it.`
+  String get mountUpdateReadNotAppliedBlockedConfirmed {
+    return Intl.message(
+      'New nodes were read but have not been applied. Flash still rejects every connection routed through it.',
+      name: 'mountUpdateReadNotAppliedBlockedConfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Subscription read. It currently has no nodes. The new result has not been applied.`
   String get mountUpdateReadEmptyNotApplied {
     return Intl.message(
@@ -12717,6 +12727,16 @@ class AppLocalizations {
     return Intl.message(
       'Flash currently rejects every connection routed through it. Read the status again.',
       name: 'mountRunningBlocked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Flash still rejects every connection routed through it.`
+  String get mountRunningBlockedConfirmed {
+    return Intl.message(
+      'Flash still rejects every connection routed through it.',
+      name: 'mountRunningBlockedConfirmed',
       desc: '',
       args: [],
     );

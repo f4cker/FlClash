@@ -1327,6 +1327,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountRunningBlocked": MessageLookupByLibrary.simpleMessage(
       "Flash 当前会拒绝所有经它转发的连接，请重新读取状态。",
     ),
+    "mountRunningBlockedConfirmed": MessageLookupByLibrary.simpleMessage(
+      "Flash 当前仍会拒绝所有经它转发的连接。",
+    ),
     "mountRunningKept": MessageLookupByLibrary.simpleMessage("仍使用上次确认的运行配置。"),
     "mountSameName": MessageLookupByLibrary.simpleMessage(
       "不同来源有同名节点时，会在名称后加上订阅名以区分。名称变化可能影响完整匹配或按结尾筛选，请核对分组结果。",
@@ -1406,6 +1409,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountUpdateReadNotAppliedBlocked": MessageLookupByLibrary.simpleMessage(
       "新节点已读取，但尚未应用。Flash 当前会拒绝所有经它转发的连接，请重新读取状态。",
     ),
+    "mountUpdateReadNotAppliedBlockedConfirmed":
+        MessageLookupByLibrary.simpleMessage(
+          "新节点已读取，但尚未应用。Flash 当前仍会拒绝所有经它转发的连接。",
+        ),
     "mountUpdateReadNotAppliedKept": MessageLookupByLibrary.simpleMessage(
       "新节点已读取，但尚未应用。仍使用上次确认的运行配置。",
     ),

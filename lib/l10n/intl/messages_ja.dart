@@ -1494,6 +1494,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountRunningBlocked": MessageLookupByLibrary.simpleMessage(
       "Flash currently rejects every connection routed through it. Read the status again.",
     ),
+    "mountRunningBlockedConfirmed": MessageLookupByLibrary.simpleMessage(
+      "Flash still rejects every connection routed through it.",
+    ),
     "mountRunningKept": MessageLookupByLibrary.simpleMessage(
       "The last confirmed running profile is still in use.",
     ),
@@ -1591,6 +1594,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountUpdateReadNotAppliedBlocked": MessageLookupByLibrary.simpleMessage(
       "New nodes were read but have not been applied. Flash currently rejects every connection routed through it. Read the status again.",
     ),
+    "mountUpdateReadNotAppliedBlockedConfirmed":
+        MessageLookupByLibrary.simpleMessage(
+          "New nodes were read but have not been applied. Flash still rejects every connection routed through it.",
+        ),
     "mountUpdateReadNotAppliedKept": MessageLookupByLibrary.simpleMessage(
       "New nodes were read but have not been applied. The last confirmed running profile is still in use.",
     ),

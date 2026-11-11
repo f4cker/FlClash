@@ -1452,9 +1452,11 @@
   "mountNodesReadAt": "Nodes read: {time}",
   "mountUpdateReadNotAppliedKept": "New nodes were read but have not been applied. The last confirmed running profile is still in use.",
   "mountUpdateReadNotAppliedBlocked": "New nodes were read but have not been applied. Flash currently rejects every connection routed through it. Read the status again.",
+  "mountUpdateReadNotAppliedBlockedConfirmed": "New nodes were read but have not been applied. Flash still rejects every connection routed through it.",
   "mountUpdateReadEmptyNotApplied": "Subscription read. It currently has no nodes. The new result has not been applied.",
   "mountRunningKept": "The last confirmed running profile is still in use.",
   "mountRunningBlocked": "Flash currently rejects every connection routed through it. Read the status again.",
+  "mountRunningBlockedConfirmed": "Flash still rejects every connection routed through it.",
   "mountProviderUpdateRefused": "New content for “{name}” was read but did not pass the mount-isolation checks and was not applied. The previously confirmed content is still in use.",
   "mountProviderUpdateRefusedUnconfirmed": "New content for “{name}” was read but did not pass the mount-isolation checks and was not applied. Its current use is unconfirmed. Read the status again.",
   "mountUnsupportedExcluded": "To keep Tailscale routing separate, {count, plural, =1{1 subscription node that is not supported for mounting was excluded. Its settings were not changed.} other{{count} subscription nodes that are not supported for mounting were excluded. Their settings were not changed.}}"
