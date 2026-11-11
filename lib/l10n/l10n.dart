@@ -7663,8 +7663,7 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one:
-          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -10305,6 +10304,28 @@ class AppLocalizations {
       name: 'tsDevicesShown',
       desc: '',
       args: [n],
+    );
+  }
+
+  /// `{count, plural, =1{1 device · Only devices visible to this account} other{{count} devices · Only devices visible to this account}}`
+  String tsDevicesCompact(num count) {
+    return Intl.plural(
+      count,
+      one: '1 device · Only devices visible to this account',
+      other: '$count devices · Only devices visible to this account',
+      name: 'tsDevicesCompact',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Showing {shown}/{total} · Devices visible to this account only`
+  String tsDevicesCompactFiltered(Object shown, Object total) {
+    return Intl.message(
+      'Showing $shown/$total · Devices visible to this account only',
+      name: 'tsDevicesCompactFiltered',
+      desc: '',
+      args: [shown, total],
     );
   }
 

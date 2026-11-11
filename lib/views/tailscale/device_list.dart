@@ -19,6 +19,12 @@ const _systemMinWidth = 600.0;
 const _columnGap = 12.0;
 const _copyWidth = 40.0;
 
+/// Below this content width the header stacks into title, owners and caption.
+const _compactMaxWidth = 720.0;
+const _compactSearchMinWidth = 160.0;
+const _compactSearchMaxWidth = 220.0;
+const _chipSpacing = 6.0;
+
 /// One width definition for the header and every row, so they never drift
 /// apart (user msg 1965). Address and status are as wide as their widest
 /// text, so neither is ever cut.
@@ -196,6 +202,34 @@ class TailscaleDeviceSection extends StatelessWidget {
       for (final entry in names.entries)
         if (entry.value > 1) entry.key,
     };
+    final choices = [
+      _OwnerChoice(
+        key: null,
+        label: '${appLocalizations.tsOwnerAll} ${devices.length}',
+      ),
+      for (final group in groups)
+        _OwnerChoice(
+          key: group.owner.filterKey,
+          label:
+              '${tailscaleOwnerLabel(context, group.owner, sharedNames: sharedNames)} ${group.count}',
+          tooltip: switch (group.owner) {
+            TailscaleOwnerMe(:final user) ||
+            TailscaleOwnerUser(:final user) => tailscaleUserDescription(user),
+            _ => '',
+          },
+        ),
+    ];
+    Widget chipOf(_OwnerChoice choice) {
+      final chip = Chip(
+        label: choice.label,
+        selected: ownerKey == choice.key,
+        onPressed: () => onOwnerChanged(choice.key),
+      );
+      return choice.tooltip.isEmpty
+          ? chip
+          : Tooltip(message: choice.tooltip, child: chip);
+    }
+
     final header = Wrap(
       spacing: 12,
       runSpacing: 10,
@@ -218,27 +252,7 @@ class TailscaleDeviceSection extends StatelessWidget {
                   appLocalizations.tsOwnerFilter,
                   style: DashboardText.label(context),
                 ),
-                Chip(
-                  label: '${appLocalizations.tsOwnerAll} ${devices.length}',
-                  selected: ownerKey == null,
-                  onPressed: () => onOwnerChanged(null),
-                ),
-                for (final group in groups)
-                  Tooltip(
-                    message: switch (group.owner) {
-                      TailscaleOwnerMe(:final user) ||
-                      TailscaleOwnerUser(
-                        :final user,
-                      ) => tailscaleUserDescription(user),
-                      _ => '',
-                    },
-                    child: Chip(
-                      label:
-                          '${tailscaleOwnerLabel(context, group.owner, sharedNames: sharedNames)} ${group.count}',
-                      selected: ownerKey == group.owner.filterKey,
-                      onPressed: () => onOwnerChanged(group.owner.filterKey),
-                    ),
-                  ),
+                for (final choice in choices) chipOf(choice),
               ],
             ),
           ),
@@ -270,7 +284,15 @@ class TailscaleDeviceSection extends StatelessWidget {
     } else {
       body = _Table(devices: shown, onCopy: onCopy, conflictOf: conflictOf);
     }
-    return Column(
+    final staleBanner = status != null && readFailed
+        ? TailscaleBanner(
+            level: TailscaleBannerLevel.warn,
+            text: appLocalizations.tsDevicesStale,
+            actionLabel: appLocalizations.tsRefreshDevices,
+            onAction: reading ? null : onRefresh,
+          )
+        : null;
+    final wide = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 12,
       children: [
@@ -306,13 +328,7 @@ class TailscaleDeviceSection extends StatelessWidget {
             ),
           ],
         ),
-        if (status != null && readFailed)
-          TailscaleBanner(
-            level: TailscaleBannerLevel.warn,
-            text: appLocalizations.tsDevicesStale,
-            actionLabel: appLocalizations.tsRefreshDevices,
-            onAction: reading ? null : onRefresh,
-          ),
+        ?staleBanner,
         if (devices.isNotEmpty)
           Text(
             appLocalizations.tsDevicesShown(shown.length),
@@ -323,6 +339,239 @@ class TailscaleDeviceSection extends StatelessWidget {
           child: body,
         ),
       ],
+    );
+    final filtered = ownerKey != null || query.trim().isNotEmpty;
+    final titleStyle = AppTextStyle.title3.of(context, emphasized: true);
+    Widget compactOf(double width) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          spacing: 16,
+          children: [
+            Expanded(
+              child: Text(appLocalizations.tsDevices, style: titleStyle),
+            ),
+            if (showSearch)
+              SizedBox(
+                width:
+                    (width -
+                            16 -
+                            _textWidth(
+                              context,
+                              appLocalizations.tsDevices,
+                              titleStyle,
+                            ))
+                        .clamp(_compactSearchMinWidth, _compactSearchMaxWidth),
+                child: SearchField(
+                  controller: searchController,
+                  height: 32,
+                  fill: DashboardColors.of(context).card,
+                  style: AppTextStyle.footnote.of(context),
+                  hintText: appLocalizations.tsSearchHint,
+                  onChanged: onQueryChanged,
+                ),
+              ),
+          ],
+        ),
+        if (showFilter) ...[
+          const SizedBox(height: 10),
+          Semantics(
+            label: appLocalizations.tsOwnerFilter,
+            container: true,
+            child: _OwnerStrip(
+              choices: choices,
+              pinned: groups.first.owner is TailscaleOwnerMe ? 2 : 1,
+              selected: ownerKey,
+              chipOf: chipOf,
+              onSelected: onOwnerChanged,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        Text(
+          devices.isEmpty
+              ? appLocalizations.tsDevicesScope
+              : filtered
+              ? appLocalizations.tsDevicesCompactFiltered(
+                  shown.length,
+                  devices.length,
+                )
+              : appLocalizations.tsDevicesCompact(devices.length),
+          style: AppTextStyle.footnote
+              .of(context)
+              .copyWith(color: colorScheme.onSurfaceVariant),
+        ),
+        if (staleBanner != null) ...[const SizedBox(height: 12), staleBanner],
+        const SizedBox(height: 12),
+        TailscaleCard(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: body,
+        ),
+      ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.maxWidth < _compactMaxWidth
+          ? compactOf(constraints.maxWidth)
+          : wide,
+    );
+  }
+}
+
+class _OwnerChoice {
+  const _OwnerChoice({
+    required this.key,
+    required this.label,
+    this.tooltip = '',
+  });
+
+  final String? key;
+  final String label;
+  final String tooltip;
+}
+
+const _chipPadding = EdgeInsets.symmetric(horizontal: 16);
+const _moreChipPadding = EdgeInsets.only(left: 16, right: 12);
+const _moreGlyphSize = 16.0;
+const _moreGap = 6.0;
+
+/// The owner chips on one line: 全部 and 我的, then the owners that fit and a
+/// "+N" chip for the rest. A chosen owner from the rest takes the last slot,
+/// as the proxies page brings its current group into view.
+class _OwnerStrip extends StatelessWidget {
+  const _OwnerStrip({
+    required this.choices,
+    required this.pinned,
+    required this.selected,
+    required this.chipOf,
+    required this.onSelected,
+  });
+
+  final List<_OwnerChoice> choices;
+  final int pinned;
+  final String? selected;
+  final Widget Function(_OwnerChoice choice) chipOf;
+  final ValueChanged<String?> onSelected;
+
+  double _widthOf(BuildContext context, String label, EdgeInsets padding) {
+    final style = AppTextStyle.subheadline.of(context, emphasized: true);
+    return math.max(
+      Card.minimumOf(context).minWidth,
+      _textWidth(context, label, style) +
+          Card.paddingOf(context, padding).horizontal,
+    );
+  }
+
+  double _moreWidthOf(BuildContext context, int count) =>
+      _widthOf(context, '+$count', _moreChipPadding) +
+      _moreGap +
+      _moreGlyphSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final widths = [
+          for (final choice in choices)
+            _widthOf(context, choice.label, _chipPadding),
+        ];
+        final others = choices.length - pinned;
+        final chosen = choices.indexWhere(
+          (choice) => selected != null && choice.key == selected,
+        );
+        List<int> visibleFor(int shownOthers) {
+          final visible = [for (var i = 0; i < pinned + shownOthers; i++) i];
+          if (shownOthers > 0 && chosen >= pinned + shownOthers) {
+            visible.last = chosen;
+          }
+          return visible;
+        }
+
+        double spanOf(List<int> visible) {
+          final hidden = choices.length - visible.length;
+          final items = visible.length + (hidden > 0 ? 1 : 0);
+          return visible.map((i) => widths[i]).sum +
+              (hidden > 0 ? _moreWidthOf(context, hidden) : 0) +
+              _chipSpacing * (items - 1);
+        }
+
+        final least = chosen >= pinned ? 1 : 0;
+        var shownOthers = others;
+        while (shownOthers > least &&
+            spanOf(visibleFor(shownOthers)) > constraints.maxWidth) {
+          shownOthers--;
+        }
+        final visible = visibleFor(shownOthers);
+        final fits = spanOf(visible) <= constraints.maxWidth;
+        final hidden = [
+          for (var i = 0; i < choices.length; i++)
+            if (!visible.contains(i)) choices[i],
+        ];
+        return Row(
+          spacing: _chipSpacing,
+          children: [
+            for (final i in visible)
+              if (!fits && i == visible.last)
+                Flexible(child: chipOf(choices[i]))
+              else
+                chipOf(choices[i]),
+            if (hidden.isNotEmpty)
+              PopupAnchor(
+                targetBuilder: (open) => Tooltip(
+                  message: context.appLocalizations.tsOwnerFilter,
+                  child: _MoreOwnersChip(count: hidden.length, onPressed: open),
+                ),
+                popupBuilder: (_) => PopupMenu(
+                  maxVisibleItems: 7,
+                  items: [
+                    for (final choice in hidden)
+                      PopupMenuItem(
+                        label: choice.label,
+                        onPressed: () => onSelected(choice.key),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MoreOwnersChip extends StatelessWidget {
+  const _MoreOwnersChip({required this.count, required this.onPressed});
+
+  final int count;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    return SizedBox(
+      height: TonalButtonSize.section.button,
+      child: Card(
+        shape: AppShape.full,
+        padding: _moreChipPadding,
+        onPressed: onPressed,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: _moreGap,
+          children: [
+            Text(
+              '+$count',
+              maxLines: 1,
+              style: AppTextStyle.subheadline
+                  .of(context, emphasized: true)
+                  .copyWith(color: colorScheme.onSurface),
+            ),
+            GlyphIcon(
+              AppGlyphs.chevronDown,
+              size: _moreGlyphSize,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

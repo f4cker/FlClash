@@ -552,6 +552,13 @@ void main() {
     await shoot(tester, '30-device-names-520');
   });
 
+  shot('30b-device-owners-menu-520', (tester) async {
+    serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+    await pumpPanel(tester, size: const Size(520, 1500));
+    await tester.tap(find.textContaining('+'));
+    await shoot(tester, '30b-device-owners-menu-520');
+  });
+
   // Panel-added accounts, design.md §12–§13.
 
   const records = [
