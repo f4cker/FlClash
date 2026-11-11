@@ -10,11 +10,13 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/metacubex/mihomo/adapter/outbound"
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/tunnel"
+	"github.com/metacubex/tailscale/ipn"
 )
 
 // Shaped like a LiteCN-style subscription: include-all groups, a group that
@@ -26,7 +28,7 @@ proxies:
   - {name: JP 01, type: socks5, server: 127.0.0.1, port: 2}
 proxy-groups:
   - {name: Proxy, type: select, include-all: true}
-  - {name: Auto, type: url-test, include-all-proxies: true, url: "http://127.0.0.1:1/", interval: 0}
+  - {name: Auto, type: select, include-all-proxies: true}
   - {name: Tailscale, type: select, proxies: [DIRECT]}
 rule-providers:
   Private:
@@ -41,7 +43,16 @@ rules:
 
 func applyManagedProfile(t *testing.T, setup *TailscaleSetup) string {
 	t.Helper()
-	home := t.TempDir()
+	return applyManagedProfileText(t, managedTestProfile, setup)
+}
+
+func applyManagedProfileText(t *testing.T, profile string, setup *TailscaleSetup) string {
+	t.Helper()
+	return applyManagedProfileHome(t, t.TempDir(), profile, setup)
+}
+
+func applyManagedProfileHome(t *testing.T, home, profile string, setup *TailscaleSetup) string {
+	t.Helper()
 	previous := C.Path.HomeDir()
 	C.SetHomeDir(home)
 	t.Cleanup(func() { C.SetHomeDir(previous) })
@@ -50,16 +61,29 @@ func applyManagedProfile(t *testing.T, setup *TailscaleSetup) string {
 	keepTunnel(t)
 	t.Cleanup(func() {
 		closeTailscaleUpTo(tailscaleGenerationMark())
-		tailscaleActiveTable.Store(nil)
+		tailscaleManagedMu.Lock()
+		tailscaleRunningSlot, tailscaleStagedSlot, tailscaleStaged = nil, nil, false
+		tailscaleManagedNameClash = map[string]bool{}
+		tailscaleManagedMu.Unlock()
 		tailscaleRouting = &tailscaleRouter{}
 	})
-	if err := os.WriteFile(filepath.Join(home, "config.yaml"), []byte(managedTestProfile), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(home, "config.yaml"), []byte(profile), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := applyConfig(&SetupParams{Tailscale: setup}); err != nil {
 		t.Fatal(err)
 	}
 	return home
+}
+
+func runningTailscaleTable() *tailscaleRouteTable {
+	tailscaleManagedMu.Lock()
+	slot := tailscaleRunningSlot
+	tailscaleManagedMu.Unlock()
+	if slot == nil {
+		return nil
+	}
+	return slot.Load()
 }
 
 func managedNode(t *testing.T, id string) *outbound.Tailscale {
@@ -160,7 +184,7 @@ func TestTailscaleManagedDraftAddsNoRules(t *testing.T) {
 	if rules := tunnel.Rules(); rules[0].Payload() != "Private" {
 		t.Fatalf("a draft added rules: %s", rules[0].Payload())
 	}
-	if tailscaleActiveTable.Load() != nil {
+	if runningTailscaleTable() != nil {
 		t.Fatal("a draft activated the routing")
 	}
 }
@@ -178,8 +202,8 @@ func TestTailscaleManagedSettingsAndGuardFollowTheID(t *testing.T) {
 		t.Fatalf("start of a signed-out managed node = %v", err)
 	}
 	report, _ := handleTailscaleRoutes(TailscaleRoutesParams{ProfileID: 7})
-	if !report.Accounts[0].LoggedOut || report.Complete != true {
-		t.Fatalf("a signed-out account counts as loading: %+v", report)
+	if !report.Accounts[0].LoggedOut || report.Complete {
+		t.Fatalf("a signed-out account whose devices were never read counts as loaded: %+v", report)
 	}
 }
 
@@ -200,7 +224,7 @@ func TestTailscaleManagedFailedLoadInjectsNothing(t *testing.T) {
 			t.Fatal("a failed load injected a managed node")
 		}
 	}
-	if tailscaleActiveTable.Load() != nil {
+	if runningTailscaleTable() != nil {
 		t.Fatal("a failed load left managed routing on")
 	}
 }
@@ -259,5 +283,176 @@ func TestTailscaleManagedRoutesAheadOfThePrivateRuleSet(t *testing.T) {
 	report, err := handleTailscaleRoutes(TailscaleRoutesParams{ProfileID: 7})
 	if err != nil || !report.Complete || targetState(report, tailscaleTargetFQDN, "nas.tail1.ts.net") != tailscaleRouteBound {
 		t.Fatalf("routes = %+v, %v", report, err)
+	}
+}
+
+func matchManagedRules(metadata *C.Metadata) string {
+	for _, rule := range tunnel.Rules() {
+		if matched, proxy := rule.Match(metadata, C.RuleMatchHelper{}); matched {
+			return proxy
+		}
+	}
+	return ""
+}
+
+func TestTailscaleManagedFailedBuildStillProtects(t *testing.T) {
+	build := buildTailscaleManagedProxy
+	buildTailscaleManagedProxy = func(map[string]any) (C.Proxy, error) { return nil, errors.New("no node") }
+	t.Cleanup(func() { buildTailscaleManagedProxy = build })
+	applyManagedProfile(t, &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{{ID: "a1", Attached: true}}})
+	if got := matchManagedRules(&C.Metadata{DstIP: netip.MustParseAddr("100.101.1.1")}); got != tailscaleRejectProxy {
+		t.Fatalf("an address while the only account failed to build -> %q, want REJECT", got)
+	}
+	if got := matchManagedRules(&C.Metadata{Host: "nas.tail1.ts.net"}); got != tailscaleRejectProxy {
+		t.Fatalf("a ts.net name -> %q", got)
+	}
+}
+
+func TestTailscaleManagedUnknownRecordsKeepProtection(t *testing.T) {
+	home := t.TempDir()
+	previous := C.Path.HomeDir()
+	C.SetHomeDir(home)
+	t.Cleanup(func() { C.SetHomeDir(previous) })
+	kept := newTailscaleRouteMemory()
+	kept.Bindings = []tailscaleRouteBinding{{
+		Target: TailscaleRouteTarget{Kind: tailscaleTargetIP, Value: "100.101.1.1"},
+		Owner:  TailscaleRouteOwner{Kind: tailscaleOwnerManaged, ID: "a1"},
+	}}
+	if err := saveTailscaleRouteMemory(7, kept); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(tailscaleRoutesPath(7))
+	applyManagedProfileHome(t, home, managedTestProfile, &TailscaleSetup{ProfileID: 7, ManagedUnknown: true})
+	if got := matchManagedRules(&C.Metadata{DstIP: netip.MustParseAddr("100.101.1.1")}); got != tailscaleRejectProxy {
+		t.Fatalf("a kept target while the accounts are unknown -> %q", got)
+	}
+	if got := matchManagedRules(&C.Metadata{DstIP: netip.MustParseAddr("100.64.9.9")}); got != tailscaleRejectProxy {
+		t.Fatalf("the range while the accounts are unknown -> %q", got)
+	}
+	if after, _ := os.ReadFile(tailscaleRoutesPath(7)); string(after) != string(before) {
+		t.Fatal("the kept routing was rewritten while the accounts were unknown")
+	}
+}
+
+func TestTailscaleForgetRoutesOfTheRunningProfileWritesNothing(t *testing.T) {
+	applyManagedProfile(t, &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{{ID: "a1", Attached: true}}})
+	node := managedNode(t, "a1")
+	tailscaleManagedMu.Lock()
+	tailscaleManagedNodes[node].live = liveAccount("a1", "u1", "tail1.ts.net", peer("nas", "", "100.101.1.1")).Live
+	tailscaleManagedMu.Unlock()
+	refreshTailscaleRoutes()
+	if _, err := os.Stat(tailscaleRoutesPath(7)); err != nil {
+		t.Fatalf("routes not kept: %v", err)
+	}
+	if result, err := handleTailscaleForgetRoutes(TailscaleRoutesParams{ProfileID: 7}); err != nil || result.Outcome != tailscaleOutcomeConfirmed {
+		t.Fatalf("forget = %+v, %v", result, err)
+	}
+	refreshTailscaleRoutes()
+	if _, err := os.Stat(tailscaleRoutesPath(7)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("the routes of a forgotten profile came back: %v", err)
+	}
+}
+
+func TestTailscaleManagedNameIsStableAndAvoidsProviderNodes(t *testing.T) {
+	profile := managedTestProfile + `proxy-providers:
+  Sub:
+    type: inline
+    payload:
+      - {name: "Tailscale (FlClash)", type: socks5, server: 127.0.0.1, port: 3}
+`
+	setup := &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{
+		{ID: "a1", Name: "Tailscale (FlClash)", Attached: true},
+		{ID: "b2", Name: "Tailscale (FlClash 2)", Attached: true},
+	}}
+	applyManagedProfileText(t, profile, setup)
+	if err := applyConfig(&SetupParams{Tailscale: setup}); err != nil {
+		t.Fatal(err)
+	}
+	if name := managedNode(t, "b2").Name(); name != "Tailscale (FlClash 2)" {
+		t.Fatalf("b2 = %q, want the name the host keeps for it", name)
+	}
+	first := managedNode(t, "a1").Name()
+	for _, pd := range tunnel.Providers() {
+		for _, proxy := range pd.Proxies() {
+			if proxy.Name() == first {
+				t.Fatalf("a1 shares %q with a node of %s", first, pd.Name())
+			}
+		}
+	}
+}
+
+func TestTailscaleManagedForgetRacesTheWatcher(t *testing.T) {
+	applyManagedProfile(t, &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{{ID: "a1", Attached: true}}})
+	node := managedNode(t, "a1")
+	key := tailscaleManagedKey(7, "a1", "")
+	for range 50 {
+		tailscaleManagedMu.Lock()
+		tailscaleManagedNodes[node] = &tailscaleManagedNode{key: key}
+		tailscaleManagedMu.Unlock()
+		done := make(chan struct{})
+		go func() {
+			watchTailscaleManaged(node, ipn.Running.String())
+			close(done)
+		}()
+		forgetTailscaleManaged(node)
+		<-done
+	}
+	tailscaleManagedMu.Lock()
+	tailscaleManagedNodes[node] = &tailscaleManagedNode{key: key}
+	tailscaleManagedMu.Unlock()
+}
+
+func TestTailscaleManagedWatcherExitDropsItsList(t *testing.T) {
+	applyManagedProfile(t, &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{{ID: "a1", Attached: true}}})
+	node := managedNode(t, "a1")
+	tailscaleManagedMu.Lock()
+	entry := tailscaleManagedNodes[node]
+	entry.live = liveAccount("a1", "u1", "").Live
+	tailscaleManagedMu.Unlock()
+	watchTailscaleManaged(node, ipn.Running.String())
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		tailscaleManagedMu.Lock()
+		watching, live := entry.watching, entry.live
+		tailscaleManagedMu.Unlock()
+		if !watching && live == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("a watcher that stopped left its list counted as loaded")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	report, _ := handleTailscaleRoutes(TailscaleRoutesParams{ProfileID: 7})
+	if report.Complete {
+		t.Fatal("routes complete without a live device list")
+	}
+}
+
+func TestTailscaleManagedTableWaitsForItsConfig(t *testing.T) {
+	applyManagedProfile(t, &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{{ID: "a1", Attached: true}}})
+	running := runningTailscaleTable()
+	if running == nil {
+		t.Fatal("no running table")
+	}
+	setTailscaleSetup(&TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{
+		{ID: "a1", Attached: true},
+		{ID: "b2", Attached: true},
+	}})
+	cfg, err := loadConfig(runningConfigPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	injectTailscaleManaged(cfg)
+	if runningTailscaleTable() != running {
+		t.Fatal("the running rules read a table built for a config not applied yet")
+	}
+	staged, _ := cfg.Rules[1].Match(&C.Metadata{DstIP: netip.MustParseAddr("100.101.1.1")}, C.RuleMatchHelper{})
+	if !staged {
+		t.Fatal("the new config's rules have no table of their own")
+	}
+	publishTailscaleManaged()
+	if runningTailscaleTable() == running {
+		t.Fatal("the table was not handed over once the config ran")
 	}
 }

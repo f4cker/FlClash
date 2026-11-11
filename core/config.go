@@ -178,6 +178,7 @@ func applyConfig(params *SetupParams) error {
 	}
 	closeTailscaleUpTo(replaced)
 	hub.ApplyConfig(cfg)
+	publishTailscaleManaged()
 	startTailscaleManaged()
 	patchSelectGroup(params.SelectedMap)
 	bumpRouteEpoch()

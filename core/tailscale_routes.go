@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	C "github.com/metacubex/mihomo/constant"
 )
 
@@ -102,6 +103,13 @@ type tailscaleRouteMemory struct {
 	Bindings  []tailscaleRouteBinding           `json:"bindings"`
 	Conflicts []tailscaleRouteClash             `json:"conflicts"`
 	Suffixes  []string                          `json:"suffixes"`
+	// Each account's last device list, still claiming while it is signed out.
+	Lists map[string]tailscaleRouteList `json:"lists,omitempty"`
+}
+
+type tailscaleRouteList struct {
+	Suffix string               `json:"suffix,omitempty"`
+	Peers  []tailscaleRoutePeer `json:"peers,omitempty"`
 }
 
 func newTailscaleRouteMemory() *tailscaleRouteMemory {
@@ -125,9 +133,9 @@ func (m *tailscaleRouteMemory) equal(other *tailscaleRouteMemory) bool {
 }
 
 type tailscaleRoutePeer struct {
-	Name  string
-	FQDN  string
-	Addrs []netip.Addr
+	Name  string       `json:"name,omitempty"`
+	FQDN  string       `json:"fqdn,omitempty"`
+	Addrs []netip.Addr `json:"addrs,omitempty"`
 }
 
 // One account's device list, read from its running node.
@@ -148,11 +156,12 @@ type tailscaleRouteAccount struct {
 }
 
 // A rule of the profile that sends something to one of its own Tailscale
-// proxies; a managed target it covers is a conflict, not taken silently.
+// proxies, or to a group holding one; a managed target it covers is a
+// conflict, not taken silently. A name target carries its device addresses.
 type tailscaleProfileRoute struct {
 	Proxy string
 	Rule  string
-	Match func(TailscaleRouteTarget) bool
+	Match func(TailscaleRouteTarget, []netip.Addr) bool
 }
 
 type tailscaleRouteDecision struct {
@@ -232,6 +241,7 @@ type tailscaleSeen struct {
 	owners  []TailscaleRouteOwner
 	devices map[TailscaleRouteOwner]string
 	rules   map[TailscaleRouteOwner]string
+	addrs   []netip.Addr
 }
 
 func (s *tailscaleSeen) add(owner TailscaleRouteOwner, device, rule string) {
@@ -264,14 +274,29 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 	next := memory.clone()
 	byID := map[string]*tailscaleRouteAccount{}
 	complete := true
+	lists := map[string]tailscaleRouteList{}
 	for i := range accounts {
 		account := &accounts[i]
 		byID[account.ID] = account
-		if account.Live != nil {
+		switch list, kept := next.Lists[account.ID]; {
+		case account.Live != nil:
 			next.Accounts[account.ID] = account.Live.Identity
-		} else if !account.LoggedOut {
+			lists[account.ID] = tailscaleRouteList{Suffix: account.Live.Suffix, Peers: account.Live.Peers}
+		case account.LoggedOut && kept:
+			lists[account.ID] = list
+		default:
 			complete = false
+			if kept {
+				lists[account.ID] = list
+			}
 		}
+	}
+	next.Lists = nil
+	for id, list := range lists {
+		if next.Lists == nil {
+			next.Lists = map[string]tailscaleRouteList{}
+		}
+		next.Lists[id] = list
 	}
 	identityOf := func(id string) (TailscaleRouteIdentity, bool) {
 		if account := byID[id]; account != nil && account.Live != nil {
@@ -293,20 +318,33 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 		}
 		return entry
 	}
+	addAddrs := func(entry *tailscaleSeen, addrs []netip.Addr) {
+		for _, addr := range addrs {
+			if !slices.Contains(entry.addrs, addr) {
+				entry.addrs = append(entry.addrs, addr)
+			}
+		}
+	}
 	for _, account := range accounts {
-		if account.Live == nil {
+		list, ok := lists[account.ID]
+		// A kept list claims only for a signed-out account.
+		if !ok || (account.Live == nil && !account.LoggedOut) {
 			continue
 		}
 		owner := TailscaleRouteOwner{Kind: tailscaleOwnerManaged, ID: account.ID}
-		if suffix := normalizeTailscaleHost(account.Live.Suffix); suffix != "" {
-			see(TailscaleRouteTarget{Kind: tailscaleTargetSuffix, Value: suffix}, owner, "", "")
+		var suffixEntry *tailscaleSeen
+		if suffix := normalizeTailscaleHost(list.Suffix); suffix != "" {
+			suffixEntry = see(TailscaleRouteTarget{Kind: tailscaleTargetSuffix, Value: suffix}, owner, "", "")
 			if !slices.Contains(next.Suffixes, suffix) {
 				next.Suffixes = append(next.Suffixes, suffix)
 			}
 		}
-		for _, peer := range account.Live.Peers {
+		for _, peer := range list.Peers {
 			if fqdn := normalizeTailscaleHost(peer.FQDN); fqdn != "" {
-				see(TailscaleRouteTarget{Kind: tailscaleTargetFQDN, Value: fqdn}, owner, peer.Name, "")
+				addAddrs(see(TailscaleRouteTarget{Kind: tailscaleTargetFQDN, Value: fqdn}, owner, peer.Name, ""), peer.Addrs)
+			}
+			if suffixEntry != nil {
+				addAddrs(suffixEntry, peer.Addrs)
 			}
 			for _, addr := range peer.Addrs {
 				see(ipTarget(addr), owner, peer.Name, "")
@@ -315,7 +353,7 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 	}
 	for _, entry := range seen {
 		for _, route := range profile {
-			if route.Match != nil && route.Match(entry.target) {
+			if route.Match != nil && route.Match(entry.target, entry.addrs) {
 				entry.add(TailscaleRouteOwner{Kind: tailscaleOwnerProfile, ID: route.Proxy}, "", route.Rule)
 			}
 		}
@@ -344,9 +382,16 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 		Accounts: []TailscaleRouteAccountReport{},
 		Targets:  []TailscaleRouteTargetReport{},
 	}
-	serve := func(binding tailscaleRouteBinding) (tailscaleRouteDecision, string) {
+	serve := func(binding tailscaleRouteBinding, addrs []netip.Addr) (tailscaleRouteDecision, string) {
 		if binding.Owner.Kind == tailscaleOwnerProfile {
-			return tailscaleRouteDecision{}, ""
+			// Sent straight to the profile's proxy, never left to rules that
+			// may now send it elsewhere; gone from the profile, it is blocked.
+			if slices.ContainsFunc(profile, func(route tailscaleProfileRoute) bool {
+				return route.Proxy == binding.Owner.ID && route.Match != nil && route.Match(binding.Target, addrs)
+			}) {
+				return tailscaleRouteDecision{Proxy: binding.Owner.ID}, ""
+			}
+			return tailscaleRouteDecision{Proxy: tailscaleRejectProxy}, tailscaleRouteUnavailable
 		}
 		account := byID[binding.Owner.ID]
 		if identity, ok := identityOf(binding.Owner.ID); ok && binding.Identity != nil && !binding.Identity.same(identity) {
@@ -375,7 +420,7 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 		var owner *TailscaleRouteOwner
 		switch {
 		case bound && binding.Assigned:
-			decision, state = serve(binding)
+			decision, state = serve(binding, entry.addrs)
 			if state == "" {
 				state = tailscaleRouteAssigned
 			}
@@ -384,7 +429,7 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 			state = tailscaleRouteConflict
 			decision = tailscaleRouteDecision{Proxy: tailscaleRejectProxy}
 		case bound:
-			decision, state = serve(binding)
+			decision, state = serve(binding, entry.addrs)
 			if state == "" {
 				state = tailscaleRouteBound
 			}
@@ -395,7 +440,7 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 				binding.Identity = &identity
 			}
 			bound = true
-			decision, state = serve(binding)
+			decision, state = serve(binding, entry.addrs)
 			if state == "" {
 				state = tailscaleRouteBound
 			}
@@ -445,6 +490,12 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 	if len(next.Conflicts) == 0 {
 		next.Conflicts = nil
 	}
+	next.Suffixes = slices.DeleteFunc(next.Suffixes, func(suffix string) bool {
+		return !tailscaleSuffixKept(suffix, lists, next)
+	})
+	if len(next.Suffixes) == 0 {
+		next.Suffixes = nil
+	}
 	slices.Sort(next.Suffixes)
 	for _, suffix := range next.Suffixes {
 		if suffix != tailscaleProtectedSuffix && !strings.HasSuffix(suffix, "."+tailscaleProtectedSuffix) {
@@ -487,6 +538,20 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 	}
 	report.ProtectedSuffixes = append([]string(nil), table.protectSuffixes...)
 	return tailscaleRouteResult{table: table, memory: next, report: report}
+}
+
+// A suffix stays blocked while an account or a kept binding refers to it.
+func tailscaleSuffixKept(suffix string, lists map[string]tailscaleRouteList, memory *tailscaleRouteMemory) bool {
+	under := func(target TailscaleRouteTarget) bool {
+		return target.Kind != tailscaleTargetIP && (target.Value == suffix || strings.HasSuffix(target.Value, "."+suffix))
+	}
+	for _, list := range lists {
+		if normalizeTailscaleHost(list.Suffix) == suffix {
+			return true
+		}
+	}
+	return slices.ContainsFunc(memory.Bindings, func(b tailscaleRouteBinding) bool { return under(b.Target) }) ||
+		slices.ContainsFunc(memory.Conflicts, func(c tailscaleRouteClash) bool { return under(c.Target) })
 }
 
 func mergeTailscaleOwners(a, b []TailscaleRouteOwner) []TailscaleRouteOwner {
@@ -580,7 +645,8 @@ func (t *tailscaleRouteTable) matchIP(addr netip.Addr) (tailscaleRouteDecision, 
 	return tailscaleRouteDecision{}, false, false
 }
 
-var tailscaleActiveTable atomic.Pointer[tailscaleRouteTable]
+// The table one config's managed rules read; each config has its own.
+type tailscaleRouteSlot = atomic.Pointer[tailscaleRouteTable]
 
 const (
 	tailscaleRuleHost = iota
@@ -588,14 +654,19 @@ const (
 )
 
 // The two managed rules at the head of the rules: one for names, one for
-// addresses. Neither resolves a name; the profile's own Tailscale routes are
-// asked only for a target no account owns, before the range is rejected.
+// addresses. Neither resolves a name; a target no account owns goes to the
+// profile's own Tailscale proxy when one of its rules sends it there, and is
+// rejected otherwise.
 type tailscaleManagedRule struct {
 	kind int
+	slot *tailscaleRouteSlot
 }
 
 func (r *tailscaleManagedRule) Match(metadata *C.Metadata, helper C.RuleMatchHelper) (bool, string) {
-	table := tailscaleActiveTable.Load()
+	if r.slot == nil {
+		return false, ""
+	}
+	table := r.slot.Load()
 	if table == nil {
 		return false, ""
 	}
@@ -611,11 +682,13 @@ func (r *tailscaleManagedRule) Match(metadata *C.Metadata, helper C.RuleMatchHel
 	if !matched || decision.Proxy == "" {
 		return false, ""
 	}
-	if protect && slices.ContainsFunc(table.profileRules, func(rule C.Rule) bool {
-		ok, _ := rule.Match(metadata, helper)
-		return ok
-	}) {
-		return false, ""
+	if protect {
+		unresolved := C.RuleMatchHelper{FindProcess: helper.FindProcess, CheckPassRule: helper.CheckPassRule}
+		for _, rule := range table.profileRules {
+			if ok, adapter := rule.Match(metadata, unresolved); ok {
+				return true, adapter
+			}
+		}
 	}
 	return true, decision.Proxy
 }
@@ -638,39 +711,102 @@ func (r *tailscaleManagedRule) Payload() string {
 
 func (r *tailscaleManagedRule) ProviderNames() []string { return nil }
 
-// The profile rules that can route a target to one of its Tailscale proxies.
+// Rules whose payload names exactly what they match.
 var tailscaleProfileRuleTypes = []C.RuleType{
 	C.Domain, C.DomainSuffix, C.DomainKeyword, C.DomainRegex, C.DomainWildcard, C.IPCIDR, C.IPSuffix,
 }
 
-func tailscaleProfileRoutes(rules []C.Rule, tailscaleProxies map[string]bool) ([]tailscaleProfileRoute, []C.Rule) {
-	var routes []tailscaleProfileRoute
-	var matched []C.Rule
-	for _, rule := range rules {
-		if !tailscaleProxies[rule.Adapter()] || !slices.Contains(tailscaleProfileRuleTypes, rule.RuleType()) {
-			continue
+func tailscaleProfileRuleIsIP(rule C.Rule) bool {
+	return rule.RuleType() == C.IPCIDR || rule.RuleType() == C.IPSuffix
+}
+
+// The profile's own Tailscale proxies, and every proxy or group through which
+// a rule can reach one of them.
+func tailscaleProfileAdapters(proxies map[string]C.Proxy) (map[string]bool, map[string]bool) {
+	own := map[string]bool{}
+	for name, proxy := range proxies {
+		if proxy.Type() == C.Tailscale {
+			own[name] = true
 		}
-		matched = append(matched, rule)
-		routes = append(routes, tailscaleProfileRoute{
-			Proxy: rule.Adapter(),
-			Rule:  rule.RuleType().String() + "," + rule.Payload() + "," + rule.Adapter(),
-			Match: func(target TailscaleRouteTarget) bool {
-				metadata := &C.Metadata{}
-				if target.Kind == tailscaleTargetIP {
-					addr, err := netip.ParseAddr(target.Value)
-					if err != nil {
-						return false
-					}
-					metadata.DstIP = addr
-				} else {
-					metadata.Host = target.Value
-				}
-				ok, _ := rule.Match(metadata, C.RuleMatchHelper{})
-				return ok
-			},
+	}
+	reach := map[string]bool{}
+	var holds func(name string, visiting map[string]bool) bool
+	holds = func(name string, visiting map[string]bool) bool {
+		if own[name] || reach[name] {
+			return true
+		}
+		proxy := proxies[name]
+		if proxy == nil || visiting[name] {
+			return false
+		}
+		group, ok := proxy.Adapter().(outboundgroup.ProxyGroup)
+		if !ok {
+			return false
+		}
+		visiting[name] = true
+		return slices.ContainsFunc(group.Proxies(), func(member C.Proxy) bool {
+			return holds(member.Name(), visiting)
 		})
 	}
-	return routes, matched
+	for name := range proxies {
+		if holds(name, map[string]bool{}) {
+			reach[name] = true
+		}
+	}
+	return own, reach
+}
+
+func tailscaleProfileRoutes(rules []C.Rule, own, reach map[string]bool) ([]tailscaleProfileRoute, []C.Rule) {
+	var routes []tailscaleProfileRoute
+	var direct []C.Rule
+	for _, rule := range rules {
+		if rule.RuleType() == C.MATCH || !reach[rule.Adapter()] && !own[rule.Adapter()] {
+			continue
+		}
+		if own[rule.Adapter()] {
+			direct = append(direct, rule)
+		}
+		route := tailscaleProfileRoute{
+			Proxy: rule.Adapter(),
+			Rule:  rule.RuleType().String() + "," + rule.Payload() + "," + rule.Adapter(),
+			Match: func(TailscaleRouteTarget, []netip.Addr) bool { return true },
+		}
+		if slices.Contains(tailscaleProfileRuleTypes, rule.RuleType()) {
+			route.Match = func(target TailscaleRouteTarget, addrs []netip.Addr) bool {
+				return tailscaleProfileRuleMatches(rule, target, addrs)
+			}
+		}
+		routes = append(routes, route)
+	}
+	return routes, direct
+}
+
+// Whether a name or address rule covers a target: an address rule covers a
+// name whose device address it holds, a name rule a network under its name.
+func tailscaleProfileRuleMatches(rule C.Rule, target TailscaleRouteTarget, addrs []netip.Addr) bool {
+	matchIP := func(addr netip.Addr) bool {
+		ok, _ := rule.Match(&C.Metadata{DstIP: addr}, C.RuleMatchHelper{})
+		return ok
+	}
+	if target.Kind == tailscaleTargetIP {
+		addr, err := netip.ParseAddr(target.Value)
+		return err == nil && matchIP(addr)
+	}
+	if tailscaleProfileRuleIsIP(rule) {
+		return slices.ContainsFunc(addrs, matchIP)
+	}
+	if ok, _ := rule.Match(&C.Metadata{Host: target.Value}, C.RuleMatchHelper{}); ok {
+		return true
+	}
+	if target.Kind != tailscaleTargetSuffix {
+		return false
+	}
+	payload := normalizeTailscaleHost(rule.Payload())
+	switch rule.RuleType() {
+	case C.Domain, C.DomainSuffix:
+		return strings.HasSuffix(payload, "."+target.Value)
+	}
+	return false
 }
 
 func tailscaleRoutesPath(profileID int64) string {
@@ -726,6 +862,7 @@ type tailscaleRouter struct {
 	saved     bool
 	report    *TailscaleRoutes
 	revision  uint64
+	forgotten bool
 }
 
 var tailscaleRouting = &tailscaleRouter{}

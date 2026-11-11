@@ -5,6 +5,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	C "github.com/metacubex/mihomo/constant"
@@ -210,7 +211,7 @@ func TestTailscaleRoutesProfileRouteIsACandidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	routes, rules := tailscaleProfileRoutes([]C.Rule{rule}, map[string]bool{"Office": true})
+	routes, rules := tailscaleProfileRoutes([]C.Rule{rule}, map[string]bool{"Office": true}, nil)
 	a := liveAccount("a", "1", "", peer("nas", "", "100.64.0.2"), peer("pi", "", "100.64.1.2"))
 	accounts := []tailscaleRouteAccount{a}
 	result := computeTailscaleRoutes(newTailscaleRouteMemory(), accounts, routes)
@@ -240,14 +241,14 @@ func TestTailscaleRoutesProfileRouteIsACandidate(t *testing.T) {
 	}
 	result = computeTailscaleRoutes(memory, accounts, routes)
 	result.table.profileRules = rules
-	tailscaleActiveTable.Store(result.table)
-	t.Cleanup(func() { tailscaleActiveTable.Store(nil) })
-	ipRule := &tailscaleManagedRule{kind: tailscaleRuleIP}
-	if matched, _ := ipRule.Match(&C.Metadata{DstIP: netip.MustParseAddr("100.64.0.2")}, C.RuleMatchHelper{}); matched {
-		t.Fatal("an address assigned to the profile's route was taken by the managed rule")
+	slot := new(tailscaleRouteSlot)
+	slot.Store(result.table)
+	ipRule := &tailscaleManagedRule{kind: tailscaleRuleIP, slot: slot}
+	if matched, proxy := ipRule.Match(&C.Metadata{DstIP: netip.MustParseAddr("100.64.0.2")}, C.RuleMatchHelper{}); !matched || proxy != "Office" {
+		t.Fatalf("an address assigned to the profile's route -> %v %q, want straight to Office", matched, proxy)
 	}
-	if matched, _ := ipRule.Match(&C.Metadata{DstIP: netip.MustParseAddr("100.64.0.77")}, C.RuleMatchHelper{}); matched {
-		t.Fatal("an unknown address the profile routes was rejected instead")
+	if matched, proxy := ipRule.Match(&C.Metadata{DstIP: netip.MustParseAddr("100.64.0.77")}, C.RuleMatchHelper{}); !matched || proxy != "Office" {
+		t.Fatalf("an unknown address the profile routes -> %v %q, want Office", matched, proxy)
 	}
 	if matched, proxy := ipRule.Match(&C.Metadata{DstIP: netip.MustParseAddr("100.70.0.1")}, C.RuleMatchHelper{}); !matched || proxy != tailscaleRejectProxy {
 		t.Fatalf("an unknown address outside the profile's route -> %v %q", matched, proxy)
@@ -314,5 +315,155 @@ func TestTailscaleManagedKeyIsIndependentOfName(t *testing.T) {
 	}
 	if tailscaleManagedKeyOf(filepath.Join(tailscaleNodesDir, a)) != "" {
 		t.Fatal("a derived directory read as managed")
+	}
+}
+
+func TestTailscaleRoutesProfilePinRejectsOnceItsRuleIsGone(t *testing.T) {
+	rule, err := R.ParseRule("IP-CIDR", "100.64.0.0/24", "Office", []string{"no-resolve"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	routes, _ := tailscaleProfileRoutes([]C.Rule{rule}, map[string]bool{"Office": true}, nil)
+	a := liveAccount("a", "1", "", peer("nas", "", "100.64.0.2"))
+	accounts := []tailscaleRouteAccount{a}
+	result := computeTailscaleRoutes(newTailscaleRouteMemory(), accounts, routes)
+	memory, err := assignTailscaleRoutes(result.memory, result.report, accounts, []TailscaleRouteAssignment{{
+		Target: TailscaleRouteTarget{Kind: tailscaleTargetIP, Value: "100.64.0.2"},
+		Owner:  TailscaleRouteOwner{Kind: tailscaleOwnerProfile, ID: "Office"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result = computeTailscaleRoutes(memory, accounts, routes)
+	if got := routeIP(t, result.table, "100.64.0.2"); got != "Office" {
+		t.Fatalf("pinned to the profile's proxy -> %q, want Office itself", got)
+	}
+
+	// A subscription update drops the rule: the pin holds and blocks.
+	result = computeTailscaleRoutes(result.memory, accounts, nil)
+	if got := routeIP(t, result.table, "100.64.0.2"); got != tailscaleRejectProxy {
+		t.Fatalf("pinned to a profile route that is gone -> %q, want REJECT", got)
+	}
+	if state := targetState(result.report, tailscaleTargetIP, "100.64.0.2"); state != tailscaleRouteUnavailable {
+		t.Fatalf("state = %q", state)
+	}
+}
+
+func TestTailscaleRoutesSignedOutAccountWithoutAListIsNotLoaded(t *testing.T) {
+	a := liveAccount("a", "1", "", peer("nas", "", "100.64.0.2"))
+	b := tailscaleRouteAccount{ID: "b", Proxy: "TS b", Available: true, LoggedOut: true}
+	result := computeTailscaleRoutes(newTailscaleRouteMemory(), []tailscaleRouteAccount{a, b}, nil)
+	if result.report.Complete {
+		t.Fatal("a signed-out account never read counts as loaded")
+	}
+	if got := routeIP(t, result.table, "100.64.0.2"); got != tailscaleRejectProxy {
+		t.Fatalf("a's address while b's devices are unknown -> %q", got)
+	}
+
+	// b read once, then signed out: its last list still claims what it saw.
+	b.LoggedOut = false
+	b.Live = &tailscaleRouteNetmap{Identity: TailscaleRouteIdentity{UserID: "2"}, Peers: []tailscaleRoutePeer{peer("pi", "", "100.64.0.3")}}
+	result = computeTailscaleRoutes(newTailscaleRouteMemory(), []tailscaleRouteAccount{b}, nil)
+	b.LoggedOut, b.Live = true, nil
+	a.Live.Peers = append(a.Live.Peers, peer("pi", "", "100.64.0.3"))
+	result = computeTailscaleRoutes(result.memory, []tailscaleRouteAccount{a, b}, nil)
+	if !result.report.Complete {
+		t.Fatal("a signed-out account with a kept list counts as loading")
+	}
+	if got := routeIP(t, result.table, "100.64.0.2"); got != "TS a" {
+		t.Fatalf("an address only a sees -> %q", got)
+	}
+	if state := targetState(result.report, tailscaleTargetIP, "100.64.0.3"); state != tailscaleRouteConflict {
+		t.Fatalf("an address the signed-out b also saw: state = %q", state)
+	}
+}
+
+func TestTailscaleProfileRoutesCoverGroupsLogicRulesAndDeviceAddresses(t *testing.T) {
+	cidr, err := R.ParseRule("IP-CIDR", "100.64.0.0/24", "Work", []string{"no-resolve"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := R.ParseRule("IP-CIDR", "100.64.0.0/10", "HK", []string{"no-resolve"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	match, err := R.ParseRule("MATCH", "", "Work", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	own, reach := map[string]bool{"Office": true}, map[string]bool{"Work": true}
+	routes, direct := tailscaleProfileRoutes([]C.Rule{other, cidr, match}, own, reach)
+	if len(routes) != 1 || routes[0].Proxy != "Work" || len(direct) != 0 {
+		t.Fatalf("routes = %+v, direct = %d", routes, len(direct))
+	}
+	a := liveAccount("a", "1", "tail-a.ts.net",
+		peer("nas", "nas.tail-a.ts.net", "100.64.0.2"),
+		peer("pi", "pi.tail-a.ts.net", "100.64.1.2"))
+	result := computeTailscaleRoutes(newTailscaleRouteMemory(), []tailscaleRouteAccount{a}, routes)
+	if state := targetState(result.report, tailscaleTargetFQDN, "nas.tail-a.ts.net"); state != tailscaleRouteConflict {
+		t.Fatalf("a name whose address the group's rule covers: state = %q", state)
+	}
+	if state := targetState(result.report, tailscaleTargetFQDN, "pi.tail-a.ts.net"); state != tailscaleRouteBound {
+		t.Fatalf("a name outside it: state = %q", state)
+	}
+
+	logic, err := R.ParseRule("AND", "((NETWORK,TCP),(DST-PORT,22))", "Office", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	routes, direct = tailscaleProfileRoutes([]C.Rule{logic}, own, reach)
+	if len(direct) != 1 {
+		t.Fatalf("a rule straight to the profile's proxy is not deferred to: %d", len(direct))
+	}
+	result = computeTailscaleRoutes(newTailscaleRouteMemory(), []tailscaleRouteAccount{a}, routes)
+	for _, target := range result.report.Targets {
+		if target.State != tailscaleRouteConflict {
+			t.Fatalf("%s under a rule that may match anything: state = %q", target.Target.key(), target.State)
+		}
+	}
+}
+
+func TestTailscaleManagedRuleNeverResolves(t *testing.T) {
+	cidr, err := R.ParseRule("IP-CIDR", "100.64.0.0/10", "Office", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := computeTailscaleRoutes(newTailscaleRouteMemory(), []tailscaleRouteAccount{liveAccount("a", "1", "")}, nil)
+	result.table.profileRules = []C.Rule{cidr}
+	slot := new(tailscaleRouteSlot)
+	slot.Store(result.table)
+	resolved := false
+	helper := C.RuleMatchHelper{ResolveIP: func() { resolved = true }}
+	hostRule := &tailscaleManagedRule{kind: tailscaleRuleHost, slot: slot}
+	if matched, proxy := hostRule.Match(&C.Metadata{Host: "short.tail-x.ts.net"}, helper); !matched || proxy != tailscaleRejectProxy {
+		t.Fatalf("an unknown name -> %v %q", matched, proxy)
+	}
+	if resolved {
+		t.Fatal("the protected path resolved a name")
+	}
+}
+
+func TestTailscaleRoutesPruneSuffixesOfRemovedAccounts(t *testing.T) {
+	a := liveAccount("a", "1", "corp.example", peer("nas", "", "100.64.0.2"))
+	b := liveAccount("b", "2", "home.example")
+	pending := tailscaleRouteAccount{ID: "c", Proxy: "TS c", Available: true}
+	result := computeTailscaleRoutes(newTailscaleRouteMemory(), []tailscaleRouteAccount{a, b, pending}, nil)
+	if !slices.Equal(result.memory.Suffixes, []string{"corp.example", "home.example"}) {
+		t.Fatalf("suffixes = %v", result.memory.Suffixes)
+	}
+	// Removed before anything bound: nothing references a's network any more.
+	result = computeTailscaleRoutes(result.memory, []tailscaleRouteAccount{b, pending}, nil)
+	if !slices.Equal(result.memory.Suffixes, []string{"home.example"}) {
+		t.Fatalf("suffixes after a was removed = %v", result.memory.Suffixes)
+	}
+	if got := routeHost(result.table, "www.corp.example"); got != "" {
+		t.Fatalf("a removed account's network -> %q, want the profile's rules", got)
+	}
+
+	// A kept binding under a suffix keeps it blocked.
+	full := computeTailscaleRoutes(newTailscaleRouteMemory(), []tailscaleRouteAccount{a, b}, nil)
+	result = computeTailscaleRoutes(full.memory, []tailscaleRouteAccount{b}, nil)
+	if !slices.Contains(result.memory.Suffixes, "corp.example") {
+		t.Fatalf("a bound network was dropped: %v", result.memory.Suffixes)
 	}
 }

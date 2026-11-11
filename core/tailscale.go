@@ -627,7 +627,9 @@ type TailscaleAccount struct {
 	LoginName   string `json:"login-name"`
 	DisplayName string `json:"display-name"`
 	Tailnet     string `json:"tailnet"`
-	ControlURL  string `json:"control-url"`
+	// The network's domain, which a rename of its display name leaves alone.
+	TailnetID  string `json:"tailnet-id,omitempty"`
+	ControlURL string `json:"control-url"`
 }
 
 func readTailscaleAccount(dir string) *TailscaleAccount {
@@ -651,6 +653,7 @@ func readTailscaleAccount(dir string) *TailscaleAccount {
 		LoginName:   profile.UserProfile.LoginName,
 		DisplayName: profile.UserProfile.DisplayName,
 		Tailnet:     cmp.Or(profile.NetworkProfile.DisplayName, profile.NetworkProfile.DomainName),
+		TailnetID:   profile.NetworkProfile.DomainName,
 		ControlURL:  normalizeControlURL(profile.ControlURL),
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/metacubex/mihomo/adapter"
 	"github.com/metacubex/mihomo/adapter/outbound"
@@ -20,6 +21,8 @@ import (
 
 const tailscaleManagedBaseName = "Tailscale"
 
+const tailscaleWatchRetry = 5 * time.Second
+
 type tailscaleManagedNode struct {
 	key      string
 	watching bool
@@ -31,10 +34,18 @@ var (
 	tailscaleManagedMu        sync.Mutex
 	tailscaleManagedNodes     = map[*outbound.Tailscale]*tailscaleManagedNode{}
 	tailscaleManagedInjecting = map[string]bool{}
-	// What the running config holds of the profile's own Tailscale routes.
+	// What the config applied last holds of the profile's own Tailscale routes.
 	tailscaleManagedProfile      []tailscaleProfileRoute
 	tailscaleManagedProfileRules []C.Rule
 	tailscaleManagedActive       bool
+	// The host could not read its accounts: protect everything, keep nothing.
+	tailscaleManagedUnknown bool
+	// A config being applied reads the staged slot until hub.ApplyConfig runs it.
+	tailscaleRunningSlot *tailscaleRouteSlot
+	tailscaleStagedSlot  *tailscaleRouteSlot
+	tailscaleStaged      bool
+	// Names a provider loaded after the parse also uses; never given again.
+	tailscaleManagedNameClash = map[string]bool{}
 )
 
 func tailscaleInjecting(stateDir string) bool {
@@ -74,16 +85,25 @@ func tailscaleManagedIDOf(t *outbound.Tailscale) string {
 
 func forgetTailscaleManaged(t *outbound.Tailscale) {
 	tailscaleManagedMu.Lock()
-	node := tailscaleManagedNodes[t]
+	var cancel context.CancelFunc
+	if node := tailscaleManagedNodes[t]; node != nil {
+		cancel = node.cancel
+	}
 	delete(tailscaleManagedNodes, t)
 	tailscaleManagedMu.Unlock()
-	if node != nil && node.cancel != nil {
-		node.cancel()
+	if cancel != nil {
+		cancel()
 	}
 }
 
 func tailscaleProxyNameTaken(cfg *config.Config, name string) bool {
 	if _, ok := cfg.Proxies[name]; ok {
+		return true
+	}
+	tailscaleManagedMu.Lock()
+	clash := tailscaleManagedNameClash[name]
+	tailscaleManagedMu.Unlock()
+	if clash {
 		return true
 	}
 	for _, pd := range cfg.Providers {
@@ -112,30 +132,33 @@ func tailscaleManagedName(cfg *config.Config, base string) string {
 	}
 }
 
+var buildTailscaleManagedProxy = func(mapping map[string]any) (C.Proxy, error) {
+	return adapter.ParseProxy(mapping, adapter.WithTunnelForAPI(tunnel.Tunnel))
+}
+
 // Adds the panel's nodes to the parsed config and, once any is attached, the
 // two managed rules at the head of its rules. Nothing goes into a group or the
-// config file.
+// config file. An attached account that fails to build still turns the rules
+// on, so its targets and the ranges stay blocked.
 func injectTailscaleManaged(cfg *config.Config) {
 	tailscaleMu.Lock()
 	var managed []TailscaleManagedSetup
 	var profileID int64
+	var unknown bool
 	if tailscaleSetup != nil {
 		managed = append(managed, tailscaleSetup.Managed...)
 		profileID = tailscaleSetup.ProfileID
+		unknown = tailscaleSetup.ManagedUnknown
 	}
 	tailscaleMu.Unlock()
 
-	tailscaleProxies := map[string]bool{}
-	for name, proxy := range cfg.Proxies {
-		if proxy.Type() == C.Tailscale {
-			tailscaleProxies[name] = true
-		}
-	}
-	attached := false
+	own, reach := tailscaleProfileAdapters(cfg.Proxies)
+	attached := unknown
 	for _, account := range managed {
 		if account.ID == "" {
 			continue
 		}
+		attached = attached || account.Attached
 		dir := tailscaleManagedDir(profileID, account.ID, account.ControlURL)
 		mapping := map[string]any{
 			"name":      tailscaleManagedName(cfg, account.Name),
@@ -155,7 +178,7 @@ func injectTailscaleManaged(cfg *config.Config) {
 		tailscaleManagedMu.Lock()
 		tailscaleManagedInjecting[dir] = true
 		tailscaleManagedMu.Unlock()
-		proxy, err := adapter.ParseProxy(mapping, adapter.WithTunnelForAPI(tunnel.Tunnel))
+		proxy, err := buildTailscaleManagedProxy(mapping)
 		tailscaleManagedMu.Lock()
 		delete(tailscaleManagedInjecting, dir)
 		tailscaleManagedMu.Unlock()
@@ -171,23 +194,48 @@ func injectTailscaleManaged(cfg *config.Config) {
 		tailscaleManagedNodes[node] = &tailscaleManagedNode{key: tailscaleManagedKey(profileID, account.ID, account.ControlURL)}
 		tailscaleManagedMu.Unlock()
 		cfg.Proxies[proxy.Name()] = proxy
-		attached = attached || account.Attached
 	}
 
-	routes, profileRules := tailscaleProfileRoutes(cfg.Rules, tailscaleProxies)
-	tailscaleManagedMu.Lock()
-	tailscaleManagedProfile, tailscaleManagedProfileRules = routes, profileRules
-	tailscaleManagedActive = attached
-	tailscaleManagedMu.Unlock()
+	routes, profileRules := tailscaleProfileRoutes(cfg.Rules, own, reach)
+	var slot *tailscaleRouteSlot
 	if attached {
+		slot = new(tailscaleRouteSlot)
 		rules := []C.Rule{
-			RW.NewRuleWrapper(&tailscaleManagedRule{kind: tailscaleRuleHost}),
-			RW.NewRuleWrapper(&tailscaleManagedRule{kind: tailscaleRuleIP}),
+			RW.NewRuleWrapper(&tailscaleManagedRule{kind: tailscaleRuleHost, slot: slot}),
+			RW.NewRuleWrapper(&tailscaleManagedRule{kind: tailscaleRuleIP, slot: slot}),
 		}
 		cfg.Rules = append(rules, cfg.Rules...)
 	}
-	// The table is ready before the config runs, so no connection meets the
-	// rules without it.
+	tailscaleManagedMu.Lock()
+	tailscaleManagedProfile, tailscaleManagedProfileRules = routes, profileRules
+	tailscaleManagedActive, tailscaleManagedUnknown = attached, unknown
+	tailscaleStagedSlot, tailscaleStaged = slot, true
+	tailscaleManagedMu.Unlock()
+	reloadTailscaleRoutes()
+}
+
+// Called once hub.ApplyConfig installed the config injected last: from now on
+// the routing follows its rules.
+func publishTailscaleManaged() {
+	tailscaleManagedMu.Lock()
+	if tailscaleStaged {
+		tailscaleRunningSlot, tailscaleStagedSlot, tailscaleStaged = tailscaleStagedSlot, nil, false
+	}
+	names := map[string]bool{}
+	for t := range tailscaleManagedNodes {
+		names[t.Name()] = true
+	}
+	tailscaleManagedMu.Unlock()
+	for _, pd := range tunnel.Providers() {
+		for _, proxy := range pd.Proxies() {
+			if names[proxy.Name()] {
+				logError("[Tailscale] panel-added node %q shares its name with a node of %s; it is renamed on the next apply", proxy.Name(), pd.Name())
+				tailscaleManagedMu.Lock()
+				tailscaleManagedNameClash[proxy.Name()] = true
+				tailscaleManagedMu.Unlock()
+			}
+		}
+	}
 	refreshTailscaleRoutes()
 }
 
@@ -205,9 +253,10 @@ func tailscaleInstanceOf(name, stateDir string) *outbound.Tailscale {
 func clearTailscaleManaged() {
 	tailscaleManagedMu.Lock()
 	tailscaleManagedProfile, tailscaleManagedProfileRules = nil, nil
-	tailscaleManagedActive = false
+	tailscaleManagedActive, tailscaleManagedUnknown = false, false
+	tailscaleStagedSlot, tailscaleStaged = nil, true
 	tailscaleManagedMu.Unlock()
-	refreshTailscaleRoutes()
+	reloadTailscaleRoutes()
 }
 
 // Brings back every attached account that still has its login and was not
@@ -255,9 +304,23 @@ func watchTailscaleManaged(t *outbound.Tailscale, state string) {
 	safeGo("tailscale managed devices", func() {
 		defer func() {
 			tailscaleManagedMu.Lock()
-			node.watching = false
+			node.watching, node.cancel, node.live = false, nil, nil
+			current := tailscaleManagedNodes[t] == node
 			tailscaleManagedMu.Unlock()
+			stopped := ctx.Err() != nil
 			cancel()
+			if !current {
+				return
+			}
+			// A list nobody keeps current any more is not a loaded one.
+			refreshTailscaleRoutes()
+			if !stopped && !t.Closed() && t.BackendState() == ipn.Running.String() {
+				time.AfterFunc(tailscaleWatchRetry, func() {
+					safeGo("tailscale managed devices retry", func() {
+						watchTailscaleManaged(t, t.BackendState())
+					})
+				})
+			}
 		}()
 		watchTailscaleDevices(ctx, t, node)
 	})
@@ -289,8 +352,14 @@ func watchTailscaleDevices(ctx context.Context, t *outbound.Tailscale, node *tai
 			continue
 		}
 		tailscaleManagedMu.Lock()
-		node.live = live
+		current := tailscaleManagedNodes[t] == node
+		if current {
+			node.live = live
+		}
 		tailscaleManagedMu.Unlock()
+		if !current {
+			return
+		}
 		refreshTailscaleRoutes()
 	}
 }
@@ -389,9 +458,21 @@ func refreshTailscaleRoutes() {
 	r.refreshLocked()
 }
 
+// A new config may keep routes again for a profile they were forgotten for.
+func reloadTailscaleRoutes() {
+	r := tailscaleRouting
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.forgotten = false
+	r.refreshLocked()
+}
+
 func (r *tailscaleRouter) ensureLoadedLocked(profileID int64) {
 	if r.profileID == profileID && r.memory != nil && r.loadErr == nil {
 		return
+	}
+	if r.profileID != profileID {
+		r.forgotten = false
 	}
 	r.profileID = profileID
 	memory, err := loadTailscaleRouteMemory(profileID)
@@ -407,7 +488,11 @@ func (r *tailscaleRouter) refreshLocked() {
 	r.ensureLoadedLocked(profileID)
 	accounts := tailscaleRouteAccounts()
 	tailscaleManagedMu.Lock()
-	profile, profileRules, active := tailscaleManagedProfile, tailscaleManagedProfileRules, tailscaleManagedActive
+	profile, profileRules, active, unknown := tailscaleManagedProfile, tailscaleManagedProfileRules, tailscaleManagedActive, tailscaleManagedUnknown
+	slot := tailscaleRunningSlot
+	if tailscaleStaged {
+		slot = tailscaleStagedSlot
+	}
 	tailscaleManagedMu.Unlock()
 
 	memory := r.memory
@@ -419,12 +504,10 @@ func (r *tailscaleRouter) refreshLocked() {
 	}
 	result := computeTailscaleRoutes(memory, accounts, profile)
 	result.table.profileRules = profileRules
-	if active {
-		tailscaleActiveTable.Store(result.table)
-	} else {
-		tailscaleActiveTable.Store(nil)
+	if slot != nil {
+		slot.Store(result.table)
 	}
-	if r.loadErr == nil {
+	if r.loadErr == nil && !unknown && !r.forgotten {
 		r.memory = result.memory
 		if r.persisted == nil || !r.persisted.equal(result.memory) {
 			if err := saveTailscaleRouteMemory(profileID, result.memory); err != nil {
@@ -519,7 +602,7 @@ func handleTailscaleForgetRoutes(params TailscaleRoutesParams) (*TailscaleForget
 		return &TailscaleForgetResult{Outcome: tailscaleOutcomeFailed, Error: asMethodError(err)}, nil
 	}
 	if params.ProfileID == r.profileID {
-		r.memory, r.persisted, r.loadErr = newTailscaleRouteMemory(), newTailscaleRouteMemory(), nil
+		r.memory, r.persisted, r.loadErr, r.forgotten = newTailscaleRouteMemory(), newTailscaleRouteMemory(), nil, true
 		r.refreshLocked()
 	}
 	return &TailscaleForgetResult{Outcome: tailscaleOutcomeConfirmed}, nil

@@ -143,6 +143,8 @@ type TailscaleSetup struct {
 	LegacyMigration *TailscaleLegacyMigration `json:"legacy-migration,omitempty"`
 	// The panel-added accounts of this profile, in sign-in order.
 	Managed []TailscaleManagedSetup `json:"managed,omitempty"`
+	// The host could not read its accounts: block every Tailscale target.
+	ManagedUnknown bool `json:"managed-unknown,omitempty"`
 }
 
 // A node the panel added; ID is the binding, Name only a label the Core may

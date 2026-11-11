@@ -35,6 +35,8 @@ func injectTailscaleManaged(*config.Config) {}
 
 func clearTailscaleManaged() {}
 
+func publishTailscaleManaged() {}
+
 func startTailscaleManaged() {}
 
 func handleTailscaleRoutes(TailscaleRoutesParams) (any, error) { return nil, errTailscaleUnsupported }
