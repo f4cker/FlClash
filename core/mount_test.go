@@ -65,14 +65,14 @@ func TestInspectMountSourceClassifiesWhatAProviderWouldLoad(t *testing.T) {
 		"share links":     {"trojan://secret@127.0.0.1:443#t1\n", MountSourceInspection{Status: mountSourceNodes, Count: 1, Listed: 1}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := inspectMountSource(writeMountFile(t, dir, strings.ReplaceAll(name, " ", "-")+".yaml", tc.content), "")
+			got := inspectMountSource(writeMountFile(t, dir, strings.ReplaceAll(name, " ", "-")+".yaml", tc.content), "", nil)
 			got.names = nil
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("inspection = %+v, want %+v", got, tc.want)
 			}
 		})
 	}
-	if got := inspectMountSource(filepath.Join(dir, "absent.yaml"), ""); got.Status != mountSourceMissing {
+	if got := inspectMountSource(filepath.Join(dir, "absent.yaml"), "", nil); got.Status != mountSourceMissing {
 		t.Errorf("absent file = %+v, want missing", got)
 	}
 }
@@ -157,7 +157,7 @@ rules:
 		got[group.Name] = group.Kind + "/" + group.Excluded
 	}
 	want := map[string]string{
-		"Proxy":    "candidate/",
+		"Proxy":    "excluded/tailscale",
 		"Office":   "excluded/tailscale",
 		"Outer":    "excluded/tailscale",
 		"Collects": "excluded/tailscale",
@@ -168,7 +168,7 @@ rules:
 	}
 
 	home := withMountHome(t)
-	for _, chosen := range []string{"Office", "Outer"} {
+	for _, chosen := range []string{"Office", "Outer", "Proxy"} {
 		setup := &MountSetup{Groups: []string{chosen}, Sources: []MountSource{{ID: 1, Path: writeMountFile(t, home, "1.yaml", mountSourceB)}}}
 		_, err := applyMountOverrides(rootOf(t, profile), setup)
 		var methodErr *MethodError
@@ -624,6 +624,14 @@ func checkOnlyConfig(t *testing.T, document *yaml.Node) *config.Config {
 	}
 	for i, mapping := range raw.Proxy {
 		raw.Proxy[i] = checkOnlyProxy(mapping)
+	}
+	for _, provider := range raw.ProxyProvider {
+		payload, _ := provider["payload"].([]any)
+		for i, item := range payload {
+			if mapping, ok := item.(map[string]any); ok {
+				payload[i] = checkOnlyProxy(mapping)
+			}
+		}
 	}
 	cfg, err := config.ParseRawConfig(raw)
 	if err != nil {

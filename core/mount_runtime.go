@@ -107,15 +107,31 @@ func mountSetupOf(params *SetupParams) *MountSetup {
 	if params.Mounts == nil {
 		return nil
 	}
-	setup := *params.Mounts
-	if params.Tailscale != nil {
-		for _, managed := range params.Tailscale.Managed {
+	return withManagedNames(params.Mounts, params.Tailscale)
+}
+
+func withManagedNames(mounts *MountSetup, tailscale *TailscaleSetup) *MountSetup {
+	setup := *mounts
+	setup.reserved = nil
+	if tailscale != nil {
+		for _, managed := range tailscale.Managed {
 			if managed.ID != "" {
 				setup.reserved = append(setup.reserved, cmp.Or(managed.Name, tailscaleManagedBaseName))
 			}
 		}
 	}
 	return &setup
+}
+
+// The running profile's preflight sees its panel-added names as its apply.
+func preflightMountSetup(mounts *MountSetup) *MountSetup {
+	tailscaleMu.Lock()
+	setup := tailscaleSetup
+	tailscaleMu.Unlock()
+	if setup == nil || mounts.Target == 0 || setup.ProfileID != mounts.Target {
+		setup = nil
+	}
+	return withManagedNames(mounts, setup)
 }
 
 func checkMountedSetup(params *SetupParams) error {
@@ -246,7 +262,7 @@ func handleMountPreflight(params MountPreflightParams) (*MountPreflight, error) 
 	}
 	configMu.Lock()
 	defer configMu.Unlock()
-	document, report, err := mountedDocument(params.Base, configPath, mounts)
+	document, report, err := mountedDocument(params.Base, configPath, preflightMountSetup(mounts))
 	if err == nil {
 		err = parseDocument(document)
 	}

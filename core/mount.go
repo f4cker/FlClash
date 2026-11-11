@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"maps"
 	"os"
 	"slices"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 	"github.com/metacubex/mihomo/common/convert"
 	mihomoYaml "github.com/metacubex/mihomo/common/yaml"
 	"github.com/metacubex/mihomo/component/age"
-	"github.com/metacubex/mihomo/constant"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -54,7 +52,9 @@ type MountSourceInspection struct {
 	Count             int    `json:"count"`
 	Listed            int    `json:"listed"`
 	TailscaleExcluded int    `json:"tailscale-excluded"`
+	RelayExcluded     int    `json:"relay-excluded"`
 	names             []string
+	relayed           []string
 }
 
 func mountProviderName(id int64) string {
@@ -62,12 +62,21 @@ func mountProviderName(id int64) string {
 }
 
 type MountInspectSourceParams struct {
-	Path         string `json:"path"`
-	AgeSecretKey string `json:"age-secret-key,omitempty"`
+	Path         string   `json:"path"`
+	AgeSecretKey string   `json:"age-secret-key,omitempty"`
+	Relay        []string `json:"relay,omitempty"`
+	Managed      []string `json:"managed,omitempty"`
 }
 
 func handleInspectMountSource(params MountInspectSourceParams) MountSourceInspection {
-	return inspectMountSource(params.Path, params.AgeSecretKey)
+	var relay *mountRelay
+	if params.Relay != nil || params.Managed != nil {
+		relay = &mountRelay{names: map[string]bool{}, managed: managedBases(params.Managed)}
+		for _, name := range params.Relay {
+			relay.names[name] = true
+		}
+	}
+	return inspectMountSource(params.Path, params.AgeSecretKey, relay)
 }
 
 func ageKeys(secretKey string) []string {
@@ -79,7 +88,7 @@ func ageKeys(secretKey string) []string {
 
 // Mirrors NewProxiesParser for a mount provider, so a file that would not
 // load there is never counted as nodes here.
-func inspectMountSource(path, ageSecretKey string) MountSourceInspection {
+func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourceInspection {
 	buf, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -130,6 +139,12 @@ func inspectMountSource(path, ageSecretKey string) MountSourceInspection {
 		if _, dup := seen[name]; dup {
 			continue
 		}
+		if dialer, _ := mapping["dialer-proxy"].(string); relay.reaches(dialer) {
+			inspection.RelayExcluded++
+			inspection.relayed = append(inspection.relayed, name)
+			seen[name] = struct{}{}
+			continue
+		}
 		proxy, err := adapter.ParseProxy(mapping)
 		if err != nil {
 			return MountSourceInspection{Status: mountSourceInvalid, Listed: len(mappings)}
@@ -139,7 +154,7 @@ func inspectMountSource(path, ageSecretKey string) MountSourceInspection {
 		inspection.names = append(inspection.names, name)
 	}
 	inspection.Count = len(inspection.names)
-	if inspection.Count == 0 && inspection.TailscaleExcluded < inspection.Listed {
+	if inspection.Count == 0 && inspection.TailscaleExcluded+inspection.RelayExcluded < inspection.Listed {
 		return MountSourceInspection{Status: mountSourceInvalid, Listed: len(mappings)}
 	}
 	return inspection
@@ -170,6 +185,7 @@ type MountGroupInfo struct {
 
 type MountTarget struct {
 	Groups []MountGroupInfo `json:"groups"`
+	Relay  []string         `json:"relay"`
 }
 
 var mountableGroupTypes = []string{"select", "url-test", "fallback", "load-balance"}
@@ -221,32 +237,20 @@ func decodeMappings(node *yaml.Node, key string) ([]map[string]any, error) {
 	return mappings, nil
 }
 
-func proxyTypesOf(root *yaml.Node) (map[string]string, error) {
-	proxies, err := decodeMappings(mappingValue(root, "proxies"), "proxies")
-	if err != nil {
-		return nil, err
-	}
-	proxyTypes := map[string]string{}
-	for _, mapping := range proxies {
-		proxyTypes[groupString(mapping, "name")] = strings.ToLower(groupString(mapping, "type"))
-	}
-	return proxyTypes, nil
-}
-
 func inspectMountTarget(root *yaml.Node) (MountTarget, error) {
-	proxyTypes, err := proxyTypesOf(root)
+	base, err := readMountBase(root)
 	if err != nil {
 		return MountTarget{}, err
 	}
-	groups, err := decodeMappings(mappingValue(root, "proxy-groups"), "proxy-groups")
-	if err != nil {
-		return MountTarget{}, err
-	}
-	target := MountTarget{Groups: []MountGroupInfo{}}
-	reach := tailscaleGroups(groups, proxyTypes)
-	for _, mapping := range groups {
+	target := MountTarget{Groups: []MountGroupInfo{}, Relay: []string{}}
+	reach := base.tailscaleGroups(tailnetSuffixes())
+	for _, mapping := range base.groups {
 		target.Groups = append(target.Groups, mountGroupInfo(mapping, reach[groupString(mapping, "name")]))
 	}
+	for name := range base.relayNames(reach) {
+		target.Relay = append(target.Relay, name)
+	}
+	slices.Sort(target.Relay)
 	return target, nil
 }
 
@@ -296,30 +300,6 @@ func collectsProviders(mapping map[string]any) bool {
 	return groupFlag(mapping, "include-all") || groupFlag(mapping, "include-all-providers")
 }
 
-// Every rule that reaches a Tailscale node goes through one of these groups.
-func tailscaleGroups(groups []map[string]any, proxyTypes map[string]string) map[string]bool {
-	hasTailscale := slices.Contains(slices.Collect(maps.Values(proxyTypes)), "tailscale")
-	reach := map[string]bool{}
-	holds := func(group map[string]any) bool {
-		excluded := strings.Contains(strings.ToLower(groupString(group, "exclude-type")), "tailscale")
-		if hasTailscale && !excluded && (groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies")) {
-			return true
-		}
-		return slices.ContainsFunc(groupList(group, "proxies"), func(member string) bool {
-			return reach[member] || !excluded && proxyTypes[member] == "tailscale"
-		})
-	}
-	for changed := true; changed; {
-		changed = false
-		for _, group := range groups {
-			if name := groupString(group, "name"); !reach[name] && holds(group) {
-				reach[name], changed = true, true
-			}
-		}
-	}
-	return reach
-}
-
 type MountNode struct {
 	Name     string `json:"name"`
 	Original string `json:"original"`
@@ -330,6 +310,7 @@ type MountSourceReport struct {
 	Provider          string      `json:"provider"`
 	Status            string      `json:"status"`
 	TailscaleExcluded int         `json:"tailscale-excluded"`
+	RelayExcluded     int         `json:"relay-excluded"`
 	Nodes             []MountNode `json:"nodes"`
 }
 
@@ -376,25 +357,22 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	if len(setup.Sources) == 0 {
 		return report, nil
 	}
+	base, err := readMountBase(root)
+	if err != nil {
+		return nil, err
+	}
 	taken := map[string]struct{}{}
-	for _, name := range slices.Concat(reservedProxyNames, setup.reserved) {
+	for _, name := range reservedProxyNames {
 		taken[name] = struct{}{}
 	}
-	proxyTypes, err := proxyTypesOf(root)
-	if err != nil {
-		return nil, err
-	}
-	for name := range proxyTypes {
+	for name := range base.proxyTypes {
 		taken[name] = struct{}{}
 	}
-	groupsNode := resolveAlias(mappingValue(root, "proxy-groups"))
-	groupMappings, err := decodeMappings(groupsNode, "proxy-groups")
-	if err != nil {
-		return nil, err
-	}
-	for _, mapping := range groupMappings {
+	for _, mapping := range base.groups {
 		taken[groupString(mapping, "name")] = struct{}{}
 	}
+	managed := managedBases(setup.reserved)
+	reserved := func(name string) bool { return managedNameFamily(name, managed) }
 
 	providers := resolveAlias(mappingValue(root, "proxy-providers"))
 	if providers == nil || isNull(providers) {
@@ -403,98 +381,47 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	} else if providers.Kind != yaml.MappingNode {
 		return nil, errors.New("proxy-providers must be a mapping")
 	}
-	for _, name := range baseProviderNames(providers) {
-		taken[name] = struct{}{}
-	}
 	var baseProviders []string
-	for i := 0; i+1 < len(providers.Content); i += 2 {
-		baseProviders = append(baseProviders, providers.Content[i].Value)
+	for name, provider := range base.providers {
+		baseProviders = append(baseProviders, name)
+		for _, node := range provider.names {
+			taken[node] = struct{}{}
+		}
 	}
 	slices.Sort(baseProviders)
+	reach := base.tailscaleGroups(tailnetSuffixes())
+	relay := &mountRelay{names: base.relayNames(reach), managed: managed}
 	names := make([]string, 0, len(setup.Sources))
 	for _, source := range setup.Sources {
 		name := mountProviderName(source.ID)
 		if mappingValue(providers, name) != nil {
 			return nil, fmt.Errorf("proxy provider %s already exists", name)
 		}
-		inspection := inspectMountSource(source.Path, "")
-		nodes, renames := mountNodeNames(source, inspection.names, taken)
+		inspection := inspectMountSource(source.Path, "", relay)
+		nodes, renames := mountNodeNames(source, inspection.names, taken, reserved)
 		report.Renamed += len(renames)
 		report.Sources = append(report.Sources, MountSourceReport{
 			ID:                source.ID,
 			Provider:          name,
 			Status:            inspection.Status,
 			TailscaleExcluded: inspection.TailscaleExcluded,
+			RelayExcluded:     inspection.RelayExcluded,
 			Nodes:             nodes,
 		})
-		definition, err := mountProviderNode(source.Path, renames)
+		definition, err := mountProviderNode(source.Path, renames, inspection, relay)
 		if err != nil {
 			return nil, err
 		}
 		setMappingValue(providers, name, definition)
 		names = append(names, name)
 	}
-	groups, err := applyMountGroups(groupsNode, groupMappings, proxyTypes, setup.Groups, names, baseProviders)
+	groupsNode := resolveAlias(mappingValue(root, "proxy-groups"))
+	groups, err := applyMountGroups(groupsNode, base.groups, reach, setup.Groups, names, baseProviders)
 	if err != nil {
 		return nil, err
 	}
 	report.Groups = groups
 	return report, nil
-}
-
-// What the base's own providers hold, from their payloads and caches. An
-// override-expr renaming is not followed; filters are not applied, which
-// only suffixes more mount nodes.
-func baseProviderNames(providers *yaml.Node) []string {
-	var names []string
-	for i := 0; i+1 < len(providers.Content); i += 2 {
-		var mapping map[string]any
-		if resolveAlias(providers.Content[i+1]).Decode(&mapping) != nil {
-			continue
-		}
-		var originals []string
-		switch groupString(mapping, "type") {
-		case "inline":
-			payload, _ := mapping["payload"].([]any)
-			for _, item := range payload {
-				if node, ok := item.(map[string]any); ok {
-					originals = append(originals, groupString(node, "name"))
-				}
-			}
-		case "file", "http":
-			path := groupString(mapping, "path")
-			if path == "" && groupString(mapping, "type") == "http" {
-				path = constant.Path.GetPathByHash("proxies", groupString(mapping, "url"))
-			}
-			originals = cachedProxyNames(constant.Path.Resolve(path), groupString(mapping, "age-secret-key"))
-		}
-		override, _ := mapping["override"].(map[string]any)
-		for _, original := range originals {
-			names = append(names, overriddenName(original, override))
-		}
-	}
-	return names
-}
-
-func cachedProxyNames(path, ageSecretKey string) []string {
-	buf, err := os.ReadFile(path)
-	if err != nil {
-		return nil
-	}
-	if buf, err = age.DecryptBytes(buf, ageKeys(ageSecretKey)...); err != nil {
-		return nil
-	}
-	var document struct {
-		Proxies []map[string]any `yaml:"proxies"`
-	}
-	if mihomoYaml.Unmarshal(buf, &document) != nil || document.Proxies == nil {
-		document.Proxies, _ = convert.ConvertsV2Ray(buf)
-	}
-	names := make([]string, 0, len(document.Proxies))
-	for _, mapping := range document.Proxies {
-		names = append(names, groupString(mapping, "name"))
-	}
-	return names
 }
 
 func overriddenName(name string, override map[string]any) string {
@@ -512,7 +439,7 @@ func overriddenName(name string, override map[string]any) string {
 	return groupString(override, "additional-prefix") + name + groupString(override, "additional-suffix")
 }
 
-func mountNodeNames(source MountSource, originals []string, taken map[string]struct{}) ([]MountNode, []MountNode) {
+func mountNodeNames(source MountSource, originals []string, taken map[string]struct{}, reserved func(string) bool) ([]MountNode, []MountNode) {
 	own := make(map[string]struct{}, len(originals))
 	for _, name := range originals {
 		own[name] = struct{}{}
@@ -524,13 +451,13 @@ func mountNodeNames(source MountSource, originals []string, taken map[string]str
 	used := func(name string) bool {
 		_, inTaken := taken[name]
 		_, inOwn := own[name]
-		return inTaken || inOwn
+		return inTaken || inOwn || reserved(name)
 	}
 	nodes := make([]MountNode, 0, len(originals))
 	var renames []MountNode
 	for _, original := range originals {
 		name := original
-		if _, clash := taken[original]; clash {
+		if _, clash := taken[original]; clash || reserved(original) {
 			name = fmt.Sprintf("%s (%s)", original, label)
 			for attempt := 1; used(name); attempt++ {
 				suffix := "#" + strconv.FormatInt(source.ID, 10)
@@ -550,13 +477,20 @@ func mountNodeNames(source MountSource, originals []string, taken map[string]str
 	return nodes, renames
 }
 
-func mountProviderNode(path string, renames []MountNode) (*yaml.Node, error) {
+// Left with relays only, a source is an empty inline list: a file may not.
+func mountProviderNode(path string, renames []MountNode, inspection MountSourceInspection, relay *mountRelay) (*yaml.Node, error) {
 	definition := map[string]any{
 		"type":              "file",
 		"path":              path,
 		"flash-allow-empty": true,
 		"exclude-type":      "tailscale",
 	}
+	if inspection.Count == 0 && inspection.RelayExcluded > 0 {
+		definition = map[string]any{"type": "inline", "payload": []any{}, "flash-allow-empty": true}
+	} else if len(inspection.relayed) > 0 {
+		definition["exclude-filter"] = exactNamesFilter(inspection.relayed)
+	}
+	override := map[string]any{}
 	if len(renames) > 0 {
 		rules := make([]map[string]any, 0, len(renames))
 		for _, rename := range renames {
@@ -565,7 +499,13 @@ func mountProviderNode(path string, renames []MountNode) (*yaml.Node, error) {
 				"target":  strings.ReplaceAll(rename.Name, "$", "$$"),
 			})
 		}
-		definition["override"] = map[string]any{"proxy-name": rules}
+		override["proxy-name"] = rules
+	}
+	if !relay.empty() && definition["type"] == "file" {
+		override["override-expr"] = []string{relay.backstop()}
+	}
+	if len(override) > 0 {
+		definition["override"] = override
 	}
 	var node yaml.Node
 	if err := node.Encode(definition); err != nil {
@@ -574,10 +514,9 @@ func mountProviderNode(path string, renames []MountNode) (*yaml.Node, error) {
 	return &node, nil
 }
 
-func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, proxyTypes map[string]string, chosen []string, providers []string, baseProviders []string) ([]MountGroupReport, error) {
+func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, reach map[string]bool, chosen []string, providers []string, baseProviders []string) ([]MountGroupReport, error) {
 	reports := []MountGroupReport{}
 	found := map[string]bool{}
-	reach := tailscaleGroups(mappings, proxyTypes)
 	for i, mapping := range mappings {
 		node := resolveAlias(groupsNode.Content[i])
 		info := mountGroupInfo(mapping, reach[groupString(mapping, "name")])
@@ -647,6 +586,13 @@ func pinBaseProviders(node *yaml.Node, mapping map[string]any, baseProviders []s
 		return nil, err
 	}
 	setMappingValue(&pinned, "use", &useNode)
+	if len(baseProviders) == 0 && len(groupList(mapping, "proxies")) == 0 && !groupFlag(mapping, "include-all") && !groupFlag(mapping, "include-all-proxies") {
+		var rejectNode yaml.Node
+		if err := rejectNode.Encode([]string{"REJECT"}); err != nil {
+			return nil, err
+		}
+		setMappingValue(&pinned, "proxies", &rejectNode)
+	}
 	return &pinned, nil
 }
 
