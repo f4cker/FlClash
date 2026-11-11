@@ -737,6 +737,50 @@ void main() {
     });
   }
 
+  for (final (state, application, says) in [
+    (MountSourceState.nodes, MountSaveOutcome.applied, true),
+    (MountSourceState.empty, null, true),
+    (MountSourceState.nodes, MountSaveOutcome.unknown, false),
+    (MountSourceState.nodes, MountSaveOutcome.applyFailedKept, false),
+    (MountSourceState.relayOnly, MountSaveOutcome.applied, false),
+    (MountSourceState.isolatedOnly, MountSaveOutcome.applied, false),
+    (MountSourceState.tailscaleOnly, MountSaveOutcome.applied, false),
+    (MountSourceState.unsupported, null, false),
+  ]) {
+    testWidgets('an update that leaves ${state.name} applied as '
+        '${application?.name} ${says ? 'says' : 'never says'} nodes updated', (
+      tester,
+    ) async {
+      final mounts =
+          FakeMounts(
+              panelOf(
+                [item(air, mounted: true)],
+                stored: MountTargetState(
+                  targetId: target.id,
+                  sourceIds: [air.id],
+                  version: 1,
+                ),
+                groups: MountTarget(
+                  groups: [groupInfo('A', kind: MountGroupKind.auto)],
+                ),
+              ),
+            )
+            ..refreshResult = MountSourceRefresh(
+              updated: true,
+              item: item(air, state: state, mounted: true),
+              application: application,
+            );
+      await pumpSheet(tester, mounts, profiles: [air]);
+      final l10n = currentAppLocalizations;
+
+      await tester.tap(find.byTooltip(l10n.mountUpdateNodes));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text(l10n.mountNodesUpdated), says ? findsOne : findsNothing);
+      await tester.pumpAndSettle();
+    });
+  }
+
   testWidgets('the running report counts relays over the inspection', (
     tester,
   ) async {

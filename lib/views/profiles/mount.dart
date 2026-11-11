@@ -417,13 +417,25 @@ class _MountSheetState extends ConsumerState<MountSheet> {
         );
       }
     });
-    if (result.updated) {
+    if (_reliablyUpdated(result)) {
       dialogs.showBanner(
         context.appLocalizations.mountNodesUpdated,
         level: BannerLevel.success,
       );
     }
     unawaited(_loadRuntime());
+  }
+
+  /// Nodes updated only when they were read, judged mountable and, where
+  /// they are mounted on the running profile, applied, copy §4 and §8.
+  bool _reliablyUpdated(MountSourceRefresh result) {
+    if (!result.updated || !(result.item?.state.fetched ?? false)) {
+      return false;
+    }
+    return switch (result.application) {
+      null || MountSaveOutcome.applied || MountSaveOutcome.saved => true,
+      _ => false,
+    };
   }
 
   Future<void> _import() async {

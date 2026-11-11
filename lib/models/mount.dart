@@ -323,6 +323,9 @@ enum MountSourceState {
     unsupported || tailscaleOnly || relayOnly || isolatedOnly => false,
     _ => true,
   };
+
+  /// A source read and left with a list to mount, even an empty one.
+  bool get fetched => this == nodes || this == empty;
 }
 
 @freezed

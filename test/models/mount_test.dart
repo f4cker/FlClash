@@ -313,6 +313,13 @@ void main() {
           MountSourceState.unsupported,
         ],
       );
+      expect(
+        [
+          for (final state in MountSourceState.values)
+            if (state.fetched) state,
+        ],
+        [MountSourceState.nodes, MountSourceState.empty],
+      );
     });
 
     test('the card counts only failures no later update cleared', () {
