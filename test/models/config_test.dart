@@ -424,21 +424,32 @@ void main() {
   group('NetworkProps JSON round-trip', () {
     test('default values', () {
       const props = NetworkProps();
-      expect(props.systemProxy, true);
+      expect(props.systemProxy, false);
       expect(props.bypassDomain, defaultBypassDomain);
       expect(props.bypassPrivateRoute, true);
       expect(props.autoSetSystemDns, true);
       expect(props.appendSystemDns, false);
     });
 
+    test('a fresh install leaves the system proxy off', () {
+      expect(NetworkProps.fromJson(null).systemProxy, isFalse);
+      expect(NetworkProps.fromJson(const {}).systemProxy, isFalse);
+      expect(Config.fromJson(const {}).networkProps.systemProxy, isFalse);
+    });
+
+    test('a saved choice to use the system proxy is kept', () {
+      final props = NetworkProps.fromJson(const {'systemProxy': true});
+      expect(props.systemProxy, isTrue);
+    });
+
     test('round-trip with custom values', () {
       const props = NetworkProps(
-        systemProxy: false,
+        systemProxy: true,
         bypassDomain: ['example.com'],
         bypassPrivateRoute: true,
       );
       final restored = roundTrip(() => props.toJson(), NetworkProps.fromJson);
-      expect(restored.systemProxy, false);
+      expect(restored.systemProxy, true);
       expect(restored.bypassDomain, ['example.com']);
       expect(restored.bypassPrivateRoute, true);
     });
@@ -1035,7 +1046,7 @@ void main() {
       const config = Config(themeProps: ThemeProps());
       final restored = roundTrip(() => config.toJson(), Config.fromJson);
       expect(restored.currentProfileId, null);
-      expect(restored.networkProps.systemProxy, true);
+      expect(restored.networkProps.systemProxy, false);
       expect(restored.vpnProps.enable, true);
       expect(restored.hotKeyActions, isEmpty);
     });

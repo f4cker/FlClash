@@ -383,8 +383,10 @@ extension AuthenticationPropsExt on AuthenticationProps {
 
 @freezed
 abstract class NetworkProps with _$NetworkProps {
+  /// [systemProxy] starts off: Flash takes the system proxy over only when
+  /// the user turns it on, never because it was installed or started.
   const factory NetworkProps({
-    @Default(true) bool systemProxy,
+    @Default(false) bool systemProxy,
     @Default(defaultBypassDomain) List<String> bypassDomain,
     @Default(true) bool bypassPrivateRoute,
     @Default(true) bool autoSetSystemDns,

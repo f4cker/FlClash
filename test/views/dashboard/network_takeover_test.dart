@@ -38,7 +38,6 @@ final _rowCases = <_RowCase>[
     const NetworkTakeoverCard(),
     'System proxy',
     (container) => container.read(networkSettingProvider).systemProxy,
-    initial: true,
   ),
   _RowCase(
     'TUN',
@@ -156,6 +155,12 @@ void main() {
   testWidgets('a row says what it is set to', (tester) async {
     await pumpCard(tester, const NetworkTakeoverCard());
 
+    // A fresh install starts with both off.
+    expect(find.text('Port 7890'), findsNothing);
+    expect(find.text(currentAppLocalizations.disabled), findsNWidgets(2));
+
+    await tester.tap(switchOf(_rowCases[0]));
+    await tester.pumpAndSettle();
     expect(find.text('Port 7890'), findsOneWidget);
     expect(find.text(currentAppLocalizations.disabled), findsOneWidget);
 
