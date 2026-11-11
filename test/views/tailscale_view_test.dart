@@ -116,12 +116,18 @@ void main() {
       await teardownView(tester);
     });
 
-    testWidgets('no node shows the empty page with 前往配置', (tester) async {
+    testWidgets('no node offers sign-in from the panel, never 前往配置', (
+      tester,
+    ) async {
       serve(const []);
       await pumpPanel(tester);
 
-      expect(find.text('尚无 Tailscale 节点'), findsOneWidget);
-      expect(find.text('前往配置'), findsOneWidget);
+      expect(find.text('登录 Tailscale'), findsWidgets);
+      expect(find.textContaining('不会自动开启系统代理或虚拟网卡。'), findsOneWidget);
+      expect(find.text('前往配置'), findsNothing);
+      verifyNever(
+        () => core.loginTailscale(any(), reauth: any(named: 'reauth')),
+      );
       await teardownView(tester);
     });
 
@@ -139,16 +145,182 @@ void main() {
       await teardownView(tester);
     });
 
-    testWidgets('the node picker shows only with two nodes or more', (
-      tester,
-    ) async {
-      serve([tsSignedOutNode, tsSignedOutNode.copyWith(name: 'ts-office')]);
+    testWidgets('the account switcher shows from one node on', (tester) async {
+      serve([tsSignedOutNode]);
       when(
         () => core.getTailscaleStatus(any()),
       ).thenAnswer((_) async => const TailscaleStatus(node: tsSignedOutNode));
       await pumpPanel(tester);
 
-      expect(find.text('ts-home · 当前节点'), findsOneWidget);
+      expect(find.text('ts-home'), findsWidgets);
+      expect(find.text('· 未登录'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('当前查看的 Tailscale 账号：ts-home')),
+        findsOneWidget,
+      );
+      await teardownView(tester);
+    });
+  });
+
+  group('panel-added accounts', () {
+    // Held, so the values set here outlive the gap before the page watches.
+    void hold() {
+      container.listen(currentProfileIdProvider, (_, _) {});
+      container.listen(patchClashConfigProvider, (_, _) {});
+    }
+
+    Future<void> seed(List<TailscaleManagedRecord> records) async {
+      hold();
+      container.read(currentProfileIdProvider.notifier).value = 42;
+      await container
+          .read(tailscaleManagedRecordsProvider.notifier)
+          .modify((_) => records);
+    }
+
+    const records = [
+      TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
+      TailscaleManagedRecord(id: 'm2', profileId: 42, attached: true),
+    ];
+
+    void serveAccounts({TailscaleRoutes? routes}) {
+      serve([
+        tsManagedNode('m1'),
+        tsManagedNode('m2', account: tsWorkAccount),
+      ], tsConnectedStatus(node: tsManagedNode('m1')));
+      when(
+        () => core.getTailscaleRoutes(42),
+      ).thenAnswer((_) async => routes ?? const TailscaleRoutes(profileId: 42));
+    }
+
+    testWidgets('the switcher lists every account and the add row', (
+      tester,
+    ) async {
+      await seed(records);
+      serveAccounts();
+      await pumpPanel(tester);
+
+      final pill = find.bySemanticsLabel(
+        RegExp('当前查看的 Tailscale 账号：pat@example.test，已连接，共 2 项'),
+      );
+      expect(pill, findsOneWidget);
+      await tester.tap(pill);
+      await settle(tester);
+
+      expect(find.text('当前配置中的 Tailscale 账号'), findsOneWidget);
+      expect(find.text('添加 Tailscale 账号'), findsOneWidget);
+      expect(find.textContaining('面板添加'), findsWidgets);
+      expect(find.text('设为默认账号'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('an attached account names its own rules and blocks the rest', (
+      tester,
+    ) async {
+      await seed(records);
+      serveAccounts(routes: tsConflictRoutes());
+      await pumpPanel(tester);
+
+      expect(find.text('网络域名：example-net.test.ts.net'), findsOneWidget);
+      expect(find.text('设备地址：9 个'), findsOneWidget);
+      expect(find.textContaining('会被拦截，不会改用其他账号或直连'), findsOneWidget);
+      expect(find.text('退出此账号'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets(
+      'a conflict is a banner, a row tag and a choice the Core gets',
+      (tester) async {
+        await seed(records);
+        serveAccounts(routes: tsConflictRoutes());
+        when(() => core.assignTailscaleRoutes(42, any())).thenAnswer(
+          (_) async => const TailscaleAssignResult(outcome: 'applied'),
+        );
+        await pumpPanel(tester);
+
+        expect(find.textContaining('1 个目标需要指定账号'), findsOneWidget);
+        expect(find.text('地址冲突'), findsOneWidget);
+        await tester.tap(find.text('指定账号'));
+        await settle(tester);
+
+        expect(find.text('地址：100.94.68.92'), findsOneWidget);
+        expect(find.text('build-mac'), findsOneWidget);
+        await tester.tap(find.text('build-mac'));
+        await tester.pump();
+        await tester.tap(find.text('保存选择'));
+        await settle(tester);
+
+        final sent =
+            verify(
+                  () => core.assignTailscaleRoutes(42, captureAny()),
+                ).captured.single
+                as List<TailscaleRouteAssignment>;
+        expect(sent, const [
+          TailscaleRouteAssignment(
+            target: tsConflictTarget,
+            owner: TailscaleRouteOwner(kind: tailscaleOwnerManaged, id: 'm2'),
+          ),
+        ]);
+        await teardownView(tester);
+      },
+    );
+
+    testWidgets('a cancelled choice never reaches the Core', (tester) async {
+      await seed(records);
+      serveAccounts(routes: tsConflictRoutes());
+      await pumpPanel(tester);
+
+      await tester.tap(find.text('指定账号'));
+      await settle(tester);
+      await tester.tap(find.text('build-mac'));
+      await tester.pump();
+      await tester.tap(find.text('取消'));
+      await settle(tester);
+
+      verifyNever(() => core.assignTailscaleRoutes(any(), any()));
+      await teardownView(tester);
+    });
+
+    testWidgets('直连 mode says the routing is not in effect', (tester) async {
+      await seed(records);
+      serveAccounts();
+      container
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mode: Mode.direct));
+      await pumpPanel(tester);
+
+      expect(find.textContaining('当前为直连模式'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('退出并移除 sits in the more menu and asks first', (tester) async {
+      await seed(records);
+      serveAccounts();
+      await pumpPanel(tester);
+
+      await tester.tap(find.byTooltip('更多'));
+      await settle(tester);
+      await tester.tap(find.text('退出并移除…'));
+      await settle(tester);
+
+      expect(find.text('退出并移除此账号？'), findsOneWidget);
+      expect(find.textContaining('pat@example.test'), findsWidgets);
+      await tester.tap(find.text('取消'));
+      await settle(tester);
+      verifyNever(() => core.logoutTailscale(any()));
+      await teardownView(tester);
+    });
+
+    testWidgets('no node: the tap is what adds an account, then signs in', (
+      tester,
+    ) async {
+      hold();
+      container.read(currentProfileIdProvider.notifier).value = 42;
+      serve(const []);
+      await pumpPanel(tester);
+      verifyNever(
+        () => core.loginTailscale(any(), reauth: any(named: 'reauth')),
+      );
+      expect(container.read(tailscaleManagedRecordsProvider), isEmpty);
       await teardownView(tester);
     });
   });
@@ -204,7 +376,7 @@ void main() {
 
       expect(find.text('已连接'), findsWidgets);
       expect(find.text('100.101.7.58'), findsOneWidget);
-      expect(find.text('pat@example.test'), findsOneWidget);
+      expect(find.text('pat@example.test'), findsWidgets);
       expect(find.text('example-net.test'), findsOneWidget);
       expect(find.text('设备'), findsOneWidget);
       expect(find.text('归属'), findsOneWidget);

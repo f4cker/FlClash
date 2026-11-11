@@ -16,8 +16,17 @@ String? tailscaleSettingsLock(
   BuildContext context, {
   required TailscaleNode node,
   required TailscalePhase phase,
+  TailscaleAttachState attach = TailscaleAttachState.none,
 }) {
   final appLocalizations = context.appLocalizations;
+  if (phase == TailscalePhase.connected && node.managed && !node.attached) {
+    // Locked until the account is in the profile, design.md §12.2.
+    return switch (attach) {
+      TailscaleAttachState.unknown => appLocalizations.tsAttachUnknownLockTip,
+      TailscaleAttachState.failed || TailscaleAttachState.duplicate => null,
+      _ => appLocalizations.tsAttachLockTip,
+    };
+  }
   if (phase == TailscalePhase.connected) {
     return node.overridable ? null : appLocalizations.tsOverrideAmbiguous;
   }
@@ -183,8 +192,10 @@ class TailscaleExitCard extends StatelessWidget {
     required this.onReadSettings,
     this.onRetry,
     this.savedExitName,
+    this.attach = TailscaleAttachState.none,
   });
 
+  final TailscaleAttachState attach;
   final TailscaleNode node;
   final TailscaleStatus? status;
   final TailscalePhase phase;
@@ -201,7 +212,12 @@ class TailscaleExitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    final lock = tailscaleSettingsLock(context, node: node, phase: phase);
+    final lock = tailscaleSettingsLock(
+      context,
+      node: node,
+      phase: phase,
+      attach: attach,
+    );
     final current = tailscaleCurrentExitPeer(node, status);
     final currentValue = tailscaleExitValue(node, status);
     final hasExit = current != null || currentValue != null;
@@ -406,8 +422,10 @@ class TailscaleRoutesCard extends StatelessWidget {
     required this.onChanged,
     required this.onReadSettings,
     this.onRetry,
+    this.attach = TailscaleAttachState.none,
   });
 
+  final TailscaleAttachState attach;
   final TailscaleNode node;
   final TailscaleStatus? status;
   final TailscalePhase phase;
@@ -419,7 +437,12 @@ class TailscaleRoutesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    final lock = tailscaleSettingsLock(context, node: node, phase: phase);
+    final lock = tailscaleSettingsLock(
+      context,
+      node: node,
+      phase: phase,
+      attach: attach,
+    );
     final value = tailscaleAcceptsRoutes(node, status);
     final applying = panel.applyingRoutes;
     final enabled = lock == null && !applying;
@@ -520,15 +543,22 @@ class TailscaleRoutesCard extends StatelessWidget {
 }
 
 /// Goes to the existing rules entry; the panel never edits rules itself.
+/// [lines] say what the shown node's rules are, per its source and state.
 class TailscaleRulesCard extends StatelessWidget {
-  const TailscaleRulesCard({super.key, required this.onGoToRules});
+  const TailscaleRulesCard({
+    super.key,
+    required this.onGoToRules,
+    this.lines = const [],
+  });
 
   final VoidCallback onGoToRules;
+  final List<String> lines;
 
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
+    final body = lines.isEmpty ? [appLocalizations.tsBoundaryTip] : lines;
     return TailscaleCard(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
       child: Row(
@@ -557,12 +587,13 @@ class TailscaleRulesCard extends StatelessWidget {
                   appLocalizations.rules,
                   style: AppTextStyle.subheadline.of(context, emphasized: true),
                 ),
-                Text(
-                  appLocalizations.tsBoundaryTip,
-                  style: AppTextStyle.footnote
-                      .of(context)
-                      .copyWith(color: colorScheme.onSurfaceVariant),
-                ),
+                for (final line in body)
+                  Text(
+                    line,
+                    style: AppTextStyle.footnote
+                        .of(context)
+                        .copyWith(color: colorScheme.onSurfaceVariant),
+                  ),
               ],
             ),
           ),

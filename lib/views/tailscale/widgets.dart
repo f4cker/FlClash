@@ -159,6 +159,45 @@ class TailscaleMetaItem extends StatelessWidget {
 }
 
 /// An identity mark: the profile picture, or the first letter on a fill.
+/// The inset tag after a name: 可作出口节点, 面板添加, or a conflict in the
+/// warning colours, its text never colour-only.
+class TailscaleTag extends StatelessWidget {
+  const TailscaleTag({super.key, required this.label, this.warn = false});
+
+  final String label;
+  final bool warn;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: ShapeDecoration(
+        color: warn
+            ? colorScheme.warningContainer
+            : DashboardColors.of(context).tone,
+        shape: AppShape.all(AppCorner.full),
+      ),
+      // As wide as its label, also in a Wrap that offers the full row.
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          label,
+          maxLines: 1,
+          style: AppTextStyle.caption2
+              .of(context, emphasized: true)
+              .copyWith(
+                color: warn
+                    ? colorScheme.onWarningContainer
+                    : colorScheme.onSurfaceVariant,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
 class TailscaleAvatar extends StatelessWidget {
   const TailscaleAvatar({
     super.key,
@@ -208,6 +247,119 @@ class TailscaleAvatar extends StatelessWidget {
                   logsSource: false,
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// The account switcher's target, design.md §13.1: avatar, account, state
+/// and a dot in the state's colour.
+class TailscaleAccountPill extends StatelessWidget {
+  const TailscaleAccountPill({
+    super.key,
+    required this.account,
+    required this.tone,
+    required this.semanticsLabel,
+    required this.onPressed,
+    this.state,
+    this.newAccount = false,
+  });
+
+  final String account;
+  final String? state;
+  final DashboardChipTone tone;
+  final bool newAccount;
+  final String semanticsLabel;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final colors = DashboardColors.of(context);
+    final dot = switch (tone) {
+      DashboardChipTone.ok => colors.ok,
+      DashboardChipTone.warn => colors.warn,
+      DashboardChipTone.error => colorScheme.error,
+      DashboardChipTone.idle => colorScheme.outline,
+    };
+    // A narrow bar keeps the dot and drops the state text, design.md §13.1.
+    final narrow = MediaQuery.sizeOf(context).width < 720;
+    final state = narrow ? null : this.state;
+    final shape = AppShape.all(AppCorner.full);
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
+          color: colors.card,
+          shape: shape,
+          shadows: DashboardShadows.e1(context),
+        ),
+        child: PressSurface(
+          fill: colors.card,
+          shape: shape,
+          onPressed: onPressed,
+          padding: const EdgeInsets.only(left: 8, right: 12),
+          child: SizedBox(
+            height: 36,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                if (newAccount)
+                  Container(
+                    width: 20,
+                    height: 20,
+                    alignment: Alignment.center,
+                    decoration: ShapeDecoration(
+                      color: colors.tone2,
+                      shape: AppShape.circle,
+                    ),
+                    child: GlyphIcon(
+                      AppGlyphs.add,
+                      size: 14,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                else
+                  TailscaleAvatar(name: account),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: narrow ? 140 : 240),
+                  child: Text(
+                    account,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyle.subheadline.of(
+                      context,
+                      emphasized: true,
+                    ),
+                  ),
+                ),
+                if (state != null)
+                  Text(
+                    '· $state',
+                    maxLines: 1,
+                    style: AppTextStyle.subheadline
+                        .of(context)
+                        .copyWith(color: colorScheme.onSurfaceVariant),
+                  ),
+                DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: dot,
+                    shape: AppShape.circle,
+                  ),
+                  child: const SizedBox.square(dimension: 7),
+                ),
+                GlyphIcon(
+                  AppGlyphs.chevronDown,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

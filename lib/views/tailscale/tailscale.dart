@@ -8,16 +8,19 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/rules.dart';
+import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'assign_dialog.dart';
 import 'device_card.dart';
 import 'device_list.dart';
 import 'settings_cards.dart';
 import 'state.dart';
+import 'widgets.dart';
 
 /// Below this the exit and subnet cards stack, design.md §2.
 const tailscaleTwoColumnWidth = 720.0;
@@ -58,7 +61,9 @@ class _Retry {
 }
 
 class _TailscaleViewState extends ConsumerState<TailscaleView> {
-  String? _selected;
+  TailscaleNodeKey? _selected;
+  bool _preparingProfile = false;
+  bool _adding = false;
   TailscaleNodeKey? _shownKey;
 
   /// Only this page's own login answers, never persisted or logged.
@@ -123,7 +128,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     if (selected == null) {
       return nodes.first;
     }
-    final node = nodes.firstWhereOrNull((node) => node.name == selected);
+    final node = nodes.firstWhereOrNull((node) => node.key == selected);
     if (node == null && nodes.length == 1) {
       return nodes.first;
     }
@@ -193,10 +198,236 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     });
   }
 
-  void _select(String name) {
+  void _select(TailscaleNodeKey key) {
     setState(() {
-      _selected = name;
+      _selected = key;
     });
+  }
+
+  TailscaleManagedPanels get _managedPanels =>
+      ref.read(tailscaleManagedPanelsProvider.notifier);
+
+  /// The account as the node's own identity names it; the node name before
+  /// one is known, 新账号 for a panel-added draft.
+  String _accountLabel(TailscaleNode node, TailscaleStatus? status) {
+    final user = status?.loginUser;
+    final name = user == null ? '' : tailscaleUserName(user);
+    if (name.isNotEmpty) {
+      return name;
+    }
+    final account = node.account;
+    if (account != null && !node.loggedOut) {
+      final label = account.loginName.takeFirstValid([account.displayName]);
+      if (label.isNotEmpty) {
+        return label;
+      }
+    }
+    if (_isDraft(node)) {
+      return context.appLocalizations.tsNewAccount;
+    }
+    return node.name;
+  }
+
+  /// A panel-added entry no account has signed in to yet.
+  bool _isDraft(TailscaleNode node) =>
+      node.managed &&
+      !node.hasIdentity &&
+      !node.loggedOut &&
+      node.account == null;
+
+  String _networkOf(TailscaleNode node, TailscaleStatus? status) {
+    final tailnet = status?.tailnet?.name ?? '';
+    if (tailnet.isNotEmpty) {
+      return tailnet;
+    }
+    return node.loggedOut ? '' : node.account?.tailnet ?? '';
+  }
+
+  String _stateLabel(TailscaleNode node, TailscalePhase phase) {
+    if (node.managed && node.loggedOut && phase == TailscalePhase.signedOut) {
+      return context.appLocalizations.tsAccountSignedOut;
+    }
+    return tailscalePhaseLabel(context, phase);
+  }
+
+  String? _sourceLabel(TailscaleNode node) {
+    final appLocalizations = context.appLocalizations;
+    if (node.managed) {
+      return appLocalizations.tsAddedInPanel;
+    }
+    return switch (ref.read(tailscaleSetupProvider)?.configSource) {
+      TailscaleSettingSource.subscription =>
+        appLocalizations.tsFromSubscription,
+      TailscaleSettingSource.profile => appLocalizations.tsFromProfile,
+      _ => null,
+    };
+  }
+
+  /// Only the user's tap gets here: the draft, then the sign-in page.
+  Future<void> _addAccount() async {
+    if (_adding) {
+      return;
+    }
+    setState(() {
+      _adding = true;
+    });
+    TailscaleNode? node;
+    try {
+      node = await _action.addManaged(
+        newProfileLabel: PageLabel.tailscale.label,
+        onPreparingProfile: () {
+          if (mounted) {
+            setState(() => _preparingProfile = true);
+          }
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _adding = false;
+          _preparingProfile = false;
+          if (node != null) {
+            _selected = node.key;
+          }
+        });
+      }
+    }
+    if (node == null) {
+      final profileId = ref.read(currentProfileIdProvider);
+      final notice = profileId == null
+          ? TailscaleManagedNotice.prepareFailed
+          : _managedPanels.of(tailscaleManagedNodeKey(profileId, '')).notice;
+      dialogs.showBanner(
+        notice == TailscaleManagedNotice.prepareUnknown
+            ? currentAppLocalizations.tsPrepareUnknown
+            : currentAppLocalizations.tsPrepareFailed,
+        level: BannerLevel.error,
+      );
+      return;
+    }
+    if (mounted) {
+      await _login(node);
+    }
+  }
+
+  Future<void> _confirmSignOut(TailscaleNode node, String account) async {
+    final appLocalizations = context.appLocalizations;
+    final confirmed = await dialogs.showMessage(
+      title: appLocalizations.tsSignOutAccountTitle,
+      message: TextSpan(
+        text: appLocalizations.tsSignOutAccountBody(account, node.name),
+      ),
+      confirmText: appLocalizations.tsSignOutAccount,
+      destructive: true,
+    );
+    if (confirmed != true) {
+      return;
+    }
+    if (await _action.signOutManaged(node)) {
+      dialogs.showBanner(
+        currentAppLocalizations.tsSignedOutReceipt,
+        level: BannerLevel.success,
+      );
+    }
+  }
+
+  Future<void> _confirmRemove(TailscaleNode node, String? account) async {
+    final appLocalizations = context.appLocalizations;
+    final profile = ref.read(currentProfileProvider)?.realLabel ?? '';
+    final last =
+        ref
+            .read(tailscaleManagedRecordsProvider.notifier)
+            .ofProfile(node.profileId)
+            .length ==
+        1;
+    final confirmed = await dialogs.showMessage(
+      title: appLocalizations.tsRemoveTitle,
+      message: TextSpan(
+        text: [
+          account == null
+              ? appLocalizations.tsRemoveBodyNode(node.name, profile)
+              : appLocalizations.tsRemoveBody(account, node.name, profile),
+          appLocalizations.tsRemoveExtra,
+          last
+              ? appLocalizations.tsRemoveLast
+              : appLocalizations.tsRemoveTargetsKept,
+        ].join('\n\n'),
+      ),
+      confirmText: appLocalizations.tsSignOutRemove,
+      destructive: true,
+    );
+    if (confirmed != true) {
+      return;
+    }
+    final notice = await _action.removeManaged(node);
+    if (notice == null) {
+      if (mounted) {
+        setState(() => _selected = null);
+      }
+      dialogs.showBanner(
+        currentAppLocalizations.tsRemoved,
+        level: BannerLevel.success,
+      );
+    }
+  }
+
+  Future<void> _chooseAccounts(
+    TailscaleRoutes routes,
+    List<TailscaleNode> nodes,
+  ) async {
+    final choices = await showTailscaleAssignDialog(
+      context,
+      routes: routes,
+      labelOf: (owner) => _ownerLabel(owner, nodes),
+    );
+    if (choices == null || choices.isEmpty || !mounted) {
+      return;
+    }
+    final notice = await _action.assignRoutes(routes.profileId, choices);
+    final appLocalizations = currentAppLocalizations;
+    switch (notice) {
+      case TailscaleAssignNotice.updated:
+        dialogs.showBanner(
+          appLocalizations.tsChoicesUpdated,
+          level: BannerLevel.success,
+        );
+      case TailscaleAssignNotice.saved:
+        dialogs.showBanner(appLocalizations.tsChoicesSaved);
+      case TailscaleAssignNotice.failed:
+        dialogs.showBanner(
+          appLocalizations.tsChoicesFailed,
+          level: BannerLevel.error,
+        );
+      case TailscaleAssignNotice.unknown:
+        dialogs.showBanner(
+          appLocalizations.tsChoicesUnknown,
+          level: BannerLevel.error,
+        );
+        ref.invalidate(tailscaleRoutesReportProvider);
+    }
+  }
+
+  /// An account by its real identity, a profile node by its name.
+  ({String account, String network}) _ownerLabel(
+    TailscaleRouteOwner owner,
+    List<TailscaleNode> nodes,
+  ) {
+    if (owner.kind == tailscaleOwnerManaged) {
+      final node = nodes.firstWhereOrNull((node) => node.managedId == owner.id);
+      if (node != null) {
+        final panel = ref.read(tailscalePanelNodesProvider)[node.key];
+        final status = panel == null ? null : _statusOf(node, panel);
+        return (
+          account: _accountLabel(node, status),
+          network: _networkOf(node, status).takeFirstValid(['—']),
+        );
+      }
+    }
+    return (
+      account: owner.id,
+      network:
+          _sourceLabel(TailscaleNode(name: owner.id, generation: 0)) ?? '—',
+    );
   }
 
   Future<void> _refresh(TailscaleNode node, {bool settings = false}) async {
@@ -481,12 +712,52 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
       });
     }
     final now = _now;
+    final managedPanels = ref.watch(tailscaleManagedPanelsProvider);
+    final managedRecord = node.managed
+        ? ref
+              .watch(tailscaleManagedRecordsProvider.notifier)
+              .recordOf(node.profileId, node.managedId)
+        : null;
+    ref.watch(tailscaleManagedRecordsProvider);
+    var managedPanel = managedPanels[node.key] ?? const TailscaleManagedPanel();
+    if (managedRecord?.removing == true && managedPanel.notice == null) {
+      managedPanel = managedPanel.copyWith(
+        notice: TailscaleManagedNotice.removeUnknown,
+      );
+    }
+    final routes = ref.watch(tailscaleRoutesReportProvider).value;
+    final account = _accountLabel(node, status);
+    final duplicate = node.managed ? _action.duplicateOf(node, nodes) : null;
+    if (node.managed &&
+        phase == TailscalePhase.connected &&
+        !node.attached &&
+        managedPanel.attach == TailscaleAttachState.none &&
+        managedRecord != null &&
+        !managedRecord.removing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _action.attachManaged(node, nodes);
+        }
+      });
+    }
+    final managedView = node.managed
+        ? TailscaleManagedCardView(
+            panel: managedPanel,
+            onRetryAttach: () => _action.attachManaged(node, nodes),
+            onRecheck: () => _action.recheckManaged(node),
+            onViewExisting: duplicate == null
+                ? null
+                : () => _select(duplicate.key),
+          )
+        : null;
     final actions = TailscaleCardActions(
       onLogin: () => _login(node),
       onRelogin: () => _login(node, reauth: true),
       onReopen: () => _reopen(node),
       onRead: () => _refresh(node),
-      onLogout: () => _confirmLogout(node),
+      onLogout: node.managed
+          ? () => _confirmSignOut(node, account)
+          : () => _confirmLogout(node),
       onRetryStart: () => _action.retryStart(node),
       onGoToProfiles: _goToProfiles,
       onCopy: _copy,
@@ -515,6 +786,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           onRetry: exitRetry == null
               ? null
               : () => _applyExit(node, exitRetry.exitPeer),
+          attach: managedPanel.attach,
         );
         final routesCard = TailscaleRoutesCard(
           node: node,
@@ -526,6 +798,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           onRetry: routesRetry?.acceptRoutes == null
               ? null
               : () => _applyRoutes(node, routesRetry!.acceptRoutes!),
+          attach: managedPanel.attach,
         );
         return SingleChildScrollView(
           padding: EdgeInsets.only(
@@ -538,7 +811,9 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 16,
             children: [
+              ..._pageBanners(context, routes, nodes),
               TailscaleDeviceCard(
+                managed: managedView,
                 node: node,
                 phase: phase,
                 status: status,
@@ -569,8 +844,12 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                 exitCard,
                 routesCard,
               ],
-              TailscaleRulesCard(onGoToRules: _goToRules),
-              if (phase == TailscalePhase.connected)
+              TailscaleRulesCard(
+                onGoToRules: _goToRules,
+                lines: _rulesLines(context, node, routes),
+              ),
+              if (phase == TailscalePhase.connected &&
+                  (!node.managed || node.attached))
                 TailscaleDeviceSection(
                   status: status,
                   readFailed: panel.readFailed,
@@ -582,6 +861,9 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                   onQueryChanged: (query) => setState(() => _query = query),
                   onRefresh: () => _refresh(node),
                   onCopy: _copy,
+                  conflictOf: routes == null
+                      ? null
+                      : (peer) => tailscaleConflictTag(context, routes, peer),
                 ),
             ],
           ),
@@ -595,8 +877,84 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
       panels: panels,
       phase: phase,
       reading: panel.reading,
+      managedView: managedView,
+      account: account,
       body: body,
     );
+  }
+
+  /// Profile-wide: the conflict count first, then a mode that bypasses the
+  /// rules, then the DNS caveat, whichever account is shown.
+  List<Widget> _pageBanners(
+    BuildContext context,
+    TailscaleRoutes? routes,
+    List<TailscaleNode> nodes,
+  ) {
+    final appLocalizations = context.appLocalizations;
+    if (!nodes.any((node) => node.managed)) {
+      return const [];
+    }
+    final config = ref.watch(
+      patchClashConfigProvider.select(
+        (state) => (
+          mode: state.mode,
+          tun: state.tun.enable,
+          dns: state.dns.enhancedMode,
+        ),
+      ),
+    );
+    final pending = routes?.pending ?? const [];
+    return [
+      if (pending.isNotEmpty)
+        Semantics(
+          liveRegion: true,
+          child: TailscaleBanner(
+            level: TailscaleBannerLevel.warn,
+            text: [
+              appLocalizations.tsConflictTitle(pending.length),
+              appLocalizations.tsConflictBody,
+            ].join(' '),
+            actionLabel: appLocalizations.tsChooseAccounts,
+            onAction: () => _chooseAccounts(routes!, nodes),
+          ),
+        ),
+      if (config.mode != Mode.rule)
+        TailscaleBanner(
+          level: TailscaleBannerLevel.warn,
+          text: config.mode == Mode.direct
+              ? appLocalizations.tsDirectMode
+              : appLocalizations.tsGlobalMode,
+        ),
+      if (config.tun && config.dns != DnsMode.fakeIp)
+        TailscaleBanner(
+          level: TailscaleBannerLevel.warn,
+          text: appLocalizations.tsDnsUnverified,
+        ),
+    ];
+  }
+
+  List<String> _rulesLines(
+    BuildContext context,
+    TailscaleNode node,
+    TailscaleRoutes? routes,
+  ) {
+    final appLocalizations = context.appLocalizations;
+    if (!node.managed) {
+      return [appLocalizations.tsRulesProfileNode];
+    }
+    final report = routes?.accountOf(node.managedId);
+    if (!node.attached || routes == null || !routes.active) {
+      return [appLocalizations.tsRulesPending];
+    }
+    return [
+      appLocalizations.tsRulesManaged,
+      if (report != null && report.fresh && !report.loggedOut) ...[
+        if (report.domain.isNotEmpty)
+          appLocalizations.tsRulesDomain(report.domain),
+        appLocalizations.tsRulesAddresses(report.addresses),
+      ],
+      appLocalizations.tsUnverifiedBlocked,
+    ];
   }
 
   Widget _page(
@@ -607,13 +965,17 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     Map<TailscaleNodeKey, TailscalePanelNode> panels = const {},
     TailscalePhase? phase,
     bool reading = false,
+    TailscaleManagedCardView? managedView,
+    String? account,
   }) {
     final appLocalizations = context.appLocalizations;
+    final settled =
+        managedView != null &&
+        !managedView.unsettled &&
+        !managedView.panel.removing;
     return Scaffold(
       title: PageLabel.tailscale.label,
-      actions: [
-        if (nodes.length >= 2) _nodePicker(context, nodes, node, panels),
-      ],
+      actions: [if (nodes.isNotEmpty) _switcher(context, nodes, node, panels)],
       iconActions: [
         if (node != null)
           IconButtonData(
@@ -624,11 +986,33 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           ),
       ],
       menuItems: [
-        if (node != null && tailscaleLogoutPhases.contains(phase))
+        if (node != null &&
+            !node.managed &&
+            tailscaleLogoutPhases.contains(phase))
           PopupMenuItem(
             label: appLocalizations.tsLogout,
             danger: true,
             onPressed: () => _confirmLogout(node),
+          ),
+        if (node != null &&
+            node.managed &&
+            settled &&
+            tailscaleLogoutPhases.contains(phase))
+          PopupMenuItem(
+            label: appLocalizations.tsSignOutAccount,
+            onPressed: () => _confirmSignOut(node, account ?? node.name),
+          ),
+        if (node != null && node.managed)
+          PopupMenuItem(
+            label: appLocalizations.tsSignOutRemoveMenu,
+            section: const PopupMenuSection(),
+            danger: true,
+            onPressed: settled
+                ? () => _confirmRemove(
+                    node,
+                    node.hasIdentity || node.account != null ? account : null,
+                  )
+                : null,
           ),
         if (node != null)
           PopupMenuItem(
@@ -641,36 +1025,81 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     );
   }
 
-  Widget _nodePicker(
+  /// The account switcher, design.md §13.1: it only changes what the page
+  /// shows and manages.
+  Widget _switcher(
     BuildContext context,
     List<TailscaleNode> nodes,
     TailscaleNode? current,
     Map<TailscaleNodeKey, TailscalePanelNode> panels,
   ) {
     final appLocalizations = context.appLocalizations;
+    ({String account, String network, String state, TailscalePhase phase})
+    describe(TailscaleNode node) {
+      final panel = panels[node.key] ?? const TailscalePanelNode();
+      final status = _statusOf(node, panel);
+      final phase = _phaseOf(node, panel);
+      return (
+        account: _accountLabel(node, status),
+        network: _networkOf(node, status),
+        state: _stateLabel(node, phase),
+        phase: phase,
+      );
+    }
+
+    final managedCount = nodes.where((node) => node.managed).length;
+    final shown = current == null ? null : describe(current);
     return PopupAnchor(
-      targetBuilder: (open) => TonalButton(
-        label: current == null
-            ? appLocalizations.tsChooseNode
-            : appLocalizations.tsCurrentNodeOf(current.name),
-        glyph: AppGlyphs.chevronDown,
+      targetBuilder: (open) => TailscaleAccountPill(
+        account: shown?.account ?? appLocalizations.tsChooseNode,
+        state: shown?.state,
+        tone: switch (shown?.phase) {
+          TailscalePhase.connected => DashboardChipTone.ok,
+          TailscalePhase.waitingBrowser ||
+          TailscalePhase.needsApproval ||
+          TailscalePhase.needsReauth => DashboardChipTone.warn,
+          TailscalePhase.startFailed ||
+          TailscalePhase.loadFailed => DashboardChipTone.error,
+          _ => DashboardChipTone.idle,
+        },
+        newAccount: current != null && _isDraft(current),
+        semanticsLabel: appLocalizations.tsSwitcherSemantics(
+          shown?.account ?? '',
+          shown?.state ?? '',
+          nodes.length,
+        ),
         onPressed: open,
       ),
       popupBuilder: (_) => PopupMenu(
         items: [
           for (final (index, node) in nodes.indexed)
-            PopupMenuItem(
-              label: node.name,
-              subtitle: tailscalePhaseLabel(
-                context,
-                _phaseOf(node, panels[node.key] ?? const TailscalePanelNode()),
-              ),
-              checked: node.key == current?.key,
-              section: index == 0
-                  ? PopupMenuSection(title: appLocalizations.tsNodesInProfile)
-                  : null,
-              onPressed: () => _select(node.name),
-            ),
+            () {
+              final item = describe(node);
+              return PopupMenuItem(
+                label: item.account,
+                subtitle: [
+                  appLocalizations.tsNetworkOf(
+                    item.network.takeFirstValid(['—']),
+                  ),
+                  item.state,
+                  ?_sourceLabel(node),
+                ].join(' · '),
+                checked: node.key == current?.key,
+                section: index == 0
+                    ? PopupMenuSection(
+                        title: appLocalizations.tsAccountsInProfile,
+                      )
+                    : null,
+                onPressed: () => _select(node.key),
+              );
+            }(),
+          PopupMenuItem(
+            label: appLocalizations.tsAddAccount,
+            glyph: AppGlyphs.add,
+            subtitle: managedCount >= 2 ? appLocalizations.tsMemoryTip : null,
+            section: const PopupMenuSection(),
+            onPressed: _adding ? null : _addAccount,
+          ),
         ],
       ),
     );
@@ -689,15 +1118,28 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     );
   }
 
+  /// No node in the profile: sign in from here, design.md §12.1.
   Widget _noNodes(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     return NullStatus(
       illustration: NullStatusIllustration.devices,
-      label: appLocalizations.tsNoNodes,
-      description: appLocalizations.tsNoNodesTip,
-      action: FilledButton(
-        onPressed: _goToProfiles,
-        child: Text(appLocalizations.tsGoToProfiles),
+      label: appLocalizations.tsSignIn,
+      description: [
+        appLocalizations.tsSignInTip,
+        appLocalizations.tsSignInBoundary,
+      ].join('\n'),
+      action: FilledButton.icon(
+        onPressed: _adding ? null : _addAccount,
+        icon: _adding
+            ? tailscaleBusyIcon(context)
+            : const GlyphIcon(AppGlyphs.openExternal, fill: 1),
+        label: Text(
+          _preparingProfile
+              ? appLocalizations.tsPreparingProfile
+              : _adding
+              ? appLocalizations.tsPreparingSignIn
+              : appLocalizations.tsSignIn,
+        ),
       ),
     );
   }
@@ -733,7 +1175,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
             for (final node in nodes)
               PopupMenuItem(
                 label: node.name,
-                onPressed: () => _select(node.name),
+                onPressed: () => _select(node.key),
               ),
           ],
         ),

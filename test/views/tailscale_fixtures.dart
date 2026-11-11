@@ -160,3 +160,93 @@ TailscaleMigrateResult tsMigrateResult(
       ? null
       : TailscaleError(code: 'tailscale_migrate_failed', message: error),
 );
+
+const tsWorkAccount = TailscaleAccount(
+  userId: '2001',
+  loginName: 'pat@work.test',
+  displayName: 'Pat Work',
+  tailnet: 'work-net.test',
+  controlUrl: tsControl,
+);
+
+const tsHomeAccount = TailscaleAccount(
+  userId: '1001',
+  loginName: 'pat@example.test',
+  displayName: 'Pat Example',
+  tailnet: 'example-net.test',
+  controlUrl: tsControl,
+);
+
+/// A panel-added account, signed in and attached unless told otherwise.
+TailscaleNode tsManagedNode(
+  String id, {
+  TailscaleAccount? account = tsHomeAccount,
+  bool attached = true,
+  bool loggedOut = false,
+}) => TailscaleNode(
+  profileId: 42,
+  name: 'tailscale-$id',
+  generation: 1,
+  controlUrl: tsControl,
+  hostname: 'flclash-mac',
+  stateDirMode: TailscaleStateDirMode.managed,
+  overridable: true,
+  managedId: id,
+  attached: attached,
+  loggedOut: loggedOut,
+  account: account,
+  started: account != null && !loggedOut,
+  hasIdentity: account != null && !loggedOut,
+  backendState: account != null && !loggedOut
+      ? TailscaleBackendState.running
+      : TailscaleBackendState.needsLogin,
+);
+
+const tsConflictTarget = TailscaleRouteTarget(
+  kind: tailscaleTargetIp,
+  value: '100.94.68.92',
+);
+
+/// Two accounts both list studio-mac's address; nothing chosen yet.
+TailscaleRoutes tsConflictRoutes() => const TailscaleRoutes(
+  profileId: 42,
+  active: true,
+  complete: true,
+  revision: 3,
+  accounts: [
+    TailscaleRouteAccountReport(
+      id: 'm1',
+      fresh: true,
+      available: true,
+      domain: 'example-net.test.ts.net',
+      addresses: 9,
+    ),
+    TailscaleRouteAccountReport(
+      id: 'm2',
+      fresh: true,
+      available: true,
+      domain: 'work-net.test.ts.net',
+      addresses: 4,
+    ),
+  ],
+  targets: [
+    TailscaleRouteTargetReport(
+      target: tsConflictTarget,
+      state: TailscaleRouteState.conflict,
+      candidates: [
+        TailscaleRouteCandidate(
+          owner: TailscaleRouteOwner(kind: tailscaleOwnerManaged, id: 'm1'),
+          device: 'studio-mac',
+          label: 'pat@example.test',
+          tailnet: 'example-net.test',
+        ),
+        TailscaleRouteCandidate(
+          owner: TailscaleRouteOwner(kind: tailscaleOwnerManaged, id: 'm2'),
+          device: 'build-mac',
+          label: 'pat@work.test',
+          tailnet: 'work-net.test',
+        ),
+      ],
+    ),
+  ],
+);

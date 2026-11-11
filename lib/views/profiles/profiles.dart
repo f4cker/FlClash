@@ -280,16 +280,31 @@ class ProfileItem extends ConsumerWidget {
   Future<void> _handleDeleteProfile(BuildContext context, WidgetRef ref) async {
     final profilesAction = ref.read(profilesActionProvider.notifier);
     final appLocalizations = context.appLocalizations;
+    final tailscale = ref.read(tailscaleActionProvider.notifier);
+    if (tailscale.hasPendingManaged(profile.id)) {
+      dialogs.showBanner(
+        appLocalizations.tsDeleteProfilePending,
+        level: BannerLevel.error,
+      );
+      return;
+    }
+    final managed = ref
+        .read(tailscaleManagedRecordsProvider.notifier)
+        .ofProfile(profile.id)
+        .length;
     final users = await profilesAction.providerUsers(profile);
     final res = await dialogs.showMessage(
       title: appLocalizations.tip,
       message: TextSpan(
-        text: users.isEmpty
-            ? appLocalizations.deleteTip(appLocalizations.profile)
-            : appLocalizations.providerInUse(
-                profile.realLabel,
-                users.map((item) => item.realLabel).join(', '),
-              ),
+        text: [
+          users.isEmpty
+              ? appLocalizations.deleteTip(appLocalizations.profile)
+              : appLocalizations.providerInUse(
+                  profile.realLabel,
+                  users.map((item) => item.realLabel).join(', '),
+                ),
+          if (managed > 0) appLocalizations.tsDeleteProfileManaged(managed),
+        ].join('\n\n'),
       ),
       destructive: true,
       confirmText: appLocalizations.delete,

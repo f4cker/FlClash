@@ -36,6 +36,33 @@ class TailscaleCardActions {
   final VoidCallback onRecheckLegacy;
 }
 
+/// What a panel-added account adds to the card: its attach and removal
+/// states, apart from the connection the chip shows.
+class TailscaleManagedCardView {
+  const TailscaleManagedCardView({
+    required this.panel,
+    required this.onRetryAttach,
+    required this.onRecheck,
+    this.onViewExisting,
+  });
+
+  final TailscaleManagedPanel panel;
+  final VoidCallback onRetryAttach;
+  final VoidCallback onRecheck;
+  final VoidCallback? onViewExisting;
+
+  /// Only a read may follow; nothing writes again until it settles.
+  bool get unsettled =>
+      panel.attach == TailscaleAttachState.unknown ||
+      const {
+        TailscaleManagedNotice.removeLogoutUnknown,
+        TailscaleManagedNotice.removeIncomplete,
+        TailscaleManagedNotice.removeUnknown,
+        TailscaleManagedNotice.prepareUnknown,
+        TailscaleManagedNotice.addUnconfirmed,
+      }.contains(panel.notice);
+}
+
 class TailscaleDeviceCard extends StatelessWidget {
   const TailscaleDeviceCard({
     super.key,
@@ -53,8 +80,10 @@ class TailscaleDeviceCard extends StatelessWidget {
     this.reading = false,
     this.restarting = false,
     this.wide = true,
+    this.managed,
   });
 
+  final TailscaleManagedCardView? managed;
   final TailscaleNode node;
   final TailscalePhase phase;
   final TailscaleStatus? status;
@@ -81,6 +110,8 @@ class TailscaleDeviceCard extends StatelessWidget {
     final legacyShown = legacyView != TailscaleLegacyView.hidden;
     final banners = [
       if (_noticeBanner(context) case final banner?)
+        banner
+      else if (_managedBanner(context) case final banner?)
         banner
       else if (legacyShown)
         TailscaleLegacyBlock(
@@ -112,6 +143,7 @@ class TailscaleDeviceCard extends StatelessWidget {
       label: [
         appLocalizations.tsCurrentDevice,
         node.name,
+        if (node.managed) appLocalizations.tsAddedInPanel,
         ?tailscaleAddressOf(status?.self),
         chipLabel,
       ].join('，'),
@@ -134,6 +166,8 @@ class TailscaleDeviceCard extends StatelessWidget {
                         .copyWith(color: context.colorScheme.onSurfaceVariant),
                   ),
                 ),
+                if (node.managed)
+                  TailscaleTag(label: appLocalizations.tsAddedInPanel),
                 Semantics(
                   label: appLocalizations.tsStatusOf(chipLabel),
                   excludeSemantics: true,
@@ -202,7 +236,9 @@ class TailscaleDeviceCard extends StatelessWidget {
         DashboardChipTone.idle,
       ),
       TailscalePhase.signedOut => (
-        appLocalizations.tsStateSignedOut,
+        node.managed && node.loggedOut
+            ? appLocalizations.tsAccountSignedOut
+            : appLocalizations.tsStateSignedOut,
         DashboardChipTone.idle,
       ),
       TailscalePhase.waitingBrowser => (
@@ -427,6 +463,125 @@ class TailscaleDeviceCard extends StatelessWidget {
     };
   }
 
+  Widget? _managedBanner(BuildContext context) {
+    final managed = this.managed;
+    if (managed == null) {
+      return null;
+    }
+    final appLocalizations = context.appLocalizations;
+    final panel = managed.panel;
+    TailscaleBanner warn(String text) =>
+        TailscaleBanner(level: TailscaleBannerLevel.warn, text: text);
+    TailscaleBanner info(String text) =>
+        TailscaleBanner(level: TailscaleBannerLevel.info, text: text);
+    switch (panel.notice) {
+      case TailscaleManagedNotice.removeLogoutUnknown:
+        return warn(appLocalizations.tsRemoveLogoutUnknown);
+      case TailscaleManagedNotice.removeIncomplete:
+        return warn(appLocalizations.tsRemoveIncomplete);
+      case TailscaleManagedNotice.removeUnknown:
+        return warn(appLocalizations.tsRemoveUnknown);
+      case TailscaleManagedNotice.prepareUnknown:
+        return warn(appLocalizations.tsPrepareUnknown);
+      case TailscaleManagedNotice.addUnconfirmed:
+        return warn(appLocalizations.tsAddUnconfirmed);
+      case TailscaleManagedNotice.prepareFailed:
+        return TailscaleBanner(
+          level: TailscaleBannerLevel.error,
+          text: appLocalizations.tsPrepareFailed,
+        );
+      case TailscaleManagedNotice.signedOut when node.loggedOut:
+        return info(appLocalizations.tsSignedOutBanner);
+      default:
+    }
+    if (panel.preparing) {
+      return info(appLocalizations.tsPreparingSignInTip);
+    }
+    return switch (panel.attach) {
+      TailscaleAttachState.attaching => info(appLocalizations.tsAttachingTip),
+      TailscaleAttachState.checking => info(appLocalizations.tsCheckingAccount),
+      TailscaleAttachState.failed => TailscaleBanner(
+        level: TailscaleBannerLevel.error,
+        text: appLocalizations.tsAttachFailed,
+      ),
+      TailscaleAttachState.unknown => warn(appLocalizations.tsAttachUnknown),
+      TailscaleAttachState.duplicate => warn(appLocalizations.tsDuplicate),
+      TailscaleAttachState.none || TailscaleAttachState.attached =>
+        node.loggedOut && phase == TailscalePhase.signedOut
+            ? info(appLocalizations.tsSignedOutBanner)
+            : null,
+    };
+  }
+
+  List<Widget>? _managedActions(BuildContext context, Widget read) {
+    final managed = this.managed;
+    if (managed == null) {
+      return null;
+    }
+    final appLocalizations = context.appLocalizations;
+    final panel = managed.panel;
+    Widget busy(String label) => FilledButton.icon(
+      onPressed: null,
+      icon: tailscaleBusyIcon(context),
+      label: Text(label),
+    );
+    if (panel.removing) {
+      return [busy(appLocalizations.tsRemoving)];
+    }
+    if (managed.unsettled) {
+      return [
+        TonalButton(
+          glyph: AppGlyphs.refresh,
+          label: appLocalizations.tsReadStatus,
+          onPressed: reading ? null : managed.onRecheck,
+        ),
+      ];
+    }
+    switch (panel.attach) {
+      case TailscaleAttachState.attaching:
+        return [busy(appLocalizations.tsAttaching)];
+      case TailscaleAttachState.failed:
+        return [
+          FilledButton.icon(
+            onPressed: managed.onRetryAttach,
+            icon: const GlyphIcon(AppGlyphs.refresh, fill: 1),
+            label: Text(appLocalizations.tsRetryAttach),
+          ),
+        ];
+      case TailscaleAttachState.duplicate:
+        return [
+          if (managed.onViewExisting case final onView?)
+            TonalButton(
+              label: appLocalizations.tsViewExisting,
+              onPressed: onView,
+            ),
+        ];
+      default:
+    }
+    if (panel.preparing) {
+      return [busy(appLocalizations.tsPreparingSignIn)];
+    }
+    return switch (phase) {
+      TailscalePhase.connected => [
+        if (loggingOut)
+          busy(appLocalizations.tsLoggingOut)
+        else
+          TonalButton(
+            label: appLocalizations.tsSignOutAccount,
+            onPressed: actions.onLogout,
+          ),
+      ],
+      TailscalePhase.signedOut => [
+        _filled(
+          context,
+          label: appLocalizations.tsSignIn,
+          onPressed: actions.onLogin,
+        ),
+      ],
+      _ => null,
+    };
+  }
+
   Widget? _stateBanner(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     return switch (phase) {
@@ -510,6 +665,9 @@ class TailscaleDeviceCard extends StatelessWidget {
     }
     if (legacyView == TailscaleLegacyView.migrated) {
       return const [];
+    }
+    if (_managedActions(context, read) case final managed?) {
+      return managed;
     }
     return switch (phase) {
       TailscalePhase.loadFailed ||

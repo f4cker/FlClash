@@ -551,4 +551,250 @@ void main() {
     await pumpPanel(tester, size: const Size(520, 1500));
     await shoot(tester, '30-device-names-520');
   });
+
+  // Panel-added accounts, design.md §12–§13.
+
+  const records = [
+    TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
+    TailscaleManagedRecord(id: 'm2', profileId: 42, attached: true),
+  ];
+
+  TailscaleStatus workStatus(TailscaleNode node) => TailscaleStatus(
+    node: node,
+    haveNodeKey: true,
+    self: const TailscalePeer(
+      id: 'self-work',
+      hostName: 'flclash-mac',
+      addresses: ['100.80.3.17', 'fd7a:115c:a1e0::5011'],
+      userId: '2001',
+      online: true,
+    ),
+    loginUser: const TailscaleUser(
+      id: '2001',
+      loginName: 'pat@work.test',
+      displayName: 'Pat Work',
+    ),
+    tailnet: const TailscaleTailnet(name: 'work-net.test'),
+    peers: const [
+      TailscalePeer(
+        id: 'w1',
+        hostName: 'build-mac',
+        dnsName: 'build-mac.work-net.test.',
+        os: 'macOS',
+        userId: '2001',
+        addresses: ['100.94.68.92', 'fd7a:115c:a1e0::77'],
+        online: true,
+      ),
+    ],
+  );
+
+  Future<void> seedManaged(
+    List<TailscaleNode> nodes, {
+    List<TailscaleManagedRecord> saved = records,
+    TailscaleRoutes? routes,
+  }) async {
+    container.listen(currentProfileIdProvider, (_, _) {});
+    container.listen(patchClashConfigProvider, (_, _) {});
+    container.read(currentProfileIdProvider.notifier).value = 42;
+    await container
+        .read(tailscaleManagedRecordsProvider.notifier)
+        .modify((_) => saved);
+    when(() => core.getTailscaleNodes()).thenAnswer((_) async => nodes);
+    when(() => core.getTailscaleStatus(any())).thenAnswer((invocation) async {
+      final ref = invocation.positionalArguments.first as TailscaleNodeRef;
+      final node = nodes.firstWhere((node) => node.managedId == ref.managedId);
+      if (!node.hasIdentity) {
+        return TailscaleStatus(node: node);
+      }
+      return node.managedId == 'm2'
+          ? workStatus(node)
+          : tsConnectedStatus(node: node, manyPeers: true);
+    });
+    when(() => core.getTailscaleRoutes(42)).thenAnswer(
+      (_) async =>
+          routes ??
+          const TailscaleRoutes(
+            profileId: 42,
+            active: true,
+            complete: true,
+            accounts: [
+              TailscaleRouteAccountReport(
+                id: 'm1',
+                fresh: true,
+                available: true,
+                domain: 'example-net.test.ts.net',
+                addresses: 9,
+              ),
+            ],
+          ),
+    );
+  }
+
+  void attachState(String id, TailscaleAttachState attach) {
+    container
+        .read(tailscaleManagedPanelsProvider.notifier)
+        .change(
+          tailscaleManagedNodeKey(42, id),
+          (state) => state.copyWith(attach: attach),
+        );
+  }
+
+  shot('31-sign-in-no-node', (tester) async {
+    container.listen(currentProfileIdProvider, (_, _) {});
+    container.read(currentProfileIdProvider.notifier).value = 42;
+    serve(const []);
+    await pumpPanel(tester, size: const Size(1100, 700));
+    await shoot(tester, '31-sign-in-no-node');
+  });
+
+  shot('32-new-account-waiting', (tester) async {
+    final draft = tsManagedNode(
+      'm1',
+      account: null,
+      attached: false,
+    ).copyWith(started: true, backendState: TailscaleBackendState.needsLogin);
+    await seedManaged(
+      [draft],
+      saved: const [TailscaleManagedRecord(id: 'm1', profileId: 42)],
+    );
+    await pumpPanel(tester);
+    await shoot(tester, '32-new-account-waiting');
+  });
+
+  shot('33-attaching', (tester) async {
+    final node = tsManagedNode('m1', attached: false);
+    await seedManaged(
+      [node],
+      saved: const [TailscaleManagedRecord(id: 'm1', profileId: 42)],
+    );
+    attachState('m1', TailscaleAttachState.attaching);
+    await pumpPanel(tester);
+    await shoot(tester, '33-attaching');
+  });
+
+  shot('34-attach-failed', (tester) async {
+    final node = tsManagedNode('m1', attached: false);
+    await seedManaged(
+      [node],
+      saved: const [TailscaleManagedRecord(id: 'm1', profileId: 42)],
+    );
+    attachState('m1', TailscaleAttachState.failed);
+    await pumpPanel(tester);
+    await shoot(tester, '34-attach-failed');
+  });
+
+  shot('35-attach-unknown', (tester) async {
+    final node = tsManagedNode('m1', attached: false);
+    await seedManaged(
+      [node],
+      saved: const [TailscaleManagedRecord(id: 'm1', profileId: 42)],
+    );
+    attachState('m1', TailscaleAttachState.unknown);
+    await pumpPanel(tester);
+    await shoot(tester, '35-attach-unknown');
+  });
+
+  shot('36-managed-connected', (tester) async {
+    await seedManaged([
+      tsManagedNode('m1'),
+      tsManagedNode('m2', account: tsWorkAccount),
+    ]);
+    await pumpPanel(tester, size: const Size(1100, 1500));
+    await shoot(tester, '36-managed-connected');
+  });
+
+  shot('37-switcher-open', (tester) async {
+    await seedManaged([
+      tsManagedNode('m1'),
+      tsManagedNode('m2', account: tsWorkAccount),
+      tsConnectedNode,
+    ]);
+    await pumpPanel(tester, size: const Size(1100, 900));
+    await tester.tap(find.bySemanticsLabel(RegExp('当前查看的 Tailscale 账号')));
+    await shoot(tester, '37-switcher-open');
+  });
+
+  shot('38-conflict-banner', (tester) async {
+    await seedManaged([
+      tsManagedNode('m1'),
+      tsManagedNode('m2', account: tsWorkAccount),
+    ], routes: tsConflictRoutes());
+    await pumpPanel(tester, size: const Size(1100, 1500));
+    await shoot(tester, '38-conflict-banner');
+  });
+
+  shot('39-assign-dialog', (tester) async {
+    await seedManaged([
+      tsManagedNode('m1'),
+      tsManagedNode('m2', account: tsWorkAccount),
+    ], routes: tsConflictRoutes());
+    await pumpPanel(tester, size: const Size(1100, 900));
+    await tester.tap(find.text('指定账号'));
+    await settle(tester);
+    await tester.tap(find.text('build-mac').last);
+    await shoot(tester, '39-assign-dialog');
+  });
+
+  shot('40-signed-out-kept', (tester) async {
+    final node = tsManagedNode('m2', account: tsWorkAccount, loggedOut: true);
+    await seedManaged(
+      [tsManagedNode('m1'), node],
+      saved: const [
+        TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
+        TailscaleManagedRecord(
+          id: 'm2',
+          profileId: 42,
+          attached: true,
+          loggedOut: true,
+        ),
+      ],
+    );
+    container
+        .read(tailscaleManagedPanelsProvider.notifier)
+        .change(
+          node.key,
+          (state) => state.copyWith(notice: TailscaleManagedNotice.signedOut),
+        );
+    await pumpPanel(tester, size: const Size(1100, 900));
+    await tester.tap(find.bySemanticsLabel(RegExp('当前查看的 Tailscale 账号')));
+    await settle(tester);
+    await tester.tap(find.text('tailscale-m2').last);
+    await shoot(tester, '40-signed-out-kept');
+  });
+
+  shot('41-remove-dialog', (tester) async {
+    await seedManaged([
+      tsManagedNode('m1'),
+      tsManagedNode('m2', account: tsWorkAccount),
+    ]);
+    await pumpPanel(tester, size: const Size(1100, 900));
+    await tester.tap(find.byTooltip('更多'));
+    await settle(tester);
+    await tester.tap(find.text('退出并移除…'));
+    await settle(tester);
+    expect(find.text('退出并移除此账号？'), findsOneWidget);
+    await shoot(tester, '41-remove-dialog');
+  });
+
+  shot('42-direct-mode', (tester) async {
+    await seedManaged([tsManagedNode('m1')]);
+    container
+        .read(patchClashConfigProvider.notifier)
+        .update((state) => state.copyWith(mode: Mode.direct));
+    await pumpPanel(tester, size: const Size(1100, 900));
+    await shoot(tester, '42-direct-mode');
+  });
+
+  shot('43-managed-dark-narrow', (tester) async {
+    await seedManaged([
+      tsManagedNode('m1'),
+      tsManagedNode('m2', account: tsWorkAccount),
+    ], routes: tsConflictRoutes());
+    await pumpPanel(
+      tester,
+      size: const Size(640, 1700),
+      themeMode: ThemeMode.dark,
+    );
+    await shoot(tester, '43-managed-dark-narrow');
+  });
 }

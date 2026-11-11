@@ -10697,6 +10697,866 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Sign in to Tailscale`
+  String get tsSignIn {
+    return Intl.message(
+      'Sign in to Tailscale',
+      name: 'tsSignIn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `After sign-in, FlClash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.`
+  String get tsSignInTip {
+    return Intl.message(
+      'After sign-in, FlClash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.',
+      name: 'tsSignInTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `System proxy and TUN will not be enabled automatically.`
+  String get tsSignInBoundary {
+    return Intl.message(
+      'System proxy and TUN will not be enabled automatically.',
+      name: 'tsSignInBoundary',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Preparing a local profile…`
+  String get tsPreparingProfile {
+    return Intl.message(
+      'Preparing a local profile…',
+      name: 'tsPreparingProfile',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Preparing sign-in…`
+  String get tsPreparingSignIn {
+    return Intl.message(
+      'Preparing sign-in…',
+      name: 'tsPreparingSignIn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Preparing Tailscale for this profile.`
+  String get tsPreparingSignInTip {
+    return Intl.message(
+      'Preparing Tailscale for this profile.',
+      name: 'tsPreparingSignInTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Adding to current profile…`
+  String get tsAttaching {
+    return Intl.message(
+      'Adding to current profile…',
+      name: 'tsAttaching',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign-in is complete. Adding the node and Tailscale rules.`
+  String get tsAttachingTip {
+    return Intl.message(
+      'Sign-in is complete. Adding the node and Tailscale rules.',
+      name: 'tsAttachingTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Added to current profile`
+  String get tsAttached {
+    return Intl.message(
+      'Added to current profile',
+      name: 'tsAttached',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tailscale traffic uses dedicated rules. Other traffic keeps its existing routing.`
+  String get tsAttachedTip {
+    return Intl.message(
+      'Tailscale traffic uses dedicated rules. Other traffic keeps its existing routing.',
+      name: 'tsAttachedTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tailscale sign-in could not be prepared. Try again.`
+  String get tsPrepareFailed {
+    return Intl.message(
+      'Tailscale sign-in could not be prepared. Try again.',
+      name: 'tsPrepareFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Try again`
+  String get tsTryAgain {
+    return Intl.message('Try again', name: 'tsTryAgain', desc: '', args: []);
+  }
+
+  /// `Signed in, but not added to this profile. Your sign-in has been kept. Try adding it again.`
+  String get tsAttachFailed {
+    return Intl.message(
+      'Signed in, but not added to this profile. Your sign-in has been kept. Try adding it again.',
+      name: 'tsAttachFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Retry adding to profile`
+  String get tsRetryAttach {
+    return Intl.message(
+      'Retry adding to profile',
+      name: 'tsRetryAttach',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The profile update is unconfirmed. Read the status again before adding the node or signing in again.`
+  String get tsAttachUnknown {
+    return Intl.message(
+      'The profile update is unconfirmed. Read the status again before adding the node or signing in again.',
+      name: 'tsAttachUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign-in preparation is unconfirmed. Read the status again before signing in again.`
+  String get tsPrepareUnknown {
+    return Intl.message(
+      'Sign-in preparation is unconfirmed. Read the status again before signing in again.',
+      name: 'tsPrepareUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Adding to this profile. Settings cannot be changed yet.`
+  String get tsAttachLockTip {
+    return Intl.message(
+      'Adding to this profile. Settings cannot be changed yet.',
+      name: 'tsAttachLockTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The profile update is unconfirmed. Read the status again first.`
+  String get tsAttachUnknownLockTip {
+    return Intl.message(
+      'The profile update is unconfirmed. Read the status again first.',
+      name: 'tsAttachUnknownLockTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Added in panel`
+  String get tsAddedInPanel {
+    return Intl.message(
+      'Added in panel',
+      name: 'tsAddedInPanel',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `FlClash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.`
+  String get tsRulesManaged {
+    return Intl.message(
+      'FlClash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.',
+      name: 'tsRulesManaged',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Network domain: {domain}`
+  String tsRulesDomain(Object domain) {
+    return Intl.message(
+      'Network domain: $domain',
+      name: 'tsRulesDomain',
+      desc: '',
+      args: [domain],
+    );
+  }
+
+  /// `Device addresses: {count}`
+  String tsRulesAddresses(Object count) {
+    return Intl.message(
+      'Device addresses: $count',
+      name: 'tsRulesAddresses',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Once added, Tailscale addresses and ts.net domains will use dedicated rules. Other traffic will keep its existing routing.`
+  String get tsRulesPending {
+    return Intl.message(
+      'Once added, Tailscale addresses and ts.net domains will use dedicated rules. Other traffic will keep its existing routing.',
+      name: 'tsRulesPending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Only traffic routed to this node by FlClash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.`
+  String get tsRulesProfileNode {
+    return Intl.message(
+      'Only traffic routed to this node by FlClash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.',
+      name: 'tsRulesProfileNode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tailscale addresses and domains without a verified account are blocked. They will not use another account or a direct connection.`
+  String get tsUnverifiedBlocked {
+    return Intl.message(
+      'Tailscale addresses and domains without a verified account are blocked. They will not use another account or a direct connection.',
+      name: 'tsUnverifiedBlocked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Panel-added routing and blocking rules take priority over existing rules for those targets. Rules for other traffic stay unchanged. Assign an account here to change a target’s routing.`
+  String get tsManagedPriority {
+    return Intl.message(
+      'Panel-added routing and blocking rules take priority over existing rules for those targets. Rules for other traffic stay unchanged. Assign an account here to change a target’s routing.',
+      name: 'tsManagedPriority',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign out and remove`
+  String get tsSignOutRemove {
+    return Intl.message(
+      'Sign out and remove',
+      name: 'tsSignOutRemove',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign out and remove…`
+  String get tsSignOutRemoveMenu {
+    return Intl.message(
+      'Sign out and remove…',
+      name: 'tsSignOutRemoveMenu',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign out and remove this account?`
+  String get tsRemoveTitle {
+    return Intl.message(
+      'Sign out and remove this account?',
+      name: 'tsRemoveTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This signs out “{account}” (node “{node}”), clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.`
+  String tsRemoveBody(Object account, Object node, Object profile) {
+    return Intl.message(
+      'This signs out “$account” (node “$node”), clears its sign-in from this Mac, and removes its panel-added node and rules from “$profile”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.',
+      name: 'tsRemoveBody',
+      desc: '',
+      args: [account, node, profile],
+    );
+  }
+
+  /// `This signs out “{node}”, clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.`
+  String tsRemoveBodyNode(Object node, Object profile) {
+    return Intl.message(
+      'This signs out “$node”, clears its sign-in from this Mac, and removes its panel-added node and rules from “$profile”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.',
+      name: 'tsRemoveBodyNode',
+      desc: '',
+      args: [node, profile],
+    );
+  }
+
+  /// `This does not delete the device from the Tailscale admin console or change the official client.`
+  String get tsRemoveExtra {
+    return Intl.message(
+      'This does not delete the device from the Tailscale admin console or change the official client.',
+      name: 'tsRemoveExtra',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Targets assigned to this account will not move to another account automatically. Blocking protection stays in place. Assign another account to access them.`
+  String get tsRemoveTargetsKept {
+    return Intl.message(
+      'Targets assigned to this account will not move to another account automatically. Blocking protection stays in place. Assign another account to access them.',
+      name: 'tsRemoveTargetsKept',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This is the last panel-added account in this profile. Removing it also removes panel-added routing and blocking rules. The original profile will handle this traffic again, which may use a direct connection or its original proxies. Confirm that you accept this change.`
+  String get tsRemoveLast {
+    return Intl.message(
+      'This is the last panel-added account in this profile. Removing it also removes panel-added routing and blocking rules. The original profile will handle this traffic again, which may use a direct connection or its original proxies. Confirm that you accept this change.',
+      name: 'tsRemoveLast',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Signing out and removing…`
+  String get tsRemoving {
+    return Intl.message(
+      'Signing out and removing…',
+      name: 'tsRemoving',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Signed out and removed`
+  String get tsRemoved {
+    return Intl.message(
+      'Signed out and removed',
+      name: 'tsRemoved',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign-out is unconfirmed. The node has not been removed. Read the status again before removing it or signing in again.`
+  String get tsRemoveLogoutUnknown {
+    return Intl.message(
+      'Sign-out is unconfirmed. The node has not been removed. Read the status again before removing it or signing in again.',
+      name: 'tsRemoveLogoutUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Signed out, but removal is incomplete. Read the status again.`
+  String get tsRemoveIncomplete {
+    return Intl.message(
+      'Signed out, but removal is incomplete. Read the status again.',
+      name: 'tsRemoveIncomplete',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Removal is unconfirmed. Read the status again before adding the node or signing in.`
+  String get tsRemoveUnknown {
+    return Intl.message(
+      'Removal is unconfirmed. Read the status again before adding the node or signing in.',
+      name: 'tsRemoveUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign out of this account`
+  String get tsSignOutAccount {
+    return Intl.message(
+      'Sign out of this account',
+      name: 'tsSignOutAccount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign out of this account?`
+  String get tsSignOutAccountTitle {
+    return Intl.message(
+      'Sign out of this account?',
+      name: 'tsSignOutAccountTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This signs out “{account}” (node “{node}”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.`
+  String tsSignOutAccountBody(Object account, Object node) {
+    return Intl.message(
+      'This signs out “$account” (node “$node”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.',
+      name: 'tsSignOutAccountBody',
+      desc: '',
+      args: [account, node],
+    );
+  }
+
+  /// `Signed out`
+  String get tsAccountSignedOut {
+    return Intl.message(
+      'Signed out',
+      name: 'tsAccountSignedOut',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Signed out of this account. In Rule mode, its assigned targets stay blocked until you sign in or explicitly reassign them.`
+  String get tsSignedOutBanner {
+    return Intl.message(
+      'Signed out of this account. In Rule mode, its assigned targets stay blocked until you sign in or explicitly reassign them.',
+      name: 'tsSignedOutBanner',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Signed out of this account`
+  String get tsSignedOutReceipt {
+    return Intl.message(
+      'Signed out of this account',
+      name: 'tsSignedOutReceipt',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tailscale accounts in this profile`
+  String get tsAccountsInProfile {
+    return Intl.message(
+      'Tailscale accounts in this profile',
+      name: 'tsAccountsInProfile',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Switching changes which account you view and manage. It does not sign out other accounts.`
+  String get tsSwitchTip {
+    return Intl.message(
+      'Switching changes which account you view and manage. It does not sign out other accounts.',
+      name: 'tsSwitchTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Add Tailscale account`
+  String get tsAddAccount {
+    return Intl.message(
+      'Add Tailscale account',
+      name: 'tsAddAccount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `New account`
+  String get tsNewAccount {
+    return Intl.message(
+      'New account',
+      name: 'tsNewAccount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Network: {name}`
+  String tsNetworkOf(Object name) {
+    return Intl.message(
+      'Network: $name',
+      name: 'tsNetworkOf',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Viewing Tailscale account: {account}, {status}. {count} entries.`
+  String tsSwitcherSemantics(Object account, Object status, Object count) {
+    return Intl.message(
+      'Viewing Tailscale account: $account, $status. $count entries.',
+      name: 'tsSwitcherSemantics',
+      desc: '',
+      args: [account, status, count],
+    );
+  }
+
+  /// `Each account runs a separate Tailscale device. Keeping more accounts online uses more memory.`
+  String get tsMemoryTip {
+    return Intl.message(
+      'Each account runs a separate Tailscale device. Keeping more accounts online uses more memory.',
+      name: 'tsMemoryTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `An entry already exists for this account. This sign-in has been kept but has not been added to routing. Review it before continuing.`
+  String get tsDuplicate {
+    return Intl.message(
+      'An entry already exists for this account. This sign-in has been kept but has not been added to routing. Review it before continuing.',
+      name: 'tsDuplicate',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `View existing account`
+  String get tsViewExisting {
+    return Intl.message(
+      'View existing account',
+      name: 'tsViewExisting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Checking account…`
+  String get tsCheckingAccount {
+    return Intl.message(
+      'Checking account…',
+      name: 'tsCheckingAccount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Account addition is unconfirmed. Read the status again first.`
+  String get tsAddUnconfirmed {
+    return Intl.message(
+      'Account addition is unconfirmed. Read the status again first.',
+      name: 'tsAddUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose accounts for {count} targets`
+  String tsConflictTitle(Object count) {
+    return Intl.message(
+      'Choose accounts for $count targets',
+      name: 'tsConflictTitle',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `These addresses or domains have multiple candidate accounts. Requests to these targets are blocked until you choose an account. They will not be sent directly.`
+  String get tsConflictBody {
+    return Intl.message(
+      'These addresses or domains have multiple candidate accounts. Requests to these targets are blocked until you choose an account. They will not be sent directly.',
+      name: 'tsConflictBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose accounts`
+  String get tsChooseAccounts {
+    return Intl.message(
+      'Choose accounts',
+      name: 'tsChooseAccounts',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Address conflict`
+  String get tsAddressConflict {
+    return Intl.message(
+      'Address conflict',
+      name: 'tsAddressConflict',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Routing conflict`
+  String get tsRoutingConflict {
+    return Intl.message(
+      'Routing conflict',
+      name: 'tsRoutingConflict',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose account for access`
+  String get tsChooseAccountFor {
+    return Intl.message(
+      'Choose account for access',
+      name: 'tsChooseAccountFor',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose accounts for targets`
+  String get tsAssignTitle {
+    return Intl.message(
+      'Choose accounts for targets',
+      name: 'tsAssignTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose one account for each target. Unassigned targets stay blocked. Other targets are not affected. An offline account will not be replaced automatically.`
+  String get tsAssignBody {
+    return Intl.message(
+      'Choose one account for each target. Unassigned targets stay blocked. Other targets are not affected. An offline account will not be replaced automatically.',
+      name: 'tsAssignBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Address: {address}`
+  String tsTargetAddress(Object address) {
+    return Intl.message(
+      'Address: $address',
+      name: 'tsTargetAddress',
+      desc: '',
+      args: [address],
+    );
+  }
+
+  /// `Domain: {domain}`
+  String tsTargetDomain(Object domain) {
+    return Intl.message(
+      'Domain: $domain',
+      name: 'tsTargetDomain',
+      desc: '',
+      args: [domain],
+    );
+  }
+
+  /// `{account} · {network}`
+  String tsCandidate(Object account, Object network) {
+    return Intl.message(
+      '$account · $network',
+      name: 'tsCandidate',
+      desc: '',
+      args: [account, network],
+    );
+  }
+
+  /// `Not assigned`
+  String get tsNotAssigned {
+    return Intl.message(
+      'Not assigned',
+      name: 'tsNotAssigned',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Save choices`
+  String get tsSaveChoices {
+    return Intl.message(
+      'Save choices',
+      name: 'tsSaveChoices',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Saving choices…`
+  String get tsSavingChoices {
+    return Intl.message(
+      'Saving choices…',
+      name: 'tsSavingChoices',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Access accounts updated`
+  String get tsChoicesUpdated {
+    return Intl.message(
+      'Access accounts updated',
+      name: 'tsChoicesUpdated',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Assigned targets`
+  String get tsAssignedTargets {
+    return Intl.message(
+      'Assigned targets',
+      name: 'tsAssignedTargets',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choices saved; application is not yet confirmed.`
+  String get tsChoicesSaved {
+    return Intl.message(
+      'Choices saved; application is not yet confirmed.',
+      name: 'tsChoicesSaved',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choices were not saved. Try again.`
+  String get tsChoicesFailed {
+    return Intl.message(
+      'Choices were not saved. Try again.',
+      name: 'tsChoicesFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The result is unconfirmed. Read the status again before saving again.`
+  String get tsChoicesUnknown {
+    return Intl.message(
+      'The result is unconfirmed. Read the status again before saving again.',
+      name: 'tsChoicesUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Assigned: {account}`
+  String tsAssignedTo(Object account) {
+    return Intl.message(
+      'Assigned: $account',
+      name: 'tsAssignedTo',
+      desc: '',
+      args: [account],
+    );
+  }
+
+  /// `The assigned account is unavailable. This target will not use another account.`
+  String get tsAssignedUnavailable {
+    return Intl.message(
+      'The assigned account is unavailable. This target will not use another account.',
+      name: 'tsAssignedUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This target’s account needs confirmation. Requests are blocked. Choose an account again.`
+  String get tsReconfirm {
+    return Intl.message(
+      'This target’s account needs confirmation. Requests are blocked. Choose an account again.',
+      name: 'tsReconfirm',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Reassign account`
+  String get tsReassign {
+    return Intl.message(
+      'Reassign account',
+      name: 'tsReassign',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Target account unconfirmed`
+  String get tsTargetUnconfirmed {
+    return Intl.message(
+      'Target account unconfirmed',
+      name: 'tsTargetUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The account for this target cannot be verified yet. Requests are blocked.`
+  String get tsTargetUnconfirmedTip {
+    return Intl.message(
+      'The account for this target cannot be verified yet. Requests are blocked.',
+      name: 'tsTargetUnconfirmedTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This profile has {count} panel-added Tailscale accounts. Deleting it removes their profile bindings, target assignments, and dedicated routing and blocking rules. Local sign-in archives are kept. Devices in the Tailscale admin console are not deleted. Other profiles are not affected.`
+  String tsDeleteProfileManaged(Object count) {
+    return Intl.message(
+      'This profile has $count panel-added Tailscale accounts. Deleting it removes their profile bindings, target assignments, and dedicated routing and blocking rules. Local sign-in archives are kept. Devices in the Tailscale admin console are not deleted. Other profiles are not affected.',
+      name: 'tsDeleteProfileManaged',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `This profile has unconfirmed Tailscale operations. Read the status again before deleting it.`
+  String get tsDeleteProfilePending {
+    return Intl.message(
+      'This profile has unconfirmed Tailscale operations. Read the status again before deleting it.',
+      name: 'tsDeleteProfilePending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Direct mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.`
+  String get tsDirectMode {
+    return Intl.message(
+      'Direct mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.',
+      name: 'tsDirectMode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Global mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.`
+  String get tsGlobalMode {
+    return Intl.message(
+      'Global mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.',
+      name: 'tsGlobalMode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The current DNS settings do not confirm that target domains are preserved for rule matching. Domain routing has not been verified. Check DNS settings.`
+  String get tsDnsUnverified {
+    return Intl.message(
+      'The current DNS settings do not confirm that target domains are preserved for rule matching. Domain routing has not been verified. Check DNS settings.',
+      name: 'tsDnsUnverified',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Cancel`
+  String get tsCancel {
+    return Intl.message('Cancel', name: 'tsCancel', desc: '', args: []);
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {

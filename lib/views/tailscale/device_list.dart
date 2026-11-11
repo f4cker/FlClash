@@ -86,6 +86,32 @@ class _TableRow extends StatelessWidget {
   }
 }
 
+/// The conflict tag of [peer]: 地址冲突 while one of its addresses awaits a
+/// choice, 归属冲突 while its name does.
+String? tailscaleConflictTag(
+  BuildContext context,
+  TailscaleRoutes routes,
+  TailscalePeer peer,
+) {
+  final appLocalizations = context.appLocalizations;
+  final dnsName = peer.dnsName.endsWith('.')
+      ? peer.dnsName.substring(0, peer.dnsName.length - 1)
+      : peer.dnsName;
+  for (final target in routes.pending) {
+    final value = target.target.value;
+    if (target.target.kind == tailscaleTargetIp &&
+        peer.addresses.any((address) => address.split('/').first == value)) {
+      return appLocalizations.tsAddressConflict;
+    }
+    if (target.target.kind != tailscaleTargetIp &&
+        dnsName.isNotEmpty &&
+        dnsName.toLowerCase() == value.toLowerCase()) {
+      return appLocalizations.tsRoutingConflict;
+    }
+  }
+  return null;
+}
+
 /// The owner filter's label for a group: real names, with the account when
 /// two groups share a name, so users are never merged by name.
 String tailscaleOwnerLabel(
@@ -123,8 +149,11 @@ class TailscaleDeviceSection extends StatelessWidget {
     required this.searchController,
     required this.onRefresh,
     required this.onCopy,
+    this.conflictOf,
   });
 
+  /// The conflict tag of a device, when its routing has one.
+  final String? Function(TailscalePeer peer)? conflictOf;
   final TailscaleStatus? status;
   final bool readFailed;
   final bool reading;
@@ -239,7 +268,7 @@ class TailscaleDeviceSection extends StatelessWidget {
             )
           : _Empty(title: appLocalizations.tsSearchEmpty);
     } else {
-      body = _Table(devices: shown, onCopy: onCopy);
+      body = _Table(devices: shown, onCopy: onCopy, conflictOf: conflictOf);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,8 +377,9 @@ class _Empty extends StatelessWidget {
 }
 
 class _Table extends StatelessWidget {
-  const _Table({required this.devices, required this.onCopy});
+  const _Table({required this.devices, required this.onCopy, this.conflictOf});
 
+  final String? Function(TailscalePeer peer)? conflictOf;
   final List<TailscaleDevice> devices;
   final ValueChanged<String> onCopy;
 
@@ -406,7 +436,12 @@ class _Table extends StatelessWidget {
             ),
             for (final (index, device) in devices.indexed) ...[
               if (index > 0) separator,
-              _DeviceRow(device: device, layout: layout, onCopy: onCopy),
+              _DeviceRow(
+                device: device,
+                layout: layout,
+                onCopy: onCopy,
+                conflict: conflictOf?.call(device.peer),
+              ),
             ],
           ],
         );
@@ -420,8 +455,10 @@ class _DeviceRow extends StatelessWidget {
     required this.device,
     required this.layout,
     required this.onCopy,
+    this.conflict,
   });
 
+  final String? conflict;
   final TailscaleDevice device;
   final _TableLayout layout;
   final ValueChanged<String> onCopy;
@@ -495,7 +532,9 @@ class _DeviceRow extends StatelessWidget {
                     : AppTextStyle.subheadline.of(context, emphasized: true),
               ),
               if (peer.exitNodeOption)
-                _Tag(label: appLocalizations.tsExitCapable),
+                TailscaleTag(label: appLocalizations.tsExitCapable),
+              if (conflict case final conflict?)
+                TailscaleTag(label: conflict, warn: true),
             ],
           ),
         ),
@@ -545,35 +584,6 @@ class _DeviceRow extends StatelessWidget {
         system: osCell,
         status: statusCell,
         copy: copyCell,
-      ),
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: ShapeDecoration(
-        color: DashboardColors.of(context).tone,
-        shape: AppShape.all(AppCorner.full),
-      ),
-      // As wide as its label, also in a Wrap that offers the full row.
-      child: Center(
-        widthFactor: 1,
-        child: Text(
-          label,
-          maxLines: 1,
-          style: AppTextStyle.caption2
-              .of(context, emphasized: true)
-              .copyWith(color: context.colorScheme.onSurfaceVariant),
-        ),
       ),
     );
   }
