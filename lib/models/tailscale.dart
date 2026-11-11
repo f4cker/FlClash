@@ -406,3 +406,36 @@ abstract class TailscaleLegacyState with _$TailscaleLegacyState {
     String? archiveError,
   }) = _TailscaleLegacyState;
 }
+
+/// What the panel knows of one node beyond the Core's list, kept for the
+/// app's lifetime so an operation outlives the page that started it.
+@freezed
+abstract class TailscalePanelNode with _$TailscalePanelNode {
+  const factory TailscalePanelNode({
+    /// The last read; it belongs to the node's instance of its generation.
+    TailscaleStatus? status,
+
+    /// The latest read failed; [status] is then what an earlier one gave.
+    @Default(false) bool readFailed,
+    @Default(false) bool reading,
+    @Default(false) bool loggingIn,
+    @Default(false) bool starting,
+
+    /// The panel's own start call failed for this generation.
+    @Default(false) bool startFailed,
+    @Default(false) bool restarting,
+    @Default(false) bool loggingOut,
+
+    /// An action's result is not known; only a read settles it.
+    @Default(false) bool unconfirmed,
+    TailscaleCardNotice? notice,
+    @Default(false) bool applyingExit,
+    @Default(false) bool applyingRoutes,
+    TailscaleSettingNotice? exitNotice,
+    TailscaleSettingNotice? routesNotice,
+
+    /// The generation the panel already started once, so a reopen does not
+    /// start it again.
+    int? prewarmed,
+  }) = _TailscalePanelNode;
+}

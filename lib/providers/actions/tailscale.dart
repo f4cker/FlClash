@@ -7,6 +7,9 @@ bool _isUnboundTailscaleError(Object error) =>
       'tailscale_node_not_found',
     }.contains(error.code);
 
+String? _codeOf(Object error) =>
+    error is CoreMethodException ? error.code : null;
+
 @Riverpod(keepAlive: true)
 class TailscaleAction extends _$TailscaleAction {
   CoreController get _core => ref.read(coreHandlerProvider);
@@ -119,6 +122,317 @@ class TailscaleAction extends _$TailscaleAction {
         error: TailscaleError(code: 'no_response'),
       );
     }
+  }
+
+  TailscalePanelNodes get _panel =>
+      ref.read(tailscalePanelNodesProvider.notifier);
+
+  /// Read only: the node as listed now, then its status. Settles an unknown
+  /// result as far as the state goes; a pending legacy outcome stays.
+  Future<TailscaleNode?> refresh(
+    TailscaleNode node, {
+    bool settings = false,
+  }) async {
+    final (read, fresh) = await _readNode(node.key);
+    if (read && fresh == null) {
+      _refreshNodes();
+      return null;
+    }
+    final target = fresh ?? node;
+    if (settings) {
+      _panel.change(
+        target.key,
+        (state) => state.copyWith(exitNotice: null, routesNotice: null),
+      );
+    }
+    await readStatus(target);
+    return target;
+  }
+
+  /// A failed read keeps the last status and marks it as not current.
+  Future<void> readStatus(TailscaleNode node) async {
+    final key = node.key;
+    if (_panel.of(key).reading) {
+      return;
+    }
+    _panel.change(key, (state) => state.copyWith(reading: true));
+    try {
+      final status = await _core.getTailscaleStatus(node.ref);
+      _publish(status.node);
+      _panel.change(
+        key,
+        (state) => state.copyWith(
+          status: status,
+          readFailed: false,
+          reading: false,
+          unconfirmed: false,
+          notice: switch (state.notice) {
+            TailscaleCardNotice.loginUnconfirmed ||
+            TailscaleCardNotice.logoutUnknown ||
+            TailscaleCardNotice.logoutFailed ||
+            TailscaleCardNotice.nodeChanged => null,
+            final notice => notice,
+          },
+        ),
+      );
+    } catch (error) {
+      commonPrint.log(
+        'tailscale ${node.name} status error $error',
+        logLevel: LogLevel.warning,
+      );
+      if (_isUnboundTailscaleError(error)) {
+        _refreshNodes();
+        _panel.change(key, (state) => state.copyWith(reading: false));
+        return;
+      }
+      _panel.change(
+        key,
+        (state) => state.copyWith(readFailed: true, reading: false),
+      );
+    }
+  }
+
+  /// Starts a node that has a login of its own, once per instance; never one
+  /// the user logged out of or one that still needs a login.
+  Future<void> prewarm(TailscaleNode node) async {
+    final key = node.key;
+    final panel = _panel.of(key);
+    if (panel.prewarmed == node.generation ||
+        panel.starting ||
+        node.started ||
+        node.loggedOut ||
+        !node.hasIdentity ||
+        node.startError != null) {
+      return;
+    }
+    _panel.change(
+      key,
+      (state) => state.copyWith(
+        prewarmed: node.generation,
+        starting: true,
+        startFailed: false,
+      ),
+    );
+    var startFailed = false;
+    var unconfirmed = false;
+    TailscaleNode? started;
+    try {
+      started = await start(node);
+    } catch (error) {
+      commonPrint.log(
+        'tailscale ${node.name} start error $error',
+        logLevel: LogLevel.warning,
+      );
+      if (_isUnboundTailscaleError(error) ||
+          const {
+            'tailscale_logged_out',
+            'tailscale_needs_login',
+          }.contains(_codeOf(error))) {
+        _refreshNodes();
+      } else if (isUnansweredCoreError(error)) {
+        unconfirmed = true;
+      } else {
+        startFailed = true;
+      }
+    } finally {
+      _panel.change(
+        key,
+        (state) => state.copyWith(
+          starting: false,
+          startFailed: startFailed,
+          unconfirmed: state.unconfirmed || unconfirmed,
+        ),
+      );
+    }
+    if (started != null) {
+      await readStatus(started);
+    }
+  }
+
+  /// A start error sticks to its instance, so a retry applies the profile
+  /// again and the new instance starts.
+  Future<void> retryStart(TailscaleNode node) async {
+    final key = node.key;
+    if (_panel.of(key).restarting) {
+      return;
+    }
+    _panel.change(
+      key,
+      (state) => state.copyWith(restarting: true, startFailed: false),
+    );
+    try {
+      await reapply();
+    } finally {
+      _panel.change(key, (state) => state.copyWith(restarting: false));
+    }
+    await _readNode(key);
+  }
+
+  /// The URL to open, only for the instance the page showed; the page drops
+  /// it once the node changes.
+  Future<String?> loginFromPanel(
+    TailscaleNode node, {
+    bool reauth = false,
+  }) async {
+    final key = node.key;
+    if (_panel.of(key).loggingIn) {
+      return null;
+    }
+    _panel.change(
+      key,
+      (state) =>
+          state.copyWith(loggingIn: true, notice: null, unconfirmed: false),
+    );
+    String? url;
+    TailscaleCardNotice? notice;
+    var unconfirmed = false;
+    try {
+      final result = await login(node, reauth: reauth);
+      if (result.generation != node.generation) {
+        notice = TailscaleCardNotice.nodeChanged;
+      } else if (result.authUrl case final authUrl? when authUrl.isNotEmpty) {
+        url = authUrl;
+      } else if (result.pending) {
+        notice = TailscaleCardNotice.loginUnconfirmed;
+        unconfirmed = true;
+      } else if (result.state == TailscaleBackendState.needsLogin) {
+        notice = TailscaleCardNotice.urlMissing;
+      }
+    } catch (error) {
+      commonPrint.log(
+        'tailscale ${node.name} login error ${_codeOf(error) ?? error.runtimeType}',
+        logLevel: LogLevel.warning,
+      );
+      if (_isUnboundTailscaleError(error)) {
+        notice = TailscaleCardNotice.nodeChanged;
+      } else if (_codeOf(error) == 'tailscale_auth_url_rejected') {
+        notice = TailscaleCardNotice.urlRejected;
+      } else if (isUnansweredCoreError(error)) {
+        notice = TailscaleCardNotice.loginUnconfirmed;
+        unconfirmed = true;
+      } else {
+        notice = TailscaleCardNotice.urlMissing;
+      }
+    } finally {
+      _panel.change(
+        key,
+        (state) => state.copyWith(
+          loggingIn: false,
+          notice: notice,
+          unconfirmed: unconfirmed,
+        ),
+      );
+    }
+    final (_, fresh) = await _readNode(key);
+    if (fresh == null) {
+      _refreshNodes();
+      return null;
+    }
+    if (fresh.generation != node.generation) {
+      url = null;
+    }
+    await readStatus(fresh);
+    return url;
+  }
+
+  /// True only once the Core confirmed the logout and the guard was saved.
+  Future<bool> logoutFromPanel(TailscaleNode node) async {
+    final key = node.key;
+    if (_panel.of(key).loggingOut) {
+      return false;
+    }
+    _panel.change(
+      key,
+      (state) => state.copyWith(loggingOut: true, notice: null),
+    );
+    var confirmed = false;
+    TailscaleCardNotice? notice;
+    try {
+      final result = await logout(node);
+      confirmed = result.outcome == TailscaleLogoutOutcome.confirmed;
+      if (!confirmed) {
+        notice = TailscaleCardNotice.logoutUnknown;
+      }
+    } catch (error) {
+      commonPrint.log(
+        'tailscale ${node.name} logout error ${_codeOf(error) ?? error.runtimeType}',
+        logLevel: LogLevel.warning,
+      );
+      notice = switch (_codeOf(error)) {
+        'tailscale_guard_not_saved' => TailscaleCardNotice.logoutFailed,
+        _ when _isUnboundTailscaleError(error) =>
+          TailscaleCardNotice.nodeChanged,
+        _ => TailscaleCardNotice.logoutUnknown,
+      };
+    } finally {
+      _panel.change(
+        key,
+        (state) => state.copyWith(
+          loggingOut: false,
+          notice: notice,
+          unconfirmed: notice == TailscaleCardNotice.logoutUnknown,
+        ),
+      );
+    }
+    final (_, fresh) = await _readNode(key);
+    if (fresh != null && fresh.generation == node.generation) {
+      await readStatus(fresh);
+    }
+    return confirmed;
+  }
+
+  /// Saved first, then applied; the outcome stays on the card until a read
+  /// of the settings or the next change.
+  Future<TailscaleSettingNotice> setPrefsFromPanel(
+    TailscaleNode node, {
+    String? exitNode,
+    bool? acceptRoutes,
+  }) async {
+    final key = node.key;
+    final exit = exitNode != null;
+    final panel = _panel.of(key);
+    if (exit ? panel.applyingExit : panel.applyingRoutes) {
+      return TailscaleSettingNotice.unknown;
+    }
+    _panel.change(
+      key,
+      (state) => exit
+          ? state.copyWith(applyingExit: true, exitNotice: null)
+          : state.copyWith(applyingRoutes: true, routesNotice: null),
+    );
+    var notice = TailscaleSettingNotice.unknown;
+    try {
+      final result = await setPrefs(
+        node,
+        exitNode: exitNode,
+        acceptRoutes: acceptRoutes,
+      );
+      notice = switch (result.outcome) {
+        TailscaleSetPrefsOutcome.applied => TailscaleSettingNotice.updated,
+        TailscaleSetPrefsOutcome.saved => TailscaleSettingNotice.saved,
+        TailscaleSetPrefsOutcome.applyFailed =>
+          TailscaleSettingNotice.applyFailed,
+        TailscaleSetPrefsOutcome.failed => TailscaleSettingNotice.failed,
+        TailscaleSetPrefsOutcome.unknown => TailscaleSettingNotice.unknown,
+      };
+    } catch (error) {
+      commonPrint.log(
+        'tailscale ${node.name} prefs error ${_codeOf(error) ?? error.runtimeType}',
+        logLevel: LogLevel.warning,
+      );
+    } finally {
+      _panel.change(
+        key,
+        (state) => exit
+            ? state.copyWith(applyingExit: false, exitNotice: notice)
+            : state.copyWith(applyingRoutes: false, routesNotice: notice),
+      );
+    }
+    final (_, fresh) = await _readNode(key);
+    if (fresh != null) {
+      await readStatus(fresh);
+    }
+    return notice;
   }
 
   TailscaleLegacyStates get _legacy =>

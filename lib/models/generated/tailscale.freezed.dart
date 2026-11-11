@@ -6998,4 +6998,346 @@ as String?,
 
 }
 
+/// @nodoc
+mixin _$TailscalePanelNode {
+
+/// The last read; it belongs to the node's instance of its generation.
+ TailscaleStatus? get status;/// The latest read failed; [status] is then what an earlier one gave.
+ bool get readFailed; bool get reading; bool get loggingIn; bool get starting;/// The panel's own start call failed for this generation.
+ bool get startFailed; bool get restarting; bool get loggingOut;/// An action's result is not known; only a read settles it.
+ bool get unconfirmed; TailscaleCardNotice? get notice; bool get applyingExit; bool get applyingRoutes; TailscaleSettingNotice? get exitNotice; TailscaleSettingNotice? get routesNotice;/// The generation the panel already started once, so a reopen does not
+/// start it again.
+ int? get prewarmed;
+/// Create a copy of TailscalePanelNode
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$TailscalePanelNodeCopyWith<TailscalePanelNode> get copyWith => _$TailscalePanelNodeCopyWithImpl<TailscalePanelNode>(this as TailscalePanelNode, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as TailscalePanelNode;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscalePanelNode&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.readFailed, _this.readFailed) || other.readFailed == _this.readFailed)&&(identical(other.reading, _this.reading) || other.reading == _this.reading)&&(identical(other.loggingIn, _this.loggingIn) || other.loggingIn == _this.loggingIn)&&(identical(other.starting, _this.starting) || other.starting == _this.starting)&&(identical(other.startFailed, _this.startFailed) || other.startFailed == _this.startFailed)&&(identical(other.restarting, _this.restarting) || other.restarting == _this.restarting)&&(identical(other.loggingOut, _this.loggingOut) || other.loggingOut == _this.loggingOut)&&(identical(other.unconfirmed, _this.unconfirmed) || other.unconfirmed == _this.unconfirmed)&&(identical(other.notice, _this.notice) || other.notice == _this.notice)&&(identical(other.applyingExit, _this.applyingExit) || other.applyingExit == _this.applyingExit)&&(identical(other.applyingRoutes, _this.applyingRoutes) || other.applyingRoutes == _this.applyingRoutes)&&(identical(other.exitNotice, _this.exitNotice) || other.exitNotice == _this.exitNotice)&&(identical(other.routesNotice, _this.routesNotice) || other.routesNotice == _this.routesNotice)&&(identical(other.prewarmed, _this.prewarmed) || other.prewarmed == _this.prewarmed));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as TailscalePanelNode;
+  return Object.hash(runtimeType,_this.status,_this.readFailed,_this.reading,_this.loggingIn,_this.starting,_this.startFailed,_this.restarting,_this.loggingOut,_this.unconfirmed,_this.notice,_this.applyingExit,_this.applyingRoutes,_this.exitNotice,_this.routesNotice,_this.prewarmed);
+}
+
+@override
+String toString() {
+  final _this = this as TailscalePanelNode;
+  return 'TailscalePanelNode(status: ${_this.status}, readFailed: ${_this.readFailed}, reading: ${_this.reading}, loggingIn: ${_this.loggingIn}, starting: ${_this.starting}, startFailed: ${_this.startFailed}, restarting: ${_this.restarting}, loggingOut: ${_this.loggingOut}, unconfirmed: ${_this.unconfirmed}, notice: ${_this.notice}, applyingExit: ${_this.applyingExit}, applyingRoutes: ${_this.applyingRoutes}, exitNotice: ${_this.exitNotice}, routesNotice: ${_this.routesNotice}, prewarmed: ${_this.prewarmed})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $TailscalePanelNodeCopyWith<$Res>  {
+  factory $TailscalePanelNodeCopyWith(TailscalePanelNode value, $Res Function(TailscalePanelNode) _then) = _$TailscalePanelNodeCopyWithImpl;
+@useResult
+$Res call({
+ TailscaleStatus? status, bool readFailed, bool reading, bool loggingIn, bool starting, bool startFailed, bool restarting, bool loggingOut, bool unconfirmed, TailscaleCardNotice? notice, bool applyingExit, bool applyingRoutes, TailscaleSettingNotice? exitNotice, TailscaleSettingNotice? routesNotice, int? prewarmed
+});
+
+
+$TailscaleStatusCopyWith<$Res>? get status;
+
+}
+/// @nodoc
+class _$TailscalePanelNodeCopyWithImpl<$Res>
+    implements $TailscalePanelNodeCopyWith<$Res> {
+  _$TailscalePanelNodeCopyWithImpl(this._self, this._then);
+
+  final TailscalePanelNode _self;
+  final $Res Function(TailscalePanelNode) _then;
+
+/// Create a copy of TailscalePanelNode
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? status = freezed,Object? readFailed = null,Object? reading = null,Object? loggingIn = null,Object? starting = null,Object? startFailed = null,Object? restarting = null,Object? loggingOut = null,Object? unconfirmed = null,Object? notice = freezed,Object? applyingExit = null,Object? applyingRoutes = null,Object? exitNotice = freezed,Object? routesNotice = freezed,Object? prewarmed = freezed,}) {
+  return _then(TailscalePanelNode(
+status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as TailscaleStatus?,readFailed: null == readFailed ? _self.readFailed : readFailed // ignore: cast_nullable_to_non_nullable
+as bool,reading: null == reading ? _self.reading : reading // ignore: cast_nullable_to_non_nullable
+as bool,loggingIn: null == loggingIn ? _self.loggingIn : loggingIn // ignore: cast_nullable_to_non_nullable
+as bool,starting: null == starting ? _self.starting : starting // ignore: cast_nullable_to_non_nullable
+as bool,startFailed: null == startFailed ? _self.startFailed : startFailed // ignore: cast_nullable_to_non_nullable
+as bool,restarting: null == restarting ? _self.restarting : restarting // ignore: cast_nullable_to_non_nullable
+as bool,loggingOut: null == loggingOut ? _self.loggingOut : loggingOut // ignore: cast_nullable_to_non_nullable
+as bool,unconfirmed: null == unconfirmed ? _self.unconfirmed : unconfirmed // ignore: cast_nullable_to_non_nullable
+as bool,notice: freezed == notice ? _self.notice : notice // ignore: cast_nullable_to_non_nullable
+as TailscaleCardNotice?,applyingExit: null == applyingExit ? _self.applyingExit : applyingExit // ignore: cast_nullable_to_non_nullable
+as bool,applyingRoutes: null == applyingRoutes ? _self.applyingRoutes : applyingRoutes // ignore: cast_nullable_to_non_nullable
+as bool,exitNotice: freezed == exitNotice ? _self.exitNotice : exitNotice // ignore: cast_nullable_to_non_nullable
+as TailscaleSettingNotice?,routesNotice: freezed == routesNotice ? _self.routesNotice : routesNotice // ignore: cast_nullable_to_non_nullable
+as TailscaleSettingNotice?,prewarmed: freezed == prewarmed ? _self.prewarmed : prewarmed // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+/// Create a copy of TailscalePanelNode
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$TailscaleStatusCopyWith<$Res>? get status {
+    if (_self.status == null) {
+    return null;
+  }
+
+  return $TailscaleStatusCopyWith<$Res>(_self.status!, (value) {
+    return _then(_self.copyWith(status: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [TailscalePanelNode].
+extension TailscalePanelNodePatterns on TailscalePanelNode {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _TailscalePanelNode value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _TailscalePanelNode() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _TailscalePanelNode value)  $default,){
+final _that = this;
+switch (_that) {
+case _TailscalePanelNode():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _TailscalePanelNode value)?  $default,){
+final _that = this;
+switch (_that) {
+case _TailscalePanelNode() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( TailscaleStatus? status,  bool readFailed,  bool reading,  bool loggingIn,  bool starting,  bool startFailed,  bool restarting,  bool loggingOut,  bool unconfirmed,  TailscaleCardNotice? notice,  bool applyingExit,  bool applyingRoutes,  TailscaleSettingNotice? exitNotice,  TailscaleSettingNotice? routesNotice,  int? prewarmed)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _TailscalePanelNode() when $default != null:
+return $default(_that.status,_that.readFailed,_that.reading,_that.loggingIn,_that.starting,_that.startFailed,_that.restarting,_that.loggingOut,_that.unconfirmed,_that.notice,_that.applyingExit,_that.applyingRoutes,_that.exitNotice,_that.routesNotice,_that.prewarmed);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( TailscaleStatus? status,  bool readFailed,  bool reading,  bool loggingIn,  bool starting,  bool startFailed,  bool restarting,  bool loggingOut,  bool unconfirmed,  TailscaleCardNotice? notice,  bool applyingExit,  bool applyingRoutes,  TailscaleSettingNotice? exitNotice,  TailscaleSettingNotice? routesNotice,  int? prewarmed)  $default,) {final _that = this;
+switch (_that) {
+case _TailscalePanelNode():
+return $default(_that.status,_that.readFailed,_that.reading,_that.loggingIn,_that.starting,_that.startFailed,_that.restarting,_that.loggingOut,_that.unconfirmed,_that.notice,_that.applyingExit,_that.applyingRoutes,_that.exitNotice,_that.routesNotice,_that.prewarmed);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( TailscaleStatus? status,  bool readFailed,  bool reading,  bool loggingIn,  bool starting,  bool startFailed,  bool restarting,  bool loggingOut,  bool unconfirmed,  TailscaleCardNotice? notice,  bool applyingExit,  bool applyingRoutes,  TailscaleSettingNotice? exitNotice,  TailscaleSettingNotice? routesNotice,  int? prewarmed)?  $default,) {final _that = this;
+switch (_that) {
+case _TailscalePanelNode() when $default != null:
+return $default(_that.status,_that.readFailed,_that.reading,_that.loggingIn,_that.starting,_that.startFailed,_that.restarting,_that.loggingOut,_that.unconfirmed,_that.notice,_that.applyingExit,_that.applyingRoutes,_that.exitNotice,_that.routesNotice,_that.prewarmed);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _TailscalePanelNode implements TailscalePanelNode {
+  const _TailscalePanelNode({this.status, this.readFailed = false, this.reading = false, this.loggingIn = false, this.starting = false, this.startFailed = false, this.restarting = false, this.loggingOut = false, this.unconfirmed = false, this.notice, this.applyingExit = false, this.applyingRoutes = false, this.exitNotice, this.routesNotice, this.prewarmed});
+  
+
+/// The last read; it belongs to the node's instance of its generation.
+@override final  TailscaleStatus? status;
+/// The latest read failed; [status] is then what an earlier one gave.
+@override@JsonKey() final  bool readFailed;
+@override@JsonKey() final  bool reading;
+@override@JsonKey() final  bool loggingIn;
+@override@JsonKey() final  bool starting;
+/// The panel's own start call failed for this generation.
+@override@JsonKey() final  bool startFailed;
+@override@JsonKey() final  bool restarting;
+@override@JsonKey() final  bool loggingOut;
+/// An action's result is not known; only a read settles it.
+@override@JsonKey() final  bool unconfirmed;
+@override final  TailscaleCardNotice? notice;
+@override@JsonKey() final  bool applyingExit;
+@override@JsonKey() final  bool applyingRoutes;
+@override final  TailscaleSettingNotice? exitNotice;
+@override final  TailscaleSettingNotice? routesNotice;
+/// The generation the panel already started once, so a reopen does not
+/// start it again.
+@override final  int? prewarmed;
+
+/// Create a copy of TailscalePanelNode
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$TailscalePanelNodeCopyWith<_TailscalePanelNode> get copyWith => __$TailscalePanelNodeCopyWithImpl<_TailscalePanelNode>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscalePanelNode&&(identical(other.status, status) || other.status == status)&&(identical(other.readFailed, readFailed) || other.readFailed == readFailed)&&(identical(other.reading, reading) || other.reading == reading)&&(identical(other.loggingIn, loggingIn) || other.loggingIn == loggingIn)&&(identical(other.starting, starting) || other.starting == starting)&&(identical(other.startFailed, startFailed) || other.startFailed == startFailed)&&(identical(other.restarting, restarting) || other.restarting == restarting)&&(identical(other.loggingOut, loggingOut) || other.loggingOut == loggingOut)&&(identical(other.unconfirmed, unconfirmed) || other.unconfirmed == unconfirmed)&&(identical(other.notice, notice) || other.notice == notice)&&(identical(other.applyingExit, applyingExit) || other.applyingExit == applyingExit)&&(identical(other.applyingRoutes, applyingRoutes) || other.applyingRoutes == applyingRoutes)&&(identical(other.exitNotice, exitNotice) || other.exitNotice == exitNotice)&&(identical(other.routesNotice, routesNotice) || other.routesNotice == routesNotice)&&(identical(other.prewarmed, prewarmed) || other.prewarmed == prewarmed));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,status,readFailed,reading,loggingIn,starting,startFailed,restarting,loggingOut,unconfirmed,notice,applyingExit,applyingRoutes,exitNotice,routesNotice,prewarmed);
+}
+
+@override
+String toString() {
+    return 'TailscalePanelNode(status: $status, readFailed: $readFailed, reading: $reading, loggingIn: $loggingIn, starting: $starting, startFailed: $startFailed, restarting: $restarting, loggingOut: $loggingOut, unconfirmed: $unconfirmed, notice: $notice, applyingExit: $applyingExit, applyingRoutes: $applyingRoutes, exitNotice: $exitNotice, routesNotice: $routesNotice, prewarmed: $prewarmed)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$TailscalePanelNodeCopyWith<$Res> implements $TailscalePanelNodeCopyWith<$Res> {
+  factory _$TailscalePanelNodeCopyWith(_TailscalePanelNode value, $Res Function(_TailscalePanelNode) _then) = __$TailscalePanelNodeCopyWithImpl;
+@override @useResult
+$Res call({
+ TailscaleStatus? status, bool readFailed, bool reading, bool loggingIn, bool starting, bool startFailed, bool restarting, bool loggingOut, bool unconfirmed, TailscaleCardNotice? notice, bool applyingExit, bool applyingRoutes, TailscaleSettingNotice? exitNotice, TailscaleSettingNotice? routesNotice, int? prewarmed
+});
+
+
+@override $TailscaleStatusCopyWith<$Res>? get status;
+
+}
+/// @nodoc
+class __$TailscalePanelNodeCopyWithImpl<$Res>
+    implements _$TailscalePanelNodeCopyWith<$Res> {
+  __$TailscalePanelNodeCopyWithImpl(this._self, this._then);
+
+  final _TailscalePanelNode _self;
+  final $Res Function(_TailscalePanelNode) _then;
+
+/// Create a copy of TailscalePanelNode
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? status = freezed,Object? readFailed = null,Object? reading = null,Object? loggingIn = null,Object? starting = null,Object? startFailed = null,Object? restarting = null,Object? loggingOut = null,Object? unconfirmed = null,Object? notice = freezed,Object? applyingExit = null,Object? applyingRoutes = null,Object? exitNotice = freezed,Object? routesNotice = freezed,Object? prewarmed = freezed,}) {
+  return _then(_TailscalePanelNode(
+status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as TailscaleStatus?,readFailed: null == readFailed ? _self.readFailed : readFailed // ignore: cast_nullable_to_non_nullable
+as bool,reading: null == reading ? _self.reading : reading // ignore: cast_nullable_to_non_nullable
+as bool,loggingIn: null == loggingIn ? _self.loggingIn : loggingIn // ignore: cast_nullable_to_non_nullable
+as bool,starting: null == starting ? _self.starting : starting // ignore: cast_nullable_to_non_nullable
+as bool,startFailed: null == startFailed ? _self.startFailed : startFailed // ignore: cast_nullable_to_non_nullable
+as bool,restarting: null == restarting ? _self.restarting : restarting // ignore: cast_nullable_to_non_nullable
+as bool,loggingOut: null == loggingOut ? _self.loggingOut : loggingOut // ignore: cast_nullable_to_non_nullable
+as bool,unconfirmed: null == unconfirmed ? _self.unconfirmed : unconfirmed // ignore: cast_nullable_to_non_nullable
+as bool,notice: freezed == notice ? _self.notice : notice // ignore: cast_nullable_to_non_nullable
+as TailscaleCardNotice?,applyingExit: null == applyingExit ? _self.applyingExit : applyingExit // ignore: cast_nullable_to_non_nullable
+as bool,applyingRoutes: null == applyingRoutes ? _self.applyingRoutes : applyingRoutes // ignore: cast_nullable_to_non_nullable
+as bool,exitNotice: freezed == exitNotice ? _self.exitNotice : exitNotice // ignore: cast_nullable_to_non_nullable
+as TailscaleSettingNotice?,routesNotice: freezed == routesNotice ? _self.routesNotice : routesNotice // ignore: cast_nullable_to_non_nullable
+as TailscaleSettingNotice?,prewarmed: freezed == prewarmed ? _self.prewarmed : prewarmed // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+/// Create a copy of TailscalePanelNode
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$TailscaleStatusCopyWith<$Res>? get status {
+    if (_self.status == null) {
+    return null;
+  }
+
+  return $TailscaleStatusCopyWith<$Res>(_self.status!, (value) {
+    return _then(_self.copyWith(status: value));
+  });
+}
+}
+
 // dart format on

@@ -202,6 +202,83 @@ abstract class _$TailscaleLegacyStates
   }
 }
 
+/// The panel's view of each node, by node key, so a result lands on the node
+/// that asked for it whichever one the page shows by then.
+
+@ProviderFor(TailscalePanelNodes)
+final tailscalePanelNodesProvider = TailscalePanelNodesProvider._();
+
+/// The panel's view of each node, by node key, so a result lands on the node
+/// that asked for it whichever one the page shows by then.
+final class TailscalePanelNodesProvider
+    extends
+        $NotifierProvider<
+          TailscalePanelNodes,
+          Map<TailscaleNodeKey, TailscalePanelNode>
+        > {
+  /// The panel's view of each node, by node key, so a result lands on the node
+  /// that asked for it whichever one the page shows by then.
+  TailscalePanelNodesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tailscalePanelNodesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tailscalePanelNodesHash();
+
+  @$internal
+  @override
+  TailscalePanelNodes create() => TailscalePanelNodes();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<TailscaleNodeKey, TailscalePanelNode> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride:
+          $SyncValueProvider<Map<TailscaleNodeKey, TailscalePanelNode>>(value),
+    );
+  }
+}
+
+String _$tailscalePanelNodesHash() =>
+    r'0b52d3784bf700e89ee9112db639b29935c8a5d6';
+
+/// The panel's view of each node, by node key, so a result lands on the node
+/// that asked for it whichever one the page shows by then.
+
+abstract class _$TailscalePanelNodes
+    extends $Notifier<Map<TailscaleNodeKey, TailscalePanelNode>> {
+  Map<TailscaleNodeKey, TailscalePanelNode> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref
+            as $Ref<
+              Map<TailscaleNodeKey, TailscalePanelNode>,
+              Map<TailscaleNodeKey, TailscalePanelNode>
+            >;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                Map<TailscaleNodeKey, TailscalePanelNode>,
+                Map<TailscaleNodeKey, TailscalePanelNode>
+              >,
+              Map<TailscaleNodeKey, TailscalePanelNode>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(tailscaleSetup)
 final tailscaleSetupProvider = TailscaleSetupProvider._();
 

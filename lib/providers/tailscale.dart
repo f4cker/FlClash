@@ -102,6 +102,28 @@ class TailscaleLegacyStates extends _$TailscaleLegacyStates
   }
 }
 
+/// The panel's view of each node, by node key, so a result lands on the node
+/// that asked for it whichever one the page shows by then.
+@Riverpod(keepAlive: true)
+class TailscalePanelNodes extends _$TailscalePanelNodes
+    with AutoDisposeNotifierMixin {
+  @override
+  Map<TailscaleNodeKey, TailscalePanelNode> build() => const {};
+
+  TailscalePanelNode of(TailscaleNodeKey key) =>
+      state[key] ?? const TailscalePanelNode();
+
+  void change(
+    TailscaleNodeKey key,
+    TailscalePanelNode Function(TailscalePanelNode state) update,
+  ) {
+    final next = update(of(key));
+    if (next != of(key)) {
+      value = {...state, key: next};
+    }
+  }
+}
+
 @riverpod
 TailscaleSetup? tailscaleSetup(Ref ref) {
   final profile = ref.watch(

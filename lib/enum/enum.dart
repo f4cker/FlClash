@@ -273,6 +273,20 @@ enum TailscaleLegacyNotice {
   unknown,
 }
 
+/// The outcome of a device card action, shown in place of the state's banner.
+enum TailscaleCardNotice {
+  browserFailed,
+  urlRejected,
+  urlMissing,
+  loginUnconfirmed,
+  nodeChanged,
+  logoutFailed,
+  logoutUnknown,
+}
+
+/// The outcome of an exit node or subnet routes change, per design.md §3.2.
+enum TailscaleSettingNotice { updated, saved, applyFailed, failed, unknown }
+
 enum FindProcessMode { always, off }
 
 enum InterfaceNameMode { clear, follow, custom }
@@ -600,6 +614,7 @@ enum PageLabel {
   dashboard,
   proxies,
   profiles,
+  tailscale,
   tools,
   logs,
   requests,
