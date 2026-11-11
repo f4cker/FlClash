@@ -300,6 +300,21 @@ void main() {
       );
     });
 
+    test('a source with nothing ordinary left cannot be newly mounted', () {
+      expect(
+        [
+          for (final state in MountSourceState.values)
+            if (!state.mountable) state,
+        ],
+        [
+          MountSourceState.tailscaleOnly,
+          MountSourceState.relayOnly,
+          MountSourceState.isolatedOnly,
+          MountSourceState.unsupported,
+        ],
+      );
+    });
+
     test('the card counts only failures no later update cleared', () {
       const target = MountTargetState(
         targetId: 1,

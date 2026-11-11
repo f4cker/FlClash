@@ -626,6 +626,117 @@ void main() {
     expect(saveButton(tester).onPressed, isNull);
   });
 
+  testWidgets('the neutral banner says same names, Tailscale nodes, then '
+      'relays, one line each', (tester) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [
+          item(air, mounted: true, tailscaleExcluded: 1),
+          item(sea, mounted: true, relayExcluded: 2),
+        ],
+        stored: MountTargetState(
+          targetId: target.id,
+          sourceIds: [air.id, sea.id],
+          version: 1,
+        ),
+        groups: MountTarget(
+          groups: [groupInfo('A', kind: MountGroupKind.auto)],
+        ),
+      ),
+    )..runtime = const MountRuntimeState(report: MountReport(renamed: 1));
+    await pumpSheet(tester, mounts, profiles: [air, sea]);
+    final l10n = currentAppLocalizations;
+
+    final banner = tester.widget<MountBanner>(find.byType(MountBanner));
+    expect(banner.level, MountBannerLevel.info);
+    expect(banner.lines, [
+      l10n.mountSameName,
+      l10n.mountTailscaleExcluded,
+      l10n.mountRelayExcluded(2),
+    ]);
+  });
+
+  for (final (name, state) in [
+    ('relay-only', MountSourceState.relayOnly),
+    ('isolated-only', MountSourceState.isolatedOnly),
+    ('Tailscale-only', MountSourceState.tailscaleOnly),
+    ('unsupported', MountSourceState.unsupported),
+  ]) {
+    testWidgets('a mounted $name source can be unchecked and saved as a pure '
+        'removal, an unmounted one cannot be checked', (tester) async {
+      final kept = sub('Kept');
+      final mounts = FakeMounts(
+        panelOf(
+          [
+            item(kept, state: state, count: 0, mounted: true),
+            item(air, state: state, count: 0),
+          ],
+          stored: MountTargetState(
+            targetId: target.id,
+            sourceIds: [kept.id],
+            version: 2,
+          ),
+        ),
+      );
+      await pumpSheet(tester, mounts, profiles: [kept, air]);
+      final l10n = currentAppLocalizations;
+      final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
+
+      double opacityOf(String row) => tester
+          .widget<Opacity>(
+            find
+                .ancestor(
+                  of: find.descendant(
+                    of: rowOf(row),
+                    matching: find.byType(MountCheckbox),
+                  ),
+                  matching: find.byType(Opacity),
+                )
+                .first,
+          )
+          .opacity;
+      Text stateLine(String row) => tester.widget<Text>(
+        find
+            .descendant(
+              of: rowOf(row),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Text && widget.style?.color == colorScheme.error,
+              ),
+            )
+            .first,
+      );
+
+      expect(find.text(l10n.mountNoGroupTitle), findsOneWidget);
+      expect(opacityOf('Kept'), 1);
+      expect(opacityOf('Air'), 0.4);
+      expect(
+        find.descendant(
+          of: rowOf('Kept'),
+          matching: find.text(l10n.mountMountedTag),
+        ),
+        findsOneWidget,
+      );
+      expect(stateLine('Kept').data, stateLine('Air').data);
+
+      await tester.tap(find.text('Air'));
+      await tester.pump();
+      expect(saveButton(tester).onPressed, isNull);
+
+      await tester.tap(find.text('Kept'));
+      await tester.pump();
+      expect(saveButton(tester).onPressed, isNotNull);
+      await tester.tap(find.text(l10n.mountSave));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.mountUnmountTitle), findsOneWidget);
+      await tester.tap(find.text(l10n.mountUnmount));
+      await tester.pumpAndSettle();
+      expect(mounts.saves.single.version, 2);
+      expect(mounts.saves.single.sources, isEmpty);
+      expect(mounts.saves.single.groups, isEmpty);
+    });
+  }
+
   testWidgets('the running report counts relays over the inspection', (
     tester,
   ) async {

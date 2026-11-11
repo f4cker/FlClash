@@ -1270,7 +1270,8 @@ class MountSourceRow extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   final VoidCallback? onRefresh;
 
-  bool get _checkable => item.state.mountable || checked;
+  /// A mounted source stays in reach to be unmounted whatever it holds now.
+  bool get _checkable => item.state.mountable || item.mounted || checked;
 
   String _detail(BuildContext context) {
     final appLocalizations = context.appLocalizations;
@@ -1312,11 +1313,11 @@ class MountSourceRow extends StatelessWidget {
       MountSourceState.notFetched => null,
       MountSourceState.relayOnly => (
         appLocalizations.mountSourceRelayOnly,
-        false,
+        true,
       ),
-      MountSourceState.isolatedOnly => (
+      MountSourceState.isolatedOnly || MountSourceState.tailscaleOnly => (
         appLocalizations.mountSourceIsolatedOnly,
-        false,
+        true,
       ),
       _ when failed || refreshUnconfirmed => (
         refreshUnconfirmed
@@ -1324,10 +1325,7 @@ class MountSourceRow extends StatelessWidget {
             : appLocalizations.mountUpdateFailedInUse,
         false,
       ),
-      MountSourceState.empty || MountSourceState.tailscaleOnly => (
-        appLocalizations.mountSourceEmpty,
-        false,
-      ),
+      MountSourceState.empty => (appLocalizations.mountSourceEmpty, false),
       MountSourceState.nodes => null,
     };
   }

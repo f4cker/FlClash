@@ -320,7 +320,7 @@ enum MountSourceState {
   unreadable;
 
   bool get mountable => switch (this) {
-    unsupported || relayOnly || isolatedOnly => false,
+    unsupported || tailscaleOnly || relayOnly || isolatedOnly => false,
     _ => true,
   };
 }
