@@ -523,6 +523,61 @@ func TestApplyConfigBlocksWhenAMountedProfileFailsOverTheDefaultConfig(t *testin
 	}
 }
 
+func TestApplyConfigFollowsASelectionToItsSourceWhenNamesShift(t *testing.T) {
+	home := withMountHome(t)
+	withCurrentConfig(t, nil)
+	keepTunnel(t)
+	t.Cleanup(func() {
+		setMountState(nil, false, false)
+		mountSelectionBasis = map[int64]*MountReport{}
+	})
+	base := writeMountFile(t, home, "base.yaml", `proxies:
+  - {name: base, type: socks5, server: 127.0.0.9, port: 1}
+proxy-groups:
+  - {name: G, type: select, proxies: [base], include-all-providers: true}
+rules:
+  - MATCH,G
+`)
+	sourceA := writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: us, type: socks5, server: 127.0.0.1, port: 1}\n")
+	sourceB := writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: hk, type: socks5, server: 127.0.0.2, port: 1}\n  - {name: jp, type: socks5, server: 127.0.0.2, port: 2}\n")
+	apply := func(selected string, revision string) MountRuntimeState {
+		t.Helper()
+		err := applyConfig(&SetupParams{
+			Base:        &SetupBase{Path: base, Overlay: "{}"},
+			SelectedMap: map[string]string{"G": selected},
+			Mounts: &MountSetup{Target: 5, Revision: revision, Sources: []MountSource{
+				{ID: 1, Label: "A", Path: sourceA},
+				{ID: 2, Label: "B", Path: sourceB},
+			}},
+		})
+		if err != nil {
+			t.Fatalf("applyConfig %s = %v", revision, err)
+		}
+		return handleMountState()
+	}
+	now := func() string {
+		selector, _ := adapterAs[*outboundgroup.Selector](tunnel.Proxies()["G"])
+		return selector.Now()
+	}
+
+	apply("hk", "r1")
+	if now() != "hk" {
+		t.Fatalf("G = %s, want B's hk", now())
+	}
+
+	writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: hk, type: socks5, server: 127.0.0.1, port: 2}\n")
+	state := apply("hk", "r2")
+	if now() != "hk (B)" || !reflect.DeepEqual(state.Moved, map[string]string{"G": "hk (B)"}) {
+		t.Fatalf("G = %s, moved %v; want B's node, now hk (B)", now(), state.Moved)
+	}
+
+	writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: jp, type: socks5, server: 127.0.0.2, port: 2}\n")
+	state = apply("hk (B)", "r3")
+	if now() != "base" || !reflect.DeepEqual(state.Lost, []string{"G"}) {
+		t.Fatalf("G = %s, lost %v; want the group's default, never A's hk", now(), state.Lost)
+	}
+}
+
 func TestLoadMountedConfigWithoutABaseMountsIntoConfigYaml(t *testing.T) {
 	home := withMountHome(t)
 	configPath := writeMountFile(t, home, "config.yaml", `proxy-groups:

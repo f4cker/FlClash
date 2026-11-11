@@ -194,21 +194,16 @@ class MountAction extends _$MountAction {
       await _settle(saved);
       return MountSaveResult(outcome: MountSaveOutcome.saved, state: saved);
     }
-    final before = await _readState();
-    final applied = await ref
-        .read(setupActionProvider.notifier)
-        .applyProfile(silence: true);
+    final setup = ref.read(setupActionProvider.notifier);
+    final applied = await setup.applyProfile(silence: true);
     final outcome = await _confirm(saved, applied: applied);
     if (outcome != MountSaveOutcome.unknown) {
       await _settle(saved);
     }
-    final lost = outcome == MountSaveOutcome.applied
-        ? await _followSelections(before?.report)
-        : const <String>[];
     return MountSaveResult(
       outcome: outcome,
       state: saved,
-      lostSelections: lost,
+      lostSelections: setup.lostMountSelections,
     );
   }
 
@@ -267,27 +262,6 @@ class MountAction extends _$MountAction {
     }
   }
 
-  /// Moves each selection of a mounted node to its name in the new report.
-  Future<List<String>> _followSelections(MountReport? before) async {
-    final after = (await _readState())?.report;
-    final profile = ref.read(currentProfileProvider);
-    if (after == null || profile == null) {
-      return const [];
-    }
-    final lost = <String>[];
-    final proxies = ref.read(proxiesActionProvider.notifier);
-    for (final MapEntry(key: group, value: selected)
-        in profile.selectedMap.entries) {
-      final next = remapMountedSelection(selected, before, after);
-      if (next == null) {
-        lost.add(group);
-      } else if (next != selected) {
-        await proxies.changeProxy(groupName: group, proxyName: next);
-      }
-    }
-    return lost;
-  }
-
   String? _messageOf(Object error) => switch (error) {
     MessageException(:final message) => message,
     CoreMethodException(:final message) => message,
@@ -330,13 +304,13 @@ class MountAction extends _$MountAction {
       if (target == null || !target.sourceIds.contains(sourceId)) {
         return MountSourceRefresh(updated: true, item: item);
       }
-      final applied = await ref
-          .read(setupActionProvider.notifier)
-          .applyProfile(silence: true);
+      final setup = ref.read(setupActionProvider.notifier);
+      final applied = await setup.applyProfile(silence: true);
       return MountSourceRefresh(
         updated: true,
         item: item,
         application: await _confirm(target, applied: applied),
+        lostSelections: setup.lostMountSelections,
       );
     });
   }

@@ -3,6 +3,7 @@ package core
 import (
 	"cmp"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
@@ -26,7 +27,65 @@ var (
 	runningConfigBlocked bool
 	// The running config is mihomo's default, which sends everything direct.
 	runningConfigDefault bool
+	mountSelectionBasis  = map[int64]*MountReport{}
+	mountSelectionMoved  map[string]string
+	mountSelectionLost   []string
 )
+
+// A mounted selection follows its source and original name; once its source
+// drops that node it is dropped, never moved to another node of that name.
+func followMountSelections(selected map[string]string, report *MountReport) map[string]string {
+	mountStateMu.Lock()
+	defer mountStateMu.Unlock()
+	mountSelectionMoved, mountSelectionLost = nil, nil
+	if report == nil {
+		return selected
+	}
+	before := mountSelectionBasis[report.Target]
+	mountSelectionBasis[report.Target] = report
+	if before == nil {
+		return selected
+	}
+	type identity struct {
+		source   int64
+		original string
+	}
+	owners := map[string]identity{}
+	for _, source := range before.Sources {
+		for _, node := range source.Nodes {
+			owners[node.Name] = identity{source.ID, node.Original}
+		}
+	}
+	names := map[identity]string{}
+	unread := map[int64]bool{}
+	for _, source := range report.Sources {
+		unread[source.ID] = source.Status != mountSourceNodes
+		for _, node := range source.Nodes {
+			names[identity{source.ID, node.Original}] = node.Name
+		}
+	}
+	followed := make(map[string]string, len(selected))
+	for group, name := range selected {
+		owner, mounted := owners[name]
+		next, listed := names[owner]
+		switch {
+		case !mounted || unread[owner.source]:
+			followed[group] = name
+		case !listed:
+			mountSelectionLost = append(mountSelectionLost, group)
+		default:
+			followed[group] = next
+			if next != name {
+				if mountSelectionMoved == nil {
+					mountSelectionMoved = map[string]string{}
+				}
+				mountSelectionMoved[group] = next
+			}
+		}
+	}
+	slices.Sort(mountSelectionLost)
+	return followed
+}
 
 func setMountState(report *MountReport, blocked, fallback bool) {
 	mountStateMu.Lock()
@@ -251,18 +310,22 @@ type MountRuntimeGroup struct {
 	Fallback string `json:"fallback,omitempty"`
 }
 
+// Moved and Lost: the selections the last apply followed or dropped.
 type MountRuntimeState struct {
 	Blocked bool                 `json:"blocked"`
 	Report  *MountReport         `json:"report,omitempty"`
 	Sources []MountRuntimeSource `json:"sources"`
 	Groups  []MountRuntimeGroup  `json:"groups"`
+	Moved   map[string]string    `json:"moved,omitempty"`
+	Lost    []string             `json:"lost,omitempty"`
 }
 
 func handleMountState() MountRuntimeState {
 	mountStateMu.Lock()
 	report, blocked := appliedMountReport, runningConfigBlocked
+	moved, lost := mountSelectionMoved, mountSelectionLost
 	mountStateMu.Unlock()
-	state := MountRuntimeState{Blocked: blocked, Report: report, Sources: []MountRuntimeSource{}, Groups: []MountRuntimeGroup{}}
+	state := MountRuntimeState{Blocked: blocked, Report: report, Sources: []MountRuntimeSource{}, Groups: []MountRuntimeGroup{}, Moved: moved, Lost: lost}
 	if report == nil {
 		return state
 	}

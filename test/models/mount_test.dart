@@ -89,6 +89,7 @@ void main() {
       selectedMap: {},
       options: options,
       mounts: MountSetup(
+        target: 1,
         revision: 'r',
         sources: [MountSource(id: 2, label: 'Air', path: '/p/2.yaml')],
         groups: ['Proxy'],
@@ -229,26 +230,6 @@ void main() {
         ),
         MountSaveOutcome.saved,
       );
-    });
-
-    test('a mounted selection follows its source and original name', () {
-      const before = MountReport(
-        sources: [
-          MountSourceReport(
-            id: 2,
-            provider: 'flash-mount-2',
-            status: MountSourceStatus.nodes,
-            nodes: [
-              MountNode(name: 'HK', original: 'HK'),
-              MountNode(name: 'JP', original: 'JP'),
-            ],
-          ),
-        ],
-      );
-      expect(remapMountedSelection('HK', before, report), 'HK (Air)');
-      expect(remapMountedSelection('JP', before, report), isNull);
-      expect(remapMountedSelection('DIRECT', before, report), 'DIRECT');
-      expect(remapMountedSelection('HK', null, report), 'HK');
     });
 
     test('a source item names what its cache holds', () {

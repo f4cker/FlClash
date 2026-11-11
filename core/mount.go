@@ -32,6 +32,7 @@ type MountSource struct {
 // Groups are the explicitly chosen ones; auto-collecting groups take every
 // mount on their own. Revision binds a readback to the setup that made it.
 type MountSetup struct {
+	Target   int64         `json:"target"`
 	Revision string        `json:"revision"`
 	Sources  []MountSource `json:"sources"`
 	Groups   []string      `json:"groups,omitempty"`
@@ -343,6 +344,7 @@ type MountGroupReport struct {
 }
 
 type MountReport struct {
+	Target   int64               `json:"target"`
 	Revision string              `json:"revision"`
 	Sources  []MountSourceReport `json:"sources"`
 	Groups   []MountGroupReport  `json:"groups"`
@@ -364,7 +366,7 @@ var reservedProxyNames = []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "CO
 // rejects when empty unless the base names its own empty-fallback. Names
 // that clash with the base or an earlier source get "(label)" appended.
 func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, error) {
-	report := &MountReport{Revision: setup.Revision, Sources: []MountSourceReport{}, Groups: []MountGroupReport{}}
+	report := &MountReport{Target: setup.Target, Revision: setup.Revision, Sources: []MountSourceReport{}, Groups: []MountGroupReport{}}
 	if len(setup.Sources) == 0 {
 		return report, nil
 	}

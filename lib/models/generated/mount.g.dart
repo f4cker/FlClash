@@ -20,6 +20,7 @@ Map<String, dynamic> _$MountSourceToJson(_MountSource instance) =>
     };
 
 _MountSetup _$MountSetupFromJson(Map<String, dynamic> json) => _MountSetup(
+  target: (json['target'] as num).toInt(),
   revision: json['revision'] as String,
   sources:
       (json['sources'] as List<dynamic>?)
@@ -33,6 +34,7 @@ _MountSetup _$MountSetupFromJson(Map<String, dynamic> json) => _MountSetup(
 
 Map<String, dynamic> _$MountSetupToJson(_MountSetup instance) =>
     <String, dynamic>{
+      'target': instance.target,
       'revision': instance.revision,
       'sources': instance.sources,
       'groups': instance.groups,
@@ -216,6 +218,7 @@ const _$MountProtectionEnumMap = {
 };
 
 _MountReport _$MountReportFromJson(Map<String, dynamic> json) => _MountReport(
+  target: (json['target'] as num?)?.toInt() ?? 0,
   revision: json['revision'] as String? ?? '',
   sources:
       (json['sources'] as List<dynamic>?)
@@ -232,6 +235,7 @@ _MountReport _$MountReportFromJson(Map<String, dynamic> json) => _MountReport(
 
 Map<String, dynamic> _$MountReportToJson(_MountReport instance) =>
     <String, dynamic>{
+      'target': instance.target,
       'revision': instance.revision,
       'sources': instance.sources,
       'groups': instance.groups,
@@ -309,6 +313,14 @@ _MountRuntimeState _$MountRuntimeStateFromJson(
           ?.map((e) => MountRuntimeGroup.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  moved:
+      (json['moved'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, e as String),
+      ) ??
+      const {},
+  lost:
+      (json['lost'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const [],
 );
 
 Map<String, dynamic> _$MountRuntimeStateToJson(_MountRuntimeState instance) =>
@@ -317,4 +329,6 @@ Map<String, dynamic> _$MountRuntimeStateToJson(_MountRuntimeState instance) =>
       'report': instance.report,
       'sources': instance.sources,
       'groups': instance.groups,
+      'moved': instance.moved,
+      'lost': instance.lost,
     };

@@ -1766,9 +1766,10 @@ void main() {
         'from a blocked one', () async {
       final profile = Profile.normal(label: 'p');
       final core = _MockCoreHandlerInterface();
-      const mounts = MountSetup(
+      final mounts = MountSetup(
+        target: profile.id,
         revision: 'r1',
-        sources: [MountSource(id: 2, label: 'Air', path: '/p/2.yaml')],
+        sources: const [MountSource(id: 2, label: 'Air', path: '/p/2.yaml')],
         groups: ['Proxy'],
       );
       when(
@@ -1835,6 +1836,54 @@ void main() {
       expect(await setupAction.applyProfile(), isFalse);
       expect(globalState.lastConfigCounts, (groups: 0, proxies: 0, rules: 0));
       expect(groupReads, greaterThan(reads));
+    });
+
+    test('an apply keeps the profile on the names the Core followed its '
+        'mounted selections to', () async {
+      final profile = Profile.normal(
+        label: 'p',
+      ).copyWith(selectedMap: {'Proxy': 'HK', 'Media': 'JP', 'Other': 'X'});
+      final core = _MockCoreHandlerInterface();
+      when(
+        () => core.getProfileBase(any()),
+      ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+      when(() => core.getExternalProviders()).thenAnswer((_) async => []);
+      when(
+        () => core.getProxies(),
+      ).thenAnswer((_) async => const ProxiesData(all: [], proxies: {}));
+      when(() => core.setupConfig(any())).thenAnswer((_) async {});
+      when(() => core.getMountState()).thenAnswer(
+        (_) async => MountRuntimeState(
+          report: MountReport(target: profile.id),
+          moved: const {'Proxy': 'HK (B)'},
+          lost: const ['Media'],
+        ),
+      );
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith(
+            (_, profileId) => nullProfileSetupState.copyWith(
+              profileId: profileId,
+              mounts: MountSetup(target: profile.id, revision: 'r'),
+            ),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      addTearDown(() => globalState.lastConfigCounts = null);
+      final setupAction = scoped.read(setupActionProvider.notifier);
+
+      expect(await setupAction.applyProfile(force: true), isTrue);
+
+      expect(
+        scoped.read(profilesProvider).getProfile(profile.id)!.selectedMap,
+        {'Proxy': 'HK (B)', 'Other': 'X'},
+      );
+      expect(setupAction.lostMountSelections, ['Media']);
     });
 
     test('a profile file leaves its bulk sections in the Core and records '

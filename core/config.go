@@ -225,7 +225,7 @@ func applyConfig(params *SetupParams) error {
 	hub.ApplyConfig(cfg)
 	publishTailscaleManaged()
 	startTailscaleManaged()
-	patchSelectGroup(params.SelectedMap)
+	patchSelectGroup(followMountSelections(params.SelectedMap, report))
 	bumpRouteEpoch()
 	updateListeners(cfg)
 	reconcileGeoUpdater()

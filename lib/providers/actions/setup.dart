@@ -44,6 +44,10 @@ class SetupAction extends _$SetupAction {
   _SetupInputs? _appliedInputs;
   var _lastPushDuration = Duration.zero;
   var _pendingForceApply = false;
+  List<String> _lostMountSelections = const [];
+
+  /// Groups whose mounted selection the last apply dropped.
+  List<String> get lostMountSelections => _lostMountSelections;
 
   bool get _isRunning => _startTime != null && _startTime!.isBeforeNow;
 
@@ -734,6 +738,40 @@ class SetupAction extends _$SetupAction {
     return '';
   }
 
+  /// Keeps the profile on the names the Core followed, unless changed since.
+  Future<void> _followMountSelections(
+    int targetId,
+    Map<String, String> sent,
+  ) async {
+    final MountRuntimeState state;
+    try {
+      state = await _core.getMountState();
+    } catch (error) {
+      commonPrint.log(
+        'mount selections unread: ${compactError(error)}',
+        logLevel: coreFailureLogLevel(error),
+      );
+      return;
+    }
+    final profile = ref.read(profilesProvider).getProfile(targetId);
+    if (profile == null ||
+        state.report?.target != targetId ||
+        state.moved.isEmpty && state.lost.isEmpty) {
+      return;
+    }
+    final selectedMap = Map<String, String>.from(profile.selectedMap);
+    for (final MapEntry(key: group, value: name) in state.moved.entries) {
+      if (selectedMap[group] == sent[group]) selectedMap[group] = name;
+    }
+    for (final group in state.lost) {
+      if (selectedMap[group] == sent[group]) selectedMap.remove(group);
+    }
+    ref
+        .read(profilesProvider.notifier)
+        .put(profile.copyWith(selectedMap: selectedMap));
+    _lostMountSelections = state.lost;
+  }
+
   /// The profile a mount reads its groups from and is checked against: the
   /// base for one built on it, the built text for any other.
   Future<({SetupBase? base, String? config})> mountTargetInput(
@@ -835,6 +873,7 @@ class SetupAction extends _$SetupAction {
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
   }) async {
+    _lostMountSelections = const [];
     var profile = ref.read(currentProfileProvider) ?? recoverMissingProfile();
     // A refresh failure is surfaced by safeRun; setup keeps the old profile.
     final nextProfile = await globalState.safeRun(() async {
@@ -963,6 +1002,9 @@ class SetupAction extends _$SetupAction {
         _appliedInputs = inputs;
         if (system.isAndroid) {
           await preferences.saveAppliedConfigMd5(yamlMd5);
+        }
+        if (setupParams.mounts case final mounts?) {
+          await _followMountSelections(mounts.target, setupParams.selectedMap);
         }
         await onUpdated?.call();
       },

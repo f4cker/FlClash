@@ -292,7 +292,7 @@ as String,
 /// @nodoc
 mixin _$MountSetup {
 
- String get revision; List<MountSource> get sources; List<String> get groups;
+ int get target; String get revision; List<MountSource> get sources; List<String> get groups;
 /// Create a copy of MountSetup
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -306,20 +306,20 @@ $MountSetupCopyWith<MountSetup> get copyWith => _$MountSetupCopyWithImpl<MountSe
 @override
 bool operator ==(Object other) {
   final _this = this as MountSetup;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSetup&&(identical(other.revision, _this.revision) || other.revision == _this.revision)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&const DeepCollectionEquality().equals(other.groups, _this.groups));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSetup&&(identical(other.target, _this.target) || other.target == _this.target)&&(identical(other.revision, _this.revision) || other.revision == _this.revision)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&const DeepCollectionEquality().equals(other.groups, _this.groups));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MountSetup;
-  return Object.hash(runtimeType,_this.revision,const DeepCollectionEquality().hash(_this.sources),const DeepCollectionEquality().hash(_this.groups));
+  return Object.hash(runtimeType,_this.target,_this.revision,const DeepCollectionEquality().hash(_this.sources),const DeepCollectionEquality().hash(_this.groups));
 }
 
 @override
 String toString() {
   final _this = this as MountSetup;
-  return 'MountSetup(revision: ${_this.revision}, sources: ${_this.sources}, groups: ${_this.groups})';
+  return 'MountSetup(target: ${_this.target}, revision: ${_this.revision}, sources: ${_this.sources}, groups: ${_this.groups})';
 }
 
 
@@ -330,7 +330,7 @@ abstract mixin class $MountSetupCopyWith<$Res>  {
   factory $MountSetupCopyWith(MountSetup value, $Res Function(MountSetup) _then) = _$MountSetupCopyWithImpl;
 @useResult
 $Res call({
- String revision, List<MountSource> sources, List<String> groups
+ int target, String revision, List<MountSource> sources, List<String> groups
 });
 
 
@@ -347,9 +347,10 @@ class _$MountSetupCopyWithImpl<$Res>
 
 /// Create a copy of MountSetup
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? revision = null,Object? sources = null,Object? groups = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? target = null,Object? revision = null,Object? sources = null,Object? groups = null,}) {
   return _then(MountSetup(
-revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
+target: null == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
+as int,revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
 as String,sources: null == sources ? _self.sources : sources // ignore: cast_nullable_to_non_nullable
 as List<MountSource>,groups: null == groups ? _self.groups : groups // ignore: cast_nullable_to_non_nullable
 as List<String>,
@@ -437,10 +438,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String revision,  List<MountSource> sources,  List<String> groups)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int target,  String revision,  List<MountSource> sources,  List<String> groups)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountSetup() when $default != null:
-return $default(_that.revision,_that.sources,_that.groups);case _:
+return $default(_that.target,_that.revision,_that.sources,_that.groups);case _:
   return orElse();
 
 }
@@ -458,10 +459,10 @@ return $default(_that.revision,_that.sources,_that.groups);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String revision,  List<MountSource> sources,  List<String> groups)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int target,  String revision,  List<MountSource> sources,  List<String> groups)  $default,) {final _that = this;
 switch (_that) {
 case _MountSetup():
-return $default(_that.revision,_that.sources,_that.groups);case _:
+return $default(_that.target,_that.revision,_that.sources,_that.groups);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -478,10 +479,10 @@ return $default(_that.revision,_that.sources,_that.groups);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String revision,  List<MountSource> sources,  List<String> groups)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int target,  String revision,  List<MountSource> sources,  List<String> groups)?  $default,) {final _that = this;
 switch (_that) {
 case _MountSetup() when $default != null:
-return $default(_that.revision,_that.sources,_that.groups);case _:
+return $default(_that.target,_that.revision,_that.sources,_that.groups);case _:
   return null;
 
 }
@@ -493,9 +494,10 @@ return $default(_that.revision,_that.sources,_that.groups);case _:
 @JsonSerializable()
 
 class _MountSetup implements MountSetup {
-  const _MountSetup({required this.revision,  List<MountSource> sources = const [],  List<String> groups = const []}): _sources = sources,_groups = groups;
+  const _MountSetup({required this.target, required this.revision,  List<MountSource> sources = const [],  List<String> groups = const []}): _sources = sources,_groups = groups;
   factory _MountSetup.fromJson(Map<String, dynamic> json) => _$MountSetupFromJson(json);
 
+@override final  int target;
 @override final  String revision;
  final  List<MountSource> _sources;
 @override@JsonKey() List<MountSource> get sources {
@@ -525,18 +527,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSetup&&(identical(other.revision, revision) || other.revision == revision)&&const DeepCollectionEquality().equals(other.sources, _sources)&&const DeepCollectionEquality().equals(other.groups, _groups));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSetup&&(identical(other.target, target) || other.target == target)&&(identical(other.revision, revision) || other.revision == revision)&&const DeepCollectionEquality().equals(other.sources, _sources)&&const DeepCollectionEquality().equals(other.groups, _groups));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,revision,const DeepCollectionEquality().hash(_sources),const DeepCollectionEquality().hash(_groups));
+    return Object.hash(runtimeType,target,revision,const DeepCollectionEquality().hash(_sources),const DeepCollectionEquality().hash(_groups));
 }
 
 @override
 String toString() {
-    return 'MountSetup(revision: $revision, sources: $sources, groups: $groups)';
+    return 'MountSetup(target: $target, revision: $revision, sources: $sources, groups: $groups)';
 }
 
 
@@ -547,7 +549,7 @@ abstract mixin class _$MountSetupCopyWith<$Res> implements $MountSetupCopyWith<$
   factory _$MountSetupCopyWith(_MountSetup value, $Res Function(_MountSetup) _then) = __$MountSetupCopyWithImpl;
 @override @useResult
 $Res call({
- String revision, List<MountSource> sources, List<String> groups
+ int target, String revision, List<MountSource> sources, List<String> groups
 });
 
 
@@ -564,9 +566,10 @@ class __$MountSetupCopyWithImpl<$Res>
 
 /// Create a copy of MountSetup
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? revision = null,Object? sources = null,Object? groups = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? target = null,Object? revision = null,Object? sources = null,Object? groups = null,}) {
   return _then(_MountSetup(
-revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
+target: null == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
+as int,revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
 as String,sources: null == sources ? _self._sources : sources // ignore: cast_nullable_to_non_nullable
 as List<MountSource>,groups: null == groups ? _self._groups : groups // ignore: cast_nullable_to_non_nullable
 as List<String>,
@@ -3145,7 +3148,7 @@ as String,
 /// @nodoc
 mixin _$MountReport {
 
- String get revision; List<MountSourceReport> get sources; List<MountGroupReport> get groups; int get renamed;
+ int get target; String get revision; List<MountSourceReport> get sources; List<MountGroupReport> get groups; int get renamed;
 /// Create a copy of MountReport
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3159,20 +3162,20 @@ $MountReportCopyWith<MountReport> get copyWith => _$MountReportCopyWithImpl<Moun
 @override
 bool operator ==(Object other) {
   final _this = this as MountReport;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountReport&&(identical(other.revision, _this.revision) || other.revision == _this.revision)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&const DeepCollectionEquality().equals(other.groups, _this.groups)&&(identical(other.renamed, _this.renamed) || other.renamed == _this.renamed));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountReport&&(identical(other.target, _this.target) || other.target == _this.target)&&(identical(other.revision, _this.revision) || other.revision == _this.revision)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&const DeepCollectionEquality().equals(other.groups, _this.groups)&&(identical(other.renamed, _this.renamed) || other.renamed == _this.renamed));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MountReport;
-  return Object.hash(runtimeType,_this.revision,const DeepCollectionEquality().hash(_this.sources),const DeepCollectionEquality().hash(_this.groups),_this.renamed);
+  return Object.hash(runtimeType,_this.target,_this.revision,const DeepCollectionEquality().hash(_this.sources),const DeepCollectionEquality().hash(_this.groups),_this.renamed);
 }
 
 @override
 String toString() {
   final _this = this as MountReport;
-  return 'MountReport(revision: ${_this.revision}, sources: ${_this.sources}, groups: ${_this.groups}, renamed: ${_this.renamed})';
+  return 'MountReport(target: ${_this.target}, revision: ${_this.revision}, sources: ${_this.sources}, groups: ${_this.groups}, renamed: ${_this.renamed})';
 }
 
 
@@ -3183,7 +3186,7 @@ abstract mixin class $MountReportCopyWith<$Res>  {
   factory $MountReportCopyWith(MountReport value, $Res Function(MountReport) _then) = _$MountReportCopyWithImpl;
 @useResult
 $Res call({
- String revision, List<MountSourceReport> sources, List<MountGroupReport> groups, int renamed
+ int target, String revision, List<MountSourceReport> sources, List<MountGroupReport> groups, int renamed
 });
 
 
@@ -3200,9 +3203,10 @@ class _$MountReportCopyWithImpl<$Res>
 
 /// Create a copy of MountReport
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? revision = null,Object? sources = null,Object? groups = null,Object? renamed = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? target = null,Object? revision = null,Object? sources = null,Object? groups = null,Object? renamed = null,}) {
   return _then(MountReport(
-revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
+target: null == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
+as int,revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
 as String,sources: null == sources ? _self.sources : sources // ignore: cast_nullable_to_non_nullable
 as List<MountSourceReport>,groups: null == groups ? _self.groups : groups // ignore: cast_nullable_to_non_nullable
 as List<MountGroupReport>,renamed: null == renamed ? _self.renamed : renamed // ignore: cast_nullable_to_non_nullable
@@ -3291,10 +3295,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String revision,  List<MountSourceReport> sources,  List<MountGroupReport> groups,  int renamed)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int target,  String revision,  List<MountSourceReport> sources,  List<MountGroupReport> groups,  int renamed)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountReport() when $default != null:
-return $default(_that.revision,_that.sources,_that.groups,_that.renamed);case _:
+return $default(_that.target,_that.revision,_that.sources,_that.groups,_that.renamed);case _:
   return orElse();
 
 }
@@ -3312,10 +3316,10 @@ return $default(_that.revision,_that.sources,_that.groups,_that.renamed);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String revision,  List<MountSourceReport> sources,  List<MountGroupReport> groups,  int renamed)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int target,  String revision,  List<MountSourceReport> sources,  List<MountGroupReport> groups,  int renamed)  $default,) {final _that = this;
 switch (_that) {
 case _MountReport():
-return $default(_that.revision,_that.sources,_that.groups,_that.renamed);case _:
+return $default(_that.target,_that.revision,_that.sources,_that.groups,_that.renamed);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3332,10 +3336,10 @@ return $default(_that.revision,_that.sources,_that.groups,_that.renamed);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String revision,  List<MountSourceReport> sources,  List<MountGroupReport> groups,  int renamed)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int target,  String revision,  List<MountSourceReport> sources,  List<MountGroupReport> groups,  int renamed)?  $default,) {final _that = this;
 switch (_that) {
 case _MountReport() when $default != null:
-return $default(_that.revision,_that.sources,_that.groups,_that.renamed);case _:
+return $default(_that.target,_that.revision,_that.sources,_that.groups,_that.renamed);case _:
   return null;
 
 }
@@ -3347,9 +3351,10 @@ return $default(_that.revision,_that.sources,_that.groups,_that.renamed);case _:
 @JsonSerializable()
 
 class _MountReport implements MountReport {
-  const _MountReport({this.revision = '',  List<MountSourceReport> sources = const [],  List<MountGroupReport> groups = const [], this.renamed = 0}): _sources = sources,_groups = groups;
+  const _MountReport({this.target = 0, this.revision = '',  List<MountSourceReport> sources = const [],  List<MountGroupReport> groups = const [], this.renamed = 0}): _sources = sources,_groups = groups;
   factory _MountReport.fromJson(Map<String, dynamic> json) => _$MountReportFromJson(json);
 
+@override@JsonKey() final  int target;
 @override@JsonKey() final  String revision;
  final  List<MountSourceReport> _sources;
 @override@JsonKey() List<MountSourceReport> get sources {
@@ -3380,18 +3385,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountReport&&(identical(other.revision, revision) || other.revision == revision)&&const DeepCollectionEquality().equals(other.sources, _sources)&&const DeepCollectionEquality().equals(other.groups, _groups)&&(identical(other.renamed, renamed) || other.renamed == renamed));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountReport&&(identical(other.target, target) || other.target == target)&&(identical(other.revision, revision) || other.revision == revision)&&const DeepCollectionEquality().equals(other.sources, _sources)&&const DeepCollectionEquality().equals(other.groups, _groups)&&(identical(other.renamed, renamed) || other.renamed == renamed));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,revision,const DeepCollectionEquality().hash(_sources),const DeepCollectionEquality().hash(_groups),renamed);
+    return Object.hash(runtimeType,target,revision,const DeepCollectionEquality().hash(_sources),const DeepCollectionEquality().hash(_groups),renamed);
 }
 
 @override
 String toString() {
-    return 'MountReport(revision: $revision, sources: $sources, groups: $groups, renamed: $renamed)';
+    return 'MountReport(target: $target, revision: $revision, sources: $sources, groups: $groups, renamed: $renamed)';
 }
 
 
@@ -3402,7 +3407,7 @@ abstract mixin class _$MountReportCopyWith<$Res> implements $MountReportCopyWith
   factory _$MountReportCopyWith(_MountReport value, $Res Function(_MountReport) _then) = __$MountReportCopyWithImpl;
 @override @useResult
 $Res call({
- String revision, List<MountSourceReport> sources, List<MountGroupReport> groups, int renamed
+ int target, String revision, List<MountSourceReport> sources, List<MountGroupReport> groups, int renamed
 });
 
 
@@ -3419,9 +3424,10 @@ class __$MountReportCopyWithImpl<$Res>
 
 /// Create a copy of MountReport
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? revision = null,Object? sources = null,Object? groups = null,Object? renamed = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? target = null,Object? revision = null,Object? sources = null,Object? groups = null,Object? renamed = null,}) {
   return _then(_MountReport(
-revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
+target: null == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
+as int,revision: null == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
 as String,sources: null == sources ? _self._sources : sources // ignore: cast_nullable_to_non_nullable
 as List<MountSourceReport>,groups: null == groups ? _self._groups : groups // ignore: cast_nullable_to_non_nullable
 as List<MountGroupReport>,renamed: null == renamed ? _self.renamed : renamed // ignore: cast_nullable_to_non_nullable
@@ -4303,7 +4309,7 @@ as String?,
 /// @nodoc
 mixin _$MountRuntimeState {
 
- bool get blocked; MountReport? get report; List<MountRuntimeSource> get sources; List<MountRuntimeGroup> get groups;
+ bool get blocked; MountReport? get report; List<MountRuntimeSource> get sources; List<MountRuntimeGroup> get groups; Map<String, String> get moved; List<String> get lost;
 /// Create a copy of MountRuntimeState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4317,20 +4323,20 @@ $MountRuntimeStateCopyWith<MountRuntimeState> get copyWith => _$MountRuntimeStat
 @override
 bool operator ==(Object other) {
   final _this = this as MountRuntimeState;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountRuntimeState&&(identical(other.blocked, _this.blocked) || other.blocked == _this.blocked)&&(identical(other.report, _this.report) || other.report == _this.report)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&const DeepCollectionEquality().equals(other.groups, _this.groups));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountRuntimeState&&(identical(other.blocked, _this.blocked) || other.blocked == _this.blocked)&&(identical(other.report, _this.report) || other.report == _this.report)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&const DeepCollectionEquality().equals(other.groups, _this.groups)&&const DeepCollectionEquality().equals(other.moved, _this.moved)&&const DeepCollectionEquality().equals(other.lost, _this.lost));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MountRuntimeState;
-  return Object.hash(runtimeType,_this.blocked,_this.report,const DeepCollectionEquality().hash(_this.sources),const DeepCollectionEquality().hash(_this.groups));
+  return Object.hash(runtimeType,_this.blocked,_this.report,const DeepCollectionEquality().hash(_this.sources),const DeepCollectionEquality().hash(_this.groups),const DeepCollectionEquality().hash(_this.moved),const DeepCollectionEquality().hash(_this.lost));
 }
 
 @override
 String toString() {
   final _this = this as MountRuntimeState;
-  return 'MountRuntimeState(blocked: ${_this.blocked}, report: ${_this.report}, sources: ${_this.sources}, groups: ${_this.groups})';
+  return 'MountRuntimeState(blocked: ${_this.blocked}, report: ${_this.report}, sources: ${_this.sources}, groups: ${_this.groups}, moved: ${_this.moved}, lost: ${_this.lost})';
 }
 
 
@@ -4341,7 +4347,7 @@ abstract mixin class $MountRuntimeStateCopyWith<$Res>  {
   factory $MountRuntimeStateCopyWith(MountRuntimeState value, $Res Function(MountRuntimeState) _then) = _$MountRuntimeStateCopyWithImpl;
 @useResult
 $Res call({
- bool blocked, MountReport? report, List<MountRuntimeSource> sources, List<MountRuntimeGroup> groups
+ bool blocked, MountReport? report, List<MountRuntimeSource> sources, List<MountRuntimeGroup> groups, Map<String, String> moved, List<String> lost
 });
 
 
@@ -4358,13 +4364,15 @@ class _$MountRuntimeStateCopyWithImpl<$Res>
 
 /// Create a copy of MountRuntimeState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? blocked = null,Object? report = freezed,Object? sources = null,Object? groups = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? blocked = null,Object? report = freezed,Object? sources = null,Object? groups = null,Object? moved = null,Object? lost = null,}) {
   return _then(MountRuntimeState(
 blocked: null == blocked ? _self.blocked : blocked // ignore: cast_nullable_to_non_nullable
 as bool,report: freezed == report ? _self.report : report // ignore: cast_nullable_to_non_nullable
 as MountReport?,sources: null == sources ? _self.sources : sources // ignore: cast_nullable_to_non_nullable
 as List<MountRuntimeSource>,groups: null == groups ? _self.groups : groups // ignore: cast_nullable_to_non_nullable
-as List<MountRuntimeGroup>,
+as List<MountRuntimeGroup>,moved: null == moved ? _self.moved : moved // ignore: cast_nullable_to_non_nullable
+as Map<String, String>,lost: null == lost ? _self.lost : lost // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 /// Create a copy of MountRuntimeState
@@ -4461,10 +4469,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool blocked,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool blocked,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountRuntimeState() when $default != null:
-return $default(_that.blocked,_that.report,_that.sources,_that.groups);case _:
+return $default(_that.blocked,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
   return orElse();
 
 }
@@ -4482,10 +4490,10 @@ return $default(_that.blocked,_that.report,_that.sources,_that.groups);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool blocked,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool blocked,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)  $default,) {final _that = this;
 switch (_that) {
 case _MountRuntimeState():
-return $default(_that.blocked,_that.report,_that.sources,_that.groups);case _:
+return $default(_that.blocked,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4502,10 +4510,10 @@ return $default(_that.blocked,_that.report,_that.sources,_that.groups);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool blocked,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool blocked,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)?  $default,) {final _that = this;
 switch (_that) {
 case _MountRuntimeState() when $default != null:
-return $default(_that.blocked,_that.report,_that.sources,_that.groups);case _:
+return $default(_that.blocked,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
   return null;
 
 }
@@ -4517,7 +4525,7 @@ return $default(_that.blocked,_that.report,_that.sources,_that.groups);case _:
 @JsonSerializable()
 
 class _MountRuntimeState implements MountRuntimeState {
-  const _MountRuntimeState({this.blocked = false, this.report,  List<MountRuntimeSource> sources = const [],  List<MountRuntimeGroup> groups = const []}): _sources = sources,_groups = groups;
+  const _MountRuntimeState({this.blocked = false, this.report,  List<MountRuntimeSource> sources = const [],  List<MountRuntimeGroup> groups = const [],  Map<String, String> moved = const {},  List<String> lost = const []}): _sources = sources,_groups = groups,_moved = moved,_lost = lost;
   factory _MountRuntimeState.fromJson(Map<String, dynamic> json) => _$MountRuntimeStateFromJson(json);
 
 @override@JsonKey() final  bool blocked;
@@ -4536,6 +4544,20 @@ class _MountRuntimeState implements MountRuntimeState {
   return EqualUnmodifiableListView(_groups);
 }
 
+ final  Map<String, String> _moved;
+@override@JsonKey() Map<String, String> get moved {
+  if (_moved is EqualUnmodifiableMapView) return _moved;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_moved);
+}
+
+ final  List<String> _lost;
+@override@JsonKey() List<String> get lost {
+  if (_lost is EqualUnmodifiableListView) return _lost;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_lost);
+}
+
 
 /// Create a copy of MountRuntimeState
 /// with the given fields replaced by the non-null parameter values.
@@ -4550,18 +4572,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountRuntimeState&&(identical(other.blocked, blocked) || other.blocked == blocked)&&(identical(other.report, report) || other.report == report)&&const DeepCollectionEquality().equals(other.sources, _sources)&&const DeepCollectionEquality().equals(other.groups, _groups));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountRuntimeState&&(identical(other.blocked, blocked) || other.blocked == blocked)&&(identical(other.report, report) || other.report == report)&&const DeepCollectionEquality().equals(other.sources, _sources)&&const DeepCollectionEquality().equals(other.groups, _groups)&&const DeepCollectionEquality().equals(other.moved, _moved)&&const DeepCollectionEquality().equals(other.lost, _lost));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,blocked,report,const DeepCollectionEquality().hash(_sources),const DeepCollectionEquality().hash(_groups));
+    return Object.hash(runtimeType,blocked,report,const DeepCollectionEquality().hash(_sources),const DeepCollectionEquality().hash(_groups),const DeepCollectionEquality().hash(_moved),const DeepCollectionEquality().hash(_lost));
 }
 
 @override
 String toString() {
-    return 'MountRuntimeState(blocked: $blocked, report: $report, sources: $sources, groups: $groups)';
+    return 'MountRuntimeState(blocked: $blocked, report: $report, sources: $sources, groups: $groups, moved: $moved, lost: $lost)';
 }
 
 
@@ -4572,7 +4594,7 @@ abstract mixin class _$MountRuntimeStateCopyWith<$Res> implements $MountRuntimeS
   factory _$MountRuntimeStateCopyWith(_MountRuntimeState value, $Res Function(_MountRuntimeState) _then) = __$MountRuntimeStateCopyWithImpl;
 @override @useResult
 $Res call({
- bool blocked, MountReport? report, List<MountRuntimeSource> sources, List<MountRuntimeGroup> groups
+ bool blocked, MountReport? report, List<MountRuntimeSource> sources, List<MountRuntimeGroup> groups, Map<String, String> moved, List<String> lost
 });
 
 
@@ -4589,13 +4611,15 @@ class __$MountRuntimeStateCopyWithImpl<$Res>
 
 /// Create a copy of MountRuntimeState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? blocked = null,Object? report = freezed,Object? sources = null,Object? groups = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? blocked = null,Object? report = freezed,Object? sources = null,Object? groups = null,Object? moved = null,Object? lost = null,}) {
   return _then(_MountRuntimeState(
 blocked: null == blocked ? _self.blocked : blocked // ignore: cast_nullable_to_non_nullable
 as bool,report: freezed == report ? _self.report : report // ignore: cast_nullable_to_non_nullable
 as MountReport?,sources: null == sources ? _self._sources : sources // ignore: cast_nullable_to_non_nullable
 as List<MountRuntimeSource>,groups: null == groups ? _self._groups : groups // ignore: cast_nullable_to_non_nullable
-as List<MountRuntimeGroup>,
+as List<MountRuntimeGroup>,moved: null == moved ? _self._moved : moved // ignore: cast_nullable_to_non_nullable
+as Map<String, String>,lost: null == lost ? _self._lost : lost // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -5586,7 +5610,7 @@ $MountTargetStateCopyWith<$Res>? get state {
 /// @nodoc
 mixin _$MountSourceRefresh {
 
- bool get updated; MountSourceItem? get item; String? get message; MountSaveOutcome? get application;
+ bool get updated; MountSourceItem? get item; String? get message; MountSaveOutcome? get application; List<String> get lostSelections;
 /// Create a copy of MountSourceRefresh
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -5598,20 +5622,20 @@ $MountSourceRefreshCopyWith<MountSourceRefresh> get copyWith => _$MountSourceRef
 @override
 bool operator ==(Object other) {
   final _this = this as MountSourceRefresh;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceRefresh&&(identical(other.updated, _this.updated) || other.updated == _this.updated)&&(identical(other.item, _this.item) || other.item == _this.item)&&(identical(other.message, _this.message) || other.message == _this.message)&&(identical(other.application, _this.application) || other.application == _this.application));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceRefresh&&(identical(other.updated, _this.updated) || other.updated == _this.updated)&&(identical(other.item, _this.item) || other.item == _this.item)&&(identical(other.message, _this.message) || other.message == _this.message)&&(identical(other.application, _this.application) || other.application == _this.application)&&const DeepCollectionEquality().equals(other.lostSelections, _this.lostSelections));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MountSourceRefresh;
-  return Object.hash(runtimeType,_this.updated,_this.item,_this.message,_this.application);
+  return Object.hash(runtimeType,_this.updated,_this.item,_this.message,_this.application,const DeepCollectionEquality().hash(_this.lostSelections));
 }
 
 @override
 String toString() {
   final _this = this as MountSourceRefresh;
-  return 'MountSourceRefresh(updated: ${_this.updated}, item: ${_this.item}, message: ${_this.message}, application: ${_this.application})';
+  return 'MountSourceRefresh(updated: ${_this.updated}, item: ${_this.item}, message: ${_this.message}, application: ${_this.application}, lostSelections: ${_this.lostSelections})';
 }
 
 
@@ -5622,7 +5646,7 @@ abstract mixin class $MountSourceRefreshCopyWith<$Res>  {
   factory $MountSourceRefreshCopyWith(MountSourceRefresh value, $Res Function(MountSourceRefresh) _then) = _$MountSourceRefreshCopyWithImpl;
 @useResult
 $Res call({
- bool updated, MountSourceItem? item, String? message, MountSaveOutcome? application
+ bool updated, MountSourceItem? item, String? message, MountSaveOutcome? application, List<String> lostSelections
 });
 
 
@@ -5639,13 +5663,14 @@ class _$MountSourceRefreshCopyWithImpl<$Res>
 
 /// Create a copy of MountSourceRefresh
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? updated = null,Object? item = freezed,Object? message = freezed,Object? application = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? updated = null,Object? item = freezed,Object? message = freezed,Object? application = freezed,Object? lostSelections = null,}) {
   return _then(MountSourceRefresh(
 updated: null == updated ? _self.updated : updated // ignore: cast_nullable_to_non_nullable
 as bool,item: freezed == item ? _self.item : item // ignore: cast_nullable_to_non_nullable
 as MountSourceItem?,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String?,application: freezed == application ? _self.application : application // ignore: cast_nullable_to_non_nullable
-as MountSaveOutcome?,
+as MountSaveOutcome?,lostSelections: null == lostSelections ? _self.lostSelections : lostSelections // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 /// Create a copy of MountSourceRefresh
@@ -5742,10 +5767,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application,  List<String> lostSelections)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountSourceRefresh() when $default != null:
-return $default(_that.updated,_that.item,_that.message,_that.application);case _:
+return $default(_that.updated,_that.item,_that.message,_that.application,_that.lostSelections);case _:
   return orElse();
 
 }
@@ -5763,10 +5788,10 @@ return $default(_that.updated,_that.item,_that.message,_that.application);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application,  List<String> lostSelections)  $default,) {final _that = this;
 switch (_that) {
 case _MountSourceRefresh():
-return $default(_that.updated,_that.item,_that.message,_that.application);case _:
+return $default(_that.updated,_that.item,_that.message,_that.application,_that.lostSelections);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -5783,10 +5808,10 @@ return $default(_that.updated,_that.item,_that.message,_that.application);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool updated,  MountSourceItem? item,  String? message,  MountSaveOutcome? application,  List<String> lostSelections)?  $default,) {final _that = this;
 switch (_that) {
 case _MountSourceRefresh() when $default != null:
-return $default(_that.updated,_that.item,_that.message,_that.application);case _:
+return $default(_that.updated,_that.item,_that.message,_that.application,_that.lostSelections);case _:
   return null;
 
 }
@@ -5798,13 +5823,20 @@ return $default(_that.updated,_that.item,_that.message,_that.application);case _
 
 
 class _MountSourceRefresh implements MountSourceRefresh {
-  const _MountSourceRefresh({required this.updated, this.item, this.message, this.application});
+  const _MountSourceRefresh({required this.updated, this.item, this.message, this.application,  List<String> lostSelections = const []}): _lostSelections = lostSelections;
   
 
 @override final  bool updated;
 @override final  MountSourceItem? item;
 @override final  String? message;
 @override final  MountSaveOutcome? application;
+ final  List<String> _lostSelections;
+@override@JsonKey() List<String> get lostSelections {
+  if (_lostSelections is EqualUnmodifiableListView) return _lostSelections;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_lostSelections);
+}
+
 
 /// Create a copy of MountSourceRefresh
 /// with the given fields replaced by the non-null parameter values.
@@ -5816,18 +5848,18 @@ _$MountSourceRefreshCopyWith<_MountSourceRefresh> get copyWith => __$MountSource
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceRefresh&&(identical(other.updated, updated) || other.updated == updated)&&(identical(other.item, item) || other.item == item)&&(identical(other.message, message) || other.message == message)&&(identical(other.application, application) || other.application == application));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceRefresh&&(identical(other.updated, updated) || other.updated == updated)&&(identical(other.item, item) || other.item == item)&&(identical(other.message, message) || other.message == message)&&(identical(other.application, application) || other.application == application)&&const DeepCollectionEquality().equals(other.lostSelections, _lostSelections));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,updated,item,message,application);
+    return Object.hash(runtimeType,updated,item,message,application,const DeepCollectionEquality().hash(_lostSelections));
 }
 
 @override
 String toString() {
-    return 'MountSourceRefresh(updated: $updated, item: $item, message: $message, application: $application)';
+    return 'MountSourceRefresh(updated: $updated, item: $item, message: $message, application: $application, lostSelections: $lostSelections)';
 }
 
 
@@ -5838,7 +5870,7 @@ abstract mixin class _$MountSourceRefreshCopyWith<$Res> implements $MountSourceR
   factory _$MountSourceRefreshCopyWith(_MountSourceRefresh value, $Res Function(_MountSourceRefresh) _then) = __$MountSourceRefreshCopyWithImpl;
 @override @useResult
 $Res call({
- bool updated, MountSourceItem? item, String? message, MountSaveOutcome? application
+ bool updated, MountSourceItem? item, String? message, MountSaveOutcome? application, List<String> lostSelections
 });
 
 
@@ -5855,13 +5887,14 @@ class __$MountSourceRefreshCopyWithImpl<$Res>
 
 /// Create a copy of MountSourceRefresh
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? updated = null,Object? item = freezed,Object? message = freezed,Object? application = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? updated = null,Object? item = freezed,Object? message = freezed,Object? application = freezed,Object? lostSelections = null,}) {
   return _then(_MountSourceRefresh(
 updated: null == updated ? _self.updated : updated // ignore: cast_nullable_to_non_nullable
 as bool,item: freezed == item ? _self.item : item // ignore: cast_nullable_to_non_nullable
 as MountSourceItem?,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String?,application: freezed == application ? _self.application : application // ignore: cast_nullable_to_non_nullable
-as MountSaveOutcome?,
+as MountSaveOutcome?,lostSelections: null == lostSelections ? _self._lostSelections : lostSelections // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 

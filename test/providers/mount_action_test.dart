@@ -74,7 +74,7 @@ void main() {
   setUpAll(() async {
     home = Directory.systemTemp.createTempSync('flclash-mount-action-');
     await useAppPaths(home);
-    registerFallbackValue(const MountSetup(revision: ''));
+    registerFallbackValue(const MountSetup(target: 0, revision: ''));
   });
 
   tearDownAll(() {

@@ -27,10 +27,12 @@ abstract class MountSource with _$MountSource {
       _$MountSourceFromJson(json);
 }
 
-/// What `SetupParams.mounts` carries; [revision] binds a readback to it.
+/// What `SetupParams.mounts` carries; [revision] binds a readback to it and
+/// [target] the selections the Core follows across applies.
 @freezed
 abstract class MountSetup with _$MountSetup {
   const factory MountSetup({
+    required int target,
     required String revision,
     @Default([]) List<MountSource> sources,
     @Default([]) List<String> groups,
@@ -67,6 +69,7 @@ MountSetup mountSetupOf(
     ],
   });
   return MountSetup(
+    target: target.targetId,
     revision: revision.toMd5(),
     sources: [
       for (final source in sources)
@@ -232,6 +235,7 @@ abstract class MountGroupReport with _$MountGroupReport {
 @freezed
 abstract class MountReport with _$MountReport {
   const factory MountReport({
+    @Default(0) int target,
     @Default('') String revision,
     @Default([]) List<MountSourceReport> sources,
     @Default([]) List<MountGroupReport> groups,
@@ -283,6 +287,8 @@ abstract class MountRuntimeGroup with _$MountRuntimeGroup {
       _$MountRuntimeGroupFromJson(json);
 }
 
+/// [moved] and [lost] are the selections the last apply followed to a new
+/// name or dropped, by group.
 @freezed
 abstract class MountRuntimeState with _$MountRuntimeState {
   const factory MountRuntimeState({
@@ -290,6 +296,8 @@ abstract class MountRuntimeState with _$MountRuntimeState {
     MountReport? report,
     @Default([]) List<MountRuntimeSource> sources,
     @Default([]) List<MountRuntimeGroup> groups,
+    @Default({}) Map<String, String> moved,
+    @Default([]) List<String> lost,
   }) = _MountRuntimeState;
 
   factory MountRuntimeState.fromJson(Map<String, Object?> json) =>
@@ -359,6 +367,7 @@ abstract class MountSourceRefresh with _$MountSourceRefresh {
     MountSourceItem? item,
     String? message,
     MountSaveOutcome? application,
+    @Default([]) List<String> lostSelections,
   }) = _MountSourceRefresh;
 }
 
@@ -401,28 +410,6 @@ MountSaveOutcome? confirmMounts(MountRuntimeState state, String revision) {
       report.sources.every((source) => sources[source.id]?.matches ?? false) &&
       report.groups.every((group) => groups[group.name]?.present ?? false);
   return consistent ? MountSaveOutcome.applied : MountSaveOutcome.saved;
-}
-
-/// A mounted node is followed by source and original name; null once that
-/// source no longer provides it.
-String? remapMountedSelection(
-  String selected,
-  MountReport? before,
-  MountReport after,
-) {
-  for (final source in before?.sources ?? const <MountSourceReport>[]) {
-    for (final node in source.nodes) {
-      if (node.name != selected) continue;
-      final next = after.sources.where((item) => item.id == source.id);
-      for (final candidate in next.expand((item) => item.nodes)) {
-        if (candidate.original == node.original) {
-          return candidate.name;
-        }
-      }
-      return null;
-    }
-  }
-  return selected;
 }
 
 MountSourceItem mountSourceItem(
