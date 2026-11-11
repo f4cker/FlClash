@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
@@ -83,13 +84,48 @@ func mountedDocument(base *SetupBase, configPath string, mounts *MountSetup) (*y
 	return &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}}, report, nil
 }
 
+// Built Tailscale or EasyTier nodes take the running node's resolver.
 func parseDocument(document *yaml.Node) error {
 	raw := config.DefaultRawConfig()
 	if err := document.Decode(raw); err != nil {
 		return err
 	}
-	_, err := config.ParseRawConfig(raw)
-	return err
+	for i, mapping := range raw.Proxy {
+		raw.Proxy[i] = checkOnlyProxy(mapping)
+	}
+	for _, provider := range raw.ProxyProvider {
+		if payload, ok := provider["payload"].([]any); ok {
+			for i, item := range payload {
+				if mapping, ok := item.(map[string]any); ok {
+					payload[i] = checkOnlyProxy(mapping)
+				}
+			}
+		}
+	}
+	cfg, err := config.ParseRawConfig(raw)
+	if err != nil {
+		return err
+	}
+	for _, proxy := range cfg.Proxies {
+		_ = proxy.Close()
+	}
+	for _, pd := range cfg.Providers {
+		for _, proxy := range pd.Proxies() {
+			_ = proxy.Close()
+		}
+		if closer, ok := pd.(interface{ Close() error }); ok {
+			_ = closer.Close()
+		}
+	}
+	return nil
+}
+
+func checkOnlyProxy(mapping map[string]any) map[string]any {
+	switch kind, _ := mapping["type"].(string); strings.ToLower(kind) {
+	case "tailscale", "easytier":
+		return map[string]any{"name": mapping["name"], "type": "direct"}
+	}
+	return mapping
 }
 
 type MountPreflightParams struct {
