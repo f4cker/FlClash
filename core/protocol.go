@@ -160,6 +160,13 @@ type TailscaleLoginParams struct {
 	Reauth bool `json:"reauth"`
 }
 
+type TailscaleMigrateParams struct {
+	Name       string `json:"name"`
+	Generation uint64 `json:"generation"`
+	// The legacy offer-token the user confirmed; any change since refuses.
+	OfferToken string `json:"offer-token"`
+}
+
 type TailscalePrefsParams struct {
 	Name         string  `json:"name"`
 	Generation   uint64  `json:"generation"`

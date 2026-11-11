@@ -448,20 +448,40 @@ func validateTailscaleAuthURL(authURL, controlURL string) error {
 // A FileStore keeps the login profiles under _profiles; an empty map means the
 // node never registered or has logged out.
 func tailscaleStateHasIdentity(dir string) bool {
+	has, _ := tailscaleStateIdentity(dir)
+	return has
+}
+
+func tailscaleStateIdentity(dir string) (bool, error) {
 	state, err := readTailscaleState(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
 	if err != nil {
-		return false
+		return false, err
 	}
 	var profiles map[string]json.RawMessage
 	if err := json.Unmarshal(state["_profiles"], &profiles); err != nil {
-		return false
+		return false, nil
 	}
-	return len(profiles) > 0
+	return len(profiles) > 0, nil
 }
 
 func tailscaleLegacyStateDir() string {
 	return filepath.Join(constant.Path.HomeDir(), tailscaleLegacyDir)
 }
+
+const (
+	tailscaleLegacyEligible        = "eligible"
+	tailscaleLegacyHasIdentity     = "has-identity"
+	tailscaleLegacyControlMismatch = "control-mismatch"
+	tailscaleLegacyInUse           = "in-use"
+	tailscaleLegacyMigrated        = "migrated"
+	tailscaleLegacyNotIsolated     = "not-isolated"
+	tailscaleLegacyDirInUse        = "dir-in-use"
+	tailscaleLegacyUnreadable      = "unreadable"
+	tailscaleLegacyUnconfirmed     = "unconfirmed"
+)
 
 // The login the shared dir held before isolation, read without touching it.
 type TailscaleLegacyIdentity struct {
@@ -472,6 +492,8 @@ type TailscaleLegacyIdentity struct {
 	// A hash of the machine key: which login this is, without the key itself.
 	Fingerprint string                    `json:"fingerprint"`
 	MigratedTo  *TailscaleLegacyMigration `json:"migrated-to,omitempty"`
+	Eligibility string                    `json:"eligibility"`
+	OfferToken  string                    `json:"offer-token,omitempty"`
 }
 
 // The one node the legacy login went to; a second copy would put one node
@@ -481,6 +503,10 @@ type TailscaleLegacyMigration struct {
 	ProfileID   int64  `json:"profile-id"`
 	Name        string `json:"name"`
 	ControlURL  string `json:"control-url"`
+}
+
+func (m *TailscaleLegacyMigration) names(profileID int64, name, controlURL string) bool {
+	return m.ProfileID == profileID && m.Name == name && m.ControlURL == normalizeControlURL(controlURL)
 }
 
 type tailscaleLoginProfile struct {
@@ -501,6 +527,10 @@ func readTailscaleState(dir string) (map[string][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return decodeTailscaleState(buf)
+}
+
+func decodeTailscaleState(buf []byte) (map[string][]byte, error) {
 	var state map[string][]byte
 	if err := json.Unmarshal(buf, &state); err != nil {
 		return nil, err
@@ -509,13 +539,26 @@ func readTailscaleState(dir string) (map[string][]byte, error) {
 }
 
 func readTailscaleLegacyIdentity() *TailscaleLegacyIdentity {
-	state, err := readTailscaleState(tailscaleLegacyStateDir())
+	identity, _, _ := readTailscaleLegacyArchive()
+	return identity
+}
+
+// A file that cannot be read or decoded is an error, never reported as absent.
+func readTailscaleLegacyArchive() (*TailscaleLegacyIdentity, []byte, error) {
+	buf, err := os.ReadFile(filepath.Join(tailscaleLegacyStateDir(), tailscaleStateFile))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil, nil
+	}
 	if err != nil {
-		return nil
+		return &TailscaleLegacyIdentity{Eligibility: tailscaleLegacyUnreadable}, nil, err
+	}
+	state, err := decodeTailscaleState(buf)
+	if err != nil {
+		return &TailscaleLegacyIdentity{Eligibility: tailscaleLegacyUnreadable}, nil, err
 	}
 	var profiles map[string]tailscaleLoginProfile
 	if json.Unmarshal(state["_profiles"], &profiles) != nil || len(profiles) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 	profile, ok := profiles[string(state["_current-profile"])]
 	if !ok {
@@ -541,49 +584,74 @@ func readTailscaleLegacyIdentity() *TailscaleLegacyIdentity {
 		ControlURL:  normalizeControlURL(controlURL),
 		Fingerprint: hex.EncodeToString(fingerprint[:16]),
 	}
-	identity.MigratedTo = tailscaleLegacyMigratedTo(identity.Fingerprint)
-	return identity
+	marker, err := tailscaleLegacyMigratedTo(identity.Fingerprint)
+	if err != nil {
+		identity.Eligibility = tailscaleLegacyUnconfirmed
+		return identity, buf, err
+	}
+	identity.MigratedTo = marker
+	return identity, buf, nil
 }
 
 func tailscaleLegacyMarkerPath() string {
 	return filepath.Join(constant.Path.HomeDir(), tailscaleNodesDir, tailscaleLegacyMarker)
 }
 
-// The Core's marker and the one the host keeps both count, so losing either
-// cannot hand the login to a second node.
-func tailscaleLegacyMigratedTo(fingerprint string) *TailscaleLegacyMigration {
-	if buf, err := os.ReadFile(tailscaleLegacyMarkerPath()); err == nil {
+// The Core's marker and the host's both count; an unreadable one is an error.
+func tailscaleLegacyMigratedTo(fingerprint string) (*TailscaleLegacyMigration, error) {
+	buf, err := os.ReadFile(tailscaleLegacyMarkerPath())
+	switch {
+	case err == nil:
 		var marker TailscaleLegacyMigration
-		if json.Unmarshal(buf, &marker) == nil && marker.Fingerprint == fingerprint {
-			return &marker
+		if err := json.Unmarshal(buf, &marker); err != nil {
+			return nil, err
 		}
+		if marker.Fingerprint == fingerprint {
+			return &marker, nil
+		}
+	case !errors.Is(err, os.ErrNotExist):
+		return nil, err
 	}
 	tailscaleMu.Lock()
 	defer tailscaleMu.Unlock()
 	if tailscaleSetup != nil {
 		if marker := tailscaleSetup.LegacyMigration; marker != nil && marker.Fingerprint == fingerprint {
 			copied := *marker
-			return &copied
+			return &copied, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
-func writeTailscaleLegacyMarker(marker TailscaleLegacyMigration) error {
+// os.Link fails on an existing marker, so only one caller ever holds the claim.
+func claimTailscaleLegacyMarker(marker TailscaleLegacyMigration) error {
 	buf, err := json.Marshal(marker)
 	if err != nil {
 		return err
 	}
-	return writeTailscaleFile(tailscaleLegacyMarkerPath(), buf)
-}
-
-// Copies the legacy state file into dir; the original stays as it was.
-func copyTailscaleLegacyState(dir string) error {
-	buf, err := os.ReadFile(filepath.Join(tailscaleLegacyStateDir(), tailscaleStateFile))
+	path := tailscaleLegacyMarkerPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	temporary, err := os.CreateTemp(filepath.Dir(path), ".tailscale-*")
 	if err != nil {
 		return err
 	}
-	return writeTailscaleFile(filepath.Join(dir, tailscaleStateFile), buf)
+	defer os.Remove(temporary.Name())
+	_, err = temporary.Write(buf)
+	if closeErr := temporary.Close(); err == nil {
+		err = closeErr
+	}
+	if err == nil {
+		err = os.Chmod(temporary.Name(), 0o600)
+	}
+	if err == nil {
+		err = os.Link(temporary.Name(), path)
+	}
+	if err == nil {
+		scheduleReclaimOwnership()
+	}
+	return err
 }
 
 func writeTailscaleFile(path string, buf []byte) error {
