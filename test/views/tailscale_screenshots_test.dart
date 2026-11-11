@@ -506,6 +506,14 @@ void main() {
         ),
       ),
     );
+    container.listen(tailscaleNodeRecordsProvider, (_, _) {});
+    await container
+        .read(tailscaleNodeRecordsProvider.notifier)
+        .modify(
+          node.key,
+          (record) =>
+              record.copyWith(exitNode: '100.88.12.4', exitNodeName: 'nas-sg'),
+        );
     serve([node], TailscaleStatus(node: node));
     await pumpPanel(tester);
     await shoot(tester, '26-signed-out-saved');
@@ -536,5 +544,11 @@ void main() {
     serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
     await pumpPanel(tester, size: const Size(640, 1500));
     await shoot(tester, '29-device-names-narrow');
+  });
+
+  shot('30-device-names-520', (tester) async {
+    serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+    await pumpPanel(tester, size: const Size(520, 1500));
+    await shoot(tester, '30-device-names-520');
   });
 }

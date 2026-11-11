@@ -68,8 +68,9 @@ void main() {
     }
   }
 
-  Future<void> pumpPanel(WidgetTester tester) async {
-    tester.view.physicalSize = _size;
+  Future<void> pumpPanel(WidgetTester tester, {Size size = _size}) async {
+    container.read(viewSizeProvider.notifier).update((_) => size);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -572,7 +573,7 @@ void main() {
       await pumpPanel(tester);
 
       expect(
-        find.text('当前配置中另有同名节点使用同一控制服务器，无法确定要更改哪一个。请在配置中为它们使用不同名称。'),
+        find.text('当前配置中有多个同名节点使用同一控制服务器，暂时无法分别保存设置。请在配置中为它们使用不同名称。'),
         findsNWidgets(2),
       );
       await tester.tap(find.text('接受子网路由'));
@@ -941,6 +942,144 @@ void main() {
         tester.renderObject<RenderParagraph>(find.text(name)).didExceedMaxLines,
         isFalse,
       );
+      await teardownView(tester);
+    });
+
+    Future<void> seedRecord(TailscaleNodeRecord record) async {
+      container.listen(tailscaleNodeRecordsProvider, (_, _) {});
+      await container
+          .read(tailscaleNodeRecordsProvider.notifier)
+          .modify(record.key, (_) => record);
+    }
+
+    TailscaleNode savedExit(String value) => tsSignedOutNode.copyWith(
+      settings: TailscaleSettings(
+        exitNode: TailscaleExitNodeSetting(
+          value: value,
+          source: TailscaleSettingSource.override,
+        ),
+      ),
+    );
+
+    testWidgets('a saved exit node shows the name kept with it', (
+      tester,
+    ) async {
+      final node = savedExit('100.88.12.4');
+      await seedRecord(
+        TailscaleNodeRecord(
+          profileId: node.profileId,
+          name: node.name,
+          controlUrl: node.controlUrl,
+          exitNode: '100.88.12.4',
+          exitNodeName: 'nas-sg',
+        ),
+      );
+      serve([node], TailscaleStatus(node: node));
+      await pumpPanel(tester);
+
+      expect(find.text('已保存：nas-sg'), findsOneWidget);
+      expect(find.text('已保存：100.88.12.4'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('a saved exit node without a matching name shows its address', (
+      tester,
+    ) async {
+      final node = savedExit('100.88.12.4');
+      await seedRecord(
+        TailscaleNodeRecord(
+          profileId: node.profileId,
+          name: node.name,
+          controlUrl: node.controlUrl,
+          exitNode: '100.88.12.9',
+          exitNodeName: 'nas-old',
+        ),
+      );
+      serve([node], TailscaleStatus(node: node));
+      await pumpPanel(tester);
+
+      expect(find.text('已保存：100.88.12.4'), findsOneWidget);
+      expect(find.textContaining('nas-old'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('an old record without a name shows the address', (
+      tester,
+    ) async {
+      final node = savedExit('100.88.12.4');
+      await seedRecord(
+        TailscaleNodeRecord.fromJson({
+          'profile-id': node.profileId,
+          'name': node.name,
+          'control-url': node.controlUrl,
+          'exit-node': '100.88.12.4',
+        }),
+      );
+      serve([node], TailscaleStatus(node: node));
+      await pumpPanel(tester);
+
+      expect(find.text('已保存：100.88.12.4'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('a value the profile sets is never shown as saved', (
+      tester,
+    ) async {
+      final node = tsSignedOutNode.copyWith(
+        settings: const TailscaleSettings(
+          exitNode: TailscaleExitNodeSetting(
+            value: '100.88.12.4',
+            source: TailscaleSettingSource.profile,
+          ),
+        ),
+      );
+      serve([node], TailscaleStatus(node: node));
+      await pumpPanel(tester);
+
+      expect(find.textContaining('已保存'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('signed in but not connected asks only to connect', (
+      tester,
+    ) async {
+      final node = tsConnectedNode.copyWith(
+        backendState: TailscaleBackendState.needsMachineAuth,
+      );
+      serve([node], TailscaleStatus(node: node));
+      await pumpPanel(tester);
+
+      expect(find.text('此节点连接后可更改设置。'), findsNWidgets(2));
+      expect(find.text('登录并连接后可更改'), findsNothing);
+      await teardownView(tester);
+    });
+
+    testWidgets('a narrow table drops 系统 and keeps status and copy', (
+      tester,
+    ) async {
+      serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+      await pumpPanel(tester, size: const Size(520, 1400));
+
+      expect(find.text('状态'), findsOneWidget);
+      expect(find.text('系统'), findsNothing);
+      final page = tester.getRect(find.byType(TailscaleView));
+      for (final finder in [
+        find.text('在线'),
+        find.text('离线'),
+        find.byTooltip('复制地址'),
+      ]) {
+        expect(finder, findsWidgets);
+        for (var i = 0; i < finder.evaluate().length; i++) {
+          expect(
+            tester.getRect(finder.at(i)).right,
+            lessThanOrEqualTo(page.right),
+          );
+        }
+      }
+      for (final element in find.text('在线').evaluate()) {
+        final paragraph = element.renderObject! as RenderParagraph;
+        expect(paragraph.didExceedMaxLines, isFalse);
+      }
       await teardownView(tester);
     });
 

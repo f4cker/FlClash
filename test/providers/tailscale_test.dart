@@ -163,6 +163,43 @@ void main() {
     ).called(1);
   });
 
+  test('an exit node keeps its name for display and never sends it', () async {
+    final container = build();
+    when(
+      () => core.setTailscalePrefs(
+        any(),
+        exitNode: any(named: 'exitNode'),
+        acceptRoutes: any(named: 'acceptRoutes'),
+      ),
+    ).thenAnswer(
+      (_) async => const TailscalePrefsResult(
+        generation: 3,
+        outcome: TailscalePrefsOutcome.notRunning,
+      ),
+    );
+
+    await action(
+      container,
+    ).setPrefs(_node, exitNode: '100.88.12.4', exitNodeName: 'nas-sg');
+    expect(records(container).single.exitNode, '100.88.12.4');
+    expect(records(container).single.exitNodeName, 'nas-sg');
+    verify(
+      () => core.setTailscalePrefs(
+        const TailscaleNodeRef(name: 'ts', generation: 3),
+        exitNode: '100.88.12.4',
+      ),
+    ).called(1);
+
+    await action(container).setPrefs(_node, acceptRoutes: false);
+    expect(records(container).single.exitNodeName, 'nas-sg');
+
+    await action(
+      container,
+    ).setPrefs(_node, exitNode: '', exitNodeName: 'nas-sg');
+    expect(records(container).single.exitNode, '');
+    expect(records(container).single.exitNodeName, isNull);
+  });
+
   test('a node the Core cannot override keeps no saved setting', () async {
     final container = build();
     when(
