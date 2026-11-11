@@ -113,6 +113,11 @@ void main() {
   final broken = Profile.normal(label: '备用配置');
   final mine = Profile.custom(label: '自定义');
   final profiles = [target, work, air, sea, odd, fresh, broken, mine];
+  // Sheet-only sources, absent from the cards behind it.
+  final relayed = sub('中转订阅');
+  final relayedSpare = sub('中转备用');
+  final legacy = sub('旧格式备用');
+  final tailnet = sub('仅 Tailscale');
 
   final stored = MountTargetState(
     targetId: target.id,
@@ -155,33 +160,35 @@ void main() {
     report: MountReport(
       renamed: 2,
       groups: [
+        // Only 订阅节点 holds nothing but providers; the others also hold
+        // base proxies, through include-all or 手动's own list.
         MountGroupReport(
           name: '全部节点',
-          via: MountGroupVia.auto,
-          protection: MountProtection.reject,
-        ),
-        MountGroupReport(
-          name: '香港',
-          via: MountGroupVia.auto,
-          protection: MountProtection.reject,
-        ),
-        MountGroupReport(
-          name: '订阅节点',
           via: MountGroupVia.auto,
           protection: MountProtection.original,
         ),
         MountGroupReport(
+          name: '香港',
+          via: MountGroupVia.auto,
+          protection: MountProtection.original,
+        ),
+        MountGroupReport(
+          name: '订阅节点',
+          via: MountGroupVia.auto,
+          protection: MountProtection.reject,
+        ),
+        MountGroupReport(
           name: '手动',
           via: MountGroupVia.use,
-          protection: MountProtection.reject,
+          protection: MountProtection.original,
         ),
       ],
     ),
     groups: [
       MountRuntimeGroup(name: '全部节点', present: true, members: 60),
       MountRuntimeGroup(name: '香港', present: true, empty: true),
-      MountRuntimeGroup(name: '订阅节点', present: true, members: 60),
-      MountRuntimeGroup(name: '手动', present: true, members: 62),
+      MountRuntimeGroup(name: '订阅节点', present: true, members: 58),
+      MountRuntimeGroup(name: '手动', present: true, members: 64),
     ],
   );
 
@@ -196,6 +203,15 @@ void main() {
     Map<int, Future<MountCardSummary?> Function()> summaries = const {},
   }) async {
     await mockPreferences();
+    // The card behind the sheet shows what the sheet's own relation counts.
+    final panel = mounts.panel;
+    final cards = {
+      if (panel != null)
+        target.id: () async => mountCardSummaryOf(panel.stored, {
+          for (final source in panel.sources) source.profile.id: ?source.record,
+        }),
+      ...summaries,
+    };
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(() => TestProfiles(profiles)),
@@ -204,7 +220,7 @@ void main() {
         for (final profile in profiles)
           if (profile.type != ProfileType.custom)
             mountCardSummaryProvider(profile.id).overrideWith(
-              (_) => summaries[profile.id]?.call() ?? Future.value(null),
+              (_) => cards[profile.id]?.call() ?? Future.value(null),
             ),
       ],
     );
@@ -479,6 +495,67 @@ void main() {
     await tester.pump();
     await tester.tap(find.text(currentAppLocalizations.mountSave));
     await shoot(tester, '16-dialog-mixed');
+  });
+
+  shot('20-sheet-relay-banner', (tester) async {
+    await pumpProfiles(
+      tester,
+      sheetMounts(
+        groups: autoGroups,
+        storedState: stored.copyWith(sourceIds: [air.id, sea.id, relayed.id]),
+        items: [
+          item(air, mounted: true, count: 42),
+          item(sea, mounted: true, count: 18, tailscaleExcluded: 2),
+          item(
+            relayed,
+            state: MountSourceState.relayOnly,
+            count: 0,
+            mounted: true,
+            relayExcluded: 3,
+          ),
+          item(
+            relayedSpare,
+            state: MountSourceState.relayOnly,
+            count: 0,
+            relayExcluded: 5,
+          ),
+        ],
+      ),
+    );
+    await openSheet(tester);
+    await shoot(tester, '20-sheet-relay-banner');
+  });
+
+  shot('21-sheet-unmountable-rows', (tester) async {
+    await pumpProfiles(
+      tester,
+      sheetMounts(
+        groups: autoGroups,
+        storedState: stored.copyWith(sourceIds: [air.id, odd.id, relayed.id]),
+        items: [
+          item(air, mounted: true, count: 42),
+          item(odd, state: MountSourceState.unsupported, mounted: true),
+          item(legacy, state: MountSourceState.unsupported, count: 0),
+          item(
+            relayed,
+            state: MountSourceState.relayOnly,
+            count: 0,
+            mounted: true,
+            relayExcluded: 3,
+          ),
+          item(
+            tailnet,
+            state: MountSourceState.tailscaleOnly,
+            count: 0,
+            tailscaleExcluded: 4,
+          ),
+        ],
+        state: null,
+      ),
+    );
+    await openSheet(tester);
+    await tester.tap(inSheet(relayed.label));
+    await shoot(tester, '21-sheet-unmountable-rows');
   });
 
   Future<void> openDelete(WidgetTester tester) async {
