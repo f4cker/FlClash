@@ -32,6 +32,16 @@ const watchExecution = false;
 
 const safeModeBuild = bool.fromEnvironment('SAFE_MODE');
 
+/// A local acceptance build: safe mode, except that Start opens a single
+/// mixed listener on 127.0.0.1:[loopbackTestPort]. Inert without SAFE_MODE,
+/// and main refuses to start when only LOOPBACK_TEST is set.
+const loopbackTestRequested = bool.fromEnvironment('LOOPBACK_TEST');
+const loopbackTestBuild = loopbackTestRequested && safeModeBuild;
+const loopbackTestPort = int.fromEnvironment(
+  'LOOPBACK_TEST_PORT',
+  defaultValue: 7891,
+);
+
 /// The bundled core has no MITM, so this stays off until one that has it ships.
 /// Not const so tests can cover both states.
 bool mitmFeature = const bool.fromEnvironment('FEATURE_MITM');

@@ -36,6 +36,9 @@ void main(List<String> args) {
         });
       };
       try {
+        if (loopbackTestRequested && !safeModeBuild) {
+          throw StateError('LOOPBACK_TEST requires SAFE_MODE=true');
+        }
         await RustLib.init();
         final version = await system.init();
         final container = await bootstrap.init(version);

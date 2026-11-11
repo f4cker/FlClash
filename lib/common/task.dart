@@ -335,6 +335,9 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       };
     }
   }
+  if (data.loopbackPort case final port?) {
+    applyLoopbackOverrides(rawConfig, port);
+  }
   List<String> rules = [];
   if (data.rules.isEmpty) {
     if (rawConfig['rules'] != null) {
@@ -382,6 +385,24 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   rawConfig['rules'] = [...mitm.rules, ...rules];
   final yaml = await _encodeYaml(Map<String, dynamic>.from(rawConfig));
   return (yaml: yaml, md5: yaml.toMd5(), counts: configCountsOf(rawConfig));
+}
+
+/// Leaves a single mixed listener on 127.0.0.1:[port] whatever the profile,
+/// the port settings or the general overrides asked for.
+void applyLoopbackOverrides(Map rawConfig, int port) {
+  rawConfig['mixed-port'] = port;
+  rawConfig['port'] = 0;
+  rawConfig['socks-port'] = 0;
+  rawConfig['redir-port'] = 0;
+  rawConfig['tproxy-port'] = 0;
+  rawConfig['allow-lan'] = false;
+  rawConfig['bind-address'] = '127.0.0.1';
+  rawConfig['listeners'] = [];
+  rawConfig['tunnels'] = [];
+  rawConfig['tun'] = {
+    if (rawConfig['tun'] case final Map tun) ...tun,
+    'enable': false,
+  };
 }
 
 typedef ShakingStoreArgs = ({

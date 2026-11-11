@@ -612,6 +612,66 @@ void main() {
     },
   );
 
+  test('a loopback port leaves one mixed listener on 127.0.0.1 only', () async {
+    Future<YamlMap> build({int? loopbackPort}) async {
+      final result = await makeRealProfileTask(
+        MakeRealProfileState(
+          profilesPath: '/profiles',
+          profileId: 14,
+          rawConfig: {
+            'bind-address': '*',
+            'listeners': [
+              {'type': 'mixed', 'name': 'extra', 'port': 1234},
+            ],
+            'tunnels': [
+              {
+                'network': ['tcp'],
+                'address': '0.0.0.0:1234',
+                'target': 'example.test:443',
+              },
+            ],
+            'tun': {'enable': true, 'mtu': 1400},
+          },
+          realPatchConfig: const PatchClashConfig(
+            mixedPort: 7890,
+            port: 7892,
+            socksPort: 7893,
+            redirPort: 7894,
+            tproxyPort: 7895,
+            allowLan: true,
+            tun: Tun(enable: true),
+          ),
+          appendSystemDns: false,
+          proxyGroups: const [],
+          rules: const [],
+          addedRules: const [],
+          defaultUA: 'FlClash-Test',
+          safeMode: true,
+          loopbackPort: loopbackPort,
+        ),
+      );
+      return loadYaml(result.yaml) as YamlMap;
+    }
+
+    final safe = await build();
+    expect(safe['mixed-port'], 7890);
+    expect(safe['allow-lan'], true);
+
+    final loopback = await build(loopbackPort: 7891);
+    expect(loopback['mixed-port'], 7891);
+    for (final key in ['port', 'socks-port', 'redir-port', 'tproxy-port']) {
+      expect(loopback[key], 0, reason: key);
+    }
+    expect(loopback['allow-lan'], false);
+    expect(loopback['bind-address'], '127.0.0.1');
+    expect(loopback['listeners'], isEmpty);
+    expect(loopback['tunnels'], isEmpty);
+    expect(loopback['tun']['enable'], false);
+    expect(loopback['tun']['mtu'], 1400);
+    expect(loopback['external-controller'], '');
+    expect(loopback['dns']['listen'], '');
+  });
+
   test('iptables interface names cannot add command arguments', () async {
     for (final interfaceName in ['br-lan.10', 'lo -M /tmp/extra']) {
       final result = await makeRealProfileTask(

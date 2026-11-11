@@ -120,6 +120,9 @@ class AppEnvManager extends ConsumerWidget {
   const AppEnvManager({super.key, required this.child});
 
   String? _bannerMessage({required bool safeMode}) {
+    if (loopbackTestBuild) {
+      return 'LOOPBACK 127.0.0.1:$loopbackTestPort';
+    }
     if (safeMode) {
       return 'SAFE MODE';
     }
