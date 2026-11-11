@@ -307,6 +307,31 @@ void main() {
       expect(container.read(profilesProvider).getProfile(2), isNull);
     });
 
+    test('an unknown apply keeps the source until a recheck', () async {
+      final container = build(running: true);
+      readsBack();
+      await mountAir(container);
+      when(() => core.getMountState()).thenThrow(const SocketException('x'));
+
+      expect(
+        await action(container).deleteSource(2),
+        MountSourceDeletion.unknown,
+      );
+      expect(container.read(profilesProvider).getProfile(2), isNotNull);
+      expect((await testDatabase.mountsDao.target(1))!.pending, isNotNull);
+
+      readsBack();
+      expect(
+        (await action(container).recheck(1)).outcome,
+        MountSaveOutcome.applied,
+      );
+      expect(
+        await action(container).deleteSource(2),
+        MountSourceDeletion.deleted,
+      );
+      expect(container.read(profilesProvider).getProfile(2), isNull);
+    });
+
     test('a pending target blocks the deletion', () async {
       final container = build(running: true);
       when(() => core.getMountState()).thenThrow(const SocketException('x'));

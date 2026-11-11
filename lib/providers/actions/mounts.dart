@@ -346,7 +346,8 @@ class MountAction extends _$MountAction {
 
   /// Unmounts [sourceId] from every target, applies the current one, then
   /// deletes the profile. Nothing happens while a target has a record
-  /// pending.
+  /// pending; an apply without a known outcome keeps the profile until
+  /// [recheck] resolves it and the deletion is retried.
   Future<MountSourceDeletion> deleteSource(int sourceId) {
     return _scheduler.run(() async {
       final List<MountTargetState> marked;
@@ -369,13 +370,16 @@ class MountAction extends _$MountAction {
         final result = await _applyAndSettle(target);
         known &= result.outcome != MountSaveOutcome.unknown;
       }
+      if (!known) {
+        return MountSourceDeletion.unknown;
+      }
       final outcome = await ref
           .read(profilesActionProvider.notifier)
           .deleteProfile(sourceId);
       if (outcome != TailscaleUnlinkOutcome.done) {
         return MountSourceDeletion.keptProfile;
       }
-      return known ? MountSourceDeletion.deleted : MountSourceDeletion.unknown;
+      return MountSourceDeletion.deleted;
     });
   }
 }
