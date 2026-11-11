@@ -122,6 +122,16 @@ String userFacingErrorMessage(Object error, AppLocalizations appLocalizations) {
           appLocalizations.ruleSetMixedTip,
         CoreMethodException(code: 'rule_set_invalid') =>
           appLocalizations.ruleSetInvalidTip,
+        CoreMethodException(
+          code: 'provider_update_refused_mount',
+          details: {'providerName': final String name, 'kept': true},
+        ) =>
+          appLocalizations.mountProviderUpdateRefused(name),
+        CoreMethodException(
+          code: 'provider_update_refused_mount',
+          details: {'providerName': final String name},
+        ) =>
+          appLocalizations.mountProviderUpdateRefusedUnconfirmed(name),
         CoreMethodException(:final message) => message,
         _ => error.toString(),
       };

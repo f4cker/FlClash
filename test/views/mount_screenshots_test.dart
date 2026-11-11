@@ -558,6 +558,67 @@ void main() {
     await shoot(tester, '21-sheet-unmountable-rows');
   });
 
+  final isolatedGroups = [
+    isolatedGroup('Tailscale 分流', MountGroupReason.rule),
+    isolatedGroup('DNS 出口', MountGroupReason.dns),
+    isolatedGroup('前置跳板', MountGroupReason.dialer),
+  ];
+
+  shot('22-groups-excluded', (tester) async {
+    await pumpProfiles(
+      tester,
+      sheetMounts(
+        groups: MountTarget(groups: [...autoGroups.groups, ...isolatedGroups]),
+      ),
+    );
+    await openSheet(tester);
+    await scrollSheetTo(
+      tester,
+      currentAppLocalizations.mountGroupsExcluded(isolatedGroups.length),
+    );
+    await shoot(tester, '22-groups-excluded');
+  });
+
+  shot('23-no-group-isolated', (tester) async {
+    await pumpProfiles(
+      tester,
+      sheetMounts(groups: MountTarget(groups: isolatedGroups), state: null),
+    );
+    await openSheet(tester);
+    await tester.tap(inSheet(work.label));
+    await scrollSheetTo(
+      tester,
+      currentAppLocalizations.mountNoGroupIsolatedDesc,
+    );
+    await shoot(tester, '23-no-group-isolated');
+  });
+
+  for (final (name, application) in [
+    ('24-update-read-not-applied', MountSaveOutcome.applyFailedKept),
+    ('25-update-read-blocked', MountSaveOutcome.applyFailedBlocked),
+  ]) {
+    shot(name, (tester) async {
+      final mounts = sheetMounts(groups: autoGroups)
+        ..refreshResult = MountSourceRefresh(
+          updated: true,
+          item: item(sea, mounted: true, count: 21),
+          application: application,
+        );
+      await pumpProfiles(tester, mounts);
+      await openSheet(tester);
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: inSheet(sea.label),
+            matching: find.byType(MountSourceRow),
+          ),
+          matching: find.byTooltip(currentAppLocalizations.mountUpdateNodes),
+        ),
+      );
+      await shoot(tester, name);
+    });
+  }
+
   Future<void> openDelete(WidgetTester tester) async {
     await tester.tap(
       find.text(air.label),

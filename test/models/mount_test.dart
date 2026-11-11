@@ -16,7 +16,7 @@ void main() {
             'provider': 'flash-mount-2',
             'status': 'read-error',
             'tailscale-excluded': 1,
-            'interface-excluded': 2,
+            'unsupported-excluded': 2,
             'nodes': [
               {'name': 'HK (Air)', 'original': 'HK'},
             ],
@@ -55,7 +55,7 @@ void main() {
     final source = state.report!.sources.single;
     expect(source.status, MountSourceStatus.readError);
     expect(source.tailscaleExcluded, 1);
-    expect(source.interfaceExcluded, 2);
+    expect(source.unsupportedExcluded, 2);
     expect(state.refused, ['lan', 'sub']);
     expect(source.nodes.single.original, 'HK');
     expect(state.report!.groups.single.via, MountGroupVia.use);
@@ -107,6 +107,60 @@ void main() {
       expect(group.excluded, MountGroupExclusion.tailscale);
       expect(group.reason, reason, reason: wire);
     }
+  });
+
+  test('excluded groups map to three isolations, each group once', () {
+    MountGroupInfo isolated(String name, MountGroupReason? reason) =>
+        MountGroupInfo(
+          name: name,
+          type: 'select',
+          kind: MountGroupKind.excluded,
+          excluded: MountGroupExclusion.tailscale,
+          reason: reason,
+        );
+    for (final reason in MountGroupReason.values) {
+      expect(reason.isolation, switch (reason) {
+        MountGroupReason.dialer => MountGroupIsolation.dialer,
+        MountGroupReason.providerUnknown ||
+        MountGroupReason.ruleUnknown => MountGroupIsolation.unknown,
+        _ => MountGroupIsolation.traffic,
+      }, reason: reason.name);
+    }
+    final target = MountTarget(
+      groups: [
+        isolated('Lan', MountGroupReason.holds),
+        isolated('Dns', MountGroupReason.dns),
+        isolated('Hop', MountGroupReason.dialer),
+        isolated('Set', MountGroupReason.ruleUnknown),
+        isolated('Later', null),
+        isolated('Lan', MountGroupReason.rule),
+        const MountGroupInfo(
+          name: 'Hidden',
+          type: 'select',
+          kind: MountGroupKind.excluded,
+          excluded: MountGroupExclusion.hidden,
+        ),
+        const MountGroupInfo(
+          name: 'Auto',
+          type: 'select',
+          kind: MountGroupKind.auto,
+        ),
+      ],
+    );
+    final groups = mountIsolatedGroups(target);
+    expect(groups.map((group) => group.name), [
+      'Lan',
+      'Dns',
+      'Hop',
+      'Set',
+      'Later',
+    ]);
+    expect(mountIsolationCounts(groups), {
+      MountGroupIsolation.traffic: 2,
+      MountGroupIsolation.dialer: 1,
+      MountGroupIsolation.unknown: 2,
+    });
+    expect(mountIsolatedGroups(null), isEmpty);
   });
 
   test('setup params carry mounts only when there are some', () {
@@ -318,7 +372,17 @@ void main() {
         stateOf(
           const MountSourceInspection(
             status: MountSourceStatus.nodes,
-            interfaceExcluded: 2,
+            unsupportedExcluded: 2,
+          ),
+        ),
+        MountSourceState.isolatedOnly,
+      );
+      expect(
+        stateOf(
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            relayExcluded: 1,
+            unsupportedExcluded: 1,
           ),
         ),
         MountSourceState.isolatedOnly,
@@ -329,9 +393,9 @@ void main() {
           const MountSourceInspection(
             status: MountSourceStatus.nodes,
             count: 1,
-            interfaceExcluded: 2,
+            unsupportedExcluded: 2,
           ),
-        ).interfaceExcluded,
+        ).unsupportedExcluded,
         2,
       );
       expect(

@@ -103,6 +103,7 @@ MountSourceItem item(
   MountSourceFailure? failure,
   int tailscaleExcluded = 0,
   int relayExcluded = 0,
+  int unsupportedExcluded = 0,
 }) => MountSourceItem(
   profile: profile,
   state: state,
@@ -110,6 +111,7 @@ MountSourceItem item(
   mounted: mounted,
   tailscaleExcluded: tailscaleExcluded,
   relayExcluded: relayExcluded,
+  unsupportedExcluded: unsupportedExcluded,
   record: failure == null
       ? null
       : MountSourceRecord(sourceId: profile.id, failure: failure),
@@ -122,6 +124,8 @@ MountGroupInfo groupInfo(
   MountGroupCollects? collects,
   bool filter = false,
   String? emptyFallback,
+  MountGroupExclusion? excluded,
+  MountGroupReason? reason,
 }) => MountGroupInfo(
   name: name,
   type: type,
@@ -129,7 +133,17 @@ MountGroupInfo groupInfo(
   collects: collects,
   filter: filter,
   emptyFallback: emptyFallback,
+  excluded: excluded,
+  reason: reason,
 );
+
+MountGroupInfo isolatedGroup(String name, MountGroupReason? reason) =>
+    groupInfo(
+      name,
+      kind: MountGroupKind.excluded,
+      excluded: MountGroupExclusion.tailscale,
+      reason: reason,
+    );
 
 MountPanel panelOf(
   List<MountSourceItem> sources, {

@@ -750,7 +750,7 @@ void main() {
     expect(
       find.descendant(
         of: banner,
-        matching: find.text(l10n.mountRelayExcluded(3)),
+        matching: find.text(l10n.mountUnsupportedExcluded(3)),
       ),
       findsOneWidget,
     );
@@ -793,7 +793,7 @@ void main() {
     expect(banner.lines, [
       l10n.mountSameName,
       l10n.mountTailscaleExcluded,
-      l10n.mountRelayExcluded(2),
+      l10n.mountUnsupportedExcluded(2),
     ]);
   });
 
@@ -990,8 +990,309 @@ void main() {
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
 
-    expect(find.text(l10n.mountRelayExcluded(1)), findsOneWidget);
-    expect(find.text(l10n.mountRelayExcluded(5)), findsNothing);
+    expect(find.text(l10n.mountUnsupportedExcluded(1)), findsOneWidget);
+    expect(find.text(l10n.mountUnsupportedExcluded(5)), findsNothing);
+  });
+
+  testWidgets('groups kept out for Tailscale share one counted info line '
+      'with their names', (tester) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [
+            groupInfo('A', kind: MountGroupKind.auto),
+            groupInfo('B'),
+            isolatedGroup('Lan', MountGroupReason.holds),
+            isolatedGroup('Hop', MountGroupReason.dialer),
+            isolatedGroup('Set', MountGroupReason.ruleUnknown),
+            groupInfo(
+              'Hidden',
+              kind: MountGroupKind.excluded,
+              excluded: MountGroupExclusion.hidden,
+            ),
+          ],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+
+    final line = find.text(l10n.mountGroupsExcluded(3));
+    expect(line, findsOneWidget);
+    final banner = tester.widget<MountBanner>(
+      find.ancestor(of: line, matching: find.byType(MountBanner)),
+    );
+    expect(banner.level, MountBannerLevel.info);
+    expect(banner.lines, [
+      l10n.mountGroupsExcluded(3),
+      l10n.mountGroupsExcludedNames('Lan, Hop, Set'),
+    ]);
+    expect(find.text('Hidden'), findsNothing);
+    expect(find.text(l10n.mountNoGroupIsolatedTitle), findsNothing);
+  });
+
+  testWidgets('no excluded or unreadable groups means no isolation line', (
+    tester,
+  ) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [groupInfo('A', kind: MountGroupKind.auto)],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    expect(find.byType(MountBanner), findsNothing);
+  });
+
+  testWidgets('unreadable groups show no isolation count', (tester) async {
+    await pumpSheet(
+      tester,
+      FakeMounts(panelOf([item(air)], groups: null)),
+      profiles: [air],
+    );
+    expect(find.byType(MountBanner), findsNothing);
+  });
+
+  testWidgets('every group kept out for Tailscale is told apart from a '
+      'profile without groups', (tester) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [
+            isolatedGroup('Lan', MountGroupReason.rule),
+            isolatedGroup('Hop', MountGroupReason.dialer),
+          ],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+
+    final banner = tester.widget<MountBanner>(
+      find.ancestor(
+        of: find.text(l10n.mountNoGroupIsolatedTitle),
+        matching: find.byType(MountBanner),
+      ),
+    );
+    expect(banner.level, MountBannerLevel.warn);
+    expect(banner.lines, [l10n.mountNoGroupIsolatedDesc]);
+    expect(find.text(l10n.mountNoGroupTitle), findsNothing);
+    expect(find.text(l10n.mountGroupsExcluded(2)), findsNothing);
+    await tester.tap(find.text('Air'));
+    await tester.pump();
+    expect(saveButton(tester).onPressed, isNull);
+  });
+
+  testWidgets('hidden groups alone still read as a profile without groups', (
+    tester,
+  ) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [
+            groupInfo(
+              'Hidden',
+              kind: MountGroupKind.excluded,
+              excluded: MountGroupExclusion.hidden,
+            ),
+          ],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    expect(find.text(l10n.mountNoGroupTitle), findsOneWidget);
+    expect(find.text(l10n.mountNoGroupIsolatedTitle), findsNothing);
+  });
+
+  Future<FakeMounts> refreshWith(
+    WidgetTester tester,
+    MountSourceRefresh result,
+  ) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air, mounted: true)],
+        stored: MountTargetState(
+          targetId: target.id,
+          sourceIds: [air.id],
+          version: 1,
+        ),
+        groups: MountTarget(
+          groups: [groupInfo('A', kind: MountGroupKind.auto)],
+        ),
+      ),
+    )..refreshResult = result;
+    await pumpSheet(tester, mounts, profiles: [air]);
+    await tester.tap(find.byTooltip(currentAppLocalizations.mountUpdateNodes));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    return mounts;
+  }
+
+  String readDetail(WidgetTester tester, int count) {
+    final l10n = currentAppLocalizations;
+    final context = tester.element(find.byType(MountSheet));
+    return [
+      l10n.mountNodesRead(count),
+      l10n.mountNodesReadAt(updated.getLastUpdateTimeDesc(context)),
+    ].join(' · ');
+  }
+
+  testWidgets('nodes read but kept from running say so and never look '
+      'updated', (tester) async {
+    await refreshWith(
+      tester,
+      MountSourceRefresh(
+        updated: true,
+        item: item(air, count: 7, mounted: true),
+        application: MountSaveOutcome.applyFailedKept,
+      ),
+    );
+    final l10n = currentAppLocalizations;
+    final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
+
+    expect(find.text(l10n.mountNodesUpdated), findsNothing);
+    Finder inRow(Finder matching) =>
+        find.descendant(of: rowOf('Air'), matching: matching);
+    expect(inRow(find.text(readDetail(tester, 7))), findsOneWidget);
+    expect(
+      inRow(find.textContaining(l10n.mountLastUpdated('').trim())),
+      findsNothing,
+    );
+    final line = tester.widget<Text>(
+      inRow(find.text(l10n.mountUpdateReadNotAppliedKept)),
+    );
+    expect(line.style?.color, colorScheme.warning);
+    expect(find.text(l10n.mountApplyBlocked), findsNothing);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('nodes read while every connection is rejected say so and '
+      'offer a status read', (tester) async {
+    final mounts = await refreshWith(
+      tester,
+      MountSourceRefresh(
+        updated: true,
+        item: item(air, count: 7, mounted: true),
+        application: MountSaveOutcome.applyFailedBlocked,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = currentAppLocalizations;
+    final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
+
+    expect(find.text(l10n.mountNodesUpdated), findsNothing);
+    final line = tester.widget<Text>(
+      find.descendant(
+        of: rowOf('Air'),
+        matching: find.text(l10n.mountUpdateReadNotAppliedBlocked),
+      ),
+    );
+    expect(line.style?.color, colorScheme.error);
+    final banner = find.ancestor(
+      of: find.text(l10n.mountApplyBlocked),
+      matching: find.byType(MountBanner),
+    );
+    expect(banner, findsOneWidget);
+    final read = find.descendant(
+      of: banner,
+      matching: find.text(l10n.mountReadStatus),
+    );
+    expect(read, findsOneWidget);
+    await tester.tap(read);
+    await tester.pumpAndSettle();
+    expect(mounts.rechecks, 1);
+  });
+
+  testWidgets('an empty list read but not applied is not the legal empty '
+      'line alone', (tester) async {
+    await refreshWith(
+      tester,
+      MountSourceRefresh(
+        updated: true,
+        item: item(air, state: MountSourceState.empty, count: 0, mounted: true),
+        application: MountSaveOutcome.applyFailedKept,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = currentAppLocalizations;
+    Finder inRow(Finder matching) =>
+        find.descendant(of: rowOf('Air'), matching: matching);
+
+    expect(inRow(find.text(l10n.mountUpdateReadEmptyNotApplied)), findsOne);
+    expect(inRow(find.text(l10n.mountRunningKept)), findsOne);
+    expect(inRow(find.text(l10n.mountSourceEmpty)), findsNothing);
+    expect(inRow(find.text(readDetail(tester, 0))), findsOne);
+  });
+
+  testWidgets('a failed fetch is no read-but-not-applied state', (
+    tester,
+  ) async {
+    await refreshWith(
+      tester,
+      MountSourceRefresh(
+        updated: false,
+        item: item(air, mounted: true, failure: MountSourceFailure.fetch),
+        message: 'offline',
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = currentAppLocalizations;
+
+    expect(find.text(l10n.mountUpdateFailedInUse), findsOneWidget);
+    expect(find.text(l10n.mountUpdateReadNotAppliedKept), findsNothing);
+    expect(find.text(l10n.mountUpdateReadNotAppliedBlocked), findsNothing);
+  });
+
+  test('only a read update with a refused apply is a refusal', () {
+    for (final (updated, application, want) in [
+      (true, MountSaveOutcome.applyFailedKept, MountRefreshRefusal.kept),
+      (true, MountSaveOutcome.applyFailedBlocked, MountRefreshRefusal.blocked),
+      (false, MountSaveOutcome.applyFailedKept, null),
+      (true, MountSaveOutcome.applied, null),
+      (true, MountSaveOutcome.unknown, null),
+      (true, null, null),
+    ]) {
+      expect(
+        mountRefreshRefusalOf(
+          MountSourceRefresh(updated: updated, application: application),
+        ),
+        want,
+      );
+    }
+  });
+
+  testWidgets('relays and unsupported nodes share one count, Tailscale nodes '
+      'their own line', (tester) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [
+          item(air, mounted: true, tailscaleExcluded: 2, relayExcluded: 1),
+          item(sea, mounted: true, unsupportedExcluded: 3),
+        ],
+        stored: MountTargetState(
+          targetId: target.id,
+          sourceIds: [air.id, sea.id],
+          version: 1,
+        ),
+        groups: MountTarget(
+          groups: [groupInfo('A', kind: MountGroupKind.auto)],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air, sea]);
+    final l10n = currentAppLocalizations;
+
+    final banner = tester.widget<MountBanner>(find.byType(MountBanner));
+    expect(banner.lines, [
+      l10n.mountTailscaleExcluded,
+      l10n.mountUnsupportedExcluded(4),
+    ]);
   });
 }
 

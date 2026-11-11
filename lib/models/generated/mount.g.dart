@@ -72,7 +72,7 @@ _MountSourceInspection _$MountSourceInspectionFromJson(
   listed: (json['listed'] as num?)?.toInt() ?? 0,
   tailscaleExcluded: (json['tailscale-excluded'] as num?)?.toInt() ?? 0,
   relayExcluded: (json['relay-excluded'] as num?)?.toInt() ?? 0,
-  interfaceExcluded: (json['interface-excluded'] as num?)?.toInt() ?? 0,
+  unsupportedExcluded: (json['unsupported-excluded'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$MountSourceInspectionToJson(
@@ -83,7 +83,7 @@ Map<String, dynamic> _$MountSourceInspectionToJson(
   'listed': instance.listed,
   'tailscale-excluded': instance.tailscaleExcluded,
   'relay-excluded': instance.relayExcluded,
-  'interface-excluded': instance.interfaceExcluded,
+  'unsupported-excluded': instance.unsupportedExcluded,
 };
 
 const _$MountSourceStatusEnumMap = {
@@ -200,7 +200,7 @@ _MountSourceReport _$MountSourceReportFromJson(Map<String, dynamic> json) =>
       status: $enumDecode(_$MountSourceStatusEnumMap, json['status']),
       tailscaleExcluded: (json['tailscale-excluded'] as num?)?.toInt() ?? 0,
       relayExcluded: (json['relay-excluded'] as num?)?.toInt() ?? 0,
-      interfaceExcluded: (json['interface-excluded'] as num?)?.toInt() ?? 0,
+      unsupportedExcluded: (json['unsupported-excluded'] as num?)?.toInt() ?? 0,
       nodes:
           (json['nodes'] as List<dynamic>?)
               ?.map((e) => MountNode.fromJson(e as Map<String, dynamic>))
@@ -215,7 +215,7 @@ Map<String, dynamic> _$MountSourceReportToJson(_MountSourceReport instance) =>
       'status': _$MountSourceStatusEnumMap[instance.status]!,
       'tailscale-excluded': instance.tailscaleExcluded,
       'relay-excluded': instance.relayExcluded,
-      'interface-excluded': instance.interfaceExcluded,
+      'unsupported-excluded': instance.unsupportedExcluded,
       'nodes': instance.nodes,
     };
 

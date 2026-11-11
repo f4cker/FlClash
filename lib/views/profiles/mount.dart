@@ -46,6 +46,20 @@ enum _Result {
 
 enum MountGroupCase { auto, pick, none, failed }
 
+/// An update read but refused: [kept] runs the last confirmed profile.
+enum MountRefreshRefusal { kept, blocked }
+
+MountRefreshRefusal? mountRefreshRefusalOf(MountSourceRefresh result) {
+  if (!result.updated) {
+    return null;
+  }
+  return switch (result.application) {
+    MountSaveOutcome.applyFailedKept => MountRefreshRefusal.kept,
+    MountSaveOutcome.applyFailedBlocked => MountRefreshRefusal.blocked,
+    _ => null,
+  };
+}
+
 MountGroupCase mountGroupCaseOf(MountTarget? target) {
   if (target == null) {
     return MountGroupCase.failed;
@@ -91,6 +105,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
 
   final Set<int> _refreshing = {};
   final Set<int> _refreshUnconfirmed = {};
+  final Map<int, MountRefreshRefusal> _refused = {};
   List<String> _lost = const [];
 
   MountAction get _mounts => ref.read(mountActionProvider.notifier);
@@ -333,6 +348,9 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       _saving = false;
       _result = _resultOf(result.outcome);
       _lost = result.lostSelections;
+      if (result.outcome == MountSaveOutcome.applied) {
+        _refused.clear();
+      }
     });
     _announce(result.outcome, removal: removal);
     await _load(resetChoice: !keepChoice);
@@ -373,6 +391,9 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     }
     setState(() {
       _rechecking = false;
+      if (result.outcome == MountSaveOutcome.applied) {
+        _refused.clear();
+      }
       if (result.outcome != MountSaveOutcome.unknown) {
         _result = switch (result.outcome) {
           MountSaveOutcome.applied || MountSaveOutcome.saved => null,
@@ -400,6 +421,15 @@ class _MountSheetState extends ConsumerState<MountSheet> {
         _refreshUnconfirmed.add(sourceId);
       } else if (result.updated) {
         _refreshUnconfirmed.remove(sourceId);
+      }
+      if (result.updated) {
+        _refused.remove(sourceId);
+        if (mountRefreshRefusalOf(result) case final refusal?) {
+          _refused[sourceId] = refusal;
+        }
+      }
+      if (_refused[sourceId] == MountRefreshRefusal.blocked) {
+        _result = _Result.applyBlocked;
       }
       if (result.application != null) {
         _lost = result.lostSelections;
@@ -617,13 +647,20 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       return MountBanner(
         lines: [text],
         level: info ? MountBannerLevel.info : MountBannerLevel.error,
+        action: _result == _Result.applyBlocked
+            ? TonalButton(
+                size: TonalButtonSize.compact,
+                label: appLocalizations.mountReadStatus,
+                onPressed: _rechecking ? null : _recheck,
+              )
+            : null,
       );
     }
     final notices = [
       if ((_runtime?.report?.renamed ?? 0) > 0) appLocalizations.mountSameName,
       if (_tailscaleExcluded(panel)) appLocalizations.mountTailscaleExcluded,
-      if (_relayExcluded(panel) case final count when count > 0)
-        appLocalizations.mountRelayExcluded(count),
+      if (_unsupportedExcluded(panel) case final count when count > 0)
+        appLocalizations.mountUnsupportedExcluded(count),
       if (_lost.isNotEmpty) appLocalizations.mountSelectionLost,
     ];
     if (notices.isEmpty) {
@@ -642,14 +679,20 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     );
   }
 
-  int _relayExcluded(MountPanel panel) {
+  int _unsupportedExcluded(MountPanel panel) {
     final reported = _runtime?.report?.sources;
     if (reported != null && reported.isNotEmpty) {
-      return reported.fold(0, (sum, source) => sum + source.relayExcluded);
+      return reported.fold(
+        0,
+        (sum, source) =>
+            sum + source.relayExcluded + source.unsupportedExcluded,
+      );
     }
     return panel.sources.fold(
       0,
-      (sum, item) => item.mounted ? sum + item.relayExcluded : sum,
+      (sum, item) => item.mounted
+          ? sum + item.relayExcluded + item.unsupportedExcluded
+          : sum,
     );
   }
 
@@ -680,6 +723,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
             mountedTag: item.mounted && confirmed,
             refreshing: _refreshing.contains(item.profile.id),
             refreshUnconfirmed: _refreshUnconfirmed.contains(item.profile.id),
+            refusal: _refused[item.profile.id],
             onChanged: interactive
                 ? (value) => _toggleSource(item, value)
                 : null,
@@ -689,6 +733,8 @@ class _MountSheetState extends ConsumerState<MountSheet> {
           ),
         _SectionLabel(appLocalizations.mountGroupsTitle),
         _buildGroups(context, panel, interactive: interactive),
+        if (_groupCase != MountGroupCase.none)
+          ?mountIsolatedGroupsBanner(panel.groups, context.appLocalizations),
       ],
     );
     return Column(
@@ -740,6 +786,13 @@ class _MountSheetState extends ConsumerState<MountSheet> {
           ],
         );
       case MountGroupCase.none:
+        if (mountIsolatedGroups(panel.groups).isNotEmpty) {
+          return MountBanner(
+            level: MountBannerLevel.warn,
+            title: appLocalizations.mountNoGroupIsolatedTitle,
+            lines: [appLocalizations.mountNoGroupIsolatedDesc],
+          );
+        }
         return MountBanner(
           level: MountBannerLevel.warn,
           title: appLocalizations.mountNoGroupTitle,
@@ -877,6 +930,27 @@ MountGroupStatus? mountGroupStatusOf(
   );
 }
 
+MountBanner? mountIsolatedGroupsBanner(
+  MountTarget? target,
+  AppLocalizations appLocalizations,
+) {
+  final groups = mountIsolatedGroups(target);
+  if (groups.isEmpty) {
+    return null;
+  }
+  return MountBanner(
+    level: MountBannerLevel.info,
+    lines: [
+      appLocalizations.mountGroupsExcluded(groups.length),
+      appLocalizations.mountGroupsExcludedNames(
+        groups
+            .map((group) => group.name)
+            .join(appLocalizations.mountNameSeparator),
+      ),
+    ],
+  );
+}
+
 enum MountBannerLevel { info, warn, error }
 
 /// A banner in the sheet's single banner slot; [lines] stack in order.
@@ -886,11 +960,13 @@ class MountBanner extends StatelessWidget {
     required this.level,
     required this.lines,
     this.title,
+    this.action,
   });
 
   final MountBannerLevel level;
   final List<String> lines;
   final String? title;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -945,6 +1021,11 @@ class MountBanner extends StatelessWidget {
                             .copyWith(color: foreground),
                       ),
                     for (final line in lines) Text(line, style: style),
+                    if (action case final action?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: action,
+                      ),
                   ],
                 ),
               ),
@@ -1295,6 +1376,7 @@ class MountSourceRow extends StatelessWidget {
     required this.refreshUnconfirmed,
     required this.onChanged,
     required this.onRefresh,
+    this.refusal,
   });
 
   final MountSourceItem item;
@@ -1304,6 +1386,7 @@ class MountSourceRow extends StatelessWidget {
   final bool refreshUnconfirmed;
   final ValueChanged<bool>? onChanged;
   final VoidCallback? onRefresh;
+  final MountRefreshRefusal? refusal;
 
   bool get _faded => !item.state.mountable && !item.mounted;
 
@@ -1322,11 +1405,19 @@ class MountSourceRow extends StatelessWidget {
       MountSourceState.tailscaleOnly ||
       MountSourceState.relayOnly ||
       MountSourceState.isolatedOnly =>
-        item.tailscaleExcluded + item.relayExcluded + item.interfaceExcluded,
+        item.tailscaleExcluded + item.relayExcluded + item.unsupportedExcluded,
       _ => null,
     };
     if (count == null || updated == null) {
       return appLocalizations.mountNotFetched;
+    }
+    if (refusal != null) {
+      return [
+        appLocalizations.mountNodesRead(count),
+        appLocalizations.mountNodesReadAt(
+          updated.getLastUpdateTimeDesc(context),
+        ),
+      ].join(' · ');
     }
     return [
       appLocalizations.mountNodeCount(count),
@@ -1334,7 +1425,38 @@ class MountSourceRow extends StatelessWidget {
     ].join(' · ');
   }
 
-  /// The state line and whether it reads as an error rather than a warning.
+  /// Each line with whether it reads as an error rather than a warning.
+  List<(String, bool)> _states(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final refusal = this.refusal;
+    if (refusal == null) {
+      return [?_state(context)];
+    }
+    final blocked = refusal == MountRefreshRefusal.blocked;
+    return switch (item.state) {
+      MountSourceState.nodes => [
+        (
+          blocked
+              ? appLocalizations.mountUpdateReadNotAppliedBlocked
+              : appLocalizations.mountUpdateReadNotAppliedKept,
+          blocked,
+        ),
+      ],
+      MountSourceState.empty => [
+        (appLocalizations.mountUpdateReadEmptyNotApplied, false),
+        _running(appLocalizations, blocked),
+      ],
+      _ => [?_state(context), _running(appLocalizations, blocked)],
+    };
+  }
+
+  (String, bool) _running(AppLocalizations appLocalizations, bool blocked) => (
+    blocked
+        ? appLocalizations.mountRunningBlocked
+        : appLocalizations.mountRunningKept,
+    blocked,
+  );
+
   (String, bool)? _state(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final failed = item.record?.failure != null;
@@ -1378,13 +1500,13 @@ class MountSourceRow extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final name = item.profile.realLabel;
     final detail = _detail(context);
-    final state = _state(context);
+    final states = _states(context);
     final onChanged = this.onChanged;
     final enabled = onChanged != null && _checkable;
     final semantics = [
       name,
       detail,
-      ?state?.$1,
+      for (final state in states) state.$1,
       checked
           ? appLocalizations.mountMountedTag
           : appLocalizations.mountNotMounted,
@@ -1415,7 +1537,7 @@ class MountSourceRow extends StatelessWidget {
               .of(context)
               .copyWith(color: colorScheme.onSurfaceVariant),
         ),
-        if (state case (final line, final error))
+        for (final (line, error) in states)
           Text(
             line,
             style: AppTextStyle.caption2

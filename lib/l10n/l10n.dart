@@ -7718,8 +7718,7 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one:
-          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -11615,10 +11614,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Mounts could not be applied. Affected connections are blocked.`
+  /// `Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.`
   String get mountApplyBlocked {
     return Intl.message(
-      'Mounts could not be applied. Affected connections are blocked.',
+      'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.',
       name: 'mountApplyBlocked',
       desc: '',
       args: [],
@@ -12111,20 +12110,6 @@ class AppLocalizations {
     );
   }
 
-  /// `{count, plural, =1{1 subscription node that routes through Tailscale was excluded. Its routing settings were not changed.} other{{count} subscription nodes that route through Tailscale were excluded. Their routing settings were not changed.}}`
-  String mountRelayExcluded(num count) {
-    return Intl.plural(
-      count,
-      one:
-          '1 subscription node that routes through Tailscale was excluded. Its routing settings were not changed.',
-      other:
-          '$count subscription nodes that route through Tailscale were excluded. Their routing settings were not changed.',
-      name: 'mountRelayExcluded',
-      desc: '',
-      args: [count],
-    );
-  }
-
   /// `All nodes in this subscription route through Tailscale and cannot be mounted. Their routing settings were not changed.`
   String get mountSourceRelayOnly {
     return Intl.message(
@@ -12135,10 +12120,10 @@ class AppLocalizations {
     );
   }
 
-  /// `All nodes in this subscription were excluded to keep Tailscale routing separate and cannot be mounted.`
+  /// `All nodes in this subscription were excluded by the mount-isolation checks and cannot be mounted. Their settings were not changed.`
   String get mountSourceIsolatedOnly {
     return Intl.message(
-      'All nodes in this subscription were excluded to keep Tailscale routing separate and cannot be mounted.',
+      'All nodes in this subscription were excluded by the mount-isolation checks and cannot be mounted. Their settings were not changed.',
       name: 'mountSourceIsolatedOnly',
       desc: '',
       args: [],
@@ -12597,6 +12582,153 @@ class AppLocalizations {
       name: 'mountFormatHelp',
       desc: '',
       args: [],
+    );
+  }
+
+  /// `To keep Tailscale routing separate, {count, plural, =1{1 group does not accept subscription nodes.} other{{count} groups do not accept subscription nodes.}}`
+  String mountGroupsExcluded(num count) {
+    return Intl.message(
+      'To keep Tailscale routing separate, ${Intl.plural(count, one: '1 group does not accept subscription nodes.', other: '$count groups do not accept subscription nodes.')}',
+      name: 'mountGroupsExcluded',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Groups: {groups}.`
+  String mountGroupsExcludedNames(Object groups) {
+    return Intl.message(
+      'Groups: $groups.',
+      name: 'mountGroupsExcludedNames',
+      desc: '',
+      args: [groups],
+    );
+  }
+
+  /// `, `
+  String get mountNameSeparator {
+    return Intl.message(', ', name: 'mountNameSeparator', desc: '', args: []);
+  }
+
+  /// `Current groups cannot receive mounts`
+  String get mountNoGroupIsolatedTitle {
+    return Intl.message(
+      'Current groups cannot receive mounts',
+      name: 'mountNoGroupIsolatedTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `None of the existing groups passed the mount-isolation checks. No group will be created, no direct-connection fallback will be added, and the original profile file will not be rewritten automatically.`
+  String get mountNoGroupIsolatedDesc {
+    return Intl.message(
+      'None of the existing groups passed the mount-isolation checks. No group will be created, no direct-connection fallback will be added, and the original profile file will not be rewritten automatically.',
+      name: 'mountNoGroupIsolatedDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 node read} other{{count} nodes read}}`
+  String mountNodesRead(num count) {
+    return Intl.plural(
+      count,
+      one: '1 node read',
+      other: '$count nodes read',
+      name: 'mountNodesRead',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Nodes read: {time}`
+  String mountNodesReadAt(Object time) {
+    return Intl.message(
+      'Nodes read: $time',
+      name: 'mountNodesReadAt',
+      desc: '',
+      args: [time],
+    );
+  }
+
+  /// `New nodes were read but have not been applied. The last confirmed running profile is still in use.`
+  String get mountUpdateReadNotAppliedKept {
+    return Intl.message(
+      'New nodes were read but have not been applied. The last confirmed running profile is still in use.',
+      name: 'mountUpdateReadNotAppliedKept',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `New nodes were read but have not been applied. Flash currently rejects every connection routed through it. Read the status again.`
+  String get mountUpdateReadNotAppliedBlocked {
+    return Intl.message(
+      'New nodes were read but have not been applied. Flash currently rejects every connection routed through it. Read the status again.',
+      name: 'mountUpdateReadNotAppliedBlocked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subscription read. It currently has no nodes. The new result has not been applied.`
+  String get mountUpdateReadEmptyNotApplied {
+    return Intl.message(
+      'Subscription read. It currently has no nodes. The new result has not been applied.',
+      name: 'mountUpdateReadEmptyNotApplied',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The last confirmed running profile is still in use.`
+  String get mountRunningKept {
+    return Intl.message(
+      'The last confirmed running profile is still in use.',
+      name: 'mountRunningKept',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Flash currently rejects every connection routed through it. Read the status again.`
+  String get mountRunningBlocked {
+    return Intl.message(
+      'Flash currently rejects every connection routed through it. Read the status again.',
+      name: 'mountRunningBlocked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `New content for “{name}” was read but did not pass the mount-isolation checks and was not applied. The previously confirmed content is still in use.`
+  String mountProviderUpdateRefused(Object name) {
+    return Intl.message(
+      'New content for “$name” was read but did not pass the mount-isolation checks and was not applied. The previously confirmed content is still in use.',
+      name: 'mountProviderUpdateRefused',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `New content for “{name}” was read but did not pass the mount-isolation checks and was not applied. Its current use is unconfirmed. Read the status again.`
+  String mountProviderUpdateRefusedUnconfirmed(Object name) {
+    return Intl.message(
+      'New content for “$name” was read but did not pass the mount-isolation checks and was not applied. Its current use is unconfirmed. Read the status again.',
+      name: 'mountProviderUpdateRefusedUnconfirmed',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `To keep Tailscale routing separate, {count, plural, =1{1 subscription node that is not supported for mounting was excluded. Its settings were not changed.} other{{count} subscription nodes that are not supported for mounting were excluded. Their settings were not changed.}}`
+  String mountUnsupportedExcluded(num count) {
+    return Intl.message(
+      'To keep Tailscale routing separate, ${Intl.plural(count, one: '1 subscription node that is not supported for mounting was excluded. Its settings were not changed.', other: '$count subscription nodes that are not supported for mounting were excluded. Their settings were not changed.')}',
+      name: 'mountUnsupportedExcluded',
+      desc: '',
+      args: [count],
     );
   }
 }

@@ -239,4 +239,32 @@ void main() {
       );
     });
   });
+
+  test('a provider update the mount gate refused names only the provider', () {
+    CoreMethodException refused(Map<String, Object?> details) =>
+        CoreMethodException(
+          code: 'provider_update_refused_mount',
+          message:
+              'sub now holds a Tailscale node while subscription nodes '
+              'are mounted; apply the profile again to take it',
+          details: details,
+        );
+
+    expect(
+      userFacingErrorMessage(
+        refused({'providerName': 'sub', 'kept': true}),
+        appLocalizations,
+      ),
+      appLocalizations.mountProviderUpdateRefused('sub'),
+    );
+    for (final details in [
+      {'providerName': 'sub', 'kept': false},
+      {'providerName': 'sub'},
+    ]) {
+      expect(
+        userFacingErrorMessage(refused(details), appLocalizations),
+        appLocalizations.mountProviderUpdateRefusedUnconfirmed('sub'),
+      );
+    }
+  });
 }

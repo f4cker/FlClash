@@ -144,7 +144,7 @@ abstract class MountSourceInspection with _$MountSourceInspection {
     @Default(0) int listed,
     @Default(0) @JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,
     @Default(0) @JsonKey(name: 'relay-excluded') int relayExcluded,
-    @Default(0) @JsonKey(name: 'interface-excluded') int interfaceExcluded,
+    @Default(0) @JsonKey(name: 'unsupported-excluded') int unsupportedExcluded,
   }) = _MountSourceInspection;
 
   factory MountSourceInspection.fromJson(Map<String, Object?> json) =>
@@ -176,6 +176,41 @@ enum MountGroupReason {
   /// Another proxy dials through it (dialer-proxy) and may keep a session
   /// there that later carries Tailscale traffic unchecked.
   dialer,
+}
+
+/// Why a group is kept out of mounts, as a user is told.
+enum MountGroupIsolation { traffic, dialer, unknown }
+
+extension MountGroupReasonIsolation on MountGroupReason {
+  MountGroupIsolation get isolation => switch (this) {
+    MountGroupReason.dialer => MountGroupIsolation.dialer,
+    MountGroupReason.providerUnknown ||
+    MountGroupReason.ruleUnknown => MountGroupIsolation.unknown,
+    _ => MountGroupIsolation.traffic,
+  };
+}
+
+/// Each group kept out to isolate Tailscale once; none when unread.
+List<MountGroupInfo> mountIsolatedGroups(MountTarget? target) {
+  final seen = <String>{};
+  return [
+    for (final group in target?.groups ?? const <MountGroupInfo>[])
+      if (group.kind == MountGroupKind.excluded &&
+          group.excluded == MountGroupExclusion.tailscale &&
+          seen.add(group.name))
+        group,
+  ];
+}
+
+Map<MountGroupIsolation, int> mountIsolationCounts(
+  List<MountGroupInfo> groups,
+) {
+  final counts = {for (final kind in MountGroupIsolation.values) kind: 0};
+  for (final group in groups) {
+    final kind = group.reason?.isolation ?? MountGroupIsolation.unknown;
+    counts[kind] = counts[kind]! + 1;
+  }
+  return counts;
 }
 
 /// [all] collects base proxies and providers, [providers] providers only.
@@ -235,7 +270,7 @@ abstract class MountSourceReport with _$MountSourceReport {
     required MountSourceStatus status,
     @Default(0) @JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,
     @Default(0) @JsonKey(name: 'relay-excluded') int relayExcluded,
-    @Default(0) @JsonKey(name: 'interface-excluded') int interfaceExcluded,
+    @Default(0) @JsonKey(name: 'unsupported-excluded') int unsupportedExcluded,
     @Default([]) List<MountNode> nodes,
   }) = _MountSourceReport;
 
@@ -364,7 +399,7 @@ abstract class MountSourceItem with _$MountSourceItem {
     @Default(0) int count,
     @Default(0) int tailscaleExcluded,
     @Default(0) int relayExcluded,
-    @Default(0) int interfaceExcluded,
+    @Default(0) int unsupportedExcluded,
     @Default(false) bool mounted,
     MountSourceRecord? record,
   }) = _MountSourceItem;
@@ -475,15 +510,16 @@ MountSourceItem mountSourceItem(
     MountSourceStatus.invalid => MountSourceState.unsupported,
     MountSourceStatus.nodes when inspection!.count > 0 =>
       MountSourceState.nodes,
-    MountSourceStatus.nodes
-        when inspection!.interfaceExcluded > 0 ||
-            inspection.relayExcluded > 0 && inspection.tailscaleExcluded > 0 =>
-      MountSourceState.isolatedOnly,
-    MountSourceStatus.nodes when inspection!.relayExcluded > 0 =>
-      MountSourceState.relayOnly,
-    MountSourceStatus.nodes when inspection!.tailscaleExcluded > 0 =>
-      MountSourceState.tailscaleOnly,
-    MountSourceStatus.nodes => MountSourceState.empty,
+    MountSourceStatus.nodes => switch ((
+      inspection!.tailscaleExcluded > 0,
+      inspection.relayExcluded > 0,
+      inspection.unsupportedExcluded > 0,
+    )) {
+      (false, false, false) => MountSourceState.empty,
+      (true, false, false) => MountSourceState.tailscaleOnly,
+      (false, true, false) => MountSourceState.relayOnly,
+      _ => MountSourceState.isolatedOnly,
+    },
   };
   return MountSourceItem(
     profile: profile,
@@ -491,7 +527,7 @@ MountSourceItem mountSourceItem(
     count: inspection?.count ?? 0,
     tailscaleExcluded: inspection?.tailscaleExcluded ?? 0,
     relayExcluded: inspection?.relayExcluded ?? 0,
-    interfaceExcluded: inspection?.interfaceExcluded ?? 0,
+    unsupportedExcluded: inspection?.unsupportedExcluded ?? 0,
     mounted: mounted,
     record: record,
   );
