@@ -93,6 +93,11 @@ Duration coreGuardFor(int timeout, {int budgetFactor = 2}) =>
 /// Kept in step with serviceSweepBudgetFactor in core/service_check.go.
 const serviceSweepBudgetFactor = 6;
 
+/// A login may queue behind another action on its node, then start it and wait
+/// for the auth URL: tailscaleActionTimeout and tailscaleAuthURLWait in
+/// core/tailscale_node.go.
+const tailscaleCoreGuard = Duration(minutes: 2);
+
 const coreConnectionWaitDuration = Duration(seconds: 10);
 
 /// Keep at or below the Core's delay-test concurrency (`delayTestConcurrency`
@@ -127,6 +132,7 @@ const clashConfigKey = 'clash_config';
 const configKey = 'config';
 const systemDnsRecordKey = 'system_dns_record';
 const bootRecordKey = 'boot_record';
+const tailscaleNodeRecordsKey = 'tailscale_node_records';
 const appliedConfigMd5Key = 'applied_config_md5';
 const defaultSystemDnsFallback = '223.5.5.5';
 const repository = 'chen08209/FlClash';

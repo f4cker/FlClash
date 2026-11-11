@@ -433,6 +433,67 @@ abstract class CoreHandlerInterface {
       timeout: const Duration(hours: 1, minutes: 1),
     );
   }
+
+  Future<List<TailscaleNode>> getTailscaleNodes() {
+    return _query(CoreMethod.tailscaleNodes, _models(TailscaleNode.fromJson));
+  }
+
+  /// Reads only; a node that has not started is described, not started.
+  Future<TailscaleStatus> getTailscaleStatus(TailscaleNodeRef node) {
+    return _query(
+      CoreMethod.tailscaleStatus,
+      _model(TailscaleStatus.fromJson),
+      arguments: node.toJson(),
+      timeout: tailscaleCoreGuard,
+    );
+  }
+
+  Future<TailscaleNode> startTailscale(TailscaleNodeRef node) {
+    return _query(
+      CoreMethod.tailscaleStart,
+      _model(TailscaleNode.fromJson),
+      arguments: node.toJson(),
+      timeout: tailscaleCoreGuard,
+    );
+  }
+
+  Future<TailscaleLoginResult> loginTailscale(
+    TailscaleNodeRef node, {
+    bool reauth = false,
+  }) {
+    return _query(
+      CoreMethod.tailscaleLogin,
+      _model(TailscaleLoginResult.fromJson),
+      arguments: {...node.toJson(), 'reauth': reauth},
+      timeout: tailscaleCoreGuard,
+    );
+  }
+
+  Future<TailscaleLogoutResult> logoutTailscale(TailscaleNodeRef node) {
+    return _query(
+      CoreMethod.tailscaleLogout,
+      _model(TailscaleLogoutResult.fromJson),
+      arguments: node.toJson(),
+      timeout: tailscaleCoreGuard,
+    );
+  }
+
+  Future<TailscalePrefsResult> setTailscalePrefs(
+    TailscaleNodeRef node, {
+    String? exitNode,
+    bool? acceptRoutes,
+  }) {
+    return _query(
+      CoreMethod.tailscaleSetPrefs,
+      _model(TailscalePrefsResult.fromJson),
+      arguments: {
+        ...node.toJson(),
+        'exit-node': ?exitNode,
+        'accept-routes': ?acceptRoutes,
+      },
+      timeout: tailscaleCoreGuard,
+    );
+  }
 }
 
 T _cast<T>(Object data) => data as T;

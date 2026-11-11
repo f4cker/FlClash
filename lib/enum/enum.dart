@@ -197,7 +197,49 @@ enum CoreEventType {
   geoUpdate,
   routeChanged,
   dialerLoop,
+  tailscaleState,
 }
+
+/// `ipn.State` as tsnet names it; [none] is a node that has not started.
+enum TailscaleBackendState {
+  @JsonValue('')
+  none,
+  @JsonValue('NoState')
+  noState,
+  @JsonValue('NeedsLogin')
+  needsLogin,
+  @JsonValue('NeedsMachineAuth')
+  needsMachineAuth,
+  @JsonValue('Stopped')
+  stopped,
+  @JsonValue('Starting')
+  starting,
+  @JsonValue('Running')
+  running,
+  unknown,
+}
+
+enum TailscaleSettingSource {
+  override,
+  profile,
+  subscription,
+  @JsonValue('default')
+  coreDefault,
+}
+
+enum TailscaleStateDirMode { derived, explicit, shared }
+
+enum TailscaleLogoutOutcome { confirmed, unknown }
+
+enum TailscalePrefsOutcome {
+  applied,
+  @JsonValue('not-running')
+  notRunning,
+  failed,
+  unknown,
+}
+
+enum TailscaleSetPrefsOutcome { applied, saved, applyFailed, unknown, failed }
 
 enum FindProcessMode { always, off }
 

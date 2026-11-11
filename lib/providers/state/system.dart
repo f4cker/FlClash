@@ -225,6 +225,7 @@ SharedState sharedState(Ref ref) {
     setupParams: SetupParams(
       selectedMap: selectedMap,
       options: ref.watch(coreOptionsProvider),
+      tailscale: ref.watch(tailscaleSetupProvider),
     ),
     vpnOptions: ref.watch(vpnOptionsProvider).value,
   );

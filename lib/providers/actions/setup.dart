@@ -66,6 +66,7 @@ class SetupAction extends _$SetupAction {
   SetupParams get _setupParams => SetupParams(
     selectedMap: ref.read(selectedMapProvider),
     options: ref.read(coreOptionsProvider),
+    tailscale: ref.read(tailscaleSetupProvider),
   );
 
   // The selection reaches the Core through changeProxy, not through an apply.
@@ -455,6 +456,9 @@ class SetupAction extends _$SetupAction {
         silence: silence,
         preloadInvoke: preloadInvoke,
         onUpdated: () async {
+          if (ref.exists(tailscaleNodesProvider)) {
+            ref.invalidate(tailscaleNodesProvider);
+          }
           await ref.read(proxiesActionProvider.notifier).updateGroups();
           await ref.read(providersProvider.notifier).syncProviders();
         },

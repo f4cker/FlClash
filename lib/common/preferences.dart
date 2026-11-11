@@ -187,6 +187,37 @@ class Preferences {
     await sharedPreferencesIns?.setString(bootRecordKey, json.encode(record));
   }
 
+  Future<List<TailscaleNodeRecord>> getTailscaleNodeRecords() async {
+    try {
+      final sharedPreferencesIns = await _store.value;
+      final raw = sharedPreferencesIns?.getString(tailscaleNodeRecordsKey);
+      if (raw == null) {
+        return const [];
+      }
+      return [
+        for (final item in json.decode(raw) as List)
+          TailscaleNodeRecord.fromJson(Map<String, Object?>.from(item as Map)),
+      ];
+    } catch (e) {
+      commonPrint.log(
+        'getTailscaleNodeRecords error ${e.toString()}',
+        logLevel: LogLevel.warning,
+      );
+      return const [];
+    }
+  }
+
+  Future<bool> saveTailscaleNodeRecords(
+    List<TailscaleNodeRecord> records,
+  ) async {
+    final sharedPreferencesIns = await _store.value;
+    return await sharedPreferencesIns?.setString(
+          tailscaleNodeRecordsKey,
+          json.encode(records),
+        ) ??
+        false;
+  }
+
   Future<void> clearPreferences() async {
     final sharedPreferencesIns = await _store.value;
     await sharedPreferencesIns?.clear();

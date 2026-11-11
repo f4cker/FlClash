@@ -113,8 +113,15 @@ class Bootstrap {
     );
     final appStateOverrides = buildAppStateOverrides(appState);
     final configOverrides = buildConfigOverrides(config);
+    final tailscaleNodeRecords = await preferences.getTailscaleNodeRecords();
     final container = ProviderContainer(
-      overrides: [...appStateOverrides, ...configOverrides],
+      overrides: [
+        ...appStateOverrides,
+        ...configOverrides,
+        tailscaleNodeRecordsProvider.overrideWithBuild(
+          (_, _) => tailscaleNodeRecords,
+        ),
+      ],
     );
     globalState.container = container;
     container

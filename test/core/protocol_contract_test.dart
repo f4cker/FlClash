@@ -145,6 +145,57 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
           },
         ],
       },
+      CoreMethod.tailscaleNodes => [_tailscaleNode],
+      CoreMethod.tailscaleStart => _tailscaleNode,
+      CoreMethod.tailscaleStatus => {
+        'node': _tailscaleNode,
+        'auth-url-ready': false,
+        'have-node-key': true,
+        'self': {
+          'id': 'n1',
+          'host-name': 'mac',
+          'user-id': '7',
+          'addresses': ['100.64.0.1'],
+          'tags': <String>[],
+          'online': true,
+          'key-expiry': '2027-01-01T00:00:00Z',
+        },
+        'login-user': {'id': '7', 'login-name': 'me@example.test'},
+        'tailnet': {'name': 'example.test', 'magic-dns-suffix': 'x.ts.net'},
+        'users': {
+          '7': {'id': '7', 'login-name': 'me@example.test'},
+        },
+        'peers': [
+          {
+            'id': 'n2',
+            'user-id': '8',
+            'alt-sharer-user-id': '9',
+            'addresses': ['100.64.0.2'],
+            'tags': <String>[],
+            'exit-node-option': true,
+          },
+        ],
+        'prefs': {'exit-node-id': 'n2', 'accept-routes': true},
+        'health': <String>[],
+      },
+      CoreMethod.tailscaleLogin => {
+        'generation': 3,
+        'state': 'NeedsLogin',
+        'auth-url': 'https://login.tailscale.com/a/x',
+        'pending': false,
+      },
+      CoreMethod.tailscaleLogout => {
+        'generation': 3,
+        'state': 'NeedsLogin',
+        'outcome': 'unknown',
+        'server-confirmed': false,
+        'identity-cleared': true,
+        'error': {'code': 'tailscale_logout_failed', 'message': 'x'},
+      },
+      CoreMethod.tailscaleSetPrefs => {
+        'generation': 3,
+        'outcome': 'not-running',
+      },
       CoreMethod.routeWatch => {'core-epoch': 1, 'route-version': 0},
       CoreMethod.routeCheck => {
         'core-epoch': 1,
@@ -196,6 +247,27 @@ class _EmptyConfigCoreHandler extends _RecordingCoreHandler {
   }
 }
 
+const _tailscaleNode = {
+  'profile-id': 42,
+  'name': 'ts',
+  'generation': 3,
+  'control-url': 'https://controlplane.tailscale.com',
+  'hostname': 'mac',
+  'state-dir-mode': 'derived',
+  'started': true,
+  'backend-state': 'Running',
+  'logged-out': false,
+  'has-identity': true,
+  'auth-key': false,
+  'ephemeral': false,
+  'overridable': true,
+  'settings': {
+    'exit-node': {'value': '100.64.0.2', 'source': 'override'},
+    'accept-routes': {'value': true, 'source': 'subscription'},
+  },
+  'warnings': ['legacy-shared-state-present'],
+};
+
 void main() {
   test('method call keeps structured arguments', () async {
     final fixture =
@@ -226,6 +298,133 @@ void main() {
 
     expect(goNames, isNotEmpty);
     expect({for (final method in CoreMethod.values) method.wireName}, goNames);
+  });
+
+  test('the Dart and Go event tables name the same events', () async {
+    final protocol = await File('core/protocol.go').readAsString();
+    final goNames = {
+      for (final match in RegExp(
+        r'^\s*\w+Message\s+MessageType\s*=\s*"([^"]+)"',
+        multiLine: true,
+      ).allMatches(protocol))
+        match.group(1)!,
+    };
+
+    expect(goNames, contains('tailscaleState'));
+    expect({
+      for (final type in CoreEventType.values)
+        if (type != CoreEventType.crash) type.name,
+    }, goNames);
+  });
+
+  test('a Tailscale action names its node by name and generation', () async {
+    final handler = _RecordingCoreHandler();
+    const node = TailscaleNodeRef(name: 'ts', generation: 3);
+
+    final nodes = await handler.getTailscaleNodes();
+    final status = await handler.getTailscaleStatus(node);
+    await handler.startTailscale(node);
+    final login = await handler.loginTailscale(node, reauth: true);
+    final logout = await handler.logoutTailscale(node);
+    final prefs = await handler.setTailscalePrefs(node, exitNode: '');
+
+    expect(nodes.single.ref, node);
+    expect(nodes.single.stateDirMode, TailscaleStateDirMode.derived);
+    expect(nodes.single.backendState, TailscaleBackendState.running);
+    expect(nodes.single.legacySharedStatePresent, isTrue);
+    expect(
+      nodes.single.settings.exitNode,
+      const TailscaleExitNodeSetting(
+        value: '100.64.0.2',
+        source: TailscaleSettingSource.override,
+      ),
+    );
+    expect(
+      nodes.single.settings.acceptRoutes.source,
+      TailscaleSettingSource.subscription,
+    );
+    for (final method in [
+      CoreMethod.tailscaleStatus,
+      CoreMethod.tailscaleStart,
+      CoreMethod.tailscaleLogout,
+    ]) {
+      expect(handler.calls[method], {'name': 'ts', 'generation': 3});
+    }
+    expect(handler.calls[CoreMethod.tailscaleLogin], {
+      'name': 'ts',
+      'generation': 3,
+      'reauth': true,
+    });
+    expect(handler.calls[CoreMethod.tailscaleSetPrefs], {
+      'name': 'ts',
+      'generation': 3,
+      'exit-node': '',
+    });
+    expect(status.loginUser?.id, '7');
+    expect(status.self?.keyExpiry, DateTime.utc(2027));
+    expect(status.peers.single.altSharerUserId, '9');
+    expect(status.prefs?.acceptRoutes, isTrue);
+    expect(login.authUrl, 'https://login.tailscale.com/a/x');
+    expect(login.state, TailscaleBackendState.needsLogin);
+    expect(logout.outcome, TailscaleLogoutOutcome.unknown);
+    expect(logout.error?.code, 'tailscale_logout_failed');
+    expect(prefs.outcome, TailscalePrefsOutcome.notRunning);
+  });
+
+  test('a Tailscale state event decodes, and an unknown state stays one', () {
+    final events = coreEventsFromData([
+      {
+        'type': 'tailscaleState',
+        'data': {
+          'name': 'ts',
+          'generation': 3,
+          'state': 'NeedsMachineAuth',
+          'auth-url-ready': false,
+        },
+      },
+    ]);
+    final event = TailscaleStateEvent.fromJson(
+      Map<String, Object?>.from(events.single.data as Map),
+    );
+
+    expect(event.state, TailscaleBackendState.needsMachineAuth);
+    expect(
+      TailscaleStateEvent.fromJson({
+        'name': 'ts',
+        'generation': 3,
+        'state': 'Later',
+      }).state,
+      TailscaleBackendState.unknown,
+    );
+  });
+
+  test('the setup payload carries the panel records of the profile', () {
+    const setup = TailscaleSetup(
+      profileId: 42,
+      configSource: TailscaleSettingSource.profile,
+      nodes: [
+        TailscaleNodeSetup(name: 'a', exitNode: ''),
+        TailscaleNodeSetup(name: 'b', loggedOut: true),
+      ],
+    );
+    final sent = json.decode(
+      json.encode(
+        const SetupParams(
+          selectedMap: {},
+          options: CoreOptions(testUrl: 'test'),
+          tailscale: setup,
+        ).toJson(),
+      ),
+    );
+
+    expect((sent as Map)['tailscale'], {
+      'profile-id': 42,
+      'config-source': 'profile',
+      'nodes': [
+        {'name': 'a', 'control-url': '', 'exit-node': '', 'logged-out': false},
+        {'name': 'b', 'control-url': '', 'logged-out': true},
+      ],
+    });
   });
 
   test('core interface sends structured request parameters', () async {

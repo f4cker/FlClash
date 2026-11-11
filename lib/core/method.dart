@@ -60,6 +60,12 @@ enum CoreMethod {
   mitmExchanges('mitm.exchanges'),
   mitmExchange('mitm.exchange'),
   mitmBody('mitm.body'),
+  tailscaleNodes('tailscale.nodes'),
+  tailscaleStatus('tailscale.status'),
+  tailscaleStart('tailscale.start'),
+  tailscaleLogin('tailscale.login'),
+  tailscaleLogout('tailscale.logout'),
+  tailscaleSetPrefs('tailscale.setPrefs'),
 
   /// The envelope of the Core's event batches, never called.
   message('message');
