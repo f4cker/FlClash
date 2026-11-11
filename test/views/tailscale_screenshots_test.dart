@@ -13,6 +13,7 @@ import 'package:fl_clash/manager/theme_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/tailscale/tailscale.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -23,6 +24,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:prism_ui/prism_ui.dart' show ThemeMode;
 
+import '../helpers/app_paths.dart';
 import '../helpers/preferences.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
@@ -135,10 +137,12 @@ void main() {
     WidgetTester tester, {
     Size size = const Size(1100, 1300),
     ThemeMode themeMode = ThemeMode.light,
+    double pixelRatio = 1,
+    Widget? page,
   }) async {
     container.read(viewSizeProvider.notifier).update((_) => size);
-    tester.view.physicalSize = size;
-    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = size * pixelRatio;
+    tester.view.devicePixelRatio = pixelRatio;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
@@ -152,10 +156,12 @@ void main() {
               theme: watchAppTheme(ref, Brightness.light),
               darkTheme: watchAppTheme(ref, Brightness.dark),
               themeMode: themeMode,
-              child: TailscaleView(
-                clock: () => tsNow,
-                launcher: (_) async => true,
-              ),
+              child:
+                  page ??
+                  TailscaleView(
+                    clock: () => tsNow,
+                    launcher: (_) async => true,
+                  ),
             ),
           ),
         ),
@@ -177,7 +183,9 @@ void main() {
     final render =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {
-      final image = await render.toImage();
+      final image = await render.toImage(
+        pixelRatio: tester.view.devicePixelRatio,
+      );
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
       await File('$_outDir/$name.png').writeAsBytes(data!.buffer.asUint8List());
@@ -884,5 +892,36 @@ void main() {
     );
     await settle(tester);
     await shoot(tester, '45-row-context-menu');
+  });
+
+  // The window of the user's report: 1054 by 772 dp, saved at 1568 by 1148.
+  const reportSize = Size(1054, 1148 * 1054 / 1568);
+  const reportRatio = 1568 / 1054;
+
+  shot('46-report-window', (tester) async {
+    await seedManaged(
+      [tsManagedNode('m1')],
+      saved: const [
+        TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
+      ],
+    );
+    await pumpPanel(tester, size: reportSize, pixelRatio: reportRatio);
+    await shoot(tester, '46-report-window');
+  });
+
+  shot('47-report-window-dashboard', (tester) async {
+    container.read(currentPageLabelProvider.notifier).value =
+        PageLabel.dashboard;
+    when(
+      () => core.watchRoute(any()),
+    ).thenAnswer((_) async => const RouteSnapshot());
+    await useAppPaths(Directory.systemTemp.createTempSync('ts_dashboard'));
+    await pumpPanel(
+      tester,
+      size: reportSize,
+      pixelRatio: reportRatio,
+      page: const DashboardView(platform: SupportPlatform.MacOS),
+    );
+    await shoot(tester, '47-report-window-dashboard');
   });
 }

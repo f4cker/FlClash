@@ -560,40 +560,31 @@ class TailscaleRulesCard extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final body = lines.isEmpty ? [appLocalizations.tsBoundaryTip] : lines;
     return TailscaleCard(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
       child: Row(
-        spacing: 12,
+        spacing: 16,
         children: [
-          Container(
-            width: 30,
-            height: 30,
-            alignment: Alignment.center,
-            decoration: ShapeDecoration(
-              color: DashboardColors.of(context).tone,
-              shape: AppShape.all(8),
-            ),
-            child: GlyphIcon(
-              AppGlyphs.rules,
-              size: 16,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 2,
+              spacing: 12,
               children: [
-                Text(
-                  appLocalizations.rules,
-                  style: AppTextStyle.subheadline.of(context, emphasized: true),
+                DashboardCardHeader(
+                  glyph: AppGlyphs.rules,
+                  title: appLocalizations.rules,
                 ),
-                for (final line in body)
-                  Text(
-                    line,
-                    style: AppTextStyle.footnote
-                        .of(context)
-                        .copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 2,
+                  children: [
+                    for (final line in body)
+                      Text(
+                        line,
+                        style: AppTextStyle.footnote
+                            .of(context)
+                            .copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

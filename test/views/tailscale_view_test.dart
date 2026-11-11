@@ -9,6 +9,9 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/tailscale/tailscale.dart';
+import 'package:fl_clash/views/dashboard/widgets/card.dart';
+import 'package:fl_clash/views/tailscale/device_card.dart';
+import 'package:fl_clash/views/tailscale/settings_cards.dart';
 import 'package:fl_clash/views/tailscale/state.dart';
 import 'package:fl_clash/views/tailscale/widgets.dart';
 import 'package:flutter/rendering.dart';
@@ -172,6 +175,41 @@ void main() {
       );
       await teardownView(tester);
     });
+  });
+
+  group('page layout', () {
+    testWidgets(
+      'the first card opens under the bar on the title\'s line, barless',
+      (tester) async {
+        serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+        await pumpPanel(tester, size: const Size(1054, 772));
+
+        final card = find.byType(TailscaleDeviceCard);
+        final cardBox = tester.getRect(card);
+        expect(cardBox.top, tester.element(card).contentTopPadding);
+        expect(cardBox.left, tester.getRect(find.text('Tailscale')).left);
+        expect(
+          find.descendant(
+            of: find.byType(TailscaleRulesCard),
+            matching: find.byType(DashboardCardHeader),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.drag(card, const Offset(0, -200));
+        await tester.pump();
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is CustomPaint &&
+                widget.foregroundPainter is ScrollbarPainter,
+          ),
+          findsNothing,
+        );
+        await teardownView(tester);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    );
   });
 
   group('panel-added accounts', () {
@@ -1238,7 +1276,7 @@ void main() {
     testWidgets('a long name keeps its line and the tag goes under it', (
       tester,
     ) async {
-      const name = 'nas-sg-exit-01';
+      const name = 'nas-sg-exit-0001';
       final status = tsConnectedStatus();
       serve([
         tsConnectedNode,
