@@ -275,7 +275,9 @@ func mountGroupInfo(mapping map[string]any, reachesTailscale bool) MountGroupInf
 		info.Kind, info.Excluded = mountGroupExcluded, "type"
 	case info.Name == globalProxyName:
 		info.Kind, info.Excluded = mountGroupExcluded, "builtin"
-	case includeAll || groupFlag(mapping, "include-all-providers"):
+	case collectsProviders(mapping) && reachesTailscale:
+		info.Kind, info.Excluded = mountGroupExcluded, "tailscale"
+	case collectsProviders(mapping):
 		info.Kind, info.Collects = mountGroupAuto, "providers"
 		if includeAll || groupFlag(mapping, "include-all-proxies") {
 			info.Collects = "all"
@@ -288,6 +290,10 @@ func mountGroupInfo(mapping map[string]any, reachesTailscale bool) MountGroupInf
 		info.Kind = mountGroupCandidate
 	}
 	return info
+}
+
+func collectsProviders(mapping map[string]any) bool {
+	return groupFlag(mapping, "include-all") || groupFlag(mapping, "include-all-providers")
 }
 
 // Every rule that reaches a Tailscale node goes through one of these groups.
@@ -400,6 +406,11 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	for _, name := range baseProviderNames(providers) {
 		taken[name] = struct{}{}
 	}
+	var baseProviders []string
+	for i := 0; i+1 < len(providers.Content); i += 2 {
+		baseProviders = append(baseProviders, providers.Content[i].Value)
+	}
+	slices.Sort(baseProviders)
 	names := make([]string, 0, len(setup.Sources))
 	for _, source := range setup.Sources {
 		name := mountProviderName(source.ID)
@@ -423,7 +434,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		setMappingValue(providers, name, definition)
 		names = append(names, name)
 	}
-	groups, err := applyMountGroups(groupsNode, groupMappings, proxyTypes, setup.Groups, names)
+	groups, err := applyMountGroups(groupsNode, groupMappings, proxyTypes, setup.Groups, names, baseProviders)
 	if err != nil {
 		return nil, err
 	}
@@ -563,13 +574,21 @@ func mountProviderNode(path string, renames []MountNode) (*yaml.Node, error) {
 	return &node, nil
 }
 
-func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, proxyTypes map[string]string, chosen []string, providers []string) ([]MountGroupReport, error) {
+func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, proxyTypes map[string]string, chosen []string, providers []string, baseProviders []string) ([]MountGroupReport, error) {
 	reports := []MountGroupReport{}
 	found := map[string]bool{}
 	reach := tailscaleGroups(mappings, proxyTypes)
 	for i, mapping := range mappings {
 		node := resolveAlias(groupsNode.Content[i])
 		info := mountGroupInfo(mapping, reach[groupString(mapping, "name")])
+		if reach[info.Name] && collectsProviders(mapping) {
+			pinned, err := pinBaseProviders(node, mapping, baseProviders)
+			if err != nil {
+				return nil, err
+			}
+			groupsNode.Content[i] = pinned
+			continue
+		}
 		via := ""
 		switch {
 		case info.Kind == mountGroupAuto:
@@ -610,6 +629,25 @@ func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, proxyTyp
 		}
 	}
 	return reports, nil
+}
+
+// A group reaching Tailscale is built as without the mounts: include-all
+// becomes include-all-proxies and only the base's providers are used.
+func pinBaseProviders(node *yaml.Node, mapping map[string]any, baseProviders []string) (*yaml.Node, error) {
+	pinned := *node
+	pinned.Content = append([]*yaml.Node(nil), node.Content...)
+	off := func() *yaml.Node { return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "false"} }
+	if groupFlag(mapping, "include-all") {
+		setMappingValue(&pinned, "include-all", off())
+		setMappingValue(&pinned, "include-all-proxies", &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"})
+	}
+	setMappingValue(&pinned, "include-all-providers", off())
+	var useNode yaml.Node
+	if err := useNode.Encode(append([]string{}, baseProviders...)); err != nil {
+		return nil, err
+	}
+	setMappingValue(&pinned, "use", &useNode)
+	return &pinned, nil
 }
 
 func uniqueStrings(values []string) []string {

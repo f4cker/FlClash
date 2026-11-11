@@ -120,7 +120,7 @@ func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
 	for name, want := range map[string]MountGroupInfo{
 		"Proxy":  {Name: "Proxy", Type: "select", Kind: mountGroupCandidate, Probe: "none"},
 		"Auto":   {Name: "Auto", Type: "url-test", Kind: mountGroupAuto, Collects: "providers", Filter: true, Probe: "probes"},
-		"All":    {Name: "All", Type: "select", Kind: mountGroupAuto, Collects: "all", Hidden: true, Probe: "none"},
+		"All":    {Name: "All", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Hidden: true, Probe: "none"},
 		"Lazy":   {Name: "Lazy", Type: "fallback", Kind: mountGroupCandidate, Probe: "unknown"},
 		"Hidden": {Name: "Hidden", Type: "select", Kind: mountGroupExcluded, Excluded: "hidden", Hidden: true, Probe: "none"},
 		"Office": {Name: "Office", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Probe: "none"},
@@ -597,5 +597,124 @@ func TestLoadMountedConfigWithoutABaseMountsIntoConfigYaml(t *testing.T) {
 	}
 	if len(report.Groups) != 1 || report.Groups[0].Via != "use" {
 		t.Errorf("groups = %+v", report.Groups)
+	}
+}
+
+const mountTailscaleAutoProfile = `proxies:
+  - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
+  - {name: ts-office, type: tailscale}
+proxy-groups:
+  - {name: Office, type: select, proxies: [ts-office, Proxy]}
+  - {name: Proxy, type: select, proxies: [base]}
+  - {name: Everything, type: select, include-all: true}
+  - {name: Routed, type: url-test, include-all-providers: true, proxies: [Office]}
+  - {name: Auto, type: url-test, include-all-providers: true}
+rules:
+  - IP-CIDR,100.64.0.0/10,Routed
+  - MATCH,Auto
+`
+
+// The merged document parsed as an apply would, with Tailscale nodes built
+// as direct stand-ins so no node starts.
+func checkOnlyConfig(t *testing.T, document *yaml.Node) *config.Config {
+	t.Helper()
+	raw := config.DefaultRawConfig()
+	if err := document.Decode(raw); err != nil {
+		t.Fatal(err)
+	}
+	for i, mapping := range raw.Proxy {
+		raw.Proxy[i] = checkOnlyProxy(mapping)
+	}
+	cfg, err := config.ParseRawConfig(raw)
+	if err != nil {
+		t.Fatalf("parse = %v", err)
+	}
+	t.Cleanup(func() {
+		for _, pd := range cfg.Providers {
+			if closer, ok := pd.(interface{ Close() error }); ok {
+				_ = closer.Close()
+			}
+		}
+	})
+	for _, pd := range cfg.Providers {
+		_ = pd.Initial()
+	}
+	return cfg
+}
+
+func groupYAML(t *testing.T, root *yaml.Node, name string) string {
+	t.Helper()
+	for _, item := range resolveAlias(mappingValue(root, "proxy-groups")).Content {
+		if mappingValue(item, "name").Value == name {
+			out, err := yaml.Marshal(item)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return string(out)
+		}
+	}
+	t.Fatalf("no group %s", name)
+	return ""
+}
+
+func TestMountKeepsAutoGroupsThatReachTailscaleFreeOfMountedNodes(t *testing.T) {
+	home := withMountHome(t)
+	params := &SetupParams{
+		Base: &SetupBase{
+			Path:    writeBaseProfile(t, mountTailscaleAutoProfile),
+			Overlay: "proxy-providers:\n  own: {type: inline, payload: [{name: own-node, type: socks5, server: 127.0.0.9, port: 1081}]}\n",
+		},
+		Mounts: &MountSetup{Revision: "r", Sources: []MountSource{
+			{ID: 3, Label: "Sub", Path: writeMountFile(t, home, "3.yaml", mountSourceB)},
+		}},
+		Tailscale: &TailscaleSetup{Managed: []TailscaleManagedSetup{{ID: "m1", Name: "us"}}},
+	}
+	plain, _, err := mountedDocument(params.Base, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	document, report, err := mountedDocument(params.Base, "", mountSetupOf(params))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := checkOnlyConfig(t, document)
+
+	for group, want := range map[string][]string{
+		"Everything": {"base", "ts-office", "own-node"},
+		"Routed":     {"Office", "own-node"},
+		"Office":     {"ts-office", "Proxy"},
+		"Auto":       {"shared", "us (Sub)", "own-node"},
+	} {
+		if got := memberNames(t, cfg, group); !reflect.DeepEqual(got, want) {
+			t.Errorf("%s members = %v, want %v", group, got, want)
+		}
+	}
+	wantGroups := []MountGroupReport{{Name: "Auto", Via: "auto", Protection: mountProtectionReject, EmptyFallback: "REJECT"}}
+	if !reflect.DeepEqual(report.Groups, wantGroups) {
+		t.Errorf("groups = %+v, want %+v", report.Groups, wantGroups)
+	}
+
+	plainRoot, mountedRoot := plain.Content[0], document.Content[0]
+	if got, want := groupYAML(t, mountedRoot, "Office"), groupYAML(t, plainRoot, "Office"); got != want {
+		t.Errorf("the Tailscale group changed:\n%s\nwant\n%s", got, want)
+	}
+	before, _ := yaml.Marshal(mappingValue(plainRoot, "proxies"))
+	after, _ := yaml.Marshal(mappingValue(mountedRoot, "proxies"))
+	if string(before) != string(after) {
+		t.Errorf("base proxies changed:\n%s\nwant\n%s", after, before)
+	}
+
+	target, err := inspectMountTarget(plainRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds := map[string]string{}
+	for _, group := range target.Groups {
+		kinds[group.Name] = group.Kind + "/" + group.Excluded
+	}
+	for name, want := range map[string]string{"Everything": "excluded/tailscale", "Routed": "excluded/tailscale", "Auto": "auto/"} {
+		if kinds[name] != want {
+			t.Errorf("%s = %s, want %s", name, kinds[name], want)
+		}
 	}
 }
