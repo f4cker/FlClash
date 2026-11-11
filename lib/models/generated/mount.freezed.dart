@@ -1450,7 +1450,7 @@ as DateTime?,
 /// @nodoc
 mixin _$MountSourceInspection {
 
- MountSourceStatus get status; int get count; int get listed;@JsonKey(name: 'tailscale-excluded') int get tailscaleExcluded;
+ MountSourceStatus get status; int get count; int get listed;@JsonKey(name: 'tailscale-excluded') int get tailscaleExcluded;@JsonKey(name: 'relay-excluded') int get relayExcluded;
 /// Create a copy of MountSourceInspection
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1464,20 +1464,20 @@ $MountSourceInspectionCopyWith<MountSourceInspection> get copyWith => _$MountSou
 @override
 bool operator ==(Object other) {
   final _this = this as MountSourceInspection;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceInspection&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.count, _this.count) || other.count == _this.count)&&(identical(other.listed, _this.listed) || other.listed == _this.listed)&&(identical(other.tailscaleExcluded, _this.tailscaleExcluded) || other.tailscaleExcluded == _this.tailscaleExcluded));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceInspection&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.count, _this.count) || other.count == _this.count)&&(identical(other.listed, _this.listed) || other.listed == _this.listed)&&(identical(other.tailscaleExcluded, _this.tailscaleExcluded) || other.tailscaleExcluded == _this.tailscaleExcluded)&&(identical(other.relayExcluded, _this.relayExcluded) || other.relayExcluded == _this.relayExcluded));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MountSourceInspection;
-  return Object.hash(runtimeType,_this.status,_this.count,_this.listed,_this.tailscaleExcluded);
+  return Object.hash(runtimeType,_this.status,_this.count,_this.listed,_this.tailscaleExcluded,_this.relayExcluded);
 }
 
 @override
 String toString() {
   final _this = this as MountSourceInspection;
-  return 'MountSourceInspection(status: ${_this.status}, count: ${_this.count}, listed: ${_this.listed}, tailscaleExcluded: ${_this.tailscaleExcluded})';
+  return 'MountSourceInspection(status: ${_this.status}, count: ${_this.count}, listed: ${_this.listed}, tailscaleExcluded: ${_this.tailscaleExcluded}, relayExcluded: ${_this.relayExcluded})';
 }
 
 
@@ -1488,7 +1488,7 @@ abstract mixin class $MountSourceInspectionCopyWith<$Res>  {
   factory $MountSourceInspectionCopyWith(MountSourceInspection value, $Res Function(MountSourceInspection) _then) = _$MountSourceInspectionCopyWithImpl;
 @useResult
 $Res call({
- MountSourceStatus status, int count, int listed,@JsonKey(name: 'tailscale-excluded') int tailscaleExcluded
+ MountSourceStatus status, int count, int listed,@JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,@JsonKey(name: 'relay-excluded') int relayExcluded
 });
 
 
@@ -1505,12 +1505,13 @@ class _$MountSourceInspectionCopyWithImpl<$Res>
 
 /// Create a copy of MountSourceInspection
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? count = null,Object? listed = null,Object? tailscaleExcluded = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? count = null,Object? listed = null,Object? tailscaleExcluded = null,Object? relayExcluded = null,}) {
   return _then(MountSourceInspection(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as MountSourceStatus,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
 as int,listed: null == listed ? _self.listed : listed // ignore: cast_nullable_to_non_nullable
 as int,tailscaleExcluded: null == tailscaleExcluded ? _self.tailscaleExcluded : tailscaleExcluded // ignore: cast_nullable_to_non_nullable
+as int,relayExcluded: null == relayExcluded ? _self.relayExcluded : relayExcluded // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }
@@ -1596,10 +1597,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( MountSourceStatus status,  int count,  int listed, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( MountSourceStatus status,  int count,  int listed, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded, @JsonKey(name: 'relay-excluded')  int relayExcluded)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountSourceInspection() when $default != null:
-return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded);case _:
+return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded,_that.relayExcluded);case _:
   return orElse();
 
 }
@@ -1617,10 +1618,10 @@ return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded);c
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( MountSourceStatus status,  int count,  int listed, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( MountSourceStatus status,  int count,  int listed, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded, @JsonKey(name: 'relay-excluded')  int relayExcluded)  $default,) {final _that = this;
 switch (_that) {
 case _MountSourceInspection():
-return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded);case _:
+return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded,_that.relayExcluded);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1637,10 +1638,10 @@ return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded);c
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( MountSourceStatus status,  int count,  int listed, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( MountSourceStatus status,  int count,  int listed, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded, @JsonKey(name: 'relay-excluded')  int relayExcluded)?  $default,) {final _that = this;
 switch (_that) {
 case _MountSourceInspection() when $default != null:
-return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded);case _:
+return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded,_that.relayExcluded);case _:
   return null;
 
 }
@@ -1652,13 +1653,14 @@ return $default(_that.status,_that.count,_that.listed,_that.tailscaleExcluded);c
 @JsonSerializable()
 
 class _MountSourceInspection implements MountSourceInspection {
-  const _MountSourceInspection({required this.status, this.count = 0, this.listed = 0, @JsonKey(name: 'tailscale-excluded') this.tailscaleExcluded = 0});
+  const _MountSourceInspection({required this.status, this.count = 0, this.listed = 0, @JsonKey(name: 'tailscale-excluded') this.tailscaleExcluded = 0, @JsonKey(name: 'relay-excluded') this.relayExcluded = 0});
   factory _MountSourceInspection.fromJson(Map<String, dynamic> json) => _$MountSourceInspectionFromJson(json);
 
 @override final  MountSourceStatus status;
 @override@JsonKey() final  int count;
 @override@JsonKey() final  int listed;
 @override@JsonKey(name: 'tailscale-excluded') final  int tailscaleExcluded;
+@override@JsonKey(name: 'relay-excluded') final  int relayExcluded;
 
 /// Create a copy of MountSourceInspection
 /// with the given fields replaced by the non-null parameter values.
@@ -1673,18 +1675,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceInspection&&(identical(other.status, status) || other.status == status)&&(identical(other.count, count) || other.count == count)&&(identical(other.listed, listed) || other.listed == listed)&&(identical(other.tailscaleExcluded, tailscaleExcluded) || other.tailscaleExcluded == tailscaleExcluded));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceInspection&&(identical(other.status, status) || other.status == status)&&(identical(other.count, count) || other.count == count)&&(identical(other.listed, listed) || other.listed == listed)&&(identical(other.tailscaleExcluded, tailscaleExcluded) || other.tailscaleExcluded == tailscaleExcluded)&&(identical(other.relayExcluded, relayExcluded) || other.relayExcluded == relayExcluded));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,status,count,listed,tailscaleExcluded);
+    return Object.hash(runtimeType,status,count,listed,tailscaleExcluded,relayExcluded);
 }
 
 @override
 String toString() {
-    return 'MountSourceInspection(status: $status, count: $count, listed: $listed, tailscaleExcluded: $tailscaleExcluded)';
+    return 'MountSourceInspection(status: $status, count: $count, listed: $listed, tailscaleExcluded: $tailscaleExcluded, relayExcluded: $relayExcluded)';
 }
 
 
@@ -1695,7 +1697,7 @@ abstract mixin class _$MountSourceInspectionCopyWith<$Res> implements $MountSour
   factory _$MountSourceInspectionCopyWith(_MountSourceInspection value, $Res Function(_MountSourceInspection) _then) = __$MountSourceInspectionCopyWithImpl;
 @override @useResult
 $Res call({
- MountSourceStatus status, int count, int listed,@JsonKey(name: 'tailscale-excluded') int tailscaleExcluded
+ MountSourceStatus status, int count, int listed,@JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,@JsonKey(name: 'relay-excluded') int relayExcluded
 });
 
 
@@ -1712,12 +1714,13 @@ class __$MountSourceInspectionCopyWithImpl<$Res>
 
 /// Create a copy of MountSourceInspection
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? count = null,Object? listed = null,Object? tailscaleExcluded = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? count = null,Object? listed = null,Object? tailscaleExcluded = null,Object? relayExcluded = null,}) {
   return _then(_MountSourceInspection(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as MountSourceStatus,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
 as int,listed: null == listed ? _self.listed : listed // ignore: cast_nullable_to_non_nullable
 as int,tailscaleExcluded: null == tailscaleExcluded ? _self.tailscaleExcluded : tailscaleExcluded // ignore: cast_nullable_to_non_nullable
+as int,relayExcluded: null == relayExcluded ? _self.relayExcluded : relayExcluded // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }
@@ -2032,7 +2035,7 @@ as String?,
 /// @nodoc
 mixin _$MountTarget {
 
- List<MountGroupInfo> get groups;
+ List<MountGroupInfo> get groups; List<String> get relay;
 /// Create a copy of MountTarget
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2046,20 +2049,20 @@ $MountTargetCopyWith<MountTarget> get copyWith => _$MountTargetCopyWithImpl<Moun
 @override
 bool operator ==(Object other) {
   final _this = this as MountTarget;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountTarget&&const DeepCollectionEquality().equals(other.groups, _this.groups));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountTarget&&const DeepCollectionEquality().equals(other.groups, _this.groups)&&const DeepCollectionEquality().equals(other.relay, _this.relay));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MountTarget;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.groups));
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.groups),const DeepCollectionEquality().hash(_this.relay));
 }
 
 @override
 String toString() {
   final _this = this as MountTarget;
-  return 'MountTarget(groups: ${_this.groups})';
+  return 'MountTarget(groups: ${_this.groups}, relay: ${_this.relay})';
 }
 
 
@@ -2070,7 +2073,7 @@ abstract mixin class $MountTargetCopyWith<$Res>  {
   factory $MountTargetCopyWith(MountTarget value, $Res Function(MountTarget) _then) = _$MountTargetCopyWithImpl;
 @useResult
 $Res call({
- List<MountGroupInfo> groups
+ List<MountGroupInfo> groups, List<String> relay
 });
 
 
@@ -2087,10 +2090,11 @@ class _$MountTargetCopyWithImpl<$Res>
 
 /// Create a copy of MountTarget
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? groups = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? groups = null,Object? relay = null,}) {
   return _then(MountTarget(
 groups: null == groups ? _self.groups : groups // ignore: cast_nullable_to_non_nullable
-as List<MountGroupInfo>,
+as List<MountGroupInfo>,relay: null == relay ? _self.relay : relay // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -2175,10 +2179,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<MountGroupInfo> groups)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<MountGroupInfo> groups,  List<String> relay)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountTarget() when $default != null:
-return $default(_that.groups);case _:
+return $default(_that.groups,_that.relay);case _:
   return orElse();
 
 }
@@ -2196,10 +2200,10 @@ return $default(_that.groups);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<MountGroupInfo> groups)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<MountGroupInfo> groups,  List<String> relay)  $default,) {final _that = this;
 switch (_that) {
 case _MountTarget():
-return $default(_that.groups);case _:
+return $default(_that.groups,_that.relay);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2216,10 +2220,10 @@ return $default(_that.groups);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<MountGroupInfo> groups)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<MountGroupInfo> groups,  List<String> relay)?  $default,) {final _that = this;
 switch (_that) {
 case _MountTarget() when $default != null:
-return $default(_that.groups);case _:
+return $default(_that.groups,_that.relay);case _:
   return null;
 
 }
@@ -2231,7 +2235,7 @@ return $default(_that.groups);case _:
 @JsonSerializable()
 
 class _MountTarget implements MountTarget {
-  const _MountTarget({ List<MountGroupInfo> groups = const []}): _groups = groups;
+  const _MountTarget({ List<MountGroupInfo> groups = const [],  List<String> relay = const []}): _groups = groups,_relay = relay;
   factory _MountTarget.fromJson(Map<String, dynamic> json) => _$MountTargetFromJson(json);
 
  final  List<MountGroupInfo> _groups;
@@ -2239,6 +2243,13 @@ class _MountTarget implements MountTarget {
   if (_groups is EqualUnmodifiableListView) return _groups;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_groups);
+}
+
+ final  List<String> _relay;
+@override@JsonKey() List<String> get relay {
+  if (_relay is EqualUnmodifiableListView) return _relay;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_relay);
 }
 
 
@@ -2255,18 +2266,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountTarget&&const DeepCollectionEquality().equals(other.groups, _groups));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountTarget&&const DeepCollectionEquality().equals(other.groups, _groups)&&const DeepCollectionEquality().equals(other.relay, _relay));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_groups));
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_groups),const DeepCollectionEquality().hash(_relay));
 }
 
 @override
 String toString() {
-    return 'MountTarget(groups: $groups)';
+    return 'MountTarget(groups: $groups, relay: $relay)';
 }
 
 
@@ -2277,7 +2288,7 @@ abstract mixin class _$MountTargetCopyWith<$Res> implements $MountTargetCopyWith
   factory _$MountTargetCopyWith(_MountTarget value, $Res Function(_MountTarget) _then) = __$MountTargetCopyWithImpl;
 @override @useResult
 $Res call({
- List<MountGroupInfo> groups
+ List<MountGroupInfo> groups, List<String> relay
 });
 
 
@@ -2294,10 +2305,11 @@ class __$MountTargetCopyWithImpl<$Res>
 
 /// Create a copy of MountTarget
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? groups = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? groups = null,Object? relay = null,}) {
   return _then(_MountTarget(
 groups: null == groups ? _self._groups : groups // ignore: cast_nullable_to_non_nullable
-as List<MountGroupInfo>,
+as List<MountGroupInfo>,relay: null == relay ? _self._relay : relay // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -2581,7 +2593,7 @@ as String,
 /// @nodoc
 mixin _$MountSourceReport {
 
- int get id; String get provider; MountSourceStatus get status;@JsonKey(name: 'tailscale-excluded') int get tailscaleExcluded; List<MountNode> get nodes;
+ int get id; String get provider; MountSourceStatus get status;@JsonKey(name: 'tailscale-excluded') int get tailscaleExcluded;@JsonKey(name: 'relay-excluded') int get relayExcluded; List<MountNode> get nodes;
 /// Create a copy of MountSourceReport
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2595,20 +2607,20 @@ $MountSourceReportCopyWith<MountSourceReport> get copyWith => _$MountSourceRepor
 @override
 bool operator ==(Object other) {
   final _this = this as MountSourceReport;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceReport&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.provider, _this.provider) || other.provider == _this.provider)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.tailscaleExcluded, _this.tailscaleExcluded) || other.tailscaleExcluded == _this.tailscaleExcluded)&&const DeepCollectionEquality().equals(other.nodes, _this.nodes));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceReport&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.provider, _this.provider) || other.provider == _this.provider)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.tailscaleExcluded, _this.tailscaleExcluded) || other.tailscaleExcluded == _this.tailscaleExcluded)&&(identical(other.relayExcluded, _this.relayExcluded) || other.relayExcluded == _this.relayExcluded)&&const DeepCollectionEquality().equals(other.nodes, _this.nodes));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MountSourceReport;
-  return Object.hash(runtimeType,_this.id,_this.provider,_this.status,_this.tailscaleExcluded,const DeepCollectionEquality().hash(_this.nodes));
+  return Object.hash(runtimeType,_this.id,_this.provider,_this.status,_this.tailscaleExcluded,_this.relayExcluded,const DeepCollectionEquality().hash(_this.nodes));
 }
 
 @override
 String toString() {
   final _this = this as MountSourceReport;
-  return 'MountSourceReport(id: ${_this.id}, provider: ${_this.provider}, status: ${_this.status}, tailscaleExcluded: ${_this.tailscaleExcluded}, nodes: ${_this.nodes})';
+  return 'MountSourceReport(id: ${_this.id}, provider: ${_this.provider}, status: ${_this.status}, tailscaleExcluded: ${_this.tailscaleExcluded}, relayExcluded: ${_this.relayExcluded}, nodes: ${_this.nodes})';
 }
 
 
@@ -2619,7 +2631,7 @@ abstract mixin class $MountSourceReportCopyWith<$Res>  {
   factory $MountSourceReportCopyWith(MountSourceReport value, $Res Function(MountSourceReport) _then) = _$MountSourceReportCopyWithImpl;
 @useResult
 $Res call({
- int id, String provider, MountSourceStatus status,@JsonKey(name: 'tailscale-excluded') int tailscaleExcluded, List<MountNode> nodes
+ int id, String provider, MountSourceStatus status,@JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,@JsonKey(name: 'relay-excluded') int relayExcluded, List<MountNode> nodes
 });
 
 
@@ -2636,12 +2648,13 @@ class _$MountSourceReportCopyWithImpl<$Res>
 
 /// Create a copy of MountSourceReport
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? provider = null,Object? status = null,Object? tailscaleExcluded = null,Object? nodes = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? provider = null,Object? status = null,Object? tailscaleExcluded = null,Object? relayExcluded = null,Object? nodes = null,}) {
   return _then(MountSourceReport(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,provider: null == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as MountSourceStatus,tailscaleExcluded: null == tailscaleExcluded ? _self.tailscaleExcluded : tailscaleExcluded // ignore: cast_nullable_to_non_nullable
+as int,relayExcluded: null == relayExcluded ? _self.relayExcluded : relayExcluded // ignore: cast_nullable_to_non_nullable
 as int,nodes: null == nodes ? _self.nodes : nodes // ignore: cast_nullable_to_non_nullable
 as List<MountNode>,
   ));
@@ -2728,10 +2741,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String provider,  MountSourceStatus status, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded,  List<MountNode> nodes)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String provider,  MountSourceStatus status, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded, @JsonKey(name: 'relay-excluded')  int relayExcluded,  List<MountNode> nodes)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountSourceReport() when $default != null:
-return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_that.nodes);case _:
+return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_that.relayExcluded,_that.nodes);case _:
   return orElse();
 
 }
@@ -2749,10 +2762,10 @@ return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String provider,  MountSourceStatus status, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded,  List<MountNode> nodes)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String provider,  MountSourceStatus status, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded, @JsonKey(name: 'relay-excluded')  int relayExcluded,  List<MountNode> nodes)  $default,) {final _that = this;
 switch (_that) {
 case _MountSourceReport():
-return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_that.nodes);case _:
+return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_that.relayExcluded,_that.nodes);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2769,10 +2782,10 @@ return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String provider,  MountSourceStatus status, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded,  List<MountNode> nodes)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String provider,  MountSourceStatus status, @JsonKey(name: 'tailscale-excluded')  int tailscaleExcluded, @JsonKey(name: 'relay-excluded')  int relayExcluded,  List<MountNode> nodes)?  $default,) {final _that = this;
 switch (_that) {
 case _MountSourceReport() when $default != null:
-return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_that.nodes);case _:
+return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_that.relayExcluded,_that.nodes);case _:
   return null;
 
 }
@@ -2784,13 +2797,14 @@ return $default(_that.id,_that.provider,_that.status,_that.tailscaleExcluded,_th
 @JsonSerializable()
 
 class _MountSourceReport implements MountSourceReport {
-  const _MountSourceReport({required this.id, required this.provider, required this.status, @JsonKey(name: 'tailscale-excluded') this.tailscaleExcluded = 0,  List<MountNode> nodes = const []}): _nodes = nodes;
+  const _MountSourceReport({required this.id, required this.provider, required this.status, @JsonKey(name: 'tailscale-excluded') this.tailscaleExcluded = 0, @JsonKey(name: 'relay-excluded') this.relayExcluded = 0,  List<MountNode> nodes = const []}): _nodes = nodes;
   factory _MountSourceReport.fromJson(Map<String, dynamic> json) => _$MountSourceReportFromJson(json);
 
 @override final  int id;
 @override final  String provider;
 @override final  MountSourceStatus status;
 @override@JsonKey(name: 'tailscale-excluded') final  int tailscaleExcluded;
+@override@JsonKey(name: 'relay-excluded') final  int relayExcluded;
  final  List<MountNode> _nodes;
 @override@JsonKey() List<MountNode> get nodes {
   if (_nodes is EqualUnmodifiableListView) return _nodes;
@@ -2812,18 +2826,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceReport&&(identical(other.id, id) || other.id == id)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.status, status) || other.status == status)&&(identical(other.tailscaleExcluded, tailscaleExcluded) || other.tailscaleExcluded == tailscaleExcluded)&&const DeepCollectionEquality().equals(other.nodes, _nodes));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceReport&&(identical(other.id, id) || other.id == id)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.status, status) || other.status == status)&&(identical(other.tailscaleExcluded, tailscaleExcluded) || other.tailscaleExcluded == tailscaleExcluded)&&(identical(other.relayExcluded, relayExcluded) || other.relayExcluded == relayExcluded)&&const DeepCollectionEquality().equals(other.nodes, _nodes));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,provider,status,tailscaleExcluded,const DeepCollectionEquality().hash(_nodes));
+    return Object.hash(runtimeType,id,provider,status,tailscaleExcluded,relayExcluded,const DeepCollectionEquality().hash(_nodes));
 }
 
 @override
 String toString() {
-    return 'MountSourceReport(id: $id, provider: $provider, status: $status, tailscaleExcluded: $tailscaleExcluded, nodes: $nodes)';
+    return 'MountSourceReport(id: $id, provider: $provider, status: $status, tailscaleExcluded: $tailscaleExcluded, relayExcluded: $relayExcluded, nodes: $nodes)';
 }
 
 
@@ -2834,7 +2848,7 @@ abstract mixin class _$MountSourceReportCopyWith<$Res> implements $MountSourceRe
   factory _$MountSourceReportCopyWith(_MountSourceReport value, $Res Function(_MountSourceReport) _then) = __$MountSourceReportCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String provider, MountSourceStatus status,@JsonKey(name: 'tailscale-excluded') int tailscaleExcluded, List<MountNode> nodes
+ int id, String provider, MountSourceStatus status,@JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,@JsonKey(name: 'relay-excluded') int relayExcluded, List<MountNode> nodes
 });
 
 
@@ -2851,12 +2865,13 @@ class __$MountSourceReportCopyWithImpl<$Res>
 
 /// Create a copy of MountSourceReport
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? provider = null,Object? status = null,Object? tailscaleExcluded = null,Object? nodes = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? provider = null,Object? status = null,Object? tailscaleExcluded = null,Object? relayExcluded = null,Object? nodes = null,}) {
   return _then(_MountSourceReport(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,provider: null == provider ? _self.provider : provider // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as MountSourceStatus,tailscaleExcluded: null == tailscaleExcluded ? _self.tailscaleExcluded : tailscaleExcluded // ignore: cast_nullable_to_non_nullable
+as int,relayExcluded: null == relayExcluded ? _self.relayExcluded : relayExcluded // ignore: cast_nullable_to_non_nullable
 as int,nodes: null == nodes ? _self._nodes : nodes // ignore: cast_nullable_to_non_nullable
 as List<MountNode>,
   ));
@@ -4641,7 +4656,7 @@ $MountReportCopyWith<$Res>? get report {
 /// @nodoc
 mixin _$MountSourceItem {
 
- Profile get profile; MountSourceState get state; int get count; int get tailscaleExcluded; bool get mounted; MountSourceRecord? get record;
+ Profile get profile; MountSourceState get state; int get count; int get tailscaleExcluded; int get relayExcluded; bool get mounted; MountSourceRecord? get record;
 /// Create a copy of MountSourceItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4653,20 +4668,20 @@ $MountSourceItemCopyWith<MountSourceItem> get copyWith => _$MountSourceItemCopyW
 @override
 bool operator ==(Object other) {
   final _this = this as MountSourceItem;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceItem&&(identical(other.profile, _this.profile) || other.profile == _this.profile)&&(identical(other.state, _this.state) || other.state == _this.state)&&(identical(other.count, _this.count) || other.count == _this.count)&&(identical(other.tailscaleExcluded, _this.tailscaleExcluded) || other.tailscaleExcluded == _this.tailscaleExcluded)&&(identical(other.mounted, _this.mounted) || other.mounted == _this.mounted)&&(identical(other.record, _this.record) || other.record == _this.record));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceItem&&(identical(other.profile, _this.profile) || other.profile == _this.profile)&&(identical(other.state, _this.state) || other.state == _this.state)&&(identical(other.count, _this.count) || other.count == _this.count)&&(identical(other.tailscaleExcluded, _this.tailscaleExcluded) || other.tailscaleExcluded == _this.tailscaleExcluded)&&(identical(other.relayExcluded, _this.relayExcluded) || other.relayExcluded == _this.relayExcluded)&&(identical(other.mounted, _this.mounted) || other.mounted == _this.mounted)&&(identical(other.record, _this.record) || other.record == _this.record));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MountSourceItem;
-  return Object.hash(runtimeType,_this.profile,_this.state,_this.count,_this.tailscaleExcluded,_this.mounted,_this.record);
+  return Object.hash(runtimeType,_this.profile,_this.state,_this.count,_this.tailscaleExcluded,_this.relayExcluded,_this.mounted,_this.record);
 }
 
 @override
 String toString() {
   final _this = this as MountSourceItem;
-  return 'MountSourceItem(profile: ${_this.profile}, state: ${_this.state}, count: ${_this.count}, tailscaleExcluded: ${_this.tailscaleExcluded}, mounted: ${_this.mounted}, record: ${_this.record})';
+  return 'MountSourceItem(profile: ${_this.profile}, state: ${_this.state}, count: ${_this.count}, tailscaleExcluded: ${_this.tailscaleExcluded}, relayExcluded: ${_this.relayExcluded}, mounted: ${_this.mounted}, record: ${_this.record})';
 }
 
 
@@ -4677,7 +4692,7 @@ abstract mixin class $MountSourceItemCopyWith<$Res>  {
   factory $MountSourceItemCopyWith(MountSourceItem value, $Res Function(MountSourceItem) _then) = _$MountSourceItemCopyWithImpl;
 @useResult
 $Res call({
- Profile profile, MountSourceState state, int count, int tailscaleExcluded, bool mounted, MountSourceRecord? record
+ Profile profile, MountSourceState state, int count, int tailscaleExcluded, int relayExcluded, bool mounted, MountSourceRecord? record
 });
 
 
@@ -4694,12 +4709,13 @@ class _$MountSourceItemCopyWithImpl<$Res>
 
 /// Create a copy of MountSourceItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? profile = null,Object? state = null,Object? count = null,Object? tailscaleExcluded = null,Object? mounted = null,Object? record = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? profile = null,Object? state = null,Object? count = null,Object? tailscaleExcluded = null,Object? relayExcluded = null,Object? mounted = null,Object? record = freezed,}) {
   return _then(MountSourceItem(
 profile: null == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
 as Profile,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
 as MountSourceState,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
 as int,tailscaleExcluded: null == tailscaleExcluded ? _self.tailscaleExcluded : tailscaleExcluded // ignore: cast_nullable_to_non_nullable
+as int,relayExcluded: null == relayExcluded ? _self.relayExcluded : relayExcluded // ignore: cast_nullable_to_non_nullable
 as int,mounted: null == mounted ? _self.mounted : mounted // ignore: cast_nullable_to_non_nullable
 as bool,record: freezed == record ? _self.record : record // ignore: cast_nullable_to_non_nullable
 as MountSourceRecord?,
@@ -4808,10 +4824,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  bool mounted,  MountSourceRecord? record)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  int relayExcluded,  bool mounted,  MountSourceRecord? record)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountSourceItem() when $default != null:
-return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.mounted,_that.record);case _:
+return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.relayExcluded,_that.mounted,_that.record);case _:
   return orElse();
 
 }
@@ -4829,10 +4845,10 @@ return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  bool mounted,  MountSourceRecord? record)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  int relayExcluded,  bool mounted,  MountSourceRecord? record)  $default,) {final _that = this;
 switch (_that) {
 case _MountSourceItem():
-return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.mounted,_that.record);case _:
+return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.relayExcluded,_that.mounted,_that.record);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4849,10 +4865,10 @@ return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  bool mounted,  MountSourceRecord? record)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Profile profile,  MountSourceState state,  int count,  int tailscaleExcluded,  int relayExcluded,  bool mounted,  MountSourceRecord? record)?  $default,) {final _that = this;
 switch (_that) {
 case _MountSourceItem() when $default != null:
-return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.mounted,_that.record);case _:
+return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_that.relayExcluded,_that.mounted,_that.record);case _:
   return null;
 
 }
@@ -4864,13 +4880,14 @@ return $default(_that.profile,_that.state,_that.count,_that.tailscaleExcluded,_t
 
 
 class _MountSourceItem implements MountSourceItem {
-  const _MountSourceItem({required this.profile, required this.state, this.count = 0, this.tailscaleExcluded = 0, this.mounted = false, this.record});
+  const _MountSourceItem({required this.profile, required this.state, this.count = 0, this.tailscaleExcluded = 0, this.relayExcluded = 0, this.mounted = false, this.record});
   
 
 @override final  Profile profile;
 @override final  MountSourceState state;
 @override@JsonKey() final  int count;
 @override@JsonKey() final  int tailscaleExcluded;
+@override@JsonKey() final  int relayExcluded;
 @override@JsonKey() final  bool mounted;
 @override final  MountSourceRecord? record;
 
@@ -4884,18 +4901,18 @@ _$MountSourceItemCopyWith<_MountSourceItem> get copyWith => __$MountSourceItemCo
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceItem&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.state, state) || other.state == state)&&(identical(other.count, count) || other.count == count)&&(identical(other.tailscaleExcluded, tailscaleExcluded) || other.tailscaleExcluded == tailscaleExcluded)&&(identical(other.mounted, mounted) || other.mounted == mounted)&&(identical(other.record, record) || other.record == record));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceItem&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.state, state) || other.state == state)&&(identical(other.count, count) || other.count == count)&&(identical(other.tailscaleExcluded, tailscaleExcluded) || other.tailscaleExcluded == tailscaleExcluded)&&(identical(other.relayExcluded, relayExcluded) || other.relayExcluded == relayExcluded)&&(identical(other.mounted, mounted) || other.mounted == mounted)&&(identical(other.record, record) || other.record == record));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,profile,state,count,tailscaleExcluded,mounted,record);
+    return Object.hash(runtimeType,profile,state,count,tailscaleExcluded,relayExcluded,mounted,record);
 }
 
 @override
 String toString() {
-    return 'MountSourceItem(profile: $profile, state: $state, count: $count, tailscaleExcluded: $tailscaleExcluded, mounted: $mounted, record: $record)';
+    return 'MountSourceItem(profile: $profile, state: $state, count: $count, tailscaleExcluded: $tailscaleExcluded, relayExcluded: $relayExcluded, mounted: $mounted, record: $record)';
 }
 
 
@@ -4906,7 +4923,7 @@ abstract mixin class _$MountSourceItemCopyWith<$Res> implements $MountSourceItem
   factory _$MountSourceItemCopyWith(_MountSourceItem value, $Res Function(_MountSourceItem) _then) = __$MountSourceItemCopyWithImpl;
 @override @useResult
 $Res call({
- Profile profile, MountSourceState state, int count, int tailscaleExcluded, bool mounted, MountSourceRecord? record
+ Profile profile, MountSourceState state, int count, int tailscaleExcluded, int relayExcluded, bool mounted, MountSourceRecord? record
 });
 
 
@@ -4923,12 +4940,13 @@ class __$MountSourceItemCopyWithImpl<$Res>
 
 /// Create a copy of MountSourceItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? profile = null,Object? state = null,Object? count = null,Object? tailscaleExcluded = null,Object? mounted = null,Object? record = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? profile = null,Object? state = null,Object? count = null,Object? tailscaleExcluded = null,Object? relayExcluded = null,Object? mounted = null,Object? record = freezed,}) {
   return _then(_MountSourceItem(
 profile: null == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
 as Profile,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
 as MountSourceState,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
 as int,tailscaleExcluded: null == tailscaleExcluded ? _self.tailscaleExcluded : tailscaleExcluded // ignore: cast_nullable_to_non_nullable
+as int,relayExcluded: null == relayExcluded ? _self.relayExcluded : relayExcluded // ignore: cast_nullable_to_non_nullable
 as int,mounted: null == mounted ? _self.mounted : mounted // ignore: cast_nullable_to_non_nullable
 as bool,record: freezed == record ? _self.record : record // ignore: cast_nullable_to_non_nullable
 as MountSourceRecord?,

@@ -103,7 +103,10 @@ void main() {
     when(() => core.clearEffect(any())).thenAnswer((_) async {});
   });
 
-  ProviderContainer build({bool running = false}) {
+  ProviderContainer build({
+    bool running = false,
+    List<TailscaleManagedRecord>? managed = const [],
+  }) {
     final container = ProviderContainer(
       overrides: [
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
@@ -111,7 +114,7 @@ void main() {
         currentProfileIdProvider.overrideWithBuild((_, _) => 1),
         initProvider.overrideWithBuild((_, _) => running),
         setupActionProvider.overrideWith(_FakeSetupAction.new),
-        tailscaleManagedRecordsProvider.overrideWithBuild((_, _) => const []),
+        tailscaleManagedRecordsProvider.overrideWithBuild((_, _) => managed),
       ],
     );
     addTearDown(container.dispose);
@@ -345,6 +348,71 @@ void main() {
         MountSourceDeletion.blocked,
       );
       expect(container.read(profilesProvider).getProfile(2), isNotNull);
+    });
+  });
+
+  group('a source is inspected against the target', () {
+    void inspects() {
+      when(
+        () => core.inspectMountTarget(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+        ),
+      ).thenAnswer((_) async => const MountTarget(relay: ['ts', 'Via TS']));
+      when(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
+        ),
+      ).thenAnswer(
+        (_) async => const MountSourceInspection(
+          status: MountSourceStatus.nodes,
+          listed: 2,
+          relayExcluded: 2,
+        ),
+      );
+    }
+
+    test('with its relay list and its own panel-added names', () async {
+      inspects();
+      final container = build(
+        managed: const [
+          TailscaleManagedRecord(id: 'a', profileId: 1, name: 'Office'),
+          TailscaleManagedRecord(id: 'b', profileId: 1),
+          TailscaleManagedRecord(id: 'c', profileId: 2, name: 'Other'),
+        ],
+      );
+
+      final panel = await action(container).loadPanel(1);
+
+      verify(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: ['ts', 'Via TS'],
+          managed: ['Office', ''],
+        ),
+      ).called(1);
+      final air = panel.sources.single;
+      expect(air.state, MountSourceState.relayOnly);
+      expect(air.state.mountable, isFalse);
+      expect(air.relayExcluded, 2);
+    });
+
+    test('with nothing while panel-added accounts are unread', () async {
+      inspects();
+      final container = build(managed: null);
+
+      await action(container).loadPanel(1);
+
+      verify(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+        ),
+      ).called(1);
     });
   });
 

@@ -143,6 +143,7 @@ abstract class MountSourceInspection with _$MountSourceInspection {
     @Default(0) int count,
     @Default(0) int listed,
     @Default(0) @JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,
+    @Default(0) @JsonKey(name: 'relay-excluded') int relayExcluded,
   }) = _MountSourceInspection;
 
   factory MountSourceInspection.fromJson(Map<String, Object?> json) =>
@@ -182,8 +183,10 @@ abstract class MountGroupInfo with _$MountGroupInfo {
 
 @freezed
 abstract class MountTarget with _$MountTarget {
-  const factory MountTarget({@Default([]) List<MountGroupInfo> groups}) =
-      _MountTarget;
+  const factory MountTarget({
+    @Default([]) List<MountGroupInfo> groups,
+    @Default([]) List<String> relay,
+  }) = _MountTarget;
 
   factory MountTarget.fromJson(Map<String, Object?> json) =>
       _$MountTargetFromJson(json);
@@ -205,6 +208,7 @@ abstract class MountSourceReport with _$MountSourceReport {
     required String provider,
     required MountSourceStatus status,
     @Default(0) @JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,
+    @Default(0) @JsonKey(name: 'relay-excluded') int relayExcluded,
     @Default([]) List<MountNode> nodes,
   }) = _MountSourceReport;
 
@@ -304,13 +308,21 @@ abstract class MountRuntimeState with _$MountRuntimeState {
       _$MountRuntimeStateFromJson(json);
 }
 
+/// [isolatedOnly]: both Tailscale nodes and Tailscale relays, nothing else.
 enum MountSourceState {
   nodes,
   empty,
   tailscaleOnly,
+  relayOnly,
+  isolatedOnly,
   notFetched,
   unsupported,
-  unreadable,
+  unreadable;
+
+  bool get mountable => switch (this) {
+    unsupported || relayOnly || isolatedOnly => false,
+    _ => true,
+  };
 }
 
 @freezed
@@ -320,6 +332,7 @@ abstract class MountSourceItem with _$MountSourceItem {
     required MountSourceState state,
     @Default(0) int count,
     @Default(0) int tailscaleExcluded,
+    @Default(0) int relayExcluded,
     @Default(false) bool mounted,
     MountSourceRecord? record,
   }) = _MountSourceItem;
@@ -430,6 +443,12 @@ MountSourceItem mountSourceItem(
     MountSourceStatus.invalid => MountSourceState.unsupported,
     MountSourceStatus.nodes when inspection!.count > 0 =>
       MountSourceState.nodes,
+    MountSourceStatus.nodes
+        when inspection!.relayExcluded > 0 &&
+            inspection.tailscaleExcluded > 0 =>
+      MountSourceState.isolatedOnly,
+    MountSourceStatus.nodes when inspection!.relayExcluded > 0 =>
+      MountSourceState.relayOnly,
     MountSourceStatus.nodes when inspection!.tailscaleExcluded > 0 =>
       MountSourceState.tailscaleOnly,
     MountSourceStatus.nodes => MountSourceState.empty,
@@ -439,6 +458,7 @@ MountSourceItem mountSourceItem(
     state: state,
     count: inspection?.count ?? 0,
     tailscaleExcluded: inspection?.tailscaleExcluded ?? 0,
+    relayExcluded: inspection?.relayExcluded ?? 0,
     mounted: mounted,
     record: record,
   );

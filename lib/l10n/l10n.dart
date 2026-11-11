@@ -12111,6 +12111,40 @@ class AppLocalizations {
     );
   }
 
+  /// `{count, plural, =1{1 subscription node that routes through Tailscale was excluded. Its routing settings were not changed.} other{{count} subscription nodes that route through Tailscale were excluded. Their routing settings were not changed.}}`
+  String mountRelayExcluded(num count) {
+    return Intl.plural(
+      count,
+      one:
+          '1 subscription node that routes through Tailscale was excluded. Its routing settings were not changed.',
+      other:
+          '$count subscription nodes that route through Tailscale were excluded. Their routing settings were not changed.',
+      name: 'mountRelayExcluded',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `All nodes in this subscription route through Tailscale and cannot be mounted. Their routing settings were not changed.`
+  String get mountSourceRelayOnly {
+    return Intl.message(
+      'All nodes in this subscription route through Tailscale and cannot be mounted. Their routing settings were not changed.',
+      name: 'mountSourceRelayOnly',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `All nodes in this subscription were excluded to keep Tailscale routing separate and cannot be mounted.`
+  String get mountSourceIsolatedOnly {
+    return Intl.message(
+      'All nodes in this subscription were excluded to keep Tailscale routing separate and cannot be mounted.',
+      name: 'mountSourceIsolatedOnly',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `When node names conflict across sources, the subscription name is added as a suffix. This may affect exact-match or end-of-name filters. Check the group results.`
   String get mountSameName {
     return Intl.message(

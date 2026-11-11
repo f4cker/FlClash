@@ -568,6 +568,99 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(l10n.mountSelectionLost), findsOneWidget);
   });
+
+  testWidgets('nodes relaying through Tailscale are counted, and a source of '
+      'nothing else cannot be mounted', (tester) async {
+    final relayed = sub('Relayed');
+    final mixed = sub('Mixed');
+    final mounts = FakeMounts(
+      panelOf(
+        [
+          item(air, mounted: true, relayExcluded: 1),
+          item(sea, mounted: true, relayExcluded: 2),
+          item(
+            relayed,
+            state: MountSourceState.relayOnly,
+            count: 0,
+            relayExcluded: 3,
+          ),
+          item(
+            mixed,
+            state: MountSourceState.isolatedOnly,
+            count: 0,
+            tailscaleExcluded: 1,
+            relayExcluded: 1,
+          ),
+        ],
+        stored: MountTargetState(
+          targetId: target.id,
+          sourceIds: [air.id, sea.id],
+          version: 1,
+        ),
+        groups: MountTarget(
+          groups: [groupInfo('A', kind: MountGroupKind.auto)],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air, sea, relayed, mixed]);
+    final l10n = currentAppLocalizations;
+
+    final banner = find.byType(MountBanner);
+    expect(
+      find.descendant(
+        of: banner,
+        matching: find.text(l10n.mountRelayExcluded(3)),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.mountTailscaleExcluded), findsNothing);
+    Finder inRow(String name, Finder matching) =>
+        find.descendant(of: rowOf(name), matching: matching);
+    expect(inRow('Relayed', find.text(l10n.mountSourceRelayOnly)), findsOne);
+    expect(inRow('Mixed', find.text(l10n.mountSourceIsolatedOnly)), findsOne);
+    expect(find.text(l10n.mountSourceEmpty), findsNothing);
+
+    await tester.tap(find.text('Relayed'));
+    await tester.tap(find.text('Mixed'));
+    await tester.pump();
+    expect(saveButton(tester).onPressed, isNull);
+  });
+
+  testWidgets('the running report counts relays over the inspection', (
+    tester,
+  ) async {
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [item(air, mounted: true, relayExcluded: 5)],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id],
+                version: 1,
+              ),
+              groups: MountTarget(
+                groups: [groupInfo('A', kind: MountGroupKind.auto)],
+              ),
+            ),
+          )
+          ..runtime = const MountRuntimeState(
+            report: MountReport(
+              sources: [
+                MountSourceReport(
+                  id: 1,
+                  provider: 'flash-mount-1',
+                  status: MountSourceStatus.nodes,
+                  relayExcluded: 1,
+                ),
+              ],
+            ),
+          );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+
+    expect(find.text(l10n.mountRelayExcluded(1)), findsOneWidget);
+    expect(find.text(l10n.mountRelayExcluded(5)), findsNothing);
+  });
 }
 
 class _SlowMounts extends FakeMounts {

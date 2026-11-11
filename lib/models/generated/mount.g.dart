@@ -71,6 +71,7 @@ _MountSourceInspection _$MountSourceInspectionFromJson(
   count: (json['count'] as num?)?.toInt() ?? 0,
   listed: (json['listed'] as num?)?.toInt() ?? 0,
   tailscaleExcluded: (json['tailscale-excluded'] as num?)?.toInt() ?? 0,
+  relayExcluded: (json['relay-excluded'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$MountSourceInspectionToJson(
@@ -80,6 +81,7 @@ Map<String, dynamic> _$MountSourceInspectionToJson(
   'count': instance.count,
   'listed': instance.listed,
   'tailscale-excluded': instance.tailscaleExcluded,
+  'relay-excluded': instance.relayExcluded,
 };
 
 const _$MountSourceStatusEnumMap = {
@@ -155,10 +157,13 @@ _MountTarget _$MountTargetFromJson(Map<String, dynamic> json) => _MountTarget(
           ?.map((e) => MountGroupInfo.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  relay:
+      (json['relay'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const [],
 );
 
 Map<String, dynamic> _$MountTargetToJson(_MountTarget instance) =>
-    <String, dynamic>{'groups': instance.groups};
+    <String, dynamic>{'groups': instance.groups, 'relay': instance.relay};
 
 _MountNode _$MountNodeFromJson(Map<String, dynamic> json) => _MountNode(
   name: json['name'] as String,
@@ -174,6 +179,7 @@ _MountSourceReport _$MountSourceReportFromJson(Map<String, dynamic> json) =>
       provider: json['provider'] as String,
       status: $enumDecode(_$MountSourceStatusEnumMap, json['status']),
       tailscaleExcluded: (json['tailscale-excluded'] as num?)?.toInt() ?? 0,
+      relayExcluded: (json['relay-excluded'] as num?)?.toInt() ?? 0,
       nodes:
           (json['nodes'] as List<dynamic>?)
               ?.map((e) => MountNode.fromJson(e as Map<String, dynamic>))
@@ -187,6 +193,7 @@ Map<String, dynamic> _$MountSourceReportToJson(_MountSourceReport instance) =>
       'provider': instance.provider,
       'status': _$MountSourceStatusEnumMap[instance.status]!,
       'tailscale-excluded': instance.tailscaleExcluded,
+      'relay-excluded': instance.relayExcluded,
       'nodes': instance.nodes,
     };
 

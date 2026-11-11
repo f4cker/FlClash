@@ -387,7 +387,10 @@ class _MountSheetState extends ConsumerState<MountSheet> {
 
   Future<void> _refresh(int sourceId) async {
     setState(() => _refreshing.add(sourceId));
-    final result = await _mounts.refreshSource(sourceId);
+    final result = await _mounts.refreshSource(
+      sourceId,
+      targetId: widget.targetId,
+    );
     if (!mounted) {
       return;
     }
@@ -607,6 +610,8 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     final notices = [
       if ((_runtime?.report?.renamed ?? 0) > 0) appLocalizations.mountSameName,
       if (_tailscaleExcluded(panel)) appLocalizations.mountTailscaleExcluded,
+      if (_relayExcluded(panel) case final count when count > 0)
+        appLocalizations.mountRelayExcluded(count),
       if (_lost.isNotEmpty) appLocalizations.mountSelectionLost,
     ];
     if (notices.isEmpty) {
@@ -622,6 +627,17 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     }
     return panel.sources.any(
       (item) => item.mounted && item.tailscaleExcluded > 0,
+    );
+  }
+
+  int _relayExcluded(MountPanel panel) {
+    final reported = _runtime?.report?.sources;
+    if (reported != null && reported.isNotEmpty) {
+      return reported.fold(0, (sum, source) => sum + source.relayExcluded);
+    }
+    return panel.sources.fold(
+      0,
+      (sum, item) => item.mounted ? sum + item.relayExcluded : sum,
     );
   }
 
@@ -1254,8 +1270,7 @@ class MountSourceRow extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   final VoidCallback? onRefresh;
 
-  /// An unsupported source cannot be checked, only unchecked.
-  bool get _checkable => item.state != MountSourceState.unsupported || checked;
+  bool get _checkable => item.state.mountable || checked;
 
   String _detail(BuildContext context) {
     final appLocalizations = context.appLocalizations;
@@ -1265,7 +1280,10 @@ class MountSourceRow extends StatelessWidget {
     final updated = item.profile.lastUpdateDate;
     final count = switch (item.state) {
       MountSourceState.nodes => item.count,
-      MountSourceState.empty || MountSourceState.tailscaleOnly => 0,
+      MountSourceState.empty ||
+      MountSourceState.tailscaleOnly ||
+      MountSourceState.relayOnly ||
+      MountSourceState.isolatedOnly => 0,
       _ => null,
     };
     if (count == null || updated == null) {
@@ -1292,6 +1310,14 @@ class MountSourceRow extends StatelessWidget {
         true,
       ),
       MountSourceState.notFetched => null,
+      MountSourceState.relayOnly => (
+        appLocalizations.mountSourceRelayOnly,
+        false,
+      ),
+      MountSourceState.isolatedOnly => (
+        appLocalizations.mountSourceIsolatedOnly,
+        false,
+      ),
       _ when failed || refreshUnconfirmed => (
         refreshUnconfirmed
             ? appLocalizations.mountUpdateFailedKept

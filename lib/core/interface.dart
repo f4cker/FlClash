@@ -165,9 +165,13 @@ abstract class CoreHandlerInterface {
     );
   }
 
+  /// [relay] and [managed] are the target's relay list and panel-added
+  /// account names; without them no node's dialer-proxy is checked.
   Future<MountSourceInspection> inspectMountSource(
     String path, {
     String ageSecretKey = '',
+    List<String>? relay,
+    List<String>? managed,
   }) {
     return _query(
       CoreMethod.mountInspectSource,
@@ -175,6 +179,8 @@ abstract class CoreHandlerInterface {
       arguments: {
         'path': path,
         if (ageSecretKey.isNotEmpty) 'age-secret-key': ageSecretKey,
+        'relay': ?relay,
+        'managed': ?managed,
       },
     );
   }

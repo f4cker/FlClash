@@ -79,7 +79,10 @@ class FakeMounts extends MountAction {
   }
 
   @override
-  Future<MountSourceRefresh> refreshSource(int sourceId) async {
+  Future<MountSourceRefresh> refreshSource(
+    int sourceId, {
+    int? targetId,
+  }) async {
     refreshed.add(sourceId);
     return refreshResult ?? const MountSourceRefresh(updated: true);
   }
@@ -99,12 +102,14 @@ MountSourceItem item(
   bool mounted = false,
   MountSourceFailure? failure,
   int tailscaleExcluded = 0,
+  int relayExcluded = 0,
 }) => MountSourceItem(
   profile: profile,
   state: state,
   count: count,
   mounted: mounted,
   tailscaleExcluded: tailscaleExcluded,
+  relayExcluded: relayExcluded,
   record: failure == null
       ? null
       : MountSourceRecord(sourceId: profile.id, failure: failure),

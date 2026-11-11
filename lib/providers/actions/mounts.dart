@@ -1,5 +1,7 @@
 part of '../action.dart';
 
+typedef _MountRelay = ({List<String> names, List<String> managed});
+
 /// Mount operations run one at a time. Each save writes the relation with a
 /// pending record first, and only a readback, or a target that is not
 /// running, clears it; an unknown outcome keeps the target locked.
@@ -21,6 +23,16 @@ class MountAction extends _$MountAction {
       database.mountsDao.statuses(),
     ).wait;
     final mounted = {...?stored?.sourceIds};
+    MountTarget? groups;
+    try {
+      groups = await readGroups(targetId);
+    } catch (error) {
+      commonPrint.log(
+        'mount groups unreadable: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+    }
+    final relay = _relayOf(targetId, groups);
     final sources = <MountSourceItem>[];
     for (final profile in ref.read(profilesProvider)) {
       if (profile.type != ProfileType.url || profile.id == targetId) {
@@ -29,19 +41,10 @@ class MountAction extends _$MountAction {
       sources.add(
         mountSourceItem(
           profile,
-          await _inspect(profile),
+          await _inspect(profile, relay),
           mounted: mounted.contains(profile.id),
           record: records[profile.id],
         ),
-      );
-    }
-    MountTarget? groups;
-    try {
-      groups = await readGroups(targetId);
-    } catch (error) {
-      commonPrint.log(
-        'mount groups unreadable: ${compactError(error)}',
-        logLevel: LogLevel.warning,
       );
     }
     return MountPanel(
@@ -52,11 +55,31 @@ class MountAction extends _$MountAction {
     );
   }
 
-  Future<MountSourceInspection?> _inspect(Profile source) async {
+  /// Null while either is unread: a guessed list would undercount.
+  _MountRelay? _relayOf(int targetId, MountTarget? groups) {
+    final records = ref.read(tailscaleManagedRecordsProvider);
+    if (groups == null || records == null) {
+      return null;
+    }
+    return (
+      names: groups.relay,
+      managed: [
+        for (final record in records)
+          if (record.profileId == targetId) record.name,
+      ],
+    );
+  }
+
+  Future<MountSourceInspection?> _inspect(
+    Profile source,
+    _MountRelay? relay,
+  ) async {
     try {
       return await _core.inspectMountSource(
         await appPath.getProfilePath(source.id.toString()),
         ageSecretKey: source.ageSecretKey,
+        relay: relay?.names,
+        managed: relay?.managed,
       );
     } catch (error) {
       commonPrint.log(
@@ -286,7 +309,7 @@ class MountAction extends _$MountAction {
 
   /// Updates [sourceId] and, when the current profile mounts it, applies
   /// and reads the result back.
-  Future<MountSourceRefresh> refreshSource(int sourceId) {
+  Future<MountSourceRefresh> refreshSource(int sourceId, {int? targetId}) {
     return _scheduler.run(() async {
       final profile = ref.read(profilesProvider).getProfile(sourceId);
       if (profile == null) {
@@ -300,7 +323,7 @@ class MountAction extends _$MountAction {
       } catch (error) {
         message = _messageOf(error) ?? compactError(error);
       }
-      final item = await _item(sourceId);
+      final item = await _item(sourceId, targetId);
       if (message != null) {
         return MountSourceRefresh(updated: false, item: item, message: message);
       }
@@ -331,7 +354,7 @@ class MountAction extends _$MountAction {
     });
   }
 
-  Future<MountSourceItem?> _item(int sourceId) async {
+  Future<MountSourceItem?> _item(int sourceId, int? targetId) async {
     final profile = ref.read(profilesProvider).getProfile(sourceId);
     if (profile == null) {
       return null;
@@ -342,9 +365,20 @@ class MountAction extends _$MountAction {
     } catch (_) {
       records = const {};
     }
+    _MountRelay? relay;
+    if (targetId != null) {
+      try {
+        relay = _relayOf(targetId, await readGroups(targetId));
+      } catch (error) {
+        commonPrint.log(
+          'mount groups unreadable: ${compactError(error)}',
+          logLevel: LogLevel.warning,
+        );
+      }
+    }
     return mountSourceItem(
       profile,
-      await _inspect(profile),
+      await _inspect(profile, relay),
       mounted: true,
       record: records[sourceId],
     );

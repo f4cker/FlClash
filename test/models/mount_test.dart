@@ -266,6 +266,35 @@ void main() {
         MountSourceState.tailscaleOnly,
       );
       expect(
+        stateOf(
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            relayExcluded: 2,
+          ),
+        ),
+        MountSourceState.relayOnly,
+      );
+      expect(
+        stateOf(
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            tailscaleExcluded: 1,
+            relayExcluded: 1,
+          ),
+        ),
+        MountSourceState.isolatedOnly,
+      );
+      expect(
+        stateOf(
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            count: 1,
+            relayExcluded: 1,
+          ),
+        ),
+        MountSourceState.nodes,
+      );
+      expect(
         stateOf(const MountSourceInspection(status: MountSourceStatus.nodes)),
         MountSourceState.empty,
       );
