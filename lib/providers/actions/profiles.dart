@@ -239,7 +239,10 @@ class ProfilesAction extends _$ProfilesAction {
         unsupported = true;
         return issue;
       }
-      final inspection = await _core.inspectMountSource(path);
+      final inspection = await _core.inspectMountSource(
+        path,
+        ageSecretKey: key,
+      );
       switch (inspection.status) {
         case MountSourceStatus.nodes:
           return null;

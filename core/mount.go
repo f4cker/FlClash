@@ -60,13 +60,25 @@ func mountProviderName(id int64) string {
 	return mountProviderPrefix + strconv.FormatInt(id, 10)
 }
 
-func handleInspectMountSource(params PathParams) MountSourceInspection {
-	return inspectMountSource(params.Path)
+type MountInspectSourceParams struct {
+	Path         string `json:"path"`
+	AgeSecretKey string `json:"age-secret-key,omitempty"`
+}
+
+func handleInspectMountSource(params MountInspectSourceParams) MountSourceInspection {
+	return inspectMountSource(params.Path, params.AgeSecretKey)
+}
+
+func ageKeys(secretKey string) []string {
+	if secretKey == "" {
+		return nil
+	}
+	return []string{secretKey}
 }
 
 // Mirrors NewProxiesParser for a mount provider, so a file that would not
 // load there is never counted as nodes here.
-func inspectMountSource(path string) MountSourceInspection {
+func inspectMountSource(path, ageSecretKey string) MountSourceInspection {
 	buf, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -74,7 +86,7 @@ func inspectMountSource(path string) MountSourceInspection {
 		}
 		return MountSourceInspection{Status: mountSourceReadError}
 	}
-	if buf, err = age.DecryptBytes(buf); err != nil {
+	if buf, err = age.DecryptBytes(buf, ageKeys(ageSecretKey)...); err != nil {
 		return MountSourceInspection{Status: mountSourceInvalid}
 	}
 	if len(bytes.TrimSpace(buf)) == 0 {
@@ -392,7 +404,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		if mappingValue(providers, name) != nil {
 			return nil, fmt.Errorf("proxy provider %s already exists", name)
 		}
-		inspection := inspectMountSource(source.Path)
+		inspection := inspectMountSource(source.Path, "")
 		nodes, renames := mountNodeNames(source, inspection.names, taken)
 		report.Renamed += len(renames)
 		report.Sources = append(report.Sources, MountSourceReport{
@@ -456,7 +468,7 @@ func cachedProxyNames(path, ageSecretKey string) []string {
 	if err != nil {
 		return nil
 	}
-	if buf, err = age.DecryptBytes(buf, ageSecretKey); err != nil {
+	if buf, err = age.DecryptBytes(buf, ageKeys(ageSecretKey)...); err != nil {
 		return nil
 	}
 	var document struct {

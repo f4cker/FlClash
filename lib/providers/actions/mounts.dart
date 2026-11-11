@@ -29,7 +29,7 @@ class MountAction extends _$MountAction {
       sources.add(
         mountSourceItem(
           profile,
-          await _inspect(profile.id),
+          await _inspect(profile),
           mounted: mounted.contains(profile.id),
           record: records[profile.id],
         ),
@@ -52,10 +52,11 @@ class MountAction extends _$MountAction {
     );
   }
 
-  Future<MountSourceInspection?> _inspect(int sourceId) async {
+  Future<MountSourceInspection?> _inspect(Profile source) async {
     try {
       return await _core.inspectMountSource(
-        await appPath.getProfilePath(sourceId.toString()),
+        await appPath.getProfilePath(source.id.toString()),
+        ageSecretKey: source.ageSecretKey,
       );
     } catch (error) {
       commonPrint.log(
@@ -353,7 +354,7 @@ class MountAction extends _$MountAction {
     }
     return mountSourceItem(
       profile,
-      await _inspect(sourceId),
+      await _inspect(profile),
       mounted: true,
       record: records[sourceId],
     );

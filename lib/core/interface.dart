@@ -165,11 +165,17 @@ abstract class CoreHandlerInterface {
     );
   }
 
-  Future<MountSourceInspection> inspectMountSource(String path) {
+  Future<MountSourceInspection> inspectMountSource(
+    String path, {
+    String ageSecretKey = '',
+  }) {
     return _query(
       CoreMethod.mountInspectSource,
       _model(MountSourceInspection.fromJson),
-      arguments: {'path': path},
+      arguments: {
+        'path': path,
+        if (ageSecretKey.isNotEmpty) 'age-secret-key': ageSecretKey,
+      },
     );
   }
 

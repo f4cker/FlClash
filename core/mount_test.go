@@ -65,14 +65,14 @@ func TestInspectMountSourceClassifiesWhatAProviderWouldLoad(t *testing.T) {
 		"share links":     {"trojan://secret@127.0.0.1:443#t1\n", MountSourceInspection{Status: mountSourceNodes, Count: 1, Listed: 1}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := inspectMountSource(writeMountFile(t, dir, strings.ReplaceAll(name, " ", "-")+".yaml", tc.content))
+			got := inspectMountSource(writeMountFile(t, dir, strings.ReplaceAll(name, " ", "-")+".yaml", tc.content), "")
 			got.names = nil
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("inspection = %+v, want %+v", got, tc.want)
 			}
 		})
 	}
-	if got := inspectMountSource(filepath.Join(dir, "absent.yaml")); got.Status != mountSourceMissing {
+	if got := inspectMountSource(filepath.Join(dir, "absent.yaml"), ""); got.Status != mountSourceMissing {
 		t.Errorf("absent file = %+v, want missing", got)
 	}
 }

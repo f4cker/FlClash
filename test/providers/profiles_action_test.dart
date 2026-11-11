@@ -263,7 +263,10 @@ void main() {
 
     void inspectsAs(MountSourceStatus status) {
       when(
-        () => core.inspectMountSource(any()),
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+        ),
       ).thenAnswer((_) async => MountSourceInspection(status: status));
     }
 
@@ -322,6 +325,27 @@ void main() {
       },
     );
 
+    test('a mounted source is inspected with its own age key', () async {
+      await mount();
+      inspectsAs(MountSourceStatus.nodes);
+
+      await container
+          .read(profilesActionProvider.notifier)
+          .fetchSource(
+            2,
+            (validate) => source
+                .copyWith(ageSecretKey: 'own-key')
+                .saveFile(
+                  Uint8List.fromList(utf8.encode('proxies: []')),
+                  validate: validate,
+                ),
+          );
+
+      verify(
+        () => core.inspectMountSource(any(), ageSecretKey: 'own-key'),
+      ).called(1);
+    });
+
     test('a failed download of a mounted source is recorded', () async {
       await mount();
 
@@ -341,7 +365,12 @@ void main() {
       expect(await save('{}'), isNotNull);
 
       expect(await cache(), '{}');
-      verifyNever(() => core.inspectMountSource(any()));
+      verifyNever(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+        ),
+      );
       expect(await testDatabase.mountsDao.statuses(), isEmpty);
     });
   });
