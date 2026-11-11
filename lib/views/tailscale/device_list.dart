@@ -432,17 +432,26 @@ class _DeviceRow extends StatelessWidget {
             ],
           ),
         ),
-        Flexible(
-          child: Text(
-            name ?? appLocalizations.tsNameMissing,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: name == null
-                ? muted
-                : AppTextStyle.subheadline.of(context, emphasized: true),
+        // The name keeps the line; the tag goes under it when both don't fit.
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                name ?? appLocalizations.tsNameMissing,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: name == null
+                    ? muted
+                    : AppTextStyle.subheadline.of(context, emphasized: true),
+              ),
+              if (peer.exitNodeOption)
+                _Tag(label: appLocalizations.tsExitCapable),
+            ],
           ),
         ),
-        if (peer.exitNodeOption) _Tag(label: appLocalizations.tsExitCapable),
       ],
     );
     final addressCell = Text(
@@ -496,17 +505,20 @@ class _Tag extends StatelessWidget {
     return Container(
       height: 20,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      alignment: Alignment.center,
       decoration: ShapeDecoration(
         color: DashboardColors.of(context).tone,
         shape: AppShape.all(AppCorner.full),
       ),
-      child: Text(
-        label,
-        maxLines: 1,
-        style: AppTextStyle.caption2
-            .of(context, emphasized: true)
-            .copyWith(color: context.colorScheme.onSurfaceVariant),
+      // As wide as its label, also in a Wrap that offers the full row.
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          label,
+          maxLines: 1,
+          style: AppTextStyle.caption2
+              .of(context, emphasized: true)
+              .copyWith(color: context.colorScheme.onSurfaceVariant),
+        ),
       ),
     );
   }
