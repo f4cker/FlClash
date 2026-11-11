@@ -134,6 +134,50 @@ func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
 	}
 }
 
+func TestMountKeepsEveryGroupThatReachesTailscaleOutOfItsTargets(t *testing.T) {
+	const profile = `proxies:
+  - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
+  - {name: ts-office, type: tailscale}
+proxy-groups:
+  - {name: Proxy, type: select, proxies: [base]}
+  - {name: Office, type: select, proxies: [ts-office, Proxy]}
+  - {name: Outer, type: url-test, proxies: [Office, base]}
+  - {name: Collects, type: select, include-all-proxies: true}
+  - {name: Filtered, type: select, include-all-proxies: true, exclude-type: "Tailscale|Wireguard"}
+rules:
+  - IP-CIDR,100.64.0.0/10,Office
+  - MATCH,Proxy
+`
+	target, err := inspectMountTarget(rootOf(t, profile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, group := range target.Groups {
+		got[group.Name] = group.Kind + "/" + group.Excluded
+	}
+	want := map[string]string{
+		"Proxy":    "candidate/",
+		"Office":   "excluded/tailscale",
+		"Outer":    "excluded/tailscale",
+		"Collects": "excluded/tailscale",
+		"Filtered": "candidate/",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("groups = %v, want %v", got, want)
+	}
+
+	home := withMountHome(t)
+	for _, chosen := range []string{"Office", "Outer"} {
+		setup := &MountSetup{Groups: []string{chosen}, Sources: []MountSource{{ID: 1, Path: writeMountFile(t, home, "1.yaml", mountSourceB)}}}
+		_, err := applyMountOverrides(rootOf(t, profile), setup)
+		var methodErr *MethodError
+		if !errors.As(err, &methodErr) || methodErr.Code != "mount_group_changed" {
+			t.Errorf("a stored choice of %s = %v, want it refused", chosen, err)
+		}
+	}
+}
+
 func TestMountGroupsThatCannotBeReadAreAnErrorNotFewerGroups(t *testing.T) {
 	home := withMountHome(t)
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)

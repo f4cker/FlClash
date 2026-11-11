@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"slices"
 	"strconv"
@@ -227,13 +228,14 @@ func inspectMountTarget(root *yaml.Node) (MountTarget, error) {
 		return MountTarget{}, err
 	}
 	target := MountTarget{Groups: []MountGroupInfo{}}
+	reach := tailscaleGroups(groups, proxyTypes)
 	for _, mapping := range groups {
-		target.Groups = append(target.Groups, mountGroupInfo(mapping, proxyTypes))
+		target.Groups = append(target.Groups, mountGroupInfo(mapping, reach[groupString(mapping, "name")]))
 	}
 	return target, nil
 }
 
-func mountGroupInfo(mapping map[string]any, proxyTypes map[string]string) MountGroupInfo {
+func mountGroupInfo(mapping map[string]any, reachesTailscale bool) MountGroupInfo {
 	kind := strings.ToLower(groupString(mapping, "type"))
 	info := MountGroupInfo{
 		Name:          groupString(mapping, "name"),
@@ -265,7 +267,7 @@ func mountGroupInfo(mapping map[string]any, proxyTypes map[string]string) MountG
 		}
 	case info.Hidden:
 		info.Kind, info.Excluded = mountGroupExcluded, "hidden"
-	case tailscaleOnlyGroup(mapping, proxyTypes):
+	case reachesTailscale:
 		info.Kind, info.Excluded = mountGroupExcluded, "tailscale"
 	default:
 		info.Kind = mountGroupCandidate
@@ -273,18 +275,28 @@ func mountGroupInfo(mapping map[string]any, proxyTypes map[string]string) MountG
 	return info
 }
 
-// A group whose own members are all Tailscale nodes is a dedicated route.
-func tailscaleOnlyGroup(mapping map[string]any, proxyTypes map[string]string) bool {
-	members := groupList(mapping, "proxies")
-	if len(members) == 0 || len(groupList(mapping, "use")) > 0 || groupFlag(mapping, "include-all-proxies") {
-		return false
+// Every rule that reaches a Tailscale node goes through one of these groups.
+func tailscaleGroups(groups []map[string]any, proxyTypes map[string]string) map[string]bool {
+	hasTailscale := slices.Contains(slices.Collect(maps.Values(proxyTypes)), "tailscale")
+	reach := map[string]bool{}
+	holds := func(group map[string]any) bool {
+		excluded := strings.Contains(strings.ToLower(groupString(group, "exclude-type")), "tailscale")
+		if hasTailscale && !excluded && (groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies")) {
+			return true
+		}
+		return slices.ContainsFunc(groupList(group, "proxies"), func(member string) bool {
+			return reach[member] || !excluded && proxyTypes[member] == "tailscale"
+		})
 	}
-	for _, member := range members {
-		if proxyTypes[member] != "tailscale" {
-			return false
+	for changed := true; changed; {
+		changed = false
+		for _, group := range groups {
+			if name := groupString(group, "name"); !reach[name] && holds(group) {
+				reach[name], changed = true, true
+			}
 		}
 	}
-	return true
+	return reach
 }
 
 type MountNode struct {
@@ -462,9 +474,10 @@ func mountProviderNode(path string, renames []MountNode) (*yaml.Node, error) {
 func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, proxyTypes map[string]string, chosen []string, providers []string) ([]MountGroupReport, error) {
 	reports := []MountGroupReport{}
 	found := map[string]bool{}
+	reach := tailscaleGroups(mappings, proxyTypes)
 	for i, mapping := range mappings {
 		node := resolveAlias(groupsNode.Content[i])
-		info := mountGroupInfo(mapping, proxyTypes)
+		info := mountGroupInfo(mapping, reach[groupString(mapping, "name")])
 		via := ""
 		switch {
 		case info.Kind == mountGroupAuto:
