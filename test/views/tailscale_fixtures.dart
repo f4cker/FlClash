@@ -1,0 +1,160 @@
+import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/models/models.dart';
+
+/// Made-up identities only; nothing here is a real account or address.
+final tsNow = DateTime.utc(2026, 11, 11, 4);
+
+const tsProfile = Profile(
+  id: 42,
+  label: 'Home',
+  autoUpdateDuration: Duration.zero,
+);
+
+const tsControl = 'https://controlplane.tailscale.com';
+
+const tsSignedOutNode = TailscaleNode(
+  profileId: 42,
+  name: 'ts-home',
+  generation: 3,
+  controlUrl: tsControl,
+  hostname: 'flclash-mac',
+  stateDirMode: TailscaleStateDirMode.derived,
+  overridable: true,
+  settings: TailscaleSettings(
+    acceptRoutes: TailscaleAcceptRoutesSetting(
+      value: true,
+      source: TailscaleSettingSource.subscription,
+    ),
+  ),
+);
+
+final tsConnectedNode = tsSignedOutNode.copyWith(
+  started: true,
+  hasIdentity: true,
+  backendState: TailscaleBackendState.running,
+);
+
+const tsMe = TailscaleUser(
+  id: '1001',
+  loginName: 'pat@example.test',
+  displayName: 'Pat Example',
+);
+
+const tsSam = TailscaleUser(
+  id: '1002',
+  loginName: 'sam@example.test',
+  displayName: 'Sam',
+);
+
+const tsAlex = TailscaleUser(
+  id: '1003',
+  loginName: 'alex@example.test',
+  displayName: 'Alex',
+);
+
+TailscalePeer _peer(
+  String id,
+  String host,
+  String ip,
+  String os,
+  String userId, {
+  bool online = true,
+  bool exit = false,
+  String? sharer,
+  List<String> tags = const [],
+}) => TailscalePeer(
+  id: id,
+  hostName: host,
+  dnsName: '$host.example-net.test.',
+  os: os,
+  userId: userId,
+  addresses: [ip, 'fd7a:115c:a1e0::${id.hashCode.toRadixString(16)}'],
+  online: online,
+  exitNodeOption: exit,
+  altSharerUserId: sharer,
+  tags: tags,
+);
+
+List<TailscalePeer> tsPeers({bool many = false}) => [
+  _peer('n1', 'studio-mac', '100.94.68.92', 'macOS', '1002'),
+  _peer('n2', 'nas-sg', '100.88.12.4', 'linux', '1002', exit: true),
+  _peer('n3', 'laptop-pat', '100.101.4.22', 'macOS', '1001'),
+  _peer(
+    'n4',
+    'office-hk',
+    '100.72.40.9',
+    'linux',
+    '1003',
+    exit: true,
+    online: false,
+    sharer: '1003',
+  ),
+  if (many) ...[
+    _peer('n5', 'phone-pat', '100.90.7.31', 'iOS', '1001'),
+    _peer('n6', 'build-box', '100.70.1.2', 'linux', '', tags: ['tag:ci']),
+    _peer('n7', 'printer', '100.70.1.3', '', ''),
+    _peer('n8', 'tv-room', '100.70.1.4', 'android', '1002', online: false),
+  ],
+];
+
+TailscaleStatus tsConnectedStatus({
+  TailscaleNode? node,
+  DateTime? keyExpiry,
+  bool manyPeers = false,
+}) => TailscaleStatus(
+  node: node ?? tsConnectedNode,
+  haveNodeKey: true,
+  self: TailscalePeer(
+    id: 'self',
+    hostName: 'flclash-mac',
+    addresses: const ['100.101.7.58', 'fd7a:115c:a1e0::6b01:73a'],
+    userId: tsMe.id,
+    online: true,
+    keyExpiry: keyExpiry,
+  ),
+  loginUser: tsMe,
+  tailnet: const TailscaleTailnet(name: 'example-net.test'),
+  users: {tsMe.id: tsMe, tsSam.id: tsSam, tsAlex.id: tsAlex},
+  peers: tsPeers(many: manyPeers),
+  prefs: const TailscalePrefs(acceptRoutes: true),
+);
+
+TailscaleNode tsLegacyNode({
+  bool authKey = false,
+  TailscaleLegacyEligibility eligibility = TailscaleLegacyEligibility.eligible,
+  String? token = 'offer-1',
+}) => tsSignedOutNode.copyWith(
+  authKey: authKey,
+  warnings: const [tailscaleLegacySharedStateWarning],
+  legacy: TailscaleLegacyIdentity(
+    loginName: 'legacy@example.test',
+    displayName: 'Legacy User',
+    controlUrl: tsControl,
+    fingerprint: 'fp-1',
+    eligibility: eligibility,
+    offerToken: token,
+  ),
+);
+
+TailscaleMigrateResult tsMigrateResult(
+  TailscaleMigrateOutcome outcome, {
+  bool targetUntouched = false,
+  bool archiveIntact = true,
+  String? error,
+  TailscaleNode? node,
+}) => TailscaleMigrateResult(
+  generation: 3,
+  outcome: outcome,
+  migration: const TailscaleLegacyMigration(
+    fingerprint: 'fp-1',
+    profileId: 42,
+    name: 'ts-home',
+    controlUrl: tsControl,
+  ),
+  node: node ?? tsLegacyNode(),
+  targetUntouched: targetUntouched,
+  archiveIntact: archiveIntact,
+  error: error == null
+      ? null
+      : TailscaleError(code: 'tailscale_migrate_failed', message: error),
+);
