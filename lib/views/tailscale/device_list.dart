@@ -183,12 +183,6 @@ class TailscaleDeviceSection extends StatelessWidget {
               ],
             ),
           ),
-        Text(
-          appLocalizations.tsDevicesScope,
-          style: AppTextStyle.footnote
-              .of(context)
-              .copyWith(color: colorScheme.onSurfaceVariant),
-        ),
       ],
     );
     final Widget body;
@@ -221,20 +215,36 @@ class TailscaleDeviceSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 12,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          spacing: 16,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 6,
           children: [
-            Expanded(child: header),
-            if (showSearch)
-              SizedBox(
-                width: 220,
-                child: SearchField(
-                  controller: searchController,
-                  hintText: appLocalizations.tsSearchHint,
-                  onChanged: onQueryChanged,
-                ),
-              ),
+            // Centred on the title and owner chips, not on the scope line.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              spacing: 16,
+              children: [
+                Expanded(child: header),
+                if (showSearch)
+                  SizedBox(
+                    width: 220,
+                    child: SearchField(
+                      controller: searchController,
+                      height: 34,
+                      fill: DashboardColors.of(context).card,
+                      style: AppTextStyle.footnote.of(context),
+                      hintText: appLocalizations.tsSearchHint,
+                      onChanged: onQueryChanged,
+                    ),
+                  ),
+              ],
+            ),
+            Text(
+              appLocalizations.tsDevicesScope,
+              style: AppTextStyle.footnote
+                  .of(context)
+                  .copyWith(color: colorScheme.onSurfaceVariant),
+            ),
           ],
         ),
         if (status != null && readFailed)
