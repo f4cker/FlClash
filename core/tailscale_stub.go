@@ -11,6 +11,8 @@ func tailscaleGenerationMark() uint64 { return 0 }
 
 func closeTailscaleUpTo(uint64) {}
 
+func markTailscaleReplaced(uint64) {}
+
 func handleTailscaleNodes() []any { return []any{} }
 
 func handleTailscaleStatus(TailscaleNodeParams) (any, error) { return nil, errTailscaleUnsupported }

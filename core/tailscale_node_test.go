@@ -86,15 +86,116 @@ func TestTailscaleCallsAreBoundToAGeneration(t *testing.T) {
 	}
 }
 
-func TestTailscaleSetPrefsRefusesProviderNodes(t *testing.T) {
+func newProviderTailscale(t *testing.T, provider string, option outbound.TailscaleOption) *outbound.Tailscale {
+	t.Helper()
+	option.ProviderName = provider
+	option.AuthKey = "tskey-test"
+	node, err := outbound.NewTailscale(option)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = node.Close() })
+	return node
+}
+
+func TestTailscaleProviderNodeTakesItsOverride(t *testing.T) {
 	resetTailscaleSetup(t)
 	constant.SetHomeDir(t.TempDir())
-	setTailscaleSetup(&TailscaleSetup{ProfileID: 1})
-	node := newGatedTailscale(t, "provided")
+	exitNode, acceptRoutes := "100.64.0.5", false
+	setTailscaleSetup(&TailscaleSetup{
+		ProfileID: 1,
+		Nodes: []TailscaleNodeSetup{
+			{Name: "provided", ControlURL: "https://login.tailscale.com/", ExitNode: &exitNode, AcceptRoutes: &acceptRoutes},
+		},
+	})
+	configuredRoutes := true
+	node := newProviderTailscale(t, "sub", outbound.TailscaleOption{Name: "provided", AcceptRoutes: &configuredRoutes})
+	if option := node.Option(); option.ExitNode != exitNode || option.AcceptRoutes == nil || *option.AcceptRoutes {
+		t.Fatalf("option = %+v, want the saved settings", option)
+	}
+	described := describeTailscale(node, []*outbound.Tailscale{node})
+	if !described.Overridable ||
+		described.Settings.ExitNode != (TailscaleExitNodeSetting{Value: exitNode, Source: tailscaleSourceOverride}) ||
+		described.Settings.AcceptRoutes != (TailscaleAcceptRoutesSetting{Value: false, Source: tailscaleSourceOverride}) {
+		t.Fatalf("described = %+v", described)
+	}
+
+	plain := newProviderTailscale(t, "sub", outbound.TailscaleOption{Name: "plain", ExitNode: "auto:any", AcceptRoutes: &configuredRoutes})
+	settings := describeTailscale(plain, nil).Settings
+	if settings.ExitNode != (TailscaleExitNodeSetting{Value: "auto:any", Source: tailscaleSourceProvider}) ||
+		settings.AcceptRoutes != (TailscaleAcceptRoutesSetting{Value: true, Source: tailscaleSourceProvider}) {
+		t.Fatalf("settings without an override = %+v", settings)
+	}
+
+	noExit := ""
+	result, err := handleTailscaleSetPrefs(TailscalePrefsParams{Name: "plain", Generation: plain.Generation(), ExitNode: &noExit})
+	if err != nil || result.Outcome != tailscaleOutcomeNotRunning {
+		t.Fatalf("setPrefs of a provider node = %+v, %v", result, err)
+	}
+	if settings := describeTailscale(plain, nil).Settings; settings.ExitNode != (TailscaleExitNodeSetting{Source: tailscaleSourceOverride}) {
+		t.Fatalf("exit node after setPrefs = %+v", settings.ExitNode)
+	}
+	updated := newProviderTailscale(t, "sub", outbound.TailscaleOption{Name: "plain", ExitNode: "auto:any"})
+	if updated.Option().ExitNode != "" {
+		t.Fatal("a provider update dropped the exit node chosen in the panel")
+	}
+}
+
+func TestTailscaleSharedKeyTakesNoOverride(t *testing.T) {
+	resetTailscaleSetup(t)
+	constant.SetHomeDir(t.TempDir())
 	acceptRoutes := true
-	_, err := handleTailscaleSetPrefs(TailscalePrefsParams{Name: "provided", Generation: node.Generation(), AcceptRoutes: &acceptRoutes})
-	if !errors.Is(err, errTailscaleNotOverridable) {
-		t.Fatalf("setPrefs of a provider node = %v", err)
+	setTailscaleSetup(&TailscaleSetup{
+		ProfileID: 1,
+		Nodes:     []TailscaleNodeSetup{{Name: "dup", AcceptRoutes: &acceptRoutes}},
+	})
+	first := newProviderTailscale(t, "one", outbound.TailscaleOption{Name: "dup"})
+	second := newProviderTailscale(t, "two", outbound.TailscaleOption{Name: "dup"})
+	if second.Option().AcceptRoutes != nil {
+		t.Fatal("a node sharing its key took the override")
+	}
+	for _, node := range []*outbound.Tailscale{first, second} {
+		if tailscaleOverridable(node) {
+			t.Fatalf("%s/%s is overridable beside a node of its key", node.Option().ProviderName, node.Name())
+		}
+	}
+	_, err := handleTailscaleSetPrefs(TailscalePrefsParams{Name: "dup", Generation: second.Generation(), AcceptRoutes: &acceptRoutes})
+	if !errors.Is(err, errTailscaleOverrideAmbiguous) {
+		t.Fatalf("setPrefs of a shared node = %v", err)
+	}
+	elsewhere := newProviderTailscale(t, "two", outbound.TailscaleOption{Name: "dup", ControlURL: "https://hs.example.com"})
+	if !tailscaleOverridable(elsewhere) {
+		t.Fatal("a node of another control server counted as shared")
+	}
+	if settings := describeTailscale(first, nil).Settings; settings.AcceptRoutes != (TailscaleAcceptRoutesSetting{Value: true, Source: tailscaleSourceOverride}) {
+		t.Fatalf("the node built with the override = %+v", settings.AcceptRoutes)
+	}
+	if settings := describeTailscale(second, nil).Settings; settings.AcceptRoutes.Source != tailscaleSourceDefault {
+		t.Fatalf("the node built without it = %+v", settings.AcceptRoutes)
+	}
+
+	markTailscaleReplaced(second.Generation())
+	t.Cleanup(func() { markTailscaleReplaced(0) })
+	next := newProviderTailscale(t, "three", outbound.TailscaleOption{Name: "dup"})
+	if next.Option().AcceptRoutes == nil || !tailscaleOverridable(next) {
+		t.Fatal("a node of the config being replaced counted as shared")
+	}
+}
+
+func TestTailscaleProxiesSectionNodeIsLeftToTheDocument(t *testing.T) {
+	resetTailscaleSetup(t)
+	constant.SetHomeDir(t.TempDir())
+	acceptRoutes := true
+	setTailscaleSetup(&TailscaleSetup{
+		ProfileID: 1,
+		Nodes:     []TailscaleNodeSetup{{Name: "listed", AcceptRoutes: &acceptRoutes}},
+	})
+	tailscaleMu.Lock()
+	tailscaleConfigs = map[string]tailscaleConfiguredValues{"listed": {}}
+	tailscaleMu.Unlock()
+	node := newProviderTailscale(t, "", outbound.TailscaleOption{Name: "listed"})
+	if node.Option().AcceptRoutes != nil {
+		t.Fatal("the hook wrote an override the merged document owns")
 	}
 }
 

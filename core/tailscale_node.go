@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/metacubex/mihomo/adapter/outbound"
@@ -29,6 +30,85 @@ func init() {
 	outbound.TailscaleStateDirHook = tailscaleStateDir
 	outbound.TailscaleStartGate = tailscaleStartGate
 	outbound.TailscaleStateHook = onTailscaleState
+	outbound.TailscaleOptionHook = adjustTailscaleOption
+}
+
+var tailscaleReplacing atomic.Uint64
+
+func markTailscaleReplaced(mark uint64) { tailscaleReplacing.Store(mark) }
+
+// A node from a proxy provider is built outside the merged document, so its
+// saved settings reach it here. One whose name and control server a node of
+// another source shares gets none: a record cannot tell the two apart.
+func adjustTailscaleOption(option *outbound.TailscaleOption) {
+	if strings.Contains(option.Name, validationNameSuffix) {
+		return
+	}
+	if option.ProviderName == "" && tailscaleInProxies(option.Name) {
+		return
+	}
+	if tailscaleKeyShared(*option, nil) {
+		return
+	}
+	node, _ := tailscaleEffectiveNode(option.Name, option.ControlURL)
+	if node.ExitNode != nil {
+		option.ExitNode = *node.ExitNode
+	}
+	if node.AcceptRoutes != nil {
+		acceptRoutes := *node.AcceptRoutes
+		option.AcceptRoutes = &acceptRoutes
+	}
+}
+
+func tailscaleKeyShared(option outbound.TailscaleOption, self *outbound.Tailscale) bool {
+	controlURL := normalizeControlURL(option.ControlURL)
+	replacing := tailscaleReplacing.Load()
+	return slices.ContainsFunc(outbound.TailscaleInstances(), func(other *outbound.Tailscale) bool {
+		if other == self || other.Name() != option.Name || other.Generation() <= replacing || other.Closed() {
+			return false
+		}
+		otherOption := other.Option()
+		return otherOption.ProviderName != option.ProviderName && normalizeControlURL(otherOption.ControlURL) == controlURL
+	})
+}
+
+func tailscaleOverridable(t *outbound.Tailscale) bool {
+	return !tailscaleKeyShared(t.Option(), t)
+}
+
+// A node another one shares its key with reports only what it was built with.
+func tailscaleNodeSettings(t *outbound.Tailscale, overridable bool) TailscaleSettings {
+	option := t.Option()
+	tailscaleMu.Lock()
+	defer tailscaleMu.Unlock()
+	source := tailscaleConfigSourceLocked()
+	configured, inProxies := tailscaleConfigs[t.Name()]
+	if option.ProviderName != "" || !inProxies {
+		written := t.ConfiguredOption()
+		configured = tailscaleConfiguredValues{acceptRoutes: written.AcceptRoutes}
+		if written.ExitNode != "" {
+			configured.exitNode = &written.ExitNode
+		}
+		if option.ProviderName != "" {
+			source = tailscaleSourceProvider
+		}
+	}
+	var node TailscaleNodeSetup
+	if overridable {
+		node, _ = tailscaleEffectiveNodeLocked(t.Name(), option.ControlURL)
+	} else {
+		configuredExit := ""
+		if configured.exitNode != nil {
+			configuredExit = *configured.exitNode
+		}
+		if option.ExitNode != configuredExit {
+			node.ExitNode = &option.ExitNode
+		}
+		if routes := option.AcceptRoutes; routes != nil && (configured.acceptRoutes == nil || *configured.acceptRoutes != *routes) {
+			node.AcceptRoutes = routes
+		}
+	}
+	return tailscaleSettingsOver(node, configured, source)
 }
 
 // Traffic, DNS and delay tests never log a node back in: a node the user
@@ -112,7 +192,10 @@ func onTailscaleState(t *outbound.Tailscale, state string, authURLReady bool) {
 		safeGo("tailscale reapply prefs", func() {
 			defer finishTailscaleReapply(t)
 			option := t.Option()
-			node, _ := tailscaleEffectiveNode(t.Name(), option.ControlURL)
+			var node TailscaleNodeSetup
+			if tailscaleOverridable(t) {
+				node, _ = tailscaleEffectiveNode(t.Name(), option.ControlURL)
+			}
 			exitNode := node.ExitNode
 			if exitNode == nil && option.ExitNode != "" {
 				exitNode = &option.ExitNode
@@ -216,6 +299,7 @@ func describeTailscale(t *outbound.Tailscale, nodes []*outbound.Tailscale) Tails
 	case !strings.Contains(option.StateDir, tailscaleNodesDir):
 		mode = "shared"
 	}
+	overridable := tailscaleOverridable(t)
 	node := TailscaleNode{
 		ProfileID:    tailscaleProfileID(),
 		Name:         t.Name(),
@@ -229,9 +313,9 @@ func describeTailscale(t *outbound.Tailscale, nodes []*outbound.Tailscale) Tails
 		HasIdentity:  tailscaleStateHasIdentity(option.StateDir),
 		AuthKey:      option.AuthKey != "",
 		Ephemeral:    option.Ephemeral,
-		Overridable:  tailscaleOverridable(t.Name()),
+		Overridable:  overridable,
 		StartError:   tailscaleStartError(t.LastStartError()),
-		Settings:     tailscaleSettings(t.Name(), option.ControlURL),
+		Settings:     tailscaleNodeSettings(t, overridable),
 		Warnings:     []string{},
 	}
 	if !t.ExplicitStateDir() {
@@ -607,8 +691,8 @@ func handleTailscaleSetPrefs(params TailscalePrefsParams) (*TailscalePrefsResult
 		return nil, err
 	}
 	defer lockTailscaleNode(t.Name())()
-	if !tailscaleOverridable(t.Name()) {
-		return nil, errTailscaleNotOverridable
+	if !tailscaleOverridable(t) {
+		return nil, errTailscaleOverrideAmbiguous
 	}
 	option := t.Option()
 	pinTailscale(t.Name(), option.ControlURL, func(pin *tailscalePin) {

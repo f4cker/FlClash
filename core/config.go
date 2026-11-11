@@ -147,6 +147,7 @@ func applyConfig(params *SetupParams) error {
 	applyOptions(params.Options)
 	setTailscaleSetup(params.Tailscale)
 	replaced := tailscaleGenerationMark()
+	markTailscaleReplaced(replaced)
 	cfg, err := loadSetupConfig(params)
 	if err != nil {
 		// The fallback is what keeps the listeners serving while the host

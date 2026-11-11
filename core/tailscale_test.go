@@ -145,8 +145,8 @@ func TestTailscaleOverridesMergeAfterProxies(t *testing.T) {
 	if settings.ExitNode.Source != tailscaleSourceDefault || settings.AcceptRoutes.Source != tailscaleSourceOverride {
 		t.Fatalf("b settings = %+v", settings)
 	}
-	if !tailscaleOverridable("a") || tailscaleOverridable("from-provider") {
-		t.Fatal("only proxies of the proxies section take overrides")
+	if !tailscaleInProxies("a") || tailscaleInProxies("from-provider") {
+		t.Fatal("a proxy of a provider counted as one of the proxies section")
 	}
 
 	built, err := mergeProfileBase(&SetupBase{Path: path, Overlay: `{}`}, false)

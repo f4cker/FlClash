@@ -31,6 +31,7 @@ const (
 	tailscaleSourceOverride     = "override"
 	tailscaleSourceProfile      = "profile"
 	tailscaleSourceSubscription = "subscription"
+	tailscaleSourceProvider     = "provider"
 	tailscaleSourceDefault      = "default"
 
 	tailscaleWarningLegacyState = "legacy-shared-state-present"
@@ -58,9 +59,9 @@ var (
 		Code:    "tailscale_applying_prefs",
 		Message: "tailscale node is applying its saved settings",
 	}
-	errTailscaleNotOverridable = &MethodError{
-		Code:    "tailscale_not_overridable",
-		Message: "tailscale node comes from a proxy provider; its settings cannot be saved",
+	errTailscaleOverrideAmbiguous = &MethodError{
+		Code:    "tailscale_override_ambiguous",
+		Message: "another tailscale node of this name and control server is in the running config",
 	}
 	errTailscaleLegacyNotFound = &MethodError{
 		Code:    "tailscale_legacy_not_found",
@@ -379,24 +380,31 @@ type TailscaleSettings struct {
 	AcceptRoutes TailscaleAcceptRoutesSetting `json:"accept-routes"`
 }
 
-// Overrides reach only the proxies section; a node from a proxy provider runs
-// with what its provider says.
-func tailscaleOverridable(name string) bool {
+// Whether the merged document carried the node in its proxies section, where
+// its overrides were already written.
+func tailscaleInProxies(name string) bool {
 	tailscaleMu.Lock()
 	defer tailscaleMu.Unlock()
 	_, ok := tailscaleConfigs[name]
 	return ok
 }
 
+func tailscaleConfigSourceLocked() string {
+	if tailscaleSetup != nil && tailscaleSetup.ConfigSource == tailscaleSourceSubscription {
+		return tailscaleSourceSubscription
+	}
+	return tailscaleSourceProfile
+}
+
 func tailscaleSettings(name, controlURL string) TailscaleSettings {
 	tailscaleMu.Lock()
 	defer tailscaleMu.Unlock()
 	node, _ := tailscaleEffectiveNodeLocked(name, controlURL)
-	configured := tailscaleConfigs[name]
-	configuredSource := tailscaleSourceProfile
-	if tailscaleSetup != nil && tailscaleSetup.ConfigSource == tailscaleSourceSubscription {
-		configuredSource = tailscaleSourceSubscription
-	}
+	return tailscaleSettingsOver(node, tailscaleConfigs[name], tailscaleConfigSourceLocked())
+}
+
+// Per field: the override, else what the node's source wrote, else the default.
+func tailscaleSettingsOver(node TailscaleNodeSetup, configured tailscaleConfiguredValues, configuredSource string) TailscaleSettings {
 	settings := TailscaleSettings{
 		ExitNode:     TailscaleExitNodeSetting{Source: tailscaleSourceDefault},
 		AcceptRoutes: TailscaleAcceptRoutesSetting{Source: tailscaleSourceDefault},
