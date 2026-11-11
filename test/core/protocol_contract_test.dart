@@ -564,6 +564,7 @@ void main() {
           'attached': false,
         },
       ],
+      'managed-unknown': false,
     });
   });
 

@@ -313,6 +313,27 @@ void main() {
       await teardownView(tester);
     });
 
+    testWidgets('a draft signed in before a restart waits for 重试接入', (
+      tester,
+    ) async {
+      await seed(const [TailscaleManagedRecord(id: 'm1', profileId: 42)]);
+      final draft = tsManagedNode('m1', attached: false);
+      serve([draft], tsConnectedStatus(node: draft));
+      when(
+        () => core.getTailscaleRoutes(42),
+      ).thenAnswer((_) async => const TailscaleRoutes(profileId: 42));
+      await pumpPanel(tester);
+      await settle(tester);
+
+      expect(find.text('重试接入'), findsOneWidget);
+      expect(
+        container.read(tailscaleManagedRecordsProvider)!.single.attached,
+        isFalse,
+      );
+      verifyNever(() => core.startTailscale(any()));
+      await teardownView(tester);
+    });
+
     testWidgets('no node: the tap is what adds an account, then signs in', (
       tester,
     ) async {

@@ -229,7 +229,7 @@ TailscaleSetup? tailscaleSetup(Ref ref) {
   }
   final records = ref.watch(tailscaleNodeRecordsProvider);
   final legacyMigration = ref.watch(tailscaleLegacyMigratedProvider);
-  final managed = ref.watch(tailscaleManagedRecordsProvider) ?? const [];
+  final managed = ref.watch(tailscaleManagedRecordsProvider);
   return TailscaleSetup(
     legacyMigration: legacyMigration,
     profileId: profile.id,
@@ -241,9 +241,10 @@ TailscaleSetup? tailscaleSetup(Ref ref) {
         if (record.profileId == profile.id) record.setup,
     ],
     managed: [
-      for (final record in managed)
+      for (final record in managed ?? const <TailscaleManagedRecord>[])
         if (record.profileId == profile.id) record.setup,
     ],
+    managedUnknown: managed == null,
   );
 }
 

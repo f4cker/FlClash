@@ -360,7 +360,20 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
       return;
     }
     final notice = await _action.removeManaged(node);
-    if (notice == null) {
+    final gone =
+        ref
+            .read(tailscaleManagedRecordsProvider.notifier)
+            .recordOf(node.profileId, node.managedId) ==
+        null;
+    if (notice != null && gone) {
+      if (mounted) {
+        setState(() => _selected = null);
+      }
+      dialogs.showBanner(
+        currentAppLocalizations.tsRemoveIncomplete,
+        level: BannerLevel.error,
+      );
+    } else if (notice == null) {
       if (mounted) {
         setState(() => _selected = null);
       }
@@ -728,26 +741,33 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     final routes = ref.watch(tailscaleRoutesReportProvider).value;
     final account = _accountLabel(node, status);
     final duplicate = node.managed ? _action.duplicateOf(node, nodes) : null;
-    if (node.managed &&
-        phase == TailscalePhase.connected &&
+    final awaitingAttach =
+        node.managed &&
         !node.attached &&
         managedPanel.attach == TailscaleAttachState.none &&
         managedRecord != null &&
-        !managedRecord.removing) {
+        !managedRecord.removing;
+    if (awaitingAttach &&
+        managedPanel.signInTapped &&
+        phase == TailscalePhase.connected) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _action.attachManaged(node, nodes);
         }
       });
+    } else if (awaitingAttach &&
+        !managedPanel.signInTapped &&
+        node.hasIdentity &&
+        !node.loggedOut) {
+      // Signed in before this run and never attached: only a tap attaches.
+      managedPanel = managedPanel.copyWith(attach: TailscaleAttachState.failed);
     }
     final managedView = node.managed
         ? TailscaleManagedCardView(
             panel: managedPanel,
             onRetryAttach: () => _action.attachManaged(node, nodes),
             onRecheck: () => _action.recheckManaged(node),
-            onViewExisting: duplicate == null
-                ? null
-                : () => _select(duplicate.key),
+            onViewExisting: duplicate == null ? null : () => _select(duplicate),
           )
         : null;
     final actions = TailscaleCardActions(

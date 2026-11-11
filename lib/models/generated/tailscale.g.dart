@@ -180,6 +180,7 @@ _TailscaleAccount _$TailscaleAccountFromJson(Map<String, dynamic> json) =>
       loginName: json['login-name'] as String? ?? '',
       displayName: json['display-name'] as String? ?? '',
       tailnet: json['tailnet'] as String? ?? '',
+      tailnetId: json['tailnet-id'] as String? ?? '',
       controlUrl: json['control-url'] as String? ?? '',
     );
 
@@ -189,6 +190,7 @@ Map<String, dynamic> _$TailscaleAccountToJson(_TailscaleAccount instance) =>
       'login-name': instance.loginName,
       'display-name': instance.displayName,
       'tailnet': instance.tailnet,
+      'tailnet-id': instance.tailnetId,
       'control-url': instance.controlUrl,
     };
 
@@ -634,6 +636,7 @@ _TailscaleManagedRecord _$TailscaleManagedRecordFromJson(
 ) => _TailscaleManagedRecord(
   id: json['id'] as String,
   profileId: (json['profile-id'] as num).toInt(),
+  name: json['name'] as String? ?? '',
   controlUrl: json['control-url'] as String? ?? '',
   exitNode: json['exit-node'] as String?,
   exitNodeName: json['exit-node-name'] as String?,
@@ -641,6 +644,9 @@ _TailscaleManagedRecord _$TailscaleManagedRecordFromJson(
   loggedOut: json['logged-out'] as bool? ?? false,
   attached: json['attached'] as bool? ?? false,
   removing: json['removing'] as bool? ?? false,
+  account: json['account'] == null
+      ? null
+      : TailscaleAccount.fromJson(json['account'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$TailscaleManagedRecordToJson(
@@ -648,6 +654,7 @@ Map<String, dynamic> _$TailscaleManagedRecordToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'profile-id': instance.profileId,
+  'name': instance.name,
   'control-url': instance.controlUrl,
   'exit-node': ?instance.exitNode,
   'exit-node-name': ?instance.exitNodeName,
@@ -655,6 +662,7 @@ Map<String, dynamic> _$TailscaleManagedRecordToJson(
   'logged-out': instance.loggedOut,
   'attached': instance.attached,
   'removing': instance.removing,
+  'account': instance.account,
 };
 
 _TailscaleManagedSetup _$TailscaleManagedSetupFromJson(
@@ -708,6 +716,7 @@ _TailscaleSetup _$TailscaleSetupFromJson(Map<String, dynamic> json) =>
               )
               .toList() ??
           const [],
+      managedUnknown: json['managed-unknown'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$TailscaleSetupToJson(_TailscaleSetup instance) =>
@@ -717,6 +726,7 @@ Map<String, dynamic> _$TailscaleSetupToJson(_TailscaleSetup instance) =>
       'nodes': instance.nodes,
       'legacy-migration': ?instance.legacyMigration,
       'managed': instance.managed,
+      'managed-unknown': instance.managedUnknown,
     };
 
 _TailscaleRouteTarget _$TailscaleRouteTargetFromJson(

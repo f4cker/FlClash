@@ -147,6 +147,9 @@ abstract class TailscaleAccount with _$TailscaleAccount {
     @JsonKey(name: 'login-name') @Default('') String loginName,
     @JsonKey(name: 'display-name') @Default('') String displayName,
     @Default('') String tailnet,
+
+    /// The network's domain, which a rename of [tailnet] leaves alone.
+    @JsonKey(name: 'tailnet-id') @Default('') String tailnetId,
     @JsonKey(name: 'control-url') @Default('') String controlUrl,
   }) = _TailscaleAccount;
 
@@ -156,8 +159,10 @@ abstract class TailscaleAccount with _$TailscaleAccount {
   bool sameAs(TailscaleAccount other) =>
       userId.isNotEmpty &&
       userId == other.userId &&
-      tailnet == other.tailnet &&
-      controlUrl == other.controlUrl;
+      controlUrl == other.controlUrl &&
+      (tailnetId.isNotEmpty && other.tailnetId.isNotEmpty
+          ? tailnetId == other.tailnetId
+          : tailnet == other.tailnet);
 }
 
 /// A node as the Core ran it when it was read: an action on a later instance
@@ -433,6 +438,9 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
   const factory TailscaleManagedRecord({
     required String id,
     @JsonKey(name: 'profile-id') required int profileId,
+
+    /// The node's name, kept so it never moves to another account.
+    @Default('') String name,
     @JsonKey(name: 'control-url') @Default('') String controlUrl,
     @JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,
     @JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,
@@ -443,6 +451,10 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
     /// A removal was started and its outcome is not known yet; it blocks a
     /// new sign-in, a second removal and deleting the profile.
     @Default(false) bool removing,
+
+    /// The identity it was attached with, so a signed-out entry still counts
+    /// against a second sign-in of the same account.
+    TailscaleAccount? account,
   }) = _TailscaleManagedRecord;
 
   factory TailscaleManagedRecord.fromJson(Map<String, Object?> json) =>
@@ -452,6 +464,7 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
 
   TailscaleManagedSetup get setup => TailscaleManagedSetup(
     id: id,
+    name: name,
     controlUrl: controlUrl,
     exitNode: exitNode,
     acceptRoutes: acceptRoutes,
@@ -486,6 +499,10 @@ abstract class TailscaleSetup with _$TailscaleSetup {
     @JsonKey(name: 'legacy-migration', includeIfNull: false)
     TailscaleLegacyMigration? legacyMigration,
     @Default([]) List<TailscaleManagedSetup> managed,
+
+    /// The stored accounts could not be read: the Core blocks every
+    /// Tailscale target rather than route by an empty list.
+    @JsonKey(name: 'managed-unknown') @Default(false) bool managedUnknown,
   }) = _TailscaleSetup;
 
   factory TailscaleSetup.fromJson(Map<String, Object?> json) =>
@@ -738,5 +755,9 @@ abstract class TailscaleManagedPanel with _$TailscaleManagedPanel {
     TailscaleManagedNotice? notice,
     @Default(false) bool removing,
     @Default(false) bool preparing,
+
+    /// The user tapped sign-in in this run; only then does a connected draft
+    /// attach on its own.
+    @Default(false) bool signInTapped,
   }) = _TailscaleManagedPanel;
 }

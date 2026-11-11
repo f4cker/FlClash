@@ -1567,7 +1567,8 @@ $TailscaleLegacyIdentityCopyWith<$Res>? get legacy {
 /// @nodoc
 mixin _$TailscaleAccount {
 
-@JsonKey(name: 'user-id') String get userId;@JsonKey(name: 'login-name') String get loginName;@JsonKey(name: 'display-name') String get displayName; String get tailnet;@JsonKey(name: 'control-url') String get controlUrl;
+@JsonKey(name: 'user-id') String get userId;@JsonKey(name: 'login-name') String get loginName;@JsonKey(name: 'display-name') String get displayName; String get tailnet;/// The network's domain, which a rename of [tailnet] leaves alone.
+@JsonKey(name: 'tailnet-id') String get tailnetId;@JsonKey(name: 'control-url') String get controlUrl;
 /// Create a copy of TailscaleAccount
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1581,20 +1582,20 @@ $TailscaleAccountCopyWith<TailscaleAccount> get copyWith => _$TailscaleAccountCo
 @override
 bool operator ==(Object other) {
   final _this = this as TailscaleAccount;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleAccount&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.loginName, _this.loginName) || other.loginName == _this.loginName)&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.tailnet, _this.tailnet) || other.tailnet == _this.tailnet)&&(identical(other.controlUrl, _this.controlUrl) || other.controlUrl == _this.controlUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleAccount&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.loginName, _this.loginName) || other.loginName == _this.loginName)&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.tailnet, _this.tailnet) || other.tailnet == _this.tailnet)&&(identical(other.tailnetId, _this.tailnetId) || other.tailnetId == _this.tailnetId)&&(identical(other.controlUrl, _this.controlUrl) || other.controlUrl == _this.controlUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TailscaleAccount;
-  return Object.hash(runtimeType,_this.userId,_this.loginName,_this.displayName,_this.tailnet,_this.controlUrl);
+  return Object.hash(runtimeType,_this.userId,_this.loginName,_this.displayName,_this.tailnet,_this.tailnetId,_this.controlUrl);
 }
 
 @override
 String toString() {
   final _this = this as TailscaleAccount;
-  return 'TailscaleAccount(userId: ${_this.userId}, loginName: ${_this.loginName}, displayName: ${_this.displayName}, tailnet: ${_this.tailnet}, controlUrl: ${_this.controlUrl})';
+  return 'TailscaleAccount(userId: ${_this.userId}, loginName: ${_this.loginName}, displayName: ${_this.displayName}, tailnet: ${_this.tailnet}, tailnetId: ${_this.tailnetId}, controlUrl: ${_this.controlUrl})';
 }
 
 
@@ -1605,7 +1606,7 @@ abstract mixin class $TailscaleAccountCopyWith<$Res>  {
   factory $TailscaleAccountCopyWith(TailscaleAccount value, $Res Function(TailscaleAccount) _then) = _$TailscaleAccountCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'user-id') String userId,@JsonKey(name: 'login-name') String loginName,@JsonKey(name: 'display-name') String displayName, String tailnet,@JsonKey(name: 'control-url') String controlUrl
+@JsonKey(name: 'user-id') String userId,@JsonKey(name: 'login-name') String loginName,@JsonKey(name: 'display-name') String displayName, String tailnet,@JsonKey(name: 'tailnet-id') String tailnetId,@JsonKey(name: 'control-url') String controlUrl
 });
 
 
@@ -1622,12 +1623,13 @@ class _$TailscaleAccountCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleAccount
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? loginName = null,Object? displayName = null,Object? tailnet = null,Object? controlUrl = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? loginName = null,Object? displayName = null,Object? tailnet = null,Object? tailnetId = null,Object? controlUrl = null,}) {
   return _then(TailscaleAccount(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,loginName: null == loginName ? _self.loginName : loginName // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,tailnet: null == tailnet ? _self.tailnet : tailnet // ignore: cast_nullable_to_non_nullable
+as String,tailnetId: null == tailnetId ? _self.tailnetId : tailnetId // ignore: cast_nullable_to_non_nullable
 as String,controlUrl: null == controlUrl ? _self.controlUrl : controlUrl // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -1714,10 +1716,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user-id')  String userId, @JsonKey(name: 'login-name')  String loginName, @JsonKey(name: 'display-name')  String displayName,  String tailnet, @JsonKey(name: 'control-url')  String controlUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user-id')  String userId, @JsonKey(name: 'login-name')  String loginName, @JsonKey(name: 'display-name')  String displayName,  String tailnet, @JsonKey(name: 'tailnet-id')  String tailnetId, @JsonKey(name: 'control-url')  String controlUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TailscaleAccount() when $default != null:
-return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_that.controlUrl);case _:
+return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_that.tailnetId,_that.controlUrl);case _:
   return orElse();
 
 }
@@ -1735,10 +1737,10 @@ return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user-id')  String userId, @JsonKey(name: 'login-name')  String loginName, @JsonKey(name: 'display-name')  String displayName,  String tailnet, @JsonKey(name: 'control-url')  String controlUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user-id')  String userId, @JsonKey(name: 'login-name')  String loginName, @JsonKey(name: 'display-name')  String displayName,  String tailnet, @JsonKey(name: 'tailnet-id')  String tailnetId, @JsonKey(name: 'control-url')  String controlUrl)  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleAccount():
-return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_that.controlUrl);case _:
+return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_that.tailnetId,_that.controlUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1755,10 +1757,10 @@ return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user-id')  String userId, @JsonKey(name: 'login-name')  String loginName, @JsonKey(name: 'display-name')  String displayName,  String tailnet, @JsonKey(name: 'control-url')  String controlUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user-id')  String userId, @JsonKey(name: 'login-name')  String loginName, @JsonKey(name: 'display-name')  String displayName,  String tailnet, @JsonKey(name: 'tailnet-id')  String tailnetId, @JsonKey(name: 'control-url')  String controlUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleAccount() when $default != null:
-return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_that.controlUrl);case _:
+return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_that.tailnetId,_that.controlUrl);case _:
   return null;
 
 }
@@ -1770,13 +1772,15 @@ return $default(_that.userId,_that.loginName,_that.displayName,_that.tailnet,_th
 @JsonSerializable()
 
 class _TailscaleAccount extends TailscaleAccount {
-  const _TailscaleAccount({@JsonKey(name: 'user-id') this.userId = '', @JsonKey(name: 'login-name') this.loginName = '', @JsonKey(name: 'display-name') this.displayName = '', this.tailnet = '', @JsonKey(name: 'control-url') this.controlUrl = ''}): super._();
+  const _TailscaleAccount({@JsonKey(name: 'user-id') this.userId = '', @JsonKey(name: 'login-name') this.loginName = '', @JsonKey(name: 'display-name') this.displayName = '', this.tailnet = '', @JsonKey(name: 'tailnet-id') this.tailnetId = '', @JsonKey(name: 'control-url') this.controlUrl = ''}): super._();
   factory _TailscaleAccount.fromJson(Map<String, dynamic> json) => _$TailscaleAccountFromJson(json);
 
 @override@JsonKey(name: 'user-id') final  String userId;
 @override@JsonKey(name: 'login-name') final  String loginName;
 @override@JsonKey(name: 'display-name') final  String displayName;
 @override@JsonKey() final  String tailnet;
+/// The network's domain, which a rename of [tailnet] leaves alone.
+@override@JsonKey(name: 'tailnet-id') final  String tailnetId;
 @override@JsonKey(name: 'control-url') final  String controlUrl;
 
 /// Create a copy of TailscaleAccount
@@ -1792,18 +1796,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleAccount&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.loginName, loginName) || other.loginName == loginName)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.tailnet, tailnet) || other.tailnet == tailnet)&&(identical(other.controlUrl, controlUrl) || other.controlUrl == controlUrl));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleAccount&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.loginName, loginName) || other.loginName == loginName)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.tailnet, tailnet) || other.tailnet == tailnet)&&(identical(other.tailnetId, tailnetId) || other.tailnetId == tailnetId)&&(identical(other.controlUrl, controlUrl) || other.controlUrl == controlUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,userId,loginName,displayName,tailnet,controlUrl);
+    return Object.hash(runtimeType,userId,loginName,displayName,tailnet,tailnetId,controlUrl);
 }
 
 @override
 String toString() {
-    return 'TailscaleAccount(userId: $userId, loginName: $loginName, displayName: $displayName, tailnet: $tailnet, controlUrl: $controlUrl)';
+    return 'TailscaleAccount(userId: $userId, loginName: $loginName, displayName: $displayName, tailnet: $tailnet, tailnetId: $tailnetId, controlUrl: $controlUrl)';
 }
 
 
@@ -1814,7 +1818,7 @@ abstract mixin class _$TailscaleAccountCopyWith<$Res> implements $TailscaleAccou
   factory _$TailscaleAccountCopyWith(_TailscaleAccount value, $Res Function(_TailscaleAccount) _then) = __$TailscaleAccountCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'user-id') String userId,@JsonKey(name: 'login-name') String loginName,@JsonKey(name: 'display-name') String displayName, String tailnet,@JsonKey(name: 'control-url') String controlUrl
+@JsonKey(name: 'user-id') String userId,@JsonKey(name: 'login-name') String loginName,@JsonKey(name: 'display-name') String displayName, String tailnet,@JsonKey(name: 'tailnet-id') String tailnetId,@JsonKey(name: 'control-url') String controlUrl
 });
 
 
@@ -1831,12 +1835,13 @@ class __$TailscaleAccountCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleAccount
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? loginName = null,Object? displayName = null,Object? tailnet = null,Object? controlUrl = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? loginName = null,Object? displayName = null,Object? tailnet = null,Object? tailnetId = null,Object? controlUrl = null,}) {
   return _then(_TailscaleAccount(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,loginName: null == loginName ? _self.loginName : loginName // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,tailnet: null == tailnet ? _self.tailnet : tailnet // ignore: cast_nullable_to_non_nullable
+as String,tailnetId: null == tailnetId ? _self.tailnetId : tailnetId // ignore: cast_nullable_to_non_nullable
 as String,controlUrl: null == controlUrl ? _self.controlUrl : controlUrl // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -6421,9 +6426,12 @@ as bool,
 /// @nodoc
 mixin _$TailscaleManagedRecord {
 
- String get id;@JsonKey(name: 'profile-id') int get profileId;@JsonKey(name: 'control-url') String get controlUrl;@JsonKey(name: 'exit-node', includeIfNull: false) String? get exitNode;@JsonKey(name: 'exit-node-name', includeIfNull: false) String? get exitNodeName;@JsonKey(name: 'accept-routes', includeIfNull: false) bool? get acceptRoutes;@JsonKey(name: 'logged-out') bool get loggedOut; bool get attached;/// A removal was started and its outcome is not known yet; it blocks a
+ String get id;@JsonKey(name: 'profile-id') int get profileId;/// The node's name, kept so it never moves to another account.
+ String get name;@JsonKey(name: 'control-url') String get controlUrl;@JsonKey(name: 'exit-node', includeIfNull: false) String? get exitNode;@JsonKey(name: 'exit-node-name', includeIfNull: false) String? get exitNodeName;@JsonKey(name: 'accept-routes', includeIfNull: false) bool? get acceptRoutes;@JsonKey(name: 'logged-out') bool get loggedOut; bool get attached;/// A removal was started and its outcome is not known yet; it blocks a
 /// new sign-in, a second removal and deleting the profile.
- bool get removing;
+ bool get removing;/// The identity it was attached with, so a signed-out entry still counts
+/// against a second sign-in of the same account.
+ TailscaleAccount? get account;
 /// Create a copy of TailscaleManagedRecord
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -6437,20 +6445,20 @@ $TailscaleManagedRecordCopyWith<TailscaleManagedRecord> get copyWith => _$Tailsc
 @override
 bool operator ==(Object other) {
   final _this = this as TailscaleManagedRecord;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleManagedRecord&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.controlUrl, _this.controlUrl) || other.controlUrl == _this.controlUrl)&&(identical(other.exitNode, _this.exitNode) || other.exitNode == _this.exitNode)&&(identical(other.exitNodeName, _this.exitNodeName) || other.exitNodeName == _this.exitNodeName)&&(identical(other.acceptRoutes, _this.acceptRoutes) || other.acceptRoutes == _this.acceptRoutes)&&(identical(other.loggedOut, _this.loggedOut) || other.loggedOut == _this.loggedOut)&&(identical(other.attached, _this.attached) || other.attached == _this.attached)&&(identical(other.removing, _this.removing) || other.removing == _this.removing));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleManagedRecord&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.controlUrl, _this.controlUrl) || other.controlUrl == _this.controlUrl)&&(identical(other.exitNode, _this.exitNode) || other.exitNode == _this.exitNode)&&(identical(other.exitNodeName, _this.exitNodeName) || other.exitNodeName == _this.exitNodeName)&&(identical(other.acceptRoutes, _this.acceptRoutes) || other.acceptRoutes == _this.acceptRoutes)&&(identical(other.loggedOut, _this.loggedOut) || other.loggedOut == _this.loggedOut)&&(identical(other.attached, _this.attached) || other.attached == _this.attached)&&(identical(other.removing, _this.removing) || other.removing == _this.removing)&&(identical(other.account, _this.account) || other.account == _this.account));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TailscaleManagedRecord;
-  return Object.hash(runtimeType,_this.id,_this.profileId,_this.controlUrl,_this.exitNode,_this.exitNodeName,_this.acceptRoutes,_this.loggedOut,_this.attached,_this.removing);
+  return Object.hash(runtimeType,_this.id,_this.profileId,_this.name,_this.controlUrl,_this.exitNode,_this.exitNodeName,_this.acceptRoutes,_this.loggedOut,_this.attached,_this.removing,_this.account);
 }
 
 @override
 String toString() {
   final _this = this as TailscaleManagedRecord;
-  return 'TailscaleManagedRecord(id: ${_this.id}, profileId: ${_this.profileId}, controlUrl: ${_this.controlUrl}, exitNode: ${_this.exitNode}, exitNodeName: ${_this.exitNodeName}, acceptRoutes: ${_this.acceptRoutes}, loggedOut: ${_this.loggedOut}, attached: ${_this.attached}, removing: ${_this.removing})';
+  return 'TailscaleManagedRecord(id: ${_this.id}, profileId: ${_this.profileId}, name: ${_this.name}, controlUrl: ${_this.controlUrl}, exitNode: ${_this.exitNode}, exitNodeName: ${_this.exitNodeName}, acceptRoutes: ${_this.acceptRoutes}, loggedOut: ${_this.loggedOut}, attached: ${_this.attached}, removing: ${_this.removing}, account: ${_this.account})';
 }
 
 
@@ -6461,11 +6469,11 @@ abstract mixin class $TailscaleManagedRecordCopyWith<$Res>  {
   factory $TailscaleManagedRecordCopyWith(TailscaleManagedRecord value, $Res Function(TailscaleManagedRecord) _then) = _$TailscaleManagedRecordCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'profile-id') int profileId,@JsonKey(name: 'control-url') String controlUrl,@JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,@JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,@JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,@JsonKey(name: 'logged-out') bool loggedOut, bool attached, bool removing
+ String id,@JsonKey(name: 'profile-id') int profileId, String name,@JsonKey(name: 'control-url') String controlUrl,@JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,@JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,@JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,@JsonKey(name: 'logged-out') bool loggedOut, bool attached, bool removing, TailscaleAccount? account
 });
 
 
-
+$TailscaleAccountCopyWith<$Res>? get account;
 
 }
 /// @nodoc
@@ -6478,21 +6486,35 @@ class _$TailscaleManagedRecordCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleManagedRecord
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = null,Object? controlUrl = null,Object? exitNode = freezed,Object? exitNodeName = freezed,Object? acceptRoutes = freezed,Object? loggedOut = null,Object? attached = null,Object? removing = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = null,Object? name = null,Object? controlUrl = null,Object? exitNode = freezed,Object? exitNodeName = freezed,Object? acceptRoutes = freezed,Object? loggedOut = null,Object? attached = null,Object? removing = null,Object? account = freezed,}) {
   return _then(TailscaleManagedRecord(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,controlUrl: null == controlUrl ? _self.controlUrl : controlUrl // ignore: cast_nullable_to_non_nullable
+as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,controlUrl: null == controlUrl ? _self.controlUrl : controlUrl // ignore: cast_nullable_to_non_nullable
 as String,exitNode: freezed == exitNode ? _self.exitNode : exitNode // ignore: cast_nullable_to_non_nullable
 as String?,exitNodeName: freezed == exitNodeName ? _self.exitNodeName : exitNodeName // ignore: cast_nullable_to_non_nullable
 as String?,acceptRoutes: freezed == acceptRoutes ? _self.acceptRoutes : acceptRoutes // ignore: cast_nullable_to_non_nullable
 as bool?,loggedOut: null == loggedOut ? _self.loggedOut : loggedOut // ignore: cast_nullable_to_non_nullable
 as bool,attached: null == attached ? _self.attached : attached // ignore: cast_nullable_to_non_nullable
 as bool,removing: null == removing ? _self.removing : removing // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,account: freezed == account ? _self.account : account // ignore: cast_nullable_to_non_nullable
+as TailscaleAccount?,
   ));
 }
+/// Create a copy of TailscaleManagedRecord
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$TailscaleAccountCopyWith<$Res>? get account {
+    if (_self.account == null) {
+    return null;
+  }
 
+  return $TailscaleAccountCopyWith<$Res>(_self.account!, (value) {
+    return _then(_self.copyWith(account: value));
+  });
+}
 }
 
 
@@ -6574,10 +6596,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut,  bool attached,  bool removing)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut,  bool attached,  bool removing,  TailscaleAccount? account)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TailscaleManagedRecord() when $default != null:
-return $default(_that.id,_that.profileId,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut,_that.attached,_that.removing);case _:
+return $default(_that.id,_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut,_that.attached,_that.removing,_that.account);case _:
   return orElse();
 
 }
@@ -6595,10 +6617,10 @@ return $default(_that.id,_that.profileId,_that.controlUrl,_that.exitNode,_that.e
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut,  bool attached,  bool removing)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut,  bool attached,  bool removing,  TailscaleAccount? account)  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleManagedRecord():
-return $default(_that.id,_that.profileId,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut,_that.attached,_that.removing);case _:
+return $default(_that.id,_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut,_that.attached,_that.removing,_that.account);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -6615,10 +6637,10 @@ return $default(_that.id,_that.profileId,_that.controlUrl,_that.exitNode,_that.e
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut,  bool attached,  bool removing)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut,  bool attached,  bool removing,  TailscaleAccount? account)?  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleManagedRecord() when $default != null:
-return $default(_that.id,_that.profileId,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut,_that.attached,_that.removing);case _:
+return $default(_that.id,_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut,_that.attached,_that.removing,_that.account);case _:
   return null;
 
 }
@@ -6630,11 +6652,13 @@ return $default(_that.id,_that.profileId,_that.controlUrl,_that.exitNode,_that.e
 @JsonSerializable()
 
 class _TailscaleManagedRecord extends TailscaleManagedRecord {
-  const _TailscaleManagedRecord({required this.id, @JsonKey(name: 'profile-id') required this.profileId, @JsonKey(name: 'control-url') this.controlUrl = '', @JsonKey(name: 'exit-node', includeIfNull: false) this.exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false) this.exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false) this.acceptRoutes, @JsonKey(name: 'logged-out') this.loggedOut = false, this.attached = false, this.removing = false}): super._();
+  const _TailscaleManagedRecord({required this.id, @JsonKey(name: 'profile-id') required this.profileId, this.name = '', @JsonKey(name: 'control-url') this.controlUrl = '', @JsonKey(name: 'exit-node', includeIfNull: false) this.exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false) this.exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false) this.acceptRoutes, @JsonKey(name: 'logged-out') this.loggedOut = false, this.attached = false, this.removing = false, this.account}): super._();
   factory _TailscaleManagedRecord.fromJson(Map<String, dynamic> json) => _$TailscaleManagedRecordFromJson(json);
 
 @override final  String id;
 @override@JsonKey(name: 'profile-id') final  int profileId;
+/// The node's name, kept so it never moves to another account.
+@override@JsonKey() final  String name;
 @override@JsonKey(name: 'control-url') final  String controlUrl;
 @override@JsonKey(name: 'exit-node', includeIfNull: false) final  String? exitNode;
 @override@JsonKey(name: 'exit-node-name', includeIfNull: false) final  String? exitNodeName;
@@ -6644,6 +6668,9 @@ class _TailscaleManagedRecord extends TailscaleManagedRecord {
 /// A removal was started and its outcome is not known yet; it blocks a
 /// new sign-in, a second removal and deleting the profile.
 @override@JsonKey() final  bool removing;
+/// The identity it was attached with, so a signed-out entry still counts
+/// against a second sign-in of the same account.
+@override final  TailscaleAccount? account;
 
 /// Create a copy of TailscaleManagedRecord
 /// with the given fields replaced by the non-null parameter values.
@@ -6658,18 +6685,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleManagedRecord&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.controlUrl, controlUrl) || other.controlUrl == controlUrl)&&(identical(other.exitNode, exitNode) || other.exitNode == exitNode)&&(identical(other.exitNodeName, exitNodeName) || other.exitNodeName == exitNodeName)&&(identical(other.acceptRoutes, acceptRoutes) || other.acceptRoutes == acceptRoutes)&&(identical(other.loggedOut, loggedOut) || other.loggedOut == loggedOut)&&(identical(other.attached, attached) || other.attached == attached)&&(identical(other.removing, removing) || other.removing == removing));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleManagedRecord&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.name, name) || other.name == name)&&(identical(other.controlUrl, controlUrl) || other.controlUrl == controlUrl)&&(identical(other.exitNode, exitNode) || other.exitNode == exitNode)&&(identical(other.exitNodeName, exitNodeName) || other.exitNodeName == exitNodeName)&&(identical(other.acceptRoutes, acceptRoutes) || other.acceptRoutes == acceptRoutes)&&(identical(other.loggedOut, loggedOut) || other.loggedOut == loggedOut)&&(identical(other.attached, attached) || other.attached == attached)&&(identical(other.removing, removing) || other.removing == removing)&&(identical(other.account, account) || other.account == account));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,profileId,controlUrl,exitNode,exitNodeName,acceptRoutes,loggedOut,attached,removing);
+    return Object.hash(runtimeType,id,profileId,name,controlUrl,exitNode,exitNodeName,acceptRoutes,loggedOut,attached,removing,account);
 }
 
 @override
 String toString() {
-    return 'TailscaleManagedRecord(id: $id, profileId: $profileId, controlUrl: $controlUrl, exitNode: $exitNode, exitNodeName: $exitNodeName, acceptRoutes: $acceptRoutes, loggedOut: $loggedOut, attached: $attached, removing: $removing)';
+    return 'TailscaleManagedRecord(id: $id, profileId: $profileId, name: $name, controlUrl: $controlUrl, exitNode: $exitNode, exitNodeName: $exitNodeName, acceptRoutes: $acceptRoutes, loggedOut: $loggedOut, attached: $attached, removing: $removing, account: $account)';
 }
 
 
@@ -6680,11 +6707,11 @@ abstract mixin class _$TailscaleManagedRecordCopyWith<$Res> implements $Tailscal
   factory _$TailscaleManagedRecordCopyWith(_TailscaleManagedRecord value, $Res Function(_TailscaleManagedRecord) _then) = __$TailscaleManagedRecordCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'profile-id') int profileId,@JsonKey(name: 'control-url') String controlUrl,@JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,@JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,@JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,@JsonKey(name: 'logged-out') bool loggedOut, bool attached, bool removing
+ String id,@JsonKey(name: 'profile-id') int profileId, String name,@JsonKey(name: 'control-url') String controlUrl,@JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,@JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,@JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,@JsonKey(name: 'logged-out') bool loggedOut, bool attached, bool removing, TailscaleAccount? account
 });
 
 
-
+@override $TailscaleAccountCopyWith<$Res>? get account;
 
 }
 /// @nodoc
@@ -6697,22 +6724,36 @@ class __$TailscaleManagedRecordCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleManagedRecord
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = null,Object? controlUrl = null,Object? exitNode = freezed,Object? exitNodeName = freezed,Object? acceptRoutes = freezed,Object? loggedOut = null,Object? attached = null,Object? removing = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = null,Object? name = null,Object? controlUrl = null,Object? exitNode = freezed,Object? exitNodeName = freezed,Object? acceptRoutes = freezed,Object? loggedOut = null,Object? attached = null,Object? removing = null,Object? account = freezed,}) {
   return _then(_TailscaleManagedRecord(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
-as int,controlUrl: null == controlUrl ? _self.controlUrl : controlUrl // ignore: cast_nullable_to_non_nullable
+as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,controlUrl: null == controlUrl ? _self.controlUrl : controlUrl // ignore: cast_nullable_to_non_nullable
 as String,exitNode: freezed == exitNode ? _self.exitNode : exitNode // ignore: cast_nullable_to_non_nullable
 as String?,exitNodeName: freezed == exitNodeName ? _self.exitNodeName : exitNodeName // ignore: cast_nullable_to_non_nullable
 as String?,acceptRoutes: freezed == acceptRoutes ? _self.acceptRoutes : acceptRoutes // ignore: cast_nullable_to_non_nullable
 as bool?,loggedOut: null == loggedOut ? _self.loggedOut : loggedOut // ignore: cast_nullable_to_non_nullable
 as bool,attached: null == attached ? _self.attached : attached // ignore: cast_nullable_to_non_nullable
 as bool,removing: null == removing ? _self.removing : removing // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,account: freezed == account ? _self.account : account // ignore: cast_nullable_to_non_nullable
+as TailscaleAccount?,
   ));
 }
 
+/// Create a copy of TailscaleManagedRecord
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$TailscaleAccountCopyWith<$Res>? get account {
+    if (_self.account == null) {
+    return null;
+  }
 
+  return $TailscaleAccountCopyWith<$Res>(_self.account!, (value) {
+    return _then(_self.copyWith(account: value));
+  });
+}
 }
 
 
@@ -7007,7 +7048,9 @@ as bool,
 /// @nodoc
 mixin _$TailscaleSetup {
 
-@JsonKey(name: 'profile-id') int get profileId;@JsonKey(name: 'config-source') TailscaleSettingSource get configSource; List<TailscaleNodeSetup> get nodes;@JsonKey(name: 'legacy-migration', includeIfNull: false) TailscaleLegacyMigration? get legacyMigration; List<TailscaleManagedSetup> get managed;
+@JsonKey(name: 'profile-id') int get profileId;@JsonKey(name: 'config-source') TailscaleSettingSource get configSource; List<TailscaleNodeSetup> get nodes;@JsonKey(name: 'legacy-migration', includeIfNull: false) TailscaleLegacyMigration? get legacyMigration; List<TailscaleManagedSetup> get managed;/// The stored accounts could not be read: the Core blocks every
+/// Tailscale target rather than route by an empty list.
+@JsonKey(name: 'managed-unknown') bool get managedUnknown;
 /// Create a copy of TailscaleSetup
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -7021,20 +7064,20 @@ $TailscaleSetupCopyWith<TailscaleSetup> get copyWith => _$TailscaleSetupCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as TailscaleSetup;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleSetup&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.configSource, _this.configSource) || other.configSource == _this.configSource)&&const DeepCollectionEquality().equals(other.nodes, _this.nodes)&&(identical(other.legacyMigration, _this.legacyMigration) || other.legacyMigration == _this.legacyMigration)&&const DeepCollectionEquality().equals(other.managed, _this.managed));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleSetup&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.configSource, _this.configSource) || other.configSource == _this.configSource)&&const DeepCollectionEquality().equals(other.nodes, _this.nodes)&&(identical(other.legacyMigration, _this.legacyMigration) || other.legacyMigration == _this.legacyMigration)&&const DeepCollectionEquality().equals(other.managed, _this.managed)&&(identical(other.managedUnknown, _this.managedUnknown) || other.managedUnknown == _this.managedUnknown));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TailscaleSetup;
-  return Object.hash(runtimeType,_this.profileId,_this.configSource,const DeepCollectionEquality().hash(_this.nodes),_this.legacyMigration,const DeepCollectionEquality().hash(_this.managed));
+  return Object.hash(runtimeType,_this.profileId,_this.configSource,const DeepCollectionEquality().hash(_this.nodes),_this.legacyMigration,const DeepCollectionEquality().hash(_this.managed),_this.managedUnknown);
 }
 
 @override
 String toString() {
   final _this = this as TailscaleSetup;
-  return 'TailscaleSetup(profileId: ${_this.profileId}, configSource: ${_this.configSource}, nodes: ${_this.nodes}, legacyMigration: ${_this.legacyMigration}, managed: ${_this.managed})';
+  return 'TailscaleSetup(profileId: ${_this.profileId}, configSource: ${_this.configSource}, nodes: ${_this.nodes}, legacyMigration: ${_this.legacyMigration}, managed: ${_this.managed}, managedUnknown: ${_this.managedUnknown})';
 }
 
 
@@ -7045,7 +7088,7 @@ abstract mixin class $TailscaleSetupCopyWith<$Res>  {
   factory $TailscaleSetupCopyWith(TailscaleSetup value, $Res Function(TailscaleSetup) _then) = _$TailscaleSetupCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'profile-id') int profileId,@JsonKey(name: 'config-source') TailscaleSettingSource configSource, List<TailscaleNodeSetup> nodes,@JsonKey(name: 'legacy-migration', includeIfNull: false) TailscaleLegacyMigration? legacyMigration, List<TailscaleManagedSetup> managed
+@JsonKey(name: 'profile-id') int profileId,@JsonKey(name: 'config-source') TailscaleSettingSource configSource, List<TailscaleNodeSetup> nodes,@JsonKey(name: 'legacy-migration', includeIfNull: false) TailscaleLegacyMigration? legacyMigration, List<TailscaleManagedSetup> managed,@JsonKey(name: 'managed-unknown') bool managedUnknown
 });
 
 
@@ -7062,14 +7105,15 @@ class _$TailscaleSetupCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleSetup
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? profileId = null,Object? configSource = null,Object? nodes = null,Object? legacyMigration = freezed,Object? managed = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? profileId = null,Object? configSource = null,Object? nodes = null,Object? legacyMigration = freezed,Object? managed = null,Object? managedUnknown = null,}) {
   return _then(TailscaleSetup(
 profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
 as int,configSource: null == configSource ? _self.configSource : configSource // ignore: cast_nullable_to_non_nullable
 as TailscaleSettingSource,nodes: null == nodes ? _self.nodes : nodes // ignore: cast_nullable_to_non_nullable
 as List<TailscaleNodeSetup>,legacyMigration: freezed == legacyMigration ? _self.legacyMigration : legacyMigration // ignore: cast_nullable_to_non_nullable
 as TailscaleLegacyMigration?,managed: null == managed ? _self.managed : managed // ignore: cast_nullable_to_non_nullable
-as List<TailscaleManagedSetup>,
+as List<TailscaleManagedSetup>,managedUnknown: null == managedUnknown ? _self.managedUnknown : managedUnknown // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of TailscaleSetup
@@ -7166,10 +7210,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'config-source')  TailscaleSettingSource configSource,  List<TailscaleNodeSetup> nodes, @JsonKey(name: 'legacy-migration', includeIfNull: false)  TailscaleLegacyMigration? legacyMigration,  List<TailscaleManagedSetup> managed)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'config-source')  TailscaleSettingSource configSource,  List<TailscaleNodeSetup> nodes, @JsonKey(name: 'legacy-migration', includeIfNull: false)  TailscaleLegacyMigration? legacyMigration,  List<TailscaleManagedSetup> managed, @JsonKey(name: 'managed-unknown')  bool managedUnknown)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TailscaleSetup() when $default != null:
-return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigration,_that.managed);case _:
+return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigration,_that.managed,_that.managedUnknown);case _:
   return orElse();
 
 }
@@ -7187,10 +7231,10 @@ return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigra
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'config-source')  TailscaleSettingSource configSource,  List<TailscaleNodeSetup> nodes, @JsonKey(name: 'legacy-migration', includeIfNull: false)  TailscaleLegacyMigration? legacyMigration,  List<TailscaleManagedSetup> managed)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'config-source')  TailscaleSettingSource configSource,  List<TailscaleNodeSetup> nodes, @JsonKey(name: 'legacy-migration', includeIfNull: false)  TailscaleLegacyMigration? legacyMigration,  List<TailscaleManagedSetup> managed, @JsonKey(name: 'managed-unknown')  bool managedUnknown)  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleSetup():
-return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigration,_that.managed);case _:
+return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigration,_that.managed,_that.managedUnknown);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -7207,10 +7251,10 @@ return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigra
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'config-source')  TailscaleSettingSource configSource,  List<TailscaleNodeSetup> nodes, @JsonKey(name: 'legacy-migration', includeIfNull: false)  TailscaleLegacyMigration? legacyMigration,  List<TailscaleManagedSetup> managed)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'profile-id')  int profileId, @JsonKey(name: 'config-source')  TailscaleSettingSource configSource,  List<TailscaleNodeSetup> nodes, @JsonKey(name: 'legacy-migration', includeIfNull: false)  TailscaleLegacyMigration? legacyMigration,  List<TailscaleManagedSetup> managed, @JsonKey(name: 'managed-unknown')  bool managedUnknown)?  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleSetup() when $default != null:
-return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigration,_that.managed);case _:
+return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigration,_that.managed,_that.managedUnknown);case _:
   return null;
 
 }
@@ -7222,7 +7266,7 @@ return $default(_that.profileId,_that.configSource,_that.nodes,_that.legacyMigra
 @JsonSerializable()
 
 class _TailscaleSetup implements TailscaleSetup {
-  const _TailscaleSetup({@JsonKey(name: 'profile-id') required this.profileId, @JsonKey(name: 'config-source') required this.configSource,  List<TailscaleNodeSetup> nodes = const [], @JsonKey(name: 'legacy-migration', includeIfNull: false) this.legacyMigration,  List<TailscaleManagedSetup> managed = const []}): _nodes = nodes,_managed = managed;
+  const _TailscaleSetup({@JsonKey(name: 'profile-id') required this.profileId, @JsonKey(name: 'config-source') required this.configSource,  List<TailscaleNodeSetup> nodes = const [], @JsonKey(name: 'legacy-migration', includeIfNull: false) this.legacyMigration,  List<TailscaleManagedSetup> managed = const [], @JsonKey(name: 'managed-unknown') this.managedUnknown = false}): _nodes = nodes,_managed = managed;
   factory _TailscaleSetup.fromJson(Map<String, dynamic> json) => _$TailscaleSetupFromJson(json);
 
 @override@JsonKey(name: 'profile-id') final  int profileId;
@@ -7242,6 +7286,9 @@ class _TailscaleSetup implements TailscaleSetup {
   return EqualUnmodifiableListView(_managed);
 }
 
+/// The stored accounts could not be read: the Core blocks every
+/// Tailscale target rather than route by an empty list.
+@override@JsonKey(name: 'managed-unknown') final  bool managedUnknown;
 
 /// Create a copy of TailscaleSetup
 /// with the given fields replaced by the non-null parameter values.
@@ -7256,18 +7303,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleSetup&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.configSource, configSource) || other.configSource == configSource)&&const DeepCollectionEquality().equals(other.nodes, _nodes)&&(identical(other.legacyMigration, legacyMigration) || other.legacyMigration == legacyMigration)&&const DeepCollectionEquality().equals(other.managed, _managed));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleSetup&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.configSource, configSource) || other.configSource == configSource)&&const DeepCollectionEquality().equals(other.nodes, _nodes)&&(identical(other.legacyMigration, legacyMigration) || other.legacyMigration == legacyMigration)&&const DeepCollectionEquality().equals(other.managed, _managed)&&(identical(other.managedUnknown, managedUnknown) || other.managedUnknown == managedUnknown));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,profileId,configSource,const DeepCollectionEquality().hash(_nodes),legacyMigration,const DeepCollectionEquality().hash(_managed));
+    return Object.hash(runtimeType,profileId,configSource,const DeepCollectionEquality().hash(_nodes),legacyMigration,const DeepCollectionEquality().hash(_managed),managedUnknown);
 }
 
 @override
 String toString() {
-    return 'TailscaleSetup(profileId: $profileId, configSource: $configSource, nodes: $nodes, legacyMigration: $legacyMigration, managed: $managed)';
+    return 'TailscaleSetup(profileId: $profileId, configSource: $configSource, nodes: $nodes, legacyMigration: $legacyMigration, managed: $managed, managedUnknown: $managedUnknown)';
 }
 
 
@@ -7278,7 +7325,7 @@ abstract mixin class _$TailscaleSetupCopyWith<$Res> implements $TailscaleSetupCo
   factory _$TailscaleSetupCopyWith(_TailscaleSetup value, $Res Function(_TailscaleSetup) _then) = __$TailscaleSetupCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'profile-id') int profileId,@JsonKey(name: 'config-source') TailscaleSettingSource configSource, List<TailscaleNodeSetup> nodes,@JsonKey(name: 'legacy-migration', includeIfNull: false) TailscaleLegacyMigration? legacyMigration, List<TailscaleManagedSetup> managed
+@JsonKey(name: 'profile-id') int profileId,@JsonKey(name: 'config-source') TailscaleSettingSource configSource, List<TailscaleNodeSetup> nodes,@JsonKey(name: 'legacy-migration', includeIfNull: false) TailscaleLegacyMigration? legacyMigration, List<TailscaleManagedSetup> managed,@JsonKey(name: 'managed-unknown') bool managedUnknown
 });
 
 
@@ -7295,14 +7342,15 @@ class __$TailscaleSetupCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleSetup
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? profileId = null,Object? configSource = null,Object? nodes = null,Object? legacyMigration = freezed,Object? managed = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? profileId = null,Object? configSource = null,Object? nodes = null,Object? legacyMigration = freezed,Object? managed = null,Object? managedUnknown = null,}) {
   return _then(_TailscaleSetup(
 profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
 as int,configSource: null == configSource ? _self.configSource : configSource // ignore: cast_nullable_to_non_nullable
 as TailscaleSettingSource,nodes: null == nodes ? _self._nodes : nodes // ignore: cast_nullable_to_non_nullable
 as List<TailscaleNodeSetup>,legacyMigration: freezed == legacyMigration ? _self.legacyMigration : legacyMigration // ignore: cast_nullable_to_non_nullable
 as TailscaleLegacyMigration?,managed: null == managed ? _self._managed : managed // ignore: cast_nullable_to_non_nullable
-as List<TailscaleManagedSetup>,
+as List<TailscaleManagedSetup>,managedUnknown: null == managedUnknown ? _self.managedUnknown : managedUnknown // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -11558,7 +11606,9 @@ as int,
 /// @nodoc
 mixin _$TailscaleManagedPanel {
 
- TailscaleAttachState get attach; TailscaleManagedNotice? get notice; bool get removing; bool get preparing;
+ TailscaleAttachState get attach; TailscaleManagedNotice? get notice; bool get removing; bool get preparing;/// The user tapped sign-in in this run; only then does a connected draft
+/// attach on its own.
+ bool get signInTapped;
 /// Create a copy of TailscaleManagedPanel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -11570,20 +11620,20 @@ $TailscaleManagedPanelCopyWith<TailscaleManagedPanel> get copyWith => _$Tailscal
 @override
 bool operator ==(Object other) {
   final _this = this as TailscaleManagedPanel;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleManagedPanel&&(identical(other.attach, _this.attach) || other.attach == _this.attach)&&(identical(other.notice, _this.notice) || other.notice == _this.notice)&&(identical(other.removing, _this.removing) || other.removing == _this.removing)&&(identical(other.preparing, _this.preparing) || other.preparing == _this.preparing));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleManagedPanel&&(identical(other.attach, _this.attach) || other.attach == _this.attach)&&(identical(other.notice, _this.notice) || other.notice == _this.notice)&&(identical(other.removing, _this.removing) || other.removing == _this.removing)&&(identical(other.preparing, _this.preparing) || other.preparing == _this.preparing)&&(identical(other.signInTapped, _this.signInTapped) || other.signInTapped == _this.signInTapped));
 }
 
 
 @override
 int get hashCode {
   final _this = this as TailscaleManagedPanel;
-  return Object.hash(runtimeType,_this.attach,_this.notice,_this.removing,_this.preparing);
+  return Object.hash(runtimeType,_this.attach,_this.notice,_this.removing,_this.preparing,_this.signInTapped);
 }
 
 @override
 String toString() {
   final _this = this as TailscaleManagedPanel;
-  return 'TailscaleManagedPanel(attach: ${_this.attach}, notice: ${_this.notice}, removing: ${_this.removing}, preparing: ${_this.preparing})';
+  return 'TailscaleManagedPanel(attach: ${_this.attach}, notice: ${_this.notice}, removing: ${_this.removing}, preparing: ${_this.preparing}, signInTapped: ${_this.signInTapped})';
 }
 
 
@@ -11594,7 +11644,7 @@ abstract mixin class $TailscaleManagedPanelCopyWith<$Res>  {
   factory $TailscaleManagedPanelCopyWith(TailscaleManagedPanel value, $Res Function(TailscaleManagedPanel) _then) = _$TailscaleManagedPanelCopyWithImpl;
 @useResult
 $Res call({
- TailscaleAttachState attach, TailscaleManagedNotice? notice, bool removing, bool preparing
+ TailscaleAttachState attach, TailscaleManagedNotice? notice, bool removing, bool preparing, bool signInTapped
 });
 
 
@@ -11611,12 +11661,13 @@ class _$TailscaleManagedPanelCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleManagedPanel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? attach = null,Object? notice = freezed,Object? removing = null,Object? preparing = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? attach = null,Object? notice = freezed,Object? removing = null,Object? preparing = null,Object? signInTapped = null,}) {
   return _then(TailscaleManagedPanel(
 attach: null == attach ? _self.attach : attach // ignore: cast_nullable_to_non_nullable
 as TailscaleAttachState,notice: freezed == notice ? _self.notice : notice // ignore: cast_nullable_to_non_nullable
 as TailscaleManagedNotice?,removing: null == removing ? _self.removing : removing // ignore: cast_nullable_to_non_nullable
 as bool,preparing: null == preparing ? _self.preparing : preparing // ignore: cast_nullable_to_non_nullable
+as bool,signInTapped: null == signInTapped ? _self.signInTapped : signInTapped // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -11702,10 +11753,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( TailscaleAttachState attach,  TailscaleManagedNotice? notice,  bool removing,  bool preparing)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( TailscaleAttachState attach,  TailscaleManagedNotice? notice,  bool removing,  bool preparing,  bool signInTapped)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TailscaleManagedPanel() when $default != null:
-return $default(_that.attach,_that.notice,_that.removing,_that.preparing);case _:
+return $default(_that.attach,_that.notice,_that.removing,_that.preparing,_that.signInTapped);case _:
   return orElse();
 
 }
@@ -11723,10 +11774,10 @@ return $default(_that.attach,_that.notice,_that.removing,_that.preparing);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( TailscaleAttachState attach,  TailscaleManagedNotice? notice,  bool removing,  bool preparing)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( TailscaleAttachState attach,  TailscaleManagedNotice? notice,  bool removing,  bool preparing,  bool signInTapped)  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleManagedPanel():
-return $default(_that.attach,_that.notice,_that.removing,_that.preparing);case _:
+return $default(_that.attach,_that.notice,_that.removing,_that.preparing,_that.signInTapped);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -11743,10 +11794,10 @@ return $default(_that.attach,_that.notice,_that.removing,_that.preparing);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( TailscaleAttachState attach,  TailscaleManagedNotice? notice,  bool removing,  bool preparing)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( TailscaleAttachState attach,  TailscaleManagedNotice? notice,  bool removing,  bool preparing,  bool signInTapped)?  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleManagedPanel() when $default != null:
-return $default(_that.attach,_that.notice,_that.removing,_that.preparing);case _:
+return $default(_that.attach,_that.notice,_that.removing,_that.preparing,_that.signInTapped);case _:
   return null;
 
 }
@@ -11758,13 +11809,16 @@ return $default(_that.attach,_that.notice,_that.removing,_that.preparing);case _
 
 
 class _TailscaleManagedPanel implements TailscaleManagedPanel {
-  const _TailscaleManagedPanel({this.attach = TailscaleAttachState.none, this.notice, this.removing = false, this.preparing = false});
+  const _TailscaleManagedPanel({this.attach = TailscaleAttachState.none, this.notice, this.removing = false, this.preparing = false, this.signInTapped = false});
   
 
 @override@JsonKey() final  TailscaleAttachState attach;
 @override final  TailscaleManagedNotice? notice;
 @override@JsonKey() final  bool removing;
 @override@JsonKey() final  bool preparing;
+/// The user tapped sign-in in this run; only then does a connected draft
+/// attach on its own.
+@override@JsonKey() final  bool signInTapped;
 
 /// Create a copy of TailscaleManagedPanel
 /// with the given fields replaced by the non-null parameter values.
@@ -11776,18 +11830,18 @@ _$TailscaleManagedPanelCopyWith<_TailscaleManagedPanel> get copyWith => __$Tails
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleManagedPanel&&(identical(other.attach, attach) || other.attach == attach)&&(identical(other.notice, notice) || other.notice == notice)&&(identical(other.removing, removing) || other.removing == removing)&&(identical(other.preparing, preparing) || other.preparing == preparing));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleManagedPanel&&(identical(other.attach, attach) || other.attach == attach)&&(identical(other.notice, notice) || other.notice == notice)&&(identical(other.removing, removing) || other.removing == removing)&&(identical(other.preparing, preparing) || other.preparing == preparing)&&(identical(other.signInTapped, signInTapped) || other.signInTapped == signInTapped));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,attach,notice,removing,preparing);
+    return Object.hash(runtimeType,attach,notice,removing,preparing,signInTapped);
 }
 
 @override
 String toString() {
-    return 'TailscaleManagedPanel(attach: $attach, notice: $notice, removing: $removing, preparing: $preparing)';
+    return 'TailscaleManagedPanel(attach: $attach, notice: $notice, removing: $removing, preparing: $preparing, signInTapped: $signInTapped)';
 }
 
 
@@ -11798,7 +11852,7 @@ abstract mixin class _$TailscaleManagedPanelCopyWith<$Res> implements $Tailscale
   factory _$TailscaleManagedPanelCopyWith(_TailscaleManagedPanel value, $Res Function(_TailscaleManagedPanel) _then) = __$TailscaleManagedPanelCopyWithImpl;
 @override @useResult
 $Res call({
- TailscaleAttachState attach, TailscaleManagedNotice? notice, bool removing, bool preparing
+ TailscaleAttachState attach, TailscaleManagedNotice? notice, bool removing, bool preparing, bool signInTapped
 });
 
 
@@ -11815,12 +11869,13 @@ class __$TailscaleManagedPanelCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleManagedPanel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? attach = null,Object? notice = freezed,Object? removing = null,Object? preparing = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? attach = null,Object? notice = freezed,Object? removing = null,Object? preparing = null,Object? signInTapped = null,}) {
   return _then(_TailscaleManagedPanel(
 attach: null == attach ? _self.attach : attach // ignore: cast_nullable_to_non_nullable
 as TailscaleAttachState,notice: freezed == notice ? _self.notice : notice // ignore: cast_nullable_to_non_nullable
 as TailscaleManagedNotice?,removing: null == removing ? _self.removing : removing // ignore: cast_nullable_to_non_nullable
 as bool,preparing: null == preparing ? _self.preparing : preparing // ignore: cast_nullable_to_non_nullable
+as bool,signInTapped: null == signInTapped ? _self.signInTapped : signInTapped // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

@@ -1942,6 +1942,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsDeleteProfilePending": MessageLookupByLibrary.simpleMessage(
       "This profile has unconfirmed Tailscale operations. Read the status again before deleting it.",
     ),
+    "tsDeleteProfileUnbindFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t unbind this profile\'s Tailscale accounts, so it was not deleted. Try again.",
+    ),
     "tsDeviceName": MessageLookupByLibrary.simpleMessage("Device name"),
     "tsDevices": MessageLookupByLibrary.simpleMessage("Devices"),
     "tsDevicesCompact": m103,

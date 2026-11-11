@@ -312,6 +312,15 @@ class ProfileItem extends ConsumerWidget {
     if (res != true) {
       return;
     }
+    if (!await tailscale.forgetProfile(profile.id)) {
+      dialogs.showBanner(
+        tailscale.hasPendingManaged(profile.id)
+            ? currentAppLocalizations.tsDeleteProfilePending
+            : currentAppLocalizations.tsDeleteProfileUnbindFailed,
+        level: BannerLevel.error,
+      );
+      return;
+    }
     await profilesAction.deleteProfile(profile.id);
   }
 

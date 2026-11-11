@@ -474,7 +474,7 @@ final class TailscaleSetupProvider
   }
 }
 
-String _$tailscaleSetupHash() => r'cff9b9465e2fe3613d88db60a03b20c13a44c860';
+String _$tailscaleSetupHash() => r'9d3b5edb24466d9efc341b6b898cb1b0b784542d';
 
 /// The Core's routing for the current profile's panel-added accounts; null
 /// while it has none.

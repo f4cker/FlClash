@@ -7663,7 +7663,8 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one:
+          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -11539,6 +11540,16 @@ class AppLocalizations {
     return Intl.message(
       'This profile has unconfirmed Tailscale operations. Read the status again before deleting it.',
       name: 'tsDeleteProfilePending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn't unbind this profile's Tailscale accounts, so it was not deleted. Try again.`
+  String get tsDeleteProfileUnbindFailed {
+    return Intl.message(
+      'Couldn\'t unbind this profile\'s Tailscale accounts, so it was not deleted. Try again.',
+      name: 'tsDeleteProfileUnbindFailed',
       desc: '',
       args: [],
     );

@@ -1757,6 +1757,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsDeleteProfilePending": MessageLookupByLibrary.simpleMessage(
       "此配置还有待确认的 Tailscale 操作，请先重新读取状态，确认后再删除配置。",
     ),
+    "tsDeleteProfileUnbindFailed": MessageLookupByLibrary.simpleMessage(
+      "未能解除此配置与 Tailscale 账号的关联，配置未删除。请重试。",
+    ),
     "tsDeviceName": MessageLookupByLibrary.simpleMessage("设备名称"),
     "tsDevices": MessageLookupByLibrary.simpleMessage("设备"),
     "tsDevicesCompact": m103,

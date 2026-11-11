@@ -1336,6 +1336,7 @@
   "tsTargetUnconfirmedTip": "The account for this target cannot be verified yet. Requests are blocked.",
   "tsDeleteProfileManaged": "This profile has {count} panel-added Tailscale accounts. Deleting it removes their profile bindings, target assignments, and dedicated routing and blocking rules. Local sign-in archives are kept. Devices in the Tailscale admin console are not deleted. Other profiles are not affected.",
   "tsDeleteProfilePending": "This profile has unconfirmed Tailscale operations. Read the status again before deleting it.",
+  "tsDeleteProfileUnbindFailed": "Couldn't unbind this profile's Tailscale accounts, so it was not deleted. Try again.",
   "tsDirectMode": "Direct mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.",
   "tsGlobalMode": "Global mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.",
   "tsDnsUnverified": "The current DNS settings do not confirm that target domains are preserved for rule matching. Domain routing has not been verified. Check DNS settings.",

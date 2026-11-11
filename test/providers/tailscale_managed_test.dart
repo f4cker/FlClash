@@ -34,6 +34,28 @@ class _FakeSetupAction extends SetupAction {
   }
 }
 
+/// Refuses any write that drops a record.
+class _FailingDrop extends TailscaleManagedRecords {
+  _FailingDrop(this.initial);
+
+  final List<TailscaleManagedRecord> initial;
+
+  @override
+  List<TailscaleManagedRecord>? build() => initial;
+
+  @override
+  Future<bool> modify(
+    List<TailscaleManagedRecord>? Function(List<TailscaleManagedRecord> records)
+    update,
+  ) async {
+    final next = update(state!);
+    if (next == null || next.length < state!.length) {
+      return false;
+    }
+    return super.modify((_) => next);
+  }
+}
+
 const _account = TailscaleAccount(
   userId: 'u1',
   loginName: 'pat@example.test',
@@ -79,8 +101,9 @@ void main() {
   });
 
   ProviderContainer build({
-    List<TailscaleManagedRecord> records = const [],
+    List<TailscaleManagedRecord>? records = const [],
     int? profileId = 42,
+    bool failDrop = false,
   }) {
     final container = ProviderContainer(
       overrides: [
@@ -92,7 +115,12 @@ void main() {
         ),
         currentProfileIdProvider.overrideWithBuild((_, _) => profileId),
         setupActionProvider.overrideWith(_FakeSetupAction.new),
-        tailscaleManagedRecordsProvider.overrideWithBuild((_, _) => records),
+        if (failDrop)
+          tailscaleManagedRecordsProvider.overrideWith(
+            () => _FailingDrop(records!),
+          )
+        else
+          tailscaleManagedRecordsProvider.overrideWithBuild((_, _) => records),
       ],
     );
     addTearDown(container.dispose);
@@ -351,7 +379,72 @@ void main() {
         (_) async => TailscaleStatus(node: _managed('m1', attached: true)),
       );
       await action(container).recheckManaged(_managed('m1', attached: true));
+      expect(
+        action(container).hasPendingManaged(42),
+        isTrue,
+        reason: 'a node that still holds its sign-in proves no logout',
+      );
+      expect(records(container).single.removing, isTrue);
+
+      final signedOut = _managed('m1', attached: true, account: null);
+      when(() => core.getTailscaleNodes()).thenAnswer((_) async => [signedOut]);
+      when(
+        () => core.getTailscaleStatus(any()),
+      ).thenAnswer((_) async => TailscaleStatus(node: signedOut));
+      await action(container).recheckManaged(signedOut);
       expect(action(container).hasPendingManaged(42), isFalse);
+    });
+
+    test('the last account: the record goes first, then its routes; a '
+        'failed forget reports the removal incomplete', () async {
+      final container = build(
+        records: const [
+          TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
+        ],
+      );
+      when(() => core.logoutTailscale(any())).thenAnswer(
+        (_) async => const TailscaleLogoutResult(
+          generation: 1,
+          outcome: TailscaleLogoutOutcome.confirmed,
+        ),
+      );
+      List<Object?>? storedWhenForgot;
+      when(() => core.forgetTailscaleRoutes(42)).thenAnswer((_) async {
+        storedWhenForgot = await _stored();
+        return const TailscaleForgetResult(outcome: 'failed');
+      });
+      when(() => core.getTailscaleNodes()).thenAnswer((_) async => const []);
+
+      final notice = await action(
+        container,
+      ).removeManaged(_managed('m1', attached: true));
+
+      expect(storedWhenForgot, isEmpty);
+      expect(notice, TailscaleManagedNotice.removeIncomplete);
+      expect(records(container), isEmpty);
+    });
+
+    test('a record that cannot be dropped keeps the routes', () async {
+      final container = build(
+        records: const [
+          TailscaleManagedRecord(id: 'm1', profileId: 42, attached: true),
+        ],
+        failDrop: true,
+      );
+      when(() => core.logoutTailscale(any())).thenAnswer(
+        (_) async => const TailscaleLogoutResult(
+          generation: 1,
+          outcome: TailscaleLogoutOutcome.confirmed,
+        ),
+      );
+
+      final notice = await action(
+        container,
+      ).removeManaged(_managed('m1', attached: true));
+
+      expect(notice, TailscaleManagedNotice.removeIncomplete);
+      verifyNever(() => core.forgetTailscaleRoutes(any()));
+      expect(records(container).single.removing, isTrue);
     });
   });
 
@@ -432,6 +525,216 @@ void main() {
     });
   });
 
+  group('unreadable records', () {
+    test('send the unknown marker and block deleting the profile', () async {
+      final container = build(records: null);
+
+      final setup = container.read(tailscaleSetupProvider)!;
+      expect(setup.managedUnknown, isTrue);
+      expect(setup.managed, isEmpty);
+      expect(setup.toJson(), containsPair('managed-unknown', true));
+      expect(action(container).hasPendingManaged(42), isTrue);
+      expect(await action(container).forgetProfile(42), isFalse);
+      verifyNever(() => core.forgetTailscaleRoutes(any()));
+    });
+
+    test('readable ones do not', () {
+      final container = build();
+      expect(container.read(tailscaleSetupProvider)!.managedUnknown, isFalse);
+    });
+  });
+
+  group('names', () {
+    test('each draft keeps a name of its own, sent with the setup', () async {
+      final container = build(
+        records: const [
+          TailscaleManagedRecord(id: 'm1', profileId: 42, name: 'Tailscale'),
+          TailscaleManagedRecord(id: 'm9', profileId: 7, name: 'Tailscale 2'),
+        ],
+      );
+      when(() => core.getTailscaleNodes()).thenAnswer((_) async => const []);
+
+      await action(container).addManaged(newProfileLabel: 'x');
+
+      final added = records(container).last;
+      expect(added.name, 'Tailscale 2');
+      expect(
+        container.read(tailscaleSetupProvider)!.managed.map((m) => m.name),
+        ['Tailscale', 'Tailscale 2'],
+      );
+    });
+  });
+
+  group('drafts', () {
+    test('opening the panel only reads an unattached draft', () async {
+      final container = build(
+        records: const [TailscaleManagedRecord(id: 'm1', profileId: 42)],
+      );
+      when(
+        () => core.getTailscaleStatus(any()),
+      ).thenAnswer((_) async => TailscaleStatus(node: _managed('m1')));
+
+      await action(container).prewarm(_managed('m1'));
+
+      verifyNever(() => core.startTailscale(any()));
+      verify(() => core.getTailscaleStatus(any())).called(1);
+    });
+
+    test('only a sign-in tap marks a draft to attach, and an attach clears '
+        'the mark', () async {
+      final container = build(
+        records: const [TailscaleManagedRecord(id: 'm1', profileId: 42)],
+      );
+      expect(panelOf(container, 'm1').signInTapped, isFalse);
+      when(
+        () => core.loginTailscale(any(), reauth: any(named: 'reauth')),
+      ).thenAnswer(
+        (_) async => const TailscaleLoginResult(
+          generation: 1,
+          state: TailscaleBackendState.running,
+        ),
+      );
+      when(
+        () => core.getTailscaleNodes(),
+      ).thenAnswer((_) async => [_managed('m1')]);
+      when(
+        () => core.getTailscaleStatus(any()),
+      ).thenAnswer((_) async => TailscaleStatus(node: _managed('m1')));
+
+      await action(container).loginFromPanel(_managed('m1'));
+      expect(panelOf(container, 'm1').signInTapped, isTrue);
+
+      await action(container).attachManaged(_managed('m1'), [_managed('m1')]);
+      expect(panelOf(container, 'm1').signInTapped, isFalse);
+    });
+  });
+
+  group('duplicates', () {
+    test('a signed-out entry still counts by the identity it attached '
+        'with', () async {
+      final container = build(
+        records: const [
+          TailscaleManagedRecord(
+            id: 'm1',
+            profileId: 42,
+            attached: true,
+            loggedOut: true,
+            account: _account,
+          ),
+          TailscaleManagedRecord(id: 'm2', profileId: 42),
+        ],
+      );
+      final nodes = [
+        _managed('m1', attached: true, account: null),
+        _managed('m2'),
+      ];
+
+      expect(
+        await action(container).attachManaged(nodes[1], nodes),
+        TailscaleAttachState.duplicate,
+      );
+      expect(_FakeSetupAction.applied, 0);
+    });
+
+    test('a renamed network is the same one; another domain is not', () {
+      const before = TailscaleAccount(
+        userId: 'u1',
+        tailnet: 'Old name',
+        tailnetId: 'example.ts.net',
+      );
+      expect(before.sameAs(before.copyWith(tailnet: 'New name')), isTrue);
+      expect(
+        before.sameAs(before.copyWith(tailnetId: 'other.ts.net')),
+        isFalse,
+      );
+    });
+
+    test('an attach stores the identity it attached with', () async {
+      final container = build(
+        records: const [TailscaleManagedRecord(id: 'm1', profileId: 42)],
+      );
+      when(
+        () => core.getTailscaleNodes(),
+      ).thenAnswer((_) async => [_managed('m1', attached: true)]);
+
+      await action(container).attachManaged(_managed('m1'), [_managed('m1')]);
+
+      expect(records(container).single.account, _account);
+      expect(
+        (await _stored()).single,
+        containsPair('account', containsPair('user-id', 'u1')),
+      );
+    });
+  });
+
+  group('deleting a profile', () {
+    const record = TailscaleManagedRecord(
+      id: 'm1',
+      profileId: 42,
+      attached: true,
+    );
+
+    test('waits for an unknown attach, sign-out or login', () {
+      final container = build(records: const [record]);
+      final key = tailscaleManagedNodeKey(42, 'm1');
+      expect(action(container).hasPendingManaged(42), isFalse);
+
+      container
+          .read(tailscaleManagedPanelsProvider.notifier)
+          .change(
+            key,
+            (state) => state.copyWith(attach: TailscaleAttachState.unknown),
+          );
+      expect(action(container).hasPendingManaged(42), isTrue);
+      container
+          .read(tailscaleManagedPanelsProvider.notifier)
+          .change(key, (_) => const TailscaleManagedPanel());
+
+      final panels = container.read(tailscalePanelNodesProvider.notifier);
+      panels.change(key, (state) => state.copyWith(unconfirmed: true));
+      expect(
+        action(container).hasPendingManaged(42),
+        isTrue,
+        reason: 'an unknown plain sign-out',
+      );
+      panels.change(
+        key,
+        (state) => state.copyWith(unconfirmed: false, loggingIn: true),
+      );
+      expect(
+        action(container).hasPendingManaged(42),
+        isTrue,
+        reason: 'a pending login',
+      );
+      expect(action(container).hasPendingManaged(7), isFalse);
+    });
+
+    test('waits for an add in progress', () async {
+      final container = build();
+      when(() => core.getTailscaleNodes()).thenAnswer((_) async {
+        expect(action(container).hasPendingManaged(42), isTrue);
+        return const [];
+      });
+
+      await action(container).addManaged(newProfileLabel: 'x');
+
+      verify(() => core.getTailscaleNodes()).called(1);
+    });
+
+    test('a failed forget keeps the records and the profile', () async {
+      final container = build(records: const [record]);
+      when(
+        () => core.forgetTailscaleRoutes(42),
+      ).thenThrow(const CoreMethodException(code: 'boom', message: 'boom'));
+
+      expect(await action(container).forgetProfile(42), isFalse);
+      await container.read(profilesActionProvider.notifier).deleteProfile(42);
+
+      expect(records(container).single.id, 'm1');
+      expect(container.read(profilesProvider).single.id, 42);
+    });
+  });
+
   test('the setup payload holds the accounts of the current profile', () {
     final container = build(
       records: const [
@@ -450,5 +753,6 @@ void main() {
     expect(setup.managed.map((item) => item.id), ['m1']);
     expect(setup.managed.single.attached, isTrue);
     expect(setup.managed.single.acceptRoutes, isTrue);
+    expect(setup.managedUnknown, isFalse);
   });
 }
