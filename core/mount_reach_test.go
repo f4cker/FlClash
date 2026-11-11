@@ -181,8 +181,8 @@ rules:
 func TestMountProviderDropsNodesThatBindAnInterface(t *testing.T) {
 	home := withMountHome(t)
 	only := writeMountFile(t, home, "1.yaml", `proxies:
-  - {name: a, type: socks5, server: 127.0.0.1, port: 1, interface-name: utun4}
-  - {name: b, type: socks5, server: 127.0.0.1, port: 2, Interface_Name: en0}
+  - {name: a, type: socks5, server: 192.0.2.1, port: 1, interface-name: utun4}
+  - {name: b, type: socks5, server: 192.0.2.1, port: 2, Interface_Name: en0}
 `)
 	got := handleInspectMountSource(MountInspectSourceParams{Path: only})
 	got.names = nil
@@ -290,18 +290,16 @@ rules:
 		t.Errorf("a plain update = %v, want it taken", err)
 	}
 
-	reaching, err := rp.ParseRuleSet([]byte("100.100.0.0/16\n"), cp.IPCIDR, cp.TextRule, nil)
-	if err != nil {
-		t.Fatal(err)
+	gate := func(name, raw string) error {
+		return rp.RuleSetGate(name, nil, []byte(raw), cp.IPCIDR, cp.TextRule)
 	}
-	missing, _ := rp.ParseRuleSet([]byte("192.168.0.0/16\n"), cp.IPCIDR, cp.TextRule, nil)
-	if rp.RuleSetGate("lan", reaching) == nil {
+	if gate("lan", "100.100.0.0/16\n") == nil {
 		t.Error("a rule set update sending Tailscale addresses to Lan was taken")
 	}
-	if err := rp.RuleSetGate("lan", missing); err != nil {
+	if err := gate("lan", "192.168.0.0/16\n"); err != nil {
 		t.Errorf("a rule set update without Tailscale = %v", err)
 	}
-	if err := rp.RuleSetGate("unused", reaching); err != nil {
+	if err := gate("unused", "100.100.0.0/16\n"); err != nil {
 		t.Errorf("a rule set no rule reads = %v, want it taken", err)
 	}
 	if got := handleMountState().Refused; !reflect.DeepEqual(got, []string{"lan", "sub"}) {
@@ -336,5 +334,101 @@ rules:
 	}
 	if err := mountRuntimeViolation(cfg.Proxies, map[string]string{"Main": reachRule}); err == nil {
 		t.Error("Main reaches a mounted node through Auto, want it found")
+	}
+}
+
+// Round 4: every path the review found Tailscale traffic could take into a
+// group that is not a rule target, each with the reason the panel shows.
+func TestMountExcludesEveryGroupTailscaleTrafficMayTake(t *testing.T) {
+	withMountHome(t)
+	const base = `proxies:
+  - {name: hk, type: socks5, server: 127.0.0.9, port: 1080}
+  - {name: ts-office, type: tailscale, dialer-proxy: Auto}
+  - {name: jump, type: socks5, server: 127.0.0.9, port: 1081, dialer-proxy: Pick}
+proxy-groups:
+  - {name: Main, type: select, proxies: [Auto, hk]}
+  - {name: Auto, type: url-test, include-all-providers: true}
+  - {name: Pick, type: select, proxies: [Inner]}
+  - {name: Inner, type: select, proxies: [hk]}
+  - {name: Free, type: select, proxies: [hk]}
+rules:
+  - IP-CIDR,100.64.0.0/10,jump,no-resolve
+  - MATCH,Main
+`
+	wantReasons := func(name, profile string, want map[string]string) {
+		t.Helper()
+		got := groupReasons(t, rootOf(t, profile))
+		for group, reason := range want {
+			if got[group] != reason {
+				t.Errorf("%s: %s = %s, want %s", name, group, got[group], reason)
+			}
+		}
+	}
+	wantReasons("dialer chains", base, map[string]string{
+		"Auto": "excluded/carrier", "Pick": "excluded/carrier", "Inner": "excluded/carrier",
+		"Main": "candidate/", "Free": "candidate/",
+	})
+	plain := strings.NewReplacer(", dialer-proxy: Auto}", "}", "  - IP-CIDR,100.64.0.0/10,jump,no-resolve\n", "").Replace(base)
+	wantReasons("no chain", plain, map[string]string{"Auto": "auto/", "Pick": "candidate/", "Free": "candidate/"})
+
+	cases := []struct {
+		name, add string
+		want      map[string]string
+	}{
+		{"GLOBAL target", "rules:\n  - IP-CIDR,100.64.0.0/10,GLOBAL\n", map[string]string{"Free": "excluded/global", "Main": "excluded/global"}},
+		{"listener proxy", "listeners:\n  - {name: in, type: mixed, port: 7891, proxy: Free}\n", map[string]string{"Free": "excluded/rule", "Main": "candidate/"}},
+		{"listener sub-rule", "listeners:\n  - {name: in, type: mixed, port: 7891, rule: side}\nsub-rules:\n  side:\n    - MATCH,Free\n", map[string]string{"Free": "excluded/rule"}},
+		{"tunnel", "tunnels:\n  - tcp,127.0.0.1:2222,100.100.1.1:22,Free\n  - {network: [tcp], address: 127.0.0.1:2223, target: 192.0.2.1:22, proxy: Main}\n", map[string]string{"Free": "excluded/rule", "Main": "candidate/"}},
+		{"sub-rule entered by a tailnet condition", "sub-rules:\n  side:\n    - DST-PORT,22,Free\n    - MATCH,Main\n", map[string]string{"Free": "excluded/rule", "Main": "excluded/rule"}},
+		{"GEOSITE without a database", "rules:\n  - GEOSITE,tailscale,Free\n", map[string]string{"Free": "excluded/rule-unknown"}},
+		{"DNS through a group", "dns:\n  nameserver: ['https://1.1.1.1/dns-query#Free&h3=true']\n", map[string]string{"Free": "excluded/dns", "Main": "candidate/"}},
+		{"DNS by rules", "dns:\n  respect-rules: true\n  nameserver: [1.1.1.1]\n", map[string]string{"Free": "excluded/dns", "Main": "excluded/dns"}},
+		{"empty-fallback on a Tailscale node", "", map[string]string{"Fallen": "excluded/holds"}},
+		{"group keys in any case", "", map[string]string{"Spelled": "excluded/holds"}},
+	}
+	for _, tc := range cases {
+		profile := plain
+		switch tc.name {
+		case "empty-fallback on a Tailscale node":
+			profile = strings.Replace(profile, "proxy-groups:\n", "proxy-groups:\n  - {name: Fallen, type: select, proxies: [hk], filter: none, empty-fallback: ts-office}\n", 1)
+		case "group keys in any case":
+			profile = strings.Replace(profile, "proxy-groups:\n", "proxy-groups:\n  - {Name: Spelled, Type: select, Proxies: [ts-office]}\n", 1)
+		case "sub-rule entered by a tailnet condition":
+			profile = strings.Replace(profile, "  - MATCH,Main\n", "  - SUB-RULE,(IP-CIDR,100.64.0.0/10),side\n  - MATCH,Main\n", 1) + tc.add
+		case "GLOBAL target", "GEOSITE without a database":
+			profile = strings.Replace(profile, "rules:\n", tc.add, 1)
+		default:
+			profile += tc.add
+		}
+		wantReasons(tc.name, profile, tc.want)
+	}
+}
+
+func TestMountSourceDropsNodesWhoseServerIsOnTailscaleOrLocal(t *testing.T) {
+	home := withMountHome(t)
+	source := writeMountFile(t, home, "1.yaml", `proxies:
+  - {name: loop, type: socks5, server: 127.0.0.1, port: 1055}
+  - {name: tailnet, type: socks5, server: 100.100.2.3, port: 1080}
+  - {name: magic, type: socks5, server: box.tail1.ts.net, port: 1080}
+  - {name: marked, type: socks5, server: 192.0.2.1, port: 1, routing-mark: 6666}
+  - {name: plain, type: socks5, server: 192.0.2.1, port: 2}
+`)
+	got := handleInspectMountSource(MountInspectSourceParams{Path: source})
+	if got.Count != 1 || got.RelayExcluded != 3 || got.InterfaceExcluded != 1 || !reflect.DeepEqual(got.names, []string{"plain"}) {
+		t.Errorf("inspection = %+v, want plain kept, three relays and one mark counted out", got)
+	}
+	const profile = `proxies:
+  - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
+proxy-groups:
+  - {name: Auto, type: url-test, include-all-providers: true}
+rules:
+  - MATCH,Auto
+`
+	members, report := mountedMembers(t, profile, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
+	if !reflect.DeepEqual(members["Auto"], []string{"plain"}) {
+		t.Errorf("Auto = %v, want only plain", members["Auto"])
+	}
+	if names := report.Sources[0].Nodes; len(names) != 1 || names[0].Name != "plain" {
+		t.Errorf("report nodes = %+v, want plain", names)
 	}
 }

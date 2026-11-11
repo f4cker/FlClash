@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"net"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -14,6 +15,8 @@ import (
 	"github.com/metacubex/mihomo/common/convert"
 	mihomoYaml "github.com/metacubex/mihomo/common/yaml"
 	"github.com/metacubex/mihomo/component/age"
+	"github.com/metacubex/mihomo/component/flashguard"
+	"github.com/metacubex/mihomo/component/geodata"
 	"github.com/metacubex/mihomo/constant"
 	cp "github.com/metacubex/mihomo/constant/provider"
 	RC "github.com/metacubex/mihomo/rules/common"
@@ -31,6 +34,13 @@ const (
 	reachRule        = "rule"
 	reachRuleUnk     = "rule-unknown"
 	reachMember      = "member"
+	// A group a Tailscale node, or a proxy Tailscale traffic takes, dials
+	// through: its mounted node would carry the tailnet.
+	reachCarrier = "carrier"
+	// Tailscale traffic is sent to GLOBAL, which may select any group.
+	reachGlobal = "global"
+	// DNS queries, tailnet names among them, go out through the group.
+	reachDNS = "dns"
 )
 
 // A base as the mount checks read it, before any mount is added.
@@ -40,7 +50,22 @@ type mountBase struct {
 	groups       []map[string]any
 	providers    map[string]baseProvider
 	ruleSets     map[string]ruleSetContent
-	rules        []string
+	// The profile's rules followed by every sub-rule's.
+	rules    []string
+	subRules map[string][]string
+	// What a listener sends without rules, and the sub-rule it takes.
+	listenerProxies []string
+	listenerRules   []string
+	// A tunnel's proxy, with the address it forwards to.
+	tunnels []mountTunnel
+	// The proxies DNS servers are reached through; rules when they follow them.
+	dnsProxies []string
+	dnsRules   bool
+}
+
+type mountTunnel struct {
+	proxy  string
+	target string
 }
 
 // What a base provider holds, from its payload and cache. Filters are not
@@ -78,12 +103,89 @@ func readMountBase(root *yaml.Node) (*mountBase, error) {
 		base.ruleSets = readBaseRuleSets(ruleSets)
 	}
 	base.rules = ruleLines(mappingValue(root, "rules"))
+	base.subRules = map[string][]string{}
 	if subRules := resolveAlias(mappingValue(root, "sub-rules")); subRules != nil && subRules.Kind == yaml.MappingNode {
 		for i := 1; i < len(subRules.Content); i += 2 {
-			base.rules = append(base.rules, ruleLines(subRules.Content[i])...)
+			lines := ruleLines(subRules.Content[i])
+			base.subRules[subRules.Content[i-1].Value] = lines
+			base.rules = append(base.rules, lines...)
 		}
 	}
+	listeners, err := decodeMappings(mappingValue(root, "listeners"), "listeners")
+	if err != nil {
+		return nil, err
+	}
+	for _, mapping := range listeners {
+		if proxy := groupString(mapping, "proxy"); proxy != "" {
+			base.listenerProxies = append(base.listenerProxies, proxy)
+		} else if rule := groupString(mapping, "rule"); rule != "" {
+			base.listenerRules = append(base.listenerRules, rule)
+		}
+	}
+	if tunnels := resolveAlias(mappingValue(root, "tunnels")); tunnels != nil && tunnels.Kind == yaml.SequenceNode {
+		for _, item := range tunnels.Content {
+			base.tunnels = append(base.tunnels, readMountTunnel(resolveAlias(item)))
+		}
+	}
+	base.readDNS(resolveAlias(mappingValue(root, "dns")))
 	return base, nil
+}
+
+// As mihomo reads a nameserver: a fragment part without = names the proxy.
+func (b *mountBase) readDNS(node *yaml.Node) {
+	var mapping map[string]any
+	if node == nil || node.Kind != yaml.MappingNode || node.Decode(&mapping) != nil {
+		return
+	}
+	b.dnsRules = groupFlag(mapping, "respect-rules")
+	var servers []string
+	for _, key := range []string{"nameserver", "fallback", "direct-nameserver"} {
+		servers = append(servers, groupList(mapping, key)...)
+	}
+	if policy, ok := providerOption(mapping, "nameserver-policy").(map[string]any); ok {
+		for _, value := range policy {
+			switch typed := value.(type) {
+			case string:
+				servers = append(servers, strings.Split(typed, ";")...)
+			case []any:
+				servers = append(servers, groupList(map[string]any{"v": typed}, "v")...)
+			}
+		}
+	}
+	for _, server := range servers {
+		_, fragment, ok := strings.Cut(server, "#")
+		if !ok {
+			continue
+		}
+		for _, part := range strings.Split(fragment, "&") {
+			if part = strings.TrimSpace(part); part != "" && !strings.Contains(part, "=") {
+				if part == "RULES" {
+					b.dnsRules = true
+				} else {
+					b.dnsProxies = append(b.dnsProxies, part)
+				}
+			}
+		}
+	}
+}
+
+// As mihomo reads a tunnel: "network,address,target,proxy" or a mapping.
+func readMountTunnel(node *yaml.Node) mountTunnel {
+	if node.Kind == yaml.ScalarNode {
+		parts := strings.Split(node.Value, ",")
+		for i := range parts {
+			parts[i] = strings.TrimSpace(parts[i])
+		}
+		if len(parts) == 4 {
+			return mountTunnel{proxy: parts[3], target: parts[2]}
+		}
+		return mountTunnel{}
+	}
+	var mapping map[string]any
+	if node.Decode(&mapping) != nil {
+		return mountTunnel{}
+	}
+	return mountTunnel{proxy: groupString(mapping, "proxy"), target: groupString(mapping, "target")}
 }
 
 func ruleLines(node *yaml.Node) []string {
@@ -269,6 +371,15 @@ func (b *mountBase) holding() map[string]string {
 				reason = reach[member]
 			}
 		}
+		// An empty-fallback is what the group takes once it holds nothing.
+		if fallback := groupString(group, "empty-fallback"); fallback != "" {
+			if reach[fallback] == reachHolds || b.proxyTypes[fallback] == "tailscale" {
+				return reachHolds
+			}
+			if reach[fallback] != "" {
+				reason = reach[fallback]
+			}
+		}
 		return reason
 	}
 	for changed := true; changed; {
@@ -284,21 +395,30 @@ func (b *mountBase) holding() map[string]string {
 }
 
 // The groups mounts must stay out of: those holding a Tailscale node, those a
-// rule other than the final MATCH (the main group) sends Tailscale ranges or
-// tailnet names to, and every group inside one, whatever is selected now.
+// rule other than the final MATCH (the main group), a listener or a tunnel
+// sends Tailscale ranges or tailnet names to, every group inside one,
+// whatever is selected now, and every group such a group or a Tailscale node
+// dials through. Tailscale traffic sent to GLOBAL keeps mounts out of all.
 func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
 	reach := b.holding()
 	groups := b.groupNames()
-	for _, line := range b.rules {
-		target, kind := reader.ruleTarget(line)
-		if !groups[target] || reach[target] != "" {
-			continue
+	targets := b.tailscaleTargets(reader)
+	global := ""
+	names := make([]string, 0, len(targets))
+	for target := range targets {
+		names = append(names, target)
+	}
+	slices.Sort(names)
+	for _, target := range names {
+		reason := reachRule
+		if targets[target] == ruleUnknown {
+			reason = reachRuleUnk
 		}
-		switch kind {
-		case ruleReaches:
-			reach[target] = reachRule
-		case ruleUnknown:
-			reach[target] = reachRuleUnk
+		switch {
+		case target == globalProxyName:
+			global = reachGlobal
+		case groups[target] && reach[target] == "":
+			reach[target] = reason
 		}
 	}
 	byName := make(map[string]map[string]any, len(b.groups))
@@ -320,7 +440,164 @@ func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
 			}
 		}
 	}
+
+	// What carries Tailscale traffic: Tailscale nodes, proxies it is sent to
+	// and the groups above, and down from each what it is a member or a
+	// dialer-proxy of, as any selection may be.
+	seen := map[string]bool{}
+	var carry func(name string)
+	carry = func(name string) {
+		if name == "" || seen[name] {
+			return
+		}
+		seen[name] = true
+		if name == globalProxyName {
+			global = reachGlobal
+			return
+		}
+		group, isGroup := byName[name]
+		if !isGroup {
+			for _, dialer := range b.proxyDialers[name] {
+				carry(dialer)
+			}
+			return
+		}
+		if reach[name] == "" {
+			reach[name] = reachCarrier
+		}
+		for _, member := range groupList(group, "proxies") {
+			carry(member)
+		}
+		carry(groupString(group, "empty-fallback"))
+		for _, p := range b.groupProviders(group) {
+			for _, dialer := range b.providers[p].dialers {
+				carry(dialer)
+			}
+		}
+		if groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies") {
+			for proxy := range b.proxyDialers {
+				carry(proxy)
+			}
+		}
+	}
+	var seeds []string
+	for name, kind := range b.proxyTypes {
+		if kind == "tailscale" {
+			seeds = append(seeds, name)
+		}
+	}
+	for name := range reach {
+		seeds = append(seeds, name)
+	}
+	for _, target := range names {
+		if !groups[target] {
+			seeds = append(seeds, target)
+		}
+	}
+	slices.Sort(seeds)
+	for _, name := range seeds {
+		carry(name)
+	}
+	for _, p := range b.providers {
+		if p.tailscale {
+			for _, dialer := range p.dialers {
+				carry(dialer)
+			}
+		}
+	}
+	// A DNS server reached through a group takes every lookup it is asked,
+	// a tailnet name too; one reached by rules may take any group.
+	for _, proxy := range b.dnsProxies {
+		switch {
+		case proxy == globalProxyName:
+			b.dnsRules = true
+		case groups[proxy] && reach[proxy] == "":
+			reach[proxy] = reachDNS
+		}
+		carry(proxy)
+	}
+	if global != "" {
+		for name := range groups {
+			if reach[name] == "" {
+				reach[name] = global
+			}
+		}
+	}
+	if b.dnsRules {
+		for name := range groups {
+			if reach[name] == "" {
+				reach[name] = reachDNS
+			}
+		}
+	}
 	return reach
+}
+
+// Every target Tailscale traffic may be sent to, by how surely: a rule whose
+// condition reaches it, everything in a sub-rule entered by one, a listener's
+// proxy and the final MATCH of a listener's sub-rule, a tunnel's proxy to a
+// Tailscale address.
+func (b *mountBase) tailscaleTargets(reader *ruleReader) map[string]int {
+	targets := map[string]int{}
+	add := func(target string, kind int) {
+		if target != "" && kind > targets[target] {
+			targets[target] = kind
+		}
+	}
+	for _, line := range b.rules {
+		target, kind := reader.ruleTarget(line)
+		if kind != ruleMisses {
+			add(target, kind)
+		}
+	}
+	entered := map[string]int{}
+	enter := func(lines []string, carried int) bool {
+		changed := false
+		for _, line := range lines {
+			tp, payload, target, _ := RC.ParseRulePayload(line, true)
+			if tp != "SUB-RULE" {
+				continue
+			}
+			kind := max(carried, reader.subRuleCondition(payload))
+			if kind > entered[target] {
+				entered[target], changed = kind, true
+			}
+		}
+		return changed
+	}
+	for changed := enter(b.rules, ruleMisses); changed; {
+		changed = false
+		for name, kind := range entered {
+			changed = enter(b.subRules[name], kind) || changed
+		}
+	}
+	for name, kind := range entered {
+		if kind == ruleMisses {
+			continue
+		}
+		for _, line := range b.subRules[name] {
+			if tp, _, target, _ := RC.ParseRulePayload(line, true); tp != "SUB-RULE" {
+				add(target, kind)
+			}
+		}
+	}
+	for _, name := range b.listenerRules {
+		for _, line := range b.subRules[name] {
+			if tp, _, target, _ := RC.ParseRulePayload(line, true); tp == "MATCH" {
+				add(target, ruleReaches)
+			}
+		}
+	}
+	for _, proxy := range b.listenerProxies {
+		add(proxy, ruleReaches)
+	}
+	for _, tunnel := range b.tunnels {
+		host, _, err := net.SplitHostPort(tunnel.target)
+		if err != nil || flashguard.ProtectedHost(host) {
+			add(tunnel.proxy, ruleReaches)
+		}
+	}
+	return targets
 }
 
 // The names a mount node's dialer-proxy must not lead to: a Tailscale node,
@@ -351,7 +628,8 @@ func (b *mountBase) relayNames(holding map[string]string) map[string]bool {
 				continue
 			}
 			all := groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies")
-			if all && chained || slices.ContainsFunc(groupList(group, "proxies"), func(member string) bool { return relay[member] }) ||
+			members := append(groupList(group, "proxies"), groupString(group, "empty-fallback"))
+			if all && chained || slices.ContainsFunc(members, func(member string) bool { return relay[member] }) ||
 				slices.ContainsFunc(b.groupProviders(group), func(p string) bool { return b.providerRelays(p, relay) }) {
 				relay[name], changed = true, true
 			}
@@ -533,6 +811,19 @@ func (r *ruleReader) ruleTarget(line string) (string, int) {
 	return target, r.condition(tp, payload, params)
 }
 
+// What a SUB-RULE line's condition lets into its sub-rule.
+func (r *ruleReader) subRuleCondition(payload string) int {
+	reach := ruleMisses
+	_, err := logic.NewSubRule(payload, "", nil, func(tp, payload, _ string, params []string, _ map[string][]constant.Rule) (constant.Rule, error) {
+		reach = max(reach, r.condition(tp, payload, params))
+		return &recordedRule{tp: tp, payload: payload}, nil
+	})
+	if err != nil {
+		return ruleUnknown
+	}
+	return reach
+}
+
 func (r *ruleReader) condition(tp, payload string, params []string) int {
 	if isSrc, _ := RC.ParseParams(params); isSrc {
 		return ruleMisses
@@ -605,12 +896,14 @@ func (r *ruleReader) ipSuffix(payload string) int {
 	}))
 }
 
-// Destination-agnostic rules (ports, processes, networks) and GEOSITE are
-// not read: like MATCH they are the profile's own catch-alls.
+// Destination-agnostic rules (ports, processes, networks) are not read:
+// like MATCH they are the profile's own catch-alls.
 func (r *ruleReader) domain(tp, payload string) int {
 	var rule constant.Rule
 	var err error
 	switch tp {
+	case "GEOSITE":
+		return r.geosite(payload)
 	case "DOMAIN":
 		rule = RC.NewDomain(payload, "")
 	case "DOMAIN-SUFFIX":
@@ -633,6 +926,21 @@ func (r *ruleReader) domain(tp, payload string) int {
 		}
 		matched, _ := rule.Match(&constant.Metadata{Host: "host." + suffix}, constant.RuleMatchHelper{})
 		return matched
+	}))
+}
+
+// A GEOSITE category is read from the database already on disk, never one
+// it would download; without it the category is unknown.
+func (r *ruleReader) geosite(payload string) int {
+	if _, err := os.Stat(constant.Path.GeoSite()); err != nil {
+		return ruleUnknown
+	}
+	matcher, err := geodata.LoadGeoSiteMatcher(payload)
+	if err != nil {
+		return ruleUnknown
+	}
+	return reachIf(slices.ContainsFunc(r.suffixes, func(suffix string) bool {
+		return matcher.ApplyDomain(suffix) || matcher.ApplyDomain("host."+suffix)
 	}))
 }
 

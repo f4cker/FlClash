@@ -240,12 +240,12 @@ proxy-groups:
 func TestMountNodeNeverTakesAFlashNameOfAPanelAddedNode(t *testing.T) {
 	home := withMountHome(t)
 	source := writeMountFile(t, home, "1.yaml", `proxies:
-  - {name: "Work (Flash)", type: socks5, server: 127.0.0.1, port: 1}
-  - {name: "Work (Flash 3)", type: socks5, server: 127.0.0.1, port: 2}
-  - {name: "Tailscale (Flash 2)", type: socks5, server: 127.0.0.1, port: 3}
-  - {name: "Work (Flash 01)", type: socks5, server: 127.0.0.1, port: 4}
-  - {name: "Work (Flash 1)", type: socks5, server: 127.0.0.1, port: 5}
-  - {name: "Home (Flash)", type: socks5, server: 127.0.0.1, port: 6}
+  - {name: "Work (Flash)", type: socks5, server: 192.0.2.1, port: 1}
+  - {name: "Work (Flash 3)", type: socks5, server: 192.0.2.1, port: 2}
+  - {name: "Tailscale (Flash 2)", type: socks5, server: 192.0.2.1, port: 3}
+  - {name: "Work (Flash 01)", type: socks5, server: 192.0.2.1, port: 4}
+  - {name: "Work (Flash 1)", type: socks5, server: 192.0.2.1, port: 5}
+  - {name: "Home (Flash)", type: socks5, server: 192.0.2.1, port: 6}
 `)
 	params := &SetupParams{
 		Mounts:    &MountSetup{Sources: []MountSource{{ID: 1, Label: "Flash", Path: source}}},
@@ -268,7 +268,7 @@ func TestMountNodeNeverTakesAFlashNameOfAPanelAddedNode(t *testing.T) {
 	if !reflect.DeepEqual(report.Sources[0].Nodes, want) {
 		t.Errorf("nodes = %+v, want %+v", report.Sources[0].Nodes, want)
 	}
-	work := writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: Work, type: socks5, server: 127.0.0.1, port: 1}\n")
+	work := writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: Work, type: socks5, server: 192.0.2.1, port: 1}\n")
 	params.Mounts.Sources = []MountSource{{ID: 2, Label: "Flash", Path: work}}
 	report, err = applyMountOverrides(rootOf(t, "proxy-groups:\n  - {name: G, type: select, include-all: true}\n"), mountSetupOf(params))
 	if err != nil {
@@ -293,14 +293,14 @@ rules:
 `
 
 const relaySource = `proxies:
-  - {name: plain, type: socks5, server: 127.0.0.1, port: 1}
-  - {name: chained, type: socks5, server: 127.0.0.1, port: 2, dialer-proxy: base}
-  - {name: via-node, type: socks5, server: 127.0.0.1, port: 3, dialer-proxy: ts-office}
-  - {name: via-group, type: socks5, server: 127.0.0.1, port: 4, dialer-proxy: Office}
-  - {name: via-hop, type: socks5, server: 127.0.0.1, port: 5, dialer-proxy: hop}
-  - {name: via-hops, type: socks5, server: 127.0.0.1, port: 6, dialer-proxy: Hops}
-  - {name: via-managed, type: socks5, server: 127.0.0.1, port: 7, dialer-proxy: Tailscale}
-  - {name: via-fallback, type: socks5, server: 127.0.0.1, port: 8, dialer-proxy: "Work (Flash 2)"}
+  - {name: plain, type: socks5, server: 192.0.2.1, port: 1}
+  - {name: chained, type: socks5, server: 192.0.2.1, port: 2, dialer-proxy: base}
+  - {name: via-node, type: socks5, server: 192.0.2.1, port: 3, dialer-proxy: ts-office}
+  - {name: via-group, type: socks5, server: 192.0.2.1, port: 4, dialer-proxy: Office}
+  - {name: via-hop, type: socks5, server: 192.0.2.1, port: 5, dialer-proxy: hop}
+  - {name: via-hops, type: socks5, server: 192.0.2.1, port: 6, dialer-proxy: Hops}
+  - {name: via-managed, type: socks5, server: 192.0.2.1, port: 7, dialer-proxy: Tailscale}
+  - {name: via-fallback, type: socks5, server: 192.0.2.1, port: 8, dialer-proxy: "Work (Flash 2)"}
   - {name: ts, type: tailscale}
 `
 
@@ -345,10 +345,10 @@ func TestMountLeavesOutNodesThatRelayThroughTailscale(t *testing.T) {
 	// The provider drops by the same reading when it loads the file, so a
 	// node the file gains after the check never becomes a member.
 	writeMountFile(t, home, "1.yaml", relaySource+
-		"  - {name: late, type: socks5, server: 127.0.0.1, port: 9, dialer-proxy: \"Tailscale (Flash)\"}\n"+
-		"  - {name: spelled, type: socks5, server: 127.0.0.1, port: 10, Dialer_Proxy: Hops}\n"+
-		"  - {name: global, type: socks5, server: 127.0.0.1, port: 11, dialer-proxy: GLOBAL}\n"+
-		"  - {name: bound, type: socks5, server: 127.0.0.1, port: 12, interface-name: utun4}\n")
+		"  - {name: late, type: socks5, server: 192.0.2.1, port: 9, dialer-proxy: \"Tailscale (Flash)\"}\n"+
+		"  - {name: spelled, type: socks5, server: 192.0.2.1, port: 10, Dialer_Proxy: Hops}\n"+
+		"  - {name: global, type: socks5, server: 192.0.2.1, port: 11, dialer-proxy: GLOBAL}\n"+
+		"  - {name: bound, type: socks5, server: 192.0.2.1, port: 12, interface-name: utun4}\n")
 	reloaded := checkOnlyConfig(t, &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}})
 	if got := memberNames(t, reloaded, "Auto"); !reflect.DeepEqual(got, []string{"plain", "chained"}) {
 		t.Errorf("Auto after the file changed = %v, want only plain and chained", got)
@@ -374,11 +374,11 @@ func TestMountLeavesOutNodesThatRelayThroughTailscale(t *testing.T) {
 func TestMountSourceWhoseNodesAllRelayThroughTailscaleIsNoEmptyList(t *testing.T) {
 	home := withMountHome(t)
 	only := writeMountFile(t, home, "1.yaml", `proxies:
-  - {name: a, type: socks5, server: 127.0.0.1, port: 1, dialer-proxy: ts-office}
-  - {name: b, type: socks5, server: 127.0.0.1, port: 2, dialer-proxy: Office}
+  - {name: a, type: socks5, server: 192.0.2.1, port: 1, dialer-proxy: ts-office}
+  - {name: b, type: socks5, server: 192.0.2.1, port: 2, dialer-proxy: Office}
 `)
 	mixed := writeMountFile(t, home, "2.yaml", `proxies:
-  - {name: c, type: socks5, server: 127.0.0.1, port: 1, dialer-proxy: Office}
+  - {name: c, type: socks5, server: 192.0.2.1, port: 1, dialer-proxy: Office}
   - {name: ts, type: tailscale}
 `)
 	relay := []string{"Office", "ts-office"}
@@ -412,7 +412,7 @@ func TestMountPreflightOfTheRunningProfileChecksItsPanelNames(t *testing.T) {
 	resetTailscaleSetup(t)
 	setTailscaleSetup(&TailscaleSetup{ProfileID: 4, Managed: []TailscaleManagedSetup{{ID: "a", Name: "Work"}}})
 	path := writeBaseProfile(t, "proxy-groups:\n  - {name: G, type: select, include-all-providers: true}\n")
-	source := writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: Work, type: socks5, server: 127.0.0.1, port: 1}\n  - {name: x, type: socks5, server: 127.0.0.1, port: 2, dialer-proxy: \"Work (Flash)\"}\n")
+	source := writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: Work, type: socks5, server: 192.0.2.1, port: 1}\n  - {name: x, type: socks5, server: 192.0.2.1, port: 2, dialer-proxy: \"Work (Flash)\"}\n")
 	for target, want := range map[int64]MountSourceReport{
 		4: {ID: 1, Provider: "flash-mount-1", Status: mountSourceNodes, RelayExcluded: 1, Nodes: []MountNode{{"Work (S)", "Work"}}},
 		5: {ID: 1, Provider: "flash-mount-1", Status: mountSourceNodes, Nodes: []MountNode{{"Work", "Work"}, {"x", "x"}}},

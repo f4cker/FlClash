@@ -167,6 +167,7 @@ func applyConfig(params *SetupParams) error {
 	configMu.Lock()
 	defer configMu.Unlock()
 
+	refreshGuardSuffixes()
 	var err error
 	if params.Mounts != nil {
 		err = checkMountedSetup(params)
@@ -238,7 +239,15 @@ func applyConfig(params *SetupParams) error {
 	startTailscaleManaged()
 	patchSelectGroup(followMountSelections(params.SelectedMap, report))
 	bumpRouteEpoch()
-	updateListeners(cfg)
+	if blocked {
+		// The blocked profile's own listeners, a proxy: DIRECT one too, stay
+		// closed; the ports and TUN stay so nothing falls back to the system.
+		listeners := *cfg
+		listeners.Listeners = nil
+		updateListeners(&listeners)
+	} else {
+		updateListeners(cfg)
+	}
 	reconcileGeoUpdater()
 	scheduleLoadMemoryRelease()
 	if blocked {

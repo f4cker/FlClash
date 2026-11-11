@@ -17,14 +17,14 @@ import (
 )
 
 const mountSourceA = `proxies:
-  - {name: hk, type: socks5, server: 127.0.0.1, port: 1080}
-  - {name: shared, type: socks5, server: 127.0.0.1, port: 1081}
+  - {name: hk, type: socks5, server: 192.0.2.1, port: 1080}
+  - {name: shared, type: socks5, server: 192.0.2.1, port: 1081}
   - {name: ts, type: tailscale}
 `
 
 const mountSourceB = `proxies:
-  - {name: shared, type: socks5, server: 127.0.0.2, port: 1080}
-  - {name: us, type: socks5, server: 127.0.0.2, port: 1081}
+  - {name: shared, type: socks5, server: 192.0.2.2, port: 1080}
+  - {name: us, type: socks5, server: 192.0.2.2, port: 1081}
 `
 
 func writeMountFile(t *testing.T, dir, name, content string) string {
@@ -60,9 +60,9 @@ func TestInspectMountSourceClassifiesWhatAProviderWouldLoad(t *testing.T) {
 		"null proxies":    {"proxies:\n", MountSourceInspection{Status: mountSourceUnsupported}},
 		"empty body":      {"  \n", MountSourceInspection{Status: mountSourceUnsupported}},
 		"html page":       {"<html><body>blocked</body></html>", MountSourceInspection{Status: mountSourceUnsupported}},
-		"nameless nodes":  {"proxies:\n  - {type: socks5, server: 127.0.0.1, port: 1}\n", MountSourceInspection{Status: mountSourceInvalid, Listed: 1}},
+		"nameless nodes":  {"proxies:\n  - {type: socks5, server: 192.0.2.1, port: 1}\n", MountSourceInspection{Status: mountSourceInvalid, Listed: 1}},
 		"node that fails": {"proxies:\n  - {name: x, type: nope}\n", MountSourceInspection{Status: mountSourceInvalid, Listed: 1}},
-		"share links":     {"trojan://secret@127.0.0.1:443#t1\n", MountSourceInspection{Status: mountSourceNodes, Count: 1, Listed: 1}},
+		"share links":     {"trojan://secret@192.0.2.1:443#t1\n", MountSourceInspection{Status: mountSourceNodes, Count: 1, Listed: 1}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got := inspectMountSource(writeMountFile(t, dir, strings.ReplaceAll(name, " ", "-")+".yaml", tc.content), "", nil)
@@ -290,9 +290,9 @@ func TestMountsReachAutoAndChosenGroupsWithSuffixesOnlyOnClashes(t *testing.T) {
 func TestMountNodeTakesTheSuffixWhenItSharesAManagedTailscaleName(t *testing.T) {
 	home := withMountHome(t)
 	source := writeMountFile(t, home, "1.yaml", `proxies:
-  - {name: hk, type: socks5, server: 127.0.0.1, port: 1080}
-  - {name: Tailscale, type: socks5, server: 127.0.0.1, port: 1081}
-  - {name: us, type: socks5, server: 127.0.0.1, port: 1082}
+  - {name: hk, type: socks5, server: 192.0.2.1, port: 1080}
+  - {name: Tailscale, type: socks5, server: 192.0.2.1, port: 1081}
+  - {name: us, type: socks5, server: 192.0.2.1, port: 1082}
 `)
 	params := &SetupParams{
 		Mounts: &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}},
@@ -319,15 +319,15 @@ func TestMountNodeTakesTheSuffixWhenItSharesAManagedTailscaleName(t *testing.T) 
 
 func TestMountNodeTakesTheSuffixWhenABaseProviderHoldsItsName(t *testing.T) {
 	home := withMountHome(t)
-	writeMountFile(t, home, "own.yaml", "proxies:\n  - {name: us, type: socks5, server: 127.0.0.3, port: 1}\n  - {name: jp, type: socks5, server: 127.0.0.3, port: 2}\n")
+	writeMountFile(t, home, "own.yaml", "proxies:\n  - {name: us, type: socks5, server: 192.0.2.3, port: 1}\n  - {name: jp, type: socks5, server: 192.0.2.3, port: 2}\n")
 	source := writeMountFile(t, home, "1.yaml", `proxies:
-  - {name: hk, type: socks5, server: 127.0.0.1, port: 1080}
-  - {name: us, type: socks5, server: 127.0.0.1, port: 1081}
-  - {name: P-us-P, type: socks5, server: 127.0.0.1, port: 1082}
-  - {name: P-Japan-P, type: socks5, server: 127.0.0.1, port: 1083}
+  - {name: hk, type: socks5, server: 192.0.2.1, port: 1080}
+  - {name: us, type: socks5, server: 192.0.2.1, port: 1081}
+  - {name: P-us-P, type: socks5, server: 192.0.2.1, port: 1082}
+  - {name: P-Japan-P, type: socks5, server: 192.0.2.1, port: 1083}
 `)
 	const base = `proxy-providers:
-  inline: {type: inline, payload: [{name: hk, type: socks5, server: 127.0.0.2, port: 1}]}
+  inline: {type: inline, payload: [{name: hk, type: socks5, server: 192.0.2.2, port: 1}]}
   own:
     type: file
     path: own.yaml
@@ -358,8 +358,8 @@ proxy-groups:
   - {name: G, type: select, include-all-providers: true}
 `
 	source := `proxies:
-  - {name: "a.b ($1)", type: socks5, server: 127.0.0.1, port: 1080}
-  - {name: "axb ($1)", type: socks5, server: 127.0.0.1, port: 1081}
+  - {name: "a.b ($1)", type: socks5, server: 192.0.2.1, port: 1080}
+  - {name: "axb ($1)", type: socks5, server: 192.0.2.1, port: 1081}
 `
 	setup := &MountSetup{Sources: []MountSource{{ID: 3, Label: "S$1", Path: writeMountFile(t, home, "3.yaml", source)}}}
 
@@ -538,8 +538,8 @@ proxy-groups:
 rules:
   - MATCH,G
 `)
-	sourceA := writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: us, type: socks5, server: 127.0.0.1, port: 1}\n")
-	sourceB := writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: hk, type: socks5, server: 127.0.0.2, port: 1}\n  - {name: jp, type: socks5, server: 127.0.0.2, port: 2}\n")
+	sourceA := writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: us, type: socks5, server: 192.0.2.1, port: 1}\n")
+	sourceB := writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: hk, type: socks5, server: 192.0.2.2, port: 1}\n  - {name: jp, type: socks5, server: 192.0.2.2, port: 2}\n")
 	apply := func(selected string, revision string) MountRuntimeState {
 		t.Helper()
 		err := applyConfig(&SetupParams{
@@ -565,13 +565,13 @@ rules:
 		t.Fatalf("G = %s, want B's hk", now())
 	}
 
-	writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: hk, type: socks5, server: 127.0.0.1, port: 2}\n")
+	writeMountFile(t, home, "1.yaml", "proxies:\n  - {name: hk, type: socks5, server: 192.0.2.1, port: 2}\n")
 	state := apply("hk", "r2")
 	if now() != "hk (B)" || !reflect.DeepEqual(state.Moved, map[string]string{"G": "hk (B)"}) {
 		t.Fatalf("G = %s, moved %v; want B's node, now hk (B)", now(), state.Moved)
 	}
 
-	writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: jp, type: socks5, server: 127.0.0.2, port: 2}\n")
+	writeMountFile(t, home, "2.yaml", "proxies:\n  - {name: jp, type: socks5, server: 192.0.2.2, port: 2}\n")
 	state = apply("hk (B)", "r3")
 	if now() != "base" || !reflect.DeepEqual(state.Lost, []string{"G"}) {
 		t.Fatalf("G = %s, lost %v; want the group's default, never A's hk", now(), state.Lost)

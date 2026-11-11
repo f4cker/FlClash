@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"slices"
 	"strconv"
@@ -12,9 +13,11 @@ import (
 
 	"github.com/dlclark/regexp2"
 	"github.com/metacubex/mihomo/adapter"
+	"github.com/metacubex/mihomo/adapter/provider"
 	"github.com/metacubex/mihomo/common/convert"
 	mihomoYaml "github.com/metacubex/mihomo/common/yaml"
 	"github.com/metacubex/mihomo/component/age"
+	"github.com/metacubex/mihomo/component/flashguard"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -77,6 +80,7 @@ func handleInspectMountSource(params MountInspectSourceParams) MountSourceInspec
 		}
 		relay = newMountRelay(names, managedBases(params.Managed))
 	}
+	refreshGuardSuffixes()
 	return inspectMountSource(params.Path, params.AgeSecretKey, relay)
 }
 
@@ -146,10 +150,14 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 		}
 		_ = proxy.Close()
 		seen[name] = struct{}{}
+		host, _, splitErr := net.SplitHostPort(proxy.Addr())
 		switch {
-		case len(proxyOptionValues(mapping, "interface-name")) > 0:
+		case slices.ContainsFunc(proxyOptionValues(mapping, "interface-name"), func(value string) bool { return value != "" }),
+			slices.ContainsFunc(proxyOptionValues(mapping, "routing-mark"), func(value string) bool { return value != "" && value != "0" }):
 			inspection.InterfaceExcluded++
-		case slices.ContainsFunc(proxyOptionValues(mapping, "dialer-proxy"), relay.reaches):
+		case slices.ContainsFunc(proxyOptionValues(mapping, "dialer-proxy"), relay.reaches),
+			splitErr == nil && flashguard.ProtectedServer(host):
+			// A server on Tailscale, or a local one, is a relay through it.
 			inspection.RelayExcluded++
 		default:
 			inspection.names = append(inspection.names, name)
@@ -193,10 +201,18 @@ type MountTarget struct {
 
 var mountableGroupTypes = []string{"select", "url-test", "fallback", "load-balance"}
 
+// Group keys are read as mihomo's group decoder reads them: the exact key
+// first, then any spelling of it ignoring case; numbers are taken as names.
 func groupFlag(mapping map[string]any, key string) bool {
-	switch value := mapping[key].(type) {
+	switch value := providerOption(mapping, key).(type) {
 	case bool:
 		return value
+	case int:
+		return value != 0
+	case int64:
+		return value != 0
+	case uint64:
+		return value != 0
 	case string:
 		parsed, _ := strconv.ParseBool(value)
 		return parsed
@@ -205,17 +221,28 @@ func groupFlag(mapping map[string]any, key string) bool {
 }
 
 func groupString(mapping map[string]any, key string) string {
-	value, _ := mapping[key].(string)
-	return value
+	value := providerOption(mapping, key)
+	if value == nil {
+		return ""
+	}
+	if _, ok := value.([]any); ok {
+		return ""
+	}
+	if _, ok := value.(map[string]any); ok {
+		return ""
+	}
+	return provider.WeakString(value)
 }
 
 func groupList(mapping map[string]any, key string) []string {
-	items, _ := mapping[key].([]any)
+	items, _ := providerOption(mapping, key).([]any)
 	names := make([]string, 0, len(items))
 	for _, item := range items {
-		if name, ok := item.(string); ok {
-			names = append(names, name)
+		switch item.(type) {
+		case nil, []any, map[string]any:
+			continue
 		}
+		names = append(names, provider.WeakString(item))
 	}
 	return names
 }
@@ -363,6 +390,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	if len(setup.Sources) == 0 {
 		return report, nil
 	}
+	refreshGuardSuffixes()
 	base, err := readMountBase(root)
 	if err != nil {
 		return nil, err

@@ -100,8 +100,8 @@ rules:
   - MATCH,G
 `
 	source := writeMountFile(t, home, "1.yaml", `proxies:
-  - {name: "Work (Flash)", type: socks5, server: 127.0.0.1, port: 1}
-  - {name: Work, type: socks5, server: 127.0.0.1, port: 2}
+  - {name: "Work (Flash)", type: socks5, server: 192.0.2.1, port: 1}
+  - {name: Work, type: socks5, server: 192.0.2.1, port: 2}
 `)
 	mounts := &MountSetup{Target: 9, Revision: "r", Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
 	setup := &TailscaleSetup{ProfileID: 9, Managed: []TailscaleManagedSetup{{ID: "m1", Name: "Work", Attached: true}}}
@@ -181,10 +181,10 @@ rules:
   - MATCH,Main
 `
 
-const mountTailscaleInvariantRelays = `  - {name: relay, type: socks5, server: 127.0.0.2, port: 2, dialer-proxy: ts-office}
-  - {name: spelled, type: socks5, server: 127.0.0.2, port: 3, DIALER_PROXY: Office}
-  - {name: global, type: socks5, server: 127.0.0.2, port: 4, dialer-proxy: GLOBAL}
-  - {name: bound, type: socks5, server: 127.0.0.2, port: 5, interface-name: utun9}
+const mountTailscaleInvariantRelays = `  - {name: relay, type: socks5, server: 192.0.2.2, port: 2, dialer-proxy: ts-office}
+  - {name: spelled, type: socks5, server: 192.0.2.2, port: 3, DIALER_PROXY: Office}
+  - {name: global, type: socks5, server: 192.0.2.2, port: 4, dialer-proxy: GLOBAL}
+  - {name: bound, type: socks5, server: 192.0.2.2, port: 5, interface-name: utun9}
 `
 
 // What a Tailscale route can end up on, followed through every group, must
@@ -194,8 +194,8 @@ func TestMountedConfigNeverRoutesTailscaleThroughAMountedNode(t *testing.T) {
 	profiles := map[string][3]string{
 		"groups": {mountTailscaleInvariantProfile, mountTailscaleInvariantProviders, ""},
 		"rule-set": {mountTailscaleRuleSetProfile, mountTailscaleRuleSetProviders,
-			"  - {name: hopper, type: socks5, server: 127.0.0.2, port: 6, Dialer-Proxy: Hops}\n" +
-				"  - {name: chained, type: socks5, server: 127.0.0.2, port: 7, dialer_proxy: Auto}\n"},
+			"  - {name: hopper, type: socks5, server: 192.0.2.2, port: 6, Dialer-Proxy: Hops}\n" +
+				"  - {name: chained, type: socks5, server: 192.0.2.2, port: 7, dialer_proxy: Auto}\n"},
 	}
 	for _, kind := range []string{"groups", "rule-set"} {
 		for _, attached := range []bool{false, true} {

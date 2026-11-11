@@ -8,7 +8,9 @@ import (
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	"github.com/metacubex/mihomo/adapter/provider"
+	"github.com/metacubex/mihomo/component/flashguard"
 	"github.com/metacubex/mihomo/constant"
+	cp "github.com/metacubex/mihomo/constant/provider"
 	"github.com/metacubex/mihomo/hub/executor"
 	rp "github.com/metacubex/mihomo/rules/provider"
 	"github.com/metacubex/mihomo/tunnel"
@@ -111,14 +113,17 @@ func gateMountProxies(name string, mappings []map[string]any) error {
 	return nil
 }
 
-func gateMountRuleSet(name string, strategy any) error {
+// The set is read again from what was loaded, with every rule recorded as
+// written: a classical set's built rules cannot be read back.
+func gateMountRuleSet(name string, _ any, raw []byte, behavior cp.RuleBehavior, format cp.RuleFormat) error {
 	mountGateMu.Lock()
 	defer mountGateMu.Unlock()
 	gate := activeMountGate
 	if gate == nil || !gate.ruleSets[name] {
 		return nil
 	}
-	if gate.reader.strategyReach(strategy) != ruleMisses {
+	strategy, err := rp.ParseRuleSet(raw, behavior, format, recordRule)
+	if err != nil || gate.reader.strategyReach(strategy) != ruleMisses {
 		return refuseMountUpdate(name, "sends Tailscale addresses or names")
 	}
 	return nil
@@ -174,6 +179,12 @@ func mountedMemberOf(proxies map[string]constant.Proxy, name string, seen map[st
 		}
 	}
 	return ""
+}
+
+// Every name under a tailnet suffix a routing memory keeps, and ts.net, is
+// one a mounted node refuses at dial time.
+func refreshGuardSuffixes(extra ...string) {
+	flashguard.SetSuffixes(append(tailnetSuffixes(), extra...))
 }
 
 func mountGateState() []string {

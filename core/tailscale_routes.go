@@ -841,11 +841,14 @@ var saveTailscaleRouteMemory = func(profileID int64, memory *tailscaleRouteMemor
 	if err != nil {
 		return err
 	}
-	return writeTailscaleFile(tailscaleRoutesPath(profileID), buf)
+	err = writeTailscaleFile(tailscaleRoutesPath(profileID), buf)
+	refreshGuardSuffixes(memory.Suffixes...)
+	return err
 }
 
 var removeTailscaleRouteMemory = func(profileID int64) error {
 	err := os.Remove(tailscaleRoutesPath(profileID))
+	refreshGuardSuffixes()
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
