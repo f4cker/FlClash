@@ -456,3 +456,96 @@ func TestTailscaleManagedTableWaitsForItsConfig(t *testing.T) {
 		t.Fatal("the table was not handed over once the config ran")
 	}
 }
+
+func TestTailscaleManagedStateTellsKeptFromForgotten(t *testing.T) {
+	applyManagedProfile(t, &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{{ID: "a1", Attached: true}}})
+	node := managedNode(t, "a1")
+	tailscaleManagedMu.Lock()
+	tailscaleManagedNodes[node].live = liveAccount("a1", "u1", "tail1.ts.net", peer("nas", "", "100.101.1.1")).Live
+	tailscaleManagedMu.Unlock()
+	refreshTailscaleRoutes()
+	before, _ := os.ReadFile(tailscaleRoutesPath(7))
+
+	kept, err := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 7})
+	if err != nil || kept.Routes != tailscaleKeptOnDisk || kept.Digest == "" || !kept.Running ||
+		kept.Forgotten || kept.Pending || kept.Protection != tailscaleProtectionActive {
+		t.Fatalf("kept = %+v, %v", kept, err)
+	}
+	again, _ := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 7})
+	if *again != *kept {
+		t.Fatalf("a second read moved: %+v", again)
+	}
+	if after, _ := os.ReadFile(tailscaleRoutesPath(7)); string(after) != string(before) {
+		t.Fatal("reading the state rewrote the routing")
+	}
+
+	if _, err := handleTailscaleForgetRoutes(TailscaleRoutesParams{ProfileID: 7}); err != nil {
+		t.Fatal(err)
+	}
+	gone, _ := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 7})
+	if gone.Routes != tailscaleKeptAbsent || gone.Digest != "" || !gone.Forgotten || gone.Pending ||
+		gone.Protection != tailscaleProtectionActive {
+		t.Fatalf("forgotten = %+v", gone)
+	}
+}
+
+func TestTailscaleManagedStateFlagsWhatIsStillMoving(t *testing.T) {
+	applyManagedProfile(t, &TailscaleSetup{ProfileID: 7, Managed: []TailscaleManagedSetup{{ID: "a1", Attached: true}}})
+	r := tailscaleRouting
+	r.mu.Lock()
+	r.memory = r.memory.clone()
+	r.memory.Accounts["a1"] = TailscaleRouteIdentity{UserID: "u1"}
+	r.mu.Unlock()
+	if state, _ := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 7}); !state.Pending {
+		t.Fatalf("an unsaved write = %+v", state)
+	}
+
+	refreshTailscaleRoutes()
+	cfg, err := loadConfig(runningConfigPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	injectTailscaleManaged(cfg)
+	if state, _ := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 7}); !state.Pending {
+		t.Fatalf("a config not in force yet = %+v", state)
+	}
+	publishTailscaleManaged()
+	if state, _ := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 7}); state.Pending {
+		t.Fatalf("a settled config = %+v", state)
+	}
+}
+
+func TestTailscaleManagedStateOfAnotherProfile(t *testing.T) {
+	applyManagedProfile(t, &TailscaleSetup{ProfileID: 7})
+	if state, _ := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 9}); state.Routes != tailscaleKeptAbsent ||
+		state.Running || state.Pending || state.Protection != tailscaleProtectionNone {
+		t.Fatalf("absent = %+v", state)
+	}
+	memory := newTailscaleRouteMemory()
+	memory.Bindings = []tailscaleRouteBinding{{
+		Target:   TailscaleRouteTarget{Kind: tailscaleTargetIP, Value: "100.101.1.1"},
+		Owner:    TailscaleRouteOwner{Kind: tailscaleOwnerManaged, ID: "a1"},
+		Assigned: true,
+	}}
+	if err := saveTailscaleRouteMemory(9, memory); err != nil {
+		t.Fatal(err)
+	}
+	kept, _ := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 9})
+	if kept.Routes != tailscaleKeptOnDisk || kept.Digest != tailscaleOwnershipDigest(memory) {
+		t.Fatalf("kept = %+v", kept)
+	}
+	memory.Lists = map[string]tailscaleRouteList{"a1": {Suffix: "tail1.ts.net"}}
+	if tailscaleOwnershipDigest(memory) != kept.Digest {
+		t.Fatal("a device list moved the ownership digest")
+	}
+	memory.Bindings[0].Assigned = false
+	if tailscaleOwnershipDigest(memory) == kept.Digest {
+		t.Fatal("a dropped pin kept the digest")
+	}
+	if err := os.WriteFile(tailscaleRoutesPath(9), []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if state, _ := handleTailscaleManagedState(TailscaleRoutesParams{ProfileID: 9}); state.Routes != tailscaleKeptUnreadable || state.Digest != "" {
+		t.Fatalf("unreadable = %+v", state)
+	}
+}

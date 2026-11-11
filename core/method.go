@@ -247,6 +247,7 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	tailscaleRoutesMethod:        withFallible(handleTailscaleRoutes),
 	tailscaleAssignMethod:        withFallible(handleTailscaleAssign),
 	tailscaleForgetRoutesMethod:  withFallible(handleTailscaleForgetRoutes),
+	tailscaleManagedStateMethod:  withFallible(handleTailscaleManagedState),
 }
 
 func watchRouteHandler(call *MethodCall) (any, error) {

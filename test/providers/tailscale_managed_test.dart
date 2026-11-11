@@ -98,6 +98,13 @@ void main() {
     _FakeSetupAction.result = true;
     _FakeSetupAction.applied = 0;
     _FakeSetupAction.seenAtApply = null;
+    when(() => core.getTailscaleManagedState(any())).thenAnswer(
+      (invocation) async => TailscaleManagedState(
+        profileId: invocation.positionalArguments.single as int,
+        routes: 'absent',
+        protection: 'none',
+      ),
+    );
   });
 
   ProviderContainer build({
@@ -737,12 +744,114 @@ void main() {
       ).thenAnswer((_) async => TailscaleForgetResult(outcome: outcome));
     }
 
-    void routesAnswer(Object error) {
-      when(() => core.getTailscaleRoutes(42)).thenThrow(error);
+    const kept = TailscaleManagedState(
+      profileId: 42,
+      routes: 'kept',
+      digest: 'd1',
+      running: true,
+      protection: 'active',
+    );
+    const forgotten = TailscaleManagedState(
+      profileId: 42,
+      routes: 'absent',
+      running: true,
+      forgotten: true,
+      protection: 'active',
+    );
+    const partial = {
+      'pins moved': TailscaleManagedState(
+        profileId: 42,
+        routes: 'kept',
+        digest: 'd2',
+        running: true,
+        protection: 'active',
+      ),
+      'file gone, memory kept': TailscaleManagedState(
+        profileId: 42,
+        routes: 'absent',
+        running: true,
+        protection: 'active',
+      ),
+      'file kept, memory forgotten': TailscaleManagedState(
+        profileId: 42,
+        routes: 'kept',
+        digest: 'd1',
+        running: true,
+        forgotten: true,
+        protection: 'active',
+      ),
+      'a write on its way': TailscaleManagedState(
+        profileId: 42,
+        routes: 'absent',
+        running: true,
+        forgotten: true,
+        pending: true,
+        protection: 'active',
+      ),
+      'REJECT rules off': TailscaleManagedState(
+        profileId: 42,
+        routes: 'absent',
+        running: true,
+        forgotten: true,
+        protection: 'off',
+      ),
+      'unreadable': TailscaleManagedState(
+        profileId: 42,
+        routes: 'unreadable',
+        running: true,
+        protection: 'active',
+      ),
+      'another profile': TailscaleManagedState(
+        profileId: 43,
+        routes: 'absent',
+        protection: 'none',
+      ),
+    };
+
+    void stateAnswers(List<Object> answers) {
+      when(() => core.getTailscaleManagedState(42)).thenAnswer((_) async {
+        final next = answers.length > 1 ? answers.removeAt(0) : answers.first;
+        if (next is TailscaleManagedState) {
+          return next;
+        }
+        throw next as Exception;
+      });
     }
 
-    test('a refused forget changed nothing and may be retried', () async {
+    const timeout = CoreMethodException(code: 'timeout', message: 'x');
+
+    Future<TailscaleUnlinkOutcome> recheck(
+      ProviderContainer container, [
+      TailscaleUnlinkOutcome open = TailscaleUnlinkOutcome.unconfirmed,
+    ]) => action(container).recheckUnlink(42, open: open);
+
+    Future<ProviderContainer> unanswered() async {
       final container = build(records: const [record]);
+      stateAnswers([kept]);
+      when(() => core.forgetTailscaleRoutes(42)).thenThrow(timeout);
+      expect(
+        await container.read(profilesActionProvider.notifier).deleteProfile(42),
+        TailscaleUnlinkOutcome.unconfirmed,
+      );
+      return container;
+    }
+
+    test('a failed read before the unlink changes nothing', () async {
+      final container = build(records: const [record]);
+      stateAnswers([timeout]);
+
+      expect(
+        await action(container).unlinkProfile(42, keep),
+        TailscaleUnlinkOutcome.failed,
+      );
+      expect(records(container), const [record]);
+      verifyNever(() => core.forgetTailscaleRoutes(any()));
+    });
+
+    test('a refused forget is retryable once a read shows the state it '
+        'started from', () async {
+      final container = build(records: const [record]);
+      stateAnswers([kept]);
       forgetAnswers('failed');
 
       expect(
@@ -756,88 +865,170 @@ void main() {
       expect(container.read(profilesProvider).single.id, 42);
     });
 
-    test('an unanswered forget keeps the records, targets and lock until a '
-        'read proves the state', () async {
-      final container = build(records: const [record]);
-      when(
-        () => core.forgetTailscaleRoutes(42),
-      ).thenThrow(const CoreMethodException(code: 'timeout', message: 'x'));
+    test(
+      'a refused forget that left a partial state stays unconfirmed',
+      () async {
+        final container = build(records: const [record]);
+        stateAnswers([kept, partial['pins moved']!]);
+        forgetAnswers('failed');
 
+        expect(
+          await action(container).unlinkProfile(42, keep),
+          TailscaleUnlinkOutcome.unconfirmed,
+        );
+        expect(records(container).single.unlinking, isTrue);
+        expect(action(container).hasPendingManaged(42), isTrue);
+      },
+    );
+
+    test('the mark records the profile, the operation and its start', () async {
+      final container = await unanswered();
+
+      final mark = records(container).single.unlink!;
+      expect(mark.profileId, 42);
+      expect(mark.operation, isNotEmpty);
+      expect(mark.before, 'kept:d1');
       expect(
-        await container.read(profilesActionProvider.notifier).deleteProfile(42),
-        TailscaleUnlinkOutcome.unconfirmed,
+        (await _stored()).single,
+        containsPair('unlink', containsPair('operation', mark.operation)),
       );
-      expect(records(container).single.unlinking, isTrue);
-      expect(container.read(profilesProvider).single.id, 42);
-      expect(action(container).hasPendingManaged(42), isTrue);
       expect(
         await action(container).unlinkProfile(42, keep),
         TailscaleUnlinkOutcome.pending,
       );
       verify(() => core.forgetTailscaleRoutes(42)).called(1);
+    });
 
+    for (final MapEntry(:key, :value) in partial.entries) {
+      test('a kept profile with $key stays unconfirmed', () async {
+        final container = await unanswered();
+        stateAnswers([value]);
+
+        expect(await recheck(container), TailscaleUnlinkOutcome.unconfirmed);
+        expect(records(container).single.unlinking, isTrue);
+        expect(action(container).hasPendingManaged(42), isTrue);
+      });
+    }
+
+    test('a failed read keeps the lock', () async {
+      final container = await unanswered();
+      stateAnswers([timeout]);
+
+      expect(await recheck(container), TailscaleUnlinkOutcome.unconfirmed);
+      expect(await recheck(container), TailscaleUnlinkOutcome.unconfirmed);
+      expect(action(container).hasPendingManaged(42), isTrue);
+      verify(() => core.getTailscaleManagedState(42)).called(3);
+    });
+
+    test('a kept profile wholly before the unlink may be retried', () async {
+      final container = await unanswered();
       container
           .read(profilesProvider.notifier)
           .put(
             const Profile(id: 43, label: '', autoUpdateDuration: Duration.zero),
           );
-      routesAnswer(const CoreMethodException(code: 'timeout', message: 'x'));
-      expect(
-        await action(
-          container,
-        ).recheckUnlink(42, open: TailscaleUnlinkOutcome.unconfirmed),
-        TailscaleUnlinkOutcome.unconfirmed,
-      );
-      expect(action(container).hasPendingManaged(42), isTrue);
-      expect(action(container).hasPendingManaged(43), isFalse);
 
-      routesAnswer(
-        const CoreMethodException(
-          code: 'tailscale_profile_not_current',
-          message: 'x',
-        ),
-      );
-      expect(
-        await action(
-          container,
-        ).recheckUnlink(42, open: TailscaleUnlinkOutcome.unconfirmed),
-        TailscaleUnlinkOutcome.failed,
-      );
+      expect(await recheck(container), TailscaleUnlinkOutcome.failed);
       expect(records(container).single.unlinking, isFalse);
+      expect(records(container).single.unlink, isNull);
       expect(action(container).hasPendingManaged(42), isFalse);
       verifyNever(() => core.forgetTailscaleRoutes(43));
     });
 
-    test('a deletion that threw keeps the records until a read finds the '
-        'profile', () async {
-      final container = build(records: const [record]);
+    test('a kept profile wholly after the unlink may be retried, which '
+        'deletes it', () async {
+      final container = await unanswered();
+      stateAnswers([forgotten]);
+
+      expect(await recheck(container), TailscaleUnlinkOutcome.failed);
+      expect(records(container).single.unlinking, isFalse);
+      expect(container.read(profilesProvider).single.id, 42);
+
       forgetAnswers('confirmed');
-
       expect(
-        await action(
-          container,
-        ).unlinkProfile(42, () async => throw StateError('disk')),
-        TailscaleUnlinkOutcome.deleteUnconfirmed,
-      );
-      expect(records(container).single.unlinking, isTrue);
-      expect(action(container).hasPendingManaged(42), isTrue);
-
-      routesAnswer(const CoreMethodException(code: 'timeout', message: 'x'));
-      expect(
-        await action(
-          container,
-        ).recheckUnlink(42, open: TailscaleUnlinkOutcome.deleteUnconfirmed),
-        TailscaleUnlinkOutcome.deleteUnconfirmed,
-      );
-      expect(action(container).hasPendingManaged(42), isTrue);
-
-      await container.read(profilesProvider.notifier).del(42);
-      expect(
-        await action(
-          container,
-        ).recheckUnlink(42, open: TailscaleUnlinkOutcome.deleteUnconfirmed),
+        await action(container).unlinkProfile(
+          42,
+          () => container.read(profilesProvider.notifier).del(42),
+        ),
         TailscaleUnlinkOutcome.done,
       );
+      expect(records(container), isEmpty);
+      expect(container.read(profilesProvider), isEmpty);
+    });
+
+    test(
+      'marks of another operation are proven only by a finished forget',
+      () async {
+        final container = await unanswered();
+        final stray = records(container).single.copyWith(
+          id: 'm2',
+          unlink: const TailscaleUnlinkMark(
+            operation: 'other',
+            profileId: 42,
+            before: 'kept:d1',
+          ),
+        );
+        await container
+            .read(tailscaleManagedRecordsProvider.notifier)
+            .modify((records) => [...records, stray]);
+
+        expect(await recheck(container), TailscaleUnlinkOutcome.unconfirmed);
+        expect(action(container).hasPendingManaged(42), isTrue);
+
+        stateAnswers([forgotten]);
+        expect(await recheck(container), TailscaleUnlinkOutcome.failed);
+      },
+    );
+
+    test(
+      'a deleted profile keeps its records until the forget is proven',
+      () async {
+        final container = build(records: const [record]);
+        stateAnswers([kept]);
+        forgetAnswers('confirmed');
+
+        expect(
+          await action(
+            container,
+          ).unlinkProfile(42, () async => throw StateError('disk')),
+          TailscaleUnlinkOutcome.deleteUnconfirmed,
+        );
+        expect(records(container).single.unlinking, isTrue);
+
+        await container.read(profilesProvider.notifier).del(42);
+        for (final state in [timeout, kept, ...partial.values]) {
+          stateAnswers([state]);
+          expect(
+            await recheck(container, TailscaleUnlinkOutcome.deleteUnconfirmed),
+            TailscaleUnlinkOutcome.deleteUnconfirmed,
+            reason: '$state',
+          );
+          expect(records(container).single.unlinking, isTrue);
+          expect(action(container).hasPendingManaged(42), isTrue);
+        }
+
+        stateAnswers([forgotten]);
+        expect(
+          await recheck(container, TailscaleUnlinkOutcome.deleteUnconfirmed),
+          TailscaleUnlinkOutcome.done,
+        );
+        expect(records(container), isEmpty);
+      },
+    );
+
+    test('a deleted profile the Core no longer runs drops its records once '
+        'its routing is gone', () async {
+      final container = await unanswered();
+      await container.read(profilesProvider.notifier).del(42);
+      stateAnswers([
+        const TailscaleManagedState(
+          profileId: 42,
+          routes: 'absent',
+          protection: 'none',
+        ),
+      ]);
+
+      expect(await recheck(container), TailscaleUnlinkOutcome.done);
       expect(records(container), isEmpty);
     });
   });

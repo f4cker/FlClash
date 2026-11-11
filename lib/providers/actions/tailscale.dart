@@ -1080,16 +1080,24 @@ class TailscaleAction extends _$TailscaleAction {
       await delete();
       return TailscaleUnlinkOutcome.done;
     }
-    if (!await _markUnlinking(profileId, true)) {
+    final before = await _readManaged(profileId);
+    if (before == null) {
+      return TailscaleUnlinkOutcome.failed;
+    }
+    final mark = TailscaleUnlinkMark(
+      operation: '${snowflake.id}',
+      profileId: profileId,
+      before: before.fingerprint(attached: _attached(profileId)),
+    );
+    if (!await _markUnlinking(profileId, mark)) {
       return TailscaleUnlinkOutcome.failed;
     }
     switch (await _forgetRoutes(profileId)) {
       case null:
         return TailscaleUnlinkOutcome.unconfirmed;
       case false:
-        return await _markUnlinking(profileId, false)
-            ? TailscaleUnlinkOutcome.failed
-            : TailscaleUnlinkOutcome.unconfirmed;
+        return await _settleUnlink(profileId, mark, stored: true) ??
+            TailscaleUnlinkOutcome.unconfirmed;
       case true:
     }
     try {
@@ -1105,8 +1113,10 @@ class TailscaleAction extends _$TailscaleAction {
     return TailscaleUnlinkOutcome.done;
   }
 
-  /// Read only: a profile gone from the database drops its marked records,
-  /// one still there unlocks once the Core answers, as a retry re-forgets.
+  /// Read only. The mark lifts only when the Core shows this profile's
+  /// routing, pins and REJECT rules settled wholly before or wholly after the
+  /// marked unlink: a deleted profile then drops its records, a kept one may
+  /// be deleted again. Anything else, a read that fails included, stays open.
   Future<TailscaleUnlinkOutcome> recheckUnlink(
     int profileId, {
     required TailscaleUnlinkOutcome open,
@@ -1114,11 +1124,19 @@ class TailscaleAction extends _$TailscaleAction {
     if (ref.read(tailscaleManagedRecordsProvider) == null) {
       return open;
     }
-    if (!_managed.ofProfile(profileId).any((record) => record.unlinking)) {
+    final marked = [
+      for (final record in _managed.ofProfile(profileId))
+        if (record.unlinking) record,
+    ];
+    if (marked.isEmpty) {
       return hasPendingManaged(profileId)
           ? TailscaleUnlinkOutcome.pending
           : TailscaleUnlinkOutcome.failed;
     }
+    final marks = {for (final record in marked) record.unlink};
+    final mark = marks.length == 1 && marks.single?.profileId == profileId
+        ? marks.single
+        : null;
     final bool stored;
     try {
       stored = await ref.read(profilesProvider.notifier).stored(profileId);
@@ -1129,32 +1147,61 @@ class TailscaleAction extends _$TailscaleAction {
       );
       return open;
     }
+    return await _settleUnlink(profileId, mark, stored: stored) ?? open;
+  }
+
+  /// Null leaves the mark: the read failed or the state is partial.
+  Future<TailscaleUnlinkOutcome?> _settleUnlink(
+    int profileId,
+    TailscaleUnlinkMark? mark, {
+    required bool stored,
+  }) async {
+    final state = await _readManaged(profileId);
+    final attached = _attached(profileId);
+    if (state == null || !state.settled(attached: attached)) {
+      return null;
+    }
     if (!stored) {
-      return await _dropProfile(profileId) ? TailscaleUnlinkOutcome.done : open;
+      return state.isForgotten && await _dropProfile(profileId)
+          ? TailscaleUnlinkOutcome.done
+          : null;
     }
-    try {
-      await _core.getTailscaleRoutes(profileId);
-    } on CoreMethodException catch (error) {
-      if (error.code != 'tailscale_profile_not_current') {
-        return open;
-      }
-    } catch (_) {
-      return open;
+    final before =
+        mark?.before != null &&
+        state.fingerprint(attached: attached) == mark!.before;
+    if (!before && !state.isForgotten) {
+      return null;
     }
-    if (!await _markUnlinking(profileId, false)) {
-      return open;
+    if (!await _markUnlinking(profileId, null)) {
+      return null;
     }
     return hasPendingManaged(profileId)
         ? TailscaleUnlinkOutcome.pending
         : TailscaleUnlinkOutcome.failed;
   }
 
-  Future<bool> _markUnlinking(int profileId, bool unlinking) {
+  Future<TailscaleManagedState?> _readManaged(int profileId) async {
+    try {
+      final state = await _core.getTailscaleManagedState(profileId);
+      return state.profileId == profileId ? state : null;
+    } catch (error) {
+      commonPrint.log(
+        'tailscale managed state error ${_codeOf(error) ?? error.runtimeType}',
+        logLevel: LogLevel.warning,
+      );
+      return null;
+    }
+  }
+
+  bool _attached(int profileId) =>
+      _managed.ofProfile(profileId).any((record) => record.attached);
+
+  Future<bool> _markUnlinking(int profileId, TailscaleUnlinkMark? mark) {
     return _managed.modify(
       (records) => [
         for (final record in records)
           record.profileId == profileId
-              ? record.copyWith(unlinking: unlinking)
+              ? record.copyWith(unlinking: mark != null, unlink: mark)
               : record,
       ],
     );

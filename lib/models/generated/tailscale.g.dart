@@ -645,6 +645,9 @@ _TailscaleManagedRecord _$TailscaleManagedRecordFromJson(
   attached: json['attached'] as bool? ?? false,
   removing: json['removing'] as bool? ?? false,
   unlinking: json['unlinking'] as bool? ?? false,
+  unlink: json['unlink'] == null
+      ? null
+      : TailscaleUnlinkMark.fromJson(json['unlink'] as Map<String, dynamic>),
   account: json['account'] == null
       ? null
       : TailscaleAccount.fromJson(json['account'] as Map<String, dynamic>),
@@ -664,7 +667,23 @@ Map<String, dynamic> _$TailscaleManagedRecordToJson(
   'attached': instance.attached,
   'removing': instance.removing,
   'unlinking': instance.unlinking,
+  'unlink': ?instance.unlink,
   'account': instance.account,
+};
+
+_TailscaleUnlinkMark _$TailscaleUnlinkMarkFromJson(Map<String, dynamic> json) =>
+    _TailscaleUnlinkMark(
+      operation: json['operation'] as String,
+      profileId: (json['profile-id'] as num).toInt(),
+      before: json['before'] as String?,
+    );
+
+Map<String, dynamic> _$TailscaleUnlinkMarkToJson(
+  _TailscaleUnlinkMark instance,
+) => <String, dynamic>{
+  'operation': instance.operation,
+  'profile-id': instance.profileId,
+  'before': ?instance.before,
 };
 
 _TailscaleManagedSetup _$TailscaleManagedSetupFromJson(
@@ -957,6 +976,30 @@ _TailscaleForgetResult _$TailscaleForgetResultFromJson(
 Map<String, dynamic> _$TailscaleForgetResultToJson(
   _TailscaleForgetResult instance,
 ) => <String, dynamic>{'outcome': instance.outcome, 'error': instance.error};
+
+_TailscaleManagedState _$TailscaleManagedStateFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleManagedState(
+  profileId: (json['profile-id'] as num?)?.toInt() ?? 0,
+  routes: json['routes'] as String? ?? '',
+  digest: json['digest'] as String? ?? '',
+  running: json['running'] as bool? ?? false,
+  forgotten: json['forgotten'] as bool? ?? false,
+  pending: json['pending'] as bool? ?? false,
+  protection: json['protection'] as String? ?? '',
+);
+
+Map<String, dynamic> _$TailscaleManagedStateToJson(
+  _TailscaleManagedState instance,
+) => <String, dynamic>{
+  'profile-id': instance.profileId,
+  'routes': instance.routes,
+  'digest': instance.digest,
+  'running': instance.running,
+  'forgotten': instance.forgotten,
+  'pending': instance.pending,
+  'protection': instance.protection,
+};
 
 _TailscaleRoutesEvent _$TailscaleRoutesEventFromJson(
   Map<String, dynamic> json,

@@ -456,6 +456,9 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
     /// blocks deleting the profile again until a read settles it.
     @Default(false) bool unlinking,
 
+    /// The unlink [unlinking] marks, and what it would undo.
+    @JsonKey(includeIfNull: false) TailscaleUnlinkMark? unlink,
+
     /// The identity it was attached with, so a signed-out entry still counts
     /// against a second sign-in of the same account.
     TailscaleAccount? account,
@@ -475,6 +478,20 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
     loggedOut: loggedOut,
     attached: attached,
   );
+}
+
+/// One unlink of a profile: [before] is the routing it started from, null
+/// when that was not settled, so only a finished forget can be proven.
+@freezed
+abstract class TailscaleUnlinkMark with _$TailscaleUnlinkMark {
+  const factory TailscaleUnlinkMark({
+    required String operation,
+    @JsonKey(name: 'profile-id') required int profileId,
+    @JsonKey(includeIfNull: false) String? before,
+  }) = _TailscaleUnlinkMark;
+
+  factory TailscaleUnlinkMark.fromJson(Map<String, Object?> json) =>
+      _$TailscaleUnlinkMarkFromJson(json);
 }
 
 @freezed
@@ -738,6 +755,43 @@ abstract class TailscaleForgetResult with _$TailscaleForgetResult {
 
   factory TailscaleForgetResult.fromJson(Map<String, Object?> json) =>
       _$TailscaleForgetResultFromJson(json);
+}
+
+/// What the Core holds of a profile's routing, read without changing it.
+@freezed
+abstract class TailscaleManagedState with _$TailscaleManagedState {
+  const TailscaleManagedState._();
+
+  const factory TailscaleManagedState({
+    @JsonKey(name: 'profile-id') @Default(0) int profileId,
+    @Default('') String routes,
+    @Default('') String digest,
+    @Default(false) bool running,
+    @Default(false) bool forgotten,
+    @Default(false) bool pending,
+    @Default('') String protection,
+  }) = _TailscaleManagedState;
+
+  factory TailscaleManagedState.fromJson(Map<String, Object?> json) =>
+      _$TailscaleManagedStateFromJson(json);
+
+  /// Nothing is on its way and the REJECT rules are where [attached] needs
+  /// them, so the state cannot move under the reader.
+  bool settled({required bool attached}) =>
+      !pending &&
+      (routes == 'absent' || routes == 'kept') &&
+      switch (protection) {
+        'none' => !running,
+        'active' => running,
+        'off' => running && !attached,
+        _ => false,
+      };
+
+  /// The routing a forget starts from; null when it cannot be told apart.
+  String? fingerprint({required bool attached}) =>
+      settled(attached: attached) && !forgotten ? '$routes:$digest' : null;
+
+  bool get isForgotten => routes == 'absent' && (!running || forgotten);
 }
 
 @freezed

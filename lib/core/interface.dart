@@ -542,6 +542,16 @@ abstract class CoreHandlerInterface {
       timeout: tailscaleCoreGuard,
     );
   }
+
+  /// Read only, for any profile, running or not.
+  Future<TailscaleManagedState> getTailscaleManagedState(int profileId) {
+    return _query(
+      CoreMethod.tailscaleManagedState,
+      _model(TailscaleManagedState.fromJson),
+      arguments: {'profile-id': profileId},
+      timeout: tailscaleCoreGuard,
+    );
+  }
 }
 
 T _cast<T>(Object data) => data as T;

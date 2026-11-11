@@ -4,7 +4,11 @@ package core
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"os"
 	"slices"
 	"strconv"
 	"sync"
@@ -606,4 +610,85 @@ func handleTailscaleForgetRoutes(params TailscaleRoutesParams) (*TailscaleForget
 		r.refreshLocked()
 	}
 	return &TailscaleForgetResult{Outcome: tailscaleOutcomeConfirmed}, nil
+}
+
+const (
+	tailscaleKeptAbsent     = "absent"
+	tailscaleKeptOnDisk     = "kept"
+	tailscaleKeptUnreadable = "unreadable"
+
+	tailscaleProtectionNone   = "none"
+	tailscaleProtectionOff    = "off"
+	tailscaleProtectionActive = "active"
+)
+
+// What a profile's routing holds right now, so the host can tell whether a
+// forget it lost the answer to ran, did not run, or stopped halfway.
+type TailscaleManagedState struct {
+	ProfileID int64 `json:"profile-id"`
+	// absent, kept or unreadable: the profile's routing file on disk.
+	Routes string `json:"routes"`
+	// Of the kept account bindings, target owners, pins and conflicts.
+	Digest  string `json:"digest,omitempty"`
+	Running bool   `json:"running"`
+	// The running routing was forgotten and keeps nothing until a new config.
+	Forgotten bool `json:"forgotten"`
+	// A write or a config is still on its way, so the state may yet move.
+	Pending bool `json:"pending"`
+	// none while the profile does not run; off or active for its REJECT rules.
+	Protection string `json:"protection"`
+}
+
+func tailscaleOwnershipDigest(memory *tailscaleRouteMemory) string {
+	buf, _ := json.Marshal(struct {
+		Accounts  map[string]TailscaleRouteIdentity `json:"accounts"`
+		Bindings  []tailscaleRouteBinding           `json:"bindings"`
+		Conflicts []tailscaleRouteClash             `json:"conflicts"`
+	}{memory.Accounts, memory.Bindings, memory.Conflicts})
+	sum := sha256.Sum256(buf)
+	return hex.EncodeToString(sum[:])
+}
+
+// Read only: nothing is refreshed or saved, so asking never settles a state.
+func handleTailscaleManagedState(params TailscaleRoutesParams) (*TailscaleManagedState, error) {
+	r := tailscaleRouting
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	state := &TailscaleManagedState{ProfileID: params.ProfileID, Protection: tailscaleProtectionNone}
+	_, statErr := os.Stat(tailscaleRoutesPath(params.ProfileID))
+	disk, err := loadTailscaleRouteMemory(params.ProfileID)
+	switch {
+	case err != nil || (statErr != nil && !errors.Is(statErr, os.ErrNotExist)):
+		state.Routes = tailscaleKeptUnreadable
+	case statErr != nil:
+		state.Routes = tailscaleKeptAbsent
+	default:
+		state.Routes, state.Digest = tailscaleKeptOnDisk, tailscaleOwnershipDigest(disk)
+	}
+	state.Running = params.ProfileID == tailscaleProfileID()
+	if !state.Running {
+		return state, nil
+	}
+	if r.profileID != params.ProfileID || r.memory == nil || r.loadErr != nil {
+		state.Pending = true
+	} else {
+		state.Forgotten = r.forgotten
+		if !r.forgotten && (r.persisted == nil || !r.persisted.equal(r.memory) || (disk != nil && !disk.equal(r.persisted))) {
+			state.Pending = true
+		}
+	}
+	tailscaleManagedMu.Lock()
+	active, unknown, staged, slot := tailscaleManagedActive, tailscaleManagedUnknown, tailscaleStaged, tailscaleRunningSlot
+	tailscaleManagedMu.Unlock()
+	switch {
+	case staged:
+		state.Pending = true
+	case !active && !unknown:
+		state.Protection = tailscaleProtectionOff
+	case slot != nil && slot.Load() != nil:
+		state.Protection = tailscaleProtectionActive
+	default:
+		state.Pending = true
+	}
+	return state, nil
 }
