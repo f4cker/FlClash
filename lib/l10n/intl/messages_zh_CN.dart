@@ -234,13 +234,46 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m97(transport) => "${transport} 请求头";
 
-  static String m98(label) => "${label}必须为URL";
+  static String m98(name) => "${name} · 当前节点";
 
-  static String m99(date) => "有效期至 ${date}";
+  static String m99(n) => "当前显示 ${n} 台设备";
 
-  static String m100(count) => "${count} 年前";
+  static String m100(node, device) =>
+      "将“${node}”的出口节点设为“${device}”。经过此节点的连接可能中断；FlClash 的规则不变。";
 
-  static String m101(count) => "${count} 年前";
+  static String m101(node) => "仅关闭“${node}”的出口转发，不会退出 Tailscale，FlClash 的规则不变。";
+
+  static String m102(time) => "认证将于 ${time} 到期，请在到期前重新登录。";
+
+  static String m103(error) => "登录记录未迁移。旧登录记录出错：${error}";
+
+  static String m104(account) => "登录账号：${account}";
+
+  static String m105(server) => "控制服务器：${server}";
+
+  static String m106(name) => "节点：${name}";
+
+  static String m107(name) => "配置：${name}";
+
+  static String m108(error) =>
+      "迁移结果待确认，旧登录记录出错：${error}。请先重新读取状态，确认前请勿重复迁移或重新登录。";
+
+  static String m109(name) =>
+      "将退出“${name}”，并清除本机保存的该节点登录身份。经过此节点的连接可能中断，其他节点不受影响。";
+
+  static String m110(name) => "节点 ${name}";
+
+  static String m111(name) => "分享来源：${name}";
+
+  static String m112(label) => "状态：${label}";
+
+  static String m113(label) => "${label}必须为URL";
+
+  static String m114(date) => "有效期至 ${date}";
+
+  static String m115(count) => "${count} 年前";
+
+  static String m116(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1604,6 +1637,278 @@ class MessageLookup extends MessageLookupByLibrary {
     "transport": MessageLookupByLibrary.simpleMessage("传输协议"),
     "transportHeaders": m97,
     "trustCertificate": MessageLookupByLibrary.simpleMessage("信任证书"),
+    "tsAcceptRoutes": MessageLookupByLibrary.simpleMessage("接受子网路由"),
+    "tsAcceptRoutesTip": MessageLookupByLibrary.simpleMessage(
+      "允许此节点使用 Tailscale 网络中已批准的子网路由。是否有流量经过这些路由，仍由现有规则决定；不会自动修改 FlClash 的规则。",
+    ),
+    "tsAccount": MessageLookupByLibrary.simpleMessage("登录账号"),
+    "tsAccountMissing": MessageLookupByLibrary.simpleMessage("账号信息未提供"),
+    "tsAddress": MessageLookupByLibrary.simpleMessage("Tailscale 地址"),
+    "tsAddressCopied": MessageLookupByLibrary.simpleMessage("地址已复制"),
+    "tsAddressMissing": MessageLookupByLibrary.simpleMessage("地址未提供"),
+    "tsAfterConnectSelectable": MessageLookupByLibrary.simpleMessage("节点连接后可选"),
+    "tsAfterLogin": MessageLookupByLibrary.simpleMessage("登录后可查看"),
+    "tsAfterLoginSelectable": MessageLookupByLibrary.simpleMessage("登录后可选"),
+    "tsBoundaryTip": MessageLookupByLibrary.simpleMessage(
+      "只有由 FlClash 规则转到此节点的流量才会使用 Tailscale。登录不会自动修改规则、系统代理或虚拟网卡设置。",
+    ),
+    "tsBrowserFailed": MessageLookupByLibrary.simpleMessage("无法打开登录页，请重试。"),
+    "tsChooseExitNode": MessageLookupByLibrary.simpleMessage("选择出口节点"),
+    "tsChooseNode": MessageLookupByLibrary.simpleMessage("选择节点"),
+    "tsClearOwnerFilter": MessageLookupByLibrary.simpleMessage("清除归属筛选"),
+    "tsControlServer": MessageLookupByLibrary.simpleMessage("控制服务器"),
+    "tsCopyAddress": MessageLookupByLibrary.simpleMessage("复制地址"),
+    "tsCoreStopped": MessageLookupByLibrary.simpleMessage("内核未运行"),
+    "tsCoreStoppedTip": MessageLookupByLibrary.simpleMessage(
+      "启动内核后，才能查看此节点的 Tailscale 状态。",
+    ),
+    "tsCurrentDevice": MessageLookupByLibrary.simpleMessage("当前设备"),
+    "tsCurrentNodeOf": m98,
+    "tsDeviceName": MessageLookupByLibrary.simpleMessage("设备名称"),
+    "tsDevices": MessageLookupByLibrary.simpleMessage("设备"),
+    "tsDevicesEmpty": MessageLookupByLibrary.simpleMessage("暂无可见设备"),
+    "tsDevicesEmptyTip": MessageLookupByLibrary.simpleMessage(
+      "当前节点暂未发现其他可见设备。",
+    ),
+    "tsDevicesFailed": MessageLookupByLibrary.simpleMessage("设备列表加载失败，请重试。"),
+    "tsDevicesScope": MessageLookupByLibrary.simpleMessage(
+      "显示当前节点可见的设备，不代表管理后台中的全部设备",
+    ),
+    "tsDevicesShown": m99,
+    "tsDevicesStale": MessageLookupByLibrary.simpleMessage(
+      "设备列表可能已过期。刷新失败，以下为上次读取的结果。",
+    ),
+    "tsExitApplying": MessageLookupByLibrary.simpleMessage("正在更改出口节点…"),
+    "tsExitCapable": MessageLookupByLibrary.simpleMessage("可作出口节点"),
+    "tsExitChangeBody": m100,
+    "tsExitChangeConfirm": MessageLookupByLibrary.simpleMessage("更改出口节点"),
+    "tsExitChangeTitle": MessageLookupByLibrary.simpleMessage("更改出口节点？"),
+    "tsExitFailed": MessageLookupByLibrary.simpleMessage("出口节点未更改，请重试。"),
+    "tsExitNode": MessageLookupByLibrary.simpleMessage("出口节点"),
+    "tsExitNodeTip": MessageLookupByLibrary.simpleMessage(
+      "只影响经此 Tailscale 节点转发的流量，不会让整台 Mac 自动使用该出口。",
+    ),
+    "tsExitOffBody": m101,
+    "tsExitOffTitle": MessageLookupByLibrary.simpleMessage("不再使用出口节点？"),
+    "tsExitStale": MessageLookupByLibrary.simpleMessage("请先刷新设备列表，再选择出口节点。"),
+    "tsExitUnknown": MessageLookupByLibrary.simpleMessage(
+      "出口节点的更改结果待确认，请重新读取当前设置。",
+    ),
+    "tsExitUpdated": MessageLookupByLibrary.simpleMessage("出口节点已更新"),
+    "tsExpiryTip": m102,
+    "tsFromLocal": MessageLookupByLibrary.simpleMessage("本机设置"),
+    "tsFromProfile": MessageLookupByLibrary.simpleMessage("来自当前配置"),
+    "tsFromSubscription": MessageLookupByLibrary.simpleMessage("来自订阅"),
+    "tsGoToProfiles": MessageLookupByLibrary.simpleMessage("前往配置"),
+    "tsGoToRules": MessageLookupByLibrary.simpleMessage("前往规则"),
+    "tsHelp": MessageLookupByLibrary.simpleMessage("补充说明"),
+    "tsHelpBody": MessageLookupByLibrary.simpleMessage(
+      "FlClash 会在 Tailscale 网络中显示为独立设备。它不提供其他设备连入这台 Mac 的 SSH、文件共享或远程桌面功能，也不提供 Tailscale SSH 或 Taildrop。",
+    ),
+    "tsIdentityFailed": MessageLookupByLibrary.simpleMessage("账号与网络信息加载失败"),
+    "tsLegacyAccountUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "账号信息未确认",
+    ),
+    "tsLegacyArchiveError": MessageLookupByLibrary.simpleMessage(
+      "登录记录未迁移。读取或保存旧登录记录时出错，无法确认原记录是否完好。",
+    ),
+    "tsLegacyArchiveErrorOf": m103,
+    "tsLegacyAuthKeyNote": MessageLookupByLibrary.simpleMessage(
+      "此节点配置了登录密钥，重新登录将使用该密钥注册新的设备身份，旧登录记录仍保留。",
+    ),
+    "tsLegacyBody": MessageLookupByLibrary.simpleMessage(
+      "可将这份登录记录复制给当前节点，保留原记录。它只能迁移到一个节点；请确认这是你要继续使用的账号，也可以选择重新登录。",
+    ),
+    "tsLegacyChanged": MessageLookupByLibrary.simpleMessage(
+      "迁移信息已变化，请重新核对后确认。",
+    ),
+    "tsLegacyConfirm": MessageLookupByLibrary.simpleMessage("确认迁移"),
+    "tsLegacyConfirmAccount": m104,
+    "tsLegacyConfirmBody": MessageLookupByLibrary.simpleMessage(
+      "将复制这份登录记录供上述节点使用，原记录保留不动。同一份旧记录不能再迁移给其他节点。迁移完成后仍需检查此节点的真实连接状态。",
+    ),
+    "tsLegacyConfirmControl": m105,
+    "tsLegacyConfirmNode": m106,
+    "tsLegacyConfirmProfile": m107,
+    "tsLegacyConfirmTitle": MessageLookupByLibrary.simpleMessage("将旧登录迁移到此节点？"),
+    "tsLegacyControlMismatch": MessageLookupByLibrary.simpleMessage(
+      "旧登录记录的控制服务器与此节点不一致，无法迁移。",
+    ),
+    "tsLegacyFailed": MessageLookupByLibrary.simpleMessage(
+      "登录记录未迁移，原记录仍保留。请重试，或选择重新登录。",
+    ),
+    "tsLegacyHasIdentity": MessageLookupByLibrary.simpleMessage(
+      "此节点已有自己的登录记录，无需迁移。",
+    ),
+    "tsLegacyInUse": MessageLookupByLibrary.simpleMessage("旧登录记录仍在使用中，暂时无法迁移。"),
+    "tsLegacyMigrate": MessageLookupByLibrary.simpleMessage("迁移到这个节点"),
+    "tsLegacyMigrated": MessageLookupByLibrary.simpleMessage(
+      "登录记录已迁移，正在读取节点状态。",
+    ),
+    "tsLegacyMigratedElsewhere": MessageLookupByLibrary.simpleMessage(
+      "这份旧登录记录已迁移到其他节点，不能再次迁移。",
+    ),
+    "tsLegacyMigrating": MessageLookupByLibrary.simpleMessage("正在迁移登录记录…"),
+    "tsLegacyRetry": MessageLookupByLibrary.simpleMessage("重试迁移"),
+    "tsLegacyTitle": MessageLookupByLibrary.simpleMessage("发现旧版登录记录"),
+    "tsLegacyUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "旧登录记录的可用状态尚未确认，请重新读取状态。",
+    ),
+    "tsLegacyUnknown": MessageLookupByLibrary.simpleMessage(
+      "迁移结果待确认，原记录仍保留。请先重新读取状态，确认前请勿重复迁移或重新登录。",
+    ),
+    "tsLegacyUnknownArchiveError": MessageLookupByLibrary.simpleMessage(
+      "迁移结果待确认，读取或保存旧登录记录时出错，无法确认原记录是否完好。请先重新读取状态，确认前请勿重复迁移或重新登录。",
+    ),
+    "tsLegacyUnknownArchiveErrorOf": m108,
+    "tsLegacyUnreadable": MessageLookupByLibrary.simpleMessage(
+      "无法读取旧登录记录，请重新核对。",
+    ),
+    "tsLoadFailedTip": MessageLookupByLibrary.simpleMessage(
+      "暂时无法读取此节点的状态，请重试。",
+    ),
+    "tsLoggedOutReceipt": MessageLookupByLibrary.simpleMessage(
+      "已退出此节点。再次点击登录前，此节点不会自动登录。",
+    ),
+    "tsLoggedOutTip": MessageLookupByLibrary.simpleMessage(
+      "你已退出此节点。点击登录后才会重新连接。",
+    ),
+    "tsLoggingOut": MessageLookupByLibrary.simpleMessage("正在退出…"),
+    "tsLogin": MessageLookupByLibrary.simpleMessage("登录 Tailscale"),
+    "tsLoginUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "尚未确认登录结果，请重新读取节点状态。",
+    ),
+    "tsLogout": MessageLookupByLibrary.simpleMessage("退出当前节点"),
+    "tsLogoutAuthKeyNote": MessageLookupByLibrary.simpleMessage(
+      "再次点击登录时，将使用配置中的登录密钥注册新的设备身份。",
+    ),
+    "tsLogoutBody": m109,
+    "tsLogoutFailed": MessageLookupByLibrary.simpleMessage(
+      "退出失败，请重新读取节点状态后重试。",
+    ),
+    "tsLogoutTitle": MessageLookupByLibrary.simpleMessage("退出此 Tailscale 节点？"),
+    "tsLogoutUnknown": MessageLookupByLibrary.simpleMessage(
+      "退出结果待确认，请重新读取节点状态，确认前请勿重复操作。",
+    ),
+    "tsNameMissing": MessageLookupByLibrary.simpleMessage("设备名称未提供"),
+    "tsNeedsApprovalTip": MessageLookupByLibrary.simpleMessage(
+      "浏览器认证已完成。请等待 Tailscale 网络管理员批准此设备。",
+    ),
+    "tsNeedsReauthTip": MessageLookupByLibrary.simpleMessage(
+      "此节点的认证已过期，请重新登录。",
+    ),
+    "tsNetwork": MessageLookupByLibrary.simpleMessage("所在网络"),
+    "tsNetworkMissing": MessageLookupByLibrary.simpleMessage("网络信息未提供"),
+    "tsNetworkNameTip": MessageLookupByLibrary.simpleMessage(
+      "网络名称不代表已核实的网络所有者。",
+    ),
+    "tsNoExitCandidates": MessageLookupByLibrary.simpleMessage("暂无可用出口节点"),
+    "tsNoExitCandidatesTip": MessageLookupByLibrary.simpleMessage(
+      "当前没有已确认可用的出口节点",
+    ),
+    "tsNoExitNode": MessageLookupByLibrary.simpleMessage("不使用出口节点"),
+    "tsNoExitNodeTip": MessageLookupByLibrary.simpleMessage(
+      "不使用出口节点不会退出 Tailscale",
+    ),
+    "tsNoNodes": MessageLookupByLibrary.simpleMessage("尚无 Tailscale 节点"),
+    "tsNoNodesTip": MessageLookupByLibrary.simpleMessage(
+      "请在现有配置中添加 Tailscale 节点，再回到这里登录和查看状态。",
+    ),
+    "tsNodeChanged": MessageLookupByLibrary.simpleMessage(
+      "当前节点已变化，请在所选节点重新发起操作。",
+    ),
+    "tsNodeGone": MessageLookupByLibrary.simpleMessage("此节点已不在当前配置中"),
+    "tsNodeGoneTip": MessageLookupByLibrary.simpleMessage("请重新选择节点。"),
+    "tsNodeOf": m110,
+    "tsNodesInProfile": MessageLookupByLibrary.simpleMessage(
+      "当前配置中的 Tailscale 节点",
+    ),
+    "tsNotOverridable": MessageLookupByLibrary.simpleMessage(
+      "此节点来自代理集合，暂不支持在此更改设置。",
+    ),
+    "tsOff": MessageLookupByLibrary.simpleMessage("已关闭"),
+    "tsOffline": MessageLookupByLibrary.simpleMessage("离线"),
+    "tsOfflineNotSelectable": MessageLookupByLibrary.simpleMessage("离线，不可选"),
+    "tsOn": MessageLookupByLibrary.simpleMessage("已开启"),
+    "tsOnline": MessageLookupByLibrary.simpleMessage("在线"),
+    "tsOverrideTip": MessageLookupByLibrary.simpleMessage(
+      "此处保存的设置优先于当前配置中的同名设置，不会修改订阅文件。",
+    ),
+    "tsOwner": MessageLookupByLibrary.simpleMessage("归属"),
+    "tsOwnerAll": MessageLookupByLibrary.simpleMessage("全部"),
+    "tsOwnerFilter": MessageLookupByLibrary.simpleMessage("设备归属"),
+    "tsOwnerFilterEmpty": MessageLookupByLibrary.simpleMessage("没有符合当前归属的设备"),
+    "tsOwnerMe": MessageLookupByLibrary.simpleMessage("我"),
+    "tsOwnerMine": MessageLookupByLibrary.simpleMessage("我的"),
+    "tsOwnerUnknown": MessageLookupByLibrary.simpleMessage("归属未知"),
+    "tsPrepareAgain": MessageLookupByLibrary.simpleMessage("重新准备登录"),
+    "tsPreparingTip": MessageLookupByLibrary.simpleMessage("正在获取此节点的登录信息。"),
+    "tsReadSettings": MessageLookupByLibrary.simpleMessage("重新读取设置"),
+    "tsReadStatus": MessageLookupByLibrary.simpleMessage("重新读取状态"),
+    "tsRefresh": MessageLookupByLibrary.simpleMessage("刷新"),
+    "tsRefreshDevices": MessageLookupByLibrary.simpleMessage("刷新设备列表"),
+    "tsRelogin": MessageLookupByLibrary.simpleMessage("重新登录"),
+    "tsReopenLogin": MessageLookupByLibrary.simpleMessage("重新打开登录页"),
+    "tsRoutesApplying": MessageLookupByLibrary.simpleMessage("正在更新子网路由设置…"),
+    "tsRoutesFailed": MessageLookupByLibrary.simpleMessage("子网路由设置未更改，请重试。"),
+    "tsRoutesOffBody": MessageLookupByLibrary.simpleMessage(
+      "此节点将不再使用这些子网路由，相关连接可能中断。FlClash 的规则不变。",
+    ),
+    "tsRoutesOffConfirm": MessageLookupByLibrary.simpleMessage("停止接受"),
+    "tsRoutesOffTitle": MessageLookupByLibrary.simpleMessage("停止接受子网路由？"),
+    "tsRoutesOnBody": MessageLookupByLibrary.simpleMessage(
+      "此节点将允许使用网络中已批准的子网路由。FlClash 的规则不变。",
+    ),
+    "tsRoutesOnTitle": MessageLookupByLibrary.simpleMessage("接受子网路由？"),
+    "tsRoutesUnknown": MessageLookupByLibrary.simpleMessage(
+      "子网路由设置的更改结果待确认，请重新读取当前设置。",
+    ),
+    "tsRoutesUpdated": MessageLookupByLibrary.simpleMessage("子网路由设置已更新"),
+    "tsSearchEmpty": MessageLookupByLibrary.simpleMessage("没有符合搜索条件的设备"),
+    "tsSearchHint": MessageLookupByLibrary.simpleMessage("搜索名称或地址"),
+    "tsSettingsApplyFailed": MessageLookupByLibrary.simpleMessage(
+      "设置已保存，但未能应用到当前节点。请重新读取当前设置。",
+    ),
+    "tsSettingsSaved": MessageLookupByLibrary.simpleMessage(
+      "设置已保存，但尚未确认生效。请重新读取当前设置。",
+    ),
+    "tsShared": MessageLookupByLibrary.simpleMessage("来自共享"),
+    "tsSharedBy": m111,
+    "tsSignedOutTip": MessageLookupByLibrary.simpleMessage("在浏览器中登录，完成此节点的认证。"),
+    "tsStartCore": MessageLookupByLibrary.simpleMessage("启动内核"),
+    "tsStartFailedTip": MessageLookupByLibrary.simpleMessage("此节点未能启动，请重试。"),
+    "tsStateConnected": MessageLookupByLibrary.simpleMessage("已连接"),
+    "tsStateLoadFailed": MessageLookupByLibrary.simpleMessage("状态加载失败"),
+    "tsStateNeedsApproval": MessageLookupByLibrary.simpleMessage("等待管理员批准"),
+    "tsStateNeedsReauth": MessageLookupByLibrary.simpleMessage("需要重新登录"),
+    "tsStatePreparing": MessageLookupByLibrary.simpleMessage("正在准备登录…"),
+    "tsStateSignedOut": MessageLookupByLibrary.simpleMessage("未登录"),
+    "tsStateStartFailed": MessageLookupByLibrary.simpleMessage("启动失败"),
+    "tsStateStarting": MessageLookupByLibrary.simpleMessage("正在启动…"),
+    "tsStateStopped": MessageLookupByLibrary.simpleMessage("已停止"),
+    "tsStateUnconfirmed": MessageLookupByLibrary.simpleMessage("状态待确认"),
+    "tsStateWaitingBrowser": MessageLookupByLibrary.simpleMessage("等待浏览器登录"),
+    "tsStatus": MessageLookupByLibrary.simpleMessage("状态"),
+    "tsStatusOf": m112,
+    "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("状态未知"),
+    "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
+      "此节点已停止，暂时无法通过它访问 Tailscale 网络。",
+    ),
+    "tsSubnetRoutes": MessageLookupByLibrary.simpleMessage("子网路由"),
+    "tsSystem": MessageLookupByLibrary.simpleMessage("系统"),
+    "tsSystemMissing": MessageLookupByLibrary.simpleMessage("系统未提供"),
+    "tsUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
+      "暂时无法确认此节点是否已连接，请重新读取状态。",
+    ),
+    "tsUrlMissing": MessageLookupByLibrary.simpleMessage(
+      "尚未获取到可用的登录页，请重新准备登录。",
+    ),
+    "tsUrlRejected": MessageLookupByLibrary.simpleMessage(
+      "无法安全打开此登录页，请检查当前节点的控制服务器配置。",
+    ),
+    "tsWaitingBrowserTip": MessageLookupByLibrary.simpleMessage(
+      "请在浏览器中完成登录。完成后，这里会根据节点状态更新。",
+    ),
     "tun": MessageLookupByLibrary.simpleMessage("虚拟网卡"),
     "tunAuthorizationFailed": MessageLookupByLibrary.simpleMessage(
       "虚拟网卡授权失败，已关闭。",
@@ -1647,14 +1952,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("上行带宽"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 重写"),
-    "urlTip": m98,
+    "urlTip": m113,
     "useHosts": MessageLookupByLibrary.simpleMessage("使用Hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("使用系统Hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("已用"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("已用流量"),
     "userAgent": MessageLookupByLibrary.simpleMessage("用户代理"),
     "username": MessageLookupByLibrary.simpleMessage("用户名"),
-    "validUntil": m99,
+    "validUntil": m114,
     "value": MessageLookupByLibrary.simpleMessage("值"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
     "viewAll": MessageLookupByLibrary.simpleMessage("查看全部"),
@@ -1669,8 +1974,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "写入系统会同时设置系统时钟，Android 上不生效。",
     ),
-    "yearsAgo": m100,
-    "yearsAgoShort": m101,
+    "yearsAgo": m115,
+    "yearsAgoShort": m116,
     "yes": MessageLookupByLibrary.simpleMessage("是"),
     "zhCN": MessageLookupByLibrary.simpleMessage("中文简体"),
   };

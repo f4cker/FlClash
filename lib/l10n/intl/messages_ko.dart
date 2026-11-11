@@ -242,13 +242,49 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m97(transport) => "${transport} 요청 헤더";
 
-  static String m98(label) => "${label}은(는) URL이어야 합니다";
+  static String m98(name) => "${name} · Current node";
 
-  static String m99(date) => "${date}까지 유효";
+  static String m99(n) => "Showing ${n} devices";
 
-  static String m100(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m100(node, device) =>
+      "Sets the exit node of “${node}” to “${device}”. Connections through this node may drop; FlClash rules stay the same.";
 
-  static String m101(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m101(node) =>
+      "Only turns off exit forwarding for “${node}”; it doesn\'t log out of Tailscale and FlClash rules stay the same.";
+
+  static String m102(time) =>
+      "Authentication expires at ${time}. Log in again before then.";
+
+  static String m103(error) =>
+      "The login record was not moved. The earlier record failed: ${error}";
+
+  static String m104(account) => "Account: ${account}";
+
+  static String m105(server) => "Control server: ${server}";
+
+  static String m106(name) => "Node: ${name}";
+
+  static String m107(name) => "Profile: ${name}";
+
+  static String m108(error) =>
+      "The move result is unconfirmed, and the earlier login record failed: ${error}. Read the status again first, and don\'t move or log in again until confirmed.";
+
+  static String m109(name) =>
+      "This logs out of “${name}” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.";
+
+  static String m110(name) => "Node ${name}";
+
+  static String m111(name) => "Shared by: ${name}";
+
+  static String m112(label) => "Status: ${label}";
+
+  static String m113(label) => "${label}은(는) URL이어야 합니다";
+
+  static String m114(date) => "${date}까지 유효";
+
+  static String m115(count) => "${Intl.plural(count, other: '${count}년 전')}";
+
+  static String m116(count) => "${Intl.plural(count, other: '${count}년 전')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1746,6 +1782,386 @@ class MessageLookup extends MessageLookupByLibrary {
     "transport": MessageLookupByLibrary.simpleMessage("전송"),
     "transportHeaders": m97,
     "trustCertificate": MessageLookupByLibrary.simpleMessage("인증서 신뢰"),
+    "tsAcceptRoutes": MessageLookupByLibrary.simpleMessage(
+      "Accept subnet routes",
+    ),
+    "tsAcceptRoutesTip": MessageLookupByLibrary.simpleMessage(
+      "Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; FlClash rules are not changed.",
+    ),
+    "tsAccount": MessageLookupByLibrary.simpleMessage("Account"),
+    "tsAccountMissing": MessageLookupByLibrary.simpleMessage(
+      "Account info not provided",
+    ),
+    "tsAddress": MessageLookupByLibrary.simpleMessage("Tailscale address"),
+    "tsAddressCopied": MessageLookupByLibrary.simpleMessage("Address copied"),
+    "tsAddressMissing": MessageLookupByLibrary.simpleMessage(
+      "Address not provided",
+    ),
+    "tsAfterConnectSelectable": MessageLookupByLibrary.simpleMessage(
+      "Available once the node is connected",
+    ),
+    "tsAfterLogin": MessageLookupByLibrary.simpleMessage(
+      "Available after login",
+    ),
+    "tsAfterLoginSelectable": MessageLookupByLibrary.simpleMessage(
+      "Available after login",
+    ),
+    "tsBoundaryTip": MessageLookupByLibrary.simpleMessage(
+      "Only traffic that FlClash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.",
+    ),
+    "tsBrowserFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t open the login page. Try again.",
+    ),
+    "tsChooseExitNode": MessageLookupByLibrary.simpleMessage(
+      "Choose exit node",
+    ),
+    "tsChooseNode": MessageLookupByLibrary.simpleMessage("Choose node"),
+    "tsClearOwnerFilter": MessageLookupByLibrary.simpleMessage(
+      "Clear owner filter",
+    ),
+    "tsControlServer": MessageLookupByLibrary.simpleMessage("Control server"),
+    "tsCopyAddress": MessageLookupByLibrary.simpleMessage("Copy address"),
+    "tsCoreStopped": MessageLookupByLibrary.simpleMessage(
+      "Core is not running",
+    ),
+    "tsCoreStoppedTip": MessageLookupByLibrary.simpleMessage(
+      "Start the core to see this node\'s Tailscale status.",
+    ),
+    "tsCurrentDevice": MessageLookupByLibrary.simpleMessage("This device"),
+    "tsCurrentNodeOf": m98,
+    "tsDeviceName": MessageLookupByLibrary.simpleMessage("Device name"),
+    "tsDevices": MessageLookupByLibrary.simpleMessage("Devices"),
+    "tsDevicesEmpty": MessageLookupByLibrary.simpleMessage(
+      "No visible devices",
+    ),
+    "tsDevicesEmptyTip": MessageLookupByLibrary.simpleMessage(
+      "This node doesn\'t see any other devices yet.",
+    ),
+    "tsDevicesFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t load the device list. Try again.",
+    ),
+    "tsDevicesScope": MessageLookupByLibrary.simpleMessage(
+      "Devices this node can see, not every device in the admin console",
+    ),
+    "tsDevicesShown": m99,
+    "tsDevicesStale": MessageLookupByLibrary.simpleMessage(
+      "The device list may be out of date. Refreshing failed; this is the last list read.",
+    ),
+    "tsExitApplying": MessageLookupByLibrary.simpleMessage(
+      "Changing exit node…",
+    ),
+    "tsExitCapable": MessageLookupByLibrary.simpleMessage("Exit node"),
+    "tsExitChangeBody": m100,
+    "tsExitChangeConfirm": MessageLookupByLibrary.simpleMessage(
+      "Change exit node",
+    ),
+    "tsExitChangeTitle": MessageLookupByLibrary.simpleMessage(
+      "Change exit node?",
+    ),
+    "tsExitFailed": MessageLookupByLibrary.simpleMessage(
+      "Exit node not changed. Try again.",
+    ),
+    "tsExitNode": MessageLookupByLibrary.simpleMessage("Exit node"),
+    "tsExitNodeTip": MessageLookupByLibrary.simpleMessage(
+      "Only affects traffic forwarded through this Tailscale node; it doesn\'t make the whole Mac use the exit.",
+    ),
+    "tsExitOffBody": m101,
+    "tsExitOffTitle": MessageLookupByLibrary.simpleMessage(
+      "Stop using the exit node?",
+    ),
+    "tsExitStale": MessageLookupByLibrary.simpleMessage(
+      "Refresh the device list before choosing an exit node.",
+    ),
+    "tsExitUnknown": MessageLookupByLibrary.simpleMessage(
+      "The exit node change is unconfirmed. Read the current settings again.",
+    ),
+    "tsExitUpdated": MessageLookupByLibrary.simpleMessage("Exit node updated"),
+    "tsExpiryTip": m102,
+    "tsFromLocal": MessageLookupByLibrary.simpleMessage("Set on this Mac"),
+    "tsFromProfile": MessageLookupByLibrary.simpleMessage(
+      "From current profile",
+    ),
+    "tsFromSubscription": MessageLookupByLibrary.simpleMessage(
+      "From subscription",
+    ),
+    "tsGoToProfiles": MessageLookupByLibrary.simpleMessage("Go to profiles"),
+    "tsGoToRules": MessageLookupByLibrary.simpleMessage("Go to rules"),
+    "tsHelp": MessageLookupByLibrary.simpleMessage("More information"),
+    "tsHelpBody": MessageLookupByLibrary.simpleMessage(
+      "FlClash shows up as a separate device in your Tailscale network. It does not let other devices reach this Mac over SSH, file sharing or remote desktop, and does not provide Tailscale SSH or Taildrop.",
+    ),
+    "tsIdentityFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t load account and network info",
+    ),
+    "tsLegacyAccountUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Account not confirmed",
+    ),
+    "tsLegacyArchiveError": MessageLookupByLibrary.simpleMessage(
+      "The login record was not moved. Reading or saving the earlier record failed, so it may not be intact.",
+    ),
+    "tsLegacyArchiveErrorOf": m103,
+    "tsLegacyAuthKeyNote": MessageLookupByLibrary.simpleMessage(
+      "This node has an auth key; logging in again registers a new device identity with it, and the earlier login record is kept.",
+    ),
+    "tsLegacyBody": MessageLookupByLibrary.simpleMessage(
+      "You can copy this login record to this node and keep the original. It can move to only one node; make sure this is the account you want to keep using, or log in again instead.",
+    ),
+    "tsLegacyChanged": MessageLookupByLibrary.simpleMessage(
+      "The move details have changed. Check them again before confirming.",
+    ),
+    "tsLegacyConfirm": MessageLookupByLibrary.simpleMessage("Confirm move"),
+    "tsLegacyConfirmAccount": m104,
+    "tsLegacyConfirmBody": MessageLookupByLibrary.simpleMessage(
+      "This copies the login record for the node above and leaves the original untouched. The same record can\'t move to another node afterwards. Check the node\'s real connection status after the move.",
+    ),
+    "tsLegacyConfirmControl": m105,
+    "tsLegacyConfirmNode": m106,
+    "tsLegacyConfirmProfile": m107,
+    "tsLegacyConfirmTitle": MessageLookupByLibrary.simpleMessage(
+      "Move the earlier login to this node?",
+    ),
+    "tsLegacyControlMismatch": MessageLookupByLibrary.simpleMessage(
+      "The earlier login record uses another control server than this node, so it can\'t move.",
+    ),
+    "tsLegacyFailed": MessageLookupByLibrary.simpleMessage(
+      "The login record was not moved and the original is kept. Try again, or log in again.",
+    ),
+    "tsLegacyHasIdentity": MessageLookupByLibrary.simpleMessage(
+      "This node already has its own login record; no need to move.",
+    ),
+    "tsLegacyInUse": MessageLookupByLibrary.simpleMessage(
+      "The earlier login record is still in use and can\'t move for now.",
+    ),
+    "tsLegacyMigrate": MessageLookupByLibrary.simpleMessage(
+      "Move to this node",
+    ),
+    "tsLegacyMigrated": MessageLookupByLibrary.simpleMessage(
+      "Login record moved. Reading the node status.",
+    ),
+    "tsLegacyMigratedElsewhere": MessageLookupByLibrary.simpleMessage(
+      "This earlier login record already moved to another node and can\'t move again.",
+    ),
+    "tsLegacyMigrating": MessageLookupByLibrary.simpleMessage(
+      "Moving login record…",
+    ),
+    "tsLegacyRetry": MessageLookupByLibrary.simpleMessage("Retry move"),
+    "tsLegacyTitle": MessageLookupByLibrary.simpleMessage(
+      "Found an earlier login record",
+    ),
+    "tsLegacyUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Whether the earlier login record can be used is unconfirmed. Read the status again.",
+    ),
+    "tsLegacyUnknown": MessageLookupByLibrary.simpleMessage(
+      "The move result is unconfirmed; the original is kept. Read the status again first, and don\'t move or log in again until confirmed.",
+    ),
+    "tsLegacyUnknownArchiveError": MessageLookupByLibrary.simpleMessage(
+      "The move result is unconfirmed, and reading or saving the earlier login record failed, so it may not be intact. Read the status again first, and don\'t move or log in again until confirmed.",
+    ),
+    "tsLegacyUnknownArchiveErrorOf": m108,
+    "tsLegacyUnreadable": MessageLookupByLibrary.simpleMessage(
+      "Can\'t read the earlier login record. Check again.",
+    ),
+    "tsLoadFailedTip": MessageLookupByLibrary.simpleMessage(
+      "Can\'t read this node\'s status right now. Try again.",
+    ),
+    "tsLoggedOutReceipt": MessageLookupByLibrary.simpleMessage(
+      "Logged out of this node. It won\'t log in again until you log in.",
+    ),
+    "tsLoggedOutTip": MessageLookupByLibrary.simpleMessage(
+      "You logged out of this node. It reconnects only after you log in.",
+    ),
+    "tsLoggingOut": MessageLookupByLibrary.simpleMessage("Logging out…"),
+    "tsLogin": MessageLookupByLibrary.simpleMessage("Log in to Tailscale"),
+    "tsLoginUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "The login result isn\'t confirmed yet. Read the node status again.",
+    ),
+    "tsLogout": MessageLookupByLibrary.simpleMessage("Log out of this node"),
+    "tsLogoutAuthKeyNote": MessageLookupByLibrary.simpleMessage(
+      "When you log in again, the auth key in the profile registers a new device identity.",
+    ),
+    "tsLogoutBody": m109,
+    "tsLogoutFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t log out. Read the node status again, then retry.",
+    ),
+    "tsLogoutTitle": MessageLookupByLibrary.simpleMessage(
+      "Log out of this Tailscale node?",
+    ),
+    "tsLogoutUnknown": MessageLookupByLibrary.simpleMessage(
+      "The logout result is unconfirmed. Read the node status again and don\'t repeat it until confirmed.",
+    ),
+    "tsNameMissing": MessageLookupByLibrary.simpleMessage("Name not provided"),
+    "tsNeedsApprovalTip": MessageLookupByLibrary.simpleMessage(
+      "Browser authentication is done. Wait for your Tailscale network admin to approve this device.",
+    ),
+    "tsNeedsReauthTip": MessageLookupByLibrary.simpleMessage(
+      "This node\'s authentication has expired. Log in again.",
+    ),
+    "tsNetwork": MessageLookupByLibrary.simpleMessage("Network"),
+    "tsNetworkMissing": MessageLookupByLibrary.simpleMessage(
+      "Network info not provided",
+    ),
+    "tsNetworkNameTip": MessageLookupByLibrary.simpleMessage(
+      "The network name does not identify a verified network owner.",
+    ),
+    "tsNoExitCandidates": MessageLookupByLibrary.simpleMessage(
+      "No exit nodes available",
+    ),
+    "tsNoExitCandidatesTip": MessageLookupByLibrary.simpleMessage(
+      "No exit node is confirmed available",
+    ),
+    "tsNoExitNode": MessageLookupByLibrary.simpleMessage("No exit node"),
+    "tsNoExitNodeTip": MessageLookupByLibrary.simpleMessage(
+      "Using no exit node doesn\'t log out of Tailscale",
+    ),
+    "tsNoNodes": MessageLookupByLibrary.simpleMessage("No Tailscale nodes yet"),
+    "tsNoNodesTip": MessageLookupByLibrary.simpleMessage(
+      "Add a Tailscale node to your profile, then come back here to log in and see its status.",
+    ),
+    "tsNodeChanged": MessageLookupByLibrary.simpleMessage(
+      "The node has changed. Start the action again on the selected node.",
+    ),
+    "tsNodeGone": MessageLookupByLibrary.simpleMessage(
+      "This node is no longer in the current profile",
+    ),
+    "tsNodeGoneTip": MessageLookupByLibrary.simpleMessage(
+      "Choose a node again.",
+    ),
+    "tsNodeOf": m110,
+    "tsNodesInProfile": MessageLookupByLibrary.simpleMessage(
+      "Tailscale nodes in the current profile",
+    ),
+    "tsNotOverridable": MessageLookupByLibrary.simpleMessage(
+      "This node comes from a proxy provider; its settings can\'t be changed here.",
+    ),
+    "tsOff": MessageLookupByLibrary.simpleMessage("Off"),
+    "tsOffline": MessageLookupByLibrary.simpleMessage("Offline"),
+    "tsOfflineNotSelectable": MessageLookupByLibrary.simpleMessage(
+      "Offline, can\'t be chosen",
+    ),
+    "tsOn": MessageLookupByLibrary.simpleMessage("On"),
+    "tsOnline": MessageLookupByLibrary.simpleMessage("Online"),
+    "tsOverrideTip": MessageLookupByLibrary.simpleMessage(
+      "Settings saved here take priority over the same settings in the profile and never change the subscription file.",
+    ),
+    "tsOwner": MessageLookupByLibrary.simpleMessage("Owner"),
+    "tsOwnerAll": MessageLookupByLibrary.simpleMessage("All"),
+    "tsOwnerFilter": MessageLookupByLibrary.simpleMessage("Device owner"),
+    "tsOwnerFilterEmpty": MessageLookupByLibrary.simpleMessage(
+      "No devices with this owner",
+    ),
+    "tsOwnerMe": MessageLookupByLibrary.simpleMessage("Me"),
+    "tsOwnerMine": MessageLookupByLibrary.simpleMessage("Mine"),
+    "tsOwnerUnknown": MessageLookupByLibrary.simpleMessage("Owner unknown"),
+    "tsPrepareAgain": MessageLookupByLibrary.simpleMessage(
+      "Prepare login again",
+    ),
+    "tsPreparingTip": MessageLookupByLibrary.simpleMessage(
+      "Getting login information for this node.",
+    ),
+    "tsReadSettings": MessageLookupByLibrary.simpleMessage(
+      "Read settings again",
+    ),
+    "tsReadStatus": MessageLookupByLibrary.simpleMessage("Read status again"),
+    "tsRefresh": MessageLookupByLibrary.simpleMessage("Refresh"),
+    "tsRefreshDevices": MessageLookupByLibrary.simpleMessage(
+      "Refresh device list",
+    ),
+    "tsRelogin": MessageLookupByLibrary.simpleMessage("Log in again"),
+    "tsReopenLogin": MessageLookupByLibrary.simpleMessage("Reopen login page"),
+    "tsRoutesApplying": MessageLookupByLibrary.simpleMessage(
+      "Updating subnet routes…",
+    ),
+    "tsRoutesFailed": MessageLookupByLibrary.simpleMessage(
+      "Subnet routes not changed. Try again.",
+    ),
+    "tsRoutesOffBody": MessageLookupByLibrary.simpleMessage(
+      "This node will stop using these subnet routes; related connections may drop. FlClash rules stay the same.",
+    ),
+    "tsRoutesOffConfirm": MessageLookupByLibrary.simpleMessage(
+      "Stop accepting",
+    ),
+    "tsRoutesOffTitle": MessageLookupByLibrary.simpleMessage(
+      "Stop accepting subnet routes?",
+    ),
+    "tsRoutesOnBody": MessageLookupByLibrary.simpleMessage(
+      "This node will use the network\'s approved subnet routes. FlClash rules stay the same.",
+    ),
+    "tsRoutesOnTitle": MessageLookupByLibrary.simpleMessage(
+      "Accept subnet routes?",
+    ),
+    "tsRoutesUnknown": MessageLookupByLibrary.simpleMessage(
+      "The subnet routes change is unconfirmed. Read the current settings again.",
+    ),
+    "tsRoutesUpdated": MessageLookupByLibrary.simpleMessage(
+      "Subnet routes updated",
+    ),
+    "tsSearchEmpty": MessageLookupByLibrary.simpleMessage(
+      "No devices match the search",
+    ),
+    "tsSearchHint": MessageLookupByLibrary.simpleMessage(
+      "Search name or address",
+    ),
+    "tsSettingsApplyFailed": MessageLookupByLibrary.simpleMessage(
+      "Saved, but couldn\'t be applied to this node. Read the current settings again.",
+    ),
+    "tsSettingsSaved": MessageLookupByLibrary.simpleMessage(
+      "Saved, but not yet confirmed in effect. Read the current settings again.",
+    ),
+    "tsShared": MessageLookupByLibrary.simpleMessage("Shared in"),
+    "tsSharedBy": m111,
+    "tsSignedOutTip": MessageLookupByLibrary.simpleMessage(
+      "Log in in your browser to authenticate this node.",
+    ),
+    "tsStartCore": MessageLookupByLibrary.simpleMessage("Start core"),
+    "tsStartFailedTip": MessageLookupByLibrary.simpleMessage(
+      "This node failed to start. Try again.",
+    ),
+    "tsStateConnected": MessageLookupByLibrary.simpleMessage("Connected"),
+    "tsStateLoadFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t load status",
+    ),
+    "tsStateNeedsApproval": MessageLookupByLibrary.simpleMessage(
+      "Waiting for admin approval",
+    ),
+    "tsStateNeedsReauth": MessageLookupByLibrary.simpleMessage(
+      "Login required again",
+    ),
+    "tsStatePreparing": MessageLookupByLibrary.simpleMessage(
+      "Preparing login…",
+    ),
+    "tsStateSignedOut": MessageLookupByLibrary.simpleMessage("Not logged in"),
+    "tsStateStartFailed": MessageLookupByLibrary.simpleMessage(
+      "Failed to start",
+    ),
+    "tsStateStarting": MessageLookupByLibrary.simpleMessage("Starting…"),
+    "tsStateStopped": MessageLookupByLibrary.simpleMessage("Stopped"),
+    "tsStateUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Status unconfirmed",
+    ),
+    "tsStateWaitingBrowser": MessageLookupByLibrary.simpleMessage(
+      "Waiting for browser login",
+    ),
+    "tsStatus": MessageLookupByLibrary.simpleMessage("Status"),
+    "tsStatusOf": m112,
+    "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("Status unknown"),
+    "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
+      "This node has stopped and can\'t reach the Tailscale network for now.",
+    ),
+    "tsSubnetRoutes": MessageLookupByLibrary.simpleMessage("Subnet routes"),
+    "tsSystem": MessageLookupByLibrary.simpleMessage("OS"),
+    "tsSystemMissing": MessageLookupByLibrary.simpleMessage("OS not provided"),
+    "tsUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
+      "Can\'t confirm whether this node is connected. Read the status again.",
+    ),
+    "tsUrlMissing": MessageLookupByLibrary.simpleMessage(
+      "No usable login page yet. Prepare the login again.",
+    ),
+    "tsUrlRejected": MessageLookupByLibrary.simpleMessage(
+      "This login page can\'t be opened safely. Check the node\'s control server in the profile.",
+    ),
+    "tsWaitingBrowserTip": MessageLookupByLibrary.simpleMessage(
+      "Finish logging in in your browser. This page updates from the node\'s status afterwards.",
+    ),
     "tun": MessageLookupByLibrary.simpleMessage("TUN"),
     "tunAuthorizationFailed": MessageLookupByLibrary.simpleMessage(
       "TUN 권한을 얻지 못해 끄기로 되돌렸습니다.",
@@ -1797,14 +2213,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("업로드 대역폭"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 재작성"),
-    "urlTip": m98,
+    "urlTip": m113,
     "useHosts": MessageLookupByLibrary.simpleMessage("hosts 사용"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("시스템 hosts 사용"),
     "usedShort": MessageLookupByLibrary.simpleMessage("사용"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("사용한 트래픽"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("사용자 이름"),
-    "validUntil": m99,
+    "validUntil": m114,
     "value": MessageLookupByLibrary.simpleMessage("값"),
     "view": MessageLookupByLibrary.simpleMessage("보기"),
     "viewAll": MessageLookupByLibrary.simpleMessage("모두 보기"),
@@ -1819,8 +2235,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "시스템에 기록하면 시스템 시계도 설정합니다. Android에서는 무시됩니다.",
     ),
-    "yearsAgo": m100,
-    "yearsAgoShort": m101,
+    "yearsAgo": m115,
+    "yearsAgoShort": m116,
     "yes": MessageLookupByLibrary.simpleMessage("예"),
     "zhCN": MessageLookupByLibrary.simpleMessage("중국어 간체"),
   };

@@ -7663,8 +7663,7 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one:
-          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -9068,6 +9067,1591 @@ class AppLocalizations {
     return Intl.message(
       'These domains are resolved by Fallback directly.',
       name: 'fallbackFilterDomainDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This device`
+  String get tsCurrentDevice {
+    return Intl.message(
+      'This device',
+      name: 'tsCurrentDevice',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Node {name}`
+  String tsNodeOf(Object name) {
+    return Intl.message('Node $name', name: 'tsNodeOf', desc: '', args: [name]);
+  }
+
+  /// `Status: {label}`
+  String tsStatusOf(Object label) {
+    return Intl.message(
+      'Status: $label',
+      name: 'tsStatusOf',
+      desc: '',
+      args: [label],
+    );
+  }
+
+  /// `{name} · Current node`
+  String tsCurrentNodeOf(Object name) {
+    return Intl.message(
+      '$name · Current node',
+      name: 'tsCurrentNodeOf',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Tailscale nodes in the current profile`
+  String get tsNodesInProfile {
+    return Intl.message(
+      'Tailscale nodes in the current profile',
+      name: 'tsNodesInProfile',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose node`
+  String get tsChooseNode {
+    return Intl.message(
+      'Choose node',
+      name: 'tsChooseNode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Refresh`
+  String get tsRefresh {
+    return Intl.message('Refresh', name: 'tsRefresh', desc: '', args: []);
+  }
+
+  /// `More information`
+  String get tsHelp {
+    return Intl.message('More information', name: 'tsHelp', desc: '', args: []);
+  }
+
+  /// `FlClash shows up as a separate device in your Tailscale network. It does not let other devices reach this Mac over SSH, file sharing or remote desktop, and does not provide Tailscale SSH or Taildrop.`
+  String get tsHelpBody {
+    return Intl.message(
+      'FlClash shows up as a separate device in your Tailscale network. It does not let other devices reach this Mac over SSH, file sharing or remote desktop, and does not provide Tailscale SSH or Taildrop.',
+      name: 'tsHelpBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The network name does not identify a verified network owner.`
+  String get tsNetworkNameTip {
+    return Intl.message(
+      'The network name does not identify a verified network owner.',
+      name: 'tsNetworkNameTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Only traffic that FlClash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.`
+  String get tsBoundaryTip {
+    return Intl.message(
+      'Only traffic that FlClash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.',
+      name: 'tsBoundaryTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Go to rules`
+  String get tsGoToRules {
+    return Intl.message('Go to rules', name: 'tsGoToRules', desc: '', args: []);
+  }
+
+  /// `Go to profiles`
+  String get tsGoToProfiles {
+    return Intl.message(
+      'Go to profiles',
+      name: 'tsGoToProfiles',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Core is not running`
+  String get tsCoreStopped {
+    return Intl.message(
+      'Core is not running',
+      name: 'tsCoreStopped',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Start the core to see this node's Tailscale status.`
+  String get tsCoreStoppedTip {
+    return Intl.message(
+      'Start the core to see this node\'s Tailscale status.',
+      name: 'tsCoreStoppedTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Start core`
+  String get tsStartCore {
+    return Intl.message('Start core', name: 'tsStartCore', desc: '', args: []);
+  }
+
+  /// `No Tailscale nodes yet`
+  String get tsNoNodes {
+    return Intl.message(
+      'No Tailscale nodes yet',
+      name: 'tsNoNodes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Add a Tailscale node to your profile, then come back here to log in and see its status.`
+  String get tsNoNodesTip {
+    return Intl.message(
+      'Add a Tailscale node to your profile, then come back here to log in and see its status.',
+      name: 'tsNoNodesTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node is no longer in the current profile`
+  String get tsNodeGone {
+    return Intl.message(
+      'This node is no longer in the current profile',
+      name: 'tsNodeGone',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose a node again.`
+  String get tsNodeGoneTip {
+    return Intl.message(
+      'Choose a node again.',
+      name: 'tsNodeGoneTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not logged in`
+  String get tsStateSignedOut {
+    return Intl.message(
+      'Not logged in',
+      name: 'tsStateSignedOut',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Preparing login…`
+  String get tsStatePreparing {
+    return Intl.message(
+      'Preparing login…',
+      name: 'tsStatePreparing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Starting…`
+  String get tsStateStarting {
+    return Intl.message(
+      'Starting…',
+      name: 'tsStateStarting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Waiting for browser login`
+  String get tsStateWaitingBrowser {
+    return Intl.message(
+      'Waiting for browser login',
+      name: 'tsStateWaitingBrowser',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Waiting for admin approval`
+  String get tsStateNeedsApproval {
+    return Intl.message(
+      'Waiting for admin approval',
+      name: 'tsStateNeedsApproval',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Connected`
+  String get tsStateConnected {
+    return Intl.message(
+      'Connected',
+      name: 'tsStateConnected',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Login required again`
+  String get tsStateNeedsReauth {
+    return Intl.message(
+      'Login required again',
+      name: 'tsStateNeedsReauth',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Stopped`
+  String get tsStateStopped {
+    return Intl.message('Stopped', name: 'tsStateStopped', desc: '', args: []);
+  }
+
+  /// `Failed to start`
+  String get tsStateStartFailed {
+    return Intl.message(
+      'Failed to start',
+      name: 'tsStateStartFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Status unconfirmed`
+  String get tsStateUnconfirmed {
+    return Intl.message(
+      'Status unconfirmed',
+      name: 'tsStateUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn't load status`
+  String get tsStateLoadFailed {
+    return Intl.message(
+      'Couldn\'t load status',
+      name: 'tsStateLoadFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Log in in your browser to authenticate this node.`
+  String get tsSignedOutTip {
+    return Intl.message(
+      'Log in in your browser to authenticate this node.',
+      name: 'tsSignedOutTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You logged out of this node. It reconnects only after you log in.`
+  String get tsLoggedOutTip {
+    return Intl.message(
+      'You logged out of this node. It reconnects only after you log in.',
+      name: 'tsLoggedOutTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Getting login information for this node.`
+  String get tsPreparingTip {
+    return Intl.message(
+      'Getting login information for this node.',
+      name: 'tsPreparingTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Finish logging in in your browser. This page updates from the node's status afterwards.`
+  String get tsWaitingBrowserTip {
+    return Intl.message(
+      'Finish logging in in your browser. This page updates from the node\'s status afterwards.',
+      name: 'tsWaitingBrowserTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Browser authentication is done. Wait for your Tailscale network admin to approve this device.`
+  String get tsNeedsApprovalTip {
+    return Intl.message(
+      'Browser authentication is done. Wait for your Tailscale network admin to approve this device.',
+      name: 'tsNeedsApprovalTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node's authentication has expired. Log in again.`
+  String get tsNeedsReauthTip {
+    return Intl.message(
+      'This node\'s authentication has expired. Log in again.',
+      name: 'tsNeedsReauthTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Authentication expires at {time}. Log in again before then.`
+  String tsExpiryTip(Object time) {
+    return Intl.message(
+      'Authentication expires at $time. Log in again before then.',
+      name: 'tsExpiryTip',
+      desc: '',
+      args: [time],
+    );
+  }
+
+  /// `This node has stopped and can't reach the Tailscale network for now.`
+  String get tsStoppedTip {
+    return Intl.message(
+      'This node has stopped and can\'t reach the Tailscale network for now.',
+      name: 'tsStoppedTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node failed to start. Try again.`
+  String get tsStartFailedTip {
+    return Intl.message(
+      'This node failed to start. Try again.',
+      name: 'tsStartFailedTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Can't confirm whether this node is connected. Read the status again.`
+  String get tsUnconfirmedTip {
+    return Intl.message(
+      'Can\'t confirm whether this node is connected. Read the status again.',
+      name: 'tsUnconfirmedTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Can't read this node's status right now. Try again.`
+  String get tsLoadFailedTip {
+    return Intl.message(
+      'Can\'t read this node\'s status right now. Try again.',
+      name: 'tsLoadFailedTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Device name`
+  String get tsDeviceName {
+    return Intl.message(
+      'Device name',
+      name: 'tsDeviceName',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Account`
+  String get tsAccount {
+    return Intl.message('Account', name: 'tsAccount', desc: '', args: []);
+  }
+
+  /// `Network`
+  String get tsNetwork {
+    return Intl.message('Network', name: 'tsNetwork', desc: '', args: []);
+  }
+
+  /// `Control server`
+  String get tsControlServer {
+    return Intl.message(
+      'Control server',
+      name: 'tsControlServer',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Available after login`
+  String get tsAfterLogin {
+    return Intl.message(
+      'Available after login',
+      name: 'tsAfterLogin',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Account info not provided`
+  String get tsAccountMissing {
+    return Intl.message(
+      'Account info not provided',
+      name: 'tsAccountMissing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Network info not provided`
+  String get tsNetworkMissing {
+    return Intl.message(
+      'Network info not provided',
+      name: 'tsNetworkMissing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn't load account and network info`
+  String get tsIdentityFailed {
+    return Intl.message(
+      'Couldn\'t load account and network info',
+      name: 'tsIdentityFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Copy address`
+  String get tsCopyAddress {
+    return Intl.message(
+      'Copy address',
+      name: 'tsCopyAddress',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Address copied`
+  String get tsAddressCopied {
+    return Intl.message(
+      'Address copied',
+      name: 'tsAddressCopied',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Log in to Tailscale`
+  String get tsLogin {
+    return Intl.message(
+      'Log in to Tailscale',
+      name: 'tsLogin',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Log in again`
+  String get tsRelogin {
+    return Intl.message('Log in again', name: 'tsRelogin', desc: '', args: []);
+  }
+
+  /// `Reopen login page`
+  String get tsReopenLogin {
+    return Intl.message(
+      'Reopen login page',
+      name: 'tsReopenLogin',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Read status again`
+  String get tsReadStatus {
+    return Intl.message(
+      'Read status again',
+      name: 'tsReadStatus',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Log out of this node`
+  String get tsLogout {
+    return Intl.message(
+      'Log out of this node',
+      name: 'tsLogout',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Logging out…`
+  String get tsLoggingOut {
+    return Intl.message(
+      'Logging out…',
+      name: 'tsLoggingOut',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Log out of this Tailscale node?`
+  String get tsLogoutTitle {
+    return Intl.message(
+      'Log out of this Tailscale node?',
+      name: 'tsLogoutTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This logs out of “{name}” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.`
+  String tsLogoutBody(Object name) {
+    return Intl.message(
+      'This logs out of “$name” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.',
+      name: 'tsLogoutBody',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `When you log in again, the auth key in the profile registers a new device identity.`
+  String get tsLogoutAuthKeyNote {
+    return Intl.message(
+      'When you log in again, the auth key in the profile registers a new device identity.',
+      name: 'tsLogoutAuthKeyNote',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Logged out of this node. It won't log in again until you log in.`
+  String get tsLoggedOutReceipt {
+    return Intl.message(
+      'Logged out of this node. It won\'t log in again until you log in.',
+      name: 'tsLoggedOutReceipt',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn't log out. Read the node status again, then retry.`
+  String get tsLogoutFailed {
+    return Intl.message(
+      'Couldn\'t log out. Read the node status again, then retry.',
+      name: 'tsLogoutFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The logout result is unconfirmed. Read the node status again and don't repeat it until confirmed.`
+  String get tsLogoutUnknown {
+    return Intl.message(
+      'The logout result is unconfirmed. Read the node status again and don\'t repeat it until confirmed.',
+      name: 'tsLogoutUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn't open the login page. Try again.`
+  String get tsBrowserFailed {
+    return Intl.message(
+      'Couldn\'t open the login page. Try again.',
+      name: 'tsBrowserFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This login page can't be opened safely. Check the node's control server in the profile.`
+  String get tsUrlRejected {
+    return Intl.message(
+      'This login page can\'t be opened safely. Check the node\'s control server in the profile.',
+      name: 'tsUrlRejected',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No usable login page yet. Prepare the login again.`
+  String get tsUrlMissing {
+    return Intl.message(
+      'No usable login page yet. Prepare the login again.',
+      name: 'tsUrlMissing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Prepare login again`
+  String get tsPrepareAgain {
+    return Intl.message(
+      'Prepare login again',
+      name: 'tsPrepareAgain',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The login result isn't confirmed yet. Read the node status again.`
+  String get tsLoginUnconfirmed {
+    return Intl.message(
+      'The login result isn\'t confirmed yet. Read the node status again.',
+      name: 'tsLoginUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The node has changed. Start the action again on the selected node.`
+  String get tsNodeChanged {
+    return Intl.message(
+      'The node has changed. Start the action again on the selected node.',
+      name: 'tsNodeChanged',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Exit node`
+  String get tsExitNode {
+    return Intl.message('Exit node', name: 'tsExitNode', desc: '', args: []);
+  }
+
+  /// `No exit node`
+  String get tsNoExitNode {
+    return Intl.message(
+      'No exit node',
+      name: 'tsNoExitNode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Using no exit node doesn't log out of Tailscale`
+  String get tsNoExitNodeTip {
+    return Intl.message(
+      'Using no exit node doesn\'t log out of Tailscale',
+      name: 'tsNoExitNodeTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Only affects traffic forwarded through this Tailscale node; it doesn't make the whole Mac use the exit.`
+  String get tsExitNodeTip {
+    return Intl.message(
+      'Only affects traffic forwarded through this Tailscale node; it doesn\'t make the whole Mac use the exit.',
+      name: 'tsExitNodeTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No exit nodes available`
+  String get tsNoExitCandidates {
+    return Intl.message(
+      'No exit nodes available',
+      name: 'tsNoExitCandidates',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No exit node is confirmed available`
+  String get tsNoExitCandidatesTip {
+    return Intl.message(
+      'No exit node is confirmed available',
+      name: 'tsNoExitCandidatesTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Refresh the device list before choosing an exit node.`
+  String get tsExitStale {
+    return Intl.message(
+      'Refresh the device list before choosing an exit node.',
+      name: 'tsExitStale',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose exit node`
+  String get tsChooseExitNode {
+    return Intl.message(
+      'Choose exit node',
+      name: 'tsChooseExitNode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Offline, can't be chosen`
+  String get tsOfflineNotSelectable {
+    return Intl.message(
+      'Offline, can\'t be chosen',
+      name: 'tsOfflineNotSelectable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Change exit node?`
+  String get tsExitChangeTitle {
+    return Intl.message(
+      'Change exit node?',
+      name: 'tsExitChangeTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sets the exit node of “{node}” to “{device}”. Connections through this node may drop; FlClash rules stay the same.`
+  String tsExitChangeBody(Object node, Object device) {
+    return Intl.message(
+      'Sets the exit node of “$node” to “$device”. Connections through this node may drop; FlClash rules stay the same.',
+      name: 'tsExitChangeBody',
+      desc: '',
+      args: [node, device],
+    );
+  }
+
+  /// `Change exit node`
+  String get tsExitChangeConfirm {
+    return Intl.message(
+      'Change exit node',
+      name: 'tsExitChangeConfirm',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Stop using the exit node?`
+  String get tsExitOffTitle {
+    return Intl.message(
+      'Stop using the exit node?',
+      name: 'tsExitOffTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Only turns off exit forwarding for “{node}”; it doesn't log out of Tailscale and FlClash rules stay the same.`
+  String tsExitOffBody(Object node) {
+    return Intl.message(
+      'Only turns off exit forwarding for “$node”; it doesn\'t log out of Tailscale and FlClash rules stay the same.',
+      name: 'tsExitOffBody',
+      desc: '',
+      args: [node],
+    );
+  }
+
+  /// `Changing exit node…`
+  String get tsExitApplying {
+    return Intl.message(
+      'Changing exit node…',
+      name: 'tsExitApplying',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Exit node updated`
+  String get tsExitUpdated {
+    return Intl.message(
+      'Exit node updated',
+      name: 'tsExitUpdated',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Exit node not changed. Try again.`
+  String get tsExitFailed {
+    return Intl.message(
+      'Exit node not changed. Try again.',
+      name: 'tsExitFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The exit node change is unconfirmed. Read the current settings again.`
+  String get tsExitUnknown {
+    return Intl.message(
+      'The exit node change is unconfirmed. Read the current settings again.',
+      name: 'tsExitUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Read settings again`
+  String get tsReadSettings {
+    return Intl.message(
+      'Read settings again',
+      name: 'tsReadSettings',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Saved, but not yet confirmed in effect. Read the current settings again.`
+  String get tsSettingsSaved {
+    return Intl.message(
+      'Saved, but not yet confirmed in effect. Read the current settings again.',
+      name: 'tsSettingsSaved',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Saved, but couldn't be applied to this node. Read the current settings again.`
+  String get tsSettingsApplyFailed {
+    return Intl.message(
+      'Saved, but couldn\'t be applied to this node. Read the current settings again.',
+      name: 'tsSettingsApplyFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subnet routes`
+  String get tsSubnetRoutes {
+    return Intl.message(
+      'Subnet routes',
+      name: 'tsSubnetRoutes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Accept subnet routes`
+  String get tsAcceptRoutes {
+    return Intl.message(
+      'Accept subnet routes',
+      name: 'tsAcceptRoutes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; FlClash rules are not changed.`
+  String get tsAcceptRoutesTip {
+    return Intl.message(
+      'Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; FlClash rules are not changed.',
+      name: 'tsAcceptRoutesTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Accept subnet routes?`
+  String get tsRoutesOnTitle {
+    return Intl.message(
+      'Accept subnet routes?',
+      name: 'tsRoutesOnTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node will use the network's approved subnet routes. FlClash rules stay the same.`
+  String get tsRoutesOnBody {
+    return Intl.message(
+      'This node will use the network\'s approved subnet routes. FlClash rules stay the same.',
+      name: 'tsRoutesOnBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Stop accepting subnet routes?`
+  String get tsRoutesOffTitle {
+    return Intl.message(
+      'Stop accepting subnet routes?',
+      name: 'tsRoutesOffTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node will stop using these subnet routes; related connections may drop. FlClash rules stay the same.`
+  String get tsRoutesOffBody {
+    return Intl.message(
+      'This node will stop using these subnet routes; related connections may drop. FlClash rules stay the same.',
+      name: 'tsRoutesOffBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Stop accepting`
+  String get tsRoutesOffConfirm {
+    return Intl.message(
+      'Stop accepting',
+      name: 'tsRoutesOffConfirm',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Updating subnet routes…`
+  String get tsRoutesApplying {
+    return Intl.message(
+      'Updating subnet routes…',
+      name: 'tsRoutesApplying',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subnet routes updated`
+  String get tsRoutesUpdated {
+    return Intl.message(
+      'Subnet routes updated',
+      name: 'tsRoutesUpdated',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subnet routes not changed. Try again.`
+  String get tsRoutesFailed {
+    return Intl.message(
+      'Subnet routes not changed. Try again.',
+      name: 'tsRoutesFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The subnet routes change is unconfirmed. Read the current settings again.`
+  String get tsRoutesUnknown {
+    return Intl.message(
+      'The subnet routes change is unconfirmed. Read the current settings again.',
+      name: 'tsRoutesUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `On`
+  String get tsOn {
+    return Intl.message('On', name: 'tsOn', desc: '', args: []);
+  }
+
+  /// `Off`
+  String get tsOff {
+    return Intl.message('Off', name: 'tsOff', desc: '', args: []);
+  }
+
+  /// `From subscription`
+  String get tsFromSubscription {
+    return Intl.message(
+      'From subscription',
+      name: 'tsFromSubscription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `From current profile`
+  String get tsFromProfile {
+    return Intl.message(
+      'From current profile',
+      name: 'tsFromProfile',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Set on this Mac`
+  String get tsFromLocal {
+    return Intl.message(
+      'Set on this Mac',
+      name: 'tsFromLocal',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Settings saved here take priority over the same settings in the profile and never change the subscription file.`
+  String get tsOverrideTip {
+    return Intl.message(
+      'Settings saved here take priority over the same settings in the profile and never change the subscription file.',
+      name: 'tsOverrideTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node comes from a proxy provider; its settings can't be changed here.`
+  String get tsNotOverridable {
+    return Intl.message(
+      'This node comes from a proxy provider; its settings can\'t be changed here.',
+      name: 'tsNotOverridable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Available after login`
+  String get tsAfterLoginSelectable {
+    return Intl.message(
+      'Available after login',
+      name: 'tsAfterLoginSelectable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Available once the node is connected`
+  String get tsAfterConnectSelectable {
+    return Intl.message(
+      'Available once the node is connected',
+      name: 'tsAfterConnectSelectable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Devices`
+  String get tsDevices {
+    return Intl.message('Devices', name: 'tsDevices', desc: '', args: []);
+  }
+
+  /// `Devices this node can see, not every device in the admin console`
+  String get tsDevicesScope {
+    return Intl.message(
+      'Devices this node can see, not every device in the admin console',
+      name: 'tsDevicesScope',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tailscale address`
+  String get tsAddress {
+    return Intl.message(
+      'Tailscale address',
+      name: 'tsAddress',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Owner`
+  String get tsOwner {
+    return Intl.message('Owner', name: 'tsOwner', desc: '', args: []);
+  }
+
+  /// `OS`
+  String get tsSystem {
+    return Intl.message('OS', name: 'tsSystem', desc: '', args: []);
+  }
+
+  /// `Status`
+  String get tsStatus {
+    return Intl.message('Status', name: 'tsStatus', desc: '', args: []);
+  }
+
+  /// `Online`
+  String get tsOnline {
+    return Intl.message('Online', name: 'tsOnline', desc: '', args: []);
+  }
+
+  /// `Offline`
+  String get tsOffline {
+    return Intl.message('Offline', name: 'tsOffline', desc: '', args: []);
+  }
+
+  /// `Status unknown`
+  String get tsStatusUnknown {
+    return Intl.message(
+      'Status unknown',
+      name: 'tsStatusUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Exit node`
+  String get tsExitCapable {
+    return Intl.message('Exit node', name: 'tsExitCapable', desc: '', args: []);
+  }
+
+  /// `Name not provided`
+  String get tsNameMissing {
+    return Intl.message(
+      'Name not provided',
+      name: 'tsNameMissing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Address not provided`
+  String get tsAddressMissing {
+    return Intl.message(
+      'Address not provided',
+      name: 'tsAddressMissing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `OS not provided`
+  String get tsSystemMissing {
+    return Intl.message(
+      'OS not provided',
+      name: 'tsSystemMissing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No visible devices`
+  String get tsDevicesEmpty {
+    return Intl.message(
+      'No visible devices',
+      name: 'tsDevicesEmpty',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node doesn't see any other devices yet.`
+  String get tsDevicesEmptyTip {
+    return Intl.message(
+      'This node doesn\'t see any other devices yet.',
+      name: 'tsDevicesEmptyTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn't load the device list. Try again.`
+  String get tsDevicesFailed {
+    return Intl.message(
+      'Couldn\'t load the device list. Try again.',
+      name: 'tsDevicesFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Refresh device list`
+  String get tsRefreshDevices {
+    return Intl.message(
+      'Refresh device list',
+      name: 'tsRefreshDevices',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The device list may be out of date. Refreshing failed; this is the last list read.`
+  String get tsDevicesStale {
+    return Intl.message(
+      'The device list may be out of date. Refreshing failed; this is the last list read.',
+      name: 'tsDevicesStale',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Showing {n} devices`
+  String tsDevicesShown(Object n) {
+    return Intl.message(
+      'Showing $n devices',
+      name: 'tsDevicesShown',
+      desc: '',
+      args: [n],
+    );
+  }
+
+  /// `Search name or address`
+  String get tsSearchHint {
+    return Intl.message(
+      'Search name or address',
+      name: 'tsSearchHint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No devices match the search`
+  String get tsSearchEmpty {
+    return Intl.message(
+      'No devices match the search',
+      name: 'tsSearchEmpty',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Device owner`
+  String get tsOwnerFilter {
+    return Intl.message(
+      'Device owner',
+      name: 'tsOwnerFilter',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `All`
+  String get tsOwnerAll {
+    return Intl.message('All', name: 'tsOwnerAll', desc: '', args: []);
+  }
+
+  /// `Mine`
+  String get tsOwnerMine {
+    return Intl.message('Mine', name: 'tsOwnerMine', desc: '', args: []);
+  }
+
+  /// `Me`
+  String get tsOwnerMe {
+    return Intl.message('Me', name: 'tsOwnerMe', desc: '', args: []);
+  }
+
+  /// `Owner unknown`
+  String get tsOwnerUnknown {
+    return Intl.message(
+      'Owner unknown',
+      name: 'tsOwnerUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No devices with this owner`
+  String get tsOwnerFilterEmpty {
+    return Intl.message(
+      'No devices with this owner',
+      name: 'tsOwnerFilterEmpty',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Clear owner filter`
+  String get tsClearOwnerFilter {
+    return Intl.message(
+      'Clear owner filter',
+      name: 'tsClearOwnerFilter',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Shared in`
+  String get tsShared {
+    return Intl.message('Shared in', name: 'tsShared', desc: '', args: []);
+  }
+
+  /// `Shared by: {name}`
+  String tsSharedBy(Object name) {
+    return Intl.message(
+      'Shared by: $name',
+      name: 'tsSharedBy',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Found an earlier login record`
+  String get tsLegacyTitle {
+    return Intl.message(
+      'Found an earlier login record',
+      name: 'tsLegacyTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Account not confirmed`
+  String get tsLegacyAccountUnconfirmed {
+    return Intl.message(
+      'Account not confirmed',
+      name: 'tsLegacyAccountUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You can copy this login record to this node and keep the original. It can move to only one node; make sure this is the account you want to keep using, or log in again instead.`
+  String get tsLegacyBody {
+    return Intl.message(
+      'You can copy this login record to this node and keep the original. It can move to only one node; make sure this is the account you want to keep using, or log in again instead.',
+      name: 'tsLegacyBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node has an auth key; logging in again registers a new device identity with it, and the earlier login record is kept.`
+  String get tsLegacyAuthKeyNote {
+    return Intl.message(
+      'This node has an auth key; logging in again registers a new device identity with it, and the earlier login record is kept.',
+      name: 'tsLegacyAuthKeyNote',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Move to this node`
+  String get tsLegacyMigrate {
+    return Intl.message(
+      'Move to this node',
+      name: 'tsLegacyMigrate',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Moving login record…`
+  String get tsLegacyMigrating {
+    return Intl.message(
+      'Moving login record…',
+      name: 'tsLegacyMigrating',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Retry move`
+  String get tsLegacyRetry {
+    return Intl.message(
+      'Retry move',
+      name: 'tsLegacyRetry',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The login record was not moved and the original is kept. Try again, or log in again.`
+  String get tsLegacyFailed {
+    return Intl.message(
+      'The login record was not moved and the original is kept. Try again, or log in again.',
+      name: 'tsLegacyFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The move details have changed. Check them again before confirming.`
+  String get tsLegacyChanged {
+    return Intl.message(
+      'The move details have changed. Check them again before confirming.',
+      name: 'tsLegacyChanged',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The move result is unconfirmed; the original is kept. Read the status again first, and don't move or log in again until confirmed.`
+  String get tsLegacyUnknown {
+    return Intl.message(
+      'The move result is unconfirmed; the original is kept. Read the status again first, and don\'t move or log in again until confirmed.',
+      name: 'tsLegacyUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The move result is unconfirmed, and reading or saving the earlier login record failed, so it may not be intact. Read the status again first, and don't move or log in again until confirmed.`
+  String get tsLegacyUnknownArchiveError {
+    return Intl.message(
+      'The move result is unconfirmed, and reading or saving the earlier login record failed, so it may not be intact. Read the status again first, and don\'t move or log in again until confirmed.',
+      name: 'tsLegacyUnknownArchiveError',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The move result is unconfirmed, and the earlier login record failed: {error}. Read the status again first, and don't move or log in again until confirmed.`
+  String tsLegacyUnknownArchiveErrorOf(Object error) {
+    return Intl.message(
+      'The move result is unconfirmed, and the earlier login record failed: $error. Read the status again first, and don\'t move or log in again until confirmed.',
+      name: 'tsLegacyUnknownArchiveErrorOf',
+      desc: '',
+      args: [error],
+    );
+  }
+
+  /// `The login record was not moved. Reading or saving the earlier record failed, so it may not be intact.`
+  String get tsLegacyArchiveError {
+    return Intl.message(
+      'The login record was not moved. Reading or saving the earlier record failed, so it may not be intact.',
+      name: 'tsLegacyArchiveError',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The login record was not moved. The earlier record failed: {error}`
+  String tsLegacyArchiveErrorOf(Object error) {
+    return Intl.message(
+      'The login record was not moved. The earlier record failed: $error',
+      name: 'tsLegacyArchiveErrorOf',
+      desc: '',
+      args: [error],
+    );
+  }
+
+  /// `Login record moved. Reading the node status.`
+  String get tsLegacyMigrated {
+    return Intl.message(
+      'Login record moved. Reading the node status.',
+      name: 'tsLegacyMigrated',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This node already has its own login record; no need to move.`
+  String get tsLegacyHasIdentity {
+    return Intl.message(
+      'This node already has its own login record; no need to move.',
+      name: 'tsLegacyHasIdentity',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The earlier login record uses another control server than this node, so it can't move.`
+  String get tsLegacyControlMismatch {
+    return Intl.message(
+      'The earlier login record uses another control server than this node, so it can\'t move.',
+      name: 'tsLegacyControlMismatch',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The earlier login record is still in use and can't move for now.`
+  String get tsLegacyInUse {
+    return Intl.message(
+      'The earlier login record is still in use and can\'t move for now.',
+      name: 'tsLegacyInUse',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This earlier login record already moved to another node and can't move again.`
+  String get tsLegacyMigratedElsewhere {
+    return Intl.message(
+      'This earlier login record already moved to another node and can\'t move again.',
+      name: 'tsLegacyMigratedElsewhere',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Can't read the earlier login record. Check again.`
+  String get tsLegacyUnreadable {
+    return Intl.message(
+      'Can\'t read the earlier login record. Check again.',
+      name: 'tsLegacyUnreadable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Whether the earlier login record can be used is unconfirmed. Read the status again.`
+  String get tsLegacyUnconfirmed {
+    return Intl.message(
+      'Whether the earlier login record can be used is unconfirmed. Read the status again.',
+      name: 'tsLegacyUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Move the earlier login to this node?`
+  String get tsLegacyConfirmTitle {
+    return Intl.message(
+      'Move the earlier login to this node?',
+      name: 'tsLegacyConfirmTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Profile: {name}`
+  String tsLegacyConfirmProfile(Object name) {
+    return Intl.message(
+      'Profile: $name',
+      name: 'tsLegacyConfirmProfile',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Node: {name}`
+  String tsLegacyConfirmNode(Object name) {
+    return Intl.message(
+      'Node: $name',
+      name: 'tsLegacyConfirmNode',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Account: {account}`
+  String tsLegacyConfirmAccount(Object account) {
+    return Intl.message(
+      'Account: $account',
+      name: 'tsLegacyConfirmAccount',
+      desc: '',
+      args: [account],
+    );
+  }
+
+  /// `Control server: {server}`
+  String tsLegacyConfirmControl(Object server) {
+    return Intl.message(
+      'Control server: $server',
+      name: 'tsLegacyConfirmControl',
+      desc: '',
+      args: [server],
+    );
+  }
+
+  /// `This copies the login record for the node above and leaves the original untouched. The same record can't move to another node afterwards. Check the node's real connection status after the move.`
+  String get tsLegacyConfirmBody {
+    return Intl.message(
+      'This copies the login record for the node above and leaves the original untouched. The same record can\'t move to another node afterwards. Check the node\'s real connection status after the move.',
+      name: 'tsLegacyConfirmBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Confirm move`
+  String get tsLegacyConfirm {
+    return Intl.message(
+      'Confirm move',
+      name: 'tsLegacyConfirm',
       desc: '',
       args: [],
     );
