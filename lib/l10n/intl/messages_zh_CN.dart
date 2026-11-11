@@ -1837,7 +1837,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsOn": MessageLookupByLibrary.simpleMessage("已开启"),
     "tsOnline": MessageLookupByLibrary.simpleMessage("在线"),
     "tsOverrideAmbiguous": MessageLookupByLibrary.simpleMessage(
-      "当前配置中另有同名节点使用同一控制服务器，无法确定要更改哪一个。请在配置中为它们使用不同名称。",
+      "当前配置中有多个同名节点使用同一控制服务器，暂时无法分别保存设置。请在配置中为它们使用不同名称。",
     ),
     "tsOverrideTip": MessageLookupByLibrary.simpleMessage(
       "此处保存的设置优先于当前配置中的同名设置，不会修改订阅文件。",

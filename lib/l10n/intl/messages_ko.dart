@@ -1794,7 +1794,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Address not provided",
     ),
     "tsAfterConnectSelectable": MessageLookupByLibrary.simpleMessage(
-      "Settings can be changed once this node connects.",
+      "Connect this node to change settings.",
     ),
     "tsAfterLogin": MessageLookupByLibrary.simpleMessage(
       "Available after login",
@@ -2047,7 +2047,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsOn": MessageLookupByLibrary.simpleMessage("On"),
     "tsOnline": MessageLookupByLibrary.simpleMessage("Online"),
     "tsOverrideAmbiguous": MessageLookupByLibrary.simpleMessage(
-      "Another node in this profile has the same name and control server, so it\'s unclear which one to change. Give them different names in the profile.",
+      "This profile has multiple nodes with the same name and control server, so their settings cannot be saved separately. Give them different names in the profile.",
     ),
     "tsOverrideTip": MessageLookupByLibrary.simpleMessage(
       "Settings saved here take priority over the same settings in the profile and never change the subscription file.",

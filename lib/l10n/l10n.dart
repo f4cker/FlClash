@@ -10103,10 +10103,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Another node in this profile has the same name and control server, so it's unclear which one to change. Give them different names in the profile.`
+  /// `This profile has multiple nodes with the same name and control server, so their settings cannot be saved separately. Give them different names in the profile.`
   String get tsOverrideAmbiguous {
     return Intl.message(
-      'Another node in this profile has the same name and control server, so it\'s unclear which one to change. Give them different names in the profile.',
+      'This profile has multiple nodes with the same name and control server, so their settings cannot be saved separately. Give them different names in the profile.',
       name: 'tsOverrideAmbiguous',
       desc: '',
       args: [],
@@ -10143,10 +10143,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Settings can be changed once this node connects.`
+  /// `Connect this node to change settings.`
   String get tsAfterConnectSelectable {
     return Intl.message(
-      'Settings can be changed once this node connects.',
+      'Connect this node to change settings.',
       name: 'tsAfterConnectSelectable',
       desc: '',
       args: [],
