@@ -218,6 +218,36 @@ class Preferences {
         false;
   }
 
+  Future<TailscaleLegacyMigration?> getTailscaleLegacyMigration() async {
+    try {
+      final sharedPreferencesIns = await _store.value;
+      final raw = sharedPreferencesIns?.getString(tailscaleLegacyMigrationKey);
+      if (raw == null) {
+        return null;
+      }
+      return TailscaleLegacyMigration.fromJson(
+        Map<String, Object?>.from(json.decode(raw) as Map),
+      );
+    } catch (e) {
+      commonPrint.log(
+        'getTailscaleLegacyMigration error ${e.toString()}',
+        logLevel: LogLevel.warning,
+      );
+      return null;
+    }
+  }
+
+  Future<bool> saveTailscaleLegacyMigration(
+    TailscaleLegacyMigration migration,
+  ) async {
+    final sharedPreferencesIns = await _store.value;
+    return await sharedPreferencesIns?.setString(
+          tailscaleLegacyMigrationKey,
+          json.encode(migration),
+        ) ??
+        false;
+  }
+
   Future<void> clearPreferences() async {
     final sharedPreferencesIns = await _store.value;
     await sharedPreferencesIns?.clear();

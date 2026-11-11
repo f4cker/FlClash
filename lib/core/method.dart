@@ -66,6 +66,7 @@ enum CoreMethod {
   tailscaleLogin('tailscale.login'),
   tailscaleLogout('tailscale.logout'),
   tailscaleSetPrefs('tailscale.setPrefs'),
+  tailscaleMigrateLegacy('tailscale.migrateLegacy'),
 
   /// The envelope of the Core's event batches, never called.
   message('message');

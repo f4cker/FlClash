@@ -8,18 +8,15 @@ part of '../tailscale.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The panel's overrides and logout guards for every profile, seeded from
-/// preferences before the first setup.
+/// Seeded from preferences before the first setup.
 
 @ProviderFor(TailscaleNodeRecords)
 final tailscaleNodeRecordsProvider = TailscaleNodeRecordsProvider._();
 
-/// The panel's overrides and logout guards for every profile, seeded from
-/// preferences before the first setup.
+/// Seeded from preferences before the first setup.
 final class TailscaleNodeRecordsProvider
     extends $NotifierProvider<TailscaleNodeRecords, List<TailscaleNodeRecord>> {
-  /// The panel's overrides and logout guards for every profile, seeded from
-  /// preferences before the first setup.
+  /// Seeded from preferences before the first setup.
   TailscaleNodeRecordsProvider._()
     : super(
         from: null,
@@ -50,8 +47,7 @@ final class TailscaleNodeRecordsProvider
 String _$tailscaleNodeRecordsHash() =>
     r'504e2ae5ab72ad105b5ea51eb885b323f264fb5c';
 
-/// The panel's overrides and logout guards for every profile, seeded from
-/// preferences before the first setup.
+/// Seeded from preferences before the first setup.
 
 abstract class _$TailscaleNodeRecords
     extends $Notifier<List<TailscaleNodeRecord>> {
@@ -66,6 +62,68 @@ abstract class _$TailscaleNodeRecords
             as $ClassProviderElement<
               AnyNotifier<List<TailscaleNodeRecord>, List<TailscaleNodeRecord>>,
               List<TailscaleNodeRecord>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// The node the legacy shared login went to; seeded with the node records.
+
+@ProviderFor(TailscaleLegacyMigrated)
+final tailscaleLegacyMigratedProvider = TailscaleLegacyMigratedProvider._();
+
+/// The node the legacy shared login went to; seeded with the node records.
+final class TailscaleLegacyMigratedProvider
+    extends
+        $NotifierProvider<TailscaleLegacyMigrated, TailscaleLegacyMigration?> {
+  /// The node the legacy shared login went to; seeded with the node records.
+  TailscaleLegacyMigratedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tailscaleLegacyMigratedProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tailscaleLegacyMigratedHash();
+
+  @$internal
+  @override
+  TailscaleLegacyMigrated create() => TailscaleLegacyMigrated();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TailscaleLegacyMigration? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TailscaleLegacyMigration?>(value),
+    );
+  }
+}
+
+String _$tailscaleLegacyMigratedHash() =>
+    r'7269902dabde57ea1f289eef15efe9314a54be2a';
+
+/// The node the legacy shared login went to; seeded with the node records.
+
+abstract class _$TailscaleLegacyMigrated
+    extends $Notifier<TailscaleLegacyMigration?> {
+  TailscaleLegacyMigration? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<TailscaleLegacyMigration?, TailscaleLegacyMigration?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<TailscaleLegacyMigration?, TailscaleLegacyMigration?>,
+              TailscaleLegacyMigration?,
               Object?,
               Object?
             >;
@@ -113,17 +171,13 @@ final class TailscaleSetupProvider
   }
 }
 
-String _$tailscaleSetupHash() => r'7b2f82c50f089699f29668b784edc60b6e22c127';
-
-/// The nodes of the running config; read only while something watches it.
+String _$tailscaleSetupHash() => r'7f4c9f8b03c48c9b78fe30fdb98800489db70d4a';
 
 @ProviderFor(TailscaleNodes)
 final tailscaleNodesProvider = TailscaleNodesProvider._();
 
-/// The nodes of the running config; read only while something watches it.
 final class TailscaleNodesProvider
     extends $AsyncNotifierProvider<TailscaleNodes, List<TailscaleNode>> {
-  /// The nodes of the running config; read only while something watches it.
   TailscaleNodesProvider._()
     : super(
         from: null,
@@ -145,8 +199,6 @@ final class TailscaleNodesProvider
 
 String _$tailscaleNodesHash() => r'e47ce4280e3888c6507e5bf969a23ef1cd30cf11';
 
-/// The nodes of the running config; read only while something watches it.
-
 abstract class _$TailscaleNodes extends $AsyncNotifier<List<TailscaleNode>> {
   FutureOr<List<TailscaleNode>> build();
   @$mustCallSuper
@@ -166,22 +218,19 @@ abstract class _$TailscaleNodes extends $AsyncNotifier<List<TailscaleNode>> {
   }
 }
 
-/// The last state the Core reported for each node name; compare its
-/// generation with the node's before acting on it.
+/// By node name; an event of another generation is not about the node read.
 
 @ProviderFor(TailscaleStateEvents)
 final tailscaleStateEventsProvider = TailscaleStateEventsProvider._();
 
-/// The last state the Core reported for each node name; compare its
-/// generation with the node's before acting on it.
+/// By node name; an event of another generation is not about the node read.
 final class TailscaleStateEventsProvider
     extends
         $NotifierProvider<
           TailscaleStateEvents,
           Map<String, TailscaleStateEvent>
         > {
-  /// The last state the Core reported for each node name; compare its
-  /// generation with the node's before acting on it.
+  /// By node name; an event of another generation is not about the node read.
   TailscaleStateEventsProvider._()
     : super(
         from: null,
@@ -214,8 +263,7 @@ final class TailscaleStateEventsProvider
 String _$tailscaleStateEventsHash() =>
     r'9bc725736122a69be7f3ae976cb04a0a0ef2d251';
 
-/// The last state the Core reported for each node name; compare its
-/// generation with the node's before acting on it.
+/// By node name; an event of another generation is not about the node read.
 
 abstract class _$TailscaleStateEvents
     extends $Notifier<Map<String, TailscaleStateEvent>> {

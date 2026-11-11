@@ -494,6 +494,15 @@ abstract class CoreHandlerInterface {
       timeout: tailscaleCoreGuard,
     );
   }
+
+  Future<TailscaleMigrateResult> migrateTailscaleLegacy(TailscaleNodeRef node) {
+    return _query(
+      CoreMethod.tailscaleMigrateLegacy,
+      _model(TailscaleMigrateResult.fromJson),
+      arguments: node.toJson(),
+      timeout: tailscaleCoreGuard,
+    );
+  }
 }
 
 T _cast<T>(Object data) => data as T;

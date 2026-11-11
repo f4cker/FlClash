@@ -196,6 +196,12 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
         'generation': 3,
         'outcome': 'not-running',
       },
+      CoreMethod.tailscaleMigrateLegacy => {
+        'generation': 3,
+        'migration': _tailscaleMigration,
+        'node': _tailscaleNode,
+        'reapply-required': true,
+      },
       CoreMethod.routeWatch => {'core-epoch': 1, 'route-version': 0},
       CoreMethod.routeCheck => {
         'core-epoch': 1,
@@ -266,6 +272,20 @@ const _tailscaleNode = {
     'accept-routes': {'value': true, 'source': 'subscription'},
   },
   'warnings': ['legacy-shared-state-present'],
+  'legacy': {
+    'login-name': 'old@example.test',
+    'display-name': 'Old',
+    'tailnet': 'example.test',
+    'control-url': 'https://controlplane.tailscale.com',
+    'fingerprint': 'f1',
+  },
+};
+
+const _tailscaleMigration = {
+  'fingerprint': 'f1',
+  'profile-id': 42,
+  'name': 'ts',
+  'control-url': 'https://controlplane.tailscale.com',
 };
 
 void main() {
@@ -327,11 +347,14 @@ void main() {
     final login = await handler.loginTailscale(node, reauth: true);
     final logout = await handler.logoutTailscale(node);
     final prefs = await handler.setTailscalePrefs(node, exitNode: '');
+    final migrated = await handler.migrateTailscaleLegacy(node);
 
     expect(nodes.single.ref, node);
     expect(nodes.single.stateDirMode, TailscaleStateDirMode.derived);
     expect(nodes.single.backendState, TailscaleBackendState.running);
     expect(nodes.single.legacySharedStatePresent, isTrue);
+    expect(nodes.single.legacy?.loginName, 'old@example.test');
+    expect(nodes.single.legacy?.migratedTo, isNull);
     expect(
       nodes.single.settings.exitNode,
       const TailscaleExitNodeSetting(
@@ -347,6 +370,7 @@ void main() {
       CoreMethod.tailscaleStatus,
       CoreMethod.tailscaleStart,
       CoreMethod.tailscaleLogout,
+      CoreMethod.tailscaleMigrateLegacy,
     ]) {
       expect(handler.calls[method], {'name': 'ts', 'generation': 3});
     }
@@ -369,6 +393,17 @@ void main() {
     expect(logout.outcome, TailscaleLogoutOutcome.unknown);
     expect(logout.error?.code, 'tailscale_logout_failed');
     expect(prefs.outcome, TailscalePrefsOutcome.notRunning);
+    expect(migrated.reapplyRequired, isTrue);
+    expect(
+      migrated.migration,
+      const TailscaleLegacyMigration(
+        fingerprint: 'f1',
+        profileId: 42,
+        name: 'ts',
+        controlUrl: 'https://controlplane.tailscale.com',
+      ),
+    );
+    expect(migrated.node.legacy?.fingerprint, 'f1');
   });
 
   test('a Tailscale state event decodes, and an unknown state stays one', () {
@@ -406,6 +441,7 @@ void main() {
         TailscaleNodeSetup(name: 'a', exitNode: ''),
         TailscaleNodeSetup(name: 'b', loggedOut: true),
       ],
+      legacyMigration: TailscaleLegacyMigration(fingerprint: 'f1', name: 'b'),
     );
     final sent = json.decode(
       json.encode(
@@ -424,6 +460,12 @@ void main() {
         {'name': 'a', 'control-url': '', 'exit-node': '', 'logged-out': false},
         {'name': 'b', 'control-url': '', 'logged-out': true},
       ],
+      'legacy-migration': {
+        'fingerprint': 'f1',
+        'profile-id': 0,
+        'name': 'b',
+        'control-url': '',
+      },
     });
   });
 

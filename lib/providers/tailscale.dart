@@ -57,6 +57,31 @@ class TailscaleNodeRecords extends _$TailscaleNodeRecords
   }
 }
 
+/// The node the legacy shared login went to; seeded with the node records.
+@Riverpod(keepAlive: true)
+class TailscaleLegacyMigrated extends _$TailscaleLegacyMigrated
+    with AutoDisposeNotifierMixin {
+  @override
+  TailscaleLegacyMigration? build() => null;
+
+  Future<bool> save(TailscaleLegacyMigration migration) async {
+    final bool saved;
+    try {
+      saved = await preferences.saveTailscaleLegacyMigration(migration);
+    } catch (error) {
+      commonPrint.log(
+        'saveTailscaleLegacyMigration error $error',
+        logLevel: LogLevel.warning,
+      );
+      return false;
+    }
+    if (saved && ref.mounted) {
+      state = migration;
+    }
+    return saved;
+  }
+}
+
 @riverpod
 TailscaleSetup? tailscaleSetup(Ref ref) {
   final profile = ref.watch(
@@ -69,7 +94,9 @@ TailscaleSetup? tailscaleSetup(Ref ref) {
     return null;
   }
   final records = ref.watch(tailscaleNodeRecordsProvider);
+  final legacyMigration = ref.watch(tailscaleLegacyMigratedProvider);
   return TailscaleSetup(
+    legacyMigration: legacyMigration,
     profileId: profile.id,
     configSource: profile.type == ProfileType.url
         ? TailscaleSettingSource.subscription

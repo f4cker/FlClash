@@ -91,6 +91,7 @@ abstract class TailscaleNode with _$TailscaleNode {
     @JsonKey(name: 'start-error') TailscaleError? startError,
     @Default(TailscaleSettings()) TailscaleSettings settings,
     @Default([]) List<String> warnings,
+    TailscaleLegacyIdentity? legacy,
   }) = _TailscaleNode;
 
   factory TailscaleNode.fromJson(Map<String, Object?> json) =>
@@ -122,6 +123,48 @@ abstract class TailscaleNodeRef with _$TailscaleNodeRef {
 }
 
 typedef TailscaleNodeKey = ({int profileId, String name, String controlUrl});
+
+/// The one node the shared pre-isolation login was copied to.
+@freezed
+abstract class TailscaleLegacyMigration with _$TailscaleLegacyMigration {
+  const factory TailscaleLegacyMigration({
+    required String fingerprint,
+    @JsonKey(name: 'profile-id') @Default(0) int profileId,
+    @Default('') String name,
+    @JsonKey(name: 'control-url') @Default('') String controlUrl,
+  }) = _TailscaleLegacyMigration;
+
+  factory TailscaleLegacyMigration.fromJson(Map<String, Object?> json) =>
+      _$TailscaleLegacyMigrationFromJson(json);
+}
+
+@freezed
+abstract class TailscaleLegacyIdentity with _$TailscaleLegacyIdentity {
+  const factory TailscaleLegacyIdentity({
+    @JsonKey(name: 'login-name') @Default('') String loginName,
+    @JsonKey(name: 'display-name') @Default('') String displayName,
+    @Default('') String tailnet,
+    @JsonKey(name: 'control-url') @Default('') String controlUrl,
+    @Default('') String fingerprint,
+    @JsonKey(name: 'migrated-to') TailscaleLegacyMigration? migratedTo,
+  }) = _TailscaleLegacyIdentity;
+
+  factory TailscaleLegacyIdentity.fromJson(Map<String, Object?> json) =>
+      _$TailscaleLegacyIdentityFromJson(json);
+}
+
+@freezed
+abstract class TailscaleMigrateResult with _$TailscaleMigrateResult {
+  const factory TailscaleMigrateResult({
+    required int generation,
+    required TailscaleLegacyMigration migration,
+    required TailscaleNode node,
+    @JsonKey(name: 'reapply-required') @Default(false) bool reapplyRequired,
+  }) = _TailscaleMigrateResult;
+
+  factory TailscaleMigrateResult.fromJson(Map<String, Object?> json) =>
+      _$TailscaleMigrateResultFromJson(json);
+}
 
 @freezed
 abstract class TailscaleUser with _$TailscaleUser {
@@ -322,6 +365,8 @@ abstract class TailscaleSetup with _$TailscaleSetup {
     @JsonKey(name: 'config-source')
     required TailscaleSettingSource configSource,
     @Default([]) List<TailscaleNodeSetup> nodes,
+    @JsonKey(name: 'legacy-migration', includeIfNull: false)
+    TailscaleLegacyMigration? legacyMigration,
   }) = _TailscaleSetup;
 
   factory TailscaleSetup.fromJson(Map<String, Object?> json) =>

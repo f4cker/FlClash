@@ -119,6 +119,11 @@ _TailscaleNode _$TailscaleNodeFromJson(
   warnings:
       (json['warnings'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
+  legacy: json['legacy'] == null
+      ? null
+      : TailscaleLegacyIdentity.fromJson(
+          json['legacy'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$TailscaleNodeToJson(_TailscaleNode instance) =>
@@ -139,6 +144,7 @@ Map<String, dynamic> _$TailscaleNodeToJson(_TailscaleNode instance) =>
       'start-error': instance.startError,
       'settings': instance.settings,
       'warnings': instance.warnings,
+      'legacy': instance.legacy,
     };
 
 const _$TailscaleStateDirModeEnumMap = {
@@ -166,6 +172,70 @@ _TailscaleNodeRef _$TailscaleNodeRefFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$TailscaleNodeRefToJson(_TailscaleNodeRef instance) =>
     <String, dynamic>{'name': instance.name, 'generation': instance.generation};
+
+_TailscaleLegacyMigration _$TailscaleLegacyMigrationFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleLegacyMigration(
+  fingerprint: json['fingerprint'] as String,
+  profileId: (json['profile-id'] as num?)?.toInt() ?? 0,
+  name: json['name'] as String? ?? '',
+  controlUrl: json['control-url'] as String? ?? '',
+);
+
+Map<String, dynamic> _$TailscaleLegacyMigrationToJson(
+  _TailscaleLegacyMigration instance,
+) => <String, dynamic>{
+  'fingerprint': instance.fingerprint,
+  'profile-id': instance.profileId,
+  'name': instance.name,
+  'control-url': instance.controlUrl,
+};
+
+_TailscaleLegacyIdentity _$TailscaleLegacyIdentityFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleLegacyIdentity(
+  loginName: json['login-name'] as String? ?? '',
+  displayName: json['display-name'] as String? ?? '',
+  tailnet: json['tailnet'] as String? ?? '',
+  controlUrl: json['control-url'] as String? ?? '',
+  fingerprint: json['fingerprint'] as String? ?? '',
+  migratedTo: json['migrated-to'] == null
+      ? null
+      : TailscaleLegacyMigration.fromJson(
+          json['migrated-to'] as Map<String, dynamic>,
+        ),
+);
+
+Map<String, dynamic> _$TailscaleLegacyIdentityToJson(
+  _TailscaleLegacyIdentity instance,
+) => <String, dynamic>{
+  'login-name': instance.loginName,
+  'display-name': instance.displayName,
+  'tailnet': instance.tailnet,
+  'control-url': instance.controlUrl,
+  'fingerprint': instance.fingerprint,
+  'migrated-to': instance.migratedTo,
+};
+
+_TailscaleMigrateResult _$TailscaleMigrateResultFromJson(
+  Map<String, dynamic> json,
+) => _TailscaleMigrateResult(
+  generation: (json['generation'] as num).toInt(),
+  migration: TailscaleLegacyMigration.fromJson(
+    json['migration'] as Map<String, dynamic>,
+  ),
+  node: TailscaleNode.fromJson(json['node'] as Map<String, dynamic>),
+  reapplyRequired: json['reapply-required'] as bool? ?? false,
+);
+
+Map<String, dynamic> _$TailscaleMigrateResultToJson(
+  _TailscaleMigrateResult instance,
+) => <String, dynamic>{
+  'generation': instance.generation,
+  'migration': instance.migration,
+  'node': instance.node,
+  'reapply-required': instance.reapplyRequired,
+};
 
 _TailscaleUser _$TailscaleUserFromJson(Map<String, dynamic> json) =>
     _TailscaleUser(
@@ -482,6 +552,11 @@ _TailscaleSetup _$TailscaleSetupFromJson(Map<String, dynamic> json) =>
               )
               .toList() ??
           const [],
+      legacyMigration: json['legacy-migration'] == null
+          ? null
+          : TailscaleLegacyMigration.fromJson(
+              json['legacy-migration'] as Map<String, dynamic>,
+            ),
     );
 
 Map<String, dynamic> _$TailscaleSetupToJson(_TailscaleSetup instance) =>
@@ -489,4 +564,5 @@ Map<String, dynamic> _$TailscaleSetupToJson(_TailscaleSetup instance) =>
       'profile-id': instance.profileId,
       'config-source': _$TailscaleSettingSourceEnumMap[instance.configSource]!,
       'nodes': instance.nodes,
+      'legacy-migration': ?instance.legacyMigration,
     };

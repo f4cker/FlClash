@@ -121,6 +121,29 @@ class TailscaleAction extends _$TailscaleAction {
     }
   }
 
+  /// The marker is kept before anything else is, so no later setup offers the
+  /// same login to a second node; a running node is read again after an apply.
+  Future<TailscaleMigrateResult> migrateLegacy(TailscaleNode node) async {
+    final result = await _core.migrateTailscaleLegacy(node.ref);
+    await ref
+        .read(tailscaleLegacyMigratedProvider.notifier)
+        .save(result.migration);
+    await _setLoggedOut(node, false);
+    if (result.reapplyRequired) {
+      await reapply();
+    } else {
+      _publish(result.node);
+    }
+    return result;
+  }
+
+  /// A start error sticks to its instance; only a new one starts again.
+  Future<bool> reapply() {
+    return ref
+        .read(setupActionProvider.notifier)
+        .applyProfile(force: true, silence: true);
+  }
+
   Future<bool> _setLoggedOut(TailscaleNode node, bool loggedOut) async {
     final saved = await _records.modify(
       node.key,

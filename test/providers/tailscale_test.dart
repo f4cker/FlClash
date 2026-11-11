@@ -189,6 +189,70 @@ void main() {
     verify(() => core.setTailscalePrefs(any(), exitNode: 'x')).called(1);
   });
 
+  test('a migrated legacy login is marked and lifts the guard', () async {
+    const migration = TailscaleLegacyMigration(
+      fingerprint: 'f1',
+      profileId: 42,
+      name: 'ts',
+      controlUrl: 'https://controlplane.tailscale.com',
+    );
+    final container = build(
+      records: [
+        TailscaleNodeRecord(
+          profileId: 42,
+          name: 'ts',
+          controlUrl: _node.controlUrl,
+          loggedOut: true,
+        ),
+      ],
+    );
+    when(() => core.getTailscaleNodes()).thenAnswer((_) async => [_node]);
+    container.listen(tailscaleNodesProvider, (_, _) {});
+    await container.read(tailscaleNodesProvider.future);
+    when(() => core.migrateTailscaleLegacy(any())).thenAnswer(
+      (_) async => TailscaleMigrateResult(
+        generation: 3,
+        migration: migration,
+        node: _node.copyWith(hasIdentity: true),
+      ),
+    );
+
+    final result = await action(container).migrateLegacy(_node);
+
+    expect(result.migration, migration);
+    expect(container.read(tailscaleLegacyMigratedProvider), migration);
+    expect(
+      (await SharedPreferences.getInstance()).getString(
+        tailscaleLegacyMigrationKey,
+      ),
+      json.encode(migration),
+    );
+    expect(records(container), isEmpty);
+    expect(
+      container.read(tailscaleNodesProvider).value?.single.hasIdentity,
+      isTrue,
+    );
+  });
+
+  test('a refused migration keeps no marker and the guard', () async {
+    final guarded = TailscaleNodeRecord(
+      profileId: 42,
+      name: 'ts',
+      controlUrl: _node.controlUrl,
+      loggedOut: true,
+    );
+    final container = build(records: [guarded]);
+    const refused = CoreMethodException(
+      code: 'tailscale_legacy_already_migrated',
+      message: 'moved',
+    );
+    when(() => core.migrateTailscaleLegacy(any())).thenThrow(refused);
+
+    await expectLater(action(container).migrateLegacy(_node), throwsA(refused));
+    expect(container.read(tailscaleLegacyMigratedProvider), isNull);
+    expect(records(container), [guarded]);
+  });
+
   test('the setup payload holds the records of the current profile', () {
     const subscription = Profile(
       id: 42,
@@ -205,6 +269,9 @@ void main() {
             TailscaleNodeRecord(profileId: 7, name: 'b', exitNode: ''),
           ],
         ),
+        tailscaleLegacyMigratedProvider.overrideWithBuild(
+          (_, _) => const TailscaleLegacyMigration(fingerprint: 'f1'),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -215,6 +282,7 @@ void main() {
         profileId: 42,
         configSource: TailscaleSettingSource.subscription,
         nodes: [TailscaleNodeSetup(name: 'a', loggedOut: true)],
+        legacyMigration: TailscaleLegacyMigration(fingerprint: 'f1'),
       ),
     );
   });
