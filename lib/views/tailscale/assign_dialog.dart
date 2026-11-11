@@ -10,8 +10,9 @@ import 'widgets.dart';
 typedef _OwnerLabel =
     ({String account, String network}) Function(TailscaleRouteOwner owner);
 
-/// The choices for the targets awaiting one, design.md §13.4; null when
-/// cancelled. A target left unchosen stays blocked.
+/// The choices for the targets awaiting one, design.md §13.4, [focus]
+/// first even when it already has one; null when cancelled. A target left
+/// unchosen stays blocked.
 Future<List<TailscaleRouteAssignment>?> showTailscaleAssignDialog(
   BuildContext context, {
   required TailscaleRoutes routes,
@@ -19,10 +20,21 @@ Future<List<TailscaleRouteAssignment>?> showTailscaleAssignDialog(
     TailscaleRouteOwner owner,
   )
   labelOf,
+  TailscaleRouteTarget? focus,
 }) {
+  final focused = focus == null
+      ? null
+      : routes.targetOf(focus.kind, focus.value);
   return dialogs.showCommonDialog<List<TailscaleRouteAssignment>>(
     context: context,
-    child: _AssignDialog(targets: routes.pending, labelOf: labelOf),
+    child: _AssignDialog(
+      targets: [
+        ?focused,
+        for (final target in routes.pending)
+          if (target.target != focus) target,
+      ],
+      labelOf: labelOf,
+    ),
   );
 }
 
@@ -39,6 +51,14 @@ class _AssignDialog extends StatefulWidget {
 class _AssignDialogState extends State<_AssignDialog> {
   final Map<TailscaleRouteTarget, TailscaleRouteOwner> _chosen = {};
 
+  /// A saved choice shows as chosen; one awaiting reconfirmation does not.
+  TailscaleRouteOwner? _savedOf(TailscaleRouteTargetReport target) =>
+      switch (target.state) {
+        TailscaleRouteState.assigned ||
+        TailscaleRouteState.unavailable => target.owner,
+        _ => null,
+      };
+
   void _save() {
     Navigator.of(context).pop([
       for (final MapEntry(:key, :value) in _chosen.entries)
@@ -52,6 +72,7 @@ class _AssignDialogState extends State<_AssignDialog> {
     final colorScheme = context.colorScheme;
     return AlertDialog(
       title: appLocalizations.tsAssignTitle,
+      width: 440,
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -62,32 +83,27 @@ class _AssignDialogState extends State<_AssignDialog> {
           child: Text(appLocalizations.tsSaveChoices),
         ),
       ],
-      child: SizedBox(
-        width: 392,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 10,
-            children: [
-              Text(
-                appLocalizations.tsAssignBody,
-                style: AppTextStyle.footnote
-                    .of(context)
-                    .copyWith(color: colorScheme.onSurfaceVariant),
-              ),
-              for (final target in widget.targets)
-                _TargetBlock(
-                  target: target,
-                  chosen: _chosen[target.target],
-                  labelOf: widget.labelOf,
-                  onChosen: (owner) => setState(() {
-                    _chosen[target.target] = owner;
-                  }),
-                ),
-            ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 10,
+        children: [
+          Text(
+            appLocalizations.tsAssignBody,
+            style: AppTextStyle.footnote
+                .of(context)
+                .copyWith(color: colorScheme.onSurfaceVariant),
           ),
-        ),
+          for (final target in widget.targets)
+            _TargetBlock(
+              target: target,
+              chosen: _chosen[target.target] ?? _savedOf(target),
+              labelOf: widget.labelOf,
+              onChosen: (owner) => setState(() {
+                _chosen[target.target] = owner;
+              }),
+            ),
+        ],
       ),
     );
   }
@@ -128,12 +144,7 @@ class _TargetBlock extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 6,
             children: [
-              Text(
-                title,
-                style: AppTextStyle.subheadline
-                    .of(context, emphasized: true)
-                    .toTabular,
-              ),
+              _TargetTitle(title: title, value: value),
               if (target.state == TailscaleRouteState.reconfirm)
                 Text(
                   appLocalizations.tsReconfirm,
@@ -153,6 +164,33 @@ class _TargetBlock extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The address or domain itself in monospace, its label as written.
+class _TargetTitle extends StatelessWidget {
+  const _TargetTitle({required this.title, required this.value});
+
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppTextStyle.subheadline.of(context, emphasized: true);
+    final at = title.indexOf(value);
+    if (at < 0) {
+      return Text(title, style: style.toJetBrainsMono);
+    }
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: title.substring(0, at)),
+          TextSpan(text: value, style: style.toJetBrainsMono),
+          TextSpan(text: title.substring(at + value.length)),
+        ],
+      ),
+      style: style,
     );
   }
 }

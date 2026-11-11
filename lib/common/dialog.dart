@@ -48,6 +48,7 @@ class Dialogs {
     String? cancelText,
     bool? dismissible,
     bool destructive = false,
+    double? width,
   }) {
     return _showMessage(
       message: message,
@@ -58,6 +59,7 @@ class Dialogs {
       dismissible: dismissible,
       destructive: destructive,
       cancelable: true,
+      width: width,
     );
   }
 
@@ -93,6 +95,7 @@ class Dialogs {
     String? cancelText,
     bool? dismissible,
     bool destructive = false,
+    double? width,
   }) async {
     return showCommonDialog<bool>(
       context: context,
@@ -103,6 +106,7 @@ class Dialogs {
           return AlertDialog(
             title: title ?? appLocalizations.tip,
             destructive: destructive,
+            width: width,
             actions: [
               if (cancelable)
                 TextButton(

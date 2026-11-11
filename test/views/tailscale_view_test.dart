@@ -267,6 +267,69 @@ void main() {
       },
     );
 
+    testWidgets('a conflicting row offers the choice for its own target', (
+      tester,
+    ) async {
+      await seed(records);
+      serveAccounts(routes: tsConflictRoutes());
+      await pumpPanel(tester);
+
+      await tester.longPress(find.text('地址冲突'));
+      await settle(tester);
+      expect(find.text('指定访问账号'), findsOneWidget);
+      await tester.tap(find.text('指定访问账号'));
+      await settle(tester);
+
+      expect(find.text('指定目标的访问账号'), findsOneWidget);
+      expect(find.text('地址：100.94.68.92'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('the rules page groups rules by account and lists choices', (
+      tester,
+    ) async {
+      await seed(records);
+      final base = tsConflictRoutes();
+      serveAccounts(
+        routes: base.copyWith(
+          targets: [
+            ...base.targets,
+            const TailscaleRouteTargetReport(
+              target: TailscaleRouteTarget(
+                kind: tailscaleTargetIp,
+                value: '100.64.0.7',
+              ),
+              state: TailscaleRouteState.unavailable,
+              owner: TailscaleRouteOwner(kind: tailscaleOwnerManaged, id: 'm2'),
+              candidates: [
+                TailscaleRouteCandidate(
+                  owner: TailscaleRouteOwner(
+                    kind: tailscaleOwnerManaged,
+                    id: 'm2',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      await pumpPanel(tester);
+
+      await tester.tap(find.text('前往规则'));
+      await settle(tester);
+
+      expect(find.text('pat@example.test'), findsWidgets);
+      expect(find.text('网络域名：work-net.test.ts.net'), findsOneWidget);
+      expect(find.text('已指定的目标'), findsOneWidget);
+      expect(find.text('尚未指定'), findsOneWidget);
+      expect(
+        find.text('已指定：pat@work.test 指定账号暂不可用，此目标不会改用其他账号。'),
+        findsOneWidget,
+      );
+      expect(find.text('重新指定账号'), findsOneWidget);
+      await teardownView(tester);
+    });
+
     testWidgets('a cancelled choice never reaches the Core', (tester) async {
       await seed(records);
       serveAccounts(routes: tsConflictRoutes());

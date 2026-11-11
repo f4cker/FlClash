@@ -278,77 +278,75 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m100(count) => "Choose accounts for ${count} targets";
 
-  static String m101(name) => "${name} · Current node";
-
-  static String m102(count) =>
+  static String m101(count) =>
       "This profile has ${count} panel-added Tailscale accounts. Deleting it removes their profile bindings, target assignments, and dedicated routing and blocking rules. Local sign-in archives are kept. Devices in the Tailscale admin console are not deleted. Other profiles are not affected.";
 
-  static String m103(count) =>
+  static String m102(count) =>
       "${Intl.plural(count, one: '1 device · Only devices visible to this account', other: '${count} devices · Only devices visible to this account')}";
 
-  static String m104(shown, total) =>
+  static String m103(shown, total) =>
       "Showing ${shown}/${total} · Devices visible to this account only";
 
-  static String m105(n) => "Showing ${n} devices";
+  static String m104(n) => "Showing ${n} devices";
 
-  static String m106(node, device) =>
+  static String m105(node, device) =>
       "Sets the exit node of “${node}” to “${device}”. Connections through this node may drop; FlClash rules stay the same.";
 
-  static String m107(node) =>
+  static String m106(node) =>
       "Only turns off exit forwarding for “${node}”; it doesn\'t log out of Tailscale and FlClash rules stay the same.";
 
-  static String m108(time) =>
+  static String m107(time) =>
       "Authentication expires at ${time}. Log in again before then.";
 
-  static String m109(account) => "Account: ${account}";
+  static String m108(account) => "Account: ${account}";
 
-  static String m110(server) => "Control server: ${server}";
+  static String m109(server) => "Control server: ${server}";
 
-  static String m111(name) => "Node: ${name}";
+  static String m110(name) => "Node: ${name}";
 
-  static String m112(name) => "Profile: ${name}";
+  static String m111(name) => "Profile: ${name}";
 
-  static String m113(name) =>
+  static String m112(name) =>
       "This logs out of “${name}” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.";
 
-  static String m114(name) => "Network: ${name}";
+  static String m113(name) => "Network: ${name}";
 
-  static String m115(name) => "Node ${name}";
+  static String m114(name) => "Node ${name}";
 
-  static String m116(account, node, profile) =>
+  static String m115(account, node, profile) =>
       "This signs out “${account}” (node “${node}”), clears its sign-in from this Mac, and removes its panel-added node and rules from “${profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.";
 
-  static String m117(node, profile) =>
+  static String m116(node, profile) =>
       "This signs out “${node}”, clears its sign-in from this Mac, and removes its panel-added node and rules from “${profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.";
 
-  static String m118(count) => "Device addresses: ${count}";
+  static String m117(count) => "Device addresses: ${count}";
 
-  static String m119(domain) => "Network domain: ${domain}";
+  static String m118(domain) => "Network domain: ${domain}";
 
-  static String m120(value) => "Saved: ${value}";
+  static String m119(value) => "Saved: ${value}";
 
-  static String m121(name) => "Shared by: ${name}";
+  static String m120(name) => "Shared by: ${name}";
 
-  static String m122(account, node) =>
+  static String m121(account, node) =>
       "This signs out “${account}” (node “${node}”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.";
 
-  static String m123(label) => "Status: ${label}";
+  static String m122(label) => "Status: ${label}";
 
-  static String m124(account, status, count) =>
+  static String m123(account, status, count) =>
       "Viewing Tailscale account: ${account}, ${status}. ${count} entries.";
 
-  static String m125(address) => "Address: ${address}";
+  static String m124(address) => "Address: ${address}";
 
-  static String m126(domain) => "Domain: ${domain}";
+  static String m125(domain) => "Domain: ${domain}";
 
-  static String m127(label) => "${label} debe ser una URL";
+  static String m126(label) => "${label} debe ser una URL";
 
-  static String m128(date) => "Válido hasta el ${date}";
+  static String m127(date) => "Válido hasta el ${date}";
 
-  static String m129(count) =>
+  static String m128(count) =>
       "${Intl.plural(count, one: 'hace 1 año', other: 'hace ${count} años')}";
 
-  static String m130(count) =>
+  static String m129(count) =>
       "${Intl.plural(count, other: 'hace ${count} a')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -2428,8 +2426,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Start the core to see this node\'s Tailscale status.",
     ),
     "tsCurrentDevice": MessageLookupByLibrary.simpleMessage("This device"),
-    "tsCurrentNodeOf": m101,
-    "tsDeleteProfileManaged": m102,
+    "tsDeleteProfileManaged": m101,
     "tsDeleteProfilePending": MessageLookupByLibrary.simpleMessage(
       "This profile has unconfirmed Tailscale operations. Read the status again before deleting it.",
     ),
@@ -2438,8 +2435,8 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tsDeviceName": MessageLookupByLibrary.simpleMessage("Device name"),
     "tsDevices": MessageLookupByLibrary.simpleMessage("Devices"),
-    "tsDevicesCompact": m103,
-    "tsDevicesCompactFiltered": m104,
+    "tsDevicesCompact": m102,
+    "tsDevicesCompactFiltered": m103,
     "tsDevicesEmpty": MessageLookupByLibrary.simpleMessage(
       "No visible devices",
     ),
@@ -2452,7 +2449,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsDevicesScope": MessageLookupByLibrary.simpleMessage(
       "Devices this node can see, not every device in the admin console",
     ),
-    "tsDevicesShown": m105,
+    "tsDevicesShown": m104,
     "tsDevicesStale": MessageLookupByLibrary.simpleMessage(
       "The device list may be out of date. Refreshing failed; this is the last list read.",
     ),
@@ -2469,7 +2466,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Changing exit node…",
     ),
     "tsExitCapable": MessageLookupByLibrary.simpleMessage("Exit node"),
-    "tsExitChangeBody": m106,
+    "tsExitChangeBody": m105,
     "tsExitChangeConfirm": MessageLookupByLibrary.simpleMessage(
       "Change exit node",
     ),
@@ -2483,7 +2480,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsExitNodeTip": MessageLookupByLibrary.simpleMessage(
       "Only affects traffic forwarded through this Tailscale node; it doesn\'t make the whole Mac use the exit.",
     ),
-    "tsExitOffBody": m107,
+    "tsExitOffBody": m106,
     "tsExitOffTitle": MessageLookupByLibrary.simpleMessage(
       "Stop using the exit node?",
     ),
@@ -2494,7 +2491,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "The exit node change is unconfirmed. Read the current settings again.",
     ),
     "tsExitUpdated": MessageLookupByLibrary.simpleMessage("Exit node updated"),
-    "tsExpiryTip": m108,
+    "tsExpiryTip": m107,
     "tsFilterEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the current filters",
     ),
@@ -2536,13 +2533,13 @@ class MessageLookup extends MessageLookupByLibrary {
       "The login record was not moved; the move details couldn\'t be saved. Try again, or log in again.",
     ),
     "tsLegacyConfirm": MessageLookupByLibrary.simpleMessage("Confirm move"),
-    "tsLegacyConfirmAccount": m109,
+    "tsLegacyConfirmAccount": m108,
     "tsLegacyConfirmBody": MessageLookupByLibrary.simpleMessage(
       "This copies the login record for the node above and leaves the original untouched. The same record can\'t move to another node afterwards. Check the node\'s real connection status after the move.",
     ),
-    "tsLegacyConfirmControl": m110,
-    "tsLegacyConfirmNode": m111,
-    "tsLegacyConfirmProfile": m112,
+    "tsLegacyConfirmControl": m109,
+    "tsLegacyConfirmNode": m110,
+    "tsLegacyConfirmProfile": m111,
     "tsLegacyConfirmTitle": MessageLookupByLibrary.simpleMessage(
       "Move the earlier login to this node?",
     ),
@@ -2613,7 +2610,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLogoutAuthKeyNote": MessageLookupByLibrary.simpleMessage(
       "When you log in again, the auth key in the profile registers a new device identity.",
     ),
-    "tsLogoutBody": m113,
+    "tsLogoutBody": m112,
     "tsLogoutFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t log out. Read the node status again, then retry.",
     ),
@@ -2643,7 +2640,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNetworkNameTip": MessageLookupByLibrary.simpleMessage(
       "The network name does not identify a verified network owner.",
     ),
-    "tsNetworkOf": m114,
+    "tsNetworkOf": m113,
     "tsNewAccount": MessageLookupByLibrary.simpleMessage("New account"),
     "tsNoExitCandidates": MessageLookupByLibrary.simpleMessage(
       "No exit nodes available",
@@ -2655,10 +2652,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNoExitNodeTip": MessageLookupByLibrary.simpleMessage(
       "Using no exit node doesn\'t log out of Tailscale",
     ),
-    "tsNoNodes": MessageLookupByLibrary.simpleMessage("No Tailscale nodes yet"),
-    "tsNoNodesTip": MessageLookupByLibrary.simpleMessage(
-      "Add a Tailscale node to your profile, then come back here to log in and see its status.",
-    ),
     "tsNodeChanged": MessageLookupByLibrary.simpleMessage(
       "The node has changed. Start the action again on the selected node.",
     ),
@@ -2668,10 +2661,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNodeGoneTip": MessageLookupByLibrary.simpleMessage(
       "Choose a node again.",
     ),
-    "tsNodeOf": m115,
-    "tsNodesInProfile": MessageLookupByLibrary.simpleMessage(
-      "Tailscale nodes in the current profile",
-    ),
+    "tsNodeOf": m114,
     "tsNotAssigned": MessageLookupByLibrary.simpleMessage("Not assigned"),
     "tsOff": MessageLookupByLibrary.simpleMessage("Off"),
     "tsOffline": MessageLookupByLibrary.simpleMessage("Offline"),
@@ -2729,8 +2719,8 @@ class MessageLookup extends MessageLookupByLibrary {
       "Refresh device list",
     ),
     "tsRelogin": MessageLookupByLibrary.simpleMessage("Log in again"),
-    "tsRemoveBody": m116,
-    "tsRemoveBodyNode": m117,
+    "tsRemoveBody": m115,
+    "tsRemoveBodyNode": m116,
     "tsRemoveExtra": MessageLookupByLibrary.simpleMessage(
       "This does not delete the device from the Tailscale admin console or change the official client.",
     ),
@@ -2790,8 +2780,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRoutingConflict": MessageLookupByLibrary.simpleMessage(
       "Routing conflict",
     ),
-    "tsRulesAddresses": m118,
-    "tsRulesDomain": m119,
+    "tsRulesAddresses": m117,
+    "tsRulesDomain": m118,
     "tsRulesManaged": MessageLookupByLibrary.simpleMessage(
       "FlClash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.",
     ),
@@ -2802,8 +2792,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Only traffic routed to this node by FlClash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.",
     ),
     "tsSaveChoices": MessageLookupByLibrary.simpleMessage("Save choices"),
-    "tsSavedValue": m120,
-    "tsSavingChoices": MessageLookupByLibrary.simpleMessage("Saving choices…"),
+    "tsSavedValue": m119,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the search",
     ),
@@ -2817,7 +2806,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Saved, but not yet confirmed in effect. Read the current settings again.",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("Shared in"),
-    "tsSharedBy": m121,
+    "tsSharedBy": m120,
     "tsSignIn": MessageLookupByLibrary.simpleMessage("Sign in to Tailscale"),
     "tsSignInBoundary": MessageLookupByLibrary.simpleMessage(
       "System proxy and TUN will not be enabled automatically.",
@@ -2828,7 +2817,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsSignOutAccount": MessageLookupByLibrary.simpleMessage(
       "Sign out of this account",
     ),
-    "tsSignOutAccountBody": m122,
+    "tsSignOutAccountBody": m121,
     "tsSignOutAccountTitle": MessageLookupByLibrary.simpleMessage(
       "Sign out of this account?",
     ),
@@ -2877,27 +2866,23 @@ class MessageLookup extends MessageLookupByLibrary {
       "Waiting for browser login",
     ),
     "tsStatus": MessageLookupByLibrary.simpleMessage("Status"),
-    "tsStatusOf": m123,
+    "tsStatusOf": m122,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("Status unknown"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "This node has stopped and can\'t reach the Tailscale network for now.",
     ),
     "tsSubnetRoutes": MessageLookupByLibrary.simpleMessage("Subnet routes"),
-    "tsSwitchTip": MessageLookupByLibrary.simpleMessage(
-      "Switching changes which account you view and manage. It does not sign out other accounts.",
-    ),
-    "tsSwitcherSemantics": m124,
+    "tsSwitcherSemantics": m123,
     "tsSystem": MessageLookupByLibrary.simpleMessage("OS"),
     "tsSystemMissing": MessageLookupByLibrary.simpleMessage("OS not provided"),
-    "tsTargetAddress": m125,
-    "tsTargetDomain": m126,
+    "tsTargetAddress": m124,
+    "tsTargetDomain": m125,
     "tsTargetUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Target account unconfirmed",
     ),
     "tsTargetUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
       "The account for this target cannot be verified yet. Requests are blocked.",
     ),
-    "tsTryAgain": MessageLookupByLibrary.simpleMessage("Try again"),
     "tsUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
       "Can\'t confirm whether this node is connected. Read the status again.",
     ),
@@ -2975,7 +2960,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("Reescritura de URL"),
-    "urlTip": m127,
+    "urlTip": m126,
     "useHosts": MessageLookupByLibrary.simpleMessage("Usar hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage(
       "Usar hosts del sistema",
@@ -2984,7 +2969,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "usedTraffic": MessageLookupByLibrary.simpleMessage("Tráfico usado"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("Usuario"),
-    "validUntil": m128,
+    "validUntil": m127,
     "value": MessageLookupByLibrary.simpleMessage("Valor"),
     "view": MessageLookupByLibrary.simpleMessage("Ver"),
     "viewAll": MessageLookupByLibrary.simpleMessage("Ver todo"),
@@ -3003,8 +2988,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Escribir en el sistema también ajusta el reloj del sistema; Android lo ignora.",
     ),
-    "yearsAgo": m129,
-    "yearsAgoShort": m130,
+    "yearsAgo": m128,
+    "yearsAgoShort": m129,
     "yes": MessageLookupByLibrary.simpleMessage("Sí"),
     "zhCN": MessageLookupByLibrary.simpleMessage("Chino simplificado"),
   };

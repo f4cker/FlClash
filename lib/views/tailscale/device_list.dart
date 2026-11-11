@@ -92,9 +92,11 @@ class _TableRow extends StatelessWidget {
   }
 }
 
-/// The conflict tag of [peer]: 地址冲突 while one of its addresses awaits a
+typedef TailscaleConflict = ({String tag, TailscaleRouteTarget target});
+
+/// The conflict of [peer]: 地址冲突 while one of its addresses awaits a
 /// choice, 归属冲突 while its name does.
-String? tailscaleConflictTag(
+TailscaleConflict? tailscaleConflictOf(
   BuildContext context,
   TailscaleRoutes routes,
   TailscalePeer peer,
@@ -107,12 +109,12 @@ String? tailscaleConflictTag(
     final value = target.target.value;
     if (target.target.kind == tailscaleTargetIp &&
         peer.addresses.any((address) => address.split('/').first == value)) {
-      return appLocalizations.tsAddressConflict;
+      return (tag: appLocalizations.tsAddressConflict, target: target.target);
     }
     if (target.target.kind != tailscaleTargetIp &&
         dnsName.isNotEmpty &&
         dnsName.toLowerCase() == value.toLowerCase()) {
-      return appLocalizations.tsRoutingConflict;
+      return (tag: appLocalizations.tsRoutingConflict, target: target.target);
     }
   }
   return null;
@@ -156,10 +158,12 @@ class TailscaleDeviceSection extends StatelessWidget {
     required this.onRefresh,
     required this.onCopy,
     this.conflictOf,
+    this.onAssign,
   });
 
-  /// The conflict tag of a device, when its routing has one.
-  final String? Function(TailscalePeer peer)? conflictOf;
+  /// The conflict of a device, when its routing has one.
+  final TailscaleConflict? Function(TailscalePeer peer)? conflictOf;
+  final ValueChanged<TailscaleRouteTarget>? onAssign;
   final TailscaleStatus? status;
   final bool readFailed;
   final bool reading;
@@ -282,7 +286,12 @@ class TailscaleDeviceSection extends StatelessWidget {
             )
           : _Empty(title: appLocalizations.tsSearchEmpty);
     } else {
-      body = _Table(devices: shown, onCopy: onCopy, conflictOf: conflictOf);
+      body = _Table(
+        devices: shown,
+        onCopy: onCopy,
+        conflictOf: conflictOf,
+        onAssign: onAssign,
+      );
     }
     final staleBanner = status != null && readFailed
         ? TailscaleBanner(
@@ -634,9 +643,15 @@ class _Empty extends StatelessWidget {
 }
 
 class _Table extends StatelessWidget {
-  const _Table({required this.devices, required this.onCopy, this.conflictOf});
+  const _Table({
+    required this.devices,
+    required this.onCopy,
+    this.conflictOf,
+    this.onAssign,
+  });
 
-  final String? Function(TailscalePeer peer)? conflictOf;
+  final TailscaleConflict? Function(TailscalePeer peer)? conflictOf;
+  final ValueChanged<TailscaleRouteTarget>? onAssign;
   final List<TailscaleDevice> devices;
   final ValueChanged<String> onCopy;
 
@@ -698,6 +713,7 @@ class _Table extends StatelessWidget {
                 layout: layout,
                 onCopy: onCopy,
                 conflict: conflictOf?.call(device.peer),
+                onAssign: onAssign,
               ),
             ],
           ],
@@ -713,9 +729,11 @@ class _DeviceRow extends StatelessWidget {
     required this.layout,
     required this.onCopy,
     this.conflict,
+    this.onAssign,
   });
 
-  final String? conflict;
+  final TailscaleConflict? conflict;
+  final ValueChanged<TailscaleRouteTarget>? onAssign;
   final TailscaleDevice device;
   final _TableLayout layout;
   final ValueChanged<String> onCopy;
@@ -791,7 +809,7 @@ class _DeviceRow extends StatelessWidget {
               if (peer.exitNodeOption)
                 TailscaleTag(label: appLocalizations.tsExitCapable),
               if (conflict case final conflict?)
-                TailscaleTag(label: conflict, warn: true),
+                TailscaleTag(label: conflict.tag, warn: true),
             ],
           ),
         ),
@@ -826,21 +844,33 @@ class _DeviceRow extends StatelessWidget {
             onPressed: () => onCopy(address),
             icon: const GlyphIcon(AppGlyphs.copy, size: 16),
           );
-    return Semantics(
-      container: true,
-      label: [
-        name ?? appLocalizations.tsNameMissing,
-        address ?? appLocalizations.tsAddressMissing,
-        peer.online ? appLocalizations.tsOnline : appLocalizations.tsOffline,
-      ].join('，'),
-      child: _TableRow(
-        layout: layout,
-        name: nameCell,
-        address: addressCell,
-        owner: ownerCell,
-        system: osCell,
-        status: statusCell,
-        copy: copyCell,
+    final onAssign = this.onAssign;
+    return ContextMenuRegion(
+      menuItems: conflict == null || onAssign == null
+          ? null
+          : [
+              PopupMenuItem(
+                glyph: AppGlyphs.account,
+                label: appLocalizations.tsChooseAccountFor,
+                onPressed: () => onAssign(conflict!.target),
+              ),
+            ],
+      child: Semantics(
+        container: true,
+        label: [
+          name ?? appLocalizations.tsNameMissing,
+          address ?? appLocalizations.tsAddressMissing,
+          peer.online ? appLocalizations.tsOnline : appLocalizations.tsOffline,
+        ].join('，'),
+        child: _TableRow(
+          layout: layout,
+          name: nameCell,
+          address: addressCell,
+          owner: ownerCell,
+          system: osCell,
+          status: statusCell,
+          copy: copyCell,
+        ),
       ),
     );
   }

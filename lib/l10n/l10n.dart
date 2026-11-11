@@ -9098,26 +9098,6 @@ class AppLocalizations {
     );
   }
 
-  /// `{name} · Current node`
-  String tsCurrentNodeOf(Object name) {
-    return Intl.message(
-      '$name · Current node',
-      name: 'tsCurrentNodeOf',
-      desc: '',
-      args: [name],
-    );
-  }
-
-  /// `Tailscale nodes in the current profile`
-  String get tsNodesInProfile {
-    return Intl.message(
-      'Tailscale nodes in the current profile',
-      name: 'tsNodesInProfile',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Choose node`
   String get tsChooseNode {
     return Intl.message(
@@ -9206,26 +9186,6 @@ class AppLocalizations {
   /// `Start core`
   String get tsStartCore {
     return Intl.message('Start core', name: 'tsStartCore', desc: '', args: []);
-  }
-
-  /// `No Tailscale nodes yet`
-  String get tsNoNodes {
-    return Intl.message(
-      'No Tailscale nodes yet',
-      name: 'tsNoNodes',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Add a Tailscale node to your profile, then come back here to log in and see its status.`
-  String get tsNoNodesTip {
-    return Intl.message(
-      'Add a Tailscale node to your profile, then come back here to log in and see its status.',
-      name: 'tsNoNodesTip',
-      desc: '',
-      args: [],
-    );
   }
 
   /// `This node is no longer in the current profile`
@@ -10830,11 +10790,6 @@ class AppLocalizations {
     );
   }
 
-  /// `Try again`
-  String get tsTryAgain {
-    return Intl.message('Try again', name: 'tsTryAgain', desc: '', args: []);
-  }
-
   /// `Signed in, but not added to this profile. Your sign-in has been kept. Try adding it again.`
   String get tsAttachFailed {
     return Intl.message(
@@ -11175,16 +11130,6 @@ class AppLocalizations {
     );
   }
 
-  /// `Switching changes which account you view and manage. It does not sign out other accounts.`
-  String get tsSwitchTip {
-    return Intl.message(
-      'Switching changes which account you view and manage. It does not sign out other accounts.',
-      name: 'tsSwitchTip',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Add Tailscale account`
   String get tsAddAccount {
     return Intl.message(
@@ -11400,16 +11345,6 @@ class AppLocalizations {
     return Intl.message(
       'Save choices',
       name: 'tsSaveChoices',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Saving choices…`
-  String get tsSavingChoices {
-    return Intl.message(
-      'Saving choices…',
-      name: 'tsSavingChoices',
       desc: '',
       args: [],
     );

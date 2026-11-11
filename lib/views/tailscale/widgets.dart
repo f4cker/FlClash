@@ -33,6 +33,7 @@ class TailscaleBanner extends StatelessWidget {
     super.key,
     required this.level,
     required this.text,
+    this.title,
     this.glyph,
     this.actionLabel,
     this.onAction,
@@ -40,6 +41,9 @@ class TailscaleBanner extends StatelessWidget {
 
   final TailscaleBannerLevel level;
   final String text;
+
+  /// An emphasized line above [text].
+  final String? title;
   final Glyph? glyph;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -69,6 +73,8 @@ class TailscaleBanner extends StatelessWidget {
           TailscaleBannerLevel.error => AppGlyphs.error,
         };
     final actionLabel = this.actionLabel;
+    final title = this.title;
+    final style = AppTextStyle.footnote.of(context).copyWith(color: foreground);
     return DecoratedBox(
       decoration: ShapeDecoration(
         color: fill,
@@ -81,12 +87,21 @@ class TailscaleBanner extends StatelessWidget {
           children: [
             GlyphIcon(glyph, size: 16, color: foreground),
             Expanded(
-              child: Text(
-                text,
-                style: AppTextStyle.footnote
-                    .of(context)
-                    .copyWith(color: foreground),
-              ),
+              child: title == null
+                  ? Text(text, style: style)
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 2,
+                      children: [
+                        Text(
+                          title,
+                          style: AppTextStyle.footnote
+                              .of(context, emphasized: true)
+                              .copyWith(color: foreground),
+                        ),
+                        Text(text, style: style),
+                      ],
+                    ),
             ),
             if (actionLabel != null)
               TextButton(
@@ -158,7 +173,6 @@ class TailscaleMetaItem extends StatelessWidget {
   }
 }
 
-/// An identity mark: the profile picture, or the first letter on a fill.
 /// The inset tag after a name: 可作出口节点, 面板添加, or a conflict in the
 /// warning colours, its text never colour-only.
 class TailscaleTag extends StatelessWidget {
@@ -198,6 +212,7 @@ class TailscaleTag extends StatelessWidget {
   }
 }
 
+/// An identity mark: the profile picture, or the first letter on a fill.
 class TailscaleAvatar extends StatelessWidget {
   const TailscaleAvatar({
     super.key,
@@ -247,6 +262,29 @@ class TailscaleAvatar extends StatelessWidget {
                   logsSource: false,
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// The avatar of an entry no account has signed in to yet.
+class TailscaleNewAccountAvatar extends StatelessWidget {
+  const TailscaleNewAccountAvatar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 20,
+      height: 20,
+      alignment: Alignment.center,
+      decoration: ShapeDecoration(
+        color: DashboardColors.of(context).tone2,
+        shape: AppShape.circle,
+      ),
+      child: GlyphIcon(
+        AppGlyphs.add,
+        size: 14,
+        color: context.colorScheme.onSurfaceVariant,
       ),
     );
   }
@@ -308,20 +346,7 @@ class TailscaleAccountPill extends StatelessWidget {
               spacing: 8,
               children: [
                 if (newAccount)
-                  Container(
-                    width: 20,
-                    height: 20,
-                    alignment: Alignment.center,
-                    decoration: ShapeDecoration(
-                      color: colors.tone2,
-                      shape: AppShape.circle,
-                    ),
-                    child: GlyphIcon(
-                      AppGlyphs.add,
-                      size: 14,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  )
+                  const TailscaleNewAccountAvatar()
                 else
                   TailscaleAvatar(name: account),
                 ConstrainedBox(

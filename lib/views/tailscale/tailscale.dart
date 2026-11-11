@@ -18,7 +18,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'assign_dialog.dart';
 import 'device_card.dart';
 import 'device_list.dart';
-import 'settings_cards.dart';
+import 'rules_view.dart';
+import 'settings_cards.dart' hide TailscaleTag;
 import 'state.dart';
 import 'widgets.dart';
 
@@ -355,6 +356,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
       ),
       confirmText: appLocalizations.tsSignOutRemove,
       destructive: true,
+      width: 440,
     );
     if (confirmed != true) {
       return;
@@ -386,11 +388,13 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
 
   Future<void> _chooseAccounts(
     TailscaleRoutes routes,
-    List<TailscaleNode> nodes,
-  ) async {
+    List<TailscaleNode> nodes, {
+    TailscaleRouteTarget? focus,
+  }) async {
     final choices = await showTailscaleAssignDialog(
       context,
       routes: routes,
+      focus: focus,
       labelOf: (owner) => _ownerLabel(owner, nodes),
     );
     if (choices == null || choices.isEmpty || !mounted) {
@@ -656,8 +660,38 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     ref.read(currentPageLabelProvider.notifier).toProfiles();
   }
 
-  void _goToRules() {
-    showInSheet<void>(context, builder: (_) => const AddedRulesView());
+  void _goToRules(List<TailscaleNode> nodes) {
+    final managed = nodes.where((node) => node.managed).toList();
+    if (managed.isEmpty) {
+      showInSheet<void>(context, builder: (_) => const AddedRulesView());
+      return;
+    }
+    showInSheet<void>(
+      context,
+      builder: (_) => TailscaleRulesView(
+        accounts: [
+          for (final node in managed)
+            (
+              id: node.managedId,
+              label: _ownerLabel(
+                TailscaleRouteOwner(
+                  kind: tailscaleOwnerManaged,
+                  id: node.managedId,
+                ),
+                nodes,
+              ).account,
+              attached: node.attached,
+            ),
+        ],
+        labelOf: (owner) => _ownerLabel(owner, nodes).account,
+        onAssign: (target) {
+          final routes = ref.read(tailscaleRoutesReportProvider).value;
+          if (routes != null) {
+            _chooseAccounts(routes, nodes, focus: target);
+          }
+        },
+      ),
+    );
   }
 
   void _showHelp() {
@@ -865,7 +899,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                 routesCard,
               ],
               TailscaleRulesCard(
-                onGoToRules: _goToRules,
+                onGoToRules: () => _goToRules(nodes),
                 lines: _rulesLines(context, node, routes),
               ),
               if (phase == TailscalePhase.connected &&
@@ -883,7 +917,11 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                   onCopy: _copy,
                   conflictOf: routes == null
                       ? null
-                      : (peer) => tailscaleConflictTag(context, routes, peer),
+                      : (peer) => tailscaleConflictOf(context, routes, peer),
+                  onAssign: routes == null
+                      ? null
+                      : (target) =>
+                            _chooseAccounts(routes, nodes, focus: target),
                 ),
             ],
           ),
@@ -930,10 +968,8 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           liveRegion: true,
           child: TailscaleBanner(
             level: TailscaleBannerLevel.warn,
-            text: [
-              appLocalizations.tsConflictTitle(pending.length),
-              appLocalizations.tsConflictBody,
-            ].join(' '),
+            title: appLocalizations.tsConflictTitle(pending.length),
+            text: appLocalizations.tsConflictBody,
             actionLabel: appLocalizations.tsChooseAccounts,
             onAction: () => _chooseAccounts(routes!, nodes),
           ),
@@ -1070,6 +1106,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     final managedCount = nodes.where((node) => node.managed).length;
     final shown = current == null ? null : describe(current);
     return PopupAnchor(
+      placement: PopupPlacement.belowAnchorEnd,
       targetBuilder: (open) => TailscaleAccountPill(
         account: shown?.account ?? appLocalizations.tsChooseNode,
         state: shown?.state,
@@ -1091,19 +1128,29 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
         onPressed: open,
       ),
       popupBuilder: (_) => PopupMenu(
+        width: 380,
+        leadingCheck: true,
+        itemPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         items: [
           for (final (index, node) in nodes.indexed)
             () {
               final item = describe(node);
+              final source = _sourceLabel(node);
               return PopupMenuItem(
                 label: item.account,
+                labelEmphasized: true,
+                leading: _isDraft(node)
+                    ? const TailscaleNewAccountAvatar()
+                    : TailscaleAvatar(name: item.account),
+                labelTrailing: source == null
+                    ? null
+                    : TailscaleTag(label: source),
                 subtitle: [
-                  appLocalizations.tsNetworkOf(
-                    item.network.takeFirstValid(['—']),
-                  ),
+                  if (item.network.isNotEmpty)
+                    appLocalizations.tsNetworkOf(item.network),
                   item.state,
-                  ?_sourceLabel(node),
                 ].join(' · '),
+                subtitleMaxLines: 1,
                 checked: node.key == current?.key,
                 section: index == 0
                     ? PopupMenuSection(
@@ -1117,6 +1164,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
             label: appLocalizations.tsAddAccount,
             glyph: AppGlyphs.add,
             subtitle: managedCount >= 2 ? appLocalizations.tsMemoryTip : null,
+            subtitleMaxLines: 4,
             section: const PopupMenuSection(),
             onPressed: _adding ? null : _addAccount,
           ),
