@@ -154,6 +154,9 @@ const _$MountGroupReasonEnumMap = {
   MountGroupReason.rule: 'rule',
   MountGroupReason.ruleUnknown: 'rule-unknown',
   MountGroupReason.member: 'member',
+  MountGroupReason.carrier: 'carrier',
+  MountGroupReason.global: 'global',
+  MountGroupReason.dns: 'dns',
 };
 
 const _$MountGroupCollectsEnumMap = {

@@ -163,6 +163,15 @@ enum MountGroupReason {
   @JsonValue('rule-unknown')
   ruleUnknown,
   member,
+
+  /// A Tailscale node, or a proxy Tailscale traffic takes, dials through it.
+  carrier,
+
+  /// Tailscale traffic is sent to GLOBAL, which may select any group.
+  global,
+
+  /// DNS lookups, tailnet names among them, go out through it.
+  dns,
 }
 
 /// [all] collects base proxies and providers, [providers] providers only.

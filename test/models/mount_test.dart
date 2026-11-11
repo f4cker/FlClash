@@ -91,6 +91,9 @@ void main() {
       ('rule', MountGroupReason.rule),
       ('rule-unknown', MountGroupReason.ruleUnknown),
       ('member', MountGroupReason.member),
+      ('carrier', MountGroupReason.carrier),
+      ('global', MountGroupReason.global),
+      ('dns', MountGroupReason.dns),
       ('later', null),
     ]) {
       final group = MountGroupInfo.fromJson({
