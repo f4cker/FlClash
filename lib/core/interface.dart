@@ -331,6 +331,15 @@ abstract class CoreHandlerInterface {
 
   Future<void> stopListener() => _command(CoreMethod.listenerStop);
 
+  /// The mixed port the Core holds, 0 when its listener is down or failed
+  /// to bind.
+  Future<int> getListeningMixedPort() {
+    return _query(
+      CoreMethod.listenerMixedPort,
+      (data) => (data as num).toInt(),
+    );
+  }
+
   Future<RouteSnapshot> watchRoute(bool watch) {
     return _query(
       CoreMethod.routeWatch,

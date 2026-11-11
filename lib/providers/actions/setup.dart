@@ -95,6 +95,7 @@ class SetupAction extends _$SetupAction {
 
   void _setLocalRunning(bool running) {
     _stopRuntimeTicker();
+    ref.read(listeningMixedPortProvider.notifier).value = null;
     if (!running) {
       _startTime = null;
       debouncer.cancel(FunctionTag.applyProfile);
@@ -199,7 +200,7 @@ class SetupAction extends _$SetupAction {
       if (!applied && _isCurrent(request)) {
         await globalState.safeRun(() => setRunning(false));
       }
-      return applied;
+      return applied && await _confirmMixedListener(request);
     }
 
     try {
@@ -208,12 +209,75 @@ class SetupAction extends _$SetupAction {
       _rollbackRunning(request);
       rethrow;
     }
+    if (!await _confirmMixedListener(request)) {
+      return false;
+    }
     final applied = await inputsApplied();
     if (_isCurrent(request) && !applied) {
       applyProfileDebounce(force: true, silence: true);
     }
     return true;
   }
+
+  Future<bool> _confirmMixedListener(_RunRequest request) async {
+    if (!_isCurrent(request)) {
+      return true;
+    }
+    return checkMixedListener();
+  }
+
+  /// Ends the run when the Core does not hold the mixed port: mihomo only
+  /// logs a bind failure, and the port may belong to another app, so the
+  /// system proxy must not point there and the run must not look healthy.
+  /// No other port is picked and nothing else is stopped. An unanswered
+  /// query leaves the port unconfirmed, which keeps the system proxy off.
+  @visibleForTesting
+  Future<bool> checkMixedListener() async {
+    if (!_mixedListenerExpected) {
+      return true;
+    }
+    final port = ref.read(patchClashConfigProvider).mixedPort;
+    if (port == 0) {
+      return true;
+    }
+    final int listening;
+    try {
+      listening = await listeningMixedPort();
+    } catch (error) {
+      commonPrint.log(
+        'mixed listener check failed: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+      return true;
+    }
+    if (!_mixedListenerExpected ||
+        port != ref.read(patchClashConfigProvider).mixedPort) {
+      return true;
+    }
+    if (listening == port) {
+      ref.read(listeningMixedPortProvider.notifier).value = listening;
+      return true;
+    }
+    commonPrint.log(
+      'mixed port $port is not held by the Core, stopping',
+      logLevel: LogLevel.error,
+    );
+    await globalState.safeRun(() => setRunning(false));
+    dialogs.showBanner(
+      currentAppLocalizations.mixedPortUnavailable('$port'),
+      level: BannerLevel.error,
+    );
+    return false;
+  }
+
+  bool get _mixedListenerExpected =>
+      system.isDesktop &&
+      !ref.read(safeModeProvider) &&
+      ref.read(isStartProvider) &&
+      !ref.read(suspendProvider);
+
+  @protected
+  Future<int> listeningMixedPort() => _core.getListeningMixedPort();
 
   Future<void> _startCoreRunning(_RunRequest request) async {
     try {
@@ -261,6 +325,7 @@ class SetupAction extends _$SetupAction {
   }
 
   Future<void> _setListening(bool running) async {
+    ref.read(listeningMixedPortProvider.notifier).value = null;
     final vpnOptions = await ref.read(vpnOptionsProvider.future);
     try {
       await setCoreRunning(running);
@@ -286,12 +351,17 @@ class SetupAction extends _$SetupAction {
         if (!ref.read(isStartProvider) || ref.read(safeModeProvider)) {
           return;
         }
+        final running = !ref.read(suspendProvider);
         try {
-          await _setListening(!ref.read(suspendProvider));
+          await _setListening(running);
         } catch (error) {
           if (!_isUnanswered(error)) {
             rethrow;
           }
+          return;
+        }
+        if (running) {
+          unawaited(checkMixedListener());
         }
       });
     });
@@ -345,6 +415,9 @@ class SetupAction extends _$SetupAction {
           options: ref.read(coreOptionsProvider),
         ),
       );
+      if (ref.read(isStartProvider)) {
+        await checkMixedListener();
+      }
     });
   }
 

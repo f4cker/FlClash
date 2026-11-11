@@ -535,6 +535,11 @@ void main() {
         .read(authorizedTunEnableProvider.notifier)
         .update((_) => TunAuthorizationState.authorized);
 
+    expect(container.read(proxyStateProvider).isStart, isFalse);
+    container.read(listeningMixedPortProvider.notifier).value = 8890;
+    expect(container.read(proxyStateProvider).isStart, isFalse);
+    container.read(listeningMixedPortProvider.notifier).value = 8899;
+
     final proxy = container.read(proxyStateProvider);
     expect(proxy.isStart, isTrue);
     expect(proxy.systemProxy, isFalse);

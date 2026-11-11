@@ -63,6 +63,17 @@ func handleStopListener() {
 	resolver.ResetConnection()
 }
 
+// mihomo only logs a mixed listener that failed to bind, so the host asks
+// which port is actually held before it points the system proxy there.
+func handleListeningMixedPort() int {
+	configMu.Lock()
+	defer configMu.Unlock()
+	if !isRunning.Load() {
+		return 0
+	}
+	return listener.GetPorts().MixedPort
+}
+
 func updateListeners(cfg *config.Config) {
 	if cfg == nil || !isRunning.Load() {
 		return

@@ -1,3 +1,6 @@
+import 'package:fl_clash/common/constant.dart';
+import 'package:fl_clash/common/proxy.dart';
+import 'package:fl_clash/common/system.dart';
 import 'package:fl_clash/manager/proxy_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
@@ -88,11 +91,29 @@ void main() {
         .copyWith(systemProxy: true);
     container.read(patchClashConfigProvider.notifier).value =
         const PatchClashConfig().copyWith(mixedPort: 7892);
+    container.read(listeningMixedPortProvider.notifier).value = 7892;
 
     final state = container.read(proxyStateProvider);
     expect(state.isStart, isTrue);
     expect(state.systemProxy, isTrue);
     expect(state.port, 7892);
+  });
+
+  test('the system proxy waits until the Core holds the port', () {
+    container.read(runTimeProvider.notifier).value = 1;
+    container.read(networkSettingProvider.notifier).value = const NetworkProps()
+        .copyWith(systemProxy: true);
+    container.read(patchClashConfigProvider.notifier).value =
+        const PatchClashConfig().copyWith(mixedPort: 7892);
+
+    expect(container.read(proxyStateProvider).isStart, !system.isDesktop);
+    container.read(listeningMixedPortProvider.notifier).value = 7890;
+    expect(container.read(proxyStateProvider).isStart, !system.isDesktop);
+  });
+
+  test('a test run never writes the host system proxy', () {
+    expect(hostNetworkWritable, isFalse);
+    expect(systemProxyQueue, isNull);
   });
 
   test('an excluded SSID suspends the system proxy', () {

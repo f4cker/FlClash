@@ -579,6 +579,7 @@
   "inputProxyGroupName": "Saisissez le nom du groupe de proxys",
   "helperCorruptTip": "Service Helper indisponible ; le mode TUN ne peut pas être activé. Réinstallez Flash pour le rétablir.",
   "tunAuthorizationFailed": "TUN n’a pas pu être autorisé et a donc été désactivé.",
+  "mixedPortUnavailable": "Impossible d’ouvrir le port {port}, une autre application l’utilise peut-être. Flash s’est arrêté et a laissé le proxy système tel quel.",
   "sudoPasswordTitle": "Saisissez votre mot de passe pour sudo",
   "coreBlockedByPolicyTip": "Windows a refusé d’exécuter FlClashCore.exe (erreur {code}). Une stratégie de contrôle des applications, telle que Smart App Control ou AppLocker, bloque les programmes non signés ; autorisez Flash dans cette stratégie ou désactivez-la, puis réessayez.",
   "coreBlockedBySmartAppControlTip": "Windows Smart App Control a bloqué FlClashCore.exe car il n’est pas signé. Ouvrez Sécurité Windows → Contrôle des applications et du navigateur → Paramètres de Smart App Control, choisissez Désactivé, puis relancez Flash. Smart App Control ne peut pas être réactivé sans réinstaller Windows.",

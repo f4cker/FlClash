@@ -1954,7 +1954,7 @@ final class ProxyStateProvider
   }
 }
 
-String _$proxyStateHash() => r'76a71ab5da07dca9aeb351282c5c03ab222d0760';
+String _$proxyStateHash() => r'372370c5792849dddf9e65cb2ae2996e123787f9';
 
 /// Watching the delay map instead would drop nodes one probe at a time, and
 /// reading it on any other rebuild would drop them whenever something

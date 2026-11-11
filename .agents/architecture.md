@@ -1578,7 +1578,7 @@ rewritten; each owner reads the flag where it would otherwise act:
 - Profile listeners and firewall rules: `_makeRealProfileTask` clears `listeners`, `tunnels`, `ss-config`,
   `vmess-config`, `tuic-server` and `iptables`, and closes `dns.listen`, preventing profile-only changes during apply.
 - System proxy: the `proxy` plugin handle in `lib/common/proxy.dart` is `null`, so `ProxyManager` and exit cleanup
-  never write the OS setting, not even the `stopProxy` that would clear what the installed app configured.
+  never write the OS setting, not even a restore from the snapshot the installed app recorded.
 - System DNS: `systemDnsCoordinator` is `null` and `shouldPatchSystemDnsProvider` is `false`, so neither the apply nor
   the restore path runs. The restore path matters because a profile or release build shares the preferences of the
   installed app (only a macOS or Android debug build has its own bundle id) and would restore from its record.
@@ -1765,9 +1765,15 @@ NDK version stands in for the hook's cache.
 - `proxy`: system proxy configuration. On Windows the package installer and uninstaller kill the app, and then run
   `FlClash.exe --clear-stale-proxy`, the installer once the new files are in place; the runner hands it to the plugin
   before any engine starts, and it turns off only a proxy still set to FlClash's `127.0.0.1:<port>` with nothing
-  listening on that port. In the app `SystemProxyQueue` sets the system proxy when the Core starts with it on, and
-  stops it on a stop or exit only when this run set it, since a stop also clears a proxy, PAC or auto-detect setting
-  someone else made. Nothing is stored, so a launch leaves alone the proxy a crashed run left.
+  listening on that port. In the app `SystemProxyQueue` sets the system proxy only once the user turned it on
+  (`NetworkProps.systemProxy` starts off), the run is up, and the Core confirmed it holds the mixed port
+  (`listener.mixedPort`, kept in `listeningMixedPortProvider` by `SetupAction.checkMixedListener`; a port the Core
+  could not bind ends the run with a banner). On macOS it first reads every network service's web, secure web and
+  SOCKS proxy and bypass list into a `SystemProxySnapshot`, stored in the preferences before anything is written. A
+  stop, exit or the next launch after a crash restores a service only while it still holds exactly what Flash wrote;
+  a service someone else changed, or one that cannot be read, is left as it is, and the PAC and auto-detect settings
+  are never touched. A run that never set the proxy changes nothing. On Windows and Linux, where nothing is read
+  back, a stop still turns off what this run set. Test processes (`FLUTTER_TEST`) never get a `proxy` handle.
 - `rust_api`: runtime Flutter Rust Bridge FFI package built through Native Assets. See below.
 - `tray`: system tray for Linux, macOS and Windows. Written for FlClash; replaced the `tray_manager` fork.
 - `window`: desktop window control for Linux, macOS and Windows. Written for FlClash; replaced the

@@ -225,6 +225,17 @@ class RunTime extends _$RunTime with AutoDisposeNotifierMixin {
   }
 }
 
+/// The mixed port the desktop Core confirmed it holds since the run last
+/// started, null until it has answered. The system proxy waits for it.
+@Riverpod(keepAlive: true)
+class ListeningMixedPort extends _$ListeningMixedPort
+    with AutoDisposeNotifierMixin {
+  @override
+  int? build() {
+    return null;
+  }
+}
+
 /// What the running Android service was started with: it builds the tunnel
 /// once, so a later change waits for a restart.
 @Riverpod(keepAlive: true)

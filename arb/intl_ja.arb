@@ -579,6 +579,7 @@
   "inputProxyGroupName": "プロキシグループ名を入力してください",
   "helperCorruptTip": "Helper サービスが利用できないため、TUN モードを有効にできません。Flash を再インストールしてください。",
   "tunAuthorizationFailed": "TUN の権限を取得できなかったため、オフにしました。",
+  "mixedPortUnavailable": "ポート {port} を開けませんでした。別のアプリが使用している可能性があります。Flash は停止し、システムプロキシはそのままにしました。",
   "sudoPasswordTitle": "sudo のパスワードを入力",
   "coreBlockedByPolicyTip": "Windows が FlClashCore.exe の実行を拒否しました（エラー {code}）。スマート アプリ コントロールや AppLocker などのアプリ制御ポリシーは未署名のプログラムをブロックします。ポリシーで Flash を許可するか、ポリシーを無効にしてから再試行してください。",
   "coreBlockedBySmartAppControlTip": "Windows のスマート アプリ コントロールが、署名されていない FlClashCore.exe をブロックしました。Windows セキュリティ → アプリとブラウザーの制御 → スマート アプリ コントロールの設定で「オフ」を選び、Flash を再起動してください。一度オフにすると、Windows を再インストールしない限り再度オンにはできません。",

@@ -118,6 +118,21 @@ class TestSetupAction extends SetupAction {
   @override
   void resetCoreTraffic() => trafficResets++;
 
+  /// Null answers with the configured port, a healthy listener.
+  int? listening;
+  Exception? listeningError;
+  int listeningQueries = 0;
+
+  @override
+  Future<int> listeningMixedPort() async {
+    listeningQueries++;
+    final error = listeningError;
+    if (error != null) {
+      throw error;
+    }
+    return listening ?? ref.read(patchClashConfigProvider).mixedPort;
+  }
+
   @override
   Future<bool> applyProfile({
     bool silence = false,
@@ -252,6 +267,116 @@ void main() {
       await container.read(setupActionProvider.notifier).setRunning(false);
 
       expect(action.coreRunningCalls, [false]);
+    });
+  });
+
+  group('mixed listener check', () {
+    setUpAll(() => AppLocalizations.load(const Locale('en')));
+
+    test('a start confirms the port the Core holds', () async {
+      markInitialized();
+
+      expect(
+        await container.read(setupActionProvider.notifier).setRunning(true),
+        isTrue,
+      );
+
+      expect(container.read(isStartProvider), isTrue);
+      expect(
+        container.read(listeningMixedPortProvider),
+        system.isDesktop
+            ? container.read(patchClashConfigProvider).mixedPort
+            : isNull,
+      );
+    });
+
+    test('a port the Core could not bind ends the run', () async {
+      if (!system.isDesktop) return;
+      markInitialized();
+      action.listening = 0;
+
+      final started = await container
+          .read(setupActionProvider.notifier)
+          .setRunning(true);
+
+      expect(started, isFalse);
+      expect(container.read(isStartProvider), isFalse);
+      expect(action.coreRunningCalls, [true, false]);
+      expect(container.read(listeningMixedPortProvider), isNull);
+      expect(container.read(proxyStateProvider).isStart, isFalse);
+    });
+
+    test('an initializing start checks after the profile applied', () async {
+      if (!system.isDesktop) return;
+      action.listening = 0;
+
+      final started = await container
+          .read(setupActionProvider.notifier)
+          .setRunning(true, initialize: true);
+
+      expect(started, isFalse);
+      expect(action.applyProfileCalls, 1);
+      expect(container.read(isStartProvider), isFalse);
+    });
+
+    test(
+      'an unanswered check keeps the run but not the system proxy',
+      () async {
+        if (!system.isDesktop) return;
+        markInitialized();
+        container.read(networkSettingProvider.notifier).value =
+            const NetworkProps(systemProxy: true);
+        action.listeningError = const CoreMethodException(
+          code: 'no_response',
+          message: '',
+        );
+
+        await container.read(setupActionProvider.notifier).setRunning(true);
+
+        expect(container.read(isStartProvider), isTrue);
+        expect(container.read(listeningMixedPortProvider), isNull);
+        expect(container.read(proxyStateProvider).isStart, isFalse);
+      },
+    );
+
+    test('a port change the Core could not bind ends the run', () async {
+      if (!system.isDesktop) return;
+      markInitialized();
+      await container.read(setupActionProvider.notifier).setRunning(true);
+      container
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mixedPort: 7999));
+      expect(container.read(proxyStateProvider).isStart, isFalse);
+      action.listening = 0;
+
+      expect(
+        await container.read(setupActionProvider.notifier).checkMixedListener(),
+        isFalse,
+      );
+      expect(container.read(isStartProvider), isFalse);
+    });
+
+    test('safe mode never asks', () async {
+      final scopedAction = TestSetupAction();
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          setupActionProvider.overrideWith(() => scopedAction),
+          commonActionProvider.overrideWith(TestCommonAction.new),
+          safeModeProvider.overrideWithValue(true),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      globalState.container = scoped;
+      scoped.read(setupActionProvider.notifier);
+
+      await scoped
+          .read(setupActionProvider.notifier)
+          .setRunning(true, initialize: true);
+
+      expect(scopedAction.listeningQueries, 0);
+      expect(scoped.read(isStartProvider), isTrue);
+      globalState.container = container;
     });
   });
 

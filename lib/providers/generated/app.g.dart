@@ -867,6 +867,69 @@ abstract class _$RunTime extends $Notifier<int?> {
   }
 }
 
+/// The mixed port the desktop Core confirmed it holds since the run last
+/// started, null until it has answered. The system proxy waits for it.
+
+@ProviderFor(ListeningMixedPort)
+final listeningMixedPortProvider = ListeningMixedPortProvider._();
+
+/// The mixed port the desktop Core confirmed it holds since the run last
+/// started, null until it has answered. The system proxy waits for it.
+final class ListeningMixedPortProvider
+    extends $NotifierProvider<ListeningMixedPort, int?> {
+  /// The mixed port the desktop Core confirmed it holds since the run last
+  /// started, null until it has answered. The system proxy waits for it.
+  ListeningMixedPortProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'listeningMixedPortProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$listeningMixedPortHash();
+
+  @$internal
+  @override
+  ListeningMixedPort create() => ListeningMixedPort();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int?>(value),
+    );
+  }
+}
+
+String _$listeningMixedPortHash() =>
+    r'19c00bf21419c59988ba396d284fd8638e325456';
+
+/// The mixed port the desktop Core confirmed it holds since the run last
+/// started, null until it has answered. The system proxy waits for it.
+
+abstract class _$ListeningMixedPort extends $Notifier<int?> {
+  int? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<int?, int?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<int?, int?>,
+              int?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// What the running Android service was started with: it builds the tunnel
 /// once, so a later change waits for a restart.
 

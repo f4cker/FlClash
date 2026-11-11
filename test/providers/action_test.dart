@@ -1008,6 +1008,10 @@ class _RaceSetupAction extends SetupAction {
   }
 
   @override
+  Future<int> listeningMixedPort() async =>
+      ref.read(patchClashConfigProvider).mixedPort;
+
+  @override
   Future<bool> setCoreRunning(bool running) async {
     transitions.add(running);
     return running

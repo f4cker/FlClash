@@ -41,8 +41,11 @@ ProxyState proxyState(Ref ref) {
   final mixedPort = ref.watch(
     patchClashConfigProvider.select((state) => state.mixedPort),
   );
+  // A port another app holds would take Flash's traffic in silence.
+  final listening =
+      !system.isDesktop || ref.watch(listeningMixedPortProvider) == mixedPort;
   return ProxyState(
-    isStart: suspend ? false : isStart,
+    isStart: !suspend && isStart && listening,
     systemProxy: systemProxySelector.systemProxy,
     bassDomain: systemProxySelector.bypassDomain,
     port: mixedPort,

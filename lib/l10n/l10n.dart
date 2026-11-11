@@ -4701,6 +4701,16 @@ class AppLocalizations {
     );
   }
 
+  /// `Port {port} could not be opened, another app may be using it. Flash stopped and left the system proxy as it was.`
+  String mixedPortUnavailable(Object port) {
+    return Intl.message(
+      'Port $port could not be opened, another app may be using it. Flash stopped and left the system proxy as it was.',
+      name: 'mixedPortUnavailable',
+      desc: '',
+      args: [port],
+    );
+  }
+
   /// `Enter your password for sudo`
   String get sudoPasswordTitle {
     return Intl.message(
@@ -7698,8 +7708,7 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one:
-          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',

@@ -66,6 +66,7 @@ const (
 	logStopMethod       CoreMethod = "log.stop"
 	listenerStartMethod CoreMethod = "listener.start"
 	listenerStopMethod  CoreMethod = "listener.stop"
+	listenerMixedMethod CoreMethod = "listener.mixedPort"
 	routeWatchMethod    CoreMethod = "route.watch"
 	routeCheckMethod    CoreMethod = "route.check"
 

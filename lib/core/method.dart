@@ -48,6 +48,7 @@ enum CoreMethod {
   logStop('log.stop'),
   listenerStart('listener.start'),
   listenerStop('listener.stop'),
+  listenerMixedPort('listener.mixedPort'),
   routeWatch('route.watch'),
   routeCheck('route.check'),
   probeOutboundIp('probe.outboundIp'),
