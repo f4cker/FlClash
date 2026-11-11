@@ -27,6 +27,10 @@ Future<void> showMountSheet(BuildContext context, Profile target) {
   );
 }
 
+/// How far a page bar's fade hangs past its foot (prism_ui's private
+/// `_headerOverhang`); the list starts below it so nothing scrolls under it.
+const double _barFadeOverhang = 16;
+
 /// The banner a save, apply or readback leaves, design §4 and §11.
 enum _Result {
   applying,
@@ -469,19 +473,25 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     } else {
       content = _buildSources(context, panel);
     }
+    // The bar floats over the body with a fade; the list scrolls only
+    // between it and the footer, both on the sheet's own surface.
+    final background = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
       title: appLocalizations.mountEntry,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          ColoredBox(
+            color: background,
+            child: SizedBox(
+              height:
+                  context.appBarInset +
+                  (context.isInCompactSheet ? 0 : _barFadeOverhang),
+            ),
+          ),
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                context.contentTopPadding + 8,
-                20,
-                12,
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -506,7 +516,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
               ),
             ),
           ),
-          _buildFooter(context),
+          ColoredBox(color: background, child: _buildFooter(context)),
         ],
       ),
     );

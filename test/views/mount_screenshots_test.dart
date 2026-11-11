@@ -95,6 +95,8 @@ void main() {
     if (skip != null) {
       return;
     }
+    // The shots are for review, not for telling a debug build apart.
+    WidgetsApp.debugAllowBannerOverride = false;
     await useAppPaths(Directory.systemTemp.createTempSync('mount_shots'));
     await _loadFont(
       'Roboto',
@@ -261,6 +263,8 @@ void main() {
     testWidgets(name, body, skip: skip != null);
   }
 
+  tearDownAll(() => WidgetsApp.debugAllowBannerOverride = true);
+
   final cardSummaries = <int, Future<MountCardSummary?> Function()>{
     target.id: () async => const MountCardSummary(mounted: 2, failed: 1),
     work.id: () async => const MountCardSummary(mounted: 1, failed: 0),
@@ -331,6 +335,18 @@ void main() {
     await openSheet(tester);
     await scrollSheetTo(tester, '均衡');
     await tester.tap(inSheet('自动选择'));
+    await settle(tester);
+    final position = tester
+        .state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(MountSheet),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        )
+        .position;
+    position.jumpTo(position.maxScrollExtent);
     await shoot(tester, '04-sheet-auto-groups');
   });
 
