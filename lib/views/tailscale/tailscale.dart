@@ -830,7 +830,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
         : null;
     final body = LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= tailscaleTwoColumnWidth + 48;
+        final wide = constraints.maxWidth >= tailscaleTwoColumnWidth + 40;
         final exitCard = TailscaleExitCard(
           node: node,
           status: status,
@@ -858,9 +858,9 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
         );
         return SingleChildScrollView(
           padding: EdgeInsets.only(
-            left: 24,
+            left: 16,
             right: 24,
-            top: context.sectionsTopPadding,
+            top: context.contentTopPadding,
             bottom: 24 + context.bottomInset,
           ),
           child: Column(
@@ -1079,7 +1079,10 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
             onPressed: _showHelp,
           ),
       ],
-      body: body,
+      body: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        child: body,
+      ),
     );
   }
 
