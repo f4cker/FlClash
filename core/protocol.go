@@ -81,6 +81,13 @@ const (
 	mitmExchangeMethod            CoreMethod = "mitm.exchange"
 	mitmBodyMethod                CoreMethod = "mitm.body"
 
+	tailscaleNodesMethod    CoreMethod = "tailscale.nodes"
+	tailscaleStatusMethod   CoreMethod = "tailscale.status"
+	tailscaleStartMethod    CoreMethod = "tailscale.start"
+	tailscaleLoginMethod    CoreMethod = "tailscale.login"
+	tailscaleLogoutMethod   CoreMethod = "tailscale.logout"
+	tailscaleSetPrefsMethod CoreMethod = "tailscale.setPrefs"
+
 	// The envelope of a batch of events, which the Core sends and never receives.
 	messageMethod CoreMethod = "message"
 )
@@ -98,6 +105,7 @@ const (
 	RouteChangedMessage   MessageType = "routeChanged"
 	DialerLoopMessage     MessageType = "dialerLoop"
 	RequestTrafficMessage MessageType = "requestTraffic"
+	TailscaleStateMessage MessageType = "tailscaleState"
 )
 
 type Message struct {
@@ -119,6 +127,41 @@ type SetupParams struct {
 	Base        *SetupBase        `json:"base,omitempty"`
 	SelectedMap map[string]string `json:"selected-map"`
 	Options     CoreOptions       `json:"options"`
+	Tailscale   *TailscaleSetup   `json:"tailscale,omitempty"`
+}
+
+type TailscaleSetup struct {
+	ProfileID    int64                `json:"profile-id"`
+	ConfigSource string               `json:"config-source"`
+	Nodes        []TailscaleNodeSetup `json:"nodes"`
+}
+
+type TailscaleNodeSetup struct {
+	Name       string `json:"name"`
+	ControlURL string `json:"control-url"`
+	// An empty one is the explicit choice of no exit node; nil leaves the config's.
+	ExitNode     *string `json:"exit-node,omitempty"`
+	AcceptRoutes *bool   `json:"accept-routes,omitempty"`
+	LoggedOut    bool    `json:"logged-out"`
+}
+
+type TailscaleNodeParams struct {
+	Name       string `json:"name"`
+	Generation uint64 `json:"generation"`
+}
+
+type TailscaleLoginParams struct {
+	Name       string `json:"name"`
+	Generation uint64 `json:"generation"`
+	// Asks for a new auth URL even while the node runs, to renew an expiring key.
+	Reauth bool `json:"reauth"`
+}
+
+type TailscalePrefsParams struct {
+	Name         string  `json:"name"`
+	Generation   uint64  `json:"generation"`
+	ExitNode     *string `json:"exit-node,omitempty"`
+	AcceptRoutes *bool   `json:"accept-routes,omitempty"`
 }
 
 type CoreOptions struct {

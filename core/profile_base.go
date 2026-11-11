@@ -76,7 +76,7 @@ func outboundsOf(mappings []map[string]any) []ProfileOutbound {
 // and never decodes it.
 func handleBuildProfile(base *SetupBase) (string, error) {
 	defer scheduleLoadMemoryRelease()
-	document, err := mergeProfileBase(base)
+	document, err := mergeProfileBase(base, false)
 	if err != nil {
 		return "", err
 	}
@@ -99,7 +99,7 @@ func isMatchRule(rule string) bool {
 }
 
 func loadConfigWithBase(base *SetupBase, configPath string) (*config.Config, error) {
-	document, err := mergeProfileBase(base)
+	document, err := mergeProfileBase(base, true)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,8 @@ func loadConfigWithBase(base *SetupBase, configPath string) (*config.Config, err
 	return withPlatformLimits(cfg), nil
 }
 
-func mergeProfileBase(base *SetupBase) (*yaml.Node, error) {
+// Only the config being applied takes the Tailscale overrides of the setup.
+func mergeProfileBase(base *SetupBase, withTailscale bool) (*yaml.Node, error) {
 	buf, err := os.ReadFile(base.Path)
 	if err != nil {
 		return nil, err
@@ -152,6 +153,9 @@ func mergeProfileBase(base *SetupBase) (*yaml.Node, error) {
 	}
 	if rules != nil {
 		setMappingValue(root, "rules", rules)
+	}
+	if withTailscale {
+		applyTailscaleOverrides(root)
 	}
 	if retag {
 		retagShortIDs(root)

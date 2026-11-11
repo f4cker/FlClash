@@ -109,6 +109,9 @@ func loadConfig(path string) (*config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	if buf, err = applyTailscaleOverridesToFile(path, buf); err != nil {
+		return nil, err
+	}
 	cfg, err := executor.ParseWithBytes(buf)
 	if err != nil {
 		return nil, err
@@ -142,6 +145,8 @@ func applyConfig(params *SetupParams) error {
 	defer configMu.Unlock()
 
 	applyOptions(params.Options)
+	setTailscaleSetup(params.Tailscale)
+	replaced := tailscaleGenerationMark()
 	cfg, err := loadSetupConfig(params)
 	if err != nil {
 		// The fallback is what keeps the listeners serving while the host
@@ -161,6 +166,12 @@ func applyConfig(params *SetupParams) error {
 	}
 
 	currentConfig = cfg
+	// The new instances must not start beside the old ones on one identity;
+	// the fallback holds none, so a failed load closes what it built too.
+	if err != nil {
+		replaced = tailscaleGenerationMark()
+	}
+	closeTailscaleUpTo(replaced)
 	hub.ApplyConfig(cfg)
 	patchSelectGroup(params.SelectedMap)
 	bumpRouteEpoch()
