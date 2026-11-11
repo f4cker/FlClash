@@ -72,6 +72,7 @@ _MountSourceInspection _$MountSourceInspectionFromJson(
   listed: (json['listed'] as num?)?.toInt() ?? 0,
   tailscaleExcluded: (json['tailscale-excluded'] as num?)?.toInt() ?? 0,
   relayExcluded: (json['relay-excluded'] as num?)?.toInt() ?? 0,
+  interfaceExcluded: (json['interface-excluded'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$MountSourceInspectionToJson(
@@ -82,6 +83,7 @@ Map<String, dynamic> _$MountSourceInspectionToJson(
   'listed': instance.listed,
   'tailscale-excluded': instance.tailscaleExcluded,
   'relay-excluded': instance.relayExcluded,
+  'interface-excluded': instance.interfaceExcluded,
 };
 
 const _$MountSourceStatusEnumMap = {
@@ -99,6 +101,11 @@ _MountGroupInfo _$MountGroupInfoFromJson(
   type: json['type'] as String,
   kind: $enumDecode(_$MountGroupKindEnumMap, json['kind']),
   excluded: $enumDecodeNullable(_$MountGroupExclusionEnumMap, json['excluded']),
+  reason: $enumDecodeNullable(
+    _$MountGroupReasonEnumMap,
+    json['reason'],
+    unknownValue: JsonKey.nullForUndefinedEnumValue,
+  ),
   collects: $enumDecodeNullable(_$MountGroupCollectsEnumMap, json['collects']),
   hidden: json['hidden'] as bool? ?? false,
   filter: json['filter'] as bool? ?? false,
@@ -117,6 +124,7 @@ Map<String, dynamic> _$MountGroupInfoToJson(_MountGroupInfo instance) =>
       'type': instance.type,
       'kind': _$MountGroupKindEnumMap[instance.kind]!,
       'excluded': _$MountGroupExclusionEnumMap[instance.excluded],
+      'reason': _$MountGroupReasonEnumMap[instance.reason],
       'collects': _$MountGroupCollectsEnumMap[instance.collects],
       'hidden': instance.hidden,
       'filter': instance.filter,
@@ -138,6 +146,14 @@ const _$MountGroupExclusionEnumMap = {
   MountGroupExclusion.hidden: 'hidden',
   MountGroupExclusion.type: 'type',
   MountGroupExclusion.tailscale: 'tailscale',
+};
+
+const _$MountGroupReasonEnumMap = {
+  MountGroupReason.holds: 'holds',
+  MountGroupReason.providerUnknown: 'provider-unknown',
+  MountGroupReason.rule: 'rule',
+  MountGroupReason.ruleUnknown: 'rule-unknown',
+  MountGroupReason.member: 'member',
 };
 
 const _$MountGroupCollectsEnumMap = {
@@ -180,6 +196,7 @@ _MountSourceReport _$MountSourceReportFromJson(Map<String, dynamic> json) =>
       status: $enumDecode(_$MountSourceStatusEnumMap, json['status']),
       tailscaleExcluded: (json['tailscale-excluded'] as num?)?.toInt() ?? 0,
       relayExcluded: (json['relay-excluded'] as num?)?.toInt() ?? 0,
+      interfaceExcluded: (json['interface-excluded'] as num?)?.toInt() ?? 0,
       nodes:
           (json['nodes'] as List<dynamic>?)
               ?.map((e) => MountNode.fromJson(e as Map<String, dynamic>))
@@ -194,6 +211,7 @@ Map<String, dynamic> _$MountSourceReportToJson(_MountSourceReport instance) =>
       'status': _$MountSourceStatusEnumMap[instance.status]!,
       'tailscale-excluded': instance.tailscaleExcluded,
       'relay-excluded': instance.relayExcluded,
+      'interface-excluded': instance.interfaceExcluded,
       'nodes': instance.nodes,
     };
 
@@ -307,6 +325,9 @@ _MountRuntimeState _$MountRuntimeStateFromJson(
   Map<String, dynamic> json,
 ) => _MountRuntimeState(
   blocked: json['blocked'] as bool? ?? false,
+  refused:
+      (json['refused'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const [],
   report: json['report'] == null
       ? null
       : MountReport.fromJson(json['report'] as Map<String, dynamic>),
@@ -333,6 +354,7 @@ _MountRuntimeState _$MountRuntimeStateFromJson(
 Map<String, dynamic> _$MountRuntimeStateToJson(_MountRuntimeState instance) =>
     <String, dynamic>{
       'blocked': instance.blocked,
+      'refused': instance.refused,
       'report': instance.report,
       'sources': instance.sources,
       'groups': instance.groups,

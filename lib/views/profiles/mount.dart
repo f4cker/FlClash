@@ -1315,14 +1315,14 @@ class MountSourceRow extends StatelessWidget {
       return appLocalizations.mountUpdatingNodes;
     }
     final updated = item.profile.lastUpdateDate;
-    // Every node of an isolated source is one of the two excluded kinds.
+    // Every node of an isolated source is one of the excluded kinds.
     final count = switch (item.state) {
       MountSourceState.nodes => item.count,
       MountSourceState.empty => 0,
       MountSourceState.tailscaleOnly ||
       MountSourceState.relayOnly ||
       MountSourceState.isolatedOnly =>
-        item.tailscaleExcluded + item.relayExcluded,
+        item.tailscaleExcluded + item.relayExcluded + item.interfaceExcluded,
       _ => null,
     };
     if (count == null || updated == null) {

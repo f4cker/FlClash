@@ -7,6 +7,7 @@ void main() {
   test('the Core mount report reads with its wire names', () {
     final state = MountRuntimeState.fromJson({
       'blocked': false,
+      'refused': ['lan', 'sub'],
       'report': {
         'revision': 'r1',
         'sources': [
@@ -15,6 +16,7 @@ void main() {
             'provider': 'flash-mount-2',
             'status': 'read-error',
             'tailscale-excluded': 1,
+            'interface-excluded': 2,
             'nodes': [
               {'name': 'HK (Air)', 'original': 'HK'},
             ],
@@ -53,6 +55,8 @@ void main() {
     final source = state.report!.sources.single;
     expect(source.status, MountSourceStatus.readError);
     expect(source.tailscaleExcluded, 1);
+    expect(source.interfaceExcluded, 2);
+    expect(state.refused, ['lan', 'sub']);
     expect(source.nodes.single.original, 'HK');
     expect(state.report!.groups.single.via, MountGroupVia.use);
     expect(state.report!.groups.single.protection, MountProtection.reject);
@@ -77,6 +81,28 @@ void main() {
     expect(group.filter, isFalse);
     expect(group.probe, MountGroupProbe.unknown);
     expect(group.emptyFallback, 'DIRECT');
+    expect(group.reason, isNull);
+  });
+
+  test('a group left out for Tailscale reads why', () {
+    for (final (wire, reason) in [
+      ('holds', MountGroupReason.holds),
+      ('provider-unknown', MountGroupReason.providerUnknown),
+      ('rule', MountGroupReason.rule),
+      ('rule-unknown', MountGroupReason.ruleUnknown),
+      ('member', MountGroupReason.member),
+      ('later', null),
+    ]) {
+      final group = MountGroupInfo.fromJson({
+        'name': 'Lan',
+        'type': 'select',
+        'kind': 'excluded',
+        'excluded': 'tailscale',
+        'reason': wire,
+      });
+      expect(group.excluded, MountGroupExclusion.tailscale);
+      expect(group.reason, reason, reason: wire);
+    }
   });
 
   test('setup params carry mounts only when there are some', () {
@@ -283,6 +309,26 @@ void main() {
           ),
         ),
         MountSourceState.isolatedOnly,
+      );
+      expect(
+        stateOf(
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            interfaceExcluded: 2,
+          ),
+        ),
+        MountSourceState.isolatedOnly,
+      );
+      expect(
+        mountSourceItem(
+          profile,
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            count: 1,
+            interfaceExcluded: 2,
+          ),
+        ).interfaceExcluded,
+        2,
       );
       expect(
         stateOf(

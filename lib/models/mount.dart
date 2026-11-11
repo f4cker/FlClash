@@ -144,6 +144,7 @@ abstract class MountSourceInspection with _$MountSourceInspection {
     @Default(0) int listed,
     @Default(0) @JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,
     @Default(0) @JsonKey(name: 'relay-excluded') int relayExcluded,
+    @Default(0) @JsonKey(name: 'interface-excluded') int interfaceExcluded,
   }) = _MountSourceInspection;
 
   factory MountSourceInspection.fromJson(Map<String, Object?> json) =>
@@ -153,6 +154,16 @@ abstract class MountSourceInspection with _$MountSourceInspection {
 enum MountGroupKind { auto, candidate, excluded }
 
 enum MountGroupExclusion { builtin, hidden, type, tailscale }
+
+enum MountGroupReason {
+  holds,
+  @JsonValue('provider-unknown')
+  providerUnknown,
+  rule,
+  @JsonValue('rule-unknown')
+  ruleUnknown,
+  member,
+}
 
 /// [all] collects base proxies and providers, [providers] providers only.
 enum MountGroupCollects { all, providers }
@@ -167,6 +178,8 @@ abstract class MountGroupInfo with _$MountGroupInfo {
     required String type,
     required MountGroupKind kind,
     MountGroupExclusion? excluded,
+    @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)
+    MountGroupReason? reason,
     MountGroupCollects? collects,
     @Default(false) bool hidden,
     @Default(false) bool filter,
@@ -209,6 +222,7 @@ abstract class MountSourceReport with _$MountSourceReport {
     required MountSourceStatus status,
     @Default(0) @JsonKey(name: 'tailscale-excluded') int tailscaleExcluded,
     @Default(0) @JsonKey(name: 'relay-excluded') int relayExcluded,
+    @Default(0) @JsonKey(name: 'interface-excluded') int interfaceExcluded,
     @Default([]) List<MountNode> nodes,
   }) = _MountSourceReport;
 
@@ -297,6 +311,7 @@ abstract class MountRuntimeGroup with _$MountRuntimeGroup {
 abstract class MountRuntimeState with _$MountRuntimeState {
   const factory MountRuntimeState({
     @Default(false) bool blocked,
+    @Default([]) List<String> refused,
     MountReport? report,
     @Default([]) List<MountRuntimeSource> sources,
     @Default([]) List<MountRuntimeGroup> groups,
@@ -308,7 +323,7 @@ abstract class MountRuntimeState with _$MountRuntimeState {
       _$MountRuntimeStateFromJson(json);
 }
 
-/// [isolatedOnly]: both Tailscale nodes and Tailscale relays, nothing else.
+/// [isolatedOnly]: only nodes kept out to isolate Tailscale, for mixed reasons.
 enum MountSourceState {
   nodes,
   empty,
@@ -336,6 +351,7 @@ abstract class MountSourceItem with _$MountSourceItem {
     @Default(0) int count,
     @Default(0) int tailscaleExcluded,
     @Default(0) int relayExcluded,
+    @Default(0) int interfaceExcluded,
     @Default(false) bool mounted,
     MountSourceRecord? record,
   }) = _MountSourceItem;
@@ -447,8 +463,8 @@ MountSourceItem mountSourceItem(
     MountSourceStatus.nodes when inspection!.count > 0 =>
       MountSourceState.nodes,
     MountSourceStatus.nodes
-        when inspection!.relayExcluded > 0 &&
-            inspection.tailscaleExcluded > 0 =>
+        when inspection!.interfaceExcluded > 0 ||
+            inspection.relayExcluded > 0 && inspection.tailscaleExcluded > 0 =>
       MountSourceState.isolatedOnly,
     MountSourceStatus.nodes when inspection!.relayExcluded > 0 =>
       MountSourceState.relayOnly,
@@ -462,6 +478,7 @@ MountSourceItem mountSourceItem(
     count: inspection?.count ?? 0,
     tailscaleExcluded: inspection?.tailscaleExcluded ?? 0,
     relayExcluded: inspection?.relayExcluded ?? 0,
+    interfaceExcluded: inspection?.interfaceExcluded ?? 0,
     mounted: mounted,
     record: record,
   );
