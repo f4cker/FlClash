@@ -449,6 +449,10 @@ class Database extends _$Database {
     await transaction(() async {
       // Backups taken while foreign keys were off may carry orphaned rows.
       await customStatement('PRAGMA defer_foreign_keys = ON');
+      // A backup carries no mounts; kept rows could bind reused profile ids.
+      await profileMounts.deleteAll();
+      await mountTargets.deleteAll();
+      await mountSourceStatuses.deleteAll();
       await batch((b) {
         if (isOverride) {
           profilesDao.setAllWithBatch(b, profiles);

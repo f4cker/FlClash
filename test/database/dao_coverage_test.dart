@@ -835,6 +835,45 @@ void main() {
     }
   });
 
+  test('a restore in either mode drops every mount', () async {
+    const target = Profile(id: 1, autoUpdateDuration: Duration.zero);
+    const source = Profile(
+      id: 2,
+      type: ProfileType.url,
+      url: 'https://example.invalid/sub',
+      autoUpdateDuration: Duration.zero,
+    );
+    for (final isOverride in [false, true]) {
+      await database.profilesDao.putAll([
+        target.toCompanion(),
+        source.toCompanion(),
+      ]);
+      final version = (await database.mountsDao.target(1))?.version;
+      await database.mountsDao.save(
+        targetId: 1,
+        expectedVersion: version,
+        sourceIds: [2],
+        groups: ['Proxy'],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      );
+      await database.mountsDao.recordSourceResult(2, at: DateTime(2026));
+
+      await database.restore(
+        [target, source],
+        const [],
+        const [],
+        const [],
+        const [],
+        isOverride: isOverride,
+      );
+
+      expect(await database.profileMounts.count.getSingle(), 0);
+      expect(await database.mountTargets.count.getSingle(), 0);
+      expect(await database.mountSourceStatuses.count.getSingle(), 0);
+    }
+  });
+
   test(
     'an override restore replaces more rules than one statement can bind',
     () async {
