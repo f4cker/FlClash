@@ -41,7 +41,7 @@ func markTailscaleReplaced(mark uint64) { tailscaleReplacing.Store(mark) }
 // saved settings reach it here. One whose name and control server a node of
 // another source shares gets none: a record cannot tell the two apart.
 func adjustTailscaleOption(option *outbound.TailscaleOption) {
-	if strings.Contains(option.Name, validationNameSuffix) {
+	if strings.Contains(option.Name, validationNameSuffix) || tailscaleInjecting(option.StateDir) {
 		return
 	}
 	if option.ProviderName == "" && tailscaleInProxies(option.Name) {
@@ -50,7 +50,7 @@ func adjustTailscaleOption(option *outbound.TailscaleOption) {
 	if tailscaleKeyShared(*option, nil) {
 		return
 	}
-	node, _ := tailscaleEffectiveNode(option.Name, option.ControlURL)
+	node, _ := tailscaleEffectiveNode(tailscaleRef{name: option.Name, controlURL: option.ControlURL})
 	if node.ExitNode != nil {
 		option.ExitNode = *node.ExitNode
 	}
@@ -64,7 +64,7 @@ func tailscaleKeyShared(option outbound.TailscaleOption, self *outbound.Tailscal
 	controlURL := normalizeControlURL(option.ControlURL)
 	replacing := tailscaleReplacing.Load()
 	return slices.ContainsFunc(outbound.TailscaleInstances(), func(other *outbound.Tailscale) bool {
-		if other == self || other.Name() != option.Name || other.Generation() <= replacing || other.Closed() {
+		if other == self || other.Name() != option.Name || other.Generation() <= replacing || other.Closed() || tailscaleIsManaged(other) {
 			return false
 		}
 		otherOption := other.Option()
@@ -73,14 +73,19 @@ func tailscaleKeyShared(option outbound.TailscaleOption, self *outbound.Tailscal
 }
 
 func tailscaleOverridable(t *outbound.Tailscale) bool {
-	return !tailscaleKeyShared(t.Option(), t)
+	return tailscaleIsManaged(t) || !tailscaleKeyShared(t.Option(), t)
 }
 
 // A node another one shares its key with reports only what it was built with.
 func tailscaleNodeSettings(t *outbound.Tailscale, overridable bool) TailscaleSettings {
 	option := t.Option()
+	ref := tailscaleRefOfNode(t)
 	tailscaleMu.Lock()
 	defer tailscaleMu.Unlock()
+	if ref.managed() {
+		node, _ := tailscaleEffectiveNodeLocked(ref)
+		return tailscaleSettingsOver(node, tailscaleConfiguredValues{}, tailscaleSourceDefault)
+	}
 	source := tailscaleConfigSourceLocked()
 	configured, inProxies := tailscaleConfigs[t.Name()]
 	if option.ProviderName != "" || !inProxies {
@@ -95,7 +100,7 @@ func tailscaleNodeSettings(t *outbound.Tailscale, overridable bool) TailscaleSet
 	}
 	var node TailscaleNodeSetup
 	if overridable {
-		node, _ = tailscaleEffectiveNodeLocked(t.Name(), option.ControlURL)
+		node, _ = tailscaleEffectiveNodeLocked(ref)
 	} else {
 		configuredExit := ""
 		if configured.exitNode != nil {
@@ -115,7 +120,7 @@ func tailscaleNodeSettings(t *outbound.Tailscale, overridable bool) TailscaleSet
 // logged out of stays out, and one with no identity waits for a login.
 func tailscaleStartGate(t *outbound.Tailscale, started bool) error {
 	option := t.Option()
-	if tailscaleLoggedOut(t.Name(), option.ControlURL) {
+	if tailscaleLoggedOut(tailscaleRefOfNode(t)) {
 		return errTailscaleLoggedOut
 	}
 	if !started && !tailscaleStateHasIdentity(option.StateDir) {
@@ -185,6 +190,9 @@ func onTailscaleState(t *outbound.Tailscale, state string, authURLReady bool) {
 		State:        state,
 		AuthURLReady: authURLReady,
 	})
+	if tailscaleIsManaged(t) {
+		watchTailscaleManaged(t, state)
+	}
 	if state != ipn.Running.String() {
 		return
 	}
@@ -194,7 +202,7 @@ func onTailscaleState(t *outbound.Tailscale, state string, authURLReady bool) {
 			option := t.Option()
 			var node TailscaleNodeSetup
 			if tailscaleOverridable(t) {
-				node, _ = tailscaleEffectiveNode(t.Name(), option.ControlURL)
+				node, _ = tailscaleEffectiveNode(tailscaleRefOfNode(t))
 			}
 			exitNode := node.ExitNode
 			if exitNode == nil && option.ExitNode != "" {
@@ -224,19 +232,22 @@ func closeTailscaleUpTo(mark uint64) {
 		if t.Generation() <= mark {
 			_ = t.Close()
 			finishTailscaleReapply(t)
+			forgetTailscaleManaged(t)
 		}
 	}
 }
 
-// The node of each name the running config holds: the newest instance.
+// The node of each name, or each managed ID, the running config holds: the
+// newest instance.
 func currentTailscaleNodes() []*outbound.Tailscale {
 	latest := map[string]*outbound.Tailscale{}
 	for _, t := range outbound.TailscaleInstances() {
 		if strings.Contains(t.Name(), validationNameSuffix) || t.Closed() {
 			continue
 		}
-		if previous := latest[t.Name()]; previous == nil || previous.Generation() < t.Generation() {
-			latest[t.Name()] = t
+		group := tailscaleGroupKey(t)
+		if previous := latest[group]; previous == nil || previous.Generation() < t.Generation() {
+			latest[group] = t
 		}
 	}
 	nodes := make([]*outbound.Tailscale, 0, len(latest))
@@ -247,9 +258,27 @@ func currentTailscaleNodes() []*outbound.Tailscale {
 	return nodes
 }
 
-func boundTailscale(name string, generation uint64) (*outbound.Tailscale, error) {
-	for _, t := range currentTailscaleNodes() {
-		if t.Name() != name {
+func tailscaleGroupKey(t *outbound.Tailscale) string {
+	if ref := tailscaleRefOfNode(t); ref.managed() {
+		return ref.key(0)
+	}
+	return t.Name()
+}
+
+// A managed ID picks the panel-added node whatever it is named now; a name
+// alone picks among the others first.
+func boundTailscale(name, managedID string, generation uint64) (*outbound.Tailscale, error) {
+	nodes := currentTailscaleNodes()
+	if managedID == "" {
+		slices.SortStableFunc(nodes, func(a, b *outbound.Tailscale) int {
+			return cmpBool(tailscaleIsManaged(a), tailscaleIsManaged(b))
+		})
+	}
+	for _, t := range nodes {
+		if managedID != "" && tailscaleManagedIDOf(t) != managedID {
+			continue
+		}
+		if managedID == "" && t.Name() != name {
 			continue
 		}
 		if t.Generation() != generation {
@@ -262,9 +291,19 @@ func boundTailscale(name string, generation uint64) (*outbound.Tailscale, error)
 
 var tailscaleNodeLocks sync.Map
 
+func cmpBool(a, b bool) int {
+	switch {
+	case a == b:
+		return 0
+	case a:
+		return 1
+	}
+	return -1
+}
+
 // Actions on one node run one at a time; other nodes are not held up.
-func lockTailscaleNode(name string) func() {
-	value, _ := tailscaleNodeLocks.LoadOrStore(name, &sync.Mutex{})
+func lockTailscaleNode(t *outbound.Tailscale) func() {
+	value, _ := tailscaleNodeLocks.LoadOrStore(tailscaleGroupKey(t), &sync.Mutex{})
 	mu := value.(*sync.Mutex)
 	mu.Lock()
 	return mu.Unlock
@@ -273,6 +312,9 @@ func lockTailscaleNode(name string) func() {
 type TailscaleNode struct {
 	ProfileID    int64                    `json:"profile-id"`
 	Name         string                   `json:"name"`
+	ManagedID    string                   `json:"managed-id,omitempty"`
+	Attached     bool                     `json:"attached"`
+	Account      *TailscaleAccount        `json:"account,omitempty"`
 	Generation   uint64                   `json:"generation"`
 	ControlURL   string                   `json:"control-url"`
 	Hostname     string                   `json:"hostname"`
@@ -292,8 +334,11 @@ type TailscaleNode struct {
 
 func describeTailscale(t *outbound.Tailscale, nodes []*outbound.Tailscale) TailscaleNode {
 	option := t.Option()
+	ref := tailscaleRefOfNode(t)
 	mode := "derived"
 	switch {
+	case ref.managed():
+		mode = "managed"
 	case t.ExplicitStateDir():
 		mode = "explicit"
 	case !strings.Contains(option.StateDir, tailscaleNodesDir):
@@ -309,7 +354,7 @@ func describeTailscale(t *outbound.Tailscale, nodes []*outbound.Tailscale) Tails
 		StateDirMode: mode,
 		Started:      t.Started(),
 		BackendState: t.BackendState(),
-		LoggedOut:    tailscaleLoggedOut(t.Name(), option.ControlURL),
+		LoggedOut:    tailscaleLoggedOut(ref),
 		HasIdentity:  tailscaleStateHasIdentity(option.StateDir),
 		AuthKey:      option.AuthKey != "",
 		Ephemeral:    option.Ephemeral,
@@ -318,7 +363,13 @@ func describeTailscale(t *outbound.Tailscale, nodes []*outbound.Tailscale) Tails
 		Settings:     tailscaleNodeSettings(t, overridable),
 		Warnings:     []string{},
 	}
-	if !t.ExplicitStateDir() {
+	if ref.managed() {
+		if managed, ok := tailscaleManagedSetupOf(ref.managedKey); ok {
+			node.ManagedID, node.Attached = managed.ID, managed.Attached
+		}
+		node.Account = readTailscaleAccount(option.StateDir)
+	}
+	if ref.managed() || !t.ExplicitStateDir() {
 		if legacy := describeTailscaleLegacy(t); legacy != nil {
 			node.Warnings = append(node.Warnings, tailscaleWarningLegacyState)
 			node.Legacy = legacy
@@ -395,7 +446,7 @@ type TailscaleStatus struct {
 
 // Reads only: a node that has not started stays that way.
 func handleTailscaleStatus(params TailscaleNodeParams) (*TailscaleStatus, error) {
-	t, err := boundTailscale(params.Name, params.Generation)
+	t, err := boundTailscale(params.Name, params.ManagedID, params.Generation)
 	if err != nil {
 		return nil, err
 	}
@@ -510,12 +561,12 @@ func tailscalePrefsOf(prefs *ipn.Prefs, st *ipnstate.Status) *TailscalePrefs {
 
 // The panel's "prepare": an explicit start of a node not logged out.
 func handleTailscaleStart(params TailscaleNodeParams) (*TailscaleNode, error) {
-	t, err := boundTailscale(params.Name, params.Generation)
+	t, err := boundTailscale(params.Name, params.ManagedID, params.Generation)
 	if err != nil {
 		return nil, err
 	}
-	defer lockTailscaleNode(t.Name())()
-	if tailscaleLoggedOut(t.Name(), t.Option().ControlURL) {
+	defer lockTailscaleNode(t)()
+	if tailscaleLoggedOut(tailscaleRefOfNode(t)) {
 		return nil, errTailscaleLoggedOut
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), tailscaleActionTimeout)
@@ -538,14 +589,14 @@ type TailscaleLoginResult struct {
 
 // The one action that lifts the logout guard.
 func handleTailscaleLogin(params TailscaleLoginParams) (*TailscaleLoginResult, error) {
-	t, err := boundTailscale(params.Name, params.Generation)
+	t, err := boundTailscale(params.Name, params.ManagedID, params.Generation)
 	if err != nil {
 		return nil, err
 	}
-	defer lockTailscaleNode(t.Name())()
+	defer lockTailscaleNode(t)()
 	option := t.Option()
 	loggedIn := false
-	pinTailscale(t.Name(), option.ControlURL, func(pin *tailscalePin) { pin.loggedOut = &loggedIn })
+	pinTailscale(tailscaleRefOfNode(t), func(pin *tailscalePin) { pin.loggedOut = &loggedIn })
 
 	ctx, cancel := context.WithTimeout(context.Background(), tailscaleActionTimeout)
 	defer cancel()
@@ -623,15 +674,16 @@ type TailscaleLogoutResult struct {
 // The guard goes up before anything else, so whatever fails afterwards the
 // node does not log itself back in; the result tells what was confirmed.
 func handleTailscaleLogout(params TailscaleNodeParams) (*TailscaleLogoutResult, error) {
-	t, err := boundTailscale(params.Name, params.Generation)
+	t, err := boundTailscale(params.Name, params.ManagedID, params.Generation)
 	if err != nil {
 		return nil, err
 	}
-	defer lockTailscaleNode(t.Name())()
+	defer lockTailscaleNode(t)()
 	option := t.Option()
 	loggedOut := true
-	pinTailscale(t.Name(), option.ControlURL, func(pin *tailscalePin) { pin.loggedOut = &loggedOut })
+	pinTailscale(tailscaleRefOfNode(t), func(pin *tailscalePin) { pin.loggedOut = &loggedOut })
 	closeTailscaleConnections(t.Name())
+	defer refreshTailscaleRoutes()
 
 	result := &TailscaleLogoutResult{Generation: t.Generation(), Outcome: tailscaleOutcomeUnknown}
 	if !t.Started() && !tailscaleStateHasIdentity(option.StateDir) {
@@ -686,16 +738,15 @@ type TailscalePrefsResult struct {
 // The host stores the override first; the pin keeps it for the next instance
 // even if a payload without it is already on its way.
 func handleTailscaleSetPrefs(params TailscalePrefsParams) (*TailscalePrefsResult, error) {
-	t, err := boundTailscale(params.Name, params.Generation)
+	t, err := boundTailscale(params.Name, params.ManagedID, params.Generation)
 	if err != nil {
 		return nil, err
 	}
-	defer lockTailscaleNode(t.Name())()
+	defer lockTailscaleNode(t)()
 	if !tailscaleOverridable(t) {
 		return nil, errTailscaleOverrideAmbiguous
 	}
-	option := t.Option()
-	pinTailscale(t.Name(), option.ControlURL, func(pin *tailscalePin) {
+	pinTailscale(tailscaleRefOfNode(t), func(pin *tailscalePin) {
 		if params.ExitNode != nil {
 			pin.exitNode = params.ExitNode
 		}

@@ -80,10 +80,11 @@ func tailscaleLegacyEligibility(t *outbound.Tailscale, identity *TailscaleLegacy
 		return identity.Eligibility, nil
 	}
 	option := t.Option()
-	if t.ExplicitStateDir() || !strings.Contains(option.StateDir, tailscaleNodesDir) {
+	managedID := tailscaleManagedIDOf(t)
+	if !tailscaleIsManaged(t) && (t.ExplicitStateDir() || !strings.Contains(option.StateDir, tailscaleNodesDir)) {
 		return tailscaleLegacyNotIsolated, nil
 	}
-	if identity.MigratedTo != nil && !identity.MigratedTo.names(tailscaleProfileID(), t.Name(), option.ControlURL) {
+	if identity.MigratedTo != nil && !identity.MigratedTo.names(tailscaleProfileID(), t.Name(), managedID, option.ControlURL) {
 		return tailscaleLegacyMigrated, nil
 	}
 	if identity.ControlURL != normalizeControlURL(option.ControlURL) {
@@ -108,6 +109,7 @@ func tailscaleLegacyOfferToken(t *outbound.Tailscale, identity *TailscaleLegacyI
 	fields := []string{
 		strconv.FormatInt(tailscaleProfileID(), 10),
 		t.Name(),
+		tailscaleManagedIDOf(t),
 		strconv.FormatUint(t.Generation(), 10),
 		normalizeControlURL(t.Option().ControlURL),
 		identity.Fingerprint,
@@ -145,11 +147,11 @@ func tailscaleLegacyRefusal(eligibility string) *MethodError {
 func handleTailscaleMigrateLegacy(params TailscaleMigrateParams) (*TailscaleMigrateResult, error) {
 	tailscaleLegacyMu.Lock()
 	defer tailscaleLegacyMu.Unlock()
-	t, err := boundTailscale(params.Name, params.Generation)
+	t, err := boundTailscale(params.Name, params.ManagedID, params.Generation)
 	if err != nil {
 		return nil, err
 	}
-	defer lockTailscaleNode(t.Name())()
+	defer lockTailscaleNode(t)()
 	identity, archive, _ := readTailscaleLegacyArchive()
 	if identity == nil {
 		return nil, errTailscaleLegacyNotFound
@@ -168,6 +170,7 @@ func handleTailscaleMigrateLegacy(params TailscaleMigrateParams) (*TailscaleMigr
 			ProfileID:   tailscaleProfileID(),
 			Name:        t.Name(),
 			ControlURL:  normalizeControlURL(option.ControlURL),
+			ManagedID:   tailscaleManagedIDOf(t),
 		},
 		ArchiveIntact: true,
 	}
@@ -202,7 +205,7 @@ func handleTailscaleMigrateLegacy(params TailscaleMigrateParams) (*TailscaleMigr
 	} else {
 		result.Outcome = tailscaleMigrateMigrated
 		loggedOut := false
-		pinTailscale(t.Name(), option.ControlURL, func(pin *tailscalePin) { pin.loggedOut = &loggedOut })
+		pinTailscale(tailscaleRefOfNode(t), func(pin *tailscalePin) { pin.loggedOut = &loggedOut })
 	}
 	return settleTailscaleMigration(t, result, archive), nil
 }

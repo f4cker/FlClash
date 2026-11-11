@@ -100,7 +100,7 @@ func TestTailscaleMigrateLegacyCopiesToOneNodeOnly(t *testing.T) {
 	first := newMigrationTarget(t, outbound.TailscaleOption{Name: "home"})
 	second := newMigrationTarget(t, outbound.TailscaleOption{Name: "office"})
 	secondToken := describeLegacy(t, second).OfferToken
-	pinTailscale("home", "", func(pin *tailscalePin) { loggedOut := true; pin.loggedOut = &loggedOut })
+	pinTailscale(tailscaleRef{name: "home"}, func(pin *tailscalePin) { loggedOut := true; pin.loggedOut = &loggedOut })
 
 	result, err := migrateShown(t, first)
 	if err != nil {

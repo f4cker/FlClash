@@ -149,6 +149,9 @@ func applyConfig(params *SetupParams) error {
 	replaced := tailscaleGenerationMark()
 	markTailscaleReplaced(replaced)
 	cfg, err := loadSetupConfig(params)
+	if err == nil {
+		injectTailscaleManaged(cfg)
+	}
 	if err != nil {
 		// The fallback is what keeps the listeners serving while the host
 		// reports the error, but it applies a config with no proxies in it.
@@ -164,6 +167,7 @@ func applyConfig(params *SetupParams) error {
 			return err
 		}
 		cfg = fallback
+		clearTailscaleManaged()
 	}
 
 	currentConfig = cfg
@@ -174,6 +178,7 @@ func applyConfig(params *SetupParams) error {
 	}
 	closeTailscaleUpTo(replaced)
 	hub.ApplyConfig(cfg)
+	startTailscaleManaged()
 	patchSelectGroup(params.SelectedMap)
 	bumpRouteEpoch()
 	updateListeners(cfg)

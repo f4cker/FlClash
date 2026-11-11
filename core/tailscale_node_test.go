@@ -70,13 +70,13 @@ func TestTailscaleCallsAreBoundToAGeneration(t *testing.T) {
 	setTailscaleSetup(&TailscaleSetup{ProfileID: 1})
 	old := newGatedTailscale(t, "bound")
 	current := newGatedTailscale(t, "bound")
-	if _, err := boundTailscale("bound", old.Generation()); !errors.Is(err, errTailscaleStaleGeneration) {
+	if _, err := boundTailscale("bound", "", old.Generation()); !errors.Is(err, errTailscaleStaleGeneration) {
 		t.Fatalf("a call for the replaced instance = %v", err)
 	}
-	if got, err := boundTailscale("bound", current.Generation()); err != nil || got != current {
+	if got, err := boundTailscale("bound", "", current.Generation()); err != nil || got != current {
 		t.Fatalf("a call for the current instance = %v, %v", got, err)
 	}
-	if _, err := boundTailscale("missing", current.Generation()); !errors.Is(err, errTailscaleNodeNotFound) {
+	if _, err := boundTailscale("missing", "", current.Generation()); !errors.Is(err, errTailscaleNodeNotFound) {
 		t.Fatalf("a call for an unknown node = %v", err)
 	}
 

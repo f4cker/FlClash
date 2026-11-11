@@ -203,17 +203,17 @@ func TestTailscalePinsHoldUntilAPayloadAgrees(t *testing.T) {
 	resetTailscaleSetup(t)
 	setTailscaleSetup(&TailscaleSetup{ProfileID: 1, Nodes: []TailscaleNodeSetup{{Name: "a"}}})
 	loggedOut := true
-	pinTailscale("a", "", func(pin *tailscalePin) { pin.loggedOut = &loggedOut })
-	if !tailscaleLoggedOut("a", "") {
+	pinTailscale(tailscaleRef{name: "a"}, func(pin *tailscalePin) { pin.loggedOut = &loggedOut })
+	if !tailscaleLoggedOut(tailscaleRef{name: "a"}) {
 		t.Fatal("the logout guard did not apply at once")
 	}
 	setTailscaleSetup(&TailscaleSetup{ProfileID: 1, Nodes: []TailscaleNodeSetup{{Name: "a"}}})
-	if !tailscaleLoggedOut("a", "") {
+	if !tailscaleLoggedOut(tailscaleRef{name: "a"}) {
 		t.Fatal("a payload sent before the logout lifted its guard")
 	}
 	setTailscaleSetup(&TailscaleSetup{ProfileID: 1, Nodes: []TailscaleNodeSetup{{Name: "a", LoggedOut: true}}})
 	setTailscaleSetup(&TailscaleSetup{ProfileID: 1, Nodes: []TailscaleNodeSetup{{Name: "a"}}})
-	if tailscaleLoggedOut("a", "") {
+	if tailscaleLoggedOut(tailscaleRef{name: "a"}) {
 		t.Fatal("the pin outlived the payload that agreed with it")
 	}
 }

@@ -2,6 +2,8 @@
 
 package core
 
+import "github.com/metacubex/mihomo/config"
+
 var errTailscaleUnsupported = &MethodError{
 	Code:    "tailscale_unsupported",
 	Message: "this core is built without tailscale support",
@@ -26,5 +28,19 @@ func handleTailscaleLogout(TailscaleNodeParams) (any, error) { return nil, errTa
 func handleTailscaleSetPrefs(TailscalePrefsParams) (any, error) { return nil, errTailscaleUnsupported }
 
 func handleTailscaleMigrateLegacy(TailscaleMigrateParams) (any, error) {
+	return nil, errTailscaleUnsupported
+}
+
+func injectTailscaleManaged(*config.Config) {}
+
+func clearTailscaleManaged() {}
+
+func startTailscaleManaged() {}
+
+func handleTailscaleRoutes(TailscaleRoutesParams) (any, error) { return nil, errTailscaleUnsupported }
+
+func handleTailscaleAssign(TailscaleAssignParams) (any, error) { return nil, errTailscaleUnsupported }
+
+func handleTailscaleForgetRoutes(TailscaleRoutesParams) (any, error) {
 	return nil, errTailscaleUnsupported
 }

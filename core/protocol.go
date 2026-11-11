@@ -88,6 +88,9 @@ const (
 	tailscaleLogoutMethod        CoreMethod = "tailscale.logout"
 	tailscaleSetPrefsMethod      CoreMethod = "tailscale.setPrefs"
 	tailscaleMigrateLegacyMethod CoreMethod = "tailscale.migrateLegacy"
+	tailscaleRoutesMethod        CoreMethod = "tailscale.routes"
+	tailscaleAssignMethod        CoreMethod = "tailscale.assign"
+	tailscaleForgetRoutesMethod  CoreMethod = "tailscale.forgetRoutes"
 
 	// The envelope of a batch of events, which the Core sends and never receives.
 	messageMethod CoreMethod = "message"
@@ -103,10 +106,11 @@ const (
 	LoadedMessage    MessageType = "loaded"
 	GeoUpdateMessage MessageType = "geoUpdate"
 	// Named after the Dart enum value, which is how CoreEvent.fromJson decodes it.
-	RouteChangedMessage   MessageType = "routeChanged"
-	DialerLoopMessage     MessageType = "dialerLoop"
-	RequestTrafficMessage MessageType = "requestTraffic"
-	TailscaleStateMessage MessageType = "tailscaleState"
+	RouteChangedMessage    MessageType = "routeChanged"
+	DialerLoopMessage      MessageType = "dialerLoop"
+	RequestTrafficMessage  MessageType = "requestTraffic"
+	TailscaleStateMessage  MessageType = "tailscaleState"
+	TailscaleRoutesMessage MessageType = "tailscaleRoutes"
 )
 
 type Message struct {
@@ -137,6 +141,21 @@ type TailscaleSetup struct {
 	Nodes        []TailscaleNodeSetup `json:"nodes"`
 	// What the host keeps of a legacy login already moved to a node.
 	LegacyMigration *TailscaleLegacyMigration `json:"legacy-migration,omitempty"`
+	// The panel-added accounts of this profile, in sign-in order.
+	Managed []TailscaleManagedSetup `json:"managed,omitempty"`
+}
+
+// A node the panel added; ID is the binding, Name only a label the Core may
+// suffix to keep it unique.
+type TailscaleManagedSetup struct {
+	ID           string  `json:"id"`
+	Name         string  `json:"name"`
+	ControlURL   string  `json:"control-url"`
+	ExitNode     *string `json:"exit-node,omitempty"`
+	AcceptRoutes *bool   `json:"accept-routes,omitempty"`
+	LoggedOut    bool    `json:"logged-out"`
+	// Only an attached account gets routing rules.
+	Attached bool `json:"attached"`
 }
 
 type TailscaleNodeSetup struct {
@@ -150,11 +169,13 @@ type TailscaleNodeSetup struct {
 
 type TailscaleNodeParams struct {
 	Name       string `json:"name"`
+	ManagedID  string `json:"managed-id,omitempty"`
 	Generation uint64 `json:"generation"`
 }
 
 type TailscaleLoginParams struct {
 	Name       string `json:"name"`
+	ManagedID  string `json:"managed-id,omitempty"`
 	Generation uint64 `json:"generation"`
 	// Asks for a new auth URL even while the node runs, to renew an expiring key.
 	Reauth bool `json:"reauth"`
@@ -162,6 +183,7 @@ type TailscaleLoginParams struct {
 
 type TailscaleMigrateParams struct {
 	Name       string `json:"name"`
+	ManagedID  string `json:"managed-id,omitempty"`
 	Generation uint64 `json:"generation"`
 	// The legacy offer-token the user confirmed; any change since refuses.
 	OfferToken string `json:"offer-token"`
@@ -169,9 +191,19 @@ type TailscaleMigrateParams struct {
 
 type TailscalePrefsParams struct {
 	Name         string  `json:"name"`
+	ManagedID    string  `json:"managed-id,omitempty"`
 	Generation   uint64  `json:"generation"`
 	ExitNode     *string `json:"exit-node,omitempty"`
 	AcceptRoutes *bool   `json:"accept-routes,omitempty"`
+}
+
+type TailscaleRoutesParams struct {
+	ProfileID int64 `json:"profile-id"`
+}
+
+type TailscaleAssignParams struct {
+	ProfileID   int64                      `json:"profile-id"`
+	Assignments []TailscaleRouteAssignment `json:"assignments"`
 }
 
 type CoreOptions struct {

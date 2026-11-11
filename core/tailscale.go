@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -34,6 +35,7 @@ const (
 	tailscaleSourceProvider     = "provider"
 	tailscaleSourceDefault      = "default"
 
+	tailscaleManagedDirName     = "managed"
 	tailscaleWarningLegacyState = "legacy-shared-state-present"
 	tailscaleWarningDirInUse    = "state-dir-in-use"
 )
@@ -122,6 +124,63 @@ func tailscaleNodeKey(profileID int64, name, controlURL string) string {
 	return hex.EncodeToString(sum[:16])
 }
 
+// A panel-added node is bound by its random ID, never by its name; the key
+// names its directory and holds no secret.
+func tailscaleManagedKey(profileID int64, id, controlURL string) string {
+	sum := sha256.Sum256([]byte("managed\x00" + strconv.FormatInt(profileID, 10) + "\x00" + id + "\x00" + normalizeControlURL(controlURL)))
+	return hex.EncodeToString(sum[:16])
+}
+
+func tailscaleManagedDir(profileID int64, id, controlURL string) string {
+	return filepath.Join(tailscaleNodesDir, tailscaleManagedDirName, tailscaleManagedKey(profileID, id, controlURL))
+}
+
+// Which node a pin, an override or a guard is about: a managed node by the
+// key its directory carries, any other by name and control server.
+type tailscaleRef struct {
+	name       string
+	controlURL string
+	managedKey string
+}
+
+func (r tailscaleRef) managed() bool { return r.managedKey != "" }
+
+func (r tailscaleRef) key(profileID int64) string {
+	if r.managed() {
+		return "managed:" + r.managedKey
+	}
+	return tailscaleNodeKey(profileID, r.name, r.controlURL)
+}
+
+// The managed key of a state-dir under tailscale-nodes/managed, else empty.
+func tailscaleManagedKeyOf(stateDir string) string {
+	dir := filepath.ToSlash(filepath.Clean(stateDir))
+	parent, key := path.Split(dir)
+	parent = strings.TrimSuffix(parent, "/")
+	if key == "" || path.Base(parent) != tailscaleManagedDirName || path.Base(path.Dir(parent)) != tailscaleNodesDir {
+		return ""
+	}
+	return key
+}
+
+func tailscaleManagedSetupLocked(key string) (TailscaleManagedSetup, bool) {
+	if tailscaleSetup == nil || key == "" {
+		return TailscaleManagedSetup{}, false
+	}
+	for _, managed := range tailscaleSetup.Managed {
+		if tailscaleManagedKey(tailscaleSetup.ProfileID, managed.ID, managed.ControlURL) == key {
+			return managed, true
+		}
+	}
+	return TailscaleManagedSetup{}, false
+}
+
+func tailscaleManagedSetupOf(key string) (TailscaleManagedSetup, bool) {
+	tailscaleMu.Lock()
+	defer tailscaleMu.Unlock()
+	return tailscaleManagedSetupLocked(key)
+}
+
 func normalizeControlURL(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -175,8 +234,15 @@ func setTailscaleSetup(setup *TailscaleSetup) {
 	if setup == nil {
 		return
 	}
+	nodes := make(map[string]TailscaleNodeSetup, len(setup.Nodes)+len(setup.Managed))
 	for _, node := range setup.Nodes {
-		key := tailscaleNodeKey(setup.ProfileID, node.Name, node.ControlURL)
+		nodes[tailscaleNodeKey(setup.ProfileID, node.Name, node.ControlURL)] = node
+	}
+	for _, managed := range setup.Managed {
+		ref := tailscaleRef{managedKey: tailscaleManagedKey(setup.ProfileID, managed.ID, managed.ControlURL)}
+		nodes[ref.key(setup.ProfileID)] = managed.node()
+	}
+	for key, node := range nodes {
 		pin := tailscalePins[key]
 		if pin == nil {
 			continue
@@ -205,20 +271,36 @@ func tailscaleProfileID() int64 {
 	return tailscaleSetup.ProfileID
 }
 
-func tailscaleEffectiveNodeLocked(name, controlURL string) (TailscaleNodeSetup, bool) {
-	node := TailscaleNodeSetup{Name: name, ControlURL: controlURL}
+func (m TailscaleManagedSetup) node() TailscaleNodeSetup {
+	return TailscaleNodeSetup{
+		Name:         m.Name,
+		ControlURL:   m.ControlURL,
+		ExitNode:     m.ExitNode,
+		AcceptRoutes: m.AcceptRoutes,
+		LoggedOut:    m.LoggedOut,
+	}
+}
+
+func tailscaleEffectiveNodeLocked(ref tailscaleRef) (TailscaleNodeSetup, bool) {
+	node := TailscaleNodeSetup{Name: ref.name, ControlURL: ref.controlURL}
 	if tailscaleSetup == nil {
 		return node, false
 	}
 	found := false
-	normalized := normalizeControlURL(controlURL)
-	for _, candidate := range tailscaleSetup.Nodes {
-		if candidate.Name == name && normalizeControlURL(candidate.ControlURL) == normalized {
-			node, found = candidate, true
-			break
+	if ref.managed() {
+		if managed, ok := tailscaleManagedSetupLocked(ref.managedKey); ok {
+			node, found = managed.node(), true
+		}
+	} else {
+		normalized := normalizeControlURL(ref.controlURL)
+		for _, candidate := range tailscaleSetup.Nodes {
+			if candidate.Name == ref.name && normalizeControlURL(candidate.ControlURL) == normalized {
+				node, found = candidate, true
+				break
+			}
 		}
 	}
-	if pin := tailscalePins[tailscaleNodeKey(tailscaleSetup.ProfileID, name, controlURL)]; pin != nil {
+	if pin := tailscalePins[ref.key(tailscaleSetup.ProfileID)]; pin != nil {
 		found = true
 		if pin.loggedOut != nil {
 			node.LoggedOut = *pin.loggedOut
@@ -233,25 +315,25 @@ func tailscaleEffectiveNodeLocked(name, controlURL string) (TailscaleNodeSetup, 
 	return node, found
 }
 
-func tailscaleEffectiveNode(name, controlURL string) (TailscaleNodeSetup, bool) {
+func tailscaleEffectiveNode(ref tailscaleRef) (TailscaleNodeSetup, bool) {
 	tailscaleMu.Lock()
 	defer tailscaleMu.Unlock()
-	return tailscaleEffectiveNodeLocked(name, controlURL)
+	return tailscaleEffectiveNodeLocked(ref)
 }
 
-func tailscaleLoggedOut(name, controlURL string) bool {
-	node, _ := tailscaleEffectiveNode(name, controlURL)
+func tailscaleLoggedOut(ref tailscaleRef) bool {
+	node, _ := tailscaleEffectiveNode(ref)
 	return node.LoggedOut
 }
 
-func pinTailscale(name, controlURL string, update func(pin *tailscalePin)) {
+func pinTailscale(ref tailscaleRef, update func(pin *tailscalePin)) {
 	tailscaleMu.Lock()
 	defer tailscaleMu.Unlock()
 	var profileID int64
 	if tailscaleSetup != nil {
 		profileID = tailscaleSetup.ProfileID
 	}
-	key := tailscaleNodeKey(profileID, name, controlURL)
+	key := ref.key(profileID)
 	pin := tailscalePins[key]
 	if pin == nil {
 		pin = &tailscalePin{}
@@ -296,7 +378,7 @@ func applyTailscaleOverrides(root *yaml.Node) {
 		}
 		configs[name] = configured
 
-		node, _ := tailscaleEffectiveNode(name, controlURL)
+		node, _ := tailscaleEffectiveNode(tailscaleRef{name: name, controlURL: controlURL})
 		if node.ExitNode == nil && node.AcceptRoutes == nil {
 			continue
 		}
@@ -399,7 +481,7 @@ func tailscaleConfigSourceLocked() string {
 func tailscaleSettings(name, controlURL string) TailscaleSettings {
 	tailscaleMu.Lock()
 	defer tailscaleMu.Unlock()
-	node, _ := tailscaleEffectiveNodeLocked(name, controlURL)
+	node, _ := tailscaleEffectiveNodeLocked(tailscaleRef{name: name, controlURL: controlURL})
 	return tailscaleSettingsOver(node, tailscaleConfigs[name], tailscaleConfigSourceLocked())
 }
 
@@ -475,6 +557,8 @@ func tailscaleStateIdentity(dir string) (bool, error) {
 	return len(profiles) > 0, nil
 }
 
+func tailscaleHomeDir() string { return constant.Path.HomeDir() }
+
 func tailscaleLegacyStateDir() string {
 	return filepath.Join(constant.Path.HomeDir(), tailscaleLegacyDir)
 }
@@ -511,10 +595,15 @@ type TailscaleLegacyMigration struct {
 	ProfileID   int64  `json:"profile-id"`
 	Name        string `json:"name"`
 	ControlURL  string `json:"control-url"`
+	// Set when the login went to a panel-added node, whose name may change.
+	ManagedID string `json:"managed-id,omitempty"`
 }
 
-func (m *TailscaleLegacyMigration) names(profileID int64, name, controlURL string) bool {
-	return m.ProfileID == profileID && m.Name == name && m.ControlURL == normalizeControlURL(controlURL)
+func (m *TailscaleLegacyMigration) names(profileID int64, name, managedID, controlURL string) bool {
+	if m.ProfileID != profileID || m.ControlURL != normalizeControlURL(controlURL) || m.ManagedID != managedID {
+		return false
+	}
+	return managedID != "" || m.Name == name
 }
 
 type tailscaleLoginProfile struct {
@@ -525,8 +614,44 @@ type tailscaleLoginProfile struct {
 		DisplayName string
 	}
 	UserProfile struct {
+		ID          int64
 		LoginName   string
 		DisplayName string
+	}
+}
+
+// The login a node's own state holds, read without starting it; the stable
+// user ID, network and control server tell two accounts apart, never the email.
+type TailscaleAccount struct {
+	UserID      string `json:"user-id"`
+	LoginName   string `json:"login-name"`
+	DisplayName string `json:"display-name"`
+	Tailnet     string `json:"tailnet"`
+	ControlURL  string `json:"control-url"`
+}
+
+func readTailscaleAccount(dir string) *TailscaleAccount {
+	state, err := readTailscaleState(dir)
+	if err != nil {
+		return nil
+	}
+	var profiles map[string]tailscaleLoginProfile
+	if json.Unmarshal(state["_profiles"], &profiles) != nil || len(profiles) == 0 {
+		return nil
+	}
+	profile, ok := profiles[string(state["_current-profile"])]
+	if !ok {
+		return nil
+	}
+	if profile.UserProfile.ID == 0 {
+		return nil
+	}
+	return &TailscaleAccount{
+		UserID:      strconv.FormatInt(profile.UserProfile.ID, 10),
+		LoginName:   profile.UserProfile.LoginName,
+		DisplayName: profile.UserProfile.DisplayName,
+		Tailnet:     cmp.Or(profile.NetworkProfile.DisplayName, profile.NetworkProfile.DomainName),
+		ControlURL:  normalizeControlURL(profile.ControlURL),
 	}
 }
 
