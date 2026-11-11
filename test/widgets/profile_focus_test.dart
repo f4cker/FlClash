@@ -42,6 +42,31 @@ class _RecordingProfilesAction extends ProfilesAction {
   }
 }
 
+class _FakeMountAction extends MountAction {
+  final List<Profile> targets;
+  final List<MountSourceDeletion> results;
+  final deleted = <int>[];
+  final rechecked = <int>[];
+
+  _FakeMountAction(this.targets, [this.results = const []]);
+
+  @override
+  Future<List<Profile>> sourceTargets(int sourceId) async => targets;
+
+  @override
+  Future<({MountSourceDeletion result, TailscaleUnlinkOutcome? unlink})>
+  deleteSource(int sourceId) async {
+    deleted.add(sourceId);
+    return (result: results[deleted.length - 1], unlink: null);
+  }
+
+  @override
+  Future<MountSaveResult> recheck(int targetId) async {
+    rechecked.add(targetId);
+    return const MountSaveResult(outcome: MountSaveOutcome.applied);
+  }
+}
+
 Future<ProviderContainer> pumpProfiles(
   WidgetTester tester, {
   required List<Profile> profiles,
@@ -278,7 +303,10 @@ void main() {
     await pumpProfiles(
       tester,
       profiles: [home],
-      overrides: [profilesActionProvider.overrideWith(() => action)],
+      overrides: [
+        profilesActionProvider.overrideWith(() => action),
+        mountActionProvider.overrideWith(() => _FakeMountAction(const [])),
+      ],
     );
 
     await openProfileMenu(tester, 'Home');
@@ -291,6 +319,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(action.deleted, [home.id]);
+  });
+
+  testWidgets('a mounted source is unmounted from the profiles it names, '
+      'and read again when the result is unknown', (tester) async {
+    final action = _RecordingProfilesAction(const []);
+    final base = Profile.normal(label: 'Base');
+    final air = urlProfile('Air');
+    final mounts = _FakeMountAction(
+      [base],
+      [MountSourceDeletion.unknown, MountSourceDeletion.deleted],
+    );
+    await pumpProfiles(
+      tester,
+      profiles: [base, air],
+      overrides: [
+        profilesActionProvider.overrideWith(() => action),
+        mountActionProvider.overrideWith(() => mounts),
+      ],
+    );
+    final l10n = currentAppLocalizations;
+
+    await openProfileMenu(tester, 'Air');
+    await tester.tap(find.text(l10n.delete));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.mountDeleteSourceTitle), findsOneWidget);
+    expect(find.textContaining('mounted on the following 1 profile'), findsOne);
+    expect(find.textContaining('deleted.\n\nBase'), findsOneWidget);
+    await tester.tap(find.text(l10n.mountDeleteSourceConfirm));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.mountDeleteSourceUnknown), findsOneWidget);
+    await tester.tap(find.text(l10n.mountReadStatus));
+    await tester.pumpAndSettle();
+
+    expect(mounts.rechecked, [base.id]);
+    expect(mounts.deleted, [air.id, air.id]);
+    expect(action.deleted, isEmpty);
   });
 
   group('the selected profile is revealed', () {

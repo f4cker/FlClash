@@ -303,7 +303,7 @@ void main() {
       expect(await action(container).sourceTargets(2), [_target]);
 
       expect(
-        await action(container).deleteSource(2),
+        (await action(container).deleteSource(2)).result,
         MountSourceDeletion.deleted,
       );
       expect((await testDatabase.mountsDao.target(1))!.sourceIds, isEmpty);
@@ -317,7 +317,7 @@ void main() {
       when(() => core.getMountState()).thenThrow(const SocketException('x'));
 
       expect(
-        await action(container).deleteSource(2),
+        (await action(container).deleteSource(2)).result,
         MountSourceDeletion.unknown,
       );
       expect(container.read(profilesProvider).getProfile(2), isNotNull);
@@ -329,7 +329,7 @@ void main() {
         MountSaveOutcome.applied,
       );
       expect(
-        await action(container).deleteSource(2),
+        (await action(container).deleteSource(2)).result,
         MountSourceDeletion.deleted,
       );
       expect(container.read(profilesProvider).getProfile(2), isNull);
@@ -341,7 +341,7 @@ void main() {
       await mountAir(container);
 
       expect(
-        await action(container).deleteSource(2),
+        (await action(container).deleteSource(2)).result,
         MountSourceDeletion.blocked,
       );
       expect(container.read(profilesProvider).getProfile(2), isNotNull);

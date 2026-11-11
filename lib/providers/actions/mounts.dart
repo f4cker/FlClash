@@ -347,16 +347,18 @@ class MountAction extends _$MountAction {
   /// Unmounts [sourceId] from every target, applies the current one, then
   /// deletes the profile. Nothing happens while a target has a record
   /// pending; an apply without a known outcome keeps the profile until
-  /// [recheck] resolves it and the deletion is retried.
-  Future<MountSourceDeletion> deleteSource(int sourceId) {
+  /// [recheck] resolves it and the deletion is retried. [unlink] is the
+  /// Tailscale outcome that kept a profile already unmounted.
+  Future<({MountSourceDeletion result, TailscaleUnlinkOutcome? unlink})>
+  deleteSource(int sourceId) {
     return _scheduler.run(() async {
       final List<MountTargetState> marked;
       try {
         marked = await database.mountsDao.beginSourceRemoval(sourceId);
       } on MountOperationUnresolved {
-        return MountSourceDeletion.blocked;
+        return (result: MountSourceDeletion.blocked, unlink: null);
       } catch (_) {
-        return MountSourceDeletion.unchanged;
+        return (result: MountSourceDeletion.unchanged, unlink: null);
       }
       for (final target in marked) {
         ref.invalidate(setupStateProvider(target.targetId));
@@ -371,15 +373,17 @@ class MountAction extends _$MountAction {
         known &= result.outcome != MountSaveOutcome.unknown;
       }
       if (!known) {
-        return MountSourceDeletion.unknown;
+        return (result: MountSourceDeletion.unknown, unlink: null);
       }
       final outcome = await ref
           .read(profilesActionProvider.notifier)
           .deleteProfile(sourceId);
-      if (outcome != TailscaleUnlinkOutcome.done) {
-        return MountSourceDeletion.keptProfile;
-      }
-      return MountSourceDeletion.deleted;
+      return (
+        result: outcome == TailscaleUnlinkOutcome.done
+            ? MountSourceDeletion.deleted
+            : MountSourceDeletion.keptProfile,
+        unlink: outcome,
+      );
     });
   }
 }

@@ -1344,5 +1344,13 @@
   "tsCancel": "取消",
   "mountApplyKept": "未能应用挂载，仍使用上次确认的运行配置。",
   "mountApplyBlocked": "未能应用挂载，相关连接已拦截。",
-  "mountSourceNoNodeList": "此订阅未提供可挂载的节点列表，请检查订阅格式。"
+  "mountSourceNoNodeList": "此订阅未提供可挂载的节点列表，请检查订阅格式。",
+  "mountDeleteSourceTitle": "删除订阅并解除挂载？",
+  "mountDeleteSourceBody": "“{subscriptionName}”还挂载在以下 {profileCount} 份配置中。删除后，将从这些配置移除此订阅提供的节点，相关连接可能中断。其他订阅、基础配置文件和 Tailscale 登录记录不会删除。",
+  "mountDeleteSourceConfirm": "删除并解除挂载",
+  "mountDeleteSourceProgress": "正在删除并解除挂载…",
+  "mountDeleteSourceDone": "订阅已删除并解除挂载",
+  "mountDeleteSourceUnknown": "订阅删除与解除挂载的结果待确认，请先重新读取状态，确认前请勿重复删除或重新挂载。",
+  "mountDeleteSourceBlocked": "此订阅或受影响配置仍有待确认的操作，请先重新读取状态，确认后再删除。",
+  "mountReadStatus": "重新读取状态"
 }

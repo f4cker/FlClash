@@ -279,6 +279,7 @@ class ProfileItem extends ConsumerWidget {
 
   Future<void> _handleDeleteProfile(BuildContext context, WidgetRef ref) async {
     final profilesAction = ref.read(profilesActionProvider.notifier);
+    final mounts = ref.read(mountActionProvider.notifier);
     final appLocalizations = context.appLocalizations;
     final tailscale = ref.read(tailscaleActionProvider.notifier);
     if (tailscale.hasPendingManaged(profile.id)) {
@@ -292,6 +293,25 @@ class ProfileItem extends ConsumerWidget {
         .read(tailscaleManagedRecordsProvider.notifier)
         .ofProfile(profile.id)
         .length;
+    final List<Profile> targets;
+    try {
+      targets = await mounts.sourceTargets(profile.id);
+    } catch (_) {
+      dialogs.showBanner(
+        appLocalizations.mountDeleteSourceBlocked,
+        level: BannerLevel.error,
+      );
+      return;
+    }
+    if (targets.isNotEmpty) {
+      return _deleteMountedSource(
+        profilesAction,
+        mounts,
+        tailscale,
+        targets,
+        managed,
+      );
+    }
     final users = await profilesAction.providerUsers(profile);
     final res = await dialogs.showMessage(
       title: appLocalizations.tip,
@@ -312,7 +332,93 @@ class ProfileItem extends ConsumerWidget {
     if (res != true) {
       return;
     }
-    var outcome = await profilesAction.deleteProfile(profile.id);
+    await _followUnlink(profilesAction, tailscale, () {
+      return profilesAction.deleteProfile(profile.id);
+    });
+  }
+
+  /// A mounted source is unmounted from [targets] before it is deleted.
+  Future<void> _deleteMountedSource(
+    ProfilesAction profilesAction,
+    MountAction mounts,
+    TailscaleAction tailscale,
+    List<Profile> targets,
+    int managed,
+  ) async {
+    var appLocalizations = currentAppLocalizations;
+    final res = await dialogs.showMessage(
+      title: appLocalizations.mountDeleteSourceTitle,
+      message: TextSpan(
+        text: [
+          appLocalizations.mountDeleteSourceBody(
+            profile.realLabel,
+            targets.length,
+          ),
+          targets.map((item) => item.realLabel).join('\n'),
+          if (managed > 0) appLocalizations.tsDeleteProfileManaged(managed),
+        ].join('\n\n'),
+      ),
+      cancelText: appLocalizations.cancel,
+      destructive: true,
+      confirmText: appLocalizations.mountDeleteSourceConfirm,
+    );
+    if (res != true) {
+      return;
+    }
+    dialogs.showBanner(appLocalizations.mountDeleteSourceProgress);
+    var deletion = await mounts.deleteSource(profile.id);
+    while (deletion.result == MountSourceDeletion.unknown) {
+      appLocalizations = currentAppLocalizations;
+      final again = await dialogs.showMessage(
+        title: appLocalizations.tip,
+        message: TextSpan(text: appLocalizations.mountDeleteSourceUnknown),
+        confirmText: appLocalizations.mountReadStatus,
+      );
+      if (again != true) {
+        return;
+      }
+      var resolved = true;
+      for (final target in targets) {
+        final result = await mounts.recheck(target.id);
+        resolved &= result.outcome != MountSaveOutcome.unknown;
+      }
+      if (resolved) {
+        deletion = await mounts.deleteSource(profile.id);
+      }
+    }
+    appLocalizations = currentAppLocalizations;
+    switch (deletion) {
+      case (result: MountSourceDeletion.deleted, unlink: _):
+        dialogs.showBanner(
+          appLocalizations.mountDeleteSourceDone,
+          level: BannerLevel.success,
+        );
+      case (result: MountSourceDeletion.keptProfile, :final unlink?):
+        await _followUnlink(profilesAction, tailscale, () async => unlink);
+      default:
+        dialogs.showBanner(
+          appLocalizations.mountDeleteSourceBlocked,
+          level: BannerLevel.error,
+        );
+    }
+  }
+
+  /// Walks the user through a Tailscale unlink that did not finish.
+  Future<void> _followUnlink(
+    ProfilesAction profilesAction,
+    TailscaleAction tailscale,
+    Future<TailscaleUnlinkOutcome> Function() delete,
+  ) async {
+    TailscaleUnlinkOutcome outcome;
+    try {
+      outcome = await delete();
+    } on MountSourceInUse {
+      dialogs.showBanner(
+        currentAppLocalizations.mountDeleteSourceBlocked,
+        level: BannerLevel.error,
+      );
+      return;
+    }
     while (true) {
       final appLocalizations = currentAppLocalizations;
       final (message, action) = switch (outcome) {
@@ -349,9 +455,17 @@ class ProfileItem extends ConsumerWidget {
       if (again != true) {
         return;
       }
-      outcome = outcome == TailscaleUnlinkOutcome.failed
-          ? await profilesAction.deleteProfile(profile.id)
-          : await tailscale.recheckUnlink(profile.id, open: outcome);
+      try {
+        outcome = outcome == TailscaleUnlinkOutcome.failed
+            ? await profilesAction.deleteProfile(profile.id)
+            : await tailscale.recheckUnlink(profile.id, open: outcome);
+      } on MountSourceInUse {
+        dialogs.showBanner(
+          currentAppLocalizations.mountDeleteSourceBlocked,
+          level: BannerLevel.error,
+        );
+        return;
+      }
     }
   }
 

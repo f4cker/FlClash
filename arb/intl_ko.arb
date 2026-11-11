@@ -1344,5 +1344,13 @@
   "tsCancel": "Cancel",
   "mountApplyKept": "Mounts could not be applied. The last confirmed running profile is still in use.",
   "mountApplyBlocked": "Mounts could not be applied. Affected connections are blocked.",
-  "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format."
+  "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format.",
+  "mountDeleteSourceTitle": "Delete subscription and unmount?",
+  "mountDeleteSourceBody": "“{subscriptionName}” is mounted on the following {profileCount, plural, =1{1 profile} other{{profileCount} profiles}}. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.",
+  "mountDeleteSourceConfirm": "Delete and unmount",
+  "mountDeleteSourceProgress": "Deleting and unmounting…",
+  "mountDeleteSourceDone": "Subscription deleted and unmounted",
+  "mountDeleteSourceUnknown": "Subscription deletion and unmounting are unconfirmed. Read the status again before deleting or mounting again.",
+  "mountDeleteSourceBlocked": "This subscription or an affected profile has unconfirmed operations. Read the status again before deleting.",
+  "mountReadStatus": "Read status again"
 }

@@ -11634,6 +11634,86 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Delete subscription and unmount?`
+  String get mountDeleteSourceTitle {
+    return Intl.message(
+      'Delete subscription and unmount?',
+      name: 'mountDeleteSourceTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `“{subscriptionName}” is mounted on the following {profileCount, plural, =1{1 profile} other{{profileCount} profiles}}. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.`
+  String mountDeleteSourceBody(Object subscriptionName, num profileCount) {
+    return Intl.message(
+      '“$subscriptionName” is mounted on the following ${Intl.plural(profileCount, one: '1 profile', other: '$profileCount profiles')}. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.',
+      name: 'mountDeleteSourceBody',
+      desc: '',
+      args: [subscriptionName, profileCount],
+    );
+  }
+
+  /// `Delete and unmount`
+  String get mountDeleteSourceConfirm {
+    return Intl.message(
+      'Delete and unmount',
+      name: 'mountDeleteSourceConfirm',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Deleting and unmounting…`
+  String get mountDeleteSourceProgress {
+    return Intl.message(
+      'Deleting and unmounting…',
+      name: 'mountDeleteSourceProgress',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subscription deleted and unmounted`
+  String get mountDeleteSourceDone {
+    return Intl.message(
+      'Subscription deleted and unmounted',
+      name: 'mountDeleteSourceDone',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subscription deletion and unmounting are unconfirmed. Read the status again before deleting or mounting again.`
+  String get mountDeleteSourceUnknown {
+    return Intl.message(
+      'Subscription deletion and unmounting are unconfirmed. Read the status again before deleting or mounting again.',
+      name: 'mountDeleteSourceUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This subscription or an affected profile has unconfirmed operations. Read the status again before deleting.`
+  String get mountDeleteSourceBlocked {
+    return Intl.message(
+      'This subscription or an affected profile has unconfirmed operations. Read the status again before deleting.',
+      name: 'mountDeleteSourceBlocked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Read status again`
+  String get mountReadStatus {
+    return Intl.message(
+      'Read status again',
+      name: 'mountReadStatus',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {
