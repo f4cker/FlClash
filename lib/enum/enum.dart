@@ -223,6 +223,7 @@ enum TailscaleSettingSource {
   override,
   profile,
   subscription,
+  provider,
   @JsonValue('default')
   coreDefault,
 }

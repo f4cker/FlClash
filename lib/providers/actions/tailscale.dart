@@ -68,7 +68,7 @@ class TailscaleAction extends _$TailscaleAction {
     if (!node.overridable) {
       return const TailscaleSetPrefsResult(
         outcome: TailscaleSetPrefsOutcome.failed,
-        error: TailscaleError(code: 'tailscale_not_overridable'),
+        error: TailscaleError(code: 'tailscale_override_ambiguous'),
       );
     }
     final previous = _records.recordOf(node.key);
@@ -103,7 +103,7 @@ class TailscaleAction extends _$TailscaleAction {
       );
     } on CoreMethodException catch (error) {
       final cause = TailscaleError(code: error.code, message: error.message);
-      if (error.code == 'tailscale_not_overridable') {
+      if (error.code == 'tailscale_override_ambiguous') {
         await _records.modify(node.key, (_) => previous);
         return TailscaleSetPrefsResult(
           outcome: TailscaleSetPrefsOutcome.failed,

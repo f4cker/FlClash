@@ -2310,6 +2310,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsFromProfile": MessageLookupByLibrary.simpleMessage(
       "From current profile",
     ),
+    "tsFromProvider": MessageLookupByLibrary.simpleMessage(
+      "From proxy provider",
+    ),
     "tsFromSubscription": MessageLookupByLibrary.simpleMessage(
       "From subscription",
     ),
@@ -2466,9 +2469,6 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNodesInProfile": MessageLookupByLibrary.simpleMessage(
       "Tailscale nodes in the current profile",
     ),
-    "tsNotOverridable": MessageLookupByLibrary.simpleMessage(
-      "This node comes from a proxy provider; its settings can\'t be changed here.",
-    ),
     "tsOff": MessageLookupByLibrary.simpleMessage("Off"),
     "tsOffline": MessageLookupByLibrary.simpleMessage("Offline"),
     "tsOfflineNotSelectable": MessageLookupByLibrary.simpleMessage(
@@ -2476,6 +2476,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tsOn": MessageLookupByLibrary.simpleMessage("On"),
     "tsOnline": MessageLookupByLibrary.simpleMessage("Online"),
+    "tsOverrideAmbiguous": MessageLookupByLibrary.simpleMessage(
+      "Another node in this profile has the same name and control server, so it\'s unclear which one to change. Give them different names in the profile.",
+    ),
     "tsOverrideTip": MessageLookupByLibrary.simpleMessage(
       "Settings saved here take priority over the same settings in the profile and never change the subscription file.",
     ),

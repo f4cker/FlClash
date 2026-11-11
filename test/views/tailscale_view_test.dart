@@ -496,7 +496,7 @@ void main() {
         ),
       ).thenThrow(
         const CoreMethodException(
-          code: 'tailscale_not_overridable',
+          code: 'tailscale_override_ambiguous',
           message: 'locked',
         ),
       );
@@ -513,6 +513,41 @@ void main() {
       ).called(1);
       expect(find.text('子网路由设置未更改，请重试。'), findsOneWidget);
       expect(find.text('重试'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('a provider node says where its setting comes from', (
+      tester,
+    ) async {
+      final node = tsConnectedNode.copyWith(
+        settings: const TailscaleSettings(
+          acceptRoutes: TailscaleAcceptRoutesSetting(
+            value: true,
+            source: TailscaleSettingSource.provider,
+          ),
+        ),
+      );
+      serve([node], tsConnectedStatus(node: node));
+      await pumpPanel(tester);
+
+      expect(find.text('来自代理集合'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('a name shared with another source locks both settings', (
+      tester,
+    ) async {
+      final node = tsConnectedNode.copyWith(overridable: false);
+      serve([node], tsConnectedStatus(node: node));
+      await pumpPanel(tester);
+
+      expect(
+        find.text('当前配置中另有同名节点使用同一控制服务器，无法确定要更改哪一个。请在配置中为它们使用不同名称。'),
+        findsNWidgets(2),
+      );
+      await tester.tap(find.text('接受子网路由'));
+      await settle(tester);
+      expect(find.text('停止接受子网路由？'), findsNothing);
       await teardownView(tester);
     });
 

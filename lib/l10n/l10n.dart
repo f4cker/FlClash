@@ -10083,6 +10083,16 @@ class AppLocalizations {
     );
   }
 
+  /// `From proxy provider`
+  String get tsFromProvider {
+    return Intl.message(
+      'From proxy provider',
+      name: 'tsFromProvider',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Set on this Mac`
   String get tsFromLocal {
     return Intl.message(
@@ -10093,21 +10103,21 @@ class AppLocalizations {
     );
   }
 
-  /// `Settings saved here take priority over the same settings in the profile and never change the subscription file.`
-  String get tsOverrideTip {
+  /// `Another node in this profile has the same name and control server, so it's unclear which one to change. Give them different names in the profile.`
+  String get tsOverrideAmbiguous {
     return Intl.message(
-      'Settings saved here take priority over the same settings in the profile and never change the subscription file.',
-      name: 'tsOverrideTip',
+      'Another node in this profile has the same name and control server, so it\'s unclear which one to change. Give them different names in the profile.',
+      name: 'tsOverrideAmbiguous',
       desc: '',
       args: [],
     );
   }
 
-  /// `This node comes from a proxy provider; its settings can't be changed here.`
-  String get tsNotOverridable {
+  /// `Settings saved here take priority over the same settings in the profile and never change the subscription file.`
+  String get tsOverrideTip {
     return Intl.message(
-      'This node comes from a proxy provider; its settings can\'t be changed here.',
-      name: 'tsNotOverridable',
+      'Settings saved here take priority over the same settings in the profile and never change the subscription file.',
+      name: 'tsOverrideTip',
       desc: '',
       args: [],
     );

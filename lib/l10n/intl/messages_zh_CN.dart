@@ -1696,6 +1696,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsFilterEmpty": MessageLookupByLibrary.simpleMessage("没有符合当前筛选条件的设备"),
     "tsFromLocal": MessageLookupByLibrary.simpleMessage("本机设置"),
     "tsFromProfile": MessageLookupByLibrary.simpleMessage("来自当前配置"),
+    "tsFromProvider": MessageLookupByLibrary.simpleMessage("来自代理集合"),
     "tsFromSubscription": MessageLookupByLibrary.simpleMessage("来自订阅"),
     "tsGoToProfiles": MessageLookupByLibrary.simpleMessage("前往配置"),
     "tsGoToRules": MessageLookupByLibrary.simpleMessage("前往规则"),
@@ -1828,14 +1829,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNodesInProfile": MessageLookupByLibrary.simpleMessage(
       "当前配置中的 Tailscale 节点",
     ),
-    "tsNotOverridable": MessageLookupByLibrary.simpleMessage(
-      "此节点来自代理集合，暂不支持在此更改设置。",
-    ),
     "tsOff": MessageLookupByLibrary.simpleMessage("已关闭"),
     "tsOffline": MessageLookupByLibrary.simpleMessage("离线"),
     "tsOfflineNotSelectable": MessageLookupByLibrary.simpleMessage("离线，不可选"),
     "tsOn": MessageLookupByLibrary.simpleMessage("已开启"),
     "tsOnline": MessageLookupByLibrary.simpleMessage("在线"),
+    "tsOverrideAmbiguous": MessageLookupByLibrary.simpleMessage(
+      "当前配置中另有同名节点使用同一控制服务器，无法确定要更改哪一个。请在配置中为它们使用不同名称。",
+    ),
     "tsOverrideTip": MessageLookupByLibrary.simpleMessage(
       "此处保存的设置优先于当前配置中的同名设置，不会修改订阅文件。",
     ),

@@ -39,6 +39,7 @@ const _$TailscaleSettingSourceEnumMap = {
   TailscaleSettingSource.override: 'override',
   TailscaleSettingSource.profile: 'profile',
   TailscaleSettingSource.subscription: 'subscription',
+  TailscaleSettingSource.provider: 'provider',
   TailscaleSettingSource.coreDefault: 'default',
 };
 

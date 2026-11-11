@@ -18,7 +18,7 @@ String? tailscaleSettingsLock(
 }) {
   final appLocalizations = context.appLocalizations;
   if (phase == TailscalePhase.connected) {
-    return node.overridable ? null : appLocalizations.tsNotOverridable;
+    return node.overridable ? null : appLocalizations.tsOverrideAmbiguous;
   }
   return switch (phase) {
     TailscalePhase.signedOut ||
@@ -37,6 +37,7 @@ String? tailscaleSourceLabel(
   return switch (source) {
     TailscaleSettingSource.subscription => appLocalizations.tsFromSubscription,
     TailscaleSettingSource.profile => appLocalizations.tsFromProfile,
+    TailscaleSettingSource.provider => appLocalizations.tsFromProvider,
     TailscaleSettingSource.override => appLocalizations.tsFromLocal,
     TailscaleSettingSource.coreDefault => null,
   };

@@ -204,6 +204,7 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
         'outcome': 'failed',
         'target-untouched': true,
         'archive-intact': false,
+        'stage': 'claim',
         'error': {'code': 'tailscale_migrate_failed', 'message': 'x'},
       },
       CoreMethod.routeWatch => {'core-epoch': 1, 'route-version': 0},
@@ -273,7 +274,7 @@ const _tailscaleNode = {
   'overridable': true,
   'settings': {
     'exit-node': {'value': '100.64.0.2', 'source': 'override'},
-    'accept-routes': {'value': true, 'source': 'subscription'},
+    'accept-routes': {'value': true, 'source': 'provider'},
   },
   'warnings': ['legacy-shared-state-present'],
   'legacy': {
@@ -426,7 +427,7 @@ void main() {
     );
     expect(
       nodes.single.settings.acceptRoutes.source,
-      TailscaleSettingSource.subscription,
+      TailscaleSettingSource.provider,
     );
     for (final method in [
       CoreMethod.tailscaleStatus,
@@ -463,6 +464,7 @@ void main() {
     expect(migrated.outcome, TailscaleMigrateOutcome.failed);
     expect(migrated.targetUntouched, isTrue);
     expect(migrated.archiveIntact, isFalse);
+    expect(migrated.stage, TailscaleMigrateStage.claim);
     expect(migrated.error?.code, 'tailscale_migrate_failed');
     expect(
       migrated.migration,

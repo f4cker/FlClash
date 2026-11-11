@@ -173,7 +173,7 @@ void main() {
       ),
     ).thenThrow(
       const CoreMethodException(
-        code: 'tailscale_not_overridable',
+        code: 'tailscale_override_ambiguous',
         message: 'provider',
       ),
     );
@@ -185,7 +185,7 @@ void main() {
 
     expect(rejected.outcome, TailscaleSetPrefsOutcome.failed);
     expect(raced.outcome, TailscaleSetPrefsOutcome.failed);
-    expect(raced.error?.code, 'tailscale_not_overridable');
+    expect(raced.error?.code, 'tailscale_override_ambiguous');
     expect(records(container), isEmpty);
     verify(() => core.setTailscalePrefs(any(), exitNode: 'x')).called(1);
   });

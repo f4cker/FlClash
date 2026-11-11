@@ -312,7 +312,7 @@ void main() {
     ).thenAnswer((invocation) async {
       if (invocation.namedArguments[#acceptRoutes] != null) {
         throw const CoreMethodException(
-          code: 'tailscale_not_overridable',
+          code: 'tailscale_override_ambiguous',
           message: 'locked',
         );
       }
