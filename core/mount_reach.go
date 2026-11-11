@@ -162,11 +162,15 @@ func (b *mountBase) readDNS(node *yaml.Node) {
 		}
 	}
 	for _, server := range servers {
-		for _, part := range strings.Split(dnsFragment(server), "&") {
-			if part = strings.TrimSpace(part); part != "" && !strings.Contains(part, "=") {
+		// mihomo looks the part up as it is; the trimmed one is kept too.
+		for _, raw := range strings.Split(dnsFragment(server), "&") {
+			if raw == "" || strings.Contains(raw, "=") {
+				continue
+			}
+			for _, part := range slices.Compact([]string{raw, strings.TrimSpace(raw)}) {
 				if part == "RULES" {
 					b.dnsRules = true
-				} else {
+				} else if part != "" {
 					b.dnsProxies = append(b.dnsProxies, part)
 				}
 			}

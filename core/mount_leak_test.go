@@ -136,11 +136,28 @@ dns:
 	if reasons := groupReasons(t, rootOf(t, base)); reasons["节点选择"] != "excluded/dns" || reasons["Main"] != "candidate/" {
 		t.Errorf("reasons = %v, want 节点选择 excluded for DNS and Main a candidate", reasons)
 	}
+	const spaced = `proxies:
+  - {name: hk, type: socks5, server: 127.0.0.9, port: 1080}
+proxy-groups:
+  - {name: " G", type: select, proxies: [hk]}
+  - {name: G, type: select, proxies: [hk]}
+  - {name: Main, type: select, proxies: [hk]}
+rules:
+  - MATCH,Main
+dns:
+`
+	for _, nameserver := range []string{"'1.1.1.1#%20G'", "'1.1.1.1# G'", "'tls://1.1.1.1#%20G&h3=true'"} {
+		reasons := groupReasons(t, rootOf(t, spaced+"  nameserver: ["+nameserver+"]\n"))
+		if reasons[" G"] != "excluded/dns" || reasons["Main"] != "candidate/" {
+			t.Errorf("%s: reasons = %v, want \" G\" excluded for DNS and Main a candidate", nameserver, reasons)
+		}
+	}
 	for server, want := range map[string]string{
 		"https://1.1.1.1/dns-query#%E8%8A%82%E7%82%B9%E9%80%89%E6%8B%A9": "节点选择",
-		"tls://1.1.1.1#Free&h3=true":                                    "Free&h3=true",
-		"1.1.1.1#A%20B":                                                 "A B",
-		"1.1.1.1":                                                       "",
+		"tls://1.1.1.1#Free&h3=true":                                     "Free&h3=true",
+		"1.1.1.1#A%20B":                                                  "A B",
+		"1.1.1.1#%20G":                                                   " G",
+		"1.1.1.1":                                                        "",
 	} {
 		if got := dnsFragment(server); got != want {
 			t.Errorf("dnsFragment(%q) = %q, want %q", server, got, want)
@@ -163,14 +180,16 @@ func TestMountSourceExcludesNodesWithUncheckedEndpoints(t *testing.T) {
   - {name: wg, type: wireguard, server: 192.0.2.1, port: 51820, private-key: zC6Kbw8IgU2If+FmAXfCxeTVpa4Ue9i6nLgEJq8Mtrs=, public-key: x7sR/MNsxJyOT0M84m1UYlOgFTPnUfdA9afSqzFJAFA=, ip: 10.0.0.2, udp: true}
   - {name: dl, type: vless, server: 203.0.113.5, port: 443, uuid: 4d1e2f6a-0f5c-4b3e-9f7a-2c1d0e9b8a71, network: xhttp, xhttp-opts: {path: /x, Download_Settings: {server: 100.101.1.1, path: /admin/x, headers: {X-A: b}}}}
   - {name: realm, type: hysteria2, server: 203.0.113.6, port: 443, password: synthetic, realm_opts: {enable: true, server-url: "http://100.101.1.1/r"}}
+  - {name: dl2, type: vless, server: 203.0.113.5, port: 443, uuid: 4d1e2f6a-0f5c-4b3e-9f7a-2c1d0e9b8a71, network: xhttp, xhttp-opts: {path: /x, 1: one, download-settings: {server: 100.101.1.2}}}
+  - {name: realm2, type: hysteria2, server: 203.0.113.6, port: 443, password: synthetic, realm-opts: {enable: "true", server-url: "http://100.101.1.1/r"}}
   - {name: xh, type: vless, server: 203.0.113.5, port: 443, uuid: 4d1e2f6a-0f5c-4b3e-9f7a-2c1d0e9b8a71, network: xhttp, xhttp-opts: {path: /x}}
   - {name: hy, type: hysteria2, server: 203.0.113.6, port: 443, password: synthetic, realm-opts: {enable: false, server-url: "http://100.101.1.1/r"}}
   - {name: plain, type: socks5, server: 192.0.2.1, port: 2}
 `)
 	kept := []string{"wg", "xh", "hy", "plain"}
 	got := handleInspectMountSource(MountInspectSourceParams{Path: source})
-	if got.Status != mountSourceNodes || got.Count != 4 || got.RelayExcluded != 7 || got.Listed != 11 || !reflect.DeepEqual(got.names, kept) {
-		t.Errorf("inspection = %+v, want %v kept, seven relay-excluded", got, kept)
+	if got.Status != mountSourceNodes || got.Count != 4 || got.RelayExcluded != 9 || got.Listed != 13 || !reflect.DeepEqual(got.names, kept) {
+		t.Errorf("inspection = %+v, want %v kept, nine relay-excluded", got, kept)
 	}
 	const profile = `proxy-groups:
   - {name: Auto, type: url-test, include-all-providers: true}
@@ -181,8 +200,8 @@ rules:
 	if !reflect.DeepEqual(members["Auto"], kept) {
 		t.Errorf("Auto = %v, want only %v", members["Auto"], kept)
 	}
-	if source := report.Sources[0]; source.RelayExcluded != 7 || len(source.Nodes) != 4 {
-		t.Errorf("report = %+v, want seven relay-excluded and four nodes", source)
+	if source := report.Sources[0]; source.RelayExcluded != 9 || len(source.Nodes) != 4 {
+		t.Errorf("report = %+v, want nine relay-excluded and four nodes", source)
 	}
 }
 
