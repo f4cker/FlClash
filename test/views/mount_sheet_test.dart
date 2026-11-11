@@ -1110,6 +1110,41 @@ void main() {
     expect(find.text(l10n.mountNoGroupIsolatedTitle), findsNothing);
   });
 
+  /// The Blocked lock: controls faded and inert, only a status read offered,
+  /// the stored relation still shown.
+  void expectBlockedLock(WidgetTester tester) {
+    final l10n = currentAppLocalizations;
+    expect(find.text(l10n.mountSave), findsNothing);
+    expect(find.widgetWithText(TonalButton, l10n.close), findsOneWidget);
+    expect(
+      find.widgetWithText(FilledButton, l10n.mountReadStatus),
+      findsOneWidget,
+    );
+    final rows = find.ancestor(
+      of: rowOf('Air').first,
+      matching: find.byType(IgnorePointer),
+    );
+    expect(
+      tester.widgetList<IgnorePointer>(rows).any((widget) => widget.ignoring),
+      isTrue,
+    );
+    expect(
+      tester
+          .widgetList<Opacity>(
+            find.ancestor(of: rowOf('Air'), matching: find.byType(Opacity)),
+          )
+          .any((widget) => widget.opacity < 1),
+      isTrue,
+    );
+    expect(
+      find.descendant(
+        of: rowOf('Air'),
+        matching: find.text(l10n.mountMountedTag),
+      ),
+      findsOneWidget,
+    );
+  }
+
   Future<FakeMounts> refreshWith(
     WidgetTester tester,
     MountSourceRefresh result,
@@ -1173,7 +1208,7 @@ void main() {
   });
 
   testWidgets('nodes read while every connection is rejected say so and '
-      'offer a status read', (tester) async {
+      'lock the sheet until a status read', (tester) async {
     final mounts = await refreshWith(
       tester,
       MountSourceRefresh(
@@ -1199,14 +1234,105 @@ void main() {
       matching: find.byType(MountBanner),
     );
     expect(banner, findsOneWidget);
-    final read = find.descendant(
-      of: banner,
-      matching: find.text(l10n.mountReadStatus),
+    expect(
+      find.descendant(of: banner, matching: find.text(l10n.mountReadStatus)),
+      findsNothing,
     );
-    expect(read, findsOneWidget);
-    await tester.tap(read);
+    expectBlockedLock(tester);
+
+    await tester.tap(find.text(l10n.mountReadStatus));
     await tester.pumpAndSettle();
     expect(mounts.rechecks, 1);
+    expectBlockedLock(tester);
+
+    mounts.recheckOutcome = MountSaveOutcome.applyFailedBlocked;
+    await tester.tap(find.text(l10n.mountReadStatus));
+    await tester.pumpAndSettle();
+    expect(mounts.rechecks, 2);
+    expect(find.text(l10n.mountApplyBlocked), findsOneWidget);
+    expect(find.text(l10n.mountSave), findsOneWidget);
+    expect(find.text(l10n.mountReadStatus), findsNothing);
+  });
+
+  testWidgets('a blocked save locks the sheet, keeps the mounted tags and '
+      'never says a failed source is in use', (tester) async {
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [
+                item(air, mounted: true, failure: MountSourceFailure.fetch),
+                item(sea),
+              ],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id],
+                version: 1,
+              ),
+              groups: MountTarget(
+                groups: [groupInfo('A', kind: MountGroupKind.auto)],
+              ),
+            ),
+          )
+          ..saveResult = const MountSaveResult(
+            outcome: MountSaveOutcome.applyFailedBlocked,
+          );
+    await pumpSheet(tester, mounts, profiles: [air, sea]);
+    final l10n = currentAppLocalizations;
+    final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
+    Finder inRow(String name, Finder matching) =>
+        find.descendant(of: rowOf(name), matching: matching);
+
+    expect(inRow('Air', find.text(l10n.mountUpdateFailedInUse)), findsOne);
+    await tester.tap(find.text('Sea'));
+    await tester.pump();
+    await tester.tap(find.text(l10n.mountSave));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.mountApplyBlocked), findsOneWidget);
+    expectBlockedLock(tester);
+    expect(inRow('Air', find.text(l10n.mountUpdateFailedInUse)), findsNothing);
+    final line = tester.widget<Text>(
+      inRow('Air', find.text(l10n.mountUpdateFailedKeptBlocked)),
+    );
+    expect(line.style?.color, colorScheme.error);
+  });
+
+  testWidgets('a failed source is in use only while the running config is '
+      'confirmed', (tester) async {
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [
+                item(air, mounted: true, failure: MountSourceFailure.fetch),
+                item(sea),
+              ],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id],
+                version: 1,
+              ),
+              groups: MountTarget(
+                groups: [groupInfo('A', kind: MountGroupKind.auto)],
+              ),
+            ),
+          )
+          ..saveResult = const MountSaveResult(
+            outcome: MountSaveOutcome.applyFailedKept,
+          );
+    await pumpSheet(tester, mounts, profiles: [air, sea]);
+    final l10n = currentAppLocalizations;
+    Finder inRow(String name, Finder matching) =>
+        find.descendant(of: rowOf(name), matching: matching);
+
+    await tester.tap(find.text('Sea'));
+    await tester.pump();
+    await tester.tap(find.text(l10n.mountSave));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.mountApplyKept), findsOneWidget);
+    expect(inRow('Air', find.text(l10n.mountMountedTag)), findsOne);
+    expect(inRow('Air', find.text(l10n.mountUpdateFailedInUse)), findsNothing);
+    expect(inRow('Air', find.text(l10n.mountUpdateFailedKept)), findsOne);
   });
 
   testWidgets('an empty list read but not applied is not the legal empty '

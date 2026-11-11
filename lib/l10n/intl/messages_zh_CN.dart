@@ -1392,6 +1392,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountUpdateFailedKept": MessageLookupByLibrary.simpleMessage(
       "更新失败，已保留上次成功获取的节点，尚未确认当前是否生效。",
     ),
+    "mountUpdateFailedKeptBlocked": MessageLookupByLibrary.simpleMessage(
+      "更新失败，已保留上次成功获取的节点。",
+    ),
     "mountUpdateNodes": MessageLookupByLibrary.simpleMessage("更新节点"),
     "mountUpdateNodesOf": m87,
     "mountUpdateReadEmptyNotApplied": MessageLookupByLibrary.simpleMessage(

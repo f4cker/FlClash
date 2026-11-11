@@ -1224,10 +1224,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Сертификат установлен",
     ),
-    "installedAppsPermissionDeniedMessage":
-        MessageLookupByLibrary.simpleMessage(
-          "Разрешение на список приложений отклонено, поэтому установленные приложения недоступны. Предоставьте его вручную в системных настройках.",
-        ),
+    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
+      "Разрешение на список приложений отклонено, поэтому установленные приложения недоступны. Предоставьте его вручную в системных настройках.",
+    ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "Эта система не выдаёт список установленных приложений без разрешения. Предоставьте его, чтобы настроить прокси для отдельных приложений.",
     ),
@@ -1853,6 +1852,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "mountUpdateFailedKept": MessageLookupByLibrary.simpleMessage(
       "Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.",
+    ),
+    "mountUpdateFailedKeptBlocked": MessageLookupByLibrary.simpleMessage(
+      "Update failed. The last successfully fetched nodes were kept.",
     ),
     "mountUpdateNodes": MessageLookupByLibrary.simpleMessage("Update nodes"),
     "mountUpdateNodesOf": m87,

@@ -46,6 +46,8 @@ enum _Result {
 
 enum MountGroupCase { auto, pick, none, failed }
 
+enum MountRunState { confirmed, unconfirmed, blocked }
+
 /// An update read but refused: [kept] runs the last confirmed profile.
 enum MountRefreshRefusal { kept, blocked }
 
@@ -98,6 +100,9 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   bool _removal = false;
   bool _rechecking = false;
   _Result? _result;
+
+  /// A block the sheet saw happen locks it until one readback confirms it.
+  bool _blockUnread = false;
 
   /// Keys the footer's primary button: a press replaces it, so a pressed
   /// button is never disabled in place, even when no frame passes between.
@@ -189,7 +194,9 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     }
   }
 
-  bool get _locked => _result == _Result.unknown;
+  bool get _locked =>
+      _result == _Result.unknown ||
+      _result == _Result.applyBlocked && _blockUnread;
 
   MountGroupCase get _groupCase => mountGroupCaseOf(_panel?.groups);
 
@@ -347,6 +354,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     setState(() {
       _saving = false;
       _result = _resultOf(result.outcome);
+      _blockUnread = _result == _Result.applyBlocked;
       _lost = result.lostSelections;
       if (result.outcome == MountSaveOutcome.applied) {
         _refused.clear();
@@ -395,6 +403,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
         _refused.clear();
       }
       if (result.outcome != MountSaveOutcome.unknown) {
+        _blockUnread = false;
         _result = switch (result.outcome) {
           MountSaveOutcome.applied || MountSaveOutcome.saved => null,
           final outcome => _resultOf(outcome),
@@ -430,6 +439,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       }
       if (_refused[sourceId] == MountRefreshRefusal.blocked) {
         _result = _Result.applyBlocked;
+        _blockUnread = true;
       }
       if (result.application != null) {
         _lost = result.lostSelections;
@@ -647,13 +657,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       return MountBanner(
         lines: [text],
         level: info ? MountBannerLevel.info : MountBannerLevel.error,
-        action: _result == _Result.applyBlocked
-            ? TonalButton(
-                size: TonalButtonSize.compact,
-                label: appLocalizations.mountReadStatus,
-                onPressed: _rechecking ? null : _recheck,
-              )
-            : null,
       );
     }
     final notices = [
@@ -701,16 +704,16 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     final colorScheme = context.colorScheme;
     final banner = _buildBanner(context, panel);
     final interactive = !_saving && !_locked;
-    final confirmed =
-        panel.stored?.pending == null &&
-        switch (_result) {
-          _Result.savedUnconfirmed ||
-          _Result.applyFailed ||
-          _Result.applyKept ||
-          _Result.applyBlocked ||
-          _Result.unknown => false,
-          _ => true,
-        };
+    final settled = panel.stored?.pending == null;
+    final confirmed = settled && _result != _Result.unknown;
+    final run = switch (_result) {
+      _Result.applyBlocked => MountRunState.blocked,
+      null ||
+      _Result.unchanged ||
+      _Result.groupsChanged ||
+      _Result.needsGroup when settled => MountRunState.confirmed,
+      _ => MountRunState.unconfirmed,
+    };
     final controls = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 12,
@@ -724,6 +727,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
             refreshing: _refreshing.contains(item.profile.id),
             refreshUnconfirmed: _refreshUnconfirmed.contains(item.profile.id),
             refusal: _refused[item.profile.id],
+            run: run,
             onChanged: interactive
                 ? (value) => _toggleSource(item, value)
                 : null,
@@ -960,13 +964,11 @@ class MountBanner extends StatelessWidget {
     required this.level,
     required this.lines,
     this.title,
-    this.action,
   });
 
   final MountBannerLevel level;
   final List<String> lines;
   final String? title;
-  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -1021,11 +1023,6 @@ class MountBanner extends StatelessWidget {
                             .copyWith(color: foreground),
                       ),
                     for (final line in lines) Text(line, style: style),
-                    if (action case final action?)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: action,
-                      ),
                   ],
                 ),
               ),
@@ -1377,6 +1374,7 @@ class MountSourceRow extends StatelessWidget {
     required this.onChanged,
     required this.onRefresh,
     this.refusal,
+    this.run = MountRunState.confirmed,
   });
 
   final MountSourceItem item;
@@ -1387,6 +1385,7 @@ class MountSourceRow extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   final VoidCallback? onRefresh;
   final MountRefreshRefusal? refusal;
+  final MountRunState run;
 
   bool get _faded => !item.state.mountable && !item.mounted;
 
@@ -1483,10 +1482,14 @@ class MountSourceRow extends StatelessWidget {
         appLocalizations.mountSourceTailscaleOnly,
         true,
       ),
+      _ when run == MountRunState.blocked && failed => (
+        appLocalizations.mountUpdateFailedKeptBlocked,
+        true,
+      ),
       _ when failed || refreshUnconfirmed => (
-        refreshUnconfirmed
-            ? appLocalizations.mountUpdateFailedKept
-            : appLocalizations.mountUpdateFailedInUse,
+        run == MountRunState.confirmed && !refreshUnconfirmed
+            ? appLocalizations.mountUpdateFailedInUse
+            : appLocalizations.mountUpdateFailedKept,
         false,
       ),
       MountSourceState.empty => (appLocalizations.mountSourceEmpty, false),

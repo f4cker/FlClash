@@ -1388,6 +1388,7 @@
   "mountNodesUpdated": "Nodes updated",
   "mountUpdateFailedInUse": "Update failed. The last successfully fetched nodes are still in use.",
   "mountUpdateFailedKept": "Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.",
+  "mountUpdateFailedKeptBlocked": "Update failed. The last successfully fetched nodes were kept.",
   "mountFetchFailed": "Could not fetch nodes from this subscription. Try again.",
   "mountSourceEmpty": "Subscription updated. It currently has no nodes.",
   "mountSourceGone": "The original subscription is unavailable. Choose a node source again.",

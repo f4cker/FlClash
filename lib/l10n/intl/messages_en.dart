@@ -1176,10 +1176,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Certificate installed",
     ),
-    "installedAppsPermissionDeniedMessage":
-        MessageLookupByLibrary.simpleMessage(
-          "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
-        ),
+    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
+      "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
+    ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "This system hides the installed app list until the permission is granted. Authorize it to configure the per-app proxy.",
     ),
@@ -1781,6 +1780,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "mountUpdateFailedKept": MessageLookupByLibrary.simpleMessage(
       "Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.",
+    ),
+    "mountUpdateFailedKeptBlocked": MessageLookupByLibrary.simpleMessage(
+      "Update failed. The last successfully fetched nodes were kept.",
     ),
     "mountUpdateNodes": MessageLookupByLibrary.simpleMessage("Update nodes"),
     "mountUpdateNodesOf": m87,

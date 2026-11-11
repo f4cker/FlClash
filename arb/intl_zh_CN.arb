@@ -1388,6 +1388,7 @@
   "mountNodesUpdated": "节点已更新",
   "mountUpdateFailedInUse": "更新失败，继续使用上次成功获取的节点。",
   "mountUpdateFailedKept": "更新失败，已保留上次成功获取的节点，尚未确认当前是否生效。",
+  "mountUpdateFailedKeptBlocked": "更新失败，已保留上次成功获取的节点。",
   "mountFetchFailed": "暂时无法获取此订阅的节点，请重试。",
   "mountSourceEmpty": "订阅已更新，目前没有节点。",
   "mountSourceGone": "原订阅已不可用，请重新选择节点来源。",

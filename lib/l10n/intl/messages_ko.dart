@@ -1561,6 +1561,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountUpdateFailedKept": MessageLookupByLibrary.simpleMessage(
       "Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.",
     ),
+    "mountUpdateFailedKeptBlocked": MessageLookupByLibrary.simpleMessage(
+      "Update failed. The last successfully fetched nodes were kept.",
+    ),
     "mountUpdateNodes": MessageLookupByLibrary.simpleMessage("Update nodes"),
     "mountUpdateNodesOf": m87,
     "mountUpdateReadEmptyNotApplied": MessageLookupByLibrary.simpleMessage(

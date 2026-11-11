@@ -7718,7 +7718,8 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one:
+          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -12055,6 +12056,16 @@ class AppLocalizations {
     return Intl.message(
       'Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.',
       name: 'mountUpdateFailedKept',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update failed. The last successfully fetched nodes were kept.`
+  String get mountUpdateFailedKeptBlocked {
+    return Intl.message(
+      'Update failed. The last successfully fetched nodes were kept.',
+      name: 'mountUpdateFailedKeptBlocked',
       desc: '',
       args: [],
     );
