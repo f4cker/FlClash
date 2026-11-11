@@ -516,8 +516,8 @@ rules:
 	if err != nil {
 		t.Fatal(err)
 	}
-	installMountGate(report)
-	t.Cleanup(func() { installMountGate(nil) })
+	installMountGate(report, nil)
+	t.Cleanup(func() { installMountGate(nil, nil) })
 	cfg := checkOnlyConfig(t, &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}})
 	runInTunnel(t, cfg, tunnel.Rule)
 	selectIn(t, cfg, "Lan", "m1")
@@ -543,7 +543,7 @@ rules:
 		t.Error("100.100.1.1 was carried after the refused update")
 	}
 
-	installMountGate(nil)
+	installMountGate(nil, nil)
 	if err := sideUpdate(reaching); err != nil {
 		t.Fatal(err)
 	}

@@ -41,6 +41,11 @@ const (
 	reachGlobal = "global"
 	// DNS queries, tailnet names among them, go out through the group.
 	reachDNS = "dns"
+	// A proxy dials through the group. A proxy that keeps its own session
+	// or dials in the background (WireGuard, QUIC, mux) puts what it later
+	// carries, a tailnet connection too, on what it dialed once: no mounted
+	// node down that chain is asked again.
+	reachDialer = "dialer"
 )
 
 // A base as the mount checks read it, before any mount is added.
@@ -139,10 +144,13 @@ func (b *mountBase) readDNS(node *yaml.Node) {
 	}
 	b.dnsRules = groupFlag(mapping, "respect-rules")
 	var servers []string
-	for _, key := range []string{"nameserver", "fallback", "direct-nameserver"} {
+	// proxy-server-nameserver also resolves node servers and a Tailscale
+	// node's control and DERP names.
+	for _, key := range []string{"nameserver", "fallback", "direct-nameserver", "default-nameserver", "proxy-server-nameserver"} {
 		servers = append(servers, groupList(mapping, key)...)
 	}
-	if policy, ok := providerOption(mapping, "nameserver-policy").(map[string]any); ok {
+	for _, key := range []string{"nameserver-policy", "proxy-server-nameserver-policy"} {
+		policy, _ := providerOption(mapping, key).(map[string]any)
 		for _, value := range policy {
 			switch typed := value.(type) {
 			case string:
@@ -421,10 +429,7 @@ func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
 			reach[target] = reason
 		}
 	}
-	byName := make(map[string]map[string]any, len(b.groups))
-	for _, group := range b.groups {
-		byName[groupString(group, "name")] = group
-	}
+	byName := b.groupsByName()
 	var queue []string
 	for name := range reach {
 		queue = append(queue, name)
@@ -445,40 +450,21 @@ func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
 	// and the groups above, and down from each what it is a member or a
 	// dialer-proxy of, as any selection may be.
 	seen := map[string]bool{}
-	var carry func(name string)
-	carry = func(name string) {
-		if name == "" || seen[name] {
-			return
-		}
-		seen[name] = true
-		if name == globalProxyName {
-			global = reachGlobal
-			return
-		}
-		group, isGroup := byName[name]
-		if !isGroup {
-			for _, dialer := range b.proxyDialers[name] {
-				carry(dialer)
+	reason := reachCarrier
+	carry := func(name string) {
+		b.walk(name, byName, seen, func(group string) {
+			if reach[group] == "" {
+				reach[group] = reason
 			}
-			return
-		}
-		if reach[name] == "" {
-			reach[name] = reachCarrier
-		}
-		for _, member := range groupList(group, "proxies") {
-			carry(member)
-		}
-		carry(groupString(group, "empty-fallback"))
-		for _, p := range b.groupProviders(group) {
-			for _, dialer := range b.providers[p].dialers {
-				carry(dialer)
+		}, func() {
+			switch {
+			case global != "":
+			case reason == reachDialer:
+				global = reachDialer
+			default:
+				global = reachGlobal
 			}
-		}
-		if groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies") {
-			for proxy := range b.proxyDialers {
-				carry(proxy)
-			}
-		}
+		})
 	}
 	var seeds []string
 	for name, kind := range b.proxyTypes {
@@ -498,8 +484,8 @@ func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
 	for _, name := range seeds {
 		carry(name)
 	}
-	for _, p := range b.providers {
-		if p.tailscale {
+	for _, name := range sortedKeys(b.providers) {
+		if p := b.providers[name]; p.tailscale {
 			for _, dialer := range p.dialers {
 				carry(dialer)
 			}
@@ -516,6 +502,19 @@ func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
 		}
 		carry(proxy)
 	}
+	// Whatever any proxy, provider node, provider or override names as its
+	// dialer-proxy: a mounted node there would carry that proxy's session.
+	reason = reachDialer
+	for _, name := range sortedKeys(b.proxyDialers) {
+		for _, dialer := range b.proxyDialers[name] {
+			carry(dialer)
+		}
+	}
+	for _, name := range sortedKeys(b.providers) {
+		for _, dialer := range b.providers[name].dialers {
+			carry(dialer)
+		}
+	}
 	if global != "" {
 		for name := range groups {
 			if reach[name] == "" {
@@ -531,6 +530,88 @@ func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
 		}
 	}
 	return reach
+}
+
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	return keys
+}
+
+func (b *mountBase) groupsByName() map[string]map[string]any {
+	byName := make(map[string]map[string]any, len(b.groups))
+	for _, group := range b.groups {
+		byName[groupString(group, "name")] = group
+	}
+	return byName
+}
+
+// walk visits what a connection through name may be carried by: a group,
+// its members and empty-fallback, its providers' dialers and, when it
+// collects every proxy, theirs; a proxy's dialers. GLOBAL stands for every
+// group and is not followed.
+func (b *mountBase) walk(name string, byName map[string]map[string]any, seen map[string]bool, group func(string), global func()) {
+	if name == "" || seen[name] {
+		return
+	}
+	seen[name] = true
+	if name == globalProxyName {
+		global()
+		return
+	}
+	mapping, isGroup := byName[name]
+	if !isGroup {
+		for _, dialer := range b.proxyDialers[name] {
+			b.walk(dialer, byName, seen, group, global)
+		}
+		return
+	}
+	group(name)
+	for _, member := range groupList(mapping, "proxies") {
+		b.walk(member, byName, seen, group, global)
+	}
+	b.walk(groupString(mapping, "empty-fallback"), byName, seen, group, global)
+	for _, p := range b.groupProviders(mapping) {
+		for _, dialer := range b.providers[p].dialers {
+			b.walk(dialer, byName, seen, group, global)
+		}
+	}
+	if groupFlag(mapping, "include-all") || groupFlag(mapping, "include-all-proxies") {
+		for _, proxy := range sortedKeys(b.proxyDialers) {
+			b.walk(proxy, byName, seen, group, global)
+		}
+	}
+}
+
+var builtinProxyNames = []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE"}
+
+// The names a proxy may take as its dialer-proxy without any group holding
+// mounts (taking) down its chain: a built-in one, or a base proxy or group
+// whose every member and dialer, followed down, avoids them. A name the
+// base does not define is never one.
+func (b *mountBase) dialSafe(taking map[string]bool) map[string]bool {
+	byName := b.groupsByName()
+	safe := map[string]bool{}
+	for _, name := range builtinProxyNames {
+		safe[name] = true
+	}
+	candidates := append(sortedKeys(b.proxyTypes), sortedKeys(byName)...)
+	if _, defined := byName[globalProxyName]; !defined {
+		candidates = append(candidates, globalProxyName)
+	}
+	for _, name := range candidates {
+		reaches := false
+		b.walk(name, byName, map[string]bool{}, func(group string) {
+			reaches = reaches || taking[group]
+		}, func() {
+			reaches = reaches || len(taking) > 0
+		})
+		safe[name] = !reaches
+	}
+	return safe
 }
 
 // Every target Tailscale traffic may be sent to, by how surely: a rule whose

@@ -144,6 +144,13 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 		if _, dup := seen[name]; dup {
 			continue
 		}
+		// Its endpoints are not the server Addr names, so the guard cannot
+		// tell whether one is on Tailscale: never built, as the provider.
+		if flashguard.UncheckedEndpoints(mapping) {
+			seen[name] = struct{}{}
+			inspection.RelayExcluded++
+			continue
+		}
 		proxy, err := adapter.ParseProxy(mapping)
 		if err != nil {
 			return MountSourceInspection{Status: mountSourceInvalid, Listed: len(mappings)}
@@ -458,6 +465,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		return nil, err
 	}
 	report.Groups = groups
+	report.gate.takeGroups(base, groups)
 	return report, nil
 }
 

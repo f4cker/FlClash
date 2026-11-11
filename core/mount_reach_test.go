@@ -269,8 +269,8 @@ rules:
 	if err != nil {
 		t.Fatal(err)
 	}
-	installMountGate(report)
-	t.Cleanup(func() { installMountGate(nil) })
+	installMountGate(report, nil)
+	t.Cleanup(func() { installMountGate(nil, nil) })
 	cfg := checkOnlyConfig(t, &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}})
 	if got := memberNames(t, cfg, "Auto"); !slices.Contains(got, "a") || !slices.Contains(got, "us") {
 		t.Fatalf("Auto = %v, want the base and mounted nodes", got)
@@ -283,7 +283,7 @@ rules:
 	if got := memberNames(t, cfg, "Auto"); !slices.Contains(got, "a") || slices.Contains(got, "r") {
 		t.Errorf("Auto after a refused update = %v, want the loaded node kept", got)
 	}
-	if err := gateMountProxies("sub", []map[string]any{{"name": "t", "type": "Tailscale"}}); err == nil {
+	if err := gateMountProxies("sub", []map[string]any{{"name": "t", "type": "Tailscale"}}, nil); err == nil {
 		t.Error("an update holding a Tailscale node was taken")
 	}
 	if _, _, err := pd.SideUpdate([]byte("proxies:\n  - {name: b, type: socks5, server: 127.0.0.9, port: 3}\n")); err != nil {
@@ -306,8 +306,8 @@ rules:
 		t.Errorf("refused = %v, want [lan sub]", got)
 	}
 
-	installMountGate(nil)
-	if err := gateMountProxies("sub", []map[string]any{{"name": "t", "type": "tailscale"}}); err != nil {
+	installMountGate(nil, nil)
+	if err := gateMountProxies("sub", []map[string]any{{"name": "t", "type": "tailscale"}}, nil); err != nil {
 		t.Errorf("without mounts = %v, want nothing gated", err)
 	}
 }
@@ -369,7 +369,11 @@ rules:
 		"Main": "candidate/", "Free": "candidate/",
 	})
 	plain := strings.NewReplacer(", dialer-proxy: Auto}", "}", "  - IP-CIDR,100.64.0.0/10,jump,no-resolve\n", "").Replace(base)
-	wantReasons("no chain", plain, map[string]string{"Auto": "auto/", "Pick": "candidate/", "Free": "candidate/"})
+	// jump still dials through Pick: whatever it carries, Pick may not take
+	// mounts, nor anything Pick may select.
+	wantReasons("no Tailscale chain", plain, map[string]string{"Auto": "auto/", "Pick": "excluded/dialer", "Inner": "excluded/dialer", "Free": "candidate/"})
+	unchained := strings.Replace(plain, ", dialer-proxy: Pick}", "}", 1)
+	wantReasons("no chain", unchained, map[string]string{"Auto": "auto/", "Pick": "candidate/", "Inner": "candidate/", "Free": "candidate/"})
 
 	cases := []struct {
 		name, add string
