@@ -173,7 +173,7 @@ final class TailscaleLegacyStatesProvider
 }
 
 String _$tailscaleLegacyStatesHash() =>
-    r'9ae2242c1d17aa3f2b14b6a39cce999d54954798';
+    r'9a378a7e6d76ccc03c99bf26310e8999efca2302';
 
 abstract class _$TailscaleLegacyStates
     extends $Notifier<Map<TailscaleNodeKey, TailscaleLegacyState>> {

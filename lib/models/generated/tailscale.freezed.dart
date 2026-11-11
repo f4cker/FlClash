@@ -6723,9 +6723,8 @@ $TailscaleErrorCopyWith<$Res>? get error {
 /// @nodoc
 mixin _$TailscaleLegacyState {
 
-/// The panel showed this node an eligible offer.
- bool get offered; bool get migrating; TailscaleLegacyNotice get notice;/// False once a read or save error of the archive itself was reported.
- bool get archiveIntact;
+ bool get offered; bool get migrating; TailscaleLegacyNotice get notice; bool get archiveIntact;/// The Core's cause, without a path, when the archive was not intact.
+ String? get archiveError;
 /// Create a copy of TailscaleLegacyState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -6737,20 +6736,20 @@ $TailscaleLegacyStateCopyWith<TailscaleLegacyState> get copyWith => _$TailscaleL
 @override
 bool operator ==(Object other) {
   final _this = this as TailscaleLegacyState;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleLegacyState&&(identical(other.offered, _this.offered) || other.offered == _this.offered)&&(identical(other.migrating, _this.migrating) || other.migrating == _this.migrating)&&(identical(other.notice, _this.notice) || other.notice == _this.notice)&&(identical(other.archiveIntact, _this.archiveIntact) || other.archiveIntact == _this.archiveIntact));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleLegacyState&&(identical(other.offered, _this.offered) || other.offered == _this.offered)&&(identical(other.migrating, _this.migrating) || other.migrating == _this.migrating)&&(identical(other.notice, _this.notice) || other.notice == _this.notice)&&(identical(other.archiveIntact, _this.archiveIntact) || other.archiveIntact == _this.archiveIntact)&&(identical(other.archiveError, _this.archiveError) || other.archiveError == _this.archiveError));
 }
 
 
 @override
 int get hashCode {
   final _this = this as TailscaleLegacyState;
-  return Object.hash(runtimeType,_this.offered,_this.migrating,_this.notice,_this.archiveIntact);
+  return Object.hash(runtimeType,_this.offered,_this.migrating,_this.notice,_this.archiveIntact,_this.archiveError);
 }
 
 @override
 String toString() {
   final _this = this as TailscaleLegacyState;
-  return 'TailscaleLegacyState(offered: ${_this.offered}, migrating: ${_this.migrating}, notice: ${_this.notice}, archiveIntact: ${_this.archiveIntact})';
+  return 'TailscaleLegacyState(offered: ${_this.offered}, migrating: ${_this.migrating}, notice: ${_this.notice}, archiveIntact: ${_this.archiveIntact}, archiveError: ${_this.archiveError})';
 }
 
 
@@ -6761,7 +6760,7 @@ abstract mixin class $TailscaleLegacyStateCopyWith<$Res>  {
   factory $TailscaleLegacyStateCopyWith(TailscaleLegacyState value, $Res Function(TailscaleLegacyState) _then) = _$TailscaleLegacyStateCopyWithImpl;
 @useResult
 $Res call({
- bool offered, bool migrating, TailscaleLegacyNotice notice, bool archiveIntact
+ bool offered, bool migrating, TailscaleLegacyNotice notice, bool archiveIntact, String? archiveError
 });
 
 
@@ -6778,13 +6777,14 @@ class _$TailscaleLegacyStateCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleLegacyState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? offered = null,Object? migrating = null,Object? notice = null,Object? archiveIntact = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? offered = null,Object? migrating = null,Object? notice = null,Object? archiveIntact = null,Object? archiveError = freezed,}) {
   return _then(TailscaleLegacyState(
 offered: null == offered ? _self.offered : offered // ignore: cast_nullable_to_non_nullable
 as bool,migrating: null == migrating ? _self.migrating : migrating // ignore: cast_nullable_to_non_nullable
 as bool,notice: null == notice ? _self.notice : notice // ignore: cast_nullable_to_non_nullable
 as TailscaleLegacyNotice,archiveIntact: null == archiveIntact ? _self.archiveIntact : archiveIntact // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,archiveError: freezed == archiveError ? _self.archiveError : archiveError // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -6869,10 +6869,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  String? archiveError)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TailscaleLegacyState() when $default != null:
-return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact);case _:
+return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.archiveError);case _:
   return orElse();
 
 }
@@ -6890,10 +6890,10 @@ return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact);
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  String? archiveError)  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleLegacyState():
-return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact);case _:
+return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.archiveError);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -6910,10 +6910,10 @@ return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact);
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool offered,  bool migrating,  TailscaleLegacyNotice notice,  bool archiveIntact,  String? archiveError)?  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleLegacyState() when $default != null:
-return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact);case _:
+return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact,_that.archiveError);case _:
   return null;
 
 }
@@ -6925,15 +6925,15 @@ return $default(_that.offered,_that.migrating,_that.notice,_that.archiveIntact);
 
 
 class _TailscaleLegacyState implements TailscaleLegacyState {
-  const _TailscaleLegacyState({this.offered = false, this.migrating = false, this.notice = TailscaleLegacyNotice.none, this.archiveIntact = true});
+  const _TailscaleLegacyState({this.offered = false, this.migrating = false, this.notice = TailscaleLegacyNotice.none, this.archiveIntact = true, this.archiveError});
   
 
-/// The panel showed this node an eligible offer.
 @override@JsonKey() final  bool offered;
 @override@JsonKey() final  bool migrating;
 @override@JsonKey() final  TailscaleLegacyNotice notice;
-/// False once a read or save error of the archive itself was reported.
 @override@JsonKey() final  bool archiveIntact;
+/// The Core's cause, without a path, when the archive was not intact.
+@override final  String? archiveError;
 
 /// Create a copy of TailscaleLegacyState
 /// with the given fields replaced by the non-null parameter values.
@@ -6945,18 +6945,18 @@ _$TailscaleLegacyStateCopyWith<_TailscaleLegacyState> get copyWith => __$Tailsca
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleLegacyState&&(identical(other.offered, offered) || other.offered == offered)&&(identical(other.migrating, migrating) || other.migrating == migrating)&&(identical(other.notice, notice) || other.notice == notice)&&(identical(other.archiveIntact, archiveIntact) || other.archiveIntact == archiveIntact));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleLegacyState&&(identical(other.offered, offered) || other.offered == offered)&&(identical(other.migrating, migrating) || other.migrating == migrating)&&(identical(other.notice, notice) || other.notice == notice)&&(identical(other.archiveIntact, archiveIntact) || other.archiveIntact == archiveIntact)&&(identical(other.archiveError, archiveError) || other.archiveError == archiveError));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,offered,migrating,notice,archiveIntact);
+    return Object.hash(runtimeType,offered,migrating,notice,archiveIntact,archiveError);
 }
 
 @override
 String toString() {
-    return 'TailscaleLegacyState(offered: $offered, migrating: $migrating, notice: $notice, archiveIntact: $archiveIntact)';
+    return 'TailscaleLegacyState(offered: $offered, migrating: $migrating, notice: $notice, archiveIntact: $archiveIntact, archiveError: $archiveError)';
 }
 
 
@@ -6967,7 +6967,7 @@ abstract mixin class _$TailscaleLegacyStateCopyWith<$Res> implements $TailscaleL
   factory _$TailscaleLegacyStateCopyWith(_TailscaleLegacyState value, $Res Function(_TailscaleLegacyState) _then) = __$TailscaleLegacyStateCopyWithImpl;
 @override @useResult
 $Res call({
- bool offered, bool migrating, TailscaleLegacyNotice notice, bool archiveIntact
+ bool offered, bool migrating, TailscaleLegacyNotice notice, bool archiveIntact, String? archiveError
 });
 
 
@@ -6984,13 +6984,14 @@ class __$TailscaleLegacyStateCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleLegacyState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? offered = null,Object? migrating = null,Object? notice = null,Object? archiveIntact = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? offered = null,Object? migrating = null,Object? notice = null,Object? archiveIntact = null,Object? archiveError = freezed,}) {
   return _then(_TailscaleLegacyState(
 offered: null == offered ? _self.offered : offered // ignore: cast_nullable_to_non_nullable
 as bool,migrating: null == migrating ? _self.migrating : migrating // ignore: cast_nullable_to_non_nullable
 as bool,notice: null == notice ? _self.notice : notice // ignore: cast_nullable_to_non_nullable
 as TailscaleLegacyNotice,archiveIntact: null == archiveIntact ? _self.archiveIntact : archiveIntact // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,archiveError: freezed == archiveError ? _self.archiveError : archiveError // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

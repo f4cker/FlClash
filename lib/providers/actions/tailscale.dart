@@ -140,16 +140,21 @@ class TailscaleAction extends _$TailscaleAction {
         migrating: true,
         notice: TailscaleLegacyNotice.none,
         archiveIntact: true,
+        archiveError: null,
       ),
     );
     var notice = TailscaleLegacyNotice.unknown;
     var archiveIntact = true;
+    String? archiveError;
     try {
       final result = await _core.migrateTailscaleLegacy(
         node.ref,
         offerToken: token,
       );
       archiveIntact = result.archiveIntact;
+      if (!archiveIntact) {
+        archiveError = result.error?.message ?? '';
+      }
       notice = switch (result.outcome) {
         TailscaleMigrateOutcome.migrated => TailscaleLegacyNotice.migrated,
         TailscaleMigrateOutcome.failed when !result.targetUntouched =>
@@ -188,6 +193,7 @@ class TailscaleAction extends _$TailscaleAction {
           migrating: false,
           notice: notice,
           archiveIntact: archiveIntact,
+          archiveError: archiveError,
         ),
       );
     }

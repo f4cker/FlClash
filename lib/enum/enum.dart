@@ -262,13 +262,9 @@ enum TailscaleMigrateOutcome { migrated, failed, unknown }
 
 enum TailscaleLegacyNotice {
   none,
-
   migrated,
-
   failed,
-
   archiveError,
-
   changed,
   unreadable,
   unconfirmed,

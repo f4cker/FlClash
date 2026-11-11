@@ -400,7 +400,9 @@ abstract class TailscaleLegacyState with _$TailscaleLegacyState {
     @Default(false) bool offered,
     @Default(false) bool migrating,
     @Default(TailscaleLegacyNotice.none) TailscaleLegacyNotice notice,
-
     @Default(true) bool archiveIntact,
+
+    /// The Core's cause, without a path, when the archive was not intact.
+    String? archiveError,
   }) = _TailscaleLegacyState;
 }
