@@ -317,6 +317,38 @@ func TestMountNodeTakesTheSuffixWhenItSharesAManagedTailscaleName(t *testing.T) 
 	}
 }
 
+func TestMountNodeTakesTheSuffixWhenABaseProviderHoldsItsName(t *testing.T) {
+	home := withMountHome(t)
+	writeMountFile(t, home, "own.yaml", "proxies:\n  - {name: us, type: socks5, server: 127.0.0.3, port: 1}\n  - {name: jp, type: socks5, server: 127.0.0.3, port: 2}\n")
+	source := writeMountFile(t, home, "1.yaml", `proxies:
+  - {name: hk, type: socks5, server: 127.0.0.1, port: 1080}
+  - {name: us, type: socks5, server: 127.0.0.1, port: 1081}
+  - {name: P-us-P, type: socks5, server: 127.0.0.1, port: 1082}
+  - {name: P-Japan-P, type: socks5, server: 127.0.0.1, port: 1083}
+`)
+	const base = `proxy-providers:
+  inline: {type: inline, payload: [{name: hk, type: socks5, server: 127.0.0.2, port: 1}]}
+  own:
+    type: file
+    path: own.yaml
+    override:
+      additional-prefix: P-
+      proxy-name: [{pattern: "^jp$", target: Japan}]
+      additional-suffix: -P
+proxy-groups:
+  - {name: G, type: select, include-all: true}
+`
+	report, err := applyMountOverrides(rootOf(t, base), &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []MountNode{{"hk (S)", "hk"}, {"us", "us"}, {"P-us-P (S)", "P-us-P"}, {"P-Japan-P (S)", "P-Japan-P"}}
+	if !reflect.DeepEqual(report.Sources[0].Nodes, want) {
+		t.Errorf("nodes = %+v, want %+v", report.Sources[0].Nodes, want)
+	}
+}
+
 func TestMountSuffixKeepsMetacharactersLiteral(t *testing.T) {
 	home := withMountHome(t)
 	const base = `proxies:

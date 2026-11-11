@@ -16,6 +16,7 @@ import (
 	"github.com/metacubex/mihomo/common/convert"
 	mihomoYaml "github.com/metacubex/mihomo/common/yaml"
 	"github.com/metacubex/mihomo/component/age"
+	"github.com/metacubex/mihomo/constant"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -382,6 +383,9 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	} else if providers.Kind != yaml.MappingNode {
 		return nil, errors.New("proxy-providers must be a mapping")
 	}
+	for _, name := range baseProviderNames(providers) {
+		taken[name] = struct{}{}
+	}
 	names := make([]string, 0, len(setup.Sources))
 	for _, source := range setup.Sources {
 		name := mountProviderName(source.ID)
@@ -411,6 +415,76 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	}
 	report.Groups = groups
 	return report, nil
+}
+
+// What the base's own providers hold, from their payloads and caches. An
+// override-expr renaming is not followed; filters are not applied, which
+// only suffixes more mount nodes.
+func baseProviderNames(providers *yaml.Node) []string {
+	var names []string
+	for i := 0; i+1 < len(providers.Content); i += 2 {
+		var mapping map[string]any
+		if resolveAlias(providers.Content[i+1]).Decode(&mapping) != nil {
+			continue
+		}
+		var originals []string
+		switch groupString(mapping, "type") {
+		case "inline":
+			payload, _ := mapping["payload"].([]any)
+			for _, item := range payload {
+				if node, ok := item.(map[string]any); ok {
+					originals = append(originals, groupString(node, "name"))
+				}
+			}
+		case "file", "http":
+			path := groupString(mapping, "path")
+			if path == "" && groupString(mapping, "type") == "http" {
+				path = constant.Path.GetPathByHash("proxies", groupString(mapping, "url"))
+			}
+			originals = cachedProxyNames(constant.Path.Resolve(path), groupString(mapping, "age-secret-key"))
+		}
+		override, _ := mapping["override"].(map[string]any)
+		for _, original := range originals {
+			names = append(names, overriddenName(original, override))
+		}
+	}
+	return names
+}
+
+func cachedProxyNames(path, ageSecretKey string) []string {
+	buf, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	if buf, err = age.DecryptBytes(buf, ageSecretKey); err != nil {
+		return nil
+	}
+	var document struct {
+		Proxies []map[string]any `yaml:"proxies"`
+	}
+	if mihomoYaml.Unmarshal(buf, &document) != nil || document.Proxies == nil {
+		document.Proxies, _ = convert.ConvertsV2Ray(buf)
+	}
+	names := make([]string, 0, len(document.Proxies))
+	for _, mapping := range document.Proxies {
+		names = append(names, groupString(mapping, "name"))
+	}
+	return names
+}
+
+func overriddenName(name string, override map[string]any) string {
+	rules, _ := override["proxy-name"].([]any)
+	for _, item := range rules {
+		rule, _ := item.(map[string]any)
+		pattern, err := regexp2.Compile(groupString(rule, "pattern"), regexp2.None)
+		if err != nil {
+			continue
+		}
+		if replaced, err := pattern.Replace(name, groupString(rule, "target"), 0, -1); err == nil {
+			name = replaced
+		}
+	}
+	return groupString(override, "additional-prefix") + name + groupString(override, "additional-suffix")
 }
 
 func mountNodeNames(source MountSource, originals []string, taken map[string]struct{}) ([]MountNode, []MountNode) {
