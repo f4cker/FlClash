@@ -14,9 +14,10 @@ func unmarshalRawConfig(buf []byte) (*config.RawConfig, error) {
 		return config.UnmarshalRawConfig(buf)
 	}
 	var document yaml.Node
-	if yaml.Unmarshal(buf, &document) != nil || !retagShortIDs(&document) {
+	if yaml.Unmarshal(buf, &document) != nil {
 		return config.UnmarshalRawConfig(buf)
 	}
+	retagShortIDs(&document)
 	rawConfig := config.DefaultRawConfig()
 	if err := document.Decode(rawConfig); err != nil {
 		return nil, err

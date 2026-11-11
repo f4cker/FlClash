@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -164,6 +166,42 @@ void main() {
 
       expect(tester.widget<RawImage>(find.byType(RawImage)).image!.width, 192);
       expect(imageCache.currentSize, 1);
+    });
+
+    testWidgets('overlapping precaches bound reads across both batches', (
+      tester,
+    ) async {
+      final streams = <StreamController<Uint8List>>[];
+      var active = 0;
+      var peak = 0;
+      readRemoteIcon = (_) {
+        active++;
+        if (active > peak) peak = active;
+        final stream = StreamController<Uint8List>(onCancel: () => active--);
+        streams.add(stream);
+        return stream.stream;
+      };
+      final batches = [
+        for (var batch = 0; batch < 2; batch++)
+          precacheTargetIcons([
+            for (var i = 0; i < maxConcurrentIconLoads * 2; i++)
+              'https://example.com/bounded-$batch-$i.svg',
+          ]),
+      ];
+      await tester.pump();
+      final initialReads = streams.length;
+      for (var index = 0; index < streams.length; index++) {
+        if (index == 0) {
+          streams[index].addError(StateError('unavailable'));
+        }
+        unawaited(streams[index].close());
+        await tester.pump();
+      }
+      await Future.wait(batches);
+      expect(initialReads, maxConcurrentIconLoads);
+      expect(streams, hasLength(maxConcurrentIconLoads * 4));
+      expect(peak, maxConcurrentIconLoads);
+      expect(active, 0);
     });
 
     testWidgets('shows the fallback once a load ends without an image', (
