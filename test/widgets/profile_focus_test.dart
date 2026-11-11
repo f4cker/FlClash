@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -35,7 +36,10 @@ class _RecordingProfilesAction extends ProfilesAction {
   Future<List<Profile>> providerUsers(Profile profile) async => users;
 
   @override
-  Future<void> deleteProfile(int id) async => deleted.add(id);
+  Future<TailscaleUnlinkOutcome> deleteProfile(int id) async {
+    deleted.add(id);
+    return TailscaleUnlinkOutcome.done;
+  }
 }
 
 Future<ProviderContainer> pumpProfiles(

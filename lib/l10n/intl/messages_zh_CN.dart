@@ -1757,6 +1757,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsDeleteProfileUnbindFailed": MessageLookupByLibrary.simpleMessage(
       "未能解除此配置与 Tailscale 账号的关联，配置未删除。请重试。",
     ),
+    "tsDeleteProfileUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "配置删除结果待确认。请先重新读取状态，确认前请勿重复删除。",
+    ),
+    "tsDeleteProfileUnlinkUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "账号关联的处理结果待确认，配置尚未删除。请先重新读取状态，确认前请勿重复删除。",
+    ),
     "tsDeviceName": MessageLookupByLibrary.simpleMessage("设备名称"),
     "tsDevices": MessageLookupByLibrary.simpleMessage("设备"),
     "tsDevicesCompact": m102,
@@ -2091,6 +2097,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsTargetUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
       "暂时无法确认此目标应使用哪个账号，访问已拦截。",
     ),
+    "tsTryAgain": MessageLookupByLibrary.simpleMessage("重试"),
     "tsUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
       "暂时无法确认此节点是否已连接，请重新读取状态。",
     ),

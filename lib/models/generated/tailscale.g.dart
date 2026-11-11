@@ -644,6 +644,7 @@ _TailscaleManagedRecord _$TailscaleManagedRecordFromJson(
   loggedOut: json['logged-out'] as bool? ?? false,
   attached: json['attached'] as bool? ?? false,
   removing: json['removing'] as bool? ?? false,
+  unlinking: json['unlinking'] as bool? ?? false,
   account: json['account'] == null
       ? null
       : TailscaleAccount.fromJson(json['account'] as Map<String, dynamic>),
@@ -662,6 +663,7 @@ Map<String, dynamic> _$TailscaleManagedRecordToJson(
   'logged-out': instance.loggedOut,
   'attached': instance.attached,
   'removing': instance.removing,
+  'unlinking': instance.unlinking,
   'account': instance.account,
 };
 

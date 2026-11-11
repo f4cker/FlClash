@@ -21,11 +21,13 @@ class ProfilesAction extends _$ProfilesAction {
 
   /// Leaves the profile in place when its Tailscale accounts cannot be
   /// unbound.
-  Future<void> deleteProfile(int id) async {
-    if (!await ref.read(tailscaleActionProvider.notifier).forgetProfile(id)) {
-      return;
+  Future<TailscaleUnlinkOutcome> deleteProfile(int id) async {
+    final outcome = await ref
+        .read(tailscaleActionProvider.notifier)
+        .unlinkProfile(id, () => ref.read(profilesProvider.notifier).del(id));
+    if (outcome != TailscaleUnlinkOutcome.done) {
+      return outcome;
     }
-    await ref.read(profilesProvider.notifier).del(id);
     await clearEffect(id);
     final currentProfileId = ref.read(currentProfileIdProvider);
     if (currentProfileId == id) {
@@ -38,6 +40,7 @@ class ProfilesAction extends _$ProfilesAction {
         unawaited(ref.read(setupActionProvider.notifier).setRunning(false));
       }
     }
+    return outcome;
   }
 
   Future<String?> validateConfigWithData(List<int> data) async {

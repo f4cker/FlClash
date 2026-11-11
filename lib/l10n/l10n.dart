@@ -11480,14 +11480,39 @@ class AppLocalizations {
     );
   }
 
-  /// `Couldn't unbind this profile's Tailscale accounts, so it was not deleted. Try again.`
+  /// `Could not unlink this profile from its Tailscale accounts. The profile was not deleted. Try again.`
   String get tsDeleteProfileUnbindFailed {
     return Intl.message(
-      'Couldn\'t unbind this profile\'s Tailscale accounts, so it was not deleted. Try again.',
+      'Could not unlink this profile from its Tailscale accounts. The profile was not deleted. Try again.',
       name: 'tsDeleteProfileUnbindFailed',
       desc: '',
       args: [],
     );
+  }
+
+  /// `The account-link update is unconfirmed. The profile has not been deleted. Read the status again before deleting it again.`
+  String get tsDeleteProfileUnlinkUnconfirmed {
+    return Intl.message(
+      'The account-link update is unconfirmed. The profile has not been deleted. Read the status again before deleting it again.',
+      name: 'tsDeleteProfileUnlinkUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Profile deletion is unconfirmed. Read the status again before deleting it again.`
+  String get tsDeleteProfileUnconfirmed {
+    return Intl.message(
+      'Profile deletion is unconfirmed. Read the status again before deleting it again.',
+      name: 'tsDeleteProfileUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Try again`
+  String get tsTryAgain {
+    return Intl.message('Try again', name: 'tsTryAgain', desc: '', args: []);
   }
 
   /// `Direct mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.`

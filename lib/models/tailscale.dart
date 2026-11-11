@@ -452,6 +452,10 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
     /// new sign-in, a second removal and deleting the profile.
     @Default(false) bool removing,
 
+    /// Deleting its profile was started and the outcome is not known yet; it
+    /// blocks deleting the profile again until a read settles it.
+    @Default(false) bool unlinking,
+
     /// The identity it was attached with, so a signed-out entry still counts
     /// against a second sign-in of the same account.
     TailscaleAccount? account,

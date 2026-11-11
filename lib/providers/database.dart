@@ -293,6 +293,10 @@ class Profiles extends _$Profiles {
     });
   }
 
+  /// Whether the database holds [id], read past the optimistic state.
+  Future<bool> stored(int id) async =>
+      await database.profilesDao.get(id) != null;
+
   Future<void> del(int id) {
     return _optimisticAsync(
       state.where((e) => e.id != id).toList(),

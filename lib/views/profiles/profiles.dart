@@ -312,16 +312,47 @@ class ProfileItem extends ConsumerWidget {
     if (res != true) {
       return;
     }
-    if (!await tailscale.forgetProfile(profile.id)) {
-      dialogs.showBanner(
-        tailscale.hasPendingManaged(profile.id)
-            ? currentAppLocalizations.tsDeleteProfilePending
-            : currentAppLocalizations.tsDeleteProfileUnbindFailed,
-        level: BannerLevel.error,
+    var outcome = await profilesAction.deleteProfile(profile.id);
+    while (true) {
+      final appLocalizations = currentAppLocalizations;
+      final (message, action) = switch (outcome) {
+        TailscaleUnlinkOutcome.done => (null, null),
+        TailscaleUnlinkOutcome.pending => (
+          appLocalizations.tsDeleteProfilePending,
+          null,
+        ),
+        TailscaleUnlinkOutcome.failed => (
+          appLocalizations.tsDeleteProfileUnbindFailed,
+          appLocalizations.tsTryAgain,
+        ),
+        TailscaleUnlinkOutcome.unconfirmed => (
+          appLocalizations.tsDeleteProfileUnlinkUnconfirmed,
+          appLocalizations.tsReadStatus,
+        ),
+        TailscaleUnlinkOutcome.deleteUnconfirmed => (
+          appLocalizations.tsDeleteProfileUnconfirmed,
+          appLocalizations.tsReadStatus,
+        ),
+      };
+      if (message == null) {
+        return;
+      }
+      if (action == null) {
+        dialogs.showBanner(message, level: BannerLevel.error);
+        return;
+      }
+      final again = await dialogs.showMessage(
+        title: appLocalizations.tip,
+        message: TextSpan(text: message),
+        confirmText: action,
       );
-      return;
+      if (again != true) {
+        return;
+      }
+      outcome = outcome == TailscaleUnlinkOutcome.failed
+          ? await profilesAction.deleteProfile(profile.id)
+          : await tailscale.recheckUnlink(profile.id, open: outcome);
     }
-    await profilesAction.deleteProfile(profile.id);
   }
 
   Future<void> _handlePreview(BuildContext context) async {

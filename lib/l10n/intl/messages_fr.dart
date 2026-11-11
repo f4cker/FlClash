@@ -2433,7 +2433,13 @@ class MessageLookup extends MessageLookupByLibrary {
       "This profile has unconfirmed Tailscale operations. Read the status again before deleting it.",
     ),
     "tsDeleteProfileUnbindFailed": MessageLookupByLibrary.simpleMessage(
-      "Couldn\'t unbind this profile\'s Tailscale accounts, so it was not deleted. Try again.",
+      "Could not unlink this profile from its Tailscale accounts. The profile was not deleted. Try again.",
+    ),
+    "tsDeleteProfileUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Profile deletion is unconfirmed. Read the status again before deleting it again.",
+    ),
+    "tsDeleteProfileUnlinkUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "The account-link update is unconfirmed. The profile has not been deleted. Read the status again before deleting it again.",
     ),
     "tsDeviceName": MessageLookupByLibrary.simpleMessage("Device name"),
     "tsDevices": MessageLookupByLibrary.simpleMessage("Devices"),
@@ -2885,6 +2891,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsTargetUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
       "The account for this target cannot be verified yet. Requests are blocked.",
     ),
+    "tsTryAgain": MessageLookupByLibrary.simpleMessage("Try again"),
     "tsUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
       "Can\'t confirm whether this node is connected. Read the status again.",
     ),

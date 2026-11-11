@@ -328,6 +328,16 @@ enum TailscaleRouteState {
 
 enum TailscaleAssignNotice { updated, saved, failed, unknown }
 
+/// Deleting a profile with panel-added accounts: [failed] changed nothing,
+/// [unconfirmed] left the unlink open, [deleteUnconfirmed] the deletion.
+enum TailscaleUnlinkOutcome {
+  done,
+  pending,
+  failed,
+  unconfirmed,
+  deleteUnconfirmed,
+}
+
 enum FindProcessMode { always, off }
 
 enum InterfaceNameMode { clear, follow, custom }

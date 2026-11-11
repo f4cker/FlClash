@@ -959,7 +959,7 @@ class TailscaleAction extends _$TailscaleAction {
         notice = TailscaleManagedNotice.removeIncomplete;
         return notice;
       }
-      if (last && !await _forgetRoutes(node.profileId)) {
+      if (last && await _forgetRoutes(node.profileId) != true) {
         await reapply();
         notice = TailscaleManagedNotice.removeIncomplete;
         return notice;
@@ -1014,16 +1014,20 @@ class TailscaleAction extends _$TailscaleAction {
     }
   }
 
-  Future<bool> _forgetRoutes(int profileId) async {
+  Future<bool?> _forgetRoutes(int profileId) async {
     try {
       final forgot = await _core.forgetTailscaleRoutes(profileId);
-      return forgot.outcome == 'confirmed';
+      return switch (forgot.outcome) {
+        'confirmed' => true,
+        'failed' => false,
+        _ => null,
+      };
     } catch (error) {
       commonPrint.log(
         'tailscale forget routes error ${_codeOf(error) ?? error.runtimeType}',
         logLevel: LogLevel.warning,
       );
-      return false;
+      return null;
     }
   }
 
@@ -1042,6 +1046,7 @@ class TailscaleAction extends _$TailscaleAction {
       final managed = _managedPanel.of(record.key);
       final panel = _panel.of(record.key);
       return record.removing ||
+          record.unlinking ||
           managed.removing ||
           managed.preparing ||
           const {
@@ -1062,18 +1067,100 @@ class TailscaleAction extends _$TailscaleAction {
     });
   }
 
-  /// Unbinds the profile's accounts; the sign-in archives stay on disk. False
-  /// keeps every record, and the profile must not be deleted then.
-  Future<bool> forgetProfile(int profileId) async {
+  /// Records stay marked until [delete] returns, so an open outcome keeps
+  /// them, their targets and the delete lock; sign-in archives stay on disk.
+  Future<TailscaleUnlinkOutcome> unlinkProfile(
+    int profileId,
+    Future<void> Function() delete,
+  ) async {
     if (hasPendingManaged(profileId)) {
-      return false;
+      return TailscaleUnlinkOutcome.pending;
     }
     if (_managed.ofProfile(profileId).isEmpty) {
-      return true;
+      await delete();
+      return TailscaleUnlinkOutcome.done;
     }
-    if (!await _forgetRoutes(profileId)) {
-      return false;
+    if (!await _markUnlinking(profileId, true)) {
+      return TailscaleUnlinkOutcome.failed;
     }
+    switch (await _forgetRoutes(profileId)) {
+      case null:
+        return TailscaleUnlinkOutcome.unconfirmed;
+      case false:
+        return await _markUnlinking(profileId, false)
+            ? TailscaleUnlinkOutcome.failed
+            : TailscaleUnlinkOutcome.unconfirmed;
+      case true:
+    }
+    try {
+      await delete();
+    } catch (error) {
+      commonPrint.log(
+        'tailscale delete profile error ${error.runtimeType}',
+        logLevel: LogLevel.warning,
+      );
+      return TailscaleUnlinkOutcome.deleteUnconfirmed;
+    }
+    await _dropProfile(profileId);
+    return TailscaleUnlinkOutcome.done;
+  }
+
+  /// Read only: a profile gone from the database drops its marked records,
+  /// one still there unlocks once the Core answers, as a retry re-forgets.
+  Future<TailscaleUnlinkOutcome> recheckUnlink(
+    int profileId, {
+    required TailscaleUnlinkOutcome open,
+  }) async {
+    if (ref.read(tailscaleManagedRecordsProvider) == null) {
+      return open;
+    }
+    if (!_managed.ofProfile(profileId).any((record) => record.unlinking)) {
+      return hasPendingManaged(profileId)
+          ? TailscaleUnlinkOutcome.pending
+          : TailscaleUnlinkOutcome.failed;
+    }
+    final bool stored;
+    try {
+      stored = await ref.read(profilesProvider.notifier).stored(profileId);
+    } catch (error) {
+      commonPrint.log(
+        'tailscale profile read error ${error.runtimeType}',
+        logLevel: LogLevel.warning,
+      );
+      return open;
+    }
+    if (!stored) {
+      return await _dropProfile(profileId) ? TailscaleUnlinkOutcome.done : open;
+    }
+    try {
+      await _core.getTailscaleRoutes(profileId);
+    } on CoreMethodException catch (error) {
+      if (error.code != 'tailscale_profile_not_current') {
+        return open;
+      }
+    } catch (_) {
+      return open;
+    }
+    if (!await _markUnlinking(profileId, false)) {
+      return open;
+    }
+    return hasPendingManaged(profileId)
+        ? TailscaleUnlinkOutcome.pending
+        : TailscaleUnlinkOutcome.failed;
+  }
+
+  Future<bool> _markUnlinking(int profileId, bool unlinking) {
+    return _managed.modify(
+      (records) => [
+        for (final record in records)
+          record.profileId == profileId
+              ? record.copyWith(unlinking: unlinking)
+              : record,
+      ],
+    );
+  }
+
+  Future<bool> _dropProfile(int profileId) {
     return _managed.modify(
       (records) => [
         for (final record in records)

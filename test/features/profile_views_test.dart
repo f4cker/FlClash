@@ -69,8 +69,10 @@ class _TestCustomProxies extends CustomProxies {
 
 class _RecordingProfilesAction extends ProfilesAction {
   @override
-  Future<void> deleteProfile(int id) =>
-      ref.read(profilesProvider.notifier).del(id);
+  Future<TailscaleUnlinkOutcome> deleteProfile(int id) async {
+    await ref.read(profilesProvider.notifier).del(id);
+    return TailscaleUnlinkOutcome.done;
+  }
 }
 
 class _RecordingSetupAction extends SetupAction {

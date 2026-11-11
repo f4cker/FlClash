@@ -518,10 +518,15 @@ void main() {
         (_) async => const TailscaleForgetResult(outcome: 'confirmed'),
       );
 
-      await action(container).forgetProfile(42);
+      final outcome = await action(container).unlinkProfile(
+        42,
+        () => container.read(profilesProvider.notifier).del(42),
+      );
 
+      expect(outcome, TailscaleUnlinkOutcome.done);
       verify(() => core.forgetTailscaleRoutes(42)).called(1);
       expect(records(container).single.id, 'm9');
+      expect(container.read(profilesProvider), isEmpty);
     });
   });
 
@@ -534,7 +539,10 @@ void main() {
       expect(setup.managed, isEmpty);
       expect(setup.toJson(), containsPair('managed-unknown', true));
       expect(action(container).hasPendingManaged(42), isTrue);
-      expect(await action(container).forgetProfile(42), isFalse);
+      expect(
+        await action(container).unlinkProfile(42, () async => fail('deleted')),
+        TailscaleUnlinkOutcome.pending,
+      );
       verifyNever(() => core.forgetTailscaleRoutes(any()));
     });
 
@@ -721,17 +729,116 @@ void main() {
       verify(() => core.getTailscaleNodes()).called(1);
     });
 
-    test('a failed forget keeps the records and the profile', () async {
+    Future<void> keep() async => fail('the profile must stay');
+
+    void forgetAnswers(String outcome) {
+      when(
+        () => core.forgetTailscaleRoutes(42),
+      ).thenAnswer((_) async => TailscaleForgetResult(outcome: outcome));
+    }
+
+    void routesAnswer(Object error) {
+      when(() => core.getTailscaleRoutes(42)).thenThrow(error);
+    }
+
+    test('a refused forget changed nothing and may be retried', () async {
+      final container = build(records: const [record]);
+      forgetAnswers('failed');
+
+      expect(
+        await container.read(profilesActionProvider.notifier).deleteProfile(42),
+        TailscaleUnlinkOutcome.failed,
+      );
+
+      expect(records(container), const [record]);
+      expect((await _stored()).single, containsPair('unlinking', false));
+      expect(action(container).hasPendingManaged(42), isFalse);
+      expect(container.read(profilesProvider).single.id, 42);
+    });
+
+    test('an unanswered forget keeps the records, targets and lock until a '
+        'read proves the state', () async {
       final container = build(records: const [record]);
       when(
         () => core.forgetTailscaleRoutes(42),
-      ).thenThrow(const CoreMethodException(code: 'boom', message: 'boom'));
+      ).thenThrow(const CoreMethodException(code: 'timeout', message: 'x'));
 
-      expect(await action(container).forgetProfile(42), isFalse);
-      await container.read(profilesActionProvider.notifier).deleteProfile(42);
-
-      expect(records(container).single.id, 'm1');
+      expect(
+        await container.read(profilesActionProvider.notifier).deleteProfile(42),
+        TailscaleUnlinkOutcome.unconfirmed,
+      );
+      expect(records(container).single.unlinking, isTrue);
       expect(container.read(profilesProvider).single.id, 42);
+      expect(action(container).hasPendingManaged(42), isTrue);
+      expect(
+        await action(container).unlinkProfile(42, keep),
+        TailscaleUnlinkOutcome.pending,
+      );
+      verify(() => core.forgetTailscaleRoutes(42)).called(1);
+
+      container
+          .read(profilesProvider.notifier)
+          .put(
+            const Profile(id: 43, label: '', autoUpdateDuration: Duration.zero),
+          );
+      routesAnswer(const CoreMethodException(code: 'timeout', message: 'x'));
+      expect(
+        await action(
+          container,
+        ).recheckUnlink(42, open: TailscaleUnlinkOutcome.unconfirmed),
+        TailscaleUnlinkOutcome.unconfirmed,
+      );
+      expect(action(container).hasPendingManaged(42), isTrue);
+      expect(action(container).hasPendingManaged(43), isFalse);
+
+      routesAnswer(
+        const CoreMethodException(
+          code: 'tailscale_profile_not_current',
+          message: 'x',
+        ),
+      );
+      expect(
+        await action(
+          container,
+        ).recheckUnlink(42, open: TailscaleUnlinkOutcome.unconfirmed),
+        TailscaleUnlinkOutcome.failed,
+      );
+      expect(records(container).single.unlinking, isFalse);
+      expect(action(container).hasPendingManaged(42), isFalse);
+      verifyNever(() => core.forgetTailscaleRoutes(43));
+    });
+
+    test('a deletion that threw keeps the records until a read finds the '
+        'profile', () async {
+      final container = build(records: const [record]);
+      forgetAnswers('confirmed');
+
+      expect(
+        await action(
+          container,
+        ).unlinkProfile(42, () async => throw StateError('disk')),
+        TailscaleUnlinkOutcome.deleteUnconfirmed,
+      );
+      expect(records(container).single.unlinking, isTrue);
+      expect(action(container).hasPendingManaged(42), isTrue);
+
+      routesAnswer(const CoreMethodException(code: 'timeout', message: 'x'));
+      expect(
+        await action(
+          container,
+        ).recheckUnlink(42, open: TailscaleUnlinkOutcome.deleteUnconfirmed),
+        TailscaleUnlinkOutcome.deleteUnconfirmed,
+      );
+      expect(action(container).hasPendingManaged(42), isTrue);
+
+      await container.read(profilesProvider.notifier).del(42);
+      expect(
+        await action(
+          container,
+        ).recheckUnlink(42, open: TailscaleUnlinkOutcome.deleteUnconfirmed),
+        TailscaleUnlinkOutcome.done,
+      );
+      expect(records(container), isEmpty);
     });
   });
 
