@@ -53,17 +53,20 @@ class TailscaleTag extends StatelessWidget {
     return Container(
       height: 20,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      alignment: Alignment.center,
       decoration: ShapeDecoration(
         color: DashboardColors.of(context).tone2,
         shape: AppShape.all(AppCorner.full),
       ),
-      child: Text(
-        label,
-        maxLines: 1,
-        style: AppTextStyle.caption2
-            .of(context, emphasized: true)
-            .copyWith(color: context.colorScheme.onSurfaceVariant),
+      // As wide as its label, also in a Wrap that offers the full row.
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          label,
+          maxLines: 1,
+          style: AppTextStyle.caption2
+              .of(context, emphasized: true)
+              .copyWith(color: context.colorScheme.onSurfaceVariant),
+        ),
       ),
     );
   }

@@ -685,7 +685,7 @@ void main() {
 
       void expectPending() {
         expect(find.textContaining('迁移结果待确认'), findsOneWidget);
-        expect(find.text('重新读取状态'), findsWidgets);
+        expect(find.text('重新读取状态'), findsOneWidget);
         expect(find.text('迁移到这个节点'), findsNothing);
         expect(find.text('重试迁移'), findsNothing);
         expect(find.text('重新登录'), findsNothing);

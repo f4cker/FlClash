@@ -66,11 +66,10 @@ class TailscaleLegacyBlock extends StatelessWidget {
           _ => null,
         },
       ),
+      // The card's only button reads; the banner adds no second one.
       TailscaleLegacyView.unknown => TailscaleBanner(
         level: TailscaleBannerLevel.warn,
         text: _unknownText(context),
-        actionLabel: appLocalizations.tsReadStatus,
-        onAction: reading ? null : onRecheck,
       ),
       TailscaleLegacyView.archiveError => TailscaleBanner(
         level: TailscaleBannerLevel.error,
