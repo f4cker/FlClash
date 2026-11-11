@@ -1170,6 +1170,279 @@ $MountOperationCopyWith<$Res>? get pending {
 }
 }
 
+/// @nodoc
+mixin _$MountSourceRecord {
+
+ int get sourceId; MountSourceFailure? get failure; DateTime? get failedAt; DateTime? get succeededAt;
+/// Create a copy of MountSourceRecord
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MountSourceRecordCopyWith<MountSourceRecord> get copyWith => _$MountSourceRecordCopyWithImpl<MountSourceRecord>(this as MountSourceRecord, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MountSourceRecord;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountSourceRecord&&(identical(other.sourceId, _this.sourceId) || other.sourceId == _this.sourceId)&&(identical(other.failure, _this.failure) || other.failure == _this.failure)&&(identical(other.failedAt, _this.failedAt) || other.failedAt == _this.failedAt)&&(identical(other.succeededAt, _this.succeededAt) || other.succeededAt == _this.succeededAt));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as MountSourceRecord;
+  return Object.hash(runtimeType,_this.sourceId,_this.failure,_this.failedAt,_this.succeededAt);
+}
+
+@override
+String toString() {
+  final _this = this as MountSourceRecord;
+  return 'MountSourceRecord(sourceId: ${_this.sourceId}, failure: ${_this.failure}, failedAt: ${_this.failedAt}, succeededAt: ${_this.succeededAt})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MountSourceRecordCopyWith<$Res>  {
+  factory $MountSourceRecordCopyWith(MountSourceRecord value, $Res Function(MountSourceRecord) _then) = _$MountSourceRecordCopyWithImpl;
+@useResult
+$Res call({
+ int sourceId, MountSourceFailure? failure, DateTime? failedAt, DateTime? succeededAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$MountSourceRecordCopyWithImpl<$Res>
+    implements $MountSourceRecordCopyWith<$Res> {
+  _$MountSourceRecordCopyWithImpl(this._self, this._then);
+
+  final MountSourceRecord _self;
+  final $Res Function(MountSourceRecord) _then;
+
+/// Create a copy of MountSourceRecord
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? sourceId = null,Object? failure = freezed,Object? failedAt = freezed,Object? succeededAt = freezed,}) {
+  return _then(MountSourceRecord(
+sourceId: null == sourceId ? _self.sourceId : sourceId // ignore: cast_nullable_to_non_nullable
+as int,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
+as MountSourceFailure?,failedAt: freezed == failedAt ? _self.failedAt : failedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,succeededAt: freezed == succeededAt ? _self.succeededAt : succeededAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MountSourceRecord].
+extension MountSourceRecordPatterns on MountSourceRecord {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MountSourceRecord value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MountSourceRecord() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MountSourceRecord value)  $default,){
+final _that = this;
+switch (_that) {
+case _MountSourceRecord():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MountSourceRecord value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MountSourceRecord() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int sourceId,  MountSourceFailure? failure,  DateTime? failedAt,  DateTime? succeededAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MountSourceRecord() when $default != null:
+return $default(_that.sourceId,_that.failure,_that.failedAt,_that.succeededAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int sourceId,  MountSourceFailure? failure,  DateTime? failedAt,  DateTime? succeededAt)  $default,) {final _that = this;
+switch (_that) {
+case _MountSourceRecord():
+return $default(_that.sourceId,_that.failure,_that.failedAt,_that.succeededAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int sourceId,  MountSourceFailure? failure,  DateTime? failedAt,  DateTime? succeededAt)?  $default,) {final _that = this;
+switch (_that) {
+case _MountSourceRecord() when $default != null:
+return $default(_that.sourceId,_that.failure,_that.failedAt,_that.succeededAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _MountSourceRecord implements MountSourceRecord {
+  const _MountSourceRecord({required this.sourceId, this.failure, this.failedAt, this.succeededAt});
+  
+
+@override final  int sourceId;
+@override final  MountSourceFailure? failure;
+@override final  DateTime? failedAt;
+@override final  DateTime? succeededAt;
+
+/// Create a copy of MountSourceRecord
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MountSourceRecordCopyWith<_MountSourceRecord> get copyWith => __$MountSourceRecordCopyWithImpl<_MountSourceRecord>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountSourceRecord&&(identical(other.sourceId, sourceId) || other.sourceId == sourceId)&&(identical(other.failure, failure) || other.failure == failure)&&(identical(other.failedAt, failedAt) || other.failedAt == failedAt)&&(identical(other.succeededAt, succeededAt) || other.succeededAt == succeededAt));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,sourceId,failure,failedAt,succeededAt);
+}
+
+@override
+String toString() {
+    return 'MountSourceRecord(sourceId: $sourceId, failure: $failure, failedAt: $failedAt, succeededAt: $succeededAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MountSourceRecordCopyWith<$Res> implements $MountSourceRecordCopyWith<$Res> {
+  factory _$MountSourceRecordCopyWith(_MountSourceRecord value, $Res Function(_MountSourceRecord) _then) = __$MountSourceRecordCopyWithImpl;
+@override @useResult
+$Res call({
+ int sourceId, MountSourceFailure? failure, DateTime? failedAt, DateTime? succeededAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$MountSourceRecordCopyWithImpl<$Res>
+    implements _$MountSourceRecordCopyWith<$Res> {
+  __$MountSourceRecordCopyWithImpl(this._self, this._then);
+
+  final _MountSourceRecord _self;
+  final $Res Function(_MountSourceRecord) _then;
+
+/// Create a copy of MountSourceRecord
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? sourceId = null,Object? failure = freezed,Object? failedAt = freezed,Object? succeededAt = freezed,}) {
+  return _then(_MountSourceRecord(
+sourceId: null == sourceId ? _self.sourceId : sourceId // ignore: cast_nullable_to_non_nullable
+as int,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
+as MountSourceFailure?,failedAt: freezed == failedAt ? _self.failedAt : failedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,succeededAt: freezed == succeededAt ? _self.succeededAt : succeededAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
+  ));
+}
+
+
+}
+
 
 /// @nodoc
 mixin _$MountSourceInspection {

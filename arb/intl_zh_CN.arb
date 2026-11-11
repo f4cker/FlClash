@@ -1341,5 +1341,8 @@
   "tsDirectMode": "当前为直连模式，Tailscale 自动分流和拦截保护未生效。请手动切换到规则模式后再访问。",
   "tsGlobalMode": "当前为全局模式，Tailscale 自动分流和拦截保护未生效。请手动切换到规则模式后再访问。",
   "tsDnsUnverified": "当前 DNS 设置无法确认目标域名会保留到规则匹配，域名分流尚未核实。请检查 DNS 设置。",
-  "tsCancel": "取消"
+  "tsCancel": "取消",
+  "mountApplyKept": "未能应用挂载，仍使用上次确认的运行配置。",
+  "mountApplyBlocked": "未能应用挂载，相关连接已拦截。",
+  "mountSourceNoNodeList": "此订阅未提供可挂载的节点列表，请检查订阅格式。"
 }

@@ -210,6 +210,16 @@ class CoreMethodException implements Exception {
   String toString() => 'CoreMethodException($code, $message, $details)';
 }
 
+MountRejectedOutcome? mountRejectedOutcome(Object? error) {
+  if (error case CoreMethodException(
+    code: 'mount_rejected',
+    details: {'outcome': final String outcome},
+  )) {
+    return MountRejectedOutcome.values.asNameMap()[outcome];
+  }
+  return null;
+}
+
 /// A Core that never answered, as opposed to one that answered with an error.
 bool isUnansweredCoreError(Object? error) => switch (error) {
   TimeoutException() => true,

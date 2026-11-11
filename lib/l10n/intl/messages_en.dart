@@ -1121,10 +1121,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Certificate installed",
     ),
-    "installedAppsPermissionDeniedMessage":
-        MessageLookupByLibrary.simpleMessage(
-          "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
-        ),
+    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
+      "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
+    ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "This system hides the installed app list until the permission is granted. Authorize it to configure the per-app proxy.",
     ),
@@ -1478,6 +1477,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "monthsAgo": m67,
     "monthsAgoShort": m68,
     "more": MessageLookupByLibrary.simpleMessage("More"),
+    "mountApplyBlocked": MessageLookupByLibrary.simpleMessage(
+      "Mounts could not be applied. Affected connections are blocked.",
+    ),
+    "mountApplyKept": MessageLookupByLibrary.simpleMessage(
+      "Mounts could not be applied. The last confirmed running profile is still in use.",
+    ),
+    "mountSourceNoNodeList": MessageLookupByLibrary.simpleMessage(
+      "This subscription does not provide a mountable node list. Check its format.",
+    ),
     "name": MessageLookupByLibrary.simpleMessage("Name"),
     "nameserverDesc": MessageLookupByLibrary.simpleMessage(
       "The default DNS servers, such as 223.5.5.5, tls://1.1.1.1 or https://dns.google/dns-query.",

@@ -70,6 +70,7 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
           ),
         );
   final allProfileProviders = ref.watch(profileProvidersProvider);
+  final profiles = ref.read(profilesProvider);
   final mitmModules =
       mitmFeature &&
           ref.watch(
@@ -105,7 +106,14 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
           : await database.scriptsDao.get(scriptId).getSingleOrNull();
     }
   }
+  final mountTarget = profileId != null && profileType != ProfileType.custom
+      ? await database.mountsDao.target(profileId)
+      : null;
+  final mounts = mountTarget == null
+      ? null
+      : mountSetupOf(mountTarget, profiles, await appPath.profilesPath);
   return SetupState(
+    mounts: mounts,
     mitmModules: mitmModules == null
         ? const []
         : await mitmModuleSources(await mitmModules),

@@ -1,3 +1,4 @@
+import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,5 +105,73 @@ void main() {
     );
     expect(MountOperation.fromJson(operation.toJson()), operation);
     expect(mountProviderName(2), 'flash-mount-2');
+  });
+
+  test('a mount setup follows the relation and every source update', () {
+    final updated = DateTime(2026, 1, 1);
+    final profiles = [
+      Profile(
+        id: 2,
+        label: 'Air',
+        type: ProfileType.url,
+        url: 'https://example.invalid/a',
+        autoUpdateDuration: Duration.zero,
+        lastUpdateDate: updated,
+      ),
+      const Profile(id: 3, label: 'Local', autoUpdateDuration: Duration.zero),
+    ];
+    const target = MountTargetState(
+      targetId: 1,
+      sourceIds: [2, 3, 9],
+      groups: ['Proxy'],
+      version: 4,
+    );
+
+    final setup = mountSetupOf(target, profiles, '/profiles');
+
+    expect(setup.sources, [
+      const MountSource(id: 2, label: 'Air', path: '/profiles/2.yaml'),
+    ]);
+    expect(setup.groups, ['Proxy']);
+    expect(
+      mountSetupOf(target, profiles, '/profiles').revision,
+      setup.revision,
+    );
+    final touched = [
+      profiles.first.copyWith(lastUpdateDate: DateTime(2026, 1, 2)),
+      profiles.last,
+    ];
+    expect(
+      mountSetupOf(target, touched, '/profiles').revision,
+      isNot(setup.revision),
+    );
+    expect(
+      mountSetupOf(target.copyWith(version: 5), profiles, '/profiles').revision,
+      isNot(setup.revision),
+    );
+  });
+
+  test('only a mount rejection names an outcome', () {
+    CoreMethodException rejected(Object? details) => CoreMethodException(
+      code: 'mount_rejected',
+      message: 'm',
+      details: details,
+    );
+    expect(
+      mountRejectedOutcome(rejected({'outcome': 'kept'})),
+      MountRejectedOutcome.kept,
+    );
+    expect(
+      mountRejectedOutcome(rejected({'outcome': 'blocked'})),
+      MountRejectedOutcome.blocked,
+    );
+    expect(mountRejectedOutcome(rejected({'outcome': 'other'})), isNull);
+    expect(
+      mountRejectedOutcome(
+        const CoreMethodException(code: 'config_rejected', message: 'm'),
+      ),
+      isNull,
+    );
+    expect(mountRejectedOutcome(Exception('x')), isNull);
   });
 }

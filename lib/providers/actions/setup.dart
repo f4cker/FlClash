@@ -846,7 +846,10 @@ class SetupAction extends _$SetupAction {
       return getProfile(setupState: state, patchConfig: realPatchConfig);
     }, title: 'build profile');
     final profileFailed = realProfile == null;
-    final setupParams = _setupParams.copyWith(base: realProfile?.base);
+    final setupParams = _setupParams.copyWith(
+      base: realProfile?.base,
+      mounts: setupState?.mounts,
+    );
     final inputs = switch (setupState) {
       final state? when !profileFailed => (
         state,
@@ -859,9 +862,11 @@ class SetupAction extends _$SetupAction {
     final yamlString = realProfile?.yaml ?? '';
     // The panel-added accounts are not in the YAML, yet change what runs.
     final managed = setupParams.tailscale?.managed ?? const [];
-    final yamlMd5 = managed.isEmpty || realProfile == null
+    final mountRevision = setupParams.mounts?.revision ?? '';
+    final yamlMd5 =
+        (managed.isEmpty && mountRevision.isEmpty) || realProfile == null
         ? realProfile?.md5 ?? ''
-        : '${realProfile.md5}${json.encode(managed)}'.toMd5();
+        : '${realProfile.md5}${json.encode(managed)}$mountRevision'.toMd5();
     if (!profileFailed && yamlMd5 == globalState.lastConfigMd5 && !force) {
       _appliedInputs = inputs;
       globalState.lastConfigCounts = realProfile.counts;
@@ -907,12 +912,20 @@ class SetupAction extends _$SetupAction {
               preloadInvoke: preloadInvoke,
             );
           } on CoreMethodException catch (error) {
-            if (error.code != 'config_rejected') {
+            final outcome = mountRejectedOutcome(error);
+            if (outcome == MountRejectedOutcome.kept) {
+              throw MessageException(currentAppLocalizations.mountApplyKept);
+            }
+            if (error.code != 'config_rejected' && outcome == null) {
               rethrow;
             }
             globalState.lastConfigCounts = configCountsOf(const {});
             await globalState.safeRun(() => onUpdated?.call());
-            throw MessageException(error.message);
+            throw MessageException(
+              outcome == MountRejectedOutcome.blocked
+                  ? currentAppLocalizations.mountApplyBlocked
+                  : error.message,
+            );
           }
         } catch (e, s) {
           setupFailed = true;

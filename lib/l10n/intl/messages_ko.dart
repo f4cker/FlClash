@@ -1257,6 +1257,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "monthsAgo": m67,
     "monthsAgoShort": m68,
     "more": MessageLookupByLibrary.simpleMessage("더 보기"),
+    "mountApplyBlocked": MessageLookupByLibrary.simpleMessage(
+      "Mounts could not be applied. Affected connections are blocked.",
+    ),
+    "mountApplyKept": MessageLookupByLibrary.simpleMessage(
+      "Mounts could not be applied. The last confirmed running profile is still in use.",
+    ),
+    "mountSourceNoNodeList": MessageLookupByLibrary.simpleMessage(
+      "This subscription does not provide a mountable node list. Check its format.",
+    ),
     "name": MessageLookupByLibrary.simpleMessage("이름"),
     "nameserverDesc": MessageLookupByLibrary.simpleMessage(
       "기본으로 사용하는 DNS 서버입니다. 예: 223.5.5.5, tls://1.1.1.1, https://dns.google/dns-query",

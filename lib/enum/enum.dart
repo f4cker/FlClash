@@ -1009,3 +1009,7 @@ enum UpdatingScope { core, local }
 enum MountSourceFailure { fetch, unsupported }
 
 enum MountOperationKind { save, deleteSource, unknown }
+
+/// How the Core answered a mounted profile it could not apply: [kept] runs
+/// the config it ran before, [blocked] one that rejects every connection.
+enum MountRejectedOutcome { kept, blocked }

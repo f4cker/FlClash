@@ -1762,6 +1762,81 @@ void main() {
       expect(shownGroups(), ['Proxy']);
     });
 
+    test('a mounted profile hands its mounts over and tells a kept run '
+        'from a blocked one', () async {
+      final profile = Profile.normal(label: 'p');
+      final core = _MockCoreHandlerInterface();
+      const mounts = MountSetup(
+        revision: 'r1',
+        sources: [MountSource(id: 2, label: 'Air', path: '/p/2.yaml')],
+        groups: ['Proxy'],
+      );
+      when(
+        () => core.getProfileBase(any()),
+      ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+      when(() => core.getExternalProviders()).thenAnswer((_) async => []);
+      var groupReads = 0;
+      when(() => core.getProxies()).thenAnswer((_) async {
+        groupReads++;
+        return const ProxiesData(all: [], proxies: {});
+      });
+      final pushed = <SetupParams>[];
+      String? outcome;
+      when(() => core.setupConfig(any())).thenAnswer((invocation) async {
+        pushed.add(invocation.positionalArguments.single as SetupParams);
+        if (outcome case final outcome?) {
+          throw CoreMethodException(
+            code: 'mount_rejected',
+            message: 'bad',
+            details: {'outcome': outcome},
+          );
+        }
+      });
+      var revision = 'r1';
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith(
+            (_, profileId) => nullProfileSetupState.copyWith(
+              profileId: profileId,
+              mounts: mounts.copyWith(revision: revision),
+            ),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      addTearDown(() => globalState.lastConfigCounts = null);
+      final setupAction = scoped.read(setupActionProvider.notifier);
+
+      expect(await setupAction.applyProfile(force: true), isTrue);
+      expect(pushed.single.mounts, mounts);
+      await setupAction.applyProfile();
+      expect(pushed, hasLength(1));
+
+      revision = 'r2';
+      scoped.invalidate(setupStateProvider);
+      await setupAction.applyProfile();
+      expect(pushed.last.mounts?.revision, 'r2');
+
+      outcome = 'kept';
+      revision = 'r3';
+      scoped.invalidate(setupStateProvider);
+      globalState.lastConfigCounts = (groups: 1, proxies: 1, rules: 1);
+      var reads = groupReads;
+      expect(await setupAction.applyProfile(), isFalse);
+      expect(globalState.lastConfigCounts, isNull);
+      expect(groupReads, reads);
+
+      outcome = 'blocked';
+      reads = groupReads;
+      expect(await setupAction.applyProfile(), isFalse);
+      expect(globalState.lastConfigCounts, (groups: 0, proxies: 0, rules: 0));
+      expect(groupReads, greaterThan(reads));
+    });
+
     test('a profile file leaves its bulk sections in the Core and records '
         'what the Core was handed', () async {
       final profile = Profile.normal(label: 'p');

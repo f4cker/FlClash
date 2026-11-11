@@ -137,6 +137,21 @@ Stream<Set<String>> customGroupNames(Ref ref) {
   return database.proxyGroupsDao.names().watch().map(Set.of);
 }
 
+@riverpod
+Stream<Map<int, MountTargetState>> mountTargets(Ref ref) {
+  return database.mountsDao.watchTargets();
+}
+
+@riverpod
+Stream<MountTargetState?> mountTarget(Ref ref, int targetId) {
+  return database.mountsDao.watchTarget(targetId);
+}
+
+@riverpod
+Stream<Map<int, MountSourceRecord>> mountSourceStatuses(Ref ref) {
+  return database.mountsDao.watchStatuses();
+}
+
 @Riverpod(keepAlive: true)
 class Profiles extends _$Profiles {
   late final _writes = _Writes(_reread);

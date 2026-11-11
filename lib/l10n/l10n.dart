@@ -7718,7 +7718,8 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one:
+          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -11602,6 +11603,36 @@ class AppLocalizations {
   /// `Cancel`
   String get tsCancel {
     return Intl.message('Cancel', name: 'tsCancel', desc: '', args: []);
+  }
+
+  /// `Mounts could not be applied. The last confirmed running profile is still in use.`
+  String get mountApplyKept {
+    return Intl.message(
+      'Mounts could not be applied. The last confirmed running profile is still in use.',
+      name: 'mountApplyKept',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mounts could not be applied. Affected connections are blocked.`
+  String get mountApplyBlocked {
+    return Intl.message(
+      'Mounts could not be applied. Affected connections are blocked.',
+      name: 'mountApplyBlocked',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This subscription does not provide a mountable node list. Check its format.`
+  String get mountSourceNoNodeList {
+    return Intl.message(
+      'This subscription does not provide a mountable node list. Check its format.',
+      name: 'mountSourceNoNodeList',
+      desc: '',
+      args: [],
+    );
   }
 }
 

@@ -1273,6 +1273,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "monthsAgo": m67,
     "monthsAgoShort": m68,
     "more": MessageLookupByLibrary.simpleMessage("その他"),
+    "mountApplyBlocked": MessageLookupByLibrary.simpleMessage(
+      "Mounts could not be applied. Affected connections are blocked.",
+    ),
+    "mountApplyKept": MessageLookupByLibrary.simpleMessage(
+      "Mounts could not be applied. The last confirmed running profile is still in use.",
+    ),
+    "mountSourceNoNodeList": MessageLookupByLibrary.simpleMessage(
+      "This subscription does not provide a mountable node list. Check its format.",
+    ),
     "name": MessageLookupByLibrary.simpleMessage("名前"),
     "nameserverDesc": MessageLookupByLibrary.simpleMessage(
       "既定で使う DNS サーバーです。例：223.5.5.5、tls://1.1.1.1、https://dns.google/dns-query",

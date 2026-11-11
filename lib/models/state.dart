@@ -6,6 +6,7 @@ import 'app.dart';
 import 'clash_config.dart';
 import 'common.dart';
 import 'core.dart';
+import 'mount.dart';
 import 'profile.dart';
 
 part 'generated/state.freezed.dart';
@@ -262,5 +263,6 @@ abstract class SetupState with _$SetupState {
     @Default({}) Map<int, String> proxyDialers,
     String? matchTarget,
     @Default([]) List<MitmModuleSource> mitmModules,
+    MountSetup? mounts,
   }) = _SetupState;
 }

@@ -1,5 +1,11 @@
+import 'dart:convert';
+
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:path/path.dart';
+
+import 'profile.dart';
 
 part 'generated/mount.freezed.dart';
 part 'generated/mount.g.dart';
@@ -34,6 +40,46 @@ abstract class MountSetup with _$MountSetup {
       _$MountSetupFromJson(json);
 }
 
+/// What [target] makes the Core mount. The revision changes with the
+/// relation and with any source update or rename, which recomputes suffixes.
+MountSetup mountSetupOf(
+  MountTargetState target,
+  List<Profile> profiles,
+  String profilesPath,
+) {
+  final sources = [
+    for (final id in target.sourceIds)
+      if (profiles.getProfile(id) case final profile?
+          when profile.type == ProfileType.url)
+        profile,
+  ];
+  final revision = json.encode({
+    'target': target.targetId,
+    'version': target.version,
+    'groups': target.groups,
+    'sources': [
+      for (final source in sources)
+        [
+          source.id,
+          source.realLabel,
+          source.lastUpdateDate?.millisecondsSinceEpoch,
+        ],
+    ],
+  });
+  return MountSetup(
+    revision: revision.toMd5(),
+    sources: [
+      for (final source in sources)
+        MountSource(
+          id: source.id,
+          label: source.realLabel,
+          path: join(profilesPath, '${source.id}.yaml'),
+        ),
+    ],
+    groups: target.groups,
+  );
+}
+
 /// A save or a source removal whose application is not yet proven.
 @freezed
 abstract class MountOperation with _$MountOperation {
@@ -56,6 +102,16 @@ abstract class MountTargetState with _$MountTargetState {
     required int version,
     MountOperation? pending,
   }) = _MountTargetState;
+}
+
+@freezed
+abstract class MountSourceRecord with _$MountSourceRecord {
+  const factory MountSourceRecord({
+    required int sourceId,
+    MountSourceFailure? failure,
+    DateTime? failedAt,
+    DateTime? succeededAt,
+  }) = _MountSourceRecord;
 }
 
 class MountVersionConflict implements Exception {

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
@@ -8,6 +10,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/app_paths.dart';
 import '../helpers/test_profiles.dart';
 
 void main() {
@@ -145,5 +148,64 @@ void main() {
     final state = await container.read(setupStateProvider(profile.id).future);
 
     expect(state.proxyDialers, {30: 'Relay'});
+  });
+
+  testWidgets('a profile with a mount record carries its mount setup', (
+    tester,
+  ) async {
+    final root = Directory.systemTemp.createTempSync('mount_setup_state');
+    addTearDown(() => root.deleteSync(recursive: true));
+    await tester.runAsync(() => useAppPaths(root));
+    const profile = Profile(
+      id: 1,
+      label: 'Base',
+      autoUpdateDuration: Duration.zero,
+    );
+    const source = Profile(
+      id: 2,
+      label: 'Air',
+      type: ProfileType.url,
+      url: 'https://example.invalid/sub',
+      autoUpdateDuration: Duration.zero,
+    );
+    await testDatabase.profilesDao.putAll([
+      profile.toCompanion(),
+      source.toCompanion(),
+    ]);
+    await testDatabase.mountsDao.save(
+      targetId: 1,
+      expectedVersion: null,
+      sourceIds: [2],
+      groups: ['Proxy'],
+      pending: (version) =>
+          MountOperation(kind: MountOperationKind.save, version: version),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(() => TestProfiles([profile, source])),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const SizedBox.shrink(),
+      ),
+    );
+
+    final state = (await tester.runAsync(
+      () => container.read(setupStateProvider(profile.id).future),
+    ))!;
+
+    final mounts = state.mounts!;
+    expect(mounts.groups, ['Proxy']);
+    expect(mounts.sources.single.id, 2);
+    expect(mounts.sources.single.label, 'Air');
+    expect(mounts.sources.single.path, endsWith('2.yaml'));
+    expect(mounts.revision, isNotEmpty);
+    final other = (await tester.runAsync(
+      () => container.read(setupStateProvider(2).future),
+    ))!;
+    expect(other.mounts, isNull);
   });
 }

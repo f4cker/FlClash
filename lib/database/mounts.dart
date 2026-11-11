@@ -107,32 +107,40 @@ class MountsDao extends DatabaseAccessor<Database> with _$MountsDaoMixin {
     );
   }
 
-  Stream<MountTargetState?> watchTarget(int targetId) {
-    final query = select(mountTargets)
-      ..where((t) => t.targetId.equals(targetId));
-    return query.watchSingleOrNull().asyncMap((_) => target(targetId));
+  Future<Map<int, MountTargetState>> targets() async {
+    final rows = await select(mountTargets).get();
+    final mounts = await (select(
+      profileMounts,
+    )..orderBy([(t) => OrderingTerm.asc(t.position)])).get();
+    return {
+      for (final row in rows)
+        row.targetId: MountTargetState(
+          targetId: row.targetId,
+          sourceIds: [
+            for (final mount in mounts)
+              if (mount.targetId == row.targetId) mount.sourceId,
+          ],
+          groups: row.groups,
+          version: row.version,
+          pending: row.pending,
+        ),
+    };
   }
 
-  /// Every target with mounts or a mount record, by target id.
+  /// Every target with a mount record, by target id. Also wakes on profile
+  /// writes, as a deleted profile takes its mount rows along by cascade.
   Stream<Map<int, MountTargetState>> watchTargets() {
-    return select(mountTargets).watch().asyncMap((rows) async {
-      final mounts = await (select(
-        profileMounts,
-      )..orderBy([(t) => OrderingTerm.asc(t.position)])).get();
-      return {
-        for (final row in rows)
-          row.targetId: MountTargetState(
-            targetId: row.targetId,
-            sourceIds: [
-              for (final mount in mounts)
-                if (mount.targetId == row.targetId) mount.sourceId,
-            ],
-            groups: row.groups,
-            version: row.version,
-            pending: row.pending,
-          ),
-      };
-    });
+    return customSelect(
+          'SELECT 1',
+          readsFrom: {mountTargets, profileMounts, attachedDatabase.profiles},
+        )
+        .watch()
+        .asyncMap((_) => targets())
+        .distinct(const DeepCollectionEquality().equals);
+  }
+
+  Stream<MountTargetState?> watchTarget(int targetId) {
+    return watchTargets().map((targets) => targets[targetId]).distinct();
   }
 
   /// The targets that mount [sourceId], in target id order.
@@ -254,15 +262,24 @@ class MountsDao extends DatabaseAccessor<Database> with _$MountsDaoMixin {
     });
   }
 
-  Future<Map<int, MountSourceStatusRow>> statuses() async {
-    final rows = await select(mountSourceStatuses).get();
-    return {for (final row in rows) row.sourceId: row};
+  Map<int, MountSourceRecord> _records(List<MountSourceStatusRow> rows) => {
+    for (final row in rows)
+      row.sourceId: MountSourceRecord(
+        sourceId: row.sourceId,
+        failure: row.failure,
+        failedAt: row.failedAt,
+        succeededAt: row.succeededAt,
+      ),
+  };
+
+  Future<Map<int, MountSourceRecord>> statuses() async {
+    return _records(await select(mountSourceStatuses).get());
   }
 
-  Stream<Map<int, MountSourceStatusRow>> watchStatuses() {
+  Stream<Map<int, MountSourceRecord>> watchStatuses() {
     return select(
       mountSourceStatuses,
-    ).watch().map((rows) => {for (final row in rows) row.sourceId: row});
+    ).watch().map(_records).distinct(const DeepCollectionEquality().equals);
   }
 
   /// A failure stays until an update of the source actually succeeds.

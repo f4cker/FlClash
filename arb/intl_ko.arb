@@ -1341,5 +1341,8 @@
   "tsDirectMode": "Direct mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.",
   "tsGlobalMode": "Global mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.",
   "tsDnsUnverified": "The current DNS settings do not confirm that target domains are preserved for rule matching. Domain routing has not been verified. Check DNS settings.",
-  "tsCancel": "Cancel"
+  "tsCancel": "Cancel",
+  "mountApplyKept": "Mounts could not be applied. The last confirmed running profile is still in use.",
+  "mountApplyBlocked": "Mounts could not be applied. Affected connections are blocked.",
+  "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format."
 }

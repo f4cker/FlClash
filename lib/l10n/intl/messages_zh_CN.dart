@@ -1156,6 +1156,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "monthsAgo": m67,
     "monthsAgoShort": m68,
     "more": MessageLookupByLibrary.simpleMessage("更多"),
+    "mountApplyBlocked": MessageLookupByLibrary.simpleMessage(
+      "未能应用挂载，相关连接已拦截。",
+    ),
+    "mountApplyKept": MessageLookupByLibrary.simpleMessage(
+      "未能应用挂载，仍使用上次确认的运行配置。",
+    ),
+    "mountSourceNoNodeList": MessageLookupByLibrary.simpleMessage(
+      "此订阅未提供可挂载的节点列表，请检查订阅格式。",
+    ),
     "name": MessageLookupByLibrary.simpleMessage("名称"),
     "nameserverDesc": MessageLookupByLibrary.simpleMessage(
       "默认使用的 DNS 服务器，如 223.5.5.5、tls://1.1.1.1、https://dns.google/dns-query。",
