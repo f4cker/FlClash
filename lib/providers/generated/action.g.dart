@@ -867,7 +867,7 @@ final class TailscaleActionProvider
   }
 }
 
-String _$tailscaleActionHash() => r'62eca01b8bf4558f4747acc1c1dfecd4541453d1';
+String _$tailscaleActionHash() => r'5c4ab540e620637f82338b748c5fe705d5381f8a';
 
 abstract class _$TailscaleAction extends $Notifier<void> {
   void build();

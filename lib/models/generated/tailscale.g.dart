@@ -562,6 +562,7 @@ _TailscaleNodeRecord _$TailscaleNodeRecordFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       controlUrl: json['control-url'] as String? ?? '',
       exitNode: json['exit-node'] as String?,
+      exitNodeName: json['exit-node-name'] as String?,
       acceptRoutes: json['accept-routes'] as bool?,
       loggedOut: json['logged-out'] as bool? ?? false,
     );
@@ -573,6 +574,7 @@ Map<String, dynamic> _$TailscaleNodeRecordToJson(
   'name': instance.name,
   'control-url': instance.controlUrl,
   'exit-node': ?instance.exitNode,
+  'exit-node-name': ?instance.exitNodeName,
   'accept-routes': ?instance.acceptRoutes,
   'logged-out': instance.loggedOut,
 };

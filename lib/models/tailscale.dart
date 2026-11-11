@@ -325,7 +325,8 @@ abstract class TailscaleStateEvent with _$TailscaleStateEvent {
 }
 
 /// What the app keeps for one node; a null field leaves the config's value.
-/// An empty [exitNode] is the explicit choice of no exit node.
+/// An empty [exitNode] is the explicit choice of no exit node; [exitNodeName]
+/// only labels it and never reaches the Core.
 @freezed
 abstract class TailscaleNodeRecord with _$TailscaleNodeRecord {
   const TailscaleNodeRecord._();
@@ -335,6 +336,7 @@ abstract class TailscaleNodeRecord with _$TailscaleNodeRecord {
     required String name,
     @JsonKey(name: 'control-url') @Default('') String controlUrl,
     @JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,
+    @JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,
     @JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,
     @JsonKey(name: 'logged-out') @Default(false) bool loggedOut,
   }) = _TailscaleNodeRecord;

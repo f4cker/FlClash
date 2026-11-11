@@ -300,7 +300,11 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   Future<void> _applyExit(TailscaleNode node, TailscalePeer? peer) async {
     final value = peer == null ? '' : tailscaleAddressOf(peer) ?? peer.id;
     _exitRetries[node.key] = _Retry(exitPeer: peer);
-    final notice = await _action.setPrefsFromPanel(node, exitNode: value);
+    final notice = await _action.setPrefsFromPanel(
+      node,
+      exitNode: value,
+      exitNodeName: peer == null ? null : tailscalePeerName(peer),
+    );
     if (notice == TailscaleSettingNotice.updated) {
       _exitRetries.remove(node.key);
       dialogs.showBanner(
@@ -491,6 +495,12 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     );
     final exitRetry = _exitRetries[node.key];
     final routesRetry = _routesRetries[node.key];
+    final record = ref
+        .watch(tailscaleNodeRecordsProvider)
+        .firstWhereOrNull((record) => record.key == node.key);
+    final savedExitName = record?.exitNode == node.settings.exitNode.value
+        ? record?.exitNodeName
+        : null;
     final body = LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= tailscaleTwoColumnWidth + 48;
@@ -499,6 +509,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
           status: status,
           phase: phase,
           panel: panel,
+          savedExitName: savedExitName,
           onSelect: (peer) => _selectExit(node, peer),
           onReadSettings: () => _refresh(node, settings: true),
           onRetry: exitRetry == null

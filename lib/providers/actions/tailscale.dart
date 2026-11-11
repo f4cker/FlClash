@@ -63,6 +63,7 @@ class TailscaleAction extends _$TailscaleAction {
   Future<TailscaleSetPrefsResult> setPrefs(
     TailscaleNode node, {
     String? exitNode,
+    String? exitNodeName,
     bool? acceptRoutes,
   }) async {
     if (!node.overridable) {
@@ -76,6 +77,11 @@ class TailscaleAction extends _$TailscaleAction {
       node.key,
       (record) => record.copyWith(
         exitNode: exitNode ?? record.exitNode,
+        exitNodeName: exitNode == null
+            ? record.exitNodeName
+            : exitNode.isEmpty
+            ? null
+            : exitNodeName,
         acceptRoutes: acceptRoutes ?? record.acceptRoutes,
       ),
     );
@@ -391,6 +397,7 @@ class TailscaleAction extends _$TailscaleAction {
   Future<TailscaleSettingNotice> setPrefsFromPanel(
     TailscaleNode node, {
     String? exitNode,
+    String? exitNodeName,
     bool? acceptRoutes,
   }) async {
     final key = node.key;
@@ -410,6 +417,7 @@ class TailscaleAction extends _$TailscaleAction {
       final result = await setPrefs(
         node,
         exitNode: exitNode,
+        exitNodeName: exitNodeName,
         acceptRoutes: acceptRoutes,
       );
       notice = switch (result.outcome) {

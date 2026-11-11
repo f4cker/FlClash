@@ -182,12 +182,16 @@ class TailscaleExitCard extends StatelessWidget {
     required this.onSelect,
     required this.onReadSettings,
     this.onRetry,
+    this.savedExitName,
   });
 
   final TailscaleNode node;
   final TailscaleStatus? status;
   final TailscalePhase phase;
   final TailscalePanelNode panel;
+
+  /// The name kept with the saved exit node, for display only.
+  final String? savedExitName;
 
   /// Null is the explicit choice of no exit node.
   final ValueChanged<TailscalePeer?> onSelect;
@@ -241,9 +245,9 @@ class TailscaleExitCard extends StatelessWidget {
         savedLine = appLocalizations.tsSavedValue(
           saved.value.isEmpty
               ? appLocalizations.tsNoExitNode
-              : peer == null
-              ? saved.value
-              : tailscaleDeviceName(context, peer),
+              : peer != null
+              ? tailscaleDeviceName(context, peer)
+              : savedExitName ?? saved.value,
         );
       }
       block = _SettingBlock(

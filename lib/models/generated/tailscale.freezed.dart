@@ -5533,7 +5533,7 @@ as bool,
 /// @nodoc
 mixin _$TailscaleNodeRecord {
 
-@JsonKey(name: 'profile-id') int get profileId; String get name;@JsonKey(name: 'control-url') String get controlUrl;@JsonKey(name: 'exit-node', includeIfNull: false) String? get exitNode;@JsonKey(name: 'accept-routes', includeIfNull: false) bool? get acceptRoutes;@JsonKey(name: 'logged-out') bool get loggedOut;
+@JsonKey(name: 'profile-id') int get profileId; String get name;@JsonKey(name: 'control-url') String get controlUrl;@JsonKey(name: 'exit-node', includeIfNull: false) String? get exitNode;@JsonKey(name: 'exit-node-name', includeIfNull: false) String? get exitNodeName;@JsonKey(name: 'accept-routes', includeIfNull: false) bool? get acceptRoutes;@JsonKey(name: 'logged-out') bool get loggedOut;
 /// Create a copy of TailscaleNodeRecord
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -5547,20 +5547,20 @@ $TailscaleNodeRecordCopyWith<TailscaleNodeRecord> get copyWith => _$TailscaleNod
 @override
 bool operator ==(Object other) {
   final _this = this as TailscaleNodeRecord;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleNodeRecord&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.controlUrl, _this.controlUrl) || other.controlUrl == _this.controlUrl)&&(identical(other.exitNode, _this.exitNode) || other.exitNode == _this.exitNode)&&(identical(other.acceptRoutes, _this.acceptRoutes) || other.acceptRoutes == _this.acceptRoutes)&&(identical(other.loggedOut, _this.loggedOut) || other.loggedOut == _this.loggedOut));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TailscaleNodeRecord&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.controlUrl, _this.controlUrl) || other.controlUrl == _this.controlUrl)&&(identical(other.exitNode, _this.exitNode) || other.exitNode == _this.exitNode)&&(identical(other.exitNodeName, _this.exitNodeName) || other.exitNodeName == _this.exitNodeName)&&(identical(other.acceptRoutes, _this.acceptRoutes) || other.acceptRoutes == _this.acceptRoutes)&&(identical(other.loggedOut, _this.loggedOut) || other.loggedOut == _this.loggedOut));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TailscaleNodeRecord;
-  return Object.hash(runtimeType,_this.profileId,_this.name,_this.controlUrl,_this.exitNode,_this.acceptRoutes,_this.loggedOut);
+  return Object.hash(runtimeType,_this.profileId,_this.name,_this.controlUrl,_this.exitNode,_this.exitNodeName,_this.acceptRoutes,_this.loggedOut);
 }
 
 @override
 String toString() {
   final _this = this as TailscaleNodeRecord;
-  return 'TailscaleNodeRecord(profileId: ${_this.profileId}, name: ${_this.name}, controlUrl: ${_this.controlUrl}, exitNode: ${_this.exitNode}, acceptRoutes: ${_this.acceptRoutes}, loggedOut: ${_this.loggedOut})';
+  return 'TailscaleNodeRecord(profileId: ${_this.profileId}, name: ${_this.name}, controlUrl: ${_this.controlUrl}, exitNode: ${_this.exitNode}, exitNodeName: ${_this.exitNodeName}, acceptRoutes: ${_this.acceptRoutes}, loggedOut: ${_this.loggedOut})';
 }
 
 
@@ -5571,7 +5571,7 @@ abstract mixin class $TailscaleNodeRecordCopyWith<$Res>  {
   factory $TailscaleNodeRecordCopyWith(TailscaleNodeRecord value, $Res Function(TailscaleNodeRecord) _then) = _$TailscaleNodeRecordCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'profile-id') int profileId, String name,@JsonKey(name: 'control-url') String controlUrl,@JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,@JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,@JsonKey(name: 'logged-out') bool loggedOut
+@JsonKey(name: 'profile-id') int profileId, String name,@JsonKey(name: 'control-url') String controlUrl,@JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,@JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,@JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,@JsonKey(name: 'logged-out') bool loggedOut
 });
 
 
@@ -5588,12 +5588,13 @@ class _$TailscaleNodeRecordCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleNodeRecord
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? profileId = null,Object? name = null,Object? controlUrl = null,Object? exitNode = freezed,Object? acceptRoutes = freezed,Object? loggedOut = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? profileId = null,Object? name = null,Object? controlUrl = null,Object? exitNode = freezed,Object? exitNodeName = freezed,Object? acceptRoutes = freezed,Object? loggedOut = null,}) {
   return _then(TailscaleNodeRecord(
 profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,controlUrl: null == controlUrl ? _self.controlUrl : controlUrl // ignore: cast_nullable_to_non_nullable
 as String,exitNode: freezed == exitNode ? _self.exitNode : exitNode // ignore: cast_nullable_to_non_nullable
+as String?,exitNodeName: freezed == exitNodeName ? _self.exitNodeName : exitNodeName // ignore: cast_nullable_to_non_nullable
 as String?,acceptRoutes: freezed == acceptRoutes ? _self.acceptRoutes : acceptRoutes // ignore: cast_nullable_to_non_nullable
 as bool?,loggedOut: null == loggedOut ? _self.loggedOut : loggedOut // ignore: cast_nullable_to_non_nullable
 as bool,
@@ -5681,10 +5682,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TailscaleNodeRecord() when $default != null:
-return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.acceptRoutes,_that.loggedOut);case _:
+return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut);case _:
   return orElse();
 
 }
@@ -5702,10 +5703,10 @@ return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut)  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleNodeRecord():
-return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.acceptRoutes,_that.loggedOut);case _:
+return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -5722,10 +5723,10 @@ return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'profile-id')  int profileId,  String name, @JsonKey(name: 'control-url')  String controlUrl, @JsonKey(name: 'exit-node', includeIfNull: false)  String? exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false)  String? exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false)  bool? acceptRoutes, @JsonKey(name: 'logged-out')  bool loggedOut)?  $default,) {final _that = this;
 switch (_that) {
 case _TailscaleNodeRecord() when $default != null:
-return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.acceptRoutes,_that.loggedOut);case _:
+return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that.exitNodeName,_that.acceptRoutes,_that.loggedOut);case _:
   return null;
 
 }
@@ -5737,13 +5738,14 @@ return $default(_that.profileId,_that.name,_that.controlUrl,_that.exitNode,_that
 @JsonSerializable()
 
 class _TailscaleNodeRecord extends TailscaleNodeRecord {
-  const _TailscaleNodeRecord({@JsonKey(name: 'profile-id') required this.profileId, required this.name, @JsonKey(name: 'control-url') this.controlUrl = '', @JsonKey(name: 'exit-node', includeIfNull: false) this.exitNode, @JsonKey(name: 'accept-routes', includeIfNull: false) this.acceptRoutes, @JsonKey(name: 'logged-out') this.loggedOut = false}): super._();
+  const _TailscaleNodeRecord({@JsonKey(name: 'profile-id') required this.profileId, required this.name, @JsonKey(name: 'control-url') this.controlUrl = '', @JsonKey(name: 'exit-node', includeIfNull: false) this.exitNode, @JsonKey(name: 'exit-node-name', includeIfNull: false) this.exitNodeName, @JsonKey(name: 'accept-routes', includeIfNull: false) this.acceptRoutes, @JsonKey(name: 'logged-out') this.loggedOut = false}): super._();
   factory _TailscaleNodeRecord.fromJson(Map<String, dynamic> json) => _$TailscaleNodeRecordFromJson(json);
 
 @override@JsonKey(name: 'profile-id') final  int profileId;
 @override final  String name;
 @override@JsonKey(name: 'control-url') final  String controlUrl;
 @override@JsonKey(name: 'exit-node', includeIfNull: false) final  String? exitNode;
+@override@JsonKey(name: 'exit-node-name', includeIfNull: false) final  String? exitNodeName;
 @override@JsonKey(name: 'accept-routes', includeIfNull: false) final  bool? acceptRoutes;
 @override@JsonKey(name: 'logged-out') final  bool loggedOut;
 
@@ -5760,18 +5762,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleNodeRecord&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.name, name) || other.name == name)&&(identical(other.controlUrl, controlUrl) || other.controlUrl == controlUrl)&&(identical(other.exitNode, exitNode) || other.exitNode == exitNode)&&(identical(other.acceptRoutes, acceptRoutes) || other.acceptRoutes == acceptRoutes)&&(identical(other.loggedOut, loggedOut) || other.loggedOut == loggedOut));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TailscaleNodeRecord&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.name, name) || other.name == name)&&(identical(other.controlUrl, controlUrl) || other.controlUrl == controlUrl)&&(identical(other.exitNode, exitNode) || other.exitNode == exitNode)&&(identical(other.exitNodeName, exitNodeName) || other.exitNodeName == exitNodeName)&&(identical(other.acceptRoutes, acceptRoutes) || other.acceptRoutes == acceptRoutes)&&(identical(other.loggedOut, loggedOut) || other.loggedOut == loggedOut));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,profileId,name,controlUrl,exitNode,acceptRoutes,loggedOut);
+    return Object.hash(runtimeType,profileId,name,controlUrl,exitNode,exitNodeName,acceptRoutes,loggedOut);
 }
 
 @override
 String toString() {
-    return 'TailscaleNodeRecord(profileId: $profileId, name: $name, controlUrl: $controlUrl, exitNode: $exitNode, acceptRoutes: $acceptRoutes, loggedOut: $loggedOut)';
+    return 'TailscaleNodeRecord(profileId: $profileId, name: $name, controlUrl: $controlUrl, exitNode: $exitNode, exitNodeName: $exitNodeName, acceptRoutes: $acceptRoutes, loggedOut: $loggedOut)';
 }
 
 
@@ -5782,7 +5784,7 @@ abstract mixin class _$TailscaleNodeRecordCopyWith<$Res> implements $TailscaleNo
   factory _$TailscaleNodeRecordCopyWith(_TailscaleNodeRecord value, $Res Function(_TailscaleNodeRecord) _then) = __$TailscaleNodeRecordCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'profile-id') int profileId, String name,@JsonKey(name: 'control-url') String controlUrl,@JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,@JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,@JsonKey(name: 'logged-out') bool loggedOut
+@JsonKey(name: 'profile-id') int profileId, String name,@JsonKey(name: 'control-url') String controlUrl,@JsonKey(name: 'exit-node', includeIfNull: false) String? exitNode,@JsonKey(name: 'exit-node-name', includeIfNull: false) String? exitNodeName,@JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,@JsonKey(name: 'logged-out') bool loggedOut
 });
 
 
@@ -5799,12 +5801,13 @@ class __$TailscaleNodeRecordCopyWithImpl<$Res>
 
 /// Create a copy of TailscaleNodeRecord
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? profileId = null,Object? name = null,Object? controlUrl = null,Object? exitNode = freezed,Object? acceptRoutes = freezed,Object? loggedOut = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? profileId = null,Object? name = null,Object? controlUrl = null,Object? exitNode = freezed,Object? exitNodeName = freezed,Object? acceptRoutes = freezed,Object? loggedOut = null,}) {
   return _then(_TailscaleNodeRecord(
 profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,controlUrl: null == controlUrl ? _self.controlUrl : controlUrl // ignore: cast_nullable_to_non_nullable
 as String,exitNode: freezed == exitNode ? _self.exitNode : exitNode // ignore: cast_nullable_to_non_nullable
+as String?,exitNodeName: freezed == exitNodeName ? _self.exitNodeName : exitNodeName // ignore: cast_nullable_to_non_nullable
 as String?,acceptRoutes: freezed == acceptRoutes ? _self.acceptRoutes : acceptRoutes // ignore: cast_nullable_to_non_nullable
 as bool?,loggedOut: null == loggedOut ? _self.loggedOut : loggedOut // ignore: cast_nullable_to_non_nullable
 as bool,
