@@ -1396,6 +1396,7 @@
   "mountRelayExcluded": "已排除 {count} 个需经 Tailscale 中转的订阅节点，原中转设置未更改。",
   "mountSourceRelayOnly": "此订阅的节点均需经 Tailscale 中转，暂不支持挂载。原中转设置未更改。",
   "mountSourceIsolatedOnly": "此订阅的节点均因 Tailscale 隔离要求被排除，暂不支持挂载。",
+  "mountSourceTailscaleOnly": "此订阅仅包含 Tailscale 节点，暂不支持挂载。",
   "mountSameName": "不同来源有同名节点时，会在名称后加上订阅名以区分。名称变化可能影响完整匹配或按结尾筛选，请核对分组结果。",
   "mountGroupsTitle": "节点加入哪些分组",
   "mountAutoSubtitle": "按原分组设置接收节点",

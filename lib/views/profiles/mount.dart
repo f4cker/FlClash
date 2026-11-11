@@ -672,15 +672,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 12,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            appLocalizations.mountChooseSources,
-            style: AppTextStyle.caption1
-                .of(context, emphasized: true)
-                .copyWith(color: colorScheme.onSurfaceVariant),
-          ),
-        ),
+        _SectionLabel(appLocalizations.mountChooseSources),
         for (final item in panel.sources)
           MountSourceRow(
             item: item,
@@ -695,6 +687,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
                 ? () => _refresh(item.profile.id)
                 : null,
           ),
+        _SectionLabel(appLocalizations.mountGroupsTitle),
         _buildGroups(context, panel, interactive: interactive),
       ],
     );
@@ -763,11 +756,10 @@ class _MountSheetState extends ConsumerState<MountSheet> {
             if (_isCandidate(group)) group,
         ];
         return MountGroupsBlock(
-          title: appLocalizations.mountGroupsTitle,
           children: [
             Text(
               appLocalizations.mountAutoSubtitle,
-              style: AppTextStyle.body.of(context, emphasized: true),
+              style: AppTextStyle.subheadline.of(context, emphasized: true),
             ),
             _Caption(appLocalizations.mountAutoDesc),
             for (final group in autos)
@@ -776,7 +768,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
               const Divider(height: 1),
               Text(
                 appLocalizations.mountExtraTitle,
-                style: AppTextStyle.body.of(context, emphasized: true),
+                style: AppTextStyle.subheadline.of(context, emphasized: true),
               ),
               _Caption(appLocalizations.mountExtraDesc),
               for (final group in extras) _candidateRow(group),
@@ -959,6 +951,25 @@ class MountBanner extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        text,
+        style: AppTextStyle.caption1
+            .of(context, emphasized: true)
+            .copyWith(color: context.colorScheme.onSurfaceVariant),
       ),
     );
   }
@@ -1282,8 +1293,9 @@ class MountSourceRow extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   final VoidCallback? onRefresh;
 
-  /// A mounted source stays in reach to be unmounted whatever it holds now.
-  bool get _checkable => item.state.mountable || item.mounted || checked;
+  bool get _faded => !item.state.mountable && !item.mounted;
+
+  bool get _checkable => !_faded || checked;
 
   String _detail(BuildContext context) {
     final appLocalizations = context.appLocalizations;
@@ -1291,12 +1303,14 @@ class MountSourceRow extends StatelessWidget {
       return appLocalizations.mountUpdatingNodes;
     }
     final updated = item.profile.lastUpdateDate;
+    // Every node of an isolated source is one of the two excluded kinds.
     final count = switch (item.state) {
       MountSourceState.nodes => item.count,
-      MountSourceState.empty ||
+      MountSourceState.empty => 0,
       MountSourceState.tailscaleOnly ||
       MountSourceState.relayOnly ||
-      MountSourceState.isolatedOnly => 0,
+      MountSourceState.isolatedOnly =>
+        item.tailscaleExcluded + item.relayExcluded,
       _ => null,
     };
     if (count == null || updated == null) {
@@ -1327,8 +1341,12 @@ class MountSourceRow extends StatelessWidget {
         appLocalizations.mountSourceRelayOnly,
         true,
       ),
-      MountSourceState.isolatedOnly || MountSourceState.tailscaleOnly => (
+      MountSourceState.isolatedOnly => (
         appLocalizations.mountSourceIsolatedOnly,
+        true,
+      ),
+      MountSourceState.tailscaleOnly => (
+        appLocalizations.mountSourceTailscaleOnly,
         true,
       ),
       _ when failed || refreshUnconfirmed => (
@@ -1422,7 +1440,7 @@ class MountSourceRow extends StatelessWidget {
                       spacing: 12,
                       children: [
                         Opacity(
-                          opacity: _checkable ? 1 : 0.4,
+                          opacity: _faded ? 0.4 : 1,
                           child: MountCheckbox(value: checked),
                         ),
                         Expanded(child: text),

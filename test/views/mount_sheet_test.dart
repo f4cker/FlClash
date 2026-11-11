@@ -214,6 +214,39 @@ void main() {
     expect(find.text(l10n.mountSavedUnconfirmed), findsOneWidget);
   });
 
+  testWidgets('the groups area has a section label like the sources, and '
+      'its sub-headings are row-sized', (tester) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [
+            groupInfo('All', kind: MountGroupKind.auto),
+            groupInfo('Pick'),
+          ],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+
+    TextStyle? styleOf(String text) =>
+        tester.widget<Text>(find.text(text)).style;
+    final label = find.text(l10n.mountGroupsTitle);
+    expect(label, findsOneWidget);
+    expect(
+      find.ancestor(of: label, matching: find.byType(MountGroupsBlock)),
+      findsNothing,
+    );
+    expect(styleOf(l10n.mountGroupsTitle), styleOf(l10n.mountChooseSources));
+    final row = styleOf('All')!;
+    for (final heading in [l10n.mountAutoSubtitle, l10n.mountExtraTitle]) {
+      final style = styleOf(heading)!;
+      expect(style.fontSize, row.fontSize);
+      expect(style.fontWeight, FontWeight.w600);
+    }
+  });
+
   testWidgets('without an auto group at least one group is needed, except '
       'to remove', (tester) async {
     final mounts = FakeMounts(
@@ -656,11 +689,11 @@ void main() {
     ]);
   });
 
-  for (final (name, state) in [
-    ('relay-only', MountSourceState.relayOnly),
-    ('isolated-only', MountSourceState.isolatedOnly),
-    ('Tailscale-only', MountSourceState.tailscaleOnly),
-    ('unsupported', MountSourceState.unsupported),
+  for (final (name, state, tailscale, relay) in [
+    ('relay-only', MountSourceState.relayOnly, 0, 3),
+    ('isolated-only', MountSourceState.isolatedOnly, 1, 2),
+    ('Tailscale-only', MountSourceState.tailscaleOnly, 3, 0),
+    ('unsupported', MountSourceState.unsupported, 0, 0),
   ]) {
     testWidgets('a mounted $name source can be unchecked and saved as a pure '
         'removal, an unmounted one cannot be checked', (tester) async {
@@ -668,8 +701,21 @@ void main() {
       final mounts = FakeMounts(
         panelOf(
           [
-            item(kept, state: state, count: 0, mounted: true),
-            item(air, state: state, count: 0),
+            item(
+              kept,
+              state: state,
+              count: 0,
+              mounted: true,
+              tailscaleExcluded: tailscale,
+              relayExcluded: relay,
+            ),
+            item(
+              air,
+              state: state,
+              count: 0,
+              tailscaleExcluded: tailscale,
+              relayExcluded: relay,
+            ),
           ],
           stored: MountTargetState(
             targetId: target.id,
@@ -717,14 +763,37 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(stateLine('Kept').data, stateLine('Air').data);
+      expect(stateLine('Kept').data, switch (state) {
+        MountSourceState.relayOnly => l10n.mountSourceRelayOnly,
+        MountSourceState.isolatedOnly => l10n.mountSourceIsolatedOnly,
+        MountSourceState.tailscaleOnly => l10n.mountSourceTailscaleOnly,
+        _ => l10n.mountSourceNoNodeList,
+      });
+      expect(stateLine('Air').data, stateLine('Kept').data);
+      // The nodes the source lists, not the none it may mount.
+      expect(
+        find.descendant(
+          of: rowOf('Kept'),
+          matching: find.textContaining(l10n.mountNodeCount(3)),
+        ),
+        state == MountSourceState.unsupported ? findsNothing : findsOneWidget,
+      );
 
       await tester.tap(find.text('Air'));
       await tester.pump();
       expect(saveButton(tester).onPressed, isNull);
 
+      // Unchecked, a mounted row keeps full strength and checks again.
       await tester.tap(find.text('Kept'));
       await tester.pump();
+      expect(opacityOf('Kept'), 1);
+      expect(saveButton(tester).onPressed, isNotNull);
+      await tester.tap(find.text('Kept'));
+      await tester.pump();
+      expect(saveButton(tester).onPressed, isNull);
+      await tester.tap(find.text('Kept'));
+      await tester.pump();
+      expect(opacityOf('Kept'), 1);
       expect(saveButton(tester).onPressed, isNotNull);
       await tester.tap(find.text(l10n.mountSave));
       await tester.pumpAndSettle();

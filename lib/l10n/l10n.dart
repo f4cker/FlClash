@@ -12145,6 +12145,16 @@ class AppLocalizations {
     );
   }
 
+  /// `This subscription contains only Tailscale nodes and cannot be mounted.`
+  String get mountSourceTailscaleOnly {
+    return Intl.message(
+      'This subscription contains only Tailscale nodes and cannot be mounted.',
+      name: 'mountSourceTailscaleOnly',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `When node names conflict across sources, the subscription name is added as a suffix. This may affect exact-match or end-of-name filters. Check the group results.`
   String get mountSameName {
     return Intl.message(

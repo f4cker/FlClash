@@ -1319,6 +1319,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountSourceRelayOnly": MessageLookupByLibrary.simpleMessage(
       "此订阅的节点均需经 Tailscale 中转，暂不支持挂载。原中转设置未更改。",
     ),
+    "mountSourceTailscaleOnly": MessageLookupByLibrary.simpleMessage(
+      "此订阅仅包含 Tailscale 节点，暂不支持挂载。",
+    ),
     "mountTailscaleExcluded": MessageLookupByLibrary.simpleMessage(
       "已从普通挂载中排除 Tailscale 节点。",
     ),

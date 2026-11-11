@@ -1396,6 +1396,7 @@
   "mountRelayExcluded": "{count, plural, =1{1 subscription node that routes through Tailscale was excluded. Its routing settings were not changed.} other{{count} subscription nodes that route through Tailscale were excluded. Their routing settings were not changed.}}",
   "mountSourceRelayOnly": "All nodes in this subscription route through Tailscale and cannot be mounted. Their routing settings were not changed.",
   "mountSourceIsolatedOnly": "All nodes in this subscription were excluded to keep Tailscale routing separate and cannot be mounted.",
+  "mountSourceTailscaleOnly": "This subscription contains only Tailscale nodes and cannot be mounted.",
   "mountSameName": "When node names conflict across sources, the subscription name is added as a suffix. This may affect exact-match or end-of-name filters. Check the group results.",
   "mountGroupsTitle": "Groups for these nodes",
   "mountAutoSubtitle": "Use existing group collection settings",

@@ -1762,6 +1762,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountSourceRelayOnly": MessageLookupByLibrary.simpleMessage(
       "All nodes in this subscription route through Tailscale and cannot be mounted. Their routing settings were not changed.",
     ),
+    "mountSourceTailscaleOnly": MessageLookupByLibrary.simpleMessage(
+      "This subscription contains only Tailscale nodes and cannot be mounted.",
+    ),
     "mountTailscaleExcluded": MessageLookupByLibrary.simpleMessage(
       "Tailscale nodes were excluded from ordinary mounts.",
     ),
