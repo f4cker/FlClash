@@ -755,7 +755,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
           children: [
             Text(
               appLocalizations.mountAutoSubtitle,
-              style: AppTextStyle.subheadline.of(context, emphasized: true),
+              style: AppTextStyle.body.of(context, emphasized: true),
             ),
             _Caption(appLocalizations.mountAutoDesc),
             for (final group in autos)
@@ -764,7 +764,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
               const Divider(height: 1),
               Text(
                 appLocalizations.mountExtraTitle,
-                style: AppTextStyle.subheadline.of(context, emphasized: true),
+                style: AppTextStyle.body.of(context, emphasized: true),
               ),
               _Caption(appLocalizations.mountExtraDesc),
               for (final group in extras) _candidateRow(group),
