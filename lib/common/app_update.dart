@@ -42,6 +42,44 @@ String? Function() resolveSelfUpdateSuffix = () => selfUpdateAssetSuffix(
 
 String? get selfUpdateSuffix => resolveSelfUpdateSuffix();
 
+/// Null where no single asset matches this build, so any release counts.
+String? releasePlatformAssetSuffix(Abi abi, {required bool windowsInstalled}) =>
+    switch (abi) {
+      Abi.macosArm64 => 'macos-arm64.dmg',
+      Abi.macosX64 => 'macos-amd64.dmg',
+      _ => selfUpdateAssetSuffix(abi, windowsInstalled: windowsInstalled),
+    };
+
+String? get releaseAssetSuffix => releasePlatformAssetSuffix(
+  Abi.current(),
+  windowsInstalled: system.isWindows && isInstalledWindowsBuild,
+);
+
+sealed class UpdateCheck {
+  const UpdateCheck();
+}
+
+final class UpdateAvailable extends UpdateCheck {
+  const UpdateAvailable(this.release);
+
+  final Map<String, dynamic> release;
+}
+
+final class UpdateUpToDate extends UpdateCheck {
+  const UpdateUpToDate();
+}
+
+/// Also when the latest release carries no asset for this build.
+final class UpdateNoRelease extends UpdateCheck {
+  const UpdateNoRelease();
+}
+
+final class UpdateCheckFailed extends UpdateCheck {
+  const UpdateCheckFailed(this.error);
+
+  final Object error;
+}
+
 // The names follow the release matrix in .github/workflows/build.yaml.
 String? selfUpdateAssetSuffix(Abi abi, {required bool windowsInstalled}) {
   return switch (abi) {
@@ -60,7 +98,10 @@ String releaseAssetName(String tag, String suffix) {
 }
 
 Uri releaseAssetUri(String tag, String name) {
-  return Uri.https('github.com', '/$repository/releases/download/$tag/$name');
+  return Uri.https(
+    'github.com',
+    '/$updateRepository/releases/download/$tag/$name',
+  );
 }
 
 final _checksumLine = RegExp(r'^([0-9a-fA-F]{64}) [ *](?:\./)?(.+)$');

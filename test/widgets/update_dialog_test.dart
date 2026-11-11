@@ -113,7 +113,7 @@ void main() {
 
     final shown = container
         .read(commonActionProvider.notifier)
-        .checkUpdateResultHandle(data: release(_bodyWith(_payload)));
+        .checkUpdateResultHandle(UpdateAvailable(release(_bodyWith(_payload))));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('v0.8.96'), findsOneWidget);
@@ -130,7 +130,7 @@ void main() {
 
     final shown = container
         .read(commonActionProvider.notifier)
-        .checkUpdateResultHandle(data: release(_bodyWith(_payload)));
+        .checkUpdateResultHandle(UpdateAvailable(release(_bodyWith(_payload))));
     await tester.pumpAndSettle();
 
     // Entry copy comes from the release payload and is English only; the group
@@ -149,7 +149,7 @@ void main() {
 
     final shown = container
         .read(commonActionProvider.notifier)
-        .checkUpdateResultHandle(data: release(_bulletsOnly));
+        .checkUpdateResultHandle(UpdateAvailable(release(_bulletsOnly)));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('- Override scripts'), findsOneWidget);
@@ -165,7 +165,7 @@ void main() {
 
     final shown = container
         .read(commonActionProvider.notifier)
-        .checkUpdateResultHandle(data: release(_bodyWith(_payload)));
+        .checkUpdateResultHandle(UpdateAvailable(release(_bodyWith(_payload))));
     await tester.pumpAndSettle();
     await tapCancel(tester);
     await shown;
@@ -174,7 +174,7 @@ void main() {
   });
 
   group('a build that updates itself', () {
-    const asset = 'FlClash-0.8.96-android-arm64-v8a.apk';
+    const asset = 'Flash-0.8.96-android-arm64-v8a.apk';
     final package = utf8.encode('package');
     final digest = sha256.convert(package).toString();
     late Directory home;
@@ -212,7 +212,10 @@ void main() {
       final container = await pumpApp(tester);
       final shown = container
           .read(commonActionProvider.notifier)
-          .checkUpdateResultHandle(data: release(_bulletsOnly), isUser: true);
+          .checkUpdateResultHandle(
+            UpdateAvailable(release(_bulletsOnly)),
+            isUser: true,
+          );
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TextButton, 'Update'));
       await tester.pump();
@@ -295,14 +298,12 @@ void main() {
     });
   });
 
-  testWidgets('a manual check keeps the setting and reports a failure', (
-    tester,
-  ) async {
+  testWidgets('a manual check keeps the setting', (tester) async {
     final container = await pumpApp(tester);
 
     final shown = container
         .read(commonActionProvider.notifier)
-        .checkUpdateResultHandle(isUser: true);
+        .checkUpdateResultHandle(const UpdateUpToDate(), isUser: true);
     await tester.pumpAndSettle();
 
     expect(find.text('Check for updates'), findsOneWidget);
@@ -310,5 +311,60 @@ void main() {
     await tapCancel(tester);
     await shown;
     expect(container.read(appSettingProvider).autoCheckUpdate, isTrue);
+  });
+
+  group('a check that finds nothing to install', () {
+    final outcomes = {
+      'up to date': (const UpdateUpToDate(), 'The app is already up to date'),
+      'no release': (const UpdateNoRelease(), 'No Flash release found yet'),
+      'failed': (
+        UpdateCheckFailed(Exception('offline')),
+        "Couldn't check for updates. Please try again.",
+      ),
+    };
+
+    for (final MapEntry(key: name, value: (result, message))
+        in outcomes.entries) {
+      testWidgets('reports $name to a manual check', (tester) async {
+        final container = await pumpApp(tester);
+
+        final shown = container
+            .read(commonActionProvider.notifier)
+            .checkUpdateResultHandle(result, isUser: true);
+        await tester.pumpAndSettle();
+
+        expect(find.text(message), findsOneWidget);
+        await tapCancel(tester);
+        await shown;
+      });
+
+      testWidgets('keeps $name quiet on an automatic check', (tester) async {
+        final container = await pumpApp(tester);
+
+        await container
+            .read(commonActionProvider.notifier)
+            .checkUpdateResultHandle(result);
+        await tester.pumpAndSettle();
+
+        expect(find.text(message), findsNothing);
+        expect(find.text('Check for updates'), findsNothing);
+        expect(container.read(appSettingProvider).autoCheckUpdate, isTrue);
+      });
+    }
+  });
+
+  testWidgets('a manual check says when no Flash release exists in Chinese', (
+    tester,
+  ) async {
+    final container = await pumpApp(tester, locale: const Locale('zh', 'CN'));
+
+    final shown = container
+        .read(commonActionProvider.notifier)
+        .checkUpdateResultHandle(const UpdateNoRelease(), isUser: true);
+    await tester.pumpAndSettle();
+
+    expect(find.text('暂未找到 Flash 发布版本'), findsOneWidget);
+    await tapCancel(tester);
+    await shown;
   });
 }

@@ -725,20 +725,20 @@ class AppLocalizations {
     );
   }
 
-  /// `Receiving a link from your phone needs the Nearby devices permission, which lets FlClash reach the local network. Turn it on in the app's settings.`
+  /// `Receiving a link from your phone needs the Nearby devices permission, which lets Flash reach the local network. Turn it on in the app's settings.`
   String get sendFromPhonePermissionDenied {
     return Intl.message(
-      'Receiving a link from your phone needs the Nearby devices permission, which lets FlClash reach the local network. Turn it on in the app\'s settings.',
+      'Receiving a link from your phone needs the Nearby devices permission, which lets Flash reach the local network. Turn it on in the app\'s settings.',
       name: 'sendFromPhonePermissionDenied',
       desc: '',
       args: [],
     );
   }
 
-  /// `Send a link to FlClash`
+  /// `Send a link to Flash`
   String get sendFromPhonePageTitle {
     return Intl.message(
-      'Send a link to FlClash',
+      'Send a link to Flash',
       name: 'sendFromPhonePageTitle',
       desc: '',
       args: [],
@@ -780,10 +780,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Scan with FlClash on another device to import this profile.`
+  /// `Scan with Flash on another device to import this profile.`
   String get shareQrcodeTip {
     return Intl.message(
-      'Scan with FlClash on another device to import this profile.',
+      'Scan with Flash on another device to import this profile.',
       name: 'shareQrcodeTip',
       desc: '',
       args: [],
@@ -961,9 +961,24 @@ class AppLocalizations {
     );
   }
 
-  /// `Project`
+  /// `FlClash upstream project`
   String get project {
-    return Intl.message('Project', name: 'project', desc: '', args: []);
+    return Intl.message(
+      'FlClash upstream project',
+      name: 'project',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `FlClash upstream Telegram`
+  String get upstreamTelegram {
+    return Intl.message(
+      'FlClash upstream Telegram',
+      name: 'upstreamTelegram',
+      desc: '',
+      args: [],
+    );
   }
 
   /// `Core`
@@ -1181,6 +1196,26 @@ class AppLocalizations {
     return Intl.message(
       'The app is already up to date',
       name: 'checkUpdateError',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No Flash release found yet`
+  String get updateNoReleaseFound {
+    return Intl.message(
+      'No Flash release found yet',
+      name: 'updateNoReleaseFound',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn't check for updates. Please try again.`
+  String get updateCheckFailed {
+    return Intl.message(
+      'Couldn\'t check for updates. Please try again.',
+      name: 'updateCheckFailed',
       desc: '',
       args: [],
     );
@@ -2331,10 +2366,10 @@ class AppLocalizations {
     return Intl.message('Disclaimer', name: 'disclaimer', desc: '', args: []);
   }
 
-  /// `Before using FlClash ("the Software"), please read this statement carefully and make sure you understand it. Tapping "Agree" means you have read and understood what follows. If you do not want to continue, tap "Exit".`
+  /// `Before using Flash ("the Software"), please read this statement carefully and make sure you understand it. Tapping "Agree" means you have read and understood what follows. If you do not want to continue, tap "Exit".`
   String get disclaimerDesc {
     return Intl.message(
-      'Before using FlClash ("the Software"), please read this statement carefully and make sure you understand it. Tapping "Agree" means you have read and understood what follows. If you do not want to continue, tap "Exit".',
+      'Before using Flash ("the Software"), please read this statement carefully and make sure you understand it. Tapping "Agree" means you have read and understood what follows. If you do not want to continue, tap "Exit".',
       name: 'disclaimerDesc',
       desc: '',
       args: [],
@@ -4646,10 +4681,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Helper service unavailable; TUN mode cannot be enabled. Reinstall FlClash to restore it.`
+  /// `Helper service unavailable; TUN mode cannot be enabled. Reinstall Flash to restore it.`
   String get helperCorruptTip {
     return Intl.message(
-      'Helper service unavailable; TUN mode cannot be enabled. Reinstall FlClash to restore it.',
+      'Helper service unavailable; TUN mode cannot be enabled. Reinstall Flash to restore it.',
       name: 'helperCorruptTip',
       desc: '',
       args: [],
@@ -4676,20 +4711,20 @@ class AppLocalizations {
     );
   }
 
-  /// `Windows refused to run FlClashCore.exe (error {code}). An app control policy such as Smart App Control or AppLocker blocks unsigned programs; allow FlClash in that policy or turn it off, then try again.`
+  /// `Windows refused to run FlClashCore.exe (error {code}). An app control policy such as Smart App Control or AppLocker blocks unsigned programs; allow Flash in that policy or turn it off, then try again.`
   String coreBlockedByPolicyTip(Object code) {
     return Intl.message(
-      'Windows refused to run FlClashCore.exe (error $code). An app control policy such as Smart App Control or AppLocker blocks unsigned programs; allow FlClash in that policy or turn it off, then try again.',
+      'Windows refused to run FlClashCore.exe (error $code). An app control policy such as Smart App Control or AppLocker blocks unsigned programs; allow Flash in that policy or turn it off, then try again.',
       name: 'coreBlockedByPolicyTip',
       desc: '',
       args: [code],
     );
   }
 
-  /// `Windows Smart App Control blocked FlClashCore.exe because it is not signed. Open Windows Security → App & browser control → Smart App Control settings, choose Off, then start FlClash again. Smart App Control cannot be turned back on without reinstalling Windows.`
+  /// `Windows Smart App Control blocked FlClashCore.exe because it is not signed. Open Windows Security → App & browser control → Smart App Control settings, choose Off, then start Flash again. Smart App Control cannot be turned back on without reinstalling Windows.`
   String get coreBlockedBySmartAppControlTip {
     return Intl.message(
-      'Windows Smart App Control blocked FlClashCore.exe because it is not signed. Open Windows Security → App & browser control → Smart App Control settings, choose Off, then start FlClash again. Smart App Control cannot be turned back on without reinstalling Windows.',
+      'Windows Smart App Control blocked FlClashCore.exe because it is not signed. Open Windows Security → App & browser control → Smart App Control settings, choose Off, then start Flash again. Smart App Control cannot be turned back on without reinstalling Windows.',
       name: 'coreBlockedBySmartAppControlTip',
       desc: '',
       args: [],
@@ -6694,10 +6729,10 @@ class AppLocalizations {
     );
   }
 
-  /// `FlClash ran into an error while starting and can't continue. Copy the details to report the problem. If it keeps happening, clearing the data usually lets the app start again.`
+  /// `Flash ran into an error while starting and can't continue. Copy the details to report the problem. If it keeps happening, clearing the data usually lets the app start again.`
   String get initFailedTip {
     return Intl.message(
-      'FlClash ran into an error while starting and can\'t continue. Copy the details to report the problem. If it keeps happening, clearing the data usually lets the app start again.',
+      'Flash ran into an error while starting and can\'t continue. Copy the details to report the problem. If it keeps happening, clearing the data usually lets the app start again.',
       name: 'initFailedTip',
       desc: '',
       args: [],
@@ -8133,10 +8168,10 @@ class AppLocalizations {
     );
   }
 
-  /// `FlClash will be able to read everything sent to the decrypted hosts, cookies and passwords included. Turn this on only for hosts you mean to rewrite.`
+  /// `Flash will be able to read everything sent to the decrypted hosts, cookies and passwords included. Turn this on only for hosts you mean to rewrite.`
   String get mitmEnableTip {
     return Intl.message(
-      'FlClash will be able to read everything sent to the decrypted hosts, cookies and passwords included. Turn this on only for hosts you mean to rewrite.',
+      'Flash will be able to read everything sent to the decrypted hosts, cookies and passwords included. Turn this on only for hosts you mean to rewrite.',
       name: 'mitmEnableTip',
       desc: '',
       args: [],
@@ -8168,10 +8203,10 @@ class AppLocalizations {
     );
   }
 
-  /// `The new certificate replaces the current one, which FlClash takes out of this device's trusted roots where it can. Every other device that trusts the current one has to install the new one.`
+  /// `The new certificate replaces the current one, which Flash takes out of this device's trusted roots where it can. Every other device that trusts the current one has to install the new one.`
   String get regenerateCertificateTip {
     return Intl.message(
-      'The new certificate replaces the current one, which FlClash takes out of this device\'s trusted roots where it can. Every other device that trusts the current one has to install the new one.',
+      'The new certificate replaces the current one, which Flash takes out of this device\'s trusted roots where it can. Every other device that trusts the current one has to install the new one.',
       name: 'regenerateCertificateTip',
       desc: '',
       args: [],
@@ -8403,10 +8438,10 @@ class AppLocalizations {
     );
   }
 
-  /// `The old certificate, {name}, is still among the system's trusted CAs. Allow FlClash root access in your root manager and regenerate, or remove the FlClash MITM CA module there and restart.`
+  /// `The old certificate, {name}, is still among the system's trusted CAs. Allow Flash root access in your root manager and regenerate, or remove the FlClash MITM CA module there and restart.`
   String mitmOldSystemCertificateLeftTip(Object name) {
     return Intl.message(
-      'The old certificate, $name, is still among the system\'s trusted CAs. Allow FlClash root access in your root manager and regenerate, or remove the FlClash MITM CA module there and restart.',
+      'The old certificate, $name, is still among the system\'s trusted CAs. Allow Flash root access in your root manager and regenerate, or remove the FlClash MITM CA module there and restart.',
       name: 'mitmOldSystemCertificateLeftTip',
       desc: '',
       args: [name],
@@ -8423,10 +8458,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Add {host} to the hostname list? FlClash can then read what is sent to it, cookies and passwords included.`
+  /// `Add {host} to the hostname list? Flash can then read what is sent to it, cookies and passwords included.`
   String mitmDecryptHostTip(Object host) {
     return Intl.message(
-      'Add $host to the hostname list? FlClash can then read what is sent to it, cookies and passwords included.',
+      'Add $host to the hostname list? Flash can then read what is sent to it, cookies and passwords included.',
       name: 'mitmDecryptHostTip',
       desc: '',
       args: [host],
@@ -8943,10 +8978,10 @@ class AppLocalizations {
     );
   }
 
-  /// `FlClash closes to install the update and opens again when it is done.`
+  /// `Flash closes to install the update and opens again when it is done.`
   String get updateRestartTip {
     return Intl.message(
-      'FlClash closes to install the update and opens again when it is done.',
+      'Flash closes to install the update and opens again when it is done.',
       name: 'updateRestartTip',
       desc: '',
       args: [],
@@ -9118,10 +9153,10 @@ class AppLocalizations {
     return Intl.message('More information', name: 'tsHelp', desc: '', args: []);
   }
 
-  /// `FlClash shows up as a separate device in your Tailscale network. It does not let other devices reach this Mac over SSH, file sharing or remote desktop, and does not provide Tailscale SSH or Taildrop.`
+  /// `Flash appears as a separate device on the Tailscale network. It does not let other devices connect to this Mac for SSH, file sharing, or remote desktop, and does not provide Tailscale SSH or Taildrop.`
   String get tsHelpBody {
     return Intl.message(
-      'FlClash shows up as a separate device in your Tailscale network. It does not let other devices reach this Mac over SSH, file sharing or remote desktop, and does not provide Tailscale SSH or Taildrop.',
+      'Flash appears as a separate device on the Tailscale network. It does not let other devices connect to this Mac for SSH, file sharing, or remote desktop, and does not provide Tailscale SSH or Taildrop.',
       name: 'tsHelpBody',
       desc: '',
       args: [],
@@ -9138,10 +9173,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Only traffic that FlClash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.`
+  /// `Only traffic that Flash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.`
   String get tsBoundaryTip {
     return Intl.message(
-      'Only traffic that FlClash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.',
+      'Only traffic that Flash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.',
       name: 'tsBoundaryTip',
       desc: '',
       args: [],
@@ -9783,10 +9818,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Sets the exit node of “{node}” to “{device}”. Connections through this node may drop; FlClash rules stay the same.`
+  /// `Sets the exit node of “{node}” to “{device}”. Connections through this node may drop; Flash rules stay the same.`
   String tsExitChangeBody(Object node, Object device) {
     return Intl.message(
-      'Sets the exit node of “$node” to “$device”. Connections through this node may drop; FlClash rules stay the same.',
+      'Sets the exit node of “$node” to “$device”. Connections through this node may drop; Flash rules stay the same.',
       name: 'tsExitChangeBody',
       desc: '',
       args: [node, device],
@@ -9813,10 +9848,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Only turns off exit forwarding for “{node}”; it doesn't log out of Tailscale and FlClash rules stay the same.`
+  /// `Only turns off exit forwarding for “{node}”; it doesn't log out of Tailscale and Flash rules stay the same.`
   String tsExitOffBody(Object node) {
     return Intl.message(
-      'Only turns off exit forwarding for “$node”; it doesn\'t log out of Tailscale and FlClash rules stay the same.',
+      'Only turns off exit forwarding for “$node”; it doesn\'t log out of Tailscale and Flash rules stay the same.',
       name: 'tsExitOffBody',
       desc: '',
       args: [node],
@@ -9913,10 +9948,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; FlClash rules are not changed.`
+  /// `Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; Flash rules are not changed.`
   String get tsAcceptRoutesTip {
     return Intl.message(
-      'Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; FlClash rules are not changed.',
+      'Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; Flash rules are not changed.',
       name: 'tsAcceptRoutesTip',
       desc: '',
       args: [],
@@ -9933,10 +9968,10 @@ class AppLocalizations {
     );
   }
 
-  /// `This node will use the network's approved subnet routes. FlClash rules stay the same.`
+  /// `This node will use the network's approved subnet routes. Flash rules stay the same.`
   String get tsRoutesOnBody {
     return Intl.message(
-      'This node will use the network\'s approved subnet routes. FlClash rules stay the same.',
+      'This node will use the network\'s approved subnet routes. Flash rules stay the same.',
       name: 'tsRoutesOnBody',
       desc: '',
       args: [],
@@ -9953,10 +9988,10 @@ class AppLocalizations {
     );
   }
 
-  /// `This node will stop using these subnet routes; related connections may drop. FlClash rules stay the same.`
+  /// `This node will stop using these subnet routes; related connections may drop. Flash rules stay the same.`
   String get tsRoutesOffBody {
     return Intl.message(
-      'This node will stop using these subnet routes; related connections may drop. FlClash rules stay the same.',
+      'This node will stop using these subnet routes; related connections may drop. Flash rules stay the same.',
       name: 'tsRoutesOffBody',
       desc: '',
       args: [],
@@ -10690,10 +10725,10 @@ class AppLocalizations {
     );
   }
 
-  /// `After sign-in, FlClash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.`
+  /// `After sign-in, Flash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.`
   String get tsSignInTip {
     return Intl.message(
-      'After sign-in, FlClash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.',
+      'After sign-in, Flash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.',
       name: 'tsSignInTip',
       desc: '',
       args: [],
@@ -10860,10 +10895,10 @@ class AppLocalizations {
     );
   }
 
-  /// `FlClash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.`
+  /// `Flash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.`
   String get tsRulesManaged {
     return Intl.message(
-      'FlClash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.',
+      'Flash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.',
       name: 'tsRulesManaged',
       desc: '',
       args: [],
@@ -10900,10 +10935,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Only traffic routed to this node by FlClash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.`
+  /// `Only traffic routed to this node by Flash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.`
   String get tsRulesProfileNode {
     return Intl.message(
-      'Only traffic routed to this node by FlClash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.',
+      'Only traffic routed to this node by Flash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.',
       name: 'tsRulesProfileNode',
       desc: '',
       args: [],

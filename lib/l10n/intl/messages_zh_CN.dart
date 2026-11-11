@@ -31,7 +31,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m4(detail) => "清除数据失败：${detail}";
 
   static String m5(code) =>
-      "Windows 拒绝运行 FlClashCore.exe（错误 ${code}）。智能应用控制、AppLocker 等应用控制策略会拦截未签名程序，请在该策略中放行 FlClash 或关闭策略后重试。";
+      "Windows 拒绝运行 FlClashCore.exe（错误 ${code}）。智能应用控制、AppLocker 等应用控制策略会拦截未签名程序，请在该策略中放行 Flash 或关闭策略后重试。";
 
   static String m6(name) =>
       "应用连续两次未能完成启动。为打断崩溃循环，已取消选中配置 ${name}，并跳过本次自动配置，你可以随时重新选中它。";
@@ -139,7 +139,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Chrome 和 Firefox 使用自己的证书库，需要 certutil：${command}";
 
   static String m55(host) =>
-      "要把 ${host} 加入主机名列表吗？之后 FlClash 能读取发往它的内容，包括 Cookie 和密码。";
+      "要把 ${host} 加入主机名列表吗？之后 Flash 能读取发往它的内容，包括 Cookie 和密码。";
 
   static String m56(host) => "要把 -${host} 加到主机名列表顶部吗？之后不再解密该主机。";
 
@@ -154,7 +154,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m61(name) => "无法移除旧证书 ${name}，请自行从信任的根证书中移除。";
 
   static String m62(name) =>
-      "旧证书 ${name} 仍在系统信任的证书中。请在 root 管理器中允许 FlClash 使用 root 后重新生成，或在其中移除“FlClash MITM CA”模块并重启。";
+      "旧证书 ${name} 仍在系统信任的证书中。请在 root 管理器中允许 Flash 使用 root 后重新生成，或在其中移除“FlClash MITM CA”模块并重启。";
 
   static String m63(name) =>
       "请在系统设置的“安全 › 加密与凭据 › 信任的凭据 › 用户”中移除旧证书 ${name}，再安装新证书。";
@@ -251,9 +251,9 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m104(n) => "当前显示 ${n} 台设备";
 
   static String m105(node, device) =>
-      "将“${node}”的出口节点设为“${device}”。经过此节点的连接可能中断；FlClash 的规则不变。";
+      "将“${node}”的出口节点设为“${device}”。经过此节点的连接可能中断；Flash 的规则不变。";
 
-  static String m106(node) => "仅关闭“${node}”的出口转发，不会退出 Tailscale，FlClash 的规则不变。";
+  static String m106(node) => "仅关闭“${node}”的出口转发，不会退出 Tailscale，Flash 的规则不变。";
 
   static String m107(time) => "认证将于 ${time} 到期，请在到期前重新登录。";
 
@@ -507,7 +507,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "core": MessageLookupByLibrary.simpleMessage("内核"),
     "coreBlockedByPolicyTip": m5,
     "coreBlockedBySmartAppControlTip": MessageLookupByLibrary.simpleMessage(
-      "Windows 智能应用控制拦截了未签名的 FlClashCore.exe。请打开 Windows 安全中心 → 应用和浏览器控制 → 智能应用控制设置，选择「关闭」后重新启动 FlClash。智能应用控制关闭后无法再开启，除非重装 Windows。",
+      "Windows 智能应用控制拦截了未签名的 FlClashCore.exe。请打开 Windows 安全中心 → 应用和浏览器控制 → 智能应用控制设置，选择「关闭」后重新启动 Flash。智能应用控制关闭后无法再开启，除非重装 Windows。",
     ),
     "coreStatus": MessageLookupByLibrary.simpleMessage("核心状态"),
     "country": MessageLookupByLibrary.simpleMessage("区域"),
@@ -605,7 +605,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "disclaimerChangesTitle": MessageLookupByLibrary.simpleMessage("声明变更"),
     "disclaimerDesc": MessageLookupByLibrary.simpleMessage(
-      "在使用 FlClash（以下简称“本软件”）前，请仔细阅读并充分理解本声明。点击“同意”表示你已阅读并理解以下内容；如不想继续，可点击“退出”。",
+      "在使用 Flash（以下简称“本软件”）前，请仔细阅读并充分理解本声明。点击“同意”表示你已阅读并理解以下内容；如不想继续，可点击“退出”。",
     ),
     "disclaimerLiabilityContent": MessageLookupByLibrary.simpleMessage(
       "在适用法律允许的最大范围内，开发者及所有贡献者均不对因使用或无法使用本软件而产生的任何直接、间接、偶然、特殊、惩罚性或后果性损害承担责任，包括但不限于数据丢失、设备损坏、网络异常、业务中断、利润损失或因此引起的任何法律纠纷，即使已被告知发生此类损害的可能性。",
@@ -787,7 +787,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "headerRewrite": MessageLookupByLibrary.simpleMessage("Header 重写"),
     "healthCheck": MessageLookupByLibrary.simpleMessage("健康检查"),
     "helperCorruptTip": MessageLookupByLibrary.simpleMessage(
-      "Helper 服务不可用，无法启用 TUN 模式，请重新安装 FlClash。",
+      "Helper 服务不可用，无法启用 TUN 模式，请重新安装 Flash。",
     ),
     "hex": MessageLookupByLibrary.simpleMessage("十六进制"),
     "hideFromList": MessageLookupByLibrary.simpleMessage("从列表中隐藏"),
@@ -869,7 +869,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "init": MessageLookupByLibrary.simpleMessage("初始化"),
     "initFailed": MessageLookupByLibrary.simpleMessage("启动失败"),
     "initFailedTip": MessageLookupByLibrary.simpleMessage(
-      "FlClash 启动时出错，无法继续运行。可以复制错误详情用于反馈；如果问题反复出现，清除数据后通常可以重新启动。",
+      "Flash 启动时出错，无法继续运行。可以复制错误详情用于反馈；如果问题反复出现，清除数据后通常可以重新启动。",
     ),
     "initiator": MessageLookupByLibrary.simpleMessage("发起方"),
     "initiatorShort": MessageLookupByLibrary.simpleMessage("发起"),
@@ -1070,7 +1070,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "mitmDecryptHost": MessageLookupByLibrary.simpleMessage("解密此主机"),
     "mitmDecryptHostTip": m55,
     "mitmEnableTip": MessageLookupByLibrary.simpleMessage(
-      "开启后，FlClash 能读取发往被解密主机的全部内容，包括 Cookie 和密码。请只为需要改写的主机开启。",
+      "开启后，Flash 能读取发往被解密主机的全部内容，包括 Cookie 和密码。请只为需要改写的主机开启。",
     ),
     "mitmExcludeHost": MessageLookupByLibrary.simpleMessage("排除解密"),
     "mitmExcludeHostTip": m56,
@@ -1286,7 +1286,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "profiles": MessageLookupByLibrary.simpleMessage("配置"),
     "profilesSort": MessageLookupByLibrary.simpleMessage("配置排序"),
-    "project": MessageLookupByLibrary.simpleMessage("项目"),
+    "project": MessageLookupByLibrary.simpleMessage("FlClash 上游项目"),
     "protocol": MessageLookupByLibrary.simpleMessage("协议"),
     "protocolParam": MessageLookupByLibrary.simpleMessage("协议参数"),
     "protocolVersion": MessageLookupByLibrary.simpleMessage("协议版本"),
@@ -1332,7 +1332,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "redo": MessageLookupByLibrary.simpleMessage("重做"),
     "regenerateCertificate": MessageLookupByLibrary.simpleMessage("重新生成证书"),
     "regenerateCertificateTip": MessageLookupByLibrary.simpleMessage(
-      "新证书会替换当前证书，FlClash 会尽量把当前证书从本机信任的根证书中移除。信任当前证书的其他设备都需要安装新证书。",
+      "新证书会替换当前证书，Flash 会尽量把当前证书从本机信任的根证书中移除。信任当前证书的其他设备都需要安装新证书。",
     ),
     "regex": MessageLookupByLibrary.simpleMessage("正则"),
     "releaseMemory": MessageLookupByLibrary.simpleMessage("释放内存"),
@@ -1533,10 +1533,10 @@ class MessageLookup extends MessageLookupByLibrary {
       "已发送，请在另一台设备上确认导入。",
     ),
     "sendFromPhonePageTitle": MessageLookupByLibrary.simpleMessage(
-      "把链接发送到 FlClash",
+      "把链接发送到 Flash",
     ),
     "sendFromPhonePermissionDenied": MessageLookupByLibrary.simpleMessage(
-      "从手机接收链接需要「附近的设备」权限，FlClash 才能访问局域网。请在应用设置中开启。",
+      "从手机接收链接需要「附近的设备」权限，Flash 才能访问局域网。请在应用设置中开启。",
     ),
     "sendFromPhoneTip": MessageLookupByLibrary.simpleMessage(
       "用手机相机扫描二维码，在打开的页面里粘贴链接。两台设备需要连在同一个网络。",
@@ -1564,7 +1564,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "shareLinkUnreadable": m93,
     "shareLinksInvalid": MessageLookupByLibrary.simpleMessage("无法从链接中读取代理"),
     "shareQrcodeTip": MessageLookupByLibrary.simpleMessage(
-      "在另一台设备上用 FlClash 扫码即可导入此配置。",
+      "在另一台设备上用 Flash 扫码即可导入此配置。",
     ),
     "show": MessageLookupByLibrary.simpleMessage("显示"),
     "showLess": MessageLookupByLibrary.simpleMessage("收起"),
@@ -1670,7 +1670,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "trustCertificate": MessageLookupByLibrary.simpleMessage("信任证书"),
     "tsAcceptRoutes": MessageLookupByLibrary.simpleMessage("接受子网路由"),
     "tsAcceptRoutesTip": MessageLookupByLibrary.simpleMessage(
-      "允许此节点使用 Tailscale 网络中已批准的子网路由。是否有流量经过这些路由，仍由现有规则决定；不会自动修改 FlClash 的规则。",
+      "允许此节点使用 Tailscale 网络中已批准的子网路由。是否有流量经过这些路由，仍由现有规则决定；不会自动修改 Flash 的规则。",
     ),
     "tsAccount": MessageLookupByLibrary.simpleMessage("登录账号"),
     "tsAccountMissing": MessageLookupByLibrary.simpleMessage("账号信息未提供"),
@@ -1721,7 +1721,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "登录已完成，正在添加节点和 Tailscale 专用规则。",
     ),
     "tsBoundaryTip": MessageLookupByLibrary.simpleMessage(
-      "只有由 FlClash 规则转到此节点的流量才会使用 Tailscale。登录不会自动修改规则、系统代理或虚拟网卡设置。",
+      "只有由 Flash 规则转到此节点的流量才会使用 Tailscale。登录不会自动修改规则、系统代理或虚拟网卡设置。",
     ),
     "tsBrowserFailed": MessageLookupByLibrary.simpleMessage("无法打开登录页，请重试。"),
     "tsCancel": MessageLookupByLibrary.simpleMessage("取消"),
@@ -1818,7 +1818,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsGoToRules": MessageLookupByLibrary.simpleMessage("前往规则"),
     "tsHelp": MessageLookupByLibrary.simpleMessage("补充说明"),
     "tsHelpBody": MessageLookupByLibrary.simpleMessage(
-      "FlClash 会在 Tailscale 网络中显示为独立设备。它不提供其他设备连入这台 Mac 的 SSH、文件共享或远程桌面功能，也不提供 Tailscale SSH 或 Taildrop。",
+      "Flash 会在 Tailscale 网络中显示为独立设备。它不提供其他设备连入这台 Mac 的 SSH、文件共享或远程桌面功能，也不提供 Tailscale SSH 或 Taildrop。",
     ),
     "tsIdentityFailed": MessageLookupByLibrary.simpleMessage("账号与网络信息加载失败"),
     "tsLegacyAccountUnconfirmed": MessageLookupByLibrary.simpleMessage(
@@ -2015,12 +2015,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRoutesApplying": MessageLookupByLibrary.simpleMessage("正在更新子网路由设置…"),
     "tsRoutesFailed": MessageLookupByLibrary.simpleMessage("子网路由设置未更改，请重试。"),
     "tsRoutesOffBody": MessageLookupByLibrary.simpleMessage(
-      "此节点将不再使用这些子网路由，相关连接可能中断。FlClash 的规则不变。",
+      "此节点将不再使用这些子网路由，相关连接可能中断。Flash 的规则不变。",
     ),
     "tsRoutesOffConfirm": MessageLookupByLibrary.simpleMessage("停止接受"),
     "tsRoutesOffTitle": MessageLookupByLibrary.simpleMessage("停止接受子网路由？"),
     "tsRoutesOnBody": MessageLookupByLibrary.simpleMessage(
-      "此节点将允许使用网络中已批准的子网路由。FlClash 的规则不变。",
+      "此节点将允许使用网络中已批准的子网路由。Flash 的规则不变。",
     ),
     "tsRoutesOnTitle": MessageLookupByLibrary.simpleMessage("接受子网路由？"),
     "tsRoutesUnknown": MessageLookupByLibrary.simpleMessage(
@@ -2031,13 +2031,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRulesAddresses": m117,
     "tsRulesDomain": m118,
     "tsRulesManaged": MessageLookupByLibrary.simpleMessage(
-      "FlClash 会按此账号的网络域名和设备地址更新专用规则。其他流量仍按原规则分流，原配置文件保持不变。",
+      "Flash 会按此账号的网络域名和设备地址更新专用规则。其他流量仍按原规则分流，原配置文件保持不变。",
     ),
     "tsRulesPending": MessageLookupByLibrary.simpleMessage(
       "接入完成后，Tailscale 地址和 ts.net 域名会使用专用规则，其他流量保留原分流。",
     ),
     "tsRulesProfileNode": MessageLookupByLibrary.simpleMessage(
-      "只有由 FlClash 规则转到此节点的流量才会使用 Tailscale。登录此节点不会自动修改现有规则，也不会开启系统代理或虚拟网卡。",
+      "只有由 Flash 规则转到此节点的流量才会使用 Tailscale。登录此节点不会自动修改现有规则，也不会开启系统代理或虚拟网卡。",
     ),
     "tsSaveChoices": MessageLookupByLibrary.simpleMessage("保存选择"),
     "tsSavedValue": m119,
@@ -2056,7 +2056,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "不会自动开启系统代理或虚拟网卡。",
     ),
     "tsSignInTip": MessageLookupByLibrary.simpleMessage(
-      "登录后，FlClash 会为当前配置添加 Tailscale 节点和专用规则。其他流量仍按原规则分流，原配置文件保持不变。",
+      "登录后，Flash 会为当前配置添加 Tailscale 节点和专用规则。其他流量仍按原规则分流，原配置文件保持不变。",
     ),
     "tsSignOutAccount": MessageLookupByLibrary.simpleMessage("退出此账号"),
     "tsSignOutAccountBody": m121,
@@ -2138,6 +2138,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "unnamed": MessageLookupByLibrary.simpleMessage("未命名"),
     "unpinWindow": MessageLookupByLibrary.simpleMessage("取消置顶"),
     "update": MessageLookupByLibrary.simpleMessage("更新"),
+    "updateCheckFailed": MessageLookupByLibrary.simpleMessage("暂时无法检查更新，请重试"),
     "updateDownloadFailed": MessageLookupByLibrary.simpleMessage("无法下载更新。"),
     "updateDownloadStarted": MessageLookupByLibrary.simpleMessage(
       "已开始下载更新，可在首页查看进度",
@@ -2147,14 +2148,20 @@ class MessageLookup extends MessageLookupByLibrary {
     "updateInstallFailed": MessageLookupByLibrary.simpleMessage(
       "无法安装更新，可以前往发布页手动下载。",
     ),
+    "updateNoReleaseFound": MessageLookupByLibrary.simpleMessage(
+      "暂未找到 Flash 发布版本",
+    ),
     "updateNotVerified": MessageLookupByLibrary.simpleMessage("下载的更新未通过校验。"),
     "updateReady": MessageLookupByLibrary.simpleMessage("更新已就绪"),
     "updateReadyTip": MessageLookupByLibrary.simpleMessage("更新已下载，点击安装"),
     "updateRestartTip": MessageLookupByLibrary.simpleMessage(
-      "FlClash 将关闭以安装更新，完成后自动重新打开。",
+      "Flash 将关闭以安装更新，完成后自动重新打开。",
     ),
     "upload": MessageLookupByLibrary.simpleMessage("上传"),
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("上行带宽"),
+    "upstreamTelegram": MessageLookupByLibrary.simpleMessage(
+      "FlClash 上游 Telegram",
+    ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 重写"),
     "urlTip": m126,

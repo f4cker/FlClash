@@ -85,18 +85,12 @@ class CommonAction extends _$CommonAction {
 
   Future<bool> autoCheckUpdate() async {
     if (!ref.read(appSettingProvider).autoCheckUpdate) return false;
-    final Map<String, dynamic>? res;
-    try {
-      res = await request.checkForUpdate();
-    } catch (error) {
-      commonPrint.log(
-        'checkForUpdate failed: ${compactError(error)}',
-        logLevel: LogLevel.warning,
-      );
-      return false;
-    }
-    await checkUpdateResultHandle(data: res);
-    return res != null;
+    final result = await request.checkForUpdate(
+      version: globalState.packageInfo.version,
+      assetSuffix: releaseAssetSuffix,
+    );
+    await checkUpdateResultHandle(result);
+    return result is UpdateAvailable;
   }
 
   TextSpan _releaseSpan(BuildContext context, String tagName, String? body) {
@@ -143,11 +137,12 @@ class CommonAction extends _$CommonAction {
     ];
   }
 
-  Future<void> checkUpdateResultHandle({
-    Map<String, dynamic>? data,
+  /// Only a manual check reports that it found nothing to install.
+  Future<void> checkUpdateResultHandle(
+    UpdateCheck result, {
     bool isUser = false,
   }) async {
-    if (data != null) {
+    if (result case UpdateAvailable(release: final data)) {
       final context = globalState.navigatorKey.currentContext!;
       final tag = data['tag_name'] as String;
       final suffix = selfUpdateSuffix;
@@ -171,10 +166,16 @@ class CommonAction extends _$CommonAction {
             .update((state) => state.copyWith(autoCheckUpdate: false));
       }
     } else if (isUser) {
+      final message = switch (result) {
+        UpdateNoRelease() => currentAppLocalizations.updateNoReleaseFound,
+        UpdateCheckFailed() => currentAppLocalizations.updateCheckFailed,
+        UpdateUpToDate() ||
+        UpdateAvailable() => currentAppLocalizations.checkUpdateError,
+      };
       unawaited(
         dialogs.showAlert(
           title: currentAppLocalizations.checkUpdate,
-          message: TextSpan(text: currentAppLocalizations.checkUpdateError),
+          message: TextSpan(text: message),
         ),
       );
     }
@@ -182,7 +183,9 @@ class CommonAction extends _$CommonAction {
 
   void _openReleasePage() {
     unawaited(
-      launchUrl(Uri.parse('https://github.com/$repository/releases/latest')),
+      launchUrl(
+        Uri.parse('https://github.com/$updateRepository/releases/latest'),
+      ),
     );
   }
 

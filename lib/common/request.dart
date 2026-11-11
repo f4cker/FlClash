@@ -104,44 +104,82 @@ class Request {
     }
   }
 
-  /// Null when this build is current; throws when GitHub cannot be asked.
-  Future<Map<String, dynamic>?> checkForUpdate() async {
-    final release = await latestRelease();
-    final remoteVersion = release['tag_name'] as String;
-    final version = globalState.packageInfo.version;
-    final hasUpdate =
-        compareVersions(remoteVersion.replaceAll('v', ''), version) > 0;
-    return hasUpdate ? release : null;
+  Future<UpdateCheck> checkForUpdate({
+    required String version,
+    required String? assetSuffix,
+  }) async {
+    try {
+      final release = await latestRelease();
+      if (release == null) return const UpdateNoRelease();
+      final tag = release['tag_name'] as String;
+      if (assetSuffix != null &&
+          !await _hasReleaseAsset(
+            release,
+            tag,
+            releaseAssetName(tag, assetSuffix),
+          )) {
+        return const UpdateNoRelease();
+      }
+      return compareVersions(tag.replaceAll('v', ''), version) > 0
+          ? UpdateAvailable(release)
+          : const UpdateUpToDate();
+    } catch (error) {
+      commonPrint.log(
+        'checkForUpdate failed: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+      return UpdateCheckFailed(error);
+    }
   }
 
-  /// The release page redirect still answers once the hourly API quota is spent.
-  Future<Map<String, dynamic>> latestRelease() async {
+  /// Null when nothing is published; the page answers past the API quota.
+  Future<Map<String, dynamic>?> latestRelease() async {
     try {
       final response = await dio.get<Map<String, dynamic>>(
-        'https://api.github.com/repos/$repository/releases/latest',
+        'https://api.github.com/repos/$updateRepository/releases/latest',
         options: Options(responseType: ResponseType.json),
       );
       return response.data!;
     } on DioException catch (error) {
+      if (error.response?.statusCode == HttpStatus.notFound) return null;
       commonPrint.log(
         'latest release API failed: ${compactError(error)}',
         logLevel: LogLevel.warning,
       );
     }
     final response = await dio.get<void>(
-      'https://github.com/$repository/releases/latest',
-      options: Options(
-        followRedirects: false,
-        validateStatus: (status) => status != null && status < 400,
-      ),
+      'https://github.com/$updateRepository/releases/latest',
+      options: Options(followRedirects: false, validateStatus: _answered),
     );
+    if (response.statusCode == HttpStatus.notFound) return null;
     final location = response.headers.value(HttpHeaders.locationHeader);
-    final segments = Uri.tryParse(location ?? '')?.pathSegments ?? const [];
-    final tagIndex = segments.indexOf('tag') + 1;
-    if (tagIndex == 0 || tagIndex >= segments.length) {
-      throw FormatException('No release tag in the redirect', location);
+    if (location == null) {
+      throw const FormatException('The release page did not redirect');
     }
+    final segments = Uri.tryParse(location)?.pathSegments ?? const [];
+    final tagIndex = segments.indexOf('tag') + 1;
+    // With nothing published GitHub redirects to the release list instead.
+    if (tagIndex == 0 || tagIndex >= segments.length) return null;
     return {'tag_name': segments[tagIndex]};
+  }
+
+  static bool _answered(int? status) =>
+      status != null && (status < 400 || status == HttpStatus.notFound);
+
+  Future<bool> _hasReleaseAsset(
+    Map<String, dynamic> release,
+    String tag,
+    String name,
+  ) async {
+    final assets = release['assets'];
+    if (assets is List) {
+      return assets.any((asset) => asset is Map && asset['name'] == name);
+    }
+    final response = await dio.head<void>(
+      releaseAssetUri(tag, name).toString(),
+      options: Options(followRedirects: false, validateStatus: _answered),
+    );
+    return response.statusCode != HttpStatus.notFound;
   }
 
   Future<String> downloadVerifiedRelease({

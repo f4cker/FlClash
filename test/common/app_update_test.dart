@@ -50,10 +50,34 @@ void main() {
     });
   });
 
+  group('releasePlatformAssetSuffix', () {
+    test('names the DMG built for the running Mac', () {
+      expect(
+        releasePlatformAssetSuffix(Abi.macosArm64, windowsInstalled: false),
+        'macos-arm64.dmg',
+      );
+      expect(
+        releasePlatformAssetSuffix(Abi.macosX64, windowsInstalled: false),
+        'macos-amd64.dmg',
+      );
+    });
+
+    test('follows the self-update asset elsewhere', () {
+      expect(
+        releasePlatformAssetSuffix(Abi.androidArm64, windowsInstalled: false),
+        'android-arm64-v8a.apk',
+      );
+      expect(
+        releasePlatformAssetSuffix(Abi.linuxX64, windowsInstalled: false),
+        isNull,
+      );
+    });
+  });
+
   test('releaseAssetName drops the tag prefix', () {
     expect(
       releaseAssetName('v0.9.3', 'android-arm64-v8a.apk'),
-      'FlClash-0.9.3-android-arm64-v8a.apk',
+      'Flash-0.9.3-android-arm64-v8a.apk',
     );
   });
 

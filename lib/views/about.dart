@@ -29,14 +29,15 @@ class AboutView extends ConsumerWidget {
     if (ref.read(loadingProvider(LoadingTag.checkUpdate))) return;
     final commonAction = ref.read(commonActionProvider.notifier);
     final result = await globalState.loadingRun(
-      () async => (release: await request.checkForUpdate()),
+      () => request.checkForUpdate(
+        version: globalState.packageInfo.version,
+        assetSuffix: releaseAssetSuffix,
+      ),
       title: context.appLocalizations.checkUpdate,
       tag: LoadingTag.checkUpdate,
     );
     if (result == null) return;
-    unawaited(
-      commonAction.checkUpdateResultHandle(data: result.release, isUser: true),
-    );
+    unawaited(commonAction.checkUpdateResultHandle(result, isUser: true));
   }
 
   Widget _buildLinkItem({
@@ -91,8 +92,8 @@ class AboutView extends ConsumerWidget {
               _buildLinkItem(
                 glyph: AppGlyphs.code,
                 title: appLocalizations.project,
-                url: 'https://github.com/$repository',
-                label: 'github.com/$repository',
+                url: 'https://github.com/$upstreamRepository',
+                label: 'github.com/$upstreamRepository',
               ),
               _buildLinkItem(
                 glyph: AppGlyphs.cpu,
@@ -102,7 +103,7 @@ class AboutView extends ConsumerWidget {
               ),
               _buildLinkItem(
                 glyph: AppGlyphs.send,
-                title: 'Telegram',
+                title: appLocalizations.upstreamTelegram,
                 url: 'https://t.me/FlClash',
                 label: 't.me/FlClash',
               ),

@@ -33,7 +33,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m4(detail) => "Impossible d’effacer les données : ${detail}";
 
   static String m5(code) =>
-      "Windows a refusé d’exécuter FlClashCore.exe (erreur ${code}). Une stratégie de contrôle des applications, telle que Smart App Control ou AppLocker, bloque les programmes non signés ; autorisez FlClash dans cette stratégie ou désactivez-la, puis réessayez.";
+      "Windows a refusé d’exécuter FlClashCore.exe (erreur ${code}). Une stratégie de contrôle des applications, telle que Smart App Control ou AppLocker, bloque les programmes non signés ; autorisez Flash dans cette stratégie ou désactivez-la, puis réessayez.";
 
   static String m6(name) =>
       "L’app n’a pas réussi à finir de démarrer deux fois de suite. Pour sortir de cette boucle, le profil ${name} a été désélectionné et la configuration automatique a été ignorée. Vous pouvez le sélectionner de nouveau à tout moment.";
@@ -167,7 +167,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Chrome et Firefox ont leurs propres magasins de certificats, qui nécessitent certutil : ${command}";
 
   static String m55(host) =>
-      "Ajouter ${host} à la liste des noms d’hôte ? FlClash pourra lire ce qui lui est envoyé, cookies et mots de passe compris.";
+      "Ajouter ${host} à la liste des noms d’hôte ? Flash pourra lire ce qui lui est envoyé, cookies et mots de passe compris.";
 
   static String m56(host) =>
       "Ajouter -${host} en tête de la liste des noms d’hôte ? L’hôte ne sera alors plus jamais déchiffré.";
@@ -186,7 +186,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Impossible de supprimer l’ancien certificat, ${name}. Retirez-le vous-même des racines de confiance.";
 
   static String m62(name) =>
-      "L’ancien certificat, ${name}, figure toujours parmi les certificats de confiance du système. Autorisez l’accès root à FlClash dans votre gestionnaire root puis régénérez-le, ou supprimez-y le module « FlClash MITM CA » et redémarrez.";
+      "L’ancien certificat, ${name}, figure toujours parmi les certificats de confiance du système. Autorisez l’accès root à Flash dans votre gestionnaire root puis régénérez-le, ou supprimez-y le module « FlClash MITM CA » et redémarrez.";
 
   static String m63(name) =>
       "Supprimez l’ancien certificat, ${name}, dans Paramètres › Sécurité › Chiffrement et identifiants › Identifiants de confiance › Utilisateur, puis installez le nouveau.";
@@ -296,10 +296,10 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m104(n) => "Showing ${n} devices";
 
   static String m105(node, device) =>
-      "Sets the exit node of “${node}” to “${device}”. Connections through this node may drop; FlClash rules stay the same.";
+      "Sets the exit node of “${node}” to “${device}”. Connections through this node may drop; Flash rules stay the same.";
 
   static String m106(node) =>
-      "Only turns off exit forwarding for “${node}”; it doesn\'t log out of Tailscale and FlClash rules stay the same.";
+      "Only turns off exit forwarding for “${node}”; it doesn\'t log out of Tailscale and Flash rules stay the same.";
 
   static String m107(time) =>
       "Authentication expires at ${time}. Log in again before then.";
@@ -672,7 +672,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "core": MessageLookupByLibrary.simpleMessage("Cœur"),
     "coreBlockedByPolicyTip": m5,
     "coreBlockedBySmartAppControlTip": MessageLookupByLibrary.simpleMessage(
-      "Windows Smart App Control a bloqué FlClashCore.exe car il n’est pas signé. Ouvrez Sécurité Windows → Contrôle des applications et du navigateur → Paramètres de Smart App Control, choisissez Désactivé, puis relancez FlClash. Smart App Control ne peut pas être réactivé sans réinstaller Windows.",
+      "Windows Smart App Control a bloqué FlClashCore.exe car il n’est pas signé. Ouvrez Sécurité Windows → Contrôle des applications et du navigateur → Paramètres de Smart App Control, choisissez Désactivé, puis relancez Flash. Smart App Control ne peut pas être réactivé sans réinstaller Windows.",
     ),
     "coreStatus": MessageLookupByLibrary.simpleMessage("État du cœur"),
     "country": MessageLookupByLibrary.simpleMessage("Région"),
@@ -804,7 +804,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Modifications de cette déclaration",
     ),
     "disclaimerDesc": MessageLookupByLibrary.simpleMessage(
-      "Avant d\'utiliser FlClash (« le Logiciel »), lisez attentivement cette déclaration et assurez-vous de bien la comprendre. Appuyer sur « Accepter » signifie que vous avez lu et compris ce qui suit. Si vous ne souhaitez pas continuer, appuyez sur « Quitter ».",
+      "Avant d\'utiliser Flash (« le Logiciel »), lisez attentivement cette déclaration et assurez-vous de bien la comprendre. Appuyer sur « Accepter » signifie que vous avez lu et compris ce qui suit. Si vous ne souhaitez pas continuer, appuyez sur « Quitter ».",
     ),
     "disclaimerLiabilityContent": MessageLookupByLibrary.simpleMessage(
       "Dans toute la mesure permise par la loi applicable, ni les développeurs ni aucun contributeur ne sauraient être tenus responsables de dommages directs, indirects, accessoires, spéciaux, punitifs ou consécutifs résultant de l’utilisation ou de l’impossibilité d’utiliser le Logiciel, y compris, sans s’y limiter, la perte de données, les dommages matériels, les pannes réseau, l’interruption d’activité, le manque à gagner ou tout litige qui en découlerait, même s’ils ont été avertis de la possibilité de tels dommages.",
@@ -1062,7 +1062,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "healthCheck": MessageLookupByLibrary.simpleMessage("Contrôle d’état"),
     "helperCorruptTip": MessageLookupByLibrary.simpleMessage(
-      "Service Helper indisponible ; le mode TUN ne peut pas être activé. Réinstallez FlClash pour le rétablir.",
+      "Service Helper indisponible ; le mode TUN ne peut pas être activé. Réinstallez Flash pour le rétablir.",
     ),
     "hex": MessageLookupByLibrary.simpleMessage("Hex"),
     "hideFromList": MessageLookupByLibrary.simpleMessage("Masquer de la liste"),
@@ -1178,7 +1178,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "init": MessageLookupByLibrary.simpleMessage("Initialisation"),
     "initFailed": MessageLookupByLibrary.simpleMessage("Échec du démarrage"),
     "initFailedTip": MessageLookupByLibrary.simpleMessage(
-      "FlClash a rencontré une erreur au démarrage et ne peut pas continuer. Copiez les détails pour signaler le problème. Si cela se reproduit, effacer les données permet généralement de relancer l’app.",
+      "Flash a rencontré une erreur au démarrage et ne peut pas continuer. Copiez les détails pour signaler le problème. Si cela se reproduit, effacer les données permet généralement de relancer l’app.",
     ),
     "initiator": MessageLookupByLibrary.simpleMessage("Initiateur"),
     "initiatorShort": MessageLookupByLibrary.simpleMessage("De"),
@@ -1460,7 +1460,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "mitmDecryptHostTip": m55,
     "mitmEnableTip": MessageLookupByLibrary.simpleMessage(
-      "FlClash pourra lire tout ce qui est envoyé aux hôtes déchiffrés, cookies et mots de passe compris. N’activez cette option que pour les hôtes à réécrire.",
+      "Flash pourra lire tout ce qui est envoyé aux hôtes déchiffrés, cookies et mots de passe compris. N’activez cette option que pour les hôtes à réécrire.",
     ),
     "mitmExcludeHost": MessageLookupByLibrary.simpleMessage(
       "Exclure du déchiffrement",
@@ -1766,7 +1766,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "profiles": MessageLookupByLibrary.simpleMessage("Profils"),
     "profilesSort": MessageLookupByLibrary.simpleMessage("Trier les profils"),
-    "project": MessageLookupByLibrary.simpleMessage("Projet"),
+    "project": MessageLookupByLibrary.simpleMessage("Projet d’origine FlClash"),
     "protocol": MessageLookupByLibrary.simpleMessage("Protocole"),
     "protocolParam": MessageLookupByLibrary.simpleMessage(
       "Paramètre du protocole",
@@ -1826,7 +1826,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Régénérer le certificat",
     ),
     "regenerateCertificateTip": MessageLookupByLibrary.simpleMessage(
-      "Le nouveau certificat remplace l’actuel, que FlClash retire des racines de confiance de cet appareil quand il le peut. Chaque autre appareil qui fait confiance à l’actuel doit installer le nouveau.",
+      "Le nouveau certificat remplace l’actuel, que Flash retire des racines de confiance de cet appareil quand il le peut. Chaque autre appareil qui fait confiance à l’actuel doit installer le nouveau.",
     ),
     "regex": MessageLookupByLibrary.simpleMessage("Regex"),
     "releaseMemory": MessageLookupByLibrary.simpleMessage("Libérer la mémoire"),
@@ -2111,10 +2111,10 @@ class MessageLookup extends MessageLookupByLibrary {
       "Envoyé. Confirmez l\'importation sur l\'autre appareil.",
     ),
     "sendFromPhonePageTitle": MessageLookupByLibrary.simpleMessage(
-      "Envoyer un lien à FlClash",
+      "Envoyer un lien à Flash",
     ),
     "sendFromPhonePermissionDenied": MessageLookupByLibrary.simpleMessage(
-      "Pour recevoir un lien depuis le téléphone, FlClash a besoin de l\'autorisation Appareils à proximité, qui lui donne accès au réseau local. Activez-la dans les paramètres de l\'application.",
+      "Pour recevoir un lien depuis le téléphone, Flash a besoin de l\'autorisation Appareils à proximité, qui lui donne accès au réseau local. Activez-la dans les paramètres de l\'application.",
     ),
     "sendFromPhoneTip": MessageLookupByLibrary.simpleMessage(
       "Scannez le code avec l\'appareil photo du téléphone, puis collez le lien dans la page qui s\'ouvre. Les deux appareils doivent être sur le même réseau.",
@@ -2160,7 +2160,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Aucun proxy n’a pu être lu dans les liens",
     ),
     "shareQrcodeTip": MessageLookupByLibrary.simpleMessage(
-      "Scannez avec FlClash sur un autre appareil pour importer ce profil.",
+      "Scannez avec Flash sur un autre appareil pour importer ce profil.",
     ),
     "show": MessageLookupByLibrary.simpleMessage("Afficher"),
     "showLess": MessageLookupByLibrary.simpleMessage("Réduire"),
@@ -2310,7 +2310,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Accept subnet routes",
     ),
     "tsAcceptRoutesTip": MessageLookupByLibrary.simpleMessage(
-      "Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; FlClash rules are not changed.",
+      "Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; Flash rules are not changed.",
     ),
     "tsAccount": MessageLookupByLibrary.simpleMessage("Account"),
     "tsAccountMissing": MessageLookupByLibrary.simpleMessage(
@@ -2379,7 +2379,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Sign-in is complete. Adding the node and Tailscale rules.",
     ),
     "tsBoundaryTip": MessageLookupByLibrary.simpleMessage(
-      "Only traffic that FlClash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.",
+      "Only traffic that Flash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.",
     ),
     "tsBrowserFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t open the login page. Try again.",
@@ -2520,7 +2520,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsGoToRules": MessageLookupByLibrary.simpleMessage("Go to rules"),
     "tsHelp": MessageLookupByLibrary.simpleMessage("More information"),
     "tsHelpBody": MessageLookupByLibrary.simpleMessage(
-      "FlClash shows up as a separate device in your Tailscale network. It does not let other devices reach this Mac over SSH, file sharing or remote desktop, and does not provide Tailscale SSH or Taildrop.",
+      "Flash appears as a separate device on the Tailscale network. It does not let other devices connect to this Mac for SSH, file sharing, or remote desktop, and does not provide Tailscale SSH or Taildrop.",
     ),
     "tsIdentityFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t load account and network info",
@@ -2765,7 +2765,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Subnet routes not changed. Try again.",
     ),
     "tsRoutesOffBody": MessageLookupByLibrary.simpleMessage(
-      "This node will stop using these subnet routes; related connections may drop. FlClash rules stay the same.",
+      "This node will stop using these subnet routes; related connections may drop. Flash rules stay the same.",
     ),
     "tsRoutesOffConfirm": MessageLookupByLibrary.simpleMessage(
       "Stop accepting",
@@ -2774,7 +2774,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Stop accepting subnet routes?",
     ),
     "tsRoutesOnBody": MessageLookupByLibrary.simpleMessage(
-      "This node will use the network\'s approved subnet routes. FlClash rules stay the same.",
+      "This node will use the network\'s approved subnet routes. Flash rules stay the same.",
     ),
     "tsRoutesOnTitle": MessageLookupByLibrary.simpleMessage(
       "Accept subnet routes?",
@@ -2791,13 +2791,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRulesAddresses": m117,
     "tsRulesDomain": m118,
     "tsRulesManaged": MessageLookupByLibrary.simpleMessage(
-      "FlClash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.",
+      "Flash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.",
     ),
     "tsRulesPending": MessageLookupByLibrary.simpleMessage(
       "Once added, Tailscale addresses and ts.net domains will use dedicated rules. Other traffic will keep its existing routing.",
     ),
     "tsRulesProfileNode": MessageLookupByLibrary.simpleMessage(
-      "Only traffic routed to this node by FlClash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.",
+      "Only traffic routed to this node by Flash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.",
     ),
     "tsSaveChoices": MessageLookupByLibrary.simpleMessage("Save choices"),
     "tsSavedValue": m119,
@@ -2820,7 +2820,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "System proxy and TUN will not be enabled automatically.",
     ),
     "tsSignInTip": MessageLookupByLibrary.simpleMessage(
-      "After sign-in, FlClash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.",
+      "After sign-in, Flash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.",
     ),
     "tsSignOutAccount": MessageLookupByLibrary.simpleMessage(
       "Sign out of this account",
@@ -2940,6 +2940,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Désépingler la fenêtre",
     ),
     "update": MessageLookupByLibrary.simpleMessage("Mettre à jour"),
+    "updateCheckFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn\'t check for updates. Please try again.",
+    ),
     "updateDownloadFailed": MessageLookupByLibrary.simpleMessage(
       "Impossible de télécharger la mise à jour.",
     ),
@@ -2955,6 +2958,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "updateInstallFailed": MessageLookupByLibrary.simpleMessage(
       "Impossible d\'installer la mise à jour. Vous pouvez la télécharger depuis la page de publication.",
     ),
+    "updateNoReleaseFound": MessageLookupByLibrary.simpleMessage(
+      "No Flash release found yet",
+    ),
     "updateNotVerified": MessageLookupByLibrary.simpleMessage(
       "La mise à jour téléchargée n\'a pas pu être vérifiée.",
     ),
@@ -2963,11 +2969,14 @@ class MessageLookup extends MessageLookupByLibrary {
       "La mise à jour est téléchargée. Touchez pour l’installer.",
     ),
     "updateRestartTip": MessageLookupByLibrary.simpleMessage(
-      "FlClash se ferme pour installer la mise à jour et se rouvre une fois terminée.",
+      "Flash se ferme pour installer la mise à jour et se rouvre une fois terminée.",
     ),
     "upload": MessageLookupByLibrary.simpleMessage("Envoi"),
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage(
       "Bande passante d’envoi",
+    ),
+    "upstreamTelegram": MessageLookupByLibrary.simpleMessage(
+      "Telegram du projet d’origine FlClash",
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("Réécriture d’URL"),

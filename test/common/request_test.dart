@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:fl_clash/common/app_update.dart';
 import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/common/request.dart';
@@ -52,6 +53,24 @@ class _PathAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     return byPath[options.uri.path]!();
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+class _RouteAdapter implements HttpClientAdapter {
+  _RouteAdapter(this.answer);
+
+  final ResponseBody Function(RequestOptions options) answer;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    return answer(options);
   }
 
   @override
@@ -141,6 +160,128 @@ void main() {
     });
   });
 
+  group('checkForUpdate', () {
+    const suffix = 'macos-arm64.dmg';
+
+    ResponseBody json(String body, int status) => ResponseBody.fromString(
+      body,
+      status,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+
+    ResponseBody redirect(String location) => ResponseBody.fromString(
+      '',
+      302,
+      headers: {
+        HttpHeaders.locationHeader: [location],
+      },
+    );
+
+    String releaseWith(List<String> assets) => jsonEncode({
+      'tag_name': 'v1.2.3',
+      'assets': [
+        for (final name in assets) {'name': name},
+      ],
+    });
+
+    Future<UpdateCheck> check(
+      ResponseBody Function(RequestOptions options) answer, {
+      String version = '1.2.3',
+    }) {
+      final request = Request()..dio.httpClientAdapter = _RouteAdapter(answer);
+      return request.checkForUpdate(version: version, assetSuffix: suffix);
+    }
+
+    test('finds no release when the repository has published none', () async {
+      final result = await check((_) => json('{}', 404));
+
+      expect(result, isA<UpdateNoRelease>());
+    });
+
+    test('finds no release when the latest carries no Flash asset', () async {
+      final result = await check(
+        (_) => json(releaseWith(['FlClash-1.2.3-$suffix']), 200),
+        version: '1.0.0',
+      );
+
+      expect(result, isA<UpdateNoRelease>());
+    });
+
+    test('finds no release when the page lists no tag', () async {
+      final result = await check(
+        (options) => options.uri.host == 'api.github.com'
+            ? json('{}', 403)
+            : redirect('https://github.com/$updateRepository/releases'),
+      );
+
+      expect(result, isA<UpdateNoRelease>());
+    });
+
+    test(
+      'is up to date against a matching release that is not newer',
+      () async {
+        final result = await check(
+          (_) => json(releaseWith(['Flash-1.2.3-$suffix']), 200),
+        );
+
+        expect(result, isA<UpdateUpToDate>());
+      },
+    );
+
+    test('offers a matching release that is newer', () async {
+      final result = await check(
+        (_) => json(releaseWith(['Flash-1.2.3-$suffix']), 200),
+        version: '1.2.2',
+      );
+
+      expect(
+        result,
+        isA<UpdateAvailable>().having(
+          (update) => update.release['tag_name'],
+          'tag',
+          'v1.2.3',
+        ),
+      );
+    });
+
+    test('asks for the asset when only the page answers', () async {
+      ResponseBody answer(RequestOptions options, {required int asset}) {
+        if (options.uri.host == 'api.github.com') return json('{}', 403);
+        if (options.method == 'HEAD') {
+          expect(
+            options.uri.path,
+            '/$updateRepository/releases/download/v1.2.3/Flash-1.2.3-$suffix',
+          );
+          return ResponseBody.fromString('', asset);
+        }
+        return redirect(
+          'https://github.com/$updateRepository/releases/tag/v1.2.3',
+        );
+      }
+
+      expect(
+        await check((options) => answer(options, asset: 302), version: '1.2.2'),
+        isA<UpdateAvailable>(),
+      );
+      expect(
+        await check((options) => answer(options, asset: 404), version: '1.2.2'),
+        isA<UpdateNoRelease>(),
+      );
+    });
+
+    test('fails when neither endpoint answers', () async {
+      final result = await check(
+        (options) => options.uri.host == 'api.github.com'
+            ? json('{}', 403)
+            : ResponseBody.fromString('', 503),
+      );
+
+      expect(result, isA<UpdateCheckFailed>());
+    });
+  });
+
   group('downloadVerifiedRelease', () {
     const name = 'FlClash-1.2.3-android-arm64-v8a.apk';
     final package = utf8.encode('package');
@@ -156,9 +297,9 @@ void main() {
     Request requestServing(String sums, List<int> asset) {
       return Request()
         ..releaseDio.httpClientAdapter = _PathAdapter({
-          '/$repository/releases/download/v1.2.3/SHA256SUMS': () =>
+          '/$updateRepository/releases/download/v1.2.3/SHA256SUMS': () =>
               ResponseBody.fromString(sums, 200),
-          '/$repository/releases/download/v1.2.3/$name': () =>
+          '/$updateRepository/releases/download/v1.2.3/$name': () =>
               ResponseBody.fromBytes(asset, 200),
         });
     }

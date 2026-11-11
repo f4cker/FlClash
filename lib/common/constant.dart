@@ -9,7 +9,11 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/widgets.dart';
 
-const appName = 'FlClash';
+const appName = 'Flash';
+
+/// The upstream name, kept wherever another system matches on it: WebDAV backups,
+/// the default TUN device, autostart entries and the User-Agent.
+const appCompatName = 'FlClash';
 const appHelperService = 'FlClashHelperService';
 const coreManifestName = 'manifest.json';
 const browserUa =
@@ -137,7 +141,8 @@ const tailscaleLegacyMigrationKey = 'tailscale_legacy_migration';
 const tailscaleManagedRecordsKey = 'tailscale_managed_records';
 const appliedConfigMd5Key = 'applied_config_md5';
 const defaultSystemDnsFallback = '223.5.5.5';
-const repository = 'chen08209/FlClash';
+const upstreamRepository = 'chen08209/FlClash';
+const updateRepository = 'f4cker/FlClash';
 const maxMobileWidth = 600;
 const maxLaptopWidth = 840;
 const defaultTestUrl = 'https://www.gstatic.com/generate_204';
