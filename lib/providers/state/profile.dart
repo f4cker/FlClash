@@ -71,6 +71,16 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
         );
   final allProfileProviders = ref.watch(profileProvidersProvider);
   final profiles = ref.read(profilesProvider);
+  final mountable = profileId != null && profileType != ProfileType.custom;
+  MountTargetState? readTarget;
+  if (mountable) {
+    ref.watch(profilesProvider.select(_mountSourceStamp));
+    ref.listen(mountTargetProvider(profileId), (_, next) {
+      if (next case AsyncData(:final value) when value != readTarget) {
+        ref.invalidateSelf();
+      }
+    });
+  }
   final mitmModules =
       mitmFeature &&
           ref.watch(
@@ -106,7 +116,7 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
           : await database.scriptsDao.get(scriptId).getSingleOrNull();
     }
   }
-  final mountTarget = profileId != null && profileType != ProfileType.custom
+  final mountTarget = readTarget = mountable
       ? await database.mountsDao.target(profileId)
       : null;
   final mounts = mountTarget == null
@@ -136,6 +146,17 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
         : null,
   );
 }
+
+/// What a mount revision reads from the subscriptions it may mount.
+String _mountSourceStamp(List<Profile> profiles) => json.encode([
+  for (final profile in profiles)
+    if (profile.type == ProfileType.url)
+      [
+        profile.id,
+        profile.realLabel,
+        profile.lastUpdateDate?.millisecondsSinceEpoch,
+      ],
+]);
 
 /// A module whose content is not on disk yet adds nothing until it downloads.
 Future<List<MitmModuleSource>> mitmModuleSources(

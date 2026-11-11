@@ -208,4 +208,66 @@ void main() {
     ))!;
     expect(other.mounts, isNull);
   });
+
+  testWidgets('a live setup follows a mount save and a source update', (
+    tester,
+  ) async {
+    final root = Directory.systemTemp.createTempSync('mount_setup_live');
+    addTearDown(() => root.deleteSync(recursive: true));
+    await tester.runAsync(() => useAppPaths(root));
+    const profile = Profile(
+      id: 1,
+      label: 'Base',
+      autoUpdateDuration: Duration.zero,
+    );
+    const source = Profile(
+      id: 2,
+      label: 'Air',
+      type: ProfileType.url,
+      url: 'https://example.invalid/sub',
+      autoUpdateDuration: Duration.zero,
+    );
+    await testDatabase.profilesDao.putAll([
+      profile.toCompanion(),
+      source.toCompanion(),
+    ]);
+    final container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(() => TestProfiles([profile, source])),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const SizedBox.shrink(),
+      ),
+    );
+    final sub = container.listen(setupStateProvider(1), (_, _) {});
+    addTearDown(sub.close);
+    Future<MountSetup?> mounts() async => (await tester.runAsync(() async {
+      await pumpEventQueue();
+      return container.read(setupStateProvider(1).future);
+    }))!.mounts;
+
+    expect(await mounts(), isNull);
+
+    await tester.runAsync(
+      () => testDatabase.mountsDao.save(
+        targetId: 1,
+        expectedVersion: null,
+        sourceIds: [2],
+        groups: ['Proxy'],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      ),
+    );
+    final saved = await mounts();
+    expect(saved?.sources.single.id, 2);
+
+    container
+        .read(profilesProvider.notifier)
+        .put(source.copyWith(lastUpdateDate: DateTime(2026)));
+    expect((await mounts())?.revision, isNot(saved!.revision));
+  });
 }

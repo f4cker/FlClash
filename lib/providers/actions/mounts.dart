@@ -165,6 +165,7 @@ class MountAction extends _$MountAction {
     } catch (_) {
       return const MountSaveResult(outcome: MountSaveOutcome.unchanged);
     }
+    ref.invalidate(setupStateProvider(targetId));
     return _applyAndSettle(saved);
   }
 
@@ -254,6 +255,7 @@ class MountAction extends _$MountAction {
   Future<void> _settle(MountTargetState state) async {
     try {
       await database.mountsDao.settle(state.targetId, state.version);
+      ref.invalidate(setupStateProvider(state.targetId));
     } catch (error) {
       commonPrint.log(
         'mount record not settled: ${compactError(error)}',
@@ -354,6 +356,9 @@ class MountAction extends _$MountAction {
         return MountSourceDeletion.blocked;
       } catch (_) {
         return MountSourceDeletion.unchanged;
+      }
+      for (final target in marked) {
+        ref.invalidate(setupStateProvider(target.targetId));
       }
       var known = true;
       for (final target in marked) {
