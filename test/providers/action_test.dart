@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:drift/native.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/core/interface.dart';
+import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
@@ -29,6 +31,9 @@ void main() {
         label: 'new label',
         url: 'still-bad-url',
       );
+      final testDatabase = db.Database(NativeDatabase.memory());
+      db.database = testDatabase;
+      addTearDown(testDatabase.close);
       final container = ProviderContainer(
         overrides: [
           currentProfileIdProvider.overrideWithBuild((_, _) => null),
