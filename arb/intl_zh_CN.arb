@@ -1210,6 +1210,8 @@
   "tsRefreshDevices": "刷新设备列表",
   "tsDevicesStale": "设备列表可能已过期。刷新失败，以下为上次读取的结果。",
   "tsDevicesShown": "当前显示 {n} 台设备",
+  "tsDevicesCompact": "{count, plural, other{{count} 台设备 · 仅显示此账号可见的设备}}",
+  "tsDevicesCompactFiltered": "显示 {shown}/{total} 台 · 仅限此账号可见的设备",
   "tsSearchHint": "搜索名称或地址",
   "tsSearchEmpty": "没有符合搜索条件的设备",
   "tsOwnerFilter": "设备归属",

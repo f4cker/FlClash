@@ -10308,6 +10308,28 @@ class AppLocalizations {
     );
   }
 
+  /// `{count, plural, =1{1 device · Only devices visible to this account} other{{count} devices · Only devices visible to this account}}`
+  String tsDevicesCompact(num count) {
+    return Intl.plural(
+      count,
+      one: '1 device · Only devices visible to this account',
+      other: '$count devices · Only devices visible to this account',
+      name: 'tsDevicesCompact',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Showing {shown}/{total} · Devices visible to this account only`
+  String tsDevicesCompactFiltered(Object shown, Object total) {
+    return Intl.message(
+      'Showing $shown/$total · Devices visible to this account only',
+      name: 'tsDevicesCompactFiltered',
+      desc: '',
+      args: [shown, total],
+    );
+  }
+
   /// `Search name or address`
   String get tsSearchHint {
     return Intl.message(

@@ -280,44 +280,50 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m98(name) => "${name} · Current node";
 
-  static String m99(n) => "Showing ${n} devices";
+  static String m99(count) =>
+      "${Intl.plural(count, one: '1 device · Only devices visible to this account', other: '${count} devices · Only devices visible to this account')}";
 
-  static String m100(node, device) =>
+  static String m100(shown, total) =>
+      "Showing ${shown}/${total} · Devices visible to this account only";
+
+  static String m101(n) => "Showing ${n} devices";
+
+  static String m102(node, device) =>
       "Sets the exit node of “${node}” to “${device}”. Connections through this node may drop; FlClash rules stay the same.";
 
-  static String m101(node) =>
+  static String m103(node) =>
       "Only turns off exit forwarding for “${node}”; it doesn\'t log out of Tailscale and FlClash rules stay the same.";
 
-  static String m102(time) =>
+  static String m104(time) =>
       "Authentication expires at ${time}. Log in again before then.";
 
-  static String m103(account) => "Account: ${account}";
+  static String m105(account) => "Account: ${account}";
 
-  static String m104(server) => "Control server: ${server}";
+  static String m106(server) => "Control server: ${server}";
 
-  static String m105(name) => "Node: ${name}";
+  static String m107(name) => "Node: ${name}";
 
-  static String m106(name) => "Profile: ${name}";
+  static String m108(name) => "Profile: ${name}";
 
-  static String m107(name) =>
+  static String m109(name) =>
       "This logs out of “${name}” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.";
 
-  static String m108(name) => "Node ${name}";
+  static String m110(name) => "Node ${name}";
 
-  static String m109(value) => "Saved: ${value}";
+  static String m111(value) => "Saved: ${value}";
 
-  static String m110(name) => "Shared by: ${name}";
+  static String m112(name) => "Shared by: ${name}";
 
-  static String m111(label) => "Status: ${label}";
+  static String m113(label) => "Status: ${label}";
 
-  static String m112(label) => "${label} doit être une URL";
+  static String m114(label) => "${label} doit être une URL";
 
-  static String m113(date) => "Valide jusqu’au ${date}";
+  static String m115(date) => "Valide jusqu’au ${date}";
 
-  static String m114(count) =>
+  static String m116(count) =>
       "${Intl.plural(count, one: 'il y a 1 an', other: 'il y a ${count} ans')}";
 
-  static String m115(count) =>
+  static String m117(count) =>
       "${Intl.plural(count, other: 'il y a ${count} a')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -2320,6 +2326,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsCurrentNodeOf": m98,
     "tsDeviceName": MessageLookupByLibrary.simpleMessage("Device name"),
     "tsDevices": MessageLookupByLibrary.simpleMessage("Devices"),
+    "tsDevicesCompact": m99,
+    "tsDevicesCompactFiltered": m100,
     "tsDevicesEmpty": MessageLookupByLibrary.simpleMessage(
       "No visible devices",
     ),
@@ -2332,7 +2340,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsDevicesScope": MessageLookupByLibrary.simpleMessage(
       "Devices this node can see, not every device in the admin console",
     ),
-    "tsDevicesShown": m99,
+    "tsDevicesShown": m101,
     "tsDevicesStale": MessageLookupByLibrary.simpleMessage(
       "The device list may be out of date. Refreshing failed; this is the last list read.",
     ),
@@ -2340,7 +2348,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Changing exit node…",
     ),
     "tsExitCapable": MessageLookupByLibrary.simpleMessage("Exit node"),
-    "tsExitChangeBody": m100,
+    "tsExitChangeBody": m102,
     "tsExitChangeConfirm": MessageLookupByLibrary.simpleMessage(
       "Change exit node",
     ),
@@ -2354,7 +2362,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsExitNodeTip": MessageLookupByLibrary.simpleMessage(
       "Only affects traffic forwarded through this Tailscale node; it doesn\'t make the whole Mac use the exit.",
     ),
-    "tsExitOffBody": m101,
+    "tsExitOffBody": m103,
     "tsExitOffTitle": MessageLookupByLibrary.simpleMessage(
       "Stop using the exit node?",
     ),
@@ -2365,7 +2373,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "The exit node change is unconfirmed. Read the current settings again.",
     ),
     "tsExitUpdated": MessageLookupByLibrary.simpleMessage("Exit node updated"),
-    "tsExpiryTip": m102,
+    "tsExpiryTip": m104,
     "tsFilterEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the current filters",
     ),
@@ -2404,13 +2412,13 @@ class MessageLookup extends MessageLookupByLibrary {
       "The login record was not moved; the move details couldn\'t be saved. Try again, or log in again.",
     ),
     "tsLegacyConfirm": MessageLookupByLibrary.simpleMessage("Confirm move"),
-    "tsLegacyConfirmAccount": m103,
+    "tsLegacyConfirmAccount": m105,
     "tsLegacyConfirmBody": MessageLookupByLibrary.simpleMessage(
       "This copies the login record for the node above and leaves the original untouched. The same record can\'t move to another node afterwards. Check the node\'s real connection status after the move.",
     ),
-    "tsLegacyConfirmControl": m104,
-    "tsLegacyConfirmNode": m105,
-    "tsLegacyConfirmProfile": m106,
+    "tsLegacyConfirmControl": m106,
+    "tsLegacyConfirmNode": m107,
+    "tsLegacyConfirmProfile": m108,
     "tsLegacyConfirmTitle": MessageLookupByLibrary.simpleMessage(
       "Move the earlier login to this node?",
     ),
@@ -2481,7 +2489,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLogoutAuthKeyNote": MessageLookupByLibrary.simpleMessage(
       "When you log in again, the auth key in the profile registers a new device identity.",
     ),
-    "tsLogoutBody": m107,
+    "tsLogoutBody": m109,
     "tsLogoutFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t log out. Read the node status again, then retry.",
     ),
@@ -2528,7 +2536,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNodeGoneTip": MessageLookupByLibrary.simpleMessage(
       "Choose a node again.",
     ),
-    "tsNodeOf": m108,
+    "tsNodeOf": m110,
     "tsNodesInProfile": MessageLookupByLibrary.simpleMessage(
       "Tailscale nodes in the current profile",
     ),
@@ -2597,7 +2605,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRoutesUpdated": MessageLookupByLibrary.simpleMessage(
       "Subnet routes updated",
     ),
-    "tsSavedValue": m109,
+    "tsSavedValue": m111,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the search",
     ),
@@ -2611,7 +2619,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Saved, but not yet confirmed in effect. Read the current settings again.",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("Shared in"),
-    "tsSharedBy": m110,
+    "tsSharedBy": m112,
     "tsSignedOutTip": MessageLookupByLibrary.simpleMessage(
       "Log in in your browser to authenticate this node.",
     ),
@@ -2645,7 +2653,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Waiting for browser login",
     ),
     "tsStatus": MessageLookupByLibrary.simpleMessage("Status"),
-    "tsStatusOf": m111,
+    "tsStatusOf": m113,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("Status unknown"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "This node has stopped and can\'t reach the Tailscale network for now.",
@@ -2726,7 +2734,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("Réécriture d’URL"),
-    "urlTip": m112,
+    "urlTip": m114,
     "useHosts": MessageLookupByLibrary.simpleMessage("Utiliser hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage(
       "Utiliser les hosts du système",
@@ -2735,7 +2743,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "usedTraffic": MessageLookupByLibrary.simpleMessage("Trafic utilisé"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("Nom d’utilisateur"),
-    "validUntil": m113,
+    "validUntil": m115,
     "value": MessageLookupByLibrary.simpleMessage("Valeur"),
     "view": MessageLookupByLibrary.simpleMessage("Afficher"),
     "viewAll": MessageLookupByLibrary.simpleMessage("Tout afficher"),
@@ -2754,8 +2762,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Écrire dans le système règle aussi l’horloge système ; Android l’ignore.",
     ),
-    "yearsAgo": m114,
-    "yearsAgoShort": m115,
+    "yearsAgo": m116,
+    "yearsAgoShort": m117,
     "yes": MessageLookupByLibrary.simpleMessage("Oui"),
     "zhCN": MessageLookupByLibrary.simpleMessage("Chinois simplifié"),
   };

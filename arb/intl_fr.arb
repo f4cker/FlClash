@@ -1210,6 +1210,8 @@
   "tsRefreshDevices": "Refresh device list",
   "tsDevicesStale": "The device list may be out of date. Refreshing failed; this is the last list read.",
   "tsDevicesShown": "Showing {n} devices",
+  "tsDevicesCompact": "{count, plural, =1{1 device · Only devices visible to this account} other{{count} devices · Only devices visible to this account}}",
+  "tsDevicesCompactFiltered": "Showing {shown}/{total} · Devices visible to this account only",
   "tsSearchHint": "Search name or address",
   "tsSearchEmpty": "No devices match the search",
   "tsOwnerFilter": "Device owner",

@@ -9,13 +9,15 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/tailscale/tailscale.dart';
 import 'package:fl_clash/views/tailscale/state.dart';
+import 'package:fl_clash/views/tailscale/widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:prism_ui/icons/icons.dart' show GlyphIcon;
-import 'package:prism_ui/prism_ui.dart' show Switch, TonalButton;
+import 'package:prism_ui/prism_ui.dart'
+    show Chip, SearchField, Switch, TonalButton;
 
 import '../helpers/preferences.dart';
 import '../helpers/test_app.dart';
@@ -1080,6 +1082,89 @@ void main() {
         final paragraph = element.renderObject! as RenderParagraph;
         expect(paragraph.didExceedMaxLines, isFalse);
       }
+      await teardownView(tester);
+    });
+
+    final moreChip = find.textContaining(RegExp(r'^\+\d+$'));
+
+    void expectCompactHeader(WidgetTester tester) {
+      final title = tester.getRect(find.text('设备'));
+      final search = tester.getRect(find.byType(SearchField));
+      expect(search.center.dy, moreOrLessEquals(title.center.dy, epsilon: 1));
+      expect(search.height, 32);
+      expect(search.width, inInclusiveRange(160, 220));
+      expect(find.text('设备归属'), findsNothing);
+      final chips = [
+        for (var i = 0; i < find.byType(Chip).evaluate().length; i++)
+          tester.getRect(find.byType(Chip).at(i)),
+        if (moreChip.evaluate().isNotEmpty) tester.getRect(moreChip),
+      ];
+      final page = tester.getRect(find.byType(TailscaleView));
+      for (final chip in chips) {
+        expect(chip.center.dy, moreOrLessEquals(chips.first.center.dy));
+        expect(chip.right, lessThanOrEqualTo(page.right));
+      }
+      final row = chips.first;
+      final caption = tester.getRect(find.textContaining('仅显示此账号可见的设备'));
+      final table = tester.getRect(
+        find
+            .ancestor(
+              of: find.text('Tailscale 地址'),
+              matching: find.byType(TailscaleCard),
+            )
+            .first,
+      );
+      expect(row.top - search.bottom, moreOrLessEquals(10, epsilon: 0.5));
+      expect(caption.top - row.bottom, moreOrLessEquals(8, epsilon: 0.5));
+      expect(table.top - caption.bottom, moreOrLessEquals(12, epsilon: 0.5));
+    }
+
+    for (final width in [520.0, 640.0]) {
+      testWidgets('at $width the header keeps search beside the title and '
+          'the owners on one line', (tester) async {
+        serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+        await pumpPanel(tester, size: Size(width, 1400));
+
+        expectCompactHeader(tester);
+        expect(find.text('全部 8'), findsOneWidget);
+        expect(find.text('我的 2'), findsOneWidget);
+        expect(find.text('8 台设备 · 仅显示此账号可见的设备'), findsOneWidget);
+        expect(find.text('当前显示 8 台设备'), findsNothing);
+        await teardownView(tester);
+      });
+    }
+
+    testWidgets('owners that do not fit open from +N and stay in view once '
+        'chosen', (tester) async {
+      serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
+      await pumpPanel(tester, size: const Size(520, 1400));
+
+      expect(moreChip, findsOneWidget);
+      expect(find.text('归属未知 1'), findsNothing);
+      final hidden = int.parse(
+        tester.widget<Text>(moreChip).data!.substring(1),
+      );
+      await tester.tap(moreChip);
+      await settle(tester);
+      expect(find.text('归属未知 1'), findsOneWidget);
+
+      await tester.tap(find.text('归属未知 1'));
+      await settle(tester);
+      expect(find.text('显示 1/8 台 · 仅限此账号可见的设备'), findsOneWidget);
+      final chosen = find.ancestor(
+        of: find.text('归属未知 1'),
+        matching: find.byType(Chip),
+      );
+      expect(tester.widget<Chip>(chosen).selected, isTrue);
+      expect(tester.widget<Text>(moreChip).data, '+$hidden');
+      expect(
+        tester.getRect(chosen).center.dy,
+        moreOrLessEquals(tester.getRect(moreChip).center.dy),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'printer');
+      await settle(tester);
+      expect(find.text('显示 1/8 台 · 仅限此账号可见的设备'), findsOneWidget);
       await teardownView(tester);
     });
 
