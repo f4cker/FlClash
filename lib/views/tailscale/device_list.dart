@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
@@ -11,31 +14,57 @@ import 'widgets.dart';
 /// Search shows once the list is this long, design.md §3.5.
 const tailscaleSearchThreshold = 8;
 
-/// One width definition for the header and every row, so they never drift
-/// apart (user msg 1965).
-class _Column {
-  const _Column({this.flex, this.width});
+/// Below this the 系统 column goes first; 归属 then gives up width.
+const _systemMinWidth = 600.0;
+const _columnGap = 12.0;
+const _copyWidth = 40.0;
 
-  final double? flex;
-  final double? width;
+/// One width definition for the header and every row, so they never drift
+/// apart (user msg 1965). Address and status are as wide as their widest
+/// text, so neither is ever cut.
+class _TableLayout {
+  const _TableLayout({
+    required this.showSystem,
+    required this.addressWidth,
+    required this.statusWidth,
+  });
+
+  final bool showSystem;
+  final double addressWidth;
+  final double statusWidth;
 }
 
-const _columns = [
-  _Column(flex: 2),
-  _Column(flex: 1.3),
-  _Column(flex: 1.6),
-  _Column(flex: .8),
-  _Column(flex: .8),
-  _Column(width: 40),
-];
-
-const _tableMinWidth = 680.0;
-const _columnGap = 12.0;
+double _textWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    maxLines: 1,
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  final width = painter.width.ceilToDouble();
+  painter.dispose();
+  return width;
+}
 
 class _TableRow extends StatelessWidget {
-  const _TableRow({required this.cells, this.minHeight = 52});
+  const _TableRow({
+    required this.layout,
+    required this.name,
+    required this.address,
+    required this.owner,
+    required this.system,
+    required this.status,
+    required this.copy,
+    this.minHeight = 52,
+  });
 
-  final List<Widget> cells;
+  final _TableLayout layout;
+  final Widget name;
+  final Widget address;
+  final Widget owner;
+  final Widget system;
+  final Widget status;
+  final Widget copy;
   final double minHeight;
 
   @override
@@ -45,11 +74,12 @@ class _TableRow extends StatelessWidget {
       child: Row(
         spacing: _columnGap,
         children: [
-          for (final (index, column) in _columns.indexed)
-            if (column.width case final width?)
-              SizedBox(width: width, child: cells[index])
-            else
-              Expanded(flex: (column.flex! * 100).round(), child: cells[index]),
+          Expanded(flex: 200, child: name),
+          SizedBox(width: layout.addressWidth, child: address),
+          Expanded(flex: 160, child: owner),
+          if (layout.showSystem) Expanded(flex: 80, child: system),
+          SizedBox(width: layout.statusWidth, child: status),
+          SizedBox(width: _copyWidth, child: copy),
         ],
       ),
     );
@@ -339,34 +369,46 @@ class _Table extends StatelessWidget {
       padding: const EdgeInsetsDirectional.only(start: 40),
       child: Container(height: 0.5, color: context.colorScheme.outlineVariant),
     );
-    final table = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _TableRow(
-          minHeight: 36,
-          cells: [
-            headerCell(appLocalizations.tsDeviceName),
-            headerCell(appLocalizations.tsAddress),
-            headerCell(appLocalizations.tsOwner),
-            headerCell(appLocalizations.tsSystem),
-            headerCell(appLocalizations.tsStatus),
-            const SizedBox.shrink(),
-          ],
-        ),
-        for (final (index, device) in devices.indexed) ...[
-          if (index > 0) separator,
-          _DeviceRow(device: device, onCopy: onCopy),
-        ],
-      ],
-    );
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= _tableMinWidth) {
-          return table;
-        }
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(width: _tableMinWidth, child: table),
+        final footnote = AppTextStyle.footnote.of(context);
+        double widest(TextStyle style, Iterable<String> texts) =>
+            texts.map((text) => _textWidth(context, text, style)).max;
+        final layout = _TableLayout(
+          showSystem: constraints.maxWidth >= _systemMinWidth,
+          addressWidth: math.max(
+            widest(headerStyle, [appLocalizations.tsAddress]),
+            widest(footnote.toTabular, [
+              appLocalizations.tsAddressMissing,
+              for (final device in devices) ?device.address,
+            ]),
+          ),
+          statusWidth: math.max(
+            widest(headerStyle, [appLocalizations.tsStatus]),
+            widest(footnote, [
+              appLocalizations.tsOnline,
+              appLocalizations.tsOffline,
+            ]),
+          ),
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TableRow(
+              layout: layout,
+              minHeight: 36,
+              name: headerCell(appLocalizations.tsDeviceName),
+              address: headerCell(appLocalizations.tsAddress),
+              owner: headerCell(appLocalizations.tsOwner),
+              system: headerCell(appLocalizations.tsSystem),
+              status: headerCell(appLocalizations.tsStatus),
+              copy: const SizedBox.shrink(),
+            ),
+            for (final (index, device) in devices.indexed) ...[
+              if (index > 0) separator,
+              _DeviceRow(device: device, layout: layout, onCopy: onCopy),
+            ],
+          ],
         );
       },
     );
@@ -374,9 +416,14 @@ class _Table extends StatelessWidget {
 }
 
 class _DeviceRow extends StatelessWidget {
-  const _DeviceRow({required this.device, required this.onCopy});
+  const _DeviceRow({
+    required this.device,
+    required this.layout,
+    required this.onCopy,
+  });
 
   final TailscaleDevice device;
+  final _TableLayout layout;
   final ValueChanged<String> onCopy;
 
   @override
@@ -491,7 +538,13 @@ class _DeviceRow extends StatelessWidget {
         peer.online ? appLocalizations.tsOnline : appLocalizations.tsOffline,
       ].join('，'),
       child: _TableRow(
-        cells: [nameCell, addressCell, ownerCell, osCell, statusCell, copyCell],
+        layout: layout,
+        name: nameCell,
+        address: addressCell,
+        owner: ownerCell,
+        system: osCell,
+        status: statusCell,
+        copy: copyCell,
       ),
     );
   }
