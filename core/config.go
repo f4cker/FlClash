@@ -170,7 +170,7 @@ func applyConfig(params *SetupParams) error {
 	var err error
 	if params.Mounts != nil {
 		err = checkMountedSetup(params)
-		if err != nil && currentConfig != nil && !runningBlocked() {
+		if err != nil && currentConfig != nil && runningConfigKeepable() {
 			logError("mounted profile rejected, the running config stays: %v", err)
 			return mountRejected(err, mountOutcomeKept)
 		}
@@ -215,7 +215,7 @@ func applyConfig(params *SetupParams) error {
 	}
 
 	currentConfig = cfg
-	setMountState(report, blocked)
+	setMountState(report, blocked, err != nil && !blocked)
 	// The new instances must not start beside the old ones on one identity;
 	// the fallback holds none, so a failed load closes what it built too.
 	if err != nil {

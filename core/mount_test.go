@@ -402,7 +402,7 @@ func TestApplyConfigKeepsTheRunningConfigWhenAMountedProfileFails(t *testing.T) 
 	home := withMountHome(t)
 	withCurrentConfig(t, nil)
 	keepTunnel(t)
-	t.Cleanup(func() { setMountState(nil, false) })
+	t.Cleanup(func() { setMountState(nil, false, false) })
 	good := writeMountFile(t, home, "base.yaml", `proxy-groups:
   - {name: G, type: select, include-all-providers: true}
 rules:
@@ -439,7 +439,7 @@ func TestApplyConfigBlocksWhenAMountedProfileFailsWithNothingRunning(t *testing.
 	home := withMountHome(t)
 	withCurrentConfig(t, nil)
 	keepTunnel(t)
-	t.Cleanup(func() { setMountState(nil, false) })
+	t.Cleanup(func() { setMountState(nil, false, false) })
 	base := writeMountFile(t, home, "base.yaml", `proxy-groups:
   - {name: G, type: select, include-all-providers: true}
 `)
@@ -460,6 +460,29 @@ func TestApplyConfigBlocksWhenAMountedProfileFailsWithNothingRunning(t *testing.
 	}
 	if rules := ruleStrings(currentConfig); !reflect.DeepEqual(rules, []string{"Match,,REJECT"}) {
 		t.Errorf("rules = %v, want only MATCH,REJECT", rules)
+	}
+}
+
+func TestApplyConfigBlocksWhenAMountedProfileFailsOverTheDefaultConfig(t *testing.T) {
+	home := withMountHome(t)
+	withCurrentConfig(t, nil)
+	keepTunnel(t)
+	t.Cleanup(func() { setMountState(nil, false, false) })
+	broken := writeMountFile(t, home, "broken.yaml", "proxy-groups:\n  - {name: G, type: select, proxies: [nope]}\n")
+	var methodErr *MethodError
+	if err := applyConfig(&SetupParams{Base: &SetupBase{Path: broken, Overlay: "{}"}}); !errors.As(err, &methodErr) || methodErr.Code != "config_rejected" {
+		t.Fatalf("applyConfig = %v, want the default config running", err)
+	}
+	failing := writeMountFile(t, home, "base.yaml", "proxy-groups:\n  - {name: G, type: select, include-all-providers: true}\n")
+
+	err := applyConfig(&SetupParams{Base: &SetupBase{Path: failing, Overlay: "{}"}, Mounts: &MountSetup{}})
+
+	if !errors.As(err, &methodErr) || methodErr.Code != "mount_rejected" ||
+		!reflect.DeepEqual(methodErr.Details, map[string]string{"outcome": mountOutcomeBlocked}) {
+		t.Fatalf("applyConfig = %v, want mount_rejected blocked, never kept", err)
+	}
+	if !handleMountState().Blocked {
+		t.Error("the direct-only default is still running")
 	}
 }
 

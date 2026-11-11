@@ -24,19 +24,22 @@ var (
 	appliedMountReport *MountReport
 	// The running config is the one that rejects every connection.
 	runningConfigBlocked bool
+	// The running config is mihomo's default, which sends everything direct.
+	runningConfigDefault bool
 )
 
-func setMountState(report *MountReport, blocked bool) {
+func setMountState(report *MountReport, blocked, fallback bool) {
 	mountStateMu.Lock()
 	defer mountStateMu.Unlock()
 	appliedMountReport = report
 	runningConfigBlocked = blocked
+	runningConfigDefault = fallback
 }
 
-func runningBlocked() bool {
+func runningConfigKeepable() bool {
 	mountStateMu.Lock()
 	defer mountStateMu.Unlock()
-	return runningConfigBlocked
+	return !runningConfigBlocked && !runningConfigDefault
 }
 
 // Panel-added Tailscale nodes are named after the parse, so a mount node of
