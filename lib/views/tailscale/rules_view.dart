@@ -2,6 +2,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/rules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -143,10 +144,11 @@ class _TargetRow extends StatelessWidget {
     final owner = target.owner;
     final assigned = owner == null ? null : labelOf(owner);
     final canChoose = target.candidates.any((candidate) => !candidate.removed);
-    final (status, action) = switch (target.state) {
+    final (status, action, blocked) = switch (target.state) {
       TailscaleRouteState.assigned when assigned != null => (
         appLocalizations.tsAssignedTo(assigned),
         appLocalizations.tsReassign,
+        false,
       ),
       TailscaleRouteState.unavailable => (
         [
@@ -154,21 +156,26 @@ class _TargetRow extends StatelessWidget {
           appLocalizations.tsAssignedUnavailable,
         ].join(' '),
         appLocalizations.tsReassign,
+        true,
       ),
       TailscaleRouteState.reconfirm => (
         appLocalizations.tsReconfirm,
         appLocalizations.tsReassign,
+        false,
       ),
       TailscaleRouteState.unconfirmed => (
         '${appLocalizations.tsTargetUnconfirmed} · '
             '${appLocalizations.tsTargetUnconfirmedTip}',
         canChoose ? appLocalizations.tsChooseAccountFor : null,
+        false,
       ),
       _ => (
         appLocalizations.tsNotAssigned,
         appLocalizations.tsChooseAccountFor,
+        true,
       ),
     };
+    final warning = context.colorScheme.warning;
     return ListItem(
       title: Text(
         target.target.value,
@@ -176,7 +183,27 @@ class _TargetRow extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: AppTextStyle.body.of(context).toJetBrainsMono,
       ),
-      subtitle: Text(status),
+      subtitle: blocked
+          ? Text.rich(
+              TextSpan(
+                children: [
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 4),
+                      child: GlyphIcon(
+                        AppGlyphs.warning,
+                        size: 12,
+                        color: warning,
+                      ),
+                    ),
+                  ),
+                  TextSpan(text: status),
+                ],
+              ),
+              style: TextStyle(color: warning),
+            )
+          : Text(status),
       trailing: action == null || !canChoose
           ? null
           : TextButton(

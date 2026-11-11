@@ -343,11 +343,13 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
         1;
     final confirmed = await dialogs.showMessage(
       title: appLocalizations.tsRemoveTitle,
-      message: TextSpan(
-        text: [
-          account == null
-              ? appLocalizations.tsRemoveBodyNode(node.name, profile)
-              : appLocalizations.tsRemoveBody(account, node.name, profile),
+      body: TailscaleNamedText(
+        names: [?account, node.name, profile],
+        fill: (names) => account == null
+            ? appLocalizations.tsRemoveBodyNode(names[0], names[1])
+            : appLocalizations.tsRemoveBody(names[0], names[1], names[2]),
+        trailing: [
+          '',
           appLocalizations.tsRemoveExtra,
           last
               ? appLocalizations.tsRemoveLast

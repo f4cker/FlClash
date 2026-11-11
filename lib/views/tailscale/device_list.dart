@@ -846,7 +846,8 @@ class _DeviceRow extends StatelessWidget {
           );
     final onAssign = this.onAssign;
     return ContextMenuRegion(
-      menuItems: conflict == null || onAssign == null
+      openAtPress: true,
+      menuItems: conflict?.target.kind != tailscaleTargetIp || onAssign == null
           ? null
           : [
               PopupMenuItem(

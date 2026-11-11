@@ -40,8 +40,10 @@ class Dialogs {
     );
   }
 
+  /// [body] stands in for [message] when the text needs widgets of its own.
   Future<bool?> showMessage({
-    required InlineSpan message,
+    InlineSpan? message,
+    Widget? body,
     BuildContext? context,
     String? title,
     String? confirmText,
@@ -50,8 +52,10 @@ class Dialogs {
     bool destructive = false,
     double? width,
   }) {
+    assert(message != null || body != null);
     return _showMessage(
       message: message,
+      body: body,
       context: context,
       title: title,
       confirmText: confirmText,
@@ -87,8 +91,9 @@ class Dialogs {
   }
 
   Future<bool?> _showMessage({
-    required InlineSpan message,
+    required InlineSpan? message,
     required bool cancelable,
+    Widget? body,
     BuildContext? context,
     String? title,
     String? confirmText,
@@ -122,10 +127,12 @@ class Dialogs {
                 child: Text(confirmText ?? appLocalizations.confirm),
               ),
             ],
-            child: SelectableText.rich(
-              TextSpan(children: [message]),
-              style: const TextStyle(overflow: TextOverflow.visible),
-            ),
+            child:
+                body ??
+                SelectableText.rich(
+                  TextSpan(children: [?message]),
+                  style: const TextStyle(overflow: TextOverflow.visible),
+                ),
           );
         },
       ),

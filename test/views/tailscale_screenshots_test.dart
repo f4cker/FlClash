@@ -14,6 +14,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/tailscale/tailscale.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -876,7 +877,11 @@ void main() {
       tsManagedNode('m2', account: tsWorkAccount),
     ], routes: tsConflictRoutes());
     await pumpPanel(tester, size: const Size(1100, 1500));
-    await tester.longPress(find.text('地址冲突'));
+    await tester.tap(
+      find.text('studio-mac'),
+      buttons: kSecondaryButton,
+      kind: PointerDeviceKind.mouse,
+    );
     await settle(tester);
     await shoot(tester, '45-row-context-menu');
   });

@@ -417,3 +417,249 @@ String tailscaleDateTime(DateTime time) {
   return '${time.year}-${two(time.month)}-${two(time.day)} '
       '${two(time.hour)}:${two(time.minute)}';
 }
+
+// Punctuation closing on a name rides with it, as a line may not start with
+// it, and the placeholder before it would otherwise allow the break.
+final _nameSlot = RegExp(
+  '([“”‘’"\'「」『』«»„]?)\uE000(\\d+)\uE001'
+  '([“”‘’"\'「」『』«»„]?[）)\\]】〕〉》，,。.、；;：:！!？?]*)',
+);
+
+/// A message whose [names], each with the quotes around it, never break
+/// across lines: a name moves to the next line whole, cut in its middle only
+/// when wider than a line. Selection and screen readers get the real names.
+class TailscaleNamedText extends StatelessWidget {
+  const TailscaleNamedText({
+    super.key,
+    required this.fill,
+    required this.names,
+    this.trailing = '',
+  });
+
+  /// The localized message with each name in its place.
+  final String Function(List<String> names) fill;
+  final List<String> names;
+
+  /// Further paragraphs after the message, plain text.
+  final String trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final template = fill([
+      for (var i = 0; i < names.length; i++) '\uE000$i\uE001',
+    ]);
+    final spans = <InlineSpan>[];
+    var at = 0;
+    for (final match in _nameSlot.allMatches(template)) {
+      final name = names[int.parse(match[2]!)];
+      spans
+        ..add(TextSpan(text: template.substring(at, match.start)))
+        ..add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: _UnbrokenName(
+              name: name,
+              quoted: '${match[1]}$name${match[3]}',
+            ),
+          ),
+        );
+      at = match.end;
+    }
+    spans.add(TextSpan(text: template.substring(at) + trailing));
+    return Semantics(
+      label: fill(names) + trailing,
+      excludeSemantics: true,
+      child: SelectionArea(child: Text.rich(TextSpan(children: spans))),
+    );
+  }
+}
+
+/// The cut name on show; under it the whole name, transparent and clipped,
+/// is what a selection copies.
+class _UnbrokenName extends StatelessWidget {
+  const _UnbrokenName({required this.name, required this.quoted});
+
+  final String name;
+  final String quoted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: name,
+      child: Stack(
+        children: [
+          SelectionContainer.disabled(child: _MiddleEllipsis(quoted)),
+          Positioned.fill(
+            child: ClipRect(
+              child: OverflowBox(
+                alignment: AlignmentDirectional.centerStart,
+                maxWidth: double.infinity,
+                child: Text(
+                  quoted,
+                  softWrap: false,
+                  style: const TextStyle(color: Color(0x00000000)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiddleEllipsis extends LeafRenderObjectWidget {
+  const _MiddleEllipsis(this.text);
+
+  final String text;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderMiddleEllipsis(
+        text: text,
+        style: DefaultTextStyle.of(context).style,
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderMiddleEllipsis renderObject,
+  ) {
+    renderObject
+      ..text = text
+      ..style = DefaultTextStyle.of(context).style
+      ..textDirection = Directionality.of(context)
+      ..textScaler = MediaQuery.textScalerOf(context);
+  }
+}
+
+class _RenderMiddleEllipsis extends RenderBox {
+  _RenderMiddleEllipsis({
+    required String text,
+    required TextStyle style,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+  }) : _text = text,
+       _style = style,
+       _painter = TextPainter(
+         textDirection: textDirection,
+         textScaler: textScaler,
+         maxLines: 1,
+       );
+
+  final TextPainter _painter;
+  late final _measure = TextPainter(maxLines: 1);
+  String _text;
+  TextStyle _style;
+
+  set text(String value) {
+    if (value != _text) {
+      _text = value;
+      markNeedsLayout();
+    }
+  }
+
+  set style(TextStyle value) {
+    if (value != _style) {
+      _style = value;
+      markNeedsLayout();
+    }
+  }
+
+  set textDirection(TextDirection value) {
+    if (value != _painter.textDirection) {
+      _painter.textDirection = value;
+      markNeedsLayout();
+    }
+  }
+
+  set textScaler(TextScaler value) {
+    if (value != _painter.textScaler) {
+      _painter.textScaler = value;
+      markNeedsLayout();
+    }
+  }
+
+  Size _lay(TextPainter painter, String text) {
+    painter
+      ..textDirection = _painter.textDirection
+      ..textScaler = _painter.textScaler
+      ..text = TextSpan(text: text, style: _style)
+      ..layout();
+    return painter.size;
+  }
+
+  /// Keeps as many characters from both ends as fit beside the ellipsis.
+  Size _fit(TextPainter painter, double maxWidth) {
+    final full = _lay(painter, _text);
+    if (full.width <= maxWidth) {
+      return full;
+    }
+    final characters = _text.characters.toList();
+    String cut(int keep) =>
+        '${characters.take(keep - keep ~/ 2).join()}…'
+        '${characters.skip(characters.length - keep ~/ 2).join()}';
+    var low = 0;
+    var high = characters.length - 1;
+    while (low < high) {
+      final keep = (low + high + 1) ~/ 2;
+      if (_lay(painter, cut(keep)).width <= maxWidth) {
+        low = keep;
+      } else {
+        high = keep - 1;
+      }
+    }
+    return _lay(painter, cut(low));
+  }
+
+  @override
+  double computeMinIntrinsicWidth(double height) => _lay(_measure, _text).width;
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => _lay(_measure, _text).width;
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _lay(_measure, _text).height;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      _lay(_measure, _text).height;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(_fit(_measure, constraints.maxWidth));
+
+  @override
+  double? computeDryBaseline(
+    BoxConstraints constraints,
+    TextBaseline baseline,
+  ) {
+    _fit(_measure, constraints.maxWidth);
+    return _measure.computeDistanceToActualBaseline(baseline);
+  }
+
+  @override
+  double? computeDistanceToActualBaseline(TextBaseline baseline) =>
+      _painter.computeDistanceToActualBaseline(baseline);
+
+  @override
+  void performLayout() {
+    size = constraints.constrain(_fit(_painter, constraints.maxWidth));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    _painter.paint(context.canvas, offset);
+  }
+
+  @override
+  void dispose() {
+    _painter.dispose();
+    _measure.dispose();
+    super.dispose();
+  }
+}

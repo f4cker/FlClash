@@ -18,7 +18,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:prism_ui/icons/icons.dart' show GlyphIcon, Glyphs;
 import 'package:prism_ui/prism_ui.dart'
-    show Chip, PopupAnchor, PopupMenuCard, SearchField, Switch, TonalButton;
+    show
+        BuildContextExtension,
+        Chip,
+        ColorSchemeExtension,
+        PopupAnchor,
+        PopupMenuCard,
+        SearchField,
+        Switch,
+        TonalButton,
+        Tooltip;
 
 import '../helpers/preferences.dart';
 import '../helpers/test_app.dart';
@@ -274,9 +283,11 @@ void main() {
       serveAccounts(routes: tsConflictRoutes());
       await pumpPanel(tester);
 
-      await tester.longPress(find.text('地址冲突'));
+      final press = tester.getCenter(find.text('地址冲突'));
+      await tester.longPressAt(press);
       await settle(tester);
       expect(find.text('指定访问账号'), findsOneWidget);
+      expect(tester.getTopLeft(find.byType(PopupMenuCard)), press);
       await tester.tap(find.text('指定访问账号'));
       await settle(tester);
 
@@ -294,6 +305,22 @@ void main() {
         routes: base.copyWith(
           targets: [
             ...base.targets,
+            const TailscaleRouteTargetReport(
+              target: TailscaleRouteTarget(
+                kind: tailscaleTargetIp,
+                value: '100.71.20.5',
+              ),
+              state: TailscaleRouteState.assigned,
+              owner: TailscaleRouteOwner(kind: tailscaleOwnerManaged, id: 'm1'),
+              candidates: [
+                TailscaleRouteCandidate(
+                  owner: TailscaleRouteOwner(
+                    kind: tailscaleOwnerManaged,
+                    id: 'm1',
+                  ),
+                ),
+              ],
+            ),
             const TailscaleRouteTargetReport(
               target: TailscaleRouteTarget(
                 kind: tailscaleTargetIp,
@@ -321,12 +348,26 @@ void main() {
       expect(find.text('pat@example.test'), findsWidgets);
       expect(find.text('网络域名：work-net.test.ts.net'), findsOneWidget);
       expect(find.text('已指定的目标'), findsOneWidget);
-      expect(find.text('尚未指定'), findsOneWidget);
+      final warning = tester.element(find.text('已指定的目标')).colorScheme.warning;
+      for (final status in [
+        '尚未指定',
+        '已指定：pat@work.test 指定账号暂不可用，此目标不会改用其他账号。',
+      ]) {
+        final row = find.textContaining(status);
+        expect(row, findsOneWidget);
+        expect(tester.widget<Text>(row).style?.color, warning);
+        final icon = tester.widget<GlyphIcon>(
+          find.descendant(of: row, matching: find.byType(GlyphIcon)),
+        );
+        expect((icon.size, icon.color), (12.0, warning));
+      }
+      final assigned = find.text('已指定：pat@example.test');
+      expect(tester.widget<Text>(assigned).style, isNull);
       expect(
-        find.text('已指定：pat@work.test 指定账号暂不可用，此目标不会改用其他账号。'),
-        findsOneWidget,
+        find.descendant(of: assigned, matching: find.byType(GlyphIcon)),
+        findsNothing,
       );
-      expect(find.text('重新指定账号'), findsOneWidget);
+      expect(find.text('重新指定账号'), findsNWidgets(2));
       await teardownView(tester);
     });
 
@@ -369,7 +410,17 @@ void main() {
       await settle(tester);
 
       expect(find.text('退出并移除此账号？'), findsOneWidget);
-      expect(find.textContaining('pat@example.test'), findsWidgets);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.excludeSemantics &&
+              (widget.properties.label ?? '').startsWith(
+                '将退出“pat@example.test”（节点“tailscale-m1”）',
+              ),
+        ),
+        findsOneWidget,
+      );
       await tester.tap(find.text('取消'));
       await settle(tester);
       verifyNever(() => core.logoutTailscale(any()));
@@ -1483,6 +1534,33 @@ void main() {
       );
       expect(opacity.opacity, 0.45);
       await teardownView(tester);
+    });
+
+    testWidgets('a name wider than the line is cut in its middle, whole '
+        'on hover', (tester) async {
+      const name = 'a-very-long-account-name@a-very-long-tailnet.example.test';
+      await tester.pumpWidget(
+        TestApp(
+          child: Center(
+            child: SizedBox(
+              width: 160,
+              child: TailscaleNamedText(
+                fill: (names) => '将退出“${names[0]}”。',
+                names: const [name],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      final shown = find.byWidgetPredicate(
+        (widget) => widget is Tooltip && widget.message == name,
+      );
+      expect(shown, findsOneWidget);
+      expect(tester.getSize(shown).width, lessThanOrEqualTo(160));
+      final full = find.descendant(of: shown, matching: find.text('“$name”。'));
+      expect(full, findsOneWidget);
     });
 
     testWidgets('前往规则 puts its chevron after the label', (tester) async {
