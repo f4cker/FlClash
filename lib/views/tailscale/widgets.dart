@@ -205,6 +205,7 @@ class TailscaleAvatar extends StatelessWidget {
                 child: ImageCacheWidget(
                   src: pictureUrl,
                   defaultWidget: fallback,
+                  logsSource: false,
                 ),
               ),
       ),

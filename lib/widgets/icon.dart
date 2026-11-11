@@ -276,11 +276,13 @@ Future<void> precacheTargetIcons(Iterable<String> srcs) async {
 class ImageCacheWidget extends StatefulWidget {
   final String src;
   final Widget defaultWidget;
+  final bool logsSource;
 
   const ImageCacheWidget({
     super.key,
     required this.src,
     required this.defaultWidget,
+    this.logsSource = true,
   });
 
   @override
@@ -323,7 +325,8 @@ class _ImageCacheWidgetState extends State<ImageCacheWidget> {
         }
       },
       onError: (Object error) {
-        commonPrint.log('Failed to read icon $src: $error');
+        final shown = widget.logsSource ? src : '(hidden)';
+        commonPrint.log('Failed to read icon $shown: $error');
       },
       onDone: () {
         if (mounted && _bytesNotifier.value == null) {
