@@ -17,6 +17,7 @@ import (
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/tunnel"
 	"github.com/metacubex/tailscale/ipn"
+	"github.com/metacubex/tailscale/tailcfg"
 )
 
 // Shaped like a LiteCN-style subscription: include-all groups, a group that
@@ -426,6 +427,41 @@ func TestTailscaleManagedWatcherExitDropsItsList(t *testing.T) {
 	report, _ := handleTailscaleRoutes(TailscaleRoutesParams{ProfileID: 7})
 	if report.Complete {
 		t.Fatal("routes complete without a live device list")
+	}
+}
+
+func TestTailscaleManagedWatchSeesPeersOutsideTheNetmap(t *testing.T) {
+	if err := ipn.ValidateNotifyWatchOpt(tailscaleDeviceWatch); err != nil {
+		t.Fatal(err)
+	}
+	if tailscaleDeviceWatch&ipn.NotifyPeerChanges == 0 {
+		t.Fatal("the watch does not ask for peer changes")
+	}
+	addr := netip.MustParseAddr("100.64.0.2")
+	peer := &tailcfg.Node{
+		Name:      "laptop.tail1.ts.net.",
+		Addresses: []netip.Prefix{netip.PrefixFrom(addr, 32)},
+		Hostinfo:  (&tailcfg.Hostinfo{Hostname: "laptop"}).View(),
+	}
+	empty := &tailscaleRouteNetmap{}
+	listed := &tailscaleRouteNetmap{Peers: []tailscaleRoutePeer{{Name: "laptop", FQDN: "laptop.tail1.ts.net.", Addrs: []netip.Addr{addr}}}}
+	cases := []struct {
+		name string
+		n    *ipn.Notify
+		live *tailscaleRouteNetmap
+		want bool
+	}{
+		{"a peer the list lacks", &ipn.Notify{PeersChanged: []*tailcfg.Node{peer}}, empty, true},
+		{"a peer before any list", &ipn.Notify{PeersChanged: []*tailcfg.Node{peer}}, nil, true},
+		{"a patch of a listed peer", &ipn.Notify{PeersChanged: []*tailcfg.Node{peer}}, listed, false},
+		{"a removed peer", &ipn.Notify{PeersRemoved: []tailcfg.NodeID{1}}, listed, true},
+		{"a new netmap", &ipn.Notify{SelfChange: &tailcfg.Node{}}, listed, true},
+		{"nothing about peers", &ipn.Notify{}, empty, false},
+	}
+	for _, c := range cases {
+		if got := tailscaleNotifyMovesDevices(c.n, c.live); got != c.want {
+			t.Errorf("%s: re-read %v, want %v", c.name, got, c.want)
+		}
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"net/netip"
 	"os"
 	"slices"
 	"strconv"
@@ -21,6 +22,8 @@ import (
 	RW "github.com/metacubex/mihomo/rules/wrapper"
 	"github.com/metacubex/mihomo/tunnel"
 	"github.com/metacubex/tailscale/ipn"
+	"github.com/metacubex/tailscale/net/tsaddr"
+	"github.com/metacubex/tailscale/tailcfg"
 )
 
 const tailscaleManagedBaseName = "Tailscale"
@@ -335,7 +338,7 @@ func watchTailscaleDevices(ctx context.Context, t *outbound.Tailscale, node *tai
 	if err != nil {
 		return
 	}
-	watcher, err := lc.WatchIPNBus(ctx, ipn.NotifyInitialNetMap|ipn.NotifyRateLimit)
+	watcher, err := lc.WatchIPNBus(ctx, tailscaleDeviceWatch)
 	if err != nil {
 		return
 	}
@@ -345,7 +348,10 @@ func watchTailscaleDevices(ctx context.Context, t *outbound.Tailscale, node *tai
 		if err != nil {
 			return
 		}
-		if n.NetMap == nil && n.State == nil {
+		tailscaleManagedMu.Lock()
+		known := node.live
+		tailscaleManagedMu.Unlock()
+		if !tailscaleNotifyMovesDevices(&n, known) {
 			continue
 		}
 		if t.BackendState() != ipn.Running.String() {
@@ -366,6 +372,35 @@ func watchTailscaleDevices(ctx context.Context, t *outbound.Tailscale, node *tai
 		}
 		refreshTailscaleRoutes()
 	}
+}
+
+// Off Windows the bus sends no netmap after the first, only PeersChanged.
+const tailscaleDeviceWatch = ipn.NotifyInitialNetMap | ipn.NotifyPeerChanges
+
+// A change to a peer the list already holds is an Online or endpoint patch.
+func tailscaleNotifyMovesDevices(n *ipn.Notify, live *tailscaleRouteNetmap) bool {
+	if n.NetMap != nil || n.State != nil || n.SelfChange != nil || len(n.PeersRemoved) > 0 {
+		return true
+	}
+	return slices.ContainsFunc(n.PeersChanged, func(peer *tailcfg.Node) bool {
+		return live == nil || !live.lists(peer)
+	})
+}
+
+func (m *tailscaleRouteNetmap) lists(peer *tailcfg.Node) bool {
+	var name string
+	if peer.Hostinfo.Valid() {
+		name = peer.Hostinfo.Hostname()
+	}
+	var addrs []netip.Addr
+	for _, prefix := range peer.Addresses {
+		if prefix.IsSingleIP() && tsaddr.IsTailscaleIP(prefix.Addr()) {
+			addrs = append(addrs, prefix.Addr())
+		}
+	}
+	return slices.ContainsFunc(m.Peers, func(known tailscaleRoutePeer) bool {
+		return known.Name == name && known.FQDN == peer.Name && slices.Equal(known.Addrs, addrs)
+	})
 }
 
 func readTailscaleDevices(ctx context.Context, t *outbound.Tailscale) (*tailscaleRouteNetmap, error) {
