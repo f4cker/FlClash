@@ -178,9 +178,13 @@ class TailscaleExitCard extends StatelessWidget {
     this.onRetry,
     this.savedExitName,
     this.attach = TailscaleAttachState.none,
+    this.exitReport,
   });
 
   final TailscaleAttachState attach;
+
+  /// The running exit group, for a panel-added account's caption line.
+  final TailscaleExitReport? exitReport;
   final TailscaleNode node;
   final TailscaleStatus? status;
   final TailscalePhase phase;
@@ -346,6 +350,10 @@ class TailscaleExitCard extends StatelessWidget {
                 label: appLocalizations.tsAboutExit,
                 paragraphs: [
                   appLocalizations.tsExitNodeTip,
+                  if (node.managed) ...[
+                    appLocalizations.tsExitHowTo,
+                    appLocalizations.tsExitGroupTip,
+                  ],
                   if (lock == null &&
                       node.settings.exitNode.source ==
                           TailscaleSettingSource.override)
@@ -354,10 +362,64 @@ class TailscaleExitCard extends StatelessWidget {
               ),
             ],
           ),
-          block,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 8,
+            children: [
+              block,
+              ?_groupLine(context, hasExit: hasExit && lock == null),
+            ],
+          ),
           ?_noticeBanner(context),
         ],
       ),
+    );
+  }
+
+  /// What the running exit group holds of this account, read back only.
+  Widget? _groupLine(BuildContext context, {required bool hasExit}) {
+    final report = exitReport;
+    if (!node.managed || !hasExit || panel.applyingExit || report == null) {
+      return null;
+    }
+    final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    final account = report.accountOf(node.managedId);
+    final (text, color) = switch (report.state) {
+      TailscaleRuntimeState.none ||
+      TailscaleRuntimeState.otherProfile => (null, null),
+      _ when account?.state == TailscaleExitState.unavailable => (
+        [
+          ?switch (account?.reason) {
+            TailscaleExitReason.needsLogin => appLocalizations.tsExitNeedsLogin,
+            TailscaleExitReason.offline => appLocalizations.tsExitDeviceOffline,
+            TailscaleExitReason.notAuthorized =>
+              appLocalizations.tsExitNotAuthorized,
+            _ => null,
+          },
+          appLocalizations.tsExitRefusing,
+        ].join(' · '),
+        colorScheme.error,
+      ),
+      _ when !report.offered || account == null => (
+        appLocalizations.tsExitGroupUnconfirmed,
+        colorScheme.onSurfaceVariant,
+      ),
+      _ when report.parents.isEmpty => (
+        appLocalizations.tsExitGroupNoParents,
+        colorScheme.onSurfaceVariant,
+      ),
+      _ => (
+        appLocalizations.tsExitGroupJoined(report.parents.length, report.group),
+        colorScheme.onSurfaceVariant,
+      ),
+    };
+    if (text == null) {
+      return null;
+    }
+    return Text(
+      text,
+      style: AppTextStyle.caption1.of(context).copyWith(color: color),
     );
   }
 

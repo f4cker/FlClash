@@ -132,11 +132,20 @@ class ProxyCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final measure = globalState.measure;
     final isLoose = type == ProxyCardType.loose;
+    final exit = ref.watch(
+      tailscaleExitRuntimeProvider.select(
+        (report) => report.value?.cardOf(proxy.name),
+      ),
+    );
     final delayText = _DelayText(
       proxy: proxy,
       testUrl: testUrl,
       alignment: isLoose ? Alignment.centerLeft : Alignment.centerRight,
+      unavailable: exit?.unavailable ?? false,
     );
+    final typeLabel = exit?.node == true
+        ? context.appLocalizations.tsExitGroupName
+        : proxy.type;
     final proxyNameText = _buildProxyNameText(context);
     final typeStyle = AppTextStyle.footnote
         .of(context)
@@ -150,7 +159,11 @@ class ProxyCard extends ConsumerWidget {
             children: [
               SizedBox(
                 height: measure.textHeight(AppTextStyle.footnote),
-                child: _ProxyDesc(proxy: proxy, style: typeStyle),
+                child: _ProxyDesc(
+                  proxy: proxy,
+                  type: typeLabel,
+                  style: typeStyle,
+                ),
               ),
               const SizedBox(height: 6),
               delayText,
@@ -165,7 +178,7 @@ class ProxyCard extends ConsumerWidget {
                 Flexible(
                   flex: 1,
                   child: TooltipText(
-                    text: Text(proxy.type, maxLines: 1, style: typeStyle),
+                    text: Text(typeLabel, maxLines: 1, style: typeStyle),
                   ),
                 ),
                 delayText,
@@ -231,9 +244,14 @@ class ProxyCard extends ConsumerWidget {
 }
 
 class _ProxyDesc extends ConsumerWidget {
-  const _ProxyDesc({required this.proxy, required this.style});
+  const _ProxyDesc({
+    required this.proxy,
+    required this.type,
+    required this.style,
+  });
 
   final Proxy proxy;
+  final String type;
   final TextStyle style;
 
   @override
@@ -247,7 +265,7 @@ class _ProxyDesc extends ConsumerWidget {
           )
         : proxy.name;
     return EmojiText(
-      nodeName == proxy.name ? proxy.type : '${proxy.type}($nodeName)',
+      nodeName == proxy.name ? type : '$type($nodeName)',
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: style,
@@ -260,11 +278,15 @@ class _DelayText extends ConsumerStatefulWidget {
     required this.proxy,
     required this.testUrl,
     required this.alignment,
+    this.unavailable = false,
   });
 
   final Proxy proxy;
   final String? testUrl;
   final Alignment alignment;
+
+  /// A Tailscale exit the Core refuses: shown as such, never as a delay.
+  final bool unavailable;
 
   @override
   ConsumerState<_DelayText> createState() => _DelayTextState();
@@ -357,7 +379,24 @@ class _DelayTextState extends ConsumerState<_DelayText> {
           height: measure.textHeight(AppTextStyle.caption2),
           child: FadeBox(
             alignment: widget.alignment,
-            child: phase != null || delay == null
+            child: widget.unavailable && phase == null
+                ? GestureDetector(
+                    onTap: _handleTestCurrentDelay,
+                    child: _withFocusRing(
+                      context,
+                      Text(
+                        context.appLocalizations.tsExitUnavailableShort,
+                        maxLines: 1,
+                        style: AppTextStyle.caption2
+                            .of(context, emphasized: true)
+                            .copyWith(
+                              overflow: TextOverflow.ellipsis,
+                              color: context.colorScheme.error,
+                            ),
+                      ),
+                    ),
+                  )
+                : phase != null || delay == null
                 ? SizedBox(
                     height: measure.textHeight(AppTextStyle.caption2),
                     width: measure.textHeight(AppTextStyle.caption2),

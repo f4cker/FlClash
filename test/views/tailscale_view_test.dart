@@ -31,6 +31,7 @@ import 'package:prism_ui/prism_ui.dart'
         PopupMenuCard,
         SearchField,
         Switch,
+        TextButton,
         TonalButton,
         Tooltip;
 
@@ -633,6 +634,190 @@ void main() {
       );
       expect(container.read(tailscaleManagedRecordsProvider), isEmpty);
       await teardownView(tester);
+    });
+
+    group('exit group', () {
+      Future<void> serveExit(
+        WidgetTester tester,
+        TailscaleExitReport report,
+      ) async {
+        await seed(const [
+          TailscaleManagedRecord(
+            id: 'm1',
+            profileId: 42,
+            attached: true,
+            exitNode: '100.88.12.4',
+            exitNodeName: 'nas-sg',
+          ),
+        ]);
+        final node = tsManagedNode('m1');
+        serve([node], tsExitStatus(node));
+        when(
+          () => core.getTailscaleRoutes(42),
+        ).thenAnswer((_) async => const TailscaleRoutes(profileId: 42));
+        when(() => core.getTailscaleExit(42)).thenAnswer((_) async => report);
+        when(
+          () => core.setTailscalePrefs(
+            any(),
+            exitNode: any(named: 'exitNode'),
+            exitLabel: any(named: 'exitLabel'),
+            acceptRoutes: any(named: 'acceptRoutes'),
+          ),
+        ).thenAnswer(
+          (_) async => const TailscalePrefsResult(
+            generation: 1,
+            outcome: TailscalePrefsOutcome.applied,
+          ),
+        );
+        await pumpPanel(tester);
+        await settle(tester);
+      }
+
+      Future<void> turnOff(WidgetTester tester) async {
+        await tester.tap(
+          find.descendant(
+            of: find.byType(TailscaleExitCard),
+            matching: find.text('nas-sg'),
+          ),
+        );
+        await settle(tester);
+        await tester.tap(find.text('不使用出口节点').last);
+        await settle(tester);
+      }
+
+      testWidgets('the card says how many manual groups offer the exit', (
+        tester,
+      ) async {
+        await serveExit(tester, tsExitReport());
+
+        expect(find.text('已作为“Tailscale 出口”加入 3 个手动策略组'), findsOneWidget);
+        await tester.tap(find.byTooltip('出口设置说明'));
+        await settle(tester);
+        expect(
+          find.textContaining('在代理页选择“Tailscale 出口”', findRichText: true),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('不加入测速或故障转移组', findRichText: true),
+          findsOneWidget,
+        );
+        await teardownView(tester);
+      });
+
+      testWidgets('no manual group is said plainly, not as an error', (
+        tester,
+      ) async {
+        await serveExit(tester, tsExitReport(parents: const []));
+
+        final line = tester.widget<Text>(find.text('当前配置没有可加入的手动策略组'));
+        final context = tester.element(find.text('当前配置没有可加入的手动策略组'));
+        expect(line.style?.color, context.colorScheme.onSurfaceVariant);
+        await teardownView(tester);
+      });
+
+      testWidgets('an unavailable exit replaces the line in the error colour', (
+        tester,
+      ) async {
+        await serveExit(
+          tester,
+          tsExitReport(
+            state: TailscaleExitState.unavailable,
+            reason: TailscaleExitReason.offline,
+          ),
+        );
+
+        const text = '出口设备离线 · 此出口不可用，选用它的连接会被拒绝';
+        expect(find.text(text), findsOneWidget);
+        expect(find.textContaining('已作为'), findsNothing);
+        final context = tester.element(find.text(text));
+        expect(
+          tester.widget<Text>(find.text(text)).style?.color,
+          context.colorScheme.error,
+        );
+        await teardownView(tester);
+      });
+
+      testWidgets('an unreadable group is 待确认, never a count', (tester) async {
+        await serveExit(tester, const TailscaleExitReport.readFailed(42));
+
+        expect(find.text('出口分组待确认'), findsOneWidget);
+        expect(find.textContaining('个手动策略组'), findsNothing);
+        await teardownView(tester);
+      });
+
+      testWidgets('turning off asks a re-pick first where the fallback is '
+          'unknown', (tester) async {
+        await serveExit(tester, tsExitReport());
+        await turnOff(tester);
+
+        expect(find.text('关闭出口节点？'), findsOneWidget);
+        expect(find.text('关闭前，请先在代理页为以下策略改选。'), findsOneWidget);
+        expect(find.text('国际媒体 → 香港策略', findRichText: true), findsOneWidget);
+        expect(find.text('仅日本 → 需要先改选', findRichText: true), findsOneWidget);
+        expect(find.textContaining('全球手动', findRichText: true), findsNothing);
+        final turnOffButton = find.ancestor(
+          of: find.text('关闭出口'),
+          matching: find.byWidgetPredicate((widget) => widget is TextButton),
+        );
+        expect(tester.widget<TextButton>(turnOffButton).onPressed, isNull);
+
+        await tester.tap(find.text('前往代理页'));
+        await settle(tester);
+        verifyNever(
+          () => core.setTailscalePrefs(
+            any(),
+            exitNode: any(named: 'exitNode'),
+            exitLabel: any(named: 'exitLabel'),
+          ),
+        );
+        expect(container.read(currentPageLabelProvider), PageLabel.proxies);
+        await teardownView(tester);
+      });
+
+      testWidgets('confirmed fallbacks are listed and kept once it is off', (
+        tester,
+      ) async {
+        await serveExit(
+          tester,
+          tsExitReport(parents: [tsExitReport().parents.first]),
+        );
+        await turnOff(tester);
+
+        expect(
+          find.text('以下策略正在使用“Tailscale 出口”。关闭后将改用下方所列选项。'),
+          findsOneWidget,
+        );
+        expect(find.text('前往代理页'), findsNothing);
+        await tester.tap(find.text('关闭出口'));
+        await settle(tester);
+
+        verify(
+          () => core.setTailscalePrefs(
+            any(),
+            exitNode: '',
+            exitLabel: any(named: 'exitLabel'),
+          ),
+        ).called(1);
+        expect(
+          container.read(profilesProvider).getProfile(42)?.selectedMap['国际媒体'],
+          '香港策略',
+        );
+        await teardownView(tester);
+      });
+
+      testWidgets('no group using it keeps the dialog as it was', (
+        tester,
+      ) async {
+        await serveExit(
+          tester,
+          tsExitReport(parents: [tsExitReport().parents.last]),
+        );
+        await turnOff(tester);
+
+        expect(find.text('不再使用出口节点？'), findsOneWidget);
+        expect(find.textContaining('→', findRichText: true), findsNothing);
+        await teardownView(tester);
+      });
     });
   });
 

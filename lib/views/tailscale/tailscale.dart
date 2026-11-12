@@ -18,6 +18,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'assign_dialog.dart';
 import 'device_card.dart';
 import 'device_list.dart';
+import 'exit_dialog.dart';
 import 'rules_view.dart';
 import 'settings_cards.dart' hide TailscaleTag;
 import 'state.dart';
@@ -525,6 +526,33 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   }
 
   Future<void> _selectExit(TailscaleNode node, TailscalePeer? peer) async {
+    final report = peer == null && node.managed
+        ? await _readExitGroup(node.profileId)
+        : null;
+    final affected = report?.affectedWithout(node.managedId) ?? const [];
+    if (!mounted) {
+      return;
+    }
+    if (affected.isNotEmpty) {
+      final choice = await dialogs.showCommonDialog<TailscaleExitOffChoice>(
+        child: TailscaleExitOffDialog(group: report!.group, affected: affected),
+      );
+      switch (choice) {
+        case TailscaleExitOffChoice.openProxies:
+          _openProxiesAt(
+            affected.firstWhere((parent) => parent.replacement == null).name,
+          );
+        case TailscaleExitOffChoice.turnOff:
+          final notice = await _applyExit(node, null);
+          if (notice == TailscaleSettingNotice.updated ||
+              notice == TailscaleSettingNotice.saved) {
+            _keepReplacements(affected);
+          }
+        case null:
+          break;
+      }
+      return;
+    }
     final appLocalizations = context.appLocalizations;
     final confirmed = await dialogs.showMessage(
       title: peer == null
@@ -548,7 +576,40 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     await _applyExit(node, peer);
   }
 
-  Future<void> _applyExit(TailscaleNode node, TailscalePeer? peer) async {
+  /// A fresh read for the dialog; the last one when the Core does not answer.
+  Future<TailscaleExitReport?> _readExitGroup(int profileId) async {
+    try {
+      return await ref.read(coreHandlerProvider).getTailscaleExit(profileId);
+    } catch (error) {
+      commonPrint.log(
+        'tailscale exit group unread: ${compactError(error)}',
+        logLevel: coreFailureLogLevel(error),
+      );
+      return ref.read(tailscaleExitRuntimeProvider).value;
+    }
+  }
+
+  void _openProxiesAt(String groupName) {
+    ref.read(proxiesActionProvider.notifier)
+      ..updateCurrentGroupName(groupName)
+      ..updateCurrentUnfoldSet({...ref.read(unfoldSetProvider), groupName});
+    ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.proxies);
+  }
+
+  /// The groups keep the option the dialog showed, also past the next apply.
+  void _keepReplacements(List<TailscaleExitParent> affected) {
+    final profiles = ref.read(profilesActionProvider.notifier);
+    for (final parent in affected) {
+      if (parent.replacement case final replacement?) {
+        profiles.updateCurrentSelectedMap(parent.name, replacement);
+      }
+    }
+  }
+
+  Future<TailscaleSettingNotice> _applyExit(
+    TailscaleNode node,
+    TailscalePeer? peer,
+  ) async {
     final value = peer == null ? '' : tailscaleAddressOf(peer) ?? peer.id;
     _exitRetries[node.key] = _Retry(exitPeer: peer);
     final notice = await _action.setPrefsFromPanel(
@@ -566,6 +627,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     if (mounted) {
       setState(() {});
     }
+    return notice;
   }
 
   Future<void> _changeRoutes(TailscaleNode node, bool accept) async {
@@ -829,6 +891,9 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     final savedExitName = record?.exitNode == node.settings.exitNode.value
         ? record?.exitNodeName
         : null;
+    final exitReport = node.managed
+        ? ref.watch(tailscaleExitRuntimeProvider).value
+        : null;
     final body = LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= tailscaleTwoColumnWidth + 40;
@@ -844,6 +909,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
               ? null
               : () => _applyExit(node, exitRetry.exitPeer),
           attach: managedPanel.attach,
+          exitReport: exitReport,
         );
         final routesCard = TailscaleRoutesCard(
           node: node,
