@@ -2428,6 +2428,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tsViewExisting": MessageLookupByLibrary.simpleMessage("查看已有账号"),
     "tsViewerNode": m163,
+    "tsViewerNone": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · 当前配置没有 Flash 添加的规则",
+    ),
     "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
       "Tailscale · 运行信息读取失败",
     ),

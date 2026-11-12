@@ -100,7 +100,8 @@ String annotateTailscaleRuntime(
   final List<String> proxies;
   switch (runtime.state) {
     case TailscaleRuntimeState.none || TailscaleRuntimeState.otherProfile:
-      return yaml;
+      rules = [appLocalizations.tsViewerNone];
+      proxies = const [];
     case TailscaleRuntimeState.readFailed:
       rules = [appLocalizations.tsViewerReadFailed];
       proxies = const [];
@@ -114,6 +115,9 @@ String annotateTailscaleRuntime(
           for (final rule in account.rules) '  - ${_commentSafe(rule)}',
         ],
       ];
+      if (rules.isEmpty) {
+        rules.add(appLocalizations.tsViewerNone);
+      }
       proxies = [
         for (final proxy in runtime.proxies)
           appLocalizations.tsViewerNode(_commentSafe(proxy)),

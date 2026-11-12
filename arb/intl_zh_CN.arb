@@ -1479,6 +1479,7 @@
   "tsViewerNode": "Tailscale · 由 Flash 添加 · 节点 {node}",
   "tsViewerUnconfirmed": "Tailscale · 当前运行的规则和节点待确认",
   "tsViewerReadFailed": "Tailscale · 运行信息读取失败",
+  "tsViewerNone": "Tailscale · 当前配置没有 Flash 添加的规则",
   "mountSameNameShort": "同名节点以订阅名区分",
   "mountNodesExcludedShort": "{count} 个节点不参与挂载",
   "mountGroupsExcludedShort": "{count} 个分组不接收订阅节点",
