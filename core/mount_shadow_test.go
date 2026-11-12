@@ -76,6 +76,16 @@ proxy-groups:
 	return b.String()
 }
 
+// liteGroupLine is the flow line declaring group in profile.
+func liteGroupLine(profile, group string) string {
+	for _, line := range strings.Split(profile, "\n") {
+		if strings.Contains(line, "{name: "+group+",") {
+			return line
+		}
+	}
+	return ""
+}
+
 var liteOrdinaryGroups = []string{
 	"即时通讯", "社交平台", "人工智能", "开发服务", "国际媒体", "谷歌服务", "苹果服务", "国外流量", "国内流量",
 	"故障转移", "全球手动", "香港策略", "台湾策略", "日本策略", "狮城策略", "韩国策略", "美国策略",
@@ -151,7 +161,9 @@ func TestMountedAirportProfileKeepsTailscaleOffMountedNodes(t *testing.T) {
 	all := []string{"香港 M01", "台湾 M01", "日本 M01", "新加坡 M01", "韩国 M01", "美国 M01"}
 	for _, group := range liteOrdinaryGroups {
 		want := all
-		if filter := liteFilterOf(profile, group); filter != nil {
+		if !strings.Contains(liteGroupLine(profile, group), "include-all") {
+			want = nil
+		} else if filter := liteFilterOf(profile, group); filter != nil {
 			want = slices.DeleteFunc(slices.Clone(all), func(name string) bool { return !filter.MatchString(name) })
 		}
 		if got := mountedIn(group); !slices.Equal(got, want) {
