@@ -180,6 +180,7 @@ func injectTailscaleManaged(cfg *config.Config) {
 			"name":      tailscaleManagedName(cfg, account.Name),
 			"type":      "tailscale",
 			"state-dir": dir,
+			"hostname":  tailscaleManagedHostname(),
 			"udp":       true,
 		}
 		if account.ControlURL != "" {
