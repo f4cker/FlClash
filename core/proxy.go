@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
@@ -37,7 +38,10 @@ type pickableGroup interface {
 }
 
 func lookupProxy(name string) constant.Proxy {
-	return tunnel.AllProxies()[name]
+	if proxy := tunnel.AllProxies()[name]; proxy != nil {
+		return proxy
+	}
+	return tailscaleExitMemberNamed(name)
 }
 
 func adapterAs[T any](proxy constant.Proxy) (group T, ok bool) {
@@ -97,6 +101,15 @@ func handleGetProxies() ProxiesData {
 	views := make(map[string]any, len(proxies))
 	for name, proxy := range proxies {
 		views[name] = proxyView(proxy)
+	}
+	// The exit group comes after the config's own, its nodes beside it.
+	if exitGroup, members := tailscaleExitShown(); exitGroup != "" && proxies[exitGroup] != nil {
+		names = append(slices.DeleteFunc(names, func(name string) bool { return name == exitGroup }), exitGroup)
+		for _, member := range members {
+			if _, taken := views[member.Name()]; !taken {
+				views[member.Name()] = proxyView(member)
+			}
+		}
 	}
 	return ProxiesData{All: names, Proxies: views}
 }

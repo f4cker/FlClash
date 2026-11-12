@@ -757,6 +757,7 @@ func handleTailscaleSetPrefs(params TailscalePrefsParams) (*TailscalePrefsResult
 	result := &TailscalePrefsResult{Generation: t.Generation(), Outcome: tailscaleOutcomeNotRunning}
 	if !t.Started() || t.BackendState() != ipn.Running.String() {
 		markTailscaleReapply(t)
+		tailscaleExitPrefsChanged(t, params.ExitNode, params.ExitLabel, result.Outcome)
 		return result, nil
 	}
 	prefs, err := editTailscalePrefs(t, params.ExitNode, params.AcceptRoutes)
@@ -770,6 +771,7 @@ func handleTailscaleSetPrefs(params TailscalePrefsParams) (*TailscalePrefsResult
 		result.Outcome = tailscaleOutcomeFailed
 		result.Error = asMethodError(err)
 	}
+	tailscaleExitPrefsChanged(t, params.ExitNode, params.ExitLabel, result.Outcome)
 	return result, nil
 }
 

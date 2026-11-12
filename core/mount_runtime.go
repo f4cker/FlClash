@@ -414,7 +414,7 @@ func mountRuntimeGroup(proxy constant.Proxy, name string, mountProviders map[str
 		return runtime
 	}
 	runtime.Present = true
-	members := group.Proxies()
+	members := slices.DeleteFunc(slices.Clone(group.Proxies()), isTailscaleExitGroup)
 	runtime.Members = len(members)
 	for _, member := range members {
 		if _, ok := mountProviders[member.ProxyInfo().ProviderName]; ok {

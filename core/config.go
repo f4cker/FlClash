@@ -239,6 +239,7 @@ func applyConfig(params *SetupParams) error {
 	publishTailscaleManaged()
 	startTailscaleManaged()
 	patchSelectGroup(followMountSelections(params.SelectedMap, report))
+	followTailscaleExitSelections(params.SelectedMap)
 	bumpRouteEpoch()
 	if blocked {
 		// The blocked profile's own listeners, a proxy: DIRECT one too, stay

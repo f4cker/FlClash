@@ -156,10 +156,12 @@ func injectTailscaleManaged(cfg *config.Config) {
 	var managed []TailscaleManagedSetup
 	var profileID int64
 	var unknown bool
+	var exitGroup string
 	if tailscaleSetup != nil {
 		managed = append(managed, tailscaleSetup.Managed...)
 		profileID = tailscaleSetup.ProfileID
 		unknown = tailscaleSetup.ManagedUnknown
+		exitGroup = tailscaleSetup.ExitGroup
 	}
 	tailscaleMu.Unlock()
 
@@ -170,6 +172,7 @@ func injectTailscaleManaged(cfg *config.Config) {
 		active:   attached,
 		unknown:  unknown,
 	}
+	var exitSeeds []tailscaleExitSeed
 	for _, account := range managed {
 		if account.ID == "" {
 			continue
@@ -212,6 +215,9 @@ func injectTailscaleManaged(cfg *config.Config) {
 		tailscaleManagedMu.Unlock()
 		cfg.Proxies[proxy.Name()] = proxy
 		run.accounts[len(run.accounts)-1].proxy = proxy.Name()
+		if account.Attached {
+			exitSeeds = append(exitSeeds, tailscaleExitSeed{setup: account, node: node, proxy: proxy})
+		}
 	}
 
 	routes, profileRules := tailscaleProfileRoutes(cfg.Rules, own, reach)
@@ -224,6 +230,7 @@ func injectTailscaleManaged(cfg *config.Config) {
 		}
 		cfg.Rules = append(rules, cfg.Rules...)
 	}
+	stageTailscaleExit(cfg, exitGroup, exitSeeds)
 	tailscaleManagedMu.Lock()
 	tailscaleManagedProfile, tailscaleManagedProfileRules = routes, profileRules
 	tailscaleManagedActive, tailscaleManagedUnknown = attached, unknown
@@ -240,6 +247,7 @@ func publishTailscaleManaged() {
 		tailscaleRunningSlot, tailscaleStagedSlot, tailscaleStaged = tailscaleStagedSlot, nil, false
 		tailscaleRunningRun, tailscaleStagedRun = tailscaleStagedRun, nil
 	}
+	publishTailscaleExit()
 	names := map[string]bool{}
 	for t := range tailscaleManagedNodes {
 		names[t.Name()] = true
@@ -275,6 +283,7 @@ func clearTailscaleManaged() {
 	tailscaleManagedActive, tailscaleManagedUnknown = false, false
 	tailscaleStagedSlot, tailscaleStagedRun, tailscaleStaged = nil, nil, true
 	tailscaleManagedMu.Unlock()
+	clearTailscaleExit()
 	reloadTailscaleRoutes()
 }
 
