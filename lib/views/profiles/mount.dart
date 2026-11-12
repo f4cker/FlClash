@@ -621,7 +621,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
         level: info ? MountBannerLevel.info : MountBannerLevel.error,
       );
     }
-    final renamed = (_runtime?.report?.renamed ?? 0) > 0;
+    final renamed = (_confirmedReport(panel)?.renamed ?? 0) > 0;
     final tailscale = _tailscaleExcluded(panel);
     final unsupported = _unsupportedExcluded(panel);
     final isolated = _groupCase == MountGroupCase.auto
@@ -671,8 +671,22 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     );
   }
 
+  /// A readback of another revision describes sources no longer mounted:
+  /// counts then come from inspecting the mounted sources.
+  MountReport? _confirmedReport(MountPanel panel) {
+    final runtime = _runtime;
+    final revision = panel.revision;
+    return switch (runtime == null || revision == null
+        ? null
+        : confirmMounts(runtime, revision)) {
+      MountSaveOutcome.applied ||
+      MountSaveOutcome.appliedUnverified => runtime!.report,
+      _ => null,
+    };
+  }
+
   int _tailscaleExcluded(MountPanel panel) {
-    final reported = _runtime?.report?.sources;
+    final reported = _confirmedReport(panel)?.sources;
     if (reported != null && reported.isNotEmpty) {
       return reported.fold(0, (sum, source) => sum + source.tailscaleExcluded);
     }
@@ -683,7 +697,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   }
 
   int _unsupportedExcluded(MountPanel panel) {
-    final reported = _runtime?.report?.sources;
+    final reported = _confirmedReport(panel)?.sources;
     if (reported != null && reported.isNotEmpty) {
       return reported.fold(
         0,

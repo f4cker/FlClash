@@ -811,9 +811,12 @@ void main() {
               groups: MountTarget(
                 groups: [groupInfo('A', kind: MountGroupKind.auto)],
               ),
+              revision: 'r',
             ),
           )
-          ..runtime = const MountRuntimeState(report: MountReport(renamed: 3))
+          ..runtime = const MountRuntimeState(
+            report: MountReport(revision: 'r', renamed: 3),
+          )
           ..refreshResult = const MountSourceRefresh(
             updated: true,
             application: MountSaveOutcome.applied,
@@ -905,22 +908,27 @@ void main() {
 
   testWidgets('the neutral banner says same names, Tailscale nodes, then '
       'relays, one line each', (tester) async {
-    final mounts = FakeMounts(
-      panelOf(
-        [
-          item(air, mounted: true, tailscaleExcluded: 1),
-          item(sea, mounted: true, relayExcluded: 2),
-        ],
-        stored: MountTargetState(
-          targetId: target.id,
-          sourceIds: [air.id, sea.id],
-          version: 1,
-        ),
-        groups: MountTarget(
-          groups: [groupInfo('A', kind: MountGroupKind.auto)],
-        ),
-      ),
-    )..runtime = const MountRuntimeState(report: MountReport(renamed: 1));
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [
+                item(air, mounted: true, tailscaleExcluded: 1),
+                item(sea, mounted: true, relayExcluded: 2),
+              ],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id, sea.id],
+                version: 1,
+              ),
+              groups: MountTarget(
+                groups: [groupInfo('A', kind: MountGroupKind.auto)],
+              ),
+              revision: 'r',
+            ),
+          )
+          ..runtime = const MountRuntimeState(
+            report: MountReport(revision: 'r', renamed: 1),
+          );
     await pumpSheet(tester, mounts, profiles: [air, sea]);
     final l10n = currentAppLocalizations;
     await openDetails(tester);
@@ -1109,10 +1117,12 @@ void main() {
               groups: MountTarget(
                 groups: [groupInfo('A', kind: MountGroupKind.auto)],
               ),
+              revision: 'r',
             ),
           )
           ..runtime = const MountRuntimeState(
             report: MountReport(
+              revision: 'r',
               sources: [
                 MountSourceReport(
                   id: 1,
@@ -1129,6 +1139,47 @@ void main() {
 
     expect(find.text(l10n.mountUnsupportedExcluded(1)), findsOneWidget);
     expect(find.text(l10n.mountUnsupportedExcluded(5)), findsNothing);
+  });
+
+  testWidgets('a readback of another revision counts nothing it reported', (
+    tester,
+  ) async {
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [item(air, mounted: true, relayExcluded: 5)],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id],
+                version: 1,
+              ),
+              groups: MountTarget(
+                groups: [groupInfo('A', kind: MountGroupKind.auto)],
+              ),
+              revision: 'r2',
+            ),
+          )
+          ..runtime = const MountRuntimeState(
+            report: MountReport(
+              revision: 'r1',
+              renamed: 2,
+              sources: [
+                MountSourceReport(
+                  id: 1,
+                  provider: 'flash-mount-1',
+                  status: MountSourceStatus.nodes,
+                  relayExcluded: 1,
+                  tailscaleExcluded: 4,
+                ),
+              ],
+            ),
+          );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    await openDetails(tester);
+
+    final banner = tester.widget<MountBanner>(find.byType(MountBanner));
+    expect(banner.lines, [l10n.mountUnsupportedExcluded(5)]);
   });
 
   testWidgets('groups kept out for Tailscale share one counted info line '
@@ -1657,10 +1708,11 @@ void main() {
                     if (isolated) isolatedGroup('Lan', MountGroupReason.rule),
                   ],
                 ),
+                revision: 'r',
               ),
             )
             ..runtime = MountRuntimeState(
-              report: MountReport(renamed: renamed ? 1 : 0),
+              report: MountReport(revision: 'r', renamed: renamed ? 1 : 0),
             );
       await pumpSheet(tester, mounts, profiles: [air]);
       final l10n = currentAppLocalizations;
