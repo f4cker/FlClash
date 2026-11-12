@@ -2,7 +2,10 @@
 
 package core
 
-import "github.com/metacubex/mihomo/config"
+import (
+	"github.com/metacubex/mihomo/config"
+	"github.com/metacubex/mihomo/constant"
+)
 
 var errTailscaleUnsupported = &MethodError{
 	Code:    "tailscale_unsupported",
@@ -56,3 +59,13 @@ func handleTailscaleManagedState(TailscaleRoutesParams) (any, error) {
 func handleTailscaleRuntimeRules(TailscaleRoutesParams) (any, error) {
 	return nil, errTailscaleUnsupported
 }
+
+func handleTailscaleExit(TailscaleRoutesParams) (any, error) { return nil, errTailscaleUnsupported }
+
+func followTailscaleExitSelections(map[string]string) {}
+
+func isTailscaleExitGroup(constant.Proxy) bool { return false }
+
+func tailscaleExitMemberNamed(string) constant.Proxy { return nil }
+
+func tailscaleExitShown() (string, []constant.Proxy) { return "", nil }

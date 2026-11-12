@@ -99,6 +99,7 @@ const (
 	tailscaleForgetRoutesMethod  CoreMethod = "tailscale.forgetRoutes"
 	tailscaleManagedStateMethod  CoreMethod = "tailscale.managedState"
 	tailscaleRuntimeRulesMethod  CoreMethod = "tailscale.runtimeRules"
+	tailscaleExitMethod          CoreMethod = "tailscale.exit"
 
 	// The envelope of a batch of events, which the Core sends and never receives.
 	messageMethod CoreMethod = "message"
@@ -156,6 +157,8 @@ type TailscaleSetup struct {
 	Managed []TailscaleManagedSetup `json:"managed,omitempty"`
 	// The host could not read its accounts: block every Tailscale target.
 	ManagedUnknown bool `json:"managed-unknown,omitempty"`
+	// The exit group's name in the host's language.
+	ExitGroup string `json:"exit-group,omitempty"`
 }
 
 const tailscaleManagedBaseName = "Tailscale"
@@ -171,6 +174,8 @@ type TailscaleManagedSetup struct {
 	LoggedOut    bool    `json:"logged-out"`
 	// Only an attached account gets routing rules.
 	Attached bool `json:"attached"`
+	// The exit node's member name in the exit group: device and account.
+	ExitLabel string `json:"exit-label,omitempty"`
 }
 
 type TailscaleNodeSetup struct {
@@ -209,6 +214,7 @@ type TailscalePrefsParams struct {
 	ManagedID    string  `json:"managed-id,omitempty"`
 	Generation   uint64  `json:"generation"`
 	ExitNode     *string `json:"exit-node,omitempty"`
+	ExitLabel    *string `json:"exit-label,omitempty"`
 	AcceptRoutes *bool   `json:"accept-routes,omitempty"`
 }
 

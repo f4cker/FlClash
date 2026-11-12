@@ -277,11 +277,14 @@ func tailscaleHolders(proxies map[string]constant.Proxy) map[string]bool {
 		}
 		visiting[name] = true
 		return slices.ContainsFunc(group.Proxies(), func(member constant.Proxy) bool {
+			if isTailscaleExitGroup(member) {
+				return false
+			}
 			return member.Type() == constant.Tailscale || holds(member.Name(), visiting)
 		})
 	}
-	for name := range proxies {
-		if holds(name, map[string]bool{}) {
+	for name, proxy := range proxies {
+		if !isTailscaleExitGroup(proxy) && holds(name, map[string]bool{}) {
 			holders[name] = true
 		}
 	}
