@@ -7,11 +7,10 @@ const sourceDir = 'assets_source/images/icon';
 const pngOutputDir = 'assets/images/tray/unix';
 const icoOutputDir = 'assets/images/tray/windows';
 const macosOutputDir = 'assets/images/tray/macos';
-const statusIconNames = ['status_1', 'status_2', 'status_3', 'status_4'];
-const macosStatusIconSources = {
-  'status_1': '$sourceDir/glyph.svg',
-  'status_4': '$sourceDir/status_4.svg',
-};
+// status_1..3 are the home toggle's cookie, rendered from the app's own shape
+// path by `UPDATE_TRAY_ICONS=1 flutter test test/tool/tray_icons_test.dart`.
+const statusIconNames = ['status_4'];
+const macosStatusIconSources = {'status_4': '$sourceDir/status_4.svg'};
 const trayBaseSize = 18;
 const trayScales = [1, 2, 3, 4];
 const appIconSource = 'assets/images/icon.png';
