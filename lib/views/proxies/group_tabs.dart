@@ -4,9 +4,11 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/models/common.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/foundation.dart' show ValueListenable, listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:prism_ui/prism_ui.dart';
+
+import 'hidden_group_name.dart';
 
 const _stripInset = 16.0;
 const _tabSpacing = 8.0;
@@ -16,10 +18,18 @@ const _tabPadding = 16.0;
 /// built: each chip's width comes from its label, so the strip can scroll to
 /// one it has not built.
 class GroupTabs extends StatefulWidget {
-  const GroupTabs({super.key, required this.controller, required this.groups});
+  const GroupTabs({
+    super.key,
+    required this.controller,
+    required this.groups,
+    this.showHiddenTags = false,
+  });
 
   final TabController controller;
   final List<Group> groups;
+
+  /// Whether a group the config hides carries its 隐藏 tag.
+  final bool showHiddenTags;
 
   @override
   State<GroupTabs> createState() => _GroupTabsState();
@@ -181,6 +191,7 @@ class _GroupTabsState extends State<GroupTabs> {
           ),
           child: _GroupTab(
             name: groups[index].name,
+            hidden: widget.showHiddenTags && groups[index].isConfigHidden,
             index: index,
             selected: _selected,
             onPressed: () => _select(index),
@@ -194,7 +205,12 @@ class _GroupTabsState extends State<GroupTabs> {
 
   @override
   Widget build(BuildContext context) {
-    final extents = _extents = _TabExtents.of(context, widget.groups, _extents);
+    final extents = _extents = _TabExtents.of(
+      context,
+      widget.groups,
+      _extents,
+      showHiddenTags: widget.showHiddenTags,
+    );
     return SizedBox(
       height: TonalButtonSize.section.button,
       child: ValueListenableBuilder(
@@ -260,8 +276,9 @@ class _TabExtents {
   static _TabExtents of(
     BuildContext context,
     List<Group> groups,
-    _TabExtents? previous,
-  ) {
+    _TabExtents? previous, {
+    required bool showHiddenTags,
+  }) {
     final style = AppTextStyle.subheadline.of(context, emphasized: true);
     final minWidth = Card.minimumOf(context).minWidth;
     final padding = Card.paddingOf(
@@ -269,8 +286,12 @@ class _TabExtents {
       const EdgeInsets.symmetric(horizontal: _tabPadding),
     ).horizontal;
     final names = [for (final group in groups) group.name];
+    final tagged = [
+      for (final group in groups) showHiddenTags && group.isConfigHidden,
+    ];
     final key = (
       _NamesKey(names),
+      _TaggedKey(tagged),
       style,
       MediaQuery.boldTextOf(context),
       MediaQuery.textScalerOf(context),
@@ -282,11 +303,16 @@ class _TabExtents {
     if (previous != null && previous._key == key) {
       return previous;
     }
+    final tagWidth = tagged.contains(true)
+        ? HiddenGroupName.tagWidthOf(context)
+        : 0.0;
     return _TabExtents._(key, [
-      for (final name in names)
+      for (final (index, name) in names.indexed)
         max(
           minWidth,
-          EmojiText.widthOf(context, name, style).ceilToDouble() + padding,
+          EmojiText.widthOf(context, name, style).ceilToDouble() +
+              padding +
+              (tagged[index] ? tagWidth : 0),
         ),
     ]);
   }
@@ -325,17 +351,32 @@ class _NamesKey {
   int get hashCode => stringListEquality.hash(names);
 }
 
+class _TaggedKey {
+  const _TaggedKey(this.tagged);
+
+  final List<bool> tagged;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _TaggedKey && listEquals(tagged, other.tagged);
+
+  @override
+  int get hashCode => Object.hashAll(tagged);
+}
+
 /// Rebuilds only when it gains or loses the selection, so a swipe across
 /// hundreds of groups rebuilds two tabs per step instead of the strip.
 class _GroupTab extends StatefulWidget {
   const _GroupTab({
     required this.name,
+    required this.hidden,
     required this.index,
     required this.selected,
     required this.onPressed,
   });
 
   final String name;
+  final bool hidden;
   final int index;
   final ValueListenable<int> selected;
   final VoidCallback onPressed;
@@ -396,7 +437,12 @@ class _GroupTabState extends State<_GroupTab> {
                   ? colorScheme.onPrimary
                   : colorScheme.onSurfaceVariant,
             ),
-        child: EmojiText(widget.name, maxLines: 1),
+        child: widget.hidden
+            ? HiddenGroupName(
+                name: widget.name,
+                child: EmojiText(widget.name, maxLines: 1),
+              )
+            : EmojiText(widget.name, maxLines: 1),
       ),
     );
   }

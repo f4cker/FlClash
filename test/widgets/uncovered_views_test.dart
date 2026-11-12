@@ -242,6 +242,81 @@ void main() {
     expect(find.byType(PopupMenu), findsNothing);
   });
 
+  testWidgets('the proxies menu shows hidden groups with their tag', (
+    tester,
+  ) async {
+    final profile = Profile.normal(label: 'p');
+    final container = _containerFor(
+      tester,
+      profiles: [profile],
+      overrides: [
+        currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+      ],
+    );
+    container
+        .read(groupsProvider.notifier)
+        .update(
+          (_) => const [
+            Group(name: 'Visible', type: GroupType.Selector, hidden: false),
+            Group(name: 'HK', type: GroupType.Selector, hidden: true),
+          ],
+        );
+    container
+        .read(patchClashConfigProvider.notifier)
+        .update((state) => state.copyWith(mode: Mode.rule));
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TestApp(child: ProxiesView()),
+      ),
+    );
+    await tester.pump();
+    final l10n = AppLocalizations.current;
+    expect(find.text('HK'), findsNothing);
+
+    await openProxiesMenu(tester);
+    final hideTimeout = tester.getTopLeft(
+      inMenu(find.text(l10n.hideTimeoutProxies)),
+    );
+    final showHidden = tester.getTopLeft(
+      inMenu(find.text(l10n.showHiddenGroups)),
+    );
+    expect(showHidden.dy, greaterThan(hideTimeout.dy));
+    await tester.tap(inMenu(find.text(l10n.showHiddenGroups)));
+    await tester.pumpAndSettle();
+
+    expect(container.read(proxiesStyleSettingProvider).showHiddenGroups, true);
+    expect(find.text('HK'), findsOneWidget);
+    expect(find.text(l10n.hiddenGroupTag), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == l10n.hiddenGroupSemantics('HK'),
+      ),
+      findsOneWidget,
+    );
+
+    container
+        .read(proxiesStyleSettingProvider.notifier)
+        .update((state) => state.copyWith(type: ProxiesType.tab));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.hiddenGroupTag), findsOneWidget);
+    await tester.tap(find.text('HK'));
+    await tester.pumpAndSettle();
+    expect(container.read(currentProfileProvider)?.currentGroupName, 'HK');
+
+    container
+        .read(proxiesStyleSettingProvider.notifier)
+        .update((state) => state.copyWith(showHiddenGroups: false));
+    await tester.pumpAndSettle();
+    expect(find.text('HK'), findsNothing);
+    expect(find.text(l10n.hiddenGroupTag), findsNothing);
+    expect(container.read(currentProfileProvider)?.currentGroupName, 'Visible');
+    expect(tester.takeException(), null);
+  });
+
   testWidgets('about view renders version and link sections', (tester) async {
     final container = _containerFor(tester);
 

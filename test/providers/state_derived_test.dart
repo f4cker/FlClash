@@ -74,6 +74,80 @@ void main() {
     expect(container.read(currentGroupsStateProvider).value, isEmpty);
   });
 
+  test('showing hidden groups keeps them in place in rule mode only', () {
+    container
+        .read(groupsProvider.notifier)
+        .update(
+          (_) => [
+            const Group(name: 'A', type: GroupType.Selector, hidden: false),
+            const Group(name: 'HK', type: GroupType.Selector, hidden: true),
+            const Group(name: 'B', type: GroupType.Selector, hidden: false),
+            Group(
+              name: GroupName.GLOBAL.name,
+              type: GroupType.Selector,
+              hidden: true,
+            ),
+          ],
+        );
+    List<String> names() => container
+        .read(currentGroupsStateProvider)
+        .value
+        .map((group) => group.name)
+        .toList();
+    void setShow(bool show) => container
+        .read(proxiesStyleSettingProvider.notifier)
+        .update((state) => state.copyWith(showHiddenGroups: show));
+    void setMode(Mode mode) => container
+        .read(patchClashConfigProvider.notifier)
+        .update((state) => state.copyWith(mode: mode));
+
+    setMode(Mode.rule);
+    expect(names(), ['A', 'B']);
+
+    setShow(true);
+    expect(names(), ['A', 'HK', 'B']);
+
+    setMode(Mode.global);
+    expect(names(), ['A', 'HK', 'B', GroupName.GLOBAL.name]);
+    setShow(false);
+    expect(names(), ['A', 'HK', 'B', GroupName.GLOBAL.name]);
+
+    setMode(Mode.direct);
+    setShow(true);
+    expect(names(), isEmpty);
+
+    setMode(Mode.rule);
+    setShow(false);
+    expect(names(), ['A', 'B']);
+  });
+
+  test('only a group the config hid counts as hidden', () {
+    expect(
+      const Group(
+        name: 'HK',
+        type: GroupType.Selector,
+        hidden: true,
+      ).isConfigHidden,
+      true,
+    );
+    expect(
+      const Group(
+        name: 'A',
+        type: GroupType.Selector,
+        hidden: false,
+      ).isConfigHidden,
+      false,
+    );
+    expect(
+      Group(
+        name: GroupName.GLOBAL.name,
+        type: GroupType.Selector,
+        hidden: true,
+      ).isConfigHidden,
+      false,
+    );
+  });
+
   test('a GLOBAL group of the profile\'s own shows in rule mode', () {
     container
         .read(groupsProvider.notifier)

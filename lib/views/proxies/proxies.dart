@@ -110,6 +110,14 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
               state.copyWith(hideTimeoutProxies: !state.hideTimeoutProxies),
         ),
       ),
+      PopupMenuItem(
+        glyph: AppGlyphs.eye,
+        label: appLocalizations.showHiddenGroups,
+        checked: style.showHiddenGroups,
+        onPressed: () => _updateStyle(
+          (state) => state.copyWith(showHiddenGroups: !state.showHiddenGroups),
+        ),
+      ),
     ];
   }
 

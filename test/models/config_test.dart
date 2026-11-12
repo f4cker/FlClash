@@ -909,6 +909,16 @@ void main() {
       );
       expect(restored.hideTimeoutProxies, true);
     });
+
+    test('round-trip keeps showing hidden groups, off by default', () {
+      expect(const ProxiesStyleProps().showHiddenGroups, false);
+      expect(ProxiesStyleProps.fromJson({}).showHiddenGroups, false);
+      final restored = roundTrip(
+        () => const ProxiesStyleProps(showHiddenGroups: true).toJson(),
+        ProxiesStyleProps.fromJson,
+      );
+      expect(restored.showHiddenGroups, true);
+    });
   });
 
   group('ThemeProps JSON round-trip', () {

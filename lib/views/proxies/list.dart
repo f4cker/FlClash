@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'card.dart';
 import 'common.dart';
+import 'hidden_group_name.dart';
 
 const _headerInset = 10.0;
 const _headerButtonInset = 4.0;
@@ -606,6 +607,11 @@ class ListHeader extends ConsumerWidget {
     final isDelayTesting = ref.watch(
       delayTestingGroupsProvider.select((state) => state.contains(groupName)),
     );
+    final showHiddenTag =
+        group.isConfigHidden &&
+        ref.watch(
+          proxiesStyleSettingProvider.select((state) => state.showHiddenGroups),
+        );
     final colorScheme = context.colorScheme;
     final level = floating > 0
         ? SurfaceLevel.floatingOf(colorScheme)
@@ -625,7 +631,12 @@ class ListHeader extends ConsumerWidget {
               child: Row(
                 children: [
                   _GroupIcon(src: group.icon, name: groupName),
-                  Flexible(child: _GroupSummary(groupName: groupName)),
+                  Flexible(
+                    child: _GroupSummary(
+                      groupName: groupName,
+                      hidden: showHiddenTag,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -756,22 +767,26 @@ class _GroupIcon extends ConsumerWidget {
 }
 
 class _GroupSummary extends StatelessWidget {
-  const _GroupSummary({required this.groupName});
+  const _GroupSummary({required this.groupName, required this.hidden});
 
   final String groupName;
 
+  /// Tags a group the config hides, shown because the user asked to see it.
+  final bool hidden;
+
   @override
   Widget build(BuildContext context) {
+    final name = EmojiText(
+      groupName,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: AppTextStyle.callout.of(context, emphasized: true),
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        EmojiText(
-          groupName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyle.callout.of(context, emphasized: true),
-        ),
+        if (hidden) HiddenGroupName(name: groupName, child: name) else name,
         const SizedBox(height: 2),
         Flexible(flex: 1, child: _SelectedProxyName(groupName: groupName)),
       ],

@@ -169,6 +169,9 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
     final proxiesLayout = ref.watch(
       proxiesStyleSettingProvider.select((state) => state.layout),
     );
+    final showHiddenGroups = ref.watch(
+      proxiesStyleSettingProvider.select((state) => state.showHiddenGroups),
+    );
     final isSearching = ref.watch(
       queryProvider(
         QueryTag.proxies,
@@ -193,7 +196,11 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
                       top: context.contentTopPadding - context.appBarInset,
                       bottom: 16,
                     ),
-                    child: GroupTabs(controller: controller, groups: groups),
+                    child: GroupTabs(
+                      controller: controller,
+                      groups: groups,
+                      showHiddenTags: showHiddenGroups,
+                    ),
                   ),
                   Expanded(
                     child: WidthBuilder(

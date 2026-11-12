@@ -2791,6 +2791,31 @@ class AppLocalizations {
     );
   }
 
+  /// `Show hidden groups`
+  String get showHiddenGroups {
+    return Intl.message(
+      'Show hidden groups',
+      name: 'showHiddenGroups',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Hidden`
+  String get hiddenGroupTag {
+    return Intl.message('Hidden', name: 'hiddenGroupTag', desc: '', args: []);
+  }
+
+  /// `{name}, Hidden`
+  String hiddenGroupSemantics(Object name) {
+    return Intl.message(
+      '$name, Hidden',
+      name: 'hiddenGroupSemantics',
+      desc: '',
+      args: [name],
+    );
+  }
+
   /// `Stack mode`
   String get stackMode {
     return Intl.message('Stack mode', name: 'stackMode', desc: '', args: []);

@@ -588,6 +588,10 @@ extension GroupsExt on List<Group> {
 extension GroupExt on Group {
   String get realNow => now ?? '';
 
+  /// Set hidden in the config; the core also hides its built-in GLOBAL,
+  /// which no config hid.
+  bool get isConfigHidden => hidden == true && name != GroupName.GLOBAL.name;
+
   String getCurrentSelectedName(String proxyName) {
     if (type.isComputedSelected) {
       return realNow.isNotEmpty ? realNow : proxyName;

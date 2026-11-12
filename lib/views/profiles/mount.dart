@@ -1254,12 +1254,22 @@ class MountTag extends StatelessWidget {
   final String label;
   final bool primary;
 
+  static const _padding = 7.0;
+
+  static double widthOf(BuildContext context, String label) =>
+      EmojiText.widthOf(
+        context,
+        label,
+        AppTextStyle.caption2.of(context, emphasized: true),
+      ).ceilToDouble() +
+      _padding * 2;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     return Container(
       height: 18,
-      padding: const EdgeInsets.symmetric(horizontal: 7),
+      padding: const EdgeInsets.symmetric(horizontal: _padding),
       decoration: ShapeDecoration(
         color: primary
             ? colorScheme.primary.opacity15

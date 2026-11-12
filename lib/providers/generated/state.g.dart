@@ -1913,7 +1913,7 @@ final class CurrentGroupsStateProvider
 }
 
 String _$currentGroupsStateHash() =>
-    r'd4ea3c3271a77d8bd791f94c697cc94a41fff38f';
+    r'1806811e91a66cbb7593a58296356bf3b2f4b679';
 
 @ProviderFor(proxyState)
 final proxyStateProvider = ProxyStateProvider._();
