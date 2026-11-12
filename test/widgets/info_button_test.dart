@@ -1,4 +1,5 @@
 import 'package:fl_clash/widgets/info_button.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -67,5 +68,49 @@ void main() {
     final popover = popoverOf(tester);
     expect(popover.bottom, glyph.top - 8);
     expect(popover.left, glyph.left);
+  });
+
+  testWidgets('scrolls what the room cannot hold', (tester) async {
+    tester.view.physicalSize = const Size(400, 200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final long = List.filled(12, paragraph);
+    await tester.pumpWidget(
+      TestApp(
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: InfoButton(paragraphs: long, label: 'About'),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('About'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final scroll = find.byType(SingleChildScrollView);
+    expect(scroll, findsOneWidget);
+    expect(tester.getRect(scroll).bottom, lessThanOrEqualTo(200 - 8));
+    await tester.drag(scroll, const Offset(0, -100));
+    await tester.pumpAndSettle();
+    expect(
+      tester.state<ScrollableState>(find.byType(Scrollable)).position.pixels,
+      greaterThan(0),
+    );
+  });
+
+  testWidgets('gives focus back to the button once dismissed', (tester) async {
+    await pumpAt(tester, Alignment.topLeft);
+    expect(find.text(paragraph), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.text(paragraph), findsNothing);
+    final focused = FocusManager.instance.primaryFocus?.context;
+    expect(
+      focused?.findAncestorWidgetOfExactType<InfoButton>(),
+      isNotNull,
+      reason: 'focus went to ${focused?.widget}',
+    );
   });
 }

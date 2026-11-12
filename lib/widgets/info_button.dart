@@ -31,6 +31,8 @@ class InfoButton extends StatefulWidget {
 class _InfoButtonState extends State<InfoButton> {
   final _controller = OverlayPortalController();
   final _anchorKey = GlobalKey();
+  final _buttonFocus = FocusNode();
+  final _popoverFocus = FocusNode();
   ScrollPosition? _scroll;
 
   @override
@@ -46,12 +48,23 @@ class _InfoButtonState extends State<InfoButton> {
   @override
   void dispose() {
     _scroll?.removeListener(_hide);
+    _buttonFocus.dispose();
+    _popoverFocus.dispose();
     super.dispose();
   }
 
   void _hide() {
     if (_controller.isShowing) {
       _controller.hide();
+    }
+  }
+
+  // Only a keyboard dismissal: a tap outside gives focus to what it hit.
+  void _dismiss() {
+    final focused = _popoverFocus.hasFocus;
+    _hide();
+    if (focused) {
+      (_buttonFocus.descendants.firstOrNull ?? _buttonFocus).requestFocus();
     }
   }
 
@@ -99,9 +112,10 @@ class _InfoButtonState extends State<InfoButton> {
               groupId: this,
               onTapOutside: (_) => _hide(),
               child: _Popover(
+                focusNode: _popoverFocus,
                 label: label,
                 paragraphs: widget.paragraphs,
-                onDismiss: _hide,
+                onDismiss: _dismiss,
               ),
             ),
           );
@@ -110,28 +124,32 @@ class _InfoButtonState extends State<InfoButton> {
           key: _anchorKey,
           width: _buttonSize,
           // A title row shorter than the button would squeeze it into a pill.
-          child: OverflowBox(
-            fit: OverflowBoxFit.deferToChild,
-            minHeight: _buttonSize,
-            maxHeight: _buttonSize,
-            child: IconButton(
-              tooltip: label,
-              padding: EdgeInsets.zero,
-              iconSize: _glyphSize,
-              style: ButtonStyle.from(
-                minimumSize: const Size.square(_buttonSize),
-                fixedSize: const Size.square(_buttonSize),
-                tapTargetSize: TapTargetSize.shrinkWrap,
-                foregroundColor: color,
-                // The same quiet glyph on a card, a list or a bar.
-                backgroundColor: const Color(0x00000000),
-              ),
-              onPressed: _toggle,
-              icon: GlyphIcon(
-                AppGlyphs.info,
-                size: _glyphSize,
-                fill: 0,
-                color: color,
+          child: Focus(
+            focusNode: _buttonFocus,
+            skipTraversal: true,
+            child: OverflowBox(
+              fit: OverflowBoxFit.deferToChild,
+              minHeight: _buttonSize,
+              maxHeight: _buttonSize,
+              child: IconButton(
+                tooltip: label,
+                padding: EdgeInsets.zero,
+                iconSize: _glyphSize,
+                style: ButtonStyle.from(
+                  minimumSize: const Size.square(_buttonSize),
+                  fixedSize: const Size.square(_buttonSize),
+                  tapTargetSize: TapTargetSize.shrinkWrap,
+                  foregroundColor: color,
+                  // The same quiet glyph on a card, a list or a bar.
+                  backgroundColor: const Color(0x00000000),
+                ),
+                onPressed: _toggle,
+                icon: GlyphIcon(
+                  AppGlyphs.info,
+                  size: _glyphSize,
+                  fill: 0,
+                  color: color,
+                ),
               ),
             ),
           ),
@@ -200,11 +218,13 @@ class InfoPopoverLayout extends SingleChildLayoutDelegate {
 
 class _Popover extends StatelessWidget {
   const _Popover({
+    required this.focusNode,
     required this.label,
     required this.paragraphs,
     required this.onDismiss,
   });
 
+  final FocusNode focusNode;
   final String label;
   final List<String> paragraphs;
   final VoidCallback onDismiss;
@@ -216,6 +236,7 @@ class _Popover extends StatelessWidget {
     return CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): onDismiss},
       child: Focus(
+        focusNode: focusNode,
         autofocus: true,
         child: Semantics(
           container: true,
@@ -230,7 +251,7 @@ class _Popover extends StatelessWidget {
                 shape: shape,
                 shadows: menuShadows(colorScheme),
               ),
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
