@@ -236,6 +236,34 @@ class ListeningMixedPort extends _$ListeningMixedPort
   }
 }
 
+/// The inbounds the config last built asks for.
+@Riverpod(keepAlive: true)
+class BuiltInbounds extends _$BuiltInbounds with AutoDisposeNotifierMixin {
+  @override
+  Map<String, Object?> build() {
+    return const {};
+  }
+}
+
+/// The current profile's own settings, as the last build read them.
+@Riverpod(keepAlive: true)
+class ProfileSettings extends _$ProfileSettings with AutoDisposeNotifierMixin {
+  @override
+  Map<String, Object?>? build() {
+    return null;
+  }
+}
+
+/// The fields the config the Core runs takes from the profile.
+@Riverpod(keepAlive: true)
+class AppliedFollowKeys extends _$AppliedFollowKeys
+    with AutoDisposeNotifierMixin {
+  @override
+  Set<PageConfigKey> build() {
+    return const {};
+  }
+}
+
 /// What the running Android service was started with: it builds the tunnel
 /// once, so a later change waits for a restart.
 @Riverpod(keepAlive: true)

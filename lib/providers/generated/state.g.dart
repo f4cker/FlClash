@@ -48,7 +48,57 @@ final class UpdateParamsProvider
   }
 }
 
-String _$updateParamsHash() => r'1613b6a3bfcd12d659c60d1fa8289ea257d662b4';
+String _$updateParamsHash() => r'4a6ad62fe9e2cae23924d8ec9a1ec390ae2dd25b';
+
+/// The mixed port Flash points the system proxy at: the page's, or the
+/// profile's once the field follows it.
+
+@ProviderFor(effectiveMixedPort)
+final effectiveMixedPortProvider = EffectiveMixedPortProvider._();
+
+/// The mixed port Flash points the system proxy at: the page's, or the
+/// profile's once the field follows it.
+
+final class EffectiveMixedPortProvider
+    extends $FunctionalProvider<int, int, int>
+    with $Provider<int> {
+  /// The mixed port Flash points the system proxy at: the page's, or the
+  /// profile's once the field follows it.
+  EffectiveMixedPortProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'effectiveMixedPortProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$effectiveMixedPortHash();
+
+  @$internal
+  @override
+  $ProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  int create(Ref ref) {
+    return effectiveMixedPort(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int>(value),
+    );
+  }
+}
+
+String _$effectiveMixedPortHash() =>
+    r'cafdf5964d0631974db8a33fe92ca3144af693a9';
 
 @ProviderFor(coreOptions)
 final coreOptionsProvider = CoreOptionsProvider._();
@@ -220,7 +270,7 @@ final class TrayStateProvider
   }
 }
 
-String _$trayStateHash() => r'd4fe17e62e479ff316ab5deb11475b4ea533d0bb';
+String _$trayStateHash() => r'a8665e030888996ec1ae8984171bdda452b73736';
 
 /// Measured delays of the proxies the tray lists, by group and then proxy
 /// name. Resolved like a proxy card, so a nested group shows its selection.
@@ -1954,7 +2004,7 @@ final class ProxyStateProvider
   }
 }
 
-String _$proxyStateHash() => r'372370c5792849dddf9e65cb2ae2996e123787f9';
+String _$proxyStateHash() => r'3dad7dd86663424a7c447caa144eb54988ed1767';
 
 /// Watching the delay map instead would drop nodes one probe at a time, and
 /// reading it on any other rebuild would drop them whenever something

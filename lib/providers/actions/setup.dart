@@ -243,7 +243,7 @@ class SetupAction extends _$SetupAction {
     if (!_mixedListenerExpected) {
       return true;
     }
-    final port = ref.read(patchClashConfigProvider).mixedPort;
+    final port = ref.read(effectiveMixedPortProvider);
     if (port == 0) {
       return true;
     }
@@ -258,7 +258,7 @@ class SetupAction extends _$SetupAction {
       return true;
     }
     if (!_mixedListenerExpected ||
-        port != ref.read(patchClashConfigProvider).mixedPort) {
+        port != ref.read(effectiveMixedPortProvider)) {
       return true;
     }
     if (listening == port) {
@@ -302,6 +302,50 @@ class SetupAction extends _$SetupAction {
 
   @protected
   Future<int> listeningMixedPort() => _core.getListeningMixedPort();
+
+  @protected
+  Future<Map<String, Object?>> listeningPorts() => _core.getListeningPorts();
+
+  /// mihomo only logs an inbound it cannot open, so each one the built
+  /// config asks for, besides the mixed port, is checked against the Core.
+  @visibleForTesting
+  Future<void> checkInbounds() async {
+    if (!_mixedListenerExpected) {
+      return;
+    }
+    final requested = ref.read(builtInboundsProvider);
+    final Map<String, Object?> held;
+    try {
+      held = await listeningPorts();
+    } catch (error) {
+      commonPrint.log(
+        'inbound check failed: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+      return;
+    }
+    final appLocalizations = currentAppLocalizations;
+    final labels = {
+      PageConfigKey.port: 'port',
+      PageConfigKey.socksPort: appLocalizations.socksPort,
+      PageConfigKey.redirPort: appLocalizations.redirPort,
+      PageConfigKey.tproxyPort: appLocalizations.tproxyPort,
+    };
+    final messages = [
+      for (final MapEntry(:key, value: label) in labels.entries)
+        if (requested[key.path] case final int port
+            when port != 0 && held[key.path] != port)
+          appLocalizations.inboundNotListening(label, '$port'),
+      if (requested['tun.enable'] == true &&
+          held['tun'] != true &&
+          ref.read(authorizedTunEnableProvider) !=
+              TunAuthorizationState.authorized)
+        appLocalizations.tunMissingAuthorization,
+    ];
+    if (messages.isNotEmpty) {
+      dialogs.showBanner(messages.join('\n'), level: BannerLevel.warning);
+    }
+  }
 
   Future<void> _startCoreRunning(_RunRequest request) async {
     try {
@@ -427,7 +471,7 @@ class SetupAction extends _$SetupAction {
   Future<void> updateConfig() async {
     await globalState.safeRun(() async {
       final patchConfig = ref.read(patchClashConfigProvider);
-      final shouldContinueSetup = await requestAdmin(patchConfig.tun.enable);
+      final shouldContinueSetup = await requestAdmin(patchConfig.pageTunEnable);
       if (!shouldContinueSetup) {
         await _restartCoreAfterAuthorization();
         return;
@@ -437,6 +481,7 @@ class SetupAction extends _$SetupAction {
         _effectivePatchConfig(patchConfig).toUpdateParams(
           authentication: networkSetting.authentication.credentials,
           options: ref.read(coreOptionsProvider),
+          layered: patchConfig.pagePriority,
         ),
       );
       if (ref.read(isStartProvider)) {
@@ -622,6 +667,21 @@ class SetupAction extends _$SetupAction {
     if (hasScript) {
       rawConfig = await handleEvaluate(scriptContent!, rawConfig);
     }
+    if (profileId == ref.read(currentProfileIdProvider)) {
+      ref.read(profileSettingsProvider.notifier).value = Map.of(rawConfig);
+    }
+    if (!patchConfig.usesPage(
+          PageConfigKey.externalController,
+          layered: patchConfig.pagePriority,
+        ) &&
+        !ref.read(safeModeProvider) &&
+        exposesControllerWithoutSecret(rawConfig)) {
+      throw MessageException(
+        currentAppLocalizations.controllerExposedWithoutSecret(
+          '${rawConfig['external-controller']}',
+        ),
+      );
+    }
     final directory = await appPath.profilesPath;
     final injected = await _resolveInjectedProviders(
       setupState,
@@ -723,10 +783,9 @@ class SetupAction extends _$SetupAction {
   Future<String> getProfileWithId(int profileId) async {
     try {
       final setupState = await ref.read(setupStateProvider(profileId).future);
-      final patchClashConfig = ref.read(patchClashConfigProvider);
       final res = await getProfile(
         setupState: setupState,
-        patchConfig: patchClashConfig,
+        patchConfig: _effectivePatchConfig(ref.read(patchClashConfigProvider)),
       );
       // The viewer shows what the Core runs, so the mounts go in as they
       // do on apply.
@@ -768,6 +827,74 @@ class SetupAction extends _$SetupAction {
       dialogs.showBanner(e.toString(), level: BannerLevel.error);
     }
     return '';
+  }
+
+  var _pageSourcesOffered = false;
+
+  /// What page priority changes for [profileId], built three ways from the
+  /// same profile.
+  @visibleForTesting
+  Future<PagePriorityChanges> pagePriorityPreview(int profileId) async {
+    final setupState = await ref.read(setupStateProvider(profileId).future);
+    final current = _effectivePatchConfig(ref.read(patchClashConfigProvider));
+    Future<Map> build(PatchClashConfig patchConfig) async {
+      final built = await getProfile(
+        setupState: setupState,
+        patchConfig: patchConfig,
+      );
+      final config = loadYaml(built.yaml);
+      return config is Map ? config : const {};
+    }
+
+    return pagePriorityChanges(
+      legacy: await build(current.copyWith(pagePriority: false)),
+      page: await build(current.copyWith(pagePriority: true, followKeys: {})),
+      file: await build(
+        current.copyWith(
+          pagePriority: true,
+          followKeys: PageConfigKey.values.toSet(),
+        ),
+      ),
+    );
+  }
+
+  /// Until the user applies the sources the upgrade changes, the profile is
+  /// built as before; with nothing to change it moves over unasked.
+  Future<void> _offerPageSources(int profileId) async {
+    if (_pageSourcesOffered || ref.read(safeModeProvider)) {
+      return;
+    }
+    _pageSourcesOffered = true;
+    final changes = await globalState.safeRun(
+      () => pagePriorityPreview(profileId),
+      silence: true,
+    );
+    if (changes == null) {
+      _pageSourcesOffered = false;
+      return;
+    }
+    final follow = <PageConfigKey>{};
+    if (changes.pageRows.isNotEmpty || changes.hiddenRows.isNotEmpty) {
+      final appLocalizations = currentAppLocalizations;
+      final confirmed = await dialogs.showMessage(
+        title: appLocalizations.pageSourceTitle,
+        confirmText: appLocalizations.applyAction,
+        cancelText: appLocalizations.cancel,
+        dismissible: false,
+        body: PageSourceRows(changes: changes, choices: follow),
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+    ref
+        .read(patchClashConfigProvider.notifier)
+        .update(
+          (state) => state.copyWith(
+            pagePriority: true,
+            followKeys: {...state.followKeys, ...follow},
+          ),
+        );
   }
 
   /// Always asks the Core, so a profile without Flash's rules says so too.
@@ -947,7 +1074,10 @@ class SetupAction extends _$SetupAction {
     }
     commonPrint.log('setup ===> ${profile?.realLabel}');
     final patchConfig = ref.read(patchClashConfigProvider);
-    final shouldContinueSetup = await requestAdmin(patchConfig.tun.enable);
+    if (!patchConfig.pagePriority && profile != null) {
+      unawaited(_offerPageSources(profile.id));
+    }
+    final shouldContinueSetup = await requestAdmin(patchConfig.pageTunEnable);
     if (!shouldContinueSetup) {
       return _SetupTaskResult.handoffToCoreRestart;
     }
@@ -961,6 +1091,11 @@ class SetupAction extends _$SetupAction {
       return getProfile(setupState: state, patchConfig: realPatchConfig);
     }, title: 'build profile');
     final profileFailed = realProfile == null;
+    if (realProfile != null) {
+      ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(
+        realProfile.yaml,
+      );
+    }
     final setupParams = _setupParams.copyWith(
       base: realProfile?.base,
       mounts: setupState?.mounts,
@@ -1050,6 +1185,11 @@ class SetupAction extends _$SetupAction {
           rethrow;
         }
         globalState.lastConfigMd5 = yamlMd5;
+        ref
+            .read(appliedFollowKeysProvider.notifier)
+            .value = realPatchConfig.pagePriority
+            ? realPatchConfig.followKeys
+            : const {};
         globalState.lastConfigCounts =
             realProfile?.counts ?? configCountsOf(const {});
         _appliedInputs = inputs;
@@ -1070,6 +1210,11 @@ class SetupAction extends _$SetupAction {
     }
     if (setupFailed || profileFailed) {
       return _SetupTaskResult.failed;
+    }
+    if (ref.mounted &&
+        realPatchConfig.pagePriority &&
+        ref.read(isStartProvider)) {
+      unawaited(checkMixedListener().then((_) => checkInbounds()));
     }
     return _SetupTaskResult.completed;
   }

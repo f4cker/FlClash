@@ -53,6 +53,7 @@ enum CoreMethod {
   listenerStart('listener.start'),
   listenerStop('listener.stop'),
   listenerMixedPort('listener.mixedPort'),
+  listenerPorts('listener.ports'),
   routeWatch('route.watch'),
   routeCheck('route.check'),
   probeOutboundIp('probe.outboundIp'),

@@ -409,6 +409,15 @@ abstract class CoreHandlerInterface {
     );
   }
 
+  /// Each inbound port the Core holds, 0 for one it does not, and whether
+  /// its TUN is up.
+  Future<Map<String, Object?>> getListeningPorts() {
+    return _query(
+      CoreMethod.listenerPorts,
+      (data) => Map<String, Object?>.from(data as Map),
+    );
+  }
+
   Future<RouteSnapshot> watchRoute(bool watch) {
     return _query(
       CoreMethod.routeWatch,

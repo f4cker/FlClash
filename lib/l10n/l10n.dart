@@ -7743,7 +7743,8 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one:
+          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -13112,6 +13113,191 @@ class AppLocalizations {
       name: 'processLookupDisabled',
       desc: '',
       args: [],
+    );
+  }
+
+  /// `Confirm setting sources`
+  String get pageSourceTitle {
+    return Intl.message(
+      'Confirm setting sources',
+      name: 'pageSourceTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `These settings differ between the app and profile. Choose which source to use.`
+  String get pageSourceDesc {
+    return Intl.message(
+      'These settings differ between the app and profile. Choose which source to use.',
+      name: 'pageSourceDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `App: {pageValue} · Profile: {fileValue}`
+  String pageSourceCompare(Object pageValue, Object fileValue) {
+    return Intl.message(
+      'App: $pageValue · Profile: $fileValue',
+      name: 'pageSourceCompare',
+      desc: '',
+      args: [pageValue, fileValue],
+    );
+  }
+
+  /// `Keep in-app settings`
+  String get keepPageSetting {
+    return Intl.message(
+      'Keep in-app settings',
+      name: 'keepPageSetting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Follow base profile`
+  String get followBaseProfile {
+    return Intl.message(
+      'Follow base profile',
+      name: 'followBaseProfile',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Apply`
+  String get applyAction {
+    return Intl.message('Apply', name: 'applyAction', desc: '', args: []);
+  }
+
+  /// `Not set`
+  String get notSet {
+    return Intl.message('Not set', name: 'notSet', desc: '', args: []);
+  }
+
+  /// `Not set; default {defaultValue}`
+  String notSetDefault(Object defaultValue) {
+    return Intl.message(
+      'Not set; default $defaultValue',
+      name: 'notSetDefault',
+      desc: '',
+      args: [defaultValue],
+    );
+  }
+
+  /// `{field}: {oldValue} → {newValue}`
+  String pageSourceChange(Object field, Object oldValue, Object newValue) {
+    return Intl.message(
+      '$field: $oldValue → $newValue',
+      name: 'pageSourceChange',
+      desc: '',
+      args: [field, oldValue, newValue],
+    );
+  }
+
+  /// `In-app settings`
+  String get sourcePage {
+    return Intl.message(
+      'In-app settings',
+      name: 'sourcePage',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Base profile`
+  String get sourceBase {
+    return Intl.message('Base profile', name: 'sourceBase', desc: '', args: []);
+  }
+
+  /// `Default`
+  String get sourceDefault {
+    return Intl.message('Default', name: 'sourceDefault', desc: '', args: []);
+  }
+
+  /// `Not yet applied`
+  String get notYetApplied {
+    return Intl.message(
+      'Not yet applied',
+      name: 'notYetApplied',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Debug`
+  String get logLevelDebug {
+    return Intl.message('Debug', name: 'logLevelDebug', desc: '', args: []);
+  }
+
+  /// `Info`
+  String get logLevelInfo {
+    return Intl.message('Info', name: 'logLevelInfo', desc: '', args: []);
+  }
+
+  /// `Warning`
+  String get logLevelWarning {
+    return Intl.message('Warning', name: 'logLevelWarning', desc: '', args: []);
+  }
+
+  /// `Error`
+  String get logLevelError {
+    return Intl.message('Error', name: 'logLevelError', desc: '', args: []);
+  }
+
+  /// `Silent`
+  String get logLevelSilent {
+    return Intl.message('Silent', name: 'logLevelSilent', desc: '', args: []);
+  }
+
+  /// `Always`
+  String get findProcessAlways {
+    return Intl.message(
+      'Always',
+      name: 'findProcessAlways',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Off`
+  String get findProcessOff {
+    return Intl.message('Off', name: 'findProcessOff', desc: '', args: []);
+  }
+
+  /// `Auto`
+  String get findProcessStrict {
+    return Intl.message('Auto', name: 'findProcessStrict', desc: '', args: []);
+  }
+
+  /// `Missing system authorization; TUN did not start`
+  String get tunMissingAuthorization {
+    return Intl.message(
+      'Missing system authorization; TUN did not start',
+      name: 'tunMissingAuthorization',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{field} {port} is not listening; this inbound did not start.`
+  String inboundNotListening(Object field, Object port) {
+    return Intl.message(
+      '$field $port is not listening; this inbound did not start.',
+      name: 'inboundNotListening',
+      desc: '',
+      args: [field, port],
+    );
+  }
+
+  /// `The external controller {address} is open beyond this Mac without a secret, so this config was not applied.`
+  String controllerExposedWithoutSecret(Object address) {
+    return Intl.message(
+      'The external controller $address is open beyond this Mac without a secret, so this config was not applied.',
+      name: 'controllerExposedWithoutSecret',
+      desc: '',
+      args: [address],
     );
   }
 }

@@ -11,9 +11,34 @@ UpdateParams updateParams(Ref ref) {
       (state) => state.toUpdateParams(
         authentication: authentication.credentials,
         options: options,
+        layered: state.pagePriority,
       ),
     ),
   );
+}
+
+/// The mixed port Flash points the system proxy at: the page's, or the
+/// profile's once the field follows it.
+@riverpod
+int effectiveMixedPort(Ref ref) {
+  final (:follows, :page) = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => (
+        follows: !state.usesPage(
+          PageConfigKey.mixedPort,
+          layered: state.pagePriority,
+        ),
+        page: state.mixedPort,
+      ),
+    ),
+  );
+  if (!follows) {
+    return page;
+  }
+  return switch (ref.watch(builtInboundsProvider)['mixed-port']) {
+    final int port => port,
+    _ => 0,
+  };
 }
 
 @riverpod
@@ -66,11 +91,7 @@ TrayState trayState(Ref ref) {
   );
   final clashConfig = ref.watch(
     patchClashConfigProvider.select(
-      (state) => (
-        mode: state.mode,
-        mixedPort: state.mixedPort,
-        tunEnable: state.tun.enable,
-      ),
+      (state) => (mode: state.mode, tunEnable: state.tun.enable),
     ),
   );
   final appSetting = ref.watch(
@@ -90,7 +111,7 @@ TrayState trayState(Ref ref) {
 
   return TrayState(
     mode: clashConfig.mode,
-    port: clashConfig.mixedPort,
+    port: ref.watch(effectiveMixedPortProvider),
     autoLaunch: appSetting.autoLaunch,
     systemProxy: systemProxy,
     tunEnable: clashConfig.tunEnable,

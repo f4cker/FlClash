@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -33,6 +34,23 @@ class NetworkSetting extends _$NetworkSetting with AutoDisposeNotifierMixin {
   @override
   NetworkProps build() {
     return const NetworkProps();
+  }
+
+  @override
+  void update(NetworkProps Function(NetworkProps) builder) {
+    final previous = value;
+    super.update(builder);
+    if (previous.authentication != value.authentication) {
+      ref
+          .read(patchClashConfigProvider.notifier)
+          .update(
+            (state) => state.copyWith(
+              followKeys: state.followKeys.difference({
+                PageConfigKey.authentication,
+              }),
+            ),
+          );
+    }
   }
 }
 
@@ -84,6 +102,12 @@ class _PatchClashConfig extends _$PatchClashConfig
   @override
   PatchClashConfig build() {
     return const PatchClashConfig();
+  }
+
+  /// Moving a control again makes its field a page setting again.
+  @override
+  void update(PatchClashConfig Function(PatchClashConfig) builder) {
+    super.update((state) => state.reclaimMoved(builder(state)));
   }
 }
 

@@ -24,6 +24,7 @@ class LogLevelItem extends ConsumerWidget {
       title: (l) => l.logLevel,
       options: LogLevel.values,
       textBuilder: (logLevel) => logLevel.name,
+      pageKey: PageConfigKey.logLevel,
       selector: patchClashConfigProvider.select((state) => state.logLevel),
       onChanged: (ref, value) => ref
           .read(patchClashConfigProvider.notifier)
@@ -214,9 +215,11 @@ ConfigToggleItem _clashToggle({
   required ConfigLabel title,
   required bool Function(PatchClashConfig state) select,
   required PatchClashConfig Function(PatchClashConfig state, bool value) update,
+  PageConfigKey? pageKey,
 }) {
   return ConfigToggleItem(
     title: title,
+    pageKey: pageKey,
     selector: patchClashConfigProvider.select(select),
     onChanged: (ref, value) => ref
         .read(patchClashConfigProvider.notifier)
@@ -293,11 +296,13 @@ class GeneralView extends ConsumerWidget {
       const PortItem(),
       _clashToggle(
         title: (l) => l.allowLan,
+        pageKey: PageConfigKey.allowLan,
         select: (state) => state.allowLan,
         update: (state, value) => state.copyWith(allowLan: value),
       ),
       _clashToggle(
         title: (l) => l.externalController,
+        pageKey: PageConfigKey.externalController,
         select: (state) =>
             state.externalController == ExternalControllerStatus.open,
         update: (state, value) => state
@@ -322,6 +327,7 @@ class GeneralView extends ConsumerWidget {
       const DelayTestTimeoutItem(),
       _clashToggle(
         title: (l) => l.findProcessMode,
+        pageKey: PageConfigKey.findProcessMode,
         select: (state) => state.findProcessMode == FindProcessMode.always,
         update: (state, value) => state.copyWith(
           findProcessMode: value ? FindProcessMode.always : FindProcessMode.off,

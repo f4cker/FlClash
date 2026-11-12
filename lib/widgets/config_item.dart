@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/ui/list_item.dart';
+import 'package:fl_clash/widgets/page_source_rows.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod/misc.dart' show ProviderListenable;
@@ -87,6 +89,7 @@ abstract class _ConfigItem<T> extends ConsumerWidget {
     required this.onChanged,
     this.subtitle,
     this.leading,
+    this.pageKey,
   });
 
   final ProviderListenable<T> selector;
@@ -94,6 +97,9 @@ abstract class _ConfigItem<T> extends ConsumerWidget {
   final ConfigLabel? subtitle;
   final ConfigWriter<T> onChanged;
   final Widget? leading;
+
+  /// The profile field this control sets, whose source the row shows.
+  final PageConfigKey? pageKey;
 
   Widget buildItem(
     BuildContext context,
@@ -110,7 +116,19 @@ abstract class _ConfigItem<T> extends ConsumerWidget {
 
   Widget? buildSubtitle(AppLocalizations appLocalizations) {
     final subtitle = this.subtitle;
-    return subtitle == null ? null : Text(subtitle(appLocalizations));
+    final text = subtitle == null ? null : Text(subtitle(appLocalizations));
+    final pageKey = this.pageKey;
+    if (pageKey == null) {
+      return text;
+    }
+    final note = PageSourceNote(pageKey: pageKey);
+    if (text == null) {
+      return note;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [text, note],
+    );
   }
 }
 
@@ -121,6 +139,7 @@ class ConfigToggleItem extends _ConfigItem<bool> {
     required super.title,
     required super.onChanged,
     super.leading,
+    super.pageKey,
   });
 
   @override
@@ -133,6 +152,7 @@ class ConfigToggleItem extends _ConfigItem<bool> {
     return ListItem.toggle(
       leading: leading,
       title: Text(title(appLocalizations)),
+      subtitle: buildSubtitle(appLocalizations),
       value: value,
       onChanged: (value) => onChanged(ref, value),
     );
@@ -149,6 +169,7 @@ class ConfigOptionsItem<T> extends _ConfigItem<T> {
     required this.textBuilder,
     super.subtitle,
     super.leading,
+    super.pageKey,
   });
 
   final List<T> options;
