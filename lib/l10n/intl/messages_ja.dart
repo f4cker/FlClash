@@ -484,6 +484,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "app": MessageLookupByLibrary.simpleMessage("アプリ"),
     "appAccessControl": MessageLookupByLibrary.simpleMessage("アプリアクセス制御"),
     "appIconDesign": MessageLookupByLibrary.simpleMessage("アプリアイコンのデザイン"),
+    "appInfoUnreadable": MessageLookupByLibrary.simpleMessage(
+      "Could not read app information",
+    ),
     "appProxiesEmpty": MessageLookupByLibrary.simpleMessage("ローカルプロキシがありません"),
     "appendSystemDns": MessageLookupByLibrary.simpleMessage("システムDNSを追加"),
     "applied": MessageLookupByLibrary.simpleMessage("適用しました"),
@@ -639,6 +642,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "copyEnvVar": MessageLookupByLibrary.simpleMessage("環境変数をコピー"),
     "copyHost": MessageLookupByLibrary.simpleMessage("ホストをコピー"),
     "copyLink": MessageLookupByLibrary.simpleMessage("リンクをコピー"),
+    "copyPath": MessageLookupByLibrary.simpleMessage("Copy path"),
     "copyRequest": MessageLookupByLibrary.simpleMessage("リクエストをコピー"),
     "copyResponse": MessageLookupByLibrary.simpleMessage("レスポンスをコピー"),
     "copyResponseBody": MessageLookupByLibrary.simpleMessage("レスポンス本文をコピー"),
@@ -911,6 +915,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "ファイルが変更されています。変更を保存しますか？",
     ),
     "filter": MessageLookupByLibrary.simpleMessage("フィルター"),
+    "filterByThisApp": MessageLookupByLibrary.simpleMessage(
+      "Filter by this app",
+    ),
+    "filterByThisProcess": MessageLookupByLibrary.simpleMessage(
+      "Filter by this process",
+    ),
     "filters": MessageLookupByLibrary.simpleMessage("フィルター"),
     "findProcessMode": MessageLookupByLibrary.simpleMessage("プロセス検出"),
     "floating": MessageLookupByLibrary.simpleMessage("フローティング"),
@@ -1727,6 +1737,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "originalUrl": MessageLookupByLibrary.simpleMessage("元の URL"),
     "other": MessageLookupByLibrary.simpleMessage("その他"),
     "otherContributors": MessageLookupByLibrary.simpleMessage("その他の貢献者"),
+    "otherDevice": MessageLookupByLibrary.simpleMessage("Other device"),
     "outbound": MessageLookupByLibrary.simpleMessage("アウトバウンド"),
     "outboundExit": MessageLookupByLibrary.simpleMessage("出口"),
     "outboundIp": MessageLookupByLibrary.simpleMessage("アウトバウンド IP"),
@@ -1769,6 +1780,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "privateKey": MessageLookupByLibrary.simpleMessage("秘密鍵"),
     "privateKeyPassphrase": MessageLookupByLibrary.simpleMessage("秘密鍵のパスフレーズ"),
     "process": MessageLookupByLibrary.simpleMessage("プロセス"),
+    "processFromOtherDevice": MessageLookupByLibrary.simpleMessage(
+      "This connection is from another device. Its process information cannot be obtained on this Mac.",
+    ),
+    "processInfoUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Process information is unavailable.",
+    ),
+    "processLookupDisabled": MessageLookupByLibrary.simpleMessage(
+      "Process lookup is currently disabled.",
+    ),
+    "processPath": MessageLookupByLibrary.simpleMessage("Process path"),
+    "processUnavailable": MessageLookupByLibrary.simpleMessage("Unavailable"),
     "profile": MessageLookupByLibrary.simpleMessage("プロファイル"),
     "profileAutoUpdateIntervalInvalidValidationDesc":
         MessageLookupByLibrary.simpleMessage("有効な間隔を入力してください"),
@@ -2872,6 +2894,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "unifiedDelay": MessageLookupByLibrary.simpleMessage("統一遅延"),
     "unknown": MessageLookupByLibrary.simpleMessage("不明"),
     "unknownNetworkError": MessageLookupByLibrary.simpleMessage("不明なネットワークエラー"),
+    "unknownProcess": MessageLookupByLibrary.simpleMessage("Unknown process"),
     "unmaximize": MessageLookupByLibrary.simpleMessage("元に戻す"),
     "unnamed": MessageLookupByLibrary.simpleMessage("名称未設定"),
     "unpinWindow": MessageLookupByLibrary.simpleMessage("固定を解除"),

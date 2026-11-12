@@ -539,6 +539,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "appIconDesign": MessageLookupByLibrary.simpleMessage(
       "Дизайн значка приложения",
     ),
+    "appInfoUnreadable": MessageLookupByLibrary.simpleMessage(
+      "Could not read app information",
+    ),
     "appProxiesEmpty": MessageLookupByLibrary.simpleMessage(
       "Нет локальных прокси",
     ),
@@ -748,6 +751,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "copyHost": MessageLookupByLibrary.simpleMessage("Копировать хост"),
     "copyLink": MessageLookupByLibrary.simpleMessage("Копировать ссылку"),
+    "copyPath": MessageLookupByLibrary.simpleMessage("Copy path"),
     "copyRequest": MessageLookupByLibrary.simpleMessage("Копировать запрос"),
     "copyResponse": MessageLookupByLibrary.simpleMessage("Копировать ответ"),
     "copyResponseBody": MessageLookupByLibrary.simpleMessage(
@@ -1086,6 +1090,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "Файл изменён. Сохранить изменения?",
     ),
     "filter": MessageLookupByLibrary.simpleMessage("Фильтр"),
+    "filterByThisApp": MessageLookupByLibrary.simpleMessage(
+      "Filter by this app",
+    ),
+    "filterByThisProcess": MessageLookupByLibrary.simpleMessage(
+      "Filter by this process",
+    ),
     "filters": MessageLookupByLibrary.simpleMessage("Фильтры"),
     "findProcessMode": MessageLookupByLibrary.simpleMessage("Поиск процесса"),
     "floating": MessageLookupByLibrary.simpleMessage("Плавающая"),
@@ -2014,6 +2024,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "otherContributors": MessageLookupByLibrary.simpleMessage(
       "Другие участники",
     ),
+    "otherDevice": MessageLookupByLibrary.simpleMessage("Other device"),
     "outbound": MessageLookupByLibrary.simpleMessage("Исходящие"),
     "outboundExit": MessageLookupByLibrary.simpleMessage("Выход"),
     "outboundIp": MessageLookupByLibrary.simpleMessage("Исходящий IP"),
@@ -2078,6 +2089,17 @@ class MessageLookup extends MessageLookupByLibrary {
       "Пароль закрытого ключа",
     ),
     "process": MessageLookupByLibrary.simpleMessage("Процесс"),
+    "processFromOtherDevice": MessageLookupByLibrary.simpleMessage(
+      "This connection is from another device. Its process information cannot be obtained on this Mac.",
+    ),
+    "processInfoUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Process information is unavailable.",
+    ),
+    "processLookupDisabled": MessageLookupByLibrary.simpleMessage(
+      "Process lookup is currently disabled.",
+    ),
+    "processPath": MessageLookupByLibrary.simpleMessage("Process path"),
+    "processUnavailable": MessageLookupByLibrary.simpleMessage("Unavailable"),
     "profile": MessageLookupByLibrary.simpleMessage("Профиль"),
     "profileAutoUpdateIntervalInvalidValidationDesc":
         MessageLookupByLibrary.simpleMessage("Введите корректный интервал"),
@@ -3285,6 +3307,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "unknownNetworkError": MessageLookupByLibrary.simpleMessage(
       "Неизвестная сетевая ошибка",
     ),
+    "unknownProcess": MessageLookupByLibrary.simpleMessage("Unknown process"),
     "unmaximize": MessageLookupByLibrary.simpleMessage("Свернуть в окно"),
     "unnamed": MessageLookupByLibrary.simpleMessage("Без названия"),
     "unpinWindow": MessageLookupByLibrary.simpleMessage("Открепить окно"),

@@ -12984,6 +12984,111 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Process path`
+  String get processPath {
+    return Intl.message(
+      'Process path',
+      name: 'processPath',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Copy path`
+  String get copyPath {
+    return Intl.message('Copy path', name: 'copyPath', desc: '', args: []);
+  }
+
+  /// `Filter by this app`
+  String get filterByThisApp {
+    return Intl.message(
+      'Filter by this app',
+      name: 'filterByThisApp',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Filter by this process`
+  String get filterByThisProcess {
+    return Intl.message(
+      'Filter by this process',
+      name: 'filterByThisProcess',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unknown process`
+  String get unknownProcess {
+    return Intl.message(
+      'Unknown process',
+      name: 'unknownProcess',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Other device`
+  String get otherDevice {
+    return Intl.message(
+      'Other device',
+      name: 'otherDevice',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Process information is unavailable.`
+  String get processInfoUnavailable {
+    return Intl.message(
+      'Process information is unavailable.',
+      name: 'processInfoUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unavailable`
+  String get processUnavailable {
+    return Intl.message(
+      'Unavailable',
+      name: 'processUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This connection is from another device. Its process information cannot be obtained on this Mac.`
+  String get processFromOtherDevice {
+    return Intl.message(
+      'This connection is from another device. Its process information cannot be obtained on this Mac.',
+      name: 'processFromOtherDevice',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not read app information`
+  String get appInfoUnreadable {
+    return Intl.message(
+      'Could not read app information',
+      name: 'appInfoUnreadable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Process lookup is currently disabled.`
+  String get processLookupDisabled {
+    return Intl.message(
+      'Process lookup is currently disabled.',
+      name: 'processLookupDisabled',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {
