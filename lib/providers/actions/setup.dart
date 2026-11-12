@@ -164,6 +164,9 @@ class SetupAction extends _$SetupAction {
         loopbackTestBuild &&
             Platform.environment['LOOPBACK_TEST_AUTOSTART'] == '1') {
       await setRunning(true, initialize: true);
+      if (Platform.environment['MOUNTCHECK_SCRIPT'] == '1') {
+        unawaited(runMountCheck(ref));
+      }
     } else {
       await globalState.safeRun(() => applyProfile(force: true));
     }

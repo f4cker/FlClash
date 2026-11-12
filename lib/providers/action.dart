@@ -29,6 +29,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 part 'actions/common.dart';
 part 'actions/setup.dart';
+part 'actions/mountcheck.dart';
 part 'actions/backup.dart';
 part 'actions/core.dart';
 part 'actions/system.dart';
