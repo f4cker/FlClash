@@ -81,6 +81,7 @@ class TUNItem extends ConsumerWidget {
   Widget build(BuildContext context, ref) {
     return ConfigToggleItem(
       title: (l) => l.tun,
+      pageKey: PageConfigKey.tunEnable,
       selector: patchClashConfigProvider.select((state) => state.tun.enable),
       onChanged: _tunWriter(
         (state, value) => state.copyWith.tun(enable: value),
@@ -176,6 +177,7 @@ class TunStackItem extends ConsumerWidget {
       title: (l) => l.stackMode,
       options: TunStack.values,
       textBuilder: (stack) => stack.name,
+      pageKey: PageConfigKey.tunStack,
       selector: patchClashConfigProvider.select((state) => state.tun.stack),
       onChanged: _tunWriter((state, value) => state.copyWith.tun(stack: value)),
     );
@@ -297,8 +299,10 @@ class _NumberItem extends ConsumerWidget {
     this.isSeconds = false,
     this.min = 0,
     this.max = _maxUint32,
+    this.pageKey,
   });
 
+  final PageConfigKey? pageKey;
   final ConfigLabel title;
   final int Function(PatchClashConfig state) select;
   final _TunUpdate<int> update;
@@ -313,9 +317,17 @@ class _NumberItem extends ConsumerWidget {
     final value = ref.watch(patchClashConfigProvider.select(select));
     return ListItem.input(
       title: Text(label),
-      subtitle: Text(
-        isSeconds ? appLocalizations.secondsCount(value) : '$value',
-      ),
+      subtitle: switch (pageKey) {
+        final pageKey? => PageSourceNote(
+          pageKey: pageKey,
+          pageValue: isSeconds
+              ? appLocalizations.secondsCount(value)
+              : '$value',
+        ),
+        null => Text(
+          isSeconds ? appLocalizations.secondsCount(value) : '$value',
+        ),
+      },
       dialogTitle: label,
       value: '$value',
       resetValue: '${select(defaultClashConfig)}',
@@ -423,6 +435,7 @@ List<Widget> outboundItems({required bool isDesktop, required bool isLinux}) {
     if (isDesktop) ...[
       ConfigToggleItem(
         title: (l) => l.disableKeepAlive,
+        pageKey: PageConfigKey.disableKeepAlive,
         selector: patchClashConfigProvider.select(
           (state) => state.disableKeepAlive,
         ),
@@ -432,12 +445,14 @@ List<Widget> outboundItems({required bool isDesktop, required bool isLinux}) {
       ),
       _NumberItem(
         title: (l) => l.keepAliveIdle,
+        pageKey: PageConfigKey.keepAliveIdle,
         isSeconds: true,
         select: (state) => state.keepAliveIdle,
         update: (state, value) => state.copyWith(keepAliveIdle: value),
       ),
       _NumberItem(
         title: (l) => l.keepAliveIntervalDesc,
+        pageKey: PageConfigKey.keepAliveInterval,
         isSeconds: true,
         select: (state) => state.keepAliveInterval,
         update: (state, value) => state.copyWith(keepAliveInterval: value),

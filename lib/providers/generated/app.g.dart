@@ -930,6 +930,184 @@ abstract class _$ListeningMixedPort extends $Notifier<int?> {
   }
 }
 
+/// The inbound settings of the config last built, as the file and page
+/// together set them.
+
+@ProviderFor(BuiltInbounds)
+final builtInboundsProvider = BuiltInboundsProvider._();
+
+/// The inbound settings of the config last built, as the file and page
+/// together set them.
+final class BuiltInboundsProvider
+    extends $NotifierProvider<BuiltInbounds, Map<String, Object?>> {
+  /// The inbound settings of the config last built, as the file and page
+  /// together set them.
+  BuiltInboundsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'builtInboundsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$builtInboundsHash();
+
+  @$internal
+  @override
+  BuiltInbounds create() => BuiltInbounds();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<String, Object?> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<String, Object?>>(value),
+    );
+  }
+}
+
+String _$builtInboundsHash() => r'37154b622856783929fcb863fbe655b7527f4813';
+
+/// The inbound settings of the config last built, as the file and page
+/// together set them.
+
+abstract class _$BuiltInbounds extends $Notifier<Map<String, Object?>> {
+  Map<String, Object?> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<Map<String, Object?>, Map<String, Object?>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Map<String, Object?>, Map<String, Object?>>,
+              Map<String, Object?>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// The current profile's own settings, as the last build read them.
+
+@ProviderFor(ProfileSettings)
+final profileSettingsProvider = ProfileSettingsProvider._();
+
+/// The current profile's own settings, as the last build read them.
+final class ProfileSettingsProvider
+    extends $NotifierProvider<ProfileSettings, Map<String, Object?>?> {
+  /// The current profile's own settings, as the last build read them.
+  ProfileSettingsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'profileSettingsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileSettingsHash();
+
+  @$internal
+  @override
+  ProfileSettings create() => ProfileSettings();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<String, Object?>? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<String, Object?>?>(value),
+    );
+  }
+}
+
+String _$profileSettingsHash() => r'068f18d65ed3b97c1b5aab3802d1091470450240';
+
+/// The current profile's own settings, as the last build read them.
+
+abstract class _$ProfileSettings extends $Notifier<Map<String, Object?>?> {
+  Map<String, Object?>? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<Map<String, Object?>?, Map<String, Object?>?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Map<String, Object?>?, Map<String, Object?>?>,
+              Map<String, Object?>?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// The fields the config the Core runs takes from the profile.
+
+@ProviderFor(AppliedFollowKeys)
+final appliedFollowKeysProvider = AppliedFollowKeysProvider._();
+
+/// The fields the config the Core runs takes from the profile.
+final class AppliedFollowKeysProvider
+    extends $NotifierProvider<AppliedFollowKeys, Set<PageConfigKey>> {
+  /// The fields the config the Core runs takes from the profile.
+  AppliedFollowKeysProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appliedFollowKeysProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appliedFollowKeysHash();
+
+  @$internal
+  @override
+  AppliedFollowKeys create() => AppliedFollowKeys();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Set<PageConfigKey> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Set<PageConfigKey>>(value),
+    );
+  }
+}
+
+String _$appliedFollowKeysHash() => r'a7412c3f5b5c9438ec9ce0a51ead38a2e3dc9967';
+
+/// The fields the config the Core runs takes from the profile.
+
+abstract class _$AppliedFollowKeys extends $Notifier<Set<PageConfigKey>> {
+  Set<PageConfigKey> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<Set<PageConfigKey>, Set<PageConfigKey>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Set<PageConfigKey>, Set<PageConfigKey>>,
+              Set<PageConfigKey>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// What the running Android service was started with: it builds the tunnel
 /// once, so a later change waits for a restart.
 
