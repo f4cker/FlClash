@@ -154,6 +154,59 @@ func TestHandleBuildProfileWritesTheMergedConfigWhereTheHostReadsSpills(t *testi
 	}
 }
 
+// The runtime config viewer reads what the Core runs: built on a base or
+// from a whole profile the host built, the mounts are in it as on apply.
+func TestHandleBuildProfileHoldsTheMountsTheCoreRuns(t *testing.T) {
+	home := withSpillHome(t, responseSpillThreshold)
+	const profile = `proxies:
+  - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
+proxy-groups:
+  - {name: Main, type: select, proxies: [base]}
+  - {name: Auto, type: url-test, include-all: true, filter: "us"}
+rules:
+  - MATCH,Main
+`
+	source := writeMountFile(t, home, "1.yaml", mountSourceB)
+	mounts := &MountSetup{Target: 1, Revision: "r", Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
+	path := writeBaseProfile(t, profile)
+	for name, params := range map[string]*BuildProfileParams{
+		"on a base":       {SetupBase: SetupBase{Path: path, Overlay: "{}"}, Mounts: mounts},
+		"from the config": {Config: profile, Mounts: mounts},
+	} {
+		built, err := handleBuildProfile(params)
+		if err != nil {
+			t.Fatalf("%s: handleBuildProfile = %v", name, err)
+		}
+		cfg, err := loadConfig(built)
+		if err != nil {
+			t.Fatalf("%s: loadConfig(built) = %v", name, err)
+		}
+		if _, ok := cfg.Providers[mountProviderName(1)]; !ok {
+			t.Errorf("%s: providers = %v, want the mount provider", name, sortedKeys(cfg.Providers))
+		}
+		for _, pd := range cfg.Providers {
+			_ = pd.Initial()
+		}
+		for group, want := range map[string][]string{"Main": {"base", "shared", "us"}, "Auto": {"us"}} {
+			if got := memberNames(t, cfg, group); !reflect.DeepEqual(got, want) {
+				t.Errorf("%s: %s = %v, want %v", name, group, got, want)
+			}
+		}
+		for _, pd := range cfg.Providers {
+			if closer, ok := pd.(interface{ Close() error }); ok {
+				_ = closer.Close()
+			}
+		}
+	}
+	plain, err := handleBuildProfile(&BuildProfileParams{SetupBase: SetupBase{Path: path, Overlay: "{}"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if buf, _ := os.ReadFile(plain); strings.Contains(string(buf), mountProviderPrefix) {
+		t.Error("a build without mounts holds a mount provider")
+	}
+}
+
 func TestLoadConfigWithBasePutsTheAddedRulesFirstAndTheOverlayOverTheRest(t *testing.T) {
 	path := writeBaseProfile(t, baseProfile)
 	base, err := handleGetProfileBase(PathParams{Path: path})

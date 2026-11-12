@@ -198,8 +198,18 @@ extension type CoreController._(CoreHandlerInterface _interface)
     );
   }
 
-  Future<String> buildProfile(SetupBase base) async {
-    return readSpilledText(await _interface.buildProfile(base));
+  Future<String> buildProfile({
+    SetupBase? base,
+    String? config,
+    MountSetup? mounts,
+  }) async {
+    return readSpilledText(
+      await _interface.buildProfile(
+        base: base,
+        config: config,
+        mounts: mounts,
+      ),
+    );
   }
 
   Future<({ProfileBase base, String path})> getProfileBase(int id) async {

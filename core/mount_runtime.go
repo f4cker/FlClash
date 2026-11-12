@@ -165,6 +165,10 @@ func mountedDocument(base *SetupBase, configPath string, mounts *MountSetup) (*y
 	if err != nil {
 		return nil, nil, err
 	}
+	return mountedConfigDocument(buf, mounts)
+}
+
+func mountedConfigDocument(buf []byte, mounts *MountSetup) (*yaml.Node, *MountReport, error) {
 	var document yaml.Node
 	if err := yaml.Unmarshal(buf, &document); err != nil {
 		return nil, nil, err
@@ -173,9 +177,11 @@ func mountedDocument(base *SetupBase, configPath string, mounts *MountSetup) (*y
 	if err != nil {
 		return nil, nil, err
 	}
-	report, err := applyMountOverrides(root, mounts)
-	if err != nil {
-		return nil, nil, err
+	var report *MountReport
+	if mounts != nil {
+		if report, err = applyMountOverrides(root, mounts); err != nil {
+			return nil, nil, err
+		}
 	}
 	return &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{root}}, report, nil
 }

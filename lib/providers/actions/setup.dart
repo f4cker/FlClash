@@ -728,8 +728,15 @@ class SetupAction extends _$SetupAction {
         setupState: setupState,
         patchConfig: patchClashConfig,
       );
+      // The viewer shows what the Core runs, so the mounts go in as they
+      // do on apply.
+      final mounts = setupState.mounts;
       return switch (res.base) {
-        final base? => await _core.buildProfile(base),
+        final base? => await _core.buildProfile(base: base, mounts: mounts),
+        null when mounts != null => await _core.buildProfile(
+          config: res.yaml,
+          mounts: mounts,
+        ),
         null => res.yaml,
       };
     } catch (e) {

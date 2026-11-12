@@ -76,7 +76,17 @@ func outboundsOf(mappings []map[string]any) []ProfileOutbound {
 // and never decodes it.
 func handleBuildProfile(params *BuildProfileParams) (string, error) {
 	defer scheduleLoadMemoryRelease()
-	document, _, err := mergeProfileBase(&params.SetupBase, false, params.Mounts)
+	var mounts *MountSetup
+	if params.Mounts != nil {
+		mounts = preflightMountSetup(params.Mounts)
+	}
+	var document *yaml.Node
+	var err error
+	if params.Path == "" {
+		document, _, err = mountedConfigDocument([]byte(params.Config), mounts)
+	} else {
+		document, _, err = mergeProfileBase(&params.SetupBase, false, mounts)
+	}
 	if err != nil {
 		return "", err
 	}

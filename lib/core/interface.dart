@@ -150,11 +150,21 @@ abstract class CoreHandlerInterface {
     );
   }
 
-  Future<String> buildProfile(SetupBase base) {
+  /// The profile as the Core runs it, mounts included: built on [base], or
+  /// from [config] for a profile the host built whole.
+  Future<String> buildProfile({
+    SetupBase? base,
+    String? config,
+    MountSetup? mounts,
+  }) {
     return _query(
       CoreMethod.profileBuild,
       _cast<String>,
-      arguments: base.toJson(),
+      arguments: {
+        ...?base?.toJson(),
+        'config': ?config,
+        'mounts': ?mounts?.toJson(),
+      },
     );
   }
 

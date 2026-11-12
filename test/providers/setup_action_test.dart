@@ -1962,7 +1962,13 @@ void main() {
       final built = File(
         join(await appPath.homeDirPath, coreSpillDirectoryName, 'p.yaml'),
       );
-      when(() => core.buildProfile(any())).thenAnswer((_) async {
+      when(
+        () => core.buildProfile(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          mounts: any(named: 'mounts'),
+        ),
+      ).thenAnswer((_) async {
         await built.create(recursive: true);
         await built.writeAsString('proxies: []\n');
         return built.path;
@@ -1987,6 +1993,59 @@ void main() {
       verifyNever(() => core.readConfig(any()));
       expect(yaml, 'proxies: []\n');
       expect(built.existsSync(), isFalse);
+    });
+
+    test('the preview holds the mounts the Core runs', () async {
+      final profile = Profile.normal(label: 'p');
+      const mounts = MountSetup(
+        target: 1,
+        revision: 'r',
+        sources: [MountSource(id: 2, label: 'A', path: '/profiles/2.yaml')],
+      );
+      final core = _MockCoreHandlerInterface();
+      when(
+        () => core.getProfileBase(any()),
+      ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+      final built = File(
+        join(await appPath.homeDirPath, coreSpillDirectoryName, 'm.yaml'),
+      );
+      when(
+        () => core.buildProfile(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          mounts: any(named: 'mounts'),
+        ),
+      ).thenAnswer((_) async {
+        await built.create(recursive: true);
+        await built.writeAsString('proxy-providers: {}\n');
+        return built.path;
+      });
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          setupStateProvider.overrideWith(
+            (_, profileId) => nullProfileSetupState.copyWith(
+              profileId: profileId,
+              mounts: mounts,
+            ),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+
+      await scoped
+          .read(setupActionProvider.notifier)
+          .getProfileWithId(profile.id);
+
+      verify(
+        () => core.buildProfile(
+          base: any(named: 'base', that: isNotNull),
+          config: null,
+          mounts: mounts,
+        ),
+      ).called(1);
     });
 
     test(

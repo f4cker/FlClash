@@ -915,7 +915,7 @@ void main() {
     const base = SetupBase(path: '/profiles/1.yaml', overlay: 'mode: rule');
 
     final outbounds = await handler.getProfileOutbounds('/profiles/1.yaml');
-    final built = await handler.buildProfile(base);
+    final built = await handler.buildProfile(base: base);
 
     expect(handler.calls[CoreMethod.profileOutbounds], {
       'path': '/profiles/1.yaml',
@@ -925,6 +925,22 @@ void main() {
     ]);
     expect(handler.calls[CoreMethod.profileBuild], base.toJson());
     expect(built, '/home/responses/1.yaml');
+
+    const mounts = MountSetup(
+      target: 1,
+      revision: 'r',
+      sources: [MountSource(id: 2, label: 'A', path: '/profiles/2.yaml')],
+    );
+    await handler.buildProfile(base: base, mounts: mounts);
+    expect(handler.calls[CoreMethod.profileBuild], {
+      ...base.toJson(),
+      'mounts': mounts.toJson(),
+    });
+    await handler.buildProfile(config: 'proxies: []\n', mounts: mounts);
+    expect(handler.calls[CoreMethod.profileBuild], {
+      'config': 'proxies: []\n',
+      'mounts': mounts.toJson(),
+    });
   });
 
   test('a proxy definition crosses as a nested mapping or null', () async {

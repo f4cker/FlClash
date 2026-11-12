@@ -235,8 +235,11 @@ type SetupBase struct {
 	Overlay string `json:"overlay"`
 }
 
+// Without a path, Config is the profile the host built, which the Core runs
+// as config.yaml.
 type BuildProfileParams struct {
 	SetupBase
+	Config string      `json:"config,omitempty"`
 	Mounts *MountSetup `json:"mounts,omitempty"`
 }
 
