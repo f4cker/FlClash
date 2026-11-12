@@ -65,9 +65,9 @@ class _PageSourceRowsState extends State<PageSourceRows> {
           for (final row in widget.changes.hiddenRows)
             Text(
               appLocalizations.pageSourceChange(
-                row.path,
-                describeConfigValue(row.path, row.oldValue),
-                describeConfigValue(row.path, row.newValue),
+                configPathLabel(row.path),
+                describeConfigValue(row.path, row.oldValue, withDefault: false),
+                describeConfigValue(row.path, row.newValue, withDefault: false),
               ),
               style: captionStyle,
             ),

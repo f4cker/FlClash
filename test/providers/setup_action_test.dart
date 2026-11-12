@@ -134,6 +134,13 @@ class TestSetupAction extends SetupAction {
     return listening ?? ref.read(patchClashConfigProvider).mixedPort;
   }
 
+  /// What the Core reports holding; null fails the query.
+  Map<String, Object?>? heldPorts;
+
+  @override
+  Future<Map<String, Object?>> listeningPorts() async =>
+      heldPorts ?? (throw const CoreMethodException(code: 'x', message: ''));
+
   /// Stands in for [SystemProxyQueue.startCount].
   int proxyStarts = 0;
 
@@ -484,6 +491,93 @@ void main() {
       expect(scopedAction.listeningQueries, 0);
       expect(scoped.read(isStartProvider), isTrue);
       globalState.container = container;
+    });
+  });
+
+  group('inbound check', () {
+    late List<String> printed;
+
+    setUp(() async {
+      await AppLocalizations.load(const Locale('zh', 'CN'));
+      printed = [];
+      final original = debugPrint;
+      debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+      addTearDown(() => debugPrint = original);
+    });
+
+    Future<void> check({
+      required Map<String, Object?> requested,
+      Map<String, Object?>? held,
+      bool systemProxy = false,
+      int mixedPort = 7890,
+    }) async {
+      markInitialized();
+      await container.read(setupActionProvider.notifier).setRunning(true);
+      printed.clear();
+      container
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mixedPort: mixedPort));
+      container
+          .read(networkSettingProvider.notifier)
+          .update((state) => state.copyWith(systemProxy: systemProxy));
+      container.read(builtInboundsProvider.notifier).value = requested;
+      action.heldPorts = held;
+      await container.read(setupActionProvider.notifier).checkInbounds();
+    }
+
+    test('names an inbound that did not start by its listener', () async {
+      if (!system.isDesktop) return;
+      await check(
+        requested: {'port': 7891, 'socks-port': 7892},
+        held: {'port': 0, 'socks-port': 7892},
+      );
+
+      expect(printed, ['[APP] banner: HTTP 代理 未启动：端口 7891 未在监听。']);
+    });
+
+    test('a port of 0 is an inbound turned off, not a failure', () async {
+      if (!system.isDesktop) return;
+      await check(requested: {'port': 0, 'socks-port': 0}, held: {});
+
+      expect(printed, isEmpty);
+    });
+
+    test('a system proxy with no port to point at is reported', () async {
+      if (!system.isDesktop) return;
+      await check(
+        requested: {'mixed-port': 0},
+        held: {},
+        systemProxy: true,
+        mixedPort: 0,
+      );
+
+      expect(printed, ['[APP] banner: 系统代理没有可用的目标端口，请检查端口配置。']);
+    });
+
+    test('an HTTP port left for the system proxy is no conflict', () async {
+      if (!system.isDesktop) return;
+      await check(
+        requested: {'port': 7891},
+        held: {'port': 7891},
+        systemProxy: true,
+        mixedPort: 0,
+      );
+
+      expect(printed, isEmpty);
+    });
+
+    test('no port is no conflict while the system proxy is off', () async {
+      if (!system.isDesktop) return;
+      await check(requested: {}, held: {}, mixedPort: 0);
+
+      expect(printed, isEmpty);
+    });
+
+    test('the no-port warning stands when the Core cannot be asked', () async {
+      if (!system.isDesktop) return;
+      await check(requested: {}, systemProxy: true, mixedPort: 0);
+
+      expect(printed, contains('[APP] banner: 系统代理没有可用的目标端口，请检查端口配置。'));
     });
   });
 

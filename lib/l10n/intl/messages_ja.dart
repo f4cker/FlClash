@@ -31,7 +31,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m4(detail) => "データを消去できませんでした：${detail}";
 
   static String m5(address) =>
-      "The external controller ${address} is open beyond this Mac without a secret, so this config was not applied.";
+      "The controller at ${address} allows non-local access without a secret. This profile was not applied.";
 
   static String m6(code) =>
       "Windows が FlClashCore.exe の実行を拒否しました（エラー ${code}）。スマート アプリ コントロールや AppLocker などのアプリ制御ポリシーは未署名のプログラムをブロックします。ポリシーで Flash を許可するか、ポリシーを無効にしてから再試行してください。";
@@ -111,8 +111,8 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m41(memory, body) =>
       "この件数に達するか、メモリを ${memory} 使い切ると、古い記録から削除されます。本文は先頭の ${body} のみ保持されます。";
 
-  static String m42(field, port) =>
-      "${field} ${port} is not listening; this inbound did not start.";
+  static String m42(listenerName, port) =>
+      "${listenerName} did not start: port ${port} is not listening.";
 
   static String m43(invalid, total) => "${total} 件中 ${invalid} 件が無効";
 
@@ -928,6 +928,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "fallbackFilterIpcidrDesc": MessageLookupByLibrary.simpleMessage(
       "Nameserver がこれらの範囲の IP を返したときは、Fallback の結果を使います。",
     ),
+    "fieldDnsSettings": MessageLookupByLibrary.simpleMessage("DNS settings"),
+    "fieldExternalUi": MessageLookupByLibrary.simpleMessage(
+      "External dashboard",
+    ),
+    "fieldSkipAuthPrefixes": MessageLookupByLibrary.simpleMessage(
+      "Source IP ranges exempt from authentication",
+    ),
+    "fieldStoreSelected": MessageLookupByLibrary.simpleMessage(
+      "Remember node selections",
+    ),
+    "fieldTunAutoDetectInterface": MessageLookupByLibrary.simpleMessage(
+      "TUN interface auto-detection",
+    ),
+    "fieldTunAutoRoute": MessageLookupByLibrary.simpleMessage(
+      "TUN automatic routing",
+    ),
     "file": MessageLookupByLibrary.simpleMessage("ファイル"),
     "fileIsUpdate": MessageLookupByLibrary.simpleMessage(
       "ファイルが変更されています。変更を保存しますか？",
@@ -943,7 +959,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "findProcessAlways": MessageLookupByLibrary.simpleMessage("Always"),
     "findProcessMode": MessageLookupByLibrary.simpleMessage("プロセス検出"),
     "findProcessOff": MessageLookupByLibrary.simpleMessage("Off"),
-    "findProcessStrict": MessageLookupByLibrary.simpleMessage("Auto"),
+    "findProcessStrict": MessageLookupByLibrary.simpleMessage("On demand"),
     "floating": MessageLookupByLibrary.simpleMessage("フローティング"),
     "followBaseProfile": MessageLookupByLibrary.simpleMessage(
       "Follow base profile",
@@ -1226,6 +1242,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "listenRoutingMarkDesc": MessageLookupByLibrary.simpleMessage(
       "リッスンのルーティングマークは Linux でのみ有効です。",
     ),
+    "listenerHttp": MessageLookupByLibrary.simpleMessage("HTTP proxy"),
+    "listenerMixed": MessageLookupByLibrary.simpleMessage("Mixed proxy"),
+    "listenerRedir": MessageLookupByLibrary.simpleMessage("Redir proxy"),
+    "listenerSocks": MessageLookupByLibrary.simpleMessage("SOCKS proxy"),
+    "listenerTproxy": MessageLookupByLibrary.simpleMessage("TProxy proxy"),
     "liveConnections": MessageLookupByLibrary.simpleMessage("リアルタイム接続"),
     "loading": MessageLookupByLibrary.simpleMessage("読み込み中…"),
     "local": MessageLookupByLibrary.simpleMessage("ローカル"),
@@ -1786,6 +1807,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "pageSourceDesc": MessageLookupByLibrary.simpleMessage(
       "These settings differ between the app and profile. Choose which source to use.",
     ),
+    "pageSourceHiddenNote": MessageLookupByLibrary.simpleMessage(
+      "Defaults are used for settings not present in the profile.",
+    ),
+    "pageSourceHiddenTitle": MessageLookupByLibrary.simpleMessage(
+      "Switch to profile values",
+    ),
     "pageSourceTitle": MessageLookupByLibrary.simpleMessage(
       "Confirm setting sources",
     ),
@@ -2257,6 +2284,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "system": MessageLookupByLibrary.simpleMessage("システム"),
     "systemApp": MessageLookupByLibrary.simpleMessage("システムアプリ"),
     "systemProxy": MessageLookupByLibrary.simpleMessage("システムプロキシ"),
+    "systemProxyNoPort": MessageLookupByLibrary.simpleMessage(
+      "No usable port is available for the system proxy. Check the port settings.",
+    ),
     "tab": MessageLookupByLibrary.simpleMessage("タブ"),
     "tabAnimation": MessageLookupByLibrary.simpleMessage("タブアニメーション"),
     "tapIconToRetry": MessageLookupByLibrary.simpleMessage("アイコンをタップして再試行"),
@@ -2932,7 +2962,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tunDesc": MessageLookupByLibrary.simpleMessage("TUN は管理者モードでのみ有効です。"),
     "tunMissingAuthorization": MessageLookupByLibrary.simpleMessage(
-      "Missing system authorization; TUN did not start",
+      "TUN did not start because system permission is missing.",
     ),
     "tunOverrideDesc": MessageLookupByLibrary.simpleMessage(
       "ここで追加した項目は、すべてのプロファイルの TUN 設定を上書きします。追加していない項目はプロファイル自身の設定のままです。カスタムプロファイル自身が追加した項目が優先されます。",
@@ -2999,6 +3029,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "username": MessageLookupByLibrary.simpleMessage("ユーザー名"),
     "validUntil": m171,
     "value": MessageLookupByLibrary.simpleMessage("値"),
+    "valueEmptyList": MessageLookupByLibrary.simpleMessage("Empty list"),
+    "valueEmptyObject": MessageLookupByLibrary.simpleMessage("Empty object"),
+    "valueEmptyText": MessageLookupByLibrary.simpleMessage("Empty text"),
+    "valueNull": MessageLookupByLibrary.simpleMessage("Null"),
+    "valueOff": MessageLookupByLibrary.simpleMessage("Off"),
+    "valueOn": MessageLookupByLibrary.simpleMessage("On"),
     "view": MessageLookupByLibrary.simpleMessage("表示"),
     "viewAll": MessageLookupByLibrary.simpleMessage("すべて表示"),
     "virtualIpv4": MessageLookupByLibrary.simpleMessage("仮想 IPv4"),

@@ -70,8 +70,8 @@ void main() {
 
     expect(find.text('页面：错误 · 文件：静默'), findsOneWidget);
     expect(find.text('页面：关闭 · 文件：总是'), findsOneWidget);
-    expect(find.text('页面：已开启 · 文件：未填写，默认 已关闭'), findsOneWidget);
-    expect(find.text('profile.store-selected：已关闭 → 已开启'), findsOneWidget);
+    expect(find.text('页面：开启 · 文件：未填写，默认 关闭'), findsOneWidget);
+    expect(find.text('记住节点选择：关闭 → 开启'), findsOneWidget);
     expect(find.text('保留页面设置'), findsNWidgets(3));
     expect(find.text('跟随基础配置'), findsNWidgets(3));
   });

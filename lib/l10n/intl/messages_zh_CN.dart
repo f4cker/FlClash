@@ -30,7 +30,7 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m4(detail) => "清除数据失败：${detail}";
 
-  static String m5(address) => "外部控制器 ${address} 对本机以外开放且未设置密钥，未应用此配置。";
+  static String m5(address) => "外部控制器 ${address} 允许非本机访问，但未设置密钥。此配置未应用。";
 
   static String m6(code) =>
       "Windows 拒绝运行 FlClashCore.exe（错误 ${code}）。智能应用控制、AppLocker 等应用控制策略会拦截未签名程序，请在该策略中放行 Flash 或关闭策略后重试。";
@@ -109,7 +109,8 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m41(memory, body) =>
       "达到此条数或占满 ${memory} 内存后，先丢弃最早的记录。每段内容只保留前 ${body}。";
 
-  static String m42(field, port) => "${field} ${port} 未能监听，此入站未启动。";
+  static String m42(listenerName, port) =>
+      "${listenerName} 未启动：端口 ${port} 未在监听。";
 
   static String m43(invalid, total) => "${total} 条中 ${invalid} 条无效";
 
@@ -844,6 +845,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "fallbackFilterIpcidrDesc": MessageLookupByLibrary.simpleMessage(
       "Nameserver 返回这些网段内的 IP 时，改用 Fallback 的结果。",
     ),
+    "fieldDnsSettings": MessageLookupByLibrary.simpleMessage("DNS 设置"),
+    "fieldExternalUi": MessageLookupByLibrary.simpleMessage("外部控制面板"),
+    "fieldSkipAuthPrefixes": MessageLookupByLibrary.simpleMessage("免验证来源地址段"),
+    "fieldStoreSelected": MessageLookupByLibrary.simpleMessage("记住节点选择"),
+    "fieldTunAutoDetectInterface": MessageLookupByLibrary.simpleMessage(
+      "TUN 自动检测网卡",
+    ),
+    "fieldTunAutoRoute": MessageLookupByLibrary.simpleMessage("TUN 自动路由"),
     "file": MessageLookupByLibrary.simpleMessage("文件"),
     "fileIsUpdate": MessageLookupByLibrary.simpleMessage("文件有修改，是否保存修改"),
     "filter": MessageLookupByLibrary.simpleMessage("筛选"),
@@ -853,7 +862,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "findProcessAlways": MessageLookupByLibrary.simpleMessage("总是"),
     "findProcessMode": MessageLookupByLibrary.simpleMessage("查找进程"),
     "findProcessOff": MessageLookupByLibrary.simpleMessage("关闭"),
-    "findProcessStrict": MessageLookupByLibrary.simpleMessage("自动"),
+    "findProcessStrict": MessageLookupByLibrary.simpleMessage("按需"),
     "floating": MessageLookupByLibrary.simpleMessage("悬浮"),
     "followBaseProfile": MessageLookupByLibrary.simpleMessage("跟随基础配置"),
     "followProfile": MessageLookupByLibrary.simpleMessage("跟随配置"),
@@ -1096,6 +1105,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "listenRoutingMarkDesc": MessageLookupByLibrary.simpleMessage(
       "监听路由标记仅在 Linux 生效。",
     ),
+    "listenerHttp": MessageLookupByLibrary.simpleMessage("HTTP 代理"),
+    "listenerMixed": MessageLookupByLibrary.simpleMessage("混合代理"),
+    "listenerRedir": MessageLookupByLibrary.simpleMessage("Redir 代理"),
+    "listenerSocks": MessageLookupByLibrary.simpleMessage("SOCKS 代理"),
+    "listenerTproxy": MessageLookupByLibrary.simpleMessage("TProxy 代理"),
     "liveConnections": MessageLookupByLibrary.simpleMessage("实时连接"),
     "loading": MessageLookupByLibrary.simpleMessage("加载中…"),
     "local": MessageLookupByLibrary.simpleMessage("本地"),
@@ -1568,6 +1582,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "pageSourceDesc": MessageLookupByLibrary.simpleMessage(
       "页面与文件中的以下设置不同，请选择使用的来源。",
     ),
+    "pageSourceHiddenNote": MessageLookupByLibrary.simpleMessage(
+      "文件未填写的项使用默认值。",
+    ),
+    "pageSourceHiddenTitle": MessageLookupByLibrary.simpleMessage("改为跟随配置文件"),
     "pageSourceTitle": MessageLookupByLibrary.simpleMessage("确认设置来源"),
     "parsePureIp": MessageLookupByLibrary.simpleMessage("解析纯IP"),
     "password": MessageLookupByLibrary.simpleMessage("密码"),
@@ -1987,6 +2005,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "system": MessageLookupByLibrary.simpleMessage("系统"),
     "systemApp": MessageLookupByLibrary.simpleMessage("系统应用"),
     "systemProxy": MessageLookupByLibrary.simpleMessage("系统代理"),
+    "systemProxyNoPort": MessageLookupByLibrary.simpleMessage(
+      "系统代理没有可用的目标端口，请检查端口配置。",
+    ),
     "tab": MessageLookupByLibrary.simpleMessage("标签页"),
     "tabAnimation": MessageLookupByLibrary.simpleMessage("选项卡动画"),
     "tapIconToRetry": MessageLookupByLibrary.simpleMessage("点击图标重试"),
@@ -2496,7 +2517,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tunDesc": MessageLookupByLibrary.simpleMessage("虚拟网卡仅在管理员模式生效。"),
     "tunMissingAuthorization": MessageLookupByLibrary.simpleMessage(
-      "缺少系统授权，TUN未启动",
+      "缺少系统授权，TUN 未启动。",
     ),
     "tunOverrideDesc": MessageLookupByLibrary.simpleMessage(
       "添加的项会覆写所有配置的虚拟网卡设置，未添加的项沿用配置自身的设置。自定义配置自己添加的项优先。",
@@ -2553,6 +2574,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "username": MessageLookupByLibrary.simpleMessage("用户名"),
     "validUntil": m171,
     "value": MessageLookupByLibrary.simpleMessage("值"),
+    "valueEmptyList": MessageLookupByLibrary.simpleMessage("空列表"),
+    "valueEmptyObject": MessageLookupByLibrary.simpleMessage("空对象"),
+    "valueEmptyText": MessageLookupByLibrary.simpleMessage("空文本"),
+    "valueNull": MessageLookupByLibrary.simpleMessage("空值（null）"),
+    "valueOff": MessageLookupByLibrary.simpleMessage("关闭"),
+    "valueOn": MessageLookupByLibrary.simpleMessage("开启"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
     "viewAll": MessageLookupByLibrary.simpleMessage("查看全部"),
     "virtualIpv4": MessageLookupByLibrary.simpleMessage("虚拟 IPv4"),
