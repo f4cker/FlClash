@@ -190,18 +190,16 @@ class _TrackerInfoBody extends StatelessWidget {
     if (!system.isAndroid) {
       return ConnectionProcessBuilder(
         metadata: metadata,
-        builder: (context, process) {
-          if (!ProcessIcon.shows(process)) {
-            return title;
-          }
-          return Row(
-            spacing: 8,
-            children: [
-              ProcessFilterIcon(process: process, size: 24),
-              Flexible(child: title),
-            ],
-          );
-        },
+        builder: (context, process) => Row(
+          spacing: 8,
+          children: [
+            if (ProcessIcon.shows(process))
+              ProcessFilterIcon(process: process, size: 24)
+            else
+              const SizedBox(width: 24),
+            Flexible(child: title),
+          ],
+        ),
       );
     }
     final process = metadata.process;

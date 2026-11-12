@@ -24,7 +24,14 @@ List<RecordColumn<TrackerInfo>> trackerInfoColumns(
   return [
     if (!isLive)
       RecordColumn(
-        TableColumn('time', appLocalizations.time, width: 80),
+        TableColumn(
+          'time',
+          appLocalizations.time,
+          width: max(
+            recordCellWidth(context, '00:00:00'),
+            recordHeaderWidth(context, appLocalizations.time),
+          ),
+        ),
         cell: (_, info) =>
             RecordCellText(info.start.showTime.trim(), muted: true),
         sortKey: (info) => info.start,
