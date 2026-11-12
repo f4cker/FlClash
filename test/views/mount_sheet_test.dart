@@ -292,6 +292,84 @@ void main() {
     expect(find.text(l10n.mountGroupsUnconfirmed), findsNothing);
   });
 
+  testWidgets('a hidden group that blocks or matches nothing counts in the '
+      'collapsed row and opens it, still unlisted', (tester) async {
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [item(air, mounted: true)],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id],
+                version: 1,
+              ),
+              revision: 'r1',
+              groups: MountTarget(
+                groups: [
+                  groupInfo('Proxy'),
+                  groupInfo('Guard', hidden: true),
+                  groupInfo('Euro', hidden: true, filter: true),
+                ],
+              ),
+            ),
+          )
+          ..runtime = const MountRuntimeState(
+            report: MountReport(
+              target: 1,
+              revision: 'r1',
+              groups: [
+                MountGroupReport(
+                  name: 'Proxy',
+                  via: MountGroupVia.auto,
+                  protection: MountProtection.base,
+                ),
+                MountGroupReport(
+                  name: 'Guard',
+                  via: MountGroupVia.auto,
+                  protection: MountProtection.reject,
+                ),
+                MountGroupReport(
+                  name: 'Euro',
+                  via: MountGroupVia.auto,
+                  protection: MountProtection.base,
+                ),
+              ],
+            ),
+            groups: [
+              MountRuntimeGroup(
+                name: 'Proxy',
+                present: true,
+                members: 4,
+                mounted: 3,
+              ),
+              MountRuntimeGroup(name: 'Guard', present: true, empty: true),
+              MountRuntimeGroup(name: 'Euro', present: true, members: 1),
+            ],
+          );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
+
+    expect(find.text(l10n.mountGroupsCount(1)), findsOneWidget);
+    expect(find.text(l10n.mountGroupsNoMatch(1)), findsOneWidget);
+    // Open without a tap, and a tap does not fold it.
+    expect(find.text(l10n.mountGroupNodes(3)), findsOneWidget);
+    await tester.tap(find.text(l10n.mountGroupsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.mountGroupNodes(3)), findsOneWidget);
+    expect(find.text('Guard'), findsNothing);
+    expect(find.text('Euro'), findsNothing);
+    for (final line in [
+      l10n.mountGroupsHiddenBlocked(1),
+      l10n.mountGroupsHiddenNoMatch(1),
+    ]) {
+      expect(
+        tester.widget<Text>(find.text(line)).style?.color,
+        colorScheme.warning,
+      );
+    }
+  });
+
   testWidgets('a readback of another revision confirms no group', (
     tester,
   ) async {
@@ -1155,6 +1233,8 @@ void main() {
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
     expect(find.text(l10n.mountNoGroupTitle), findsNothing);
+    expect(find.text(l10n.mountGroupsHiddenCount(1)), findsOneWidget);
+    expect(find.text(l10n.mountGroupsCount(0)), findsNothing);
     await tester.tap(find.text(l10n.mountGroupsTitle));
     await tester.pumpAndSettle();
     expect(find.text('Hidden'), findsNothing);

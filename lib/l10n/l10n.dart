@@ -12790,6 +12790,42 @@ class AppLocalizations {
     );
   }
 
+  /// `{count, plural, =1{1 hidden group} other{{count} hidden groups}}`
+  String mountGroupsHiddenCount(num count) {
+    return Intl.plural(
+      count,
+      one: '1 hidden group',
+      other: '$count hidden groups',
+      name: 'mountGroupsHiddenCount',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count, plural, =1{1 hidden group is empty and rejects connections.} other{{count} hidden groups are empty and reject connections.}}`
+  String mountGroupsHiddenBlocked(num count) {
+    return Intl.plural(
+      count,
+      one: '1 hidden group is empty and rejects connections.',
+      other: '$count hidden groups are empty and reject connections.',
+      name: 'mountGroupsHiddenBlocked',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count, plural, =1{1 hidden group has no matching mounted node.} other{{count} hidden groups have no matching mounted node.}}`
+  String mountGroupsHiddenNoMatch(num count) {
+    return Intl.plural(
+      count,
+      one: '1 hidden group has no matching mounted node.',
+      other: '$count hidden groups have no matching mounted node.',
+      name: 'mountGroupsHiddenNoMatch',
+      desc: '',
+      args: [count],
+    );
+  }
+
   /// `Details`
   String get mountDetails {
     return Intl.message('Details', name: 'mountDetails', desc: '', args: []);

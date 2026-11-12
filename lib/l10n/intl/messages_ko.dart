@@ -206,205 +206,214 @@ class MessageLookup extends MessageLookupByLibrary {
       "${Intl.plural(count, one: '1 group excludes subscription nodes', other: '${count} groups exclude subscription nodes')}";
 
   static String m79(count) =>
-      "${Intl.plural(count, one: '1 group has no match', other: '${count} groups have no match')}";
+      "${Intl.plural(count, one: '1 hidden group is empty and rejects connections.', other: '${count} hidden groups are empty and reject connections.')}";
 
-  static String m80(time) => "Last updated: ${time}";
+  static String m80(count) =>
+      "${Intl.plural(count, one: '1 hidden group', other: '${count} hidden groups')}";
 
   static String m81(count) =>
-      "${Intl.plural(count, one: '1 node', other: '${count} nodes')}";
+      "${Intl.plural(count, one: '1 hidden group has no matching mounted node.', other: '${count} hidden groups have no matching mounted node.')}";
 
   static String m82(count) =>
+      "${Intl.plural(count, one: '1 group has no match', other: '${count} groups have no match')}";
+
+  static String m83(time) => "Last updated: ${time}";
+
+  static String m84(count) =>
+      "${Intl.plural(count, one: '1 node', other: '${count} nodes')}";
+
+  static String m85(count) =>
       "${Intl.plural(count, one: '1 node excluded from mounting', other: '${count} nodes excluded from mounting')}";
 
-  static String m83(count) =>
+  static String m86(count) =>
       "${Intl.plural(count, one: '1 node read', other: '${count} nodes read')}";
 
-  static String m84(time) => "Nodes read: ${time}";
+  static String m87(time) => "Nodes read: ${time}";
 
-  static String m85(label, profileName) =>
+  static String m88(label, profileName) =>
       "${label}, target profile ${profileName}";
 
-  static String m86(name) =>
+  static String m89(name) =>
       "New content for “${name}” was read but did not pass the mount-isolation checks and was not applied. The previously confirmed content is still in use.";
 
-  static String m87(name) =>
+  static String m90(name) =>
       "New content for “${name}” was read but did not pass the mount-isolation checks and was not applied. Its current use is unconfirmed. Read the status again.";
 
-  static String m88(count) => "Show all ${count} groups";
+  static String m91(count) => "Show all ${count} groups";
 
-  static String m89(profileName) => "Target profile: ${profileName}";
+  static String m92(profileName) => "Target profile: ${profileName}";
 
-  static String m90(subscriptionName, profileName) =>
+  static String m93(subscriptionName, profileName) =>
       "This removes nodes from “${subscriptionName}” from “${profileName}”. Connections using those nodes may be interrupted. The subscription, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.";
 
-  static String m91(count, profileName) =>
+  static String m94(count, profileName) =>
       "This removes nodes provided by the following ${Intl.plural(count, one: '1 subscription', other: '${count} subscriptions')} from “${profileName}”. Connections using those nodes may be interrupted. The subscriptions, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.";
 
-  static String m92(count) =>
+  static String m95(count) =>
       "To keep Tailscale routing separate, ${Intl.plural(count, one: '1 subscription node that is not supported for mounting was excluded. Its settings were not changed.', other: '${count} subscription nodes that are not supported for mounting were excluded. Their settings were not changed.')}";
 
-  static String m93(name) => "Update nodes of ${name}";
+  static String m96(name) => "Update nodes of ${name}";
 
-  static String m94(name) => "Mount: ${name} · node list not yet confirmed";
+  static String m97(name) => "Mount: ${name} · node list not yet confirmed";
 
-  static String m95(name, count) =>
+  static String m98(name, count) =>
       "Mount: ${name} · ${Intl.plural(count, one: '1 node', other: '${count} nodes')}";
 
-  static String m96(count) =>
+  static String m99(count) =>
       "${Intl.plural(count, one: '1 subscription mounted', other: '${count} subscriptions mounted')}";
 
-  static String m97(code) =>
+  static String m100(code) =>
       "서버가 접근을 거부했습니다(HTTP ${code}). 링크가 만료되었거나 자격 증명이 잘못되었을 수 있습니다";
 
-  static String m98(code) => "서버가 요청을 거부했습니다(HTTP ${code})";
+  static String m101(code) => "서버가 요청을 거부했습니다(HTTP ${code})";
 
-  static String m99(code) =>
+  static String m102(code) =>
       "이 주소에서 아무것도 찾지 못했습니다(HTTP ${code}). URL이 올바른지 확인하세요";
 
-  static String m100(detail) => "네트워크 요청 실패: ${detail}";
+  static String m103(detail) => "네트워크 요청 실패: ${detail}";
 
-  static String m101(code) => "서버에 문제가 발생했습니다(HTTP ${code}). 나중에 다시 시도하세요";
+  static String m104(code) => "서버에 문제가 발생했습니다(HTTP ${code}). 나중에 다시 시도하세요";
 
-  static String m102(label) => "${label}이(가) 아직 없습니다";
+  static String m105(label) => "${label}이(가) 아직 없습니다";
 
-  static String m103(label, min, max) =>
+  static String m106(label, min, max) =>
       "${label}은(는) ${min}에서 ${max} 사이여야 합니다";
 
-  static String m104(label) => "${label}은(는) 숫자여야 합니다";
+  static String m107(label) => "${label}은(는) 숫자여야 합니다";
 
-  static String m105(label) => "${label}은(는) 1024에서 49151 사이여야 합니다";
+  static String m108(label) => "${label}은(는) 1024에서 49151 사이여야 합니다";
 
-  static String m106(port) => "포트 ${port}";
+  static String m109(port) => "포트 ${port}";
 
-  static String m107(days) => "${Intl.plural(days, other: '${days}일 남음')}";
+  static String m110(days) => "${Intl.plural(days, other: '${days}일 남음')}";
 
-  static String m108(date, days) =>
+  static String m111(date, days) =>
       "${date} 만료, ${Intl.plural(days, other: '${days}일')} 남음";
 
-  static String m109(time) => "${time} 업데이트";
+  static String m112(time) => "${time} 업데이트";
 
-  static String m110(label, profiles) =>
+  static String m113(label, profiles) =>
       "${label}은(는) 아직 ${profiles}에서 사용 중이며, 삭제하면 해당 프로필이 제대로 작동하지 않습니다. 삭제하시겠습니까?";
 
-  static String m111(count, label) =>
+  static String m114(count, label) =>
       "${Intl.plural(count, other: '프록시 ${label}개')}";
 
-  static String m112(name, count) => "${name} 외 (프록시 ${count}개)";
+  static String m115(name, count) => "${name} 외 (프록시 ${count}개)";
 
-  static String m113(removed) =>
+  static String m116(removed) =>
       "다음 프록시가 삭제됩니다: ${removed}. 이름이 바뀐 줄은 새 프록시로 간주되며, 삭제된 프록시를 지정한 사용자 지정 프로필에는 누락으로 표시됩니다. 그래도 적용하시겠습니까?";
 
-  static String m114(removed, added) =>
+  static String m117(removed, added) =>
       "다음 프록시가 삭제됩니다: ${removed}. 다음 프록시가 추가됩니다: ${added}. 이름이 바뀐 줄은 새 프록시로 간주되며, 삭제된 프록시를 지정한 사용자 지정 프로필에는 누락으로 표시됩니다. 그래도 적용하시겠습니까?";
 
-  static String m115(label) =>
+  static String m118(label) =>
       "${label}은(는) 이 프로필의 규칙, 프록시 그룹, 다이얼러 프록시, DNS 또는 NTP에서 아직 참조 중이며, 삭제하면 작동하지 않게 됩니다. 삭제하시겠습니까?";
 
-  static String m116(count, label) =>
+  static String m119(count, label) =>
       "${Intl.plural(count, other: '프록시 그룹 ${label}개')}";
 
-  static String m117(count, label) =>
+  static String m120(count, label) =>
       "${Intl.plural(count, other: '규칙 ${label}개')}";
 
-  static String m118(appName) => "${appName} (안전 모드)";
+  static String m121(appName) => "${appName} (안전 모드)";
 
-  static String m119(count) => "${Intl.plural(count, other: '${count}초')}";
+  static String m122(count) => "${Intl.plural(count, other: '${count}초')}";
 
-  static String m120(count) => "${count}개 적용 중";
+  static String m123(count) => "${count}개 적용 중";
 
-  static String m121(count) => "${Intl.plural(count, other: '문제 ${count}건')}";
+  static String m124(count) => "${Intl.plural(count, other: '문제 ${count}건')}";
 
-  static String m122(count) => "${Intl.plural(count, other: '설정 ${count}개')}";
+  static String m125(count) => "${Intl.plural(count, other: '설정 ${count}개')}";
 
-  static String m123(link) => "읽을 수 있는 프록시가 없습니다: ${link}";
+  static String m126(link) => "읽을 수 있는 프록시가 없습니다: ${link}";
 
-  static String m124(label) => "${label}은(는) 하나만 입력해야 합니다";
+  static String m127(label) => "${label}은(는) 하나만 입력해야 합니다";
 
-  static String m125(value) => "최고 ${value}";
+  static String m128(value) => "최고 ${value}";
 
-  static String m126(value) => "합계 ${value}";
+  static String m129(value) => "합계 ${value}";
 
-  static String m127(transport) => "${transport} 요청 헤더";
+  static String m130(transport) => "${transport} 요청 헤더";
 
-  static String m128(account) => "Assigned: ${account}";
+  static String m131(account) => "Assigned: ${account}";
 
-  static String m129(account, network) => "${account} · ${network}";
+  static String m132(account, network) => "${account} · ${network}";
 
-  static String m130(count) => "Choose accounts for ${count} targets";
+  static String m133(count) => "Choose accounts for ${count} targets";
 
-  static String m131(count) =>
+  static String m134(count) =>
       "This profile has ${count} panel-added Tailscale accounts. Deleting it removes their profile bindings, target assignments, and dedicated routing and blocking rules. Local sign-in archives are kept. Devices in the Tailscale admin console are not deleted. Other profiles are not affected.";
 
-  static String m132(count) =>
+  static String m135(count) =>
       "${Intl.plural(count, one: '1 device · Only devices visible to this account', other: '${count} devices · Only devices visible to this account')}";
 
-  static String m133(shown, total) =>
+  static String m136(shown, total) =>
       "Showing ${shown}/${total} · Devices visible to this account only";
 
-  static String m134(shown, total) => "Showing ${shown} / ${total}";
+  static String m137(shown, total) => "Showing ${shown} / ${total}";
 
-  static String m135(n) => "Showing ${n} devices";
+  static String m138(n) => "Showing ${n} devices";
 
-  static String m136(node, device) =>
+  static String m139(node, device) =>
       "Sets the exit node of “${node}” to “${device}”. Connections through this node may drop; Flash rules stay the same.";
 
-  static String m137(node) =>
+  static String m140(node) =>
       "Only turns off exit forwarding for “${node}”; it doesn\'t log out of Tailscale and Flash rules stay the same.";
 
-  static String m138(time) =>
+  static String m141(time) =>
       "Authentication expires at ${time}. Log in again before then.";
 
-  static String m139(account) => "Account: ${account}";
+  static String m142(account) => "Account: ${account}";
 
-  static String m140(server) => "Control server: ${server}";
+  static String m143(server) => "Control server: ${server}";
 
-  static String m141(name) => "Node: ${name}";
+  static String m144(name) => "Node: ${name}";
 
-  static String m142(name) => "Profile: ${name}";
+  static String m145(name) => "Profile: ${name}";
 
-  static String m143(name) =>
+  static String m146(name) =>
       "This logs out of “${name}” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.";
 
-  static String m144(name) => "Network: ${name}";
+  static String m147(name) => "Network: ${name}";
 
-  static String m145(name) => "Node ${name}";
+  static String m148(name) => "Node ${name}";
 
-  static String m146(account, node, profile) =>
+  static String m149(account, node, profile) =>
       "This signs out “${account}” (node “${node}”), clears its sign-in from this Mac, and removes its panel-added node and rules from “${profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.";
 
-  static String m147(node, profile) =>
+  static String m150(node, profile) =>
       "This signs out “${node}”, clears its sign-in from this Mac, and removes its panel-added node and rules from “${profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.";
 
-  static String m148(count) => "Device addresses: ${count}";
+  static String m151(count) => "Device addresses: ${count}";
 
-  static String m149(domain) => "Network domain: ${domain}";
+  static String m152(domain) => "Network domain: ${domain}";
 
-  static String m150(count, domain) =>
+  static String m153(count, domain) =>
       "${Intl.plural(count, one: '${domain} · 1 device address', other: '${domain} · ${count} device addresses')}";
 
-  static String m151(value) => "Saved: ${value}";
+  static String m154(value) => "Saved: ${value}";
 
-  static String m152(name) => "Shared by: ${name}";
+  static String m155(name) => "Shared by: ${name}";
 
-  static String m153(account, node) =>
+  static String m156(account, node) =>
       "This signs out “${account}” (node “${node}”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.";
 
-  static String m154(label) => "Status: ${label}";
+  static String m157(label) => "Status: ${label}";
 
-  static String m155(account, status, count) =>
+  static String m158(account, status, count) =>
       "Viewing Tailscale account: ${account}, ${status}. ${count} entries.";
 
-  static String m156(address) => "Address: ${address}";
+  static String m159(address) => "Address: ${address}";
 
-  static String m157(domain) => "Domain: ${domain}";
+  static String m160(domain) => "Domain: ${domain}";
 
-  static String m158(label) => "${label}은(는) URL이어야 합니다";
+  static String m161(label) => "${label}은(는) URL이어야 합니다";
 
-  static String m159(date) => "${date}까지 유효";
+  static String m162(date) => "${date}까지 유효";
 
-  static String m160(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m163(count) => "${Intl.plural(count, other: '${count}년 전')}";
 
-  static String m161(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m164(count) => "${Intl.plural(count, other: '${count}년 전')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1435,7 +1444,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountGroupsHidden": MessageLookupByLibrary.simpleMessage(
       "Hidden proxy groups also follow the filtering and isolation rules. They are not listed here.",
     ),
-    "mountGroupsNoMatch": m79,
+    "mountGroupsHiddenBlocked": m79,
+    "mountGroupsHiddenCount": m80,
+    "mountGroupsHiddenNoMatch": m81,
+    "mountGroupsNoMatch": m82,
     "mountGroupsSummary": MessageLookupByLibrary.simpleMessage(
       "Mounted nodes are added to all eligible proxy groups using each group’s existing filters. Existing nodes are kept.",
     ),
@@ -1455,7 +1467,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountIsolationFirst": MessageLookupByLibrary.simpleMessage(
       "Tailscale and other mount-isolation requirements still take priority. Ineligible groups will not receive subscription nodes.",
     ),
-    "mountLastUpdated": m80,
+    "mountLastUpdated": m83,
     "mountListFailed": MessageLookupByLibrary.simpleMessage(
       "Could not load subscriptions. Try again.",
     ),
@@ -1476,10 +1488,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountNoGroupTitle": MessageLookupByLibrary.simpleMessage(
       "This profile has no proxy group that can receive subscription nodes. Mounting cannot be completed yet.",
     ),
-    "mountNodeCount": m81,
-    "mountNodesExcludedShort": m82,
-    "mountNodesRead": m83,
-    "mountNodesReadAt": m84,
+    "mountNodeCount": m84,
+    "mountNodesExcludedShort": m85,
+    "mountNodesRead": m86,
+    "mountNodesReadAt": m87,
     "mountNodesUpdated": MessageLookupByLibrary.simpleMessage("Nodes updated"),
     "mountNotFetched": MessageLookupByLibrary.simpleMessage(
       "Nodes not fetched yet",
@@ -1488,9 +1500,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountPillFailedSemantics": MessageLookupByLibrary.simpleMessage(
       "a subscription update failed",
     ),
-    "mountPillSemantics": m85,
-    "mountProviderUpdateRefused": m86,
-    "mountProviderUpdateRefusedUnconfirmed": m87,
+    "mountPillSemantics": m88,
+    "mountProviderUpdateRefused": m89,
+    "mountProviderUpdateRefusedUnconfirmed": m90,
     "mountReadAgain": MessageLookupByLibrary.simpleMessage("Read again"),
     "mountReadStatus": MessageLookupByLibrary.simpleMessage(
       "Read status again",
@@ -1518,7 +1530,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountSelectionLost": MessageLookupByLibrary.simpleMessage(
       "The previously selected node is no longer in this subscription. Choose another node.",
     ),
-    "mountShowAllGroups": m88,
+    "mountShowAllGroups": m91,
     "mountShowLess": MessageLookupByLibrary.simpleMessage("Show less"),
     "mountSomeExcluded": MessageLookupByLibrary.simpleMessage(
       "Some nodes or groups are excluded from mounting",
@@ -1544,7 +1556,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountTailscaleExcluded": MessageLookupByLibrary.simpleMessage(
       "Tailscale nodes were excluded from ordinary mounts.",
     ),
-    "mountTarget": m89,
+    "mountTarget": m92,
     "mountTypeFallback": MessageLookupByLibrary.simpleMessage("Failover"),
     "mountTypeLoadBalance": MessageLookupByLibrary.simpleMessage(
       "Load balancing",
@@ -1560,8 +1572,8 @@ class MessageLookup extends MessageLookupByLibrary {
       "The mount result is unconfirmed. Read the status again before saving or unmounting.",
     ),
     "mountUnmount": MessageLookupByLibrary.simpleMessage("Unmount"),
-    "mountUnmountBody": m90,
-    "mountUnmountManyBody": m91,
+    "mountUnmountBody": m93,
+    "mountUnmountManyBody": m94,
     "mountUnmountManyTitle": MessageLookupByLibrary.simpleMessage(
       "Unmount these subscriptions?",
     ),
@@ -1573,7 +1585,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "mountUnmounted": MessageLookupByLibrary.simpleMessage("Unmounted"),
     "mountUnmounting": MessageLookupByLibrary.simpleMessage("Unmounting…"),
-    "mountUnsupportedExcluded": m92,
+    "mountUnsupportedExcluded": m95,
     "mountUpdateFailedInUse": MessageLookupByLibrary.simpleMessage(
       "Update failed. The last successfully fetched nodes are still in use.",
     ),
@@ -1584,7 +1596,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Update failed. The last successfully fetched nodes were kept.",
     ),
     "mountUpdateNodes": MessageLookupByLibrary.simpleMessage("Update nodes"),
-    "mountUpdateNodesOf": m93,
+    "mountUpdateNodesOf": m96,
     "mountUpdateReadEmptyNotApplied": MessageLookupByLibrary.simpleMessage(
       "Subscription read. It currently has no nodes. The new result has not been applied.",
     ),
@@ -1607,9 +1619,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountUpdatingNodes": MessageLookupByLibrary.simpleMessage(
       "Updating nodes…",
     ),
-    "mountViewerPending": m94,
-    "mountViewerSource": m95,
-    "mountedCount": m96,
+    "mountViewerPending": m97,
+    "mountViewerSource": m98,
+    "mountedCount": m99,
     "name": MessageLookupByLibrary.simpleMessage("이름"),
     "nameserverDesc": MessageLookupByLibrary.simpleMessage(
       "기본으로 사용하는 DNS 서버입니다. 예: 223.5.5.5, tls://1.1.1.1, https://dns.google/dns-query",
@@ -1619,8 +1631,8 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "navigationBarStyle": MessageLookupByLibrary.simpleMessage("하단 바"),
     "network": MessageLookupByLibrary.simpleMessage("네트워크"),
-    "networkAccessDeniedError": m97,
-    "networkBadResponseError": m98,
+    "networkAccessDeniedError": m100,
+    "networkBadResponseError": m101,
     "networkCancelledError": MessageLookupByLibrary.simpleMessage(
       "요청이 취소되었습니다",
     ),
@@ -1631,13 +1643,13 @@ class MessageLookup extends MessageLookupByLibrary {
       "서버 주소를 확인할 수 없습니다. URL이 올바른지, DNS가 정상인지 확인하세요",
     ),
     "networkName": MessageLookupByLibrary.simpleMessage("네트워크 이름"),
-    "networkNotFoundError": m99,
+    "networkNotFoundError": m102,
     "networkRateLimitedError": MessageLookupByLibrary.simpleMessage(
       "요청이 너무 많습니다(HTTP 429). 잠시 후 다시 시도하세요",
     ),
-    "networkRequestFailed": m100,
+    "networkRequestFailed": m103,
     "networkSecret": MessageLookupByLibrary.simpleMessage("네트워크 시크릿"),
-    "networkServerError": m101,
+    "networkServerError": m104,
     "networkSpeed": MessageLookupByLibrary.simpleMessage("네트워크 속도"),
     "networkTakeover": MessageLookupByLibrary.simpleMessage("트래픽 가로채기"),
     "networkTimeoutError": MessageLookupByLibrary.simpleMessage(
@@ -1668,9 +1680,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "ntpInterval": MessageLookupByLibrary.simpleMessage("동기화 간격(분)"),
     "nullProfileDesc": MessageLookupByLibrary.simpleMessage("프로필을 추가하여 시작하세요"),
-    "nullTip": m102,
-    "numberRangeTip": m103,
-    "numberTip": m104,
+    "nullTip": m105,
+    "numberRangeTip": m106,
+    "numberTip": m107,
     "obfs": MessageLookupByLibrary.simpleMessage("난독화"),
     "obfsHost": MessageLookupByLibrary.simpleMessage("난독화 호스트"),
     "obfsMode": MessageLookupByLibrary.simpleMessage("난독화 모드"),
@@ -1714,8 +1726,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "port": MessageLookupByLibrary.simpleMessage("포트"),
     "portConflictTip": MessageLookupByLibrary.simpleMessage("다른 포트를 입력하세요"),
     "portHopping": MessageLookupByLibrary.simpleMessage("포트 호핑"),
-    "portTip": m105,
-    "portValue": m106,
+    "portTip": m108,
+    "portValue": m109,
     "ports": MessageLookupByLibrary.simpleMessage("포트"),
     "preSharedKey": MessageLookupByLibrary.simpleMessage("사전 공유 키"),
     "preferred": MessageLookupByLibrary.simpleMessage("우선"),
@@ -1731,8 +1743,8 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage("올바른 간격을 입력하세요"),
     "profileAutoUpdateIntervalNullValidationDesc":
         MessageLookupByLibrary.simpleMessage("자동 업데이트 간격을 입력하세요"),
-    "profileDaysLeft": m107,
-    "profileExpiresIn": m108,
+    "profileDaysLeft": m110,
+    "profileExpiresIn": m111,
     "profileHasUpdate": MessageLookupByLibrary.simpleMessage(
       "프로필이 수정되었습니다. 자동 업데이트를 끄시겠습니까?",
     ),
@@ -1745,7 +1757,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "profileTunSettingsDesc": MessageLookupByLibrary.simpleMessage(
       "이 프로필에만 적용되며 네트워크 설정의 TUN 덮어쓰기 항목보다 우선합니다.",
     ),
-    "profileUpdatedAt": m109,
+    "profileUpdatedAt": m112,
     "profileUrlInvalidValidationDesc": MessageLookupByLibrary.simpleMessage(
       "올바른 프로필 URL을 입력하세요",
     ),
@@ -1758,22 +1770,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "protocol": MessageLookupByLibrary.simpleMessage("프로토콜"),
     "protocolParam": MessageLookupByLibrary.simpleMessage("프로토콜 매개변수"),
     "protocolVersion": MessageLookupByLibrary.simpleMessage("프로토콜 버전"),
-    "providerInUse": m110,
+    "providerInUse": m113,
     "providerUrlTip": MessageLookupByLibrary.simpleMessage("원격 공급자만 지원합니다"),
     "providers": MessageLookupByLibrary.simpleMessage("외부 리소스"),
     "proxies": MessageLookupByLibrary.simpleMessage("프록시"),
-    "proxiesCount": m111,
-    "proxiesProfileLabel": m112,
-    "proxiesRemovedTip": m113,
-    "proxiesReplacedTip": m114,
+    "proxiesCount": m114,
+    "proxiesProfileLabel": m115,
+    "proxiesRemovedTip": m116,
+    "proxiesReplacedTip": m117,
     "proxyChains": MessageLookupByLibrary.simpleMessage("프록시 체인"),
     "proxyGroup": MessageLookupByLibrary.simpleMessage("프록시 그룹"),
     "proxyGroupEmpty": MessageLookupByLibrary.simpleMessage("프록시 그룹이 비어 있습니다"),
-    "proxyGroupInUse": m115,
+    "proxyGroupInUse": m118,
     "proxyGroupsAfterStart": MessageLookupByLibrary.simpleMessage(
       "코어가 시작되면 그룹이 여기에 표시됩니다",
     ),
-    "proxyGroupsCount": m116,
+    "proxyGroupsCount": m119,
     "proxyProviders": MessageLookupByLibrary.simpleMessage("프록시 공급자"),
     "proxyServerNameserverDesc": MessageLookupByLibrary.simpleMessage(
       "프록시 서버의 도메인 확인에만 사용합니다.",
@@ -1983,12 +1995,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "규칙은 DOMAIN,example.com,DIRECT처럼 지원하는 유형으로 시작해야 합니다",
     ),
     "rules": MessageLookupByLibrary.simpleMessage("규칙"),
-    "rulesCount": m117,
+    "rulesCount": m120,
     "runTime": MessageLookupByLibrary.simpleMessage("실행 시간"),
     "running": MessageLookupByLibrary.simpleMessage("실행 중"),
     "runtimeConfig": MessageLookupByLibrary.simpleMessage("런타임 구성"),
     "safeMode": MessageLookupByLibrary.simpleMessage("안전 모드"),
-    "safeModeAppTitle": m118,
+    "safeModeAppTitle": m121,
     "saturation": MessageLookupByLibrary.simpleMessage("채도"),
     "save": MessageLookupByLibrary.simpleMessage("저장"),
     "saveChanges": MessageLookupByLibrary.simpleMessage("변경 사항을 저장하시겠습니까?"),
@@ -1999,9 +2011,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "scrollToSelected": MessageLookupByLibrary.simpleMessage("선택 항목으로 스크롤"),
     "search": MessageLookupByLibrary.simpleMessage("검색"),
     "seconds": MessageLookupByLibrary.simpleMessage("초"),
-    "secondsCount": m119,
+    "secondsCount": m122,
     "secretKey": MessageLookupByLibrary.simpleMessage("키"),
-    "sectionsInEffect": m120,
+    "sectionsInEffect": m123,
     "select": MessageLookupByLibrary.simpleMessage("선택"),
     "selectAll": MessageLookupByLibrary.simpleMessage("모두 선택"),
     "selectRuleSet": MessageLookupByLibrary.simpleMessage("규칙 세트를 선택하세요"),
@@ -2030,7 +2042,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "휴대폰 카메라로 코드를 스캔한 뒤 열린 페이지에 링크를 붙여 넣으세요. 두 기기가 같은 네트워크에 연결되어 있어야 합니다.",
     ),
     "server": MessageLookupByLibrary.simpleMessage("서버"),
-    "serviceAbnormalCount": m121,
+    "serviceAbnormalCount": m124,
     "serviceAllAvailable": MessageLookupByLibrary.simpleMessage("모두 사용 가능"),
     "serviceAvailable": MessageLookupByLibrary.simpleMessage("사용 가능"),
     "serviceBlocked": MessageLookupByLibrary.simpleMessage("차단됨"),
@@ -2052,8 +2064,8 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "settingEntries": MessageLookupByLibrary.simpleMessage("설정"),
     "settings": MessageLookupByLibrary.simpleMessage("설정"),
-    "settingsCount": m122,
-    "shareLinkUnreadable": m123,
+    "settingsCount": m125,
+    "shareLinkUnreadable": m126,
     "shareLinksInvalid": MessageLookupByLibrary.simpleMessage(
       "링크에서 읽을 수 있는 프록시가 없습니다",
     ),
@@ -2073,7 +2085,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "singleShareLinkOnly": MessageLookupByLibrary.simpleMessage(
       "여기에는 링크를 하나만 입력하세요. 여러 개는 목록의 빠른 편집에서 편집하세요",
     ),
-    "singleValueTip": m124,
+    "singleValueTip": m127,
     "size": MessageLookupByLibrary.simpleMessage("크기"),
     "skipCertVerify": MessageLookupByLibrary.simpleMessage("인증서 검증 건너뛰기"),
     "skipDomain": MessageLookupByLibrary.simpleMessage("건너뛸 도메인"),
@@ -2168,11 +2180,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "totalUpload": MessageLookupByLibrary.simpleMessage("업로드량"),
     "tproxyPort": MessageLookupByLibrary.simpleMessage("TProxy 포트"),
     "traffic": MessageLookupByLibrary.simpleMessage("트래픽"),
-    "trafficPeak": m125,
-    "trafficTotal": m126,
+    "trafficPeak": m128,
+    "trafficTotal": m129,
     "trafficUsage": MessageLookupByLibrary.simpleMessage("트래픽 사용량"),
     "transport": MessageLookupByLibrary.simpleMessage("전송"),
-    "transportHeaders": m127,
+    "transportHeaders": m130,
     "trustCertificate": MessageLookupByLibrary.simpleMessage("인증서 신뢰"),
     "tsAboutExit": MessageLookupByLibrary.simpleMessage("About exit settings"),
     "tsAboutRoutes": MessageLookupByLibrary.simpleMessage(
@@ -2224,7 +2236,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsAssignedTargets": MessageLookupByLibrary.simpleMessage(
       "Assigned targets",
     ),
-    "tsAssignedTo": m128,
+    "tsAssignedTo": m131,
     "tsAssignedUnavailable": MessageLookupByLibrary.simpleMessage(
       "The assigned account is unavailable. This target will not use another account.",
     ),
@@ -2259,7 +2271,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Couldn\'t open the login page. Try again.",
     ),
     "tsCancel": MessageLookupByLibrary.simpleMessage("Cancel"),
-    "tsCandidate": m129,
+    "tsCandidate": m132,
     "tsChangeAfterSignIn": MessageLookupByLibrary.simpleMessage(
       "Sign in and connect to change",
     ),
@@ -2292,7 +2304,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsConflictBody": MessageLookupByLibrary.simpleMessage(
       "These addresses or domains have multiple candidate accounts. Requests to these targets are blocked until you choose an account. They will not be sent directly.",
     ),
-    "tsConflictTitle": m130,
+    "tsConflictTitle": m133,
     "tsControlServer": MessageLookupByLibrary.simpleMessage("Control server"),
     "tsCopyAddress": MessageLookupByLibrary.simpleMessage("Copy address"),
     "tsCoreStopped": MessageLookupByLibrary.simpleMessage(
@@ -2302,7 +2314,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Start the core to see this node\'s Tailscale status.",
     ),
     "tsCurrentDevice": MessageLookupByLibrary.simpleMessage("This device"),
-    "tsDeleteProfileManaged": m131,
+    "tsDeleteProfileManaged": m134,
     "tsDeleteProfilePending": MessageLookupByLibrary.simpleMessage(
       "This profile has unconfirmed Tailscale operations. Read the status again before deleting it.",
     ),
@@ -2317,8 +2329,8 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tsDeviceName": MessageLookupByLibrary.simpleMessage("Device name"),
     "tsDevices": MessageLookupByLibrary.simpleMessage("Devices"),
-    "tsDevicesCompact": m132,
-    "tsDevicesCompactFiltered": m133,
+    "tsDevicesCompact": m135,
+    "tsDevicesCompactFiltered": m136,
     "tsDevicesEmpty": MessageLookupByLibrary.simpleMessage(
       "No visible devices",
     ),
@@ -2328,11 +2340,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsDevicesFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t load the device list. Try again.",
     ),
-    "tsDevicesFiltered": m134,
+    "tsDevicesFiltered": m137,
     "tsDevicesScope": MessageLookupByLibrary.simpleMessage(
       "Devices this node can see, not every device in the admin console",
     ),
-    "tsDevicesShown": m135,
+    "tsDevicesShown": m138,
     "tsDevicesStale": MessageLookupByLibrary.simpleMessage(
       "The device list may be out of date. Refreshing failed; this is the last list read.",
     ),
@@ -2349,7 +2361,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Changing exit node…",
     ),
     "tsExitCapable": MessageLookupByLibrary.simpleMessage("Exit node"),
-    "tsExitChangeBody": m136,
+    "tsExitChangeBody": m139,
     "tsExitChangeConfirm": MessageLookupByLibrary.simpleMessage(
       "Change exit node",
     ),
@@ -2363,7 +2375,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsExitNodeTip": MessageLookupByLibrary.simpleMessage(
       "Only affects traffic forwarded through this Tailscale node; it doesn\'t make the whole Mac use the exit.",
     ),
-    "tsExitOffBody": m137,
+    "tsExitOffBody": m140,
     "tsExitOffTitle": MessageLookupByLibrary.simpleMessage(
       "Stop using the exit node?",
     ),
@@ -2374,7 +2386,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "The exit node change is unconfirmed. Read the current settings again.",
     ),
     "tsExitUpdated": MessageLookupByLibrary.simpleMessage("Exit node updated"),
-    "tsExpiryTip": m138,
+    "tsExpiryTip": m141,
     "tsFilterEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the current filters",
     ),
@@ -2416,13 +2428,13 @@ class MessageLookup extends MessageLookupByLibrary {
       "The login record was not moved; the move details couldn\'t be saved. Try again, or log in again.",
     ),
     "tsLegacyConfirm": MessageLookupByLibrary.simpleMessage("Confirm move"),
-    "tsLegacyConfirmAccount": m139,
+    "tsLegacyConfirmAccount": m142,
     "tsLegacyConfirmBody": MessageLookupByLibrary.simpleMessage(
       "This copies the login record for the node above and leaves the original untouched. The same record can\'t move to another node afterwards. Check the node\'s real connection status after the move.",
     ),
-    "tsLegacyConfirmControl": m140,
-    "tsLegacyConfirmNode": m141,
-    "tsLegacyConfirmProfile": m142,
+    "tsLegacyConfirmControl": m143,
+    "tsLegacyConfirmNode": m144,
+    "tsLegacyConfirmProfile": m145,
     "tsLegacyConfirmTitle": MessageLookupByLibrary.simpleMessage(
       "Move the earlier login to this node?",
     ),
@@ -2493,7 +2505,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsLogoutAuthKeyNote": MessageLookupByLibrary.simpleMessage(
       "When you log in again, the auth key in the profile registers a new device identity.",
     ),
-    "tsLogoutBody": m143,
+    "tsLogoutBody": m146,
     "tsLogoutFailed": MessageLookupByLibrary.simpleMessage(
       "Couldn\'t log out. Read the node status again, then retry.",
     ),
@@ -2523,7 +2535,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNetworkNameTip": MessageLookupByLibrary.simpleMessage(
       "The network name does not identify a verified network owner.",
     ),
-    "tsNetworkOf": m144,
+    "tsNetworkOf": m147,
     "tsNewAccount": MessageLookupByLibrary.simpleMessage("New account"),
     "tsNoExitCandidates": MessageLookupByLibrary.simpleMessage(
       "No exit nodes available",
@@ -2544,7 +2556,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsNodeGoneTip": MessageLookupByLibrary.simpleMessage(
       "Choose a node again.",
     ),
-    "tsNodeOf": m145,
+    "tsNodeOf": m148,
     "tsNotAssigned": MessageLookupByLibrary.simpleMessage("Not assigned"),
     "tsOff": MessageLookupByLibrary.simpleMessage("Off"),
     "tsOffline": MessageLookupByLibrary.simpleMessage("Offline"),
@@ -2602,8 +2614,8 @@ class MessageLookup extends MessageLookupByLibrary {
       "Refresh device list",
     ),
     "tsRelogin": MessageLookupByLibrary.simpleMessage("Log in again"),
-    "tsRemoveBody": m146,
-    "tsRemoveBodyNode": m147,
+    "tsRemoveBody": m149,
+    "tsRemoveBodyNode": m150,
     "tsRemoveExtra": MessageLookupByLibrary.simpleMessage(
       "This does not delete the device from the Tailscale admin console or change the official client.",
     ),
@@ -2663,8 +2675,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRoutingConflict": MessageLookupByLibrary.simpleMessage(
       "Routing conflict",
     ),
-    "tsRulesAddresses": m148,
-    "tsRulesDomain": m149,
+    "tsRulesAddresses": m151,
+    "tsRulesDomain": m152,
     "tsRulesManaged": MessageLookupByLibrary.simpleMessage(
       "Flash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.",
     ),
@@ -2674,12 +2686,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRulesProfileNode": MessageLookupByLibrary.simpleMessage(
       "Only traffic routed to this node by Flash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.",
     ),
-    "tsRulesSummary": m150,
+    "tsRulesSummary": m153,
     "tsRulesUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Domain and address details are unconfirmed.",
     ),
     "tsSaveChoices": MessageLookupByLibrary.simpleMessage("Save choices"),
-    "tsSavedValue": m151,
+    "tsSavedValue": m154,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the search",
     ),
@@ -2693,7 +2705,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Saved, but not yet confirmed in effect. Read the current settings again.",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("Shared in"),
-    "tsSharedBy": m152,
+    "tsSharedBy": m155,
     "tsSignIn": MessageLookupByLibrary.simpleMessage("Sign in to Tailscale"),
     "tsSignInBoundary": MessageLookupByLibrary.simpleMessage(
       "System proxy and TUN will not be enabled automatically.",
@@ -2707,7 +2719,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsSignOutAccount": MessageLookupByLibrary.simpleMessage(
       "Sign out of this account",
     ),
-    "tsSignOutAccountBody": m153,
+    "tsSignOutAccountBody": m156,
     "tsSignOutAccountTitle": MessageLookupByLibrary.simpleMessage(
       "Sign out of this account?",
     ),
@@ -2756,17 +2768,17 @@ class MessageLookup extends MessageLookupByLibrary {
       "Waiting for browser login",
     ),
     "tsStatus": MessageLookupByLibrary.simpleMessage("Status"),
-    "tsStatusOf": m154,
+    "tsStatusOf": m157,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("Status unknown"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "This node has stopped and can\'t reach the Tailscale network for now.",
     ),
     "tsSubnetRoutes": MessageLookupByLibrary.simpleMessage("Subnet routes"),
-    "tsSwitcherSemantics": m155,
+    "tsSwitcherSemantics": m158,
     "tsSystem": MessageLookupByLibrary.simpleMessage("OS"),
     "tsSystemMissing": MessageLookupByLibrary.simpleMessage("OS not provided"),
-    "tsTargetAddress": m156,
-    "tsTargetDomain": m157,
+    "tsTargetAddress": m159,
+    "tsTargetDomain": m160,
     "tsTargetUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Target account unconfirmed",
     ),
@@ -2852,14 +2864,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 재작성"),
-    "urlTip": m158,
+    "urlTip": m161,
     "useHosts": MessageLookupByLibrary.simpleMessage("hosts 사용"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("시스템 hosts 사용"),
     "usedShort": MessageLookupByLibrary.simpleMessage("사용"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("사용한 트래픽"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("사용자 이름"),
-    "validUntil": m159,
+    "validUntil": m162,
     "value": MessageLookupByLibrary.simpleMessage("값"),
     "view": MessageLookupByLibrary.simpleMessage("보기"),
     "viewAll": MessageLookupByLibrary.simpleMessage("모두 보기"),
@@ -2874,8 +2886,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "시스템에 기록하면 시스템 시계도 설정합니다. Android에서는 무시됩니다.",
     ),
-    "yearsAgo": m160,
-    "yearsAgoShort": m161,
+    "yearsAgo": m163,
+    "yearsAgoShort": m164,
     "yes": MessageLookupByLibrary.simpleMessage("예"),
     "zhCN": MessageLookupByLibrary.simpleMessage("중국어 간체"),
   };

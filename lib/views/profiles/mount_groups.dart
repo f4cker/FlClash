@@ -39,14 +39,19 @@ class MountGroupsView {
     required this.rows,
     required this.hidden,
     required this.unconfirmed,
+    this.hiddenBlocked = 0,
+    this.hiddenNoMatch = 0,
   });
 
   final List<MountGroupLine> rows;
   final int hidden;
   final bool unconfirmed;
+  final int hiddenBlocked;
+  final int hiddenNoMatch;
 
   int get noMatch =>
-      rows.where((row) => row.state == MountGroupState.noMatch).length;
+      rows.where((row) => row.state == MountGroupState.noMatch).length +
+      hiddenNoMatch;
 
   MountGroupsStatus get status {
     if (noMatch > 0) {
@@ -63,7 +68,10 @@ class MountGroupsView {
 
   /// A group down to its REJECT fallback refuses connections now: never
   /// left behind a collapsed row.
-  bool get blocking => rows.any((row) => row.status?.warn ?? false);
+  bool get blocking =>
+      hiddenBlocked > 0 || rows.any((row) => row.status?.warn ?? false);
+
+  bool get forcedOpen => blocking || hiddenNoMatch > 0;
 }
 
 /// [pending]: the ticks are not what is applied, so rows are candidates
@@ -82,6 +90,8 @@ MountGroupsView mountGroupsViewOf(
   runtime ??= applied;
   final rows = <MountGroupLine>[];
   var hidden = 0;
+  var hiddenBlocked = 0;
+  var hiddenNoMatch = 0;
   final report = {
     for (final group in applied?.report?.groups ?? const <MountGroupReport>[])
       group.name: group,
@@ -93,10 +103,6 @@ MountGroupsView mountGroupsViewOf(
   final unconfirmed = !pending && mounted && applied == null;
   for (final group in target.groups) {
     if (group.kind != MountGroupKind.auto) {
-      continue;
-    }
-    if (group.hidden) {
-      hidden++;
       continue;
     }
     var state = MountGroupState.none;
@@ -116,6 +122,15 @@ MountGroupsView mountGroupsViewOf(
         state = count > 0 ? MountGroupState.applied : MountGroupState.noMatch;
       }
     }
+    if (group.hidden) {
+      hidden++;
+      if (status?.warn ?? false) {
+        hiddenBlocked++;
+      } else if (state == MountGroupState.noMatch) {
+        hiddenNoMatch++;
+      }
+      continue;
+    }
     rows.add(
       MountGroupLine(
         group: group,
@@ -125,7 +140,13 @@ MountGroupsView mountGroupsViewOf(
       ),
     );
   }
-  return MountGroupsView(rows: rows, hidden: hidden, unconfirmed: unconfirmed);
+  return MountGroupsView(
+    rows: rows,
+    hidden: hidden,
+    unconfirmed: unconfirmed,
+    hiddenBlocked: hiddenBlocked,
+    hiddenNoMatch: hiddenNoMatch,
+  );
 }
 
 /// The groups block, design §12, §12.1 and §13: one summary row that opens
@@ -150,7 +171,7 @@ class MountGroupsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
-    final open = expanded || view.blocking;
+    final open = expanded || view.forcedOpen;
     final (statusText, warn) = switch (view.status) {
       MountGroupsStatus.normal => (null, false),
       MountGroupsStatus.pending => (appLocalizations.mountGroupPending, false),
@@ -163,7 +184,9 @@ class MountGroupsSection extends StatelessWidget {
         false,
       ),
     };
-    final count = appLocalizations.mountGroupsCount(view.rows.length);
+    final count = view.rows.isEmpty && view.hidden > 0
+        ? appLocalizations.mountGroupsHiddenCount(view.hidden)
+        : appLocalizations.mountGroupsCount(view.rows.length);
     final caption = AppTextStyle.caption2
         .of(context)
         .copyWith(color: colorScheme.onSurfaceVariant);
@@ -172,9 +195,9 @@ class MountGroupsSection extends StatelessWidget {
       expanded: open,
       label: [appLocalizations.mountGroupsTitle, count, ?statusText].join(', '),
       excludeSemantics: true,
-      onTap: view.blocking ? null : onToggle,
+      onTap: view.forcedOpen ? null : onToggle,
       child: PressRegion(
-        onTap: view.blocking ? null : onToggle,
+        onTap: view.forcedOpen ? null : onToggle,
         shape: AppShape.all(AppCorner.sm),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44 - 24),
@@ -244,6 +267,18 @@ class MountGroupsSection extends StatelessWidget {
             ),
           if (view.hidden > 0)
             Text(appLocalizations.mountGroupsHidden, style: caption),
+          for (final line in [
+            if (view.hiddenBlocked > 0)
+              appLocalizations.mountGroupsHiddenBlocked(view.hiddenBlocked),
+            if (view.hiddenNoMatch > 0)
+              appLocalizations.mountGroupsHiddenNoMatch(view.hiddenNoMatch),
+          ])
+            Text(
+              line,
+              style: AppTextStyle.caption2
+                  .of(context, emphasized: true)
+                  .copyWith(color: colorScheme.warning),
+            ),
         ],
       ],
     );
