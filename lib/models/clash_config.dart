@@ -2434,6 +2434,8 @@ extension PatchClashConfigExt on PatchClashConfig {
       (PageConfigKey.externalController, null) => copyWith(
         externalController: ExternalControllerStatus.close,
       ),
+      (PageConfigKey.globalUa, final String value) => copyWith(globalUa: value),
+      (PageConfigKey.globalUa, null) => copyWith(globalUa: null),
       (PageConfigKey.keepAliveIdle, final int value) => copyWith(
         keepAliveIdle: value,
       ),

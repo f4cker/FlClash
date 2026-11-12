@@ -115,8 +115,7 @@ abstract class _ConfigItem<T> extends ConsumerWidget {
     return buildItem(context, ref, appLocalizations, ref.watch(selector));
   }
 
-  /// Writes [value]; moving a control whose field follows the profile makes
-  /// it a page setting again.
+  /// Moving a control whose field follows the profile reclaims it.
   void change(WidgetRef ref, T value) {
     onChanged(ref, value);
     if (pageKey case final pageKey?) {

@@ -4,6 +4,7 @@ import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/on_demand.dart';
 import 'package:fl_clash/views/config/override.dart';
 import 'package:fl_clash/views/config/user_agents.dart';
@@ -42,9 +43,34 @@ class UaItem extends ConsumerWidget {
     final globalUa = ref.watch(
       patchClashConfigProvider.select((state) => state.globalUa),
     );
+    final pagePriority = ref.watch(
+      patchClashConfigProvider.select((state) => state.pagePriority),
+    );
+    final follow = followMenuItems(
+      ref,
+      PageConfigKey.globalUa,
+      separated: false,
+    );
     return ListItem.open(
       title: Text(appLocalizations.userAgent),
-      subtitle: Text(globalUa ?? appLocalizations.defaultText),
+      subtitle: pagePriority
+          ? PageSourceNote(
+              pageKey: PageConfigKey.globalUa,
+              describe: (value) => switch (value) {
+                null => appLocalizations.defaultText,
+                _ => describeConfigValue(PageConfigKey.globalUa.path, value),
+              },
+            )
+          : Text(globalUa ?? appLocalizations.defaultText),
+      trailing: follow.isEmpty
+          ? null
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RowMenuButton(items: follow, tooltip: appLocalizations.more),
+                const GlyphIcon(AppGlyphs.chevronForward),
+              ],
+            ),
       widget: const UserAgentsView(),
     );
   }

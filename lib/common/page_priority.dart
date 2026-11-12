@@ -266,8 +266,7 @@ bool exposesControllerWithoutSecret(Map config) {
   return !(host == 'localhost' || host == '::1' || host.startsWith('127.'));
 }
 
-/// Only the host and port of a controller address, without any credentials
-/// or query it carries.
+/// A controller address cut to host:port, dropping credentials and query.
 String controllerHostPort(String address) {
   final uri = Uri.tryParse(address.contains('://') ? address : '//$address');
   if (uri == null || uri.host.isEmpty) {

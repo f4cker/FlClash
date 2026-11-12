@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
@@ -28,10 +29,13 @@ class _UserAgentsViewState extends ConsumerState<UserAgentsView> {
         .update((state) => state.copyWith(userAgents: userAgents));
   }
 
-  void _select(String? userAgent) {
+  void _select(String? userAgent, {bool picked = false}) {
     ref
         .read(patchClashConfigProvider.notifier)
         .update((state) => state.copyWith(globalUa: userAgent));
+    if (picked) {
+      ref.read(patchClashConfigProvider.notifier).claim(PageConfigKey.globalUa);
+    }
   }
 
   Future<String?> _showInputDialog([String? userAgent]) async {
@@ -134,7 +138,7 @@ class _UserAgentsViewState extends ConsumerState<UserAgentsView> {
             label: userAgent,
             isSelected: userAgent == selected,
             onSelected: () {
-              _select(userAgent);
+              _select(userAgent, picked: true);
             },
             trailing: DetailButton(
               glyph: AppGlyphs.edit,
@@ -156,7 +160,7 @@ class _UserAgentsViewState extends ConsumerState<UserAgentsView> {
       appSettingProvider.select((state) => state.userAgents),
     );
     final selected = ref.watch(
-      patchClashConfigProvider.select((state) => state.globalUa),
+      shownClashConfigProvider.select((state) => state.globalUa),
     );
     final entries = _visibleUserAgents(userAgents, selected);
     return Scaffold(
@@ -180,7 +184,7 @@ class _UserAgentsViewState extends ConsumerState<UserAgentsView> {
             label: appLocalizations.defaultText,
             isSelected: selected == null,
             onSelected: () {
-              _select(null);
+              _select(null, picked: true);
             },
           ),
         ),
