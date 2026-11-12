@@ -1111,12 +1111,9 @@ class _OwnerCell extends StatelessWidget {
           style: AppTextStyle.footnote.of(context),
         );
       case TailscaleOwnerUnknown():
-        final network = this.network;
-        if (network != null) {
-          description = appLocalizations.tsOwnerUnknownNetwork(network);
-        }
+        description = network?.trim();
         main = Text(
-          description ?? appLocalizations.tsOwnerUnknown,
+          description ?? '',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: muted,
@@ -1150,7 +1147,9 @@ class _OwnerCell extends StatelessWidget {
       cell = Tooltip(
         message: description,
         child: Semantics(
-          label: '${appLocalizations.tsOwner} $description',
+          label: owner is TailscaleOwnerUnknown
+              ? description
+              : '${appLocalizations.tsOwner} $description',
           child: cell,
         ),
       );

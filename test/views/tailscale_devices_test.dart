@@ -229,11 +229,11 @@ void main() {
     );
   });
 
-  testWidgets('an owner missing from the status names the network, else '
-      'stays 归属未知; 我 is unchanged', (tester) async {
+  testWidgets('an owner missing from the status names only the network; '
+      '我 is unchanged', (tester) async {
     await pump(tester, devicesStatus());
 
-    expect(find.text('未知 · 网络 alice@example.com'), findsOneWidget);
+    expect(find.text('alice@example.com'), findsOneWidget);
     expect(find.text('归属未知'), findsNothing);
     expect(
       find.descendant(of: rowOf('studio-mac'), matching: find.text('我')),
@@ -251,7 +251,7 @@ void main() {
     expect(find.textContaining('未知 · 网络'), findsNothing);
     expect(
       find.descendant(of: rowOf('office-hk'), matching: find.text('归属未知')),
-      findsOneWidget,
+      findsNothing,
     );
   });
 
@@ -278,7 +278,7 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.text('Unknown · Network alice@example.com'), findsOneWidget);
+    expect(find.text('alice@example.com'), findsOneWidget);
     expect(find.byTooltip('Copy address'), findsNWidgets(4));
     expect(find.byTooltip('Copy name'), findsNWidgets(3));
   });
