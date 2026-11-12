@@ -487,6 +487,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "app": MessageLookupByLibrary.simpleMessage("앱"),
     "appAccessControl": MessageLookupByLibrary.simpleMessage("앱 접근 제어"),
     "appIconDesign": MessageLookupByLibrary.simpleMessage("앱 아이콘 디자인"),
+    "appInfoUnreadable": MessageLookupByLibrary.simpleMessage(
+      "Could not read app information",
+    ),
     "appProxiesEmpty": MessageLookupByLibrary.simpleMessage("로컬 프록시 없음"),
     "appendSystemDns": MessageLookupByLibrary.simpleMessage("시스템 DNS 추가"),
     "applied": MessageLookupByLibrary.simpleMessage("적용했습니다"),
@@ -632,6 +635,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "copyEnvVar": MessageLookupByLibrary.simpleMessage("환경 변수 복사"),
     "copyHost": MessageLookupByLibrary.simpleMessage("호스트 복사"),
     "copyLink": MessageLookupByLibrary.simpleMessage("링크 복사"),
+    "copyPath": MessageLookupByLibrary.simpleMessage("Copy path"),
     "copyRequest": MessageLookupByLibrary.simpleMessage("요청 복사"),
     "copyResponse": MessageLookupByLibrary.simpleMessage("응답 복사"),
     "copyResponseBody": MessageLookupByLibrary.simpleMessage("응답 본문 복사"),
@@ -904,6 +908,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "파일이 수정되었습니다. 변경 사항을 저장하시겠습니까?",
     ),
     "filter": MessageLookupByLibrary.simpleMessage("필터"),
+    "filterByThisApp": MessageLookupByLibrary.simpleMessage(
+      "Filter by this app",
+    ),
+    "filterByThisProcess": MessageLookupByLibrary.simpleMessage(
+      "Filter by this process",
+    ),
     "filters": MessageLookupByLibrary.simpleMessage("필터"),
     "findProcessMode": MessageLookupByLibrary.simpleMessage("프로세스 찾기"),
     "floating": MessageLookupByLibrary.simpleMessage("플로팅"),
@@ -1710,6 +1720,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "originalUrl": MessageLookupByLibrary.simpleMessage("원래 URL"),
     "other": MessageLookupByLibrary.simpleMessage("기타"),
     "otherContributors": MessageLookupByLibrary.simpleMessage("기타 기여자"),
+    "otherDevice": MessageLookupByLibrary.simpleMessage("Other device"),
     "outbound": MessageLookupByLibrary.simpleMessage("아웃바운드"),
     "outboundExit": MessageLookupByLibrary.simpleMessage("출구"),
     "outboundIp": MessageLookupByLibrary.simpleMessage("아웃바운드 IP"),
@@ -1752,6 +1763,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "privateKey": MessageLookupByLibrary.simpleMessage("개인 키"),
     "privateKeyPassphrase": MessageLookupByLibrary.simpleMessage("개인 키 암호"),
     "process": MessageLookupByLibrary.simpleMessage("프로세스"),
+    "processFromOtherDevice": MessageLookupByLibrary.simpleMessage(
+      "This connection is from another device. Its process information cannot be obtained on this Mac.",
+    ),
+    "processInfoUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Process information is unavailable.",
+    ),
+    "processLookupDisabled": MessageLookupByLibrary.simpleMessage(
+      "Process lookup is currently disabled.",
+    ),
+    "processPath": MessageLookupByLibrary.simpleMessage("Process path"),
+    "processUnavailable": MessageLookupByLibrary.simpleMessage("Unavailable"),
     "profile": MessageLookupByLibrary.simpleMessage("프로필"),
     "profileAutoUpdateIntervalInvalidValidationDesc":
         MessageLookupByLibrary.simpleMessage("올바른 간격을 입력하세요"),
@@ -2854,6 +2876,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "unknownNetworkError": MessageLookupByLibrary.simpleMessage(
       "알 수 없는 네트워크 오류",
     ),
+    "unknownProcess": MessageLookupByLibrary.simpleMessage("Unknown process"),
     "unmaximize": MessageLookupByLibrary.simpleMessage("이전 크기로 복원"),
     "unnamed": MessageLookupByLibrary.simpleMessage("이름 없음"),
     "unpinWindow": MessageLookupByLibrary.simpleMessage("창 고정 해제"),

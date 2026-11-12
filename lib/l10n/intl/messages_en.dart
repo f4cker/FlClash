@@ -531,6 +531,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "App access control",
     ),
     "appIconDesign": MessageLookupByLibrary.simpleMessage("App icon design"),
+    "appInfoUnreadable": MessageLookupByLibrary.simpleMessage(
+      "Could not read app information",
+    ),
     "appProxiesEmpty": MessageLookupByLibrary.simpleMessage("No local proxies"),
     "appendSystemDns": MessageLookupByLibrary.simpleMessage(
       "Append system DNS",
@@ -722,6 +725,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "copyHost": MessageLookupByLibrary.simpleMessage("Copy host"),
     "copyLink": MessageLookupByLibrary.simpleMessage("Copy link"),
+    "copyPath": MessageLookupByLibrary.simpleMessage("Copy path"),
     "copyRequest": MessageLookupByLibrary.simpleMessage("Copy request"),
     "copyResponse": MessageLookupByLibrary.simpleMessage("Copy response"),
     "copyResponseBody": MessageLookupByLibrary.simpleMessage(
@@ -1048,6 +1052,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "The file has been modified. Save the changes?",
     ),
     "filter": MessageLookupByLibrary.simpleMessage("Filter"),
+    "filterByThisApp": MessageLookupByLibrary.simpleMessage(
+      "Filter by this app",
+    ),
+    "filterByThisProcess": MessageLookupByLibrary.simpleMessage(
+      "Filter by this process",
+    ),
     "filters": MessageLookupByLibrary.simpleMessage("Filters"),
     "findProcessMode": MessageLookupByLibrary.simpleMessage("Find process"),
     "floating": MessageLookupByLibrary.simpleMessage("Floating"),
@@ -1946,6 +1956,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "otherContributors": MessageLookupByLibrary.simpleMessage(
       "Other contributors",
     ),
+    "otherDevice": MessageLookupByLibrary.simpleMessage("Other device"),
     "outbound": MessageLookupByLibrary.simpleMessage("Outbound"),
     "outboundExit": MessageLookupByLibrary.simpleMessage("Exit"),
     "outboundIp": MessageLookupByLibrary.simpleMessage("Outbound IP"),
@@ -1998,6 +2009,17 @@ class MessageLookup extends MessageLookupByLibrary {
       "Private key passphrase",
     ),
     "process": MessageLookupByLibrary.simpleMessage("Process"),
+    "processFromOtherDevice": MessageLookupByLibrary.simpleMessage(
+      "This connection is from another device. Its process information cannot be obtained on this Mac.",
+    ),
+    "processInfoUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Process information is unavailable.",
+    ),
+    "processLookupDisabled": MessageLookupByLibrary.simpleMessage(
+      "Process lookup is currently disabled.",
+    ),
+    "processPath": MessageLookupByLibrary.simpleMessage("Process path"),
+    "processUnavailable": MessageLookupByLibrary.simpleMessage("Unavailable"),
     "profile": MessageLookupByLibrary.simpleMessage("Profile"),
     "profileAutoUpdateIntervalInvalidValidationDesc":
         MessageLookupByLibrary.simpleMessage("Please enter a valid interval"),
@@ -3182,6 +3204,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "unknownNetworkError": MessageLookupByLibrary.simpleMessage(
       "Unknown network error",
     ),
+    "unknownProcess": MessageLookupByLibrary.simpleMessage("Unknown process"),
     "unmaximize": MessageLookupByLibrary.simpleMessage("Restore down"),
     "unnamed": MessageLookupByLibrary.simpleMessage("Unnamed"),
     "unpinWindow": MessageLookupByLibrary.simpleMessage("Unpin window"),

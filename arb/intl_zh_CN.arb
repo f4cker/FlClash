@@ -1484,5 +1484,16 @@
   "mountNodesExcludedShort": "{count} 个节点不参与挂载",
   "mountGroupsExcludedShort": "{count} 个分组不接收订阅节点",
   "mountNamesAndExclusions": "重名及排除说明",
-  "mountSomeExcluded": "部分节点或分组不参与挂载"
+  "mountSomeExcluded": "部分节点或分组不参与挂载",
+  "processPath": "进程路径",
+  "copyPath": "复制路径",
+  "filterByThisApp": "筛选此应用",
+  "filterByThisProcess": "筛选此进程",
+  "unknownProcess": "未知进程",
+  "otherDevice": "其他设备",
+  "processInfoUnavailable": "未获取到进程信息。",
+  "processUnavailable": "无法获取",
+  "processFromOtherDevice": "此连接来自其他设备，无法在这台 Mac 上获取其进程信息。",
+  "appInfoUnreadable": "无法读取应用信息",
+  "processLookupDisabled": "当前未开启进程查找。"
 }

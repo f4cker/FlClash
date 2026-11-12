@@ -1484,5 +1484,16 @@
   "mountNodesExcludedShort": "{count, plural, =1{1 node excluded from mounting} other{{count} nodes excluded from mounting}}",
   "mountGroupsExcludedShort": "{count, plural, =1{1 group excludes subscription nodes} other{{count} groups exclude subscription nodes}}",
   "mountNamesAndExclusions": "Name conflicts and exclusions",
-  "mountSomeExcluded": "Some nodes or groups are excluded from mounting"
+  "mountSomeExcluded": "Some nodes or groups are excluded from mounting",
+  "processPath": "Process path",
+  "copyPath": "Copy path",
+  "filterByThisApp": "Filter by this app",
+  "filterByThisProcess": "Filter by this process",
+  "unknownProcess": "Unknown process",
+  "otherDevice": "Other device",
+  "processInfoUnavailable": "Process information is unavailable.",
+  "processUnavailable": "Unavailable",
+  "processFromOtherDevice": "This connection is from another device. Its process information cannot be obtained on this Mac.",
+  "appInfoUnreadable": "Could not read app information",
+  "processLookupDisabled": "Process lookup is currently disabled."
 }
