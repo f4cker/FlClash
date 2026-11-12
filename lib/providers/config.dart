@@ -109,6 +109,9 @@ class _PatchClashConfig extends _$PatchClashConfig
   void update(PatchClashConfig Function(PatchClashConfig) builder) {
     super.update((state) => state.reclaimMoved(builder(state)));
   }
+
+  /// Makes [key] a page setting again, even where its value did not move.
+  void claim(PageConfigKey key) => super.update((state) => state.unfollow(key));
 }
 
 @riverpod

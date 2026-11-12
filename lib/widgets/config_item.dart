@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/ui/list_item.dart';
 import 'package:fl_clash/widgets/page_source_rows.dart';
 import 'package:flutter/widgets.dart';
@@ -114,6 +115,15 @@ abstract class _ConfigItem<T> extends ConsumerWidget {
     return buildItem(context, ref, appLocalizations, ref.watch(selector));
   }
 
+  /// Writes [value]; moving a control whose field follows the profile makes
+  /// it a page setting again.
+  void change(WidgetRef ref, T value) {
+    onChanged(ref, value);
+    if (pageKey case final pageKey?) {
+      ref.read(patchClashConfigProvider.notifier).claim(pageKey);
+    }
+  }
+
   Widget? buildSubtitle(AppLocalizations appLocalizations) {
     final subtitle = this.subtitle;
     final text = subtitle == null ? null : Text(subtitle(appLocalizations));
@@ -154,7 +164,7 @@ class ConfigToggleItem extends _ConfigItem<bool> {
       title: Text(title(appLocalizations)),
       subtitle: buildSubtitle(appLocalizations),
       value: value,
-      onChanged: (value) => onChanged(ref, value),
+      onChanged: (value) => change(ref, value),
     );
   }
 }
@@ -189,7 +199,7 @@ class ConfigOptionsItem<T> extends _ConfigItem<T> {
       options: options,
       value: value,
       textBuilder: textBuilder,
-      onChanged: (value) => onChanged(ref, value),
+      onChanged: (value) => change(ref, value),
     );
   }
 }

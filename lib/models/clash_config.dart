@@ -2402,6 +2402,66 @@ extension PatchClashConfigExt on PatchClashConfig {
     PageConfigKey.tunStack => tun.stack,
   };
 
+  /// This config with [key] holding [raw], the profile's value for it; a
+  /// value the field cannot hold leaves it as it is.
+  PatchClashConfig withFileValue(PageConfigKey key, Object? raw) {
+    T? named<T extends Enum>(List<T> values) => raw is String
+        ? values.firstWhereOrNull((item) => item.name == raw.toLowerCase())
+        : null;
+    return switch ((key, raw)) {
+      (PageConfigKey.mixedPort, final int value) => copyWith(mixedPort: value),
+      (PageConfigKey.port, final int value) => copyWith(port: value),
+      (PageConfigKey.socksPort, final int value) => copyWith(socksPort: value),
+      (PageConfigKey.redirPort, final int value) => copyWith(redirPort: value),
+      (PageConfigKey.tproxyPort, final int value) => copyWith(
+        tproxyPort: value,
+      ),
+      (PageConfigKey.mode, _) => copyWith(mode: named(Mode.values) ?? mode),
+      (PageConfigKey.allowLan, final bool value) => copyWith(allowLan: value),
+      (PageConfigKey.logLevel, _) => copyWith(
+        logLevel: named(LogLevel.values) ?? logLevel,
+      ),
+      (PageConfigKey.findProcessMode, final String value) => copyWith(
+        findProcessMode: value == 'always'
+            ? FindProcessMode.always
+            : FindProcessMode.off,
+      ),
+      (PageConfigKey.externalController, final String value) => copyWith(
+        externalController: value.isEmpty
+            ? ExternalControllerStatus.close
+            : ExternalControllerStatus.open,
+      ),
+      (PageConfigKey.externalController, null) => copyWith(
+        externalController: ExternalControllerStatus.close,
+      ),
+      (PageConfigKey.keepAliveIdle, final int value) => copyWith(
+        keepAliveIdle: value,
+      ),
+      (PageConfigKey.keepAliveInterval, final int value) => copyWith(
+        keepAliveInterval: value,
+      ),
+      (PageConfigKey.disableKeepAlive, final bool value) => copyWith(
+        disableKeepAlive: value,
+      ),
+      (PageConfigKey.geoAutoUpdate, final bool value) => copyWith(
+        geoAutoUpdate: value,
+      ),
+      (PageConfigKey.geoUpdateInterval, final int value) => copyWith(
+        geoUpdateInterval: value,
+      ),
+      (PageConfigKey.tunEnable, final bool value) => copyWith.tun(
+        enable: value,
+      ),
+      (PageConfigKey.tunStack, _) => copyWith.tun(
+        stack: named(TunStack.values) ?? tun.stack,
+      ),
+      _ => this,
+    };
+  }
+
+  PatchClashConfig unfollow(PageConfigKey key) =>
+      copyWith(followKeys: followKeys.difference({key}));
+
   /// [next], with each followed field whose control the user moved back on
   /// the page.
   PatchClashConfig reclaimMoved(PatchClashConfig next) {

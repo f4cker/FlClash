@@ -930,18 +930,15 @@ abstract class _$ListeningMixedPort extends $Notifier<int?> {
   }
 }
 
-/// The inbound settings of the config last built, as the file and page
-/// together set them.
+/// The inbounds the config last built asks for.
 
 @ProviderFor(BuiltInbounds)
 final builtInboundsProvider = BuiltInboundsProvider._();
 
-/// The inbound settings of the config last built, as the file and page
-/// together set them.
+/// The inbounds the config last built asks for.
 final class BuiltInboundsProvider
     extends $NotifierProvider<BuiltInbounds, Map<String, Object?>> {
-  /// The inbound settings of the config last built, as the file and page
-  /// together set them.
+  /// The inbounds the config last built asks for.
   BuiltInboundsProvider._()
     : super(
         from: null,
@@ -971,8 +968,7 @@ final class BuiltInboundsProvider
 
 String _$builtInboundsHash() => r'37154b622856783929fcb863fbe655b7527f4813';
 
-/// The inbound settings of the config last built, as the file and page
-/// together set them.
+/// The inbounds the config last built asks for.
 
 abstract class _$BuiltInbounds extends $Notifier<Map<String, Object?>> {
   Map<String, Object?> build();

@@ -145,14 +145,9 @@ String describeConfigValue(String path, Object? value) {
   return switch ((path, value)) {
     ('mode', final String mode) =>
       Mode.values.firstWhereOrNull((item) => item.name == mode)?.label ?? mode,
-    ('log-level', final String level) => switch (level) {
-      'debug' => l.logLevelDebug,
-      'info' => l.logLevelInfo,
-      'warning' => l.logLevelWarning,
-      'error' => l.logLevelError,
-      'silent' => l.logLevelSilent,
-      _ => level,
-    },
+    ('log-level', final String level) =>
+      LogLevel.values.firstWhereOrNull((item) => item.name == level)?.label ??
+          level,
     ('find-process-mode', final String mode) => switch (mode) {
       'always' => l.findProcessAlways,
       'off' => l.findProcessOff,

@@ -5,6 +5,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/state.dart';
 import 'package:fl_clash/views/config/override.dart';
 import 'package:fl_clash/views/config/tun.dart';
 import 'package:fl_clash/widgets/widgets.dart';
@@ -82,7 +83,7 @@ class TUNItem extends ConsumerWidget {
     return ConfigToggleItem(
       title: (l) => l.tun,
       pageKey: PageConfigKey.tunEnable,
-      selector: patchClashConfigProvider.select((state) => state.tun.enable),
+      selector: shownClashConfigProvider.select((state) => state.tun.enable),
       onChanged: _tunWriter(
         (state, value) => state.copyWith.tun(enable: value),
       ),
@@ -178,7 +179,7 @@ class TunStackItem extends ConsumerWidget {
       options: TunStack.values,
       textBuilder: (stack) => stack.name,
       pageKey: PageConfigKey.tunStack,
-      selector: patchClashConfigProvider.select((state) => state.tun.stack),
+      selector: shownClashConfigProvider.select((state) => state.tun.stack),
       onChanged: _tunWriter((state, value) => state.copyWith.tun(stack: value)),
     );
   }
@@ -314,7 +315,10 @@ class _NumberItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
     final label = title(appLocalizations);
-    final value = ref.watch(patchClashConfigProvider.select(select));
+    final value = ref.watch(
+      (pageKey == null ? patchClashConfigProvider : shownClashConfigProvider)
+          .select(select),
+    );
     return ListItem.input(
       title: Text(label),
       subtitle: switch (pageKey) {
@@ -350,6 +354,9 @@ class _NumberItem extends ConsumerWidget {
         ref
             .read(patchClashConfigProvider.notifier)
             .update((state) => update(state, int.parse(value.trim())));
+        if (pageKey case final pageKey?) {
+          ref.read(patchClashConfigProvider.notifier).claim(pageKey);
+        }
       },
     );
   }
@@ -436,7 +443,7 @@ List<Widget> outboundItems({required bool isDesktop, required bool isLinux}) {
       ConfigToggleItem(
         title: (l) => l.disableKeepAlive,
         pageKey: PageConfigKey.disableKeepAlive,
-        selector: patchClashConfigProvider.select(
+        selector: shownClashConfigProvider.select(
           (state) => state.disableKeepAlive,
         ),
         onChanged: _tunWriter(

@@ -23,9 +23,9 @@ class LogLevelItem extends ConsumerWidget {
     return ConfigOptionsItem<LogLevel>(
       title: (l) => l.logLevel,
       options: LogLevel.values,
-      textBuilder: (logLevel) => logLevel.name,
+      textBuilder: (logLevel) => logLevel.label,
       pageKey: PageConfigKey.logLevel,
-      selector: patchClashConfigProvider.select((state) => state.logLevel),
+      selector: shownClashConfigProvider.select((state) => state.logLevel),
       onChanged: (ref, value) => ref
           .read(patchClashConfigProvider.notifier)
           .update((state) => state.copyWith(logLevel: value)),
@@ -220,7 +220,9 @@ ConfigToggleItem _clashToggle({
   return ConfigToggleItem(
     title: title,
     pageKey: pageKey,
-    selector: patchClashConfigProvider.select(select),
+    selector:
+        (pageKey == null ? patchClashConfigProvider : shownClashConfigProvider)
+            .select(select),
     onChanged: (ref, value) => ref
         .read(patchClashConfigProvider.notifier)
         .update((state) => update(state, value)),
