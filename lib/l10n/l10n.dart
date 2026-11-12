@@ -13135,38 +13135,223 @@ class AppLocalizations {
     return Intl.message('Off', name: 'findProcessOff', desc: '', args: []);
   }
 
-  /// `Auto`
+  /// `On demand`
   String get findProcessStrict {
-    return Intl.message('Auto', name: 'findProcessStrict', desc: '', args: []);
+    return Intl.message(
+      'On demand',
+      name: 'findProcessStrict',
+      desc: '',
+      args: [],
+    );
   }
 
-  /// `Missing system authorization; TUN did not start`
+  /// `TUN did not start because system permission is missing.`
   String get tunMissingAuthorization {
     return Intl.message(
-      'Missing system authorization; TUN did not start',
+      'TUN did not start because system permission is missing.',
       name: 'tunMissingAuthorization',
       desc: '',
       args: [],
     );
   }
 
-  /// `{field} {port} is not listening; this inbound did not start.`
-  String inboundNotListening(Object field, Object port) {
+  /// `{listenerName} did not start: port {port} is not listening.`
+  String inboundNotListening(Object listenerName, Object port) {
     return Intl.message(
-      '$field $port is not listening; this inbound did not start.',
+      '$listenerName did not start: port $port is not listening.',
       name: 'inboundNotListening',
       desc: '',
-      args: [field, port],
+      args: [listenerName, port],
     );
   }
 
-  /// `The external controller {address} is open beyond this Mac without a secret, so this config was not applied.`
+  /// `The controller at {address} allows non-local access without a secret. This profile was not applied.`
   String controllerExposedWithoutSecret(Object address) {
     return Intl.message(
-      'The external controller $address is open beyond this Mac without a secret, so this config was not applied.',
+      'The controller at $address allows non-local access without a secret. This profile was not applied.',
       name: 'controllerExposedWithoutSecret',
       desc: '',
       args: [address],
+    );
+  }
+
+  /// `No usable port is available for the system proxy. Check the port settings.`
+  String get systemProxyNoPort {
+    return Intl.message(
+      'No usable port is available for the system proxy. Check the port settings.',
+      name: 'systemProxyNoPort',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Switch to profile values`
+  String get pageSourceHiddenTitle {
+    return Intl.message(
+      'Switch to profile values',
+      name: 'pageSourceHiddenTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Defaults are used for settings not present in the profile.`
+  String get pageSourceHiddenNote {
+    return Intl.message(
+      'Defaults are used for settings not present in the profile.',
+      name: 'pageSourceHiddenNote',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `On`
+  String get valueOn {
+    return Intl.message('On', name: 'valueOn', desc: '', args: []);
+  }
+
+  /// `Off`
+  String get valueOff {
+    return Intl.message('Off', name: 'valueOff', desc: '', args: []);
+  }
+
+  /// `Empty list`
+  String get valueEmptyList {
+    return Intl.message(
+      'Empty list',
+      name: 'valueEmptyList',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Empty object`
+  String get valueEmptyObject {
+    return Intl.message(
+      'Empty object',
+      name: 'valueEmptyObject',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Empty text`
+  String get valueEmptyText {
+    return Intl.message(
+      'Empty text',
+      name: 'valueEmptyText',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Null`
+  String get valueNull {
+    return Intl.message('Null', name: 'valueNull', desc: '', args: []);
+  }
+
+  /// `Remember node selections`
+  String get fieldStoreSelected {
+    return Intl.message(
+      'Remember node selections',
+      name: 'fieldStoreSelected',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `TUN automatic routing`
+  String get fieldTunAutoRoute {
+    return Intl.message(
+      'TUN automatic routing',
+      name: 'fieldTunAutoRoute',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `TUN interface auto-detection`
+  String get fieldTunAutoDetectInterface {
+    return Intl.message(
+      'TUN interface auto-detection',
+      name: 'fieldTunAutoDetectInterface',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Source IP ranges exempt from authentication`
+  String get fieldSkipAuthPrefixes {
+    return Intl.message(
+      'Source IP ranges exempt from authentication',
+      name: 'fieldSkipAuthPrefixes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `External dashboard`
+  String get fieldExternalUi {
+    return Intl.message(
+      'External dashboard',
+      name: 'fieldExternalUi',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `DNS settings`
+  String get fieldDnsSettings {
+    return Intl.message(
+      'DNS settings',
+      name: 'fieldDnsSettings',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mixed proxy`
+  String get listenerMixed {
+    return Intl.message(
+      'Mixed proxy',
+      name: 'listenerMixed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `HTTP proxy`
+  String get listenerHttp {
+    return Intl.message('HTTP proxy', name: 'listenerHttp', desc: '', args: []);
+  }
+
+  /// `SOCKS proxy`
+  String get listenerSocks {
+    return Intl.message(
+      'SOCKS proxy',
+      name: 'listenerSocks',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Redir proxy`
+  String get listenerRedir {
+    return Intl.message(
+      'Redir proxy',
+      name: 'listenerRedir',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `TProxy proxy`
+  String get listenerTproxy {
+    return Intl.message(
+      'TProxy proxy',
+      name: 'listenerTproxy',
+      desc: '',
+      args: [],
     );
   }
 }

@@ -33,7 +33,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m4(detail) => "Couldn\'t clear the data: ${detail}";
 
   static String m5(address) =>
-      "The external controller ${address} is open beyond this Mac without a secret, so this config was not applied.";
+      "The controller at ${address} allows non-local access without a secret. This profile was not applied.";
 
   static String m6(code) =>
       "Windows refused to run FlClashCore.exe (error ${code}). An app control policy such as Smart App Control or AppLocker blocks unsigned programs; allow Flash in that policy or turn it off, then try again.";
@@ -126,8 +126,8 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m41(memory, body) =>
       "The oldest records go first once this many are kept or they fill ${memory} of memory. Each body keeps its first ${body}.";
 
-  static String m42(field, port) =>
-      "${field} ${port} is not listening; this inbound did not start.";
+  static String m42(listenerName, port) =>
+      "${listenerName} did not start: port ${port} is not listening.";
 
   static String m43(invalid, total) => "${invalid} of ${total} invalid";
 
@@ -1057,6 +1057,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "fallbackFilterIpcidrDesc": MessageLookupByLibrary.simpleMessage(
       "When Nameserver returns an IP in these ranges, the Fallback answer is used.",
     ),
+    "fieldDnsSettings": MessageLookupByLibrary.simpleMessage("DNS settings"),
+    "fieldExternalUi": MessageLookupByLibrary.simpleMessage(
+      "External dashboard",
+    ),
+    "fieldSkipAuthPrefixes": MessageLookupByLibrary.simpleMessage(
+      "Source IP ranges exempt from authentication",
+    ),
+    "fieldStoreSelected": MessageLookupByLibrary.simpleMessage(
+      "Remember node selections",
+    ),
+    "fieldTunAutoDetectInterface": MessageLookupByLibrary.simpleMessage(
+      "TUN interface auto-detection",
+    ),
+    "fieldTunAutoRoute": MessageLookupByLibrary.simpleMessage(
+      "TUN automatic routing",
+    ),
     "file": MessageLookupByLibrary.simpleMessage("File"),
     "fileIsUpdate": MessageLookupByLibrary.simpleMessage(
       "The file has been modified. Save the changes?",
@@ -1066,7 +1082,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "findProcessAlways": MessageLookupByLibrary.simpleMessage("Always"),
     "findProcessMode": MessageLookupByLibrary.simpleMessage("Find process"),
     "findProcessOff": MessageLookupByLibrary.simpleMessage("Off"),
-    "findProcessStrict": MessageLookupByLibrary.simpleMessage("Auto"),
+    "findProcessStrict": MessageLookupByLibrary.simpleMessage("On demand"),
     "floating": MessageLookupByLibrary.simpleMessage("Floating"),
     "followBaseProfile": MessageLookupByLibrary.simpleMessage(
       "Follow base profile",
@@ -1383,6 +1399,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "listenRoutingMarkDesc": MessageLookupByLibrary.simpleMessage(
       "Listen routing mark works only on Linux.",
     ),
+    "listenerHttp": MessageLookupByLibrary.simpleMessage("HTTP proxy"),
+    "listenerMixed": MessageLookupByLibrary.simpleMessage("Mixed proxy"),
+    "listenerRedir": MessageLookupByLibrary.simpleMessage("Redir proxy"),
+    "listenerSocks": MessageLookupByLibrary.simpleMessage("SOCKS proxy"),
+    "listenerTproxy": MessageLookupByLibrary.simpleMessage("TProxy proxy"),
     "liveConnections": MessageLookupByLibrary.simpleMessage("Live connections"),
     "loading": MessageLookupByLibrary.simpleMessage("Loading…"),
     "local": MessageLookupByLibrary.simpleMessage("Local"),
@@ -1992,6 +2013,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "pageSourceDesc": MessageLookupByLibrary.simpleMessage(
       "These settings differ between the app and profile. Choose which source to use.",
     ),
+    "pageSourceHiddenNote": MessageLookupByLibrary.simpleMessage(
+      "Defaults are used for settings not present in the profile.",
+    ),
+    "pageSourceHiddenTitle": MessageLookupByLibrary.simpleMessage(
+      "Switch to profile values",
+    ),
     "pageSourceTitle": MessageLookupByLibrary.simpleMessage(
       "Confirm setting sources",
     ),
@@ -2526,6 +2553,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "system": MessageLookupByLibrary.simpleMessage("System"),
     "systemApp": MessageLookupByLibrary.simpleMessage("System apps"),
     "systemProxy": MessageLookupByLibrary.simpleMessage("System proxy"),
+    "systemProxyNoPort": MessageLookupByLibrary.simpleMessage(
+      "No usable port is available for the system proxy. Check the port settings.",
+    ),
     "tab": MessageLookupByLibrary.simpleMessage("Tab"),
     "tabAnimation": MessageLookupByLibrary.simpleMessage("Tab animation"),
     "tapIconToRetry": MessageLookupByLibrary.simpleMessage(
@@ -3204,7 +3234,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "TUN works only in administrator mode.",
     ),
     "tunMissingAuthorization": MessageLookupByLibrary.simpleMessage(
-      "Missing system authorization; TUN did not start",
+      "TUN did not start because system permission is missing.",
     ),
     "tunOverrideDesc": MessageLookupByLibrary.simpleMessage(
       "Entries added here replace the TUN settings of every profile; anything not added keeps the profile\'s own setting. Entries a custom profile adds itself take precedence.",
@@ -3272,6 +3302,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "username": MessageLookupByLibrary.simpleMessage("Username"),
     "validUntil": m170,
     "value": MessageLookupByLibrary.simpleMessage("Value"),
+    "valueEmptyList": MessageLookupByLibrary.simpleMessage("Empty list"),
+    "valueEmptyObject": MessageLookupByLibrary.simpleMessage("Empty object"),
+    "valueEmptyText": MessageLookupByLibrary.simpleMessage("Empty text"),
+    "valueNull": MessageLookupByLibrary.simpleMessage("Null"),
+    "valueOff": MessageLookupByLibrary.simpleMessage("Off"),
+    "valueOn": MessageLookupByLibrary.simpleMessage("On"),
     "view": MessageLookupByLibrary.simpleMessage("View"),
     "viewAll": MessageLookupByLibrary.simpleMessage("View all"),
     "virtualIpv4": MessageLookupByLibrary.simpleMessage("Virtual IPv4"),

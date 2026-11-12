@@ -133,11 +133,16 @@ PagePriorityChanges pagePriorityChanges({
   return (pageRows: pageRows, hiddenRows: hiddenRows);
 }
 
-/// A config value as its setting shows it, [configKeyMissing] as not set.
-String describeConfigValue(String path, Object? value) {
+/// A config value as its setting shows it, [configKeyMissing] as not set;
+/// with [withDefault], a missing value names the default mihomo uses.
+String describeConfigValue(
+  String path,
+  Object? value, {
+  bool withDefault = true,
+}) {
   final l = currentAppLocalizations;
   if (identical(value, configKeyMissing)) {
-    return switch (kernelDefaults[path]) {
+    return switch (withDefault ? kernelDefaults[path] : null) {
       null => l.notSet,
       final fallback => l.notSetDefault(describeConfigValue(path, fallback)),
     };
@@ -159,16 +164,36 @@ String describeConfigValue(String path, Object? value) {
       users.isEmpty
           ? l.none
           : users.map((item) => '$item'.split(':').first).join(', '),
-    (_, final bool enabled) => enabled ? l.enabled : l.disabled,
-    (_, final List items) => items.isEmpty ? '[]' : items.join(', '),
+    (_, final bool enabled) => enabled ? l.valueOn : l.valueOff,
+    (_, '') => l.valueEmptyText,
+    (_, final List items) =>
+      items.isEmpty ? l.valueEmptyList : items.join(', '),
     (_, final Map entries) =>
       entries.isEmpty
-          ? '{}'
+          ? l.valueEmptyObject
           : entries.entries
                 .map((entry) => '${entry.key}: ${entry.value}')
                 .join(', '),
-    (_, null) => 'null',
+    (_, null) => l.valueNull,
     _ => '$value',
+  };
+}
+
+/// The name a profile key goes by where no page control shows it.
+String configPathLabel(String path) {
+  final l = currentAppLocalizations;
+  if (path.startsWith('dns.')) {
+    return '${l.fieldDnsSettings} · ${path.substring(4)}';
+  }
+  return switch (path) {
+    'profile.store-selected' => l.fieldStoreSelected,
+    'tun.dns-hijack' => l.dnsHijacking,
+    'tun.auto-route' => l.fieldTunAutoRoute,
+    'tun.auto-detect-interface' => l.fieldTunAutoDetectInterface,
+    'skip-auth-prefixes' => l.fieldSkipAuthPrefixes,
+    'external-ui' => l.fieldExternalUi,
+    'routing-mark' => l.routingMark,
+    _ => path,
   };
 }
 
@@ -239,4 +264,15 @@ bool exposesControllerWithoutSecret(Map config) {
       .replaceAll('[', '')
       .replaceAll(']', '');
   return !(host == 'localhost' || host == '::1' || host.startsWith('127.'));
+}
+
+/// Only the host and port of a controller address, without any credentials
+/// or query it carries.
+String controllerHostPort(String address) {
+  final uri = Uri.tryParse(address.contains('://') ? address : '//$address');
+  if (uri == null || uri.host.isEmpty) {
+    return address.split('@').last.split(RegExp('[/?#]')).first;
+  }
+  final host = uri.host.contains(':') ? '[${uri.host}]' : uri.host;
+  return uri.hasPort ? '$host:${uri.port}' : host;
 }

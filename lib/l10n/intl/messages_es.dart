@@ -33,7 +33,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m4(detail) => "No se pudieron borrar los datos: ${detail}";
 
   static String m5(address) =>
-      "The external controller ${address} is open beyond this Mac without a secret, so this config was not applied.";
+      "The controller at ${address} allows non-local access without a secret. This profile was not applied.";
 
   static String m6(code) =>
       "Windows se negó a ejecutar FlClashCore.exe (error ${code}). Una directiva de control de aplicaciones, como Smart App Control o AppLocker, bloquea los programas sin firmar; permite Flash en esa directiva o desactívala e inténtalo de nuevo.";
@@ -129,8 +129,8 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m41(memory, body) =>
       "Los registros más antiguos se eliminan primero al alcanzar este número u ocupar ${memory} de memoria. De cada cuerpo se conservan solo los primeros ${body}.";
 
-  static String m42(field, port) =>
-      "${field} ${port} is not listening; this inbound did not start.";
+  static String m42(listenerName, port) =>
+      "${listenerName} did not start: port ${port} is not listening.";
 
   static String m43(invalid, total) => "${invalid} de ${total} no válidos";
 
@@ -1122,6 +1122,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "fallbackFilterIpcidrDesc": MessageLookupByLibrary.simpleMessage(
       "Si Nameserver devuelve una IP de estos rangos, se usa la respuesta de Fallback.",
     ),
+    "fieldDnsSettings": MessageLookupByLibrary.simpleMessage("DNS settings"),
+    "fieldExternalUi": MessageLookupByLibrary.simpleMessage(
+      "External dashboard",
+    ),
+    "fieldSkipAuthPrefixes": MessageLookupByLibrary.simpleMessage(
+      "Source IP ranges exempt from authentication",
+    ),
+    "fieldStoreSelected": MessageLookupByLibrary.simpleMessage(
+      "Remember node selections",
+    ),
+    "fieldTunAutoDetectInterface": MessageLookupByLibrary.simpleMessage(
+      "TUN interface auto-detection",
+    ),
+    "fieldTunAutoRoute": MessageLookupByLibrary.simpleMessage(
+      "TUN automatic routing",
+    ),
     "file": MessageLookupByLibrary.simpleMessage("Archivo"),
     "fileIsUpdate": MessageLookupByLibrary.simpleMessage(
       "El archivo se ha modificado. ¿Guardar los cambios?",
@@ -1131,7 +1147,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "findProcessAlways": MessageLookupByLibrary.simpleMessage("Always"),
     "findProcessMode": MessageLookupByLibrary.simpleMessage("Buscar proceso"),
     "findProcessOff": MessageLookupByLibrary.simpleMessage("Off"),
-    "findProcessStrict": MessageLookupByLibrary.simpleMessage("Auto"),
+    "findProcessStrict": MessageLookupByLibrary.simpleMessage("On demand"),
     "floating": MessageLookupByLibrary.simpleMessage("Flotante"),
     "followBaseProfile": MessageLookupByLibrary.simpleMessage(
       "Follow base profile",
@@ -1470,6 +1486,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "listenRoutingMarkDesc": MessageLookupByLibrary.simpleMessage(
       "La marca de enrutamiento de escucha solo funciona en Linux.",
     ),
+    "listenerHttp": MessageLookupByLibrary.simpleMessage("HTTP proxy"),
+    "listenerMixed": MessageLookupByLibrary.simpleMessage("Mixed proxy"),
+    "listenerRedir": MessageLookupByLibrary.simpleMessage("Redir proxy"),
+    "listenerSocks": MessageLookupByLibrary.simpleMessage("SOCKS proxy"),
+    "listenerTproxy": MessageLookupByLibrary.simpleMessage("TProxy proxy"),
     "liveConnections": MessageLookupByLibrary.simpleMessage(
       "Conexiones activas",
     ),
@@ -2105,6 +2126,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "pageSourceDesc": MessageLookupByLibrary.simpleMessage(
       "These settings differ between the app and profile. Choose which source to use.",
     ),
+    "pageSourceHiddenNote": MessageLookupByLibrary.simpleMessage(
+      "Defaults are used for settings not present in the profile.",
+    ),
+    "pageSourceHiddenTitle": MessageLookupByLibrary.simpleMessage(
+      "Switch to profile values",
+    ),
     "pageSourceTitle": MessageLookupByLibrary.simpleMessage(
       "Confirm setting sources",
     ),
@@ -2691,6 +2718,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "system": MessageLookupByLibrary.simpleMessage("Sistema"),
     "systemApp": MessageLookupByLibrary.simpleMessage("Apps del sistema"),
     "systemProxy": MessageLookupByLibrary.simpleMessage("Proxy del sistema"),
+    "systemProxyNoPort": MessageLookupByLibrary.simpleMessage(
+      "No usable port is available for the system proxy. Check the port settings.",
+    ),
     "tab": MessageLookupByLibrary.simpleMessage("Pestaña"),
     "tabAnimation": MessageLookupByLibrary.simpleMessage(
       "Animación de pestañas",
@@ -3373,7 +3403,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "TUN solo funciona en modo administrador.",
     ),
     "tunMissingAuthorization": MessageLookupByLibrary.simpleMessage(
-      "Missing system authorization; TUN did not start",
+      "TUN did not start because system permission is missing.",
     ),
     "tunOverrideDesc": MessageLookupByLibrary.simpleMessage(
       "Las entradas añadidas aquí sustituyen los ajustes de TUN de todos los perfiles; lo que no añadas conserva el ajuste del propio perfil. Las entradas que añade un perfil personalizado tienen prioridad.",
@@ -3447,6 +3477,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "username": MessageLookupByLibrary.simpleMessage("Usuario"),
     "validUntil": m170,
     "value": MessageLookupByLibrary.simpleMessage("Valor"),
+    "valueEmptyList": MessageLookupByLibrary.simpleMessage("Empty list"),
+    "valueEmptyObject": MessageLookupByLibrary.simpleMessage("Empty object"),
+    "valueEmptyText": MessageLookupByLibrary.simpleMessage("Empty text"),
+    "valueNull": MessageLookupByLibrary.simpleMessage("Null"),
+    "valueOff": MessageLookupByLibrary.simpleMessage("Off"),
+    "valueOn": MessageLookupByLibrary.simpleMessage("On"),
     "view": MessageLookupByLibrary.simpleMessage("Ver"),
     "viewAll": MessageLookupByLibrary.simpleMessage("Ver todo"),
     "virtualIpv4": MessageLookupByLibrary.simpleMessage("IPv4 virtual"),

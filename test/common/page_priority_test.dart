@@ -85,6 +85,7 @@ void main() {
     test('uses the field translation, not on and off', () {
       expect(describeConfigValue('log-level', 'silent'), '静默');
       expect(describeConfigValue('find-process-mode', 'always'), '总是');
+      expect(describeConfigValue('find-process-mode', 'strict'), '按需');
       expect(describeConfigValue('mode', 'rule'), '规则');
       expect(describeConfigValue('external-controller', ''), '关闭');
     });
@@ -92,14 +93,40 @@ void main() {
     test('tells a missing key from an explicit empty one', () {
       expect(describeConfigValue('external-ui', configKeyMissing), '未填写');
       expect(describeConfigValue('log-level', configKeyMissing), '未填写，默认 信息');
-      expect(describeConfigValue('skip-auth-prefixes', const []), '[]');
-      expect(describeConfigValue('allow-lan', false), '已关闭');
+      expect(
+        describeConfigValue('log-level', configKeyMissing, withDefault: false),
+        '未填写',
+      );
+      expect(describeConfigValue('skip-auth-prefixes', const []), '空列表');
+      expect(describeConfigValue('dns.fallback-filter', const {}), '空对象');
+      expect(describeConfigValue('external-ui', ''), '空文本');
+      expect(describeConfigValue('external-ui', null), '空值（null）');
+      expect(describeConfigValue('allow-lan', false), '关闭');
+      expect(describeConfigValue('allow-lan', true), '开启');
       expect(describeConfigValue('port', 0), '0');
     });
 
     test('shows a credential by its user name only', () {
       expect(describeConfigValue('authentication', ['ann:secret']), 'ann');
     });
+  });
+
+  test('configPathLabel names a hidden key in user terms', () {
+    expect(configPathLabel('profile.store-selected'), '记住节点选择');
+    expect(configPathLabel('external-ui'), '外部控制面板');
+    expect(configPathLabel('tun.dns-hijack'), 'DNS劫持');
+    expect(configPathLabel('routing-mark'), '路由标记');
+    expect(configPathLabel('dns.enhanced-mode'), 'DNS 设置 · enhanced-mode');
+  });
+
+  test('controllerHostPort keeps only the host and port', () {
+    expect(controllerHostPort('0.0.0.0:9090'), '0.0.0.0:9090');
+    expect(
+      controllerHostPort('http://u:p@10.0.0.2:9090/x?k=1'),
+      '10.0.0.2:9090',
+    );
+    expect(controllerHostPort('[::]:9090'), '[::]:9090');
+    expect(controllerHostPort(':9090'), ':9090');
   });
 
   group('exposesControllerWithoutSecret', () {

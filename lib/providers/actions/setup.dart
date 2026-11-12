@@ -308,12 +308,21 @@ class SetupAction extends _$SetupAction {
 
   /// mihomo only logs an inbound it cannot open, so each one the built
   /// config asks for, besides the mixed port, is checked against the Core.
+  /// A port of 0 is an inbound turned off, not one that failed.
   @visibleForTesting
   Future<void> checkInbounds() async {
     if (!_mixedListenerExpected) {
       return;
     }
     final requested = ref.read(builtInboundsProvider);
+    final appLocalizations = currentAppLocalizations;
+    final noProxyPort =
+        ref.read(networkSettingProvider).systemProxy &&
+        ref.read(effectiveMixedPortProvider) == 0 &&
+        switch (requested['port']) {
+          final int port => port == 0,
+          _ => true,
+        };
     final Map<String, Object?> held;
     try {
       held = await listeningPorts();
@@ -322,14 +331,19 @@ class SetupAction extends _$SetupAction {
         'inbound check failed: ${compactError(error)}',
         logLevel: LogLevel.warning,
       );
+      if (noProxyPort) {
+        dialogs.showBanner(
+          appLocalizations.systemProxyNoPort,
+          level: BannerLevel.warning,
+        );
+      }
       return;
     }
-    final appLocalizations = currentAppLocalizations;
     final labels = {
-      PageConfigKey.port: 'port',
-      PageConfigKey.socksPort: appLocalizations.socksPort,
-      PageConfigKey.redirPort: appLocalizations.redirPort,
-      PageConfigKey.tproxyPort: appLocalizations.tproxyPort,
+      PageConfigKey.port: appLocalizations.listenerHttp,
+      PageConfigKey.socksPort: appLocalizations.listenerSocks,
+      PageConfigKey.redirPort: appLocalizations.listenerRedir,
+      PageConfigKey.tproxyPort: appLocalizations.listenerTproxy,
     };
     final messages = [
       for (final MapEntry(:key, value: label) in labels.entries)
@@ -341,6 +355,7 @@ class SetupAction extends _$SetupAction {
           ref.read(authorizedTunEnableProvider) !=
               TunAuthorizationState.authorized)
         appLocalizations.tunMissingAuthorization,
+      if (noProxyPort) appLocalizations.systemProxyNoPort,
     ];
     if (messages.isNotEmpty) {
       dialogs.showBanner(messages.join('\n'), level: BannerLevel.warning);
@@ -678,7 +693,7 @@ class SetupAction extends _$SetupAction {
         exposesControllerWithoutSecret(rawConfig)) {
       throw MessageException(
         currentAppLocalizations.controllerExposedWithoutSecret(
-          '${rawConfig['external-controller']}',
+          controllerHostPort('${rawConfig['external-controller']}'),
         ),
       );
     }
