@@ -30,6 +30,7 @@ proxy-groups:
   - {name: 美国策略, type: fallback, include-all: true, filter: US}
   - {name: 均衡, type: load-balance, proxies: [HK 01, US 01]}
   - {name: 仅香港, type: select, include-all: true, filter: HK, exclude-type: Direct}
+  - {name: 仅日本, type: select, include-all: true, filter: JP}
   - {name: 隐藏, type: select, hidden: true, proxies: [DIRECT, REJECT]}
   - {name: Tailscale 出口, type: select, proxies: [DIRECT, HK 01]}
 rules:
@@ -82,6 +83,7 @@ func TestTailscaleExitGroupJoinsEveryManualGroupLast(t *testing.T) {
 		"国际媒体":         {"香港策略", "美国策略", "全球手动", "DIRECT", exit},
 		"全球手动":         {"HK 01", "US 01", exit},
 		"仅香港":          {"HK 01", exit},
+		"仅日本":          {"COMPATIBLE", exit},
 		"隐藏":           {"DIRECT", "REJECT", exit},
 		"Tailscale 出口": {"DIRECT", "HK 01", exit},
 		"香港策略":         {"HK 01"},
@@ -124,10 +126,13 @@ func TestTailscaleExitGroupJoinsEveryManualGroupLast(t *testing.T) {
 	for _, parent := range report.Parents {
 		parents = append(parents, parent.Name)
 	}
-	if want := []string{"国际媒体", "全球手动", "仅香港", "隐藏", "Tailscale 出口"}; !reflect.DeepEqual(parents, want) {
+	if want := []string{"国际媒体", "全球手动", "仅香港", "仅日本", "隐藏", "Tailscale 出口"}; !reflect.DeepEqual(parents, want) {
 		t.Fatalf("parents = %q, want %q", parents, want)
 	}
-	if first := report.Parents[0]; first.Now != "香港策略" || first.Members[len(first.Members)-1] != exit {
+	if empty := report.Parents[3]; empty.Replacement != "" {
+		t.Fatalf("a group left with its empty fallback falls back to %q", empty.Replacement)
+	}
+	if first := report.Parents[0]; first.Now != "香港策略" || first.Members[len(first.Members)-1] != exit || first.Replacement != "香港策略" {
 		t.Fatalf("parent = %+v", first)
 	}
 	if len(report.Accounts) != 1 || report.Accounts[0].ID != "a1" || report.Accounts[0].State != tailscaleExitUnavailable || report.Accounts[0].Reason != outbound.TailscaleExitNeedsLogin {
