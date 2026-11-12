@@ -19,7 +19,7 @@ Future<void> _mcWait(int step) async {
 }
 
 Future<void> _mcDump(Ref ref, String tag) async {
-  final mounts = ref.read(mountActionProvider.notifier);
+  final mounts = globalState.container.read(mountActionProvider.notifier);
   final panel = await mounts.loadPanel(_mcA);
   _mc('$tag stored=${panel.stored?.sourceIds} v=${panel.stored?.version} '
       'pending=${panel.stored?.pending != null} revision=${panel.revision}');
@@ -39,7 +39,7 @@ Future<void> _mcDump(Ref ref, String tag) async {
     _mc('$tag runtime group ${group.name} present=${group.present} '
         'members=${group.members} mounted=${group.mounted} empty=${group.empty}');
   }
-  final text = await ref
+  final text = await globalState.container
       .read(setupActionProvider.notifier)
       .getProfileWithId(_mcA);
   await File('/tmp/mountcheck/viewer-$tag.yaml').writeAsString(text);
@@ -48,7 +48,7 @@ Future<void> _mcDump(Ref ref, String tag) async {
 
 Future<void> runMountCheck(Ref ref) async {
   try {
-    final mounts = ref.read(mountActionProvider.notifier);
+    final mounts = globalState.container.read(mountActionProvider.notifier);
     await _mcWait(1);
     await _mcDump(ref, 's1-legacy');
 
