@@ -99,6 +99,11 @@ const PagePriorityChanges _fixtureChanges = (
       newValue: ['127.0.0.1/8'],
     ),
     HiddenOverrideRow(
+      path: 'external-ui',
+      oldValue: 'ui',
+      newValue: configKeyMissing,
+    ),
+    HiddenOverrideRow(
       path: 'tun.dns-hijack',
       oldValue: ['any:53'],
       newValue: configKeyMissing,
@@ -182,10 +187,11 @@ void main() {
     await shoot(
       tester,
       '01-dialog',
-      size: const Size(1054, 980),
+      size: const Size(1054, 1100),
       child: Center(
         child: AlertDialog(
           title: '确认设置来源',
+          width: pageSourceDialogWidth,
           actions: [
             TextButton(onPressed: () {}, child: const Text('取消')),
             TextButton(onPressed: () {}, child: const Text('应用')),
