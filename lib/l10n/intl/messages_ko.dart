@@ -409,13 +409,18 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m161(domain) => "Domain: ${domain}";
 
-  static String m162(label) => "${label}은(는) URL이어야 합니다";
+  static String m162(node) => "Tailscale · Added by Flash · Node ${node}";
 
-  static String m163(date) => "${date}까지 유효";
+  static String m163(count, node) =>
+      "Tailscale · Added by Flash · ${Intl.plural(count, one: '1 rule', other: '${count} rules')} → Node ${node}";
 
-  static String m164(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m164(label) => "${label}은(는) URL이어야 합니다";
 
-  static String m165(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m165(date) => "${date}까지 유효";
+
+  static String m166(count) => "${Intl.plural(count, other: '${count}년 전')}";
+
+  static String m167(count) => "${Intl.plural(count, other: '${count}년 전')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -2809,6 +2814,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsViewExisting": MessageLookupByLibrary.simpleMessage(
       "View existing account",
     ),
+    "tsViewerNode": m162,
+    "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · Could not read runtime information",
+    ),
+    "tsViewerRules": m163,
+    "tsViewerUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · Current rules and nodes are unconfirmed",
+    ),
     "tsWaitingBrowserTip": MessageLookupByLibrary.simpleMessage(
       "Finish logging in in your browser. This page updates from the node\'s status afterwards.",
     ),
@@ -2872,14 +2885,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 재작성"),
-    "urlTip": m162,
+    "urlTip": m164,
     "useHosts": MessageLookupByLibrary.simpleMessage("hosts 사용"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("시스템 hosts 사용"),
     "usedShort": MessageLookupByLibrary.simpleMessage("사용"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("사용한 트래픽"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("사용자 이름"),
-    "validUntil": m163,
+    "validUntil": m165,
     "value": MessageLookupByLibrary.simpleMessage("값"),
     "view": MessageLookupByLibrary.simpleMessage("보기"),
     "viewAll": MessageLookupByLibrary.simpleMessage("모두 보기"),
@@ -2894,8 +2907,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "시스템에 기록하면 시스템 시계도 설정합니다. Android에서는 무시됩니다.",
     ),
-    "yearsAgo": m164,
-    "yearsAgoShort": m165,
+    "yearsAgo": m166,
+    "yearsAgoShort": m167,
     "yes": MessageLookupByLibrary.simpleMessage("예"),
     "zhCN": MessageLookupByLibrary.simpleMessage("중국어 간체"),
   };

@@ -432,14 +432,19 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m161(domain) => "Domain: ${domain}";
 
-  static String m162(label) => "${label} must be a URL";
+  static String m162(node) => "Tailscale · Added by Flash · Node ${node}";
 
-  static String m163(date) => "Valid until ${date}";
+  static String m163(count, node) =>
+      "Tailscale · Added by Flash · ${Intl.plural(count, one: '1 rule', other: '${count} rules')} → Node ${node}";
 
-  static String m164(count) =>
+  static String m164(label) => "${label} must be a URL";
+
+  static String m165(date) => "Valid until ${date}";
+
+  static String m166(count) =>
       "${Intl.plural(count, one: '1 year ago', other: '${count} years ago')}";
 
-  static String m165(count) => "${Intl.plural(count, other: '${count}y ago')}";
+  static String m167(count) => "${Intl.plural(count, other: '${count}y ago')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -3135,6 +3140,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsViewExisting": MessageLookupByLibrary.simpleMessage(
       "View existing account",
     ),
+    "tsViewerNode": m162,
+    "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · Could not read runtime information",
+    ),
+    "tsViewerRules": m163,
+    "tsViewerUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · Current rules and nodes are unconfirmed",
+    ),
     "tsWaitingBrowserTip": MessageLookupByLibrary.simpleMessage(
       "Finish logging in in your browser. This page updates from the node\'s status afterwards.",
     ),
@@ -3202,14 +3215,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL rewrite"),
-    "urlTip": m162,
+    "urlTip": m164,
     "useHosts": MessageLookupByLibrary.simpleMessage("Use hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("Use system hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("used"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("Used traffic"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("Username"),
-    "validUntil": m163,
+    "validUntil": m165,
     "value": MessageLookupByLibrary.simpleMessage("Value"),
     "view": MessageLookupByLibrary.simpleMessage("View"),
     "viewAll": MessageLookupByLibrary.simpleMessage("View all"),
@@ -3226,8 +3239,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Write to system also sets the system clock; Android ignores it.",
     ),
-    "yearsAgo": m164,
-    "yearsAgoShort": m165,
+    "yearsAgo": m166,
+    "yearsAgoShort": m167,
     "yes": MessageLookupByLibrary.simpleMessage("Yes"),
     "zhCN": MessageLookupByLibrary.simpleMessage("Simplified Chinese"),
   };

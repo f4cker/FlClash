@@ -376,13 +376,18 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m161(domain) => "域名：${domain}";
 
-  static String m162(label) => "${label}必须为URL";
+  static String m162(node) => "Tailscale · 由 Flash 添加 · 节点 ${node}";
 
-  static String m163(date) => "有效期至 ${date}";
+  static String m163(count, node) =>
+      "Tailscale · 由 Flash 添加 · ${count} 条规则 → 节点 ${node}";
 
-  static String m164(count) => "${count} 年前";
+  static String m164(label) => "${label}必须为URL";
 
-  static String m165(count) => "${count} 年前";
+  static String m165(date) => "有效期至 ${date}";
+
+  static String m166(count) => "${count} 年前";
+
+  static String m167(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -2418,6 +2423,14 @@ class MessageLookup extends MessageLookupByLibrary {
       "无法安全打开此登录页，请检查当前节点的控制服务器配置。",
     ),
     "tsViewExisting": MessageLookupByLibrary.simpleMessage("查看已有账号"),
+    "tsViewerNode": m162,
+    "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · 运行信息读取失败",
+    ),
+    "tsViewerRules": m163,
+    "tsViewerUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · 当前运行的规则和节点待确认",
+    ),
     "tsWaitingBrowserTip": MessageLookupByLibrary.simpleMessage(
       "请在浏览器中完成登录。完成后，这里会根据节点状态更新。",
     ),
@@ -2471,14 +2484,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 重写"),
-    "urlTip": m162,
+    "urlTip": m164,
     "useHosts": MessageLookupByLibrary.simpleMessage("使用Hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("使用系统Hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("已用"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("已用流量"),
     "userAgent": MessageLookupByLibrary.simpleMessage("用户代理"),
     "username": MessageLookupByLibrary.simpleMessage("用户名"),
-    "validUntil": m163,
+    "validUntil": m165,
     "value": MessageLookupByLibrary.simpleMessage("值"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
     "viewAll": MessageLookupByLibrary.simpleMessage("查看全部"),
@@ -2493,8 +2506,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "写入系统会同时设置系统时钟，Android 上不生效。",
     ),
-    "yearsAgo": m164,
-    "yearsAgoShort": m165,
+    "yearsAgo": m166,
+    "yearsAgoShort": m167,
     "yes": MessageLookupByLibrary.simpleMessage("是"),
     "zhCN": MessageLookupByLibrary.simpleMessage("中文简体"),
   };

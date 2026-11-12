@@ -404,13 +404,18 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m161(domain) => "Domain: ${domain}";
 
-  static String m162(label) => "${label}はURLである必要があります";
+  static String m162(node) => "Tailscale · Added by Flash · Node ${node}";
 
-  static String m163(date) => "有効期限 ${date}";
+  static String m163(count, node) =>
+      "Tailscale · Added by Flash · ${Intl.plural(count, one: '1 rule', other: '${count} rules')} → Node ${node}";
 
-  static String m164(count) => "${count} 年前";
+  static String m164(label) => "${label}はURLである必要があります";
 
-  static String m165(count) => "${count} 年前";
+  static String m165(date) => "有効期限 ${date}";
+
+  static String m166(count) => "${count} 年前";
+
+  static String m167(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -2836,6 +2841,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsViewExisting": MessageLookupByLibrary.simpleMessage(
       "View existing account",
     ),
+    "tsViewerNode": m162,
+    "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · Could not read runtime information",
+    ),
+    "tsViewerRules": m163,
+    "tsViewerUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · Current rules and nodes are unconfirmed",
+    ),
     "tsWaitingBrowserTip": MessageLookupByLibrary.simpleMessage(
       "Finish logging in in your browser. This page updates from the node\'s status afterwards.",
     ),
@@ -2899,14 +2912,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 書き換え"),
-    "urlTip": m162,
+    "urlTip": m164,
     "useHosts": MessageLookupByLibrary.simpleMessage("Hostsを使用"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("システムのHostsを使用"),
     "usedShort": MessageLookupByLibrary.simpleMessage("使用済み"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("使用済みトラフィック"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("ユーザー名"),
-    "validUntil": m163,
+    "validUntil": m165,
     "value": MessageLookupByLibrary.simpleMessage("値"),
     "view": MessageLookupByLibrary.simpleMessage("表示"),
     "viewAll": MessageLookupByLibrary.simpleMessage("すべて表示"),
@@ -2921,8 +2934,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "システムに書き込むを有効にするとシステムクロックも設定します。Android では無視されます。",
     ),
-    "yearsAgo": m164,
-    "yearsAgoShort": m165,
+    "yearsAgo": m166,
+    "yearsAgoShort": m167,
     "yes": MessageLookupByLibrary.simpleMessage("はい"),
     "zhCN": MessageLookupByLibrary.simpleMessage("簡体字中国語"),
   };

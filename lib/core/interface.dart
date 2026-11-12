@@ -630,6 +630,16 @@ abstract class CoreHandlerInterface {
       timeout: tailscaleCoreGuard,
     );
   }
+
+  /// Read only: the rules and nodes Flash added to the running config.
+  Future<TailscaleRuntimeRules> getTailscaleRuntimeRules(int profileId) {
+    return _query(
+      CoreMethod.tailscaleRuntimeRules,
+      _model(TailscaleRuntimeRules.fromJson),
+      arguments: {'profile-id': profileId},
+      timeout: tailscaleCoreGuard,
+    );
+  }
 }
 
 T _cast<T>(Object data) => data as T;

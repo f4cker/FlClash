@@ -444,14 +444,19 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m161(domain) => "Domain: ${domain}";
 
-  static String m162(label) => "${label} doit être une URL";
+  static String m162(node) => "Tailscale · Added by Flash · Node ${node}";
 
-  static String m163(date) => "Valide jusqu’au ${date}";
+  static String m163(count, node) =>
+      "Tailscale · Added by Flash · ${Intl.plural(count, one: '1 rule', other: '${count} rules')} → Node ${node}";
 
-  static String m164(count) =>
+  static String m164(label) => "${label} doit être une URL";
+
+  static String m165(date) => "Valide jusqu’au ${date}";
+
+  static String m166(count) =>
       "${Intl.plural(count, one: 'il y a 1 an', other: 'il y a ${count} ans')}";
 
-  static String m165(count) =>
+  static String m167(count) =>
       "${Intl.plural(count, other: 'il y a ${count} a')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
@@ -3304,6 +3309,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsViewExisting": MessageLookupByLibrary.simpleMessage(
       "View existing account",
     ),
+    "tsViewerNode": m162,
+    "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · Could not read runtime information",
+    ),
+    "tsViewerRules": m163,
+    "tsViewerUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · Current rules and nodes are unconfirmed",
+    ),
     "tsWaitingBrowserTip": MessageLookupByLibrary.simpleMessage(
       "Finish logging in in your browser. This page updates from the node\'s status afterwards.",
     ),
@@ -3377,7 +3390,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("Réécriture d’URL"),
-    "urlTip": m162,
+    "urlTip": m164,
     "useHosts": MessageLookupByLibrary.simpleMessage("Utiliser hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage(
       "Utiliser les hosts du système",
@@ -3386,7 +3399,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "usedTraffic": MessageLookupByLibrary.simpleMessage("Trafic utilisé"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("Nom d’utilisateur"),
-    "validUntil": m163,
+    "validUntil": m165,
     "value": MessageLookupByLibrary.simpleMessage("Valeur"),
     "view": MessageLookupByLibrary.simpleMessage("Afficher"),
     "viewAll": MessageLookupByLibrary.simpleMessage("Tout afficher"),
@@ -3405,8 +3418,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Écrire dans le système règle aussi l’horloge système ; Android l’ignore.",
     ),
-    "yearsAgo": m164,
-    "yearsAgoShort": m165,
+    "yearsAgo": m166,
+    "yearsAgoShort": m167,
     "yes": MessageLookupByLibrary.simpleMessage("Oui"),
     "zhCN": MessageLookupByLibrary.simpleMessage("Chinois simplifié"),
   };

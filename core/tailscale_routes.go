@@ -166,7 +166,8 @@ type tailscaleProfileRoute struct {
 
 type tailscaleRouteDecision struct {
 	// Empty leaves the connection to the rules after the managed ones.
-	Proxy string
+	Proxy   string
+	Account string
 }
 
 type tailscaleSuffixDecision struct {
@@ -395,12 +396,12 @@ func computeTailscaleRoutes(memory *tailscaleRouteMemory, accounts []tailscaleRo
 		}
 		account := byID[binding.Owner.ID]
 		if identity, ok := identityOf(binding.Owner.ID); ok && binding.Identity != nil && !binding.Identity.same(identity) {
-			return tailscaleRouteDecision{Proxy: tailscaleRejectProxy}, tailscaleRouteReconfirm
+			return tailscaleRouteDecision{Proxy: tailscaleRejectProxy, Account: binding.Owner.ID}, tailscaleRouteReconfirm
 		}
 		if account == nil || account.LoggedOut || !account.Available {
-			return tailscaleRouteDecision{Proxy: tailscaleRejectProxy}, tailscaleRouteUnavailable
+			return tailscaleRouteDecision{Proxy: tailscaleRejectProxy, Account: binding.Owner.ID}, tailscaleRouteUnavailable
 		}
-		return tailscaleRouteDecision{Proxy: account.Proxy}, ""
+		return tailscaleRouteDecision{Proxy: account.Proxy, Account: account.ID}, ""
 	}
 
 	keys := make([]string, 0, len(seen))
@@ -643,6 +644,55 @@ func (t *tailscaleRouteTable) matchIP(addr netip.Addr) (tailscaleRouteDecision, 
 		}
 	}
 	return tailscaleRouteDecision{}, false, false
+}
+
+type tailscaleRuleLine struct {
+	text    string
+	account string
+}
+
+// The table as Clash rules in the order the two managed rules try it.
+func (t *tailscaleRouteTable) ruleLines() []tailscaleRuleLine {
+	var lines []tailscaleRuleLine
+	add := func(kind, payload string, decision tailscaleRouteDecision) {
+		if decision.Proxy != "" {
+			lines = append(lines, tailscaleRuleLine{text: kind + "," + payload + "," + decision.Proxy, account: decision.Account})
+		}
+	}
+	reject := tailscaleRouteDecision{Proxy: tailscaleRejectProxy}
+	fqdns := make([]string, 0, len(t.fqdns))
+	for fqdn := range t.fqdns {
+		fqdns = append(fqdns, fqdn)
+	}
+	slices.Sort(fqdns)
+	for _, fqdn := range fqdns {
+		add("DOMAIN", fqdn, t.fqdns[fqdn])
+	}
+	for _, suffix := range t.suffixes {
+		add("DOMAIN-SUFFIX", suffix.suffix, suffix.decision)
+	}
+	for _, suffix := range t.protectSuffixes {
+		add("DOMAIN-SUFFIX", suffix, reject)
+	}
+	addrs := make([]netip.Addr, 0, len(t.ips))
+	for addr := range t.ips {
+		addrs = append(addrs, addr)
+	}
+	slices.SortFunc(addrs, netip.Addr.Compare)
+	for _, addr := range addrs {
+		add(tailscaleCIDRKind(addr), netip.PrefixFrom(addr, addr.BitLen()).String(), t.ips[addr])
+	}
+	for _, prefix := range tailscaleProtectedPrefixes {
+		add(tailscaleCIDRKind(prefix.Addr()), prefix.String(), reject)
+	}
+	return lines
+}
+
+func tailscaleCIDRKind(addr netip.Addr) string {
+	if addr.Is4() {
+		return "IP-CIDR"
+	}
+	return "IP-CIDR6"
 }
 
 // The table one config's managed rules read; each config has its own.

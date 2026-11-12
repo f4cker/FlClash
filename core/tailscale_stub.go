@@ -52,3 +52,7 @@ func handleTailscaleForgetRoutes(TailscaleRoutesParams) (any, error) {
 func handleTailscaleManagedState(TailscaleRoutesParams) (any, error) {
 	return nil, errTailscaleUnsupported
 }
+
+func handleTailscaleRuntimeRules(TailscaleRoutesParams) (any, error) {
+	return nil, errTailscaleUnsupported
+}

@@ -15,6 +15,7 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/state.dart';
+import 'package:fl_clash/providers/tailscale.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -2185,6 +2186,81 @@ void main() {
                 : 'proxy-providers:\n  # ${l10n.mountViewerPending('C')}\n'
                       '  flash-mount-2:\n',
           ),
+        );
+      });
+    }
+
+    for (final failed in [false, true]) {
+      test('the preview notes the Tailscale rules the Core runs'
+          '${failed ? ', or that it could not read them' : ''}', () async {
+        final profile = Profile.normal(label: 'p');
+        final setup = TailscaleSetup(
+          profileId: profile.id,
+          configSource: TailscaleSettingSource.profile,
+          managed: const [TailscaleManagedSetup(id: 'a1', attached: true)],
+        );
+        final core = _MockCoreHandlerInterface();
+        when(
+          () => core.getProfileBase(any()),
+        ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+        final built = File(
+          join(await appPath.homeDirPath, coreSpillDirectoryName, 't.yaml'),
+        );
+        when(
+          () => core.buildProfile(
+            base: any(named: 'base'),
+            config: any(named: 'config'),
+            mounts: any(named: 'mounts'),
+          ),
+        ).thenAnswer((_) async {
+          await built.create(recursive: true);
+          await built.writeAsString('rules:\n  - MATCH,DIRECT\n');
+          return built.path;
+        });
+        when(() => core.getTailscaleRuntimeRules(profile.id)).thenAnswer((
+          _,
+        ) async {
+          if (failed) {
+            throw StateError('unread');
+          }
+          return TailscaleRuntimeRules(
+            profileId: profile.id,
+            state: TailscaleRuntimeState.confirmed,
+            revision: tailscaleRuntimeRevisionOf(setup),
+            accounts: const [
+              TailscaleRuntimeAccount(
+                id: 'a1',
+                node: 'TS',
+                rules: ['DOMAIN-SUFFIX,ts.net,REJECT'],
+              ),
+            ],
+          );
+        });
+        final scoped = ProviderContainer(
+          overrides: [
+            profilesProvider.overrideWith(() => TestProfiles([profile])),
+            setupStateProvider.overrideWith(
+              (_, profileId) =>
+                  nullProfileSetupState.copyWith(profileId: profileId),
+            ),
+            tailscaleSetupProvider.overrideWithValue(setup),
+            coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+            setupActionProvider.overrideWith(SetupAction.new),
+          ],
+        );
+        addTearDown(scoped.dispose);
+
+        final yaml = await scoped
+            .read(setupActionProvider.notifier)
+            .getProfileWithId(profile.id);
+
+        final l10n = currentAppLocalizations;
+        expect(
+          yaml,
+          failed
+              ? 'rules:\n  # ${l10n.tsViewerReadFailed}\n  - MATCH,DIRECT\n'
+              : 'rules:\n  # ${l10n.tsViewerRules(1, 'TS')}\n'
+                    '  #   - DOMAIN-SUFFIX,ts.net,REJECT\n  - MATCH,DIRECT\n',
         );
       });
     }

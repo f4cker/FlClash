@@ -98,6 +98,7 @@ const (
 	tailscaleAssignMethod        CoreMethod = "tailscale.assign"
 	tailscaleForgetRoutesMethod  CoreMethod = "tailscale.forgetRoutes"
 	tailscaleManagedStateMethod  CoreMethod = "tailscale.managedState"
+	tailscaleRuntimeRulesMethod  CoreMethod = "tailscale.runtimeRules"
 
 	// The envelope of a batch of events, which the Core sends and never receives.
 	messageMethod CoreMethod = "message"

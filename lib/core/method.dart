@@ -76,6 +76,7 @@ enum CoreMethod {
   tailscaleAssign('tailscale.assign'),
   tailscaleForgetRoutes('tailscale.forgetRoutes'),
   tailscaleManagedState('tailscale.managedState'),
+  tailscaleRuntimeRules('tailscale.runtimeRules'),
 
   /// The envelope of the Core's event batches, never called.
   message('message');

@@ -49,6 +49,10 @@ var (
 	tailscaleRunningSlot *tailscaleRouteSlot
 	tailscaleStagedSlot  *tailscaleRouteSlot
 	tailscaleStaged      bool
+	// What the injected config holds of the panel's accounts, handed over
+	// with the slot.
+	tailscaleRunningRun *tailscaleManagedRun
+	tailscaleStagedRun  *tailscaleManagedRun
 	// Names a provider loaded after the parse also uses; never given again.
 	tailscaleManagedNameClash = map[string]bool{}
 )
@@ -161,10 +165,16 @@ func injectTailscaleManaged(cfg *config.Config) {
 
 	own, reach := tailscaleProfileAdapters(cfg.Proxies)
 	attached := tailscaleManagedRules(&TailscaleSetup{Managed: managed, ManagedUnknown: unknown})
+	run := &tailscaleManagedRun{
+		revision: tailscaleRuntimeRevision(profileID, managed, unknown),
+		active:   attached,
+		unknown:  unknown,
+	}
 	for _, account := range managed {
 		if account.ID == "" {
 			continue
 		}
+		run.accounts = append(run.accounts, tailscaleManagedRunAccount{id: account.ID, attached: account.Attached})
 		dir := tailscaleManagedDir(profileID, account.ID, account.ControlURL)
 		mapping := map[string]any{
 			"name":      tailscaleManagedName(cfg, account.Name),
@@ -200,6 +210,7 @@ func injectTailscaleManaged(cfg *config.Config) {
 		tailscaleManagedNodes[node] = &tailscaleManagedNode{key: tailscaleManagedKey(profileID, account.ID, account.ControlURL)}
 		tailscaleManagedMu.Unlock()
 		cfg.Proxies[proxy.Name()] = proxy
+		run.accounts[len(run.accounts)-1].proxy = proxy.Name()
 	}
 
 	routes, profileRules := tailscaleProfileRoutes(cfg.Rules, own, reach)
@@ -215,7 +226,7 @@ func injectTailscaleManaged(cfg *config.Config) {
 	tailscaleManagedMu.Lock()
 	tailscaleManagedProfile, tailscaleManagedProfileRules = routes, profileRules
 	tailscaleManagedActive, tailscaleManagedUnknown = attached, unknown
-	tailscaleStagedSlot, tailscaleStaged = slot, true
+	tailscaleStagedSlot, tailscaleStagedRun, tailscaleStaged = slot, run, true
 	tailscaleManagedMu.Unlock()
 	reloadTailscaleRoutes()
 }
@@ -226,6 +237,7 @@ func publishTailscaleManaged() {
 	tailscaleManagedMu.Lock()
 	if tailscaleStaged {
 		tailscaleRunningSlot, tailscaleStagedSlot, tailscaleStaged = tailscaleStagedSlot, nil, false
+		tailscaleRunningRun, tailscaleStagedRun = tailscaleStagedRun, nil
 	}
 	names := map[string]bool{}
 	for t := range tailscaleManagedNodes {
@@ -260,7 +272,7 @@ func clearTailscaleManaged() {
 	tailscaleManagedMu.Lock()
 	tailscaleManagedProfile, tailscaleManagedProfileRules = nil, nil
 	tailscaleManagedActive, tailscaleManagedUnknown = false, false
-	tailscaleStagedSlot, tailscaleStaged = nil, true
+	tailscaleStagedSlot, tailscaleStagedRun, tailscaleStaged = nil, nil, true
 	tailscaleManagedMu.Unlock()
 	reloadTailscaleRoutes()
 }

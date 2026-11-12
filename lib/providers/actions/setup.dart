@@ -732,10 +732,10 @@ class SetupAction extends _$SetupAction {
       // do on apply.
       final mounts = setupState.mounts;
       if (mounts == null) {
-        return switch (res.base) {
+        return await _annotateTailscale(profileId, switch (res.base) {
           final base? => await _core.buildProfile(base: base),
           null => res.yaml,
-        };
+        });
       }
       final String yaml;
       try {
@@ -746,10 +746,10 @@ class SetupAction extends _$SetupAction {
       } catch (e) {
         // A failed mount check still leaves the profile itself to show.
         dialogs.showBanner(e.toString(), level: BannerLevel.error);
-        return switch (res.base) {
+        return await _annotateTailscale(profileId, switch (res.base) {
           final base? => await _core.buildProfile(base: base),
           null => res.yaml,
-        };
+        });
       }
       MountRuntimeState? runtime;
       try {
@@ -760,16 +760,40 @@ class SetupAction extends _$SetupAction {
           logLevel: coreFailureLogLevel(error),
         );
       }
-      return annotateMountProviders(
-        yaml,
-        mounts,
-        runtime,
-        currentAppLocalizations,
+      return await _annotateTailscale(
+        profileId,
+        annotateMountProviders(yaml, mounts, runtime, currentAppLocalizations),
       );
     } catch (e) {
       dialogs.showBanner(e.toString(), level: BannerLevel.error);
     }
     return '';
+  }
+
+  /// Only the profile the Core runs has Flash's Tailscale rules in force.
+  Future<String> _annotateTailscale(int profileId, String yaml) async {
+    final setup = ref.read(tailscaleSetupProvider);
+    if (setup == null ||
+        setup.profileId != profileId ||
+        setup.managed.isEmpty && !setup.managedUnknown) {
+      return yaml;
+    }
+    TailscaleRuntimeRules runtime;
+    try {
+      runtime = await _core.getTailscaleRuntimeRules(profileId);
+    } catch (error) {
+      commonPrint.log(
+        'tailscale runtime rules unread: ${compactError(error)}',
+        logLevel: coreFailureLogLevel(error),
+      );
+      runtime = TailscaleRuntimeRules.readFailed(profileId);
+    }
+    return annotateTailscaleRuntime(
+      yaml,
+      runtime,
+      setup,
+      currentAppLocalizations,
+    );
   }
 
   /// Keeps the profile on the names the Core followed, unless changed since.

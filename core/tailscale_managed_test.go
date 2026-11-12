@@ -64,6 +64,7 @@ func applyManagedProfileHome(t *testing.T, home, profile string, setup *Tailscal
 		closeTailscaleUpTo(tailscaleGenerationMark())
 		tailscaleManagedMu.Lock()
 		tailscaleRunningSlot, tailscaleStagedSlot, tailscaleStaged = nil, nil, false
+		tailscaleRunningRun, tailscaleStagedRun = nil, nil
 		tailscaleManagedNameClash = map[string]bool{}
 		tailscaleManagedMu.Unlock()
 		tailscaleRouting = &tailscaleRouter{}

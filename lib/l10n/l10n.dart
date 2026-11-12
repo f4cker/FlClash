@@ -12891,6 +12891,46 @@ class AppLocalizations {
     );
   }
 
+  /// `Tailscale · Added by Flash · {count, plural, =1{1 rule} other{{count} rules}} → Node {node}`
+  String tsViewerRules(num count, Object node) {
+    return Intl.message(
+      'Tailscale · Added by Flash · ${Intl.plural(count, one: '1 rule', other: '$count rules')} → Node $node',
+      name: 'tsViewerRules',
+      desc: '',
+      args: [count, node],
+    );
+  }
+
+  /// `Tailscale · Added by Flash · Node {node}`
+  String tsViewerNode(Object node) {
+    return Intl.message(
+      'Tailscale · Added by Flash · Node $node',
+      name: 'tsViewerNode',
+      desc: '',
+      args: [node],
+    );
+  }
+
+  /// `Tailscale · Current rules and nodes are unconfirmed`
+  String get tsViewerUnconfirmed {
+    return Intl.message(
+      'Tailscale · Current rules and nodes are unconfirmed',
+      name: 'tsViewerUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tailscale · Could not read runtime information`
+  String get tsViewerReadFailed {
+    return Intl.message(
+      'Tailscale · Could not read runtime information',
+      name: 'tsViewerReadFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Matching node names use the subscription name`
   String get mountSameNameShort {
     return Intl.message(
