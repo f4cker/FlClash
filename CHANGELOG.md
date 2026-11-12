@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.9.4 (2026-11-12)
+
+**Features**
+
+- **mount** Mount subscription nodes into a profile from its card (c509cb9)
+- **tailscale** MagicDNS names, presence and running Flash rules (1645be1)
+- **requests** Show the Mac app or process of each connection (28c99a8)
+- **config** Page settings layer over the profile file per field (e7c88d1)
+- **tray** Cookie status icons and a new app icon (1c45db6)
+
+**Bug Fixes**
+
+- **core** Keep mounted nodes out of every Tailscale route and relay (b0d5d12)
+
 ## v0.9.3 (2026-11-04)
 
 **Features**
