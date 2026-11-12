@@ -122,7 +122,6 @@ void main() {
   final stored = MountTargetState(
     targetId: target.id,
     sourceIds: [air.id, sea.id],
-    groups: const ['手动'],
     version: 3,
   );
   final sources = [

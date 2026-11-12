@@ -176,7 +176,6 @@ void main() {
       targetId: 1,
       expectedVersion: null,
       sourceIds: [2],
-      groups: ['Proxy'],
       pending: (version) =>
           MountOperation(kind: MountOperationKind.save, version: version),
     );
@@ -198,7 +197,6 @@ void main() {
     ))!;
 
     final mounts = state.mounts!;
-    expect(mounts.groups, ['Proxy']);
     expect(mounts.sources.single.id, 2);
     expect(mounts.sources.single.label, 'Air');
     expect(mounts.sources.single.path, endsWith('2.yaml'));
@@ -257,7 +255,6 @@ void main() {
         targetId: 1,
         expectedVersion: null,
         sourceIds: [2],
-        groups: ['Proxy'],
         pending: (version) =>
             MountOperation(kind: MountOperationKind.save, version: version),
       ),

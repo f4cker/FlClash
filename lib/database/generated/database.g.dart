@@ -5635,6 +5635,8 @@ class $MountTargetsTable extends MountTargets
 
 class MountTargetRow extends DataClass implements Insertable<MountTargetRow> {
   final int targetId;
+
+  /// Groups once chosen by hand; no longer read, and cleared on a save.
   final List<String> groups;
   final int version;
   final MountOperation? pending;

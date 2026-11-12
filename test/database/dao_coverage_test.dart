@@ -853,7 +853,6 @@ void main() {
         targetId: 1,
         expectedVersion: version,
         sourceIds: [2],
-        groups: ['Proxy'],
         pending: (version) =>
             MountOperation(kind: MountOperationKind.save, version: version),
       );

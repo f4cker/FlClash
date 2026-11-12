@@ -52,6 +52,13 @@ class MountAction extends _$MountAction {
       stored: stored,
       sources: sources,
       groups: groups,
+      revision: stored == null
+          ? null
+          : mountSetupOf(
+              stored,
+              ref.read(profilesProvider),
+              await appPath.profilesPath,
+            ).revision,
     );
   }
 
@@ -105,11 +112,10 @@ class MountAction extends _$MountAction {
     int targetId, {
     required int? expectedVersion,
     required List<int> sourceIds,
-    required List<String> groups,
     VoidCallback? onStored,
   }) {
     return _scheduler.run(
-      () => _save(targetId, expectedVersion, sourceIds, groups, onStored),
+      () => _save(targetId, expectedVersion, sourceIds, onStored),
     );
   }
 
@@ -117,7 +123,6 @@ class MountAction extends _$MountAction {
     int targetId,
     int? expectedVersion,
     List<int> sourceIds,
-    List<String> groups,
     VoidCallback? onStored,
   ) async {
     final MountTargetState? current;
@@ -138,7 +143,6 @@ class MountAction extends _$MountAction {
     final candidate = MountTargetState(
       targetId: targetId,
       sourceIds: sourceIds,
-      groups: groups,
       version: (expectedVersion ?? 0) + 1,
     );
     final MountPreflight preflight;
@@ -161,16 +165,17 @@ class MountAction extends _$MountAction {
         message: _messageOf(error),
       );
     }
-    if (preflight.errorCode == 'mount_group_changed') {
-      return const MountSaveResult(outcome: MountSaveOutcome.groupsChanged);
-    }
     if (preflight.error case final error?) {
       return MountSaveResult(
         outcome: MountSaveOutcome.unchanged,
         message: error,
       );
     }
-    if (sourceIds.isNotEmpty && (preflight.report?.groups.isEmpty ?? true)) {
+    // Nodes no group takes are not mounted; a pure removal still goes on.
+    final adds = sourceIds.any(
+      (id) => !(current?.sourceIds.contains(id) ?? false),
+    );
+    if (adds && (preflight.report?.groups.isEmpty ?? true)) {
       return const MountSaveResult(outcome: MountSaveOutcome.needsGroup);
     }
     final MountTargetState saved;
@@ -179,7 +184,6 @@ class MountAction extends _$MountAction {
         targetId: targetId,
         expectedVersion: expectedVersion,
         sourceIds: sourceIds,
-        groups: groups,
         pending: (version) => MountOperation(
           kind: MountOperationKind.save,
           version: version,

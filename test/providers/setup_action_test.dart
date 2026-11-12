@@ -1770,7 +1770,6 @@ void main() {
         target: profile.id,
         revision: 'r1',
         sources: const [MountSource(id: 2, label: 'Air', path: '/p/2.yaml')],
-        groups: ['Proxy'],
       );
       when(
         () => core.getProfileBase(any()),

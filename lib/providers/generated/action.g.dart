@@ -91,7 +91,7 @@ final class SetupActionProvider extends $NotifierProvider<SetupAction, void> {
   }
 }
 
-String _$setupActionHash() => r'622ce23f1bfa8eec8b5754a72ba079a2bb4288c4';
+String _$setupActionHash() => r'1df37b212f8e3f3d751d555caf177796c34f9738';
 
 abstract class _$SetupAction extends $Notifier<void> {
   void build();
@@ -928,7 +928,7 @@ final class MountActionProvider extends $NotifierProvider<MountAction, void> {
   }
 }
 
-String _$mountActionHash() => r'b5474f0501afb896dbc9ce56537f8afac946d555';
+String _$mountActionHash() => r'ee20a115bb7310a3e16ebd633bd1fac72d6bf29f';
 
 /// Mount operations run one at a time. Each save writes the relation with a
 /// pending record first, and only a readback, or a target that is not

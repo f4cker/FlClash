@@ -62,11 +62,6 @@ Future<void> pumpSheet(
 Finder rowOf(String name) =>
     find.ancestor(of: find.text(name), matching: find.byType(MountSourceRow));
 
-Finder candidateOf(String name) => find.ancestor(
-  of: find.text(name),
-  matching: find.byType(MountCandidateRow),
-);
-
 FilledButton saveButton(WidgetTester tester) => tester.widget<FilledButton>(
   find.widgetWithText(FilledButton, currentAppLocalizations.mountSave),
 );
@@ -117,7 +112,7 @@ void main() {
     expect(find.text(l10n.mountEmptyTitle), findsOneWidget);
     expect(find.text(l10n.mountImport), findsOneWidget);
     expect(find.text(l10n.mountImportHint), findsOneWidget);
-    expect(find.text(l10n.mountFormatHelp), findsNothing);
+    expect(find.text(l10n.mountFormatHelp), findsOneWidget);
   });
 
   testWidgets('each row says what state its source is in', (tester) async {
@@ -156,7 +151,7 @@ void main() {
     expect(inRow('Sea', find.byTooltip(l10n.mountUpdateNodes)), findsNothing);
     expect(inRow('Odd', find.text(l10n.mountSourceNoNodeList)), findsOne);
     expect(inRow('None', find.text(l10n.mountNotFetched)), findsOneWidget);
-    expect(find.text(l10n.mountFormatHelp), findsOneWidget);
+    expect(find.text(l10n.mountFormatHelp), findsNothing);
 
     await tester.tap(find.text('Odd'));
     await tester.pump();
@@ -167,32 +162,18 @@ void main() {
     expect(mounts.refreshed, [air.id]);
   });
 
-  testWidgets('auto groups are listed with how they collect, extras are '
-      'optional and typed', (tester) async {
+  testWidgets('the groups block is one collapsed row that opens to a '
+      'read-only list, with no box to check', (tester) async {
     final mounts = FakeMounts(
       panelOf(
         [item(air)],
         groups: MountTarget(
           groups: [
-            groupInfo(
-              'All',
-              kind: MountGroupKind.auto,
-              collects: MountGroupCollects.all,
-            ),
-            groupInfo(
-              'Subs',
-              kind: MountGroupKind.auto,
-              collects: MountGroupCollects.providers,
-            ),
-            groupInfo(
-              'HK',
-              kind: MountGroupKind.auto,
-              collects: MountGroupCollects.all,
-              filter: true,
-            ),
             groupInfo('Pick'),
-            groupInfo('Fast', type: 'url-test', filter: true),
+            groupInfo('HK', filter: true),
+            groupInfo('Fast', type: 'url-test'),
             groupInfo('Spread', type: 'load-balance'),
+            groupInfo('Quiet', hidden: true),
           ],
         ),
       ),
@@ -200,35 +181,172 @@ void main() {
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
 
-    expect(find.text(l10n.mountAutoSubtitle), findsOneWidget);
-    expect(find.text(l10n.mountHintCollectsAll), findsOneWidget);
-    expect(find.text(l10n.mountHintCollectsProviders), findsOneWidget);
-    expect(find.text(l10n.mountHintFiltered), findsOneWidget);
-    expect(find.text(l10n.mountExtraTitle), findsOneWidget);
-    expect(find.text(l10n.mountTypeSelect), findsOneWidget);
-    expect(find.text(l10n.mountTypeSelectDesc), findsOneWidget);
+    expect(find.text(l10n.mountGroupsTitle), findsOneWidget);
+    expect(find.text(l10n.mountGroupsCount(4)), findsOneWidget);
+    expect(find.text('Pick'), findsNothing);
+    expect(find.text(l10n.mountGroupsSummary), findsNothing);
+    final title = tester.widget<Text>(find.text(l10n.mountGroupsTitle)).style!;
+    expect(title.fontWeight, FontWeight.w600);
+    expect(
+      tester.getSize(find.byType(MountGroupsBlock)).height,
+      greaterThanOrEqualTo(44),
+    );
+
+    await tester.tap(find.text(l10n.mountGroupsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.mountGroupsSummary), findsOneWidget);
+    for (final name in ['Pick', 'HK', 'Fast', 'Spread']) {
+      expect(find.text(name), findsOneWidget);
+    }
+    expect(find.text('Quiet'), findsNothing);
+    expect(find.text(l10n.mountGroupsHidden), findsOneWidget);
+    expect(find.text(l10n.mountTypeSelect), findsNWidgets(2));
     expect(find.text(l10n.mountTypeUrlTest), findsOneWidget);
     expect(find.text(l10n.mountTypeLoadBalance), findsOneWidget);
-    expect(find.text(l10n.mountFilterNotice), findsNothing);
+    expect(find.text(l10n.mountHintFiltered), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(MountGroupsBlock),
+        matching: find.byType(MountCheckbox),
+      ),
+      findsNothing,
+    );
+    // Nothing ticked yet: no count and no promise.
+    expect(find.text(l10n.mountGroupPending), findsNothing);
 
-    await tester.tap(find.text('Fast'));
+    // Rows are not controls; tapping one changes nothing.
+    await tester.tap(find.text('Pick'));
     await tester.pump();
-    expect(find.text(l10n.mountFilterNotice), findsOneWidget);
-    await tester.tap(find.text('Fast'));
-    await tester.pump();
-
-    // Leaving the extras unchecked never blocks a save.
     expect(saveButton(tester).onPressed, isNull);
+
     await tester.tap(find.text('Air'));
     await tester.pump();
+    // The collapsed row's state and each row's.
+    expect(find.text(l10n.mountGroupPending), findsNWidgets(5));
     expect(saveButton(tester).onPressed, isNotNull);
     await tester.tap(find.text(l10n.mountSave));
     await tester.pumpAndSettle();
 
     expect(mounts.saves.single.version, isNull);
     expect(mounts.saves.single.sources, [air.id]);
-    expect(mounts.saves.single.groups, isEmpty);
     expect(find.text(l10n.mountSavedUnconfirmed), findsOneWidget);
+  });
+
+  testWidgets('a confirmed readback counts each group and warns on a zero '
+      'match, an unconfirmed one shows no count', (tester) async {
+    MountPanel panel({String? revision}) => panelOf(
+      [item(air, mounted: true)],
+      stored: MountTargetState(
+        targetId: target.id,
+        sourceIds: [air.id],
+        version: 1,
+      ),
+      revision: revision,
+      groups: MountTarget(
+        groups: [groupInfo('Proxy'), groupInfo('HK', filter: true)],
+      ),
+    );
+    const runtime = MountRuntimeState(
+      report: MountReport(
+        target: 1,
+        revision: 'r1',
+        groups: [
+          MountGroupReport(
+            name: 'Proxy',
+            via: MountGroupVia.auto,
+            protection: MountProtection.base,
+          ),
+          MountGroupReport(
+            name: 'HK',
+            via: MountGroupVia.auto,
+            protection: MountProtection.base,
+          ),
+        ],
+      ),
+      groups: [
+        MountRuntimeGroup(name: 'Proxy', present: true, members: 5, mounted: 3),
+        MountRuntimeGroup(name: 'HK', present: true, members: 2),
+      ],
+    );
+    final mounts = FakeMounts(panel(revision: 'r1'))..runtime = runtime;
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
+
+    final worst = tester.widget<Text>(find.text(l10n.mountGroupsNoMatch(1)));
+    expect(worst.style?.color, colorScheme.warning);
+    await tester.tap(find.text(l10n.mountGroupsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.mountGroupNodes(3)), findsOneWidget);
+    final zero = tester.widget<Text>(find.text(l10n.mountGroupNoMatch));
+    expect(zero.style?.color, colorScheme.warning);
+    expect(find.text(l10n.mountGroupsUnconfirmed), findsNothing);
+  });
+
+  testWidgets('a readback of another revision confirms no group', (
+    tester,
+  ) async {
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [item(air, mounted: true)],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id],
+                version: 1,
+              ),
+              revision: 'r0',
+              groups: MountTarget(groups: [groupInfo('Proxy')]),
+            ),
+          )
+          ..runtime = const MountRuntimeState(
+            report: MountReport(
+              target: 1,
+              revision: 'r1',
+              groups: [
+                MountGroupReport(
+                  name: 'Proxy',
+                  via: MountGroupVia.auto,
+                  protection: MountProtection.base,
+                ),
+              ],
+            ),
+            groups: [
+              MountRuntimeGroup(name: 'Proxy', present: true, mounted: 3),
+            ],
+          );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    expect(find.text(l10n.mountGroupsUnconfirmed), findsOneWidget);
+    await tester.tap(find.text(l10n.mountGroupsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.mountGroupsUnconfirmed), findsNWidgets(2));
+    expect(find.text(l10n.mountGroupNodes(3)), findsNothing);
+  });
+
+  testWidgets('past eight groups the list shows eight, then all on request', (
+    tester,
+  ) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [for (var i = 1; i <= 10; i++) groupInfo('G$i')],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+
+    await tester.tap(find.text(l10n.mountGroupsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text('G8'), findsOneWidget);
+    expect(find.text('G9'), findsNothing);
+    await tester.tap(find.text(l10n.mountShowAllGroups(10)));
+    await tester.pumpAndSettle();
+    expect(find.text('G9'), findsOneWidget);
+    expect(find.text('G10'), findsOneWidget);
+    expect(find.text(l10n.mountShowAllGroups(10)), findsNothing);
   });
 
   for (final brightness in Brightness.values) {
@@ -247,10 +365,7 @@ void main() {
             version: 1,
           ),
           groups: MountTarget(
-            groups: [
-              groupInfo('All', kind: MountGroupKind.auto),
-              groupInfo('Pick'),
-            ],
+            groups: [groupInfo('All', kind: MountGroupKind.auto)],
           ),
         ),
       );
@@ -298,16 +413,7 @@ void main() {
       final rowFill = fillOf(
         find.descendant(of: rowOf('Sea'), matching: find.byType(DecoratedBox)),
       );
-      final blockFill = fillOf(
-        find.descendant(
-          of: find.byType(MountGroupsBlock),
-          matching: find.byType(DecoratedBox),
-        ),
-      );
-      for (final (box, background) in [
-        (boxOf(rowOf('Sea')), rowFill),
-        (boxOf(candidateOf('Pick')), blockFill),
-      ]) {
+      for (final (box, background) in [(boxOf(rowOf('Sea')), rowFill)]) {
         expect(box.color!.a, 0);
         expect(box.side.width, 1.5);
         expect(box.side.color, colorScheme.onSurfaceVariant);
@@ -322,84 +428,24 @@ void main() {
     });
   }
 
-  testWidgets('the groups area has a section label like the sources, and '
-      'its sub-headings are row-sized', (tester) async {
+  testWidgets('the groups title sits in its row, with no section label '
+      'outside the block', (tester) async {
     final mounts = FakeMounts(
-      panelOf(
-        [item(air)],
-        groups: MountTarget(
-          groups: [
-            groupInfo('All', kind: MountGroupKind.auto),
-            groupInfo('Pick'),
-          ],
-        ),
-      ),
+      panelOf([item(air)], groups: MountTarget(groups: [groupInfo('All')])),
     );
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
 
-    TextStyle? styleOf(String text) =>
-        tester.widget<Text>(find.text(text)).style;
     final label = find.text(l10n.mountGroupsTitle);
     expect(label, findsOneWidget);
     expect(
       find.ancestor(of: label, matching: find.byType(MountGroupsBlock)),
-      findsNothing,
+      findsOneWidget,
     );
-    expect(styleOf(l10n.mountGroupsTitle), styleOf(l10n.mountChooseSources));
-    final row = styleOf('All')!;
-    for (final heading in [l10n.mountAutoSubtitle, l10n.mountExtraTitle]) {
-      final style = styleOf(heading)!;
-      expect(style.fontSize, row.fontSize);
-      expect(style.fontWeight, FontWeight.w600);
-    }
-  });
-
-  testWidgets('without an auto group at least one group is needed, except '
-      'to remove', (tester) async {
-    final mounts = FakeMounts(
-      panelOf(
-        [item(air), item(sea, mounted: true)],
-        stored: MountTargetState(
-          targetId: target.id,
-          sourceIds: [sea.id],
-          groups: const ['Proxy'],
-          version: 3,
-        ),
-        groups: MountTarget(
-          groups: [
-            groupInfo('Proxy'),
-            groupInfo('Fallback', type: 'fallback'),
-          ],
-        ),
-      ),
-    );
-    await pumpSheet(tester, mounts, profiles: [air, sea]);
-    final l10n = currentAppLocalizations;
-
-    expect(find.text(l10n.mountPickTitle), findsOneWidget);
-    expect(find.text(l10n.mountPickRequired), findsNothing);
-
-    await tester.tap(find.text('Proxy'));
-    await tester.tap(find.text('Air'));
-    await tester.pump();
-    expect(find.text(l10n.mountPickRequired), findsOneWidget);
-    expect(saveButton(tester).onPressed, isNull);
-
-    await tester.tap(find.text('Fallback'));
-    await tester.pump();
-    expect(find.text(l10n.mountPickRequired), findsNothing);
-    expect(find.text(l10n.mountTypeFallback), findsOneWidget);
-    expect(saveButton(tester).onPressed, isNotNull);
-
-    // Back to the stored groups: unchecking Sea alone needs none.
-    await tester.tap(find.text('Fallback'));
-    await tester.tap(find.text('Proxy'));
-    await tester.tap(find.text('Air'));
-    await tester.tap(find.text('Sea'));
-    await tester.pump();
-    expect(find.text(l10n.mountPickRequired), findsNothing);
-    expect(saveButton(tester).onPressed, isNotNull);
+    expect(find.text(l10n.mountFormatHelp), findsNothing);
+    expect(find.byTooltip(l10n.mountAbout), findsOneWidget);
+    final line = tester.widget<Text>(find.text(l10n.mountDescription));
+    expect(line.maxLines, 1);
   });
 
   testWidgets('a profile without groups blocks mounting but still unmounts, '
@@ -441,7 +487,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(mounts.saves.single.version, 2);
     expect(mounts.saves.single.sources, isEmpty);
-    expect(mounts.saves.single.groups, isEmpty);
   });
 
   testWidgets('groups that cannot be read never pass for no groups', (
@@ -463,7 +508,7 @@ void main() {
     );
     await tester.tap(find.text(l10n.mountReadAgain));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.mountAutoSubtitle), findsOneWidget);
+    expect(find.text(l10n.mountGroupsTitle), findsOneWidget);
     // The staged choice survives the reread.
     expect(saveButton(tester).onPressed, isNotNull);
   });
@@ -652,8 +697,10 @@ void main() {
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
 
+    // A group down to blocking opens the row by itself.
     expect(find.text(l10n.mountBlockTag), findsNWidgets(2));
-    expect(find.text(l10n.mountBlockDesc), findsOneWidget);
+    expect(find.byTooltip(l10n.mountBlockDesc), findsNWidgets(2));
+    expect(find.text(l10n.mountBlockDesc), findsNothing);
     final empty = tester.widget<Text>(find.text(l10n.mountGroupEmpty('Empty')));
     final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
     expect(empty.style?.color, colorScheme.warning);
@@ -910,7 +957,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(mounts.saves.single.version, 2);
       expect(mounts.saves.single.sources, isEmpty);
-      expect(mounts.saves.single.groups, isEmpty);
     });
   }
 
@@ -1006,11 +1052,7 @@ void main() {
             isolatedGroup('Lan', MountGroupReason.holds),
             isolatedGroup('Hop', MountGroupReason.dialer),
             isolatedGroup('Set', MountGroupReason.ruleUnknown),
-            groupInfo(
-              'Hidden',
-              kind: MountGroupKind.excluded,
-              excluded: MountGroupExclusion.hidden,
-            ),
+            groupInfo('Hidden', hidden: true),
           ],
         ),
       ),
@@ -1025,6 +1067,7 @@ void main() {
     );
     expect(banner.level, MountBannerLevel.info);
     expect(banner.lines, [
+      l10n.mountIsolationFirst,
       l10n.mountGroupsExcluded(3),
       l10n.mountGroupsExcludedNames('Lan, Hop, Set'),
     ]);
@@ -1087,27 +1130,24 @@ void main() {
     expect(saveButton(tester).onPressed, isNull);
   });
 
-  testWidgets('hidden groups alone still read as a profile without groups', (
+  testWidgets('hidden groups alone still take mounts, unlisted', (
     tester,
   ) async {
     final mounts = FakeMounts(
-      panelOf(
-        [item(air)],
-        groups: MountTarget(
-          groups: [
-            groupInfo(
-              'Hidden',
-              kind: MountGroupKind.excluded,
-              excluded: MountGroupExclusion.hidden,
-            ),
-          ],
-        ),
-      ),
+      panelOf([
+        item(air),
+      ], groups: MountTarget(groups: [groupInfo('Hidden', hidden: true)])),
     );
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
-    expect(find.text(l10n.mountNoGroupTitle), findsOneWidget);
-    expect(find.text(l10n.mountNoGroupIsolatedTitle), findsNothing);
+    expect(find.text(l10n.mountNoGroupTitle), findsNothing);
+    await tester.tap(find.text(l10n.mountGroupsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text('Hidden'), findsNothing);
+    expect(find.text(l10n.mountGroupsHidden), findsOneWidget);
+    await tester.tap(find.text('Air'));
+    await tester.pump();
+    expect(saveButton(tester).onPressed, isNotNull);
   });
 
   /// The Blocked lock: controls faded and inert, only a status read offered,

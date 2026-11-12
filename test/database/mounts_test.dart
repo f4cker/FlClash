@@ -32,7 +32,6 @@ void main() {
       targetId: 1,
       expectedVersion: null,
       sourceIds: [3, 2],
-      groups: ['Proxy'],
       pending: saving,
     );
 
@@ -49,7 +48,6 @@ void main() {
       targetId: 1,
       expectedVersion: null,
       sourceIds: [2],
-      groups: const [],
       pending: saving,
     );
 
@@ -58,7 +56,6 @@ void main() {
         targetId: 1,
         expectedVersion: 1,
         sourceIds: [3],
-        groups: const [],
         pending: saving,
       ),
       throwsA(isA<MountOperationUnresolved>()),
@@ -69,7 +66,6 @@ void main() {
         targetId: 1,
         expectedVersion: null,
         sourceIds: [3],
-        groups: const [],
         pending: saving,
       ),
       throwsA(isA<MountVersionConflict>()),
@@ -78,7 +74,6 @@ void main() {
       targetId: 1,
       expectedVersion: 1,
       sourceIds: const [],
-      groups: const [],
       pending: saving,
     );
     expect(next.version, 2);
@@ -90,7 +85,6 @@ void main() {
       targetId: 1,
       expectedVersion: null,
       sourceIds: [2],
-      groups: const [],
       pending: saving,
     );
 
@@ -105,7 +99,6 @@ void main() {
       targetId: 1,
       expectedVersion: null,
       sourceIds: [2, 3],
-      groups: const [],
       pending: saving,
     );
     await database.mountsDao.recordSourceResult(
@@ -130,7 +123,6 @@ void main() {
       targetId: 1,
       expectedVersion: null,
       sourceIds: [2, 3],
-      groups: const [],
       pending: saving,
     );
     await database.mountsDao.settle(1, 1);
@@ -176,7 +168,6 @@ void main() {
       targetId: 1,
       expectedVersion: null,
       sourceIds: [2],
-      groups: const [],
       pending: saving,
     );
     await database.customStatement(

@@ -30,6 +30,7 @@ class MountTargets extends Table {
   IntColumn get targetId =>
       integer().references(Profiles, #id, onDelete: KeyAction.cascade)();
 
+  /// Groups once chosen by hand; no longer read, and cleared on a save.
   TextColumn get groups => text().map(const StringListConverter())();
 
   IntColumn get version => integer()();
@@ -101,7 +102,6 @@ class MountsDao extends DatabaseAccessor<Database> with _$MountsDaoMixin {
     return MountTargetState(
       targetId: targetId,
       sourceIds: [for (final mount in mounts) mount.sourceId],
-      groups: row.groups,
       version: row.version,
       pending: row.pending,
     );
@@ -120,7 +120,6 @@ class MountsDao extends DatabaseAccessor<Database> with _$MountsDaoMixin {
             for (final mount in mounts)
               if (mount.targetId == row.targetId) mount.sourceId,
           ],
-          groups: row.groups,
           version: row.version,
           pending: row.pending,
         ),
@@ -161,7 +160,6 @@ class MountsDao extends DatabaseAccessor<Database> with _$MountsDaoMixin {
     required int targetId,
     required int? expectedVersion,
     required List<int> sourceIds,
-    required List<String> groups,
     required MountOperation Function(int version) pending,
   }) {
     return transaction(() async {
@@ -190,7 +188,7 @@ class MountsDao extends DatabaseAccessor<Database> with _$MountsDaoMixin {
       await into(mountTargets).insertOnConflictUpdate(
         MountTargetsCompanion.insert(
           targetId: Value(targetId),
-          groups: groups,
+          groups: const [],
           version: version,
           pending: Value(operation),
         ),
@@ -198,7 +196,6 @@ class MountsDao extends DatabaseAccessor<Database> with _$MountsDaoMixin {
       return MountTargetState(
         targetId: targetId,
         sourceIds: sourceIds,
-        groups: groups,
         version: version,
         pending: operation,
       );

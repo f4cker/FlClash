@@ -11885,10 +11885,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Choose imported subscriptions to add their nodes to this profile. Its rules, DNS, and group structure stay unchanged, as does dedicated Tailscale routing. Original files are not rewritten.`
+  /// `Adds nodes without changing rules or DNS.`
   String get mountDescription {
     return Intl.message(
-      'Choose imported subscriptions to add their nodes to this profile. Its rules, DNS, and group structure stay unchanged, as does dedicated Tailscale routing. Original files are not rewritten.',
+      'Adds nodes without changing rules or DNS.',
       name: 'mountDescription',
       desc: '',
       args: [],
@@ -12257,101 +12257,11 @@ class AppLocalizations {
     );
   }
 
-  /// `Use existing group collection settings`
-  String get mountAutoSubtitle {
-    return Intl.message(
-      'Use existing group collection settings',
-      name: 'mountAutoSubtitle',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `These groups collect and filter subscription nodes using their existing settings. Choose additional proxy groups below if needed.`
-  String get mountAutoDesc {
-    return Intl.message(
-      'These groups collect and filter subscription nodes using their existing settings. Choose additional proxy groups below if needed.',
-      name: 'mountAutoDesc',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Collects nodes automatically`
-  String get mountHintCollectsAll {
-    return Intl.message(
-      'Collects nodes automatically',
-      name: 'mountHintCollectsAll',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Collects subscription nodes automatically`
-  String get mountHintCollectsProviders {
-    return Intl.message(
-      'Collects subscription nodes automatically',
-      name: 'mountHintCollectsProviders',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Auto-collected · Group filters apply`
   String get mountHintFiltered {
     return Intl.message(
       'Auto-collected · Group filters apply',
       name: 'mountHintFiltered',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Additional groups (optional)`
-  String get mountExtraTitle {
-    return Intl.message(
-      'Additional groups (optional)',
-      name: 'mountExtraTitle',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `You can also add these subscription nodes to other proxy groups. Leave this unselected to use only the collection settings above. This choice applies to all subscriptions mounted on this profile.`
-  String get mountExtraDesc {
-    return Intl.message(
-      'You can also add these subscription nodes to other proxy groups. Leave this unselected to use only the collection settings above. This choice applies to all subscriptions mounted on this profile.',
-      name: 'mountExtraDesc',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Choose target groups`
-  String get mountPickTitle {
-    return Intl.message(
-      'Choose target groups',
-      name: 'mountPickTitle',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `This profile has no group that automatically collects subscription nodes. Choose the proxy groups that should receive them. Only the effective profile is updated; the original file is not rewritten.`
-  String get mountPickDesc {
-    return Intl.message(
-      'This profile has no group that automatically collects subscription nodes. Choose the proxy groups that should receive them. Only the effective profile is updated; the original file is not rewritten.',
-      name: 'mountPickDesc',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Choose at least one target group.`
-  String get mountPickRequired {
-    return Intl.message(
-      'Choose at least one target group.',
-      name: 'mountPickRequired',
       desc: '',
       args: [],
     );
@@ -12387,31 +12297,11 @@ class AppLocalizations {
     );
   }
 
-  /// `Target groups have changed. Read and confirm them before saving.`
-  String get mountGroupsChanged {
-    return Intl.message(
-      'Target groups have changed. Read and confirm them before saving.',
-      name: 'mountGroupsChanged',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Manual selection`
   String get mountTypeSelect {
     return Intl.message(
       'Manual selection',
       name: 'mountTypeSelect',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `You choose which node to use.`
-  String get mountTypeSelectDesc {
-    return Intl.message(
-      'You choose which node to use.',
-      name: 'mountTypeSelectDesc',
       desc: '',
       args: [],
     );
@@ -12427,16 +12317,6 @@ class AppLocalizations {
     );
   }
 
-  /// `This group sends connectivity checks and selects a node automatically based on the results.`
-  String get mountTypeUrlTestDesc {
-    return Intl.message(
-      'This group sends connectivity checks and selects a node automatically based on the results.',
-      name: 'mountTypeUrlTestDesc',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Failover`
   String get mountTypeFallback {
     return Intl.message(
@@ -12447,51 +12327,11 @@ class AppLocalizations {
     );
   }
 
-  /// `This group sends connectivity checks and switches nodes when needed, following the original profile settings.`
-  String get mountTypeFallbackDesc {
-    return Intl.message(
-      'This group sends connectivity checks and switches nodes when needed, following the original profile settings.',
-      name: 'mountTypeFallbackDesc',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Load balancing`
   String get mountTypeLoadBalance {
     return Intl.message(
       'Load balancing',
       name: 'mountTypeLoadBalance',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `This group checks nodes and distributes connections according to the original profile settings.`
-  String get mountTypeLoadBalanceDesc {
-    return Intl.message(
-      'This group checks nodes and distributes connections according to the original profile settings.',
-      name: 'mountTypeLoadBalanceDesc',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Behavior follows the original group settings`
-  String get mountTypeUnknownDesc {
-    return Intl.message(
-      'Behavior follows the original group settings',
-      name: 'mountTypeUnknownDesc',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `This group’s existing inclusion and exclusion filters also apply to mounted nodes. The filters will not be changed.`
-  String get mountFilterNotice {
-    return Intl.message(
-      'This group’s existing inclusion and exclusion filters also apply to mounted nodes. The filters will not be changed.',
-      name: 'mountFilterNotice',
       desc: '',
       args: [],
     );
@@ -12544,36 +12384,6 @@ class AppLocalizations {
       name: 'mountGroupEmpty',
       desc: '',
       args: [group],
-    );
-  }
-
-  /// `Nodes were fetched, but the selected groups’ filters leave no selectable options. Check their filters.`
-  String get mountGroupFiltered {
-    return Intl.message(
-      'Nodes were fetched, but the selected groups’ filters leave no selectable options. Check their filters.',
-      name: 'mountGroupFiltered',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Selected`
-  String get mountGroupSelected {
-    return Intl.message(
-      'Selected',
-      name: 'mountGroupSelected',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Not selected`
-  String get mountGroupNotSelected {
-    return Intl.message(
-      'Not selected',
-      name: 'mountGroupNotSelected',
-      desc: '',
-      args: [],
     );
   }
 
@@ -12846,6 +12656,127 @@ class AppLocalizations {
       name: 'mountUnsupportedExcluded',
       desc: '',
       args: [count],
+    );
+  }
+
+  /// `About mounts`
+  String get mountAbout {
+    return Intl.message('About mounts', name: 'mountAbout', desc: '', args: []);
+  }
+
+  /// `Choose imported subscriptions to add their nodes to this profile. All eligible proxy groups receive mounted nodes, then apply their existing inclusion and exclusion filters. Existing nodes, rules, and DNS settings are kept, and original files are not rewritten.`
+  String get mountAboutBody {
+    return Intl.message(
+      'Choose imported subscriptions to add their nodes to this profile. All eligible proxy groups receive mounted nodes, then apply their existing inclusion and exclusion filters. Existing nodes, rules, and DNS settings are kept, and original files are not rewritten.',
+      name: 'mountAboutBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tailscale and other mount-isolation requirements still take priority. Ineligible groups will not receive subscription nodes.`
+  String get mountIsolationFirst {
+    return Intl.message(
+      'Tailscale and other mount-isolation requirements still take priority. Ineligible groups will not receive subscription nodes.',
+      name: 'mountIsolationFirst',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Mounted nodes are added to all eligible proxy groups using each group’s existing filters. Existing nodes are kept.`
+  String get mountGroupsSummary {
+    return Intl.message(
+      'Mounted nodes are added to all eligible proxy groups using each group’s existing filters. Existing nodes are kept.',
+      name: 'mountGroupsSummary',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 group} other{{count} groups}}`
+  String mountGroupsCount(num count) {
+    return Intl.plural(
+      count,
+      one: '1 group',
+      other: '$count groups',
+      name: 'mountGroupsCount',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Pending application`
+  String get mountGroupPending {
+    return Intl.message(
+      'Pending application',
+      name: 'mountGroupPending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 mounted node} other{{count} mounted nodes}}`
+  String mountGroupNodes(num count) {
+    return Intl.plural(
+      count,
+      one: '1 mounted node',
+      other: '$count mounted nodes',
+      name: 'mountGroupNodes',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `No mounted nodes match`
+  String get mountGroupNoMatch {
+    return Intl.message(
+      'No mounted nodes match',
+      name: 'mountGroupNoMatch',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 group has no match} other{{count} groups have no match}}`
+  String mountGroupsNoMatch(num count) {
+    return Intl.plural(
+      count,
+      one: '1 group has no match',
+      other: '$count groups have no match',
+      name: 'mountGroupsNoMatch',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Group additions are not confirmed`
+  String get mountGroupsUnconfirmed {
+    return Intl.message(
+      'Group additions are not confirmed',
+      name: 'mountGroupsUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Show all {count} groups`
+  String mountShowAllGroups(Object count) {
+    return Intl.message(
+      'Show all $count groups',
+      name: 'mountShowAllGroups',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Hidden proxy groups also follow the filtering and isolation rules. They are not listed here.`
+  String get mountGroupsHidden {
+    return Intl.message(
+      'Hidden proxy groups also follow the filtering and isolation rules. They are not listed here.',
+      name: 'mountGroupsHidden',
+      desc: '',
+      args: [],
     );
   }
 }

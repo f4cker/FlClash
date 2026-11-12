@@ -5,7 +5,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:flutter/widgets.dart';
 
-typedef SaveCall = ({int? version, List<int> sources, List<String> groups});
+typedef SaveCall = ({int? version, List<int> sources});
 
 class FakeMounts extends MountAction {
   FakeMounts(this.panel);
@@ -63,10 +63,9 @@ class FakeMounts extends MountAction {
     int targetId, {
     required int? expectedVersion,
     required List<int> sourceIds,
-    required List<String> groups,
     VoidCallback? onStored,
   }) async {
-    saves.add((version: expectedVersion, sources: sourceIds, groups: groups));
+    saves.add((version: expectedVersion, sources: sourceIds));
     onStored?.call();
     await saveGate?.future;
     return saveResult;
@@ -119,10 +118,11 @@ MountSourceItem item(
 
 MountGroupInfo groupInfo(
   String name, {
-  MountGroupKind kind = MountGroupKind.candidate,
+  MountGroupKind kind = MountGroupKind.auto,
   String type = 'select',
   MountGroupCollects? collects,
   bool filter = false,
+  bool hidden = false,
   String? emptyFallback,
   MountGroupExclusion? excluded,
   MountGroupReason? reason,
@@ -130,6 +130,7 @@ MountGroupInfo groupInfo(
   name: name,
   type: type,
   kind: kind,
+  hidden: hidden,
   collects: collects,
   filter: filter,
   emptyFallback: emptyFallback,
@@ -149,9 +150,11 @@ MountPanel panelOf(
   List<MountSourceItem> sources, {
   MountTarget? groups = const MountTarget(),
   MountTargetState? stored,
+  String? revision,
 }) => MountPanel(
   target: target,
   sources: sources,
   groups: groups,
   stored: stored,
+  revision: revision,
 );

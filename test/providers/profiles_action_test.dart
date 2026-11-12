@@ -256,7 +256,6 @@ void main() {
       targetId: 1,
       expectedVersion: null,
       sourceIds: [2],
-      groups: const [],
       pending: (version) =>
           MountOperation(kind: MountOperationKind.save, version: version),
     );

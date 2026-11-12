@@ -128,12 +128,9 @@ void main() {
   Future<MountSaveResult> mountAir(
     ProviderContainer container, {
     int? expectedVersion,
-  }) => action(container).save(
-    1,
-    expectedVersion: expectedVersion,
-    sourceIds: [2],
-    groups: ['Proxy'],
-  );
+  }) => action(
+    container,
+  ).save(1, expectedVersion: expectedVersion, sourceIds: [2]);
 
   Future<String> runningRevision() async {
     final target = (await testDatabase.mountsDao.target(1))!;
@@ -178,7 +175,6 @@ void main() {
       expect(result.outcome, MountSaveOutcome.saved);
       final stored = (await testDatabase.mountsDao.target(1))!;
       expect(stored.sourceIds, [2]);
-      expect(stored.groups, ['Proxy']);
       expect(stored.version, 1);
       expect(stored.pending, isNull);
       expect(_FakeSetupAction.applied, 0);
@@ -201,25 +197,8 @@ void main() {
       ).called(1);
     });
 
-    test('a vanished group or no group at all stores nothing', () async {
+    test('no group at all stores nothing', () async {
       final container = build();
-      when(
-        () => core.preflightMounts(
-          base: any(named: 'base'),
-          config: any(named: 'config'),
-          mounts: any(named: 'mounts'),
-        ),
-      ).thenAnswer(
-        (_) async => const MountPreflight(
-          error: 'gone',
-          errorCode: 'mount_group_changed',
-        ),
-      );
-      expect(
-        (await mountAir(container)).outcome,
-        MountSaveOutcome.groupsChanged,
-      );
-
       when(
         () => core.preflightMounts(
           base: any(named: 'base'),
@@ -256,12 +235,9 @@ void main() {
         readsBack(blocked: true);
         _FakeSetupAction.result = false;
         expect(
-          (await action(container).save(
-            1,
-            expectedVersion: 1,
-            sourceIds: [2],
-            groups: const [],
-          )).outcome,
+          (await action(
+            container,
+          ).save(1, expectedVersion: 1, sourceIds: [2])).outcome,
           MountSaveOutcome.applyFailedBlocked,
         );
         expect((await testDatabase.mountsDao.target(1))!.pending, isNull);

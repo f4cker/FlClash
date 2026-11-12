@@ -138,7 +138,7 @@ void main() {
           name: 'Hidden',
           type: 'select',
           kind: MountGroupKind.excluded,
-          excluded: MountGroupExclusion.hidden,
+          excluded: MountGroupExclusion.builtin,
         ),
         const MountGroupInfo(
           name: 'Auto',
@@ -176,10 +176,9 @@ void main() {
         target: 1,
         revision: 'r',
         sources: [MountSource(id: 2, label: 'Air', path: '/p/2.yaml')],
-        groups: ['Proxy'],
       ),
     ).toJson();
-    expect((json['mounts'] as MountSetup).toJson()['groups'], ['Proxy']);
+    expect((json['mounts'] as MountSetup).toJson(), isNot(contains('groups')));
   });
 
   test('a pending operation round-trips through JSON', () {
@@ -208,7 +207,6 @@ void main() {
     const target = MountTargetState(
       targetId: 1,
       sourceIds: [2, 3, 9],
-      groups: ['Proxy'],
       version: 4,
     );
 
@@ -217,7 +215,6 @@ void main() {
     expect(setup.sources, [
       const MountSource(id: 2, label: 'Air', path: '/profiles/2.yaml'),
     ]);
-    expect(setup.groups, ['Proxy']);
     expect(
       mountSetupOf(target, profiles, '/profiles').revision,
       setup.revision,
@@ -440,7 +437,6 @@ void main() {
       const target = MountTargetState(
         targetId: 1,
         sourceIds: [2, 3, 4],
-        groups: ['Proxy'],
         version: 1,
       );
       final summary = mountCardSummaryOf(target, {

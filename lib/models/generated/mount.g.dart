@@ -27,9 +27,6 @@ _MountSetup _$MountSetupFromJson(Map<String, dynamic> json) => _MountSetup(
           ?.map((e) => MountSource.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
-  groups:
-      (json['groups'] as List<dynamic>?)?.map((e) => e as String).toList() ??
-      const [],
 );
 
 Map<String, dynamic> _$MountSetupToJson(_MountSetup instance) =>
@@ -37,7 +34,6 @@ Map<String, dynamic> _$MountSetupToJson(_MountSetup instance) =>
       'target': instance.target,
       'revision': instance.revision,
       'sources': instance.sources,
-      'groups': instance.groups,
     };
 
 _MountOperation _$MountOperationFromJson(Map<String, dynamic> json) =>
@@ -137,13 +133,11 @@ Map<String, dynamic> _$MountGroupInfoToJson(_MountGroupInfo instance) =>
 
 const _$MountGroupKindEnumMap = {
   MountGroupKind.auto: 'auto',
-  MountGroupKind.candidate: 'candidate',
   MountGroupKind.excluded: 'excluded',
 };
 
 const _$MountGroupExclusionEnumMap = {
   MountGroupExclusion.builtin: 'builtin',
-  MountGroupExclusion.hidden: 'hidden',
   MountGroupExclusion.type: 'type',
   MountGroupExclusion.tailscale: 'tailscale',
 };

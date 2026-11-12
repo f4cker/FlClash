@@ -12,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'add.dart';
+import 'mount_groups.dart';
 
 /// The glyph of every mount entry point.
 const mountGlyph = AppGlyphs.cloudDownload;
@@ -36,7 +37,6 @@ enum _Result {
   applying,
   savedUnconfirmed,
   unchanged,
-  groupsChanged,
   needsGroup,
   applyFailed,
   applyKept,
@@ -44,7 +44,7 @@ enum _Result {
   unknown,
 }
 
-enum MountGroupCase { auto, pick, none, failed }
+enum MountGroupCase { auto, none, failed }
 
 enum MountRunState { confirmed, unconfirmed, blocked }
 
@@ -69,14 +69,8 @@ MountGroupCase mountGroupCaseOf(MountTarget? target) {
   if (target.groups.any((group) => group.kind == MountGroupKind.auto)) {
     return MountGroupCase.auto;
   }
-  if (target.groups.any(_isCandidate)) {
-    return MountGroupCase.pick;
-  }
   return MountGroupCase.none;
 }
-
-bool _isCandidate(MountGroupInfo group) =>
-    group.kind == MountGroupKind.candidate && !group.hidden;
 
 class MountSheet extends ConsumerStatefulWidget {
   const MountSheet({super.key, required this.targetId});
@@ -94,7 +88,11 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   var _generation = 0;
 
   Set<int> _selected = {};
-  Set<String> _groups = {};
+
+  /// The groups row opens, and past eight rows shows them all, until the
+  /// sheet reopens, design §12 and §13.
+  bool _groupsOpen = false;
+  bool _allGroups = false;
 
   bool _saving = false;
   bool _removal = false;
@@ -122,22 +120,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   }
 
   Set<int> get _mounted => {...?_panel?.stored?.sourceIds};
-
-  Set<String> _storedGroupsOf(MountPanel panel) {
-    final stored = panel.stored?.groups ?? const <String>[];
-    final target = panel.groups;
-    if (target == null) {
-      return {...stored};
-    }
-    final candidates = {
-      for (final group in target.groups)
-        if (_isCandidate(group)) group.name,
-    };
-    return {
-      for (final name in stored)
-        if (candidates.contains(name)) name,
-    };
-  }
 
   /// [resetChoice] puts the boxes back to what is stored; otherwise the
   /// staged choice survives, as across an import.
@@ -173,7 +155,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       final sourceIds = {for (final item in panel.sources) item.profile.id};
       if (resetChoice || previous == null) {
         _selected = {...?panel.stored?.sourceIds};
-        _groups = _storedGroupsOf(panel);
       } else {
         _selected = {
           for (final id in _selected)
@@ -203,25 +184,14 @@ class _MountSheetState extends ConsumerState<MountSheet> {
 
   MountGroupCase get _groupCase => mountGroupCaseOf(_panel?.groups);
 
-  bool get _groupsUnchanged => setEquals(
-    _groups,
-    _panel == null ? <String>{} : _storedGroupsOf(_panel!),
-  );
-
-  bool get _dirty => !setEquals(_selected, _mounted) || !_groupsUnchanged;
+  bool get _dirty => !setEquals(_selected, _mounted);
 
   Set<int> get _additions => _selected.difference(_mounted);
 
   Set<int> get _removals => _mounted.difference(_selected);
 
   /// A change that only unchecks mounted sources needs no group.
-  bool get _onlyRemoves => _additions.isEmpty && _groupsUnchanged;
-
-  bool get _needsGroup =>
-      _groupCase == MountGroupCase.pick &&
-      _groups.isEmpty &&
-      _selected.isNotEmpty &&
-      !_onlyRemoves;
+  bool get _onlyRemoves => _additions.isEmpty;
 
   bool get _canSave {
     if (_panel == null || !_dirty || _locked || _saving || _rechecking) {
@@ -229,20 +199,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     }
     return switch (_groupCase) {
       MountGroupCase.auto => true,
-      MountGroupCase.pick => !_needsGroup,
       MountGroupCase.none || MountGroupCase.failed => _onlyRemoves,
-    };
-  }
-
-  List<String> get _groupsToSave {
-    final panel = _panel!;
-    return switch (_groupCase) {
-      MountGroupCase.auto || MountGroupCase.pick => [
-        for (final group in panel.groups!.groups)
-          if (_isCandidate(group) && _groups.contains(group.name)) group.name,
-      ],
-      MountGroupCase.none => const [],
-      MountGroupCase.failed => [...?panel.stored?.groups],
     };
   }
 
@@ -338,7 +295,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       widget.targetId,
       expectedVersion: panel.stored?.version,
       sourceIds: _orderedSelection,
-      groups: _groupsToSave,
       onStored: () {
         if (mounted) {
           setState(() => _result = _Result.applying);
@@ -349,9 +305,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       return;
     }
     final keepChoice = switch (result.outcome) {
-      MountSaveOutcome.unchanged ||
-      MountSaveOutcome.needsGroup ||
-      MountSaveOutcome.groupsChanged => true,
+      MountSaveOutcome.unchanged || MountSaveOutcome.needsGroup => true,
       _ => false,
     };
     setState(() {
@@ -372,7 +326,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     MountSaveOutcome.appliedUnverified ||
     MountSaveOutcome.saved => _Result.savedUnconfirmed,
     MountSaveOutcome.unchanged => _Result.unchanged,
-    MountSaveOutcome.groupsChanged => _Result.groupsChanged,
     MountSaveOutcome.needsGroup => _Result.needsGroup,
     MountSaveOutcome.locked || MountSaveOutcome.unknown => _Result.unknown,
     MountSaveOutcome.applyFailedKept => _Result.applyKept,
@@ -501,19 +454,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     });
   }
 
-  void _toggleGroup(String name, bool value) {
-    setState(() {
-      if (value) {
-        _groups.add(name);
-      } else {
-        _groups.remove(name);
-      }
-      if (_result != _Result.applying) {
-        _result = null;
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
@@ -554,19 +494,32 @@ class _MountSheetState extends ConsumerState<MountSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (target != null)
-                    Text(
-                      appLocalizations.mountTarget(target.realLabel),
-                      style: AppTextStyle.body.of(context, emphasized: true),
+                    Row(
+                      spacing: 4,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            appLocalizations.mountTarget(target.realLabel),
+                            style: AppTextStyle.body.of(
+                              context,
+                              emphasized: true,
+                            ),
+                          ),
+                        ),
+                        InfoButton(
+                          label: appLocalizations.mountAbout,
+                          paragraphs: [appLocalizations.mountAboutBody],
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Text(
                     appLocalizations.mountDescription,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTextStyle.caption1
                         .of(context)
-                        .copyWith(
-                          color: context.colorScheme.onSurfaceVariant,
-                          height: 1.55,
-                        ),
+                        .copyWith(color: context.colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 12),
                   content,
@@ -640,8 +593,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       _Result.applying => appLocalizations.mountApplying,
       _Result.savedUnconfirmed => appLocalizations.mountSavedUnconfirmed,
       _Result.unchanged => appLocalizations.mountUnchanged,
-      _Result.groupsChanged => appLocalizations.mountGroupsChanged,
-      _Result.needsGroup => appLocalizations.mountPickRequired,
+      _Result.needsGroup => appLocalizations.mountNoGroupTitle,
       _Result.applyFailed => appLocalizations.mountApplyFailed,
       _Result.applyKept => appLocalizations.mountApplyKept,
       _Result.applyBlocked when _blockSettled =>
@@ -706,7 +658,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
 
   Widget _buildSources(BuildContext context, MountPanel panel) {
     final appLocalizations = context.appLocalizations;
-    final colorScheme = context.colorScheme;
     final banner = _buildBanner(context, panel);
     final interactive = !_saving && !_locked;
     final settled = panel.stored?.pending == null;
@@ -715,7 +666,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       _Result.applyBlocked => MountRunState.blocked,
       null ||
       _Result.unchanged ||
-      _Result.groupsChanged ||
       _Result.needsGroup when settled => MountRunState.confirmed,
       _ => MountRunState.unconfirmed,
     };
@@ -741,7 +691,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
                 ? () => _refresh(item.profile.id)
                 : null,
           ),
-        _SectionLabel(appLocalizations.mountGroupsTitle),
         _buildGroups(context, panel, interactive: interactive),
         if (_groupCase != MountGroupCase.none)
           ?mountIsolatedGroupsBanner(panel.groups, context.appLocalizations),
@@ -755,15 +704,6 @@ class _MountSheetState extends ConsumerState<MountSheet> {
         IgnorePointer(
           ignoring: !interactive,
           child: Opacity(opacity: interactive ? 1 : 0.5, child: controls),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            appLocalizations.mountFormatHelp,
-            style: AppTextStyle.caption2
-                .of(context)
-                .copyWith(color: colorScheme.onSurfaceVariant),
-          ),
         ),
       ],
     );
@@ -809,72 +749,33 @@ class _MountSheetState extends ConsumerState<MountSheet> {
           lines: [appLocalizations.mountNoGroupDesc],
         );
       case MountGroupCase.auto:
-        final groups = panel.groups!.groups;
-        final autos = [
-          for (final group in groups)
-            if (group.kind == MountGroupKind.auto) group,
-        ];
-        final extras = [
-          for (final group in groups)
-            if (_isCandidate(group)) group,
-        ];
-        return MountGroupsBlock(
-          children: [
-            Text(
-              appLocalizations.mountAutoSubtitle,
-              style: AppTextStyle.subheadline.of(context, emphasized: true),
-            ),
-            _Caption(appLocalizations.mountAutoDesc),
-            for (final group in autos)
-              MountAutoGroupRow(group: group, status: _statusOf(group)),
-            if (extras.isNotEmpty) ...[
-              const Divider(height: 1),
-              Text(
-                appLocalizations.mountExtraTitle,
-                style: AppTextStyle.subheadline.of(context, emphasized: true),
-              ),
-              _Caption(appLocalizations.mountExtraDesc),
-              for (final group in extras) _candidateRow(group),
-            ],
-          ],
-        );
-      case MountGroupCase.pick:
-        final candidates = [
-          for (final group in panel.groups!.groups)
-            if (_isCandidate(group)) group,
-        ];
-        return MountGroupsBlock(
-          title: appLocalizations.mountPickTitle,
-          children: [
-            _Caption(appLocalizations.mountPickDesc),
-            for (final group in candidates) _candidateRow(group),
-            if (_needsGroup)
-              Text(
-                appLocalizations.mountPickRequired,
-                style: AppTextStyle.caption1
-                    .of(context, emphasized: true)
-                    .copyWith(color: context.colorScheme.warning),
-              ),
-          ],
+        return MountGroupsSection(
+          view: _groupsView(panel),
+          expanded: _groupsOpen,
+          showAll: _allGroups,
+          onToggle: () => setState(() => _groupsOpen = !_groupsOpen),
+          onShowAll: () => setState(() => _allGroups = true),
         );
     }
   }
 
-  Widget _candidateRow(MountGroupInfo group) {
-    final checked = _groups.contains(group.name);
-    return MountCandidateRow(
-      group: group,
-      checked: checked,
-      status: checked ? _statusOf(group) : null,
-      onChanged: (value) => _toggleGroup(group.name, value),
-    );
-  }
-
-  MountGroupStatus? _statusOf(MountGroupInfo group) {
-    return mountGroupStatusOf(
-      group,
-      report: _runtime?.report?.groups,
-      runtime: _runtime?.groups,
+  /// Rows are pending while the ticks are not what is mounted, and say
+  /// what runs only once a readback confirms the stored relation.
+  MountGroupsView _groupsView(MountPanel panel) {
+    final runtime = _runtime;
+    final revision = panel.revision;
+    final confirmed =
+        runtime != null &&
+        revision != null &&
+        panel.stored?.pending == null &&
+        _result != _Result.unknown &&
+        confirmMounts(runtime, revision) == MountSaveOutcome.applied;
+    return mountGroupsViewOf(
+      panel.groups!,
+      pending: _dirty && _selected.isNotEmpty,
+      mounted: _mounted.isNotEmpty,
+      applied: confirmed ? runtime : null,
+      runtime: runtime,
       appLocalizations: context.appLocalizations,
     );
   }
@@ -931,11 +832,9 @@ MountGroupStatus? mountGroupStatusOf(
   if (!empty) {
     return null;
   }
-  final filtered = group.filter || group.excludeFilter || group.excludeType;
+  // Wholly empty, filtered or not: its own nodes are gone too, copy §4.
   return MountGroupStatus(
-    line: filtered
-        ? appLocalizations.mountGroupFiltered
-        : appLocalizations.mountGroupEmpty(group.name),
+    line: appLocalizations.mountGroupEmpty(group.name),
     warn: true,
   );
 }
@@ -951,6 +850,7 @@ MountBanner? mountIsolatedGroupsBanner(
   return MountBanner(
     level: MountBannerLevel.info,
     lines: [
+      appLocalizations.mountIsolationFirst,
       appLocalizations.mountGroupsExcluded(groups.length),
       appLocalizations.mountGroupsExcludedNames(
         groups
@@ -1055,22 +955,6 @@ class _SectionLabel extends StatelessWidget {
             .of(context, emphasized: true)
             .copyWith(color: context.colorScheme.onSurfaceVariant),
       ),
-    );
-  }
-}
-
-class _Caption extends StatelessWidget {
-  const _Caption(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: AppTextStyle.caption1
-          .of(context)
-          .copyWith(color: context.colorScheme.onSurfaceVariant),
     );
   }
 }
@@ -1183,6 +1067,13 @@ class _EmptySources extends StatelessWidget {
                 .of(context)
                 .copyWith(color: colorScheme.onSurfaceVariant),
           ),
+          Text(
+            appLocalizations.mountFormatHelp,
+            textAlign: TextAlign.center,
+            style: AppTextStyle.caption2
+                .of(context)
+                .copyWith(color: colorScheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -1259,9 +1150,15 @@ class MountNameList extends StatelessWidget {
 }
 
 class MountGroupsBlock extends StatelessWidget {
-  const MountGroupsBlock({super.key, this.title, required this.children});
+  const MountGroupsBlock({
+    super.key,
+    this.title,
+    this.corner = AppCorner.md,
+    required this.children,
+  });
 
   final String? title;
+  final double corner;
   final List<Widget> children;
 
   @override
@@ -1270,7 +1167,7 @@ class MountGroupsBlock extends StatelessWidget {
     return DecoratedBox(
       decoration: ShapeDecoration(
         color: context.raisedSurfaceLevel.colorOf(context.colorScheme),
-        shape: AppShape.all(AppCorner.md),
+        shape: AppShape.all(corner),
       ),
       child: SurfaceScope(
         level: context.raisedSurfaceLevel,
@@ -1631,213 +1528,20 @@ class MountSourceRow extends StatelessWidget {
   }
 }
 
-/// A read-only auto group with the hint of how it collects, design §5 A.
-class MountAutoGroupRow extends StatelessWidget {
-  const MountAutoGroupRow({super.key, required this.group, this.status});
-
-  final MountGroupInfo group;
-  final MountGroupStatus? status;
-
-  String? _hint(BuildContext context) {
-    final appLocalizations = context.appLocalizations;
-    if (group.filter || group.excludeFilter || group.excludeType) {
-      return appLocalizations.mountHintFiltered;
-    }
-    return switch (group.collects) {
-      MountGroupCollects.all => appLocalizations.mountHintCollectsAll,
-      MountGroupCollects.providers =>
-        appLocalizations.mountHintCollectsProviders,
-      null => null,
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hint = _hint(context);
-    final status = this.status;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 2,
-      children: [
-        Row(
-          spacing: 8,
-          children: [
-            Expanded(
-              child: Row(
-                spacing: 8,
-                children: [
-                  Flexible(
-                    child: Text(
-                      group.name,
-                      style: AppTextStyle.subheadline.of(context),
-                    ),
-                  ),
-                  if (status?.blockTag ?? false)
-                    MountTag(label: context.appLocalizations.mountBlockTag),
-                ],
-              ),
-            ),
-            if (hint != null)
-              Text(
-                hint,
-                style: AppTextStyle.caption2
-                    .of(context)
-                    .copyWith(color: context.colorScheme.onSurfaceVariant),
-              ),
-          ],
-        ),
-        if (status != null) _StatusLine(status: status),
-      ],
-    );
-  }
-}
-
-class _StatusLine extends StatelessWidget {
-  const _StatusLine({required this.status});
-
-  final MountGroupStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final line = status.line;
-    if (line == null) {
-      return const SizedBox.shrink();
-    }
-    final colorScheme = context.colorScheme;
-    return Text(
-      line,
-      style: AppTextStyle.caption2
-          .of(context, emphasized: status.warn)
-          .copyWith(
-            color: status.warn
-                ? colorScheme.warning
-                : colorScheme.onSurfaceVariant,
-          ),
-    );
-  }
-}
-
-/// The type tag and its description of a group one can add, design §11.
-({String tag, String description}) mountGroupTypeOf(
+/// The type tag of a group, design §11; a type it does not know shows as
+/// written.
+String mountGroupTypeTag(
   MountGroupInfo group,
   AppLocalizations appLocalizations,
 ) {
   final type = group.type.toLowerCase().replaceAll('-', '');
-  final (tag, description) = switch (type) {
-    'select' || 'selector' => (
-      appLocalizations.mountTypeSelect,
-      appLocalizations.mountTypeSelectDesc,
-    ),
-    'urltest' => (
-      appLocalizations.mountTypeUrlTest,
-      appLocalizations.mountTypeUrlTestDesc,
-    ),
-    'fallback' => (
-      appLocalizations.mountTypeFallback,
-      appLocalizations.mountTypeFallbackDesc,
-    ),
-    'loadbalance' => (
-      appLocalizations.mountTypeLoadBalance,
-      appLocalizations.mountTypeLoadBalanceDesc,
-    ),
-    _ => (group.type, appLocalizations.mountTypeUnknownDesc),
+  return switch (type) {
+    'select' || 'selector' => appLocalizations.mountTypeSelect,
+    'urltest' => appLocalizations.mountTypeUrlTest,
+    'fallback' => appLocalizations.mountTypeFallback,
+    'loadbalance' => appLocalizations.mountTypeLoadBalance,
+    _ => group.type,
   };
-  if (group.probe == MountGroupProbe.unknown) {
-    return (tag: tag, description: appLocalizations.mountTypeUnknownDesc);
-  }
-  return (tag: tag, description: description);
-}
-
-/// A group one can check: case B's targets and case A's extras.
-class MountCandidateRow extends StatelessWidget {
-  const MountCandidateRow({
-    super.key,
-    required this.group,
-    required this.checked,
-    required this.onChanged,
-    this.status,
-  });
-
-  final MountGroupInfo group;
-  final bool checked;
-  final ValueChanged<bool> onChanged;
-  final MountGroupStatus? status;
-
-  @override
-  Widget build(BuildContext context) {
-    final appLocalizations = context.appLocalizations;
-    final colorScheme = context.colorScheme;
-    final type = mountGroupTypeOf(group, appLocalizations);
-    final filtered =
-        checked && (group.filter || group.excludeFilter || group.excludeType);
-    final status = this.status;
-    final captionStyle = AppTextStyle.caption2
-        .of(context)
-        .copyWith(color: colorScheme.onSurfaceVariant);
-    final semantics = [
-      group.name,
-      type.tag,
-      type.description,
-      if (filtered) appLocalizations.mountFilterNotice,
-      ?status?.line,
-      checked
-          ? appLocalizations.mountGroupSelected
-          : appLocalizations.mountGroupNotSelected,
-    ].join(', ');
-    return Semantics(
-      container: true,
-      checked: checked,
-      label: semantics,
-      onTap: () => onChanged(!checked),
-      excludeSemantics: true,
-      child: PressRegion(
-        onTap: () => onChanged(!checked),
-        shape: AppShape.all(AppCorner.sm),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 28),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 10,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 1),
-                child: MountCheckbox(value: checked),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 2,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          group.name,
-                          style: AppTextStyle.subheadline.of(context),
-                        ),
-                        MountTag(label: type.tag),
-                        if (status?.blockTag ?? false)
-                          MountTag(label: appLocalizations.mountBlockTag),
-                      ],
-                    ),
-                    Text(type.description, style: captionStyle),
-                    if (filtered)
-                      Text(
-                        appLocalizations.mountFilterNotice,
-                        style: captionStyle,
-                      ),
-                    if (status != null) _StatusLine(status: status),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 const _pillHeight = 28.0;

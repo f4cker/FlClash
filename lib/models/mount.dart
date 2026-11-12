@@ -28,14 +28,14 @@ abstract class MountSource with _$MountSource {
 }
 
 /// What `SetupParams.mounts` carries; [revision] binds a readback to it and
-/// [target] the selections the Core follows across applies.
+/// [target] the selections the Core follows across applies. No group is
+/// named: every group the Core's checks allow takes the mounts.
 @freezed
 abstract class MountSetup with _$MountSetup {
   const factory MountSetup({
     required int target,
     required String revision,
     @Default([]) List<MountSource> sources,
-    @Default([]) List<String> groups,
   }) = _MountSetup;
 
   factory MountSetup.fromJson(Map<String, Object?> json) =>
@@ -58,7 +58,6 @@ MountSetup mountSetupOf(
   final revision = json.encode({
     'target': target.targetId,
     'version': target.version,
-    'groups': target.groups,
     'sources': [
       for (final source in sources)
         [
@@ -79,7 +78,6 @@ MountSetup mountSetupOf(
           path: join(profilesPath, '${source.id}.yaml'),
         ),
     ],
-    groups: target.groups,
   );
 }
 
@@ -96,12 +94,13 @@ abstract class MountOperation with _$MountOperation {
       _$MountOperationFromJson(json);
 }
 
+/// Groups a target once chose by hand are not read: the relation, its
+/// version and any pending record are all a target keeps.
 @freezed
 abstract class MountTargetState with _$MountTargetState {
   const factory MountTargetState({
     required int targetId,
     @Default([]) List<int> sourceIds,
-    @Default([]) List<String> groups,
     required int version,
     MountOperation? pending,
   }) = _MountTargetState;
@@ -151,9 +150,10 @@ abstract class MountSourceInspection with _$MountSourceInspection {
       _$MountSourceInspectionFromJson(json);
 }
 
-enum MountGroupKind { auto, candidate, excluded }
+/// [auto] takes the mounts through its own filters; [excluded] is kept out.
+enum MountGroupKind { auto, excluded }
 
-enum MountGroupExclusion { builtin, hidden, type, tailscale }
+enum MountGroupExclusion { builtin, type, tailscale }
 
 enum MountGroupReason {
   holds,
@@ -406,7 +406,8 @@ abstract class MountSourceItem with _$MountSourceItem {
 }
 
 /// [groups] is null when they could not be read, which is not the same as a
-/// profile without groups.
+/// profile without groups. [revision] is what the stored relation applies
+/// as, to tell a readback of it from one of an earlier relation.
 @freezed
 abstract class MountPanel with _$MountPanel {
   const factory MountPanel({
@@ -414,17 +415,18 @@ abstract class MountPanel with _$MountPanel {
     MountTargetState? stored,
     @Default([]) List<MountSourceItem> sources,
     MountTarget? groups,
+    String? revision,
   }) = _MountPanel;
 }
 
 /// [appliedUnverified]: the Core runs this revision but its nodes or groups
-/// differ from the report; [saved]: stored, no readback possible.
+/// differ from the report; [saved]: stored, no readback possible;
+/// [needsGroup]: no group of the target may take the mounts.
 enum MountSaveOutcome {
   applied,
   appliedUnverified,
   saved,
   unchanged,
-  groupsChanged,
   needsGroup,
   locked,
   applyFailedKept,
