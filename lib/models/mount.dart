@@ -563,24 +563,45 @@ String annotateMountProviders(
     for (final source in mounts.sources)
       mountProviderName(source.id): source.label,
   };
-  final key = RegExp(r'^( *)(' + mountProviderPrefix + r'\d+):\s*$');
+  final key = RegExp(r'^( +)(' + mountProviderPrefix + r'\d+):\s*$');
+  final section = RegExp(r'^([^\s#][^:]*):');
+  List<String> notes(String indent, String provider) {
+    final name = _commentSafe(labels[provider]!);
+    return switch (loaded[provider]) {
+      final nodes? => [
+        '$indent# ${appLocalizations.mountViewerSource(name, nodes.length)}',
+        for (final node in nodes) '$indent#   - ${_commentSafe(node)}',
+      ],
+      null => ['$indent# ${appLocalizations.mountViewerPending(name)}'],
+    };
+  }
+
+  final lines = yaml.split('\n');
+  final block = <String>{};
+  var providers = false;
+  for (final line in lines) {
+    if (section.firstMatch(line) case final match?) {
+      providers = match.group(1) == 'proxy-providers';
+    } else if (key.firstMatch(line) case final match? when providers) {
+      block.add(match.group(2)!);
+    }
+  }
   final out = <String>[];
-  for (final line in yaml.split('\n')) {
-    final match = key.firstMatch(line);
-    final label = labels[match?.group(2)];
-    if (match != null && label != null) {
-      final indent = match.group(1)!;
-      final name = _commentSafe(label);
-      switch (loaded[match.group(2)]) {
-        case final nodes?:
-          out.add(
-            '$indent# ${appLocalizations.mountViewerSource(name, nodes.length)}',
-          );
-          out.addAll([
-            for (final node in nodes) '$indent#   - ${_commentSafe(node)}',
-          ]);
-        case null:
-          out.add('$indent# ${appLocalizations.mountViewerPending(name)}');
+  providers = false;
+  for (final line in lines) {
+    if (section.firstMatch(line) case final match?) {
+      providers = match.group(1) == 'proxy-providers';
+      // A flow mapping has no line per provider: its notes lead the section.
+      if (providers) {
+        for (final provider in labels.keys) {
+          if (!block.contains(provider)) {
+            out.addAll(notes('', provider));
+          }
+        }
+      }
+    } else if (key.firstMatch(line) case final match? when providers) {
+      if (labels.containsKey(match.group(2))) {
+        out.addAll(notes(match.group(1)!, match.group(2)!));
       }
     }
     out.add(line);

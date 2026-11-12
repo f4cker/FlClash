@@ -577,5 +577,34 @@ proxy-groups:
       expect(partial, contains('# 挂载：机场C · 节点列表待确认'));
       expect(partial, isNot(contains('C-韩国-01')));
     });
+
+    test('a flow mapping gets its notes at the head of the section', () {
+      const flow =
+          'proxy-providers: {flash-mount-2: {path: /p/2.yaml}, '
+          'flash-mount-3: {path: /p/3.yaml}}\nrules: [MATCH,DIRECT]\n';
+      final text = annotateMountProviders(flow, mounts, runtime(), l10n);
+      expect(
+        text,
+        startsWith(
+          '# 挂载：机场B · 1 个节点\n#   - B-美国-01\n'
+          '# 挂载：机场C · 2 个节点\n',
+        ),
+      );
+      expect(text, endsWith(flow));
+    });
+
+    test('only providers under proxy-providers get notes', () {
+      const other =
+          'proxy-providers:\n  flash-mount-2:\n    path: /p/2.yaml\n'
+          'rule-providers:\n  flash-mount-3:\n    path: /r.yaml\n';
+      final text = annotateMountProviders(other, mounts, runtime(), l10n);
+      expect(text, contains('  #   - B-美国-01\n  flash-mount-2:\n'));
+      expect(
+        text,
+        startsWith('# 挂载：机场C · 2 个节点\n'),
+        reason: 'a source with no block entry is noted at the section head',
+      );
+      expect(text, contains('rule-providers:\n  flash-mount-3:\n'));
+    });
   });
 }
