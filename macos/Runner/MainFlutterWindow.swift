@@ -27,6 +27,7 @@ class MainFlutterWindow: NSWindow {
             }
         }
         
+        ProcessAppChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         RegisterGeneratedPlugins(registry: flutterViewController)
         super.awakeFromNib()
     }

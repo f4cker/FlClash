@@ -21,6 +21,10 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		F5A1C0012F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */; };
+		F5A1C0032F10000100A1B2C3 /* ProcessAppChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */; };
+		F5A1C0052F10000100A1B2C3 /* ProcessAppLocatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */; };
+		F5A1C0072F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */; };
 		331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C80D7294CF71000263BE5 /* RunnerTests.swift */; };
 		335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335BBD1A22A9A15E00E9071D /* GeneratedPluginRegistrant.swift */; };
 		33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC10F02044A3C60003C045 /* AppDelegate.swift */; };
@@ -74,6 +78,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppLocator.swift; sourceTree = "<group>"; };
+		F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppChannel.swift; sourceTree = "<group>"; };
+		F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppLocatorTests.swift; sourceTree = "<group>"; };
 		331C80D5294CF71000263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		331C80D7294CF71000263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		333000ED22D3DE5D00554162 /* Warnings.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Warnings.xcconfig; sourceTree = "<group>"; };
@@ -120,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				331C80D7294CF71000263BE5 /* RunnerTests.swift */,
+				F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -183,6 +191,8 @@
 			children = (
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
+				F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */,
+				F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -378,6 +388,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */,
+				F5A1C0052F10000100A1B2C3 /* ProcessAppLocatorTests.swift in Sources */,
+				F5A1C0072F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -388,6 +400,8 @@
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
+				F5A1C0032F10000100A1B2C3 /* ProcessAppChannel.swift in Sources */,
+				F5A1C0012F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
