@@ -67,7 +67,12 @@ void main() {
 
     final context = tester.element(find.byType(DevicesHarness));
     final variant = context.colorScheme.onSurfaceVariant;
-    for (final text in ['office-hk', '100.72.40.9']) {
+    for (final text in [
+      'office-hk',
+      '100.72.40.9',
+      'office-hk.example.ts.net',
+      'studio-mac.example.ts.net',
+    ]) {
       expect(tester.widget<Text>(find.text(text)).style?.color, variant);
     }
     for (final text in ['studio-mac', '100.94.68.92']) {
@@ -108,6 +113,8 @@ void main() {
     expect(dns.left, ip.left);
     final dnsText = tester.widget<Text>(find.text('studio-mac.example.ts.net'));
     expect(dnsText.style?.fontFamily, 'JetBrainsMono');
+    expect(dnsText.style?.fontSize, 11);
+    expect(tester.widget<Text>(find.text('100.94.68.92')).style?.fontSize, 13);
     expect(dnsText.maxLines, 1);
     expect(dnsText.overflow, TextOverflow.ellipsis);
     expect(
@@ -154,12 +161,15 @@ void main() {
     final ip = tester.getRect(find.text('100.94.68.92'));
     final addressBox = tester.getRect(address);
     expect(addressBox.size, const Size.square(24));
-    expect(addressBox.left - ip.right, moreOrLessEquals(6, epsilon: 0.5));
-    final dns = tester.getRect(find.text('studio-mac.example.ts.net'));
+    Rect glyphRect(Finder button) => tester.getRect(
+      find.descendant(of: button, matching: find.byType(GlyphIcon)),
+    );
     expect(
-      tester.getRect(name).left - dns.right,
+      glyphRect(address).left - ip.right,
       moreOrLessEquals(6, epsilon: 0.5),
     );
+    final dns = tester.getRect(find.text('studio-mac.example.ts.net'));
+    expect(glyphRect(name).left - dns.right, moreOrLessEquals(6, epsilon: 0.5));
     final glyph = tester.widget<GlyphIcon>(
       find.descendant(of: address, matching: find.byType(GlyphIcon)),
     );
