@@ -165,6 +165,11 @@ class ConfigToggleItem extends _ConfigItem<bool> {
       subtitle: buildSubtitle(appLocalizations),
       value: value,
       onChanged: (value) => change(ref, value),
+      menuItems: switch (pageKey) {
+        final pageKey? => followMenuItems(ref, pageKey, separated: false),
+        null => const [],
+      },
+      menuTooltip: appLocalizations.more,
     );
   }
 }
@@ -200,6 +205,10 @@ class ConfigOptionsItem<T> extends _ConfigItem<T> {
       value: value,
       textBuilder: textBuilder,
       onChanged: (value) => change(ref, value),
+      menuItems: switch (pageKey) {
+        final pageKey? => followMenuItems(ref, pageKey),
+        null => const [],
+      },
     );
   }
 }

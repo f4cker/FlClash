@@ -169,22 +169,59 @@ class SourceChoice extends StatelessWidget {
   }
 }
 
-/// Where a page-controlled field's value comes from, with the action that
-/// hands it back to the profile.
+/// A page value in the form a profile writes it.
+Object? pageRawValue(Object? value) => switch (value) {
+  (final ExternalControllerStatus status, _) => status.value,
+  final Enum item => item.name,
+  _ => value,
+};
+
+/// The menu item that hands a page-controlled field back to the profile,
+/// offered whenever the page controls it, whatever the two values are.
+List<PopupMenuItem> followMenuItems(
+  WidgetRef ref,
+  PageConfigKey key, {
+  bool separated = true,
+}) {
+  final (:pagePriority, :follows) = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => (
+        pagePriority: state.pagePriority,
+        follows: state.followKeys.contains(key),
+      ),
+    ),
+  );
+  if (!pagePriority || follows) {
+    return const [];
+  }
+  return [
+    PopupMenuItem(
+      label: currentAppLocalizations.followBaseProfile,
+      section: separated ? const PopupMenuSection() : null,
+      onPressed: () => ref
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.follow(key)),
+    ),
+  ];
+}
+
+/// Where a page-controlled field's value comes from, as "value · source".
 class PageSourceNote extends ConsumerWidget {
-  const PageSourceNote({super.key, required this.pageKey, this.pageValue});
+  const PageSourceNote({super.key, required this.pageKey, this.describe});
 
   final PageConfigKey pageKey;
 
-  final String? pageValue;
+  /// Words a value as its row does, where that differs from the profile's.
+  final String Function(Object? value)? describe;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (:pagePriority, :follows) = ref.watch(
+    final (:pagePriority, :follows, :pageValue) = ref.watch(
       patchClashConfigProvider.select(
         (state) => (
           pagePriority: state.pagePriority,
           follows: state.followKeys.contains(pageKey),
+          pageValue: pageRawValue(state.pageValue(pageKey)),
         ),
       ),
     );
@@ -192,44 +229,37 @@ class PageSourceNote extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     final appLocalizations = context.appLocalizations;
+    String word(Object? value) =>
+        describe?.call(value) ?? describeConfigValue(pageKey.path, value);
     final pending =
         ref.watch(appliedFollowKeysProvider).contains(pageKey) != follows;
-    final String text;
+    final String value;
+    final String source;
     if (follows) {
       final fileValue = switch (ref.watch(profileSettingsProvider)) {
         final settings? => readConfigPath(settings, pageKey.path),
         null => configKeyMissing,
       };
-      final fromFile = !identical(fileValue, configKeyMissing);
       final fallback = kernelDefaults[pageKey.path];
-      final value = fromFile
-          ? describeConfigValue(pageKey.path, fileValue)
-          : fallback == null
-          ? appLocalizations.notSet
-          : describeConfigValue(pageKey.path, fallback);
-      text =
-          '$value · ${fromFile ? appLocalizations.sourceBase : appLocalizations.sourceDefault}';
+      if (!identical(fileValue, configKeyMissing)) {
+        value = word(fileValue);
+        source = appLocalizations.sourceBase;
+      } else if (fallback != null) {
+        value = word(fallback);
+        source = appLocalizations.sourceDefault;
+      } else {
+        value = appLocalizations.notSet;
+        source = appLocalizations.sourceBase;
+      }
     } else {
-      text = [?pageValue, appLocalizations.sourcePage].join(' · ');
+      value = word(pageValue);
+      source = appLocalizations.sourcePage;
     }
-    final style = AppTextStyle.footnote.of(context).toLight;
-    return Row(
-      spacing: 8,
-      children: [
-        Flexible(
-          child: Text(
-            pending ? '$text · ${appLocalizations.notYetApplied}' : text,
-            style: style,
-          ),
-        ),
-        if (!follows)
-          TextButton(
-            onPressed: () => ref
-                .read(patchClashConfigProvider.notifier)
-                .update((state) => state.follow(pageKey)),
-            child: Text(appLocalizations.followBaseProfile),
-          ),
-      ],
+    return Text(
+      [value, source, if (pending) appLocalizations.notYetApplied].join(' · '),
+      style: AppTextStyle.caption1
+          .of(context)
+          .copyWith(color: context.colorScheme.onSurfaceVariant),
     );
   }
 }
