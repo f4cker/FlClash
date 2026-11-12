@@ -356,6 +356,22 @@ double recordHeaderWidth(BuildContext context, String label) =>
         .ceilToDouble() +
     _recordCellInset * 2;
 
+TextStyle _recordCellStyle(BuildContext context) {
+  final style = AppTextStyle.subheadline.of(context);
+  return style.copyWith(
+    height: _recordCellLineHeight / style.fontSize!,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
+}
+
+/// The width a column needs to show [sample] whole in a row's text.
+double recordCellWidth(BuildContext context, String sample) =>
+    MeasureScope.of(context)
+        .computeTextSize(Text(sample, style: _recordCellStyle(context)))
+        .width
+        .ceilToDouble() +
+    _recordCellInset * 2;
+
 class RecordHeaderCell extends StatelessWidget {
   final String label;
   final bool end;
@@ -438,7 +454,6 @@ class RecordTableRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
-    final style = AppTextStyle.subheadline.of(context);
     final shape = AppShape.all(AppCorner.fit(table.rowHeight));
     final level = striped ? context.raisedSurfaceLevel : context.surfaceLevel;
     final row = PressSurface(
@@ -447,11 +462,7 @@ class RecordTableRow extends StatelessWidget {
       childFills: true,
       onPressed: onTap,
       child: DefaultTextStyle(
-        style: style.copyWith(
-          color: colorScheme.onSurface,
-          height: _recordCellLineHeight / style.fontSize!,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
+        style: _recordCellStyle(context).copyWith(color: colorScheme.onSurface),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         child: TableCells(

@@ -6,6 +6,7 @@ import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -149,15 +150,22 @@ void main() {
       ]);
     });
 
-    testWidgets('no process info keeps the row without an icon', (
-      tester,
-    ) async {
-      await pump(
-        tester,
-        TrackerInfoItem(trackerInfo: _unknown, detailTitle: 'detail'),
-      );
+    testWidgets('no process info leaves the icon slot empty', (tester) async {
+      Future<double> titleLeft(TrackerInfo info) async {
+        await pump(
+          tester,
+          TrackerInfoItem(trackerInfo: info, detailTitle: 'detail'),
+        );
+        return tester.getTopLeft(find.textContaining('example.com')).dx;
+      }
+
+      final withIcon = await titleLeft(_app);
+      final cli = await titleLeft(_cli);
+      final without = await titleLeft(_unknown);
       expect(find.text('Unknown process  ·  198.18.0.1:50100'), findsOneWidget);
       expect(find.byType(ProcessFilterIcon), findsNothing);
+      expect(without, withIcon);
+      expect(cli, withIcon);
     });
 
     testWidgets('a LAN client of this Mac reads as another device', (
@@ -183,11 +191,44 @@ void main() {
       expect(tooltip.message, 'Example Browser Helper\n$_chromePath');
     });
 
-    testWidgets('an unknown process is muted text alone', (tester) async {
+    testWidgets('an unknown process lines up with named ones', (tester) async {
+      await pump(tester, ProcessCell(metadata: _app.metadata));
+      final named = tester.getTopLeft(find.text('Example Browser')).dx;
       await pump(tester, ProcessCell(metadata: _unknown.metadata));
       expect(find.text('Unknown process'), findsOneWidget);
       expect(find.byType(Tooltip), findsNothing);
+      expect(tester.getTopLeft(find.text('Unknown process')).dx, named);
     });
+  });
+
+  testWidgets('the table shows the whole start time', (tester) async {
+    tester.view.physicalSize = const Size(1000, 300);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await pump(
+      tester,
+      Builder(
+        builder: (context) => RecordTableFrame<TrackerInfo>(
+          tableId: 'process-time',
+          items: [_app, _unknown],
+          columnsOf: (width) =>
+              trackerInfoColumns(context, width: width, isLive: false),
+          builder: (context, table, items) => TrackerInfoList(
+            trackerInfos: items,
+            table: table,
+            detailTitle: 'detail',
+          ),
+        ),
+      ),
+    );
+    final time = _app.start.showTime.trim();
+    final cells = find.text(time);
+    expect(cells, findsNWidgets(2));
+    for (final cell in cells.evaluate()) {
+      final paragraph = cell.renderObject! as RenderParagraph;
+      expect(paragraph.didExceedMaxLines, isFalse);
+    }
   });
 
   group('detail', () {
@@ -230,7 +271,8 @@ void main() {
       expect(find.text('Process'), findsOneWidget);
       expect(find.text('Example Browser Helper'), findsOneWidget);
       expect(find.text('Process path'), findsOneWidget);
-      expect(find.text(_chromePath), findsOneWidget);
+      expect(find.byTooltip(_chromePath), findsOneWidget);
+      expect(find.textContaining('…'), findsOneWidget);
       await tester.tap(find.byTooltip('Copy path'));
       await tester.pump();
       expect(copied, _chromePath);
@@ -242,7 +284,8 @@ void main() {
       await pumpDetail(tester, _cli);
       expect(find.text('App'), findsNothing);
       expect(find.text('ssh'), findsOneWidget);
-      expect(find.text('/usr/bin/ssh'), findsOneWidget);
+      expect(find.byTooltip('/usr/bin/ssh'), findsOneWidget);
+      expect(find.textContaining('/usr/bin/ssh'), findsOneWidget);
     });
 
     testWidgets('no process info says so', (tester) async {
@@ -270,7 +313,35 @@ void main() {
       expect(find.text('App'), findsNothing);
       expect(find.text('Gone'), findsOneWidget);
       expect(find.text('Could not read app information'), findsOneWidget);
-      expect(find.text('/Applications/Gone.app/g'), findsOneWidget);
+      expect(find.byTooltip('/Applications/Gone.app/g'), findsOneWidget);
+    });
+  });
+
+  group('path ellipsis', () {
+    const style = TextStyle(fontSize: 10);
+
+    test('keeps a path that fits whole', () {
+      expect(
+        middleEllipsisPath('/usr/bin/ssh', style: style, maxWidth: 400),
+        '/usr/bin/ssh',
+      );
+    });
+
+    test('cuts the middle and keeps both ends', () {
+      final shown = middleEllipsisPath(
+        _chromePath,
+        style: style,
+        maxWidth: 120,
+        maxLines: 2,
+        trailing: const Size(26, 20),
+      );
+      expect(shown.length, lessThan(_chromePath.length));
+      final [head, tail] = shown.split('…');
+      expect(head, isNotEmpty);
+      expect(tail, isNotEmpty);
+      expect(_chromePath.startsWith(head), isTrue);
+      expect(_chromePath.endsWith(tail), isTrue);
+      expect((head.length - tail.length).abs(), lessThanOrEqualTo(1));
     });
   });
 

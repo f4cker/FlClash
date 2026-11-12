@@ -146,7 +146,13 @@ class ProcessCell extends StatelessWidget {
               : TextStyle(color: context.colorScheme.onSurfaceVariant),
         );
         if (!process.hasProcess) {
-          return text;
+          return Row(
+            spacing: 6,
+            children: [
+              const SizedBox(width: 16),
+              Flexible(child: text),
+            ],
+          );
         }
         return Tooltip(
           message: [
@@ -250,6 +256,68 @@ class _ReasonRow extends StatelessWidget {
   }
 }
 
+const _pathMaxLines = 3;
+const _copyButtonSize = 20.0;
+const _copyButtonGap = 6.0;
+
+/// [path] with its middle cut to an ellipsis until it and a trailing
+/// [trailing] box fit in [maxLines] lines of [maxWidth].
+String middleEllipsisPath(
+  String path, {
+  required TextStyle style,
+  required double maxWidth,
+  int maxLines = _pathMaxLines,
+  Size trailing = Size.zero,
+  TextScaler textScaler = TextScaler.noScaling,
+}) {
+  final painter = TextPainter(
+    maxLines: maxLines,
+    textScaler: textScaler,
+    textDirection: TextDirection.ltr,
+  );
+  bool fits(String text) {
+    painter
+      ..text = TextSpan(
+        style: style,
+        children: [
+          TextSpan(text: text),
+          const WidgetSpan(child: SizedBox.shrink()),
+        ],
+      )
+      ..setPlaceholderDimensions([
+        PlaceholderDimensions(
+          size: trailing,
+          alignment: PlaceholderAlignment.middle,
+        ),
+      ])
+      ..layout(maxWidth: maxWidth);
+    return !painter.didExceedMaxLines;
+  }
+
+  String keeping(int count) =>
+      '${path.substring(0, (count + 1) ~/ 2)}…'
+      '${path.substring(path.length - count ~/ 2)}';
+
+  try {
+    if (fits(path)) {
+      return path;
+    }
+    var low = 0;
+    var high = path.length - 1;
+    while (low < high) {
+      final mid = (low + high + 1) ~/ 2;
+      if (fits(keeping(mid))) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return keeping(low);
+  } finally {
+    painter.dispose();
+  }
+}
+
 class _PathRow extends StatelessWidget {
   final String path;
 
@@ -264,29 +332,57 @@ class _PathRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    final style = AppTextStyle.caption1
+        .of(context)
+        .copyWith(color: colorScheme.onSurfaceVariant);
+    const trailing = Size(_copyButtonSize + _copyButtonGap, _copyButtonSize);
+    final copy = Padding(
+      padding: const EdgeInsets.only(left: _copyButtonGap),
+      child: SizedBox.square(
+        dimension: _copyButtonSize,
+        child: IconButton(
+          tooltip: appLocalizations.copyPath,
+          padding: EdgeInsets.zero,
+          style: ButtonStyle.from(
+            minimumSize: const Size.square(_copyButtonSize),
+            fixedSize: const Size.square(_copyButtonSize),
+            tapTargetSize: TapTargetSize.shrinkWrap,
+          ),
+          onPressed: () => _copy(context),
+          icon: const GlyphIcon(AppGlyphs.copy, size: 14),
+        ),
+      ),
+    );
     return DetailRow(
       title: appLocalizations.processPath,
-      value: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 4,
-        children: [
-          Flexible(
-            child: SelectableText(
-              path,
-              textAlign: TextAlign.end,
-              style: AppTextStyle.footnote
-                  .of(context)
-                  .toJetBrainsMono
-                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+      value: LayoutBuilder(
+        builder: (context, constraints) {
+          final shown = middleEllipsisPath(
+            path,
+            style: style,
+            maxWidth: constraints.maxWidth,
+            trailing: trailing,
+            textScaler: MediaQuery.textScalerOf(context),
+          );
+          return Tooltip(
+            message: path,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: shown),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: copy,
+                  ),
+                ],
+              ),
+              style: style,
+              textAlign: TextAlign.start,
+              maxLines: _pathMaxLines,
             ),
-          ),
-          IconButton(
-            tooltip: appLocalizations.copyPath,
-            onPressed: () => _copy(context),
-            icon: const GlyphIcon(AppGlyphs.copy, size: 16),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
