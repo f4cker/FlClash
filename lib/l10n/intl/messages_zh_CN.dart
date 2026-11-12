@@ -347,47 +347,49 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m149(name) => "节点 ${name}";
 
-  static String m150(account, node, profile) =>
+  static String m150(network) => "未知 · 网络 ${network}";
+
+  static String m151(account, node, profile) =>
       "将退出“${account}”（节点“${node}”），清除本机保存的该节点登录身份，并从“${profile}”移除面板添加的节点和专用规则。经过此节点的连接可能中断。不会退出或移除其他账号。";
 
-  static String m151(node, profile) =>
+  static String m152(node, profile) =>
       "将退出“${node}”，清除本机保存的该节点登录身份，并从“${profile}”移除面板添加的节点和专用规则。经过此节点的连接可能中断。不会退出或移除其他账号。";
 
-  static String m152(count) => "设备地址：${count} 个";
+  static String m153(count) => "设备地址：${count} 个";
 
-  static String m153(domain) => "网络域名：${domain}";
+  static String m154(domain) => "网络域名：${domain}";
 
-  static String m154(count, domain) =>
+  static String m155(count, domain) =>
       "${Intl.plural(count, other: '${domain} · ${count} 个设备地址')}";
 
-  static String m155(value) => "已保存：${value}";
+  static String m156(value) => "已保存：${value}";
 
-  static String m156(name) => "分享来源：${name}";
+  static String m157(name) => "分享来源：${name}";
 
-  static String m157(account, node) =>
+  static String m158(account, node) =>
       "将退出“${account}”（节点“${node}”），并清除本机保存的该节点登录身份。面板记录和目标归属会保留；发往此账号的连接可能中断，不会自动改用其他账号或直连。不会退出其他账号。再次使用时需由你点击登录。";
 
-  static String m158(label) => "状态：${label}";
+  static String m159(label) => "状态：${label}";
 
-  static String m159(account, status, count) =>
+  static String m160(account, status, count) =>
       "当前查看的 Tailscale 账号：${account}，${status}，共 ${count} 项";
 
-  static String m160(address) => "地址：${address}";
+  static String m161(address) => "地址：${address}";
 
-  static String m161(domain) => "域名：${domain}";
+  static String m162(domain) => "域名：${domain}";
 
-  static String m162(node) => "Tailscale · 由 Flash 添加 · 节点 ${node}";
+  static String m163(node) => "Tailscale · 由 Flash 添加 · 节点 ${node}";
 
-  static String m163(count, node) =>
+  static String m164(count, node) =>
       "Tailscale · 由 Flash 添加 · ${count} 条规则 → 节点 ${node}";
 
-  static String m164(label) => "${label}必须为URL";
+  static String m165(label) => "${label}必须为URL";
 
-  static String m165(date) => "有效期至 ${date}";
-
-  static String m166(count) => "${count} 年前";
+  static String m166(date) => "有效期至 ${date}";
 
   static String m167(count) => "${count} 年前";
+
+  static String m168(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -2053,6 +2055,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsConflictTitle": m134,
     "tsControlServer": MessageLookupByLibrary.simpleMessage("控制服务器"),
     "tsCopyAddress": MessageLookupByLibrary.simpleMessage("复制地址"),
+    "tsCopyName": MessageLookupByLibrary.simpleMessage("复制名称"),
     "tsCoreStopped": MessageLookupByLibrary.simpleMessage("内核未运行"),
     "tsCoreStoppedTip": MessageLookupByLibrary.simpleMessage(
       "启动内核后，才能查看此节点的 Tailscale 状态。",
@@ -2274,6 +2277,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsOwnerMe": MessageLookupByLibrary.simpleMessage("我"),
     "tsOwnerMine": MessageLookupByLibrary.simpleMessage("我的"),
     "tsOwnerUnknown": MessageLookupByLibrary.simpleMessage("归属未知"),
+    "tsOwnerUnknownNetwork": m150,
     "tsPrepareAgain": MessageLookupByLibrary.simpleMessage("重新准备登录"),
     "tsPrepareFailed": MessageLookupByLibrary.simpleMessage(
       "暂时无法准备 Tailscale 登录，请重试。",
@@ -2296,8 +2300,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRefresh": MessageLookupByLibrary.simpleMessage("刷新"),
     "tsRefreshDevices": MessageLookupByLibrary.simpleMessage("刷新设备列表"),
     "tsRelogin": MessageLookupByLibrary.simpleMessage("重新登录"),
-    "tsRemoveBody": m150,
-    "tsRemoveBodyNode": m151,
+    "tsRemoveBody": m151,
+    "tsRemoveBodyNode": m152,
     "tsRemoveExtra": MessageLookupByLibrary.simpleMessage(
       "此操作不删除 Tailscale 管理页面中的设备，也不更改官方客户端。",
     ),
@@ -2337,8 +2341,8 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tsRoutesUpdated": MessageLookupByLibrary.simpleMessage("子网路由设置已更新"),
     "tsRoutingConflict": MessageLookupByLibrary.simpleMessage("归属冲突"),
-    "tsRulesAddresses": m152,
-    "tsRulesDomain": m153,
+    "tsRulesAddresses": m153,
+    "tsRulesDomain": m154,
     "tsRulesManaged": MessageLookupByLibrary.simpleMessage(
       "Flash 会按此账号的网络域名和设备地址更新专用规则。其他流量仍按原规则分流，原配置文件保持不变。",
     ),
@@ -2348,10 +2352,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRulesProfileNode": MessageLookupByLibrary.simpleMessage(
       "只有由 Flash 规则转到此节点的流量才会使用 Tailscale。登录此节点不会自动修改现有规则，也不会开启系统代理或虚拟网卡。",
     ),
-    "tsRulesSummary": m154,
+    "tsRulesSummary": m155,
     "tsRulesUnconfirmed": MessageLookupByLibrary.simpleMessage("域名和地址信息待确认"),
     "tsSaveChoices": MessageLookupByLibrary.simpleMessage("保存选择"),
-    "tsSavedValue": m155,
+    "tsSavedValue": m156,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage("没有符合搜索条件的设备"),
     "tsSearchHint": MessageLookupByLibrary.simpleMessage("搜索名称或地址"),
     "tsSettingsApplyFailed": MessageLookupByLibrary.simpleMessage(
@@ -2361,7 +2365,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "设置已保存，但尚未确认生效。请重新读取当前设置。",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("来自共享"),
-    "tsSharedBy": m156,
+    "tsSharedBy": m157,
     "tsSignIn": MessageLookupByLibrary.simpleMessage("登录 Tailscale"),
     "tsSignInBoundary": MessageLookupByLibrary.simpleMessage(
       "不会自动开启系统代理或虚拟网卡。",
@@ -2371,7 +2375,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "登录后，Flash 会为当前配置添加 Tailscale 节点和专用规则。其他流量仍按原规则分流，原配置文件保持不变。",
     ),
     "tsSignOutAccount": MessageLookupByLibrary.simpleMessage("退出此账号"),
-    "tsSignOutAccountBody": m157,
+    "tsSignOutAccountBody": m158,
     "tsSignOutAccountTitle": MessageLookupByLibrary.simpleMessage("退出此账号？"),
     "tsSignOutRemove": MessageLookupByLibrary.simpleMessage("退出并移除"),
     "tsSignOutRemoveMenu": MessageLookupByLibrary.simpleMessage("退出并移除…"),
@@ -2394,17 +2398,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsStateUnconfirmed": MessageLookupByLibrary.simpleMessage("状态待确认"),
     "tsStateWaitingBrowser": MessageLookupByLibrary.simpleMessage("等待浏览器登录"),
     "tsStatus": MessageLookupByLibrary.simpleMessage("状态"),
-    "tsStatusOf": m158,
+    "tsStatusOf": m159,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("状态未知"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "此节点已停止，暂时无法通过它访问 Tailscale 网络。",
     ),
     "tsSubnetRoutes": MessageLookupByLibrary.simpleMessage("子网路由"),
-    "tsSwitcherSemantics": m159,
+    "tsSwitcherSemantics": m160,
     "tsSystem": MessageLookupByLibrary.simpleMessage("系统"),
     "tsSystemMissing": MessageLookupByLibrary.simpleMessage("系统未提供"),
-    "tsTargetAddress": m160,
-    "tsTargetDomain": m161,
+    "tsTargetAddress": m161,
+    "tsTargetDomain": m162,
     "tsTargetUnconfirmed": MessageLookupByLibrary.simpleMessage("目标归属待确认"),
     "tsTargetUnconfirmedTip": MessageLookupByLibrary.simpleMessage(
       "暂时无法确认此目标应使用哪个账号，访问已拦截。",
@@ -2423,11 +2427,11 @@ class MessageLookup extends MessageLookupByLibrary {
       "无法安全打开此登录页，请检查当前节点的控制服务器配置。",
     ),
     "tsViewExisting": MessageLookupByLibrary.simpleMessage("查看已有账号"),
-    "tsViewerNode": m162,
+    "tsViewerNode": m163,
     "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
       "Tailscale · 运行信息读取失败",
     ),
-    "tsViewerRules": m163,
+    "tsViewerRules": m164,
     "tsViewerUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Tailscale · 当前运行的规则和节点待确认",
     ),
@@ -2484,14 +2488,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 重写"),
-    "urlTip": m164,
+    "urlTip": m165,
     "useHosts": MessageLookupByLibrary.simpleMessage("使用Hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("使用系统Hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("已用"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("已用流量"),
     "userAgent": MessageLookupByLibrary.simpleMessage("用户代理"),
     "username": MessageLookupByLibrary.simpleMessage("用户名"),
-    "validUntil": m165,
+    "validUntil": m166,
     "value": MessageLookupByLibrary.simpleMessage("值"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
     "viewAll": MessageLookupByLibrary.simpleMessage("查看全部"),
@@ -2506,8 +2510,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "写入系统会同时设置系统时钟，Android 上不生效。",
     ),
-    "yearsAgo": m166,
-    "yearsAgoShort": m167,
+    "yearsAgo": m167,
+    "yearsAgoShort": m168,
     "yes": MessageLookupByLibrary.simpleMessage("是"),
     "zhCN": MessageLookupByLibrary.simpleMessage("中文简体"),
   };

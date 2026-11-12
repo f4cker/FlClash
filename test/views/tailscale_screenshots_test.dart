@@ -28,6 +28,7 @@ import '../helpers/app_paths.dart';
 import '../helpers/preferences.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
+import 'tailscale_devices_fixtures.dart';
 import 'tailscale_fixtures.dart';
 
 class _MockCore extends Mock implements CoreHandlerInterface {}
@@ -1032,4 +1033,41 @@ void main() {
     await tester.tap(find.byTooltip('出口设置说明'));
     await shoot(tester, 'quiet-04-popover-open');
   });
+
+  for (final copied in [false, true]) {
+    final name = copied ? 'devices-table-copied' : 'devices-table-hover';
+    shot(name, (tester) async {
+      await pumpPanel(
+        tester,
+        size: const Size(968, 420),
+        pixelRatio: 2,
+        page: DevicesHarness(status: devicesStatus()),
+      );
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      await gesture.moveTo(tester.getCenter(find.text('studio-mac')));
+      await tester.pump();
+      if (copied) {
+        await tester.tap(find.byTooltip('复制名称').first);
+        await tester.pump(const Duration(milliseconds: 300));
+        await gesture.moveTo(tester.getCenter(find.text('studio-mac')));
+        await tester.pump();
+        final render =
+            boundary.currentContext!.findRenderObject()!
+                as RenderRepaintBoundary;
+        await tester.runAsync(() async {
+          final image = await render.toImage(pixelRatio: 2);
+          final data = await image.toByteData(format: ui.ImageByteFormat.png);
+          image.dispose();
+          await File(
+            '$_outDir/$name.png',
+          ).writeAsBytes(data!.buffer.asUint8List());
+        });
+        await tester.pump(const Duration(seconds: 2));
+        return;
+      }
+      await shoot(tester, name);
+    });
+  }
 }

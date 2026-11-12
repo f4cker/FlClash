@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
@@ -18,6 +20,13 @@ const tailscaleSearchThreshold = 8;
 const _systemMinWidth = 600.0;
 const _columnGap = 12.0;
 const _copyWidth = 40.0;
+const _copyGap = 6.0;
+const _copyGlyph = 14.0;
+const _copyTarget = 24.0;
+const _copiedFor = Duration(milliseconds: 1200);
+
+/// How far the address column grows past the freed width to fit names.
+const _addressMaxShare = 0.36;
 
 /// Below this content width the header stacks into title, owners and caption.
 const _compactMaxWidth = 720.0;
@@ -26,19 +35,16 @@ const _compactSearchMaxWidth = 220.0;
 const _chipSpacing = 6.0;
 const _infoButtonWidth = 28.0;
 
+var _loggedMissingOwners = 0;
+
 /// One width definition for the header and every row, so they never drift
-/// apart (user msg 1965). Address and status are as wide as their widest
-/// text, so neither is ever cut.
+/// apart (user msg 1965). The address column also takes the width the old
+/// status and copy columns held.
 class _TableLayout {
-  const _TableLayout({
-    required this.showSystem,
-    required this.addressWidth,
-    required this.statusWidth,
-  });
+  const _TableLayout({required this.showSystem, required this.addressWidth});
 
   final bool showSystem;
   final double addressWidth;
-  final double statusWidth;
 }
 
 double _textWidth(BuildContext context, String text, TextStyle style) {
@@ -60,8 +66,6 @@ class _TableRow extends StatelessWidget {
     required this.address,
     required this.owner,
     required this.system,
-    required this.status,
-    required this.copy,
     this.minHeight = 52,
   });
 
@@ -70,8 +74,6 @@ class _TableRow extends StatelessWidget {
   final Widget address;
   final Widget owner;
   final Widget system;
-  final Widget status;
-  final Widget copy;
   final double minHeight;
 
   @override
@@ -85,8 +87,6 @@ class _TableRow extends StatelessWidget {
           SizedBox(width: layout.addressWidth, child: address),
           Expanded(flex: 160, child: owner),
           if (layout.showSystem) Expanded(flex: 80, child: system),
-          SizedBox(width: layout.statusWidth, child: status),
-          SizedBox(width: _copyWidth, child: copy),
         ],
       ),
     );
@@ -158,6 +158,7 @@ class TailscaleDeviceSection extends StatelessWidget {
     required this.searchController,
     required this.onRefresh,
     required this.onCopy,
+    this.onCopyName,
     this.conflictOf,
     this.onAssign,
   });
@@ -176,6 +177,25 @@ class TailscaleDeviceSection extends StatelessWidget {
   final VoidCallback onRefresh;
   final ValueChanged<String> onCopy;
 
+  /// Copies a MagicDNS name; [onCopy] when null.
+  final ValueChanged<String>? onCopyName;
+
+  void _logMissingOwners(TailscaleStatus status) {
+    final missing = tailscaleMissingOwnerCount(status);
+    if (missing == _loggedMissingOwners) {
+      return;
+    }
+    _loggedMissingOwners = missing;
+    if (missing > 0) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => commonPrint.log(
+          'tailscale devices: $missing owner ids not in the status user list',
+          logLevel: LogLevel.debug,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
@@ -184,6 +204,9 @@ class TailscaleDeviceSection extends StatelessWidget {
     final devices = status == null
         ? const <TailscaleDevice>[]
         : tailscaleDevicesOf(status);
+    if (status != null) {
+      _logMissingOwners(status);
+    }
     final groups = tailscaleOwnerGroupsOf(devices);
     final showFilter = groups.length >= 2;
     final ownerKey =
@@ -296,9 +319,13 @@ class TailscaleDeviceSection extends StatelessWidget {
             )
           : _Empty(title: appLocalizations.tsSearchEmpty);
     } else {
+      final network = status?.tailnet?.name ?? '';
       body = _Table(
         devices: shown,
+        magicDns: status?.tailnet?.magicDnsEnabled ?? false,
+        network: network.isEmpty ? null : network,
         onCopy: onCopy,
+        onCopyName: onCopyName ?? onCopy,
         conflictOf: conflictOf,
         onAssign: onAssign,
       );
@@ -628,7 +655,10 @@ class _Empty extends StatelessWidget {
 class _Table extends StatelessWidget {
   const _Table({
     required this.devices,
+    required this.magicDns,
+    required this.network,
     required this.onCopy,
+    required this.onCopyName,
     this.conflictOf,
     this.onAssign,
   });
@@ -636,7 +666,12 @@ class _Table extends StatelessWidget {
   final TailscaleConflict? Function(TailscalePeer peer)? conflictOf;
   final ValueChanged<TailscaleRouteTarget>? onAssign;
   final List<TailscaleDevice> devices;
+  final bool magicDns;
+
+  /// The 所在网络 the device card shows, for owners the status leaves out.
+  final String? network;
   final ValueChanged<String> onCopy;
+  final ValueChanged<String> onCopyName;
 
   @override
   Widget build(BuildContext context) {
@@ -659,21 +694,35 @@ class _Table extends StatelessWidget {
         final footnote = AppTextStyle.footnote.of(context);
         double widest(TextStyle style, Iterable<String> texts) =>
             texts.map((text) => _textWidth(context, text, style)).max;
+        final address = math.max(
+          widest(headerStyle, [appLocalizations.tsAddress]),
+          widest(footnote.toTabular, [
+            appLocalizations.tsAddressMissing,
+            for (final device in devices) ?device.address,
+          ]),
+        );
+        final status = math.max(
+          widest(headerStyle, [appLocalizations.tsStatus]),
+          widest(footnote, [
+            appLocalizations.tsOnline,
+            appLocalizations.tsOffline,
+          ]),
+        );
+        final names = [
+          for (final device in devices)
+            ?tailscaleMagicDnsName(device.peer, enabled: magicDns),
+        ];
+        final named = names.isEmpty
+            ? 0.0
+            : widest(AppTextStyle.caption1.of(context).toJetBrainsMono, names) +
+                  _copyGap +
+                  _copyTarget;
+        final freed = address + status + _copyWidth + _columnGap * 2;
         final layout = _TableLayout(
           showSystem: constraints.maxWidth >= _systemMinWidth,
           addressWidth: math.max(
-            widest(headerStyle, [appLocalizations.tsAddress]),
-            widest(footnote.toTabular, [
-              appLocalizations.tsAddressMissing,
-              for (final device in devices) ?device.address,
-            ]),
-          ),
-          statusWidth: math.max(
-            widest(headerStyle, [appLocalizations.tsStatus]),
-            widest(footnote, [
-              appLocalizations.tsOnline,
-              appLocalizations.tsOffline,
-            ]),
+            freed,
+            math.min(named, constraints.maxWidth * _addressMaxShare),
           ),
         );
         return Column(
@@ -686,15 +735,16 @@ class _Table extends StatelessWidget {
               address: headerCell(appLocalizations.tsAddress),
               owner: headerCell(appLocalizations.tsOwner),
               system: headerCell(appLocalizations.tsSystem),
-              status: headerCell(appLocalizations.tsStatus),
-              copy: const SizedBox.shrink(),
             ),
             for (final (index, device) in devices.indexed) ...[
               if (index > 0) separator,
               _DeviceRow(
                 device: device,
                 layout: layout,
+                dnsName: tailscaleMagicDnsName(device.peer, enabled: magicDns),
+                network: network,
                 onCopy: onCopy,
+                onCopyName: onCopyName,
                 conflict: conflictOf?.call(device.peer),
                 onAssign: onAssign,
               ),
@@ -706,11 +756,14 @@ class _Table extends StatelessWidget {
   }
 }
 
-class _DeviceRow extends StatelessWidget {
+class _DeviceRow extends StatefulWidget {
   const _DeviceRow({
     required this.device,
     required this.layout,
+    required this.dnsName,
+    required this.network,
     required this.onCopy,
+    required this.onCopyName,
     this.conflict,
     this.onAssign,
   });
@@ -719,19 +772,35 @@ class _DeviceRow extends StatelessWidget {
   final ValueChanged<TailscaleRouteTarget>? onAssign;
   final TailscaleDevice device;
   final _TableLayout layout;
+  final String? dnsName;
+  final String? network;
   final ValueChanged<String> onCopy;
+  final ValueChanged<String> onCopyName;
+
+  @override
+  State<_DeviceRow> createState() => _DeviceRowState();
+}
+
+class _DeviceRowState extends State<_DeviceRow> {
+  bool _hovered = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
+    final device = widget.device;
+    final conflict = widget.conflict;
     final peer = device.peer;
     final address = device.address;
+    final dnsName = widget.dnsName;
+    final online = peer.online;
     final muted = AppTextStyle.footnote
         .of(context)
         .copyWith(color: colorScheme.onSurfaceVariant);
     final name = device.name;
     final colors = DashboardColors.of(context);
+    final nameStyle = AppTextStyle.subheadline.of(context, emphasized: true);
     final nameCell = Row(
       spacing: 10,
       children: [
@@ -762,7 +831,7 @@ class _DeviceRow extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: ShapeDecoration(
-                    color: peer.online ? colors.online : colorScheme.outline,
+                    color: online ? colors.online : colorScheme.outline,
                     shape: CircleBorder(
                       side: BorderSide(color: colors.card, width: 2),
                     ),
@@ -785,7 +854,9 @@ class _DeviceRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: name == null
                     ? muted
-                    : AppTextStyle.subheadline.of(context, emphasized: true),
+                    : online
+                    ? nameStyle
+                    : nameStyle.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               if (peer.exitNodeOption)
                 TailscaleTag(label: appLocalizations.tsExitCapable),
@@ -796,15 +867,44 @@ class _DeviceRow extends StatelessWidget {
         ),
       ],
     );
-    final addressCell = Text(
-      address ?? appLocalizations.tsAddressMissing,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: address == null
-          ? muted
-          : AppTextStyle.footnote.of(context).toTabular,
+    final showCopy = _hovered || _focused;
+    final addressStyle = AppTextStyle.footnote.of(context).toTabular;
+    final Widget addressCell = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (address == null)
+          Text(
+            appLocalizations.tsAddressMissing,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          )
+        else
+          _CopyLine(
+            text: address,
+            style: online
+                ? addressStyle
+                : addressStyle.copyWith(color: colorScheme.onSurfaceVariant),
+            label: appLocalizations.tsCopyAddress,
+            showCopy: showCopy,
+            onCopy: () => widget.onCopy(address),
+          ),
+        if (dnsName != null)
+          _CopyLine(
+            text: dnsName,
+            style: AppTextStyle.caption1
+                .of(context)
+                .toJetBrainsMono
+                .copyWith(color: colorScheme.onSurfaceVariant),
+            label: appLocalizations.tsCopyName,
+            showCopy: showCopy,
+            tooltip: true,
+            onCopy: () => widget.onCopyName(dnsName),
+          ),
+      ],
     );
-    final ownerCell = _OwnerCell(device: device);
+    final ownerCell = _OwnerCell(device: device, network: widget.network);
     final osCell = Text(
       peer.os.isEmpty
           ? appLocalizations.tsSystemMissing
@@ -813,19 +913,7 @@ class _DeviceRow extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: muted,
     );
-    final statusCell = Text(
-      peer.online ? appLocalizations.tsOnline : appLocalizations.tsOffline,
-      maxLines: 1,
-      style: peer.online ? AppTextStyle.footnote.of(context) : muted,
-    );
-    final copyCell = address == null
-        ? const SizedBox.shrink()
-        : IconButton(
-            tooltip: appLocalizations.tsCopyAddress,
-            onPressed: () => onCopy(address),
-            icon: const GlyphIcon(AppGlyphs.copy, size: 16),
-          );
-    final onAssign = this.onAssign;
+    final onAssign = widget.onAssign;
     return ContextMenuRegion(
       openAtPress: true,
       menuItems: conflict?.target.kind != tailscaleTargetIp || onAssign == null
@@ -837,23 +925,119 @@ class _DeviceRow extends StatelessWidget {
                 onPressed: () => onAssign(conflict!.target),
               ),
             ],
-      child: Semantics(
-        container: true,
-        label: [
-          name ?? appLocalizations.tsNameMissing,
-          address ?? appLocalizations.tsAddressMissing,
-          peer.online ? appLocalizations.tsOnline : appLocalizations.tsOffline,
-        ].join('，'),
-        child: _TableRow(
-          layout: layout,
-          name: nameCell,
-          address: addressCell,
-          owner: ownerCell,
-          system: osCell,
-          status: statusCell,
-          copy: copyCell,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onFocusChange: (value) => setState(() => _focused = value),
+          child: Semantics(
+            container: true,
+            label: [
+              name ?? appLocalizations.tsNameMissing,
+              address ?? appLocalizations.tsAddressMissing,
+              online ? appLocalizations.tsOnline : appLocalizations.tsOffline,
+            ].join('，'),
+            child: _TableRow(
+              layout: widget.layout,
+              minHeight: dnsName == null ? 52 : 60,
+              name: nameCell,
+              address: addressCell,
+              owner: ownerCell,
+              system: osCell,
+            ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// A value cut at its end with its copy button always beside it, shown only
+/// while the row is hovered or focused, or just copied.
+class _CopyLine extends StatefulWidget {
+  const _CopyLine({
+    required this.text,
+    required this.style,
+    required this.label,
+    required this.showCopy,
+    required this.onCopy,
+    this.tooltip = false,
+  });
+
+  final String text;
+  final TextStyle style;
+  final String label;
+  final bool showCopy;
+  final VoidCallback onCopy;
+
+  /// Whether hovering the text shows it whole.
+  final bool tooltip;
+
+  @override
+  State<_CopyLine> createState() => _CopyLineState();
+}
+
+class _CopyLineState extends State<_CopyLine> {
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _copy() {
+    widget.onCopy();
+    _timer?.cancel();
+    setState(() {
+      _timer = Timer(_copiedFor, () {
+        if (mounted) {
+          setState(() => _timer = null);
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copied = _timer != null;
+    Widget text = Text(
+      widget.text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: widget.style,
+    );
+    if (widget.tooltip) {
+      text = Tooltip(message: widget.text, child: text);
+    }
+    return Row(
+      spacing: _copyGap,
+      children: [
+        Flexible(child: text),
+        Opacity(
+          opacity: widget.showCopy || copied ? 1 : 0,
+          alwaysIncludeSemantics: true,
+          child: SizedBox.square(
+            dimension: _copyTarget,
+            child: IconButton(
+              tooltip: widget.label,
+              padding: EdgeInsets.zero,
+              style: ButtonStyle.from(
+                minimumSize: const Size.square(_copyTarget),
+                fixedSize: const Size.square(_copyTarget),
+                tapTargetSize: TapTargetSize.shrinkWrap,
+              ),
+              onPressed: _copy,
+              icon: GlyphIcon(
+                copied ? AppGlyphs.check : AppGlyphs.copy,
+                size: _copyGlyph,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -861,9 +1045,10 @@ class _DeviceRow extends StatelessWidget {
 /// "我" for the signed-in user by stable ID only, the account kept in the
 /// tooltip; other users by their real text; the sharer apart from the owner.
 class _OwnerCell extends StatelessWidget {
-  const _OwnerCell({required this.device});
+  const _OwnerCell({required this.device, this.network});
 
   final TailscaleDevice device;
+  final String? network;
 
   @override
   Widget build(BuildContext context) {
@@ -923,7 +1108,16 @@ class _OwnerCell extends StatelessWidget {
           style: AppTextStyle.footnote.of(context),
         );
       case TailscaleOwnerUnknown():
-        main = Text(appLocalizations.tsOwnerUnknown, style: muted);
+        final network = this.network;
+        if (network != null) {
+          description = appLocalizations.tsOwnerUnknownNetwork(network);
+        }
+        main = Text(
+          description ?? appLocalizations.tsOwnerUnknown,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: muted,
+        );
     }
     final sharer = device.sharer;
     final shareLine = sharer != null

@@ -651,10 +651,10 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     }
   }
 
-  Future<void> _copy(String text) async {
+  Future<void> _copy(String text, {String? message}) async {
     await Clipboard.setData(ClipboardData(text: text));
     dialogs.showBanner(
-      currentAppLocalizations.tsAddressCopied,
+      message ?? currentAppLocalizations.tsAddressCopied,
       level: BannerLevel.success,
     );
   }
@@ -916,6 +916,8 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                   onQueryChanged: (query) => setState(() => _query = query),
                   onRefresh: () => _refresh(node),
                   onCopy: _copy,
+                  onCopyName: (name) =>
+                      _copy(name, message: currentAppLocalizations.copySuccess),
                   conflictOf: routes == null
                       ? null
                       : (peer) => tailscaleConflictOf(context, routes, peer),
