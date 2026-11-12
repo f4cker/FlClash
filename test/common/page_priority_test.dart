@@ -146,4 +146,13 @@ void main() {
     });
     expect(builtInboundsOf(''), isEmpty);
   });
+
+  test('builtFindProcessModeOf reads the mode mihomo runs the config with', () {
+    expect(builtFindProcessModeOf('find-process-mode: always\n'), 'always');
+    expect(builtFindProcessModeOf('find-process-mode: OFF\n'), 'off');
+    expect(builtFindProcessModeOf('mode: rule\n'), 'strict');
+    expect(builtFindProcessModeOf('find-process-mode: sometimes\n'), isNull);
+    expect(builtFindProcessModeOf('find-process-mode: 1\n'), isNull);
+    expect(builtFindProcessModeOf(''), isNull);
+  });
 }

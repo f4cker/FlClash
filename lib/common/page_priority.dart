@@ -245,3 +245,22 @@ bool exposesControllerWithoutSecret(Map config) {
       .replaceAll(']', '');
   return !(host == 'localhost' || host == '::1' || host.startsWith('127.'));
 }
+
+const _findProcessModes = {'always', 'strict', 'off'};
+
+/// The find-process-mode mihomo runs [yaml] with; null if it would not run.
+String? builtFindProcessModeOf(String yaml) {
+  final config = yaml.isEmpty ? null : loadYaml(yaml);
+  if (config is! Map) {
+    return null;
+  }
+  final value = readConfigPath(config, 'find-process-mode');
+  final mode = identical(value, configKeyMissing)
+      ? kernelDefaults['find-process-mode']
+      : value;
+  if (mode is! String) {
+    return null;
+  }
+  final spelled = mode.toLowerCase();
+  return _findProcessModes.contains(spelled) ? spelled : null;
+}

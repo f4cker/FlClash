@@ -1130,6 +1130,60 @@ void main() {
 
       expect(params.externalController, ExternalControllerStatus.close);
     });
+
+    test('a page-owned find-process mode runs once the Core takes it, and a '
+        'followed one keeps the applied mode', () async {
+      final core = _MockCoreHandlerInterface();
+      final pushed = Completer<void>();
+      when(() => core.updateConfig(any())).thenAnswer((_) => pushed.future);
+      final scopedAction = TestSetupAction();
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          setupActionProvider.overrideWith(() => scopedAction),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.read(setupActionProvider.notifier);
+      final running = scoped.read(runningFindProcessModeProvider.notifier);
+      running.value = 'strict';
+      scoped.read(patchClashConfigProvider.notifier).value =
+          const PatchClashConfig(findProcessMode: FindProcessMode.always);
+
+      final update = scopedAction.updateConfig();
+      await pumpEventQueue();
+      expect(running.value, 'strict');
+      pushed.complete();
+      await update;
+      expect(running.value, 'always');
+
+      scoped.read(patchClashConfigProvider.notifier).value =
+          const PatchClashConfig(followKeys: {PageConfigKey.findProcessMode});
+      await scopedAction.updateConfig();
+      expect(running.value, 'always');
+    });
+
+    test('a failed live update leaves the running mode alone', () async {
+      final core = _MockCoreHandlerInterface();
+      when(
+        () => core.updateConfig(any()),
+      ).thenThrow(const CoreMethodException(code: 'failed', message: ''));
+      final scopedAction = TestSetupAction();
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          setupActionProvider.overrideWith(() => scopedAction),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      scoped.read(setupActionProvider.notifier);
+
+      await scopedAction.updateConfig();
+
+      expect(scoped.read(runningFindProcessModeProvider), isNull);
+    });
   });
 
   group('recoverMissingProfile', () {
@@ -1522,6 +1576,96 @@ void main() {
         expect(pushedConfig, isNot(contains('9090')));
       },
     );
+
+    group('running find-process mode', () {
+      Future<(bool, String?)> apply({
+        required Map<String, dynamic> file,
+        required PatchClashConfig patchConfig,
+        CoreMethodException? pushError,
+      }) async {
+        final profile = Profile.normal(label: 'p');
+        final core = _MockCoreHandlerInterface();
+        when(
+          () => core.getProfileBase(any()),
+        ).thenAnswer((_) async => ProfileBase(config: file, digest: 'd'));
+        late final ProviderContainer scoped;
+        String? duringPush = 'unread';
+        when(() => core.setupConfig(any())).thenAnswer((_) async {
+          duringPush = scoped.read(runningFindProcessModeProvider);
+          if (pushError != null) {
+            throw pushError;
+          }
+        });
+        scoped = ProviderContainer(
+          overrides: [
+            profilesProvider.overrideWith(() => TestProfiles([profile])),
+            currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+            setupStateProvider.overrideWith(
+              (_, profileId) =>
+                  nullProfileSetupState.copyWith(profileId: profileId),
+            ),
+            coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+            setupActionProvider.overrideWith(SetupAction.new),
+          ],
+        );
+        addTearDown(scoped.dispose);
+        scoped.read(patchClashConfigProvider.notifier).value = patchConfig;
+
+        final succeeded = await scoped
+            .read(setupActionProvider.notifier)
+            .applyProfile(force: true);
+
+        expect(duringPush, isNull);
+        return (succeeded, scoped.read(runningFindProcessModeProvider));
+      }
+
+      const followed = PatchClashConfig(
+        followKeys: {PageConfigKey.findProcessMode},
+      );
+
+      test('the page mode wins over the profile file', () async {
+        final result = await apply(
+          file: {'find-process-mode': 'always'},
+          patchConfig: const PatchClashConfig(),
+        );
+
+        expect(result, (true, 'off'));
+      });
+
+      test('a followed mode is the profile file one', () async {
+        final result = await apply(
+          file: {'find-process-mode': 'always'},
+          patchConfig: followed,
+        );
+
+        expect(result, (true, 'always'));
+      });
+
+      test('a followed mode the file leaves out is mihomo default', () async {
+        final result = await apply(file: {}, patchConfig: followed);
+
+        expect(result, (true, 'strict'));
+      });
+
+      test('a value mihomo would not run stays unknown', () async {
+        final result = await apply(
+          file: {'find-process-mode': 'sometimes'},
+          patchConfig: followed,
+        );
+
+        expect(result, (true, null));
+      });
+
+      test('a push the Core fails sets nothing', () async {
+        final result = await apply(
+          file: {'find-process-mode': 'always'},
+          patchConfig: followed,
+          pushError: const CoreMethodException(code: 'failed', message: ''),
+        );
+
+        expect(result, (false, null));
+      });
+    });
 
     test('leaving an editor rebuilds the profile only once its inputs '
         'differ from the applied config', () async {

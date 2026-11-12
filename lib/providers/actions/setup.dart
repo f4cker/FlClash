@@ -477,13 +477,22 @@ class SetupAction extends _$SetupAction {
         return;
       }
       final networkSetting = ref.read(networkSettingProvider);
+      final effective = _effectivePatchConfig(patchConfig);
       await _core.updateConfig(
-        _effectivePatchConfig(patchConfig).toUpdateParams(
+        effective.toUpdateParams(
           authentication: networkSetting.authentication.credentials,
           options: ref.read(coreOptionsProvider),
           layered: patchConfig.pagePriority,
         ),
       );
+      // A followed field is left out, so the Core keeps the applied value.
+      if (patchConfig.usesPage(
+        PageConfigKey.findProcessMode,
+        layered: patchConfig.pagePriority,
+      )) {
+        ref.read(runningFindProcessModeProvider.notifier).value =
+            effective.findProcessMode.name;
+      }
       if (ref.read(isStartProvider)) {
         await checkMixedListener();
       }
@@ -1120,6 +1129,8 @@ class SetupAction extends _$SetupAction {
     if (!profileFailed && yamlMd5 == globalState.lastConfigMd5 && !force) {
       _appliedInputs = inputs;
       globalState.lastConfigCounts = realProfile.counts;
+      ref.read(runningFindProcessModeProvider.notifier).value =
+          builtFindProcessModeOf(yamlString);
       await preloadInvoke?.call();
       return _SetupTaskResult.completed;
     }
@@ -1185,6 +1196,8 @@ class SetupAction extends _$SetupAction {
           rethrow;
         }
         globalState.lastConfigMd5 = yamlMd5;
+        ref.read(runningFindProcessModeProvider.notifier).value =
+            builtFindProcessModeOf(yamlString);
         ref
             .read(appliedFollowKeysProvider.notifier)
             .value = realPatchConfig.pagePriority
