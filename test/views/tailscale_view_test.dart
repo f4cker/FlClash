@@ -639,8 +639,9 @@ void main() {
     group('exit group', () {
       Future<void> serveExit(
         WidgetTester tester,
-        TailscaleExitReport report,
-      ) async {
+        TailscaleExitReport report, {
+        TailscaleStatus Function(TailscaleNode node) status = tsExitStatus,
+      }) async {
         await seed(const [
           TailscaleManagedRecord(
             id: 'm1',
@@ -651,7 +652,7 @@ void main() {
           ),
         ]);
         final node = tsManagedNode('m1');
-        serve([node], tsExitStatus(node));
+        serve([node], status(node));
         when(
           () => core.getTailscaleRoutes(42),
         ).thenAnswer((_) async => const TailscaleRoutes(profileId: 42));
@@ -724,9 +725,14 @@ void main() {
             state: TailscaleExitState.unavailable,
             reason: TailscaleExitReason.offline,
           ),
+          status: (node) => tsExitStatus(node, online: false),
         );
 
         const text = '出口设备离线 · 此出口不可用，选用它的连接会被拒绝';
+        expect(
+          find.text('100.88.12.4 · 离线', findRichText: true),
+          findsOneWidget,
+        );
         expect(find.text(text), findsOneWidget);
         expect(find.textContaining('已作为'), findsNothing);
         final context = tester.element(find.text(text));
@@ -736,6 +742,45 @@ void main() {
         );
         await teardownView(tester);
       });
+
+      for (final (name, online, exitNodeOption, reason, line) in [
+        (
+          'an online device not allowed as an exit',
+          true,
+          false,
+          TailscaleExitReason.notAuthorized,
+          '尚未获准使用此出口 · 此出口不可用，选用它的连接会被拒绝',
+        ),
+        (
+          'an online device the Core last read as offline',
+          true,
+          true,
+          TailscaleExitReason.offline,
+          '此出口不可用，选用它的连接会被拒绝',
+        ),
+      ]) {
+        testWidgets('$name names no reason the card contradicts', (
+          tester,
+        ) async {
+          await serveExit(
+            tester,
+            tsExitReport(state: TailscaleExitState.unavailable, reason: reason),
+            status: (node) => tsExitStatus(
+              node,
+              online: online,
+              exitNodeOption: exitNodeOption,
+            ),
+          );
+
+          expect(
+            find.text('100.88.12.4 · 在线', findRichText: true),
+            findsOneWidget,
+          );
+          expect(find.text(line), findsOneWidget);
+          expect(find.textContaining('出口设备离线'), findsNothing);
+          await teardownView(tester);
+        });
+      }
 
       testWidgets('an unreadable group is 待确认, never a count', (tester) async {
         await serveExit(tester, const TailscaleExitReport.readFailed(42));
@@ -764,7 +809,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('国际媒体 → 香港策略', findRichText: true), findsOneWidget);
-        final empty = find.text('仅日本 → 没有剩余选项', findRichText: true);
+        final empty = find.text('仅日本 → 关闭后无剩余选项', findRichText: true);
         expect(empty, findsOneWidget);
         expect(find.textContaining('全球手动', findRichText: true), findsNothing);
         expect(find.text('前往代理页'), findsNothing);

@@ -126,6 +126,43 @@ void main() {
     expect(unconfirmed.offPlanOf('a1').isEmpty, isTrue);
   });
 
+  test('the reason named follows the device the card shows', () {
+    TailscaleExitReason? shown(
+      TailscaleExitReason reason, {
+      bool online = true,
+      bool exitNodeOption = true,
+      bool listed = true,
+    }) => tailscaleExitShownReason(
+      TailscaleExitAccount(
+        id: 'a1',
+        member: 'nas-sg',
+        exitNode: '100.88.12.4',
+        state: TailscaleExitState.unavailable,
+        reason: reason,
+      ),
+      listed
+          ? TailscalePeer(
+              id: 'n2',
+              online: online,
+              exitNodeOption: exitNodeOption,
+            )
+          : null,
+    );
+    const offline = TailscaleExitReason.offline;
+    const notAuthorized = TailscaleExitReason.notAuthorized;
+    expect(shown(offline, online: false), offline);
+    expect(shown(offline), isNull);
+    expect(shown(notAuthorized, online: false), offline);
+    expect(shown(offline, exitNodeOption: false), notAuthorized);
+    expect(shown(notAuthorized, exitNodeOption: false), notAuthorized);
+    expect(shown(notAuthorized), isNull);
+    expect(shown(offline, listed: false), offline);
+    expect(
+      shown(TailscaleExitReason.needsLogin, online: false),
+      TailscaleExitReason.needsLogin,
+    );
+  });
+
   test('a proxy card knows the exit group and its nodes', () {
     expect(report.cardOf('nas-sg · pat@example.test'), (
       node: true,

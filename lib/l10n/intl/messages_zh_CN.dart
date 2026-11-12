@@ -2202,7 +2202,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsExitOffAffectedBody": m147,
     "tsExitOffAffectedTitle": MessageLookupByLibrary.simpleMessage("关闭出口节点？"),
     "tsExitOffBody": m148,
-    "tsExitOffNoOption": MessageLookupByLibrary.simpleMessage("没有剩余选项"),
+    "tsExitOffNoOption": MessageLookupByLibrary.simpleMessage("关闭后无剩余选项"),
     "tsExitOffTitle": MessageLookupByLibrary.simpleMessage("不再使用出口节点？"),
     "tsExitRefusing": MessageLookupByLibrary.simpleMessage("此出口不可用，选用它的连接会被拒绝"),
     "tsExitStale": MessageLookupByLibrary.simpleMessage("请先刷新设备列表，再选择出口节点。"),

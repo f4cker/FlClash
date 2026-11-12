@@ -13618,10 +13618,10 @@ class AppLocalizations {
     );
   }
 
-  /// `No option left`
+  /// `No options will remain`
   String get tsExitOffNoOption {
     return Intl.message(
-      'No option left',
+      'No options will remain',
       name: 'tsExitOffNoOption',
       desc: '',
       args: [],

@@ -352,6 +352,27 @@ class TailscaleExitReport {
   }
 }
 
+/// Read against the [peer] the card shows; a stale reason is not named.
+TailscaleExitReason? tailscaleExitShownReason(
+  TailscaleExitAccount account,
+  TailscalePeer? peer,
+) {
+  final reason = account.reason;
+  if (peer == null || reason == TailscaleExitReason.needsLogin) {
+    return reason;
+  }
+  if (!peer.online) {
+    return TailscaleExitReason.offline;
+  }
+  if (!peer.exitNodeOption) {
+    return TailscaleExitReason.notAuthorized;
+  }
+  return switch (reason) {
+    TailscaleExitReason.offline || TailscaleExitReason.notAuthorized => null,
+    _ => reason,
+  };
+}
+
 class TailscaleExitOffPlan {
   const TailscaleExitOffPlan({
     this.moves = const [],

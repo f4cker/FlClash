@@ -364,7 +364,11 @@ class TailscaleExitCard extends StatelessWidget {
             spacing: 8,
             children: [
               block,
-              ?_groupLine(context, hasExit: hasExit && lock == null),
+              ?_groupLine(
+                context,
+                hasExit: hasExit && lock == null,
+                peer: current,
+              ),
             ],
           ),
           ?_noticeBanner(context),
@@ -374,7 +378,11 @@ class TailscaleExitCard extends StatelessWidget {
   }
 
   /// What the running exit group holds of this account, read back only.
-  Widget? _groupLine(BuildContext context, {required bool hasExit}) {
+  Widget? _groupLine(
+    BuildContext context, {
+    required bool hasExit,
+    required TailscalePeer? peer,
+  }) {
     final report = exitReport;
     if (!node.managed || !hasExit || panel.applyingExit || report == null) {
       return null;
@@ -385,19 +393,24 @@ class TailscaleExitCard extends StatelessWidget {
     final (text, color) = switch (report.state) {
       TailscaleRuntimeState.none ||
       TailscaleRuntimeState.otherProfile => (null, null),
-      _ when account?.state == TailscaleExitState.unavailable => (
-        [
-          ?switch (account?.reason) {
-            TailscaleExitReason.needsLogin => appLocalizations.tsExitNeedsLogin,
-            TailscaleExitReason.offline => appLocalizations.tsExitDeviceOffline,
-            TailscaleExitReason.notAuthorized =>
-              appLocalizations.tsExitNotAuthorized,
-            _ => null,
-          },
-          appLocalizations.tsExitRefusing,
-        ].join(' · '),
-        colorScheme.error,
-      ),
+      _
+          when account != null &&
+              account.state == TailscaleExitState.unavailable =>
+        (
+          [
+            ?switch (tailscaleExitShownReason(account, peer)) {
+              TailscaleExitReason.needsLogin =>
+                appLocalizations.tsExitNeedsLogin,
+              TailscaleExitReason.offline =>
+                appLocalizations.tsExitDeviceOffline,
+              TailscaleExitReason.notAuthorized =>
+                appLocalizations.tsExitNotAuthorized,
+              _ => null,
+            },
+            appLocalizations.tsExitRefusing,
+          ].join(' · '),
+          colorScheme.error,
+        ),
       _ when !report.offered || account == null => (
         appLocalizations.tsExitGroupUnconfirmed,
         colorScheme.onSurfaceVariant,

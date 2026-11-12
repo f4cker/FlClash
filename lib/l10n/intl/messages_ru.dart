@@ -2955,7 +2955,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Turn off the exit node?",
     ),
     "tsExitOffBody": m148,
-    "tsExitOffNoOption": MessageLookupByLibrary.simpleMessage("No option left"),
+    "tsExitOffNoOption": MessageLookupByLibrary.simpleMessage(
+      "No options will remain",
+    ),
     "tsExitOffTitle": MessageLookupByLibrary.simpleMessage(
       "Stop using the exit node?",
     ),
