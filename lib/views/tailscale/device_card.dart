@@ -292,6 +292,12 @@ class TailscaleDeviceCard extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final appLocalizations = context.appLocalizations;
     final ipv6 = tailscaleIpv6Of(self);
+    final dnsName = self == null
+        ? null
+        : tailscaleMagicDnsName(
+            self,
+            enabled: status?.tailnet?.magicDnsEnabled == true,
+          );
     final muted = usable ? colorScheme.onSurface : colorScheme.onSurfaceVariant;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,6 +340,28 @@ class TailscaleDeviceCard extends StatelessWidget {
                     .copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ),
+          ),
+        if (dnsName != null)
+          Row(
+            spacing: 4,
+            children: [
+              Flexible(
+                child: Text(
+                  dnsName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyle.footnote
+                      .of(context)
+                      .copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+              ),
+              if (usable)
+                IconButton(
+                  tooltip: appLocalizations.tsCopyName,
+                  onPressed: () => actions.onCopy(dnsName),
+                  icon: const GlyphIcon(AppGlyphs.copy, size: 18),
+                ),
+            ],
           ),
       ],
     );
