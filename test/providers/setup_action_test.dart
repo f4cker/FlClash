@@ -2236,6 +2236,12 @@ void main() {
             ],
           );
         });
+        when(() => core.getTailscaleExit(profile.id)).thenAnswer(
+          (_) async => TailscaleExitReport(
+            profileId: profile.id,
+            state: TailscaleRuntimeState.confirmed,
+          ),
+        );
         final scoped = ProviderContainer(
           overrides: [
             profilesProvider.overrideWith(() => TestProfiles([profile])),

@@ -696,6 +696,7 @@ _TailscaleManagedSetup _$TailscaleManagedSetupFromJson(
   acceptRoutes: json['accept-routes'] as bool?,
   loggedOut: json['logged-out'] as bool? ?? false,
   attached: json['attached'] as bool? ?? false,
+  exitLabel: json['exit-label'] as String?,
 );
 
 Map<String, dynamic> _$TailscaleManagedSetupToJson(
@@ -708,6 +709,7 @@ Map<String, dynamic> _$TailscaleManagedSetupToJson(
   'accept-routes': ?instance.acceptRoutes,
   'logged-out': instance.loggedOut,
   'attached': instance.attached,
+  'exit-label': ?instance.exitLabel,
 };
 
 _TailscaleSetup _$TailscaleSetupFromJson(Map<String, dynamic> json) =>
@@ -738,6 +740,7 @@ _TailscaleSetup _$TailscaleSetupFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       managedUnknown: json['managed-unknown'] as bool? ?? false,
+      exitGroup: json['exit-group'] as String?,
     );
 
 Map<String, dynamic> _$TailscaleSetupToJson(_TailscaleSetup instance) =>
@@ -748,6 +751,7 @@ Map<String, dynamic> _$TailscaleSetupToJson(_TailscaleSetup instance) =>
       'legacy-migration': ?instance.legacyMigration,
       'managed': instance.managed,
       'managed-unknown': instance.managedUnknown,
+      'exit-group': ?instance.exitGroup,
     };
 
 _TailscaleRouteTarget _$TailscaleRouteTargetFromJson(

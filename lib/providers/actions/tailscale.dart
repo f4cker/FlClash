@@ -110,6 +110,7 @@ class TailscaleAction extends _$TailscaleAction {
       final result = await _core.setTailscalePrefs(
         node.ref,
         exitNode: exitNode,
+        exitLabel: _managedRecordOf(node)?.exitLabelFor(exitNode, exitNodeName),
         acceptRoutes: acceptRoutes,
       );
       return TailscaleSetPrefsResult(
@@ -470,6 +471,10 @@ class TailscaleAction extends _$TailscaleAction {
             ? state.copyWith(applyingExit: false, exitNotice: notice)
             : state.copyWith(applyingRoutes: false, routesNotice: notice),
       );
+    }
+    if (exit && node.managed) {
+      // The exit group follows the node at once; its groups are read again.
+      ref.read(proxiesActionProvider.notifier).updateGroupsDebounce();
     }
     final (_, fresh) = await _readNode(key);
     if (fresh != null) {

@@ -91,7 +91,7 @@ final class SetupActionProvider extends $NotifierProvider<SetupAction, void> {
   }
 }
 
-String _$setupActionHash() => r'1df37b212f8e3f3d751d555caf177796c34f9738';
+String _$setupActionHash() => r'b3e4d4486c22bd4ce25610ef40cdcba5f237f5d0';
 
 abstract class _$SetupAction extends $Notifier<void> {
   void build();
@@ -398,7 +398,7 @@ final class ProxiesActionProvider
   }
 }
 
-String _$proxiesActionHash() => r'09ba0ec4e7776a78aebca8ed2c54579bfdc59f8c';
+String _$proxiesActionHash() => r'0e2e8a232d8281c40700e49f06f660f2cf86a566';
 
 abstract class _$ProxiesAction extends $Notifier<void> {
   void build();
@@ -867,7 +867,7 @@ final class TailscaleActionProvider
   }
 }
 
-String _$tailscaleActionHash() => r'8f738fbe43c2d59bdd965dae396d212cf07cab2c';
+String _$tailscaleActionHash() => r'60ea9d242080118df43e3fe36e5355caedba8291';
 
 abstract class _$TailscaleAction extends $Notifier<void> {
   void build();
@@ -928,7 +928,7 @@ final class MountActionProvider extends $NotifierProvider<MountAction, void> {
   }
 }
 
-String _$mountActionHash() => r'ee20a115bb7310a3e16ebd633bd1fac72d6bf29f';
+String _$mountActionHash() => r'c15dafc54391714a9123ffba974504229af76e0c';
 
 /// Mount operations run one at a time. Each save writes the relation with a
 /// pending record first, and only a readback, or a target that is not

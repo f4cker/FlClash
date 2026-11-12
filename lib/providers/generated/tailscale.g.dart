@@ -474,7 +474,68 @@ final class TailscaleSetupProvider
   }
 }
 
-String _$tailscaleSetupHash() => r'9d3b5edb24466d9efc341b6b898cb1b0b784542d';
+String _$tailscaleSetupHash() => r'23298e10a80d82a419904f72d8090aa7d420ace2';
+
+/// The exit group the running config holds, read back after every groups
+/// read; null while the current profile has no panel-added account.
+
+@ProviderFor(TailscaleExitRuntime)
+final tailscaleExitRuntimeProvider = TailscaleExitRuntimeProvider._();
+
+/// The exit group the running config holds, read back after every groups
+/// read; null while the current profile has no panel-added account.
+final class TailscaleExitRuntimeProvider
+    extends $AsyncNotifierProvider<TailscaleExitRuntime, TailscaleExitReport?> {
+  /// The exit group the running config holds, read back after every groups
+  /// read; null while the current profile has no panel-added account.
+  TailscaleExitRuntimeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tailscaleExitRuntimeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tailscaleExitRuntimeHash();
+
+  @$internal
+  @override
+  TailscaleExitRuntime create() => TailscaleExitRuntime();
+}
+
+String _$tailscaleExitRuntimeHash() =>
+    r'f7b561a7d2ed06afa2c89935a05b14f7cd6590f1';
+
+/// The exit group the running config holds, read back after every groups
+/// read; null while the current profile has no panel-added account.
+
+abstract class _$TailscaleExitRuntime
+    extends $AsyncNotifier<TailscaleExitReport?> {
+  FutureOr<TailscaleExitReport?> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<TailscaleExitReport?>, TailscaleExitReport?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<TailscaleExitReport?>,
+                TailscaleExitReport?
+              >,
+              AsyncValue<TailscaleExitReport?>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
 
 /// The Core's routing for the current profile's panel-added accounts; null
 /// while it has none.

@@ -1,10 +1,12 @@
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/core/method.dart' show coreFailureLogLevel;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'app.dart';
 import 'config.dart';
 import 'core.dart';
 import 'state.dart';
@@ -245,7 +247,49 @@ TailscaleSetup? tailscaleSetup(Ref ref) {
         if (record.profileId == profile.id) record.setup,
     ],
     managedUnknown: managed == null,
+    exitGroup: managed?.any((record) => record.profileId == profile.id) ?? false
+        ? _exitGroupName(ref)
+        : null,
   );
+}
+
+/// Null until a locale is loaded: the Core then names the group itself.
+String? _exitGroupName(Ref ref) {
+  if (ref.watch(loadedLocaleProvider) == null) {
+    return null;
+  }
+  return currentAppLocalizations.tsExitGroupName;
+}
+
+/// Read back after every groups read; null without a panel-added account.
+@riverpod
+class TailscaleExitRuntime extends _$TailscaleExitRuntime {
+  @override
+  Future<TailscaleExitReport?> build() async {
+    final profileId = ref.watch(currentProfileIdProvider);
+    if (profileId == null) {
+      return null;
+    }
+    final managed = ref.watch(
+      tailscaleManagedRecordsProvider.select(
+        (records) =>
+            records?.any((record) => record.profileId == profileId) ?? false,
+      ),
+    );
+    if (!managed) {
+      return null;
+    }
+    ref.watch(groupsProvider);
+    try {
+      return await ref.read(coreHandlerProvider).getTailscaleExit(profileId);
+    } catch (error) {
+      commonPrint.log(
+        'tailscale exit group unread: ${compactError(error)}',
+        logLevel: coreFailureLogLevel(error),
+      );
+      return TailscaleExitReport.readFailed(profileId);
+    }
+  }
 }
 
 /// The Core's routing for the current profile's panel-added accounts; null
