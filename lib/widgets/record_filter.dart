@@ -162,8 +162,16 @@ class RecordFilterController<T> extends ValueNotifier<RecordFilterState> {
       isFiltering ? items.whereFilters(facets, filters).toList() : items;
 
   List<RecordGroup<T>>? groupsOf(List<T> items, {bool reverse = false}) {
-    final keyOf = grouper?.keyOf;
-    return keyOf == null ? null : groupRecords(items, keyOf, reverse: reverse);
+    final grouper = this.grouper;
+    if (grouper == null) {
+      return null;
+    }
+    return groupRecords(
+      items,
+      grouper.keyOf,
+      reverse: reverse,
+      sinks: grouper.sinks,
+    );
   }
 
   List<PopupMenuItem> menuItems(BuildContext context, {required bool pinned}) {
@@ -269,6 +277,7 @@ class RecordGroupedList<T> extends StatelessWidget {
   final Widget Function(BuildContext context, T item, int index) itemBuilder;
   final Widget? Function(RecordGroup<T> group)? leadingOf;
   final Widget? Function(RecordGroup<T> group)? trailingOf;
+  final String Function(RecordGroup<T> group)? labelOf;
 
   const RecordGroupedList({
     super.key,
@@ -280,6 +289,7 @@ class RecordGroupedList<T> extends StatelessWidget {
     required this.itemBuilder,
     this.leadingOf,
     this.trailingOf,
+    this.labelOf,
   });
 
   @override
@@ -299,7 +309,9 @@ class RecordGroupedList<T> extends StatelessWidget {
                 for (final group in groups)
                   CollapsibleGroup(
                     key: group.key,
-                    label: group.key.isEmpty ? other : group.key,
+                    label:
+                        labelOf?.call(group) ??
+                        (group.key.isEmpty ? other : group.key),
                     itemCount: group.items.length,
                     leading: leadingOf?.call(group),
                     trailing: trailingOf?.call(group),

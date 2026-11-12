@@ -10,6 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:prism_ui/icons/glyph.dart';
 
 import 'clash_config.dart';
+import 'process_info.dart';
 import 'record_filter.dart';
 
 part 'generated/common.freezed.dart';
@@ -90,10 +91,12 @@ abstract class Metadata with _$Metadata {
   const factory Metadata({
     @Default(0) int uid,
     @Default('') String network,
+    @Default('') String type,
     @Default('') String sourceIP,
     @Default('') String sourcePort,
     @Default('') String destinationIP,
     @Default('') String destinationPort,
+    @Default('') String inboundIP,
     @Default('') String host,
     DnsMode? dnsMode,
     @Default('') String process,
@@ -164,6 +167,10 @@ extension TrackerInfoExt on TrackerInfo {
     return process.trim();
   }
 
+  /// Android goes by package name; the Mac by bundle or executable.
+  String get processKey =>
+      system.isAndroid ? metadata.process : processApps.processOf(metadata).key;
+
   String get ruleText => rulePayload.isNotEmpty ? '$rule($rulePayload)' : rule;
 
   List<String> get searchFields => [
@@ -175,6 +182,7 @@ extension TrackerInfoExt on TrackerInfo {
     metadata.sourcePort,
     metadata.process,
     metadata.processPath,
+    if (!system.isAndroid) processApps.processOf(metadata).app?.name ?? '',
     metadata.remoteDestination,
     metadata.destinationIPASN,
     ...metadata.destinationGeoIP,
@@ -263,12 +271,22 @@ final trackerInfoFacets = <RecordFacet<TrackerInfo>>[
     (info) => [if (info.metadata.mitm) 'MITM'],
     offered: true,
   ),
-  RecordFacet(RecordFacetKind.app, (info) => [info.metadata.process]),
+  RecordFacet(
+    RecordFacetKind.app,
+    (info) => [info.processKey],
+    labelOf: system.isAndroid ? null : (key) => processApps.labelOf(key),
+  ),
   RecordFacet(RecordFacetKind.proxy, (info) => info.chains),
 ];
 
 final trackerInfoGroupers = <RecordGrouper<TrackerInfo>>[
-  RecordGrouper(RecordGrouping.app, (info) => info.metadata.process),
+  RecordGrouper(
+    RecordGrouping.app,
+    (info) => info.processKey,
+    sinks: system.isAndroid
+        ? null
+        : (key) => key.isEmpty || key == otherDeviceProcessKey,
+  ),
   RecordGrouper(RecordGrouping.host, (info) => info.title),
   RecordGrouper(RecordGrouping.rule, (info) => info.ruleText),
   RecordGrouper(RecordGrouping.exit, (info) => info.chains.firstOrNull ?? ''),
