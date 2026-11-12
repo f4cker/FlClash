@@ -884,6 +884,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                 reading: panel.reading,
                 restarting: panel.restarting,
                 wide: constraints.maxWidth >= 560,
+                source: node.managed ? null : _sourceLabel(node),
               ),
               if (wide)
                 IntrinsicHeight(
@@ -900,10 +901,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                 exitCard,
                 routesCard,
               ],
-              TailscaleRulesCard(
-                onGoToRules: () => _goToRules(nodes),
-                lines: _rulesLines(context, node, routes),
-              ),
+              _rulesCard(context, node, routes, nodes),
               if (phase == TailscalePhase.connected &&
                   (!node.managed || node.attached))
                 TailscaleDeviceSection(
@@ -991,28 +989,77 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     ];
   }
 
-  List<String> _rulesLines(
+  /// The summary is only what the Core read back; a missing or unverified
+  /// report shows no number and no domain.
+  Widget _rulesCard(
     BuildContext context,
     TailscaleNode node,
     TailscaleRoutes? routes,
+    List<TailscaleNode> nodes,
   ) {
     final appLocalizations = context.appLocalizations;
+    void onGoToRules() => _goToRules(nodes);
     if (!node.managed) {
-      return [appLocalizations.tsRulesProfileNode];
+      return TailscaleRulesCard(
+        onGoToRules: onGoToRules,
+        about: [appLocalizations.tsRulesProfileNode],
+      );
     }
-    final report = routes?.accountOf(node.managedId);
-    if (!node.attached || routes == null || !routes.active) {
-      return [appLocalizations.tsRulesPending];
-    }
-    return [
+    final about = [
       appLocalizations.tsRulesManaged,
-      if (report != null && report.fresh && !report.loggedOut) ...[
-        if (report.domain.isNotEmpty)
-          appLocalizations.tsRulesDomain(report.domain),
-        appLocalizations.tsRulesAddresses(report.addresses),
-      ],
       appLocalizations.tsUnverifiedBlocked,
     ];
+    if (!node.attached || routes == null || !routes.active) {
+      return TailscaleRulesCard(
+        onGoToRules: onGoToRules,
+        caption: appLocalizations.tsRulesPending,
+        about: about,
+      );
+    }
+    final report = routes.accountOf(node.managedId);
+    final verified = report != null && report.fresh && !report.loggedOut;
+    final String? caption;
+    if (!verified) {
+      caption = null;
+    } else if (report.domain.isNotEmpty) {
+      caption = appLocalizations.tsRulesSummary(
+        report.addresses,
+        report.domain,
+      );
+    } else {
+      caption = appLocalizations.tsRulesAddresses(report.addresses);
+    }
+    return TailscaleRulesCard(
+      onGoToRules: onGoToRules,
+      caption: caption,
+      warning: _rulesWarning(context, node, routes),
+      about: about,
+    );
+  }
+
+  /// A target of this account that is blocked, in the words the rules page
+  /// uses; the conflict banner already counts the ones awaiting a choice.
+  String? _rulesWarning(
+    BuildContext context,
+    TailscaleNode node,
+    TailscaleRoutes routes,
+  ) {
+    final appLocalizations = context.appLocalizations;
+    bool ours(TailscaleRouteTargetReport target) =>
+        target.owner?.kind == tailscaleOwnerManaged &&
+        target.owner?.id == node.managedId;
+    if (routes.targets.any(
+      (target) =>
+          target.state == TailscaleRouteState.unavailable && ours(target),
+    )) {
+      return appLocalizations.tsAssignedUnavailable;
+    }
+    if (routes.targets.any(
+      (target) => target.state == TailscaleRouteState.unconfirmed,
+    )) {
+      return appLocalizations.tsTargetUnconfirmedTip;
+    }
+    return null;
   }
 
   Widget _page(
@@ -1194,13 +1241,8 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
   /// No node in the profile: sign in from here, design.md §12.1.
   Widget _noNodes(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    return NullStatus(
-      illustration: NullStatusIllustration.devices,
-      label: appLocalizations.tsSignIn,
-      description: [
-        appLocalizations.tsSignInTip,
-        appLocalizations.tsSignInBoundary,
-      ].join('\n'),
+    return _SignInStatus(
+      about: [appLocalizations.tsSignInTip, appLocalizations.tsSignInBoundary],
       action: FilledButton.icon(
         onPressed: _adding ? null : _addAccount,
         icon: _adding
@@ -1272,4 +1314,73 @@ String tailscalePhaseLabel(BuildContext context, TailscalePhase phase) {
     TailscalePhase.startFailed => appLocalizations.tsStateStartFailed,
     TailscalePhase.unconfirmed => appLocalizations.tsStateUnconfirmed,
   };
+}
+
+/// The no-node screen of [NullStatus], with the info button after its title
+/// and one line under it.
+class _SignInStatus extends StatelessWidget {
+  const _SignInStatus({required this.about, required this.action});
+
+  final List<String> about;
+  final Widget action;
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    final compact = MediaQuery.sizeOf(context).height < 560;
+    return Align(
+      alignment: const Alignment(0.0, -0.2),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              EmptyIllustration(
+                type: NullStatusIllustration.devices,
+                dimension: EmptyIllustration.dimensionOf(context),
+              ),
+              SizedBox(height: compact ? 12 : 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 4,
+                children: [
+                  Flexible(
+                    child: Text(
+                      appLocalizations.tsSignIn,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyle.headline
+                          .of(context)
+                          .copyWith(color: colorScheme.onSurface),
+                    ),
+                  ),
+                  InfoButton(
+                    label: appLocalizations.tsAboutTailscale,
+                    paragraphs: about,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                appLocalizations.tsSignInShort,
+                textAlign: TextAlign.center,
+                style: AppTextStyle.subheadline
+                    .of(context)
+                    .copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 24),
+              Theme(
+                data: Theme.of(
+                  context,
+                ).copyWith(visualDensity: VisualDensity.standard),
+                child: action,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

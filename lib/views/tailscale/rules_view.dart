@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -7,8 +9,6 @@ import 'package:fl_clash/views/config/rules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'widgets.dart';
 
 typedef TailscaleRulesAccount = ({String id, String label, bool attached});
 
@@ -34,9 +34,25 @@ class TailscaleRulesView extends ConsumerWidget {
       for (final target in routes?.targets ?? const [])
         if (target.state != TailscaleRouteState.bound) target,
     ];
-    final tag = TailscaleTag(label: appLocalizations.tsAddedInPanel);
     return Scaffold(
       title: appLocalizations.rules,
+      titleWidget: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 4,
+        children: [
+          Flexible(
+            child: Text(
+              appLocalizations.rules,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          InfoButton(
+            label: appLocalizations.tsAboutRules,
+            paragraphs: [appLocalizations.tsManagedPriority],
+          ),
+        ],
+      ),
       actions: [
         TextButton(
           onPressed: () => showInSheet<void>(
@@ -49,16 +65,8 @@ class TailscaleRulesView extends ConsumerWidget {
       body: Builder(
         builder: (context) => CustomScrollView(
           slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                context.contentTopPadding,
-                16,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: ListFooter(text: appLocalizations.tsManagedPriority),
-              ),
+            SliverToBoxAdapter(
+              child: SizedBox(height: context.contentTopPadding),
             ),
             for (final account in accounts)
               SliverPadding(
@@ -66,7 +74,10 @@ class TailscaleRulesView extends ConsumerWidget {
                 sliver: SliverToBoxAdapter(
                   child: Column(
                     children: [
-                      ListHeader(title: account.label, trailing: tag),
+                      _AccountHeader(
+                        title: account.label,
+                        about: [appLocalizations.tsUnverifiedBlocked],
+                      ),
                       generateGroup(_accountRows(context, routes, account)),
                     ],
                   ),
@@ -76,10 +87,7 @@ class TailscaleRulesView extends ConsumerWidget {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverToBoxAdapter(
-                  child: ListHeader(
-                    title: appLocalizations.tsAssignedTargets,
-                    trailing: tag,
-                  ),
+                  child: ListHeader(title: appLocalizations.tsAssignedTargets),
                 ),
               ),
             SliverPadding(
@@ -118,14 +126,54 @@ class TailscaleRulesView extends ConsumerWidget {
     final report = routes.accountOf(account.id);
     final verified = report != null && report.fresh && !report.loggedOut;
     return [
-      row(appLocalizations.tsAttached, appLocalizations.tsAttachedTip),
+      row(appLocalizations.tsAttached),
       if (verified && report.domain.isNotEmpty)
         row(appLocalizations.tsRulesDomain(report.domain)),
       if (verified) row(appLocalizations.tsRulesAddresses(report.addresses)),
-      row(appLocalizations.tsUnverifiedBlocked),
     ];
   }
 }
+
+/// A group title with its explanation right after the name, behind the info
+/// button.
+class _AccountHeader extends StatelessWidget {
+  const _AccountHeader({required this.title, required this.about});
+
+  final String title;
+  final List<String> about;
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = listHeaderPaddingOf(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        padding.left,
+        math.max(0, padding.top - _headerOverhang),
+        padding.right,
+        math.max(0, padding.bottom - _headerOverhang),
+      ),
+      child: Row(
+        spacing: 4,
+        children: [
+          Flexible(
+            child: Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyle.headline
+                  .of(context)
+                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+            ),
+          ),
+          InfoButton(paragraphs: about),
+        ],
+      ),
+    );
+  }
+}
+
+/// Half of what the info button stands above a headline line.
+const _headerOverhang = 3.0;
 
 class _TargetRow extends StatelessWidget {
   const _TargetRow({

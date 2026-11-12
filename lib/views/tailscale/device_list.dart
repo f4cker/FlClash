@@ -24,6 +24,7 @@ const _compactMaxWidth = 720.0;
 const _compactSearchMinWidth = 160.0;
 const _compactSearchMaxWidth = 220.0;
 const _chipSpacing = 6.0;
+const _infoButtonWidth = 28.0;
 
 /// One width definition for the header and every row, so they never drift
 /// apart (user msg 1965). Address and status are as wide as their widest
@@ -234,15 +235,30 @@ class TailscaleDeviceSection extends StatelessWidget {
           : Tooltip(message: choice.tooltip, child: chip);
     }
 
+    final filtered = ownerKey != null || query.trim().isNotEmpty;
+    final titleStyle = AppTextStyle.title3.of(context, emphasized: true);
+    final title = Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        Text(appLocalizations.tsDevices, style: titleStyle),
+        InfoButton(paragraphs: [appLocalizations.tsDevicesScope]),
+      ],
+    );
+    final countLine = filtered && devices.isNotEmpty
+        ? Text(
+            appLocalizations.tsDevicesFiltered(shown.length, devices.length),
+            style: AppTextStyle.caption1
+                .of(context)
+                .copyWith(color: colorScheme.onSurfaceVariant),
+          )
+        : null;
     final header = Wrap(
       spacing: 12,
       runSpacing: 10,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
-          appLocalizations.tsDevices,
-          style: AppTextStyle.title3.of(context, emphasized: true),
-        ),
+        title,
         if (showFilter)
           Semantics(
             label: appLocalizations.tsOwnerFilter,
@@ -251,13 +267,7 @@ class TailscaleDeviceSection extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(
-                  appLocalizations.tsOwnerFilter,
-                  style: DashboardText.label(context),
-                ),
-                for (final choice in choices) chipOf(choice),
-              ],
+              children: [for (final choice in choices) chipOf(choice)],
             ),
           ),
       ],
@@ -305,52 +315,33 @@ class TailscaleDeviceSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 12,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 6,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          spacing: 16,
           children: [
-            // Centred on the title and owner chips, not on the scope line.
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              spacing: 16,
-              children: [
-                Expanded(child: header),
-                if (showSearch)
-                  SizedBox(
-                    width: 220,
-                    child: SearchField(
-                      controller: searchController,
-                      height: 34,
-                      fill: DashboardColors.of(context).card,
-                      style: AppTextStyle.footnote.of(context),
-                      hintText: appLocalizations.tsSearchHint,
-                      onChanged: onQueryChanged,
-                    ),
-                  ),
-              ],
-            ),
-            Text(
-              appLocalizations.tsDevicesScope,
-              style: AppTextStyle.footnote
-                  .of(context)
-                  .copyWith(color: colorScheme.onSurfaceVariant),
-            ),
+            Expanded(child: header),
+            if (showSearch)
+              SizedBox(
+                width: 220,
+                child: SearchField(
+                  controller: searchController,
+                  height: 34,
+                  fill: DashboardColors.of(context).card,
+                  style: AppTextStyle.footnote.of(context),
+                  hintText: appLocalizations.tsSearchHint,
+                  onChanged: onQueryChanged,
+                ),
+              ),
           ],
         ),
         ?staleBanner,
-        if (devices.isNotEmpty)
-          Text(
-            appLocalizations.tsDevicesShown(shown.length),
-            style: DashboardText.label(context),
-          ),
+        ?countLine,
         TailscaleCard(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
           child: body,
         ),
       ],
     );
-    final filtered = ownerKey != null || query.trim().isNotEmpty;
-    final titleStyle = AppTextStyle.title3.of(context, emphasized: true);
     Widget compactOf(double width) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -358,13 +349,18 @@ class TailscaleDeviceSection extends StatelessWidget {
           spacing: 16,
           children: [
             Expanded(
-              child: Text(appLocalizations.tsDevices, style: titleStyle),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: title,
+              ),
             ),
             if (showSearch)
               SizedBox(
                 width:
                     (width -
                             16 -
+                            4 -
+                            _infoButtonWidth -
                             _textWidth(
                               context,
                               appLocalizations.tsDevices,
@@ -396,20 +392,7 @@ class TailscaleDeviceSection extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 8),
-        Text(
-          devices.isEmpty
-              ? appLocalizations.tsDevicesScope
-              : filtered
-              ? appLocalizations.tsDevicesCompactFiltered(
-                  shown.length,
-                  devices.length,
-                )
-              : appLocalizations.tsDevicesCompact(devices.length),
-          style: AppTextStyle.footnote
-              .of(context)
-              .copyWith(color: colorScheme.onSurfaceVariant),
-        ),
+        if (countLine != null) ...[const SizedBox(height: 8), countLine],
         if (staleBanner != null) ...[const SizedBox(height: 12), staleBanner],
         const SizedBox(height: 12),
         TailscaleCard(

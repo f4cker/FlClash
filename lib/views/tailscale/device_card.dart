@@ -81,7 +81,11 @@ class TailscaleDeviceCard extends StatelessWidget {
     this.restarting = false,
     this.wide = true,
     this.managed,
+    this.source,
   });
+
+  /// Where a node not added in the panel comes from, as 来自订阅.
+  final String? source;
 
   final TailscaleManagedCardView? managed;
   final TailscaleNode node;
@@ -143,7 +147,7 @@ class TailscaleDeviceCard extends StatelessWidget {
       label: [
         appLocalizations.tsCurrentDevice,
         node.name,
-        if (node.managed) appLocalizations.tsAddedInPanel,
+        ?_source,
         ?tailscaleAddressOf(status?.self),
         chipLabel,
       ].join('，'),
@@ -166,8 +170,7 @@ class TailscaleDeviceCard extends StatelessWidget {
                         .copyWith(color: context.colorScheme.onSurfaceVariant),
                   ),
                 ),
-                if (node.managed)
-                  TailscaleTag(label: appLocalizations.tsAddedInPanel),
+                if (_source case final source?) TailscaleTag(label: source),
                 Semantics(
                   label: appLocalizations.tsStatusOf(chipLabel),
                   excludeSemantics: true,
@@ -212,6 +215,9 @@ class TailscaleDeviceCard extends StatelessWidget {
       ),
     );
   }
+
+  /// Panel-added is the normal case and goes untagged.
+  String? get _source => node.managed ? null : source;
 
   bool get _legacyOffers => const {
     TailscaleLegacyView.offer,

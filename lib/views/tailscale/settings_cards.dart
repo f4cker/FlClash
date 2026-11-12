@@ -83,22 +83,6 @@ class TailscaleTag extends StatelessWidget {
   }
 }
 
-class _CardFootnote extends StatelessWidget {
-  const _CardFootnote(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: AppTextStyle.caption1
-          .of(context)
-          .copyWith(color: context.colorScheme.onSurfaceVariant),
-    );
-  }
-}
-
 /// A settings block row: a title over a secondary line, then [trailing].
 class _SettingBlock extends StatelessWidget {
   const _SettingBlock({
@@ -148,13 +132,14 @@ class _SettingBlock extends StatelessWidget {
                     color: dimmed ? colorScheme.onSurfaceVariant : null,
                   ),
                 ),
-                if (subtitle != null)
+                if (subtitle != null || tag != null)
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(subtitle, style: DashboardText.label(context)),
+                      if (subtitle != null)
+                        Text(subtitle, style: DashboardText.label(context)),
                       if (tag != null) TailscaleTag(label: tag),
                     ],
                   ),
@@ -280,7 +265,7 @@ class TailscaleExitCard extends StatelessWidget {
       final canChoose = !stale && candidates.isNotEmpty;
       final canTurnOff = hasExit;
       final String title;
-      final String subtitle;
+      String? subtitle;
       var dimmed = false;
       if (hasExit) {
         title = _exitName(context, current, currentValue);
@@ -298,7 +283,6 @@ class TailscaleExitCard extends StatelessWidget {
         dimmed = true;
       } else {
         title = appLocalizations.tsNoExitNode;
-        subtitle = appLocalizations.tsNoExitNodeTip;
       }
       final menuItems = [
         PopupMenuItem(
@@ -357,13 +341,21 @@ class TailscaleExitCard extends StatelessWidget {
           DashboardCardHeader(
             glyph: AppGlyphs.vpn,
             title: appLocalizations.tsExitNode,
+            leading: [
+              InfoButton(
+                label: appLocalizations.tsAboutExit,
+                paragraphs: [
+                  appLocalizations.tsExitNodeTip,
+                  if (lock == null &&
+                      node.settings.exitNode.source ==
+                          TailscaleSettingSource.override)
+                    appLocalizations.tsOverrideTip,
+                ],
+              ),
+            ],
           ),
           block,
           ?_noticeBanner(context),
-          _CardFootnote(appLocalizations.tsExitNodeTip),
-          if (lock == null &&
-              node.settings.exitNode.source == TailscaleSettingSource.override)
-            _CardFootnote(appLocalizations.tsOverrideTip),
         ],
       ),
     );
@@ -450,13 +442,9 @@ class TailscaleRoutesCard extends StatelessWidget {
       context,
       node.settings.acceptRoutes.source,
     );
+    // The switch shows on or off; only a lock or a change in flight is said.
     final subtitle =
-        lock ??
-        (applying
-            ? appLocalizations.tsRoutesApplying
-            : value
-            ? appLocalizations.tsOn
-            : appLocalizations.tsOff);
+        lock ?? (applying ? appLocalizations.tsRoutesApplying : null);
     final saved = node.settings.acceptRoutes;
     final savedLine =
         lock != null &&
@@ -474,6 +462,18 @@ class TailscaleRoutesCard extends StatelessWidget {
           DashboardCardHeader(
             glyph: AppGlyphs.split,
             title: appLocalizations.tsSubnetRoutes,
+            leading: [
+              InfoButton(
+                label: appLocalizations.tsAboutRoutes,
+                paragraphs: [
+                  appLocalizations.tsAcceptRoutesTip,
+                  if (lock == null &&
+                      node.settings.acceptRoutes.source ==
+                          TailscaleSettingSource.override)
+                    appLocalizations.tsOverrideTip,
+                ],
+              ),
+            ],
           ),
           _SettingBlock(
             title: appLocalizations.tsAcceptRoutes,
@@ -500,11 +500,6 @@ class TailscaleRoutesCard extends StatelessWidget {
             ),
           ),
           ?_noticeBanner(context),
-          _CardFootnote(appLocalizations.tsAcceptRoutesTip),
-          if (lock == null &&
-              node.settings.acceptRoutes.source ==
-                  TailscaleSettingSource.override)
-            _CardFootnote(appLocalizations.tsOverrideTip),
         ],
       ),
     );
@@ -543,22 +538,33 @@ class TailscaleRoutesCard extends StatelessWidget {
 }
 
 /// Goes to the existing rules entry; the panel never edits rules itself.
-/// [lines] say what the shown node's rules are, per its source and state.
+/// [caption] is what the Core read back for the shown node, [warning] a rule
+/// problem that stays in sight, [about] the explanation behind the info
+/// button.
 class TailscaleRulesCard extends StatelessWidget {
   const TailscaleRulesCard({
     super.key,
     required this.onGoToRules,
-    this.lines = const [],
+    this.caption,
+    this.warning,
+    this.about = const [],
   });
 
   final VoidCallback onGoToRules;
-  final List<String> lines;
+  final String? caption;
+  final String? warning;
+  final List<String> about;
 
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
-    final body = lines.isEmpty ? [appLocalizations.tsBoundaryTip] : lines;
+    final caption = this.caption;
+    final warning = this.warning;
+    final about = this.about.isEmpty
+        ? [appLocalizations.tsBoundaryTip]
+        : this.about;
+    final warningColor = colorScheme.warning;
     return TailscaleCard(
       child: Row(
         spacing: 16,
@@ -566,25 +572,48 @@ class TailscaleRulesCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 12,
+              spacing: 4,
               children: [
                 DashboardCardHeader(
                   glyph: AppGlyphs.rules,
                   title: appLocalizations.rules,
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 2,
-                  children: [
-                    for (final line in body)
-                      Text(
-                        line,
-                        style: AppTextStyle.footnote
-                            .of(context)
-                            .copyWith(color: colorScheme.onSurfaceVariant),
-                      ),
+                  leading: [
+                    InfoButton(
+                      label: appLocalizations.tsAboutRules,
+                      paragraphs: about,
+                    ),
                   ],
                 ),
+                if (caption != null)
+                  Text(
+                    caption,
+                    style: AppTextStyle.caption1
+                        .of(context)
+                        .copyWith(color: colorScheme.onSurfaceVariant),
+                  ),
+                if (warning != null)
+                  Row(
+                    spacing: 4,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: GlyphIcon(
+                          AppGlyphs.warning,
+                          size: 12,
+                          color: warningColor,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          warning,
+                          style: AppTextStyle.caption1
+                              .of(context)
+                              .copyWith(color: warningColor),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

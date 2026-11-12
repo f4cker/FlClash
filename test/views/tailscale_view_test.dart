@@ -11,10 +11,12 @@ import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/tailscale/tailscale.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:fl_clash/views/tailscale/device_card.dart';
+import 'package:fl_clash/views/tailscale/rules_view.dart';
 import 'package:fl_clash/views/tailscale/settings_cards.dart';
 import 'package:fl_clash/views/tailscale/state.dart';
 import 'package:fl_clash/views/tailscale/widgets.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -138,8 +140,13 @@ void main() {
       await pumpPanel(tester);
 
       expect(find.text('登录 Tailscale'), findsWidgets);
-      expect(find.textContaining('不会自动开启系统代理或虚拟网卡。'), findsOneWidget);
+      expect(find.text('登录后自动添加节点和专用规则，原文件不变。'), findsOneWidget);
+      expect(find.textContaining('不会自动开启系统代理或虚拟网卡。'), findsNothing);
       expect(find.text('前往配置'), findsNothing);
+      await tester.tap(find.byTooltip('Tailscale 说明'));
+      await settle(tester);
+      expect(find.text('不会自动开启系统代理或虚拟网卡。'), findsOneWidget);
+      expect(find.textContaining('原配置文件保持不变'), findsOneWidget);
       verifyNever(
         () => core.loginTailscale(any(), reauth: any(named: 'reauth')),
       );
@@ -270,10 +277,15 @@ void main() {
       serveAccounts(routes: tsConflictRoutes());
       await pumpPanel(tester);
 
-      expect(find.text('网络域名：example-net.test.ts.net'), findsOneWidget);
-      expect(find.text('设备地址：9 个'), findsOneWidget);
-      expect(find.textContaining('会被拦截，不会改用其他账号或直连'), findsOneWidget);
+      expect(find.text('example-net.test.ts.net · 9 个设备地址'), findsOneWidget);
+      expect(find.text('网络域名：example-net.test.ts.net'), findsNothing);
+      expect(find.textContaining('会被拦截，不会改用其他账号或直连'), findsNothing);
+      expect(find.textContaining('Flash 会按此账号'), findsNothing);
       expect(find.text('退出此账号'), findsOneWidget);
+      await tester.tap(find.byTooltip('规则说明'));
+      await settle(tester);
+      expect(find.textContaining('会被拦截，不会改用其他账号或直连'), findsOneWidget);
+      expect(find.textContaining('Flash 会按此账号'), findsOneWidget);
       await teardownView(tester);
     });
 
@@ -406,6 +418,104 @@ void main() {
         findsNothing,
       );
       expect(find.text('重新指定账号'), findsNWidgets(2));
+      await teardownView(tester);
+    });
+
+    testWidgets('the rules sheet keeps its state rows and moves the rest '
+        'behind info', (tester) async {
+      await seed(records);
+      serveAccounts(routes: tsConflictRoutes());
+      await pumpPanel(tester);
+      await tester.tap(find.text('前往规则'));
+      await settle(tester);
+
+      expect(find.text('面板添加'), findsNothing);
+      expect(find.text('已接入当前配置'), findsWidgets);
+      expect(find.text('网络域名：example-net.test.ts.net'), findsOneWidget);
+      expect(find.text('设备地址：9 个'), findsOneWidget);
+      expect(find.textContaining('Tailscale 流量使用专用规则'), findsNothing);
+      expect(find.textContaining('面板添加的专用规则'), findsNothing);
+      expect(find.textContaining('未匹配到可靠归属'), findsNothing);
+
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(TailscaleRulesView),
+              matching: find.byTooltip('说明'),
+            )
+            .first,
+      );
+      await settle(tester);
+      expect(find.textContaining('未匹配到可靠归属'), findsOneWidget);
+      await tester.tapAt(
+        tester.getRect(find.byType(TailscaleRulesView)).bottomLeft +
+            const Offset(24, -24),
+      );
+      await settle(tester);
+      expect(find.textContaining('未匹配到可靠归属'), findsNothing);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(TailscaleRulesView),
+          matching: find.byTooltip('规则说明'),
+        ),
+      );
+      await settle(tester);
+      expect(find.textContaining('面板添加的专用规则'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('a blocked target of the account stays inline on the rules '
+        'card', (tester) async {
+      await seed(records);
+      serveAccounts(
+        routes: tsConflictRoutes().copyWith(
+          targets: const [
+            TailscaleRouteTargetReport(
+              target: TailscaleRouteTarget(
+                kind: tailscaleTargetIp,
+                value: '100.64.0.7',
+              ),
+              state: TailscaleRouteState.unavailable,
+              owner: TailscaleRouteOwner(kind: tailscaleOwnerManaged, id: 'm1'),
+            ),
+          ],
+        ),
+      );
+      await pumpPanel(tester);
+
+      expect(find.text('example-net.test.ts.net · 9 个设备地址'), findsOneWidget);
+      expect(find.text('指定账号暂不可用，此目标不会改用其他账号。'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('an unread account report shows no made-up summary', (
+      tester,
+    ) async {
+      await seed(records);
+      serveAccounts(
+        routes: const TailscaleRoutes(
+          profileId: 42,
+          active: true,
+          accounts: [TailscaleRouteAccountReport(id: 'm1', addresses: 9)],
+        ),
+      );
+      await pumpPanel(tester);
+
+      expect(find.textContaining('个设备地址'), findsNothing);
+      expect(find.byTooltip('规则说明'), findsOneWidget);
+      await teardownView(tester);
+    });
+
+    testWidgets('a panel-added account goes untagged on its card', (
+      tester,
+    ) async {
+      await seed(records);
+      serveAccounts();
+      await pumpPanel(tester);
+
+      expect(find.text('面板添加'), findsNothing);
+      expect(find.text('已连接'), findsWidgets);
       await teardownView(tester);
     });
 
@@ -558,7 +668,9 @@ void main() {
       expect(find.text('归属'), findsOneWidget);
       expect(find.text('我'), findsWidgets);
       expect(find.text('退出当前节点'), findsOneWidget);
-      expect(find.text('当前显示 4 台设备'), findsOneWidget);
+      expect(find.text('当前显示 4 台设备'), findsNothing);
+      expect(find.textContaining('显示 4 / 4'), findsNothing);
+      expect(find.text('显示当前节点可见的设备，不代表管理后台中的全部设备'), findsNothing);
       await teardownView(tester);
     });
 
@@ -566,10 +678,11 @@ void main() {
       serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
       await pumpPanel(tester);
 
-      expect(find.text('设备归属'), findsOneWidget);
+      expect(find.text('设备归属'), findsNothing);
+      expect(find.text('显示 8 / 8 台'), findsNothing);
       await tester.tap(find.textContaining('我的'));
       await settle(tester);
-      expect(find.text('当前显示 2 台设备'), findsOneWidget);
+      expect(find.text('显示 2 / 8 台'), findsOneWidget);
 
       await tester.enterText(find.byType(EditableText), 'no-such-device');
       await settle(tester);
@@ -832,6 +945,37 @@ void main() {
   });
 
   group('exit node and subnet routes', () {
+    testWidgets('the cards show title, value and control; the rest opens '
+        'from info', (tester) async {
+      serve([tsConnectedNode], tsConnectedStatus());
+      await pumpPanel(tester);
+
+      expect(find.text('不使用出口节点'), findsOneWidget);
+      expect(find.text('不使用出口节点不会退出 Tailscale'), findsNothing);
+      expect(find.textContaining('只影响经此 Tailscale 节点转发的流量'), findsNothing);
+      expect(find.text('接受子网路由'), findsOneWidget);
+      expect(find.text('已开启'), findsNothing);
+      expect(find.text('已关闭'), findsNothing);
+      expect(find.textContaining('允许此节点使用'), findsNothing);
+      expect(find.text('显示当前节点可见的设备，不代表管理后台中的全部设备'), findsNothing);
+
+      await tester.tap(find.byTooltip('出口设置说明'));
+      await settle(tester);
+      expect(find.textContaining('只影响经此 Tailscale 节点转发的流量'), findsOneWidget);
+      await tester.tap(find.byTooltip('子网路由说明'));
+      await settle(tester);
+      expect(find.textContaining('只影响经此 Tailscale 节点转发的流量'), findsNothing);
+      expect(find.textContaining('允许此节点使用'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await settle(tester);
+      expect(find.textContaining('允许此节点使用'), findsNothing);
+
+      await tester.tap(find.byTooltip('说明'));
+      await settle(tester);
+      expect(find.text('显示当前节点可见的设备，不代表管理后台中的全部设备'), findsOneWidget);
+      await teardownView(tester);
+    });
+
     testWidgets('an exit node change asks first and an unanswered one stays '
         'pending', (tester) async {
       serve([tsConnectedNode], tsConnectedStatus());
@@ -1451,7 +1595,6 @@ void main() {
         expect(chip.right, lessThanOrEqualTo(page.right));
       }
       final row = chips.first;
-      final caption = tester.getRect(find.textContaining('仅显示此账号可见的设备'));
       final table = tester.getRect(
         find
             .ancestor(
@@ -1461,8 +1604,7 @@ void main() {
             .first,
       );
       expect(row.top - search.bottom, moreOrLessEquals(10, epsilon: 0.5));
-      expect(caption.top - row.bottom, moreOrLessEquals(8, epsilon: 0.5));
-      expect(table.top - caption.bottom, moreOrLessEquals(12, epsilon: 0.5));
+      expect(table.top - row.bottom, moreOrLessEquals(12, epsilon: 0.5));
     }
 
     for (final width in [520.0, 640.0]) {
@@ -1474,8 +1616,9 @@ void main() {
         expectCompactHeader(tester);
         expect(find.text('全部 8'), findsOneWidget);
         expect(find.text('我的 2'), findsOneWidget);
-        expect(find.text('8 台设备 · 仅显示此账号可见的设备'), findsOneWidget);
-        expect(find.text('当前显示 8 台设备'), findsNothing);
+        expect(find.textContaining('仅显示此账号可见的设备'), findsNothing);
+        expect(find.textContaining('台设备'), findsNothing);
+        expect(find.textContaining('显示 8 / 8'), findsNothing);
         await teardownView(tester);
       });
     }
@@ -1526,7 +1669,7 @@ void main() {
 
       await tester.tap(find.text('归属未知 1'));
       await settle(tester);
-      expect(find.text('显示 1/8 台 · 仅限此账号可见的设备'), findsOneWidget);
+      expect(find.text('显示 1 / 8 台'), findsOneWidget);
       final chosen = find.ancestor(
         of: find.text('归属未知 1'),
         matching: find.byType(Chip),
@@ -1554,7 +1697,7 @@ void main() {
 
       await tester.enterText(find.byType(EditableText), 'printer');
       await settle(tester);
-      expect(find.text('显示 1/8 台 · 仅限此账号可见的设备'), findsOneWidget);
+      expect(find.text('显示 1 / 8 台'), findsOneWidget);
       await teardownView(tester);
     });
 
