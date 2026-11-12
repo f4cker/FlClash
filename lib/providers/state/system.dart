@@ -41,6 +41,28 @@ int effectiveMixedPort(Ref ref) {
   };
 }
 
+/// The page settings as their controls show them: a field that follows the
+/// profile shows the profile's value, or mihomo's default when it has none.
+@riverpod
+PatchClashConfig shownClashConfig(Ref ref) {
+  final config = ref.watch(patchClashConfigProvider);
+  if (!config.pagePriority || config.followKeys.isEmpty) {
+    return config;
+  }
+  final settings = ref.watch(profileSettingsProvider);
+  var shown = config;
+  for (final key in config.followKeys) {
+    final value = settings == null
+        ? configKeyMissing
+        : readConfigPath(settings, key.path);
+    shown = shown.withFileValue(
+      key,
+      identical(value, configKeyMissing) ? kernelDefaults[key.path] : value,
+    );
+  }
+  return shown;
+}
+
 @riverpod
 CoreOptions coreOptions(Ref ref) {
   final (:testUrl, :mitmCapture) = ref.watch(

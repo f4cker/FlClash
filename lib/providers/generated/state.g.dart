@@ -100,6 +100,60 @@ final class EffectiveMixedPortProvider
 String _$effectiveMixedPortHash() =>
     r'cafdf5964d0631974db8a33fe92ca3144af693a9';
 
+/// The page settings as their controls show them: a field that follows the
+/// profile shows the profile's value, or mihomo's default when it has none.
+
+@ProviderFor(shownClashConfig)
+final shownClashConfigProvider = ShownClashConfigProvider._();
+
+/// The page settings as their controls show them: a field that follows the
+/// profile shows the profile's value, or mihomo's default when it has none.
+
+final class ShownClashConfigProvider
+    extends
+        $FunctionalProvider<
+          PatchClashConfig,
+          PatchClashConfig,
+          PatchClashConfig
+        >
+    with $Provider<PatchClashConfig> {
+  /// The page settings as their controls show them: a field that follows the
+  /// profile shows the profile's value, or mihomo's default when it has none.
+  ShownClashConfigProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shownClashConfigProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shownClashConfigHash();
+
+  @$internal
+  @override
+  $ProviderElement<PatchClashConfig> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  PatchClashConfig create(Ref ref) {
+    return shownClashConfig(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PatchClashConfig value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PatchClashConfig>(value),
+    );
+  }
+}
+
+String _$shownClashConfigHash() => r'4af0edc39ebae7bb9fd35cfc38cdb910f98db6f7';
+
 @ProviderFor(coreOptions)
 final coreOptionsProvider = CoreOptionsProvider._();
 

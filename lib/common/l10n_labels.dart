@@ -167,3 +167,16 @@ extension RecordGroupingL10n on RecordGrouping {
     };
   }
 }
+
+extension LogLevelL10n on LogLevel {
+  String get label {
+    final appLocalizations = currentAppLocalizations;
+    return switch (this) {
+      LogLevel.debug => appLocalizations.logLevelDebug,
+      LogLevel.info => appLocalizations.logLevelInfo,
+      LogLevel.warning => appLocalizations.logLevelWarning,
+      LogLevel.error => appLocalizations.logLevelError,
+      LogLevel.silent => appLocalizations.logLevelSilent,
+    };
+  }
+}
