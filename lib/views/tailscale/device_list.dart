@@ -23,6 +23,9 @@ const _copyWidth = 40.0;
 const _copyGap = 6.0;
 const _copyGlyph = 14.0;
 const _copyTarget = 24.0;
+
+/// The 6 runs from the text to the glyph, not to the wider tap target.
+const _copySpacing = _copyGap - (_copyTarget - _copyGlyph) / 2;
 const _copiedFor = Duration(milliseconds: 1200);
 
 /// How far the address column grows past the freed width to fit names.
@@ -714,8 +717,8 @@ class _Table extends StatelessWidget {
         ];
         final named = names.isEmpty
             ? 0.0
-            : widest(AppTextStyle.caption1.of(context).toJetBrainsMono, names) +
-                  _copyGap +
+            : widest(AppTextStyle.caption2.of(context).toJetBrainsMono, names) +
+                  _copySpacing +
                   _copyTarget;
         final freed = address + status + _copyWidth + _columnGap * 2;
         final layout = _TableLayout(
@@ -893,7 +896,7 @@ class _DeviceRowState extends State<_DeviceRow> {
         if (dnsName != null)
           _CopyLine(
             text: dnsName,
-            style: AppTextStyle.caption1
+            style: AppTextStyle.caption2
                 .of(context)
                 .toJetBrainsMono
                 .copyWith(color: colorScheme.onSurfaceVariant),
@@ -1013,7 +1016,7 @@ class _CopyLineState extends State<_CopyLine> {
       text = Tooltip(message: widget.text, child: text);
     }
     return Row(
-      spacing: _copyGap,
+      spacing: _copySpacing,
       children: [
         Flexible(child: text),
         Opacity(
