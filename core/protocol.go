@@ -5,7 +5,6 @@ import (
 
 	"github.com/metacubex/mihomo/adapter/provider"
 	P "github.com/metacubex/mihomo/component/process"
-	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel"
@@ -72,6 +71,7 @@ const (
 	listenerStartMethod CoreMethod = "listener.start"
 	listenerStopMethod  CoreMethod = "listener.stop"
 	listenerMixedMethod CoreMethod = "listener.mixedPort"
+	listenerPortsMethod CoreMethod = "listener.ports"
 	routeWatchMethod    CoreMethod = "route.watch"
 	routeCheckMethod    CoreMethod = "route.check"
 
@@ -245,12 +245,12 @@ type BuildProfileParams struct {
 }
 
 type ProfileBase struct {
-	Config      *config.RawConfig `json:"config"`
-	Digest      string            `json:"digest"`
-	MatchRules  []string          `json:"match-rules"`
-	Proxies     int               `json:"proxies"`
-	ProxyGroups int               `json:"proxy-groups"`
-	Rules       int               `json:"rules"`
+	Config      map[string]any `json:"config"`
+	Digest      string         `json:"digest"`
+	MatchRules  []string       `json:"match-rules"`
+	Proxies     int            `json:"proxies"`
+	ProxyGroups int            `json:"proxy-groups"`
+	Rules       int            `json:"rules"`
 }
 
 type ProfileOutbounds struct {
@@ -282,8 +282,17 @@ type UpdateParams struct {
 	Options            *CoreOptions       `json:"options"`
 }
 
+type ListeningPorts struct {
+	Port       int  `json:"port"`
+	SocksPort  int  `json:"socks-port"`
+	RedirPort  int  `json:"redir-port"`
+	TProxyPort int  `json:"tproxy-port"`
+	MixedPort  int  `json:"mixed-port"`
+	Tun        bool `json:"tun"`
+}
+
 type tunSchema struct {
-	Enable    bool               `yaml:"enable" json:"enable"`
+	Enable    *bool              `yaml:"enable" json:"enable"`
 	Device    *string            `yaml:"device" json:"device"`
 	Stack     *constant.TUNStack `yaml:"stack" json:"stack"`
 	AutoRoute *bool              `yaml:"auto-route" json:"auto-route"`

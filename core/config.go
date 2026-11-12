@@ -337,7 +337,9 @@ func applyOptions(options CoreOptions) {
 }
 
 func patchTun(target *LC.Tun, params *tunSchema) {
-	target.Enable = params.Enable
+	if params.Enable != nil {
+		target.Enable = *params.Enable
+	}
 	if params.AutoRoute != nil {
 		target.AutoRoute = *params.AutoRoute
 	}

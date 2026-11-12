@@ -222,8 +222,9 @@ func TestUpdateConfigPatchesOnlyTheTunFieldsItWasGiven(t *testing.T) {
 	withCurrentConfig(t, &config.Config{General: &config.General{}, Controller: &config.Controller{}})
 	currentConfig.General.Tun.Device = "keep-me"
 	device := "flclash-tun"
+	enable := true
 
-	if err := updateConfig(&UpdateParams{Tun: &tunSchema{Enable: true}}); err != nil {
+	if err := updateConfig(&UpdateParams{Tun: &tunSchema{Enable: &enable}}); err != nil {
 		t.Fatalf("updateConfig error: %v", err)
 	}
 	if !currentConfig.General.Tun.Enable {
@@ -233,11 +234,14 @@ func TestUpdateConfigPatchesOnlyTheTunFieldsItWasGiven(t *testing.T) {
 		t.Errorf("Tun.Device = %q, want an omitted field left untouched", currentConfig.General.Tun.Device)
 	}
 
-	if err := updateConfig(&UpdateParams{Tun: &tunSchema{Enable: true, Device: &device}}); err != nil {
+	if err := updateConfig(&UpdateParams{Tun: &tunSchema{Device: &device}}); err != nil {
 		t.Fatalf("updateConfig error: %v", err)
 	}
 	if currentConfig.General.Tun.Device != device {
 		t.Errorf("Tun.Device = %q, want %q", currentConfig.General.Tun.Device, device)
+	}
+	if !currentConfig.General.Tun.Enable {
+		t.Error("a patch without enable turned the TUN off")
 	}
 }
 

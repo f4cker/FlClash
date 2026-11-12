@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/metacubex/mihomo/component/age"
@@ -20,6 +21,8 @@ import (
 // What makes a profile large stays in the Core; the overlay the host sends
 // back replaces every other section.
 var profileBaseSections = []string{"proxies", "proxy-groups", "sub-rules"}
+
+var profileBulkSections = append([]string{"rules"}, profileBaseSections...)
 
 func handleGetProfileBase(params PathParams) (*ProfileBase, error) {
 	defer scheduleLoadMemoryRelease()
@@ -44,9 +47,65 @@ func handleGetProfileBase(params PathParams) (*ProfileBase, error) {
 			base.MatchRules = append(base.MatchRules, rule)
 		}
 	}
-	raw.Proxy, raw.ProxyGroup, raw.Rule, raw.SubRules = nil, nil, nil, nil
-	base.Config = raw
+	if base.Config, err = profileSettings(buf); err != nil {
+		return nil, err
+	}
 	return base, nil
+}
+
+// The keys the file writes, as written: a key it leaves out must stay out of
+// the overlay so mihomo fills its own default, and the host can tell the two
+// apart.
+func profileSettings(buf []byte) (map[string]any, error) {
+	buf, err := age.DecryptBytes(buf)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt config error: %w", err)
+	}
+	var document yaml.Node
+	if err := yaml.Unmarshal(buf, &document); err != nil {
+		return nil, err
+	}
+	profile, err := documentMapping(&document)
+	if err != nil {
+		return nil, err
+	}
+	settings := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	for i := 0; i+1 < len(profile.Content); i += 2 {
+		if name := profile.Content[i]; name.Kind == yaml.ScalarNode && slices.Contains(profileBulkSections, name.Value) {
+			continue
+		}
+		settings.Content = append(settings.Content, profile.Content[i], profile.Content[i+1])
+	}
+	values := map[string]any{}
+	if err := settings.Decode(&values); err != nil {
+		return nil, err
+	}
+	for _, key := range profileBulkSections {
+		delete(values, key)
+	}
+	return stringKeyed(values).(map[string]any), nil
+}
+
+// JSON takes only string keys, and YAML allows a mapping keyed by numbers.
+func stringKeyed(value any) any {
+	switch value := value.(type) {
+	case map[string]any:
+		for key, item := range value {
+			value[key] = stringKeyed(item)
+		}
+		return value
+	case map[any]any:
+		converted := make(map[string]any, len(value))
+		for key, item := range value {
+			converted[fmt.Sprint(key)] = stringKeyed(item)
+		}
+		return converted
+	case []any:
+		for i, item := range value {
+			value[i] = stringKeyed(item)
+		}
+	}
+	return value
 }
 
 func handleGetProfileOutbounds(params PathParams) (*ProfileOutbounds, error) {
