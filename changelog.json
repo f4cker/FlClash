@@ -2,6 +2,54 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.9.4",
+      "tag": "v0.9.4",
+      "date": "2026-11-12",
+      "prerelease": false,
+      "groups": [
+        {
+          "type": "feat",
+          "entries": [
+            {
+              "id": "c509cb9",
+              "scope": "mount",
+              "text": "Mount subscription nodes into a profile from its card"
+            },
+            {
+              "id": "1645be1",
+              "scope": "tailscale",
+              "text": "MagicDNS names, presence and running Flash rules"
+            },
+            {
+              "id": "28c99a8",
+              "scope": "requests",
+              "text": "Show the Mac app or process of each connection"
+            },
+            {
+              "id": "e7c88d1",
+              "scope": "config",
+              "text": "Page settings layer over the profile file per field"
+            },
+            {
+              "id": "1c45db6",
+              "scope": "tray",
+              "text": "Cookie status icons and a new app icon"
+            }
+          ]
+        },
+        {
+          "type": "fix",
+          "entries": [
+            {
+              "id": "b0d5d12",
+              "scope": "core",
+              "text": "Keep mounted nodes out of every Tailscale route and relay"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.3",
       "tag": "v0.9.3",
       "date": "2026-11-04",
