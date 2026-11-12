@@ -69,3 +69,7 @@ func isTailscaleExitGroup(constant.Proxy) bool { return false }
 func tailscaleExitMemberNamed(string) constant.Proxy { return nil }
 
 func tailscaleExitShown() (string, []constant.Proxy) { return "", nil }
+
+func tailscaleExitSnapshot() uint64 { return 0 }
+
+func clearTailscaleExit() {}

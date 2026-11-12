@@ -41,6 +41,8 @@ class ProxiesAction extends _$ProxiesAction {
 
   final Map<String, String> _pendingSelectedRollback = {};
 
+  int _groupsReadRevision = 0;
+
   @override
   void build() {
     ref.onDispose(() => _delayFlushTimer?.cancel());
@@ -128,8 +130,11 @@ class ProxiesAction extends _$ProxiesAction {
   }
 
   Future<void> updateGroups() async {
+    final revision = ++_groupsReadRevision;
+    final profile = ref.read(currentProfileProvider);
+    var snapshot = 0;
     try {
-      ref.read(groupsProvider.notifier).value = await retry(
+      final groups = await retry<List<Group>>(
         task: () async {
           final sortType = ref.read(
             proxiesStyleSettingProvider.select((state) => state.sortType),
@@ -143,6 +148,7 @@ class ProxiesAction extends _$ProxiesAction {
           );
           try {
             return await _core.getProxiesGroups(
+              onSnapshot: (value) => snapshot = value,
               selectedMap: selectedMap,
               sortType: sortType,
               delayMap: delayMap,
@@ -158,6 +164,17 @@ class ProxiesAction extends _$ProxiesAction {
         },
         retryIf: (res) => res.isEmpty,
       );
+      if (revision != _groupsReadRevision ||
+          ref.read(currentProfileProvider)?.id != profile?.id) {
+        return;
+      }
+      if (profile != null && groups.isNotEmpty) {
+        await _reconcileExitSelections(profile, groups, revision, snapshot);
+      }
+      if (revision == _groupsReadRevision &&
+          ref.read(currentProfileProvider)?.id == profile?.id) {
+        ref.read(groupsProvider.notifier).value = groups;
+      }
     } catch (e) {
       // The Core failure path already runs inside the retry task above; a
       // throw here only means ref.read hit a disposed container or the
@@ -166,6 +183,90 @@ class ProxiesAction extends _$ProxiesAction {
         'updateGroups failed: $e',
         logLevel: coreFailureLogLevel(e),
       );
+    }
+  }
+
+  Future<void> _reconcileExitSelections(
+    Profile sent,
+    List<Group> groups,
+    int revision,
+    int snapshot,
+  ) async {
+    final alias = RegExp(r'^Tailscale (?:出口|exit)(?: \(Flash(?: \d+)?\))?$');
+    if (!sent.selectedMap.containsKey(tailscaleExitSelectionKey) &&
+        !sent.selectedMap.entries.any(
+          (entry) => alias.hasMatch(entry.key) || alias.hasMatch(entry.value),
+        )) {
+      return;
+    }
+    final TailscaleExitReport report;
+    try {
+      report = await _core.getTailscaleExit(sent.id);
+    } catch (_) {
+      return;
+    }
+    if (revision != _groupsReadRevision ||
+        ref.read(currentProfileProvider)?.id != sent.id ||
+        report.profileId != sent.id ||
+        snapshot == 0 ||
+        report.revision != snapshot ||
+        !{
+          TailscaleRuntimeState.confirmed,
+          TailscaleRuntimeState.none,
+        }.contains(report.state)) {
+      return;
+    }
+    final profile = ref.read(profilesProvider).getProfile(sent.id);
+    if (profile == null) {
+      return;
+    }
+    final names = {
+      for (final group in groups) ...[
+        group.name,
+        for (final proxy in group.all) proxy.name,
+      ],
+    };
+    final selected = {...profile.selectedMap};
+    for (final MapEntry(key: group, value: choice)
+        in sent.selectedMap.entries) {
+      if (selected[group] != choice) {
+        continue;
+      }
+      String? replacement = choice;
+      if (group == tailscaleExitSelectionKey) {
+        if (report.accountOf(choice) == null) {
+          replacement = report.selected.isEmpty ? null : report.selected;
+        }
+      } else if (alias.hasMatch(group) && !names.contains(group)) {
+        replacement = null;
+      } else if (alias.hasMatch(choice) && !names.contains(choice)) {
+        final parent = groups.getGroup(group);
+        replacement =
+            report.offered &&
+                (parent?.all.any((proxy) => proxy.name == report.group) ??
+                    false)
+            ? report.group
+            : parent == null ||
+                  parent.realNow.isEmpty ||
+                  parent.realNow == 'COMPATIBLE'
+            ? null
+            : parent.realNow;
+      } else if (group == report.group && report.memberNamed(choice) == null) {
+        replacement = report.accountOf(report.selected)?.member;
+      }
+      if (replacement == null) {
+        selected.remove(group);
+      } else {
+        selected[group] = replacement;
+      }
+    }
+    if (selected.length != profile.selectedMap.length ||
+        selected.entries.any(
+          (entry) => profile.selectedMap[entry.key] != entry.value,
+        )) {
+      ref
+          .read(profilesProvider.notifier)
+          .put(profile.copyWith(selectedMap: selected));
     }
   }
 

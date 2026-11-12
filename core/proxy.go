@@ -88,6 +88,10 @@ func proxyGroupNames(
 }
 
 func handleGetProxies() ProxiesData {
+	configMu.Lock()
+	defer configMu.Unlock()
+	selectMu.Lock()
+	defer selectMu.Unlock()
 	proxies := tunnel.AllProxies()
 
 	names := proxyGroupNames(config.GetProxyNameList(), func(name string) (constant.AdapterType, bool) {
@@ -111,7 +115,7 @@ func handleGetProxies() ProxiesData {
 			}
 		}
 	}
-	return ProxiesData{All: names, Proxies: views}
+	return ProxiesData{All: names, Proxies: views, TailscaleRevision: tailscaleExitSnapshot()}
 }
 
 // Proxy.MarshalJSON encodes each node twice, with history the host never reads.

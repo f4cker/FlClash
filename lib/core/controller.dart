@@ -167,12 +167,14 @@ extension type CoreController._(CoreHandlerInterface _interface)
   }
 
   Future<List<Group>> getProxiesGroups({
+    void Function(int revision)? onSnapshot,
     required ProxiesSortType sortType,
     required DelayMap delayMap,
     required Map<String, String> selectedMap,
     required String defaultTestUrl,
   }) async {
     final proxiesData = await _interface.getProxies();
+    onSnapshot?.call(proxiesData.tailscaleRevision);
     return toGroupsTask(
       ComputeGroupsState(
         proxiesData: proxiesData,
@@ -204,11 +206,7 @@ extension type CoreController._(CoreHandlerInterface _interface)
     MountSetup? mounts,
   }) async {
     return readSpilledText(
-      await _interface.buildProfile(
-        base: base,
-        config: config,
-        mounts: mounts,
-      ),
+      await _interface.buildProfile(base: base, config: config, mounts: mounts),
     );
   }
 

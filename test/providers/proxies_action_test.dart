@@ -111,6 +111,282 @@ void main() {
   }
 
   group('updateGroups', () {
+    const exit = 'Tailscale 出口 (Flash)';
+    const member = 'exit-a1 · a1@example.test';
+    const remaining = 'exit-b2 · b2@example.test';
+    final saved = <String, String>{
+      'Policy': exit,
+      'Empty': exit,
+      exit: member,
+      tailscaleExitSelectionKey: 'a1',
+      'UserGroup': 'Tailscale 出口',
+      'UserNode': 'Tailscale exit',
+    };
+
+    ProxiesData exitData({bool active = false}) => ProxiesData(
+      tailscaleRevision: 1,
+      all: ['GLOBAL', 'Policy', 'Empty', 'Tailscale 出口', if (active) exit],
+      proxies: {
+        'GLOBAL': {
+          'name': 'GLOBAL',
+          'type': 'Selector',
+          'now': 'DIRECT',
+          'all': ['DIRECT', 'Tailscale 出口', 'Tailscale exit'],
+        },
+        'Policy': {
+          'name': 'Policy',
+          'type': 'Selector',
+          'now': active ? exit : 'DIRECT',
+          'all': ['DIRECT', if (active) exit],
+        },
+        'Empty': {
+          'name': 'Empty',
+          'type': 'Selector',
+          'now': active ? exit : 'COMPATIBLE',
+          'all': ['COMPATIBLE', if (active) exit],
+        },
+        'Tailscale 出口': {
+          'name': 'Tailscale 出口',
+          'type': 'Selector',
+          'now': 'DIRECT',
+          'all': ['DIRECT'],
+        },
+        'Tailscale exit': {'name': 'Tailscale exit', 'type': 'socks5'},
+        'DIRECT': {'name': 'DIRECT', 'type': 'Direct'},
+        'COMPATIBLE': {'name': 'COMPATIBLE', 'type': 'Direct'},
+        if (active) ...{
+          exit: {
+            'name': exit,
+            'type': 'Selector',
+            'now': remaining,
+            'all': [remaining],
+          },
+          remaining: {'name': remaining, 'type': 'Tailscale'},
+        },
+      },
+    );
+
+    Profile exitProfile() =>
+        Profile(id: 1, autoUpdateDuration: Duration.zero, selectedMap: saved);
+
+    for (final state in [
+      TailscaleRuntimeState.confirmed,
+      TailscaleRuntimeState.none,
+    ]) {
+      test(
+        'closed exit selections are repaired after $state and stay repaired on reload',
+        () async {
+          final container = buildContainer(profile: exitProfile());
+          when(core.getProxies).thenAnswer((_) async => exitData());
+          when(() => core.getTailscaleExit(1)).thenAnswer(
+            (_) async =>
+                TailscaleExitReport(revision: 1, profileId: 1, state: state),
+          );
+
+          await actionOf(container).updateGroups();
+          expect(container.read(profilesProvider).getProfile(1)!.selectedMap, {
+            'Policy': 'DIRECT',
+            'UserGroup': 'Tailscale 出口',
+            'UserNode': 'Tailscale exit',
+          });
+          await actionOf(container).updateGroups();
+          expect(
+            container
+                .read(profilesProvider)
+                .getProfile(1)!
+                .selectedMap['Policy'],
+            'DIRECT',
+          );
+          expect(
+            container.read(profilesProvider).getProfile(1)!.selectedMap,
+            isNot(contains(tailscaleExitSelectionKey)),
+          );
+        },
+      );
+    }
+
+    test(
+      'same-profile runtime replacement between reads cannot erase a new valid choice',
+      () async {
+        final container = buildContainer(profile: exitProfile());
+        when(
+          core.getProxies,
+        ).thenAnswer((_) async => exitData().copyWith(tailscaleRevision: 7));
+        when(() => core.getTailscaleExit(1)).thenAnswer(
+          (_) async => const TailscaleExitReport(
+            revision: 8,
+            profileId: 1,
+            state: TailscaleRuntimeState.none,
+          ),
+        );
+
+        await actionOf(container).updateGroups();
+        expect(
+          container.read(profilesProvider).getProfile(1)!.selectedMap,
+          saved,
+        );
+      },
+    );
+
+    test(
+      'fallback persistence follows Core order, not name-sorted presentation',
+      () async {
+        final container = buildContainer(profile: exitProfile());
+        container
+            .read(proxiesStyleSettingProvider.notifier)
+            .update((state) => state.copyWith(sortType: ProxiesSortType.name));
+        final data = exitData();
+        final proxies = {
+          ...data.proxies,
+          'Policy': {
+            'name': 'Policy',
+            'type': 'Selector',
+            'now': 'Z-proxy',
+            'all': ['Z-proxy', 'DIRECT'],
+          },
+          'Z-proxy': {'name': 'Z-proxy', 'type': 'socks5'},
+        };
+        when(
+          core.getProxies,
+        ).thenAnswer((_) async => data.copyWith(proxies: proxies));
+        when(() => core.getTailscaleExit(1)).thenAnswer(
+          (_) async => const TailscaleExitReport(
+            revision: 1,
+            profileId: 1,
+            state: TailscaleRuntimeState.none,
+          ),
+        );
+
+        await actionOf(container).updateGroups();
+        expect(
+          container.read(groupsProvider).getGroup('Policy')!.all.first.name,
+          'DIRECT',
+        );
+        expect(
+          container.read(profilesProvider).getProfile(1)!.selectedMap['Policy'],
+          'Z-proxy',
+        );
+      },
+    );
+
+    test(
+      'one account removed preserves shared parents and follows the remaining member',
+      () async {
+        final container = buildContainer(profile: exitProfile());
+        when(core.getProxies).thenAnswer((_) async => exitData(active: true));
+        when(() => core.getTailscaleExit(1)).thenAnswer(
+          (_) async => const TailscaleExitReport(
+            revision: 1,
+            profileId: 1,
+            state: TailscaleRuntimeState.confirmed,
+            group: exit,
+            selected: 'b2',
+            accounts: [
+              TailscaleExitAccount(
+                id: 'b2',
+                member: remaining,
+                exitNode: '100.64.0.7',
+                state: TailscaleExitState.unavailable,
+              ),
+            ],
+          ),
+        );
+
+        await actionOf(container).updateGroups();
+        final selected = container
+            .read(profilesProvider)
+            .getProfile(1)!
+            .selectedMap;
+        expect(selected['Policy'], exit);
+        expect(selected['Empty'], exit);
+        expect(selected[exit], remaining);
+        expect(selected[tailscaleExitSelectionKey], 'b2');
+      },
+    );
+
+    test('unconfirmed closure never repairs saved selections', () async {
+      final container = buildContainer(profile: exitProfile());
+      when(core.getProxies).thenAnswer((_) async => exitData());
+      when(
+        () => core.getTailscaleExit(1),
+      ).thenAnswer((_) async => const TailscaleExitReport.readFailed(1));
+
+      await actionOf(container).updateGroups();
+      expect(
+        container.read(profilesProvider).getProfile(1)!.selectedMap,
+        saved,
+      );
+    });
+
+    test(
+      'a late read after a profile switch cannot repair either profile',
+      () async {
+        final container = buildContainer(profile: exitProfile());
+        final other = exitProfile().copyWith(id: 2);
+        container.read(profilesProvider.notifier).put(other);
+        final reading = Completer<void>();
+        final report = Completer<TailscaleExitReport>();
+        when(core.getProxies).thenAnswer((_) async => exitData());
+        when(() => core.getTailscaleExit(1)).thenAnswer((_) {
+          reading.complete();
+          return report.future;
+        });
+
+        final update = actionOf(container).updateGroups();
+        await reading.future;
+        container.read(currentProfileIdProvider.notifier).value = 2;
+        report.complete(
+          const TailscaleExitReport(
+            revision: 1,
+            profileId: 1,
+            state: TailscaleRuntimeState.none,
+          ),
+        );
+        await update;
+        expect(
+          container.read(profilesProvider).getProfile(1)!.selectedMap,
+          saved,
+        );
+        expect(
+          container.read(profilesProvider).getProfile(2)!.selectedMap,
+          saved,
+        );
+      },
+    );
+
+    test('a selection changed during readback is not overwritten', () async {
+      final container = buildContainer(profile: exitProfile());
+      final reading = Completer<void>();
+      final report = Completer<TailscaleExitReport>();
+      when(core.getProxies).thenAnswer((_) async => exitData());
+      when(() => core.getTailscaleExit(1)).thenAnswer((_) {
+        reading.complete();
+        return report.future;
+      });
+
+      final update = actionOf(container).updateGroups();
+      await reading.future;
+      container
+          .read(profilesProvider.notifier)
+          .put(
+            exitProfile().copyWith(
+              selectedMap: {...saved, 'Policy': 'ManualNew'},
+            ),
+          );
+      report.complete(
+        const TailscaleExitReport(
+          revision: 1,
+          profileId: 1,
+          state: TailscaleRuntimeState.none,
+        ),
+      );
+      await update;
+      expect(
+        container.read(profilesProvider).getProfile(1)!.selectedMap['Policy'],
+        'ManualNew',
+      );
+    });
+
     test('publishes the groups derived from core proxy data', () async {
       when(core.getProxies).thenAnswer(
         (_) async => ProxiesData(

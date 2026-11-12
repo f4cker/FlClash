@@ -4,6 +4,7 @@ package core
 
 import (
 	"context"
+	"maps"
 	"regexp"
 	"slices"
 	"strconv"
@@ -43,6 +44,7 @@ type tailscaleExitAccount struct {
 	label  string
 	exit   string
 	node   *outbound.Tailscale
+	proxy  C.Proxy
 	member C.Proxy
 	name   atomic.Value
 }
@@ -64,11 +66,14 @@ type tailscaleExitRuntime struct {
 }
 
 var (
-	tailscaleExitMu      sync.Mutex
-	tailscaleExitRunning *tailscaleExitRuntime
-	tailscaleExitStaged  *tailscaleExitRuntime
-	tailscaleExitPending bool
+	tailscaleExitMu       sync.Mutex
+	tailscaleExitRunning  *tailscaleExitRuntime
+	tailscaleExitStaged   *tailscaleExitRuntime
+	tailscaleExitPending  bool
+	tailscaleExitRevision atomic.Uint64
 )
+
+func tailscaleExitSnapshot() uint64 { return tailscaleExitRevision.Load() }
 
 func runningTailscaleExit() *tailscaleExitRuntime {
 	tailscaleExitMu.Lock()
@@ -174,6 +179,7 @@ type tailscaleExitSeed struct {
 func stageTailscaleExit(cfg *config.Config, base string, seeds []tailscaleExitSeed) {
 	tailscaleExitMu.Lock()
 	tailscaleExitStaged, tailscaleExitPending = nil, true
+	tailscaleExitRevision.Add(1)
 	tailscaleExitMu.Unlock()
 	for _, seed := range seeds {
 		expected := seed.setup.ExitNode != nil && *seed.setup.ExitNode != ""
@@ -191,7 +197,7 @@ func stageTailscaleExit(cfg *config.Config, base string, seeds []tailscaleExitSe
 		rt.taken[name] = true
 	}
 	for _, seed := range seeds {
-		account := &tailscaleExitAccount{id: seed.setup.ID, base: seed.proxy.Name(), label: seed.setup.ExitLabel, node: seed.node}
+		account := &tailscaleExitAccount{id: seed.setup.ID, base: seed.proxy.Name(), label: seed.setup.ExitLabel, node: seed.node, proxy: seed.proxy}
 		if seed.setup.ExitNode != nil {
 			account.exit = *seed.setup.ExitNode
 		}
@@ -217,7 +223,9 @@ func stageTailscaleExit(cfg *config.Config, base string, seeds []tailscaleExitSe
 		}
 		parent.SetRuntimeProxies(rt.offered)
 	}
-	cfg.Proxies[rt.name] = rt.group
+	if rt.active.Load() {
+		cfg.Proxies[rt.name] = rt.group
+	}
 	tailscaleExitMu.Lock()
 	tailscaleExitStaged = rt
 	tailscaleExitMu.Unlock()
@@ -228,12 +236,14 @@ func publishTailscaleExit() {
 	defer tailscaleExitMu.Unlock()
 	if tailscaleExitPending {
 		tailscaleExitRunning, tailscaleExitStaged, tailscaleExitPending = tailscaleExitStaged, nil, false
+		tailscaleExitRevision.Add(1)
 	}
 }
 
 func clearTailscaleExit() {
 	tailscaleExitMu.Lock()
 	tailscaleExitStaged, tailscaleExitPending = nil, true
+	tailscaleExitRevision.Add(1)
 	tailscaleExitMu.Unlock()
 }
 
@@ -277,9 +287,11 @@ func tailscaleExitShown() (string, []C.Proxy) {
 // what the node now holds, and a choice of the renamed node stays on it.
 func tailscaleExitPrefsChanged(t *outbound.Tailscale, exitNode, label *string, outcome string) {
 	t.InvalidateExitState()
-	if exitNode == nil || outcome == tailscaleOutcomeFailed {
+	if exitNode == nil || outcome != tailscaleOutcomeApplied && outcome != tailscaleOutcomeNotRunning {
 		return
 	}
+	configMu.Lock()
+	defer configMu.Unlock()
 	expected := *exitNode != ""
 	t.SetExitExpected(&expected)
 	rt := runningTailscaleExit()
@@ -297,15 +309,17 @@ func tailscaleExitPrefsChanged(t *outbound.Tailscale, exitNode, label *string, o
 	rt.mu.Lock()
 	var changed *tailscaleExitAccount
 	for _, account := range rt.accounts {
-		if account.id == id && id != "" {
+		if account.id == id && id != "" && account.node == t {
 			changed = account
 		}
 	}
-	if changed == nil {
+	if changed == nil || tunnel.Proxies()[changed.base] != changed.proxy {
 		rt.mu.Unlock()
 		return
 	}
+	tailscaleExitRevision.Add(1)
 	before := changed.memberName()
+	wasActive := rt.active.Load()
 	selected := now == before
 	changed.exit, changed.node = *exitNode, t
 	if label != nil {
@@ -314,6 +328,20 @@ func tailscaleExitPrefsChanged(t *outbound.Tailscale, exitNode, label *string, o
 	rt.renameLocked()
 	after := changed.memberName()
 	rt.mu.Unlock()
+	if rt.active.Load() != wasActive {
+		proxies := maps.Clone(tunnel.Proxies())
+		if rt.active.Load() {
+			proxies[rt.name] = rt.group
+		} else if proxies[rt.name] == rt.group {
+			delete(proxies, rt.name)
+		}
+		tunnel.UpdateProxies(proxies, tunnel.Providers())
+		if currentConfig != nil {
+			updated := *currentConfig
+			updated.Proxies = proxies
+			currentConfig = &updated
+		}
+	}
 	switch {
 	case !rt.active.Load():
 		for _, parent := range using {
@@ -337,11 +365,12 @@ func tailscaleExitUsers(rt *tailscaleExitRuntime) []*outboundgroup.Selector {
 	return using
 }
 
-// A group left with no option but its empty fallback keeps its choice.
 func settleTailscaleExitChoice(group *outboundgroup.Selector) {
+	next := ""
 	if first := group.Proxies()[0]; first != group.EmptyFallback() {
-		group.ForceSet(first.Name())
+		next = first.Name()
 	}
+	group.ForceSet(next)
 }
 
 // Brings the saved choices back onto the group: its own by account, and a
@@ -372,11 +401,16 @@ func followTailscaleExitSelections(mapping map[string]string) {
 		bases = append(bases, match[1])
 	}
 	for group, selected := range mapping {
-		if selected == rt.name || proxies[selected] != nil || !tailscaleExitAlias(selected, bases) {
+		if selected != rt.name && (proxies[selected] != nil || !tailscaleExitAlias(selected, bases)) {
 			continue
 		}
 		if parent, ok := adapterAs[*outboundgroup.Selector](proxies[group]); ok && !isBuiltInGlobal(proxies[group]) {
-			parent.ForceSet(rt.name)
+			if rt.active.Load() {
+				parent.ForceSet(rt.name)
+			} else {
+				parent.ForceSet("")
+				settleTailscaleExitChoice(parent)
+			}
 		}
 	}
 }
@@ -401,7 +435,8 @@ type TailscaleExitParent struct {
 
 // What the running config holds of the exit group, read from it.
 type TailscaleExitReport struct {
-	ProfileID int64 `json:"profile-id"`
+	Revision  uint64 `json:"revision"`
+	ProfileID int64  `json:"profile-id"`
 	// confirmed, none, unconfirmed (a config is on its way) or other-profile.
 	State    string                      `json:"state"`
 	Group    string                      `json:"group,omitempty"`
@@ -411,12 +446,19 @@ type TailscaleExitReport struct {
 }
 
 func handleTailscaleExit(params TailscaleRoutesParams) (*TailscaleExitReport, error) {
+	revision := tailscaleExitSnapshot()
 	report := &TailscaleExitReport{
+		Revision:  revision,
 		ProfileID: params.ProfileID,
 		State:     tailscaleRuntimeUnconfirmed,
 		Parents:   []TailscaleExitParent{},
 		Accounts:  []TailscaleExitAccountState{},
 	}
+	defer func() {
+		if tailscaleExitSnapshot() != revision {
+			report.State = tailscaleRuntimeUnconfirmed
+		}
+	}()
 	if params.ProfileID != tailscaleProfileID() {
 		report.State = tailscaleRuntimeOtherProfile
 		return report, nil
@@ -450,6 +492,10 @@ func handleTailscaleExit(params TailscaleRoutesParams) (*TailscaleExitReport, er
 		state.State, state.Reason = tailscaleExitAccountState(item.node)
 		report.Accounts = append(report.Accounts, state)
 	}
+	configMu.Lock()
+	defer configMu.Unlock()
+	selectMu.Lock()
+	defer selectMu.Unlock()
 	if !rt.active.Load() {
 		return report, nil
 	}

@@ -398,7 +398,7 @@ final class ProxiesActionProvider
   }
 }
 
-String _$proxiesActionHash() => r'0e2e8a232d8281c40700e49f06f660f2cf86a566';
+String _$proxiesActionHash() => r'80bd29b93de50d79e20db2f78f9f7443134d5656';
 
 abstract class _$ProxiesAction extends $Notifier<void> {
   void build();
@@ -867,7 +867,7 @@ final class TailscaleActionProvider
   }
 }
 
-String _$tailscaleActionHash() => r'5e2fd11a2d1261840e1dababcb43fbd873b94846';
+String _$tailscaleActionHash() => r'c9e28e4d6e17426e5a4fcb0f4f46b12817b5a632';
 
 abstract class _$TailscaleAction extends $Notifier<void> {
   void build();

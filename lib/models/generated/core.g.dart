@@ -642,9 +642,14 @@ Map<String, dynamic> _$ExternalProviderToJson(_ExternalProvider instance) =>
     };
 
 _ProxiesData _$ProxiesDataFromJson(Map<String, dynamic> json) => _ProxiesData(
+  tailscaleRevision: (json['tailscale-revision'] as num?)?.toInt() ?? 0,
   proxies: json['proxies'] as Map<String, dynamic>,
   all: (json['all'] as List<dynamic>).map((e) => e as String).toList(),
 );
 
 Map<String, dynamic> _$ProxiesDataToJson(_ProxiesData instance) =>
-    <String, dynamic>{'proxies': instance.proxies, 'all': instance.all};
+    <String, dynamic>{
+      'tailscale-revision': instance.tailscaleRevision,
+      'proxies': instance.proxies,
+      'all': instance.all,
+    };

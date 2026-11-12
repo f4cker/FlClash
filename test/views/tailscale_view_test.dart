@@ -42,6 +42,15 @@ import 'tailscale_fixtures.dart';
 
 class _MockCore extends Mock implements CoreHandlerInterface {}
 
+class _TrackingProxiesAction extends ProxiesAction {
+  static int refreshes = 0;
+
+  @override
+  void updateGroupsDebounce([Duration? duration]) {
+    refreshes++;
+  }
+}
+
 const _size = Size(1100, 1400);
 
 void main() {
@@ -61,9 +70,11 @@ void main() {
     core = _MockCore();
     opened = [];
     browserOpens = true;
+    _TrackingProxiesAction.refreshes = 0;
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
+        proxiesActionProvider.overrideWith(_TrackingProxiesAction.new),
         currentProfileProvider.overrideWithValue(tsProfile),
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
       ],
@@ -931,6 +942,16 @@ void main() {
 
         expect(find.text('不再使用出口节点？'), findsOneWidget);
         expect(find.textContaining('→', findRichText: true), findsNothing);
+        await tester.tap(find.text('不使用出口节点').last);
+        await settle(tester);
+        verify(
+          () => core.setTailscalePrefs(
+            any(),
+            exitNode: '',
+            exitLabel: any(named: 'exitLabel'),
+          ),
+        ).called(1);
+        expect(_TrackingProxiesAction.refreshes, 1);
         await teardownView(tester);
       });
     });

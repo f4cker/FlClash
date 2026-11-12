@@ -240,6 +240,7 @@ class TailscaleExitParent {
 /// The exit group as the running config holds it, read back from the Core.
 class TailscaleExitReport {
   const TailscaleExitReport({
+    this.revision = 0,
     required this.profileId,
     required this.state,
     this.group = '',
@@ -249,7 +250,8 @@ class TailscaleExitReport {
   });
 
   const TailscaleExitReport.readFailed(this.profileId)
-    : state = TailscaleRuntimeState.readFailed,
+    : revision = 0,
+      state = TailscaleRuntimeState.readFailed,
       group = '',
       selected = '',
       parents = const [],
@@ -257,6 +259,7 @@ class TailscaleExitReport {
 
   factory TailscaleExitReport.fromJson(Map<String, Object?> json) =>
       TailscaleExitReport(
+        revision: json['revision'] as int? ?? 0,
         profileId: json['profile-id'] as int? ?? 0,
         state: TailscaleRuntimeState.of(json['state'] as String? ?? ''),
         group: json['group'] as String? ?? '',
@@ -275,6 +278,7 @@ class TailscaleExitReport {
         ],
       );
 
+  final int revision;
   final int profileId;
   final TailscaleRuntimeState state;
 

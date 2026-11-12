@@ -415,8 +415,9 @@ type ExternalProvider struct {
 }
 
 type ProxiesData struct {
-	Proxies map[string]any `json:"proxies"`
-	All     []string       `json:"all"`
+	TailscaleRevision uint64         `json:"tailscale-revision"`
+	Proxies           map[string]any `json:"proxies"`
+	All               []string       `json:"all"`
 }
 
 type nodeView struct {

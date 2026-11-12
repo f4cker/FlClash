@@ -3,6 +3,7 @@
 package core
 
 import (
+	"encoding/json"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/metacubex/mihomo/adapter/outbound"
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/config"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/tunnel"
 )
@@ -148,6 +150,173 @@ func TestTailscaleExitGroupJoinsEveryManualGroupLast(t *testing.T) {
 	}
 }
 
+func assertExitProxyViews(t *testing.T, active bool, members ...string) {
+	t.Helper()
+	rt := runningTailscaleExit()
+	data := handleGetProxies()
+	report, err := handleTailscaleExit(TailscaleRoutesParams{ProfileID: tailscaleProfileID()})
+	if err != nil || report.Revision != data.TailscaleRevision || report.Revision == 0 {
+		t.Fatalf("incoherent exit snapshot: proxies=%d report=%+v err=%v", data.TailscaleRevision, report, err)
+	}
+	if got := slices.Contains(data.All, rt.name); got != active {
+		t.Errorf("listed exit group = %v, want %v", got, active)
+	}
+	if _, got := data.Proxies[rt.name]; got != active {
+		t.Errorf("exit group view = %v, want %v", got, active)
+	}
+	if !slices.Contains(data.All, tailscaleExitGroupBase) || data.Proxies[tailscaleExitGroupBase] == nil {
+		t.Error("the same-name user-authored group disappeared")
+	}
+	for _, account := range rt.accounts {
+		_, got := data.Proxies[account.memberName()]
+		if want := slices.Contains(members, account.memberName()); got != want {
+			t.Errorf("member %s view = %v, want %v", account.id, got, want)
+		}
+	}
+	for name, proxy := range tunnel.Proxies() {
+		parent, ok := adapterAs[*outboundgroup.Selector](proxy)
+		if !ok || proxy == rt.group || isBuiltInGlobal(proxy) {
+			continue
+		}
+		if got := slices.Contains(parent.RuntimeProxies(), rt.group); got != active {
+			t.Errorf("%s runtime candidate = %v, want %v", name, got, active)
+		}
+		encoded, err := json.Marshal(data.Proxies[name])
+		if err != nil {
+			t.Fatal(err)
+		}
+		var view struct {
+			All []string `json:"all"`
+		}
+		if err := json.Unmarshal(encoded, &view); err != nil {
+			t.Fatal(err)
+		}
+		if got := slices.Contains(view.All, rt.name); got != active {
+			t.Errorf("%s visible candidate = %v, want %v", name, got, active)
+		}
+	}
+	for source, proxies := range map[string]map[string]C.Proxy{
+		"tunnel": tunnel.Proxies(),
+		"all":    tunnel.AllProxies(),
+		"config": currentConfig.Proxies,
+	} {
+		if got := proxies[rt.name] == rt.group; got != active {
+			t.Errorf("%s registry contains runtime group = %v, want %v", source, got, active)
+		}
+	}
+}
+
+func TestTailscaleExitProxyViewsFollowConfiguredExits(t *testing.T) {
+	resetTailscaleExit(t)
+	applyManagedProfileText(t, exitTestProfile, exitSetup(map[string]string{"a1": "100.64.0.9", "b2": "100.64.0.7"}))
+	rt := runningTailscaleExit()
+	before := config.GetProxyNameList()
+	config.SetProxyNameList(append(slices.Clone(before), rt.name))
+	t.Cleanup(func() { config.SetProxyNameList(before) })
+	parent := tunnel.Proxies()["国际媒体"].Adapter().(*outboundgroup.Selector)
+	parent.ForceSet(rt.name)
+	assertExitProxyViews(t, true, "exit-a1 · a1@example.com", "exit-b2 · b2@example.com")
+
+	t.Run("unavailable is not disabled", func(t *testing.T) {
+		report, err := handleTailscaleExit(TailscaleRoutesParams{ProfileID: 7})
+		if err != nil || report.Accounts[0].State != tailscaleExitUnavailable {
+			t.Fatalf("unavailable report = %+v, %v", report, err)
+		}
+		assertExitProxyViews(t, true, "exit-a1 · a1@example.com", "exit-b2 · b2@example.com")
+		if parent.Now() != rt.name {
+			t.Fatal("unavailability moved a valid parent selection")
+		}
+	})
+	off := ""
+	tailscaleExitPrefsChanged(managedNode(t, "b2"), &off, nil, tailscaleOutcomeApplied)
+	assertExitProxyViews(t, true, "exit-a1 · a1@example.com")
+	if parent.Now() != rt.name {
+		t.Fatal("disabling one of two exits moved a valid parent selection")
+	}
+	a1 := managedNode(t, "a1")
+	registered := tunnel.AllProxies()
+	tailscaleExitPrefsChanged(a1, &off, nil, tailscaleOutcomeFailed)
+	assertExitProxyViews(t, true, "exit-a1 · a1@example.com")
+	tailscaleExitPrefsChanged(a1, &off, nil, tailscaleOutcomeNotRunning)
+	assertExitProxyViews(t, false)
+	if registered[rt.name] != rt.group {
+		t.Fatal("OFF mutated a published proxy map")
+	}
+	if parent.Now() != "香港策略" {
+		t.Fatalf("final OFF selected %q", parent.Now())
+	}
+	exit := "100.64.0.9"
+	tailscaleExitPrefsChanged(a1, &exit, nil, tailscaleOutcomeApplied)
+	assertExitProxyViews(t, true, "exit-a1 · a1@example.com")
+	if runningTailscaleExit() != rt || parent.Now() != "香港策略" {
+		t.Fatal("re-enabling replaced the runtime or restored a stale parent selection")
+	}
+}
+
+func TestTailscaleExitClosedSetupDoesNotRestoreStaleSelections(t *testing.T) {
+	resetTailscaleExit(t)
+	applyManagedProfileText(t, exitTestProfile, exitSetup(map[string]string{"a1": "100.64.0.9"}))
+	old := managedNode(t, "a1")
+	const exit = "Tailscale 出口 (Flash)"
+	if err := applyConfig(&SetupParams{Tailscale: exitSetup(nil), SelectedMap: map[string]string{
+		"国际媒体": exit,
+		"仅日本":  exit,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	assertExitProxyViews(t, false)
+	value := "100.64.0.9"
+	tailscaleExitPrefsChanged(old, &value, nil, tailscaleOutcomeApplied)
+	assertExitProxyViews(t, false)
+	fresh := managedNode(t, "a1")
+	tailscaleExitPrefsChanged(fresh, &value, nil, tailscaleOutcomeApplied)
+	for group, want := range map[string]string{"国际媒体": "香港策略", "仅日本": "COMPATIBLE"} {
+		if got := tunnel.Proxies()[group].Adapter().(outboundgroup.ProxyGroup).Now(); got != want {
+			t.Errorf("%s restored stale selection %q, want %q", group, got, want)
+		}
+	}
+	off := ""
+	tailscaleExitPrefsChanged(fresh, &off, nil, tailscaleOutcomeUnknown)
+	assertExitProxyViews(t, true, runningTailscaleExit().accounts[0].memberName())
+	tailscaleExitPrefsChanged(fresh, &off, nil, tailscaleOutcomeApplied)
+	tailscaleExitPrefsChanged(fresh, &off, nil, tailscaleOutcomeApplied)
+	assertExitProxyViews(t, false)
+}
+
+func TestTailscaleExitRemovalAndProfileSwitch(t *testing.T) {
+	resetTailscaleExit(t)
+	setup := exitSetup(map[string]string{"a1": "100.64.0.9", "b2": "100.64.0.7"})
+	applyManagedProfileText(t, exitTestProfile, setup)
+	const exit = "Tailscale 出口 (Flash)"
+	old := managedNode(t, "a1")
+	setup.Managed = setup.Managed[1:]
+	if err := applyConfig(&SetupParams{Tailscale: setup, SelectedMap: map[string]string{"国际媒体": exit}}); err != nil {
+		t.Fatal(err)
+	}
+	assertExitProxyViews(t, true, "exit-b2 · b2@example.com")
+	if now := tunnel.Proxies()["国际媒体"].Adapter().(outboundgroup.ProxyGroup).Now(); now != exit {
+		t.Fatalf("removing one account moved shared selection to %q", now)
+	}
+	other := exitSetup(nil)
+	other.ProfileID = 8
+	if err := applyConfig(&SetupParams{Tailscale: other}); err != nil {
+		t.Fatal(err)
+	}
+	value := "100.64.0.9"
+	tailscaleExitPrefsChanged(old, &value, nil, tailscaleOutcomeApplied)
+	assertExitProxyViews(t, false)
+	if report, _ := handleTailscaleExit(TailscaleRoutesParams{ProfileID: 7}); report.State != tailscaleRuntimeOtherProfile {
+		t.Fatalf("old profile report = %+v", report)
+	}
+	if err := applyConfig(&SetupParams{Tailscale: &TailscaleSetup{ProfileID: 8}}); err != nil {
+		t.Fatal(err)
+	}
+	data := handleGetProxies()
+	if slices.Contains(data.All, exit) || data.Proxies[exit] != nil || runningTailscaleExit() != nil {
+		t.Fatal("removing the last attached account kept the generated group")
+	}
+}
+
 func TestTailscaleExitGroupStaysAwayWithoutAnExit(t *testing.T) {
 	resetTailscaleExit(t)
 	applyManagedProfileText(t, exitTestProfile, exitSetup(nil))
@@ -275,7 +444,7 @@ func TestTailscaleExitTurnedOffFallsBackToTheFirstOption(t *testing.T) {
 	expect("all off", map[string]string{"国际媒体": "香港策略", "隐藏": "DIRECT", "仅日本": "COMPATIBLE", "全球手动": "US 01"})
 	a1Exit, a1Label := "100.64.0.9", "exit-a1 · a1@example.com"
 	tailscaleExitPrefsChanged(a1, &a1Exit, &a1Label, tailscaleOutcomeApplied)
-	expect("a1 back", map[string]string{"国际媒体": "香港策略", "隐藏": "DIRECT", "全球手动": "US 01"})
+	expect("a1 back", map[string]string{"国际媒体": "香港策略", "隐藏": "DIRECT", "仅日本": "COMPATIBLE", "全球手动": "US 01"})
 }
 
 // The exit group reaches Tailscale nodes, but a rule's group that offers it

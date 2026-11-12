@@ -176,6 +176,7 @@ func applyConfig(params *SetupParams) error {
 			return mountRejected(err, mountOutcomeKept)
 		}
 	}
+	clearTailscaleExit()
 	applyOptions(params.Options)
 	setTailscaleSetup(params.Tailscale)
 	replaced := tailscaleGenerationMark()
