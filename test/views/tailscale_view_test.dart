@@ -699,6 +699,26 @@ void main() {
       await teardownView(tester);
     });
 
+    testWidgets('an online device dot is system green, an offline one grey', (
+      tester,
+    ) async {
+      serve([tsConnectedNode], tsConnectedStatus());
+      await pumpPanel(tester);
+
+      final dots = tester
+          .widgetList<Container>(find.byType(Container))
+          .map((box) => box.decoration)
+          .whereType<ShapeDecoration>()
+          .where((shape) => shape.shape is CircleBorder)
+          .map((shape) => shape.color)
+          .toList();
+      final context = tester.element(find.byType(TailscaleView));
+      expect(dots, hasLength(4));
+      expect(dots.where((c) => c == const Color(0xFF34C759)), hasLength(3));
+      expect(dots.where((c) => c == context.colorScheme.outline), hasLength(1));
+      await teardownView(tester);
+    });
+
     testWidgets('the owner filter and its empty result', (tester) async {
       serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
       await pumpPanel(tester);

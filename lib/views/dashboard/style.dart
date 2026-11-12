@@ -13,6 +13,7 @@ class DashboardColors {
     required this.thumb,
     required this.series2,
     required this.ok,
+    required this.online,
     required this.okContainer,
     required this.onOkContainer,
     required this.warn,
@@ -35,6 +36,9 @@ class DashboardColors {
         card,
       ),
       ok: colorScheme.success,
+      online: Color(
+        colorScheme.brightness == Brightness.dark ? 0xFF30D158 : 0xFF34C759,
+      ),
       okContainer: colorScheme.successContainer,
       onOkContainer: colorScheme.onSuccessContainer,
       warn: colorScheme.warning,
@@ -53,6 +57,9 @@ class DashboardColors {
   final Color thumb;
   final Color series2;
   final Color ok;
+
+  /// iOS 27's systemGreen, for a presence dot that reads as live.
+  final Color online;
   final Color okContainer;
   final Color onOkContainer;
   final Color warn;

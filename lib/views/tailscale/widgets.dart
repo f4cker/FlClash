@@ -315,7 +315,7 @@ class TailscaleAccountPill extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final colors = DashboardColors.of(context);
     final dot = switch (tone) {
-      DashboardChipTone.ok => colors.ok,
+      DashboardChipTone.ok => colors.online,
       DashboardChipTone.warn => colors.warn,
       DashboardChipTone.error => colorScheme.error,
       DashboardChipTone.idle => colorScheme.outline,

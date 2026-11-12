@@ -2,6 +2,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -186,6 +187,9 @@ class TailscaleDeviceCard extends StatelessWidget {
                         label: chipLabel,
                         tone: chipTone,
                         dot: !busyChip,
+                        dotColor: chipTone == DashboardChipTone.ok
+                            ? DashboardColors.of(context).online
+                            : null,
                       ),
                     ],
                   ),

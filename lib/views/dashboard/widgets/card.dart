@@ -439,12 +439,14 @@ class DashboardChip extends StatelessWidget {
     required this.label,
     this.tone = DashboardChipTone.idle,
     this.dot = false,
+    this.dotColor,
     this.large = false,
   });
 
   final String label;
   final DashboardChipTone tone;
   final bool dot;
+  final Color? dotColor;
   final bool large;
 
   @override
@@ -471,7 +473,7 @@ class DashboardChip extends StatelessWidget {
           if (dot)
             DecoratedBox(
               decoration: ShapeDecoration(
-                color: foreground,
+                color: dotColor ?? foreground,
                 shape: AppShape.circle,
               ),
               child: const SizedBox.square(dimension: 6),

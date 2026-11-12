@@ -762,9 +762,7 @@ class _DeviceRow extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: ShapeDecoration(
-                    color: peer.online
-                        ? colors.onOkContainer
-                        : colorScheme.outline,
+                    color: peer.online ? colors.online : colorScheme.outline,
                     shape: CircleBorder(
                       side: BorderSide(color: colors.card, width: 2),
                     ),
