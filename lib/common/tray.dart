@@ -59,18 +59,14 @@ class AppTray implements TrayPort {
     required bool tunEnable,
     required bool safeMode,
     bool monochrome = true,
+    Mode mode = Mode.rule,
   }) {
-    final status = switch ((
-      safeMode,
-      _isTemplate(monochrome) || !isStart,
-      tunEnable,
-    )) {
-      (true, _, _) => 4,
-      (false, true, _) => 1,
-      (false, false, false) => 2,
-      (false, false, true) => 3,
-    };
-    return '${_trayIconDir(monochrome)}/status_$status.$_trayIconSuffix';
+    final name = safeMode
+        ? 'status_4'
+        : !isStart
+        ? 'stopped'
+        : '${mode.name}${!_isTemplate(monochrome) && tunEnable ? '_tun' : ''}';
+    return '${_trayIconDir(monochrome)}/$name.$_trayIconSuffix';
   }
 
   @override
@@ -101,6 +97,7 @@ class AppTray implements TrayPort {
             tunEnable: trayState.tunEnable,
             safeMode: trayState.safeMode,
             monochrome: trayState.monochromeTrayIcon,
+            mode: trayState.mode,
           ),
           isTemplate: _isTemplate(trayState.monochromeTrayIcon),
           size: isMacOS ? 18 : 16,

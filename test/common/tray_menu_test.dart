@@ -252,13 +252,28 @@ void main() {
     expect(
       base['bytes'],
       base64Encode(
-        File('assets/images/tray/unix/status_3.png').readAsBytesSync(),
+        File('assets/images/tray/unix/rule_tun.png').readAsBytesSync(),
       ),
     );
     expect(
       _item(showCall(), currentAppLocalizations.monochromeIcon)['checked'],
       isFalse,
     );
+  });
+
+  test('changing the running mode immediately sends its new icon', () async {
+    for (final mode in Mode.values) {
+      calls.clear();
+      await update(_trayState(isStart: true, mode: mode));
+      final arguments = showCall()!.arguments as Map;
+      final reps = ((arguments['icon'] as Map)['reps'] as List).cast<Map>();
+      expect(
+        reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
+        base64Encode(
+          File('assets/images/tray/macos/${mode.name}.png').readAsBytesSync(),
+        ),
+      );
+    }
   });
 
   test('skips the platform call when the tray state is unchanged', () async {
