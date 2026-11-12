@@ -320,7 +320,8 @@ func mountDialerViolation(proxies map[string]constant.Proxy, providers map[strin
 }
 
 // The first mounted node a connection through name may take: a member, at
-// any depth, or one down a member's or name's own dialer-proxy chain.
+// any depth, or one down a member's or name's own dialer-proxy chain. A
+// mount provider a group uses counts before its nodes have loaded.
 func mountedMemberOf(proxies map[string]constant.Proxy, name string, seen map[string]bool) string {
 	proxy, ok := proxies[name]
 	if !ok || seen[name] {
@@ -341,6 +342,11 @@ func mountedMemberOf(proxies map[string]constant.Proxy, name string, seen map[st
 		}
 		if found := mountedMemberOf(proxies, next, seen); found != "" {
 			return found
+		}
+	}
+	for _, provider := range group.Providers() {
+		if flashguard.IsMountProvider(provider.Name()) {
+			return provider.Name()
 		}
 	}
 	return ""

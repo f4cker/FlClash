@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"net/netip"
 	"slices"
 	"strconv"
@@ -485,6 +487,56 @@ func TestHopSessionsOnAMountedNodeAreRefusedAndFoundBeforeRunning(t *testing.T) 
 	}
 	if !mount.empty() {
 		t.Error("the held config reached the mount egress")
+	}
+}
+
+// Applied from elsewhere while the mount provider still loads, it is held all the same.
+func TestAHopThroughAMountStillLoadingIsHeld(t *testing.T) {
+	withMountHome(t)
+	mount := newSocksRecorder(t, hopMountServer)
+	base := newSocksRecorder(t, "")
+	requested, release := make(chan struct{}, 1), make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case requested <- struct{}{}:
+		default:
+		}
+		select {
+		case <-release:
+		case <-r.Context().Done():
+			return
+		}
+		_, _ = io.WriteString(w, hopMountSource)
+	}))
+	t.Cleanup(server.Close)
+	var once sync.Once
+	t.Cleanup(func() { once.Do(func() { close(release) }) })
+	profile := hopConfig(hopProfile, mount, base, "{name: 节点选择, type: select, use: [flash-mount-1]}") +
+		"proxy-providers:\n  flash-mount-1: {type: http, url: '" + server.URL + "/m.yaml', proxy: DIRECT, interval: 0}\n"
+	profile = strings.Replace(profile, "{name: Auto, type: select, include-all-providers: true}", "{name: Auto, type: select, proxies: [base1]}", 1)
+
+	applyFromElsewhere(t, profile)
+	running := tunnel.Status() == tunnel.Running
+	select {
+	case <-requested:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the mount provider was never fetched")
+	}
+	if running {
+		t.Error("a config whose hop dials through a mount still loading runs")
+	}
+	once.Do(func() { close(release) })
+	waitUntil(t, "m1 loaded", func() bool { return slices.Contains(runningMembers(t, "节点选择"), "m1") })
+	for _, hop := range []string{"mux-home", "wg-home", "hy-home"} {
+		for _, target := range []string{guardOrdinary, "100.100.1.1:22"} {
+			if tcpThrough(t, target, hop, time.Second) {
+				t.Errorf("%s carried a connection to %s", hop, target)
+			}
+		}
+	}
+	time.Sleep(300 * time.Millisecond)
+	if servers, targets, packets := mount.seen(); len(servers)+len(targets)+len(packets) > 0 {
+		t.Errorf("the mounted node's egress saw servers %v, targets %v, packets %v", servers, targets, packets)
 	}
 }
 
