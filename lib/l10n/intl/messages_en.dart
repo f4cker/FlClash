@@ -3145,6 +3145,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "View existing account",
     ),
     "tsViewerNode": m163,
+    "tsViewerNone": MessageLookupByLibrary.simpleMessage(
+      "Tailscale · No rules added by Flash in this profile",
+    ),
     "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
       "Tailscale · Could not read runtime information",
     ),

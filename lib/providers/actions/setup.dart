@@ -770,14 +770,9 @@ class SetupAction extends _$SetupAction {
     return '';
   }
 
-  /// Only the profile the Core runs has Flash's Tailscale rules in force.
+  /// Always asks the Core, so a profile without Flash's rules says so too.
   Future<String> _annotateTailscale(int profileId, String yaml) async {
     final setup = ref.read(tailscaleSetupProvider);
-    if (setup == null ||
-        setup.profileId != profileId ||
-        setup.managed.isEmpty && !setup.managedUnknown) {
-      return yaml;
-    }
     TailscaleRuntimeRules runtime;
     try {
       runtime = await _core.getTailscaleRuntimeRules(profileId);

@@ -12946,6 +12946,16 @@ class AppLocalizations {
     );
   }
 
+  /// `Tailscale · No rules added by Flash in this profile`
+  String get tsViewerNone {
+    return Intl.message(
+      'Tailscale · No rules added by Flash in this profile',
+      name: 'tsViewerNone',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Matching node names use the subscription name`
   String get mountSameNameShort {
     return Intl.message(

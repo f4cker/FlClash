@@ -133,19 +133,47 @@ void main() {
     expect(strip(text), yaml);
   });
 
-  test('no attached account adds nothing', () {
-    for (final state in [
-      TailscaleRuntimeState.none,
-      TailscaleRuntimeState.otherProfile,
+  test('no attached account, another profile or no rules say so once', () {
+    for (final runtime in [
+      const TailscaleRuntimeRules(
+        profileId: 7,
+        state: TailscaleRuntimeState.none,
+      ),
+      const TailscaleRuntimeRules(
+        profileId: 7,
+        state: TailscaleRuntimeState.otherProfile,
+      ),
+      TailscaleRuntimeRules(
+        profileId: 7,
+        state: TailscaleRuntimeState.confirmed,
+        revision: tailscaleRuntimeRevisionOf(setup),
+      ),
     ]) {
-      final text = annotateTailscaleRuntime(
-        yaml,
-        TailscaleRuntimeRules(profileId: 7, state: state),
-        setup,
-        zh,
+      final text = annotateTailscaleRuntime(yaml, runtime, setup, zh);
+      expect(
+        text,
+        contains('rules:\n  # Tailscale · 当前配置没有 Flash 添加的规则\n  - DOMAIN'),
       );
-      expect(text, yaml);
+      expect(RegExp('Tailscale').allMatches(text), hasLength(1));
+      expect(strip(text), yaml);
     }
+  });
+
+  test('English says a profile has no Flash rules', () async {
+    final en = await AppLocalizations.load(const Locale('en'));
+    final text = annotateTailscaleRuntime(
+      yaml,
+      const TailscaleRuntimeRules(
+        profileId: 7,
+        state: TailscaleRuntimeState.none,
+      ),
+      null,
+      en,
+    );
+    expect(
+      text,
+      contains('  # Tailscale · No rules added by Flash in this profile\n'),
+    );
   });
 
   test('flow sections get the notes on the next lines', () {

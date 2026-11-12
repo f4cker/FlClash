@@ -1973,6 +1973,12 @@ void main() {
         await built.writeAsString('proxies: []\n');
         return built.path;
       });
+      when(() => core.getTailscaleRuntimeRules(profile.id)).thenAnswer(
+        (_) async => TailscaleRuntimeRules(
+          profileId: profile.id,
+          state: TailscaleRuntimeState.none,
+        ),
+      );
       final scoped = ProviderContainer(
         overrides: [
           profilesProvider.overrideWith(() => TestProfiles([profile])),
@@ -1991,7 +1997,7 @@ void main() {
           .getProfileWithId(profile.id);
 
       verifyNever(() => core.readConfig(any()));
-      expect(yaml, 'proxies: []\n');
+      expect(yaml, 'proxies: []\n\n# ${currentAppLocalizations.tsViewerNone}');
       expect(built.existsSync(), isFalse);
     });
 
@@ -2079,6 +2085,12 @@ void main() {
         await built.writeAsString('proxies: [base]\n');
         return built.path;
       });
+      when(() => core.getTailscaleRuntimeRules(profile.id)).thenAnswer(
+        (_) async => TailscaleRuntimeRules(
+          profileId: profile.id,
+          state: TailscaleRuntimeState.none,
+        ),
+      );
       final scoped = ProviderContainer(
         overrides: [
           profilesProvider.overrideWith(() => TestProfiles([profile])),
@@ -2098,7 +2110,10 @@ void main() {
           .read(setupActionProvider.notifier)
           .getProfileWithId(profile.id);
 
-      expect(yaml, 'proxies: [base]\n');
+      expect(
+        yaml,
+        'proxies: [base]\n\n# ${currentAppLocalizations.tsViewerNone}',
+      );
     });
 
     for (final (revision, found) in [('r', true), ('r0', false)]) {
