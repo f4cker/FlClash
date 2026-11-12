@@ -529,27 +529,26 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     final report = peer == null && node.managed
         ? await _readExitGroup(node.profileId)
         : null;
-    final affected = report?.affectedWithout(node.managedId) ?? const [];
+    final plan =
+        report?.offPlanOf(node.managedId) ?? const TailscaleExitOffPlan();
     if (!mounted) {
       return;
     }
-    if (affected.isNotEmpty) {
-      final choice = await dialogs.showCommonDialog<TailscaleExitOffChoice>(
-        child: TailscaleExitOffDialog(group: report!.group, affected: affected),
+    if (!plan.isEmpty) {
+      final appLocalizations = context.appLocalizations;
+      final confirmed = await dialogs.showMessage(
+        title: appLocalizations.tsExitOffAffectedTitle,
+        confirmText: appLocalizations.tsExitTurnOff,
+        width: tailscaleExitOffDialogWidth,
+        body: TailscaleExitOffRows(group: report!.group, plan: plan),
       );
-      switch (choice) {
-        case TailscaleExitOffChoice.openProxies:
-          _openProxiesAt(
-            affected.firstWhere((parent) => parent.replacement == null).name,
-          );
-        case TailscaleExitOffChoice.turnOff:
-          final notice = await _applyExit(node, null);
-          if (notice == TailscaleSettingNotice.updated ||
-              notice == TailscaleSettingNotice.saved) {
-            _keepReplacements(affected);
-          }
-        case null:
-          break;
+      if (confirmed != true) {
+        return;
+      }
+      final notice = await _applyExit(node, null);
+      if (notice == TailscaleSettingNotice.updated ||
+          notice == TailscaleSettingNotice.saved) {
+        _keepFallbacks(report.group, plan);
       }
       return;
     }
@@ -589,21 +588,22 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     }
   }
 
-  void _openProxiesAt(String groupName) {
-    ref.read(proxiesActionProvider.notifier)
-      ..updateCurrentGroupName(groupName)
-      ..updateCurrentUnfoldSet({...ref.read(unfoldSetProvider), groupName});
-    ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.proxies);
-  }
-
-  /// The groups keep the option the dialog showed, also past the next apply.
-  void _keepReplacements(List<TailscaleExitParent> affected) {
-    final profiles = ref.read(profilesActionProvider.notifier);
-    for (final parent in affected) {
-      if (parent.replacement case final replacement?) {
-        profiles.updateCurrentSelectedMap(parent.name, replacement);
-      }
+  /// Kept past the next apply; the groups are read back from the Core.
+  void _keepFallbacks(String group, TailscaleExitOffPlan plan) {
+    ref.read(profilesActionProvider.notifier).updateCurrentSelections({
+      if (plan.groupMove case final next?) ...{
+        group: next.member,
+        tailscaleExitSelectionKey: next.id,
+      },
+      for (final move in plan.moves) move.group: move.to,
+    });
+    for (final name in plan.empty) {
+      commonPrint.log(
+        'tailscale exit off: $name has no option left',
+        logLevel: LogLevel.warning,
+      );
     }
+    ref.read(proxiesActionProvider.notifier).updateGroupsDebounce();
   }
 
   Future<TailscaleSettingNotice> _applyExit(

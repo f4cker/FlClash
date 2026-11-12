@@ -7743,7 +7743,8 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one:
+          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -12995,21 +12996,11 @@ class AppLocalizations {
     );
   }
 
-  /// `Select “Tailscale exit” on the Proxies page to use this exit node for a policy.`
+  /// `Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.`
   String get tsExitHowTo {
     return Intl.message(
-      'Select “Tailscale exit” on the Proxies page to use this exit node for a policy.',
+      'Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.',
       name: 'tsExitHowTo',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Enabling an exit node adds “Tailscale exit” as an option in all manual policy groups, not in latency-test or fallback groups. Existing selections stay unchanged. Only traffic actually using it goes through this exit node; your Mac’s default exit stays unchanged.`
-  String get tsExitGroupTip {
-    return Intl.message(
-      'Enabling an exit node adds “Tailscale exit” as an option in all manual policy groups, not in latency-test or fallback groups. Existing selections stay unchanged. Only traffic actually using it goes through this exit node; your Mac’s default exit stays unchanged.',
-      name: 'tsExitGroupTip',
       desc: '',
       args: [],
     );
@@ -13107,43 +13098,13 @@ class AppLocalizations {
     );
   }
 
-  /// `These policies are using “{group}”. Turning it off will switch them to the options listed below.`
+  /// `Turning off the exit node switches policies using “{group}” to the first option in each group.`
   String tsExitOffAffectedBody(Object group) {
     return Intl.message(
-      'These policies are using “$group”. Turning it off will switch them to the options listed below.',
+      'Turning off the exit node switches policies using “$group” to the first option in each group.',
       name: 'tsExitOffAffectedBody',
       desc: '',
       args: [group],
-    );
-  }
-
-  /// `Choose another option for these policies on the Proxies page before turning off the exit node.`
-  String get tsExitOffRepickBody {
-    return Intl.message(
-      'Choose another option for these policies on the Proxies page before turning off the exit node.',
-      name: 'tsExitOffRepickBody',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Choose another option first`
-  String get tsExitRepickFirst {
-    return Intl.message(
-      'Choose another option first',
-      name: 'tsExitRepickFirst',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Open Proxies`
-  String get tsExitOpenProxies {
-    return Intl.message(
-      'Open Proxies',
-      name: 'tsExitOpenProxies',
-      desc: '',
-      args: [],
     );
   }
 
@@ -13152,6 +13113,16 @@ class AppLocalizations {
     return Intl.message(
       'Turn off exit node',
       name: 'tsExitTurnOff',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No option left`
+  String get tsExitOffNoOption {
+    return Intl.message(
+      'No option left',
+      name: 'tsExitOffNoOption',
       desc: '',
       args: [],
     );

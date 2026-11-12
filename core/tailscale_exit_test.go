@@ -224,6 +224,60 @@ func TestTailscaleExitSelectionsFollowTheAccount(t *testing.T) {
 	}
 }
 
+// Turning an exit off moves only the choices it leaves invalid, each to the
+// first option its group has left; an unavailable exit moves nothing.
+func TestTailscaleExitTurnedOffFallsBackToTheFirstOption(t *testing.T) {
+	resetTailscaleExit(t)
+	setup := exitSetup(map[string]string{"a1": "100.64.0.9", "b2": "100.64.0.7"})
+	applyManagedProfileText(t, exitTestProfile, setup)
+	const exit = "Tailscale 出口 (Flash)"
+	if err := applyConfig(&SetupParams{Tailscale: setup, SelectedMap: map[string]string{
+		"国际媒体":                    exit,
+		"隐藏":                      exit,
+		"仅日本":                     exit,
+		"全球手动":                    "US 01",
+		tailscaleExitSelectionKey: "b2",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	now := func(name string) string {
+		return tunnel.Proxies()[name].Adapter().(outboundgroup.ProxyGroup).Now()
+	}
+	expect := func(step string, want map[string]string) {
+		t.Helper()
+		for group, choice := range want {
+			if got := now(group); got != choice {
+				t.Errorf("%s: %s uses %q, want %q", step, group, got, choice)
+			}
+		}
+	}
+	onExit := map[string]string{"国际媒体": exit, "隐藏": exit, "仅日本": exit, "全球手动": "US 01"}
+
+	if _, err := handleTailscaleExit(TailscaleRoutesParams{ProfileID: 7}); err != nil {
+		t.Fatal(err)
+	}
+	expect("unavailable", onExit)
+
+	a1, b2 := managedNode(t, "a1"), managedNode(t, "b2")
+	off, b2Exit, b2Label := "", "100.64.0.7", "exit-b2 · b2@example.com"
+	tailscaleExitPrefsChanged(b2, &off, nil, tailscaleOutcomeApplied)
+	expect("b2 off", onExit)
+	if got := now(exit); got != "exit-a1 · a1@example.com" {
+		t.Fatalf("with b2 off the exit group uses %q", got)
+	}
+	tailscaleExitPrefsChanged(b2, &b2Exit, &b2Label, tailscaleOutcomeApplied)
+	if got := now(exit); got != "exit-a1 · a1@example.com" {
+		t.Fatalf("b2 back took the exit group's choice: %q", got)
+	}
+	tailscaleExitPrefsChanged(b2, &off, nil, tailscaleOutcomeApplied)
+
+	tailscaleExitPrefsChanged(a1, &off, nil, tailscaleOutcomeApplied)
+	expect("all off", map[string]string{"国际媒体": "香港策略", "隐藏": "DIRECT", "仅日本": "COMPATIBLE", "全球手动": "US 01"})
+	a1Exit, a1Label := "100.64.0.9", "exit-a1 · a1@example.com"
+	tailscaleExitPrefsChanged(a1, &a1Exit, &a1Label, tailscaleOutcomeApplied)
+	expect("a1 back", map[string]string{"国际媒体": "香港策略", "隐藏": "DIRECT", "全球手动": "US 01"})
+}
+
 // The exit group reaches Tailscale nodes, but a rule's group that offers it
 // claims no tailnet target and takes no fewer mounts.
 func TestTailscaleExitGroupLeavesOwnershipAndMountsAlone(t *testing.T) {

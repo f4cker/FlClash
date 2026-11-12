@@ -290,6 +290,10 @@ func tailscaleExitPrefsChanged(t *outbound.Tailscale, exitNode, label *string, o
 	selectMu.Lock()
 	defer selectMu.Unlock()
 	now := rt.selector.Now()
+	var using []*outboundgroup.Selector
+	if !expected {
+		using = tailscaleExitUsers(rt)
+	}
 	rt.mu.Lock()
 	var changed *tailscaleExitAccount
 	for _, account := range rt.accounts {
@@ -310,8 +314,33 @@ func tailscaleExitPrefsChanged(t *outbound.Tailscale, exitNode, label *string, o
 	rt.renameLocked()
 	after := changed.memberName()
 	rt.mu.Unlock()
-	if selected && after != before {
+	switch {
+	case !rt.active.Load():
+		for _, parent := range using {
+			settleTailscaleExitChoice(parent)
+		}
+	case selected && !expected:
+		settleTailscaleExitChoice(rt.selector)
+	case selected && after != before:
 		rt.selector.ForceSet(after)
+	}
+}
+
+func tailscaleExitUsers(rt *tailscaleExitRuntime) []*outboundgroup.Selector {
+	var using []*outboundgroup.Selector
+	for _, proxy := range tunnel.Proxies() {
+		parent, ok := adapterAs[*outboundgroup.Selector](proxy)
+		if ok && !isBuiltInGlobal(proxy) && slices.Contains(parent.RuntimeProxies(), rt.group) && parent.Now() == rt.name {
+			using = append(using, parent)
+		}
+	}
+	return using
+}
+
+// A group left with no option but its empty fallback keeps its choice.
+func settleTailscaleExitChoice(group *outboundgroup.Selector) {
+	if first := group.Proxies()[0]; first != group.EmptyFallback() {
+		group.ForceSet(first.Name())
 	}
 }
 

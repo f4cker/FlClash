@@ -7,12 +7,17 @@ class ProfilesAction extends _$ProfilesAction {
   @override
   void build() {}
 
-  void updateCurrentSelectedMap(String groupName, String proxyName) {
+  void updateCurrentSelectedMap(String groupName, String proxyName) =>
+      updateCurrentSelections({groupName: proxyName});
+
+  /// One write for all of [choices], so none is read back stale.
+  void updateCurrentSelections(Map<String, String> choices) {
     final currentProfile = ref.read(currentProfileProvider);
     if (currentProfile != null &&
-        currentProfile.selectedMap[groupName] != proxyName) {
-      final selectedMap = Map<String, String>.from(currentProfile.selectedMap)
-        ..[groupName] = proxyName;
+        choices.entries.any(
+          (choice) => currentProfile.selectedMap[choice.key] != choice.value,
+        )) {
+      final selectedMap = {...currentProfile.selectedMap, ...choices};
       ref
           .read(profilesProvider.notifier)
           .put(currentProfile.copyWith(selectedMap: selectedMap));

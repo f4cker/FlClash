@@ -320,20 +320,49 @@ class TailscaleExitReport {
     );
   }
 
-  /// The groups that would lose the exit group once [accountId] turns its
-  /// exit off: none while another account keeps a node in it.
-  List<TailscaleExitParent> affectedWithout(String accountId) {
-    if (!offered ||
-        accounts.any(
-          (account) => account.id != accountId && account.exitNode.isNotEmpty,
-        )) {
-      return const [];
+  /// Only choices the turn-off leaves invalid move, each to its first option.
+  TailscaleExitOffPlan offPlanOf(String accountId) {
+    if (!offered) {
+      return const TailscaleExitOffPlan();
     }
-    return [
-      for (final parent in parents)
-        if (parent.now == group) parent,
+    final remaining = [
+      for (final account in accounts)
+        if (account.id != accountId && account.exitNode.isNotEmpty) account,
     ];
+    if (remaining.isNotEmpty) {
+      return TailscaleExitOffPlan(
+        groupMove: selected == accountId ? remaining.first : null,
+      );
+    }
+    final using = parents.where((parent) => parent.now == group);
+    return TailscaleExitOffPlan(
+      moves: [
+        for (final parent in using)
+          if (parent.replacement case final to?) (group: parent.name, to: to),
+      ],
+      empty: [
+        for (final parent in using)
+          if (parent.replacement == null) parent.name,
+      ],
+    );
   }
+}
+
+class TailscaleExitOffPlan {
+  const TailscaleExitOffPlan({
+    this.moves = const [],
+    this.empty = const [],
+    this.groupMove,
+  });
+
+  final List<({String group, String to})> moves;
+
+  final List<String> empty;
+
+  /// The exit group's next node when its chosen one goes.
+  final TailscaleExitAccount? groupMove;
+
+  bool get isEmpty => moves.isEmpty && empty.isEmpty && groupMove == null;
 }
 
 /// The exit group's grey note under the proxy groups.

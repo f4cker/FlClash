@@ -330,7 +330,7 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m141(count, group) => "已作为“${group}”加入 ${count} 个手动策略组";
 
-  static String m142(group) => "以下策略正在使用“${group}”。关闭后将改用下方所列选项。";
+  static String m142(group) => "关闭后，正在使用“${group}”的策略将改用各组的第一个选项。";
 
   static String m143(node) => "仅关闭“${node}”的出口转发，不会退出 Tailscale，Flash 的规则不变。";
 
@@ -2116,12 +2116,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsExitGroupNoParents": MessageLookupByLibrary.simpleMessage(
       "当前配置没有可加入的手动策略组",
     ),
-    "tsExitGroupTip": MessageLookupByLibrary.simpleMessage(
-      "开启出口后，“Tailscale 出口”会作为候选加入所有手动策略组，不加入测速或故障转移组。不会自动切换现有选择；只有实际选用它的流量经过此出口，不改整机出口。",
-    ),
     "tsExitGroupUnconfirmed": MessageLookupByLibrary.simpleMessage("出口分组待确认"),
     "tsExitHowTo": MessageLookupByLibrary.simpleMessage(
-      "在代理页选择“Tailscale 出口”，让指定策略使用此出口。",
+      "开启出口不会切换现有选择，只有在代理页选用“Tailscale 出口”的策略才经此出口。",
     ),
     "tsExitNeedsLogin": MessageLookupByLibrary.simpleMessage("需要重新登录此账号"),
     "tsExitNode": MessageLookupByLibrary.simpleMessage("出口节点"),
@@ -2132,13 +2129,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsExitOffAffectedBody": m142,
     "tsExitOffAffectedTitle": MessageLookupByLibrary.simpleMessage("关闭出口节点？"),
     "tsExitOffBody": m143,
-    "tsExitOffRepickBody": MessageLookupByLibrary.simpleMessage(
-      "关闭前，请先在代理页为以下策略改选。",
-    ),
+    "tsExitOffNoOption": MessageLookupByLibrary.simpleMessage("没有剩余选项"),
     "tsExitOffTitle": MessageLookupByLibrary.simpleMessage("不再使用出口节点？"),
-    "tsExitOpenProxies": MessageLookupByLibrary.simpleMessage("前往代理页"),
     "tsExitRefusing": MessageLookupByLibrary.simpleMessage("此出口不可用，选用它的连接会被拒绝"),
-    "tsExitRepickFirst": MessageLookupByLibrary.simpleMessage("需要先改选"),
     "tsExitStale": MessageLookupByLibrary.simpleMessage("请先刷新设备列表，再选择出口节点。"),
     "tsExitTurnOff": MessageLookupByLibrary.simpleMessage("关闭出口"),
     "tsExitUnavailableShort": MessageLookupByLibrary.simpleMessage("不可用"),

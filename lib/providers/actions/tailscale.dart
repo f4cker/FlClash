@@ -110,7 +110,14 @@ class TailscaleAction extends _$TailscaleAction {
       final result = await _core.setTailscalePrefs(
         node.ref,
         exitNode: exitNode,
-        exitLabel: _managedRecordOf(node)?.exitLabelFor(exitNode, exitNodeName),
+        exitLabel: _managedRecordOf(node)?.exitLabelFor(
+          exitNode,
+          exitNodeName,
+          shared: tailscaleExitShared(
+            _managed.state ?? const [],
+            node.profileId,
+          ),
+        ),
         acceptRoutes: acceptRoutes,
       );
       return TailscaleSetPrefsResult(

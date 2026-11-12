@@ -94,6 +94,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  test('the Core\'s order is kept, the exit group last', () async {
+    Map<String, Object> group(String name, List<String> all) => {
+      'name': name,
+      'type': 'Selector',
+      'now': all.first,
+      'all': all,
+    };
+    final groups = await buildGroups(
+      ComputeGroupsState(
+        proxiesData: ProxiesData(
+          all: const ['GLOBAL', '国际媒体', '全球手动', 'Tailscale 出口'],
+          proxies: {
+            'GLOBAL': group('GLOBAL', ['国际媒体', '全球手动']),
+            '国际媒体': group('国际媒体', ['全球手动', 'DIRECT', 'Tailscale 出口']),
+            '全球手动': group('全球手动', ['DIRECT', 'Tailscale 出口']),
+            'Tailscale 出口': group('Tailscale 出口', [tsExitMember]),
+            'DIRECT': {'name': 'DIRECT', 'type': 'Direct'},
+            tsExitMember: {'name': tsExitMember, 'type': 'Tailscale'},
+          },
+        ),
+        sortType: ProxiesSortType.none,
+        delayMap: const {},
+        selectedMap: const {},
+        defaultTestUrl: '',
+      ),
+    );
+    expect(groups.map((group) => group.name).last, 'Tailscale 出口');
+    expect(groups[1].all.map((proxy) => proxy.name).last, 'Tailscale 出口');
+  });
+
   testWidgets('an unavailable exit reads 不可用 in the error colour', (
     tester,
   ) async {
