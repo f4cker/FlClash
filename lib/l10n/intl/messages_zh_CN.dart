@@ -1171,6 +1171,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "memoryEstimateSharedDesc": MessageLookupByLibrary.simpleMessage(
       "内核与应用运行在同一进程，内核部分按运行时统计估算，其余计入应用及共享内存。",
     ),
+    "memoryGoRuntimeDescription": MessageLookupByLibrary.simpleMessage(
+      "Go 运行时统计；各项不代表进程常驻内存的构成。",
+    ),
     "memoryInfo": MessageLookupByLibrary.simpleMessage("内存信息"),
     "memoryInfoDesc": MessageLookupByLibrary.simpleMessage("应用与内核占用的内存"),
     "memoryReleased": MessageLookupByLibrary.simpleMessage("内存已释放"),

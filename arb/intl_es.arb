@@ -376,6 +376,7 @@
   "memoryCoreHeapIdle": "Heap inactivo",
   "memoryCoreStack": "Pilas de goroutines",
   "memoryCoreRuntime": "Sobrecarga del runtime",
+  "memoryGoRuntimeDescription": "Estadísticas del entorno de ejecución de Go; estos valores no son un desglose de la memoria residente del proceso.",
   "memoryCoreNotRunning": "El núcleo no se está ejecutando",
   "memoryAppResident": "Memoria residente",
   "memoryAppShared": "App y compartida",

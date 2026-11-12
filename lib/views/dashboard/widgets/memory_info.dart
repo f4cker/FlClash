@@ -364,7 +364,6 @@ class _MemoryDetailSheetState extends ConsumerState<MemoryDetailSheet>
       _MemoryRow(
         label: appLocalizations.memoryAppResident,
         bytes: snapshot.app,
-        total: snapshot.app,
       ),
     ];
   }
@@ -377,34 +376,23 @@ class _MemoryDetailSheetState extends ConsumerState<MemoryDetailSheet>
     if (core == null) {
       return [ListItem(title: Text(appLocalizations.memoryCoreNotRunning))];
     }
-    final total = snapshot.coreTotal;
     return [
       _MemoryRow(
         label: appLocalizations.memoryCoreHeapInuse,
         bytes: core.heapInuse,
-        total: total,
       ),
       _MemoryRow(
         label: appLocalizations.memoryCoreHeapIdle,
         bytes: core.heapIdle,
-        total: total,
       ),
       _MemoryRow(
         label: appLocalizations.memoryCoreStack,
         bytes: core.stackInuse,
-        total: total,
       ),
       _MemoryRow(
         label: appLocalizations.memoryCoreRuntime,
         bytes: core.runtimeOther,
-        total: total,
       ),
-      if (snapshot.coreOther > 0)
-        _MemoryRow(
-          label: appLocalizations.other,
-          bytes: snapshot.coreOther,
-          total: total,
-        ),
     ];
   }
 
@@ -442,6 +430,9 @@ class _MemoryDetailSheetState extends ConsumerState<MemoryDetailSheet>
             bytes: _snapshot.coreTotal,
             contentKey: ValueKey(_snapshot.core != null),
             items: _coreItems(appLocalizations, _snapshot),
+            description: _snapshot.core == null
+                ? null
+                : appLocalizations.memoryGoRuntimeDescription,
           ),
         ],
       ),
@@ -455,11 +446,13 @@ class _MemorySection extends StatelessWidget {
     required this.bytes,
     required this.items,
     this.contentKey,
+    this.description,
   });
 
   final String title;
   final int bytes;
   final List<Widget> items;
+  final String? description;
 
   /// A change cross-fades the rows instead of swapping them in place.
   final Key? contentKey;
@@ -486,6 +479,16 @@ class _MemorySection extends StatelessWidget {
             child: KeyedSubtree(key: contentKey, child: generateGroup(items)),
           ),
         ),
+        if (description != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(5, 8, 5, 0),
+            child: Text(
+              description!,
+              style: AppTextStyle.footnote
+                  .of(context)
+                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+            ),
+          ),
       ],
     );
   }
@@ -620,19 +623,13 @@ class _MemoryBar extends StatelessWidget {
 }
 
 class _MemoryRow extends StatelessWidget {
-  const _MemoryRow({
-    required this.label,
-    required this.bytes,
-    required this.total,
-  });
+  const _MemoryRow({required this.label, required this.bytes});
 
   final String label;
   final int bytes;
-  final int total;
 
   @override
   Widget build(BuildContext context) {
-    final percent = total == 0 ? 0 : bytes * 100 / total;
     return ListItem(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -640,7 +637,7 @@ class _MemoryRow extends StatelessWidget {
         children: [
           Flexible(child: Text(label)),
           Text(
-            '${percent.fixed(decimals: 1)}%',
+            '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB',
             style: AppTextStyle.subheadline
                 .of(context)
                 .copyWith(color: context.colorScheme.onSurfaceVariant),

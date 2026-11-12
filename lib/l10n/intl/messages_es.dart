@@ -1359,9 +1359,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Certificado instalado",
     ),
-    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
-      "Se denegó el permiso de lista de apps, por lo que no se pueden mostrar las apps instaladas. Concédelo manualmente en los ajustes del sistema.",
-    ),
+    "installedAppsPermissionDeniedMessage":
+        MessageLookupByLibrary.simpleMessage(
+          "Se denegó el permiso de lista de apps, por lo que no se pueden mostrar las apps instaladas. Concédelo manualmente en los ajustes del sistema.",
+        ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "Este sistema oculta la lista de apps instaladas hasta que se concede el permiso. Autorízalo para configurar el proxy por app.",
     ),
@@ -1586,6 +1587,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "memoryEstimateSharedDesc": MessageLookupByLibrary.simpleMessage(
       "El núcleo se ejecuta dentro del proceso de la app. Su parte se estima a partir de las estadísticas del runtime, y el resto cuenta como memoria de la app y compartida.",
+    ),
+    "memoryGoRuntimeDescription": MessageLookupByLibrary.simpleMessage(
+      "Estadísticas del entorno de ejecución de Go; estos valores no son un desglose de la memoria residente del proceso.",
     ),
     "memoryInfo": MessageLookupByLibrary.simpleMessage(
       "Información de memoria",

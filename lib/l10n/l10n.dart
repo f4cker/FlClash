@@ -3021,6 +3021,16 @@ class AppLocalizations {
     );
   }
 
+  /// `Go runtime statistics; these values are not a breakdown of process resident memory.`
+  String get memoryGoRuntimeDescription {
+    return Intl.message(
+      'Go runtime statistics; these values are not a breakdown of process resident memory.',
+      name: 'memoryGoRuntimeDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Core is not running`
   String get memoryCoreNotRunning {
     return Intl.message(
@@ -7743,8 +7753,7 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one:
-          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
