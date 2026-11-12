@@ -1040,8 +1040,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     );
   }
 
-  /// A target of this account that is blocked, in the words the rules page
-  /// uses; the conflict banner already counts the ones awaiting a choice.
+  /// A blocked target of this account, worded as on the rules page.
   String? _rulesWarning(
     BuildContext context,
     TailscaleNode node,
@@ -1319,8 +1318,7 @@ String tailscalePhaseLabel(BuildContext context, TailscalePhase phase) {
   };
 }
 
-/// The no-node screen of [NullStatus], with the info button after its title
-/// and one line under it.
+/// The no-node screen of [NullStatus], with an info button after its title.
 class _SignInStatus extends StatelessWidget {
   const _SignInStatus({required this.about, required this.action});
 
