@@ -196,11 +196,21 @@ abstract class CoreHandlerInterface {
   }
 
   /// [base] for a custom profile, [config] for the built text of any other.
-  Future<MountTarget> inspectMountTarget({SetupBase? base, String? config}) {
+  /// [managedTarget] is the target when its apply puts the panel-added
+  /// Tailscale rules first, which take Tailscale traffic before its own.
+  Future<MountTarget> inspectMountTarget({
+    SetupBase? base,
+    String? config,
+    int? managedTarget,
+  }) {
     return _query(
       CoreMethod.mountInspectTarget,
       _model(MountTarget.fromJson),
-      arguments: {'base': ?base?.toJson(), 'config': ?config},
+      arguments: {
+        'base': ?base?.toJson(),
+        'config': ?config,
+        'managed-target': ?managedTarget,
+      },
     );
   }
 

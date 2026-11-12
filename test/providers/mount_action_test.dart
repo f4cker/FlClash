@@ -333,6 +333,7 @@ void main() {
         () => core.inspectMountTarget(
           base: any(named: 'base'),
           config: any(named: 'config'),
+          managedTarget: any(named: 'managedTarget'),
         ),
       ).thenAnswer((_) async => const MountTarget(relay: ['ts', 'Via TS']));
       when(
@@ -376,6 +377,35 @@ void main() {
       expect(air.state.mountable, isFalse);
       expect(air.relayExcluded, 2);
     });
+
+    test(
+      'with the panel-added rules only when an account is attached',
+      () async {
+        inspects();
+        final container = build(
+          managed: const [
+            TailscaleManagedRecord(id: 'a', profileId: 1),
+            TailscaleManagedRecord(id: 'c', profileId: 2, attached: true),
+          ],
+        );
+        await action(container).readGroups(1);
+        await action(container).readGroups(2);
+
+        verify(
+          () => core.inspectMountTarget(
+            base: any(named: 'base'),
+            config: any(named: 'config'),
+          ),
+        ).called(1);
+        verify(
+          () => core.inspectMountTarget(
+            base: any(named: 'base'),
+            config: any(named: 'config'),
+            managedTarget: 2,
+          ),
+        ).called(1);
+      },
+    );
 
     test('with nothing while panel-added accounts are unread', () async {
       inspects();

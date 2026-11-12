@@ -112,7 +112,7 @@ func rootOf(t *testing.T, content string) *yaml.Node {
 }
 
 func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
-	target, err := inspectMountTarget(rootOf(t, mountTargetProfile))
+	target, err := inspectMountTarget(rootOf(t, mountTargetProfile), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ rules:
   - IP-CIDR,100.64.0.0/10,Office
   - MATCH,Proxy
 `
-	target, err := inspectMountTarget(rootOf(t, profile))
+	target, err := inspectMountTarget(rootOf(t, profile), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestMountGroupsThatCannotBeReadAreAnErrorNotFewerGroups(t *testing.T) {
 		"proxy not a mapping": "proxies: [x]\nproxy-groups:\n  - {name: H, type: select, include-all: true}\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			if target, err := inspectMountTarget(rootOf(t, profile)); err == nil {
+			if target, err := inspectMountTarget(rootOf(t, profile), 0); err == nil {
 				t.Errorf("inspect = %+v, want an error", target)
 			}
 			setup := &MountSetup{Sources: []MountSource{{ID: 1, Path: source}}}
@@ -197,7 +197,7 @@ func TestMountGroupsThatCannotBeReadAreAnErrorNotFewerGroups(t *testing.T) {
 			}
 		})
 	}
-	if target, err := inspectMountTarget(rootOf(t, "proxy-groups:\n")); err != nil || len(target.Groups) != 0 {
+	if target, err := inspectMountTarget(rootOf(t, "proxy-groups:\n"), 0); err != nil || len(target.Groups) != 0 {
 		t.Errorf("null groups = %+v, %v; want none and no error", target, err)
 	}
 }
@@ -767,7 +767,7 @@ func TestMountKeepsAutoGroupsThatReachTailscaleFreeOfMountedNodes(t *testing.T) 
 		t.Errorf("base proxies changed:\n%s\nwant\n%s", after, before)
 	}
 
-	target, err := inspectMountTarget(plainRoot)
+	target, err := inspectMountTarget(plainRoot, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

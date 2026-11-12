@@ -113,6 +113,9 @@ func mountSetupOf(params *SetupParams) *MountSetup {
 func withManagedNames(mounts *MountSetup, tailscale *TailscaleSetup) *MountSetup {
 	setup := *mounts
 	setup.reserved = nil
+	if setup.managedRules = tailscaleManagedRules(tailscale); setup.managedRules {
+		setup.managedProfile = tailscale.ProfileID
+	}
 	if tailscale != nil {
 		for _, managed := range tailscale.Managed {
 			if managed.ID != "" {
@@ -121,6 +124,19 @@ func withManagedNames(mounts *MountSetup, tailscale *TailscaleSetup) *MountSetup
 		}
 	}
 	return &setup
+}
+
+func tailscaleManagedRules(setup *TailscaleSetup) bool {
+	return tailscaleManagedBuilt && setup != nil && (setup.ManagedUnknown || slices.ContainsFunc(setup.Managed, func(account TailscaleManagedSetup) bool {
+		return account.ID != "" && account.Attached
+	}))
+}
+
+func managedTargetOf(params MountTargetParams) int64 {
+	if !tailscaleManagedBuilt {
+		return 0
+	}
+	return params.ManagedTarget
 }
 
 // The running profile's preflight sees its panel-added names as its apply.
@@ -282,6 +298,8 @@ func handleMountPreflight(params MountPreflightParams) (*MountPreflight, error) 
 type MountTargetParams struct {
 	Base   *SetupBase `json:"base,omitempty"`
 	Config string     `json:"config,omitempty"`
+	// Set when the target's apply puts the managed Tailscale rules first.
+	ManagedTarget int64 `json:"managed-target,omitempty"`
 }
 
 // Reads the groups only: a base that does not parse alone, as one whose
@@ -306,7 +324,7 @@ func handleInspectMountTarget(params MountTargetParams) (*MountTarget, error) {
 		}
 		root = mapping
 	}
-	target, err := inspectMountTarget(root)
+	target, err := inspectMountTarget(root, managedTargetOf(params))
 	if err != nil {
 		return nil, err
 	}

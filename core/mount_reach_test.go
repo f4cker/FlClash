@@ -15,7 +15,7 @@ import (
 
 func groupReasons(t *testing.T, root *yaml.Node) map[string]string {
 	t.Helper()
-	target, err := inspectMountTarget(root)
+	target, err := inspectMountTarget(root, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ rules:
   - IP-CIDR,100.64.0.0/10,Lan
   - MATCH,UsesClean
 `
-	target, err := inspectMountTarget(rootOf(t, profile))
+	target, err := inspectMountTarget(rootOf(t, profile), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,4 +434,46 @@ rules:
 	if names := report.Sources[0].Nodes; len(names) != 1 || names[0].Name != "plain" {
 		t.Errorf("report nodes = %+v, want plain", names)
 	}
+}
+
+// Only a built-in target ends the match for UDP too.
+func TestMountReadsRulesInOrderOnceTailscaleIsTaken(t *testing.T) {
+	withMountHome(t)
+	const profile = `proxies:
+  - {name: hk, type: socks5, server: 127.0.0.9, port: 1080}
+proxy-groups:
+  - {name: Main, type: select, proxies: [hk]}
+  - {name: Early, type: select, proxies: [hk]}
+  - {name: Late, type: select, proxies: [hk]}
+  - {name: Names, type: select, proxies: [hk]}
+rule-providers:
+  remote: {type: http, behavior: domain, format: mrs, url: 'http://127.0.0.1:9/r', path: ./missing.mrs}
+rules:
+  - DOMAIN-SUFFIX,ts.net,DIRECT
+  - IP-CIDR,100.64.0.0/10,REJECT,no-resolve
+  - IP-CIDR6,fd7a:115c:a1e0::/48,REJECT,no-resolve
+  - RULE-SET,remote,Late
+  - GEOIP,private,Late,no-resolve
+  - NOT,((DOMAIN,x.com)),Late
+  - MATCH,Main
+`
+	wantReasons := func(label, profile string, want map[string]string) {
+		t.Helper()
+		got := groupReasons(t, rootOf(t, profile))
+		for group, reason := range want {
+			if got[group] != reason {
+				t.Errorf("%s: %s = %s, want %s", label, group, got[group], reason)
+			}
+		}
+	}
+	wantReasons("taken", profile, map[string]string{"Late": "auto/", "Main": "auto/"})
+	early := strings.Replace(profile, "rules:\n", "rules:\n  - RULE-SET,remote,Early\n", 1)
+	wantReasons("before", early, map[string]string{"Early": "excluded/rule-unknown", "Late": "auto/"})
+	grouped := strings.Replace(profile, "ts.net,DIRECT", "ts.net,Names", 1)
+	wantReasons("taken by a group", grouped, map[string]string{"Names": "excluded/rule", "Late": "excluded/rule"})
+	resolving := strings.Replace(profile, "  - IP-CIDR,100.64.0.0/10,REJECT,no-resolve\n", "  - IP-CIDR,100.64.0.0/10,Early\n  - IP-CIDR,100.64.0.0/10,REJECT,no-resolve\n", 1)
+	resolving = strings.Replace(resolving, "ts.net,DIRECT", "ts.net,Names", 1)
+	wantReasons("resolving", resolving, map[string]string{"Early": "excluded/rule"})
+	v4only := strings.Replace(profile, "  - IP-CIDR6,fd7a:115c:a1e0::/48,REJECT,no-resolve\n", "", 1)
+	wantReasons("IPv6 open", v4only, map[string]string{"Late": "excluded/rule"})
 }

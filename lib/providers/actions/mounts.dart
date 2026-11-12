@@ -101,7 +101,21 @@ class MountAction extends _$MountAction {
     final input = await ref
         .read(setupActionProvider.notifier)
         .mountTargetInput(targetId);
-    return _core.inspectMountTarget(base: input.base, config: input.config);
+    // Unread records leave the rules out, as the safer reading.
+    final records = ref.read(tailscaleManagedRecordsProvider);
+    final managed =
+        records?.any(
+          (record) =>
+              record.profileId == targetId &&
+              record.id.isNotEmpty &&
+              record.attached,
+        ) ??
+        false;
+    return _core.inspectMountTarget(
+      base: input.base,
+      config: input.config,
+      managedTarget: managed ? targetId : null,
+    );
   }
 
   /// [expectedVersion] is the version the choice was made on, null for a

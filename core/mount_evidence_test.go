@@ -66,7 +66,7 @@ rules:
 		}},
 		{"plain", plain, map[string]string{"Proxy": "auto//", "Auto": "auto//", "Direct": "auto//"}},
 	} {
-		target, err := inspectMountTarget(rootOf(t, tc.profile))
+		target, err := inspectMountTarget(rootOf(t, tc.profile), 0)
 		if err != nil {
 			t.Fatal(err)
 		}

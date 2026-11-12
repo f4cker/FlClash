@@ -14,7 +14,7 @@ import (
 
 func groupKinds(t *testing.T, root *yaml.Node) map[string]string {
 	t.Helper()
-	target, err := inspectMountTarget(root)
+	target, err := inspectMountTarget(root, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -418,7 +418,7 @@ func TestMountLeavesOutNodesThatRelayThroughTailscale(t *testing.T) {
 		t.Errorf("Auto after the file changed = %v, want only plain and chained", got)
 	}
 
-	target, err := inspectMountTarget(rootOf(t, relayProfile))
+	target, err := inspectMountTarget(rootOf(t, relayProfile), 0)
 	if err != nil {
 		t.Fatal(err)
 	}

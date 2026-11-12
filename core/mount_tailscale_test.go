@@ -224,6 +224,7 @@ func checkMountedTailscaleInvariant(t *testing.T, profile, providers, relays str
 	if err != nil {
 		t.Fatal(err)
 	}
+	base.managedRules = attached
 	static := base.tailscaleGroups(newRuleReader(base))
 	guarded := map[string]bool{}
 	for name := range reach {

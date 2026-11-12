@@ -51,14 +51,15 @@ const (
 
 // A base as the mount checks read it, before any mount is added.
 type mountBase struct {
-	proxyTypes   map[string]string
-	proxyDialers map[string][]string
-	groups       []map[string]any
-	providers    map[string]baseProvider
-	ruleSets     map[string]ruleSetContent
-	// The profile's rules followed by every sub-rule's.
-	rules    []string
-	subRules map[string][]string
+	proxyTypes     map[string]string
+	proxyDialers   map[string][]string
+	groups         []map[string]any
+	providers      map[string]baseProvider
+	ruleSets       map[string]ruleSetContent
+	rules          []string
+	subRules       map[string][]string
+	managedRules   bool
+	managedProfile int64
 	// What a listener sends without rules, and the sub-rule it takes.
 	listenerProxies []string
 	listenerRules   []string
@@ -112,9 +113,7 @@ func readMountBase(root *yaml.Node) (*mountBase, error) {
 	base.subRules = map[string][]string{}
 	if subRules := resolveAlias(mappingValue(root, "sub-rules")); subRules != nil && subRules.Kind == yaml.MappingNode {
 		for i := 1; i < len(subRules.Content); i += 2 {
-			lines := ruleLines(subRules.Content[i])
-			base.subRules[subRules.Content[i-1].Value] = lines
-			base.rules = append(base.rules, lines...)
+			base.subRules[subRules.Content[i-1].Value] = ruleLines(subRules.Content[i])
 		}
 	}
 	listeners, err := decodeMappings(mappingValue(root, "listeners"), "listeners")
@@ -633,10 +632,8 @@ func (b *mountBase) dialSafe(taking map[string]bool) map[string]bool {
 	return safe
 }
 
-// Every target Tailscale traffic may be sent to, by how surely: a rule whose
-// condition reaches it, everything in a sub-rule entered by one, a listener's
-// proxy and the final MATCH of a listener's sub-rule, a tunnel's proxy to a
-// Tailscale address.
+// Every target Tailscale traffic may be sent to, by how surely. Rules after
+// those that took every Tailscale range and tailnet name never see it.
 func (b *mountBase) tailscaleTargets(reader *ruleReader) map[string]int {
 	targets := map[string]int{}
 	add := func(target string, kind int) {
@@ -644,47 +641,66 @@ func (b *mountBase) tailscaleTargets(reader *ruleReader) map[string]int {
 			targets[target] = kind
 		}
 	}
-	for _, line := range b.rules {
-		target, kind := reader.ruleTarget(line)
-		if kind != ruleMisses {
-			add(target, kind)
-		}
-	}
+	inside := map[string]bool{}
 	entered := map[string]int{}
-	enter := func(lines []string, carried int) bool {
-		changed := false
-		for _, line := range lines {
-			tp, payload, target, _ := RC.ParseRulePayload(line, true)
-			if tp != "SUB-RULE" {
-				continue
-			}
-			kind := max(carried, reader.subRuleCondition(payload))
-			if kind > entered[target] {
-				entered[target], changed = kind, true
-			}
-		}
-		return changed
+	open := reader.narrowed()
+	if b.managedRules {
+		open.coverManaged(tailscaleProtectedSuffixesOf(b.managedProfile))
 	}
-	for changed := enter(b.rules, ruleMisses); changed; {
-		changed = false
-		for name, kind := range entered {
-			changed = enter(b.subRules[name], kind) || changed
+	for _, line := range b.rules {
+		if open.shadowed() {
+			break
 		}
-	}
-	for name, kind := range entered {
-		if kind == ruleMisses {
-			continue
-		}
-		for _, line := range b.subRules[name] {
-			if tp, _, target, _ := RC.ParseRulePayload(line, true); tp != "SUB-RULE" {
+		tp, payload, target, params := RC.ParseRulePayload(line, true)
+		switch {
+		case target == "" || tp == "MATCH":
+		case tp == "SUB-RULE":
+			inside[target] = true
+			if kind := open.subRuleCondition(payload); kind > entered[target] {
+				entered[target] = kind
+			}
+		default:
+			if kind := open.condition(tp, payload, params); kind != ruleMisses {
 				add(target, kind)
 			}
+			if slices.Contains(capturingTargets, target) {
+				open.cover(tp, payload, params)
+			}
 		}
 	}
+	listened := map[string]bool{}
 	for _, name := range b.listenerRules {
+		listened[name], inside[name] = true, true
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, name := range sortedKeys(inside) {
+			for _, line := range b.subRules[name] {
+				tp, payload, target, _ := RC.ParseRulePayload(line, true)
+				if tp != "SUB-RULE" {
+					continue
+				}
+				kind := max(entered[name], reader.subRuleCondition(payload))
+				if !inside[target] || kind > entered[target] {
+					inside[target], entered[target], changed = true, max(kind, entered[target]), true
+				}
+			}
+		}
+	}
+	for _, name := range sortedKeys(inside) {
 		for _, line := range b.subRules[name] {
-			if tp, _, target, _ := RC.ParseRulePayload(line, true); tp == "MATCH" {
-				add(target, ruleReaches)
+			tp, payload, target, params := RC.ParseRulePayload(line, true)
+			own := ruleMisses
+			switch {
+			case tp == "SUB-RULE":
+				continue
+			case tp == "MATCH":
+				own = reachIf(listened[name])
+			default:
+				own = reader.condition(tp, payload, params)
+			}
+			if kind := max(entered[name], own); kind != ruleMisses {
+				add(target, kind)
 			}
 		}
 	}
@@ -699,6 +715,10 @@ func (b *mountBase) tailscaleTargets(reader *ruleReader) map[string]int {
 	}
 	return targets
 }
+
+// A proxy or group may lack UDP or select PASS, and pass a flow on to later
+// rules; these end the match for both.
+var capturingTargets = []string{"DIRECT", "REJECT", "REJECT-DROP"}
 
 // The names a mount node's dialer-proxy must not lead to: a Tailscale node,
 // a group holding one, and a base proxy or group that relays through those.
@@ -896,7 +916,90 @@ type ruleReader struct {
 	suffixes []string
 	ruleSets map[string]ruleSetContent
 	// The rule sets a rule reads to send something to a group.
-	used map[string]bool
+	used    map[string]bool
+	covered *tailnetCover
+}
+
+type tailnetCover struct {
+	prefixes map[netip.Prefix]bool
+	suffixes map[string]bool
+}
+
+func (r *ruleReader) narrowed() *ruleReader {
+	return &ruleReader{suffixes: r.suffixes, ruleSets: r.ruleSets, used: r.used, covered: &tailnetCover{prefixes: map[netip.Prefix]bool{}, suffixes: map[string]bool{}}}
+}
+
+// Another profile's kept suffix stays open: its rules do not protect it.
+func (r *ruleReader) coverManaged(kept []string) {
+	for _, prefix := range tailscaleProtectedPrefixes {
+		r.covered.prefixes[prefix] = true
+	}
+	kept = append(slices.Clone(kept), tailscaleProtectedSuffix)
+	for _, suffix := range r.suffixes {
+		if slices.ContainsFunc(kept, func(managed string) bool {
+			return suffix == managed || strings.HasSuffix(suffix, "."+managed)
+		}) {
+			r.covered.suffixes[suffix] = true
+		}
+	}
+}
+
+func (r *ruleReader) cover(tp, payload string, params []string) {
+	if isSrc, _ := RC.ParseParams(params); isSrc {
+		return
+	}
+	switch tp {
+	case "IP-CIDR", "IP-CIDR6":
+		rule, err := netip.ParsePrefix(payload)
+		if err != nil {
+			return
+		}
+		rule = rule.Masked()
+		for _, prefix := range tailscaleProtectedPrefixes {
+			if rule.Bits() <= prefix.Bits() && rule.Contains(prefix.Addr()) {
+				r.covered.prefixes[prefix] = true
+			}
+		}
+	case "DOMAIN-SUFFIX":
+		domain := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(payload)), ".")
+		for _, suffix := range r.suffixes {
+			if domain != "" && (suffix == domain || strings.HasSuffix(suffix, "."+domain)) {
+				r.covered.suffixes[suffix] = true
+			}
+		}
+	}
+}
+
+func (r *ruleReader) shadowed() bool {
+	return r.covered != nil && len(r.openSuffixes()) == 0 && len(r.openPrefixes(true)) == 0
+}
+
+func (r *ruleReader) openSuffixes() []string {
+	if r.covered == nil {
+		return r.suffixes
+	}
+	var open []string
+	for _, suffix := range r.suffixes {
+		if !r.covered.suffixes[suffix] {
+			open = append(open, suffix)
+		}
+	}
+	return open
+}
+
+// A rule that resolves sees every range while a tailnet name is open: the
+// name may resolve into a range taken only for connections to the address.
+func (r *ruleReader) openPrefixes(noResolve bool) []netip.Prefix {
+	if r.covered == nil || !noResolve && len(r.openSuffixes()) > 0 {
+		return tailscaleProtectedPrefixes
+	}
+	var open []netip.Prefix
+	for _, prefix := range tailscaleProtectedPrefixes {
+		if !r.covered.prefixes[prefix] {
+			open = append(open, prefix)
+		}
+	}
+	return open
 }
 
 func newRuleReader(base *mountBase) *ruleReader {
@@ -925,7 +1028,8 @@ func (r *ruleReader) subRuleCondition(payload string) int {
 }
 
 func (r *ruleReader) condition(tp, payload string, params []string) int {
-	if isSrc, _ := RC.ParseParams(params); isSrc {
+	isSrc, noResolve := RC.ParseParams(params)
+	if isSrc {
 		return ruleMisses
 	}
 	switch tp {
@@ -934,11 +1038,12 @@ func (r *ruleReader) condition(tp, payload string, params []string) int {
 		if err != nil {
 			return ruleUnknown
 		}
-		return reachIf(slices.ContainsFunc(tailscaleProtectedPrefixes, prefix.Masked().Overlaps))
+		return reachIf(slices.ContainsFunc(r.openPrefixes(noResolve), prefix.Masked().Overlaps))
 	case "IP-SUFFIX":
-		return r.ipSuffix(payload)
+		return r.ipSuffix(payload, r.openPrefixes(noResolve))
 	case "GEOIP":
-		return reachIf(strings.EqualFold(payload, "lan") || strings.EqualFold(payload, "private"))
+		private := strings.EqualFold(payload, "lan") || strings.EqualFold(payload, "private")
+		return reachIf(private && len(r.openPrefixes(noResolve)) > 0)
 	case "RULE-SET":
 		if r.used != nil {
 			r.used[payload] = true
@@ -980,13 +1085,13 @@ func reachIf(reaches bool) int {
 	return ruleMisses
 }
 
-func (r *ruleReader) ipSuffix(payload string) int {
+func (r *ruleReader) ipSuffix(payload string, prefixes []netip.Prefix) int {
 	rule, err := RC.NewIPSuffix(payload, "", false, true)
 	if err != nil {
 		return ruleUnknown
 	}
 	suffix, _ := netip.ParsePrefix(payload)
-	return reachIf(slices.ContainsFunc(tailscaleProtectedPrefixes, func(prefix netip.Prefix) bool {
+	return reachIf(slices.ContainsFunc(prefixes, func(prefix netip.Prefix) bool {
 		candidate, ok := joinPrefixBits(prefix, suffix.Addr())
 		if !ok {
 			return false
@@ -999,6 +1104,9 @@ func (r *ruleReader) ipSuffix(payload string) int {
 // Destination-agnostic rules (ports, processes, networks) are not read:
 // like MATCH they are the profile's own catch-alls.
 func (r *ruleReader) domain(tp, payload string) int {
+	if len(r.openSuffixes()) == 0 {
+		return ruleMisses
+	}
 	var rule constant.Rule
 	var err error
 	switch tp {
@@ -1020,7 +1128,7 @@ func (r *ruleReader) domain(tp, payload string) int {
 	if err != nil {
 		return ruleUnknown
 	}
-	return reachIf(slices.ContainsFunc(r.suffixes, func(suffix string) bool {
+	return reachIf(slices.ContainsFunc(r.openSuffixes(), func(suffix string) bool {
 		if tailscaleProfileRuleMatches(rule, TailscaleRouteTarget{Kind: tailscaleTargetSuffix, Value: suffix}, nil) {
 			return true
 		}
@@ -1039,7 +1147,7 @@ func (r *ruleReader) geosite(payload string) int {
 	if err != nil {
 		return ruleUnknown
 	}
-	return reachIf(slices.ContainsFunc(r.suffixes, func(suffix string) bool {
+	return reachIf(slices.ContainsFunc(r.openSuffixes(), func(suffix string) bool {
 		return matcher.ApplyDomain(suffix) || matcher.ApplyDomain("host."+suffix)
 	}))
 }

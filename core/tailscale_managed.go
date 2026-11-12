@@ -145,6 +145,8 @@ var buildTailscaleManagedProxy = func(mapping map[string]any) (C.Proxy, error) {
 // two managed rules at the head of its rules. Nothing goes into a group or the
 // config file. An attached account that fails to build still turns the rules
 // on, so its targets and the ranges stay blocked.
+const tailscaleManagedBuilt = true
+
 func injectTailscaleManaged(cfg *config.Config) {
 	tailscaleMu.Lock()
 	var managed []TailscaleManagedSetup
@@ -158,12 +160,11 @@ func injectTailscaleManaged(cfg *config.Config) {
 	tailscaleMu.Unlock()
 
 	own, reach := tailscaleProfileAdapters(cfg.Proxies)
-	attached := unknown
+	attached := tailscaleManagedRules(&TailscaleSetup{Managed: managed, ManagedUnknown: unknown})
 	for _, account := range managed {
 		if account.ID == "" {
 			continue
 		}
-		attached = attached || account.Attached
 		dir := tailscaleManagedDir(profileID, account.ID, account.ControlURL)
 		mapping := map[string]any{
 			"name":      tailscaleManagedName(cfg, account.Name),

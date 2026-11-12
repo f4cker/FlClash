@@ -809,6 +809,22 @@ func tailscaleProfileRuleMatches(rule C.Rule, target TailscaleRouteTarget, addrs
 	return false
 }
 
+// The suffixes a profile's managed rules protect besides ts.net, as its
+// kept routes hold them; none when they cannot be read.
+func tailscaleProtectedSuffixesOf(profileID int64) []string {
+	memory, err := loadTailscaleRouteMemory(profileID)
+	if err != nil {
+		return nil
+	}
+	var kept []string
+	for _, suffix := range memory.Suffixes {
+		if suffix = normalizeTailscaleHost(suffix); suffix != "" && tailscaleSuffixKept(suffix, memory.Lists, memory) {
+			kept = append(kept, suffix)
+		}
+	}
+	return kept
+}
+
 func tailscaleRoutesPath(profileID int64) string {
 	return filepath.Join(tailscaleRoutesDir(), "routes-"+strconv.FormatInt(profileID, 10)+".json")
 }

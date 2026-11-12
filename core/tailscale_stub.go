@@ -31,6 +31,8 @@ func handleTailscaleMigrateLegacy(TailscaleMigrateParams) (any, error) {
 	return nil, errTailscaleUnsupported
 }
 
+const tailscaleManagedBuilt = false
+
 func injectTailscaleManaged(*config.Config) {}
 
 func clearTailscaleManaged() {}

@@ -39,6 +39,10 @@ type MountSetup struct {
 	Revision string        `json:"revision"`
 	Sources  []MountSource `json:"sources"`
 	reserved []string
+	// The managed Tailscale rules run ahead of the profile's own, with the
+	// routes kept for managedProfile.
+	managedRules   bool
+	managedProfile int64
 }
 
 const (
@@ -275,11 +279,14 @@ func decodeMappings(node *yaml.Node, key string) ([]map[string]any, error) {
 	return mappings, nil
 }
 
-func inspectMountTarget(root *yaml.Node) (MountTarget, error) {
+// managedProfile is the target when its apply puts the managed Tailscale
+// rules first, 0 otherwise.
+func inspectMountTarget(root *yaml.Node, managedProfile int64) (MountTarget, error) {
 	base, err := readMountBase(root)
 	if err != nil {
 		return MountTarget{}, err
 	}
+	base.managedRules, base.managedProfile = managedProfile != 0, managedProfile
 	target := MountTarget{Groups: []MountGroupInfo{}, Relay: []string{}}
 	reach := base.tailscaleGroups(newRuleReader(base))
 	for _, mapping := range base.groups {
@@ -396,6 +403,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	if err != nil {
 		return nil, err
 	}
+	base.managedRules, base.managedProfile = setup.managedRules, setup.managedProfile
 	taken := map[string]struct{}{}
 	for _, name := range reservedProxyNames {
 		taken[name] = struct{}{}
