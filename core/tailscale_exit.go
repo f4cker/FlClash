@@ -365,6 +365,9 @@ type TailscaleExitParent struct {
 	Name    string   `json:"name"`
 	Now     string   `json:"now"`
 	Members []string `json:"members"`
+	// What the group falls back to once the exit group goes; empty when
+	// only its empty fallback would be left.
+	Replacement string `json:"replacement,omitempty"`
 }
 
 // What the running config holds of the exit group, read from it.
@@ -435,8 +438,12 @@ func handleTailscaleExit(params TailscaleRoutesParams) (*TailscaleExitReport, er
 			continue
 		}
 		entry := TailscaleExitParent{Name: name, Now: parent.Now(), Members: []string{}}
-		for _, member := range parent.Proxies() {
+		members := parent.Proxies()
+		for _, member := range members {
 			entry.Members = append(entry.Members, member.Name())
+		}
+		if first := members[0]; first != rt.group && first != parent.EmptyFallback() {
+			entry.Replacement = first.Name()
 		}
 		report.Parents = append(report.Parents, entry)
 	}
