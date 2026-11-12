@@ -323,66 +323,53 @@ class TailscaleAccountPill extends StatelessWidget {
     // A narrow bar keeps the dot and drops the state text, design.md §13.1.
     final narrow = MediaQuery.sizeOf(context).width < 720;
     final state = narrow ? null : this.state;
-    const shape = AppShape.full;
     return Semantics(
       button: true,
       label: semanticsLabel,
       excludeSemantics: true,
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          color: colors.card,
-          shape: shape,
-          shadows: DashboardShadows.e1(context),
-        ),
-        child: PressSurface(
-          fill: colors.card,
-          shape: shape,
+      child: ElasticPress(
+        child: IconButton(
+          style: ButtonStyle(
+            shape: AppShape.full,
+            fixedSize: Size.fromHeight(TonalButtonSize.bar.button),
+            padding: const EdgeInsets.only(left: 8, right: 12),
+          ),
           onPressed: onPressed,
-          padding: const EdgeInsets.only(left: 8, right: 12),
-          child: SizedBox(
-            height: TonalButtonSize.bar.button,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 8,
-              children: [
-                if (newAccount)
-                  const TailscaleNewAccountAvatar()
-                else
-                  TailscaleAvatar(name: account),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: narrow ? 140 : 240),
-                  child: Text(
-                    account,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyle.subheadline.of(
-                      context,
-                      emphasized: true,
-                    ),
-                  ),
+          icon: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 8,
+            children: [
+              if (newAccount)
+                const TailscaleNewAccountAvatar()
+              else
+                TailscaleAvatar(name: account),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: narrow ? 140 : 240),
+                child: Text(
+                  account,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyle.subheadline.of(context, emphasized: true),
                 ),
-                if (state != null)
-                  Text(
-                    '· $state',
-                    maxLines: 1,
-                    style: AppTextStyle.subheadline
-                        .of(context)
-                        .copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
-                DecoratedBox(
-                  decoration: ShapeDecoration(
-                    color: dot,
-                    shape: AppShape.circle,
-                  ),
-                  child: const SizedBox.square(dimension: 7),
+              ),
+              if (state != null)
+                Text(
+                  '· $state',
+                  maxLines: 1,
+                  style: AppTextStyle.subheadline
+                      .of(context)
+                      .copyWith(color: colorScheme.onSurfaceVariant),
                 ),
-                GlyphIcon(
-                  AppGlyphs.chevronDown,
-                  size: 16,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ],
-            ),
+              DecoratedBox(
+                decoration: ShapeDecoration(color: dot, shape: AppShape.circle),
+                child: const SizedBox.square(dimension: 7),
+              ),
+              GlyphIcon(
+                AppGlyphs.chevronDown,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ],
           ),
         ),
       ),

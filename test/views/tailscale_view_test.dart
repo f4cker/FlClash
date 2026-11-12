@@ -29,7 +29,14 @@ import 'package:prism_ui/prism_ui.dart'
         BuildContextExtension,
         Chip,
         ColorSchemeExtension,
+        ElasticPress,
+        ElasticHover,
         IconButton,
+        LiquidGlass,
+        LiquidGlassQuality,
+        LiquidGlassStyle,
+        PressLook,
+        ThemeMode,
         PopupAnchor,
         PopupPlacement,
         PressSurface,
@@ -103,7 +110,12 @@ void main() {
     }
   }
 
-  Future<void> pumpPanel(WidgetTester tester, {Size size = _size}) async {
+  Future<void> pumpPanel(
+    WidgetTester tester, {
+    Size size = _size,
+    LiquidGlassQuality? liquidGlass,
+    ThemeMode themeMode = ThemeMode.light,
+  }) async {
     container.read(viewSizeProvider.notifier).update((_) => size);
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -114,6 +126,8 @@ void main() {
         container: container,
         child: TestApp(
           locale: const Locale('zh', 'CN'),
+          liquidGlass: liquidGlass,
+          themeMode: themeMode,
           child: TailscaleView(
             clock: () => tsNow,
             launcher: (url) async {
@@ -203,6 +217,70 @@ void main() {
   });
 
   group('page layout', () {
+    for (final themeMode in [ThemeMode.light, ThemeMode.dark]) {
+      for (final quality in [null, ...LiquidGlassQuality.values]) {
+        testWidgets('account capsule shares bar glass in $themeMode $quality', (
+          tester,
+        ) async {
+          serve([tsConnectedNode], tsConnectedStatus());
+          await pumpPanel(tester, liquidGlass: quality, themeMode: themeMode);
+          final pill = find.byType(TailscaleAccountPill);
+          final refresh = find.byWidgetPredicate(
+            (widget) => widget is IconButton && widget.tooltip == '刷新',
+          );
+          final surfaces = [
+            for (final control in [pill, refresh])
+              tester.widget<PressSurface>(
+                find.descendant(
+                  of: control,
+                  matching: find.byType(PressSurface),
+                ),
+              ),
+          ];
+          expect(surfaces.first.fill, surfaces.last.fill);
+          expect(surfaces.first.look, PressLook.none);
+          expect(surfaces.first.look, surfaces.last.look);
+          expect(surfaces.first.foreground, surfaces.last.foreground);
+          final panes = find.descendant(
+            of: pill,
+            matching: find.byType(LiquidGlass),
+          );
+          if (quality == null) {
+            expect(panes, findsNothing);
+          } else {
+            expect(panes, findsOneWidget);
+            expect(surfaces.first.fill, const Color(0x00000000));
+            final pane = tester.widget<LiquidGlass>(panes);
+            final adjacent = tester.widget<LiquidGlass>(
+              find.descendant(of: refresh, matching: find.byType(LiquidGlass)),
+            );
+            expect(pane.style, adjacent.style);
+            expect(
+              pane.style,
+              LiquidGlassStyle.regular(tester.element(pill).colorScheme),
+            );
+            expect(pane.pressed, isFalse);
+            surfaces.first.statesController!.update(WidgetState.pressed, true);
+            await tester.pump();
+            expect(tester.widget<LiquidGlass>(panes).pressed, isTrue);
+            expect(
+              find.descendant(of: pill, matching: find.byType(ElasticPress)),
+              findsOneWidget,
+            );
+            expect(
+              find.descendant(of: pill, matching: find.byType(ElasticHover)),
+              findsOneWidget,
+            );
+            surfaces.first.statesController!.update(WidgetState.pressed, false);
+            await tester.pump();
+            expect(tester.widget<LiquidGlass>(panes).pressed, isFalse);
+          }
+          expect(tester.takeException(), isNull);
+          await teardownView(tester);
+        });
+      }
+    }
+
     for (final width in [1054.0, 760.0, 520.0, 390.0]) {
       testWidgets('account capsule matches bar controls at $width dp', (
         tester,
@@ -225,7 +303,9 @@ void main() {
         final bounds = tester.getRect(surface);
         final buttons = find.descendant(
           of: find.byType(AppBar),
-          matching: find.byType(IconButton),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is IconButton && widget.tooltip != null,
+          ),
         );
         expect(buttons, findsNWidgets(2));
         for (final button in buttons.evaluate()) {
