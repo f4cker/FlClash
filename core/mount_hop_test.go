@@ -646,7 +646,7 @@ func TestProviderUpdateAddingADialerThroughAMountIsRefused(t *testing.T) {
 proxy-groups:
   - {name: Free, type: select, use: [sub]}
   - {name: Later, type: select, use: [late]}
-  - {name: Auto, type: select, proxies: [base1]}
+  - {name: Auto, type: select, include-all-proxies: true, exclude-filter: "^egress$"}
 rules:
   - MATCH,Auto
 `)

@@ -1681,7 +1681,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "more": MessageLookupByLibrary.simpleMessage("Más"),
     "mountAbout": MessageLookupByLibrary.simpleMessage("About mounts"),
     "mountAboutBody": MessageLookupByLibrary.simpleMessage(
-      "Choose imported subscriptions to add their nodes to this profile. All eligible proxy groups receive mounted nodes, then apply their existing inclusion and exclusion filters. Existing nodes, rules, and DNS settings are kept, and original files are not rewritten.",
+      "Choose imported subscriptions to add nodes to this profile. Nodes are added only to groups already configured to accept new nodes automatically, using each group’s existing inclusion and exclusion filters. Groups with only fixed members and no automatic collection stay unchanged. Existing nodes, rules, and DNS settings stay unchanged.",
     ),
     "mountAlsoMounts": m70,
     "mountApplyBlocked": MessageLookupByLibrary.simpleMessage(
@@ -1763,6 +1763,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountGroupPending": MessageLookupByLibrary.simpleMessage(
       "Pending application",
     ),
+    "mountGroupsAllNoMatch": MessageLookupByLibrary.simpleMessage(
+      "Mounted nodes match no group filters.",
+    ),
     "mountGroupsCount": m76,
     "mountGroupsExcluded": m77,
     "mountGroupsExcludedNames": m78,
@@ -1778,7 +1781,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountGroupsHiddenNoMatch": m82,
     "mountGroupsNoMatch": m83,
     "mountGroupsSummary": MessageLookupByLibrary.simpleMessage(
-      "Mounted nodes are added to all eligible proxy groups using each group’s existing filters. Existing nodes are kept.",
+      "Added only to groups that automatically accept new nodes, using each group’s filters.",
     ),
     "mountGroupsTitle": MessageLookupByLibrary.simpleMessage(
       "Groups for these nodes",
@@ -1806,7 +1809,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Name conflicts and exclusions",
     ),
     "mountNoGroupDesc": MessageLookupByLibrary.simpleMessage(
-      "No group will be created and routing rules will not be changed automatically.",
+      "No groups will be created and routing rules will not be changed automatically.",
     ),
     "mountNoGroupIsolatedDesc": MessageLookupByLibrary.simpleMessage(
       "None of the existing groups passed the mount-isolation checks. No group will be created, no direct-connection fallback will be added, and the original profile file will not be rewritten automatically.",
@@ -1815,7 +1818,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Current groups cannot receive mounts",
     ),
     "mountNoGroupTitle": MessageLookupByLibrary.simpleMessage(
-      "This profile has no proxy group that can receive subscription nodes. Mounting cannot be completed yet.",
+      "This profile has no groups that automatically accept new nodes. Mounted nodes have not been added to any group.",
     ),
     "mountNodeCount": m85,
     "mountNodesExcludedShort": m86,

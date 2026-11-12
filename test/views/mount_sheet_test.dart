@@ -535,6 +535,148 @@ void main() {
     expect(line.maxLines, 1);
   });
 
+  testWidgets('groups with fixed members are never listed nor counted', (
+    tester,
+  ) async {
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [item(air, mounted: true)],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id],
+                version: 1,
+              ),
+              revision: 'r1',
+              groups: MountTarget(
+                groups: [
+                  groupInfo('Auto'),
+                  groupInfo('Parent', kind: MountGroupKind.fixed),
+                  groupInfo('Shy', kind: MountGroupKind.fixed, hidden: true),
+                ],
+              ),
+            ),
+          )
+          ..runtime = const MountRuntimeState(
+            report: MountReport(
+              target: 1,
+              revision: 'r1',
+              groups: [
+                MountGroupReport(
+                  name: 'Auto',
+                  via: MountGroupVia.auto,
+                  protection: MountProtection.base,
+                ),
+              ],
+            ),
+            groups: [
+              MountRuntimeGroup(
+                name: 'Auto',
+                present: true,
+                members: 3,
+                mounted: 3,
+              ),
+              MountRuntimeGroup(name: 'Parent', present: true, members: 2),
+              MountRuntimeGroup(name: 'Shy', present: true, members: 1),
+            ],
+          );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+
+    expect(find.text(l10n.mountGroupsCount(1)), findsOneWidget);
+    await tester.tap(find.text(l10n.mountGroupsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.mountGroupsSummary), findsOneWidget);
+    expect(find.text('Auto'), findsOneWidget);
+    expect(find.text('Parent'), findsNothing);
+    expect(find.text(l10n.mountGroupNodes(0)), findsNothing);
+    expect(find.text(l10n.mountGroupNoMatch), findsNothing);
+    expect(find.text(l10n.mountGroupsHidden), findsNothing);
+    expect(find.text(l10n.mountGroupsAllNoMatch), findsNothing);
+    expect(find.textContaining(l10n.mountIsolationFirst), findsNothing);
+  });
+
+  testWidgets('a profile whose groups all list fixed members says so '
+      'directly', (tester) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [
+            groupInfo('Parent', kind: MountGroupKind.fixed),
+            groupInfo('HK', kind: MountGroupKind.fixed, hidden: true),
+          ],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+
+    expect(find.text(l10n.mountNoGroupTitle), findsOneWidget);
+    expect(find.text(l10n.mountNoGroupDesc), findsOneWidget);
+    expect(find.text(l10n.mountNoGroupIsolatedTitle), findsNothing);
+    expect(find.text(l10n.mountGroupsTitle), findsNothing);
+    expect(find.text('Parent'), findsNothing);
+    await tester.tap(find.text('Air'));
+    await tester.pump();
+    expect(saveButton(tester).onPressed, isNull);
+  });
+
+  testWidgets('every accepting group matching nothing says the filters '
+      'matched none, without opening', (tester) async {
+    final mounts =
+        FakeMounts(
+            panelOf(
+              [item(air, mounted: true)],
+              stored: MountTargetState(
+                targetId: target.id,
+                sourceIds: [air.id],
+                version: 1,
+              ),
+              revision: 'r1',
+              groups: MountTarget(
+                groups: [
+                  groupInfo('HK', filter: true),
+                  groupInfo('JP', filter: true, hidden: true),
+                  groupInfo('Parent', kind: MountGroupKind.fixed),
+                ],
+              ),
+            ),
+          )
+          ..runtime = const MountRuntimeState(
+            report: MountReport(
+              target: 1,
+              revision: 'r1',
+              groups: [
+                MountGroupReport(
+                  name: 'HK',
+                  via: MountGroupVia.auto,
+                  protection: MountProtection.base,
+                ),
+                MountGroupReport(
+                  name: 'JP',
+                  via: MountGroupVia.auto,
+                  protection: MountProtection.base,
+                ),
+              ],
+            ),
+            groups: [
+              MountRuntimeGroup(name: 'HK', present: true, members: 2),
+              MountRuntimeGroup(name: 'JP', present: true, members: 1),
+              MountRuntimeGroup(name: 'Parent', present: true, members: 2),
+            ],
+          );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    final colorScheme = tester.element(find.byType(MountSheet)).colorScheme;
+
+    final line = tester.widget<Text>(find.text(l10n.mountGroupsAllNoMatch));
+    expect(line.style?.color, colorScheme.warning);
+    expect(find.text(l10n.mountGroupsNoMatch(2)), findsNothing);
+    expect(find.text(l10n.mountNoGroupTitle), findsNothing);
+    expect(find.text('Parent'), findsNothing);
+  });
+
   testWidgets('a profile without groups blocks mounting but still unmounts, '
       'after asking', (tester) async {
     final mounts = FakeMounts(

@@ -99,8 +99,8 @@ func TestDNSThroughAGroupUnderEveryKeyKeepsMountsOut(t *testing.T) {
 	const base = `proxies:
   - {name: hk, type: socks5, server: 127.0.0.9, port: 1080}
 proxy-groups:
-  - {name: Main, type: select, proxies: [hk]}
-  - {name: Free, type: select, proxies: [hk]}
+  - {name: Main, type: select, proxies: [hk], include-all-providers: true}
+  - {name: Free, type: select, proxies: [hk], include-all-providers: true}
 rules:
   - MATCH,Main
 `
@@ -126,8 +126,8 @@ func TestDNSThroughAPercentEncodedGroupKeepsMountsOut(t *testing.T) {
 	const base = `proxies:
   - {name: hk, type: socks5, server: 127.0.0.9, port: 1080}
 proxy-groups:
-  - {name: 节点选择, type: select, proxies: [hk]}
-  - {name: Main, type: select, proxies: [hk]}
+  - {name: 节点选择, type: select, proxies: [hk], include-all-providers: true}
+  - {name: Main, type: select, proxies: [hk], include-all-providers: true}
 rules:
   - MATCH,Main
 dns:
@@ -139,9 +139,9 @@ dns:
 	const spaced = `proxies:
   - {name: hk, type: socks5, server: 127.0.0.9, port: 1080}
 proxy-groups:
-  - {name: " G", type: select, proxies: [hk]}
-  - {name: G, type: select, proxies: [hk]}
-  - {name: Main, type: select, proxies: [hk]}
+  - {name: " G", type: select, proxies: [hk], include-all-providers: true}
+  - {name: G, type: select, proxies: [hk], include-all-providers: true}
+  - {name: Main, type: select, proxies: [hk], include-all-providers: true}
 rules:
   - MATCH,Main
 dns:

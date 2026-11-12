@@ -598,6 +598,8 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       _Result.applying => appLocalizations.mountApplying,
       _Result.savedUnconfirmed => appLocalizations.mountSavedUnconfirmed,
       _Result.unchanged => appLocalizations.mountUnchanged,
+      _Result.needsGroup when mountIsolatedGroups(_panel?.groups).isNotEmpty =>
+        appLocalizations.mountNoGroupIsolatedTitle,
       _Result.needsGroup => appLocalizations.mountNoGroupTitle,
       _Result.applyFailed => appLocalizations.mountApplyFailed,
       _Result.applyKept => appLocalizations.mountApplyKept,

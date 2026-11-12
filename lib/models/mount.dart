@@ -151,8 +151,9 @@ abstract class MountSourceInspection with _$MountSourceInspection {
       _$MountSourceInspectionFromJson(json);
 }
 
-/// [auto] takes the mounts through its own filters; [excluded] is kept out.
-enum MountGroupKind { auto, excluded }
+/// [auto] takes the mounts through its own filters; [excluded] is kept out;
+/// [fixed] only lists its members, so takes no new node and is never shown.
+enum MountGroupKind { auto, excluded, fixed }
 
 enum MountGroupExclusion { builtin, type, tailscale }
 

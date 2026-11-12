@@ -88,12 +88,12 @@ proxy-groups:
   - {name: Proxy, type: select, proxies: [base, Auto]}
   - {name: Auto, type: url-test, include-all-providers: true, filter: "^hk"}
   - {name: All, type: select, include-all: true, hidden: true}
-  - {name: Lazy, type: fallback, proxies: [base], interval: 0}
-  - {name: Hidden, type: select, proxies: [base], hidden: true}
-  - {name: Office, type: select, proxies: [office]}
-  - {name: Chain, type: relay, proxies: [base]}
-  - {name: Direct, type: select, proxies: [base], empty-fallback: DIRECT, exclude-filter: x}
-  - {name: GLOBAL, type: select, proxies: [Proxy]}
+  - {name: Lazy, type: fallback, proxies: [base], include-all-providers: true, interval: 0}
+  - {name: Hidden, type: select, proxies: [base], include-all-providers: true, hidden: true}
+  - {name: Office, type: select, proxies: [office], include-all-providers: true}
+  - {name: Chain, type: relay, proxies: [base], include-all-providers: true}
+  - {name: Direct, type: select, proxies: [base], include-all-providers: true, empty-fallback: DIRECT, exclude-filter: x}
+  - {name: GLOBAL, type: select, proxies: [Proxy], include-all-providers: true}
 rules:
   - MATCH,Proxy
 `
@@ -121,14 +121,14 @@ func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
 		got[group.Name] = group
 	}
 	for name, want := range map[string]MountGroupInfo{
-		"Proxy":  {Name: "Proxy", Type: "select", Kind: mountGroupAuto, Probe: "none"},
+		"Proxy":  {Name: "Proxy", Type: "select", Kind: mountGroupFixed, Probe: "none"},
 		"Auto":   {Name: "Auto", Type: "url-test", Kind: mountGroupAuto, Collects: "providers", Filter: true, Probe: "probes"},
 		"All":    {Name: "All", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Reason: reachHolds, Hidden: true, Probe: "none"},
-		"Lazy":   {Name: "Lazy", Type: "fallback", Kind: mountGroupAuto, Probe: "unknown"},
-		"Hidden": {Name: "Hidden", Type: "select", Kind: mountGroupAuto, Hidden: true, Probe: "none"},
+		"Lazy":   {Name: "Lazy", Type: "fallback", Kind: mountGroupAuto, Collects: "providers", Probe: "unknown"},
+		"Hidden": {Name: "Hidden", Type: "select", Kind: mountGroupAuto, Collects: "providers", Hidden: true, Probe: "none"},
 		"Office": {Name: "Office", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Reason: reachHolds, Probe: "none"},
 		"Chain":  {Name: "Chain", Type: "relay", Kind: mountGroupExcluded, Excluded: "type", Probe: "probes"},
-		"Direct": {Name: "Direct", Type: "select", Kind: mountGroupAuto, ExcludeFilter: true, EmptyFallback: "DIRECT", Probe: "none"},
+		"Direct": {Name: "Direct", Type: "select", Kind: mountGroupAuto, Collects: "providers", ExcludeFilter: true, EmptyFallback: "DIRECT", Probe: "none"},
 		"GLOBAL": {Name: "GLOBAL", Type: "select", Kind: mountGroupExcluded, Excluded: "builtin", Probe: "none"},
 	} {
 		if got[name] != want {
@@ -142,9 +142,9 @@ func TestMountKeepsEveryGroupThatReachesTailscaleOutOfItsTargets(t *testing.T) {
   - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
   - {name: ts-office, type: tailscale}
 proxy-groups:
-  - {name: Proxy, type: select, proxies: [base]}
-  - {name: Office, type: select, proxies: [ts-office, Proxy]}
-  - {name: Outer, type: url-test, proxies: [Office, base]}
+  - {name: Proxy, type: select, proxies: [base], include-all-providers: true}
+  - {name: Office, type: select, proxies: [ts-office, Proxy], include-all-providers: true}
+  - {name: Outer, type: url-test, proxies: [Office, base], include-all-providers: true}
   - {name: Collects, type: select, include-all-proxies: true}
   - {name: Filtered, type: select, include-all-proxies: true, exclude-type: "Tailscale|Wireguard"}
 rules:
@@ -244,17 +244,17 @@ func TestMountsReachEveryAllowedGroupWithSuffixesOnlyOnClashes(t *testing.T) {
 
 	loadable := strings.NewReplacer(
 		"type: tailscale", "type: socks5, server: 127.0.0.9, port: 1082",
-		"  - {name: Chain, type: relay, proxies: [base]}\n", "",
+		"  - {name: Chain, type: relay, proxies: [base], include-all-providers: true}\n", "",
 	).Replace(mountTargetProfile)
 	cfg, report := mountedConfig(t, loadable, setup)
 
-	if got, want := memberNames(t, cfg, "Proxy"), []string{"base", "Auto", "hk", "shared (Sub A)", "shared (Sub B)", "us"}; !reflect.DeepEqual(got, want) {
+	if got, want := memberNames(t, cfg, "Proxy"), []string{"base", "Auto"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Proxy members = %v, want %v", got, want)
 	}
 	if got, want := memberNames(t, cfg, "Auto"), []string{"hk"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Auto members = %v, want %v", got, want)
 	}
-	// A fixed list keeps its members and takes the mounts after them.
+	// A group that also collects providers keeps its members first.
 	for _, group := range []string{"Lazy", "Hidden", "Office"} {
 		if got, want := memberNames(t, cfg, group), []string{"base", "hk", "shared (Sub A)", "shared (Sub B)", "us"}; group != "Office" && !reflect.DeepEqual(got, want) {
 			t.Errorf("%s members = %v, want %v", group, got, want)
@@ -274,13 +274,12 @@ func TestMountsReachEveryAllowedGroupWithSuffixesOnlyOnClashes(t *testing.T) {
 		t.Errorf("sources = %+v, want %+v", report.Sources, wantSources)
 	}
 	wantGroups := []MountGroupReport{
-		{Name: "Proxy", Via: "use", Protection: mountProtectionOriginal},
 		{Name: "Auto", Via: "auto", Protection: mountProtectionReject, EmptyFallback: "REJECT"},
 		{Name: "All", Via: "auto", Protection: mountProtectionOriginal},
-		{Name: "Lazy", Via: "use", Protection: mountProtectionOriginal},
-		{Name: "Hidden", Via: "use", Protection: mountProtectionOriginal},
-		{Name: "Office", Via: "use", Protection: mountProtectionOriginal},
-		{Name: "Direct", Via: "use", Protection: mountProtectionBase, EmptyFallback: "DIRECT"},
+		{Name: "Lazy", Via: "auto", Protection: mountProtectionOriginal},
+		{Name: "Hidden", Via: "auto", Protection: mountProtectionOriginal},
+		{Name: "Office", Via: "auto", Protection: mountProtectionOriginal},
+		{Name: "Direct", Via: "auto", Protection: mountProtectionBase, EmptyFallback: "DIRECT"},
 	}
 	if !reflect.DeepEqual(report.Groups, wantGroups) {
 		t.Errorf("groups = %+v, want %+v", report.Groups, wantGroups)
@@ -420,7 +419,7 @@ func TestMountIgnoresTheGroupsAnOlderHostChose(t *testing.T) {
 	for _, group := range report.Groups {
 		names = append(names, group.Name)
 	}
-	if want := []string{"Proxy", "Auto", "Lazy", "Hidden", "Direct"}; !reflect.DeepEqual(names, want) {
+	if want := []string{"Auto", "Lazy", "Hidden", "Direct"}; !reflect.DeepEqual(names, want) {
 		t.Errorf("groups = %v, want %v", names, want)
 	}
 }
@@ -636,7 +635,7 @@ rules:
 func TestLoadMountedConfigWithoutABaseMountsIntoConfigYaml(t *testing.T) {
 	home := withMountHome(t)
 	configPath := writeMountFile(t, home, "config.yaml", `proxy-groups:
-  - {name: G, type: select, proxies: [DIRECT]}
+  - {name: G, type: select, proxies: [DIRECT], include-all-providers: true}
 `)
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
 
@@ -650,7 +649,7 @@ func TestLoadMountedConfigWithoutABaseMountsIntoConfigYaml(t *testing.T) {
 	if got := memberNames(t, cfg, "G"); !reflect.DeepEqual(got, []string{"DIRECT", "shared", "us"}) {
 		t.Errorf("G members = %v", got)
 	}
-	if len(report.Groups) != 1 || report.Groups[0].Via != "use" {
+	if len(report.Groups) != 1 || report.Groups[0].Via != "auto" {
 		t.Errorf("groups = %+v", report.Groups)
 	}
 }

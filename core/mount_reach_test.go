@@ -52,7 +52,7 @@ rule-providers:
 proxy-groups:
 `)
 	for _, name := range groups {
-		profile.WriteString("  - {name: " + name + ", type: select, proxies: [base]}\n")
+		profile.WriteString("  - {name: " + name + ", type: select, proxies: [base], include-all-providers: true}\n")
 	}
 	profile.WriteString(`rules:
   - RULE-SET,cgnat,CGNAT
@@ -104,12 +104,12 @@ func TestMountFollowsARuleTargetIntoEveryBranchThatMayProxy(t *testing.T) {
 	const profile = `proxies:
   - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
 proxy-groups:
-  - {name: Direct, type: select, proxies: [DIRECT, Proxy]}
-  - {name: Proxy, type: select, proxies: [Auto, base]}
+  - {name: Direct, type: select, proxies: [DIRECT, Proxy], include-all-providers: true}
+  - {name: Proxy, type: select, proxies: [Auto, base], include-all-providers: true}
   - {name: Auto, type: url-test, include-all-providers: true}
-  - {name: OnlyDirect, type: select, proxies: [DIRECT, REJECT]}
+  - {name: OnlyDirect, type: select, proxies: [DIRECT, REJECT], include-all-providers: true}
   - {name: Free, type: url-test, include-all-providers: true}
-  - {name: Main, type: select, proxies: [Free, base]}
+  - {name: Main, type: select, proxies: [Free, base], include-all-providers: true}
 rules:
   - GEOIP,LAN,Direct
   - IP-CIDR,100.64.0.0/10,OnlyDirect
@@ -213,8 +213,8 @@ proxy-providers:
 proxy-groups:
   - {name: Remote, type: select, use: [remote]}
   - {name: Hidden, type: select, use: [hidden]}
-  - {name: Outer, type: select, proxies: [Remote, base]}
-  - {name: Other, type: select, proxies: [base]}
+  - {name: Outer, type: select, proxies: [Remote, base], include-all-proxies: true}
+  - {name: Other, type: select, include-all-proxies: true}
   - {name: Auto, type: url-test, include-all-providers: true}
 rules:
   - MATCH,Other
@@ -345,11 +345,11 @@ func TestMountExcludesEveryGroupTailscaleTrafficMayTake(t *testing.T) {
   - {name: ts-office, type: tailscale, dialer-proxy: Auto}
   - {name: jump, type: socks5, server: 127.0.0.9, port: 1081, dialer-proxy: Pick}
 proxy-groups:
-  - {name: Main, type: select, proxies: [Auto, hk]}
+  - {name: Main, type: select, proxies: [Auto, hk], include-all-providers: true}
   - {name: Auto, type: url-test, include-all-providers: true}
-  - {name: Pick, type: select, proxies: [Inner]}
-  - {name: Inner, type: select, proxies: [hk]}
-  - {name: Free, type: select, proxies: [hk]}
+  - {name: Pick, type: select, proxies: [Inner], include-all-providers: true}
+  - {name: Inner, type: select, proxies: [hk], include-all-providers: true}
+  - {name: Free, type: select, proxies: [hk], include-all-providers: true}
 rules:
   - IP-CIDR,100.64.0.0/10,jump,no-resolve
   - MATCH,Main
@@ -393,9 +393,9 @@ rules:
 		profile := plain
 		switch tc.name {
 		case "empty-fallback on a Tailscale node":
-			profile = strings.Replace(profile, "proxy-groups:\n", "proxy-groups:\n  - {name: Fallen, type: select, proxies: [hk], filter: none, empty-fallback: ts-office}\n", 1)
+			profile = strings.Replace(profile, "proxy-groups:\n", "proxy-groups:\n  - {name: Fallen, type: select, proxies: [hk], filter: none, empty-fallback: ts-office, include-all-providers: true}\n", 1)
 		case "group keys in any case":
-			profile = strings.Replace(profile, "proxy-groups:\n", "proxy-groups:\n  - {Name: Spelled, Type: select, Proxies: [ts-office]}\n", 1)
+			profile = strings.Replace(profile, "proxy-groups:\n", "proxy-groups:\n  - {Name: Spelled, Type: select, Proxies: [ts-office], Include-All-Providers: true}\n", 1)
 		case "sub-rule entered by a tailnet condition":
 			profile = strings.Replace(profile, "  - MATCH,Main\n", "  - SUB-RULE,(IP-CIDR,100.64.0.0/10),side\n  - MATCH,Main\n", 1) + tc.add
 		case "GLOBAL target", "GEOSITE without a database":
@@ -442,10 +442,10 @@ func TestMountReadsRulesInOrderOnceTailscaleIsTaken(t *testing.T) {
 	const profile = `proxies:
   - {name: hk, type: socks5, server: 127.0.0.9, port: 1080}
 proxy-groups:
-  - {name: Main, type: select, proxies: [hk]}
-  - {name: Early, type: select, proxies: [hk]}
-  - {name: Late, type: select, proxies: [hk]}
-  - {name: Names, type: select, proxies: [hk]}
+  - {name: Main, type: select, proxies: [hk], include-all-providers: true}
+  - {name: Early, type: select, proxies: [hk], include-all-providers: true}
+  - {name: Late, type: select, proxies: [hk], include-all-providers: true}
+  - {name: Names, type: select, proxies: [hk], include-all-providers: true}
 rule-providers:
   remote: {type: http, behavior: domain, format: mrs, url: 'http://127.0.0.1:9/r', path: ./missing.mrs}
 rules:

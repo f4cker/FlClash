@@ -179,13 +179,13 @@ func TestMountKeepsGroupsInsideATailscaleGroupFreeOfMountedNodes(t *testing.T) {
   - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
   - {name: ts-office, type: tailscale}
 proxy-groups:
-  - {name: Office, type: fallback, proxies: [ts-office, Pool]}
+  - {name: Office, type: fallback, proxies: [ts-office, Pool], include-all-providers: true}
   - {name: Pool, type: url-test, include-all-providers: true}
-  - {name: Desk, type: select, proxies: [ts-office, Inner]}
-  - {name: Inner, type: select, proxies: [Deep]}
+  - {name: Desk, type: select, proxies: [ts-office, Inner], include-all-providers: true}
+  - {name: Inner, type: select, proxies: [Deep], include-all-providers: true}
   - {name: Deep, type: url-test, include-all-providers: true, proxies: [base]}
-  - {name: Pick, type: url-test, proxies: [ts-office, Chosen]}
-  - {name: Chosen, type: select, proxies: [base]}
+  - {name: Pick, type: url-test, proxies: [ts-office, Chosen], include-all-providers: true}
+  - {name: Chosen, type: select, proxies: [base], include-all-providers: true}
   - {name: Free, type: url-test, include-all-providers: true}
 rules:
   - IP-CIDR,100.64.0.0/10,Office
@@ -225,20 +225,20 @@ func TestMountKeepsGroupsATailscaleRuleTargetsOutOfItsTargets(t *testing.T) {
 	const profile = `proxies:
   - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
 proxy-groups:
-  - {name: V4, type: select, proxies: [base]}
-  - {name: V6, type: select, proxies: [base]}
-  - {name: Net, type: select, proxies: [base]}
-  - {name: Tailnet, type: select, proxies: [base]}
-  - {name: Device, type: select, proxies: [base]}
-  - {name: Wide, type: select, proxies: [base]}
-  - {name: Suffix, type: select, proxies: [base]}
-  - {name: Sub, type: select, proxies: [base]}
+  - {name: V4, type: select, proxies: [base], include-all-providers: true}
+  - {name: V6, type: select, proxies: [base], include-all-providers: true}
+  - {name: Net, type: select, proxies: [base], include-all-providers: true}
+  - {name: Tailnet, type: select, proxies: [base], include-all-providers: true}
+  - {name: Device, type: select, proxies: [base], include-all-providers: true}
+  - {name: Wide, type: select, proxies: [base], include-all-providers: true}
+  - {name: Suffix, type: select, proxies: [base], include-all-providers: true}
+  - {name: Sub, type: select, proxies: [base], include-all-providers: true}
   - {name: Collects, type: url-test, include-all-providers: true}
-  - {name: Lan, type: select, proxies: [base]}
-  - {name: Google, type: select, proxies: [base]}
-  - {name: Source, type: select, proxies: [base]}
-  - {name: Main, type: select, proxies: [base]}
-  - {name: Final, type: select, proxies: [base]}
+  - {name: Lan, type: select, proxies: [base], include-all-providers: true}
+  - {name: Google, type: select, proxies: [base], include-all-providers: true}
+  - {name: Source, type: select, proxies: [base], include-all-providers: true}
+  - {name: Main, type: select, proxies: [base], include-all-providers: true}
+  - {name: Final, type: select, proxies: [base], include-all-providers: true}
 sub-rules:
   inner:
     - DOMAIN-WILDCARD,*.corp.example,Sub

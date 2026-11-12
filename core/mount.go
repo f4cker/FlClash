@@ -182,10 +182,12 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 	return inspection
 }
 
-// Auto is a group that takes the mounts; excluded, one kept out of them.
+// Auto is a group that takes the mounts; excluded, one kept out of them;
+// fixed, one that only lists its members and so takes no new node.
 const (
 	mountGroupAuto     = "auto"
 	mountGroupExcluded = "excluded"
+	mountGroupFixed    = "fixed"
 )
 
 // What the mount panel needs of one base group. Filters are only flagged:
@@ -323,6 +325,8 @@ func mountGroupInfo(mapping map[string]any, reach string) MountGroupInfo {
 	// Hidden groups take mounts as visible ones do: hiding is the Proxies
 	// page's concern, never a group rule.
 	switch {
+	case !acceptsNewNodes(mapping):
+		info.Kind = mountGroupFixed
 	case !slices.Contains(mountableGroupTypes, kind):
 		info.Kind, info.Excluded = mountGroupExcluded, "type"
 	case info.Name == globalProxyName:
@@ -339,6 +343,12 @@ func mountGroupInfo(mapping map[string]any, reach string) MountGroupInfo {
 		}
 	}
 	return info
+}
+
+// Mounted nodes join a group as new subscription nodes would: only one
+// that collects proxies or providers, or uses one, takes any.
+func acceptsNewNodes(mapping map[string]any) bool {
+	return collectsProviders(mapping) || groupFlag(mapping, "include-all-proxies") || len(groupList(mapping, "use")) > 0
 }
 
 func collectsProviders(mapping map[string]any) bool {
@@ -389,8 +399,8 @@ type MountReport struct {
 var reservedProxyNames = []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", globalProxyName}
 
 // Each source becomes a file provider over the cache Flash keeps; every
-// group the checks allow takes every one, through include-all or a use, and
-// keeps its own members and filters. A group left with provider nodes only
+// group that accepts new nodes and the checks allow takes every one,
+// through include-all or a use, and keeps its own members and filters. A group left with provider nodes only
 // rejects when empty unless the base names its own empty-fallback. Names
 // that clash with the base or an earlier source get "(label)" appended.
 func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, error) {

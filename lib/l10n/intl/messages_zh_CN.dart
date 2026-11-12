@@ -1235,7 +1235,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "more": MessageLookupByLibrary.simpleMessage("更多"),
     "mountAbout": MessageLookupByLibrary.simpleMessage("挂载说明"),
     "mountAboutBody": MessageLookupByLibrary.simpleMessage(
-      "选择已导入的机场订阅，只将节点加入这份配置。所有允许接入的普通代理组都会接收挂载节点，再按各组原有的筛选和排除条件过滤。已有节点、规则和 DNS 保留，原文件不会改写。",
+      "选择已导入的机场订阅，为当前配置添加节点。节点只加入原配置中会自动接收新节点的分组，再按各组的筛选和排除条件过滤。只列出固定成员、且不自动接收新节点的分组保持原样。已有节点、规则和 DNS 不变。",
     ),
     "mountAlsoMounts": m70,
     "mountApplyBlocked": MessageLookupByLibrary.simpleMessage(
@@ -1297,6 +1297,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountGroupNoMatch": MessageLookupByLibrary.simpleMessage("无匹配挂载节点"),
     "mountGroupNodes": m75,
     "mountGroupPending": MessageLookupByLibrary.simpleMessage("待应用"),
+    "mountGroupsAllNoMatch": MessageLookupByLibrary.simpleMessage(
+      "挂载节点未匹配任何分组的筛选条件。",
+    ),
     "mountGroupsCount": m76,
     "mountGroupsExcluded": m77,
     "mountGroupsExcludedNames": m78,
@@ -1312,7 +1315,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountGroupsHiddenNoMatch": m82,
     "mountGroupsNoMatch": m83,
     "mountGroupsSummary": MessageLookupByLibrary.simpleMessage(
-      "挂载节点按各组原有筛选条件自动加入所有允许接入的普通分组，已有节点保留。",
+      "只加入自动接收新节点的分组，再按各组条件筛选。",
     ),
     "mountGroupsTitle": MessageLookupByLibrary.simpleMessage("节点加入哪些分组"),
     "mountGroupsUnconfirmed": MessageLookupByLibrary.simpleMessage("分组接入尚未确认"),
@@ -1339,7 +1342,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "当前分组暂不支持挂载",
     ),
     "mountNoGroupTitle": MessageLookupByLibrary.simpleMessage(
-      "此配置没有可接收订阅节点的普通代理组，暂时无法完成挂载。",
+      "当前配置没有自动接收新节点的分组，挂载节点未加入任何分组。",
     ),
     "mountNodeCount": m85,
     "mountNodesExcludedShort": m86,

@@ -46,25 +46,25 @@ rules:
   - DOMAIN-SUFFIX,example.cn,Direct
   - MATCH,Proxy
 `
-	switchedOn := "excluded/tailscale/rule"
+	fixed := "fixed//"
 	for _, tc := range []struct {
 		name    string
 		profile string
 		want    map[string]string
 	}{
 		{"acl-like, LAN rule set on a direct-or-proxy switch", aclLikeProfile, map[string]string{
-			"🎯 全球直连": switchedOn, "🚀 节点选择": "excluded/tailscale/member", "♻️ 自动选择": "excluded/tailscale/member",
-			"📲 电报消息": "auto//", "🛑 全球拦截": "auto//", "🐟 漏网之鱼": "auto//",
+			"🎯 全球直连": fixed, "🚀 节点选择": fixed, "♻️ 自动选择": "excluded/tailscale/member",
+			"📲 电报消息": fixed, "🛑 全球拦截": fixed, "🐟 漏网之鱼": fixed,
 		}},
 		{"acl-like, direct-only LAN target", directOnly, map[string]string{
-			"🎯 全球直连": switchedOn, "🚀 节点选择": "auto//", "♻️ 自动选择": "auto//",
-			"📲 电报消息": "auto//", "🛑 全球拦截": "auto//", "🐟 漏网之鱼": "auto//",
+			"🎯 全球直连": fixed, "🚀 节点选择": fixed, "♻️ 自动选择": "auto//",
+			"📲 电报消息": fixed, "🛑 全球拦截": fixed, "🐟 漏网之鱼": fixed,
 		}},
 		{"acl-like, LAN rule set not cached", uncached, map[string]string{
-			"🎯 全球直连": "excluded/tailscale/rule-unknown", "🚀 节点选择": "excluded/tailscale/member",
-			"♻️ 自动选择": "excluded/tailscale/member", "📲 电报消息": "auto//", "🛑 全球拦截": "auto//",
+			"🎯 全球直连": fixed, "🚀 节点选择": fixed,
+			"♻️ 自动选择": "excluded/tailscale/member", "📲 电报消息": fixed, "🛑 全球拦截": fixed,
 		}},
-		{"plain", plain, map[string]string{"Proxy": "auto//", "Auto": "auto//", "Direct": "auto//"}},
+		{"plain", plain, map[string]string{"Proxy": fixed, "Auto": "auto//", "Direct": fixed}},
 	} {
 		target, err := inspectMountTarget(rootOf(t, tc.profile), 0)
 		if err != nil {
@@ -81,15 +81,20 @@ rules:
 		t.Logf("%s; relay %v:%s", tc.name, target.Relay, table.String())
 	}
 
+	// The LAN switch may select 自动选择, the only collecting group.
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
-	members, _ := mountedMembers(t, aclLikeProfile, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
-	for _, group := range []string{"🎯 全球直连", "🚀 节点选择", "♻️ 自动选择"} {
+	setup := &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
+	members, report := mountedMembers(t, aclLikeProfile, setup)
+	if len(report.Groups) != 0 || slices.Contains(members["♻️ 自动选择"], "us") {
+		t.Errorf("groups = %+v, 自动选择 = %v; want nothing mounted", report.Groups, members["♻️ 自动选择"])
+	}
+	members, report = mountedMembers(t, directOnly, setup)
+	if len(report.Groups) != 1 || !slices.Contains(members["♻️ 自动选择"], "us") {
+		t.Errorf("groups = %+v, 自动选择 = %v; want only 自动选择 mounted", report.Groups, members["♻️ 自动选择"])
+	}
+	for _, group := range []string{"🚀 节点选择", "📲 电报消息", "🐟 漏网之鱼", "🎯 全球直连"} {
 		if slices.Contains(members[group], "us") {
-			t.Errorf("%s = %v, a LAN route could reach a mounted node", group, members[group])
+			t.Errorf("%s = %v, want its members as written", group, members[group])
 		}
 	}
-	if !slices.Contains(members["🐟 漏网之鱼"], "us") || !slices.Contains(members["📲 电报消息"], "us") {
-		t.Errorf("漏网之鱼 = %v, 电报消息 = %v; want both mounted", members["🐟 漏网之鱼"], members["📲 电报消息"])
-	}
-	t.Logf("mounted into 漏网之鱼 and 电报消息: %v", members)
 }

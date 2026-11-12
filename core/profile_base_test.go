@@ -161,7 +161,7 @@ func TestHandleBuildProfileHoldsTheMountsTheCoreRuns(t *testing.T) {
 	const profile = `proxies:
   - {name: base, type: socks5, server: 127.0.0.9, port: 1080}
 proxy-groups:
-  - {name: Main, type: select, proxies: [base]}
+  - {name: Main, type: select, proxies: [base], include-all-providers: true}
   - {name: Auto, type: url-test, include-all: true, filter: "us"}
 rules:
   - MATCH,Main

@@ -134,6 +134,7 @@ Map<String, dynamic> _$MountGroupInfoToJson(_MountGroupInfo instance) =>
 const _$MountGroupKindEnumMap = {
   MountGroupKind.auto: 'auto',
   MountGroupKind.excluded: 'excluded',
+  MountGroupKind.fixed: 'fixed',
 };
 
 const _$MountGroupExclusionEnumMap = {

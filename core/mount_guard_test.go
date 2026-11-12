@@ -532,7 +532,7 @@ func TestMountedClassicalRuleSetUpdateIsRefusedTwice(t *testing.T) {
 	profile := strings.Replace(`proxies:
   - {name: egress, type: http, server: 127.0.0.1, port: EGRESS}
 proxy-groups:
-  - {name: Lan, type: select, proxies: [DIRECT]}
+  - {name: Lan, type: select, proxies: [DIRECT], include-all-providers: true}
 rule-providers:
   lan: {type: file, behavior: classical, format: text, path: lan.txt}
 rules:

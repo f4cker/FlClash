@@ -41,6 +41,7 @@ class MountGroupsView {
     required this.unconfirmed,
     this.hiddenBlocked = 0,
     this.hiddenNoMatch = 0,
+    this.allNoMatch = false,
   });
 
   final List<MountGroupLine> rows;
@@ -48,6 +49,9 @@ class MountGroupsView {
   final bool unconfirmed;
   final int hiddenBlocked;
   final int hiddenNoMatch;
+
+  /// Every group taking mounts, hidden ones too, matched none of them.
+  final bool allNoMatch;
 
   int get noMatch =>
       rows.where((row) => row.state == MountGroupState.noMatch).length +
@@ -101,6 +105,8 @@ MountGroupsView mountGroupsViewOf(
       group.name: group,
   };
   final unconfirmed = !pending && mounted && applied == null;
+  var taking = 0;
+  var zero = 0;
   for (final group in target.groups) {
     if (group.kind != MountGroupKind.auto) {
       continue;
@@ -121,6 +127,10 @@ MountGroupsView mountGroupsViewOf(
         count = runtime!.mounted;
         state = count > 0 ? MountGroupState.applied : MountGroupState.noMatch;
       }
+    }
+    taking++;
+    if (state == MountGroupState.noMatch) {
+      zero++;
     }
     if (group.hidden) {
       hidden++;
@@ -146,6 +156,7 @@ MountGroupsView mountGroupsViewOf(
     unconfirmed: unconfirmed,
     hiddenBlocked: hiddenBlocked,
     hiddenNoMatch: hiddenNoMatch,
+    allNoMatch: taking > 0 && zero == taking,
   );
 }
 
@@ -173,6 +184,7 @@ class MountGroupsSection extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final open = expanded || view.forcedOpen;
     final (statusText, warn) = switch (view.status) {
+      _ when view.allNoMatch => (null, false),
       MountGroupsStatus.normal => (null, false),
       MountGroupsStatus.pending => (appLocalizations.mountGroupPending, false),
       MountGroupsStatus.noMatch => (
@@ -193,7 +205,12 @@ class MountGroupsSection extends StatelessWidget {
     final header = Semantics(
       button: true,
       expanded: open,
-      label: [appLocalizations.mountGroupsTitle, count, ?statusText].join(', '),
+      label: [
+        appLocalizations.mountGroupsTitle,
+        count,
+        ?statusText,
+        if (view.allNoMatch) appLocalizations.mountGroupsAllNoMatch,
+      ].join(', '),
       excludeSemantics: true,
       onTap: view.forcedOpen ? null : onToggle,
       child: PressRegion(
@@ -243,6 +260,13 @@ class MountGroupsSection extends StatelessWidget {
       corner: AppCorner.lg,
       children: [
         header,
+        if (view.allNoMatch)
+          Text(
+            appLocalizations.mountGroupsAllNoMatch,
+            style: AppTextStyle.caption2
+                .of(context, emphasized: true)
+                .copyWith(color: colorScheme.warning),
+          ),
         if (open) ...[
           Text(
             appLocalizations.mountGroupsSummary,
