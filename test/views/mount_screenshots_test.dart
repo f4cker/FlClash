@@ -345,6 +345,16 @@ void main() {
     await shoot(tester, '03-sheet-auto');
   });
 
+  shot('03b-sheet-auto-narrow', (tester) async {
+    await pumpProfiles(
+      tester,
+      sheetMounts(groups: autoGroups),
+      size: const Size(640, 720),
+    );
+    await openSheet(tester);
+    await shoot(tester, '03b-sheet-auto-narrow');
+  });
+
   shot('04-sheet-auto-groups', (tester) async {
     await pumpProfiles(tester, sheetMounts(groups: autoGroups));
     await openSheet(tester);

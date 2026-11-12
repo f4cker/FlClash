@@ -879,6 +879,64 @@ void main() {
     await shoot(tester, '44-rules-page');
   });
 
+  shot('44b-rules-page-dark', (tester) async {
+    final base = tsConflictRoutes();
+    await seedManaged(
+      [tsManagedNode('m1'), tsManagedNode('m2', account: tsWorkAccount)],
+      routes: base.copyWith(
+        targets: [
+          ...base.targets,
+          const TailscaleRouteTargetReport(
+            target: TailscaleRouteTarget(
+              kind: tailscaleTargetIp,
+              value: '100.71.20.5',
+            ),
+            state: TailscaleRouteState.assigned,
+            owner: TailscaleRouteOwner(kind: tailscaleOwnerManaged, id: 'm1'),
+            candidates: [
+              TailscaleRouteCandidate(
+                owner: TailscaleRouteOwner(
+                  kind: tailscaleOwnerManaged,
+                  id: 'm1',
+                ),
+              ),
+              TailscaleRouteCandidate(
+                owner: TailscaleRouteOwner(
+                  kind: tailscaleOwnerManaged,
+                  id: 'm2',
+                ),
+              ),
+            ],
+          ),
+          const TailscaleRouteTargetReport(
+            target: TailscaleRouteTarget(
+              kind: tailscaleTargetIp,
+              value: '100.64.0.7',
+            ),
+            state: TailscaleRouteState.unavailable,
+            owner: TailscaleRouteOwner(kind: tailscaleOwnerManaged, id: 'm2'),
+            candidates: [
+              TailscaleRouteCandidate(
+                owner: TailscaleRouteOwner(
+                  kind: tailscaleOwnerManaged,
+                  id: 'm2',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    await pumpPanel(
+      tester,
+      size: const Size(1100, 1300),
+      themeMode: ThemeMode.dark,
+    );
+    await tester.tap(find.text('前往规则'));
+    await settle(tester);
+    await shoot(tester, '44b-rules-page-dark');
+  });
+
   shot('45-row-context-menu', (tester) async {
     await seedManaged([
       tsManagedNode('m1'),
