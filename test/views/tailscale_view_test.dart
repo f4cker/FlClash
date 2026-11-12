@@ -507,7 +507,28 @@ void main() {
       expect(find.byTooltip('规则说明'), findsOneWidget);
       await tester.tap(find.text('前往规则'));
       await settle(tester);
-      expect(find.byType(TailscaleRulesView), findsOneWidget);
+      final sheet = find.byType(TailscaleRulesView);
+      expect(sheet, findsOneWidget);
+      Finder inSheet(String text) =>
+          find.descendant(of: sheet, matching: find.text(text));
+      final attached = inSheet('已接入当前配置');
+      final unconfirmed = inSheet('域名和地址信息待确认');
+      expect(attached, findsNWidgets(2));
+      expect(unconfirmed, findsNWidgets(2));
+      for (var index = 0; index < 2; index++) {
+        expect(
+          tester.getTopLeft(unconfirmed.at(index)).dy,
+          greaterThan(tester.getTopLeft(attached.at(index)).dy),
+        );
+      }
+      expect(
+        find.descendant(of: sheet, matching: find.textContaining('网络域名：')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: sheet, matching: find.textContaining('设备地址：')),
+        findsNothing,
+      );
       await teardownView(tester);
     });
 

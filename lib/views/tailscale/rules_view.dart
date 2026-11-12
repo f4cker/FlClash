@@ -118,15 +118,24 @@ class TailscaleRulesView extends ConsumerWidget {
     final appLocalizations = context.appLocalizations;
     Widget row(String title, [String? subtitle]) => ListItem(
       title: Text(title),
-      subtitle: subtitle == null ? null : Text(subtitle),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle,
+              style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+            ),
     );
     if (!account.attached || routes == null || !routes.active) {
       return [row(appLocalizations.tsRulesPending)];
     }
     final report = routes.accountOf(account.id);
     final verified = report != null && report.fresh && !report.loggedOut;
+    final stale = !verified && !(report?.loggedOut ?? false);
     return [
-      row(appLocalizations.tsAttached),
+      row(
+        appLocalizations.tsAttached,
+        stale ? appLocalizations.tsRulesUnconfirmed : null,
+      ),
       if (verified && report.domain.isNotEmpty)
         row(appLocalizations.tsRulesDomain(report.domain)),
       if (verified) row(appLocalizations.tsRulesAddresses(report.addresses)),
