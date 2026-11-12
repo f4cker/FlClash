@@ -940,6 +940,10 @@ _PatchClashConfig _$PatchClashConfigFromJson(Map<String, dynamic> json) =>
       mitm: json['mitm'] == null
           ? defaultMitm
           : Mitm.fromJson(json['mitm'] as Map<String, dynamic>),
+      followKeys: json['follow-profile-keys'] == null
+          ? const {}
+          : _followKeysFromJson(json['follow-profile-keys'] as List),
+      pagePriority: json['page-priority'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$PatchClashConfigToJson(_PatchClashConfig instance) =>
@@ -986,6 +990,10 @@ Map<String, dynamic> _$PatchClashConfigToJson(_PatchClashConfig instance) =>
           .map((e) => _$GeneralOverrideKeyEnumMap[e]!)
           .toList(),
       'mitm': instance.mitm,
+      'follow-profile-keys': instance.followKeys
+          .map((e) => _$PageConfigKeyEnumMap[e]!)
+          .toList(),
+      'page-priority': instance.pagePriority,
     };
 
 const _$ModeEnumMap = {
@@ -1029,6 +1037,30 @@ const _$GeneralOverrideKeyEnumMap = {
   GeneralOverrideKey.tcpConcurrent: 'tcp-concurrent',
   GeneralOverrideKey.ipv6: 'ipv6',
   GeneralOverrideKey.geodataLoader: 'geodata-loader',
+};
+
+const _$PageConfigKeyEnumMap = {
+  PageConfigKey.mixedPort: 'mixed-port',
+  PageConfigKey.port: 'port',
+  PageConfigKey.socksPort: 'socks-port',
+  PageConfigKey.redirPort: 'redir-port',
+  PageConfigKey.tproxyPort: 'tproxy-port',
+  PageConfigKey.mode: 'mode',
+  PageConfigKey.allowLan: 'allow-lan',
+  PageConfigKey.logLevel: 'log-level',
+  PageConfigKey.findProcessMode: 'find-process-mode',
+  PageConfigKey.externalController: 'external-controller',
+  PageConfigKey.authentication: 'authentication',
+  PageConfigKey.globalUa: 'global-ua',
+  PageConfigKey.hosts: 'hosts',
+  PageConfigKey.keepAliveIdle: 'keep-alive-idle',
+  PageConfigKey.keepAliveInterval: 'keep-alive-interval',
+  PageConfigKey.disableKeepAlive: 'disable-keep-alive',
+  PageConfigKey.geoAutoUpdate: 'geo-auto-update',
+  PageConfigKey.geoUpdateInterval: 'geo-update-interval',
+  PageConfigKey.geoXUrl: 'geox-url',
+  PageConfigKey.tunEnable: 'tun.enable',
+  PageConfigKey.tunStack: 'tun.stack',
 };
 
 _Mitm _$MitmFromJson(Map<String, dynamic> json) => _Mitm(

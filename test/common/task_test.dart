@@ -205,7 +205,7 @@ void main() {
       expect(config['mixed-port'], 7893);
       expect(config['allow-lan'], true);
       expect(config['global-ua'], 'FlClash-Test');
-      expect(config['profile']['store-selected'], false);
+      expect(config.containsKey('profile'), isFalse);
       expect(
         config['dns']['nameserver'],
         containsAll(['1.1.1.1', 'system://']),
@@ -314,8 +314,7 @@ void main() {
     },
   );
 
-  // A profile-shipped loopback skip-auth-prefixes would bypass the credentials.
-  test('makeRealProfileTask lets the app own local authentication', () async {
+  test('makeRealProfileTask lets the page own only authentication', () async {
     final rawConfig = await decodeJSONTask<Map<String, dynamic>>(
       jsonEncode({
         'authentication': ['subscription:injected'],
@@ -338,17 +337,17 @@ void main() {
     final enabled = await makeRealProfileTask(state);
     final enabledConfig = loadYaml(enabled.yaml) as YamlMap;
     expect(enabledConfig['authentication'], ['user:pass']);
-    expect(enabledConfig['skip-auth-prefixes'], isEmpty);
+    expect(enabledConfig['skip-auth-prefixes'], ['127.0.0.1/32']);
 
     final disabled = await makeRealProfileTask(
       state.copyWith(authentication: const []),
     );
     final disabledConfig = loadYaml(disabled.yaml) as YamlMap;
     expect(disabledConfig['authentication'], isEmpty);
-    expect(disabledConfig['skip-auth-prefixes'], isEmpty);
+    expect(disabledConfig['skip-auth-prefixes'], ['127.0.0.1/32']);
   });
 
-  test('makeRealProfileTask overrides DNS and explicit custom data', () async {
+  test('makeRealProfileTask writes custom data and no DNS template', () async {
     final result = await makeRealProfileTask(
       const MakeRealProfileState(
         profilesPath: '/profiles',
@@ -377,8 +376,7 @@ void main() {
     );
     final config = loadYaml(result.yaml) as YamlMap;
 
-    expect(config['dns']['enable'], true);
-    expect(config['dns']['nameserver'], isNot(contains('system://')));
+    expect(config.containsKey('dns'), isFalse);
     expect(config['proxy-groups'], hasLength(1));
     expect(config['proxy-groups'][0].keys, ['name', 'type', 'proxies']);
     expect(config['proxy-groups'][0]['type'], 'select');
@@ -738,20 +736,20 @@ void main() {
       final tun = config['tun'] as YamlMap;
 
       expect(tun['stack'], 'gvisor');
-      expect(tun['auto-route'], true);
+      expect(tun.containsKey('auto-route'), isFalse);
       expect(tun['mtu'], 1500);
       expect(tun['strict-route'], true);
       expect(tun.containsKey('congestion-controller'), isFalse);
       expect(tun['udp-timeout'], 60);
     });
 
-    test('tun detects the outbound interface over the profile', () async {
+    test('tun keeps the profile auto-detect-interface', () async {
       final config = await runWith(const PatchClashConfig(), {
         'tun': {'auto-detect-interface': false},
       });
       final tun = config['tun'] as YamlMap;
 
-      expect(tun['auto-detect-interface'], true);
+      expect(tun['auto-detect-interface'], false);
     });
 
     test('outbound settings start at the core defaults', () async {
@@ -760,7 +758,7 @@ void main() {
       });
 
       expect(config['keep-alive-idle'], 15);
-      expect(config['routing-mark'], 0);
+      expect(config['routing-mark'], Platform.isLinux ? 0 : 1);
     });
 
     test('set outbound values replace the profile ones', () async {
@@ -769,7 +767,7 @@ void main() {
         {'routing-mark': 1, 'disable-keep-alive': false},
       );
 
-      expect(config['routing-mark'], 6666);
+      expect(config['routing-mark'], Platform.isLinux ? 6666 : 1);
       expect(config['disable-keep-alive'], true);
     });
 

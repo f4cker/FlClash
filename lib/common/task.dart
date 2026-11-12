@@ -121,7 +121,6 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   final overrides = data.overrides;
   final addedRules = data.addedRules;
   final appendSystemDns = data.appendSystemDns;
-  final defaultUA = data.defaultUA;
   String getProvidersFilePathInner(String type, String key) {
     return join(
       profilesPath,
@@ -159,74 +158,11 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     }
   }
 
-  rawConfig['external-controller'] =
-      data.safeMode || realPatchConfig.secret.isEmpty
-      ? ''
-      : realPatchConfig.externalController.value;
-  rawConfig['secret'] = realPatchConfig.secret;
-  // mihomo serves the unix and pipe controllers without a secret, and the unix
-  // one unlinks whatever sits at its path before opening it to everyone.
-  rawConfig['external-controller-tls'] = '';
-  rawConfig['external-controller-unix'] = '';
-  rawConfig['external-controller-pipe'] = '';
-  final iptables = rawConfig['iptables'];
-  if (iptables is Map) {
-    final inboundInterface = iptables['inbound-interface'];
-    if (inboundInterface is String && inboundInterface.contains(' ')) {
-      rawConfig['iptables'] = {'enable': false};
-    }
+  if (realPatchConfig.pagePriority) {
+    applyPageSettings(rawConfig, data);
+  } else {
+    _applyLegacySettings(rawConfig, data);
   }
-  rawConfig['external-ui'] = '';
-  switch (realPatchConfig.interfaceNameMode) {
-    case InterfaceNameMode.clear:
-      rawConfig['interface-name'] = '';
-    case InterfaceNameMode.follow:
-      break;
-    case InterfaceNameMode.custom:
-      rawConfig['interface-name'] = realPatchConfig.interfaceName;
-  }
-  rawConfig['external-ui-url'] = '';
-  rawConfig.addAll(realPatchConfig.generalOverrideJson);
-  rawConfig['log-level'] = realPatchConfig.logLevel.name;
-  rawConfig['port'] = 0;
-  rawConfig['socks-port'] = 0;
-  rawConfig['keep-alive-interval'] = realPatchConfig.keepAliveInterval;
-  rawConfig['keep-alive-idle'] = realPatchConfig.keepAliveIdle;
-  rawConfig['disable-keep-alive'] = realPatchConfig.disableKeepAlive;
-  rawConfig['routing-mark'] = realPatchConfig.routingMark;
-  rawConfig['mixed-port'] = realPatchConfig.mixedPort;
-  rawConfig['port'] = realPatchConfig.port;
-  rawConfig['socks-port'] = realPatchConfig.socksPort;
-  rawConfig['redir-port'] = realPatchConfig.redirPort;
-  rawConfig['tproxy-port'] = realPatchConfig.tproxyPort;
-  rawConfig['find-process-mode'] = realPatchConfig.findProcessMode.name;
-  rawConfig['allow-lan'] = realPatchConfig.allowLan;
-  // The app owns local inbound authentication; a profile-provided
-  // skip-auth-prefixes could silently exempt loopback and defeat it.
-  rawConfig['authentication'] = data.authentication;
-  rawConfig['skip-auth-prefixes'] = [];
-  rawConfig['mode'] = realPatchConfig.mode.name;
-  // auto-route is always on, so without auto-detect-interface the core sends
-  // its own outbound back into the TUN unless interface-name binds it, and
-  // interface-name wins over the detected interface anyway. A profile's own
-  // dns-hijack may leave queries to other resolvers unhijacked, so only a
-  // picked key replaces any:53.
-  final tun = {
-    if (rawConfig['tun'] is Map) ...rawConfig['tun'] as Map,
-    'dns-hijack': defaultDnsHijack,
-    ...overrides.tun.overrideJson(overrides.tunOverrideKeys),
-    ...realPatchConfig.tun.coreJson,
-    'auto-detect-interface': true,
-  };
-  if (data.bypassPrivateRoute) {
-    tun['route-exclude-address'] = [
-      if (tun['route-exclude-address'] case final List routes) ...routes,
-      ...privateRouteAddress,
-    ];
-  }
-  rawConfig['tun'] = tun;
-  rawConfig['geo-auto-update'] = realPatchConfig.geoAutoUpdate;
-  rawConfig['geo-update-interval'] = realPatchConfig.geoUpdateInterval;
   final snifferOverride = overrides.sniffer.overrideJson(
     overrides.snifferOverrideKeys,
   );
@@ -255,9 +191,6 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       ),
   ]);
   rawConfig['mitm'] = realPatchConfig.mitm.coreJson(mitm.mitm);
-  if (rawConfig['profile'] == null) {
-    rawConfig['profile'] = {};
-  }
   void injectUnconfinedProviders(
     String section,
     Map<String, dynamic> injected,
@@ -276,40 +209,31 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   confineProviders('rule-providers', rulesProviderDirectoryName);
   injectUnconfinedProviders('proxy-providers', data.injectedProxyProviders);
   injectUnconfinedProviders('rule-providers', data.injectedRuleProviders);
-  rawConfig['profile']['store-selected'] = false;
-  rawConfig['geox-url'] = realPatchConfig.geoXUrl.raw;
-  rawConfig['global-ua'] = realPatchConfig.globalUa ?? defaultUA;
-  if (rawConfig['hosts'] == null) {
-    rawConfig['hosts'] = {};
+  if (!realPatchConfig.pagePriority) {
+    _applyLegacyProfileSettings(rawConfig, data);
   }
-  for (final host in realPatchConfig.hosts.entries) {
-    rawConfig['hosts'][host.key] = host.value.splitByMultipleSeparators;
-  }
-  var rawDns = rawConfig['dns'] is Map
-      ? Map<String, dynamic>.from(rawConfig['dns'] as Map)
-      : <String, dynamic>{};
-  final isEnableDns = rawDns['enable'] == true;
   const systemDns = 'system://';
-  if (!isEnableDns) {
-    rawDns = mergeDnsOverride(
-      rawDns,
-      baselineDns.overrideJson(baselineDnsOverrideKeys),
-    );
-  }
-  rawDns = mergeDnsOverride(
-    rawDns,
+  final dns = mergeDnsOverride(
+    rawConfig['dns'] is Map
+        ? Map<String, dynamic>.from(rawConfig['dns'] as Map)
+        : <String, dynamic>{},
     overrides.dns.overrideJson(
       overrides.dnsOverrideKeys,
       keepEmpty: data.keepEmptyDnsOverrides,
     ),
   );
-  rawConfig['dns'] = rawDns;
+  if (dns.isNotEmpty || rawConfig.containsKey('dns')) {
+    rawConfig['dns'] = dns;
+  }
   final ntpOverride = overrides.ntp.overrideJson(overrides.ntpOverrideKeys);
   if (ntpOverride.isNotEmpty) {
     final rawNtp = rawConfig['ntp'] is Map
         ? Map<String, dynamic>.from(rawConfig['ntp'] as Map)
         : <String, dynamic>{};
     rawConfig['ntp'] = {...rawNtp, ...ntpOverride};
+  }
+  if (appendSystemDns || data.safeMode) {
+    rawConfig['dns'] ??= <String, dynamic>{};
   }
   if (appendSystemDns) {
     final List<String> nameserver = List<String>.from(
@@ -382,6 +306,196 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   rawConfig['rules'] = [...mitm.rules, ...rules];
   final yaml = await _encodeYaml(Map<String, dynamic>.from(rawConfig));
   return (yaml: yaml, md5: yaml.toMd5(), counts: configCountsOf(rawConfig));
+}
+
+/// The settings a profile built before page priority carried, as it did.
+void _applyLegacySettings(Map rawConfig, MakeRealProfileState data) {
+  final realPatchConfig = data.realPatchConfig;
+  final overrides = data.overrides;
+  rawConfig['external-controller'] =
+      data.safeMode || realPatchConfig.secret.isEmpty
+      ? ''
+      : realPatchConfig.externalController.value;
+  rawConfig['secret'] = realPatchConfig.secret;
+  // mihomo serves the unix and pipe controllers without a secret, and the unix
+  // one unlinks whatever sits at its path before opening it to everyone.
+  rawConfig['external-controller-tls'] = '';
+  rawConfig['external-controller-unix'] = '';
+  rawConfig['external-controller-pipe'] = '';
+  final iptables = rawConfig['iptables'];
+  if (iptables is Map) {
+    final inboundInterface = iptables['inbound-interface'];
+    if (inboundInterface is String && inboundInterface.contains(' ')) {
+      rawConfig['iptables'] = {'enable': false};
+    }
+  }
+  rawConfig['external-ui'] = '';
+  switch (realPatchConfig.interfaceNameMode) {
+    case InterfaceNameMode.clear:
+      rawConfig['interface-name'] = '';
+    case InterfaceNameMode.follow:
+      break;
+    case InterfaceNameMode.custom:
+      rawConfig['interface-name'] = realPatchConfig.interfaceName;
+  }
+  rawConfig['external-ui-url'] = '';
+  rawConfig.addAll(realPatchConfig.generalOverrideJson);
+  rawConfig['log-level'] = realPatchConfig.logLevel.name;
+  rawConfig['port'] = 0;
+  rawConfig['socks-port'] = 0;
+  rawConfig['keep-alive-interval'] = realPatchConfig.keepAliveInterval;
+  rawConfig['keep-alive-idle'] = realPatchConfig.keepAliveIdle;
+  rawConfig['disable-keep-alive'] = realPatchConfig.disableKeepAlive;
+  rawConfig['routing-mark'] = realPatchConfig.routingMark;
+  rawConfig['mixed-port'] = realPatchConfig.mixedPort;
+  rawConfig['port'] = realPatchConfig.port;
+  rawConfig['socks-port'] = realPatchConfig.socksPort;
+  rawConfig['redir-port'] = realPatchConfig.redirPort;
+  rawConfig['tproxy-port'] = realPatchConfig.tproxyPort;
+  rawConfig['find-process-mode'] = realPatchConfig.findProcessMode.name;
+  rawConfig['allow-lan'] = realPatchConfig.allowLan;
+  // The app owns local inbound authentication; a profile-provided
+  // skip-auth-prefixes could silently exempt loopback and defeat it.
+  rawConfig['authentication'] = data.authentication;
+  rawConfig['skip-auth-prefixes'] = [];
+  rawConfig['mode'] = realPatchConfig.mode.name;
+  final tun = {
+    if (rawConfig['tun'] is Map) ...rawConfig['tun'] as Map,
+    'dns-hijack': defaultDnsHijack,
+    ...overrides.tun.overrideJson(overrides.tunOverrideKeys),
+    ...realPatchConfig.tun.coreJson,
+    'auto-detect-interface': true,
+  };
+  if (data.bypassPrivateRoute) {
+    tun['route-exclude-address'] = [
+      if (tun['route-exclude-address'] case final List routes) ...routes,
+      ...privateRouteAddress,
+    ];
+  }
+  rawConfig['tun'] = tun;
+  rawConfig['geo-auto-update'] = realPatchConfig.geoAutoUpdate;
+  rawConfig['geo-update-interval'] = realPatchConfig.geoUpdateInterval;
+}
+
+void _applyLegacyProfileSettings(Map rawConfig, MakeRealProfileState data) {
+  final realPatchConfig = data.realPatchConfig;
+  rawConfig['profile'] = {
+    if (rawConfig['profile'] case final Map profile) ...profile,
+    'store-selected': false,
+  };
+  rawConfig['geox-url'] = realPatchConfig.geoXUrl.raw;
+  rawConfig['global-ua'] = realPatchConfig.globalUa ?? data.defaultUA;
+  if (rawConfig['hosts'] == null) {
+    rawConfig['hosts'] = {};
+  }
+  for (final host in realPatchConfig.hosts.entries) {
+    rawConfig['hosts'][host.key] = host.value.splitByMultipleSeparators;
+  }
+  var rawDns = rawConfig['dns'] is Map
+      ? Map<String, dynamic>.from(rawConfig['dns'] as Map)
+      : <String, dynamic>{};
+  final isEnableDns = rawDns['enable'] == true;
+  if (!isEnableDns) {
+    rawDns = mergeDnsOverride(
+      rawDns,
+      baselineDns.overrideJson(baselineDnsOverrideKeys),
+    );
+  }
+  rawConfig['dns'] = rawDns;
+}
+
+/// Writes each field a page control owns, and only that field; every other
+/// key stays as the file wrote it, and one it leaves out takes the Core's
+/// default.
+@visibleForTesting
+void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
+  final page = data.realPatchConfig;
+  final overrides = data.overrides;
+  bool owns(PageConfigKey key) => !page.followKeys.contains(key);
+  void put(PageConfigKey key, Object? value) {
+    if (owns(key)) {
+      rawConfig[key.path] = value;
+    }
+  }
+
+  if (data.safeMode) {
+    rawConfig['external-controller'] = '';
+    rawConfig['secret'] = page.secret;
+  } else if (owns(PageConfigKey.externalController)) {
+    rawConfig['external-controller'] = page.secret.isEmpty
+        ? ''
+        : page.externalController.value;
+    rawConfig['secret'] = page.secret;
+  }
+  rawConfig['external-controller-tls'] = '';
+  rawConfig['external-controller-unix'] = '';
+  rawConfig['external-controller-pipe'] = '';
+  final iptables = rawConfig['iptables'];
+  if (iptables is Map) {
+    final inboundInterface = iptables['inbound-interface'];
+    if (inboundInterface is String && inboundInterface.contains(' ')) {
+      rawConfig['iptables'] = {'enable': false};
+    }
+  }
+  switch (page.interfaceNameMode) {
+    case InterfaceNameMode.clear:
+      rawConfig['interface-name'] = '';
+    case InterfaceNameMode.follow:
+      break;
+    case InterfaceNameMode.custom:
+      rawConfig['interface-name'] = page.interfaceName;
+  }
+  rawConfig.addAll(page.generalOverrideJson);
+  put(PageConfigKey.logLevel, page.logLevel.name);
+  put(PageConfigKey.mixedPort, page.mixedPort);
+  put(PageConfigKey.port, page.port);
+  put(PageConfigKey.socksPort, page.socksPort);
+  put(PageConfigKey.redirPort, page.redirPort);
+  put(PageConfigKey.tproxyPort, page.tproxyPort);
+  put(PageConfigKey.keepAliveInterval, page.keepAliveInterval);
+  put(PageConfigKey.keepAliveIdle, page.keepAliveIdle);
+  put(PageConfigKey.disableKeepAlive, page.disableKeepAlive);
+  if (Platform.isLinux) {
+    rawConfig['routing-mark'] = page.routingMark;
+  }
+  put(PageConfigKey.findProcessMode, page.findProcessMode.name);
+  put(PageConfigKey.allowLan, page.allowLan);
+  put(PageConfigKey.authentication, data.authentication);
+  put(PageConfigKey.mode, page.mode.name);
+  final tun = {
+    if (rawConfig['tun'] is Map) ...rawConfig['tun'] as Map,
+    ...overrides.tun.overrideJson(overrides.tunOverrideKeys),
+    if (owns(PageConfigKey.tunEnable)) 'enable': page.tun.enable,
+    if (owns(PageConfigKey.tunStack)) 'stack': page.tun.stack.name,
+  };
+  if (data.safeMode) {
+    tun['enable'] = false;
+  }
+  if (data.bypassPrivateRoute) {
+    tun['route-exclude-address'] = [
+      if (tun['route-exclude-address'] case final List routes) ...routes,
+      ...privateRouteAddress,
+    ];
+  }
+  if (tun.isNotEmpty) {
+    rawConfig['tun'] = tun;
+  }
+  put(PageConfigKey.geoAutoUpdate, page.geoAutoUpdate);
+  put(PageConfigKey.geoUpdateInterval, page.geoUpdateInterval);
+  if (owns(PageConfigKey.geoXUrl)) {
+    rawConfig['geox-url'] = {
+      if (rawConfig['geox-url'] is Map) ...rawConfig['geox-url'] as Map,
+      ...page.geoXUrl.raw,
+    };
+  }
+  put(PageConfigKey.globalUa, page.globalUa ?? data.defaultUA);
+  if (owns(PageConfigKey.hosts) && page.hosts.isNotEmpty) {
+    rawConfig['hosts'] = {
+      if (rawConfig['hosts'] is Map) ...rawConfig['hosts'] as Map,
+      for (final MapEntry(:key, :value) in page.hosts.entries)
+        key: value.splitByMultipleSeparators,
+    };
+  }
 }
 
 typedef ShakingStoreArgs = ({

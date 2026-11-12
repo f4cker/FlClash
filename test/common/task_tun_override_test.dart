@@ -98,8 +98,7 @@ void main() {
     expect(tun['include-uid'], [1000]);
   });
 
-  test('hijacks every port 53 query over the profile unless a key is '
-      'picked', () async {
+  test('keeps the profile dns-hijack unless a key is picked', () async {
     const profileHijack = {
       'tun': {
         'dns-hijack': ['198.18.0.2:53'],
@@ -117,7 +116,7 @@ void main() {
       ),
     );
 
-    expect(tun['dns-hijack'], defaultDnsHijack);
+    expect(tun['dns-hijack'], ['198.18.0.2:53']);
     expect(picked['dns-hijack'], ['tcp://any:53']);
   });
 

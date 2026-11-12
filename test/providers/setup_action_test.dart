@@ -175,7 +175,7 @@ void main() {
     registerFallbackValue(const SetupBase(path: '', overlay: ''));
     registerFallbackValue(
       const UpdateParams(
-        tun: Tun(),
+        tun: {'enable': false},
         mixedPort: 7890,
         allowLan: false,
         findProcessMode: FindProcessMode.off,
@@ -1050,7 +1050,7 @@ void main() {
       final params =
           verify(() => core.updateConfig(captureAny())).captured.single
               as UpdateParams;
-      expect(params.tun.enable, isFalse);
+      expect(params.tun?['enable'], isFalse);
       expect(scopedAction.authorizeCalls, 0);
     });
 

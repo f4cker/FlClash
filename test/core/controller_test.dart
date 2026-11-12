@@ -30,7 +30,7 @@ void main() {
     registerFallbackValue(const InitParams(homeDir: '.', version: 1));
     registerFallbackValue(
       const UpdateParams(
-        tun: Tun(),
+        tun: {'enable': false},
         mixedPort: 7890,
         allowLan: true,
         findProcessMode: FindProcessMode.off,
@@ -168,7 +168,7 @@ void main() {
 
     test('updateConfig delegates to interface', () async {
       const params = UpdateParams(
-        tun: Tun(enable: false),
+        tun: {'enable': false},
         mixedPort: 7890,
         allowLan: true,
         findProcessMode: FindProcessMode.off,

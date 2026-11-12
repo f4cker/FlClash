@@ -1243,7 +1243,7 @@ as int,
 /// @nodoc
 mixin _$UpdateParams {
 
-@JsonKey(toJson: _tunCoreJson) Tun get tun;@JsonKey(name: 'mixed-port') int get mixedPort;@JsonKey(name: 'allow-lan') bool get allowLan;@JsonKey(name: 'find-process-mode') FindProcessMode get findProcessMode; Mode get mode;@JsonKey(name: 'log-level') LogLevel get logLevel; bool? get ipv6;@JsonKey(name: 'tcp-concurrent') bool? get tcpConcurrent;@JsonKey(name: 'external-controller') ExternalControllerStatus get externalController; String get secret;@JsonKey(name: 'unified-delay') bool? get unifiedDelay; List<String> get authentication;@JsonKey(name: 'geo-auto-update') bool get geoAutoUpdate;@JsonKey(name: 'geo-update-interval') int get geoUpdateInterval;@JsonKey(name: 'geox-url') Map<String, String> get geoXUrl; CoreOptions get options;
+ Map<String, Object?>? get tun;@JsonKey(name: 'mixed-port') int? get mixedPort;@JsonKey(name: 'allow-lan') bool? get allowLan;@JsonKey(name: 'find-process-mode') FindProcessMode? get findProcessMode; Mode? get mode;@JsonKey(name: 'log-level') LogLevel? get logLevel; bool? get ipv6;@JsonKey(name: 'tcp-concurrent') bool? get tcpConcurrent;@JsonKey(name: 'external-controller') ExternalControllerStatus? get externalController; String? get secret;@JsonKey(name: 'unified-delay') bool? get unifiedDelay; List<String>? get authentication;@JsonKey(name: 'geo-auto-update') bool? get geoAutoUpdate;@JsonKey(name: 'geo-update-interval') int? get geoUpdateInterval;@JsonKey(name: 'geox-url') Map<String, String>? get geoXUrl; CoreOptions get options;
 /// Create a copy of UpdateParams
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1257,14 +1257,14 @@ $UpdateParamsCopyWith<UpdateParams> get copyWith => _$UpdateParamsCopyWithImpl<U
 @override
 bool operator ==(Object other) {
   final _this = this as UpdateParams;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UpdateParams&&(identical(other.tun, _this.tun) || other.tun == _this.tun)&&(identical(other.mixedPort, _this.mixedPort) || other.mixedPort == _this.mixedPort)&&(identical(other.allowLan, _this.allowLan) || other.allowLan == _this.allowLan)&&(identical(other.findProcessMode, _this.findProcessMode) || other.findProcessMode == _this.findProcessMode)&&(identical(other.mode, _this.mode) || other.mode == _this.mode)&&(identical(other.logLevel, _this.logLevel) || other.logLevel == _this.logLevel)&&(identical(other.ipv6, _this.ipv6) || other.ipv6 == _this.ipv6)&&(identical(other.tcpConcurrent, _this.tcpConcurrent) || other.tcpConcurrent == _this.tcpConcurrent)&&(identical(other.externalController, _this.externalController) || other.externalController == _this.externalController)&&(identical(other.secret, _this.secret) || other.secret == _this.secret)&&(identical(other.unifiedDelay, _this.unifiedDelay) || other.unifiedDelay == _this.unifiedDelay)&&const DeepCollectionEquality().equals(other.authentication, _this.authentication)&&(identical(other.geoAutoUpdate, _this.geoAutoUpdate) || other.geoAutoUpdate == _this.geoAutoUpdate)&&(identical(other.geoUpdateInterval, _this.geoUpdateInterval) || other.geoUpdateInterval == _this.geoUpdateInterval)&&const DeepCollectionEquality().equals(other.geoXUrl, _this.geoXUrl)&&(identical(other.options, _this.options) || other.options == _this.options));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UpdateParams&&const DeepCollectionEquality().equals(other.tun, _this.tun)&&(identical(other.mixedPort, _this.mixedPort) || other.mixedPort == _this.mixedPort)&&(identical(other.allowLan, _this.allowLan) || other.allowLan == _this.allowLan)&&(identical(other.findProcessMode, _this.findProcessMode) || other.findProcessMode == _this.findProcessMode)&&(identical(other.mode, _this.mode) || other.mode == _this.mode)&&(identical(other.logLevel, _this.logLevel) || other.logLevel == _this.logLevel)&&(identical(other.ipv6, _this.ipv6) || other.ipv6 == _this.ipv6)&&(identical(other.tcpConcurrent, _this.tcpConcurrent) || other.tcpConcurrent == _this.tcpConcurrent)&&(identical(other.externalController, _this.externalController) || other.externalController == _this.externalController)&&(identical(other.secret, _this.secret) || other.secret == _this.secret)&&(identical(other.unifiedDelay, _this.unifiedDelay) || other.unifiedDelay == _this.unifiedDelay)&&const DeepCollectionEquality().equals(other.authentication, _this.authentication)&&(identical(other.geoAutoUpdate, _this.geoAutoUpdate) || other.geoAutoUpdate == _this.geoAutoUpdate)&&(identical(other.geoUpdateInterval, _this.geoUpdateInterval) || other.geoUpdateInterval == _this.geoUpdateInterval)&&const DeepCollectionEquality().equals(other.geoXUrl, _this.geoXUrl)&&(identical(other.options, _this.options) || other.options == _this.options));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as UpdateParams;
-  return Object.hash(runtimeType,_this.tun,_this.mixedPort,_this.allowLan,_this.findProcessMode,_this.mode,_this.logLevel,_this.ipv6,_this.tcpConcurrent,_this.externalController,_this.secret,_this.unifiedDelay,const DeepCollectionEquality().hash(_this.authentication),_this.geoAutoUpdate,_this.geoUpdateInterval,const DeepCollectionEquality().hash(_this.geoXUrl),_this.options);
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.tun),_this.mixedPort,_this.allowLan,_this.findProcessMode,_this.mode,_this.logLevel,_this.ipv6,_this.tcpConcurrent,_this.externalController,_this.secret,_this.unifiedDelay,const DeepCollectionEquality().hash(_this.authentication),_this.geoAutoUpdate,_this.geoUpdateInterval,const DeepCollectionEquality().hash(_this.geoXUrl),_this.options);
 }
 
 @override
@@ -1281,11 +1281,11 @@ abstract mixin class $UpdateParamsCopyWith<$Res>  {
   factory $UpdateParamsCopyWith(UpdateParams value, $Res Function(UpdateParams) _then) = _$UpdateParamsCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(toJson: _tunCoreJson) Tun tun,@JsonKey(name: 'mixed-port') int mixedPort,@JsonKey(name: 'allow-lan') bool allowLan,@JsonKey(name: 'find-process-mode') FindProcessMode findProcessMode, Mode mode,@JsonKey(name: 'log-level') LogLevel logLevel, bool? ipv6,@JsonKey(name: 'tcp-concurrent') bool? tcpConcurrent,@JsonKey(name: 'external-controller') ExternalControllerStatus externalController, String secret,@JsonKey(name: 'unified-delay') bool? unifiedDelay, List<String> authentication,@JsonKey(name: 'geo-auto-update') bool geoAutoUpdate,@JsonKey(name: 'geo-update-interval') int geoUpdateInterval,@JsonKey(name: 'geox-url') Map<String, String> geoXUrl, CoreOptions options
+ Map<String, Object?>? tun,@JsonKey(name: 'mixed-port') int? mixedPort,@JsonKey(name: 'allow-lan') bool? allowLan,@JsonKey(name: 'find-process-mode') FindProcessMode? findProcessMode, Mode? mode,@JsonKey(name: 'log-level') LogLevel? logLevel, bool? ipv6,@JsonKey(name: 'tcp-concurrent') bool? tcpConcurrent,@JsonKey(name: 'external-controller') ExternalControllerStatus? externalController, String? secret,@JsonKey(name: 'unified-delay') bool? unifiedDelay, List<String>? authentication,@JsonKey(name: 'geo-auto-update') bool? geoAutoUpdate,@JsonKey(name: 'geo-update-interval') int? geoUpdateInterval,@JsonKey(name: 'geox-url') Map<String, String>? geoXUrl, CoreOptions options
 });
 
 
-$TunCopyWith<$Res> get tun;$CoreOptionsCopyWith<$Res> get options;
+$CoreOptionsCopyWith<$Res> get options;
 
 }
 /// @nodoc
@@ -1298,37 +1298,28 @@ class _$UpdateParamsCopyWithImpl<$Res>
 
 /// Create a copy of UpdateParams
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? tun = null,Object? mixedPort = null,Object? allowLan = null,Object? findProcessMode = null,Object? mode = null,Object? logLevel = null,Object? ipv6 = freezed,Object? tcpConcurrent = freezed,Object? externalController = null,Object? secret = null,Object? unifiedDelay = freezed,Object? authentication = null,Object? geoAutoUpdate = null,Object? geoUpdateInterval = null,Object? geoXUrl = null,Object? options = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? tun = freezed,Object? mixedPort = freezed,Object? allowLan = freezed,Object? findProcessMode = freezed,Object? mode = freezed,Object? logLevel = freezed,Object? ipv6 = freezed,Object? tcpConcurrent = freezed,Object? externalController = freezed,Object? secret = freezed,Object? unifiedDelay = freezed,Object? authentication = freezed,Object? geoAutoUpdate = freezed,Object? geoUpdateInterval = freezed,Object? geoXUrl = freezed,Object? options = null,}) {
   return _then(UpdateParams(
-tun: null == tun ? _self.tun : tun // ignore: cast_nullable_to_non_nullable
-as Tun,mixedPort: null == mixedPort ? _self.mixedPort : mixedPort // ignore: cast_nullable_to_non_nullable
-as int,allowLan: null == allowLan ? _self.allowLan : allowLan // ignore: cast_nullable_to_non_nullable
-as bool,findProcessMode: null == findProcessMode ? _self.findProcessMode : findProcessMode // ignore: cast_nullable_to_non_nullable
-as FindProcessMode,mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
-as Mode,logLevel: null == logLevel ? _self.logLevel : logLevel // ignore: cast_nullable_to_non_nullable
-as LogLevel,ipv6: freezed == ipv6 ? _self.ipv6 : ipv6 // ignore: cast_nullable_to_non_nullable
+tun: freezed == tun ? _self.tun : tun // ignore: cast_nullable_to_non_nullable
+as Map<String, Object?>?,mixedPort: freezed == mixedPort ? _self.mixedPort : mixedPort // ignore: cast_nullable_to_non_nullable
+as int?,allowLan: freezed == allowLan ? _self.allowLan : allowLan // ignore: cast_nullable_to_non_nullable
+as bool?,findProcessMode: freezed == findProcessMode ? _self.findProcessMode : findProcessMode // ignore: cast_nullable_to_non_nullable
+as FindProcessMode?,mode: freezed == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
+as Mode?,logLevel: freezed == logLevel ? _self.logLevel : logLevel // ignore: cast_nullable_to_non_nullable
+as LogLevel?,ipv6: freezed == ipv6 ? _self.ipv6 : ipv6 // ignore: cast_nullable_to_non_nullable
 as bool?,tcpConcurrent: freezed == tcpConcurrent ? _self.tcpConcurrent : tcpConcurrent // ignore: cast_nullable_to_non_nullable
-as bool?,externalController: null == externalController ? _self.externalController : externalController // ignore: cast_nullable_to_non_nullable
-as ExternalControllerStatus,secret: null == secret ? _self.secret : secret // ignore: cast_nullable_to_non_nullable
-as String,unifiedDelay: freezed == unifiedDelay ? _self.unifiedDelay : unifiedDelay // ignore: cast_nullable_to_non_nullable
-as bool?,authentication: null == authentication ? _self.authentication : authentication // ignore: cast_nullable_to_non_nullable
-as List<String>,geoAutoUpdate: null == geoAutoUpdate ? _self.geoAutoUpdate : geoAutoUpdate // ignore: cast_nullable_to_non_nullable
-as bool,geoUpdateInterval: null == geoUpdateInterval ? _self.geoUpdateInterval : geoUpdateInterval // ignore: cast_nullable_to_non_nullable
-as int,geoXUrl: null == geoXUrl ? _self.geoXUrl : geoXUrl // ignore: cast_nullable_to_non_nullable
-as Map<String, String>,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
+as bool?,externalController: freezed == externalController ? _self.externalController : externalController // ignore: cast_nullable_to_non_nullable
+as ExternalControllerStatus?,secret: freezed == secret ? _self.secret : secret // ignore: cast_nullable_to_non_nullable
+as String?,unifiedDelay: freezed == unifiedDelay ? _self.unifiedDelay : unifiedDelay // ignore: cast_nullable_to_non_nullable
+as bool?,authentication: freezed == authentication ? _self.authentication : authentication // ignore: cast_nullable_to_non_nullable
+as List<String>?,geoAutoUpdate: freezed == geoAutoUpdate ? _self.geoAutoUpdate : geoAutoUpdate // ignore: cast_nullable_to_non_nullable
+as bool?,geoUpdateInterval: freezed == geoUpdateInterval ? _self.geoUpdateInterval : geoUpdateInterval // ignore: cast_nullable_to_non_nullable
+as int?,geoXUrl: freezed == geoXUrl ? _self.geoXUrl : geoXUrl // ignore: cast_nullable_to_non_nullable
+as Map<String, String>?,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
 as CoreOptions,
   ));
 }
 /// Create a copy of UpdateParams
-/// with the given fields replaced by the non-null parameter values.
-@override
-@pragma('vm:prefer-inline')
-$TunCopyWith<$Res> get tun {
-  
-  return $TunCopyWith<$Res>(_self.tun, (value) {
-    return _then(_self.copyWith(tun: value));
-  });
-}/// Create a copy of UpdateParams
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
@@ -1419,7 +1410,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(toJson: _tunCoreJson)  Tun tun, @JsonKey(name: 'mixed-port')  int mixedPort, @JsonKey(name: 'allow-lan')  bool allowLan, @JsonKey(name: 'find-process-mode')  FindProcessMode findProcessMode,  Mode mode, @JsonKey(name: 'log-level')  LogLevel logLevel,  bool? ipv6, @JsonKey(name: 'tcp-concurrent')  bool? tcpConcurrent, @JsonKey(name: 'external-controller')  ExternalControllerStatus externalController,  String secret, @JsonKey(name: 'unified-delay')  bool? unifiedDelay,  List<String> authentication, @JsonKey(name: 'geo-auto-update')  bool geoAutoUpdate, @JsonKey(name: 'geo-update-interval')  int geoUpdateInterval, @JsonKey(name: 'geox-url')  Map<String, String> geoXUrl,  CoreOptions options)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Map<String, Object?>? tun, @JsonKey(name: 'mixed-port')  int? mixedPort, @JsonKey(name: 'allow-lan')  bool? allowLan, @JsonKey(name: 'find-process-mode')  FindProcessMode? findProcessMode,  Mode? mode, @JsonKey(name: 'log-level')  LogLevel? logLevel,  bool? ipv6, @JsonKey(name: 'tcp-concurrent')  bool? tcpConcurrent, @JsonKey(name: 'external-controller')  ExternalControllerStatus? externalController,  String? secret, @JsonKey(name: 'unified-delay')  bool? unifiedDelay,  List<String>? authentication, @JsonKey(name: 'geo-auto-update')  bool? geoAutoUpdate, @JsonKey(name: 'geo-update-interval')  int? geoUpdateInterval, @JsonKey(name: 'geox-url')  Map<String, String>? geoXUrl,  CoreOptions options)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UpdateParams() when $default != null:
 return $default(_that.tun,_that.mixedPort,_that.allowLan,_that.findProcessMode,_that.mode,_that.logLevel,_that.ipv6,_that.tcpConcurrent,_that.externalController,_that.secret,_that.unifiedDelay,_that.authentication,_that.geoAutoUpdate,_that.geoUpdateInterval,_that.geoXUrl,_that.options);case _:
@@ -1440,7 +1431,7 @@ return $default(_that.tun,_that.mixedPort,_that.allowLan,_that.findProcessMode,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(toJson: _tunCoreJson)  Tun tun, @JsonKey(name: 'mixed-port')  int mixedPort, @JsonKey(name: 'allow-lan')  bool allowLan, @JsonKey(name: 'find-process-mode')  FindProcessMode findProcessMode,  Mode mode, @JsonKey(name: 'log-level')  LogLevel logLevel,  bool? ipv6, @JsonKey(name: 'tcp-concurrent')  bool? tcpConcurrent, @JsonKey(name: 'external-controller')  ExternalControllerStatus externalController,  String secret, @JsonKey(name: 'unified-delay')  bool? unifiedDelay,  List<String> authentication, @JsonKey(name: 'geo-auto-update')  bool geoAutoUpdate, @JsonKey(name: 'geo-update-interval')  int geoUpdateInterval, @JsonKey(name: 'geox-url')  Map<String, String> geoXUrl,  CoreOptions options)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Map<String, Object?>? tun, @JsonKey(name: 'mixed-port')  int? mixedPort, @JsonKey(name: 'allow-lan')  bool? allowLan, @JsonKey(name: 'find-process-mode')  FindProcessMode? findProcessMode,  Mode? mode, @JsonKey(name: 'log-level')  LogLevel? logLevel,  bool? ipv6, @JsonKey(name: 'tcp-concurrent')  bool? tcpConcurrent, @JsonKey(name: 'external-controller')  ExternalControllerStatus? externalController,  String? secret, @JsonKey(name: 'unified-delay')  bool? unifiedDelay,  List<String>? authentication, @JsonKey(name: 'geo-auto-update')  bool? geoAutoUpdate, @JsonKey(name: 'geo-update-interval')  int? geoUpdateInterval, @JsonKey(name: 'geox-url')  Map<String, String>? geoXUrl,  CoreOptions options)  $default,) {final _that = this;
 switch (_that) {
 case _UpdateParams():
 return $default(_that.tun,_that.mixedPort,_that.allowLan,_that.findProcessMode,_that.mode,_that.logLevel,_that.ipv6,_that.tcpConcurrent,_that.externalController,_that.secret,_that.unifiedDelay,_that.authentication,_that.geoAutoUpdate,_that.geoUpdateInterval,_that.geoXUrl,_that.options);case _:
@@ -1460,7 +1451,7 @@ return $default(_that.tun,_that.mixedPort,_that.allowLan,_that.findProcessMode,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(toJson: _tunCoreJson)  Tun tun, @JsonKey(name: 'mixed-port')  int mixedPort, @JsonKey(name: 'allow-lan')  bool allowLan, @JsonKey(name: 'find-process-mode')  FindProcessMode findProcessMode,  Mode mode, @JsonKey(name: 'log-level')  LogLevel logLevel,  bool? ipv6, @JsonKey(name: 'tcp-concurrent')  bool? tcpConcurrent, @JsonKey(name: 'external-controller')  ExternalControllerStatus externalController,  String secret, @JsonKey(name: 'unified-delay')  bool? unifiedDelay,  List<String> authentication, @JsonKey(name: 'geo-auto-update')  bool geoAutoUpdate, @JsonKey(name: 'geo-update-interval')  int geoUpdateInterval, @JsonKey(name: 'geox-url')  Map<String, String> geoXUrl,  CoreOptions options)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Map<String, Object?>? tun, @JsonKey(name: 'mixed-port')  int? mixedPort, @JsonKey(name: 'allow-lan')  bool? allowLan, @JsonKey(name: 'find-process-mode')  FindProcessMode? findProcessMode,  Mode? mode, @JsonKey(name: 'log-level')  LogLevel? logLevel,  bool? ipv6, @JsonKey(name: 'tcp-concurrent')  bool? tcpConcurrent, @JsonKey(name: 'external-controller')  ExternalControllerStatus? externalController,  String? secret, @JsonKey(name: 'unified-delay')  bool? unifiedDelay,  List<String>? authentication, @JsonKey(name: 'geo-auto-update')  bool? geoAutoUpdate, @JsonKey(name: 'geo-update-interval')  int? geoUpdateInterval, @JsonKey(name: 'geox-url')  Map<String, String>? geoXUrl,  CoreOptions options)?  $default,) {final _that = this;
 switch (_that) {
 case _UpdateParams() when $default != null:
 return $default(_that.tun,_that.mixedPort,_that.allowLan,_that.findProcessMode,_that.mode,_that.logLevel,_that.ipv6,_that.tcpConcurrent,_that.externalController,_that.secret,_that.unifiedDelay,_that.authentication,_that.geoAutoUpdate,_that.geoUpdateInterval,_that.geoXUrl,_that.options);case _:
@@ -1472,37 +1463,49 @@ return $default(_that.tun,_that.mixedPort,_that.allowLan,_that.findProcessMode,_
 }
 
 /// @nodoc
-@JsonSerializable()
 
+@JsonSerializable(includeIfNull: false)
 class _UpdateParams implements UpdateParams {
-  const _UpdateParams({@JsonKey(toJson: _tunCoreJson) required this.tun, @JsonKey(name: 'mixed-port') required this.mixedPort, @JsonKey(name: 'allow-lan') required this.allowLan, @JsonKey(name: 'find-process-mode') required this.findProcessMode, required this.mode, @JsonKey(name: 'log-level') required this.logLevel, this.ipv6, @JsonKey(name: 'tcp-concurrent') this.tcpConcurrent, @JsonKey(name: 'external-controller') required this.externalController, this.secret = '', @JsonKey(name: 'unified-delay') this.unifiedDelay,  List<String> authentication = const [], @JsonKey(name: 'geo-auto-update') this.geoAutoUpdate = false, @JsonKey(name: 'geo-update-interval') this.geoUpdateInterval = 24, @JsonKey(name: 'geox-url')  Map<String, String> geoXUrl = const {}, required this.options}): _authentication = authentication,_geoXUrl = geoXUrl;
+  const _UpdateParams({ Map<String, Object?>? tun, @JsonKey(name: 'mixed-port') this.mixedPort, @JsonKey(name: 'allow-lan') this.allowLan, @JsonKey(name: 'find-process-mode') this.findProcessMode, this.mode, @JsonKey(name: 'log-level') this.logLevel, this.ipv6, @JsonKey(name: 'tcp-concurrent') this.tcpConcurrent, @JsonKey(name: 'external-controller') this.externalController, this.secret, @JsonKey(name: 'unified-delay') this.unifiedDelay,  List<String>? authentication, @JsonKey(name: 'geo-auto-update') this.geoAutoUpdate, @JsonKey(name: 'geo-update-interval') this.geoUpdateInterval, @JsonKey(name: 'geox-url')  Map<String, String>? geoXUrl, required this.options}): _tun = tun,_authentication = authentication,_geoXUrl = geoXUrl;
   factory _UpdateParams.fromJson(Map<String, dynamic> json) => _$UpdateParamsFromJson(json);
 
-@override@JsonKey(toJson: _tunCoreJson) final  Tun tun;
-@override@JsonKey(name: 'mixed-port') final  int mixedPort;
-@override@JsonKey(name: 'allow-lan') final  bool allowLan;
-@override@JsonKey(name: 'find-process-mode') final  FindProcessMode findProcessMode;
-@override final  Mode mode;
-@override@JsonKey(name: 'log-level') final  LogLevel logLevel;
-@override final  bool? ipv6;
-@override@JsonKey(name: 'tcp-concurrent') final  bool? tcpConcurrent;
-@override@JsonKey(name: 'external-controller') final  ExternalControllerStatus externalController;
-@override@JsonKey() final  String secret;
-@override@JsonKey(name: 'unified-delay') final  bool? unifiedDelay;
- final  List<String> _authentication;
-@override@JsonKey() List<String> get authentication {
-  if (_authentication is EqualUnmodifiableListView) return _authentication;
+ final  Map<String, Object?>? _tun;
+@override Map<String, Object?>? get tun {
+  final value = _tun;
+  if (value == null) return null;
+  if (_tun is EqualUnmodifiableMapView) return _tun;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_authentication);
+  return EqualUnmodifiableMapView(value);
 }
 
-@override@JsonKey(name: 'geo-auto-update') final  bool geoAutoUpdate;
-@override@JsonKey(name: 'geo-update-interval') final  int geoUpdateInterval;
- final  Map<String, String> _geoXUrl;
-@override@JsonKey(name: 'geox-url') Map<String, String> get geoXUrl {
+@override@JsonKey(name: 'mixed-port') final  int? mixedPort;
+@override@JsonKey(name: 'allow-lan') final  bool? allowLan;
+@override@JsonKey(name: 'find-process-mode') final  FindProcessMode? findProcessMode;
+@override final  Mode? mode;
+@override@JsonKey(name: 'log-level') final  LogLevel? logLevel;
+@override final  bool? ipv6;
+@override@JsonKey(name: 'tcp-concurrent') final  bool? tcpConcurrent;
+@override@JsonKey(name: 'external-controller') final  ExternalControllerStatus? externalController;
+@override final  String? secret;
+@override@JsonKey(name: 'unified-delay') final  bool? unifiedDelay;
+ final  List<String>? _authentication;
+@override List<String>? get authentication {
+  final value = _authentication;
+  if (value == null) return null;
+  if (_authentication is EqualUnmodifiableListView) return _authentication;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(value);
+}
+
+@override@JsonKey(name: 'geo-auto-update') final  bool? geoAutoUpdate;
+@override@JsonKey(name: 'geo-update-interval') final  int? geoUpdateInterval;
+ final  Map<String, String>? _geoXUrl;
+@override@JsonKey(name: 'geox-url') Map<String, String>? get geoXUrl {
+  final value = _geoXUrl;
+  if (value == null) return null;
   if (_geoXUrl is EqualUnmodifiableMapView) return _geoXUrl;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableMapView(_geoXUrl);
+  return EqualUnmodifiableMapView(value);
 }
 
 @override final  CoreOptions options;
@@ -1520,13 +1523,13 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _UpdateParams&&(identical(other.tun, tun) || other.tun == tun)&&(identical(other.mixedPort, mixedPort) || other.mixedPort == mixedPort)&&(identical(other.allowLan, allowLan) || other.allowLan == allowLan)&&(identical(other.findProcessMode, findProcessMode) || other.findProcessMode == findProcessMode)&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.logLevel, logLevel) || other.logLevel == logLevel)&&(identical(other.ipv6, ipv6) || other.ipv6 == ipv6)&&(identical(other.tcpConcurrent, tcpConcurrent) || other.tcpConcurrent == tcpConcurrent)&&(identical(other.externalController, externalController) || other.externalController == externalController)&&(identical(other.secret, secret) || other.secret == secret)&&(identical(other.unifiedDelay, unifiedDelay) || other.unifiedDelay == unifiedDelay)&&const DeepCollectionEquality().equals(other.authentication, _authentication)&&(identical(other.geoAutoUpdate, geoAutoUpdate) || other.geoAutoUpdate == geoAutoUpdate)&&(identical(other.geoUpdateInterval, geoUpdateInterval) || other.geoUpdateInterval == geoUpdateInterval)&&const DeepCollectionEquality().equals(other.geoXUrl, _geoXUrl)&&(identical(other.options, options) || other.options == options));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _UpdateParams&&const DeepCollectionEquality().equals(other.tun, _tun)&&(identical(other.mixedPort, mixedPort) || other.mixedPort == mixedPort)&&(identical(other.allowLan, allowLan) || other.allowLan == allowLan)&&(identical(other.findProcessMode, findProcessMode) || other.findProcessMode == findProcessMode)&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.logLevel, logLevel) || other.logLevel == logLevel)&&(identical(other.ipv6, ipv6) || other.ipv6 == ipv6)&&(identical(other.tcpConcurrent, tcpConcurrent) || other.tcpConcurrent == tcpConcurrent)&&(identical(other.externalController, externalController) || other.externalController == externalController)&&(identical(other.secret, secret) || other.secret == secret)&&(identical(other.unifiedDelay, unifiedDelay) || other.unifiedDelay == unifiedDelay)&&const DeepCollectionEquality().equals(other.authentication, _authentication)&&(identical(other.geoAutoUpdate, geoAutoUpdate) || other.geoAutoUpdate == geoAutoUpdate)&&(identical(other.geoUpdateInterval, geoUpdateInterval) || other.geoUpdateInterval == geoUpdateInterval)&&const DeepCollectionEquality().equals(other.geoXUrl, _geoXUrl)&&(identical(other.options, options) || other.options == options));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,tun,mixedPort,allowLan,findProcessMode,mode,logLevel,ipv6,tcpConcurrent,externalController,secret,unifiedDelay,const DeepCollectionEquality().hash(_authentication),geoAutoUpdate,geoUpdateInterval,const DeepCollectionEquality().hash(_geoXUrl),options);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_tun),mixedPort,allowLan,findProcessMode,mode,logLevel,ipv6,tcpConcurrent,externalController,secret,unifiedDelay,const DeepCollectionEquality().hash(_authentication),geoAutoUpdate,geoUpdateInterval,const DeepCollectionEquality().hash(_geoXUrl),options);
 }
 
 @override
@@ -1542,11 +1545,11 @@ abstract mixin class _$UpdateParamsCopyWith<$Res> implements $UpdateParamsCopyWi
   factory _$UpdateParamsCopyWith(_UpdateParams value, $Res Function(_UpdateParams) _then) = __$UpdateParamsCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(toJson: _tunCoreJson) Tun tun,@JsonKey(name: 'mixed-port') int mixedPort,@JsonKey(name: 'allow-lan') bool allowLan,@JsonKey(name: 'find-process-mode') FindProcessMode findProcessMode, Mode mode,@JsonKey(name: 'log-level') LogLevel logLevel, bool? ipv6,@JsonKey(name: 'tcp-concurrent') bool? tcpConcurrent,@JsonKey(name: 'external-controller') ExternalControllerStatus externalController, String secret,@JsonKey(name: 'unified-delay') bool? unifiedDelay, List<String> authentication,@JsonKey(name: 'geo-auto-update') bool geoAutoUpdate,@JsonKey(name: 'geo-update-interval') int geoUpdateInterval,@JsonKey(name: 'geox-url') Map<String, String> geoXUrl, CoreOptions options
+ Map<String, Object?>? tun,@JsonKey(name: 'mixed-port') int? mixedPort,@JsonKey(name: 'allow-lan') bool? allowLan,@JsonKey(name: 'find-process-mode') FindProcessMode? findProcessMode, Mode? mode,@JsonKey(name: 'log-level') LogLevel? logLevel, bool? ipv6,@JsonKey(name: 'tcp-concurrent') bool? tcpConcurrent,@JsonKey(name: 'external-controller') ExternalControllerStatus? externalController, String? secret,@JsonKey(name: 'unified-delay') bool? unifiedDelay, List<String>? authentication,@JsonKey(name: 'geo-auto-update') bool? geoAutoUpdate,@JsonKey(name: 'geo-update-interval') int? geoUpdateInterval,@JsonKey(name: 'geox-url') Map<String, String>? geoXUrl, CoreOptions options
 });
 
 
-@override $TunCopyWith<$Res> get tun;@override $CoreOptionsCopyWith<$Res> get options;
+@override $CoreOptionsCopyWith<$Res> get options;
 
 }
 /// @nodoc
@@ -1559,38 +1562,29 @@ class __$UpdateParamsCopyWithImpl<$Res>
 
 /// Create a copy of UpdateParams
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? tun = null,Object? mixedPort = null,Object? allowLan = null,Object? findProcessMode = null,Object? mode = null,Object? logLevel = null,Object? ipv6 = freezed,Object? tcpConcurrent = freezed,Object? externalController = null,Object? secret = null,Object? unifiedDelay = freezed,Object? authentication = null,Object? geoAutoUpdate = null,Object? geoUpdateInterval = null,Object? geoXUrl = null,Object? options = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? tun = freezed,Object? mixedPort = freezed,Object? allowLan = freezed,Object? findProcessMode = freezed,Object? mode = freezed,Object? logLevel = freezed,Object? ipv6 = freezed,Object? tcpConcurrent = freezed,Object? externalController = freezed,Object? secret = freezed,Object? unifiedDelay = freezed,Object? authentication = freezed,Object? geoAutoUpdate = freezed,Object? geoUpdateInterval = freezed,Object? geoXUrl = freezed,Object? options = null,}) {
   return _then(_UpdateParams(
-tun: null == tun ? _self.tun : tun // ignore: cast_nullable_to_non_nullable
-as Tun,mixedPort: null == mixedPort ? _self.mixedPort : mixedPort // ignore: cast_nullable_to_non_nullable
-as int,allowLan: null == allowLan ? _self.allowLan : allowLan // ignore: cast_nullable_to_non_nullable
-as bool,findProcessMode: null == findProcessMode ? _self.findProcessMode : findProcessMode // ignore: cast_nullable_to_non_nullable
-as FindProcessMode,mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
-as Mode,logLevel: null == logLevel ? _self.logLevel : logLevel // ignore: cast_nullable_to_non_nullable
-as LogLevel,ipv6: freezed == ipv6 ? _self.ipv6 : ipv6 // ignore: cast_nullable_to_non_nullable
+tun: freezed == tun ? _self._tun : tun // ignore: cast_nullable_to_non_nullable
+as Map<String, Object?>?,mixedPort: freezed == mixedPort ? _self.mixedPort : mixedPort // ignore: cast_nullable_to_non_nullable
+as int?,allowLan: freezed == allowLan ? _self.allowLan : allowLan // ignore: cast_nullable_to_non_nullable
+as bool?,findProcessMode: freezed == findProcessMode ? _self.findProcessMode : findProcessMode // ignore: cast_nullable_to_non_nullable
+as FindProcessMode?,mode: freezed == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
+as Mode?,logLevel: freezed == logLevel ? _self.logLevel : logLevel // ignore: cast_nullable_to_non_nullable
+as LogLevel?,ipv6: freezed == ipv6 ? _self.ipv6 : ipv6 // ignore: cast_nullable_to_non_nullable
 as bool?,tcpConcurrent: freezed == tcpConcurrent ? _self.tcpConcurrent : tcpConcurrent // ignore: cast_nullable_to_non_nullable
-as bool?,externalController: null == externalController ? _self.externalController : externalController // ignore: cast_nullable_to_non_nullable
-as ExternalControllerStatus,secret: null == secret ? _self.secret : secret // ignore: cast_nullable_to_non_nullable
-as String,unifiedDelay: freezed == unifiedDelay ? _self.unifiedDelay : unifiedDelay // ignore: cast_nullable_to_non_nullable
-as bool?,authentication: null == authentication ? _self._authentication : authentication // ignore: cast_nullable_to_non_nullable
-as List<String>,geoAutoUpdate: null == geoAutoUpdate ? _self.geoAutoUpdate : geoAutoUpdate // ignore: cast_nullable_to_non_nullable
-as bool,geoUpdateInterval: null == geoUpdateInterval ? _self.geoUpdateInterval : geoUpdateInterval // ignore: cast_nullable_to_non_nullable
-as int,geoXUrl: null == geoXUrl ? _self._geoXUrl : geoXUrl // ignore: cast_nullable_to_non_nullable
-as Map<String, String>,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
+as bool?,externalController: freezed == externalController ? _self.externalController : externalController // ignore: cast_nullable_to_non_nullable
+as ExternalControllerStatus?,secret: freezed == secret ? _self.secret : secret // ignore: cast_nullable_to_non_nullable
+as String?,unifiedDelay: freezed == unifiedDelay ? _self.unifiedDelay : unifiedDelay // ignore: cast_nullable_to_non_nullable
+as bool?,authentication: freezed == authentication ? _self._authentication : authentication // ignore: cast_nullable_to_non_nullable
+as List<String>?,geoAutoUpdate: freezed == geoAutoUpdate ? _self.geoAutoUpdate : geoAutoUpdate // ignore: cast_nullable_to_non_nullable
+as bool?,geoUpdateInterval: freezed == geoUpdateInterval ? _self.geoUpdateInterval : geoUpdateInterval // ignore: cast_nullable_to_non_nullable
+as int?,geoXUrl: freezed == geoXUrl ? _self._geoXUrl : geoXUrl // ignore: cast_nullable_to_non_nullable
+as Map<String, String>?,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
 as CoreOptions,
   ));
 }
 
 /// Create a copy of UpdateParams
-/// with the given fields replaced by the non-null parameter values.
-@override
-@pragma('vm:prefer-inline')
-$TunCopyWith<$Res> get tun {
-  
-  return $TunCopyWith<$Res>(_self.tun, (value) {
-    return _then(_self.copyWith(tun: value));
-  });
-}/// Create a copy of UpdateParams
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')

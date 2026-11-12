@@ -32,13 +32,14 @@ Future<YamlMap> _dnsOf({
   Dns dns = _dns,
   Set<DnsOverrideKey> keys = _keys,
   bool keepEmpty = false,
+  bool pagePriority = true,
 }) async {
   final result = await makeRealProfileTask(
     MakeRealProfileState(
       profilesPath: '/profiles',
       profileId: 1,
       rawConfig: rawConfig,
-      realPatchConfig: const PatchClashConfig(),
+      realPatchConfig: PatchClashConfig(pagePriority: pagePriority),
       overrides: ProfileOverrides(dns: dns, dnsOverrideKeys: keys),
       keepEmptyDnsOverrides: keepEmpty,
       appendSystemDns: false,
@@ -77,9 +78,9 @@ void main() {
   });
 
   test(
-    'fills the minimal defaults plus overrides for a profile without DNS',
+    'the legacy build fills the minimal defaults for a profile without DNS',
     () async {
-      final dns = await _dnsOf(rawConfig: {});
+      final dns = await _dnsOf(rawConfig: {}, pagePriority: false);
 
       expect(dns, {
         'enable': true,
@@ -90,6 +91,16 @@ void main() {
       });
     },
   );
+
+  test('writes only the picked keys for a profile without DNS', () async {
+    final dns = await _dnsOf(rawConfig: {});
+
+    expect(dns, {
+      'nameserver': ['1.1.1.1'],
+      'ipv6': true,
+      'fallback-filter': {'geoip': true},
+    });
+  });
 
   test('a key picked without a value writes nothing', () async {
     final dns = await _dnsOf(

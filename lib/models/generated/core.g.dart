@@ -78,56 +78,52 @@ Map<String, dynamic> _$ProfileBaseToJson(_ProfileBase instance) =>
 
 _UpdateParams _$UpdateParamsFromJson(Map<String, dynamic> json) =>
     _UpdateParams(
-      tun: Tun.fromJson(json['tun'] as Map<String, dynamic>),
-      mixedPort: (json['mixed-port'] as num).toInt(),
-      allowLan: json['allow-lan'] as bool,
-      findProcessMode: $enumDecode(
+      tun: json['tun'] as Map<String, dynamic>?,
+      mixedPort: (json['mixed-port'] as num?)?.toInt(),
+      allowLan: json['allow-lan'] as bool?,
+      findProcessMode: $enumDecodeNullable(
         _$FindProcessModeEnumMap,
         json['find-process-mode'],
       ),
-      mode: $enumDecode(_$ModeEnumMap, json['mode']),
-      logLevel: $enumDecode(_$LogLevelEnumMap, json['log-level']),
+      mode: $enumDecodeNullable(_$ModeEnumMap, json['mode']),
+      logLevel: $enumDecodeNullable(_$LogLevelEnumMap, json['log-level']),
       ipv6: json['ipv6'] as bool?,
       tcpConcurrent: json['tcp-concurrent'] as bool?,
-      externalController: $enumDecode(
+      externalController: $enumDecodeNullable(
         _$ExternalControllerStatusEnumMap,
         json['external-controller'],
       ),
-      secret: json['secret'] as String? ?? '',
+      secret: json['secret'] as String?,
       unifiedDelay: json['unified-delay'] as bool?,
-      authentication:
-          (json['authentication'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      geoAutoUpdate: json['geo-auto-update'] as bool? ?? false,
-      geoUpdateInterval: (json['geo-update-interval'] as num?)?.toInt() ?? 24,
-      geoXUrl:
-          (json['geox-url'] as Map<String, dynamic>?)?.map(
-            (k, e) => MapEntry(k, e as String),
-          ) ??
-          const {},
+      authentication: (json['authentication'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      geoAutoUpdate: json['geo-auto-update'] as bool?,
+      geoUpdateInterval: (json['geo-update-interval'] as num?)?.toInt(),
+      geoXUrl: (json['geox-url'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, e as String),
+      ),
       options: CoreOptions.fromJson(json['options'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$UpdateParamsToJson(_UpdateParams instance) =>
     <String, dynamic>{
-      'tun': _tunCoreJson(instance.tun),
-      'mixed-port': instance.mixedPort,
-      'allow-lan': instance.allowLan,
-      'find-process-mode': _$FindProcessModeEnumMap[instance.findProcessMode]!,
-      'mode': _$ModeEnumMap[instance.mode]!,
-      'log-level': _$LogLevelEnumMap[instance.logLevel]!,
-      'ipv6': instance.ipv6,
-      'tcp-concurrent': instance.tcpConcurrent,
+      'tun': ?instance.tun,
+      'mixed-port': ?instance.mixedPort,
+      'allow-lan': ?instance.allowLan,
+      'find-process-mode': ?_$FindProcessModeEnumMap[instance.findProcessMode],
+      'mode': ?_$ModeEnumMap[instance.mode],
+      'log-level': ?_$LogLevelEnumMap[instance.logLevel],
+      'ipv6': ?instance.ipv6,
+      'tcp-concurrent': ?instance.tcpConcurrent,
       'external-controller':
-          _$ExternalControllerStatusEnumMap[instance.externalController]!,
-      'secret': instance.secret,
-      'unified-delay': instance.unifiedDelay,
-      'authentication': instance.authentication,
-      'geo-auto-update': instance.geoAutoUpdate,
-      'geo-update-interval': instance.geoUpdateInterval,
-      'geox-url': instance.geoXUrl,
+          ?_$ExternalControllerStatusEnumMap[instance.externalController],
+      'secret': ?instance.secret,
+      'unified-delay': ?instance.unifiedDelay,
+      'authentication': ?instance.authentication,
+      'geo-auto-update': ?instance.geoAutoUpdate,
+      'geo-update-interval': ?instance.geoUpdateInterval,
+      'geox-url': ?instance.geoXUrl,
       'options': instance.options,
     };
 
