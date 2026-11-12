@@ -185,4 +185,144 @@ void main() {
     expect(config.followKeys, isEmpty);
     expect(config.logLevel, LogLevel.debug);
   });
+
+  group('source line and follow action', () {
+    testWidgets('a page switch says its value and source, with a menu', (
+      tester,
+    ) async {
+      final container = await _pump(
+        tester,
+        const PatchClashConfig(tun: Tun(enable: false)),
+        const TUNItem(),
+      );
+
+      expect(find.text('关闭 · 页面设置'), findsOneWidget);
+      expect(find.text('跟随基础配置'), findsNothing);
+
+      await tester.tap(find.byType(RowMenuButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('跟随基础配置'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(patchClashConfigProvider).followKeys, {
+        PageConfigKey.tunEnable,
+      });
+      expect(find.text('关闭 · 基础配置 · 尚未应用'), findsOneWidget);
+      expect(find.byType(RowMenuButton), findsNothing);
+    });
+
+    testWidgets('a list ends its menu with the follow action', (tester) async {
+      final container = await _pump(
+        tester,
+        const PatchClashConfig(logLevel: LogLevel.silent),
+        const LogLevelItem(),
+      );
+
+      expect(find.text('静默 · 页面设置'), findsOneWidget);
+      await tester.tap(find.text('静默').first);
+      await tester.pumpAndSettle();
+      final follow = tester.getRect(find.text('跟随基础配置'));
+      for (final level in ['调试', '信息', '警告', '错误']) {
+        expect(tester.getRect(find.text(level).last).top, lessThan(follow.top));
+      }
+
+      await tester.tap(find.text('跟随基础配置'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(patchClashConfigProvider).followKeys, {
+        PageConfigKey.logLevel,
+      });
+    });
+
+    testWidgets('a followed list offers no follow action', (tester) async {
+      await _pump(
+        tester,
+        const PatchClashConfig(followKeys: {PageConfigKey.logLevel}),
+        const LogLevelItem(),
+      );
+
+      expect(find.text('静默 · 基础配置 · 尚未应用'), findsOneWidget);
+      await tester.tap(find.text('静默').first);
+      await tester.pumpAndSettle();
+      expect(find.text('跟随基础配置'), findsNothing);
+    });
+
+    testWidgets('a field the file leaves out shows the default', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const PatchClashConfig(
+          allowLan: true,
+          followKeys: {PageConfigKey.allowLan},
+        ),
+        ConfigToggleItem(
+          title: (l) => l.allowLan,
+          pageKey: PageConfigKey.allowLan,
+          selector: shownClashConfigProvider.select((state) => state.allowLan),
+          onChanged: (_, _) {},
+        ),
+      );
+
+      expect(find.text('关闭 · 默认值 · 尚未应用'), findsOneWidget);
+      expect(_switchValue(tester), isFalse);
+    });
+
+    testWidgets('find-process on demand is named, not turned on or off', (
+      tester,
+    ) async {
+      final container = await _pump(
+        tester,
+        const PatchClashConfig(
+          findProcessMode: FindProcessMode.always,
+          followKeys: {PageConfigKey.findProcessMode},
+        ),
+        ConfigToggleItem(
+          title: (l) => l.findProcessMode,
+          pageKey: PageConfigKey.findProcessMode,
+          selector: shownClashConfigProvider.select(
+            (state) => state.findProcessMode == FindProcessMode.always,
+          ),
+          onChanged: (ref, value) => ref
+              .read(patchClashConfigProvider.notifier)
+              .update(
+                (state) => state.copyWith(
+                  findProcessMode: value
+                      ? FindProcessMode.always
+                      : FindProcessMode.off,
+                ),
+              ),
+        ),
+      );
+
+      expect(find.text('按需 · 基础配置 · 尚未应用'), findsOneWidget);
+      expect(_switchValue(tester), isFalse);
+      expect(container.read(patchClashConfigProvider).followKeys, {
+        PageConfigKey.findProcessMode,
+      });
+    });
+
+    testWidgets('the follow action stands even where the values agree', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const PatchClashConfig(tun: Tun(enable: false)),
+        const TUNItem(),
+      );
+
+      expect(find.byType(RowMenuButton), findsOneWidget);
+    });
+
+    testWidgets('legacy mode shows neither source nor action', (tester) async {
+      await _pump(
+        tester,
+        const PatchClashConfig(pagePriority: false),
+        const TUNItem(),
+      );
+
+      expect(find.textContaining('页面设置'), findsNothing);
+      expect(find.byType(RowMenuButton), findsNothing);
+    });
+  });
 }

@@ -324,13 +324,29 @@ class _NumberItem extends ConsumerWidget {
       subtitle: switch (pageKey) {
         final pageKey? => PageSourceNote(
           pageKey: pageKey,
-          pageValue: isSeconds
-              ? appLocalizations.secondsCount(value)
-              : '$value',
+          describe: isSeconds
+              ? (value) => value is int
+                    ? appLocalizations.secondsCount(value)
+                    : describeConfigValue(pageKey.path, value)
+              : null,
         ),
         null => Text(
           isSeconds ? appLocalizations.secondsCount(value) : '$value',
         ),
+      },
+      trailing: switch (pageKey) {
+        final pageKey? => switch (followMenuItems(
+          ref,
+          pageKey,
+          separated: false,
+        )) {
+          final items when items.isNotEmpty => RowMenuButton(
+            items: items,
+            tooltip: appLocalizations.more,
+          ),
+          _ => null,
+        },
+        null => null,
       },
       dialogTitle: label,
       value: '$value',

@@ -14,8 +14,15 @@ final class _DefaultAction extends _ListItemAction {
 final class _ToggleAction extends _ListItemAction {
   final bool value;
   final ValueChanged<bool>? onChanged;
+  final List<PopupMenuItem> menuItems;
+  final String? menuTooltip;
 
-  const _ToggleAction({required this.value, this.onChanged});
+  const _ToggleAction({
+    required this.value,
+    this.onChanged,
+    this.menuItems = const [],
+    this.menuTooltip,
+  });
 }
 
 final class _CheckboxAction extends _ListItemAction {
@@ -43,12 +50,14 @@ final class _OptionsAction<T> extends _ListItemAction {
   final T value;
   final String Function(T value) textBuilder;
   final ValueChanged<T> onChanged;
+  final List<PopupMenuItem> menuItems;
 
   const _OptionsAction({
     required this.options,
     required this.textBuilder,
     required this.value,
     required this.onChanged,
+    this.menuItems = const [],
   });
 }
 
@@ -132,6 +141,7 @@ class ListItem<T> extends StatelessWidget {
     required T value,
     required String Function(T value) textBuilder,
     required ValueChanged<T> onChanged,
+    List<PopupMenuItem> menuItems = const [],
     this.horizontalTitleGap,
     this.minTileHeight,
     this.minVerticalPadding = listRowVerticalPadding,
@@ -141,6 +151,7 @@ class ListItem<T> extends StatelessWidget {
          value: value,
          textBuilder: textBuilder,
          onChanged: onChanged,
+         menuItems: menuItems,
        ),
        trailing = null,
        onTap = null;
@@ -200,11 +211,18 @@ class ListItem<T> extends StatelessWidget {
     this.padding = const EdgeInsets.only(left: 16, right: 8),
     required bool value,
     ValueChanged<bool>? onChanged,
+    List<PopupMenuItem> menuItems = const [],
+    String? menuTooltip,
     this.horizontalTitleGap,
     this.minTileHeight,
     this.minVerticalPadding = listRowVerticalPadding,
     this.alignment = ListRowAlignment.center,
-  }) : _action = _ToggleAction(value: value, onChanged: onChanged),
+  }) : _action = _ToggleAction(
+         value: value,
+         onChanged: onChanged,
+         menuItems: menuItems,
+         menuTooltip: menuTooltip,
+       ),
        trailing = null,
        onTap = null;
 
@@ -320,6 +338,7 @@ class ListItem<T> extends StatelessWidget {
                     checked: option == optionsDelegate.value,
                     onPressed: () => optionsDelegate.onChanged(option),
                   ),
+                ...optionsDelegate.menuItems,
               ],
             ),
           ),
@@ -373,9 +392,19 @@ class ListItem<T> extends StatelessWidget {
               : () {
                   toggleAction.onChanged!(!toggleAction.value);
                 },
-          trailing: Switch(
-            value: toggleAction.value,
-            onChanged: toggleAction.onChanged,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (toggleAction.menuItems.isNotEmpty)
+                RowMenuButton(
+                  items: toggleAction.menuItems,
+                  tooltip: toggleAction.menuTooltip,
+                ),
+              Switch(
+                value: toggleAction.value,
+                onChanged: toggleAction.onChanged,
+              ),
+            ],
           ),
         );
       case _DefaultAction():
@@ -415,6 +444,30 @@ class _OptionsValueButton extends StatelessWidget {
           const GlyphIcon(Glyphs.picker),
         ],
       ),
+    );
+  }
+}
+
+/// The more button of a row whose control has no menu of its own, for the
+/// actions a list row's menu would otherwise end with.
+class RowMenuButton extends StatelessWidget {
+  const RowMenuButton({super.key, required this.items, this.tooltip});
+
+  final List<PopupMenuItem> items;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupAnchor(
+      targetBuilder: (open) => IconButton(
+        onPressed: open,
+        tooltip: tooltip,
+        icon: GlyphIcon(
+          Glyphs.more,
+          color: context.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      popupBuilder: (_) => PopupMenu(items: items),
     );
   }
 }

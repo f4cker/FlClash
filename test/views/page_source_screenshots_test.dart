@@ -140,6 +140,7 @@ void main() {
     required Size size,
     required Widget child,
     void Function(ProviderContainer container)? prepare,
+    Future<void> Function()? act,
   }) async {
     await mockPreferences();
     final container = ProviderContainer();
@@ -170,6 +171,12 @@ void main() {
     );
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 100));
+    }
+    if (act != null) {
+      await act();
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
     final render =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -202,30 +209,68 @@ void main() {
     );
   });
 
+  void prepareRows(ProviderContainer container) {
+    container
+        .read(patchClashConfigProvider.notifier)
+        .value = const PatchClashConfig(
+      tun: Tun(enable: true),
+      allowLan: true,
+      logLevel: LogLevel.error,
+      followKeys: {PageConfigKey.tunEnable, PageConfigKey.allowLan},
+    );
+    container.read(appliedFollowKeysProvider.notifier).value = const {
+      PageConfigKey.allowLan,
+    };
+    container.read(profileSettingsProvider.notifier).value = const {
+      'log-level': 'silent',
+      'find-process-mode': 'strict',
+      'tun': {'enable': false, 'stack': 'mixed'},
+    };
+  }
+
+  final rows = Padding(
+    padding: const EdgeInsets.all(16),
+    child: generateSection(
+      title: '页面设置与基础配置',
+      items: [
+        const LogLevelItem(),
+        ConfigToggleItem(
+          title: (l) => l.findProcessMode,
+          pageKey: PageConfigKey.findProcessMode,
+          selector: shownClashConfigProvider.select(
+            (state) => state.findProcessMode == FindProcessMode.always,
+          ),
+          onChanged: (_, _) {},
+        ),
+        const TUNItem(),
+        ConfigToggleItem(
+          title: (l) => l.allowLan,
+          pageKey: PageConfigKey.allowLan,
+          selector: shownClashConfigProvider.select((state) => state.allowLan),
+          onChanged: (_, _) {},
+        ),
+      ],
+    ),
+  );
+
   testWidgets('02-rows', skip: skip != null, (tester) async {
     await shoot(
       tester,
       '02-rows',
-      size: const Size(1054, 300),
-      prepare: (container) {
-        container
-            .read(patchClashConfigProvider.notifier)
-            .value = const PatchClashConfig(
-          tun: Tun(enable: true),
-          followKeys: {PageConfigKey.tunEnable},
-        );
-        container.read(profileSettingsProvider.notifier).value = const {
-          'log-level': 'silent',
-          'tun': {'enable': false, 'stack': 'mixed'},
-        };
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: generateSection(
-          title: '页面设置与基础配置',
-          items: const [LogLevelItem(), TUNItem()],
-        ),
-      ),
+      size: const Size(1054, 420),
+      prepare: prepareRows,
+      child: rows,
+    );
+  });
+
+  testWidgets('03-menu', skip: skip != null, (tester) async {
+    await shoot(
+      tester,
+      '03-menu',
+      size: const Size(1054, 560),
+      prepare: prepareRows,
+      child: Padding(padding: const EdgeInsets.only(top: 140), child: rows),
+      act: () => tester.tap(find.text('错误').first),
     );
   });
 }
