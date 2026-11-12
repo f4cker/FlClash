@@ -11604,6 +11604,83 @@ class AppLocalizations {
     return Intl.message('Cancel', name: 'tsCancel', desc: '', args: []);
   }
 
+  /// `Sign in to add a node and dedicated rules. Original files stay unchanged.`
+  String get tsSignInShort {
+    return Intl.message(
+      'Sign in to add a node and dedicated rules. Original files stay unchanged.',
+      name: 'tsSignInShort',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{{domain} · 1 device address} other{{domain} · {count} device addresses}}`
+  String tsRulesSummary(num count, Object domain) {
+    return Intl.plural(
+      count,
+      one: '$domain · 1 device address',
+      other: '$domain · $count device addresses',
+      name: 'tsRulesSummary',
+      desc: '',
+      args: [count, domain],
+    );
+  }
+
+  /// `Showing {shown} / {total}`
+  String tsDevicesFiltered(Object shown, Object total) {
+    return Intl.message(
+      'Showing $shown / $total',
+      name: 'tsDevicesFiltered',
+      desc: '',
+      args: [shown, total],
+    );
+  }
+
+  /// `About Tailscale`
+  String get tsAboutTailscale {
+    return Intl.message(
+      'About Tailscale',
+      name: 'tsAboutTailscale',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `About exit settings`
+  String get tsAboutExit {
+    return Intl.message(
+      'About exit settings',
+      name: 'tsAboutExit',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `About subnet routes`
+  String get tsAboutRoutes {
+    return Intl.message(
+      'About subnet routes',
+      name: 'tsAboutRoutes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `About rules`
+  String get tsAboutRules {
+    return Intl.message(
+      'About rules',
+      name: 'tsAboutRules',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `About`
+  String get infoAbout {
+    return Intl.message('About', name: 'infoAbout', desc: '', args: []);
+  }
+
   /// `Mounts could not be applied. The last confirmed running profile is still in use.`
   String get mountApplyKept {
     return Intl.message(
