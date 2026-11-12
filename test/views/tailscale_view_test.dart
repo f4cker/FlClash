@@ -694,12 +694,12 @@ void main() {
         await tester.tap(find.byTooltip('出口设置说明'));
         await settle(tester);
         expect(
-          find.textContaining('在代理页选择“Tailscale 出口”', findRichText: true),
+          find.textContaining('开启出口不会切换现有选择', findRichText: true),
           findsOneWidget,
         );
         expect(
           find.textContaining('不加入测速或故障转移组', findRichText: true),
-          findsOneWidget,
+          findsNothing,
         );
         await teardownView(tester);
       });
@@ -745,49 +745,48 @@ void main() {
         await teardownView(tester);
       });
 
-      testWidgets('turning off asks a re-pick first where the fallback is '
-          'unknown', (tester) async {
+      Finder dialogOf(Finder child) => find.ancestor(
+        of: child,
+        matching: find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == 'AlertDialog',
+        ),
+      );
+
+      testWidgets('turning off moves each group on it to its first option', (
+        tester,
+      ) async {
         await serveExit(tester, tsExitReport());
         await turnOff(tester);
 
         expect(find.text('关闭出口节点？'), findsOneWidget);
-        expect(find.text('关闭前，请先在代理页为以下策略改选。'), findsOneWidget);
+        expect(
+          find.text('关闭后，正在使用“Tailscale 出口”的策略将改用各组的第一个选项。'),
+          findsOneWidget,
+        );
         expect(find.text('国际媒体 → 香港策略', findRichText: true), findsOneWidget);
-        expect(find.text('仅日本 → 需要先改选', findRichText: true), findsOneWidget);
+        final empty = find.text('仅日本 → 没有剩余选项', findRichText: true);
+        expect(empty, findsOneWidget);
         expect(find.textContaining('全球手动', findRichText: true), findsNothing);
+        expect(find.text('前往代理页'), findsNothing);
+        expect(find.text('需要先改选', findRichText: true), findsNothing);
+        expect(
+          tester.getSize(dialogOf(empty)).width,
+          greaterThanOrEqualTo(480),
+        );
         final turnOffButton = find.ancestor(
           of: find.text('关闭出口'),
           matching: find.byWidgetPredicate((widget) => widget is TextButton),
         );
-        expect(tester.widget<TextButton>(turnOffButton).onPressed, isNull);
-
-        await tester.tap(find.text('前往代理页'));
-        await settle(tester);
-        verifyNever(
-          () => core.setTailscalePrefs(
-            any(),
-            exitNode: any(named: 'exitNode'),
-            exitLabel: any(named: 'exitLabel'),
-          ),
-        );
-        expect(container.read(currentPageLabelProvider), PageLabel.proxies);
-        await teardownView(tester);
-      });
-
-      testWidgets('confirmed fallbacks are listed and kept once it is off', (
-        tester,
-      ) async {
-        await serveExit(
-          tester,
-          tsExitReport(parents: [tsExitReport().parents.first]),
-        );
-        await turnOff(tester);
-
+        expect(tester.widget<TextButton>(turnOffButton).onPressed, isNotNull);
         expect(
-          find.text('以下策略正在使用“Tailscale 出口”。关闭后将改用下方所列选项。'),
-          findsOneWidget,
+          tester.getCenter(find.text('取消')).dx,
+          lessThan(tester.getCenter(find.text('关闭出口')).dx),
         );
-        expect(find.text('前往代理页'), findsNothing);
+        expect(
+          tester.getCenter(find.text('取消')).dy,
+          tester.getCenter(find.text('关闭出口')).dy,
+        );
+
         await tester.tap(find.text('关闭出口'));
         await settle(tester);
 
@@ -798,10 +797,81 @@ void main() {
             exitLabel: any(named: 'exitLabel'),
           ),
         ).called(1);
-        expect(
-          container.read(profilesProvider).getProfile(42)?.selectedMap['国际媒体'],
-          '香港策略',
+        final selected = container
+            .read(profilesProvider)
+            .getProfile(42)
+            ?.selectedMap;
+        expect(selected?['国际媒体'], '香港策略');
+        expect(selected?.containsKey('仅日本'), isFalse);
+        expect(selected?.containsKey('全球手动'), isFalse);
+        await teardownView(tester);
+      });
+
+      testWidgets('cancelling leaves the exit node and every choice', (
+        tester,
+      ) async {
+        await serveExit(tester, tsExitReport());
+        await turnOff(tester);
+        await tester.tap(find.text('取消'));
+        await settle(tester);
+
+        verifyNever(
+          () => core.setTailscalePrefs(
+            any(),
+            exitNode: any(named: 'exitNode'),
+            exitLabel: any(named: 'exitLabel'),
+          ),
         );
+        expect(
+          container.read(profilesProvider).getProfile(42)?.selectedMap,
+          isNot(contains('国际媒体')),
+        );
+        await teardownView(tester);
+      });
+
+      testWidgets('with another account left only the exit group moves', (
+        tester,
+      ) async {
+        final base = tsExitReport();
+        await serveExit(
+          tester,
+          TailscaleExitReport(
+            profileId: 42,
+            state: TailscaleRuntimeState.confirmed,
+            group: base.group,
+            selected: 'm1',
+            parents: base.parents,
+            accounts: [
+              ...base.accounts,
+              const TailscaleExitAccount(
+                id: 'm2',
+                member: 'build-mac · pat@work.test',
+                exitNode: '100.94.68.92',
+                state: TailscaleExitState.applied,
+              ),
+            ],
+          ),
+        );
+        await turnOff(tester);
+
+        expect(
+          find.text(
+            'Tailscale 出口 → build-mac · pat@work.test',
+            findRichText: true,
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('国际媒体', findRichText: true), findsNothing);
+        await tester.tap(find.text('关闭出口'));
+        await settle(tester);
+
+        final selected = container
+            .read(profilesProvider)
+            .getProfile(42)
+            ?.selectedMap;
+        expect(selected?['Tailscale 出口'], 'build-mac · pat@work.test');
+        expect(selected?[tailscaleExitSelectionKey], 'm2');
+        expect(selected?.containsKey('国际媒体'), isFalse);
         await teardownView(tester);
       });
 

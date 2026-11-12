@@ -1097,8 +1097,9 @@ void main() {
 
   Future<void> pumpExitProxies(
     WidgetTester tester,
-    TailscaleExitReport report,
-  ) async {
+    TailscaleExitReport report, {
+    Size size = const Size(quietWidth, 760),
+  }) async {
     container.dispose();
     final groups = tsExitGroups();
     final profile = Profile.normal().copyWith(
@@ -1123,7 +1124,7 @@ void main() {
         .update((state) => state.copyWith(type: ProxiesType.list));
     await pumpPanel(
       tester,
-      size: const Size(quietWidth, 760),
+      size: size,
       pixelRatio: reportRatio,
       page: const ProxiesView(),
     );
@@ -1150,8 +1151,17 @@ void main() {
     await shoot(tester, 'exit-02-proxies');
   });
 
-  shot('exit-03-off-dialog', (tester) async {
-    await seedExit(tsExitReport());
+  shot('exit-02b-proxies-one-column', (tester) async {
+    await pumpExitProxies(tester, tsExitReport(), size: const Size(700, 1240));
+    await shoot(tester, 'exit-02b-proxies-one-column');
+  });
+
+  Future<void> shootOff(
+    WidgetTester tester,
+    String name,
+    TailscaleExitReport report,
+  ) async {
+    await seedExit(report);
     await pumpPanel(
       tester,
       size: const Size(quietWidth, 900),
@@ -1167,7 +1177,31 @@ void main() {
     await tester.tap(find.text('不使用出口节点').last);
     await settle(tester);
     expect(find.text('关闭出口节点？'), findsOneWidget);
-    await shoot(tester, 'exit-03-off-dialog');
+    await shoot(tester, name);
+  }
+
+  shot('exit-03-off-dialog', (tester) async {
+    final parents = tsExitReport().parents;
+    await shootOff(
+      tester,
+      'exit-03-off-dialog',
+      tsExitReport(
+        parents: [
+          parents.first,
+          const TailscaleExitParent(
+            name: '直连优先',
+            now: 'Tailscale 出口',
+            members: ['DIRECT', '香港策略', 'Tailscale 出口'],
+            replacement: 'DIRECT',
+          ),
+          parents.last,
+        ],
+      ),
+    );
+  });
+
+  shot('exit-03b-off-dialog-empty-group', (tester) async {
+    await shootOff(tester, 'exit-03b-off-dialog-empty-group', tsExitReport());
   });
 
   shot('exit-04-unavailable', (tester) async {

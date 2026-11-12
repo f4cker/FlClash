@@ -256,7 +256,7 @@ TailscaleStatus tsExitStatus(TailscaleNode node) => tsConnectedStatus(
   node: node,
 ).copyWith(prefs: const TailscalePrefs(exitNodeIp: '100.88.12.4'));
 
-const tsExitMember = 'nas-sg · pat@example.test';
+const tsExitMember = 'nas-sg';
 
 /// The running exit group: 国际媒体 falls back to 香港策略, 仅日本 to nothing
 /// the Core can name.

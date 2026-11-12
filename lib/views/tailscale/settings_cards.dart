@@ -350,10 +350,7 @@ class TailscaleExitCard extends StatelessWidget {
                 label: appLocalizations.tsAboutExit,
                 paragraphs: [
                   appLocalizations.tsExitNodeTip,
-                  if (node.managed) ...[
-                    appLocalizations.tsExitHowTo,
-                    appLocalizations.tsExitGroupTip,
-                  ],
+                  if (node.managed) appLocalizations.tsExitHowTo,
                   if (lock == null &&
                       node.settings.exitNode.source ==
                           TailscaleSettingSource.override)

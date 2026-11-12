@@ -60,37 +60,70 @@ void main() {
     expect(report.memberNamed('nas-sg · pat@example.test')?.id, 'a1');
   });
 
-  test('only groups using the exit group are affected by turning it off', () {
-    expect(report.affectedWithout('a1').map((parent) => parent.name), [
-      '国际媒体',
-      '仅日本',
-    ]);
+  test('turning it off moves the groups on it to their first option', () {
+    final plan = report.offPlanOf('a1');
+    expect(plan.moves, [(group: '国际媒体', to: '香港策略')]);
+    expect(plan.empty, ['仅日本']);
+    expect(plan.groupMove, isNull);
   });
 
-  test('another account keeping an exit node leaves every group alone', () {
-    final shared = TailscaleExitReport.fromJson({
+  test('a first option that is DIRECT or a group is taken as it is', () {
+    final direct = TailscaleExitReport.fromJson({
       ...exitReply,
-      'accounts': [
-        ...exitReply['accounts']! as List,
+      'parents': [
         {
-          'id': 'b2',
-          'member': 'office-hk · pat@work.test',
-          'exit-node': '100.72.40.9',
-          'state': 'applied',
+          'name': '直连优先',
+          'now': 'Tailscale 出口',
+          'members': ['DIRECT', '香港策略', 'Tailscale 出口'],
+          'replacement': 'DIRECT',
+        },
+        {
+          'name': '国际媒体',
+          'now': 'Tailscale 出口',
+          'members': ['美国策略', 'DIRECT', 'Tailscale 出口'],
+          'replacement': '美国策略',
         },
       ],
     });
-    expect(shared.affectedWithout('a1'), isEmpty);
-    expect(shared.affectedWithout('c3'), isEmpty);
+    expect(direct.offPlanOf('a1').moves, [
+      (group: '直连优先', to: 'DIRECT'),
+      (group: '国际媒体', to: '美国策略'),
+    ]);
   });
 
-  test('an unconfirmed read affects nothing it cannot name', () {
+  final shared = TailscaleExitReport.fromJson({
+    ...exitReply,
+    'accounts': [
+      ...exitReply['accounts']! as List,
+      {
+        'id': 'b2',
+        'member': 'office-hk · pat@work.test',
+        'exit-node': '100.72.40.9',
+        'state': 'applied',
+      },
+    ],
+  });
+
+  test('with another account left only the exit group\'s own choice moves', () {
+    final plan = shared.offPlanOf('a1');
+    expect(plan.groupMove?.id, 'b2');
+    expect(plan.groupMove?.member, 'office-hk · pat@work.test');
+    expect(plan.moves, isEmpty);
+    expect(plan.empty, isEmpty);
+  });
+
+  test('an account the exit group does not use moves nothing', () {
+    expect(shared.offPlanOf('b2').isEmpty, isTrue);
+    expect(shared.offPlanOf('c3').isEmpty, isTrue);
+  });
+
+  test('an unconfirmed read moves nothing it cannot name', () {
     final unconfirmed = TailscaleExitReport.fromJson({
       ...exitReply,
       'state': 'unconfirmed',
     });
     expect(unconfirmed.offered, isFalse);
-    expect(unconfirmed.affectedWithout('a1'), isEmpty);
+    expect(unconfirmed.offPlanOf('a1').isEmpty, isTrue);
   });
 
   test('a proxy card knows the exit group and its nodes', () {
@@ -103,7 +136,7 @@ void main() {
     expect(const TailscaleExitReport.readFailed(7).cardOf('x'), isNull);
   });
 
-  test('the node is named by device then account', () {
+  test('the node is named by its device, and its account once shared', () {
     const record = TailscaleManagedRecord(
       id: 'a1',
       profileId: 7,
@@ -115,13 +148,33 @@ void main() {
         displayName: 'Pat',
       ),
     );
-    expect(record.setup.exitLabel, 'nas-sg · pat@example.test');
+    final alone = record.setupWith(shared: false);
+    expect(alone.exitLabel, 'nas-sg');
+    expect(alone.toJson()['exit-label'], 'nas-sg');
+    final shared = record.setupWith(shared: true);
+    expect(shared.exitLabel, 'nas-sg · pat@example.test');
     expect(
-      record.copyWith(exitNodeName: null, account: null).setup.exitLabel,
+      record
+          .copyWith(exitNodeName: null, account: null)
+          .setupWith(shared: true)
+          .exitLabel,
       '100.88.12.4 · a1',
     );
-    expect(record.copyWith(exitNode: '').setup.exitLabel, isNull);
-    expect(record.setup.toJson()['exit-label'], 'nas-sg · pat@example.test');
+    expect(
+      record.copyWith(exitNode: '').setupWith(shared: true).exitLabel,
+      isNull,
+    );
+  });
+
+  test('an account shares the group once another one is attached', () {
+    const a1 = TailscaleManagedRecord(id: 'a1', profileId: 7, attached: true);
+    expect(tailscaleExitShared([a1], 7), isFalse);
+    expect(
+      tailscaleExitShared([a1, a1.copyWith(id: 'a2', attached: false)], 7),
+      isFalse,
+    );
+    expect(tailscaleExitShared([a1, a1.copyWith(profileId: 8)], 7), isFalse);
+    expect(tailscaleExitShared([a1, a1.copyWith(id: 'a2')], 7), isTrue);
   });
 
   group('runtime viewer', () {

@@ -244,7 +244,10 @@ TailscaleSetup? tailscaleSetup(Ref ref) {
     ],
     managed: [
       for (final record in managed ?? const <TailscaleManagedRecord>[])
-        if (record.profileId == profile.id) record.setup,
+        if (record.profileId == profile.id)
+          record.setupWith(
+            shared: tailscaleExitShared(managed ?? const [], profile.id),
+          ),
     ],
     managedUnknown: managed == null,
     exitGroup: managed?.any((record) => record.profileId == profile.id) ?? false

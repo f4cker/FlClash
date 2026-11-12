@@ -406,7 +406,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "${Intl.plural(count, one: '“${group}” added to 1 manual policy group', other: '“${group}” added to ${count} manual policy groups')}";
 
   static String m147(group) =>
-      "These policies are using “${group}”. Turning it off will switch them to the options listed below.";
+      "Turning off the exit node switches policies using “${group}” to the first option in each group.";
 
   static String m148(node) =>
       "Only turns off exit forwarding for “${node}”; it doesn\'t log out of Tailscale and Flash rules stay the same.";
@@ -2995,14 +2995,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsExitGroupNoParents": MessageLookupByLibrary.simpleMessage(
       "No manual policy groups in this profile can receive the exit group",
     ),
-    "tsExitGroupTip": MessageLookupByLibrary.simpleMessage(
-      "Enabling an exit node adds “Tailscale exit” as an option in all manual policy groups, not in latency-test or fallback groups. Existing selections stay unchanged. Only traffic actually using it goes through this exit node; your Mac’s default exit stays unchanged.",
-    ),
     "tsExitGroupUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Exit group unconfirmed",
     ),
     "tsExitHowTo": MessageLookupByLibrary.simpleMessage(
-      "Select “Tailscale exit” on the Proxies page to use this exit node for a policy.",
+      "Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.",
     ),
     "tsExitNeedsLogin": MessageLookupByLibrary.simpleMessage(
       "Sign in to this account again",
@@ -3019,18 +3016,12 @@ class MessageLookup extends MessageLookupByLibrary {
       "Turn off the exit node?",
     ),
     "tsExitOffBody": m148,
-    "tsExitOffRepickBody": MessageLookupByLibrary.simpleMessage(
-      "Choose another option for these policies on the Proxies page before turning off the exit node.",
-    ),
+    "tsExitOffNoOption": MessageLookupByLibrary.simpleMessage("No option left"),
     "tsExitOffTitle": MessageLookupByLibrary.simpleMessage(
       "Stop using the exit node?",
     ),
-    "tsExitOpenProxies": MessageLookupByLibrary.simpleMessage("Open Proxies"),
     "tsExitRefusing": MessageLookupByLibrary.simpleMessage(
       "This exit node is unavailable. Connections using it will be rejected",
-    ),
-    "tsExitRepickFirst": MessageLookupByLibrary.simpleMessage(
-      "Choose another option first",
     ),
     "tsExitStale": MessageLookupByLibrary.simpleMessage(
       "Refresh the device list before choosing an exit node.",

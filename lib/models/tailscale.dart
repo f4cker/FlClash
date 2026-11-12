@@ -469,19 +469,24 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
 
   TailscaleNodeKey get key => tailscaleManagedNodeKey(profileId, id);
 
-  TailscaleManagedSetup get setup => TailscaleManagedSetup(
-    id: id,
-    name: name,
-    controlUrl: controlUrl,
-    exitNode: exitNode,
-    acceptRoutes: acceptRoutes,
-    loggedOut: loggedOut,
-    attached: attached,
-    exitLabel: exitLabelFor(exitNode, exitNodeName),
-  );
+  TailscaleManagedSetup setupWith({required bool shared}) =>
+      TailscaleManagedSetup(
+        id: id,
+        name: name,
+        controlUrl: controlUrl,
+        exitNode: exitNode,
+        acceptRoutes: acceptRoutes,
+        loggedOut: loggedOut,
+        attached: attached,
+        exitLabel: exitLabelFor(exitNode, exitNodeName, shared: shared),
+      );
 
-  /// The exit node's name in the exit group: device, then account.
-  String? exitLabelFor(String? exitNode, String? exitNodeName) {
+  /// The device, then the account once [shared] by another account.
+  String? exitLabelFor(
+    String? exitNode,
+    String? exitNodeName, {
+    required bool shared,
+  }) {
     if (exitNode == null || exitNode.isEmpty) {
       return null;
     }
@@ -489,10 +494,23 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
       (value) => value?.trim().isNotEmpty ?? false,
       orElse: () => '',
     )!;
+    final device = first([exitNodeName, exitNode]);
+    if (!shared) {
+      return device;
+    }
     final owner = first([account?.loginName, account?.displayName, name, id]);
-    return '${first([exitNodeName, exitNode])} · $owner';
+    return '$device · $owner';
   }
 }
+
+bool tailscaleExitShared(
+  Iterable<TailscaleManagedRecord> records,
+  int profileId,
+) =>
+    records
+        .where((record) => record.profileId == profileId && record.attached)
+        .length >
+    1;
 
 /// One unlink of a profile: [before] is the routing it started from, null
 /// when that was not settled, so only a finished forget can be proven.

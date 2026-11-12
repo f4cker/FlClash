@@ -1541,8 +1541,7 @@
   "listenerRedir": "Redir proxy",
   "listenerTproxy": "TProxy proxy",
   "tsExitGroupName": "Tailscale exit",
-  "tsExitHowTo": "Select “Tailscale exit” on the Proxies page to use this exit node for a policy.",
-  "tsExitGroupTip": "Enabling an exit node adds “Tailscale exit” as an option in all manual policy groups, not in latency-test or fallback groups. Existing selections stay unchanged. Only traffic actually using it goes through this exit node; your Mac’s default exit stays unchanged.",
+  "tsExitHowTo": "Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.",
   "tsExitGroupUnconfirmed": "Exit group unconfirmed",
   "tsExitGroupJoined": "{count, plural, =1{“{group}” added to 1 manual policy group} other{“{group}” added to {count} manual policy groups}}",
   "tsExitGroupNoParents": "No manual policy groups in this profile can receive the exit group",
@@ -1552,11 +1551,9 @@
   "tsExitRefusing": "This exit node is unavailable. Connections using it will be rejected",
   "tsExitUnavailableShort": "Unavailable",
   "tsExitOffAffectedTitle": "Turn off the exit node?",
-  "tsExitOffAffectedBody": "These policies are using “{group}”. Turning it off will switch them to the options listed below.",
-  "tsExitOffRepickBody": "Choose another option for these policies on the Proxies page before turning off the exit node.",
-  "tsExitRepickFirst": "Choose another option first",
-  "tsExitOpenProxies": "Open Proxies",
+  "tsExitOffAffectedBody": "Turning off the exit node switches policies using “{group}” to the first option in each group.",
   "tsExitTurnOff": "Turn off exit node",
+  "tsExitOffNoOption": "No option left",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed"
 }
