@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.6 (2026-11-12)
+
+**Bug Fixes**
+
+- **tailscale** Remove closed exit groups from the running config and clear invalid saved selections (1e4704a)
+- **tailscale** Keep cleanup isolated to the current config and retain the core's original fallback order (1e4704a)
+
 ## v0.9.5 (2026-11-12)
 
 **Features**
