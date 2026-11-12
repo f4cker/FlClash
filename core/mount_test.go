@@ -14,6 +14,7 @@ import (
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/hub/executor"
 	"github.com/metacubex/mihomo/tunnel"
 	"go.yaml.in/yaml/v3"
 )
@@ -479,6 +480,50 @@ rules:
 	}
 	if currentConfig != running || handleMountState().Report.Revision != "r1" {
 		t.Error("a rejected mounted profile replaced the running config")
+	}
+}
+
+func TestApplyConfigPublishesTheReportOnlyOnceTheConfigRuns(t *testing.T) {
+	home := withMountHome(t)
+	withCurrentConfig(t, nil)
+	keepTunnel(t)
+	t.Cleanup(func() { setMountState(nil, false, false) })
+	setMountState(nil, false, false)
+	before := executor.FlashBeforeRunning
+	t.Cleanup(func() { executor.FlashBeforeRunning = before })
+	var during []*MountReport
+	executor.FlashBeforeRunning = func() error {
+		during = append(during, handleMountState().Report)
+		if before == nil {
+			return nil
+		}
+		return before()
+	}
+	base := writeMountFile(t, home, "base.yaml", `proxy-groups:
+  - {name: G, type: select, include-all-providers: true}
+rules:
+  - MATCH,G
+`)
+	source := writeMountFile(t, home, "1.yaml", mountSourceB)
+
+	err := applyConfig(&SetupParams{
+		Base:   &SetupBase{Path: base, Overlay: "{}"},
+		Mounts: &MountSetup{Revision: "r1", Sources: []MountSource{{ID: 1, Label: "S", Path: source}}},
+	})
+
+	if err != nil {
+		t.Fatalf("applyConfig = %v", err)
+	}
+	if len(during) == 0 {
+		t.Fatal("the runtime check never ran")
+	}
+	for _, report := range during {
+		if report != nil {
+			t.Errorf("the readback named revision %q before the config ran", report.Revision)
+		}
+	}
+	if state := handleMountState(); state.Report == nil || state.Report.Revision != "r1" || state.Blocked {
+		t.Errorf("state = %+v, want r1 published after the apply", state)
 	}
 }
 

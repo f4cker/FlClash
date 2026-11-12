@@ -216,7 +216,6 @@ func applyConfig(params *SetupParams) error {
 	}
 
 	currentConfig = cfg
-	setMountState(report, blocked, err != nil && !blocked)
 	// The new instances must not start beside the old ones on one identity;
 	// the fallback holds none, so a failed load closes what it built too.
 	if err != nil {
@@ -231,10 +230,12 @@ func applyConfig(params *SetupParams) error {
 			clearTailscaleManaged()
 			installMountGate(nil, blocking)
 			currentConfig, err, blocked = blocking, runtimeErr, true
-			setMountState(report, true, false)
 			hub.ApplyConfig(blocking)
 		}
 	}
+	// Published once the config runs and its runtime check is settled, so a
+	// readback never names a revision that is not live or is about to block.
+	setMountState(report, blocked, err != nil && !blocked)
 	publishTailscaleManaged()
 	startTailscaleManaged()
 	patchSelectGroup(followMountSelections(params.SelectedMap, report))
