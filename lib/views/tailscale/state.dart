@@ -258,6 +258,23 @@ String? tailscalePeerName(TailscalePeer peer) {
   return dnsLabel.isEmpty ? null : dnsLabel;
 }
 
+/// The full MagicDNS name without its root dot, only where the tailnet has
+/// MagicDNS on.
+String? tailscaleMagicDnsName(TailscalePeer peer, {required bool enabled}) {
+  final name = peer.dnsName.endsWith('.')
+      ? peer.dnsName.substring(0, peer.dnsName.length - 1)
+      : peer.dnsName;
+  return enabled && name.isNotEmpty ? name : null;
+}
+
+/// Peers whose owner ID the status's user list does not hold.
+int tailscaleMissingOwnerCount(TailscaleStatus status) => status.peers
+    .where(
+      (peer) =>
+          peer.userId.isNotEmpty && !status.users.containsKey(peer.userId),
+    )
+    .length;
+
 /// The IPv4 address when there is one, as the design shows it first.
 String? tailscaleAddressOf(TailscalePeer? peer) {
   final addresses = peer?.addresses ?? const <String>[];

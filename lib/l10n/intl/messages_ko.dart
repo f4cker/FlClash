@@ -380,47 +380,49 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m149(name) => "Node ${name}";
 
-  static String m150(account, node, profile) =>
+  static String m150(network) => "Unknown · Network ${network}";
+
+  static String m151(account, node, profile) =>
       "This signs out “${account}” (node “${node}”), clears its sign-in from this Mac, and removes its panel-added node and rules from “${profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.";
 
-  static String m151(node, profile) =>
+  static String m152(node, profile) =>
       "This signs out “${node}”, clears its sign-in from this Mac, and removes its panel-added node and rules from “${profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.";
 
-  static String m152(count) => "Device addresses: ${count}";
+  static String m153(count) => "Device addresses: ${count}";
 
-  static String m153(domain) => "Network domain: ${domain}";
+  static String m154(domain) => "Network domain: ${domain}";
 
-  static String m154(count, domain) =>
+  static String m155(count, domain) =>
       "${Intl.plural(count, one: '${domain} · 1 device address', other: '${domain} · ${count} device addresses')}";
 
-  static String m155(value) => "Saved: ${value}";
+  static String m156(value) => "Saved: ${value}";
 
-  static String m156(name) => "Shared by: ${name}";
+  static String m157(name) => "Shared by: ${name}";
 
-  static String m157(account, node) =>
+  static String m158(account, node) =>
       "This signs out “${account}” (node “${node}”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.";
 
-  static String m158(label) => "Status: ${label}";
+  static String m159(label) => "Status: ${label}";
 
-  static String m159(account, status, count) =>
+  static String m160(account, status, count) =>
       "Viewing Tailscale account: ${account}, ${status}. ${count} entries.";
 
-  static String m160(address) => "Address: ${address}";
+  static String m161(address) => "Address: ${address}";
 
-  static String m161(domain) => "Domain: ${domain}";
+  static String m162(domain) => "Domain: ${domain}";
 
-  static String m162(node) => "Tailscale · Added by Flash · Node ${node}";
+  static String m163(node) => "Tailscale · Added by Flash · Node ${node}";
 
-  static String m163(count, node) =>
+  static String m164(count, node) =>
       "Tailscale · Added by Flash · ${Intl.plural(count, one: '1 rule', other: '${count} rules')} → Node ${node}";
 
-  static String m164(label) => "${label}은(는) URL이어야 합니다";
+  static String m165(label) => "${label}은(는) URL이어야 합니다";
 
-  static String m165(date) => "${date}까지 유효";
-
-  static String m166(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m166(date) => "${date}까지 유효";
 
   static String m167(count) => "${Intl.plural(count, other: '${count}년 전')}";
+
+  static String m168(count) => "${Intl.plural(count, other: '${count}년 전')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -2320,6 +2322,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsConflictTitle": m134,
     "tsControlServer": MessageLookupByLibrary.simpleMessage("Control server"),
     "tsCopyAddress": MessageLookupByLibrary.simpleMessage("Copy address"),
+    "tsCopyName": MessageLookupByLibrary.simpleMessage("Copy name"),
     "tsCoreStopped": MessageLookupByLibrary.simpleMessage(
       "Core is not running",
     ),
@@ -2593,6 +2596,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsOwnerMe": MessageLookupByLibrary.simpleMessage("Me"),
     "tsOwnerMine": MessageLookupByLibrary.simpleMessage("Mine"),
     "tsOwnerUnknown": MessageLookupByLibrary.simpleMessage("Owner unknown"),
+    "tsOwnerUnknownNetwork": m150,
     "tsPrepareAgain": MessageLookupByLibrary.simpleMessage(
       "Prepare login again",
     ),
@@ -2627,8 +2631,8 @@ class MessageLookup extends MessageLookupByLibrary {
       "Refresh device list",
     ),
     "tsRelogin": MessageLookupByLibrary.simpleMessage("Log in again"),
-    "tsRemoveBody": m150,
-    "tsRemoveBodyNode": m151,
+    "tsRemoveBody": m151,
+    "tsRemoveBodyNode": m152,
     "tsRemoveExtra": MessageLookupByLibrary.simpleMessage(
       "This does not delete the device from the Tailscale admin console or change the official client.",
     ),
@@ -2688,8 +2692,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRoutingConflict": MessageLookupByLibrary.simpleMessage(
       "Routing conflict",
     ),
-    "tsRulesAddresses": m152,
-    "tsRulesDomain": m153,
+    "tsRulesAddresses": m153,
+    "tsRulesDomain": m154,
     "tsRulesManaged": MessageLookupByLibrary.simpleMessage(
       "Flash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.",
     ),
@@ -2699,12 +2703,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsRulesProfileNode": MessageLookupByLibrary.simpleMessage(
       "Only traffic routed to this node by Flash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.",
     ),
-    "tsRulesSummary": m154,
+    "tsRulesSummary": m155,
     "tsRulesUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Domain and address details are unconfirmed.",
     ),
     "tsSaveChoices": MessageLookupByLibrary.simpleMessage("Save choices"),
-    "tsSavedValue": m155,
+    "tsSavedValue": m156,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage(
       "No devices match the search",
     ),
@@ -2718,7 +2722,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Saved, but not yet confirmed in effect. Read the current settings again.",
     ),
     "tsShared": MessageLookupByLibrary.simpleMessage("Shared in"),
-    "tsSharedBy": m156,
+    "tsSharedBy": m157,
     "tsSignIn": MessageLookupByLibrary.simpleMessage("Sign in to Tailscale"),
     "tsSignInBoundary": MessageLookupByLibrary.simpleMessage(
       "System proxy and TUN will not be enabled automatically.",
@@ -2732,7 +2736,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsSignOutAccount": MessageLookupByLibrary.simpleMessage(
       "Sign out of this account",
     ),
-    "tsSignOutAccountBody": m157,
+    "tsSignOutAccountBody": m158,
     "tsSignOutAccountTitle": MessageLookupByLibrary.simpleMessage(
       "Sign out of this account?",
     ),
@@ -2781,17 +2785,17 @@ class MessageLookup extends MessageLookupByLibrary {
       "Waiting for browser login",
     ),
     "tsStatus": MessageLookupByLibrary.simpleMessage("Status"),
-    "tsStatusOf": m158,
+    "tsStatusOf": m159,
     "tsStatusUnknown": MessageLookupByLibrary.simpleMessage("Status unknown"),
     "tsStoppedTip": MessageLookupByLibrary.simpleMessage(
       "This node has stopped and can\'t reach the Tailscale network for now.",
     ),
     "tsSubnetRoutes": MessageLookupByLibrary.simpleMessage("Subnet routes"),
-    "tsSwitcherSemantics": m159,
+    "tsSwitcherSemantics": m160,
     "tsSystem": MessageLookupByLibrary.simpleMessage("OS"),
     "tsSystemMissing": MessageLookupByLibrary.simpleMessage("OS not provided"),
-    "tsTargetAddress": m160,
-    "tsTargetDomain": m161,
+    "tsTargetAddress": m161,
+    "tsTargetDomain": m162,
     "tsTargetUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Target account unconfirmed",
     ),
@@ -2814,11 +2818,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsViewExisting": MessageLookupByLibrary.simpleMessage(
       "View existing account",
     ),
-    "tsViewerNode": m162,
+    "tsViewerNode": m163,
     "tsViewerReadFailed": MessageLookupByLibrary.simpleMessage(
       "Tailscale · Could not read runtime information",
     ),
-    "tsViewerRules": m163,
+    "tsViewerRules": m164,
     "tsViewerUnconfirmed": MessageLookupByLibrary.simpleMessage(
       "Tailscale · Current rules and nodes are unconfirmed",
     ),
@@ -2885,14 +2889,14 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 재작성"),
-    "urlTip": m164,
+    "urlTip": m165,
     "useHosts": MessageLookupByLibrary.simpleMessage("hosts 사용"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("시스템 hosts 사용"),
     "usedShort": MessageLookupByLibrary.simpleMessage("사용"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("사용한 트래픽"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("사용자 이름"),
-    "validUntil": m165,
+    "validUntil": m166,
     "value": MessageLookupByLibrary.simpleMessage("값"),
     "view": MessageLookupByLibrary.simpleMessage("보기"),
     "viewAll": MessageLookupByLibrary.simpleMessage("모두 보기"),
@@ -2907,8 +2911,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "시스템에 기록하면 시스템 시계도 설정합니다. Android에서는 무시됩니다.",
     ),
-    "yearsAgo": m166,
-    "yearsAgoShort": m167,
+    "yearsAgo": m167,
+    "yearsAgoShort": m168,
     "yes": MessageLookupByLibrary.simpleMessage("예"),
     "zhCN": MessageLookupByLibrary.simpleMessage("중국어 간체"),
   };

@@ -9582,6 +9582,11 @@ class AppLocalizations {
     );
   }
 
+  /// `Copy name`
+  String get tsCopyName {
+    return Intl.message('Copy name', name: 'tsCopyName', desc: '', args: []);
+  }
+
   /// `Address copied`
   String get tsAddressCopied {
     return Intl.message(
@@ -10421,6 +10426,16 @@ class AppLocalizations {
       name: 'tsOwnerUnknown',
       desc: '',
       args: [],
+    );
+  }
+
+  /// `Unknown · Network {network}`
+  String tsOwnerUnknownNetwork(Object network) {
+    return Intl.message(
+      'Unknown · Network $network',
+      name: 'tsOwnerUnknownNetwork',
+      desc: '',
+      args: [network],
     );
   }
 

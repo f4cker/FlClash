@@ -1591,18 +1591,17 @@ void main() {
       await teardownView(tester);
     });
 
-    testWidgets('a narrow table drops 系统 and keeps status and copy', (
+    testWidgets('a narrow table drops 系统 and keeps the address and copy', (
       tester,
     ) async {
       serve([tsConnectedNode], tsConnectedStatus(manyPeers: true));
       await pumpPanel(tester, size: const Size(520, 1400));
 
-      expect(find.text('状态'), findsOneWidget);
+      expect(find.text('状态'), findsNothing);
       expect(find.text('系统'), findsNothing);
       final page = tester.getRect(find.byType(TailscaleView));
       for (final finder in [
-        find.text('在线'),
-        find.text('离线'),
+        find.text('100.94.68.92'),
         find.byTooltip('复制地址'),
       ]) {
         expect(finder, findsWidgets);
@@ -1613,10 +1612,10 @@ void main() {
           );
         }
       }
-      for (final element in find.text('在线').evaluate()) {
-        final paragraph = element.renderObject! as RenderParagraph;
-        expect(paragraph.didExceedMaxLines, isFalse);
-      }
+      final address = tester.renderObject<RenderParagraph>(
+        find.text('100.94.68.92'),
+      );
+      expect(address.didExceedMaxLines, isFalse);
       await teardownView(tester);
     });
 
