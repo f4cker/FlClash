@@ -24,15 +24,21 @@ import 'package:mocktail/mocktail.dart';
 import 'package:prism_ui/icons/icons.dart' show GlyphIcon, Glyphs;
 import 'package:prism_ui/prism_ui.dart'
     show
+        AppBar,
+        AppShape,
         BuildContextExtension,
         Chip,
         ColorSchemeExtension,
+        IconButton,
         PopupAnchor,
+        PopupPlacement,
+        PressSurface,
         PopupMenuCard,
         SearchField,
         Switch,
         TextButton,
         TonalButton,
+        TonalButtonSize,
         Tooltip;
 
 import '../helpers/preferences.dart';
@@ -197,6 +203,101 @@ void main() {
   });
 
   group('page layout', () {
+    for (final width in [1054.0, 760.0, 520.0, 390.0]) {
+      testWidgets('account capsule matches bar controls at $width dp', (
+        tester,
+      ) async {
+        const account = 'a.very.long.synthetic.account.name@an.example.test';
+        serve(
+          [tsConnectedNode],
+          tsConnectedStatus().copyWith(
+            loginUser: tsMe.copyWith(loginName: account),
+            peers: const [],
+          ),
+        );
+        await pumpPanel(tester, size: Size(width, 900));
+
+        final pill = find.byType(TailscaleAccountPill);
+        final surface = find.descendant(
+          of: pill,
+          matching: find.byType(PressSurface),
+        );
+        final bounds = tester.getRect(surface);
+        final buttons = find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byType(IconButton),
+        );
+        expect(buttons, findsNWidgets(2));
+        for (final button in buttons.evaluate()) {
+          final circle = tester.getRect(
+            find.descendant(
+              of: find.byWidget(button.widget),
+              matching: find.byType(PressSurface),
+            ),
+          );
+          expect(circle.size, Size.square(TonalButtonSize.bar.button));
+          expect(bounds.top, circle.top);
+          expect(bounds.bottom, circle.bottom);
+          expect(bounds.center.dy, circle.center.dy);
+        }
+        expect(tester.widget<PressSurface>(surface).shape, AppShape.full);
+        final label = find.descendant(of: pill, matching: find.text(account));
+        final text = tester.widget<Text>(label);
+        final paragraph = tester.renderObject<RenderParagraph>(label);
+        expect(text.maxLines, 1);
+        expect(text.overflow, TextOverflow.ellipsis);
+        expect(paragraph.didExceedMaxLines, isTrue);
+        expect(
+          paragraph
+              .getBoxesForSelection(
+                const TextSelection(
+                  baseOffset: 0,
+                  extentOffset: account.length,
+                ),
+              )
+              .map((box) => (box.top, box.bottom))
+              .toSet(),
+          hasLength(1),
+        );
+        final row = tester.widget<Row>(
+          find.descendant(of: pill, matching: find.byType(Row)),
+        );
+        for (final child in row.children) {
+          expect(
+            tester.getRect(find.byWidget(child)).center.dy,
+            bounds.center.dy,
+          );
+        }
+        expect(
+          find.descendant(of: pill, matching: find.text('· 已连接')),
+          width < 720 ? findsNothing : findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+
+        final anchor = find.ancestor(
+          of: pill,
+          matching: find.byType(PopupAnchor),
+        );
+        expect(
+          tester.widget<PopupAnchor>(anchor).placement,
+          PopupPlacement.belowAnchorEnd,
+        );
+        final anchorBounds = tester.getRect(anchor);
+        await tester.tap(pill);
+        await settle(tester);
+        final menu = tester.getRect(find.byType(PopupMenuCard));
+        expect(menu.top, greaterThanOrEqualTo(anchorBounds.bottom));
+        if (width >= 720) {
+          expect(menu.right, anchorBounds.right);
+        } else {
+          expect(menu.left, greaterThanOrEqualTo(0));
+          expect(menu.right, lessThanOrEqualTo(width));
+        }
+        expect(find.text('添加 Tailscale 账号'), findsOneWidget);
+        await teardownView(tester);
+      });
+    }
+
     testWidgets(
       'the first card opens under the bar on the title\'s line, barless',
       (tester) async {

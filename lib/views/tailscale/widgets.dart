@@ -323,7 +323,7 @@ class TailscaleAccountPill extends StatelessWidget {
     // A narrow bar keeps the dot and drops the state text, design.md §13.1.
     final narrow = MediaQuery.sizeOf(context).width < 720;
     final state = narrow ? null : this.state;
-    final shape = AppShape.all(AppCorner.full);
+    const shape = AppShape.full;
     return Semantics(
       button: true,
       label: semanticsLabel,
@@ -340,7 +340,7 @@ class TailscaleAccountPill extends StatelessWidget {
           onPressed: onPressed,
           padding: const EdgeInsets.only(left: 8, right: 12),
           child: SizedBox(
-            height: 36,
+            height: TonalButtonSize.bar.button,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               spacing: 8,
