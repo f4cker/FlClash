@@ -1230,10 +1230,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Сертификат установлен",
     ),
-    "installedAppsPermissionDeniedMessage":
-        MessageLookupByLibrary.simpleMessage(
-          "Разрешение на список приложений отклонено, поэтому установленные приложения недоступны. Предоставьте его вручную в системных настройках.",
-        ),
+    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
+      "Разрешение на список приложений отклонено, поэтому установленные приложения недоступны. Предоставьте его вручную в системных настройках.",
+    ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "Эта система не выдаёт список установленных приложений без разрешения. Предоставьте его, чтобы настроить прокси для отдельных приложений.",
     ),
@@ -3099,6 +3098,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Only traffic routed to this node by Flash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.",
     ),
     "tsRulesSummary": m142,
+    "tsRulesUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Domain and address details are unconfirmed.",
+    ),
     "tsSaveChoices": MessageLookupByLibrary.simpleMessage("Save choices"),
     "tsSavedValue": m143,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage(
@@ -3120,7 +3122,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "System proxy and TUN will not be enabled automatically.",
     ),
     "tsSignInShort": MessageLookupByLibrary.simpleMessage(
-      "Sign in to add a node and dedicated rules. Original files stay unchanged.",
+      "Sign in to add a node and dedicated rules.",
     ),
     "tsSignInTip": MessageLookupByLibrary.simpleMessage(
       "After sign-in, Flash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.",

@@ -2321,6 +2321,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "只有由 Flash 规则转到此节点的流量才会使用 Tailscale。登录此节点不会自动修改现有规则，也不会开启系统代理或虚拟网卡。",
     ),
     "tsRulesSummary": m142,
+    "tsRulesUnconfirmed": MessageLookupByLibrary.simpleMessage("域名和地址信息待确认"),
     "tsSaveChoices": MessageLookupByLibrary.simpleMessage("保存选择"),
     "tsSavedValue": m143,
     "tsSearchEmpty": MessageLookupByLibrary.simpleMessage("没有符合搜索条件的设备"),
@@ -2337,9 +2338,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "tsSignInBoundary": MessageLookupByLibrary.simpleMessage(
       "不会自动开启系统代理或虚拟网卡。",
     ),
-    "tsSignInShort": MessageLookupByLibrary.simpleMessage(
-      "登录后自动添加节点和专用规则，原文件不变。",
-    ),
+    "tsSignInShort": MessageLookupByLibrary.simpleMessage("登录后自动添加节点和专用规则。"),
     "tsSignInTip": MessageLookupByLibrary.simpleMessage(
       "登录后，Flash 会为当前配置添加 Tailscale 节点和专用规则。其他流量仍按原规则分流，原配置文件保持不变。",
     ),

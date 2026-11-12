@@ -140,7 +140,7 @@ void main() {
       await pumpPanel(tester);
 
       expect(find.text('登录 Tailscale'), findsWidgets);
-      expect(find.text('登录后自动添加节点和专用规则，原文件不变。'), findsOneWidget);
+      expect(find.text('登录后自动添加节点和专用规则。'), findsOneWidget);
       expect(find.textContaining('不会自动开启系统代理或虚拟网卡。'), findsNothing);
       expect(find.text('前往配置'), findsNothing);
       await tester.tap(find.byTooltip('Tailscale 说明'));
@@ -265,7 +265,7 @@ void main() {
 
       expect(find.text('当前配置中的 Tailscale 账号'), findsOneWidget);
       expect(find.text('添加 Tailscale 账号'), findsOneWidget);
-      expect(find.textContaining('面板添加'), findsWidgets);
+      expect(find.text('面板添加'), findsNothing);
       expect(find.text('设为默认账号'), findsNothing);
       await teardownView(tester);
     });
@@ -489,7 +489,7 @@ void main() {
       await teardownView(tester);
     });
 
-    testWidgets('an unread account report shows no made-up summary', (
+    testWidgets('a stale account report says so and locks nothing', (
       tester,
     ) async {
       await seed(records);
@@ -503,7 +503,11 @@ void main() {
       await pumpPanel(tester);
 
       expect(find.textContaining('个设备地址'), findsNothing);
+      expect(find.text('域名和地址信息待确认'), findsOneWidget);
       expect(find.byTooltip('规则说明'), findsOneWidget);
+      await tester.tap(find.text('前往规则'));
+      await settle(tester);
+      expect(find.byType(TailscaleRulesView), findsOneWidget);
       await teardownView(tester);
     });
 

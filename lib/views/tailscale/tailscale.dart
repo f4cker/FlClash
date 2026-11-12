@@ -251,10 +251,11 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     return tailscalePhaseLabel(context, phase);
   }
 
+  /// Only a node from a file names its source; panel-added is the default.
   String? _sourceLabel(TailscaleNode node) {
     final appLocalizations = context.appLocalizations;
     if (node.managed) {
-      return appLocalizations.tsAddedInPanel;
+      return null;
     }
     return switch (ref.read(tailscaleSetupProvider)?.configSource) {
       TailscaleSettingSource.subscription =>
@@ -884,7 +885,7 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
                 reading: panel.reading,
                 restarting: panel.restarting,
                 wide: constraints.maxWidth >= 560,
-                source: node.managed ? null : _sourceLabel(node),
+                source: _sourceLabel(node),
               ),
               if (wide)
                 IntrinsicHeight(
@@ -989,8 +990,8 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     ];
   }
 
-  /// The summary is only what the Core read back; a missing or unverified
-  /// report shows no number and no domain.
+  /// The summary is only what the Core read back; a missing or stale report
+  /// says so instead of showing a number or a domain.
   Widget _rulesCard(
     BuildContext context,
     TailscaleNode node,
@@ -1019,8 +1020,10 @@ class _TailscaleViewState extends ConsumerState<TailscaleView> {
     final report = routes.accountOf(node.managedId);
     final verified = report != null && report.fresh && !report.loggedOut;
     final String? caption;
-    if (!verified) {
+    if (report?.loggedOut ?? false) {
       caption = null;
+    } else if (!verified) {
+      caption = appLocalizations.tsRulesUnconfirmed;
     } else if (report.domain.isNotEmpty) {
       caption = appLocalizations.tsRulesSummary(
         report.addresses,
