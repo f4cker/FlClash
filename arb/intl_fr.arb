@@ -1495,7 +1495,7 @@
   "tsExitOffAffectedTitle": "Turn off the exit node?",
   "tsExitOffAffectedBody": "Turning off the exit node switches policies using “{group}” to the first option in each group.",
   "tsExitTurnOff": "Turn off exit node",
-  "tsExitOffNoOption": "No option left",
+  "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed"
 }

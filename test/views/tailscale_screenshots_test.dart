@@ -1037,7 +1037,10 @@ void main() {
 
   // The exit group, exit-design.md v2, light, saved 1568 wide.
 
-  Future<void> seedExit(TailscaleExitReport report) async {
+  Future<void> seedExit(
+    TailscaleExitReport report, {
+    TailscaleStatus Function(TailscaleNode node) status = tsExitStatus,
+  }) async {
     final node = tsManagedNode('m1');
     await seedManaged(
       [node],
@@ -1053,7 +1056,7 @@ void main() {
     );
     when(
       () => core.getTailscaleStatus(any()),
-    ).thenAnswer((_) async => tsExitStatus(node));
+    ).thenAnswer((_) async => status(node));
     when(() => core.getTailscaleExit(42)).thenAnswer((_) async => report);
   }
 
@@ -1167,13 +1170,32 @@ void main() {
   });
 
   shot('exit-04-unavailable', (tester) async {
-    await seedExit(unavailable);
+    await seedExit(
+      unavailable,
+      status: (node) => tsExitStatus(node, online: false),
+    );
     await pumpPanel(
       tester,
       size: const Size(quietWidth, 900),
       pixelRatio: reportRatio,
     );
     await shoot(tester, 'exit-04-unavailable');
+  });
+
+  shot('exit-04b-not-allowed', (tester) async {
+    await seedExit(
+      tsExitReport(
+        state: TailscaleExitState.unavailable,
+        reason: TailscaleExitReason.notAuthorized,
+      ),
+      status: (node) => tsExitStatus(node, exitNodeOption: false),
+    );
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 900),
+      pixelRatio: reportRatio,
+    );
+    await shoot(tester, 'exit-04b-not-allowed');
   });
 
   shot('exit-05-proxies-unavailable', (tester) async {

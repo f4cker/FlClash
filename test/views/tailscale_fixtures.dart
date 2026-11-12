@@ -252,9 +252,22 @@ TailscaleRoutes tsConflictRoutes() => const TailscaleRoutes(
 );
 
 /// m1 uses nas-sg as its exit node.
-TailscaleStatus tsExitStatus(TailscaleNode node) => tsConnectedStatus(
-  node: node,
-).copyWith(prefs: const TailscalePrefs(exitNodeIp: '100.88.12.4'));
+TailscaleStatus tsExitStatus(
+  TailscaleNode node, {
+  bool online = true,
+  bool exitNodeOption = true,
+}) {
+  final status = tsConnectedStatus(node: node);
+  return status.copyWith(
+    prefs: const TailscalePrefs(exitNodeIp: '100.88.12.4'),
+    peers: [
+      for (final peer in status.peers)
+        peer.hostName == 'nas-sg'
+            ? peer.copyWith(online: online, exitNodeOption: exitNodeOption)
+            : peer,
+    ],
+  );
+}
 
 const tsExitMember = 'nas-sg';
 

@@ -1495,7 +1495,7 @@
   "tsExitOffAffectedTitle": "关闭出口节点？",
   "tsExitOffAffectedBody": "关闭后，正在使用“{group}”的策略将改用各组的第一个选项。",
   "tsExitTurnOff": "关闭出口",
-  "tsExitOffNoOption": "没有剩余选项",
+  "tsExitOffNoOption": "关闭后无剩余选项",
   "tsViewerExit": "{group} · 由 Flash 添加 · {member} · 手动策略组：{groups}",
   "tsViewerExitUnconfirmed": "Tailscale 出口 · 当前运行的出口和分组待确认"
 }
