@@ -307,14 +307,14 @@ func runningMembers(t *testing.T, group string) []string {
 
 // Applies profile with one mounted source through Flash's own apply, as
 // the host does, and leaves it running.
-func applyMounted(t *testing.T, home, profile, source string, groups ...string) {
+func applyMounted(t *testing.T, home, profile, source string) {
 	t.Helper()
-	applyMountedOverlay(t, home, profile, "{}", source, groups...)
+	applyMountedOverlay(t, home, profile, "{}", source)
 }
 
 // The overlay is what Flash builds beside the base: providers and rules
 // sit there, the base gives proxies and groups.
-func applyMountedOverlay(t *testing.T, home, profile, overlay, source string, groups ...string) {
+func applyMountedOverlay(t *testing.T, home, profile, overlay, source string) {
 	t.Helper()
 	withCurrentConfig(t, nil)
 	keepTunnel(t)
@@ -325,7 +325,7 @@ func applyMountedOverlay(t *testing.T, home, profile, overlay, source string, gr
 	base := writeMountFile(t, home, "base.yaml", profile)
 	err := applyConfig(&SetupParams{
 		Base:   &SetupBase{Path: base, Overlay: overlay},
-		Mounts: &MountSetup{Revision: "r", Groups: groups, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}},
+		Mounts: &MountSetup{Revision: "r", Sources: []MountSource{{ID: 1, Label: "S", Path: source}}},
 	})
 	if err != nil {
 		t.Fatalf("applyConfig = %v", err)
@@ -515,7 +515,7 @@ proxy-groups:
 rules:
   - MATCH,G
 `)
-	applyMounted(t, home, profile, source, "G")
+	applyMounted(t, home, profile, source)
 	selectRunning(t, "G", "m1")
 	refused := recordRefusals(t)
 	ordinary := &constant.Metadata{NetWork: constant.TCP, DstIP: netip.MustParseAddr("203.0.113.9"), DstPort: 443}
@@ -651,7 +651,7 @@ rules:
   - MATCH,Auto
 `)
 	const overlay = "proxy-providers:\n  sub: {type: file, path: sub.yaml}\n  late: {type: file, path: late.yaml}\n"
-	applyMountedOverlay(t, home, profile, overlay, source, "Auto")
+	applyMountedOverlay(t, home, profile, overlay, source)
 	if got := runningMembers(t, "Auto"); !slices.Contains(got, "m1") {
 		t.Fatalf("Auto = %v, want m1 mounted", got)
 	}
@@ -671,13 +671,13 @@ rules:
 	if _, _, err := late.SideUpdate(chained); err == nil {
 		t.Error("an unread provider took a node dialing through Auto")
 	}
-	if got := runningMembers(t, "Free"); !slices.Equal(got, []string{"a"}) {
+	if got := runningMembers(t, "Free"); !slices.Equal(got, []string{"a", "m1"}) {
 		t.Errorf("Free = %v, want what was checked", got)
 	}
 	if refusedNow := handleMountState().Refused; !slices.Equal(refusedNow, []string{"late", "sub"}) {
 		t.Errorf("refused = %v, want [late sub]", refusedNow)
 	}
-	if _, _, err := sub.SideUpdate([]byte("proxies:\n  - {name: a, type: socks5, server: 192.0.2.80, port: 1080, dialer-proxy: base1}\n  - {name: y, type: socks5, server: 192.0.2.82, port: 1080, dialer-proxy: Free}\n")); err != nil {
+	if _, _, err := sub.SideUpdate([]byte("proxies:\n  - {name: a, type: socks5, server: 192.0.2.80, port: 1080, dialer-proxy: base1}\n  - {name: y, type: socks5, server: 192.0.2.82, port: 1080, dialer-proxy: base1}\n")); err != nil {
 		t.Errorf("an update dialing clear of mounts = %v, want it taken", err)
 	}
 	if !mount.empty() {

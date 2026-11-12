@@ -75,11 +75,11 @@ proxy-groups:
   - MATCH,Main
 `)
 	want := map[string]string{
-		"CGNAT": "excluded/rule", "Lan": "candidate/", "Names": "excluded/rule", "Plain": "candidate/",
-		"Classic": "excluded/rule", "ClassicMiss": "candidate/",
+		"CGNAT": "excluded/rule", "Lan": "auto/", "Names": "excluded/rule", "Plain": "auto/",
+		"Classic": "excluded/rule", "ClassicMiss": "auto/",
 		"Remote": "excluded/rule-unknown", "Broken": "excluded/rule-unknown", "Missing": "excluded/rule-unknown",
-		"Payload": "excluded/rule", "GeoLan": "excluded/rule", "GeoPrivate": "excluded/rule", "GeoCN": "candidate/",
-		"And": "excluded/rule", "Or": "excluded/rule", "OrMiss": "candidate/", "Not": "excluded/rule", "Main": "candidate/",
+		"Payload": "excluded/rule", "GeoLan": "excluded/rule", "GeoPrivate": "excluded/rule", "GeoCN": "auto/",
+		"And": "excluded/rule", "Or": "excluded/rule", "OrMiss": "auto/", "Not": "excluded/rule", "Main": "auto/",
 	}
 	got := groupReasons(t, rootOf(t, profile.String()))
 	for name, reason := range want {
@@ -92,13 +92,11 @@ proxy-groups:
 		t.Errorf("the remote rule set's cache = %v, want it left absent", err)
 	}
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
+	taking := map[string]bool{}
 	for name, reason := range want {
-		setup := &MountSetup{Groups: []string{name}, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
-		_, err := applyMountOverrides(rootOf(t, profile.String()), setup)
-		if refused := err != nil; refused != strings.HasPrefix(reason, mountGroupExcluded) {
-			t.Errorf("choosing %s = %v, want refused %v", name, err, !refused)
-		}
+		taking[name] = !strings.HasPrefix(reason, mountGroupExcluded)
 	}
+	checkMountTakingAsWritten(t, profile.String(), &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}, taking)
 }
 
 func TestMountFollowsARuleTargetIntoEveryBranchThatMayProxy(t *testing.T) {
@@ -119,7 +117,7 @@ rules:
 `
 	wantReasons := map[string]string{
 		"Direct": "excluded/rule", "Proxy": "excluded/member", "Auto": "excluded/member",
-		"OnlyDirect": "excluded/rule", "Free": "auto/", "Main": "candidate/",
+		"OnlyDirect": "excluded/rule", "Free": "auto/", "Main": "auto/",
 	}
 	got := groupReasons(t, rootOf(t, profile))
 	for name, reason := range wantReasons {
@@ -128,7 +126,7 @@ rules:
 		}
 	}
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
-	members, report := mountedMembers(t, profile, &MountSetup{Groups: []string{"Main"}, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
+	members, report := mountedMembers(t, profile, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
 	if slices.Contains(members["Auto"], "us") {
 		t.Errorf("Auto = %v, a LAN route through Direct could pick a mounted node", members["Auto"])
 	}
@@ -224,7 +222,7 @@ rules:
 	got := groupReasons(t, rootOf(t, profile))
 	for name, reason := range map[string]string{
 		"Remote": "excluded/provider-unknown", "Hidden": "excluded/provider-unknown", "Outer": "excluded/provider-unknown",
-		"Other": "candidate/", "Auto": "excluded/provider-unknown",
+		"Other": "auto/", "Auto": "excluded/provider-unknown",
 	} {
 		if got[name] != reason {
 			t.Errorf("%s = %s, want %s", name, got[name], reason)
@@ -234,7 +232,7 @@ rules:
 		t.Errorf("the remote provider's cache = %v, want it left absent", err)
 	}
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
-	if _, err := applyMountOverrides(rootOf(t, profile), &MountSetup{Groups: []string{"Other"}, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}); err != nil {
+	if _, err := applyMountOverrides(rootOf(t, profile), &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}); err != nil {
 		t.Errorf("choosing Other = %v, want it mounted", err)
 	}
 }
@@ -321,6 +319,7 @@ proxy-groups:
   - {name: Auto, type: url-test, include-all-providers: true}
   - {name: Lan, type: select, proxies: [base]}
 rules:
+  - IP-CIDR,100.64.0.0/10,Lan
   - MATCH,Main
 `
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
@@ -366,26 +365,26 @@ rules:
 	}
 	wantReasons("dialer chains", base, map[string]string{
 		"Auto": "excluded/carrier", "Pick": "excluded/carrier", "Inner": "excluded/carrier",
-		"Main": "candidate/", "Free": "candidate/",
+		"Main": "auto/", "Free": "auto/",
 	})
 	plain := strings.NewReplacer(", dialer-proxy: Auto}", "}", "  - IP-CIDR,100.64.0.0/10,jump,no-resolve\n", "").Replace(base)
 	// jump still dials through Pick: whatever it carries, Pick may not take
 	// mounts, nor anything Pick may select.
-	wantReasons("no Tailscale chain", plain, map[string]string{"Auto": "auto/", "Pick": "excluded/dialer", "Inner": "excluded/dialer", "Free": "candidate/"})
+	wantReasons("no Tailscale chain", plain, map[string]string{"Auto": "auto/", "Pick": "excluded/dialer", "Inner": "excluded/dialer", "Free": "auto/"})
 	unchained := strings.Replace(plain, ", dialer-proxy: Pick}", "}", 1)
-	wantReasons("no chain", unchained, map[string]string{"Auto": "auto/", "Pick": "candidate/", "Inner": "candidate/", "Free": "candidate/"})
+	wantReasons("no chain", unchained, map[string]string{"Auto": "auto/", "Pick": "auto/", "Inner": "auto/", "Free": "auto/"})
 
 	cases := []struct {
 		name, add string
 		want      map[string]string
 	}{
 		{"GLOBAL target", "rules:\n  - IP-CIDR,100.64.0.0/10,GLOBAL\n", map[string]string{"Free": "excluded/global", "Main": "excluded/global"}},
-		{"listener proxy", "listeners:\n  - {name: in, type: mixed, port: 7891, proxy: Free}\n", map[string]string{"Free": "excluded/rule", "Main": "candidate/"}},
+		{"listener proxy", "listeners:\n  - {name: in, type: mixed, port: 7891, proxy: Free}\n", map[string]string{"Free": "excluded/rule", "Main": "auto/"}},
 		{"listener sub-rule", "listeners:\n  - {name: in, type: mixed, port: 7891, rule: side}\nsub-rules:\n  side:\n    - MATCH,Free\n", map[string]string{"Free": "excluded/rule"}},
-		{"tunnel", "tunnels:\n  - tcp,127.0.0.1:2222,100.100.1.1:22,Free\n  - {network: [tcp], address: 127.0.0.1:2223, target: 192.0.2.1:22, proxy: Main}\n", map[string]string{"Free": "excluded/rule", "Main": "candidate/"}},
+		{"tunnel", "tunnels:\n  - tcp,127.0.0.1:2222,100.100.1.1:22,Free\n  - {network: [tcp], address: 127.0.0.1:2223, target: 192.0.2.1:22, proxy: Main}\n", map[string]string{"Free": "excluded/rule", "Main": "auto/"}},
 		{"sub-rule entered by a tailnet condition", "sub-rules:\n  side:\n    - DST-PORT,22,Free\n    - MATCH,Main\n", map[string]string{"Free": "excluded/rule", "Main": "excluded/rule"}},
 		{"GEOSITE without a database", "rules:\n  - GEOSITE,tailscale,Free\n", map[string]string{"Free": "excluded/rule-unknown"}},
-		{"DNS through a group", "dns:\n  nameserver: ['https://1.1.1.1/dns-query#Free&h3=true']\n", map[string]string{"Free": "excluded/dns", "Main": "candidate/"}},
+		{"DNS through a group", "dns:\n  nameserver: ['https://1.1.1.1/dns-query#Free&h3=true']\n", map[string]string{"Free": "excluded/dns", "Main": "auto/"}},
 		{"DNS by rules", "dns:\n  respect-rules: true\n  nameserver: [1.1.1.1]\n", map[string]string{"Free": "excluded/dns", "Main": "excluded/dns"}},
 		{"empty-fallback on a Tailscale node", "", map[string]string{"Fallen": "excluded/holds"}},
 		{"group keys in any case", "", map[string]string{"Spelled": "excluded/holds"}},

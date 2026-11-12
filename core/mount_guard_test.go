@@ -540,7 +540,7 @@ rules:
   - MATCH,REJECT
 `, "EGRESS", recorder.port(), 1)
 	root := rootOf(t, profile)
-	report, err := applyMountOverrides(root, &MountSetup{Groups: []string{"Lan"}, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
+	report, err := applyMountOverrides(root, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
 	if err != nil {
 		t.Fatal(err)
 	}

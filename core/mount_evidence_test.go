@@ -54,17 +54,17 @@ rules:
 	}{
 		{"acl-like, LAN rule set on a direct-or-proxy switch", aclLikeProfile, map[string]string{
 			"🎯 全球直连": switchedOn, "🚀 节点选择": "excluded/tailscale/member", "♻️ 自动选择": "excluded/tailscale/member",
-			"📲 电报消息": "candidate//", "🛑 全球拦截": "candidate//", "🐟 漏网之鱼": "candidate//",
+			"📲 电报消息": "auto//", "🛑 全球拦截": "auto//", "🐟 漏网之鱼": "auto//",
 		}},
 		{"acl-like, direct-only LAN target", directOnly, map[string]string{
-			"🎯 全球直连": switchedOn, "🚀 节点选择": "candidate//", "♻️ 自动选择": "auto//",
-			"📲 电报消息": "candidate//", "🛑 全球拦截": "candidate//", "🐟 漏网之鱼": "candidate//",
+			"🎯 全球直连": switchedOn, "🚀 节点选择": "auto//", "♻️ 自动选择": "auto//",
+			"📲 电报消息": "auto//", "🛑 全球拦截": "auto//", "🐟 漏网之鱼": "auto//",
 		}},
 		{"acl-like, LAN rule set not cached", uncached, map[string]string{
 			"🎯 全球直连": "excluded/tailscale/rule-unknown", "🚀 节点选择": "excluded/tailscale/member",
-			"♻️ 自动选择": "excluded/tailscale/member", "📲 电报消息": "candidate//", "🛑 全球拦截": "candidate//",
+			"♻️ 自动选择": "excluded/tailscale/member", "📲 电报消息": "auto//", "🛑 全球拦截": "auto//",
 		}},
-		{"plain", plain, map[string]string{"Proxy": "candidate//", "Auto": "auto//", "Direct": "candidate//"}},
+		{"plain", plain, map[string]string{"Proxy": "auto//", "Auto": "auto//", "Direct": "auto//"}},
 	} {
 		target, err := inspectMountTarget(rootOf(t, tc.profile))
 		if err != nil {
@@ -82,7 +82,7 @@ rules:
 	}
 
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
-	members, _ := mountedMembers(t, aclLikeProfile, &MountSetup{Groups: []string{"🐟 漏网之鱼", "📲 电报消息"}, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
+	members, _ := mountedMembers(t, aclLikeProfile, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
 	for _, group := range []string{"🎯 全球直连", "🚀 节点选择", "♻️ 自动选择"} {
 		if slices.Contains(members[group], "us") {
 			t.Errorf("%s = %v, a LAN route could reach a mounted node", group, members[group])

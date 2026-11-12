@@ -1,7 +1,7 @@
 package core
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"slices"
@@ -34,13 +34,56 @@ func wantKinds(t *testing.T, got, want map[string]string) {
 	}
 }
 
+// For a profile that does not load alone: what each group, as it will run,
+// takes of the mounts by its own mapping, checked against the report.
+func checkMountTakingAsWritten(t *testing.T, profile string, setup *MountSetup, want map[string]bool) {
+	t.Helper()
+	root := rootOf(t, profile)
+	report, err := applyMountOverrides(root, setup)
+	if err != nil {
+		t.Fatalf("mounting = %v", err)
+	}
+	reported := map[string]bool{}
+	for _, group := range report.Groups {
+		reported[group.Name] = true
+	}
+	mounted, err := decodeMappings(mappingValue(root, "proxy-groups"), "proxy-groups")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mapping := range mounted {
+		name := groupString(mapping, "name")
+		takes, listed := want[name]
+		if !listed {
+			continue
+		}
+		holds := collectsProviders(mapping) || slices.Contains(groupList(mapping, "use"), mountProviderName(1))
+		if reported[name] != takes || holds != takes {
+			t.Errorf("%s: reported %v, runs %v; want taking mounts %v", name, reported[name], mapping, takes)
+		}
+	}
+}
+
+// The group is kept out of the mounts: the report leaves it out and, as
+// it will run, it collects no provider and uses no mount provider.
 func refusedChoice(t *testing.T, profile, group, source string) {
 	t.Helper()
-	setup := &MountSetup{Groups: []string{group}, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
-	_, err := applyMountOverrides(rootOf(t, profile), setup)
-	var methodErr *MethodError
-	if !errors.As(err, &methodErr) || methodErr.Code != "mount_group_changed" {
-		t.Errorf("a stored choice of %s = %v, want it refused", group, err)
+	root := rootOf(t, profile)
+	report, err := applyMountOverrides(root, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
+	if err != nil {
+		t.Fatalf("mounting = %v", err)
+	}
+	if slices.ContainsFunc(report.Groups, func(g MountGroupReport) bool { return g.Name == group }) {
+		t.Errorf("%s takes the mounts, want it kept out", group)
+	}
+	mounted, err := decodeMappings(mappingValue(root, "proxy-groups"), "proxy-groups")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mapping := range mounted {
+		if groupString(mapping, "name") == group && (collectsProviders(mapping) || slices.Contains(groupList(mapping, "use"), mountProviderName(1))) {
+			t.Errorf("%s as it runs = %v, want no mount provider", group, mapping)
+		}
 	}
 }
 
@@ -58,6 +101,29 @@ func mountedMembers(t *testing.T, profile string, setup *MountSetup) (map[string
 		members[name] = memberNames(t, cfg, name)
 	}
 	return members, report
+}
+
+// Fails for each named group whose taking mounts is not what want says:
+// the report lists it, and its running members hold a mounted node.
+func checkMountTaking(t *testing.T, label, profile string, setup *MountSetup, want map[string]bool) {
+	t.Helper()
+	members, report := mountedMembers(t, profile, setup)
+	reported := map[string]bool{}
+	for _, group := range report.Groups {
+		reported[group.Name] = true
+	}
+	mounted := map[string]bool{}
+	for _, source := range report.Sources {
+		for _, node := range source.Nodes {
+			mounted[node.Name] = true
+		}
+	}
+	for name, takes := range want {
+		holds := slices.ContainsFunc(members[name], func(member string) bool { return mounted[member] })
+		if reported[name] != takes || holds != takes {
+			t.Errorf("%s%s: reported %v, members %v; want taking mounts %v", label, name, reported[name], members[name], takes)
+		}
+	}
 }
 
 func TestMountSeesTailscaleNodesHeldByABaseProvider(t *testing.T) {
@@ -83,7 +149,7 @@ proxy-groups:
 		"UsesCache":  "excluded/tailscale",
 		"Everything": "excluded/tailscale",
 		"Typed":      "auto/",
-		"Dropped":    "candidate/",
+		"Dropped":    "auto/",
 	})
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
 	refusedChoice(t, profile, "Uses", source)
@@ -93,7 +159,7 @@ proxy-groups:
 		"  cached: {type: file, path: cached.yaml}\n", "",
 		"  - {name: UsesCache, type: select, use: [cached], proxies: [base]}\n", "",
 	).Replace(profile)
-	members, _ := mountedMembers(t, loadable, &MountSetup{Groups: []string{"Dropped"}, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
+	members, _ := mountedMembers(t, loadable, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
 	for _, group := range []string{"Providers", "Everything"} {
 		if slices.Contains(members[group], "us") {
 			t.Errorf("%s = %v, holds a mounted node", group, members[group])
@@ -196,23 +262,21 @@ rules:
 		"V4": "excluded/tailscale", "V6": "excluded/tailscale", "Net": "excluded/tailscale",
 		"Tailnet": "excluded/tailscale", "Device": "excluded/tailscale", "Wide": "excluded/tailscale",
 		"Suffix": "excluded/tailscale", "Sub": "excluded/tailscale", "Collects": "auto/",
-		"Lan": "candidate/", "Google": "candidate/", "Source": "candidate/",
-		"Main": "candidate/", "Final": "excluded/tailscale",
+		"Lan": "auto/", "Google": "auto/", "Source": "auto/",
+		"Main": "auto/", "Final": "excluded/tailscale",
 	}
 	wantKinds(t, groupKinds(t, rootOf(t, profile)), want)
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
+	taking := map[string]bool{}
+	for group, kind := range want {
+		taking[group] = !strings.HasPrefix(kind, mountGroupExcluded)
+	}
 	for _, managed := range [][]string{nil, {"Work"}} {
-		for group, kind := range want {
-			setup := &MountSetup{Groups: []string{group}, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}, reserved: managed}
-			_, err := applyMountOverrides(rootOf(t, profile), setup)
-			excluded := strings.HasPrefix(kind, mountGroupExcluded)
-			if refused := err != nil; refused != excluded {
-				t.Errorf("managed %v: choosing %s = %v, want refused %v", managed, group, err, excluded)
-			}
-		}
+		setup := &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}, reserved: managed}
+		checkMountTaking(t, fmt.Sprintf("managed %v: ", managed), profile, setup, taking)
 	}
 	final := strings.Replace(profile, "  - MATCH,Main\n", "  - MATCH,Final\n", 1)
-	wantKinds(t, groupKinds(t, rootOf(t, final)), map[string]string{"Final": "excluded/tailscale", "Main": "candidate/"})
+	wantKinds(t, groupKinds(t, rootOf(t, final)), map[string]string{"Final": "excluded/tailscale", "Main": "auto/"})
 	tailnet := strings.Replace(profile, "  - DOMAIN-KEYWORD,tailscale,Collects\n", "  - DOMAIN-KEYWORD,ts,Collects\n", 1)
 	wantKinds(t, groupKinds(t, rootOf(t, tailnet)), map[string]string{"Collects": "excluded/tailscale"})
 }
@@ -229,7 +293,7 @@ proxy-groups:
   - {name: Unfiltered, type: select, include-all-proxies: true, exclude-filter: "ts"}
 `
 	wantKinds(t, groupKinds(t, rootOf(t, profile)), map[string]string{
-		"Listed":     "candidate/",
+		"Listed":     "auto/",
 		"Longer":     "excluded/tailscale",
 		"Prefixed":   "excluded/tailscale",
 		"Filtered":   "excluded/tailscale",

@@ -1,11 +1,13 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -118,14 +120,14 @@ func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
 		got[group.Name] = group
 	}
 	for name, want := range map[string]MountGroupInfo{
-		"Proxy":  {Name: "Proxy", Type: "select", Kind: mountGroupCandidate, Probe: "none"},
+		"Proxy":  {Name: "Proxy", Type: "select", Kind: mountGroupAuto, Probe: "none"},
 		"Auto":   {Name: "Auto", Type: "url-test", Kind: mountGroupAuto, Collects: "providers", Filter: true, Probe: "probes"},
 		"All":    {Name: "All", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Reason: reachHolds, Hidden: true, Probe: "none"},
-		"Lazy":   {Name: "Lazy", Type: "fallback", Kind: mountGroupCandidate, Probe: "unknown"},
-		"Hidden": {Name: "Hidden", Type: "select", Kind: mountGroupExcluded, Excluded: "hidden", Hidden: true, Probe: "none"},
+		"Lazy":   {Name: "Lazy", Type: "fallback", Kind: mountGroupAuto, Probe: "unknown"},
+		"Hidden": {Name: "Hidden", Type: "select", Kind: mountGroupAuto, Hidden: true, Probe: "none"},
 		"Office": {Name: "Office", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Reason: reachHolds, Probe: "none"},
 		"Chain":  {Name: "Chain", Type: "relay", Kind: mountGroupExcluded, Excluded: "type", Probe: "probes"},
-		"Direct": {Name: "Direct", Type: "select", Kind: mountGroupCandidate, ExcludeFilter: true, EmptyFallback: "DIRECT", Probe: "none"},
+		"Direct": {Name: "Direct", Type: "select", Kind: mountGroupAuto, ExcludeFilter: true, EmptyFallback: "DIRECT", Probe: "none"},
 		"GLOBAL": {Name: "GLOBAL", Type: "select", Kind: mountGroupExcluded, Excluded: "builtin", Probe: "none"},
 	} {
 		if got[name] != want {
@@ -161,21 +163,17 @@ rules:
 		"Office":   "excluded/tailscale",
 		"Outer":    "excluded/tailscale",
 		"Collects": "excluded/tailscale",
-		"Filtered": "candidate/",
+		"Filtered": "auto/",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("groups = %v, want %v", got, want)
 	}
 
 	home := withMountHome(t)
-	for _, chosen := range []string{"Office", "Outer", "Proxy"} {
-		setup := &MountSetup{Groups: []string{chosen}, Sources: []MountSource{{ID: 1, Path: writeMountFile(t, home, "1.yaml", mountSourceB)}}}
-		_, err := applyMountOverrides(rootOf(t, profile), setup)
-		var methodErr *MethodError
-		if !errors.As(err, &methodErr) || methodErr.Code != "mount_group_changed" {
-			t.Errorf("a stored choice of %s = %v, want it refused", chosen, err)
-		}
-	}
+	setup := &MountSetup{Sources: []MountSource{{ID: 1, Path: writeMountFile(t, home, "1.yaml", mountSourceB)}}}
+	checkMountTakingAsWritten(t, profile, setup, map[string]bool{
+		"Proxy": false, "Office": false, "Outer": false, "Collects": false, "Filtered": true,
+	})
 }
 
 func TestMountGroupsThatCannotBeReadAreAnErrorNotFewerGroups(t *testing.T) {
@@ -236,9 +234,9 @@ func memberNames(t *testing.T, cfg *config.Config, group string) []string {
 	return names
 }
 
-func TestMountsReachAutoAndChosenGroupsWithSuffixesOnlyOnClashes(t *testing.T) {
+func TestMountsReachEveryAllowedGroupWithSuffixesOnlyOnClashes(t *testing.T) {
 	home := withMountHome(t)
-	setup := &MountSetup{Revision: "r1", Groups: []string{"Proxy", "Direct"}, Sources: []MountSource{
+	setup := &MountSetup{Revision: "r1", Sources: []MountSource{
 		{ID: 7, Label: "Sub A", Path: writeMountFile(t, home, "7.yaml", mountSourceA)},
 		{ID: 9, Label: "Sub B", Path: writeMountFile(t, home, "9.yaml", mountSourceB)},
 	}}
@@ -255,8 +253,14 @@ func TestMountsReachAutoAndChosenGroupsWithSuffixesOnlyOnClashes(t *testing.T) {
 	if got, want := memberNames(t, cfg, "Auto"), []string{"hk"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Auto members = %v, want %v", got, want)
 	}
-	if got := memberNames(t, cfg, "Lazy"); !reflect.DeepEqual(got, []string{"base"}) {
-		t.Errorf("an unchosen group changed: %v", got)
+	// A fixed list keeps its members and takes the mounts after them.
+	for _, group := range []string{"Lazy", "Hidden", "Office"} {
+		if got, want := memberNames(t, cfg, group), []string{"base", "hk", "shared (Sub A)", "shared (Sub B)", "us"}; group != "Office" && !reflect.DeepEqual(got, want) {
+			t.Errorf("%s members = %v, want %v", group, got, want)
+		}
+	}
+	if got, want := memberNames(t, cfg, "Office"), []string{"office", "hk", "shared (Sub A)", "shared (Sub B)", "us"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Office members = %v, want %v", got, want)
 	}
 	if report.Renamed != 2 || report.Revision != "r1" {
 		t.Errorf("report = %+v, want two renames on r1", report)
@@ -272,6 +276,9 @@ func TestMountsReachAutoAndChosenGroupsWithSuffixesOnlyOnClashes(t *testing.T) {
 		{Name: "Proxy", Via: "use", Protection: mountProtectionOriginal},
 		{Name: "Auto", Via: "auto", Protection: mountProtectionReject, EmptyFallback: "REJECT"},
 		{Name: "All", Via: "auto", Protection: mountProtectionOriginal},
+		{Name: "Lazy", Via: "use", Protection: mountProtectionOriginal},
+		{Name: "Hidden", Via: "use", Protection: mountProtectionOriginal},
+		{Name: "Office", Via: "use", Protection: mountProtectionOriginal},
 		{Name: "Direct", Via: "use", Protection: mountProtectionBase, EmptyFallback: "DIRECT"},
 	}
 	if !reflect.DeepEqual(report.Groups, wantGroups) {
@@ -394,16 +401,26 @@ rules:
 	}
 }
 
-func TestMountRefusesAChosenGroupThatIsGone(t *testing.T) {
+// A host that still sends the groups it once chose has them ignored: every
+// allowed group takes the mounts, the chosen ones and the rest alike.
+func TestMountIgnoresTheGroupsAnOlderHostChose(t *testing.T) {
 	home := withMountHome(t)
 	path := writeBaseProfile(t, mountTargetProfile)
-	setup := &MountSetup{Groups: []string{"Hidden"}, Sources: []MountSource{{ID: 1, Path: writeMountFile(t, home, "1.yaml", mountSourceB)}}}
-
-	_, _, err := mergeProfileBase(&SetupBase{Path: path, Overlay: "{}"}, false, setup)
-
-	var methodErr *MethodError
-	if !errors.As(err, &methodErr) || methodErr.Code != "mount_group_changed" || methodErr.Details != "Hidden" {
-		t.Fatalf("merge = %v, want mount_group_changed for Hidden", err)
+	source := writeMountFile(t, home, "1.yaml", mountSourceB)
+	var setup MountSetup
+	if err := json.Unmarshal([]byte(`{"target": 3, "revision": "r", "groups": ["Lazy", "Gone"], "sources": [{"id": 1, "label": "S", "path": `+strconv.Quote(source)+`}]}`), &setup); err != nil {
+		t.Fatal(err)
+	}
+	_, report, err := mergeProfileBase(&SetupBase{Path: path, Overlay: "{}"}, false, &setup)
+	if err != nil {
+		t.Fatalf("merge = %v, want the stored groups ignored", err)
+	}
+	var names []string
+	for _, group := range report.Groups {
+		names = append(names, group.Name)
+	}
+	if want := []string{"Proxy", "Auto", "Lazy", "Hidden", "Direct"}; !reflect.DeepEqual(names, want) {
+		t.Errorf("groups = %v, want %v", names, want)
 	}
 }
 
@@ -425,13 +442,6 @@ func TestMountPreflightReportsWhatTheApplyWouldRefuse(t *testing.T) {
 	})
 	if err != nil || with.Error != "" || with.Report == nil || with.Report.Revision != "r" {
 		t.Errorf("preflight with a mount = %+v, %v; want a clean report", with, err)
-	}
-	gone, err := handleMountPreflight(MountPreflightParams{
-		Config: base,
-		Mounts: &MountSetup{Groups: []string{"Nope"}, Sources: []MountSource{{ID: 1, Path: source}}},
-	})
-	if err != nil || gone.ErrorCode != "mount_group_changed" {
-		t.Errorf("preflight on a missing group = %+v, %v", gone, err)
 	}
 }
 
@@ -585,7 +595,7 @@ func TestLoadMountedConfigWithoutABaseMountsIntoConfigYaml(t *testing.T) {
 `)
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
 
-	cfg, report, err := loadMountedConfig(configPath, &MountSetup{Groups: []string{"G"}, Sources: []MountSource{{ID: 1, Path: source}}})
+	cfg, report, err := loadMountedConfig(configPath, &MountSetup{Sources: []MountSource{{ID: 1, Path: source}}})
 	if err != nil {
 		t.Fatalf("loadMountedConfig = %v", err)
 	}

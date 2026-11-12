@@ -113,7 +113,7 @@ rules:
 		"percent-encoded with params":    "  proxy-server-nameserver: ['1.1.1.1#%46ree&h3=true']\n",
 	} {
 		reasons := groupReasons(t, rootOf(t, base+"dns:\n"+dns))
-		if reasons["Free"] != "excluded/dns" || reasons["Main"] != "candidate/" {
+		if reasons["Free"] != "excluded/dns" || reasons["Main"] != "auto/" {
 			t.Errorf("%s: reasons = %v, want Free excluded for DNS and Main a candidate", name, reasons)
 		}
 	}
@@ -133,7 +133,7 @@ rules:
 dns:
   nameserver: ['https://1.1.1.1/dns-query#%E8%8A%82%E7%82%B9%E9%80%89%E6%8B%A9']
 `
-	if reasons := groupReasons(t, rootOf(t, base)); reasons["节点选择"] != "excluded/dns" || reasons["Main"] != "candidate/" {
+	if reasons := groupReasons(t, rootOf(t, base)); reasons["节点选择"] != "excluded/dns" || reasons["Main"] != "auto/" {
 		t.Errorf("reasons = %v, want 节点选择 excluded for DNS and Main a candidate", reasons)
 	}
 	const spaced = `proxies:
@@ -148,7 +148,7 @@ dns:
 `
 	for _, nameserver := range []string{"'1.1.1.1#%20G'", "'1.1.1.1# G'", "'tls://1.1.1.1#%20G&h3=true'"} {
 		reasons := groupReasons(t, rootOf(t, spaced+"  nameserver: ["+nameserver+"]\n"))
-		if reasons[" G"] != "excluded/dns" || reasons["Main"] != "candidate/" {
+		if reasons[" G"] != "excluded/dns" || reasons["Main"] != "auto/" {
 			t.Errorf("%s: reasons = %v, want \" G\" excluded for DNS and Main a candidate", nameserver, reasons)
 		}
 	}

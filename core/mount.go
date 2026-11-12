@@ -30,13 +30,14 @@ type MountSource struct {
 	Path  string `json:"path"`
 }
 
-// Groups are the explicitly chosen ones; auto-collecting groups take every
-// mount on their own. Revision binds a readback to the setup that made it.
+// Every ordinary group the isolation checks allow takes every mount, then
+// filters it by its own rules; no group is chosen. A host that still sends
+// the groups it once chose has them ignored. Revision binds a readback to
+// the setup that made it.
 type MountSetup struct {
 	Target   int64         `json:"target"`
 	Revision string        `json:"revision"`
 	Sources  []MountSource `json:"sources"`
-	Groups   []string      `json:"groups,omitempty"`
 	reserved []string
 }
 
@@ -177,10 +178,10 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 	return inspection
 }
 
+// Auto is a group that takes the mounts; excluded, one kept out of them.
 const (
-	mountGroupAuto      = "auto"
-	mountGroupCandidate = "candidate"
-	mountGroupExcluded  = "excluded"
+	mountGroupAuto     = "auto"
+	mountGroupExcluded = "excluded"
 )
 
 // What the mount panel needs of one base group. Filters are only flagged:
@@ -312,24 +313,23 @@ func mountGroupInfo(mapping map[string]any, reach string) MountGroupInfo {
 		}
 	}
 	includeAll := groupFlag(mapping, "include-all")
+	// Hidden groups take mounts as visible ones do: hiding is the Proxies
+	// page's concern, never a group rule.
 	switch {
 	case !slices.Contains(mountableGroupTypes, kind):
 		info.Kind, info.Excluded = mountGroupExcluded, "type"
 	case info.Name == globalProxyName:
 		info.Kind, info.Excluded = mountGroupExcluded, "builtin"
-	case collectsProviders(mapping) && reachesTailscale:
-		info.Kind, info.Excluded, info.Reason = mountGroupExcluded, "tailscale", reach
-	case collectsProviders(mapping):
-		info.Kind, info.Collects = mountGroupAuto, "providers"
-		if includeAll || groupFlag(mapping, "include-all-proxies") {
-			info.Collects = "all"
-		}
-	case info.Hidden:
-		info.Kind, info.Excluded = mountGroupExcluded, "hidden"
 	case reachesTailscale:
 		info.Kind, info.Excluded, info.Reason = mountGroupExcluded, "tailscale", reach
 	default:
-		info.Kind = mountGroupCandidate
+		info.Kind = mountGroupAuto
+		if collectsProviders(mapping) {
+			info.Collects = "providers"
+			if includeAll || groupFlag(mapping, "include-all-proxies") {
+				info.Collects = "all"
+			}
+		}
 	}
 	return info
 }
@@ -361,7 +361,8 @@ const (
 	mountProtectionOriginal = "original"
 )
 
-// Via is auto for a group that collects every provider, use for a chosen one.
+// Via is auto for a group that collects every provider on its own, use for
+// one the mounts are added to.
 type MountGroupReport struct {
 	Name          string `json:"name"`
 	Via           string `json:"via"`
@@ -378,18 +379,11 @@ type MountReport struct {
 	gate     *mountGate
 }
 
-func errMountGroupChanged(name string) error {
-	return &MethodError{
-		Code:    "mount_group_changed",
-		Message: fmt.Sprintf("target group %q is gone or no longer takes subscription nodes", name),
-		Details: name,
-	}
-}
-
 var reservedProxyNames = []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", globalProxyName}
 
-// Each source becomes a file provider over the cache Flash keeps; chosen
-// groups gain a use of every one, and a group left with provider nodes only
+// Each source becomes a file provider over the cache Flash keeps; every
+// group the checks allow takes every one, through include-all or a use, and
+// keeps its own members and filters. A group left with provider nodes only
 // rejects when empty unless the base names its own empty-fallback. Names
 // that clash with the base or an earlier source get "(label)" appended.
 func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, error) {
@@ -460,8 +454,11 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		names = append(names, name)
 	}
 	groupsNode := resolveAlias(mappingValue(root, "proxy-groups"))
-	groups, err := applyMountGroups(groupsNode, base.groups, reach, setup.Groups, names, baseProviders)
+	groups, err := applyMountGroups(groupsNode, base.groups, reach, names, baseProviders)
 	if err != nil {
+		return nil, err
+	}
+	if err := checkMountedGroups(groupsNode, reach, groups, names); err != nil {
 		return nil, err
 	}
 	report.Groups = groups
@@ -555,36 +552,28 @@ func mountProviderNode(path string, renames []MountNode, relay *mountRelay) (*ya
 	return &node, nil
 }
 
-func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, reach map[string]string, chosen []string, providers []string, baseProviders []string) ([]MountGroupReport, error) {
+func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, reach map[string]string, providers []string, baseProviders []string) ([]MountGroupReport, error) {
 	reports := []MountGroupReport{}
-	found := map[string]bool{}
 	for i, mapping := range mappings {
 		node := resolveAlias(groupsNode.Content[i])
 		info := mountGroupInfo(mapping, reach[groupString(mapping, "name")])
-		if reach[info.Name] != "" && collectsProviders(mapping) {
-			pinned, err := pinBaseProviders(node, mapping, baseProviders)
-			if err != nil {
-				return nil, err
+		if info.Kind != mountGroupAuto {
+			// A kept-out group that collects every provider would collect
+			// the mounts too: it is built as without them.
+			if collectsProviders(mapping) {
+				pinned, err := pinBaseProviders(node, mapping, baseProviders)
+				if err != nil {
+					return nil, err
+				}
+				groupsNode.Content[i] = pinned
 			}
-			groupsNode.Content[i] = pinned
 			continue
 		}
-		via := ""
-		switch {
-		case info.Kind == mountGroupAuto:
-			via = "auto"
-		case slices.Contains(chosen, info.Name) && info.Kind == mountGroupCandidate:
-			via = "use"
-		}
-		if slices.Contains(chosen, info.Name) && via != "" {
-			found[info.Name] = true
-		}
-		if via == "" {
-			continue
-		}
+		via := "auto"
 		copied := *node
 		copied.Content = append([]*yaml.Node(nil), node.Content...)
-		if via == "use" {
+		if !collectsProviders(mapping) {
+			via = "use"
 			uses := append(groupList(mapping, "use"), providers...)
 			var useNode yaml.Node
 			if err := useNode.Encode(uniqueStrings(uses)); err != nil {
@@ -603,12 +592,54 @@ func applyMountGroups(groupsNode *yaml.Node, mappings []map[string]any, reach ma
 		groupsNode.Content[i] = &copied
 		reports = append(reports, report)
 	}
-	for _, name := range chosen {
-		if !found[name] {
-			return nil, errMountGroupChanged(name)
+	return reports, nil
+}
+
+func errMountIsolation(name string) error {
+	return &MethodError{
+		Code:    "mount_isolation_check",
+		Message: fmt.Sprintf("group %q would take mounted nodes the isolation checks keep out", name),
+		Details: name,
+	}
+}
+
+// Checks the groups as they will run, mounts added, against what the
+// isolation checks read of the base: no group they keep out may hold a
+// mount provider, and whatever such a group may be carried by (members and
+// empty-fallback) must be kept out too. Adding mounts adds providers only,
+// never a group edge, so a failure here is a gap in those checks; the
+// target is refused rather than run.
+func checkMountedGroups(groupsNode *yaml.Node, reach map[string]string, taking []MountGroupReport, mountProviders []string) error {
+	mounted, err := decodeMappings(groupsNode, "proxy-groups")
+	if err != nil {
+		return err
+	}
+	takes := map[string]bool{}
+	for _, group := range taking {
+		takes[group.Name] = true
+	}
+	names := map[string]bool{}
+	for _, mapping := range mounted {
+		names[groupString(mapping, "name")] = true
+	}
+	for _, mapping := range mounted {
+		name := groupString(mapping, "name")
+		holdsMount := collectsProviders(mapping) || slices.ContainsFunc(groupList(mapping, "use"), func(use string) bool {
+			return slices.Contains(mountProviders, use)
+		})
+		if holdsMount != takes[name] || holdsMount && reach[name] != "" {
+			return errMountIsolation(name)
+		}
+		if reach[name] == "" {
+			continue
+		}
+		for _, member := range append(groupList(mapping, "proxies"), groupString(mapping, "empty-fallback")) {
+			if names[member] && (reach[member] == "" || takes[member]) {
+				return errMountIsolation(member)
+			}
 		}
 	}
-	return reports, nil
+	return nil
 }
 
 // A group reaching Tailscale is built as without the mounts: include-all
