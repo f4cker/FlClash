@@ -935,10 +935,19 @@ class SetupAction extends _$SetupAction {
       );
       runtime = TailscaleRuntimeRules.readFailed(profileId);
     }
-    return annotateTailscaleRuntime(
-      yaml,
-      runtime,
-      setup,
+    TailscaleExitReport exit;
+    try {
+      exit = await _core.getTailscaleExit(profileId);
+    } catch (error) {
+      commonPrint.log(
+        'tailscale exit group unread: ${compactError(error)}',
+        logLevel: coreFailureLogLevel(error),
+      );
+      exit = TailscaleExitReport.readFailed(profileId);
+    }
+    return annotateTailscaleExit(
+      annotateTailscaleRuntime(yaml, runtime, setup, currentAppLocalizations),
+      exit,
       currentAppLocalizations,
     );
   }

@@ -99,6 +99,7 @@ class ProxiesAction extends _$ProxiesAction {
     ref
         .read(profilesActionProvider.notifier)
         .updateCurrentSelectedMap(groupName, proxyName);
+    _keepTailscaleExitChoice(groupName, proxyName);
     debouncer.call((FunctionTag.changeProxy, groupName), (
       String groupName,
       String proxyName,
@@ -106,6 +107,20 @@ class ProxiesAction extends _$ProxiesAction {
       await changeProxy(groupName: groupName, proxyName: proxyName);
       updateGroupsDebounce();
     }, args: [groupName, proxyName]);
+  }
+
+  /// The exit group's choice is kept by account, as its node names change.
+  void _keepTailscaleExitChoice(String groupName, String proxyName) {
+    final report = ref.read(tailscaleExitRuntimeProvider).value;
+    if (report == null || !report.offered || report.group != groupName) {
+      return;
+    }
+    final account = report.memberNamed(proxyName);
+    if (account != null) {
+      ref
+          .read(profilesActionProvider.notifier)
+          .updateCurrentSelectedMap(tailscaleExitSelectionKey, account.id);
+    }
   }
 
   String _currentSelectedName(String groupName) {

@@ -568,6 +568,7 @@ abstract class CoreHandlerInterface {
   Future<TailscalePrefsResult> setTailscalePrefs(
     TailscaleNodeRef node, {
     String? exitNode,
+    String? exitLabel,
     bool? acceptRoutes,
   }) {
     return _query(
@@ -576,6 +577,7 @@ abstract class CoreHandlerInterface {
       arguments: {
         ...node.toJson(),
         'exit-node': ?exitNode,
+        'exit-label': ?exitLabel,
         'accept-routes': ?acceptRoutes,
       },
       timeout: tailscaleCoreGuard,
@@ -645,6 +647,16 @@ abstract class CoreHandlerInterface {
     return _query(
       CoreMethod.tailscaleRuntimeRules,
       _model(TailscaleRuntimeRules.fromJson),
+      arguments: {'profile-id': profileId},
+      timeout: tailscaleCoreGuard,
+    );
+  }
+
+  /// Read only: the exit group and its parents as the running config holds them.
+  Future<TailscaleExitReport> getTailscaleExit(int profileId) {
+    return _query(
+      CoreMethod.tailscaleExit,
+      _model(TailscaleExitReport.fromJson),
       arguments: {'profile-id': profileId},
       timeout: tailscaleCoreGuard,
     );

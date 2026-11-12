@@ -78,6 +78,7 @@ enum CoreMethod {
   tailscaleForgetRoutes('tailscale.forgetRoutes'),
   tailscaleManagedState('tailscale.managedState'),
   tailscaleRuntimeRules('tailscale.runtimeRules'),
+  tailscaleExit('tailscale.exit'),
 
   /// The envelope of the Core's event batches, never called.
   message('message');

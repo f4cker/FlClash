@@ -477,7 +477,21 @@ abstract class TailscaleManagedRecord with _$TailscaleManagedRecord {
     acceptRoutes: acceptRoutes,
     loggedOut: loggedOut,
     attached: attached,
+    exitLabel: exitLabelFor(exitNode, exitNodeName),
   );
+
+  /// The exit node's name in the exit group: device, then account.
+  String? exitLabelFor(String? exitNode, String? exitNodeName) {
+    if (exitNode == null || exitNode.isEmpty) {
+      return null;
+    }
+    String first(List<String?> values) => values.firstWhere(
+      (value) => value?.trim().isNotEmpty ?? false,
+      orElse: () => '',
+    )!;
+    final owner = first([account?.loginName, account?.displayName, name, id]);
+    return '${first([exitNodeName, exitNode])} · $owner';
+  }
 }
 
 /// One unlink of a profile: [before] is the routing it started from, null
@@ -504,6 +518,7 @@ abstract class TailscaleManagedSetup with _$TailscaleManagedSetup {
     @JsonKey(name: 'accept-routes', includeIfNull: false) bool? acceptRoutes,
     @JsonKey(name: 'logged-out') @Default(false) bool loggedOut,
     @Default(false) bool attached,
+    @JsonKey(name: 'exit-label', includeIfNull: false) String? exitLabel,
   }) = _TailscaleManagedSetup;
 
   factory TailscaleManagedSetup.fromJson(Map<String, Object?> json) =>
@@ -524,6 +539,9 @@ abstract class TailscaleSetup with _$TailscaleSetup {
     /// The stored accounts could not be read: the Core blocks every
     /// Tailscale target rather than route by an empty list.
     @JsonKey(name: 'managed-unknown') @Default(false) bool managedUnknown,
+
+    /// The exit group's name in the app's language.
+    @JsonKey(name: 'exit-group', includeIfNull: false) String? exitGroup,
   }) = _TailscaleSetup;
 
   factory TailscaleSetup.fromJson(Map<String, Object?> json) =>

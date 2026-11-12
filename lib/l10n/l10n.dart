@@ -13485,6 +13485,198 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Tailscale exit`
+  String get tsExitGroupName {
+    return Intl.message(
+      'Tailscale exit',
+      name: 'tsExitGroupName',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Select “Tailscale exit” on the Proxies page to use this exit node for a policy.`
+  String get tsExitHowTo {
+    return Intl.message(
+      'Select “Tailscale exit” on the Proxies page to use this exit node for a policy.',
+      name: 'tsExitHowTo',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Enabling an exit node adds “Tailscale exit” as an option in all manual policy groups, not in latency-test or fallback groups. Existing selections stay unchanged. Only traffic actually using it goes through this exit node; your Mac’s default exit stays unchanged.`
+  String get tsExitGroupTip {
+    return Intl.message(
+      'Enabling an exit node adds “Tailscale exit” as an option in all manual policy groups, not in latency-test or fallback groups. Existing selections stay unchanged. Only traffic actually using it goes through this exit node; your Mac’s default exit stays unchanged.',
+      name: 'tsExitGroupTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Exit group unconfirmed`
+  String get tsExitGroupUnconfirmed {
+    return Intl.message(
+      'Exit group unconfirmed',
+      name: 'tsExitGroupUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{“{group}” added to 1 manual policy group} other{“{group}” added to {count} manual policy groups}}`
+  String tsExitGroupJoined(num count, Object group) {
+    return Intl.plural(
+      count,
+      one: '“$group” added to 1 manual policy group',
+      other: '“$group” added to $count manual policy groups',
+      name: 'tsExitGroupJoined',
+      desc: '',
+      args: [count, group],
+    );
+  }
+
+  /// `No manual policy groups in this profile can receive the exit group`
+  String get tsExitGroupNoParents {
+    return Intl.message(
+      'No manual policy groups in this profile can receive the exit group',
+      name: 'tsExitGroupNoParents',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This exit node is not authorized for use`
+  String get tsExitNotAuthorized {
+    return Intl.message(
+      'This exit node is not authorized for use',
+      name: 'tsExitNotAuthorized',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Exit device offline`
+  String get tsExitDeviceOffline {
+    return Intl.message(
+      'Exit device offline',
+      name: 'tsExitDeviceOffline',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign in to this account again`
+  String get tsExitNeedsLogin {
+    return Intl.message(
+      'Sign in to this account again',
+      name: 'tsExitNeedsLogin',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This exit node is unavailable. Connections using it will be rejected`
+  String get tsExitRefusing {
+    return Intl.message(
+      'This exit node is unavailable. Connections using it will be rejected',
+      name: 'tsExitRefusing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Unavailable`
+  String get tsExitUnavailableShort {
+    return Intl.message(
+      'Unavailable',
+      name: 'tsExitUnavailableShort',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Turn off the exit node?`
+  String get tsExitOffAffectedTitle {
+    return Intl.message(
+      'Turn off the exit node?',
+      name: 'tsExitOffAffectedTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `These policies are using “{group}”. Turning it off will switch them to the options listed below.`
+  String tsExitOffAffectedBody(Object group) {
+    return Intl.message(
+      'These policies are using “$group”. Turning it off will switch them to the options listed below.',
+      name: 'tsExitOffAffectedBody',
+      desc: '',
+      args: [group],
+    );
+  }
+
+  /// `Choose another option for these policies on the Proxies page before turning off the exit node.`
+  String get tsExitOffRepickBody {
+    return Intl.message(
+      'Choose another option for these policies on the Proxies page before turning off the exit node.',
+      name: 'tsExitOffRepickBody',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Choose another option first`
+  String get tsExitRepickFirst {
+    return Intl.message(
+      'Choose another option first',
+      name: 'tsExitRepickFirst',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Open Proxies`
+  String get tsExitOpenProxies {
+    return Intl.message(
+      'Open Proxies',
+      name: 'tsExitOpenProxies',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Turn off exit node`
+  String get tsExitTurnOff {
+    return Intl.message(
+      'Turn off exit node',
+      name: 'tsExitTurnOff',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{group} · Added by Flash · {member} · Manual policy groups: {groups}`
+  String tsViewerExit(Object group, Object member, Object groups) {
+    return Intl.message(
+      '$group · Added by Flash · $member · Manual policy groups: $groups',
+      name: 'tsViewerExit',
+      desc: '',
+      args: [group, member, groups],
+    );
+  }
+
+  /// `Tailscale exit · Current exit node and groups are unconfirmed`
+  String get tsViewerExitUnconfirmed {
+    return Intl.message(
+      'Tailscale exit · Current exit node and groups are unconfirmed',
+      name: 'tsViewerExitUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {
