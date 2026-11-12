@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.9.7 (2026-11-12)
+
+**Bug Fixes**
+
+- **mount** Collect mounted nodes independently of base routing, DNS and unrelated provider caches; retain actual dependency errors and Tailscale connection safeguards (f88a516)
+- **profiles** Show reported mount exclusion reasons in details (7d20c247)
+- **tailscale** Match the account capsule height to the adjacent bar buttons (77d2cb1)
+
 ## v0.9.6 (2026-11-12)
 
 **Bug Fixes**
