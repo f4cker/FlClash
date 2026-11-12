@@ -2047,6 +2047,59 @@ void main() {
       ).called(1);
     });
 
+    test('a preview whose mount check fails still shows the profile', () async {
+      final profile = Profile.normal(label: 'p');
+      const mounts = MountSetup(
+        target: 1,
+        revision: 'r',
+        sources: [MountSource(id: 2, label: 'A', path: '/profiles/2.yaml')],
+      );
+      final core = _MockCoreHandlerInterface();
+      when(
+        () => core.getProfileBase(any()),
+      ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+      final built = File(
+        join(await appPath.homeDirPath, coreSpillDirectoryName, 'f.yaml'),
+      );
+      when(
+        () => core.buildProfile(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          mounts: any(named: 'mounts', that: isNotNull),
+        ),
+      ).thenThrow(Exception('mount check failed'));
+      when(
+        () => core.buildProfile(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+        ),
+      ).thenAnswer((_) async {
+        await built.create(recursive: true);
+        await built.writeAsString('proxies: [base]\n');
+        return built.path;
+      });
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          setupStateProvider.overrideWith(
+            (_, profileId) => nullProfileSetupState.copyWith(
+              profileId: profileId,
+              mounts: mounts,
+            ),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+
+      final yaml = await scoped
+          .read(setupActionProvider.notifier)
+          .getProfileWithId(profile.id);
+
+      expect(yaml, 'proxies: [base]\n');
+    });
+
     for (final (revision, found) in [('r', true), ('r0', false)]) {
       test('a search of the preview ${found ? 'finds' : 'does not find'} a '
           'mounted node when the Core runs ${found ? 'this' : 'another'} '

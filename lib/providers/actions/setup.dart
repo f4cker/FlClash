@@ -731,15 +731,26 @@ class SetupAction extends _$SetupAction {
       // The viewer shows what the Core runs, so the mounts go in as they
       // do on apply.
       final mounts = setupState.mounts;
-      final yaml = switch (res.base) {
-        final base? => await _core.buildProfile(base: base, mounts: mounts),
-        null when mounts != null => await _core.buildProfile(
-          config: res.yaml,
-          mounts: mounts,
-        ),
-        null => res.yaml,
-      };
-      if (mounts == null) return yaml;
+      if (mounts == null) {
+        return switch (res.base) {
+          final base? => await _core.buildProfile(base: base),
+          null => res.yaml,
+        };
+      }
+      final String yaml;
+      try {
+        yaml = switch (res.base) {
+          final base? => await _core.buildProfile(base: base, mounts: mounts),
+          null => await _core.buildProfile(config: res.yaml, mounts: mounts),
+        };
+      } catch (e) {
+        // A failed mount check still leaves the profile itself to show.
+        dialogs.showBanner(e.toString(), level: BannerLevel.error);
+        return switch (res.base) {
+          final base? => await _core.buildProfile(base: base),
+          null => res.yaml,
+        };
+      }
       MountRuntimeState? runtime;
       try {
         runtime = await _core.getMountState();
