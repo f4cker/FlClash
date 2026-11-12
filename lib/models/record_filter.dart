@@ -75,7 +75,10 @@ class RecordGrouper<T> {
   final RecordGrouping grouping;
   final String Function(T item) keyOf;
 
-  const RecordGrouper(this.grouping, this.keyOf);
+  /// Groups whose key this holds for go last, in their own order.
+  final bool Function(String key)? sinks;
+
+  const RecordGrouper(this.grouping, this.keyOf, {this.sinks});
 }
 
 class RecordGroup<T> {
@@ -93,14 +96,22 @@ List<RecordGroup<T>> groupRecords<T>(
   List<T> items,
   String Function(T item) keyOf, {
   bool reverse = false,
+  bool Function(String key)? sinks,
 }) {
   final groups = <String, List<T>>{};
   for (final item in reverse ? items.reversed : items) {
     (groups[keyOf(item)] ??= []).add(item);
   }
-  return [
+  final all = [
     for (final MapEntry(:key, :value) in groups.entries)
       RecordGroup(key, value),
+  ];
+  if (sinks == null) {
+    return all;
+  }
+  return [
+    ...all.where((group) => !sinks(group.key)),
+    ...all.where((group) => sinks(group.key)),
   ];
 }
 

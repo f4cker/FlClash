@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
@@ -227,8 +228,11 @@ void main() {
           [
             tracker('1', metadata: meta(process: 'chrome')),
             tracker('2', metadata: meta(process: 'firefox')),
-          ].whereFilters(trackerInfoFacets, const [
-            RecordFilter(RecordFacetKind.app, 'firefox'),
+          ].whereFilters(trackerInfoFacets, [
+            RecordFilter(
+              RecordFacetKind.app,
+              system.isAndroid ? 'firefox' : 'proc:firefox',
+            ),
           ]).toList();
       expect(infos.map((info) => info.id), ['2']);
     });

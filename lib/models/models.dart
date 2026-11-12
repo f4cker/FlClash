@@ -6,6 +6,7 @@ export 'config.dart';
 export 'core.dart';
 export 'ip_quality.dart';
 export 'mount.dart';
+export 'process_info.dart';
 export 'profile.dart';
 export 'record_filter.dart';
 export 'references.dart';
