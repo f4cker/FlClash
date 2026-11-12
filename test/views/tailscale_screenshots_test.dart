@@ -14,6 +14,8 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/dashboard/dashboard.dart';
+import 'package:fl_clash/views/proxies/proxies.dart';
+import 'package:fl_clash/views/tailscale/settings_cards.dart';
 import 'package:fl_clash/views/tailscale/tailscale.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -1031,5 +1033,117 @@ void main() {
     );
     await tester.tap(find.byTooltip('出口设置说明'));
     await shoot(tester, 'quiet-04-popover-open');
+  });
+
+  // The exit group, exit-design.md v2, light, saved 1568 wide.
+
+  Future<void> seedExit(TailscaleExitReport report) async {
+    final node = tsManagedNode('m1');
+    await seedManaged(
+      [node],
+      saved: const [
+        TailscaleManagedRecord(
+          id: 'm1',
+          profileId: 42,
+          attached: true,
+          exitNode: '100.88.12.4',
+          exitNodeName: 'nas-sg',
+        ),
+      ],
+    );
+    when(
+      () => core.getTailscaleStatus(any()),
+    ).thenAnswer((_) async => tsExitStatus(node));
+    when(() => core.getTailscaleExit(42)).thenAnswer((_) async => report);
+  }
+
+  Future<void> pumpExitProxies(
+    WidgetTester tester,
+    TailscaleExitReport report,
+  ) async {
+    container.dispose();
+    final groups = tsExitGroups();
+    final profile = Profile.normal().copyWith(
+      unfoldSet: {'国际媒体', 'Tailscale 出口'},
+    );
+    container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(() => TestProfiles([profile])),
+        currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+        currentGroupsStateProvider.overrideWithValue(
+          GroupsState(value: groups),
+        ),
+        groupsProvider.overrideWithValue(groups),
+        tailscaleExitRuntimeProvider.overrideWithBuild((_, _) async => report),
+      ],
+    );
+    globalState.container = container;
+    container.listen(tailscaleExitRuntimeProvider, (_, _) {});
+    await container.read(tailscaleExitRuntimeProvider.future);
+    container
+        .read(proxiesStyleSettingProvider.notifier)
+        .update((state) => state.copyWith(type: ProxiesType.list));
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 760),
+      pixelRatio: reportRatio,
+      page: const ProxiesView(),
+    );
+  }
+
+  final unavailable = tsExitReport(
+    state: TailscaleExitState.unavailable,
+    reason: TailscaleExitReason.offline,
+  );
+
+  shot('exit-01-card', (tester) async {
+    await seedExit(tsExitReport());
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 900),
+      pixelRatio: reportRatio,
+    );
+    await tester.tap(find.byTooltip('出口设置说明'));
+    await shoot(tester, 'exit-01-card');
+  });
+
+  shot('exit-02-proxies', (tester) async {
+    await pumpExitProxies(tester, tsExitReport());
+    await shoot(tester, 'exit-02-proxies');
+  });
+
+  shot('exit-03-off-dialog', (tester) async {
+    await seedExit(tsExitReport());
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 900),
+      pixelRatio: reportRatio,
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(TailscaleExitCard),
+        matching: find.text('nas-sg'),
+      ),
+    );
+    await settle(tester);
+    await tester.tap(find.text('不使用出口节点').last);
+    await settle(tester);
+    expect(find.text('关闭出口节点？'), findsOneWidget);
+    await shoot(tester, 'exit-03-off-dialog');
+  });
+
+  shot('exit-04-unavailable', (tester) async {
+    await seedExit(unavailable);
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 900),
+      pixelRatio: reportRatio,
+    );
+    await shoot(tester, 'exit-04-unavailable');
+  });
+
+  shot('exit-05-proxies-unavailable', (tester) async {
+    await pumpExitProxies(tester, unavailable);
+    await shoot(tester, 'exit-05-proxies-unavailable');
   });
 }
