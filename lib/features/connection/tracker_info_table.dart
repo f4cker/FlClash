@@ -6,6 +6,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 
+import 'process_view.dart';
 import 'tracker_info_item.dart';
 
 const _fullLiveTableWidth = 1200.0;
@@ -31,8 +32,12 @@ List<RecordColumn<TrackerInfo>> trackerInfoColumns(
       ),
     RecordColumn(
       TableColumn('process', appLocalizations.process, width: wide ? 160 : 140),
-      cell: (_, info) => RecordCellText(info.progressText),
-      sortKey: (info) => info.progressText.toLowerCase(),
+      cell: (_, info) => system.isAndroid
+          ? RecordCellText(info.progressText)
+          : ProcessCell(metadata: info.metadata),
+      sortKey: (info) => system.isAndroid
+          ? info.progressText.toLowerCase()
+          : processLabelOf(processApps.processOf(info.metadata)).toLowerCase(),
     ),
     RecordColumn(
       TableColumn('target', appLocalizations.target, flex: wide ? 1.4 : 1.3),

@@ -7,6 +7,7 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'process_view.dart';
 import 'tracker_info_item.dart';
 import 'tracker_info_table.dart';
 
@@ -253,6 +254,7 @@ class _TrackerInfoGroupedListState
                 system.isAndroid,
           ),
         );
+    final byProcess = grouping == RecordGrouping.app && !system.isAndroid;
     final showsTraffic = isLive || table != null;
     return RecordGroupedList<TrackerInfo>(
       groups: widget.groups,
@@ -260,8 +262,15 @@ class _TrackerInfoGroupedListState
       controller: widget.controller,
       padding: widget.padding,
       estimatedItemExtent: table?.rowHeight ?? recordListEstimatedExtent,
-      leadingOf: (group) => showIcon && group.key.isNotEmpty
-          ? PackageIcon(packageName: group.key, size: 24)
+      leadingOf: byProcess
+          ? (group) => _processLeading(group)
+          : (group) => showIcon && group.key.isNotEmpty
+                ? PackageIcon(packageName: group.key, size: 24)
+                : null,
+      labelOf: byProcess
+          ? (group) => processLabelOf(
+              processApps.processOf(group.items.first.metadata),
+            )
           : null,
       trailingOf: isLive ? (group) => _buildSpeed(context, group.items) : null,
       itemBuilder: (_, trackerInfo, index) {
@@ -296,6 +305,14 @@ class _TrackerInfoGroupedListState
         );
       },
     );
+  }
+
+  Widget? _processLeading(RecordGroup<TrackerInfo> group) {
+    final process = processApps.processOf(group.items.first.metadata);
+    if (!ProcessIcon.shows(process)) {
+      return null;
+    }
+    return ProcessIcon(process: process, size: 24);
   }
 
   Widget _buildSpeed(BuildContext context, List<TrackerInfo> trackerInfos) {

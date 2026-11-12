@@ -538,6 +538,22 @@ class _CoreStatus extends _$CoreStatus with AutoDisposeNotifierMixin {
   }
 }
 
+/// The find-process-mode the running Core was confirmed to apply, as the
+/// config spells it; null while unconfirmed or with the Core stopped.
+@Riverpod(keepAlive: true)
+class RunningFindProcessMode extends _$RunningFindProcessMode
+    with AutoDisposeNotifierMixin {
+  @override
+  String? build() {
+    ref.listen(coreStatusProvider, (_, next) {
+      if (next != CoreStatus.connected) {
+        state = null;
+      }
+    });
+    return null;
+  }
+}
+
 @riverpod
 class Query extends _$Query with AutoDisposeNotifierMixin {
   @override

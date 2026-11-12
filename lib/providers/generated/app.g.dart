@@ -1968,6 +1968,69 @@ abstract class _$CoreStatus extends $Notifier<CoreStatus> {
   }
 }
 
+/// The find-process-mode the running Core was confirmed to apply, as the
+/// config spells it; null while unconfirmed or with the Core stopped.
+
+@ProviderFor(RunningFindProcessMode)
+final runningFindProcessModeProvider = RunningFindProcessModeProvider._();
+
+/// The find-process-mode the running Core was confirmed to apply, as the
+/// config spells it; null while unconfirmed or with the Core stopped.
+final class RunningFindProcessModeProvider
+    extends $NotifierProvider<RunningFindProcessMode, String?> {
+  /// The find-process-mode the running Core was confirmed to apply, as the
+  /// config spells it; null while unconfirmed or with the Core stopped.
+  RunningFindProcessModeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'runningFindProcessModeProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$runningFindProcessModeHash();
+
+  @$internal
+  @override
+  RunningFindProcessMode create() => RunningFindProcessMode();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$runningFindProcessModeHash() =>
+    r'be3a3f09e9a3ce76ef5a23464237bbc24252efa8';
+
+/// The find-process-mode the running Core was confirmed to apply, as the
+/// config spells it; null while unconfirmed or with the Core stopped.
+
+abstract class _$RunningFindProcessMode extends $Notifier<String?> {
+  String? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<String?, String?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String?, String?>,
+              String?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(Query)
 final queryProvider = QueryFamily._();
 
