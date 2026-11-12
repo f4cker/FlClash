@@ -88,6 +88,7 @@ func applyMountedTailscale(t *testing.T, home, profile, overlay string, mounts *
 	if err := applyConfig(&SetupParams{Base: base, Mounts: mounts, Tailscale: setup}); err != nil {
 		t.Fatalf("applyConfig = %v", err)
 	}
+	waitProviderLoads(t)
 }
 
 func TestMountedNodeNeverRenamesAPanelAddedNode(t *testing.T) {

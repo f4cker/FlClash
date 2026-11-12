@@ -1,12 +1,15 @@
 package core
 
 import (
+	"bytes"
 	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"runtime"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/metacubex/mihomo/common/utils"
 	"github.com/metacubex/mihomo/constant"
@@ -22,6 +25,7 @@ func keepTunnel(t *testing.T) {
 	proxies, providers := tunnel.Proxies(), tunnel.Providers()
 	rules, ruleProviders := tunnel.Rules(), tunnel.RuleProviders()
 	t.Cleanup(func() {
+		waitProviderLoads(t)
 		inner.New(own)
 		tunnel.UpdateProxies(proxies, providers)
 		tunnel.UpdateRules(rules, nil, ruleProviders)
@@ -35,6 +39,27 @@ func keepTunnel(t *testing.T) {
 			tunnel.OnRunning()
 		}
 	})
+}
+
+// waitProviderLoads waits out the loads ApplyConfig leaves dialing, which mid-restore would find no DIRECT.
+func waitProviderLoads(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	stack := make([]byte, 1<<20)
+	for {
+		n := runtime.Stack(stack, true)
+		if n == len(stack) {
+			stack = make([]byte, 2*len(stack))
+			continue
+		}
+		if !bytes.Contains(stack[:n], []byte("hub/executor.loadProvider")) {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("provider loads still running after 10s")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 func issueAt(issues []ValidationIssue, count int) []string {
