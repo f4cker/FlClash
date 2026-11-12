@@ -74,6 +74,24 @@ func handleListeningMixedPort() int {
 	return listener.GetPorts().MixedPort
 }
 
+// Every inbound mihomo only logs a failure for, as the Core holds it now.
+func handleListeningPorts() ListeningPorts {
+	configMu.Lock()
+	defer configMu.Unlock()
+	if !isRunning.Load() {
+		return ListeningPorts{}
+	}
+	ports := listener.GetPorts()
+	return ListeningPorts{
+		Port:       ports.Port,
+		SocksPort:  ports.SocksPort,
+		RedirPort:  ports.RedirPort,
+		TProxyPort: ports.TProxyPort,
+		MixedPort:  ports.MixedPort,
+		Tun:        listener.GetTunConf().Enable,
+	}
+}
+
 func updateListeners(cfg *config.Config) {
 	if cfg == nil || !isRunning.Load() {
 		return

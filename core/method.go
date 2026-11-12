@@ -237,6 +237,7 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	listenerStartMethod: action(handleStartListener),
 	listenerStopMethod:  action(handleStopListener),
 	listenerMixedMethod: withoutArguments(handleListeningMixedPort),
+	listenerPortsMethod: withoutArguments(handleListeningPorts),
 	routeWatchMethod:    watchRouteHandler,
 	routeCheckMethod:    withArguments(handleCheckRoutes),
 

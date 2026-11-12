@@ -92,12 +92,15 @@ func TestHandleGetProfileBaseLeavesTheBulkSectionsInTheCore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("handleGetProfileBase = %v", err)
 	}
-	raw := base.Config
-	if raw.Proxy != nil || raw.ProxyGroup != nil || raw.Rule != nil || raw.SubRules != nil {
-		t.Errorf("config kept a bulk section: %+v", raw)
+	settings := base.Config
+	for _, key := range []string{"proxies", "proxy-groups", "rules", "sub-rules"} {
+		if _, kept := settings[key]; kept {
+			t.Errorf("config kept the bulk section %s", key)
+		}
 	}
-	if raw.MixedPort != 7000 || !raw.DNS.Enable {
-		t.Errorf("config dropped a section the host patches: mixed-port %d, dns %t", raw.MixedPort, raw.DNS.Enable)
+	dns, _ := settings["dns"].(map[string]any)
+	if settings["mixed-port"] != 7000 || dns["enable"] != true {
+		t.Errorf("config dropped a section the host patches: %v", settings)
 	}
 	if base.Proxies != 2 || base.ProxyGroups != 1 || base.Rules != 3 {
 		t.Errorf("counts = %d/%d/%d, want 2/1/3", base.Proxies, base.ProxyGroups, base.Rules)
@@ -108,6 +111,49 @@ func TestHandleGetProfileBaseLeavesTheBulkSectionsInTheCore(t *testing.T) {
 	digest := sha256.Sum256([]byte(baseProfile))
 	if base.Digest != hex.EncodeToString(digest[:]) {
 		t.Errorf("digest = %s, want the sha256 of the file", base.Digest)
+	}
+}
+
+func TestHandleGetProfileBaseKeepsOnlyTheKeysTheFileWrites(t *testing.T) {
+	path := writeBaseProfile(t, `port: 0
+allow-lan: false
+log-level: silent
+hosts: {}
+skip-auth-prefixes: []
+tun: {enable: false, stack: mixed}
+profile: {store-selected: true}
+nested: {1: one}
+proxies: []
+`)
+
+	base, err := handleGetProfileBase(PathParams{Path: path})
+
+	if err != nil {
+		t.Fatalf("handleGetProfileBase = %v", err)
+	}
+	want := map[string]any{
+		"port":               0,
+		"allow-lan":          false,
+		"log-level":          "silent",
+		"hosts":              map[string]any{},
+		"skip-auth-prefixes": []any{},
+		"tun":                map[string]any{"enable": false, "stack": "mixed"},
+		"profile":            map[string]any{"store-selected": true},
+		"nested":             map[string]any{"1": "one"},
+	}
+	if !reflect.DeepEqual(base.Config, want) {
+		t.Errorf("config = %#v, want %#v", base.Config, want)
+	}
+	if _, err := json.Marshal(base); err != nil {
+		t.Errorf("the host cannot read the base: %v", err)
+	}
+}
+
+func TestHandleGetProfileBaseRejectsWhatMihomoRejects(t *testing.T) {
+	path := writeBaseProfile(t, "mixed-port: not-a-port\n")
+
+	if _, err := handleGetProfileBase(PathParams{Path: path}); err == nil {
+		t.Error("a mixed-port mihomo cannot decode was accepted")
 	}
 }
 
