@@ -7,7 +7,6 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// The dialog's width, so its description fits on one line.
 const pageSourceDialogWidth = 480.0;
 
 /// The rows of the dialog that confirms each setting's source before page
@@ -105,8 +104,7 @@ class _PageSourceRowsState extends State<PageSourceRows> {
   }
 }
 
-/// A row's two sources side by side; the chosen one is tinted, not filled,
-/// so the dialog's only filled button stays its default action.
+/// A row's two sources; the chosen one is tinted, leaving 应用 the only fill.
 class SourceChoice extends StatelessWidget {
   const SourceChoice({
     super.key,
@@ -169,7 +167,6 @@ class SourceChoice extends StatelessWidget {
   }
 }
 
-/// A page value in the form a profile writes it.
 Object? pageRawValue(Object? value) => switch (value) {
   (final ExternalControllerStatus status, _) => status.value,
   final Enum item => item.name,
@@ -211,7 +208,6 @@ class PageSourceNote extends ConsumerWidget {
 
   final PageConfigKey pageKey;
 
-  /// Words a value as its row does, where that differs from the profile's.
   final String Function(Object? value)? describe;
 
   @override

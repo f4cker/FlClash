@@ -4,6 +4,7 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/config/general.dart';
 import 'package:fl_clash/views/config/network.dart';
+import 'package:fl_clash/views/config/user_agents.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -323,6 +324,66 @@ void main() {
 
       expect(find.textContaining('页面设置'), findsNothing);
       expect(find.byType(RowMenuButton), findsNothing);
+    });
+  });
+
+  group('user agent', () {
+    testWidgets('the row says the profile UA it follows', (tester) async {
+      final container = await _pump(
+        tester,
+        const PatchClashConfig(followKeys: {PageConfigKey.globalUa}),
+        const UaItem(),
+      );
+      container.read(profileSettingsProvider.notifier).value = const {
+        'global-ua': 'clash.meta/file',
+      };
+      await tester.pumpAndSettle();
+
+      expect(find.text('clash.meta/file · 基础配置 · 尚未应用'), findsOneWidget);
+      expect(find.byType(RowMenuButton), findsNothing);
+    });
+
+    testWidgets('the page UA row offers the follow action', (tester) async {
+      final container = await _pump(
+        tester,
+        const PatchClashConfig(),
+        const UaItem(),
+      );
+
+      expect(find.text('默认 · 页面设置'), findsOneWidget);
+      await tester.tap(find.byType(RowMenuButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('跟随基础配置'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(patchClashConfigProvider).followKeys, {
+        PageConfigKey.globalUa,
+      });
+    });
+
+    testWidgets('picking a UA while following takes it back to the page', (
+      tester,
+    ) async {
+      final container = await _pump(
+        tester,
+        const PatchClashConfig(
+          globalUa: 'page-ua',
+          followKeys: {PageConfigKey.globalUa},
+        ),
+        const SizedBox(height: 600, width: 400, child: UserAgentsView()),
+      );
+      container.read(profileSettingsProvider.notifier).value = const {
+        'global-ua': 'file-ua',
+      };
+      await tester.pumpAndSettle();
+
+      expect(find.text('file-ua'), findsOneWidget);
+      await tester.tap(find.text('默认'));
+      await tester.pumpAndSettle();
+
+      final config = container.read(patchClashConfigProvider);
+      expect(config.followKeys, isEmpty);
+      expect(config.globalUa, isNull);
     });
   });
 }
