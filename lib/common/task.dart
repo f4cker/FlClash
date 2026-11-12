@@ -403,6 +403,15 @@ void applyLoopbackOverrides(Map rawConfig, int port) {
     if (rawConfig['tun'] case final Map tun) ...tun,
     'enable': false,
   };
+  final env = Platform.environment;
+  final controllerPort = int.tryParse(
+    env['LOOPBACK_TEST_CONTROLLER_PORT'] ?? '',
+  );
+  final controllerSecret = env['LOOPBACK_TEST_CONTROLLER_SECRET'] ?? '';
+  if (controllerPort != null && controllerSecret.isNotEmpty) {
+    rawConfig['external-controller'] = '127.0.0.1:$controllerPort';
+    rawConfig['secret'] = controllerSecret;
+  }
 }
 
 typedef ShakingStoreArgs = ({
