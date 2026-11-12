@@ -175,11 +175,11 @@ func TestMountedGroupsAreCheckedAsTheyWillRun(t *testing.T) {
 	}{
 		"kept-out group uses a mount": {
 			groups: "proxy-groups:\n  - {name: Lan, type: select, use: [flash-mount-1]}\n  - {name: Free, type: select, use: [flash-mount-1]}\n",
-			reach:  map[string]string{"Lan": reachRule}, taking: taking, want: "Lan",
+			reach:  map[string]string{"Lan": reachHolds}, taking: taking, want: "Lan",
 		},
 		"kept-out group collects every provider": {
 			groups: "proxy-groups:\n  - {name: Lan, type: select, include-all: true}\n  - {name: Free, type: select, use: [flash-mount-1]}\n",
-			reach:  map[string]string{"Lan": reachRule}, taking: taking, want: "Lan",
+			reach:  map[string]string{"Lan": reachHolds}, taking: taking, want: "Lan",
 		},
 		"unreported group takes mounts": {
 			groups: "proxy-groups:\n  - {name: Other, type: select, use: [flash-mount-1]}\n  - {name: Free, type: select, use: [flash-mount-1]}\n",
@@ -187,15 +187,15 @@ func TestMountedGroupsAreCheckedAsTheyWillRun(t *testing.T) {
 		},
 		"member of a kept-out group takes mounts": {
 			groups: "proxy-groups:\n  - {name: Lan, type: select, proxies: [DIRECT, Free]}\n  - {name: Free, type: select, use: [flash-mount-1]}\n",
-			reach:  map[string]string{"Lan": reachRule}, taking: taking, want: "Free",
+			reach:  map[string]string{"Lan": reachHolds}, taking: taking,
 		},
 		"empty-fallback of a kept-out group takes mounts": {
 			groups: "proxy-groups:\n  - {name: Lan, type: select, proxies: [DIRECT], empty-fallback: Free}\n  - {name: Free, type: select, use: [flash-mount-1]}\n",
-			reach:  map[string]string{"Lan": reachRule}, taking: taking, want: "Free",
+			reach:  map[string]string{"Lan": reachHolds}, taking: taking,
 		},
 		"a sound plan": {
 			groups: "proxy-groups:\n  - {name: Lan, type: select, proxies: [DIRECT, Inner]}\n  - {name: Inner, type: select, proxies: [DIRECT]}\n  - {name: Free, type: select, use: [flash-mount-1]}\n",
-			reach:  map[string]string{"Lan": reachRule, "Inner": reachMember}, taking: taking,
+			reach:  map[string]string{"Lan": reachHolds, "Inner": reachHolds}, taking: taking,
 		},
 	} {
 		err := checkMountedGroups(groupsOf(tc.groups), tc.reach, tc.taking, mount)
@@ -231,13 +231,13 @@ rules:
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
 	setup := &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
 	checkMountTaking(t, "", profile, setup, map[string]bool{
-		"Lan": false, "Block": false, "Switch": false, "Main": false, "Auto": false, "Free": true,
+		"Lan": true, "Block": true, "Switch": true, "Main": true, "Auto": true, "Free": true,
 	})
 	members, _ := mountedMembers(t, profile, setup)
-	if !reflect.DeepEqual(members["Lan"], []string{"DIRECT", "Block"}) || !reflect.DeepEqual(members["Block"], []string{"REJECT"}) {
+	if !slices.Equal(members["Lan"][:2], []string{"DIRECT", "Block"}) || members["Block"][0] != "REJECT" {
 		t.Errorf("Lan = %v, Block = %v; want them as written", members["Lan"], members["Block"])
 	}
-	if slices.Contains(members["Auto"], "us") {
+	if !slices.Contains(members["Auto"], "us") {
 		t.Errorf("Auto = %v, the switch could pick a mounted node through Main", members["Auto"])
 	}
 }

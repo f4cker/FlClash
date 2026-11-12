@@ -123,7 +123,7 @@ func TestInspectMountTargetSortsGroupsByWhatAMountMayDo(t *testing.T) {
 	for name, want := range map[string]MountGroupInfo{
 		"Proxy":  {Name: "Proxy", Type: "select", Kind: mountGroupFixed, Probe: "none"},
 		"Auto":   {Name: "Auto", Type: "url-test", Kind: mountGroupAuto, Collects: "providers", Filter: true, Probe: "probes"},
-		"All":    {Name: "All", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Reason: reachHolds, Hidden: true, Probe: "none"},
+		"All":    {Name: "All", Type: "select", Kind: mountGroupAuto, Collects: "all", Hidden: true, Probe: "none"},
 		"Lazy":   {Name: "Lazy", Type: "fallback", Kind: mountGroupAuto, Collects: "providers", Probe: "unknown"},
 		"Hidden": {Name: "Hidden", Type: "select", Kind: mountGroupAuto, Collects: "providers", Hidden: true, Probe: "none"},
 		"Office": {Name: "Office", Type: "select", Kind: mountGroupExcluded, Excluded: "tailscale", Reason: reachHolds, Probe: "none"},
@@ -160,10 +160,10 @@ rules:
 		got[group.Name] = group.Kind + "/" + group.Excluded
 	}
 	want := map[string]string{
-		"Proxy":    "excluded/tailscale",
-		"Office":   "excluded/tailscale",
-		"Outer":    "excluded/tailscale",
-		"Collects": "excluded/tailscale",
+		"Proxy":    "auto/",
+		"Office":   "auto/",
+		"Outer":    "auto/",
+		"Collects": "auto/",
 		"Filtered": "auto/",
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -173,7 +173,7 @@ rules:
 	home := withMountHome(t)
 	setup := &MountSetup{Sources: []MountSource{{ID: 1, Path: writeMountFile(t, home, "1.yaml", mountSourceB)}}}
 	checkMountTakingAsWritten(t, profile, setup, map[string]bool{
-		"Proxy": false, "Office": false, "Outer": false, "Collects": false, "Filtered": true,
+		"Proxy": true, "Office": true, "Outer": true, "Collects": true, "Filtered": true,
 	})
 }
 
@@ -419,7 +419,7 @@ func TestMountIgnoresTheGroupsAnOlderHostChose(t *testing.T) {
 	for _, group := range report.Groups {
 		names = append(names, group.Name)
 	}
-	if want := []string{"Auto", "Lazy", "Hidden", "Direct"}; !reflect.DeepEqual(names, want) {
+	if want := []string{"Auto", "All", "Lazy", "Hidden", "Direct"}; !reflect.DeepEqual(names, want) {
 		t.Errorf("groups = %v, want %v", names, want)
 	}
 }
@@ -742,8 +742,8 @@ func TestMountKeepsAutoGroupsThatReachTailscaleFreeOfMountedNodes(t *testing.T) 
 	cfg := checkOnlyConfig(t, document)
 
 	for group, want := range map[string][]string{
-		"Everything": {"base", "ts-office", "own-node"},
-		"Routed":     {"Office", "own-node"},
+		"Everything": {"base", "ts-office", "shared", "us (Sub)", "own-node"},
+		"Routed":     {"Office", "shared", "us (Sub)", "own-node"},
 		"Office":     {"ts-office", "Proxy"},
 		"Auto":       {"shared", "us (Sub)", "own-node"},
 	} {
@@ -751,7 +751,7 @@ func TestMountKeepsAutoGroupsThatReachTailscaleFreeOfMountedNodes(t *testing.T) 
 			t.Errorf("%s members = %v, want %v", group, got, want)
 		}
 	}
-	wantGroups := []MountGroupReport{{Name: "Auto", Via: "auto", Protection: mountProtectionReject, EmptyFallback: "REJECT"}}
+	wantGroups := []MountGroupReport{{Name: "Everything", Via: "auto", Protection: mountProtectionOriginal}, {Name: "Routed", Via: "auto", Protection: mountProtectionOriginal}, {Name: "Auto", Via: "auto", Protection: mountProtectionReject, EmptyFallback: "REJECT"}}
 	if !reflect.DeepEqual(report.Groups, wantGroups) {
 		t.Errorf("groups = %+v, want %+v", report.Groups, wantGroups)
 	}
@@ -774,7 +774,7 @@ func TestMountKeepsAutoGroupsThatReachTailscaleFreeOfMountedNodes(t *testing.T) 
 	for _, group := range target.Groups {
 		kinds[group.Name] = group.Kind + "/" + group.Excluded
 	}
-	for name, want := range map[string]string{"Everything": "excluded/tailscale", "Routed": "excluded/tailscale", "Auto": "auto/"} {
+	for name, want := range map[string]string{"Everything": "auto/", "Routed": "auto/", "Auto": "auto/"} {
 		if kinds[name] != want {
 			t.Errorf("%s = %s, want %s", name, kinds[name], want)
 		}

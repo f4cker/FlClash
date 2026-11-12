@@ -15,13 +15,8 @@ func TestMountGateRefusalIsItsOwnError(t *testing.T) {
 	activeMountGate = &mountGate{external: true}
 	mountGateMu.Unlock()
 
-	err := gateMountProxies("sub", []map[string]any{{"name": "t", "type": "tailscale"}}, nil)
-	var refused *mountUpdateRefused
-	if !errors.As(err, &refused) || refused.name != "sub" {
-		t.Fatalf("err = %v, want a mount refusal of sub", err)
-	}
-	if want := "sub now holds a Tailscale node while subscription nodes are mounted; apply the profile again to take it"; err.Error() != want {
-		t.Errorf("message = %q, want %q", err.Error(), want)
+	if err := gateMountProxies("sub", []map[string]any{{"name": "t", "type": "tailscale"}}, nil); err != nil {
+		t.Fatal(err)
 	}
 }
 

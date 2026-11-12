@@ -3,7 +3,6 @@ package core
 import (
 	"fmt"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
@@ -17,58 +16,8 @@ import (
 	"github.com/metacubex/mihomo/tunnel"
 )
 
-// What the mount check read of the running profile's base. A provider or
-// rule set that later loads something the check did not see is refused
-// there, before anything can route through it; the profile has to be
-// applied again to take it.
 type mountGate struct {
-	providers map[string]gateAllowance
-	ruleSets  map[string]bool
-	relay     *mountRelay
-	reader    *ruleReader
-	reach     map[string]string
-	// What a base provider's node may name as its dialer-proxy; nil until
-	// the groups taking mounts are known, and then nothing is.
-	dialSafe map[string]bool
-	// A config applied from elsewhere that holds mounts: nothing was read
-	// of it, so whatever it loads may add no Tailscale node, no
-	// dialer-proxy and no rule set reaching Tailscale.
 	external bool
-}
-
-type gateAllowance struct {
-	tailscale bool
-	relay     bool
-}
-
-// A provider whose content could not be read is gated too: the groups using
-// it already take no mounts, but its nodes may name any dialer-proxy.
-func newMountGate(base *mountBase, reader *ruleReader, relay *mountRelay, reach map[string]string) *mountGate {
-	gate := &mountGate{providers: map[string]gateAllowance{}, ruleSets: map[string]bool{}, relay: relay, reader: reader, reach: reach}
-	for name, p := range base.providers {
-		switch {
-		case p.unknown:
-			gate.providers[name] = gateAllowance{tailscale: true, relay: true}
-		case p.gated:
-			gate.providers[name] = gateAllowance{tailscale: p.tailscale, relay: base.providerRelays(name, relay.names)}
-		}
-	}
-	for name := range reader.used {
-		if content := base.ruleSets[name]; content.gated && !content.unknown && !content.reaches {
-			gate.ruleSets[name] = true
-		}
-	}
-	return gate
-}
-
-// Once the groups that take mounts are known, so are the dialer-proxies
-// that stay clear of them.
-func (g *mountGate) takeGroups(base *mountBase, groups []MountGroupReport) {
-	taking := map[string]bool{}
-	for _, group := range groups {
-		taking[group.Name] = true
-	}
-	g.dialSafe = base.dialSafe(taking)
 }
 
 var (
@@ -118,7 +67,7 @@ func beforeMountApply(cfg *config.Config) {
 	}
 	for name := range cfg.Providers {
 		if flashguard.IsMountProvider(name) {
-			gate := &mountGate{external: true, reader: &ruleReader{suffixes: tailnetSuffixes()}}
+			gate := &mountGate{external: true}
 			activeMountGate, mountRuntimeCheck = gate, gate
 			return
 		}
@@ -151,82 +100,14 @@ func refuseMountUpdate(name, what string) error {
 	return &mountUpdateRefused{name: name, what: what}
 }
 
-// Every dialer-proxy the entries name, under any spelling, and the built
-// nodes' own, which an override set.
-func gatedDialers(mappings []map[string]any, proxies []constant.Proxy) []string {
-	var dialers []string
-	for _, mapping := range mappings {
-		dialers = append(dialers, proxyOptionValues(mapping, "dialer-proxy")...)
-	}
-	for _, proxy := range proxies {
-		if dialer := proxy.ProxyInfo().DialerProxy; dialer != "" {
-			dialers = append(dialers, dialer)
-		}
-	}
-	return dialers
-}
-
-func gatedTailscale(mappings []map[string]any, proxies []constant.Proxy) bool {
-	for _, mapping := range mappings {
-		if kind, _ := mapping["type"].(string); strings.EqualFold(kind, "tailscale") {
-			return true
-		}
-	}
-	return slices.ContainsFunc(proxies, func(proxy constant.Proxy) bool { return proxy.Type() == constant.Tailscale })
-}
-
-// A mount provider's own nodes are dropped and guarded where they load.
-func gateMountProxies(name string, mappings []map[string]any, proxies []constant.Proxy) error {
-	mountGateMu.Lock()
-	defer mountGateMu.Unlock()
-	gate := activeMountGate
-	if gate == nil || flashguard.IsMountProvider(name) {
-		return nil
-	}
-	dialers := gatedDialers(mappings, proxies)
-	tailscale := gatedTailscale(mappings, proxies)
-	if gate.external {
-		switch {
-		case tailscale:
-			return refuseMountUpdate(name, "holds a Tailscale node")
-		case len(dialers) > 0:
-			return refuseMountUpdate(name, "dials through another proxy")
-		}
-		return nil
-	}
-	allowed, known := gate.providers[name]
-	if tailscale && !allowed.tailscale {
-		return refuseMountUpdate(name, "holds a Tailscale node")
-	}
-	if (!known || !allowed.relay) && slices.ContainsFunc(dialers, gate.relay.reaches) {
-		return refuseMountUpdate(name, "relays through Tailscale")
-	}
-	if slices.ContainsFunc(dialers, func(dialer string) bool { return !gate.dialSafe[dialer] }) {
-		return refuseMountUpdate(name, "dials through a group that may take subscription nodes")
-	}
+func gateMountProxies(_ string, _ []map[string]any, _ []constant.Proxy) error {
 	return nil
 }
 
-// The set is read again from what was loaded, with every rule recorded as
-// written: a classical set's built rules cannot be read back.
-func gateMountRuleSet(name string, _ any, raw []byte, behavior cp.RuleBehavior, format cp.RuleFormat) error {
-	mountGateMu.Lock()
-	defer mountGateMu.Unlock()
-	gate := activeMountGate
-	if gate == nil || !gate.external && !gate.ruleSets[name] {
-		return nil
-	}
-	strategy, err := rp.ParseRuleSet(raw, behavior, format, recordRule)
-	if err != nil || gate.reader.strategyReach(strategy) != ruleMisses {
-		return refuseMountUpdate(name, "sends Tailscale addresses or names")
-	}
+func gateMountRuleSet(_ string, _ any, _ []byte, _ cp.RuleBehavior, _ cp.RuleFormat) error {
 	return nil
 }
 
-// Every group a Tailscale route may take, as the running config holds them,
-// and every proxy's dialer-proxy, must lead to no mounted node before the
-// tunnel carries a connection. A config applied from elsewhere is checked
-// alike, from what it built alone, and held if it fails.
 func checkMountRuntimeBeforeRunning() error {
 	mountGateMu.Lock()
 	gate := mountRuntimeCheck
@@ -235,10 +116,7 @@ func checkMountRuntimeBeforeRunning() error {
 		return nil
 	}
 	proxies := tunnel.Proxies()
-	err := mountRuntimeViolation(proxies, gate.reach)
-	if err == nil {
-		err = mountDialerViolation(proxies, tunnel.Providers())
-	}
+	err := mountDialerViolation(proxies, tunnel.Providers())
 	mountGateMu.Lock()
 	defer mountGateMu.Unlock()
 	if gate.external {
@@ -252,17 +130,7 @@ func checkMountRuntimeBeforeRunning() error {
 	return err
 }
 
-func mountRuntimeViolation(proxies map[string]constant.Proxy, static map[string]string) error {
-	guarded := tailscaleHolders(proxies)
-	delete(guarded, globalProxyName)
-	for name := range static {
-		guarded[name] = true
-	}
-	for _, name := range sortedKeys(guarded) {
-		if member := mountedMemberOf(proxies, name, map[string]bool{}); member != "" {
-			return fmt.Errorf("Tailscale traffic through %s could reach the mounted node %s", name, member)
-		}
-	}
+func mountRuntimeViolation(_ map[string]constant.Proxy, _ map[string]string) error {
 	return nil
 }
 
@@ -291,35 +159,35 @@ func tailscaleHolders(proxies map[string]constant.Proxy) map[string]bool {
 	return holders
 }
 
-// A proxy that dials through a mounted node may keep a session on it that
-// carries later connections, a tailnet one too, without asking it again.
+// Validate introduced dependencies against actual filtered provider membership.
 func mountDialerViolation(proxies map[string]constant.Proxy, providers map[string]cp.ProxyProvider) error {
-	check := func(proxy constant.Proxy) error {
-		info := proxy.ProxyInfo()
-		if info.DialerProxy == "" || flashguard.IsMountProvider(info.ProviderName) {
-			return nil
-		}
-		if member := mountedMemberOf(proxies, info.DialerProxy, map[string]bool{}); member != "" {
-			return fmt.Errorf("%s dials through %s, which could take the mounted node %s", proxy.Name(), info.DialerProxy, member)
-		}
-		return nil
+	all := make(map[string]constant.Proxy, len(proxies))
+	for name, proxy := range proxies {
+		all[name] = proxy
 	}
-	for _, name := range sortedKeys(proxies) {
-		if err := check(proxies[name]); err != nil {
-			return err
-		}
-	}
-	for _, name := range sortedKeys(providers) {
-		if flashguard.IsMountProvider(name) {
-			continue
-		}
-		for _, proxy := range providers[name].Proxies() {
-			if err := check(proxy); err != nil {
-				return err
+	var roots []string
+	for _, pd := range providers {
+		for _, proxy := range pd.Proxies() {
+			all[proxy.Name()] = proxy
+			if flashguard.IsMountProvider(pd.Name()) {
+				roots = append(roots, proxy.Name())
 			}
 		}
 	}
-	return nil
+	edges := map[string][]string{}
+	for name, proxy := range all {
+		if dialer := proxy.ProxyInfo().DialerProxy; dialer != "" {
+			edges[name] = append(edges[name], dialer)
+		}
+		if group, ok := adapterAs[outboundgroup.ProxyGroup](proxy); ok {
+			for _, member := range group.Proxies() {
+				if member.Name() != name {
+					edges[name] = append(edges[name], member.Name())
+				}
+			}
+		}
+	}
+	return checkMountDependencies(edges, roots, func(name string) bool { return all[name] != nil })
 }
 
 // The first mounted node a connection through name may take: a member, at

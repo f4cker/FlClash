@@ -30,10 +30,8 @@ type MountSource struct {
 	Path  string `json:"path"`
 }
 
-// Every ordinary group the isolation checks allow takes every mount, then
-// filters it by its own rules; no group is chosen. A host that still sends
-// the groups it once chose has them ignored. Revision binds a readback to
-// the setup that made it.
+// Groups collect mounted nodes by their own declarations and filters.
+// Revision binds a readback to the setup that made it.
 type MountSetup struct {
 	Target   int64         `json:"target"`
 	Revision string        `json:"revision"`
@@ -63,6 +61,7 @@ type MountSourceInspection struct {
 	RelayExcluded       int    `json:"relay-excluded"`
 	UnsupportedExcluded int    `json:"unsupported-excluded"`
 	names               []string
+	dialers             map[string][]string
 }
 
 func mountProviderName(id int64) string {
@@ -173,6 +172,12 @@ func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourc
 			inspection.RelayExcluded++
 		default:
 			inspection.names = append(inspection.names, name)
+			if dialers := proxyOptionValues(mapping, "dialer-proxy"); len(dialers) > 0 {
+				if inspection.dialers == nil {
+					inspection.dialers = map[string][]string{}
+				}
+				inspection.dialers[name] = dialers
+			}
 		}
 	}
 	inspection.Count = len(inspection.names)
@@ -290,7 +295,7 @@ func inspectMountTarget(root *yaml.Node, managedProfile int64) (MountTarget, err
 	}
 	base.managedRules, base.managedProfile = managedProfile != 0, managedProfile
 	target := MountTarget{Groups: []MountGroupInfo{}, Relay: []string{}}
-	reach := base.tailscaleGroups(newRuleReader(base))
+	reach := base.dedicatedGroups()
 	for _, mapping := range base.groups {
 		target.Groups = append(target.Groups, mountGroupInfo(mapping, reach[groupString(mapping, "name")]))
 	}
@@ -442,11 +447,12 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		}
 	}
 	slices.Sort(baseProviders)
-	reader := newRuleReader(base)
-	reach := base.tailscaleGroups(reader)
+	reach := base.dedicatedGroups()
 	relay := newMountRelay(base.relayNames(base.holding()), managed)
-	report.gate = newMountGate(base, reader, relay, reach)
+	report.gate = &mountGate{}
 	names := make([]string, 0, len(setup.Sources))
+	dependencies := map[string][]string{}
+	var mounted []string
 	for _, source := range setup.Sources {
 		name := mountProviderName(source.ID)
 		if mappingValue(providers, name) != nil {
@@ -464,9 +470,40 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 			UnsupportedExcluded: inspection.UnsupportedExcluded,
 			Nodes:               nodes,
 		})
+		own := map[string]string{}
+		for _, node := range nodes {
+			own[node.Original] = node.Name
+			mounted = append(mounted, node.Name)
+		}
+		for original, dialers := range inspection.dialers {
+			for _, dialer := range dialers {
+				if renamed, ok := own[dialer]; ok {
+					dialer = renamed
+				}
+				dependencies[own[original]] = append(dependencies[own[original]], dialer)
+			}
+		}
 		definition, err := mountProviderNode(source.Path, renames, relay)
 		if err != nil {
 			return nil, err
+		}
+		if len(renames) > 0 && len(inspection.dialers) > 0 {
+			override := mappingValue(definition, "override")
+			var expressions []string
+			for _, node := range nodes {
+				for _, dialer := range inspection.dialers[node.Original] {
+					if renamed, ok := own[dialer]; ok && renamed != dialer {
+						expressions = append(expressions, fmt.Sprintf("(select(.name == %s) | .dialer-proxy) = %s", strconv.Quote(node.Name), strconv.Quote(renamed)))
+					}
+				}
+			}
+			if len(expressions) > 0 {
+				var expressionsNode yaml.Node
+				if err := expressionsNode.Encode(expressions); err != nil {
+					return nil, err
+				}
+				setMappingValue(override, "override-expr", &expressionsNode)
+			}
 		}
 		setMappingValue(providers, name, definition)
 		names = append(names, name)
@@ -480,7 +517,9 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		return nil, err
 	}
 	report.Groups = groups
-	report.gate.takeGroups(base, groups)
+	if err := checkMountBaseDependencies(base, mounted, dependencies); err != nil {
+		return nil, err
+	}
 	return report, nil
 }
 
@@ -621,12 +660,7 @@ func errMountIsolation(name string) error {
 	}
 }
 
-// Checks the groups as they will run, mounts added, against what the
-// isolation checks read of the base: no group they keep out may hold a
-// mount provider, and whatever such a group may be carried by (members and
-// empty-fallback) must be kept out too. Adding mounts adds providers only,
-// never a group edge, so a failure here is a gap in those checks; the
-// target is refused rather than run.
+// Check direct provider admission, not the base configuration's routing graph.
 func checkMountedGroups(groupsNode *yaml.Node, reach map[string]string, taking []MountGroupReport, mountProviders []string) error {
 	mounted, err := decodeMappings(groupsNode, "proxy-groups")
 	if err != nil {
@@ -636,10 +670,6 @@ func checkMountedGroups(groupsNode *yaml.Node, reach map[string]string, taking [
 	for _, group := range taking {
 		takes[group.Name] = true
 	}
-	names := map[string]bool{}
-	for _, mapping := range mounted {
-		names[groupString(mapping, "name")] = true
-	}
 	for _, mapping := range mounted {
 		name := groupString(mapping, "name")
 		holdsMount := collectsProviders(mapping) || slices.ContainsFunc(groupList(mapping, "use"), func(use string) bool {
@@ -647,14 +677,6 @@ func checkMountedGroups(groupsNode *yaml.Node, reach map[string]string, taking [
 		})
 		if holdsMount != takes[name] || holdsMount && reach[name] != "" {
 			return errMountIsolation(name)
-		}
-		if reach[name] == "" {
-			continue
-		}
-		for _, member := range append(groupList(mapping, "proxies"), groupString(mapping, "empty-fallback")) {
-			if names[member] && (reach[member] == "" || takes[member]) {
-				return errMountIsolation(member)
-			}
 		}
 	}
 	return nil

@@ -558,14 +558,14 @@ rules:
 	}
 
 	reaching := []byte("IP-CIDR,10.0.0.0/8\nIP-CIDR,100.64.0.0/10\n")
-	if err := sideUpdate(reaching); err == nil {
-		t.Fatal("a classical update sending 100.64.0.0/10 to Lan was taken")
+	if err := sideUpdate(reaching); err != nil {
+		t.Fatal(err)
 	}
-	if buf, _ := os.ReadFile(lan); string(buf) != "IP-CIDR,10.0.0.0/8\n" {
+	if buf, _ := os.ReadFile(lan); string(buf) != string(reaching) {
 		t.Errorf("the rule set file = %q, want what was checked", buf)
 	}
-	if !slices.Contains(handleMountState().Refused, "lan") {
-		t.Errorf("refused = %v, want lan", handleMountState().Refused)
+	if len(handleMountState().Refused) != 0 {
+		t.Errorf("refused = %v, want no structural refusal", handleMountState().Refused)
 	}
 	if carriedTCP(t, "100.100.1.1:22", "") {
 		t.Error("100.100.1.1 was carried after the refused update")
@@ -579,8 +579,8 @@ rules:
 		t.Error("100.100.1.1 was carried through Lan's mounted node")
 	}
 	wantNothingRecorded(t, recorder, "Tailscale traffic through a rule set")
-	if got := refused.waitFor(t, 1); len(got) != 1 {
-		t.Errorf("refusals = %v, want the one through Lan", got)
+	if got := refused.waitFor(t, 2); len(got) != 2 {
+		t.Errorf("refusals = %v, want both guarded refusals through Lan", got)
 	}
 	if !carriedTCP(t, "10.1.2.3:80", "") {
 		t.Error("Lan's mounted node did not carry 10.1.2.3")

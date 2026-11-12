@@ -121,14 +121,17 @@ func TestMountedAirportProfileKeepsTailscaleOffMountedNodes(t *testing.T) {
 	}
 	writeMountFile(t, tailscaleRoutesDir(), "routes-9.json",
 		`{"version": 1, "accounts": {}, "suffixes": ["corp.example"], "lists": {"m1": {"suffix": "corp.example"}}}`)
-	profile := liteProfile()
+	writeSyntheticMountGeoIP(t)
+	profile := "geodata-mode: true\n" + strings.ReplaceAll(liteProfile(), "type: http, behavior:", "type: file, behavior:")
+	profile = strings.ReplaceAll(profile, "interval: 300", "interval: 0")
+	profile = strings.ReplaceAll(profile, "url: 'https://www.gstatic.com/generate_204'", "url: ''")
 
 	base, err := readMountBase(rootOf(t, profile))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reach := base.tailscaleGroups(newRuleReader(base)); reach["即时通讯"] == "" || reach["国外流量"] == "" {
-		t.Errorf("without managed rules: 即时通讯 %q, 国外流量 %q; want both excluded", reach["即时通讯"], reach["国外流量"])
+	if reach := base.tailscaleGroups(newRuleReader(base)); len(reach) != 0 {
+		t.Errorf("without managed rules: 即时通讯 %q, 国外流量 %q; want no routing-based exclusions", reach["即时通讯"], reach["国外流量"])
 	}
 	target, err := inspectMountTarget(rootOf(t, profile), 9)
 	if err != nil {
@@ -143,7 +146,7 @@ func TestMountedAirportProfileKeepsTailscaleOffMountedNodes(t *testing.T) {
 	source := writeMountFile(t, home, "1.yaml", liteMountSource)
 	mounts := &MountSetup{Target: 9, Revision: "r", Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
 	setup := &TailscaleSetup{ProfileID: 9, Managed: []TailscaleManagedSetup{{ID: "m1", Name: "Work", Attached: true}}}
-	applyMountedTailscale(t, home, liteSections(profile, false), liteSections(profile, true), mounts, setup)
+	applyMountedTailscale(t, home, liteSections(profile, false), "geodata-mode: true\n"+liteSections(profile, true), mounts, setup)
 	if state := handleMountState(); state.Blocked || len(state.Refused) > 0 {
 		t.Fatalf("state = blocked %v, refused %v", state.Blocked, state.Refused)
 	}
