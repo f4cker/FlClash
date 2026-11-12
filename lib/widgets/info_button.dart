@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
@@ -8,6 +10,8 @@ import 'package:flutter/widgets.dart';
 const _buttonSize = 28.0;
 const _glyphSize = 16.0;
 const _popoverMaxWidth = 360.0;
+const _popoverGap = 8.0;
+const _popoverMargin = 8.0;
 
 /// The one place an explanation lives once it leaves the normal state: an
 /// info glyph right after a title that opens [paragraphs] in a popover.
@@ -66,7 +70,11 @@ class _InfoButtonState extends State<InfoButton> {
       return null;
     }
     final origin = anchor.localToGlobal(Offset.zero, ancestor: overlay);
-    return origin & anchor.size;
+    return Rect.fromCenter(
+      center: (origin & anchor.size).center,
+      width: _glyphSize,
+      height: _glyphSize,
+    );
   }
 
   @override
@@ -83,8 +91,8 @@ class _InfoButtonState extends State<InfoButton> {
             return const SizedBox.shrink();
           }
           return CustomSingleChildLayout(
-            delegate: CaretPopupLayout(
-              caretRect: rect,
+            delegate: InfoPopoverLayout(
+              glyphRect: rect,
               padding: MediaQuery.paddingOf(overlayContext),
             ),
             child: TapRegion(
@@ -131,6 +139,63 @@ class _InfoButtonState extends State<InfoButton> {
       ),
     );
   }
+}
+
+/// Hangs the popover [_popoverGap] below the glyph with their left edges
+/// aligned, shifted left only as far as the right edge needs, and above the
+/// glyph only when the room below is too short and the room above is larger.
+class InfoPopoverLayout extends SingleChildLayoutDelegate {
+  const InfoPopoverLayout({
+    required this.glyphRect,
+    this.padding = EdgeInsets.zero,
+  });
+
+  final Rect glyphRect;
+  final EdgeInsets padding;
+
+  double get _below => glyphRect.bottom + _popoverGap;
+
+  double get _above => glyphRect.top - _popoverGap;
+
+  double get _top => padding.top + _popoverMargin;
+
+  double _bottom(double height) => height - padding.bottom - _popoverMargin;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final room = math.max(
+      _bottom(constraints.maxHeight) - _below,
+      _above - _top,
+    );
+    return BoxConstraints(
+      maxWidth: math.max(
+        0.0,
+        constraints.maxWidth - padding.horizontal - _popoverMargin * 2,
+      ),
+      maxHeight: math.max(0.0, room),
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final spaceBelow = _bottom(size.height) - _below;
+    final spaceAbove = _above - _top;
+    final opensBelow =
+        childSize.height <= spaceBelow || spaceBelow >= spaceAbove;
+    final minLeft = padding.left + _popoverMargin;
+    final maxLeft = size.width - padding.right - _popoverMargin;
+    return Offset(
+      glyphRect.left.clamp(
+        minLeft,
+        math.max(minLeft, maxLeft - childSize.width),
+      ),
+      opensBelow ? _below : _above - childSize.height,
+    );
+  }
+
+  @override
+  bool shouldRelayout(InfoPopoverLayout oldDelegate) =>
+      glyphRect != oldDelegate.glyphRect || padding != oldDelegate.padding;
 }
 
 class _Popover extends StatelessWidget {
