@@ -924,4 +924,54 @@ void main() {
     );
     await shoot(tester, '47-report-window-dashboard');
   });
+
+  // The quiet-by-default pass, light, saved 1568 wide.
+  const quietWidth = 1054.0;
+
+  shot('quiet-01-signed-out', (tester) async {
+    container.listen(currentProfileIdProvider, (_, _) {});
+    container.read(currentProfileIdProvider.notifier).value = 42;
+    serve(const []);
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 720),
+      pixelRatio: reportRatio,
+    );
+    await shoot(tester, 'quiet-01-signed-out');
+  });
+
+  shot('quiet-02-connected-full', (tester) async {
+    await seedManaged([tsManagedNode('m1')]);
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 1180),
+      pixelRatio: reportRatio,
+    );
+    await shoot(tester, 'quiet-02-connected-full');
+  });
+
+  shot('quiet-03-rules-sheet', (tester) async {
+    await seedManaged([
+      tsManagedNode('m1'),
+      tsManagedNode('m2', account: tsWorkAccount),
+    ], routes: tsConflictRoutes());
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 900),
+      pixelRatio: reportRatio,
+    );
+    await tester.tap(find.text('前往规则'));
+    await shoot(tester, 'quiet-03-rules-sheet');
+  });
+
+  shot('quiet-04-popover-open', (tester) async {
+    await seedManaged([tsManagedNode('m1')]);
+    await pumpPanel(
+      tester,
+      size: const Size(quietWidth, 900),
+      pixelRatio: reportRatio,
+    );
+    await tester.tap(find.byTooltip('出口设置说明'));
+    await shoot(tester, 'quiet-04-popover-open');
+  });
 }

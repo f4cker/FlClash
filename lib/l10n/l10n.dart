@@ -11604,10 +11604,10 @@ class AppLocalizations {
     return Intl.message('Cancel', name: 'tsCancel', desc: '', args: []);
   }
 
-  /// `Sign in to add a node and dedicated rules. Original files stay unchanged.`
+  /// `Sign in to add a node and dedicated rules.`
   String get tsSignInShort {
     return Intl.message(
-      'Sign in to add a node and dedicated rules. Original files stay unchanged.',
+      'Sign in to add a node and dedicated rules.',
       name: 'tsSignInShort',
       desc: '',
       args: [],
@@ -11623,6 +11623,16 @@ class AppLocalizations {
       name: 'tsRulesSummary',
       desc: '',
       args: [count, domain],
+    );
+  }
+
+  /// `Domain and address details are unconfirmed.`
+  String get tsRulesUnconfirmed {
+    return Intl.message(
+      'Domain and address details are unconfirmed.',
+      name: 'tsRulesUnconfirmed',
+      desc: '',
+      args: [],
     );
   }
 
