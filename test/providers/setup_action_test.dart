@@ -2211,6 +2211,12 @@ void main() {
         await built.writeAsString('proxies: []\n');
         return built.path;
       });
+      when(() => core.getTailscaleExit(profile.id)).thenAnswer(
+        (_) async => TailscaleExitReport(
+          profileId: profile.id,
+          state: TailscaleRuntimeState.none,
+        ),
+      );
       when(() => core.getTailscaleRuntimeRules(profile.id)).thenAnswer(
         (_) async => TailscaleRuntimeRules(
           profileId: profile.id,
@@ -2323,6 +2329,12 @@ void main() {
         await built.writeAsString('proxies: [base]\n');
         return built.path;
       });
+      when(() => core.getTailscaleExit(profile.id)).thenAnswer(
+        (_) async => TailscaleExitReport(
+          profileId: profile.id,
+          state: TailscaleRuntimeState.none,
+        ),
+      );
       when(() => core.getTailscaleRuntimeRules(profile.id)).thenAnswer(
         (_) async => TailscaleRuntimeRules(
           profileId: profile.id,
