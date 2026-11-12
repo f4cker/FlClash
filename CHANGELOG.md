@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.9.5 (2026-11-12)
+
+**Features**
+
+- **tailscale** Offer the Tailscale exit group in manual policy groups without changing existing selections (cacb6cc)
+- **tray** Show D, R or G inside the running cookie icon (b90720d)
+
+**Bug Fixes**
+
+- **tailscale** On turn-off, move only removed exit selections to the first remaining option (2dd0ac3)
+- **tailscale** Keep exit warnings consistent with the displayed device state (c61f00e)
+
 ## v0.9.4 (2026-11-12)
 
 **Features**

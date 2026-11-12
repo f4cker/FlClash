@@ -2,6 +2,44 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.9.5",
+      "tag": "v0.9.5",
+      "date": "2026-11-12",
+      "prerelease": false,
+      "groups": [
+        {
+          "type": "feat",
+          "entries": [
+            {
+              "id": "cacb6cc",
+              "scope": "tailscale",
+              "text": "Offer the Tailscale exit group in manual policy groups without changing existing selections"
+            },
+            {
+              "id": "b90720d",
+              "scope": "tray",
+              "text": "Show D, R or G inside the running cookie icon"
+            }
+          ]
+        },
+        {
+          "type": "fix",
+          "entries": [
+            {
+              "id": "2dd0ac3",
+              "scope": "tailscale",
+              "text": "On turn-off, move only removed exit selections to the first remaining option"
+            },
+            {
+              "id": "c61f00e",
+              "scope": "tailscale",
+              "text": "Keep exit warnings consistent with the displayed device state"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.4",
       "tag": "v0.9.4",
       "date": "2026-11-12",
