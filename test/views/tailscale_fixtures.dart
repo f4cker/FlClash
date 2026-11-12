@@ -250,3 +250,93 @@ TailscaleRoutes tsConflictRoutes() => const TailscaleRoutes(
     ),
   ],
 );
+
+/// m1 uses nas-sg as its exit node.
+TailscaleStatus tsExitStatus(TailscaleNode node) => tsConnectedStatus(
+  node: node,
+).copyWith(prefs: const TailscalePrefs(exitNodeIp: '100.88.12.4'));
+
+const tsExitMember = 'nas-sg · pat@example.test';
+
+/// The running exit group: 国际媒体 falls back to 香港策略, 仅日本 to nothing
+/// the Core can name.
+TailscaleExitReport tsExitReport({
+  TailscaleExitState state = TailscaleExitState.applied,
+  TailscaleExitReason? reason,
+  List<TailscaleExitParent>? parents,
+}) => TailscaleExitReport(
+  profileId: 42,
+  state: TailscaleRuntimeState.confirmed,
+  group: 'Tailscale 出口',
+  selected: 'm1',
+  parents:
+      parents ??
+      const [
+        TailscaleExitParent(
+          name: '国际媒体',
+          now: 'Tailscale 出口',
+          members: ['香港策略', '美国策略', 'DIRECT', 'Tailscale 出口'],
+          replacement: '香港策略',
+        ),
+        TailscaleExitParent(
+          name: '仅日本',
+          now: 'Tailscale 出口',
+          members: ['COMPATIBLE', 'Tailscale 出口'],
+        ),
+        TailscaleExitParent(
+          name: '全球手动',
+          now: 'HK 01',
+          members: ['HK 01', 'US 01', 'Tailscale 出口'],
+          replacement: 'HK 01',
+        ),
+      ],
+  accounts: [
+    TailscaleExitAccount(
+      id: 'm1',
+      member: tsExitMember,
+      exitNode: '100.88.12.4',
+      state: state,
+      reason: reason,
+    ),
+  ],
+);
+
+/// The proxies page as the Core lists it with the exit group added last.
+List<Group> tsExitGroups() {
+  const exit = Proxy(name: 'Tailscale 出口', type: 'Selector');
+  return [
+    const Group(
+      name: '国际媒体',
+      type: GroupType.Selector,
+      hidden: false,
+      now: '香港策略',
+      all: [
+        Proxy(name: '香港策略', type: 'URLTest'),
+        Proxy(name: '美国策略', type: 'Fallback'),
+        Proxy(name: 'DIRECT', type: 'Direct'),
+        exit,
+      ],
+    ),
+    const Group(
+      name: '香港策略',
+      type: GroupType.URLTest,
+      hidden: false,
+      now: 'HK 01',
+      all: [Proxy(name: 'HK 01', type: 'Socks5')],
+    ),
+    const Group(
+      name: '美国策略',
+      type: GroupType.Fallback,
+      hidden: false,
+      now: 'US 01',
+      all: [Proxy(name: 'US 01', type: 'Socks5')],
+    ),
+    const Group(
+      name: 'Tailscale 出口',
+      type: GroupType.Selector,
+      hidden: false,
+      now: tsExitMember,
+      all: [Proxy(name: tsExitMember, type: 'Tailscale')],
+    ),
+  ];
+}
