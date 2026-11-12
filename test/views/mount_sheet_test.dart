@@ -62,6 +62,15 @@ Future<void> pumpSheet(
 Finder rowOf(String name) =>
     find.ancestor(of: find.text(name), matching: find.byType(MountSourceRow));
 
+/// Opens the collapsed notices banner, which stays open, design §13.2.
+Future<void> openDetails(WidgetTester tester) async {
+  final details = find.text(currentAppLocalizations.mountDetails);
+  expect(details, findsOneWidget);
+  await tester.tap(details);
+  await tester.pumpAndSettle();
+  expect(details, findsNothing);
+}
+
 FilledButton saveButton(WidgetTester tester) => tester.widget<FilledButton>(
   find.widgetWithText(FilledButton, currentAppLocalizations.mountSave),
 );
@@ -734,6 +743,7 @@ void main() {
           );
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
+    await openDetails(tester);
 
     final banner = find.byType(MountBanner);
     expect(banner, findsOneWidget);
@@ -792,6 +802,7 @@ void main() {
     );
     await pumpSheet(tester, mounts, profiles: [air, sea, relayed, mixed]);
     final l10n = currentAppLocalizations;
+    await openDetails(tester);
 
     final banner = find.byType(MountBanner);
     expect(
@@ -834,6 +845,7 @@ void main() {
     )..runtime = const MountRuntimeState(report: MountReport(renamed: 1));
     await pumpSheet(tester, mounts, profiles: [air, sea]);
     final l10n = currentAppLocalizations;
+    await openDetails(tester);
 
     final banner = tester.widget<MountBanner>(find.byType(MountBanner));
     expect(banner.level, MountBannerLevel.info);
@@ -1035,6 +1047,7 @@ void main() {
           );
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
+    await openDetails(tester);
 
     expect(find.text(l10n.mountUnsupportedExcluded(1)), findsOneWidget);
     expect(find.text(l10n.mountUnsupportedExcluded(5)), findsNothing);
@@ -1059,6 +1072,7 @@ void main() {
     );
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
+    await openDetails(tester);
 
     final line = find.text(l10n.mountGroupsExcluded(3));
     expect(line, findsOneWidget);
@@ -1530,12 +1544,111 @@ void main() {
     );
     await pumpSheet(tester, mounts, profiles: [air, sea]);
     final l10n = currentAppLocalizations;
+    await openDetails(tester);
 
     final banner = tester.widget<MountBanner>(find.byType(MountBanner));
     expect(banner.lines, [
       l10n.mountTailscaleExcluded,
       l10n.mountUnsupportedExcluded(4),
     ]);
+  });
+
+  for (final (name, renamed, tailscale, isolated, summary) in [
+    ('same names alone', true, 0, false, 'same'),
+    ('excluded nodes alone', false, 2, false, 'nodes'),
+    ('isolated groups alone', false, 0, true, 'groups'),
+    ('same names with exclusions', true, 2, false, 'names'),
+    ('nodes and groups', false, 2, true, 'some'),
+  ]) {
+    testWidgets('a notices banner for $name is one line with 详情 that opens '
+        'in place', (tester) async {
+      final mounts =
+          FakeMounts(
+              panelOf(
+                [item(air, mounted: true, tailscaleExcluded: tailscale)],
+                stored: MountTargetState(
+                  targetId: target.id,
+                  sourceIds: [air.id],
+                  version: 1,
+                ),
+                groups: MountTarget(
+                  groups: [
+                    groupInfo('A'),
+                    if (isolated) isolatedGroup('Lan', MountGroupReason.rule),
+                  ],
+                ),
+              ),
+            )
+            ..runtime = MountRuntimeState(
+              report: MountReport(renamed: renamed ? 1 : 0),
+            );
+      await pumpSheet(tester, mounts, profiles: [air]);
+      final l10n = currentAppLocalizations;
+
+      final line = switch (summary) {
+        'same' => l10n.mountSameNameShort,
+        'nodes' => l10n.mountNodesExcludedShort(tailscale),
+        'groups' => l10n.mountGroupsExcludedShort(1),
+        'names' => l10n.mountNamesAndExclusions,
+        _ => l10n.mountSomeExcluded,
+      };
+      var banner = tester.widget<MountBanner>(find.byType(MountBanner));
+      expect(banner.lines, [line]);
+      expect(banner.level, MountBannerLevel.info);
+      expect(find.text(l10n.mountSameName), findsNothing);
+
+      await openDetails(tester);
+      banner = tester.widget<MountBanner>(find.byType(MountBanner));
+      expect(banner.lines, [
+        if (renamed) l10n.mountSameName,
+        if (tailscale > 0) l10n.mountTailscaleExcluded,
+        if (isolated) ...[
+          l10n.mountIsolationFirst,
+          l10n.mountGroupsExcluded(1),
+          l10n.mountGroupsExcludedNames('Lan'),
+        ],
+      ]);
+      expect(find.text(line), findsNothing);
+    });
+  }
+
+  testWidgets('without anything excluded or renamed there is no banner', (
+    tester,
+  ) async {
+    await pumpSheet(
+      tester,
+      FakeMounts(
+        panelOf([item(air)], groups: MountTarget(groups: [groupInfo('A')])),
+      ),
+      profiles: [air],
+    );
+    expect(find.byType(MountBanner), findsNothing);
+    expect(find.text(currentAppLocalizations.mountDetails), findsNothing);
+  });
+
+  testWidgets('a format error row keeps its red line and opens the format '
+      'help with 详情', (tester) async {
+    final mounts = FakeMounts(
+      panelOf([
+        item(air),
+        item(odd, state: MountSourceState.unsupported, count: 0),
+      ], groups: MountTarget(groups: [groupInfo('A')])),
+    );
+    await pumpSheet(tester, mounts, profiles: [air, odd]);
+    final l10n = currentAppLocalizations;
+
+    Finder inRow(String name, Finder matching) =>
+        find.descendant(of: rowOf(name), matching: matching);
+    expect(inRow('Odd', find.text(l10n.mountSourceNoNodeList)), findsOne);
+    expect(inRow('Air', find.text(l10n.mountDetails)), findsNothing);
+    expect(find.text(l10n.mountFormatHelp), findsNothing);
+
+    await tester.tap(inRow('Odd', find.text(l10n.mountDetails)));
+    await tester.pumpAndSettle();
+    expect(inRow('Odd', find.text(l10n.mountFormatHelp)), findsOneWidget);
+    expect(inRow('Odd', find.text(l10n.mountDetails)), findsNothing);
+    // 详情 is not the row's checkbox.
+    expect(saveButton(tester).onPressed, isNull);
   });
 }
 

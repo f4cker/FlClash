@@ -12779,6 +12779,65 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Details`
+  String get mountDetails {
+    return Intl.message('Details', name: 'mountDetails', desc: '', args: []);
+  }
+
+  /// `Matching node names use the subscription name`
+  String get mountSameNameShort {
+    return Intl.message(
+      'Matching node names use the subscription name',
+      name: 'mountSameNameShort',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `{count, plural, =1{1 node excluded from mounting} other{{count} nodes excluded from mounting}}`
+  String mountNodesExcludedShort(num count) {
+    return Intl.plural(
+      count,
+      one: '1 node excluded from mounting',
+      other: '$count nodes excluded from mounting',
+      name: 'mountNodesExcludedShort',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `{count, plural, =1{1 group excludes subscription nodes} other{{count} groups exclude subscription nodes}}`
+  String mountGroupsExcludedShort(num count) {
+    return Intl.plural(
+      count,
+      one: '1 group excludes subscription nodes',
+      other: '$count groups exclude subscription nodes',
+      name: 'mountGroupsExcludedShort',
+      desc: '',
+      args: [count],
+    );
+  }
+
+  /// `Name conflicts and exclusions`
+  String get mountNamesAndExclusions {
+    return Intl.message(
+      'Name conflicts and exclusions',
+      name: 'mountNamesAndExclusions',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Some nodes or groups are excluded from mounting`
+  String get mountSomeExcluded {
+    return Intl.message(
+      'Some nodes or groups are excluded from mounting',
+      name: 'mountSomeExcluded',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {

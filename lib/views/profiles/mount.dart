@@ -94,6 +94,11 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   bool _groupsOpen = false;
   bool _allGroups = false;
 
+  /// The notices banner and the format help of each such row open in place
+  /// and stay open until the sheet reopens, design §13.
+  bool _noticesOpen = false;
+  final Set<int> _formatHelp = {};
+
   bool _saving = false;
   bool _removal = false;
   bool _rechecking = false;
@@ -616,26 +621,62 @@ class _MountSheetState extends ConsumerState<MountSheet> {
         level: info ? MountBannerLevel.info : MountBannerLevel.error,
       );
     }
-    final notices = [
-      if ((_runtime?.report?.renamed ?? 0) > 0) appLocalizations.mountSameName,
-      if (_tailscaleExcluded(panel)) appLocalizations.mountTailscaleExcluded,
-      if (_unsupportedExcluded(panel) case final count when count > 0)
-        appLocalizations.mountUnsupportedExcluded(count),
-      if (_lost.isNotEmpty) appLocalizations.mountSelectionLost,
+    final renamed = (_runtime?.report?.renamed ?? 0) > 0;
+    final tailscale = _tailscaleExcluded(panel);
+    final unsupported = _unsupportedExcluded(panel);
+    final isolated = _groupCase == MountGroupCase.auto
+        ? mountIsolatedGroups(panel.groups)
+        : const <MountGroupInfo>[];
+    final lost = [if (_lost.isNotEmpty) appLocalizations.mountSelectionLost];
+    final details = [
+      if (renamed) appLocalizations.mountSameName,
+      if (tailscale > 0) appLocalizations.mountTailscaleExcluded,
+      if (unsupported > 0)
+        appLocalizations.mountUnsupportedExcluded(unsupported),
+      if (isolated.isNotEmpty)
+        ...mountIsolatedGroupsLines(isolated, appLocalizations),
     ];
-    if (notices.isEmpty) {
-      return null;
+    if (details.isEmpty) {
+      return lost.isEmpty
+          ? null
+          : MountBanner(lines: lost, level: MountBannerLevel.info);
     }
-    return MountBanner(lines: notices, level: MountBannerLevel.info);
+    if (_noticesOpen) {
+      return MountBanner(
+        lines: [...lost, ...details],
+        level: MountBannerLevel.info,
+      );
+    }
+    final nodes = tailscale + unsupported > 0;
+    final groups = isolated.isNotEmpty;
+    // One short line, compact-copy: the case itself when it is the only one.
+    final summary = switch ((renamed, nodes, groups)) {
+      (true, false, false) => appLocalizations.mountSameNameShort,
+      (false, true, false) => appLocalizations.mountNodesExcludedShort(
+        tailscale + unsupported,
+      ),
+      (false, false, true) => appLocalizations.mountGroupsExcludedShort(
+        isolated.length,
+      ),
+      (true, _, _) => appLocalizations.mountNamesAndExclusions,
+      _ => appLocalizations.mountSomeExcluded,
+    };
+    return MountBanner(
+      lines: [...lost, summary],
+      level: MountBannerLevel.info,
+      actionLabel: appLocalizations.mountDetails,
+      onAction: () => setState(() => _noticesOpen = true),
+    );
   }
 
-  bool _tailscaleExcluded(MountPanel panel) {
-    final reported = _runtime?.report?.sources ?? const <MountSourceReport>[];
-    if (reported.any((source) => source.tailscaleExcluded > 0)) {
-      return true;
+  int _tailscaleExcluded(MountPanel panel) {
+    final reported = _runtime?.report?.sources;
+    if (reported != null && reported.isNotEmpty) {
+      return reported.fold(0, (sum, source) => sum + source.tailscaleExcluded);
     }
-    return panel.sources.any(
-      (item) => item.mounted && item.tailscaleExcluded > 0,
+    return panel.sources.fold(
+      0,
+      (sum, item) => item.mounted ? sum + item.tailscaleExcluded : sum,
     );
   }
 
@@ -690,10 +731,11 @@ class _MountSheetState extends ConsumerState<MountSheet> {
             onRefresh: item.mounted && !_refreshing.contains(item.profile.id)
                 ? () => _refresh(item.profile.id)
                 : null,
+            formatHelpOpen: _formatHelp.contains(item.profile.id),
+            onFormatHelp: () =>
+                setState(() => _formatHelp.add(item.profile.id)),
           ),
         _buildGroups(context, panel, interactive: interactive),
-        if (_groupCase != MountGroupCase.none)
-          ?mountIsolatedGroupsBanner(panel.groups, context.appLocalizations),
       ],
     );
     return Column(
@@ -839,27 +881,17 @@ MountGroupStatus? mountGroupStatusOf(
   );
 }
 
-MountBanner? mountIsolatedGroupsBanner(
-  MountTarget? target,
+/// The full lines on groups kept out for Tailscale, the boundary first.
+List<String> mountIsolatedGroupsLines(
+  List<MountGroupInfo> groups,
   AppLocalizations appLocalizations,
-) {
-  final groups = mountIsolatedGroups(target);
-  if (groups.isEmpty) {
-    return null;
-  }
-  return MountBanner(
-    level: MountBannerLevel.info,
-    lines: [
-      appLocalizations.mountIsolationFirst,
-      appLocalizations.mountGroupsExcluded(groups.length),
-      appLocalizations.mountGroupsExcludedNames(
-        groups
-            .map((group) => group.name)
-            .join(appLocalizations.mountNameSeparator),
-      ),
-    ],
-  );
-}
+) => [
+  appLocalizations.mountIsolationFirst,
+  appLocalizations.mountGroupsExcluded(groups.length),
+  appLocalizations.mountGroupsExcludedNames(
+    groups.map((group) => group.name).join(appLocalizations.mountNameSeparator),
+  ),
+];
 
 enum MountBannerLevel { info, warn, error }
 
@@ -870,11 +902,17 @@ class MountBanner extends StatelessWidget {
     required this.level,
     required this.lines,
     this.title,
+    this.actionLabel,
+    this.onAction,
   });
 
   final MountBannerLevel level;
   final List<String> lines;
   final String? title;
+
+  /// A text button after the lines, as 详情 on a collapsed banner.
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -932,6 +970,8 @@ class MountBanner extends StatelessWidget {
                   ],
                 ),
               ),
+              if (actionLabel case final label?)
+                MountTextAction(label: label, onPressed: onAction),
             ],
           ),
         ),
@@ -1279,7 +1319,14 @@ class MountSourceRow extends StatelessWidget {
     this.refusal,
     this.run = MountRunState.confirmed,
     this.blockSettled = false,
+    this.formatHelpOpen = false,
+    this.onFormatHelp,
   });
+
+  /// A row whose format is not supported offers 详情 for the format help,
+  /// design §13.4.
+  final bool formatHelpOpen;
+  final VoidCallback? onFormatHelp;
 
   final MountSourceItem item;
   final bool checked;
@@ -1295,6 +1342,8 @@ class MountSourceRow extends StatelessWidget {
   bool get _faded => !item.state.mountable && !item.mounted;
 
   bool get _checkable => !_faded || checked;
+
+  bool get _formatError => item.state == MountSourceState.unsupported;
 
   String _detail(BuildContext context) {
     final appLocalizations = context.appLocalizations;
@@ -1459,6 +1508,13 @@ class MountSourceRow extends StatelessWidget {
                   color: error ? colorScheme.error : colorScheme.warning,
                 ),
           ),
+        if (_formatError && formatHelpOpen)
+          Text(
+            appLocalizations.mountFormatHelp,
+            style: AppTextStyle.caption2
+                .of(context)
+                .copyWith(color: colorScheme.onSurfaceVariant),
+          ),
       ],
     );
     return DecoratedBox(
@@ -1500,6 +1556,14 @@ class MountSourceRow extends StatelessWidget {
                 ),
               ),
             ),
+            if (_formatError && !formatHelpOpen)
+              Padding(
+                padding: EdgeInsets.only(right: item.mounted ? 4 : 10),
+                child: MountTextAction(
+                  label: appLocalizations.mountDetails,
+                  onPressed: onFormatHelp,
+                ),
+              ),
             if (item.mounted)
               Padding(
                 padding: const EdgeInsets.only(right: 10),
@@ -1657,6 +1721,37 @@ class MountPill extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A plain text button in the primary color, as 详情 and 显示全部.
+class MountTextAction extends StatelessWidget {
+  const MountTextAction({super.key, required this.label, this.onPressed});
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: onPressed,
+      child: PressRegion(
+        onTap: onPressed,
+        shape: AppShape.all(AppCorner.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          child: Text(
+            label,
+            style: AppTextStyle.footnote
+                .of(context, emphasized: true)
+                .copyWith(color: context.colorScheme.primary),
           ),
         ),
       ),

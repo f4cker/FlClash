@@ -237,21 +237,9 @@ class MountGroupsSection extends StatelessWidget {
           if (rows.length < view.rows.length)
             Align(
               alignment: AlignmentDirectional.centerStart,
-              child: Semantics(
-                button: true,
-                child: PressRegion(
-                  onTap: onShowAll,
-                  shape: AppShape.all(AppCorner.sm),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      appLocalizations.mountShowAllGroups(view.rows.length),
-                      style: AppTextStyle.footnote
-                          .of(context, emphasized: true)
-                          .copyWith(color: colorScheme.primary),
-                    ),
-                  ),
-                ),
+              child: MountTextAction(
+                label: appLocalizations.mountShowAllGroups(view.rows.length),
+                onPressed: onShowAll,
               ),
             ),
           if (view.hidden > 0)
