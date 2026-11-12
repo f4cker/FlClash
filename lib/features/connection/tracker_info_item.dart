@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'detail_tabs.dart';
 import 'mitm_exchanges.dart';
+import 'process_view.dart';
 
 String _endpointText(String ip, String port) {
   if (ip.isEmpty) {
@@ -186,6 +187,23 @@ class _TrackerInfoBody extends StatelessWidget {
         ],
       ),
     );
+    if (!system.isAndroid) {
+      return ConnectionProcessBuilder(
+        metadata: metadata,
+        builder: (context, process) {
+          if (!ProcessIcon.shows(process)) {
+            return title;
+          }
+          return Row(
+            spacing: 8,
+            children: [
+              ProcessFilterIcon(process: process, size: 24),
+              Flexible(child: title),
+            ],
+          );
+        },
+      );
+    }
     final process = metadata.process;
     if (!showIcon || process.isEmpty) {
       return title;
@@ -205,16 +223,35 @@ class _TrackerInfoBody extends StatelessWidget {
     );
   }
 
+  Widget _buildSource(BuildContext context, RecordTextStyles styles) {
+    final metadata = trackerInfo.metadata;
+    final endpoint = _endpointText(metadata.sourceIP, metadata.sourcePort);
+    if (system.isAndroid) {
+      final source = [
+        trackerInfo.progressText,
+        endpoint,
+      ].where((text) => text.isNotEmpty).join('  ·  ');
+      return source.isEmpty
+          ? const SizedBox.shrink()
+          : Text(source, style: styles.secondary);
+    }
+    return ConnectionProcessBuilder(
+      metadata: metadata,
+      builder: (context, process) => Text(
+        [
+          processLabelOf(process),
+          endpoint,
+        ].where((text) => text.isNotEmpty).join('  ·  '),
+        style: styles.secondary,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     final styles = RecordTextStyles.of(context);
-    final metadata = trackerInfo.metadata;
     final rule = trackerInfo.ruleText;
-    final source = [
-      trackerInfo.progressText,
-      _endpointText(metadata.sourceIP, metadata.sourcePort),
-    ].where((text) => text.isNotEmpty).join('  ·  ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 4,
@@ -247,7 +284,7 @@ class _TrackerInfoBody extends StatelessWidget {
               ),
           ],
         ),
-        if (source.isNotEmpty) Text(source, style: styles.secondary),
+        _buildSource(context, styles),
       ],
     );
   }
@@ -357,6 +394,16 @@ class TrackerInfoDetailView extends ConsumerWidget {
   }
 
   Widget _buildOverview(BuildContext context) {
+    if (system.isAndroid) {
+      return _buildOverviewWith(context, null);
+    }
+    return ConnectionProcessBuilder(
+      metadata: trackerInfo.metadata,
+      builder: _buildOverviewWith,
+    );
+  }
+
+  Widget _buildOverviewWith(BuildContext context, ConnectionProcess? process) {
     final appLocalizations = context.appLocalizations;
     final metadata = trackerInfo.metadata;
     return ListView(
@@ -367,14 +414,20 @@ class TrackerInfoDetailView extends ConsumerWidget {
       children: [
         generateSection(
           title: appLocalizations.basicInfo,
-          items: _buildRows([
-            (appLocalizations.creationTime, trackerInfo.start.showFull),
-            (appLocalizations.networkType, metadata.network),
-            (appLocalizations.process, trackerInfo.progressText),
-            (appLocalizations.rule, trackerInfo.ruleText),
-            (appLocalizations.upload, trackerInfo.upload.traffic.show),
-            (appLocalizations.download, trackerInfo.download.traffic.show),
-          ]),
+          items: [
+            ..._buildRows([
+              (appLocalizations.creationTime, trackerInfo.start.showFull),
+              (appLocalizations.networkType, metadata.network),
+              if (process == null)
+                (appLocalizations.process, trackerInfo.progressText),
+            ]),
+            if (process != null) ...processDetailRows(context, process),
+            ..._buildRows([
+              (appLocalizations.rule, trackerInfo.ruleText),
+              (appLocalizations.upload, trackerInfo.upload.traffic.show),
+              (appLocalizations.download, trackerInfo.download.traffic.show),
+            ]),
+          ],
         ),
         generateSection(
           title: appLocalizations.address,

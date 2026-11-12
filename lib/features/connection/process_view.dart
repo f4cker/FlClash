@@ -1,0 +1,353 @@
+import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/app.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Rebuilds as the Mac answers which app [metadata]'s process belongs to.
+class ConnectionProcessBuilder extends StatelessWidget {
+  final Metadata metadata;
+  final Widget Function(BuildContext context, ConnectionProcess process)
+  builder;
+
+  const ConnectionProcessBuilder({
+    super.key,
+    required this.metadata,
+    required this.builder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: processApps,
+      builder: (context, _) =>
+          builder(context, processApps.processOf(metadata)),
+    );
+  }
+}
+
+/// The app's own icon, or the command-line glyph in an inset well; nothing
+/// for a connection with no process.
+class ProcessIcon extends StatelessWidget {
+  final ConnectionProcess process;
+  final double size;
+
+  const ProcessIcon({super.key, required this.process, required this.size});
+
+  static bool shows(ConnectionProcess process) => process.hasProcess;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!process.hasProcess) {
+      return const SizedBox.shrink();
+    }
+    if (process.pending) {
+      return SizedBox.square(dimension: size);
+    }
+    final app = process.app;
+    final icon = app == null ? null : processApps.iconOf(app);
+    if (icon != null) {
+      return Image(
+        image: icon,
+        width: size,
+        height: size,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.medium,
+        excludeFromSemantics: true,
+      );
+    }
+    final colorScheme = context.colorScheme;
+    final glyph = app == null ? AppGlyphs.code : AppGlyphs.appsList;
+    if (size < 20) {
+      return GlyphIcon(glyph, size: size, color: colorScheme.onSurfaceVariant);
+    }
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: ShapeDecoration(
+        color: SurfaceLevel.inset.colorOf(colorScheme),
+        shape: RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(size / 4),
+        ),
+      ),
+      child: GlyphIcon(
+        glyph,
+        size: size * 2 / 3,
+        color: colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
+/// What a row names a connection's source by.
+String processLabelOf(ConnectionProcess process) => switch (process.kind) {
+  ProcessKind.app || ProcessKind.process => process.label,
+  ProcessKind.unknown => currentAppLocalizations.unknownProcess,
+  ProcessKind.otherDevice => currentAppLocalizations.otherDevice,
+};
+
+/// The leading icon of a row, which filters the list by the process.
+class ProcessFilterIcon extends StatelessWidget {
+  final ConnectionProcess process;
+  final double size;
+
+  const ProcessFilterIcon({
+    super.key,
+    required this.process,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final tooltip = process.kind == ProcessKind.app
+        ? appLocalizations.filterByThisApp
+        : appLocalizations.filterByThisProcess;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: '$tooltip ${process.label}',
+        child: GestureDetector(
+          onTap: () => RecordFilterScope.add(
+            context,
+            RecordFilter(RecordFacetKind.app, process.key),
+          ),
+          child: ProcessIcon(process: process, size: size),
+        ),
+      ),
+    );
+  }
+}
+
+/// The table's process cell: a small icon and the app or process name, the
+/// full process and path on hover.
+class ProcessCell extends StatelessWidget {
+  final Metadata metadata;
+
+  const ProcessCell({super.key, required this.metadata});
+
+  @override
+  Widget build(BuildContext context) {
+    return ConnectionProcessBuilder(
+      metadata: metadata,
+      builder: (context, process) {
+        final text = Text(
+          processLabelOf(process),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: process.hasProcess
+              ? null
+              : TextStyle(color: context.colorScheme.onSurfaceVariant),
+        );
+        if (!process.hasProcess) {
+          return text;
+        }
+        return Tooltip(
+          message: [
+            process.name,
+            if (process.path.isNotEmpty) process.path,
+          ].join('\n'),
+          child: Row(
+            spacing: 6,
+            children: [
+              ProcessIcon(process: process, size: 16),
+              Flexible(child: text),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The 应用 / 进程 / 进程路径 rows of a connection's detail.
+List<Widget> processDetailRows(
+  BuildContext context,
+  ConnectionProcess process,
+) {
+  final appLocalizations = context.appLocalizations;
+  final app = process.app;
+  switch (process.kind) {
+    case ProcessKind.unknown:
+      return [
+        _ReasonRow(
+          title: appLocalizations.process,
+          value: appLocalizations.unknown,
+          reason: appLocalizations.processInfoUnavailable,
+        ),
+      ];
+    case ProcessKind.otherDevice:
+      return [
+        _ReasonRow(
+          title: appLocalizations.process,
+          value: appLocalizations.processUnavailable,
+          reason: appLocalizations.processFromOtherDevice,
+        ),
+      ];
+    case ProcessKind.app || ProcessKind.process:
+      return [
+        if (app != null)
+          DetailRow(
+            title: appLocalizations.app,
+            copyText: app.name,
+            value: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                ProcessIcon(process: process, size: 32),
+                Flexible(child: Text(app.name)),
+              ],
+            ),
+          ),
+        if (process.appUnreadable)
+          _ReasonRow(
+            title: appLocalizations.process,
+            value: process.name,
+            reason: appLocalizations.appInfoUnreadable,
+          )
+        else
+          DetailRow.text(title: appLocalizations.process, value: process.name),
+        if (process.path.isNotEmpty) _PathRow(path: process.path),
+      ];
+  }
+}
+
+class _ReasonRow extends StatelessWidget {
+  final String title;
+  final String value;
+  final String reason;
+
+  const _ReasonRow({
+    required this.title,
+    required this.value,
+    required this.reason,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DetailRow(
+      title: title,
+      value: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        spacing: 2,
+        children: [
+          Text(value),
+          Text(
+            reason,
+            style: AppTextStyle.caption1
+                .of(context)
+                .copyWith(color: context.colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PathRow extends StatelessWidget {
+  final String path;
+
+  const _PathRow({required this.path});
+
+  Future<void> _copy(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: path));
+    if (!context.mounted) return;
+    dialogs.showBanner(context.appLocalizations.copySuccess);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    return DetailRow(
+      title: appLocalizations.processPath,
+      value: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 4,
+        children: [
+          Flexible(
+            child: SelectableText(
+              path,
+              textAlign: TextAlign.end,
+              style: AppTextStyle.footnote
+                  .of(context)
+                  .toJetBrainsMono
+                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+            ),
+          ),
+          IconButton(
+            tooltip: appLocalizations.copyPath,
+            onPressed: () => _copy(context),
+            icon: const GlyphIcon(AppGlyphs.copy, size: 16),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One quiet line over the requests when the running Core has process
+/// lookup off and none of [visible] carries process info.
+class ProcessLookupOffNotice extends ConsumerWidget {
+  final List<TrackerInfo> visible;
+  final Widget child;
+
+  const ProcessLookupOffNotice({
+    super.key,
+    required this.visible,
+    required this.child,
+  });
+
+  static bool showsFor(String? runningMode, List<TrackerInfo> visible) =>
+      runningMode == 'off' &&
+      visible.isNotEmpty &&
+      visible.every(
+        (info) =>
+            info.metadata.process.trim().isEmpty &&
+            info.metadata.processPath.trim().isEmpty,
+      );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = system.isAndroid
+        ? null
+        : ref.watch(runningFindProcessModeProvider);
+    if (!showsFor(mode, visible)) {
+      return child;
+    }
+    return Padding(
+      padding: EdgeInsets.only(top: context.contentTopPadding),
+      child: MediaQuery.removePadding(
+        context: context,
+        removeTop: true,
+        child: FloatingBarScope(
+          inset: 0,
+          child: TopInsetScope(
+            inset: 8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    context.appLocalizations.processLookupDisabled,
+                    style: AppTextStyle.caption1
+                        .of(context)
+                        .copyWith(color: context.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+                Expanded(child: child),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -120,7 +120,7 @@ class _RequestsViewState extends ConsumerState<RequestsView>
     final body = RecordFilterScope(
       onFilter: _filters.add,
       child: ListenableBuilder(
-        listenable: _filters,
+        listenable: Listenable.merge([_filters, processApps]),
         builder: (_, _) => _buildBody(),
       ),
     );
@@ -238,70 +238,73 @@ class _RecentFeedState extends State<_RecentFeed> {
             label: appLocalizations.nullTip(appLocalizations.requests),
             illustration: NullStatusIllustration.requests,
           ),
-          child: RecordTableFrame<TrackerInfo>(
-            tableId: 'requests',
-            items: requests,
-            reverse: true,
-            columnsOf: (width) =>
-                trackerInfoColumns(context, width: width, isLive: false),
-            builder: (context, table, requests) {
-              final padding = EdgeInsets.only(
-                top: context.contentTopPadding,
-                bottom: 16 + context.bottomInset,
-              );
-              final detailTitle = appLocalizations.details(
-                appLocalizations.request,
-              );
-              final groups = widget.filters.groupsOf(requests, reverse: true);
-              if (groups != null) {
-                return FloatingScrollbar(
-                  controller: _scrollController,
-                  hintBuilder: (fraction) {
-                    final index = (fraction * (groups.length - 1)).round();
-                    return groups[index].items.first.start.showFull;
-                  },
-                  child: TrackerInfoGroupedList(
-                    groups: groups,
-                    grouping: widget.filters.value.grouping!,
-                    isLive: false,
-                    controller: _scrollController,
-                    padding: padding,
-                    table: table,
-                    detailTitle: detailTitle,
-                  ),
+          child: ProcessLookupOffNotice(
+            visible: requests,
+            child: RecordTableFrame<TrackerInfo>(
+              tableId: 'requests',
+              items: requests,
+              reverse: true,
+              columnsOf: (width) =>
+                  trackerInfoColumns(context, width: width, isLive: false),
+              builder: (context, table, requests) {
+                final padding = EdgeInsets.only(
+                  top: context.contentTopPadding,
+                  bottom: 16 + context.bottomInset,
                 );
-              }
-              return Align(
-                alignment: Alignment.topCenter,
-                child: FloatingScrollbar(
-                  controller: _scrollController,
-                  hintBuilder: (fraction) {
-                    final index = (fraction * (requests.length - 1)).round();
-                    return requests[index].start.showFull;
-                  },
-                  child: ScrollToEndBox(
+                final detailTitle = appLocalizations.details(
+                  appLocalizations.request,
+                );
+                final groups = widget.filters.groupsOf(requests, reverse: true);
+                if (groups != null) {
+                  return FloatingScrollbar(
                     controller: _scrollController,
-                    enable: state.autoScrollToEnd,
-                    onCancelToEnd: () {
-                      widget.listController.setAutoScrollToEnd(false);
+                    hintBuilder: (fraction) {
+                      final index = (fraction * (groups.length - 1)).round();
+                      return groups[index].items.first.start.showFull;
                     },
-                    onResumeToEnd: () {
-                      widget.onResumeToEnd();
-                    },
-                    child: TrackerInfoList(
-                      reverse: true,
-                      shrinkWrap: true,
-                      physics: _physics,
+                    child: TrackerInfoGroupedList(
+                      groups: groups,
+                      grouping: widget.filters.value.grouping!,
+                      isLive: false,
                       controller: _scrollController,
                       padding: padding,
-                      trackerInfos: requests,
                       table: table,
                       detailTitle: detailTitle,
                     ),
+                  );
+                }
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: FloatingScrollbar(
+                    controller: _scrollController,
+                    hintBuilder: (fraction) {
+                      final index = (fraction * (requests.length - 1)).round();
+                      return requests[index].start.showFull;
+                    },
+                    child: ScrollToEndBox(
+                      controller: _scrollController,
+                      enable: state.autoScrollToEnd,
+                      onCancelToEnd: () {
+                        widget.listController.setAutoScrollToEnd(false);
+                      },
+                      onResumeToEnd: () {
+                        widget.onResumeToEnd();
+                      },
+                      child: TrackerInfoList(
+                        reverse: true,
+                        shrinkWrap: true,
+                        physics: _physics,
+                        controller: _scrollController,
+                        padding: padding,
+                        trackerInfos: requests,
+                        table: table,
+                        detailTitle: detailTitle,
+                      ),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       },
@@ -452,41 +455,44 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
             label: appLocalizations.nullTip(appLocalizations.connections),
             illustration: NullStatusIllustration.connections,
           ),
-          child: RecordTableFrame<TrackerInfo>(
-            tableId: 'connections',
-            items: connections,
-            columnsOf: (width) =>
-                trackerInfoColumns(context, width: width, isLive: true),
-            builder: (context, table, connections) {
-              final padding = EdgeInsets.only(
-                top: context.contentTopPadding,
-                bottom: 16 + context.bottomInset,
-              );
-              final detailTitle = appLocalizations.details(
-                appLocalizations.connection,
-              );
-              final groups = widget.filters.groupsOf(connections);
-              if (groups != null) {
-                return TrackerInfoGroupedList(
-                  groups: groups,
-                  grouping: widget.filters.value.grouping!,
-                  isLive: true,
+          child: ProcessLookupOffNotice(
+            visible: connections,
+            child: RecordTableFrame<TrackerInfo>(
+              tableId: 'connections',
+              items: connections,
+              columnsOf: (width) =>
+                  trackerInfoColumns(context, width: width, isLive: true),
+              builder: (context, table, connections) {
+                final padding = EdgeInsets.only(
+                  top: context.contentTopPadding,
+                  bottom: 16 + context.bottomInset,
+                );
+                final detailTitle = appLocalizations.details(
+                  appLocalizations.connection,
+                );
+                final groups = widget.filters.groupsOf(connections);
+                if (groups != null) {
+                  return TrackerInfoGroupedList(
+                    groups: groups,
+                    grouping: widget.filters.value.grouping!,
+                    isLive: true,
+                    controller: _scrollController,
+                    padding: padding,
+                    table: table,
+                    detailTitle: detailTitle,
+                    onClose: _closeConnection,
+                  );
+                }
+                return TrackerInfoAnimatedList(
                   controller: _scrollController,
                   padding: padding,
+                  trackerInfos: connections,
                   table: table,
                   detailTitle: detailTitle,
                   onClose: _closeConnection,
                 );
-              }
-              return TrackerInfoAnimatedList(
-                controller: _scrollController,
-                padding: padding,
-                trackerInfos: connections,
-                table: table,
-                detailTitle: detailTitle,
-                onClose: _closeConnection,
-              );
-            },
+              },
+            ),
           ),
         );
       },

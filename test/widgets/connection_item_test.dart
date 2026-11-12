@@ -70,7 +70,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('DOMAIN-SUFFIX(example.com)'), findsOneWidget);
-    expect(find.text('chrome(1000)'), findsOneWidget);
+    expect(find.text('chrome'), findsOneWidget);
     expect(find.text('1.2.3.4:8080'), findsOneWidget);
     expect(find.text('5.6.7.8:443'), findsOneWidget);
     expect(find.text('example.com'), findsOneWidget);
@@ -171,7 +171,7 @@ void main() {
     expect(rule.dx, lessThan(group.dx));
     expect(group.dx, lessThan(node.dx));
     expect(find.text('example.com:443  5.6.7.8'), findsOneWidget);
-    expect(find.text('chrome(1000)  ·  1.2.3.4:8080'), findsOneWidget);
+    expect(find.text('chrome  ·  1.2.3.4:8080'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
