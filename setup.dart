@@ -24,6 +24,50 @@ const _hostPlatform = {
   'windows': 'windows',
 };
 
+const _distributorUrl = 'https://github.com/chen08209/flutter_distributor.git';
+const _distributorRef = 'v0.6.11-flclash.4';
+const _distributorPath = 'packages/flutter_distributor';
+
+bool isDistributorActivated(String cacheDir) {
+  final packageDir = p.join(cacheDir, 'global_packages', 'flutter_distributor');
+  if (!File(
+    p.join(packageDir, '.dart_tool', 'package_config.json'),
+  ).existsSync()) {
+    return false;
+  }
+  try {
+    final lock = loadYaml(
+      File(p.join(packageDir, 'pubspec.lock')).readAsStringSync(),
+    );
+    return switch (lock) {
+      {
+        'packages': {
+          'flutter_distributor': {
+            'source': 'git',
+            'description': {
+              'url': _distributorUrl,
+              'ref': _distributorRef,
+              'path': _distributorPath,
+            },
+          },
+        },
+      } =>
+        true,
+      _ => false,
+    };
+  } on FileSystemException {
+    return false;
+  } on YamlException {
+    return false;
+  }
+}
+
+String get _pubCacheDir =>
+    Platform.environment['PUB_CACHE'] ??
+    (Platform.isWindows
+        ? p.join(Platform.environment['LOCALAPPDATA']!, 'Pub', 'Cache')
+        : p.join(Platform.environment['HOME']!, '.pub-cache'));
+
 Future<void> main(List<String> args) async {
   final parser = createSetupArgParser();
 
@@ -178,26 +222,34 @@ Future<int> _package(
   final depExit = await _ensureDependencies(platform);
   if (depExit != 0) return depExit;
 
-  final activateResult = await Process.run('dart', [
-    'pub',
-    'global',
-    'activate',
-    '-s',
-    'git',
-    'https://github.com/chen08209/flutter_distributor.git',
-    '--git-ref',
-    'v0.6.11-flclash.4',
-    '--git-path',
-    'packages/flutter_distributor',
-  ]);
-  if (activateResult.exitCode != 0) {
-    stderr.write(activateResult.stderr);
-    return activateResult.exitCode;
+  if (isDistributorActivated(_pubCacheDir)) {
+    stdout.writeln('flutter_distributor $_distributorRef already activated.');
+  } else {
+    final activateResult = await Process.run('dart', [
+      'pub',
+      'global',
+      'activate',
+      '-s',
+      'git',
+      _distributorUrl,
+      '--git-ref',
+      _distributorRef,
+      '--git-path',
+      _distributorPath,
+    ]);
+    if (activateResult.exitCode != 0) {
+      stderr.write(activateResult.stderr);
+      return activateResult.exitCode;
+    }
   }
 
   final process = await Process.start(
-    'flutter_distributor',
+    'dart',
     [
+      'pub',
+      'global',
+      'run',
+      'flutter_distributor:main',
       'package',
       '--skip-clean',
       '--platform',
