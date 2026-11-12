@@ -896,6 +896,7 @@ class SetupAction extends _$SetupAction {
         confirmText: appLocalizations.applyAction,
         cancelText: appLocalizations.cancel,
         dismissible: false,
+        width: pageSourceDialogWidth,
         body: PageSourceRows(changes: changes, choices: follow),
       );
       if (confirmed != true) {
