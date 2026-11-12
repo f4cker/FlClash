@@ -42,7 +42,7 @@ const _setupParams = SetupParams(
 );
 
 const _updateParams = UpdateParams(
-  tun: Tun(),
+  tun: {'enable': false},
   mixedPort: 7890,
   allowLan: true,
   findProcessMode: FindProcessMode.off,

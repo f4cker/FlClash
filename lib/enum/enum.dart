@@ -511,6 +511,37 @@ enum GeneralOverrideKey with OverrideKey {
   final String path;
 }
 
+/// A profile field one of Flash's own controls sets, unless the user hands it
+/// back to the profile.
+@JsonEnum(valueField: 'path')
+enum PageConfigKey {
+  mixedPort('mixed-port'),
+  port('port'),
+  socksPort('socks-port'),
+  redirPort('redir-port'),
+  tproxyPort('tproxy-port'),
+  mode('mode'),
+  allowLan('allow-lan'),
+  logLevel('log-level'),
+  findProcessMode('find-process-mode'),
+  externalController('external-controller'),
+  authentication('authentication'),
+  globalUa('global-ua'),
+  hosts('hosts'),
+  keepAliveIdle('keep-alive-idle'),
+  keepAliveInterval('keep-alive-interval'),
+  disableKeepAlive('disable-keep-alive'),
+  geoAutoUpdate('geo-auto-update'),
+  geoUpdateInterval('geo-update-interval'),
+  geoXUrl('geox-url'),
+  tunEnable('tun.enable'),
+  tunStack('tun.stack');
+
+  const PageConfigKey(this.path);
+
+  final String path;
+}
+
 enum ExternalControllerStatus {
   @JsonValue('')
   close(''),

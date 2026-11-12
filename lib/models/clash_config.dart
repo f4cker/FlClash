@@ -2127,6 +2127,21 @@ Map<String, Object?> _withLegacyGeneralOverrideKeys(Map<String, Object?> json) {
   };
 }
 
+const _followKeysJsonKey = 'follow-profile-keys';
+const _pagePriorityJsonKey = 'page-priority';
+
+Set<PageConfigKey> _followKeysFromJson(List<Object?> json) => {
+  for (final path in json)
+    ?PageConfigKey.values.firstWhereOrNull((key) => key.path == path),
+};
+
+Map<String, Object?> _withLegacyPagePriority(Map<String, Object?> json) {
+  if (json.containsKey(_pagePriorityJsonKey)) {
+    return json;
+  }
+  return {...json, _pagePriorityJsonKey: false};
+}
+
 @freezed
 abstract class PatchClashConfig with _$PatchClashConfig {
   const factory PatchClashConfig({
@@ -2194,12 +2209,21 @@ abstract class PatchClashConfig with _$PatchClashConfig {
     )
     Set<GeneralOverrideKey> generalOverrideKeys,
     @Default(defaultMitm) Mitm mitm,
+    @Default({})
+    @JsonKey(name: _followKeysJsonKey, fromJson: _followKeysFromJson)
+    Set<PageConfigKey> followKeys,
+
+    /// Off until the user confirms the sources an upgrade would change; until
+    /// then the profile is built as before.
+    @Default(true) @JsonKey(name: _pagePriorityJsonKey) bool pagePriority,
   }) = _PatchClashConfig;
 
   factory PatchClashConfig.fromJson(Map<String, Object?> json) =>
       _$PatchClashConfigFromJson(
-        _withLegacyGeneralOverrideKeys(
-          _withLegacyTunOverride(_withLegacyDnsOverrideKeys(json)),
+        _withLegacyPagePriority(
+          _withLegacyGeneralOverrideKeys(
+            _withLegacyTunOverride(_withLegacyDnsOverrideKeys(json)),
+          ),
         ),
       );
 
@@ -2354,26 +2378,92 @@ extension PatchClashConfigExt on PatchClashConfig {
     generalOverrideKeys.difference(const {GeneralOverrideKey.testUrl}),
   );
 
+  Object? pageValue(PageConfigKey key) => switch (key) {
+    PageConfigKey.mixedPort => mixedPort,
+    PageConfigKey.port => port,
+    PageConfigKey.socksPort => socksPort,
+    PageConfigKey.redirPort => redirPort,
+    PageConfigKey.tproxyPort => tproxyPort,
+    PageConfigKey.mode => mode,
+    PageConfigKey.allowLan => allowLan,
+    PageConfigKey.logLevel => logLevel,
+    PageConfigKey.findProcessMode => findProcessMode,
+    PageConfigKey.externalController => (externalController, secret),
+    PageConfigKey.authentication => null,
+    PageConfigKey.globalUa => globalUa,
+    PageConfigKey.hosts => hosts,
+    PageConfigKey.keepAliveIdle => keepAliveIdle,
+    PageConfigKey.keepAliveInterval => keepAliveInterval,
+    PageConfigKey.disableKeepAlive => disableKeepAlive,
+    PageConfigKey.geoAutoUpdate => geoAutoUpdate,
+    PageConfigKey.geoUpdateInterval => geoUpdateInterval,
+    PageConfigKey.geoXUrl => geoXUrl,
+    PageConfigKey.tunEnable => tun.enable,
+    PageConfigKey.tunStack => tun.stack,
+  };
+
+  /// [next], with each followed field whose control the user moved back on
+  /// the page.
+  PatchClashConfig reclaimMoved(PatchClashConfig next) {
+    const equality = DeepCollectionEquality();
+    final moved = {
+      for (final key in next.followKeys)
+        if (!equality.equals(pageValue(key), next.pageValue(key))) key,
+    };
+    if (moved.isEmpty) {
+      return next;
+    }
+    return next.copyWith(followKeys: next.followKeys.difference(moved));
+  }
+
+  /// The TUN the page asks for; one the profile turns on is its own request.
+  bool get pageTunEnable =>
+      tun.enable && usesPage(PageConfigKey.tunEnable, layered: pagePriority);
+
+  PatchClashConfig follow(PageConfigKey key) =>
+      copyWith(followKeys: {...followKeys, key});
+
+  bool usesPage(PageConfigKey key, {required bool layered}) =>
+      !layered || !followKeys.contains(key);
+
+  /// With [layered], a field handed back to the profile is left out, so the
+  /// Core keeps the profile's value.
   UpdateParams toUpdateParams({
     required List<String> authentication,
     required CoreOptions options,
+    bool layered = false,
   }) {
+    T? page<T>(PageConfigKey key, T value) =>
+        usesPage(key, layered: layered) ? value : null;
+    final controller = usesPage(
+      PageConfigKey.externalController,
+      layered: layered,
+    );
+    final tunPatch = layered
+        ? {
+            'enable': ?page(PageConfigKey.tunEnable, tun.enable),
+            'stack': ?page(PageConfigKey.tunStack, tun.stack.name),
+          }
+        : tun.coreJson;
     return UpdateParams(
-      tun: tun,
-      authentication: authentication,
-      allowLan: allowLan,
-      findProcessMode: findProcessMode,
-      mode: mode,
-      logLevel: logLevel,
+      tun: tunPatch.isEmpty ? null : tunPatch,
+      authentication: page(PageConfigKey.authentication, authentication),
+      allowLan: page(PageConfigKey.allowLan, allowLan),
+      findProcessMode: page(PageConfigKey.findProcessMode, findProcessMode),
+      mode: page(PageConfigKey.mode, mode),
+      logLevel: page(PageConfigKey.logLevel, logLevel),
       ipv6: _picked(GeneralOverrideKey.ipv6, ipv6),
       tcpConcurrent: _picked(GeneralOverrideKey.tcpConcurrent, tcpConcurrent),
-      externalController: externalController,
-      secret: secret,
+      externalController: controller ? externalController : null,
+      secret: controller && (!layered || secret.isNotEmpty) ? secret : null,
       unifiedDelay: _picked(GeneralOverrideKey.unifiedDelay, unifiedDelay),
-      mixedPort: mixedPort,
-      geoAutoUpdate: geoAutoUpdate,
-      geoUpdateInterval: geoUpdateInterval,
-      geoXUrl: geoXUrl.raw,
+      mixedPort: page(PageConfigKey.mixedPort, mixedPort),
+      geoAutoUpdate: page(PageConfigKey.geoAutoUpdate, geoAutoUpdate),
+      geoUpdateInterval: page(
+        PageConfigKey.geoUpdateInterval,
+        geoUpdateInterval,
+      ),
+      geoXUrl: page(PageConfigKey.geoXUrl, geoXUrl.raw),
       options: options,
     );
   }

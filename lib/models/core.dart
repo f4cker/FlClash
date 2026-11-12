@@ -61,24 +61,25 @@ abstract class ProfileBase with _$ProfileBase {
 
 @freezed
 abstract class UpdateParams with _$UpdateParams {
+  /// A field left null is one the Core keeps as the profile set it.
+  @JsonSerializable(includeIfNull: false)
   const factory UpdateParams({
-    @JsonKey(toJson: _tunCoreJson) required Tun tun,
-    @JsonKey(name: 'mixed-port') required int mixedPort,
-    @JsonKey(name: 'allow-lan') required bool allowLan,
-    @JsonKey(name: 'find-process-mode')
-    required FindProcessMode findProcessMode,
-    required Mode mode,
-    @JsonKey(name: 'log-level') required LogLevel logLevel,
+    Map<String, Object?>? tun,
+    @JsonKey(name: 'mixed-port') int? mixedPort,
+    @JsonKey(name: 'allow-lan') bool? allowLan,
+    @JsonKey(name: 'find-process-mode') FindProcessMode? findProcessMode,
+    Mode? mode,
+    @JsonKey(name: 'log-level') LogLevel? logLevel,
     bool? ipv6,
     @JsonKey(name: 'tcp-concurrent') bool? tcpConcurrent,
     @JsonKey(name: 'external-controller')
-    required ExternalControllerStatus externalController,
-    @Default('') String secret,
+    ExternalControllerStatus? externalController,
+    String? secret,
     @JsonKey(name: 'unified-delay') bool? unifiedDelay,
-    @Default([]) List<String> authentication,
-    @Default(false) @JsonKey(name: 'geo-auto-update') bool geoAutoUpdate,
-    @Default(24) @JsonKey(name: 'geo-update-interval') int geoUpdateInterval,
-    @Default({}) @JsonKey(name: 'geox-url') Map<String, String> geoXUrl,
+    List<String>? authentication,
+    @JsonKey(name: 'geo-auto-update') bool? geoAutoUpdate,
+    @JsonKey(name: 'geo-update-interval') int? geoUpdateInterval,
+    @JsonKey(name: 'geox-url') Map<String, String>? geoXUrl,
     required CoreOptions options,
   }) = _UpdateParams;
 
@@ -202,8 +203,6 @@ abstract class MitmBody with _$MitmBody {
   factory MitmBody.fromJson(Map<String, Object?> json) =>
       _$MitmBodyFromJson(json);
 }
-
-Map<String, Object?> _tunCoreJson(Tun tun) => tun.coreJson;
 
 @freezed
 abstract class VpnOptions with _$VpnOptions {
