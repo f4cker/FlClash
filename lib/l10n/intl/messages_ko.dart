@@ -1051,6 +1051,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "memoryEstimateSharedDesc": MessageLookupByLibrary.simpleMessage(
       "코어는 앱 프로세스 안에서 실행됩니다. 코어의 점유량은 런타임 통계로 추정하며, 나머지는 앱 및 공유 메모리로 집계합니다.",
     ),
+    "memoryGoRuntimeDescription": MessageLookupByLibrary.simpleMessage(
+      "Go 런타임 통계입니다. 각 값은 프로세스 상주 메모리의 구성 항목이 아닙니다.",
+    ),
     "memoryInfo": MessageLookupByLibrary.simpleMessage("메모리 정보"),
     "memoryInfoDesc": MessageLookupByLibrary.simpleMessage("앱과 코어가 사용하는 메모리"),
     "memoryReleased": MessageLookupByLibrary.simpleMessage("메모리를 해제했습니다"),

@@ -370,6 +370,7 @@
   "memoryCoreHeapIdle": "Свободная куча",
   "memoryCoreStack": "Стеки горутин",
   "memoryCoreRuntime": "Накладные расходы среды",
+  "memoryGoRuntimeDescription": "Статистика среды выполнения Go; эти значения не являются составляющими резидентной памяти процесса.",
   "memoryCoreNotRunning": "Ядро не запущено",
   "memoryAppResident": "Резидентная память",
   "memoryAppShared": "Приложение и общая",

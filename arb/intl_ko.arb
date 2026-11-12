@@ -370,6 +370,7 @@
   "memoryCoreHeapIdle": "유휴 힙",
   "memoryCoreStack": "고루틴 스택",
   "memoryCoreRuntime": "런타임 오버헤드",
+  "memoryGoRuntimeDescription": "Go 런타임 통계입니다. 각 값은 프로세스 상주 메모리의 구성 항목이 아닙니다.",
   "memoryCoreNotRunning": "코어가 실행 중이 아닙니다",
   "memoryAppResident": "상주 메모리",
   "memoryAppShared": "앱 및 공유",

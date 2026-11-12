@@ -1127,9 +1127,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Certificat installé",
     ),
-    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
-      "L’autorisation de la liste des apps a été refusée ; les apps installées ne peuvent donc pas être listées. Veuillez l’accorder manuellement dans les réglages du système.",
-    ),
+    "installedAppsPermissionDeniedMessage":
+        MessageLookupByLibrary.simpleMessage(
+          "L’autorisation de la liste des apps a été refusée ; les apps installées ne peuvent donc pas être listées. Veuillez l’accorder manuellement dans les réglages du système.",
+        ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "Ce système masque la liste des apps installées tant que l’autorisation n’est pas accordée. Accordez-la pour configurer le proxy par app.",
     ),
@@ -1341,6 +1342,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "memoryEstimateSharedDesc": MessageLookupByLibrary.simpleMessage(
       "Le cœur s’exécute dans le processus de l’app. Sa part est estimée à partir des statistiques du runtime, et le reste compte comme mémoire de l’app et partagée.",
+    ),
+    "memoryGoRuntimeDescription": MessageLookupByLibrary.simpleMessage(
+      "Statistiques du runtime Go : ces valeurs ne constituent pas une répartition de la mémoire résidente du processus.",
     ),
     "memoryInfo": MessageLookupByLibrary.simpleMessage("Infos mémoire"),
     "memoryInfoDesc": MessageLookupByLibrary.simpleMessage(

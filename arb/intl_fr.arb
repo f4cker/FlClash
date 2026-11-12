@@ -370,6 +370,7 @@
   "memoryCoreHeapIdle": "Tas inactif",
   "memoryCoreStack": "Piles de goroutines",
   "memoryCoreRuntime": "Surcharge du runtime",
+  "memoryGoRuntimeDescription": "Statistiques du runtime Go : ces valeurs ne constituent pas une répartition de la mémoire résidente du processus.",
   "memoryCoreNotRunning": "Le cœur n’est pas en cours d’exécution",
   "memoryAppResident": "Mémoire résidente",
   "memoryAppShared": "App et partagée",

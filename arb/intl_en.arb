@@ -370,6 +370,7 @@
   "memoryCoreHeapIdle": "Heap idle",
   "memoryCoreStack": "Goroutine stacks",
   "memoryCoreRuntime": "Runtime overhead",
+  "memoryGoRuntimeDescription": "Go runtime statistics; these values are not a breakdown of process resident memory.",
   "memoryCoreNotRunning": "Core is not running",
   "memoryAppResident": "Resident memory",
   "memoryAppShared": "App & shared",

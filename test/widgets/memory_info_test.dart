@@ -581,17 +581,24 @@ void main() {
       expect(inSheet('App'), findsOneWidget);
       expect(find.text('12MB'), findsOneWidget);
       expect(find.text('Resident memory'), findsOneWidget);
-      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('12.0 MB'), findsOneWidget);
       expect(inSheet('Core'), findsOneWidget);
       expect(find.text('4MB'), findsOneWidget);
       expect(find.text('Heap in use'), findsOneWidget);
-      expect(find.text('50%'), findsOneWidget);
+      expect(find.text('2.0 MB'), findsOneWidget);
       expect(find.text('Heap idle'), findsOneWidget);
-      expect(find.text('25%'), findsOneWidget);
+      expect(find.text('1.0 MB'), findsOneWidget);
       expect(find.text('Goroutine stacks'), findsOneWidget);
-      expect(find.text('12.5%'), findsOneWidget);
+      expect(find.text('0.5 MB'), findsOneWidget);
       expect(find.text('Runtime overhead'), findsOneWidget);
-      expect(find.text('Other'), findsOneWidget);
+      expect(find.text('Other'), findsNothing);
+      expect(find.text('0.3 MB'), findsOneWidget);
+      expect(
+        find.text(
+          'Go runtime statistics; these values are not a breakdown of process resident memory.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Core is not running'), findsNothing);
       expect(find.text(_estimateDesc), findsOneWidget);
       expect(find.text('App & shared'), findsNothing);
@@ -673,14 +680,14 @@ void main() {
         ),
       );
 
-      expect(find.text('37.5%'), findsOneWidget);
-      expect(find.text('75%'), findsNothing);
+      expect(find.text('1.5 MB'), findsOneWidget);
+      expect(find.text('6.0 MB'), findsNothing);
 
-      heapInuse = 3 * 1024 * 1024;
+      heapInuse = 6 * 1024 * 1024;
       await tester.pump(const Duration(seconds: 2));
       await tester.pump();
 
-      expect(find.text('75%'), findsOneWidget);
+      expect(find.text('6.0 MB'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });

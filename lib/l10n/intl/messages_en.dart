@@ -1048,9 +1048,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Certificate installed",
     ),
-    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
-      "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
-    ),
+    "installedAppsPermissionDeniedMessage":
+        MessageLookupByLibrary.simpleMessage(
+          "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
+        ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "This system hides the installed app list until the permission is granted. Authorize it to configure the per-app proxy.",
     ),
@@ -1242,6 +1243,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "memoryEstimateSharedDesc": MessageLookupByLibrary.simpleMessage(
       "The Core runs inside the app process. Its share is estimated from runtime stats, and the rest counts as app and shared memory.",
+    ),
+    "memoryGoRuntimeDescription": MessageLookupByLibrary.simpleMessage(
+      "Go runtime statistics; these values are not a breakdown of process resident memory.",
     ),
     "memoryInfo": MessageLookupByLibrary.simpleMessage("Memory info"),
     "memoryInfoDesc": MessageLookupByLibrary.simpleMessage(

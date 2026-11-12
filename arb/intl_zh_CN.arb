@@ -370,6 +370,7 @@
   "memoryCoreHeapIdle": "堆内存空闲",
   "memoryCoreStack": "协程栈",
   "memoryCoreRuntime": "运行时开销",
+  "memoryGoRuntimeDescription": "Go 运行时统计；各项不代表进程常驻内存的构成。",
   "memoryCoreNotRunning": "内核未运行",
   "memoryAppResident": "常驻内存",
   "memoryAppShared": "应用及共享",
