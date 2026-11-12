@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:path/path.dart';
 
@@ -534,6 +535,60 @@ MountSourceItem mountSourceItem(
     record: record,
   );
 }
+
+/// Viewer-only notes; names only from the readback of the revision the Core
+/// runs, as a source read since is not what runs until applied.
+String annotateMountProviders(
+  String yaml,
+  MountSetup mounts,
+  MountRuntimeState? runtime,
+  AppLocalizations appLocalizations,
+) {
+  final report = runtime?.report;
+  final running =
+      runtime != null &&
+      !runtime.blocked &&
+      report != null &&
+      report.target == mounts.target &&
+      report.revision == mounts.revision;
+  final loaded = <String, List<String>>{
+    if (running)
+      for (final source in report.sources)
+        if (runtime.sources.any(
+          (it) => it.provider == source.provider && it.present && it.matches,
+        ))
+          source.provider: [for (final node in source.nodes) node.name],
+  };
+  final labels = {
+    for (final source in mounts.sources)
+      mountProviderName(source.id): source.label,
+  };
+  final key = RegExp(r'^( *)(' + mountProviderPrefix + r'\d+):\s*$');
+  final out = <String>[];
+  for (final line in yaml.split('\n')) {
+    final match = key.firstMatch(line);
+    final label = labels[match?.group(2)];
+    if (match != null && label != null) {
+      final indent = match.group(1)!;
+      final name = _commentSafe(label);
+      switch (loaded[match.group(2)]) {
+        case final nodes?:
+          out.add(
+            '$indent# ${appLocalizations.mountViewerSource(name, nodes.length)}',
+          );
+          out.addAll([
+            for (final node in nodes) '$indent#   - ${_commentSafe(node)}',
+          ]);
+        case null:
+          out.add('$indent# ${appLocalizations.mountViewerPending(name)}');
+      }
+    }
+    out.add(line);
+  }
+  return out.join('\n');
+}
+
+String _commentSafe(String text) => text.replaceAll(RegExp(r'[\r\n]+'), ' ');
 
 class MountSourceInUse implements Exception {
   const MountSourceInUse();

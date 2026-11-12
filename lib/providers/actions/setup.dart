@@ -731,7 +731,7 @@ class SetupAction extends _$SetupAction {
       // The viewer shows what the Core runs, so the mounts go in as they
       // do on apply.
       final mounts = setupState.mounts;
-      return switch (res.base) {
+      final yaml = switch (res.base) {
         final base? => await _core.buildProfile(base: base, mounts: mounts),
         null when mounts != null => await _core.buildProfile(
           config: res.yaml,
@@ -739,6 +739,22 @@ class SetupAction extends _$SetupAction {
         ),
         null => res.yaml,
       };
+      if (mounts == null) return yaml;
+      MountRuntimeState? runtime;
+      try {
+        runtime = await _core.getMountState();
+      } catch (error) {
+        commonPrint.log(
+          'mount state unread: ${compactError(error)}',
+          logLevel: coreFailureLogLevel(error),
+        );
+      }
+      return annotateMountProviders(
+        yaml,
+        mounts,
+        runtime,
+        currentAppLocalizations,
+      );
     } catch (e) {
       dialogs.showBanner(e.toString(), level: BannerLevel.error);
     }

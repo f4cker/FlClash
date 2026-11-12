@@ -645,6 +645,8 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       return MountBanner(
         lines: [...lost, ...details],
         level: MountBannerLevel.info,
+        actionLabel: appLocalizations.mountShowLess,
+        onAction: () => setState(() => _noticesOpen = false),
       );
     }
     final nodes = tailscale + unsupported > 0;

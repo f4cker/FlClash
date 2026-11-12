@@ -1,6 +1,8 @@
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -456,6 +458,124 @@ void main() {
         mountCardSummaryOf(target.copyWith(sourceIds: const []), const {}),
         isNull,
       );
+    });
+  });
+
+  group('the viewer notes', () {
+    late AppLocalizations l10n;
+    setUpAll(
+      () async => l10n = await AppLocalizations.load(const Locale('zh', 'CN')),
+    );
+
+    const yaml = '''
+proxy-providers:
+  flash-mount-2:
+    path: /p/2.yaml
+    type: file
+  flash-mount-3:
+    path: /p/3.yaml
+    type: file
+proxy-groups:
+  - {name: "Proxy", type: select, use: [flash-mount-2, flash-mount-3]}
+''';
+    const mounts = MountSetup(
+      target: 1,
+      revision: 'r2',
+      sources: [
+        MountSource(id: 2, label: '机场B', path: '/p/2.yaml'),
+        MountSource(id: 3, label: '机场C', path: '/p/3.yaml'),
+      ],
+    );
+    MountRuntimeState runtime({
+      String revision = 'r2',
+      bool blocked = false,
+      bool matches = true,
+    }) => MountRuntimeState(
+      blocked: blocked,
+      report: MountReport(
+        target: 1,
+        revision: revision,
+        sources: const [
+          MountSourceReport(
+            id: 2,
+            provider: 'flash-mount-2',
+            status: MountSourceStatus.nodes,
+            nodes: [MountNode(name: 'B-美国-01', original: 'B-美国-01')],
+          ),
+          MountSourceReport(
+            id: 3,
+            provider: 'flash-mount-3',
+            status: MountSourceStatus.nodes,
+            nodes: [
+              MountNode(name: 'A-香港-01 (机场C)', original: 'A-香港-01'),
+              MountNode(name: 'C-韩国-01', original: 'C-韩国-01'),
+            ],
+          ),
+        ],
+      ),
+      sources: [
+        const MountRuntimeSource(
+          id: 2,
+          provider: 'flash-mount-2',
+          present: true,
+          count: 1,
+          matches: true,
+        ),
+        MountRuntimeSource(
+          id: 3,
+          provider: 'flash-mount-3',
+          present: true,
+          count: 2,
+          matches: matches,
+        ),
+      ],
+    );
+
+    test('name the nodes the running revision loaded, after rename', () {
+      final text = annotateMountProviders(yaml, mounts, runtime(), l10n);
+      expect(
+        text,
+        contains(
+          '  # 挂载：机场C · 2 个节点\n'
+          '  #   - A-香港-01 (机场C)\n'
+          '  #   - C-韩国-01\n'
+          '  flash-mount-3:\n',
+        ),
+      );
+      expect(text, contains('  # 挂载：机场B · 1 个节点\n  #   - B-美国-01\n'));
+      expect(text.replaceAll(RegExp(r'^ *#.*\n', multiLine: true), ''), yaml);
+    });
+
+    test('a revision read but not applied names no nodes', () {
+      final text = annotateMountProviders(
+        yaml,
+        mounts,
+        runtime(revision: 'r1'),
+        l10n,
+      );
+      expect(text, contains('  # 挂载：机场B · 节点列表待确认\n  flash-mount-2:\n'));
+      expect(text, contains('  # 挂载：机场C · 节点列表待确认\n  flash-mount-3:\n'));
+      expect(text, isNot(contains('B-美国-01')));
+      expect(text, isNot(contains('C-韩国-01')));
+    });
+
+    test('a blocked run, an unread state, or a provider the Core does not '
+        'hold as reported names no nodes', () {
+      for (final state in [runtime(blocked: true), null]) {
+        expect(
+          annotateMountProviders(yaml, mounts, state, l10n),
+          isNot(contains('B-美国-01')),
+        );
+      }
+      final partial = annotateMountProviders(
+        yaml,
+        mounts,
+        runtime(matches: false),
+        l10n,
+      );
+      expect(partial, contains('#   - B-美国-01'));
+      expect(partial, contains('# 挂载：机场C · 节点列表待确认'));
+      expect(partial, isNot(contains('C-韩国-01')));
     });
   });
 }

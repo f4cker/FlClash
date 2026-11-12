@@ -12785,6 +12785,31 @@ class AppLocalizations {
     return Intl.message('Details', name: 'mountDetails', desc: '', args: []);
   }
 
+  /// `Show less`
+  String get mountShowLess {
+    return Intl.message('Show less', name: 'mountShowLess', desc: '', args: []);
+  }
+
+  /// `Mount: {name} · {count, plural, =1{1 node} other{{count} nodes}}`
+  String mountViewerSource(Object name, num count) {
+    return Intl.message(
+      'Mount: $name · ${Intl.plural(count, one: '1 node', other: '$count nodes')}',
+      name: 'mountViewerSource',
+      desc: '',
+      args: [name, count],
+    );
+  }
+
+  /// `Mount: {name} · node list not yet confirmed`
+  String mountViewerPending(Object name) {
+    return Intl.message(
+      'Mount: $name · node list not yet confirmed',
+      name: 'mountViewerPending',
+      desc: '',
+      args: [name],
+    );
+  }
+
   /// `Matching node names use the subscription name`
   String get mountSameNameShort {
     return Intl.message(

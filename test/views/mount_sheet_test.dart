@@ -62,7 +62,7 @@ Future<void> pumpSheet(
 Finder rowOf(String name) =>
     find.ancestor(of: find.text(name), matching: find.byType(MountSourceRow));
 
-/// Opens the collapsed notices banner, which stays open, design §13.2.
+/// Opens the collapsed notices banner, design §13.2.
 Future<void> openDetails(WidgetTester tester) async {
   final details = find.text(currentAppLocalizations.mountDetails);
   expect(details, findsOneWidget);
@@ -1561,7 +1561,7 @@ void main() {
     ('nodes and groups', false, 2, true, 'some'),
   ]) {
     testWidgets('a notices banner for $name is one line with 详情 that opens '
-        'in place', (tester) async {
+        'in place, and 收起 folds it back', (tester) async {
       final mounts =
           FakeMounts(
               panelOf(
@@ -1609,6 +1609,13 @@ void main() {
         ],
       ]);
       expect(find.text(line), findsNothing);
+
+      await tester.tap(find.text(l10n.mountShowLess));
+      await tester.pumpAndSettle();
+      banner = tester.widget<MountBanner>(find.byType(MountBanner));
+      expect(banner.lines, [line]);
+      expect(find.text(l10n.mountDetails), findsOneWidget);
+      expect(find.text(l10n.mountShowLess), findsNothing);
     });
   }
 

@@ -2047,6 +2047,95 @@ void main() {
       ).called(1);
     });
 
+    for (final (revision, found) in [('r', true), ('r0', false)]) {
+      test('a search of the preview ${found ? 'finds' : 'does not find'} a '
+          'mounted node when the Core runs ${found ? 'this' : 'another'} '
+          'revision', () async {
+        final profile = Profile.normal(label: 'p');
+        const mounts = MountSetup(
+          target: 1,
+          revision: 'r',
+          sources: [MountSource(id: 2, label: 'C', path: '/profiles/2.yaml')],
+        );
+        final core = _MockCoreHandlerInterface();
+        when(
+          () => core.getProfileBase(any()),
+        ).thenAnswer((_) async => const ProfileBase(config: {}, digest: 'd'));
+        final built = File(
+          join(await appPath.homeDirPath, coreSpillDirectoryName, 'n.yaml'),
+        );
+        when(
+          () => core.buildProfile(
+            base: any(named: 'base'),
+            config: any(named: 'config'),
+            mounts: any(named: 'mounts'),
+          ),
+        ).thenAnswer((_) async {
+          await built.create(recursive: true);
+          await built.writeAsString(
+            'proxy-providers:\n  flash-mount-2:\n    type: file\n',
+          );
+          return built.path;
+        });
+        when(() => core.getMountState()).thenAnswer(
+          (_) async => MountRuntimeState(
+            report: MountReport(
+              target: 1,
+              revision: revision,
+              sources: const [
+                MountSourceReport(
+                  id: 2,
+                  provider: 'flash-mount-2',
+                  status: MountSourceStatus.nodes,
+                  nodes: [MountNode(name: 'HK (C)', original: 'HK')],
+                ),
+              ],
+            ),
+            sources: const [
+              MountRuntimeSource(
+                id: 2,
+                provider: 'flash-mount-2',
+                present: true,
+                count: 1,
+                matches: true,
+              ),
+            ],
+          ),
+        );
+        final scoped = ProviderContainer(
+          overrides: [
+            profilesProvider.overrideWith(() => TestProfiles([profile])),
+            setupStateProvider.overrideWith(
+              (_, profileId) => nullProfileSetupState.copyWith(
+                profileId: profileId,
+                mounts: mounts,
+              ),
+            ),
+            coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+            setupActionProvider.overrideWith(SetupAction.new),
+          ],
+        );
+        addTearDown(scoped.dispose);
+
+        final yaml = await scoped
+            .read(setupActionProvider.notifier)
+            .getProfileWithId(profile.id);
+
+        final l10n = currentAppLocalizations;
+        expect(yaml.contains('HK (C)'), found);
+        expect(
+          yaml,
+          startsWith(
+            found
+                ? 'proxy-providers:\n  # ${l10n.mountViewerSource('C', 1)}\n'
+                      '  #   - HK (C)\n  flash-mount-2:\n'
+                : 'proxy-providers:\n  # ${l10n.mountViewerPending('C')}\n'
+                      '  flash-mount-2:\n',
+          ),
+        );
+      });
+    }
+
     test(
       'the extend page reads only the outbounds of a profile file',
       () async {
