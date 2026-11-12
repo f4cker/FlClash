@@ -7,6 +7,7 @@ import 'package:fl_clash/common/boot_record.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/system_dns.dart';
 import 'package:fl_clash/core/desktop/helper_client.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/plugins/app.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
@@ -139,6 +140,9 @@ class System {
       isWindows || (isLinux && !isAppImage && _hasSystemd);
 
   Future<bool> checkIsAdmin() async {
+    if (isMacOS && macosManagedHelperBuild) {
+      return await macosHelperClient.status() == MacHelperState.enabled;
+    }
     if (hasHelperService) {
       return await helperClient.readiness() == HelperReadiness.ready;
     }
@@ -211,6 +215,11 @@ class System {
   }
 
   Future<AuthorizeCode> authorizeCore() async {
+    if (isMacOS && macosManagedHelperBuild) {
+      return await macosHelperClient.status() == MacHelperState.enabled
+          ? AuthorizeCode.none
+          : AuthorizeCode.error;
+    }
     if (system.isAndroid) {
       return AuthorizeCode.error;
     }

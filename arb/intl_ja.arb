@@ -1561,5 +1561,21 @@
   "tsExitTurnOff": "Turn off exit node",
   "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
-  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed"
+  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
+  "macHelperTitle": "Flash ヘルパー",
+  "macHelperOff": "準備未完了",
+  "macHelperOn": "ヘルパーの準備完了（TUN の状態ではありません）",
+  "macHelperPending": "管理者承認付きインストーラが必要",
+  "macHelperUnavailable": "ヘルパーを利用できません",
+  "macHelperCannotUse": "このバージョンではヘルパーを使用できません",
+  "macHelperRepair": "ヘルパーの修復が必要です",
+  "macHelperStopUnknown": "ヘルパーの停止を確認できませんでした",
+  "macHelperTurnOn": "インストール手順",
+  "macHelperTurnOff": "無効化の手順",
+  "macHelperOpenSettings": "インストーラの手順",
+  "macHelperTryAgain": "再確認",
+  "macHelperRepairAction": "修復の手順",
+  "macHelperCheckAgain": "再確認",
+  "macHelperUnavailableDetail": "現在 Flash はヘルパーに接続できないため、TUN を開始できません。TUN の設定は保持されています。",
+  "macHelperPendingDetail": "Flash のインストーラで、管理者の承認を得てヘルパーをインストール・更新・修復・無効化してください。無効化は Flash のアンインストールではなく、再承認が必要になる場合があります。インストーラの完了だけではヘルパーや TUN の動作は確認できません。TUN 設定は保持されます。"
 }

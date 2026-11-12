@@ -1561,5 +1561,21 @@
   "tsExitTurnOff": "关闭出口",
   "tsExitOffNoOption": "关闭后无剩余选项",
   "tsViewerExit": "{group} · 由 Flash 添加 · {member} · 手动策略组：{groups}",
-  "tsViewerExitUnconfirmed": "Tailscale 出口 · 当前运行的出口和分组待确认"
+  "tsViewerExitUnconfirmed": "Tailscale 出口 · 当前运行的出口和分组待确认",
+  "macHelperTitle": "Flash 助手",
+  "macHelperOff": "尚未就绪",
+  "macHelperOn": "助手已就绪（不代表 TUN 已运行）",
+  "macHelperPending": "需要管理员批准的安装程序",
+  "macHelperUnavailable": "助手暂不可用",
+  "macHelperCannotUse": "此版本不能启用助手",
+  "macHelperRepair": "助手需要修复",
+  "macHelperStopUnknown": "未能确认助手是否已停用",
+  "macHelperTurnOn": "查看安装说明",
+  "macHelperTurnOff": "查看停用说明",
+  "macHelperOpenSettings": "查看安装程序说明",
+  "macHelperTryAgain": "重新检查",
+  "macHelperRepairAction": "查看修复说明",
+  "macHelperCheckAgain": "重新检查",
+  "macHelperUnavailableDetail": "Flash 现在连不上助手，TUN 暂时无法启动。你的 TUN 设置已保留。",
+  "macHelperPendingDetail": "请通过 Flash 的安装程序安装、更新、修复或停用助手，并明确批准管理员操作。停用不等于卸载 Flash，后续操作可能需要再次授权。安装程序完成不代表助手已就绪或 TUN 已运行。你的 TUN 设置已保留。"
 }

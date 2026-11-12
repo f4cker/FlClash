@@ -1276,6 +1276,36 @@ class MessageLookup extends MessageLookupByLibrary {
     "logsTest": MessageLookupByLibrary.simpleMessage("로그 테스트"),
     "loopback": MessageLookupByLibrary.simpleMessage("UWP 루프백 예외"),
     "loose": MessageLookupByLibrary.simpleMessage("넓게"),
+    "macHelperCannotUse": MessageLookupByLibrary.simpleMessage(
+      "이 버전에서는 도우미를 사용할 수 없음",
+    ),
+    "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage("다시 확인"),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage("준비되지 않음"),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage(
+      "도우미 준비됨(TUN 실행 상태 아님)",
+    ),
+    "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage("설치 프로그램 안내"),
+    "macHelperPending": MessageLookupByLibrary.simpleMessage(
+      "관리자 승인 설치 프로그램 필요",
+    ),
+    "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
+      "Flash 설치 프로그램에서 관리자의 명시적 승인을 받아 도우미를 설치, 업데이트, 복구하거나 끄세요. 끄기는 Flash 삭제가 아니며 다시 승인이 필요할 수 있습니다. 설치 완료만으로 도우미나 TUN 실행을 확인할 수 없습니다. TUN 설정은 유지됩니다.",
+    ),
+    "macHelperRepair": MessageLookupByLibrary.simpleMessage("도우미 복구 필요"),
+    "macHelperRepairAction": MessageLookupByLibrary.simpleMessage("복구 안내"),
+    "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
+      "도우미가 꺼졌는지 확인할 수 없음",
+    ),
+    "macHelperTitle": MessageLookupByLibrary.simpleMessage("Flash 도우미"),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("다시 확인"),
+    "macHelperTurnOff": MessageLookupByLibrary.simpleMessage("끄기 안내"),
+    "macHelperTurnOn": MessageLookupByLibrary.simpleMessage("설치 안내"),
+    "macHelperUnavailable": MessageLookupByLibrary.simpleMessage(
+      "도우미를 사용할 수 없음",
+    ),
+    "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
+      "현재 Flash가 도우미에 연결할 수 없어 TUN을 시작할 수 없습니다. TUN 설정은 유지됩니다.",
+    ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("로컬 매핑"),
     "matchCase": MessageLookupByLibrary.simpleMessage("대/소문자 구분"),
     "matchSourceIp": MessageLookupByLibrary.simpleMessage("출발지 IP 일치"),

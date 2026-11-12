@@ -7753,7 +7753,8 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one:
+          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -13702,6 +13703,161 @@ class AppLocalizations {
     return Intl.message(
       'Tailscale exit · Current exit node and groups are unconfirmed',
       name: 'tsViewerExitUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Flash Helper`
+  String get macHelperTitle {
+    return Intl.message(
+      'Flash Helper',
+      name: 'macHelperTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not ready`
+  String get macHelperOff {
+    return Intl.message('Not ready', name: 'macHelperOff', desc: '', args: []);
+  }
+
+  /// `Helper ready (not TUN status)`
+  String get macHelperOn {
+    return Intl.message(
+      'Helper ready (not TUN status)',
+      name: 'macHelperOn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Administrator-approved installer required`
+  String get macHelperPending {
+    return Intl.message(
+      'Administrator-approved installer required',
+      name: 'macHelperPending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper unavailable`
+  String get macHelperUnavailable {
+    return Intl.message(
+      'Helper unavailable',
+      name: 'macHelperUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This version can’t use the helper`
+  String get macHelperCannotUse {
+    return Intl.message(
+      'This version can’t use the helper',
+      name: 'macHelperCannotUse',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper needs repair`
+  String get macHelperRepair {
+    return Intl.message(
+      'Helper needs repair',
+      name: 'macHelperRepair',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t confirm the helper was turned off`
+  String get macHelperStopUnknown {
+    return Intl.message(
+      'Couldn’t confirm the helper was turned off',
+      name: 'macHelperStopUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Installer Instructions`
+  String get macHelperTurnOn {
+    return Intl.message(
+      'Installer Instructions',
+      name: 'macHelperTurnOn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Turn-Off Instructions`
+  String get macHelperTurnOff {
+    return Intl.message(
+      'Turn-Off Instructions',
+      name: 'macHelperTurnOff',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Installer Instructions`
+  String get macHelperOpenSettings {
+    return Intl.message(
+      'Installer Instructions',
+      name: 'macHelperOpenSettings',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Check Again`
+  String get macHelperTryAgain {
+    return Intl.message(
+      'Check Again',
+      name: 'macHelperTryAgain',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Repair Instructions`
+  String get macHelperRepairAction {
+    return Intl.message(
+      'Repair Instructions',
+      name: 'macHelperRepairAction',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Check Again`
+  String get macHelperCheckAgain {
+    return Intl.message(
+      'Check Again',
+      name: 'macHelperCheckAgain',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.`
+  String get macHelperUnavailableDetail {
+    return Intl.message(
+      'Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.',
+      name: 'macHelperUnavailableDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.`
+  String get macHelperPendingDetail {
+    return Intl.message(
+      'Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.',
+      name: 'macHelperPendingDetail',
       desc: '',
       args: [],
     );

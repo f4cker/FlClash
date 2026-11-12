@@ -27,6 +27,7 @@ class MainFlutterWindow: NSWindow {
             }
         }
         
+        ManagedHelperChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         ProcessAppChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         RegisterGeneratedPlugins(registry: flutterViewController)
         super.awakeFromNib()

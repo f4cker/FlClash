@@ -1561,5 +1561,21 @@
   "tsExitTurnOff": "Turn off exit node",
   "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
-  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed"
+  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
+  "macHelperTitle": "Asistente de Flash",
+  "macHelperOff": "No está listo",
+  "macHelperOn": "Asistente listo (no indica el estado de TUN)",
+  "macHelperPending": "Se requiere el instalador aprobado por un administrador",
+  "macHelperUnavailable": "Asistente no disponible",
+  "macHelperCannotUse": "Esta versión no puede usar el asistente",
+  "macHelperRepair": "El asistente necesita reparación",
+  "macHelperStopUnknown": "No se pudo confirmar la desactivación del asistente",
+  "macHelperTurnOn": "Instrucciones de instalación",
+  "macHelperTurnOff": "Instrucciones para desactivar",
+  "macHelperOpenSettings": "Instrucciones del instalador",
+  "macHelperTryAgain": "Comprobar de nuevo",
+  "macHelperRepairAction": "Instrucciones de reparación",
+  "macHelperCheckAgain": "Volver a comprobar",
+  "macHelperUnavailableDetail": "Flash no puede conectar con el asistente ahora, por lo que TUN no puede iniciarse. Se conserva tu ajuste de TUN.",
+  "macHelperPendingDetail": "Usa el instalador de Flash con aprobación explícita de un administrador para instalar, actualizar, reparar o desactivar el asistente. Desactivarlo no desinstala Flash y puede requerir aprobación otra vez. Completar la instalación no confirma que el asistente o TUN estén funcionando. Tu ajuste de TUN se conserva."
 }

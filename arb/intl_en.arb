@@ -1561,5 +1561,21 @@
   "tsExitTurnOff": "Turn off exit node",
   "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
-  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed"
+  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
+  "macHelperTitle": "Flash Helper",
+  "macHelperOff": "Not ready",
+  "macHelperOn": "Helper ready (not TUN status)",
+  "macHelperPending": "Administrator-approved installer required",
+  "macHelperUnavailable": "Helper unavailable",
+  "macHelperCannotUse": "This version can’t use the helper",
+  "macHelperRepair": "Helper needs repair",
+  "macHelperStopUnknown": "Couldn’t confirm the helper was turned off",
+  "macHelperTurnOn": "Installer Instructions",
+  "macHelperTurnOff": "Turn-Off Instructions",
+  "macHelperOpenSettings": "Installer Instructions",
+  "macHelperTryAgain": "Check Again",
+  "macHelperRepairAction": "Repair Instructions",
+  "macHelperCheckAgain": "Check Again",
+  "macHelperUnavailableDetail": "Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.",
+  "macHelperPendingDetail": "Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved."
 }

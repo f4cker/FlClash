@@ -1032,6 +1032,15 @@ class SetupAction extends _$SetupAction {
     if (!enableTun || ref.read(safeModeProvider)) {
       return true;
     }
+    if (system.isMacOS && macosManagedHelperBuild) {
+      final state = await macosHelperClient.status();
+      if (state != MacHelperState.enabled) {
+        throw MessageException(
+          currentAppLocalizations.macHelperUnavailableDetail,
+        );
+      }
+      return true;
+    }
     final authorizationState = ref.read(authorizedTunEnableProvider);
     if (authorizationState != TunAuthorizationState.none) {
       return true;

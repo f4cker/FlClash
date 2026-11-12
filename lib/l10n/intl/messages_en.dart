@@ -1282,10 +1282,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Certificate installed",
     ),
-    "installedAppsPermissionDeniedMessage":
-        MessageLookupByLibrary.simpleMessage(
-          "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
-        ),
+    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
+      "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
+    ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "This system hides the installed app list until the permission is granted. Authorize it to configure the per-app proxy.",
     ),
@@ -1464,6 +1463,46 @@ class MessageLookup extends MessageLookupByLibrary {
     "logsTest": MessageLookupByLibrary.simpleMessage("Logs test"),
     "loopback": MessageLookupByLibrary.simpleMessage("UWP loopback exemption"),
     "loose": MessageLookupByLibrary.simpleMessage("Loose"),
+    "macHelperCannotUse": MessageLookupByLibrary.simpleMessage(
+      "This version can’t use the helper",
+    ),
+    "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage("Check Again"),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage("Not ready"),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage(
+      "Helper ready (not TUN status)",
+    ),
+    "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage(
+      "Installer Instructions",
+    ),
+    "macHelperPending": MessageLookupByLibrary.simpleMessage(
+      "Administrator-approved installer required",
+    ),
+    "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
+      "Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.",
+    ),
+    "macHelperRepair": MessageLookupByLibrary.simpleMessage(
+      "Helper needs repair",
+    ),
+    "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
+      "Repair Instructions",
+    ),
+    "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
+      "Couldn’t confirm the helper was turned off",
+    ),
+    "macHelperTitle": MessageLookupByLibrary.simpleMessage("Flash Helper"),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("Check Again"),
+    "macHelperTurnOff": MessageLookupByLibrary.simpleMessage(
+      "Turn-Off Instructions",
+    ),
+    "macHelperTurnOn": MessageLookupByLibrary.simpleMessage(
+      "Installer Instructions",
+    ),
+    "macHelperUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Helper unavailable",
+    ),
+    "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
+      "Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.",
+    ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Map local"),
     "matchCase": MessageLookupByLibrary.simpleMessage("Match case"),
     "matchSourceIp": MessageLookupByLibrary.simpleMessage("Match source IP"),

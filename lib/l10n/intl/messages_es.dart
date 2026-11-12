@@ -1359,10 +1359,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Certificado instalado",
     ),
-    "installedAppsPermissionDeniedMessage":
-        MessageLookupByLibrary.simpleMessage(
-          "Se denegó el permiso de lista de apps, por lo que no se pueden mostrar las apps instaladas. Concédelo manualmente en los ajustes del sistema.",
-        ),
+    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
+      "Se denegó el permiso de lista de apps, por lo que no se pueden mostrar las apps instaladas. Concédelo manualmente en los ajustes del sistema.",
+    ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "Este sistema oculta la lista de apps instaladas hasta que se concede el permiso. Autorízalo para configurar el proxy por app.",
     ),
@@ -1555,6 +1554,52 @@ class MessageLookup extends MessageLookupByLibrary {
       "Exención de loopback de UWP",
     ),
     "loose": MessageLookupByLibrary.simpleMessage("Amplio"),
+    "macHelperCannotUse": MessageLookupByLibrary.simpleMessage(
+      "Esta versión no puede usar el asistente",
+    ),
+    "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage(
+      "Volver a comprobar",
+    ),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage("No está listo"),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage(
+      "Asistente listo (no indica el estado de TUN)",
+    ),
+    "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage(
+      "Instrucciones del instalador",
+    ),
+    "macHelperPending": MessageLookupByLibrary.simpleMessage(
+      "Se requiere el instalador aprobado por un administrador",
+    ),
+    "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
+      "Usa el instalador de Flash con aprobación explícita de un administrador para instalar, actualizar, reparar o desactivar el asistente. Desactivarlo no desinstala Flash y puede requerir aprobación otra vez. Completar la instalación no confirma que el asistente o TUN estén funcionando. Tu ajuste de TUN se conserva.",
+    ),
+    "macHelperRepair": MessageLookupByLibrary.simpleMessage(
+      "El asistente necesita reparación",
+    ),
+    "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
+      "Instrucciones de reparación",
+    ),
+    "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
+      "No se pudo confirmar la desactivación del asistente",
+    ),
+    "macHelperTitle": MessageLookupByLibrary.simpleMessage(
+      "Asistente de Flash",
+    ),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage(
+      "Comprobar de nuevo",
+    ),
+    "macHelperTurnOff": MessageLookupByLibrary.simpleMessage(
+      "Instrucciones para desactivar",
+    ),
+    "macHelperTurnOn": MessageLookupByLibrary.simpleMessage(
+      "Instrucciones de instalación",
+    ),
+    "macHelperUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Asistente no disponible",
+    ),
+    "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
+      "Flash no puede conectar con el asistente ahora, por lo que TUN no puede iniciarse. Se conserva tu ajuste de TUN.",
+    ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Mapeo local"),
     "matchCase": MessageLookupByLibrary.simpleMessage(
       "Coincidir mayúsculas y minúsculas",

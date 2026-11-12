@@ -1561,5 +1561,21 @@
   "tsExitTurnOff": "Turn off exit node",
   "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
-  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed"
+  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
+  "macHelperTitle": "Помощник Flash",
+  "macHelperOff": "Ещё не готов",
+  "macHelperOn": "Помощник готов (это не состояние TUN)",
+  "macHelperPending": "Нужен установщик с одобрением администратора",
+  "macHelperUnavailable": "Помощник недоступен",
+  "macHelperCannotUse": "Эта версия не может использовать помощника",
+  "macHelperRepair": "Помощник требует восстановления",
+  "macHelperStopUnknown": "Не удалось подтвердить отключение помощника",
+  "macHelperTurnOn": "Инструкция по установке",
+  "macHelperTurnOff": "Инструкция по отключению",
+  "macHelperOpenSettings": "Инструкция установщика",
+  "macHelperTryAgain": "Проверить снова",
+  "macHelperRepairAction": "Инструкция по восстановлению",
+  "macHelperCheckAgain": "Проверить снова",
+  "macHelperUnavailableDetail": "Сейчас Flash не может подключиться к помощнику, поэтому TUN не запускается. Настройка TUN сохранена.",
+  "macHelperPendingDetail": "Для установки, обновления, восстановления или отключения помощника используйте установщик Flash с явным одобрением администратора. Отключение не удаляет Flash; одобрение может потребоваться снова. Завершение установки не подтверждает работу помощника или TUN. Настройка TUN сохранена."
 }

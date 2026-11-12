@@ -1561,5 +1561,21 @@
   "tsExitTurnOff": "Turn off exit node",
   "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
-  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed"
+  "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
+  "macHelperTitle": "Flash 도우미",
+  "macHelperOff": "준비되지 않음",
+  "macHelperOn": "도우미 준비됨(TUN 실행 상태 아님)",
+  "macHelperPending": "관리자 승인 설치 프로그램 필요",
+  "macHelperUnavailable": "도우미를 사용할 수 없음",
+  "macHelperCannotUse": "이 버전에서는 도우미를 사용할 수 없음",
+  "macHelperRepair": "도우미 복구 필요",
+  "macHelperStopUnknown": "도우미가 꺼졌는지 확인할 수 없음",
+  "macHelperTurnOn": "설치 안내",
+  "macHelperTurnOff": "끄기 안내",
+  "macHelperOpenSettings": "설치 프로그램 안내",
+  "macHelperTryAgain": "다시 확인",
+  "macHelperRepairAction": "복구 안내",
+  "macHelperCheckAgain": "다시 확인",
+  "macHelperUnavailableDetail": "현재 Flash가 도우미에 연결할 수 없어 TUN을 시작할 수 없습니다. TUN 설정은 유지됩니다.",
+  "macHelperPendingDetail": "Flash 설치 프로그램에서 관리자의 명시적 승인을 받아 도우미를 설치, 업데이트, 복구하거나 끄세요. 끄기는 Flash 삭제가 아니며 다시 승인이 필요할 수 있습니다. 설치 완료만으로 도우미나 TUN 실행을 확인할 수 없습니다. TUN 설정은 유지됩니다."
 }

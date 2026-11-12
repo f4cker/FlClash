@@ -1330,10 +1330,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "installCertificateSuccess": MessageLookupByLibrary.simpleMessage(
       "Сертификат установлен",
     ),
-    "installedAppsPermissionDeniedMessage":
-        MessageLookupByLibrary.simpleMessage(
-          "Разрешение на список приложений отклонено, поэтому установленные приложения недоступны. Предоставьте его вручную в системных настройках.",
-        ),
+    "installedAppsPermissionDeniedMessage": MessageLookupByLibrary.simpleMessage(
+      "Разрешение на список приложений отклонено, поэтому установленные приложения недоступны. Предоставьте его вручную в системных настройках.",
+    ),
     "installedAppsPermissionDesc": MessageLookupByLibrary.simpleMessage(
       "Эта система не выдаёт список установленных приложений без разрешения. Предоставьте его, чтобы настроить прокси для отдельных приложений.",
     ),
@@ -1518,6 +1517,50 @@ class MessageLookup extends MessageLookupByLibrary {
       "Снятие ограничения loopback для UWP",
     ),
     "loose": MessageLookupByLibrary.simpleMessage("Свободный"),
+    "macHelperCannotUse": MessageLookupByLibrary.simpleMessage(
+      "Эта версия не может использовать помощника",
+    ),
+    "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage(
+      "Проверить снова",
+    ),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage("Ещё не готов"),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage(
+      "Помощник готов (это не состояние TUN)",
+    ),
+    "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage(
+      "Инструкция установщика",
+    ),
+    "macHelperPending": MessageLookupByLibrary.simpleMessage(
+      "Нужен установщик с одобрением администратора",
+    ),
+    "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
+      "Для установки, обновления, восстановления или отключения помощника используйте установщик Flash с явным одобрением администратора. Отключение не удаляет Flash; одобрение может потребоваться снова. Завершение установки не подтверждает работу помощника или TUN. Настройка TUN сохранена.",
+    ),
+    "macHelperRepair": MessageLookupByLibrary.simpleMessage(
+      "Помощник требует восстановления",
+    ),
+    "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
+      "Инструкция по восстановлению",
+    ),
+    "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
+      "Не удалось подтвердить отключение помощника",
+    ),
+    "macHelperTitle": MessageLookupByLibrary.simpleMessage("Помощник Flash"),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage(
+      "Проверить снова",
+    ),
+    "macHelperTurnOff": MessageLookupByLibrary.simpleMessage(
+      "Инструкция по отключению",
+    ),
+    "macHelperTurnOn": MessageLookupByLibrary.simpleMessage(
+      "Инструкция по установке",
+    ),
+    "macHelperUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Помощник недоступен",
+    ),
+    "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
+      "Сейчас Flash не может подключиться к помощнику, поэтому TUN не запускается. Настройка TUN сохранена.",
+    ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Локальная подмена"),
     "matchCase": MessageLookupByLibrary.simpleMessage("Учитывать регистр"),
     "matchSourceIp": MessageLookupByLibrary.simpleMessage(

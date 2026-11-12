@@ -1,0 +1,28 @@
+#!/bin/bash
+set -euo pipefail
+[[ "$EUID" == 0 && "${3:-/}" == / ]] || exit 78
+bundle='/Library/Application Support/Flash/Flash.app'
+plist='/Library/LaunchDaemons/com.layoute.flash.helper.plist'
+base='/Library/Application Support/Flash'
+lock="$base/.installer-lock"
+tool="$bundle/Contents/Library/HelperTools/FlashMaintenance"
+guard="$(/usr/bin/dirname "$0")/FlashMaintenance"
+status=0
+"$guard" preflight || status=$?
+[[ "$status" != 10 ]] || exit 0
+[[ "$status" == 0 ]] || exit 78
+/bin/mkdir -p -m 0755 "$base"
+/bin/mkdir -m 0700 "$lock" || exit 78
+if [[ "$status" == 0 ]]; then
+  "$guard" arm
+  if "$guard" serviceAbsent; then
+    /bin/launchctl enable system/com.layoute.flash.helper
+    /bin/launchctl bootstrap system "$plist"
+  fi
+  "$tool" prepare
+  /bin/launchctl bootout system "$plist"
+  "$guard" quiescent
+fi
+[[ "$status" == 0 ]] || exit 78
+/bin/launchctl disable system/com.layoute.flash.helper
+/bin/rmdir "$lock"
