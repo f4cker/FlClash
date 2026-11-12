@@ -1534,6 +1534,21 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountGroupPending": MessageLookupByLibrary.simpleMessage(
       "Pending application",
     ),
+    "mountGroupReasonDialer": MessageLookupByLibrary.simpleMessage(
+      "Other nodes use this group to relay traffic",
+    ),
+    "mountGroupReasonDns": MessageLookupByLibrary.simpleMessage(
+      "DNS requests use routing rules to choose an exit",
+    ),
+    "mountGroupReasonMember": MessageLookupByLibrary.simpleMessage(
+      "Restricted due to group membership; the underlying reason is unconfirmed",
+    ),
+    "mountGroupReasonProviderUnknown": MessageLookupByLibrary.simpleMessage(
+      "The base profile’s node list is currently unavailable",
+    ),
+    "mountGroupReasonRuleUnknown": MessageLookupByLibrary.simpleMessage(
+      "Rule contents are currently unavailable",
+    ),
     "mountGroupsAllNoMatch": MessageLookupByLibrary.simpleMessage(
       "Mounted nodes match no group filters.",
     ),

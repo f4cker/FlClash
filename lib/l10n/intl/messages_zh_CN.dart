@@ -1357,6 +1357,21 @@ class MessageLookup extends MessageLookupByLibrary {
     "mountGroupNoMatch": MessageLookupByLibrary.simpleMessage("无匹配挂载节点"),
     "mountGroupNodes": m77,
     "mountGroupPending": MessageLookupByLibrary.simpleMessage("待应用"),
+    "mountGroupReasonDialer": MessageLookupByLibrary.simpleMessage(
+      "此分组被其他节点用作中转出口",
+    ),
+    "mountGroupReasonDns": MessageLookupByLibrary.simpleMessage(
+      "DNS 请求会按分流规则选择出口",
+    ),
+    "mountGroupReasonMember": MessageLookupByLibrary.simpleMessage(
+      "此分组因成员关联而受限，具体原因待确认",
+    ),
+    "mountGroupReasonProviderUnknown": MessageLookupByLibrary.simpleMessage(
+      "暂时无法读取基础配置的节点列表",
+    ),
+    "mountGroupReasonRuleUnknown": MessageLookupByLibrary.simpleMessage(
+      "暂时无法读取规则内容",
+    ),
     "mountGroupsAllNoMatch": MessageLookupByLibrary.simpleMessage(
       "挂载节点未匹配任何分组的筛选条件。",
     ),

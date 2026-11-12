@@ -12577,6 +12577,56 @@ class AppLocalizations {
     return Intl.message(', ', name: 'mountNameSeparator', desc: '', args: []);
   }
 
+  /// `Rule contents are currently unavailable`
+  String get mountGroupReasonRuleUnknown {
+    return Intl.message(
+      'Rule contents are currently unavailable',
+      name: 'mountGroupReasonRuleUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The base profile’s node list is currently unavailable`
+  String get mountGroupReasonProviderUnknown {
+    return Intl.message(
+      'The base profile’s node list is currently unavailable',
+      name: 'mountGroupReasonProviderUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `DNS requests use routing rules to choose an exit`
+  String get mountGroupReasonDns {
+    return Intl.message(
+      'DNS requests use routing rules to choose an exit',
+      name: 'mountGroupReasonDns',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Other nodes use this group to relay traffic`
+  String get mountGroupReasonDialer {
+    return Intl.message(
+      'Other nodes use this group to relay traffic',
+      name: 'mountGroupReasonDialer',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Restricted due to group membership; the underlying reason is unconfirmed`
+  String get mountGroupReasonMember {
+    return Intl.message(
+      'Restricted due to group membership; the underlying reason is unconfirmed',
+      name: 'mountGroupReasonMember',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Current groups cannot receive mounts`
   String get mountNoGroupIsolatedTitle {
     return Intl.message(

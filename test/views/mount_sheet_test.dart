@@ -1353,8 +1353,9 @@ void main() {
     expect(banner.lines, [l10n.mountUnsupportedExcluded(5)]);
   });
 
-  testWidgets('groups kept out for Tailscale share one counted info line '
-      'with their names', (tester) async {
+  testWidgets('mixed exclusions show each group with its reported reason', (
+    tester,
+  ) async {
     final mounts = FakeMounts(
       panelOf(
         [item(air)],
@@ -1372,6 +1373,11 @@ void main() {
     );
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
+    await tester.tap(find.text('Air'));
+    await tester.pump();
+    expect(saveButton(tester).onPressed, isNotNull);
+    expect(find.text(l10n.mountGroupReasonDialer), findsNothing);
+    expect(find.text(l10n.mountGroupReasonRuleUnknown), findsNothing);
     await openDetails(tester);
 
     final line = find.text(l10n.mountGroupsExcluded(3));
@@ -1383,8 +1389,15 @@ void main() {
     expect(banner.lines, [
       l10n.mountIsolationFirst,
       l10n.mountGroupsExcluded(3),
-      l10n.mountGroupsExcludedNames('Lan, Hop, Set'),
+      l10n.mountGroupsExcludedNames('Lan'),
+      l10n.mountIsolationFirst,
+      l10n.mountGroupsExcludedNames('Hop'),
+      l10n.mountGroupReasonDialer,
+      l10n.mountGroupsExcludedNames('Set'),
+      l10n.mountGroupReasonRuleUnknown,
     ]);
+    expect(saveButton(tester).onPressed, isNotNull);
+    expect(mounts.saves, isEmpty);
     expect(find.text('Hidden'), findsNothing);
     expect(find.text(l10n.mountNoGroupIsolatedTitle), findsNothing);
   });
@@ -1442,6 +1455,98 @@ void main() {
     await tester.tap(find.text('Air'));
     await tester.pump();
     expect(saveButton(tester).onPressed, isNull);
+  });
+
+  testWidgets('all-excluded details expose actual reasons without enabling '
+      'Save', (tester) async {
+    final groups = [
+      isolatedGroup('Rules', MountGroupReason.ruleUnknown),
+      isolatedGroup('Base nodes', MountGroupReason.providerUnknown),
+      isolatedGroup('Resolver', MountGroupReason.dns),
+      isolatedGroup('Relay', MountGroupReason.dialer),
+    ];
+    final mounts = FakeMounts(
+      panelOf([item(air)], groups: MountTarget(groups: groups)),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    final expected = [
+      l10n.mountGroupReasonRuleUnknown,
+      l10n.mountGroupReasonProviderUnknown,
+      l10n.mountGroupReasonDns,
+      l10n.mountGroupReasonDialer,
+    ];
+    for (final reason in expected) {
+      expect(find.text(reason), findsNothing);
+    }
+    await tester.tap(find.text('Air'));
+    await tester.pump();
+    expect(saveButton(tester).onPressed, isNull);
+
+    await openDetails(tester);
+    final banner = tester.widget<MountBanner>(find.byType(MountBanner));
+    expect(banner.lines, [
+      l10n.mountNoGroupIsolatedDesc,
+      l10n.mountIsolationFirst,
+      l10n.mountGroupsExcluded(groups.length),
+      for (var i = 0; i < groups.length; i++) ...[
+        l10n.mountGroupsExcludedNames(groups[i].name),
+        expected[i],
+      ],
+    ]);
+    expect(saveButton(tester).onPressed, isNull);
+    expect(mounts.saves, isEmpty);
+
+    await tester.tap(find.text(l10n.mountShowLess));
+    await tester.pumpAndSettle();
+    expect(tester.widget<MountBanner>(find.byType(MountBanner)).lines, [
+      l10n.mountNoGroupIsolatedDesc,
+    ]);
+    expect(saveButton(tester).onPressed, isNull);
+    expect(mounts.saves, isEmpty);
+  });
+
+  testWidgets('member and unknown reasons do not invent DNS or confirmed '
+      'Tailscale causes', (tester) async {
+    final unknown = MountGroupInfo.fromJson({
+      'name': 'Future',
+      'type': 'select',
+      'kind': 'excluded',
+      'excluded': 'tailscale',
+      'reason': 'future-reason',
+    });
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [
+            isolatedGroup('Members', MountGroupReason.member),
+            isolatedGroup('Missing', null),
+            unknown,
+          ],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    await openDetails(tester);
+    final lines = tester.widget<MountBanner>(find.byType(MountBanner)).lines;
+    expect(
+      lines,
+      containsAllInOrder([
+        l10n.mountGroupsExcludedNames('Members'),
+        l10n.mountGroupReasonMember,
+        l10n.mountGroupsExcludedNames('Missing'),
+        l10n.serviceUnavailable,
+        l10n.mountGroupsExcludedNames('Future'),
+        l10n.serviceUnavailable,
+      ]),
+    );
+    expect(lines, isNot(contains(l10n.mountGroupReasonDns)));
+    expect(
+      lines.where((line) => line == l10n.mountIsolationFirst),
+      hasLength(1),
+    );
   });
 
   testWidgets('hidden groups alone still take mounts, unlisted', (
@@ -1909,6 +2014,7 @@ void main() {
           l10n.mountIsolationFirst,
           l10n.mountGroupsExcluded(1),
           l10n.mountGroupsExcludedNames('Lan'),
+          l10n.mountIsolationFirst,
         ],
       ]);
       expect(find.text(line), findsNothing);

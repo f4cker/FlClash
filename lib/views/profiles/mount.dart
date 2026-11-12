@@ -97,6 +97,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   /// The notices banner and the format help of each such row open in place
   /// and stay open until the sheet reopens, design §13.
   bool _noticesOpen = false;
+  bool _groupDetailsOpen = false;
   final Set<int> _formatHelp = {};
 
   bool _saving = false;
@@ -796,11 +797,21 @@ class _MountSheetState extends ConsumerState<MountSheet> {
           ],
         );
       case MountGroupCase.none:
-        if (mountIsolatedGroups(panel.groups).isNotEmpty) {
+        final isolated = mountIsolatedGroups(panel.groups);
+        if (isolated.isNotEmpty) {
           return MountBanner(
             level: MountBannerLevel.warn,
             title: appLocalizations.mountNoGroupIsolatedTitle,
-            lines: [appLocalizations.mountNoGroupIsolatedDesc],
+            lines: [
+              appLocalizations.mountNoGroupIsolatedDesc,
+              if (_groupDetailsOpen)
+                ...mountIsolatedGroupsLines(isolated, appLocalizations),
+            ],
+            actionLabel: _groupDetailsOpen
+                ? appLocalizations.mountShowLess
+                : appLocalizations.mountDetails,
+            onAction: () =>
+                setState(() => _groupDetailsOpen = !_groupDetailsOpen),
           );
         }
         return MountBanner(
@@ -899,17 +910,35 @@ MountGroupStatus? mountGroupStatusOf(
   );
 }
 
-/// The full lines on groups kept out for Tailscale, the boundary first.
+/// The full lines on excluded groups, with the reported reason for each.
 List<String> mountIsolatedGroupsLines(
   List<MountGroupInfo> groups,
   AppLocalizations appLocalizations,
 ) => [
   appLocalizations.mountIsolationFirst,
   appLocalizations.mountGroupsExcluded(groups.length),
-  appLocalizations.mountGroupsExcludedNames(
-    groups.map((group) => group.name).join(appLocalizations.mountNameSeparator),
-  ),
+  for (final group in groups) ...[
+    appLocalizations.mountGroupsExcludedNames(group.name),
+    _mountGroupReasonLabel(group.reason, appLocalizations),
+  ],
 ];
+
+String _mountGroupReasonLabel(
+  MountGroupReason? reason,
+  AppLocalizations appLocalizations,
+) => switch (reason) {
+  MountGroupReason.ruleUnknown => appLocalizations.mountGroupReasonRuleUnknown,
+  MountGroupReason.providerUnknown =>
+    appLocalizations.mountGroupReasonProviderUnknown,
+  MountGroupReason.dns => appLocalizations.mountGroupReasonDns,
+  MountGroupReason.dialer => appLocalizations.mountGroupReasonDialer,
+  MountGroupReason.member => appLocalizations.mountGroupReasonMember,
+  MountGroupReason.holds ||
+  MountGroupReason.rule ||
+  MountGroupReason.carrier ||
+  MountGroupReason.global => appLocalizations.mountIsolationFirst,
+  null => appLocalizations.serviceUnavailable,
+};
 
 enum MountBannerLevel { info, warn, error }
 
