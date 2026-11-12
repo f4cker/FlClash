@@ -124,6 +124,35 @@ void main() {
     expect(find.text(l10n.mountFormatHelp), findsOneWidget);
   });
 
+  testWidgets('a row reads as mounted only once it is, not when ticked', (
+    tester,
+  ) async {
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air, mounted: true), item(sea)],
+        stored: MountTargetState(
+          targetId: target.id,
+          sourceIds: [air.id],
+          version: 1,
+        ),
+        groups: MountTarget(
+          groups: [groupInfo('Auto', kind: MountGroupKind.auto)],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air, sea]);
+    final l10n = currentAppLocalizations;
+    Finder row(String name, String state) =>
+        find.bySemanticsLabel(RegExp('^$name, .*, ${RegExp.escape(state)}\$'));
+
+    expect(row('Air', l10n.mountMountedTag), findsOneWidget);
+    expect(row('Sea', l10n.mountNotMounted), findsOneWidget);
+    await tester.tap(find.text('Sea'));
+    await tester.pump();
+    expect(row('Sea', l10n.mountNotMounted), findsOneWidget);
+    expect(row('Sea', l10n.mountMountedTag), findsNothing);
+  });
+
   testWidgets('each row says what state its source is in', (tester) async {
     final mounts = FakeMounts(
       panelOf(

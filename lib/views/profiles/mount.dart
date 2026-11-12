@@ -1497,7 +1497,7 @@ class MountSourceRow extends StatelessWidget {
       name,
       detail,
       for (final state in states) state.$1,
-      checked
+      mountedTag
           ? appLocalizations.mountMountedTag
           : appLocalizations.mountNotMounted,
     ].join(', ');
