@@ -8,6 +8,7 @@ not GUI load acceptance and cannot establish the defines embedded by a compiler.
 """
 import argparse
 import ctypes
+import errno
 import hashlib
 import json
 import os
@@ -24,7 +25,7 @@ WORKTREE = Path('/Users/layoute/SideWork/FlClash/.airbuild/worktree/exit-cleanup
 KEYCHAIN = '/Users/layoute/Library/Application Support/Flash Signing/FlashSigning.keychain-db'
 CERTIFICATE_SHA1 = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CERTIFICATE_SHA256 = 'E8346770F4BF2ABC94F755A136677CDA84B821A668B0983E7FBEF21F8A646E95'
-VERIFIER_SHA256 = 'ea1837b2ba10db5e00140aa15d1b831290760e0d800dee00f3c74fdccc0c277d'
+VERIFIER_SHA256 = '006b6d11b10d0875654fab009e7b6a231ebfb83f12cbb0a8c77ec0c463d65829'
 PACKAGING = WORKTREE / 'macos/packaging'
 GUI_ENTITLEMENTS = {
     'com.apple.security.files.user-selected.read-write': True,
@@ -96,6 +97,9 @@ def read_regular(path):
 def require_no_acl(path):
     if sys.platform != 'darwin':
         raise ValueError('Signing requires macOS ACL inspection')
+    before = path.lstat()
+    if stat.S_IFMT(before.st_mode) not in {stat.S_IFREG, stat.S_IFDIR, stat.S_IFLNK} or before.st_nlink < 1:
+        raise ValueError(f'Cannot inspect ACL of unknown node type/link metadata: {path}')
     library = ctypes.CDLL('/usr/lib/libSystem.B.dylib', use_errno=True)
     library.acl_init.argtypes = [ctypes.c_int]
     library.acl_init.restype = ctypes.c_void_p
@@ -103,16 +107,30 @@ def require_no_acl(path):
     library.acl_get_link_np.restype = ctypes.c_void_p
     library.acl_size.argtypes = [ctypes.c_void_p]
     library.acl_size.restype = ctypes.c_ssize_t
+    library.acl_valid.argtypes = [ctypes.c_void_p]
+    library.acl_valid.restype = ctypes.c_int
     library.acl_free.argtypes = [ctypes.c_void_p]
     library.acl_free.restype = ctypes.c_int
     empty = library.acl_init(0)
+    ctypes.set_errno(0)
     acl = library.acl_get_link_np(os.fsencode(path), 0x100)
+    error = ctypes.get_errno()
     try:
-        if not empty or not acl:
-            raise ValueError(f'Cannot inspect extended ACL: {path}')
+        after = path.lstat()
+        fields = ('st_dev', 'st_ino', 'st_mode', 'st_uid', 'st_gid', 'st_nlink', 'st_flags', 'st_ctime_ns')
+        if any(getattr(before, field) != getattr(after, field) for field in fields):
+            raise ValueError(f'ACL node metadata changed during inspection: {path}')
+        if not empty:
+            raise ValueError(f'Cannot allocate empty ACL baseline: {path}')
         baseline = library.acl_size(empty)
-        size = library.acl_size(acl)
-        if baseline <= 0 or size != baseline:
+        if baseline <= 0:
+            raise ValueError(f'Cannot inspect empty ACL baseline: {path}')
+        # Darwin reports ENOENT for an existing unchanged node with no ACL.
+        if not acl:
+            if error != errno.ENOENT:
+                raise ValueError(f'Cannot inspect extended ACL: {path}')
+            return
+        if library.acl_valid(acl) != 0 or library.acl_size(acl) != baseline:
             raise ValueError(f'Extended ACLs are not allowed: {path}')
     finally:
         if acl:
@@ -316,9 +334,9 @@ def execute(app_value, keychain, certificate):
                     'intended_static_candidate': {
                         'MACOS_MANAGED_HELPER': True,
                         'FC_PINNED_CERTIFICATE_SHA1': CERTIFICATE_SHA1,
-                        'FC_MANAGED_GUI_LOADS_VERIFIED': 0,
+                        'FC_MANAGED_CANDIDATE_ENABLED': 1,
                     },
-                    'FC_MANAGED_GUI_LOADS_VERIFIED': 'not modified or asserted',
+                    'FC_MANAGED_CANDIDATE_ENABLED': 'not modified or asserted',
                     'FC_PINNED_CERTIFICATE_SHA1': 'not modified or asserted',
                     'MACOS_MANAGED_HELPER': 'not modified or asserted'},
         'limitations': ['No code execution, GUI loading, install, or package acceptance.',

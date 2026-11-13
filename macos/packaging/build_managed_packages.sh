@@ -1,33 +1,31 @@
 #!/bin/bash
 set -euo pipefail
-[[ "$EUID" != 0 && "$#" == 2 ]] || exit 64
-[[ "${FC_PACKAGE_CERTIFICATE_SHA1:-}" =~ ^[[:xdigit:]]{40}$ ]] || exit 78
-[[ "${FC_ARTIFACT_LOADS_VERIFIED:-0}" == 1 ]] || exit 78
+[[ "$EUID" != 0 && "$#" == 4 ]] || exit 64
+# Native-load evidence is artifact-bound, never an environment assertion.
 source_dir="$(cd "$(/usr/bin/dirname "$0")" && pwd)"
-app="$(cd "$1" && pwd)"
-[[ "$app" == */Flash.app && ! -e "$2" ]] || exit 78
-/usr/bin/python3 "$source_dir/stage_managed_payload.py" --verify "$app"
-verify() {
-  local path="$1" identifier="$2"
-  local requirement="anchor H\"$FC_PACKAGE_CERTIFICATE_SHA1\" and certificate leaf = H\"$FC_PACKAGE_CERTIFICATE_SHA1\" and identifier \"$identifier\""
-  /usr/bin/codesign --verify --strict --all-architectures -R "$requirement" "$path"
-  local flags
-  flags="$(/usr/bin/codesign -dvvv "$path" 2>&1)"
-  [[ "$flags" == *runtime* && "$flags" != *adhoc* ]] || exit 78
+app="$(cd "$1" && pwd -P)"
+[[ "$app" == */Flash.app && ! -e "$2" && ! -L "$2" ]] || exit 78
+output_parent="$(cd "$(/usr/bin/dirname "$2")" && pwd -P)"
+output="$output_parent/$(/usr/bin/basename "$2")"
+[[ "$output" != "$app/"* && "$app" != "$output/"* ]] || exit 78
+evidence="$3"
+metadata="$4"
+[[ "$evidence" == /* && "$metadata" == /* ]] || exit 78
+verify_evidence() {
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C /usr/bin/python3 -I -S -B \
+    "$source_dir/qualify_native_loads.py" --verify-evidence --app "$app" \
+    --evidence "$evidence" --build-metadata "$metadata" "$@"
 }
-verify "$app" com.layoute.flash
-verify "$app/Contents/MacOS/FlClashCore" com.layoute.flash.core
-verify "$app/Contents/Library/HelperTools/FlashHelper" com.layoute.flash.helper
-verify "$app/Contents/Library/HelperTools/FlashMaintenance" com.layoute.flash.maintenance
-/usr/bin/codesign --verify --deep --strict --all-architectures "$app"
-/bin/mkdir -m 0700 "$2"
-output="$(cd "$2" && pwd)"
+verify_evidence
+umask 077
+/bin/mkdir -m 0700 "$output"
 work="$output/payload"
 /bin/mkdir -p "$work/Library/Application Support/Flash/.incoming"
 /usr/bin/ditto "$app" "$work/Library/Application Support/Flash/.incoming/Flash.app"
+verify_evidence --verify-copy "$work/Library/Application Support/Flash/.incoming/Flash.app"
 components="$output/components.plist"
 /usr/bin/pkgbuild --analyze --root "$work" "$components"
-/usr/bin/python3 "$source_dir/pin_component_policy.py" "$components"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C /usr/bin/python3 "$source_dir/pin_component_policy.py" "$components"
 for operation in install repair disable remove; do
   scripts="$output/$operation-scripts"
   /bin/mkdir "$scripts"
@@ -39,9 +37,13 @@ for operation in install repair disable remove; do
       --identifier "com.layoute.flash.managed.$operation" --install-location / \
       "$output/Flash-$operation.pkg"
   else
-    /usr/bin/pkgbuild --nopayload --scripts "$scripts" \
+    /usr/bin/pkgbuild --nopayload --scripts "$scripts" --install-location / \
       --identifier "com.layoute.flash.managed.$operation" \
       "$output/Flash-$operation.pkg"
   fi
+  expanded="$output/$operation-expanded"
+  /usr/sbin/pkgutil --expand-full "$output/Flash-$operation.pkg" "$expanded"
+  verify_evidence --verify-expanded-package "$expanded" --package-operation "$operation"
 done
-printf '%s\n' 'Unsigned local packages only. Review and explicitly approve each install/disable/uninstall operation.'
+verify_evidence
+printf '%s\n' 'Unsigned local packages match qualified signed input. Helper/installer operations remain unverified and unapproved.'

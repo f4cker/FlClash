@@ -1,10 +1,12 @@
 import copy
+import errno
 import hashlib
 import importlib.util
 import json
 import os
 from pathlib import Path
 import plistlib
+import stat
 import subprocess
 import tempfile
 import types
@@ -141,6 +143,8 @@ class SigningPolicyTests(unittest.TestCase):
             self.assertIn('=designated => ', args[args.index('--requirements') + 1])
         self.assertTrue(any('--deep' in args and '--verify' in args for args in self.calls))
         self.assertEqual(report['defines']['artifact_values'], 'not established by static signing')
+        self.assertEqual(report['defines']['intended_static_candidate']['FC_MANAGED_CANDIDATE_ENABLED'], 1)
+        self.assertNotIn('FC_MANAGED_GUI_LOADS_VERIFIED', report['defines'])
 
     def test_only_gui_gets_minimal_library_exception(self):
         for target in self.targets():
@@ -208,6 +212,19 @@ class SigningPolicyTests(unittest.TestCase):
         }))
         with self.assertRaisesRegex(ValueError, 'identity'):
             self.targets()
+
+    def test_unsafe_modes_are_rejected_independently_of_filesystem_chmod(self):
+        path = self.write('Contents/Resources/mode-fixture', b'fixture')
+        real_lstat = Path.lstat
+        for mode in (0o666, 0o664, 0o4644, 0o2644, 0o1644, 0o755):
+            def observed(candidate):
+                metadata = real_lstat(candidate)
+                if candidate == path:
+                    return os.stat_result((stat.S_IFREG | mode, *metadata[1:]))
+                return metadata
+            with self.subTest(mode=oct(mode)), patch.object(Path, 'lstat', observed):
+                with self.assertRaises(ValueError):
+                    DRIVER.inventory(self.app, self.verifier)
 
     def test_hardlink_special_executable_and_writeable_modes_rejected(self):
         path = self.write('Contents/Resources/data', b'fixture')
@@ -343,19 +360,75 @@ class ToolContractTests(unittest.TestCase):
         self.assertEqual(DRIVER.VERIFIER_SHA256, DRIVER.sha256(
             (Path(__file__).parents[1] / 'stage_managed_payload.py').read_bytes()))
 
+    def acl_node(self, **changes):
+        fields = dict(st_dev=1, st_ino=2, st_mode=stat.S_IFREG | 0o600, st_uid=501,
+                      st_gid=20, st_nlink=1, st_flags=0, st_ctime_ns=123456789)
+        fields.update(changes)
+        return types.SimpleNamespace(**fields)
+
+    def acl_library(self, pointer=0, size=32):
+        return types.SimpleNamespace(
+            acl_init=MagicMock(return_value=1), acl_get_link_np=MagicMock(return_value=pointer),
+            acl_size=MagicMock(return_value=size), acl_valid=MagicMock(return_value=0), acl_free=MagicMock(),
+        )
+
+    def test_acl_null_enoent_accepts_only_stable_existing_known_nodes(self):
+        for kind in (stat.S_IFREG, stat.S_IFDIR, stat.S_IFLNK):
+            node = self.acl_node(st_mode=kind | 0o600)
+            library = self.acl_library()
+            with self.subTest(kind=kind), patch.object(DRIVER.sys, 'platform', 'darwin'):
+                with patch.object(DRIVER.ctypes, 'CDLL', return_value=library):
+                    with patch.object(DRIVER.ctypes, 'get_errno', return_value=errno.ENOENT):
+                        with patch.object(Path, 'lstat', side_effect=[node, copy.copy(node)]) as inspect:
+                            DRIVER.require_no_acl(Path('/synthetic'))
+            self.assertEqual(inspect.call_count, 2)
+            library.acl_free.assert_called_once_with(1)
+
+    def test_acl_null_other_errors_or_uninspectable_changed_metadata_reject(self):
+        node = self.acl_node()
+        failures = [(error, [node, node]) for error in
+                    (0, errno.EACCES, errno.EPERM, errno.EIO, errno.EINVAL, errno.ENOTSUP)]
+        failures.extend((errno.ENOENT, [node, self.acl_node(**{field: value})]) for field, value in (
+            ('st_dev', 2), ('st_ino', 3), ('st_mode', stat.S_IFDIR | 0o600), ('st_uid', 0),
+            ('st_gid', 0), ('st_nlink', 2), ('st_flags', 1), ('st_ctime_ns', 123456790)))
+        failures.extend((errno.ENOENT, states) for states in (
+            [FileNotFoundError()], [node, FileNotFoundError()], [self.acl_node(st_nlink=0)],
+            [self.acl_node(st_mode=stat.S_IFIFO | 0o600)]))
+        for error, states in failures:
+            library = self.acl_library()
+            with self.subTest(error=error, states=states), patch.object(DRIVER.sys, 'platform', 'darwin'):
+                with patch.object(DRIVER.ctypes, 'CDLL', return_value=library):
+                    with patch.object(DRIVER.ctypes, 'get_errno', return_value=error):
+                        with patch.object(Path, 'lstat', side_effect=states):
+                            with self.assertRaises((ValueError, OSError)):
+                                DRIVER.require_no_acl(Path('/synthetic'))
+        for initial, size, pointer, valid in ((0, 32, 0, 0), (1, -1, 0, 0), (1, 32, 2, -1)):
+            library = self.acl_library(pointer, size)
+            library.acl_init.return_value = initial
+            library.acl_valid.return_value = valid
+            with self.subTest(initial=initial, size=size, pointer=pointer):
+                with patch.object(DRIVER.sys, 'platform', 'darwin'):
+                    with patch.object(DRIVER.ctypes, 'CDLL', return_value=library):
+                        with patch.object(DRIVER.ctypes, 'get_errno', return_value=errno.ENOENT):
+                            with patch.object(Path, 'lstat', return_value=node):
+                                with self.assertRaises(ValueError):
+                                    DRIVER.require_no_acl(Path('/synthetic'))
+
     def test_acl_check_rejects_nonempty_or_unreadable_acl_and_frees_objects(self):
         for size, pointer, allowed in ((32, 2, True), (64, 2, False), (-1, 2, False), (32, 0, False)):
             library = types.SimpleNamespace(
                 acl_init=MagicMock(return_value=1), acl_get_link_np=MagicMock(return_value=pointer),
-                acl_size=MagicMock(side_effect=[32, size]), acl_free=MagicMock(),
+                acl_size=MagicMock(side_effect=[32, size]), acl_valid=MagicMock(return_value=0),
+                acl_free=MagicMock(),
             )
             with self.subTest(size=size, pointer=pointer), patch.object(DRIVER.sys, 'platform', 'darwin'):
                 with patch.object(DRIVER.ctypes, 'CDLL', return_value=library):
-                    if allowed:
-                        DRIVER.require_no_acl(Path('/synthetic'))
-                    else:
-                        with self.assertRaises(ValueError):
+                    with patch.object(Path, 'lstat', return_value=self.acl_node()):
+                        if allowed:
                             DRIVER.require_no_acl(Path('/synthetic'))
+                        else:
+                            with self.assertRaises(ValueError):
+                                DRIVER.require_no_acl(Path('/synthetic'))
             library.acl_free.assert_any_call(1)
             if pointer:
                 library.acl_free.assert_any_call(pointer)
