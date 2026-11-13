@@ -18,6 +18,8 @@ MACH_MAGIC = {bytes.fromhex(value) for value in (
 )}
 SYSTEM = ('/usr/lib/', '/System/Library/')
 BAD_RPATH = '/usr/local/lib/.'
+APP_FRAMEWORK_BINARY = 'Contents/Frameworks/App.framework/Versions/A/App'
+REDUNDANT_APP_RPATHS = ('@executable_path/Frameworks', '@loader_path/Frameworks')
 PLATFORMS = {'arm64': 'macos_arm64', 'x86_64': 'macos_x64'}
 FIXED_EXECUTABLES = (
     'Contents/MacOS/FlClashCore',
@@ -157,6 +159,38 @@ def load_commands(binary):
     return dict(zip(slice_names, slices))
 
 
+def normalize_app_rpaths(binary, slices, gui, app):
+    if binary != app / APP_FRAMEWORK_BINARY:
+        return slices
+    removals = []
+    for value in REDUNDANT_APP_RPATHS:
+        counts = [paths.count(value) for paths, _ in slices.values()]
+        if not any(counts):
+            continue
+        target = expanded(value, binary, gui)
+        inside(target.parent, app)
+        try:
+            target.lstat()
+        except FileNotFoundError:
+            if any(count != 1 for count in counts):
+                raise ValueError(f'Inconsistent redundant App rpath slices: {value}')
+            removals.append(value)
+        else:
+            check_rpath(value, binary, gui, app)
+    if not removals:
+        return slices
+    arguments = ['/usr/bin/install_name_tool']
+    for value in removals:
+        arguments += ['-delete_rpath', value]
+    subprocess.run(arguments + [str(binary)], check=True)
+    updated = load_commands(binary)
+    if set(updated) != set(slices) or any(
+        value in paths for paths, _ in updated.values() for value in removals
+    ):
+        raise ValueError(f'Incomplete redundant App rpath normalization: {binary}')
+    return updated
+
+
 def stage(source, destination):
     source = source.resolve(strict=True)
     if destination.exists() or destination.is_symlink() or destination.resolve().is_relative_to(source):
@@ -199,6 +233,8 @@ def audit(destination, mutate=False):
                 raise ValueError('External rpath remains in sealed artifact')
             subprocess.run(['/usr/bin/install_name_tool', '-delete_rpath', BAD_RPATH, str(binary)], check=True)
             slices = load_commands(binary)
+        if mutate:
+            slices = normalize_app_rpaths(binary, slices, gui, app)
         commands[binary] = slices
     required = set(commands[gui])
     platforms = {PLATFORMS[architecture] for architecture in required}
