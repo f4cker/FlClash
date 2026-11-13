@@ -47,7 +47,7 @@ class _WindowContainerState extends ConsumerState<WindowManager>
       prev,
       next,
     ) {
-      if (prev != next) {
+      if (prev != next && !system.isMacOS) {
         debouncer.call(FunctionTag.autoLaunch, () {
           autoLaunch?.updateStatus(next);
         });

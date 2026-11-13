@@ -4,5 +4,6 @@
   <key>Label</key><string>com.layoute.flash.helper</string>
   <key>Program</key><string>/Library/Application Support/Flash/Flash.app/Contents/Library/HelperTools/FlashHelper</string>
   <key>MachServices</key><dict><key>com.layoute.flash.helper</key><true/></dict>
+  <key>AssociatedBundleIdentifiers</key><array><string>com.layoute.flash</string></array>
   <key>ProcessType</key><string>Interactive</string>
 </dict></plist>

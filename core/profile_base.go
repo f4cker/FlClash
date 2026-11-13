@@ -176,11 +176,11 @@ func loadConfigWithBase(base *SetupBase, configPath string, mounts *MountSetup) 
 	if err := document.Decode(raw); err != nil {
 		return nil, nil, err
 	}
-	if err := writeConfigDocument(configPath, document); err != nil {
-		return nil, nil, err
-	}
 	cfg, err := config.ParseRawConfig(raw)
 	if err != nil {
+		return nil, nil, err
+	}
+	if err := writeConfigDocument(configPath, document); err != nil {
 		return nil, nil, err
 	}
 	return withPlatformLimits(cfg), report, nil

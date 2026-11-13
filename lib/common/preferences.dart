@@ -12,6 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class Preferences {
   static Preferences? _instance;
+  static var _initialCompositionRevision = 0;
+
   var _store = ResolveOnce(_open);
 
   Future<bool> get isInit async => await _store.value != null;
@@ -20,8 +22,18 @@ class Preferences {
 
   static Future<SharedPreferences?> _open() async {
     try {
-      return await SharedPreferences.getInstance();
+      final store = await SharedPreferences.getInstance();
+      _initialCompositionRevision =
+          store.containsKey(configKey) || store.containsKey(clashConfigKey)
+          ? 0
+          : 1;
+      if (_initialCompositionRevision == 1 &&
+          !store.containsKey('compositionRevision')) {
+        await store.setInt('compositionRevision', 1);
+      }
+      return store;
     } catch (_) {
+      _initialCompositionRevision = 0;
       return null;
     }
   }
@@ -76,6 +88,23 @@ class Preferences {
     } else {
       await preferences?.setString(appliedConfigMd5Key, md5);
     }
+  }
+
+  Future<int> getCompositionRevision() async {
+    try {
+      final store = await _store.value;
+      return store == null
+          ? 0
+          : store.getInt('compositionRevision') ?? _initialCompositionRevision;
+    } catch (_) {
+      // An unreadable marker is unknown, never evidence of a fresh install.
+      return 0;
+    }
+  }
+
+  Future<bool> saveCompositionRevision() async {
+    final store = await _store.value;
+    return await store?.setInt('compositionRevision', 1) ?? false;
   }
 
   Future<Map<String, Object?>?> getConfigMap() async {

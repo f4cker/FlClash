@@ -158,11 +158,7 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     }
   }
 
-  if (realPatchConfig.pagePriority) {
-    applyPageSettings(rawConfig, data);
-  } else {
-    _applyLegacySettings(rawConfig, data);
-  }
+  applyPageSettings(rawConfig, data);
   final snifferOverride = overrides.sniffer.overrideJson(
     overrides.snifferOverrideKeys,
   );
@@ -209,9 +205,6 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   confineProviders('rule-providers', rulesProviderDirectoryName);
   injectUnconfinedProviders('proxy-providers', data.injectedProxyProviders);
   injectUnconfinedProviders('rule-providers', data.injectedRuleProviders);
-  if (!realPatchConfig.pagePriority) {
-    _applyLegacyProfileSettings(rawConfig, data);
-  }
   const systemDns = 'system://';
   final dns = mergeDnsOverride(
     rawConfig['dns'] is Map
@@ -225,6 +218,16 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   if (dns.isNotEmpty || rawConfig.containsKey('dns')) {
     rawConfig['dns'] = dns;
   }
+  final pageDns = mergeDnsOverride(
+    rawConfig['dns'] is Map
+        ? Map<String, dynamic>.from(rawConfig['dns'] as Map)
+        : <String, dynamic>{},
+    realPatchConfig.dns.overrideJson(
+      DnsOverrideKey.normalProfileKeys,
+      keepEmpty: true,
+    ),
+  );
+  rawConfig['dns'] = pageDns;
   final ntpOverride = overrides.ntp.overrideJson(overrides.ntpOverrideKeys);
   if (ntpOverride.isNotEmpty) {
     final rawNtp = rawConfig['ntp'] is Map
@@ -258,6 +261,13 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
         NtpOverrideKey.writeToSystem.path: false,
       };
     }
+  }
+  final effectiveDns = rawConfig['dns'] as Map;
+  final effectiveNameservers = effectiveDns['nameserver'];
+  if (!data.safeMode &&
+      effectiveDns['enable'] == true &&
+      (effectiveNameservers is! List || effectiveNameservers.isEmpty)) {
+    throw StateError('Enabled DNS requires a nameserver');
   }
   List<String> rules = [];
   if (data.rules.isEmpty) {
@@ -308,102 +318,6 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   return (yaml: yaml, md5: yaml.toMd5(), counts: configCountsOf(rawConfig));
 }
 
-/// The settings a profile built before page priority carried, as it did.
-void _applyLegacySettings(Map rawConfig, MakeRealProfileState data) {
-  final realPatchConfig = data.realPatchConfig;
-  final overrides = data.overrides;
-  rawConfig['external-controller'] =
-      data.safeMode || realPatchConfig.secret.isEmpty
-      ? ''
-      : realPatchConfig.externalController.value;
-  rawConfig['secret'] = realPatchConfig.secret;
-  // mihomo serves the unix and pipe controllers without a secret, and the unix
-  // one unlinks whatever sits at its path before opening it to everyone.
-  rawConfig['external-controller-tls'] = '';
-  rawConfig['external-controller-unix'] = '';
-  rawConfig['external-controller-pipe'] = '';
-  final iptables = rawConfig['iptables'];
-  if (iptables is Map) {
-    final inboundInterface = iptables['inbound-interface'];
-    if (inboundInterface is String && inboundInterface.contains(' ')) {
-      rawConfig['iptables'] = {'enable': false};
-    }
-  }
-  rawConfig['external-ui'] = '';
-  switch (realPatchConfig.interfaceNameMode) {
-    case InterfaceNameMode.clear:
-      rawConfig['interface-name'] = '';
-    case InterfaceNameMode.follow:
-      break;
-    case InterfaceNameMode.custom:
-      rawConfig['interface-name'] = realPatchConfig.interfaceName;
-  }
-  rawConfig['external-ui-url'] = '';
-  rawConfig.addAll(realPatchConfig.generalOverrideJson);
-  rawConfig['log-level'] = realPatchConfig.logLevel.name;
-  rawConfig['port'] = 0;
-  rawConfig['socks-port'] = 0;
-  rawConfig['keep-alive-interval'] = realPatchConfig.keepAliveInterval;
-  rawConfig['keep-alive-idle'] = realPatchConfig.keepAliveIdle;
-  rawConfig['disable-keep-alive'] = realPatchConfig.disableKeepAlive;
-  rawConfig['routing-mark'] = realPatchConfig.routingMark;
-  rawConfig['mixed-port'] = realPatchConfig.mixedPort;
-  rawConfig['port'] = realPatchConfig.port;
-  rawConfig['socks-port'] = realPatchConfig.socksPort;
-  rawConfig['redir-port'] = realPatchConfig.redirPort;
-  rawConfig['tproxy-port'] = realPatchConfig.tproxyPort;
-  rawConfig['find-process-mode'] = realPatchConfig.findProcessMode.name;
-  rawConfig['allow-lan'] = realPatchConfig.allowLan;
-  // The app owns local inbound authentication; a profile-provided
-  // skip-auth-prefixes could silently exempt loopback and defeat it.
-  rawConfig['authentication'] = data.authentication;
-  rawConfig['skip-auth-prefixes'] = [];
-  rawConfig['mode'] = realPatchConfig.mode.name;
-  final tun = {
-    if (rawConfig['tun'] is Map) ...rawConfig['tun'] as Map,
-    'dns-hijack': defaultDnsHijack,
-    ...overrides.tun.overrideJson(overrides.tunOverrideKeys),
-    ...realPatchConfig.tun.coreJson,
-    'auto-detect-interface': true,
-  };
-  if (data.bypassPrivateRoute) {
-    tun['route-exclude-address'] = [
-      if (tun['route-exclude-address'] case final List routes) ...routes,
-      ...privateRouteAddress,
-    ];
-  }
-  rawConfig['tun'] = tun;
-  rawConfig['geo-auto-update'] = realPatchConfig.geoAutoUpdate;
-  rawConfig['geo-update-interval'] = realPatchConfig.geoUpdateInterval;
-}
-
-void _applyLegacyProfileSettings(Map rawConfig, MakeRealProfileState data) {
-  final realPatchConfig = data.realPatchConfig;
-  rawConfig['profile'] = {
-    if (rawConfig['profile'] case final Map profile) ...profile,
-    'store-selected': false,
-  };
-  rawConfig['geox-url'] = realPatchConfig.geoXUrl.raw;
-  rawConfig['global-ua'] = realPatchConfig.globalUa ?? data.defaultUA;
-  if (rawConfig['hosts'] == null) {
-    rawConfig['hosts'] = {};
-  }
-  for (final host in realPatchConfig.hosts.entries) {
-    rawConfig['hosts'][host.key] = host.value.splitByMultipleSeparators;
-  }
-  var rawDns = rawConfig['dns'] is Map
-      ? Map<String, dynamic>.from(rawConfig['dns'] as Map)
-      : <String, dynamic>{};
-  final isEnableDns = rawDns['enable'] == true;
-  if (!isEnableDns) {
-    rawDns = mergeDnsOverride(
-      rawDns,
-      baselineDns.overrideJson(baselineDnsOverrideKeys),
-    );
-  }
-  rawConfig['dns'] = rawDns;
-}
-
 /// Writes each field a page control owns, and only that field; every other
 /// key stays as the file wrote it, and one it leaves out takes the Core's
 /// default.
@@ -411,30 +325,38 @@ void _applyLegacyProfileSettings(Map rawConfig, MakeRealProfileState data) {
 void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
   final page = data.realPatchConfig;
   final overrides = data.overrides;
-  bool owns(PageConfigKey key) => !page.followKeys.contains(key);
   void put(PageConfigKey key, Object? value) {
-    if (owns(key)) {
-      rawConfig[key.path] = value;
-    }
+    rawConfig[key.path] = value;
   }
 
   if (data.safeMode) {
     rawConfig['external-controller'] = '';
     rawConfig['secret'] = page.secret;
-  } else if (owns(PageConfigKey.externalController)) {
-    rawConfig['external-controller'] = page.secret.isEmpty
-        ? ''
-        : page.externalController.value;
+  } else {
+    if (page.externalController != ExternalControllerStatus.close &&
+        page.secret.isEmpty) {
+      throw StateError('External controller requires authentication');
+    }
+    rawConfig['external-controller'] = page.externalController.value;
     rawConfig['secret'] = page.secret;
   }
-  rawConfig['external-controller-tls'] = '';
-  rawConfig['external-controller-unix'] = '';
-  rawConfig['external-controller-pipe'] = '';
+  for (final key in [
+    'external-controller-tls',
+    'external-controller-unix',
+    'external-controller-pipe',
+  ]) {
+    if (data.safeMode) {
+      rawConfig[key] = '';
+    } else if (rawConfig[key] case final String endpoint
+        when endpoint.isNotEmpty) {
+      throw StateError('$key is not supported');
+    }
+  }
   final iptables = rawConfig['iptables'];
-  if (iptables is Map) {
+  if (!data.safeMode && iptables is Map && iptables['enable'] == true) {
     final inboundInterface = iptables['inbound-interface'];
     if (inboundInterface is String && inboundInterface.contains(' ')) {
-      rawConfig['iptables'] = {'enable': false};
+      throw StateError('iptables.inbound-interface must not contain spaces');
     }
   }
   switch (page.interfaceNameMode) {
@@ -465,8 +387,27 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
   final tun = {
     if (rawConfig['tun'] is Map) ...rawConfig['tun'] as Map,
     ...overrides.tun.overrideJson(overrides.tunOverrideKeys),
-    if (owns(PageConfigKey.tunEnable)) 'enable': page.tun.enable,
-    if (owns(PageConfigKey.tunStack)) 'stack': page.tun.stack.name,
+    ...page.tunOverride.overrideJson({
+      TunOverrideKey.mtu,
+      TunOverrideKey.congestionController,
+      TunOverrideKey.routeAddress,
+      TunOverrideKey.routeExcludeAddress,
+      TunOverrideKey.dnsHijack,
+      TunOverrideKey.udpTimeout,
+      TunOverrideKey.disableIcmpForwarding,
+      if (Platform.isLinux || Platform.isWindows) TunOverrideKey.strictRoute,
+      if (Platform.isLinux) ...{
+        TunOverrideKey.gso,
+        TunOverrideKey.includeInterface,
+        TunOverrideKey.excludeInterface,
+        TunOverrideKey.includeUid,
+        TunOverrideKey.excludeUid,
+        TunOverrideKey.excludeSrcPort,
+        TunOverrideKey.excludeDstPort,
+      },
+    }, keepEmpty: true),
+    'enable': page.tun.enable,
+    'stack': page.tun.stack.name,
   };
   if (data.safeMode) {
     tun['enable'] = false;
@@ -482,20 +423,15 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
   }
   put(PageConfigKey.geoAutoUpdate, page.geoAutoUpdate);
   put(PageConfigKey.geoUpdateInterval, page.geoUpdateInterval);
-  if (owns(PageConfigKey.geoXUrl)) {
-    rawConfig['geox-url'] = {
-      if (rawConfig['geox-url'] is Map) ...rawConfig['geox-url'] as Map,
-      ...page.geoXUrl.raw,
-    };
-  }
+  rawConfig['geox-url'] = {
+    if (rawConfig['geox-url'] is Map) ...rawConfig['geox-url'] as Map,
+    ...page.geoXUrl.raw,
+  };
   put(PageConfigKey.globalUa, page.globalUa ?? data.defaultUA);
-  if (owns(PageConfigKey.hosts) && page.hosts.isNotEmpty) {
-    rawConfig['hosts'] = {
-      if (rawConfig['hosts'] is Map) ...rawConfig['hosts'] as Map,
-      for (final MapEntry(:key, :value) in page.hosts.entries)
-        key: value.splitByMultipleSeparators,
-    };
-  }
+  rawConfig['hosts'] = {
+    for (final MapEntry(:key, :value) in page.hosts.entries)
+      key: value.splitByMultipleSeparators,
+  };
 }
 
 typedef ShakingStoreArgs = ({

@@ -41,6 +41,39 @@ static void testEntitlements(void) {
 #endif
 }
 
+static void testHelperAssociation(void) {
+    NSDictionary *canonical = FCCanonicalHelperPlist();
+    assert(canonical.count == 5);
+    assert(FCClassifyHelperPlist(canonical) == FCHelperPlistAssociated);
+    NSMutableDictionary *legacy = canonical.mutableCopy;
+    [legacy removeObjectForKey:@"AssociatedBundleIdentifiers"];
+    assert(FCClassifyHelperPlist(legacy) == FCHelperPlistLegacy);
+    for (id association in @[@[], @[FCServiceIdentifier], @[FCClientIdentifier, FCServiceIdentifier],
+            FCClientIdentifier, @YES, @[@1]]) {
+        NSMutableDictionary *invalid = canonical.mutableCopy;
+        invalid[@"AssociatedBundleIdentifiers"] = association;
+        assert(FCClassifyHelperPlist(invalid) == FCHelperPlistInvalid);
+    }
+    for (NSString *key in canonical) {
+        NSMutableDictionary *invalid = canonical.mutableCopy;
+        [invalid removeObjectForKey:key];
+        assert(FCClassifyHelperPlist(invalid) == ([key isEqual:@"AssociatedBundleIdentifiers"] ?
+            FCHelperPlistLegacy : FCHelperPlistInvalid));
+        invalid[key] = @42;
+        assert(FCClassifyHelperPlist(invalid) == FCHelperPlistInvalid);
+    }
+    for (NSDictionary *mutation in @[@{@"Label": FCServiceIdentifier}, @{@"Program": @"/tmp/FlashHelper"},
+            @{@"ProcessType": @"Background"}, @{@"MachServices": @{FCHelperLabel: @1}},
+            @{@"MachServices": @{FCHelperLabel: @NO}}, @{@"MachServices": @{FCServiceIdentifier: @YES}},
+            @{@"Unknown": @YES}]) {
+        NSMutableDictionary *invalid = canonical.mutableCopy;
+        [invalid addEntriesFromDictionary:mutation];
+        assert(FCClassifyHelperPlist(invalid) == FCHelperPlistInvalid);
+    }
+    assert(FCClassifyHelperPlist(nil) == FCHelperPlistInvalid);
+    assert(FCClassifyHelperPlist(@[]) == FCHelperPlistInvalid);
+}
+
 int main(void) {
     @autoreleasepool {
         NSString *pin = @"0123456789abcdef0123456789abcdef01234567";
@@ -48,6 +81,7 @@ int main(void) {
         assert(@FC_PRODUCTION_TEAM_ID.length == 0);
         assert(FC_MANAGED_CANDIDATE_ENABLED == FC_TRUST_TEST_EXPECT_CANDIDATE_ENABLED);
         testEntitlements();
+        testHelperAssociation();
         NSArray<NSString *> *roles = @[FCClientIdentifier, FCHelperLabel, FCMaintenanceIdentifier];
         for (NSString *role in roles) {
             NSString *production = FCSigningRequirement(role);

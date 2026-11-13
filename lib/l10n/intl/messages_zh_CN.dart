@@ -584,6 +584,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "columns": MessageLookupByLibrary.simpleMessage("列数"),
     "compact": MessageLookupByLibrary.simpleMessage("紧凑"),
     "compatible": MessageLookupByLibrary.simpleMessage("兼容模式"),
+    "compositionBaselineUnknown": MessageLookupByLibrary.simpleMessage(
+      "无法确认之前运行的值和来源。以下是拟应用的配置，不代表与当前运行配置的差异。",
+    ),
+    "compositionCandidateNote": MessageLookupByLibrary.simpleMessage(
+      "页面有的设置使用页面保存的值；页面没有的先使用配置文件中的值，文件未设置时使用默认值。以下内容基于已保存的配置准备，不会刷新订阅。密钥和较大的内容已隐藏或遮盖。TUN 显示的是拟开启或关闭，并非实际运行状态；授权、挂载内容和 Tailscale 相关内容将在应用时检查。",
+    ),
+    "compositionReadFailed": MessageLookupByLibrary.simpleMessage(
+      "无法准备或重新核验拟应用的配置，本次尚未应用。请检查配置和设置后重试。",
+    ),
+    "compositionRecordFailed": MessageLookupByLibrary.simpleMessage(
+      "配置已应用，但无法保存首次确认记录。重启应用后可能需要再次确认。",
+    ),
+    "compositionReviewTitle": MessageLookupByLibrary.simpleMessage("首次应用前确认设置"),
+    "compositionSourceUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "来源待确认",
+    ),
     "confirm": MessageLookupByLibrary.simpleMessage("确定"),
     "confirmClearAllData": MessageLookupByLibrary.simpleMessage("确定要清除所有数据？"),
     "confirmDeleteProxyGroup": MessageLookupByLibrary.simpleMessage(
@@ -1153,6 +1169,21 @@ class MessageLookup extends MessageLookupByLibrary {
     "logLevelWarning": MessageLookupByLibrary.simpleMessage("警告"),
     "logcat": MessageLookupByLibrary.simpleMessage("日志捕获"),
     "logcatDesc": MessageLookupByLibrary.simpleMessage("关闭日志捕获会隐藏日志入口。"),
+    "loginItemMissingStatus": MessageLookupByLibrary.simpleMessage(
+      "无法读取登录时打开的状态。",
+    ),
+    "loginItemNotFound": MessageLookupByLibrary.simpleMessage(
+      "macOS 找不到当前的 Flash，无法设置登录时打开。",
+    ),
+    "loginItemOperationFailed": MessageLookupByLibrary.simpleMessage(
+      "无法更改登录时打开设置。",
+    ),
+    "loginItemRequiresApproval": MessageLookupByLibrary.simpleMessage(
+      "需要在系统设置中允许 Flash 登录时打开。",
+    ),
+    "loginItemUnexpectedStatus": MessageLookupByLibrary.simpleMessage(
+      "无法确认登录时打开是否已按所选设置更新。",
+    ),
     "logs": MessageLookupByLibrary.simpleMessage("日志"),
     "logsAndDiagnostics": MessageLookupByLibrary.simpleMessage("日志与诊断"),
     "logsTest": MessageLookupByLibrary.simpleMessage("日志测试"),
@@ -2604,7 +2635,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tun": MessageLookupByLibrary.simpleMessage("虚拟网卡"),
     "tunAuthorizationFailed": MessageLookupByLibrary.simpleMessage(
-      "虚拟网卡授权失败，已关闭。",
+      "TUN 授权未完成，本次未应用。已保留页面上的设置。",
     ),
     "tunDesc": MessageLookupByLibrary.simpleMessage("虚拟网卡仅在管理员模式生效。"),
     "tunMissingAuthorization": MessageLookupByLibrary.simpleMessage(

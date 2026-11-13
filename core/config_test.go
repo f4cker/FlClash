@@ -819,8 +819,11 @@ func TestApplyConfigTellsARejectedProfileFromAFailedCall(t *testing.T) {
 	if !errors.As(err, &methodErr) || methodErr.Code != "config_rejected" {
 		t.Fatalf("applyConfig = %v, want a config_rejected error", err)
 	}
-	if currentConfig == nil {
-		t.Error("the default config did not take the rejected one's place")
+	if currentConfig != nil {
+		t.Error("a cold rejected candidate installed a default config")
+	}
+	if details, ok := methodErr.Details.(map[string]string); !ok || details["outcome"] != "not_applied" {
+		t.Errorf("details = %+v, want not_applied", methodErr.Details)
 	}
 }
 

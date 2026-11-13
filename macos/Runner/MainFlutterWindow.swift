@@ -1,6 +1,7 @@
 import Cocoa
 import FlutterMacOS
 import window
+import ServiceManagement
 import LaunchAtLogin
 import Darwin
 
@@ -70,17 +71,7 @@ class MainFlutterWindow: NSWindow {
             name: "launch_at_startup", binaryMessenger: flutterViewController.engine.binaryMessenger
         )
         .setMethodCallHandler { (_ call: FlutterMethodCall, result: @escaping FlutterResult) in
-            switch call.method {
-            case "launchAtStartupIsEnabled":
-                result(LaunchAtLogin.isEnabled)
-            case "launchAtStartupSetEnabled":
-                if let arguments = call.arguments as? [String: Any] {
-                    LaunchAtLogin.isEnabled = arguments["setEnabledValue"] as! Bool
-                }
-                result(nil)
-            default:
-                result(FlutterMethodNotImplemented)
-            }
+            MainAppLoginItem.handle(call, result: result)
         }
 
         ManagedHelperChannel.register(messenger: flutterViewController.engine.binaryMessenger)
@@ -135,4 +126,135 @@ class MainFlutterWindow: NSWindow {
         super.order(place, relativeTo: otherWin)
         hiddenWindowAtLaunch()
     }
+}
+
+private enum MainAppLoginItem {
+    static func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard call.method == "launchAtStartupIsEnabled" ||
+              call.method == "launchAtStartupSetEnabled" else {
+            result(FlutterMethodNotImplemented)
+            return
+        }
+        guard #available(macOS 13, *) else {
+            handleLegacy(call, result: result)
+            return
+        }
+        let service = SMAppService.mainApp
+        if call.method == "launchAtStartupIsEnabled" {
+            switch service.status {
+            case .enabled: result(true)
+            case .notRegistered: result(false)
+            default: result(statusError(service.status, operation: "read"))
+            }
+            return
+        }
+        guard let arguments = call.arguments as? [String: Any],
+              let enabled = arguments["setEnabledValue"] as? Bool else {
+            result(FlutterError(code: "invalid_arguments",
+                                message: "setEnabledValue must be a Boolean.", details: nil))
+            return
+        }
+        let before = service.status
+        if enabled && before == .enabled {
+            result(nil)
+            return
+        }
+        if before == .notFound || (enabled && before == .requiresApproval) {
+            result(statusError(before, operation: enabled ? "enable" : "disable"))
+            return
+        }
+        do {
+            switch before {
+            case .enabled:
+                if !enabled { try service.unregister() }
+            case .requiresApproval:
+                if enabled {
+                    result(statusError(before, operation: "enable"))
+                    return
+                }
+                try service.unregister()
+            case .notRegistered:
+                if enabled { try service.register() }
+            case .notFound:
+                result(statusError(before, operation: enabled ? "enable" : "disable"))
+                return
+            @unknown default:
+                result(statusError(before, operation: enabled ? "enable" : "disable"))
+                return
+            }
+        } catch {
+            let native = error as NSError
+            result(FlutterError(
+                code: "login_item_operation_failed", message: native.localizedDescription,
+                details: ["operation": enabled ? "enable" : "disable",
+                          "status": statusName(service.status),
+                          "domain": native.domain, "nativeCode": native.code]
+            ))
+            return
+        }
+        let after = service.status
+        guard enabled ? after == .enabled : after == .notRegistered else {
+            result(statusError(after, operation: enabled ? "enable" : "disable"))
+            return
+        }
+        result(nil)
+    }
+
+    private static func handleLegacy(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        if call.method == "launchAtStartupIsEnabled" {
+            result(LaunchAtLogin.isEnabled)
+            return
+        }
+        guard let arguments = call.arguments as? [String: Any],
+              let enabled = arguments["setEnabledValue"] as? Bool else {
+            result(FlutterError(code: "invalid_arguments",
+                                message: "setEnabledValue must be a Boolean.", details: nil))
+            return
+        }
+        if LaunchAtLogin.isEnabled != enabled {
+            LaunchAtLogin.isEnabled = enabled
+        }
+        let actual = LaunchAtLogin.isEnabled
+        guard actual == enabled else {
+            result(FlutterError(
+                code: "login_item_operation_failed",
+                message: "Open at Login did not reach the requested state.",
+                details: ["operation": enabled ? "enable" : "disable",
+                          "status": actual ? "enabled" : "notRegistered"]
+            ))
+            return
+        }
+        result(nil)
+    }
+
+    @available(macOS 13, *)
+    private static func statusName(_ status: SMAppService.Status) -> String {
+        switch status {
+        case .enabled: return "enabled"
+        case .requiresApproval: return "requiresApproval"
+        case .notRegistered: return "notRegistered"
+        case .notFound: return "notFound"
+        @unknown default: return "unknown"
+        }
+    }
+
+    @available(macOS 13, *)
+    private static func statusError(_ status: SMAppService.Status, operation: String) -> FlutterError {
+        let code: String
+        let message: String
+        switch status {
+        case .requiresApproval:
+            code = "login_item_requires_approval"
+            message = "Approve Flash in System Settings > General > Login Items to open it at login."
+        case .notFound:
+            code = "login_item_not_found"
+            message = "macOS could not find this application as a login item."
+        default:
+            code = "login_item_unexpected_status"
+            message = "Open at Login did not reach the requested state."
+        }
+        return FlutterError(code: code, message: message,
+                            details: ["status": statusName(status), "operation": operation])
+    }
+
 }

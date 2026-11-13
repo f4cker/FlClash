@@ -48,22 +48,19 @@ final class UpdateParamsProvider
   }
 }
 
-String _$updateParamsHash() => r'4a6ad62fe9e2cae23924d8ec9a1ec390ae2dd25b';
+String _$updateParamsHash() => r'b24584f2c570a0d70bdab466bb4efc8971b8b1c0';
 
-/// The mixed port Flash points the system proxy at: the page's, or the
-/// profile's once the field follows it.
+/// The mixed port configured by the in-app control.
 
 @ProviderFor(effectiveMixedPort)
 final effectiveMixedPortProvider = EffectiveMixedPortProvider._();
 
-/// The mixed port Flash points the system proxy at: the page's, or the
-/// profile's once the field follows it.
+/// The mixed port configured by the in-app control.
 
 final class EffectiveMixedPortProvider
     extends $FunctionalProvider<int, int, int>
     with $Provider<int> {
-  /// The mixed port Flash points the system proxy at: the page's, or the
-  /// profile's once the field follows it.
+  /// The mixed port configured by the in-app control.
   EffectiveMixedPortProvider._()
     : super(
         from: null,
@@ -98,16 +95,10 @@ final class EffectiveMixedPortProvider
 }
 
 String _$effectiveMixedPortHash() =>
-    r'cafdf5964d0631974db8a33fe92ca3144af693a9';
-
-/// The page settings as their controls show them: a field that follows the
-/// profile shows the profile's value, or mihomo's default when it has none.
+    r'107581b1cbadff1beb40ee37fb2890937e040d30';
 
 @ProviderFor(shownClashConfig)
 final shownClashConfigProvider = ShownClashConfigProvider._();
-
-/// The page settings as their controls show them: a field that follows the
-/// profile shows the profile's value, or mihomo's default when it has none.
 
 final class ShownClashConfigProvider
     extends
@@ -117,8 +108,6 @@ final class ShownClashConfigProvider
           PatchClashConfig
         >
     with $Provider<PatchClashConfig> {
-  /// The page settings as their controls show them: a field that follows the
-  /// profile shows the profile's value, or mihomo's default when it has none.
   ShownClashConfigProvider._()
     : super(
         from: null,
@@ -152,7 +141,7 @@ final class ShownClashConfigProvider
   }
 }
 
-String _$shownClashConfigHash() => r'4af0edc39ebae7bb9fd35cfc38cdb910f98db6f7';
+String _$shownClashConfigHash() => r'549339366004bb408df0f1f293c27b95c53657c3';
 
 @ProviderFor(coreOptions)
 final coreOptionsProvider = CoreOptionsProvider._();
@@ -501,6 +490,61 @@ final class GetHotKeyActionFamily extends $Family
   String toString() => r'getHotKeyActionProvider';
 }
 
+@ProviderFor(PendingCompositionDnsEligibility)
+final pendingCompositionDnsEligibilityProvider =
+    PendingCompositionDnsEligibilityProvider._();
+
+final class PendingCompositionDnsEligibilityProvider
+    extends $NotifierProvider<PendingCompositionDnsEligibility, bool?> {
+  PendingCompositionDnsEligibilityProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pendingCompositionDnsEligibilityProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$pendingCompositionDnsEligibilityHash();
+
+  @$internal
+  @override
+  PendingCompositionDnsEligibility create() =>
+      PendingCompositionDnsEligibility();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool?>(value),
+    );
+  }
+}
+
+String _$pendingCompositionDnsEligibilityHash() =>
+    r'a020f7dbab9d777bfd948d93cc4204c860f4c2a9';
+
+abstract class _$PendingCompositionDnsEligibility extends $Notifier<bool?> {
+  bool? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool?, bool?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool?, bool?>,
+              bool?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(shouldPatchSystemDns)
 final shouldPatchSystemDnsProvider = ShouldPatchSystemDnsProvider._();
 
@@ -541,7 +585,7 @@ final class ShouldPatchSystemDnsProvider
 }
 
 String _$shouldPatchSystemDnsHash() =>
-    r'f74bcdbae504e9528b2e960b8620d097c27f3ca9';
+    r'e142fa1cdea9bd9baae406a559f736492dc0fe1f';
 
 @ProviderFor(sharedState)
 final sharedStateProvider = SharedStateProvider._();

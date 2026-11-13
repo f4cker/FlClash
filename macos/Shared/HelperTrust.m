@@ -29,11 +29,40 @@ NSString *FCInstalledExecutable(NSString *role) {
     return @"";
 }
 
+NSDictionary *FCCanonicalHelperPlist(void) {
+    return @{@"Label": FCHelperLabel, @"Program": FCInstalledExecutable(FCHelperLabel),
+        @"MachServices": @{FCHelperLabel: @YES}, @"ProcessType": @"Interactive",
+        @"AssociatedBundleIdentifiers": @[FCClientIdentifier]};
+}
+
+FCHelperPlistSchema FCClassifyHelperPlist(id plist) {
+    if (![plist isKindOfClass:NSDictionary.class]) return FCHelperPlistInvalid;
+    NSDictionary *dictionary = plist;
+    for (NSString *key in @[@"Label", @"Program", @"ProcessType"])
+        if (![dictionary[key] isKindOfClass:NSString.class]) return FCHelperPlistInvalid;
+    NSDictionary *services = dictionary[@"MachServices"];
+    if (![services isKindOfClass:NSDictionary.class] || services.count != 1) return FCHelperPlistInvalid;
+    id enabled = services[FCHelperLabel];
+    if (!enabled || CFGetTypeID((__bridge CFTypeRef)enabled) != CFBooleanGetTypeID()) return FCHelperPlistInvalid;
+    id association = dictionary[@"AssociatedBundleIdentifiers"];
+    if (association && (![association isKindOfClass:NSArray.class] || [association count] != 1 ||
+        ![association[0] isKindOfClass:NSString.class])) return FCHelperPlistInvalid;
+    NSDictionary *canonical = FCCanonicalHelperPlist();
+    if ([dictionary isEqualToDictionary:canonical]) return FCHelperPlistAssociated;
+    NSMutableDictionary *legacy = canonical.mutableCopy;
+    [legacy removeObjectForKey:@"AssociatedBundleIdentifiers"];
+    return [dictionary isEqualToDictionary:legacy] ? FCHelperPlistLegacy : FCHelperPlistInvalid;
+}
+
 BOOL FCLegacyPlistTrusted(void) {
     if (!FCProtectedTree(FCLegacyPlist, NO)) return NO;
-    NSDictionary *plist = [NSDictionary dictionaryWithContentsOfFile:FCLegacyPlist];
-    return [plist isEqual:@{@"Label": FCHelperLabel, @"Program": FCInstalledExecutable(FCHelperLabel),
-        @"MachServices": @{FCHelperLabel: @YES}, @"ProcessType": @"Interactive"}];
+    return FCClassifyHelperPlist([NSDictionary dictionaryWithContentsOfFile:FCLegacyPlist]) == FCHelperPlistAssociated;
+}
+
+BOOL FCLegacyPlistTrustedForMaintenance(void) {
+    if (!FCProtectedTree(FCLegacyPlist, NO)) return NO;
+    FCHelperPlistSchema schema = FCClassifyHelperPlist([NSDictionary dictionaryWithContentsOfFile:FCLegacyPlist]);
+    return schema == FCHelperPlistLegacy || schema == FCHelperPlistAssociated;
 }
 
 const size_t FCMaxFrame = 64 * 1024 * 1024;

@@ -637,6 +637,24 @@ class MessageLookup extends MessageLookupByLibrary {
     "columns": MessageLookupByLibrary.simpleMessage("列数"),
     "compact": MessageLookupByLibrary.simpleMessage("コンパクト"),
     "compatible": MessageLookupByLibrary.simpleMessage("互換モード"),
+    "compositionBaselineUnknown": MessageLookupByLibrary.simpleMessage(
+      "The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.",
+    ),
+    "compositionCandidateNote": MessageLookupByLibrary.simpleMessage(
+      "Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.",
+    ),
+    "compositionReadFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn’t prepare or recheck the proposed configuration. It has not been applied. Check the configuration and settings, then try again.",
+    ),
+    "compositionRecordFailed": MessageLookupByLibrary.simpleMessage(
+      "The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.",
+    ),
+    "compositionReviewTitle": MessageLookupByLibrary.simpleMessage(
+      "Review Settings Before First Apply",
+    ),
+    "compositionSourceUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Source unconfirmed",
+    ),
     "confirm": MessageLookupByLibrary.simpleMessage("OK"),
     "confirmClearAllData": MessageLookupByLibrary.simpleMessage(
       "すべてのデータを消去してもよろしいですか？",
@@ -1293,6 +1311,21 @@ class MessageLookup extends MessageLookupByLibrary {
     "logcat": MessageLookupByLibrary.simpleMessage("ログキャプチャ"),
     "logcatDesc": MessageLookupByLibrary.simpleMessage(
       "ログキャプチャを無効にすると、ログの入り口が非表示になります。",
+    ),
+    "loginItemMissingStatus": MessageLookupByLibrary.simpleMessage(
+      "Couldn’t read the Open at Login status.",
+    ),
+    "loginItemNotFound": MessageLookupByLibrary.simpleMessage(
+      "macOS couldn’t find the current Flash app to set it to open at login.",
+    ),
+    "loginItemOperationFailed": MessageLookupByLibrary.simpleMessage(
+      "Couldn’t change the Open at Login setting.",
+    ),
+    "loginItemRequiresApproval": MessageLookupByLibrary.simpleMessage(
+      "Allow Flash to open at login in System Settings.",
+    ),
+    "loginItemUnexpectedStatus": MessageLookupByLibrary.simpleMessage(
+      "Couldn’t confirm that Open at Login was updated as requested.",
     ),
     "logs": MessageLookupByLibrary.simpleMessage("ログ"),
     "logsAndDiagnostics": MessageLookupByLibrary.simpleMessage("ログと診断"),
@@ -3081,7 +3114,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "tun": MessageLookupByLibrary.simpleMessage("TUN"),
     "tunAuthorizationFailed": MessageLookupByLibrary.simpleMessage(
-      "TUN の権限を取得できなかったため、オフにしました。",
+      "TUN authorization wasn’t completed. The configuration was not applied. Your in-app setting was kept.",
     ),
     "tunDesc": MessageLookupByLibrary.simpleMessage("TUN は管理者モードでのみ有効です。"),
     "tunMissingAuthorization": MessageLookupByLibrary.simpleMessage(

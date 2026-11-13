@@ -53,6 +53,11 @@
   "tunDesc": "TUN は管理者モードでのみ有効です。",
   "minimizeOnExit": "終了時に最小化",
   "autoLaunch": "自動起動",
+  "loginItemRequiresApproval": "Allow Flash to open at login in System Settings.",
+  "loginItemNotFound": "macOS couldn’t find the current Flash app to set it to open at login.",
+  "loginItemUnexpectedStatus": "Couldn’t confirm that Open at Login was updated as requested.",
+  "loginItemMissingStatus": "Couldn’t read the Open at Login status.",
+  "loginItemOperationFailed": "Couldn’t change the Open at Login setting.",
   "silentLaunch": "サイレント起動",
   "autoRun": "自動実行",
   "autoRunDesc": "自動実行はアプリを開いたときにプロキシを開始します。",
@@ -582,7 +587,7 @@
   "tolerance": "許容値",
   "inputProxyGroupName": "プロキシグループ名を入力してください",
   "helperCorruptTip": "Helper サービスが利用できないため、TUN モードを有効にできません。Flash を再インストールしてください。",
-  "tunAuthorizationFailed": "TUN の権限を取得できなかったため、オフにしました。",
+  "tunAuthorizationFailed": "TUN authorization wasn’t completed. The configuration was not applied. Your in-app setting was kept.",
   "mixedPortUnavailable": "Could not open port {port}. Another app may be using it. The proxy service did not start.",
   "mixedPortUnavailableProxyUnchanged": "Could not open port {port}. Another app may be using it. The proxy service did not start. System proxy settings were not changed.",
   "sudoPasswordTitle": "sudo のパスワードを入力",
@@ -1593,5 +1598,11 @@
   "traySelected": "選択中",
   "trayTestLatency": "遅延をテスト",
   "trayReject": "拒否",
-  "trayLatencyBadge": "{value} ms"
+  "trayLatencyBadge": "{value} ms",
+  "compositionReviewTitle": "Review Settings Before First Apply",
+  "compositionBaselineUnknown": "The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.",
+  "compositionCandidateNote": "Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.",
+  "compositionReadFailed": "Couldn’t prepare or recheck the proposed configuration. It has not been applied. Check the configuration and settings, then try again.",
+  "compositionSourceUnconfirmed": "Source unconfirmed",
+  "compositionRecordFailed": "The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app."
 }

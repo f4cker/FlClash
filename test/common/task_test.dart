@@ -185,6 +185,7 @@ void main() {
             allowLan: true,
             ipv6: true,
             hosts: {'router.local': '192.168.1.1,192.168.1.2'},
+            dns: Dns(nameserver: ['9.9.9.9']),
           ),
           appendSystemDns: true,
           proxyGroups: const [],
@@ -206,10 +207,7 @@ void main() {
       expect(config['allow-lan'], true);
       expect(config['global-ua'], 'FlClash-Test');
       expect(config.containsKey('profile'), isFalse);
-      expect(
-        config['dns']['nameserver'],
-        containsAll(['1.1.1.1', 'system://']),
-      );
+      expect(config['dns']['nameserver'], ['9.9.9.9', 'system://']);
       expect(config['hosts']['router.local'], ['192.168.1.1', '192.168.1.2']);
       expect(config['sniffer']['sniff']['HTTP']['ports'], ['80', '443']);
       expect(
@@ -376,7 +374,12 @@ void main() {
     );
     final config = loadYaml(result.yaml) as YamlMap;
 
-    expect(config.containsKey('dns'), isFalse);
+    expect(config['dns']['nameserver'], const Dns().nameserver);
+    expect(config['dns'].keys.toSet(), {
+      for (final key in DnsOverrideKey.normalProfileKeys) key.path,
+    });
+    expect(config['dns'].containsKey('enable'), isFalse);
+    expect(config['dns'].containsKey('fallback-filter'), isFalse);
     expect(config['proxy-groups'], hasLength(1));
     expect(config['proxy-groups'][0].keys, ['name', 'type', 'proxies']);
     expect(config['proxy-groups'][0]['type'], 'select');
@@ -393,6 +396,10 @@ void main() {
             'www.example.com': ['8.8.8.8'],
           },
           'nameserver': ['9.9.9.9'],
+          'respect-rules': false,
+          'cache-max-size': 0,
+          'nameserver-policy': <String, dynamic>{},
+          'fallback-filter': {'geoip': false, 'ipcidr': <String>[]},
         },
         'proxy-providers': {
           'first': {'type': 'http', 'url': 'https://example.com/shared.yaml'},
@@ -416,7 +423,16 @@ void main() {
     );
     final config = loadYaml(result.yaml) as YamlMap;
 
-    expect(config['dns']['direct-nameserver'], ['223.5.5.5']);
+    expect(config['dns']['direct-nameserver'], isEmpty);
+    expect(config['dns']['enable'], false);
+    expect(config['dns']['respect-rules'], false);
+    expect(config['dns']['cache-max-size'], 0);
+    expect(config['dns']['nameserver-policy'], isEmpty);
+    expect(config['dns']['fallback-filter'], {
+      'geoip': false,
+      'ipcidr': <String>[],
+    });
+    expect(config['dns']['nameserver'], const Dns().nameserver);
     expect(config['dns']['proxy-server-nameserver-policy'], {
       'www.example.com': ['8.8.8.8'],
     });
@@ -437,7 +453,9 @@ void main() {
             'dns': {'enable': true, 'listen': '0.0.0.0:53'},
             'ntp': {'enable': true, 'write-to-system': true},
           },
-          realPatchConfig: const PatchClashConfig(),
+          realPatchConfig: const PatchClashConfig(
+            dns: Dns(listen: '0.0.0.0:53'),
+          ),
           appendSystemDns: false,
           proxyGroups: const [],
           rules: const [],
@@ -462,34 +480,52 @@ void main() {
   test(
     'makeRealProfileTask does not let a profile open a controller',
     () async {
-      for (final safeMode in [false, true]) {
-        final result = await makeRealProfileTask(
-          MakeRealProfileState(
-            profilesPath: '/profiles',
-            profileId: 14,
-            rawConfig: {
-              'external-controller': '0.0.0.0:9090',
-              'secret': 'from-the-profile',
-              'external-controller-tls': '0.0.0.0:9443',
-              'external-controller-unix': '/tmp/victim',
-              'external-controller-pipe': r'\\.\pipe\mihomo',
-            },
-            realPatchConfig: const PatchClashConfig(),
-            appendSystemDns: false,
-            proxyGroups: const [],
-            rules: const [],
-            addedRules: const [],
-            defaultUA: 'FlClash-Test',
-            safeMode: safeMode,
-          ),
-        );
-        final config = loadYaml(result.yaml) as YamlMap;
+      for (final endpoint in {
+        'external-controller-tls': '0.0.0.0:9443',
+        'external-controller-unix': '/tmp/synthetic-controller.sock',
+        'external-controller-pipe': r'\\.\pipe\synthetic-controller',
+      }.entries) {
+        for (final safeMode in [false, true]) {
+          final resultFuture = makeRealProfileTask(
+            MakeRealProfileState(
+              profilesPath: '/profiles',
+              profileId: 14,
+              rawConfig: {
+                'external-controller': '0.0.0.0:9090',
+                'secret': 'from-the-profile',
+                endpoint.key: endpoint.value,
+              },
+              realPatchConfig: const PatchClashConfig(),
+              appendSystemDns: false,
+              proxyGroups: const [],
+              rules: const [],
+              addedRules: const [],
+              defaultUA: 'FlClash-Test',
+              safeMode: safeMode,
+            ),
+          );
+          if (!safeMode) {
+            await expectLater(
+              resultFuture,
+              throwsA(
+                isA<StateError>().having(
+                  (error) => error.message,
+                  'message',
+                  '${endpoint.key} is not supported',
+                ),
+              ),
+            );
+            continue;
+          }
+          final result = await resultFuture;
+          final config = loadYaml(result.yaml) as YamlMap;
 
-        expect(config['external-controller-tls'], '');
-        expect(config['external-controller-unix'], '');
-        expect(config['external-controller-pipe'], '');
-        expect(config['external-controller'], '');
-        expect(config['secret'], '');
+          expect(config['external-controller-tls'], '');
+          expect(config['external-controller-unix'], '');
+          expect(config['external-controller-pipe'], '');
+          expect(config['external-controller'], '');
+          expect(config['secret'], '');
+        }
       }
     },
   );
@@ -525,12 +561,21 @@ void main() {
 
       final closed = await build(const PatchClashConfig());
       expect(closed['secret'], '');
-      final missingSecret = await build(
-        const PatchClashConfig(
-          externalController: ExternalControllerStatus.open,
+      expect(closed['external-controller'], '');
+      await expectLater(
+        build(
+          const PatchClashConfig(
+            externalController: ExternalControllerStatus.open,
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'External controller requires authentication',
+          ),
         ),
       );
-      expect(missingSecret['external-controller'], '');
     },
   );
 
@@ -564,6 +609,7 @@ void main() {
             realPatchConfig: const PatchClashConfig(
               externalController: ExternalControllerStatus.open,
               secret: 'from-the-app',
+              dns: Dns(listen: '0.0.0.0:53'),
             ),
             appendSystemDns: false,
             proxyGroups: const [],
@@ -612,36 +658,53 @@ void main() {
 
   test('iptables interface names cannot add command arguments', () async {
     for (final interfaceName in ['br-lan.10', 'lo -M /tmp/extra']) {
-      final result = await makeRealProfileTask(
-        MakeRealProfileState(
-          profilesPath: '/profiles',
-          profileId: 14,
-          rawConfig: {
-            'iptables': {
-              'enable': true,
-              'inbound-interface': interfaceName,
-              'bypass': ['192.168.0.0/16'],
-            },
-          },
-          realPatchConfig: const PatchClashConfig(),
-          appendSystemDns: false,
-          proxyGroups: const [],
-          rules: const [],
-          addedRules: const [],
-          defaultUA: 'FlClash-Test',
-        ),
-      );
-      final config = loadYaml(result.yaml) as YamlMap;
-      expect(
-        config['iptables'],
-        interfaceName == 'br-lan.10'
-            ? {
+      for (final safeMode in [false, true]) {
+        final resultFuture = makeRealProfileTask(
+          MakeRealProfileState(
+            profilesPath: '/profiles',
+            profileId: 14,
+            rawConfig: {
+              'iptables': {
                 'enable': true,
                 'inbound-interface': interfaceName,
                 'bypass': ['192.168.0.0/16'],
-              }
-            : {'enable': false},
-      );
+              },
+            },
+            realPatchConfig: const PatchClashConfig(),
+            appendSystemDns: false,
+            proxyGroups: const [],
+            rules: const [],
+            addedRules: const [],
+            defaultUA: 'FlClash-Test',
+            safeMode: safeMode,
+          ),
+        );
+        if (!safeMode && interfaceName != 'br-lan.10') {
+          await expectLater(
+            resultFuture,
+            throwsA(
+              isA<StateError>().having(
+                (error) => error.message,
+                'message',
+                'iptables.inbound-interface must not contain spaces',
+              ),
+            ),
+          );
+          continue;
+        }
+        final result = await resultFuture;
+        final config = loadYaml(result.yaml) as YamlMap;
+        expect(
+          config['iptables'],
+          safeMode
+              ? {'enable': false}
+              : {
+                  'enable': true,
+                  'inbound-interface': interfaceName,
+                  'bypass': ['192.168.0.0/16'],
+                },
+        );
+      }
     }
   });
 
@@ -723,13 +786,27 @@ void main() {
     test('tun takes its stack from the settings and the rest from the '
         'profile', () async {
       final config = await runWith(
-        const PatchClashConfig(tun: Tun(stack: TunStack.gvisor, mtu: 1400)),
+        const PatchClashConfig(
+          tun: Tun(stack: TunStack.gvisor),
+          tunOverride: ProfileTun(
+            mtu: 1400,
+            congestionController: 'bbr',
+            udpTimeout: 0,
+            routeAddress: [],
+            routeExcludeAddress: [],
+            dnsHijack: [],
+          ),
+        ),
         {
           'tun': {
             'stack': 'system',
             'mtu': 1500,
             'strict-route': true,
             'udp-timeout': 60,
+            'route-address': ['0.0.0.0/0'],
+            'route-exclude-address': ['10.0.0.0/8'],
+            'dns-hijack': ['any:53'],
+            'device': 'profile-tun',
           },
         },
       );
@@ -737,10 +814,14 @@ void main() {
 
       expect(tun['stack'], 'gvisor');
       expect(tun.containsKey('auto-route'), isFalse);
-      expect(tun['mtu'], 1500);
-      expect(tun['strict-route'], true);
-      expect(tun.containsKey('congestion-controller'), isFalse);
-      expect(tun['udp-timeout'], 60);
+      expect(tun['mtu'], 1400);
+      expect(tun['strict-route'], !(Platform.isLinux || Platform.isWindows));
+      expect(tun['congestion-controller'], 'bbr');
+      expect(tun['udp-timeout'], 0);
+      expect(tun['route-address'], isEmpty);
+      expect(tun['route-exclude-address'], isEmpty);
+      expect(tun['dns-hijack'], isEmpty);
+      expect(tun['device'], 'profile-tun');
     });
 
     test('tun keeps the profile auto-detect-interface', () async {
@@ -848,6 +929,224 @@ DOMAIN-SUFFIX,ads.example.com,REJECT
       expect((config['mitm'] as YamlMap)['enable'], isFalse);
       expect((config['mitm'] as YamlMap)['hostname'], isEmpty);
     });
+  });
+
+  group('makeRealProfileTask ownership regressions', () {
+    Future<YamlMap> build({
+      required Map<String, dynamic> rawConfig,
+      PatchClashConfig page = const PatchClashConfig(),
+      ProfileOverrides overrides = const ProfileOverrides(),
+      bool appendSystemDns = false,
+      bool safeMode = false,
+    }) async {
+      final result = await makeRealProfileTask(
+        MakeRealProfileState(
+          profilesPath: '/profiles',
+          profileId: 18,
+          rawConfig: rawConfig,
+          realPatchConfig: page,
+          overrides: overrides,
+          appendSystemDns: appendSystemDns,
+          safeMode: safeMode,
+          proxyGroups: const [],
+          rules: const [],
+          addedRules: const [],
+          defaultUA: 'FlClash-Test',
+        ),
+      );
+      return loadYaml(result.yaml) as YamlMap;
+    }
+
+    test(
+      'page defaults and the whole Hosts dictionary replace the file',
+      () async {
+        for (final hosts in [
+          <String, String>{},
+          {'page.test': '192.0.2.1,192.0.2.2'},
+        ]) {
+          final config = await build(
+            rawConfig: {
+              'allow-lan': true,
+              'port': 8888,
+              'ipv6': true,
+              'unified-delay': false,
+              'tcp-concurrent': false,
+              'hosts': {'file.test': '192.0.2.3'},
+            },
+            page: PatchClashConfig(hosts: hosts),
+          );
+
+          expect(config['allow-lan'], false);
+          expect(config['port'], 0);
+          expect(config['ipv6'], false);
+          expect(config['unified-delay'], true);
+          expect(config['tcp-concurrent'], true);
+          expect(
+            config['hosts'],
+            hosts.isEmpty
+                ? {}
+                : {
+                    'page.test': ['192.0.2.1', '192.0.2.2'],
+                  },
+          );
+        }
+      },
+    );
+
+    test(
+      'custom profile overrides apply only their selected controls',
+      () async {
+        final config = await build(
+          rawConfig: {
+            'ntp': {
+              'enable': true,
+              'server': 'file.example',
+              'write-to-system': false,
+            },
+            'sniffer': {
+              'enable': true,
+              'force-domain': ['file.example'],
+            },
+          },
+          overrides: const ProfileOverrides(
+            ntp: Ntp(server: 'custom.example', enable: false),
+            ntpOverrideKeys: {NtpOverrideKey.server},
+            sniffer: Sniffer(
+              enable: false,
+              forceDomain: ['unselected.example'],
+            ),
+            snifferOverrideKeys: {SnifferOverrideKey.enable},
+          ),
+        );
+
+        expect(config['ntp'], {
+          'enable': true,
+          'server': 'custom.example',
+          'write-to-system': false,
+        });
+        expect(config['sniffer'], {
+          'enable': false,
+          'force-domain': ['file.example'],
+        });
+      },
+    );
+
+    test(
+      'uncontrolled nested false zero and empty file values survive',
+      () async {
+        final config = await build(
+          rawConfig: {
+            'tun': {
+              'auto-route': false,
+              'auto-detect-interface': false,
+              'file-descriptor': 0,
+            },
+            'sniffer': {'enable': false, 'force-domain': <String>[]},
+            'ntp': {'enable': false, 'interval': 0},
+            'skip-auth-prefixes': <String>[],
+          },
+        );
+
+        expect(config['tun']['auto-route'], false);
+        expect(config['tun']['auto-detect-interface'], false);
+        expect(config['tun']['file-descriptor'], 0);
+        expect(config['sniffer'], {
+          'enable': false,
+          'force-domain': <String>[],
+        });
+        expect(config['ntp'], {'enable': false, 'interval': 0});
+        expect(config['skip-auth-prefixes'], isEmpty);
+      },
+    );
+
+    test('DNS empty fragments remain selected-only and opt-in', () {
+      const dns = Dns(nameserver: []);
+
+      expect(dns.overrideJson({DnsOverrideKey.nameserver}), isEmpty);
+      expect(dns.overrideJson({}, keepEmpty: true), isEmpty);
+      expect(dns.overrideJson({DnsOverrideKey.nameserver}, keepEmpty: true), {
+        'nameserver': <String>[],
+      });
+    });
+
+    test(
+      'DNS keeps missing and explicit null unowned enable distinct',
+      () async {
+        final missing = await build(rawConfig: {'dns': <String, dynamic>{}});
+        final explicitNull = await build(
+          rawConfig: {
+            'dns': {'enable': null},
+          },
+        );
+
+        expect(missing['dns'].containsKey('enable'), false);
+        expect(explicitNull['dns'].containsKey('enable'), true);
+        expect(explicitNull['dns']['enable'], isNull);
+      },
+    );
+
+    test(
+      'safe mode keeps empty DNS isolated without normal rejection',
+      () async {
+        final config = await build(
+          rawConfig: {
+            'dns': {'enable': true, 'listen': '0.0.0.0:53'},
+            'tun': {'enable': true},
+          },
+          page: const PatchClashConfig(
+            dns: Dns(listen: '0.0.0.0:53', nameserver: []),
+            tun: Tun(enable: true),
+          ),
+          safeMode: true,
+        );
+
+        expect(config['dns']['listen'], '');
+        expect(config['dns']['nameserver'], isEmpty);
+        expect(config['tun']['enable'], false);
+        expect(config['external-controller'], '');
+        expect(config['listeners'], isEmpty);
+      },
+    );
+
+    test('disabled DNS accepts the page empty nameserver list', () async {
+      final config = await build(
+        rawConfig: {
+          'dns': {
+            'enable': false,
+            'nameserver': ['192.0.2.53'],
+          },
+        },
+        page: const PatchClashConfig(dns: Dns(nameserver: [])),
+      );
+
+      expect(config['dns']['enable'], false);
+      expect(config['dns']['nameserver'], isEmpty);
+    });
+
+    test(
+      'enabled DNS rejects empty nameservers without system fallback',
+      () async {
+        await expectLater(
+          build(
+            rawConfig: {
+              'dns': {'enable': true, 'nameserver': <String>[]},
+            },
+            page: const PatchClashConfig(dns: Dns(nameserver: [])),
+          ),
+          throwsStateError,
+        );
+
+        final config = await build(
+          rawConfig: {
+            'dns': {'enable': true, 'nameserver': <String>[]},
+          },
+          page: const PatchClashConfig(dns: Dns(nameserver: [])),
+          appendSystemDns: true,
+        );
+        expect(config['dns']['enable'], true);
+        expect(config['dns']['nameserver'], ['system://']);
+      },
+    );
   });
 
   group('makeRealProfileTask legacy provider file migration', () {

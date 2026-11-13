@@ -559,14 +559,16 @@ func TestApplyConfigBlocksWhenAMountedProfileFailsOverTheDefaultConfig(t *testin
 	withCurrentConfig(t, nil)
 	keepTunnel(t)
 	t.Cleanup(func() { setMountState(nil, false, false) })
-	broken := writeMountFile(t, home, "broken.yaml", "proxy-groups:\n  - {name: G, type: select, proxies: [nope]}\n")
-	var methodErr *MethodError
-	if err := applyConfig(&SetupParams{Base: &SetupBase{Path: broken, Overlay: "{}"}}); !errors.As(err, &methodErr) || methodErr.Code != "config_rejected" {
-		t.Fatalf("applyConfig = %v, want the default config running", err)
+	fallback, err := config.ParseRawConfig(config.DefaultRawConfig())
+	if err != nil {
+		t.Fatal(err)
 	}
+	currentConfig = fallback
+	setMountState(nil, false, true)
+	var methodErr *MethodError
 	failing := writeMountFile(t, home, "base.yaml", "proxy-groups:\n  - {name: G, type: select, include-all-providers: true}\n")
 
-	err := applyConfig(&SetupParams{Base: &SetupBase{Path: failing, Overlay: "{}"}, Mounts: &MountSetup{}})
+	err = applyConfig(&SetupParams{Base: &SetupBase{Path: failing, Overlay: "{}"}, Mounts: &MountSetup{}})
 
 	if !errors.As(err, &methodErr) || methodErr.Code != "mount_rejected" ||
 		!reflect.DeepEqual(methodErr.Details, map[string]string{"outcome": mountOutcomeBlocked}) {

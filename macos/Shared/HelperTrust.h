@@ -14,7 +14,15 @@ extern NSString * const FCRuntimeDirectory;
 extern NSString * const FCLegacyRuntimeDirectory;
 BOOL FCLegacyRuntimeAbsent(void);
 NSString *FCInstalledExecutable(NSString *role);
+typedef NS_ENUM(NSUInteger, FCHelperPlistSchema) {
+    FCHelperPlistInvalid,
+    FCHelperPlistLegacy,
+    FCHelperPlistAssociated,
+};
+NSDictionary *FCCanonicalHelperPlist(void);
+FCHelperPlistSchema FCClassifyHelperPlist(id _Nullable plist);
 BOOL FCLegacyPlistTrusted(void);
+BOOL FCLegacyPlistTrustedForMaintenance(void);
 @interface FCMessageValidator : NSObject
 - (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable bundle:(nullable NSString *)bundle;
 - (BOOL)check:(xpc_object_t)message;

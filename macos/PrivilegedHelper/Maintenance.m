@@ -53,7 +53,7 @@ static BOOL FCRecordRemovalHandoff(void);
 
 static BOOL FCPrepare(void) {
     NSString *requirement = FCSigningRequirement(FCHelperLabel);
-    if (!requirement || ![FCBundleTrust(FCInstalledBundle) isEqual:@"trusted"] || !FCLegacyPlistTrusted()) return NO;
+    if (!requirement || ![FCBundleTrust(FCInstalledBundle) isEqual:@"trusted"] || !FCLegacyPlistTrustedForMaintenance()) return NO;
     dispatch_queue_t queue = dispatch_queue_create("com.layoute.flash.maintenance", DISPATCH_QUEUE_SERIAL);
     xpc_connection_t connection = xpc_connection_create_mach_service(FCHelperLabel.UTF8String,
         queue, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
@@ -181,7 +181,7 @@ static FCRemovalAction FCRemovalState(NSDictionary *state) {
     return FCClassifyRemoval((FCRemovalSnapshot){phase,
         FCRemovalArtifactAt(FCInstalledBundle, state[@"old"], NO),
         FCRemovalArtifactAt(FCRetiredBundle(), state[@"old"], phase == FCRemovalCleaning),
-        FCAbsent(FCLegacyPlist) ? FCRemovalAbsent : FCLegacyPlistTrusted() ? FCRemovalMatching : FCRemovalUntrusted,
+        FCAbsent(FCLegacyPlist) ? FCRemovalAbsent : FCLegacyPlistTrustedForMaintenance() ? FCRemovalMatching : FCRemovalUntrusted,
         FCRemovalQuiescent()});
 }
 
@@ -208,7 +208,7 @@ static BOOL FCFinishRemoval(void) {
     }
     if (action == FCRemovalClean) {
         if (!FCWriteTransaction(@"remove-cleaning", state[@"old"], @"") || !FCRemovalQuiescent()) return NO;
-        if (!FCAbsent(FCLegacyPlist) && (!FCLegacyPlistTrusted() || unlink(FCLegacyPlist.fileSystemRepresentation))) return NO;
+        if (!FCAbsent(FCLegacyPlist) && (!FCLegacyPlistTrustedForMaintenance() || unlink(FCLegacyPlist.fileSystemRepresentation))) return NO;
         if (!FCSync(FCLegacyPlist.stringByDeletingLastPathComponent) || !FCRemoveFixedTree(FCRetiredBundle()) ||
             !FCWriteTransaction(@"remove-cleaned", state[@"old"], @"")) return NO;
         action = FCRemovalFinish;
@@ -243,9 +243,23 @@ static int FCBeginRemoval(void) {
         return 10;
     }
     NSString *current = FCSeal(FCInstalledBundle);
-    if (current.length != 128 || !FCLegacyPlistTrusted()) return 78;
+    if (current.length != 128 || !FCLegacyPlistTrustedForMaintenance()) return 78;
     if (!emptyLock && mkdir(FCLock().fileSystemRepresentation, 0700)) return 78;
     return FCWriteTransaction(@"remove-pending", current, @"") ? 0 : 78;
+}
+
+static BOOL FCQuiescent(void);
+
+static BOOL FCWriteCanonicalHelperPlist(void) {
+    NSDictionary *plist = FCCanonicalHelperPlist();
+    return [plist writeToFile:FCLegacyPlist atomically:YES] && chmod(FCLegacyPlist.fileSystemRepresentation, 0644) == 0 &&
+        FCSync(FCLegacyPlist) && FCSync(FCLegacyPlist.stringByDeletingLastPathComponent) && FCLegacyPlistTrusted();
+}
+
+static BOOL FCFirstInstallPlistRecoveryAllowed(NSDictionary *state, NSString *current) {
+    return state && [state[@"phase"] isEqual:@"prepared"] && [state[@"old"] isEqual:@"absent"] &&
+        current.length == 128 && [current isEqual:state[@"new"]] && FCAbsent(FCLegacyPlist) &&
+        FCAbsent(FCIncomingBundle()) && FCQuiescent();
 }
 
 static BOOL FCBegin(BOOL repair) {
@@ -260,7 +274,7 @@ static BOOL FCBegin(BOOL repair) {
     if (!current) return NO;
     if (FCAbsent(FCLock())) {
         BOOL absent = [current isEqual:@"absent"];
-        if (absent ? !FCFirstInstallAllowed(YES, FCAbsent(FCLegacyPlist), FCAbsent(FCRuntimeDirectory), FCMachAbsent()) : !FCLegacyPlistTrusted()) return NO;
+        if (absent ? !FCFirstInstallAllowed(YES, FCAbsent(FCLegacyPlist), FCAbsent(FCRuntimeDirectory), FCMachAbsent()) : !FCLegacyPlistTrustedForMaintenance()) return NO;
         if (mkdir(FCBase().fileSystemRepresentation, 0755) && errno != EEXIST) return NO;
         if (mkdir(FCLock().fileSystemRepresentation, 0700)) return NO;
     } else {
@@ -268,11 +282,14 @@ static BOOL FCBegin(BOOL repair) {
         NSArray *entries = repair && FCProtectedTree(FCLock(), YES) ?
             [NSFileManager.defaultManager contentsOfDirectoryAtPath:FCLock() error:nil] : nil;
         BOOL emptyInterruptedLock = FCEmptyLockRecoveryAllowed(repair, entries && entries.count == 0,
-            [current isEqual:@"absent"], current != nil, FCLegacyPlistTrusted(),
+            [current isEqual:@"absent"], current != nil, FCLegacyPlistTrustedForMaintenance(),
             FCFirstInstallAllowed(YES, FCAbsent(FCLegacyPlist), FCAbsent(FCRuntimeDirectory), FCMachAbsent()));
         if (!emptyInterruptedLock && !FCTransactionResumeAllowed(state != nil, [current isEqual:state[@"old"]], [current isEqual:state[@"new"]])) return NO;
-        if (!FCAbsent(FCLegacyPlist) && !FCLegacyPlistTrusted()) return NO;
-        if (!emptyInterruptedLock && FCAbsent(FCLegacyPlist) && ![state[@"old"] isEqual:@"absent"]) return NO;
+        if (!FCAbsent(FCLegacyPlist) && !FCLegacyPlistTrustedForMaintenance()) return NO;
+        if (!emptyInterruptedLock && FCAbsent(FCLegacyPlist) && ![current isEqual:@"absent"]) {
+            if (!repair || !FCFirstInstallPlistRecoveryAllowed(state, current) ||
+                !FCWriteCanonicalHelperPlist() || ![FCSeal(FCInstalledBundle) isEqual:state[@"new"]]) return NO;
+        }
     }
     if (!FCRemoveIncoming()) return NO;
     return FCWriteTransaction(@"staging", current, @"");
@@ -283,7 +300,7 @@ static BOOL FCStageReady(void) {
     NSString *current = FCSeal(FCInstalledBundle);
     NSString *incoming = FCSeal(FCIncomingBundle());
     return state && [state[@"phase"] isEqual:@"staging"] && [current isEqual:state[@"old"]] &&
-        incoming && ![incoming isEqual:@"absent"] && (FCAbsent(FCLegacyPlist) || FCLegacyPlistTrusted()) &&
+        incoming && ![incoming isEqual:@"absent"] && ([state[@"old"] isEqual:@"absent"] ? FCAbsent(FCLegacyPlist) : FCLegacyPlistTrustedForMaintenance()) &&
         FCWriteTransaction(@"prepared", current, incoming);
 }
 
@@ -298,14 +315,11 @@ static BOOL FCCommit(void) {
     if (!state || !FCTransactionCommitAllowed([state[@"phase"] isEqual:@"prepared"], FCQuiescent(),
         [FCSeal(FCInstalledBundle) isEqual:state[@"old"]], [FCSeal(FCIncomingBundle()) isEqual:state[@"new"]])) return NO;
     BOOL first = [state[@"old"] isEqual:@"absent"];
+    if (first ? !FCAbsent(FCLegacyPlist) : !FCLegacyPlistTrustedForMaintenance()) return NO;
     int result = first ? rename(FCIncomingBundle().fileSystemRepresentation, FCInstalledBundle.fileSystemRepresentation) :
         renamex_np(FCIncomingBundle().fileSystemRepresentation, FCInstalledBundle.fileSystemRepresentation, RENAME_SWAP);
     if (result || !FCSync(FCBase()) || !FCSync(FCIncoming())) return NO;
-    NSDictionary *plist = @{@"Label": FCHelperLabel, @"Program": FCInstalledExecutable(FCHelperLabel),
-        @"MachServices": @{FCHelperLabel: @YES}, @"ProcessType": @"Interactive"};
-    if (!FCAbsent(FCLegacyPlist) && !FCLegacyPlistTrusted()) return NO;
-    if (![plist writeToFile:FCLegacyPlist atomically:YES] || chmod(FCLegacyPlist.fileSystemRepresentation, 0644) ||
-        !FCSync(FCLegacyPlist) || !FCSync(FCLegacyPlist.stringByDeletingLastPathComponent)) return NO;
+    if (!FCWriteCanonicalHelperPlist()) return NO;
     return [FCSeal(FCInstalledBundle) isEqual:state[@"new"]] && FCLegacyPlistTrusted() &&
         FCWriteTransaction(@"committed", state[@"old"], state[@"new"]);
 }
@@ -341,7 +355,7 @@ int main(int argc, const char *argv[]) {
         if ([action isEqual:@"preflight"]) {
             if (FCFirstInstallAllowed(FCAbsent(FCInstalledBundle), FCAbsent(FCLegacyPlist), FCAbsent(FCRuntimeDirectory), FCMachAbsent())) return 10;
             if (![FCBundleTrust(FCInstalledBundle) isEqual:@"trusted"]) return FCResult(NO, "installed-bundle-untrusted");
-            return FCResult(FCLegacyPlistTrusted(), "launch-daemon-untrusted");
+            return FCResult(FCLegacyPlistTrustedForMaintenance(), "launch-daemon-untrusted");
         }
         if ([action isEqual:@"arm"]) {
             if (mkdir(FCRuntimeDirectory.fileSystemRepresentation, 0700) && errno != EEXIST)

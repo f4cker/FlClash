@@ -252,7 +252,11 @@ func parseDocument(document *yaml.Node) error {
 func checkOnlyProxy(mapping map[string]any) map[string]any {
 	switch kind, _ := mapping["type"].(string); strings.ToLower(kind) {
 	case "tailscale", "easytier":
-		return map[string]any{"name": mapping["name"], "type": "direct"}
+		probe := map[string]any{"name": mapping["name"], "type": "direct"}
+		if dialer, ok := mapping["dialer-proxy"]; ok {
+			probe["dialer-proxy"] = dialer
+		}
+		return probe
 	}
 	return mapping
 }

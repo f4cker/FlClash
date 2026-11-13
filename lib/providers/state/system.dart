@@ -11,57 +11,21 @@ UpdateParams updateParams(Ref ref) {
       (state) => state.toUpdateParams(
         authentication: authentication.credentials,
         options: options,
-        layered: state.pagePriority,
+        layered: true,
       ),
     ),
   );
 }
 
-/// The mixed port Flash points the system proxy at: the page's, or the
-/// profile's once the field follows it.
+/// The mixed port configured by the in-app control.
 @riverpod
 int effectiveMixedPort(Ref ref) {
-  final (:follows, :page) = ref.watch(
-    patchClashConfigProvider.select(
-      (state) => (
-        follows: !state.usesPage(
-          PageConfigKey.mixedPort,
-          layered: state.pagePriority,
-        ),
-        page: state.mixedPort,
-      ),
-    ),
-  );
-  if (!follows) {
-    return page;
-  }
-  return switch (ref.watch(builtInboundsProvider)['mixed-port']) {
-    final int port => port,
-    _ => 0,
-  };
+  return ref.watch(patchClashConfigProvider.select((state) => state.mixedPort));
 }
 
-/// The page settings as their controls show them: a field that follows the
-/// profile shows the profile's value, or mihomo's default when it has none.
 @riverpod
-PatchClashConfig shownClashConfig(Ref ref) {
-  final config = ref.watch(patchClashConfigProvider);
-  if (!config.pagePriority || config.followKeys.isEmpty) {
-    return config;
-  }
-  final settings = ref.watch(profileSettingsProvider);
-  var shown = config;
-  for (final key in config.followKeys) {
-    final value = settings == null
-        ? configKeyMissing
-        : readConfigPath(settings, key.path);
-    shown = shown.withFileValue(
-      key,
-      identical(value, configKeyMissing) ? kernelDefaults[key.path] : value,
-    );
-  }
-  return shown;
-}
+PatchClashConfig shownClashConfig(Ref ref) =>
+    ref.watch(patchClashConfigProvider);
 
 @riverpod
 CoreOptions coreOptions(Ref ref) {
@@ -216,22 +180,32 @@ HotKeyAction getHotKeyAction(Ref ref, HotAction hotAction) {
   );
 }
 
+@Riverpod(keepAlive: true)
+class PendingCompositionDnsEligibility
+    extends _$PendingCompositionDnsEligibility
+    with AutoDisposeNotifierMixin {
+  @override
+  bool? build() => null;
+}
+
 @riverpod
 bool shouldPatchSystemDns(Ref ref) {
+  final isStart = ref.watch(runTimeProvider.select((state) => state != null));
+  if (!isStart) return false;
+  // Eligibility, not a DNS snapshot: authorization cannot adopt a candidate.
+  final pending = ref.watch(pendingCompositionDnsEligibilityProvider);
+  if (pending != null) return pending;
   final autoSetSystemDns = ref.watch(
     networkSettingProvider.select((state) => state.autoSetSystemDns),
   );
   if (!autoSetSystemDns || ref.watch(safeModeProvider)) {
     return false;
   }
-  final isStart = ref.watch(runTimeProvider.select((state) => state != null));
   final tunEnable = ref.watch(
     patchClashConfigProvider.select((state) => state.tun.enable),
   );
   final authorizationState = ref.watch(authorizedTunEnableProvider);
-  return isStart &&
-      tunEnable &&
-      authorizationState == TunAuthorizationState.authorized;
+  return tunEnable && authorizationState == TunAuthorizationState.authorized;
 }
 
 @riverpod

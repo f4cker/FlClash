@@ -435,6 +435,56 @@ class AppLocalizations {
     return Intl.message('Auto launch', name: 'autoLaunch', desc: '', args: []);
   }
 
+  /// `Allow Flash to open at login in System Settings.`
+  String get loginItemRequiresApproval {
+    return Intl.message(
+      'Allow Flash to open at login in System Settings.',
+      name: 'loginItemRequiresApproval',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `macOS couldn’t find the current Flash app to set it to open at login.`
+  String get loginItemNotFound {
+    return Intl.message(
+      'macOS couldn’t find the current Flash app to set it to open at login.',
+      name: 'loginItemNotFound',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t confirm that Open at Login was updated as requested.`
+  String get loginItemUnexpectedStatus {
+    return Intl.message(
+      'Couldn’t confirm that Open at Login was updated as requested.',
+      name: 'loginItemUnexpectedStatus',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t read the Open at Login status.`
+  String get loginItemMissingStatus {
+    return Intl.message(
+      'Couldn’t read the Open at Login status.',
+      name: 'loginItemMissingStatus',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t change the Open at Login setting.`
+  String get loginItemOperationFailed {
+    return Intl.message(
+      'Couldn’t change the Open at Login setting.',
+      name: 'loginItemOperationFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Silent launch`
   String get silentLaunch {
     return Intl.message(
@@ -4726,10 +4776,10 @@ class AppLocalizations {
     );
   }
 
-  /// `TUN could not be authorized, so it was turned off.`
+  /// `TUN authorization wasn’t completed. The configuration was not applied. Your in-app setting was kept.`
   String get tunAuthorizationFailed {
     return Intl.message(
-      'TUN could not be authorized, so it was turned off.',
+      'TUN authorization wasn’t completed. The configuration was not applied. Your in-app setting was kept.',
       name: 'tunAuthorizationFailed',
       desc: '',
       args: [],
@@ -14004,6 +14054,66 @@ class AppLocalizations {
       name: 'trayLatencyBadge',
       desc: '',
       args: [value],
+    );
+  }
+
+  /// `Review Settings Before First Apply`
+  String get compositionReviewTitle {
+    return Intl.message(
+      'Review Settings Before First Apply',
+      name: 'compositionReviewTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.`
+  String get compositionBaselineUnknown {
+    return Intl.message(
+      'The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.',
+      name: 'compositionBaselineUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.`
+  String get compositionCandidateNote {
+    return Intl.message(
+      'Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.',
+      name: 'compositionCandidateNote',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t prepare or recheck the proposed configuration. It has not been applied. Check the configuration and settings, then try again.`
+  String get compositionReadFailed {
+    return Intl.message(
+      'Couldn’t prepare or recheck the proposed configuration. It has not been applied. Check the configuration and settings, then try again.',
+      name: 'compositionReadFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Source unconfirmed`
+  String get compositionSourceUnconfirmed {
+    return Intl.message(
+      'Source unconfirmed',
+      name: 'compositionSourceUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.`
+  String get compositionRecordFailed {
+    return Intl.message(
+      'The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.',
+      name: 'compositionRecordFailed',
+      desc: '',
+      args: [],
     );
   }
 }

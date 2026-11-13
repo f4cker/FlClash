@@ -200,7 +200,10 @@ void main() {
   late TestSetupAction action;
   late ProviderContainer container;
 
-  setUp(() {
+  setUp(() async {
+    // This suite exercises already-adopted paths. First-adoption cases live in
+    // composition_adoption_test.dart and explicitly seed revision zero.
+    await mockPreferences({'compositionRevision': 1});
     action = TestSetupAction();
     container = ProviderContainer(
       overrides: [
@@ -1094,29 +1097,62 @@ void main() {
       );
     });
 
-    test('a failed authorization turns tun off and asks again on the next '
-        'enable', () async {
-      await AppLocalizations.load(const Locale('en'));
-      container
-          .read(patchClashConfigProvider.notifier)
-          .update((state) => state.copyWith.tun(enable: true));
-      action.authorizeResult = AuthorizeCode.error;
+    test(
+      'a failed authorization preserves requested tun and asks again on retry',
+      () async {
+        await AppLocalizations.load(const Locale('en'));
+        container
+            .read(patchClashConfigProvider.notifier)
+            .update((state) => state.copyWith.tun(enable: true));
+        action.authorizeResult = AuthorizeCode.error;
 
-      expect(await action.requestAdmin(true), isTrue);
-      expect(container.read(patchClashConfigProvider).tun.enable, isFalse);
-      expect(
-        container.read(authorizedTunEnableProvider),
-        TunAuthorizationState.none,
-      );
+        expect(await action.requestAdmin(true), isTrue);
+        expect(container.read(patchClashConfigProvider).tun.enable, isTrue);
+        expect(
+          container.read(authorizedTunEnableProvider),
+          TunAuthorizationState.none,
+        );
 
-      action.authorizeResult = AuthorizeCode.success;
+        action.authorizeResult = AuthorizeCode.success;
 
-      expect(await action.requestAdmin(true), isFalse);
-      expect(action.authorizeCalls, 2);
-    });
+        expect(await action.requestAdmin(true), isFalse);
+        expect(action.authorizeCalls, 2);
+      },
+    );
   });
 
   group('updateConfig', () {
+    test(
+      'ordinary invalid controller rejects before authorization or update',
+      () async {
+        await AppLocalizations.load(const Locale('en'));
+        final core = _MockCoreHandlerInterface();
+        final scopedAction = TestSetupAction();
+        final scoped = ProviderContainer(
+          overrides: [
+            profilesProvider.overrideWith(TestProfiles.new),
+            setupActionProvider.overrideWith(() => scopedAction),
+            coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+            safeModeProvider.overrideWithValue(false),
+          ],
+        );
+        addTearDown(scoped.dispose);
+        scoped.read(setupActionProvider.notifier);
+        scoped
+            .read(patchClashConfigProvider.notifier)
+            .update(
+              (state) => state.copyWith(
+                externalController: ExternalControllerStatus.open,
+                secret: '',
+                tun: state.tun.copyWith(enable: false),
+              ),
+            );
+        await scopedAction.updateConfig();
+        verifyNever(() => core.updateConfig(any()));
+        expect(scopedAction.authorizeCalls, 0);
+      },
+    );
+
     test('safe mode pushes tun disabled even once authorized', () async {
       final core = _MockCoreHandlerInterface();
       when(() => core.updateConfig(any())).thenAnswer((_) async {});
@@ -1553,7 +1589,7 @@ void main() {
     );
 
     test(
-      'a profile that fails to build still pushes the empty config to core',
+      'a failed build preserves confirmed file and metadata without setup',
       () async {
         final profile = Profile.normal(label: 'p');
         final core = _MockCoreHandlerInterface();
@@ -1566,6 +1602,14 @@ void main() {
             await appPath.configFilePath,
           ).readAsString();
         });
+        final configFile = File(await appPath.configFilePath);
+        await configFile.parent.create(recursive: true);
+        await configFile.writeAsString('confirmed synthetic config');
+        globalState.lastConfigMd5 = 'confirmed-md5';
+        final confirmedCounts = configCountsOf({
+          'rules': ['MATCH,DIRECT'],
+        });
+        globalState.lastConfigCounts = confirmedCounts;
         final scoped = ProviderContainer(
           overrides: [
             profilesProvider.overrideWith(() => TestProfiles([profile])),
@@ -1585,7 +1629,11 @@ void main() {
             .applyProfile(force: true);
 
         expect(succeeded, isFalse);
-        expect(pushedConfig, isEmpty);
+        expect(pushedConfig, isNull);
+        verifyNever(() => core.setupConfig(any()));
+        expect(await configFile.readAsString(), 'confirmed synthetic config');
+        expect(globalState.lastConfigMd5, 'confirmed-md5');
+        expect(globalState.lastConfigCounts, confirmedCounts);
         expect(scoped.read(currentProfileIdProvider), profile.id);
       },
     );
@@ -1914,8 +1962,8 @@ void main() {
       verify(() => core.setupConfig(any())).called(1);
     });
 
-    test('a config the Core rejected is pushed again once reverted, and the '
-        'groups follow the Core through both', () async {
+    test('a known kept rejection retains groups and reverting to confirmed '
+        'inputs needs no extra push', () async {
       final profile = Profile.normal(label: 'p');
       final core = _MockCoreHandlerInterface();
       Map<String, dynamic> global(List<String> all) => {
@@ -1937,13 +1985,6 @@ void main() {
           'GLOBAL': global(['Proxy']),
         },
       );
-      final fallbackProxies = ProxiesData(
-        all: const ['GLOBAL'],
-        proxies: {
-          'DIRECT': <String, dynamic>{'name': 'DIRECT', 'type': 'Direct'},
-          'GLOBAL': global(['DIRECT']),
-        },
-      );
       var rejecting = false;
       var coreProxies = profileProxies;
       when(
@@ -1953,10 +1994,10 @@ void main() {
       when(() => core.getProxies()).thenAnswer((_) async => coreProxies);
       when(() => core.setupConfig(any())).thenAnswer((_) async {
         if (rejecting) {
-          coreProxies = fallbackProxies;
           throw const CoreMethodException(
             code: 'config_rejected',
             message: 'invalid hosts',
+            details: {'outcome': 'kept'},
           );
         }
         coreProxies = profileProxies;
@@ -1992,12 +2033,12 @@ void main() {
       rejecting = true;
       setHosts({'example.com': 'not-an-address'});
       expect(await setupAction.applyProfile(), isFalse);
-      expect(shownGroups(), isEmpty);
+      expect(shownGroups(), ['Proxy']);
 
       rejecting = false;
       setHosts(originalHosts);
       expect(await setupAction.applyProfile(), isTrue);
-      verify(() => core.setupConfig(any())).called(3);
+      verify(() => core.setupConfig(any())).called(2);
       expect(shownGroups(), ['Proxy']);
     });
 
@@ -2066,7 +2107,7 @@ void main() {
       globalState.lastConfigCounts = (groups: 1, proxies: 1, rules: 1);
       var reads = groupReads;
       expect(await setupAction.applyProfile(), isFalse);
-      expect(globalState.lastConfigCounts, isNull);
+      expect(globalState.lastConfigCounts, (groups: 1, proxies: 1, rules: 1));
       expect(groupReads, reads);
 
       outcome = 'blocked';
