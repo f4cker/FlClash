@@ -7,6 +7,7 @@ This program never unlocks, enumerates, or changes a keychain. Static evidence i
 not GUI load acceptance and cannot establish the defines embedded by a compiler.
 """
 import argparse
+import base64
 import ctypes
 import errno
 import hashlib
@@ -256,7 +257,7 @@ def displayed_entitlements(output):
 def verify_target(app, target, scratch):
     path = str(app / target['path'])
     run_tool(['/usr/bin/codesign', '--verify', '--strict', '--all-architectures',
-              '-R', requirement(target['identifier']), path])
+              '-R', '=' + requirement(target['identifier']), path])
     slices = {}
     for architecture in target['architectures']:
         detail = run_tool(['/usr/bin/codesign', '--display', '--verbose=4',
@@ -276,7 +277,7 @@ def verify_target(app, target, scratch):
             raise ValueError('Unexpected signed entitlements')
         prefix = scratch / f'{target["role"]}-{architecture}-cert-'
         run_tool(['/usr/bin/codesign', '--display', '--arch', architecture,
-                  '--extract-certificates', str(prefix), path])
+                  '--extract-certificates=' + str(prefix), path])
         certificate = read_regular(Path(str(prefix) + '0'))
         if (hashlib.sha1(certificate).hexdigest().upper() != CERTIFICATE_SHA1 or
                 sha256(certificate).upper() != CERTIFICATE_SHA256):
@@ -302,6 +303,39 @@ def check_signing_delta(before, after, targets):
 
 def tree_digest(entries):
     return sha256(json.dumps(entries, sort_keys=True, separators=(',', ':')).encode())
+
+
+def tool_failure_details(error, app, targets):
+    command = error.cmd
+    if not isinstance(command, (list, tuple)) or not command or command[0] not in TOOLS:
+        return {'details_omitted': 'Command outside fixed tool allowlist'}
+    action = {'/usr/bin/lipo': 'inspect-architectures', '/usr/bin/otool': 'inspect-load-commands'}.get(command[0])
+    if command[0] == '/usr/bin/codesign':
+        options = {argument.split('=', 1)[0] for argument in command[1:] if isinstance(argument, str)}
+        action = next((name for flag, name in (
+            ('--sign', 'sign'), ('--verify', 'verify'), ('--extract-certificates', 'display-certificates'),
+            ('--entitlements', 'display-entitlements'), ('--display', 'display'),
+        ) if flag in options), 'unrecognized')
+        if action == 'verify' and '--deep' in command:
+            action = 'verify-deep'
+    target = next((target for target in targets if command[-1] in {
+        str(app / target['path']), str(app / target['binary']),
+    }), None)
+    details = {'tool': command[0], 'action': action,
+               'target': {key: target[key] for key in ('role', 'path', 'identifier')} if target else None,
+               'returncode': error.returncode if isinstance(error, subprocess.CalledProcessError) else None}
+    if isinstance(error, subprocess.TimeoutExpired):
+        details['timeout_seconds'] = error.timeout
+    for name in ('stdout', 'stderr'):
+        data = getattr(error, name, None) or b''
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        retained = data[:4096]
+        details[name] = {'text': retained.decode('utf-8', errors='replace'),
+                         'base64': base64.b64encode(retained).decode('ascii'),
+                         'captured_bytes': len(data), 'retained_bytes': len(retained),
+                         'truncated': len(data) > len(retained)}
+    return details
 
 
 def execute(app_value, keychain, certificate):
@@ -381,6 +415,8 @@ def execute(app_value, keychain, certificate):
                 report['static_verification'] = True
         except BaseException as error:
             report['failure'] = type(error).__name__
+            if isinstance(error, (subprocess.CalledProcessError, subprocess.TimeoutExpired)):
+                report['failure_details'] = tool_failure_details(error, app, targets)
             save_report()
             raise
         save_report()

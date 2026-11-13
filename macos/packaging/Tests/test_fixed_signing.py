@@ -1,3 +1,4 @@
+import base64
 import copy
 import errno
 import hashlib
@@ -107,8 +108,9 @@ class SigningPolicyTests(unittest.TestCase):
                 stderr = (f'Identifier={target["identifier"]}\n'
                           'CodeDirectory v=20500 size=1 flags=0x10000(runtime) hashes=1+1\n'
                           'TeamIdentifier=not set\n').encode()
-            elif '--extract-certificates' in arguments:
-                prefix = arguments[arguments.index('--extract-certificates') + 1]
+            elif any(argument.startswith('--extract-certificates=') for argument in arguments):
+                prefix = next(argument.split('=', 1)[1] for argument in arguments
+                              if argument.startswith('--extract-certificates='))
                 Path(prefix + '0').write_bytes(self.certificate)
             elif '--entitlements' in arguments and '--display' in arguments:
                 stdout = plistlib.dumps(DRIVER.GUI_ENTITLEMENTS if arguments[-1] == str(self.app) else {})
@@ -142,6 +144,16 @@ class SigningPolicyTests(unittest.TestCase):
             self.assertEqual(args[args.index('--options') + 1], 'runtime')
             self.assertIn('=designated => ', args[args.index('--requirements') + 1])
         self.assertTrue(any('--deep' in args and '--verify' in args for args in self.calls))
+        verify = [args for args in self.calls if '-R' in args]
+        self.assertEqual(len(verify), 9)
+        for arguments in verify:
+            target = next(target for target in report['targets'] if str(self.app / target['path']) == arguments[-1])
+            self.assertEqual(arguments[arguments.index('-R') + 1], '=' + DRIVER.requirement(target['identifier']))
+        extractions = [args for args in self.calls if any(arg.startswith('--extract-certificates=') for arg in args)]
+        self.assertEqual(len(extractions), 18)
+        for arguments in extractions:
+            self.assertNotIn('--extract-certificates', arguments)
+            self.assertTrue(arguments[-2].startswith('--extract-certificates='))
         self.assertEqual(report['defines']['artifact_values'], 'not established by static signing')
         self.assertEqual(report['defines']['intended_static_candidate']['FC_MANAGED_CANDIDATE_ENABLED'], 1)
         self.assertNotIn('FC_MANAGED_GUI_LOADS_VERIFIED', report['defines'])
@@ -297,6 +309,67 @@ class SigningPolicyTests(unittest.TestCase):
         self.assertIs(report['actualGUIloads'], False)
         self.assertEqual(report['failure'], 'CalledProcessError')
 
+    def test_subprocess_failures_preserve_bounded_exact_output_without_retry_or_raw_command(self):
+        stdout = b'public-output\xff' + b'x' * 5000
+        stderr = b'public-failure\xfe' + b'y' * 6000
+        report_path = self.app.parent / 'Flash.signing-static.json'
+        for error_type in (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            attempts = []
+            def failure(arguments):
+                if '--sign' in arguments:
+                    attempts.append(arguments)
+                    command = arguments[:-1] + ['--synthetic-secret=DO_NOT_RECORD_THIS'] + arguments[-1:]
+                    if error_type is subprocess.CalledProcessError:
+                        raise error_type(23, command, output=stdout, stderr=stderr)
+                    raise error_type(command, 120, output=stdout, stderr=stderr)
+                return self.tool(arguments)
+            with self.subTest(error_type=error_type.__name__):
+                with patch.object(DRIVER, 'run_tool', side_effect=failure):
+                    with self.assertRaises(error_type):
+                        self.execute()
+                self.assertEqual(len(attempts), 1)
+                raw = report_path.read_text()
+                self.assertNotIn('DO_NOT_RECORD_THIS', raw)
+                self.assertNotIn(DRIVER.KEYCHAIN, raw)
+                report = json.loads(raw)
+                self.assertIs(report['static_verification'], False)
+                self.assertIs(report['actualGUIloads'], False)
+                self.assertIs(report['packaging_accepted'], False)
+                self.assertEqual(report['failure'], error_type.__name__)
+                detail = report['failure_details']
+                self.assertEqual(detail['tool'], '/usr/bin/codesign')
+                self.assertEqual(detail['action'], 'sign')
+                self.assertEqual(detail['target']['role'], 'core')
+                self.assertEqual(detail['returncode'], 23 if error_type is subprocess.CalledProcessError else None)
+                if error_type is subprocess.TimeoutExpired:
+                    self.assertEqual(detail['timeout_seconds'], 120)
+                for name, data in (('stdout', stdout), ('stderr', stderr)):
+                    captured = detail[name]
+                    self.assertEqual(base64.b64decode(captured['base64']), data[:4096])
+                    self.assertEqual(captured['text'], data[:4096].decode('utf-8', errors='replace'))
+                    self.assertEqual(captured['captured_bytes'], len(data))
+                    self.assertEqual(captured['retained_bytes'], 4096)
+                    self.assertIs(captured['truncated'], True)
+                with patch.object(DRIVER, 'run_tool', side_effect=failure):
+                    with self.assertRaises(FileExistsError):
+                        self.execute()
+                self.assertEqual(len(attempts), 1)
+                report_path.unlink()
+
+    def test_failure_diagnostics_identify_readonly_verify_and_omit_unknown_tools(self):
+        target = self.targets()[0]
+        command = ['/usr/bin/codesign', '--verify', '-R', '=' + DRIVER.requirement(target['identifier']),
+                   str(self.app / target['path'])]
+        error = subprocess.CalledProcessError(1, command, output=b'', stderr=b'public verification failure')
+        detail = DRIVER.tool_failure_details(error, self.app, [target])
+        self.assertEqual(detail['action'], 'verify')
+        self.assertEqual(detail['target']['identifier'], target['identifier'])
+        self.assertIs(detail['stderr']['truncated'], False)
+        self.assertEqual(base64.b64decode(detail['stderr']['base64']), error.stderr)
+        error.cmd = ['/unapproved/tool', '--password', 'DO_NOT_RECORD_THIS']
+        detail = DRIVER.tool_failure_details(error, self.app, [target])
+        self.assertEqual(set(detail), {'details_omitted'})
+
     def test_every_architecture_checks_flags_entitlements_and_certificate(self):
         target = self.targets()[-1]
         target['architectures'] = ['arm64', 'x86_64']
@@ -319,8 +392,9 @@ class SigningPolicyTests(unittest.TestCase):
                         output.stderr = output.stderr.replace(b'Identifier=com.layoute.flash', b'Identifier=evil')
                 if defect == 'entitlements' and '--entitlements' in arguments:
                     output.stdout = plistlib.dumps({'com.apple.security.get-task-allow': True})
-                if defect == 'certificate' and '--extract-certificates' in arguments:
-                    Path(arguments[arguments.index('--extract-certificates') + 1] + '0').write_bytes(b'wrong')
+                if defect == 'certificate' and any(arg.startswith('--extract-certificates=') for arg in arguments):
+                    prefix = next(arg.split('=', 1)[1] for arg in arguments if arg.startswith('--extract-certificates='))
+                    Path(prefix + '0').write_bytes(b'wrong')
                 return output
             with self.subTest(defect=defect), patch.object(DRIVER, 'run_tool', side_effect=corrupt):
                 with self.assertRaises(ValueError):
