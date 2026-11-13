@@ -55,6 +55,16 @@ NSString *FCSigningRequirement(NSString *identifier) {
     return FCRequirementForPolicy(identifier, @FC_PINNED_CERTIFICATE_SHA1, @FC_PRODUCTION_TEAM_ID);
 }
 
+BOOL FCCodeEntitlementsAllowed(NSString *identifier, BOOL protectedGUI, NSDictionary *entitlements, uint32_t flags) {
+    BOOL guiException = protectedGUI && FC_MANAGED_CANDIDATE_ENABLED &&
+        @FC_PINNED_CERTIFICATE_SHA1.length == 40 && [identifier isEqualToString:FCClientIdentifier];
+    return (flags & kSecCodeSignatureRuntime) &&
+        !(flags & kSecCodeSignatureAdhoc) &&
+        ![entitlements[@"com.apple.security.get-task-allow"] boolValue] &&
+        (guiException || ![entitlements[@"com.apple.security.cs.disable-library-validation"] boolValue]) &&
+        ![entitlements[@"com.apple.security.cs.allow-dyld-environment-variables"] boolValue];
+}
+
 static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, BOOL protectedGUI) {
     NSString *text = FCSigningRequirement(identifier);
     if (!text) return NO;
@@ -68,13 +78,7 @@ static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, BOOL protec
     NSDictionary *info = CFBridgingRelease(information);
     NSDictionary *entitlements = info[(__bridge NSString *)kSecCodeInfoEntitlementsDict];
     uint32_t flags = [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue];
-    BOOL guiLibraryException = protectedGUI && FC_MANAGED_GUI_LOADS_VERIFIED &&
-        @FC_PINNED_CERTIFICATE_SHA1.length == 40 && [identifier isEqualToString:FCClientIdentifier];
-    return (flags & kSecCodeSignatureRuntime) &&
-        !(flags & kSecCodeSignatureAdhoc) &&
-        ![entitlements[@"com.apple.security.get-task-allow"] boolValue] &&
-        (guiLibraryException || ![entitlements[@"com.apple.security.cs.disable-library-validation"] boolValue]) &&
-        ![entitlements[@"com.apple.security.cs.allow-dyld-environment-variables"] boolValue];
+    return FCCodeEntitlementsAllowed(identifier, protectedGUI, entitlements, flags);
 }
 
 @interface FCMessageValidator ()
@@ -103,15 +107,10 @@ static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, BOOL protec
     NSURL *executable = info[(__bridge NSString *)kSecCodeInfoMainExecutable];
     NSDictionary *entitlements = info[(__bridge NSString *)kSecCodeInfoEntitlementsDict];
     uint32_t flags = [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue];
-    BOOL guiException = self.bundle && FC_MANAGED_GUI_LOADS_VERIFIED && @FC_PINNED_CERTIFICATE_SHA1.length == 40 &&
-        [self.identifier isEqualToString:FCClientIdentifier];
     char canonical[PATH_MAX];
     valid = valid && executable && [executable.path isEqualToString:self.executable] &&
         realpath(executable.path.fileSystemRepresentation, canonical) && [@(canonical) isEqualToString:self.executable] &&
-        (flags & kSecCodeSignatureRuntime) && !(flags & kSecCodeSignatureAdhoc) &&
-        ![entitlements[@"com.apple.security.get-task-allow"] boolValue] &&
-        (guiException || ![entitlements[@"com.apple.security.cs.disable-library-validation"] boolValue]) &&
-        ![entitlements[@"com.apple.security.cs.allow-dyld-environment-variables"] boolValue];
+        FCCodeEntitlementsAllowed(self.identifier, self.bundle != nil, entitlements, flags);
     if (valid && !self.sealed) {
         SecStaticCodeRef diskCode = NULL;
         valid = FCProtectedTree(self.executable, NO) && (!self.bundle || FCProtectedTree(self.bundle, YES)) &&
@@ -225,7 +224,7 @@ NSString *FCPayloadTrust(NSString *bundle) {
     NSString *incoming = [FCInstalledBundle.stringByDeletingLastPathComponent stringByAppendingPathComponent:@".incoming/Flash.app"];
     NSString *retired = [FCInstalledBundle.stringByDeletingLastPathComponent stringByAppendingPathComponent:@".retired.app"];
     if (![bundle isEqualToString:FCInstalledBundle] && ![bundle isEqualToString:incoming] && ![bundle isEqualToString:retired]) return @"protectedInstallationRequired";
-    if (@FC_PINNED_CERTIFICATE_SHA1.length && !FC_MANAGED_GUI_LOADS_VERIFIED) return @"signingRequired";
+    if (@FC_PINNED_CERTIFICATE_SHA1.length && !FC_MANAGED_CANDIDATE_ENABLED) return @"signingRequired";
     if (!FCCheckStatic(bundle, FCClientIdentifier)) return @"signingRequired";
     if (!FCProtectedTree(bundle, YES)) return @"protectedInstallationRequired";
     if (!FCCheckStatic([bundle stringByAppendingPathComponent:@"Contents/Library/HelperTools/FlashHelper"],
