@@ -16,6 +16,10 @@ verify_evidence() {
     "$source_dir/qualify_native_loads.py" --verify-evidence --app "$app" \
     --evidence "$evidence" --build-metadata "$metadata" "$@"
 }
+raw_package() {
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C /usr/bin/python3 -I -S -B \
+    "$source_dir/normalize_package_info.py" "$@"
+}
 verify_evidence
 umask 077
 /bin/mkdir -m 0700 "$output"
@@ -32,17 +36,32 @@ for operation in install repair disable remove; do
   /bin/cp "$source_dir/installer/$operation/"* "$scripts/"
   /bin/cp "$app/Contents/Library/HelperTools/FlashMaintenance" "$scripts/FlashMaintenance"
   /bin/chmod 0755 "$scripts/"*
+  built="$output/$operation-built.pkg"
+  package="$output/Flash-$operation.pkg"
   if [[ "$operation" == install || "$operation" == repair ]]; then
     /usr/bin/pkgbuild --root "$work" --component-plist "$components" --ownership recommended --scripts "$scripts" \
       --identifier "com.layoute.flash.managed.$operation" --install-location / \
-      "$output/Flash-$operation.pkg"
+      "$built"
   else
     /usr/bin/pkgbuild --nopayload --scripts "$scripts" --install-location / \
       --identifier "com.layoute.flash.managed.$operation" \
-      "$output/Flash-$operation.pkg"
+      "$built"
   fi
+  raw="$output/$operation-raw"
+  snapshot="$output/$operation-raw-members.json"
+  /bin/mkdir "$raw"
+  /usr/bin/xar -xf "$built" -C "$raw"
+  raw_package normalize "$raw" "$snapshot" "$operation"
+  raw_package verify "$raw" "$snapshot" "$operation"
+  # pkgutil --expand decompresses Scripts; preserve every member via the outer XAR instead.
+  (cd "$raw" && /usr/bin/xar -cf "$package" --compression=none *)
+  raw_package verify "$raw" "$snapshot" "$operation"
+  final_raw="$output/$operation-final-raw"
+  /bin/mkdir "$final_raw"
+  /usr/bin/xar -xf "$package" -C "$final_raw"
+  raw_package verify "$final_raw" "$snapshot" "$operation"
   expanded="$output/$operation-expanded"
-  /usr/sbin/pkgutil --expand-full "$output/Flash-$operation.pkg" "$expanded"
+  /usr/sbin/pkgutil --expand-full "$package" "$expanded"
   verify_evidence --verify-expanded-package "$expanded" --package-operation "$operation"
 done
 verify_evidence

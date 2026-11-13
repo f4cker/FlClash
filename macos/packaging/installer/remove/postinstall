@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+[[ "$EUID" == 0 && "${3:-/}" == / ]] || exit 78
+exit 0
