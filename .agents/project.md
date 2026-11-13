@@ -1,5 +1,8 @@
 # Project Context
 
+For the transported checkout, read [PROJECT-MOVE.md](../PROJECT-MOVE.md) first:
+source base, move boundaries, archival tooling and read-only arrival checks live there.
+
 FlClash is a multi-platform proxy client based on ClashMeta (mihomo), built with Flutter. It supports Android, Windows, macOS, and Linux, drawing its own components in the `prism_ui` package: a color system of its own with Apple's Human Interface interaction conventions.
 
 ## Version Notes
