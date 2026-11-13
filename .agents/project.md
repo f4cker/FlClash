@@ -14,6 +14,17 @@ FlClash is a multi-platform proxy client based on ClashMeta (mihomo), built with
   version. `flutter analyze` excludes `lib/**/generated/**`, so a raise is
   proven by `flutter test`, which parses the generated code, not by analyze.
 
+## Clash.Meta Upstream
+
+The Core submodule uses `chen08209/Clash.Meta` branch `FlClash` as its upstream baseline.
+Our `f4cker/Clash.Meta` fork keeps the Flash-specific commits on `flash/0.9.5`; keep that fork URL and the
+pinned gitlink so a fresh checkout can obtain all our changes. The baseline verified on 2026-11-13 is
+`024245dc72bc92f48237f865119afe0cd53ac9e6`, an ancestor of our pinned
+`15af7cd6e534971e6f07bcba1d50f63f5cc8134c` with ten additional Flash commits. Do not replace the gitlink
+with the upstream tip or use an upstream reset: that would drop our Tailscale, mount-isolation, provider,
+and dynamic-group changes. Future upstream updates must preserve and verify these changes before advancing the pin.
+GitHub's displayed fork parent is separate repository metadata; this baseline declaration does not change it.
+
 ## Forked Dependencies
 
 One `pubspec.yaml` dependency is pinned to a fork by commit SHA. The fork lives
