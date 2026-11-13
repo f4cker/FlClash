@@ -20,7 +20,7 @@ const _colors = [
   ui.Color(0xFFB86900),
 ];
 
-Future<Uint8List> _render(int size, int state, bool mono) async {
+Future<Uint8List> _render(int size, int state, bool mono, bool tun) async {
   final recorder = ui.PictureRecorder();
   final canvas = ui.Canvas(recorder);
   canvas.scale(size / 18);
@@ -79,6 +79,15 @@ Future<Uint8List> _render(int size, int state, bool mono) async {
     );
     canvas.restore();
     text.dispose();
+    if (tun) {
+      canvas
+        ..drawCircle(
+          const ui.Offset(16, 16),
+          2.6,
+          ui.Paint()..blendMode = ui.BlendMode.clear,
+        )
+        ..drawCircle(const ui.Offset(16, 16), 1.5, paint);
+    }
   }
   canvas.restore();
   final image = await recorder.endRecording().toImage(size, size);
@@ -146,39 +155,33 @@ void main() {
           ),
         );
       await font.load();
-      for (final dir in ['unix', 'windows']) {
-        for (final file in Directory(
-          'assets/images/tray/$dir',
-        ).listSync(recursive: true).whereType<File>()) {
-          if (RegExp(
-            r'/(direct|rule|global)_tun\.(png|ico)$',
-          ).hasMatch(file.path)) {
-            await file.delete();
-          }
-        }
-      }
       for (var state = 0; state < _names.length; state++) {
         for (final mono in [true, false]) {
-          final name = _names[state];
-          final dir = 'assets/images/tray/${mono ? 'macos' : 'unix'}';
-          for (final scale in [1, 2, 3, 4]) {
-            final path = scale == 1
-                ? '$dir/$name.png'
-                : '$dir/$scale.0x/$name.png';
-            await File(
-              path,
-            ).writeAsBytes(await _render(18 * scale, state, mono));
-          }
-          if (!mono) {
-            final entries = <IcoEntry>[];
-            for (final size in _icoSizes) {
-              entries.add(
-                IcoEntry(size: size, png: await _render(size, state, false)),
-              );
+          for (final tun in [false, if (state > 0) true]) {
+            final name = '${_names[state]}${tun ? '_tun' : ''}';
+            final dir = 'assets/images/tray/${mono ? 'macos' : 'unix'}';
+            for (final scale in [1, 2, 3, 4]) {
+              final path = scale == 1
+                  ? '$dir/$name.png'
+                  : '$dir/$scale.0x/$name.png';
+              await File(
+                path,
+              ).writeAsBytes(await _render(18 * scale, state, mono, tun));
             }
-            await File(
-              'assets/images/tray/windows/$name.ico',
-            ).writeAsBytes(buildIco(entries));
+            if (!mono) {
+              final entries = <IcoEntry>[];
+              for (final size in _icoSizes) {
+                entries.add(
+                  IcoEntry(
+                    size: size,
+                    png: await _render(size, state, false, tun),
+                  ),
+                );
+              }
+              await File(
+                'assets/images/tray/windows/$name.ico',
+              ).writeAsBytes(buildIco(entries));
+            }
           }
         }
       }
@@ -223,16 +226,65 @@ void main() {
     );
   }
 
-  test('Windows mode colors cover every ICO size', () async {
+  for (final scale in [1, 2, 3, 4]) {
+    test(
+      'TUN dot is separated and preserves mode glyphs at scale $scale',
+      () async {
+        final variant = scale == 1 ? '' : '$scale.0x/';
+        final size = 18 * scale;
+        for (var state = 1; state < _names.length; state++) {
+          final name = _names[state];
+          final off = await _pixels(
+            await File(
+              'assets/images/tray/unix/$variant$name.png',
+            ).readAsBytes(),
+          );
+          final on = await _pixels(
+            await File(
+              'assets/images/tray/unix/$variant${name}_tun.png',
+            ).readAsBytes(),
+          );
+          final mono = await _pixels(
+            await File(
+              'assets/images/tray/macos/$variant${name}_tun.png',
+            ).readAsBytes(),
+          );
+          _expectColor(on, _colors[state]);
+          _expectColor(mono, const ui.Color(0xFF000000));
+          expect(_alpha(on), _alpha(mono));
+          expect(on[(16 * scale * size + 16 * scale) * 4 + 3], 255);
+          expect(
+            on[((14.5 * scale).floor() * size + (14.5 * scale).floor()) * 4 +
+                3],
+            lessThanOrEqualTo(32),
+          );
+          expect(_alpha(on), isNot(orderedEquals(_alpha(off))));
+          for (var y = 0; y < size; y++) {
+            for (var x = 0; x < size; x++) {
+              if (x >= 12 * scale && y >= 12 * scale) continue;
+              final alpha = (y * size + x) * 4 + 3;
+              expect(on[alpha], off[alpha]);
+            }
+          }
+        }
+      },
+    );
+  }
+
+  test('Windows mode and TUN colors cover every ICO size', () async {
     for (var state = 0; state < _names.length; state++) {
-      final images = _icoImages(
-        await File(
-          'assets/images/tray/windows/${_names[state]}.ico',
-        ).readAsBytes(),
-      );
-      expect(images, hasLength(_icoSizes.length));
-      for (final image in images) {
-        _expectColor(await _pixels(image), _colors[state]);
+      for (final tun in [false, if (state > 0) true]) {
+        final name = '${_names[state]}${tun ? '_tun' : ''}';
+        final images = _icoImages(
+          await File('assets/images/tray/windows/$name.ico').readAsBytes(),
+        );
+        expect(images, hasLength(_icoSizes.length));
+        for (var i = 0; i < images.length; i++) {
+          final header = ByteData.sublistView(images[i]);
+          expect(header.getUint32(16), _icoSizes[i]);
+          expect(header.getUint32(20), _icoSizes[i]);
+          _expectColor(await _pixels(images[i]), _colors[state]);
+        }
       }
     }
   });

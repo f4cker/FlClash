@@ -65,7 +65,7 @@ class AppTray implements TrayPort {
         ? 'status_4'
         : !isStart
         ? 'stopped'
-        : mode.name;
+        : '${mode.name}${tunEnable ? '_tun' : ''}';
     return '${_trayIconDir(monochrome)}/$name.$_trayIconSuffix';
   }
 

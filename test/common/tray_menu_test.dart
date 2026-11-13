@@ -251,7 +251,9 @@ void main() {
     final base = reps.firstWhere((rep) => rep['scale'] == 1.0);
     expect(
       base['bytes'],
-      base64Encode(File('assets/images/tray/unix/rule.png').readAsBytesSync()),
+      base64Encode(
+        File('assets/images/tray/unix/rule_tun.png').readAsBytesSync(),
+      ),
     );
     expect(
       _item(showCall(), currentAppLocalizations.monochromeIcon)['checked'],
@@ -274,40 +276,72 @@ void main() {
     }
   });
 
-  test('color mode updates ignore TUN and keep stopped distinct', () async {
-    for (final mode in [Mode.rule, Mode.global, Mode.direct, Mode.rule]) {
-      for (final tun in [false, true]) {
-        calls.clear();
-        await update(
-          _trayState(
-            isStart: true,
-            mode: mode,
-            tunEnable: tun,
-            monochromeTrayIcon: false,
-          ),
-        );
-        final icon = (showCall()!.arguments as Map)['icon'] as Map;
-        expect(icon['isTemplate'], isFalse);
-        final reps = (icon['reps'] as List).cast<Map>();
-        expect(
-          reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
-          base64Encode(
-            File('assets/images/tray/unix/${mode.name}.png').readAsBytesSync(),
-          ),
-        );
+  test(
+    'running mode updates select independent color and template TUN variants',
+    () async {
+      for (final mono in [false, true]) {
+        final directory = mono ? 'macos' : 'unix';
+        for (final mode in [Mode.rule, Mode.global, Mode.direct, Mode.rule]) {
+          for (final tun in [false, true]) {
+            calls.clear();
+            await update(
+              _trayState(
+                isStart: true,
+                mode: mode,
+                tunEnable: tun,
+                monochromeTrayIcon: mono,
+              ),
+            );
+            final icon = (showCall()!.arguments as Map)['icon'] as Map;
+            expect(icon['isTemplate'], mono);
+            final reps = (icon['reps'] as List).cast<Map>();
+            expect(
+              reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
+              base64Encode(
+                File(
+                  'assets/images/tray/$directory/${mode.name}${tun ? '_tun' : ''}.png',
+                ).readAsBytesSync(),
+              ),
+            );
+          }
+        }
       }
-    }
-    calls.clear();
-    await update(_trayState(mode: Mode.direct, monochromeTrayIcon: false));
-    final icon = (showCall()!.arguments as Map)['icon'] as Map;
-    final reps = (icon['reps'] as List).cast<Map>();
-    expect(
-      reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
-      base64Encode(
-        File('assets/images/tray/unix/stopped.png').readAsBytesSync(),
-      ),
-    );
-  });
+    },
+  );
+
+  test(
+    'stored TUN never adds a running dot when stopped, suspended or safe',
+    () async {
+      for (final mono in [false, true]) {
+        final directory = mono ? 'macos' : 'unix';
+        for (final (state, name) in [
+          (_trayState(tunEnable: true), 'stopped'),
+          (
+            _trayState(
+              isStart: true,
+              tunEnable: true,
+            ).copyWith(suspended: true),
+            'stopped',
+          ),
+          (
+            _trayState(isStart: true, tunEnable: true, safeMode: true),
+            'status_4',
+          ),
+        ]) {
+          calls.clear();
+          await update(state.copyWith(monochromeTrayIcon: mono));
+          final icon = (showCall()!.arguments as Map)['icon'] as Map;
+          final reps = (icon['reps'] as List).cast<Map>();
+          expect(
+            reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
+            base64Encode(
+              File('assets/images/tray/$directory/$name.png').readAsBytesSync(),
+            ),
+          );
+        }
+      }
+    },
+  );
 
   test('skips the platform call when the tray state is unchanged', () async {
     await update(_trayState(isStart: true));

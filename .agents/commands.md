@@ -123,7 +123,9 @@ Generated output paths, configured in each package's `build.yaml`:
 
 Tray and Windows app icons are generated, not hand-edited. The active tray uses a hollow gray `stopped`
 cookie or a filled cookie with a cutout mode letter: neutral gray `direct` (D), primary blue `rule` (R),
-and warning amber-orange `global` (G). TUN does not change the icon color. The geometry is
+and warning amber-orange `global` (G). Running with TUN adds a color-matched lower-right dot,
+separated from the cookie by a transparent gap (`*_tun` variants, including macOS templates).
+Stopped and safe mode never show the dot. TUN does not change the mode color. The geometry is
 `MaterialShapes.cookie9Sided`, drawn from `shapePathOf` at every size. Generate these on macOS
 (the letter renderer uses the system rounded font):
 

@@ -21,7 +21,7 @@ void main() {
                   ? 'status_4'
                   : !running
                   ? 'stopped'
-                  : mode.name;
+                  : '${mode.name}${tun ? '_tun' : ''}';
               final path = tray.getTrayIcon(
                 isStart: running,
                 tunEnable: tun,
@@ -38,7 +38,7 @@ void main() {
     }
   }
 
-  test('mode changes select distinct color icons regardless of TUN', () {
+  test('mode changes retain their names with an independent TUN variant', () {
     final tray = AppTray.forPlatform(isMacOS: true, isWindows: false);
     final paths = <String>{};
     for (final mode in [Mode.rule, Mode.global, Mode.direct, Mode.rule]) {
@@ -58,7 +58,7 @@ void main() {
           monochrome: false,
           mode: mode,
         ),
-        path,
+        'assets/images/tray/unix/${mode.name}_tun.png',
       );
       paths.add(path);
     }
