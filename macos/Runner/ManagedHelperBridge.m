@@ -2,6 +2,8 @@
 #import "../Shared/HelperTrust.h"
 #import "../Shared/HelperIdentity.h"
 #import <ServiceManagement/ServiceManagement.h>
+#import <sys/stat.h>
+#import <errno.h>
 
 @interface FCManagedHelperBridge ()
 @property dispatch_queue_t queue;
@@ -33,13 +35,20 @@
 
 - (NSString *)gate {
     if (![self effectsAllowed]) return @"disabled";
-    if (@available(macOS 13.0, *)) return FCBundleTrust(NSBundle.mainBundle.bundlePath);
+    if (@available(macOS 14.0, *)) {
+        NSString *gui = FCGUIBundleTrust(NSBundle.mainBundle.bundlePath);
+        if (![gui isEqualToString:@"trusted"]) return gui;
+        struct stat state;
+        if (lstat(FCInstalledBundle.fileSystemRepresentation, &state) < 0)
+            return errno == ENOENT ? @"installerRequired" : @"protectedInstallationRequired";
+        return FCBundleTrust(FCInstalledBundle);
+    }
     return @"unsupported";
 }
 
 - (NSString *)installationStatus {
     if (![self effectsAllowed]) return @"disabled";
-    if (@available(macOS 13.0, *)) {
+    if (@available(macOS 14.0, *)) {
         NSString *gate = self.connectionTrusted ? @"trusted" : [self gate];
         if (![gate isEqualToString:@"trusted"]) return gate;
         if (!FCLegacyPlistTrusted()) return @"repairRequired";

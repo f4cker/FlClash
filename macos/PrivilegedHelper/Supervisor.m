@@ -9,6 +9,7 @@
 #import <sys/wait.h>
 #import <fcntl.h>
 #import <unistd.h>
+#import <stdio.h>
 
 @interface FCSupervisor : NSObject
 @property dispatch_queue_t queue;
@@ -249,7 +250,7 @@ static BOOL FCTransactionPending(void) {
 }
 
 - (void)handle:(xpc_object_t)request connection:(xpc_connection_t)connection
-    gui:(FCMessageValidator *)gui tool:(FCMessageValidator *)tool {
+    gui:(FCGUIMessageValidator *)gui tool:(FCMessageValidator *)tool {
     const char *method = xpc_dictionary_get_string(request, "method");
     BOOL maintenanceRequest = method && !strcmp(method, "prepareMaintenance");
     BOOL authenticated = maintenanceRequest ? xpc_connection_get_euid(connection) == 0 && [tool check:request] : [gui check:request];
@@ -291,15 +292,14 @@ static BOOL FCTransactionPending(void) {
 }
 
 - (void)accept:(xpc_connection_t)connection {
-    NSString *guiRequirement = FCSigningRequirement(FCClientIdentifier);
+    NSString *guiRequirement = FCSplitGUIRequirement();
     NSString *toolRequirement = FCSigningRequirement(FCMaintenanceIdentifier);
     NSString *requirement = guiRequirement && toolRequirement ?
         [NSString stringWithFormat:@"(%@) or (%@)", guiRequirement, toolRequirement] : nil;
     if (!requirement || xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)) {
         xpc_connection_cancel(connection); return;
     }
-    FCMessageValidator *gui = [[FCMessageValidator alloc] initWithIdentifier:FCClientIdentifier
-        executable:FCInstalledExecutable(FCClientIdentifier) bundle:FCInstalledBundle];
+    FCGUIMessageValidator *gui = [FCGUIMessageValidator new];
     FCMessageValidator *tool = [[FCMessageValidator alloc] initWithIdentifier:FCMaintenanceIdentifier
         executable:FCInstalledExecutable(FCMaintenanceIdentifier) bundle:nil];
     xpc_connection_set_target_queue(connection, self.queue);
@@ -313,7 +313,12 @@ static BOOL FCTransactionPending(void) {
 
 int main(void) {
     @autoreleasepool {
-        if (geteuid() != 0 || !FCSigningRequirement(FCClientIdentifier)) return 78;
+        if (@available(macOS 14.0, *)) {} else return 78;
+        if (geteuid() != 0 || !FCSplitGUIRequirement()) return 78;
+        if (!FCLegacyRuntimeAbsent()) {
+            fputs("FlashHelper: legacy-runtime-recovery-required: legacy runtime exists or absence cannot be proven; preserve journals and recover before retry\n", stderr);
+            return 78;
+        }
         FCSupervisor *supervisor = [FCSupervisor new];
         if (![FCBundleTrust(supervisor.bundle ?: @"") isEqualToString:@"trusted"] || !FCLegacyPlistTrusted()) return 78;
         xpc_connection_t listener = xpc_connection_create_mach_service(FCHelperLabel.UTF8String,

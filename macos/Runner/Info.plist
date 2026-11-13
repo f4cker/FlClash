@@ -43,10 +43,6 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Flash modifications © 2026 com.layoute.&#10;FlClash: Copyright © 2023 com.follow. All rights reserved.&#10;Licensed under GPL-3.0.</string>
-	<key>NSMainNibFile</key>
-	<string>MainMenu</string>
-	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Flash needs location access to detect your Wi-Fi network name for connectivity features.</string>
 </dict>

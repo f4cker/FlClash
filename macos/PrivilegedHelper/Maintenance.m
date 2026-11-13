@@ -21,11 +21,32 @@ static BOOL FCMachAbsent(void) {
     return result == BOOTSTRAP_UNKNOWN_SERVICE;
 }
 
+static BOOL FCPreflightFailure(const char *diagnostic) {
+    fprintf(stderr, "FlashMaintenance: %s\n", diagnostic);
+    return NO;
+}
+
+static int FCResult(BOOL success, const char *diagnostic) {
+    return success ? 0 : (FCPreflightFailure(diagnostic), 78);
+}
+
+static BOOL FCPrivateRuntimeNode(NSString *path, BOOL directory) {
+    struct stat state;
+    return FCProtectedTree(path, NO) && lstat(path.fileSystemRepresentation, &state) == 0 &&
+        (directory ? S_ISDIR(state.st_mode) : S_ISREG(state.st_mode)) &&
+        (state.st_mode & 07777) == (directory ? 0700 : 0600);
+}
+
 static BOOL FCParentsSafe(void) {
-    NSString *base = FCInstalledBundle.stringByDeletingLastPathComponent;
-    return FCProtectedTree(@"/Library/LaunchDaemons", NO) &&
-        FCProtectedTree(FCAbsent(base) ? base.stringByDeletingLastPathComponent : base, NO) &&
-        FCProtectedTree(@"/private/var/run", NO);
+    NSString *base = FCRuntimeDirectory.stringByDeletingLastPathComponent;
+    if (!FCProtectedTree(@"/Library/LaunchDaemons", NO))
+        return FCPreflightFailure("launch-daemon-parent-unsafe");
+    BOOL absent = FCAbsent(base);
+    if (!FCProtectedTree(absent ? base.stringByDeletingLastPathComponent : base, NO))
+        return FCPreflightFailure(absent ? "owned-base-parent-unsafe" : "owned-base-unsafe");
+    if (!FCAbsent(FCRuntimeDirectory) && !FCPrivateRuntimeNode(FCRuntimeDirectory, YES))
+        return FCPreflightFailure("runtime-root-unsafe");
+    return YES;
 }
 
 static BOOL FCRecordRemovalHandoff(void);
@@ -299,40 +320,52 @@ static BOOL FCFinish(void) {
 
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
-        if (geteuid() != 0 || argc != 2 || !FCSigningRequirement(FCMaintenanceIdentifier) || !FCParentsSafe()) return 78;
+        if (geteuid() != 0) return FCResult(NO, "root-required");
+        if (argc != 2) return FCResult(NO, "one-action-required");
+        if (!FCSigningRequirement(FCMaintenanceIdentifier)) return FCResult(NO, "signing-policy-unavailable");
+        if (!FCLegacyRuntimeAbsent()) return FCResult(NO,
+            "legacy-runtime-recovery-required: legacy runtime exists or absence cannot be proven; preserve journals and recover before retry");
+        if (!FCParentsSafe()) return 78;
         NSString *action = @(argv[1]);
-        if ([action isEqual:@"beginRemove"]) return FCBeginRemoval();
-        if ([action isEqual:@"finishRemove"]) return FCFinishRemoval() ? 0 : 78;
-        if ([action isEqual:@"beginInstall"]) return FCBegin(NO) ? 0 : 78;
-        if ([action isEqual:@"beginRepair"]) return FCBegin(YES) ? 0 : 78;
-        if ([action isEqual:@"stageReady"]) return FCStageReady() ? 0 : 78;
-        if ([action isEqual:@"commitInstall"]) return FCCommit() ? 0 : 78;
-        if ([action isEqual:@"finishInstall"]) return FCFinish() ? 0 : 78;
+        if ([action isEqual:@"beginRemove"]) {
+            int result = FCBeginRemoval();
+            if (result == 78) FCPreflightFailure("begin-remove-state-rejected");
+            return result;
+        }
+        if ([action isEqual:@"finishRemove"]) return FCResult(FCFinishRemoval(), "finish-remove-state-rejected");
+        if ([action isEqual:@"beginInstall"]) return FCResult(FCBegin(NO), "begin-install-state-rejected");
+        if ([action isEqual:@"beginRepair"]) return FCResult(FCBegin(YES), "begin-repair-state-rejected");
+        if ([action isEqual:@"stageReady"]) return FCResult(FCStageReady(), "stage-state-rejected");
+        if ([action isEqual:@"commitInstall"]) return FCResult(FCCommit(), "commit-state-rejected");
+        if ([action isEqual:@"finishInstall"]) return FCResult(FCFinish(), "finish-install-state-rejected");
         if ([action isEqual:@"preflight"]) {
             if (FCFirstInstallAllowed(FCAbsent(FCInstalledBundle), FCAbsent(FCLegacyPlist), FCAbsent(FCRuntimeDirectory), FCMachAbsent())) return 10;
-            return [FCBundleTrust(FCInstalledBundle) isEqual:@"trusted"] && FCLegacyPlistTrusted() ? 0 : 78;
+            if (![FCBundleTrust(FCInstalledBundle) isEqual:@"trusted"]) return FCResult(NO, "installed-bundle-untrusted");
+            return FCResult(FCLegacyPlistTrusted(), "launch-daemon-untrusted");
         }
         if ([action isEqual:@"arm"]) {
-            if (mkdir(FCRuntimeDirectory.fileSystemRepresentation, 0700) && errno != EEXIST) return 78;
-            struct stat runtime;
-            if (!FCProtectedTree(FCRuntimeDirectory, NO) || lstat(FCRuntimeDirectory.fileSystemRepresentation, &runtime) ||
-                (runtime.st_mode & 0777) != 0700) return 78;
+            if (mkdir(FCRuntimeDirectory.fileSystemRepresentation, 0700) && errno != EEXIST)
+                return FCResult(NO, "runtime-root-create-failed");
+            if (!FCPrivateRuntimeNode(FCRuntimeDirectory, YES)) return FCResult(NO, "runtime-root-unsafe");
             NSString *marker = [FCRuntimeDirectory stringByAppendingPathComponent:@"maintenance"];
-            if (!FCAbsent(marker)) return FCProtectedTree(marker, NO) ? 0 : 78;
+            if (!FCAbsent(marker)) return FCResult(FCPrivateRuntimeNode(marker, NO), "maintenance-marker-unsafe");
             int file = open(marker.fileSystemRepresentation, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
-            if (file < 0) return 78;
-            BOOL durable = fsync(file) == 0 && FCSync(FCRuntimeDirectory);
+            if (file < 0) return FCResult(NO, "maintenance-marker-create-failed");
+            BOOL durable = fsync(file) == 0 && FCSync(FCRuntimeDirectory) &&
+                FCSync(FCRuntimeDirectory.stringByDeletingLastPathComponent);
             close(file);
-            return durable ? 0 : 78;
+            return FCResult(durable, "runtime-sync-failed");
         }
         if ([action isEqual:@"disarm"]) {
             NSString *marker = [FCRuntimeDirectory stringByAppendingPathComponent:@"maintenance"];
-            return FCAbsent(marker) || (FCProtectedTree(marker, NO) && unlink(marker.fileSystemRepresentation) == 0) ? 0 : 78;
+            return FCResult(FCAbsent(marker) || (FCPrivateRuntimeNode(marker, NO) &&
+                unlink(marker.fileSystemRepresentation) == 0), "maintenance-marker-remove-failed");
         }
-        if ([action isEqual:@"serviceAbsent"]) return FCMachAbsent() ? 0 : 78;
-        if ([action isEqual:@"verify"]) return [FCBundleTrust(FCInstalledBundle) isEqual:@"trusted"] && FCLegacyPlistTrusted() ? 0 : 78;
-        if ([action isEqual:@"quiescent"]) return FCQuiescent() ? 0 : 78;
-        if ([action isEqual:@"prepare"]) return FCPrepare() ? 0 : 78;
+        if ([action isEqual:@"serviceAbsent"]) return FCResult(FCMachAbsent(), "service-not-proven-absent");
+        if ([action isEqual:@"verify"]) return FCResult([FCBundleTrust(FCInstalledBundle) isEqual:@"trusted"] &&
+            FCLegacyPlistTrusted(), "installed-state-untrusted");
+        if ([action isEqual:@"quiescent"]) return FCResult(FCQuiescent(), "runtime-not-quiescent");
+        if ([action isEqual:@"prepare"]) return FCResult(FCPrepare(), "maintenance-handoff-rejected");
         return 64;
     }
 }

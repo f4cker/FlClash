@@ -50,16 +50,22 @@ enum NativeLoadVerification {
 class MainFlutterWindow: NSWindow {
     private var verificationChannel: FlutterMethodChannel?
 
-    override func awakeFromNib() {
+    private var configured = false
+
+    func configureFlutter() {
+        guard !configured else { return }
+        configured = true
         if NativeLoadVerification.requested {
             startNativeLoadVerification()
             return
         }
-        let flutterViewController = FlutterViewController()
+        let project = makeProject()
+        let engine = FlashFlutterEngine(name: "io.flutter", project: project, allowHeadlessExecution: false)
+        let flutterViewController = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
         let windowFrame = self.frame
         self.contentViewController = flutterViewController
         self.setFrame(windowFrame, display: true)
-        
+
         FlutterMethodChannel(
             name: "launch_at_startup", binaryMessenger: flutterViewController.engine.binaryMessenger
         )
@@ -76,12 +82,21 @@ class MainFlutterWindow: NSWindow {
                 result(FlutterMethodNotImplemented)
             }
         }
-        
+
         ManagedHelperChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         ProcessAppChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         RegisterGeneratedPlugins(registry: flutterViewController)
-        super.awakeFromNib()
     }
+
+    private func makeProject() -> FlutterDartProject {
+        guard let frameworks = Bundle.main.privateFrameworksURL,
+              let bundle = Bundle(url: frameworks.appendingPathComponent("App.framework")) else {
+            if NativeLoadVerification.requested { NativeLoadVerification.fail("app_bundle_missing") }
+            fatalError("Missing App.framework")
+        }
+        return FlutterDartProject(precompiledDartBundle: bundle)
+    }
+
     private func startNativeLoadVerification() {
         guard let challenge = NativeLoadVerification.challenge else {
             NativeLoadVerification.fail("invalid_arguments")
@@ -92,9 +107,10 @@ class MainFlutterWindow: NSWindow {
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 20) {
             NativeLoadVerification.fail("native_timeout")
         }
-        let project = FlutterDartProject()
+        let project = makeProject()
         project.dartEntrypointArguments = NativeLoadVerification.arguments
-        let controller = FlutterViewController(project: project)
+        let engine = FlashFlutterEngine(name: "io.flutter", project: project, allowHeadlessExecution: false)
+        let controller = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
         let channel = FlutterMethodChannel(
             name: "flash/native_load_verification", binaryMessenger: controller.engine.binaryMessenger
         )
