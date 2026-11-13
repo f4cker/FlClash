@@ -199,7 +199,9 @@ def sandbox_profile(app, scratch):
              ' (literal "/dev/urandom") (literal "/dev/random") (literal "/usr/bin/arch"))',
              '(allow sysctl-read)',
              '(allow mach-lookup (global-name "com.apple.windowserver.active")',
-             ' (global-name "com.apple.CARenderServer") (global-name "com.apple.MTLCompilerService"))',
+             ' (global-name "com.apple.CARenderServer") (global-name "com.apple.MTLCompilerService")',
+             ' (global-name "com.apple.coreservices.launchservicesd")',
+             ' (global-name "com.apple.CoreServices.coreservicesd"))',
              '(deny mach-lookup (global-name "com.layoute.flash.helper"))']
     for path in denied_paths():
         rules.append('(deny file-read* (subpath ' + quote(path) + '))')

@@ -154,6 +154,23 @@ class QualificationTests(unittest.TestCase):
         self.assertNotIn('(allow network', profile)
         self.assertNotIn('(allow process-fork', profile)
         self.assertNotIn('(allow mach-lookup)', profile)
+        allowed_names = [
+            'com.apple.windowserver.active', 'com.apple.CARenderServer',
+            'com.apple.MTLCompilerService', 'com.apple.coreservices.launchservicesd',
+            'com.apple.CoreServices.coreservicesd',
+        ]
+        exact_lookup = '(allow mach-lookup ' + ' '.join(
+            '(global-name ' + json.dumps(name) + ')' for name in allowed_names
+        ) + ')'
+        self.assertIn(exact_lookup, ' '.join(profile.split()))
+        self.assertEqual(profile.count('(allow mach-lookup'), 1)
+        self.assertCountEqual(
+            [json.loads(part.split(')', 1)[0]) for part in profile.split('(global-name ')[1:]],
+            allowed_names + ['com.layoute.flash.helper'],
+        )
+        for unapproved in ('pasteboard', 'tcc', 'opendirectory', 'logd',
+                           'distributednotifications', 'DiskArbitration', 'lsd.openurl'):
+            self.assertFalse(any(unapproved.lower() in name.lower() for name in allowed_names))
         self.assertTrue(any('OS-managed' in caveat for caveat in Q.CAVEATS))
 
     def test_host_evidence_binds_installed_dyld_bootstrap_policy(self):
