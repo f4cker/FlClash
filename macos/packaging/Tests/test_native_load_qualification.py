@@ -154,6 +154,15 @@ class QualificationTests(unittest.TestCase):
         self.assertNotIn('(allow network', profile)
         self.assertNotIn('(allow process-fork', profile)
         self.assertNotIn('(allow mach-lookup)', profile)
+        self.assertEqual(
+            [line.strip() for line in profile.splitlines() if 'iokit' in line],
+            ['(allow iokit-open-user-client (iokit-user-client-class "IOGPUDeviceUserClient")',
+             '(iokit-user-client-class "AGXDeviceUserClient")',
+             '(iokit-user-client-class "IOSurfaceRootUserClient"))'],
+        )
+        self.assertEqual(profile.count('(allow iokit'), 1)
+        for unapproved in ('iokit-open-service', 'IOAccelerator', 'IOSurfaceSendRight'):
+            self.assertNotIn(unapproved, profile)
         allowed_names = [
             'com.apple.windowserver.active', 'com.apple.CARenderServer',
             'com.apple.MTLCompilerService', 'com.apple.coreservices.launchservicesd',
