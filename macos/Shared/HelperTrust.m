@@ -149,11 +149,7 @@ static BOOL FCProtectedNode(NSString *path) {
     if (lstat(path.fileSystemRepresentation, &st) || st.st_uid != 0 || (st.st_mode & 06022) ||
         (!S_ISDIR(st.st_mode) && !S_ISREG(st.st_mode)) ||
         (S_ISREG(st.st_mode) && st.st_nlink != 1)) return NO;
-    acl_t acl = acl_get_file(path.fileSystemRepresentation, ACL_TYPE_EXTENDED);
-    if (!acl) return NO;
-    BOOL empty = FCACLEmpty(acl);
-    acl_free(acl);
-    return empty;
+    return FCPathACLEmpty(path.fileSystemRepresentation, &st);
 }
 
 static BOOL FCProtectedFrameworkLink(NSString *path, NSString *bundle) {
@@ -173,11 +169,7 @@ static BOOL FCProtectedFrameworkLink(NSString *path, NSString *bundle) {
     if (!permitted || target.isAbsolutePath) return NO;
     struct stat st;
     if (lstat(path.fileSystemRepresentation, &st) || !S_ISLNK(st.st_mode) || st.st_uid != 0) return NO;
-    acl_t acl = acl_get_link_np(path.fileSystemRepresentation, ACL_TYPE_EXTENDED);
-    if (!acl) return NO;
-    BOOL empty = FCACLEmpty(acl);
-    acl_free(acl);
-    if (!empty) return NO;
+    if (!FCPathACLEmpty(path.fileSystemRepresentation, &st)) return NO;
     char resolved[PATH_MAX];
     if (!realpath(path.fileSystemRepresentation, resolved)) return NO;
     NSString *canonical = @(resolved);

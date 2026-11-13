@@ -124,10 +124,7 @@ static BOOL FCRemovableTree(NSString *root) {
         NSString *path = item.path;
         if (lstat(path.fileSystemRepresentation, &node) || node.st_uid != 0) return NO;
         if (S_ISLNK(node.st_mode)) {
-            acl_t acl = acl_get_link_np(path.fileSystemRepresentation, ACL_TYPE_EXTENDED);
-            BOOL empty = FCACLEmpty(acl);
-            if (acl) acl_free(acl);
-            if (!empty) return NO;
+            if (!FCPathACLEmpty(path.fileSystemRepresentation, &node)) return NO;
         } else if (!FCProtectedTree(path, NO)) return NO;
     }
     return readable;
