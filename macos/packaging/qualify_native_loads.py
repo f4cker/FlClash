@@ -183,7 +183,7 @@ def sandbox_profile(app, scratch):
     # The installed OS policy grants dyld's signature/linking syscalls; executable
     # mappings alone are insufficient even for /usr/bin/true. Its bytes are bound
     # into host evidence, and explicit denials below override imported allowances.
-    rules = ['(version 1)', '(deny default (with report))', '(import "dyld-support.sb")',
+    rules = ['(version 1)', '(debug deny)', '(deny default)', '(import "dyld-support.sb")',
              '(deny network*)', '(deny process-fork)', '(deny sysctl-write)',
              '(deny file-write* (require-not (subpath ' + quote(scratch) + ')))',
              '(allow process-exec (literal "/usr/bin/arch") (literal ' + quote(gui) + '))',
