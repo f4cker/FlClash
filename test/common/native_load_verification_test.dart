@@ -402,6 +402,46 @@ void main() {
       }
     });
 
+    test(
+      'hidden diagnostic explicitly starts the engine after handshake setup',
+      () {
+        final source = read('macos/Runner/MainFlutterWindow.swift');
+        final diagnostic = source.substring(
+          source.indexOf('private func startNativeLoadVerification()'),
+          source.indexOf('override public func order('),
+        );
+        final run = diagnostic.indexOf(
+          'guard controller.engine.run(withEntrypoint: nil) else {',
+        );
+        expect(
+          run,
+          greaterThan(diagnostic.indexOf('channel.setMethodCallHandler')),
+        );
+        expect(run, greaterThan(diagnostic.indexOf('result(true)')));
+        expect(
+          run,
+          greaterThan(diagnostic.indexOf('verificationChannel = channel')),
+        );
+        expect(
+          run,
+          greaterThan(diagnostic.indexOf('contentViewController = controller')),
+        );
+        expect(
+          diagnostic.substring(run),
+          contains('NativeLoadVerification.fail("engine_start_failed")'),
+        );
+        for (final forbidden in [
+          'viewWillAppear',
+          'viewDidAppear',
+          'makeKey',
+          'orderFront',
+          'isRunning',
+        ]) {
+          expect(diagnostic, isNot(contains(forbidden)), reason: forbidden);
+        }
+      },
+    );
+
     test('AppDelegate diagnostic lifecycle cannot enter WindowPlugin', () {
       final source = read('macos/Runner/AppDelegate.swift');
       final terminate = source.substring(
