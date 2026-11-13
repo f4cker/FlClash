@@ -1577,5 +1577,21 @@
   "macHelperRepairAction": "Repair Instructions",
   "macHelperCheckAgain": "Check Again",
   "macHelperUnavailableDetail": "Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.",
-  "macHelperPendingDetail": "Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved."
+  "macHelperPendingDetail": "Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.",
+  "trayMultipleNodes": "Multiple nodes",
+  "trayNoAvailableMembers": "No available members",
+  "trayCouldNotLoad": "Couldn’t load",
+  "trayCouldNotSwitch": "Couldn’t switch",
+  "traySwitchUnconfirmed": "Couldn’t confirm the switch",
+  "traySelectionUnknown": "Current selection unknown",
+  "trayCurrentSelection": "Current selection: {name}",
+  "trayLatencyUnknown": "Latency unknown",
+  "trayTesting": "Testing",
+  "trayLatencyMilliseconds": "Latency {value} milliseconds",
+  "trayLatencyLessThanOne": "Latency less than 1 millisecond",
+  "traySwitchingTo": "Switching to {name}",
+  "traySelected": "Selected",
+  "trayTestLatency": "Test Latency",
+  "trayReject": "Reject",
+  "trayLatencyBadge": "{value} ms"
 }

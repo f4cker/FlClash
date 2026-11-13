@@ -1577,5 +1577,21 @@
   "macHelperRepairAction": "修復の手順",
   "macHelperCheckAgain": "再確認",
   "macHelperUnavailableDetail": "現在 Flash はヘルパーに接続できないため、TUN を開始できません。TUN の設定は保持されています。",
-  "macHelperPendingDetail": "Flash のインストーラで、管理者の承認を得てヘルパーをインストール・更新・修復・無効化してください。無効化は Flash のアンインストールではなく、再承認が必要になる場合があります。インストーラの完了だけではヘルパーや TUN の動作は確認できません。TUN 設定は保持されます。"
+  "macHelperPendingDetail": "Flash のインストーラで、管理者の承認を得てヘルパーをインストール・更新・修復・無効化してください。無効化は Flash のアンインストールではなく、再承認が必要になる場合があります。インストーラの完了だけではヘルパーや TUN の動作は確認できません。TUN 設定は保持されます。",
+  "trayMultipleNodes": "複数のノード",
+  "trayNoAvailableMembers": "利用可能なメンバーがありません",
+  "trayCouldNotLoad": "読み込みに失敗",
+  "trayCouldNotSwitch": "切り替えに失敗",
+  "traySwitchUnconfirmed": "切り替え結果を確認できません",
+  "traySelectionUnknown": "現在の選択は不明",
+  "trayCurrentSelection": "現在の選択：{name}",
+  "trayLatencyUnknown": "遅延は不明",
+  "trayTesting": "テスト中",
+  "trayLatencyMilliseconds": "遅延 {value} ミリ秒",
+  "trayLatencyLessThanOne": "遅延は1ミリ秒未満",
+  "traySwitchingTo": "{name} に切り替え中",
+  "traySelected": "選択中",
+  "trayTestLatency": "遅延をテスト",
+  "trayReject": "拒否",
+  "trayLatencyBadge": "{value} ms"
 }

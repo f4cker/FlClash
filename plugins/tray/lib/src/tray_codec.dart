@@ -44,6 +44,27 @@ abstract final class TrayCodec {
     );
   }
 
+  static Map<String, Object?> _decoration(
+    TrayMenuIcon? icon,
+    TrayMenuBadge? badge,
+    String? accessibilityLabel,
+  ) => {
+    if (icon != null)
+      'icon': {
+        'monogram': icon.monogram,
+        'background': icon.background,
+        'foreground': icon.foreground,
+        if (icon.pngBytes != null) 'png': base64Encode(icon.pngBytes!),
+      },
+    if (badge != null)
+      'badge': {
+        'label': badge.label,
+        'background': badge.background,
+        'foreground': badge.foreground,
+      },
+    'accessibilityLabel': ?accessibilityLabel,
+  };
+
   static List<Object?> _encodeItems(
     List<TrayMenuItem> items,
     Map<int, TrayMenuItem> sink,
@@ -54,17 +75,28 @@ abstract final class TrayCodec {
       sink[id] = item;
       return switch (item) {
         TrayMenuSeparator() => <String, Object?>{'id': id, 'type': 'separator'},
-        TrayMenuAction(:final label, :final detail, :final enabled) =>
+        TrayMenuAction(
+          :final label,
+          :final detail,
+          :final icon,
+          :final badge,
+          :final accessibilityLabel,
+          :final enabled,
+        ) =>
           <String, Object?>{
             'id': id,
             'type': 'action',
             'label': label,
             if (detail != null && detail.isNotEmpty) 'detail': detail,
+            ..._decoration(icon, badge, accessibilityLabel),
             'enabled': enabled,
           },
         TrayMenuCheckbox(
           :final label,
           :final detail,
+          :final icon,
+          :final badge,
+          :final accessibilityLabel,
           :final enabled,
           :final checked,
         ) =>
@@ -73,12 +105,16 @@ abstract final class TrayCodec {
             'type': 'checkbox',
             'label': label,
             if (detail != null && detail.isNotEmpty) 'detail': detail,
+            ..._decoration(icon, badge, accessibilityLabel),
             'enabled': enabled,
             'checked': checked,
           },
         TrayMenuSubmenu(
           :final label,
           :final detail,
+          :final icon,
+          :final badge,
+          :final accessibilityLabel,
           :final enabled,
           :final items,
         ) =>
@@ -87,6 +123,7 @@ abstract final class TrayCodec {
             'type': 'submenu',
             'label': label,
             if (detail != null && detail.isNotEmpty) 'detail': detail,
+            ..._decoration(icon, badge, accessibilityLabel),
             'enabled': enabled,
             'items': _encodeItems(items, sink, allocator),
           },

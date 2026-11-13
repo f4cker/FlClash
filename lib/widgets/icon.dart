@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:fl_clash/common/cache.dart';
 import 'package:fl_clash/common/common.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/svg.dart';
 
 const _maxCachedIconBytes = 16 << 20;
+const maxTrayIconSourceBytes = 1 << 20;
 
 // The precache and the widget must resolve equal providers to share one
 // ImageCache entry; 192 physical pixels cover a 48 dp icon box at 4x.
@@ -43,24 +45,29 @@ class _IconBytesCache {
 
   void operator []=(String key, Uint8List? value) {
     remove(key);
-    final size = value?.lengthInBytes ?? 0;
+    final size = (value?.lengthInBytes ?? 0) + key.length * 2;
     if (size > maxBytes) {
       return;
     }
     _entries[key] = value;
     _bytes += size;
-    while (_bytes > maxBytes) {
+    while (_bytes > maxBytes || _entries.length > 512) {
       remove(_entries.keys.first);
     }
   }
 
   void remove(String key) {
-    _bytes -= _entries.remove(key)?.lengthInBytes ?? 0;
+    if (_entries.containsKey(key)) {
+      _bytes -= (_entries.remove(key)?.lengthInBytes ?? 0) + key.length * 2;
+    }
   }
 }
 
 final _decodedIcons = _IconBytesCache(_maxCachedIconBytes);
 final _remoteIcons = _IconBytesCache(_maxCachedIconBytes);
+final _targetIconCacheRevision = ValueNotifier<int>(0);
+
+ValueListenable<int> get targetIconCacheRevision => _targetIconCacheRevision;
 
 Uint8List? _decodeIcon(String src) {
   if (!src.contains('base64,')) {
@@ -130,28 +137,24 @@ class _ImagePlaceholder extends StatelessWidget {
   }
 }
 
-/// Stands for a proxy group without an icon: the first letter or digit of
-/// its name, past any leading emoji the name already shows.
+final _monogramLetter = RegExp(r'[\p{L}\p{N}]', unicode: true);
+
+String groupMonogram(String name) {
+  final letter = _monogramLetter.firstMatch(name)?.group(0);
+  return letter?.toUpperCase() ?? name.characters.firstOrNull ?? '';
+}
+
+/// Stands for a proxy group without an icon, past any leading emoji.
 class GroupMonogram extends StatelessWidget {
   final String name;
 
   const GroupMonogram(this.name, {super.key});
 
-  static final _letter = RegExp(r'[\p{L}\p{N}]', unicode: true);
-
-  String get _mark {
-    final letter = _letter.firstMatch(name)?.group(0);
-    if (letter != null) {
-      return letter.toUpperCase();
-    }
-    return name.characters.firstOrNull ?? '';
-  }
-
   @override
   Widget build(BuildContext context) {
     final iconTheme = IconTheme.of(context);
     final size = iconTheme.size ?? 24;
-    final mark = _mark;
+    final mark = groupMonogram(name);
     if (mark.isEmpty) {
       return const _ImagePlaceholder();
     }
@@ -210,6 +213,93 @@ final _cacheManager = CacheManager(
   ),
 );
 
+BaseCacheManager? _cacheOnlyIconManager;
+
+@visibleForTesting
+set cacheOnlyIconManager(BaseCacheManager? value) {
+  _cacheOnlyIconManager = value;
+}
+
+/// Reads only the configured source's existing bytes; stale files stay usable.
+Future<Uint8List?> readTargetIconBytesFromCache(String src) async {
+  if (src.isEmpty || src.length > maxTrayIconSourceBytes * 3 + 512) {
+    return null;
+  }
+  Uint8List? bounded(Uint8List? bytes) =>
+      bytes != null &&
+          bytes.isNotEmpty &&
+          bytes.lengthInBytes <= maxTrayIconSourceBytes
+      ? bytes
+      : null;
+
+  final memory = _decodedIcons[src] ?? _remoteIcons[src];
+  if (memory != null) {
+    return bounded(memory);
+  }
+  try {
+    if (src.startsWith('data:')) {
+      final data = UriData.parse(src);
+      if (!data.mimeType.startsWith('image/')) {
+        return null;
+      }
+      if (data.isBase64) {
+        if (data.contentText.length > ((maxTrayIconSourceBytes + 2) ~/ 3) * 4) {
+          return null;
+        }
+      } else {
+        final text = data.contentText;
+        var length = 0;
+        for (var i = 0; i < text.length; i++, length++) {
+          if (text.codeUnitAt(i) > 127 || length >= maxTrayIconSourceBytes) {
+            return null;
+          }
+          if (text[i] == '%') {
+            i += 2;
+          }
+        }
+      }
+      final bytes = bounded(data.contentAsBytes());
+      if (bytes != null) {
+        _decodedIcons[src] = bytes;
+      }
+      return bytes;
+    }
+    final uri = Uri.tryParse(src);
+    if (src.length > 8192 ||
+        uri == null ||
+        !const {'http', 'https'}.contains(uri.scheme) ||
+        uri.host.isEmpty) {
+      return null;
+    }
+    final info = await (_cacheOnlyIconManager ?? _cacheManager)
+        .getFileFromCache(src);
+    if (info == null) {
+      return null;
+    }
+    final length = await info.file.length();
+    if (length <= 0 || length > maxTrayIconSourceBytes) {
+      return null;
+    }
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in info.file.openRead(
+      0,
+      maxTrayIconSourceBytes + 1,
+    )) {
+      if (builder.length + chunk.length > maxTrayIconSourceBytes) {
+        return null;
+      }
+      builder.add(chunk);
+    }
+    final bytes = bounded(builder.takeBytes());
+    if (bytes != null) {
+      _remoteIcons[src] = bytes;
+    }
+    return bytes;
+  } catch (_) {
+    return null;
+  }
+}
+
 Stream<Uint8List> _readCachedIcon(String src) {
   return _cacheManager
       .getFileStreamV2(src)
@@ -229,7 +319,11 @@ Stream<Uint8List> _loadRemoteIcon(String src) {
     final next = current != null && listEquals(current, bytes)
         ? current
         : bytes;
-    return _remoteIcons[src] = next;
+    _remoteIcons[src] = next;
+    if (!identical(current, next) && _remoteIcons.contains(src)) {
+      _targetIconCacheRevision.value++;
+    }
+    return next;
   });
 }
 

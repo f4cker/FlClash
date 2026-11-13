@@ -7753,8 +7753,7 @@ class AppLocalizations {
   String customImportDroppedSubRules(num count, Object label) {
     return Intl.plural(
       count,
-      one:
-          '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
+      one: '1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules',
       other:
           '$label SUB-RULE rules were dropped, since custom profiles do not support sub-rules',
       name: 'customImportDroppedSubRules',
@@ -13860,6 +13859,151 @@ class AppLocalizations {
       name: 'macHelperPendingDetail',
       desc: '',
       args: [],
+    );
+  }
+
+  /// `Multiple nodes`
+  String get trayMultipleNodes {
+    return Intl.message(
+      'Multiple nodes',
+      name: 'trayMultipleNodes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No available members`
+  String get trayNoAvailableMembers {
+    return Intl.message(
+      'No available members',
+      name: 'trayNoAvailableMembers',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t load`
+  String get trayCouldNotLoad {
+    return Intl.message(
+      'Couldn’t load',
+      name: 'trayCouldNotLoad',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t switch`
+  String get trayCouldNotSwitch {
+    return Intl.message(
+      'Couldn’t switch',
+      name: 'trayCouldNotSwitch',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t confirm the switch`
+  String get traySwitchUnconfirmed {
+    return Intl.message(
+      'Couldn’t confirm the switch',
+      name: 'traySwitchUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Current selection unknown`
+  String get traySelectionUnknown {
+    return Intl.message(
+      'Current selection unknown',
+      name: 'traySelectionUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Current selection: {name}`
+  String trayCurrentSelection(Object name) {
+    return Intl.message(
+      'Current selection: $name',
+      name: 'trayCurrentSelection',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Latency unknown`
+  String get trayLatencyUnknown {
+    return Intl.message(
+      'Latency unknown',
+      name: 'trayLatencyUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Testing`
+  String get trayTesting {
+    return Intl.message('Testing', name: 'trayTesting', desc: '', args: []);
+  }
+
+  /// `Latency {value} milliseconds`
+  String trayLatencyMilliseconds(Object value) {
+    return Intl.message(
+      'Latency $value milliseconds',
+      name: 'trayLatencyMilliseconds',
+      desc: '',
+      args: [value],
+    );
+  }
+
+  /// `Latency less than 1 millisecond`
+  String get trayLatencyLessThanOne {
+    return Intl.message(
+      'Latency less than 1 millisecond',
+      name: 'trayLatencyLessThanOne',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Switching to {name}`
+  String traySwitchingTo(Object name) {
+    return Intl.message(
+      'Switching to $name',
+      name: 'traySwitchingTo',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Selected`
+  String get traySelected {
+    return Intl.message('Selected', name: 'traySelected', desc: '', args: []);
+  }
+
+  /// `Test Latency`
+  String get trayTestLatency {
+    return Intl.message(
+      'Test Latency',
+      name: 'trayTestLatency',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Reject`
+  String get trayReject {
+    return Intl.message('Reject', name: 'trayReject', desc: '', args: []);
+  }
+
+  /// `{value} ms`
+  String trayLatencyBadge(Object value) {
+    return Intl.message(
+      '$value ms',
+      name: 'trayLatencyBadge',
+      desc: '',
+      args: [value],
     );
   }
 }

@@ -1577,5 +1577,21 @@
   "macHelperRepairAction": "Instructions de réparation",
   "macHelperCheckAgain": "Vérifier à nouveau",
   "macHelperUnavailableDetail": "Flash ne peut pas joindre l’assistant pour le moment. TUN ne peut pas démarrer. Votre réglage TUN est conservé.",
-  "macHelperPendingDetail": "Utilisez l’installateur Flash avec l’accord explicite d’un administrateur pour installer, mettre à jour, réparer ou désactiver l’assistant. Le désactiver ne désinstalle pas Flash et une nouvelle autorisation peut être nécessaire. La fin de l’installation ne confirme pas le fonctionnement de l’assistant ou de TUN. Votre réglage TUN est conservé."
+  "macHelperPendingDetail": "Utilisez l’installateur Flash avec l’accord explicite d’un administrateur pour installer, mettre à jour, réparer ou désactiver l’assistant. Le désactiver ne désinstalle pas Flash et une nouvelle autorisation peut être nécessaire. La fin de l’installation ne confirme pas le fonctionnement de l’assistant ou de TUN. Votre réglage TUN est conservé.",
+  "trayMultipleNodes": "Plusieurs nœuds",
+  "trayNoAvailableMembers": "Aucun membre disponible",
+  "trayCouldNotLoad": "Chargement impossible",
+  "trayCouldNotSwitch": "Changement impossible",
+  "traySwitchUnconfirmed": "Impossible de confirmer le changement",
+  "traySelectionUnknown": "Sélection actuelle inconnue",
+  "trayCurrentSelection": "Sélection actuelle : {name}",
+  "trayLatencyUnknown": "Latence inconnue",
+  "trayTesting": "Test en cours",
+  "trayLatencyMilliseconds": "Latence : {value} millisecondes",
+  "trayLatencyLessThanOne": "Latence inférieure à 1 milliseconde",
+  "traySwitchingTo": "Passage à {name}",
+  "traySelected": "Sélectionné",
+  "trayTestLatency": "Tester la latence",
+  "trayReject": "Rejeter",
+  "trayLatencyBadge": "{value} ms"
 }

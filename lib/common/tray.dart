@@ -1,16 +1,27 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/providers/tray_menu.dart';
+import 'package:fl_clash/ui/delay_color.dart';
+import 'package:fl_clash/widgets/icon.dart' show groupMonogram;
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:prism_ui/prism_ui.dart';
 import 'package:tray/tray.dart';
 
 import 'app_localizations.dart';
-import 'l10n_labels.dart';
 import 'app_ports.dart';
+import 'compute.dart';
 import 'constant.dart';
 import 'keyboard.dart';
+import 'l10n_labels.dart';
+import 'print.dart';
 import 'provider_reader.dart';
+import 'string.dart';
 import 'system.dart';
+import 'tray_icon.dart';
 import 'window.dart';
 
 class AppTray implements TrayPort {
@@ -18,10 +29,17 @@ class AppTray implements TrayPort {
 
   final bool isMacOS;
   final bool isWindows;
+  final Future<Uint8List?> Function(String) _readIcon;
 
   bool _isShutDown = false;
+  (int?, Mode, bool)? _groupCacheScope;
+  List<Group> _lastVisibleGroups = const [];
 
-  AppTray._internal({required this.isMacOS, required this.isWindows});
+  AppTray._internal({
+    required this.isMacOS,
+    required this.isWindows,
+    Future<Uint8List?> Function(String) iconReader = readTrayIconPng,
+  }) : _readIcon = iconReader;
 
   factory AppTray() {
     _instance ??= AppTray._internal(
@@ -35,8 +53,13 @@ class AppTray implements TrayPort {
   factory AppTray.forPlatform({
     required bool isMacOS,
     required bool isWindows,
+    Future<Uint8List?> Function(String)? iconReader,
   }) {
-    return AppTray._internal(isMacOS: isMacOS, isWindows: isWindows);
+    return AppTray._internal(
+      isMacOS: isMacOS,
+      isWindows: isWindows,
+      iconReader: iconReader ?? readTrayIconPng,
+    );
   }
 
   String get _trayIconSuffix {
@@ -89,6 +112,8 @@ class AppTray implements TrayPort {
     if (_isShutDown) {
       return;
     }
+    final menu = await _buildMenu(trayState: trayState, read: read);
+    if (_isShutDown) return;
     await Tray.instance.show(
       TraySpec(
         icon: TrayIcon.asset(
@@ -105,7 +130,7 @@ class AppTray implements TrayPort {
         toolTip: trayState.safeMode
             ? currentAppLocalizations.safeModeAppTitle(appName)
             : appName,
-        menu: _buildMenu(trayState: trayState, read: read),
+        menu: menu,
       ),
     );
     await updateTitle(showTrayTitle: trayState.showTrayTitle, traffic: traffic);
@@ -121,10 +146,13 @@ class AppTray implements TrayPort {
     await Tray.instance.setTitle(showTrayTitle ? traffic.trayTitle : '');
   }
 
-  List<TrayMenuItem> _buildMenu({
+  Future<List<TrayMenuItem>> _buildMenu({
     required TrayState trayState,
     required ProviderReader read,
-  }) {
+  }) async {
+    final groupMenu = isMacOS
+        ? await _buildGroupMenu(trayState: trayState, read: read)
+        : const <TrayMenuItem>[];
     final commonAction = read(commonActionProvider.notifier);
     final systemAction = read(systemActionProvider.notifier);
     final setupAction = read(setupActionProvider.notifier);
@@ -182,7 +210,7 @@ class AppTray implements TrayPort {
           },
         ),
       const TrayMenuSeparator(),
-      if (isMacOS) ..._buildGroupMenu(trayState: trayState, read: read),
+      ...groupMenu,
       if (trayState.isStart) ...[
         TrayMenuCheckbox(
           label: appLocalizations.tun,
@@ -225,68 +253,340 @@ class AppTray implements TrayPort {
     ).text(hotKey.modifiers, key);
   }
 
-  String? _delayText(int? delay) {
-    if (delay == null) {
-      return null;
-    }
-    return delay > 0
-        ? '$delay'
-        : delayFailureText(delay, currentAppLocalizations);
-  }
-
-  List<TrayMenuItem> _buildGroupMenu({
+  Future<List<TrayMenuItem>> _buildGroupMenu({
     required TrayState trayState,
     required ProviderReader read,
-  }) {
-    if (trayState.groups.isEmpty) {
+  }) async {
+    final scope = (
+      read(currentProfileIdProvider),
+      trayState.mode,
+      read(proxiesStyleSettingProvider).showHiddenGroups,
+    );
+    if (_groupCacheScope != scope) {
+      _groupCacheScope = scope;
+      _lastVisibleGroups = const [];
+    }
+    final readFailed = read(trayGroupsReadFailedProvider);
+    final rawGroups = read(groupsProvider);
+    if (trayState.mode == Mode.direct) {
+      _lastVisibleGroups = const [];
       return const [];
     }
+    if (!readFailed) {
+      _lastVisibleGroups = [
+        for (final group in trayState.groups)
+          group.copyWith(now: rawGroups.getGroup(group.name)?.now),
+      ];
+    }
+    final groups = readFailed ? _lastVisibleGroups : trayState.groups;
+    if (groups.isEmpty) {
+      return readFailed
+          ? [
+              TrayMenuAction(
+                label: currentAppLocalizations.trayCouldNotLoad,
+                enabled: false,
+              ),
+              const TrayMenuSeparator(),
+            ]
+          : const [];
+    }
+    final scheme = read(
+      genColorSchemeProvider(read(currentBrightnessProvider)),
+    );
+    final menuStates = read(trayGroupMenuStatesProvider);
     final delays = read(trayDelaysProvider);
+    final pendingTests = read(pendingDelayTestsProvider);
+    final testingGroups = read(delayTestingGroupsProvider);
+    final selectedMap = read(selectedMapProvider);
+    final defaultTestUrl = read(patchClashConfigProvider).testUrl;
     final proxiesAction = read(proxiesActionProvider.notifier);
+    final connected = read(coreStatusProvider) == CoreStatus.connected;
+    bool isCurrentScope() =>
+        read(currentProfileIdProvider) == scope.$1 &&
+        read(patchClashConfigProvider).mode == scope.$2;
+    final icons = await _readMenuIcons(groups, rawGroups);
     return [
-      for (final group in trayState.groups)
+      for (final group in groups)
         _buildGroupSubmenu(
           group,
-          selectedName: read(selectedProxyNameProvider(group.name)),
+          rawGroup: readFailed ? group : rawGroups.getGroup(group.name),
+          menuState: menuStates[group.name],
+          configuredName: trayState.selectedMap[group.name],
+          isStart: trayState.isStart,
+          canSelect: !readFailed && (!trayState.isStart || connected),
+          readFailed: readFailed,
+          testing: testingGroups.contains(group.name),
           delays: delays[group.name] ?? const {},
+          pendingNames: {
+            for (final proxy in group.all)
+              if (_isDelayPending(
+                proxy.name,
+                testUrl: group.testUrl.takeFirstValid([defaultTestUrl]),
+                rawGroups: rawGroups,
+                selectedMap: selectedMap,
+                pendingTests: pendingTests,
+              ))
+                proxy.name,
+          },
+          scheme: scheme,
+          icons: icons,
+          rawGroups: rawGroups,
+          onTest: () {
+            if (!isCurrentScope()) return;
+            _observe(
+              proxiesAction.delayTestPageGroup(group.name, matchSearch: false),
+            );
+          },
           onSelected: (proxyName) {
-            proxiesAction.changeProxy(
-              groupName: group.name,
-              proxyName: proxyName,
+            if (!isCurrentScope()) return;
+            _observe(
+              proxiesAction.changeProxyForTray(
+                groupName: group.name,
+                proxyName: proxyName,
+              ),
             );
           },
         ),
       TrayMenuAction(
         label: HotAction.delayTest.label,
         detail: _shortcut(trayState, HotAction.delayTest),
+        enabled: !readFailed,
         onSelected: () {
-          proxiesAction.delayTestGroups(trayState.groups);
+          if (!isCurrentScope()) return;
+          _observe(proxiesAction.delayTestGroups(groups));
         },
       ),
       const TrayMenuSeparator(),
     ];
   }
 
+  bool _isDelayPending(
+    String proxyName, {
+    required String testUrl,
+    required List<Group> rawGroups,
+    required Map<String, String> selectedMap,
+    required Map<String, DelayTestPhase> pendingTests,
+  }) {
+    if (pendingTests.isEmpty) return false;
+    final target = computeRealSelectedProxyState(
+      proxyName,
+      groups: rawGroups,
+      selectedMap: selectedMap,
+    );
+    return pendingTests.containsKey(
+      delayTestKey(target.testUrl.takeFirstValid([testUrl]), target.proxyName),
+    );
+  }
+
+  Future<Map<String, Uint8List?>> _readMenuIcons(
+    List<Group> groups,
+    List<Group> rawGroups,
+  ) async {
+    final sources = <String>{
+      for (final group in groups) ...[
+        group.icon,
+        for (final proxy in group.all)
+          rawGroups.getGroup(proxy.name)?.icon ?? '',
+      ],
+    }..remove('');
+    final icons = <String, Uint8List?>{};
+    final iterator = sources.iterator;
+    Future<void> readNext() async {
+      while (iterator.moveNext()) {
+        final source = iterator.current;
+        var timedOut = false;
+        // Normalize covariant readers before timeout accepts a null fallback.
+        icons[source] = await _readIcon(source)
+            .then<Uint8List?>((bytes) => bytes)
+            .timeout(
+              const Duration(milliseconds: 150),
+              onTimeout: () {
+                timedOut = true;
+                return null;
+              },
+            );
+        // A timeout leaves the helper's acquisition running in this slot.
+        if (timedOut) return;
+      }
+    }
+
+    await Future.wait([for (var i = 0; i < 4; i++) readNext()]);
+    return icons;
+  }
+
+  void _observe(Future<void> operation) {
+    unawaited(
+      operation.onError<Object>((error, stackTrace) {
+        commonPrint.log(
+          'Tray action failed: ${compactError(error)}',
+          logLevel: LogLevel.error,
+        );
+      }),
+    );
+  }
+
+  TrayMenuBadge _badge(
+    int? delay,
+    bool pending,
+    Proxy proxy,
+    ColorScheme scheme,
+  ) {
+    final l10n = currentAppLocalizations;
+    final value = pending || delay == 0 ? null : delay;
+    final label = pending
+        ? l10n.trayTesting
+        : value == null
+        ? switch (proxy.type.toLowerCase()) {
+            'direct' => l10n.direct,
+            'reject' || 'rejectdrop' => l10n.trayReject,
+            _ => '—',
+          }
+        : value > 0
+        ? l10n.trayLatencyBadge(value)
+        : value == -1
+        ? l10n.timeout
+        : l10n.delayFailed;
+    final status = scheme.delayColor(value);
+    final (background, foreground) = status == null
+        ? (SurfaceLevel.inset.colorOf(scheme), scheme.onSurfaceVariant)
+        : value! < 0
+        ? (scheme.errorContainer, scheme.onErrorContainer)
+        : value < 600
+        ? (scheme.successContainer, scheme.onSuccessContainer)
+        : (scheme.warningContainer, scheme.onWarningContainer);
+    return TrayMenuBadge(
+      label: label,
+      background: background.toARGB32(),
+      foreground: foreground.toARGB32(),
+    );
+  }
+
   TrayMenuSubmenu _buildGroupSubmenu(
     Group group, {
-    required String? selectedName,
+    required Group? rawGroup,
+    required TrayGroupMenuState? menuState,
+    required String? configuredName,
+    required bool isStart,
+    required bool canSelect,
+    required bool readFailed,
+    required bool testing,
     required Map<String, int> delays,
+    required Set<String> pendingNames,
+    required ColorScheme scheme,
+    required Map<String, Uint8List?> icons,
+    required List<Group> rawGroups,
+    required void Function() onTest,
     required void Function(String proxyName) onSelected,
   }) {
+    final l10n = currentAppLocalizations;
+    final members = {for (final proxy in group.all) proxy.name};
+    final pending = menuState?.pendingName;
+    final failure = menuState?.switchFailure;
+    final candidate = menuState != null
+        ? menuState.confirmedName
+        : isStart
+        ? rawGroup?.now
+        : members.contains(configuredName)
+        ? configuredName
+        : (rawGroup ?? group).now;
+    final selected = members.contains(candidate) ? candidate : null;
+    final selection = group.type == GroupType.LoadBalance
+        ? l10n.trayMultipleNodes
+        : selected ?? '—';
+    final status = readFailed
+        ? l10n.trayCouldNotLoad
+        : switch (failure) {
+            TraySwitchFailure.failed => l10n.trayCouldNotSwitch,
+            TraySwitchFailure.unconfirmed => l10n.traySwitchUnconfirmed,
+            null => pending == null ? null : l10n.traySwitchingTo(pending),
+          };
+    TrayMenuIcon icon(String name, String source, SurfaceLevel level) =>
+        TrayMenuIcon(
+          monogram: groupMonogram(name),
+          background: level.colorOf(scheme).toARGB32(),
+          foreground: scheme.onSurfaceVariant.toARGB32(),
+          pngBytes: icons[source],
+        );
     return TrayMenuSubmenu(
       label: group.name,
-      detail: _delayText(delays[selectedName]),
+      detail: status ?? selection,
+      icon: icon(group.name, group.icon, SurfaceLevel.block),
+      accessibilityLabel: [
+        group.name,
+        group.type == GroupType.LoadBalance
+            ? l10n.trayMultipleNodes
+            : selected == null
+            ? l10n.traySelectionUnknown
+            : l10n.trayCurrentSelection(selected),
+        if (status != null) status,
+      ].join(', '),
       items: [
+        TrayMenuAction(
+          label: l10n.trayTestLatency,
+          enabled: !readFailed && !testing && group.all.isNotEmpty,
+          onSelected: onTest,
+        ),
+        const TrayMenuSeparator(),
+        if (status != null) TrayMenuAction(label: status, enabled: false),
+        if (group.all.isEmpty)
+          TrayMenuAction(label: l10n.trayNoAvailableMembers, enabled: false),
         for (final proxy in group.all)
-          TrayMenuCheckbox(
-            label: proxy.name,
-            checked: selectedName == proxy.name,
-            detail: _delayText(delays[proxy.name]),
-            onSelected: () {
-              onSelected(proxy.name);
-            },
+          _buildMember(
+            proxy,
+            checked:
+                group.type != GroupType.LoadBalance && selected == proxy.name,
+            enabled:
+                canSelect &&
+                pending == null &&
+                group.type != GroupType.LoadBalance &&
+                group.type != GroupType.Relay,
+            badge: _badge(
+              delays[proxy.name],
+              pendingNames.contains(proxy.name),
+              proxy,
+              scheme,
+            ),
+            icon: icon(
+              proxy.name,
+              rawGroups.getGroup(proxy.name)?.icon ?? '',
+              SurfaceLevel.inset,
+            ),
+            measuredDelay: delays[proxy.name],
+            testing: pendingNames.contains(proxy.name),
+            onSelected: () => onSelected(proxy.name),
           ),
       ],
+    );
+  }
+
+  TrayMenuCheckbox _buildMember(
+    Proxy proxy, {
+    required bool checked,
+    required bool enabled,
+    required TrayMenuBadge badge,
+    required TrayMenuIcon icon,
+    required int? measuredDelay,
+    required bool testing,
+    required void Function() onSelected,
+  }) {
+    return TrayMenuCheckbox(
+      label: proxy.name,
+      checked: checked,
+      enabled: enabled,
+      icon: icon,
+      badge: badge,
+      accessibilityLabel: [
+        proxy.name,
+        if (checked) currentAppLocalizations.traySelected,
+        testing
+            ? currentAppLocalizations.trayTesting
+            : measuredDelay != null && measuredDelay > 0
+            ? currentAppLocalizations.trayLatencyMilliseconds(measuredDelay)
+            : badge.label == '—'
+            ? currentAppLocalizations.trayLatencyUnknown
+            : badge.label,
+      ].join(', '),
+      onSelected: onSelected,
     );
   }
 }

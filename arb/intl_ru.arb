@@ -1577,5 +1577,21 @@
   "macHelperRepairAction": "Инструкция по восстановлению",
   "macHelperCheckAgain": "Проверить снова",
   "macHelperUnavailableDetail": "Сейчас Flash не может подключиться к помощнику, поэтому TUN не запускается. Настройка TUN сохранена.",
-  "macHelperPendingDetail": "Для установки, обновления, восстановления или отключения помощника используйте установщик Flash с явным одобрением администратора. Отключение не удаляет Flash; одобрение может потребоваться снова. Завершение установки не подтверждает работу помощника или TUN. Настройка TUN сохранена."
+  "macHelperPendingDetail": "Для установки, обновления, восстановления или отключения помощника используйте установщик Flash с явным одобрением администратора. Отключение не удаляет Flash; одобрение может потребоваться снова. Завершение установки не подтверждает работу помощника или TUN. Настройка TUN сохранена.",
+  "trayMultipleNodes": "Несколько узлов",
+  "trayNoAvailableMembers": "Нет доступных участников",
+  "trayCouldNotLoad": "Не удалось загрузить",
+  "trayCouldNotSwitch": "Не удалось переключить",
+  "traySwitchUnconfirmed": "Не удалось подтвердить переключение",
+  "traySelectionUnknown": "Текущий выбор неизвестен",
+  "trayCurrentSelection": "Текущий выбор: {name}",
+  "trayLatencyUnknown": "Задержка неизвестна",
+  "trayTesting": "Проверка",
+  "trayLatencyMilliseconds": "Задержка: {value} мс",
+  "trayLatencyLessThanOne": "Задержка менее 1 миллисекунды",
+  "traySwitchingTo": "Переключение на {name}",
+  "traySelected": "Выбрано",
+  "trayTestLatency": "Проверить задержку",
+  "trayReject": "Отклонить",
+  "trayLatencyBadge": "{value} ms"
 }

@@ -1577,5 +1577,21 @@
   "macHelperRepairAction": "查看修复说明",
   "macHelperCheckAgain": "重新检查",
   "macHelperUnavailableDetail": "Flash 现在连不上助手，TUN 暂时无法启动。你的 TUN 设置已保留。",
-  "macHelperPendingDetail": "请通过 Flash 的安装程序安装、更新、修复或停用助手，并明确批准管理员操作。停用不等于卸载 Flash，后续操作可能需要再次授权。安装程序完成不代表助手已就绪或 TUN 已运行。你的 TUN 设置已保留。"
+  "macHelperPendingDetail": "请通过 Flash 的安装程序安装、更新、修复或停用助手，并明确批准管理员操作。停用不等于卸载 Flash，后续操作可能需要再次授权。安装程序完成不代表助手已就绪或 TUN 已运行。你的 TUN 设置已保留。",
+  "trayMultipleNodes": "多节点",
+  "trayNoAvailableMembers": "没有可用成员",
+  "trayCouldNotLoad": "读取失败",
+  "trayCouldNotSwitch": "切换失败",
+  "traySwitchUnconfirmed": "未能确认切换结果",
+  "traySelectionUnknown": "当前选择未知",
+  "trayCurrentSelection": "当前选择：{name}",
+  "trayLatencyUnknown": "延迟未知",
+  "trayTesting": "测试中",
+  "trayLatencyMilliseconds": "延迟 {value} 毫秒",
+  "trayLatencyLessThanOne": "延迟小于1毫秒",
+  "traySwitchingTo": "正在切换至 {name}",
+  "traySelected": "已选择",
+  "trayTestLatency": "测试延迟",
+  "trayReject": "拒绝",
+  "trayLatencyBadge": "{value} ms"
 }

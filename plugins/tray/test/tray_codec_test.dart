@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tray/src/tray_codec.dart';
 import 'package:tray/tray.dart';
@@ -130,6 +133,117 @@ void main() {
 
     expect(signatureWith('88 ms'), isNot(signatureWith('90 ms')));
     expect(signatureWith(null), isNot(signatureWith('88 ms')));
+  });
+
+  test('decorations encode additively on every actionable row type', () {
+    final bytes = Uint8List.fromList([137, 80, 78, 71]);
+    final icon = TrayMenuIcon(
+      monogram: 'HK',
+      background: 0xffeeeeee,
+      foreground: 0xff222222,
+      pngBytes: bytes,
+    );
+    const badge = TrayMenuBadge(
+      label: '10000 ms',
+      background: 0xff112233,
+      foreground: 0xffeeeeee,
+    );
+    final encoded = TrayCodec.encode(
+      _spec(
+        menu: [
+          TrayMenuAction(
+            label: 'a',
+            icon: icon,
+            badge: badge,
+            accessibilityLabel: 'Full action',
+          ),
+          TrayMenuCheckbox(
+            label: 'b',
+            checked: true,
+            icon: icon,
+            badge: badge,
+            accessibilityLabel: 'Full checkbox',
+          ),
+          TrayMenuSubmenu(
+            label: 'c',
+            items: const [],
+            icon: icon,
+            badge: badge,
+            accessibilityLabel: 'Full group',
+          ),
+          const TrayMenuAction(label: 'plain'),
+        ],
+      ),
+    );
+    final items = encoded.menu.cast<Map<String, Object?>>();
+    for (final item in items.take(3)) {
+      expect(item['icon'], {
+        'monogram': 'HK',
+        'background': 0xffeeeeee,
+        'foreground': 0xff222222,
+        'png': base64Encode(bytes),
+      });
+      expect(item['badge'], {
+        'label': '10000 ms',
+        'background': 0xff112233,
+        'foreground': 0xffeeeeee,
+      });
+      expect(item['accessibilityLabel'], startsWith('Full'));
+    }
+    expect(items.last.keys, ['id', 'type', 'label', 'enabled']);
+  });
+
+  test('signature tracks every decoration field and enabled state', () {
+    String signature({
+      String monogram = 'A',
+      int background = 1,
+      int foreground = 2,
+      Uint8List? png,
+      String badgeLabel = '8 ms',
+      int badgeBackground = 3,
+      int badgeForeground = 4,
+      String accessibilityLabel = 'Full',
+      bool enabled = true,
+    }) => TrayCodec.encode(
+      _spec(
+        menu: [
+          TrayMenuAction(
+            label: 'a',
+            enabled: enabled,
+            accessibilityLabel: accessibilityLabel,
+            icon: TrayMenuIcon(
+              monogram: monogram,
+              background: background,
+              foreground: foreground,
+              pngBytes: png,
+            ),
+            badge: TrayMenuBadge(
+              label: badgeLabel,
+              background: badgeBackground,
+              foreground: badgeForeground,
+            ),
+          ),
+        ],
+      ),
+    ).signature;
+    final base = signature();
+    for (final changed in [
+      signature(monogram: 'B'),
+      signature(background: 5),
+      signature(foreground: 5),
+      signature(png: Uint8List.fromList([1])),
+      signature(badgeLabel: '9 ms'),
+      signature(badgeBackground: 5),
+      signature(badgeForeground: 5),
+      signature(accessibilityLabel: 'Other'),
+      signature(enabled: false),
+    ]) {
+      expect(changed, isNot(base));
+    }
+    expect(
+      (jsonDecode(base) as Map)['menu'][0]['icon'],
+      isNot(contains('png')),
+    );
   });
 
   test('separators serialize without label or state', () {
