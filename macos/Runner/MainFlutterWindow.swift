@@ -107,10 +107,10 @@ class MainFlutterWindow: NSWindow {
             result(true)
         }
         verificationChannel = channel
-        contentViewController = controller
         guard controller.engine.run(withEntrypoint: nil) else {
             NativeLoadVerification.fail("engine_start_failed")
         }
+        contentViewController = controller
         #endif
     }
 

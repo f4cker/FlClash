@@ -403,7 +403,7 @@ void main() {
     });
 
     test(
-      'hidden diagnostic explicitly starts the engine after handshake setup',
+      'hidden diagnostic starts after handshake setup and before content attachment',
       () {
         final source = read('macos/Runner/MainFlutterWindow.swift');
         final diagnostic = source.substring(
@@ -424,7 +424,7 @@ void main() {
         );
         expect(
           run,
-          greaterThan(diagnostic.indexOf('contentViewController = controller')),
+          lessThan(diagnostic.indexOf('contentViewController = controller')),
         );
         expect(
           diagnostic.substring(run),
