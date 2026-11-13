@@ -1,10 +1,24 @@
 #import "../../Shared/HelperTrust.h"
+#import "../../Shared/HelperIdentity.h"
 #include <assert.h>
 
 int main(void) {
     @autoreleasepool {
         NSString *pin = @"0123456789abcdef0123456789abcdef01234567";
-        assert(FCSigningRequirement(FCClientIdentifier) == nil);
+        assert([@FC_PINNED_CERTIFICATE_SHA1 isEqualToString:@"BBA7F8529FD271B9848EC03A2CE3F4780F585556"]);
+        assert(@FC_PRODUCTION_TEAM_ID.length == 0);
+        assert(FC_MANAGED_GUI_LOADS_VERIFIED == 0);
+        NSArray<NSString *> *roles = @[FCClientIdentifier, FCHelperLabel, FCMaintenanceIdentifier];
+        for (NSString *role in roles) {
+            NSString *production = FCSigningRequirement(role);
+            NSString *expected = [NSString stringWithFormat:
+                @"anchor H\"%@\" and certificate leaf = H\"%@\" and identifier \"%@\"",
+                @FC_PINNED_CERTIFICATE_SHA1, @FC_PINNED_CERTIFICATE_SHA1, role];
+            assert([production isEqualToString:expected]);
+            SecRequirementRef parsed = NULL;
+            assert(SecRequirementCreateWithString((__bridge CFStringRef)production, 0, &parsed) == errSecSuccess);
+            CFRelease(parsed);
+        }
         assert(FCRequirementForPolicy(FCClientIdentifier, @"", @"") == nil);
         assert(FCRequirementForPolicy(FCClientIdentifier, @"Alice", @"") == nil);
         assert(FCRequirementForPolicy(FCClientIdentifier, pin, @"ABCDE12345") == nil);
@@ -22,6 +36,6 @@ int main(void) {
         parsed = NULL;
         assert(SecRequirementCreateWithString((__bridge CFStringRef)requirement, 0, &parsed) == errSecSuccess);
         CFRelease(parsed);
-        puts("12 trust-policy assertions passed; no services or processes used");
+        puts("Trust-policy assertions passed for all fixed roles; GUI load gate remains false; no services or processes used");
     }
 }
