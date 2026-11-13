@@ -121,19 +121,28 @@ Generated output paths, configured in each package's `build.yaml`:
 - `lib/providers/generated/*.g.dart`.
 - `lib/database/generated/*.g.dart`.
 
-Tray and Windows app icons are generated, not hand-edited. `status_1`–`status_3` are the home start
-toggle's running shape, `MaterialShapes.cookie9Sided`, drawn from `shapePathOf` at every pixel size (1 px
-margin on the 18 px canvas) and told apart only by fill: grey stopped, blue gradient running, teal gradient TUN.
-They are rendered by a Flutter test, which otherwise checks the committed files still match:
+Tray and Windows app icons are generated, not hand-edited. The active tray uses a hollow gray `stopped`
+cookie or a filled cookie with a cutout mode letter: neutral gray `direct` (D), primary blue `rule` (R),
+and warning amber-orange `global` (G). TUN does not change the icon color. The geometry is
+`MaterialShapes.cookie9Sided`, drawn from `shapePathOf` at every size. Generate these on macOS
+(the letter renderer uses the system rounded font):
+
+```bash
+UPDATE_TRAY_MODE_ICONS=1 flutter test test/tool/tray_mode_icons_test.dart
+```
+
+A normal run checks the committed mode colors, letter masks, stopped hollow and monochrome behavior,
+all Windows ICO sizes, and contrast on synthetic light/dark menu bars. The older `status_1`–`status_3`
+assets are still checked/generated separately:
 
 ```bash
 UPDATE_TRAY_ICONS=1 flutter test test/tool/tray_icons_test.dart
 ```
 
-It writes the tray PNGs with Flutter `2.0x/`–`4.0x/` resolution variants to `assets/images/tray/unix/`,
-the black-and-alpha template `status_1` to `assets/images/tray/macos/` (macOS draws its menu bar icon as a
-template by default, where color is lost), and the multi-size tray `.ico` files to `assets/images/tray/windows/`.
-With the tray menu's monochrome icon turned off, macOS loads the color PNGs from `assets/images/tray/unix/`.
+The generators write color PNGs with Flutter `2.0x/`–`4.0x/` resolution variants to
+`assets/images/tray/unix/`, black-and-alpha templates to `assets/images/tray/macos/`, and multi-size
+tray `.ico` files to `assets/images/tray/windows/`. With the tray menu's monochrome icon turned off,
+macOS loads the color PNGs from `assets/images/tray/unix/`.
 
 `status_4` and `windows/runner/resources/app_icon.ico` come from `assets_source/images/icon/status_4.svg` and
 `assets/images/icon.png`; that script needs `rsvg-convert` (librsvg) on `PATH`:

@@ -251,9 +251,7 @@ void main() {
     final base = reps.firstWhere((rep) => rep['scale'] == 1.0);
     expect(
       base['bytes'],
-      base64Encode(
-        File('assets/images/tray/unix/rule_tun.png').readAsBytesSync(),
-      ),
+      base64Encode(File('assets/images/tray/unix/rule.png').readAsBytesSync()),
     );
     expect(
       _item(showCall(), currentAppLocalizations.monochromeIcon)['checked'],
@@ -274,6 +272,41 @@ void main() {
         ),
       );
     }
+  });
+
+  test('color mode updates ignore TUN and keep stopped distinct', () async {
+    for (final mode in [Mode.rule, Mode.global, Mode.direct, Mode.rule]) {
+      for (final tun in [false, true]) {
+        calls.clear();
+        await update(
+          _trayState(
+            isStart: true,
+            mode: mode,
+            tunEnable: tun,
+            monochromeTrayIcon: false,
+          ),
+        );
+        final icon = (showCall()!.arguments as Map)['icon'] as Map;
+        expect(icon['isTemplate'], isFalse);
+        final reps = (icon['reps'] as List).cast<Map>();
+        expect(
+          reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
+          base64Encode(
+            File('assets/images/tray/unix/${mode.name}.png').readAsBytesSync(),
+          ),
+        );
+      }
+    }
+    calls.clear();
+    await update(_trayState(mode: Mode.direct, monochromeTrayIcon: false));
+    final icon = (showCall()!.arguments as Map)['icon'] as Map;
+    final reps = (icon['reps'] as List).cast<Map>();
+    expect(
+      reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
+      base64Encode(
+        File('assets/images/tray/unix/stopped.png').readAsBytesSync(),
+      ),
+    );
   });
 
   test('skips the platform call when the tray state is unchanged', () async {
