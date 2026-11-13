@@ -135,7 +135,10 @@ class QualificationTests(unittest.TestCase):
 
     def test_sandbox_real_data_keychain_evidence_and_helper_are_denied(self):
         profile = Q.sandbox_profile(self.app, self.scratch)
-        for directive in ('(deny default)', '(import "dyld-support.sb")',
+        self.assertEqual(profile.splitlines()[1], '(deny default (with report))')
+        self.assertEqual(profile.count('(with report)'), 1)
+        self.assertNotIn('(deny default)\n', profile)
+        for directive in ('(deny default (with report))', '(import "dyld-support.sb")',
                           '(deny network*)', '(deny process-fork)', '(deny sysctl-write)',
                           '(deny file-write* (require-not (subpath ' + json.dumps(str(self.scratch)) + ')))',
                           '(deny mach-lookup (global-name "com.layoute.flash.helper"))'):
