@@ -422,6 +422,11 @@ func inlineAliases(root *yaml.Node) {
 		if _, seen := visited[node]; seen {
 			return
 		}
+		if node.Kind == yaml.ScalarNode && node.ShortTag() == "!!merge" && node.Value == "<<" {
+			// Dart rejects explicit !!merge tags; a plain << keeps Go's merge semantics.
+			node.Tag = ""
+			node.Style = 0
+		}
 		if node.Anchor != "" {
 			visited[node] = struct{}{}
 			node.Anchor = ""

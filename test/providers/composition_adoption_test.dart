@@ -271,6 +271,46 @@ void main() {
   );
 
   test(
+    'Go profile.build merge fixture reaches review and still waits for ACK',
+    () async {
+      await bind();
+      final materialized = await File(
+        'test/fixtures/profile_build_merge_expected.yaml',
+      ).readAsString();
+      when(
+        () => core.buildProfile(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          mounts: any(named: 'mounts'),
+        ),
+      ).thenAnswer((_) async {
+        final spill = File(
+          join(await appPath.homeDirPath, coreSpillDirectoryName, 'merge.yaml'),
+        );
+        await spill.create(recursive: true);
+        await spill.writeAsString(materialized);
+        return spill.path;
+      });
+      acknowledgement = Completer<void>();
+      final invoked = Completer<void>();
+      when(() => core.setupConfig(any())).thenAnswer((call) async {
+        pushes.add(call.positionalArguments.single as SetupParams);
+        invoked.complete();
+        await acknowledgement!.future;
+      });
+      final applying = action.applyProfile(force: true);
+      await invoked.future;
+      expect(action.previews, [materialized]);
+      expect(await preferences.getCompositionRevision(), 0);
+      expect(globalState.lastConfigMd5, 'confirmed-old');
+      expect(pushes, hasLength(1));
+      acknowledgement!.complete();
+      expect(await applying, isTrue);
+      expect(await preferences.getCompositionRevision(), 1);
+    },
+  );
+
+  test(
     'review marks actual saved GeoX children Page even when equal to file',
     () async {
       await bind();

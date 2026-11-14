@@ -126,7 +126,7 @@ static BOOL FCTransactionPending(void) {
         struct timespec delay = {0, 10000000};
         nanosleep(&delay, NULL);
     }
-    return NO;
+    return [self confirmExit];
 }
 
 - (BOOL)openRelay {

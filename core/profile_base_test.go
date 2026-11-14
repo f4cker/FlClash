@@ -200,6 +200,69 @@ func TestHandleBuildProfileWritesTheMergedConfigWhereTheHostReadsSpills(t *testi
 	}
 }
 
+func TestBuildProfileMergeKeysRemainReadableByTheHost(t *testing.T) {
+	withSpillHome(t, responseSpillThreshold)
+	fixture := filepath.Join("..", "test", "fixtures", "profile_build_merge.yaml")
+	original, err := os.ReadFile(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want map[string]any
+	if err := yaml.Unmarshal(original, &want); err != nil {
+		t.Fatal(err)
+	}
+	base, err := handleGetProfileBase(PathParams{Path: fixture})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, params := range map[string]*BuildProfileParams{
+		"base":     {SetupBase: SetupBase{Path: fixture, Overlay: overlayOf(t, base, nil, nil)}},
+		"whole":    {Config: string(original)},
+		"explicit": {Config: strings.ReplaceAll(string(original), "<<:", "!!merge '<<':")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			arguments, err := json.Marshal(params)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var response MethodResponse
+			if err := json.Unmarshal(handleMethodCall(&MethodCall{ID: "merge", Method: profileBuildMethod, Arguments: arguments}), &response); err != nil {
+				t.Fatal(err)
+			}
+			if response.Error != nil {
+				t.Fatal(response.Error)
+			}
+			path, ok := response.Result.(string)
+			if !ok || filepath.Dir(path) != spilledResponseDir() {
+				t.Fatalf("result = %v, want a YAML spill path", response.Result)
+			}
+			built, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if bytes.Contains(built, []byte("!!merge")) {
+				t.Error("Dart package:yaml cannot read explicit !!merge tags")
+			}
+			var got map[string]any
+			if err := yaml.Unmarshal(built, &got); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("built profile changed merge precedence or literal keys: got %v, want %v", got, want)
+			}
+			if name == "whole" {
+				expected, err := os.ReadFile(filepath.Join("..", "test", "fixtures", "profile_build_merge_expected.yaml"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(built, expected) {
+					t.Errorf("profile.build output differs from the fixture read by the Dart adoption test:\n%s", built)
+				}
+			}
+		})
+	}
+}
+
 // The runtime config viewer reads what the Core runs: built on a base or
 // from a whole profile the host built, the mounts are in it as on apply.
 func TestHandleBuildProfileHoldsTheMountsTheCoreRuns(t *testing.T) {
