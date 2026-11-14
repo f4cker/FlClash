@@ -36,7 +36,9 @@ class SplitSigningTests(unittest.TestCase):
         data = json.loads(manifest.read_text())
         data['native-assets'] = {k: v for k, v in data['native-assets'].items() if 'arm64' in k}
         manifest.write_text(json.dumps(data))
-        self.core_sha256 = hashlib.sha256((self.app / 'Contents/MacOS/FlClashCore').read_bytes()).hexdigest()
+        self.core_bytes = (self.app / 'Contents/MacOS/FlClashCore').read_bytes()
+        self.core_sha256 = hashlib.sha256(self.core_bytes).hexdigest()
+        (self.app / 'Contents/MacOS/FlClashCore').unlink()
         self.contract = {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
                          'AcceptedCoreSHA256': [self.core_sha256]}
         info = self.app / 'Contents/Info.plist'
@@ -106,10 +108,10 @@ class SplitSigningTests(unittest.TestCase):
     def execute(self):
         return D.execute('gui', str(self.app), D.KEYCHAIN, self.fixture.pin1, core_sha256=self.core_sha256)
 
-    def test_seven_gui_targets_nested_first_receipt_and_gates(self):
+    def test_six_gui_targets_nested_first_receipt_and_gates(self):
         report = json.loads(self.execute().read_text())
         self.assertTrue(report['static_verification'])
-        self.assertEqual(len(report['targets']), 7)
+        self.assertEqual(len(report['targets']), 6)
         for gate in ('actualGUIloads', 'native_qualification', 'packaging_accepted', 'runtime_gate_changed'):
             self.assertIs(report[gate], False)
         signing = [args for args in self.calls if '--sign' in args]
@@ -136,7 +138,7 @@ class SplitSigningTests(unittest.TestCase):
         self.assertIn('failure_inventory', report)
         self.assertEqual(sum('--library-constraint' in args for args in self.calls), 1)
 
-    def test_all_seven_container_preflights_finish_before_first_codesign(self):
+    def test_all_six_container_preflights_finish_before_first_codesign(self):
         inspections = []
         original = self.tool
         def inspect(binary):
@@ -144,15 +146,15 @@ class SplitSigningTests(unittest.TestCase):
             return binary
         def tool(args):
             if args[0] == '/usr/bin/codesign':
-                self.assertEqual(len(inspections), 7)
+                self.assertEqual(len(inspections), 6)
             return original(args)
         with patch.object(self.constraint, 'inspect_slice', side_effect=inspect):
             with patch.object(self.fixed, 'run_tool', tool):
                 self.execute()
-        self.assertEqual(len(inspections), 7)
+        self.assertEqual(len(inspections), 6)
 
     def test_invalid_container_at_any_position_prevents_all_codesign_calls(self):
-        for position in range(7):
+        for position in range(6):
             effects = [b'slice'] * position + [ValueError('Malformed FAT container')]
             with self.subTest(position=position):
                 self.calls.clear()
@@ -219,6 +221,7 @@ class SplitSigningTests(unittest.TestCase):
 
     def test_service_has_four_targets_and_no_frameworks(self):
         shutil.rmtree(self.app / 'Contents/Frameworks')
+        self.fixture.binary('Contents/MacOS/FlClashCore')
         for _, relative, _ in self.fixed.FIXED[1:]:
             self.fixture.binary(relative)
         self.fixture.write('Contents/Info.plist', plistlib.dumps({
@@ -252,6 +255,9 @@ class SplitSigningTests(unittest.TestCase):
         service = gui.parent.parent / 'service/Flash.app'
         shutil.copytree(gui, service, symlinks=True)
         shutil.rmtree(service / 'Contents/Frameworks')
+        core = service / 'Contents/MacOS/FlClashCore'
+        core.write_bytes(self.core_bytes)
+        core.chmod(0o755)
         (service / 'Contents/Info.plist').write_bytes(plistlib.dumps({
             'CFBundleIdentifier': 'com.layoute.flash.service', 'CFBundleExecutable': 'Flash',
             'FlashHelperCompatibility': {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
@@ -267,7 +273,7 @@ class SplitSigningTests(unittest.TestCase):
 
     def test_complete_service_verifies_four_but_signs_only_three_preserving_core(self):
         gui, digest = self.prepare_service()
-        core = (gui / 'Contents/MacOS/FlClashCore').read_bytes()
+        core = self.core_bytes
         report_path = D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1,
                                 str(gui), digest, self.core_sha256)
         report = json.loads(report_path.read_text())
@@ -290,12 +296,22 @@ class SplitSigningTests(unittest.TestCase):
         self.assertEqual(report['reused_signed_core_sha256'], self.core_sha256)
         self.assertEqual(sum('--sign' in args for args in self.calls), 3)
 
-    def test_gui_signing_preserves_released_core_in_receipt_and_bytes(self):
-        before = (self.app / 'Contents/MacOS/FlClashCore').read_bytes()
+    def test_gui_signing_records_accepted_service_core_without_bundling_it(self):
         report = json.loads(self.execute().read_text())
-        self.assertEqual(report['reused_signed_core_sha256'], hashlib.sha256(before).hexdigest())
-        self.assertEqual((self.app / 'Contents/MacOS/FlClashCore').read_bytes(), before)
+        self.assertEqual(report['accepted_service_core_sha256'], self.core_sha256)
+        self.assertNotIn('reused_signed_core_sha256', report)
+        self.assertFalse((self.app / 'Contents/MacOS/FlClashCore').exists())
         self.assertEqual(report['compatibility'], self.contract)
+
+    def test_gui_rejects_injected_core_and_unaccepted_pin_before_signing(self):
+        core = self.app / 'Contents/MacOS/FlClashCore'
+        core.write_bytes(b'non-Mach-O placeholder')
+        with self.assertRaisesRegex(ValueError, 'loose Core'):
+            self.execute()
+        core.unlink()
+        with self.assertRaisesRegex(ValueError, 'does not accept'):
+            D.execute('gui', str(self.app), D.KEYCHAIN, self.fixture.pin1, core_sha256='0' * 64)
+        self.assertFalse(any('--sign' in args for args in self.calls))
 
     def test_service_rejects_nonidentical_core_before_signing(self):
         gui, digest = self.prepare_service()
@@ -315,6 +331,39 @@ class SplitSigningTests(unittest.TestCase):
             return result
         with patch.object(self.fixed, 'run_tool', tool), self.assertRaises(ValueError):
             D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1, str(gui), digest, self.core_sha256)
+
+    def test_derived_service_verifies_four_targets_but_signs_only_outer(self):
+        self.prepare_service()
+        immutable = {name: (self.app / name).read_bytes() for _, name, _ in self.fixed.FIXED}
+        gate = types.SimpleNamespace(verify_wrapper_derivation=unittest.mock.Mock())
+        original = D.frozen_module
+        def frozen(name, pin):
+            return gate if name == 'verify_split_service.py' else original(name, pin)
+        with patch.object(D, 'frozen_module', side_effect=frozen):
+            result = D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1,
+                core_sha256=self.core_sha256, wrapper_derivation=self.fixture.root / 'derivation.json',
+                wrapper_derivation_sha256='d' * 64)
+        report = json.loads(result.read_text())
+        self.assertEqual(len(report['targets']), 4)
+        signing = [args for args in self.calls if '--sign' in args]
+        self.assertEqual(len(signing), 1)
+        self.assertEqual(signing[0][-1], str(self.app))
+        self.assertNotIn('--deep', signing[0])
+        self.assertEqual(report['signing_scope'], 'service-wrapper-only')
+        self.assertEqual(gate.verify_wrapper_derivation.call_count, 2)
+        for name, original_bytes in immutable.items():
+            self.assertEqual((self.app / name).read_bytes(), original_bytes)
+
+    def test_invalid_wrapper_derivation_prevents_signing(self):
+        self.prepare_service()
+        gate = types.SimpleNamespace(verify_wrapper_derivation=unittest.mock.Mock(side_effect=ValueError('bad derivation')))
+        original = D.frozen_module
+        with patch.object(D, 'frozen_module', side_effect=lambda name, pin: gate if name == 'verify_split_service.py' else original(name, pin)):
+            with self.assertRaisesRegex(ValueError, 'bad derivation'):
+                D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1,
+                    core_sha256=self.core_sha256, wrapper_derivation=self.fixture.root / 'derivation.json',
+                    wrapper_derivation_sha256='d' * 64)
+        self.assertFalse(any('--sign' in args for args in self.calls))
 
     def test_frozen_modules_and_identity(self):
         with self.assertRaises(ValueError):

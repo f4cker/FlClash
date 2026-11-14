@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import plistlib
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +20,8 @@ SOURCES = {
 BINARIES = {'helper': 'Contents/Library/HelperTools/FlashHelper',
             'maintenance': 'Contents/Library/HelperTools/FlashMaintenance', 'stub': 'Contents/MacOS/Flash'}
 CORE = 'Contents/MacOS/FlClashCore'
+WRAPPER_SOURCE_RECEIPT_SHA256 = '336e963c97a6e829f7fe6938cabf3cbb57696600c935f2bbec1e2ef2826e31b9'
+WRAPPER_CORE_SHA256 = '0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5'
 SANDBOX = ['/usr/bin/sandbox-exec', '-p', '(version 1) (allow default) (deny network*)']
 
 
@@ -82,12 +85,17 @@ def verify_bundle(app, phase, receipt_path, receipt_sha256, signer, stage):
     stage.check_layout(app, phase)
     compatibility = stage.read_compatibility(app, phase)
     entries = fixed.inventory(app, verifier)
+    if phase == 'gui':
+        core_bound = (receipt.get('accepted_service_core_sha256') in compatibility['AcceptedCoreSHA256'] and
+                      'reused_signed_core_sha256' not in receipt)
+    else:
+        core_bound = receipt.get('reused_signed_core_sha256') == digest(read(app / CORE))
     if (receipt.get('schema') != 1 or receipt.get('phase') != phase or receipt.get('app') != str(app) or
             receipt.get('static_verification') is not True or receipt.get('pins') != {
                 'certificate_sha1': signer.CERTIFICATE_SHA1, 'certificate_sha256': signer.CERTIFICATE_SHA256} or
             receipt.get('compatibility') != compatibility or
             receipt.get('after') != {'tree_sha256': fixed.tree_digest(entries), 'entries': entries} or
-            receipt.get('reused_signed_core_sha256') != digest(read(app / CORE))):
+            not core_bound):
         raise ValueError('Signing receipt differs from exact artifact/compatibility')
     before = receipt['before']['entries']
     if receipt['before']['tree_sha256'] != fixed.tree_digest(before):
@@ -110,11 +118,100 @@ def verify_bundle(app, phase, receipt_path, receipt_sha256, signer, stage):
                     raise ValueError('GUI five-framework constraint changed')
     if targets != receipt['targets']:
         raise ValueError('Artifact signatures differ from receipt')
-    fixed.check_signing_delta(before, entries, [target for target in targets if target['role'] != 'core'])
+    if receipt.get('signing_scope') == 'service-wrapper-only':
+        if phase != 'service':
+            raise ValueError('Wrapper signing scope is service-only')
+        derivation = receipt.get('wrapper_derivation', {})
+        verify_wrapper_derivation(Path(derivation['path']), derivation['sha256'], app, signer, stage,
+                                  unsigned_entries=before)
+        mutable = [target for target in targets if target['role'] == 'service']
+    else:
+        if 'signing_scope' in receipt or 'wrapper_derivation' in receipt:
+            raise ValueError('Unknown signing scope')
+        mutable = [target for target in targets if target['role'] != 'core']
+    fixed.check_signing_delta(before, entries, mutable)
     fixed.run_tool(['/usr/bin/codesign', '--verify', '--deep', '--strict', '--all-architectures', str(app)])
     if fixed.inventory(app, verifier) != entries or pinned_json(receipt_path, receipt_sha256) != receipt:
         raise ValueError('Artifact or receipt changed during verification')
     return receipt
+
+
+def verify_historical_compile_receipt(path, expected, signed):
+    compiled = pinned_json(path, expected)
+    schema = compiled.get('schema')
+    if schema == 'flash-stable-service-compile-v2':
+        entries = compiled.get('staged_unsigned_entries')
+    elif schema == 'flash-1305-service-compile-v1':
+        if compiled.get('compile_completed') is not True or compiled.get('staging_completed') is not True:
+            raise ValueError('Historical compiler provenance is incomplete')
+        entries = compiled.get('entries')
+    else:
+        raise ValueError('Unsupported historical compiler provenance schema')
+    if (compiled.get('completed') is not True or
+            entries != signed['before']['entries'] or
+            compiled.get('core_sha256') != signed['reused_signed_core_sha256'] or
+            set(compiled.get('outputs', {})) != set(BINARIES)):
+        raise ValueError('Historical compiler provenance differs from released service')
+    for role, binary in BINARIES.items():
+        if compiled['outputs'][role].get('sha256') != signed['before']['entries'][binary]['sha256']:
+            raise ValueError('Historical compiler output differs from released signing input')
+    return compiled
+
+
+def verify_wrapper_derivation(path, expected, app, signer, stage, *, unsigned_entries=None):
+    data = pinned_json(path, expected)
+    fields = {'schema', 'compiled', 'helper_binary_build', 'service_wrapper_build', 'source', 'app', 'gui',
+              'source_receipt', 'source_receipt_sha256', 'source_compile_receipt', 'source_compile_receipt_sha256',
+              'source_entries', 'unsigned_entries', 'metadata_delta', 'gui_icon_sha256', 'preserved_code_sha256'}
+    if (set(data) != fields or data.get('schema') != 'flash-service-wrapper-derivation-v1' or data.get('compiled') is not False or
+            data.get('helper_binary_build') != stage.HELPER_BINARY_BUILD or
+            data.get('service_wrapper_build') != stage.SERVICE_WRAPPER_BUILD or
+            data.get('app') != str(app) or data.get('source_receipt_sha256') != WRAPPER_SOURCE_RECEIPT_SHA256):
+        raise ValueError('Invalid released-service wrapper derivation')
+    source, gui = Path(data['source']), Path(data['gui'])
+    if (source == app or source.resolve(strict=True) != source or gui.resolve(strict=True) != gui or
+            app.resolve(strict=True) != app):
+        raise ValueError('Wrapper inputs must be canonical and distinct')
+    signed = verify_bundle(source, 'service', Path(data['source_receipt']), data['source_receipt_sha256'], signer, stage)
+    if signed['reused_signed_core_sha256'] != WRAPPER_CORE_SHA256:
+        raise ValueError('Wrapper source Core differs from released pin')
+    verify_historical_compile_receipt(Path(data['source_compile_receipt']), data['source_compile_receipt_sha256'], signed)
+    source_entries = stage.inventory(source)
+    info = plistlib.loads(read(source / 'Contents/Info.plist'))
+    if (source_entries != data.get('source_entries') or info.get('CFBundleVersion') != stage.HELPER_BINARY_BUILD or
+            'CFBundleIconFile' in info or stage.ICON in source_entries):
+        raise ValueError('Wrapper source must be the unchanged iconless released service')
+    icon = stage.icon_bytes(gui / stage.ICON)
+    if digest(icon) != data.get('gui_icon_sha256'):
+        raise ValueError('Wrapper GUI icon changed')
+    delta = {'CFBundleIconFile': {'before': None, 'after': 'AppIcon.icns'},
+             'CFBundleVersion': {'before': stage.HELPER_BINARY_BUILD, 'after': stage.SERVICE_WRAPPER_BUILD}}
+    if data.get('metadata_delta') != delta:
+        raise ValueError('Unapproved wrapper metadata delta')
+    info.update(CFBundleIconFile='AppIcon.icns', CFBundleVersion=stage.SERVICE_WRAPPER_BUILD)
+    expected_entries = {name: entry for name, entry in source_entries.items()
+                        if name != 'Contents/_CodeSignature' and not name.startswith('Contents/_CodeSignature/')}
+    expected_entries['Contents/Info.plist'] = {'kind': 'file', 'mode': 0o644, 'sha256': digest(plistlib.dumps(info))}
+    expected_entries['Contents/Resources'] = {'kind': 'directory', 'mode': 0o755}
+    expected_entries[stage.ICON] = {'kind': 'file', 'mode': 0o644, 'sha256': digest(icon)}
+    code = {name: source_entries[name]['sha256'] for name in (stage.CORE, stage.HELPER, stage.MAINTENANCE, 'Contents/MacOS/Flash')}
+    if data.get('preserved_code_sha256') != code or data.get('unsigned_entries') != expected_entries:
+        raise ValueError('Wrapper changed executable bytes or unapproved resources')
+    if unsigned_entries is None:
+        stage.check_layout(app, 'service')
+        observed = stage.inventory(app)
+    else:
+        observed = {}
+        for name, entry in unsigned_entries.items():
+            item = {'kind': entry['kind'], 'mode': int(entry['mode'], 8)}
+            if entry['kind'] == 'file':
+                item['sha256'] = entry['sha256']
+            observed[name] = item
+    if observed != expected_entries:
+        raise ValueError('Wrapper unsigned artifact differs from exact derivation')
+    if pinned_json(path, expected) != data or stage.inventory(source) != source_entries or stage.icon_bytes(gui / stage.ICON) != icon:
+        raise ValueError('Wrapper derivation inputs changed during verification')
+    return data
 
 
 def verify_compile_receipt(path, expected, signed):

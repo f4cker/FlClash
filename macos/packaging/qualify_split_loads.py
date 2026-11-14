@@ -27,7 +27,7 @@ SCHEMA = 'flash-split-native-loads-v1'
 STATE_SCHEMA = 'flash-split-frozen-state-v1'
 NATIVE_SHA256 = '053311e347049f0ee4ba7745b7120817617600e27fc0014bf2f8bf389377b1bc'
 CONSTRAINT_SHA256 = 'b1a402989ca8fd4375b081c68df5d974cf5be635389f399ff9f4ba17e7b2d7de'
-DRIVER_SHA256 = '9023fbb047381d8b5a46802e6718eb449b49701557beb6b4e177da15e25f9a59'
+DRIVER_SHA256 = '32c94cae90ce997482611ab074eade2cef7d3aed8d0446ed51480ff68cb423e3'
 BUILD_ROOT = ROOT / '.airbuild/buildcandidate/split-2026111303'
 BUILD_METADATA = BUILD_ROOT / 'continuation-04/build-metadata.json'
 BUILD_METADATA_SHA256 = '0327f163c9707bcfe43c6feee6b657a572535c05d4b94fa4da2b701a4bcd4fd9'
@@ -199,7 +199,7 @@ def read_build_evidence(path, expected, fixed):
 def build_provenance(metadata_path, metadata, metadata_hash, report, targets, fixed):
     if metadata_path != BUILD_METADATA or metadata_hash != BUILD_METADATA_SHA256:
         raise ValueError('Expected the unchanged final continuation-04 build metadata')
-    if (metadata.get('architectures') != ['arm64'] or metadata.get('macho_count') != 7 or
+    if (metadata.get('architectures') != ['arm64'] or metadata.get('macho_count') != 6 or
             any(metadata.get(key) is not True for key in (
                 'flutter_release_compile_succeeded', 'fresh_core_built', 'fresh_gui_aot_built',
                 'static_stage_audit_passed', 'original_failures_preserved')) or
@@ -248,10 +248,10 @@ def build_provenance(metadata_path, metadata, metadata_hash, report, targets, fi
     manifest = documents[prefix + 'candidate-file-manifest.json']
     macho = documents[prefix + 'macho-inventory.json']
     binaries = {target['binary'] for target in targets}
-    if (len(macho) != 7 or {item['path'] for item in macho} != binaries or
+    if (len(macho) != 6 or {item['path'] for item in macho} != binaries or
             any(item['architectures'] != ['arm64'] or
                 item['sha256'] != inventory[item['path']]['sha256'] for item in macho)):
-        raise ValueError('Frozen unsigned Mach-O inventory differs from the seven GUI targets')
+        raise ValueError('Frozen unsigned Mach-O inventory differs from the six GUI targets')
     before, projected = {}, {}
     if inventory.get('.') != {'directory': True, 'mode': 0o755}:
         raise ValueError('Unexpected frozen unsigned bundle root')
@@ -283,19 +283,21 @@ def frozen_state(app, metadata_path, signer, scratch):
     if signer.CONSTRAINT_SHA256 != CONSTRAINT_SHA256:
         raise ValueError('Unreviewed constraint inspector')
     app = fixed.staging_path(str(app))
-    if app != GUI_APP or (app / 'Contents/Library').exists():
+    if (app != GUI_APP or (app / 'Contents/Library').exists() or
+            (app / 'Contents/MacOS/FlClashCore').exists() or (app / 'Contents/MacOS/FlClashCore').is_symlink()):
         raise ValueError('Only the new GUI-only split stage may be qualified')
     metadata_path = legacy.canonical(str(metadata_path))
     report_path = app.parent / 'Flash.gui-signing-static.json'
     report, report_hash = legacy.protected_json(report_path, fixed)
     metadata, metadata_hash = legacy.protected_json(metadata_path, fixed)
     source_names = ('sign_split_payload.py', 'sign_fixed_payload.py', 'stage_managed_payload.py',
-                    'library_constraint.py', 'FixedGUI.entitlements', 'qualify_native_loads.py',
+                    'library_constraint.py', 'FixedGUI.entitlements', 'stage_split_payload.py', 'qualify_native_loads.py',
                     'qualify_split_loads.py')
     sources = {name: digest(fixed.read_regular(PACKAGING / name)) for name in source_names}
     expected_sources = {'sign_split_payload.py': DRIVER_SHA256,
                         'sign_fixed_payload.py': signer.FIXED_SIGNER_SHA256,
                         'stage_managed_payload.py': fixed.VERIFIER_SHA256,
+                        'stage_split_payload.py': signer.STAGING_SHA256,
                         'library_constraint.py': CONSTRAINT_SHA256,
                         'qualify_native_loads.py': NATIVE_SHA256}
     if any(sources[name] != expected for name, expected in expected_sources.items()):
@@ -306,6 +308,7 @@ def frozen_state(app, metadata_path, signer, scratch):
                        'fixed_signer_sha256': sources['sign_fixed_payload.py'],
                        'constraint_sha256': sources['library_constraint.py'],
                        'verifier_sha256': sources['stage_managed_payload.py'],
+                       'staging_sha256': sources['stage_split_payload.py'],
                        'gui_entitlements_sha256': sources['FixedGUI.entitlements']}
     verifier = fixed.trusted_verifier()
     entries = fixed.inventory(app, verifier)
@@ -323,11 +326,17 @@ def frozen_state(app, metadata_path, signer, scratch):
         raise ValueError('Signing receipt native constraint review differs from current host/evidence')
     info = plistlib.loads(fixed.read_regular(app / 'Contents/Info.plist'))
     validate_metadata(metadata, info, fixed)
+    stage = signer.frozen_module('stage_split_payload.py', signer.STAGING_SHA256)
+    compatibility = stage.validate_compatibility(info.get('FlashHelperCompatibility'), 'gui')
+    if (report.get('compatibility') != compatibility or
+            report.get('accepted_service_core_sha256') not in compatibility['AcceptedCoreSHA256'] or
+            'reused_signed_core_sha256' in report):
+        raise ValueError('GUI service Core acceptance receipt differs from sealed metadata')
     targets = signer.signing_targets(app, entries, 'gui', fixed)
-    expected_binaries = {'Contents/MacOS/FlClashCore', 'Contents/MacOS/Flash'} | {
+    expected_binaries = {'Contents/MacOS/Flash'} | {
         f'Contents/Frameworks/{name}.framework/Versions/A/{name}' for name in FRAMEWORKS}
-    if len(targets) != 7 or {target['binary'] for target in targets} != expected_binaries:
-        raise ValueError('Expected exactly Core, five frameworks, and GUI; no helper')
+    if len(targets) != 6 or {target['binary'] for target in targets} != expected_binaries:
+        raise ValueError('Expected exactly five frameworks and GUI; no loose Core or helper')
     provenance = build_provenance(metadata_path, metadata, metadata_hash, report, targets, fixed)
     signer.audit(app, 'gui', fixed, verifier, targets)
     hashes = []

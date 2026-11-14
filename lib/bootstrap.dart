@@ -9,6 +9,9 @@ import 'package:fl_clash/common/migration.dart';
 import 'package:fl_clash/common/tray.dart';
 import 'package:fl_clash/common/window.dart';
 import 'package:fl_clash/database/database.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
+import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
+import 'package:fl_clash/views/config/macos_helper.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
@@ -198,9 +201,22 @@ class Bootstrap {
       return;
     }
     await _showCrashRecoveryTip();
-    await _container.read(coreActionProvider.notifier).startCore();
-    if (!_bootDecision.isDegraded) {
-      await _container.read(setupActionProvider.notifier).initStatus();
+    final helperReady =
+        !system.isMacOS ||
+        !macosManagedHelperBuild ||
+        _container.read(safeModeProvider) ||
+        await prepareMacHelperStartup(
+          maintenance: macHelperMaintenance,
+          foreground: !_container.read(appSettingProvider).silentLaunch,
+          wasOffered: preferences.getMacHelperInvitationShown,
+          markOffered: preferences.markMacHelperInvitationShown,
+          show: showMacHelperFlow,
+        );
+    if (helperReady) {
+      await _container.read(coreActionProvider.notifier).startCore();
+      if (!_bootDecision.isDegraded) {
+        await _container.read(setupActionProvider.notifier).initStatus();
+      }
     }
     _container.read(initProvider.notifier).value = true;
     unawaited(_container.read(resourcesActionProvider.notifier).autoUpdate());

@@ -126,10 +126,18 @@ class SystemAction extends _$SystemAction {
     await windowPort?.toggle();
   }
 
-  void updateTun() {
+  void updateTun() async {
+    final enabled = !ref.read(patchClashConfigProvider).tun.enable;
+    if (system.isMacOS &&
+        macosManagedHelperBuild &&
+        !await ref
+            .read(setupActionProvider.notifier)
+            .prepareTunEnable(enabled)) {
+      return;
+    }
     ref
         .read(patchClashConfigProvider.notifier)
-        .update((state) => state.copyWith.tun(enable: !state.tun.enable));
+        .update((state) => state.copyWith.tun(enable: enabled));
   }
 
   void updateSystemProxy() {

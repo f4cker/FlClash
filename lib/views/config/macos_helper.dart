@@ -1,55 +1,233 @@
+import 'dart:async';
+
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/core/desktop/model.dart';
-import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum MacHelperAction { enable, installer, disable, retry, repair, recheck }
+enum MacHelperAction { install, update, settings, retry, recheck }
 
 MacHelperAction? macHelperAction(MacHelperState state) => switch (state) {
-  MacHelperState.off => MacHelperAction.enable,
-  MacHelperState.approvalRequired ||
-  MacHelperState.installerRequired ||
+  MacHelperState.off ||
+  MacHelperState.installerRequired => MacHelperAction.install,
   MacHelperState.updateRequired ||
-  MacHelperState.protectedInstallationRequired => MacHelperAction.installer,
-  MacHelperState.enabled => MacHelperAction.disable,
-  MacHelperState.unavailable || MacHelperState.denied => MacHelperAction.retry,
+  MacHelperState.incompatible => MacHelperAction.update,
+  MacHelperState.approvalRequired => MacHelperAction.settings,
+  MacHelperState.cancelled ||
+  MacHelperState.failed ||
+  MacHelperState.denied => MacHelperAction.retry,
   MacHelperState.repairRequired ||
-  MacHelperState.incompatible => MacHelperAction.repair,
+  MacHelperState.unavailable ||
+  MacHelperState.unknown ||
   MacHelperState.exitUnconfirmed => MacHelperAction.recheck,
   _ => null,
 };
 
 String macHelperLabel(AppLocalizations l, MacHelperState state) =>
     switch (state) {
-      MacHelperState.off => l.macHelperOff,
-      MacHelperState.installerRequired ||
-      MacHelperState.updateRequired ||
-      MacHelperState.protectedInstallationRequired => l.macHelperPending,
+      MacHelperState.off || MacHelperState.installerRequired => l.macHelperOff,
       MacHelperState.enabled => l.macHelperOn,
       MacHelperState.approvalRequired => l.macHelperPending,
-      MacHelperState.unavailable ||
-      MacHelperState.denied => l.macHelperUnavailable,
-      MacHelperState.repairRequired ||
+      MacHelperState.protectedInstallationRequired => l.macHelperMoveTitle,
+      MacHelperState.updateRequired ||
       MacHelperState.incompatible => l.macHelperRepair,
+      MacHelperState.unavailable ||
+      MacHelperState.unknown ||
       MacHelperState.exitUnconfirmed => l.macHelperStopUnknown,
+      MacHelperState.cancelled => l.macHelperInstallCancelled,
+      MacHelperState.failed ||
+      MacHelperState.denied => l.macHelperInstallFailed,
       _ => l.macHelperCannotUse,
     };
 
-String _actionLabel(AppLocalizations l, MacHelperAction action) =>
-    switch (action) {
-      MacHelperAction.enable => l.macHelperTurnOn,
-      MacHelperAction.installer => l.macHelperOpenSettings,
-      MacHelperAction.disable => l.macHelperTurnOff,
-      MacHelperAction.retry => l.macHelperTryAgain,
-      MacHelperAction.repair => l.macHelperRepairAction,
-      MacHelperAction.recheck => l.macHelperCheckAgain,
-    };
+String _statusLabel(AppLocalizations l, MacHelperMaintenance flow) {
+  return switch (flow.progress) {
+    MacHelperProgress.checking => l.macHelperChecking,
+    MacHelperProgress.authorizing => l.macHelperAuthorizing,
+    MacHelperProgress.installing => l.macHelperInstalling,
+    MacHelperProgress.updating => l.macHelperUpdating,
+    MacHelperProgress.idle => switch (flow.state) {
+      null => l.macHelperChecking,
+      MacHelperState.cancelled when flow.isUpdate => l.macHelperUpdateCancelled,
+      MacHelperState.failed ||
+      MacHelperState.denied when flow.isUpdate => l.macHelperUpdateFailed,
+      final state => macHelperLabel(l, state),
+    },
+  };
+}
+
+String _detail(AppLocalizations l, MacHelperMaintenance flow) {
+  if (flow.progress == MacHelperProgress.checking) return l.macHelperChecking;
+  if (flow.busy) return l.macHelperAuthorizing;
+  return switch (flow.state) {
+    MacHelperState.off ||
+    MacHelperState.installerRequired => l.macHelperInstallDetail,
+    MacHelperState.updateRequired ||
+    MacHelperState.incompatible => l.macHelperUpdateDetail,
+    MacHelperState.repairRequired => l.macHelperUnavailableDetail,
+    MacHelperState.protectedInstallationRequired => l.macHelperMoveDetail,
+    MacHelperState.approvalRequired => l.macHelperApprovalDetail,
+    MacHelperState.denied => l.macHelperDeniedDetail,
+    MacHelperState.signingRequired => l.macHelperVerificationDetail,
+    MacHelperState.failed => switch (flow.client.failureCode) {
+      'installerPayloadInvalid' => l.macHelperPayloadDetail,
+      'verificationFailed' || 'incompatible' => l.macHelperVerificationDetail,
+      _ => l.macHelperFailedDetail,
+    },
+    MacHelperState.exitUnconfirmed ||
+    MacHelperState.unknown ||
+    MacHelperState.unavailable => l.macHelperUnknownDetail,
+    MacHelperState.enabled => l.macHelperReadyDetail,
+    _ => '',
+  };
+}
+
+final macHelperMaintenance = MacHelperMaintenance(
+  macosHelperClient,
+  stop: () => globalState.container.read(coreHandlerProvider).stop(),
+);
+
+Future<void>? _visibleHelperDialog;
+
+Future<void> showMacHelperFlow({
+  BuildContext? context,
+  MacHelperMaintenance? maintenance,
+}) {
+  final visible = _visibleHelperDialog;
+  if (visible != null) return visible;
+  final flow = maintenance ?? macHelperMaintenance;
+  final operation = dialogs.showCommonDialog<void>(
+    context: context,
+    child: MacHelperDialog(maintenance: flow),
+  );
+  _visibleHelperDialog = operation;
+  unawaited(operation.whenComplete(() => _visibleHelperDialog = null));
+  return operation;
+}
+
+class MacHelperDialog extends StatefulWidget {
+  final MacHelperMaintenance maintenance;
+
+  const MacHelperDialog({super.key, required this.maintenance});
+
+  @override
+  State<MacHelperDialog> createState() => _MacHelperDialogState();
+}
+
+class _MacHelperDialogState extends State<MacHelperDialog> {
+  bool _expanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.maintenance.state == null && !widget.maintenance.busy) {
+      unawaited(widget.maintenance.check());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.maintenance,
+      builder: (context, _) {
+        final flow = widget.maintenance;
+        final l = context.appLocalizations;
+        final action = flow.state == null ? null : macHelperAction(flow.state!);
+        final invitation =
+            !flow.busy &&
+            (action == MacHelperAction.install ||
+                action == MacHelperAction.update);
+        final update = action == MacHelperAction.update;
+        final status = _statusLabel(l, flow);
+        final detail = _detail(l, flow);
+        final failure =
+            flow.state == MacHelperState.failed ||
+            flow.state == MacHelperState.denied;
+        return AlertDialog(
+          title: invitation
+              ? (update ? l.macHelperUpdateTitle : l.macHelperInstallTitle)
+              : status,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                invitation
+                    ? (update
+                          ? l.macHelperNotNowUpdate
+                          : l.macHelperNotNowInstall)
+                    : flow.busy || flow.state == MacHelperState.enabled
+                    ? l.close
+                    : l.macHelperLater,
+              ),
+            ),
+            if (!flow.busy && action != null)
+              TextButton(
+                onPressed: () {
+                  switch (action) {
+                    case MacHelperAction.install ||
+                        MacHelperAction.update ||
+                        MacHelperAction.retry:
+                      unawaited(flow.install(confirmed: true));
+                    case MacHelperAction.settings:
+                      unawaited(flow.openSettings());
+                    case MacHelperAction.recheck:
+                      unawaited(flow.check());
+                  }
+                },
+                child: Text(switch (action) {
+                  MacHelperAction.install => l.macHelperInstall,
+                  MacHelperAction.update => l.macHelperUpdate,
+                  MacHelperAction.retry => l.macHelperTryAgain,
+                  MacHelperAction.settings => l.macHelperOpenSettings,
+                  MacHelperAction.recheck => l.macHelperCheckAgain,
+                }),
+              ),
+          ],
+          child: Semantics(
+            liveRegion: true,
+            label: status,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  detail,
+                  maxLines: failure && !_expanded ? 3 : null,
+                  overflow: failure && !_expanded
+                      ? TextOverflow.ellipsis
+                      : null,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyle.footnote
+                      .of(context)
+                      .copyWith(height: 20 / 13),
+                ),
+                if (failure)
+                  TextButton(
+                    onPressed: () => setState(() => _expanded = !_expanded),
+                    child: Text(
+                      _expanded
+                          ? l.macHelperLessDetails
+                          : l.macHelperMoreDetails,
+                    ),
+                  ),
+                if (!flow.busy && action == MacHelperAction.settings)
+                  TextButton(
+                    onPressed: () => unawaited(flow.check()),
+                    child: Text(l.macHelperCheckAgain),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 class MacHelperItem extends ConsumerStatefulWidget {
   final MacHelperClient? client;
@@ -62,97 +240,42 @@ class MacHelperItem extends ConsumerStatefulWidget {
 }
 
 class _MacHelperItemState extends ConsumerState<MacHelperItem> {
-  MacHelperState? _state;
-  bool _busy = false;
+  late final MacHelperMaintenance _flow;
 
-  MacHelperClient get _client => widget.client ?? macosHelperClient;
-
-  Future<void> _show() async {
-    if (_busy || ref.read(safeModeProvider)) return;
-    setState(() => _busy = true);
-    try {
-      final state = await _client.status();
-      if (!mounted) return;
-      setState(() => _state = state);
-      final l = context.appLocalizations;
-      final action = macHelperAction(state);
-      final detail = switch (state) {
-        MacHelperState.approvalRequired ||
-        MacHelperState.installerRequired ||
-        MacHelperState.updateRequired ||
-        MacHelperState.protectedInstallationRequired ||
-        MacHelperState.off ||
-        MacHelperState.repairRequired ||
-        MacHelperState.incompatible ||
-        MacHelperState.enabled => l.macHelperPendingDetail,
-        MacHelperState.unavailable ||
-        MacHelperState.denied => l.macHelperUnavailableDetail,
-        _ => '',
-      };
-      if (action == null) {
-        await dialogs.showAlert(
-          title: l.macHelperTitle,
-          message: TextSpan(text: macHelperLabel(l, state)),
-        );
-        return;
-      }
-      final confirmed = await dialogs.showMessage(
-        context: context,
-        title: l.macHelperTitle,
-        message: TextSpan(
-          text:
-              '${macHelperLabel(l, state)}${detail.isEmpty ? '' : '\n\n$detail'}',
-        ),
-        confirmText: _actionLabel(l, action),
-        destructive: action == MacHelperAction.disable,
-      );
-      if (confirmed != true || !mounted || ref.read(safeModeProvider)) return;
-      final MacHelperState next;
-      switch (action) {
-        case MacHelperAction.enable || MacHelperAction.installer:
-          next = await _client.installerInstructions(confirmed: true);
-        case MacHelperAction.disable:
-          next = await MacHelperMaintenance(
-            _client,
-            stop:
-                widget.stop ??
-                () async {
-                  final result = await ref.read(coreHandlerProvider).stop();
-                  if (result.outcome != CoreLifecycleOutcome.superseded) {
-                    ref.read(coreStatusProvider.notifier).value =
-                        CoreStatus.disconnected;
-                  }
-                  return result;
-                },
-          ).turnOff(confirmed: true);
-        case MacHelperAction.retry || MacHelperAction.recheck:
-          next = await _client.status();
-        case MacHelperAction.repair:
-          next = await _client.installerInstructions(confirmed: true);
-      }
-      if (mounted) {
-        setState(() => _state = next);
-        if (next == MacHelperState.installerRequired) {
-          await dialogs.showAlert(
-            title: l.macHelperTitle,
-            message: TextSpan(text: l.macHelperPendingDetail),
+  @override
+  void initState() {
+    super.initState();
+    _flow = widget.client == null
+        ? macHelperMaintenance
+        : MacHelperMaintenance(
+            widget.client!,
+            stop: widget.stop ?? () => ref.read(coreHandlerProvider).stop(),
           );
-        }
-      }
-    } on Exception {
-      if (mounted) setState(() => _state = MacHelperState.unavailable);
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    if (!ref.read(safeModeProvider) && _flow.state == null) {
+      unawaited(_flow.check());
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
-    return ListItem(
-      title: Text(l.macHelperTitle),
-      subtitle: _state == null ? null : Text(macHelperLabel(l, _state!)),
-      onTap: _busy ? null : _show,
+    return ListenableBuilder(
+      listenable: _flow,
+      builder: (context, _) => ListItem(
+        title: Text(l.macHelperTitle),
+        subtitle: Text(_statusLabel(l, _flow)),
+        onTap: ref.watch(safeModeProvider)
+            ? null
+            : () async {
+                if (!_flow.busy && _flow.state == MacHelperState.enabled) {
+                  await _flow.check();
+                  if (_flow.state == MacHelperState.enabled) return;
+                }
+                if (context.mounted) {
+                  await showMacHelperFlow(context: context, maintenance: _flow);
+                }
+              },
+      ),
     );
   }
 }

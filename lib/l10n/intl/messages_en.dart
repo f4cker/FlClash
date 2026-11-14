@@ -1505,34 +1505,86 @@ class MessageLookup extends MessageLookupByLibrary {
     "logsTest": MessageLookupByLibrary.simpleMessage("Logs test"),
     "loopback": MessageLookupByLibrary.simpleMessage("UWP loopback exemption"),
     "loose": MessageLookupByLibrary.simpleMessage("Loose"),
+    "macHelperApprovalDetail": MessageLookupByLibrary.simpleMessage(
+      "Allow Flash Helper in macOS System Settings, then return here and check again.",
+    ),
+    "macHelperAuthorizing": MessageLookupByLibrary.simpleMessage(
+      "Waiting for administrator authorization",
+    ),
     "macHelperCannotUse": MessageLookupByLibrary.simpleMessage(
       "This version can’t use the helper",
     ),
     "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage("Check Again"),
-    "macHelperOff": MessageLookupByLibrary.simpleMessage("Not ready"),
-    "macHelperOn": MessageLookupByLibrary.simpleMessage(
-      "Helper ready (not TUN status)",
+    "macHelperChecking": MessageLookupByLibrary.simpleMessage(
+      "Checking helper…",
     ),
+    "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
+      "Administrator authorization was denied. You can retry when you are ready to authorize.",
+    ),
+    "macHelperFailedDetail": MessageLookupByLibrary.simpleMessage(
+      "macOS could not complete the operation. You can retry manually.",
+    ),
+    "macHelperInstall": MessageLookupByLibrary.simpleMessage("Install"),
+    "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage(
+      "Installation cancelled",
+    ),
+    "macHelperInstallDetail": MessageLookupByLibrary.simpleMessage(
+      "The helper manages Flash’s network core in the background. Installation requires administrator authorization. After installation, Flash will check whether the helper is available.",
+    ),
+    "macHelperInstallFailed": MessageLookupByLibrary.simpleMessage(
+      "Helper installation failed",
+    ),
+    "macHelperInstallTitle": MessageLookupByLibrary.simpleMessage(
+      "Install Flash Helper?",
+    ),
+    "macHelperInstalling": MessageLookupByLibrary.simpleMessage(
+      "Installing helper…",
+    ),
+    "macHelperLater": MessageLookupByLibrary.simpleMessage("Later"),
+    "macHelperLessDetails": MessageLookupByLibrary.simpleMessage(
+      "Hide Details",
+    ),
+    "macHelperMoreDetails": MessageLookupByLibrary.simpleMessage(
+      "Show Details",
+    ),
+    "macHelperMoveDetail": MessageLookupByLibrary.simpleMessage(
+      "Move Flash to Applications, then reopen it to install the helper.",
+    ),
+    "macHelperMoveTitle": MessageLookupByLibrary.simpleMessage(
+      "Move Flash to Applications",
+    ),
+    "macHelperNotNowInstall": MessageLookupByLibrary.simpleMessage("Not Now"),
+    "macHelperNotNowUpdate": MessageLookupByLibrary.simpleMessage("Not Now"),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage(
+      "Helper not installed",
+    ),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage("Helper ready"),
     "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage(
-      "Installer Instructions",
+      "Open macOS Settings",
+    ),
+    "macHelperPayloadDetail": MessageLookupByLibrary.simpleMessage(
+      "The installation files could not be verified. Replace Flash with a complete, trusted copy and try again.",
     ),
     "macHelperPending": MessageLookupByLibrary.simpleMessage(
-      "Administrator-approved installer required",
+      "Approval required in macOS Settings",
     ),
     "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
       "Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.",
     ),
+    "macHelperReadyDetail": MessageLookupByLibrary.simpleMessage(
+      "The helper is available. This does not mean TUN or a connection is running. Retry the feature when you are ready.",
+    ),
     "macHelperRepair": MessageLookupByLibrary.simpleMessage(
-      "Helper needs repair",
+      "Helper update required",
     ),
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
       "Repair Instructions",
     ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
-      "Couldn’t confirm the helper was turned off",
+      "Unable to confirm helper readiness",
     ),
     "macHelperTitle": MessageLookupByLibrary.simpleMessage("Flash Helper"),
-    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("Check Again"),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("Retry"),
     "macHelperTurnOff": MessageLookupByLibrary.simpleMessage(
       "Turn-Off Instructions",
     ),
@@ -1544,6 +1596,28 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
       "Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.",
+    ),
+    "macHelperUnknownDetail": MessageLookupByLibrary.simpleMessage(
+      "The operation’s outcome is unknown. Check again to confirm helper readiness; Flash will not repeat the installation while it is unconfirmed.",
+    ),
+    "macHelperUpdate": MessageLookupByLibrary.simpleMessage("Update"),
+    "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
+      "Update cancelled",
+    ),
+    "macHelperUpdateDetail": MessageLookupByLibrary.simpleMessage(
+      "The installed helper is incompatible with this version of Flash. Updating may require administrator authorization.",
+    ),
+    "macHelperUpdateFailed": MessageLookupByLibrary.simpleMessage(
+      "Helper update failed",
+    ),
+    "macHelperUpdateTitle": MessageLookupByLibrary.simpleMessage(
+      "Update Flash Helper?",
+    ),
+    "macHelperUpdating": MessageLookupByLibrary.simpleMessage(
+      "Updating helper…",
+    ),
+    "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
+      "The helper’s security or compatibility check failed. Use a trusted, compatible release of Flash.",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Map local"),
     "matchCase": MessageLookupByLibrary.simpleMessage("Match case"),

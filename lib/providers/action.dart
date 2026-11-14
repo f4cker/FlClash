@@ -1,4 +1,5 @@
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
+import 'package:fl_clash/views/config/macos_helper.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';

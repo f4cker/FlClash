@@ -191,9 +191,62 @@ class SetupAction extends _$SetupAction {
     }
   }
 
-  Future<bool> setRunning(bool running, {bool initialize = false}) {
+  @protected
+  bool get usesManagedMacHelper => system.isMacOS && macosManagedHelperBuild;
+
+  @protected
+  bool get macHelperBusy => macHelperMaintenance.busy;
+
+  @protected
+  Future<MacHelperState> checkMacHelper() => macHelperMaintenance.check();
+
+  @protected
+  Future<void> presentMacHelper() => showMacHelperFlow();
+
+  int _tunHelperRevision = 0;
+
+  Future<bool> prepareTunEnable(bool enabled) async {
+    final revision = ++_tunHelperRevision;
+    if (!enabled || !usesManagedMacHelper || ref.read(safeModeProvider)) {
+      return true;
+    }
+    if (macHelperBusy) {
+      await presentMacHelper();
+      return false;
+    }
+    final state = await checkMacHelper();
+    if (revision != _tunHelperRevision) return false;
+    if (state == MacHelperState.enabled) return true;
+    await presentMacHelper();
+    return false;
+  }
+
+  int _helperRunRevision = 0;
+
+  Future<bool> setRunning(bool running, {bool initialize = false}) async {
+    final revision = ++_helperRunRevision;
     if (running && !initialize && !ref.read(initProvider)) {
-      return Future.value(true);
+      return true;
+    }
+    if (running && usesManagedMacHelper && !ref.read(safeModeProvider)) {
+      if (macHelperBusy) {
+        if (!initialize) await presentMacHelper();
+        return false;
+      }
+      final state = await checkMacHelper();
+      if (revision != _helperRunRevision) return false;
+      if (state != MacHelperState.enabled) {
+        if (!initialize) await presentMacHelper();
+        return false;
+      }
+      if (ref.read(coreStatusProvider) != CoreStatus.connected) {
+        await ref.read(coreActionProvider.notifier).startCore();
+        if (revision != _helperRunRevision ||
+            ref.read(coreStatusProvider) != CoreStatus.connected) {
+          return false;
+        }
+        initialize = true;
+      }
     }
     return _run(running, initialize: running && initialize);
   }
@@ -1049,8 +1102,8 @@ class SetupAction extends _$SetupAction {
     if (!enableTun || ref.read(safeModeProvider)) {
       return true;
     }
-    if (system.isMacOS && macosManagedHelperBuild) {
-      final state = await macosHelperClient.status();
+    if (usesManagedMacHelper) {
+      final state = await checkMacHelper();
       if (state != MacHelperState.enabled) {
         throw MessageException(
           currentAppLocalizations.macHelperUnavailableDetail,

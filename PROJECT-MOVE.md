@@ -4,7 +4,34 @@
 This is the existing Flash/FlClash Flutter project (Flutter **3.47.x**), currently
 focused on macOS, not a new iOS app. Do not generate an iOS manifest.
 
-## Supported source checkout
+## Current delivery preparation — 2026-11-14
+
+The supported source checkout is now root `main`. The next local macOS delivery
+is being prepared as `0.9.10+2026111407`, with one embedded install package for
+helper setup through macOS administrator authorization.
+The stable helper build remains `2026111402`; its signed service and Core bytes
+must not be rebuilt or re-signed. Retained Core SHA256:
+`0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5`.
+
+This is source preparation, not a published release or runtime acceptance. Native
+installation, authorization UI, helper readiness, and TUN behavior still
+require acceptance on the intended Mac. Keep the existing self-signed identity;
+this is not Developer ID signing or notarization. Public delivery remains only
+the DMG and `SHA256SUMS`, with no separate helper PKG upload.
+
+[macos/packaging/local_release.md](macos/packaging/local_release.md) is the current
+local packaging and embedded-resource contract. For a local artifact only, use its
+existing `check`, `build`, `sign`, and `package` phases after separately authorized
+commit/tag coordination. Each phase requires a clean `main` checkout and matching
+local version tag. Do not use `run` for local-only work: it also creates a GitHub
+draft. Neither this handoff nor the source changes authorize publication, tag
+changes, signing, installation, or execution.
+
+The remaining move record below describes the **2026-11-13 snapshot**, not current
+branch, tag, remote, or delivery state. Its preservation and private-material
+exclusions remain applicable; its old commit checks are historical references.
+
+## Supported source checkout — historical move snapshot
 
 The repository root, originally `/Users/layoute/SideWork/FlClash` (`R`), now
 contains the latest source and is the supported checkout to transport and use.

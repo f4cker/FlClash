@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
@@ -77,13 +78,26 @@ class _TakeoverRow extends ConsumerWidget {
             ),
           )
         : appLocalizations.enabled;
-    void change(bool value) => systemProxy
-        ? ref
-              .read(networkSettingProvider.notifier)
-              .update((state) => state.copyWith(systemProxy: value))
-        : ref
-              .read(patchClashConfigProvider.notifier)
-              .update((state) => state.copyWith.tun(enable: value));
+    void change(bool value) async {
+      if (systemProxy) {
+        ref
+            .read(networkSettingProvider.notifier)
+            .update((state) => state.copyWith(systemProxy: value));
+        return;
+      }
+      if (system.isMacOS &&
+          macosManagedHelperBuild &&
+          !await ref
+              .read(setupActionProvider.notifier)
+              .prepareTunEnable(value)) {
+        return;
+      }
+      if (!context.mounted) return;
+      ref
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith.tun(enable: value));
+    }
+
     return DashboardSwitchRow(
       glyph: systemProxy ? AppGlyphs.shuffle : AppGlyphs.vpn,
       title: title,

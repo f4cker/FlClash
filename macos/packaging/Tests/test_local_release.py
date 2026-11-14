@@ -69,18 +69,34 @@ class LocalReleaseTests(unittest.TestCase):
     def test_bundle_marketing_and_build_versions_must_match(self):
         app = self.directory / 'gui/Flash.app'
         (app / 'Contents/MacOS').mkdir(parents=True)
-        core = app / RELEASE.CORE
-        core.write_bytes(b'fake-retained-core')
+        loader = importlib.util.spec_from_file_location('version_stage', PACKAGING / 'stage_split_payload.py')
+        stage = importlib.util.module_from_spec(loader)
+        loader.loader.exec_module(stage)
+        module_patch = patch.object(RELEASE, 'module', return_value=stage)
+        module_patch.start()
+        self.addCleanup(module_patch.stop)
         plist = app / 'Contents/Info.plist'
-        plist.write_bytes(plistlib.dumps({'CFBundleShortVersionString': '0.9.8', 'CFBundleVersion': '2026111405'}))
-        with patch.object(RELEASE, 'CORE_SHA256', RELEASE.sha(core)):
+        info = {'CFBundleShortVersionString': '0.9.8', 'CFBundleVersion': '2026111405',
+                'FlashMinimumServiceBuild': '2026111408',
+                'FlashHelperCompatibility': {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
+                                             'AcceptedCoreSHA256': [RELEASE.CORE_SHA256]}}
+        plist.write_bytes(plistlib.dumps(info))
+        RELEASE.check_version(app, self.identity)
+        for key, value in [('version', '0.9.7'), ('build', '2026111404')]:
+            with self.assertRaisesRegex(ValueError, 'version differs'):
+                RELEASE.check_version(app, dict(self.identity, **{key: value}))
+        core = app / RELEASE.CORE
+        core.write_bytes(b'non-Mach-O placeholder')
+        with self.assertRaisesRegex(ValueError, 'loose Core'):
             RELEASE.check_version(app, self.identity)
-            for key, value in [('version', '0.9.7'), ('build', '2026111404')]:
-                with self.assertRaisesRegex(ValueError, 'version differs'):
-                    RELEASE.check_version(app, dict(self.identity, **{key: value}))
-            (app / 'Contents/Library').mkdir()
-            with self.assertRaisesRegex(ValueError, 'embed helper'):
-                RELEASE.check_version(app, self.identity)
+        core.unlink()
+        info['FlashHelperCompatibility']['AcceptedCoreSHA256'] = ['0' * 64]
+        plist.write_bytes(plistlib.dumps(info))
+        with self.assertRaisesRegex(ValueError, 'accept the released service Core'):
+            RELEASE.check_version(app, self.identity)
+        (app / 'Contents/Library').mkdir()
+        with self.assertRaisesRegex(ValueError, 'embed helper'):
+            RELEASE.check_version(app, self.identity)
 
     def test_local_config_requires_ignored_private_file_and_pinned_adapter(self):
         config = dict(self.config, schema=1)
@@ -132,11 +148,12 @@ class LocalReleaseTests(unittest.TestCase):
     def test_manifest_allowlist_tampering_and_symlinks(self):
         dmg = self.public_assets()
         self.assertEqual({p.name for p in self.release.assets()}, {dmg.name, 'SHA256SUMS'})
-        private = dmg.parent / 'signing-receipt.json'
-        private.write_text('private provenance')
-        with self.assertRaisesRegex(ValueError, 'Unexpected public'):
-            self.release.assets()
-        private.unlink()
+        for name in ('signing-receipt.json', 'Flash-helper-install.pkg', 'Flash-helper-repair.pkg'):
+            private = dmg.parent / name
+            private.write_text('not a public asset')
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'Unexpected public'):
+                self.release.assets()
+            private.unlink()
         dmg.write_bytes(b'changed')
         with self.assertRaisesRegex(ValueError, 'asset changed'):
             self.release.assets()
@@ -161,8 +178,11 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertIn(RELEASE.BEGIN, body)
         self.assertIn(RELEASE.END, body)
         self.assertNotIn('-->', payload)
-        for text in ('arm64', '2026111402', 'GUI-only', 'not notarized', 'Self-signed', 'runtime acceptance'):
+        for text in ('arm64', '2026111402', '2026111408', 'one embedded install package', 'not notarized', 'Self-signed', 'runtime acceptance'):
             self.assertIn(text, body)
+        self.assertIn('no separate helper download', body)
+        self.assertNotIn('repair', body)
+        self.assertNotIn('helper separately', body)
         with self.assertRaises(ValueError):
             RELEASE.notes(dict(self.identity, tag='v0.9.9'))
 
@@ -176,13 +196,19 @@ class LocalReleaseTests(unittest.TestCase):
     def test_real_build_then_staging_precedes_sign_request(self):
         service = {'Core': 'immutable'}
         staged = Mock()
+        embedded = Mock()
+        events = []
         def stage_gui(fresh, app, core, pin):
+            events.append('stage-gui')
             self.assertEqual(pin, RELEASE.CORE_SHA256)
             self.assertIn('new-xcode-macos', str(fresh))
             app.mkdir(parents=True)
         staged.stage_gui.side_effect = stage_gui
-        fixed = types.SimpleNamespace(inventory=Mock(return_value={'fresh': 'code'}),
-                                      trusted_verifier=lambda: None)
+        embedded.stage.side_effect = lambda *args: events.append('embed-installers')
+        def inventory(*args):
+            events.append('unsigned-inventory')
+            return {'fresh': 'code', 'embedded': 'installers'}
+        fixed = types.SimpleNamespace(inventory=inventory, trusted_verifier=lambda: None)
         def command(argv, **kwargs):
             self.assertEqual(Path(argv[1]).name, 'build_local_gui.sh')
             output = Path(argv[3])
@@ -190,19 +216,59 @@ class LocalReleaseTests(unittest.TestCase):
             (output / 'build.log').write_text('fresh compiler output')
             return ''
         with patch.object(RELEASE, 'command', side_effect=command) as run, \
-                patch.object(RELEASE, 'module', return_value=staged), \
+                patch.object(RELEASE, 'module', side_effect=lambda name: embedded
+                             if name == 'embedded_helper_installer' else staged), \
                 patch.object(RELEASE, 'static_dependencies', return_value=(fixed, None)), \
                 patch.object(RELEASE, 'check_service', return_value=service), \
-                patch.object(RELEASE, 'check_version'), patch.object(self.release, 'unchanged'):
+                patch.object(RELEASE, 'check_version', side_effect=lambda *args: events.append('check-version')), \
+                patch.object(self.release, 'unchanged'):
             self.release.build()
             self.release.build()
+        self.assertEqual(events, ['stage-gui', 'embed-installers', 'check-version', 'unsigned-inventory'])
+        embedded.stage.assert_called_once_with(
+            self.release.app, Path(self.config['service']), self.directory / 'helper-packages',
+            Path(self.config['service_receipt']), self.config['service_receipt_sha256'],
+            RELEASE.CORE_SHA256, RELEASE.SERVICE_BUILD)
         self.assertEqual(run.call_count, 1)
         request = RELEASE.pinned(self.release.request, self.release.state['request_sha256'])
         self.assertEqual(request['source'], self.identity)
-        self.assertEqual(request['unsigned_entries'], {'fresh': 'code'})
+        self.assertEqual(request['unsigned_entries'], {'fresh': 'code', 'embedded': 'installers'})
         self.assertEqual(request['certificate_sha1'], RELEASE.IDENTITY)
         self.assertEqual(request['mode'], 'gui-only')
         self.assertFalse(self.release.response.exists())
+
+    def test_embedded_package_failure_prevents_unsigned_sign_request(self):
+        staged, embedded = Mock(), Mock()
+        embedded.stage.side_effect = ValueError('invalid released package')
+        with patch.object(RELEASE, 'command') as run, \
+                patch.object(RELEASE, 'module', side_effect=lambda name: embedded
+                             if name == 'embedded_helper_installer' else staged), \
+                patch.object(RELEASE, 'check_service', return_value={}), \
+                patch.object(RELEASE, 'static_dependencies') as signing:
+            with self.assertRaisesRegex(ValueError, 'invalid released package'):
+                self.release.build()
+        self.assertEqual(run.call_count, 1)
+        signing.assert_not_called()
+        self.assertFalse(self.release.request.exists())
+        self.assertNotIn('request_sha256', self.release.state)
+        self.assertFalse(self.release.response.exists())
+
+    def test_verify_rejects_invalid_embedded_manifest_before_signature_gate(self):
+        RELEASE.save(self.release.request, {'unsigned_entries': {}})
+        self.release.state['request_sha256'] = RELEASE.sha(self.release.request)
+        receipt = self.directory / 'gui-receipt.json'
+        RELEASE.save(receipt, {'before': {'entries': {}}})
+        RELEASE.save(self.release.response, {'schema': 1, 'request_sha256': self.release.state['request_sha256'],
+                     'gui_receipt': str(receipt), 'gui_receipt_sha256': RELEASE.sha(receipt)})
+        self.release.state['response_sha256'] = RELEASE.sha(self.release.response)
+        embedded = Mock()
+        embedded.verify.side_effect = ValueError('invalid embedded manifest')
+        with patch.object(self.release, 'unchanged'), patch.object(RELEASE, 'check_version'), \
+                patch.object(RELEASE, 'module', return_value=embedded) as load:
+            with self.assertRaisesRegex(ValueError, 'invalid embedded manifest'):
+                self.release.verify()
+        load.assert_called_once_with('embedded_helper_installer')
+        embedded.verify.assert_called_once_with(self.release.app)
 
     def test_verify_binds_fresh_code_and_request_before_static_signatures(self):
         self.release.state['service_inventory'] = {}

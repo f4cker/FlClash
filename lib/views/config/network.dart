@@ -7,6 +7,7 @@ import 'package:fl_clash/views/config/macos_helper.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/state.dart';
 import 'package:fl_clash/views/config/override.dart';
 import 'package:fl_clash/views/config/tun.dart';
@@ -82,7 +83,7 @@ class TUNItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, ref) {
-    return ConfigToggleItem(
+    return _TunToggleItem(
       title: (l) => l.tun,
       pageKey: PageConfigKey.tunEnable,
       selector: shownClashConfigProvider.select((state) => state.tun.enable),
@@ -90,6 +91,25 @@ class TUNItem extends ConsumerWidget {
         (state, value) => state.copyWith.tun(enable: value),
       ),
     );
+  }
+}
+
+class _TunToggleItem extends ConfigToggleItem {
+  const _TunToggleItem({
+    required super.title,
+    required super.selector,
+    required super.onChanged,
+    super.pageKey,
+  });
+
+  @override
+  void change(WidgetRef ref, bool value) async {
+    if (system.isMacOS &&
+        macosManagedHelperBuild &&
+        !await ref.read(setupActionProvider.notifier).prepareTunEnable(value)) {
+      return;
+    }
+    if (ref.context.mounted) super.change(ref, value);
   }
 }
 

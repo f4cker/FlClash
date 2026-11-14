@@ -1,9 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 umask 077
-[[ "$EUID" != 0 && ( "$#" == 8 || "$#" == 10 ) ]] || { echo 'usage: build_split_packages.sh gui-only|helper-update SIGNED_GUI RELEASED_SERVICE NEW_OUTPUT GUI_RECEIPT GUI_SHA256 SERVICE_RECEIPT SERVICE_SHA256 [COMPILE_RECEIPT COMPILE_SHA256]' >&2; exit 64; }
+[[ "$EUID" != 0 && ( "$#" == 8 || "$#" == 10 ) ]] || { echo 'usage: build_split_packages.sh gui-only|helper-update GUI SERVICE OUTPUT GUI_RECEIPT GUI_SHA256 SERVICE_RECEIPT SERVICE_SHA256 [COMPILE_RECEIPT COMPILE_SHA256]; or embedded-released-service UNSIGNED_GUI SERVICE OUTPUT SERVICE_RECEIPT SERVICE_SHA256 CORE_SHA256 SERVICE_BUILD' >&2; exit 64; }
 mode="$1"
-[[ ( "$mode" == gui-only && "$#" == 8 ) || ( "$mode" == helper-update && "$#" == 10 ) ]] || exit 64
+[[ ( "$mode" == gui-only && "$#" == 8 ) || ( "$mode" == helper-update && "$#" == 10 ) ||
+   ( "$mode" == embedded-released-service && "$#" == 8 ) ]] || exit 64
 source_dir="$(cd "$(/usr/bin/dirname "$0")" && pwd)"
 gui="$(cd "$2" && pwd -P)"
 service="$(cd "$3" && pwd -P)"
@@ -19,7 +20,12 @@ gui_sha256="$6"
 service_receipt="$7"
 service_sha256="$8"
 compile_args=()
-if [[ "$mode" == helper-update ]]; then
+if [[ "$mode" == embedded-released-service ]]; then
+  service_receipt="$5"
+  service_sha256="$6"
+  core_sha256="$7"
+  service_build="$8"
+elif [[ "$mode" == helper-update ]]; then
   compile_args=(--compile-receipt "$9" --compile-sha256 "${10}")
 fi
 python() {
@@ -27,20 +33,28 @@ python() {
 }
 split() { python "$source_dir/stage_split_payload.py" "$@"; }
 verify_evidence() {
-  split verify-release --gui "$gui" --service "$service" \
-    --gui-receipt "$gui_receipt" --gui-sha256 "$gui_sha256" \
-    --service-receipt "$service_receipt" --service-sha256 "$service_sha256" \
-    ${compile_args[@]+"${compile_args[@]}"}
+  if [[ "$mode" == embedded-released-service ]]; then
+    python "$source_dir/embedded_helper_installer.py" verify-service --gui "$gui" --service "$service" \
+      --receipt "$service_receipt" --receipt-sha256 "$service_sha256" \
+      --core-sha256 "$core_sha256" --service-build "$service_build"
+  else
+    split verify-release --gui "$gui" --service "$service" \
+      --gui-receipt "$gui_receipt" --gui-sha256 "$gui_sha256" \
+      --service-receipt "$service_receipt" --service-sha256 "$service_sha256" \
+      ${compile_args[@]+"${compile_args[@]}"}
+  fi
 }
 raw_package() { python "$source_dir/normalize_package_info.py" "$@"; }
 verify_evidence
 /bin/mkdir -m 0700 "$output"
-/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C VOLNAME=Flash APPS_NAME=应用程序 \
-  /bin/bash "$source_dir/../../tool/macos/make_styled_dmg.sh" \
-  "$gui" "$source_dir/dmg/background.png" "$source_dir/dmg/background@2x.png" "$output/Flash.dmg"
-verify_evidence
+if [[ "$mode" != embedded-released-service ]]; then
+  /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C VOLNAME=Flash APPS_NAME=应用程序 \
+    /bin/bash "$source_dir/../../tool/macos/make_styled_dmg.sh" \
+    "$gui" "$source_dir/dmg/background.png" "$source_dir/dmg/background@2x.png" "$output/Flash.dmg"
+  verify_evidence
+fi
 if [[ "$mode" == gui-only ]]; then
-  printf '%s\n' 'GUI-only styled DMG created; released service and Core unchanged; functional acceptance UNTESTED.'
+  printf '%s\n' 'Styled GUI DMG created; released service and Core unchanged; functional acceptance UNTESTED.'
   exit 0
 fi
 work="$output/payload"
@@ -50,7 +64,11 @@ split verify-copy --kind service --original "$service" --copy "$work/Library/App
 components="$output/components.plist"
 /usr/bin/pkgbuild --analyze --root "$work" "$components"
 python "$source_dir/pin_component_policy.py" "$components"
-for operation in install repair disable remove; do
+operations=(install)
+if [[ "$mode" == helper-update ]]; then
+  operations+=(repair disable remove)
+fi
+for operation in "${operations[@]}"; do
   scripts="$output/$operation-scripts"
   /bin/mkdir "$scripts"
   /bin/cp "$source_dir/installer/$operation/"* "$scripts/"
@@ -81,4 +99,4 @@ for operation in install repair disable remove; do
   split verify-expanded --service "$service" --expanded "$expanded" --operation "$operation"
   verify_evidence
 done
-printf '%s\n' 'Styled GUI DMG and one-time helper migration packages created; functional acceptance UNTESTED.'
+printf '%s\n' 'Verified service packages created; released service and Core unchanged; functional acceptance UNTESTED.'

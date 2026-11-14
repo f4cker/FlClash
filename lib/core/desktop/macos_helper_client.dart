@@ -21,12 +21,23 @@ enum MacHelperState {
   disabled,
   denied,
   repairRequired,
-  exitUnconfirmed;
+  exitUnconfirmed,
+  cancelled,
+  failed,
+  unknown;
 
-  static MacHelperState parse(Object? code) => values.firstWhere(
-    (value) => value.name == code,
-    orElse: () => unavailable,
-  );
+  static MacHelperState parse(Object? code) => switch (code) {
+    'authorizationCancelled' => cancelled,
+    'authorizationDenied' => denied,
+    'installationFailed' ||
+    'installerPayloadInvalid' ||
+    'invalidRequest' => failed,
+    'installationUnknown' || 'installInProgress' => unknown,
+    _ => values.firstWhere(
+      (value) => value.name == code,
+      orElse: () => unavailable,
+    ),
+  };
 }
 
 abstract interface class MacHelperNativeApi {
@@ -108,6 +119,9 @@ final class MacHelperClient {
   String? _session;
   String? _lastStopped;
   bool _maintenance = false;
+  bool _installing = false;
+  bool _installationUnknown = false;
+  String? failureCode;
   _MacHelperRelay? _relay;
   bool _sending = false;
 
@@ -129,7 +143,28 @@ final class MacHelperClient {
   Future<MacHelperState> status() async {
     if (_safeMode()) return MacHelperState.disabled;
     try {
-      return MacHelperState.parse((await _native.invoke('status'))['code']);
+      final answer = await _native.invoke('status');
+      final state = MacHelperState.parse(answer['code']);
+      final underlying = MacHelperState.parse(answer['installationStatus']);
+      if (_session != null && _relay?.active != true) {
+        return MacHelperState.exitUnconfirmed;
+      }
+      if (_installationUnknown) {
+        if (state == MacHelperState.enabled) {
+          _installationUnknown = false;
+        } else if (state != MacHelperState.approvalRequired) {
+          return underlying == MacHelperState.approvalRequired
+              ? MacHelperState.approvalRequired
+              : MacHelperState.unknown;
+        }
+      }
+      if (state == MacHelperState.unknown) {
+        _installationUnknown = true;
+        if (underlying == MacHelperState.approvalRequired) {
+          return MacHelperState.approvalRequired;
+        }
+      }
+      return state;
     } on Exception {
       return MacHelperState.unavailable;
     }
@@ -138,13 +173,50 @@ final class MacHelperClient {
   Future<MacHelperState> installerInstructions({
     required bool confirmed,
   }) async {
-    _requireEffects();
     if (!confirmed) throw const MacHelperException('consentRequired');
-    return MacHelperState.parse(
-      (await _native.invoke('installerInstructions', {
+    _requireEffects();
+    if (_installing) throw const MacHelperException('maintenance');
+    if (_installationUnknown) return MacHelperState.unknown;
+    if (_session != null) return MacHelperState.exitUnconfirmed;
+    _installing = true;
+    failureCode = null;
+    try {
+      final state = await status();
+      if (!{
+        MacHelperState.off,
+        MacHelperState.installerRequired,
+        MacHelperState.updateRequired,
+        MacHelperState.incompatible,
+      }.contains(state)) {
+        return state;
+      }
+      final result = await _native.invoke('installerInstructions', {
         'confirmed': true,
-      }))['code'],
-    );
+      });
+      final code = result['code'];
+      failureCode = code is String ? code : null;
+      if (code == 'ok' || code == 'enabled') return await status();
+      final outcome = MacHelperState.parse(code);
+      if (outcome == MacHelperState.unknown ||
+          outcome == MacHelperState.unavailable ||
+          outcome == MacHelperState.exitUnconfirmed) {
+        _installationUnknown = true;
+        return result['installationStatus'] == 'approvalRequired'
+            ? MacHelperState.approvalRequired
+            : MacHelperState.unknown;
+      }
+      return outcome;
+    } on Exception {
+      _installationUnknown = true;
+      return MacHelperState.unknown;
+    } finally {
+      _installing = false;
+    }
+  }
+
+  Future<void> openSettings() async {
+    _requireEffects();
+    await _native.invoke('openApprovalSettings');
   }
 
   Future<MacHelperState> maintain(
@@ -162,9 +234,15 @@ final class MacHelperClient {
 
   Future<int> start(String session) async {
     _requireEffects();
-    if (_maintenance) throw const MacHelperException('maintenance');
+    if (_maintenance || _installing) {
+      throw const MacHelperException('maintenance');
+    }
+    if (_installationUnknown) throw const MacHelperException('unknown');
     if (_session != null) throw const MacHelperException('exitUnconfirmed');
     final state = await status();
+    if (_maintenance || _installing) {
+      throw const MacHelperException('maintenance');
+    }
     if (state != MacHelperState.enabled) throw MacHelperException(state.name);
     _session = session;
     final relay = _relay = _MacHelperRelay(session);

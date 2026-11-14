@@ -20,7 +20,8 @@ import types
 WORKTREE = Path(__file__).resolve().parents[2]
 PACKAGING = WORKTREE / 'macos/packaging'
 FIXED_SIGNER_SHA256 = '2574d8356c2ac9ad50cb94bc476a11463f6ee8f30d24fab97fbe7432c880771a'
-STAGING_SHA256 = '98f16a7e23fb747ff8cc8a395b6395ac0fb165f5ca05b14f32f322c399760bdc'
+WRAPPER_VERIFIER_SHA256 = 'f79f4e7767770b0675364e508c8302e143038e7867061e0a0b9cf235c2d6b0b3'
+STAGING_SHA256 = '4b01bcf0b59335e73a0c09cac0c0e0367531087d2513ac6d88901758a4794162'
 CONSTRAINT_SHA256 = 'b1a402989ca8fd4375b081c68df5d974cf5be635389f399ff9f4ba17e7b2d7de'
 KEYCHAIN = '/Users/layoute/Library/Application Support/Flash Signing/FlashSigning.keychain-db'
 CERTIFICATE_SHA1 = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
@@ -116,9 +117,12 @@ def dependencies():
 
 def signing_targets(app, entries, phase, fixed):
     if phase == 'gui':
+        core = app / 'Contents/MacOS/FlClashCore'
+        if core.exists() or core.is_symlink():
+            raise ValueError('GUI must not contain a loose Core')
         original = fixed.FIXED
         try:
-            fixed.FIXED = original[:1]
+            fixed.FIXED = ()
             targets = fixed.signing_targets(app, entries)
         finally:
             fixed.FIXED = original
@@ -150,7 +154,7 @@ def audit(app, phase, fixed, verifier, targets):
     if phase == 'gui':
         original = verifier.FIXED_EXECUTABLES
         try:
-            verifier.FIXED_EXECUTABLES = ('Contents/MacOS/FlClashCore',)
+            verifier.FIXED_EXECUTABLES = ()
             verifier.audit(app)
         finally:
             verifier.FIXED_EXECUTABLES = original
@@ -204,7 +208,8 @@ def sign_arguments(app, target, entitlement_file, fixed, constraint_file=None):
     return args
 
 
-def execute(phase, app_value, keychain, certificate, gui_app=None, gui_report_sha256=None, core_sha256=None):
+def execute(phase, app_value, keychain, certificate, gui_app=None, gui_report_sha256=None, core_sha256=None,
+            wrapper_derivation=None, wrapper_derivation_sha256=None):
     if keychain != KEYCHAIN or certificate != CERTIFICATE_SHA1 or os.getuid() == 0:
         raise ValueError('Only fixed identity/keychain and non-root caller allowed')
     if Path(__file__).absolute() != PACKAGING / 'sign_split_payload.py':
@@ -213,6 +218,8 @@ def execute(phase, app_value, keychain, certificate, gui_app=None, gui_report_sh
         raise ValueError('Unknown phase')
     if phase == 'gui' and (gui_app is not None or gui_report_sha256 is not None):
         raise ValueError('GUI phase does not consume a prior receipt')
+    if bool(wrapper_derivation) != bool(wrapper_derivation_sha256) or (wrapper_derivation and phase != 'service'):
+        raise ValueError('Wrapper derivation requires service phase and exact receipt pin')
     if bool(gui_app) != bool(gui_report_sha256):
         raise ValueError('GUI provenance requires both bundle and receipt SHA256')
     if not isinstance(core_sha256, str) or len(core_sha256) != 64 or any(c not in '0123456789abcdef' for c in core_sha256):
@@ -222,9 +229,19 @@ def execute(phase, app_value, keychain, certificate, gui_app=None, gui_report_sh
     app = fixed.staging_path(app_value)
     verifier = fixed.trusted_verifier()
     stage = frozen_module('stage_split_payload.py', STAGING_SHA256)
+    wrapper_gate = None
+    if wrapper_derivation:
+        wrapper_gate = frozen_module('verify_split_service.py', WRAPPER_VERIFIER_SHA256)
+        wrapper_gate.verify_wrapper_derivation(Path(wrapper_derivation), wrapper_derivation_sha256, app,
+                                               types.SimpleNamespace(dependencies=dependencies, signing_targets=signing_targets,
+                                                   audit=audit, CERTIFICATE_SHA1=CERTIFICATE_SHA1,
+                                                   CERTIFICATE_SHA256=CERTIFICATE_SHA256), stage)
     compatibility = stage.read_compatibility(app, phase)
     before = fixed.inventory(app, verifier)
-    if fixed.sha256(fixed.read_regular(app / 'Contents/MacOS/FlClashCore')) != core_sha256:
+    if phase == 'gui':
+        if core_sha256 not in compatibility['AcceptedCoreSHA256']:
+            raise ValueError('GUI does not accept the released service Core')
+    elif fixed.sha256(fixed.read_regular(app / 'Contents/MacOS/FlClashCore')) != core_sha256:
         raise ValueError('Released Core differs before signing')
     targets = signing_targets(app, before, phase, fixed)
     for target in targets:
@@ -253,7 +270,11 @@ def execute(phase, app_value, keychain, certificate, gui_app=None, gui_report_sh
                          'verifier_sha256': fixed.VERIFIER_SHA256,
                          'gui_entitlements_sha256': fixed.sha256(entitlement_source)},
               'before': {'tree_sha256': fixed.tree_digest(before), 'entries': before}, 'targets': targets,
-              'reused_signed_core_sha256': core_sha256, 'compatibility': compatibility}
+              'compatibility': compatibility}
+    report['accepted_service_core_sha256' if phase == 'gui' else 'reused_signed_core_sha256'] = core_sha256
+    if wrapper_derivation:
+        report['signing_scope'] = 'service-wrapper-only'
+        report['wrapper_derivation'] = {'path': str(wrapper_derivation), 'sha256': wrapper_derivation_sha256}
     if gui is not None:
         report['gui_receipt_sha256'] = gui_report_sha256
         report['gui_cdhash'] = receipt['library_constraint']['cdhash']
@@ -281,7 +302,7 @@ def execute(phase, app_value, keychain, certificate, gui_app=None, gui_report_sh
                     if target['role'] == 'gui':
                         constraint_file = scratch / 'library.plist'
                         constraint_file.write_bytes(constraint.constraint_plist(hashes))
-                    if target['role'] != 'core':
+                    if target['role'] == 'service' or (not wrapper_derivation and target['role'] != 'core'):
                         fixed.run_tool(sign_arguments(app, target,
                             entitlements if target['role'] == 'gui' else empty, fixed, constraint_file))
                     certificates = scratch / str(index)
@@ -298,10 +319,16 @@ def execute(phase, app_value, keychain, certificate, gui_app=None, gui_report_sh
                 audit(app, phase, fixed, verifier, targets)
                 after = fixed.inventory(app, verifier)
                 signing_targets(app, after, phase, fixed)
-                mutable = [target for target in targets if target['role'] != 'core']
+                mutable = [target for target in targets if target['role'] == 'service' or
+                           (not wrapper_derivation and target['role'] != 'core')]
                 fixed.check_signing_delta(before, after, mutable)
-                if fixed.sha256(fixed.read_regular(app / 'Contents/MacOS/FlClashCore')) != core_sha256:
+                if phase == 'service' and fixed.sha256(fixed.read_regular(app / 'Contents/MacOS/FlClashCore')) != core_sha256:
                     raise ValueError('Released Core changed during signing')
+                if wrapper_derivation:
+                    wrapper_gate.verify_wrapper_derivation(Path(wrapper_derivation), wrapper_derivation_sha256, app,
+                        types.SimpleNamespace(dependencies=dependencies, signing_targets=signing_targets, audit=audit,
+                            CERTIFICATE_SHA1=CERTIFICATE_SHA1, CERTIFICATE_SHA256=CERTIFICATE_SHA256), stage,
+                        unsigned_entries=before)
                 if gui is not None:
                     gui_receipt(gui, gui_report_sha256, fixed, constraint, verifier)
                     stage.compatible_pair(gui, app)
@@ -335,12 +362,15 @@ def main():
     parser.add_argument('--gui-app')
     parser.add_argument('--gui-report-sha256')
     parser.add_argument('--core-sha256', required=True)
+    parser.add_argument('--wrapper-derivation', type=Path)
+    parser.add_argument('--wrapper-derivation-sha256')
     parser.add_argument('--keychain', required=True)
     parser.add_argument('--certificate', required=True)
     args = parser.parse_args()
     try:
         result = execute(args.phase, args.app, args.keychain, args.certificate,
-                         args.gui_app, args.gui_report_sha256, args.core_sha256)
+                         args.gui_app, args.gui_report_sha256, args.core_sha256,
+                         args.wrapper_derivation, args.wrapper_derivation_sha256)
     except (ValueError, OSError, subprocess.SubprocessError) as error:
         print('Split signing failed closed: ' + type(error).__name__, file=sys.stderr)
         return 1
