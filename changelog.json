@@ -2,6 +2,29 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.9.11",
+      "tag": "v0.9.11",
+      "date": "2026-11-14",
+      "prerelease": false,
+      "groups": [
+        {
+          "type": "fix",
+          "entries": [
+            {
+              "id": "882c4e2",
+              "scope": "macos",
+              "text": "Remove the unused loose Core from the managed GUI while retaining the signed service Core unchanged"
+            },
+            {
+              "id": "882c4e2",
+              "scope": "macos",
+              "text": "Include the Flash icon in the helper service bundle and offer its wrapper update through the existing confirmed installer"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.10",
       "tag": "v0.9.10",
       "date": "2026-11-14",
