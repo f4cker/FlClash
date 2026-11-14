@@ -41,7 +41,7 @@ def verify_service(gui, service, receipt, receipt_sha256, core_sha256, service_b
     stage = module('stage_split_payload')
     info = plistlib.loads((service / 'Contents/Info.plist').read_bytes())
     require(str(info.get('CFBundleVersion')) == service_build, 'Released helper build changed')
-    require(sha(service / CORE) == core_sha256 == sha(gui / CORE), 'Released service/Core changed')
+    require(sha(service / CORE) == core_sha256, 'Released service/Core changed')
     stage.check_layout(gui, 'gui')
     stage.compatible_pair(gui, service)
     return gate.verify_bundle(service, 'service', receipt, receipt_sha256,

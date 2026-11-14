@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.11 (2026-11-14)
+
+**Bug Fixes**
+
+- **macos** Remove the unused loose Core from the managed GUI while retaining the signed service Core unchanged
+- **macos** Include the Flash icon in the helper service bundle and offer its wrapper update through the existing confirmed installer
+
 ## v0.9.10 (2026-11-14)
 
 **Bug Fixes**

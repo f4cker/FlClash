@@ -5,9 +5,13 @@ upstream Telegram/Homebrew publishing integrations. Gitta owns merging `main` an
 creating/pushing the matching tag. Do that before building: the CLI refuses a dirty
 checkout, another branch, mismatched submodules, or a tag not at `main` HEAD.
 
-The arm64 release embeds one install package for the unchanged stable
-helper build `2026111402` and retains Core SHA256
+The arm64 release embeds one install package for service wrapper build
+`2026111408`, retaining helper binary build `2026111402` and Core SHA256
 `0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5`.
+The managed GUI has no loose `Contents/MacOS/FlClashCore`; its sealed
+`AcceptedCoreSHA256` accepts the Core inside the service package. GUI metadata
+`FlashMinimumServiceBuild` is the string `2026111408`, so an older trusted service
+wrapper requires an update even when its helper/Core protocol is compatible.
 The app can request macOS administrator authorization to install that
 helper; first-time users do not need a separate helper download. No helper PKGs
 are uploaded as separate public assets. Version/tag selection remains a separate
@@ -35,7 +39,7 @@ commit it or copy credentials into it. All paths must be canonical absolute path
   "sdk": "<Flutter SDK root>",
   "signer": "<executable protected local adapter>",
   "signer_sha256": "<adapter SHA256>",
-  "service": "<existing stable 1402 service Flash.app>",
+  "service": "<verified derived 1408 service wrapper Flash.app>",
   "service_receipt": "<existing current-schema service receipt>",
   "service_receipt_sha256": "<service receipt SHA256>"
 }
@@ -75,7 +79,8 @@ python3 macos/packaging/local_release.py run --tag vX.Y.Z --run release-XYZ
 
 `check` validates local source/config/service inputs without building, signing or
 network. `run` actually builds a fresh unsigned GUI, stages the exact retained
-Core, builds and embeds one install package from the exact signed stable service,
+service-Core compatibility metadata without a loose GUI Core, builds and embeds
+one install package from the exact signed derived service wrapper,
 invokes the protected GUI signer, statically verifies signatures and receipts,
 creates the styled DMG through `build_split_packages.sh gui-only`, verifies its
 read-only mounted bundle copy, and creates/verifies a GitHub **draft**. It does not
@@ -108,11 +113,11 @@ downloads its two assets to compare their actual bytes with local SHA256 hashes.
 
 After `stage_gui` and before the unsigned GUI inventory/signing request, the local
 CLI runs `build_split_packages.sh embedded-released-service`. This narrow route
-verifies the existing service signing receipt, fixed identity, exact stable build
-and Core, then reuses the helper-update route's package construction, raw package
+verifies the existing service signing receipt, fixed identity, exact wrapper build
+and retained Core, then reuses the helper-update route's package construction, raw package
 normalization, transactional install scripts, and exact signed
-`FlashMaintenance`. It does not compile or re-sign service code and does not claim
-new compile evidence. The existing helper-update route still requires its compile
+`FlashMaintenance`. Package construction does not compile or re-sign service code
+and does not claim new compile evidence. The existing helper-update route still requires its compile
 receipt. Neither route executes the delivered installer scripts during packaging.
 
 The expanded install package is checked with `stage_split_payload.verify_expanded`:
@@ -141,11 +146,50 @@ Resources have mode `0644` and their directories `0755`, including under umask
 `077`. They enter the unsigned inventory and outer app signature together with the
 fresh GUI. Exact-copy verification of the mounted DMG includes them. The package
 is an internal resource, not separately published or Developer ID signed;
-the installed service binaries retain their existing signatures. Packaging/static
+the helper, Core, and maintenance binaries retain their existing signatures;
+the service wrapper has a new outer signature binding its icon and metadata. Packaging/static
 checks do not establish installation, authorization UI, or runtime acceptance.
 The embedded contract rejects repair entries and extra packages. The standalone
 helper-update route retains its install, repair, disable, and remove operations;
 the embedded route builds only install and does not add recovery behavior.
+
+## Managed GUI and service-wrapper staging
+
+`stage_gui` still consumes an explicit released Core source and SHA256, verifies
+those bytes before/after staging, and seals its accepted hash in GUI metadata.
+It removes only the managed stage's loose Core. The shared Xcode/unmanaged build
+copy behavior is unchanged. The GUI has six signing targets: its main executable
+and five frameworks; the native five-framework library constraint is unchanged.
+GUI receipts use `accepted_service_core_sha256`, not a claim of reused GUI bytes.
+Service receipts retain `reused_signed_core_sha256` and actual-byte checks.
+
+`stage_service(..., *, released_core, core_sha256)` and
+`finalize_core_copy(..., *, released_core, core_sha256)` require an explicit,
+pinned released source, never a GUI Core. Their CLI equivalents require
+`--released-core` and `--core-sha256`. New service staging copies the GUI's
+`Contents/Resources/AppIcon.icns` and sets `CFBundleIconFile` to `AppIcon.icns`.
+The icon must be a canonical single-link regular `0644` file, with `icns` magic
+and an exact declared byte length. Verification accepts either the old iconless
+service shape or this exact icon/metadata pair, never arbitrary resources.
+
+For this delivery, `stage_split_payload.derive_service_wrapper` copies the
+verified iconless `2026111402` service to a new destination, removes its old outer
+seal, copies the GUI icon, and changes only `CFBundleIconFile` and
+`CFBundleVersion` (`2026111408`). It returns a
+`flash-service-wrapper-derivation-v1` record, including original service receipt
+and historical compile receipt pins, exact source/unsigned inventories, metadata
+delta, icon hash, and preserved executable hashes. `compiled` is `false`; the
+historical compilation is not represented as a new build. The retained original
+service, receipts, and GUI icon source remain required verification inputs.
+
+The existing signer accepts `--phase service --wrapper-derivation <JSON>
+--wrapper-derivation-sha256 <SHA256>` only after the pinned derivation validates.
+It verifies all four service code targets but signs only the outer wrapper,
+without `--deep` signing. Its receipt uses `signing_scope: service-wrapper-only`
+and binds the derivation path/hash. Static package verification rechecks this
+provenance and permits only the outer signature delta; helper, Core, and
+maintenance bytes cannot change. Ordinary service compilation/signing remains a
+separate route and still needs its real compile evidence.
 
 ## Protected adapter contract (version 1)
 

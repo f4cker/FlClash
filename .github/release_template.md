@@ -5,9 +5,12 @@
 - [Changelog](https://github.com/f4cker/FlClash/blob/main/CHANGELOG.md)
 
 Apple Silicon release with one embedded install package for the
-stable helper build **2026111402**. Install the helper from the app with
+service wrapper build **2026111408**, retaining helper binary build **2026111402**.
+Install the helper from the app with
 macOS administrator authorization; no separate helper download is required. The
-helper and released Core bytes remain unchanged. Public assets are only the DMG
+helper and released Core bytes remain unchanged; the managed GUI has no loose
+Core copy. The wrapper adds the app icon under a new outer signature.
+Public assets are only the DMG
 and `SHA256SUMS`; the helper package stays inside the app.
 
 Self-signed with the existing Flash identity, **not Apple Developer ID signed and

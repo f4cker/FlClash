@@ -21,7 +21,7 @@ REPOSITORY = 'f4cker/FlClash'
 CORE_SHA256 = '0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5'
 IDENTITY = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CORE = 'Contents/MacOS/FlClashCore'
-HELPER_BUILD = '2026111402'
+SERVICE_BUILD = '2026111408'
 BEGIN = '<!-- flclash:changelog:begin -->'
 END = '<!-- flclash:changelog:end -->'
 JSON_BEGIN = '<!-- flclash:changelog:json'
@@ -122,9 +122,10 @@ def check_service(config):
     app = Path(config['service'])
     receipt = pinned(Path(config['service_receipt']), config['service_receipt_sha256'])
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
-    require(str(info.get('CFBundleVersion')) == HELPER_BUILD, 'Only the immutable 1402 helper is supported')
+    require(str(info.get('CFBundleVersion')) == SERVICE_BUILD, 'Only the derived 1408 service wrapper is supported')
     require(sha(app / CORE) == CORE_SHA256, 'Released service/Core changed')
-    require(receipt.get('phase') == 'service' and receipt.get('static_verification') is True,
+    require(receipt.get('phase') == 'service' and receipt.get('static_verification') is True and
+            receipt.get('signing_scope') == 'service-wrapper-only',
             'Missing released service signing evidence')
     return module('stage_split_payload').inventory(app)
 
@@ -134,7 +135,11 @@ def check_version(app, identity):
     require(info.get('CFBundleShortVersionString') == identity['version'] and
             str(info.get('CFBundleVersion')) == identity['build'], 'Built bundle version differs from source')
     require(not (app / 'Contents/Library').exists(), 'GUI must not embed helper tools')
-    require(sha(app / CORE) == CORE_SHA256, 'GUI must retain exact released signed Core bytes')
+    require(not (app / CORE).exists() and not (app / CORE).is_symlink(), 'GUI must not contain a loose Core')
+    stage = module('stage_split_payload')
+    require(info.get(stage.MINIMUM_SERVICE_BUILD_KEY) == SERVICE_BUILD, 'GUI minimum service build differs')
+    require(CORE_SHA256 in stage.read_compatibility(app, 'gui')['AcceptedCoreSHA256'],
+            'GUI must accept the released service Core')
 
 
 def notes(identity):
@@ -158,7 +163,7 @@ def notes(identity):
     lines += [END, '', JSON_BEGIN, payload, '-->', '',
               '## macOS release scope', '',
               'Apple Silicon (arm64) release with one embedded install package for '
-              'the stable helper build **2026111402**. Install the helper from the app '
+              'service wrapper build **2026111408**, retaining helper binary build **2026111402**. Install the helper from the app '
               'with macOS administrator authorization; no separate helper download is required.', '',
               'Self-signed with the existing Flash identity; **not Apple Developer ID signed '
               'and not notarized**. The released helper and Core remain unchanged. Packaging '
@@ -218,7 +223,7 @@ class Release:
         module('embedded_helper_installer').stage(
             self.app, Path(self.config['service']), self.directory / 'helper-packages',
             Path(self.config['service_receipt']), self.config['service_receipt_sha256'],
-            CORE_SHA256, HELPER_BUILD)
+            CORE_SHA256, SERVICE_BUILD)
         check_version(self.app, self.identity)
         fixed, _ = static_dependencies()
         entries = fixed.inventory(self.app, fixed.trusted_verifier())

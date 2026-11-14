@@ -89,6 +89,27 @@ class EmbeddedHelperInstallerSourceTests(unittest.TestCase):
         self.assertIn('@"installationStatus": code', invoke)
         self.assertNotIn('dispatch_after', install)
 
+    def test_wrapper_minimum_only_refines_authenticated_enabled_status(self):
+        status = BRIDGE.split('- (void)status:')[1].split('- (void)request:')[0]
+        self.assertLess(status.index('[self installationStatus]'), status.index('[self request:@"hello"'))
+        self.assertLess(status.index('[self request:@"hello"'), status.index('[self serviceBuildStatus]'))
+        self.assertIn('if ([code isEqualToString:@"enabled"]) code = [self serviceBuildStatus]', status)
+        minimum = BRIDGE.split('- (NSString *)serviceBuildStatus {')[1].split('- (void)status:')[0]
+        self.assertIn('NSBundle.mainBundle.infoDictionary[@"FlashMinimumServiceBuild"]', minimum)
+        self.assertIn('[FCInstalledBundle stringByAppendingPathComponent:@"Contents/Info.plist"]', minimum)
+        self.assertIn('installed:service[@"CFBundleVersion"]', minimum)
+        gate = BRIDGE.split('- (NSString *)gate {')[1].split('- (NSString *)installationStatus')[0]
+        self.assertLess(gate.index('FCBundleTrust(FCInstalledBundle)'), gate.index('FCReadCompatibility'))
+        self.assertIn('FCCompatibilityVersion(service[@"CallerPolicy"], 2)', gate)
+        self.assertNotIn('serviceBuildStatus', gate)
+        invoke = BRIDGE.split('- (void)invoke:')[1]
+        handshake = invoke.split('[self request:@"hello" arguments:@{}')[1]
+        self.assertLess(handshake.index('if (![answer[@"code"] isEqual:@"ok"])'),
+                        handshake.index('[self serviceBuildStatus]'))
+        self.assertLess(handshake.index('[self serviceBuildStatus]'),
+                        handshake.index('[self request:method'))
+        self.assertIn('else [self request:method arguments:arguments completion:completion]', invoke)
+
     def test_pending_marker_precedes_auth_and_survives_bridge_recreation(self):
         self.assertIn('_installationUncertain = [self installerPending]', BRIDGE)
         persistence = BRIDGE.split('- (BOOL)installerPending')[1].split('- (BOOL)effectsAllowed')[0]

@@ -8,6 +8,15 @@
 #import <errno.h>
 #import <limits.h>
 
+static BOOL FCServiceBuildValid(id value) {
+    if (![value isKindOfClass:NSString.class] || [value length] != 10 || [value characterAtIndex:0] == '0') return NO;
+    for (NSUInteger index = 0; index < 10; index++) {
+        unichar digit = [value characterAtIndex:index];
+        if (digit < '0' || digit > '9') return NO;
+    }
+    return YES;
+}
+
 @interface FCManagedHelperBridge ()
 @property dispatch_queue_t queue;
 @property xpc_connection_t connection;
@@ -94,6 +103,21 @@
     return @"unsupported";
 }
 
+- (NSString *)serviceBuildStatusForMinimum:(id)minimum installed:(id)installed {
+    if (!minimum) return @"enabled";
+    if (!FCServiceBuildValid(minimum)) return @"signingRequired";
+    if (!FCServiceBuildValid(installed)) return @"repairRequired";
+    return [installed compare:minimum options:NSLiteralSearch] == NSOrderedAscending ? @"updateRequired" : @"enabled";
+}
+
+- (NSString *)serviceBuildStatus {
+    id minimum = NSBundle.mainBundle.infoDictionary[@"FlashMinimumServiceBuild"];
+    if (!minimum) return @"enabled";
+    NSDictionary *service = [NSDictionary dictionaryWithContentsOfFile:
+        [FCInstalledBundle stringByAppendingPathComponent:@"Contents/Info.plist"]];
+    return [self serviceBuildStatusForMinimum:minimum installed:service[@"CFBundleVersion"]];
+}
+
 - (void)status:(void (^)(NSDictionary *))completion {
     NSString *code = [self installationStatus];
     if (![code isEqualToString:@"enabled"]) { completion(@{@"code": code}); return; }
@@ -101,6 +125,8 @@
         NSString *code = [answer[@"code"] isEqual:@"ok"] ? @"enabled" :
             [answer[@"code"] isEqual:@"exitUnconfirmed"] || [answer[@"code"] isEqual:@"maintenance"] ? @"exitUnconfirmed" :
             [answer[@"code"] isEqual:@"incompatible"] ? @"incompatible" : @"unavailable";
+        // Wrapper freshness must not mask approval, failed authentication, or unconfirmed helper state.
+        if ([code isEqualToString:@"enabled"]) code = [self serviceBuildStatus];
         completion(@{@"code": code});
     }];
 }
@@ -422,10 +448,13 @@
             NSString *status = [self installationStatus];
             if (![status isEqualToString:@"enabled"]) { completion(@{@"code": status}); return; }
         }
-        if ([method isEqualToString:@"start"]) {
+        if (!relay) {
             [self request:@"hello" arguments:@{} completion:^(NSDictionary *answer) {
                 if (![answer[@"code"] isEqual:@"ok"]) { completion(answer); return; }
-                [self request:method arguments:arguments completion:completion];
+                NSString *buildStatus = [self serviceBuildStatus];
+                if (![buildStatus isEqualToString:@"enabled"]) { completion(@{@"code": buildStatus}); return; }
+                if ([method isEqualToString:@"hello"]) completion(answer);
+                else [self request:method arguments:arguments completion:completion];
             }];
         } else [self request:method arguments:arguments completion:completion];
     });

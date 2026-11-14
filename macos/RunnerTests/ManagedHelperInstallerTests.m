@@ -7,6 +7,7 @@ static BOOL MockWriteFails;
 
 @interface FCManagedHelperBridge (InstallerTests)
 @property dispatch_queue_t queue;
+@property BOOL connectionTrusted;
 - (BOOL)effectsAllowed;
 - (BOOL)installerPending;
 - (BOOL)writeInstallerPending:(BOOL)pending;
@@ -15,6 +16,8 @@ static BOOL MockWriteFails;
     operation:(NSString *)operation;
 - (NSString *)installerGate;
 - (NSString *)installationStatus;
+- (NSString *)serviceBuildStatus;
+- (NSString *)serviceBuildStatusForMinimum:(id)minimum installed:(id)installed;
 - (NSDictionary *)installerPayload:(NSString *)operation;
 - (NSString *)installerScript:(NSDictionary *)payload;
 - (NSString *)installerOutcomeForAnswer:(NSAppleEventDescriptor *)answer error:(NSDictionary *)error;
@@ -32,6 +35,12 @@ static BOOL MockWriteFails;
 @property NSString *operation;
 @property NSUInteger authorizations;
 @property NSUInteger hellos;
+@property NSUInteger starts;
+@property NSUInteger relays;
+@property NSUInteger buildChecks;
+@property id minimumBuild;
+@property id installedBuild;
+@property id afterBuild;
 @property BOOL invalidPayload;
 @property BOOL hold;
 @property(copy) void (^held)(NSString *);
@@ -52,21 +61,35 @@ static BOOL MockWriteFails;
     return YES;
 }
 - (BOOL)effectsAllowed { return self.allowed; }
+- (NSString *)gate { return self.trust; }
 - (NSString *)installerGate { return self.allowed ? self.trust : @"disabled"; }
 - (NSString *)installationStatus { return self.state; }
+- (NSString *)serviceBuildStatus {
+    self.buildChecks++;
+    return [self serviceBuildStatusForMinimum:self.minimumBuild installed:self.installedBuild];
+}
 - (NSDictionary *)installerPayload:(NSString *)operation {
     self.operation = operation;
     return self.invalidPayload ? nil : @{};
 }
 - (void)request:(NSString *)method arguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {
-    assert([method isEqualToString:@"hello"]);
-    self.hellos++;
-    completion(@{@"code": self.hello});
+    if ([method isEqualToString:@"hello"]) {
+        self.hellos++;
+        completion(@{@"code": self.hello});
+    } else {
+        if ([method isEqualToString:@"start"]) self.starts++;
+        else {
+            assert(([@[@"stop", @"send", @"receive"] containsObject:method]));
+            self.relays++;
+        }
+        completion(@{@"code": @"ok"});
+    }
 }
 - (void)authorizeInstaller:(NSDictionary *)payload completion:(void (^)(NSString *))completion {
     assert(MockPending);
     self.authorizations++;
     self.state = self.after;
+    if (self.afterBuild) self.installedBuild = self.afterBuild;
     if (self.hold) self.held = completion;
     else completion(self.outcome);
 }
@@ -149,8 +172,105 @@ static NSString *Install(InstallerMock *bridge) {
     return Invoke(bridge, @"installerInstructions", @{@"confirmed": @YES})[@"code"];
 }
 
+static void TestServiceBuildMinimum(void) {
+    NSString *minimum = @"2026111408";
+    for (NSString *build in @[@"2026111402", minimum, @"2026111409", @"9999999999"]) {
+        InstallerMock *bridge = FreshMock();
+        bridge.state = @"enabled"; bridge.minimumBuild = minimum; bridge.installedBuild = build;
+        NSString *expected = [build isEqual:@"2026111402"] ? @"updateRequired" : @"enabled";
+        assert([Invoke(bridge, @"status", @{})[@"code"] isEqual:expected]);
+        assert(bridge.hellos == 1 && bridge.buildChecks == 1 && bridge.authorizations == 0);
+        assert([Invoke(bridge, @"installerInstructions", @{})[@"code"] isEqual:@"consentRequired"]);
+        assert(bridge.authorizations == 0);
+        bridge.afterBuild = minimum;
+        assert([Install(bridge) isEqual:@"enabled"]);
+        assert(bridge.authorizations == ([expected isEqual:@"updateRequired"] ? 1 : 0));
+    }
+    InstallerMock *legacy = FreshMock(); legacy.state = @"enabled"; legacy.installedBuild = @"2026111402";
+    assert([Invoke(legacy, @"status", @{})[@"code"] isEqual:@"enabled"]);
+    assert([Install(legacy) isEqual:@"enabled"] && legacy.authorizations == 0);
+    NSArray *invalid = @[@"", @"202611408", @"02026111408", @"0202611408", @"2026111408.0",
+        @"202611140x", @"+026111408", @" 026111408", @"２０２６１１１４０８", @2026111408, @YES,
+        NSNull.null, @[], @{}, [@"9" stringByPaddingToLength:4096 withString:@"9" startingAtIndex:0]];
+    InstallerMock *bridge = FreshMock();
+    assert([[bridge serviceBuildStatusForMinimum:nil installed:nil] isEqual:@"enabled"]);
+    assert([[bridge serviceBuildStatusForMinimum:minimum installed:nil] isEqual:@"repairRequired"]);
+    for (id bad in invalid) {
+        assert([[bridge serviceBuildStatusForMinimum:nil installed:bad] isEqual:@"enabled"]);
+        bridge = FreshMock(); bridge.state = @"enabled"; bridge.minimumBuild = bad; bridge.installedBuild = minimum;
+        assert([Invoke(bridge, @"status", @{})[@"code"] isEqual:@"signingRequired"]);
+        assert([Install(bridge) isEqual:@"signingRequired"] && bridge.authorizations == 0);
+        bridge.minimumBuild = minimum; bridge.installedBuild = bad;
+        assert([Invoke(bridge, @"status", @{})[@"code"] isEqual:@"repairRequired"]);
+        assert([Install(bridge) isEqual:@"repairRequired"] && bridge.authorizations == 0);
+    }
+    for (NSString *state in @[@"signingRequired", @"protectedInstallationRequired", @"repairRequired",
+            @"approvalRequired", @"installationUnknown", @"unsupported", @"incompatible", @"updateRequired"]) {
+        bridge = FreshMock(); bridge.state = state; bridge.minimumBuild = minimum; bridge.installedBuild = @"2026111402";
+        assert([Invoke(bridge, @"status", @{})[@"code"] isEqual:state]);
+        bridge.minimumBuild = NSNull.null;
+        assert([Invoke(bridge, @"status", @{})[@"code"] isEqual:state]);
+        assert(bridge.buildChecks == 0 && bridge.hellos == 0 && bridge.authorizations == 0);
+    }
+    for (NSString *hello in @[@"maintenance", @"exitUnconfirmed", @"incompatible", @"unavailable"]) {
+        bridge = FreshMock(); bridge.state = @"enabled"; bridge.minimumBuild = minimum;
+        bridge.installedBuild = @"2026111402"; bridge.hello = hello;
+        NSString *expected = [hello isEqual:@"maintenance"] ? @"exitUnconfirmed" : hello;
+        assert([Invoke(bridge, @"status", @{})[@"code"] isEqual:expected]);
+        assert(bridge.buildChecks == 0 && bridge.authorizations == 0);
+    }
+    MockPending = YES;
+    bridge = [InstallerMock new]; bridge.state = @"enabled";
+    bridge.minimumBuild = minimum; bridge.installedBuild = @"2026111402";
+    NSDictionary *pending = Invoke(bridge, @"status", @{});
+    assert([pending[@"code"] isEqual:@"installationUnknown"]);
+    assert([pending[@"installationStatus"] isEqual:@"updateRequired"] && MockPending);
+    assert([Install(bridge) isEqual:@"installationUnknown"] && bridge.authorizations == 0);
+    MockPending = NO;
+}
+
+static void TestServiceBuildInvoke(void) {
+    for (NSString *method in @[@"hello", @"start"]) {
+        for (NSArray *values in @[@[@"2026111408", @"2026111402", @"updateRequired"],
+                @[@"bad", @"2026111408", @"signingRequired"],
+                @[@"2026111408", @"bad", @"repairRequired"],
+                @[@"2026111408", @"2026111408", @"ok"],
+                @[@"2026111408", @"2026111409", @"ok"]]) {
+            InstallerMock *bridge = FreshMock(); bridge.state = @"enabled";
+            bridge.minimumBuild = values[0]; bridge.installedBuild = values[1];
+            assert([Invoke(bridge, method, @{})[@"code"] isEqual:values[2]]);
+            assert(bridge.hellos == 1 && bridge.buildChecks == 1 && bridge.authorizations == 0);
+            assert(bridge.starts == ([method isEqual:@"start"] && [values[2] isEqual:@"ok"] ? 1 : 0));
+        }
+        for (NSString *state in @[@"approvalRequired", @"installationUnknown", @"repairRequired"]) {
+            InstallerMock *bridge = FreshMock(); bridge.state = state; bridge.minimumBuild = @"bad";
+            assert([Invoke(bridge, method, @{})[@"code"] isEqual:state]);
+            assert(bridge.hellos == 0 && bridge.buildChecks == 0 && bridge.starts == 0);
+        }
+        for (NSString *hello in @[@"maintenance", @"exitUnconfirmed", @"incompatible", @"unavailable"]) {
+            InstallerMock *bridge = FreshMock(); bridge.state = @"enabled";
+            bridge.minimumBuild = @"bad"; bridge.hello = hello;
+            assert([Invoke(bridge, method, @{})[@"code"] isEqual:hello]);
+            assert(bridge.hellos == 1 && bridge.buildChecks == 0 && bridge.starts == 0);
+        }
+        InstallerMock *bridge = FreshMock(); bridge.state = @"enabled";
+        bridge.trust = @"protectedInstallationRequired"; bridge.minimumBuild = @"bad";
+        assert([Invoke(bridge, method, @{})[@"code"] isEqual:bridge.trust]);
+        assert(bridge.hellos == 0 && bridge.buildChecks == 0 && bridge.starts == 0);
+        bridge = FreshMock(); bridge.state = @"enabled"; bridge.installedBuild = @"2026111402";
+        assert([Invoke(bridge, method, @{})[@"code"] isEqual:@"ok"]);
+    }
+    InstallerMock *bridge = FreshMock(); bridge.state = @"enabled"; bridge.minimumBuild = @"bad";
+    bridge.trust = @"signingRequired"; bridge.connectionTrusted = YES;
+    for (NSString *method in @[@"stop", @"send", @"receive"])
+        assert([Invoke(bridge, method, @{})[@"code"] isEqual:@"ok"]);
+    assert(bridge.relays == 3 && bridge.hellos == 0 && bridge.buildChecks == 0);
+}
+
 int main(void) {
     @autoreleasepool {
+        TestServiceBuildMinimum();
+        TestServiceBuildInvoke();
         InstallerMock *bridge = FreshMock();
         assert([Invoke(bridge, @"installerInstructions", @{})[@"code"] isEqual:@"consentRequired"]);
         assert([Invoke(bridge, @"installerInstructions", @{@"confirmed": @1})[@"code"] isEqual:@"consentRequired"]);

@@ -15,6 +15,7 @@ SPEC = importlib.util.spec_from_file_location(
     'split_qualification', Path(__file__).parents[1] / 'qualify_split_loads.py')
 Q = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(Q)
+Q.PACKAGING = Path(__file__).resolve().parents[1]
 
 
 class QualificationPinsTests(unittest.TestCase):
@@ -68,7 +69,7 @@ class SplitQualificationTests(unittest.TestCase):
                          'defines': {'APP_ENV': 'stable', 'MACOS_MANAGED_HELPER': True,
                                      'FC_MANAGED_CANDIDATE_ENABLED': 1,
                                      'FC_PINNED_CERTIFICATE_SHA1': self.fixed.CERTIFICATE_SHA1}}
-        self.targets = [{'role': 'core', 'binary': 'Contents/MacOS/FlClashCore'}] + [
+        self.targets = [
             {'role': 'framework', 'binary': f'Contents/Frameworks/{name}.framework/Versions/A/{name}'}
             for name in Q.FRAMEWORKS] + [{'role': 'gui', 'binary': 'Contents/MacOS/Flash'}]
         for target in self.targets:
@@ -79,20 +80,28 @@ class SplitQualificationTests(unittest.TestCase):
         self.fixed.inventory.return_value = self.entries
         self.sources = {name: (Q.PACKAGING / name).read_bytes() for name in (
             'sign_split_payload.py', 'sign_fixed_payload.py', 'stage_managed_payload.py',
-            'library_constraint.py', 'FixedGUI.entitlements', 'qualify_native_loads.py',
+            'library_constraint.py', 'FixedGUI.entitlements', 'stage_split_payload.py', 'qualify_native_loads.py',
             'qualify_split_loads.py')}
+        self.signer.STAGING_SHA256 = Q.digest(self.sources['stage_split_payload.py'])
+        self.contract = {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1, 'AcceptedCoreSHA256': ['a' * 64]}
+        self.info['FlashHelperCompatibility'] = self.contract
+        stage_spec = importlib.util.spec_from_file_location('qualification_stage', Q.PACKAGING / 'stage_split_payload.py')
+        stage = importlib.util.module_from_spec(stage_spec)
+        stage_spec.loader.exec_module(stage)
+        self.signer.frozen_module.return_value = stage
         self.signer.FIXED_SIGNER_SHA256 = Q.digest(self.sources['sign_fixed_payload.py'])
         self.fixed.VERIFIER_SHA256 = Q.digest(self.sources['stage_managed_payload.py'])
         self.fixed.read_regular.side_effect = self.read
         inputs = {key: Q.digest(self.sources[name]) for key, name in (
             ('driver_sha256', 'sign_split_payload.py'), ('fixed_signer_sha256', 'sign_fixed_payload.py'),
             ('constraint_sha256', 'library_constraint.py'), ('verifier_sha256', 'stage_managed_payload.py'),
-            ('gui_entitlements_sha256', 'FixedGUI.entitlements'))}
+            ('gui_entitlements_sha256', 'FixedGUI.entitlements'), ('staging_sha256', 'stage_split_payload.py'))}
         targets = copy.deepcopy(self.targets)
         for target in targets:
             target['verified_slices'] = self.fixed.verify_target.return_value
             target['cdhash'] = Q.hashlib.sha256(target['binary'].encode()).digest()[:20].hex()
-        self.report = {'schema': 1, 'phase': 'gui', 'app': str(self.app), 'static_verification': True,
+        self.report = {'schema': 1, 'phase': 'gui', 'compatibility': self.contract,
+                       'accepted_service_core_sha256': 'a' * 64, 'app': str(self.app), 'static_verification': True,
                        'actualGUIloads': False, 'native_qualification': False, 'packaging_accepted': False,
                        'runtime_gate_changed': False, 'inputs': inputs,
                        'pins': {'certificate_sha1': self.fixed.CERTIFICATE_SHA1,
@@ -157,13 +166,13 @@ class SplitQualificationTests(unittest.TestCase):
                 'packaging_accepted': False, 'before': state, 'after': state,
                 'execution': execution, 'protocol': protocol}
 
-    def test_frozen_gui_has_exact_seven_signatures_and_actual_constraint_binding(self):
+    def test_frozen_gui_has_exact_six_signatures_and_actual_constraint_binding(self):
         state = self.freeze()
         self.assertEqual(state['schema'], Q.STATE_SCHEMA)
         self.assertEqual(state['build_metadata_sha256'], Q.digest(self.read(self.metadata_path)))
-        self.assertEqual(len(state['targets']), 7)
-        self.assertEqual(self.fixed.verify_target.call_count, 7)
-        self.assertEqual(self.constraint.cdhash.call_count, 7)
+        self.assertEqual(len(state['targets']), 6)
+        self.assertEqual(self.fixed.verify_target.call_count, 6)
+        self.assertEqual(self.constraint.cdhash.call_count, 6)
         self.assertEqual(len(self.constraint.verify_library_constraint.call_args.args[1]), 5)
         self.fixed.run_tool.assert_called_once_with([
             '/usr/bin/codesign', '--verify', '--deep', '--strict', '--all-architectures', str(self.app)])
@@ -302,25 +311,23 @@ class SplitQualificationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 Q.pinned_module('fixture.py', 'TBD_PARENT_REVIEW_REQUIRED')
 
-    def test_packaging_calls_static_gui_verifier_but_still_requires_service_provenance(self):
-        spec = importlib.util.spec_from_file_location('split_stage_gate', Q.PACKAGING / 'stage_split_payload.py')
-        stage = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(stage)
+    def test_packaging_requires_independent_service_provenance(self):
+        stage = self.signer.frozen_module.return_value
+        gate = MagicMock()
         service = self.root / 'service/Flash.app'
-        for app in (self.app, service):
-            core = app / stage.CORE
-            core.parent.mkdir(parents=True, exist_ok=True)
-            core.write_bytes(b'identical signed core fixture')
-        self.metadata_path.write_text(json.dumps(self.metadata))
-        self.evidence_path.write_text(json.dumps({'schema': Q.SCHEMA, 'scope': 'gui-only'}))
-        qualifier = MagicMock()
-        with patch.object(stage, 'check_layout'), patch.object(stage, 'load_local', return_value=qualifier):
-            with self.assertRaisesRegex(ValueError, 'Service package qualification is NOT integrated'):
-                stage.require_split_qualification(self.app, service, self.evidence_path, self.metadata_path)
-            qualifier.verify.assert_called_once_with(self.app, self.metadata_path, self.evidence_path)
-            qualifier.verify.side_effect = ValueError('stale GUI')
-            with self.assertRaisesRegex(ValueError, 'stale GUI'):
-                stage.require_split_qualification(self.app, service, self.evidence_path, self.metadata_path)
+        with patch.object(stage, 'check_layout'), patch.object(stage, 'compatible_pair'), \
+                patch.object(stage, 'load_local', return_value=gate):
+            stage.verify_release(self.app, service, self.root / 'gui.json', 'a' * 64,
+                                 self.root / 'service.json', 'b' * 64)
+        gate.verify.assert_called_once_with(self.app, service, self.root / 'gui.json', 'a' * 64,
+                                            self.root / 'service.json', 'b' * 64, None, None)
+
+    def test_qualification_rejects_loose_core_even_without_macho_magic(self):
+        core = self.app / 'Contents/MacOS/FlClashCore'
+        core.parent.mkdir(parents=True)
+        core.write_bytes(b'placeholder')
+        with self.assertRaisesRegex(ValueError, 'GUI-only split stage'):
+            self.freeze()
 
     def test_old_profile_is_reused_byte_for_byte_and_old_module_unchanged(self):
         old = Q.pinned_module('qualify_native_loads.py', Q.NATIVE_SHA256)
@@ -344,12 +351,11 @@ class BuildProvenanceTests(unittest.TestCase):
         self.fixed.tree_digest.side_effect = original.tree_digest
         self.fixed.check_signing_delta.side_effect = original.check_signing_delta
         self.fixed.read_regular.side_effect = lambda path: path.read_bytes()
-        self.targets = [{'role': 'core', 'binary': 'Contents/MacOS/FlClashCore',
-                         'path': 'Contents/MacOS/FlClashCore'}] + [
+        self.targets = [
             {'role': 'framework', 'binary': f'Contents/Frameworks/{name}.framework/Versions/A/{name}',
              'path': f'Contents/Frameworks/{name}.framework'} for name in Q.FRAMEWORKS] + [
             {'role': 'gui', 'binary': 'Contents/MacOS/Flash', 'path': '.'}]
-        self.metadata = {'architectures': ['arm64'], 'macho_count': 7, 'source_head': 'fixture', 'sdk': {},
+        self.metadata = {'architectures': ['arm64'], 'macho_count': 6, 'source_head': 'fixture', 'sdk': {},
                          'compile_evidence': {}, 'stage_evidence': {}, 'evidence_continuations': []}
         for key in ('flutter_release_compile_succeeded', 'fresh_core_built', 'fresh_gui_aot_built',
                     'static_stage_audit_passed', 'original_failures_preserved'):

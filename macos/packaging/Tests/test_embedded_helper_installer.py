@@ -45,7 +45,7 @@ class EmbeddedInstallerTests(unittest.TestCase):
     def package(self, argv, **kwargs):
         self.assertEqual(argv, ['/bin/bash', str(PACKAGING / 'build_split_packages.sh'),
                          'embedded-released-service', str(self.gui), str(self.service), str(self.output),
-                         str(self.receipt), self.receipt_sha256, self.core_sha256, '42'])
+                         str(self.receipt), self.receipt_sha256, self.core_sha256, '2026111408'])
         self.assertTrue(kwargs['check'])
         self.output.mkdir()
         for operation, name in EMBED.PACKAGES.items():
@@ -67,7 +67,7 @@ class EmbeddedInstallerTests(unittest.TestCase):
 
     def stage(self):
         return EMBED.stage(self.gui, self.service, self.output, self.receipt, self.receipt_sha256,
-                           self.core_sha256, '42')
+                           self.core_sha256, '2026111408')
 
     def test_embeds_only_install_and_manifest_before_signing(self):
         before = PAYLOAD.SPLIT.inventory(self.service)
@@ -104,7 +104,7 @@ class EmbeddedInstallerTests(unittest.TestCase):
             PAYLOAD.SPLIT.verify_copy(self.gui, copied, 'gui')
 
     def test_released_service_gate_rejects_wrong_build_or_core_before_packaging(self):
-        for core, build in [('0' * 64, '42'), (self.core_sha256, '2026111403')]:
+        for core, build in [('0' * 64, '2026111408'), (self.core_sha256, '2026111403')]:
             with self.subTest(core=core, build=build), self.assertRaisesRegex(ValueError, 'changed'):
                 EMBED.verify_service(self.gui, self.service, self.receipt, self.receipt_sha256, core, build)
         self.gate.verify_bundle.assert_not_called()
@@ -114,9 +114,19 @@ class EmbeddedInstallerTests(unittest.TestCase):
         run.assert_not_called()
         self.assertFalse(self.output.exists())
 
-    def test_unsigned_gui_core_must_be_exact_released_core(self):
+    def test_old_wrapper_cannot_satisfy_gui_minimum_even_with_matching_supplied_build(self):
+        info_path = self.service / 'Contents/Info.plist'
+        info = EMBED.plistlib.loads(info_path.read_bytes())
+        info['CFBundleVersion'] = '2026111402'
+        info_path.write_bytes(EMBED.plistlib.dumps(info))
+        with self.assertRaisesRegex(ValueError, 'below the GUI minimum'):
+            EMBED.verify_service(self.gui, self.service, self.receipt, self.receipt_sha256,
+                                  self.core_sha256, '2026111402')
+        self.gate.verify_bundle.assert_not_called()
+
+    def test_unsigned_gui_must_not_contain_loose_core(self):
         (self.gui / EMBED.CORE).write_bytes(b'other core')
-        with self.assertRaisesRegex(ValueError, 'service/Core changed'):
+        with self.assertRaisesRegex(ValueError, 'loose Core'):
             self.stage()
         self.gate.verify_bundle.assert_not_called()
 

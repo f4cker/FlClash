@@ -26,12 +26,15 @@ class SplitPayloadTests(unittest.TestCase):
         self.service = self.root / 'service/Flash.app'
         self.binary(self.source / 'Contents/MacOS/Flash')
         self.binary(self.source / SPLIT.CORE)
+        self.released_core = self.binary(self.root / 'released-core')
+        self.core_sha256 = hashlib.sha256(self.released_core.read_bytes()).hexdigest()
+        self.write(self.source / SPLIT.ICON, b'icns' + (16).to_bytes(4, 'big') + b'icondata')
         self.binary(self.source / SPLIT.HELPER)
         self.binary(self.source / SPLIT.MAINTENANCE)
         self.write(self.source / SPLIT.DAEMON, b'old embedded daemon')
         self.write(self.source / 'Contents/Info.plist', plistlib.dumps({
             'CFBundleIdentifier': 'com.layoute.flash', 'CFBundleExecutable': 'Flash',
-            'CFBundleVersion': '42', 'CFBundleShortVersionString': '0.9.5',
+            'CFBundleVersion': '2026111408', 'CFBundleShortVersionString': '0.9.5',
         }))
         for name in SPLIT.FRAMEWORKS:
             framework = self.source / f'Contents/Frameworks/{name}.framework'
@@ -61,38 +64,36 @@ class SplitPayloadTests(unittest.TestCase):
         return path
 
     def stage_pair(self):
-        SPLIT.stage_gui(self.source, self.gui)
-        core = self.gui / SPLIT.CORE
-        core.write_bytes(core.read_bytes() + b'exact-signed-core-fixture')
-        SPLIT.seal_compatibility(self.gui, 'gui', {
-            **SPLIT.COMPATIBILITY_VERSIONS,
-            'AcceptedCoreSHA256': [hashlib.sha256(core.read_bytes()).hexdigest()],
-        })
+        SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
         inputs = [self.binary(self.root / name) for name in ('stub', 'new-helper', 'new-maintenance')]
-        SPLIT.stage_service(self.gui, *inputs, self.service, 'test-core-1', 'test-core-revision')
+        SPLIT.stage_service(self.gui, *inputs, self.service, 'test-core-1', 'test-core-revision',
+                            released_core=self.released_core, core_sha256=self.core_sha256)
 
     def test_gui_keeps_fresh_ui_and_removes_service_before_signing(self):
         before = SPLIT.inventory(self.source)
-        SPLIT.stage_gui(self.source, self.gui)
+        SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
         self.assertEqual(SPLIT.inventory(self.source), before)
         self.assertEqual((self.gui / self.ui).read_bytes(), (self.source / self.ui).read_bytes())
         self.assertFalse((self.gui / 'Contents/Library').exists())
         self.assertFalse((self.gui / 'Contents/_CodeSignature').exists())
-        self.assertEqual(len(SPLIT.signing_targets('gui')), 7)
-        self.assertEqual(self.verifier.FIXED_EXECUTABLES, (SPLIT.CORE,))
+        self.assertEqual(len(SPLIT.signing_targets('gui')), 6)
+        self.assertEqual(self.verifier.FIXED_EXECUTABLES, ())
         self.audit.assert_called_once_with(self.gui, mutate=True)
 
     def test_service_has_four_targets_and_identical_signed_core(self):
         self.stage_pair()
         self.assertEqual(len(SPLIT.signing_targets('service')), 4)
-        self.assertEqual((self.service / SPLIT.CORE).read_bytes(), (self.gui / SPLIT.CORE).read_bytes())
+        self.assertFalse((self.gui / SPLIT.CORE).exists())
+        self.assertEqual((self.service / SPLIT.CORE).read_bytes(), self.released_core.read_bytes())
+        self.assertEqual((self.service / SPLIT.ICON).read_bytes(), (self.gui / SPLIT.ICON).read_bytes())
         self.assertFalse((self.service / 'Contents/Frameworks').exists())
         self.assertFalse((self.service / self.ui).exists())
         info = plistlib.loads((self.service / 'Contents/Info.plist').read_bytes())
         self.assertEqual(info['CFBundleIdentifier'], 'com.layoute.flash.service')
         self.assertEqual(info['CFBundleExecutable'], 'Flash')
         self.assertTrue(info['LSBackgroundOnly'])
-        self.assertEqual(info['CFBundleVersion'], '42')
+        self.assertEqual(info['CFBundleIconFile'], 'AppIcon.icns')
+        self.assertEqual(info['CFBundleVersion'], '2026111408')
         self.assertEqual(info['LSMinimumSystemVersion'], '14.0')
 
     def test_unsigned_gui_modes_follow_macho_bytes_before_and_after_audit(self):
@@ -102,7 +103,7 @@ class SplitPayloadTests(unittest.TestCase):
         def changed_mode(app, mutate):
             (app / 'Contents/MacOS/Flash').chmod(0o644)
         self.audit.side_effect = changed_mode
-        SPLIT.stage_gui(self.source, self.gui)
+        SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
         self.assertEqual((self.gui / 'Contents/MacOS/Flash').stat().st_mode & 0o777, 0o755)
         self.assertEqual((self.gui / target.relative_to(self.source)).stat().st_mode & 0o777, 0o755)
         self.assertEqual((self.gui / self.ui).stat().st_mode & 0o777, 0o644)
@@ -141,7 +142,7 @@ class SplitPayloadTests(unittest.TestCase):
         before = SPLIT.inventory(self.source)
         previous_umask = os.umask(0o077)
         try:
-            SPLIT.stage_gui(self.source, self.gui)
+            SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
         finally:
             os.umask(previous_umask)
         staged = SPLIT.inventory(self.gui)
@@ -159,18 +160,18 @@ class SplitPayloadTests(unittest.TestCase):
             SPLIT.verify_copy(self.gui, copied, 'gui')
 
     def test_existing_output_never_overwrites_ui_fixes(self):
-        SPLIT.stage_gui(self.source, self.gui)
+        SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
         before = SPLIT.inventory(self.gui)
         with self.assertRaisesRegex(ValueError, 'never overlay'):
-            SPLIT.stage_gui(self.source, self.gui)
+            SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
         self.assertEqual(before, SPLIT.inventory(self.gui))
 
     def test_nested_destination_and_external_link_rejected(self):
         with self.assertRaisesRegex(ValueError, 'outside every input'):
-            SPLIT.stage_gui(self.source, self.source / 'nested/Flash.app')
+            SPLIT.stage_gui(self.source, self.source / 'nested/Flash.app', self.released_core, self.core_sha256)
         (self.source / 'external').symlink_to(self.root)
         with self.assertRaisesRegex(ValueError, 'Escaping bundle link'):
-            SPLIT.stage_gui(self.source, self.gui)
+            SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
         self.assertFalse(self.gui.exists())
 
     def test_service_rejects_gui_assets_and_unknown_code(self):
@@ -205,16 +206,16 @@ class SplitPayloadTests(unittest.TestCase):
     def test_core_finalization_cannot_mutate_released_service(self):
         self.stage_pair()
         before = SPLIT.inventory(self.service)
-        SPLIT.finalize_core_copy(self.gui, self.service)
-        core = self.gui / SPLIT.CORE
-        old_hash = hashlib.sha256(core.read_bytes()).hexdigest()
-        core.write_bytes(core.read_bytes() + b'new-core')
-        SPLIT.seal_compatibility(self.gui, 'gui', {
-            **SPLIT.COMPATIBILITY_VERSIONS,
-            'AcceptedCoreSHA256': [hashlib.sha256(core.read_bytes()).hexdigest(), old_hash],
-        })
+        SPLIT.finalize_core_copy(self.gui, self.service, released_core=self.released_core,
+                                 core_sha256=self.core_sha256)
+        self.released_core.write_bytes(self.released_core.read_bytes() + b'new-core')
+        with self.assertRaisesRegex(ValueError, 'hash mismatch'):
+            SPLIT.finalize_core_copy(self.gui, self.service, released_core=self.released_core,
+                                     core_sha256=self.core_sha256)
+        new_hash = hashlib.sha256(self.released_core.read_bytes()).hexdigest()
         with self.assertRaisesRegex(ValueError, 'immutable'):
-            SPLIT.finalize_core_copy(self.gui, self.service)
+            SPLIT.finalize_core_copy(self.gui, self.service, released_core=self.released_core,
+                                     core_sha256=new_hash)
         self.assertEqual(before, SPLIT.inventory(self.service))
 
     def test_different_core_fails_before_receipt_loading(self):
@@ -272,17 +273,16 @@ class SplitPayloadTests(unittest.TestCase):
             (self.source / self.ui).write_bytes(revision.encode())
             destination = self.root / revision / 'Flash.app'
             SPLIT.stage_gui(self.source, destination, released, digest)
-            self.assertEqual((destination / SPLIT.CORE).read_bytes(), released.read_bytes())
+            self.assertFalse((destination / SPLIT.CORE).exists())
             self.assertEqual(SPLIT.compatible_pair(destination, self.service)['CoreSHA256'], digest)
             self.assertEqual(SPLIT.inventory(self.service), service_before)
             self.assertEqual((destination / self.ui).read_bytes(), revision.encode())
 
-    def test_gui_may_accept_installed_core_different_from_bundled_core(self):
+    def test_gui_metadata_may_accept_multiple_service_cores_without_bundled_core(self):
         self.stage_pair()
         service_hash = hashlib.sha256((self.service / SPLIT.CORE).read_bytes()).hexdigest()
-        core = self.gui / SPLIT.CORE
-        core.write_bytes(core.read_bytes() + b'other-approved-core')
-        own_hash = hashlib.sha256(core.read_bytes()).hexdigest()
+        self.assertFalse((self.gui / SPLIT.CORE).exists())
+        own_hash = hashlib.sha256(b'other-approved-core').hexdigest()
         SPLIT.seal_compatibility(self.gui, 'gui', {
             **SPLIT.COMPATIBILITY_VERSIONS, 'AcceptedCoreSHA256': [own_hash, service_hash],
         })
@@ -317,6 +317,94 @@ class SplitPayloadTests(unittest.TestCase):
         self.write(self.service / 'Contents/_CodeSignature/CodeResources', b'sealed')
         with self.assertRaisesRegex(ValueError, 'precede outer signing'):
             SPLIT.seal_compatibility(self.service, 'service', SPLIT.read_compatibility(self.service, 'service'))
+
+    def test_gui_rejects_any_loose_core_including_non_macho_and_dangling_link(self):
+        self.stage_pair()
+        core = self.gui / SPLIT.CORE
+        for data in (b'placeholder', self.released_core.read_bytes()):
+            self.write(core, data)
+            with self.assertRaisesRegex(ValueError, 'loose Core'):
+                SPLIT.check_layout(self.gui, 'gui')
+            core.unlink()
+        core.symlink_to('absent-core')
+        with self.assertRaisesRegex(ValueError, 'loose Core'):
+            SPLIT.check_layout(self.gui, 'gui')
+
+    def test_service_staging_requires_explicit_matching_released_core_and_icon(self):
+        self.stage_pair()
+        inputs = [self.root / name for name in ('stub', 'new-helper', 'new-maintenance')]
+        target = self.root / 'new-service/Flash.app'
+        with self.assertRaises(TypeError):
+            SPLIT.stage_service(self.gui, *inputs, target, 'version', 'revision')
+        with self.assertRaisesRegex(ValueError, 'hash mismatch'):
+            SPLIT.stage_service(self.gui, *inputs, target, 'version', 'revision',
+                                released_core=self.released_core, core_sha256='0' * 64)
+        self.assertFalse(target.exists())
+        (self.gui / SPLIT.ICON).unlink()
+        with self.assertRaises(OSError):
+            SPLIT.stage_service(self.gui, *inputs, target, 'version', 'revision',
+                                released_core=self.released_core, core_sha256=self.core_sha256)
+        self.assertFalse(target.exists())
+
+    def test_service_icon_exact_shape_and_old_iconless_service(self):
+        self.stage_pair()
+        icon = self.service / SPLIT.ICON
+        original = icon.read_bytes()
+        for bad in (b'not-an-icon', b'icns' + (999).to_bytes(4, 'big') + b'contents'):
+            icon.write_bytes(bad)
+            with self.assertRaisesRegex(ValueError, 'icon header or length'):
+                SPLIT.check_layout(self.service, 'service')
+        icon.write_bytes(original)
+        icon.chmod(0o755)
+        with self.assertRaisesRegex(ValueError, 'mode 0644'):
+            SPLIT.check_layout(self.service, 'service')
+        icon.chmod(0o644)
+        extra = icon.parent / 'Other.icns'
+        self.write(extra, original)
+        with self.assertRaisesRegex(ValueError, 'extra files'):
+            SPLIT.check_layout(self.service, 'service')
+        extra.unlink()
+        icon.unlink()
+        with self.assertRaisesRegex(ValueError, 'metadata must match'):
+            SPLIT.check_layout(self.service, 'service')
+        icon.parent.rmdir()
+        info_path = self.service / 'Contents/Info.plist'
+        info = plistlib.loads(info_path.read_bytes())
+        del info['CFBundleIconFile']
+        info_path.write_bytes(plistlib.dumps(info))
+        SPLIT.check_layout(self.service, 'service')
+        self.write(icon, original)
+        with self.assertRaisesRegex(ValueError, 'metadata must match'):
+            SPLIT.check_layout(self.service, 'service')
+
+    def test_minimum_service_build_rejects_old_wrapper_but_legacy_gui_is_unchanged(self):
+        self.stage_pair()
+        gui_info_path = self.gui / 'Contents/Info.plist'
+        service_info_path = self.service / 'Contents/Info.plist'
+        gui_info = plistlib.loads(gui_info_path.read_bytes())
+        service_info = plistlib.loads(service_info_path.read_bytes())
+        self.assertEqual(gui_info[SPLIT.MINIMUM_SERVICE_BUILD_KEY], '2026111408')
+        service_info['CFBundleVersion'] = '2026111402'
+        service_info_path.write_bytes(plistlib.dumps(service_info))
+        with self.assertRaisesRegex(ValueError, 'below the GUI minimum'):
+            SPLIT.compatible_pair(self.gui, self.service)
+        for minimum in (True, 2026111408, '', 'not-a-build', '2026111408.1', '0202611408', '0000000000'):
+            gui_info[SPLIT.MINIMUM_SERVICE_BUILD_KEY] = minimum
+            gui_info_path.write_bytes(plistlib.dumps(gui_info))
+            with self.subTest(minimum=minimum), self.assertRaisesRegex(ValueError, 'minimum service build'):
+                SPLIT.compatible_pair(self.gui, self.service)
+        gui_info[SPLIT.MINIMUM_SERVICE_BUILD_KEY] = '2026111408'
+        gui_info_path.write_bytes(plistlib.dumps(gui_info))
+        for version in ('0202611408', '0000000000'):
+            service_info['CFBundleVersion'] = version
+            service_info_path.write_bytes(plistlib.dumps(service_info))
+            with self.subTest(version=version), self.assertRaisesRegex(ValueError, 'below the GUI minimum'):
+                SPLIT.compatible_pair(self.gui, self.service)
+        service_info['CFBundleVersion'] = '2026111402'
+        service_info_path.write_bytes(plistlib.dumps(service_info))
+        del gui_info[SPLIT.MINIMUM_SERVICE_BUILD_KEY]
+        gui_info_path.write_bytes(plistlib.dumps(gui_info))
+        SPLIT.compatible_pair(self.gui, self.service)
 
     def test_stub_has_no_gui_or_service_side_effects(self):
         stub = (SPLIT.PACKAGING.parent / 'PrivilegedHelper/ServiceStub.c').read_text()

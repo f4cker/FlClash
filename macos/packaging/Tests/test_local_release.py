@@ -69,18 +69,34 @@ class LocalReleaseTests(unittest.TestCase):
     def test_bundle_marketing_and_build_versions_must_match(self):
         app = self.directory / 'gui/Flash.app'
         (app / 'Contents/MacOS').mkdir(parents=True)
-        core = app / RELEASE.CORE
-        core.write_bytes(b'fake-retained-core')
+        loader = importlib.util.spec_from_file_location('version_stage', PACKAGING / 'stage_split_payload.py')
+        stage = importlib.util.module_from_spec(loader)
+        loader.loader.exec_module(stage)
+        module_patch = patch.object(RELEASE, 'module', return_value=stage)
+        module_patch.start()
+        self.addCleanup(module_patch.stop)
         plist = app / 'Contents/Info.plist'
-        plist.write_bytes(plistlib.dumps({'CFBundleShortVersionString': '0.9.8', 'CFBundleVersion': '2026111405'}))
-        with patch.object(RELEASE, 'CORE_SHA256', RELEASE.sha(core)):
+        info = {'CFBundleShortVersionString': '0.9.8', 'CFBundleVersion': '2026111405',
+                'FlashMinimumServiceBuild': '2026111408',
+                'FlashHelperCompatibility': {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
+                                             'AcceptedCoreSHA256': [RELEASE.CORE_SHA256]}}
+        plist.write_bytes(plistlib.dumps(info))
+        RELEASE.check_version(app, self.identity)
+        for key, value in [('version', '0.9.7'), ('build', '2026111404')]:
+            with self.assertRaisesRegex(ValueError, 'version differs'):
+                RELEASE.check_version(app, dict(self.identity, **{key: value}))
+        core = app / RELEASE.CORE
+        core.write_bytes(b'non-Mach-O placeholder')
+        with self.assertRaisesRegex(ValueError, 'loose Core'):
             RELEASE.check_version(app, self.identity)
-            for key, value in [('version', '0.9.7'), ('build', '2026111404')]:
-                with self.assertRaisesRegex(ValueError, 'version differs'):
-                    RELEASE.check_version(app, dict(self.identity, **{key: value}))
-            (app / 'Contents/Library').mkdir()
-            with self.assertRaisesRegex(ValueError, 'embed helper'):
-                RELEASE.check_version(app, self.identity)
+        core.unlink()
+        info['FlashHelperCompatibility']['AcceptedCoreSHA256'] = ['0' * 64]
+        plist.write_bytes(plistlib.dumps(info))
+        with self.assertRaisesRegex(ValueError, 'accept the released service Core'):
+            RELEASE.check_version(app, self.identity)
+        (app / 'Contents/Library').mkdir()
+        with self.assertRaisesRegex(ValueError, 'embed helper'):
+            RELEASE.check_version(app, self.identity)
 
     def test_local_config_requires_ignored_private_file_and_pinned_adapter(self):
         config = dict(self.config, schema=1)
@@ -162,7 +178,7 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertIn(RELEASE.BEGIN, body)
         self.assertIn(RELEASE.END, body)
         self.assertNotIn('-->', payload)
-        for text in ('arm64', '2026111402', 'one embedded install package', 'not notarized', 'Self-signed', 'runtime acceptance'):
+        for text in ('arm64', '2026111402', '2026111408', 'one embedded install package', 'not notarized', 'Self-signed', 'runtime acceptance'):
             self.assertIn(text, body)
         self.assertIn('no separate helper download', body)
         self.assertNotIn('repair', body)
@@ -212,7 +228,7 @@ class LocalReleaseTests(unittest.TestCase):
         embedded.stage.assert_called_once_with(
             self.release.app, Path(self.config['service']), self.directory / 'helper-packages',
             Path(self.config['service_receipt']), self.config['service_receipt_sha256'],
-            RELEASE.CORE_SHA256, RELEASE.HELPER_BUILD)
+            RELEASE.CORE_SHA256, RELEASE.SERVICE_BUILD)
         self.assertEqual(run.call_count, 1)
         request = RELEASE.pinned(self.release.request, self.release.state['request_sha256'])
         self.assertEqual(request['source'], self.identity)

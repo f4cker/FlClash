@@ -75,6 +75,39 @@ class ServiceGateTests(unittest.TestCase):
             self.receipt[key] = original
         self.fixed.verify_target.assert_not_called()
 
+    def test_wrapper_signing_scope_allows_only_outer_signature_delta(self):
+        self.receipt['signing_scope'] = 'service-wrapper-only'
+        self.receipt['wrapper_derivation'] = {'path': str(self.root / 'derivation.json'), 'sha256': 'a' * 64}
+        with patch.object(GATE, 'verify_wrapper_derivation') as verify_derivation:
+            self.verify()
+        self.assertEqual([target['role'] for target in self.fixed.check_signing_delta.call_args.args[2]], ['service'])
+        verify_derivation.assert_called_once_with(self.root / 'derivation.json', 'a' * 64, self.app,
+            self.signer, self.stage, unsigned_entries=self.receipt['before']['entries'])
+        self.receipt['signing_scope'] = 'unknown'
+        with self.assertRaisesRegex(ValueError, 'Unknown signing scope'):
+            self.verify()
+
+    def test_gui_receipt_binds_accepted_service_core_without_reading_absent_gui_core(self):
+        (self.app / GATE.CORE).unlink()
+        self.compatibility = {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
+                              'AcceptedCoreSHA256': [self.core_hash]}
+        self.stage.read_compatibility.return_value = self.compatibility
+        self.receipt.update(phase='gui', compatibility=self.compatibility, accepted_service_core_sha256=self.core_hash)
+        del self.receipt['reused_signed_core_sha256']
+        self.targets = []
+        self.receipt['targets'] = []
+        pin = self.save(self.receipt_path, self.receipt)
+        GATE.verify_bundle(self.app, 'gui', self.receipt_path, pin, self.signer, self.stage)
+        self.receipt['accepted_service_core_sha256'] = '0' * 64
+        pin = self.save(self.receipt_path, self.receipt)
+        with self.assertRaisesRegex(ValueError, 'artifact/compatibility'):
+            GATE.verify_bundle(self.app, 'gui', self.receipt_path, pin, self.signer, self.stage)
+        self.receipt['accepted_service_core_sha256'] = self.core_hash
+        self.receipt['reused_signed_core_sha256'] = self.core_hash
+        pin = self.save(self.receipt_path, self.receipt)
+        with self.assertRaisesRegex(ValueError, 'artifact/compatibility'):
+            GATE.verify_bundle(self.app, 'gui', self.receipt_path, pin, self.signer, self.stage)
+
     def test_signature_or_delta_failure_is_fatal(self):
         self.fixed.verify_target.side_effect = ValueError('invalid signature')
         with self.assertRaisesRegex(ValueError, 'invalid signature'):
@@ -163,6 +196,118 @@ class ServiceGateTests(unittest.TestCase):
             pin = self.save(path, value)
             with self.assertRaisesRegex(ValueError, 'Compiler provenance'):
                 GATE.verify_compile_receipt(path, pin, self.receipt)
+
+
+class WrapperDerivationTests(unittest.TestCase):
+    def setUp(self):
+        fixture_spec = importlib.util.spec_from_file_location('wrapper_fixtures', Path(__file__).with_name('test_split_payload.py'))
+        fixtures = importlib.util.module_from_spec(fixture_spec)
+        fixture_spec.loader.exec_module(fixtures)
+        self.fixture = fixtures.SplitPayloadTests('runTest')
+        self.fixture.setUp()
+        self.addCleanup(self.fixture.doCleanups)
+        self.fixture.stage_pair()
+        self.stage = fixtures.SPLIT
+        self.source, self.gui, self.root = self.fixture.service, self.fixture.gui, self.fixture.root
+        icon = self.source / self.stage.ICON
+        icon.unlink()
+        icon.parent.rmdir()
+        info_path = self.source / 'Contents/Info.plist'
+        info = GATE.plistlib.loads(info_path.read_bytes())
+        del info['CFBundleIconFile']
+        info['CFBundleVersion'] = '2026111402'
+        info_path.write_bytes(GATE.plistlib.dumps(info))
+        self.fixture.write(self.source / 'Contents/_CodeSignature/CodeResources', b'old-outer-seal')
+        self.destination = self.root / 'wrapper/Flash.app'
+        self.source_receipt = self.root / 'source-receipt.json'
+        self.source_receipt.write_text('{}')
+        self.source_pin = GATE.digest(self.source_receipt.read_bytes())
+        self.source_entries = self.stage.inventory(self.source)
+        self.signed = {'before': {'entries': self.source_entries},
+                       'reused_signed_core_sha256': self.fixture.core_sha256}
+        compiled = {'schema': 'flash-stable-service-compile-v2', 'completed': True,
+                    'staged_unsigned_entries': self.source_entries, 'core_sha256': self.fixture.core_sha256,
+                    'outputs': {role: {'sha256': self.source_entries[name]['sha256']}
+                                for role, name in GATE.BINARIES.items()}}
+        self.compiled = self.root / 'historical-compile.json'
+        self.compiled.write_text(json.dumps(compiled))
+        self.compile_pin = GATE.digest(self.compiled.read_bytes())
+        self.signer = object()
+        self.source_gate = patch.object(GATE, 'verify_bundle', return_value=self.signed).start()
+        patch.object(GATE, 'WRAPPER_SOURCE_RECEIPT_SHA256', self.source_pin).start()
+        patch.object(GATE, 'WRAPPER_CORE_SHA256', self.fixture.core_sha256).start()
+        original_loader = self.stage.load_local
+        def load(name):
+            if name == 'verify_split_service': return GATE
+            if name == 'sign_split_payload': return self.signer
+            if name == 'stage_split_payload': return self.stage
+            return original_loader(name)
+        patch.object(self.stage, 'load_local', side_effect=load).start()
+        self.addCleanup(patch.stopall)
+        self.receipt = self.root / 'derivation.json'
+
+    def derive(self):
+        return self.stage.derive_service_wrapper(self.source, self.gui, self.destination,
+            source_receipt=self.source_receipt, source_receipt_sha256=self.source_pin,
+            source_compile_receipt=self.compiled, source_compile_sha256=self.compile_pin)
+
+    def verify(self, data, **kwargs):
+        self.receipt.write_text(json.dumps(data))
+        return GATE.verify_wrapper_derivation(self.receipt, GATE.digest(self.receipt.read_bytes()),
+                                              self.destination, self.signer, self.stage, **kwargs)
+
+    def test_derivation_changes_only_icon_metadata_and_removes_outer_seal(self):
+        data = self.derive()
+        self.assertEqual(self.verify(data), data)
+        self.assertEqual(self.stage.inventory(self.source), self.source_entries)
+        self.assertIs(data['compiled'], False)
+        self.assertEqual(data['helper_binary_build'], '2026111402')
+        self.assertEqual(data['service_wrapper_build'], '2026111408')
+        self.assertFalse((self.destination / 'Contents/_CodeSignature').exists())
+        for name in data['preserved_code_sha256']:
+            self.assertEqual((self.source / name).read_bytes(), (self.destination / name).read_bytes())
+        fixed_entries = {name: dict(entry, mode=oct(entry['mode'])) for name, entry in data['unsigned_entries'].items()}
+        self.assertEqual(self.verify(data, unsigned_entries=fixed_entries), data)
+        self.source_gate.assert_called_with(self.source, 'service', self.source_receipt, self.source_pin,
+                                            self.signer, self.stage)
+
+    def test_derivation_rejects_unapproved_metadata_resources_or_code(self):
+        data = self.derive()
+        for name in (self.stage.CORE, self.stage.HELPER, self.stage.MAINTENANCE, 'Contents/MacOS/Flash', 'Contents/Info.plist'):
+            path = self.destination / name
+            original = path.read_bytes()
+            if name == 'Contents/Info.plist':
+                info = GATE.plistlib.loads(original)
+                info['CFBundleName'] = 'Unapproved'
+                path.write_bytes(GATE.plistlib.dumps(info))
+            else:
+                path.write_bytes(original + b'changed')
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                self.verify(data)
+            path.write_bytes(original)
+        self.fixture.write(self.destination / 'Contents/Resources/extra', b'extra')
+        with self.assertRaisesRegex(ValueError, 'extra files'):
+            self.verify(data)
+
+    def test_fabricated_compile_delta_or_preserved_hash_is_rejected(self):
+        data = self.derive()
+        for key, value in (('compiled', True), ('service_wrapper_build', '2026111409'),
+                           ('source_receipt_sha256', '0' * 64), ('metadata_delta', {}),
+                           ('preserved_code_sha256', {}), ('gui_icon_sha256', '0' * 64),
+                           ('unsigned_entries', {})):
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.verify(dict(data, **{key: value}))
+        self.compiled.write_bytes(self.compiled.read_bytes() + b' ')
+        with self.assertRaisesRegex(ValueError, 'Pinned receipt changed'):
+            self.verify(data)
+
+    def test_new_output_and_original_release_pin_are_required(self):
+        self.derive()
+        with self.assertRaisesRegex(ValueError, 'never overlay'):
+            self.derive()
+        self.source_pin = '0' * 64
+        with self.assertRaisesRegex(ValueError, 'exact released iconless'):
+            self.derive()
 
 
 if __name__ == '__main__':
