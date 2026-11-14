@@ -108,6 +108,56 @@ class SplitPayloadTests(unittest.TestCase):
         self.assertEqual((self.gui / self.ui).stat().st_mode & 0o777, 0o644)
         self.assertEqual(target.stat().st_mode & 0o777, 0o644)
 
+    @unittest.skipUnless(hasattr(os, 'lchmod'), 'Requires symlink mode support')
+    def test_symlink_mode_normalization_does_not_follow_file_or_directory_targets(self):
+        app = self.root / 'links'
+        app.mkdir()
+        target_file = self.root / 'untouched-file'
+        target_file.write_bytes(b'unchanged target')
+        target_file.chmod(0o600)
+        target_directory = self.root / 'untouched-directory'
+        target_directory.mkdir(mode=0o700)
+        links = (app / 'file-link', app / 'directory-link')
+        for link, target in zip(links, (target_file, target_directory)):
+            link.symlink_to(target)
+            os.lchmod(link, 0o700)
+        targets = [os.readlink(link) for link in links]
+        with patch.object(SPLIT.os, 'lchmod', wraps=os.lchmod) as lchmod:
+            SPLIT.normalize_modes(app)
+        self.assertEqual({call.args for call in lchmod.call_args_list}, {(link, 0o755) for link in links})
+        self.assertEqual([link.lstat().st_mode & 0o777 for link in links], [0o755, 0o755])
+        self.assertEqual([os.readlink(link) for link in links], targets)
+        self.assertEqual(target_file.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(target_directory.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(target_file.read_bytes(), b'unchanged target')
+
+    @unittest.skipUnless(hasattr(os, 'lchmod'), 'Requires symlink mode support')
+    def test_restrictive_umask_stages_readable_symlinks_before_inventory(self):
+        for directory, directories, files in os.walk(self.source, followlinks=False):
+            for name in directories + files:
+                path = Path(directory) / name
+                if path.is_symlink():
+                    os.lchmod(path, 0o700)
+        before = SPLIT.inventory(self.source)
+        previous_umask = os.umask(0o077)
+        try:
+            SPLIT.stage_gui(self.source, self.gui)
+        finally:
+            os.umask(previous_umask)
+        staged = SPLIT.inventory(self.gui)
+        links = {name: entry for name, entry in staged.items() if entry['kind'] == 'link'}
+        self.assertEqual(len(links), 2 * len(SPLIT.FRAMEWORKS))
+        self.assertTrue(all(entry['mode'] == 0o755 for entry in links.values()))
+        self.assertEqual(SPLIT.inventory(self.source), before)
+        copied = self.root / 'readable-copy/Flash.app'
+        shutil.copytree(self.gui, copied, symlinks=True)
+        for name in links:
+            os.lchmod(copied / name, 0o755)
+        SPLIT.verify_copy(self.gui, copied, 'gui')
+        os.lchmod(copied / next(iter(links)), 0o700)
+        with self.assertRaisesRegex(ValueError, 'Copied payload differs'):
+            SPLIT.verify_copy(self.gui, copied, 'gui')
+
     def test_existing_output_never_overwrites_ui_fixes(self):
         SPLIT.stage_gui(self.source, self.gui)
         before = SPLIT.inventory(self.gui)

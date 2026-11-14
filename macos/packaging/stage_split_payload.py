@@ -116,11 +116,13 @@ def check_layout(app, kind):
 
 def normalize_modes(app):
     magic = load_local('stage_managed_payload').MACH_MAGIC
-    for directory, _, files in os.walk(app, followlinks=False):
+    for directory, directories, files in os.walk(app, followlinks=False):
         Path(directory).chmod(0o755)
-        for name in files:
+        for name in directories + files:
             path = Path(directory) / name
-            if not path.is_symlink():
+            if path.is_symlink():
+                os.lchmod(path, 0o755)
+            elif path.is_file():
                 with path.open('rb') as stream:
                     executable = stream.read(4) in magic
                 path.chmod(0o755 if executable else 0o644)
