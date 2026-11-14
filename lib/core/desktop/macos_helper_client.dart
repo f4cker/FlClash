@@ -10,6 +10,7 @@ const macosHelperMaxFrame = 64 * 1024 * 1024;
 enum MacHelperState {
   off,
   installerRequired,
+  updateRequired,
   enabled,
   approvalRequired,
   unavailable,

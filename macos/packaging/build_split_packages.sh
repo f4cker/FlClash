@@ -1,41 +1,48 @@
 #!/bin/bash
 set -euo pipefail
 umask 077
-[[ "$EUID" != 0 && "$#" == 11 ]] || { echo 'usage: build_split_packages.sh SIGNED_GUI SIGNED_SERVICE NEW_OUTPUT NEW_EVIDENCE NEW_BUILD_METADATA COMPILE_RECEIPT COMPILE_SHA256 SIGNING_RECEIPT SIGNING_SHA256 TOOLING_DELTA TOOLING_SHA256' >&2; exit 64; }
+[[ "$EUID" != 0 && ( "$#" == 8 || "$#" == 10 ) ]] || { echo 'usage: build_split_packages.sh gui-only|helper-update SIGNED_GUI RELEASED_SERVICE NEW_OUTPUT GUI_RECEIPT GUI_SHA256 SERVICE_RECEIPT SERVICE_SHA256 [COMPILE_RECEIPT COMPILE_SHA256]' >&2; exit 64; }
+mode="$1"
+[[ ( "$mode" == gui-only && "$#" == 8 ) || ( "$mode" == helper-update && "$#" == 10 ) ]] || exit 64
 source_dir="$(cd "$(/usr/bin/dirname "$0")" && pwd)"
-gui="$(cd "$1" && pwd -P)"
-service="$(cd "$2" && pwd -P)"
+gui="$(cd "$2" && pwd -P)"
+service="$(cd "$3" && pwd -P)"
 [[ "$gui" == */Flash.app && "$service" == */Flash.app && "$gui" != "$service" ]] || exit 78
-[[ ! -e "$3" && ! -L "$3" && "$4" == /* && "$5" == /* ]] || exit 78
-output_parent="$(cd "$(/usr/bin/dirname "$3")" && pwd -P)"
-output="$output_parent/$(/usr/bin/basename "$3")"
+[[ ! -e "$4" && ! -L "$4" ]] || exit 78
+output_parent="$(cd "$(/usr/bin/dirname "$4")" && pwd -P)"
+output="$output_parent/$(/usr/bin/basename "$4")"
 for app in "$gui" "$service"; do
   [[ "$output" != "$app/"* && "$app" != "$output/"* ]] || exit 78
 done
-evidence="$4"
-metadata="$5"
-compile_receipt="$6"
-compile_sha256="$7"
-signing_receipt="$8"
-signing_sha256="$9"
-tooling_delta="${10}"
-tooling_sha256="${11}"
-[[ "$compile_receipt" == /* && "$signing_receipt" == /* && "$tooling_delta" == /* ]] || exit 78
+gui_receipt="$5"
+gui_sha256="$6"
+service_receipt="$7"
+service_sha256="$8"
+compile_args=()
+if [[ "$mode" == helper-update ]]; then
+  compile_args=(--compile-receipt "$9" --compile-sha256 "${10}")
+fi
 python() {
   /usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C /usr/bin/python3 -I -S -B "$@"
 }
 split() { python "$source_dir/stage_split_payload.py" "$@"; }
 verify_evidence() {
-  split verify-qualification --gui "$gui" --service "$service" \
-    --evidence "$evidence" --build-metadata "$metadata" \
-    --service-compile-receipt "$compile_receipt" --service-compile-sha256 "$compile_sha256" \
-    --service-signing-receipt "$signing_receipt" --service-signing-sha256 "$signing_sha256" \
-    --tooling-delta "$tooling_delta" --tooling-delta-sha256 "$tooling_sha256"
+  split verify-release --gui "$gui" --service "$service" \
+    --gui-receipt "$gui_receipt" --gui-sha256 "$gui_sha256" \
+    --service-receipt "$service_receipt" --service-sha256 "$service_sha256" \
+    ${compile_args[@]+"${compile_args[@]}"}
 }
 raw_package() { python "$source_dir/normalize_package_info.py" "$@"; }
-# Every gate rechecks unchanged GUI qualification and separate static service provenance.
 verify_evidence
 /bin/mkdir -m 0700 "$output"
+/usr/bin/env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C VOLNAME=Flash APPS_NAME=应用程序 \
+  /bin/bash "$source_dir/../../tool/macos/make_styled_dmg.sh" \
+  "$gui" "$source_dir/dmg/background.png" "$source_dir/dmg/background@2x.png" "$output/Flash.dmg"
+verify_evidence
+if [[ "$mode" == gui-only ]]; then
+  printf '%s\n' 'GUI-only styled DMG created; released service and Core unchanged; functional acceptance UNTESTED.'
+  exit 0
+fi
 work="$output/payload"
 /bin/mkdir -p "$work/Library/Application Support/Flash/.incoming"
 /usr/bin/ditto "$service" "$work/Library/Application Support/Flash/.incoming/Flash.app"
@@ -74,12 +81,4 @@ for operation in install repair disable remove; do
   split verify-expanded --service "$service" --expanded "$expanded" --operation "$operation"
   verify_evidence
 done
-dmg_root="$output/dmg-root"
-/bin/mkdir "$dmg_root"
-/usr/bin/ditto "$gui" "$dmg_root/Flash.app"
-/bin/ln -s /Applications "$dmg_root/Applications"
-split verify-copy --kind gui --original "$gui" --copy "$dmg_root/Flash.app"
-verify_evidence
-/usr/bin/hdiutil create -srcfolder "$dmg_root" -volname Flash -format UDZO "$output/Flash.dmg"
-verify_evidence
-printf '%s\n' 'Separate GUI drag-to-Applications DMG and helper-only packages created; installation remains unverified.'
+printf '%s\n' 'Styled GUI DMG and one-time helper migration packages created; functional acceptance UNTESTED.'

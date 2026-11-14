@@ -36,6 +36,22 @@ class SplitSigningTests(unittest.TestCase):
         data = json.loads(manifest.read_text())
         data['native-assets'] = {k: v for k, v in data['native-assets'].items() if 'arm64' in k}
         manifest.write_text(json.dumps(data))
+        self.core_sha256 = hashlib.sha256((self.app / 'Contents/MacOS/FlClashCore').read_bytes()).hexdigest()
+        self.contract = {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
+                         'AcceptedCoreSHA256': [self.core_sha256]}
+        info = self.app / 'Contents/Info.plist'
+        info.write_bytes(plistlib.dumps({**plistlib.loads(info.read_bytes()),
+                                        'FlashHelperCompatibility': self.contract}))
+        private = self.fixture.root / 'driver-source'
+        private.mkdir()
+        for name in ('sign_split_payload.py', 'stage_split_payload.py', 'library_constraint.py', 'FixedGUI.entitlements'):
+            target = private / name
+            target.write_bytes((ROOT / name).read_bytes())
+            target.chmod(0o600)
+        for name, value in (('PACKAGING', private), ('__file__', str(private / 'sign_split_payload.py'))):
+            replacement = patch.object(D, name, value)
+            replacement.start()
+            self.addCleanup(replacement.stop)
         self.calls = []
         self.native_review = {'scope': 'replace-sign-time-validator-only',
                               'original_suite_passed': False,
@@ -88,7 +104,7 @@ class SplitSigningTests(unittest.TestCase):
                                  getattr(self, 'phase', 'gui'), self.fixed)
 
     def execute(self):
-        return D.execute('gui', str(self.app), D.KEYCHAIN, self.fixture.pin1)
+        return D.execute('gui', str(self.app), D.KEYCHAIN, self.fixture.pin1, core_sha256=self.core_sha256)
 
     def test_seven_gui_targets_nested_first_receipt_and_gates(self):
         report = json.loads(self.execute().read_text())
@@ -97,7 +113,8 @@ class SplitSigningTests(unittest.TestCase):
         for gate in ('actualGUIloads', 'native_qualification', 'packaging_accepted', 'runtime_gate_changed'):
             self.assertIs(report[gate], False)
         signing = [args for args in self.calls if '--sign' in args]
-        self.assertEqual(len(signing), 7)
+        self.assertEqual(len(signing), 6)
+        self.assertFalse(any('FlClashCore' in args[-1] for args in signing))
         self.assertEqual(signing[-1][-1], str(self.app))
         self.assertTrue(all('--deep' not in args for args in signing))
         self.assertTrue(all('--library-constraint' not in args for args in signing[:-1]))
@@ -215,7 +232,7 @@ class SplitSigningTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             D.signing_targets(self.app, entries, 'service', self.fixed)
 
-    def test_service_requires_pinned_gui_receipt(self):
+    def test_signing_requires_explicit_released_core_hash(self):
         with self.assertRaises(ValueError):
             D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1)
 
@@ -236,7 +253,9 @@ class SplitSigningTests(unittest.TestCase):
         shutil.copytree(gui, service, symlinks=True)
         shutil.rmtree(service / 'Contents/Frameworks')
         (service / 'Contents/Info.plist').write_bytes(plistlib.dumps({
-            'CFBundleIdentifier': 'com.layoute.flash.service', 'CFBundleExecutable': 'Flash'}))
+            'CFBundleIdentifier': 'com.layoute.flash.service', 'CFBundleExecutable': 'Flash',
+            'FlashHelperCompatibility': {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
+                'CoreSHA256': self.core_sha256, 'CoreVersion': 'test-1', 'CoreRevision': 'test-revision'}}))
         for _, relative, _ in self.fixed.FIXED[1:]:
             path = service / relative
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -250,7 +269,7 @@ class SplitSigningTests(unittest.TestCase):
         gui, digest = self.prepare_service()
         core = (gui / 'Contents/MacOS/FlClashCore').read_bytes()
         report_path = D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1,
-                                str(gui), digest)
+                                str(gui), digest, self.core_sha256)
         report = json.loads(report_path.read_text())
         self.assertTrue(report['static_verification'])
         self.assertEqual(len(report['targets']), 4)
@@ -262,11 +281,27 @@ class SplitSigningTests(unittest.TestCase):
         self.assertEqual(report['gui_receipt_sha256'], digest)
         self.assertFalse(report['native_qualification'])
 
+    def test_service_signing_does_not_require_gui_build_or_receipt(self):
+        self.prepare_service()
+        report = json.loads(D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1,
+                                     core_sha256=self.core_sha256).read_text())
+        self.assertNotIn('gui_cdhash', report)
+        self.assertTrue(report['static_verification'])
+        self.assertEqual(report['reused_signed_core_sha256'], self.core_sha256)
+        self.assertEqual(sum('--sign' in args for args in self.calls), 3)
+
+    def test_gui_signing_preserves_released_core_in_receipt_and_bytes(self):
+        before = (self.app / 'Contents/MacOS/FlClashCore').read_bytes()
+        report = json.loads(self.execute().read_text())
+        self.assertEqual(report['reused_signed_core_sha256'], hashlib.sha256(before).hexdigest())
+        self.assertEqual((self.app / 'Contents/MacOS/FlClashCore').read_bytes(), before)
+        self.assertEqual(report['compatibility'], self.contract)
+
     def test_service_rejects_nonidentical_core_before_signing(self):
         gui, digest = self.prepare_service()
         (self.app / 'Contents/MacOS/FlClashCore').write_bytes(b'\xcf\xfa\xed\xfechanged')
         with self.assertRaises(ValueError):
-            D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1, str(gui), digest)
+            D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1, str(gui), digest, self.core_sha256)
         self.assertFalse(any('--sign' in args for args in self.calls))
 
     def test_service_rejects_core_mutation_during_signing(self):
@@ -279,7 +314,7 @@ class SplitSigningTests(unittest.TestCase):
                 path.write_bytes(path.read_bytes() + b'changed')
             return result
         with patch.object(self.fixed, 'run_tool', tool), self.assertRaises(ValueError):
-            D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1, str(gui), digest)
+            D.execute('service', str(self.app), D.KEYCHAIN, self.fixture.pin1, str(gui), digest, self.core_sha256)
 
     def test_frozen_modules_and_identity(self):
         with self.assertRaises(ValueError):

@@ -9,6 +9,7 @@ import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/state.dart';
 import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/tray_menu.dart';
 import 'package:fl_clash/widgets/icon.dart' show targetIconCacheRevision;
 import 'package:prism_ui/prism_ui.dart' show ColorScheme;
@@ -50,6 +51,11 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
     });
     if (_isMacOS) {
       ref.listenManual(groupsProvider, _onMenuDataChanged);
+      ref.listenManual(profilesProvider, _onMenuDataChanged);
+      ref.listenManual(
+        proxiesStyleSettingProvider.select((state) => state.showHiddenGroups),
+        _onMenuDataChanged,
+      );
       ref.listenManual(trayGroupMenuStatesProvider, _onMenuDataChanged);
       ref.listenManual(trayGroupsReadFailedProvider, _onMenuDataChanged);
       ref.listenManual<int?>(currentProfileIdProvider, (prev, next) {

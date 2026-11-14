@@ -7,10 +7,10 @@ import json
 import os
 from pathlib import Path
 import plistlib
+import re
 import shutil
 import stat
 import sys
-import types
 
 PACKAGING = Path(__file__).resolve().parent
 GUI_PATH = '/Applications/Flash.app'
@@ -25,6 +25,8 @@ MAINTENANCE = 'Contents/Library/HelperTools/FlashMaintenance'
 DAEMON = 'Contents/Library/LaunchDaemons/com.layoute.flash.helper.plist'
 OPERATIONS = ('install', 'repair', 'disable', 'remove')
 EVIDENCE_SCHEMA = 'flash-split-native-loads-v1'
+COMPATIBILITY_KEY = 'FlashHelperCompatibility'
+COMPATIBILITY_VERSIONS = {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1}
 
 
 def load_local(name):
@@ -124,9 +126,80 @@ def normalize_modes(app):
                 path.chmod(0o755 if executable else 0o644)
 
 
-def stage_gui(source, destination):
+def validate_compatibility(contract, kind):
+    if not isinstance(contract, dict) or any(
+            type(contract.get(key)) is not int or contract[key] != value
+            for key, value in COMPATIBILITY_VERSIONS.items()):
+        raise ValueError('Unsupported helper compatibility version')
+    def valid_hash(value):
+        return isinstance(value, str) and re.fullmatch(r'[0-9a-f]{64}', value) is not None
+    if kind == 'gui':
+        hashes = contract.get('AcceptedCoreSHA256')
+        if (not isinstance(hashes, list) or not 1 <= len(hashes) <= 16 or
+                not all(valid_hash(value) for value in hashes) or len(set(hashes)) != len(hashes)):
+            raise ValueError('Invalid accepted Core hash list')
+    elif kind == 'service':
+        if not valid_hash(contract.get('CoreSHA256')) or any(
+                not isinstance(contract.get(key), str) or not 1 <= len(contract[key].encode('utf-16-le')) // 2 <= 128
+                for key in ('CoreVersion', 'CoreRevision')):
+            raise ValueError('Invalid service Core compatibility metadata')
+    else:
+        raise ValueError('Unknown compatibility role')
+    return contract
+
+
+def read_compatibility(app, kind):
+    info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
+    contract = validate_compatibility(info.get(COMPATIBILITY_KEY), kind)
+    core_hash = hashlib.sha256((app / CORE).read_bytes()).hexdigest()
+    expected = contract['AcceptedCoreSHA256'] if kind == 'gui' else [contract['CoreSHA256']]
+    if core_hash not in expected:
+        raise ValueError('Bundled Core differs from sealed compatibility metadata')
+    return contract
+
+
+def compatible_pair(gui, service):
+    caller = read_compatibility(gui, 'gui')
+    installed = read_compatibility(service, 'service')
+    if installed['CoreSHA256'] not in caller['AcceptedCoreSHA256']:
+        raise ValueError('GUI does not accept this service Core')
+    return installed
+
+
+def seal_compatibility(app, kind, contract):
+    if (app / 'Contents/_CodeSignature').exists():
+        raise ValueError('Compatibility metadata must precede outer signing')
+    validate_compatibility(contract, kind)
+    path = app / 'Contents/Info.plist'
+    info = plistlib.loads(path.read_bytes())
+    info[COMPATIBILITY_KEY] = contract
+    path.write_bytes(plistlib.dumps(info))
+    read_compatibility(app, kind)
+
+
+def released_core_bytes(path, expected_sha256):
+    if not re.fullmatch(r'[0-9a-f]{64}', expected_sha256 or ''):
+        raise ValueError('Explicit released signed Core SHA256 required')
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(descriptor, 'rb') as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise ValueError('Released Core must be a real single-link file')
+        data = stream.read()
+    if hashlib.sha256(data).hexdigest() != expected_sha256:
+        raise ValueError('Released signed Core hash mismatch')
+    return data
+
+
+def stage_gui(source, destination, released_core=None, core_sha256=None, accepted_core_sha256=None):
     inventory(source)
-    new_destination(destination, [source])
+    sources = [source]
+    if released_core is not None:
+        core = released_core_bytes(released_core, core_sha256)
+        sources.append(released_core)
+    elif core_sha256 is not None:
+        raise ValueError('Released Core source required')
+    new_destination(destination, sources)
     shutil.copytree(source, destination, symlinks=True)
     library = destination / 'Contents/Library'
     if library.exists():
@@ -139,12 +212,27 @@ def stage_gui(source, destination):
     verifier = load_local('stage_managed_payload')
     verifier.FIXED_EXECUTABLES = (CORE,)
     verifier.audit(destination, mutate=True)
+    if released_core is not None:
+        (destination / CORE).write_bytes(core)
+        if released_core_bytes(released_core, core_sha256) != core:
+            raise ValueError('Released Core changed during staging')
+        verifier.audit(destination, mutate=False)
+        seal_compatibility(destination, 'gui', {
+            **COMPATIBILITY_VERSIONS,
+            'AcceptedCoreSHA256': accepted_core_sha256 if accepted_core_sha256 is not None else [core_sha256],
+        })
     normalize_modes(destination)
     check_layout(destination, 'gui')
 
 
-def stage_service(gui, stub, helper, maintenance, destination):
+def stage_service(gui, stub, helper, maintenance, destination, core_version, core_revision):
     check_layout(gui, 'gui')
+    read_compatibility(gui, 'gui')
+    compatibility = validate_compatibility({
+        **COMPATIBILITY_VERSIONS,
+        'CoreSHA256': hashlib.sha256((gui / CORE).read_bytes()).hexdigest(),
+        'CoreVersion': core_version, 'CoreRevision': core_revision,
+    }, 'service')
     sources = [gui, stub, helper, maintenance]
     for path in sources[1:]:
         if path.is_symlink() or not path.is_file() or path.stat().st_nlink != 1:
@@ -163,6 +251,7 @@ def stage_service(gui, stub, helper, maintenance, destination):
     info.update(CFBundleIdentifier=SERVICE_ID, CFBundleExecutable='Flash',
                 CFBundleName='Flash Service', CFBundlePackageType='APPL',
                 LSBackgroundOnly=True, LSMinimumSystemVersion='14.0')
+    info[COMPATIBILITY_KEY] = compatibility
     (destination / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
     (destination / 'Contents/Info.plist').chmod(0o644)
     for directory, _, _ in os.walk(destination):
@@ -198,29 +287,18 @@ def verify_split_service(app, gui=None):
             rpaths = [verifier.check_rpath(path, binary, binary, app) for path in paths]
             for dependency in dependencies:
                 verifier.check_dependency(dependency, binary, binary, app, rpaths, architecture, commands)
-    if gui is not None and (app / CORE).read_bytes() != (gui / CORE).read_bytes():
-        raise ValueError('GUI and service Core bytes differ')
+    read_compatibility(app, 'service')
+    if gui is not None:
+        compatible_pair(gui, app)
     return entries
 
 
 def finalize_core_copy(gui, service):
     check_layout(gui, 'gui')
     check_layout(service, 'service')
-    if (service / 'Contents/_CodeSignature').exists():
-        raise ValueError('Core refresh must precede the service outer signature')
-    target = service / CORE
-    scratch = target.with_name('.FlClashCore.split-copy')
-    stream = scratch.open('xb')
-    try:
-        with stream:
-            stream.write((gui / CORE).read_bytes())
-        scratch.chmod(0o755)
-        os.replace(scratch, target)
-    finally:
-        if scratch.exists():
-            scratch.unlink()
-    if target.read_bytes() != (gui / CORE).read_bytes():
-        raise ValueError('Signed Core changed during copy')
+    compatible_pair(gui, service)
+    if (service / CORE).read_bytes() != (gui / CORE).read_bytes():
+        raise ValueError('Released Core is immutable; stage a new service for a Core change')
 
 
 def qualification_binding(gui, service, metadata):
@@ -236,43 +314,14 @@ def qualification_binding(gui, service, metadata):
             'service_identifier': SERVICE_ID}
 
 
-def load_service_gate(tooling_delta, tooling_sha256):
-    def regular(path):
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        with os.fdopen(descriptor, 'rb') as stream:
-            info = os.fstat(stream.fileno())
-            if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or
-                    info.st_uid != os.getuid() or info.st_mode & 0o7022 or path.resolve(strict=True) != path):
-                raise ValueError('Unsafe downstream verifier/delta input')
-            return stream.read(), info
-    data, _ = regular(tooling_delta)
-    if hashlib.sha256(data).hexdigest() != tooling_sha256:
-        raise ValueError('Downstream tooling delta pin mismatch')
-    delta = json.loads(data)
-    path = PACKAGING / 'verify_split_service.py'
-    source, info = regular(path)
-    expected = delta['files']['macos/packaging/verify_split_service.py']['after']
-    if expected != {'sha256': hashlib.sha256(source).hexdigest(), 'bytes': len(source),
-                    'mode': stat.S_IMODE(info.st_mode)}:
-        raise ValueError('Static service verifier pin mismatch before import')
-    loaded = types.ModuleType('_pinned_split_service_gate')
-    loaded.__file__ = str(path)
-    exec(compile(source, str(path), 'exec'), loaded.__dict__)
-    return loaded
-
-
-def require_split_qualification(gui, service, evidence, metadata, compile_receipt=None,
-                                compile_sha256=None, signing_receipt=None, signing_sha256=None,
-                                tooling_delta=None, tooling_sha256=None):
+def verify_release(gui, service, gui_receipt, gui_sha256, service_receipt, service_sha256,
+                   compile_receipt=None, compile_sha256=None):
     check_layout(gui, 'gui')
     check_layout(service, 'service')
-    if (gui / CORE).read_bytes() != (service / CORE).read_bytes():
-        raise ValueError('GUI and service Core bytes differ')
-    if not all((compile_receipt, compile_sha256, signing_receipt, signing_sha256, tooling_delta, tooling_sha256)):
-        raise ValueError('Explicit service compile/sign receipts and reviewed tooling delta pins required')
-    return load_service_gate(tooling_delta, tooling_sha256).verify(
-        gui, service, evidence, metadata, compile_receipt, compile_sha256,
-        signing_receipt, signing_sha256, tooling_delta, tooling_sha256,
+    compatible_pair(gui, service)
+    return load_local('verify_split_service').verify(
+        gui, service, gui_receipt, gui_sha256, service_receipt, service_sha256,
+        compile_receipt, compile_sha256,
     )
 
 
@@ -311,20 +360,25 @@ def main():
     gui = commands.add_parser('gui', allow_abbrev=False)
     gui.add_argument('--fresh-build-app', required=True, type=Path)
     gui.add_argument('--output', required=True, type=Path)
+    gui.add_argument('--released-core', required=True, type=Path)
+    gui.add_argument('--core-sha256', required=True)
+    gui.add_argument('--accepted-core-sha256', action='append')
     service = commands.add_parser('service', allow_abbrev=False)
     service.add_argument('--signed-gui', required=True, type=Path)
+    service.add_argument('--core-version', required=True)
+    service.add_argument('--core-revision', required=True)
     for name in ('stub', 'helper', 'maintenance', 'output'):
         service.add_argument('--' + name, required=True, type=Path)
     refresh = commands.add_parser('finalize-core-copy', allow_abbrev=False)
     for name in ('gui', 'service'):
         refresh.add_argument('--' + name, required=True, type=Path)
-    gate = commands.add_parser('verify-qualification', allow_abbrev=False)
-    for name in ('gui', 'service', 'evidence', 'build-metadata'):
+    gate = commands.add_parser('verify-release', allow_abbrev=False)
+    for name in ('gui', 'service', 'gui-receipt', 'service-receipt'):
         gate.add_argument('--' + name, required=True, type=Path)
-    for name in ('service-compile-receipt', 'service-signing-receipt', 'tooling-delta'):
-        gate.add_argument('--' + name, required=True, type=Path)
-    for name in ('service-compile-sha256', 'service-signing-sha256', 'tooling-delta-sha256'):
+    for name in ('gui-sha256', 'service-sha256'):
         gate.add_argument('--' + name, required=True)
+    gate.add_argument('--compile-receipt', type=Path)
+    gate.add_argument('--compile-sha256')
     copied = commands.add_parser('verify-copy', allow_abbrev=False)
     copied.add_argument('--kind', required=True, choices=('gui', 'service'))
     for name in ('original', 'copy'):
@@ -336,16 +390,16 @@ def main():
     args = parser.parse_args()
     try:
         if args.command == 'gui':
-            stage_gui(args.fresh_build_app, args.output)
+            stage_gui(args.fresh_build_app, args.output, args.released_core, args.core_sha256, args.accepted_core_sha256)
         elif args.command == 'service':
-            stage_service(args.signed_gui, args.stub, args.helper, args.maintenance, args.output)
+            stage_service(args.signed_gui, args.stub, args.helper, args.maintenance, args.output,
+                          args.core_version, args.core_revision)
         elif args.command == 'finalize-core-copy':
             finalize_core_copy(args.gui, args.service)
-        elif args.command == 'verify-qualification':
-            require_split_qualification(args.gui, args.service, args.evidence, args.build_metadata,
-                                        args.service_compile_receipt, args.service_compile_sha256,
-                                        args.service_signing_receipt, args.service_signing_sha256,
-                                        args.tooling_delta, args.tooling_delta_sha256)
+        elif args.command == 'verify-release':
+            verify_release(args.gui, args.service, args.gui_receipt, args.gui_sha256,
+                           args.service_receipt, args.service_sha256,
+                           args.compile_receipt, args.compile_sha256)
         elif args.command == 'verify-copy':
             verify_copy(args.original, args.copy, args.kind)
         else:

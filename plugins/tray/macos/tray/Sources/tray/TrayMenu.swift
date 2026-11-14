@@ -46,7 +46,7 @@ final class TrayMenu: NSMenu, NSMenuDelegate {
         super.init(title: "")
         autoenablesItems = false
         delegate = self
-        minimumWidth = 320
+        showsStateColumn = false
         font = .menuFont(ofSize: max(13, NSFont.menuFont(ofSize: 0).pointSize))
         for entry in items {
             let item = makeItem(entry)
@@ -163,9 +163,9 @@ final class TrayMenu: NSMenu, NSMenuDelegate {
     // AppKit does not support resizing custom row views during tracking.
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard items.contains(where: { !$0.isSeparatorItem && $0.view == nil }) else { return }
-        let width = min(maximumWidth, max(320, contents.compactMap { $0 }.map {
+        let width = min(maximumWidth, contents.compactMap { $0 }.map {
             TrayMenuItemView.preferredWidth($0)
-        }.max() ?? 320))
+        }.max() ?? 0)
         for (item, content) in zip(items, contents) {
             if item.view == nil, let content = content {
                 item.view = TrayMenuItemView(content: content, width: width)

@@ -270,6 +270,61 @@ void main() {
     },
   );
 
+  test('each candidate parses its materialized YAML only once', () async {
+    await bind();
+    final source = await File(
+      'lib/providers/actions/setup.dart',
+    ).readAsString();
+    final start = source.indexOf(
+      'Future<_CompositionCandidate> _readCompositionCandidate()',
+    );
+    expect(start, isNonNegative);
+    final candidate = source.substring(
+      start,
+      source.indexOf(
+        'Future<_CompositionCandidate?> _reviewComposition()',
+        start,
+      ),
+    );
+    expect(RegExp(r'\bloadYaml\s*\(').allMatches(candidate), hasLength(1));
+  });
+
+  for (final invalid in {
+    'blank': '   \n',
+    'null': 'null\n',
+    'scalar': 'not-a-map\n',
+    'sequence': '[one, two]\n',
+    'malformed': 'dns: [\n',
+  }.entries) {
+    test('rejects ${invalid.key} candidate without review or apply', () async {
+      await bind();
+      when(
+        () => core.buildProfile(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          mounts: any(named: 'mounts'),
+        ),
+      ).thenAnswer((_) async {
+        final spill = File(
+          join(
+            await appPath.homeDirPath,
+            coreSpillDirectoryName,
+            'invalid.yaml',
+          ),
+        );
+        await spill.create(recursive: true);
+        await spill.writeAsString(invalid.value);
+        return spill.path;
+      });
+      expect(await action.applyProfile(force: true), isFalse);
+      expect(action.previews, isEmpty);
+      expect(pushes, isEmpty);
+      expect(await preferences.getCompositionRevision(), 0);
+      expect(globalState.lastConfigMd5, 'confirmed-old');
+      expect(await running.readAsString(), 'confirmed running sentinel\n');
+    });
+  }
+
   test(
     'Go profile.build merge fixture reaches review and still waits for ACK',
     () async {
@@ -301,6 +356,13 @@ void main() {
       final applying = action.applyProfile(force: true);
       await invoked.future;
       expect(action.previews, [materialized]);
+      verify(
+        () => core.buildProfile(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          mounts: any(named: 'mounts'),
+        ),
+      ).called(3);
       expect(await preferences.getCompositionRevision(), 0);
       expect(globalState.lastConfigMd5, 'confirmed-old');
       expect(pushes, hasLength(1));

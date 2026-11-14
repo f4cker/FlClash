@@ -58,9 +58,10 @@ final class TrayMenuItemView: NSView {
 
     private struct Metrics {
         let height: CGFloat
-        let stateX: CGFloat = 12
-        let iconX: CGFloat = 30
-        let titleX: CGFloat = 52
+        let leadingX: CGFloat = 12
+        let leadingWidth: CGFloat = 16
+        let titleGap: CGFloat = 8
+        var titleX: CGFloat { leadingX + leadingWidth + titleGap }
         let trailing: CGFloat = 18
         let highlightInset: CGFloat = 5
         let font: NSFont
@@ -184,10 +185,9 @@ final class TrayMenuItemView: NSView {
         let highlighted = isHighlighted
         let primary: NSColor = highlighted ? .selectedMenuItemTextColor : content.enabled ? .labelColor : .disabledControlTextColor
         if content.checked {
-            drawSymbol(Self.checkmark, x: metrics.stateX, color: primary, maxWidth: 12)
-        }
-        if let icon = content.icon {
-            let rect = NSRect(x: metrics.iconX, y: (bounds.height - 16) / 2, width: 16, height: 16)
+            drawSymbol(Self.checkmark, x: metrics.leadingX + (metrics.leadingWidth - min(12, Self.checkmark.size.width)) / 2, color: primary, maxWidth: 12)
+        } else if !content.isCheckbox, let icon = content.icon {
+            let rect = NSRect(x: metrics.leadingX, y: (bounds.height - metrics.leadingWidth) / 2, width: metrics.leadingWidth, height: metrics.leadingWidth)
             if let image = icon.image {
                 image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: content.enabled ? 1 : 0.45, respectFlipped: true, hints: nil)
             } else {

@@ -140,6 +140,30 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('hidden setting and source label changes refresh the menu', (
+    tester,
+  ) async {
+    await pumpTrayManager(tester);
+    container
+        .read(proxiesStyleSettingProvider.notifier)
+        .update((state) => state.copyWith(showHiddenGroups: true));
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, greaterThan(0));
+    _RecordingSystemAction.updateTrayCount = 0;
+    container
+        .read(profilesProvider.notifier)
+        .put(
+          const Profile(
+            id: 7,
+            label: 'Renamed source',
+            type: ProfileType.url,
+            autoUpdateDuration: Duration.zero,
+          ),
+        );
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, greaterThan(0));
+  });
+
   testWidgets('renders its child untouched', (tester) async {
     await pumpTrayManager(tester);
 

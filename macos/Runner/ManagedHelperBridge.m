@@ -1,6 +1,7 @@
 #import "ManagedHelperBridge.h"
 #import "../Shared/HelperTrust.h"
 #import "../Shared/HelperIdentity.h"
+#import "../Shared/HelperCompatibility.h"
 #import <ServiceManagement/ServiceManagement.h>
 #import <sys/stat.h>
 #import <errno.h>
@@ -12,6 +13,7 @@
 @property NSUInteger pendingBytes;
 @property FCMessageValidator *validator;
 @property BOOL connectionTrusted;
+@property NSString *negotiatedCoreHash;
 @end
 
 @implementation FCManagedHelperBridge
@@ -41,7 +43,11 @@
         struct stat state;
         if (lstat(FCInstalledBundle.fileSystemRepresentation, &state) < 0)
             return errno == ENOENT ? @"installerRequired" : @"protectedInstallationRequired";
-        return FCBundleTrust(FCInstalledBundle);
+        NSString *serviceTrust = FCBundleTrust(FCInstalledBundle);
+        if (![serviceTrust isEqualToString:@"trusted"]) return serviceTrust;
+        NSDictionary *service = FCReadCompatibility(FCInstalledBundle);
+        if (!FCCompatibilityVersion(service[@"CallerPolicy"], 2)) return @"updateRequired";
+        return FCCompatibilityAccepts(FCReadCompatibility(FCGUIBundle), service) ? @"trusted" : @"incompatible";
     }
     return @"unsupported";
 }
@@ -49,7 +55,7 @@
 - (NSString *)installationStatus {
     if (![self effectsAllowed]) return @"disabled";
     if (@available(macOS 14.0, *)) {
-        NSString *gate = self.connectionTrusted ? @"trusted" : [self gate];
+        NSString *gate = [self gate];
         if (![gate isEqualToString:@"trusted"]) return gate;
         if (!FCLegacyPlistTrusted()) return @"repairRequired";
         switch ([SMAppService statusForLegacyURL:[NSURL fileURLWithPath:FCLegacyPlist]]) {
@@ -67,7 +73,8 @@
     if (![code isEqualToString:@"enabled"]) { completion(@{@"code": code}); return; }
     [self request:@"hello" arguments:@{} completion:^(NSDictionary *answer) {
         NSString *code = [answer[@"code"] isEqual:@"ok"] ? @"enabled" :
-            [answer[@"code"] isEqual:@"exitUnconfirmed"] || [answer[@"code"] isEqual:@"maintenance"] ? @"exitUnconfirmed" : @"unavailable";
+            [answer[@"code"] isEqual:@"exitUnconfirmed"] || [answer[@"code"] isEqual:@"maintenance"] ? @"exitUnconfirmed" :
+            [answer[@"code"] isEqual:@"incompatible"] ? @"incompatible" : @"unavailable";
         completion(@{@"code": code});
     }];
 }
@@ -93,7 +100,7 @@
             if (xpc_get_type(event) == XPC_TYPE_ERROR && self.connection == connection) {
                 xpc_connection_cancel(connection);
                 self.connection = nil;
-                self.connectionTrusted = NO;
+                self.connectionTrusted = NO; self.negotiatedCoreHash = nil;
             }
         });
         xpc_connection_resume(connection);
@@ -105,10 +112,11 @@
     NSString *session = arguments[@"session"];
     if ([session isKindOfClass:NSString.class]) xpc_dictionary_set_string(message, "session", session.UTF8String);
     if (frame && [frame isKindOfClass:NSData.class]) xpc_dictionary_set_data(message, "frame", frame.bytes, bytes);
-    if ([method isEqualToString:@"start"] || [method isEqualToString:@"hello"]) {
-        NSString *hash = FCSHA256([NSBundle.mainBundle.bundlePath
-            stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"]);
-        xpc_dictionary_set_string(message, "coreHash", hash.UTF8String);
+    if ([method isEqualToString:@"start"]) {
+        if (!self.connectionTrusted || !FCCoreHashValid(self.negotiatedCoreHash)) {
+            completion(@{@"code": @"incompatible"}); return;
+        }
+        xpc_dictionary_set_string(message, "coreHash", self.negotiatedCoreHash.UTF8String);
     }
     self.pending++;
     self.pendingBytes += bytes;
@@ -125,7 +133,7 @@
         if (xpc_get_type(reply) != XPC_TYPE_DICTIONARY || ![self.validator check:reply] ||
             xpc_dictionary_get_int64(reply, "protocol") != 1) {
             xpc_connection_cancel(connection);
-            if (self.connection == connection) { self.connection = nil; self.connectionTrusted = NO; }
+            if (self.connection == connection) { self.connection = nil; self.connectionTrusted = NO; self.negotiatedCoreHash = nil; }
             finish(@{@"code": @"unavailable"}); return;
         }
         const char *code = xpc_dictionary_get_string(reply, "code");
@@ -138,13 +146,25 @@
         const void *data = xpc_dictionary_get_data(reply, "frame", &size);
         if (size > FCMaxFrame) { finish(@{@"code": @"incompatible"}); return; }
         if (data) answer[@"frame"] = [NSData dataWithBytes:data length:size];
-        self.connectionTrusted = YES;
+        if ([method isEqualToString:@"hello"] && [answer[@"code"] isEqual:@"ok"]) {
+            const char *version = xpc_dictionary_get_string(reply, "coreVersion");
+            const char *revision = xpc_dictionary_get_string(reply, "coreRevision");
+            NSDictionary *service = FCReadCompatibility(FCInstalledBundle);
+            NSDictionary *reported = @{@"CallerPolicy": @(xpc_dictionary_get_int64(reply, "callerPolicy")),
+                @"ServiceAPI": @(xpc_dictionary_get_int64(reply, "serviceAPI")),
+                @"CoreAPI": @(xpc_dictionary_get_int64(reply, "coreAPI")), @"CoreSHA256": answer[@"coreHash"],
+                @"CoreVersion": version ? @(version) : @"", @"CoreRevision": revision ? @(revision) : @""};
+            BOOL compatible = FCCompatibilityHelloMatches(FCReadCompatibility(FCGUIBundle), service, reported);
+            if (!compatible) { self.negotiatedCoreHash = nil; finish(@{@"code": @"incompatible"}); return; }
+            self.connectionTrusted = YES;
+            self.negotiatedCoreHash = answer[@"coreHash"];
+        }
         finish(answer);
     });
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 8 * NSEC_PER_SEC), self.queue, ^{
         if (finished) return;
         xpc_connection_cancel(connection);
-        if (self.connection == connection) { self.connection = nil; self.connectionTrusted = NO; }
+        if (self.connection == connection) { self.connection = nil; self.connectionTrusted = NO; self.negotiatedCoreHash = nil; }
         finish(@{@"code": @"exitUnconfirmed"});
     });
 }
@@ -167,7 +187,12 @@
             NSString *status = [self installationStatus];
             if (![status isEqualToString:@"enabled"]) { completion(@{@"code": status}); return; }
         }
-        [self request:method arguments:arguments completion:completion];
+        if ([method isEqualToString:@"start"]) {
+            [self request:@"hello" arguments:@{} completion:^(NSDictionary *answer) {
+                if (![answer[@"code"] isEqual:@"ok"]) { completion(answer); return; }
+                [self request:method arguments:arguments completion:completion];
+            }];
+        } else [self request:method arguments:arguments completion:completion];
     });
 }
 @end

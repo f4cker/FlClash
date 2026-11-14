@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -106,11 +107,12 @@ void main() {
   ProviderContainer build({
     bool running = false,
     List<TailscaleManagedRecord>? managed = const [],
+    List<Profile> profiles = const [_target, _source],
   }) {
     final container = ProviderContainer(
       overrides: [
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
-        profilesProvider.overrideWith(() => TestProfiles([_target, _source])),
+        profilesProvider.overrideWith(() => TestProfiles(profiles)),
         currentProfileIdProvider.overrideWithBuild((_, _) => 1),
         initProvider.overrideWithBuild((_, _) => running),
         setupActionProvider.overrideWith(_FakeSetupAction.new),
@@ -351,6 +353,93 @@ void main() {
         ),
       );
     }
+
+    test('inspection overlaps within a bound and keeps source order', () async {
+      inspects();
+      final targetRead = Completer<void>();
+      when(
+        () => core.inspectMountTarget(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          managedTarget: any(named: 'managedTarget'),
+        ),
+      ).thenAnswer((_) async {
+        targetRead.complete();
+        return const MountTarget(relay: ['ts']);
+      });
+      final pending = {
+        for (var id = 2; id <= 6; id++) id: Completer<MountSourceInspection>(),
+      };
+      const nodes = MountSourceInspection(
+        status: MountSourceStatus.nodes,
+        count: 1,
+        listed: 1,
+      );
+      addTearDown(() {
+        for (final result in pending.values) {
+          if (!result.isCompleted) result.complete(nodes);
+        }
+      });
+      final started = <int>[];
+      var active = 0;
+      var peak = 0;
+      when(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
+        ),
+      ).thenAnswer((invocation) async {
+        final path = invocation.positionalArguments.single as String;
+        final id = int.parse(path.split('/').last.split('.').first);
+        started.add(id);
+        active++;
+        if (active > peak) peak = active;
+        try {
+          return await pending[id]!.future;
+        } finally {
+          active--;
+        }
+      });
+      final container = build(
+        profiles: [
+          _target,
+          for (var id = 2; id <= 6; id++) _source.copyWith(id: id),
+        ],
+      );
+      final loading = action(container).loadPanel(1);
+      await targetRead.future;
+      await pumpEventQueue();
+      expect(started, [2, 3, 4, 5]);
+      expect(peak, 4);
+
+      pending[5]!.complete(nodes);
+      await pumpEventQueue();
+      expect(started, [2, 3, 4, 5, 6]);
+      expect(peak, 4);
+      pending[3]!.completeError(const SocketException('unreadable'));
+      pending[4]!.complete(nodes);
+      pending[6]!.complete(nodes);
+      pending[2]!.complete(nodes);
+      final panel = await loading;
+      expect(panel.sources.map((item) => item.profile.id), [2, 3, 4, 5, 6]);
+      expect(panel.sources[1].state, MountSourceState.unreadable);
+      expect(panel.sources.first.count, 1);
+      expect(active, 0);
+
+      inspects();
+      final reloaded = await action(container).loadPanel(1);
+      expect(reloaded.sources.every((item) => item.relayExcluded == 2), isTrue);
+      verify(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
+        ),
+      ).called(10);
+    });
 
     test('with its relay list and its own panel-added names', () async {
       inspects();

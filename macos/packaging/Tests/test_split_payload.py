@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import json
 import os
@@ -63,8 +64,12 @@ class SplitPayloadTests(unittest.TestCase):
         SPLIT.stage_gui(self.source, self.gui)
         core = self.gui / SPLIT.CORE
         core.write_bytes(core.read_bytes() + b'exact-signed-core-fixture')
+        SPLIT.seal_compatibility(self.gui, 'gui', {
+            **SPLIT.COMPATIBILITY_VERSIONS,
+            'AcceptedCoreSHA256': [hashlib.sha256(core.read_bytes()).hexdigest()],
+        })
         inputs = [self.binary(self.root / name) for name in ('stub', 'new-helper', 'new-maintenance')]
-        SPLIT.stage_service(self.gui, *inputs, self.service)
+        SPLIT.stage_service(self.gui, *inputs, self.service, 'test-core-1', 'test-core-revision')
 
     def test_gui_keeps_fresh_ui_and_removes_service_before_signing(self):
         before = SPLIT.inventory(self.source)
@@ -136,47 +141,39 @@ class SplitPayloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'differs'):
             SPLIT.verify_copy(self.gui, copied, 'gui')
 
-    def test_old_evidence_and_new_labels_cannot_unlock_packaging(self):
+    def test_release_verifier_receives_independent_artifact_receipt_pins(self):
         self.stage_pair()
-        evidence, metadata = self.root / 'evidence.json', self.root / 'metadata.json'
-        for schema, message in ((1, 'Explicit service'), (SPLIT.EVIDENCE_SCHEMA, 'Explicit service')):
-            metadata.write_text(json.dumps({'schema': 'flash-split-build-v1'}))
-            evidence.write_text(json.dumps({'schema': schema, 'qualified': True, 'actualGUIloads': True,
-                                            'binding': SPLIT.qualification_binding(self.gui, self.service, metadata)}))
-            with self.assertRaisesRegex(ValueError, message):
-                SPLIT.require_split_qualification(self.gui, self.service, evidence, metadata)
+        gate = SPLIT.load_local('verify_split_service')
+        with patch.object(gate, 'verify', return_value={'functional_acceptance': 'UNTESTED'}) as verify:
+            original = SPLIT.load_local
+            with patch.object(SPLIT, 'load_local', side_effect=lambda name: gate if name == 'verify_split_service' else original(name)):
+                SPLIT.verify_release(self.gui, self.service, self.root / 'gui.json', 'a' * 64,
+                                     self.root / 'service.json', 'b' * 64)
+        verify.assert_called_once_with(self.gui, self.service, self.root / 'gui.json', 'a' * 64,
+                                       self.root / 'service.json', 'b' * 64, None, None)
 
-    def test_finalize_core_copy_changes_only_unsigned_service_core(self):
+    def test_core_finalization_cannot_mutate_released_service(self):
         self.stage_pair()
         before = SPLIT.inventory(self.service)
-        core = self.gui / SPLIT.CORE
-        core.write_bytes(core.read_bytes() + b'final-gui-signature')
         SPLIT.finalize_core_copy(self.gui, self.service)
-        after = SPLIT.inventory(self.service)
-        self.assertEqual({key for key in before if before[key] != after[key]}, {SPLIT.CORE})
-        self.assertEqual((self.service / SPLIT.CORE).read_bytes(), core.read_bytes())
-        self.write(self.service / 'Contents/_CodeSignature/CodeResources', b'service signed')
-        with self.assertRaisesRegex(ValueError, 'precede'):
+        core = self.gui / SPLIT.CORE
+        old_hash = hashlib.sha256(core.read_bytes()).hexdigest()
+        core.write_bytes(core.read_bytes() + b'new-core')
+        SPLIT.seal_compatibility(self.gui, 'gui', {
+            **SPLIT.COMPATIBILITY_VERSIONS,
+            'AcceptedCoreSHA256': [hashlib.sha256(core.read_bytes()).hexdigest(), old_hash],
+        })
+        with self.assertRaisesRegex(ValueError, 'immutable'):
             SPLIT.finalize_core_copy(self.gui, self.service)
+        self.assertEqual(before, SPLIT.inventory(self.service))
 
-    def test_binding_changes_with_ui_or_metadata_and_rejects_unbound_evidence(self):
-        self.stage_pair()
-        metadata = self.root / 'metadata.json'
-        metadata.write_text(json.dumps({'schema': 'flash-split-build-v1'}))
-        binding = SPLIT.qualification_binding(self.gui, self.service, metadata)
-        (self.gui / self.ui).write_bytes(b'changed UI')
-        self.assertNotEqual(binding, SPLIT.qualification_binding(self.gui, self.service, metadata))
-        evidence = self.root / 'evidence.json'
-        evidence.write_text(json.dumps({'schema': SPLIT.EVIDENCE_SCHEMA, 'binding': binding}))
-        with self.assertRaisesRegex(ValueError, 'Explicit service'):
-            SPLIT.require_split_qualification(self.gui, self.service, evidence, metadata)
-
-    def test_different_core_fails_before_evidence(self):
+    def test_different_core_fails_before_receipt_loading(self):
         self.stage_pair()
         core = self.service / SPLIT.CORE
         core.write_bytes(core.read_bytes() + b'resigned')
-        with self.assertRaisesRegex(ValueError, 'Core bytes differ'):
-            SPLIT.require_split_qualification(self.gui, self.service, self.root / 'missing', self.root / 'missing')
+        with self.assertRaisesRegex(ValueError, 'sealed compatibility'):
+            SPLIT.verify_release(self.gui, self.service, self.root / 'missing', 'a' * 64,
+                                 self.root / 'missing', 'b' * 64)
 
     def test_package_scripts_need_0755_and_no_payload_for_remove(self):
         self.stage_pair()
@@ -197,36 +194,79 @@ class SplitPayloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'must not have a payload'):
             SPLIT.verify_expanded(self.service, expanded, 'remove')
 
-    def test_packager_gates_before_output_and_makes_actual_drag_dmg(self):
+    def test_packager_gui_only_exits_after_styled_dmg_before_any_pkg_build(self):
         source = (SPLIT.PACKAGING / 'build_split_packages.sh').read_text()
         self.assertLess(source.index('umask 077'), source.index('\nverify_evidence\n'))
         self.assertLess(source.index('\nverify_evidence\n'), source.index('/bin/mkdir -m 0700'))
-        self.assertIn('/usr/bin/ditto "$gui" "$dmg_root/Flash.app"', source)
-        self.assertIn('/bin/ln -s /Applications "$dmg_root/Applications"', source)
-        self.assertIn('-srcfolder "$dmg_root"', source)
+        styled = source.index('tool/macos/make_styled_dmg.sh')
+        gui_only = source.index('if [[ "$mode" == gui-only ]]', styled)
+        self.assertLess(styled, gui_only)
+        self.assertLess(source.index('exit 0', gui_only), source.index('/usr/bin/pkgbuild'))
+        self.assertIn('APPS_NAME=应用程序', source)
+        self.assertIn('background@2x.png', source)
+        self.assertNotIn('hdiutil create', source)
         self.assertNotIn('qualify_native_loads.py', source)
         self.assertIn('/bin/chmod 0755 "$scripts/"*', source)
         self.assertIn('--compression=none', source)
         self.assertIn('raw_package verify "$final_raw"', source)
-        for flag in ('--service-compile-receipt', '--service-compile-sha256',
-                     '--service-signing-receipt', '--service-signing-sha256',
-                     '--tooling-delta', '--tooling-delta-sha256'):
-            self.assertIn(flag, source)
+        self.assertIn('--gui-sha256', source)
+        self.assertIn('--service-sha256', source)
+        self.assertIn('--compile-sha256', source)
 
-    def test_service_verifier_hash_is_checked_before_import(self):
-        delta = self.root / 'delta.json'
-        delta.write_text('{}')
-        delta.chmod(0o600)
-        with self.assertRaisesRegex(ValueError, 'delta pin mismatch'):
-            SPLIT.load_service_gate(delta, '0' * 64)
-        fake = self.root / 'packaging/verify_split_service.py'
-        self.write(fake, b'raise AssertionError("untrusted module executed")')
-        delta.write_text(json.dumps({'files': {'macos/packaging/verify_split_service.py': {
-            'after': {'sha256': '0' * 64, 'bytes': 0, 'mode': 0o644},
-        }}}))
-        with patch.object(SPLIT, 'PACKAGING', fake.parent):
-            with self.assertRaisesRegex(ValueError, 'before import'):
-                SPLIT.load_service_gate(delta, SPLIT.hashlib.sha256(delta.read_bytes()).hexdigest())
+    def test_two_gui_releases_reuse_core_and_leave_service_byte_identical(self):
+        self.stage_pair()
+        released = self.service / SPLIT.CORE
+        digest = hashlib.sha256(released.read_bytes()).hexdigest()
+        service_before = SPLIT.inventory(self.service)
+        for revision in ('gui-first', 'gui-second'):
+            (self.source / self.ui).write_bytes(revision.encode())
+            destination = self.root / revision / 'Flash.app'
+            SPLIT.stage_gui(self.source, destination, released, digest)
+            self.assertEqual((destination / SPLIT.CORE).read_bytes(), released.read_bytes())
+            self.assertEqual(SPLIT.compatible_pair(destination, self.service)['CoreSHA256'], digest)
+            self.assertEqual(SPLIT.inventory(self.service), service_before)
+            self.assertEqual((destination / self.ui).read_bytes(), revision.encode())
+
+    def test_gui_may_accept_installed_core_different_from_bundled_core(self):
+        self.stage_pair()
+        service_hash = hashlib.sha256((self.service / SPLIT.CORE).read_bytes()).hexdigest()
+        core = self.gui / SPLIT.CORE
+        core.write_bytes(core.read_bytes() + b'other-approved-core')
+        own_hash = hashlib.sha256(core.read_bytes()).hexdigest()
+        SPLIT.seal_compatibility(self.gui, 'gui', {
+            **SPLIT.COMPATIBILITY_VERSIONS, 'AcceptedCoreSHA256': [own_hash, service_hash],
+        })
+        self.assertEqual(SPLIT.compatible_pair(self.gui, self.service)['CoreSHA256'], service_hash)
+        SPLIT.seal_compatibility(self.gui, 'gui', {
+            **SPLIT.COMPATIBILITY_VERSIONS, 'AcceptedCoreSHA256': [own_hash],
+        })
+        with self.assertRaisesRegex(ValueError, 'does not accept'):
+            SPLIT.compatible_pair(self.gui, self.service)
+
+    def test_bad_released_core_pin_leaves_source_and_service_unchanged(self):
+        self.stage_pair()
+        before = SPLIT.inventory(self.service)
+        destination = self.root / 'wrong-pin/Flash.app'
+        with self.assertRaisesRegex(ValueError, 'hash mismatch'):
+            SPLIT.stage_gui(self.source, destination, self.service / SPLIT.CORE, '0' * 64)
+        self.assertFalse(destination.exists())
+        self.assertEqual(before, SPLIT.inventory(self.service))
+
+    def test_compatibility_types_versions_hash_bounds_and_legacy_fail_closed(self):
+        good = {**SPLIT.COMPATIBILITY_VERSIONS, 'AcceptedCoreSHA256': ['a' * 64]}
+        for key, value in [('CallerPolicy', True), ('CallerPolicy', 1), ('ServiceAPI', 1.0),
+                           ('CoreAPI', 2), ('AcceptedCoreSHA256', []),
+                           ('AcceptedCoreSHA256', ['A' * 64]),
+                           ('AcceptedCoreSHA256', ['a' * 64] * 2),
+                           ('AcceptedCoreSHA256', [f'{i:064x}' for i in range(17)])]:
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                SPLIT.validate_compatibility(dict(good, **{key: value}), 'gui')
+        with self.assertRaises(ValueError):
+            SPLIT.read_compatibility(self.source, 'gui')
+        self.stage_pair()
+        self.write(self.service / 'Contents/_CodeSignature/CodeResources', b'sealed')
+        with self.assertRaisesRegex(ValueError, 'precede outer signing'):
+            SPLIT.seal_compatibility(self.service, 'service', SPLIT.read_compatibility(self.service, 'service'))
 
     def test_stub_has_no_gui_or_service_side_effects(self):
         stub = (SPLIT.PACKAGING.parent / 'PrivilegedHelper/ServiceStub.c').read_text()

@@ -6,6 +6,8 @@
 
 #import "HelperIdentity.h"
 #import "ProtectedPathPolicy.h"
+#import "LibraryConstraintPolicy.h"
+#import "HelperCompatibility.h"
 
 NSString * const FCHelperLabel = @"com.layoute.flash.helper";
 NSString * const FCClientIdentifier = @"com.layoute.flash";
@@ -114,25 +116,14 @@ BOOL FCGUIEntitlementsAllowed(NSDictionary *entitlements, uint32_t flags) {
     return YES;
 }
 
-BOOL FCSplitGUIHashMatches(NSData *hash) {
-    NSString *approved = @FC_SPLIT_GUI_CDHASH;
-    if (approved.length != 40 || ![hash isKindOfClass:NSData.class] || hash.length != 20 ||
-        [approved rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:
-            @"0123456789abcdefABCDEF"] invertedSet]].location != NSNotFound) return NO;
-    const uint8_t *bytes = hash.bytes;
-    NSMutableString *actual = [NSMutableString stringWithCapacity:40];
-    for (NSUInteger i = 0; i < hash.length; i++) [actual appendFormat:@"%02x", bytes[i]];
-    return [actual isEqualToString:approved.lowercaseString];
+BOOL FCValidGUIHash(NSData *hash) {
+    return [hash isKindOfClass:NSData.class] && hash.length == 20;
 }
 
 NSString *FCSplitGUIRequirement(void) {
-    NSString *pin = @FC_SPLIT_GUI_CDHASH;
-    NSString *certificate = @FC_PINNED_CERTIFICATE_SHA1;
-    if (pin.length != 40 || certificate.length != 40 || @FC_PRODUCTION_TEAM_ID.length ||
-        [pin rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:
-            @"0123456789abcdefABCDEF"] invertedSet]].location != NSNotFound) return nil;
-    NSString *identity = FCSigningRequirement(FCClientIdentifier);
-    return identity ? [NSString stringWithFormat:@"(%@) and cdhash H\"%@\"", identity, pin] : nil;
+    if (![@FC_PINNED_CERTIFICATE_SHA1 isEqualToString:@"BBA7F8529FD271B9848EC03A2CE3F4780F585556"] ||
+        @FC_PRODUCTION_TEAM_ID.length) return nil;
+    return FCSigningRequirement(FCClientIdentifier);
 }
 
 static NSDictionary *FCSigningInformation(SecStaticCodeRef code) {
@@ -150,15 +141,15 @@ static BOOL FCGUIExecutableMatches(NSDictionary *info) {
 }
 
 static BOOL FCCheckGUIStatic(SecStaticCodeRef code) {
-    NSString *text = @FC_PINNED_CERTIFICATE_SHA1.length == 40 && !@FC_PRODUCTION_TEAM_ID.length
-        ? FCSigningRequirement(FCClientIdentifier) : nil;
+    NSString *text = FCSplitGUIRequirement();
     SecRequirementRef requirement = NULL;
     if (!text || SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement)) return NO;
     BOOL valid = SecStaticCodeCheckValidity(code,
         kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode, requirement) == errSecSuccess;
     CFRelease(requirement);
     NSDictionary *info = valid ? FCSigningInformation(code) : nil;
-    return valid && FCGUIExecutableMatches(info) && FCGUIEntitlementsAllowed(
+    return valid && FCGUIExecutableMatches(info) && FCGUILibraryPolicy(FCGUIBundle, info[(__bridge NSString *)kSecCodeInfoUnique]) &&
+        FCGUICompatibilityValid(FCReadCompatibility(FCGUIBundle)) && FCGUIEntitlementsAllowed(
         info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
         [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
 }
@@ -189,7 +180,7 @@ NSString *FCGUIBundleTrust(NSString *bundle) {
         if (requirement) CFRelease(requirement);
         NSDictionary *info = valid ? FCSigningInformation(code) : nil;
         NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
-        valid = valid && FCGUIExecutableMatches(info) && FCSplitGUIHashMatches(runningHash) &&
+        valid = valid && FCGUIExecutableMatches(info) && FCValidGUIHash(runningHash) &&
             FCGUIEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
                 [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
         SecStaticCodeRef diskCode = NULL;
@@ -199,7 +190,7 @@ NSString *FCGUIBundleTrust(NSString *bundle) {
             valid = FCCheckGUIStatic(diskCode);
             NSDictionary *diskInfo = valid ? FCSigningInformation(diskCode) : nil;
             NSData *diskHash = diskInfo[(__bridge NSString *)kSecCodeInfoUnique];
-            valid = valid && FCSplitGUIHashMatches(diskHash) && [diskHash isEqualToData:runningHash];
+            valid = valid && FCValidGUIHash(diskHash) && [diskHash isEqualToData:runningHash];
         }
         if (diskCode) CFRelease(diskCode);
         CFRelease(code);

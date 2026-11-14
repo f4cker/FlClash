@@ -303,8 +303,19 @@ class AppTray implements TrayPort {
     final connected = read(coreStatusProvider) == CoreStatus.connected;
     bool isCurrentScope() =>
         read(currentProfileIdProvider) == scope.$1 &&
-        read(patchClashConfigProvider).mode == scope.$2;
-    final icons = await _readMenuIcons(groups, rawGroups);
+        read(patchClashConfigProvider).mode == scope.$2 &&
+        read(proxiesStyleSettingProvider).showHiddenGroups == scope.$3;
+    final hasMountedNodes = groups.any(
+      (group) => group.all.any(
+        (proxy) => proxy.providerName?.startsWith(mountProviderPrefix) ?? false,
+      ),
+    );
+    final sourceLabels = {
+      for (final profile
+          in hasMountedNodes ? read(profilesProvider) : <Profile>[])
+        mountProviderName(profile.id): profile.realLabel,
+    };
+    final icons = await _readMenuIcons(groups);
     return [
       for (final group in groups)
         _buildGroupSubmenu(
@@ -330,7 +341,7 @@ class AppTray implements TrayPort {
           },
           scheme: scheme,
           icons: icons,
-          rawGroups: rawGroups,
+          sourceLabels: sourceLabels,
           onTest: () {
             if (!isCurrentScope()) return;
             _observe(
@@ -378,17 +389,9 @@ class AppTray implements TrayPort {
     );
   }
 
-  Future<Map<String, Uint8List?>> _readMenuIcons(
-    List<Group> groups,
-    List<Group> rawGroups,
-  ) async {
-    final sources = <String>{
-      for (final group in groups) ...[
-        group.icon,
-        for (final proxy in group.all)
-          rawGroups.getGroup(proxy.name)?.icon ?? '',
-      ],
-    }..remove('');
+  Future<Map<String, Uint8List?>> _readMenuIcons(List<Group> groups) async {
+    final sources = <String>{for (final group in groups) group.icon}
+      ..remove('');
     final icons = <String, Uint8List?>{};
     final iterator = sources.iterator;
     Future<void> readNext() async {
@@ -474,7 +477,7 @@ class AppTray implements TrayPort {
     required Set<String> pendingNames,
     required ColorScheme scheme,
     required Map<String, Uint8List?> icons,
-    required List<Group> rawGroups,
+    required Map<String, String> sourceLabels,
     required void Function() onTest,
     required void Function(String proxyName) onSelected,
   }) {
@@ -490,15 +493,27 @@ class AppTray implements TrayPort {
         ? configuredName
         : (rawGroup ?? group).now;
     final selected = members.contains(candidate) ? candidate : null;
+    String displayName(String name) {
+      for (final proxy in group.all) {
+        if (proxy.name == name) return _memberLabel(proxy, sourceLabels);
+      }
+      return name;
+    }
+
     final selection = group.type == GroupType.LoadBalance
         ? l10n.trayMultipleNodes
-        : selected ?? '—';
+        : selected == null
+        ? '—'
+        : displayName(selected);
     final status = readFailed
         ? l10n.trayCouldNotLoad
         : switch (failure) {
             TraySwitchFailure.failed => l10n.trayCouldNotSwitch,
             TraySwitchFailure.unconfirmed => l10n.traySwitchUnconfirmed,
-            null => pending == null ? null : l10n.traySwitchingTo(pending),
+            null =>
+              pending == null
+                  ? null
+                  : l10n.traySwitchingTo(displayName(pending)),
           };
     TrayMenuIcon icon(String name, String source, SurfaceLevel level) =>
         TrayMenuIcon(
@@ -517,7 +532,7 @@ class AppTray implements TrayPort {
             ? l10n.trayMultipleNodes
             : selected == null
             ? l10n.traySelectionUnknown
-            : l10n.trayCurrentSelection(selected),
+            : l10n.trayCurrentSelection(displayName(selected)),
         if (status != null) status,
       ].join(', '),
       items: [
@@ -532,7 +547,7 @@ class AppTray implements TrayPort {
           TrayMenuAction(label: l10n.trayNoAvailableMembers, enabled: false),
         for (final proxy in group.all)
           _buildMember(
-            proxy,
+            label: _memberLabel(proxy, sourceLabels),
             checked:
                 group.type != GroupType.LoadBalance && selected == proxy.name,
             enabled:
@@ -546,11 +561,6 @@ class AppTray implements TrayPort {
               proxy,
               scheme,
             ),
-            icon: icon(
-              proxy.name,
-              rawGroups.getGroup(proxy.name)?.icon ?? '',
-              SurfaceLevel.inset,
-            ),
             measuredDelay: delays[proxy.name],
             testing: pendingNames.contains(proxy.name),
             onSelected: () => onSelected(proxy.name),
@@ -559,24 +569,29 @@ class AppTray implements TrayPort {
     );
   }
 
-  TrayMenuCheckbox _buildMember(
-    Proxy proxy, {
+  String _memberLabel(Proxy proxy, Map<String, String> sourceLabels) {
+    final source = sourceLabels[proxy.providerName];
+    if (source == null || source.isEmpty) return proxy.name;
+    final prefix = '$source · ';
+    return proxy.name.startsWith(prefix) ? proxy.name : '$prefix${proxy.name}';
+  }
+
+  TrayMenuCheckbox _buildMember({
+    required String label,
     required bool checked,
     required bool enabled,
     required TrayMenuBadge badge,
-    required TrayMenuIcon icon,
     required int? measuredDelay,
     required bool testing,
     required void Function() onSelected,
   }) {
     return TrayMenuCheckbox(
-      label: proxy.name,
+      label: label,
       checked: checked,
       enabled: enabled,
-      icon: icon,
       badge: badge,
       accessibilityLabel: [
-        proxy.name,
+        label,
         if (checked) currentAppLocalizations.traySelected,
         testing
             ? currentAppLocalizations.trayTesting

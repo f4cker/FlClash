@@ -168,6 +168,35 @@ Matcher _helperCode(String code) =>
 
 void main() {
   test(
+    'stable helper migration is explicit and never blocks owned stop',
+    () async {
+      final native = _Native()..state = 'updateRequired';
+      final client = MacHelperClient(native: native, safeMode: () => false);
+      expect(await client.status(), MacHelperState.updateRequired);
+      expect(
+        macHelperAction(MacHelperState.updateRequired),
+        MacHelperAction.installer,
+      );
+      await expectLater(
+        client.start(_session),
+        throwsA(_helperCode('updateRequired')),
+      );
+      expect(native.calls, everyElement('status'));
+      await expectLater(
+        client.installerInstructions(confirmed: false),
+        throwsA(_helperCode('consentRequired')),
+      );
+      native.state = 'enabled';
+      await client.start(_session);
+      native.state = 'updateRequired';
+      native.calls.clear();
+      expect(await client.stop(_session), isTrue);
+      expect(native.calls, ['stop']);
+      native.receive.complete({'code': 'stopped'});
+    },
+  );
+
+  test(
     'status is passive and preserves precise authorization states',
     () async {
       for (final state in MacHelperState.values) {

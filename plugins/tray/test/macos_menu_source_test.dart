@@ -42,15 +42,32 @@ void main() {
   );
 
   test(
-    'bounded native layout keeps distinct check, icon and title columns',
+    'native layout shares one leading slot without a system state column',
     () {
       expect(menu, contains('isSubmenu ? 420 : 380'));
-      expect(menu, contains('minimumWidth = 320'));
-      expect(menu, contains('min(maximumWidth, max(320,'));
+      expect(menu, contains('showsStateColumn = false'));
+      expect(menu, isNot(contains('minimumWidth = 320')));
+      expect(menu, contains('min(maximumWidth, contents.compactMap'));
+      expect(
+        view,
+        contains('} else if !content.isCheckbox, let icon = content.icon'),
+      );
+      expect(view, isNot(contains('stateX')));
+      expect(view, isNot(contains('iconX')));
+      expect(view, contains('x: metrics.leadingX + (metrics.leadingWidth'));
+      expect(view, contains('NSRect(x: metrics.leadingX,'));
+      expect(view, contains('leadingX + leadingWidth + titleGap'));
+      expect(view, contains('detailGap: CGFloat = 12'));
+      expect(
+        view,
+        contains('lineBreakMode: NSLineBreakMode = .byTruncatingTail'),
+      );
+      expect(view, contains('drawSymbol(Self.arrow'));
+
       for (final metric in [
-        'stateX: CGFloat = 12',
-        'iconX: CGFloat = 30',
-        'titleX: CGFloat = 52',
+        'leadingX: CGFloat = 12',
+        'leadingWidth: CGFloat = 16',
+        'titleGap: CGFloat = 8',
         'height = 28',
         'height = 26',
         'font.pointSize + 10',

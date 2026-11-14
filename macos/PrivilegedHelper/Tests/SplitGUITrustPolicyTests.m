@@ -1,11 +1,13 @@
 #import "../../Shared/HelperTrust.h"
 #import "../../Shared/HelperIdentity.h"
 #import <assert.h>
+#import "../../Shared/LibraryConstraintPolicy.h"
+#import "../../Shared/HelperCompatibility.h"
 
 static xpc_object_t fixtureMessage;
 static NSMutableDictionary *runningInfo;
 static NSMutableDictionary *diskInfo;
-static BOOL messageValid, runningValid, diskValid, canonicalValid;
+static BOOL messageValid, runningValid, diskValid, canonicalValid, libraryValid, compatibilityValid;
 static NSUInteger messageChecks, sealChecks;
 
 static OSStatus FixtureMessage(xpc_object_t message, SecCSFlags flags, SecCodeRef *code) {
@@ -40,6 +42,13 @@ static char *FixtureRealpath(const char *path, char *resolved) {
     return resolved;
 }
 
+static BOOL FixtureLibrary(NSString *bundle, NSData *hash) { return libraryValid; }
+static NSDictionary *FixtureCompatibility(NSString *bundle) {
+    return compatibilityValid ? @{@"CallerPolicy": @2, @"ServiceAPI": @1, @"CoreAPI": @1,
+        @"AcceptedCoreSHA256": @[@"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"]} : nil;
+}
+#define FCGUILibraryPolicy FixtureLibrary
+#define FCReadCompatibility FixtureCompatibility
 #define SecCodeCreateWithXPCMessage FixtureMessage
 #define SecCodeCheckValidity FixtureRunning
 #define SecCodeCopySigningInformation FixtureInformation
@@ -61,7 +70,7 @@ static NSData *ApprovedHash(void) {
 }
 
 static void Reset(void) {
-    messageValid = runningValid = diskValid = canonicalValid = YES;
+    messageValid = runningValid = diskValid = canonicalValid = libraryValid = compatibilityValid = YES;
     runningInfo = [@{(__bridge NSString *)kSecCodeInfoMainExecutable:
         [NSURL fileURLWithPath:FCInstalledExecutable(FCClientIdentifier)],
         (__bridge NSString *)kSecCodeInfoUnique: ApprovedHash(),
@@ -106,6 +115,24 @@ static void TestMessages(void) {
     assert(sealChecks == seals + 1);
     diskValid = NO;
     assert(![validator check:fixtureMessage]);
+    Reset(); libraryValid = NO;
+    assert(![validator check:fixtureMessage]);
+    Reset(); compatibilityValid = NO;
+    assert(![validator check:fixtureMessage]);
+    Reset();
+    runningInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
+    diskInfo[(__bridge NSString *)kSecCodeInfoUnique] = runningInfo[(__bridge NSString *)kSecCodeInfoUnique];
+    assert([validator check:fixtureMessage]);
+    for (id malformed in @[[NSData data], [NSMutableData dataWithLength:19], [NSMutableData dataWithLength:21], @"hash"]) {
+        Reset();
+        runningInfo[(__bridge NSString *)kSecCodeInfoUnique] = malformed;
+        diskInfo[(__bridge NSString *)kSecCodeInfoUnique] = malformed;
+        assert(![validator check:fixtureMessage]);
+    }
+    Reset();
+    [runningInfo removeObjectForKey:(__bridge NSString *)kSecCodeInfoUnique];
+    [diskInfo removeObjectForKey:(__bridge NSString *)kSecCodeInfoUnique];
+    assert(![validator check:fixtureMessage]);
     Reset(); runningValid = NO;
     assert(![validator check:fixtureMessage]);
     Reset(); messageValid = NO;
@@ -147,17 +174,20 @@ int main(void) {
         assert([FCInstalledExecutable(FCClientIdentifier) hasPrefix:[FCGUIBundle stringByAppendingString:@"/"]]);
         assert([FCInstalledExecutable(FCHelperLabel) hasPrefix:[FCInstalledBundle stringByAppendingString:@"/"]]);
         assert([FCInstalledExecutable(FCMaintenanceIdentifier) hasPrefix:[FCInstalledBundle stringByAppendingString:@"/"]]);
-        assert(!FCSplitGUIHashMatches(nil));
-        assert(!FCSplitGUIHashMatches([NSMutableData dataWithLength:19]));
-        assert(!FCSplitGUIHashMatches([NSMutableData dataWithLength:21]));
+        assert(!FCValidGUIHash(nil));
+        assert(!FCValidGUIHash([NSMutableData dataWithLength:19]));
+        assert(!FCValidGUIHash([NSMutableData dataWithLength:21]));
+        assert(FCValidGUIHash(ApprovedHash()));
+        BOOL identity = [@FC_PINNED_CERTIFICATE_SHA1 isEqual:@"BBA7F8529FD271B9848EC03A2CE3F4780F585556"];
+        assert((FCSplitGUIRequirement() != nil) == identity);
         Reset();
-        assert([FCGUIBundleTrust(FCGUIBundle) isEqualToString:@"trusted"]);
+        assert([FCGUIBundleTrust(FCGUIBundle) isEqualToString:@"trusted"] == identity);
         assert(![FCGUIBundleTrust(FCInstalledBundle) isEqualToString:@"trusted"]);
-        BOOL pinned = [@FC_SPLIT_GUI_CDHASH.lowercaseString isEqualToString:@"000102030405060708090a0b0c0d0e0f10111213"];
-        assert(FCSplitGUIHashMatches(ApprovedHash()) == pinned);
-        assert((FCSplitGUIRequirement() != nil) == pinned);
-        if (pinned) TestMessages();
-        else {
+        if (identity) {
+            assert([FCSplitGUIRequirement() isEqual:FCSigningRequirement(FCClientIdentifier)]);
+            assert(![FCSplitGUIRequirement() containsString:@"cdhash"]);
+            TestMessages();
+        } else {
             NSUInteger checks = messageChecks;
             assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
             assert(messageChecks == checks);

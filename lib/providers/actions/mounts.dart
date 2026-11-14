@@ -9,6 +9,7 @@ typedef _MountRelay = ({List<String> names, List<String> managed});
 class MountAction extends _$MountAction {
   CoreController get _core => ref.read(coreHandlerProvider);
   final _scheduler = SerialTaskScheduler();
+  final _inspectionPool = TaskPool(4);
 
   @override
   void build() {}
@@ -33,20 +34,18 @@ class MountAction extends _$MountAction {
       );
     }
     final relay = _relayOf(targetId, groups);
-    final sources = <MountSourceItem>[];
-    for (final profile in ref.read(profilesProvider)) {
-      if (profile.type != ProfileType.url || profile.id == targetId) {
-        continue;
-      }
-      sources.add(
-        mountSourceItem(
-          profile,
-          await _inspect(profile, relay),
-          mounted: mounted.contains(profile.id),
-          record: records[profile.id],
-        ),
-      );
-    }
+    final sources = await Future.wait([
+      for (final profile in ref.read(profilesProvider))
+        if (profile.type == ProfileType.url && profile.id != targetId)
+          _inspectionPool.run(
+            () async => mountSourceItem(
+              profile,
+              await _inspect(profile, relay),
+              mounted: mounted.contains(profile.id),
+              record: records[profile.id],
+            ),
+          ),
+    ]);
     return MountPanel(
       target: target,
       stored: stored,

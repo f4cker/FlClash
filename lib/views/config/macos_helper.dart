@@ -15,6 +15,7 @@ MacHelperAction? macHelperAction(MacHelperState state) => switch (state) {
   MacHelperState.off => MacHelperAction.enable,
   MacHelperState.approvalRequired ||
   MacHelperState.installerRequired ||
+  MacHelperState.updateRequired ||
   MacHelperState.protectedInstallationRequired => MacHelperAction.installer,
   MacHelperState.enabled => MacHelperAction.disable,
   MacHelperState.unavailable || MacHelperState.denied => MacHelperAction.retry,
@@ -28,6 +29,7 @@ String macHelperLabel(AppLocalizations l, MacHelperState state) =>
     switch (state) {
       MacHelperState.off => l.macHelperOff,
       MacHelperState.installerRequired ||
+      MacHelperState.updateRequired ||
       MacHelperState.protectedInstallationRequired => l.macHelperPending,
       MacHelperState.enabled => l.macHelperOn,
       MacHelperState.approvalRequired => l.macHelperPending,
@@ -77,6 +79,7 @@ class _MacHelperItemState extends ConsumerState<MacHelperItem> {
       final detail = switch (state) {
         MacHelperState.approvalRequired ||
         MacHelperState.installerRequired ||
+        MacHelperState.updateRequired ||
         MacHelperState.protectedInstallationRequired ||
         MacHelperState.off ||
         MacHelperState.repairRequired ||

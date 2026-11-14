@@ -14,14 +14,12 @@ class SplitGUITrustTests(unittest.TestCase):
     def test_pure_policy_and_per_message_validation(self):
         with tempfile.TemporaryDirectory(prefix='flash-split-policy-') as scratch:
             executable = str(Path(scratch) / 'policy')
-            for pin in ('', '000102030405060708090a0b0c0d0e0f10111213',
-                        '000102030405060708090A0B0C0D0E0F10111213',
-                        'bad', 'g' * 40):
+            for pin in ('BBA7F8529FD271B9848EC03A2CE3F4780F585556', '', 'A' * 40, 'bad'):
                 with self.subTest(pin=pin):
                     subprocess.run([
                         'clang', '-fobjc-arc', '-fblocks', '-Werror',
                         '-Wno-deprecated-declarations',
-                        f'-DFC_SPLIT_GUI_CDHASH="{pin}"',
+                        f'-DFC_PINNED_CERTIFICATE_SHA1="{pin}"',
                         str(MACOS / 'PrivilegedHelper/Tests/SplitGUITrustPolicyTests.m'),
                         '-framework', 'Foundation', '-framework', 'Security',
                         '-o', executable,
@@ -36,7 +34,7 @@ class SplitGUITrustTests(unittest.TestCase):
         for role in ('FCHelperLabel', 'FCMaintenanceIdentifier', '@"com.layoute.flash.core"'):
             self.assertIn(role, payload)
         self.assertIn('[self.bundle stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"]', SUPERVISOR)
-        self.assertNotIn('FCGUIBundle', SUPERVISOR)
+        self.assertIn('FCReadCompatibility(FCGUIBundle)', SUPERVISOR)
         self.assertIn('gui:(FCGUIMessageValidator *)gui', SUPERVISOR)
         self.assertIn('NSString *guiRequirement = FCSplitGUIRequirement()', SUPERVISOR)
 
@@ -46,8 +44,8 @@ class SplitGUITrustTests(unittest.TestCase):
         self.assertIn('SecCodeCreateWithXPCMessage(message', gui)
         self.assertIn('fileURLWithPath:FCGUIBundle', gui)
         self.assertIn('FCCheckGUIStatic(diskCode)', gui)
-        self.assertIn('FCSplitGUIHashMatches(runningHash)', gui)
-        self.assertIn('FCSplitGUIHashMatches(diskHash)', gui)
+        self.assertIn('FCValidGUIHash(runningHash)', gui)
+        self.assertIn('FCValidGUIHash(diskHash)', gui)
         self.assertIn('[diskHash isEqualToData:runningHash]', gui)
         self.assertNotIn('sealed', gui)
         self.assertNotIn('FCProtectedTree', gui)
@@ -58,7 +56,10 @@ class SplitGUITrustTests(unittest.TestCase):
         self.assertIn('FCGUIBundleTrust(NSBundle.mainBundle.bundlePath)', gate)
         self.assertIn('FCBundleTrust(FCInstalledBundle)', gate)
         self.assertIn('errno == ENOENT ? @"installerRequired"', gate)
-        self.assertIn('FCSHA256([NSBundle.mainBundle.bundlePath', BRIDGE)
+        self.assertNotIn('FCSHA256([NSBundle.mainBundle.bundlePath', BRIDGE)
+        self.assertIn('FCCompatibilityVersion(service[@"CallerPolicy"], 2)', gate)
+        self.assertIn('@"updateRequired"', gate)
+        self.assertIn('self.negotiatedCoreHash.UTF8String', BRIDGE)
         self.assertIn('"coreHash"', BRIDGE)
 
 

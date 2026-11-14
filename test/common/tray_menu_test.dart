@@ -13,6 +13,7 @@ import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/state.dart';
+import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/tray_menu.dart';
@@ -28,6 +29,7 @@ import 'package:riverpod/riverpod.dart';
 import 'package:tray/tray.dart';
 
 import '../helpers/app_paths.dart';
+import '../helpers/test_profiles.dart';
 
 const _channel = MethodChannel('tray');
 
@@ -502,6 +504,195 @@ void main() {
           null,
         );
   }
+
+  test('members have no icons, including subgroup members and flags', () async {
+    final nested = _proxyGroup.copyWith(name: 'Nested', icon: 'nested-icon');
+    final group = _proxyGroup.copyWith(
+      all: const [
+        Proxy(name: '🇭🇰 Hong Kong ✨', type: 'Shadowsocks'),
+        Proxy(name: 'Nested', type: 'Selector'),
+        Proxy(name: 'DIRECT', type: 'Direct'),
+      ],
+    );
+    final readIcons = <String>[];
+    final localTray = AppTray.forPlatform(
+      isMacOS: true,
+      isWindows: false,
+      iconReader: (source) async {
+        readIcons.add(source);
+        return null;
+      },
+    );
+    container.read(groupsProvider.notifier).value = [group, nested];
+    await update(
+      _trayState(groups: [group], selectedMap: {'Proxy': '🇭🇰 Hong Kong ✨'}),
+      on: localTray,
+    );
+    expect(members('Proxy').map((item) => item['label']), [
+      '🇭🇰 Hong Kong ✨',
+      'Nested',
+      'DIRECT',
+    ]);
+    expect(members('Proxy').map((item) => item['icon']), everyElement(isNull));
+    expect(members('Proxy').first['checked'], isTrue);
+    expect(_item(showCall(), 'Proxy')['icon'], isNotNull);
+    expect(_item(showCall(), 'Proxy')['detail'], '🇭🇰 Hong Kong ✨');
+    expect(readIcons, isEmpty);
+  });
+
+  test(
+    'mounted labels use exact source metadata and select raw node ids',
+    () async {
+      final recorded = <String>[];
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          currentProfileProvider.overrideWithValue(null),
+          profilesProvider.overrideWith(
+            () => TestProfiles(const [
+              Profile(
+                id: 7,
+                label: 'Source 🇭🇰',
+                type: ProfileType.url,
+                autoUpdateDuration: Duration.zero,
+              ),
+              Profile(
+                id: 8,
+                label: 'Other',
+                type: ProfileType.url,
+                autoUpdateDuration: Duration.zero,
+              ),
+            ]),
+          ),
+          proxiesActionProvider.overrideWith(
+            () => _RecordingProxiesAction(recorded),
+          ),
+        ],
+      );
+      const raw = '🇯🇵 Tokyo ✨ (Source 🇭🇰)';
+      const label = 'Source 🇭🇰 · $raw';
+      final group = _proxyGroup.copyWith(
+        all: const [
+          Proxy(name: raw, type: 'Shadowsocks', providerName: 'flash-mount-7'),
+          Proxy(
+            name: 'Source 🇭🇰 · already prefixed',
+            type: 'Shadowsocks',
+            providerName: 'flash-mount-7',
+          ),
+          Proxy(
+            name: '🇯🇵 Tokyo ✨',
+            type: 'Shadowsocks',
+            providerName: 'flash-mount-8',
+          ),
+          Proxy(name: 'ordinary', type: 'Direct', providerName: 'subscription'),
+          Proxy(
+            name: 'unknown source',
+            type: 'Direct',
+            providerName: 'flash-mount-99',
+          ),
+        ],
+      );
+      await update(_trayState(groups: [group], selectedMap: {'Proxy': raw}));
+      expect(members('Proxy').map((item) => item['label']), [
+        label,
+        'Source 🇭🇰 · already prefixed',
+        'Other · 🇯🇵 Tokyo ✨',
+        'ordinary',
+        'unknown source',
+      ]);
+      expect(members('Proxy').first['checked'], isTrue);
+      expect(members('Proxy').first['accessibilityLabel'], contains(label));
+      expect(_item(showCall(), 'Proxy')['detail'], label);
+      expect(_item(showCall(), 'Proxy')['accessibilityLabel'], contains(label));
+      await select(members('Proxy').first);
+      expect(recorded, ['switch:Proxy:$raw']);
+      container
+          .read(trayGroupMenuStatesProvider.notifier)
+          .set(
+            'Proxy',
+            const TrayGroupMenuState(confirmedName: raw, pendingName: raw),
+          );
+      await update(_trayState(groups: [group]));
+      expect(
+        _item(showCall(), 'Proxy')['detail'],
+        currentAppLocalizations.traySwitchingTo(label),
+      );
+    },
+  );
+
+  test(
+    'tray follows proxy-page hidden setting, default and failed-read scope',
+    () async {
+      final recorded = <String>[];
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          currentProfileProvider.overrideWithValue(null),
+          profilesProvider.overrideWith(TestProfiles.new),
+          proxiesActionProvider.overrideWith(
+            () => _RecordingProxiesAction(recorded),
+          ),
+        ],
+      );
+      container.read(groupsProvider.notifier).value = [
+        _proxyGroup.copyWith(hidden: false),
+        _proxyGroup.copyWith(name: 'Hidden', hidden: true),
+        _proxyGroup.copyWith(name: 'GLOBAL', hidden: true),
+      ];
+      Future<void> refresh() => update(container.read(trayStateProvider));
+      List<String> groupNames() => _items(showCall())
+          .where((item) => item['type'] == 'submenu')
+          .map((item) => item['label'] as String)
+          .toList();
+      expect(
+        container.read(proxiesStyleSettingProvider).showHiddenGroups,
+        isFalse,
+      );
+      await refresh();
+      expect(groupNames(), ['Proxy']);
+      container
+          .read(proxiesStyleSettingProvider.notifier)
+          .update((state) => state.copyWith(showHiddenGroups: true));
+      await refresh();
+      expect(groupNames(), ['Proxy', 'Hidden']);
+      expect(
+        groupNames(),
+        container
+            .read(currentGroupsStateProvider)
+            .value
+            .map((group) => group.name),
+      );
+      final hiddenMember = members('Hidden').first;
+      final hiddenTest = children('Hidden').first;
+      final allTest = _item(showCall(), HotAction.delayTest.label);
+      container
+          .read(proxiesStyleSettingProvider.notifier)
+          .update((state) => state.copyWith(showHiddenGroups: false));
+      await select(hiddenMember);
+      await select(hiddenTest);
+      await select(allTest);
+      expect(recorded, isEmpty);
+      container.read(trayGroupsReadFailedProvider.notifier).set(true);
+      await refresh();
+      expect(groupNames(), isEmpty);
+      container.read(trayGroupsReadFailedProvider.notifier).set(false);
+      await refresh();
+      expect(groupNames(), ['Proxy']);
+      for (final mode in [Mode.global, Mode.direct]) {
+        container
+            .read(patchClashConfigProvider.notifier)
+            .update((state) => state.copyWith(mode: mode));
+        await refresh();
+        expect(
+          groupNames(),
+          container
+              .read(currentGroupsStateProvider)
+              .value
+              .map((group) => group.name),
+        );
+      }
+    },
+  );
 
   test(
     'preserves the complete main menu order and flat member order',

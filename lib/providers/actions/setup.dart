@@ -1138,7 +1138,8 @@ class SetupAction extends _$SetupAction {
       config: built.base == null ? built.yaml : null,
       mounts: state.mounts,
     );
-    if (materialized.trim().isEmpty || loadYaml(materialized) is! Map) {
+    final decoded = materialized.trim().isEmpty ? null : loadYaml(materialized);
+    if (decoded is! Map) {
       throw StateError('Empty or unreadable composition candidate');
     }
     final fingerprint = json.encode([
@@ -1163,9 +1164,7 @@ class SetupAction extends _$SetupAction {
       basePaths: {
         if (state.profileType != ProfileType.custom &&
             state.extendType != ExtendType.script)
-          for (final entry in compositionReviewValues(
-            loadYaml(materialized) as Map,
-          ).entries)
+          for (final entry in compositionReviewValues(decoded).entries)
             if (source.containsKey(entry.key) &&
                 json.encode(source[entry.key]) == json.encode(entry.value))
               entry.key,

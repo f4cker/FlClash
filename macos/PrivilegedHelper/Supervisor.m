@@ -1,6 +1,7 @@
 #import "../Shared/HelperTrust.h"
 #import "Spawn.h"
 #import "SessionPolicy.h"
+#import "../Shared/HelperCompatibility.h"
 #import <libproc.h>
 #import <poll.h>
 #import <signal.h>
@@ -17,6 +18,7 @@
 @property NSString *session;
 @property NSString *bundle;
 @property NSString *coreHash;
+@property NSDictionary *serviceContract;
 @property uid_t uid;
 @property pid_t child;
 @property int listener;
@@ -71,6 +73,13 @@ static BOOL FCTransactionPending(void) {
     const char *nonce = xpc_dictionary_get_string(request, "nonce");
     if (nonce && strlen(nonce) <= 64) xpc_dictionary_set_string(reply, "nonce", nonce);
     xpc_dictionary_set_string(reply, "coreHash", self.coreHash.UTF8String ?: "");
+    if (self.serviceContract) {
+        xpc_dictionary_set_int64(reply, "callerPolicy", 2);
+        xpc_dictionary_set_int64(reply, "serviceAPI", 1);
+        xpc_dictionary_set_int64(reply, "coreAPI", 1);
+        xpc_dictionary_set_string(reply, "coreVersion", [self.serviceContract[@"CoreVersion"] UTF8String]);
+        xpc_dictionary_set_string(reply, "coreRevision", [self.serviceContract[@"CoreRevision"] UTF8String]);
+    }
     if (frame) xpc_dictionary_set_data(reply, "frame", frame.bytes, frame.length);
     xpc_connection_send_message(xpc_dictionary_get_remote_connection(request), reply);
 }
@@ -165,18 +174,32 @@ static BOOL FCTransactionPending(void) {
     return YES;
 }
 
+- (NSString *)validateCompatibility {
+    self.serviceContract = nil;
+    NSString *trust = FCBundleTrust(self.bundle ?: @"");
+    if (![trust isEqualToString:@"trusted"]) return trust;
+    NSDictionary *contract = FCReadCompatibility(self.bundle);
+    if (!FCCompatibilityAccepts(FCReadCompatibility(FCGUIBundle), contract)) return @"incompatible";
+    NSString *hash = FCSHA256([self.bundle stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"]);
+    if (![hash isEqualToString:contract[@"CoreSHA256"]]) return @"incompatible";
+    self.serviceContract = contract;
+    self.coreHash = hash;
+    return @"ok";
+}
+
 - (NSString *)start:(xpc_object_t)request connection:(xpc_connection_t)connection session:(NSString *)session {
     if (self.ownershipUncertain) return @"exitUnconfirmed";
     if (FCTransactionPending()) self.maintenance = YES;
     if (self.maintenance) return @"maintenance";
     if (self.child) return @"sessionBusy";
     if (xpc_connection_get_euid(connection) == 0) return @"wrongOwner";
-    NSString *trust = FCBundleTrust(self.bundle ?: @"");
-    if (![trust isEqualToString:@"trusted"]) return trust;
+    NSString *compatibility = [self validateCompatibility];
+    if (![compatibility isEqualToString:@"ok"]) return compatibility;
     NSString *core = [self.bundle stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"];
     NSString *hash = FCSHA256(core);
     const char *expected = xpc_dictionary_get_string(request, "coreHash");
-    if (!expected || hash.length != 64 || ![hash isEqualToString:@(expected)]) return @"incompatible";
+    if (!expected || ![hash isEqualToString:self.serviceContract[@"CoreSHA256"]] ||
+        ![hash isEqualToString:@(expected)]) return @"incompatible";
     if (![self openRelay]) { [self closeRelay]; return @"relayFailed"; }
     NSString *journal = [FCRuntimeDirectory stringByAppendingPathComponent:@"child-owned"];
     int record = open(journal.fileSystemRepresentation, O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW | O_CLOEXEC, 0600);
@@ -271,9 +294,7 @@ static BOOL FCTransactionPending(void) {
     BOOL matching = FCOwnsSession((__bridge void *)self.owner, (__bridge void *)connection,
         self.uid, xpc_connection_get_euid(connection), self.session.UTF8String, session.UTF8String);
     if ([action isEqualToString:@"hello"]) {
-        NSString *core = [self.bundle stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"];
-        self.coreHash = FCSHA256(core);
-        code = self.ownershipUncertain ? @"exitUnconfirmed" : self.maintenance ? @"maintenance" : @"ok";
+        code = self.ownershipUncertain ? @"exitUnconfirmed" : self.maintenance ? @"maintenance" : [self validateCompatibility];
     } else if ([action isEqualToString:@"start"]) {
         if (FCValidSession(rawSession))
             code = [self start:request connection:connection session:session];
