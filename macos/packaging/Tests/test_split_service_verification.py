@@ -57,6 +57,23 @@ class ServiceGateTests(unittest.TestCase):
         pin = self.save(self.receipt_path, self.receipt)
         return GATE.verify_bundle(self.app, 'service', self.receipt_path, pin, self.signer, self.stage)
 
+    def test_historical_v1_requires_its_own_entries_and_completion_fields(self):
+        compiled = {'schema': 'flash-1305-service-compile-v1', 'completed': True,
+                    'compile_completed': True, 'staging_completed': True,
+                    'entries': self.entries, 'core_sha256': self.core_hash,
+                    'outputs': {role: {'sha256': self.entries[binary]['sha256']}
+                                for role, binary in GATE.BINARIES.items()}}
+        path = self.root / 'historical-v1.json'
+        pin = self.save(path, compiled)
+        self.assertEqual(GATE.verify_historical_compile_receipt(path, pin, self.receipt), compiled)
+        for key in ('completed', 'compile_completed', 'staging_completed', 'entries'):
+            invalid = copy.deepcopy(compiled)
+            del invalid[key]
+            invalid['staged_unsigned_entries'] = self.entries
+            pin = self.save(path, invalid)
+            with self.subTest(missing=key), self.assertRaises(ValueError):
+                GATE.verify_historical_compile_receipt(path, pin, self.receipt)
+
     def test_static_gate_verifies_four_signatures_without_gui_pin(self):
         self.verify()
         self.assertEqual(self.fixed.verify_target.call_count, 4)
@@ -308,6 +325,49 @@ class WrapperDerivationTests(unittest.TestCase):
         self.source_pin = '0' * 64
         with self.assertRaisesRegex(ValueError, 'exact released iconless'):
             self.derive()
+
+
+class PreservedHistoricalCompileReceiptTests(unittest.TestCase):
+    evidence = Path(__file__).parents[3] / '.airbuild/stable-helper-3332'
+    compile_path = evidence / 'service-compile/receipt.json'
+    source_path = evidence / 'current-static-verification/service-current-schema.json'
+    compile_pin = 'bdd93c859d94c4e8a50a457251175d937ab118c160bd0925d20ac81f8e58890b'
+
+    def setUp(self):
+        if not self.compile_path.exists() or not self.source_path.exists():
+            self.skipTest('Preserved private historical receipts not present')
+        self.signed = GATE.pinned_json(self.source_path, GATE.WRAPPER_SOURCE_RECEIPT_SHA256)
+        self.compiled = GATE.pinned_json(self.compile_path, self.compile_pin)
+
+    def test_real_receipts_are_read_only_and_provenance_matches(self):
+        self.assertEqual(self.compiled['schema'], 'flash-1305-service-compile-v1')
+        self.assertEqual(GATE.verify_historical_compile_receipt(
+            self.compile_path, self.compile_pin, self.signed), self.compiled)
+        self.assertEqual(GATE.digest(self.compile_path.read_bytes()), self.compile_pin)
+        self.assertEqual(GATE.digest(self.source_path.read_bytes()), GATE.WRAPPER_SOURCE_RECEIPT_SHA256)
+        with self.assertRaises(ValueError):
+            GATE.verify_historical_compile_receipt(self.compile_path, '0' * 64, self.signed)
+
+    def test_real_receipt_mutations_cannot_bypass_provenance(self):
+        mutations = [
+            ('schema', 'flash-unknown-service-compile-v1'),
+            ('schema', 'flash-stable-service-compile-v2'),
+            ('completed', False), ('compile_completed', False), ('staging_completed', False),
+            ('entries', {}), ('core_sha256', '0' * 64), ('outputs', {}),
+        ]
+        outputs = copy.deepcopy(self.compiled['outputs'])
+        outputs['helper']['sha256'] = '0' * 64
+        mutations.append(('outputs', outputs))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'mutated-copy.json'
+            for key, value in mutations:
+                invalid = copy.deepcopy(self.compiled)
+                invalid[key] = value
+                path.write_text(json.dumps(invalid, sort_keys=True))
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                    GATE.verify_historical_compile_receipt(path, GATE.digest(path.read_bytes()), self.signed)
+        self.assertEqual(GATE.digest(self.compile_path.read_bytes()), self.compile_pin)
+        self.assertEqual(GATE.digest(self.source_path.read_bytes()), GATE.WRAPPER_SOURCE_RECEIPT_SHA256)
 
 
 if __name__ == '__main__':

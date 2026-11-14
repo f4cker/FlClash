@@ -138,8 +138,17 @@ def verify_bundle(app, phase, receipt_path, receipt_sha256, signer, stage):
 
 def verify_historical_compile_receipt(path, expected, signed):
     compiled = pinned_json(path, expected)
-    if (compiled.get('schema') != 'flash-stable-service-compile-v2' or compiled.get('completed') is not True or
-            compiled.get('staged_unsigned_entries') != signed['before']['entries'] or
+    schema = compiled.get('schema')
+    if schema == 'flash-stable-service-compile-v2':
+        entries = compiled.get('staged_unsigned_entries')
+    elif schema == 'flash-1305-service-compile-v1':
+        if compiled.get('compile_completed') is not True or compiled.get('staging_completed') is not True:
+            raise ValueError('Historical compiler provenance is incomplete')
+        entries = compiled.get('entries')
+    else:
+        raise ValueError('Unsupported historical compiler provenance schema')
+    if (compiled.get('completed') is not True or
+            entries != signed['before']['entries'] or
             compiled.get('core_sha256') != signed['reused_signed_core_sha256'] or
             set(compiled.get('outputs', {})) != set(BINARIES)):
         raise ValueError('Historical compiler provenance differs from released service')
