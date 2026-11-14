@@ -1,11 +1,24 @@
 #!/bin/bash
 set -euo pipefail
+mode="${FC_MACOS_PACKAGE_MODE:-helper-update}"
+case "$mode" in
+  gui-only|helper-update) ;;
+  *) echo 'FC_MACOS_PACKAGE_MODE must be gui-only or helper-update' >&2; exit 1 ;;
+esac
 managed=false
 for encoded in ${DART_DEFINES//,/ }; do
   define="$(printf '%s' "$encoded" | /usr/bin/base64 --decode)"
   if [[ "$define" == MACOS_MANAGED_HELPER=true ]]; then managed=true; fi
 done
 if [[ "$managed" != true ]]; then exit 0; fi
+if [[ "$mode" == gui-only ]]; then
+  [[ "$CONFIGURATION" == Release ]] || { echo 'GUI-only requires Release' >&2; exit 1; }
+  library="$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Library"
+  [[ ! -e "$library/HelperTools" && ! -e "$library/LaunchDaemons" ]] || {
+    echo 'GUI-only requires a fresh build without embedded helper tools' >&2; exit 1;
+  }
+  exit 0
+fi
 candidate="${FC_MANAGED_CANDIDATE_ENABLED-0}"
 case "$candidate" in
   0|1) ;;

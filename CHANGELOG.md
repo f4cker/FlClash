@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.9.8 (2026-11-14)
+
+**Bug Fixes**
+
+- **tray** Clarify native menu actions and preflight mount composition (5ae2152)
+- **mount** Refine progressive mount data caching and helper compatibility (fb06296)
+- **mount** Prewarm provider data before committing a mount (73e701d)
+
 ## v0.9.7 (2026-11-12)
 
 **Bug Fixes**

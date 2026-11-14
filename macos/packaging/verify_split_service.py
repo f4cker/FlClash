@@ -69,9 +69,15 @@ def compile_argv(role, compiler, sdk, output):
     return args + [str(ROOT / source) for source in SOURCES[role]] + ['-o', str(output)]
 
 
+def static_dependencies(signer):
+    fixed, constraint = signer.dependencies()
+    fixed.PACKAGING = PACKAGING
+    return fixed, constraint
+
+
 def verify_bundle(app, phase, receipt_path, receipt_sha256, signer, stage):
     receipt = pinned_json(receipt_path, receipt_sha256)
-    fixed, constraint = signer.dependencies()
+    fixed, constraint = static_dependencies(signer)
     verifier = fixed.trusted_verifier()
     stage.check_layout(app, phase)
     compatibility = stage.read_compatibility(app, phase)

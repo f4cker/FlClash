@@ -8,8 +8,8 @@ A multi-platform proxy client based on ClashMeta. Simple to use, open source and
 
 **English** · [简体中文](README_zh_CN.md)
 
-[![Release](https://img.shields.io/github/v/release/chen08209/FlClash?style=flat-square&label=release)](https://github.com/chen08209/FlClash/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/chen08209/FlClash/total?style=flat-square&logo=github)](https://github.com/chen08209/FlClash/releases)
+[![Release](https://img.shields.io/github/v/release/f4cker/FlClash?style=flat-square&label=release)](https://github.com/f4cker/FlClash/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/f4cker/FlClash/total?style=flat-square&logo=github)](https://github.com/f4cker/FlClash/releases)
 [![License](https://img.shields.io/github/license/chen08209/FlClash?style=flat-square)](LICENSE)
 [![Telegram](https://img.shields.io/badge/Telegram-channel-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/FlClash)
 
@@ -40,8 +40,13 @@ A multi-platform proxy client based on ClashMeta. Simple to use, open source and
 
 ## Download
 
-Get the latest build from [GitHub Releases](https://github.com/chen08209/FlClash/releases/latest), or open the
-[website](https://chen08209.github.io/FlClash#download), which picks the right file for your device.
+Get this fork from [GitHub Releases](https://github.com/f4cker/FlClash/releases/latest).
+The 0.9.8 release is an Apple Silicon GUI-only update: `Flash-0.9.8-macos-arm64.dmg`.
+It requires the existing stable helper build **2026111402**; the DMG does not install the helper.
+It is self-signed, not Apple Developer ID signed or notarized. The platform/package list below
+describes upstream distributions, not additional assets supplied by this release.
+
+Maintainers: [local Mac release command and protected signing setup](macos/packaging/local_release.md).
 
 | Platform | Packages | Notes |
 | --- | --- | --- |
@@ -52,7 +57,7 @@ Get the latest build from [GitHub Releases](https://github.com/chen08209/FlClash
 
 <p>
   <a href="https://chen08209.github.io/FlClash-fdroid-repo/repo?fingerprint=789D6D32668712EF7672F9E58DEEB15FBD6DCEEC5AE7A4371EA72F2AAE8A12FD"><img alt="Get it on F-Droid" src="snapshots/get-it-on-fdroid.svg" height="56"></a>
-  <a href="https://github.com/chen08209/FlClash/releases/latest"><img alt="Get it on GitHub" src="snapshots/get-it-on-github.svg" height="56"></a>
+  <a href="https://github.com/f4cker/FlClash/releases/latest"><img alt="Get it on GitHub" src="snapshots/get-it-on-github.svg" height="56"></a>
 </p>
 
 **Homebrew**
