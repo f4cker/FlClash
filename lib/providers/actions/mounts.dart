@@ -12,11 +12,23 @@ class MountAction extends _$MountAction {
   final _inspectionPool = _MountInspectionPool();
   final _panelLoads = <VoidCallback>{};
   final _inspectionCache = <String, MountSourceInspection>{};
+  final _inspectionFlights =
+      <
+        String,
+        ({Future<MountSourceInspection?> result, bool Function() isCurrent})
+      >{};
+  final _preparations = <int, _MountPreparation>{};
+  final _sourceUpdates = <int, Object>{};
+  int? _recentTargetId;
   var _cacheEpoch = 0;
 
   void _clearInspectionCache() {
     _cacheEpoch++;
     _inspectionCache.clear();
+    _inspectionFlights.clear();
+    for (final sourceId in _preparations.keys.toList()) {
+      _cancelPreparation(sourceId);
+    }
   }
 
   @override
@@ -26,11 +38,148 @@ class MountAction extends _$MountAction {
     ref.listen(coreStatusProvider, (_, _) => _clearInspectionCache());
     ref.listen(coreHandlerProvider, (_, _) => _clearInspectionCache());
     ref.onDispose(() {
+      _clearInspectionCache();
       for (final cancel in _panelLoads.toList()) {
         cancel();
       }
     });
   }
+
+  Object beginSourceUpdate(int sourceId) {
+    _cancelPreparation(sourceId);
+    for (final entry in _preparations.entries.toList()) {
+      if (entry.value.targetId == sourceId) _cancelPreparation(entry.key);
+    }
+    final token = Object();
+    _sourceUpdates[sourceId] = token;
+    return token;
+  }
+
+  void finishSourceUpdate(int sourceId, Object token, {required bool updated}) {
+    if (!identical(_sourceUpdates[sourceId], token)) return;
+    _sourceUpdates.remove(sourceId);
+    if (!updated || !ref.mounted) return;
+    _cancelPreparation(sourceId);
+    if (_preparations.length >= 32) {
+      _cancelPreparation(_preparations.keys.first);
+    }
+    final job = _MountPreparation();
+    _preparations[sourceId] = job;
+    job.timer = Timer(const Duration(milliseconds: 300), () {
+      job.timer = Timer(const Duration(seconds: 15), () {
+        if (identical(_preparations[sourceId], job)) {
+          _cancelPreparation(sourceId);
+        }
+      });
+      unawaited(_prepareSource(sourceId, job));
+    });
+  }
+
+  void _cancelPreparation(int sourceId) {
+    final job = _preparations.remove(sourceId);
+    if (job == null) return;
+    job.active = false;
+    job.timer?.cancel();
+    _inspectionPool.cancel(job);
+  }
+
+  Future<void> _prepareSource(int sourceId, _MountPreparation job) async {
+    try {
+      final targets = <int>{
+        ?ref.read(currentProfileIdProvider),
+        ?_recentTargetId,
+        ...await database.mountsDao.targetsOf(sourceId),
+      }..remove(sourceId);
+      if (!job.active || !ref.mounted) return;
+      final remaining = targets.take(4).iterator;
+      void next() {
+        if (!job.active || !ref.mounted) return;
+        if (!remaining.moveNext()) {
+          _cancelPreparation(sourceId);
+          return;
+        }
+        final targetId = remaining.current;
+        _inspectionPool.add(job, () async {
+          try {
+            await _prepareTarget(sourceId, targetId, job);
+          } catch (_) {
+            // Opportunistic preparation must never surface a download error.
+          } finally {
+            next();
+          }
+        }, background: true);
+      }
+
+      next();
+    } catch (_) {
+      if (identical(_preparations[sourceId], job)) {
+        _cancelPreparation(sourceId);
+      }
+    }
+  }
+
+  Future<void> _prepareTarget(
+    int sourceId,
+    int targetId,
+    _MountPreparation job,
+  ) async {
+    if (!job.active || !ref.mounted) return;
+    final profiles = ref.read(profilesProvider);
+    final source = profiles.getProfile(sourceId);
+    final target = profiles.getProfile(targetId);
+    if (source?.type != ProfileType.url || target == null) return;
+    final patch = ref.read(patchClashConfigProvider);
+    final records = ref.read(tailscaleManagedRecordsProvider);
+    if (records == null) return;
+    final epoch = _cacheEpoch;
+    var contextCurrent = true;
+    job.targetId = targetId;
+    final subscription = ref.listen(
+      setupStateProvider(targetId).future,
+      (_, _) => contextCurrent = false,
+    );
+    bool isCurrent() =>
+        job.active &&
+        ref.mounted &&
+        contextCurrent &&
+        !_sourceUpdates.containsKey(sourceId) &&
+        !_sourceUpdates.containsKey(targetId) &&
+        epoch == _cacheEpoch &&
+        ref.read(profilesProvider).getProfile(sourceId) == source &&
+        ref.read(profilesProvider).getProfile(targetId) == target &&
+        ref.read(patchClashConfigProvider) == patch &&
+        ref.read(tailscaleManagedRecordsProvider) == records;
+    try {
+      String? targetKey;
+      final groups = await _readGroups(
+        targetId,
+        isCurrent: isCurrent,
+        onInput: (input) async {
+          final fingerprint = await compute(_mountTargetFingerprint, input);
+          targetKey = fingerprint == null ? null : '$targetId:$fingerprint';
+        },
+      );
+      if (!isCurrent() || targetKey == null) return;
+      final relay = _relayOf(targetId, groups);
+      if (relay == null) return;
+      await _inspectCached(
+        source!,
+        relay,
+        targetKey: targetKey,
+        isCurrent: isCurrent,
+      );
+    } finally {
+      subscription.close();
+      job.targetId = null;
+    }
+  }
+
+  Future<MountSourceInspection> inspectDownloadedSource(
+    String path,
+    String key,
+  ) => _inspectionPool.run(
+    () => _core.inspectMountSource(path, ageSecretKey: key),
+  );
 
   Future<MountPanel> loadPanel(int targetId) async {
     final target = ref.read(profilesProvider).getProfile(targetId);
@@ -69,6 +218,7 @@ class MountAction extends _$MountAction {
 
   Stream<MountPanel> watchPanel(int targetId, {bool refresh = false}) {
     if (refresh) _clearInspectionCache();
+    _recentTargetId = targetId;
     late StreamController<MountPanel> controller;
     final owner = Object();
     late VoidCallback disposeLoad;
@@ -270,20 +420,42 @@ class MountAction extends _$MountAction {
         return cached;
       }
     }
-    final result = await _inspect(source, relay, isCurrent: isCurrent);
-    if (!isCurrent()) return null;
-    if (key != null &&
-        result != null &&
-        mountSourceItem(source, result).state.mountable &&
-        key == await compute(_mountSourceFingerprint, input) &&
-        isCurrent() &&
-        epoch == _cacheEpoch) {
-      if (_inspectionCache.length >= 128) {
-        _inspectionCache.remove(_inspectionCache.keys.first);
+    bool valid() => isCurrent() && epoch == _cacheEpoch;
+    if (key != null) {
+      final flight = _inspectionFlights[key];
+      if (flight != null && flight.isCurrent()) {
+        final result = await flight.result;
+        if (valid() && result != null) return result;
+        if (!valid()) return null;
       }
-      _inspectionCache[key] = result;
     }
-    return result;
+    Future<MountSourceInspection?> inspect() async {
+      final result = await _inspect(source, relay, isCurrent: valid);
+      if (!valid()) return null;
+      if (key != null &&
+          result != null &&
+          mountSourceItem(source, result).state.mountable) {
+        if (key != await compute(_mountSourceFingerprint, input) || !valid()) {
+          return null;
+        }
+        if (_inspectionCache.length >= 128) {
+          _inspectionCache.remove(_inspectionCache.keys.first);
+        }
+        _inspectionCache[key!] = result;
+      }
+      return valid() ? result : null;
+    }
+
+    final result = inspect();
+    final flight = (result: result, isCurrent: valid);
+    if (key != null) _inspectionFlights[key] = flight;
+    try {
+      return await result;
+    } finally {
+      if (key != null && identical(_inspectionFlights[key]?.result, result)) {
+        _inspectionFlights.remove(key);
+      }
+    }
   }
 
   Future<MountSourceInspection?> _inspect(
@@ -387,18 +559,20 @@ class MountAction extends _$MountAction {
     );
     final MountPreflight preflight;
     try {
-      final input = await ref
-          .read(setupActionProvider.notifier)
-          .mountTargetInput(targetId);
-      preflight = await _core.preflightMounts(
-        base: input.base,
-        config: input.config,
-        mounts: mountSetupOf(
-          candidate,
-          ref.read(profilesProvider),
-          await appPath.profilesPath,
-        ),
-      );
+      preflight = await _inspectionPool.run(() async {
+        final input = await ref
+            .read(setupActionProvider.notifier)
+            .mountTargetInput(targetId);
+        return _core.preflightMounts(
+          base: input.base,
+          config: input.config,
+          mounts: mountSetupOf(
+            candidate,
+            ref.read(profilesProvider),
+            await appPath.profilesPath,
+          ),
+        );
+      });
     } catch (error) {
       return MountSaveResult(
         outcome: MountSaveOutcome.unchanged,
@@ -719,9 +893,17 @@ class MountAction extends _$MountAction {
   }
 }
 
+class _MountPreparation {
+  bool active = true;
+  Timer? timer;
+  int? targetId;
+}
+
 class _MountInspectionPool {
   final _waiting = <({Object owner, Future<void> Function() run})>[];
+  final _background = <({Object owner, Future<void> Function() run})>[];
   var _active = 0;
+  var _backgroundActive = false;
 
   Future<T> run<T>(Future<T> Function() operation) {
     final result = Completer<T>();
@@ -735,29 +917,41 @@ class _MountInspectionPool {
     return result.future;
   }
 
-  void add(Object owner, Future<void> Function() run) {
-    _waiting.add((owner: owner, run: run));
+  void add(
+    Object owner,
+    Future<void> Function() run, {
+    bool background = false,
+  }) {
+    (background ? _background : _waiting).add((owner: owner, run: run));
     _drain();
   }
 
   void cancel(Object owner) {
     _waiting.removeWhere((job) => identical(job.owner, owner));
+    _background.removeWhere((job) => identical(job.owner, owner));
   }
 
   void _drain() {
-    while (_active < 4 && _waiting.isNotEmpty) {
-      final job = _waiting.removeAt(0);
+    while (_active < 4) {
+      final background = _waiting.isEmpty;
+      if (background && (_backgroundActive || _background.isEmpty)) return;
+      final job = (background ? _background : _waiting).removeAt(0);
       _active++;
-      unawaited(_run(job.run));
+      if (background) _backgroundActive = true;
+      unawaited(_run(job.run, background: background));
     }
   }
 
-  Future<void> _run(Future<void> Function() run) async {
+  Future<void> _run(
+    Future<void> Function() run, {
+    required bool background,
+  }) async {
     try {
       await run();
     } finally {
       // Cancellation removes queued work, never a live RPC's slot.
       _active--;
+      if (background) _backgroundActive = false;
       _drain();
     }
   }

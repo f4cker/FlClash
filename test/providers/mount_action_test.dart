@@ -24,6 +24,7 @@ class _FakeSetupAction extends SetupAction {
   static bool result = true;
   static int applied = 0;
   static String config = 'proxies: []';
+  static final targetInputs = <int>[];
 
   @override
   Future<bool> applyProfile({
@@ -38,7 +39,10 @@ class _FakeSetupAction extends SetupAction {
   @override
   Future<({SetupBase? base, String? config})> mountTargetInput(
     int profileId,
-  ) async => (base: null, config: config);
+  ) async {
+    targetInputs.add(profileId);
+    return (base: null, config: config);
+  }
 }
 
 const _target = Profile(
@@ -113,6 +117,7 @@ void main() {
     _FakeSetupAction.result = true;
     _FakeSetupAction.applied = 0;
     _FakeSetupAction.config = 'proxies: []';
+    _FakeSetupAction.targetInputs.clear();
     when(
       () => core.preflightMounts(
         base: any(named: 'base'),
@@ -429,6 +434,318 @@ void main() {
         ),
       );
     }
+
+    group('background preparation', () {
+      const nodes = MountSourceInspection(
+        status: MountSourceStatus.nodes,
+        count: 7,
+        listed: 7,
+      );
+      late List<int> sourceCalls;
+      late List<Completer<MountSourceInspection>> sources;
+      var holdSources = false;
+
+      setUp(() {
+        inspects();
+        sourceCalls = [];
+        sources = [];
+        holdSources = false;
+        when(
+          () => core.inspectMountSource(
+            any(),
+            ageSecretKey: any(named: 'ageSecretKey'),
+            relay: any(named: 'relay'),
+            managed: any(named: 'managed'),
+          ),
+        ).thenAnswer((invocation) {
+          final path = invocation.positionalArguments.single as String;
+          sourceCalls.add(int.parse(path.split('/').last.split('.').first));
+          if (!holdSources) return Future.value(nodes);
+          final gate = Completer<MountSourceInspection>();
+          sources.add(gate);
+          return gate.future;
+        });
+        addTearDown(() {
+          for (final gate in sources) {
+            if (!gate.isCompleted) gate.complete(nodes);
+          }
+        });
+      });
+
+      Future<void> download(
+        ProviderContainer container, {
+        int id = 2,
+        String content = 'proxies: [updated]',
+      }) async {
+        final file = File(await appPath.getProfilePath('$id'));
+        await file.parent.create(recursive: true);
+        addTearDown(() async {
+          if (await file.exists()) await file.delete();
+        });
+        final updated = await container
+            .read(profilesActionProvider.notifier)
+            .fetchSource(id, (_) async {
+              await file.writeAsString(content);
+              return _source.copyWith(id: id, lastUpdateDate: DateTime.now());
+            });
+        container.read(profilesProvider.notifier).put(updated!);
+      }
+
+      test(
+        'successful update returns before preparation and open shares it',
+        () async {
+          final container = build();
+          holdSources = true;
+          await download(container);
+          expect(sourceCalls, isEmpty);
+          expect(_FakeSetupAction.targetInputs, isEmpty);
+          await waitFor(() => sources.length == 1);
+          final opening = action(container).watchPanel(1).last;
+          await waitFor(() => _FakeSetupAction.targetInputs.length == 2);
+          await pumpEventQueue();
+          expect(sourceCalls, [2]);
+          sources.single.complete(nodes);
+          expect((await opening).sources.single.count, 7);
+          expect(sourceCalls, [2]);
+          expect(
+            (await action(container).watchPanel(1).last).sources.single.count,
+            7,
+          );
+          expect(sourceCalls, [2]);
+        },
+      );
+
+      test('failed and skipped updates do not prepare', () async {
+        final container = build();
+        final profiles = container.read(profilesActionProvider.notifier);
+        await expectLater(
+          profiles.fetchSource(
+            2,
+            (_) async => throw const SocketException('offline'),
+          ),
+          throwsA(isA<SocketException>()),
+        );
+        expect(await profiles.fetchSource(2, (_) async => null), isNull);
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+        expect(_FakeSetupAction.targetInputs, isEmpty);
+        expect(sourceCalls, isEmpty);
+      });
+
+      test('rapid successful updates coalesce to the latest source', () async {
+        final container = build();
+        await download(container, content: 'proxies: [first]');
+        await download(container, content: 'proxies: [second]');
+        await download(container, content: 'proxies: [third]');
+        await waitFor(() => sourceCalls.isNotEmpty);
+        expect(
+          (await action(container).watchPanel(1).last).sources.single.count,
+          7,
+        );
+        expect(sourceCalls, [2]);
+        expect(_FakeSetupAction.targetInputs, [1, 1]);
+      });
+
+      test(
+        'a superseded live preparation cannot publish or release its slot',
+        () async {
+          final container = build();
+          holdSources = true;
+          await download(container);
+          await waitFor(() => sources.length == 1);
+          await download(container, content: 'proxies: [newer]');
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          expect(sourceCalls, [2]);
+          sources.first.complete(nodes.copyWith(count: 99));
+          await waitFor(() => sources.length == 2);
+          sources.last.complete(nodes);
+          final panel = await action(container).watchPanel(1).last;
+          expect(panel.sources.single.count, 7);
+          expect(sourceCalls, [2, 2]);
+        },
+      );
+
+      test(
+        'older overlapping download completion cannot schedule preparation',
+        () async {
+          final container = build();
+          final old = Completer<Profile?>();
+          final oldDownload = container
+              .read(profilesActionProvider.notifier)
+              .fetchSource(2, (_) => old.future);
+          await download(container);
+          old.complete(_source);
+          await oldDownload;
+          await waitFor(() => sourceCalls.isNotEmpty);
+          await action(container).watchPanel(1).last;
+          expect(sourceCalls, [2]);
+        },
+      );
+
+      test(
+        'a changed managed context discards late results even if restored',
+        () async {
+          final container = build();
+          holdSources = true;
+          await download(container);
+          await waitFor(() => sources.length == 1);
+          container
+              .read(tailscaleManagedRecordsProvider.notifier)
+              .value = const [
+            TailscaleManagedRecord(
+              id: 'changed',
+              profileId: 1,
+              name: 'Managed',
+            ),
+          ];
+          sources.single.complete(nodes.copyWith(count: 99));
+          await pumpEventQueue();
+          container.read(tailscaleManagedRecordsProvider.notifier).value =
+              const [];
+          holdSources = false;
+          final panel = await action(container).watchPanel(1).last;
+          expect(panel.sources.single.count, 7);
+          expect(sourceCalls, [2, 2]);
+        },
+      );
+
+      test(
+        'unknown target context and background errors do not affect updates',
+        () async {
+          final unknown = build(managed: null);
+          await download(unknown);
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          expect(sourceCalls, isEmpty);
+          expect(_FakeSetupAction.targetInputs, isEmpty);
+          unknown.dispose();
+          final container = build();
+          when(
+            () => core.inspectMountTarget(
+              base: any(named: 'base'),
+              config: any(named: 'config'),
+              managedTarget: any(named: 'managedTarget'),
+            ),
+          ).thenThrow(const SocketException('unavailable'));
+          await download(container);
+          await waitFor(() => _FakeSetupAction.targetInputs.isNotEmpty);
+          await pumpEventQueue();
+          expect(sourceCalls, isEmpty);
+        },
+      );
+
+      test(
+        'target scope is current plus existing relations, capped at four',
+        () async {
+          final container = build(
+            profiles: [
+              _target,
+              _source,
+              for (var id = 3; id <= 9; id++) _target.copyWith(id: id),
+            ],
+          );
+          for (var id = 3; id <= 9; id++) {
+            await testDatabase.profilesDao.putAll([
+              _target.copyWith(id: id).toCompanion(),
+            ]);
+            await testDatabase.mountsDao.save(
+              targetId: id,
+              expectedVersion: null,
+              sourceIds: [2],
+              pending: (version) => MountOperation(
+                kind: MountOperationKind.save,
+                version: version,
+              ),
+            );
+          }
+          await download(container);
+          await waitFor(() => sourceCalls.length == 4);
+          await pumpEventQueue();
+          expect(_FakeSetupAction.targetInputs, [1, 3, 4, 5]);
+          expect(sourceCalls, [2, 2, 2, 2]);
+        },
+      );
+
+      test(
+        'warm counts never replace fresh preflight on successive saves',
+        () async {
+          final container = build();
+          await download(container);
+          await waitFor(() => sourceCalls.isNotEmpty);
+          await action(container).watchPanel(1).last;
+          expect(sourceCalls, [2]);
+          expect((await mountAir(container)).outcome, MountSaveOutcome.saved);
+          expect(
+            (await mountAir(container, expectedVersion: 1)).outcome,
+            MountSaveOutcome.saved,
+          );
+          verify(
+            () => core.preflightMounts(
+              base: any(named: 'base'),
+              config: any(named: 'config'),
+              mounts: any(named: 'mounts'),
+            ),
+          ).called(2);
+        },
+      );
+
+      test(
+        'actual RPC pool stays at four and foreground precedes queued background',
+        () async {
+          final container = build(
+            profiles: [_target, _source, _source.copyWith(id: 3)],
+          );
+          holdSources = true;
+          await download(container);
+          await waitFor(() => sources.length == 1);
+          await download(container, id: 3);
+          final targets = <Completer<MountTarget>>[];
+          var active = 1;
+          var peak = 1;
+          when(
+            () => core.inspectMountTarget(
+              base: any(named: 'base'),
+              config: any(named: 'config'),
+              managedTarget: any(named: 'managedTarget'),
+            ),
+          ).thenAnswer((_) async {
+            final gate = Completer<MountTarget>();
+            targets.add(gate);
+            active++;
+            if (active > peak) peak = active;
+            try {
+              return await gate.future;
+            } finally {
+              active--;
+            }
+          });
+          final foreground = [
+            for (var i = 0; i < 5; i++) action(container).readGroups(1),
+          ];
+          await waitFor(() => targets.length == 3);
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          expect(targets, hasLength(3));
+          expect(peak, 4);
+          active--;
+          sources.single.complete(nodes);
+          await waitFor(() => targets.length == 4);
+          expect(sourceCalls, [2]);
+          expect(peak, 4);
+          targets.first.complete(const MountTarget());
+          await waitFor(() => targets.length == 5);
+          expect(sourceCalls, [2]);
+          for (final gate in targets.skip(1).toList()) {
+            gate.complete(const MountTarget());
+          }
+          await Future.wait(foreground);
+          await waitFor(() => targets.length == 6);
+          targets.last.complete(const MountTarget());
+          await waitFor(() => sources.length == 2);
+          sources.last.complete(nodes);
+          await pumpEventQueue();
+          expect(peak, 4);
+          expect(sourceCalls, [2, 3]);
+        },
+      );
+    });
 
     test('inspection overlaps within a bound and keeps source order', () async {
       inspects();
