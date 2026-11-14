@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.10 (2026-11-14)
+
+**Bug Fixes**
+
+- **macos** Remove redundant embedded helper repair package (de353da)
+
 ## v0.9.9 (2026-11-14)
 
 **Features**
