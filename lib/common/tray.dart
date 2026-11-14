@@ -213,7 +213,7 @@ class AppTray implements TrayPort {
       ...groupMenu,
       if (trayState.isStart) ...[
         TrayMenuCheckbox(
-          label: appLocalizations.tun,
+          label: appLocalizations.trayTunMode,
           checked: trayState.tunEnable,
           detail: shortcut(HotAction.tun),
           onSelected: systemAction.updateTun,
@@ -232,7 +232,7 @@ class AppTray implements TrayPort {
         onSelected: systemAction.updateAutoLaunch,
       ),
       TrayMenuAction(
-        label: appLocalizations.copyEnvVar,
+        label: appLocalizations.trayCopyProxyCommand,
         detail: shortcut(HotAction.copyEnv),
         onSelected: systemAction.copyProxyEnv,
       ),

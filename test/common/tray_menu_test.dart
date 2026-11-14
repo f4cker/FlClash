@@ -186,9 +186,9 @@ void main() {
     expect(labels, contains(l10n.show));
     expect(labels, contains(l10n.start));
     expect(labels, contains(l10n.autoLaunch));
-    expect(labels, contains(l10n.copyEnvVar));
+    expect(labels, contains(l10n.trayCopyProxyCommand));
     expect(labels, contains(l10n.exit));
-    expect(labels, isNot(contains(l10n.tun)));
+    expect(labels, isNot(contains(l10n.trayTunMode)));
     expect(labels, isNot(contains(l10n.systemProxy)));
   });
 
@@ -198,7 +198,7 @@ void main() {
     final labels = _labels(showCall());
     final l10n = currentAppLocalizations;
     expect(labels, contains(l10n.stop), reason: 'start flips to stop');
-    expect(labels, contains(l10n.tun));
+    expect(labels, contains(l10n.trayTunMode));
     expect(labels, contains(l10n.systemProxy));
   });
 
@@ -209,9 +209,9 @@ void main() {
       final labels = _labels(showCall());
       final l10n = currentAppLocalizations;
       expect(labels, contains(l10n.stop));
-      expect(labels, contains(l10n.tun));
+      expect(labels, contains(l10n.trayTunMode));
       expect(labels, contains(l10n.systemProxy));
-      expect(labels, contains(l10n.copyEnvVar));
+      expect(labels, contains(l10n.trayCopyProxyCommand));
     });
 
     test('names the mode in the tooltip and ships the safe icon', () async {
@@ -420,7 +420,7 @@ void main() {
     final call = showCall();
     expect(_item(call, l10n.show)['detail'], '⌃⇧V');
     expect(_item(call, Mode.global.label)['detail'], '⌃⇧G');
-    expect(_item(call, l10n.tun)['detail'], '⌃⇧T');
+    expect(_item(call, l10n.trayTunMode)['detail'], '⌃⇧T');
     expect(_item(call, l10n.exit), isNot(contains('detail')));
     expect(_item(call, Mode.rule.label), isNot(contains('detail')));
   });
@@ -710,11 +710,11 @@ void main() {
         'Proxy',
         HotAction.delayTest.label,
         '|',
-        l10n.tun,
+        l10n.trayTunMode,
         l10n.systemProxy,
         '|',
         l10n.autoLaunch,
-        l10n.copyEnvVar,
+        l10n.trayCopyProxyCommand,
         '|',
         l10n.exit,
       ]);

@@ -2841,6 +2841,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficUsage": MessageLookupByLibrary.simpleMessage("Статистика трафика"),
     "transport": MessageLookupByLibrary.simpleMessage("Транспорт"),
     "transportHeaders": m136,
+    "trayCopyProxyCommand": MessageLookupByLibrary.simpleMessage(
+      "Копировать команду прокси для терминала",
+    ),
     "trayCouldNotLoad": MessageLookupByLibrary.simpleMessage(
       "Не удалось загрузить",
     ),
@@ -2875,6 +2878,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Проверить задержку",
     ),
     "trayTesting": MessageLookupByLibrary.simpleMessage("Проверка"),
+    "trayTunMode": MessageLookupByLibrary.simpleMessage("Режим TUN"),
     "trustCertificate": MessageLookupByLibrary.simpleMessage(
       "Доверять сертификату",
     ),

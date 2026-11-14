@@ -420,10 +420,13 @@ void main() {
             if (!state.mountable) state,
         ],
         [
+          MountSourceState.pending,
           MountSourceState.tailscaleOnly,
           MountSourceState.relayOnly,
           MountSourceState.isolatedOnly,
+          MountSourceState.notFetched,
           MountSourceState.unsupported,
+          MountSourceState.unreadable,
         ],
       );
       expect(

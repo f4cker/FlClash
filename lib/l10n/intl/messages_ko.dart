@@ -2395,6 +2395,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficUsage": MessageLookupByLibrary.simpleMessage("트래픽 사용량"),
     "transport": MessageLookupByLibrary.simpleMessage("전송"),
     "transportHeaders": m136,
+    "trayCopyProxyCommand": MessageLookupByLibrary.simpleMessage(
+      "터미널 프록시 명령 복사",
+    ),
     "trayCouldNotLoad": MessageLookupByLibrary.simpleMessage("불러오기 실패"),
     "trayCouldNotSwitch": MessageLookupByLibrary.simpleMessage("전환 실패"),
     "trayCurrentSelection": m137,
@@ -2419,6 +2422,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "traySwitchingTo": m140,
     "trayTestLatency": MessageLookupByLibrary.simpleMessage("지연 시간 테스트"),
     "trayTesting": MessageLookupByLibrary.simpleMessage("테스트 중"),
+    "trayTunMode": MessageLookupByLibrary.simpleMessage("TUN 모드"),
     "trustCertificate": MessageLookupByLibrary.simpleMessage("인증서 신뢰"),
     "tsAboutExit": MessageLookupByLibrary.simpleMessage("About exit settings"),
     "tsAboutRoutes": MessageLookupByLibrary.simpleMessage(

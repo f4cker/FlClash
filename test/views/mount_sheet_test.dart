@@ -81,6 +81,182 @@ void main() {
   final odd = sub('Odd');
   final none = sub('None');
 
+  testWidgets(
+    'real names precede inspection and a fast row is usable while another waits',
+    (tester) async {
+      final mounts = _StreamingMounts();
+      await pumpSheet(tester, mounts, profiles: [air, sea]);
+      final metadata = panelOf(
+        [
+          item(air, state: MountSourceState.pending, count: 0),
+          item(sea, state: MountSourceState.pending, count: 0, mounted: true),
+        ],
+        stored: MountTargetState(
+          targetId: target.id,
+          sourceIds: [sea.id],
+          version: 7,
+        ),
+      ).copyWith(groups: null, groupsPending: true);
+      mounts.panels.single.add(metadata);
+      await tester.pumpAndSettle();
+      expect(find.text('Air'), findsOneWidget);
+      expect(find.text('Sea'), findsOneWidget);
+      expect(tester.widget<MountSourceRow>(rowOf('Air')).onChanged, isNull);
+      expect(saveButton(tester).onPressed, isNull);
+      final ready = metadata.copyWith(
+        groupsPending: false,
+        groups: MountTarget(groups: [groupInfo('Auto')]),
+        sources: [item(air), metadata.sources.last],
+      );
+      mounts.panels.single.add(ready);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Air'));
+      await tester.pumpAndSettle();
+      final fastRow = tester.widget<MountSourceRow>(rowOf('Air'));
+      expect(fastRow.checked, isTrue);
+      expect(saveButton(tester).onPressed, isNotNull);
+      expect(
+        tester.widget<MountSourceRow>(rowOf('Sea')).item.state,
+        MountSourceState.pending,
+      );
+      mounts.panels.single.add(
+        ready.copyWith(
+          sources: [ready.sources.first, item(sea, mounted: true)],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        identical(tester.widget<MountSourceRow>(rowOf('Air')), fastRow),
+        isTrue,
+      );
+      expect(tester.widget<MountSourceRow>(rowOf('Air')).checked, isTrue);
+      expect(
+        tester
+            .widgetList<MountSourceRow>(find.byType(MountSourceRow))
+            .map((row) => row.item.profile.id),
+        [air.id, sea.id],
+      );
+      await tester.tap(find.text(currentAppLocalizations.mountSave));
+      await tester.pumpAndSettle();
+      expect(mounts.saves.single.version, 7);
+      expect(mounts.saves.single.sources, [sea.id, air.id]);
+      await tester.pumpWidget(const SizedBox());
+      for (final panel in mounts.panels) {
+        unawaited(panel.close());
+      }
+    },
+  );
+
+  for (final state in [
+    MountSourceState.pending,
+    MountSourceState.unreadable,
+    MountSourceState.notFetched,
+  ]) {
+    testWidgets('$state permits pure removals but not new selections', (
+      tester,
+    ) async {
+      final mounts = _StreamingMounts();
+      await pumpSheet(tester, mounts, profiles: [air, sea]);
+      mounts.panels.single.add(
+        panelOf(
+          [item(air, state: state, mounted: true), item(sea, state: state)],
+          stored: MountTargetState(
+            targetId: target.id,
+            sourceIds: [air.id],
+            version: 3,
+          ),
+        ).copyWith(groups: null, groupsPending: true),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.widget<MountSourceRow>(rowOf('Sea')).onChanged, isNull);
+      await tester.tap(find.text('Air'));
+      await tester.pumpAndSettle();
+      expect(saveButton(tester).onPressed, isNotNull);
+      await tester.pumpWidget(const SizedBox());
+      unawaited(mounts.panels.single.close());
+    });
+  }
+
+  testWidgets(
+    'retry preserves staged choices but revalidates before additions',
+    (tester) async {
+      final mounts = _StreamingMounts();
+      await pumpSheet(tester, mounts, profiles: [air, sea]);
+      final initial = panelOf([
+        item(air),
+        item(sea, state: MountSourceState.unreadable),
+      ], groups: MountTarget(groups: [groupInfo('Auto')]));
+      mounts.panels.single.add(initial);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Air'));
+      await tester.pumpAndSettle();
+      expect(saveButton(tester).onPressed, isNotNull);
+      await tester.tap(find.text(currentAppLocalizations.mountReadAgain));
+      await tester.pumpAndSettle();
+      expect(mounts.panels, hasLength(2));
+      expect(saveButton(tester).onPressed, isNull);
+      mounts.panels.last.add(
+        initial.copyWith(
+          groupsPending: true,
+          sources: [
+            for (final row in initial.sources)
+              row.copyWith(state: MountSourceState.pending),
+          ],
+        ),
+      );
+      mounts.panels.first.add(initial.copyWith(sources: [item(sea)]));
+      await tester.pumpAndSettle();
+      expect(tester.widget<MountSourceRow>(rowOf('Air')).checked, isTrue);
+      expect(saveButton(tester).onPressed, isNull);
+      mounts.panels.last.add(initial);
+      await tester.pumpAndSettle();
+      expect(tester.widget<MountSourceRow>(rowOf('Air')).checked, isTrue);
+      expect(saveButton(tester).onPressed, isNotNull);
+      await tester.pumpWidget(const SizedBox());
+      for (final panel in mounts.panels) {
+        unawaited(panel.close());
+      }
+    },
+  );
+
+  testWidgets('an addition invalidated during confirmation cannot be saved', (
+    tester,
+  ) async {
+    final mounts = _StreamingMounts();
+    await pumpSheet(tester, mounts, profiles: [air, sea]);
+    final initial = panelOf(
+      [item(air), item(sea, mounted: true)],
+      stored: MountTargetState(
+        targetId: target.id,
+        sourceIds: [sea.id],
+        version: 4,
+      ),
+      groups: MountTarget(groups: [groupInfo('Auto')]),
+    );
+    mounts.panels.single.add(initial);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Air'));
+    await tester.tap(find.text('Sea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(currentAppLocalizations.mountSave));
+    await tester.pumpAndSettle();
+    expect(find.text(currentAppLocalizations.mountUpdateTitle), findsOneWidget);
+    mounts.panels.single.add(
+      initial.copyWith(
+        sources: [
+          item(air, state: MountSourceState.unreadable),
+          item(sea, mounted: true),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(currentAppLocalizations.mountSave).last);
+    await tester.pumpAndSettle();
+    expect(mounts.saves, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    unawaited(mounts.panels.single.close());
+  });
+
   testWidgets('a list that cannot be read is an error, never the empty '
       'state', (tester) async {
     final mounts = FakeMounts(null)..loadError = StateError('db');
@@ -767,7 +943,9 @@ void main() {
     await tester.tap(find.text(l10n.mountReadAgain));
     await tester.pumpAndSettle();
     expect(find.text(l10n.mountGroupsTitle), findsOneWidget);
-    // The staged choice survives the reread.
+    expect(saveButton(tester).onPressed, isNull);
+    await tester.tap(find.text('Air'));
+    await tester.pump();
     expect(saveButton(tester).onPressed, isNotNull);
   });
 
@@ -2075,4 +2253,18 @@ class _SlowMounts extends FakeMounts {
 
   @override
   Future<MountPanel> loadPanel(int targetId) => future;
+}
+
+class _StreamingMounts extends FakeMounts {
+  _StreamingMounts() : super(null);
+
+  final panels = <StreamController<MountPanel>>[];
+
+  @override
+  Stream<MountPanel> watchPanel(int targetId, {bool refresh = false}) {
+    loads++;
+    final controller = StreamController<MountPanel>();
+    panels.add(controller);
+    return controller.stream;
+  }
 }

@@ -374,6 +374,8 @@
   "interfaceNameModeCustom": "Custom",
   "interfaceName": "Interface name",
   "copyEnvVar": "Copy environment variables",
+  "trayTunMode": "TUN mode",
+  "trayCopyProxyCommand": "Copy terminal proxy command",
   "memoryInfo": "Memory info",
   "total": "Total",
   "releaseMemory": "Release memory",

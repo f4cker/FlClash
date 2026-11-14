@@ -9,10 +9,28 @@ typedef _MountRelay = ({List<String> names, List<String> managed});
 class MountAction extends _$MountAction {
   CoreController get _core => ref.read(coreHandlerProvider);
   final _scheduler = SerialTaskScheduler();
-  final _inspectionPool = TaskPool(4);
+  final _inspectionPool = _MountInspectionPool();
+  final _panelLoads = <VoidCallback>{};
+  final _inspectionCache = <String, MountSourceInspection>{};
+  var _cacheEpoch = 0;
+
+  void _clearInspectionCache() {
+    _cacheEpoch++;
+    _inspectionCache.clear();
+  }
 
   @override
-  void build() {}
+  void build() {
+    ref.listen(initProvider, (_, _) => _clearInspectionCache());
+    ref.listen(versionProvider, (_, _) => _clearInspectionCache());
+    ref.listen(coreStatusProvider, (_, _) => _clearInspectionCache());
+    ref.listen(coreHandlerProvider, (_, _) => _clearInspectionCache());
+    ref.onDispose(() {
+      for (final cancel in _panelLoads.toList()) {
+        cancel();
+      }
+    });
+  }
 
   Future<MountPanel> loadPanel(int targetId) async {
     final target = ref.read(profilesProvider).getProfile(targetId);
@@ -24,33 +42,21 @@ class MountAction extends _$MountAction {
       database.mountsDao.statuses(),
     ).wait;
     final mounted = {...?stored?.sourceIds};
-    MountTarget? groups;
-    try {
-      groups = await readGroups(targetId);
-    } catch (error) {
-      commonPrint.log(
-        'mount groups unreadable: ${compactError(error)}',
-        logLevel: LogLevel.warning,
-      );
-    }
-    final relay = _relayOf(targetId, groups);
-    final sources = await Future.wait([
+    final sources = [
       for (final profile in ref.read(profilesProvider))
         if (profile.type == ProfileType.url && profile.id != targetId)
-          _inspectionPool.run(
-            () async => mountSourceItem(
-              profile,
-              await _inspect(profile, relay),
-              mounted: mounted.contains(profile.id),
-              record: records[profile.id],
-            ),
+          MountSourceItem(
+            profile: profile,
+            state: MountSourceState.pending,
+            mounted: mounted.contains(profile.id),
+            record: records[profile.id],
           ),
-    ]);
+    ];
     return MountPanel(
       target: target,
       stored: stored,
       sources: sources,
-      groups: groups,
+      groupsPending: true,
       revision: stored == null
           ? null
           : mountSetupOf(
@@ -59,6 +65,167 @@ class MountAction extends _$MountAction {
               await appPath.profilesPath,
             ).revision,
     );
+  }
+
+  Stream<MountPanel> watchPanel(int targetId, {bool refresh = false}) {
+    if (refresh) _clearInspectionCache();
+    late StreamController<MountPanel> controller;
+    final owner = Object();
+    late VoidCallback disposeLoad;
+    var active = true;
+    Timer? deadline;
+    MountPanel? panel;
+    final subscriptions = <ProviderSubscription<dynamic>>[];
+
+    void cancel() {
+      active = false;
+      deadline?.cancel();
+      _inspectionPool.cancel(owner);
+      for (final subscription in subscriptions) {
+        subscription.close();
+      }
+      subscriptions.clear();
+      _panelLoads.remove(disposeLoad);
+    }
+
+    void finish() {
+      cancel();
+      unawaited(controller.close());
+    }
+
+    void publish(MountPanel value) {
+      panel = value;
+      controller.add(value);
+    }
+
+    void fail({bool contextChanged = false}) {
+      if (!active) return;
+      final current = panel;
+      if (current == null) {
+        controller.addError(TimeoutException('mount metadata'));
+      } else {
+        publish(
+          current.copyWith(
+            groups: contextChanged || current.groupsPending
+                ? null
+                : current.groups,
+            groupsPending: false,
+            sources: [
+              for (final item in current.sources)
+                contextChanged || item.state == MountSourceState.pending
+                    ? item.copyWith(state: MountSourceState.unreadable)
+                    : item,
+            ],
+          ),
+        );
+      }
+      finish();
+    }
+
+    Future<void> inspect() async {
+      MountTarget? groups;
+      String? targetKey;
+      try {
+        groups = await _readGroups(
+          targetId,
+          isCurrent: () => active && ref.mounted,
+          onInput: (input) async {
+            final fingerprint = await compute(_mountTargetFingerprint, input);
+            targetKey = fingerprint == null ? null : '$targetId:$fingerprint';
+          },
+        );
+      } catch (error) {
+        commonPrint.log(
+          'mount groups unreadable: ${compactError(error)}',
+          logLevel: LogLevel.warning,
+        );
+      }
+      if (!active || !ref.mounted) return;
+      deadline?.cancel();
+      final relay = _relayOf(targetId, groups);
+      if (relay == null) {
+        fail(contextChanged: true);
+        return;
+      }
+      publish(panel!.copyWith(groups: groups, groupsPending: false));
+      var remaining = panel!.sources.length;
+      if (remaining == 0) {
+        finish();
+        return;
+      }
+      deadline = Timer(const Duration(seconds: 10), fail);
+      for (var index = 0; index < panel!.sources.length; index++) {
+        final position = index;
+        final item = panel!.sources[position];
+        _inspectionPool.add(owner, () async {
+          final result = await _inspectCached(
+            item.profile,
+            relay,
+            targetKey: targetKey,
+            isCurrent: () => active && ref.mounted,
+          );
+          if (!active || !ref.mounted) return;
+          final sources = [...panel!.sources];
+          sources[position] = mountSourceItem(
+            item.profile,
+            result,
+            mounted: item.mounted,
+            record: item.record,
+          );
+          publish(panel!.copyWith(sources: sources));
+          if (--remaining == 0) finish();
+        });
+      }
+    }
+
+    Future<void> start() async {
+      deadline = Timer(const Duration(seconds: 10), fail);
+      try {
+        final metadata = await loadPanel(targetId);
+        if (!active || !ref.mounted) return;
+        publish(metadata);
+        if (!metadata.groupsPending) {
+          finish();
+          return;
+        }
+        subscriptions.add(
+          ref.listen(profilesProvider, (_, _) => fail(contextChanged: true)),
+        );
+        subscriptions.add(
+          ref.listen(
+            tailscaleManagedRecordsProvider,
+            (_, _) => fail(contextChanged: true),
+          ),
+        );
+        subscriptions.add(
+          ref.listen(
+            patchClashConfigProvider,
+            (_, _) => fail(contextChanged: true),
+          ),
+        );
+        subscriptions.add(
+          ref.listen(
+            setupStateProvider(targetId).future,
+            (_, _) => fail(contextChanged: true),
+          ),
+        );
+        _inspectionPool.add(owner, inspect);
+      } catch (error, stack) {
+        if (!active) return;
+        controller.addError(error, stack);
+        finish();
+      }
+    }
+
+    disposeLoad = finish;
+    controller = StreamController<MountPanel>(
+      onListen: () {
+        _panelLoads.add(disposeLoad);
+        unawaited(start());
+      },
+      onCancel: cancel,
+    );
+    return controller.stream;
   }
 
   /// Null while either is unread: a guessed list would undercount.
@@ -76,13 +243,59 @@ class MountAction extends _$MountAction {
     );
   }
 
+  Future<MountSourceInspection?> _inspectCached(
+    Profile source,
+    _MountRelay relay, {
+    required String? targetKey,
+    required bool Function() isCurrent,
+  }) async {
+    String? key;
+    final epoch = _cacheEpoch;
+    final path = await appPath.getProfilePath(source.id.toString());
+    if (!isCurrent()) return null;
+    final input = (
+      path: path,
+      secret: source.ageSecretKey,
+      target: targetKey,
+      relay: relay.names,
+      managed: relay.managed,
+      version: ref.read(versionProvider).toString(),
+    );
+    if (targetKey != null) key = await compute(_mountSourceFingerprint, input);
+    if (!isCurrent()) return null;
+    if (key != null && epoch == _cacheEpoch) {
+      final cached = _inspectionCache.remove(key);
+      if (cached != null) {
+        _inspectionCache[key] = cached;
+        return cached;
+      }
+    }
+    final result = await _inspect(source, relay, isCurrent: isCurrent);
+    if (!isCurrent()) return null;
+    if (key != null &&
+        result != null &&
+        mountSourceItem(source, result).state.mountable &&
+        key == await compute(_mountSourceFingerprint, input) &&
+        isCurrent() &&
+        epoch == _cacheEpoch) {
+      if (_inspectionCache.length >= 128) {
+        _inspectionCache.remove(_inspectionCache.keys.first);
+      }
+      _inspectionCache[key] = result;
+    }
+    return result;
+  }
+
   Future<MountSourceInspection?> _inspect(
     Profile source,
-    _MountRelay? relay,
-  ) async {
+    _MountRelay? relay, {
+    bool Function()? isCurrent,
+  }) async {
     try {
+      final path = await appPath.getProfilePath(source.id.toString());
+      if (isCurrent != null && !isCurrent()) return null;
       return await _core.inspectMountSource(
-        await appPath.getProfilePath(source.id.toString()),
+        path,
         ageSecretKey: source.ageSecretKey,
         relay: relay?.names,
         managed: relay?.managed,
@@ -96,10 +309,24 @@ class MountAction extends _$MountAction {
     }
   }
 
-  Future<MountTarget> readGroups(int targetId) async {
+  Future<MountTarget> readGroups(int targetId) =>
+      _inspectionPool.run(() => _readGroups(targetId));
+
+  Future<MountTarget> _readGroups(
+    int targetId, {
+    bool Function()? isCurrent,
+    Future<void> Function(({SetupBase? base, String? config}))? onInput,
+  }) async {
     final input = await ref
         .read(setupActionProvider.notifier)
         .mountTargetInput(targetId);
+    if (isCurrent != null && !isCurrent()) {
+      throw StateError('mount inspection superseded');
+    }
+    await onInput?.call(input);
+    if (isCurrent != null && !isCurrent()) {
+      throw StateError('mount inspection superseded');
+    }
     // Unread records leave the rules out, as the safer reading.
     final records = ref.read(tailscaleManagedRecordsProvider);
     final managed =
@@ -190,6 +417,27 @@ class MountAction extends _$MountAction {
     );
     if (adds && (preflight.report?.groups.isEmpty ?? true)) {
       return const MountSaveResult(outcome: MountSaveOutcome.needsGroup);
+    }
+    // Cached panel counts are advisory: the live guard is only authoritative here.
+    final additions = sourceIds.where(
+      (id) => !(current?.sourceIds.contains(id) ?? false),
+    );
+    _clearInspectionCache();
+    for (final id in additions) {
+      final reports = preflight.report?.sources.where(
+        (source) => source.id == id,
+      );
+      if (reports == null || reports.length != 1) {
+        return const MountSaveResult(outcome: MountSaveOutcome.unchanged);
+      }
+      final report = reports.single;
+      if (report.status != MountSourceStatus.nodes ||
+          report.nodes.isEmpty &&
+              (report.tailscaleExcluded > 0 ||
+                  report.relayExcluded > 0 ||
+                  report.unsupportedExcluded > 0)) {
+        return const MountSaveResult(outcome: MountSaveOutcome.unchanged);
+      }
     }
     final MountTargetState saved;
     try {
@@ -327,6 +575,7 @@ class MountAction extends _$MountAction {
   /// Updates [sourceId] and, when the current profile mounts it, applies
   /// and reads the result back.
   Future<MountSourceRefresh> refreshSource(int sourceId, {int? targetId}) {
+    _clearInspectionCache();
     return _scheduler.run(() async {
       final profile = ref.read(profilesProvider).getProfile(sourceId);
       if (profile == null) {
@@ -395,7 +644,9 @@ class MountAction extends _$MountAction {
     }
     return mountSourceItem(
       profile,
-      await _inspect(profile, relay),
+      relay == null
+          ? null
+          : await _inspectionPool.run(() => _inspect(profile, relay)),
       mounted: true,
       record: records[sourceId],
     );
@@ -465,5 +716,107 @@ class MountAction extends _$MountAction {
         unlink: outcome,
       );
     });
+  }
+}
+
+class _MountInspectionPool {
+  final _waiting = <({Object owner, Future<void> Function() run})>[];
+  var _active = 0;
+
+  Future<T> run<T>(Future<T> Function() operation) {
+    final result = Completer<T>();
+    add(Object(), () async {
+      try {
+        result.complete(await operation());
+      } catch (error, stack) {
+        result.completeError(error, stack);
+      }
+    });
+    return result.future;
+  }
+
+  void add(Object owner, Future<void> Function() run) {
+    _waiting.add((owner: owner, run: run));
+    _drain();
+  }
+
+  void cancel(Object owner) {
+    _waiting.removeWhere((job) => identical(job.owner, owner));
+  }
+
+  void _drain() {
+    while (_active < 4 && _waiting.isNotEmpty) {
+      final job = _waiting.removeAt(0);
+      _active++;
+      unawaited(_run(job.run));
+    }
+  }
+
+  Future<void> _run(Future<void> Function() run) async {
+    try {
+      await run();
+    } finally {
+      // Cancellation removes queued work, never a live RPC's slot.
+      _active--;
+      _drain();
+    }
+  }
+}
+
+Future<String?> _mountTargetFingerprint(
+  ({SetupBase? base, String? config}) input,
+) async {
+  try {
+    final base = input.base;
+    return sha256
+        .convert(
+          utf8.encode(
+            jsonEncode([
+              input.config,
+              base?.path,
+              base?.overlay,
+              if (base != null)
+                (await sha256.bind(File(base.path).openRead()).first)
+                    .toString(),
+            ]),
+          ),
+        )
+        .toString();
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<String?> _mountSourceFingerprint(
+  ({
+    String path,
+    String? secret,
+    String? target,
+    List<String> relay,
+    List<String> managed,
+    String version,
+  })
+  input,
+) async {
+  try {
+    final digest = await sha256.bind(File(input.path).openRead()).first;
+    return sha256
+        .convert(
+          utf8.encode(
+            jsonEncode([
+              1,
+              input.path,
+              digest.toString(),
+              input.secret,
+              input.target,
+              input.relay,
+              input.managed,
+              input.version,
+            ]),
+          ),
+        )
+        .toString();
+  } catch (_) {
+    return null;
   }
 }

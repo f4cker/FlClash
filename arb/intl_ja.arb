@@ -374,6 +374,8 @@
   "interfaceNameModeCustom": "カスタム",
   "interfaceName": "インターフェース名",
   "copyEnvVar": "環境変数をコピー",
+  "trayTunMode": "TUN モード",
+  "trayCopyProxyCommand": "ターミナルのプロキシコマンドをコピー",
   "memoryInfo": "メモリ情報",
   "total": "合計",
   "releaseMemory": "メモリを解放",

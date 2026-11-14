@@ -2422,6 +2422,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficUsage": MessageLookupByLibrary.simpleMessage("トラフィック統計"),
     "transport": MessageLookupByLibrary.simpleMessage("トランスポート"),
     "transportHeaders": m136,
+    "trayCopyProxyCommand": MessageLookupByLibrary.simpleMessage(
+      "ターミナルのプロキシコマンドをコピー",
+    ),
     "trayCouldNotLoad": MessageLookupByLibrary.simpleMessage("読み込みに失敗"),
     "trayCouldNotSwitch": MessageLookupByLibrary.simpleMessage("切り替えに失敗"),
     "trayCurrentSelection": m137,
@@ -2442,6 +2445,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "traySwitchingTo": m140,
     "trayTestLatency": MessageLookupByLibrary.simpleMessage("遅延をテスト"),
     "trayTesting": MessageLookupByLibrary.simpleMessage("テスト中"),
+    "trayTunMode": MessageLookupByLibrary.simpleMessage("TUN モード"),
     "trustCertificate": MessageLookupByLibrary.simpleMessage("証明書を信頼"),
     "tsAboutExit": MessageLookupByLibrary.simpleMessage("About exit settings"),
     "tsAboutRoutes": MessageLookupByLibrary.simpleMessage(

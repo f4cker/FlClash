@@ -374,6 +374,8 @@
   "interfaceNameModeCustom": "自定义",
   "interfaceName": "网卡名称",
   "copyEnvVar": "复制环境变量",
+  "trayTunMode": "TUN 模式",
+  "trayCopyProxyCommand": "复制终端代理命令",
   "memoryInfo": "内存信息",
   "total": "总计",
   "releaseMemory": "释放内存",

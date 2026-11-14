@@ -374,6 +374,8 @@
   "interfaceNameModeCustom": "Вручную",
   "interfaceName": "Имя интерфейса",
   "copyEnvVar": "Копировать переменные окружения",
+  "trayTunMode": "Режим TUN",
+  "trayCopyProxyCommand": "Копировать команду прокси для терминала",
   "memoryInfo": "Память",
   "total": "Всего",
   "releaseMemory": "Освободить память",

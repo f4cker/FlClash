@@ -375,6 +375,7 @@ abstract class MountRuntimeState with _$MountRuntimeState {
 
 /// [isolatedOnly]: only nodes kept out to isolate Tailscale, for mixed reasons.
 enum MountSourceState {
+  pending,
   nodes,
   empty,
   tailscaleOnly,
@@ -385,8 +386,8 @@ enum MountSourceState {
   unreadable;
 
   bool get mountable => switch (this) {
-    unsupported || tailscaleOnly || relayOnly || isolatedOnly => false,
-    _ => true,
+    nodes || empty => true,
+    _ => false,
   };
 
   /// A source read and left with a list to mount, even an empty one.
@@ -417,6 +418,7 @@ abstract class MountPanel with _$MountPanel {
     MountTargetState? stored,
     @Default([]) List<MountSourceItem> sources,
     MountTarget? groups,
+    @Default(false) bool groupsPending,
     String? revision,
   }) = _MountPanel;
 }

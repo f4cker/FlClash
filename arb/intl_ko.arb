@@ -374,6 +374,8 @@
   "interfaceNameModeCustom": "사용자 지정",
   "interfaceName": "인터페이스 이름",
   "copyEnvVar": "환경 변수 복사",
+  "trayTunMode": "TUN 모드",
+  "trayCopyProxyCommand": "터미널 프록시 명령 복사",
   "memoryInfo": "메모리 정보",
   "total": "합계",
   "releaseMemory": "메모리 해제",

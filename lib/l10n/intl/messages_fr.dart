@@ -2902,6 +2902,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficUsage": MessageLookupByLibrary.simpleMessage("Trafic utilisé"),
     "transport": MessageLookupByLibrary.simpleMessage("Transport"),
     "transportHeaders": m136,
+    "trayCopyProxyCommand": MessageLookupByLibrary.simpleMessage(
+      "Copier la commande proxy du terminal",
+    ),
     "trayCouldNotLoad": MessageLookupByLibrary.simpleMessage(
       "Chargement impossible",
     ),
@@ -2936,6 +2939,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Tester la latence",
     ),
     "trayTesting": MessageLookupByLibrary.simpleMessage("Test en cours"),
+    "trayTunMode": MessageLookupByLibrary.simpleMessage("Mode TUN"),
     "trustCertificate": MessageLookupByLibrary.simpleMessage(
       "Approuver le certificat",
     ),

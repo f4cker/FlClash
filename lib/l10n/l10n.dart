@@ -3011,6 +3011,21 @@ class AppLocalizations {
     );
   }
 
+  /// `TUN mode`
+  String get trayTunMode {
+    return Intl.message('TUN mode', name: 'trayTunMode', desc: '', args: []);
+  }
+
+  /// `Copy terminal proxy command`
+  String get trayCopyProxyCommand {
+    return Intl.message(
+      'Copy terminal proxy command',
+      name: 'trayCopyProxyCommand',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Memory info`
   String get memoryInfo {
     return Intl.message('Memory info', name: 'memoryInfo', desc: '', args: []);
