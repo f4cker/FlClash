@@ -379,6 +379,20 @@ class LocalReleaseTests(unittest.TestCase):
 
 
 class HelperBuildModeTests(unittest.TestCase):
+    def test_builder_records_real_source_state_before_compilation(self):
+        source = (PACKAGING / 'build_local_gui.sh').read_text()
+        records = (
+            '/usr/bin/git rev-parse HEAD > "$out/source-head.txt"',
+            '/usr/bin/git --no-optional-locks status --porcelain > "$out/source-status.txt"',
+        )
+        for record in records:
+            with self.subTest(record=record):
+                self.assertEqual(source.count(record), 1)
+                self.assertLess(source.index('cd "$root"'), source.index(record))
+                self.assertLess(source.index('mkdir -p "$out/kept-caches"'), source.index(record))
+                self.assertLess(source.index(record), source.index('for cache in flutter_build setup_build_cache'))
+                self.assertLess(source.index(record), source.index('/usr/bin/sandbox-exec -p "$guard"'))
+
     def run_stage(self, mode=None, configuration='Release', candidate='0', managed=True):
         import base64
         with tempfile.TemporaryDirectory() as temporary:

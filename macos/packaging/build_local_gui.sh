@@ -16,6 +16,8 @@ cd "$root"
 [[ -f .dart_tool/package_config.json ]] || { echo 'Resolve dependencies with the configured SDK before release.' >&2; exit 69; }
 mkdir -p "$out/kept-caches" "$out/sdk-launchers/bin" "$out/sdk-launchers/packages/flutter_tools/bin" "$out/xcrun-bin"
 exec > >(tee "$out/build.log") 2>&1
+/usr/bin/git rev-parse HEAD > "$out/source-head.txt"
+/usr/bin/git --no-optional-locks status --porcelain > "$out/source-status.txt"
 cat > "$out/sdk-launchers/bin/flutter" <<EOF
 #!/bin/bash
 export FLUTTER_ROOT=$(printf '%q' "$sdk")
