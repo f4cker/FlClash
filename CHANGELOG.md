@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.9 (2026-11-14)
+
+**Features**
+
+- **macos** Install or repair the helper from the app using embedded packages and macOS administrator authorization (0230a1c)
+
 ## v0.9.8 (2026-11-14)
 
 **Bug Fixes**
