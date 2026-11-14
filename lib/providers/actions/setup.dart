@@ -16,6 +16,18 @@ typedef BuiltProfile = ({
   SetupBase? base,
 });
 
+typedef _CompositionCandidate = ({
+  Profile profile,
+  SetupState state,
+  PatchClashConfig patch,
+  NetworkProps network,
+  SetupParams params,
+  BuiltProfile built,
+  String materialized,
+  String fingerprint,
+  Set<String> basePaths,
+});
+
 class _RunRequest {
   final bool running;
   final bool initialize;
@@ -38,6 +50,13 @@ class SetupAction extends _$SetupAction {
 
   Timer? _runtimeTimer;
   final _setupScheduler = SerialTaskScheduler();
+  final _compositionReview = CompositionReviewGate();
+  bool _compositionAdoptedThisSession = false;
+  bool _deferRunningPublication = false;
+
+  Future<bool> get _compositionPending async =>
+      !_compositionAdoptedThisSession &&
+      await preferences.getCompositionRevision() < 1;
   final _listenerScheduler = SerialTaskScheduler();
   _RunRequest? _latestRunRequest;
   DateTime? _startTime;
@@ -81,7 +100,7 @@ class SetupAction extends _$SetupAction {
     if (!ref.read(initProvider)) return true;
     ref.read(proxiesActionProvider.notifier).cancelDelayTests();
     ref.read(delayDataSourceProvider.notifier).value = {};
-    final setupResult = applyProfile(force: true);
+    final setupResult = _applyAutomatic(force: true);
     ref.read(logsProvider.notifier).value = FixedList(maxLogsLength);
     ref.read(requestsProvider.notifier).value = FixedList(maxRequestsLength);
     ref.read(dnsQueriesProvider.notifier).value = FixedList(
@@ -98,6 +117,7 @@ class SetupAction extends _$SetupAction {
   }
 
   void _setLocalRunning(bool running) {
+    _deferRunningPublication = false;
     _stopRuntimeTicker();
     ref.read(listeningMixedPortProvider.notifier).value = null;
     if (!running) {
@@ -117,6 +137,7 @@ class SetupAction extends _$SetupAction {
   }
 
   void _syncRuntimeTicker() {
+    if (_deferRunningPublication) return;
     if (_startTime == null || !_isTrafficShown) {
       _stopRuntimeTicker();
       return;
@@ -137,6 +158,7 @@ class SetupAction extends _$SetupAction {
   }
 
   void _refreshRunningState() {
+    if (_deferRunningPublication) return;
     _updateRunTime();
     unawaited(ref.read(commonActionProvider.notifier).updateTraffic());
   }
@@ -156,6 +178,8 @@ class SetupAction extends _$SetupAction {
     if (!globalState.needInitStatus) {
       return;
     }
+    // Visibility observers must not publish a resumed start during review.
+    _deferRunningPublication = true;
     _startTime = await serviceStartTime();
     if (_isRunning) {
       globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
@@ -163,7 +187,7 @@ class SetupAction extends _$SetupAction {
     } else if (ref.read(appSettingProvider).autoRun) {
       await setRunning(true, initialize: true);
     } else {
-      await globalState.safeRun(() => applyProfile(force: true));
+      await globalState.safeRun(() => _applyAutomatic(force: true));
     }
   }
 
@@ -186,11 +210,38 @@ class SetupAction extends _$SetupAction {
       previousStartTime: _startTime,
     );
     _latestRunRequest = request;
-    _setLocalRunning(running);
-    if (request.initialize) {
-      globalState.needInitStatus = false;
+    if (!running) {
+      _setLocalRunning(false);
+      return _stop(request);
     }
-    return running ? _start(request) : _stop(request);
+    _deferRunningPublication = true;
+    return _beginStart(request);
+  }
+
+  Future<bool> _beginStart(_RunRequest request) async {
+    if (await _compositionPending) {
+      // Do not publish running/system-DNS state or open listeners while first
+      // adoption is being reviewed. A declined resume leaves its service alone.
+      final applied = await _runSetup(
+        automatic: request.initialize,
+        force: !request.resume,
+      );
+      if (!_isCurrent(request)) return true;
+      if (applied != _SetupTaskResult.completed) return false;
+      _setLocalRunning(true);
+      if (request.initialize) globalState.needInitStatus = false;
+      try {
+        await _startCoreRunning(request);
+      } catch (_) {
+        _rollbackRunning(request);
+        rethrow;
+      }
+      return _confirmMixedListener(request);
+    }
+    if (!_isCurrent(request)) return true;
+    _setLocalRunning(true);
+    if (request.initialize) globalState.needInitStatus = false;
+    return _start(request);
   }
 
   Future<bool> _start(_RunRequest request) async {
@@ -484,34 +535,58 @@ class SetupAction extends _$SetupAction {
 
   @visibleForTesting
   Future<void> updateConfig() async {
-    await globalState.safeRun(() async {
-      final patchConfig = ref.read(patchClashConfigProvider);
-      final shouldContinueSetup = await requestAdmin(patchConfig.pageTunEnable);
-      if (!shouldContinueSetup) {
-        await _restartCoreAfterAuthorization();
-        return;
-      }
-      final networkSetting = ref.read(networkSettingProvider);
-      final effective = _effectivePatchConfig(patchConfig);
-      await _core.updateConfig(
-        effective.toUpdateParams(
-          authentication: networkSetting.authentication.credentials,
-          options: ref.read(coreOptionsProvider),
-          layered: patchConfig.pagePriority,
-        ),
+    if (await _compositionPending) {
+      // A patch cannot acknowledge first adoption or bypass the review.
+      await globalState.safeRun(
+        () => _runSetup(automatic: true, silence: true),
       );
-      // A followed field is left out, so the Core keeps the applied value.
-      if (patchConfig.usesPage(
-        PageConfigKey.findProcessMode,
-        layered: patchConfig.pagePriority,
-      )) {
+      return;
+    }
+    var restart = false;
+    await _setupScheduler.run(
+      () => globalState.safeRun(() async {
+        final patchConfig = ref.read(patchClashConfigProvider);
+        _effectivePatchConfig(patchConfig);
+        final shouldContinueSetup = await requestAdmin(
+          patchConfig.pageTunEnable,
+        );
+        if (!shouldContinueSetup) {
+          restart = true;
+          return;
+        }
+        if (patchConfig.pageTunEnable &&
+            !ref.read(safeModeProvider) &&
+            ref.read(authorizedTunEnableProvider) !=
+                TunAuthorizationState.authorized) {
+          throw MessageException(
+            currentAppLocalizations.tunAuthorizationFailed,
+          );
+        }
+        final networkSetting = ref.read(networkSettingProvider);
+        final effective = _effectivePatchConfig(patchConfig);
+        try {
+          await _core.updateConfig(
+            effective.toUpdateParams(
+              authentication: networkSetting.authentication.credentials,
+              options: ref.read(coreOptionsProvider),
+              layered: true,
+            ),
+          );
+        } catch (error) {
+          final kept =
+              error is CoreMethodException &&
+              error.code == 'config_rejected' &&
+              error.details is Map &&
+              (error.details as Map)['outcome'] == 'kept';
+          if (!kept) await _forgetConfirmedComposition();
+          rethrow;
+        }
         ref.read(runningFindProcessModeProvider.notifier).value =
             effective.findProcessMode.name;
-      }
-      if (ref.read(isStartProvider)) {
-        await checkMixedListener();
-      }
-    });
+        if (ref.read(isStartProvider)) await checkMixedListener();
+      }),
+    );
+    if (restart) await _restartCoreAfterAuthorization();
   }
 
   @protected
@@ -529,7 +604,7 @@ class SetupAction extends _$SetupAction {
       (silence) {
         final force = _pendingForceApply;
         _pendingForceApply = false;
-        applyProfile(silence: silence, force: force);
+        _applyAutomatic(silence: silence, force: force);
       },
       args: [silence],
       duration: Duration(
@@ -557,7 +632,7 @@ class SetupAction extends _$SetupAction {
   void autoApplyProfile() {
     runAfterFrame(() async {
       if (!await inputsApplied()) {
-        await applyProfile();
+        await _applyAutomatic();
       }
     });
   }
@@ -594,10 +669,7 @@ class SetupAction extends _$SetupAction {
         );
   }
 
-  // False means building the profile, the config write, or the Core setup
-  // step failed; a profile that fails to build is still pushed to the Core
-  // as the empty config so it never keeps serving the previous one.
-  // authorizeCore failures still throw.
+  // Failed builds and cancelled reviews never reach the Core setup step.
   Future<bool> applyProfile({
     bool silence = false,
     bool force = false,
@@ -611,13 +683,23 @@ class SetupAction extends _$SetupAction {
     return result != _SetupTaskResult.failed;
   }
 
+  Future<bool> _applyAutomatic({
+    bool silence = false,
+    bool force = false,
+  }) async {
+    return await _runSetup(automatic: true, silence: silence, force: force) !=
+        _SetupTaskResult.failed;
+  }
+
   Future<_SetupTaskResult> _runSetup({
+    bool automatic = false,
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,
   }) async {
     final result = await _setupScheduler.run(() {
       return _setupConfig(
+        automatic: automatic,
         force: force,
         silence: silence,
         preloadInvoke: preloadInvoke,
@@ -696,7 +778,7 @@ class SetupAction extends _$SetupAction {
     }
     if (!patchConfig.usesPage(
           PageConfigKey.externalController,
-          layered: patchConfig.pagePriority,
+          layered: true,
         ) &&
         !ref.read(safeModeProvider) &&
         exposesControllerWithoutSecret(rawConfig)) {
@@ -853,75 +935,6 @@ class SetupAction extends _$SetupAction {
     return '';
   }
 
-  var _pageSourcesOffered = false;
-
-  /// What page priority changes for [profileId], built three ways from the
-  /// same profile.
-  @visibleForTesting
-  Future<PagePriorityChanges> pagePriorityPreview(int profileId) async {
-    final setupState = await ref.read(setupStateProvider(profileId).future);
-    final current = _effectivePatchConfig(ref.read(patchClashConfigProvider));
-    Future<Map> build(PatchClashConfig patchConfig) async {
-      final built = await getProfile(
-        setupState: setupState,
-        patchConfig: patchConfig,
-      );
-      final config = loadYaml(built.yaml);
-      return config is Map ? config : const {};
-    }
-
-    return pagePriorityChanges(
-      legacy: await build(current.copyWith(pagePriority: false)),
-      page: await build(current.copyWith(pagePriority: true, followKeys: {})),
-      file: await build(
-        current.copyWith(
-          pagePriority: true,
-          followKeys: PageConfigKey.values.toSet(),
-        ),
-      ),
-    );
-  }
-
-  /// Until the user applies the sources the upgrade changes, the profile is
-  /// built as before; with nothing to change it moves over unasked.
-  Future<void> _offerPageSources(int profileId) async {
-    if (_pageSourcesOffered || ref.read(safeModeProvider)) {
-      return;
-    }
-    _pageSourcesOffered = true;
-    final changes = await globalState.safeRun(
-      () => pagePriorityPreview(profileId),
-      silence: true,
-    );
-    if (changes == null) {
-      _pageSourcesOffered = false;
-      return;
-    }
-    final follow = <PageConfigKey>{};
-    if (changes.pageRows.isNotEmpty || changes.hiddenRows.isNotEmpty) {
-      final appLocalizations = currentAppLocalizations;
-      final confirmed = await dialogs.showMessage(
-        title: appLocalizations.pageSourceTitle,
-        confirmText: appLocalizations.applyAction,
-        cancelText: appLocalizations.cancel,
-        dismissible: false,
-        width: pageSourceDialogWidth,
-        body: PageSourceRows(changes: changes, choices: follow),
-      );
-      if (confirmed != true) {
-        return;
-      }
-    }
-    ref
-        .read(patchClashConfigProvider.notifier)
-        .update(
-          (state) => state.copyWith(
-            pagePriority: true,
-            followKeys: {...state.followKeys, ...follow},
-          ),
-        );
-  }
-
   /// Always asks the Core, so a profile without Flash's rules says so too.
   Future<String> _annotateTailscale(int profileId, String yaml) async {
     final setup = ref.read(tailscaleSetupProvider);
@@ -1002,23 +1015,27 @@ class SetupAction extends _$SetupAction {
     };
   }
 
-  PatchClashConfig _effectivePatchConfig(PatchClashConfig patchConfig) {
+  PatchClashConfig _effectivePatchConfig(
+    PatchClashConfig patchConfig, {
+    bool preserveRequestedTun = false,
+  }) {
     if (ref.read(safeModeProvider)) {
       return patchConfig.copyWith(
         tun: patchConfig.tun.copyWith(enable: false),
         externalController: ExternalControllerStatus.close,
       );
     }
+    if (patchConfig.externalController != ExternalControllerStatus.close &&
+        patchConfig.secret.isEmpty) {
+      throw StateError('External controller requires authentication');
+    }
     final authorized =
         ref.read(authorizedTunEnableProvider) ==
         TunAuthorizationState.authorized;
     return patchConfig.copyWith(
       tun: patchConfig.tun.copyWith(
-        enable: patchConfig.tun.enable && authorized,
+        enable: patchConfig.tun.enable && (preserveRequestedTun || authorized),
       ),
-      externalController: patchConfig.secret.isEmpty
-          ? ExternalControllerStatus.close
-          : patchConfig.externalController,
     );
   }
 
@@ -1030,6 +1047,17 @@ class SetupAction extends _$SetupAction {
   @visibleForTesting
   Future<bool> requestAdmin(bool enableTun) async {
     if (!enableTun || ref.read(safeModeProvider)) {
+      return true;
+    }
+    if (system.isMacOS && macosManagedHelperBuild) {
+      final state = await macosHelperClient.status();
+      if (state != MacHelperState.enabled) {
+        throw MessageException(
+          currentAppLocalizations.macHelperUnavailableDetail,
+        );
+      }
+      ref.read(authorizedTunEnableProvider.notifier).value =
+          TunAuthorizationState.authorized;
       return true;
     }
     final authorizationState = ref.read(authorizedTunEnableProvider);
@@ -1053,9 +1081,6 @@ class SetupAction extends _$SetupAction {
         return true;
       case AuthorizeCode.error:
         authorizationNotifier.value = TunAuthorizationState.none;
-        ref
-            .read(patchClashConfigProvider.notifier)
-            .update((state) => state.copyWith.tun(enable: false));
         dialogs.showBanner(
           currentAppLocalizations.tunAuthorizationFailed,
           level: BannerLevel.error,
@@ -1081,57 +1106,263 @@ class SetupAction extends _$SetupAction {
     return fallback;
   }
 
+  Future<void> _forgetConfirmedComposition({
+    bool defaultRuntime = false,
+  }) async {
+    _appliedInputs = null;
+    ref.read(runningFindProcessModeProvider.notifier).value = null;
+    globalState.lastConfigMd5 = null;
+    globalState.lastConfigCounts = defaultRuntime
+        ? configCountsOf(const {})
+        : null;
+    if (system.isAndroid) await preferences.saveAppliedConfigMd5(null);
+  }
+
+  Future<_CompositionCandidate> _readCompositionCandidate() async {
+    final profile = ref.read(currentProfileProvider) ?? recoverMissingProfile();
+    if (profile == null) throw StateError('No saved profile to review');
+    final state = await ref.read(setupStateProvider(profile.id).future);
+    final patch = _effectivePatchConfig(
+      ref.read(patchClashConfigProvider),
+      preserveRequestedTun: true,
+    );
+    final network = ref.read(networkSettingProvider);
+    final params = _setupParams.copyWith(mounts: state.mounts);
+    final built = await getProfile(setupState: state, patchConfig: patch);
+    final source = compositionReviewValues(
+      ref.read(profileSettingsProvider) ?? const {},
+    );
+    // Normal-profile YAML is only an overlay, never a complete candidate.
+    final materialized = await _core.buildProfile(
+      base: built.base,
+      config: built.base == null ? built.yaml : null,
+      mounts: state.mounts,
+    );
+    final decoded = materialized.trim().isEmpty ? null : loadYaml(materialized);
+    if (decoded is! Map) {
+      throw StateError('Empty or unreadable composition candidate');
+    }
+    final fingerprint = json.encode([
+      profile.id,
+      state.hashCode,
+      built.md5,
+      materialized,
+      patch.toJson(),
+      network.toJson(),
+      params.toJson(),
+      ref.read(safeModeProvider),
+    ]).toMd5();
+    return (
+      profile: profile,
+      state: state,
+      patch: patch,
+      network: network,
+      params: params,
+      built: built,
+      materialized: materialized,
+      fingerprint: fingerprint,
+      basePaths: {
+        if (state.profileType != ProfileType.custom &&
+            state.extendType != ExtendType.script)
+          for (final entry in compositionReviewValues(decoded).entries)
+            if (source.containsKey(entry.key) &&
+                json.encode(source[entry.key]) == json.encode(entry.value))
+              entry.key,
+      },
+    );
+  }
+
+  /// The existing setup scheduler owns this gate, including live-patch entry.
+  /// Source refresh is deliberately excluded until first adoption completes.
+  Future<_CompositionCandidate?> _reviewComposition() async {
+    try {
+      var candidate = await _readCompositionCandidate();
+      for (var attempts = 0; attempts < 3; attempts++) {
+        if (_compositionReview.approves(candidate.fingerprint)) {
+          return candidate;
+        }
+        final approved = await reviewComposition(
+          candidate.materialized,
+          basePaths: candidate.basePaths,
+          pagePaths: {
+            ...PageConfigKey.values.map((key) => key.path),
+            ...candidate.patch.geoXUrl.raw.keys.map((key) => 'geox-url.$key'),
+            'secret',
+            'interface-name',
+            ...GeneralOverrideKey.values
+                .where((key) => key != GeneralOverrideKey.testUrl)
+                .map((key) => key.path),
+            ...DnsOverrideKey.normalProfileKeys.map((key) => 'dns.${key.path}'),
+            ...candidate.state.overrides.dnsOverrideKeys.map(
+              (key) => 'dns.${key.path}',
+            ),
+            ...candidate.state.overrides.ntpOverrideKeys.map(
+              (key) => 'ntp.${key.path}',
+            ),
+            ...candidate.state.overrides.snifferOverrideKeys.map(
+              (key) => 'sniffer.${key.path}',
+            ),
+            ...candidate.state.overrides.tunOverrideKeys.map(
+              (key) => 'tun.${key.path}',
+            ),
+            ...TunOverrideKey.values
+                .where(
+                  (key) => switch (key) {
+                    TunOverrideKey.strictRoute =>
+                      Platform.isLinux || Platform.isWindows,
+                    TunOverrideKey.gso ||
+                    TunOverrideKey.includeInterface ||
+                    TunOverrideKey.excludeInterface ||
+                    TunOverrideKey.includeUid ||
+                    TunOverrideKey.excludeUid ||
+                    TunOverrideKey.excludeSrcPort ||
+                    TunOverrideKey.excludeDstPort => Platform.isLinux,
+                    _ => true,
+                  },
+                )
+                .map((key) => 'tun.${key.path}'),
+            if (Platform.isLinux) 'routing-mark',
+          },
+        );
+        if (!approved) {
+          _compositionReview.cancel();
+          return null;
+        }
+        final checked = await _readCompositionCandidate();
+        if (checked.fingerprint == candidate.fingerprint) {
+          _compositionReview.approve(candidate.fingerprint);
+          return checked;
+        }
+        // Apply to a stale preview is not consent to new settings/source.
+        candidate = checked;
+      }
+      throw StateError('Configuration kept changing during review');
+    } catch (error) {
+      commonPrint.log(
+        'composition review preparation failed (${error.runtimeType})',
+      );
+      dialogs.showBanner(
+        currentAppLocalizations.compositionReadFailed,
+        level: BannerLevel.error,
+      );
+      return null;
+    }
+  }
+
+  @protected
+  Future<bool> reviewComposition(
+    String yaml, {
+    required Set<String> pagePaths,
+    required Set<String> basePaths,
+  }) async {
+    final strings = currentAppLocalizations;
+    final values = compositionReviewValues(loadYaml(yaml) as Map);
+    return await dialogs.showMessage(
+          title: strings.compositionReviewTitle,
+          confirmText: strings.applyAction,
+          cancelText: strings.cancel,
+          dismissible: false,
+          width: 640,
+          body: SizedBox(
+            width: 640,
+            height: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 12,
+                children: [
+                  Text(strings.compositionBaselineUnknown),
+                  Text(strings.compositionCandidateNote),
+                  for (final entry in values.entries)
+                    Text(
+                      '${entry.key}: ${json.encode(entry.value)} · '
+                      '${pagePaths.contains(entry.key)
+                          ? strings.sourcePage
+                          : basePaths.contains(entry.key)
+                          ? strings.sourceBase
+                          : strings.compositionSourceUnconfirmed}',
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ) ==
+        true;
+  }
+
   Future<_SetupTaskResult> _setupConfig({
+    bool automatic = false,
     bool force = false,
     bool silence = false,
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
   }) async {
+    final adoptionPending = await _compositionPending;
+    if (adoptionPending &&
+        ref.read(pendingCompositionDnsEligibilityProvider) == null) {
+      final eligibility = ref.read(shouldPatchSystemDnsProvider);
+      ref.read(pendingCompositionDnsEligibilityProvider.notifier).value =
+          eligibility;
+    }
+    if (adoptionPending &&
+        _compositionReview.suppressed(automatic: automatic)) {
+      return _SetupTaskResult.failed;
+    }
+    final adoption = adoptionPending ? await _reviewComposition() : null;
+    if (adoptionPending && adoption == null) return _SetupTaskResult.failed;
     _lostMountSelections = const [];
-    var profile = ref.read(currentProfileProvider) ?? recoverMissingProfile();
+    var profile =
+        adoption?.profile ??
+        ref.read(currentProfileProvider) ??
+        recoverMissingProfile();
     // A refresh failure is surfaced by safeRun; setup keeps the old profile.
-    final nextProfile = await globalState.safeRun(() async {
-      final current = profile;
-      if (current == null) {
-        return null;
-      }
-      return ref
-          .read(profilesActionProvider.notifier)
-          .fetchSource(
-            current.id,
-            (validate) => current.checkAndUpdateAndCopy(validate: validate),
-          );
-    });
+    final nextProfile = adoptionPending
+        ? null
+        : await globalState.safeRun(() async {
+            final current = profile;
+            if (current == null) {
+              return null;
+            }
+            return ref
+                .read(profilesActionProvider.notifier)
+                .fetchSource(
+                  current.id,
+                  (validate) =>
+                      current.checkAndUpdateAndCopy(validate: validate),
+                );
+          });
     if (nextProfile != null) {
       profile = nextProfile;
       ref.read(profilesProvider.notifier).put(nextProfile);
     }
     commonPrint.log('setup ===> ${profile?.realLabel}');
     final patchConfig = ref.read(patchClashConfigProvider);
-    if (!patchConfig.pagePriority && profile != null) {
-      unawaited(_offerPageSources(profile.id));
-    }
+    _effectivePatchConfig(patchConfig);
     final shouldContinueSetup = await requestAdmin(patchConfig.pageTunEnable);
-    if (!shouldContinueSetup) {
-      return _SetupTaskResult.handoffToCoreRestart;
+    if (!shouldContinueSetup) return _SetupTaskResult.handoffToCoreRestart;
+    if (patchConfig.pageTunEnable &&
+        !ref.read(safeModeProvider) &&
+        ref.read(authorizedTunEnableProvider) !=
+            TunAuthorizationState.authorized) {
+      return _SetupTaskResult.failed;
     }
     final pushWatch = Stopwatch()..start();
     final realPatchConfig = _effectivePatchConfig(patchConfig);
     final networkSetting = ref.read(networkSettingProvider);
-    SetupState? setupState;
-    final realProfile = await globalState.safeRun(() async {
-      final state = await ref.read(setupStateProvider(profile?.id).future);
-      setupState = state;
-      return getProfile(setupState: state, patchConfig: realPatchConfig);
-    }, title: 'build profile');
+    SetupState? setupState = adoption?.state;
+    final realProfile =
+        adoption?.built ??
+        await globalState.safeRun(() async {
+          final state = await ref.read(setupStateProvider(profile?.id).future);
+          setupState = state;
+          return getProfile(setupState: state, patchConfig: realPatchConfig);
+        }, title: 'build profile');
     final profileFailed = realProfile == null;
-    if (realProfile != null) {
-      ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(
-        realProfile.yaml,
-      );
+    if (profileFailed) {
+      return _SetupTaskResult.failed;
     }
-    final setupParams = _setupParams.copyWith(
-      base: realProfile?.base,
+    var setupParams = _setupParams.copyWith(
+      base: realProfile.base,
       mounts: setupState?.mounts,
     );
     final inputs = switch (setupState) {
@@ -1143,41 +1374,61 @@ class SetupAction extends _$SetupAction {
       ),
       _ => null,
     };
-    final yamlString = realProfile?.yaml ?? '';
+    final yamlString = realProfile.yaml;
     // The panel-added accounts are not in the YAML, yet change what runs.
     final managed = setupParams.tailscale?.managed ?? const [];
     final mountRevision = setupParams.mounts?.revision ?? '';
-    final yamlMd5 =
-        (managed.isEmpty && mountRevision.isEmpty) || realProfile == null
-        ? realProfile?.md5 ?? ''
+    final yamlMd5 = (managed.isEmpty && mountRevision.isEmpty)
+        ? realProfile.md5
         : '${realProfile.md5}${json.encode(managed)}$mountRevision'.toMd5();
-    if (!profileFailed && yamlMd5 == globalState.lastConfigMd5 && !force) {
+    if (!adoptionPending && yamlMd5 == globalState.lastConfigMd5 && !force) {
       _appliedInputs = inputs;
+      ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(
+        realProfile.yaml,
+      );
       globalState.lastConfigCounts = realProfile.counts;
       ref.read(runningFindProcessModeProvider.notifier).value =
           builtFindProcessModeOf(yamlString);
       await preloadInvoke?.call();
       return _SetupTaskResult.completed;
     }
-    // Go answers a config it rejects by running its built-in default, which
-    // has no proxies, so until this push succeeds no applied config is known.
-    _appliedInputs = null;
-    globalState.lastConfigMd5 = null;
-    globalState.lastConfigCounts = null;
+    // Confirmed metadata stays unchanged until the full setup acknowledges.
+    // The Core owns candidate validation and running-file commit.
     if (system.isAndroid) {
       await ref.read(vpnOptionsProvider.future);
       await preferences.saveShareState(ref.read(sharedStateProvider));
-      await preferences.saveAppliedConfigMd5(null);
     }
     // Recaptured so _start's catch can roll back after safeRun swallows it.
     (Object, StackTrace)? handoffFailure;
     var setupFailed = false;
     await globalState.loadingRun(
       () async {
+        Directory? stagedDirectory;
+        var releaseCandidate = true;
+        var rpcStarted = false;
+        var definitelyKept = false;
+        var defaultRuntime = false;
         try {
           if (setupParams.base == null) {
-            final configFilePath = await appPath.configFilePath;
-            await File(configFilePath).writeAsStringAtomically(yamlString);
+            // The agreed full-candidate contract clears only overlay rules:
+            // bulk and rules come from this private source, settings from overlay.
+            // createTemp gives each attempt a nonshared, private directory.
+            // Ambiguous RPCs retain it: Core may still be reading that path.
+            stagedDirectory = await Directory(
+              await appPath.homeDirPath,
+            ).createTemp('.composition-');
+            final stagedSource = File(
+              join(stagedDirectory.path, 'candidate.yaml'),
+            );
+            await stagedSource.writeAsStringAtomically(yamlString);
+            final overlay = Map<String, dynamic>.from(
+              loadYaml(yamlString) as Map,
+            );
+            overlay['rules'] = <String>[];
+            final settingsYaml = await encodeYamlTask(overlay);
+            setupParams = setupParams.copyWith(
+              base: SetupBase(path: stagedSource.path, overlay: settingsYaml),
+            );
           }
           final profileId = profile?.id;
           if (profileId != null) {
@@ -1193,20 +1444,53 @@ class SetupAction extends _$SetupAction {
             }
           }
           try {
+            if (adoption != null &&
+                (await _readCompositionCandidate()).fingerprint !=
+                    adoption.fingerprint) {
+              throw StateError('Reviewed configuration changed; review again');
+            }
+            rpcStarted = true;
+            releaseCandidate = false;
             await _core.setupConfig(
               params: setupParams,
               preloadInvoke: preloadInvoke,
             );
+            releaseCandidate = true;
+            if (adoptionPending) {
+              ref
+                      .read(pendingCompositionDnsEligibilityProvider.notifier)
+                      .value =
+                  null;
+              if (_deferRunningPublication && _isRunning) {
+                _deferRunningPublication = false;
+                _updateRunTime();
+                _syncRuntimeTicker();
+              }
+            }
           } on CoreMethodException catch (error) {
+            final configOutcome =
+                error.code == 'config_rejected' && error.details is Map
+                ? (error.details as Map)['outcome']
+                : null;
+            if (error.code == 'config_rejected' ||
+                error.code == 'mount_rejected') {
+              releaseCandidate = true;
+            }
+            definitelyKept = configOutcome == 'kept';
+            defaultRuntime = configOutcome == 'default';
             final outcome = mountRejectedOutcome(error);
             if (outcome == MountRejectedOutcome.kept) {
+              definitelyKept = true;
               throw MessageException(currentAppLocalizations.mountApplyKept);
             }
             if (error.code != 'config_rejected' && outcome == null) {
               rethrow;
             }
-            globalState.lastConfigCounts = configCountsOf(const {});
-            await globalState.safeRun(() => onUpdated?.call());
+            if (outcome == MountRejectedOutcome.blocked) {
+              defaultRuntime = true;
+              await _forgetConfirmedComposition(defaultRuntime: true);
+              await globalState.safeRun(() => onUpdated?.call());
+            }
             throw MessageException(
               outcome == MountRejectedOutcome.blocked
                   ? currentAppLocalizations.mountApplyBlocked
@@ -1215,24 +1499,51 @@ class SetupAction extends _$SetupAction {
           }
         } catch (e, s) {
           setupFailed = true;
+          if (rpcStarted && !definitelyKept) {
+            await _forgetConfirmedComposition(defaultRuntime: defaultRuntime);
+          }
           if (preloadInvoke != null) {
             handoffFailure = (e, s);
           }
           rethrow;
+        } finally {
+          if (releaseCandidate) {
+            try {
+              await stagedDirectory?.safeDelete(recursive: true);
+            } catch (_) {
+              // The Core acknowledgement must survive local cleanup failure.
+              commonPrint.log('composition candidate cleanup failed');
+            }
+          }
         }
+        ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(
+          realProfile.yaml,
+        );
         globalState.lastConfigMd5 = yamlMd5;
         ref.read(runningFindProcessModeProvider.notifier).value =
             builtFindProcessModeOf(yamlString);
-        ref
-            .read(appliedFollowKeysProvider.notifier)
-            .value = realPatchConfig.pagePriority
-            ? realPatchConfig.followKeys
-            : const {};
-        globalState.lastConfigCounts =
-            realProfile?.counts ?? configCountsOf(const {});
+        ref.read(appliedFollowKeysProvider.notifier).value = const {};
+        globalState.lastConfigCounts = realProfile.counts;
         _appliedInputs = inputs;
         if (system.isAndroid) {
           await preferences.saveAppliedConfigMd5(yamlMd5);
+        }
+        if (adoptionPending) {
+          // The runtime acknowledgement is real even if recording the one-time
+          // revision fails. Do not convert that into a claimed apply rollback.
+          _compositionAdoptedThisSession = true;
+          var recorded = false;
+          try {
+            recorded = await preferences.saveCompositionRevision();
+          } catch (_) {
+            // Report separately; confirmed runtime metadata is already committed.
+          }
+          if (!recorded) {
+            dialogs.showBanner(
+              currentAppLocalizations.compositionRecordFailed,
+              level: BannerLevel.error,
+            );
+          }
         }
         if (setupParams.mounts case final mounts?) {
           await _followMountSelections(mounts.target, setupParams.selectedMap);
@@ -1249,9 +1560,7 @@ class SetupAction extends _$SetupAction {
     if (setupFailed || profileFailed) {
       return _SetupTaskResult.failed;
     }
-    if (ref.mounted &&
-        realPatchConfig.pagePriority &&
-        ref.read(isStartProvider)) {
+    if (ref.mounted && ref.read(isStartProvider)) {
       unawaited(checkMixedListener().then((_) => checkInbounds()));
     }
     return _SetupTaskResult.completed;

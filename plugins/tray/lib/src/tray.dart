@@ -20,6 +20,7 @@ const String _methodOpenMenu = 'openMenu';
 const String _eventIconActivated = 'onIconActivated';
 const String _eventMenuRequested = 'onMenuRequested';
 const String _eventMenuItemSelected = 'onMenuItemSelected';
+const String _eventMenuGenerations = 'onMenuGenerations';
 
 final class Tray {
   Tray._() {
@@ -36,6 +37,15 @@ final class Tray {
   Map<int, TrayMenuItem> _itemsById = const {};
   Future<void> _queue = Future<void>.value();
   String? _signature;
+  int? _menuGeneration;
+  int? _pendingMenuGeneration;
+  int? _trackingMenuGeneration;
+  EncodedTray? _pendingMenu;
+  Set<int> _nativeMenuGenerations = const {};
+  final Map<int, Map<int, TrayMenuItem>> _menusByGeneration = {};
+  final Map<int, Map<int, TrayMenuItem>> _menuOriginsByGeneration = {};
+  final Map<int, List<Object?>> _menuLayoutsByGeneration = {};
+  int _nextMenuGeneration = 0;
   String _title = '';
   String _requestedTitle = '';
   bool _isVisible = false;
@@ -69,6 +79,14 @@ final class Tray {
     _itemsById = const {};
     _queue = Future<void>.value();
     _signature = null;
+    _menuGeneration = null;
+    _pendingMenuGeneration = null;
+    _trackingMenuGeneration = null;
+    _pendingMenu = null;
+    _nativeMenuGenerations = const {};
+    _menusByGeneration.clear();
+    _menuOriginsByGeneration.clear();
+    _menuLayoutsByGeneration.clear();
     _title = '';
     _requestedTitle = '';
     _isVisible = false;
@@ -93,23 +111,131 @@ final class Tray {
     final encoded = TrayCodec.encode(spec);
     if (_isVisible && encoded.signature == _signature) {
       _itemsById = encoded.itemsById;
+      if (defaultTargetPlatform == TargetPlatform.macOS &&
+          _menuGeneration != null) {
+        _menusByGeneration[_menuGeneration!] = encoded.itemsById;
+        _menuOriginsByGeneration[_menuGeneration!] = encoded.itemsById;
+        if (_trackingMenuGeneration != null &&
+            _trackingMenuGeneration != _menuGeneration) {
+          _reconcileTrackedCallbacks(_trackingMenuGeneration!, encoded);
+        }
+      }
       return;
     }
-    final isApplied = await _channel
-        .invokeMethod<bool>(_methodShow, <String, Object?>{
-          'id': _stableId,
-          'icon': await _resolveIcon(spec.icon),
-          'toolTip': encoded.toolTip,
-          'title': _title,
-          'menu': encoded.menu,
-        });
-    if (isApplied != true) {
-      _signature = null;
+    final generation = ++_nextMenuGeneration;
+    final isMacOS = defaultTargetPlatform == TargetPlatform.macOS;
+    if (isMacOS) {
+      _pendingMenuGeneration = generation;
+      _pendingMenu = encoded;
+      _menusByGeneration[generation] = encoded.itemsById;
+      _menuOriginsByGeneration[generation] = encoded.itemsById;
+      _menuLayoutsByGeneration[generation] = encoded.menu;
+    }
+    try {
+      final isApplied = await _channel
+          .invokeMethod<bool>(_methodShow, <String, Object?>{
+            'id': _stableId,
+            'icon': await _resolveIcon(spec.icon),
+            'toolTip': encoded.toolTip,
+            'title': _title,
+            'menu': encoded.menu,
+            if (isMacOS) 'menuGeneration': generation,
+          });
+      if (isApplied != true) {
+        _signature = null;
+        return;
+      }
+      _itemsById = encoded.itemsById;
+      _signature = encoded.signature;
+      _menuGeneration = generation;
+      _isVisible = true;
+    } finally {
+      _pendingMenuGeneration = null;
+      _pendingMenu = null;
+      _pruneMenuGenerations();
+    }
+  }
+
+  void _pruneMenuGenerations() {
+    bool unused(int generation) =>
+        generation != _menuGeneration &&
+        generation != _pendingMenuGeneration &&
+        !_nativeMenuGenerations.contains(generation);
+    _menusByGeneration.removeWhere((generation, _) => unused(generation));
+    _menuOriginsByGeneration.removeWhere((generation, _) => unused(generation));
+    _menuLayoutsByGeneration.removeWhere((generation, _) => unused(generation));
+  }
+
+  void _reconcileTrackedCallbacks(int generation, EncodedTray desired) {
+    final layout = _menuLayoutsByGeneration[generation];
+    final previous = _menusByGeneration[generation];
+    final origins = _menuOriginsByGeneration[generation];
+    if (layout == null || previous == null || origins == null) {
       return;
     }
-    _itemsById = encoded.itemsById;
-    _signature = encoded.signature;
-    _isVisible = true;
+    final reconciled = <int, TrayMenuItem>{};
+    void visit(List<Object?> retained, List<Object?> incoming) {
+      for (final value in retained) {
+        final row = value! as Map<String, Object?>;
+        bool sameIdentity(Object? value) {
+          final other = value! as Map<String, Object?>;
+          return row['type'] == other['type'] && row['label'] == other['label'];
+        }
+
+        final matches = incoming.where(sameIdentity).toList();
+        final unique =
+            retained.where(sameIdentity).length == 1 && matches.length == 1;
+        final match = unique ? matches.single! as Map<String, Object?> : null;
+        final id = row['id']! as int;
+        final oldItem = previous[id] ?? origins[id];
+        final newItem = match == null ? null : desired.itemsById[match['id']];
+        if (oldItem != null && newItem != null) {
+          reconciled[id] = _retainCallback(
+            newItem,
+            oldItem,
+            origins[id] ?? oldItem,
+          );
+        }
+        if (row['type'] == 'submenu') {
+          visit(
+            row['items']! as List<Object?>,
+            match?['items'] as List<Object?>? ?? const [],
+          );
+        }
+      }
+    }
+
+    visit(layout, desired.menu);
+    _menusByGeneration[generation] = reconciled;
+  }
+
+  TrayMenuItem _retainCallback(
+    TrayMenuItem item,
+    TrayMenuItem previous,
+    TrayMenuItem origin,
+  ) {
+    return switch (item) {
+      TrayMenuAction() => TrayMenuAction(
+        label: item.label,
+        detail: item.detail,
+        icon: item.icon,
+        badge: item.badge,
+        accessibilityLabel: item.accessibilityLabel,
+        enabled: item.enabled && (origin as TrayMenuAction).enabled,
+        onSelected: (previous as TrayMenuAction).onSelected,
+      ),
+      TrayMenuCheckbox() => TrayMenuCheckbox(
+        label: item.label,
+        checked: item.checked,
+        detail: item.detail,
+        icon: item.icon,
+        badge: item.badge,
+        accessibilityLabel: item.accessibilityLabel,
+        enabled: item.enabled && (origin as TrayMenuCheckbox).enabled,
+        onSelected: (previous as TrayMenuCheckbox).onSelected,
+      ),
+      TrayMenuSubmenu() || TrayMenuSeparator() => item,
+    };
   }
 
   Future<void> _setTitle(String title) async {
@@ -129,6 +255,12 @@ final class Tray {
   Future<void> _hide() async {
     _itemsById = const {};
     _signature = null;
+    _menuGeneration = null;
+    _trackingMenuGeneration = null;
+    _nativeMenuGenerations = const {};
+    _menusByGeneration.clear();
+    _menuOriginsByGeneration.clear();
+    _menuLayoutsByGeneration.clear();
     _title = '';
     if (!_isVisible) {
       return;
@@ -150,21 +282,51 @@ final class Tray {
         _events.add(const TrayIconActivated());
       case _eventMenuRequested:
         _events.add(const TrayMenuRequested());
+      case _eventMenuGenerations:
+        final arguments = call.arguments;
+        if (defaultTargetPlatform != TargetPlatform.macOS) {
+          return;
+        }
+        final references = arguments is Map
+            ? arguments['generations']
+            : arguments;
+        if (references is! List) {
+          return;
+        }
+        _nativeMenuGenerations = references.whereType<int>().take(3).toSet();
+        final tracking = arguments is Map
+            ? arguments['trackingGeneration']
+            : null;
+        _trackingMenuGeneration = tracking is int ? tracking : null;
+        if (_pendingMenu case final pending?) {
+          if (_nativeMenuGenerations.contains(_pendingMenuGeneration) &&
+              _trackingMenuGeneration != null &&
+              _trackingMenuGeneration != _pendingMenuGeneration) {
+            _reconcileTrackedCallbacks(_trackingMenuGeneration!, pending);
+          }
+        }
+        _pruneMenuGenerations();
       case _eventMenuItemSelected:
         final arguments = call.arguments;
         if (arguments is! Map) {
           return;
         }
+        final generation = arguments['menuGeneration'];
+        final items = defaultTargetPlatform == TargetPlatform.macOS
+            ? (generation is int ? _menusByGeneration[generation] : null)
+            : _itemsById;
         final id = arguments['id'];
-        final item = id is int ? _itemsById[id] : null;
+        final item = id is int ? (items?[id]) : null;
         if (item == null) {
           return;
         }
         switch (item) {
-          case TrayMenuAction(:final onSelected):
+          case TrayMenuAction(enabled: true, :final onSelected):
             onSelected?.call();
-          case TrayMenuCheckbox(:final onSelected):
+          case TrayMenuCheckbox(enabled: true, :final onSelected):
             onSelected?.call();
+          case TrayMenuAction():
+          case TrayMenuCheckbox():
           case TrayMenuSubmenu():
           case TrayMenuSeparator():
             return;

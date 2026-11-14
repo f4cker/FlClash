@@ -1,0 +1,1058 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
+import 'package:fl_clash/core/desktop/macos_helper_launcher.dart';
+import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
+import 'package:fl_clash/core/desktop/macos_helper_transport.dart';
+import 'package:fl_clash/core/desktop/model.dart';
+import 'package:fl_clash/core/desktop/transport.dart';
+import 'package:fl_clash/views/config/macos_helper.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+const _session = '0123456789abcdef0123456789abcdef';
+
+class _Native implements MacHelperNativeApi {
+  final calls = <String>[];
+  final arguments = <Map<String, Object?>>[];
+  String state = 'enabled';
+  String stopCode = 'ok';
+  bool stopExitConfirmed = true;
+  String startCode = 'ok';
+  bool exitConfirmed = true;
+  Completer<Map<Object?, Object?>> receive = Completer();
+
+  @override
+  Future<Map<Object?, Object?>> invoke(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) async {
+    calls.add(method);
+    this.arguments.add(arguments);
+    return switch (method) {
+      'status' => {'code': state},
+      'start' => {
+        'code': startCode,
+        'protocol': 1,
+        'pid': 42,
+        'exitConfirmed': exitConfirmed,
+      },
+      'stop' => {
+        'code': stopCode,
+        'exitConfirmed': stopCode == 'ok' && stopExitConfirmed,
+      },
+      'installerInstructions' => {'code': 'installerRequired'},
+      'receive' => receive.future,
+      _ => {'code': 'ok'},
+    };
+  }
+}
+
+final class _RelayCall {
+  final Map<String, Object?> arguments;
+  final reply = Completer<Map<Object?, Object?>>();
+
+  _RelayCall(this.arguments);
+}
+
+final class _RelayNative implements MacHelperNativeApi {
+  final sends = <_RelayCall>[];
+  final receives = <_RelayCall>[];
+  final calls = <String>[];
+  int externalPending = 0;
+  int maxPending = 0;
+  String stopCode = 'ok';
+  Object? stopError;
+  Completer<Map<Object?, Object?>>? stopReply;
+
+  int get pending =>
+      externalPending +
+      [...sends, ...receives].where((call) => !call.reply.isCompleted).length;
+
+  Future<Map<Object?, Object?>> _hold(
+    List<_RelayCall> destination,
+    Map<String, Object?> arguments,
+  ) {
+    final full = pending >= 32;
+    final call = _RelayCall(arguments);
+    destination.add(call);
+    if (full) call.reply.complete({'code': 'backpressure'});
+    if (pending > maxPending) maxPending = pending;
+    return call.reply.future;
+  }
+
+  @override
+  Future<Map<Object?, Object?>> invoke(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) {
+    calls.add(method);
+    switch (method) {
+      case 'status':
+        return Future.value({'code': 'enabled'});
+      case 'start':
+        return Future.value({'code': 'ok', 'protocol': 1, 'pid': 42});
+      case 'stop':
+        if (stopError != null) return Future.error(stopError!);
+        if (pending >= 32) return Future.value({'code': 'backpressure'});
+        return stopReply?.future ??
+            Future.value({'code': stopCode, 'exitConfirmed': stopCode == 'ok'});
+      case 'send':
+        return _hold(sends, arguments);
+      case 'receive':
+        return _hold(receives, arguments);
+      default:
+        throw StateError('Unexpected fake method: $method');
+    }
+  }
+}
+
+final class _RelayFixture {
+  final native = _RelayNative();
+  late final MacHelperClient client;
+  final events = <MacHelperEvent>[];
+  late final StreamSubscription<MacHelperEvent> subscription;
+  String session = _session;
+  bool _closed = false;
+
+  _RelayFixture({int backpressureRetries = 500}) {
+    client = MacHelperClient(
+      native: native,
+      safeMode: () => false,
+      backpressureRetries: backpressureRetries,
+    );
+    subscription = client.events.listen(events.add);
+    addTearDown(close);
+  }
+
+  Iterable<MacHelperDisconnected> get disconnects =>
+      events.whereType<MacHelperDisconnected>();
+
+  Future<void> start([String value = _session]) async {
+    session = value;
+    await client.start(session);
+    await _flush();
+  }
+
+  Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+    native.externalPending = 0;
+    native.stopCode = 'ok';
+    native.stopError = null;
+    native.stopReply = null;
+    await client.stop(session);
+    for (final call in [...native.sends, ...native.receives]) {
+      if (!call.reply.isCompleted) call.reply.complete({'code': 'stopped'});
+    }
+    await _flush(const Duration(milliseconds: 32));
+    await subscription.cancel();
+  }
+}
+
+Future<void> _flush([Duration duration = Duration.zero]) =>
+    Future<void>.delayed(duration);
+
+Future<void> _until(bool Function() condition) async {
+  final elapsed = Stopwatch()..start();
+  while (!condition()) {
+    if (elapsed.elapsed > const Duration(seconds: 1)) {
+      fail('Relay did not progress within one second');
+    }
+    await _flush(const Duration(milliseconds: 1));
+  }
+}
+
+Matcher _helperCode(String code) =>
+    isA<MacHelperException>().having((error) => error.code, 'code', code);
+
+void main() {
+  test(
+    'stable helper migration is explicit and never blocks owned stop',
+    () async {
+      final native = _Native()..state = 'updateRequired';
+      final client = MacHelperClient(native: native, safeMode: () => false);
+      expect(await client.status(), MacHelperState.updateRequired);
+      expect(
+        macHelperAction(MacHelperState.updateRequired),
+        MacHelperAction.installer,
+      );
+      await expectLater(
+        client.start(_session),
+        throwsA(_helperCode('updateRequired')),
+      );
+      expect(native.calls, everyElement('status'));
+      await expectLater(
+        client.installerInstructions(confirmed: false),
+        throwsA(_helperCode('consentRequired')),
+      );
+      native.state = 'enabled';
+      await client.start(_session);
+      native.state = 'updateRequired';
+      native.calls.clear();
+      expect(await client.stop(_session), isTrue);
+      expect(native.calls, ['stop']);
+      native.receive.complete({'code': 'stopped'});
+    },
+  );
+
+  test(
+    'status is passive and preserves precise authorization states',
+    () async {
+      for (final state in MacHelperState.values) {
+        final native = _Native()..state = state.name;
+        expect(await MacHelperClient(native: native).status(), state);
+        expect(native.calls, ['status']);
+      }
+    },
+  );
+
+  test(
+    'safe mode blocks every native owner entry without calling channels',
+    () async {
+      final native = _Native();
+      final client = MacHelperClient(native: native, safeMode: () => true);
+      expect(await client.status(), MacHelperState.disabled);
+      await expectLater(
+        client.installerInstructions(confirmed: true),
+        throwsA(isA<MacHelperException>()),
+      );
+
+      await expectLater(
+        client.start(_session),
+        throwsA(isA<MacHelperException>()),
+      );
+      await expectLater(
+        client.stop(_session),
+        throwsA(isA<MacHelperException>()),
+      );
+      expect(() => client.send([1]), throwsA(isA<MacHelperException>()));
+      expect(native.calls, isEmpty);
+    },
+  );
+
+  test(
+    'installer instructions require consent and never report installation complete',
+    () async {
+      final native = _Native();
+      final client = MacHelperClient(native: native);
+      await expectLater(
+        client.installerInstructions(confirmed: false),
+        throwsA(isA<MacHelperException>()),
+      );
+      expect(native.calls, isEmpty);
+      expect(
+        await client.installerInstructions(confirmed: true),
+        MacHelperState.installerRequired,
+      );
+      expect(native.arguments.single, {'confirmed': true});
+    },
+  );
+
+  for (final state in MacHelperState.values.where(
+    (state) => state != MacHelperState.enabled,
+  )) {
+    test(
+      'managed launcher refuses ${state.name} without fallback or registration',
+      () async {
+        final native = _Native()..state = state.name;
+        final launcher = MacHelperLauncher(MacHelperClient(native: native));
+        await expectLater(
+          launcher.resolve(),
+          throwsA(isA<MacHelperException>()),
+        );
+        expect(native.calls, ['status']);
+      },
+    );
+  }
+
+  test(
+    'lease start never forwards endpoint or executable and stop is idempotent',
+    () async {
+      final native = _Native();
+      final client = MacHelperClient(native: native);
+      final lease = await MacHelperLauncher(
+        client,
+      ).start(sessionId: _session, address: '/untrusted/address');
+      expect(lease.pid, 42);
+      expect(lease.owner, CoreProcessOwner.helper);
+      expect(native.arguments[native.calls.indexOf('start')], {
+        'session': _session,
+      });
+      final first = await lease.stop(const Duration(seconds: 1));
+      expect(first.exitConfirmed, isTrue);
+      expect(await lease.stop(const Duration(seconds: 1)), first);
+      expect(native.calls.where((method) => method == 'stop'), hasLength(1));
+    },
+  );
+
+  test(
+    'unconfirmed stop retains ownership, rejects replacement, and supports retry',
+    () async {
+      final native = _Native()..stopCode = 'exitUnconfirmed';
+      final client = MacHelperClient(native: native);
+      final lease = await MacHelperLauncher(
+        client,
+      ).start(sessionId: _session, address: 'ignored');
+      expect(
+        (await lease.stop(const Duration(seconds: 1))).exitConfirmed,
+        isFalse,
+      );
+      await expectLater(
+        client.start('11111111111111111111111111111111'),
+        throwsA(isA<MacHelperException>()),
+      );
+      expect(native.calls.where((method) => method == 'start'), hasLength(1));
+      native.stopCode = 'ok';
+      expect(
+        (await lease.stop(const Duration(seconds: 1))).exitConfirmed,
+        isTrue,
+      );
+    },
+  );
+
+  test('an ok stop without exit evidence keeps the session owned', () async {
+    final native = _Native()..stopExitConfirmed = false;
+    final client = MacHelperClient(native: native);
+    await client.start(_session);
+    expect(await client.stop(_session), isFalse);
+    await expectLater(
+      client.start('1123456789abcdef0123456789abcdef'),
+      throwsA(isA<MacHelperException>()),
+    );
+    expect(native.calls.where((method) => method == 'start'), hasLength(1));
+    native.stopExitConfirmed = true;
+    expect(await client.stop(_session), isTrue);
+  });
+
+  test('wrong session cannot stop the owned child', () async {
+    final native = _Native();
+    final client = MacHelperClient(native: native);
+    await client.start(_session);
+    expect(await client.stop('other-session'), isFalse);
+    expect(native.calls, isNot(contains('stop')));
+    await client.stop(_session);
+  });
+
+  test('confirmed pre-spawn error does not strand a session', () async {
+    final native = _Native()..startCode = 'incompatible';
+    final client = MacHelperClient(native: native);
+    await expectLater(
+      client.start(_session),
+      throwsA(isA<MacHelperException>()),
+    );
+    expect(() => client.send([1]), throwsA(_helperCode('notConnected')));
+    native.startCode = 'ok';
+    expect(await client.start(_session), 42);
+    await client.stop(_session);
+  });
+
+  test(
+    'transport relays unchanged payload and confirms matching disconnect',
+    () async {
+      final native = _Native();
+      final client = MacHelperClient(native: native);
+      final transport = MacHelperTransport(client);
+      await transport.open();
+      final frame = transport.frames.first;
+      await client.start(_session);
+      final connected = await transport.waitUntilConnected(
+        const Duration(seconds: 1),
+      );
+      expect(connected.pid, 42);
+      native.receive.complete({
+        'code': 'ok',
+        'frame': Uint8List.fromList([123, 125]),
+      });
+      expect(await frame, [123, 125]);
+      final disconnected = transport.events.firstWhere(
+        (event) => event is TransportDisconnected,
+      );
+      await client.stop(_session);
+      expect(
+        (await disconnected as TransportDisconnected).generation,
+        connected.generation,
+      );
+      await transport.close();
+    },
+  );
+
+  test(
+    'turn-off instructions wait for lifecycle stop without claiming removal',
+    () async {
+      final native = _Native();
+      final client = MacHelperClient(native: native);
+      final gate = Completer<CoreLifecycleResult>();
+      final operation = MacHelperMaintenance(
+        client,
+        stop: () => gate.future,
+      ).turnOff(confirmed: true);
+      await expectLater(
+        client.start(_session),
+        throwsA(isA<MacHelperException>()),
+      );
+      expect(native.calls, isEmpty);
+      gate.complete(
+        const CoreLifecycleResult(
+          revision: 1,
+          outcome: CoreLifecycleOutcome.applied,
+        ),
+      );
+      expect(await operation, MacHelperState.installerRequired);
+      expect(native.calls, ['installerInstructions']);
+    },
+  );
+
+  test(
+    'failed or superseded lifecycle stop never advances to installer instructions',
+    () async {
+      for (final superseded in [false, true]) {
+        final native = _Native();
+        final maintenance = MacHelperMaintenance(
+          MacHelperClient(native: native),
+          stop: () async {
+            if (!superseded) throw StateError('unknown exit');
+            return const CoreLifecycleResult(
+              revision: 1,
+              outcome: CoreLifecycleOutcome.superseded,
+            );
+          },
+        );
+        if (!superseded) {
+          await expectLater(
+            maintenance.turnOff(confirmed: true),
+            throwsStateError,
+          );
+        } else {
+          expect(
+            await maintenance.turnOff(confirmed: true),
+            MacHelperState.exitUnconfirmed,
+          );
+        }
+        expect(native.calls, isEmpty);
+      }
+    },
+  );
+
+  test(
+    'untrusted or unsupported builds offer no activation or retry action',
+    () {
+      for (final state in [
+        MacHelperState.signingRequired,
+        MacHelperState.unsupported,
+        MacHelperState.disabled,
+      ]) {
+        expect(macHelperAction(state), isNull);
+      }
+      expect(
+        macHelperAction(MacHelperState.approvalRequired),
+        MacHelperAction.installer,
+      );
+      expect(macHelperAction(MacHelperState.enabled), MacHelperAction.disable);
+      expect(
+        macHelperAction(MacHelperState.protectedInstallationRequired),
+        MacHelperAction.installer,
+      );
+      expect(
+        macHelperAction(MacHelperState.installerRequired),
+        MacHelperAction.installer,
+      );
+    },
+  );
+
+  test(
+    '64-frame burst is copied, FIFO, exactly once under native cap 32',
+    () async {
+      final fixture = _RelayFixture();
+      await fixture.start();
+      final native = fixture.native;
+      for (var index = 0; index < 64; index++) {
+        final frame = [index];
+        fixture.client.send(frame);
+        frame[0] = 255;
+      }
+      expect(native.sends, hasLength(1));
+      expect(native.pending, 2);
+      expect(native.receives, hasLength(1));
+      for (var index = 0; index < 64; index++) {
+        expect(native.sends, hasLength(index + 1));
+        expect(native.sends[index].arguments['frame'], [index]);
+        expect(native.sends[index].arguments['session'], _session);
+        expect(native.pending, 2);
+        native.sends[index].reply.complete({'code': 'ok'});
+        await _flush();
+      }
+      expect(native.sends, hasLength(64));
+      expect(native.maxPending, 2);
+      expect(fixture.disconnects, isEmpty);
+      expect(native.calls.where((method) => method == 'stop'), isEmpty);
+      await fixture.close();
+      expect(fixture.disconnects, hasLength(1));
+    },
+  );
+
+  test('native send pressure retries only the refused FIFO head', () async {
+    final fixture = _RelayFixture();
+    await fixture.start();
+    final native = fixture.native..externalPending = 31;
+    fixture.client.send([1]);
+    fixture.client.send([2]);
+    await _flush();
+    expect(native.sends, hasLength(1));
+    expect(native.sends.single.reply.isCompleted, isTrue);
+    expect(fixture.disconnects, isEmpty);
+    await _until(() => native.sends.length == 2);
+    expect(native.sends, hasLength(2));
+    expect(native.sends.last.reply.isCompleted, isTrue);
+    native.externalPending = 30;
+    await _until(() => native.sends.length == 3);
+    expect(native.sends, hasLength(3));
+    expect(native.sends.last.reply.isCompleted, isFalse);
+    expect(native.sends.map((call) => call.arguments['frame']), [
+      [1],
+      [1],
+      [1],
+    ]);
+    expect(native.pending, 32);
+    native.sends.last.reply.complete({'code': 'ok'});
+    await _flush();
+    expect(native.sends, hasLength(4));
+    expect(native.sends.last.arguments['frame'], [2]);
+    native.sends.last.reply.complete({'code': 'ok'});
+    await _flush();
+    expect(fixture.disconnects, isEmpty);
+    await fixture.close();
+  });
+
+  test(
+    'receive pressure retries with delay and resumes frame delivery',
+    () async {
+      final fixture = _RelayFixture();
+      await fixture.start();
+      final native = fixture.native..externalPending = 32;
+      native.receives.single.reply.complete({'code': 'backpressure'});
+      await _flush();
+      expect(fixture.disconnects, isEmpty);
+      await _until(() => native.receives.length == 2);
+      expect(native.receives, hasLength(2));
+      expect(native.receives.last.reply.isCompleted, isTrue);
+      native.externalPending = 0;
+      await _until(() => native.receives.length == 3);
+      expect(native.receives, hasLength(3));
+      native.receives.last.reply.complete({
+        'code': 'ok',
+        'frame': Uint8List.fromList([3, 4]),
+      });
+      await _flush();
+      expect(fixture.events.whereType<MacHelperFrame>().single.data, [3, 4]);
+      expect(fixture.disconnects, isEmpty);
+      await _until(() => native.receives.length == 4);
+      expect(native.receives, hasLength(4));
+      await fixture.close();
+    },
+  );
+
+  for (final failure in ['unavailable', 'exitUnconfirmed', 'futureError']) {
+    test(
+      'send $failure fails once without retry or losing ownership',
+      () async {
+        final fixture = _RelayFixture();
+        await fixture.start();
+        fixture.client.send([1]);
+        fixture.client.send([2]);
+        final error = TimeoutException('ambiguous native completion');
+        if (failure == 'futureError') {
+          fixture.native.sends.single.reply.completeError(error);
+        } else {
+          fixture.native.sends.single.reply.complete({'code': failure});
+        }
+        await _flush();
+        expect(fixture.disconnects, hasLength(1));
+        expect(
+          fixture.disconnects.single.error,
+          failure == 'futureError' ? same(error) : _helperCode(failure),
+        );
+        fixture.native.receives.single.reply.complete({'code': 'unavailable'});
+        await _flush(const Duration(milliseconds: 64));
+        expect(fixture.disconnects, hasLength(1));
+        expect(fixture.native.sends, hasLength(1));
+        expect(
+          () => fixture.client.send([3]),
+          throwsA(_helperCode('notConnected')),
+        );
+        await expectLater(
+          fixture.client.start('other-session'),
+          throwsA(_helperCode('exitUnconfirmed')),
+        );
+        expect(
+          fixture.native.calls.where((method) => method == 'stop'),
+          isEmpty,
+        );
+        await fixture.close();
+        expect(fixture.disconnects, hasLength(1));
+      },
+    );
+  }
+
+  test('receive disconnect wins once over a concurrent failed send', () async {
+    final fixture = _RelayFixture();
+    await fixture.start();
+    fixture.client.send([1]);
+    fixture.client.send([2]);
+    final error = StateError('receive disconnected');
+    fixture.native.receives.single.reply.completeError(error);
+    await _flush();
+    fixture.native.sends.single.reply.completeError(StateError('send failed'));
+    await _flush();
+    expect(fixture.disconnects.single.error, same(error));
+    expect(fixture.native.sends, hasLength(1));
+    await fixture.close();
+    expect(fixture.disconnects, hasLength(1));
+  });
+
+  test(
+    'terminal receive code is preserved and stop still owns cleanup',
+    () async {
+      final fixture = _RelayFixture();
+      await fixture.start();
+      fixture.native.receives.single.reply.complete({'code': 'denied'});
+      await _flush(const Duration(milliseconds: 64));
+      expect(fixture.disconnects.single.error, _helperCode('denied'));
+      expect(fixture.native.receives, hasLength(1));
+      expect(fixture.native.calls.where((method) => method == 'stop'), isEmpty);
+      await fixture.close();
+      expect(fixture.disconnects, hasLength(1));
+    },
+  );
+
+  test(
+    'stopped session ignores stale failures without a replacement',
+    () async {
+      final fixture = _RelayFixture();
+      await fixture.start();
+      fixture.client.send([1]);
+      fixture.client.send([2]);
+      expect(await fixture.client.stop(_session), isTrue);
+      fixture.native.sends.single.reply.completeError(StateError('late send'));
+      fixture.native.receives.single.reply.completeError(
+        StateError('late receive'),
+      );
+      await _flush(const Duration(milliseconds: 64));
+      expect(fixture.native.sends, hasLength(1));
+      expect(fixture.disconnects, hasLength(1));
+      expect(fixture.disconnects.single.error, isNull);
+      expect(
+        () => fixture.client.send([3]),
+        throwsA(_helperCode('notConnected')),
+      );
+      await fixture.close();
+      expect(fixture.disconnects, hasLength(1));
+    },
+  );
+
+  for (final restart in ['same', 'different']) {
+    for (final oldReply in ['ok', 'unavailable', 'futureError']) {
+      test(
+        'restart $restart isolates stale $oldReply and queue counters',
+        () async {
+          final fixture = _RelayFixture();
+          await fixture.start();
+          fixture.client.send([99]);
+          for (var index = 0; index < 255; index++) {
+            fixture.client.send([98]);
+          }
+          expect(await fixture.client.stop(_session), isTrue);
+          final session = restart == 'same'
+              ? _session
+              : '1123456789abcdef0123456789abcdef';
+          await fixture.start(session);
+          final frame = Uint8List(macosHelperMaxFrame);
+          fixture.client.send(frame);
+          expect(
+            () => fixture.client.send([1]),
+            throwsA(_helperCode('backpressure')),
+          );
+          expect(fixture.native.sends, hasLength(1));
+          final oldSend = fixture.native.sends.first;
+          if (oldReply == 'futureError') {
+            oldSend.reply.completeError(StateError('old generation'));
+          } else {
+            oldSend.reply.complete({'code': oldReply});
+          }
+          fixture.native.receives.first.reply.complete({
+            'code': 'ok',
+            'frame': Uint8List.fromList([97]),
+          });
+          await _flush();
+          expect(fixture.native.sends, hasLength(2));
+          expect(fixture.native.sends.last.arguments['session'], session);
+          expect(
+            (fixture.native.sends.last.arguments['frame'] as Uint8List).length,
+            macosHelperMaxFrame,
+          );
+          expect(fixture.events.whereType<MacHelperFrame>(), isEmpty);
+          expect(fixture.disconnects, hasLength(1));
+          expect(
+            () => fixture.client.send([1]),
+            throwsA(_helperCode('backpressure')),
+          );
+          fixture.native.sends.last.reply.complete({'code': 'ok'});
+          await _flush();
+          for (var index = 0; index < 256; index++) {
+            fixture.client.send([index]);
+          }
+          expect(
+            () => fixture.client.send([]),
+            throwsA(_helperCode('backpressure')),
+          );
+          await fixture.close();
+          expect(fixture.native.sends, hasLength(3));
+          expect(fixture.disconnects, hasLength(2));
+        },
+      );
+    }
+  }
+
+  test(
+    'stop invalidates queued sends before native exit confirmation',
+    () async {
+      final fixture = _RelayFixture();
+      await fixture.start();
+      fixture.client.send([1]);
+      fixture.client.send([2]);
+      final stopReply = fixture.native.stopReply = Completer();
+      final stopped = fixture.client.stop(_session);
+      fixture.native.sends.single.reply.complete({'code': 'ok'});
+      await _flush();
+      expect(fixture.native.sends, hasLength(1));
+      expect(
+        () => fixture.client.send([3]),
+        throwsA(_helperCode('notConnected')),
+      );
+      stopReply.complete({'code': 'exitUnconfirmed', 'exitConfirmed': false});
+      expect(await stopped, isFalse);
+      expect(fixture.disconnects, isEmpty);
+      await expectLater(
+        fixture.client.start(_session),
+        throwsA(_helperCode('exitUnconfirmed')),
+      );
+      await fixture.close();
+      expect(fixture.disconnects, hasLength(1));
+      expect(
+        fixture.native.calls.where((method) => method == 'stop'),
+        hasLength(2),
+      );
+      expect(await fixture.client.stop(_session), isTrue);
+      expect(
+        fixture.native.calls.where((method) => method == 'stop'),
+        hasLength(2),
+      );
+    },
+  );
+
+  test('stop during send and receive retry cancels stale dispatch', () async {
+    final fixture = _RelayFixture();
+    await fixture.start();
+    fixture.client.send([1]);
+    fixture.client.send([2]);
+    fixture.native.sends.single.reply.complete({'code': 'backpressure'});
+    fixture.native.receives.single.reply.complete({'code': 'backpressure'});
+    await _flush();
+    expect(await fixture.client.stop(_session), isTrue);
+    await fixture.start();
+    fixture.client.send([3]);
+    await _until(() => fixture.native.sends.length == 2);
+    expect(fixture.native.sends, hasLength(2));
+    expect(fixture.native.sends.last.arguments['frame'], [3]);
+    expect(fixture.native.receives, hasLength(2));
+    expect(fixture.disconnects, hasLength(1));
+    await fixture.close();
+  });
+
+  test('queue count bounds zero-byte frames independently of bytes', () async {
+    final fixture = _RelayFixture();
+    await fixture.start();
+    for (var index = 0; index < 256; index++) {
+      fixture.client.send([]);
+    }
+    expect(() => fixture.client.send([]), throwsA(_helperCode('backpressure')));
+    fixture.native.sends.single.reply.complete({'code': 'ok'});
+    await _flush();
+    fixture.client.send([]);
+    expect(
+      () => fixture.client.send([1]),
+      throwsA(_helperCode('backpressure')),
+    );
+    expect(fixture.disconnects, isEmpty);
+    await fixture.close();
+    expect(fixture.native.sends, hasLength(2));
+  });
+
+  test(
+    '64 MiB byte budget counts in-flight data independently of count',
+    () async {
+      final fixture = _RelayFixture();
+      await fixture.start();
+      final frame = Uint8List(macosHelperMaxFrame ~/ 2);
+      fixture.client.send(frame);
+      fixture.client.send(frame);
+      expect(
+        () => fixture.client.send([1]),
+        throwsA(_helperCode('backpressure')),
+      );
+      fixture.client.send([]);
+      fixture.native.sends.single.reply.complete({'code': 'ok'});
+      await _flush();
+      fixture.client.send(frame);
+      expect(
+        () => fixture.client.send([1]),
+        throwsA(_helperCode('backpressure')),
+      );
+      expect(fixture.disconnects, isEmpty);
+      await fixture.close();
+      expect(fixture.native.sends, hasLength(2));
+    },
+  );
+
+  test('missing session and invalid frames are not queue saturation', () async {
+    final fixture = _RelayFixture();
+    expect(
+      () => fixture.client.send([1]),
+      throwsA(_helperCode('notConnected')),
+    );
+    await fixture.start();
+    expect(
+      () => fixture.client.send(Uint8List(macosHelperMaxFrame + 1)),
+      throwsA(_helperCode('invalidFrame')),
+    );
+    expect(
+      () => fixture.client.send([-1]),
+      throwsA(_helperCode('invalidFrame')),
+    );
+    expect(
+      () => fixture.client.send([256]),
+      throwsA(_helperCode('invalidFrame')),
+    );
+    for (var index = 0; index < 256; index++) {
+      fixture.client.send([index]);
+    }
+    expect(
+      () => fixture.client.send([1]),
+      throwsA(_helperCode('backpressure')),
+    );
+    await fixture.close();
+    expect(
+      () => fixture.client.send([1]),
+      throwsA(_helperCode('notConnected')),
+    );
+  });
+
+  for (final method in ['send', 'receive']) {
+    test(
+      'persistent $method pressure exhausts once and retains ownership',
+      () async {
+        final fixture = _RelayFixture(backpressureRetries: 2);
+        await fixture.start();
+        final native = fixture.native;
+        if (method == 'send') {
+          native.externalPending = 31;
+          for (var index = 0; index < 64; index++) {
+            fixture.client.send([index]);
+          }
+        } else {
+          native.externalPending = 32;
+          native.receives.single.reply.complete({'code': 'backpressure'});
+        }
+        await _until(() => fixture.disconnects.isNotEmpty);
+        final attempts = method == 'send' ? native.sends : native.receives;
+        expect(attempts, hasLength(3));
+        expect(fixture.disconnects.single.error, _helperCode('backpressure'));
+        await _flush(const Duration(milliseconds: 48));
+        expect(attempts, hasLength(3));
+        expect(fixture.disconnects, hasLength(1));
+        expect(
+          () => fixture.client.send([1]),
+          throwsA(_helperCode('notConnected')),
+        );
+        await expectLater(
+          fixture.client.start(_session),
+          throwsA(_helperCode('exitUnconfirmed')),
+        );
+        expect(native.calls.where((call) => call == 'stop'), isEmpty);
+        await fixture.close();
+        expect(fixture.disconnects, hasLength(1));
+      },
+    );
+  }
+
+  test(
+    'send progress resets the pressure budget for the next FIFO head',
+    () async {
+      final fixture = _RelayFixture(backpressureRetries: 1);
+      await fixture.start();
+      final sends = fixture.native.sends;
+      fixture.client.send([1]);
+      fixture.client.send([2]);
+      sends.single.reply.complete({'code': 'backpressure'});
+      await _until(() => sends.length == 2);
+      sends.last.reply.complete({'code': 'ok'});
+      await _until(() => sends.length == 3);
+      sends.last.reply.complete({'code': 'backpressure'});
+      await _until(() => sends.length == 4);
+      sends.last.reply.complete({'code': 'ok'});
+      await _flush();
+      expect(sends.map((call) => call.arguments['frame']), [
+        [1],
+        [1],
+        [2],
+        [2],
+      ]);
+      expect(fixture.disconnects, isEmpty);
+      await fixture.close();
+    },
+  );
+
+  test(
+    'receive progress resets the pressure budget for the next poll',
+    () async {
+      final fixture = _RelayFixture(backpressureRetries: 1);
+      await fixture.start();
+      final receives = fixture.native.receives;
+      receives.single.reply.complete({'code': 'backpressure'});
+      await _until(() => receives.length == 2);
+      receives.last.reply.complete({
+        'code': 'ok',
+        'frame': Uint8List.fromList([1]),
+      });
+      await _until(() => receives.length == 3);
+      receives.last.reply.complete({'code': 'backpressure'});
+      await _until(() => receives.length == 4);
+      receives.last.reply.complete({
+        'code': 'ok',
+        'frame': Uint8List.fromList([2]),
+      });
+      await _flush();
+      expect(
+        fixture.events.whereType<MacHelperFrame>().map((event) => event.data),
+        [
+          [1],
+          [2],
+        ],
+      );
+      expect(fixture.disconnects, isEmpty);
+      await fixture.close();
+    },
+  );
+
+  test(
+    'transient stop pressure retries after discarding unsent frames',
+    () async {
+      final fixture = _RelayFixture(backpressureRetries: 2);
+      await fixture.start();
+      final native = fixture.native;
+      fixture.client.send([1]);
+      fixture.client.send([2]);
+      native.externalPending = 30;
+      final stopped = fixture.client.stop(_session);
+      await _flush();
+      expect(native.pending, 32);
+      expect(native.calls.where((call) => call == 'stop'), hasLength(1));
+      native.sends.single.reply.complete({'code': 'ok'});
+      expect(await stopped, isTrue);
+      expect(native.calls.where((call) => call == 'stop'), hasLength(2));
+      expect(native.sends, hasLength(1));
+      await _flush();
+      expect(fixture.disconnects.single.error, isNull);
+      await fixture.close();
+      expect(fixture.disconnects, hasLength(1));
+    },
+  );
+
+  test(
+    'stop pressure exhaustion retains ownership and permits a fresh retry',
+    () async {
+      final fixture = _RelayFixture(backpressureRetries: 2);
+      await fixture.start();
+      final native = fixture.native..stopCode = 'backpressure';
+      fixture.client.send([1]);
+      fixture.client.send([2]);
+      expect(await fixture.client.stop(_session), isFalse);
+      expect(native.calls.where((call) => call == 'stop'), hasLength(3));
+      native.sends.single.reply.complete({'code': 'ok'});
+      await _flush(const Duration(milliseconds: 48));
+      expect(native.sends, hasLength(1));
+      expect(native.calls.where((call) => call == 'stop'), hasLength(3));
+      expect(fixture.disconnects, isEmpty);
+      expect(
+        () => fixture.client.send([3]),
+        throwsA(_helperCode('notConnected')),
+      );
+      await expectLater(
+        fixture.client.start(_session),
+        throwsA(_helperCode('exitUnconfirmed')),
+      );
+      native.stopCode = 'ok';
+      expect(await fixture.client.stop(_session), isTrue);
+      await _flush();
+      expect(native.calls.where((call) => call == 'stop'), hasLength(4));
+      expect(fixture.disconnects.single.error, isNull);
+      await fixture.close();
+      expect(fixture.disconnects, hasLength(1));
+    },
+  );
+
+  for (final failure in ['exitUnconfirmed', 'unavailable', 'futureError']) {
+    test('ambiguous stop $failure is never retried', () async {
+      final fixture = _RelayFixture(backpressureRetries: 2);
+      await fixture.start();
+      final native = fixture.native;
+      fixture.client.send([1]);
+      fixture.client.send([2]);
+      if (failure == 'futureError') {
+        native.stopError = TimeoutException('ambiguous stop');
+      } else {
+        native.stopCode = failure;
+      }
+      expect(await fixture.client.stop(_session), isFalse);
+      native.sends.single.reply.complete({'code': 'unavailable'});
+      await _flush(const Duration(milliseconds: 48));
+      expect(native.calls.where((call) => call == 'stop'), hasLength(1));
+      expect(native.sends, hasLength(1));
+      expect(fixture.disconnects, isEmpty);
+      await expectLater(
+        fixture.client.start(_session),
+        throwsA(_helperCode('exitUnconfirmed')),
+      );
+      await fixture.close();
+      expect(fixture.disconnects, hasLength(1));
+    });
+  }
+
+  for (final restart in ['same', 'different']) {
+    test(
+      'stop pressure retry cannot enter a $restart restarted generation',
+      () async {
+        final fixture = _RelayFixture(backpressureRetries: 2);
+        await fixture.start();
+        final native = fixture.native..stopCode = 'backpressure';
+        final oldStop = fixture.client.stop(_session);
+        await _flush();
+        expect(native.calls.where((call) => call == 'stop'), hasLength(1));
+        native.stopCode = 'ok';
+        expect(await fixture.client.stop(_session), isTrue);
+        final session = restart == 'same'
+            ? _session
+            : '1123456789abcdef0123456789abcdef';
+        await fixture.start(session);
+        expect(await oldStop, isFalse);
+        expect(native.calls.where((call) => call == 'stop'), hasLength(2));
+        fixture.client.send([1]);
+        native.sends.single.reply.complete({'code': 'ok'});
+        await _flush();
+        expect(fixture.disconnects, hasLength(1));
+        await fixture.close();
+        expect(fixture.disconnects, hasLength(2));
+      },
+    );
+  }
+}

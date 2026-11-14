@@ -4,6 +4,7 @@ import 'package:fl_clash/common/network_error.dart';
 import 'package:fl_clash/core/desktop/launch_policy.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:prism_ui/l10n.dart';
 
@@ -108,8 +109,25 @@ String? coreLaunchBlockedMessage(
   };
 }
 
+String? loginItemErrorMessage(Object error, AppLocalizations appLocalizations) {
+  return switch (error) {
+    PlatformException(code: 'login_item_requires_approval') =>
+      appLocalizations.loginItemRequiresApproval,
+    PlatformException(code: 'login_item_not_found') =>
+      appLocalizations.loginItemNotFound,
+    PlatformException(code: 'login_item_unexpected_status') =>
+      appLocalizations.loginItemUnexpectedStatus,
+    PlatformException(code: 'login_item_missing_status') =>
+      appLocalizations.loginItemMissingStatus,
+    PlatformException(:final code) when code.startsWith('login_item_') =>
+      appLocalizations.loginItemOperationFailed,
+    _ => null,
+  };
+}
+
 String userFacingErrorMessage(Object error, AppLocalizations appLocalizations) {
-  return networkErrorMessage(error, appLocalizations) ??
+  return loginItemErrorMessage(error, appLocalizations) ??
+      networkErrorMessage(error, appLocalizations) ??
       coreLaunchBlockedMessage(error, appLocalizations) ??
       switch (error) {
         AgeSecretKeyRequiredException() =>

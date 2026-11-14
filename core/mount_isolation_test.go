@@ -144,16 +144,16 @@ proxy-groups:
   - {name: Dropped, type: select, use: [dropped], proxies: [base]}
 `
 	wantKinds(t, groupKinds(t, rootOf(t, profile)), map[string]string{
-		"Providers":  "excluded/tailscale",
-		"Uses":       "excluded/tailscale",
-		"UsesCache":  "excluded/tailscale",
-		"Everything": "excluded/tailscale",
+		"Providers":  "auto/",
+		"Uses":       "auto/",
+		"UsesCache":  "auto/",
+		"Everything": "auto/",
 		"Typed":      "auto/",
 		"Dropped":    "auto/",
 	})
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
-	refusedChoice(t, profile, "Uses", source)
-	refusedChoice(t, profile, "UsesCache", source)
+	checkMountTakingAsWritten(t, profile, &MountSetup{Sources: []MountSource{{ID: 1, Path: source}}}, map[string]bool{"Uses": true})
+	checkMountTakingAsWritten(t, profile, &MountSetup{Sources: []MountSource{{ID: 1, Path: source}}}, map[string]bool{"UsesCache": true})
 
 	loadable := strings.NewReplacer(
 		"  cached: {type: file, path: cached.yaml}\n", "",
@@ -161,7 +161,7 @@ proxy-groups:
 	).Replace(profile)
 	members, _ := mountedMembers(t, loadable, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
 	for _, group := range []string{"Providers", "Everything"} {
-		if slices.Contains(members[group], "us") {
+		if !slices.Contains(members[group], "us") {
 			t.Errorf("%s = %v, holds a mounted node", group, members[group])
 		}
 		if !slices.Contains(members[group], "ts-home") {
@@ -192,26 +192,26 @@ rules:
   - MATCH,Free
 `
 	wantKinds(t, groupKinds(t, rootOf(t, profile)), map[string]string{
-		"Pool":   "excluded/tailscale",
-		"Inner":  "excluded/tailscale",
-		"Deep":   "excluded/tailscale",
-		"Chosen": "excluded/tailscale",
+		"Pool":   "auto/",
+		"Inner":  "auto/",
+		"Deep":   "auto/",
+		"Chosen": "auto/",
 		"Free":   "auto/",
 	})
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
-	refusedChoice(t, profile, "Chosen", source)
+	checkMountTaking(t, "", profile, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}, map[string]bool{"Chosen": true})
 
 	members, report := mountedMembers(t, profile, &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}})
 	for _, group := range []string{"Pool", "Deep"} {
-		if slices.Contains(members[group], "us") {
-			t.Errorf("%s = %v, holds a mounted node", group, members[group])
+		if !slices.Contains(members[group], "us") {
+			t.Errorf("%s = %v, lost mounted nodes", group, members[group])
 		}
 	}
 	if !slices.Contains(members["Free"], "us") {
 		t.Errorf("Free = %v, want the mounted nodes", members["Free"])
 	}
-	if !reflect.DeepEqual(report.Groups, []MountGroupReport{{Name: "Free", Via: "auto", Protection: mountProtectionReject, EmptyFallback: "REJECT"}}) {
-		t.Errorf("groups = %+v", report.Groups)
+	if len(report.Groups) != 8 {
+		t.Errorf("groups = %+v, want all ordinary mixed and collecting groups", report.Groups)
 	}
 }
 
@@ -259,11 +259,11 @@ rules:
   - MATCH,Main
 `
 	want := map[string]string{
-		"V4": "excluded/tailscale", "V6": "excluded/tailscale", "Net": "excluded/tailscale",
-		"Tailnet": "excluded/tailscale", "Device": "excluded/tailscale", "Wide": "excluded/tailscale",
-		"Suffix": "excluded/tailscale", "Sub": "excluded/tailscale", "Collects": "auto/",
+		"V4": "auto/", "V6": "auto/", "Net": "auto/",
+		"Tailnet": "auto/", "Device": "auto/", "Wide": "auto/",
+		"Suffix": "auto/", "Sub": "auto/", "Collects": "auto/",
 		"Lan": "auto/", "Google": "auto/", "Source": "auto/",
-		"Main": "auto/", "Final": "excluded/tailscale",
+		"Main": "auto/", "Final": "auto/",
 	}
 	wantKinds(t, groupKinds(t, rootOf(t, profile)), want)
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
@@ -276,9 +276,9 @@ rules:
 		checkMountTaking(t, fmt.Sprintf("managed %v: ", managed), profile, setup, taking)
 	}
 	final := strings.Replace(profile, "  - MATCH,Main\n", "  - MATCH,Final\n", 1)
-	wantKinds(t, groupKinds(t, rootOf(t, final)), map[string]string{"Final": "excluded/tailscale", "Main": "auto/"})
+	wantKinds(t, groupKinds(t, rootOf(t, final)), map[string]string{"Final": "auto/", "Main": "auto/"})
 	tailnet := strings.Replace(profile, "  - DOMAIN-KEYWORD,tailscale,Collects\n", "  - DOMAIN-KEYWORD,ts,Collects\n", 1)
-	wantKinds(t, groupKinds(t, rootOf(t, tailnet)), map[string]string{"Collects": "excluded/tailscale"})
+	wantKinds(t, groupKinds(t, rootOf(t, tailnet)), map[string]string{"Collects": "auto/"})
 }
 
 func TestMountReadsExcludeTypeAsMihomoDoes(t *testing.T) {
@@ -294,10 +294,10 @@ proxy-groups:
 `
 	wantKinds(t, groupKinds(t, rootOf(t, profile)), map[string]string{
 		"Listed":     "auto/",
-		"Longer":     "excluded/tailscale",
-		"Prefixed":   "excluded/tailscale",
-		"Filtered":   "excluded/tailscale",
-		"Unfiltered": "excluded/tailscale",
+		"Longer":     "auto/",
+		"Prefixed":   "auto/",
+		"Filtered":   "auto/",
+		"Unfiltered": "auto/",
 	})
 }
 
@@ -485,6 +485,12 @@ func TestMountPreflightOfTheRunningProfileChecksItsPanelNames(t *testing.T) {
 			Base:   &SetupBase{Path: path, Overlay: "{}"},
 			Mounts: &MountSetup{Target: target, Sources: []MountSource{{ID: 1, Label: "S", Path: source}}},
 		})
+		if target == 5 {
+			if err != nil || preflight == nil || !strings.Contains(preflight.Error, `dependency "Work (Flash)" is missing`) {
+				t.Errorf("missing unmanaged dependency: %+v, %v", preflight, err)
+			}
+			continue
+		}
 		if err != nil || preflight.Report == nil {
 			t.Fatalf("preflight = %+v, %v", preflight, err)
 		}

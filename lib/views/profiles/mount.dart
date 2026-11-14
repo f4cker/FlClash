@@ -44,7 +44,7 @@ enum _Result {
   unknown,
 }
 
-enum MountGroupCase { auto, none, failed }
+enum MountGroupCase { pending, auto, none, failed }
 
 enum MountRunState { confirmed, unconfirmed, blocked }
 
@@ -86,6 +86,8 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   bool _loadFailed = false;
   MountRuntimeState? _runtime;
   var _generation = 0;
+  StreamSubscription<MountPanel>? _inspection;
+  final _sourceRows = <int, ({Object state, Widget widget})>{};
 
   Set<int> _selected = {};
 
@@ -97,6 +99,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   /// The notices banner and the format help of each such row open in place
   /// and stay open until the sheet reopens, design §13.
   bool _noticesOpen = false;
+  bool _groupDetailsOpen = false;
   final Set<int> _formatHelp = {};
 
   bool _saving = false;
@@ -128,54 +131,90 @@ class _MountSheetState extends ConsumerState<MountSheet> {
 
   /// [resetChoice] puts the boxes back to what is stored; otherwise the
   /// staged choice survives, as across an import.
-  Future<void> _load({bool resetChoice = true}) async {
+  Future<void> _load({bool resetChoice = true, bool refresh = false}) async {
     final generation = ++_generation;
     setState(() {
       _loadFailed = false;
       if (resetChoice) {
         _panel = null;
+      } else if (_panel case final panel?) {
+        _panel = panel.copyWith(
+          groupsPending: true,
+          sources: [
+            for (final item in panel.sources)
+              item.copyWith(state: MountSourceState.pending),
+          ],
+        );
       }
     });
-    MountPanel panel;
-    try {
-      panel = await _mounts
-          .loadPanel(widget.targetId)
-          .timeout(mountLoadTimeout);
-    } catch (error) {
-      commonPrint.log(
-        'mount panel unreadable: ${compactError(error)}',
-        logLevel: LogLevel.warning,
-      );
-      if (mounted && generation == _generation) {
-        setState(() => _loadFailed = true);
-      }
-      return;
+    unawaited(_inspection?.cancel());
+    if (!mounted || generation != _generation) return;
+    var first = true;
+    final loaded = Completer<void>();
+    _inspection = _mounts
+        .watchPanel(widget.targetId, refresh: refresh)
+        .listen(
+          (panel) {
+            if (!mounted || generation != _generation) return;
+            setState(() {
+              final previous = _panel;
+              _panel = panel;
+              if (first) {
+                _sourceRows.clear();
+                final sourceIds = {
+                  for (final item in panel.sources) item.profile.id,
+                };
+                if (resetChoice || previous == null) {
+                  _selected = {...?panel.stored?.sourceIds};
+                } else {
+                  _selected = _selected.intersection(sourceIds);
+                }
+                if (panel.stored?.pending != null) _result = _Result.unknown;
+              }
+            });
+            if (first) {
+              first = false;
+              loaded.complete();
+              unawaited(_loadRuntime());
+            }
+          },
+          onError: (Object error) {
+            commonPrint.log(
+              'mount panel unreadable: ${compactError(error)}',
+              logLevel: LogLevel.warning,
+            );
+            if (mounted && generation == _generation) {
+              setState(() => _loadFailed = true);
+            }
+            if (!loaded.isCompleted) loaded.complete();
+          },
+          onDone: () {
+            if (!loaded.isCompleted) loaded.complete();
+          },
+        );
+    await loaded.future;
+  }
+
+  @override
+  void didUpdateWidget(covariant MountSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.targetId != oldWidget.targetId) {
+      _runtime = null;
+      unawaited(_load());
     }
-    if (!mounted || generation != _generation) {
-      return;
-    }
-    setState(() {
-      final previous = _panel;
-      _panel = panel;
-      final sourceIds = {for (final item in panel.sources) item.profile.id};
-      if (resetChoice || previous == null) {
-        _selected = {...?panel.stored?.sourceIds};
-      } else {
-        _selected = {
-          for (final id in _selected)
-            if (sourceIds.contains(id)) id,
-        };
-      }
-      if (panel.stored?.pending != null) {
-        _result = _Result.unknown;
-      }
-    });
-    unawaited(_loadRuntime());
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    unawaited(_inspection?.cancel());
+    super.dispose();
   }
 
   Future<void> _loadRuntime() async {
+    final generation = _generation;
     final runtime = await _mounts.readRuntime(widget.targetId);
-    if (mounted) {
+    if (mounted && generation == _generation) {
       setState(() => _runtime = runtime);
     }
   }
@@ -187,7 +226,9 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       _result == _Result.unknown ||
       _result == _Result.applyBlocked && _blockUnread;
 
-  MountGroupCase get _groupCase => mountGroupCaseOf(_panel?.groups);
+  MountGroupCase get _groupCase => _panel?.groupsPending == true
+      ? MountGroupCase.pending
+      : mountGroupCaseOf(_panel?.groups);
 
   bool get _dirty => !setEquals(_selected, _mounted);
 
@@ -199,13 +240,22 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   bool get _onlyRemoves => _additions.isEmpty;
 
   bool get _canSave {
-    if (_panel == null || !_dirty || _locked || _saving || _rechecking) {
+    if (_panel == null ||
+        _loadFailed ||
+        !_dirty ||
+        _locked ||
+        _saving ||
+        _rechecking) {
       return false;
     }
-    return switch (_groupCase) {
-      MountGroupCase.auto => true,
-      MountGroupCase.none || MountGroupCase.failed => _onlyRemoves,
-    };
+    if (_onlyRemoves) return true;
+    return _groupCase == MountGroupCase.auto &&
+        _panel!.sources
+            .where((item) => _additions.contains(item.profile.id))
+            .every((item) => item.state.mountable) &&
+        _additions.every(
+          (id) => _panel!.sources.any((item) => item.profile.id == id),
+        );
   }
 
   /// Mounted sources keep their place; new ones follow in list order.
@@ -284,10 +334,18 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     if (panel == null || !_canSave) {
       return;
     }
+    final generation = _generation;
+    final targetId = widget.targetId;
+    final selection = _orderedSelection;
     if (_removals.isNotEmpty && !await _confirmChange()) {
       return;
     }
-    if (!mounted) {
+    if (!mounted ||
+        generation != _generation ||
+        targetId != widget.targetId ||
+        !_canSave ||
+        !setEquals(selection.toSet(), _selected) ||
+        panel.stored?.version != _panel?.stored?.version) {
       return;
     }
     final removal = _additions.isEmpty && _removals.isNotEmpty;
@@ -297,9 +355,9 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       _result = null;
     });
     final result = await _mounts.save(
-      widget.targetId,
+      targetId,
       expectedVersion: panel.stored?.version,
-      sourceIds: _orderedSelection,
+      sourceIds: selection,
       onStored: () {
         if (mounted) {
           setState(() => _result = _Result.applying);
@@ -442,11 +500,16 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   Future<void> _import() async {
     await importProfilesFromLinks(context, ref, showProfiles: false);
     if (mounted) {
-      await _load(resetChoice: false);
+      await _load(resetChoice: false, refresh: true);
     }
   }
 
   void _toggleSource(MountSourceItem item, bool value) {
+    if (value &&
+        !item.mounted &&
+        (!item.state.mountable || _groupCase != MountGroupCase.auto)) {
+      return;
+    }
     setState(() {
       if (value) {
         _selected.add(item.profile.id);
@@ -734,24 +797,26 @@ class _MountSheetState extends ConsumerState<MountSheet> {
       children: [
         _SectionLabel(appLocalizations.mountChooseSources),
         for (final item in panel.sources)
-          MountSourceRow(
-            item: item,
-            checked: _selected.contains(item.profile.id),
-            mountedTag: item.mounted && confirmed,
-            refreshing: _refreshing.contains(item.profile.id),
-            refreshUnconfirmed: _refreshUnconfirmed.contains(item.profile.id),
-            refusal: _refused[item.profile.id],
+          _buildSourceRow(
+            item,
+            interactive: interactive,
+            confirmed: confirmed,
             run: run,
-            blockSettled: _result == _Result.applyBlocked && _blockSettled,
-            onChanged: interactive
-                ? (value) => _toggleSource(item, value)
-                : null,
-            onRefresh: item.mounted && !_refreshing.contains(item.profile.id)
-                ? () => _refresh(item.profile.id)
-                : null,
-            formatHelpOpen: _formatHelp.contains(item.profile.id),
-            onFormatHelp: () =>
-                setState(() => _formatHelp.add(item.profile.id)),
+          ),
+        if (!panel.groupsPending &&
+            panel.groups != null &&
+            panel.sources.any(
+              (item) => item.state == MountSourceState.unreadable,
+            ))
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TonalButton(
+              size: TonalButtonSize.compact,
+              label: appLocalizations.mountReadAgain,
+              onPressed: interactive
+                  ? () => _load(resetChoice: false, refresh: true)
+                  : null,
+            ),
           ),
         _buildGroups(context, panel, interactive: interactive),
       ],
@@ -769,6 +834,54 @@ class _MountSheetState extends ConsumerState<MountSheet> {
     );
   }
 
+  Widget _buildSourceRow(
+    MountSourceItem item, {
+    required bool interactive,
+    required bool confirmed,
+    required MountRunState run,
+  }) {
+    final id = item.profile.id;
+    final checked = _selected.contains(id);
+    final checkable =
+        interactive &&
+        (item.mounted ||
+            checked ||
+            _groupCase == MountGroupCase.auto && item.state.mountable);
+    final state = (
+      item,
+      checked,
+      checkable,
+      confirmed,
+      run,
+      _refreshing.contains(id),
+      _refreshUnconfirmed.contains(id),
+      _refused[id],
+      _result == _Result.applyBlocked && _blockSettled,
+      _formatHelp.contains(id),
+    );
+    final cached = _sourceRows[id];
+    if (cached?.state == state) return cached!.widget;
+    final row = MountSourceRow(
+      key: ValueKey(id),
+      item: item,
+      checked: checked,
+      mountedTag: item.mounted && confirmed,
+      refreshing: _refreshing.contains(id),
+      refreshUnconfirmed: _refreshUnconfirmed.contains(id),
+      refusal: _refused[id],
+      run: run,
+      blockSettled: _result == _Result.applyBlocked && _blockSettled,
+      onChanged: checkable ? (value) => _toggleSource(item, value) : null,
+      onRefresh: item.mounted && !_refreshing.contains(id)
+          ? () => _refresh(id)
+          : null,
+      formatHelpOpen: _formatHelp.contains(id),
+      onFormatHelp: () => setState(() => _formatHelp.add(id)),
+    );
+    _sourceRows[id] = (state: state, widget: row);
+    return row;
+  }
+
   Widget _buildGroups(
     BuildContext context,
     MountPanel panel, {
@@ -776,6 +889,8 @@ class _MountSheetState extends ConsumerState<MountSheet> {
   }) {
     final appLocalizations = context.appLocalizations;
     switch (_groupCase) {
+      case MountGroupCase.pending:
+        return MountGroupsBlock(children: [Text(appLocalizations.loading)]);
       case MountGroupCase.failed:
         return MountGroupsBlock(
           children: [
@@ -790,17 +905,29 @@ class _MountSheetState extends ConsumerState<MountSheet> {
               child: TonalButton(
                 size: TonalButtonSize.compact,
                 label: appLocalizations.mountReadAgain,
-                onPressed: interactive ? () => _load(resetChoice: false) : null,
+                onPressed: interactive
+                    ? () => _load(resetChoice: false, refresh: true)
+                    : null,
               ),
             ),
           ],
         );
       case MountGroupCase.none:
-        if (mountIsolatedGroups(panel.groups).isNotEmpty) {
+        final isolated = mountIsolatedGroups(panel.groups);
+        if (isolated.isNotEmpty) {
           return MountBanner(
             level: MountBannerLevel.warn,
             title: appLocalizations.mountNoGroupIsolatedTitle,
-            lines: [appLocalizations.mountNoGroupIsolatedDesc],
+            lines: [
+              appLocalizations.mountNoGroupIsolatedDesc,
+              if (_groupDetailsOpen)
+                ...mountIsolatedGroupsLines(isolated, appLocalizations),
+            ],
+            actionLabel: _groupDetailsOpen
+                ? appLocalizations.mountShowLess
+                : appLocalizations.mountDetails,
+            onAction: () =>
+                setState(() => _groupDetailsOpen = !_groupDetailsOpen),
           );
         }
         return MountBanner(
@@ -899,17 +1026,35 @@ MountGroupStatus? mountGroupStatusOf(
   );
 }
 
-/// The full lines on groups kept out for Tailscale, the boundary first.
+/// The full lines on excluded groups, with the reported reason for each.
 List<String> mountIsolatedGroupsLines(
   List<MountGroupInfo> groups,
   AppLocalizations appLocalizations,
 ) => [
   appLocalizations.mountIsolationFirst,
   appLocalizations.mountGroupsExcluded(groups.length),
-  appLocalizations.mountGroupsExcludedNames(
-    groups.map((group) => group.name).join(appLocalizations.mountNameSeparator),
-  ),
+  for (final group in groups) ...[
+    appLocalizations.mountGroupsExcludedNames(group.name),
+    _mountGroupReasonLabel(group.reason, appLocalizations),
+  ],
 ];
+
+String _mountGroupReasonLabel(
+  MountGroupReason? reason,
+  AppLocalizations appLocalizations,
+) => switch (reason) {
+  MountGroupReason.ruleUnknown => appLocalizations.mountGroupReasonRuleUnknown,
+  MountGroupReason.providerUnknown =>
+    appLocalizations.mountGroupReasonProviderUnknown,
+  MountGroupReason.dns => appLocalizations.mountGroupReasonDns,
+  MountGroupReason.dialer => appLocalizations.mountGroupReasonDialer,
+  MountGroupReason.member => appLocalizations.mountGroupReasonMember,
+  MountGroupReason.holds ||
+  MountGroupReason.rule ||
+  MountGroupReason.carrier ||
+  MountGroupReason.global => appLocalizations.mountIsolationFirst,
+  null => appLocalizations.serviceUnavailable,
+};
 
 enum MountBannerLevel { info, warn, error }
 
@@ -1447,6 +1592,7 @@ class MountSourceRow extends StatelessWidget {
     final appLocalizations = context.appLocalizations;
     final failed = item.record?.failure != null;
     return switch (item.state) {
+      MountSourceState.pending => (appLocalizations.loading, false),
       MountSourceState.unsupported => (
         appLocalizations.mountSourceNoNodeList,
         true,

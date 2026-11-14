@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -22,6 +23,8 @@ class _MockCore extends Mock implements CoreHandlerInterface {}
 class _FakeSetupAction extends SetupAction {
   static bool result = true;
   static int applied = 0;
+  static String config = 'proxies: []';
+  static final targetInputs = <int>[];
 
   @override
   Future<bool> applyProfile({
@@ -36,7 +39,10 @@ class _FakeSetupAction extends SetupAction {
   @override
   Future<({SetupBase? base, String? config})> mountTargetInput(
     int profileId,
-  ) async => (base: null, config: 'proxies: []');
+  ) async {
+    targetInputs.add(profileId);
+    return (base: null, config: config);
+  }
 }
 
 const _target = Profile(
@@ -56,6 +62,13 @@ const _source = Profile(
 
 const _withGroup = MountPreflight(
   report: MountReport(
+    sources: [
+      MountSourceReport(
+        id: 2,
+        provider: 'flash-mount-2',
+        status: MountSourceStatus.nodes,
+      ),
+    ],
     groups: [
       MountGroupReport(
         name: 'Proxy',
@@ -65,6 +78,16 @@ const _withGroup = MountPreflight(
     ],
   ),
 );
+
+Future<void> waitFor(bool Function() ready) async {
+  final elapsed = Stopwatch()..start();
+  while (!ready()) {
+    if (elapsed.elapsed > const Duration(seconds: 3)) {
+      fail('asynchronous inspection did not start');
+    }
+    await pumpEventQueue();
+  }
+}
 
 void main() {
   late Directory home;
@@ -93,6 +116,8 @@ void main() {
     ]);
     _FakeSetupAction.result = true;
     _FakeSetupAction.applied = 0;
+    _FakeSetupAction.config = 'proxies: []';
+    _FakeSetupAction.targetInputs.clear();
     when(
       () => core.preflightMounts(
         base: any(named: 'base'),
@@ -106,11 +131,12 @@ void main() {
   ProviderContainer build({
     bool running = false,
     List<TailscaleManagedRecord>? managed = const [],
+    List<Profile> profiles = const [_target, _source],
   }) {
     final container = ProviderContainer(
       overrides: [
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
-        profilesProvider.overrideWith(() => TestProfiles([_target, _source])),
+        profilesProvider.overrideWith(() => TestProfiles(profiles)),
         currentProfileIdProvider.overrideWithBuild((_, _) => 1),
         initProvider.overrideWithBuild((_, _) => running),
         setupActionProvider.overrideWith(_FakeSetupAction.new),
@@ -179,6 +205,63 @@ void main() {
       expect(stored.pending, isNull);
       expect(_FakeSetupAction.applied, 0);
     });
+
+    for (final source in <MountSourceReport?>[
+      null,
+      const MountSourceReport(
+        id: 2,
+        provider: 'flash-mount-2',
+        status: MountSourceStatus.missing,
+      ),
+      const MountSourceReport(
+        id: 2,
+        provider: 'flash-mount-2',
+        status: MountSourceStatus.readError,
+      ),
+      const MountSourceReport(
+        id: 2,
+        provider: 'flash-mount-2',
+        status: MountSourceStatus.invalid,
+      ),
+      const MountSourceReport(
+        id: 2,
+        provider: 'flash-mount-2',
+        status: MountSourceStatus.nodes,
+        tailscaleExcluded: 1,
+      ),
+      const MountSourceReport(
+        id: 2,
+        provider: 'flash-mount-2',
+        status: MountSourceStatus.nodes,
+        relayExcluded: 1,
+      ),
+      const MountSourceReport(
+        id: 2,
+        provider: 'flash-mount-2',
+        status: MountSourceStatus.nodes,
+        unsupportedExcluded: 1,
+      ),
+    ]) {
+      test(
+        'fresh preflight rejects unavailable or wholly excluded addition $source',
+        () async {
+          when(
+            () => core.preflightMounts(
+              base: any(named: 'base'),
+              config: any(named: 'config'),
+              mounts: any(named: 'mounts'),
+            ),
+          ).thenAnswer(
+            (_) async => MountPreflight(
+              report: _withGroup.report!.copyWith(sources: [?source]),
+            ),
+          );
+          final result = await mountAir(build());
+          expect(result.outcome, MountSaveOutcome.unchanged);
+          expect(await testDatabase.mountsDao.target(1), isNull);
+        },
+      );
+    }
 
     test('a choice made on a stale version writes nothing', () async {
       final container = build();
@@ -352,6 +435,784 @@ void main() {
       );
     }
 
+    group('background preparation', () {
+      const nodes = MountSourceInspection(
+        status: MountSourceStatus.nodes,
+        count: 7,
+        listed: 7,
+      );
+      late List<int> sourceCalls;
+      late List<Completer<MountSourceInspection>> sources;
+      var holdSources = false;
+
+      setUp(() {
+        inspects();
+        sourceCalls = [];
+        sources = [];
+        holdSources = false;
+        when(
+          () => core.inspectMountSource(
+            any(),
+            ageSecretKey: any(named: 'ageSecretKey'),
+            relay: any(named: 'relay'),
+            managed: any(named: 'managed'),
+          ),
+        ).thenAnswer((invocation) {
+          final path = invocation.positionalArguments.single as String;
+          sourceCalls.add(int.parse(path.split('/').last.split('.').first));
+          if (!holdSources) return Future.value(nodes);
+          final gate = Completer<MountSourceInspection>();
+          sources.add(gate);
+          return gate.future;
+        });
+        addTearDown(() {
+          for (final gate in sources) {
+            if (!gate.isCompleted) gate.complete(nodes);
+          }
+        });
+      });
+
+      Future<void> download(
+        ProviderContainer container, {
+        int id = 2,
+        String content = 'proxies: [updated]',
+      }) async {
+        final file = File(await appPath.getProfilePath('$id'));
+        await file.parent.create(recursive: true);
+        addTearDown(() async {
+          if (await file.exists()) await file.delete();
+        });
+        final updated = await container
+            .read(profilesActionProvider.notifier)
+            .fetchSource(id, (_) async {
+              await file.writeAsString(content);
+              return _source.copyWith(id: id, lastUpdateDate: DateTime.now());
+            });
+        container.read(profilesProvider.notifier).put(updated!);
+      }
+
+      test(
+        'successful update returns before preparation and open shares it',
+        () async {
+          final container = build();
+          holdSources = true;
+          await download(container);
+          expect(sourceCalls, isEmpty);
+          expect(_FakeSetupAction.targetInputs, isEmpty);
+          await waitFor(() => sources.length == 1);
+          final opening = action(container).watchPanel(1).last;
+          await waitFor(() => _FakeSetupAction.targetInputs.length == 2);
+          await pumpEventQueue();
+          expect(sourceCalls, [2]);
+          sources.single.complete(nodes);
+          expect((await opening).sources.single.count, 7);
+          expect(sourceCalls, [2]);
+          expect(
+            (await action(container).watchPanel(1).last).sources.single.count,
+            7,
+          );
+          expect(sourceCalls, [2]);
+        },
+      );
+
+      test('failed and skipped updates do not prepare', () async {
+        final container = build();
+        final profiles = container.read(profilesActionProvider.notifier);
+        await expectLater(
+          profiles.fetchSource(
+            2,
+            (_) async => throw const SocketException('offline'),
+          ),
+          throwsA(isA<SocketException>()),
+        );
+        expect(await profiles.fetchSource(2, (_) async => null), isNull);
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+        expect(_FakeSetupAction.targetInputs, isEmpty);
+        expect(sourceCalls, isEmpty);
+      });
+
+      test('rapid successful updates coalesce to the latest source', () async {
+        final container = build();
+        await download(container, content: 'proxies: [first]');
+        await download(container, content: 'proxies: [second]');
+        await download(container, content: 'proxies: [third]');
+        await waitFor(() => sourceCalls.isNotEmpty);
+        expect(
+          (await action(container).watchPanel(1).last).sources.single.count,
+          7,
+        );
+        expect(sourceCalls, [2]);
+        expect(_FakeSetupAction.targetInputs, [1, 1]);
+      });
+
+      test(
+        'a superseded live preparation cannot publish or release its slot',
+        () async {
+          final container = build();
+          holdSources = true;
+          await download(container);
+          await waitFor(() => sources.length == 1);
+          await download(container, content: 'proxies: [newer]');
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          expect(sourceCalls, [2]);
+          sources.first.complete(nodes.copyWith(count: 99));
+          await waitFor(() => sources.length == 2);
+          sources.last.complete(nodes);
+          final panel = await action(container).watchPanel(1).last;
+          expect(panel.sources.single.count, 7);
+          expect(sourceCalls, [2, 2]);
+        },
+      );
+
+      test(
+        'older overlapping download completion cannot schedule preparation',
+        () async {
+          final container = build();
+          final old = Completer<Profile?>();
+          final oldDownload = container
+              .read(profilesActionProvider.notifier)
+              .fetchSource(2, (_) => old.future);
+          await download(container);
+          old.complete(_source);
+          await oldDownload;
+          await waitFor(() => sourceCalls.isNotEmpty);
+          await action(container).watchPanel(1).last;
+          expect(sourceCalls, [2]);
+        },
+      );
+
+      test(
+        'a changed managed context discards late results even if restored',
+        () async {
+          final container = build();
+          holdSources = true;
+          await download(container);
+          await waitFor(() => sources.length == 1);
+          container
+              .read(tailscaleManagedRecordsProvider.notifier)
+              .value = const [
+            TailscaleManagedRecord(
+              id: 'changed',
+              profileId: 1,
+              name: 'Managed',
+            ),
+          ];
+          sources.single.complete(nodes.copyWith(count: 99));
+          await pumpEventQueue();
+          container.read(tailscaleManagedRecordsProvider.notifier).value =
+              const [];
+          holdSources = false;
+          final panel = await action(container).watchPanel(1).last;
+          expect(panel.sources.single.count, 7);
+          expect(sourceCalls, [2, 2]);
+        },
+      );
+
+      test(
+        'unknown target context and background errors do not affect updates',
+        () async {
+          final unknown = build(managed: null);
+          await download(unknown);
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          expect(sourceCalls, isEmpty);
+          expect(_FakeSetupAction.targetInputs, isEmpty);
+          unknown.dispose();
+          final container = build();
+          when(
+            () => core.inspectMountTarget(
+              base: any(named: 'base'),
+              config: any(named: 'config'),
+              managedTarget: any(named: 'managedTarget'),
+            ),
+          ).thenThrow(const SocketException('unavailable'));
+          await download(container);
+          await waitFor(() => _FakeSetupAction.targetInputs.isNotEmpty);
+          await pumpEventQueue();
+          expect(sourceCalls, isEmpty);
+        },
+      );
+
+      test(
+        'target scope is current plus existing relations, capped at four',
+        () async {
+          final container = build(
+            profiles: [
+              _target,
+              _source,
+              for (var id = 3; id <= 9; id++) _target.copyWith(id: id),
+            ],
+          );
+          for (var id = 3; id <= 9; id++) {
+            await testDatabase.profilesDao.putAll([
+              _target.copyWith(id: id).toCompanion(),
+            ]);
+            await testDatabase.mountsDao.save(
+              targetId: id,
+              expectedVersion: null,
+              sourceIds: [2],
+              pending: (version) => MountOperation(
+                kind: MountOperationKind.save,
+                version: version,
+              ),
+            );
+          }
+          await download(container);
+          await waitFor(() => sourceCalls.length == 4);
+          await pumpEventQueue();
+          expect(_FakeSetupAction.targetInputs, [1, 3, 4, 5]);
+          expect(sourceCalls, [2, 2, 2, 2]);
+        },
+      );
+
+      test(
+        'warm counts never replace fresh preflight on successive saves',
+        () async {
+          final container = build();
+          await download(container);
+          await waitFor(() => sourceCalls.isNotEmpty);
+          await action(container).watchPanel(1).last;
+          expect(sourceCalls, [2]);
+          expect((await mountAir(container)).outcome, MountSaveOutcome.saved);
+          expect(
+            (await mountAir(container, expectedVersion: 1)).outcome,
+            MountSaveOutcome.saved,
+          );
+          verify(
+            () => core.preflightMounts(
+              base: any(named: 'base'),
+              config: any(named: 'config'),
+              mounts: any(named: 'mounts'),
+            ),
+          ).called(2);
+        },
+      );
+
+      test(
+        'actual RPC pool stays at four and foreground precedes queued background',
+        () async {
+          final container = build(
+            profiles: [_target, _source, _source.copyWith(id: 3)],
+          );
+          holdSources = true;
+          await download(container);
+          await waitFor(() => sources.length == 1);
+          await download(container, id: 3);
+          final targets = <Completer<MountTarget>>[];
+          var active = 1;
+          var peak = 1;
+          when(
+            () => core.inspectMountTarget(
+              base: any(named: 'base'),
+              config: any(named: 'config'),
+              managedTarget: any(named: 'managedTarget'),
+            ),
+          ).thenAnswer((_) async {
+            final gate = Completer<MountTarget>();
+            targets.add(gate);
+            active++;
+            if (active > peak) peak = active;
+            try {
+              return await gate.future;
+            } finally {
+              active--;
+            }
+          });
+          final foreground = [
+            for (var i = 0; i < 5; i++) action(container).readGroups(1),
+          ];
+          await waitFor(() => targets.length == 3);
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          expect(targets, hasLength(3));
+          expect(peak, 4);
+          active--;
+          sources.single.complete(nodes);
+          await waitFor(() => targets.length == 4);
+          expect(sourceCalls, [2]);
+          expect(peak, 4);
+          targets.first.complete(const MountTarget());
+          await waitFor(() => targets.length == 5);
+          expect(sourceCalls, [2]);
+          for (final gate in targets.skip(1).toList()) {
+            gate.complete(const MountTarget());
+          }
+          await Future.wait(foreground);
+          await waitFor(() => targets.length == 6);
+          targets.last.complete(const MountTarget());
+          await waitFor(() => sources.length == 2);
+          sources.last.complete(nodes);
+          await pumpEventQueue();
+          expect(peak, 4);
+          expect(sourceCalls, [2, 3]);
+        },
+      );
+    });
+
+    test('inspection overlaps within a bound and keeps source order', () async {
+      inspects();
+      final targetRead = Completer<void>();
+      when(
+        () => core.inspectMountTarget(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          managedTarget: any(named: 'managedTarget'),
+        ),
+      ).thenAnswer((_) async {
+        targetRead.complete();
+        return const MountTarget(relay: ['ts']);
+      });
+      final pending = {
+        for (var id = 2; id <= 6; id++) id: Completer<MountSourceInspection>(),
+      };
+      const nodes = MountSourceInspection(
+        status: MountSourceStatus.nodes,
+        count: 1,
+        listed: 1,
+      );
+      addTearDown(() {
+        for (final result in pending.values) {
+          if (!result.isCompleted) result.complete(nodes);
+        }
+      });
+      final started = <int>[];
+      var active = 0;
+      var peak = 0;
+      when(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
+        ),
+      ).thenAnswer((invocation) async {
+        final path = invocation.positionalArguments.single as String;
+        final id = int.parse(path.split('/').last.split('.').first);
+        started.add(id);
+        active++;
+        if (active > peak) peak = active;
+        try {
+          return await pending[id]!.future;
+        } finally {
+          active--;
+        }
+      });
+      final container = build(
+        profiles: [
+          _target,
+          for (var id = 2; id <= 6; id++) _source.copyWith(id: id),
+        ],
+      );
+      final updates = <MountPanel>[];
+      final loading = action(container).watchPanel(1).map((panel) {
+        updates.add(panel);
+        return panel;
+      }).last;
+      await targetRead.future;
+      await pumpEventQueue();
+      expect(updates.first.groupsPending, isTrue);
+      expect(updates.first.sources.map((item) => item.profile.id), [
+        2,
+        3,
+        4,
+        5,
+        6,
+      ]);
+      expect(
+        updates.first.sources.every(
+          (item) => item.state == MountSourceState.pending,
+        ),
+        isTrue,
+      );
+      await waitFor(() => started.length == 4);
+      expect(started, unorderedEquals([2, 3, 4, 5]));
+      expect(peak, 4);
+
+      pending[5]!.complete(nodes);
+      await pumpEventQueue();
+      await waitFor(() => started.length == 5);
+      expect(started, unorderedEquals([2, 3, 4, 5, 6]));
+      expect(updates.last.sources[3].state.mountable, isTrue);
+      expect(updates.last.sources.first.state, MountSourceState.pending);
+      expect(peak, 4);
+      pending[3]!.completeError(const SocketException('unreadable'));
+      pending[4]!.complete(nodes);
+      pending[6]!.complete(nodes);
+      pending[2]!.complete(nodes);
+      final panel = await loading;
+      expect(panel.sources.map((item) => item.profile.id), [2, 3, 4, 5, 6]);
+      expect(panel.sources[1].state, MountSourceState.unreadable);
+      expect(panel.sources.first.count, 1);
+      expect(active, 0);
+
+      inspects();
+      final reloaded = await action(container).watchPanel(1).last;
+      expect(reloaded.sources.every((item) => item.relayExcluded == 2), isTrue);
+      verify(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
+        ),
+      ).called(10);
+    });
+
+    test('metadata is published before the target RPC resolves', () async {
+      inspects();
+      final target = Completer<MountTarget>();
+      when(
+        () => core.inspectMountTarget(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          managedTarget: any(named: 'managedTarget'),
+        ),
+      ).thenAnswer((_) => target.future);
+      final updates = <MountPanel>[];
+      final subscription = action(build()).watchPanel(1).listen(updates.add);
+      await pumpEventQueue();
+      expect(updates.single.sources.single.profile.realLabel, 'Air');
+      expect(updates.single.groupsPending, isTrue);
+      expect(updates.single.sources.single.state, MountSourceState.pending);
+      expect(updates.single.sources.single.state.mountable, isFalse);
+      await subscription.cancel();
+      target.complete(const MountTarget());
+      await pumpEventQueue();
+      expect(updates, hasLength(1));
+      verifyNever(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
+        ),
+      );
+    });
+
+    test(
+      'close/retry cancels queued checks but retains live RPC slots',
+      () async {
+        inspects();
+        final calls = <({int id, Completer<MountSourceInspection> gate})>[];
+        var active = 0;
+        var peak = 0;
+        when(
+          () => core.inspectMountSource(
+            any(),
+            ageSecretKey: any(named: 'ageSecretKey'),
+            relay: any(named: 'relay'),
+            managed: any(named: 'managed'),
+          ),
+        ).thenAnswer((invocation) async {
+          final path = invocation.positionalArguments.single as String;
+          final id = int.parse(path.split('/').last.split('.').first);
+          final gate = Completer<MountSourceInspection>();
+          calls.add((id: id, gate: gate));
+          active++;
+          if (active > peak) peak = active;
+          try {
+            return await gate.future;
+          } finally {
+            active--;
+          }
+        });
+        final container = build(
+          profiles: [
+            _target,
+            for (var id = 2; id <= 8; id++) _source.copyWith(id: id),
+          ],
+        );
+        final old = <MountPanel>[];
+        final first = action(container).watchPanel(1).listen(old.add);
+        await pumpEventQueue();
+        await waitFor(() => calls.length == 4);
+        expect(calls.map((call) => call.id), unorderedEquals([2, 3, 4, 5]));
+        await first.cancel();
+        final oldCount = old.length;
+        final next = <MountPanel>[];
+        final second = action(container).watchPanel(1).listen(next.add);
+        await pumpEventQueue();
+        expect(next.single.groupsPending, isTrue);
+        expect(calls, hasLength(4));
+        const nodes = MountSourceInspection(
+          status: MountSourceStatus.nodes,
+          count: 1,
+        );
+        calls.first.gate.complete(nodes);
+        await pumpEventQueue();
+        await waitFor(() => calls.length == 5);
+        expect(calls.map((call) => call.id), unorderedEquals([2, 3, 4, 5, 2]));
+        expect(peak, 4);
+        await second.cancel();
+        for (final call in calls.skip(1)) {
+          call.gate.complete(nodes);
+        }
+        await pumpEventQueue();
+        expect(old, hasLength(oldCount));
+        expect(calls, hasLength(5));
+        expect(active, 0);
+      },
+    );
+
+    test(
+      'context changes invalidate completed rows and discard late results',
+      () async {
+        inspects();
+        final source = Completer<MountSourceInspection>();
+        when(
+          () => core.inspectMountSource(
+            any(),
+            ageSecretKey: any(named: 'ageSecretKey'),
+            relay: any(named: 'relay'),
+            managed: any(named: 'managed'),
+          ),
+        ).thenAnswer((_) => source.future);
+        final container = build();
+        final updates = <MountPanel>[];
+        final done = action(container).watchPanel(1).map((panel) {
+          updates.add(panel);
+          return panel;
+        }).last;
+        await pumpEventQueue();
+        container
+            .read(profilesProvider.notifier)
+            .put(_source.copyWith(label: 'Changed'));
+        await pumpEventQueue();
+        final result = await done;
+        expect(result.groups, isNull);
+        expect(result.sources.single.state.mountable, isFalse);
+        final count = updates.length;
+        source.complete(
+          const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            count: 1,
+          ),
+        );
+        await pumpEventQueue();
+        expect(updates, hasLength(count));
+      },
+    );
+
+    test(
+      'timeout marks pending rows failed without releasing live RPC slots',
+      () async {
+        inspects();
+        final gates = <Completer<MountSourceInspection>>[];
+        when(
+          () => core.inspectMountSource(
+            any(),
+            ageSecretKey: any(named: 'ageSecretKey'),
+            relay: any(named: 'relay'),
+            managed: any(named: 'managed'),
+          ),
+        ).thenAnswer((_) {
+          final gate = Completer<MountSourceInspection>();
+          gates.add(gate);
+          return gate.future;
+        });
+        final container = build(
+          profiles: [
+            _target,
+            for (var id = 2; id <= 7; id++) _source.copyWith(id: id),
+          ],
+        );
+        final updates = <MountPanel>[];
+        final expired = await action(container).watchPanel(1).map((panel) {
+          updates.add(panel);
+          return panel;
+        }).last;
+        expect(gates, hasLength(4));
+        expect(
+          expired.sources.every(
+            (item) => item.state == MountSourceState.unreadable,
+          ),
+          isTrue,
+        );
+        expect(expired.sources.every((item) => !item.state.mountable), isTrue);
+        final count = updates.length;
+        final next = <MountPanel>[];
+        final retry = action(container).watchPanel(1).listen(next.add);
+        await pumpEventQueue();
+        expect(next.single.groupsPending, isTrue);
+        expect(gates, hasLength(4));
+        await retry.cancel();
+        for (final gate in gates) {
+          gate.complete(
+            const MountSourceInspection(
+              status: MountSourceStatus.nodes,
+              count: 1,
+            ),
+          );
+        }
+        await pumpEventQueue();
+        expect(gates, hasLength(4));
+        expect(updates, hasLength(count));
+      },
+    );
+
+    test(
+      'same content skips repeat source RPCs; content and context invalidate',
+      () async {
+        inspects();
+        final file = File(await appPath.getProfilePath('2'));
+        await file.parent.create(recursive: true);
+        await file.writeAsString('proxies: [a]');
+        addTearDown(() async {
+          if (await file.exists()) await file.delete();
+        });
+        var calls = 0;
+        when(
+          () => core.inspectMountSource(
+            any(),
+            ageSecretKey: any(named: 'ageSecretKey'),
+            relay: any(named: 'relay'),
+            managed: any(named: 'managed'),
+          ),
+        ).thenAnswer((_) async {
+          calls++;
+          return const MountSourceInspection(
+            status: MountSourceStatus.nodes,
+            count: 1,
+          );
+        });
+        final container = build();
+        final mounts = action(container);
+        Future<void> load() async {
+          final panel = await mounts.watchPanel(1).last;
+          expect(panel.sources.single.state.mountable, isTrue);
+        }
+
+        await load();
+        await load();
+        expect(calls, 1);
+        final modified = await file.lastModified();
+        await file.writeAsString('proxies: [b]');
+        await file.setLastModified(modified);
+        await load();
+        expect(calls, 2);
+        container
+            .read(profilesProvider.notifier)
+            .put(_source.copyWith(ageSecretKey: 'test-secret'));
+        await load();
+        expect(calls, 3);
+        _FakeSetupAction.config = 'proxies: [target]';
+        await load();
+        expect(calls, 4);
+        container.read(tailscaleManagedRecordsProvider.notifier).value = const [
+          TailscaleManagedRecord(id: 'x', profileId: 1, name: 'Office'),
+        ];
+        await load();
+        expect(calls, 5);
+        container.read(versionProvider.notifier).value = 2;
+        await load();
+        expect(calls, 6);
+        await mounts.watchPanel(1, refresh: true).last;
+        expect(calls, 7);
+        await file.delete();
+        await load();
+        await load();
+        expect(calls, 9);
+      },
+    );
+
+    test('cached counts never bypass a changed live guard at save', () async {
+      inspects();
+      final file = File(await appPath.getProfilePath('2'));
+      await file.parent.create(recursive: true);
+      await file.writeAsString('proxies: []');
+      addTearDown(file.delete);
+      var calls = 0;
+      when(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
+        ),
+      ).thenAnswer((_) async {
+        calls++;
+        return const MountSourceInspection(
+          status: MountSourceStatus.nodes,
+          count: 1,
+        );
+      });
+      final container = build();
+      final mounts = action(container);
+      await mounts.watchPanel(1).last;
+      final cached = await mounts.watchPanel(1).last;
+      expect(calls, 1);
+      expect(cached.sources.single.state.mountable, isTrue);
+      when(
+        () => core.preflightMounts(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          mounts: any(named: 'mounts'),
+        ),
+      ).thenAnswer(
+        (_) async => MountPreflight(
+          report: _withGroup.report!.copyWith(
+            sources: const [
+              MountSourceReport(
+                id: 2,
+                provider: 'flash-mount-2',
+                status: MountSourceStatus.nodes,
+                tailscaleExcluded: 1,
+              ),
+            ],
+          ),
+        ),
+      );
+      final result = await mountAir(container);
+      expect(result.outcome, MountSaveOutcome.unchanged);
+      expect(await testDatabase.mountsDao.target(1), isNull);
+      await mounts.watchPanel(1).last;
+      expect(calls, 2);
+    });
+
+    test(
+      'queued target refresh shares the four live inspection slots',
+      () async {
+        inspects();
+        final gates = <Completer<MountSourceInspection>>[];
+        when(
+          () => core.inspectMountSource(
+            any(),
+            ageSecretKey: any(named: 'ageSecretKey'),
+            relay: any(named: 'relay'),
+            managed: any(named: 'managed'),
+          ),
+        ).thenAnswer((_) {
+          final gate = Completer<MountSourceInspection>();
+          gates.add(gate);
+          return gate.future;
+        });
+        final mounts = action(
+          build(
+            profiles: [
+              _target,
+              for (var id = 2; id <= 5; id++) _source.copyWith(id: id),
+            ],
+          ),
+        );
+        final subscription = mounts.watchPanel(1).listen((_) {});
+        await waitFor(() => gates.length == 4);
+        var refreshed = false;
+        final refresh = mounts.readGroups(1).then((_) => refreshed = true);
+        await pumpEventQueue();
+        expect(refreshed, isFalse);
+        await subscription.cancel();
+        gates.first.complete(
+          const MountSourceInspection(status: MountSourceStatus.nodes),
+        );
+        await refresh;
+        expect(refreshed, isTrue);
+        for (final gate in gates.skip(1)) {
+          gate.complete(
+            const MountSourceInspection(status: MountSourceStatus.nodes),
+          );
+        }
+        await pumpEventQueue();
+      },
+    );
+
     test('with its relay list and its own panel-added names', () async {
       inspects();
       final container = build(
@@ -362,7 +1223,7 @@ void main() {
         ],
       );
 
-      final panel = await action(container).loadPanel(1);
+      final panel = await action(container).watchPanel(1).last;
 
       verify(
         () => core.inspectMountSource(
@@ -407,18 +1268,21 @@ void main() {
       },
     );
 
-    test('with nothing while panel-added accounts are unread', () async {
+    test('unread managed accounts block inspections and additions', () async {
       inspects();
       final container = build(managed: null);
 
-      await action(container).loadPanel(1);
-
-      verify(
+      final panel = await action(container).watchPanel(1).last;
+      expect(panel.groups, isNull);
+      expect(panel.sources.single.state.mountable, isFalse);
+      verifyNever(
         () => core.inspectMountSource(
           any(),
           ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
         ),
-      ).called(1);
+      );
     });
   });
 

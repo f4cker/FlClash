@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
+import 'package:fl_clash/views/config/macos_helper.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
@@ -497,6 +499,7 @@ List<Widget> networkOptionsItems({
 }) {
   return [
     if (isDesktop) const TUNItem(),
+    if (isMacOS && macosManagedHelperBuild) const MacHelperItem(),
     if (isMacOS) const AutoSetSystemDnsItem(),
     const TunStackItem(),
     // mihomo's DefaultSocketHook ignores interface-name on Android

@@ -1,0 +1,13 @@
+x-node: &node {type: socks5, server: 192.0.2.1, port: 1080}
+x-literal: {"<<": literal-string-key}
+proxies:
+  - <<: *node
+    name: merged
+    port: 1081
+  - <<: [{server: 192.0.2.2}, *node]
+    name: layered
+proxy-groups:
+  - &group {name: Pick, type: select, proxies: [merged, layered]}
+  - <<: *group
+    name: Again
+rules: ["MATCH,Pick"]

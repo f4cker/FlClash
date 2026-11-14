@@ -14,6 +14,7 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/state.dart';
+import 'package:fl_clash/providers/tray_menu.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -111,6 +112,282 @@ void main() {
   }
 
   group('updateGroups', () {
+    const exit = 'Tailscale 出口 (Flash)';
+    const member = 'exit-a1 · a1@example.test';
+    const remaining = 'exit-b2 · b2@example.test';
+    final saved = <String, String>{
+      'Policy': exit,
+      'Empty': exit,
+      exit: member,
+      tailscaleExitSelectionKey: 'a1',
+      'UserGroup': 'Tailscale 出口',
+      'UserNode': 'Tailscale exit',
+    };
+
+    ProxiesData exitData({bool active = false}) => ProxiesData(
+      tailscaleRevision: 1,
+      all: ['GLOBAL', 'Policy', 'Empty', 'Tailscale 出口', if (active) exit],
+      proxies: {
+        'GLOBAL': {
+          'name': 'GLOBAL',
+          'type': 'Selector',
+          'now': 'DIRECT',
+          'all': ['DIRECT', 'Tailscale 出口', 'Tailscale exit'],
+        },
+        'Policy': {
+          'name': 'Policy',
+          'type': 'Selector',
+          'now': active ? exit : 'DIRECT',
+          'all': ['DIRECT', if (active) exit],
+        },
+        'Empty': {
+          'name': 'Empty',
+          'type': 'Selector',
+          'now': active ? exit : 'COMPATIBLE',
+          'all': ['COMPATIBLE', if (active) exit],
+        },
+        'Tailscale 出口': {
+          'name': 'Tailscale 出口',
+          'type': 'Selector',
+          'now': 'DIRECT',
+          'all': ['DIRECT'],
+        },
+        'Tailscale exit': {'name': 'Tailscale exit', 'type': 'socks5'},
+        'DIRECT': {'name': 'DIRECT', 'type': 'Direct'},
+        'COMPATIBLE': {'name': 'COMPATIBLE', 'type': 'Direct'},
+        if (active) ...{
+          exit: {
+            'name': exit,
+            'type': 'Selector',
+            'now': remaining,
+            'all': [remaining],
+          },
+          remaining: {'name': remaining, 'type': 'Tailscale'},
+        },
+      },
+    );
+
+    Profile exitProfile() =>
+        Profile(id: 1, autoUpdateDuration: Duration.zero, selectedMap: saved);
+
+    for (final state in [
+      TailscaleRuntimeState.confirmed,
+      TailscaleRuntimeState.none,
+    ]) {
+      test(
+        'closed exit selections are repaired after $state and stay repaired on reload',
+        () async {
+          final container = buildContainer(profile: exitProfile());
+          when(core.getProxies).thenAnswer((_) async => exitData());
+          when(() => core.getTailscaleExit(1)).thenAnswer(
+            (_) async =>
+                TailscaleExitReport(revision: 1, profileId: 1, state: state),
+          );
+
+          await actionOf(container).updateGroups();
+          expect(container.read(profilesProvider).getProfile(1)!.selectedMap, {
+            'Policy': 'DIRECT',
+            'UserGroup': 'Tailscale 出口',
+            'UserNode': 'Tailscale exit',
+          });
+          await actionOf(container).updateGroups();
+          expect(
+            container
+                .read(profilesProvider)
+                .getProfile(1)!
+                .selectedMap['Policy'],
+            'DIRECT',
+          );
+          expect(
+            container.read(profilesProvider).getProfile(1)!.selectedMap,
+            isNot(contains(tailscaleExitSelectionKey)),
+          );
+        },
+      );
+    }
+
+    test(
+      'same-profile runtime replacement between reads cannot erase a new valid choice',
+      () async {
+        final container = buildContainer(profile: exitProfile());
+        when(
+          core.getProxies,
+        ).thenAnswer((_) async => exitData().copyWith(tailscaleRevision: 7));
+        when(() => core.getTailscaleExit(1)).thenAnswer(
+          (_) async => const TailscaleExitReport(
+            revision: 8,
+            profileId: 1,
+            state: TailscaleRuntimeState.none,
+          ),
+        );
+
+        await actionOf(container).updateGroups();
+        expect(
+          container.read(profilesProvider).getProfile(1)!.selectedMap,
+          saved,
+        );
+      },
+    );
+
+    test(
+      'fallback persistence follows Core order, not name-sorted presentation',
+      () async {
+        final container = buildContainer(profile: exitProfile());
+        container
+            .read(proxiesStyleSettingProvider.notifier)
+            .update((state) => state.copyWith(sortType: ProxiesSortType.name));
+        final data = exitData();
+        final proxies = {
+          ...data.proxies,
+          'Policy': {
+            'name': 'Policy',
+            'type': 'Selector',
+            'now': 'Z-proxy',
+            'all': ['Z-proxy', 'DIRECT'],
+          },
+          'Z-proxy': {'name': 'Z-proxy', 'type': 'socks5'},
+        };
+        when(
+          core.getProxies,
+        ).thenAnswer((_) async => data.copyWith(proxies: proxies));
+        when(() => core.getTailscaleExit(1)).thenAnswer(
+          (_) async => const TailscaleExitReport(
+            revision: 1,
+            profileId: 1,
+            state: TailscaleRuntimeState.none,
+          ),
+        );
+
+        await actionOf(container).updateGroups();
+        expect(
+          container.read(groupsProvider).getGroup('Policy')!.all.first.name,
+          'DIRECT',
+        );
+        expect(
+          container.read(profilesProvider).getProfile(1)!.selectedMap['Policy'],
+          'Z-proxy',
+        );
+      },
+    );
+
+    test(
+      'one account removed preserves shared parents and follows the remaining member',
+      () async {
+        final container = buildContainer(profile: exitProfile());
+        when(core.getProxies).thenAnswer((_) async => exitData(active: true));
+        when(() => core.getTailscaleExit(1)).thenAnswer(
+          (_) async => const TailscaleExitReport(
+            revision: 1,
+            profileId: 1,
+            state: TailscaleRuntimeState.confirmed,
+            group: exit,
+            selected: 'b2',
+            accounts: [
+              TailscaleExitAccount(
+                id: 'b2',
+                member: remaining,
+                exitNode: '100.64.0.7',
+                state: TailscaleExitState.unavailable,
+              ),
+            ],
+          ),
+        );
+
+        await actionOf(container).updateGroups();
+        final selected = container
+            .read(profilesProvider)
+            .getProfile(1)!
+            .selectedMap;
+        expect(selected['Policy'], exit);
+        expect(selected['Empty'], exit);
+        expect(selected[exit], remaining);
+        expect(selected[tailscaleExitSelectionKey], 'b2');
+      },
+    );
+
+    test('unconfirmed closure never repairs saved selections', () async {
+      final container = buildContainer(profile: exitProfile());
+      when(core.getProxies).thenAnswer((_) async => exitData());
+      when(
+        () => core.getTailscaleExit(1),
+      ).thenAnswer((_) async => const TailscaleExitReport.readFailed(1));
+
+      await actionOf(container).updateGroups();
+      expect(
+        container.read(profilesProvider).getProfile(1)!.selectedMap,
+        saved,
+      );
+    });
+
+    test(
+      'a late read after a profile switch cannot repair either profile',
+      () async {
+        final container = buildContainer(profile: exitProfile());
+        final other = exitProfile().copyWith(id: 2);
+        container.read(profilesProvider.notifier).put(other);
+        final reading = Completer<void>();
+        final report = Completer<TailscaleExitReport>();
+        when(core.getProxies).thenAnswer((_) async => exitData());
+        when(() => core.getTailscaleExit(1)).thenAnswer((_) {
+          reading.complete();
+          return report.future;
+        });
+
+        final update = actionOf(container).updateGroups();
+        await reading.future;
+        container.read(currentProfileIdProvider.notifier).value = 2;
+        report.complete(
+          const TailscaleExitReport(
+            revision: 1,
+            profileId: 1,
+            state: TailscaleRuntimeState.none,
+          ),
+        );
+        await update;
+        expect(
+          container.read(profilesProvider).getProfile(1)!.selectedMap,
+          saved,
+        );
+        expect(
+          container.read(profilesProvider).getProfile(2)!.selectedMap,
+          saved,
+        );
+      },
+    );
+
+    test('a selection changed during readback is not overwritten', () async {
+      final container = buildContainer(profile: exitProfile());
+      final reading = Completer<void>();
+      final report = Completer<TailscaleExitReport>();
+      when(core.getProxies).thenAnswer((_) async => exitData());
+      when(() => core.getTailscaleExit(1)).thenAnswer((_) {
+        reading.complete();
+        return report.future;
+      });
+
+      final update = actionOf(container).updateGroups();
+      await reading.future;
+      container
+          .read(profilesProvider.notifier)
+          .put(
+            exitProfile().copyWith(
+              selectedMap: {...saved, 'Policy': 'ManualNew'},
+            ),
+          );
+      report.complete(
+        const TailscaleExitReport(
+          revision: 1,
+          profileId: 1,
+          state: TailscaleRuntimeState.none,
+        ),
+      );
+      await update;
+      expect(
+        container.read(profilesProvider).getProfile(1)!.selectedMap['Policy'],
+        'ManualNew',
+      );
+    });
+
     test('publishes the groups derived from core proxy data', () async {
       when(core.getProxies).thenAnswer(
         (_) async => ProxiesData(
@@ -364,6 +641,786 @@ void main() {
           'Proxy': 'HK-00',
         });
         debouncer.cancel((FunctionTag.changeProxy, 'Proxy'));
+      },
+    );
+  });
+
+  group('changeProxyForTray', () {
+    const old = 'HK-00';
+    const target = 'HK-01';
+    const members = [Proxy(name: old, type: 'ss'), _proxy];
+
+    ProxiesData data({
+      String now = target,
+      List<String> all = const [old, target],
+      GroupType type = GroupType.Selector,
+    }) => ProxiesData(
+      all: const ['Proxy'],
+      proxies: {
+        'Proxy': {'name': 'Proxy', 'type': type.name, 'now': now, 'all': all},
+        for (final name in all) name: {'name': name, 'type': 'ss'},
+      },
+    );
+
+    ProviderContainer trayContainer() {
+      final container = buildContainer(profile: _selectedProfile(old));
+      container.read(runTimeProvider.notifier).value = 1;
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      container.read(groupsProvider.notifier).value = [
+        _group('Proxy', members).copyWith(now: old),
+      ];
+      return container;
+    }
+
+    TrayGroupMenuState? menuState(ProviderContainer container) =>
+        container.read(trayGroupMenuStatesProvider)['Proxy'];
+
+    Future<void> switchProxy(ProviderContainer container) => actionOf(
+      container,
+    ).changeProxyForTray(groupName: 'Proxy', proxyName: target);
+
+    setUp(() {
+      when(
+        () => core.changeProxy(any()),
+      ).thenAnswer((_) async => const ChangeProxyResult(changed: true));
+      when(core.closeConnections).thenAnswer((_) async {});
+      when(core.resetConnections).thenAnswer((_) async {});
+      when(core.getProxies).thenAnswer((_) async => data());
+    });
+
+    for (final type in [GroupType.URLTest, GroupType.Fallback]) {
+      test('confirms active member selection in a $type group', () async {
+        final container = trayContainer();
+        container.read(groupsProvider.notifier).value = [
+          _group('Proxy', members).copyWith(type: type, now: old),
+        ];
+        when(core.getProxies).thenAnswer((_) async => data(type: type));
+        await switchProxy(container);
+        verify(() => core.changeProxy(any())).called(1);
+        expect(container.read(rawGroupsProvider).single.now, target);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          target,
+        );
+        expect(menuState(container), isNull);
+      });
+    }
+
+    for (final type in [GroupType.LoadBalance, GroupType.Relay]) {
+      test('rejects direct member selection in a $type group', () async {
+        final container = trayContainer();
+        container.read(groupsProvider.notifier).value = [
+          _group('Proxy', members).copyWith(type: type, now: old),
+        ];
+        await switchProxy(container);
+        container.read(runTimeProvider.notifier).value = null;
+        await switchProxy(container);
+        verifyNever(() => core.changeProxy(any()));
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          old,
+        );
+        expect(menuState(container), isNull);
+      });
+    }
+
+    for (final type in [
+      GroupType.Selector,
+      GroupType.URLTest,
+      GroupType.Fallback,
+    ]) {
+      for (final status in [CoreStatus.connected, CoreStatus.disconnected]) {
+        test(
+          'saves a stopped $type choice with Core $status without claiming confirmation',
+          () async {
+            final container = trayContainer();
+            container.read(runTimeProvider.notifier).value = null;
+            container.read(coreStatusProvider.notifier).value = status;
+            container.read(groupsProvider.notifier).value = [
+              _group('Proxy', members).copyWith(type: type, now: target),
+            ];
+            await switchProxy(container);
+            expect(
+              container.read(currentProfileProvider)?.selectedMap['Proxy'],
+              target,
+            );
+            expect(container.read(rawGroupsProvider).single.now, target);
+            expect(menuState(container), isNull);
+            verifyNever(() => core.changeProxy(any()));
+            verifyNever(core.getProxies);
+            verifyNever(core.closeConnections);
+            verifyNever(core.resetConnections);
+          },
+        );
+      }
+    }
+
+    test(
+      'a running but disconnected Core does not turn an active switch into a saved choice',
+      () async {
+        final container = trayContainer();
+        container.read(coreStatusProvider.notifier).value =
+            CoreStatus.disconnected;
+        await switchProxy(container);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          old,
+        );
+        expect(menuState(container), isNull);
+        verifyNever(() => core.changeProxy(any()));
+      },
+    );
+
+    test(
+      'stopping clears an uncertain active lock before saving a stopped choice',
+      () async {
+        when(() => core.changeProxy(any())).thenThrow(
+          const CoreMethodException(code: 'no_response', message: 'no answer'),
+        );
+        final container = trayContainer();
+        await switchProxy(container);
+        expect(
+          menuState(container)?.switchFailure,
+          TraySwitchFailure.unconfirmed,
+        );
+        container.read(runTimeProvider.notifier).value = null;
+        await switchProxy(container);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          target,
+        );
+        expect(container.read(rawGroupsProvider).single.now, old);
+        expect(menuState(container), isNull);
+        verify(() => core.changeProxy(any())).called(1);
+        verifyNever(core.getProxies);
+      },
+    );
+
+    test(
+      'a stopped configured choice does not overwrite the old raw Core choice',
+      () async {
+        final container = trayContainer();
+        container.read(runTimeProvider.notifier).value = null;
+        await switchProxy(container);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          target,
+        );
+        expect(container.read(rawGroupsProvider).single.now, old);
+        expect(menuState(container), isNull);
+        verifyNever(() => core.changeProxy(any()));
+      },
+    );
+
+    test(
+      'a stopped choice validates the current profile, group, and member',
+      () async {
+        final container = trayContainer();
+        container.read(runTimeProvider.notifier).value = null;
+        await actionOf(
+          container,
+        ).changeProxyForTray(groupName: 'Missing', proxyName: target);
+        await actionOf(
+          container,
+        ).changeProxyForTray(groupName: 'Proxy', proxyName: 'Missing');
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          old,
+        );
+        container.read(currentProfileIdProvider.notifier).value = 2;
+        await switchProxy(container);
+        expect(
+          container.read(profilesProvider).getProfile(1)?.selectedMap['Proxy'],
+          old,
+        );
+        expect(menuState(container), isNull);
+        verifyNever(() => core.changeProxy(any()));
+      },
+    );
+
+    test(
+      'a click after starting uses the live running state, not a stopped menu snapshot',
+      () async {
+        final selected = Completer<ChangeProxyResult>();
+        when(() => core.changeProxy(any())).thenAnswer((_) => selected.future);
+        final container = trayContainer();
+        container.read(runTimeProvider.notifier).value = null;
+        container.read(runTimeProvider.notifier).value = 2;
+        final operation = switchProxy(container);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          old,
+        );
+        expect(menuState(container)?.confirmedName, old);
+        expect(menuState(container)?.pendingName, target);
+        verify(() => core.changeProxy(any())).called(1);
+        selected.complete(const ChangeProxyResult(changed: false));
+        await operation;
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          target,
+        );
+      },
+    );
+
+    for (final changed in [true, false]) {
+      test(
+        'keeps the old check until raw Core confirmation, changed=$changed',
+        () async {
+          final selected = Completer<ChangeProxyResult>();
+          final reading = Completer<void>();
+          final snapshot = Completer<ProxiesData>();
+          when(
+            () => core.changeProxy(any()),
+          ).thenAnswer((_) => selected.future);
+          when(core.getProxies).thenAnswer((_) {
+            reading.complete();
+            return snapshot.future;
+          });
+          final container = trayContainer();
+          final observed = <TrayGroupMenuState?>[];
+          container.listen(trayGroupMenuStatesProvider, (_, next) {
+            observed.add(next['Proxy']);
+          });
+
+          final operation = switchProxy(container);
+          expect(menuState(container)?.confirmedName, old);
+          expect(menuState(container)?.pendingName, target);
+          expect(
+            container.read(currentProfileProvider)?.selectedMap['Proxy'],
+            old,
+          );
+          selected.complete(ChangeProxyResult(changed: changed));
+          await reading.future;
+          expect(menuState(container)?.confirmedName, old);
+          expect(menuState(container)?.pendingName, target);
+          snapshot.complete(data());
+          await operation;
+
+          expect(container.read(rawGroupsProvider).single.now, target);
+          expect(
+            container.read(currentProfileProvider)?.selectedMap['Proxy'],
+            target,
+          );
+          expect(menuState(container), isNull);
+          expect(observed.first?.confirmedName, old);
+          expect(observed.last, isNull);
+          if (changed) {
+            verify(core.closeConnections).called(1);
+          } else {
+            verifyNever(core.closeConnections);
+            verifyNever(core.resetConnections);
+          }
+        },
+      );
+    }
+
+    for (final failure in [
+      const ChangeProxyResult(message: 'proxy not exist'),
+      const CoreMethodException(code: 'invalid_argument', message: 'removed'),
+    ]) {
+      test(
+        'explicit failure is observable and preserves the old selection: $failure',
+        () async {
+          if (failure is ChangeProxyResult) {
+            when(
+              () => core.changeProxy(any()),
+            ).thenAnswer((_) async => failure);
+          } else {
+            when(() => core.changeProxy(any())).thenThrow(failure);
+          }
+          final container = trayContainer();
+
+          await switchProxy(container);
+
+          expect(menuState(container)?.confirmedName, old);
+          expect(menuState(container)?.pendingName, isNull);
+          expect(menuState(container)?.switchFailure, TraySwitchFailure.failed);
+          expect(
+            container.read(currentProfileProvider)?.selectedMap['Proxy'],
+            old,
+          );
+          verifyNever(core.getProxies);
+          verifyNever(core.closeConnections);
+          verifyNever(core.resetConnections);
+        },
+      );
+    }
+
+    for (final origin in ['main window', 'external Core']) {
+      test(
+        'a failed notice follows a later confirmed $origin selection',
+        () async {
+          when(() => core.changeProxy(any())).thenAnswer(
+            (_) async => const ChangeProxyResult(message: 'selection rejected'),
+          );
+          final container = trayContainer();
+          await switchProxy(container);
+          expect(menuState(container)?.confirmedName, old);
+          expect(menuState(container)?.switchFailure, TraySwitchFailure.failed);
+
+          if (origin == 'main window') {
+            when(
+              () => core.changeProxy(any()),
+            ).thenAnswer((_) async => const ChangeProxyResult(changed: true));
+            await actionOf(
+              container,
+            ).changeProxy(groupName: 'Proxy', proxyName: target);
+          }
+          await actionOf(container).updateGroups();
+
+          expect(container.read(rawGroupsProvider).single.now, target);
+          expect(menuState(container)?.confirmedName, target);
+          expect(menuState(container)?.pendingName, isNull);
+          expect(menuState(container)?.switchFailure, TraySwitchFailure.failed);
+          await switchProxy(container);
+          verify(
+            () => core.changeProxy(any()),
+          ).called(origin == 'main window' ? 2 : 1);
+        },
+      );
+    }
+
+    test('a removed group drops its failed notice before recreation', () async {
+      when(() => core.changeProxy(any())).thenAnswer(
+        (_) async => const ChangeProxyResult(message: 'selection rejected'),
+      );
+      final container = trayContainer();
+      await switchProxy(container);
+      expect(menuState(container)?.switchFailure, TraySwitchFailure.failed);
+      final other = data().copyWith(
+        all: const ['Other'],
+        proxies: {
+          'Other': {
+            'name': 'Other',
+            'type': 'Selector',
+            'now': old,
+            'all': [old],
+          },
+          old: {'name': old, 'type': 'ss'},
+        },
+      );
+      when(core.getProxies).thenAnswer((_) async => other);
+      await actionOf(container).updateGroups();
+      expect(menuState(container), isNull);
+
+      when(core.getProxies).thenAnswer((_) async => data());
+      await actionOf(container).updateGroups();
+      expect(container.read(rawGroupsProvider).single.now, target);
+      expect(menuState(container), isNull);
+    });
+
+    for (final error in [
+      const CoreMethodException(code: 'no_response', message: 'no answer'),
+      TimeoutException('no answer'),
+    ]) {
+      test(
+        'an unanswered request stays uncertain and locked until refresh: $error',
+        () async {
+          when(() => core.changeProxy(any())).thenThrow(error);
+          final container = trayContainer();
+          await switchProxy(container);
+
+          expect(
+            menuState(container)?.switchFailure,
+            TraySwitchFailure.unconfirmed,
+          );
+          expect(menuState(container)?.confirmedName, old);
+          expect(menuState(container)?.pendingName, target);
+          expect(
+            container.read(currentProfileProvider)?.selectedMap['Proxy'],
+            old,
+          );
+          await switchProxy(container);
+          verify(() => core.changeProxy(any())).called(1);
+          expect(container.read(trayGroupsReadFailedProvider), isFalse);
+
+          await actionOf(container).updateGroups();
+          expect(menuState(container), isNull);
+          expect(
+            container.read(currentProfileProvider)?.selectedMap['Proxy'],
+            target,
+          );
+        },
+      );
+    }
+
+    test('accepted RPC with a mismatching now is not confirmation', () async {
+      when(core.getProxies).thenAnswer((_) async => data(now: old));
+      final container = trayContainer();
+      await switchProxy(container);
+
+      expect(
+        menuState(container)?.switchFailure,
+        TraySwitchFailure.unconfirmed,
+      );
+      expect(menuState(container)?.confirmedName, old);
+      expect(container.read(currentProfileProvider)?.selectedMap['Proxy'], old);
+      await actionOf(container).updateGroups();
+      expect(menuState(container), isNull);
+      expect(container.read(currentProfileProvider)?.selectedMap['Proxy'], old);
+    });
+
+    test(
+      'confirmation read errors retain the old check and recover on refresh',
+      () async {
+        when(core.getProxies).thenThrow(
+          const CoreMethodException(
+            code: 'no_response',
+            message: 'read timed out',
+          ),
+        );
+        final container = trayContainer();
+        await switchProxy(container);
+
+        expect(
+          menuState(container)?.switchFailure,
+          TraySwitchFailure.unconfirmed,
+        );
+        expect(menuState(container)?.confirmedName, old);
+        expect(menuState(container)?.pendingName, target);
+        expect(container.read(trayGroupsReadFailedProvider), isTrue);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          old,
+        );
+        when(core.getProxies).thenAnswer((_) async => data());
+        await actionOf(container).updateGroups();
+        expect(container.read(trayGroupsReadFailedProvider), isFalse);
+        expect(menuState(container), isNull);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          target,
+        );
+      },
+    );
+
+    test(
+      'rejects duplicate taps and another member of the same pending group',
+      () async {
+        final selected = Completer<ChangeProxyResult>();
+        when(() => core.changeProxy(any())).thenAnswer((_) => selected.future);
+        final container = trayContainer();
+        final operation = switchProxy(container);
+        await switchProxy(container);
+        await actionOf(
+          container,
+        ).changeProxyForTray(groupName: 'Proxy', proxyName: old);
+        expect(menuState(container)?.pendingName, target);
+        verify(() => core.changeProxy(any())).called(1);
+        selected.complete(const ChangeProxyResult(changed: false));
+        await operation;
+      },
+    );
+
+    test(
+      'ignores already selected, missing groups, and missing members',
+      () async {
+        final container = trayContainer();
+        await actionOf(
+          container,
+        ).changeProxyForTray(groupName: 'Proxy', proxyName: old);
+        await actionOf(
+          container,
+        ).changeProxyForTray(groupName: 'Missing', proxyName: target);
+        await actionOf(
+          container,
+        ).changeProxyForTray(groupName: 'Proxy', proxyName: 'Removed');
+        expect(menuState(container), isNull);
+        verifyNever(() => core.changeProxy(any()));
+      },
+    );
+
+    for (final confirmed in [target, old]) {
+      test(
+        'a newer $confirmed snapshot resolves a superseded switch confirmation without another read',
+        () async {
+          final firstSnapshot = Completer<ProxiesData>();
+          final reading = Completer<void>();
+          var reads = 0;
+          when(
+            () => core.changeProxy(any()),
+          ).thenAnswer((_) async => const ChangeProxyResult(changed: false));
+          when(core.getProxies).thenAnswer((_) {
+            reads++;
+            if (reads == 1) {
+              reading.complete();
+              return firstSnapshot.future;
+            }
+            return Future.value(data(now: confirmed));
+          });
+          final container = trayContainer();
+          final operation = switchProxy(container);
+          await reading.future;
+
+          await actionOf(container).updateGroups();
+          expect(container.read(rawGroupsProvider).single.now, confirmed);
+          expect(menuState(container)?.pendingName, target);
+          expect(
+            container.read(currentProfileProvider)?.selectedMap['Proxy'],
+            old,
+          );
+
+          firstSnapshot.complete(data(now: confirmed == target ? old : target));
+          await operation;
+
+          expect(menuState(container), isNull);
+          expect(container.read(rawGroupsProvider).single.now, confirmed);
+          expect(
+            container.read(currentProfileProvider)?.selectedMap['Proxy'],
+            confirmed,
+          );
+          expect(container.read(trayGroupsReadFailedProvider), isFalse);
+          verify(core.getProxies).called(2);
+        },
+      );
+    }
+
+    test('runtime ticks do not invalidate a pending tray switch', () async {
+      final selected = Completer<ChangeProxyResult>();
+      when(() => core.changeProxy(any())).thenAnswer((_) => selected.future);
+      final container = trayContainer();
+      final operation = switchProxy(container);
+      container.read(runTimeProvider.notifier).value = 2;
+      expect(menuState(container)?.pendingName, target);
+      selected.complete(const ChangeProxyResult(changed: false));
+      await operation;
+      expect(menuState(container), isNull);
+      expect(
+        container.read(currentProfileProvider)?.selectedMap['Proxy'],
+        target,
+      );
+    });
+
+    for (final lifecycle in ['profile', 'core', 'running state']) {
+      for (final phase in ['RPC', 'confirmation']) {
+        test(
+          'ignores $phase completion after a $lifecycle generation change',
+          () async {
+            final selected = Completer<ChangeProxyResult>();
+            final snapshot = Completer<ProxiesData>();
+            final reading = Completer<void>();
+            when(
+              () => core.changeProxy(any()),
+            ).thenAnswer((_) => selected.future);
+            when(core.getProxies).thenAnswer((_) {
+              reading.complete();
+              return snapshot.future;
+            });
+            final container = trayContainer();
+            final operation = switchProxy(container);
+            if (phase == 'confirmation') {
+              selected.complete(const ChangeProxyResult(changed: false));
+              await reading.future;
+            }
+            if (lifecycle == 'profile') {
+              container
+                  .read(profilesProvider.notifier)
+                  .put(_selectedProfile('Other').copyWith(id: 2));
+              container.read(currentProfileIdProvider.notifier).value = 2;
+              expect(container.read(currentProfileProvider)?.id, 2);
+            } else if (lifecycle == 'core') {
+              container.read(coreStatusProvider.notifier).value =
+                  CoreStatus.disconnected;
+              container.read(coreStatusProvider.notifier).value =
+                  CoreStatus.connected;
+            } else {
+              container.read(runTimeProvider.notifier).value = null;
+              container.read(runTimeProvider.notifier).value = 2;
+            }
+            container.read(groupsProvider.notifier).value = [
+              _group('New generation', const []),
+            ];
+            if (phase == 'RPC') {
+              selected.complete(const ChangeProxyResult(changed: true));
+            } else {
+              snapshot.complete(data());
+            }
+            await operation;
+
+            expect(container.read(trayGroupMenuStatesProvider), isEmpty);
+            expect(
+              container.read(groupsProvider).single.name,
+              'New generation',
+            );
+            expect(
+              container
+                  .read(profilesProvider)
+                  .getProfile(1)
+                  ?.selectedMap['Proxy'],
+              old,
+            );
+            if (lifecycle == 'profile') {
+              expect(
+                container.read(currentProfileProvider)?.selectedMap['Proxy'],
+                'Other',
+              );
+            }
+            expect(container.read(trayGroupsReadFailedProvider), isFalse);
+          },
+        );
+      }
+    }
+
+    test('a profile round trip cannot revive an old switch', () async {
+      final selected = Completer<ChangeProxyResult>();
+      when(() => core.changeProxy(any())).thenAnswer((_) => selected.future);
+      final container = trayContainer();
+      final operation = switchProxy(container);
+      container.read(currentProfileIdProvider.notifier).value = 2;
+      container.read(currentProfileIdProvider.notifier).value = 1;
+      selected.complete(const ChangeProxyResult(changed: true));
+      await operation;
+      expect(menuState(container), isNull);
+      expect(container.read(currentProfileProvider)?.selectedMap['Proxy'], old);
+      verifyNever(core.getProxies);
+      verifyNever(core.closeConnections);
+    });
+
+    test(
+      'uses reset policy and treats reset failure separately from confirmation',
+      () async {
+        final container = trayContainer();
+        container.read(appSettingProvider.notifier).value =
+            const AppSettingProps(closeConnections: false);
+        when(core.resetConnections).thenThrow(StateError('reset failed'));
+        await switchProxy(container);
+        verify(core.resetConnections).called(1);
+        verifyNever(core.closeConnections);
+        expect(menuState(container), isNull);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          target,
+        );
+      },
+    );
+
+    test('a removed group cannot be revived by its in-flight RPC', () async {
+      final selected = Completer<ChangeProxyResult>();
+      when(() => core.changeProxy(any())).thenAnswer((_) => selected.future);
+      final container = trayContainer();
+      final operation = switchProxy(container);
+      container.read(groupsProvider.notifier).value = [];
+      container.read(groupsProvider.notifier).value = [
+        _group('Proxy', members).copyWith(now: old),
+      ];
+      selected.complete(const ChangeProxyResult(changed: true));
+      await operation;
+      expect(menuState(container), isNull);
+      expect(container.read(currentProfileProvider)?.selectedMap['Proxy'], old);
+      verifyNever(core.getProxies);
+      verifyNever(core.closeConnections);
+    });
+
+    test('ignores completion after container disposal', () async {
+      final selected = Completer<ChangeProxyResult>();
+      when(() => core.changeProxy(any())).thenAnswer((_) => selected.future);
+      final container = ProviderContainer(
+        overrides: [
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          profilesProvider.overrideWith(
+            () => TestProfiles([_selectedProfile(old)]),
+          ),
+          currentProfileIdProvider.overrideWithBuild((_, _) => 1),
+        ],
+      );
+      container.read(runTimeProvider.notifier).value = 1;
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      container.read(groupsProvider.notifier).value = [
+        _group('Proxy', members).copyWith(now: old),
+      ];
+      final operation = switchProxy(container);
+      container.dispose();
+      selected.complete(const ChangeProxyResult(changed: true));
+      await expectLater(operation, completes);
+      verifyNever(core.getProxies);
+      verifyNever(core.closeConnections);
+    });
+
+    for (final removed in ['group', 'member']) {
+      test('does not persist a removed $removed from confirmation', () async {
+        final container = trayContainer();
+        when(core.getProxies).thenAnswer(
+          (_) async => removed == 'group'
+              ? ProxiesData(
+                  all: const ['Other'],
+                  proxies: {
+                    'Other': {
+                      'name': 'Other',
+                      'type': 'Selector',
+                      'all': [old],
+                      'now': old,
+                    },
+                    old: {'name': old, 'type': 'ss'},
+                  },
+                )
+              : data(now: old, all: const [old]),
+        );
+        await switchProxy(container);
+        expect(menuState(container), isNull);
+        expect(
+          container.read(currentProfileProvider)?.selectedMap['Proxy'],
+          old,
+        );
+      });
+    }
+
+    test(
+      'successful empty data is not invented into a group read error',
+      () async {
+        when(
+          core.getProxies,
+        ).thenAnswer((_) async => const ProxiesData(all: [], proxies: {}));
+        final container = trayContainer();
+        await actionOf(container).updateGroups();
+        expect(container.read(trayGroupsReadFailedProvider), isFalse);
+        expect(container.read(groupsProvider), isEmpty);
+      },
+    );
+
+    test(
+      'profile lifecycle resets tray failures without clearing app groups',
+      () async {
+        final container = trayContainer();
+        when(core.getProxies).thenThrow(StateError('read failed'));
+        await actionOf(container).updateGroups();
+        expect(container.read(trayGroupsReadFailedProvider), isTrue);
+        container
+            .read(trayGroupMenuStatesProvider.notifier)
+            .set(
+              'Proxy',
+              const TrayGroupMenuState(
+                confirmedName: old,
+                switchFailure: TraySwitchFailure.failed,
+              ),
+            );
+        container.read(groupsProvider.notifier).value = [
+          _group('Unchanged', const []),
+        ];
+        container.read(currentProfileIdProvider.notifier).value = 2;
+        expect(container.read(trayGroupsReadFailedProvider), isFalse);
+        expect(container.read(trayGroupMenuStatesProvider), isEmpty);
+        expect(container.read(groupsProvider).single.name, 'Unchanged');
+      },
+    );
+
+    test(
+      'a superseded failed group read cannot mark a newer snapshot failed',
+      () async {
+        final first = Completer<ProxiesData>();
+        var count = 0;
+        when(core.getProxies).thenAnswer((_) {
+          count++;
+          return count == 1 ? first.future : Future.value(data());
+        });
+        final container = trayContainer();
+        final stale = actionOf(container).updateGroups();
+        await actionOf(container).updateGroups();
+        when(core.getProxies).thenThrow(StateError('old read failed'));
+        first.completeError(StateError('old read failed'));
+        await stale;
+        expect(container.read(trayGroupsReadFailedProvider), isFalse);
+        expect(container.read(groupsProvider).single.now, target);
       },
     );
   });

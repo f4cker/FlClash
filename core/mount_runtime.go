@@ -224,6 +224,17 @@ func parseDocument(document *yaml.Node) error {
 	if err != nil {
 		return err
 	}
+	var mountErr error
+	for name, pd := range cfg.Providers {
+		if strings.HasPrefix(name, mountProviderPrefix) {
+			if err := pd.Initial(); err != nil && mountErr == nil {
+				mountErr = err
+			}
+		}
+	}
+	if mountErr == nil {
+		mountErr = mountDialerViolation(cfg.Proxies, cfg.Providers)
+	}
 	for _, proxy := range cfg.Proxies {
 		_ = proxy.Close()
 	}
@@ -235,13 +246,17 @@ func parseDocument(document *yaml.Node) error {
 			_ = closer.Close()
 		}
 	}
-	return nil
+	return mountErr
 }
 
 func checkOnlyProxy(mapping map[string]any) map[string]any {
 	switch kind, _ := mapping["type"].(string); strings.ToLower(kind) {
 	case "tailscale", "easytier":
-		return map[string]any{"name": mapping["name"], "type": "direct"}
+		probe := map[string]any{"name": mapping["name"], "type": "direct"}
+		if dialer, ok := mapping["dialer-proxy"]; ok {
+			probe["dialer-proxy"] = dialer
+		}
+		return probe
 	}
 	return mapping
 }

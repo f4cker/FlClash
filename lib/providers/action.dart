@@ -1,10 +1,13 @@
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:dio/dio.dart' show CancelToken, DioException;
 import 'package:fl_clash/common/app_data.dart';
 import 'package:fl_clash/common/boot_guard.dart';
+import 'package:fl_clash/common/composition_review.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/common/system_dns.dart';
@@ -16,10 +19,10 @@ import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/plugins/service.dart';
 import 'package:fl_clash/providers/actions/system_exit.dart';
 import 'package:fl_clash/providers/mitm.dart';
+import 'package:fl_clash/providers/tray_menu.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/ui.dart';
-import 'package:fl_clash/widgets/page_source_rows.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart' show compute, listEquals;
 import 'package:flutter/services.dart';

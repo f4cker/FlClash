@@ -4,13 +4,17 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/netip"
 	"reflect"
 	"slices"
 	"testing"
 
 	"github.com/metacubex/mihomo/adapter/outbound"
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/component/flashguard"
+	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/dns"
 	"github.com/metacubex/mihomo/tunnel"
 	D "github.com/miekg/dns"
@@ -196,7 +200,7 @@ func TestMountedConfigNeverRoutesTailscaleThroughAMountedNode(t *testing.T) {
 		"groups": {mountTailscaleInvariantProfile, mountTailscaleInvariantProviders, ""},
 		"rule-set": {mountTailscaleRuleSetProfile, mountTailscaleRuleSetProviders,
 			"  - {name: hopper, type: socks5, server: 192.0.2.2, port: 6, Dialer-Proxy: Hops}\n" +
-				"  - {name: chained, type: socks5, server: 192.0.2.2, port: 7, dialer_proxy: Auto}\n"},
+				""},
 	}
 	for _, kind := range []string{"groups", "rule-set"} {
 		for _, attached := range []bool{false, true} {
@@ -218,39 +222,18 @@ func checkMountedTailscaleInvariant(t *testing.T, profile, providers, relays str
 	applyMountedTailscale(t, home, profile, providers, mounts, setup)
 
 	proxies := tunnel.Proxies()
-	own, reach := tailscaleProfileAdapters(proxies)
-	delete(reach, globalProxyName)
-	routes, _ := tailscaleProfileRoutes(tunnel.Rules(), own, reach)
-	base, err := readMountBase(rootOf(t, profile+providers))
-	if err != nil {
-		t.Fatal(err)
-	}
-	base.managedRules = attached
-	static := base.tailscaleGroups(newRuleReader(base))
-	guarded := map[string]bool{}
-	for name := range reach {
-		guarded[name] = true
-		if _, group := adapterAs[outboundgroup.ProxyGroup](proxies[name]); group && static[name] == "" {
-			t.Errorf("%s reaches Tailscale at runtime but the mount check missed it", name)
+	for _, provider := range tunnel.Providers() {
+		if !flashguard.IsMountProvider(provider.Name()) {
+			continue
 		}
-	}
-	for _, route := range routes {
-		guarded[route.Proxy] = true
-	}
-	for name := range static {
-		guarded[name] = true
-	}
-	if table := runningTailscaleTable(); table != nil {
-		for _, decision := range table.ips {
-			guarded[decision.Proxy] = true
-		}
-		for _, decision := range table.suffixes {
-			guarded[decision.decision.Proxy] = true
-		}
-	}
-	for name := range guarded {
-		if member := mountedMemberOf(proxies, name, map[string]bool{}); member != "" {
-			t.Errorf("Tailscale traffic through %s can reach the mounted node %s", name, member)
+		for _, proxy := range provider.Proxies() {
+			meta := &constant.Metadata{NetWork: constant.TCP, DstIP: netip.MustParseAddr("100.101.1.1"), DstPort: 443}
+			if conn, err := proxy.DialContext(t.Context(), meta); !errors.Is(err, flashguard.ErrRefused) {
+				if conn != nil {
+					_ = conn.Close()
+				}
+				t.Errorf("%s protected connection = %v", proxy.Name(), err)
+			}
 		}
 	}
 	if member := mountedMemberOf(proxies, "Main", map[string]bool{}); member == "" {

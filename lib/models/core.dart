@@ -477,6 +477,7 @@ extension ExternalProviderExt on ExternalProvider {
 @freezed
 abstract class ProxiesData with _$ProxiesData {
   const factory ProxiesData({
+    @JsonKey(name: 'tailscale-revision') @Default(0) int tailscaleRevision,
     required Map<String, dynamic> proxies,
     required List<String> all,
   }) = _ProxiesData;

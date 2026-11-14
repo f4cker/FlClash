@@ -12,10 +12,16 @@ import 'application.dart';
 import 'bootstrap.dart';
 import 'common/app_data.dart';
 import 'common/common.dart';
+import 'common/macos_managed_native_library.dart';
+import 'common/native_load_verification.dart';
 import 'common/preferences_store.dart';
 import 'common/window.dart';
 
 void main(List<String> args) {
+  if (isNativeLoadVerificationRequested(args)) {
+    unawaited(runNativeLoadVerification(args));
+    return;
+  }
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +42,7 @@ void main(List<String> args) {
         });
       };
       try {
-        await RustLib.init();
+        await RustLib.init(externalLibrary: loadMacosManagedNativeLibrary());
         final version = await system.init();
         final container = await bootstrap.init(version);
         await FlClashHttpOverrides.trustCoreRoots();

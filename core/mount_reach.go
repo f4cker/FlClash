@@ -75,14 +75,15 @@ type mountTunnel struct {
 	target string
 }
 
-// What a base provider holds, from its payload and cache. Filters are not
-// applied, so a Tailscale node they would drop still counts.
+// Raw provider membership is filtered per group before dedicated admission.
 type baseProvider struct {
-	names     []string
-	tailscale bool
-	unknown   bool
-	gated     bool
-	dialers   []string
+	names          []string
+	tailscale      bool
+	nodeTypes      map[string]string
+	tailscaleNames []string
+	unknown        bool
+	gated          bool
+	dialers        []string
 }
 
 func readMountBase(root *yaml.Node) (*mountBase, error) {
@@ -105,34 +106,6 @@ func readMountBase(root *yaml.Node) (*mountBase, error) {
 	if providers := resolveAlias(mappingValue(root, "proxy-providers")); providers != nil && providers.Kind == yaml.MappingNode {
 		base.providers = readBaseProviders(providers)
 	}
-	base.ruleSets = map[string]ruleSetContent{}
-	if ruleSets := resolveAlias(mappingValue(root, "rule-providers")); ruleSets != nil && ruleSets.Kind == yaml.MappingNode {
-		base.ruleSets = readBaseRuleSets(ruleSets)
-	}
-	base.rules = ruleLines(mappingValue(root, "rules"))
-	base.subRules = map[string][]string{}
-	if subRules := resolveAlias(mappingValue(root, "sub-rules")); subRules != nil && subRules.Kind == yaml.MappingNode {
-		for i := 1; i < len(subRules.Content); i += 2 {
-			base.subRules[subRules.Content[i-1].Value] = ruleLines(subRules.Content[i])
-		}
-	}
-	listeners, err := decodeMappings(mappingValue(root, "listeners"), "listeners")
-	if err != nil {
-		return nil, err
-	}
-	for _, mapping := range listeners {
-		if proxy := groupString(mapping, "proxy"); proxy != "" {
-			base.listenerProxies = append(base.listenerProxies, proxy)
-		} else if rule := groupString(mapping, "rule"); rule != "" {
-			base.listenerRules = append(base.listenerRules, rule)
-		}
-	}
-	if tunnels := resolveAlias(mappingValue(root, "tunnels")); tunnels != nil && tunnels.Kind == yaml.SequenceNode {
-		for _, item := range tunnels.Content {
-			base.tunnels = append(base.tunnels, readMountTunnel(resolveAlias(item)))
-		}
-	}
-	base.readDNS(resolveAlias(mappingValue(root, "dns")))
 	return base, nil
 }
 
@@ -310,8 +283,16 @@ func readBaseProvider(mapping map[string]any) baseProvider {
 		if excluded && strings.EqualFold(groupString(node, "type"), "tailscale") {
 			continue
 		}
-		p.names = append(p.names, overriddenName(groupString(node, "name"), override))
-		p.tailscale = p.tailscale || strings.EqualFold(groupString(node, "type"), "tailscale")
+		name := overriddenName(groupString(node, "name"), override)
+		p.names = append(p.names, name)
+		if p.nodeTypes == nil {
+			p.nodeTypes = map[string]string{}
+		}
+		p.nodeTypes[name] = strings.ToLower(groupString(node, "type"))
+		if strings.EqualFold(groupString(node, "type"), "tailscale") {
+			p.tailscale = true
+			p.tailscaleNames = append(p.tailscaleNames, overriddenName(groupString(node, "name"), override))
+		}
 		p.dialers = append(p.dialers, proxyOptionValues(node, "dialer-proxy")...)
 	}
 	return p
@@ -368,24 +349,22 @@ func (b *mountBase) groupProviders(group map[string]any) []string {
 	return groupList(group, "use")
 }
 
-// The groups holding a Tailscale node, or perhaps one through an unread provider.
+// Only known Tailscale node holders retain the dedicated admission scope.
 func (b *mountBase) holding() map[string]string {
-	hasTailscale := false
-	for _, kind := range b.proxyTypes {
-		hasTailscale = hasTailscale || kind == "tailscale"
-	}
 	reach := map[string]string{}
 	holds := func(group map[string]any) string {
 		excluded := typeExcluded(groupString(group, "exclude-type"), "tailscale")
-		if !excluded && hasTailscale && (groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies")) {
-			return reachHolds
+		if !excluded && (groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies")) {
+			for name, kind := range b.proxyTypes {
+				if kind == "tailscale" && mountGroupMatches(group, name) {
+					return reachHolds
+				}
+			}
 		}
 		reason := ""
 		for _, name := range b.groupProviders(group) {
 			switch p := b.providers[name]; {
-			case p.unknown:
-				reason = reachProviderUnk
-			case p.tailscale && !excluded:
+			case p.tailscale && !excluded && slices.ContainsFunc(p.tailscaleNames, func(name string) bool { return mountGroupMatches(group, name) }):
 				return reachHolds
 			}
 		}
@@ -420,134 +399,8 @@ func (b *mountBase) holding() map[string]string {
 	return reach
 }
 
-// The groups mounts must stay out of: those holding a Tailscale node, those a
-// rule other than the final MATCH (the main group), a listener or a tunnel
-// sends Tailscale ranges or tailnet names to, every group inside one,
-// whatever is selected now, and every group such a group or a Tailscale node
-// dials through. Tailscale traffic sent to GLOBAL keeps mounts out of all.
-func (b *mountBase) tailscaleGroups(reader *ruleReader) map[string]string {
-	reach := b.holding()
-	groups := b.groupNames()
-	targets := b.tailscaleTargets(reader)
-	global := ""
-	names := make([]string, 0, len(targets))
-	for target := range targets {
-		names = append(names, target)
-	}
-	slices.Sort(names)
-	for _, target := range names {
-		reason := reachRule
-		if targets[target] == ruleUnknown {
-			reason = reachRuleUnk
-		}
-		switch {
-		case target == globalProxyName:
-			global = reachGlobal
-		case groups[target] && reach[target] == "":
-			reach[target] = reason
-		}
-	}
-	byName := b.groupsByName()
-	var queue []string
-	for name := range reach {
-		queue = append(queue, name)
-	}
-	slices.Sort(queue)
-	for len(queue) > 0 {
-		name := queue[0]
-		queue = queue[1:]
-		for _, member := range groupList(byName[name], "proxies") {
-			if groups[member] && reach[member] == "" {
-				reach[member] = reachMember
-				queue = append(queue, member)
-			}
-		}
-	}
-
-	// What carries Tailscale traffic: Tailscale nodes, proxies it is sent to
-	// and the groups above, and down from each what it is a member or a
-	// dialer-proxy of, as any selection may be.
-	seen := map[string]bool{}
-	reason := reachCarrier
-	carry := func(name string) {
-		b.walk(name, byName, seen, func(group string) {
-			if reach[group] == "" {
-				reach[group] = reason
-			}
-		}, func() {
-			switch {
-			case global != "":
-			case reason == reachDialer:
-				global = reachDialer
-			default:
-				global = reachGlobal
-			}
-		})
-	}
-	var seeds []string
-	for name, kind := range b.proxyTypes {
-		if kind == "tailscale" {
-			seeds = append(seeds, name)
-		}
-	}
-	for name := range reach {
-		seeds = append(seeds, name)
-	}
-	for _, target := range names {
-		if !groups[target] {
-			seeds = append(seeds, target)
-		}
-	}
-	slices.Sort(seeds)
-	for _, name := range seeds {
-		carry(name)
-	}
-	for _, name := range sortedKeys(b.providers) {
-		if p := b.providers[name]; p.tailscale {
-			for _, dialer := range p.dialers {
-				carry(dialer)
-			}
-		}
-	}
-	// A DNS server reached through a group takes every lookup it is asked,
-	// a tailnet name too; one reached by rules may take any group.
-	for _, proxy := range b.dnsProxies {
-		switch {
-		case proxy == globalProxyName:
-			b.dnsRules = true
-		case groups[proxy] && reach[proxy] == "":
-			reach[proxy] = reachDNS
-		}
-		carry(proxy)
-	}
-	// Whatever any proxy, provider node, provider or override names as its
-	// dialer-proxy: a mounted node there would carry that proxy's session.
-	reason = reachDialer
-	for _, name := range sortedKeys(b.proxyDialers) {
-		for _, dialer := range b.proxyDialers[name] {
-			carry(dialer)
-		}
-	}
-	for _, name := range sortedKeys(b.providers) {
-		for _, dialer := range b.providers[name].dialers {
-			carry(dialer)
-		}
-	}
-	if global != "" {
-		for name := range groups {
-			if reach[name] == "" {
-				reach[name] = global
-			}
-		}
-	}
-	if b.dnsRules {
-		for name := range groups {
-			if reach[name] == "" {
-				reach[name] = reachDNS
-			}
-		}
-	}
-	return reach
+func (b *mountBase) tailscaleGroups(_ *ruleReader) map[string]string {
+	return b.dedicatedGroups()
 }
 
 func sortedKeys[V any](m map[string]V) []string {
@@ -760,7 +613,7 @@ func (b *mountBase) relayNames(holding map[string]string) map[string]bool {
 
 func (b *mountBase) providerRelays(name string, relay map[string]bool) bool {
 	p := b.providers[name]
-	return p.unknown || slices.ContainsFunc(p.dialers, func(dialer string) bool { return relay[dialer] })
+	return slices.ContainsFunc(p.dialers, func(dialer string) bool { return relay[dialer] })
 }
 
 const (
@@ -1258,4 +1111,71 @@ func (r *mountRelay) pattern() string {
 		parts = append(parts, regexp2.Escape(base)+`(?: \(Flash(?: (?:[2-9]|[1-9][0-9]+))?\))?`)
 	}
 	return "^(?:" + strings.Join(parts, "|") + ")$"
+}
+
+func mountGroupMatches(group map[string]any, name string) bool {
+	matches := func(pattern string) bool {
+		for _, part := range strings.Split(pattern, "`") {
+			reg, err := regexp2.Compile(part, regexp2.None)
+			if err == nil {
+				if matched, _ := reg.MatchString(name); matched {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	filter := groupString(group, "filter")
+	exclude := groupString(group, "exclude-filter")
+	return (filter == "" || matches(filter)) && (exclude == "" || !matches(exclude))
+}
+
+// Dedicated admission is explicit TS-only membership, never a rule, DNS,
+// mixed parent, or an include-all pool that happens to see a TS node.
+func (b *mountBase) dedicatedGroups() map[string]string {
+	dedicated := map[string]string{}
+	for changed := true; changed; {
+		changed = false
+		for _, group := range b.groups {
+			name := groupString(group, "name")
+			members, uses := groupList(group, "proxies"), groupList(group, "use")
+			if dedicated[name] != "" || len(members)+len(uses) == 0 {
+				continue
+			}
+			hasTS, ordinary := false, false
+			add := func(member, kind string, filtered bool) {
+				if typeExcluded(groupString(group, "exclude-type"), kind) {
+					return
+				}
+				matchGroup := group
+				if !filtered {
+					matchGroup = map[string]any{"exclude-filter": groupString(group, "exclude-filter")}
+				}
+				if !mountGroupMatches(matchGroup, member) {
+					return
+				}
+				isTS := kind == "tailscale" || dedicated[member] != ""
+				hasTS, ordinary = hasTS || isTS, ordinary || !isTS
+			}
+			for _, member := range members {
+				add(member, b.proxyTypes[member], false)
+			}
+			if groupFlag(group, "include-all") || groupFlag(group, "include-all-proxies") {
+				for member, kind := range b.proxyTypes {
+					add(member, kind, true)
+				}
+			}
+			for _, use := range b.groupProviders(group) {
+				p := b.providers[use]
+				ordinary = ordinary || p.unknown
+				for member, kind := range p.nodeTypes {
+					add(member, kind, true)
+				}
+			}
+			if hasTS && !ordinary {
+				dedicated[name], changed = reachHolds, true
+			}
+		}
+	}
+	return dedicated
 }

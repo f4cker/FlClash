@@ -151,7 +151,7 @@ class _SniffField extends OverrideField<Sniffer> {
   Widget build(
     OverrideModel<Sniffer> model, {
     required ConfigLabel title,
-    required Widget leading,
+    required Widget? leading,
   }) {
     return _SniffItem(model: model, overrideKey: overrideKey, leading: leading);
   }
@@ -175,7 +175,7 @@ class _SniffItem extends ConsumerWidget {
 
   final OverrideModel<Sniffer> model;
   final SnifferOverrideKey overrideKey;
-  final Widget leading;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

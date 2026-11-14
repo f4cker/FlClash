@@ -364,7 +364,7 @@ class _PolicyField extends ValueOverrideField<Dns, Map<String, String>> {
   Widget build(
     OverrideModel<Dns> model, {
     required ConfigLabel title,
-    required Widget leading,
+    required Widget? leading,
   }) {
     return _PolicyItem(
       model: model,
@@ -390,7 +390,7 @@ class _PolicyItem extends ConsumerWidget {
   final OverrideModel<Dns> model;
   final ConfigLabel title;
   final ConfigLabel description;
-  final Widget leading;
+  final Widget? leading;
   final Map<String, String> Function(Dns dns) select;
   final Dns Function(Dns dns, Map<String, String> value) update;
 

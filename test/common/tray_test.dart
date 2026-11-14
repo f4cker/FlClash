@@ -21,7 +21,7 @@ void main() {
                   ? 'status_4'
                   : !running
                   ? 'stopped'
-                  : '${mode.name}${directory != 'macos' && tun ? '_tun' : ''}';
+                  : '${mode.name}${tun ? '_tun' : ''}';
               final path = tray.getTrayIcon(
                 isStart: running,
                 tunEnable: tun,
@@ -37,4 +37,31 @@ void main() {
       }
     }
   }
+
+  test('mode changes retain their names with an independent TUN variant', () {
+    final tray = AppTray.forPlatform(isMacOS: true, isWindows: false);
+    final paths = <String>{};
+    for (final mode in [Mode.rule, Mode.global, Mode.direct, Mode.rule]) {
+      final path = tray.getTrayIcon(
+        isStart: true,
+        tunEnable: false,
+        safeMode: false,
+        monochrome: false,
+        mode: mode,
+      );
+      expect(path, 'assets/images/tray/unix/${mode.name}.png');
+      expect(
+        tray.getTrayIcon(
+          isStart: true,
+          tunEnable: true,
+          safeMode: false,
+          monochrome: false,
+          mode: mode,
+        ),
+        'assets/images/tray/unix/${mode.name}_tun.png',
+      );
+      paths.add(path);
+    }
+    expect(paths, hasLength(3));
+  });
 }

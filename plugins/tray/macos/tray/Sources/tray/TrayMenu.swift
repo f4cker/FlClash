@@ -1,19 +1,57 @@
 import AppKit
 
-final class TrayMenu: NSMenu, NSMenuDelegate {
-    private let onSelect: (Int) -> Void
-    private let onClose: (() -> Void)?
-    private var contents: [TrayMenuItemView.Content?] = []
+enum TrayMenuTopology {
+    static func sharedIndex(_ entry: [String: Any], current: [[String: Any]], desired: [[String: Any]]) -> Int? {
+        func sameIdentity(_ other: [String: Any]) -> Bool {
+            entry["type"] as? String == other["type"] as? String &&
+                entry["label"] as? String == other["label"] as? String
+        }
+        guard current.filter(sameIdentity).count == 1 else { return nil }
+        let matches = desired.indices.filter { sameIdentity(desired[$0]) }
+        return matches.count == 1 ? matches[0] : nil
+    }
 
-    init(items: [[String: Any]], onSelect: @escaping (Int) -> Void, onClose: (() -> Void)? = nil) {
+    static func matches(_ current: [[String: Any]], _ desired: [[String: Any]]) -> Bool {
+        guard current.count == desired.count else { return false }
+        return zip(current, desired).allSatisfy { old, new in
+            let type = old["type"] as? String ?? ""
+            guard type == new["type"] as? String,
+                  old["id"] as? Int == new["id"] as? Int else { return false }
+            if type == "separator" { return true }
+            guard old["label"] as? String == new["label"] as? String else { return false }
+            return type != "submenu" || matches(
+                old["items"] as? [[String: Any]] ?? [],
+                new["items"] as? [[String: Any]] ?? []
+            )
+        }
+    }
+}
+
+final class TrayMenu: NSMenu, NSMenuDelegate {
+    private let onSelect: (Int, Int) -> Void
+    private let onClose: ((Int) -> Void)?
+    private let maximumWidth: CGFloat
+    private var entries: [[String: Any]]
+    private var initiallyEnabled: [Bool] = []
+    private var contents: [TrayMenuItemView.Content?] = []
+    private(set) var generation: Int
+
+    init(items: [[String: Any]], generation: Int, onSelect: @escaping (Int, Int) -> Void,
+         onClose: ((Int) -> Void)? = nil, isSubmenu: Bool = false) {
         self.onSelect = onSelect
         self.onClose = onClose
+        self.generation = generation
+        entries = items
+        maximumWidth = isSubmenu ? 420 : 380
         super.init(title: "")
         autoenablesItems = false
         delegate = self
+        showsStateColumn = false
+        font = .menuFont(ofSize: max(13, NSFont.menuFont(ofSize: 0).pointSize))
         for entry in items {
             let item = makeItem(entry)
             addItem(item)
+            initiallyEnabled.append(item.isEnabled)
             contents.append(item.isSeparatorItem ? nil : TrayMenu.content(entry, item))
         }
     }
@@ -22,28 +60,85 @@ final class TrayMenu: NSMenu, NSMenuDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private static func detail(_ entry: [String: Any]) -> String? {
-        guard let detail = entry["detail"] as? String, !detail.isEmpty else {
-            return nil
+    func reconcile(items: [[String: Any]], generation: Int) -> Bool {
+        if TrayMenuTopology.matches(entries, items) {
+            apply(items: items, generation: generation)
+            return true
         }
+        reconcileRetained(items: items)
+        return false
+    }
+
+    private func reconcileRetained(items desired: [[String: Any]]) {
+        let original = entries
+        for (index, item) in items.enumerated() {
+            guard !item.isSeparatorItem else { continue }
+            var entry = original[index]
+            if let match = TrayMenuTopology.sharedIndex(entry, current: original, desired: desired) {
+                entry = desired[match]
+                entry["id"] = original[index]["id"]
+                entry["enabled"] = (entry["enabled"] as? Bool ?? true) && initiallyEnabled[index]
+                TrayMenu.configure(item, entry)
+                (item.submenu as? TrayMenu)?.reconcileRetained(items: entry["items"] as? [[String: Any]] ?? [])
+            } else {
+                entry["enabled"] = false
+                item.isEnabled = false
+                (item.submenu as? TrayMenu)?.reconcileRetained(items: [])
+            }
+            if let submenu = item.submenu as? TrayMenu { entry["items"] = submenu.entries }
+            entries[index] = entry
+            let content = TrayMenu.content(entry, item)
+            contents[index] = content
+            (item.view as? TrayMenuItemView)?.update(content: content)
+        }
+    }
+
+    private func apply(items entries: [[String: Any]], generation: Int) {
+        self.entries = entries
+        self.generation = generation
+        initiallyEnabled = entries.map { $0["enabled"] as? Bool ?? true }
+        for (index, pair) in zip(items, entries).enumerated() {
+            let (item, entry) = pair
+            guard !item.isSeparatorItem else { continue }
+            TrayMenu.configure(item, entry)
+            if let submenu = item.submenu as? TrayMenu {
+                submenu.apply(items: entry["items"] as? [[String: Any]] ?? [], generation: generation)
+            }
+            let content = TrayMenu.content(entry, item)
+            contents[index] = content
+            (item.view as? TrayMenuItemView)?.update(content: content)
+        }
+    }
+
+    func prepareForOpening() {
+        for item in items {
+            item.view = nil
+            (item.submenu as? TrayMenu)?.prepareForOpening()
+        }
+    }
+
+    private static func detail(_ entry: [String: Any]) -> String? {
+        guard let detail = entry["detail"] as? String, !detail.isEmpty else { return nil }
         return detail
+    }
+
+    private static func configure(_ item: NSMenuItem, _ entry: [String: Any]) {
+        let type = entry["type"] as? String ?? ""
+        item.title = entry["label"] as? String ?? ""
+        item.tag = entry["id"] as? Int ?? 0
+        item.isEnabled = entry["enabled"] as? Bool ?? true
+        item.toolTip = entry["accessibilityLabel"] as? String ?? [item.title, detail(entry)].compactMap { $0 }.joined(separator: ", ")
+        item.state = type == "checkbox" && entry["checked"] as? Bool == true ? .on : .off
     }
 
     private func makeItem(_ entry: [String: Any]) -> NSMenuItem {
         let type = entry["type"] as? String ?? ""
-        if type == "separator" {
-            return NSMenuItem.separator()
-        }
-
+        if type == "separator" { return NSMenuItem.separator() }
         let item = NSMenuItem()
-        item.title = entry["label"] as? String ?? ""
-        item.tag = entry["id"] as? Int ?? 0
-        item.isEnabled = entry["enabled"] as? Bool ?? true
-        item.state = type == "checkbox" && entry["checked"] as? Bool == true ? .on : .off
-
+        TrayMenu.configure(item, entry)
         if type == "submenu" {
             let children = entry["items"] as? [[String: Any]] ?? []
-            setSubmenu(TrayMenu(items: children, onSelect: onSelect), for: item)
+            setSubmenu(TrayMenu(items: children, generation: generation, onSelect: onSelect, isSubmenu: true), for: item)
         } else {
             item.target = self
             item.action = #selector(didSelectItem(_:))
@@ -55,36 +150,41 @@ final class TrayMenu: NSMenu, NSMenuDelegate {
         TrayMenuItemView.Content(
             label: item.title,
             detail: detail(entry),
+            icon: (entry["icon"] as? [String: Any]).map { TrayMenuItemView.Icon($0) },
+            badge: (entry["badge"] as? [String: Any]).map { TrayMenuItemView.Badge($0) },
+            accessibilityLabel: entry["accessibilityLabel"] as? String,
+            isCheckbox: entry["type"] as? String == "checkbox",
             checked: item.state == .on,
             enabled: item.isEnabled,
             hasSubmenu: item.hasSubmenu
         )
     }
 
-    // A delay test rebuilds the menu per result; measuring every row then costs ~20x.
+    // AppKit does not support resizing custom row views during tracking.
     func menuNeedsUpdate(_ menu: NSMenu) {
-        guard !contents.isEmpty else {
-            return
-        }
+        guard items.contains(where: { !$0.isSeparatorItem && $0.view == nil }) else { return }
+        let width = min(maximumWidth, contents.compactMap { $0 }.map {
+            TrayMenuItemView.preferredWidth($0)
+        }.max() ?? 0)
         for (item, content) in zip(items, contents) {
-            if let content = content {
-                item.view = TrayMenuItemView(content: content)
+            if item.view == nil, let content = content {
+                item.view = TrayMenuItemView(content: content, width: width)
             }
         }
-        contents = []
     }
 
     // AppKit does not redraw an item's view when its highlight changes.
     func menu(_ menu: NSMenu, willHighlight item: NSMenuItem?) {
-        highlightedItem?.view?.needsDisplay = true
-        item?.view?.needsDisplay = true
+        (highlightedItem?.view as? TrayMenuItemView)?.updateHighlight(false)
+        (item?.view as? TrayMenuItemView)?.updateHighlight(true)
     }
 
     func menuDidClose(_ menu: NSMenu) {
-        onClose?()
+        onClose?(generation)
     }
 
     @objc private func didSelectItem(_ sender: NSMenuItem) {
-        onSelect(sender.tag)
+        guard sender.isEnabled else { return }
+        onSelect(sender.tag, generation)
     }
 }

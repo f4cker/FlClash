@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/tray_menu.dart';
+import 'package:fl_clash/common/compute.dart';
 import 'package:fl_clash/manager/locale_manager.dart';
 import 'package:fl_clash/manager/tray_manager.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -93,10 +97,14 @@ void main() {
   Future<void> pumpTrayManager(
     WidgetTester tester, {
     SystemAction Function()? systemAction,
+    bool isMacOS = true,
   }) async {
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
+        currentProfileProvider.overrideWithValue(null),
+        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        systemBrightnessProvider.overrideWithBuild((_, _) => Brightness.light),
         systemActionProvider.overrideWith(
           systemAction ?? _RecordingSystemAction.new,
         ),
@@ -106,7 +114,9 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const HostApp(home: TrayManager(child: SizedBox.shrink())),
+        child: HostApp(
+          home: TrayManager(isMacOS: isMacOS, child: const SizedBox.shrink()),
+        ),
       ),
     );
     await tester.pump();
@@ -122,13 +132,37 @@ void main() {
         child: HostApp(
           locale: locale,
           home: const LocaleManager(
-            child: TrayManager(child: SizedBox.shrink()),
+            child: TrayManager(isMacOS: true, child: SizedBox.shrink()),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('hidden setting and source label changes refresh the menu', (
+    tester,
+  ) async {
+    await pumpTrayManager(tester);
+    container
+        .read(proxiesStyleSettingProvider.notifier)
+        .update((state) => state.copyWith(showHiddenGroups: true));
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, greaterThan(0));
+    _RecordingSystemAction.updateTrayCount = 0;
+    container
+        .read(profilesProvider.notifier)
+        .put(
+          const Profile(
+            id: 7,
+            label: 'Renamed source',
+            type: ProfileType.url,
+            autoUpdateDuration: Duration.zero,
+          ),
+        );
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, greaterThan(0));
+  });
 
   testWidgets('renders its child untouched', (tester) async {
     await pumpTrayManager(tester);
@@ -229,6 +263,9 @@ void main() {
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
+        currentProfileProvider.overrideWithValue(null),
+        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        systemBrightnessProvider.overrideWithBuild((_, _) => Brightness.light),
         systemActionProvider.overrideWith(_RecordingSystemAction.new),
       ],
     );
@@ -249,6 +286,9 @@ void main() {
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
+        currentProfileProvider.overrideWithValue(null),
+        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        systemBrightnessProvider.overrideWithBuild((_, _) => Brightness.light),
         systemActionProvider.overrideWith(_RecordingSystemAction.new),
       ],
     );
@@ -259,6 +299,149 @@ void main() {
     await pumpLocalizedTrayManager(tester, const Locale('en'));
 
     expect(_RecordingSystemAction.updateTrayCount, 0);
+  });
+
+  testWidgets('mounting subscribes without an initial recursive tray read', (
+    tester,
+  ) async {
+    await pumpTrayManager(tester);
+    expect(_RecordingSystemAction.updateTrayCount, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('raw confirmation changes update a selection-stripped menu', (
+    tester,
+  ) async {
+    await pumpTrayManager(tester);
+    const group = Group(
+      name: 'Proxy',
+      type: GroupType.Selector,
+      now: 'A',
+      all: [
+        Proxy(name: 'A', type: 'Direct'),
+        Proxy(name: 'B', type: 'Direct'),
+      ],
+    );
+    container.read(groupsProvider.notifier).value = [group];
+    await tester.pumpAndSettle();
+    _RecordingSystemAction.updateTrayCount = 0;
+    container.read(groupsProvider.notifier).value = [group.copyWith(now: 'B')];
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, 1);
+  });
+
+  testWidgets(
+    'pending, confirmation, read failure and group test state update the menu',
+    (tester) async {
+      await pumpTrayManager(tester);
+      final states = container.read(trayGroupMenuStatesProvider.notifier);
+      final readFailure = container.read(trayGroupsReadFailedProvider.notifier);
+      final testing = container.read(delayTestingGroupsProvider.notifier);
+      for (final change in <void Function()>[
+        () => states.set(
+          'Proxy',
+          const TrayGroupMenuState(confirmedName: 'A', pendingName: 'B'),
+        ),
+        () => states.set('Proxy', const TrayGroupMenuState(confirmedName: 'B')),
+        () => readFailure.set(true),
+        () => testing.start('Proxy'),
+      ]) {
+        _RecordingSystemAction.updateTrayCount = 0;
+        change();
+        await tester.pumpAndSettle();
+        expect(_RecordingSystemAction.updateTrayCount, 1);
+      }
+    },
+  );
+
+  testWidgets('pending target phases update even with no measured delays', (
+    tester,
+  ) async {
+    await pumpTrayManager(tester);
+    final key = delayTestKey('https://test.invalid', 'Leaf');
+    final pending = container.read(pendingDelayTestsProvider.notifier);
+    for (final change in <void Function()>[
+      () => pending.apply(acquired: [key]),
+      () => pending.apply(started: [key]),
+      () => pending.apply(finished: [key]),
+    ]) {
+      _RecordingSystemAction.updateTrayCount = 0;
+      change();
+      await tester.pumpAndSettle();
+      expect(_RecordingSystemAction.updateTrayCount, 1);
+    }
+  });
+
+  testWidgets(
+    'theme scheme, brightness, core and profile changes reach the menu',
+    (tester) async {
+      await pumpTrayManager(tester);
+      for (final change in <void Function()>[
+        () => container
+            .read(themeSettingProvider.notifier)
+            .update((state) => state.copyWith(primaryColor: 0xFF0080FF)),
+        () => container.read(systemBrightnessProvider.notifier).value =
+            Brightness.dark,
+        () => container
+            .read(themeSettingProvider.notifier)
+            .update((state) => state.copyWith(primaryColor: null)),
+        () => container
+            .read(dynamicColorProvider.notifier)
+            .seed(accentColor: const Color(0xFF00FF80)),
+        () => container.read(coreStatusProvider.notifier).value =
+            CoreStatus.disconnected,
+        () => container.read(currentProfileIdProvider.notifier).value = 42,
+      ]) {
+        _RecordingSystemAction.updateTrayCount = 0;
+        change();
+        await tester.pumpAndSettle();
+        expect(_RecordingSystemAction.updateTrayCount, greaterThanOrEqualTo(1));
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets('unrelated app state does not refresh the tray', (tester) async {
+    await pumpTrayManager(tester);
+    _RecordingSystemAction.updateTrayCount = 0;
+    container.read(queryProvider(QueryTag.proxies).notifier).value = 'search';
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, 0);
+  });
+
+  testWidgets('non-macOS avoids all rich-menu subscriptions', (tester) async {
+    await pumpTrayManager(tester, isMacOS: false);
+    _RecordingSystemAction.updateTrayCount = 0;
+    container
+        .read(trayGroupMenuStatesProvider.notifier)
+        .set('Proxy', const TrayGroupMenuState(pendingName: 'A'));
+    container
+        .read(pendingDelayTestsProvider.notifier)
+        .apply(acquired: ['test-key']);
+    container
+        .read(themeSettingProvider.notifier)
+        .update((state) => state.copyWith(primaryColor: 0xFF123456));
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, 0);
+  });
+
+  testWidgets('rich-menu subscriptions stop after disposal', (tester) async {
+    await pumpTrayManager(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    _RecordingSystemAction.updateTrayCount = 0;
+    container
+        .read(trayGroupMenuStatesProvider.notifier)
+        .set('Proxy', const TrayGroupMenuState(pendingName: 'A'));
+    container
+        .read(pendingDelayTestsProvider.notifier)
+        .apply(acquired: ['test-key']);
+    container
+        .read(themeSettingProvider.notifier)
+        .update((state) => state.copyWith(primaryColor: 0xFF123456));
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, 0);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('tray events stop being handled after disposal', (tester) async {

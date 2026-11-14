@@ -10,6 +10,9 @@ import 'desktop/helper_client.dart';
 import 'desktop/launcher.dart';
 import 'desktop/lifecycle.dart';
 import 'desktop/model.dart';
+import 'desktop/macos_helper_client.dart';
+import 'desktop/macos_helper_launcher.dart';
+import 'desktop/macos_helper_transport.dart';
 import 'desktop/rpc_client.dart';
 import 'desktop/transport.dart';
 import 'event.dart';
@@ -37,14 +40,19 @@ class CoreService extends CoreHandlerInterface {
     final address = system.isWindows ? windowsPipeName : unixSocketPath;
     final directLauncher = DirectCoreLauncher();
 
+    final managedMac = system.isMacOS && macosManagedHelperBuild;
     final lifecycle = DesktopCoreLifecycle(
-      transportFactory: () => IpcCoreTransport(address: address),
-      launcherResolver: HelperLauncherResolver(
-        hasHelper: system.hasHelperService && !safeModeBuild,
-        directLauncher: directLauncher,
-        helperLauncher: HelperLauncher(helperClient),
-        helperReady: () => helperClient.readiness(),
-      ),
+      transportFactory: () => managedMac
+          ? MacHelperTransport(macosHelperClient)
+          : IpcCoreTransport(address: address),
+      launcherResolver: managedMac
+          ? MacHelperLauncher(macosHelperClient)
+          : HelperLauncherResolver(
+              hasHelper: system.hasHelperService && !safeModeBuild,
+              directLauncher: directLauncher,
+              helperLauncher: HelperLauncher(helperClient),
+              helperReady: () => helperClient.readiness(),
+            ),
       verifyPeerPid: system.isWindows,
     );
     return CoreService._(

@@ -164,11 +164,15 @@ func tailscaleManagedKeyOf(stateDir string) string {
 }
 
 func tailscaleManagedSetupLocked(key string) (TailscaleManagedSetup, bool) {
-	if tailscaleSetup == nil || key == "" {
+	return tailscaleManagedSetupFor(key, tailscaleSetup)
+}
+
+func tailscaleManagedSetupFor(key string, setup *TailscaleSetup) (TailscaleManagedSetup, bool) {
+	if setup == nil || key == "" {
 		return TailscaleManagedSetup{}, false
 	}
-	for _, managed := range tailscaleSetup.Managed {
-		if tailscaleManagedKey(tailscaleSetup.ProfileID, managed.ID, managed.ControlURL) == key {
+	for _, managed := range setup.Managed {
+		if tailscaleManagedKey(setup.ProfileID, managed.ID, managed.ControlURL) == key {
 			return managed, true
 		}
 	}
@@ -282,25 +286,29 @@ func (m TailscaleManagedSetup) node() TailscaleNodeSetup {
 }
 
 func tailscaleEffectiveNodeLocked(ref tailscaleRef) (TailscaleNodeSetup, bool) {
+	return tailscaleEffectiveNodeForSetupLocked(ref, tailscaleSetup)
+}
+
+func tailscaleEffectiveNodeForSetupLocked(ref tailscaleRef, setup *TailscaleSetup) (TailscaleNodeSetup, bool) {
 	node := TailscaleNodeSetup{Name: ref.name, ControlURL: ref.controlURL}
-	if tailscaleSetup == nil {
+	if setup == nil {
 		return node, false
 	}
 	found := false
 	if ref.managed() {
-		if managed, ok := tailscaleManagedSetupLocked(ref.managedKey); ok {
+		if managed, ok := tailscaleManagedSetupFor(ref.managedKey, setup); ok {
 			node, found = managed.node(), true
 		}
 	} else {
 		normalized := normalizeControlURL(ref.controlURL)
-		for _, candidate := range tailscaleSetup.Nodes {
+		for _, candidate := range setup.Nodes {
 			if candidate.Name == ref.name && normalizeControlURL(candidate.ControlURL) == normalized {
 				node, found = candidate, true
 				break
 			}
 		}
 	}
-	if pin := tailscalePins[ref.key(tailscaleSetup.ProfileID)]; pin != nil {
+	if pin := tailscalePins[ref.key(setup.ProfileID)]; pin != nil {
 		found = true
 		if pin.loggedOut != nil {
 			node.LoggedOut = *pin.loggedOut
@@ -345,15 +353,16 @@ func pinTailscale(ref tailscaleRef, update func(pin *tailscalePin)) {
 // Runs on the merged document, after the profile's proxies are in place, so a
 // subscription update never drops what the user chose in the panel.
 func applyTailscaleOverrides(root *yaml.Node) {
+	tailscaleMu.Lock()
+	defer tailscaleMu.Unlock()
+	tailscaleConfigs = tailscaleOverridesForSetupLocked(root, tailscaleSetup)
+}
+
+func tailscaleOverridesForSetupLocked(root *yaml.Node, setup *TailscaleSetup) map[string]tailscaleConfiguredValues {
 	configs := map[string]tailscaleConfiguredValues{}
-	defer func() {
-		tailscaleMu.Lock()
-		tailscaleConfigs = configs
-		tailscaleMu.Unlock()
-	}()
 	proxies := resolveAlias(mappingValue(root, "proxies"))
 	if proxies == nil || proxies.Kind != yaml.SequenceNode {
-		return
+		return configs
 	}
 	for i, item := range proxies.Content {
 		mapping := resolveAlias(item)
@@ -378,7 +387,7 @@ func applyTailscaleOverrides(root *yaml.Node) {
 		}
 		configs[name] = configured
 
-		node, _ := tailscaleEffectiveNode(tailscaleRef{name: name, controlURL: controlURL})
+		node, _ := tailscaleEffectiveNodeForSetupLocked(tailscaleRef{name: name, controlURL: controlURL}, setup)
 		if node.ExitNode == nil && node.AcceptRoutes == nil {
 			continue
 		}
@@ -392,6 +401,7 @@ func applyTailscaleOverrides(root *yaml.Node) {
 		}
 		proxies.Content[i] = &copied
 	}
+	return configs
 }
 
 func scalarValue(node *yaml.Node) string {

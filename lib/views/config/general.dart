@@ -1,9 +1,11 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/launch.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/on_demand.dart';
 import 'package:fl_clash/views/config/override.dart';
@@ -275,10 +277,25 @@ class GeneralView extends ConsumerWidget {
   List<Widget> _startupItems(AppLocalizations appLocalizations) {
     return [
       if (system.isDesktop) ...[
-        _appSettingToggle(
+        ConfigToggleItem(
           title: (l) => l.autoLaunch,
-          select: (state) => state.autoLaunch,
-          update: (state, value) => state.copyWith(autoLaunch: value),
+          selector: appSettingProvider.select((state) => state.autoLaunch),
+          onChanged: (ref, value) async {
+            final appSetting = ref.read(appSettingProvider.notifier);
+            await globalState.safeRun(() async {
+              if (system.isMacOS) {
+                final launcher = autoLaunch;
+                if (launcher != null) {
+                  if (value) {
+                    await launcher.enable();
+                  } else {
+                    await launcher.disable();
+                  }
+                }
+              }
+              appSetting.update((state) => state.copyWith(autoLaunch: value));
+            });
+          },
         ),
         _appSettingToggle(
           title: (l) => l.silentLaunch,

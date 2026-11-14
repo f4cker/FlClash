@@ -20,7 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prism_ui/prism_ui.dart' show ThemeMode;
+import 'package:prism_ui/prism_ui.dart' show FilledButton, ThemeMode;
 
 import '../helpers/app_paths.dart';
 import '../helpers/preferences.dart';
@@ -600,6 +600,44 @@ void main() {
       currentAppLocalizations.mountNoGroupIsolatedDesc,
     );
     await shoot(tester, '23-no-group-isolated');
+  });
+
+  shot('23b-all-blocked-details', (tester) async {
+    await pumpProfiles(
+      tester,
+      sheetMounts(
+        groups: MountTarget(
+          groups: [
+            isolatedGroup('规则检查', MountGroupReason.ruleUnknown),
+            isolatedGroup('基础节点', MountGroupReason.providerUnknown),
+            isolatedGroup('DNS 出口', MountGroupReason.dns),
+            isolatedGroup('中转分组', MountGroupReason.dialer),
+            isolatedGroup('成员关联', MountGroupReason.member),
+          ],
+        ),
+        storedState: MountTargetState(targetId: target.id, version: 1),
+        items: [item(air)],
+        state: null,
+      ),
+    );
+    await openSheet(tester);
+    await tester.tap(inSheet(air.label));
+    await scrollSheetTo(tester, currentAppLocalizations.mountDetails);
+    await tester.tap(inSheet(currentAppLocalizations.mountDetails));
+    await settle(tester);
+    await scrollSheetTo(tester, currentAppLocalizations.mountGroupReasonMember);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(
+              FilledButton,
+              currentAppLocalizations.mountSave,
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+    await shoot(tester, '23b-all-blocked-details');
   });
 
   for (final (name, application) in [

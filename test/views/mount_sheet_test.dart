@@ -81,6 +81,182 @@ void main() {
   final odd = sub('Odd');
   final none = sub('None');
 
+  testWidgets(
+    'real names precede inspection and a fast row is usable while another waits',
+    (tester) async {
+      final mounts = _StreamingMounts();
+      await pumpSheet(tester, mounts, profiles: [air, sea]);
+      final metadata = panelOf(
+        [
+          item(air, state: MountSourceState.pending, count: 0),
+          item(sea, state: MountSourceState.pending, count: 0, mounted: true),
+        ],
+        stored: MountTargetState(
+          targetId: target.id,
+          sourceIds: [sea.id],
+          version: 7,
+        ),
+      ).copyWith(groups: null, groupsPending: true);
+      mounts.panels.single.add(metadata);
+      await tester.pumpAndSettle();
+      expect(find.text('Air'), findsOneWidget);
+      expect(find.text('Sea'), findsOneWidget);
+      expect(tester.widget<MountSourceRow>(rowOf('Air')).onChanged, isNull);
+      expect(saveButton(tester).onPressed, isNull);
+      final ready = metadata.copyWith(
+        groupsPending: false,
+        groups: MountTarget(groups: [groupInfo('Auto')]),
+        sources: [item(air), metadata.sources.last],
+      );
+      mounts.panels.single.add(ready);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Air'));
+      await tester.pumpAndSettle();
+      final fastRow = tester.widget<MountSourceRow>(rowOf('Air'));
+      expect(fastRow.checked, isTrue);
+      expect(saveButton(tester).onPressed, isNotNull);
+      expect(
+        tester.widget<MountSourceRow>(rowOf('Sea')).item.state,
+        MountSourceState.pending,
+      );
+      mounts.panels.single.add(
+        ready.copyWith(
+          sources: [ready.sources.first, item(sea, mounted: true)],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        identical(tester.widget<MountSourceRow>(rowOf('Air')), fastRow),
+        isTrue,
+      );
+      expect(tester.widget<MountSourceRow>(rowOf('Air')).checked, isTrue);
+      expect(
+        tester
+            .widgetList<MountSourceRow>(find.byType(MountSourceRow))
+            .map((row) => row.item.profile.id),
+        [air.id, sea.id],
+      );
+      await tester.tap(find.text(currentAppLocalizations.mountSave));
+      await tester.pumpAndSettle();
+      expect(mounts.saves.single.version, 7);
+      expect(mounts.saves.single.sources, [sea.id, air.id]);
+      await tester.pumpWidget(const SizedBox());
+      for (final panel in mounts.panels) {
+        unawaited(panel.close());
+      }
+    },
+  );
+
+  for (final state in [
+    MountSourceState.pending,
+    MountSourceState.unreadable,
+    MountSourceState.notFetched,
+  ]) {
+    testWidgets('$state permits pure removals but not new selections', (
+      tester,
+    ) async {
+      final mounts = _StreamingMounts();
+      await pumpSheet(tester, mounts, profiles: [air, sea]);
+      mounts.panels.single.add(
+        panelOf(
+          [item(air, state: state, mounted: true), item(sea, state: state)],
+          stored: MountTargetState(
+            targetId: target.id,
+            sourceIds: [air.id],
+            version: 3,
+          ),
+        ).copyWith(groups: null, groupsPending: true),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.widget<MountSourceRow>(rowOf('Sea')).onChanged, isNull);
+      await tester.tap(find.text('Air'));
+      await tester.pumpAndSettle();
+      expect(saveButton(tester).onPressed, isNotNull);
+      await tester.pumpWidget(const SizedBox());
+      unawaited(mounts.panels.single.close());
+    });
+  }
+
+  testWidgets(
+    'retry preserves staged choices but revalidates before additions',
+    (tester) async {
+      final mounts = _StreamingMounts();
+      await pumpSheet(tester, mounts, profiles: [air, sea]);
+      final initial = panelOf([
+        item(air),
+        item(sea, state: MountSourceState.unreadable),
+      ], groups: MountTarget(groups: [groupInfo('Auto')]));
+      mounts.panels.single.add(initial);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Air'));
+      await tester.pumpAndSettle();
+      expect(saveButton(tester).onPressed, isNotNull);
+      await tester.tap(find.text(currentAppLocalizations.mountReadAgain));
+      await tester.pumpAndSettle();
+      expect(mounts.panels, hasLength(2));
+      expect(saveButton(tester).onPressed, isNull);
+      mounts.panels.last.add(
+        initial.copyWith(
+          groupsPending: true,
+          sources: [
+            for (final row in initial.sources)
+              row.copyWith(state: MountSourceState.pending),
+          ],
+        ),
+      );
+      mounts.panels.first.add(initial.copyWith(sources: [item(sea)]));
+      await tester.pumpAndSettle();
+      expect(tester.widget<MountSourceRow>(rowOf('Air')).checked, isTrue);
+      expect(saveButton(tester).onPressed, isNull);
+      mounts.panels.last.add(initial);
+      await tester.pumpAndSettle();
+      expect(tester.widget<MountSourceRow>(rowOf('Air')).checked, isTrue);
+      expect(saveButton(tester).onPressed, isNotNull);
+      await tester.pumpWidget(const SizedBox());
+      for (final panel in mounts.panels) {
+        unawaited(panel.close());
+      }
+    },
+  );
+
+  testWidgets('an addition invalidated during confirmation cannot be saved', (
+    tester,
+  ) async {
+    final mounts = _StreamingMounts();
+    await pumpSheet(tester, mounts, profiles: [air, sea]);
+    final initial = panelOf(
+      [item(air), item(sea, mounted: true)],
+      stored: MountTargetState(
+        targetId: target.id,
+        sourceIds: [sea.id],
+        version: 4,
+      ),
+      groups: MountTarget(groups: [groupInfo('Auto')]),
+    );
+    mounts.panels.single.add(initial);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Air'));
+    await tester.tap(find.text('Sea'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(currentAppLocalizations.mountSave));
+    await tester.pumpAndSettle();
+    expect(find.text(currentAppLocalizations.mountUpdateTitle), findsOneWidget);
+    mounts.panels.single.add(
+      initial.copyWith(
+        sources: [
+          item(air, state: MountSourceState.unreadable),
+          item(sea, mounted: true),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(currentAppLocalizations.mountSave).last);
+    await tester.pumpAndSettle();
+    expect(mounts.saves, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    unawaited(mounts.panels.single.close());
+  });
+
   testWidgets('a list that cannot be read is an error, never the empty '
       'state', (tester) async {
     final mounts = FakeMounts(null)..loadError = StateError('db');
@@ -767,7 +943,9 @@ void main() {
     await tester.tap(find.text(l10n.mountReadAgain));
     await tester.pumpAndSettle();
     expect(find.text(l10n.mountGroupsTitle), findsOneWidget);
-    // The staged choice survives the reread.
+    expect(saveButton(tester).onPressed, isNull);
+    await tester.tap(find.text('Air'));
+    await tester.pump();
     expect(saveButton(tester).onPressed, isNotNull);
   });
 
@@ -1353,8 +1531,9 @@ void main() {
     expect(banner.lines, [l10n.mountUnsupportedExcluded(5)]);
   });
 
-  testWidgets('groups kept out for Tailscale share one counted info line '
-      'with their names', (tester) async {
+  testWidgets('mixed exclusions show each group with its reported reason', (
+    tester,
+  ) async {
     final mounts = FakeMounts(
       panelOf(
         [item(air)],
@@ -1372,6 +1551,11 @@ void main() {
     );
     await pumpSheet(tester, mounts, profiles: [air]);
     final l10n = currentAppLocalizations;
+    await tester.tap(find.text('Air'));
+    await tester.pump();
+    expect(saveButton(tester).onPressed, isNotNull);
+    expect(find.text(l10n.mountGroupReasonDialer), findsNothing);
+    expect(find.text(l10n.mountGroupReasonRuleUnknown), findsNothing);
     await openDetails(tester);
 
     final line = find.text(l10n.mountGroupsExcluded(3));
@@ -1383,8 +1567,15 @@ void main() {
     expect(banner.lines, [
       l10n.mountIsolationFirst,
       l10n.mountGroupsExcluded(3),
-      l10n.mountGroupsExcludedNames('Lan, Hop, Set'),
+      l10n.mountGroupsExcludedNames('Lan'),
+      l10n.mountIsolationFirst,
+      l10n.mountGroupsExcludedNames('Hop'),
+      l10n.mountGroupReasonDialer,
+      l10n.mountGroupsExcludedNames('Set'),
+      l10n.mountGroupReasonRuleUnknown,
     ]);
+    expect(saveButton(tester).onPressed, isNotNull);
+    expect(mounts.saves, isEmpty);
     expect(find.text('Hidden'), findsNothing);
     expect(find.text(l10n.mountNoGroupIsolatedTitle), findsNothing);
   });
@@ -1442,6 +1633,98 @@ void main() {
     await tester.tap(find.text('Air'));
     await tester.pump();
     expect(saveButton(tester).onPressed, isNull);
+  });
+
+  testWidgets('all-excluded details expose actual reasons without enabling '
+      'Save', (tester) async {
+    final groups = [
+      isolatedGroup('Rules', MountGroupReason.ruleUnknown),
+      isolatedGroup('Base nodes', MountGroupReason.providerUnknown),
+      isolatedGroup('Resolver', MountGroupReason.dns),
+      isolatedGroup('Relay', MountGroupReason.dialer),
+    ];
+    final mounts = FakeMounts(
+      panelOf([item(air)], groups: MountTarget(groups: groups)),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    final expected = [
+      l10n.mountGroupReasonRuleUnknown,
+      l10n.mountGroupReasonProviderUnknown,
+      l10n.mountGroupReasonDns,
+      l10n.mountGroupReasonDialer,
+    ];
+    for (final reason in expected) {
+      expect(find.text(reason), findsNothing);
+    }
+    await tester.tap(find.text('Air'));
+    await tester.pump();
+    expect(saveButton(tester).onPressed, isNull);
+
+    await openDetails(tester);
+    final banner = tester.widget<MountBanner>(find.byType(MountBanner));
+    expect(banner.lines, [
+      l10n.mountNoGroupIsolatedDesc,
+      l10n.mountIsolationFirst,
+      l10n.mountGroupsExcluded(groups.length),
+      for (var i = 0; i < groups.length; i++) ...[
+        l10n.mountGroupsExcludedNames(groups[i].name),
+        expected[i],
+      ],
+    ]);
+    expect(saveButton(tester).onPressed, isNull);
+    expect(mounts.saves, isEmpty);
+
+    await tester.tap(find.text(l10n.mountShowLess));
+    await tester.pumpAndSettle();
+    expect(tester.widget<MountBanner>(find.byType(MountBanner)).lines, [
+      l10n.mountNoGroupIsolatedDesc,
+    ]);
+    expect(saveButton(tester).onPressed, isNull);
+    expect(mounts.saves, isEmpty);
+  });
+
+  testWidgets('member and unknown reasons do not invent DNS or confirmed '
+      'Tailscale causes', (tester) async {
+    final unknown = MountGroupInfo.fromJson({
+      'name': 'Future',
+      'type': 'select',
+      'kind': 'excluded',
+      'excluded': 'tailscale',
+      'reason': 'future-reason',
+    });
+    final mounts = FakeMounts(
+      panelOf(
+        [item(air)],
+        groups: MountTarget(
+          groups: [
+            isolatedGroup('Members', MountGroupReason.member),
+            isolatedGroup('Missing', null),
+            unknown,
+          ],
+        ),
+      ),
+    );
+    await pumpSheet(tester, mounts, profiles: [air]);
+    final l10n = currentAppLocalizations;
+    await openDetails(tester);
+    final lines = tester.widget<MountBanner>(find.byType(MountBanner)).lines;
+    expect(
+      lines,
+      containsAllInOrder([
+        l10n.mountGroupsExcludedNames('Members'),
+        l10n.mountGroupReasonMember,
+        l10n.mountGroupsExcludedNames('Missing'),
+        l10n.serviceUnavailable,
+        l10n.mountGroupsExcludedNames('Future'),
+        l10n.serviceUnavailable,
+      ]),
+    );
+    expect(lines, isNot(contains(l10n.mountGroupReasonDns)));
+    expect(
+      lines.where((line) => line == l10n.mountIsolationFirst),
+      hasLength(1),
+    );
   });
 
   testWidgets('hidden groups alone still take mounts, unlisted', (
@@ -1909,6 +2192,7 @@ void main() {
           l10n.mountIsolationFirst,
           l10n.mountGroupsExcluded(1),
           l10n.mountGroupsExcludedNames('Lan'),
+          l10n.mountIsolationFirst,
         ],
       ]);
       expect(find.text(line), findsNothing);
@@ -1969,4 +2253,18 @@ class _SlowMounts extends FakeMounts {
 
   @override
   Future<MountPanel> loadPanel(int targetId) => future;
+}
+
+class _StreamingMounts extends FakeMounts {
+  _StreamingMounts() : super(null);
+
+  final panels = <StreamController<MountPanel>>[];
+
+  @override
+  Stream<MountPanel> watchPanel(int targetId, {bool refresh = false}) {
+    loads++;
+    final controller = StreamController<MountPanel>();
+    panels.add(controller);
+    return controller.stream;
+  }
 }

@@ -23,6 +23,51 @@ Future<void> _pump(WidgetTester tester, Widget icon) {
 }
 
 void main() {
+  test('group monograms share Unicode letter, digit and grapheme behavior', () {
+    for (final (name, mark) in [
+      ('', ''),
+      ('proxy', 'P'),
+      ('🚀 节点选择', '节'),
+      ('♻️ 9 Auto', '9'),
+      ('🇭🇰', '🇭🇰'),
+      ('👩‍👩‍👧‍👦', '👩‍👩‍👧‍👦'),
+      ('!!!', '!'),
+      ('🚀 élan', 'É'),
+      ('🚀 ٣ Auto', '٣'),
+    ]) {
+      expect(groupMonogram(name), mark, reason: name);
+    }
+  });
+
+  test(
+    'cache revisions track changed arrivals, not reads or equal bytes',
+    () async {
+      const src = 'https://example.com/revision-only.svg';
+      final first = Uint8List.fromList([1, 2, 3]);
+      var notifications = 0;
+      void onChange() => notifications++;
+      final initial = targetIconCacheRevision.value;
+      targetIconCacheRevision.addListener(onChange);
+      readRemoteIcon = (_) => Stream.fromIterable([
+        first,
+        Uint8List.fromList(first),
+        Uint8List.fromList([1, 2, 4]),
+      ]);
+      try {
+        await precacheTargetIcons([src]);
+        expect(targetIconCacheRevision.value, initial + 2);
+        expect(notifications, 2);
+        expect(await readTargetIconBytesFromCache(src), [1, 2, 4]);
+        expect(await readTargetIconBytesFromCache(src), [1, 2, 4]);
+        expect(targetIconCacheRevision.value, initial + 2);
+        expect(notifications, 2);
+      } finally {
+        readRemoteIcon = null;
+        targetIconCacheRevision.removeListener(onChange);
+      }
+    },
+  );
+
   testWidgets('a group without an icon shows the first letter of its name, '
       'past a leading emoji', (tester) async {
     for (final (name, mark) in [

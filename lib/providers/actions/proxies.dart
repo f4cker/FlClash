@@ -23,6 +23,15 @@ class _DelayTestJob {
   bool cancelled = false;
 }
 
+class _TrayProxySwitch {
+  _TrayProxySwitch(this.confirmedName, this.proxyName, this.generation);
+
+  final String? confirmedName;
+  final String proxyName;
+  final int generation;
+  bool uncertain = false;
+}
+
 @Riverpod(keepAlive: true)
 class ProxiesAction extends _$ProxiesAction {
   CoreController get _core => ref.read(coreHandlerProvider);
@@ -41,14 +50,52 @@ class ProxiesAction extends _$ProxiesAction {
 
   final Map<String, String> _pendingSelectedRollback = {};
 
+  int _groupsReadRevision = 0;
+
+  ({int revision, List<Group> groups})? _lastSuccessfulGroupsRead;
+
+  int _trayGeneration = 0;
+
+  final Map<String, _TrayProxySwitch> _traySwitches = {};
+
   @override
   void build() {
-    ref.onDispose(() => _delayFlushTimer?.cancel());
+    ref.onDispose(() {
+      _delayFlushTimer?.cancel();
+      _invalidateTrayOperations();
+    });
+    ref.listen(currentProfileIdProvider, (_, _) {
+      _invalidateTrayOperations();
+    });
+    ref.listen(coreHandlerProvider, (_, _) => _invalidateTrayOperations());
+    ref.listen(runTimeProvider, (previous, next) {
+      if ((previous == null) != (next == null)) _invalidateTrayOperations();
+    });
+    ref.listen(groupsProvider, (_, groups) {
+      if (ref.read(trayGroupsReadFailedProvider)) return;
+      _reconcileFailedTrayStates(groups);
+      for (final entry in _traySwitches.entries.toList()) {
+        if (!_hasTrayTarget(
+          groups.getGroup(entry.key),
+          entry.value.proxyName,
+        )) {
+          _removeTraySwitch(entry.key);
+        }
+      }
+    });
     ref.listen(coreStatusProvider, (_, next) {
+      _invalidateTrayOperations();
       if (next != CoreStatus.connected) {
         cancelDelayTests();
       }
     });
+  }
+
+  void _invalidateTrayOperations() {
+    _trayGeneration++;
+    _groupsReadRevision++;
+    _lastSuccessfulGroupsRead = null;
+    _traySwitches.clear();
   }
 
   void cancelDelayTests() {
@@ -128,8 +175,18 @@ class ProxiesAction extends _$ProxiesAction {
   }
 
   Future<void> updateGroups() async {
+    await _updateGroups();
+  }
+
+  Future<List<Group>?> _updateGroups() async {
+    final generation = _trayGeneration;
+    final core = _core;
+    var readFailed = false;
+    final revision = ++_groupsReadRevision;
+    final profile = ref.read(currentProfileProvider);
+    var snapshot = 0;
     try {
-      ref.read(groupsProvider.notifier).value = await retry(
+      final groups = await retry<List<Group>>(
         task: () async {
           final sortType = ref.read(
             proxiesStyleSettingProvider.select((state) => state.sortType),
@@ -142,13 +199,17 @@ class ProxiesAction extends _$ProxiesAction {
             currentProfileProvider.select((state) => state?.selectedMap ?? {}),
           );
           try {
-            return await _core.getProxiesGroups(
+            final groups = await core.getProxiesGroups(
+              onSnapshot: (value) => snapshot = value,
               selectedMap: selectedMap,
               sortType: sortType,
               delayMap: delayMap,
               defaultTestUrl: testUrl,
             );
+            readFailed = false;
+            return groups;
           } catch (e) {
+            readFailed = true;
             commonPrint.log(
               'updateGroups error: $e',
               logLevel: coreFailureLogLevel(e),
@@ -158,14 +219,118 @@ class ProxiesAction extends _$ProxiesAction {
         },
         retryIf: (res) => res.isEmpty,
       );
+      if (!ref.mounted ||
+          generation != _trayGeneration ||
+          revision != _groupsReadRevision ||
+          ref.read(currentProfileProvider)?.id != profile?.id) {
+        return null;
+      }
+      ref.read(trayGroupsReadFailedProvider.notifier).set(readFailed);
+      if (profile != null && groups.isNotEmpty) {
+        await _reconcileExitSelections(profile, groups, revision, snapshot);
+      }
+      if (ref.mounted &&
+          generation == _trayGeneration &&
+          revision == _groupsReadRevision &&
+          ref.read(currentProfileProvider)?.id == profile?.id) {
+        ref.read(groupsProvider.notifier).value = groups;
+        if (!readFailed) {
+          _lastSuccessfulGroupsRead = (revision: revision, groups: groups);
+          _resolveUncertainTraySwitches(groups);
+          return groups;
+        }
+      }
     } catch (e) {
-      // The Core failure path already runs inside the retry task above; a
-      // throw here only means ref.read hit a disposed container or the
-      // groupsProvider write itself failed.
       commonPrint.log(
         'updateGroups failed: $e',
         logLevel: coreFailureLogLevel(e),
       );
+    }
+    return null;
+  }
+
+  Future<void> _reconcileExitSelections(
+    Profile sent,
+    List<Group> groups,
+    int revision,
+    int snapshot,
+  ) async {
+    final alias = RegExp(r'^Tailscale (?:出口|exit)(?: \(Flash(?: \d+)?\))?$');
+    if (!sent.selectedMap.containsKey(tailscaleExitSelectionKey) &&
+        !sent.selectedMap.entries.any(
+          (entry) => alias.hasMatch(entry.key) || alias.hasMatch(entry.value),
+        )) {
+      return;
+    }
+    final TailscaleExitReport report;
+    try {
+      report = await _core.getTailscaleExit(sent.id);
+    } catch (_) {
+      return;
+    }
+    if (!ref.mounted ||
+        revision != _groupsReadRevision ||
+        ref.read(currentProfileProvider)?.id != sent.id ||
+        report.profileId != sent.id ||
+        snapshot == 0 ||
+        report.revision != snapshot ||
+        !{
+          TailscaleRuntimeState.confirmed,
+          TailscaleRuntimeState.none,
+        }.contains(report.state)) {
+      return;
+    }
+    final profile = ref.read(profilesProvider).getProfile(sent.id);
+    if (profile == null) {
+      return;
+    }
+    final names = {
+      for (final group in groups) ...[
+        group.name,
+        for (final proxy in group.all) proxy.name,
+      ],
+    };
+    final selected = {...profile.selectedMap};
+    for (final MapEntry(key: group, value: choice)
+        in sent.selectedMap.entries) {
+      if (selected[group] != choice) {
+        continue;
+      }
+      String? replacement = choice;
+      if (group == tailscaleExitSelectionKey) {
+        if (report.accountOf(choice) == null) {
+          replacement = report.selected.isEmpty ? null : report.selected;
+        }
+      } else if (alias.hasMatch(group) && !names.contains(group)) {
+        replacement = null;
+      } else if (alias.hasMatch(choice) && !names.contains(choice)) {
+        final parent = groups.getGroup(group);
+        replacement =
+            report.offered &&
+                (parent?.all.any((proxy) => proxy.name == report.group) ??
+                    false)
+            ? report.group
+            : parent == null ||
+                  parent.realNow.isEmpty ||
+                  parent.realNow == 'COMPATIBLE'
+            ? null
+            : parent.realNow;
+      } else if (group == report.group && report.memberNamed(choice) == null) {
+        replacement = report.accountOf(report.selected)?.member;
+      }
+      if (replacement == null) {
+        selected.remove(group);
+      } else {
+        selected[group] = replacement;
+      }
+    }
+    if (selected.length != profile.selectedMap.length ||
+        selected.entries.any(
+          (entry) => profile.selectedMap[entry.key] != entry.value,
+        )) {
+      ref
+          .read(profilesProvider.notifier)
+          .put(profile.copyWith(selectedMap: selected));
     }
   }
 
@@ -190,6 +355,198 @@ class ProxiesAction extends _$ProxiesAction {
     _scheduleDelayFlush();
   }
 
+  bool _isCurrentTraySwitch(String groupName, _TrayProxySwitch operation) =>
+      ref.mounted &&
+      operation.generation == _trayGeneration &&
+      identical(_traySwitches[groupName], operation) &&
+      ref.read(isStartProvider);
+
+  bool _isTraySelectableGroup(Group? group) => const {
+    GroupType.Selector,
+    GroupType.URLTest,
+    GroupType.Fallback,
+  }.contains(group?.type);
+
+  bool _hasTrayTarget(Group? group, String proxyName) =>
+      _isTraySelectableGroup(group) &&
+      group!.all.any((proxy) => proxy.name == proxyName);
+
+  void _removeTraySwitch(String groupName) {
+    _traySwitches.remove(groupName);
+    ref.read(trayGroupMenuStatesProvider.notifier).remove(groupName);
+  }
+
+  void _setTraySwitchFailure(
+    String groupName,
+    _TrayProxySwitch operation,
+    TraySwitchFailure failure,
+  ) {
+    if (!_isCurrentTraySwitch(groupName, operation)) return;
+    operation.uncertain = failure == TraySwitchFailure.unconfirmed;
+    ref
+        .read(trayGroupMenuStatesProvider.notifier)
+        .set(
+          groupName,
+          TrayGroupMenuState(
+            confirmedName: operation.confirmedName,
+            pendingName: operation.uncertain ? operation.proxyName : null,
+            switchFailure: failure,
+          ),
+        );
+    if (!operation.uncertain) _traySwitches.remove(groupName);
+  }
+
+  void _saveTraySelection(String groupName, String proxyName) {
+    ref
+        .read(profilesActionProvider.notifier)
+        .updateCurrentSelectedMap(groupName, proxyName);
+    _keepTailscaleExitChoice(groupName, proxyName);
+  }
+
+  void _reconcileFailedTrayStates(List<Group> groups) {
+    final states = ref.read(trayGroupMenuStatesProvider);
+    final menu = ref.read(trayGroupMenuStatesProvider.notifier);
+    for (final entry in states.entries) {
+      if (entry.value.switchFailure != TraySwitchFailure.failed) continue;
+      final group = groups.getGroup(entry.key);
+      if (!_isTraySelectableGroup(group)) {
+        menu.remove(entry.key);
+      } else if (entry.value.confirmedName != group!.now) {
+        menu.set(
+          entry.key,
+          TrayGroupMenuState(
+            confirmedName: group.now,
+            switchFailure: TraySwitchFailure.failed,
+          ),
+        );
+      }
+    }
+  }
+
+  void _resolveUncertainTraySwitches(List<Group> groups) {
+    for (final entry in _traySwitches.entries.toList()) {
+      if (!_isCurrentTraySwitch(entry.key, entry.value)) continue;
+      final group = groups.getGroup(entry.key);
+      if (!_hasTrayTarget(group, entry.value.proxyName)) {
+        _removeTraySwitch(entry.key);
+      } else if (entry.value.uncertain &&
+          group!.realNow.isNotEmpty &&
+          group.all.any((proxy) => proxy.name == group.realNow)) {
+        _saveTraySelection(entry.key, group.realNow);
+        _removeTraySwitch(entry.key);
+      }
+    }
+  }
+
+  Future<void> changeProxyForTray({
+    required String groupName,
+    required String proxyName,
+  }) async {
+    if (!ref.mounted ||
+        _traySwitches.containsKey(groupName) ||
+        ref.read(trayGroupsReadFailedProvider) ||
+        ref.read(currentProfileProvider) == null) {
+      return;
+    }
+    final group = ref.read(groupsProvider).getGroup(groupName);
+    if (!_hasTrayTarget(group, proxyName)) return;
+    if (!ref.read(isStartProvider)) {
+      _saveTraySelection(groupName, proxyName);
+      ref.read(trayGroupMenuStatesProvider.notifier).remove(groupName);
+      return;
+    }
+    if (ref.read(coreStatusProvider) != CoreStatus.connected ||
+        group!.now == proxyName) {
+      return;
+    }
+    final operation = _TrayProxySwitch(group.now, proxyName, _trayGeneration);
+    final core = _core;
+    _traySwitches[groupName] = operation;
+    ref
+        .read(trayGroupMenuStatesProvider.notifier)
+        .set(
+          groupName,
+          TrayGroupMenuState(confirmedName: group.now, pendingName: proxyName),
+        );
+    try {
+      final result = await _changeProxyOnCore(core, groupName, proxyName);
+      if (!_isCurrentTraySwitch(groupName, operation)) return;
+      if (!_hasTrayTarget(
+        ref.read(groupsProvider).getGroup(groupName),
+        proxyName,
+      )) {
+        _removeTraySwitch(groupName);
+        return;
+      }
+      if (result.changed) {
+        await _resetProxyConnections(core, groupName, proxyName);
+      }
+      if (!_isCurrentTraySwitch(groupName, operation)) return;
+      final confirmationRevision = _groupsReadRevision + 1;
+      final groups = await _updateGroups();
+      if (!_isCurrentTraySwitch(groupName, operation)) return;
+      if (groups == null) {
+        _setTraySwitchFailure(
+          groupName,
+          operation,
+          TraySwitchFailure.unconfirmed,
+        );
+        final latest = _lastSuccessfulGroupsRead;
+        if (latest != null &&
+            latest.revision == _groupsReadRevision &&
+            latest.revision > confirmationRevision) {
+          _resolveUncertainTraySwitches(latest.groups);
+        }
+        return;
+      }
+      final confirmed = groups.getGroup(groupName);
+      if (!_hasTrayTarget(confirmed, proxyName)) {
+        _removeTraySwitch(groupName);
+      } else if (confirmed!.now == proxyName) {
+        _saveTraySelection(groupName, proxyName);
+        _removeTraySwitch(groupName);
+      } else {
+        _setTraySwitchFailure(
+          groupName,
+          operation,
+          TraySwitchFailure.unconfirmed,
+        );
+      }
+    } catch (error) {
+      commonPrint.log(
+        'changeProxyForTray($groupName -> $proxyName) failed: $error',
+        logLevel: coreFailureLogLevel(error),
+      );
+      if (!_isCurrentTraySwitch(groupName, operation)) return;
+      if (!_hasTrayTarget(
+        ref.read(groupsProvider).getGroup(groupName),
+        proxyName,
+      )) {
+        _removeTraySwitch(groupName);
+        return;
+      }
+      _setTraySwitchFailure(
+        groupName,
+        operation,
+        isUnansweredCoreError(error)
+            ? TraySwitchFailure.unconfirmed
+            : TraySwitchFailure.failed,
+      );
+    }
+  }
+
+  Future<ChangeProxyResult> _changeProxyOnCore(
+    CoreController core,
+    String groupName,
+    String proxyName,
+  ) async {
+    final result = await core.changeProxy(
+      ChangeProxyParams(groupName: groupName, proxyName: proxyName),
+    );
+    if (result.message.isNotEmpty) throw MessageException(result.message);
+    return result;
+  }
+
   Future<void> changeProxy({
     required String groupName,
     required String proxyName,
@@ -201,12 +558,7 @@ class ProxiesAction extends _$ProxiesAction {
     profilesAction.updateCurrentSelectedMap(groupName, proxyName);
     final ChangeProxyResult result;
     try {
-      result = await _core.changeProxy(
-        ChangeProxyParams(groupName: groupName, proxyName: proxyName),
-      );
-      if (result.message.isNotEmpty) {
-        throw MessageException(result.message);
-      }
+      result = await _changeProxyOnCore(_core, groupName, proxyName);
     } catch (error) {
       commonPrint.log(
         'changeProxy($groupName -> $proxyName) failed: $error',
@@ -219,14 +571,21 @@ class ProxiesAction extends _$ProxiesAction {
       );
       return;
     }
-    if (!result.changed) {
-      return;
+    if (result.changed) {
+      await _resetProxyConnections(_core, groupName, proxyName);
     }
+  }
+
+  Future<void> _resetProxyConnections(
+    CoreController core,
+    String groupName,
+    String proxyName,
+  ) async {
     try {
       if (ref.read(appSettingProvider).closeConnections) {
-        await _core.closeConnections();
+        await core.closeConnections();
       } else {
-        await _core.resetConnections();
+        await core.resetConnections();
       }
     } catch (error) {
       commonPrint.log(

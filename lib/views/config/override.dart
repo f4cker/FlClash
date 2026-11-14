@@ -181,7 +181,7 @@ abstract class OverrideField<M> {
   Widget build(
     OverrideModel<M> model, {
     required ConfigLabel title,
-    required Widget leading,
+    required Widget? leading,
   });
 
   M reset(M model, M defaults);
@@ -204,7 +204,7 @@ class ToggleOverrideField<M> extends ValueOverrideField<M, bool> {
   Widget build(
     OverrideModel<M> model, {
     required ConfigLabel title,
-    required Widget leading,
+    required Widget? leading,
   }) {
     return ConfigToggleItem(
       leading: leading,
@@ -233,7 +233,7 @@ class OptionsOverrideField<M, T extends Object>
   Widget build(
     OverrideModel<M> model, {
     required ConfigLabel title,
-    required Widget leading,
+    required Widget? leading,
   }) {
     return ConfigOptionsItem<T>(
       leading: leading,
@@ -274,7 +274,7 @@ class NumberOverrideField<M> extends ValueOverrideField<M, int> {
   Widget build(
     OverrideModel<M> model, {
     required ConfigLabel title,
-    required Widget leading,
+    required Widget? leading,
   }) {
     return ConfigTextItem(
       leading: leading,
@@ -309,7 +309,7 @@ class TextOverrideField<M> extends ValueOverrideField<M, String> {
   Widget build(
     OverrideModel<M> model, {
     required ConfigLabel title,
-    required Widget leading,
+    required Widget? leading,
   }) {
     return ConfigTextItem(
       leading: leading,
@@ -343,7 +343,7 @@ class ListOverrideField<M> extends ValueOverrideField<M, List<String>> {
   Widget build(
     OverrideModel<M> model, {
     required ConfigLabel title,
-    required Widget leading,
+    required Widget? leading,
   }) {
     return ConfigListEditItem(
       leading: leading,
@@ -537,8 +537,12 @@ class OverrideView<K extends OverrideKey, M> extends ConsumerWidget {
     final (:isEmpty, :canAdd) = ref.watch(
       target.select(
         (state) => (
-          isEmpty: !spec.values.any(state.keys.contains),
-          canAdd: spec.values.any((key) => !state.keys.contains(key)),
+          isEmpty:
+              target is! PatchOverrideTarget<K, M> &&
+              !spec.values.any(state.keys.contains),
+          canAdd:
+              target is! PatchOverrideTarget<K, M> &&
+              spec.values.any((key) => !state.keys.contains(key)),
         ),
       ),
     );
@@ -546,13 +550,14 @@ class OverrideView<K extends OverrideKey, M> extends ConsumerWidget {
     return Scaffold(
       title: spec.title(appLocalizations),
       iconActions: [
-        if (!isEmpty)
+        if (!isEmpty && target is! PatchOverrideTarget<K, M>)
           IconButtonData(
             glyph: AppGlyphs.addCircle,
             onPressed: canAdd ? () => _handleAdd(context, ref) : null,
             tooltip: addEntry,
           ),
-        if (spec is OverrideQuickEdit<K, M>)
+        if (spec is OverrideQuickEdit<K, M> &&
+            target is! PatchOverrideTarget<K, M>)
           IconButtonData(
             glyph: AppGlyphs.compose,
             onPressed: () => _handleQuickEdit(context, ref, spec),
@@ -587,7 +592,9 @@ class _OverrideList<K extends OverrideKey, M> extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
     final keys = ref.watch(spec.target.select((state) => state.keys));
-    final entries = spec.values.where(keys.contains);
+    final entries = spec.target is PatchOverrideTarget<K, M>
+        ? spec.values
+        : spec.values.where(keys.contains);
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
         top: context.sectionsTopPadding,
@@ -650,7 +657,8 @@ class OverrideSection<K extends OverrideKey, M> extends ConsumerWidget {
     final picked = ref.watch(spec.target.select((state) => state.keys));
     final listed = [
       for (final key in spec.values)
-        if (picked.contains(key)) key,
+        if (spec.target is PatchOverrideTarget<K, M> || picked.contains(key))
+          key,
     ];
     void handleAdd() => showOverrideAddSheet(context, ref, spec);
     return generateAnimatedSection(
@@ -696,7 +704,9 @@ class OverrideEntry<K extends OverrideKey, M> extends StatelessWidget {
           ? _ListedValue(spec, overrideKey)
           : spec.target,
       title: (l) => spec.label(overrideKey, l),
-      leading: _RemoveButton(spec: spec, overrideKey: overrideKey),
+      leading: spec.target is PatchOverrideTarget<K, M>
+          ? null
+          : _RemoveButton(spec: spec, overrideKey: overrideKey),
     );
   }
 }

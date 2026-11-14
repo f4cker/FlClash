@@ -1340,7 +1340,7 @@ extension DnsOverrideExt on Dns {
     return json;
   }
 
-  /// [keepEmpty] writes emptied keys, but the core refuses an empty nameserver.
+  /// [keepEmpty] preserves explicit clears; the composed candidate validates DNS.
   Map<String, Object?> overrideJson(
     Set<DnsOverrideKey> keys, {
     bool keepEmpty = false,
@@ -1348,9 +1348,7 @@ extension DnsOverrideExt on Dns {
     _json,
     DnsOverrideKey.values,
     keys,
-    keepEmpty: keepEmpty
-        ? keys.difference({DnsOverrideKey.nameserver})
-        : const <DnsOverrideKey>{},
+    keepEmpty: keepEmpty ? keys : const <DnsOverrideKey>{},
   );
 
   String overrideYaml(Set<DnsOverrideKey> keys) =>
@@ -1610,8 +1608,15 @@ Set<TunOverrideKey> _tunOverrideKeysFromJson(List<Object?> json) => {
 };
 
 extension TunOverrideExt on ProfileTun {
-  Map<String, Object?> overrideJson(Set<TunOverrideKey> keys) =>
-      _overrideJson(toJson(), TunOverrideKey.values, keys);
+  Map<String, Object?> overrideJson(
+    Set<TunOverrideKey> keys, {
+    bool keepEmpty = false,
+  }) => _overrideJson(
+    toJson(),
+    TunOverrideKey.values,
+    keys,
+    keepEmpty: keepEmpty ? keys : const <TunOverrideKey>{},
+  );
 }
 
 /// Network TUN values changed from their defaults become app-wide overrides.
@@ -2213,8 +2218,6 @@ abstract class PatchClashConfig with _$PatchClashConfig {
     @JsonKey(name: _followKeysJsonKey, fromJson: _followKeysFromJson)
     Set<PageConfigKey> followKeys,
 
-    /// Off until the user confirms the sources an upgrade would change; until
-    /// then the profile is built as before.
     @Default(true) @JsonKey(name: _pagePriorityJsonKey) bool pagePriority,
   }) = _PatchClashConfig;
 
@@ -2369,13 +2372,14 @@ class MitmRules {
 }
 
 extension PatchClashConfigExt on PatchClashConfig {
-  T? _picked<T>(GeneralOverrideKey key, T value) =>
-      generalOverrideKeys.contains(key) ? value : null;
+  T? _picked<T>(GeneralOverrideKey key, T value) => value;
 
   Map<String, Object?> get generalOverrideJson => _overrideJson(
     toJson(),
     GeneralOverrideKey.values,
-    generalOverrideKeys.difference(const {GeneralOverrideKey.testUrl}),
+    GeneralOverrideKey.values.toSet().difference(const {
+      GeneralOverrideKey.testUrl,
+    }),
   );
 
   Object? pageValue(PageConfigKey key) => switch (key) {
@@ -2485,11 +2489,8 @@ extension PatchClashConfigExt on PatchClashConfig {
   PatchClashConfig follow(PageConfigKey key) =>
       copyWith(followKeys: {...followKeys, key});
 
-  bool usesPage(PageConfigKey key, {required bool layered}) =>
-      !layered || !followKeys.contains(key);
+  bool usesPage(PageConfigKey key, {required bool layered}) => true;
 
-  /// With [layered], a field handed back to the profile is left out, so the
-  /// Core keeps the profile's value.
   UpdateParams toUpdateParams({
     required List<String> authentication,
     required CoreOptions options,
@@ -2501,12 +2502,7 @@ extension PatchClashConfigExt on PatchClashConfig {
       PageConfigKey.externalController,
       layered: layered,
     );
-    final tunPatch = layered
-        ? {
-            'enable': ?page(PageConfigKey.tunEnable, tun.enable),
-            'stack': ?page(PageConfigKey.tunStack, tun.stack.name),
-          }
-        : tun.coreJson;
+    final tunPatch = {'enable': tun.enable, 'stack': tun.stack.name};
     return UpdateParams(
       tun: tunPatch.isEmpty ? null : tunPatch,
       authentication: page(PageConfigKey.authentication, authentication),
@@ -2517,7 +2513,7 @@ extension PatchClashConfigExt on PatchClashConfig {
       ipv6: _picked(GeneralOverrideKey.ipv6, ipv6),
       tcpConcurrent: _picked(GeneralOverrideKey.tcpConcurrent, tcpConcurrent),
       externalController: controller ? externalController : null,
-      secret: controller && (!layered || secret.isNotEmpty) ? secret : null,
+      secret: controller ? secret : null,
       unifiedDelay: _picked(GeneralOverrideKey.unifiedDelay, unifiedDelay),
       mixedPort: page(PageConfigKey.mixedPort, mixedPort),
       geoAutoUpdate: page(PageConfigKey.geoAutoUpdate, geoAutoUpdate),

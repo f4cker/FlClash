@@ -171,9 +171,23 @@ class Bootstrap {
     );
     unawaited(clearUpdateDownloads());
     unawaited(_container.read(commonActionProvider.notifier).autoCheckUpdate());
-    unawaited(
-      autoLaunch?.updateStatus(_container.read(appSettingProvider).autoLaunch),
-    );
+    if (system.isMacOS) {
+      unawaited(
+        globalState.safeRun(() async {
+          await autoLaunch?.refreshStatus((enabled) {
+            _container
+                .read(appSettingProvider.notifier)
+                .update((state) => state.copyWith(autoLaunch: enabled));
+          });
+        }),
+      );
+    } else {
+      unawaited(
+        autoLaunch?.updateStatus(
+          _container.read(appSettingProvider).autoLaunch,
+        ),
+      );
+    }
     if (!_container.read(appSettingProvider).silentLaunch) {
       unawaited(window?.show());
     } else {

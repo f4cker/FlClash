@@ -23,7 +23,7 @@ rules:
   - RULE-SET,LocalAreaNetwork,🎯 全球直连
   - RULE-SET,BanAD,🛑 全球拦截
   - DOMAIN-SUFFIX,t.me,📲 电报消息
-  - GEOIP,CN,🎯 全球直连
+  - IP-CIDR,198.51.100.0/24,🎯 全球直连
   - MATCH,🐟 漏网之鱼
 `
 
@@ -53,7 +53,7 @@ rules:
 		want    map[string]string
 	}{
 		{"acl-like, LAN rule set on a direct-or-proxy switch", aclLikeProfile, map[string]string{
-			"🎯 全球直连": fixed, "🚀 节点选择": fixed, "♻️ 自动选择": "excluded/tailscale/member",
+			"🎯 全球直连": fixed, "🚀 节点选择": fixed, "♻️ 自动选择": "auto//",
 			"📲 电报消息": fixed, "🛑 全球拦截": fixed, "🐟 漏网之鱼": fixed,
 		}},
 		{"acl-like, direct-only LAN target", directOnly, map[string]string{
@@ -62,7 +62,7 @@ rules:
 		}},
 		{"acl-like, LAN rule set not cached", uncached, map[string]string{
 			"🎯 全球直连": fixed, "🚀 节点选择": fixed,
-			"♻️ 自动选择": "excluded/tailscale/member", "📲 电报消息": fixed, "🛑 全球拦截": fixed,
+			"♻️ 自动选择": "auto//", "📲 电报消息": fixed, "🛑 全球拦截": fixed,
 		}},
 		{"plain", plain, map[string]string{"Proxy": fixed, "Auto": "auto//", "Direct": fixed}},
 	} {
@@ -85,8 +85,8 @@ rules:
 	source := writeMountFile(t, home, "1.yaml", mountSourceB)
 	setup := &MountSetup{Sources: []MountSource{{ID: 1, Label: "S", Path: source}}}
 	members, report := mountedMembers(t, aclLikeProfile, setup)
-	if len(report.Groups) != 0 || slices.Contains(members["♻️ 自动选择"], "us") {
-		t.Errorf("groups = %+v, 自动选择 = %v; want nothing mounted", report.Groups, members["♻️ 自动选择"])
+	if len(report.Groups) != 1 || !slices.Contains(members["♻️ 自动选择"], "us") {
+		t.Errorf("groups = %+v, 自动选择 = %v; want 自动选择 mounted without changing fixed parents", report.Groups, members["♻️ 自动选择"])
 	}
 	members, report = mountedMembers(t, directOnly, setup)
 	if len(report.Groups) != 1 || !slices.Contains(members["♻️ 自动选择"], "us") {

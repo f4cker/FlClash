@@ -1,0 +1,338 @@
+{
+  "schema_version": 1,
+  "created_date": "2026-11-13",
+  "purpose": "Source-only archival/incomplete snapshot; not a new build entrypoint; do not execute without later owner consent.",
+  "original_root": "/Users/layoute/SideWork/FlClash",
+  "original_worktree": "/Users/layoute/SideWork/FlClash/.airbuild/worktree/exit-cleanup",
+  "source_base_branch": "chore/move-ready-20261113",
+  "source_base_commit": "4330c6af758b0f8acdffda4fb67e03c8fb745e13",
+  "archive": "project-move/tool-source.zip",
+  "archive_sha256": "928dc38147ddc87f4d7d13d5fece58eca15ff0e0c827e65411f44a880d767297",
+  "archive_bytes": 163549,
+  "file_count": 42,
+  "uncompressed_bytes": 486348,
+  "counts_by_origin": {
+    "build-tool-source": 21,
+    "root-tools": 5,
+    "exit-cleanup-tools": 16
+  },
+  "preservation": "Original file bytes preserved; no scripts imported, executed or rewritten; all allowlisted sources included, including historical duplicates.",
+  "secret_review": {
+    "reviewed_files": 42,
+    "detected_embedded_secrets": 0,
+    "method": "UTF-8/text-only check; private-key/provider-token/credential-URL/authorization-literal/credential-assignment/credential-flag scans; sensitive code contexts reviewed with values suppressed. Password variable names and public certificate fingerprints are not secrets. Any possible actual credential blocks archival."
+  },
+  "excluded_categories": [
+    "private-configs",
+    "signing-provision (entire folder, including tools and frozen executables)",
+    "identity files and credentials",
+    ".env/.fvmrc/env.json",
+    "prepared metadata",
+    "data",
+    "evidence",
+    "binaries",
+    "extra images (tracked assets suffice)"
+  ],
+  "excluded_files_in_scoped_tool_roots": [
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/split-service-compile-2026111303-prepared.json",
+      "reason": "not allowlisted source (.py/.sh or text xcrun)"
+    }
+  ],
+  "files": [
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/fixed-identity-2026111301-recovery-attempt02/native-command-trace.sh",
+      "archive_path": "build-tool-source/fixed-identity-2026111301-recovery-attempt02/native-command-trace.sh",
+      "bytes": 96,
+      "sha256": "da3fe7e79c6e3a758d8af4b8229f1fd4682ef45a6702c3aaca7e61d197735b78",
+      "mode": "0660"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/fixed-identity-2026111301-rpath-recovery-attempt03/rpath-recovery/recover.py",
+      "archive_path": "build-tool-source/fixed-identity-2026111301-rpath-recovery-attempt03/rpath-recovery/recover.py",
+      "bytes": 6920,
+      "sha256": "00d00f9c6f73115c6c05c3ede618895466d7010cf5594e91bdb7e8d8a62b372d",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304/build_driver.py",
+      "archive_path": "build-tool-source/relay-2026111304/build_driver.py",
+      "bytes": 39536,
+      "sha256": "5f76d8b03ca0865b64e2f789dfdeb502d12d91fc089394e0b416e8c1157595db",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304/test_build_driver.py",
+      "archive_path": "build-tool-source/relay-2026111304/test_build_driver.py",
+      "bytes": 19249,
+      "sha256": "2d1e3fed97ab64f97c9da7da2bba008604c26b96e6a94ff4b9aac10911c42673",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304-attempt02/build_driver.py",
+      "archive_path": "build-tool-source/relay-2026111304-attempt02/build_driver.py",
+      "bytes": 39583,
+      "sha256": "3eaab2a0226f73592f094ecd0d573ec4a126a9f4bab7528dd8da212c3cf53612",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304-attempt02/qualifier-before-metadata-pin.py",
+      "archive_path": "build-tool-source/relay-2026111304-attempt02/qualifier-before-metadata-pin.py",
+      "bytes": 29231,
+      "sha256": "06488deedf433ad1f32650649ef279ef01335dbac75146ab50f447900ec72487",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/relay-packages-2026111304.sh",
+      "archive_path": "build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/relay-packages-2026111304.sh",
+      "bytes": 6328,
+      "sha256": "967c8154c9cf62320729590259a0cee94a723e22c911d42542a55be664dbea0f",
+      "mode": "0700"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/relay-qualify-2026111304.py",
+      "archive_path": "build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/relay-qualify-2026111304.py",
+      "bytes": 29247,
+      "sha256": "1cd548c384a04e788e3460002e9c83e35f497fa0c77a088160c305bdb946a48d",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/relay-service-compile-2026111304.py",
+      "archive_path": "build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/relay-service-compile-2026111304.py",
+      "bytes": 9423,
+      "sha256": "1e1d72f53fe2957629297fab0da87293c40b3178f63c2690ac0baa6908a3f30f",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/relay-service-verify-2026111304.py",
+      "archive_path": "build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/relay-service-verify-2026111304.py",
+      "bytes": 17786,
+      "sha256": "f7a4a18e4e8b5f4e312cabea7e25382ddc820ffc64baabfc3af5c095afa7736d",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/split-packages-03-publish.py",
+      "archive_path": "build-tool-source/relay-2026111304-attempt02/service-tooling-prepin-01/split-packages-03-publish.py",
+      "bytes": 3838,
+      "sha256": "1a0ddef664313dc75dbcb001334858b3c9d29d8b3703cbf79e470082fbd7d11a",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/relay-2026111304-attempt02/test_build_driver.py",
+      "archive_path": "build-tool-source/relay-2026111304-attempt02/test_build_driver.py",
+      "bytes": 20250,
+      "sha256": "897bbada087de64fb47b02f59d932ee1aca88f47981cb489ae8df64298bd2ae9",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/build_driver.py",
+      "archive_path": "build-tool-source/split-2026111303/build_driver.py",
+      "bytes": 19863,
+      "sha256": "3d8bf3f8d955e6e04022dc3072eae63ad67a9dde4bd59eb7af327b4e21c96f17",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/continuation-01/continue_evidence.py",
+      "archive_path": "build-tool-source/split-2026111303/continuation-01/continue_evidence.py",
+      "bytes": 9274,
+      "sha256": "ad4542ea891b6610fa854843499b8cd7839b622f80f791480aa829873dc0a904",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/continuation-02/continue_stage.py",
+      "archive_path": "build-tool-source/split-2026111303/continuation-02/continue_stage.py",
+      "bytes": 10502,
+      "sha256": "c8d34b18244a85e02c1d1ab20f7f61b748e8e546fe78d00cee74f1708bbd7e15",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/continuation-03/finish_stage.py",
+      "archive_path": "build-tool-source/split-2026111303/continuation-03/finish_stage.py",
+      "bytes": 12143,
+      "sha256": "60a329a454c41d90092b92c92ed5d874d2e82ec8ffd8ae359970f9df44f3e6e6",
+      "mode": "0644"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/continuation-04/restage_pristine.py",
+      "archive_path": "build-tool-source/split-2026111303/continuation-04/restage_pristine.py",
+      "bytes": 16392,
+      "sha256": "e4ff816aa40b60c9d83c4d9fce76ddd55dbc716a3875d2dbcf361e561bb0f914",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/signing-continuation-01/preflight.py",
+      "archive_path": "build-tool-source/split-2026111303/signing-continuation-01/preflight.py",
+      "bytes": 13568,
+      "sha256": "227f0e48dbdc3311b975d8905562ee640bc989f62bd75095f89b53868b8ea174",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/signing-continuation-01/test_preflight.py",
+      "archive_path": "build-tool-source/split-2026111303/signing-continuation-01/test_preflight.py",
+      "bytes": 5204,
+      "sha256": "5a182bcfbcde5fef7864e10ac80e0eb704c2aeaa13c1b0df28e175d4bafbad0a",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/signing-continuation-02/preflight.py",
+      "archive_path": "build-tool-source/split-2026111303/signing-continuation-02/preflight.py",
+      "bytes": 17614,
+      "sha256": "1a929a8d80a90c488a2a2f2f982808338b3a492a83c59b5d3864831cdb1d5e89",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/move-essentials/build-tool-source/split-2026111303/signing-continuation-02/test_preflight.py",
+      "archive_path": "build-tool-source/split-2026111303/signing-continuation-02/test_preflight.py",
+      "bytes": 6732,
+      "sha256": "4f7c25f83169aca931ab0eafca8d56d94149005d1ae7d562c9c614689331bd72",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/tools/exit-cleanup-build.sh",
+      "archive_path": "root-tools/exit-cleanup-build.sh",
+      "bytes": 2505,
+      "sha256": "f175589f0088b94d0d5caf9947801d7c4d6d2a1c075a830415ec1946b2f7adab",
+      "mode": "0770"
+    },
+    {
+      "source_path": ".airbuild/tools/exit-cleanup-package.sh",
+      "archive_path": "root-tools/exit-cleanup-package.sh",
+      "bytes": 1655,
+      "sha256": "8762cb81c3c19613aec7e5a77200a1f62bfbed8694b4c40c74409b0eb89f2f08",
+      "mode": "0660"
+    },
+    {
+      "source_path": ".airbuild/tools/make_styled_dmg.sh",
+      "archive_path": "root-tools/make_styled_dmg.sh",
+      "bytes": 15267,
+      "sha256": "7a69d56b6f8f7f9b80568fc9a2adeea32c875e42a49a824f5f95543c166d8b26",
+      "mode": "0750"
+    },
+    {
+      "source_path": ".airbuild/tools/mount-pool-build.sh",
+      "archive_path": "root-tools/mount-pool-build.sh",
+      "bytes": 2648,
+      "sha256": "a8226324f30a86b726365ff0335c30ed17c2b1108b74cce356506a2410091f09",
+      "mode": "0755"
+    },
+    {
+      "source_path": ".airbuild/tools/r6b-build.sh",
+      "archive_path": "root-tools/r6b-build.sh",
+      "bytes": 2412,
+      "sha256": "1270bc892c8426bd31254860705ccf05ba06be9664db46ea05c02c876789b905",
+      "mode": "0770"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/fixed-candidate-build-2026111301-complete-evidence.sh",
+      "archive_path": "exit-cleanup-tools/fixed-candidate-build-2026111301-complete-evidence.sh",
+      "bytes": 5434,
+      "sha256": "2b46b133462df5f8769ec3e1f190011e8fbf8b871aa65fab2c0f8d126897b18b",
+      "mode": "0700"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/fixed-candidate-build-2026111301-recovery-attempt02.sh",
+      "archive_path": "exit-cleanup-tools/fixed-candidate-build-2026111301-recovery-attempt02.sh",
+      "bytes": 11784,
+      "sha256": "c30b42be08c0f7b89cd7af40ce497667c436fc7337db6480b07d37460b533739",
+      "mode": "0700"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/fixed-candidate-build-2026111301.sh",
+      "archive_path": "exit-cleanup-tools/fixed-candidate-build-2026111301.sh",
+      "bytes": 5720,
+      "sha256": "6031fb821a39fbb8e3601e5142b50daadb92d17209cbf9a3f086a106feb3a36b",
+      "mode": "0700"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/fixed-candidate-build-2026111302-engine-start-fix.sh",
+      "archive_path": "exit-cleanup-tools/fixed-candidate-build-2026111302-engine-start-fix.sh",
+      "bytes": 17825,
+      "sha256": "fc18879f713dd9a5d6b6c1bde9db24bc85d17e870a86a35b32e835496e0eb224",
+      "mode": "0700"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/fixed-candidate-xcrun-bin/xcrun",
+      "archive_path": "exit-cleanup-tools/fixed-candidate-xcrun-bin/xcrun",
+      "bytes": 535,
+      "sha256": "923d477e8a1e58a8c24889082c9ac8aeef28d9035093c03147b7e79fe0c92586",
+      "mode": "0700"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/relay-build-2026111304-attempt02.sh",
+      "archive_path": "exit-cleanup-tools/relay-build-2026111304-attempt02.sh",
+      "bytes": 782,
+      "sha256": "51f980b4db7bf4540def53bcbda3ba4bc13aa559430104193798495dd020e9cf",
+      "mode": "0750"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/relay-build-2026111304.sh",
+      "archive_path": "exit-cleanup-tools/relay-build-2026111304.sh",
+      "bytes": 727,
+      "sha256": "0cce1cb9c20cd58ab7e7b81405898bdba6a0e316a6e34f7c6ede761242418cd5",
+      "mode": "0750"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/relay-packages-2026111304.sh",
+      "archive_path": "exit-cleanup-tools/relay-packages-2026111304.sh",
+      "bytes": 6328,
+      "sha256": "967c8154c9cf62320729590259a0cee94a723e22c911d42542a55be664dbea0f",
+      "mode": "0700"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/relay-qualify-2026111304.py",
+      "archive_path": "exit-cleanup-tools/relay-qualify-2026111304.py",
+      "bytes": 29247,
+      "sha256": "1cd548c384a04e788e3460002e9c83e35f497fa0c77a088160c305bdb946a48d",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/relay-service-compile-2026111304.py",
+      "archive_path": "exit-cleanup-tools/relay-service-compile-2026111304.py",
+      "bytes": 9423,
+      "sha256": "1e1d72f53fe2957629297fab0da87293c40b3178f63c2690ac0baa6908a3f30f",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/relay-service-verify-2026111304.py",
+      "archive_path": "exit-cleanup-tools/relay-service-verify-2026111304.py",
+      "bytes": 18028,
+      "sha256": "874bfcc85b9075c999c438aa75a08aa4ab7b08bad7d8fef77a932319d17fbd9d",
+      "mode": "0600"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/split-build-2026111303.sh",
+      "archive_path": "exit-cleanup-tools/split-build-2026111303.sh",
+      "bytes": 656,
+      "sha256": "f7ca569ff3d6362822715e356ce2d7af8f2de6a593be8196b84283fc4b5e86ac",
+      "mode": "0755"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/split-packages-03-2026111303.sh",
+      "archive_path": "exit-cleanup-tools/split-packages-03-2026111303.sh",
+      "bytes": 4590,
+      "sha256": "2a40a6eda13607b060a4d2ccecbf903ae2a5db5508e0a97b398862b1068f2570",
+      "mode": "0700"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/split-packages-03-publish.py",
+      "archive_path": "exit-cleanup-tools/split-packages-03-publish.py",
+      "bytes": 3838,
+      "sha256": "1a0ddef664313dc75dbcb001334858b3c9d29d8b3703cbf79e470082fbd7d11a",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/split-service-compile-2026111303.py",
+      "archive_path": "exit-cleanup-tools/split-service-compile-2026111303.py",
+      "bytes": 9420,
+      "sha256": "4536506ed6ee7493948617282b57348b81d4d97a753ce4f51ef13504c5c3e9c2",
+      "mode": "0640"
+    },
+    {
+      "source_path": ".airbuild/worktree/exit-cleanup/.airbuild/tools/test_split_service_compile_2026111303.py",
+      "archive_path": "exit-cleanup-tools/test_split_service_compile_2026111303.py",
+      "bytes": 4745,
+      "sha256": "f38f9a94c267111c9610609af6a10e975a4d30a1e98d019201be2a6de57f7c12",
+      "mode": "0640"
+    }
+  ]
+}

@@ -244,10 +244,9 @@ class ProfilesAction extends _$ProfilesAction {
         unsupported = true;
         return issue;
       }
-      final inspection = await _core.inspectMountSource(
-        path,
-        ageSecretKey: key,
-      );
+      final inspection = await ref
+          .read(mountActionProvider.notifier)
+          .inspectDownloadedSource(path, key);
       switch (inspection.status) {
         case MountSourceStatus.nodes:
           return null;
@@ -259,10 +258,13 @@ class ProfilesAction extends _$ProfilesAction {
       }
     }
 
+    final mounts = ref.read(mountActionProvider.notifier);
+    final update = mounts.beginSourceUpdate(sourceId);
     final Profile? fetched;
     try {
       fetched = await fetch(validate);
     } catch (_) {
+      mounts.finishSourceUpdate(sourceId, update, updated: false);
       if (await isMounted()) {
         await _recordSource(
           sourceId,
@@ -276,6 +278,11 @@ class ProfilesAction extends _$ProfilesAction {
     if (fetched != null && await isMounted()) {
       await _recordSource(sourceId, null);
     }
+    mounts.finishSourceUpdate(
+      sourceId,
+      update,
+      updated: fetched?.type == ProfileType.url,
+    );
     return fetched;
   }
 

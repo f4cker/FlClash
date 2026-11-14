@@ -77,55 +77,22 @@ void main() {
       expect(config['tun']['stack'], 'mips');
     });
 
-    test('a followed field takes the file value as written', () async {
+    test('obsolete follow keys cannot bypass page settings', () async {
       final config = await _build(_following(PageConfigKey.values));
-
-      for (final key in [
-        'mode',
-        'port',
-        'socks-port',
-        'redir-port',
-        'mixed-port',
-        'tproxy-port',
-        'allow-lan',
-        'log-level',
-        'find-process-mode',
-        'keep-alive-interval',
-        'external-controller',
-        'authentication',
-      ]) {
-        expect(
-          const DeepCollectionEquality().equals(config[key], _fixture[key]),
-          isTrue,
-          reason: key,
-        );
-      }
-      expect(config['tun']['enable'], false);
-      expect(config['tun']['stack'], 'mixed');
+      final page = await _build(_page);
+      expect(const DeepCollectionEquality().equals(config, page), isTrue);
     });
 
-    test('a followed field the file leaves out stays out', () async {
+    test('missing file page fields still receive saved page values', () async {
       final config = await _build(
         _following(PageConfigKey.values),
         profile: const {'mode': 'global'},
       );
-
-      for (final key in [
-        'mixed-port',
-        'log-level',
-        'find-process-mode',
-        'allow-lan',
-        'external-controller',
-        'tun',
-        'profile',
-        'skip-auth-prefixes',
-        'dns',
-        'global-ua',
-        'hosts',
-      ]) {
-        expect(config.containsKey(key), isFalse, reason: key);
-      }
-      expect(config['mode'], 'global');
+      expect(config['mode'], 'rule');
+      expect(config['port'], 0);
+      expect(config['log-level'], 'error');
+      expect(config['tun']['enable'], false);
+      expect(config.containsKey('profile'), isFalse);
     });
 
     test('a page control writes only its field, not the block', () async {
@@ -146,14 +113,15 @@ void main() {
       expect(config['profile']['store-selected'], true);
       expect(config['skip-auth-prefixes'], ['127.0.0.1/8']);
       expect(config['sniffer']['enable'], true);
-      expect(config['dns']['nameserver'], ['223.5.5.5']);
+      expect(config['dns']['nameserver'], _page.dns.nameserver);
       expect(config.containsKey('external-ui'), isFalse);
     });
 
-    test('a profile without DNS gets no baseline template', () async {
+    test('missing DNS gets only controlled page fields', () async {
       final config = await _build(_page, profile: const {'mode': 'rule'});
 
-      expect(config.containsKey('dns'), isFalse);
+      expect(config['dns']['nameserver'], _page.dns.nameserver);
+      expect(config['dns'].containsKey('enable'), isFalse);
     });
 
     test('a false, zero or empty value in the file is kept', () async {
@@ -173,7 +141,7 @@ void main() {
       expect(config['authentication'], isEmpty);
     });
 
-    test('page hosts add entries to the file hosts', () async {
+    test('page hosts replace the full file hosts map', () async {
       final config = await _build(
         _page.copyWith(hosts: const {'a.test': '1.1.1.1'}),
         profile: const {
@@ -182,17 +150,21 @@ void main() {
       );
 
       expect(config['hosts']['a.test'], '1.1.1.1');
-      expect(config['hosts']['b.test'], '2.2.2.2');
+      expect(config['hosts'].containsKey('b.test'), isFalse);
     });
 
-    test('the unix controller stays off, the file cannot open it', () async {
-      final config = await _build(
-        _following(PageConfigKey.values),
-        profile: const {'external-controller-unix': '/tmp/c.sock'},
-      );
-
-      expect(config['external-controller-unix'], '');
-    });
+    test(
+      'unsupported unix controller is rejected before any socket opens',
+      () async {
+        await expectLater(
+          _build(
+            _page,
+            profile: const {'external-controller-unix': '/tmp/c.sock'},
+          ),
+          throwsStateError,
+        );
+      },
+    );
 
     test('safe mode keeps the TUN and the controller off', () async {
       final result = await makeRealProfileTask(
@@ -220,13 +192,13 @@ void main() {
   });
 
   group('legacy build until the user confirms', () {
-    test('keeps every old override', () async {
+    test('obsolete flag cannot restore hidden overrides', () async {
       final config = await _build(_page.copyWith(pagePriority: false));
 
-      expect(config['profile']['store-selected'], false);
-      expect(config['skip-auth-prefixes'], isEmpty);
-      expect(config['tun']['auto-route'], true);
-      expect(config['tun']['auto-detect-interface'], true);
+      expect(config['profile']['store-selected'], true);
+      expect(config['skip-auth-prefixes'], ['127.0.0.1/8']);
+      expect(config['tun'].containsKey('auto-route'), isFalse);
+      expect(config['tun'].containsKey('auto-detect-interface'), isFalse);
       expect(config['find-process-mode'], 'off');
     });
 
@@ -271,7 +243,7 @@ void main() {
       expect(moved.followKeys, {PageConfigKey.logLevel});
     });
 
-    test('a followed live field is left out of the live patch', () {
+    test('obsolete followed fields remain in the live patch', () {
       final params = _following({PageConfigKey.mode, PageConfigKey.tunEnable})
           .toUpdateParams(
             authentication: const [],
@@ -280,12 +252,12 @@ void main() {
           );
       final patch = params.toJson();
 
-      expect(patch.containsKey('mode'), isFalse);
-      expect(patch['tun'], {'stack': 'mips'});
+      expect(patch['mode'], 'rule');
+      expect(patch['tun'], {'enable': false, 'stack': 'mips'});
       expect(patch['log-level'], 'error');
     });
 
-    test('the legacy live patch still sends the whole TUN', () {
+    test('live patch never injects unexposed TUN children', () {
       final patch = _page
           .toUpdateParams(
             authentication: const [],
@@ -293,7 +265,7 @@ void main() {
           )
           .toJson();
 
-      expect(patch['tun']['auto-route'], true);
+      expect((patch['tun'] as Map).containsKey('auto-route'), isFalse);
       expect(patch['mode'], 'rule');
     });
   });

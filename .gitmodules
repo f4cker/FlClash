@@ -1,3 +1,5 @@
+# Clash.Meta upstream baseline: https://github.com/chen08209/Clash.Meta, branch FlClash.
+# Keep the Flash fork URL/branch below: its pinned commit retains our additional patches.
 [submodule "core/Clash.Meta"]
 	path = core/Clash.Meta
 	url = git@github.com:f4cker/Clash.Meta.git

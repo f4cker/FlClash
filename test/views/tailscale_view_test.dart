@@ -24,15 +24,28 @@ import 'package:mocktail/mocktail.dart';
 import 'package:prism_ui/icons/icons.dart' show GlyphIcon, Glyphs;
 import 'package:prism_ui/prism_ui.dart'
     show
+        AppBar,
+        AppShape,
         BuildContextExtension,
         Chip,
         ColorSchemeExtension,
+        ElasticPress,
+        ElasticHover,
+        IconButton,
+        LiquidGlass,
+        LiquidGlassQuality,
+        LiquidGlassStyle,
+        PressLook,
+        ThemeMode,
         PopupAnchor,
+        PopupPlacement,
+        PressSurface,
         PopupMenuCard,
         SearchField,
         Switch,
         TextButton,
         TonalButton,
+        TonalButtonSize,
         Tooltip;
 
 import '../helpers/preferences.dart';
@@ -41,6 +54,15 @@ import '../helpers/test_profiles.dart';
 import 'tailscale_fixtures.dart';
 
 class _MockCore extends Mock implements CoreHandlerInterface {}
+
+class _TrackingProxiesAction extends ProxiesAction {
+  static int refreshes = 0;
+
+  @override
+  void updateGroupsDebounce([Duration? duration]) {
+    refreshes++;
+  }
+}
 
 const _size = Size(1100, 1400);
 
@@ -61,9 +83,11 @@ void main() {
     core = _MockCore();
     opened = [];
     browserOpens = true;
+    _TrackingProxiesAction.refreshes = 0;
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
+        proxiesActionProvider.overrideWith(_TrackingProxiesAction.new),
         currentProfileProvider.overrideWithValue(tsProfile),
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
       ],
@@ -86,7 +110,12 @@ void main() {
     }
   }
 
-  Future<void> pumpPanel(WidgetTester tester, {Size size = _size}) async {
+  Future<void> pumpPanel(
+    WidgetTester tester, {
+    Size size = _size,
+    LiquidGlassQuality? liquidGlass,
+    ThemeMode themeMode = ThemeMode.light,
+  }) async {
     container.read(viewSizeProvider.notifier).update((_) => size);
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -97,6 +126,8 @@ void main() {
         container: container,
         child: TestApp(
           locale: const Locale('zh', 'CN'),
+          liquidGlass: liquidGlass,
+          themeMode: themeMode,
           child: TailscaleView(
             clock: () => tsNow,
             launcher: (url) async {
@@ -186,6 +217,167 @@ void main() {
   });
 
   group('page layout', () {
+    for (final themeMode in [ThemeMode.light, ThemeMode.dark]) {
+      for (final quality in [null, ...LiquidGlassQuality.values]) {
+        testWidgets('account capsule shares bar glass in $themeMode $quality', (
+          tester,
+        ) async {
+          serve([tsConnectedNode], tsConnectedStatus());
+          await pumpPanel(tester, liquidGlass: quality, themeMode: themeMode);
+          final pill = find.byType(TailscaleAccountPill);
+          final refresh = find.byWidgetPredicate(
+            (widget) => widget is IconButton && widget.tooltip == '刷新',
+          );
+          final surfaces = [
+            for (final control in [pill, refresh])
+              tester.widget<PressSurface>(
+                find.descendant(
+                  of: control,
+                  matching: find.byType(PressSurface),
+                ),
+              ),
+          ];
+          expect(surfaces.first.fill, surfaces.last.fill);
+          expect(surfaces.first.look, PressLook.none);
+          expect(surfaces.first.look, surfaces.last.look);
+          expect(surfaces.first.foreground, surfaces.last.foreground);
+          final panes = find.descendant(
+            of: pill,
+            matching: find.byType(LiquidGlass),
+          );
+          if (quality == null) {
+            expect(panes, findsNothing);
+          } else {
+            expect(panes, findsOneWidget);
+            expect(surfaces.first.fill, const Color(0x00000000));
+            final pane = tester.widget<LiquidGlass>(panes);
+            final adjacent = tester.widget<LiquidGlass>(
+              find.descendant(of: refresh, matching: find.byType(LiquidGlass)),
+            );
+            expect(pane.style, adjacent.style);
+            expect(
+              pane.style,
+              LiquidGlassStyle.regular(tester.element(pill).colorScheme),
+            );
+            expect(pane.pressed, isFalse);
+            surfaces.first.statesController!.update(WidgetState.pressed, true);
+            await tester.pump();
+            expect(tester.widget<LiquidGlass>(panes).pressed, isTrue);
+            expect(
+              find.descendant(of: pill, matching: find.byType(ElasticPress)),
+              findsOneWidget,
+            );
+            expect(
+              find.descendant(of: pill, matching: find.byType(ElasticHover)),
+              findsOneWidget,
+            );
+            surfaces.first.statesController!.update(WidgetState.pressed, false);
+            await tester.pump();
+            expect(tester.widget<LiquidGlass>(panes).pressed, isFalse);
+          }
+          expect(tester.takeException(), isNull);
+          await teardownView(tester);
+        });
+      }
+    }
+
+    for (final width in [1054.0, 760.0, 520.0, 390.0]) {
+      testWidgets('account capsule matches bar controls at $width dp', (
+        tester,
+      ) async {
+        const account = 'a.very.long.synthetic.account.name@an.example.test';
+        serve(
+          [tsConnectedNode],
+          tsConnectedStatus().copyWith(
+            loginUser: tsMe.copyWith(loginName: account),
+            peers: const [],
+          ),
+        );
+        await pumpPanel(tester, size: Size(width, 900));
+
+        final pill = find.byType(TailscaleAccountPill);
+        final surface = find.descendant(
+          of: pill,
+          matching: find.byType(PressSurface),
+        );
+        final bounds = tester.getRect(surface);
+        final buttons = find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is IconButton && widget.tooltip != null,
+          ),
+        );
+        expect(buttons, findsNWidgets(2));
+        for (final button in buttons.evaluate()) {
+          final circle = tester.getRect(
+            find.descendant(
+              of: find.byWidget(button.widget),
+              matching: find.byType(PressSurface),
+            ),
+          );
+          expect(circle.size, Size.square(TonalButtonSize.bar.button));
+          expect(bounds.top, circle.top);
+          expect(bounds.bottom, circle.bottom);
+          expect(bounds.center.dy, circle.center.dy);
+        }
+        expect(tester.widget<PressSurface>(surface).shape, AppShape.full);
+        final label = find.descendant(of: pill, matching: find.text(account));
+        final text = tester.widget<Text>(label);
+        final paragraph = tester.renderObject<RenderParagraph>(label);
+        expect(text.maxLines, 1);
+        expect(text.overflow, TextOverflow.ellipsis);
+        expect(paragraph.didExceedMaxLines, isTrue);
+        expect(
+          paragraph
+              .getBoxesForSelection(
+                const TextSelection(
+                  baseOffset: 0,
+                  extentOffset: account.length,
+                ),
+              )
+              .map((box) => (box.top, box.bottom))
+              .toSet(),
+          hasLength(1),
+        );
+        final row = tester.widget<Row>(
+          find.descendant(of: pill, matching: find.byType(Row)),
+        );
+        for (final child in row.children) {
+          expect(
+            tester.getRect(find.byWidget(child)).center.dy,
+            bounds.center.dy,
+          );
+        }
+        expect(
+          find.descendant(of: pill, matching: find.text('· 已连接')),
+          width < 720 ? findsNothing : findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+
+        final anchor = find.ancestor(
+          of: pill,
+          matching: find.byType(PopupAnchor),
+        );
+        expect(
+          tester.widget<PopupAnchor>(anchor).placement,
+          PopupPlacement.belowAnchorEnd,
+        );
+        final anchorBounds = tester.getRect(anchor);
+        await tester.tap(pill);
+        await settle(tester);
+        final menu = tester.getRect(find.byType(PopupMenuCard));
+        expect(menu.top, greaterThanOrEqualTo(anchorBounds.bottom));
+        if (width >= 720) {
+          expect(menu.right, anchorBounds.right);
+        } else {
+          expect(menu.left, greaterThanOrEqualTo(0));
+          expect(menu.right, lessThanOrEqualTo(width));
+        }
+        expect(find.text('添加 Tailscale 账号'), findsOneWidget);
+        await teardownView(tester);
+      });
+    }
+
     testWidgets(
       'the first card opens under the bar on the title\'s line, barless',
       (tester) async {
@@ -931,6 +1123,16 @@ void main() {
 
         expect(find.text('不再使用出口节点？'), findsOneWidget);
         expect(find.textContaining('→', findRichText: true), findsNothing);
+        await tester.tap(find.text('不使用出口节点').last);
+        await settle(tester);
+        verify(
+          () => core.setTailscalePrefs(
+            any(),
+            exitNode: '',
+            exitLabel: any(named: 'exitLabel'),
+          ),
+        ).called(1);
+        expect(_TrackingProxiesAction.refreshes, 1);
         await teardownView(tester);
       });
     });

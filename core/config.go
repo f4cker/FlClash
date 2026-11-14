@@ -176,6 +176,37 @@ func applyConfig(params *SetupParams) error {
 			return mountRejected(err, mountOutcomeKept)
 		}
 	}
+	var candidate *setupCandidate
+	if err == nil {
+		candidate, err = prepareSetupConfig(params)
+	}
+	var candidateBytes []byte
+	if err == nil {
+		defer os.Remove(candidate.path)
+		candidateBytes, err = os.ReadFile(candidate.path)
+		if err == nil {
+			err = os.Rename(candidate.path, runningConfigPath())
+		}
+		if err == nil {
+			scheduleReclaimOwnership()
+		}
+	}
+	if err != nil {
+		if params.Mounts == nil {
+			var preflightErr *setupPreflightError
+			if candidate != nil || errors.As(err, &preflightErr) {
+				return configRejected(err, "unknown")
+			}
+			if currentConfig != nil {
+				return configRejected(err, "kept")
+			}
+			return configRejected(err, "not_applied")
+		}
+		if currentConfig != nil && runningConfigKeepable() {
+			return mountRejected(err, mountOutcomeKept)
+		}
+	}
+	clearTailscaleExit()
 	applyOptions(params.Options)
 	setTailscaleSetup(params.Tailscale)
 	replaced := tailscaleGenerationMark()
@@ -183,7 +214,17 @@ func applyConfig(params *SetupParams) error {
 	var cfg *config.Config
 	var report *MountReport
 	if err == nil {
-		cfg, report, err = loadSetupConfig(params)
+		tailscaleMu.Lock()
+		tailscaleConfigs = candidate.configs
+		tailscaleMu.Unlock()
+		report = candidate.report
+		cfg, err = executor.ParseWithBytes(candidateBytes)
+		if err == nil {
+			cfg = withPlatformLimits(cfg)
+		}
+		if err != nil && params.Mounts == nil {
+			return configRejected(err, "unknown")
+		}
 	}
 	if err == nil {
 		injectTailscaleManaged(cfg)
@@ -197,27 +238,11 @@ func applyConfig(params *SetupParams) error {
 		}
 		cfg, blocked = blocking, true
 		clearTailscaleManaged()
-	} else if err != nil {
-		// The fallback is what keeps the listeners serving while the host
-		// reports the error, but it applies a config with no proxies in it.
-		// From the UI that is indistinguishable from a subscription that went
-		// dead: the profile still lists every node, every delay test answers
-		// Timeout, and nothing routes. Name the real cause in the log.
-		logError(
-			"config apply failed, falling back to the built-in default - no proxies will be available: %v",
-			err,
-		)
-		fallback, fallbackErr := config.ParseRawConfig(config.DefaultRawConfig())
-		if fallbackErr != nil {
-			return err
-		}
-		cfg = fallback
-		clearTailscaleManaged()
 	}
 
 	currentConfig = cfg
 	// The new instances must not start beside the old ones on one identity;
-	// the fallback holds none, so a failed load closes what it built too.
+	// a blocked load closes what it built too.
 	if err != nil {
 		replaced = tailscaleGenerationMark()
 	}
@@ -256,10 +281,13 @@ func applyConfig(params *SetupParams) error {
 		return mountRejected(err, mountOutcomeBlocked)
 	}
 	if err != nil {
-		// The host tells this apart from a call that failed: the default config runs.
-		return &MethodError{Code: "config_rejected", Message: err.Error()}
+		return configRejected(err, "unknown")
 	}
 	return nil
+}
+
+func configRejected(err error, outcome string) error {
+	return &MethodError{Code: "config_rejected", Message: err.Error(), Details: map[string]string{"outcome": outcome}}
 }
 
 func updateConfig(params *UpdateParams) error {

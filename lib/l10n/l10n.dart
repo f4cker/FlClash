@@ -435,6 +435,56 @@ class AppLocalizations {
     return Intl.message('Auto launch', name: 'autoLaunch', desc: '', args: []);
   }
 
+  /// `Allow Flash to open at login in System Settings.`
+  String get loginItemRequiresApproval {
+    return Intl.message(
+      'Allow Flash to open at login in System Settings.',
+      name: 'loginItemRequiresApproval',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `macOS couldn’t find the current Flash app to set it to open at login.`
+  String get loginItemNotFound {
+    return Intl.message(
+      'macOS couldn’t find the current Flash app to set it to open at login.',
+      name: 'loginItemNotFound',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t confirm that Open at Login was updated as requested.`
+  String get loginItemUnexpectedStatus {
+    return Intl.message(
+      'Couldn’t confirm that Open at Login was updated as requested.',
+      name: 'loginItemUnexpectedStatus',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t read the Open at Login status.`
+  String get loginItemMissingStatus {
+    return Intl.message(
+      'Couldn’t read the Open at Login status.',
+      name: 'loginItemMissingStatus',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t change the Open at Login setting.`
+  String get loginItemOperationFailed {
+    return Intl.message(
+      'Couldn’t change the Open at Login setting.',
+      name: 'loginItemOperationFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Silent launch`
   String get silentLaunch {
     return Intl.message(
@@ -2961,6 +3011,21 @@ class AppLocalizations {
     );
   }
 
+  /// `TUN mode`
+  String get trayTunMode {
+    return Intl.message('TUN mode', name: 'trayTunMode', desc: '', args: []);
+  }
+
+  /// `Copy terminal proxy command`
+  String get trayCopyProxyCommand {
+    return Intl.message(
+      'Copy terminal proxy command',
+      name: 'trayCopyProxyCommand',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Memory info`
   String get memoryInfo {
     return Intl.message('Memory info', name: 'memoryInfo', desc: '', args: []);
@@ -4726,10 +4791,10 @@ class AppLocalizations {
     );
   }
 
-  /// `TUN could not be authorized, so it was turned off.`
+  /// `TUN authorization wasn’t completed. The configuration was not applied. Your in-app setting was kept.`
   String get tunAuthorizationFailed {
     return Intl.message(
-      'TUN could not be authorized, so it was turned off.',
+      'TUN authorization wasn’t completed. The configuration was not applied. Your in-app setting was kept.',
       name: 'tunAuthorizationFailed',
       desc: '',
       args: [],
@@ -12577,6 +12642,56 @@ class AppLocalizations {
     return Intl.message(', ', name: 'mountNameSeparator', desc: '', args: []);
   }
 
+  /// `Rule contents are currently unavailable`
+  String get mountGroupReasonRuleUnknown {
+    return Intl.message(
+      'Rule contents are currently unavailable',
+      name: 'mountGroupReasonRuleUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The base profile’s node list is currently unavailable`
+  String get mountGroupReasonProviderUnknown {
+    return Intl.message(
+      'The base profile’s node list is currently unavailable',
+      name: 'mountGroupReasonProviderUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `DNS requests use routing rules to choose an exit`
+  String get mountGroupReasonDns {
+    return Intl.message(
+      'DNS requests use routing rules to choose an exit',
+      name: 'mountGroupReasonDns',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Other nodes use this group to relay traffic`
+  String get mountGroupReasonDialer {
+    return Intl.message(
+      'Other nodes use this group to relay traffic',
+      name: 'mountGroupReasonDialer',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Restricted due to group membership; the underlying reason is unconfirmed`
+  String get mountGroupReasonMember {
+    return Intl.message(
+      'Restricted due to group membership; the underlying reason is unconfirmed',
+      name: 'mountGroupReasonMember',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Current groups cannot receive mounts`
   String get mountNoGroupIsolatedTitle {
     return Intl.message(
@@ -13652,6 +13767,366 @@ class AppLocalizations {
     return Intl.message(
       'Tailscale exit · Current exit node and groups are unconfirmed',
       name: 'tsViewerExitUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Flash Helper`
+  String get macHelperTitle {
+    return Intl.message(
+      'Flash Helper',
+      name: 'macHelperTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not ready`
+  String get macHelperOff {
+    return Intl.message('Not ready', name: 'macHelperOff', desc: '', args: []);
+  }
+
+  /// `Helper ready (not TUN status)`
+  String get macHelperOn {
+    return Intl.message(
+      'Helper ready (not TUN status)',
+      name: 'macHelperOn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Administrator-approved installer required`
+  String get macHelperPending {
+    return Intl.message(
+      'Administrator-approved installer required',
+      name: 'macHelperPending',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper unavailable`
+  String get macHelperUnavailable {
+    return Intl.message(
+      'Helper unavailable',
+      name: 'macHelperUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This version can’t use the helper`
+  String get macHelperCannotUse {
+    return Intl.message(
+      'This version can’t use the helper',
+      name: 'macHelperCannotUse',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper needs repair`
+  String get macHelperRepair {
+    return Intl.message(
+      'Helper needs repair',
+      name: 'macHelperRepair',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t confirm the helper was turned off`
+  String get macHelperStopUnknown {
+    return Intl.message(
+      'Couldn’t confirm the helper was turned off',
+      name: 'macHelperStopUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Installer Instructions`
+  String get macHelperTurnOn {
+    return Intl.message(
+      'Installer Instructions',
+      name: 'macHelperTurnOn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Turn-Off Instructions`
+  String get macHelperTurnOff {
+    return Intl.message(
+      'Turn-Off Instructions',
+      name: 'macHelperTurnOff',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Installer Instructions`
+  String get macHelperOpenSettings {
+    return Intl.message(
+      'Installer Instructions',
+      name: 'macHelperOpenSettings',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Check Again`
+  String get macHelperTryAgain {
+    return Intl.message(
+      'Check Again',
+      name: 'macHelperTryAgain',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Repair Instructions`
+  String get macHelperRepairAction {
+    return Intl.message(
+      'Repair Instructions',
+      name: 'macHelperRepairAction',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Check Again`
+  String get macHelperCheckAgain {
+    return Intl.message(
+      'Check Again',
+      name: 'macHelperCheckAgain',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.`
+  String get macHelperUnavailableDetail {
+    return Intl.message(
+      'Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.',
+      name: 'macHelperUnavailableDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.`
+  String get macHelperPendingDetail {
+    return Intl.message(
+      'Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.',
+      name: 'macHelperPendingDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Multiple nodes`
+  String get trayMultipleNodes {
+    return Intl.message(
+      'Multiple nodes',
+      name: 'trayMultipleNodes',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No available members`
+  String get trayNoAvailableMembers {
+    return Intl.message(
+      'No available members',
+      name: 'trayNoAvailableMembers',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t load`
+  String get trayCouldNotLoad {
+    return Intl.message(
+      'Couldn’t load',
+      name: 'trayCouldNotLoad',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t switch`
+  String get trayCouldNotSwitch {
+    return Intl.message(
+      'Couldn’t switch',
+      name: 'trayCouldNotSwitch',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t confirm the switch`
+  String get traySwitchUnconfirmed {
+    return Intl.message(
+      'Couldn’t confirm the switch',
+      name: 'traySwitchUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Current selection unknown`
+  String get traySelectionUnknown {
+    return Intl.message(
+      'Current selection unknown',
+      name: 'traySelectionUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Current selection: {name}`
+  String trayCurrentSelection(Object name) {
+    return Intl.message(
+      'Current selection: $name',
+      name: 'trayCurrentSelection',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Latency unknown`
+  String get trayLatencyUnknown {
+    return Intl.message(
+      'Latency unknown',
+      name: 'trayLatencyUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Testing`
+  String get trayTesting {
+    return Intl.message('Testing', name: 'trayTesting', desc: '', args: []);
+  }
+
+  /// `Latency {value} milliseconds`
+  String trayLatencyMilliseconds(Object value) {
+    return Intl.message(
+      'Latency $value milliseconds',
+      name: 'trayLatencyMilliseconds',
+      desc: '',
+      args: [value],
+    );
+  }
+
+  /// `Latency less than 1 millisecond`
+  String get trayLatencyLessThanOne {
+    return Intl.message(
+      'Latency less than 1 millisecond',
+      name: 'trayLatencyLessThanOne',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Switching to {name}`
+  String traySwitchingTo(Object name) {
+    return Intl.message(
+      'Switching to $name',
+      name: 'traySwitchingTo',
+      desc: '',
+      args: [name],
+    );
+  }
+
+  /// `Selected`
+  String get traySelected {
+    return Intl.message('Selected', name: 'traySelected', desc: '', args: []);
+  }
+
+  /// `Test Latency`
+  String get trayTestLatency {
+    return Intl.message(
+      'Test Latency',
+      name: 'trayTestLatency',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Reject`
+  String get trayReject {
+    return Intl.message('Reject', name: 'trayReject', desc: '', args: []);
+  }
+
+  /// `{value} ms`
+  String trayLatencyBadge(Object value) {
+    return Intl.message(
+      '$value ms',
+      name: 'trayLatencyBadge',
+      desc: '',
+      args: [value],
+    );
+  }
+
+  /// `Review Settings Before First Apply`
+  String get compositionReviewTitle {
+    return Intl.message(
+      'Review Settings Before First Apply',
+      name: 'compositionReviewTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.`
+  String get compositionBaselineUnknown {
+    return Intl.message(
+      'The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.',
+      name: 'compositionBaselineUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.`
+  String get compositionCandidateNote {
+    return Intl.message(
+      'Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.',
+      name: 'compositionCandidateNote',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t prepare or recheck the proposed configuration. It has not been applied. Check the configuration and settings, then try again.`
+  String get compositionReadFailed {
+    return Intl.message(
+      'Couldn’t prepare or recheck the proposed configuration. It has not been applied. Check the configuration and settings, then try again.',
+      name: 'compositionReadFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Source unconfirmed`
+  String get compositionSourceUnconfirmed {
+    return Intl.message(
+      'Source unconfirmed',
+      name: 'compositionSourceUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.`
+  String get compositionRecordFailed {
+    return Intl.message(
+      'The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.',
+      name: 'compositionRecordFailed',
       desc: '',
       args: [],
     );

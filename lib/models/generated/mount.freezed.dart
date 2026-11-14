@@ -4983,7 +4983,7 @@ $MountSourceRecordCopyWith<$Res>? get record {
 /// @nodoc
 mixin _$MountPanel {
 
- Profile get target; MountTargetState? get stored; List<MountSourceItem> get sources; MountTarget? get groups; String? get revision;
+ Profile get target; MountTargetState? get stored; List<MountSourceItem> get sources; MountTarget? get groups; bool get groupsPending; String? get revision;
 /// Create a copy of MountPanel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4995,20 +4995,20 @@ $MountPanelCopyWith<MountPanel> get copyWith => _$MountPanelCopyWithImpl<MountPa
 @override
 bool operator ==(Object other) {
   final _this = this as MountPanel;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountPanel&&(identical(other.target, _this.target) || other.target == _this.target)&&(identical(other.stored, _this.stored) || other.stored == _this.stored)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&(identical(other.groups, _this.groups) || other.groups == _this.groups)&&(identical(other.revision, _this.revision) || other.revision == _this.revision));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountPanel&&(identical(other.target, _this.target) || other.target == _this.target)&&(identical(other.stored, _this.stored) || other.stored == _this.stored)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&(identical(other.groups, _this.groups) || other.groups == _this.groups)&&(identical(other.groupsPending, _this.groupsPending) || other.groupsPending == _this.groupsPending)&&(identical(other.revision, _this.revision) || other.revision == _this.revision));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MountPanel;
-  return Object.hash(runtimeType,_this.target,_this.stored,const DeepCollectionEquality().hash(_this.sources),_this.groups,_this.revision);
+  return Object.hash(runtimeType,_this.target,_this.stored,const DeepCollectionEquality().hash(_this.sources),_this.groups,_this.groupsPending,_this.revision);
 }
 
 @override
 String toString() {
   final _this = this as MountPanel;
-  return 'MountPanel(target: ${_this.target}, stored: ${_this.stored}, sources: ${_this.sources}, groups: ${_this.groups}, revision: ${_this.revision})';
+  return 'MountPanel(target: ${_this.target}, stored: ${_this.stored}, sources: ${_this.sources}, groups: ${_this.groups}, groupsPending: ${_this.groupsPending}, revision: ${_this.revision})';
 }
 
 
@@ -5019,7 +5019,7 @@ abstract mixin class $MountPanelCopyWith<$Res>  {
   factory $MountPanelCopyWith(MountPanel value, $Res Function(MountPanel) _then) = _$MountPanelCopyWithImpl;
 @useResult
 $Res call({
- Profile target, MountTargetState? stored, List<MountSourceItem> sources, MountTarget? groups, String? revision
+ Profile target, MountTargetState? stored, List<MountSourceItem> sources, MountTarget? groups, bool groupsPending, String? revision
 });
 
 
@@ -5036,13 +5036,14 @@ class _$MountPanelCopyWithImpl<$Res>
 
 /// Create a copy of MountPanel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? target = null,Object? stored = freezed,Object? sources = null,Object? groups = freezed,Object? revision = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? target = null,Object? stored = freezed,Object? sources = null,Object? groups = freezed,Object? groupsPending = null,Object? revision = freezed,}) {
   return _then(MountPanel(
 target: null == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
 as Profile,stored: freezed == stored ? _self.stored : stored // ignore: cast_nullable_to_non_nullable
 as MountTargetState?,sources: null == sources ? _self.sources : sources // ignore: cast_nullable_to_non_nullable
 as List<MountSourceItem>,groups: freezed == groups ? _self.groups : groups // ignore: cast_nullable_to_non_nullable
-as MountTarget?,revision: freezed == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
+as MountTarget?,groupsPending: null == groupsPending ? _self.groupsPending : groupsPending // ignore: cast_nullable_to_non_nullable
+as bool,revision: freezed == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -5161,10 +5162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups,  String? revision)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups,  bool groupsPending,  String? revision)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountPanel() when $default != null:
-return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.revision);case _:
+return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.groupsPending,_that.revision);case _:
   return orElse();
 
 }
@@ -5182,10 +5183,10 @@ return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.revis
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups,  String? revision)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups,  bool groupsPending,  String? revision)  $default,) {final _that = this;
 switch (_that) {
 case _MountPanel():
-return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.revision);case _:
+return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.groupsPending,_that.revision);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -5202,10 +5203,10 @@ return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.revis
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups,  String? revision)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Profile target,  MountTargetState? stored,  List<MountSourceItem> sources,  MountTarget? groups,  bool groupsPending,  String? revision)?  $default,) {final _that = this;
 switch (_that) {
 case _MountPanel() when $default != null:
-return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.revision);case _:
+return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.groupsPending,_that.revision);case _:
   return null;
 
 }
@@ -5217,7 +5218,7 @@ return $default(_that.target,_that.stored,_that.sources,_that.groups,_that.revis
 
 
 class _MountPanel implements MountPanel {
-  const _MountPanel({required this.target, this.stored,  List<MountSourceItem> sources = const [], this.groups, this.revision}): _sources = sources;
+  const _MountPanel({required this.target, this.stored,  List<MountSourceItem> sources = const [], this.groups, this.groupsPending = false, this.revision}): _sources = sources;
   
 
 @override final  Profile target;
@@ -5230,6 +5231,7 @@ class _MountPanel implements MountPanel {
 }
 
 @override final  MountTarget? groups;
+@override@JsonKey() final  bool groupsPending;
 @override final  String? revision;
 
 /// Create a copy of MountPanel
@@ -5242,18 +5244,18 @@ _$MountPanelCopyWith<_MountPanel> get copyWith => __$MountPanelCopyWithImpl<_Mou
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountPanel&&(identical(other.target, target) || other.target == target)&&(identical(other.stored, stored) || other.stored == stored)&&const DeepCollectionEquality().equals(other.sources, _sources)&&(identical(other.groups, groups) || other.groups == groups)&&(identical(other.revision, revision) || other.revision == revision));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountPanel&&(identical(other.target, target) || other.target == target)&&(identical(other.stored, stored) || other.stored == stored)&&const DeepCollectionEquality().equals(other.sources, _sources)&&(identical(other.groups, groups) || other.groups == groups)&&(identical(other.groupsPending, groupsPending) || other.groupsPending == groupsPending)&&(identical(other.revision, revision) || other.revision == revision));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,target,stored,const DeepCollectionEquality().hash(_sources),groups,revision);
+    return Object.hash(runtimeType,target,stored,const DeepCollectionEquality().hash(_sources),groups,groupsPending,revision);
 }
 
 @override
 String toString() {
-    return 'MountPanel(target: $target, stored: $stored, sources: $sources, groups: $groups, revision: $revision)';
+    return 'MountPanel(target: $target, stored: $stored, sources: $sources, groups: $groups, groupsPending: $groupsPending, revision: $revision)';
 }
 
 
@@ -5264,7 +5266,7 @@ abstract mixin class _$MountPanelCopyWith<$Res> implements $MountPanelCopyWith<$
   factory _$MountPanelCopyWith(_MountPanel value, $Res Function(_MountPanel) _then) = __$MountPanelCopyWithImpl;
 @override @useResult
 $Res call({
- Profile target, MountTargetState? stored, List<MountSourceItem> sources, MountTarget? groups, String? revision
+ Profile target, MountTargetState? stored, List<MountSourceItem> sources, MountTarget? groups, bool groupsPending, String? revision
 });
 
 
@@ -5281,13 +5283,14 @@ class __$MountPanelCopyWithImpl<$Res>
 
 /// Create a copy of MountPanel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? target = null,Object? stored = freezed,Object? sources = null,Object? groups = freezed,Object? revision = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? target = null,Object? stored = freezed,Object? sources = null,Object? groups = freezed,Object? groupsPending = null,Object? revision = freezed,}) {
   return _then(_MountPanel(
 target: null == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
 as Profile,stored: freezed == stored ? _self.stored : stored // ignore: cast_nullable_to_non_nullable
 as MountTargetState?,sources: null == sources ? _self._sources : sources // ignore: cast_nullable_to_non_nullable
 as List<MountSourceItem>,groups: freezed == groups ? _self.groups : groups // ignore: cast_nullable_to_non_nullable
-as MountTarget?,revision: freezed == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
+as MountTarget?,groupsPending: null == groupsPending ? _self.groupsPending : groupsPending // ignore: cast_nullable_to_non_nullable
+as bool,revision: freezed == revision ? _self.revision : revision // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

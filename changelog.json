@@ -2,6 +2,34 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.9.8",
+      "tag": "v0.9.8",
+      "date": "2026-11-14",
+      "prerelease": false,
+      "groups": [
+        {
+          "type": "fix",
+          "entries": [
+            {
+              "id": "5ae2152",
+              "scope": "tray",
+              "text": "Clarify native menu actions and preflight mount composition"
+            },
+            {
+              "id": "fb06296",
+              "scope": "mount",
+              "text": "Refine progressive mount data caching and helper compatibility"
+            },
+            {
+              "id": "73e701d",
+              "scope": "mount",
+              "text": "Prewarm provider data before committing a mount"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.5",
       "tag": "v0.9.5",
       "date": "2026-11-12",

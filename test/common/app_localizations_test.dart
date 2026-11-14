@@ -10,6 +10,7 @@ import 'package:fl_clash/core/desktop/launch_policy.dart';
 import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +20,46 @@ void main() {
   setUpAll(() async {
     appLocalizations = await AppLocalizations.load(const Locale('en'));
   });
+
+  test(
+    'login errors use approved localized copy without native details',
+    () async {
+      try {
+        for (final locale in [const Locale('en'), const Locale('zh', 'CN')]) {
+          final localizations = await AppLocalizations.load(locale);
+          final expected = <String, String>{
+            'login_item_requires_approval':
+                localizations.loginItemRequiresApproval,
+            'login_item_not_found': localizations.loginItemNotFound,
+            'login_item_unexpected_status':
+                localizations.loginItemUnexpectedStatus,
+            'login_item_missing_status': localizations.loginItemMissingStatus,
+            'login_item_operation_failed':
+                localizations.loginItemOperationFailed,
+            'login_item_future_state': localizations.loginItemOperationFailed,
+          };
+          for (final entry in expected.entries) {
+            final error = PlatformException(
+              code: entry.key,
+              message: 'RAW_NATIVE /Users/private/App.app',
+              details: {'path': '/Users/private/App.app', 'nativeCode': 42},
+            );
+            expect(userFacingErrorMessage(error, localizations), entry.value);
+            expect(entry.value, isNot(contains('RAW_NATIVE')));
+            expect(entry.value, isNot(contains('/Users/')));
+          }
+          expect(
+            localizations.loginItemRequiresApproval,
+            locale.languageCode == 'zh'
+                ? '需要在系统设置中允许 Flash 登录时打开。'
+                : 'Allow Flash to open at login in System Settings.',
+          );
+        }
+      } finally {
+        await AppLocalizations.load(const Locale('en'));
+      }
+    },
+  );
 
   DioException dioError(
     DioExceptionType type, {

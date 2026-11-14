@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.9.8 (2026-11-14)
+
+**Bug Fixes**
+
+- **tray** Clarify native menu actions and preflight mount composition (5ae2152)
+- **mount** Refine progressive mount data caching and helper compatibility (fb06296)
+- **mount** Prewarm provider data before committing a mount (73e701d)
+
+## v0.9.7 (2026-11-12)
+
+**Bug Fixes**
+
+- **mount** Collect mounted nodes independently of base routing, DNS and unrelated provider caches; retain actual dependency errors and Tailscale connection safeguards (f88a516)
+- **profiles** Show reported mount exclusion reasons in details (7d20c247)
+- **tailscale** Match the account capsule height to the adjacent bar buttons (77d2cb1)
+
+## v0.9.6 (2026-11-12)
+
+**Bug Fixes**
+
+- **tailscale** Remove closed exit groups from the running config and clear invalid saved selections (1e4704a)
+- **tailscale** Keep cleanup isolated to the current config and retain the core's original fallback order (1e4704a)
+
 ## v0.9.5 (2026-11-12)
 
 **Features**
