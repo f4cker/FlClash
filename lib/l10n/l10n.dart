@@ -13782,25 +13782,30 @@ class AppLocalizations {
     );
   }
 
-  /// `Not ready`
+  /// `Helper not installed`
   String get macHelperOff {
-    return Intl.message('Not ready', name: 'macHelperOff', desc: '', args: []);
+    return Intl.message(
+      'Helper not installed',
+      name: 'macHelperOff',
+      desc: '',
+      args: [],
+    );
   }
 
-  /// `Helper ready (not TUN status)`
+  /// `Helper ready`
   String get macHelperOn {
     return Intl.message(
-      'Helper ready (not TUN status)',
+      'Helper ready',
       name: 'macHelperOn',
       desc: '',
       args: [],
     );
   }
 
-  /// `Administrator-approved installer required`
+  /// `Approval required in macOS Settings`
   String get macHelperPending {
     return Intl.message(
-      'Administrator-approved installer required',
+      'Approval required in macOS Settings',
       name: 'macHelperPending',
       desc: '',
       args: [],
@@ -13827,20 +13832,20 @@ class AppLocalizations {
     );
   }
 
-  /// `Helper needs repair`
+  /// `Helper update required`
   String get macHelperRepair {
     return Intl.message(
-      'Helper needs repair',
+      'Helper update required',
       name: 'macHelperRepair',
       desc: '',
       args: [],
     );
   }
 
-  /// `Couldn’t confirm the helper was turned off`
+  /// `Unable to confirm helper readiness`
   String get macHelperStopUnknown {
     return Intl.message(
-      'Couldn’t confirm the helper was turned off',
+      'Unable to confirm helper readiness',
       name: 'macHelperStopUnknown',
       desc: '',
       args: [],
@@ -13867,24 +13872,19 @@ class AppLocalizations {
     );
   }
 
-  /// `Installer Instructions`
+  /// `Open macOS Settings`
   String get macHelperOpenSettings {
     return Intl.message(
-      'Installer Instructions',
+      'Open macOS Settings',
       name: 'macHelperOpenSettings',
       desc: '',
       args: [],
     );
   }
 
-  /// `Check Again`
+  /// `Retry`
   String get macHelperTryAgain {
-    return Intl.message(
-      'Check Again',
-      name: 'macHelperTryAgain',
-      desc: '',
-      args: [],
-    );
+    return Intl.message('Retry', name: 'macHelperTryAgain', desc: '', args: []);
   }
 
   /// `Repair Instructions`
@@ -14127,6 +14127,276 @@ class AppLocalizations {
     return Intl.message(
       'The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.',
       name: 'compositionRecordFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Install Flash Helper?`
+  String get macHelperInstallTitle {
+    return Intl.message(
+      'Install Flash Helper?',
+      name: 'macHelperInstallTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update Flash Helper?`
+  String get macHelperUpdateTitle {
+    return Intl.message(
+      'Update Flash Helper?',
+      name: 'macHelperUpdateTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Install`
+  String get macHelperInstall {
+    return Intl.message(
+      'Install',
+      name: 'macHelperInstall',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update`
+  String get macHelperUpdate {
+    return Intl.message('Update', name: 'macHelperUpdate', desc: '', args: []);
+  }
+
+  /// `Not Now`
+  String get macHelperNotNowInstall {
+    return Intl.message(
+      'Not Now',
+      name: 'macHelperNotNowInstall',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not Now`
+  String get macHelperNotNowUpdate {
+    return Intl.message(
+      'Not Now',
+      name: 'macHelperNotNowUpdate',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The helper manages Flash’s network core in the background. Installation requires administrator authorization. After installation, Flash will check whether the helper is available.`
+  String get macHelperInstallDetail {
+    return Intl.message(
+      'The helper manages Flash’s network core in the background. Installation requires administrator authorization. After installation, Flash will check whether the helper is available.',
+      name: 'macHelperInstallDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The installed helper is incompatible with this version of Flash. Updating may require administrator authorization.`
+  String get macHelperUpdateDetail {
+    return Intl.message(
+      'The installed helper is incompatible with this version of Flash. Updating may require administrator authorization.',
+      name: 'macHelperUpdateDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Checking helper…`
+  String get macHelperChecking {
+    return Intl.message(
+      'Checking helper…',
+      name: 'macHelperChecking',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Waiting for administrator authorization`
+  String get macHelperAuthorizing {
+    return Intl.message(
+      'Waiting for administrator authorization',
+      name: 'macHelperAuthorizing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Installing helper…`
+  String get macHelperInstalling {
+    return Intl.message(
+      'Installing helper…',
+      name: 'macHelperInstalling',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Updating helper…`
+  String get macHelperUpdating {
+    return Intl.message(
+      'Updating helper…',
+      name: 'macHelperUpdating',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Installation cancelled`
+  String get macHelperInstallCancelled {
+    return Intl.message(
+      'Installation cancelled',
+      name: 'macHelperInstallCancelled',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update cancelled`
+  String get macHelperUpdateCancelled {
+    return Intl.message(
+      'Update cancelled',
+      name: 'macHelperUpdateCancelled',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper installation failed`
+  String get macHelperInstallFailed {
+    return Intl.message(
+      'Helper installation failed',
+      name: 'macHelperInstallFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper update failed`
+  String get macHelperUpdateFailed {
+    return Intl.message(
+      'Helper update failed',
+      name: 'macHelperUpdateFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Later`
+  String get macHelperLater {
+    return Intl.message('Later', name: 'macHelperLater', desc: '', args: []);
+  }
+
+  /// `Move Flash to Applications, then reopen it to install the helper.`
+  String get macHelperMoveDetail {
+    return Intl.message(
+      'Move Flash to Applications, then reopen it to install the helper.',
+      name: 'macHelperMoveDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Allow Flash Helper in macOS System Settings, then return here and check again.`
+  String get macHelperApprovalDetail {
+    return Intl.message(
+      'Allow Flash Helper in macOS System Settings, then return here and check again.',
+      name: 'macHelperApprovalDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Administrator authorization was denied. You can retry when you are ready to authorize.`
+  String get macHelperDeniedDetail {
+    return Intl.message(
+      'Administrator authorization was denied. You can retry when you are ready to authorize.',
+      name: 'macHelperDeniedDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `macOS could not complete the operation. You can retry manually.`
+  String get macHelperFailedDetail {
+    return Intl.message(
+      'macOS could not complete the operation. You can retry manually.',
+      name: 'macHelperFailedDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The operation’s outcome is unknown. Check again to confirm helper readiness; Flash will not repeat the installation while it is unconfirmed.`
+  String get macHelperUnknownDetail {
+    return Intl.message(
+      'The operation’s outcome is unknown. Check again to confirm helper readiness; Flash will not repeat the installation while it is unconfirmed.',
+      name: 'macHelperUnknownDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The helper’s security or compatibility check failed. Use a trusted, compatible release of Flash.`
+  String get macHelperVerificationDetail {
+    return Intl.message(
+      'The helper’s security or compatibility check failed. Use a trusted, compatible release of Flash.',
+      name: 'macHelperVerificationDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The installation files could not be verified. Replace Flash with a complete, trusted copy and try again.`
+  String get macHelperPayloadDetail {
+    return Intl.message(
+      'The installation files could not be verified. Replace Flash with a complete, trusted copy and try again.',
+      name: 'macHelperPayloadDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The helper is available. This does not mean TUN or a connection is running. Retry the feature when you are ready.`
+  String get macHelperReadyDetail {
+    return Intl.message(
+      'The helper is available. This does not mean TUN or a connection is running. Retry the feature when you are ready.',
+      name: 'macHelperReadyDetail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Show Details`
+  String get macHelperMoreDetails {
+    return Intl.message(
+      'Show Details',
+      name: 'macHelperMoreDetails',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Hide Details`
+  String get macHelperLessDetails {
+    return Intl.message(
+      'Hide Details',
+      name: 'macHelperLessDetails',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Move Flash to Applications`
+  String get macHelperMoveTitle {
+    return Intl.message(
+      'Move Flash to Applications',
+      name: 'macHelperMoveTitle',
       desc: '',
       args: [],
     );

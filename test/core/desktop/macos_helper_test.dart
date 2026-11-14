@@ -175,7 +175,7 @@ void main() {
       expect(await client.status(), MacHelperState.updateRequired);
       expect(
         macHelperAction(MacHelperState.updateRequired),
-        MacHelperAction.installer,
+        MacHelperAction.update,
       );
       await expectLater(
         client.start(_session),
@@ -232,9 +232,9 @@ void main() {
   );
 
   test(
-    'installer instructions require consent and never report installation complete',
+    'installation requires consent and never infers readiness from completion',
     () async {
-      final native = _Native();
+      final native = _Native()..state = 'installerRequired';
       final client = MacHelperClient(native: native);
       await expectLater(
         client.installerInstructions(confirmed: false),
@@ -245,7 +245,8 @@ void main() {
         await client.installerInstructions(confirmed: true),
         MacHelperState.installerRequired,
       );
-      expect(native.arguments.single, {'confirmed': true});
+      expect(native.calls, ['status', 'installerInstructions']);
+      expect(native.arguments.last, {'confirmed': true});
     },
   );
 
@@ -378,15 +379,15 @@ void main() {
   );
 
   test(
-    'turn-off instructions wait for lifecycle stop without claiming removal',
+    'maintenance stops through its lifecycle owner before installation',
     () async {
-      final native = _Native();
+      final native = _Native()..state = 'installerRequired';
       final client = MacHelperClient(native: native);
       final gate = Completer<CoreLifecycleResult>();
-      final operation = MacHelperMaintenance(
-        client,
-        stop: () => gate.future,
-      ).turnOff(confirmed: true);
+      final maintenance = MacHelperMaintenance(client, stop: () => gate.future);
+      await maintenance.check();
+      native.calls.clear();
+      final operation = maintenance.install(confirmed: true);
       await expectLater(
         client.start(_session),
         throwsA(isA<MacHelperException>()),
@@ -399,15 +400,15 @@ void main() {
         ),
       );
       expect(await operation, MacHelperState.installerRequired);
-      expect(native.calls, ['installerInstructions']);
+      expect(native.calls, ['status', 'installerInstructions']);
     },
   );
 
   test(
-    'failed or superseded lifecycle stop never advances to installer instructions',
+    'failed or superseded stop locks replacement, including recheck',
     () async {
       for (final superseded in [false, true]) {
-        final native = _Native();
+        final native = _Native()..state = 'updateRequired';
         final maintenance = MacHelperMaintenance(
           MacHelperClient(native: native),
           stop: () async {
@@ -418,18 +419,20 @@ void main() {
             );
           },
         );
-        if (!superseded) {
-          await expectLater(
-            maintenance.turnOff(confirmed: true),
-            throwsStateError,
-          );
-        } else {
-          expect(
-            await maintenance.turnOff(confirmed: true),
-            MacHelperState.exitUnconfirmed,
-          );
-        }
+        await maintenance.check();
+        native.calls.clear();
+        expect(
+          await maintenance.install(confirmed: true),
+          MacHelperState.exitUnconfirmed,
+        );
         expect(native.calls, isEmpty);
+        native.state = 'enabled';
+        expect(await maintenance.check(), MacHelperState.exitUnconfirmed);
+        expect(
+          await maintenance.install(confirmed: true),
+          MacHelperState.exitUnconfirmed,
+        );
+        expect(native.calls, ['status']);
       }
     },
   );
@@ -446,16 +449,16 @@ void main() {
       }
       expect(
         macHelperAction(MacHelperState.approvalRequired),
-        MacHelperAction.installer,
+        MacHelperAction.settings,
       );
-      expect(macHelperAction(MacHelperState.enabled), MacHelperAction.disable);
+      expect(macHelperAction(MacHelperState.enabled), null);
       expect(
         macHelperAction(MacHelperState.protectedInstallationRequired),
-        MacHelperAction.installer,
+        null,
       );
       expect(
         macHelperAction(MacHelperState.installerRequired),
-        MacHelperAction.installer,
+        MacHelperAction.install,
       );
     },
   );

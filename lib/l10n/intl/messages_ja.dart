@@ -1332,28 +1332,72 @@ class MessageLookup extends MessageLookupByLibrary {
     "logsTest": MessageLookupByLibrary.simpleMessage("ログテスト"),
     "loopback": MessageLookupByLibrary.simpleMessage("UWP ループバック解除"),
     "loose": MessageLookupByLibrary.simpleMessage("ゆったり"),
+    "macHelperApprovalDetail": MessageLookupByLibrary.simpleMessage(
+      "macOS のシステム設定で Flash ヘルパーを許可し、ここに戻って再確認してください。",
+    ),
+    "macHelperAuthorizing": MessageLookupByLibrary.simpleMessage("管理者の承認を待機中"),
     "macHelperCannotUse": MessageLookupByLibrary.simpleMessage(
       "このバージョンではヘルパーを使用できません",
     ),
     "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage("再確認"),
-    "macHelperOff": MessageLookupByLibrary.simpleMessage("準備未完了"),
-    "macHelperOn": MessageLookupByLibrary.simpleMessage(
-      "ヘルパーの準備完了（TUN の状態ではありません）",
+    "macHelperChecking": MessageLookupByLibrary.simpleMessage("ヘルパーを確認中…"),
+    "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
+      "管理者の承認が拒否されました。承認できるときに再試行してください。",
     ),
-    "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage("インストーラの手順"),
-    "macHelperPending": MessageLookupByLibrary.simpleMessage(
-      "管理者承認付きインストーラが必要",
+    "macHelperFailedDetail": MessageLookupByLibrary.simpleMessage(
+      "macOS は操作を完了できませんでした。手動で再試行できます。",
     ),
+    "macHelperInstall": MessageLookupByLibrary.simpleMessage("インストール"),
+    "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage(
+      "インストールをキャンセルしました",
+    ),
+    "macHelperInstallDetail": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーはバックグラウンドで Flash のネットワークコアを管理します。インストールには管理者の承認が必要です。完了後、Flash が利用可能か確認します。",
+    ),
+    "macHelperInstallFailed": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーのインストールに失敗",
+    ),
+    "macHelperInstallTitle": MessageLookupByLibrary.simpleMessage(
+      "Flash ヘルパーをインストールしますか？",
+    ),
+    "macHelperInstalling": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーをインストール中…",
+    ),
+    "macHelperLater": MessageLookupByLibrary.simpleMessage("後で"),
+    "macHelperLessDetails": MessageLookupByLibrary.simpleMessage("詳細を隠す"),
+    "macHelperMoreDetails": MessageLookupByLibrary.simpleMessage("詳細を表示"),
+    "macHelperMoveDetail": MessageLookupByLibrary.simpleMessage(
+      "Flash を「アプリケーション」に移動して開き直してから、ヘルパーをインストールしてください。",
+    ),
+    "macHelperMoveTitle": MessageLookupByLibrary.simpleMessage(
+      "Flash を「アプリケーション」に移動",
+    ),
+    "macHelperNotNowInstall": MessageLookupByLibrary.simpleMessage(
+      "今はインストールしない",
+    ),
+    "macHelperNotNowUpdate": MessageLookupByLibrary.simpleMessage("今は更新しない"),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage("ヘルパー未インストール"),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage("ヘルパーの準備完了"),
+    "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage(
+      "macOS 設定を開く",
+    ),
+    "macHelperPayloadDetail": MessageLookupByLibrary.simpleMessage(
+      "インストールファイルを検証できません。完全で信頼できる Flash に置き換えて再試行してください。",
+    ),
+    "macHelperPending": MessageLookupByLibrary.simpleMessage("macOS 設定での許可が必要"),
     "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
       "Flash のインストーラで、管理者の承認を得てヘルパーをインストール・更新・修復・無効化してください。無効化は Flash のアンインストールではなく、再承認が必要になる場合があります。インストーラの完了だけではヘルパーや TUN の動作は確認できません。TUN 設定は保持されます。",
     ),
-    "macHelperRepair": MessageLookupByLibrary.simpleMessage("ヘルパーの修復が必要です"),
+    "macHelperReadyDetail": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーは利用可能です。TUN や接続が動作中という意味ではありません。必要な機能を再度お試しください。",
+    ),
+    "macHelperRepair": MessageLookupByLibrary.simpleMessage("ヘルパーの更新が必要"),
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage("修復の手順"),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
-      "ヘルパーの停止を確認できませんでした",
+      "ヘルパーの状態を確認できません",
     ),
     "macHelperTitle": MessageLookupByLibrary.simpleMessage("Flash ヘルパー"),
-    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("再確認"),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("再試行"),
     "macHelperTurnOff": MessageLookupByLibrary.simpleMessage("無効化の手順"),
     "macHelperTurnOn": MessageLookupByLibrary.simpleMessage("インストール手順"),
     "macHelperUnavailable": MessageLookupByLibrary.simpleMessage(
@@ -1361,6 +1405,24 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
       "現在 Flash はヘルパーに接続できないため、TUN を開始できません。TUN の設定は保持されています。",
+    ),
+    "macHelperUnknownDetail": MessageLookupByLibrary.simpleMessage(
+      "操作結果を確認できません。再確認してください。確認できるまで Flash は再インストールしません。",
+    ),
+    "macHelperUpdate": MessageLookupByLibrary.simpleMessage("更新"),
+    "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
+      "更新をキャンセルしました",
+    ),
+    "macHelperUpdateDetail": MessageLookupByLibrary.simpleMessage(
+      "インストール済みのヘルパーはこのバージョンと互換性がありません。更新には管理者の承認が必要な場合があります。",
+    ),
+    "macHelperUpdateFailed": MessageLookupByLibrary.simpleMessage("ヘルパーの更新に失敗"),
+    "macHelperUpdateTitle": MessageLookupByLibrary.simpleMessage(
+      "Flash ヘルパーを更新しますか？",
+    ),
+    "macHelperUpdating": MessageLookupByLibrary.simpleMessage("ヘルパーを更新中…"),
+    "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーの安全性または互換性の確認に失敗しました。信頼できる互換バージョンの Flash を使用してください。",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("ローカルマップ"),
     "matchCase": MessageLookupByLibrary.simpleMessage("大文字と小文字を区別"),

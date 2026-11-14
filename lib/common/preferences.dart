@@ -49,6 +49,17 @@ class Preferences {
     return _instance!;
   }
 
+  Future<bool> getMacHelperInvitationShown() async {
+    final store = await _store.value;
+    return store == null ||
+        (store.getBool('macHelperInvitationShown') ?? false);
+  }
+
+  Future<void> markMacHelperInvitationShown() async {
+    final store = await _store.value;
+    await store?.setBool('macHelperInvitationShown', true);
+  }
+
   Future<int> getVersion() async {
     final preferences = await _store.value;
     return preferences?.getInt('version') ?? 0;

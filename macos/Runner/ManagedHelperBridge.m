@@ -2,9 +2,11 @@
 #import "../Shared/HelperTrust.h"
 #import "../Shared/HelperIdentity.h"
 #import "../Shared/HelperCompatibility.h"
+#import "../Shared/LibraryConstraintPolicy.h"
 #import <ServiceManagement/ServiceManagement.h>
 #import <sys/stat.h>
 #import <errno.h>
+#import <limits.h>
 
 @interface FCManagedHelperBridge ()
 @property dispatch_queue_t queue;
@@ -14,12 +16,35 @@
 @property FCMessageValidator *validator;
 @property BOOL connectionTrusted;
 @property NSString *negotiatedCoreHash;
+@property BOOL installInFlight;
+@property BOOL installationUncertain;
 @end
 
 @implementation FCManagedHelperBridge
 - (instancetype)init {
-    if ((self = [super init])) _queue = dispatch_queue_create("com.layoute.flash.helper.bridge", DISPATCH_QUEUE_SERIAL);
+    if ((self = [super init])) {
+        _queue = dispatch_queue_create("com.layoute.flash.helper.bridge", DISPATCH_QUEUE_SERIAL);
+        _installationUncertain = [self installerPending];
+    }
     return self;
+}
+
+- (BOOL)installerPending {
+    return [NSUserDefaults.standardUserDefaults objectForKey:@"FlashHelperInstallerPending"] != nil;
+}
+
+- (BOOL)writeInstallerPending:(BOOL)pending {
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    if (pending) [defaults setBool:YES forKey:@"FlashHelperInstallerPending"];
+    else [defaults removeObjectForKey:@"FlashHelperInstallerPending"];
+    return [defaults synchronize];
+}
+
+- (BOOL)recordInstallerPending:(BOOL)pending {
+    if (!pending && !self.installationUncertain) return YES;
+    BOOL saved = [self writeInstallerPending:pending];
+    self.installationUncertain = pending || !saved;
+    return saved;
 }
 
 - (BOOL)effectsAllowed {
@@ -63,6 +88,7 @@
             case SMAppServiceStatusRequiresApproval: return @"approvalRequired";
             case SMAppServiceStatusNotRegistered: return @"off";
             case SMAppServiceStatusNotFound: return @"repairRequired";
+            default: return @"installationUnknown";
         }
     }
     return @"unsupported";
@@ -169,13 +195,225 @@
     });
 }
 
+- (NSString *)installerGate {
+    if (![self effectsAllowed]) return @"disabled";
+    if (@available(macOS 14.0, *)) return FCGUIBundleTrust(NSBundle.mainBundle.bundlePath);
+    return @"unsupported";
+}
+
+- (NSData *)validatedInstallerCodeHash {
+    SecStaticCodeRef code = NULL;
+    SecRequirementRef requirement = NULL;
+    NSString *text = FCSplitGUIRequirement();
+    if (!text || SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement)) return nil;
+    BOOL valid = SecStaticCodeCreateWithPath((__bridge CFURLRef)[NSURL fileURLWithPath:FCGUIBundle], 0, &code) == errSecSuccess;
+    valid = valid && SecStaticCodeCheckValidity(code,
+        kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode, requirement) == errSecSuccess;
+    CFDictionaryRef information = NULL;
+    valid = valid && SecCodeCopySigningInformation(code, kSecCSSigningInformation, &information) == errSecSuccess;
+    NSDictionary *info = CFBridgingRelease(information);
+    NSData *hash = valid ? info[(__bridge NSString *)kSecCodeInfoUnique] : nil;
+    CFRelease(requirement);
+    if (code) CFRelease(code);
+    return FCGUILibraryPolicy(FCGUIBundle, hash) ? hash : nil;
+}
+
+- (BOOL)installerResources:(NSData *)resources codeDirectory:(NSData *)directory matchHash:(NSData *)validatedHash {
+    NSData *cd = FCPolicyCodeDirectory(@{@0: directory ?: NSData.data});
+    if (!cd || ![validatedHash isKindOfClass:NSData.class] || validatedHash.length != 20 ||
+        ![FCPolicyDigest(cd, 20) isEqualToData:validatedHash]) return NO;
+    const uint8_t *p = cd.bytes;
+    uint32_t offset = FCRead32(p + 16, YES), special = FCRead32(p + 24, YES);
+    return special >= 3 && resources && resources.length <= UINT32_MAX &&
+        [[cd subdataWithRange:NSMakeRange(offset - 3 * 32, 32)] isEqualToData:FCPolicyDigest(resources, 32)];
+}
+
+- (NSString *)installerDigestHex:(NSData *)digest {
+    NSMutableString *hex = [NSMutableString string];
+    const uint8_t *bytes = digest.bytes;
+    for (NSUInteger index = 0; index < digest.length; index++) [hex appendFormat:@"%02x", bytes[index]];
+    return hex;
+}
+
+- (NSDictionary *)installerPayloadFromResources:(NSData *)resources manifest:(NSData *)data
+    packageHashes:(NSDictionary *)hashes codeDirectory:(NSData *)directory validatedHash:(NSData *)validatedHash
+    operation:(NSString *)operation {
+    if (![@[@"install", @"repair"] containsObject:operation] ||
+        ![self installerResources:resources codeDirectory:directory matchHash:validatedHash]) return nil;
+    id seal = [NSPropertyListSerialization propertyListWithData:resources options:0 format:nil error:nil];
+    if (![seal isKindOfClass:NSDictionary.class] || ![seal[@"files2"] isKindOfClass:NSDictionary.class] ||
+        !data || data.length > 16384) return nil;
+    NSDictionary *files = seal[@"files2"];
+    for (NSString *name in @[@"manifest.json", @"Flash-helper-install.pkg", @"Flash-helper-repair.pkg"]) {
+        id entry = files[[@"Resources/HelperInstaller" stringByAppendingPathComponent:name]];
+        if (![entry isKindOfClass:NSDictionary.class] || ![entry[@"hash2"] isKindOfClass:NSData.class] ||
+            [entry[@"hash2"] length] != 32 || [entry[@"optional"] boolValue]) return nil;
+        NSString *digest = [name isEqualToString:@"manifest.json"] ?
+            [self installerDigestHex:FCPolicyDigest(data, 32)] : hashes[name];
+        if (![[self installerDigestHex:entry[@"hash2"]] isEqualToString:digest]) return nil;
+    }
+    id manifest = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+    if (![manifest isKindOfClass:NSDictionary.class] || [manifest count] != 2 ||
+        !FCCompatibilityVersion(manifest[@"schema"], 1)) return nil;
+    id packages = manifest[@"packages"];
+    if (![packages isKindOfClass:NSDictionary.class] || [packages count] != 2) return nil;
+    for (NSString *key in @[@"install", @"repair"]) {
+        id package = packages[key];
+        NSString *name = [NSString stringWithFormat:@"Flash-helper-%@.pkg", key];
+        if (![package isKindOfClass:NSDictionary.class] || [package count] != 2 ||
+            ![package[@"file"] isEqual:name] || !FCCoreHashValid(package[@"sha256"]) ||
+            ![hashes[name] isEqual:package[@"sha256"]]) return nil;
+    }
+    NSString *root = [FCGUIBundle stringByAppendingPathComponent:@"Contents/Resources/HelperInstaller"];
+    return @{@"path": [root stringByAppendingPathComponent:packages[operation][@"file"]],
+             @"sha256": packages[operation][@"sha256"]};
+}
+
+- (NSDictionary *)installerPayload:(NSString *)operation {
+    NSString *root = [FCGUIBundle stringByAppendingPathComponent:@"Contents/Resources/HelperInstaller"];
+    NSData *resources = [NSData dataWithContentsOfFile:
+        [FCGUIBundle stringByAppendingPathComponent:@"Contents/_CodeSignature/CodeResources"]];
+    NSData *directory = FCPolicyCodeDirectory(FCPolicyFile(
+        [FCGUIBundle stringByAppendingPathComponent:@"Contents/MacOS/Flash"]));
+    NSMutableDictionary *hashes = [NSMutableDictionary dictionary];
+    NSData *manifest = nil;
+    for (NSString *name in @[@"manifest.json", @"Flash-helper-install.pkg", @"Flash-helper-repair.pkg"]) {
+        NSString *path = [root stringByAppendingPathComponent:name];
+        struct stat state;
+        char canonical[PATH_MAX];
+        if (lstat(path.fileSystemRepresentation, &state) || !S_ISREG(state.st_mode) || state.st_nlink != 1 ||
+            !realpath(path.fileSystemRepresentation, canonical) || ![path isEqualToString:@(canonical)]) return nil;
+        if ([name isEqualToString:@"manifest.json"]) {
+            if (state.st_size > 16384) return nil;
+            manifest = [NSData dataWithContentsOfFile:path];
+        } else hashes[name] = FCSHA256(path);
+    }
+    // Authenticate the retained bytes, not a later successful check of mutable bundle paths.
+    return [self installerPayloadFromResources:resources manifest:manifest packageHashes:hashes
+        codeDirectory:directory validatedHash:[self validatedInstallerCodeHash] operation:operation];
+}
+
+- (NSString *)installerScript:(NSDictionary *)payload {
+    NSString *(^quote)(NSString *) = ^NSString *(NSString *value) {
+        return [NSString stringWithFormat:@"'%@'", [value stringByReplacingOccurrencesOfString:@"'" withString:@"'\\''"]];
+    };
+    // Snapshot after authorization so the package cannot change while the system prompt is open.
+    NSString *command = [NSString stringWithFormat:
+        @"set -eu; umask 077; work=$(/usr/bin/mktemp -d /private/tmp/com.layoute.flash.helper.XXXXXXXX); "
+         "trap '/bin/rm -rf -- \"$work\"' EXIT; "
+         "/bin/cp %@ \"$work/installer.pkg\"; "
+         "actual=$(/usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C /usr/bin/shasum -a 256 \"$work/installer.pkg\"); "
+         "[ \"${actual%%%% *}\" = %@ ] || exit 65; "
+         "/usr/bin/env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin /usr/sbin/installer -pkg \"$work/installer.pkg\" -target / >/dev/null 2>&1",
+        quote(payload[@"path"]), quote(payload[@"sha256"])];
+    NSString *escaped = [[command stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
+        stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""];
+    return [NSString stringWithFormat:@"do shell script \"%@\" with administrator privileges", escaped];
+}
+
+- (NSString *)installerOutcomeForAnswer:(NSAppleEventDescriptor *)answer error:(NSDictionary *)error {
+    NSInteger number = [error[NSAppleScriptErrorNumber] integerValue];
+    return answer && !error ? @"ok" :
+        number == -128 || number == -60006 ? @"authorizationCancelled" :
+        number == -60005 || number == -1743 ? @"authorizationDenied" :
+        number > 0 && number <= 255 ? @"installationFailed" : @"installationUnknown";
+}
+
+- (void)authorizeInstaller:(NSDictionary *)payload completion:(void (^)(NSString *))completion {
+    NSString *source = [self installerScript:payload];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSDictionary *error = nil;
+        NSAppleEventDescriptor *answer = [[[NSAppleScript alloc] initWithSource:source] executeAndReturnError:&error];
+        NSString *code = [self installerOutcomeForAnswer:answer error:error];
+        dispatch_async(self.queue, ^{ completion(code); });
+    });
+}
+
+- (void)installWithArguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {
+    if (arguments.count > 1 || (arguments.count && !arguments[@"confirmed"])) {
+        completion(@{@"code": @"invalidRequest"}); return;
+    }
+    if (![arguments[@"confirmed"] isEqual:@YES] ||
+        CFGetTypeID((__bridge CFTypeRef)arguments[@"confirmed"]) != CFBooleanGetTypeID()) {
+        completion(@{@"code": @"consentRequired"}); return;
+    }
+    NSString *gate = [self installerGate];
+    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    self.installInFlight = YES;
+    void (^finish)(NSDictionary *) = ^(NSDictionary *answer) {
+        self.installInFlight = NO;
+        completion(answer);
+    };
+    [self status:^(NSDictionary *before) {
+        NSString *status = before[@"code"];
+        if ([status isEqualToString:@"enabled"]) {
+            [self recordInstallerPending:NO];
+            finish(before); return;
+        }
+        if ([status isEqualToString:@"approvalRequired"]) { finish(before); return; }
+        if (self.installationUncertain || [@[@"unavailable", @"exitUnconfirmed", @"installationUnknown"] containsObject:status]) {
+            [self recordInstallerPending:YES];
+            finish(@{@"code": @"installationUnknown", @"installationStatus": status}); return;
+        }
+        NSString *operation = [status isEqualToString:@"installerRequired"] ? @"install" :
+            [@[@"off", @"repairRequired", @"updateRequired", @"incompatible"] containsObject:status] ? @"repair" : nil;
+        if (!operation) { finish(before); return; }
+        NSDictionary *payload = [self installerPayload:operation];
+        if (!payload) { finish(@{@"code": @"installerPayloadInvalid"}); return; }
+        if (![self recordInstallerPending:YES]) {
+            finish(@{@"code": @"installationUnknown"}); return;
+        }
+        [self authorizeInstaller:payload completion:^(NSString *outcome) {
+            if ([@[@"authorizationCancelled", @"authorizationDenied", @"installationFailed"] containsObject:outcome])
+                [self recordInstallerPending:NO];
+            if (self.connection) xpc_connection_cancel(self.connection);
+            self.connection = nil; self.connectionTrusted = NO; self.negotiatedCoreHash = nil;
+            [self status:^(NSDictionary *after) {
+                NSString *status = after[@"code"];
+                NSString *code = [outcome isEqualToString:@"ok"] ?
+                    ([@[@"enabled", @"approvalRequired"] containsObject:status] ? status : @"installationUnknown") : outcome;
+                if ([status isEqualToString:@"enabled"]) [self recordInstallerPending:NO];
+                finish(@{@"code": code, @"installationStatus": status});
+            }];
+        }];
+    }];
+}
+
+- (void)openApprovalSettings:(void (^)(NSDictionary *))completion {
+    NSString *gate = [self installerGate];
+    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    NSString *status = [self installationStatus];
+    if (![status isEqualToString:@"approvalRequired"]) { [self status:completion]; return; }
+    if (@available(macOS 14.0, *)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [SMAppService openSystemSettingsLoginItems];
+            dispatch_async(self.queue, ^{ completion(@{@"code": @"approvalRequired"}); });
+        });
+    }
+}
+
 - (void)invoke:(NSString *)method arguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {
     dispatch_async(self.queue, ^{
-        if ([method isEqualToString:@"status"]) { [self status:completion]; return; }
         if (![self effectsAllowed]) { completion(@{@"code": @"disabled"}); return; }
-        if ([method isEqualToString:@"installerInstructions"]) {
-            completion(@{@"code": [arguments[@"confirmed"] isEqual:@YES] ? @"installerRequired" : @"consentRequired"});
+        if (self.installInFlight && ![@[@"stop", @"send", @"receive"] containsObject:method]) {
+            completion(@{@"code": @"installInProgress"}); return;
+        }
+        if ([method isEqualToString:@"status"]) {
+            [self status:^(NSDictionary *answer) {
+                NSString *code = answer[@"code"];
+                if ([code isEqualToString:@"enabled"]) [self recordInstallerPending:NO];
+                if (self.installationUncertain && ![code isEqualToString:@"approvalRequired"])
+                    completion(@{@"code": @"installationUnknown", @"installationStatus": code});
+                else completion(answer);
+            }];
             return;
+        }
+        if ([method isEqualToString:@"installerInstructions"]) {
+            [self installWithArguments:arguments completion:completion]; return;
+        }
+        if ([method isEqualToString:@"openApprovalSettings"]) {
+            if (arguments.count) { completion(@{@"code": @"invalidRequest"}); return; }
+            [self openApprovalSettings:completion]; return;
         }
         BOOL relay = [@[@"stop", @"send", @"receive"] containsObject:method];
         NSString *gate = relay && self.connectionTrusted ? @"trusted" : [self gate];

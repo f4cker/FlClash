@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local Mac GUI-only build, protected signing, packaging and explicit release."""
+"""Local Mac release with embedded helper installers and protected GUI signing."""
 import argparse
 from contextlib import contextmanager
 import fcntl
@@ -21,6 +21,7 @@ REPOSITORY = 'f4cker/FlClash'
 CORE_SHA256 = '0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5'
 IDENTITY = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CORE = 'Contents/MacOS/FlClashCore'
+HELPER_BUILD = '2026111402'
 BEGIN = '<!-- flclash:changelog:begin -->'
 END = '<!-- flclash:changelog:end -->'
 JSON_BEGIN = '<!-- flclash:changelog:json'
@@ -121,7 +122,7 @@ def check_service(config):
     app = Path(config['service'])
     receipt = pinned(Path(config['service_receipt']), config['service_receipt_sha256'])
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
-    require(str(info.get('CFBundleVersion')) == '2026111402', 'Only the immutable 1402 helper is supported')
+    require(str(info.get('CFBundleVersion')) == HELPER_BUILD, 'Only the immutable 1402 helper is supported')
     require(sha(app / CORE) == CORE_SHA256, 'Released service/Core changed')
     require(receipt.get('phase') == 'service' and receipt.get('static_verification') is True,
             'Missing released service signing evidence')
@@ -156,9 +157,9 @@ def notes(identity):
                          separators=(',', ':')).replace('>', '\\u003e')
     lines += [END, '', JSON_BEGIN, payload, '-->', '',
               '## macOS release scope', '',
-              'Apple Silicon (arm64) GUI-only update. Requires the existing stable helper build '
-              '**2026111402**; this DMG does not install or update the helper. First-time users '
-              'must obtain that helper separately before using this release.', '',
+              'Apple Silicon (arm64) release with embedded first-install and repair packages for '
+              'the stable helper build **2026111402**. Install or repair the helper from the app '
+              'with macOS administrator authorization; no separate helper download is required.', '',
               'Self-signed with the existing Flash identity; **not Apple Developer ID signed '
               'and not notarized**. The released helper and Core remain unchanged. Packaging '
               'and static signature checks are not a claim of full test-suite or runtime acceptance.', '']
@@ -214,6 +215,10 @@ class Release:
         fresh = output / 'new-xcode-macos/Build/Products/Release/Flash.app'
         stage = module('stage_split_payload')
         stage.stage_gui(fresh, self.app, Path(self.config['service']) / CORE, CORE_SHA256)
+        module('embedded_helper_installer').stage(
+            self.app, Path(self.config['service']), self.directory / 'helper-packages',
+            Path(self.config['service_receipt']), self.config['service_receipt_sha256'],
+            CORE_SHA256, HELPER_BUILD)
         check_version(self.app, self.identity)
         fixed, _ = static_dependencies()
         entries = fixed.inventory(self.app, fixed.trusted_verifier())
@@ -243,6 +248,7 @@ class Release:
         require(receipt.get('before', {}).get('entries') == request['unsigned_entries'],
                 'Signing receipt does not match fresh unsigned code')
         check_version(self.app, self.identity)
+        module('embedded_helper_installer').verify(self.app)
         result = module('verify_split_service').verify(
             self.app, Path(self.config['service']), path, response['gui_receipt_sha256'],
             Path(self.config['service_receipt']), self.config['service_receipt_sha256'])

@@ -1189,25 +1189,83 @@ class MessageLookup extends MessageLookupByLibrary {
     "logsTest": MessageLookupByLibrary.simpleMessage("日志测试"),
     "loopback": MessageLookupByLibrary.simpleMessage("UWP 回环解锁"),
     "loose": MessageLookupByLibrary.simpleMessage("宽松"),
+    "macHelperApprovalDetail": MessageLookupByLibrary.simpleMessage(
+      "请在 macOS 系统设置中允许 Flash 辅助程序，然后返回此处重新检查。",
+    ),
+    "macHelperAuthorizing": MessageLookupByLibrary.simpleMessage("等待管理员授权"),
     "macHelperCannotUse": MessageLookupByLibrary.simpleMessage("此版本不能启用助手"),
     "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage("重新检查"),
-    "macHelperOff": MessageLookupByLibrary.simpleMessage("尚未就绪"),
-    "macHelperOn": MessageLookupByLibrary.simpleMessage("助手已就绪（不代表 TUN 已运行）"),
-    "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage("查看安装程序说明"),
-    "macHelperPending": MessageLookupByLibrary.simpleMessage("需要管理员批准的安装程序"),
+    "macHelperChecking": MessageLookupByLibrary.simpleMessage("正在检查辅助程序…"),
+    "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
+      "管理员授权被拒绝。准备好授权后，可以手动重试。",
+    ),
+    "macHelperFailedDetail": MessageLookupByLibrary.simpleMessage(
+      "macOS 未能完成操作。你可以手动重试。",
+    ),
+    "macHelperInstall": MessageLookupByLibrary.simpleMessage("安装"),
+    "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage("已取消安装"),
+    "macHelperInstallDetail": MessageLookupByLibrary.simpleMessage(
+      "辅助程序在后台管理 Flash 的网络核心。安装时需要管理员授权；安装完成后，Flash 会检查它是否可用。",
+    ),
+    "macHelperInstallFailed": MessageLookupByLibrary.simpleMessage("辅助程序安装失败"),
+    "macHelperInstallTitle": MessageLookupByLibrary.simpleMessage(
+      "安装 Flash 辅助程序？",
+    ),
+    "macHelperInstalling": MessageLookupByLibrary.simpleMessage("正在安装辅助程序…"),
+    "macHelperLater": MessageLookupByLibrary.simpleMessage("稍后再说"),
+    "macHelperLessDetails": MessageLookupByLibrary.simpleMessage("收起详情"),
+    "macHelperMoreDetails": MessageLookupByLibrary.simpleMessage("展开详情"),
+    "macHelperMoveDetail": MessageLookupByLibrary.simpleMessage(
+      "请将 Flash 移到“应用程序”文件夹，再重新打开以安装辅助程序。",
+    ),
+    "macHelperMoveTitle": MessageLookupByLibrary.simpleMessage(
+      "请将 Flash 移到“应用程序”",
+    ),
+    "macHelperNotNowInstall": MessageLookupByLibrary.simpleMessage("暂不安装"),
+    "macHelperNotNowUpdate": MessageLookupByLibrary.simpleMessage("暂不更新"),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage("辅助程序未安装"),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage("辅助程序已就绪"),
+    "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage(
+      "打开 macOS 设置",
+    ),
+    "macHelperPayloadDetail": MessageLookupByLibrary.simpleMessage(
+      "无法验证安装文件。请更换为完整、可信的 Flash 副本后重试。",
+    ),
+    "macHelperPending": MessageLookupByLibrary.simpleMessage("需要在 macOS 设置中允许"),
     "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
       "请通过 Flash 的安装程序安装、更新、修复或停用助手，并明确批准管理员操作。停用不等于卸载 Flash，后续操作可能需要再次授权。安装程序完成不代表助手已就绪或 TUN 已运行。你的 TUN 设置已保留。",
     ),
-    "macHelperRepair": MessageLookupByLibrary.simpleMessage("助手需要修复"),
+    "macHelperReadyDetail": MessageLookupByLibrary.simpleMessage(
+      "辅助程序已可用，但不表示 TUN 或连接正在运行。准备好后，请再次启用所需功能。",
+    ),
+    "macHelperRepair": MessageLookupByLibrary.simpleMessage("辅助程序需要更新"),
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage("查看修复说明"),
-    "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage("未能确认助手是否已停用"),
-    "macHelperTitle": MessageLookupByLibrary.simpleMessage("Flash 助手"),
-    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("重新检查"),
+    "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
+      "无法确认辅助程序是否已就绪",
+    ),
+    "macHelperTitle": MessageLookupByLibrary.simpleMessage("Flash 辅助程序"),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("重试"),
     "macHelperTurnOff": MessageLookupByLibrary.simpleMessage("查看停用说明"),
     "macHelperTurnOn": MessageLookupByLibrary.simpleMessage("查看安装说明"),
     "macHelperUnavailable": MessageLookupByLibrary.simpleMessage("助手暂不可用"),
     "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
       "Flash 现在连不上助手，TUN 暂时无法启动。你的 TUN 设置已保留。",
+    ),
+    "macHelperUnknownDetail": MessageLookupByLibrary.simpleMessage(
+      "无法确认操作结果。请重新检查辅助程序是否已就绪；确认前，Flash 不会重复安装。",
+    ),
+    "macHelperUpdate": MessageLookupByLibrary.simpleMessage("更新"),
+    "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage("已取消更新"),
+    "macHelperUpdateDetail": MessageLookupByLibrary.simpleMessage(
+      "已安装的辅助程序与当前版本不兼容。更新时可能需要管理员授权。",
+    ),
+    "macHelperUpdateFailed": MessageLookupByLibrary.simpleMessage("辅助程序更新失败"),
+    "macHelperUpdateTitle": MessageLookupByLibrary.simpleMessage(
+      "更新 Flash 辅助程序？",
+    ),
+    "macHelperUpdating": MessageLookupByLibrary.simpleMessage("正在更新辅助程序…"),
+    "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
+      "辅助程序未通过安全性或兼容性检查。请使用可信且兼容的 Flash 版本。",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("本地映射"),
     "matchCase": MessageLookupByLibrary.simpleMessage("区分大小写"),

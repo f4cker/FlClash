@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/controller.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/core/spill.dart';
@@ -170,6 +171,36 @@ class TestSetupAction extends SetupAction {
   }
 }
 
+class _ManagedHelperSetupAction extends TestSetupAction {
+  MacHelperState helperState = MacHelperState.installerRequired;
+  Completer<MacHelperState>? helperCheck;
+  bool installSucceeds = false;
+  int invitations = 0;
+
+  @override
+  bool get usesManagedMacHelper => true;
+
+  @override
+  Future<MacHelperState> checkMacHelper() async =>
+      helperCheck?.future ?? helperState;
+
+  @override
+  Future<void> presentMacHelper() async {
+    invitations++;
+    if (installSucceeds) helperState = MacHelperState.enabled;
+  }
+}
+
+class _HelperRetryCoreAction extends CoreAction {
+  int starts = 0;
+
+  @override
+  Future<void> startCore() async {
+    starts++;
+    ref.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() {
@@ -295,6 +326,88 @@ void main() {
 
       expect(action.coreRunningCalls, [false]);
     });
+  });
+
+  group('managed helper feature dependency', () {
+    late _ManagedHelperSetupAction managed;
+    late _HelperRetryCoreAction core;
+    late ProviderContainer scoped;
+
+    setUp(() {
+      managed = _ManagedHelperSetupAction();
+      core = _HelperRetryCoreAction();
+      scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          setupActionProvider.overrideWith(() => managed),
+          coreActionProvider.overrideWith(() => core),
+          commonActionProvider.overrideWith(TestCommonAction.new),
+        ],
+      );
+      globalState.container = scoped;
+      scoped.read(initProvider.notifier).value = true;
+      scoped.read(setupActionProvider.notifier);
+    });
+
+    tearDown(() => scoped.dispose());
+
+    test('declining leaves GUI initialized and saved TUN unchanged', () async {
+      final saved = scoped.read(patchClashConfigProvider).tun.enable;
+      expect(await managed.setRunning(true), isFalse);
+      expect(managed.invitations, 1);
+      expect(scoped.read(initProvider), isTrue);
+      expect(scoped.read(patchClashConfigProvider).tun.enable, saved);
+      expect(managed.coreRunningCalls, isEmpty);
+      expect(core.starts, 0);
+    });
+
+    test('automatic setup never repeats the invitation', () async {
+      expect(await managed.setRunning(true, initialize: true), isFalse);
+      expect(managed.invitations, 0);
+      expect(managed.coreRunningCalls, isEmpty);
+    });
+
+    test(
+      'installation does not start feature; explicit retry uses lifecycle owner',
+      () async {
+        managed.installSucceeds = true;
+        expect(await managed.setRunning(true), isFalse);
+        expect(core.starts, 0);
+        expect(managed.coreRunningCalls, isEmpty);
+        expect(await managed.setRunning(true), isTrue);
+        expect(core.starts, 1);
+        expect(managed.applyProfileCalls, 1);
+        expect(managed.coreRunningCalls, [true]);
+        expect(managed.invitations, 1);
+      },
+    );
+
+    test(
+      'stop supersedes pending helper readiness before any lifecycle start',
+      () async {
+        managed.helperCheck = Completer();
+        final start = managed.setRunning(true);
+        await managed.setRunning(false);
+        managed.helperCheck!.complete(MacHelperState.enabled);
+        expect(await start, isFalse);
+        expect(core.starts, 0);
+        expect(managed.coreRunningCalls, [false]);
+      },
+    );
+
+    test(
+      'TUN dependency requires a fresh user retry without mutating preferences',
+      () async {
+        managed.installSucceeds = true;
+        final saved = scoped.read(patchClashConfigProvider);
+        expect(await managed.prepareTunEnable(true), isFalse);
+        expect(scoped.read(patchClashConfigProvider), saved);
+        expect(await managed.prepareTunEnable(true), isTrue);
+        expect(managed.invitations, 1);
+        expect(core.starts, 0);
+        expect(managed.coreRunningCalls, isEmpty);
+      },
+    );
   });
 
   group('mixed listener check', () {

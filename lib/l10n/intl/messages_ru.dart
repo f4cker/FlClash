@@ -1559,38 +1559,88 @@ class MessageLookup extends MessageLookupByLibrary {
       "Снятие ограничения loopback для UWP",
     ),
     "loose": MessageLookupByLibrary.simpleMessage("Свободный"),
+    "macHelperApprovalDetail": MessageLookupByLibrary.simpleMessage(
+      "Разрешите помощник Flash в Системных настройках macOS, затем вернитесь и проверьте снова.",
+    ),
+    "macHelperAuthorizing": MessageLookupByLibrary.simpleMessage(
+      "Ожидание разрешения администратора",
+    ),
     "macHelperCannotUse": MessageLookupByLibrary.simpleMessage(
       "Эта версия не может использовать помощника",
     ),
     "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage(
       "Проверить снова",
     ),
-    "macHelperOff": MessageLookupByLibrary.simpleMessage("Ещё не готов"),
-    "macHelperOn": MessageLookupByLibrary.simpleMessage(
-      "Помощник готов (это не состояние TUN)",
+    "macHelperChecking": MessageLookupByLibrary.simpleMessage(
+      "Проверка помощника…",
     ),
+    "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
+      "Администратор отказал в разрешении. Повторите попытку, когда сможете разрешить операцию.",
+    ),
+    "macHelperFailedDetail": MessageLookupByLibrary.simpleMessage(
+      "macOS не удалось завершить операцию. Можно повторить попытку вручную.",
+    ),
+    "macHelperInstall": MessageLookupByLibrary.simpleMessage("Установить"),
+    "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage(
+      "Установка отменена",
+    ),
+    "macHelperInstallDetail": MessageLookupByLibrary.simpleMessage(
+      "Помощник управляет сетевым ядром Flash в фоновом режиме. Для установки требуется разрешение администратора. После установки Flash проверит его доступность.",
+    ),
+    "macHelperInstallFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось установить помощник",
+    ),
+    "macHelperInstallTitle": MessageLookupByLibrary.simpleMessage(
+      "Установить помощник Flash?",
+    ),
+    "macHelperInstalling": MessageLookupByLibrary.simpleMessage(
+      "Установка помощника…",
+    ),
+    "macHelperLater": MessageLookupByLibrary.simpleMessage("Позже"),
+    "macHelperLessDetails": MessageLookupByLibrary.simpleMessage(
+      "Скрыть подробности",
+    ),
+    "macHelperMoreDetails": MessageLookupByLibrary.simpleMessage(
+      "Показать подробности",
+    ),
+    "macHelperMoveDetail": MessageLookupByLibrary.simpleMessage(
+      "Переместите Flash в папку «Программы» и откройте снова для установки помощника.",
+    ),
+    "macHelperMoveTitle": MessageLookupByLibrary.simpleMessage(
+      "Переместите Flash в «Программы»",
+    ),
+    "macHelperNotNowInstall": MessageLookupByLibrary.simpleMessage("Не сейчас"),
+    "macHelperNotNowUpdate": MessageLookupByLibrary.simpleMessage("Не сейчас"),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage(
+      "Помощник не установлен",
+    ),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage("Помощник готов"),
     "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage(
-      "Инструкция установщика",
+      "Открыть настройки macOS",
+    ),
+    "macHelperPayloadDetail": MessageLookupByLibrary.simpleMessage(
+      "Не удалось проверить файлы установки. Замените Flash полной надёжной копией и повторите попытку.",
     ),
     "macHelperPending": MessageLookupByLibrary.simpleMessage(
-      "Нужен установщик с одобрением администратора",
+      "Требуется разрешение в настройках macOS",
     ),
     "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
       "Для установки, обновления, восстановления или отключения помощника используйте установщик Flash с явным одобрением администратора. Отключение не удаляет Flash; одобрение может потребоваться снова. Завершение установки не подтверждает работу помощника или TUN. Настройка TUN сохранена.",
     ),
+    "macHelperReadyDetail": MessageLookupByLibrary.simpleMessage(
+      "Помощник доступен. Это не означает, что TUN или соединение работают. Повторите действие с нужной функцией.",
+    ),
     "macHelperRepair": MessageLookupByLibrary.simpleMessage(
-      "Помощник требует восстановления",
+      "Требуется обновление помощника",
     ),
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
       "Инструкция по восстановлению",
     ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
-      "Не удалось подтвердить отключение помощника",
+      "Не удалось подтвердить готовность помощника",
     ),
     "macHelperTitle": MessageLookupByLibrary.simpleMessage("Помощник Flash"),
-    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage(
-      "Проверить снова",
-    ),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("Повторить"),
     "macHelperTurnOff": MessageLookupByLibrary.simpleMessage(
       "Инструкция по отключению",
     ),
@@ -1602,6 +1652,28 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
       "Сейчас Flash не может подключиться к помощнику, поэтому TUN не запускается. Настройка TUN сохранена.",
+    ),
+    "macHelperUnknownDetail": MessageLookupByLibrary.simpleMessage(
+      "Результат операции неизвестен. Проверьте снова; Flash не будет повторять установку до подтверждения результата.",
+    ),
+    "macHelperUpdate": MessageLookupByLibrary.simpleMessage("Обновить"),
+    "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
+      "Обновление отменено",
+    ),
+    "macHelperUpdateDetail": MessageLookupByLibrary.simpleMessage(
+      "Установленный помощник несовместим с текущей версией. Для обновления может потребоваться разрешение администратора.",
+    ),
+    "macHelperUpdateFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось обновить помощник",
+    ),
+    "macHelperUpdateTitle": MessageLookupByLibrary.simpleMessage(
+      "Обновить помощник Flash?",
+    ),
+    "macHelperUpdating": MessageLookupByLibrary.simpleMessage(
+      "Обновление помощника…",
+    ),
+    "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
+      "Проверка безопасности или совместимости помощника не пройдена. Используйте надёжную совместимую версию Flash.",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Локальная подмена"),
     "matchCase": MessageLookupByLibrary.simpleMessage("Учитывать регистр"),

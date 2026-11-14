@@ -1596,40 +1596,90 @@ class MessageLookup extends MessageLookupByLibrary {
       "Exención de loopback de UWP",
     ),
     "loose": MessageLookupByLibrary.simpleMessage("Amplio"),
+    "macHelperApprovalDetail": MessageLookupByLibrary.simpleMessage(
+      "Permite el asistente de Flash en los Ajustes del Sistema de macOS y vuelve aquí para comprobarlo.",
+    ),
+    "macHelperAuthorizing": MessageLookupByLibrary.simpleMessage(
+      "Esperando autorización de administrador",
+    ),
     "macHelperCannotUse": MessageLookupByLibrary.simpleMessage(
       "Esta versión no puede usar el asistente",
     ),
     "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage(
-      "Volver a comprobar",
+      "Comprobar de nuevo",
     ),
-    "macHelperOff": MessageLookupByLibrary.simpleMessage("No está listo"),
-    "macHelperOn": MessageLookupByLibrary.simpleMessage(
-      "Asistente listo (no indica el estado de TUN)",
+    "macHelperChecking": MessageLookupByLibrary.simpleMessage(
+      "Comprobando el asistente…",
     ),
+    "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
+      "Se denegó la autorización de administrador. Reintenta cuando puedas autorizar la operación.",
+    ),
+    "macHelperFailedDetail": MessageLookupByLibrary.simpleMessage(
+      "macOS no pudo completar la operación. Puedes reintentar manualmente.",
+    ),
+    "macHelperInstall": MessageLookupByLibrary.simpleMessage("Instalar"),
+    "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage(
+      "Instalación cancelada",
+    ),
+    "macHelperInstallDetail": MessageLookupByLibrary.simpleMessage(
+      "El asistente gestiona el núcleo de red de Flash en segundo plano. La instalación requiere autorización de administrador. Después, Flash comprobará si está disponible.",
+    ),
+    "macHelperInstallFailed": MessageLookupByLibrary.simpleMessage(
+      "Error al instalar el asistente",
+    ),
+    "macHelperInstallTitle": MessageLookupByLibrary.simpleMessage(
+      "¿Instalar el asistente de Flash?",
+    ),
+    "macHelperInstalling": MessageLookupByLibrary.simpleMessage(
+      "Instalando el asistente…",
+    ),
+    "macHelperLater": MessageLookupByLibrary.simpleMessage("Más tarde"),
+    "macHelperLessDetails": MessageLookupByLibrary.simpleMessage(
+      "Ocultar detalles",
+    ),
+    "macHelperMoreDetails": MessageLookupByLibrary.simpleMessage(
+      "Mostrar detalles",
+    ),
+    "macHelperMoveDetail": MessageLookupByLibrary.simpleMessage(
+      "Mueve Flash a Aplicaciones y vuelve a abrirlo para instalar el asistente.",
+    ),
+    "macHelperMoveTitle": MessageLookupByLibrary.simpleMessage(
+      "Mover Flash a Aplicaciones",
+    ),
+    "macHelperNotNowInstall": MessageLookupByLibrary.simpleMessage("Ahora no"),
+    "macHelperNotNowUpdate": MessageLookupByLibrary.simpleMessage("Ahora no"),
+    "macHelperOff": MessageLookupByLibrary.simpleMessage(
+      "Asistente no instalado",
+    ),
+    "macHelperOn": MessageLookupByLibrary.simpleMessage("Asistente listo"),
     "macHelperOpenSettings": MessageLookupByLibrary.simpleMessage(
-      "Instrucciones del instalador",
+      "Abrir Ajustes de macOS",
+    ),
+    "macHelperPayloadDetail": MessageLookupByLibrary.simpleMessage(
+      "No se pudieron verificar los archivos de instalación. Sustituye Flash por una copia completa y fiable e inténtalo de nuevo.",
     ),
     "macHelperPending": MessageLookupByLibrary.simpleMessage(
-      "Se requiere el instalador aprobado por un administrador",
+      "Se requiere permiso en Ajustes de macOS",
     ),
     "macHelperPendingDetail": MessageLookupByLibrary.simpleMessage(
       "Usa el instalador de Flash con aprobación explícita de un administrador para instalar, actualizar, reparar o desactivar el asistente. Desactivarlo no desinstala Flash y puede requerir aprobación otra vez. Completar la instalación no confirma que el asistente o TUN estén funcionando. Tu ajuste de TUN se conserva.",
     ),
+    "macHelperReadyDetail": MessageLookupByLibrary.simpleMessage(
+      "El asistente está disponible. Esto no significa que TUN o una conexión estén activos. Vuelve a intentar la función que necesites.",
+    ),
     "macHelperRepair": MessageLookupByLibrary.simpleMessage(
-      "El asistente necesita reparación",
+      "El asistente necesita actualizarse",
     ),
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
       "Instrucciones de reparación",
     ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
-      "No se pudo confirmar la desactivación del asistente",
+      "No se puede confirmar si el asistente está listo",
     ),
     "macHelperTitle": MessageLookupByLibrary.simpleMessage(
       "Asistente de Flash",
     ),
-    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage(
-      "Comprobar de nuevo",
-    ),
+    "macHelperTryAgain": MessageLookupByLibrary.simpleMessage("Reintentar"),
     "macHelperTurnOff": MessageLookupByLibrary.simpleMessage(
       "Instrucciones para desactivar",
     ),
@@ -1641,6 +1691,28 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperUnavailableDetail": MessageLookupByLibrary.simpleMessage(
       "Flash no puede conectar con el asistente ahora, por lo que TUN no puede iniciarse. Se conserva tu ajuste de TUN.",
+    ),
+    "macHelperUnknownDetail": MessageLookupByLibrary.simpleMessage(
+      "El resultado es desconocido. Comprueba de nuevo; Flash no repetirá la instalación hasta confirmarlo.",
+    ),
+    "macHelperUpdate": MessageLookupByLibrary.simpleMessage("Actualizar"),
+    "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
+      "Actualización cancelada",
+    ),
+    "macHelperUpdateDetail": MessageLookupByLibrary.simpleMessage(
+      "El asistente instalado no es compatible con esta versión. La actualización puede requerir autorización de administrador.",
+    ),
+    "macHelperUpdateFailed": MessageLookupByLibrary.simpleMessage(
+      "Error al actualizar el asistente",
+    ),
+    "macHelperUpdateTitle": MessageLookupByLibrary.simpleMessage(
+      "¿Actualizar el asistente de Flash?",
+    ),
+    "macHelperUpdating": MessageLookupByLibrary.simpleMessage(
+      "Actualizando el asistente…",
+    ),
+    "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
+      "Falló la comprobación de seguridad o compatibilidad. Usa una versión fiable y compatible de Flash.",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Mapeo local"),
     "matchCase": MessageLookupByLibrary.simpleMessage(
