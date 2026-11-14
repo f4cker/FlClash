@@ -7,14 +7,14 @@ focused on macOS, not a new iOS app. Do not generate an iOS manifest.
 ## Current delivery preparation — 2026-11-14
 
 The supported source checkout is now root `main`. The next local macOS delivery
-is being prepared as `0.9.9+2026111406`, with embedded install/repair packages for
-first-time helper setup and repair through macOS administrator authorization.
+is being prepared as `0.9.10+2026111407`, with one embedded install package for
+helper setup through macOS administrator authorization.
 The stable helper build remains `2026111402`; its signed service and Core bytes
 must not be rebuilt or re-signed. Retained Core SHA256:
 `0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5`.
 
 This is source preparation, not a published release or runtime acceptance. Native
-installation, repair, authorization UI, helper readiness, and TUN behavior still
+installation, authorization UI, helper readiness, and TUN behavior still
 require acceptance on the intended Mac. Keep the existing self-signed identity;
 this is not Developer ID signing or notarization. Public delivery remains only
 the DMG and `SHA256SUMS`, with no separate helper PKG upload.

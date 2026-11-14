@@ -238,13 +238,13 @@
 - (NSDictionary *)installerPayloadFromResources:(NSData *)resources manifest:(NSData *)data
     packageHashes:(NSDictionary *)hashes codeDirectory:(NSData *)directory validatedHash:(NSData *)validatedHash
     operation:(NSString *)operation {
-    if (![@[@"install", @"repair"] containsObject:operation] ||
+    if (![operation isEqualToString:@"install"] ||
         ![self installerResources:resources codeDirectory:directory matchHash:validatedHash]) return nil;
     id seal = [NSPropertyListSerialization propertyListWithData:resources options:0 format:nil error:nil];
     if (![seal isKindOfClass:NSDictionary.class] || ![seal[@"files2"] isKindOfClass:NSDictionary.class] ||
         !data || data.length > 16384) return nil;
     NSDictionary *files = seal[@"files2"];
-    for (NSString *name in @[@"manifest.json", @"Flash-helper-install.pkg", @"Flash-helper-repair.pkg"]) {
+    for (NSString *name in @[@"manifest.json", @"Flash-helper-install.pkg"]) {
         id entry = files[[@"Resources/HelperInstaller" stringByAppendingPathComponent:name]];
         if (![entry isKindOfClass:NSDictionary.class] || ![entry[@"hash2"] isKindOfClass:NSData.class] ||
             [entry[@"hash2"] length] != 32 || [entry[@"optional"] boolValue]) return nil;
@@ -256,17 +256,14 @@
     if (![manifest isKindOfClass:NSDictionary.class] || [manifest count] != 2 ||
         !FCCompatibilityVersion(manifest[@"schema"], 1)) return nil;
     id packages = manifest[@"packages"];
-    if (![packages isKindOfClass:NSDictionary.class] || [packages count] != 2) return nil;
-    for (NSString *key in @[@"install", @"repair"]) {
-        id package = packages[key];
-        NSString *name = [NSString stringWithFormat:@"Flash-helper-%@.pkg", key];
-        if (![package isKindOfClass:NSDictionary.class] || [package count] != 2 ||
-            ![package[@"file"] isEqual:name] || !FCCoreHashValid(package[@"sha256"]) ||
-            ![hashes[name] isEqual:package[@"sha256"]]) return nil;
-    }
+    if (![packages isKindOfClass:NSDictionary.class] || [packages count] != 1) return nil;
+    id package = packages[@"install"];
+    NSString *name = @"Flash-helper-install.pkg";
+    if (![package isKindOfClass:NSDictionary.class] || [package count] != 2 ||
+        ![package[@"file"] isEqual:name] || !FCCoreHashValid(package[@"sha256"]) ||
+        ![hashes[name] isEqual:package[@"sha256"]]) return nil;
     NSString *root = [FCGUIBundle stringByAppendingPathComponent:@"Contents/Resources/HelperInstaller"];
-    return @{@"path": [root stringByAppendingPathComponent:packages[operation][@"file"]],
-             @"sha256": packages[operation][@"sha256"]};
+    return @{@"path": [root stringByAppendingPathComponent:name], @"sha256": package[@"sha256"]};
 }
 
 - (NSDictionary *)installerPayload:(NSString *)operation {
@@ -277,7 +274,7 @@
         [FCGUIBundle stringByAppendingPathComponent:@"Contents/MacOS/Flash"]));
     NSMutableDictionary *hashes = [NSMutableDictionary dictionary];
     NSData *manifest = nil;
-    for (NSString *name in @[@"manifest.json", @"Flash-helper-install.pkg", @"Flash-helper-repair.pkg"]) {
+    for (NSString *name in @[@"manifest.json", @"Flash-helper-install.pkg"]) {
         NSString *path = [root stringByAppendingPathComponent:name];
         struct stat state;
         char canonical[PATH_MAX];
@@ -355,10 +352,10 @@
             [self recordInstallerPending:YES];
             finish(@{@"code": @"installationUnknown", @"installationStatus": status}); return;
         }
-        NSString *operation = [status isEqualToString:@"installerRequired"] ? @"install" :
-            [@[@"off", @"repairRequired", @"updateRequired", @"incompatible"] containsObject:status] ? @"repair" : nil;
-        if (!operation) { finish(before); return; }
-        NSDictionary *payload = [self installerPayload:operation];
+        if (![@[@"installerRequired", @"off", @"updateRequired", @"incompatible"] containsObject:status]) {
+            finish(before); return;
+        }
+        NSDictionary *payload = [self installerPayload:@"install"];
         if (!payload) { finish(@{@"code": @"installerPayloadInvalid"}); return; }
         if (![self recordInstallerPending:YES]) {
             finish(@{@"code": @"installationUnknown"}); return;

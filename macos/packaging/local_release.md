@@ -1,14 +1,14 @@
-# Local macOS release with embedded helper installers
+# Local macOS release with an embedded helper installer
 
 This is a local Mac command, not a GitHub runner workflow. It does not enable the
 upstream Telegram/Homebrew publishing integrations. Gitta owns merging `main` and
 creating/pushing the matching tag. Do that before building: the CLI refuses a dirty
 checkout, another branch, mismatched submodules, or a tag not at `main` HEAD.
 
-The arm64 release embeds first-install and repair packages for the unchanged stable
+The arm64 release embeds one install package for the unchanged stable
 helper build `2026111402` and retains Core SHA256
 `0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5`.
-The app can request macOS administrator authorization to install or repair that
+The app can request macOS administrator authorization to install that
 helper; first-time users do not need a separate helper download. No helper PKGs
 are uploaded as separate public assets. Version/tag selection remains a separate
 release coordination step.
@@ -49,16 +49,16 @@ a direct invocation of the old hardcoded tracked signer is not sufficient.
 
 ## Commands
 
-For the pending `0.9.9+2026111406` local artifact, use separate phases after review,
-commit, and local tag coordination. A matching local `v0.9.9` tag at clean `main`
+For the pending `0.9.10+2026111407` local artifact, use separate phases after review,
+commit, and local tag coordination. A matching local `v0.9.10` tag at clean `main`
 HEAD is required even for `check`; this tool never creates or moves tags.
 These phases do not create a GitHub draft or publish:
 
 ```sh
-python3 macos/packaging/local_release.py check --tag v0.9.9 --run release-099-embedded
-python3 macos/packaging/local_release.py build --tag v0.9.9 --run release-099-embedded
-python3 macos/packaging/local_release.py sign --tag v0.9.9 --run release-099-embedded
-python3 macos/packaging/local_release.py package --tag v0.9.9 --run release-099-embedded
+python3 macos/packaging/local_release.py check --tag v0.9.10 --run release-0910-install-only
+python3 macos/packaging/local_release.py build --tag v0.9.10 --run release-0910-install-only
+python3 macos/packaging/local_release.py sign --tag v0.9.10 --run release-0910-install-only
+python3 macos/packaging/local_release.py package --tag v0.9.10 --run release-0910-install-only
 ```
 
 Use a new run name after a partial failure. Each phase requires the same source,
@@ -75,7 +75,7 @@ python3 macos/packaging/local_release.py run --tag vX.Y.Z --run release-XYZ
 
 `check` validates local source/config/service inputs without building, signing or
 network. `run` actually builds a fresh unsigned GUI, stages the exact retained
-Core, builds and embeds install/repair packages from the exact signed stable service,
+Core, builds and embeds one install package from the exact signed stable service,
 invokes the protected GUI signer, statically verifies signatures and receipts,
 creates the styled DMG through `build_split_packages.sh gui-only`, verifies its
 read-only mounted bundle copy, and creates/verifies a GitHub **draft**. It does not
@@ -110,19 +110,18 @@ After `stage_gui` and before the unsigned GUI inventory/signing request, the loc
 CLI runs `build_split_packages.sh embedded-released-service`. This narrow route
 verifies the existing service signing receipt, fixed identity, exact stable build
 and Core, then reuses the helper-update route's package construction, raw package
-normalization, transactional install/repair scripts, and exact signed
+normalization, transactional install scripts, and exact signed
 `FlashMaintenance`. It does not compile or re-sign service code and does not claim
 new compile evidence. The existing helper-update route still requires its compile
 receipt. Neither route executes the delivered installer scripts during packaging.
 
-Both expanded packages are checked with `stage_split_payload.verify_expanded`:
+The expanded install package is checked with `stage_split_payload.verify_expanded`:
 service payload inventory, reviewed scripts, executable modes, and signed
 maintenance bytes must match exactly. Package work stays under the ignored run's
 `helper-packages/`; only these resources are copied into the unsigned GUI:
 
 ```text
 Contents/Resources/HelperInstaller/Flash-helper-install.pkg
-Contents/Resources/HelperInstaller/Flash-helper-repair.pkg
 Contents/Resources/HelperInstaller/manifest.json
 ```
 
@@ -133,18 +132,20 @@ package bytes (no plist and no additional service fields):
 {
   "schema": 1,
   "packages": {
-    "install": {"file": "Flash-helper-install.pkg", "sha256": "<SHA256>"},
-    "repair": {"file": "Flash-helper-repair.pkg", "sha256": "<SHA256>"}
+    "install": {"file": "Flash-helper-install.pkg", "sha256": "<SHA256>"}
   }
 }
 ```
 
 Resources have mode `0644` and their directories `0755`, including under umask
 `077`. They enter the unsigned inventory and outer app signature together with the
-fresh GUI. Exact-copy verification of the mounted DMG includes them. The packages
-are internal resources, not separately published or Developer ID signed PKGs;
+fresh GUI. Exact-copy verification of the mounted DMG includes them. The package
+is an internal resource, not separately published or Developer ID signed;
 the installed service binaries retain their existing signatures. Packaging/static
-checks do not establish first-install, repair, authorization UI, or runtime acceptance.
+checks do not establish installation, authorization UI, or runtime acceptance.
+The embedded contract rejects repair entries and extra packages. The standalone
+helper-update route retains its install, repair, disable, and remove operations;
+the embedded route builds only install and does not add recovery behavior.
 
 ## Protected adapter contract (version 1)
 

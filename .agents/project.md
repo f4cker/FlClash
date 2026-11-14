@@ -1,7 +1,7 @@
 # Project Context
 
 For the transported checkout, read [PROJECT-MOVE.md](../PROJECT-MOVE.md) first:
-its current delivery section distinguishes the pending `0.9.9+2026111406` embedded-helper
+its current delivery section distinguishes the pending `0.9.10+2026111407` embedded-helper
 release from the historical move snapshot and its preservation boundaries.
 [Local macOS release](../macos/packaging/local_release.md) defines the current phased
 packaging route. Stable helper `2026111402` and signed Core bytes remain unchanged;

@@ -97,7 +97,7 @@ static void Put32(NSMutableData *data, NSUInteger offset, uint32_t value) {
     for (NSUInteger index = 0; index < 4; index++) bytes[offset + index] = value >> (24 - index * 8);
 }
 
-static NSDictionary *RetainedFixture(NSString *packageText) {
+static NSDictionary *RetainedFixture(NSString *packageText, BOOL extraPackage) {
     NSData *package = [packageText dataUsingEncoding:NSUTF8StringEncoding];
     NSData *digest = FCPolicyDigest(package, 32);
     NSMutableString *hex = [NSMutableString string];
@@ -106,11 +106,12 @@ static NSDictionary *RetainedFixture(NSString *packageText) {
     NSMutableDictionary *packages = [NSMutableDictionary dictionary];
     NSMutableDictionary *hashes = [NSMutableDictionary dictionary];
     NSMutableDictionary *files = [NSMutableDictionary dictionary];
-    for (NSString *key in @[@"install", @"repair"]) {
+    for (NSString *key in @[@"install"]) {
         NSString *name = [NSString stringWithFormat:@"Flash-helper-%@.pkg", key];
         packages[key] = @{@"file": name, @"sha256": hex}; hashes[name] = hex;
         files[[@"Resources/HelperInstaller" stringByAppendingPathComponent:name]] = @{@"hash2": digest};
     }
+    if (extraPackage) packages[@"repair"] = packages[@"install"];
     NSData *manifest = [NSJSONSerialization dataWithJSONObject:@{@"schema": @1, @"packages": packages} options:0 error:nil];
     files[@"Resources/HelperInstaller/manifest.json"] = @{@"hash2": FCPolicyDigest(manifest, 32)};
     NSData *resources = [NSPropertyListSerialization dataWithPropertyList:@{@"files2": files}
@@ -170,12 +171,15 @@ int main(void) {
         assert([Install(bridge) isEqual:@"approvalRequired"]);
         assert(bridge.authorizations == 0);
 
-        for (NSString *state in @[@"installerRequired", @"repairRequired", @"off", @"updateRequired", @"incompatible"]) {
+        for (NSString *state in @[@"installerRequired", @"off", @"updateRequired", @"incompatible"]) {
             bridge = FreshMock(); bridge.state = state;
             assert([Install(bridge) isEqual:@"enabled"]);
-            assert([bridge.operation isEqual:[state isEqual:@"installerRequired"] ? @"install" : @"repair"]);
+            assert([bridge.operation isEqual:@"install"]);
             assert(bridge.authorizations == 1 && bridge.hellos == 1);
         }
+        bridge = FreshMock(); bridge.state = @"repairRequired";
+        assert([Install(bridge) isEqual:@"repairRequired"]);
+        assert(bridge.authorizations == 0 && !bridge.operation && !MockPending);
         bridge = FreshMock(); bridge.invalidPayload = YES;
         assert([Install(bridge) isEqual:@"installerPayloadInvalid"]);
         assert(bridge.authorizations == 0);
@@ -253,10 +257,12 @@ int main(void) {
         bridge = FreshMock(); MockWriteFails = YES;
         assert([Install(bridge) isEqual:@"installationUnknown"] && bridge.authorizations == 0);
         MockWriteFails = NO;
-        NSDictionary *original = RetainedFixture(@"signed package bytes");
-        NSDictionary *substituted = RetainedFixture(@"attacker package bytes");
+        NSDictionary *original = RetainedFixture(@"signed package bytes", NO);
+        NSDictionary *substituted = RetainedFixture(@"attacker package bytes", NO);
         RetainedPayloadMock *retained = RetainedMock(original);
         assert([Install(retained) isEqual:@"enabled"] && retained.authorizations == 1);
+        retained = RetainedMock(RetainedFixture(@"signed package bytes", YES));
+        assert([Install(retained) isEqual:@"installerPayloadInvalid"] && retained.authorizations == 0);
         for (NSArray *replaced in @[@[@"hashes"], @[@"manifest", @"hashes"],
                 @[@"resources", @"manifest", @"hashes"], @[@"resources", @"manifest", @"hashes", @"directory"]]) {
             NSMutableDictionary *swapped = [original mutableCopy];

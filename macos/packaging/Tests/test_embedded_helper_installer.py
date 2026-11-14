@@ -69,7 +69,7 @@ class EmbeddedInstallerTests(unittest.TestCase):
         return EMBED.stage(self.gui, self.service, self.output, self.receipt, self.receipt_sha256,
                            self.core_sha256, '42')
 
-    def test_embeds_only_install_repair_and_manifest_before_signing(self):
+    def test_embeds_only_install_and_manifest_before_signing(self):
         before = PAYLOAD.SPLIT.inventory(self.service)
         previous_umask = os.umask(0o077)
         try:
@@ -81,7 +81,11 @@ class EmbeddedInstallerTests(unittest.TestCase):
         self.assertEqual(manifest, {'schema': 1, 'packages': {
             operation: {'file': name, 'sha256': EMBED.sha(self.output / name)}
             for operation, name in EMBED.PACKAGES.items()}})
+        self.assertEqual(EMBED.PACKAGES, {'install': 'Flash-helper-install.pkg'})
+        self.assertEqual(set(manifest['packages']), {'install'})
         self.assertEqual(EMBED.verify(self.gui), manifest)
+        self.assertEqual({p.name for p in (self.gui / EMBED.RESOURCE).iterdir()},
+                         {'manifest.json', 'Flash-helper-install.pkg'})
         resources = self.gui / EMBED.RESOURCE
         self.assertEqual(resources.stat().st_mode & 0o777, 0o755)
         self.assertEqual(resources.parent.stat().st_mode & 0o777, 0o755)
@@ -171,7 +175,7 @@ class EmbeddedInstallerTests(unittest.TestCase):
             manifest = self.stage()
         directory = self.gui / EMBED.RESOURCE
         manifest_path = directory / 'manifest.json'
-        for mutation in ('hash', 'path', 'schema', 'missing', 'extra'):
+        for mutation in ('hash', 'path', 'schema', 'missing', 'extra', 'repair'):
             data = copy.deepcopy(manifest)
             if mutation == 'hash':
                 data['packages']['install']['sha256'] = '0' * 64
@@ -180,18 +184,21 @@ class EmbeddedInstallerTests(unittest.TestCase):
             elif mutation == 'schema':
                 data['schema'] = True
             elif mutation == 'missing':
-                del data['packages']['repair']
+                del data['packages']['install']
+            elif mutation == 'repair':
+                data['packages']['repair'] = {'file': 'Flash-helper-repair.pkg', 'sha256': '0' * 64}
             else:
                 data['packages']['disable'] = data['packages']['install']
             manifest_path.write_text(json.dumps(data))
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 EMBED.verify(self.gui)
         manifest_path.write_text(json.dumps(manifest))
-        extra = directory / 'Flash-helper-remove.pkg'
-        extra.write_bytes(b'extra')
-        with self.assertRaisesRegex(ValueError, 'Unexpected embedded'):
-            EMBED.verify(self.gui)
-        extra.unlink()
+        for name in ('Flash-helper-repair.pkg', 'Flash-helper-remove.pkg'):
+            extra = directory / name
+            extra.write_bytes(b'extra')
+            with self.subTest(extra=name), self.assertRaisesRegex(ValueError, 'Unexpected embedded'):
+                EMBED.verify(self.gui)
+            extra.unlink()
         package = directory / EMBED.PACKAGES['install']
         package.unlink()
         package.symlink_to(self.output / package.name)
@@ -201,8 +208,7 @@ class EmbeddedInstallerTests(unittest.TestCase):
     def test_embedded_shell_route_reuses_package_loop_without_compile_or_dmg(self):
         source = (PACKAGING / 'build_split_packages.sh').read_text()
         self.assertIn('"$mode" != embedded-released-service', source)
-        self.assertIn('operations=(install repair)', source)
-        self.assertIn('if [[ "$mode" == helper-update ]]; then\n  operations+=(disable remove)', source)
+        self.assertIn('operations=(install)\nif [[ "$mode" == helper-update ]]; then\n  operations+=(repair disable remove)\nfi', source)
         embedded_gate = source.split('verify_evidence() {')[1].split('  else')[0]
         self.assertIn('embedded_helper_installer.py', embedded_gate)
         self.assertNotIn('compile', embedded_gate)

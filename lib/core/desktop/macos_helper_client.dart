@@ -187,7 +187,6 @@ final class MacHelperClient {
         MacHelperState.installerRequired,
         MacHelperState.updateRequired,
         MacHelperState.incompatible,
-        MacHelperState.repairRequired,
       }.contains(state)) {
         return state;
       }

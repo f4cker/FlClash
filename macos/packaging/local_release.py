@@ -157,8 +157,8 @@ def notes(identity):
                          separators=(',', ':')).replace('>', '\\u003e')
     lines += [END, '', JSON_BEGIN, payload, '-->', '',
               '## macOS release scope', '',
-              'Apple Silicon (arm64) release with embedded first-install and repair packages for '
-              'the stable helper build **2026111402**. Install or repair the helper from the app '
+              'Apple Silicon (arm64) release with one embedded install package for '
+              'the stable helper build **2026111402**. Install the helper from the app '
               'with macOS administrator authorization; no separate helper download is required.', '',
               'Self-signed with the existing Flash identity; **not Apple Developer ID signed '
               'and not notarized**. The released helper and Core remain unchanged. Packaging '

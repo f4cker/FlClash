@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Embed verified packages of an immutable released service before GUI signing."""
+"""Embed the verified install package of an immutable released service before GUI signing."""
 import argparse
 import hashlib
 import importlib.util
@@ -14,7 +14,7 @@ import sys
 
 PACKAGING = Path(__file__).resolve().parent
 RESOURCE = Path('Contents/Resources/HelperInstaller')
-PACKAGES = {operation: 'Flash-helper-' + operation + '.pkg' for operation in ('install', 'repair')}
+PACKAGES = {'install': 'Flash-helper-install.pkg'}
 CORE = 'Contents/MacOS/FlClashCore'
 
 

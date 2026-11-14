@@ -64,9 +64,9 @@ split verify-copy --kind service --original "$service" --copy "$work/Library/App
 components="$output/components.plist"
 /usr/bin/pkgbuild --analyze --root "$work" "$components"
 python "$source_dir/pin_component_policy.py" "$components"
-operations=(install repair)
+operations=(install)
 if [[ "$mode" == helper-update ]]; then
-  operations+=(disable remove)
+  operations+=(repair disable remove)
 fi
 for operation in "${operations[@]}"; do
   scripts="$output/$operation-scripts"

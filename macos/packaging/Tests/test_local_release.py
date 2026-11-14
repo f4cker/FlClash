@@ -162,9 +162,10 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertIn(RELEASE.BEGIN, body)
         self.assertIn(RELEASE.END, body)
         self.assertNotIn('-->', payload)
-        for text in ('arm64', '2026111402', 'embedded first-install', 'not notarized', 'Self-signed', 'runtime acceptance'):
+        for text in ('arm64', '2026111402', 'one embedded install package', 'not notarized', 'Self-signed', 'runtime acceptance'):
             self.assertIn(text, body)
         self.assertIn('no separate helper download', body)
+        self.assertNotIn('repair', body)
         self.assertNotIn('helper separately', body)
         with self.assertRaises(ValueError):
             RELEASE.notes(dict(self.identity, tag='v0.9.9'))

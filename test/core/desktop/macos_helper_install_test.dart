@@ -198,6 +198,7 @@ void main() {
   );
 
   for (final state in [
+    'repairRequired',
     'protectedInstallationRequired',
     'approvalRequired',
     'signingRequired',
@@ -212,6 +213,48 @@ void main() {
       expect(native.calls, everyElement('status'));
     });
   }
+
+  test(
+    'repairRequired neither stops Core nor offers startup installation',
+    () async {
+      final native = InstallNative()..state = 'repairRequired';
+      var stops = 0;
+      var prompts = 0;
+      final flow = MacHelperMaintenance(
+        MacHelperClient(native: native, safeMode: () => false),
+        stop: () async {
+          stops++;
+          return const CoreLifecycleResult(
+            revision: 1,
+            outcome: CoreLifecycleOutcome.applied,
+          );
+        },
+      );
+      expect(await flow.check(), MacHelperState.repairRequired);
+      expect(flow.canInstall, isFalse);
+      expect(
+        await flow.install(confirmed: true),
+        MacHelperState.repairRequired,
+      );
+      expect(
+        await prepareMacHelperStartup(
+          maintenance: flow,
+          foreground: true,
+          wasOffered: () async => false,
+          markOffered: () async {
+            prompts++;
+          },
+          show: () async {
+            prompts++;
+          },
+        ),
+        isFalse,
+      );
+      expect(stops, 0);
+      expect(prompts, 0);
+      expect(native.calls, everyElement('status'));
+    },
+  );
 
   test(
     'startup decline persists across launches; passive readiness still runs',

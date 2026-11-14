@@ -31,7 +31,6 @@ final class MacHelperMaintenance extends ChangeNotifier {
     MacHelperState.installerRequired ||
     MacHelperState.updateRequired ||
     MacHelperState.incompatible ||
-    MacHelperState.repairRequired ||
     MacHelperState.cancelled ||
     MacHelperState.denied ||
     MacHelperState.failed => true,
@@ -78,9 +77,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
       if (_stopUnknown) return MacHelperState.exitUnconfirmed;
       if (!canInstall) return _state ?? MacHelperState.unknown;
       _update = switch (_state) {
-        MacHelperState.updateRequired ||
-        MacHelperState.incompatible ||
-        MacHelperState.repairRequired => true,
+        MacHelperState.updateRequired || MacHelperState.incompatible => true,
         MacHelperState.cancelled ||
         MacHelperState.failed ||
         MacHelperState.denied => _update,

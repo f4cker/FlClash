@@ -114,6 +114,28 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('repairRequired offers only safe guidance and recheck', (
+    tester,
+  ) async {
+    final native = InstallNative()..state = 'repairRequired';
+    final flow = makeMaintenance(native);
+    await flow.check();
+    await pumpHost(tester, flow);
+    final l = currentAppLocalizations;
+    expect(find.text(l.macHelperCannotUse), findsOneWidget);
+    expect(find.text(l.macHelperUnavailableDetail), findsOneWidget);
+    expect(find.text(l.macHelperCheckAgain), findsOneWidget);
+    expect(find.text(l.macHelperInstall), findsNothing);
+    expect(find.text(l.macHelperUpdate), findsNothing);
+    expect(find.text(l.macHelperTryAgain), findsNothing);
+    expect(find.text(l.macHelperUpdateDetail), findsNothing);
+    await tester.tap(find.text(l.macHelperCheckAgain));
+    await tester.pumpAndSettle();
+    expect(native.calls, ['status', 'status']);
+    await tester.tap(find.text(l.macHelperLater));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('outside Applications explains move, never offers install', (
     tester,
   ) async {

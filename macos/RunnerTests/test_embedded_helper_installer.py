@@ -8,10 +8,10 @@ TRUST = (ROOT / 'macos/Shared/HelperTrust.m').read_text()
 
 
 class EmbeddedHelperInstallerSourceTests(unittest.TestCase):
-    def test_fixed_json_manifest_and_both_packages_are_sealed(self):
+    def test_fixed_json_manifest_and_only_install_package_are_sealed(self):
         payload = BRIDGE.split('- (NSData *)validatedInstallerCodeHash')[1].split('- (NSString *)installerScript:')[0]
         for token in ('Contents/Resources/HelperInstaller', 'manifest.json',
-                      'Flash-helper-install.pkg', 'Flash-helper-repair.pkg',
+                      'Flash-helper-install.pkg', '[packages count] != 1', 'packages[@"install"]',
                       'Contents/_CodeSignature/CodeResources', 'seal[@"files2"]',
                       'entry[@"hash2"]', 'entry[@"optional"]',
                       'S_ISREG(state.st_mode)', 'state.st_nlink != 1', 'realpath(',
@@ -27,6 +27,8 @@ class EmbeddedHelperInstallerSourceTests(unittest.TestCase):
                         validation.index('SecCodeCopySigningInformation(code,'))
         self.assertIn('kSecCodeInfoUnique', validation)
         self.assertNotIn('manifest.plist', payload)
+        self.assertNotIn('Flash-helper-repair.pkg', BRIDGE)
+        self.assertNotIn('@"repair"', BRIDGE)
         self.assertIn('FCGUIBundleTrust(NSBundle.mainBundle.bundlePath)', BRIDGE)
         self.assertIn('kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode', TRUST)
 
@@ -39,7 +41,24 @@ class EmbeddedHelperInstallerSourceTests(unittest.TestCase):
         install = BRIDGE.split('- (void)installWithArguments:')[1].split('- (void)openApprovalSettings:')[0]
         self.assertLess(install.index('consentRequired'), install.index('self.installInFlight = YES'))
         self.assertLess(install.index('isEqualToString:@"enabled"'), install.index('[self installerPayload:'))
-        self.assertIn('[@[@"off", @"repairRequired", @"updateRequired", @"incompatible"]', install)
+        self.assertIn('[@[@"installerRequired", @"off", @"updateRequired", @"incompatible"]', install)
+        self.assertNotIn('@"repairRequired"', install)
+        self.assertIn('[self installerPayload:@"install"]', install)
+
+    def test_existing_install_transaction_supports_replacement_not_recovery(self):
+        preinstall = (ROOT / 'macos/packaging/installer/install/preinstall').read_text()
+        postinstall = (ROOT / 'macos/packaging/installer/install/postinstall').read_text()
+        maintenance = (ROOT / 'macos/PrivilegedHelper/Maintenance.m').read_text()
+        begin = maintenance.split('static BOOL FCBegin(BOOL repair)')[1].split('static BOOL FCStageReady')[0]
+        self.assertIn('"$guard" beginInstall', preinstall)
+        self.assertNotIn('beginRepair', preinstall)
+        self.assertIn('if ([action isEqual:@"beginInstall"]) return FCResult(FCBegin(NO)', maintenance)
+        self.assertIn('FCAbsent(FCLock())', begin)
+        self.assertIn('!FCLegacyPlistTrustedForMaintenance()', begin)
+        self.assertIn('NSDictionary *state = repair ? FCTransaction() : nil', begin)
+        self.assertIn('if (!repair || !FCFirstInstallPlistRecoveryAllowed', begin)
+        self.assertLess(postinstall.index('" prepare'), postinstall.index('/bin/launchctl bootout'))
+        self.assertLess(postinstall.index('"$guard" quiescent'), postinstall.index('"$guard" commitInstall'))
 
     def test_system_authorization_uses_verified_private_snapshot(self):
         script = BRIDGE.split('- (NSString *)installerScript:')[1].split('- (NSString *)installerOutcomeForAnswer:')[0]

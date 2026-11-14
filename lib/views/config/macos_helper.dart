@@ -17,12 +17,12 @@ MacHelperAction? macHelperAction(MacHelperState state) => switch (state) {
   MacHelperState.off ||
   MacHelperState.installerRequired => MacHelperAction.install,
   MacHelperState.updateRequired ||
-  MacHelperState.repairRequired ||
   MacHelperState.incompatible => MacHelperAction.update,
   MacHelperState.approvalRequired => MacHelperAction.settings,
   MacHelperState.cancelled ||
   MacHelperState.failed ||
   MacHelperState.denied => MacHelperAction.retry,
+  MacHelperState.repairRequired ||
   MacHelperState.unavailable ||
   MacHelperState.unknown ||
   MacHelperState.exitUnconfirmed => MacHelperAction.recheck,
@@ -36,7 +36,6 @@ String macHelperLabel(AppLocalizations l, MacHelperState state) =>
       MacHelperState.approvalRequired => l.macHelperPending,
       MacHelperState.protectedInstallationRequired => l.macHelperMoveTitle,
       MacHelperState.updateRequired ||
-      MacHelperState.repairRequired ||
       MacHelperState.incompatible => l.macHelperRepair,
       MacHelperState.unavailable ||
       MacHelperState.unknown ||
@@ -70,8 +69,8 @@ String _detail(AppLocalizations l, MacHelperMaintenance flow) {
     MacHelperState.off ||
     MacHelperState.installerRequired => l.macHelperInstallDetail,
     MacHelperState.updateRequired ||
-    MacHelperState.incompatible ||
-    MacHelperState.repairRequired => l.macHelperUpdateDetail,
+    MacHelperState.incompatible => l.macHelperUpdateDetail,
+    MacHelperState.repairRequired => l.macHelperUnavailableDetail,
     MacHelperState.protectedInstallationRequired => l.macHelperMoveDetail,
     MacHelperState.approvalRequired => l.macHelperApprovalDetail,
     MacHelperState.denied => l.macHelperDeniedDetail,
