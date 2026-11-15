@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.12 (2026-11-15)
+
+**Bug Fixes**
+
+- **macos** When silent startup is blocked by the helper, Flash now shows the reason and an action instead of remaining stuck on “Connecting.” (8fb284a)
+
 ## v0.9.11 (2026-11-14)
 
 **Bug Fixes**
