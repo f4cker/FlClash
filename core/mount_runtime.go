@@ -2,12 +2,16 @@ package core
 
 import (
 	"cmp"
+	"crypto/md5"
+	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/component/age"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/tunnel"
@@ -20,7 +24,8 @@ const (
 )
 
 var (
-	mountStateMu sync.Mutex
+	mountStateMu    sync.Mutex
+	mountGeneration uint64
 	// What the running config was built with; nil when it holds no mounts.
 	appliedMountReport *MountReport
 	// The running config is the one that rejects every connection.
@@ -90,7 +95,12 @@ func followMountSelections(selected map[string]string, report *MountReport) map[
 func setMountState(report *MountReport, blocked, fallback bool) {
 	mountStateMu.Lock()
 	defer mountStateMu.Unlock()
+	previous := appliedMountReport
 	appliedMountReport = report
+	if previous != report {
+		previous.discardInputs()
+	}
+	mountGeneration++
 	runningConfigBlocked = blocked
 	runningConfigDefault = fallback
 }
@@ -107,7 +117,9 @@ func mountSetupOf(params *SetupParams) *MountSetup {
 	if params.Mounts == nil {
 		return nil
 	}
-	return withManagedNames(params.Mounts, params.Tailscale)
+	setup := withManagedNames(params.Mounts, params.Tailscale)
+	setup.stageInputs = true
+	return setup
 }
 
 func withManagedNames(mounts *MountSetup, tailscale *TailscaleSetup) *MountSetup {
@@ -151,7 +163,8 @@ func preflightMountSetup(mounts *MountSetup) *MountSetup {
 }
 
 func checkMountedSetup(params *SetupParams) error {
-	document, _, err := mountedDocument(params.Base, runningConfigPath(), mountSetupOf(params))
+	document, report, err := mountedDocument(params.Base, runningConfigPath(), mountSetupOf(params))
+	defer report.discardInputs()
 	if err != nil {
 		return err
 	}
@@ -311,8 +324,9 @@ func handleMountPreflight(params MountPreflightParams) (*MountPreflight, error) 
 }
 
 type MountTargetParams struct {
-	Base   *SetupBase `json:"base,omitempty"`
-	Config string     `json:"config,omitempty"`
+	Base       *SetupBase `json:"base,omitempty"`
+	Config     string     `json:"config,omitempty"`
+	Projection bool       `json:"projection,omitempty"`
 	// Set when the target's apply puts the managed Tailscale rules first.
 	ManagedTarget int64 `json:"managed-target,omitempty"`
 }
@@ -322,7 +336,13 @@ type MountTargetParams struct {
 func handleInspectMountTarget(params MountTargetParams) (*MountTarget, error) {
 	defer scheduleLoadMemoryRelease()
 	var root *yaml.Node
-	if params.Base != nil {
+	if params.Projection {
+		var err error
+		root, err = mountTargetProjection(params)
+		if err != nil {
+			return nil, err
+		}
+	} else if params.Base != nil {
 		document, _, err := mergeProfileBase(params.Base, false, nil)
 		if err != nil {
 			return nil, err
@@ -344,6 +364,61 @@ func handleInspectMountTarget(params MountTargetParams) (*MountTarget, error) {
 		return nil, err
 	}
 	return &target, nil
+}
+
+func mountTargetProjection(params MountTargetParams) (*yaml.Node, error) {
+	buf := []byte(params.Config)
+	if params.Base != nil {
+		var err error
+		buf, err = os.ReadFile(params.Base.Path)
+		if err != nil {
+			return nil, err
+		}
+		buf, err = age.DecryptBytes(buf)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var document yaml.Node
+	if err := yaml.Unmarshal(buf, &document); err != nil {
+		return nil, err
+	}
+	root, err := documentMapping(&document)
+	if err != nil {
+		return nil, err
+	}
+	projection := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	for _, key := range []string{"proxies", "proxy-groups", "proxy-providers"} {
+		if value := mappingValue(root, key); value != nil {
+			setMappingValue(projection, key, value)
+		}
+	}
+	if params.Base != nil {
+		providers := mappingValue(projection, "proxy-providers")
+		if providers != nil {
+			var definitions map[string]map[string]any
+			if err := providers.Decode(&definitions); err != nil {
+				return nil, err
+			}
+			for name, definition := range definitions {
+				if definition == nil || definition["type"] == "inline" {
+					continue
+				}
+				key := "proxy-providers/" + name
+				if url, ok := definition["url"].(string); ok && url != "" {
+					key = name + "@" + url
+				}
+				id := strings.TrimSuffix(filepath.Base(params.Base.Path), filepath.Ext(params.Base.Path))
+				definition["path"] = filepath.Join(filepath.Dir(params.Base.Path), "providers", id, "proxies", fmt.Sprintf("%x", md5.Sum([]byte(key))))
+			}
+			var confined yaml.Node
+			if err := confined.Encode(definitions); err != nil {
+				return nil, err
+			}
+			setMappingValue(projection, "proxy-providers", &confined)
+		}
+	}
+	return projection, nil
 }
 
 type MountRuntimeSource struct {
@@ -369,21 +444,22 @@ type MountRuntimeGroup struct {
 // Refused: base providers and rule sets whose update was refused because it
 // would reach Tailscale where the mount check saw nothing.
 type MountRuntimeState struct {
-	Blocked bool                 `json:"blocked"`
-	Refused []string             `json:"refused,omitempty"`
-	Report  *MountReport         `json:"report,omitempty"`
-	Sources []MountRuntimeSource `json:"sources"`
-	Groups  []MountRuntimeGroup  `json:"groups"`
-	Moved   map[string]string    `json:"moved,omitempty"`
-	Lost    []string             `json:"lost,omitempty"`
+	Generation uint64               `json:"generation"`
+	Blocked    bool                 `json:"blocked"`
+	Refused    []string             `json:"refused,omitempty"`
+	Report     *MountReport         `json:"report,omitempty"`
+	Sources    []MountRuntimeSource `json:"sources"`
+	Groups     []MountRuntimeGroup  `json:"groups"`
+	Moved      map[string]string    `json:"moved,omitempty"`
+	Lost       []string             `json:"lost,omitempty"`
 }
 
 func handleMountState() MountRuntimeState {
 	mountStateMu.Lock()
-	report, blocked := appliedMountReport, runningConfigBlocked
+	report, blocked, generation := appliedMountReport, runningConfigBlocked, mountGeneration
 	moved, lost := mountSelectionMoved, mountSelectionLost
 	mountStateMu.Unlock()
-	state := MountRuntimeState{Blocked: blocked, Refused: mountGateState(), Report: report, Sources: []MountRuntimeSource{}, Groups: []MountRuntimeGroup{}, Moved: moved, Lost: lost}
+	state := MountRuntimeState{Generation: generation, Blocked: blocked, Refused: mountGateState(), Report: report, Sources: []MountRuntimeSource{}, Groups: []MountRuntimeGroup{}, Moved: moved, Lost: lost}
 	if report == nil {
 		return state
 	}

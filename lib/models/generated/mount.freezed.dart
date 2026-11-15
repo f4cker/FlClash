@@ -4315,7 +4315,7 @@ as String?,
 /// @nodoc
 mixin _$MountRuntimeState {
 
- bool get blocked; List<String> get refused; MountReport? get report; List<MountRuntimeSource> get sources; List<MountRuntimeGroup> get groups; Map<String, String> get moved; List<String> get lost;
+ int get generation; bool get blocked; List<String> get refused; MountReport? get report; List<MountRuntimeSource> get sources; List<MountRuntimeGroup> get groups; Map<String, String> get moved; List<String> get lost;
 /// Create a copy of MountRuntimeState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4329,20 +4329,20 @@ $MountRuntimeStateCopyWith<MountRuntimeState> get copyWith => _$MountRuntimeStat
 @override
 bool operator ==(Object other) {
   final _this = this as MountRuntimeState;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountRuntimeState&&(identical(other.blocked, _this.blocked) || other.blocked == _this.blocked)&&const DeepCollectionEquality().equals(other.refused, _this.refused)&&(identical(other.report, _this.report) || other.report == _this.report)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&const DeepCollectionEquality().equals(other.groups, _this.groups)&&const DeepCollectionEquality().equals(other.moved, _this.moved)&&const DeepCollectionEquality().equals(other.lost, _this.lost));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MountRuntimeState&&(identical(other.generation, _this.generation) || other.generation == _this.generation)&&(identical(other.blocked, _this.blocked) || other.blocked == _this.blocked)&&const DeepCollectionEquality().equals(other.refused, _this.refused)&&(identical(other.report, _this.report) || other.report == _this.report)&&const DeepCollectionEquality().equals(other.sources, _this.sources)&&const DeepCollectionEquality().equals(other.groups, _this.groups)&&const DeepCollectionEquality().equals(other.moved, _this.moved)&&const DeepCollectionEquality().equals(other.lost, _this.lost));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MountRuntimeState;
-  return Object.hash(runtimeType,_this.blocked,const DeepCollectionEquality().hash(_this.refused),_this.report,const DeepCollectionEquality().hash(_this.sources),const DeepCollectionEquality().hash(_this.groups),const DeepCollectionEquality().hash(_this.moved),const DeepCollectionEquality().hash(_this.lost));
+  return Object.hash(runtimeType,_this.generation,_this.blocked,const DeepCollectionEquality().hash(_this.refused),_this.report,const DeepCollectionEquality().hash(_this.sources),const DeepCollectionEquality().hash(_this.groups),const DeepCollectionEquality().hash(_this.moved),const DeepCollectionEquality().hash(_this.lost));
 }
 
 @override
 String toString() {
   final _this = this as MountRuntimeState;
-  return 'MountRuntimeState(blocked: ${_this.blocked}, refused: ${_this.refused}, report: ${_this.report}, sources: ${_this.sources}, groups: ${_this.groups}, moved: ${_this.moved}, lost: ${_this.lost})';
+  return 'MountRuntimeState(generation: ${_this.generation}, blocked: ${_this.blocked}, refused: ${_this.refused}, report: ${_this.report}, sources: ${_this.sources}, groups: ${_this.groups}, moved: ${_this.moved}, lost: ${_this.lost})';
 }
 
 
@@ -4353,7 +4353,7 @@ abstract mixin class $MountRuntimeStateCopyWith<$Res>  {
   factory $MountRuntimeStateCopyWith(MountRuntimeState value, $Res Function(MountRuntimeState) _then) = _$MountRuntimeStateCopyWithImpl;
 @useResult
 $Res call({
- bool blocked, List<String> refused, MountReport? report, List<MountRuntimeSource> sources, List<MountRuntimeGroup> groups, Map<String, String> moved, List<String> lost
+ int generation, bool blocked, List<String> refused, MountReport? report, List<MountRuntimeSource> sources, List<MountRuntimeGroup> groups, Map<String, String> moved, List<String> lost
 });
 
 
@@ -4370,9 +4370,10 @@ class _$MountRuntimeStateCopyWithImpl<$Res>
 
 /// Create a copy of MountRuntimeState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? blocked = null,Object? refused = null,Object? report = freezed,Object? sources = null,Object? groups = null,Object? moved = null,Object? lost = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? generation = null,Object? blocked = null,Object? refused = null,Object? report = freezed,Object? sources = null,Object? groups = null,Object? moved = null,Object? lost = null,}) {
   return _then(MountRuntimeState(
-blocked: null == blocked ? _self.blocked : blocked // ignore: cast_nullable_to_non_nullable
+generation: null == generation ? _self.generation : generation // ignore: cast_nullable_to_non_nullable
+as int,blocked: null == blocked ? _self.blocked : blocked // ignore: cast_nullable_to_non_nullable
 as bool,refused: null == refused ? _self.refused : refused // ignore: cast_nullable_to_non_nullable
 as List<String>,report: freezed == report ? _self.report : report // ignore: cast_nullable_to_non_nullable
 as MountReport?,sources: null == sources ? _self.sources : sources // ignore: cast_nullable_to_non_nullable
@@ -4476,10 +4477,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool blocked,  List<String> refused,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int generation,  bool blocked,  List<String> refused,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MountRuntimeState() when $default != null:
-return $default(_that.blocked,_that.refused,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
+return $default(_that.generation,_that.blocked,_that.refused,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
   return orElse();
 
 }
@@ -4497,10 +4498,10 @@ return $default(_that.blocked,_that.refused,_that.report,_that.sources,_that.gro
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool blocked,  List<String> refused,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int generation,  bool blocked,  List<String> refused,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)  $default,) {final _that = this;
 switch (_that) {
 case _MountRuntimeState():
-return $default(_that.blocked,_that.refused,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
+return $default(_that.generation,_that.blocked,_that.refused,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4517,10 +4518,10 @@ return $default(_that.blocked,_that.refused,_that.report,_that.sources,_that.gro
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool blocked,  List<String> refused,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int generation,  bool blocked,  List<String> refused,  MountReport? report,  List<MountRuntimeSource> sources,  List<MountRuntimeGroup> groups,  Map<String, String> moved,  List<String> lost)?  $default,) {final _that = this;
 switch (_that) {
 case _MountRuntimeState() when $default != null:
-return $default(_that.blocked,_that.refused,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
+return $default(_that.generation,_that.blocked,_that.refused,_that.report,_that.sources,_that.groups,_that.moved,_that.lost);case _:
   return null;
 
 }
@@ -4532,9 +4533,10 @@ return $default(_that.blocked,_that.refused,_that.report,_that.sources,_that.gro
 @JsonSerializable()
 
 class _MountRuntimeState implements MountRuntimeState {
-  const _MountRuntimeState({this.blocked = false,  List<String> refused = const [], this.report,  List<MountRuntimeSource> sources = const [],  List<MountRuntimeGroup> groups = const [],  Map<String, String> moved = const {},  List<String> lost = const []}): _refused = refused,_sources = sources,_groups = groups,_moved = moved,_lost = lost;
+  const _MountRuntimeState({this.generation = 0, this.blocked = false,  List<String> refused = const [], this.report,  List<MountRuntimeSource> sources = const [],  List<MountRuntimeGroup> groups = const [],  Map<String, String> moved = const {},  List<String> lost = const []}): _refused = refused,_sources = sources,_groups = groups,_moved = moved,_lost = lost;
   factory _MountRuntimeState.fromJson(Map<String, dynamic> json) => _$MountRuntimeStateFromJson(json);
 
+@override@JsonKey() final  int generation;
 @override@JsonKey() final  bool blocked;
  final  List<String> _refused;
 @override@JsonKey() List<String> get refused {
@@ -4586,18 +4588,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountRuntimeState&&(identical(other.blocked, blocked) || other.blocked == blocked)&&const DeepCollectionEquality().equals(other.refused, _refused)&&(identical(other.report, report) || other.report == report)&&const DeepCollectionEquality().equals(other.sources, _sources)&&const DeepCollectionEquality().equals(other.groups, _groups)&&const DeepCollectionEquality().equals(other.moved, _moved)&&const DeepCollectionEquality().equals(other.lost, _lost));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MountRuntimeState&&(identical(other.generation, generation) || other.generation == generation)&&(identical(other.blocked, blocked) || other.blocked == blocked)&&const DeepCollectionEquality().equals(other.refused, _refused)&&(identical(other.report, report) || other.report == report)&&const DeepCollectionEquality().equals(other.sources, _sources)&&const DeepCollectionEquality().equals(other.groups, _groups)&&const DeepCollectionEquality().equals(other.moved, _moved)&&const DeepCollectionEquality().equals(other.lost, _lost));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,blocked,const DeepCollectionEquality().hash(_refused),report,const DeepCollectionEquality().hash(_sources),const DeepCollectionEquality().hash(_groups),const DeepCollectionEquality().hash(_moved),const DeepCollectionEquality().hash(_lost));
+    return Object.hash(runtimeType,generation,blocked,const DeepCollectionEquality().hash(_refused),report,const DeepCollectionEquality().hash(_sources),const DeepCollectionEquality().hash(_groups),const DeepCollectionEquality().hash(_moved),const DeepCollectionEquality().hash(_lost));
 }
 
 @override
 String toString() {
-    return 'MountRuntimeState(blocked: $blocked, refused: $refused, report: $report, sources: $sources, groups: $groups, moved: $moved, lost: $lost)';
+    return 'MountRuntimeState(generation: $generation, blocked: $blocked, refused: $refused, report: $report, sources: $sources, groups: $groups, moved: $moved, lost: $lost)';
 }
 
 
@@ -4608,7 +4610,7 @@ abstract mixin class _$MountRuntimeStateCopyWith<$Res> implements $MountRuntimeS
   factory _$MountRuntimeStateCopyWith(_MountRuntimeState value, $Res Function(_MountRuntimeState) _then) = __$MountRuntimeStateCopyWithImpl;
 @override @useResult
 $Res call({
- bool blocked, List<String> refused, MountReport? report, List<MountRuntimeSource> sources, List<MountRuntimeGroup> groups, Map<String, String> moved, List<String> lost
+ int generation, bool blocked, List<String> refused, MountReport? report, List<MountRuntimeSource> sources, List<MountRuntimeGroup> groups, Map<String, String> moved, List<String> lost
 });
 
 
@@ -4625,9 +4627,10 @@ class __$MountRuntimeStateCopyWithImpl<$Res>
 
 /// Create a copy of MountRuntimeState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? blocked = null,Object? refused = null,Object? report = freezed,Object? sources = null,Object? groups = null,Object? moved = null,Object? lost = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? generation = null,Object? blocked = null,Object? refused = null,Object? report = freezed,Object? sources = null,Object? groups = null,Object? moved = null,Object? lost = null,}) {
   return _then(_MountRuntimeState(
-blocked: null == blocked ? _self.blocked : blocked // ignore: cast_nullable_to_non_nullable
+generation: null == generation ? _self.generation : generation // ignore: cast_nullable_to_non_nullable
+as int,blocked: null == blocked ? _self.blocked : blocked // ignore: cast_nullable_to_non_nullable
 as bool,refused: null == refused ? _self._refused : refused // ignore: cast_nullable_to_non_nullable
 as List<String>,report: freezed == report ? _self.report : report // ignore: cast_nullable_to_non_nullable
 as MountReport?,sources: null == sources ? _self._sources : sources // ignore: cast_nullable_to_non_nullable

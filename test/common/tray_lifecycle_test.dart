@@ -1,13 +1,19 @@
 import 'package:fl_clash/common/tray.dart';
+import 'package:fl_clash/core/controller.dart';
+import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:tray/tray.dart';
+
+class _MockCore extends Mock implements CoreHandlerInterface {}
 
 const _channel = MethodChannel('tray');
 
@@ -31,6 +37,7 @@ void main() {
 
   late List<MethodCall> calls;
   late ProviderContainer container;
+  late _MockCore core;
 
   setUpAll(() async {
     await AppLocalizations.load(const Locale('en'));
@@ -39,7 +46,12 @@ void main() {
   setUp(() {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     calls = [];
-    container = ProviderContainer();
+    core = _MockCore();
+    container = ProviderContainer(
+      overrides: [
+        coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+      ],
+    );
     Tray.instance.resetForTesting();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, (call) async {
@@ -52,6 +64,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
     container.dispose();
+    verifyZeroInteractions(core);
     debugDefaultTargetPlatformOverride = null;
   });
 

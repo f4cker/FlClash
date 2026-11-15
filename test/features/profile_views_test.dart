@@ -92,6 +92,7 @@ class _RecordingSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool Function()? owns,
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,

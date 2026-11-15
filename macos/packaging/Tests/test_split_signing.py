@@ -50,7 +50,8 @@ class SplitSigningTests(unittest.TestCase):
             target = private / name
             target.write_bytes((ROOT / name).read_bytes())
             target.chmod(0o600)
-        for name, value in (('PACKAGING', private), ('__file__', str(private / 'sign_split_payload.py'))):
+        for name, value in (('PACKAGING', private), ('__file__', str(private / 'sign_split_payload.py')),
+                            ('STAGING_SHA256', hashlib.sha256((private / 'stage_split_payload.py').read_bytes()).hexdigest())):
             replacement = patch.object(D, name, value)
             replacement.start()
             self.addCleanup(replacement.stop)

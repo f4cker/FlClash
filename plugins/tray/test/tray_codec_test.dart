@@ -14,6 +14,50 @@ TraySpec _spec({
 }
 
 void main() {
+  test('transient status has a semantic key but no action callback', () {
+    const status = TrayMenuAction.status(
+      statusKey: 'outbound-mode',
+      label: 'Switching to Global',
+      accessibilityLabel: 'Switching to Global mode',
+    );
+    final encoded = TrayCodec.encode(
+      _spec(
+        menu: const [
+          status,
+          TrayMenuAction(label: 'ordinary'),
+        ],
+      ),
+    );
+    final rows = encoded.menu.cast<Map<String, Object?>>();
+    expect(rows.first, {
+      'id': 1024,
+      'type': 'action',
+      'transientStatusKey': 'outbound-mode',
+      'label': 'Switching to Global',
+      'accessibilityLabel': 'Switching to Global mode',
+      'enabled': false,
+    });
+    expect(status.enabled, isFalse);
+    expect(status.onSelected, isNull);
+    expect(rows.last.containsKey('transientStatusKey'), isFalse);
+    expect(rows.last['id'], 1025);
+    expect(encoded.itemsById[1024], same(status));
+  });
+
+  test('signature distinguishes a transient status from an ordinary row', () {
+    final status = TrayCodec.encode(
+      _spec(
+        menu: const [
+          TrayMenuAction.status(statusKey: 'mode', label: 'Pending'),
+        ],
+      ),
+    );
+    final ordinary = TrayCodec.encode(
+      _spec(menu: const [TrayMenuAction(label: 'Pending', enabled: false)]),
+    );
+    expect(status.signature, isNot(ordinary.signature));
+  });
+
   test(
     'segment metadata preserves per-option callback ids and checked state',
     () {

@@ -944,6 +944,7 @@ class _TestSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool Function()? owns,
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,
@@ -1039,6 +1040,7 @@ class _InitializingSetupAction extends _RaceSetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool Function()? owns,
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.14 (2026-11-16)
+
+**Bug Fixes**
+
+- **mounts** Refresh native FILE providers from downloaded subscription data and keep mounted-node projections consistent with the latest profile.
+- **tray** Clear stale mode-switch prompts and report unconfirmed changes after 15 seconds.
+
 ## v0.9.13 (2026-11-15)
 
 **Bug Fixes**

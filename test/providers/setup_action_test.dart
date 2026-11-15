@@ -36,6 +36,17 @@ class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
 
 // checkAndUpdateAndCopy checks the file system before it refreshes, so its
 // failure tests need appPath to resolve to a real, writable directory.
+class _HeldSourceProfilesAction extends ProfilesAction {
+  final ready = Completer<void>();
+  final result = Completer<Profile?>();
+
+  @override
+  Future<Profile?> ensureSource(Profile profile) {
+    ready.complete();
+    return result.future;
+  }
+}
+
 class _ListenerHandoffFailureSetupAction extends SetupAction {
   final List<bool> coreRunningCalls = [];
 
@@ -161,6 +172,7 @@ class TestSetupAction extends SetupAction {
 
   @override
   Future<bool> applyProfile({
+    bool Function()? owns,
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,
@@ -170,6 +182,25 @@ class TestSetupAction extends SetupAction {
     await preloadInvoke?.call();
     return true;
   }
+}
+
+class _TrayDeadlineSetupAction extends TestSetupAction {
+  Duration deadline = const Duration(seconds: 15);
+  Completer<AuthorizeCode>? authorization;
+  Completer<int>? listener;
+
+  @override
+  Duration get trayModeDeadline => deadline;
+
+  @override
+  Future<AuthorizeCode> authorizeCore() async {
+    final result = await super.authorizeCore();
+    return authorization?.future ?? result;
+  }
+
+  @override
+  Future<int> listeningMixedPort() =>
+      listener?.future ?? super.listeningMixedPort();
 }
 
 class _ManagedHelperSetupAction extends TestSetupAction {
@@ -1479,16 +1510,15 @@ void main() {
 
   group('tray mode transaction', () {
     late ProviderContainer scoped;
-    late TestSetupAction owner;
+    late _TrayDeadlineSetupAction owner;
     late _MockCoreHandlerInterface core;
     late Completer<void> reply;
 
-    setUp(() async {
-      await AppLocalizations.load(const Locale('en'));
+    void bindOwner() {
       core = _MockCoreHandlerInterface();
       reply = Completer<void>();
       when(() => core.updateConfig(any())).thenAnswer((_) => reply.future);
-      owner = TestSetupAction();
+      owner = _TrayDeadlineSetupAction();
       scoped = ProviderContainer(
         overrides: [
           profilesProvider.overrideWith(TestProfiles.new),
@@ -1499,7 +1529,17 @@ void main() {
       );
       scoped.read(setupActionProvider.notifier);
       addTearDown(scoped.dispose);
+    }
+
+    setUp(() async {
+      await AppLocalizations.load(const Locale('en'));
+      bindOwner();
     });
+
+    void resetOwner() {
+      scoped.dispose();
+      bindOwner();
+    }
 
     test(
       'keeps configured mode pending and commits only after acknowledgement',
@@ -1519,6 +1559,222 @@ void main() {
         expect(scoped.read(patchClashConfigProvider).mode, Mode.global);
         expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
         expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+      },
+    );
+
+    for (final fails in [false, true]) {
+      testWidgets(
+        'deadline releases UI but serializes retry behind late ${fails ? 'error' : 'success'}',
+        (tester) async {
+          resetOwner();
+          var finished = false;
+          final operation = owner.changeModeForTray(Mode.global);
+          unawaited(operation.then((_) => finished = true));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 14));
+          expect(finished, isFalse);
+          expect(
+            scoped.read(trayModeMenuStateProvider).pendingMode,
+            Mode.global,
+          );
+          await tester.pump(const Duration(seconds: 1));
+          await operation;
+          expect(finished, isTrue);
+          expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+          expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+          expect(
+            scoped.read(trayModeMenuStateProvider).error,
+            currentAppLocalizations.traySwitchUnconfirmed,
+          );
+          final retryReply = Completer<void>();
+          when(
+            () => core.updateConfig(any()),
+          ).thenAnswer((_) => retryReply.future);
+          final retry = owner.changeModeForTray(Mode.global);
+          await tester.pump();
+          expect(
+            scoped.read(trayModeMenuStateProvider).pendingMode,
+            Mode.global,
+          );
+          expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+          verify(() => core.updateConfig(any())).called(1);
+          scoped.read(runningFindProcessModeProvider.notifier).value = 'always';
+          if (fails) {
+            reply.completeError(StateError('late RPC error'));
+          } else {
+            reply.complete();
+          }
+          await tester.pump();
+          verify(() => core.updateConfig(any())).called(1);
+          expect(scoped.read(runningFindProcessModeProvider), 'always');
+          expect(owner.listeningQueries, 0);
+          expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+          expect(
+            scoped.read(trayModeMenuStateProvider).pendingMode,
+            Mode.global,
+          );
+          expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+          retryReply.complete();
+          await tester.pump();
+          await retry;
+          expect(scoped.read(patchClashConfigProvider).mode, Mode.global);
+          expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+          scoped.dispose();
+          await tester.pump();
+        },
+      );
+    }
+
+    for (final adoptionPending in [false, true]) {
+      testWidgets(
+        'expired queued ${adoptionPending ? 'adoption' : 'patch'} never sends or authorizes',
+        (tester) async {
+          resetOwner();
+          final blocker = owner.updateConfig();
+          await tester.pump();
+          verify(() => core.updateConfig(any())).called(1);
+          if (adoptionPending) {
+            await tester.runAsync(
+              () => mockPreferences({'compositionRevision': 0}),
+            );
+          }
+          scoped
+              .read(patchClashConfigProvider.notifier)
+              .update(
+                (state) =>
+                    state.copyWith(tun: state.tun.copyWith(enable: true)),
+              );
+          owner.deadline = const Duration(seconds: 2);
+          final operation = owner.changeModeForTray(Mode.direct);
+          await tester.pump();
+          await tester.pump(owner.deadline);
+          await operation;
+          expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+          expect(
+            scoped.read(trayModeMenuStateProvider).error,
+            currentAppLocalizations.traySwitchUnconfirmed,
+          );
+          reply.complete();
+          await tester.pump();
+          await blocker;
+          verifyNever(() => core.updateConfig(any()));
+          verifyNever(() => core.setupConfig(any()));
+          expect(owner.authorizeCalls, 0);
+          expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+          scoped.dispose();
+          await tester.pump();
+        },
+      );
+    }
+
+    for (final authorization in AuthorizeCode.values) {
+      testWidgets('late authorization $authorization cannot send or restart', (
+        tester,
+      ) async {
+        resetOwner();
+        owner.authorization = Completer<AuthorizeCode>();
+        scoped
+            .read(patchClashConfigProvider.notifier)
+            .update(
+              (state) => state.copyWith(tun: state.tun.copyWith(enable: true)),
+            );
+        final operation = owner.changeModeForTray(Mode.direct);
+        await tester.pump();
+        expect(owner.authorizeCalls, 1);
+        await tester.pump(owner.deadline);
+        await operation;
+        expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+        expect(
+          scoped.read(trayModeMenuStateProvider).error,
+          currentAppLocalizations.traySwitchUnconfirmed,
+        );
+        expect(
+          scoped.read(authorizedTunEnableProvider),
+          TunAuthorizationState.none,
+        );
+        owner.authorization!.complete(authorization);
+        await tester.pump();
+        verifyNever(() => core.updateConfig(any()));
+        expect(
+          scoped.read(authorizedTunEnableProvider),
+          TunAuthorizationState.none,
+        );
+        expect(owner.coreRunningCalls, isEmpty);
+        expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+        owner.authorization = Completer<AuthorizeCode>();
+        final retry = owner.changeModeForTray(Mode.direct);
+        await tester.pump();
+        expect(owner.authorizeCalls, 2);
+        expect(scoped.read(trayModeMenuStateProvider).pendingMode, Mode.direct);
+        owner.authorization!.complete(AuthorizeCode.none);
+        await tester.pump();
+        reply.complete();
+        await tester.pump();
+        await retry;
+        expect(scoped.read(patchClashConfigProvider).mode, Mode.direct);
+        expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+        scoped.dispose();
+        await tester.pump();
+      });
+    }
+
+    for (final fails in [false, true]) {
+      testWidgets(
+        'post-ack deadline ignores late listener ${fails ? 'error' : 'mismatch'}',
+        (tester) async {
+          resetOwner();
+          owner.listener = Completer<int>();
+          final operation = owner.changeModeForTray(Mode.direct);
+          await tester.pump();
+          reply.complete();
+          await tester.pump();
+          await tester.pump(owner.deadline);
+          await operation;
+          expect(
+            scoped.read(trayModeMenuStateProvider).error,
+            currentAppLocalizations.traySwitchUnconfirmed,
+          );
+          expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+          scoped.read(runningFindProcessModeProvider.notifier).value = 'always';
+          if (fails) {
+            owner.listener!.completeError(StateError('late listener error'));
+          } else {
+            owner.listener!.complete(0);
+          }
+          await tester.pump();
+          expect(scoped.read(runningFindProcessModeProvider), 'always');
+          expect(scoped.read(listeningMixedPortProvider), isNull);
+          expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+          expect(owner.coreRunningCalls, isEmpty);
+          scoped.dispose();
+          await tester.pump();
+        },
+      );
+    }
+
+    testWidgets(
+      'older deadline and finally cannot clear newer pending intent',
+      (tester) async {
+        resetOwner();
+        final first = owner.changeModeForTray(Mode.direct);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 5));
+        owner.changeMode(Mode.global);
+        final second = owner.changeModeForTray(Mode.direct);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 10));
+        await first;
+        expect(scoped.read(trayModeMenuStateProvider).pendingMode, Mode.direct);
+        expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+        await tester.pump(const Duration(seconds: 5));
+        await second;
+        expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+        expect(scoped.read(patchClashConfigProvider).mode, Mode.global);
+        reply.complete();
+        await tester.pump();
+        verify(() => core.updateConfig(any())).called(2);
+        scoped.dispose();
+        await tester.pump();
       },
     );
 
@@ -1847,6 +2103,50 @@ void main() {
       script: null,
       overrides: ProfileOverrides(),
     );
+
+    for (final change in ['delete', 'switch', 'type', 'commit']) {
+      test('stale setup source $change never builds or applies', () async {
+        final profile = Profile.normal(
+          label: 'synthetic',
+          url: 'https://example.invalid/source',
+        );
+        final other = Profile.custom(label: 'other');
+        final core = _MockCoreHandlerInterface();
+        final profiles = _HeldSourceProfilesAction();
+        final scoped = ProviderContainer(
+          overrides: [
+            profilesProvider.overrideWith(() => TestProfiles([profile, other])),
+            profilesActionProvider.overrideWith(() => profiles),
+            currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+            initProvider.overrideWithBuild((_, _) => true),
+            setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+            coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          ],
+        );
+        addTearDown(scoped.dispose);
+        globalState.container = scoped;
+        final applying = scoped
+            .read(setupActionProvider.notifier)
+            .applyProfile(force: true);
+        await profiles.ready.future;
+        switch (change) {
+          case 'delete':
+            await scoped.read(profilesProvider.notifier).del(profile.id);
+          case 'switch':
+            scoped.read(currentProfileIdProvider.notifier).value = other.id;
+          case 'type':
+            scoped
+                .read(profilesProvider.notifier)
+                .put(profile.copyWith(type: ProfileType.file));
+          case 'commit':
+            break;
+        }
+        profiles.result.complete(change == 'commit' ? profile : null);
+        expect(await applying, isFalse);
+        verifyNever(() => core.getProfileBase(any()));
+        verifyNever(() => core.setupConfig(any()));
+      });
+    }
 
     test(
       'a refresh failure still runs core.setupConfig and preloadInvoke',

@@ -181,6 +181,11 @@ func applyConfig(params *SetupParams) error {
 		candidate, err = prepareSetupConfig(params)
 	}
 	var candidateBytes []byte
+	defer func() {
+		if candidate != nil {
+			candidate.report.discardInputs()
+		}
+	}()
 	if err == nil {
 		defer os.Remove(candidate.path)
 		candidateBytes, err = os.ReadFile(candidate.path)

@@ -1,23 +1,14 @@
 package core
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io/fs"
-	"net"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/dlclark/regexp2"
-	"github.com/metacubex/mihomo/adapter"
 	"github.com/metacubex/mihomo/adapter/provider"
-	"github.com/metacubex/mihomo/common/convert"
-	mihomoYaml "github.com/metacubex/mihomo/common/yaml"
-	"github.com/metacubex/mihomo/component/age"
-	"github.com/metacubex/mihomo/component/flashguard"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -33,10 +24,11 @@ type MountSource struct {
 // Groups collect mounted nodes by their own declarations and filters.
 // Revision binds a readback to the setup that made it.
 type MountSetup struct {
-	Target   int64         `json:"target"`
-	Revision string        `json:"revision"`
-	Sources  []MountSource `json:"sources"`
-	reserved []string
+	Target      int64         `json:"target"`
+	Revision    string        `json:"revision"`
+	Sources     []MountSource `json:"sources"`
+	reserved    []string
+	stageInputs bool
 	// The managed Tailscale rules run ahead of the profile's own, with the
 	// routes kept for managedProfile.
 	managedRules   bool
@@ -95,96 +87,8 @@ func ageKeys(secretKey string) []string {
 	return []string{secretKey}
 }
 
-// Mirrors NewProxiesParser for a mount provider, so a file that would not
-// load there is never counted as nodes here.
 func inspectMountSource(path, ageSecretKey string, relay *mountRelay) MountSourceInspection {
-	buf, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return MountSourceInspection{Status: mountSourceMissing}
-		}
-		return MountSourceInspection{Status: mountSourceReadError}
-	}
-	if buf, err = age.DecryptBytes(buf, ageKeys(ageSecretKey)...); err != nil {
-		return MountSourceInspection{Status: mountSourceInvalid}
-	}
-	if len(bytes.TrimSpace(buf)) == 0 {
-		return MountSourceInspection{Status: mountSourceUnsupported}
-	}
-	var mappings []map[string]any
-	var document any
-	root, isMapping := document.(map[string]any)
-	if err := mihomoYaml.Unmarshal(buf, &document); err == nil {
-		root, isMapping = document.(map[string]any)
-	}
-	if !isMapping {
-		converted, convertErr := convert.ConvertsV2Ray(buf)
-		if convertErr != nil || len(converted) == 0 {
-			return MountSourceInspection{Status: mountSourceUnsupported}
-		}
-		mappings = converted
-	} else {
-		list, ok := root["proxies"].([]any)
-		if !ok {
-			return MountSourceInspection{Status: mountSourceUnsupported}
-		}
-		for _, item := range list {
-			mapping, _ := item.(map[string]any)
-			mappings = append(mappings, mapping)
-		}
-	}
-	inspection := MountSourceInspection{Status: mountSourceNodes, Listed: len(mappings)}
-	seen := map[string]struct{}{}
-	for _, mapping := range mappings {
-		kind, _ := mapping["type"].(string)
-		if strings.EqualFold(kind, "tailscale") {
-			inspection.TailscaleExcluded++
-			continue
-		}
-		name, ok := mapping["name"].(string)
-		if !ok {
-			continue
-		}
-		if _, dup := seen[name]; dup {
-			continue
-		}
-		// Its endpoints are not the server Addr names, so the guard cannot
-		// tell whether one is on Tailscale: never built, as the provider.
-		if flashguard.UncheckedEndpoints(mapping) {
-			seen[name] = struct{}{}
-			inspection.UnsupportedExcluded++
-			continue
-		}
-		proxy, err := adapter.ParseProxy(mapping)
-		if err != nil {
-			return MountSourceInspection{Status: mountSourceInvalid, Listed: len(mappings)}
-		}
-		_ = proxy.Close()
-		seen[name] = struct{}{}
-		host, _, splitErr := net.SplitHostPort(proxy.Addr())
-		switch {
-		case slices.ContainsFunc(proxyOptionValues(mapping, "interface-name"), func(value string) bool { return value != "" }),
-			slices.ContainsFunc(proxyOptionValues(mapping, "routing-mark"), func(value string) bool { return value != "" && value != "0" }):
-			inspection.UnsupportedExcluded++
-		case slices.ContainsFunc(proxyOptionValues(mapping, "dialer-proxy"), relay.reaches),
-			splitErr == nil && flashguard.ProtectedServer(host):
-			// A server on Tailscale, or a local one, is a relay through it.
-			inspection.RelayExcluded++
-		default:
-			inspection.names = append(inspection.names, name)
-			if dialers := proxyOptionValues(mapping, "dialer-proxy"); len(dialers) > 0 {
-				if inspection.dialers == nil {
-					inspection.dialers = map[string][]string{}
-				}
-				inspection.dialers[name] = dialers
-			}
-		}
-	}
-	inspection.Count = len(inspection.names)
-	if inspection.Count == 0 && inspection.TailscaleExcluded+inspection.RelayExcluded+inspection.UnsupportedExcluded < inspection.Listed {
-		return MountSourceInspection{Status: mountSourceInvalid, Listed: len(mappings)}
-	}
-	return inspection
+	return readMountSnapshot(path, ageSecretKey).admit(relay)
 }
 
 // Auto is a group that takes the mounts; excluded, one kept out of them;
@@ -399,6 +303,7 @@ type MountReport struct {
 	Groups   []MountGroupReport  `json:"groups"`
 	Renamed  int                 `json:"renamed"`
 	gate     *mountGate
+	inputs   map[int64]mountProviderInput
 }
 
 var reservedProxyNames = []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", globalProxyName}
@@ -410,6 +315,12 @@ var reservedProxyNames = []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "CO
 // that clash with the base or an earlier source get "(label)" appended.
 func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, error) {
 	report := &MountReport{Target: setup.Target, Revision: setup.Revision, Sources: []MountSourceReport{}, Groups: []MountGroupReport{}}
+	complete := false
+	defer func() {
+		if !complete {
+			report.discardInputs()
+		}
+	}()
 	if len(setup.Sources) == 0 {
 		return report, nil
 	}
@@ -450,6 +361,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	reach := base.dedicatedGroups()
 	relay := newMountRelay(base.relayNames(base.holding()), managed)
 	report.gate = &mountGate{}
+	report.inputs = make(map[int64]mountProviderInput, len(setup.Sources))
 	names := make([]string, 0, len(setup.Sources))
 	dependencies := map[string][]string{}
 	var mounted []string
@@ -458,7 +370,20 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 		if mappingValue(providers, name) != nil {
 			return nil, fmt.Errorf("proxy provider %s already exists", name)
 		}
-		inspection := inspectMountSource(source.Path, "", relay)
+		snapshot := readMountSnapshot(source.Path, "")
+		inspection := snapshot.admit(relay)
+		if inspection.Status != mountSourceNodes {
+			return nil, fmt.Errorf("mount source %d is %s", source.ID, inspection.Status)
+		}
+		path := source.Path
+		if setup.stageInputs {
+			var err error
+			path, err = snapshot.providerPath()
+			if err != nil {
+				return nil, err
+			}
+			report.inputs[source.ID] = mountProviderInput{source: source, path: path, snapshot: snapshot, relay: relay}
+		}
 		nodes, renames := mountNodeNames(source, inspection.names, taken, reserved)
 		report.Renamed += len(renames)
 		report.Sources = append(report.Sources, MountSourceReport{
@@ -483,7 +408,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 				dependencies[own[original]] = append(dependencies[own[original]], dialer)
 			}
 		}
-		definition, err := mountProviderNode(source.Path, renames, relay)
+		definition, err := mountProviderNode(path, renames, relay)
 		if err != nil {
 			return nil, err
 		}
@@ -520,6 +445,7 @@ func applyMountOverrides(root *yaml.Node, setup *MountSetup) (*MountReport, erro
 	if err := checkMountBaseDependencies(base, mounted, dependencies); err != nil {
 		return nil, err
 	}
+	complete = true
 	return report, nil
 }
 

@@ -323,6 +323,7 @@ Map<String, dynamic> _$MountRuntimeGroupToJson(_MountRuntimeGroup instance) =>
 _MountRuntimeState _$MountRuntimeStateFromJson(
   Map<String, dynamic> json,
 ) => _MountRuntimeState(
+  generation: (json['generation'] as num?)?.toInt() ?? 0,
   blocked: json['blocked'] as bool? ?? false,
   refused:
       (json['refused'] as List<dynamic>?)?.map((e) => e as String).toList() ??
@@ -352,6 +353,7 @@ _MountRuntimeState _$MountRuntimeStateFromJson(
 
 Map<String, dynamic> _$MountRuntimeStateToJson(_MountRuntimeState instance) =>
     <String, dynamic>{
+      'generation': instance.generation,
       'blocked': instance.blocked,
       'refused': instance.refused,
       'report': instance.report,

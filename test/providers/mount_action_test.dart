@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
@@ -23,18 +24,33 @@ class _MockCore extends Mock implements CoreHandlerInterface {}
 class _FakeSetupAction extends SetupAction {
   static bool result = true;
   static int applied = 0;
+  static int revisionTick = 0;
+  static int queued = 0;
+
+  @override
+  void applyProfileDebounce({bool silence = false, bool force = false}) {
+    queued++;
+  }
+
   static String config = 'proxies: []';
   static final targetInputs = <int>[];
 
   @override
   Future<bool> applyProfile({
+    bool Function()? owns,
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,
   }) async {
     applied++;
+    revisionTick++;
     return result;
   }
+
+  @override
+  Future<({SetupBase? base, String? config})> mountTargetProjectionInput(
+    int profileId,
+  ) => mountTargetInput(profileId);
 
   @override
   Future<({SetupBase? base, String? config})> mountTargetInput(
@@ -43,6 +59,67 @@ class _FakeSetupAction extends SetupAction {
     targetInputs.add(profileId);
     return (base: null, config: config);
   }
+}
+
+class _HeldBuildSetupAction extends SetupAction {
+  final ready = Completer<void>();
+  final release = Completer<void>();
+  var builds = 0;
+
+  @override
+  void build() {}
+
+  @override
+  Future<bool> requestAdmin(bool enableTun) async => true;
+
+  @override
+  Future<BuiltProfile> getProfile({
+    required SetupState setupState,
+    required PatchClashConfig patchConfig,
+  }) async {
+    builds++;
+    if (!ready.isCompleted) ready.complete();
+    await release.future;
+    return (
+      yaml: 'proxies: []\nproxy-groups: []\nrules: []',
+      md5: 'synthetic',
+      counts: configCountsOf(const {}),
+      base: null,
+    );
+  }
+}
+
+class _FakeProfilesAction extends ProfilesAction {
+  static int downloads = 0;
+  static final fetchedProfiles = <Profile>[];
+  static Future<void> Function(int)? beforeDownload;
+  static void Function()? beforeInstall;
+  static String Function()? content;
+
+  @override
+  Future<Profile?> fetchSource(
+    int sourceId,
+    Future<Profile?> Function(
+      ValidateConfig validate,
+      PublishProfile publish,
+      InstallProfile install,
+    )
+    fetch,
+  ) => super.fetchSource(sourceId, (validate, publish, install) async {
+    downloads++;
+    await beforeDownload?.call(sourceId);
+    final profile = ref.read(profilesProvider).getProfile(sourceId)!;
+    fetchedProfiles.add(profile);
+    return profile.saveFile(
+      Uint8List.fromList((content?.call() ?? 'proxies: []').codeUnits),
+      validate: validate,
+      publish: publish,
+      install: (publish) {
+        beforeInstall?.call();
+        return install(publish);
+      },
+    );
+  });
 }
 
 const _target = Profile(
@@ -98,6 +175,12 @@ void main() {
     home = Directory.systemTemp.createTempSync('flclash-mount-action-');
     await useAppPaths(home);
     registerFallbackValue(const MountSetup(target: 0, revision: ''));
+    registerFallbackValue(
+      const SetupParams(
+        selectedMap: {},
+        options: CoreOptions(testUrl: ''),
+      ),
+    );
   });
 
   tearDownAll(() {
@@ -115,7 +198,14 @@ void main() {
       _source.toCompanion(),
     ]);
     _FakeSetupAction.result = true;
+    _FakeSetupAction.revisionTick = 0;
     _FakeSetupAction.applied = 0;
+    _FakeSetupAction.queued = 0;
+    _FakeProfilesAction.downloads = 0;
+    _FakeProfilesAction.beforeDownload = null;
+    _FakeProfilesAction.beforeInstall = null;
+    _FakeProfilesAction.content = null;
+    _FakeProfilesAction.fetchedProfiles.clear();
     _FakeSetupAction.config = 'proxies: []';
     _FakeSetupAction.targetInputs.clear();
     when(
@@ -132,14 +222,21 @@ void main() {
     bool running = false,
     List<TailscaleManagedRecord>? managed = const [],
     List<Profile> profiles = const [_target, _source],
+    bool forbidSetupState = false,
+    SetupAction? setup,
   }) {
     final container = ProviderContainer(
       overrides: [
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
         profilesProvider.overrideWith(() => TestProfiles(profiles)),
+        if (forbidSetupState)
+          setupStateProvider.overrideWith(
+            (_, _) => throw StateError('full setup forbidden'),
+          ),
         currentProfileIdProvider.overrideWithBuild((_, _) => 1),
         initProvider.overrideWithBuild((_, _) => running),
-        setupActionProvider.overrideWith(_FakeSetupAction.new),
+        setupActionProvider.overrideWith(() => setup ?? _FakeSetupAction()),
+        profilesActionProvider.overrideWith(_FakeProfilesAction.new),
         tailscaleManagedRecordsProvider.overrideWithBuild((_, _) => managed),
       ],
     );
@@ -160,18 +257,26 @@ void main() {
 
   Future<String> runningRevision() async {
     final target = (await testDatabase.mountsDao.target(1))!;
-    return mountSetupOf(target, const [
-      _target,
-      _source,
-    ], await appPath.profilesPath).revision;
+    return mountSetupOf(
+      target,
+      globalState.container.read(profilesProvider),
+      await appPath.profilesPath,
+    ).revision;
   }
 
   void readsBack({bool blocked = false, bool matches = true}) {
-    when(() => core.getMountState()).thenAnswer(
-      (_) async => MountRuntimeState(
+    var lastTick = -1;
+    String? revision;
+    when(() => core.getMountState()).thenAnswer((_) async {
+      if (lastTick != _FakeSetupAction.revisionTick) {
+        revision = await runningRevision();
+        lastTick = _FakeSetupAction.revisionTick;
+      }
+      return MountRuntimeState(
         blocked: blocked,
         report: MountReport(
-          revision: await runningRevision(),
+          target: 1,
+          revision: revision!,
           sources: const [
             MountSourceReport(
               id: 2,
@@ -190,7 +295,610 @@ void main() {
           ),
         ],
         groups: const [MountRuntimeGroup(name: 'Proxy', present: true)],
+      );
+    });
+  }
+
+  test('delayed refresh never resurrects a deleted profile', () async {
+    final container = build();
+    await container.read(profilesProvider.notifier).del(2);
+    await container
+        .read(profilesActionProvider.notifier)
+        .updateProfile(_source);
+    expect(container.read(profilesProvider).getProfile(2), isNull);
+    expect(_FakeProfilesAction.downloads, 0);
+  });
+
+  test(
+    'delayed refresh reads the latest edited URL instead of its capture',
+    () async {
+      final container = build();
+      await mountAir(container);
+      final edited = _source.copyWith(url: 'https://example.invalid/new');
+      container.read(profilesProvider.notifier).put(edited);
+      when(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            const MountSourceInspection(status: MountSourceStatus.nodes),
+      );
+      await container
+          .read(profilesActionProvider.notifier)
+          .updateProfile(_source);
+      expect(_FakeProfilesAction.fetchedProfiles.single.url, edited.url);
+      expect(container.read(profilesProvider).getProfile(2)!.url, edited.url);
+    },
+  );
+
+  void nativeRefresh(
+    MountRefreshOutcome outcome, {
+    Future<void> Function()? beforeReply,
+  }) {
+    when(
+      () => core.refreshMountSources(
+        target: any(named: 'target'),
+        generation: any(named: 'generation'),
+        revision: any(named: 'revision'),
+        nextRevision: any(named: 'nextRevision'),
+        sources: any(named: 'sources'),
       ),
+    ).thenAnswer((call) async {
+      await beforeReply?.call();
+      final state = await core.getMountState();
+      return MountRefreshResult(
+        outcome: outcome,
+        state: state.copyWith(
+          generation: state.generation + 1,
+          report: state.report?.copyWith(
+            revision: call.namedArguments[#nextRevision] as String,
+          ),
+        ),
+      );
+    });
+  }
+
+  void nodeDownloads() {
+    when(
+      () => core.inspectMountSource(
+        any(),
+        ageSecretKey: any(named: 'ageSecretKey'),
+      ),
+    ).thenAnswer(
+      (_) async => const MountSourceInspection(status: MountSourceStatus.nodes),
+    );
+  }
+
+  for (final mode in [
+    'applied',
+    'requiresApply',
+    'inactive',
+    'superseded',
+    'kept',
+    'unknown',
+  ]) {
+    test('refresh orchestration stage counts $mode', () async {
+      final container = build(running: mode != 'inactive');
+      readsBack();
+      await mountAir(container);
+      _FakeSetupAction.applied = 0;
+      _FakeSetupAction.targetInputs.clear();
+      var validations = 0;
+      var inspections = 0;
+      when(() => core.validateConfig(any())).thenAnswer((_) async {
+        validations++;
+        return null;
+      });
+      when(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+        ),
+      ).thenAnswer((_) async {
+        inspections++;
+        return const MountSourceInspection(status: MountSourceStatus.nodes);
+      });
+      nativeRefresh(
+        mode == 'inactive'
+            ? MountRefreshOutcome.applied
+            : MountRefreshOutcome.values.byName(mode),
+      );
+      final timer = Stopwatch()..start();
+      final result = await action(container).refreshSource(2, targetId: 1);
+      final returned = timer.elapsedMicroseconds;
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      // Synthetic RPCs count orchestration, not Core or network latency.
+      // ignore: avoid_print
+      print(
+        'mount-refresh $mode: downloads=${_FakeProfilesAction.downloads} validate=$validations source=$inspections target=${_FakeSetupAction.targetInputs.length} queued=${_FakeSetupAction.queued} apply=${_FakeSetupAction.applied} returnUs=$returned observedUs=${timer.elapsedMicroseconds}',
+      );
+      expect(result.updated, isTrue);
+      expect(result.item!.state.fetched, isTrue);
+      expect(_FakeProfilesAction.downloads, 1);
+      expect(validations, 0);
+      expect(inspections, 1);
+      expect(_FakeSetupAction.targetInputs, isEmpty);
+      expect(_FakeSetupAction.queued, 0);
+      expect(_FakeSetupAction.applied, mode == 'requiresApply' ? 1 : 0);
+      expect(result.application, switch (mode) {
+        'applied' || 'requiresApply' => MountSaveOutcome.applied,
+        'superseded' => MountSaveOutcome.unchanged,
+        'kept' => MountSaveOutcome.applyFailedKept,
+        'unknown' => MountSaveOutcome.unknown,
+        _ => null,
+      });
+      expect(
+        (await testDatabase.mountsDao.target(1))!.pending != null,
+        mode == 'unknown',
+      );
+    });
+  }
+
+  for (final batchMode in ['simultaneous', 'update-all', 'automatic']) {
+    test(
+      '$batchMode source downloads fall back once for the current target',
+      () async {
+        const second = Profile(
+          id: 3,
+          type: ProfileType.url,
+          label: 'Second',
+          url: 'https://example.invalid/second',
+          autoUpdateDuration: Duration.zero,
+        );
+        await testDatabase.profilesDao.putAll([second.toCompanion()]);
+        final container = build(
+          running: true,
+          profiles: [
+            _target.copyWith(type: ProfileType.file),
+            _source,
+            second,
+          ],
+        );
+        readsBack();
+        await testDatabase.mountsDao.save(
+          targetId: 1,
+          expectedVersion: null,
+          sourceIds: [2, 3],
+          pending: (version) =>
+              MountOperation(kind: MountOperationKind.save, version: version),
+        );
+        await testDatabase.mountsDao.settle(1, 1);
+        await core.getMountState();
+        nodeDownloads();
+        nativeRefresh(MountRefreshOutcome.requiresApply);
+        final ready = Completer<void>();
+        final release = Completer<void>();
+        var started = 0;
+        if (batchMode == 'simultaneous') {
+          _FakeProfilesAction.beforeDownload = (_) async {
+            if (++started == 2) ready.complete();
+            await release.future;
+          };
+        }
+        final profiles = container.read(profilesActionProvider.notifier);
+        final refreshing = switch (batchMode) {
+          'update-all' => profiles.updateProfiles(),
+          'automatic' => profiles.autoUpdateProfiles(),
+          _ => Future.wait([
+            profiles.updateProfile(_source),
+            profiles.updateProfile(second),
+          ]),
+        };
+        if (batchMode == 'simultaneous') {
+          await ready.future;
+          release.complete();
+        }
+        await refreshing;
+        expect(_FakeProfilesAction.downloads, 2);
+        expect(_FakeSetupAction.applied, 1);
+        expect(_FakeSetupAction.queued, 0);
+        verify(
+          () => core.refreshMountSources(
+            target: 1,
+            generation: any(named: 'generation'),
+            revision: any(named: 'revision'),
+            nextRevision: any(named: 'nextRevision'),
+            sources: any(
+              named: 'sources',
+              that: containsPair(3, isA<String>()),
+            ),
+          ),
+        ).called(1);
+      },
+    );
+  }
+
+  for (final renameWhen in ['before', 'during']) {
+    test(
+      'source rename $renameWhen download skips native and applies once',
+      () async {
+        final container = build(running: true);
+        readsBack();
+        await mountAir(container);
+        _FakeSetupAction.applied = 0;
+        nodeDownloads();
+        void rename() => container
+            .read(profilesProvider.notifier)
+            .put(_source.copyWith(label: 'Renamed'));
+        if (renameWhen == 'before') {
+          rename();
+        } else {
+          _FakeProfilesAction.beforeDownload = (_) async {
+            rename();
+          };
+        }
+        final result = await action(container).refreshSource(2);
+        expect(result.application, MountSaveOutcome.applied);
+        expect(_FakeSetupAction.applied, 1);
+        verifyNever(
+          () => core.refreshMountSources(
+            target: any(named: 'target'),
+            generation: any(named: 'generation'),
+            revision: any(named: 'revision'),
+            nextRevision: any(named: 'nextRevision'),
+            sources: any(named: 'sources'),
+          ),
+        );
+      },
+    );
+  }
+
+  test(
+    'one source mounted by two targets only refreshes the selected target',
+    () async {
+      final other = _target.copyWith(id: 3, label: 'Inactive');
+      await testDatabase.profilesDao.putAll([other.toCompanion()]);
+      final container = build(
+        running: true,
+        profiles: [_target, _source, other],
+      );
+      readsBack();
+      await mountAir(container);
+      await action(container).save(3, expectedVersion: null, sourceIds: [2]);
+      _FakeSetupAction.applied = 0;
+      _FakeSetupAction.targetInputs.clear();
+      nodeDownloads();
+      nativeRefresh(MountRefreshOutcome.applied);
+      final result = await action(container).refreshSource(2);
+      expect(result.application, MountSaveOutcome.applied);
+      expect(_FakeSetupAction.applied, 0);
+      expect(_FakeSetupAction.targetInputs, isEmpty);
+      expect((await testDatabase.mountsDao.target(3))!.version, 1);
+      verify(
+        () => core.refreshMountSources(
+          target: 1,
+          generation: any(named: 'generation'),
+          revision: any(named: 'revision'),
+          nextRevision: any(named: 'nextRevision'),
+          sources: any(named: 'sources'),
+        ),
+      ).called(1);
+    },
+  );
+
+  test(
+    'overlapping refreshes share a batch but only newest intent reports success',
+    () async {
+      final container = build(running: true);
+      readsBack();
+      await mountAir(container);
+      nodeDownloads();
+      nativeRefresh(MountRefreshOutcome.applied);
+      final oldReady = Completer<void>();
+      final newReady = Completer<void>();
+      final oldRelease = Completer<void>();
+      var count = 0;
+      _FakeProfilesAction.beforeDownload = (_) async {
+        if (++count == 1) {
+          oldReady.complete();
+          await oldRelease.future;
+        } else {
+          newReady.complete();
+        }
+      };
+      final old = action(container).refreshSource(2);
+      await oldReady.future;
+      final newest = action(container).refreshSource(2);
+      await newReady.future;
+      oldRelease.complete();
+      expect((await old).updated, isFalse);
+      expect((await newest).application, MountSaveOutcome.applied);
+      verify(
+        () => core.refreshMountSources(
+          target: 1,
+          generation: any(named: 'generation'),
+          revision: any(named: 'revision'),
+          nextRevision: any(named: 'nextRevision'),
+          sources: any(named: 'sources'),
+        ),
+      ).called(1);
+    },
+  );
+
+  test(
+    'native IPC failure keeps the refresh lock and never falls back',
+    () async {
+      final container = build(running: true);
+      readsBack();
+      await mountAir(container);
+      _FakeSetupAction.applied = 0;
+      nodeDownloads();
+      nativeRefresh(
+        MountRefreshOutcome.applied,
+        beforeReply: () async {
+          throw const SocketException('synthetic IPC failure');
+        },
+      );
+      final result = await action(container).refreshSource(2);
+      expect(result.application, MountSaveOutcome.unknown);
+      expect((await testDatabase.mountsDao.target(1))!.pending, isNotNull);
+      expect(_FakeSetupAction.applied, 0);
+    },
+  );
+
+  for (final scope in ['mounted', 'standalone']) {
+    test('saving unrelated target never cancels $scope refresh', () async {
+      final other = _target.copyWith(id: 3, label: 'Other');
+      await testDatabase.profilesDao.putAll([other.toCompanion()]);
+      final container = build(profiles: [_target, _source, other]);
+      if (scope == 'mounted') await mountAir(container);
+      nodeDownloads();
+      when(() => core.validateConfig(any())).thenAnswer((_) async => null);
+      final ready = Completer<void>();
+      final release = Completer<void>();
+      _FakeProfilesAction.beforeDownload = (_) async {
+        ready.complete();
+        await release.future;
+      };
+      final selected = scope == 'mounted' ? _source : _target;
+      final refreshing = container
+          .read(profilesActionProvider.notifier)
+          .refreshProfile(selected);
+      await ready.future;
+      await action(container).save(3, expectedVersion: null, sourceIds: []);
+      release.complete();
+      expect((await refreshing).updated, isTrue);
+      expect(
+        container
+            .read(profilesProvider)
+            .getProfile(selected.id)!
+            .lastUpdateDate,
+        isNotNull,
+      );
+    });
+  }
+
+  test(
+    'new candidate waits for held native refresh before replacing raw bytes',
+    () async {
+      final container = build(running: true);
+      readsBack();
+      await mountAir(container);
+      nodeDownloads();
+      _FakeSetupAction.applied = 0;
+      var runtime = await core.getMountState();
+      when(() => core.getMountState()).thenAnswer((_) async => runtime);
+      final ready = Completer<void>();
+      final release = Completer<void>();
+      var calls = 0;
+      when(
+        () => core.refreshMountSources(
+          target: any(named: 'target'),
+          generation: any(named: 'generation'),
+          revision: any(named: 'revision'),
+          nextRevision: any(named: 'nextRevision'),
+          sources: any(named: 'sources'),
+        ),
+      ).thenAnswer((call) async {
+        calls++;
+        if (calls == 1) {
+          ready.complete();
+          await release.future;
+        }
+        runtime = runtime.copyWith(
+          generation: runtime.generation + 1,
+          report: runtime.report!.copyWith(
+            revision: call.namedArguments[#nextRevision] as String,
+          ),
+        );
+        return MountRefreshResult(
+          outcome: MountRefreshOutcome.applied,
+          state: runtime,
+        );
+      });
+      _FakeProfilesAction.content = () =>
+          'proxies: []\n# download ${_FakeProfilesAction.downloads}';
+      final first = action(container).refreshSource(2);
+      await ready.future;
+      final file = File(await appPath.getProfilePath('2'));
+      final firstBytes = await file.readAsString();
+      final staged = Completer<void>();
+      _FakeProfilesAction.beforeInstall = () => staged.complete();
+      final second = action(container).refreshSource(2);
+      await staged.future;
+      await pumpEventQueue();
+      expect(await file.readAsString(), firstBytes);
+      expect(_FakeProfilesAction.downloads, 2);
+      release.complete();
+      expect((await first).updated, isFalse);
+      final latest = await second;
+      expect(latest.updated, isTrue);
+      expect(latest.application, MountSaveOutcome.applied);
+      expect(await file.readAsString(), contains('# download 2'));
+      expect(calls, 2);
+      expect(_FakeSetupAction.applied, 0);
+      expect((await testDatabase.mountsDao.target(1))!.pending, isNull);
+    },
+  );
+
+  test(
+    'preexisting setup can install its missing base while refresh awaits fallback',
+    () async {
+      await mockPreferences({'compositionRevision': 1});
+      final held = _HeldBuildSetupAction();
+      final container = build(running: true, setup: held);
+      final targetFile = File(await appPath.getProfilePath('1'));
+      if (await targetFile.exists()) await targetFile.delete();
+      await testDatabase.mountsDao.save(
+        targetId: 1,
+        expectedVersion: null,
+        sourceIds: [2],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      );
+      await testDatabase.mountsDao.settle(1, 1);
+      readsBack();
+      await core.getMountState();
+      nodeDownloads();
+      when(() => core.validateConfig(any())).thenAnswer((_) async => null);
+      final downloadReady = Completer<void>();
+      final releaseDownload = Completer<void>();
+      _FakeProfilesAction.beforeDownload = (id) async {
+        if (id == 1) {
+          downloadReady.complete();
+          await releaseDownload.future;
+        }
+      };
+      container.read(setupActionProvider.notifier);
+      var ownsFirst = true;
+      final first = held.applyProfile(owns: () => ownsFirst);
+      await downloadReady.future;
+      final nativeReady = Completer<void>();
+      nativeRefresh(
+        MountRefreshOutcome.requiresApply,
+        beforeReply: () async => nativeReady.complete(),
+      );
+      final refresh = action(container).refreshSource(2);
+      await nativeReady.future;
+      await pumpEventQueue();
+      ownsFirst = false;
+      releaseDownload.complete();
+      expect(await first.timeout(const Duration(seconds: 3)), isFalse);
+      expect(await targetFile.exists(), isTrue);
+      await held.ready.future.timeout(const Duration(seconds: 3));
+      container.read(profilesActionProvider.notifier).cancelSourceUpdate(2);
+      held.release.complete();
+      expect(
+        (await refresh.timeout(const Duration(seconds: 3))).updated,
+        isFalse,
+      );
+      expect(held.builds, 1);
+      verifyNever(() => core.setupConfig(any()));
+      expect((await testDatabase.mountsDao.target(1))!.pending, isNull);
+    },
+  );
+
+  for (final stage in ['queued', 'building']) {
+    test(
+      'requiresApply owner invalidated while $stage never reaches setup RPC',
+      () async {
+        await mockPreferences({'compositionRevision': 1});
+        final held = _HeldBuildSetupAction();
+        final container = build(
+          running: true,
+          profiles: [
+            _target.copyWith(type: ProfileType.file),
+            _source,
+          ],
+          setup: held,
+        );
+        readsBack();
+        await testDatabase.mountsDao.save(
+          targetId: 1,
+          expectedVersion: null,
+          sourceIds: [2],
+          pending: (version) =>
+              MountOperation(kind: MountOperationKind.save, version: version),
+        );
+        await testDatabase.mountsDao.settle(1, 1);
+        await core.getMountState();
+        nodeDownloads();
+        container.read(setupActionProvider.notifier);
+        var ownsFirst = true;
+        Future<bool>? first;
+        if (stage == 'queued') {
+          first = held.applyProfile(owns: () => ownsFirst);
+          await held.ready.future;
+        }
+        final nativeReady = Completer<void>();
+        nativeRefresh(
+          MountRefreshOutcome.requiresApply,
+          beforeReply: () async {
+            nativeReady.complete();
+          },
+        );
+        final refreshing = action(container).refreshSource(2);
+        await nativeReady.future;
+        if (stage == 'building') await held.ready.future;
+        await pumpEventQueue();
+        expect(
+          (await action(container).recheck(1)).outcome,
+          MountSaveOutcome.locked,
+        );
+        expect((await testDatabase.mountsDao.target(1))!.pending, isNotNull);
+        container.read(profilesActionProvider.notifier).cancelSourceUpdate(2);
+        ownsFirst = false;
+        held.release.complete();
+        final result = await refreshing;
+        if (first != null) expect(await first, isFalse);
+        expect(result.updated, isFalse);
+        expect(held.builds, 1);
+        verifyNever(() => core.setupConfig(any()));
+        expect((await testDatabase.mountsDao.target(1))!.pending, isNull);
+      },
+    );
+  }
+
+  for (final intent in ['newer-refresh', 'switch', 'unmount', 'delete']) {
+    test(
+      'requiresApply never falls back after $intent intent supersedes it',
+      () async {
+        final container = build(running: true);
+        readsBack();
+        await mountAir(container);
+        _FakeSetupAction.applied = 0;
+        nodeDownloads();
+        final ready = Completer<void>();
+        final release = Completer<void>();
+        nativeRefresh(
+          MountRefreshOutcome.requiresApply,
+          beforeReply: () async {
+            ready.complete();
+            await release.future;
+          },
+        );
+        final refreshing = action(container).refreshSource(2);
+        await ready.future;
+        Future<MountSaveResult>? removing;
+        switch (intent) {
+          case 'switch':
+            container.read(currentProfileIdProvider.notifier).value = 2;
+          case 'newer-refresh':
+            container
+                .read(profilesActionProvider.notifier)
+                .cancelSourceUpdate(2);
+          case 'unmount':
+            removing = action(container).save(
+              1,
+              expectedVersion: (await testDatabase.mountsDao.target(
+                1,
+              ))!.version,
+              sourceIds: [],
+            );
+          case 'delete':
+            container
+                .read(profilesActionProvider.notifier)
+                .cancelSourceUpdate(2);
+            await container.read(profilesProvider.notifier).del(2);
+        }
+        release.complete();
+        final result = await refreshing;
+        expect(result.application, anyOf(isNull, MountSaveOutcome.unchanged));
+        if (removing != null) await removing;
+        expect(_FakeSetupAction.applied, intent == 'unmount' ? 1 : 0);
+      },
     );
   }
 
@@ -413,7 +1121,7 @@ void main() {
   group('a source is inspected against the target', () {
     void inspects() {
       when(
-        () => core.inspectMountTarget(
+        () => core.inspectMountTargetProjection(
           base: any(named: 'base'),
           config: any(named: 'config'),
           managedTarget: any(named: 'managedTarget'),
@@ -435,315 +1143,22 @@ void main() {
       );
     }
 
-    group('background preparation', () {
-      const nodes = MountSourceInspection(
-        status: MountSourceStatus.nodes,
-        count: 7,
-        listed: 7,
-      );
-      late List<int> sourceCalls;
-      late List<Completer<MountSourceInspection>> sources;
-      var holdSources = false;
-
-      setUp(() {
-        inspects();
-        sourceCalls = [];
-        sources = [];
-        holdSources = false;
-        when(
-          () => core.inspectMountSource(
-            any(),
-            ageSecretKey: any(named: 'ageSecretKey'),
-            relay: any(named: 'relay'),
-            managed: any(named: 'managed'),
-          ),
-        ).thenAnswer((invocation) {
-          final path = invocation.positionalArguments.single as String;
-          sourceCalls.add(int.parse(path.split('/').last.split('.').first));
-          if (!holdSources) return Future.value(nodes);
-          final gate = Completer<MountSourceInspection>();
-          sources.add(gate);
-          return gate.future;
-        });
-        addTearDown(() {
-          for (final gate in sources) {
-            if (!gate.isCompleted) gate.complete(nodes);
-          }
-        });
-      });
-
-      Future<void> download(
-        ProviderContainer container, {
-        int id = 2,
-        String content = 'proxies: [updated]',
-      }) async {
-        final file = File(await appPath.getProfilePath('$id'));
-        await file.parent.create(recursive: true);
-        addTearDown(() async {
-          if (await file.exists()) await file.delete();
-        });
-        final updated = await container
-            .read(profilesActionProvider.notifier)
-            .fetchSource(id, (_) async {
-              await file.writeAsString(content);
-              return _source.copyWith(id: id, lastUpdateDate: DateTime.now());
-            });
-        container.read(profilesProvider.notifier).put(updated!);
-      }
-
-      test(
-        'successful update returns before preparation and open shares it',
-        () async {
-          final container = build();
-          holdSources = true;
-          await download(container);
-          expect(sourceCalls, isEmpty);
-          expect(_FakeSetupAction.targetInputs, isEmpty);
-          await waitFor(() => sources.length == 1);
-          final opening = action(container).watchPanel(1).last;
-          await waitFor(() => _FakeSetupAction.targetInputs.length == 2);
-          await pumpEventQueue();
-          expect(sourceCalls, [2]);
-          sources.single.complete(nodes);
-          expect((await opening).sources.single.count, 7);
-          expect(sourceCalls, [2]);
-          expect(
-            (await action(container).watchPanel(1).last).sources.single.count,
-            7,
-          );
-          expect(sourceCalls, [2]);
-        },
-      );
-
-      test('failed and skipped updates do not prepare', () async {
-        final container = build();
-        final profiles = container.read(profilesActionProvider.notifier);
-        await expectLater(
-          profiles.fetchSource(
-            2,
-            (_) async => throw const SocketException('offline'),
-          ),
-          throwsA(isA<SocketException>()),
-        );
-        expect(await profiles.fetchSource(2, (_) async => null), isNull);
-        await Future<void>.delayed(const Duration(milliseconds: 400));
-        expect(_FakeSetupAction.targetInputs, isEmpty);
-        expect(sourceCalls, isEmpty);
-      });
-
-      test('rapid successful updates coalesce to the latest source', () async {
-        final container = build();
-        await download(container, content: 'proxies: [first]');
-        await download(container, content: 'proxies: [second]');
-        await download(container, content: 'proxies: [third]');
-        await waitFor(() => sourceCalls.isNotEmpty);
-        expect(
-          (await action(container).watchPanel(1).last).sources.single.count,
-          7,
-        );
-        expect(sourceCalls, [2]);
-        expect(_FakeSetupAction.targetInputs, [1, 1]);
-      });
-
-      test(
-        'a superseded live preparation cannot publish or release its slot',
-        () async {
-          final container = build();
-          holdSources = true;
-          await download(container);
-          await waitFor(() => sources.length == 1);
-          await download(container, content: 'proxies: [newer]');
-          await Future<void>.delayed(const Duration(milliseconds: 400));
-          expect(sourceCalls, [2]);
-          sources.first.complete(nodes.copyWith(count: 99));
-          await waitFor(() => sources.length == 2);
-          sources.last.complete(nodes);
-          final panel = await action(container).watchPanel(1).last;
-          expect(panel.sources.single.count, 7);
-          expect(sourceCalls, [2, 2]);
-        },
-      );
-
-      test(
-        'older overlapping download completion cannot schedule preparation',
-        () async {
-          final container = build();
-          final old = Completer<Profile?>();
-          final oldDownload = container
-              .read(profilesActionProvider.notifier)
-              .fetchSource(2, (_) => old.future);
-          await download(container);
-          old.complete(_source);
-          await oldDownload;
-          await waitFor(() => sourceCalls.isNotEmpty);
-          await action(container).watchPanel(1).last;
-          expect(sourceCalls, [2]);
-        },
-      );
-
-      test(
-        'a changed managed context discards late results even if restored',
-        () async {
-          final container = build();
-          holdSources = true;
-          await download(container);
-          await waitFor(() => sources.length == 1);
-          container
-              .read(tailscaleManagedRecordsProvider.notifier)
-              .value = const [
-            TailscaleManagedRecord(
-              id: 'changed',
-              profileId: 1,
-              name: 'Managed',
-            ),
-          ];
-          sources.single.complete(nodes.copyWith(count: 99));
-          await pumpEventQueue();
-          container.read(tailscaleManagedRecordsProvider.notifier).value =
-              const [];
-          holdSources = false;
-          final panel = await action(container).watchPanel(1).last;
-          expect(panel.sources.single.count, 7);
-          expect(sourceCalls, [2, 2]);
-        },
-      );
-
-      test(
-        'unknown target context and background errors do not affect updates',
-        () async {
-          final unknown = build(managed: null);
-          await download(unknown);
-          await Future<void>.delayed(const Duration(milliseconds: 400));
-          expect(sourceCalls, isEmpty);
-          expect(_FakeSetupAction.targetInputs, isEmpty);
-          unknown.dispose();
-          final container = build();
-          when(
-            () => core.inspectMountTarget(
-              base: any(named: 'base'),
-              config: any(named: 'config'),
-              managedTarget: any(named: 'managedTarget'),
-            ),
-          ).thenThrow(const SocketException('unavailable'));
-          await download(container);
-          await waitFor(() => _FakeSetupAction.targetInputs.isNotEmpty);
-          await pumpEventQueue();
-          expect(sourceCalls, isEmpty);
-        },
-      );
-
-      test(
-        'target scope is current plus existing relations, capped at four',
-        () async {
-          final container = build(
-            profiles: [
-              _target,
-              _source,
-              for (var id = 3; id <= 9; id++) _target.copyWith(id: id),
-            ],
-          );
-          for (var id = 3; id <= 9; id++) {
-            await testDatabase.profilesDao.putAll([
-              _target.copyWith(id: id).toCompanion(),
-            ]);
-            await testDatabase.mountsDao.save(
-              targetId: id,
-              expectedVersion: null,
-              sourceIds: [2],
-              pending: (version) => MountOperation(
-                kind: MountOperationKind.save,
-                version: version,
-              ),
-            );
-          }
-          await download(container);
-          await waitFor(() => sourceCalls.length == 4);
-          await pumpEventQueue();
-          expect(_FakeSetupAction.targetInputs, [1, 3, 4, 5]);
-          expect(sourceCalls, [2, 2, 2, 2]);
-        },
-      );
-
-      test(
-        'warm counts never replace fresh preflight on successive saves',
-        () async {
-          final container = build();
-          await download(container);
-          await waitFor(() => sourceCalls.isNotEmpty);
-          await action(container).watchPanel(1).last;
-          expect(sourceCalls, [2]);
-          expect((await mountAir(container)).outcome, MountSaveOutcome.saved);
-          expect(
-            (await mountAir(container, expectedVersion: 1)).outcome,
-            MountSaveOutcome.saved,
-          );
-          verify(
-            () => core.preflightMounts(
-              base: any(named: 'base'),
-              config: any(named: 'config'),
-              mounts: any(named: 'mounts'),
-            ),
-          ).called(2);
-        },
-      );
-
-      test(
-        'actual RPC pool stays at four and foreground precedes queued background',
-        () async {
-          final container = build(
-            profiles: [_target, _source, _source.copyWith(id: 3)],
-          );
-          holdSources = true;
-          await download(container);
-          await waitFor(() => sources.length == 1);
-          await download(container, id: 3);
-          final targets = <Completer<MountTarget>>[];
-          var active = 1;
-          var peak = 1;
-          when(
-            () => core.inspectMountTarget(
-              base: any(named: 'base'),
-              config: any(named: 'config'),
-              managedTarget: any(named: 'managedTarget'),
-            ),
-          ).thenAnswer((_) async {
-            final gate = Completer<MountTarget>();
-            targets.add(gate);
-            active++;
-            if (active > peak) peak = active;
-            try {
-              return await gate.future;
-            } finally {
-              active--;
-            }
-          });
-          final foreground = [
-            for (var i = 0; i < 5; i++) action(container).readGroups(1),
-          ];
-          await waitFor(() => targets.length == 3);
-          await Future<void>.delayed(const Duration(milliseconds: 400));
-          expect(targets, hasLength(3));
-          expect(peak, 4);
-          active--;
-          sources.single.complete(nodes);
-          await waitFor(() => targets.length == 4);
-          expect(sourceCalls, [2]);
-          expect(peak, 4);
-          targets.first.complete(const MountTarget());
-          await waitFor(() => targets.length == 5);
-          expect(sourceCalls, [2]);
-          for (final gate in targets.skip(1).toList()) {
-            gate.complete(const MountTarget());
-          }
-          await Future.wait(foreground);
-          await waitFor(() => targets.length == 6);
-          targets.last.complete(const MountTarget());
-          await waitFor(() => sources.length == 2);
-          sources.last.complete(nodes);
-          await pumpEventQueue();
-          expect(peak, 4);
-          expect(sourceCalls, [2, 3]);
-        },
+    test('downloads never prewarm target or source inspections', () async {
+      inspects();
+      final container = build();
+      when(() => core.validateConfig(any())).thenAnswer((_) async => null);
+      final profiles = container.read(profilesActionProvider.notifier);
+      final updated = await profiles.fetchSource(2, (_, _, _) async => _source);
+      expect(updated, isNotNull);
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(_FakeSetupAction.targetInputs, isEmpty);
+      verifyNever(
+        () => core.inspectMountSource(
+          any(),
+          ageSecretKey: any(named: 'ageSecretKey'),
+          relay: any(named: 'relay'),
+          managed: any(named: 'managed'),
+        ),
       );
     });
 
@@ -751,7 +1166,7 @@ void main() {
       inspects();
       final targetRead = Completer<void>();
       when(
-        () => core.inspectMountTarget(
+        () => core.inspectMountTargetProjection(
           base: any(named: 'base'),
           config: any(named: 'config'),
           managedTarget: any(named: 'managedTarget'),
@@ -856,11 +1271,28 @@ void main() {
       ).called(10);
     });
 
+    test('actual panel entry never initializes full setup inputs', () async {
+      inspects();
+      final panel = await action(
+        build(forbidSetupState: true),
+      ).watchPanel(1).last;
+      expect(panel.groupsPending, isFalse);
+      expect(panel.sources.single.state, isNot(MountSourceState.unreadable));
+      verifyNever(() => core.getProfileBase(any()));
+      verifyNever(
+        () => core.buildProfile(
+          base: any(named: 'base'),
+          config: any(named: 'config'),
+          mounts: any(named: 'mounts'),
+        ),
+      );
+    });
+
     test('metadata is published before the target RPC resolves', () async {
       inspects();
       final target = Completer<MountTarget>();
       when(
-        () => core.inspectMountTarget(
+        () => core.inspectMountTargetProjection(
           base: any(named: 'base'),
           config: any(named: 'config'),
           managedTarget: any(named: 'managedTarget'),
@@ -1253,13 +1685,13 @@ void main() {
         await action(container).readGroups(2);
 
         verify(
-          () => core.inspectMountTarget(
+          () => core.inspectMountTargetProjection(
             base: any(named: 'base'),
             config: any(named: 'config'),
           ),
         ).called(1);
         verify(
-          () => core.inspectMountTarget(
+          () => core.inspectMountTargetProjection(
             base: any(named: 'base'),
             config: any(named: 'config'),
             managedTarget: 2,

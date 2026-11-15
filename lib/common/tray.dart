@@ -221,12 +221,16 @@ class AppTray implements TrayPort {
         ),
       const TrayMenuSeparator(),
       if (modeState.pendingMode case final pending?)
-        TrayMenuAction(
+        TrayMenuAction.status(
+          statusKey: 'outbound-mode',
           label: appLocalizations.traySwitchingTo(pending.label),
-          enabled: false,
+        )
+      else if (modeState.error case final error?)
+        TrayMenuAction.status(
+          statusKey: 'outbound-mode',
+          label: error,
+          accessibilityLabel: error,
         ),
-      if (modeState.error case final error?)
-        TrayMenuAction(label: error, accessibilityLabel: error, enabled: false),
       ...groupMenu,
       if (trayState.isStart) ...[
         TrayMenuCheckbox(

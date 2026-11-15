@@ -474,7 +474,7 @@ final class TailscaleSetupProvider
   }
 }
 
-String _$tailscaleSetupHash() => r'23298e10a80d82a419904f72d8090aa7d420ace2';
+String _$tailscaleSetupHash() => r'125dcf4f4bf2297679f683c8cfd960df91e58f9c';
 
 /// Read back after every groups read; null without a panel-added account.
 

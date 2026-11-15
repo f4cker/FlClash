@@ -34,7 +34,7 @@ class SplitPayloadTests(unittest.TestCase):
         self.write(self.source / SPLIT.DAEMON, b'old embedded daemon')
         self.write(self.source / 'Contents/Info.plist', plistlib.dumps({
             'CFBundleIdentifier': 'com.layoute.flash', 'CFBundleExecutable': 'Flash',
-            'CFBundleVersion': '2026111408', 'CFBundleShortVersionString': '0.9.5',
+            'CFBundleVersion': '2026111503', 'CFBundleShortVersionString': '0.9.5',
         }))
         for name in SPLIT.FRAMEWORKS:
             framework = self.source / f'Contents/Frameworks/{name}.framework'
@@ -93,8 +93,43 @@ class SplitPayloadTests(unittest.TestCase):
         self.assertEqual(info['CFBundleExecutable'], 'Flash')
         self.assertTrue(info['LSBackgroundOnly'])
         self.assertEqual(info['CFBundleIconFile'], 'AppIcon.icns')
-        self.assertEqual(info['CFBundleVersion'], '2026111408')
+        self.assertEqual(info['CFBundleVersion'], '2026111503')
         self.assertEqual(info['LSMinimumSystemVersion'], '14.0')
+
+    def test_metadata_only_gui_source_does_not_claim_a_fresh_gui_or_old_core_pair(self):
+        SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
+        original = SPLIT.inventory(self.gui)
+        new_core = self.binary(self.root / 'new-core')
+        new_core.write_bytes(new_core.read_bytes() + b'new-core')
+        new_hash = hashlib.sha256(new_core.read_bytes()).hexdigest()
+        inputs = [self.binary(self.root / name) for name in ('stub', 'helper', 'maintenance')]
+        with self.assertRaisesRegex(ValueError, 'GUI does not accept'):
+            SPLIT.stage_service(self.gui, *inputs, self.service, 'v1.19.33', 'a' * 40,
+                                released_core=new_core, core_sha256=new_hash)
+        SPLIT.stage_service(self.gui, *inputs, self.service, 'v1.19.33', 'a' * 40,
+                            released_core=new_core, core_sha256=new_hash,
+                            service_version='0.9.14', service_build='2026111503')
+        self.assertEqual(SPLIT.inventory(self.gui), original)
+        info = plistlib.loads((self.service / 'Contents/Info.plist').read_bytes())
+        self.assertEqual(info['CFBundleShortVersionString'], '0.9.14')
+        self.assertEqual(info['CFBundleVersion'], '2026111503')
+        self.assertEqual(info[SPLIT.COMPATIBILITY_KEY]['CoreSHA256'], new_hash)
+        self.assertEqual((self.service / SPLIT.CORE).read_bytes(), new_core.read_bytes())
+        self.assertFalse((self.service / 'Contents/Frameworks').exists())
+        with self.assertRaisesRegex(ValueError, 'GUI does not accept'):
+            SPLIT.compatible_pair(self.gui, self.service)
+        self.assertEqual(SPLIT.SERVICE_WRAPPER_BUILD, '2026111408')
+
+    def test_metadata_only_requires_both_exact_version_fields_before_writing(self):
+        SPLIT.stage_gui(self.source, self.gui, self.released_core, self.core_sha256)
+        inputs = [self.binary(self.root / name) for name in ('stub', 'helper', 'maintenance')]
+        for version, build in [('0.9.14', None), (None, '2026111503'), ('', '2026111503'),
+                               (True, '2026111503'), ('0.9.14', 2026111503), ('0.9.14', '1503')]:
+            with self.subTest(version=version, build=build), self.assertRaisesRegex(ValueError, 'both required'):
+                SPLIT.stage_service(self.gui, *inputs, self.service, 'v1.19.33', 'a' * 40,
+                                    released_core=self.released_core, core_sha256=self.core_sha256,
+                                    service_version=version, service_build=build)
+            self.assertFalse(self.service.exists())
 
     def test_unsigned_gui_modes_follow_macho_bytes_before_and_after_audit(self):
         target = self.source / 'Contents/Frameworks/App.framework/Versions/A/App'
@@ -383,7 +418,7 @@ class SplitPayloadTests(unittest.TestCase):
         service_info_path = self.service / 'Contents/Info.plist'
         gui_info = plistlib.loads(gui_info_path.read_bytes())
         service_info = plistlib.loads(service_info_path.read_bytes())
-        self.assertEqual(gui_info[SPLIT.MINIMUM_SERVICE_BUILD_KEY], '2026111408')
+        self.assertEqual(gui_info[SPLIT.MINIMUM_SERVICE_BUILD_KEY], '2026111503')
         service_info['CFBundleVersion'] = '2026111402'
         service_info_path.write_bytes(plistlib.dumps(service_info))
         with self.assertRaisesRegex(ValueError, 'below the GUI minimum'):

@@ -76,6 +76,7 @@ abstract final class TrayCodec {
       return switch (item) {
         TrayMenuSeparator() => <String, Object?>{'id': id, 'type': 'separator'},
         TrayMenuAction(
+          :final transientStatusKey,
           :final label,
           :final detail,
           :final icon,
@@ -86,6 +87,7 @@ abstract final class TrayCodec {
           <String, Object?>{
             'id': id,
             'type': 'action',
+            'transientStatusKey': ?transientStatusKey,
             'label': label,
             if (detail != null && detail.isNotEmpty) 'detail': detail,
             ..._decoration(icon, badge, accessibilityLabel),

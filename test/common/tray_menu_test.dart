@@ -283,6 +283,46 @@ void main() {
     },
   );
 
+  test(
+    'mode status uses one semantic slot through pending, error and success',
+    () async {
+      final state = container.read(trayModeMenuStateProvider.notifier);
+      state.set(const TrayModeMenuState(pendingMode: Mode.global));
+      await update(_trayState());
+      final pending = _items(
+        showCall(),
+      ).singleWhere((item) => item['transientStatusKey'] == 'outbound-mode');
+      expect(
+        pending['label'],
+        currentAppLocalizations.traySwitchingTo(Mode.global.label),
+      );
+      expect(pending['enabled'], isFalse);
+
+      const reason = 'fixture mode failure';
+      state.set(const TrayModeMenuState(error: reason));
+      await update(_trayState());
+      final failed = _items(showCall()).singleWhere(
+        (item) => item['transientStatusKey'] == pending['transientStatusKey'],
+      );
+      expect(failed['label'], reason);
+      expect(failed['accessibilityLabel'], reason);
+      expect(failed['enabled'], isFalse);
+      expect(_labels(showCall()), isNot(contains(pending['label'])));
+
+      state.set(const TrayModeMenuState());
+      await update(_trayState(mode: Mode.global));
+      expect(
+        _items(
+          showCall(),
+        ).where((item) => item.containsKey('transientStatusKey')),
+        isEmpty,
+      );
+      expect(_labels(showCall()), isNot(contains(pending['label'])));
+      expect(_labels(showCall()), isNot(contains(reason)));
+      expect(_item(showCall(), Mode.global.label)['checked'], isTrue);
+    },
+  );
+
   test('non-macOS keeps the ordinary mode checkboxes', () async {
     await update(
       _trayState(),

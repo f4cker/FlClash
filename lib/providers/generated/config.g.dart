@@ -509,7 +509,7 @@ final class _PatchClashConfigProvider
   }
 }
 
-String _$_patchClashConfigHash() => r'c23b24b2ed0ef2c4974d0381c6d46e8c06b40872';
+String _$_patchClashConfigHash() => r'6b3e07470ca704ae42536c29074296da8d1730b8';
 
 abstract class _$PatchClashConfig extends $Notifier<PatchClashConfig> {
   PatchClashConfig build();

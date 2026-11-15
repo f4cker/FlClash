@@ -41,8 +41,21 @@ final class TrayMenuAction extends TrayMenuItem {
     this.accessibilityLabel,
     this.enabled = true,
     this.onSelected,
-  });
+  }) : transientStatusKey = null;
 
+  const TrayMenuAction.status({
+    required this.label,
+    required String statusKey,
+    this.accessibilityLabel,
+  }) : assert(statusKey != ''),
+       transientStatusKey = statusKey,
+       detail = null,
+       icon = null,
+       badge = null,
+       enabled = false,
+       onSelected = null;
+
+  final String? transientStatusKey;
   final String label;
   final String? detail;
   final TrayMenuIcon? icon;

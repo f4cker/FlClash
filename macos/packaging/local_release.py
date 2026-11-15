@@ -18,10 +18,12 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY = 'f4cker/FlClash'
-CORE_SHA256 = '0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5'
+CORE_SHA256 = 'PENDING_SIGNED_CORE_1503'
+CORE_REVISION = 'PENDING_BUILT_WRAPPER_REVISION'
+SERVICE_RECEIPT_SHA256 = 'PENDING_SIGNED_SERVICE_1503'
 IDENTITY = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CORE = 'Contents/MacOS/FlClashCore'
-SERVICE_BUILD = '2026111408'
+SERVICE_BUILD = '2026111503'
 BEGIN = '<!-- flclash:changelog:begin -->'
 END = '<!-- flclash:changelog:end -->'
 JSON_BEGIN = '<!-- flclash:changelog:json'
@@ -119,15 +121,36 @@ def configuration(path):
 
 
 def check_service(config):
-    app = Path(config['service'])
-    receipt = pinned(Path(config['service_receipt']), config['service_receipt_sha256'])
+    require(re.fullmatch('[0-9a-f]{64}', CORE_SHA256) and
+            re.fullmatch('[0-9a-f]{40}', CORE_REVISION) and
+            re.fullmatch('[0-9a-f]{64}', SERVICE_RECEIPT_SHA256),
+            'New signed Core/service pins are pending')
+    base = ROOT / '.airbuild/local-release/service-core-1503'
+    app = base / 'service-payload/Flash.app'
+    receipt_path = base / 'service-current-schema.json'
+    require(config['service'] == str(app) and config['service_receipt'] == str(receipt_path) and
+            config['service_receipt_sha256'] == SERVICE_RECEIPT_SHA256,
+            'Only the exact reviewed 1503 service is supported')
+    receipt = pinned(receipt_path, SERVICE_RECEIPT_SHA256)
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
-    require(str(info.get('CFBundleVersion')) == SERVICE_BUILD, 'Only the derived 1408 service wrapper is supported')
+    require(info.get('CFBundleVersion') == SERVICE_BUILD and
+            info.get('CFBundleShortVersionString') == '0.9.14', 'Service version differs')
     require(sha(app / CORE) == CORE_SHA256, 'Released service/Core changed')
-    require(receipt.get('phase') == 'service' and receipt.get('static_verification') is True and
-            receipt.get('signing_scope') == 'service-wrapper-only',
-            'Missing released service signing evidence')
-    return module('stage_split_payload').inventory(app)
+    require(type(receipt.get('schema')) is int and receipt['schema'] == 1 and
+            receipt.get('phase') == 'service' and receipt.get('app') == str(app) and
+            receipt.get('static_verification') is True and 'signing_scope' not in receipt and
+            'wrapper_derivation' not in receipt and
+            receipt.get('reused_signed_core_sha256') == CORE_SHA256 and
+            receipt.get('before', {}).get('entries', {}).get(CORE, {}).get('sha256') == CORE_SHA256 and
+            receipt.get('compatibility') == {
+                'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1, 'CoreSHA256': CORE_SHA256,
+                'CoreVersion': 'v1.19.33', 'CoreRevision': CORE_REVISION},
+            'Exact ordinary new-Core service signing evidence required')
+    gate = module('verify_split_service')
+    stage = module('stage_split_payload')
+    gate.verify_bundle(app, 'service', receipt_path, SERVICE_RECEIPT_SHA256,
+                       module('sign_split_payload'), stage)
+    return stage.inventory(app)
 
 
 def check_version(app, identity):
@@ -163,10 +186,10 @@ def notes(identity):
     lines += [END, '', JSON_BEGIN, payload, '-->', '',
               '## macOS release scope', '',
               'Apple Silicon (arm64) release with one embedded install package for '
-              'service wrapper build **2026111408**, retaining helper binary build **2026111402**. Install the helper from the app '
+              'service build **2026111503**, retaining helper binary build **2026111402**. Install the helper from the app '
               'with macOS administrator authorization; no separate helper download is required.', '',
               'Self-signed with the existing Flash identity; **not Apple Developer ID signed '
-              'and not notarized**. The released helper and Core remain unchanged. Packaging '
+              'and not notarized**. The helper remains unchanged; the Core is newly built and signed. Packaging '
               'and static signature checks are not a claim of full test-suite or runtime acceptance.', '']
     return '\n'.join(lines)
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -13,6 +14,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/core.dart';
+import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/widgets.dart';
@@ -50,10 +52,12 @@ void main() {
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
+        currentProfileIdProvider.overrideWithBuild((_, _) => 1),
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
       ],
     );
     addTearDown(container.dispose);
+    container.listen(currentProfileIdProvider, (_, _) {});
     globalState.container = container;
   });
 
@@ -247,18 +251,23 @@ void main() {
         target.toCompanion(),
         source.toCompanion(),
       ]);
+      container.read(profilesProvider.notifier).put(target);
+      container.read(profilesProvider.notifier).put(source);
       final cache = File(await appPath.getProfilePath('2'));
       await cache.parent.create(recursive: true);
       await cache.writeAsString('proxies: [old]');
     });
 
-    Future<void> mount() => testDatabase.mountsDao.save(
-      targetId: 1,
-      expectedVersion: null,
-      sourceIds: [2],
-      pending: (version) =>
-          MountOperation(kind: MountOperationKind.save, version: version),
-    );
+    Future<void> mount() async {
+      await testDatabase.mountsDao.save(
+        targetId: 1,
+        expectedVersion: null,
+        sourceIds: [2],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      );
+      await testDatabase.mountsDao.settle(1, 1);
+    }
 
     void inspectsAs(MountSourceStatus status) {
       when(
@@ -274,15 +283,186 @@ void main() {
           .read(profilesActionProvider.notifier)
           .fetchSource(
             2,
-            (validate) => source.saveFile(
+            (validate, publish, install) => source.saveFile(
               Uint8List.fromList(utf8.encode(body)),
               validate: validate,
+              publish: publish,
+              install: install,
             ),
           );
     }
 
     Future<String> cache() async =>
         File(await appPath.getProfilePath('2')).readAsString();
+
+    test('setup cache hit cannot supersede an actual refresh', () async {
+      final gate = Completer<void>();
+      final ready = Completer<void>();
+      final profiles = container.read(profilesActionProvider.notifier);
+      final updating = profiles.fetchSource(
+        2,
+        (validate, publish, install) => source.saveFile(
+          Uint8List.fromList('proxies: [new]'.codeUnits),
+          validate: (path, key) async {
+            ready.complete();
+            await gate.future;
+            return validate(path, key);
+          },
+          publish: publish,
+          install: install,
+        ),
+      );
+      await ready.future;
+      expect(await profiles.ensureSource(source), isNull);
+      gate.complete();
+      expect(await updating, isNotNull);
+      expect(await cache(), 'proxies: [new]');
+    });
+
+    test(
+      'older completed metadata cannot overwrite a newer download',
+      () async {
+        final profiles = container.read(profilesActionProvider.notifier);
+        final old = await save('proxies: [old-result]');
+        final newest = await save('proxies: [new-result]');
+        expect(profiles.commitSourceUpdate(newest!), isNotNull);
+        expect(profiles.commitSourceUpdate(old!), isNull);
+        expect(await cache(), 'proxies: [new-result]');
+      },
+    );
+
+    test('a mounted-only candidate skips full profile validation', () async {
+      await mount();
+      inspectsAs(MountSourceStatus.nodes);
+      await save('proxies: []\nrules: [raw-export]');
+      verifyNever(() => core.validateConfig(any()));
+    });
+
+    test(
+      'a mounted source selected standalone still validates full profile',
+      () async {
+        await mount();
+        container.read(currentProfileIdProvider.notifier).value = 2;
+        inspectsAs(MountSourceStatus.nodes);
+        await save('proxies: []');
+        verify(() => core.validateConfig(any())).called(1);
+      },
+    );
+
+    test(
+      'selection switch during node inspection blocks unvalidated publication',
+      () async {
+        await mount();
+        final ready = Completer<void>();
+        final gate = Completer<MountSourceInspection>();
+        when(
+          () => core.inspectMountSource(
+            any(),
+            ageSecretKey: any(named: 'ageSecretKey'),
+          ),
+        ).thenAnswer((_) {
+          ready.complete();
+          return gate.future;
+        });
+        final pending = save('proxies: [new]');
+        await ready.future;
+        container.read(currentProfileIdProvider.notifier).value = 2;
+        gate.complete(
+          const MountSourceInspection(status: MountSourceStatus.nodes),
+        );
+        expect(await pending, isNull);
+        expect(await cache(), 'proxies: [old]');
+      },
+    );
+
+    test(
+      'mutating validation cannot replace canonical raw download bytes',
+      () async {
+        const raw = 'synthetic-encrypted-or-share-link-source';
+        final updated = await container
+            .read(profilesActionProvider.notifier)
+            .fetchSource(
+              2,
+              (validate, publish, install) => source.saveFile(
+                Uint8List.fromList(raw.codeUnits),
+                validate: (path, key) async {
+                  await File(path).writeAsString('proxies: []');
+                  return null;
+                },
+                publish: publish,
+                install: install,
+              ),
+            );
+        expect(updated, isNotNull);
+        expect(await cache(), raw);
+      },
+    );
+
+    test('newest overlapping candidate alone publishes raw bytes', () async {
+      final first = Completer<void>();
+      final ready = Completer<void>();
+      final profiles = container.read(profilesActionProvider.notifier);
+      final old = profiles.fetchSource(
+        2,
+        (validate, publish, install) => source.saveFile(
+          Uint8List.fromList('proxies: [stale]'.codeUnits),
+          validate: (path, key) async {
+            ready.complete();
+            await first.future;
+            return validate(path, key);
+          },
+          publish: publish,
+          install: install,
+        ),
+      );
+      await ready.future;
+      expect(await save('proxies: [new]\nrules: [raw-export]'), isNotNull);
+      first.complete();
+      expect(await old, isNull);
+      expect(await cache(), 'proxies: [new]\nrules: [raw-export]');
+    });
+
+    for (final edit in ['delete', 'url', 'key', 'type', 'restore', 'cancel']) {
+      test('$edit supersedes a validated but unpublished candidate', () async {
+        final gate = Completer<void>();
+        final ready = Completer<void>();
+        final profiles = container.read(profilesActionProvider.notifier);
+        final updating = profiles.fetchSource(
+          2,
+          (validate, publish, install) => source.saveFile(
+            Uint8List.fromList('proxies: [stale]'.codeUnits),
+            validate: (path, key) async {
+              final issue = await validate(path, key);
+              ready.complete();
+              await gate.future;
+              return issue;
+            },
+            publish: publish,
+            install: install,
+          ),
+        );
+        await ready.future;
+        final store = container.read(profilesProvider.notifier);
+        switch (edit) {
+          case 'delete':
+            await store.del(2);
+          case 'url':
+            store.put(source.copyWith(url: 'https://example.invalid/new'));
+          case 'key':
+            store.put(source.copyWith(ageSecretKey: 'new-key'));
+          case 'type':
+            store.put(source.copyWith(type: ProfileType.file));
+          case 'restore':
+            store.put(source.copyWith(url: 'https://example.invalid/new'));
+            store.put(source);
+          case 'cancel':
+            profiles.cancelSourceUpdate(2);
+        }
+        gate.complete();
+        expect(await updating, isNull);
+        expect(await cache(), 'proxies: [old]');
+      });
+    }
 
     test('a mounted source keeps its cache on content without nodes', () async {
       await mount();
@@ -332,11 +512,13 @@ void main() {
           .read(profilesActionProvider.notifier)
           .fetchSource(
             2,
-            (validate) => source
+            (validate, publish, install) => source
                 .copyWith(ageSecretKey: 'own-key')
                 .saveFile(
                   Uint8List.fromList(utf8.encode('proxies: []')),
                   validate: validate,
+                  publish: publish,
+                  install: install,
                 ),
           );
 
@@ -351,7 +533,10 @@ void main() {
       await expectLater(
         container
             .read(profilesActionProvider.notifier)
-            .fetchSource(2, (_) async => throw const SocketException('down')),
+            .fetchSource(
+              2,
+              (_, _, _) async => throw const SocketException('down'),
+            ),
         throwsA(isA<SocketException>()),
       );
 

@@ -31,6 +31,25 @@ class _NullCore extends CoreHandlerInterface {
   Future<CoreLifecycleResult> close() async => _unused;
 }
 
+class _MountReplyCore extends _NullCore {
+  Object? arguments;
+  CoreMethod? method;
+
+  @override
+  Future<Object?> invokeMethod({
+    required CoreMethod method,
+    Object? arguments,
+    Duration? timeout,
+  }) async {
+    this.method = method;
+    this.arguments = arguments;
+    return {
+      'outcome': 'applied',
+      'state': {'generation': 8},
+    };
+  }
+}
+
 const _unused = CoreLifecycleResult(
   revision: 0,
   outcome: CoreLifecycleOutcome.applied,
@@ -67,6 +86,47 @@ void main() {
   late _NullCore core;
 
   setUp(() => core = _NullCore());
+
+  test(
+    'mount refresh carries generation, raw digest, and both revisions',
+    () async {
+      final reply = _MountReplyCore();
+      final result = await reply.refreshMountSources(
+        target: 42,
+        generation: 7,
+        revision: 'old',
+        nextRevision: 'next',
+        sources: {101: 'raw-sha256'},
+      );
+      expect(reply.method, CoreMethod.mountRefreshSources);
+      expect(reply.method!.wireName, 'mount.refreshSources');
+      expect(reply.arguments, {
+        'target': 42,
+        'generation': 7,
+        'revision': 'old',
+        'next-revision': 'next',
+        'sources': [
+          {'id': 101, 'digest': 'raw-sha256'},
+        ],
+      });
+      expect(result.outcome, MountRefreshOutcome.applied);
+      expect(result.state.generation, 8);
+      expect(MountRuntimeState.fromJson({}).generation, 0);
+    },
+  );
+
+  test('mount refresh with no acknowledgement fails closed', () async {
+    await expectLater(
+      core.refreshMountSources(
+        target: 42,
+        generation: 7,
+        revision: 'old',
+        nextRevision: 'next',
+        sources: {101: 'digest'},
+      ),
+      _emptyResult,
+    );
+  });
 
   test('a command succeeds on an answer that carries nothing', () async {
     await core.setupConfig(_setupParams);

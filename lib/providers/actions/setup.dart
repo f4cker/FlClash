@@ -1,5 +1,23 @@
 part of '../action.dart';
 
+String _mountProjectionConfig(
+  ({
+    List<ProxyGroup> groups,
+    List<CustomProxy> proxies,
+    Map<int, String> dialers,
+    Map<String, dynamic> providers,
+  })
+  data,
+) => json.encode({
+  'proxies': appProxiesPayload(
+    data.proxies,
+    dialers: data.dialers,
+    groups: data.groups,
+  ),
+  'proxy-groups': [for (final group in data.groups) group.definition],
+  'proxy-providers': data.providers,
+});
+
 enum _SetupTaskResult { completed, handoffToCoreRestart, failed }
 
 typedef _SetupInputs = (
@@ -355,8 +373,8 @@ class SetupAction extends _$SetupAction {
   /// No other port is picked and nothing else is stopped. An unanswered
   /// query leaves the port unconfirmed, which keeps the system proxy off.
   @visibleForTesting
-  Future<bool> checkMixedListener() async {
-    if (!_mixedListenerExpected) {
+  Future<bool> checkMixedListener({bool Function()? owns}) async {
+    if (!(owns?.call() ?? true) || !_mixedListenerExpected) {
       return true;
     }
     final port = ref.read(effectiveMixedPortProvider);
@@ -373,7 +391,8 @@ class SetupAction extends _$SetupAction {
       );
       return true;
     }
-    if (!_mixedListenerExpected ||
+    if (!(owns?.call() ?? true) ||
+        !_mixedListenerExpected ||
         port != ref.read(effectiveMixedPortProvider)) {
       return true;
     }
@@ -390,6 +409,7 @@ class SetupAction extends _$SetupAction {
     // of this run may have pointed it at Flash, and a restore may not have
     // finished or may have left a service alone.
     final unchanged = await systemProxyUnchangedSince(_systemProxyMark);
+    if (!(owns?.call() ?? true)) return false;
     dialogs.showBanner(
       unchanged
           ? currentAppLocalizations.mixedPortUnavailableProxyUnchanged('$port')
@@ -610,9 +630,18 @@ class SetupAction extends _$SetupAction {
   }) async {
     Future<T?> run<T>(Future<T> Function() operation) async =>
         trayMode == null ? globalState.safeRun(operation) : operation();
-    if (await _compositionPending) {
+    final adoptionPending = await _compositionPending;
+    if (!(isCurrent?.call() ?? true)) return false;
+    if (adoptionPending) {
       // A patch cannot acknowledge first adoption or bypass the review.
-      final result = await run(() => _runSetup(automatic: true, silence: true));
+      final result = await run(
+        () => _runSetup(
+          automatic: true,
+          silence: true,
+          owns: isCurrent,
+          trayMode: trayMode != null,
+        ),
+      );
       if (trayMode == null || result != _SetupTaskResult.completed) {
         return false;
       }
@@ -627,9 +656,10 @@ class SetupAction extends _$SetupAction {
             ? configured
             : configured.copyWith(mode: trayMode);
         _effectivePatchConfig(patchConfig);
-        final shouldContinueSetup = await requestAdmin(
-          patchConfig.pageTunEnable,
-        );
+        final shouldContinueSetup = trayMode == null
+            ? await requestAdmin(patchConfig.pageTunEnable)
+            : await _requestAdmin(patchConfig.pageTunEnable, owns: isCurrent);
+        if (!(isCurrent?.call() ?? true)) return;
         if (!shouldContinueSetup) {
           restart = true;
           return;
@@ -664,18 +694,25 @@ class SetupAction extends _$SetupAction {
           rethrow;
         }
         if (isCurrent != null && !isCurrent()) return;
-        ref.read(runningFindProcessModeProvider.notifier).value =
-            effective.findProcessMode.name;
-        if (ref.read(isStartProvider)) await checkMixedListener();
+        if (ref.read(isStartProvider)) {
+          await checkMixedListener(owns: isCurrent);
+        }
         if (isCurrent == null || isCurrent()) {
+          ref.read(runningFindProcessModeProvider.notifier).value =
+              effective.findProcessMode.name;
           onApplied?.call();
           applied = true;
         }
       }),
     );
-    if (restart) await _restartCoreAfterAuthorization();
+    if (restart && (isCurrent?.call() ?? true)) {
+      await _restartCoreAfterAuthorization();
+    }
     return applied;
   }
+
+  @protected
+  Duration get trayModeDeadline => const Duration(seconds: 15);
 
   Future<void> changeModeForTray(Mode mode) async {
     if (ref.read(trayModeMenuStateProvider).pendingMode != null ||
@@ -703,11 +740,26 @@ class SetupAction extends _$SetupAction {
     );
     menu.set(TrayModeMenuState(pendingMode: mode));
     try {
-      final applied = await _updateConfig(
-        trayMode: mode,
-        isCurrent: isCurrent,
-        onApplied: () => _publishMode(mode),
-      );
+      // Only the UI wait expires; the scheduler retains the actual operation.
+      final applied =
+          await _updateConfig(
+            trayMode: mode,
+            isCurrent: isCurrent,
+            onApplied: () => _publishMode(mode),
+          ).timeout(
+            trayModeDeadline,
+            onTimeout: () {
+              if (isCurrent()) {
+                _trayModeRevision++;
+                menu.set(
+                  TrayModeMenuState(
+                    error: currentAppLocalizations.traySwitchUnconfirmed,
+                  ),
+                );
+              }
+              return false;
+            },
+          );
       if (isCurrent()) {
         menu.set(
           TrayModeMenuState(
@@ -734,6 +786,16 @@ class SetupAction extends _$SetupAction {
         ),
       );
     } finally {
+      if (isCurrent()) {
+        _trayModeRevision++;
+        if (ref.read(trayModeMenuStateProvider).pendingMode != null) {
+          menu.set(
+            TrayModeMenuState(
+              error: currentAppLocalizations.traySwitchUnconfirmed,
+            ),
+          );
+        }
+      }
       runningSubscription.close();
       handlerSubscription.close();
     }
@@ -831,10 +893,12 @@ class SetupAction extends _$SetupAction {
   Future<bool> applyProfile({
     bool silence = false,
     bool force = false,
+    bool Function()? owns,
     Future<void> Function()? preloadInvoke,
   }) async {
     final result = await _runSetup(
       force: force,
+      owns: owns,
       silence: silence,
       preloadInvoke: preloadInvoke,
     );
@@ -850,13 +914,18 @@ class SetupAction extends _$SetupAction {
   }
 
   Future<_SetupTaskResult> _runSetup({
+    bool trayMode = false,
     bool automatic = false,
     bool silence = false,
     bool force = false,
+    bool Function()? owns,
     Future<void> Function()? preloadInvoke,
   }) async {
     final result = await _setupScheduler.run(() {
+      if (!(owns?.call() ?? true)) return Future.value(_SetupTaskResult.failed);
       return _setupConfig(
+        trayMode: trayMode,
+        owns: owns,
         automatic: automatic,
         force: force,
         silence: silence,
@@ -870,6 +939,7 @@ class SetupAction extends _$SetupAction {
         },
       );
     });
+    if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     if (result != _SetupTaskResult.handoffToCoreRestart) {
       return result;
     }
@@ -1157,8 +1227,51 @@ class SetupAction extends _$SetupAction {
     _lostMountSelections = state.lost;
   }
 
-  /// The profile a mount reads its groups from and is checked against: the
-  /// base for one built on it, the built text for any other.
+  /// Display only: never use this projection for preflight or apply.
+  Future<({SetupBase? base, String? config})> mountTargetProjectionInput(
+    int profileId,
+  ) async {
+    final profile = ref.read(profileProvider(profileId));
+    if (profile == null) throw StateError('Mount target is unavailable');
+    if (profile.type != ProfileType.custom) {
+      if (profile.extendType == ExtendType.script) {
+        throw StateError('Mount groups are unavailable for a script profile');
+      }
+      return (
+        base: SetupBase(
+          path: await appPath.getProfilePath(profileId.toString()),
+          overlay: '{}',
+        ),
+        config: null,
+      );
+    }
+    final groups = await database.proxyGroupsDao.query(profileId).get();
+    final proxies = await database.customProxiesDao.query().get();
+    final dialers = {
+      for (final dialer
+          in await database.proxyDialersDao.query(profileId).get())
+        dialer.proxyId: dialer.target,
+    };
+    final used = {for (final group in groups) ...?group.use};
+    final providers = <String, dynamic>{};
+    for (final entry in ref.read(profileProvidersProvider).entries) {
+      if (!used.contains(entry.key)) continue;
+      providers[entry.key] = {
+        'type': 'file',
+        'path': await appPath.getProfilePath(entry.value.toString()),
+        ...?profile.overrides.proxyProviders[entry.key]?.definition,
+      };
+    }
+    final config = await compute(_mountProjectionConfig, (
+      groups: groups,
+      proxies: proxies,
+      dialers: dialers,
+      providers: providers,
+    ));
+    return (base: null, config: config);
+  }
+
+  /// The complete candidate used by mount preflight, never a display projection.
   Future<({SetupBase? base, String? config})> mountTargetInput(
     int profileId,
   ) async {
@@ -1203,12 +1316,16 @@ class SetupAction extends _$SetupAction {
   }
 
   @visibleForTesting
-  Future<bool> requestAdmin(bool enableTun) async {
+  Future<bool> requestAdmin(bool enableTun) => _requestAdmin(enableTun);
+
+  Future<bool> _requestAdmin(bool enableTun, {bool Function()? owns}) async {
+    if (!(owns?.call() ?? true)) return false;
     if (!enableTun || ref.read(safeModeProvider)) {
       return true;
     }
     if (usesManagedMacHelper) {
       final state = await checkMacHelper();
+      if (!(owns?.call() ?? true)) return false;
       if (state != MacHelperState.enabled) {
         throw MessageException(
           currentAppLocalizations.macHelperUnavailableDetail,
@@ -1226,9 +1343,12 @@ class SetupAction extends _$SetupAction {
     final authorizationNotifier = ref.read(
       authorizedTunEnableProvider.notifier,
     );
-    authorizationNotifier.value = TunAuthorizationState.unauthorized;
+    if (owns == null) {
+      authorizationNotifier.value = TunAuthorizationState.unauthorized;
+    }
 
     final code = await authorizeCore();
+    if (!(owns?.call() ?? true)) return false;
 
     switch (code) {
       case AuthorizeCode.success:
@@ -1332,10 +1452,16 @@ class SetupAction extends _$SetupAction {
 
   /// The existing setup scheduler owns this gate, including live-patch entry.
   /// Source refresh is deliberately excluded until first adoption completes.
-  Future<_CompositionCandidate?> _reviewComposition() async {
+  Future<_CompositionCandidate?> _reviewComposition() =>
+      _reviewOwnedComposition();
+
+  Future<_CompositionCandidate?> _reviewOwnedComposition({
+    bool Function()? owns,
+  }) async {
     try {
       var candidate = await _readCompositionCandidate();
       for (var attempts = 0; attempts < 3; attempts++) {
+        if (!(owns?.call() ?? true)) return null;
         if (_compositionReview.approves(candidate.fingerprint)) {
           return candidate;
         }
@@ -1382,11 +1508,13 @@ class SetupAction extends _$SetupAction {
             if (Platform.isLinux) 'routing-mark',
           },
         );
+        if (!(owns?.call() ?? true)) return null;
         if (!approved) {
           _compositionReview.cancel();
           return null;
         }
         final checked = await _readCompositionCandidate();
+        if (!(owns?.call() ?? true)) return null;
         if (checked.fingerprint == candidate.fingerprint) {
           _compositionReview.approve(candidate.fingerprint);
           return checked;
@@ -1396,6 +1524,7 @@ class SetupAction extends _$SetupAction {
       }
       throw StateError('Configuration kept changing during review');
     } catch (error) {
+      if (!(owns?.call() ?? true)) return null;
       commonPrint.log(
         'composition review preparation failed (${error.runtimeType})',
       );
@@ -1449,13 +1578,17 @@ class SetupAction extends _$SetupAction {
   }
 
   Future<_SetupTaskResult> _setupConfig({
+    bool trayMode = false,
     bool automatic = false,
     bool force = false,
+    bool Function()? owns,
     bool silence = false,
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
   }) async {
+    if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     final adoptionPending = await _compositionPending;
+    if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     if (adoptionPending &&
         ref.read(pendingCompositionDnsEligibilityProvider) == null) {
       final eligibility = ref.read(shouldPatchSystemDnsProvider);
@@ -1466,13 +1599,30 @@ class SetupAction extends _$SetupAction {
         _compositionReview.suppressed(automatic: automatic)) {
       return _SetupTaskResult.failed;
     }
-    final adoption = adoptionPending ? await _reviewComposition() : null;
-    if (adoptionPending && adoption == null) return _SetupTaskResult.failed;
+    final adoption = adoptionPending
+        ? owns == null
+              ? await _reviewComposition()
+              : await _reviewOwnedComposition(owns: owns)
+        : null;
+    if (!(owns?.call() ?? true) || (adoptionPending && adoption == null)) {
+      return _SetupTaskResult.failed;
+    }
     _lostMountSelections = const [];
     var profile =
         adoption?.profile ??
         ref.read(currentProfileProvider) ??
         recoverMissingProfile();
+    final sourceIdentity = profile;
+    bool sourceCurrent() {
+      final latest = ref.read(currentProfileProvider);
+      return (owns?.call() ?? true) &&
+          ref.read(currentProfileIdProvider) == sourceIdentity?.id &&
+          latest?.id == sourceIdentity?.id &&
+          latest?.type == sourceIdentity?.type &&
+          latest?.url == sourceIdentity?.url &&
+          latest?.ageSecretKey == sourceIdentity?.ageSecretKey;
+    }
+
     // A refresh failure is surfaced by safeRun; setup keeps the old profile.
     final nextProfile = adoptionPending
         ? null
@@ -1483,21 +1633,26 @@ class SetupAction extends _$SetupAction {
             }
             return ref
                 .read(profilesActionProvider.notifier)
-                .fetchSource(
-                  current.id,
-                  (validate) =>
-                      current.checkAndUpdateAndCopy(validate: validate),
-                );
+                .ensureSource(current);
           });
     if (nextProfile != null) {
-      profile = nextProfile;
-      ref.read(profilesProvider.notifier).put(nextProfile);
+      final committed = ref
+          .read(profilesActionProvider.notifier)
+          .commitSourceUpdate(nextProfile);
+      if (committed == null) return _SetupTaskResult.failed;
+      profile = committed;
     }
+    if (!sourceCurrent()) return _SetupTaskResult.failed;
+    profile = ref.read(currentProfileProvider);
     commonPrint.log('setup ===> ${profile?.realLabel}');
     final patchConfig = ref.read(patchClashConfigProvider);
     _effectivePatchConfig(patchConfig);
-    final shouldContinueSetup = await requestAdmin(patchConfig.pageTunEnable);
+    final shouldContinueSetup = trayMode
+        ? await _requestAdmin(patchConfig.pageTunEnable, owns: owns)
+        : await requestAdmin(patchConfig.pageTunEnable);
+    if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     if (!shouldContinueSetup) return _SetupTaskResult.handoffToCoreRestart;
+    if (!sourceCurrent()) return _SetupTaskResult.failed;
     if (patchConfig.pageTunEnable &&
         !ref.read(safeModeProvider) &&
         ref.read(authorizedTunEnableProvider) !=
@@ -1512,11 +1667,12 @@ class SetupAction extends _$SetupAction {
         adoption?.built ??
         await globalState.safeRun(() async {
           final state = await ref.read(setupStateProvider(profile?.id).future);
+          if (!sourceCurrent()) throw StateError('Profile setup superseded');
           setupState = state;
           return getProfile(setupState: state, patchConfig: realPatchConfig);
         }, title: 'build profile');
     final profileFailed = realProfile == null;
-    if (profileFailed) {
+    if (profileFailed || !sourceCurrent()) {
       return _SetupTaskResult.failed;
     }
     var setupParams = _setupParams.copyWith(
@@ -1607,6 +1763,9 @@ class SetupAction extends _$SetupAction {
                     adoption.fingerprint) {
               throw StateError('Reviewed configuration changed; review again');
             }
+            if (!sourceCurrent()) {
+              throw StateError('Profile setup superseded');
+            }
             rpcStarted = true;
             releaseCandidate = false;
             await _core.setupConfig(
@@ -1614,6 +1773,10 @@ class SetupAction extends _$SetupAction {
               preloadInvoke: preloadInvoke,
             );
             releaseCandidate = true;
+            if (!(owns?.call() ?? true)) {
+              setupFailed = true;
+              return;
+            }
             if (adoptionPending) {
               ref
                       .read(pendingCompositionDnsEligibilityProvider.notifier)
@@ -1626,6 +1789,10 @@ class SetupAction extends _$SetupAction {
               }
             }
           } on CoreMethodException catch (error) {
+            if (!(owns?.call() ?? true)) {
+              setupFailed = true;
+              return;
+            }
             final configOutcome =
                 error.code == 'config_rejected' && error.details is Map
                 ? (error.details as Map)['outcome']
@@ -1657,6 +1824,7 @@ class SetupAction extends _$SetupAction {
           }
         } catch (e, s) {
           setupFailed = true;
+          if (!(owns?.call() ?? true)) return;
           if (rpcStarted && !definitelyKept) {
             await _forgetConfirmedComposition(defaultRuntime: defaultRuntime);
           }
@@ -1673,6 +1841,10 @@ class SetupAction extends _$SetupAction {
               commonPrint.log('composition candidate cleanup failed');
             }
           }
+        }
+        if (!(owns?.call() ?? true)) {
+          setupFailed = true;
+          return;
         }
         ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(
           realProfile.yaml,

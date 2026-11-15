@@ -20,6 +20,9 @@ class LocalReleaseTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve()
+        core_patch = patch.object(RELEASE, 'CORE_SHA256', 'a' * 64)
+        core_patch.start()
+        self.addCleanup(core_patch.stop)
         self.patch = patch.object(RELEASE, 'ROOT', self.root)
         self.patch.start()
         self.addCleanup(self.patch.stop)
@@ -66,6 +69,50 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertEqual(actual.WORKTREE, Path('/protected/signing'))
         self.assertIs(observed, constraint)
 
+    def test_pending_service_pins_stop_before_any_artifact_access(self):
+        with patch.object(RELEASE, 'CORE_SHA256', 'PENDING_SIGNED_CORE_1503'), \
+                patch.object(RELEASE, 'pinned') as read:
+            with self.assertRaisesRegex(ValueError, 'pins are pending'):
+                RELEASE.check_service(self.config)
+            read.assert_not_called()
+
+    def test_only_exact_reviewed_ordinary_new_core_service_is_accepted(self):
+        app = self.root / '.airbuild/local-release/service-core-1503/service-payload/Flash.app'
+        (app / 'Contents/MacOS').mkdir(parents=True)
+        (app / RELEASE.CORE).write_bytes(b'new-signed-core-fixture-never-execute')
+        core_hash = RELEASE.sha(app / RELEASE.CORE)
+        (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({
+            'CFBundleVersion': '2026111503', 'CFBundleShortVersionString': '0.9.14'}))
+        path = app.parent.parent / 'service-current-schema.json'
+        config = dict(self.config, service=str(app), service_receipt=str(path), service_receipt_sha256='b' * 64)
+        receipt = {'schema': 1, 'phase': 'service', 'app': str(app), 'static_verification': True,
+                   'reused_signed_core_sha256': core_hash,
+                   'before': {'entries': {RELEASE.CORE: {'sha256': core_hash}}},
+                   'compatibility': {'CallerPolicy': 2, 'CoreAPI': 1, 'ServiceAPI': 1,
+                                     'CoreSHA256': core_hash, 'CoreVersion': 'v1.19.33', 'CoreRevision': 'c' * 40}}
+        gate, stage, signer = Mock(), Mock(), object()
+        stage.inventory.return_value = {'exact': 'inventory'}
+        def module(name):
+            return {'verify_split_service': gate, 'stage_split_payload': stage, 'sign_split_payload': signer}[name]
+        with patch.object(RELEASE, 'CORE_SHA256', core_hash), patch.object(RELEASE, 'CORE_REVISION', 'c' * 40), \
+                patch.object(RELEASE, 'SERVICE_RECEIPT_SHA256', 'b' * 64), \
+                patch.object(RELEASE, 'module', side_effect=module), patch.object(RELEASE, 'pinned', return_value=receipt):
+            self.assertEqual(RELEASE.check_service(config), {'exact': 'inventory'})
+            gate.verify_bundle.assert_called_once_with(app, 'service', path, 'b' * 64, signer, stage)
+            gate.reset_mock()
+            for key, value in [('schema', True), ('phase', 'gui'), ('signing_scope', 'service-wrapper-only'),
+                               ('wrapper_derivation', {}), ('reused_signed_core_sha256', '0' * 64),
+                               ('before', {'entries': {RELEASE.CORE: {'sha256': '0' * 64}}}),
+                               ('compatibility', dict(receipt['compatibility'], CoreRevision='old'))]:
+                changed = dict(receipt, **{key: value})
+                with self.subTest(key=key), patch.object(RELEASE, 'pinned', return_value=changed):
+                    with self.assertRaisesRegex(ValueError, 'ordinary new-Core'):
+                        RELEASE.check_service(config)
+            for key in ('service', 'service_receipt', 'service_receipt_sha256'):
+                with self.subTest(key=key), self.assertRaisesRegex(ValueError, 'exact reviewed'):
+                    RELEASE.check_service(dict(config, **{key: 'arbitrary'}))
+            gate.verify_bundle.assert_not_called()
+
     def test_bundle_marketing_and_build_versions_must_match(self):
         app = self.directory / 'gui/Flash.app'
         (app / 'Contents/MacOS').mkdir(parents=True)
@@ -77,7 +124,7 @@ class LocalReleaseTests(unittest.TestCase):
         self.addCleanup(module_patch.stop)
         plist = app / 'Contents/Info.plist'
         info = {'CFBundleShortVersionString': '0.9.8', 'CFBundleVersion': '2026111405',
-                'FlashMinimumServiceBuild': '2026111408',
+                'FlashMinimumServiceBuild': RELEASE.SERVICE_BUILD,
                 'FlashHelperCompatibility': {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
                                              'AcceptedCoreSHA256': [RELEASE.CORE_SHA256]}}
         plist.write_bytes(plistlib.dumps(info))
@@ -178,7 +225,7 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertIn(RELEASE.BEGIN, body)
         self.assertIn(RELEASE.END, body)
         self.assertNotIn('-->', payload)
-        for text in ('arm64', '2026111402', '2026111408', 'one embedded install package', 'not notarized', 'Self-signed', 'runtime acceptance'):
+        for text in ('arm64', '2026111402', '2026111503', 'one embedded install package', 'not notarized', 'Self-signed', 'runtime acceptance'):
             self.assertIn(text, body)
         self.assertIn('no separate helper download', body)
         self.assertNotIn('repair', body)

@@ -9,6 +9,15 @@ typedef _MountRelay = ({List<String> names, List<String> managed});
 class MountAction extends _$MountAction {
   CoreController get _core => ref.read(coreHandlerProvider);
   final _scheduler = SerialTaskScheduler();
+  final _applyingTargets = <int>{};
+  Future<void> installSource(int sourceId, VoidCallback install) =>
+      _scheduler.run(() async {
+        if (await hasPendingRemoval(sourceId)) {
+          throw const ProfileUpdateSuperseded();
+        }
+        install();
+      });
+
   final _inspectionPool = _MountInspectionPool();
   final _panelLoads = <VoidCallback>{};
   final _inspectionCache = <String, MountSourceInspection>{};
@@ -17,18 +26,13 @@ class MountAction extends _$MountAction {
         String,
         ({Future<MountSourceInspection?> result, bool Function() isCurrent})
       >{};
-  final _preparations = <int, _MountPreparation>{};
-  final _sourceUpdates = <int, Object>{};
-  int? _recentTargetId;
   var _cacheEpoch = 0;
+  final _targetIntents = <int, int>{};
 
   void _clearInspectionCache() {
     _cacheEpoch++;
     _inspectionCache.clear();
     _inspectionFlights.clear();
-    for (final sourceId in _preparations.keys.toList()) {
-      _cancelPreparation(sourceId);
-    }
   }
 
   @override
@@ -43,135 +47,6 @@ class MountAction extends _$MountAction {
         cancel();
       }
     });
-  }
-
-  Object beginSourceUpdate(int sourceId) {
-    _cancelPreparation(sourceId);
-    for (final entry in _preparations.entries.toList()) {
-      if (entry.value.targetId == sourceId) _cancelPreparation(entry.key);
-    }
-    final token = Object();
-    _sourceUpdates[sourceId] = token;
-    return token;
-  }
-
-  void finishSourceUpdate(int sourceId, Object token, {required bool updated}) {
-    if (!identical(_sourceUpdates[sourceId], token)) return;
-    _sourceUpdates.remove(sourceId);
-    if (!updated || !ref.mounted) return;
-    _cancelPreparation(sourceId);
-    if (_preparations.length >= 32) {
-      _cancelPreparation(_preparations.keys.first);
-    }
-    final job = _MountPreparation();
-    _preparations[sourceId] = job;
-    job.timer = Timer(const Duration(milliseconds: 300), () {
-      job.timer = Timer(const Duration(seconds: 15), () {
-        if (identical(_preparations[sourceId], job)) {
-          _cancelPreparation(sourceId);
-        }
-      });
-      unawaited(_prepareSource(sourceId, job));
-    });
-  }
-
-  void _cancelPreparation(int sourceId) {
-    final job = _preparations.remove(sourceId);
-    if (job == null) return;
-    job.active = false;
-    job.timer?.cancel();
-    _inspectionPool.cancel(job);
-  }
-
-  Future<void> _prepareSource(int sourceId, _MountPreparation job) async {
-    try {
-      final targets = <int>{
-        ?ref.read(currentProfileIdProvider),
-        ?_recentTargetId,
-        ...await database.mountsDao.targetsOf(sourceId),
-      }..remove(sourceId);
-      if (!job.active || !ref.mounted) return;
-      final remaining = targets.take(4).iterator;
-      void next() {
-        if (!job.active || !ref.mounted) return;
-        if (!remaining.moveNext()) {
-          _cancelPreparation(sourceId);
-          return;
-        }
-        final targetId = remaining.current;
-        _inspectionPool.add(job, () async {
-          try {
-            await _prepareTarget(sourceId, targetId, job);
-          } catch (_) {
-            // Opportunistic preparation must never surface a download error.
-          } finally {
-            next();
-          }
-        }, background: true);
-      }
-
-      next();
-    } catch (_) {
-      if (identical(_preparations[sourceId], job)) {
-        _cancelPreparation(sourceId);
-      }
-    }
-  }
-
-  Future<void> _prepareTarget(
-    int sourceId,
-    int targetId,
-    _MountPreparation job,
-  ) async {
-    if (!job.active || !ref.mounted) return;
-    final profiles = ref.read(profilesProvider);
-    final source = profiles.getProfile(sourceId);
-    final target = profiles.getProfile(targetId);
-    if (source?.type != ProfileType.url || target == null) return;
-    final patch = ref.read(patchClashConfigProvider);
-    final records = ref.read(tailscaleManagedRecordsProvider);
-    if (records == null) return;
-    final epoch = _cacheEpoch;
-    var contextCurrent = true;
-    job.targetId = targetId;
-    final subscription = ref.listen(
-      setupStateProvider(targetId).future,
-      (_, _) => contextCurrent = false,
-    );
-    bool isCurrent() =>
-        job.active &&
-        ref.mounted &&
-        contextCurrent &&
-        !_sourceUpdates.containsKey(sourceId) &&
-        !_sourceUpdates.containsKey(targetId) &&
-        epoch == _cacheEpoch &&
-        ref.read(profilesProvider).getProfile(sourceId) == source &&
-        ref.read(profilesProvider).getProfile(targetId) == target &&
-        ref.read(patchClashConfigProvider) == patch &&
-        ref.read(tailscaleManagedRecordsProvider) == records;
-    try {
-      String? targetKey;
-      final groups = await _readGroups(
-        targetId,
-        isCurrent: isCurrent,
-        onInput: (input) async {
-          final fingerprint = await compute(_mountTargetFingerprint, input);
-          targetKey = fingerprint == null ? null : '$targetId:$fingerprint';
-        },
-      );
-      if (!isCurrent() || targetKey == null) return;
-      final relay = _relayOf(targetId, groups);
-      if (relay == null) return;
-      await _inspectCached(
-        source!,
-        relay,
-        targetKey: targetKey,
-        isCurrent: isCurrent,
-      );
-    } finally {
-      subscription.close();
-      job.targetId = null;
-    }
   }
 
   Future<MountSourceInspection> inspectDownloadedSource(
@@ -218,7 +93,6 @@ class MountAction extends _$MountAction {
 
   Stream<MountPanel> watchPanel(int targetId, {bool refresh = false}) {
     if (refresh) _clearInspectionCache();
-    _recentTargetId = targetId;
     late StreamController<MountPanel> controller;
     final owner = Object();
     late VoidCallback disposeLoad;
@@ -226,6 +100,7 @@ class MountAction extends _$MountAction {
     Timer? deadline;
     MountPanel? panel;
     final subscriptions = <ProviderSubscription<dynamic>>[];
+    StreamSubscription<dynamic>? databaseChanges;
 
     void cancel() {
       active = false;
@@ -235,6 +110,7 @@ class MountAction extends _$MountAction {
         subscription.close();
       }
       subscriptions.clear();
+      unawaited(databaseChanges?.cancel());
       _panelLoads.remove(disposeLoad);
     }
 
@@ -353,11 +229,10 @@ class MountAction extends _$MountAction {
             (_, _) => fail(contextChanged: true),
           ),
         );
-        subscriptions.add(
-          ref.listen(
-            setupStateProvider(targetId).future,
-            (_, _) => fail(contextChanged: true),
-          ),
+        // Observe table changes directly: listening to setupState would eagerly
+        // assemble rules, scripts and MITM files just to invalidate this panel.
+        databaseChanges = database.tableUpdates().listen(
+          (_) => fail(contextChanged: true),
         );
         _inspectionPool.add(owner, inspect);
       } catch (error, stack) {
@@ -491,7 +366,7 @@ class MountAction extends _$MountAction {
   }) async {
     final input = await ref
         .read(setupActionProvider.notifier)
-        .mountTargetInput(targetId);
+        .mountTargetProjectionInput(targetId);
     if (isCurrent != null && !isCurrent()) {
       throw StateError('mount inspection superseded');
     }
@@ -509,7 +384,7 @@ class MountAction extends _$MountAction {
               record.attached,
         ) ??
         false;
-    return _core.inspectMountTarget(
+    return _core.inspectMountTargetProjection(
       base: input.base,
       config: input.config,
       managedTarget: managed ? targetId : null,
@@ -525,10 +400,28 @@ class MountAction extends _$MountAction {
     required int? expectedVersion,
     required List<int> sourceIds,
     VoidCallback? onStored,
-  }) {
-    return _scheduler.run(
+  }) async {
+    final intent = (_targetIntents[targetId] ?? 0) + 1;
+    _targetIntents[targetId] = intent;
+    try {
+      final previous = await database.mountsDao.target(targetId);
+      if (_targetIntents[targetId] == intent &&
+          previous?.version == expectedVersion) {
+        final profiles = ref.read(profilesActionProvider.notifier);
+        for (final id in previous?.sourceIds ?? <int>[]) {
+          if (!sourceIds.contains(id)) profiles.cancelSourceUpdate(id);
+        }
+      }
+    } catch (_) {
+      // The serialized save reports unreadability; it must not cancel sources
+      // belonging to unrelated targets, or an active standalone refresh.
+    }
+    final result = await _scheduler.run(
       () => _save(targetId, expectedVersion, sourceIds, onStored),
     );
+    return result.outcome == MountSaveOutcome.saved && result.state != null
+        ? _applyAndSettle(result.state!)
+        : result;
   }
 
   Future<MountSaveResult> _save(
@@ -632,7 +525,8 @@ class MountAction extends _$MountAction {
     }
     ref.invalidate(setupStateProvider(targetId));
     onStored?.call();
-    return _applyAndSettle(saved);
+    _applyingTargets.add(saved.targetId);
+    return MountSaveResult(outcome: MountSaveOutcome.saved, state: saved);
   }
 
   /// Reads the running state back for a target whose last save or removal
@@ -648,6 +542,12 @@ class MountAction extends _$MountAction {
       if (current == null) {
         return const MountSaveResult(outcome: MountSaveOutcome.saved);
       }
+      if (_applyingTargets.contains(targetId)) {
+        return MountSaveResult(
+          outcome: MountSaveOutcome.locked,
+          state: current,
+        );
+      }
       final outcome = await _confirm(current, applied: null);
       if (current.pending != null && outcome != MountSaveOutcome.unknown) {
         await _settle(current);
@@ -657,21 +557,27 @@ class MountAction extends _$MountAction {
   }
 
   Future<MountSaveResult> _applyAndSettle(MountTargetState saved) async {
-    if (!_isRunning(saved.targetId)) {
-      await _settle(saved);
-      return MountSaveResult(outcome: MountSaveOutcome.saved, state: saved);
+    try {
+      if (!_isRunning(saved.targetId)) {
+        return await _scheduler.run(() async {
+          await _settle(saved);
+          return MountSaveResult(outcome: MountSaveOutcome.saved, state: saved);
+        });
+      }
+      final setup = ref.read(setupActionProvider.notifier);
+      final applied = await setup.applyProfile(silence: true);
+      return await _scheduler.run(() async {
+        final outcome = await _confirm(saved, applied: applied);
+        if (outcome != MountSaveOutcome.unknown) await _settle(saved);
+        return MountSaveResult(
+          outcome: outcome,
+          state: saved,
+          lostSelections: setup.lostMountSelections,
+        );
+      });
+    } finally {
+      _applyingTargets.remove(saved.targetId);
     }
-    final setup = ref.read(setupActionProvider.notifier);
-    final applied = await setup.applyProfile(silence: true);
-    final outcome = await _confirm(saved, applied: applied);
-    if (outcome != MountSaveOutcome.unknown) {
-      await _settle(saved);
-    }
-    return MountSaveResult(
-      outcome: outcome,
-      state: saved,
-      lostSelections: setup.lostMountSelections,
-    );
   }
 
   /// What the Core runs for [targetId], null when it runs another profile
@@ -746,84 +652,278 @@ class MountAction extends _$MountAction {
     _ => null,
   };
 
-  /// Updates [sourceId] and, when the current profile mounts it, applies
-  /// and reads the result back.
-  Future<MountSourceRefresh> refreshSource(int sourceId, {int? targetId}) {
+  /// Downloads are deliberately outside the mutation scheduler so a later
+  /// refresh/removal owns its source immediately, even during a slow download.
+  Future<MountSourceRefresh> refreshSource(
+    int sourceId, {
+    int? targetId,
+  }) async {
     _clearInspectionCache();
-    return _scheduler.run(() async {
-      final profile = ref.read(profilesProvider).getProfile(sourceId);
-      if (profile == null) {
-        return const MountSourceRefresh(updated: false);
-      }
-      String? message;
-      try {
-        await ref
-            .read(profilesActionProvider.notifier)
-            .updateProfile(profile, showLoading: true);
-      } catch (error) {
-        message = _messageOf(error) ?? compactError(error);
-      }
-      final item = await _item(sourceId, targetId);
-      if (message != null) {
-        return MountSourceRefresh(updated: false, item: item, message: message);
-      }
-      final currentId = ref.read(currentProfileIdProvider);
-      final MountTargetState? target;
-      try {
-        target = currentId == null
-            ? null
-            : await database.mountsDao.target(currentId);
-      } catch (_) {
-        return MountSourceRefresh(
-          updated: true,
-          item: item,
-          application: MountSaveOutcome.unknown,
-        );
-      }
-      if (target == null || !target.sourceIds.contains(sourceId)) {
-        return MountSourceRefresh(updated: true, item: item);
-      }
-      final setup = ref.read(setupActionProvider.notifier);
-      final applied = await setup.applyProfile(silence: true);
+    final profile = ref.read(profilesProvider).getProfile(sourceId);
+    if (profile == null) return const MountSourceRefresh(updated: false);
+    try {
+      return await ref
+          .read(profilesActionProvider.notifier)
+          .refreshProfile(profile, showLoading: true);
+    } catch (error) {
       return MountSourceRefresh(
-        updated: true,
-        item: item,
-        application: await _confirm(target, applied: applied),
-        lostSelections: setup.lostMountSelections,
+        updated: false,
+        message: _messageOf(error) ?? compactError(error),
       );
-    });
+    }
   }
 
-  Future<MountSourceItem?> _item(int sourceId, int? targetId) async {
-    final profile = ref.read(profilesProvider).getProfile(sourceId);
-    if (profile == null) {
-      return null;
-    }
-    Map<int, MountSourceRecord> records;
+  /// A batch publishes at most one current-target operation. Other targets
+  /// consume the canonical cache when selected; they are never built here.
+  Future<Map<int, MountSourceRefresh>> completeSourceUpdates(
+    List<Profile> updated, {
+    required int? targetId,
+    required String? previousRevision,
+    required bool targetCurrent,
+    required Map<int, String> previousLabels,
+  }) async {
+    if (updated.isEmpty) return const {};
+    final profiles = ref.read(profilesActionProvider.notifier);
+    final intent = _targetIntents[targetId] ?? 0;
+    var selected = targetCurrent;
+    final subscription = ref.listen(currentProfileIdProvider, (_, next) {
+      if (next != targetId) selected = false;
+    });
+    bool current() =>
+        ref.mounted &&
+        selected &&
+        ref.read(currentProfileIdProvider) == targetId &&
+        (_targetIntents[targetId] ?? 0) == intent;
+    Future<Map<int, MountSourceRefresh>> Function()? applyOutside;
     try {
-      records = await database.mountsDao.statuses();
-    } catch (_) {
-      records = const {};
-    }
-    _MountRelay? relay;
-    if (targetId != null) {
-      try {
-        relay = _relayOf(targetId, await readGroups(targetId));
-      } catch (error) {
-        commonPrint.log(
-          'mount groups unreadable: ${compactError(error)}',
-          logLevel: LogLevel.warning,
+      final result = await _scheduler.run(() async {
+        final active = updated.where(profiles.isSourceUpdateCurrent).toList();
+        final results = <int, MountSourceRefresh>{
+          for (final profile in active)
+            profile.id: MountSourceRefresh(
+              updated: true,
+              item: profiles.sourceUpdateItem(profile),
+            ),
+        };
+        Map<int, MountSourceRefresh> superseded() => {
+          for (final entry in results.entries)
+            entry.key: entry.value.copyWith(
+              application: MountSaveOutcome.unchanged,
+            ),
+        };
+        if (!current()) return superseded();
+        if (targetId == null || !_isRunning(targetId)) return results;
+        final target = await database.mountsDao.target(targetId);
+        if (!current()) return superseded();
+        final mounted = active
+            .where((profile) => target?.sourceIds.contains(profile.id) ?? false)
+            .toList();
+        final standalone = active.any((profile) => profile.id == targetId);
+        if (!standalone && mounted.isEmpty) {
+          // Preserve explicit custom-profile provider references, independently
+          // of mount relations, without rebuilding unrelated inactive targets.
+          applyOutside = () async {
+            if (!current() || !active.every(profiles.isSourceUpdateCurrent)) {
+              return superseded();
+            }
+            await ref
+                .read(clashProvidersActionProvider.notifier)
+                .applyIfReferenced(ProviderKind.proxy, {
+                  for (final profile in active) profile.realLabel,
+                }, force: true);
+            return results;
+          };
+          return <int, MountSourceRefresh>{};
+        }
+        MountTargetState? expectedTarget;
+        String? expectedRevision;
+        String? profilesPath;
+        bool owns() =>
+            current() &&
+            active.every(profiles.isSourceUpdateCurrent) &&
+            (expectedTarget == null ||
+                mountSetupOf(
+                      expectedTarget,
+                      ref.read(profilesProvider),
+                      profilesPath!,
+                    ).revision ==
+                    expectedRevision);
+        if (!owns()) return superseded();
+        if (target?.pending != null) {
+          for (final profile in mounted) {
+            results[profile.id] = results[profile.id]!.copyWith(
+              application: MountSaveOutcome.locked,
+            );
+          }
+          return results;
+        }
+        if (standalone) {
+          applyOutside = () async {
+            final applied = await ref
+                .read(setupActionProvider.notifier)
+                .applyProfile(silence: true, owns: owns);
+            for (final profile in active) {
+              results[profile.id] = results[profile.id]!.copyWith(
+                application: !owns()
+                    ? MountSaveOutcome.unchanged
+                    : applied
+                    ? MountSaveOutcome.applied
+                    : MountSaveOutcome.applyFailedKept,
+              );
+            }
+            return results;
+          };
+          return <int, MountSourceRefresh>{};
+        }
+        // Record the attempted refresh before the IPC. An ambiguous response
+        // leaves this existing durable lock for explicit readback/reconciliation.
+        final pending = await database.mountsDao.save(
+          targetId: targetId,
+          expectedVersion: target!.version,
+          sourceIds: target.sourceIds,
+          pending: (version) => MountOperation(
+            kind: MountOperationKind.save,
+            version: version,
+            sourceIds: target.sourceIds,
+          ),
         );
-      }
+        ref.invalidate(setupStateProvider(targetId));
+        profilesPath = await appPath.profilesPath;
+        final next = mountSetupOf(
+          pending,
+          ref.read(profilesProvider),
+          profilesPath,
+        );
+        expectedTarget = pending;
+        expectedRevision = next.revision;
+        final labelsUnchanged = pending.sourceIds.every(
+          (id) =>
+              previousLabels[id] ==
+              ref.read(profilesProvider).getProfile(id)?.realLabel,
+        );
+        var outcome = MountSaveOutcome.unknown;
+        MountRuntimeState? runtime;
+        String? message;
+        var lost = <String>[];
+        var needsApply = false;
+        bool? fallbackApplied;
+        Future<void> fullApply() async {
+          if (!owns()) {
+            outcome = MountSaveOutcome.unchanged;
+            return;
+          }
+          final setup = ref.read(setupActionProvider.notifier);
+          fallbackApplied = await setup.applyProfile(silence: true, owns: owns);
+          lost = setup.lostMountSelections;
+          runtime = null;
+        }
+
+        try {
+          final digests = <int, String>{};
+          for (final profile in mounted) {
+            final path = await appPath.getProfilePath(profile.id.toString());
+            digests[profile.id] =
+                (await sha256.bind(File(path).openRead()).first).toString();
+          }
+          final before = await _readState();
+          if (!owns()) {
+            outcome = MountSaveOutcome.unchanged;
+          } else if (before?.report?.target != targetId) {
+            outcome = MountSaveOutcome.unknown;
+          } else if (before!.blocked) {
+            outcome = MountSaveOutcome.applyFailedBlocked;
+          } else if (previousRevision == null) {
+            outcome = MountSaveOutcome.unknown;
+          } else if (before.report!.revision != previousRevision ||
+              !labelsUnchanged) {
+            // Labels/relations or a previously unapplied source changed before
+            // this download. The native request cannot prove those inputs.
+            needsApply = true;
+          } else {
+            final response = await _core.refreshMountSources(
+              target: targetId,
+              generation: before.generation,
+              revision: before.report!.revision,
+              nextRevision: next.revision,
+              sources: digests,
+            );
+            runtime = response.state;
+            message = response.error;
+            switch (response.outcome) {
+              case MountRefreshOutcome.applied:
+                outcome = response.state.report?.target == targetId
+                    ? confirmMounts(response.state, next.revision) ??
+                          MountSaveOutcome.unknown
+                    : MountSaveOutcome.unknown;
+                lost = response.state.lost;
+              case MountRefreshOutcome.requiresApply:
+                needsApply = true;
+              case MountRefreshOutcome.superseded:
+                outcome = MountSaveOutcome.unchanged;
+              case MountRefreshOutcome.kept:
+                outcome = MountSaveOutcome.applyFailedKept;
+              case MountRefreshOutcome.unknown:
+                outcome = MountSaveOutcome.unknown;
+            }
+          }
+        } catch (error) {
+          message = _messageOf(error) ?? compactError(error);
+        }
+        Future<Map<int, MountSourceRefresh>> finish() async {
+          if (fallbackApplied != null) {
+            outcome = owns()
+                ? await _confirm(pending, applied: fallbackApplied)
+                : MountSaveOutcome.unchanged;
+          }
+          if (outcome != MountSaveOutcome.unknown) await _settle(pending);
+          for (final profile in mounted) {
+            MountSourceReport? report;
+            if (outcome == MountSaveOutcome.applied ||
+                outcome == MountSaveOutcome.appliedUnverified) {
+              for (final source
+                  in runtime?.report?.sources ?? <MountSourceReport>[]) {
+                if (source.id == profile.id) report = source;
+              }
+            }
+            results[profile.id] = MountSourceRefresh(
+              updated: profiles.isSourceUpdateCurrent(profile),
+              item: profiles.sourceUpdateItem(profile, report: report),
+              application: current() ? outcome : MountSaveOutcome.unchanged,
+              message: message,
+              lostSelections: lost,
+            );
+          }
+          return results;
+        }
+
+        if (needsApply) {
+          if (!owns()) {
+            outcome = MountSaveOutcome.unchanged;
+            return finish();
+          }
+          // Setup may itself need a canonical install. Never wait for its
+          // scheduler while holding the mount mutation scheduler.
+          _applyingTargets.add(targetId);
+          applyOutside = () async {
+            try {
+              try {
+                await fullApply();
+              } catch (error) {
+                message = _messageOf(error) ?? compactError(error);
+              }
+              return await _scheduler.run(finish);
+            } finally {
+              _applyingTargets.remove(targetId);
+            }
+          };
+          return <int, MountSourceRefresh>{};
+        }
+        return finish();
+      });
+      return applyOutside == null ? result : await applyOutside!();
+    } finally {
+      subscription.close();
     }
-    return mountSourceItem(
-      profile,
-      relay == null
-          ? null
-          : await _inspectionPool.run(() => _inspect(profile, relay)),
-      mounted: true,
-      record: records[sourceId],
-    );
   }
 
   /// The profiles that mount [sourceId]; throws when they cannot be read,
@@ -855,30 +955,32 @@ class MountAction extends _$MountAction {
   /// [recheck] resolves it and the deletion is retried. [unlink] is the
   /// Tailscale outcome that kept a profile already unmounted.
   Future<({MountSourceDeletion result, TailscaleUnlinkOutcome? unlink})>
-  deleteSource(int sourceId) {
+  deleteSource(int sourceId) async {
+    ref.read(profilesActionProvider.notifier).cancelSourceUpdate(sourceId);
+    final List<MountTargetState> marked;
+    try {
+      marked = await _scheduler.run(() async {
+        final targets = await database.mountsDao.beginSourceRemoval(sourceId);
+        _applyingTargets.addAll(targets.map((target) => target.targetId));
+        return targets;
+      });
+    } on MountOperationUnresolved {
+      return (result: MountSourceDeletion.blocked, unlink: null);
+    } catch (_) {
+      return (result: MountSourceDeletion.unchanged, unlink: null);
+    }
+    for (final target in marked) {
+      ref.invalidate(setupStateProvider(target.targetId));
+    }
+    var known = true;
+    for (final target in marked) {
+      final result = await _applyAndSettle(target);
+      known &= result.outcome != MountSaveOutcome.unknown;
+    }
+    if (!known) return (result: MountSourceDeletion.unknown, unlink: null);
     return _scheduler.run(() async {
-      final List<MountTargetState> marked;
-      try {
-        marked = await database.mountsDao.beginSourceRemoval(sourceId);
-      } on MountOperationUnresolved {
+      if (await database.mountsDao.isMounted(sourceId)) {
         return (result: MountSourceDeletion.blocked, unlink: null);
-      } catch (_) {
-        return (result: MountSourceDeletion.unchanged, unlink: null);
-      }
-      for (final target in marked) {
-        ref.invalidate(setupStateProvider(target.targetId));
-      }
-      var known = true;
-      for (final target in marked) {
-        if (!_isRunning(target.targetId)) {
-          await _settle(target);
-          continue;
-        }
-        final result = await _applyAndSettle(target);
-        known &= result.outcome != MountSaveOutcome.unknown;
-      }
-      if (!known) {
-        return (result: MountSourceDeletion.unknown, unlink: null);
       }
       final outcome = await ref
           .read(profilesActionProvider.notifier)
@@ -891,12 +993,6 @@ class MountAction extends _$MountAction {
       );
     });
   }
-}
-
-class _MountPreparation {
-  bool active = true;
-  Timer? timer;
-  int? targetId;
 }
 
 class _MountInspectionPool {

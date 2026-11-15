@@ -23,6 +23,12 @@ func prepareSetupConfig(params *SetupParams) (*setupCandidate, error) {
 	var document *yaml.Node
 	var report *MountReport
 	var err error
+	retained := false
+	defer func() {
+		if !retained {
+			report.discardInputs()
+		}
+	}()
 	if params.Base != nil {
 		document, report, err = mergeProfileBase(params.Base, false, mountSetupOf(params))
 	} else {
@@ -48,6 +54,7 @@ func prepareSetupConfig(params *SetupParams) (*setupCandidate, error) {
 	if err != nil {
 		return nil, &setupPreflightError{err}
 	}
+	retained = true
 	return &setupCandidate{path: path, report: report, configs: configs}, nil
 }
 

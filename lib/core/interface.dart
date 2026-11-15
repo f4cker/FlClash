@@ -195,7 +195,25 @@ abstract class CoreHandlerInterface {
     );
   }
 
-  /// [base] for a custom profile, [config] for the built text of any other.
+  /// Display-only node/group projection; preflight must use the full candidate.
+  Future<MountTarget> inspectMountTargetProjection({
+    SetupBase? base,
+    String? config,
+    int? managedTarget,
+  }) {
+    return _query(
+      CoreMethod.mountInspectTarget,
+      _model(MountTarget.fromJson),
+      arguments: {
+        'base': ?base?.toJson(),
+        'config': ?config,
+        'managed-target': ?managedTarget,
+        'projection': true,
+      },
+    );
+  }
+
+  /// [base] for a layered profile, [config] for a complete candidate.
   /// [managedTarget] is the target when its apply puts the panel-added
   /// Tailscale rules first, which take Tailscale traffic before its own.
   Future<MountTarget> inspectMountTarget({
@@ -229,6 +247,27 @@ abstract class CoreHandlerInterface {
       },
     );
   }
+
+  Future<MountRefreshResult> refreshMountSources({
+    required int target,
+    required int generation,
+    required String revision,
+    required String nextRevision,
+    required Map<int, String> sources,
+  }) => _query(
+    CoreMethod.mountRefreshSources,
+    _model(MountRefreshResult.fromJson),
+    arguments: {
+      'target': target,
+      'generation': generation,
+      'revision': revision,
+      'next-revision': nextRevision,
+      'sources': [
+        for (final entry in sources.entries)
+          {'id': entry.key, 'digest': entry.value},
+      ],
+    },
+  );
 
   Future<MountRuntimeState> getMountState() {
     return _query(CoreMethod.mountState, _model(MountRuntimeState.fromJson));

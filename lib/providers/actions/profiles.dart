@@ -1,8 +1,144 @@
 part of '../action.dart';
 
+class _SourceUpdateBatch {
+  _SourceUpdateBatch(this.targetId, this.priorRevision, this.labels);
+
+  final Map<int, String> labels;
+  final int? targetId;
+  final Future<String?> priorRevision;
+  var targetCurrent = true;
+  ProviderSubscription<int?>? selection;
+  var pending = 0;
+  final updated = <int, Profile>{};
+  final done = Completer<Map<int, MountSourceRefresh>>();
+}
+
 @Riverpod(keepAlive: true)
 class ProfilesAction extends _$ProfilesAction {
   CoreController get _core => ref.read(coreHandlerProvider);
+  final _sourceUpdates = <int, Object>{};
+  final _sourceResults = Expando<Object>();
+  final _sourceInspections = Expando<MountSourceInspection>();
+  _SourceUpdateBatch? _updateBatch;
+
+  _SourceUpdateBatch _newUpdateBatch() {
+    final targetId = ref.read(currentProfileIdProvider);
+    final before = [...ref.read(profilesProvider)];
+    final batch = _SourceUpdateBatch(targetId, () async {
+      try {
+        final target = targetId == null
+            ? null
+            : await database.mountsDao.target(targetId);
+        if (target == null) return null;
+        return mountSetupOf(
+          target,
+          before,
+          await appPath.profilesPath,
+        ).revision;
+      } catch (_) {
+        return null;
+      }
+    }(), {for (final profile in before) profile.id: profile.realLabel});
+    batch.selection = ref.listen(currentProfileIdProvider, (_, next) {
+      if (next != targetId) batch.targetCurrent = false;
+    });
+    return batch;
+  }
+
+  bool isSourceUpdateCurrent(Profile profile) {
+    final token = _sourceResults[profile];
+    final latest = ref.read(profilesProvider).getProfile(profile.id);
+    return token != null &&
+        identical(_sourceUpdates[profile.id], token) &&
+        latest != null &&
+        latest.url == profile.url &&
+        latest.type == profile.type &&
+        latest.ageSecretKey == profile.ageSecretKey &&
+        latest.realLabel == profile.realLabel &&
+        latest.lastUpdateDate == profile.lastUpdateDate;
+  }
+
+  MountSourceItem sourceUpdateItem(
+    Profile profile, {
+    MountSourceReport? report,
+  }) {
+    final inspection = report == null
+        ? _sourceInspections[profile]
+        : MountSourceInspection(
+            status: report.status,
+            count: report.nodes.length,
+            tailscaleExcluded: report.tailscaleExcluded,
+            relayExcluded: report.relayExcluded,
+            unsupportedExcluded: report.unsupportedExcluded,
+          );
+    return mountSourceItem(profile, inspection, mounted: true);
+  }
+
+  void _releaseUpdateBatch(_SourceUpdateBatch batch) {
+    if (--batch.pending != 0) return;
+    if (identical(_updateBatch, batch)) _updateBatch = null;
+    unawaited(() async {
+      try {
+        final results = await ref
+            .read(mountActionProvider.notifier)
+            .completeSourceUpdates(
+              batch.updated.values.toList(),
+              targetId: batch.targetId,
+              previousRevision: await batch.priorRevision,
+              targetCurrent: batch.targetCurrent,
+              previousLabels: batch.labels,
+            );
+        batch.done.complete(results);
+      } catch (error) {
+        batch.done.complete({
+          for (final profile in batch.updated.values)
+            profile.id: MountSourceRefresh(
+              updated: true,
+              application: MountSaveOutcome.unknown,
+              message: compactError(error),
+            ),
+        });
+      } finally {
+        batch.selection?.close();
+      }
+    }());
+  }
+
+  Future<void> _updateMany(List<int> ids, {bool automatic = false}) async {
+    final batch = _updateBatch ??= _newUpdateBatch();
+    batch.pending++;
+    try {
+      for (final id in ids) {
+        final profile = ref.read(profilesProvider).getProfile(id);
+        if (profile == null || profile.type != ProfileType.url) continue;
+        if (automatic &&
+            (!profile.autoUpdate ||
+                profile.lastUpdateDate
+                        ?.add(profile.autoUpdateDuration)
+                        .isBeforeNow ==
+                    false)) {
+          continue;
+        }
+        try {
+          await refreshProfile(
+            profile,
+            showLoading: !automatic,
+            waitForApplication: false,
+          );
+        } catch (error) {
+          if (!automatic) rethrow;
+          commonPrint.log(compactError(error), logLevel: LogLevel.warning);
+        }
+      }
+    } finally {
+      _releaseUpdateBatch(batch);
+    }
+    await batch.done.future;
+  }
+
+  void cancelSourceUpdate(int sourceId) {
+    _sourceUpdates.remove(sourceId);
+  }
 
   @override
   void build() {}
@@ -28,6 +164,7 @@ class ProfilesAction extends _$ProfilesAction {
   /// unbound. Throws [MountSourceInUse] for a source still mounted, which
   /// [MountAction.deleteSource] unmounts first.
   Future<TailscaleUnlinkOutcome> deleteProfile(int id) async {
+    cancelSourceUpdate(id);
     if (await database.mountsDao.isMounted(id)) {
       throw const MountSourceInUse();
     }
@@ -56,25 +193,9 @@ class ProfilesAction extends _$ProfilesAction {
     return _core.validateConfigWithData(data);
   }
 
-  Future<void> autoUpdateProfiles() async {
-    for (final id in [
-      for (final profile in ref.read(profilesProvider)) profile.id,
-    ]) {
-      final profile = ref.read(profilesProvider).getProfile(id);
-      if (profile == null || !profile.autoUpdate) continue;
-      final isNotNeedUpdate = profile.lastUpdateDate
-          ?.add(profile.autoUpdateDuration)
-          .isBeforeNow;
-      if (isNotNeedUpdate == false || profile.type != ProfileType.url) {
-        continue;
-      }
-      try {
-        await updateProfile(profile);
-      } catch (e) {
-        commonPrint.log(compactError(e), logLevel: LogLevel.warning);
-      }
-    }
-  }
+  Future<void> autoUpdateProfiles() => _updateMany([
+    for (final profile in ref.read(profilesProvider)) profile.id,
+  ], automatic: true);
 
   void putProfile(Profile profile) {
     ref.read(profilesProvider.notifier).put(profile);
@@ -142,79 +263,106 @@ class ProfilesAction extends _$ProfilesAction {
     );
   }
 
-  Future<void> updateProfiles() async {
-    for (final id in [
-      for (final profile in ref.read(profilesProvider)) profile.id,
-    ]) {
-      final profile = ref.read(profilesProvider).getProfile(id);
-      if (profile == null || profile.type != ProfileType.url) continue;
-      await updateProfile(profile, showLoading: true);
-    }
-  }
+  Future<void> updateProfiles() => _updateMany([
+    for (final profile in ref.read(profilesProvider)) profile.id,
+  ]);
 
   Future<void> updateProfile(
     Profile profile, {
     bool showLoading = false,
   }) async {
+    await refreshProfile(profile, showLoading: showLoading);
+  }
+
+  /// Every caller joins the in-flight download batch. Only the final download
+  /// schedules runtime work; explicit update-all also holds the batch open.
+  Future<MountSourceRefresh> refreshProfile(
+    Profile profile, {
+    bool showLoading = false,
+    bool waitForApplication = true,
+  }) async {
+    final current = ref.read(profilesProvider).getProfile(profile.id);
+    if (current == null || current.type != ProfileType.url) {
+      return const MountSourceRefresh(updated: false);
+    }
+    profile = current;
+    final batch = _updateBatch ??= _newUpdateBatch();
+    batch.pending++;
     final operation = showLoading
         ? ref.read(updatingKeysProvider.notifier).start(profile.updatingKey)
         : null;
+    Profile? committed;
     try {
-      ref.read(profilesProvider.notifier).put(profile);
-      final updated = (await fetchSource(
+      final downloaded = await fetchSource(
         profile.id,
-        (validate) => profile.update(validate: validate),
-      ))!;
-      // The download can take minutes; edits and deletes made meanwhile win.
-      final latest = ref.read(profilesProvider).getProfile(profile.id);
-      if (latest == null) {
-        await clearEffect(profile.id);
-        return;
-      }
-      final newProfile = latest.copyWith(
-        label: latest.label.takeFirstValid([updated.label]),
-        subscriptionInfo: updated.subscriptionInfo,
-        lastUpdateDate: updated.lastUpdateDate,
+        (validate, publish, install) => profile.update(
+          validate: validate,
+          publish: publish,
+          install: install,
+        ),
       );
-      ref.read(profilesProvider.notifier).put(newProfile);
-      final currentId = ref.read(currentProfileIdProvider);
-      if (profile.id == currentId ||
-          await _mountedBy(profile.id).then((ids) => ids.contains(currentId))) {
-        ref
-            .read(setupActionProvider.notifier)
-            .applyProfileDebounce(silence: true);
-      } else {
-        final label = ref
-            .read(profilesProvider.notifier)
-            .labeled(newProfile)
-            .realLabel;
-        unawaited(
-          ref.read(clashProvidersActionProvider.notifier).applyIfReferenced(
-            ProviderKind.proxy,
-            {label},
-            force: true,
-          ),
-        );
-      }
+      if (downloaded != null) committed = commitSourceUpdate(downloaded);
+      if (committed != null) batch.updated[profile.id] = committed;
     } finally {
+      _releaseUpdateBatch(batch);
       if (operation != null) {
         ref
             .read(updatingKeysProvider.notifier)
             .stop(profile.updatingKey, operation);
       }
     }
+    if (committed == null) return const MountSourceRefresh(updated: false);
+    if (!waitForApplication) {
+      return MountSourceRefresh(
+        updated: true,
+        item: sourceUpdateItem(committed),
+      );
+    }
+    final results = await batch.done.future;
+    if (!isSourceUpdateCurrent(committed)) {
+      return const MountSourceRefresh(updated: false);
+    }
+    return results[profile.id] ?? const MountSourceRefresh(updated: false);
   }
 
-  Future<List<int>> _mountedBy(int sourceId) async {
-    try {
-      return await database.mountsDao.targetsOf(sourceId);
-    } catch (error) {
-      commonPrint.log(
-        'mount lookup failed: ${compactError(error)}',
-        logLevel: LogLevel.warning,
-      );
-      return const [];
+  Profile? commitSourceUpdate(Profile updated) {
+    final token = _sourceResults[updated];
+    final latest = ref.read(profilesProvider).getProfile(updated.id);
+    if (token == null ||
+        !identical(_sourceUpdates[updated.id], token) ||
+        latest == null ||
+        latest.url != updated.url ||
+        latest.ageSecretKey != updated.ageSecretKey ||
+        latest.type != updated.type) {
+      return null;
     }
+    final merged = latest.copyWith(
+      label: latest.label.takeFirstValid([updated.label]),
+      subscriptionInfo: updated.subscriptionInfo,
+      lastUpdateDate: updated.lastUpdateDate,
+    );
+    ref.read(profilesProvider.notifier).put(merged);
+    _sourceResults[merged] = token;
+    _sourceInspections[merged] = _sourceInspections[updated];
+    return merged;
+  }
+
+  Future<Profile?> ensureSource(Profile profile) async {
+    if (profile.type != ProfileType.url) return null;
+    final path = await appPath.getProfilePath(profile.id.toString());
+    if (await File(path).exists()) return null;
+    final latest = ref.read(profilesProvider).getProfile(profile.id);
+    if (latest == null ||
+        latest.type != profile.type ||
+        latest.url != profile.url ||
+        latest.ageSecretKey != profile.ageSecretKey) {
+      return null;
+    }
+    return fetchSource(
+      profile.id,
+      (validate, publish, install) =>
+          latest.update(validate: validate, publish: publish, install: install),
+    );
   }
 
   /// Runs a download of [sourceId]. A mounted source must still hold a node
@@ -222,31 +370,60 @@ class ProfilesAction extends _$ProfilesAction {
   /// A null result is a download that did not run.
   Future<Profile?> fetchSource(
     int sourceId,
-    Future<Profile?> Function(ValidateConfig validate) fetch,
+    Future<Profile?> Function(
+      ValidateConfig validate,
+      PublishProfile publish,
+      InstallProfile install,
+    )
+    fetch,
   ) async {
-    // Asked only once a download runs: most calls fetch nothing.
+    final original = ref.read(profilesProvider).getProfile(sourceId);
+    if (original == null) return null;
+    final token = Object();
+    _sourceUpdates[sourceId] = token;
+    final priorRevision = _updateBatch?.priorRevision;
+    var unchanged = true;
+    final subscription = ref.listen(profilesProvider, (_, next) {
+      final latest = next.getProfile(sourceId);
+      if (latest?.url != original.url ||
+          latest?.ageSecretKey != original.ageSecretKey ||
+          latest?.type != original.type) {
+        unchanged = false;
+      }
+    });
+    bool isCurrent() =>
+        ref.mounted && unchanged && identical(_sourceUpdates[sourceId], token);
     bool? mounted;
+    var mountLookupFailed = false;
+    var fullValidated = false;
     Future<bool> isMounted() async {
       try {
         return mounted ??= await database.mountsDao.isMounted(sourceId);
       } catch (_) {
+        mountLookupFailed = true;
         return mounted = true;
       }
     }
 
     var unsupported = false;
+    MountSourceInspection? inspected;
     Future<String?> validate(String path, String key) async {
-      final issue = await _core.validateProfile(path, key);
-      if (!await isMounted()) {
-        return issue;
+      final mounted = await isMounted();
+      if (!mounted ||
+          mountLookupFailed ||
+          ref.read(currentProfileIdProvider) == sourceId) {
+        final issue = await _core.validateProfile(path, key);
+        if (issue != null) {
+          unsupported = mounted;
+          return issue;
+        }
+        fullValidated = true;
       }
-      if (issue != null) {
-        unsupported = true;
-        return issue;
-      }
+      if (!mounted) return null;
       final inspection = await ref
           .read(mountActionProvider.notifier)
           .inspectDownloadedSource(path, key);
+      inspected = inspection;
       switch (inspection.status) {
         case MountSourceStatus.nodes:
           return null;
@@ -258,14 +435,37 @@ class ProfilesAction extends _$ProfilesAction {
       }
     }
 
-    final mounts = ref.read(mountActionProvider.notifier);
-    final update = mounts.beginSourceUpdate(sourceId);
-    final Profile? fetched;
+    var updated = false;
     try {
-      fetched = await fetch(validate);
+      // Capture the old mount revision before any candidate can replace bytes.
+      // Ownership was acquired above, so this wait cannot revive an older intent.
+      await priorRevision;
+      if (!isCurrent()) return null;
+      final fetched = await fetch(
+        validate,
+        () =>
+            isCurrent() &&
+            (fullValidated || ref.read(currentProfileIdProvider) != sourceId),
+        (install) => ref
+            .read(mountActionProvider.notifier)
+            .installSource(sourceId, install),
+      );
+      if (!isCurrent()) return null;
+      if (fetched != null && await isMounted() && isCurrent()) {
+        await _recordSource(sourceId, null);
+      }
+      if (!isCurrent()) return null;
+      updated = fetched?.type == ProfileType.url;
+      if (fetched != null) {
+        _sourceResults[fetched] = token;
+        _sourceInspections[fetched] = inspected;
+      }
+      return fetched;
+    } on ProfileUpdateSuperseded {
+      return null;
     } catch (_) {
-      mounts.finishSourceUpdate(sourceId, update, updated: false);
-      if (await isMounted()) {
+      if (!isCurrent()) return null;
+      if (await isMounted() && isCurrent()) {
         await _recordSource(
           sourceId,
           unsupported
@@ -274,16 +474,12 @@ class ProfilesAction extends _$ProfilesAction {
         );
       }
       rethrow;
+    } finally {
+      subscription.close();
+      if (!updated && identical(_sourceUpdates[sourceId], token)) {
+        _sourceUpdates.remove(sourceId);
+      }
     }
-    if (fetched != null && await isMounted()) {
-      await _recordSource(sourceId, null);
-    }
-    mounts.finishSourceUpdate(
-      sourceId,
-      update,
-      updated: fetched?.type == ProfileType.url,
-    );
-    return fetched;
   }
 
   Future<void> _recordSource(int sourceId, MountSourceFailure? failure) async {

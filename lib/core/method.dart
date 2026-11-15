@@ -22,6 +22,7 @@ enum CoreMethod {
   mountInspectTarget('mount.inspectTarget'),
   mountPreflight('mount.preflight'),
   mountState('mount.state'),
+  mountRefreshSources('mount.refreshSources'),
   proxyList('proxy.list'),
   proxySelect('proxy.select'),
   proxyDefinition('proxy.definition'),

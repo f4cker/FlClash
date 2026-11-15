@@ -22,6 +22,7 @@ enum TrayMenuTopology {
     static func sharedIndex(_ entry: [String: Any], current: [[String: Any]], desired: [[String: Any]]) -> Int? {
         func sameIdentity(_ other: [String: Any]) -> Bool {
             entry["type"] as? String == other["type"] as? String &&
+                entry["transientStatusKey"] as? String == other["transientStatusKey"] as? String &&
                 entry["label"] as? String == other["label"] as? String
         }
         guard current.filter(sameIdentity).count == 1 else { return nil }
@@ -34,7 +35,8 @@ enum TrayMenuTopology {
         return zip(current, desired).allSatisfy { old, new in
             let type = old["type"] as? String ?? ""
             guard type == new["type"] as? String,
-                  old["id"] as? Int == new["id"] as? Int else { return false }
+                  old["id"] as? Int == new["id"] as? Int,
+                  old["transientStatusKey"] as? String == new["transientStatusKey"] as? String else { return false }
             if type == "separator" { return true }
             guard old["label"] as? String == new["label"] as? String else { return false }
             return (type != "submenu" && type != "segments") || matches(
@@ -94,7 +96,10 @@ final class TrayMenu: NSMenu, NSMenuDelegate {
         for (index, item) in items.enumerated() {
             guard !item.isSeparatorItem else { continue }
             var entry = original[index]
-            if let match = TrayMenuTopology.sharedIndex(entry, current: original, desired: desired) {
+            if let status = TrayMenuTransientStatus.retained(entry, current: original, desired: desired) {
+                entry = status
+                TrayMenu.configure(item, entry)
+            } else if let match = TrayMenuTopology.sharedIndex(entry, current: original, desired: desired) {
                 entry = desired[match]
                 entry["id"] = original[index]["id"]
                 entry["enabled"] = (entry["enabled"] as? Bool ?? true) && initiallyEnabled[index]

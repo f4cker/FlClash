@@ -620,7 +620,7 @@ void main() {
               segmentGroup: 'mode',
               onSelected: () => selected++,
             ),
-            const TrayMenuAction(label: 'Pending', enabled: false),
+            const TrayMenuAction.status(statusKey: 'mode', label: 'Pending'),
           ],
         ),
       );

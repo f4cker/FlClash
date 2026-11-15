@@ -32,10 +32,11 @@ const (
 	profileBuildMethod       CoreMethod = "profile.build"
 	profileClearEffectMethod CoreMethod = "profile.clearEffect"
 
-	mountInspectSourceMethod CoreMethod = "mount.inspectSource"
-	mountInspectTargetMethod CoreMethod = "mount.inspectTarget"
-	mountPreflightMethod     CoreMethod = "mount.preflight"
-	mountStateMethod         CoreMethod = "mount.state"
+	mountInspectSourceMethod  CoreMethod = "mount.inspectSource"
+	mountInspectTargetMethod  CoreMethod = "mount.inspectTarget"
+	mountPreflightMethod      CoreMethod = "mount.preflight"
+	mountStateMethod          CoreMethod = "mount.state"
+	mountRefreshSourcesMethod CoreMethod = "mount.refreshSources"
 
 	proxyListMethod       CoreMethod = "proxy.list"
 	proxySelectMethod     CoreMethod = "proxy.select"

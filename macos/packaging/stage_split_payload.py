@@ -23,6 +23,7 @@ CORE = 'Contents/MacOS/FlClashCore'
 ICON = 'Contents/Resources/AppIcon.icns'
 MINIMUM_SERVICE_BUILD_KEY = 'FlashMinimumServiceBuild'
 SERVICE_WRAPPER_BUILD = '2026111408'
+CURRENT_SERVICE_BUILD = '2026111503'
 HELPER_BINARY_BUILD = '2026111402'
 HELPER = 'Contents/Library/HelperTools/FlashHelper'
 MAINTENANCE = 'Contents/Library/HelperTools/FlashMaintenance'
@@ -258,18 +259,24 @@ def stage_gui(source, destination, released_core=None, core_sha256=None, accepte
         raise ValueError('Released Core changed during staging')
     info_path = destination / 'Contents/Info.plist'
     info = plistlib.loads(info_path.read_bytes())
-    info[MINIMUM_SERVICE_BUILD_KEY] = SERVICE_WRAPPER_BUILD
+    info[MINIMUM_SERVICE_BUILD_KEY] = CURRENT_SERVICE_BUILD
     info_path.write_bytes(plistlib.dumps(info))
     seal_compatibility(destination, 'gui', contract)
     normalize_modes(destination)
     check_layout(destination, 'gui')
 
 
-def stage_service(gui, stub, helper, maintenance, destination, core_version, core_revision, *, released_core, core_sha256):
+def stage_service(gui, stub, helper, maintenance, destination, core_version, core_revision, *, released_core, core_sha256,
+                  service_version=None, service_build=None):
     check_layout(gui, 'gui')
     caller = read_compatibility(gui, 'gui')
     core = released_core_bytes(released_core, core_sha256)
-    if core_sha256 not in caller['AcceptedCoreSHA256']:
+    metadata_only = service_version is not None or service_build is not None
+    if metadata_only:
+        if (not isinstance(service_version, str) or re.fullmatch(r'\d+\.\d+\.\d+', service_version) is None or
+                not isinstance(service_build, str) or re.fullmatch(r'[1-9][0-9]{9}', service_build) is None):
+            raise ValueError('Explicit service version and build are both required for a metadata-only GUI source')
+    elif core_sha256 not in caller['AcceptedCoreSHA256']:
         raise ValueError('GUI does not accept this service Core')
     icon = icon_bytes(gui / ICON)
     compatibility = validate_compatibility({
@@ -292,6 +299,8 @@ def stage_service(gui, stub, helper, maintenance, destination, core_version, cor
         target.chmod(0o644 if relative in (DAEMON, ICON) else 0o755)
     source_info = plistlib.loads((gui / 'Contents/Info.plist').read_bytes())
     info = {key: source_info[key] for key in ('CFBundleVersion', 'CFBundleShortVersionString') if key in source_info}
+    if metadata_only:
+        info.update(CFBundleVersion=service_build, CFBundleShortVersionString=service_version)
     info.update(CFBundleIdentifier=SERVICE_ID, CFBundleExecutable='Flash',
                 CFBundleName='Flash Service', CFBundlePackageType='APPL',
                 LSBackgroundOnly=True, LSMinimumSystemVersion='14.0', CFBundleIconFile='AppIcon.icns')
@@ -463,6 +472,8 @@ def main():
     service.add_argument('--core-sha256', required=True)
     service.add_argument('--core-version', required=True)
     service.add_argument('--core-revision', required=True)
+    service.add_argument('--service-version', help='Use GUI only as a metadata/icon source; requires --service-build')
+    service.add_argument('--service-build', help='Explicit service build, not the source GUI build')
     for name in ('stub', 'helper', 'maintenance', 'output'):
         service.add_argument('--' + name, required=True, type=Path)
     refresh = commands.add_parser('finalize-core-copy', allow_abbrev=False)
@@ -491,7 +502,8 @@ def main():
             stage_gui(args.fresh_build_app, args.output, args.released_core, args.core_sha256, args.accepted_core_sha256)
         elif args.command == 'service':
             stage_service(args.signed_gui, args.stub, args.helper, args.maintenance, args.output,
-                          args.core_version, args.core_revision, released_core=args.released_core, core_sha256=args.core_sha256)
+                          args.core_version, args.core_revision, released_core=args.released_core, core_sha256=args.core_sha256,
+                          service_version=args.service_version, service_build=args.service_build)
         elif args.command == 'finalize-core-copy':
             finalize_core_copy(args.gui, args.service, released_core=args.released_core, core_sha256=args.core_sha256)
         elif args.command == 'verify-release':

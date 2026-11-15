@@ -14,6 +14,13 @@ part 'generated/profile.g.dart';
 typedef ValidateConfig =
     Future<String?> Function(String path, String ageSecretKey);
 
+typedef PublishProfile = bool Function();
+typedef InstallProfile = Future<void> Function(void Function() install);
+
+class ProfileUpdateSuperseded implements Exception {
+  const ProfileUpdateSuperseded();
+}
+
 @freezed
 abstract class SubscriptionInfo with _$SubscriptionInfo {
   const factory SubscriptionInfo({
@@ -158,6 +165,8 @@ extension ProfileExtension on Profile {
 
   Future<Profile?> checkAndUpdateAndCopy({
     required ValidateConfig validate,
+    PublishProfile? publish,
+    InstallProfile? install,
   }) async {
     if (type != ProfileType.url) {
       return null;
@@ -166,7 +175,7 @@ extension ProfileExtension on Profile {
     if (await mFile.exists()) {
       return null;
     }
-    return update(validate: validate);
+    return update(validate: validate, publish: publish, install: install);
   }
 
   Future<File> _getFile([bool autoCreate = true]) async {
@@ -183,7 +192,11 @@ extension ProfileExtension on Profile {
     return _getFile();
   }
 
-  Future<Profile> update({required ValidateConfig validate}) async {
+  Future<Profile> update({
+    required ValidateConfig validate,
+    PublishProfile? publish,
+    InstallProfile? install,
+  }) async {
     final response = await request.getFileResponseForUrl(url);
     final disposition = response.headers.value('content-disposition');
     final userinfo = response.headers.value('subscription-userinfo');
@@ -196,22 +209,54 @@ extension ProfileExtension on Profile {
     ).saveFile(
       decompressUnlabeled(response.data ?? Uint8List(0)),
       validate: validate,
+      publish: publish,
+      install: install,
     );
   }
 
   Future<Profile> saveFile(
     Uint8List bytes, {
     required ValidateConfig validate,
+    PublishProfile? publish,
+    InstallProfile? install,
   }) async {
     final path = await appPath.tempFilePath;
     final tempFile = File(path);
-    await tempFile.safeWriteAsBytes(bytes);
-    if (await validate(path, ageSecretKey) case final issue?) {
-      throw MessageException(issue);
+    File? candidate;
+    try {
+      await tempFile.safeWriteAsBytes(bytes);
+      if (await validate(path, ageSecretKey) case final issue?) {
+        throw MessageException(issue);
+      }
+      final target = await appPath.getProfilePath(id.toString());
+      candidate = File('$target.${snowflake.id}.candidate');
+      await candidate.parent.create(recursive: true);
+      // Full validation may decrypt or convert its temporary input in place.
+      await candidate.safeWriteAsBytes(bytes);
+      for (var attempt = 1; ; attempt++) {
+        void publishCandidate() {
+          if (publish != null && !publish()) {
+            throw const ProfileUpdateSuperseded();
+          }
+          candidate!.renameSync(target);
+        }
+
+        try {
+          if (install == null) {
+            publishCandidate();
+          } else {
+            await install(publishCandidate);
+          }
+          break;
+        } on FileSystemException {
+          if (attempt == 10) rethrow;
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      }
+      return copyWith(lastUpdateDate: DateTime.now());
+    } finally {
+      await tempFile.safeDelete();
+      await candidate?.safeDelete();
     }
-    final mFile = await _getFile(false);
-    await tempFile.copyAtomically(mFile.path);
-    await tempFile.safeDelete();
-    return copyWith(lastUpdateDate: DateTime.now());
   }
 }

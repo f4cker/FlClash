@@ -6,11 +6,12 @@ creating/pushing the matching tag. Do that before building: the CLI refuses a di
 checkout, another branch, mismatched submodules, or a tag not at `main` HEAD.
 
 The arm64 release embeds one install package for service wrapper build
-`2026111408`, retaining helper binary build `2026111402` and Core SHA256
-`0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5`.
+`2026111503`, retaining helper binary build `2026111402` with a newly built and
+signed Core. Its final signed SHA256 and actual wrapper source revision are
+pending compilation/signing; placeholders fail the release gates.
 The managed GUI has no loose `Contents/MacOS/FlClashCore`; its sealed
 `AcceptedCoreSHA256` accepts the Core inside the service package. GUI metadata
-`FlashMinimumServiceBuild` is the string `2026111408`, so an older trusted service
+`FlashMinimumServiceBuild` is the string `2026111503`, so an older trusted service
 wrapper requires an update even when its helper/Core protocol is compatible.
 The app can request macOS administrator authorization to install that
 helper; first-time users do not need a separate helper download. No helper PKGs
@@ -39,7 +40,7 @@ commit it or copy credentials into it. All paths must be canonical absolute path
   "sdk": "<Flutter SDK root>",
   "signer": "<executable protected local adapter>",
   "signer_sha256": "<adapter SHA256>",
-  "service": "<verified derived 1408 service wrapper Flash.app>",
+  "service": "<exact reviewed 1503 ordinary service Flash.app>",
   "service_receipt": "<existing current-schema service receipt>",
   "service_receipt_sha256": "<service receipt SHA256>"
 }
@@ -53,16 +54,28 @@ a direct invocation of the old hardcoded tracked signer is not sufficient.
 
 ## Commands
 
-For the pending `0.9.10+2026111407` local artifact, use separate phases after review,
-commit, and local tag coordination. A matching local `v0.9.10` tag at clean `main`
+Before these GUI phases, the existing protected local route must compile/sign the
+new Core and stage/sign the ordinary 1503 service in a new private scope. Use
+`stage_service` with that newly signed Core, retained signed helper/Maintenance
+and stub, GUI icon, and the new version. A retained verified GUI may supply only
+metadata/icon via explicit `--service-version 0.9.14 --service-build 2026111503`;
+this neither claims a fresh GUI compilation nor accepts that old GUI/Core pair.
+The later fresh GUI must accept the new signed Core. The schema-1 service receipt records
+`reused_signed_core_sha256` because the new Core is already signed when the outer
+service is sealed; it does not mean reuse of the old Core. Preserve historical
+receipts and wrapper-v1 semantics. Promote the final Core, receipt and adapter
+pins only after review, backing up the current private configuration first.
+
+For the pending `0.9.14+2026111503` local artifact, use separate phases after review,
+commit, and local tag coordination. A matching local `v0.9.14` tag at clean `main`
 HEAD is required even for `check`; this tool never creates or moves tags.
 These phases do not create a GitHub draft or publish:
 
 ```sh
-python3 macos/packaging/local_release.py check --tag v0.9.10 --run release-0910-install-only
-python3 macos/packaging/local_release.py build --tag v0.9.10 --run release-0910-install-only
-python3 macos/packaging/local_release.py sign --tag v0.9.10 --run release-0910-install-only
-python3 macos/packaging/local_release.py package --tag v0.9.10 --run release-0910-install-only
+python3 macos/packaging/local_release.py check --tag v0.9.14 --run release-0914-node-only
+python3 macos/packaging/local_release.py build --tag v0.9.14 --run release-0914-node-only
+python3 macos/packaging/local_release.py sign --tag v0.9.14 --run release-0914-node-only
+python3 macos/packaging/local_release.py package --tag v0.9.14 --run release-0914-node-only
 ```
 
 Use a new run name after a partial failure. Each phase requires the same source,
@@ -146,7 +159,8 @@ Resources have mode `0644` and their directories `0755`, including under umask
 `077`. They enter the unsigned inventory and outer app signature together with the
 fresh GUI. Exact-copy verification of the mounted DMG includes them. The package
 is an internal resource, not separately published or Developer ID signed;
-the helper, Core, and maintenance binaries retain their existing signatures;
+the helper and maintenance retain their signatures, and the newly signed Core
+is preserved during service and GUI packaging;
 the service wrapper has a new outer signature binding its icon and metadata. Packaging/static
 checks do not establish installation, authorization UI, or runtime acceptance.
 The embedded contract rejects repair entries and extra packages. The standalone
@@ -172,7 +186,7 @@ The icon must be a canonical single-link regular `0644` file, with `icns` magic
 and an exact declared byte length. Verification accepts either the old iconless
 service shape or this exact icon/metadata pair, never arbitrary resources.
 
-For this delivery, `stage_split_payload.derive_service_wrapper` copies the
+For historical wrapper-v1 deliveries only, `stage_split_payload.derive_service_wrapper` copies the
 verified iconless `2026111402` service to a new destination, removes its old outer
 seal, copies the GUI icon, and changes only `CFBundleIconFile` and
 `CFBundleVersion` (`2026111408`). It returns a

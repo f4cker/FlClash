@@ -265,6 +265,10 @@ func requestMethodError(err error, details map[string]any) *MethodError {
 }
 
 func updateExternalProvider(name string, update func(cp.Provider) *MethodError) error {
+	if strings.HasPrefix(name, mountProviderPrefix) {
+		configMu.Lock()
+		defer configMu.Unlock()
+	}
 	p, exist := lookupExternalProvider(name)
 	if !exist {
 		return providerError("provider_not_found", name, errors.New("external provider does not exist"))

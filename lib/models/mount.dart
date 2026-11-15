@@ -360,6 +360,7 @@ abstract class MountRuntimeGroup with _$MountRuntimeGroup {
 @freezed
 abstract class MountRuntimeState with _$MountRuntimeState {
   const factory MountRuntimeState({
+    @Default(0) int generation,
     @Default(false) bool blocked,
     @Default([]) List<String> refused,
     MountReport? report,
@@ -371,6 +372,32 @@ abstract class MountRuntimeState with _$MountRuntimeState {
 
   factory MountRuntimeState.fromJson(Map<String, Object?> json) =>
       _$MountRuntimeStateFromJson(json);
+}
+
+enum MountRefreshOutcome { applied, requiresApply, superseded, kept, unknown }
+
+class MountRefreshResult {
+  const MountRefreshResult({
+    required this.outcome,
+    required this.state,
+    this.error,
+  });
+
+  final MountRefreshOutcome outcome;
+  final MountRuntimeState state;
+  final String? error;
+
+  factory MountRefreshResult.fromJson(Map<String, Object?> json) =>
+      MountRefreshResult(
+        outcome: MountRefreshOutcome.values.firstWhere(
+          (value) => value.name == json['outcome'],
+          orElse: () => MountRefreshOutcome.unknown,
+        ),
+        state: MountRuntimeState.fromJson(
+          (json['state'] as Map).cast<String, Object?>(),
+        ),
+        error: json['error'] as String?,
+      );
 }
 
 /// [isolatedOnly]: only nodes kept out to isolate Tailscale, for mixed reasons.
