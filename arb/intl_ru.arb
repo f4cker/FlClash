@@ -1634,5 +1634,13 @@
   "macHelperReadyDetail": "Помощник доступен. Это не означает, что TUN или соединение работают. Повторите действие с нужной функцией.",
   "macHelperMoreDetails": "Показать подробности",
   "macHelperLessDetails": "Скрыть подробности",
-  "macHelperMoveTitle": "Переместите Flash в «Программы»"
+  "macHelperMoveTitle": "Переместите Flash в «Программы»",
+  "macHelperStartupUpdate": "Требуется обновление помощника. Ядро не запущено.",
+  "macHelperStartupInstall": "Помощник не установлен. Ядро не запущено.",
+  "macHelperStartupUnavailable": "Помощник недоступен. Ядро не запущено.",
+  "macHelperStatusUnknown": "Не удалось подтвердить состояние помощника",
+  "macHelperCoreUnconfirmed": "Состояние ядра не подтверждено",
+  "macHelperInstallAction": "Установить помощник",
+  "macHelperUpdateAction": "Обновить помощник",
+  "macHelperVerificationFailed": "Проверка помощника не пройдена"
 }

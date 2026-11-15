@@ -135,6 +135,7 @@ final class MacHelperClient {
        _backpressureRetries = backpressureRetries;
 
   Stream<MacHelperEvent> get events => _events.stream;
+  bool get hasCoreSession => _session != null;
 
   void _requireEffects() {
     if (_safeMode()) throw const MacHelperException('disabled');

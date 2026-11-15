@@ -1326,6 +1326,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage("다시 확인"),
     "macHelperChecking": MessageLookupByLibrary.simpleMessage("도우미 확인 중…"),
+    "macHelperCoreUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "코어 상태가 확인되지 않았습니다",
+    ),
     "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
       "관리자 승인이 거부되었습니다. 승인할 준비가 되면 다시 시도하세요.",
     ),
@@ -1333,6 +1336,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "macOS가 작업을 완료하지 못했습니다. 수동으로 다시 시도할 수 있습니다.",
     ),
     "macHelperInstall": MessageLookupByLibrary.simpleMessage("설치"),
+    "macHelperInstallAction": MessageLookupByLibrary.simpleMessage("도우미 설치"),
     "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage("설치 취소됨"),
     "macHelperInstallDetail": MessageLookupByLibrary.simpleMessage(
       "도우미는 백그라운드에서 Flash의 네트워크 코어를 관리합니다. 설치하려면 관리자 승인이 필요합니다. 설치 후 Flash가 사용 가능 여부를 확인합니다.",
@@ -1374,6 +1378,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperRepair": MessageLookupByLibrary.simpleMessage("도우미 업데이트 필요"),
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage("복구 안내"),
+    "macHelperStartupInstall": MessageLookupByLibrary.simpleMessage(
+      "도우미가 설치되지 않았습니다. 코어가 시작되지 않았습니다.",
+    ),
+    "macHelperStartupUnavailable": MessageLookupByLibrary.simpleMessage(
+      "도우미를 사용할 수 없습니다. 코어가 시작되지 않았습니다.",
+    ),
+    "macHelperStartupUpdate": MessageLookupByLibrary.simpleMessage(
+      "도우미 업데이트가 필요합니다. 코어가 시작되지 않았습니다.",
+    ),
+    "macHelperStatusUnknown": MessageLookupByLibrary.simpleMessage(
+      "도우미 상태를 확인할 수 없습니다",
+    ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
       "도우미 준비 상태를 확인할 수 없음",
     ),
@@ -1391,6 +1407,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "작업 결과를 확인할 수 없습니다. 다시 확인하세요. 확인될 때까지 Flash는 설치를 반복하지 않습니다.",
     ),
     "macHelperUpdate": MessageLookupByLibrary.simpleMessage("업데이트"),
+    "macHelperUpdateAction": MessageLookupByLibrary.simpleMessage("도우미 업데이트"),
     "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
       "업데이트 취소됨",
     ),
@@ -1406,6 +1423,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperUpdating": MessageLookupByLibrary.simpleMessage("도우미 업데이트 중…"),
     "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
       "도우미의 보안 또는 호환성 확인에 실패했습니다. 신뢰할 수 있는 호환 버전의 Flash를 사용하세요.",
+    ),
+    "macHelperVerificationFailed": MessageLookupByLibrary.simpleMessage(
+      "도우미 검증 실패",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("로컬 매핑"),
     "matchCase": MessageLookupByLibrary.simpleMessage("대/소문자 구분"),

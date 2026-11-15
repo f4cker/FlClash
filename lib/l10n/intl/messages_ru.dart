@@ -1574,6 +1574,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperChecking": MessageLookupByLibrary.simpleMessage(
       "Проверка помощника…",
     ),
+    "macHelperCoreUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Состояние ядра не подтверждено",
+    ),
     "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
       "Администратор отказал в разрешении. Повторите попытку, когда сможете разрешить операцию.",
     ),
@@ -1581,6 +1584,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "macOS не удалось завершить операцию. Можно повторить попытку вручную.",
     ),
     "macHelperInstall": MessageLookupByLibrary.simpleMessage("Установить"),
+    "macHelperInstallAction": MessageLookupByLibrary.simpleMessage(
+      "Установить помощник",
+    ),
     "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage(
       "Установка отменена",
     ),
@@ -1636,6 +1642,18 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
       "Инструкция по восстановлению",
     ),
+    "macHelperStartupInstall": MessageLookupByLibrary.simpleMessage(
+      "Помощник не установлен. Ядро не запущено.",
+    ),
+    "macHelperStartupUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Помощник недоступен. Ядро не запущено.",
+    ),
+    "macHelperStartupUpdate": MessageLookupByLibrary.simpleMessage(
+      "Требуется обновление помощника. Ядро не запущено.",
+    ),
+    "macHelperStatusUnknown": MessageLookupByLibrary.simpleMessage(
+      "Не удалось подтвердить состояние помощника",
+    ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
       "Не удалось подтвердить готовность помощника",
     ),
@@ -1657,6 +1675,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Результат операции неизвестен. Проверьте снова; Flash не будет повторять установку до подтверждения результата.",
     ),
     "macHelperUpdate": MessageLookupByLibrary.simpleMessage("Обновить"),
+    "macHelperUpdateAction": MessageLookupByLibrary.simpleMessage(
+      "Обновить помощник",
+    ),
     "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
       "Обновление отменено",
     ),
@@ -1674,6 +1695,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
       "Проверка безопасности или совместимости помощника не пройдена. Используйте надёжную совместимую версию Flash.",
+    ),
+    "macHelperVerificationFailed": MessageLookupByLibrary.simpleMessage(
+      "Проверка помощника не пройдена",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Локальная подмена"),
     "matchCase": MessageLookupByLibrary.simpleMessage("Учитывать регистр"),

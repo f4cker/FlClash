@@ -1634,5 +1634,13 @@
   "macHelperReadyDetail": "ヘルパーは利用可能です。TUN や接続が動作中という意味ではありません。必要な機能を再度お試しください。",
   "macHelperMoreDetails": "詳細を表示",
   "macHelperLessDetails": "詳細を隠す",
-  "macHelperMoveTitle": "Flash を「アプリケーション」に移動"
+  "macHelperMoveTitle": "Flash を「アプリケーション」に移動",
+  "macHelperStartupUpdate": "ヘルパーの更新が必要です。コアは起動していません。",
+  "macHelperStartupInstall": "ヘルパーが未インストールです。コアは起動していません。",
+  "macHelperStartupUnavailable": "ヘルパーを利用できません。コアは起動していません。",
+  "macHelperStatusUnknown": "ヘルパーの状態を確認できません",
+  "macHelperCoreUnconfirmed": "コアの状態を確認できません",
+  "macHelperInstallAction": "ヘルパーをインストール",
+  "macHelperUpdateAction": "ヘルパーを更新",
+  "macHelperVerificationFailed": "ヘルパーの検証に失敗しました"
 }

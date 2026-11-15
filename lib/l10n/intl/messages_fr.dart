@@ -1615,6 +1615,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperChecking": MessageLookupByLibrary.simpleMessage(
       "Vérification de l’assistant…",
     ),
+    "macHelperCoreUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "État du noyau non confirmé",
+    ),
     "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
       "L’autorisation administrateur a été refusée. Réessayez lorsque vous pourrez autoriser l’opération.",
     ),
@@ -1622,6 +1625,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "macOS n’a pas pu terminer l’opération. Vous pouvez réessayer manuellement.",
     ),
     "macHelperInstall": MessageLookupByLibrary.simpleMessage("Installer"),
+    "macHelperInstallAction": MessageLookupByLibrary.simpleMessage(
+      "Installer l’assistant",
+    ),
     "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage(
       "Installation annulée",
     ),
@@ -1681,6 +1687,18 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
       "Instructions de réparation",
     ),
+    "macHelperStartupInstall": MessageLookupByLibrary.simpleMessage(
+      "Assistant non installé. Le noyau n’a pas démarré.",
+    ),
+    "macHelperStartupUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Assistant indisponible. Le noyau n’a pas démarré.",
+    ),
+    "macHelperStartupUpdate": MessageLookupByLibrary.simpleMessage(
+      "Mise à jour de l’assistant requise. Le noyau n’a pas démarré.",
+    ),
+    "macHelperStatusUnknown": MessageLookupByLibrary.simpleMessage(
+      "Impossible de confirmer l’état de l’assistant",
+    ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
       "Impossible de confirmer que l’assistant est prêt",
     ),
@@ -1702,6 +1720,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "Le résultat est inconnu. Vérifiez à nouveau ; Flash ne répétera pas l’installation tant que le résultat n’est pas confirmé.",
     ),
     "macHelperUpdate": MessageLookupByLibrary.simpleMessage("Mettre à jour"),
+    "macHelperUpdateAction": MessageLookupByLibrary.simpleMessage(
+      "Mettre à jour l’assistant",
+    ),
     "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
       "Mise à jour annulée",
     ),
@@ -1719,6 +1740,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
       "La vérification de sécurité ou de compatibilité a échoué. Utilisez une version fiable et compatible de Flash.",
+    ),
+    "macHelperVerificationFailed": MessageLookupByLibrary.simpleMessage(
+      "Échec de la vérification de l’assistant",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Mappage local"),
     "matchCase": MessageLookupByLibrary.simpleMessage("Respecter la casse"),

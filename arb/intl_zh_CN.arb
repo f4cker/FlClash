@@ -1634,5 +1634,13 @@
   "macHelperReadyDetail": "辅助程序已可用，但不表示 TUN 或连接正在运行。准备好后，请再次启用所需功能。",
   "macHelperMoreDetails": "展开详情",
   "macHelperLessDetails": "收起详情",
-  "macHelperMoveTitle": "请将 Flash 移到“应用程序”"
+  "macHelperMoveTitle": "请将 Flash 移到“应用程序”",
+  "macHelperStartupUpdate": "辅助程序需要更新，内核未启动",
+  "macHelperStartupInstall": "辅助程序未安装，内核未启动",
+  "macHelperStartupUnavailable": "辅助程序暂不可用，内核未启动",
+  "macHelperStatusUnknown": "无法确认辅助程序状态",
+  "macHelperCoreUnconfirmed": "内核运行状态待确认",
+  "macHelperInstallAction": "安装辅助程序",
+  "macHelperUpdateAction": "更新辅助程序",
+  "macHelperVerificationFailed": "辅助程序验证失败"
 }

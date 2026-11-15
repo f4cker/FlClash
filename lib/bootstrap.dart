@@ -207,6 +207,10 @@ class Bootstrap {
         _container.read(safeModeProvider) ||
         await prepareMacHelperStartup(
           maintenance: macHelperMaintenance,
+          onBlocked: () {
+            _container.read(coreStatusProvider.notifier).value =
+                CoreStatus.disconnected;
+          },
           foreground: !_container.read(appSettingProvider).silentLaunch,
           wasOffered: preferences.getMacHelperInvitationShown,
           markOffered: preferences.markMacHelperInvitationShown,

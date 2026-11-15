@@ -46,7 +46,7 @@ String macHelperLabel(AppLocalizations l, MacHelperState state) =>
       _ => l.macHelperCannotUse,
     };
 
-String _statusLabel(AppLocalizations l, MacHelperMaintenance flow) {
+String macHelperStatusLabel(AppLocalizations l, MacHelperMaintenance flow) {
   return switch (flow.progress) {
     MacHelperProgress.checking => l.macHelperChecking,
     MacHelperProgress.authorizing => l.macHelperAuthorizing,
@@ -62,7 +62,7 @@ String _statusLabel(AppLocalizations l, MacHelperMaintenance flow) {
   };
 }
 
-String _detail(AppLocalizations l, MacHelperMaintenance flow) {
+String macHelperDetail(AppLocalizations l, MacHelperMaintenance flow) {
   if (flow.progress == MacHelperProgress.checking) return l.macHelperChecking;
   if (flow.busy) return l.macHelperAuthorizing;
   return switch (flow.state) {
@@ -144,8 +144,8 @@ class _MacHelperDialogState extends State<MacHelperDialog> {
             (action == MacHelperAction.install ||
                 action == MacHelperAction.update);
         final update = action == MacHelperAction.update;
-        final status = _statusLabel(l, flow);
-        final detail = _detail(l, flow);
+        final status = macHelperStatusLabel(l, flow);
+        final detail = macHelperDetail(l, flow);
         final failure =
             flow.state == MacHelperState.failed ||
             flow.state == MacHelperState.denied;
@@ -263,7 +263,7 @@ class _MacHelperItemState extends ConsumerState<MacHelperItem> {
       listenable: _flow,
       builder: (context, _) => ListItem(
         title: Text(l.macHelperTitle),
-        subtitle: Text(_statusLabel(l, _flow)),
+        subtitle: Text(macHelperStatusLabel(l, _flow)),
         onTap: ref.watch(safeModeProvider)
             ? null
             : () async {

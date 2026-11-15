@@ -1634,5 +1634,13 @@
   "macHelperReadyDetail": "El asistente está disponible. Esto no significa que TUN o una conexión estén activos. Vuelve a intentar la función que necesites.",
   "macHelperMoreDetails": "Mostrar detalles",
   "macHelperLessDetails": "Ocultar detalles",
-  "macHelperMoveTitle": "Mover Flash a Aplicaciones"
+  "macHelperMoveTitle": "Mover Flash a Aplicaciones",
+  "macHelperStartupUpdate": "El asistente requiere una actualización. El núcleo no se ha iniciado.",
+  "macHelperStartupInstall": "Asistente no instalado. El núcleo no se ha iniciado.",
+  "macHelperStartupUnavailable": "Asistente no disponible. El núcleo no se ha iniciado.",
+  "macHelperStatusUnknown": "No se pudo confirmar el estado del asistente",
+  "macHelperCoreUnconfirmed": "Estado del núcleo sin confirmar",
+  "macHelperInstallAction": "Instalar asistente",
+  "macHelperUpdateAction": "Actualizar asistente",
+  "macHelperVerificationFailed": "Error de verificación del asistente"
 }

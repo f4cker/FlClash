@@ -1634,5 +1634,13 @@
   "macHelperReadyDetail": "L’assistant est disponible. Cela ne signifie pas que TUN ou une connexion fonctionne. Réessayez la fonctionnalité souhaitée.",
   "macHelperMoreDetails": "Afficher les détails",
   "macHelperLessDetails": "Masquer les détails",
-  "macHelperMoveTitle": "Déplacer Flash dans Applications"
+  "macHelperMoveTitle": "Déplacer Flash dans Applications",
+  "macHelperStartupUpdate": "Mise à jour de l’assistant requise. Le noyau n’a pas démarré.",
+  "macHelperStartupInstall": "Assistant non installé. Le noyau n’a pas démarré.",
+  "macHelperStartupUnavailable": "Assistant indisponible. Le noyau n’a pas démarré.",
+  "macHelperStatusUnknown": "Impossible de confirmer l’état de l’assistant",
+  "macHelperCoreUnconfirmed": "État du noyau non confirmé",
+  "macHelperInstallAction": "Installer l’assistant",
+  "macHelperUpdateAction": "Mettre à jour l’assistant",
+  "macHelperVerificationFailed": "Échec de la vérification de l’assistant"
 }

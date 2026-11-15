@@ -1518,6 +1518,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperChecking": MessageLookupByLibrary.simpleMessage(
       "Checking helper…",
     ),
+    "macHelperCoreUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "Core status unconfirmed",
+    ),
     "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
       "Administrator authorization was denied. You can retry when you are ready to authorize.",
     ),
@@ -1525,6 +1528,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "macOS could not complete the operation. You can retry manually.",
     ),
     "macHelperInstall": MessageLookupByLibrary.simpleMessage("Install"),
+    "macHelperInstallAction": MessageLookupByLibrary.simpleMessage(
+      "Install Helper",
+    ),
     "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage(
       "Installation cancelled",
     ),
@@ -1580,6 +1586,18 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage(
       "Repair Instructions",
     ),
+    "macHelperStartupInstall": MessageLookupByLibrary.simpleMessage(
+      "Helper not installed. The core hasn’t started.",
+    ),
+    "macHelperStartupUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Helper unavailable. The core hasn’t started.",
+    ),
+    "macHelperStartupUpdate": MessageLookupByLibrary.simpleMessage(
+      "Helper update required. The core hasn’t started.",
+    ),
+    "macHelperStatusUnknown": MessageLookupByLibrary.simpleMessage(
+      "Couldn’t confirm helper status",
+    ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
       "Unable to confirm helper readiness",
     ),
@@ -1601,6 +1619,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "The operation’s outcome is unknown. Check again to confirm helper readiness; Flash will not repeat the installation while it is unconfirmed.",
     ),
     "macHelperUpdate": MessageLookupByLibrary.simpleMessage("Update"),
+    "macHelperUpdateAction": MessageLookupByLibrary.simpleMessage(
+      "Update Helper",
+    ),
     "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
       "Update cancelled",
     ),
@@ -1618,6 +1639,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
       "The helper’s security or compatibility check failed. Use a trusted, compatible release of Flash.",
+    ),
+    "macHelperVerificationFailed": MessageLookupByLibrary.simpleMessage(
+      "Helper verification failed",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("Map local"),
     "matchCase": MessageLookupByLibrary.simpleMessage("Match case"),

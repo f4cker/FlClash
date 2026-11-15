@@ -118,13 +118,15 @@ final class MacHelperMaintenance extends ChangeNotifier {
 Future<bool> prepareMacHelperStartup({
   required MacHelperMaintenance maintenance,
   required bool foreground,
+  required void Function() onBlocked,
   required Future<bool> Function() wasOffered,
   required Future<void> Function() markOffered,
   required Future<void> Function() show,
 }) async {
   final alreadyBusy = maintenance.busy;
   final state = await maintenance.check();
-  if (state == MacHelperState.enabled) return !alreadyBusy;
+  if (state == MacHelperState.enabled && !alreadyBusy) return true;
+  onBlocked();
   if (foreground && maintenance.canInstall && !await wasOffered()) {
     await markOffered();
     await show();

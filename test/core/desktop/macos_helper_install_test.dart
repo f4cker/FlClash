@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/preferences.dart';
+import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/providers/providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/core/desktop/model.dart';
@@ -46,6 +49,69 @@ MacHelperMaintenance makeMaintenance(InstallNative native) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final state in MacHelperState.values) {
+    test(
+      'silent startup settles initial connecting for $state without effects',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            coreStatusProvider.overrideWithBuild(
+              (_, _) => CoreStatus.connecting,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        expect(container.read(coreStatusProvider), CoreStatus.connecting);
+        final native = InstallNative()..state = state.name;
+        final flow = makeMaintenance(native);
+        addTearDown(flow.dispose);
+        final ready = await prepareMacHelperStartup(
+          maintenance: flow,
+          foreground: false,
+          onBlocked: () => container.read(coreStatusProvider.notifier).value =
+              CoreStatus.disconnected,
+          wasOffered: () async =>
+              fail('Silent startup must not inspect invitation history'),
+          markOffered: () async =>
+              fail('Silent startup must not mark an invitation'),
+          show: () async => fail('Silent startup must not open a dialog'),
+        );
+        expect(ready, state == MacHelperState.enabled);
+        expect(
+          container.read(coreStatusProvider),
+          ready ? CoreStatus.connecting : CoreStatus.disconnected,
+        );
+        expect(native.calls, ['status']);
+      },
+    );
+  }
+
+  test(
+    'startup joining maintenance cannot resume after installation',
+    () async {
+      final native = InstallNative()..pending = Completer();
+      final flow = makeMaintenance(native);
+      await flow.check();
+      final install = flow.install(confirmed: true);
+      await Future<void>.delayed(Duration.zero);
+      var blocked = false;
+      final startup = prepareMacHelperStartup(
+        maintenance: flow,
+        foreground: false,
+        onBlocked: () => blocked = true,
+        wasOffered: () async => false,
+        markOffered: () async =>
+            fail('No invitation while joining maintenance'),
+        show: () async => fail('No popup while joining maintenance'),
+      );
+      native.state = 'enabled';
+      native.pending!.complete({'code': 'enabled'});
+      expect(await install, MacHelperState.enabled);
+      expect(await startup, isFalse);
+      expect(blocked, isTrue);
+    },
+  );
 
   test('no consent means no status, stop or privileged call', () async {
     final native = InstallNative();
@@ -240,6 +306,7 @@ void main() {
         await prepareMacHelperStartup(
           maintenance: flow,
           foreground: true,
+          onBlocked: () {},
           wasOffered: () async => false,
           markOffered: () async {
             prompts++;
@@ -266,6 +333,7 @@ void main() {
       Future<bool> startup({bool foreground = true}) => prepareMacHelperStartup(
         maintenance: makeMaintenance(native),
         foreground: foreground,
+        onBlocked: () {},
         wasOffered: preferences.getMacHelperInvitationShown,
         markOffered: preferences.markMacHelperInvitationShown,
         show: () async {
@@ -291,12 +359,15 @@ void main() {
     () async {
       final native = InstallNative();
       final flow = makeMaintenance(native);
+      var blocked = false;
       final ready = await prepareMacHelperStartup(
         maintenance: flow,
         foreground: true,
+        onBlocked: () => blocked = true,
         wasOffered: () async => false,
         markOffered: () async {},
         show: () async {
+          expect(blocked, isTrue);
           native.state = 'enabled';
           await flow.check();
         },

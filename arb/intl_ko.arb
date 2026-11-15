@@ -1634,5 +1634,13 @@
   "macHelperReadyDetail": "도우미를 사용할 수 있습니다. TUN이나 연결이 실행 중이라는 뜻은 아닙니다. 필요한 기능을 다시 시도하세요.",
   "macHelperMoreDetails": "세부 정보 표시",
   "macHelperLessDetails": "세부 정보 숨기기",
-  "macHelperMoveTitle": "Flash를 응용 프로그램 폴더로 이동"
+  "macHelperMoveTitle": "Flash를 응용 프로그램 폴더로 이동",
+  "macHelperStartupUpdate": "도우미 업데이트가 필요합니다. 코어가 시작되지 않았습니다.",
+  "macHelperStartupInstall": "도우미가 설치되지 않았습니다. 코어가 시작되지 않았습니다.",
+  "macHelperStartupUnavailable": "도우미를 사용할 수 없습니다. 코어가 시작되지 않았습니다.",
+  "macHelperStatusUnknown": "도우미 상태를 확인할 수 없습니다",
+  "macHelperCoreUnconfirmed": "코어 상태가 확인되지 않았습니다",
+  "macHelperInstallAction": "도우미 설치",
+  "macHelperUpdateAction": "도우미 업데이트",
+  "macHelperVerificationFailed": "도우미 검증 실패"
 }

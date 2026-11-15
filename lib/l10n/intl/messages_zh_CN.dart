@@ -1196,6 +1196,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperCannotUse": MessageLookupByLibrary.simpleMessage("此版本不能启用助手"),
     "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage("重新检查"),
     "macHelperChecking": MessageLookupByLibrary.simpleMessage("正在检查辅助程序…"),
+    "macHelperCoreUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "内核运行状态待确认",
+    ),
     "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
       "管理员授权被拒绝。准备好授权后，可以手动重试。",
     ),
@@ -1203,6 +1206,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "macOS 未能完成操作。你可以手动重试。",
     ),
     "macHelperInstall": MessageLookupByLibrary.simpleMessage("安装"),
+    "macHelperInstallAction": MessageLookupByLibrary.simpleMessage("安装辅助程序"),
     "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage("已取消安装"),
     "macHelperInstallDetail": MessageLookupByLibrary.simpleMessage(
       "辅助程序在后台管理 Flash 的网络核心。安装时需要管理员授权；安装完成后，Flash 会检查它是否可用。",
@@ -1240,6 +1244,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperRepair": MessageLookupByLibrary.simpleMessage("辅助程序需要更新"),
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage("查看修复说明"),
+    "macHelperStartupInstall": MessageLookupByLibrary.simpleMessage(
+      "辅助程序未安装，内核未启动",
+    ),
+    "macHelperStartupUnavailable": MessageLookupByLibrary.simpleMessage(
+      "辅助程序暂不可用，内核未启动",
+    ),
+    "macHelperStartupUpdate": MessageLookupByLibrary.simpleMessage(
+      "辅助程序需要更新，内核未启动",
+    ),
+    "macHelperStatusUnknown": MessageLookupByLibrary.simpleMessage(
+      "无法确认辅助程序状态",
+    ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
       "无法确认辅助程序是否已就绪",
     ),
@@ -1255,6 +1271,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "无法确认操作结果。请重新检查辅助程序是否已就绪；确认前，Flash 不会重复安装。",
     ),
     "macHelperUpdate": MessageLookupByLibrary.simpleMessage("更新"),
+    "macHelperUpdateAction": MessageLookupByLibrary.simpleMessage("更新辅助程序"),
     "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage("已取消更新"),
     "macHelperUpdateDetail": MessageLookupByLibrary.simpleMessage(
       "已安装的辅助程序与当前版本不兼容。更新时可能需要管理员授权。",
@@ -1266,6 +1283,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperUpdating": MessageLookupByLibrary.simpleMessage("正在更新辅助程序…"),
     "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
       "辅助程序未通过安全性或兼容性检查。请使用可信且兼容的 Flash 版本。",
+    ),
+    "macHelperVerificationFailed": MessageLookupByLibrary.simpleMessage(
+      "辅助程序验证失败",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("本地映射"),
     "matchCase": MessageLookupByLibrary.simpleMessage("区分大小写"),

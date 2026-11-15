@@ -1341,6 +1341,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperCheckAgain": MessageLookupByLibrary.simpleMessage("再確認"),
     "macHelperChecking": MessageLookupByLibrary.simpleMessage("ヘルパーを確認中…"),
+    "macHelperCoreUnconfirmed": MessageLookupByLibrary.simpleMessage(
+      "コアの状態を確認できません",
+    ),
     "macHelperDeniedDetail": MessageLookupByLibrary.simpleMessage(
       "管理者の承認が拒否されました。承認できるときに再試行してください。",
     ),
@@ -1348,6 +1351,9 @@ class MessageLookup extends MessageLookupByLibrary {
       "macOS は操作を完了できませんでした。手動で再試行できます。",
     ),
     "macHelperInstall": MessageLookupByLibrary.simpleMessage("インストール"),
+    "macHelperInstallAction": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーをインストール",
+    ),
     "macHelperInstallCancelled": MessageLookupByLibrary.simpleMessage(
       "インストールをキャンセルしました",
     ),
@@ -1393,6 +1399,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "macHelperRepair": MessageLookupByLibrary.simpleMessage("ヘルパーの更新が必要"),
     "macHelperRepairAction": MessageLookupByLibrary.simpleMessage("修復の手順"),
+    "macHelperStartupInstall": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーが未インストールです。コアは起動していません。",
+    ),
+    "macHelperStartupUnavailable": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーを利用できません。コアは起動していません。",
+    ),
+    "macHelperStartupUpdate": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーの更新が必要です。コアは起動していません。",
+    ),
+    "macHelperStatusUnknown": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーの状態を確認できません",
+    ),
     "macHelperStopUnknown": MessageLookupByLibrary.simpleMessage(
       "ヘルパーの状態を確認できません",
     ),
@@ -1410,6 +1428,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "操作結果を確認できません。再確認してください。確認できるまで Flash は再インストールしません。",
     ),
     "macHelperUpdate": MessageLookupByLibrary.simpleMessage("更新"),
+    "macHelperUpdateAction": MessageLookupByLibrary.simpleMessage("ヘルパーを更新"),
     "macHelperUpdateCancelled": MessageLookupByLibrary.simpleMessage(
       "更新をキャンセルしました",
     ),
@@ -1423,6 +1442,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "macHelperUpdating": MessageLookupByLibrary.simpleMessage("ヘルパーを更新中…"),
     "macHelperVerificationDetail": MessageLookupByLibrary.simpleMessage(
       "ヘルパーの安全性または互換性の確認に失敗しました。信頼できる互換バージョンの Flash を使用してください。",
+    ),
+    "macHelperVerificationFailed": MessageLookupByLibrary.simpleMessage(
+      "ヘルパーの検証に失敗しました",
     ),
     "mapLocal": MessageLookupByLibrary.simpleMessage("ローカルマップ"),
     "matchCase": MessageLookupByLibrary.simpleMessage("大文字と小文字を区別"),

@@ -1634,5 +1634,13 @@
   "macHelperReadyDetail": "The helper is available. This does not mean TUN or a connection is running. Retry the feature when you are ready.",
   "macHelperMoreDetails": "Show Details",
   "macHelperLessDetails": "Hide Details",
-  "macHelperMoveTitle": "Move Flash to Applications"
+  "macHelperMoveTitle": "Move Flash to Applications",
+  "macHelperStartupUpdate": "Helper update required. The core hasn’t started.",
+  "macHelperStartupInstall": "Helper not installed. The core hasn’t started.",
+  "macHelperStartupUnavailable": "Helper unavailable. The core hasn’t started.",
+  "macHelperStatusUnknown": "Couldn’t confirm helper status",
+  "macHelperCoreUnconfirmed": "Core status unconfirmed",
+  "macHelperInstallAction": "Install Helper",
+  "macHelperUpdateAction": "Update Helper",
+  "macHelperVerificationFailed": "Helper verification failed"
 }

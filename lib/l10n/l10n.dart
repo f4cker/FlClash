@@ -14401,6 +14401,86 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `Helper update required. The core hasn’t started.`
+  String get macHelperStartupUpdate {
+    return Intl.message(
+      'Helper update required. The core hasn’t started.',
+      name: 'macHelperStartupUpdate',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper not installed. The core hasn’t started.`
+  String get macHelperStartupInstall {
+    return Intl.message(
+      'Helper not installed. The core hasn’t started.',
+      name: 'macHelperStartupInstall',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper unavailable. The core hasn’t started.`
+  String get macHelperStartupUnavailable {
+    return Intl.message(
+      'Helper unavailable. The core hasn’t started.',
+      name: 'macHelperStartupUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Couldn’t confirm helper status`
+  String get macHelperStatusUnknown {
+    return Intl.message(
+      'Couldn’t confirm helper status',
+      name: 'macHelperStatusUnknown',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Core status unconfirmed`
+  String get macHelperCoreUnconfirmed {
+    return Intl.message(
+      'Core status unconfirmed',
+      name: 'macHelperCoreUnconfirmed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Install Helper`
+  String get macHelperInstallAction {
+    return Intl.message(
+      'Install Helper',
+      name: 'macHelperInstallAction',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Update Helper`
+  String get macHelperUpdateAction {
+    return Intl.message(
+      'Update Helper',
+      name: 'macHelperUpdateAction',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Helper verification failed`
+  String get macHelperVerificationFailed {
+    return Intl.message(
+      'Helper verification failed',
+      name: 'macHelperVerificationFailed',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {

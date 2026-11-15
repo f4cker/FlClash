@@ -292,6 +292,7 @@ void main() {
     () async {
       final native = _Native()..stopCode = 'exitUnconfirmed';
       final client = MacHelperClient(native: native);
+      expect(client.hasCoreSession, isFalse);
       final lease = await MacHelperLauncher(
         client,
       ).start(sessionId: _session, address: 'ignored');
@@ -304,11 +305,13 @@ void main() {
         throwsA(isA<MacHelperException>()),
       );
       expect(native.calls.where((method) => method == 'start'), hasLength(1));
+      expect(client.hasCoreSession, isTrue);
       native.stopCode = 'ok';
       expect(
         (await lease.stop(const Duration(seconds: 1))).exitConfirmed,
         isTrue,
       );
+      expect(client.hasCoreSession, isFalse);
     },
   );
 
