@@ -4,8 +4,7 @@
 
 **Bug Fixes**
 
-- **mounts** Refresh native FILE providers from downloaded subscription data and keep mounted-node projections consistent with the latest profile.
-- **tray** Clear stale mode-switch prompts and report unconfirmed changes after 15 seconds.
+- **mounts,tray** Refresh native FILE providers and mounted-node projections; clear stale mode prompts and report unconfirmed switches after 15 seconds. (da680ef)
 
 ## v0.9.13 (2026-11-15)
 

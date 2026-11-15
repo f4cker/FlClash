@@ -2,6 +2,24 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.9.14",
+      "tag": "v0.9.14",
+      "date": "2026-11-16",
+      "prerelease": false,
+      "groups": [
+        {
+          "type": "fix",
+          "entries": [
+            {
+              "id": "da680ef",
+              "scope": "mounts,tray",
+              "text": "Refresh native FILE providers and mounted-node projections; clear stale mode prompts and report unconfirmed switches after 15 seconds."
+            }
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.13",
       "tag": "v0.9.13",
       "date": "2026-11-15",

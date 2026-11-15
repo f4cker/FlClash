@@ -7,8 +7,10 @@ checkout, another branch, mismatched submodules, or a tag not at `main` HEAD.
 
 The arm64 release embeds one install package for service wrapper build
 `2026111503`, retaining helper binary build `2026111402` with a newly built and
-signed Core. Its final signed SHA256 and actual wrapper source revision are
-pending compilation/signing; placeholders fail the release gates.
+signed Core. Its signed Core SHA256 is
+`84c3acc53eedf0a95d86badc060d72cfea9c4883126c79e276ac085041ea6ad2`; the actual compiled wrapper
+source revision is `da680ef85b251e22deb01fe2a5f5b1f4424be3ab`.
+That revision is retained even when the final GUI commit/tag differs.
 The managed GUI has no loose `Contents/MacOS/FlClashCore`; its sealed
 `AcceptedCoreSHA256` accepts the Core inside the service package. GUI metadata
 `FlashMinimumServiceBuild` is the string `2026111503`, so an older trusted service
@@ -66,7 +68,7 @@ service is sealed; it does not mean reuse of the old Core. Preserve historical
 receipts and wrapper-v1 semantics. Promote the final Core, receipt and adapter
 pins only after review, backing up the current private configuration first.
 
-For the pending `0.9.14+2026111503` local artifact, use separate phases after review,
+For the `0.9.14+2026111503` local artifact, use separate phases after review,
 commit, and local tag coordination. A matching local `v0.9.14` tag at clean `main`
 HEAD is required even for `check`; this tool never creates or moves tags.
 These phases do not create a GitHub draft or publish:
