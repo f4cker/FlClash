@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.13 (2026-11-15)
+
+**Bug Fixes**
+
+- **tray** Rule, Global, and Direct are now shown as a segmented control in the menu bar for clearer mode switching. (93ed399)
+
 ## v0.9.12 (2026-11-15)
 
 **Bug Fixes**

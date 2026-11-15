@@ -2,6 +2,24 @@
   "schemaVersion": 2,
   "versions": [
     {
+      "version": "0.9.13",
+      "tag": "v0.9.13",
+      "date": "2026-11-15",
+      "prerelease": false,
+      "groups": [
+        {
+          "type": "fix",
+          "entries": [
+            {
+              "id": "93ed399",
+              "scope": "tray",
+              "text": "Rule, Global, and Direct are now shown as a segmented control in the menu bar for clearer mode switching."
+            }
+          ]
+        }
+      ]
+    },
+    {
       "version": "0.9.12",
       "tag": "v0.9.12",
       "date": "2026-11-15",
