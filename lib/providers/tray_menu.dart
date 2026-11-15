@@ -1,4 +1,5 @@
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/core.dart';
@@ -68,4 +69,24 @@ class TrayGroupsReadFailed extends Notifier<bool> {
   }
 
   void set(bool value) => state = value;
+}
+
+@immutable
+class TrayModeMenuState {
+  const TrayModeMenuState({this.pendingMode, this.error});
+
+  final Mode? pendingMode;
+  final String? error;
+}
+
+final trayModeMenuStateProvider =
+    NotifierProvider<TrayModeMenuStateNotifier, TrayModeMenuState>(
+      TrayModeMenuStateNotifier.new,
+    );
+
+class TrayModeMenuStateNotifier extends Notifier<TrayModeMenuState> {
+  @override
+  TrayModeMenuState build() => const TrayModeMenuState();
+
+  void set(TrayModeMenuState value) => state = value;
 }

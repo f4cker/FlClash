@@ -57,6 +57,8 @@ final class TrayMenuCheckbox extends TrayMenuItem {
     required this.label,
     required this.checked,
     this.detail,
+    this.segmentGroup,
+    this.segmentError,
     this.icon,
     this.badge,
     this.accessibilityLabel,
@@ -67,6 +69,8 @@ final class TrayMenuCheckbox extends TrayMenuItem {
   final String label;
   final bool checked;
   final String? detail;
+  final String? segmentGroup;
+  final String? segmentError;
   final TrayMenuIcon? icon;
   final TrayMenuBadge? badge;
   final String? accessibilityLabel;

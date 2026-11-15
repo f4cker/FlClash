@@ -17,6 +17,7 @@ import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/state.dart';
 import 'package:fl_clash/providers/tailscale.dart';
+import 'package:fl_clash/providers/tray_menu.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -1473,6 +1474,218 @@ void main() {
         isNull,
       );
       expect(scoped.read(currentProfileIdProvider), isNull);
+    });
+  });
+
+  group('tray mode transaction', () {
+    late ProviderContainer scoped;
+    late TestSetupAction owner;
+    late _MockCoreHandlerInterface core;
+    late Completer<void> reply;
+
+    setUp(() async {
+      await AppLocalizations.load(const Locale('en'));
+      core = _MockCoreHandlerInterface();
+      reply = Completer<void>();
+      when(() => core.updateConfig(any())).thenAnswer((_) => reply.future);
+      owner = TestSetupAction();
+      scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          setupActionProvider.overrideWith(() => owner),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          isStartProvider.overrideWithValue(true),
+        ],
+      );
+      scoped.read(setupActionProvider.notifier);
+      addTearDown(scoped.dispose);
+    });
+
+    test(
+      'keeps configured mode pending and commits only after acknowledgement',
+      () async {
+        final operation = owner.changeModeForTray(Mode.global);
+        await pumpEventQueue();
+        expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+        expect(scoped.read(trayModeMenuStateProvider).pendingMode, Mode.global);
+        final params =
+            verify(() => core.updateConfig(captureAny())).captured.single
+                as UpdateParams;
+        expect(params.mode, Mode.global);
+        await owner.changeModeForTray(Mode.direct);
+        verifyNever(() => core.updateConfig(any()));
+        reply.complete();
+        await operation;
+        expect(scoped.read(patchClashConfigProvider).mode, Mode.global);
+        expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+        expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+      },
+    );
+
+    test('rejection keeps old mode and exposes the reason', () async {
+      final operation = owner.changeModeForTray(Mode.direct);
+      await pumpEventQueue();
+      reply.completeError(
+        const CoreMethodException(
+          code: 'config_rejected',
+          message: 'fixture rejected',
+          details: {'outcome': 'kept'},
+        ),
+      );
+      await operation;
+      expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+      expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+      expect(
+        scoped.read(trayModeMenuStateProvider).error,
+        contains('fixture rejected'),
+      );
+      expect(
+        scoped.read(trayModeMenuStateProvider).error,
+        contains(currentAppLocalizations.trayCouldNotSwitch),
+      );
+    });
+
+    test('missing acknowledgement is unconfirmed, not selected', () async {
+      final operation = owner.changeModeForTray(Mode.direct);
+      await pumpEventQueue();
+      reply.completeError(
+        const CoreMethodException(
+          code: 'no_response',
+          message: 'fixture timeout',
+        ),
+      );
+      await operation;
+      expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+      expect(
+        scoped.read(trayModeMenuStateProvider).error,
+        contains(currentAppLocalizations.traySwitchUnconfirmed),
+      );
+      expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+    });
+
+    for (final fails in [false, true]) {
+      test(
+        'newer ordinary intent wins over late ${fails ? 'failure' : 'success'}',
+        () async {
+          final operation = owner.changeModeForTray(Mode.direct);
+          await pumpEventQueue();
+          when(() => core.updateConfig(any())).thenAnswer((_) async {});
+          owner.changeMode(Mode.global);
+          if (fails) {
+            reply.completeError(
+              const CoreMethodException(
+                code: 'config_rejected',
+                message: 'late',
+                details: {'outcome': 'kept'},
+              ),
+            );
+          } else {
+            reply.complete();
+          }
+          await operation;
+          await pumpEventQueue();
+          expect(scoped.read(patchClashConfigProvider).mode, Mode.global);
+          expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+          expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+        },
+      );
+    }
+
+    for (final fails in [false, true]) {
+      test(
+        'same-value ordinary intent cancels late ${fails ? 'failure' : 'success'} and reapplies it',
+        () async {
+          final operation = owner.changeModeForTray(Mode.direct);
+          await pumpEventQueue();
+          owner.changeMode(Mode.rule);
+          when(() => core.updateConfig(any())).thenAnswer((_) async {});
+          if (fails) {
+            reply.completeError(
+              const CoreMethodException(
+                code: 'config_rejected',
+                message: 'late',
+                details: {'outcome': 'kept'},
+              ),
+            );
+          } else {
+            reply.complete();
+          }
+          await operation;
+          expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+          expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+          expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+          await pumpEventQueue();
+          final params = verify(
+            () => core.updateConfig(captureAny()),
+          ).captured.cast<UpdateParams>();
+          expect(params.map((value) => value.mode), [Mode.direct, Mode.rule]);
+        },
+      );
+    }
+
+    test('unrelated concurrent config edit is preserved on success', () async {
+      final operation = owner.changeModeForTray(Mode.direct);
+      await pumpEventQueue();
+      scoped
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mixedPort: 8899));
+      reply.complete();
+      await operation;
+      expect(scoped.read(patchClashConfigProvider).mode, Mode.direct);
+      expect(scoped.read(patchClashConfigProvider).mixedPort, 8899);
+    });
+
+    test('stopped mode is saved without a Core request', () async {
+      final stopped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          isStartProvider.overrideWithValue(false),
+        ],
+      );
+      addTearDown(stopped.dispose);
+      await stopped
+          .read(setupActionProvider.notifier)
+          .changeModeForTray(Mode.direct);
+      expect(stopped.read(patchClashConfigProvider).mode, Mode.direct);
+      verifyNever(() => core.updateConfig(any()));
+    });
+
+    test(
+      'scope change abandons an in-flight response without a stale selection',
+      () async {
+        final operation = owner.changeModeForTray(Mode.direct);
+        await pumpEventQueue();
+        scoped.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+        expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+        reply.complete();
+        await operation;
+        expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+        expect(scoped.read(trayModeMenuStateProvider).error, isNull);
+      },
+    );
+
+    test('controller validation still rejects before a tray request', () async {
+      scoped
+          .read(patchClashConfigProvider.notifier)
+          .update(
+            (state) => state.copyWith(
+              externalController: ExternalControllerStatus.open,
+              secret: '',
+            ),
+          );
+      await owner.changeModeForTray(Mode.direct);
+      verifyNever(() => core.updateConfig(any()));
+      expect(owner.authorizeCalls, 0);
+      expect(scoped.read(patchClashConfigProvider).mode, Mode.rule);
+      expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
+      expect(scoped.read(trayModeMenuStateProvider).error, isNotEmpty);
+    });
+
+    test('current mode is a no-op', () async {
+      await owner.changeModeForTray(Mode.rule);
+      verifyNever(() => core.updateConfig(any()));
+      expect(scoped.read(trayModeMenuStateProvider).pendingMode, isNull);
     });
   });
 

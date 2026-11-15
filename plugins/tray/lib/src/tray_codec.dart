@@ -92,6 +92,8 @@ abstract final class TrayCodec {
             'enabled': enabled,
           },
         TrayMenuCheckbox(
+          :final segmentGroup,
+          :final segmentError,
           :final label,
           :final detail,
           :final icon,
@@ -103,6 +105,8 @@ abstract final class TrayCodec {
           <String, Object?>{
             'id': id,
             'type': 'checkbox',
+            'segmentGroup': ?segmentGroup,
+            'segmentError': ?segmentError,
             'label': label,
             if (detail != null && detail.isNotEmpty) 'detail': detail,
             ..._decoration(icon, badge, accessibilityLabel),

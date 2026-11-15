@@ -14,6 +14,42 @@ TraySpec _spec({
 }
 
 void main() {
+  test(
+    'segment metadata preserves per-option callback ids and checked state',
+    () {
+      final encoded = TrayCodec.encode(
+        _spec(
+          menu: const [
+            TrayMenuCheckbox(
+              label: 'Rule',
+              checked: true,
+              segmentGroup: 'mode',
+              segmentError: 'reason',
+            ),
+            TrayMenuCheckbox(
+              label: 'Global',
+              checked: false,
+              segmentGroup: 'mode',
+              enabled: false,
+            ),
+            TrayMenuCheckbox(
+              label: 'Direct',
+              checked: false,
+              segmentGroup: 'mode',
+            ),
+          ],
+        ),
+      );
+      final rows = encoded.menu.cast<Map<String, Object?>>();
+      expect(rows.map((row) => row['segmentGroup']), everyElement('mode'));
+      expect(rows.map((row) => row['id']), [1024, 1025, 1026]);
+      expect(rows.first['segmentError'], 'reason');
+      expect(rows.first['checked'], true);
+      expect(rows[1]['enabled'], false);
+      expect(encoded.itemsById[1026], isA<TrayMenuCheckbox>());
+    },
+  );
+
   test('assigns ids in pre-order starting at the first id', () {
     final encoded = TrayCodec.encode(
       _spec(

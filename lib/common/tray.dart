@@ -157,6 +157,9 @@ class AppTray implements TrayPort {
     final systemAction = read(systemActionProvider.notifier);
     final setupAction = read(setupActionProvider.notifier);
     final appLocalizations = currentAppLocalizations;
+    final modeState = isMacOS
+        ? read(trayModeMenuStateProvider)
+        : const TrayModeMenuState();
     String? shortcut(HotAction action) => _shortcut(trayState, action);
     final showItem = TrayMenuAction(
       label: appLocalizations.show,
@@ -199,6 +202,9 @@ class AppTray implements TrayPort {
       for (final mode in Mode.values)
         TrayMenuCheckbox(
           label: mode.label,
+          segmentGroup: isMacOS ? 'outbound-mode' : null,
+          segmentError: modeState.error,
+          enabled: modeState.pendingMode == null,
           checked: mode == trayState.mode,
           detail: shortcut(switch (mode) {
             Mode.rule => HotAction.ruleMode,
@@ -206,10 +212,21 @@ class AppTray implements TrayPort {
             Mode.direct => HotAction.directMode,
           }),
           onSelected: () {
-            setupAction.changeMode(mode);
+            if (isMacOS) {
+              _observe(setupAction.changeModeForTray(mode));
+            } else {
+              setupAction.changeMode(mode);
+            }
           },
         ),
       const TrayMenuSeparator(),
+      if (modeState.pendingMode case final pending?)
+        TrayMenuAction(
+          label: appLocalizations.traySwitchingTo(pending.label),
+          enabled: false,
+        ),
+      if (modeState.error case final error?)
+        TrayMenuAction(label: error, accessibilityLabel: error, enabled: false),
       ...groupMenu,
       if (trayState.isStart) ...[
         TrayMenuCheckbox(

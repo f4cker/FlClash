@@ -241,6 +241,59 @@ void main() {
     expect(checkedModes, contains(Intl.message(Mode.global.name)));
   });
 
+  test(
+    'macOS mode segments reuse localized labels and keep confirmed selection while pending',
+    () async {
+      container
+          .read(trayModeMenuStateProvider.notifier)
+          .set(const TrayModeMenuState(pendingMode: Mode.direct));
+      await update(_trayState(mode: Mode.global));
+      final segments = _items(
+        showCall(),
+      ).where((item) => item['segmentGroup'] == 'outbound-mode').toList();
+      expect(
+        segments.map((item) => item['label']),
+        Mode.values.map((mode) => mode.label),
+      );
+      expect(segments.map((item) => item['enabled']), everyElement(false));
+      expect(
+        segments.where((item) => item['checked'] == true).single['label'],
+        Mode.global.label,
+      );
+      expect(
+        _labels(showCall()),
+        contains(currentAppLocalizations.traySwitchingTo(Mode.direct.label)),
+      );
+    },
+  );
+
+  test(
+    'failed mode keeps selection, enables retry, and carries the full reason',
+    () async {
+      const reason = 'fixture mode failure';
+      container
+          .read(trayModeMenuStateProvider.notifier)
+          .set(const TrayModeMenuState(error: reason));
+      await update(_trayState());
+      final selected = _item(showCall(), Mode.rule.label);
+      expect(selected['checked'], isTrue);
+      expect(selected['enabled'], isTrue);
+      expect(selected['segmentError'], reason);
+      expect(_item(showCall(), reason)['accessibilityLabel'], reason);
+    },
+  );
+
+  test('non-macOS keeps the ordinary mode checkboxes', () async {
+    await update(
+      _trayState(),
+      on: AppTray.forPlatform(isMacOS: false, isWindows: true),
+    );
+    expect(
+      _items(showCall()).where((item) => item.containsKey('segmentGroup')),
+      isEmpty,
+    );
+  });
+
   test('sends icon, tooltip and menu in a single show call', () async {
     await update(_trayState(isStart: true, tunEnable: true));
 

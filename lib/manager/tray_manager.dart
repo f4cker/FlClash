@@ -57,6 +57,7 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
         _onMenuDataChanged,
       );
       ref.listenManual(trayGroupMenuStatesProvider, _onMenuDataChanged);
+      ref.listenManual(trayModeMenuStateProvider, _onMenuDataChanged);
       ref.listenManual(trayGroupsReadFailedProvider, _onMenuDataChanged);
       ref.listenManual<int?>(currentProfileIdProvider, (prev, next) {
         _onMenuDataChanged(prev, next);

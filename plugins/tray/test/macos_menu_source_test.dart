@@ -13,6 +13,57 @@ void main() {
   final menu = _source('TrayMenu');
   final view = _source('TrayMenuItemView');
   final plugin = _source('TrayPlugin');
+  final segments = _source('TrayMenuSegmentsView');
+
+  test('segments use confirmed state and selectable button accessibility', () {
+    expect(
+      segments,
+      contains('segment.selected = entry["checked"] as? Bool == true'),
+    );
+    expect(segments, contains('setAccessibilityRole(.button)'));
+    expect(segments, contains('setAccessibilitySelected(selected)'));
+    expect(segments, contains('setAccessibilityEnabled(enabled)'));
+    expect(segments, contains('override func accessibilityPerformPress()'));
+    expect(segments, contains('notification: .valueChanged'));
+    final activation = segments.substring(
+      segments.indexOf('private func activate('),
+      segments.indexOf('func activateFocused'),
+    );
+    expect(activation, isNot(contains('selected =')));
+    expect(activation, contains('onSelect(id)'));
+    expect(segments, isNot(contains('checkmark')));
+    expect(segments, isNot(contains('NSSegmentedControl')));
+    expect(segments, contains('alert.messageText = error'));
+  });
+
+  test('segment keyboard focus is separate and preserves other menu keys', () {
+    expect(segments, contains('case 123, 124:'));
+    expect(segments, contains('case 36, 49, 76:'));
+    expect(segments, contains('self.activateFocused()'));
+    expect(segments, contains('self.refreshFocus()'));
+    expect(segments, contains('default:\n                return event'));
+    expect(segments, contains('NSEvent.removeMonitor(monitor)'));
+    expect(menu, contains('TrayMenuSegmentsView)?.updateHighlight(true)'));
+    expect(menu, contains('TrayMenuTopology.grouped(items)'));
+    expect(menu, contains('self.onSelect(id, self.generation)'));
+    expect(menu, contains('child["id"] = old["id"]'));
+  });
+
+  test('segments share menu geometry and use neutral light and dark fills', () {
+    expect(segments, contains('NSFont.menuFont(ofSize: max(13,'));
+    expect(segments, contains('bounds.insetBy(dx: 5, dy: 4)'));
+    expect(segments, contains('track.layer?.cornerRadius = 8'));
+    expect(segments, contains('layer?.cornerRadius = 5'));
+    expect(segments, contains('cornerCurve = .continuous'));
+    expect(segments, contains('dark ? 0.17 : 0.82'));
+    expect(segments, contains('white.withAlphaComponent(0.07)'));
+    expect(segments, contains('black.withAlphaComponent(0.05)'));
+    expect(segments, contains('white.withAlphaComponent(0.08)'));
+    expect(segments, contains('black.withAlphaComponent(0.04)'));
+    expect(segments, contains('.foregroundColor: NSColor.labelColor'));
+    expect(segments, isNot(contains('controlAccentColor')));
+    expect(segments, contains('borderWidth = keyboardFocused ? 2 : 0'));
+  });
 
   test(
     'native menu retains titles, checkbox state, actions and actual submenus',
@@ -47,7 +98,7 @@ void main() {
       expect(menu, contains('isSubmenu ? 420 : 380'));
       expect(menu, contains('showsStateColumn = false'));
       expect(menu, isNot(contains('minimumWidth = 320')));
-      expect(menu, contains('min(maximumWidth, contents.compactMap'));
+      expect(menu, contains('min(maximumWidth, measuredContents.map'));
       expect(
         view,
         contains('} else if !content.isCheckbox, let icon = content.icon'),

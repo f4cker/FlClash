@@ -49,6 +49,7 @@ class SetupAction extends _$SetupAction {
   CoreController get _core => ref.read(coreHandlerProvider);
 
   Timer? _runtimeTimer;
+  int _trayModeRevision = 0;
   final _setupScheduler = SerialTaskScheduler();
   final _compositionReview = CompositionReviewGate();
   bool _compositionAdoptedThisSession = false;
@@ -73,11 +74,22 @@ class SetupAction extends _$SetupAction {
   @override
   void build() {
     ref.onDispose(_stopRuntimeTicker);
+    ref.listen(
+      patchClashConfigProvider.select((value) => value.mode),
+      (_, _) => _invalidateTrayMode(),
+    );
+    ref.listen(currentProfileIdProvider, (_, _) => _invalidateTrayMode());
+    ref.listen(coreStatusProvider, (_, _) => _invalidateTrayMode());
     ref.listen(appVisibleProvider, (_, _) => _syncRuntimeTicker());
     ref.listen(
       appSettingProvider.select((state) => state.showTrayTitle),
       (_, _) => _syncRuntimeTicker(),
     );
+  }
+
+  void _invalidateTrayMode() {
+    _trayModeRevision++;
+    ref.read(trayModeMenuStateProvider.notifier).set(const TrayModeMenuState());
   }
 
   bool get _isTrafficShown =>
@@ -588,17 +600,32 @@ class SetupAction extends _$SetupAction {
 
   @visibleForTesting
   Future<void> updateConfig() async {
+    await _updateConfig();
+  }
+
+  Future<bool> _updateConfig({
+    Mode? trayMode,
+    bool Function()? isCurrent,
+    VoidCallback? onApplied,
+  }) async {
+    Future<T?> run<T>(Future<T> Function() operation) async =>
+        trayMode == null ? globalState.safeRun(operation) : operation();
     if (await _compositionPending) {
       // A patch cannot acknowledge first adoption or bypass the review.
-      await globalState.safeRun(
-        () => _runSetup(automatic: true, silence: true),
-      );
-      return;
+      final result = await run(() => _runSetup(automatic: true, silence: true));
+      if (trayMode == null || result != _SetupTaskResult.completed) {
+        return false;
+      }
     }
     var restart = false;
+    var applied = false;
     await _setupScheduler.run(
-      () => globalState.safeRun(() async {
-        final patchConfig = ref.read(patchClashConfigProvider);
+      () => run(() async {
+        if (isCurrent != null && !isCurrent()) return;
+        final configured = ref.read(patchClashConfigProvider);
+        final patchConfig = trayMode == null
+            ? configured
+            : configured.copyWith(mode: trayMode);
         _effectivePatchConfig(patchConfig);
         final shouldContinueSetup = await requestAdmin(
           patchConfig.pageTunEnable,
@@ -615,6 +642,7 @@ class SetupAction extends _$SetupAction {
             currentAppLocalizations.tunAuthorizationFailed,
           );
         }
+        if (isCurrent != null && !isCurrent()) return;
         final networkSetting = ref.read(networkSettingProvider);
         final effective = _effectivePatchConfig(patchConfig);
         try {
@@ -626,6 +654,7 @@ class SetupAction extends _$SetupAction {
             ),
           );
         } catch (error) {
+          if (isCurrent != null && !isCurrent()) return;
           final kept =
               error is CoreMethodException &&
               error.code == 'config_rejected' &&
@@ -634,12 +663,80 @@ class SetupAction extends _$SetupAction {
           if (!kept) await _forgetConfirmedComposition();
           rethrow;
         }
+        if (isCurrent != null && !isCurrent()) return;
         ref.read(runningFindProcessModeProvider.notifier).value =
             effective.findProcessMode.name;
         if (ref.read(isStartProvider)) await checkMixedListener();
+        if (isCurrent == null || isCurrent()) {
+          onApplied?.call();
+          applied = true;
+        }
       }),
     );
     if (restart) await _restartCoreAfterAuthorization();
+    return applied;
+  }
+
+  Future<void> changeModeForTray(Mode mode) async {
+    if (ref.read(trayModeMenuStateProvider).pendingMode != null ||
+        ref.read(patchClashConfigProvider).mode == mode) {
+      return;
+    }
+    if (!ref.read(isStartProvider)) {
+      changeMode(mode);
+      return;
+    }
+    final revision = ++_trayModeRevision;
+    final handler = _core;
+    bool isCurrent() =>
+        ref.mounted &&
+        revision == _trayModeRevision &&
+        identical(handler, _core);
+    final menu = ref.read(trayModeMenuStateProvider.notifier);
+    final runningSubscription = ref.listen(
+      isStartProvider,
+      (_, _) => _invalidateTrayMode(),
+    );
+    final handlerSubscription = ref.listen(
+      coreHandlerProvider,
+      (_, _) => _invalidateTrayMode(),
+    );
+    menu.set(TrayModeMenuState(pendingMode: mode));
+    try {
+      final applied = await _updateConfig(
+        trayMode: mode,
+        isCurrent: isCurrent,
+        onApplied: () => _publishMode(mode),
+      );
+      if (isCurrent()) {
+        menu.set(
+          TrayModeMenuState(
+            error: applied
+                ? null
+                : currentAppLocalizations.traySwitchUnconfirmed,
+          ),
+        );
+      }
+    } catch (error) {
+      if (!isCurrent()) return;
+      final reason = userFacingErrorMessage(error, currentAppLocalizations);
+      menu.set(
+        TrayModeMenuState(
+          error: [
+            error is CoreMethodException &&
+                    error.code == 'config_rejected' &&
+                    error.details is Map &&
+                    (error.details as Map)['outcome'] == 'kept'
+                ? currentAppLocalizations.trayCouldNotSwitch
+                : currentAppLocalizations.traySwitchUnconfirmed,
+            if (reason.isNotEmpty) reason,
+          ].join(': '),
+        ),
+      );
+    } finally {
+      runningSubscription.close();
+      handlerSubscription.close();
+    }
   }
 
   @protected
@@ -670,6 +767,14 @@ class SetupAction extends _$SetupAction {
   }
 
   void changeMode(Mode mode) {
+    final supersedesTray =
+        ref.read(trayModeMenuStateProvider).pendingMode != null;
+    _invalidateTrayMode();
+    _publishMode(mode);
+    if (supersedesTray) unawaited(updateConfig());
+  }
+
+  void _publishMode(Mode mode) {
     ref
         .read(patchClashConfigProvider.notifier)
         .update((state) => state.copyWith(mode: mode));

@@ -606,6 +606,54 @@ void main() {
   );
 
   test(
+    'macOS mode segments opened pending can re-enable in a retained generation',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      var selected = 0;
+      await Tray.instance.show(
+        _spec(
+          menu: [
+            TrayMenuCheckbox(
+              label: 'Direct',
+              checked: false,
+              enabled: false,
+              segmentGroup: 'mode',
+              onSelected: () => selected++,
+            ),
+            const TrayMenuAction(label: 'Pending', enabled: false),
+          ],
+        ),
+      );
+      final tracked = (calls.last.arguments as Map)['menuGeneration'] as int;
+      nativeTrackingGeneration = tracked;
+      nativeGenerationsForShow = (generation) => [tracked, generation];
+      await Tray.instance.openMenu();
+      await _emit('onMenuItemSelected', {
+        'id': 1024,
+        'menuGeneration': tracked,
+      });
+      expect(selected, 0);
+      await Tray.instance.show(
+        _spec(
+          menu: [
+            TrayMenuCheckbox(
+              label: 'Direct',
+              checked: false,
+              segmentGroup: 'mode',
+              onSelected: () => selected += 100,
+            ),
+          ],
+        ),
+      );
+      await _emit('onMenuItemSelected', {
+        'id': 1024,
+        'menuGeneration': tracked,
+      });
+      expect(selected, 1);
+    },
+  );
+
+  test(
     'macOS originally-disabled retained rows stay disabled until reopen',
     () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;

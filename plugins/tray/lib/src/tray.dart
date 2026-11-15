@@ -225,13 +225,19 @@ final class Tray {
         onSelected: (previous as TrayMenuAction).onSelected,
       ),
       TrayMenuCheckbox() => TrayMenuCheckbox(
+        segmentGroup: item.segmentGroup,
+        segmentError: item.segmentError,
         label: item.label,
         checked: item.checked,
         detail: item.detail,
         icon: item.icon,
         badge: item.badge,
         accessibilityLabel: item.accessibilityLabel,
-        enabled: item.enabled && (origin as TrayMenuCheckbox).enabled,
+        enabled:
+            item.enabled &&
+            ((origin as TrayMenuCheckbox).enabled ||
+                (item.segmentGroup != null &&
+                    item.segmentGroup == origin.segmentGroup)),
         onSelected: (previous as TrayMenuCheckbox).onSelected,
       ),
       TrayMenuSubmenu() || TrayMenuSeparator() => item,
