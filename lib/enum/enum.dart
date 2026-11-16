@@ -1046,3 +1046,50 @@ enum MountOperationKind { save, deleteSource, unknown }
 /// How the Core answered a mounted profile it could not apply: [kept] runs
 /// the config it ran before, [blocked] one that rejects every connection.
 enum MountRejectedOutcome { kept, blocked }
+
+/// The ids `macos/Runner/ProcessSourceCatalog.swift` answers; a [shared]
+/// service is one many apps go through.
+enum SystemService {
+  appStore(shared: false),
+  softwareUpdate(shared: false),
+  pushNotifications(shared: false),
+  iCloud(shared: false),
+  photos(shared: false),
+  messages(shared: false),
+  maps(shared: false),
+  weather(shared: false),
+  siri(shared: false),
+  spotlight(shared: false),
+  appleAccount(shared: false),
+  findMy(shared: false),
+  dateTime(shared: false),
+  mail(shared: false),
+  safari(shared: false),
+  news(shared: false),
+  home(shared: false),
+  gameCenter(shared: false),
+  screenTime(shared: false),
+  tips(shared: false),
+  books(shared: false),
+  reminders(shared: false),
+  contacts(shared: false),
+  analytics(shared: false),
+  backgroundDownloads(shared: true),
+  nameResolution(shared: true),
+  certificateChecks(shared: true),
+  webContent(shared: true),
+  networkProxy(shared: true),
+  systemAssets(shared: true),
+  location(shared: true),
+  continuity(shared: true),
+  captivePortal(shared: true),
+  appSecurity(shared: true);
+
+  final bool shared;
+
+  const SystemService({required this.shared});
+
+  static final _byId = values.asNameMap();
+
+  static SystemService? fromId(String id) => _byId[id];
+}

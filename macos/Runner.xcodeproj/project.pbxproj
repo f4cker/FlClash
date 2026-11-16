@@ -29,6 +29,11 @@
 		F5A1C0032F10000100A1B2C3 /* ProcessAppChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */; };
 		F5A1C0052F10000100A1B2C3 /* ProcessAppLocatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */; };
 		F5A1C0072F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */; };
+		F5A1C0112F10000100A1B2C3 /* ProcessSourceCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0122F10000100A1B2C3 /* ProcessSourceCatalog.swift */; };
+		F5A1C0132F10000100A1B2C3 /* ProcessSourceCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0122F10000100A1B2C3 /* ProcessSourceCatalog.swift */; };
+		F5A1C0142F10000100A1B2C3 /* ProcessSourceResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0152F10000100A1B2C3 /* ProcessSourceResolver.swift */; };
+		F5A1C0162F10000100A1B2C3 /* ProcessSourceResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0152F10000100A1B2C3 /* ProcessSourceResolver.swift */; };
+		F5A1C0172F10000100A1B2C3 /* ProcessSourceCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0182F10000100A1B2C3 /* ProcessSourceCatalogTests.swift */; };
 		331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C80D7294CF71000263BE5 /* RunnerTests.swift */; };
 		335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335BBD1A22A9A15E00E9071D /* GeneratedPluginRegistrant.swift */; };
 		33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC10F02044A3C60003C045 /* AppDelegate.swift */; };
@@ -88,6 +93,9 @@
 		F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppLocator.swift; sourceTree = "<group>"; };
 		F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppChannel.swift; sourceTree = "<group>"; };
 		F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppLocatorTests.swift; sourceTree = "<group>"; };
+		F5A1C0122F10000100A1B2C3 /* ProcessSourceCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSourceCatalog.swift; sourceTree = "<group>"; };
+		F5A1C0152F10000100A1B2C3 /* ProcessSourceResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSourceResolver.swift; sourceTree = "<group>"; };
+		F5A1C0182F10000100A1B2C3 /* ProcessSourceCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSourceCatalogTests.swift; sourceTree = "<group>"; };
 		331C80D5294CF71000263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		331C80D7294CF71000263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		333000ED22D3DE5D00554162 /* Warnings.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Warnings.xcconfig; sourceTree = "<group>"; };
@@ -134,6 +142,7 @@
 			children = (
 				331C80D7294CF71000263BE5 /* RunnerTests.swift */,
 				F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */,
+				F5A1C0182F10000100A1B2C3 /* ProcessSourceCatalogTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -204,6 +213,8 @@
 				FA2633000000000000000303 /* FlashFlutterEngine.h */,
 				F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */,
 				F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */,
+				F5A1C0122F10000100A1B2C3 /* ProcessSourceCatalog.swift */,
+				F5A1C0152F10000100A1B2C3 /* ProcessSourceResolver.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -413,6 +424,9 @@
 				331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */,
 				F5A1C0052F10000100A1B2C3 /* ProcessAppLocatorTests.swift in Sources */,
 				F5A1C0072F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */,
+				F5A1C0132F10000100A1B2C3 /* ProcessSourceCatalog.swift in Sources */,
+				F5A1C0162F10000100A1B2C3 /* ProcessSourceResolver.swift in Sources */,
+				F5A1C0172F10000100A1B2C3 /* ProcessSourceCatalogTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -429,6 +443,8 @@
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 				F5A1C0032F10000100A1B2C3 /* ProcessAppChannel.swift in Sources */,
 				F5A1C0012F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */,
+				F5A1C0112F10000100A1B2C3 /* ProcessSourceCatalog.swift in Sources */,
+				F5A1C0142F10000100A1B2C3 /* ProcessSourceResolver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
