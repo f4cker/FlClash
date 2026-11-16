@@ -1,4 +1,24 @@
-# Project move handoff — 2026-11-13
+# Project move handoff — current preparation 2026-11-16
+
+**Current handoff: [project-move/HANDOFF-20261116.md](project-move/HANDOFF-20261116.md).**
+Read it first for the proposed move to **lavas-mini-apps**. Latest reported delivery
+is `v0.9.14+2026111503`; runtime remains untested. Source was clean at
+`721c3731508a4fddecd7fc58ddf6ccf32e155ffb` before these uncommitted preparation files.
+No move or commit has been initiated. The nonsecret archive preserves all 34
+reviewed essential files: release config/templates/receipt, exact signed service
+app, and unique drafts. **USER3622 additionally authorized original signing-tool
+preparation**: five explicitly allowlisted nonsecret files, including the byte-exact
+frozen provisioner, are preserved in `project-move/signing-tool-preservation.zip`
+with their own inventory. This narrowly supersedes the historical tool no-copy/
+no-inspection rule; all private-material exclusions remain. Existing tooling has
+**no persistent restore CLI**: generation/export modes must not be run for migration.
+Same-identity restoration and target ACL/path compatibility remain unperformed,
+not prerequisites to creating the target workspace. Owner privately transfers the
+existing encrypted `.p12` separately; see the current handoff for its exact path.
+No export/import, credential disclosure, keychain change, build, signing, execution,
+upload or upstream merge is authorized. The current handoff supersedes **all
+version/pin/status claims below** and the narrow tool exclusion only as just noted.
+Everything below is historical context.
 
 **New agent: read this file first, then `AGENTS.md`. Chat history is not moved.**
 This is the existing Flash/FlClash Flutter project (Flutter **3.47.x**), currently

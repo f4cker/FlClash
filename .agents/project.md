@@ -1,11 +1,14 @@
 # Project Context
 
-For the transported checkout, read [PROJECT-MOVE.md](../PROJECT-MOVE.md) first:
-its current delivery section distinguishes the pending `0.9.10+2026111407` embedded-helper
-release from the historical move snapshot and its preservation boundaries.
+For the transported checkout, read [PROJECT-MOVE.md](../PROJECT-MOVE.md) and its
+[current migration handoff](../project-move/HANDOFF-20261116.md) first. Latest
+reported delivery is `0.9.14+2026111503`; source/runtime and migration-preservation
+status are recorded there. The proposed move has not started and signing readiness
+is blocked separately from source transport.
 [Local macOS release](../macos/packaging/local_release.md) defines the current phased
-packaging route. Stable helper `2026111402` and signed Core bytes remain unchanged;
-source/static checks do not establish installation or runtime acceptance.
+packaging route: service wrapper `2026111503`, retained helper binary `2026111402`,
+and its pinned current signed Core. Source/static checks do not establish
+installation or runtime acceptance.
 
 FlClash is a multi-platform proxy client based on ClashMeta (mihomo), built with Flutter. It supports Android, Windows, macOS, and Linux, drawing its own components in the `prism_ui` package: a color system of its own with Apple's Human Interface interaction conventions.
 

@@ -1,0 +1,261 @@
+{
+  "schema": 1,
+  "prepared_date": "2026-11-16",
+  "source_head": "721c3731508a4fddecd7fc58ddf6ccf32e155ffb",
+  "archive": "nonsecret-preparation.zip",
+  "archive_sha256": "4f67f86303a0496344ea11049837aeca9c93d36500a21c7300e4d03051ac289c",
+  "archive_bytes": 23630195,
+  "scope": "Reviewed nonsecret release inputs, exact signed service app and unique Go drafts; preservation only, not a ready-to-run signing pipeline",
+  "scan": "No private-key blocks or private credential markers found. One Bearer regex hit in compiled Core was conclusively attributed to the existing tracked public Disney browser-client literal in core/service_rules.go:15 (78 bytes), plus 4 adjacent rodata bytes. ARM64 reference stores the exact literal length 78. Source documents this as a public token supplied to any web visitor, not a user signing/runtime credential. No matched value was printed or recorded. Password-book labels and source filenames are metadata only.",
+  "excluded": "No private-configs, keychain, certificate, encrypted backup, signing-provision directory, or runtime credentials read/copied into archive.",
+  "files": [
+    {
+      "path": ".airbuild/local-release/config.json",
+      "bytes": 597,
+      "mode": "0o600",
+      "sha256": "4c3087070ca2feb361c89207bc8b8d54d48ce2877133c6efd0152d1ad5e170b2",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-template-pins.json",
+      "bytes": 1917,
+      "mode": "0o600",
+      "sha256": "476e68342bd8bd0c5041b8d5bfbbbae2bb6b63bd2c19a6cb94f0eeefe74df060",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/delivery-3242/delivery-policy.json",
+      "bytes": 575,
+      "mode": "0o600",
+      "sha256": "10a7fa9c6c3b442e1ac3338a570f4f5aa9772c0d2f8189c028f7d6daa102f40a",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/native-source-copy-receipt.json",
+      "bytes": 16062,
+      "mode": "0o600",
+      "sha256": "f5f3453c58afb481a677426aa281bade75624a773d832d267d90389224bd49d9",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/proven-route/gui/bindings.json",
+      "bytes": 127499,
+      "mode": "0o600",
+      "sha256": "4f4059c1b97af67ec7c3d260da36c9e1b519e7d896da35fd43997e1331cf1c07",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/proven-route/gui/guard.m",
+      "bytes": 40607,
+      "mode": "0o600",
+      "sha256": "8d678138063f3022d3115ed0631d064cc3669b539e5d33d9acd92fc7eb0bc5ac",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/proven-route/gui/pipe_signing_session_password.py",
+      "bytes": 7660,
+      "mode": "0o600",
+      "sha256": "48bdadf59cbc145222c228b77c76d5bf971cc8469d5b4e805092bfb75c01a1b4",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/proven-route/gui/sign-current.py",
+      "bytes": 20856,
+      "mode": "0o600",
+      "sha256": "9a0d71c383cc34c122baeab2cb91b2513bd2d15c930ed734eb34afe03afa6f06",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/proven-route/gui/signing_mutation_codesign_compat.py",
+      "bytes": 21802,
+      "mode": "0o600",
+      "sha256": "0c84b568f507d8fa238ba62b506b588ffa8c29c8cb7265ed0adee604b51fbaed",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/provenance/compile-result.json",
+      "bytes": 1146,
+      "mode": "0o600",
+      "sha256": "e40ac06b45410b1a300400ad34707863f2c86644ea525ee3e67125f1fee2bbd5",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/provenance/source-manifest.json",
+      "bytes": 13056,
+      "mode": "0o600",
+      "sha256": "8b7fe42a21aef10034b88543e36410d66db6d1ac37ebeef6059416146a7635d6",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/compile-service-1305.py",
+      "bytes": 50718,
+      "mode": "0o600",
+      "sha256": "31401316ff50ff3e59256bb3a280bdaa309f794549ba59c61282b00563e1f63d",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/deps/library_constraint.py",
+      "bytes": 9553,
+      "mode": "0o600",
+      "sha256": "b1a402989ca8fd4375b081c68df5d974cf5be635389f399ff9f4ba17e7b2d7de",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/deps/native_constraint_parser.py",
+      "bytes": 15667,
+      "mode": "0o600",
+      "sha256": "94d85cd371be9d906f56bbe1c6467a32bbe57efb6514b494b978c32d4f6b98b4",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/deps/sign_fixed_payload.py",
+      "bytes": 22085,
+      "mode": "0o600",
+      "sha256": "2574d8356c2ac9ad50cb94bc476a11463f6ee8f30d24fab97fbe7432c880771a",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/deps/stage_managed_payload.py",
+      "bytes": 12161,
+      "mode": "0o600",
+      "sha256": "006b6d11b10d0875654fab009e7b6a231ebfb83f12cbb0a8c77ec0c463d65829",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/preflight-1305.py",
+      "bytes": 77184,
+      "mode": "0o600",
+      "sha256": "addf3eef8e5d944caef670d2b08c701e704fd98eae6de0774d921b3b93abf3a6",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/sign-1305.py",
+      "bytes": 13329,
+      "mode": "0o600",
+      "sha256": "fd12febca6c6101af4ab088cfba396be34a234da99e5d4b33b03620ade125d3f",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/signing_mutation.py",
+      "bytes": 21753,
+      "mode": "0o600",
+      "sha256": "71ce74511c53ba6fa5e9945462f9a54c7466362b19216bf1b23cd26ab5b79485",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/gui-templates/signing/stage-1305.py",
+      "bytes": 9996,
+      "mode": "0o600",
+      "sha256": "26ec684ed41494ac68e8e49eb69c0dd347dd5f38e5575d07e39fc589077bb67e",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-current-schema.json",
+      "bytes": 10022,
+      "mode": "0o600",
+      "sha256": "eed26f327f55df4162ab31343f3c203ec813d99637280d82ffd6fe1b47b379a6",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/Info.plist",
+      "bytes": 1148,
+      "mode": "0o644",
+      "sha256": "ec7e629ee545a53f2cd9880e7464b5176761a0bd7c4febd2369e268f9bd0572d",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/Library/HelperTools/FlashHelper",
+      "bytes": 158400,
+      "mode": "0o755",
+      "sha256": "6201613f0c59927cb006a26b8d67b6487a37815dae07174e035f3f654e318fc3",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/Library/HelperTools/FlashMaintenance",
+      "bytes": 152928,
+      "mode": "0o755",
+      "sha256": "93a5af89d1024aecd227ec4f061a33c497857a233b87348b6c60e11ed8e29cdd",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/Library/LaunchDaemons/com.layoute.flash.helper.plist",
+      "bytes": 593,
+      "mode": "0o644",
+      "sha256": "23e1ab5ba4def3eeacd1033b29a01837d014598b695b7a5acbd4e431c49eecec",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/MacOS/FlClashCore",
+      "bytes": 66260960,
+      "mode": "0o755",
+      "sha256": "84c3acc53eedf0a95d86badc060d72cfea9c4883126c79e276ac085041ea6ad2",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/MacOS/Flash",
+      "bytes": 35376,
+      "mode": "0o755",
+      "sha256": "704b206f3c965c819ca5bf79a8ed88beca0929e6d0e84abc4f9e4aa611705eee",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/Resources/AppIcon.icns",
+      "bytes": 76839,
+      "mode": "0o644",
+      "sha256": "84d648b5f047aa8042331d8408c86f5b945c2f739c852bed2e0276833e6ebd61",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/_CodeSignature/CodeResources",
+      "bytes": 3271,
+      "mode": "0o644",
+      "sha256": "e07cd049489c3358a2f672731d60183e407e75bcd8bad3f1dabe9702906aa92f",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/local-release/service-core-1503/signer-adapter.py",
+      "bytes": 25059,
+      "mode": "0o700",
+      "sha256": "5d26a8c1e13c05d1ac10fb47b7140616cbee3e915cd1e0dbf7bb6f8a64317433",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/mount-snapshot-draft/mount.go",
+      "bytes": 21472,
+      "mode": "0o660",
+      "sha256": "00609dbd80ae3e489d872ba238065a5bb4149da8734b75cc075453e4af0b2830",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/mount-snapshot-draft/mount.patch",
+      "bytes": 5404,
+      "mode": "0o660",
+      "sha256": "0ba41191aaa9cc25daa0777f9be2573522a26fb015738c5c88bbb182d27a21d0",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/mount-snapshot-draft/mount_snapshot.go",
+      "bytes": 7657,
+      "mode": "0o640",
+      "sha256": "7ed732eda515b3ce960696b1d210e5e9e85100a0fc216c15478b894f2414944f",
+      "in_archive": true
+    },
+    {
+      "path": ".airbuild/mount-snapshot-draft/mount_snapshot_test.go",
+      "bytes": 2375,
+      "mode": "0o640",
+      "sha256": "d1123ca2f9ef802829e68c8538f79b7b0d915a345b4a60d0e8f6e144d4b32ae6",
+      "in_archive": true
+    }
+  ],
+  "binary_scan_provenance": {
+    "file": ".airbuild/local-release/service-core-1503/service-payload/Flash.app/Contents/MacOS/FlClashCore",
+    "matched_offset": 24742770,
+    "regex_length": 82,
+    "public_literal_length": 78,
+    "adjacent_rodata_bytes": 4,
+    "tracked_source": "core/service_rules.go:13-15",
+    "classification": "public browser-client constant plus adjacent packed rodata, not private credential",
+    "values_disclosed": false
+  }
+}

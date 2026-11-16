@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "authorization": "USER3622: nonsecret original signing-tool inspection/preservation only; no identity operations, build, sign, execution, or move",
+  "source_directory": ".airbuild/worktree/exit-cleanup/.airbuild/evidence/mac-authorization/signing-provision",
+  "archive": "signing-tool-preservation.zip",
+  "archive_bytes": 46001,
+  "archive_sha256": "7656ecba5c6fa0ba0e74b3eacd67471dee1505b5757d0c0b4cc0a37f8c0fa7ee",
+  "allowlist_only": true,
+  "contains_private_material": false,
+  "scan": "Private-key blocks and credential patterns absent from all five allowlisted files; source constructs identity/passwords at runtime, password launcher reads named fields only when executed; never executed. Frozen provisioner/source/launcher and resume source hashes match original signing-identity-handoff.md historical pins.",
+  "interface_findings": {
+    "signing-provision.m": [
+      "--validate-input: framed-input validation, not restoration",
+      "--provision: NEW identity generation; forbidden for migration"
+    ],
+    "signing-resume-once.m": [
+      "--test-pure: synthetic checks",
+      "--validate-input: framed-input validation",
+      "--resume-existing-identity-native-once: exports from EXISTING original keychain; NOT destination restoration"
+    ],
+    "persistent_restore_interface": "NONE: all SecPKCS12Import calls in these sources use kSecImportToMemoryOnly; no --restore/--import path exists"
+  },
+  "exclusions": [
+    "encrypted .p12 backup",
+    "keychain database and companion",
+    "public certificate file",
+    "password values",
+    "private-configs",
+    "logs/evidence/runtime data",
+    "all other provisioner folder contents"
+  ],
+  "files": [
+    {
+      "source": ".airbuild/worktree/exit-cleanup/.airbuild/evidence/mac-authorization/signing-provision/signing-provision.m",
+      "member": "signing-provision/signing-provision.m",
+      "bytes": 38706,
+      "mode": "0o640",
+      "sha256": "706029df83f3172ea61bd3e7381b1a95e976d3fea9a6b50cf8864fd09891ff0f",
+      "role": "historical source/documentation for restoration review; NEVER execute launcher"
+    },
+    {
+      "source": ".airbuild/worktree/exit-cleanup/.airbuild/evidence/mac-authorization/signing-provision/signing-provision",
+      "member": "signing-provision/signing-provision",
+      "bytes": 77664,
+      "mode": "0o770",
+      "sha256": "4bdb5a6be8cbef2557670292fc9051469c1be572ba59151b86baec45f18d6b60",
+      "role": "frozen trusted-creator executable; preserve byte-exact, NEVER execute for restoration"
+    },
+    {
+      "source": ".airbuild/worktree/exit-cleanup/.airbuild/evidence/mac-authorization/signing-provision/pipe_passwords.py",
+      "member": "signing-provision/pipe_passwords.py",
+      "bytes": 1588,
+      "mode": "0o640",
+      "sha256": "1d049f8eae332d63442b4b2d0e98ff1503805d52a6fc2f246914ed4cac455981",
+      "role": "historical source/documentation for restoration review; NEVER execute launcher"
+    },
+    {
+      "source": ".airbuild/worktree/exit-cleanup/.airbuild/evidence/mac-authorization/signing-provision/signing-resume-once.m",
+      "member": "signing-provision/signing-resume-once.m",
+      "bytes": 47109,
+      "mode": "0o660",
+      "sha256": "9ba3e3b982832806578ae50e29711c6acd50e3192e62e91448bf8817a0a33c7d",
+      "role": "historical source/documentation for restoration review; NEVER execute launcher"
+    },
+    {
+      "source": ".airbuild/worktree/exit-cleanup/.airbuild/evidence/mac-authorization/signing-provision/signing-identity-handoff.md",
+      "member": "signing-provision/signing-identity-handoff.md",
+      "bytes": 6697,
+      "mode": "0o640",
+      "sha256": "b963d7a6e13b763b04dcc3cfafa63b392354e76f31949b8b5c41490b9ca4d4cd",
+      "role": "historical source/documentation for restoration review; NEVER execute launcher"
+    }
+  ]
+}
