@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/common/app_ports.dart';
@@ -81,10 +80,27 @@ Map<String, Object?> _describe(TrayItem item) {
   return {
     'id': item.id,
     'type': item.kind.name,
-    'label': item.label,
+    if (item.kind != TrayItemKind.separator) 'label': item.label,
     if (item.detail != null) 'detail': item.detail,
     'enabled': item.enabled,
     'checked': item.checked,
+    'transientStatusKey': ?item.transientStatusKey,
+    'segmentGroup': ?item.segmentGroup,
+    'segmentError': ?item.segmentError,
+    if (item.icon case final icon?)
+      'icon': {
+        'monogram': icon.monogram,
+        'background': icon.background,
+        'foreground': icon.foreground,
+        if (icon.png case final png?) 'png': base64Encode(png),
+      },
+    if (item.badge case final badge?)
+      'badge': {
+        'label': badge.label,
+        'background': badge.background,
+        'foreground': badge.foreground,
+      },
+    'accessibilityLabel': ?item.accessibilityLabel,
     'items': item.items.map(_describe).toList(),
   };
 }
@@ -358,15 +374,11 @@ void main() {
 
   test('changing the running mode immediately sends its new icon', () async {
     for (final mode in Mode.values) {
-      calls.clear();
+      host.clear();
       await update(_trayState(isStart: true, mode: mode));
-      final arguments = showCall()!.arguments as Map;
-      final reps = ((arguments['icon'] as Map)['reps'] as List).cast<Map>();
       expect(
-        reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
-        base64Encode(
-          File('assets/images/tray/macos/${mode.name}.png').readAsBytesSync(),
-        ),
+        showCall()!.image.pngs.first,
+        File('assets/images/tray/macos/${mode.name}.png').readAsBytesSync(),
       );
     }
   });
@@ -378,7 +390,7 @@ void main() {
         final directory = mono ? 'macos' : 'unix';
         for (final mode in [Mode.rule, Mode.global, Mode.direct, Mode.rule]) {
           for (final tun in [false, true]) {
-            calls.clear();
+            host.clear();
             await update(
               _trayState(
                 isStart: true,
@@ -387,16 +399,13 @@ void main() {
                 monochromeTrayIcon: mono,
               ),
             );
-            final icon = (showCall()!.arguments as Map)['icon'] as Map;
-            expect(icon['isTemplate'], mono);
-            final reps = (icon['reps'] as List).cast<Map>();
+            final icon = showCall()!.image;
+            expect(icon.template, mono);
             expect(
-              reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
-              base64Encode(
-                File(
-                  'assets/images/tray/$directory/${mode.name}${tun ? '_tun' : ''}.png',
-                ).readAsBytesSync(),
-              ),
+              icon.pngs.first,
+              File(
+                'assets/images/tray/$directory/${mode.name}${tun ? '_tun' : ''}.png',
+              ).readAsBytesSync(),
             );
           }
         }
@@ -423,15 +432,11 @@ void main() {
             'status_4',
           ),
         ]) {
-          calls.clear();
+          host.clear();
           await update(state.copyWith(monochromeTrayIcon: mono));
-          final icon = (showCall()!.arguments as Map)['icon'] as Map;
-          final reps = (icon['reps'] as List).cast<Map>();
           expect(
-            reps.firstWhere((rep) => rep['scale'] == 1.0)['bytes'],
-            base64Encode(
-              File('assets/images/tray/$directory/$name.png').readAsBytesSync(),
-            ),
+            showCall()!.image.pngs.first,
+            File('assets/images/tray/$directory/$name.png').readAsBytesSync(),
           );
         }
       }
@@ -570,18 +575,12 @@ void main() {
       children(groupName).where((item) => item['type'] == 'checkbox').toList();
 
   Future<void> select(Map item) async {
-    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .handlePlatformMessage(
-          _channel.name,
-          const StandardMethodCodec().encodeMethodCall(
-            MethodCall('onMenuItemSelected', {
-              'id': item['id'],
-              'menuGeneration':
-                  (showCall()!.arguments as Map)['menuGeneration'],
-            }),
-          ),
-          null,
-        );
+    host.emit(
+      TraySignalKind.itemSelected,
+      item['id'] as int,
+      showCall()!.menuGeneration,
+    );
+    await pumpEventQueue();
   }
 
   test('members have no icons, including subgroup members and flags', () async {

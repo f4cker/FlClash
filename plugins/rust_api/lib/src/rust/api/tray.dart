@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Stream<TraySignal> traySignals() =>
     RustLib.instance.api.crateApiTrayTraySignals();
@@ -28,12 +28,17 @@ class TrayContent {
   final String title;
   final List<TrayItem> menu;
 
+  /// Names this menu in later selections on macOS, where an open menu may
+  /// outlive the content that built it. Zero where unused.
+  final int menuGeneration;
+
   const TrayContent({
     required this.id,
     required this.image,
     required this.toolTip,
     required this.title,
     required this.menu,
+    required this.menuGeneration,
   });
 
   @override
@@ -42,7 +47,8 @@ class TrayContent {
       image.hashCode ^
       toolTip.hashCode ^
       title.hashCode ^
-      menu.hashCode;
+      menu.hashCode ^
+      menuGeneration.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -53,7 +59,8 @@ class TrayContent {
           image == other.image &&
           toolTip == other.toolTip &&
           title == other.title &&
-          menu == other.menu;
+          menu == other.menu &&
+          menuGeneration == other.menuGeneration;
 }
 
 enum TrayIconPlacement { leading, trailing }
@@ -102,6 +109,20 @@ class TrayItem {
   final bool checked;
   final List<TrayItem> items;
 
+  /// A disabled action that only reports a state; an open menu keeps its
+  /// row in place and swaps the text when the state changes.
+  final String? transientStatusKey;
+
+  /// Neighbouring checkboxes with the same group are drawn as one
+  /// segmented control on macOS.
+  final String? segmentGroup;
+
+  /// Shown as an alert once when a segment group reports an error.
+  final String? segmentError;
+  final TrayItemIcon? icon;
+  final TrayItemBadge? badge;
+  final String? accessibilityLabel;
+
   const TrayItem({
     required this.id,
     required this.kind,
@@ -110,6 +131,12 @@ class TrayItem {
     required this.enabled,
     required this.checked,
     required this.items,
+    this.transientStatusKey,
+    this.segmentGroup,
+    this.segmentError,
+    this.icon,
+    this.badge,
+    this.accessibilityLabel,
   });
 
   @override
@@ -120,7 +147,13 @@ class TrayItem {
       detail.hashCode ^
       enabled.hashCode ^
       checked.hashCode ^
-      items.hashCode;
+      items.hashCode ^
+      transientStatusKey.hashCode ^
+      segmentGroup.hashCode ^
+      segmentError.hashCode ^
+      icon.hashCode ^
+      badge.hashCode ^
+      accessibilityLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -133,7 +166,72 @@ class TrayItem {
           detail == other.detail &&
           enabled == other.enabled &&
           checked == other.checked &&
-          items == other.items;
+          items == other.items &&
+          transientStatusKey == other.transientStatusKey &&
+          segmentGroup == other.segmentGroup &&
+          segmentError == other.segmentError &&
+          icon == other.icon &&
+          badge == other.badge &&
+          accessibilityLabel == other.accessibilityLabel;
+}
+
+/// A trailing pill, such as a delay. Colors are ARGB.
+class TrayItemBadge {
+  final String label;
+  final int background;
+  final int foreground;
+
+  const TrayItemBadge({
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  @override
+  int get hashCode =>
+      label.hashCode ^ background.hashCode ^ foreground.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TrayItemBadge &&
+          runtimeType == other.runtimeType &&
+          label == other.label &&
+          background == other.background &&
+          foreground == other.foreground;
+}
+
+/// A small leading glyph: a PNG when one is given, otherwise up to two
+/// letters on a rounded square. Colors are ARGB.
+class TrayItemIcon {
+  final String monogram;
+  final int background;
+  final int foreground;
+  final Uint8List? png;
+
+  const TrayItemIcon({
+    required this.monogram,
+    required this.background,
+    required this.foreground,
+    this.png,
+  });
+
+  @override
+  int get hashCode =>
+      monogram.hashCode ^
+      background.hashCode ^
+      foreground.hashCode ^
+      png.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TrayItemIcon &&
+          runtimeType == other.runtimeType &&
+          monogram == other.monogram &&
+          background == other.background &&
+          foreground == other.foreground &&
+          png == other.png;
 }
 
 enum TrayItemKind { action, checkbox, submenu, separator }
@@ -141,11 +239,25 @@ enum TrayItemKind { action, checkbox, submenu, separator }
 class TraySignal {
   final TraySignalKind kind;
   final int itemId;
+  final int menuGeneration;
+  final Uint32List generations;
+  final int? trackingGeneration;
 
-  const TraySignal({required this.kind, required this.itemId});
+  const TraySignal({
+    required this.kind,
+    required this.itemId,
+    required this.menuGeneration,
+    required this.generations,
+    this.trackingGeneration,
+  });
 
   @override
-  int get hashCode => kind.hashCode ^ itemId.hashCode;
+  int get hashCode =>
+      kind.hashCode ^
+      itemId.hashCode ^
+      menuGeneration.hashCode ^
+      generations.hashCode ^
+      trackingGeneration.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -153,7 +265,18 @@ class TraySignal {
       other is TraySignal &&
           runtimeType == other.runtimeType &&
           kind == other.kind &&
-          itemId == other.itemId;
+          itemId == other.itemId &&
+          menuGeneration == other.menuGeneration &&
+          generations == other.generations &&
+          trackingGeneration == other.trackingGeneration;
 }
 
-enum TraySignalKind { iconActivated, menuRequested, itemSelected }
+enum TraySignalKind {
+  iconActivated,
+  menuRequested,
+  itemSelected,
+
+  /// The menu generations the native side still holds, and the one being
+  /// tracked, if a menu is open.
+  menuGenerations,
+}

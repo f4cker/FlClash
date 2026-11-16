@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/tray_menu.dart';

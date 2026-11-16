@@ -222,6 +222,12 @@ mod tests {
             enabled: true,
             checked: false,
             items: Vec::new(),
+            transient_status_key: None,
+            segment_group: None,
+            segment_error: None,
+            icon: None,
+            badge: None,
+            accessibility_label: None,
         }
     }
 

@@ -2985,6 +2985,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TrayItemBadge dco_decode_box_autoadd_tray_item_badge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_tray_item_badge(raw);
+  }
+
+  @protected
+  TrayItemIcon dco_decode_box_autoadd_tray_item_icon(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_tray_item_icon(raw);
+  }
+
+  @protected
   int dco_decode_box_autoadd_u_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -3134,6 +3146,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Uint32List dco_decode_list_prim_u_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint32List;
+  }
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as List<int>;
@@ -3188,6 +3206,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TrayItemBadge? dco_decode_opt_box_autoadd_tray_item_badge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_tray_item_badge(raw);
+  }
+
+  @protected
+  TrayItemIcon? dco_decode_opt_box_autoadd_tray_item_icon(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_tray_item_icon(raw);
+  }
+
+  @protected
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
@@ -3233,14 +3263,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TrayContent dco_decode_tray_content(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return TrayContent(
       id: dco_decode_String(arr[0]),
       image: dco_decode_tray_image(arr[1]),
       toolTip: dco_decode_String(arr[2]),
       title: dco_decode_String(arr[3]),
       menu: dco_decode_list_tray_item(arr[4]),
+      menuGeneration: dco_decode_u_32(arr[5]),
     );
   }
 
@@ -3269,8 +3300,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TrayItem dco_decode_tray_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return TrayItem(
       id: dco_decode_u_32(arr[0]),
       kind: dco_decode_tray_item_kind(arr[1]),
@@ -3279,6 +3310,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       enabled: dco_decode_bool(arr[4]),
       checked: dco_decode_bool(arr[5]),
       items: dco_decode_list_tray_item(arr[6]),
+      transientStatusKey: dco_decode_opt_String(arr[7]),
+      segmentGroup: dco_decode_opt_String(arr[8]),
+      segmentError: dco_decode_opt_String(arr[9]),
+      icon: dco_decode_opt_box_autoadd_tray_item_icon(arr[10]),
+      badge: dco_decode_opt_box_autoadd_tray_item_badge(arr[11]),
+      accessibilityLabel: dco_decode_opt_String(arr[12]),
+    );
+  }
+
+  @protected
+  TrayItemBadge dco_decode_tray_item_badge(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return TrayItemBadge(
+      label: dco_decode_String(arr[0]),
+      background: dco_decode_u_32(arr[1]),
+      foreground: dco_decode_u_32(arr[2]),
+    );
+  }
+
+  @protected
+  TrayItemIcon dco_decode_tray_item_icon(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return TrayItemIcon(
+      monogram: dco_decode_String(arr[0]),
+      background: dco_decode_u_32(arr[1]),
+      foreground: dco_decode_u_32(arr[2]),
+      png: dco_decode_opt_list_prim_u_8_strict(arr[3]),
     );
   }
 
@@ -3292,11 +3356,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TraySignal dco_decode_tray_signal(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return TraySignal(
       kind: dco_decode_tray_signal_kind(arr[0]),
       itemId: dco_decode_u_32(arr[1]),
+      menuGeneration: dco_decode_u_32(arr[2]),
+      generations: dco_decode_list_prim_u_32_strict(arr[3]),
+      trackingGeneration: dco_decode_opt_box_autoadd_u_32(arr[4]),
     );
   }
 
@@ -3582,6 +3649,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TrayItemBadge sse_decode_box_autoadd_tray_item_badge(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_tray_item_badge(deserializer));
+  }
+
+  @protected
+  TrayItemIcon sse_decode_box_autoadd_tray_item_icon(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_tray_item_icon(deserializer));
+  }
+
+  @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_u_32(deserializer));
@@ -3770,6 +3853,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint32List(len_);
+  }
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -3854,6 +3944,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TrayItemBadge? sse_decode_opt_box_autoadd_tray_item_badge(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_tray_item_badge(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  TrayItemIcon? sse_decode_opt_box_autoadd_tray_item_icon(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_tray_item_icon(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -3922,12 +4038,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_toolTip = sse_decode_String(deserializer);
     var var_title = sse_decode_String(deserializer);
     var var_menu = sse_decode_list_tray_item(deserializer);
+    var var_menuGeneration = sse_decode_u_32(deserializer);
     return TrayContent(
       id: var_id,
       image: var_image,
       toolTip: var_toolTip,
       title: var_title,
       menu: var_menu,
+      menuGeneration: var_menuGeneration,
     );
   }
 
@@ -3967,6 +4085,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_enabled = sse_decode_bool(deserializer);
     var var_checked = sse_decode_bool(deserializer);
     var var_items = sse_decode_list_tray_item(deserializer);
+    var var_transientStatusKey = sse_decode_opt_String(deserializer);
+    var var_segmentGroup = sse_decode_opt_String(deserializer);
+    var var_segmentError = sse_decode_opt_String(deserializer);
+    var var_icon = sse_decode_opt_box_autoadd_tray_item_icon(deserializer);
+    var var_badge = sse_decode_opt_box_autoadd_tray_item_badge(deserializer);
+    var var_accessibilityLabel = sse_decode_opt_String(deserializer);
     return TrayItem(
       id: var_id,
       kind: var_kind,
@@ -3975,6 +4099,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       enabled: var_enabled,
       checked: var_checked,
       items: var_items,
+      transientStatusKey: var_transientStatusKey,
+      segmentGroup: var_segmentGroup,
+      segmentError: var_segmentError,
+      icon: var_icon,
+      badge: var_badge,
+      accessibilityLabel: var_accessibilityLabel,
+    );
+  }
+
+  @protected
+  TrayItemBadge sse_decode_tray_item_badge(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_label = sse_decode_String(deserializer);
+    var var_background = sse_decode_u_32(deserializer);
+    var var_foreground = sse_decode_u_32(deserializer);
+    return TrayItemBadge(
+      label: var_label,
+      background: var_background,
+      foreground: var_foreground,
+    );
+  }
+
+  @protected
+  TrayItemIcon sse_decode_tray_item_icon(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_monogram = sse_decode_String(deserializer);
+    var var_background = sse_decode_u_32(deserializer);
+    var var_foreground = sse_decode_u_32(deserializer);
+    var var_png = sse_decode_opt_list_prim_u_8_strict(deserializer);
+    return TrayItemIcon(
+      monogram: var_monogram,
+      background: var_background,
+      foreground: var_foreground,
+      png: var_png,
     );
   }
 
@@ -3990,7 +4148,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_kind = sse_decode_tray_signal_kind(deserializer);
     var var_itemId = sse_decode_u_32(deserializer);
-    return TraySignal(kind: var_kind, itemId: var_itemId);
+    var var_menuGeneration = sse_decode_u_32(deserializer);
+    var var_generations = sse_decode_list_prim_u_32_strict(deserializer);
+    var var_trackingGeneration = sse_decode_opt_box_autoadd_u_32(deserializer);
+    return TraySignal(
+      kind: var_kind,
+      itemId: var_itemId,
+      menuGeneration: var_menuGeneration,
+      generations: var_generations,
+      trackingGeneration: var_trackingGeneration,
+    );
   }
 
   @protected
@@ -4347,6 +4514,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_tray_item_badge(
+    TrayItemBadge self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_tray_item_badge(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_tray_item_icon(
+    TrayItemIcon self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_tray_item_icon(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self, serializer);
@@ -4519,6 +4704,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_prim_u_32_strict(
+    Uint32List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint32List(self);
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_loose(
     List<int> self,
     SseSerializer serializer,
@@ -4604,6 +4799,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_tray_item_badge(
+    TrayItemBadge? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_tray_item_badge(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_tray_item_icon(
+    TrayItemIcon? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_tray_item_icon(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -4679,6 +4900,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.toolTip, serializer);
     sse_encode_String(self.title, serializer);
     sse_encode_list_tray_item(self.menu, serializer);
+    sse_encode_u_32(self.menuGeneration, serializer);
   }
 
   @protected
@@ -4710,6 +4932,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.enabled, serializer);
     sse_encode_bool(self.checked, serializer);
     sse_encode_list_tray_item(self.items, serializer);
+    sse_encode_opt_String(self.transientStatusKey, serializer);
+    sse_encode_opt_String(self.segmentGroup, serializer);
+    sse_encode_opt_String(self.segmentError, serializer);
+    sse_encode_opt_box_autoadd_tray_item_icon(self.icon, serializer);
+    sse_encode_opt_box_autoadd_tray_item_badge(self.badge, serializer);
+    sse_encode_opt_String(self.accessibilityLabel, serializer);
+  }
+
+  @protected
+  void sse_encode_tray_item_badge(
+    TrayItemBadge self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.label, serializer);
+    sse_encode_u_32(self.background, serializer);
+    sse_encode_u_32(self.foreground, serializer);
+  }
+
+  @protected
+  void sse_encode_tray_item_icon(TrayItemIcon self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.monogram, serializer);
+    sse_encode_u_32(self.background, serializer);
+    sse_encode_u_32(self.foreground, serializer);
+    sse_encode_opt_list_prim_u_8_strict(self.png, serializer);
   }
 
   @protected
@@ -4723,6 +4971,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_tray_signal_kind(self.kind, serializer);
     sse_encode_u_32(self.itemId, serializer);
+    sse_encode_u_32(self.menuGeneration, serializer);
+    sse_encode_list_prim_u_32_strict(self.generations, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.trackingGeneration, serializer);
   }
 
   @protected

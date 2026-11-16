@@ -1,153 +1,46 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tray/tray.dart';
+import 'package:rust_api/tray.dart';
 
-const MethodChannel _channel = MethodChannel('tray');
-const StandardMethodCodec _codec = StandardMethodCodec();
+import '../../helpers/fake_tray_host.dart';
+
+// Flash's macOS menu generations: an open menu may outlive the content that
+// built it, so selections name the generation they were made in.
 
 TraySpec _spec({List<TrayMenuItem> menu = const []}) {
   return TraySpec(
-    icon: const TrayIcon.asset('assets/icon.ico'),
-    toolTip: 'FlClash',
+    icon: const TrayIcon.asset('assets/images/tray/unix/status_1.png'),
+    toolTip: 'Flash',
     menu: menu,
   );
-}
-
-Future<void> _emit(String method, Object? arguments) {
-  return TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .handlePlatformMessage(
-        _channel.name,
-        _codec.encodeMethodCall(MethodCall(method, arguments)),
-        (_) {},
-      );
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late List<MethodCall> calls;
-  late bool showResult;
-  Completer<void>? showGate;
-  List<int> Function(int generation)? nativeGenerationsForShow;
-  int? nativeTrackingGeneration;
-
-  int showCount() => calls.where((call) => call.method == 'show').length;
+  late FakeTrayHost host;
 
   setUp(() {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-    calls = [];
-    showResult = true;
-    showGate = null;
-    nativeGenerationsForShow = null;
-    nativeTrackingGeneration = null;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, (call) async {
-          calls.add(call);
-          if (call.method == 'show') {
-            await showGate?.future;
-            if (showResult &&
-                debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
-              final generation =
-                  (call.arguments as Map)['menuGeneration'] as int;
-              await _emit('onMenuGenerations', {
-                'generations':
-                    nativeGenerationsForShow?.call(generation) ?? [generation],
-                'trackingGeneration': ?nativeTrackingGeneration,
-              });
-            }
-            return showResult;
-          }
-          return true;
-        });
-    Tray.instance.resetForTesting();
+    host = FakeTrayHost();
+    Tray.instance.resetForTesting(host);
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, null);
-    Tray.instance.resetForTesting();
+        .setMockMessageHandler('flutter/assets', null);
     debugDefaultTargetPlatformOverride = null;
   });
 
-  test('a rejected show stays invisible and is retried', () async {
-    showResult = false;
-    await Tray.instance.show(_spec());
+  Future<void> select(int id, [int menuGeneration = 0]) async {
+    host.emit(TraySignalKind.itemSelected, id, menuGeneration);
+    await Future<void>.delayed(Duration.zero);
+  }
 
-    expect(showCount(), 1);
-    expect(Tray.instance.isVisible, isFalse);
-
-    showResult = true;
-    await Tray.instance.show(_spec());
-
-    expect(showCount(), 2);
-    expect(Tray.instance.isVisible, isTrue);
-  });
-
-  test(
-    'an unchanged payload is suppressed only after an accepted show',
-    () async {
-      showResult = true;
-      await Tray.instance.show(_spec());
-      await Tray.instance.show(_spec());
-
-      expect(showCount(), 1);
-
-      showResult = false;
-      await Tray.instance.show(_spec(menu: const [TrayMenuAction(label: 'a')]));
-      await Tray.instance.show(_spec(menu: const [TrayMenuAction(label: 'a')]));
-
-      expect(showCount(), 3);
-    },
-  );
-
-  test('titles queued behind a stalled call collapse to the newest', () async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-    await Tray.instance.show(_spec());
-
-    final gate = Completer<void>();
-    showGate = gate;
-    final stalled = Tray.instance.show(
-      _spec(menu: const [TrayMenuAction(label: 'a')]),
-    );
-    unawaited(Tray.instance.setTitle('1'));
-    unawaited(Tray.instance.setTitle('2'));
-    final settled = Tray.instance.setTitle('3');
-    gate.complete();
-    await stalled;
-    await settled;
-
-    final titles = calls
-        .where((call) => call.method == 'setTitle')
-        .map((call) => (call.arguments as Map)['title'])
-        .toList();
-    expect(
-      titles,
-      ['3'],
-      reason:
-          'a native call that blocks the queue must not replay every title '
-          'that piled up behind it',
-    );
-  });
-
-  test('menu selection dispatches only for known integer ids', () async {
-    var selected = 0;
-    await Tray.instance.show(
-      _spec(
-        menu: [TrayMenuAction(label: 'a', onSelected: () => selected++)],
-      ),
-    );
-
-    await _emit('onMenuItemSelected', <String, Object?>{'id': 1024});
-    expect(selected, 1);
-
-    await _emit('onMenuItemSelected', <String, Object?>{'id': 4096});
-    await _emit('onMenuItemSelected', <String, Object?>{'id': '1024'});
-    await _emit('onMenuItemSelected', null);
-    expect(selected, 1);
-  });
+  Future<void> generations(List<int> generations, {int? tracking}) async {
+    host.emitMenuGenerations(generations, tracking: tracking);
+    await Future<void>.delayed(Duration.zero);
+  }
 
   test(
     'disabled actions and checkboxes never dispatch programmatically',
@@ -172,8 +65,8 @@ void main() {
           ],
         ),
       );
-      await _emit('onMenuItemSelected', {'id': 1024});
-      await _emit('onMenuItemSelected', {'id': 1025});
+      await select(1024);
+      await select(1025);
       await Future<void>.delayed(Duration.zero);
       expect(selected, 0);
       expect(events, isEmpty);
@@ -192,24 +85,18 @@ void main() {
           menu: [TrayMenuAction(label: 'old', onSelected: () => oldSelected++)],
         ),
       );
-      final oldGeneration = (calls.last.arguments as Map)['menuGeneration'];
+      final oldGeneration = host.lastShown!.menuGeneration;
       await Tray.instance.show(
         _spec(
           menu: [TrayMenuAction(label: 'new', onSelected: () => newSelected++)],
         ),
       );
-      final generation = (calls.last.arguments as Map)['menuGeneration'];
+      final generation = host.lastShown!.menuGeneration;
       expect(generation, isNot(oldGeneration));
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': oldGeneration,
-      });
-      await _emit('onMenuItemSelected', {'id': 1024});
+      await select(1024, oldGeneration);
+      await select(1024);
       expect([oldSelected, newSelected], [0, 0]);
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': generation,
-      });
+      await select(1024, generation);
       expect([oldSelected, newSelected], [0, 1]);
     },
   );
@@ -222,23 +109,17 @@ void main() {
       await Tray.instance.show(
         _spec(menu: const [TrayMenuAction(label: 'same')]),
       );
-      final generation = (calls.last.arguments as Map)['menuGeneration'];
+      final generation = host.lastShown!.menuGeneration;
       await Tray.instance.show(
         _spec(
           menu: [TrayMenuAction(label: 'same', onSelected: () => selected++)],
         ),
       );
-      expect(showCount(), 1);
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': generation,
-      });
+      expect(host.shown, hasLength(1));
+      await select(1024, generation);
       expect(selected, 1);
       await Tray.instance.hide();
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': generation,
-      });
+      await select(1024, generation);
       expect(selected, 1);
     },
   );
@@ -254,42 +135,29 @@ void main() {
           menu: [TrayMenuAction(label: 'old', onSelected: () => oldSelected++)],
         ),
       );
-      final generation = (calls.last.arguments as Map)['menuGeneration'];
-      showResult = false;
+      final generation = host.lastShown!.menuGeneration;
+      host.showResult = false;
       await Tray.instance.show(
         _spec(
           menu: [TrayMenuAction(label: 'new', onSelected: () => newSelected++)],
         ),
       );
-      final rejectedGeneration =
-          (calls.last.arguments as Map)['menuGeneration'];
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': rejectedGeneration,
-      });
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': generation,
-      });
+      final rejectedGeneration = host.lastShown!.menuGeneration;
+      await select(1024, rejectedGeneration);
+      await select(1024, generation);
       expect([oldSelected, newSelected], [1, 0]);
       await Tray.instance.hide();
-      showResult = true;
+      host.showResult = true;
       await Tray.instance.show(
         _spec(
           menu: [TrayMenuAction(label: 'new', onSelected: () => newSelected++)],
         ),
       );
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': generation,
-      });
+      await select(1024, generation);
       expect([oldSelected, newSelected], [1, 0]);
-      final newGeneration = (calls.last.arguments as Map)['menuGeneration'];
+      final newGeneration = host.lastShown!.menuGeneration;
       expect(newGeneration, isNot(generation));
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': newGeneration,
-      });
+      await select(1024, newGeneration);
       expect([oldSelected, newSelected], [1, 1]);
     },
   );
@@ -323,7 +191,7 @@ void main() {
           ],
         ),
       );
-      final oldGeneration = (calls.last.arguments as Map)['menuGeneration'];
+      final oldGeneration = host.lastShown!.menuGeneration;
       await Tray.instance.openMenu();
       await Tray.instance.show(
         _spec(
@@ -338,24 +206,16 @@ void main() {
           ],
         ),
       );
-      final arguments = calls.last.arguments as Map;
-      final generation = arguments['menuGeneration'];
-      final row = (arguments['menu'] as List).single as Map;
-      expect(row['checked'], isTrue);
-      expect(row['badge'], {
-        'label': '10000 ms',
-        'background': 3,
-        'foreground': 4,
-      });
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': generation,
-      });
+      final generation = host.lastShown!.menuGeneration;
+      final row = host.lastShown!.menu.single;
+      expect(row.checked, isTrue);
+      expect(
+        row.badge,
+        const TrayItemBadge(label: '10000 ms', background: 3, foreground: 4),
+      );
+      await select(1024, generation);
       expect([oldSelected, refreshedSelected], [0, 1]);
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': oldGeneration,
-      });
+      await select(1024, oldGeneration);
       expect([oldSelected, refreshedSelected], [0, 1]);
       await Tray.instance.show(
         _spec(
@@ -370,12 +230,8 @@ void main() {
           ],
         ),
       );
-      final disabledGeneration =
-          (calls.last.arguments as Map)['menuGeneration'];
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': disabledGeneration,
-      });
+      final disabledGeneration = host.lastShown!.menuGeneration;
+      await select(1024, disabledGeneration);
       expect(refreshedSelected, 1);
     },
   );
@@ -394,14 +250,10 @@ void main() {
           ],
         ),
       );
-      final trackedGeneration =
-          (calls.last.arguments as Map)['menuGeneration'] as int;
+      final trackedGeneration = host.lastShown!.menuGeneration;
       await Tray.instance.openMenu();
-      nativeTrackingGeneration = trackedGeneration;
-      nativeGenerationsForShow = (generation) => [
-        trackedGeneration,
-        generation,
-      ];
+      host.trackingGeneration = trackedGeneration;
+      host.generationsForShow = (generation) => [trackedGeneration, generation];
       await Tray.instance.show(
         _spec(
           menu: [
@@ -413,33 +265,20 @@ void main() {
           ],
         ),
       );
-      final desiredGeneration =
-          (calls.last.arguments as Map)['menuGeneration'] as int;
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': trackedGeneration,
-      });
+      final desiredGeneration = host.lastShown!.menuGeneration;
+      await select(1024, trackedGeneration);
       expect([trackedSelected, insertedSelected, shiftedSelected], [1, 0, 0]);
-      await _emit('onMenuGenerations', [trackedGeneration, desiredGeneration]);
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': trackedGeneration,
-      });
+      await generations([trackedGeneration, desiredGeneration]);
+      await select(1024, trackedGeneration);
       expect(
         [trackedSelected, insertedSelected, shiftedSelected],
         [2, 0, 0],
         reason: 'AppKit may send the selection after menuDidClose',
       );
-      await _emit('onMenuItemSelected', {
-        'id': 1025,
-        'menuGeneration': desiredGeneration,
-      });
+      await select(1025, desiredGeneration);
       expect([trackedSelected, insertedSelected, shiftedSelected], [2, 0, 1]);
-      await _emit('onMenuGenerations', [desiredGeneration]);
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': trackedGeneration,
-      });
+      await generations([desiredGeneration]);
+      await select(1024, trackedGeneration);
       expect([trackedSelected, insertedSelected, shiftedSelected], [2, 0, 1]);
     },
   );
@@ -459,13 +298,9 @@ void main() {
           ],
         ),
       );
-      final trackedGeneration =
-          (calls.last.arguments as Map)['menuGeneration'] as int;
-      nativeTrackingGeneration = trackedGeneration;
-      nativeGenerationsForShow = (generation) => [
-        trackedGeneration,
-        generation,
-      ];
+      final trackedGeneration = host.lastShown!.menuGeneration;
+      host.trackingGeneration = trackedGeneration;
+      host.generationsForShow = (generation) => [trackedGeneration, generation];
       final generations = <int>[];
       for (var index = 0; index < 12; index++) {
         final captured = index;
@@ -480,23 +315,14 @@ void main() {
             ],
           ),
         );
-        generations.add((calls.last.arguments as Map)['menuGeneration'] as int);
+        generations.add(host.lastShown!.menuGeneration);
       }
       for (final generation in generations.take(generations.length - 1)) {
-        await _emit('onMenuItemSelected', {
-          'id': 1024,
-          'menuGeneration': generation,
-        });
+        await select(1024, generation);
       }
       expect(selected, isEmpty);
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': trackedGeneration,
-      });
-      await _emit('onMenuItemSelected', {
-        'id': 1025,
-        'menuGeneration': generations.last,
-      });
+      await select(1024, trackedGeneration);
+      await select(1025, generations.last);
       expect(selected, [-1, 11]);
     },
   );
@@ -529,9 +355,9 @@ void main() {
           ],
         ),
       );
-      final tracked = (calls.last.arguments as Map)['menuGeneration'] as int;
-      nativeTrackingGeneration = tracked;
-      nativeGenerationsForShow = (generation) => [tracked, generation];
+      final tracked = host.lastShown!.menuGeneration;
+      host.trackingGeneration = tracked;
+      host.generationsForShow = (generation) => [tracked, generation];
       await Tray.instance.openMenu();
       TraySpec updated({bool enabled = true, bool duplicate = false}) => _spec(
         menu: [
@@ -557,14 +383,8 @@ void main() {
         ],
       );
       await Tray.instance.show(updated());
-      await _emit('onMenuItemSelected', {
-        'id': 1025,
-        'menuGeneration': tracked,
-      });
-      await _emit('onMenuItemSelected', {
-        'id': 1026,
-        'menuGeneration': tracked,
-      });
+      await select(1025, tracked);
+      await select(1026, tracked);
       expect(
         [selected, removedSelected, newSelected],
         [1, 0, 0],
@@ -572,30 +392,21 @@ void main() {
             'the retained HK tag keeps its original callback; removed rows never target desired IDs',
       );
       await Tray.instance.show(updated(enabled: false));
-      await _emit('onMenuItemSelected', {
-        'id': 1025,
-        'menuGeneration': tracked,
-      });
+      await select(1025, tracked);
       expect(
         selected,
         1,
         reason: 'live disabled state must also reject programmatic events',
       );
       await Tray.instance.show(updated(duplicate: true));
-      await _emit('onMenuItemSelected', {
-        'id': 1025,
-        'menuGeneration': tracked,
-      });
+      await select(1025, tracked);
       expect(
         selected,
         1,
         reason: 'ambiguous sibling identities are disabled, not guessed',
       );
       await Tray.instance.show(updated());
-      await _emit('onMenuItemSelected', {
-        'id': 1025,
-        'menuGeneration': tracked,
-      });
+      await select(1025, tracked);
       expect(
         selected,
         2,
@@ -624,14 +435,11 @@ void main() {
           ],
         ),
       );
-      final tracked = (calls.last.arguments as Map)['menuGeneration'] as int;
-      nativeTrackingGeneration = tracked;
-      nativeGenerationsForShow = (generation) => [tracked, generation];
+      final tracked = host.lastShown!.menuGeneration;
+      host.trackingGeneration = tracked;
+      host.generationsForShow = (generation) => [tracked, generation];
       await Tray.instance.openMenu();
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': tracked,
-      });
+      await select(1024, tracked);
       expect(selected, 0);
       await Tray.instance.show(
         _spec(
@@ -645,10 +453,7 @@ void main() {
           ],
         ),
       );
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': tracked,
-      });
+      await select(1024, tracked);
       expect(selected, 1);
     },
   );
@@ -677,9 +482,9 @@ void main() {
           ],
         ),
       );
-      final tracked = (calls.last.arguments as Map)['menuGeneration'] as int;
-      nativeTrackingGeneration = tracked;
-      nativeGenerationsForShow = (generation) => [tracked, generation];
+      final tracked = host.lastShown!.menuGeneration;
+      host.trackingGeneration = tracked;
+      host.generationsForShow = (generation) => [tracked, generation];
       await Tray.instance.openMenu();
       await Tray.instance.show(
         _spec(
@@ -697,20 +502,11 @@ void main() {
           ],
         ),
       );
-      final desired = (calls.last.arguments as Map)['menuGeneration'] as int;
-      await _emit('onMenuItemSelected', {
-        'id': 1026,
-        'menuGeneration': tracked,
-      });
+      final desired = host.lastShown!.menuGeneration;
+      await select(1026, tracked);
       expect([oldSelected, newSelected], [0, 0]);
-      await _emit('onMenuGenerations', {
-        'generations': [tracked, desired],
-        'trackingGeneration': desired,
-      });
-      await _emit('onMenuItemSelected', {
-        'id': 1025,
-        'menuGeneration': desired,
-      });
+      await generations([tracked, desired], tracking: desired);
+      await select(1025, desired);
       expect([oldSelected, newSelected], [0, 1]);
     },
   );
@@ -725,84 +521,21 @@ void main() {
           menu: [TrayMenuAction(label: 'A', onSelected: () => selected++)],
         ),
       );
-      final generation = (calls.last.arguments as Map)['menuGeneration'] as int;
-      final entered = Completer<void>();
-      final gate = Completer<void>();
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(_channel, (call) async {
-            calls.add(call);
-            if (call.method == 'show') {
-              entered.complete();
-              await gate.future;
-              return false;
-            }
-            return true;
-          });
-      final rejected = Tray.instance.show(
-        _spec(menu: const [TrayMenuAction(label: 'B')]),
-      );
-      await entered.future;
-      await _emit('onMenuGenerations', {
-        'generations': [generation],
-        'trackingGeneration': generation,
-      });
-      gate.complete();
-      await rejected;
-      await _emit('onMenuItemSelected', {
-        'id': 1024,
-        'menuGeneration': generation,
-      });
+      final generation = host.lastShown!.menuGeneration;
+      // The tracking signal for A arrives while B is still pending, and
+      // the host then refuses B.
+      host.onShow = (_) {
+        host.emitMenuGenerations([generation], tracking: generation);
+        return false;
+      };
+      await Tray.instance.show(_spec(menu: const [TrayMenuAction(label: 'B')]));
+      host.onShow = null;
+      await select(1024, generation);
       expect(
         selected,
         1,
         reason: 'unaccepted B must not disable callbacks of still-visible A',
       );
-    },
-  );
-
-  test('a rejected show keeps callbacks for the visible menu', () async {
-    var oldSelected = 0;
-    var newSelected = 0;
-    await Tray.instance.show(
-      _spec(
-        menu: [TrayMenuAction(label: 'old', onSelected: () => oldSelected++)],
-      ),
-    );
-
-    showResult = false;
-    await Tray.instance.show(
-      _spec(
-        menu: [TrayMenuAction(label: 'new', onSelected: () => newSelected++)],
-      ),
-    );
-    await _emit('onMenuItemSelected', <String, Object?>{'id': 1024});
-
-    expect([oldSelected, newSelected], [1, 0]);
-  });
-
-  test(
-    'an unchanged accepted show refreshes callbacks without a native show',
-    () async {
-      var oldSelected = 0;
-      var newSelected = 0;
-      await Tray.instance.show(
-        _spec(
-          menu: [
-            TrayMenuAction(label: 'item', onSelected: () => oldSelected++),
-          ],
-        ),
-      );
-      await Tray.instance.show(
-        _spec(
-          menu: [
-            TrayMenuAction(label: 'item', onSelected: () => newSelected++),
-          ],
-        ),
-      );
-      await _emit('onMenuItemSelected', <String, Object?>{'id': 1024});
-
-      expect(showCount(), 1);
-      expect([oldSelected, newSelected], [0, 1]);
     },
   );
 }

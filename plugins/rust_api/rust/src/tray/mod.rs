@@ -32,7 +32,21 @@ pub fn listen(sink: StreamSink<TraySignal, SseCodec>) {
     allow(dead_code)
 )]
 fn emit(kind: TraySignalKind, item_id: u32) {
+    emit_signal(TraySignal {
+        kind,
+        item_id,
+        menu_generation: 0,
+        generations: Vec::new(),
+        tracking_generation: None,
+    });
+}
+
+#[cfg_attr(
+    not(any(target_os = "linux", target_os = "macos", windows)),
+    allow(dead_code)
+)]
+fn emit_signal(signal: TraySignal) {
     if let Some(sink) = SINK.lock().unwrap_or_else(PoisonError::into_inner).as_ref() {
-        let _ = sink.add(TraySignal { kind, item_id });
+        let _ = sink.add(signal);
     }
 }

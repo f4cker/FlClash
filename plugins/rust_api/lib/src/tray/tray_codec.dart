@@ -53,18 +53,36 @@ abstract final class TrayCodec {
           checked: false,
           items: const [],
         ),
-        TrayMenuAction(:final label, :final detail, :final enabled) => TrayItem(
-          id: id,
-          kind: TrayItemKind.action,
-          label: label,
-          detail: _detail(detail),
-          enabled: enabled,
-          checked: false,
-          items: const [],
-        ),
-        TrayMenuCheckbox(
+        TrayMenuAction(
+          :final transientStatusKey,
           :final label,
           :final detail,
+          :final icon,
+          :final badge,
+          :final accessibilityLabel,
+          :final enabled,
+        ) =>
+          TrayItem(
+            id: id,
+            kind: TrayItemKind.action,
+            label: label,
+            detail: _detail(detail),
+            enabled: enabled,
+            checked: false,
+            items: const [],
+            transientStatusKey: transientStatusKey,
+            icon: _icon(icon),
+            badge: _badge(badge),
+            accessibilityLabel: accessibilityLabel,
+          ),
+        TrayMenuCheckbox(
+          :final segmentGroup,
+          :final segmentError,
+          :final label,
+          :final detail,
+          :final icon,
+          :final badge,
+          :final accessibilityLabel,
           :final enabled,
           :final checked,
         ) =>
@@ -76,10 +94,18 @@ abstract final class TrayCodec {
             enabled: enabled,
             checked: checked,
             items: const [],
+            segmentGroup: segmentGroup,
+            segmentError: segmentError,
+            icon: _icon(icon),
+            badge: _badge(badge),
+            accessibilityLabel: accessibilityLabel,
           ),
         TrayMenuSubmenu(
           :final label,
           :final detail,
+          :final icon,
+          :final badge,
+          :final accessibilityLabel,
           :final enabled,
           :final items,
         ) =>
@@ -91,6 +117,9 @@ abstract final class TrayCodec {
             enabled: enabled,
             checked: false,
             items: _encodeItems(items, sink, allocator),
+            icon: _icon(icon),
+            badge: _badge(badge),
+            accessibilityLabel: accessibilityLabel,
           ),
       };
     }).toList();
@@ -98,6 +127,29 @@ abstract final class TrayCodec {
 
   static String? _detail(String? detail) {
     return detail == null || detail.isEmpty ? null : detail;
+  }
+
+  static TrayItemIcon? _icon(TrayMenuIcon? icon) {
+    if (icon == null) {
+      return null;
+    }
+    return TrayItemIcon(
+      monogram: icon.monogram,
+      background: icon.background & 0xFFFFFFFF,
+      foreground: icon.foreground & 0xFFFFFFFF,
+      png: icon.pngBytes,
+    );
+  }
+
+  static TrayItemBadge? _badge(TrayMenuBadge? badge) {
+    if (badge == null) {
+      return null;
+    }
+    return TrayItemBadge(
+      label: badge.label,
+      background: badge.background & 0xFFFFFFFF,
+      foreground: badge.foreground & 0xFFFFFFFF,
+    );
   }
 
   static List<Object?> _describe(List<TrayItem> items) {
@@ -110,6 +162,23 @@ abstract final class TrayCodec {
           item.detail,
           item.enabled,
           item.checked,
+          item.transientStatusKey,
+          item.segmentGroup,
+          item.segmentError,
+          item.accessibilityLabel,
+          if (item.icon case final icon?)
+            [
+              icon.monogram,
+              icon.background,
+              icon.foreground,
+              if (icon.png case final png?) base64Encode(png),
+            ]
+          else
+            null,
+          if (item.badge case final badge?)
+            [badge.label, badge.background, badge.foreground]
+          else
+            null,
           _describe(item.items),
         ],
     ];

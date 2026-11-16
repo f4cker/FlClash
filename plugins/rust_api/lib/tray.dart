@@ -6,6 +6,8 @@ export 'src/rust/api/tray.dart'
         TrayIconPlacement,
         TrayImage,
         TrayItem,
+        TrayItemBadge,
+        TrayItemIcon,
         TrayItemKind,
         TraySignal,
         TraySignalKind;

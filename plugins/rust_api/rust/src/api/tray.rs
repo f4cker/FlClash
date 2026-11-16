@@ -11,6 +11,24 @@ pub enum TrayItemKind {
     Separator,
 }
 
+/// A small leading glyph: a PNG when one is given, otherwise up to two
+/// letters on a rounded square. Colors are ARGB.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrayItemIcon {
+    pub monogram: String,
+    pub background: u32,
+    pub foreground: u32,
+    pub png: Option<Vec<u8>>,
+}
+
+/// A trailing pill, such as a delay. Colors are ARGB.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrayItemBadge {
+    pub label: String,
+    pub background: u32,
+    pub foreground: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TrayItem {
     pub id: u32,
@@ -20,6 +38,17 @@ pub struct TrayItem {
     pub enabled: bool,
     pub checked: bool,
     pub items: Vec<TrayItem>,
+    /// A disabled action that only reports a state; an open menu keeps its
+    /// row in place and swaps the text when the state changes.
+    pub transient_status_key: Option<String>,
+    /// Neighbouring checkboxes with the same group are drawn as one
+    /// segmented control on macOS.
+    pub segment_group: Option<String>,
+    /// Shown as an alert once when a segment group reports an error.
+    pub segment_error: Option<String>,
+    pub icon: Option<TrayItemIcon>,
+    pub badge: Option<TrayItemBadge>,
+    pub accessibility_label: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,6 +73,9 @@ pub struct TrayContent {
     pub tool_tip: String,
     pub title: String,
     pub menu: Vec<TrayItem>,
+    /// Names this menu in later selections on macOS, where an open menu may
+    /// outlive the content that built it. Zero where unused.
+    pub menu_generation: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,12 +83,18 @@ pub enum TraySignalKind {
     IconActivated,
     MenuRequested,
     ItemSelected,
+    /// The menu generations the native side still holds, and the one being
+    /// tracked, if a menu is open.
+    MenuGenerations,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraySignal {
     pub kind: TraySignalKind,
     pub item_id: u32,
+    pub menu_generation: u32,
+    pub generations: Vec<u32>,
+    pub tracking_generation: Option<u32>,
 }
 
 #[frb]
