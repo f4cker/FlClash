@@ -132,12 +132,13 @@ def check_service(config):
             config['service_receipt_sha256'] == SERVICE_RECEIPT_SHA256,
             'Only the exact reviewed 1503 service is supported')
     receipt = pinned(receipt_path, SERVICE_RECEIPT_SHA256)
+    gate = module('verify_split_service')
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
     require(info.get('CFBundleVersion') == SERVICE_BUILD and
             info.get('CFBundleShortVersionString') == '0.9.14', 'Service version differs')
     require(sha(app / CORE) == CORE_SHA256, 'Released service/Core changed')
     require(type(receipt.get('schema')) is int and receipt['schema'] == 1 and
-            receipt.get('phase') == 'service' and receipt.get('app') == str(app) and
+            receipt.get('phase') == 'service' and gate.receipt_app_matches(receipt.get('app'), app, 'service') and
             receipt.get('static_verification') is True and 'signing_scope' not in receipt and
             'wrapper_derivation' not in receipt and
             receipt.get('reused_signed_core_sha256') == CORE_SHA256 and
@@ -146,7 +147,6 @@ def check_service(config):
                 'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1, 'CoreSHA256': CORE_SHA256,
                 'CoreVersion': 'v1.19.33', 'CoreRevision': CORE_REVISION},
             'Exact ordinary new-Core service signing evidence required')
-    gate = module('verify_split_service')
     stage = module('stage_split_payload')
     gate.verify_bundle(app, 'service', receipt_path, SERVICE_RECEIPT_SHA256,
                        module('sign_split_payload'), stage)

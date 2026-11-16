@@ -22,8 +22,8 @@ import sys
 import tempfile
 import types
 
-WORKTREE = Path('/Users/layoute/SideWork/FlClash/.airbuild/worktree/exit-cleanup')
-KEYCHAIN = '/Users/layoute/Library/Application Support/Flash Signing/FlashSigning.keychain-db'
+WORKTREE = Path('/Users/lavas/Library/Application Support/plus.yellow.AirBuild/environment/a6604af9-17b7-4c44-9d33-261a665bd547/projects/770e9d36-b2a0-45c9-a3a3-dd6b6836c72f')
+KEYCHAIN = '/Users/lavas/Library/Application Support/Flash Signing/FlashSigning.keychain-db'
 CERTIFICATE_SHA1 = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CERTIFICATE_SHA256 = 'E8346770F4BF2ABC94F755A136677CDA84B821A668B0983E7FBEF21F8A646E95'
 VERIFIER_SHA256 = '006b6d11b10d0875654fab009e7b6a231ebfb83f12cbb0a8c77ec0c463d65829'

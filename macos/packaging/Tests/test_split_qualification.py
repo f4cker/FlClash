@@ -347,7 +347,7 @@ class BuildProvenanceTests(unittest.TestCase):
         self.path = self.root / 'continuation-04/build-metadata.json'
         self.fixed = MagicMock()
         original = Q.pinned_module('sign_fixed_payload.py',
-                                  '2574d8356c2ac9ad50cb94bc476a11463f6ee8f30d24fab97fbe7432c880771a')
+                                  'd052cd737101131357d728395997afa3c58eec79e5f643d150715f8095daa5e4')
         self.fixed.tree_digest.side_effect = original.tree_digest
         self.fixed.check_signing_delta.side_effect = original.check_signing_delta
         self.fixed.read_regular.side_effect = lambda path: path.read_bytes()

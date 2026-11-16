@@ -23,6 +23,76 @@ CORE = 'Contents/MacOS/FlClashCore'
 WRAPPER_SOURCE_RECEIPT_SHA256 = '336e963c97a6e829f7fe6938cabf3cbb57696600c935f2bbec1e2ef2826e31b9'
 WRAPPER_CORE_SHA256 = '0441127a849029cab427e74f334c4b4aa3ba025f525003bf85ded03ba81820b5'
 SANDBOX = ['/usr/bin/sandbox-exec', '-p', '(version 1) (allow default) (deny network*)']
+# Destination-Mac migration (see MIGRATION-CHECKS.md): the reviewed 1503 service receipt
+# (sha256 pinned by callers, bytes unchanged) records its original-Mac absolute path. Exactly
+# that one recorded path is accepted for exactly this one current service location; every
+# other receipt/artifact/compatibility check is unchanged.
+ORIGINAL_SERVICE_APP = ('/Users/layoute/SideWork/FlClash/.airbuild/local-release/'
+                        'service-core-1503/service-payload/Flash.app')
+MIGRATED_SERVICE_APP = str(ROOT / '.airbuild/local-release/service-core-1503/service-payload/Flash.app')
+
+
+def migrated_service_receipt(receipt, app, phase):
+    return (phase == 'service' and receipt.get('app') == ORIGINAL_SERVICE_APP and
+            receipt_app_matches(receipt.get('app'), app, phase))
+
+
+DISPLAY_AUTHORITY = 'Flash Local Code Signing'
+
+
+def migrated_display_targets(app, targets, recorded, fixed):
+    """Destination-Mac replacement for the raw `codesign --display` text digest.
+
+    The recorded digest covers host-rendered text (absolute path, local time zone,
+    codesign/OS version). The signed bytes are already bound by the exact receipt
+    tree, and every other per-slice field is still compared exactly. Here the
+    current display must parse to exactly the expected signature fields; only then
+    is the recorded host-text digest carried over for the final exact comparison.
+    """
+    if len(targets) != len(recorded):
+        raise ValueError('Artifact signatures differ from receipt')
+    result = []
+    for target, old in zip(targets, recorded):
+        if set(target) != set(old) or {k: v for k, v in target.items() if k != 'verified_slices'} != \
+                {k: v for k, v in old.items() if k != 'verified_slices'}:
+            raise ValueError('Artifact signatures differ from receipt')
+        current, previous = target['verified_slices'], old['verified_slices']
+        if set(current) != set(previous):
+            raise ValueError('Artifact signatures differ from receipt')
+        slices = {}
+        for architecture, value in current.items():
+            expected = previous[architecture]
+            if set(value) != set(expected) or any(value[k] != expected[k] for k in value if k != 'display_sha256'):
+                raise ValueError('Artifact signatures differ from receipt')
+            path = app / target['path']
+            detail = fixed.run_tool(['/usr/bin/codesign', '--display', '--verbose=4', '--arch', architecture,
+                                     str(path)]).stderr.decode('utf-8', errors='strict')
+            fields = {}
+            for line in detail.splitlines():
+                key, sep, rest = line.partition('=')
+                if sep and key not in fields:
+                    fields[key] = rest
+            authorities = [line for line in detail.splitlines() if line.startswith('Authority=')]
+            executable = app / target['binary']
+            if (fields.get('Executable') != str(executable) or fields.get('Identifier') != target['identifier'] or
+                    fields.get('CDHash') != target['cdhash'] or
+                    not fields.get('CandidateCDHashFull sha256', '').startswith(target['cdhash']) or
+                    fields.get('TeamIdentifier') != 'not set' or 'Timestamp' in fields or
+                    fields.get('Signature') == 'adhoc' or authorities != ['Authority=' + DISPLAY_AUTHORITY] or
+                    not re.search(r'^CodeDirectory .*? flags=0x10000\(runtime\) ', detail, re.M) or
+                    (fields.get('Info.plist') != 'not bound' and 'Info.plist entries' not in fields) or not fields.get('Signed Time')):
+                raise ValueError('Signature display fields differ from receipt')
+            slices[architecture] = dict(value, display_sha256=expected['display_sha256'])
+        result.append(dict(target, verified_slices=slices))
+    return result
+
+
+def receipt_app_matches(recorded, app, phase):
+    current = str(app)
+    if type(recorded) is str and recorded == current:
+        return True
+    return (phase == 'service' and recorded == ORIGINAL_SERVICE_APP and
+            current == MIGRATED_SERVICE_APP and Path(current).resolve(strict=True) == Path(current))
 
 
 def read(path):
@@ -90,7 +160,7 @@ def verify_bundle(app, phase, receipt_path, receipt_sha256, signer, stage):
                       'reused_signed_core_sha256' not in receipt)
     else:
         core_bound = receipt.get('reused_signed_core_sha256') == digest(read(app / CORE))
-    if (receipt.get('schema') != 1 or receipt.get('phase') != phase or receipt.get('app') != str(app) or
+    if (receipt.get('schema') != 1 or receipt.get('phase') != phase or not receipt_app_matches(receipt.get('app'), app, phase) or
             receipt.get('static_verification') is not True or receipt.get('pins') != {
                 'certificate_sha1': signer.CERTIFICATE_SHA1, 'certificate_sha256': signer.CERTIFICATE_SHA256} or
             receipt.get('compatibility') != compatibility or
@@ -116,6 +186,8 @@ def verify_bundle(app, phase, receipt_path, receipt_sha256, signer, stage):
             if target['role'] == 'gui':
                 if constraint.verify_library_constraint(binary, hashes) != receipt.get('library_constraint'):
                     raise ValueError('GUI five-framework constraint changed')
+    if migrated_service_receipt(receipt, app, phase):
+        targets = migrated_display_targets(app, targets, receipt['targets'], fixed)
     if targets != receipt['targets']:
         raise ValueError('Artifact signatures differ from receipt')
     if receipt.get('signing_scope') == 'service-wrapper-only':

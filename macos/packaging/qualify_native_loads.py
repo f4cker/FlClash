@@ -22,11 +22,11 @@ import time
 import types
 import xml.etree.ElementTree as ET
 
-ROOT = Path('/Users/layoute/SideWork/FlClash/.airbuild/worktree/exit-cleanup')
+ROOT = Path('/Users/lavas/Library/Application Support/plus.yellow.AirBuild/environment/a6604af9-17b7-4c44-9d33-261a665bd547/projects/770e9d36-b2a0-45c9-a3a3-dd6b6836c72f')
 PACKAGING = ROOT / 'macos/packaging'
 SCRATCH_ROOT = ROOT / '.airbuild/native-load-scratch'
 EVIDENCE_ROOT = ROOT / '.airbuild/evidence/native-load-qualification'
-REAL_HOME = Path('/Users/layoute')
+REAL_HOME = Path('/Users/lavas')
 DYLD_BOOTSTRAP_PROFILE = Path('/System/Library/Sandbox/Profiles/dyld-support.sb')
 PROBES = {'flutter_pixel', 'rust_utf8', 'objective_c_string', 'sqlite_memory'}
 PREFIX = 'FLASH_NATIVE_LOADS '

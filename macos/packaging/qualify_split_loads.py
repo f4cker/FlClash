@@ -19,15 +19,15 @@ import sys
 import tempfile
 import types
 
-ROOT = Path('/Users/layoute/SideWork/FlClash/.airbuild/worktree/exit-cleanup')
+ROOT = Path('/Users/lavas/Library/Application Support/plus.yellow.AirBuild/environment/a6604af9-17b7-4c44-9d33-261a665bd547/projects/770e9d36-b2a0-45c9-a3a3-dd6b6836c72f')
 PACKAGING = ROOT / 'macos/packaging'
 GUI_APP = ROOT / '.airbuild/artifacts/split-2026111303-retry01/gui/Flash.app'
 EVIDENCE_ROOT = ROOT / '.airbuild/evidence/split-native-load-qualification'
 SCHEMA = 'flash-split-native-loads-v1'
 STATE_SCHEMA = 'flash-split-frozen-state-v1'
-NATIVE_SHA256 = '053311e347049f0ee4ba7745b7120817617600e27fc0014bf2f8bf389377b1bc'
+NATIVE_SHA256 = '67971de9020f9894459aacf3962e1991d7b9eecb43989971989cd0d531f9406a'
 CONSTRAINT_SHA256 = 'b1a402989ca8fd4375b081c68df5d974cf5be635389f399ff9f4ba17e7b2d7de'
-DRIVER_SHA256 = '32c94cae90ce997482611ab074eade2cef7d3aed8d0446ed51480ff68cb423e3'
+DRIVER_SHA256 = 'ae49c918a91a9dffd10d8d17ba2d32da44423dd42d04ee6e9a0e62104485e2c0'
 BUILD_ROOT = ROOT / '.airbuild/buildcandidate/split-2026111303'
 BUILD_METADATA = BUILD_ROOT / 'continuation-04/build-metadata.json'
 BUILD_METADATA_SHA256 = '0327f163c9707bcfe43c6feee6b657a572535c05d4b94fa4da2b701a4bcd4fd9'

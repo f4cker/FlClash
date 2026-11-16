@@ -430,7 +430,7 @@ class ToolContractTests(unittest.TestCase):
         self.assertEqual(DRIVER.CERTIFICATE_SHA256,
                          'E8346770F4BF2ABC94F755A136677CDA84B821A668B0983E7FBEF21F8A646E95')
         self.assertEqual(DRIVER.KEYCHAIN,
-                         '/Users/layoute/Library/Application Support/Flash Signing/FlashSigning.keychain-db')
+                         '/Users/lavas/Library/Application Support/Flash Signing/FlashSigning.keychain-db')
         self.assertEqual(DRIVER.VERIFIER_SHA256, DRIVER.sha256(
             (Path(__file__).parents[1] / 'stage_managed_payload.py').read_bytes()))
 
