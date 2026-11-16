@@ -6,7 +6,7 @@ import 'package:fl_clash/common/print.dart';
 import 'package:fl_clash/common/system.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart' show ProxyState;
-import 'package:rust_api/rust_api.dart' as rust_api;
+import 'package:fl_clash/common/system_proxy.dart';
 
 final proxy = system.isDesktop && hostNetworkWritable ? Proxy() : null;
 
@@ -68,7 +68,7 @@ class SystemProxyQueue {
       }
       await _recover();
       if (state.isStart && state.systemProxy) {
-        await _start(state.port, state.bassDomain);
+        await _start(state.port, state.bassDomain, state.pacScript);
       } else {
         await _restore();
       }
@@ -118,11 +118,15 @@ class SystemProxyQueue {
     await _restore();
   }
 
-  Future<void> _start(int port, List<String> bypassDomain) async {
+  Future<void> _start(
+    int port,
+    List<String> bypassDomain,
+    String? pacScript,
+  ) async {
     _starts++;
     final snapshot = _snapshot != null
-        ? _snapshot!.applying(port, bypassDomain)
-        : await _proxy.snapshotProxy(port, bypassDomain);
+        ? _snapshot!.applying(port, bypassDomain, pac: pacScript != null)
+        : await _proxy.snapshotProxy(port, bypassDomain, pacScript);
     if (snapshot == null) {
       commonPrint.log(
         'system proxy left unchanged: its current settings could not be read',
@@ -134,7 +138,7 @@ class SystemProxyQueue {
       await _store?.write(snapshot);
     }
     _snapshot = snapshot;
-    if (!await _proxy.startProxy(port, bypassDomain)) {
+    if (!await _proxy.startProxy(port, bypassDomain, pacScript)) {
       _logFailure();
     }
   }

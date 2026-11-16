@@ -7,7 +7,7 @@ import 'package:fl_clash/common/system_dns.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
-import 'package:proxy/proxy.dart' show SystemProxySnapshot;
+import 'package:fl_clash/common/system_proxy.dart' show SystemProxySnapshot;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Preferences {

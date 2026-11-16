@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/proxy.dart';
+import 'package:fl_clash/common/system_proxy.dart';
 import 'package:fl_clash/models/models.dart' show ProxyState;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,6 +31,7 @@ class _FakeProxy implements Proxy {
   Future<SystemProxySnapshot?> snapshotProxy(
     int port, [
     List<String> bypassDomain = const [],
+    String? pacScript,
   ]) async {
     calls.add('snapshot');
     if (!readable) {
@@ -43,7 +45,11 @@ class _FakeProxy implements Proxy {
   }
 
   @override
-  Future<bool> startProxy(int port, [List<String> bypassDomain = const []]) {
+  Future<bool> startProxy(
+    int port, [
+    List<String> bypassDomain = const [],
+    String? pacScript,
+  ]) {
     return _call('start $port');
   }
 
@@ -382,6 +388,7 @@ class _NonRestorableProxy extends _FakeProxy {
   Future<SystemProxySnapshot?> snapshotProxy(
     int port, [
     List<String> bypassDomain = const [],
+    String? pacScript,
   ]) async {
     calls.add('snapshot');
     return SystemProxySnapshot(
