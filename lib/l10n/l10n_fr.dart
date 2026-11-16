@@ -5838,33 +5838,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get macHelperTitle => 'Assistant Flash';
 
   @override
-  String get macHelperOff => 'Assistant non installé';
-
-  @override
   String get macHelperOn => 'Assistant prêt';
-
-  @override
-  String get macHelperPending => 'Autorisation requise dans les réglages macOS';
-
-  @override
-  String get macHelperUnavailable => 'Assistant indisponible';
-
-  @override
-  String get macHelperCannotUse =>
-      'Cette version ne peut pas utiliser l’assistant';
-
-  @override
-  String get macHelperRepair => 'Mise à jour de l’assistant requise';
-
-  @override
-  String get macHelperStopUnknown =>
-      'Impossible de confirmer que l’assistant est prêt';
-
-  @override
-  String get macHelperTurnOn => 'Instructions d’installation';
-
-  @override
-  String get macHelperTurnOff => 'Instructions de désactivation';
 
   @override
   String get macHelperOpenSettings => 'Ouvrir les réglages macOS';
@@ -5873,18 +5847,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get macHelperTryAgain => 'Réessayer';
 
   @override
-  String get macHelperRepairAction => 'Instructions de réparation';
-
-  @override
   String get macHelperCheckAgain => 'Vérifier à nouveau';
 
   @override
   String get macHelperUnavailableDetail =>
       'Flash ne peut pas joindre l’assistant pour le moment. TUN ne peut pas démarrer. Votre réglage TUN est conservé.';
-
-  @override
-  String get macHelperPendingDetail =>
-      'Utilisez l’installateur Flash avec l’accord explicite d’un administrateur pour installer, mettre à jour, réparer ou désactiver l’assistant. Le désactiver ne désinstalle pas Flash et une nouvelle autorisation peut être nécessaire. La fin de l’installation ne confirme pas le fonctionnement de l’assistant ou de TUN. Votre réglage TUN est conservé.';
 
   @override
   String get trayMultipleNodes => 'Plusieurs nœuds';
@@ -5965,57 +5932,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.';
 
   @override
-  String get macHelperInstallTitle => 'Installer l’assistant Flash ?';
-
-  @override
-  String get macHelperUpdateTitle => 'Mettre à jour l’assistant Flash ?';
-
-  @override
-  String get macHelperInstall => 'Installer';
-
-  @override
-  String get macHelperUpdate => 'Mettre à jour';
-
-  @override
-  String get macHelperNotNowInstall => 'Pas maintenant';
-
-  @override
-  String get macHelperNotNowUpdate => 'Pas maintenant';
-
-  @override
-  String get macHelperInstallDetail =>
-      'L’assistant gère le cœur réseau de Flash en arrière-plan. L’installation nécessite une autorisation administrateur. Flash vérifiera ensuite sa disponibilité.';
-
-  @override
-  String get macHelperUpdateDetail =>
-      'L’assistant installé est incompatible avec cette version. La mise à jour peut nécessiter une autorisation administrateur.';
-
-  @override
   String get macHelperChecking => 'Vérification de l’assistant…';
 
   @override
-  String get macHelperAuthorizing => 'En attente d’autorisation administrateur';
-
-  @override
-  String get macHelperInstalling => 'Installation de l’assistant…';
-
-  @override
   String get macHelperUpdating => 'Mise à jour de l’assistant…';
-
-  @override
-  String get macHelperInstallCancelled => 'Installation annulée';
-
-  @override
-  String get macHelperUpdateCancelled => 'Mise à jour annulée';
-
-  @override
-  String get macHelperInstallFailed => 'Échec de l’installation de l’assistant';
-
-  @override
-  String get macHelperUpdateFailed => 'Échec de la mise à jour de l’assistant';
-
-  @override
-  String get macHelperLater => 'Plus tard';
 
   @override
   String get macHelperMoveDetail =>
@@ -6026,49 +5946,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Autorisez l’assistant Flash dans les Réglages Système de macOS, puis revenez vérifier.';
 
   @override
-  String get macHelperDeniedDetail =>
-      'L’autorisation administrateur a été refusée. Réessayez lorsque vous pourrez autoriser l’opération.';
-
-  @override
-  String get macHelperFailedDetail =>
-      'macOS n’a pas pu terminer l’opération. Vous pouvez réessayer manuellement.';
-
-  @override
-  String get macHelperUnknownDetail =>
-      'Le résultat est inconnu. Vérifiez à nouveau ; Flash ne répétera pas l’installation tant que le résultat n’est pas confirmé.';
-
-  @override
-  String get macHelperVerificationDetail =>
-      'La vérification de sécurité ou de compatibilité a échoué. Utilisez une version fiable et compatible de Flash.';
-
-  @override
-  String get macHelperPayloadDetail =>
-      'Les fichiers d’installation n’ont pas pu être vérifiés. Remplacez Flash par une copie complète et fiable, puis réessayez.';
-
-  @override
-  String get macHelperReadyDetail =>
-      'L’assistant est disponible. Cela ne signifie pas que TUN ou une connexion fonctionne. Réessayez la fonctionnalité souhaitée.';
-
-  @override
-  String get macHelperMoreDetails => 'Afficher les détails';
-
-  @override
-  String get macHelperLessDetails => 'Masquer les détails';
-
-  @override
   String get macHelperMoveTitle => 'Déplacer Flash dans Applications';
-
-  @override
-  String get macHelperStartupUpdate =>
-      'Mise à jour de l’assistant requise. Le noyau n’a pas démarré.';
-
-  @override
-  String get macHelperStartupInstall =>
-      'Assistant non installé. Le noyau n’a pas démarré.';
-
-  @override
-  String get macHelperStartupUnavailable =>
-      'Assistant indisponible. Le noyau n’a pas démarré.';
 
   @override
   String get macHelperStatusUnknown =>
@@ -6078,14 +5956,104 @@ class AppLocalizationsFr extends AppLocalizations {
   String get macHelperCoreUnconfirmed => 'État du noyau non confirmé';
 
   @override
-  String get macHelperInstallAction => 'Installer l’assistant';
+  String get macHelperMigrationTitle => 'Helper update required';
 
   @override
-  String get macHelperUpdateAction => 'Mettre à jour l’assistant';
+  String get macHelperMigrationDetail =>
+      'Flash needs to remove the old helper and turn on the new one. You’ll be asked for your administrator password.';
 
   @override
-  String get macHelperVerificationFailed =>
-      'Échec de la vérification de l’assistant';
+  String get macHelperMigrationAction => 'Start update';
+
+  @override
+  String get macHelperApprovalTitle => 'Allow Flash to run in the background';
+
+  @override
+  String get macHelperApprovalStep1 => 'Open Login Items & Extensions.';
+
+  @override
+  String get macHelperApprovalStep2 =>
+      'Under Allow in the Background, find Flash.';
+
+  @override
+  String get macHelperApprovalStep3 =>
+      'Turn on the switch next to Flash, then come back to Flash.';
+
+  @override
+  String macHelperStepLabel(Object number, Object text) {
+    return 'Step $number: $text';
+  }
+
+  @override
+  String get macHelperStartingTitle => 'Starting helper…';
+
+  @override
+  String get macHelperStartingDetail => 'Please wait.';
+
+  @override
+  String get macHelperStartSlowTitle => 'The helper is taking longer to start';
+
+  @override
+  String get macHelperStartSlowDetail =>
+      'Flash can’t confirm yet whether the helper has started. Check again; if it’s still not ready, view the details.';
+
+  @override
+  String get macHelperViewDetails => 'View details';
+
+  @override
+  String get macHelperSignatureTitle =>
+      'The helper didn’t pass the security check';
+
+  @override
+  String get macHelperSignatureDetail =>
+      'Flash didn’t run the helper. Download and install Flash again.';
+
+  @override
+  String get macHelperDisabledTitle => 'The helper is turned off';
+
+  @override
+  String get macHelperDisabledDetail =>
+      'In System Settings, go to Login Items & Extensions, turn on Flash’s background switch, then come back to Flash.';
+
+  @override
+  String get macHelperFailedTitle => 'The helper update didn’t finish';
+
+  @override
+  String get macHelperFailedStopOld =>
+      'Couldn’t stop the old helper. Try again.';
+
+  @override
+  String get macHelperFailedRemoveOld =>
+      'Couldn’t remove the old helper. Try again.';
+
+  @override
+  String get macHelperFailedRegisterNew =>
+      'Couldn’t register the new helper. Try again.';
+
+  @override
+  String get macHelperFailedUnknown =>
+      'Something went wrong during the update. View the details, then try again.';
+
+  @override
+  String get macHelperRequiredTitle => 'Turn on the helper first';
+
+  @override
+  String get macHelperRequiredDetail =>
+      'This feature needs the helper. Finish the setup, then try again.';
+
+  @override
+  String get macHelperViewSetup => 'View setup';
+
+  @override
+  String get macHelperReinstallTitle => 'The helper can’t be used';
+
+  @override
+  String get macHelperReinstallDetail =>
+      'The helper inside Flash is missing or doesn’t match this version. Download and install Flash again.';
+
+  @override
+  String get macHelperUnsupportedDetail =>
+      'The helper requires macOS 14 or later.';
 
   @override
   String get liveStatus => 'État en direct';

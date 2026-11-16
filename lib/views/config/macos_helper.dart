@@ -7,127 +7,296 @@ import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum MacHelperAction { install, update, settings, retry, recheck }
+/// What the single "Helper" card shows for a state. Pure, so it is unit-tested
+/// without widgets.
+enum MacHelperCardKind {
+  ready,
+  migration,
+  approval,
+  disabledByUser,
+  starting,
+  startSlow,
+  signatureFailed,
+  updateFailed,
+  reinstall,
+  move,
+  unsupported,
+  exitUnconfirmed,
+}
 
-MacHelperAction? macHelperAction(MacHelperState state) => switch (state) {
-  MacHelperState.off ||
-  MacHelperState.installerRequired => MacHelperAction.install,
-  MacHelperState.updateRequired ||
-  MacHelperState.incompatible => MacHelperAction.update,
-  MacHelperState.approvalRequired => MacHelperAction.settings,
-  MacHelperState.cancelled ||
-  MacHelperState.failed ||
-  MacHelperState.denied => MacHelperAction.retry,
-  MacHelperState.repairRequired ||
-  MacHelperState.unavailable ||
-  MacHelperState.unknown ||
-  MacHelperState.exitUnconfirmed => MacHelperAction.recheck,
-  _ => null,
-};
+enum MacHelperCardAction { migrate, retry, openSettings, recheck, viewDetails }
 
-String macHelperLabel(AppLocalizations l, MacHelperState state) =>
+final class MacHelperCardView {
+  final MacHelperCardKind kind;
+  final String title;
+  final String? detail;
+  final List<String> steps;
+
+  /// The in-progress text replaces the buttons, never the card content.
+  final String? progress;
+  final MacHelperCardAction? primary;
+  final MacHelperCardAction? secondary;
+
+  /// Copyable raw text behind "View details"; never interpreted further.
+  final String? rawDetail;
+
+  const MacHelperCardView({
+    required this.kind,
+    required this.title,
+    this.detail,
+    this.steps = const [],
+    this.progress,
+    this.primary,
+    this.secondary,
+    this.rawDetail,
+  });
+
+  bool get isProblem => switch (kind) {
+    MacHelperCardKind.signatureFailed ||
+    MacHelperCardKind.updateFailed ||
+    MacHelperCardKind.reinstall ||
+    MacHelperCardKind.unsupported => true,
+    _ => false,
+  };
+}
+
+MacHelperCardKind macHelperCardKind(MacHelperState state, bool startSlow) =>
     switch (state) {
-      MacHelperState.off || MacHelperState.installerRequired => l.macHelperOff,
-      MacHelperState.enabled => l.macHelperOn,
-      MacHelperState.approvalRequired => l.macHelperPending,
-      MacHelperState.protectedInstallationRequired => l.macHelperMoveTitle,
-      MacHelperState.updateRequired ||
-      MacHelperState.incompatible => l.macHelperRepair,
-      MacHelperState.unavailable ||
-      MacHelperState.unknown ||
-      MacHelperState.exitUnconfirmed => l.macHelperStopUnknown,
-      MacHelperState.cancelled => l.macHelperInstallCancelled,
-      MacHelperState.failed ||
-      MacHelperState.denied => l.macHelperInstallFailed,
-      _ => l.macHelperCannotUse,
+      MacHelperState.enabled => MacHelperCardKind.ready,
+      MacHelperState.migrationRequired => MacHelperCardKind.migration,
+      MacHelperState.requiresApproval ||
+      MacHelperState.notRegistered => MacHelperCardKind.approval,
+      MacHelperState.disabledByUser => MacHelperCardKind.disabledByUser,
+      MacHelperState.starting || MacHelperState.staleHelper =>
+        startSlow ? MacHelperCardKind.startSlow : MacHelperCardKind.starting,
+      MacHelperState.signatureFailed => MacHelperCardKind.signatureFailed,
+      MacHelperState.updateFailed => MacHelperCardKind.updateFailed,
+      MacHelperState.reinstallRequired => MacHelperCardKind.reinstall,
+      MacHelperState.moveRequired => MacHelperCardKind.move,
+      MacHelperState.unsupported ||
+      MacHelperState.disabled => MacHelperCardKind.unsupported,
+      MacHelperState.exitUnconfirmed => MacHelperCardKind.exitUnconfirmed,
+      // A status that could not be read is handled like a slow start: no
+      // failure is claimed, the user can check again or view the raw code.
+      MacHelperState.unavailable => MacHelperCardKind.startSlow,
     };
 
-String macHelperStatusLabel(AppLocalizations l, MacHelperMaintenance flow) {
-  return switch (flow.progress) {
-    MacHelperProgress.checking => l.macHelperChecking,
-    MacHelperProgress.authorizing => l.macHelperAuthorizing,
-    MacHelperProgress.installing => l.macHelperInstalling,
+String macHelperFailedStepText(AppLocalizations l, MacHelperFailedStep step) =>
+    switch (step) {
+      MacHelperFailedStep.stopOld => l.macHelperFailedStopOld,
+      MacHelperFailedStep.removeOld => l.macHelperFailedRemoveOld,
+      MacHelperFailedStep.registerNew => l.macHelperFailedRegisterNew,
+      MacHelperFailedStep.unknown => l.macHelperFailedUnknown,
+    };
+
+MacHelperCardView macHelperCardView(
+  AppLocalizations l,
+  MacHelperMaintenance flow,
+) {
+  final state = flow.state;
+  if (state == null) {
+    return MacHelperCardView(
+      kind: MacHelperCardKind.starting,
+      title: l.macHelperTitle,
+      progress: l.macHelperChecking,
+    );
+  }
+  final kind = macHelperCardKind(state, flow.startSlow);
+  final busyText = switch (flow.progress) {
     MacHelperProgress.updating => l.macHelperUpdating,
-    MacHelperProgress.idle => switch (flow.state) {
-      null => l.macHelperChecking,
-      MacHelperState.cancelled when flow.isUpdate => l.macHelperUpdateCancelled,
-      MacHelperState.failed ||
-      MacHelperState.denied when flow.isUpdate => l.macHelperUpdateFailed,
-      final state => macHelperLabel(l, state),
-    },
+    MacHelperProgress.checking ||
+    MacHelperProgress.opening => l.macHelperChecking,
+    MacHelperProgress.idle => null,
+  };
+  final raw = [
+    if (flow.failure?.detail.isNotEmpty == true) flow.failure!.detail,
+    if (flow.lastCode != null) 'status: ${flow.lastCode}',
+  ].join('\n');
+  return switch (kind) {
+    MacHelperCardKind.ready => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperOn,
+    ),
+    MacHelperCardKind.migration => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperMigrationTitle,
+      detail: l.macHelperMigrationDetail,
+      progress: busyText,
+      primary: MacHelperCardAction.migrate,
+    ),
+    MacHelperCardKind.approval => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperApprovalTitle,
+      detail: l.macHelperApprovalDetail,
+      steps: [
+        l.macHelperApprovalStep1,
+        l.macHelperApprovalStep2,
+        l.macHelperApprovalStep3,
+      ],
+      progress: busyText,
+      primary: MacHelperCardAction.openSettings,
+      secondary: MacHelperCardAction.recheck,
+    ),
+    MacHelperCardKind.disabledByUser => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperDisabledTitle,
+      detail: l.macHelperDisabledDetail,
+      progress: busyText,
+      primary: MacHelperCardAction.openSettings,
+      secondary: MacHelperCardAction.recheck,
+    ),
+    MacHelperCardKind.starting => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperStartingTitle,
+      detail: l.macHelperStartingDetail,
+      progress: l.macHelperStartingTitle,
+    ),
+    MacHelperCardKind.startSlow => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperStartSlowTitle,
+      detail: l.macHelperStartSlowDetail,
+      progress: busyText,
+      primary: MacHelperCardAction.recheck,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
+    MacHelperCardKind.signatureFailed => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperSignatureTitle,
+      detail: l.macHelperSignatureDetail,
+      // Deliberately no action that could run the helper anyway.
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
+    MacHelperCardKind.updateFailed => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperFailedTitle,
+      detail: macHelperFailedStepText(
+        l,
+        flow.failure?.step ?? MacHelperFailedStep.unknown,
+      ),
+      progress: busyText,
+      primary: MacHelperCardAction.retry,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
+    MacHelperCardKind.reinstall => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperReinstallTitle,
+      detail: l.macHelperReinstallDetail,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
+    MacHelperCardKind.move => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperMoveTitle,
+      detail: l.macHelperMoveDetail,
+    ),
+    MacHelperCardKind.unsupported => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperReinstallTitle,
+      detail: l.macHelperUnsupportedDetail,
+    ),
+    MacHelperCardKind.exitUnconfirmed => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperCoreUnconfirmed,
+      detail: l.macHelperStatusUnknown,
+      progress: busyText,
+      primary: MacHelperCardAction.recheck,
+    ),
   };
 }
 
-String macHelperDetail(AppLocalizations l, MacHelperMaintenance flow) {
-  if (flow.progress == MacHelperProgress.checking) return l.macHelperChecking;
-  if (flow.busy) return l.macHelperAuthorizing;
-  return switch (flow.state) {
-    MacHelperState.off ||
-    MacHelperState.installerRequired => l.macHelperInstallDetail,
-    MacHelperState.updateRequired ||
-    MacHelperState.incompatible => l.macHelperUpdateDetail,
-    MacHelperState.repairRequired => l.macHelperUnavailableDetail,
-    MacHelperState.protectedInstallationRequired => l.macHelperMoveDetail,
-    MacHelperState.approvalRequired => l.macHelperApprovalDetail,
-    MacHelperState.denied => l.macHelperDeniedDetail,
-    MacHelperState.signingRequired => l.macHelperVerificationDetail,
-    MacHelperState.failed => switch (flow.client.failureCode) {
-      'installerPayloadInvalid' => l.macHelperPayloadDetail,
-      'verificationFailed' || 'incompatible' => l.macHelperVerificationDetail,
-      _ => l.macHelperFailedDetail,
-    },
-    MacHelperState.exitUnconfirmed ||
-    MacHelperState.unknown ||
-    MacHelperState.unavailable => l.macHelperUnknownDetail,
-    MacHelperState.enabled => l.macHelperReadyDetail,
-    _ => '',
-  };
-}
+String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
+    switch (action) {
+      MacHelperCardAction.migrate => l.macHelperMigrationAction,
+      MacHelperCardAction.retry => l.macHelperTryAgain,
+      MacHelperCardAction.openSettings => l.macHelperOpenSettings,
+      MacHelperCardAction.recheck => l.macHelperCheckAgain,
+      MacHelperCardAction.viewDetails => l.macHelperViewDetails,
+    };
+
+/// One-line label for list items and tooltips.
+String macHelperStatusLabel(AppLocalizations l, MacHelperMaintenance flow) =>
+    macHelperCardView(l, flow).title;
 
 final macHelperMaintenance = MacHelperMaintenance(
   macosHelperClient,
   stop: () => globalState.container.read(coreHandlerProvider).stop(),
 );
 
-Future<void>? _visibleHelperDialog;
-
-Future<void> showMacHelperFlow({
-  BuildContext? context,
-  MacHelperMaintenance? maintenance,
-}) {
-  final visible = _visibleHelperDialog;
-  if (visible != null) return visible;
-  final flow = maintenance ?? macHelperMaintenance;
-  final operation = dialogs.showCommonDialog<void>(
-    context: context,
-    child: MacHelperDialog(maintenance: flow),
-  );
-  _visibleHelperDialog = operation;
-  unawaited(operation.whenComplete(() => _visibleHelperDialog = null));
-  return operation;
-}
-
-class MacHelperDialog extends StatefulWidget {
+/// The "Helper" card. Switches content by state; collapses to one line when
+/// ready; re-checks when Flash returns to the foreground.
+class MacHelperCard extends StatefulWidget {
   final MacHelperMaintenance maintenance;
 
-  const MacHelperDialog({super.key, required this.maintenance});
+  /// Inside a dialog the card is not wrapped in its own [Card] surface.
+  final bool embedded;
+
+  const MacHelperCard({
+    super.key,
+    required this.maintenance,
+    this.embedded = false,
+  });
 
   @override
-  State<MacHelperDialog> createState() => _MacHelperDialogState();
+  State<MacHelperCard> createState() => _MacHelperCardState();
 }
 
-class _MacHelperDialogState extends State<MacHelperDialog> {
-  bool _expanded = false;
+class _MacHelperCardState extends State<MacHelperCard> {
+  late final AppLifecycleListener _lifecycle;
+  bool _details = false;
+  String? _announced;
 
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(onResume: widget.maintenance.resumed);
     if (widget.maintenance.state == null && !widget.maintenance.busy) {
       unawaited(widget.maintenance.check());
+    }
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  void _announce(BuildContext context, String title) {
+    if (_announced == title) return;
+    final first = _announced == null;
+    _announced = title;
+    if (first) return;
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        title,
+        Directionality.of(context),
+      ),
+    );
+  }
+
+  void _run(MacHelperCardAction action) {
+    final flow = widget.maintenance;
+    switch (action) {
+      case MacHelperCardAction.migrate:
+      case MacHelperCardAction.retry:
+        setState(() => _details = false);
+        unawaited(flow.migrate(confirmed: true));
+      case MacHelperCardAction.openSettings:
+        unawaited(flow.openSettings());
+      case MacHelperCardAction.recheck:
+        unawaited(flow.recheck());
+      case MacHelperCardAction.viewDetails:
+        setState(() => _details = !_details);
     }
   }
 
@@ -136,95 +305,231 @@ class _MacHelperDialogState extends State<MacHelperDialog> {
     return ListenableBuilder(
       listenable: widget.maintenance,
       builder: (context, _) {
-        final flow = widget.maintenance;
         final l = context.appLocalizations;
-        final action = flow.state == null ? null : macHelperAction(flow.state!);
-        final invitation =
-            !flow.busy &&
-            (action == MacHelperAction.install ||
-                action == MacHelperAction.update);
-        final update = action == MacHelperAction.update;
-        final status = macHelperStatusLabel(l, flow);
-        final detail = macHelperDetail(l, flow);
-        final failure =
-            flow.state == MacHelperState.failed ||
-            flow.state == MacHelperState.denied;
-        return AlertDialog(
-          title: invitation
-              ? (update ? l.macHelperUpdateTitle : l.macHelperInstallTitle)
-              : status,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                invitation
-                    ? (update
-                          ? l.macHelperNotNowUpdate
-                          : l.macHelperNotNowInstall)
-                    : flow.busy || flow.state == MacHelperState.enabled
-                    ? l.close
-                    : l.macHelperLater,
-              ),
+        final view = macHelperCardView(l, widget.maintenance);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _announce(context, view.title);
+        });
+        final content = view.kind == MacHelperCardKind.ready
+            ? _buildReady(context, view)
+            : _buildContent(context, view);
+        if (widget.embedded) return content;
+        // A plain surface, not a [Card]: the card is not pressable, so it must
+        // neither read as a button nor draw its text in disabled colors.
+        final colorScheme = context.colorScheme;
+        return Surface(
+          color: view.isProblem
+              ? colorScheme.errorContainer
+              : context.raisedSurfaceLevel.colorOf(colorScheme),
+          shape: AppShape.all(AppCorner.md),
+          child: Padding(padding: const EdgeInsets.all(14), child: content),
+        );
+      },
+    );
+  }
+
+  Widget _buildReady(BuildContext context, MacHelperCardView view) {
+    return Semantics(
+      liveRegion: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: context.colorScheme.success,
+              shape: BoxShape.circle,
             ),
-            if (!flow.busy && action != null)
-              TextButton(
-                onPressed: () {
-                  switch (action) {
-                    case MacHelperAction.install ||
-                        MacHelperAction.update ||
-                        MacHelperAction.retry:
-                      unawaited(flow.install(confirmed: true));
-                    case MacHelperAction.settings:
-                      unawaited(flow.openSettings());
-                    case MacHelperAction.recheck:
-                      unawaited(flow.check());
-                  }
-                },
-                child: Text(switch (action) {
-                  MacHelperAction.install => l.macHelperInstall,
-                  MacHelperAction.update => l.macHelperUpdate,
-                  MacHelperAction.retry => l.macHelperTryAgain,
-                  MacHelperAction.settings => l.macHelperOpenSettings,
-                  MacHelperAction.recheck => l.macHelperCheckAgain,
-                }),
-              ),
-          ],
-          child: Semantics(
-            liveRegion: true,
-            label: status,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  detail,
-                  maxLines: failure && !_expanded ? 3 : null,
-                  overflow: failure && !_expanded
-                      ? TextOverflow.ellipsis
-                      : null,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyle.footnote
-                      .of(context)
-                      .copyWith(height: 20 / 13),
+          ),
+          const SizedBox(width: 8),
+          Text(view.title, style: AppTextStyle.footnote.of(context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, MacHelperCardView view) {
+    final l = context.appLocalizations;
+    final busy = widget.maintenance.busy;
+    final waiting = view.kind == MacHelperCardKind.starting;
+    final footnote = AppTextStyle.footnote
+        .of(context)
+        .copyWith(height: 20 / 13);
+    final glyph = switch (view.kind) {
+      MacHelperCardKind.migration => AppGlyphs.sync,
+      MacHelperCardKind.approval ||
+      MacHelperCardKind.disabledByUser => AppGlyphs.warning,
+      _ when view.isProblem => AppGlyphs.error,
+      _ => AppGlyphs.warning,
+    };
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          header: true,
+          liveRegion: true,
+          child: Row(
+            children: [
+              if (waiting)
+                const ActivityIndicator(size: 16)
+              else
+                GlyphIcon(
+                  glyph,
+                  color: view.isProblem
+                      ? context.colorScheme.error
+                      : context.colorScheme.warning,
                 ),
-                if (failure)
-                  TextButton(
-                    onPressed: () => setState(() => _expanded = !_expanded),
-                    child: Text(
-                      _expanded
-                          ? l.macHelperLessDetails
-                          : l.macHelperMoreDetails,
-                    ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  view.title,
+                  style: AppTextStyle.subheadline.of(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (view.detail != null) ...[
+          const SizedBox(height: 6),
+          Text(view.detail!, style: footnote),
+        ],
+        for (final (index, step) in view.steps.indexed)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Semantics(
+              label: l.macHelperStepLabel('${index + 1}', step),
+              excludeSemantics: true,
+              child: Text('${index + 1}. $step', style: footnote),
+            ),
+          ),
+        const SizedBox(height: 10),
+        if (busy && view.progress != null && !waiting)
+          Row(
+            children: [
+              const ActivityIndicator(size: 14),
+              const SizedBox(width: 8),
+              Text(view.progress!, style: footnote),
+            ],
+          )
+        else if (!waiting)
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              if (view.primary != null)
+                FilledButton(
+                  onPressed: busy ? null : () => _run(view.primary!),
+                  child: Text(macHelperActionLabel(l, view.primary!)),
+                ),
+              if (view.secondary != null)
+                TextButton(
+                  onPressed: busy ? null : () => _run(view.secondary!),
+                  child: Text(macHelperActionLabel(l, view.secondary!)),
+                ),
+            ],
+          ),
+        if (_details && view.rawDetail != null && view.rawDetail!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    view.rawDetail!,
+                    style: AppTextStyle.caption1.of(context),
                   ),
-                if (!flow.busy && action == MacHelperAction.settings)
-                  TextButton(
-                    onPressed: () => unawaited(flow.check()),
-                    child: Text(l.macHelperCheckAgain),
+                ),
+                TextButton(
+                  onPressed: () => unawaited(
+                    Clipboard.setData(ClipboardData(text: view.rawDetail!)),
                   ),
+                  child: Text(l.copy),
+                ),
               ],
             ),
           ),
-        );
-      },
+      ],
+    );
+  }
+}
+
+Future<void>? _visibleHelperDialog;
+
+/// Shows the helper card in a dialog. With [requiredByFeature], a feature that
+/// needs the helper (TUN, starting the Core) first explains why; its switch
+/// stays off.
+Future<void> showMacHelperFlow({
+  BuildContext? context,
+  MacHelperMaintenance? maintenance,
+  bool requiredByFeature = false,
+}) {
+  final visible = _visibleHelperDialog;
+  if (visible != null) return visible;
+  final flow = maintenance ?? macHelperMaintenance;
+  final operation = dialogs.showCommonDialog<void>(
+    context: context,
+    child: MacHelperDialog(
+      maintenance: flow,
+      requiredByFeature: requiredByFeature,
+    ),
+  );
+  _visibleHelperDialog = operation;
+  unawaited(operation.whenComplete(() => _visibleHelperDialog = null));
+  return operation;
+}
+
+class MacHelperDialog extends StatefulWidget {
+  final MacHelperMaintenance maintenance;
+  final bool requiredByFeature;
+
+  const MacHelperDialog({
+    super.key,
+    required this.maintenance,
+    this.requiredByFeature = false,
+  });
+
+  @override
+  State<MacHelperDialog> createState() => _MacHelperDialogState();
+}
+
+class _MacHelperDialogState extends State<MacHelperDialog> {
+  late bool _gate = widget.requiredByFeature;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.appLocalizations;
+    if (_gate) {
+      return AlertDialog(
+        title: l.macHelperRequiredTitle,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.cancel),
+          ),
+          TextButton(
+            onPressed: () => setState(() => _gate = false),
+            child: Text(l.macHelperViewSetup),
+          ),
+        ],
+        child: Text(
+          l.macHelperRequiredDetail,
+          textAlign: TextAlign.center,
+          style: AppTextStyle.footnote.of(context).copyWith(height: 20 / 13),
+        ),
+      );
+    }
+    return AlertDialog(
+      title: l.macHelperTitle,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.close),
+        ),
+      ],
+      child: MacHelperCard(maintenance: widget.maintenance, embedded: true),
     );
   }
 }

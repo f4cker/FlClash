@@ -8,6 +8,8 @@ import 'package:fl_clash/core/desktop/macos_helper_transport.dart';
 import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/core/desktop/transport.dart';
 import 'package:fl_clash/views/config/macos_helper.dart';
+import 'package:fl_clash/l10n/l10n.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _session = '0123456789abcdef0123456789abcdef';
@@ -41,7 +43,7 @@ class _Native implements MacHelperNativeApi {
         'code': stopCode,
         'exitConfirmed': stopCode == 'ok' && stopExitConfirmed,
       },
-      'installerInstructions' => {'code': 'installerRequired'},
+      'migrate' => {'code': state},
       'receive' => receive.future,
       _ => {'code': 'ok'},
     };
@@ -167,40 +169,50 @@ Matcher _helperCode(String code) =>
     isA<MacHelperException>().having((error) => error.code, 'code', code);
 
 void main() {
-  test(
-    'stable helper migration is explicit and never blocks owned stop',
-    () async {
-      final native = _Native()..state = 'updateRequired';
-      final client = MacHelperClient(native: native, safeMode: () => false);
-      expect(await client.status(), MacHelperState.updateRequired);
-      expect(
-        macHelperAction(MacHelperState.updateRequired),
-        MacHelperAction.update,
-      );
-      await expectLater(
-        client.start(_session),
-        throwsA(_helperCode('updateRequired')),
-      );
-      expect(native.calls, everyElement('status'));
-      await expectLater(
-        client.installerInstructions(confirmed: false),
-        throwsA(_helperCode('consentRequired')),
-      );
-      native.state = 'enabled';
-      await client.start(_session);
-      native.state = 'updateRequired';
-      native.calls.clear();
-      expect(await client.stop(_session), isTrue);
-      expect(native.calls, ['stop']);
-      native.receive.complete({'code': 'stopped'});
-    },
-  );
+  test('helper migration is explicit and never blocks owned stop', () async {
+    final native = _Native()..state = 'migrationRequired';
+    final client = MacHelperClient(native: native, safeMode: () => false);
+    expect(await client.status(), MacHelperState.migrationRequired);
+    expect(
+      macHelperCardKind(MacHelperState.migrationRequired, false),
+      MacHelperCardKind.migration,
+    );
+    await expectLater(
+      client.start(_session),
+      throwsA(_helperCode('migrationRequired')),
+    );
+    expect(native.calls, everyElement('status'));
+    expect(
+      () => client.migrate(confirmed: false),
+      throwsA(_helperCode('consentRequired')),
+    );
+    native.state = 'enabled';
+    await client.start(_session);
+    native.state = 'migrationRequired';
+    native.calls.clear();
+    expect(await client.stop(_session), isTrue);
+    expect(native.calls, ['stop']);
+    native.receive.complete({'code': 'stopped'});
+  });
 
   test(
     'status is passive and preserves precise authorization states',
     () async {
-      for (final state in MacHelperState.values) {
-        final native = _Native()..state = state.name;
+      const expected = {
+        'enabled': MacHelperState.enabled,
+        'migrationRequired': MacHelperState.migrationRequired,
+        'requiresApproval': MacHelperState.requiresApproval,
+        'notRegistered': MacHelperState.notRegistered,
+        'staleHelper': MacHelperState.staleHelper,
+        'signingRequired': MacHelperState.signatureFailed,
+        'notFound': MacHelperState.reinstallRequired,
+        'moveRequired': MacHelperState.moveRequired,
+        'migrationIncomplete': MacHelperState.updateFailed,
+        'unsupported': MacHelperState.unsupported,
+        'unavailable': MacHelperState.starting,
+      };
+      for (final MapEntry(key: code, value: state) in expected.entries) {
+        final native = _Native()..state = code;
         expect(await MacHelperClient(native: native).status(), state);
         expect(native.calls, ['status']);
       }
@@ -213,10 +225,12 @@ void main() {
       final native = _Native();
       final client = MacHelperClient(native: native, safeMode: () => true);
       expect(await client.status(), MacHelperState.disabled);
-      await expectLater(
-        client.installerInstructions(confirmed: true),
+      expect(
+        () => client.migrate(confirmed: true),
         throwsA(isA<MacHelperException>()),
       );
+      expect(() => client.enable(), throwsA(isA<MacHelperException>()));
+      expect(() => client.repair(), throwsA(isA<MacHelperException>()));
 
       await expectLater(
         client.start(_session),
@@ -231,32 +245,39 @@ void main() {
     },
   );
 
-  test(
-    'installation requires consent and never infers readiness from completion',
-    () async {
-      final native = _Native()..state = 'installerRequired';
-      final client = MacHelperClient(native: native);
-      await expectLater(
-        client.installerInstructions(confirmed: false),
-        throwsA(isA<MacHelperException>()),
-      );
-      expect(native.calls, isEmpty);
-      expect(
-        await client.installerInstructions(confirmed: true),
-        MacHelperState.installerRequired,
-      );
-      expect(native.calls, ['status', 'installerInstructions']);
-      expect(native.arguments.last, {'confirmed': true});
-    },
-  );
+  test('migration requires consent and reports the native outcome', () async {
+    final native = _Native()..state = 'migrationRequired';
+    final client = MacHelperClient(native: native);
+    expect(
+      () => client.migrate(confirmed: false),
+      throwsA(isA<MacHelperException>()),
+    );
+    expect(native.calls, isEmpty);
+    expect(
+      await client.migrate(confirmed: true),
+      MacHelperState.migrationRequired,
+    );
+    expect(native.calls, ['migrate']);
+    expect(native.arguments.last, {'confirmed': true});
+  });
 
-  for (final state in MacHelperState.values.where(
-    (state) => state != MacHelperState.enabled,
-  )) {
+  for (final state in [
+    'migrationRequired',
+    'requiresApproval',
+    'notRegistered',
+    'staleHelper',
+    'signingRequired',
+    'notFound',
+    'incompatible',
+    'moveRequired',
+    'migrationIncomplete',
+    'unsupported',
+    'unavailable',
+  ]) {
     test(
-      'managed launcher refuses ${state.name} without fallback or registration',
+      'managed launcher refuses $state without fallback or registration',
       () async {
-        final native = _Native()..state = state.name;
+        final native = _Native()..state = state;
         final launcher = MacHelperLauncher(MacHelperClient(native: native));
         await expectLater(
           launcher.resolve(),
@@ -382,15 +403,15 @@ void main() {
   );
 
   test(
-    'maintenance stops through its lifecycle owner before installation',
+    'maintenance stops through its lifecycle owner before migration',
     () async {
-      final native = _Native()..state = 'installerRequired';
+      final native = _Native()..state = 'migrationRequired';
       final client = MacHelperClient(native: native);
       final gate = Completer<CoreLifecycleResult>();
       final maintenance = MacHelperMaintenance(client, stop: () => gate.future);
       await maintenance.check();
       native.calls.clear();
-      final operation = maintenance.install(confirmed: true);
+      final operation = maintenance.migrate(confirmed: true);
       await expectLater(
         client.start(_session),
         throwsA(isA<MacHelperException>()),
@@ -402,8 +423,8 @@ void main() {
           outcome: CoreLifecycleOutcome.applied,
         ),
       );
-      expect(await operation, MacHelperState.installerRequired);
-      expect(native.calls, ['status', 'installerInstructions']);
+      expect(await operation, MacHelperState.migrationRequired);
+      expect(native.calls, ['migrate']);
     },
   );
 
@@ -411,7 +432,7 @@ void main() {
     'failed or superseded stop locks replacement, including recheck',
     () async {
       for (final superseded in [false, true]) {
-        final native = _Native()..state = 'updateRequired';
+        final native = _Native()..state = 'migrationRequired';
         final maintenance = MacHelperMaintenance(
           MacHelperClient(native: native),
           stop: () async {
@@ -425,14 +446,14 @@ void main() {
         await maintenance.check();
         native.calls.clear();
         expect(
-          await maintenance.install(confirmed: true),
+          await maintenance.migrate(confirmed: true),
           MacHelperState.exitUnconfirmed,
         );
         expect(native.calls, isEmpty);
         native.state = 'enabled';
         expect(await maintenance.check(), MacHelperState.exitUnconfirmed);
         expect(
-          await maintenance.install(confirmed: true),
+          await maintenance.migrate(confirmed: true),
           MacHelperState.exitUnconfirmed,
         );
         expect(native.calls, ['status']);
@@ -442,29 +463,66 @@ void main() {
 
   test(
     'untrusted or unsupported builds offer no activation or retry action',
-    () {
-      for (final state in [
-        MacHelperState.signingRequired,
-        MacHelperState.unsupported,
-        MacHelperState.disabled,
-      ]) {
-        expect(macHelperAction(state), isNull);
+    () async {
+      final l = lookupAppLocalizations(const Locale('en'));
+      for (final code in ['signingRequired', 'unsupported', 'notFound']) {
+        final flow = MacHelperMaintenance(
+          MacHelperClient(native: _Native()..state = code),
+          stop: () async => const CoreLifecycleResult(
+            revision: 1,
+            outcome: CoreLifecycleOutcome.applied,
+          ),
+        );
+        await flow.check();
+        final view = macHelperCardView(l, flow);
+        expect(view.primary, isNull, reason: code);
+        expect(
+          view.secondary,
+          anyOf(isNull, MacHelperCardAction.viewDetails),
+          reason: code,
+        );
       }
-      expect(
-        macHelperAction(MacHelperState.approvalRequired),
-        MacHelperAction.settings,
-      );
-      expect(macHelperAction(MacHelperState.enabled), null);
-      expect(
-        macHelperAction(MacHelperState.protectedInstallationRequired),
-        null,
-      );
-      expect(
-        macHelperAction(MacHelperState.installerRequired),
-        MacHelperAction.install,
-      );
     },
   );
+
+  test('card kinds and actions follow the helper state', () {
+    expect(
+      macHelperCardKind(MacHelperState.signatureFailed, false),
+      MacHelperCardKind.signatureFailed,
+    );
+    expect(
+      macHelperCardKind(MacHelperState.requiresApproval, false),
+      MacHelperCardKind.approval,
+    );
+    expect(
+      macHelperCardKind(MacHelperState.notRegistered, false),
+      MacHelperCardKind.approval,
+    );
+    expect(
+      macHelperCardKind(MacHelperState.disabledByUser, false),
+      MacHelperCardKind.disabledByUser,
+    );
+    expect(
+      macHelperCardKind(MacHelperState.starting, false),
+      MacHelperCardKind.starting,
+    );
+    expect(
+      macHelperCardKind(MacHelperState.starting, true),
+      MacHelperCardKind.startSlow,
+    );
+    expect(
+      macHelperCardKind(MacHelperState.staleHelper, false),
+      MacHelperCardKind.starting,
+    );
+    expect(
+      macHelperCardKind(MacHelperState.disabled, false),
+      MacHelperCardKind.unsupported,
+    );
+    expect(
+      macHelperCardKind(MacHelperState.enabled, false),
+      MacHelperCardKind.ready,
+    );
+  });
 
   test(
     '64-frame burst is copied, FIFO, exactly once under native cap 32',

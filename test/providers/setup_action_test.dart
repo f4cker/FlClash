@@ -204,7 +204,7 @@ class _TrayDeadlineSetupAction extends TestSetupAction {
 }
 
 class _ManagedHelperSetupAction extends TestSetupAction {
-  MacHelperState helperState = MacHelperState.installerRequired;
+  MacHelperState helperState = MacHelperState.migrationRequired;
   Completer<MacHelperState>? helperCheck;
   bool installSucceeds = false;
   int invitations = 0;

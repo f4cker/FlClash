@@ -5313,54 +5313,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tsViewerExitUnconfirmed => 'Tailscale 出口 · 当前运行的出口和分组待确认';
 
   @override
-  String get macHelperTitle => 'Flash 辅助程序';
-
-  @override
-  String get macHelperOff => '辅助程序未安装';
+  String get macHelperTitle => '辅助程序';
 
   @override
   String get macHelperOn => '辅助程序已就绪';
 
   @override
-  String get macHelperPending => '需要在 macOS 设置中允许';
-
-  @override
-  String get macHelperUnavailable => '助手暂不可用';
-
-  @override
-  String get macHelperCannotUse => '此版本不能启用助手';
-
-  @override
-  String get macHelperRepair => '辅助程序需要更新';
-
-  @override
-  String get macHelperStopUnknown => '无法确认辅助程序是否已就绪';
-
-  @override
-  String get macHelperTurnOn => '查看安装说明';
-
-  @override
-  String get macHelperTurnOff => '查看停用说明';
-
-  @override
-  String get macHelperOpenSettings => '打开 macOS 设置';
+  String get macHelperOpenSettings => '打开系统设置';
 
   @override
   String get macHelperTryAgain => '重试';
 
   @override
-  String get macHelperRepairAction => '查看修复说明';
-
-  @override
   String get macHelperCheckAgain => '重新检查';
 
   @override
-  String get macHelperUnavailableDetail =>
-      'Flash 现在连不上助手，TUN 暂时无法启动。你的 TUN 设置已保留。';
-
-  @override
-  String get macHelperPendingDetail =>
-      '请通过 Flash 的安装程序安装、更新、修复或停用助手，并明确批准管理员操作。停用不等于卸载 Flash，后续操作可能需要再次授权。安装程序完成不代表助手已就绪或 TUN 已运行。你的 TUN 设置已保留。';
+  String get macHelperUnavailableDetail => '辅助程序尚未就绪，TUN 暂时无法启动。你的 TUN 设置已保留。';
 
   @override
   String get trayMultipleNodes => '多节点';
@@ -5439,101 +5407,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get compositionRecordFailed => '配置已应用，但无法保存首次确认记录。重启应用后可能需要再次确认。';
 
   @override
-  String get macHelperInstallTitle => '安装 Flash 辅助程序？';
-
-  @override
-  String get macHelperUpdateTitle => '更新 Flash 辅助程序？';
-
-  @override
-  String get macHelperInstall => '安装';
-
-  @override
-  String get macHelperUpdate => '更新';
-
-  @override
-  String get macHelperNotNowInstall => '暂不安装';
-
-  @override
-  String get macHelperNotNowUpdate => '暂不更新';
-
-  @override
-  String get macHelperInstallDetail =>
-      '辅助程序在后台管理 Flash 的网络核心。安装时需要管理员授权；安装完成后，Flash 会检查它是否可用。';
-
-  @override
-  String get macHelperUpdateDetail => '已安装的辅助程序与当前版本不兼容。更新时可能需要管理员授权。';
-
-  @override
-  String get macHelperChecking => '正在检查辅助程序…';
-
-  @override
-  String get macHelperAuthorizing => '等待管理员授权';
-
-  @override
-  String get macHelperInstalling => '正在安装辅助程序…';
+  String get macHelperChecking => '正在检查…';
 
   @override
   String get macHelperUpdating => '正在更新辅助程序…';
 
   @override
-  String get macHelperInstallCancelled => '已取消安装';
+  String get macHelperMoveDetail => '请将 Flash 移到“应用程序”文件夹，然后重新打开 Flash。';
 
   @override
-  String get macHelperUpdateCancelled => '已取消更新';
-
-  @override
-  String get macHelperInstallFailed => '辅助程序安装失败';
-
-  @override
-  String get macHelperUpdateFailed => '辅助程序更新失败';
-
-  @override
-  String get macHelperLater => '稍后再说';
-
-  @override
-  String get macHelperMoveDetail => '请将 Flash 移到“应用程序”文件夹，再重新打开以安装辅助程序。';
-
-  @override
-  String get macHelperApprovalDetail =>
-      '请在 macOS 系统设置中允许 Flash 辅助程序，然后返回此处重新检查。';
-
-  @override
-  String get macHelperDeniedDetail => '管理员授权被拒绝。准备好授权后，可以手动重试。';
-
-  @override
-  String get macHelperFailedDetail => 'macOS 未能完成操作。你可以手动重试。';
-
-  @override
-  String get macHelperUnknownDetail =>
-      '无法确认操作结果。请重新检查辅助程序是否已就绪；确认前，Flash 不会重复安装。';
-
-  @override
-  String get macHelperVerificationDetail =>
-      '辅助程序未通过安全性或兼容性检查。请使用可信且兼容的 Flash 版本。';
-
-  @override
-  String get macHelperPayloadDetail => '无法验证安装文件。请更换为完整、可信的 Flash 副本后重试。';
-
-  @override
-  String get macHelperReadyDetail => '辅助程序已可用，但不表示 TUN 或连接正在运行。准备好后，请再次启用所需功能。';
-
-  @override
-  String get macHelperMoreDetails => '展开详情';
-
-  @override
-  String get macHelperLessDetails => '收起详情';
+  String get macHelperApprovalDetail => '在系统设置中打开 Flash 的后台运行开关。';
 
   @override
   String get macHelperMoveTitle => '请将 Flash 移到“应用程序”';
-
-  @override
-  String get macHelperStartupUpdate => '辅助程序需要更新，内核未启动';
-
-  @override
-  String get macHelperStartupInstall => '辅助程序未安装，内核未启动';
-
-  @override
-  String get macHelperStartupUnavailable => '辅助程序暂不可用，内核未启动';
 
   @override
   String get macHelperStatusUnknown => '无法确认辅助程序状态';
@@ -5542,13 +5428,92 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperCoreUnconfirmed => '内核运行状态待确认';
 
   @override
-  String get macHelperInstallAction => '安装辅助程序';
+  String get macHelperMigrationTitle => '需要更新辅助程序';
 
   @override
-  String get macHelperUpdateAction => '更新辅助程序';
+  String get macHelperMigrationDetail => 'Flash 需要移除旧版辅助程序并启用新版。更新时需要输入管理员密码。';
 
   @override
-  String get macHelperVerificationFailed => '辅助程序验证失败';
+  String get macHelperMigrationAction => '开始更新';
+
+  @override
+  String get macHelperApprovalTitle => '请允许 Flash 在后台运行';
+
+  @override
+  String get macHelperApprovalStep1 => '打开“登录项与扩展”。';
+
+  @override
+  String get macHelperApprovalStep2 => '在“允许在后台”中找到 Flash。';
+
+  @override
+  String get macHelperApprovalStep3 => '打开 Flash 旁边的开关，然后返回 Flash。';
+
+  @override
+  String macHelperStepLabel(Object number, Object text) {
+    return '第 $number 步：$text';
+  }
+
+  @override
+  String get macHelperStartingTitle => '正在启动辅助程序…';
+
+  @override
+  String get macHelperStartingDetail => '请稍候。';
+
+  @override
+  String get macHelperStartSlowTitle => '辅助程序启动时间较长';
+
+  @override
+  String get macHelperStartSlowDetail => '暂时无法确认辅助程序是否已启动。请重新检查；如果仍未就绪，请查看详情。';
+
+  @override
+  String get macHelperViewDetails => '查看详情';
+
+  @override
+  String get macHelperSignatureTitle => '辅助程序未通过安全检查';
+
+  @override
+  String get macHelperSignatureDetail => 'Flash 未运行辅助程序。请重新下载安装 Flash。';
+
+  @override
+  String get macHelperDisabledTitle => '辅助程序已关闭';
+
+  @override
+  String get macHelperDisabledDetail =>
+      '请在系统设置的“登录项与扩展”中，打开 Flash 的后台运行开关，然后返回 Flash。';
+
+  @override
+  String get macHelperFailedTitle => '辅助程序更新未完成';
+
+  @override
+  String get macHelperFailedStopOld => '无法停止旧版辅助程序，请重试。';
+
+  @override
+  String get macHelperFailedRemoveOld => '无法移除旧版辅助程序，请重试。';
+
+  @override
+  String get macHelperFailedRegisterNew => '无法注册新版辅助程序，请重试。';
+
+  @override
+  String get macHelperFailedUnknown => '更新时遇到问题，请查看详情后重试。';
+
+  @override
+  String get macHelperRequiredTitle => '请先启用辅助程序';
+
+  @override
+  String get macHelperRequiredDetail => '此功能需要辅助程序。请按提示完成设置后再试。';
+
+  @override
+  String get macHelperViewSetup => '查看设置';
+
+  @override
+  String get macHelperReinstallTitle => '无法使用辅助程序';
+
+  @override
+  String get macHelperReinstallDetail =>
+      'Flash 中的辅助程序缺失或与此版本不匹配。请重新下载安装 Flash。';
+
+  @override
+  String get macHelperUnsupportedDetail => '辅助程序需要 macOS 14 或更高版本。';
 
   @override
   String get liveStatus => '实时状态';

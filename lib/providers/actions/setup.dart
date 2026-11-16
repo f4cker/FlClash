@@ -231,7 +231,7 @@ class SetupAction extends _$SetupAction {
   Future<MacHelperState> checkMacHelper() => macHelperMaintenance.check();
 
   @protected
-  Future<void> presentMacHelper() => showMacHelperFlow();
+  Future<void> presentMacHelper() => showMacHelperFlow(requiredByFeature: true);
 
   int _tunHelperRevision = 0;
 

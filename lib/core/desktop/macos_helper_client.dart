@@ -7,37 +7,117 @@ import 'package:flutter/services.dart';
 const macosManagedHelperBuild = bool.fromEnvironment('MACOS_MANAGED_HELPER');
 const macosHelperMaxFrame = 64 * 1024 * 1024;
 
+/// User-facing state of the bundled SMAppService daemon.
 enum MacHelperState {
-  off,
-  installerRequired,
-  updateRequired,
+  /// Registered, approved, and the running daemon answered for this build.
   enabled,
-  approvalRequired,
-  unavailable,
-  incompatible,
-  signingRequired,
-  protectedInstallationRequired,
+
+  /// The old pkg-installed helper (or its residue) must be removed first.
+  migrationRequired,
+
+  /// Registered but waiting for the user in Login Items & Extensions.
+  requiresApproval,
+
+  /// Was approved before; the user switched it off in System Settings.
+  disabledByUser,
+
+  /// Not yet registered with SMAppService.
+  notRegistered,
+
+  /// Approved; the daemon has not answered yet (launchd starts it on demand).
+  starting,
+
+  /// A daemon process from the previous app build still answers.
+  staleHelper,
+
+  /// The bundled daemon failed its pinned code-signing check.
+  signatureFailed,
+
+  /// The bundled daemon is missing/incompatible or Flash is not in /Applications.
+  reinstallRequired,
+  moveRequired,
+
+  /// Removing the old helper or registering the new one did not finish.
+  updateFailed,
+
   unsupported,
   disabled,
-  denied,
-  repairRequired,
   exitUnconfirmed,
-  cancelled,
-  failed,
+  unavailable;
+
+  static MacHelperState parse(
+    Object? code, [
+    Object? previouslyEnabled,
+  ]) => switch (code) {
+    'enabled' => enabled,
+    'requiresApproval' =>
+      previouslyEnabled == true ? disabledByUser : requiresApproval,
+    'notRegistered' => notRegistered,
+    'migrationRequired' || 'authorizationCancelled' => migrationRequired,
+    'migrationIncomplete' ||
+    'migrationFailed' ||
+    'registrationFailed' ||
+    'authorizationDenied' => updateFailed,
+    'staleHelper' => staleHelper,
+    'signingRequired' => signatureFailed,
+    'notFound' || 'incompatible' => reinstallRequired,
+    'moveRequired' => moveRequired,
+    'unsupported' => unsupported,
+    'disabled' => disabled,
+    'exitUnconfirmed' => exitUnconfirmed,
+    // The bridge reports `unavailable` when an approved daemon does not answer yet.
+    'unavailable' => starting,
+    _ => unavailable,
+  };
+}
+
+/// The step of the update that did not complete, as reported by the native side.
+enum MacHelperFailedStep {
+  stopOld,
+  removeOld,
+  registerNew,
   unknown;
 
-  static MacHelperState parse(Object? code) => switch (code) {
-    'authorizationCancelled' => cancelled,
-    'authorizationDenied' => denied,
-    'installationFailed' ||
-    'installerPayloadInvalid' ||
-    'invalidRequest' => failed,
-    'installationUnknown' || 'installInProgress' => unknown,
-    _ => values.firstWhere(
-      (value) => value.name == code,
-      orElse: () => unavailable,
-    ),
-  };
+  static MacHelperFailedStep parse(Object? value) =>
+      values.firstWhere((step) => step.name == value, orElse: () => unknown);
+}
+
+final class MacHelperFailure {
+  final MacHelperFailedStep step;
+
+  /// Raw, copyable native error text. Never interpreted beyond the step.
+  final String detail;
+
+  const MacHelperFailure(this.step, this.detail);
+
+  static MacHelperFailure? fromAnswer(Map<Object?, Object?> answer) {
+    final code = answer['code'];
+    String text(Object? value) => value is String ? value : '';
+    final residue = answer['residue'];
+    final residueText = residue is List && residue.isNotEmpty
+        ? '\nresidue: ${residue.join(', ')}'
+        : '';
+    return switch (code) {
+      'migrationFailed' => MacHelperFailure(
+        MacHelperFailedStep.parse(answer['step']),
+        '${text(answer['detail'])}$residueText'.trim(),
+      ),
+      'registrationFailed' => MacHelperFailure(
+        MacHelperFailedStep.registerNew,
+        'registrationFailed ${text(answer['domain'])} ${answer['error'] ?? ''}'
+            .trim(),
+      ),
+      'migrationIncomplete' => MacHelperFailure(
+        MacHelperFailedStep.unknown,
+        'migrationIncomplete$residueText',
+      ),
+      'authorizationDenied' => const MacHelperFailure(
+        MacHelperFailedStep.unknown,
+        'authorizationDenied',
+      ),
+      _ => null,
+    };
+  }
 }
 
 abstract interface class MacHelperNativeApi {
@@ -119,9 +199,13 @@ final class MacHelperClient {
   String? _session;
   String? _lastStopped;
   bool _maintenance = false;
-  bool _installing = false;
-  bool _installationUnknown = false;
-  String? failureCode;
+
+  /// Raw code of the last native answer, shown under "View details".
+  String? lastCode;
+
+  /// Failed update step; kept until a later answer reports another outcome so
+  /// a generic `migrationIncomplete` does not hide the step that failed.
+  MacHelperFailure? failure;
   _MacHelperRelay? _relay;
   bool _sending = false;
 
@@ -141,78 +225,59 @@ final class MacHelperClient {
     if (_safeMode()) throw const MacHelperException('disabled');
   }
 
-  Future<MacHelperState> status() async {
+  MacHelperState _record(Map<Object?, Object?> answer) {
+    final code = answer['code'];
+    lastCode = code is String ? code : null;
+    final state = code == 'authorizationCancelled'
+        ? MacHelperState.parse(answer['status'] ?? 'migrationRequired')
+        : MacHelperState.parse(code, answer['previouslyEnabled']);
+    final next = MacHelperFailure.fromAnswer(answer);
+    if (state != MacHelperState.updateFailed) {
+      failure = null;
+    } else if (next != null &&
+        (next.step != MacHelperFailedStep.unknown || failure == null)) {
+      failure = next;
+    }
+    return state;
+  }
+
+  Future<MacHelperState> _call(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) async {
     if (_safeMode()) return MacHelperState.disabled;
     try {
-      final answer = await _native.invoke('status');
-      final state = MacHelperState.parse(answer['code']);
-      final underlying = MacHelperState.parse(answer['installationStatus']);
+      final state = _record(await _native.invoke(method, arguments));
       if (_session != null && _relay?.active != true) {
         return MacHelperState.exitUnconfirmed;
       }
-      if (_installationUnknown) {
-        if (state == MacHelperState.enabled) {
-          _installationUnknown = false;
-        } else if (state != MacHelperState.approvalRequired) {
-          return underlying == MacHelperState.approvalRequired
-              ? MacHelperState.approvalRequired
-              : MacHelperState.unknown;
-        }
-      }
-      if (state == MacHelperState.unknown) {
-        _installationUnknown = true;
-        if (underlying == MacHelperState.approvalRequired) {
-          return MacHelperState.approvalRequired;
-        }
-      }
       return state;
     } on Exception {
+      lastCode = 'channelError';
       return MacHelperState.unavailable;
     }
   }
 
-  Future<MacHelperState> installerInstructions({
-    required bool confirmed,
-  }) async {
+  Future<MacHelperState> status() => _call('status');
+
+  /// Remove the old helper (one administrator prompt) and register the daemon.
+  Future<MacHelperState> migrate({required bool confirmed}) {
     if (!confirmed) throw const MacHelperException('consentRequired');
     _requireEffects();
-    if (_installing) throw const MacHelperException('maintenance');
-    if (_installationUnknown) return MacHelperState.unknown;
-    if (_session != null) return MacHelperState.exitUnconfirmed;
-    _installing = true;
-    failureCode = null;
-    try {
-      final state = await status();
-      if (!{
-        MacHelperState.off,
-        MacHelperState.installerRequired,
-        MacHelperState.updateRequired,
-        MacHelperState.incompatible,
-      }.contains(state)) {
-        return state;
-      }
-      final result = await _native.invoke('installerInstructions', {
-        'confirmed': true,
-      });
-      final code = result['code'];
-      failureCode = code is String ? code : null;
-      if (code == 'ok' || code == 'enabled') return await status();
-      final outcome = MacHelperState.parse(code);
-      if (outcome == MacHelperState.unknown ||
-          outcome == MacHelperState.unavailable ||
-          outcome == MacHelperState.exitUnconfirmed) {
-        _installationUnknown = true;
-        return result['installationStatus'] == 'approvalRequired'
-            ? MacHelperState.approvalRequired
-            : MacHelperState.unknown;
-      }
-      return outcome;
-    } on Exception {
-      _installationUnknown = true;
-      return MacHelperState.unknown;
-    } finally {
-      _installing = false;
-    }
+    if (_session != null) return Future.value(MacHelperState.exitUnconfirmed);
+    return _call('migrate', {'confirmed': true});
+  }
+
+  /// Register with SMAppService; no administrator prompt.
+  Future<MacHelperState> enable() {
+    _requireEffects();
+    return _call('enable');
+  }
+
+  /// Retire a daemon process left over from the previous app build.
+  Future<MacHelperState> repair() {
+    _requireEffects();
+    return _call('repair');
   }
 
   Future<void> openSettings() async {
@@ -235,13 +300,12 @@ final class MacHelperClient {
 
   Future<int> start(String session) async {
     _requireEffects();
-    if (_maintenance || _installing) {
+    if (_maintenance) {
       throw const MacHelperException('maintenance');
     }
-    if (_installationUnknown) throw const MacHelperException('unknown');
     if (_session != null) throw const MacHelperException('exitUnconfirmed');
     final state = await status();
-    if (_maintenance || _installing) {
+    if (_maintenance) {
       throw const MacHelperException('maintenance');
     }
     if (state != MacHelperState.enabled) throw MacHelperException(state.name);

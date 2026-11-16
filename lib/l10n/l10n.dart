@@ -9801,14 +9801,8 @@ abstract class AppLocalizations {
   /// No description provided for @macHelperTitle.
   ///
   /// In en, this message translates to:
-  /// **'Flash Helper'**
+  /// **'Helper'**
   String get macHelperTitle;
-
-  /// No description provided for @macHelperOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Helper not installed'**
-  String get macHelperOff;
 
   /// No description provided for @macHelperOn.
   ///
@@ -9816,83 +9810,29 @@ abstract class AppLocalizations {
   /// **'Helper ready'**
   String get macHelperOn;
 
-  /// No description provided for @macHelperPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Approval required in macOS Settings'**
-  String get macHelperPending;
-
-  /// No description provided for @macHelperUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Helper unavailable'**
-  String get macHelperUnavailable;
-
-  /// No description provided for @macHelperCannotUse.
-  ///
-  /// In en, this message translates to:
-  /// **'This version can’t use the helper'**
-  String get macHelperCannotUse;
-
-  /// No description provided for @macHelperRepair.
-  ///
-  /// In en, this message translates to:
-  /// **'Helper update required'**
-  String get macHelperRepair;
-
-  /// No description provided for @macHelperStopUnknown.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to confirm helper readiness'**
-  String get macHelperStopUnknown;
-
-  /// No description provided for @macHelperTurnOn.
-  ///
-  /// In en, this message translates to:
-  /// **'Installer Instructions'**
-  String get macHelperTurnOn;
-
-  /// No description provided for @macHelperTurnOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Turn-Off Instructions'**
-  String get macHelperTurnOff;
-
   /// No description provided for @macHelperOpenSettings.
   ///
   /// In en, this message translates to:
-  /// **'Open macOS Settings'**
+  /// **'Open System Settings'**
   String get macHelperOpenSettings;
 
   /// No description provided for @macHelperTryAgain.
   ///
   /// In en, this message translates to:
-  /// **'Retry'**
+  /// **'Try again'**
   String get macHelperTryAgain;
-
-  /// No description provided for @macHelperRepairAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Repair Instructions'**
-  String get macHelperRepairAction;
 
   /// No description provided for @macHelperCheckAgain.
   ///
   /// In en, this message translates to:
-  /// **'Check Again'**
+  /// **'Check again'**
   String get macHelperCheckAgain;
 
   /// No description provided for @macHelperUnavailableDetail.
   ///
   /// In en, this message translates to:
-  /// **'Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.'**
+  /// **'The helper isn’t ready, so TUN can’t start yet. Your TUN setting is kept.'**
   String get macHelperUnavailableDetail;
-
-  /// No description provided for @macHelperPendingDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.'**
-  String get macHelperPendingDetail;
 
   /// No description provided for @trayMultipleNodes.
   ///
@@ -10026,71 +9966,11 @@ abstract class AppLocalizations {
   /// **'The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.'**
   String get compositionRecordFailed;
 
-  /// No description provided for @macHelperInstallTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Install Flash Helper?'**
-  String get macHelperInstallTitle;
-
-  /// No description provided for @macHelperUpdateTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Update Flash Helper?'**
-  String get macHelperUpdateTitle;
-
-  /// No description provided for @macHelperInstall.
-  ///
-  /// In en, this message translates to:
-  /// **'Install'**
-  String get macHelperInstall;
-
-  /// No description provided for @macHelperUpdate.
-  ///
-  /// In en, this message translates to:
-  /// **'Update'**
-  String get macHelperUpdate;
-
-  /// No description provided for @macHelperNotNowInstall.
-  ///
-  /// In en, this message translates to:
-  /// **'Not Now'**
-  String get macHelperNotNowInstall;
-
-  /// No description provided for @macHelperNotNowUpdate.
-  ///
-  /// In en, this message translates to:
-  /// **'Not Now'**
-  String get macHelperNotNowUpdate;
-
-  /// No description provided for @macHelperInstallDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'The helper manages Flash’s network core in the background. Installation requires administrator authorization. After installation, Flash will check whether the helper is available.'**
-  String get macHelperInstallDetail;
-
-  /// No description provided for @macHelperUpdateDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'The installed helper is incompatible with this version of Flash. Updating may require administrator authorization.'**
-  String get macHelperUpdateDetail;
-
   /// No description provided for @macHelperChecking.
   ///
   /// In en, this message translates to:
-  /// **'Checking helper…'**
+  /// **'Checking…'**
   String get macHelperChecking;
-
-  /// No description provided for @macHelperAuthorizing.
-  ///
-  /// In en, this message translates to:
-  /// **'Waiting for administrator authorization'**
-  String get macHelperAuthorizing;
-
-  /// No description provided for @macHelperInstalling.
-  ///
-  /// In en, this message translates to:
-  /// **'Installing helper…'**
-  String get macHelperInstalling;
 
   /// No description provided for @macHelperUpdating.
   ///
@@ -10098,119 +9978,23 @@ abstract class AppLocalizations {
   /// **'Updating helper…'**
   String get macHelperUpdating;
 
-  /// No description provided for @macHelperInstallCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Installation cancelled'**
-  String get macHelperInstallCancelled;
-
-  /// No description provided for @macHelperUpdateCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Update cancelled'**
-  String get macHelperUpdateCancelled;
-
-  /// No description provided for @macHelperInstallFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Helper installation failed'**
-  String get macHelperInstallFailed;
-
-  /// No description provided for @macHelperUpdateFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Helper update failed'**
-  String get macHelperUpdateFailed;
-
-  /// No description provided for @macHelperLater.
-  ///
-  /// In en, this message translates to:
-  /// **'Later'**
-  String get macHelperLater;
-
   /// No description provided for @macHelperMoveDetail.
   ///
   /// In en, this message translates to:
-  /// **'Move Flash to Applications, then reopen it to install the helper.'**
+  /// **'Move Flash to the Applications folder, then open Flash again.'**
   String get macHelperMoveDetail;
 
   /// No description provided for @macHelperApprovalDetail.
   ///
   /// In en, this message translates to:
-  /// **'Allow Flash Helper in macOS System Settings, then return here and check again.'**
+  /// **'Turn on Flash’s background switch in System Settings.'**
   String get macHelperApprovalDetail;
-
-  /// No description provided for @macHelperDeniedDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Administrator authorization was denied. You can retry when you are ready to authorize.'**
-  String get macHelperDeniedDetail;
-
-  /// No description provided for @macHelperFailedDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'macOS could not complete the operation. You can retry manually.'**
-  String get macHelperFailedDetail;
-
-  /// No description provided for @macHelperUnknownDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'The operation’s outcome is unknown. Check again to confirm helper readiness; Flash will not repeat the installation while it is unconfirmed.'**
-  String get macHelperUnknownDetail;
-
-  /// No description provided for @macHelperVerificationDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'The helper’s security or compatibility check failed. Use a trusted, compatible release of Flash.'**
-  String get macHelperVerificationDetail;
-
-  /// No description provided for @macHelperPayloadDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'The installation files could not be verified. Replace Flash with a complete, trusted copy and try again.'**
-  String get macHelperPayloadDetail;
-
-  /// No description provided for @macHelperReadyDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'The helper is available. This does not mean TUN or a connection is running. Retry the feature when you are ready.'**
-  String get macHelperReadyDetail;
-
-  /// No description provided for @macHelperMoreDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'Show Details'**
-  String get macHelperMoreDetails;
-
-  /// No description provided for @macHelperLessDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'Hide Details'**
-  String get macHelperLessDetails;
 
   /// No description provided for @macHelperMoveTitle.
   ///
   /// In en, this message translates to:
   /// **'Move Flash to Applications'**
   String get macHelperMoveTitle;
-
-  /// No description provided for @macHelperStartupUpdate.
-  ///
-  /// In en, this message translates to:
-  /// **'Helper update required. The core hasn’t started.'**
-  String get macHelperStartupUpdate;
-
-  /// No description provided for @macHelperStartupInstall.
-  ///
-  /// In en, this message translates to:
-  /// **'Helper not installed. The core hasn’t started.'**
-  String get macHelperStartupInstall;
-
-  /// No description provided for @macHelperStartupUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Helper unavailable. The core hasn’t started.'**
-  String get macHelperStartupUnavailable;
 
   /// No description provided for @macHelperStatusUnknown.
   ///
@@ -10224,23 +10008,173 @@ abstract class AppLocalizations {
   /// **'Core status unconfirmed'**
   String get macHelperCoreUnconfirmed;
 
-  /// No description provided for @macHelperInstallAction.
+  /// No description provided for @macHelperMigrationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Install Helper'**
-  String get macHelperInstallAction;
+  /// **'Helper update required'**
+  String get macHelperMigrationTitle;
 
-  /// No description provided for @macHelperUpdateAction.
+  /// No description provided for @macHelperMigrationDetail.
   ///
   /// In en, this message translates to:
-  /// **'Update Helper'**
-  String get macHelperUpdateAction;
+  /// **'Flash needs to remove the old helper and turn on the new one. You’ll be asked for your administrator password.'**
+  String get macHelperMigrationDetail;
 
-  /// No description provided for @macHelperVerificationFailed.
+  /// No description provided for @macHelperMigrationAction.
   ///
   /// In en, this message translates to:
-  /// **'Helper verification failed'**
-  String get macHelperVerificationFailed;
+  /// **'Start update'**
+  String get macHelperMigrationAction;
+
+  /// No description provided for @macHelperApprovalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Flash to run in the background'**
+  String get macHelperApprovalTitle;
+
+  /// No description provided for @macHelperApprovalStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Login Items & Extensions.'**
+  String get macHelperApprovalStep1;
+
+  /// No description provided for @macHelperApprovalStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Allow in the Background, find Flash.'**
+  String get macHelperApprovalStep2;
+
+  /// No description provided for @macHelperApprovalStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on the switch next to Flash, then come back to Flash.'**
+  String get macHelperApprovalStep3;
+
+  /// No description provided for @macHelperStepLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {number}: {text}'**
+  String macHelperStepLabel(Object number, Object text);
+
+  /// No description provided for @macHelperStartingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting helper…'**
+  String get macHelperStartingTitle;
+
+  /// No description provided for @macHelperStartingDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait.'**
+  String get macHelperStartingDetail;
+
+  /// No description provided for @macHelperStartSlowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper is taking longer to start'**
+  String get macHelperStartSlowTitle;
+
+  /// No description provided for @macHelperStartSlowDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash can’t confirm yet whether the helper has started. Check again; if it’s still not ready, view the details.'**
+  String get macHelperStartSlowDetail;
+
+  /// No description provided for @macHelperViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View details'**
+  String get macHelperViewDetails;
+
+  /// No description provided for @macHelperSignatureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper didn’t pass the security check'**
+  String get macHelperSignatureTitle;
+
+  /// No description provided for @macHelperSignatureDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash didn’t run the helper. Download and install Flash again.'**
+  String get macHelperSignatureDetail;
+
+  /// No description provided for @macHelperDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper is turned off'**
+  String get macHelperDisabledTitle;
+
+  /// No description provided for @macHelperDisabledDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'In System Settings, go to Login Items & Extensions, turn on Flash’s background switch, then come back to Flash.'**
+  String get macHelperDisabledDetail;
+
+  /// No description provided for @macHelperFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper update didn’t finish'**
+  String get macHelperFailedTitle;
+
+  /// No description provided for @macHelperFailedStopOld.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t stop the old helper. Try again.'**
+  String get macHelperFailedStopOld;
+
+  /// No description provided for @macHelperFailedRemoveOld.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t remove the old helper. Try again.'**
+  String get macHelperFailedRemoveOld;
+
+  /// No description provided for @macHelperFailedRegisterNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t register the new helper. Try again.'**
+  String get macHelperFailedRegisterNew;
+
+  /// No description provided for @macHelperFailedUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong during the update. View the details, then try again.'**
+  String get macHelperFailedUnknown;
+
+  /// No description provided for @macHelperRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on the helper first'**
+  String get macHelperRequiredTitle;
+
+  /// No description provided for @macHelperRequiredDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature needs the helper. Finish the setup, then try again.'**
+  String get macHelperRequiredDetail;
+
+  /// No description provided for @macHelperViewSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'View setup'**
+  String get macHelperViewSetup;
+
+  /// No description provided for @macHelperReinstallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper can’t be used'**
+  String get macHelperReinstallTitle;
+
+  /// No description provided for @macHelperReinstallDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper inside Flash is missing or doesn’t match this version. Download and install Flash again.'**
+  String get macHelperReinstallDetail;
+
+  /// No description provided for @macHelperUnsupportedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper requires macOS 14 or later.'**
+  String get macHelperUnsupportedDetail;
 
   /// No description provided for @liveStatus.
   ///
