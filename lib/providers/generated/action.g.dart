@@ -40,7 +40,7 @@ final class CommonActionProvider extends $NotifierProvider<CommonAction, void> {
   }
 }
 
-String _$commonActionHash() => r'15baafcc30c4fd1bdaada3a060879e8430541bdc';
+String _$commonActionHash() => r'826c7b6edca6d485e4b64608fbd7331716f187ef';
 
 abstract class _$CommonAction extends $Notifier<void> {
   void build();
@@ -91,7 +91,7 @@ final class SetupActionProvider extends $NotifierProvider<SetupAction, void> {
   }
 }
 
-String _$setupActionHash() => r'18ff44174700e1155f9b8e98f0b9d388bf8c13f1';
+String _$setupActionHash() => r'9d70ab370e2c4758d5b649c1493dcccf5e40ade6';
 
 abstract class _$SetupAction extends $Notifier<void> {
   void build();
@@ -244,7 +244,7 @@ final class SystemActionProvider extends $NotifierProvider<SystemAction, void> {
   }
 }
 
-String _$systemActionHash() => r'c4322f9eb86a47c36b27549e0e46094495eaf9c0';
+String _$systemActionHash() => r'78a96d92b61e42739643e6381b19a37e8d36d3d4';
 
 abstract class _$SystemAction extends $Notifier<void> {
   void build();
@@ -398,7 +398,7 @@ final class ProxiesActionProvider
   }
 }
 
-String _$proxiesActionHash() => r'f5ab52e013477fa15b31400f7db32038e222e507';
+String _$proxiesActionHash() => r'e316b68deff398abd8713cb9ad7481d679a9b965';
 
 abstract class _$ProxiesAction extends $Notifier<void> {
   void build();
@@ -450,7 +450,7 @@ final class ProfilesActionProvider
   }
 }
 
-String _$profilesActionHash() => r'd8a34d545b8191c46b1cff11a00ee5f33a7c2f8c';
+String _$profilesActionHash() => r'd922bca4ceb4c11faba2c0936586fb7f3f1cd116';
 
 abstract class _$ProfilesAction extends $Notifier<void> {
   void build();
@@ -818,6 +818,123 @@ final class UpdatingActionProvider
 String _$updatingActionHash() => r'f98e26e80cc700f84e880393d0b280a08c37789b';
 
 abstract class _$UpdatingAction extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(TailscaleAction)
+final tailscaleActionProvider = TailscaleActionProvider._();
+
+final class TailscaleActionProvider
+    extends $NotifierProvider<TailscaleAction, void> {
+  TailscaleActionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tailscaleActionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tailscaleActionHash();
+
+  @$internal
+  @override
+  TailscaleAction create() => TailscaleAction();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$tailscaleActionHash() => r'c9e28e4d6e17426e5a4fcb0f4f46b12817b5a632';
+
+abstract class _$TailscaleAction extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Mount operations run one at a time. Each save writes the relation with a
+/// pending record first, and only a readback, or a target that is not
+/// running, clears it; an unknown outcome keeps the target locked.
+
+@ProviderFor(MountAction)
+final mountActionProvider = MountActionProvider._();
+
+/// Mount operations run one at a time. Each save writes the relation with a
+/// pending record first, and only a readback, or a target that is not
+/// running, clears it; an unknown outcome keeps the target locked.
+final class MountActionProvider extends $NotifierProvider<MountAction, void> {
+  /// Mount operations run one at a time. Each save writes the relation with a
+  /// pending record first, and only a readback, or a target that is not
+  /// running, clears it; an unknown outcome keeps the target locked.
+  MountActionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mountActionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mountActionHash();
+
+  @$internal
+  @override
+  MountAction create() => MountAction();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$mountActionHash() => r'b9798fc3eac81136d208dd8c5c810a8bebca97dc';
+
+/// Mount operations run one at a time. Each save writes the relation with a
+/// pending record first, and only a readback, or a target that is not
+/// running, clears it; an unknown outcome keeps the target locked.
+
+abstract class _$MountAction extends $Notifier<void> {
   void build();
   @$mustCallSuper
   @override

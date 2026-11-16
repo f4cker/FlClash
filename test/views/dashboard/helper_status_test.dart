@@ -7,7 +7,8 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/config/macos_helper.dart';
-import 'package:fl_clash/views/dashboard/widgets/core_status_button.dart';
+import 'package:fl_clash/views/dashboard/widgets/live_status.dart';
+import 'package:fl_clash/views/dashboard/widgets/mac_helper_status.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,7 +67,9 @@ void main() {
             data: MediaQueryData(textScaler: TextScaler.linear(scale)),
             child: Scaffold(
               title: 'Dashboard',
-              actions: [CoreStatusButton(maintenance: flow)],
+              actions: [
+                LiveStatusButton(separateCore: true, maintenance: flow),
+              ],
               body: MacHelperStatus(
                 maintenance: flow,
                 child: const SizedBox.expand(),
@@ -131,7 +134,7 @@ void main() {
     native.pending!.complete({'code': 'enabled'});
     await tester.pumpAndSettle();
     expect(find.text(l.macHelperInstalling), findsNothing);
-    expect(find.text(l.disconnected), findsOneWidget);
+    expect(find.bySemanticsLabel(l.coreStopped), findsOneWidget);
     expect(container.read(coreStatusProvider), CoreStatus.disconnected);
     expect(container.read(isStartProvider), isFalse);
     expect(container.read(patchClashConfigProvider), saved);
@@ -276,7 +279,10 @@ void main() {
     globalState.container = container;
     container.read(viewSizeProvider.notifier).value = const Size(1200, 800);
     await pumpStatus(tester);
-    expect(find.text(currentAppLocalizations.disconnected), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(currentAppLocalizations.coreStopped),
+      findsOneWidget,
+    );
     expect(
       find.text(currentAppLocalizations.macHelperUpdateAction),
       findsNothing,

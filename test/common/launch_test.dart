@@ -33,7 +33,7 @@ void main() {
     launcher = _FakeLauncher();
     AutoLaunch.entry = launcher;
     autoLaunch = AutoLaunch();
-      });
+  });
 
   tearDownAll(() {
     AutoLaunch.entry = originalLauncher;
@@ -122,9 +122,7 @@ void main() {
       response = null;
       failure = null;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(MacOSLoginItemEntry.channel, (
-            call,
-          ) async {
+          .setMockMethodCallHandler(MacOSLoginItemEntry.channel, (call) async {
             calls.add(call);
             if (failure != null) throw failure!;
             return response;

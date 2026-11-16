@@ -442,25 +442,32 @@ void main() {
       },
     );
 
-    test('AppDelegate diagnostic lifecycle cannot enter WindowPlugin', () {
-      final source = read('macos/Runner/AppDelegate.swift');
-      final terminate = source.substring(
-        source.indexOf('override func applicationShouldTerminate('),
-      );
-      expect(
-        terminate.indexOf(
-          'if NativeLoadVerification.requested { NativeLoadVerification.fail("interrupted") }',
-        ),
-        lessThan(terminate.indexOf('WindowPlugin.instance')),
-      );
-      final reopen = source.substring(
-        source.indexOf('override func applicationShouldHandleReopen('),
-      );
-      expect(
-        reopen.indexOf('if NativeLoadVerification.requested { return false }'),
-        lessThan(reopen.indexOf('WindowPlugin.instance')),
-      );
-      expect(source, contains('return !NativeLoadVerification.requested'));
-    });
+    test(
+      'AppDelegate diagnostic lifecycle cannot reach the window lifecycle',
+      () {
+        final source = read('macos/Runner/AppDelegate.swift');
+        final terminate = source.substring(
+          source.indexOf('override func applicationShouldTerminate('),
+        );
+        expect(
+          terminate.indexOf(
+            'if NativeLoadVerification.requested { NativeLoadVerification.fail("interrupted") }',
+          ),
+          lessThan(
+            terminate.indexOf('name: .flClashApplicationShouldTerminate'),
+          ),
+        );
+        final reopen = source.substring(
+          source.indexOf('override func applicationShouldHandleReopen('),
+        );
+        expect(
+          reopen.indexOf(
+            'if NativeLoadVerification.requested { return false }',
+          ),
+          lessThan(reopen.indexOf('name: .flClashApplicationReopen')),
+        );
+        expect(source, contains('return !NativeLoadVerification.requested'));
+      },
+    );
   });
 }

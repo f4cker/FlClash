@@ -443,7 +443,7 @@ void main() {
   });
 
   group('mixed listener check', () {
-    setUpAll(() => AppLocalizations.load(const Locale('en')));
+    setUpAll(() => loadAppLocalizations(const Locale('en')));
 
     test('a start confirms the port the Core holds', () async {
       markInitialized();
@@ -646,7 +646,7 @@ void main() {
     late List<String> printed;
 
     setUp(() async {
-      await AppLocalizations.load(const Locale('zh', 'CN'));
+      loadAppLocalizations(const Locale('zh', 'CN'));
       printed = [];
       final original = debugPrint;
       debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
@@ -1245,8 +1245,8 @@ void main() {
     test(
       'a failed authorization preserves requested tun and asks again on retry',
       () async {
-        await AppLocalizations.load(const Locale('en'));
         loadAppLocalizations(const Locale('en'));
+        container
             .read(patchClashConfigProvider.notifier)
             .update((state) => state.copyWith.tun(enable: true));
         action.authorizeResult = AuthorizeCode.error;
@@ -1270,7 +1270,7 @@ void main() {
     test(
       'ordinary invalid controller rejects before authorization or update',
       () async {
-        await AppLocalizations.load(const Locale('en'));
+        loadAppLocalizations(const Locale('en'));
         final core = _MockCoreHandlerInterface();
         final scopedAction = TestSetupAction();
         final scoped = ProviderContainer(
@@ -1532,7 +1532,7 @@ void main() {
     }
 
     setUp(() async {
-      await AppLocalizations.load(const Locale('en'));
+      loadAppLocalizations(const Locale('en'));
       bindOwner();
     });
 

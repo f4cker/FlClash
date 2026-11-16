@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/core/method.dart';
+import 'package:fl_clash/core/spill.dart';
 import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -27,6 +28,7 @@ class _RecordingCore extends CoreHandlerInterface {
     required CoreMethod method,
     Object? arguments,
     Duration? timeout,
+    CoreResultModel? model,
   }) async {
     expect(method, CoreMethod.mountInspectTarget);
     this.arguments = arguments;
@@ -76,7 +78,6 @@ void main() {
     profileId: 1,
     profileLastUpdateDate: null,
     profileType: ProfileType.url,
-    extendType: ExtendType.standard,
     rules: [],
     proxyGroups: [],
     addedRules: [],
@@ -190,9 +191,7 @@ void main() {
   test(
     'script groups are unavailable without reading or executing scripts',
     () async {
-      final container = containerFor([
-        normal.copyWith(extendType: ExtendType.script, scriptId: 99),
-      ]);
+      final container = containerFor([normal.copyWith(scriptId: 99)]);
       final action =
           container.read(setupActionProvider.notifier) as _CountingSetup;
       await expectLater(

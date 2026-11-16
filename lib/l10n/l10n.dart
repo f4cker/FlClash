@@ -432,6 +432,36 @@ abstract class AppLocalizations {
   /// **'Auto launch'**
   String get autoLaunch;
 
+  /// No description provided for @loginItemRequiresApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Flash to open at login in System Settings.'**
+  String get loginItemRequiresApproval;
+
+  /// No description provided for @loginItemNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'macOS couldn’t find the current Flash app to set it to open at login.'**
+  String get loginItemNotFound;
+
+  /// No description provided for @loginItemUnexpectedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t confirm that Open at Login was updated as requested.'**
+  String get loginItemUnexpectedStatus;
+
+  /// No description provided for @loginItemMissingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t read the Open at Login status.'**
+  String get loginItemMissingStatus;
+
+  /// No description provided for @loginItemOperationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t change the Open at Login setting.'**
+  String get loginItemOperationFailed;
+
   /// No description provided for @silentLaunch.
   ///
   /// In en, this message translates to:
@@ -675,13 +705,13 @@ abstract class AppLocalizations {
   /// No description provided for @sendFromPhonePermissionDenied.
   ///
   /// In en, this message translates to:
-  /// **'Receiving a link from your phone needs the Nearby devices permission, which lets FlClash reach the local network. Turn it on in the app\'s settings.'**
+  /// **'Receiving a link from your phone needs the Nearby devices permission, which lets Flash reach the local network. Turn it on in the app\'s settings.'**
   String get sendFromPhonePermissionDenied;
 
   /// No description provided for @sendFromPhonePageTitle.
   ///
   /// In en, this message translates to:
-  /// **'Send a link to FlClash'**
+  /// **'Send a link to Flash'**
   String get sendFromPhonePageTitle;
 
   /// No description provided for @sendFromPhonePageHint.
@@ -711,7 +741,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareQrcodeTip.
   ///
   /// In en, this message translates to:
-  /// **'Scan with FlClash on another device to import this profile.'**
+  /// **'Scan with Flash on another device to import this profile.'**
   String get shareQrcodeTip;
 
   /// No description provided for @qrcodeTooLongTip.
@@ -843,8 +873,14 @@ abstract class AppLocalizations {
   /// No description provided for @project.
   ///
   /// In en, this message translates to:
-  /// **'Project'**
+  /// **'FlClash upstream project'**
   String get project;
+
+  /// No description provided for @upstreamTelegram.
+  ///
+  /// In en, this message translates to:
+  /// **'FlClash upstream Telegram'**
+  String get upstreamTelegram;
 
   /// No description provided for @core.
   ///
@@ -1007,6 +1043,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The app is already up to date'**
   String get checkUpdateError;
+
+  /// No description provided for @updateNoReleaseFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Flash release found yet'**
+  String get updateNoReleaseFound;
+
+  /// No description provided for @updateCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check for updates. Please try again.'**
+  String get updateCheckFailed;
 
   /// No description provided for @goDownload.
   ///
@@ -1899,7 +1947,7 @@ abstract class AppLocalizations {
   /// No description provided for @disclaimerDesc.
   ///
   /// In en, this message translates to:
-  /// **'Before using FlClash (\"the Software\"), please read this statement carefully and make sure you understand it. Tapping \"Agree\" means you have read and understood what follows. If you do not want to continue, tap \"Exit\".'**
+  /// **'Before using Flash (\"the Software\"), please read this statement carefully and make sure you understand it. Tapping \"Agree\" means you have read and understood what follows. If you do not want to continue, tap \"Exit\".'**
   String get disclaimerDesc;
 
   /// No description provided for @disclaimerSoftwareTitle.
@@ -2184,6 +2232,24 @@ abstract class AppLocalizations {
   /// **'Hide timed-out proxies'**
   String get hideTimeoutProxies;
 
+  /// No description provided for @showHiddenGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Show hidden groups'**
+  String get showHiddenGroups;
+
+  /// No description provided for @hiddenGroupTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden'**
+  String get hiddenGroupTag;
+
+  /// No description provided for @hiddenGroupSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, Hidden'**
+  String hiddenGroupSemantics(Object name);
+
   /// No description provided for @stackMode.
   ///
   /// In en, this message translates to:
@@ -2310,6 +2376,18 @@ abstract class AppLocalizations {
   /// **'Copy environment variables'**
   String get copyEnvVar;
 
+  /// No description provided for @trayTunMode.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode'**
+  String get trayTunMode;
+
+  /// No description provided for @trayCopyProxyCommand.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy terminal proxy command'**
+  String get trayCopyProxyCommand;
+
   /// No description provided for @memoryInfo.
   ///
   /// In en, this message translates to:
@@ -2351,6 +2429,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Runtime overhead'**
   String get memoryCoreRuntime;
+
+  /// No description provided for @memoryGoRuntimeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Go runtime statistics; these values are not a breakdown of process resident memory.'**
+  String get memoryGoRuntimeDescription;
 
   /// No description provided for @memoryCoreNotRunning.
   ///
@@ -3567,14 +3651,26 @@ abstract class AppLocalizations {
   /// No description provided for @helperCorruptTip.
   ///
   /// In en, this message translates to:
-  /// **'Helper service unavailable; TUN mode cannot be enabled. Reinstall FlClash to restore it.'**
+  /// **'Helper service unavailable; TUN mode cannot be enabled. Reinstall Flash to restore it.'**
   String get helperCorruptTip;
 
   /// No description provided for @tunAuthorizationFailed.
   ///
   /// In en, this message translates to:
-  /// **'TUN could not be authorized, so it was turned off.'**
+  /// **'TUN authorization wasn’t completed. The configuration was not applied. Your in-app setting was kept.'**
   String get tunAuthorizationFailed;
+
+  /// No description provided for @mixedPortUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open port {port}. Another app may be using it. The proxy service did not start.'**
+  String mixedPortUnavailable(Object port);
+
+  /// No description provided for @mixedPortUnavailableProxyUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open port {port}. Another app may be using it. The proxy service did not start. System proxy settings were not changed.'**
+  String mixedPortUnavailableProxyUnchanged(Object port);
 
   /// No description provided for @sudoPasswordTitle.
   ///
@@ -3585,13 +3681,13 @@ abstract class AppLocalizations {
   /// No description provided for @coreBlockedByPolicyTip.
   ///
   /// In en, this message translates to:
-  /// **'Windows refused to run FlClashCore.exe (error {code}). An app control policy such as Smart App Control or AppLocker blocks unsigned programs; allow FlClash in that policy or turn it off, then try again.'**
+  /// **'Windows refused to run FlClashCore.exe (error {code}). An app control policy such as Smart App Control or AppLocker blocks unsigned programs; allow Flash in that policy or turn it off, then try again.'**
   String coreBlockedByPolicyTip(Object code);
 
   /// No description provided for @coreBlockedBySmartAppControlTip.
   ///
   /// In en, this message translates to:
-  /// **'Windows Smart App Control blocked FlClashCore.exe because it is not signed. Open Windows Security → App & browser control → Smart App Control settings, choose Off, then start FlClash again. Smart App Control cannot be turned back on without reinstalling Windows.'**
+  /// **'Windows Smart App Control blocked FlClashCore.exe because it is not signed. Open Windows Security → App & browser control → Smart App Control settings, choose Off, then start Flash again. Smart App Control cannot be turned back on without reinstalling Windows.'**
   String get coreBlockedBySmartAppControlTip;
 
   /// No description provided for @hideFromList.
@@ -4995,7 +5091,7 @@ abstract class AppLocalizations {
   /// No description provided for @initFailedTip.
   ///
   /// In en, this message translates to:
-  /// **'FlClash ran into an error while starting and can\'t continue. Copy the details to report the problem. If it keeps happening, clearing the data usually lets the app start again.'**
+  /// **'Flash ran into an error while starting and can\'t continue. Copy the details to report the problem. If it keeps happening, clearing the data usually lets the app start again.'**
   String get initFailedTip;
 
   /// No description provided for @errorDetails.
@@ -5991,7 +6087,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmEnableTip.
   ///
   /// In en, this message translates to:
-  /// **'FlClash will be able to read everything sent to the decrypted hosts, cookies and passwords included. Turn this on only for hosts you mean to rewrite.'**
+  /// **'Flash will be able to read everything sent to the decrypted hosts, cookies and passwords included. Turn this on only for hosts you mean to rewrite.'**
   String get mitmEnableTip;
 
   /// No description provided for @certificate.
@@ -6015,7 +6111,7 @@ abstract class AppLocalizations {
   /// No description provided for @regenerateCertificateTip.
   ///
   /// In en, this message translates to:
-  /// **'The new certificate replaces the current one, which FlClash takes out of this device\'s trusted roots where it can. Every other device that trusts the current one has to install the new one.'**
+  /// **'The new certificate replaces the current one, which Flash takes out of this device\'s trusted roots where it can. Every other device that trusts the current one has to install the new one.'**
   String get regenerateCertificateTip;
 
   /// No description provided for @exportCertificate.
@@ -6159,7 +6255,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmOldSystemCertificateLeftTip.
   ///
   /// In en, this message translates to:
-  /// **'The old certificate, {name}, is still among the system\'s trusted CAs. Allow FlClash root access in your root manager and regenerate, or remove the FlClash MITM CA module there and restart.'**
+  /// **'The old certificate, {name}, is still among the system\'s trusted CAs. Allow Flash root access in your root manager and regenerate, or remove the FlClash MITM CA module there and restart.'**
   String mitmOldSystemCertificateLeftTip(Object name);
 
   /// No description provided for @mitmDecryptHost.
@@ -6171,7 +6267,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmDecryptHostTip.
   ///
   /// In en, this message translates to:
-  /// **'Add {host} to the hostname list? FlClash can then read what is sent to it, cookies and passwords included.'**
+  /// **'Add {host} to the hostname list? Flash can then read what is sent to it, cookies and passwords included.'**
   String mitmDecryptHostTip(Object host);
 
   /// No description provided for @mitmClientRefusedCertificate.
@@ -6537,7 +6633,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateRestartTip.
   ///
   /// In en, this message translates to:
-  /// **'FlClash closes to install the update and opens again when it is done.'**
+  /// **'Flash closes to install the update and opens again when it is done.'**
   String get updateRestartTip;
 
   /// No description provided for @updateDownloadFailed.
@@ -6611,6 +6707,3306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'These domains are resolved by Fallback directly.'**
   String get fallbackFilterDomainDesc;
+
+  /// No description provided for @tsCurrentDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get tsCurrentDevice;
+
+  /// No description provided for @tsNodeOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Node {name}'**
+  String tsNodeOf(Object name);
+
+  /// No description provided for @tsStatusOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {label}'**
+  String tsStatusOf(Object label);
+
+  /// No description provided for @tsChooseNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose node'**
+  String get tsChooseNode;
+
+  /// No description provided for @tsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get tsRefresh;
+
+  /// No description provided for @tsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'More information'**
+  String get tsHelp;
+
+  /// No description provided for @tsHelpBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash appears as a separate device on the Tailscale network. It does not let other devices connect to this Mac for SSH, file sharing, or remote desktop, and does not provide Tailscale SSH or Taildrop.'**
+  String get tsHelpBody;
+
+  /// No description provided for @tsNetworkNameTip.
+  ///
+  /// In en, this message translates to:
+  /// **'The network name does not identify a verified network owner.'**
+  String get tsNetworkNameTip;
+
+  /// No description provided for @tsBoundaryTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Only traffic that Flash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.'**
+  String get tsBoundaryTip;
+
+  /// No description provided for @tsGoToRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to rules'**
+  String get tsGoToRules;
+
+  /// No description provided for @tsGoToProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to profiles'**
+  String get tsGoToProfiles;
+
+  /// No description provided for @tsCoreStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Core is not running'**
+  String get tsCoreStopped;
+
+  /// No description provided for @tsCoreStoppedTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the core to see this node\'s Tailscale status.'**
+  String get tsCoreStoppedTip;
+
+  /// No description provided for @tsStartCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Start core'**
+  String get tsStartCore;
+
+  /// No description provided for @tsNodeGone.
+  ///
+  /// In en, this message translates to:
+  /// **'This node is no longer in the current profile'**
+  String get tsNodeGone;
+
+  /// No description provided for @tsNodeGoneTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a node again.'**
+  String get tsNodeGoneTip;
+
+  /// No description provided for @tsStateSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Not logged in'**
+  String get tsStateSignedOut;
+
+  /// No description provided for @tsStatePreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing login…'**
+  String get tsStatePreparing;
+
+  /// No description provided for @tsStateStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting…'**
+  String get tsStateStarting;
+
+  /// No description provided for @tsStateWaitingBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for browser login'**
+  String get tsStateWaitingBrowser;
+
+  /// No description provided for @tsStateNeedsApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for admin approval'**
+  String get tsStateNeedsApproval;
+
+  /// No description provided for @tsStateConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get tsStateConnected;
+
+  /// No description provided for @tsStateNeedsReauth.
+  ///
+  /// In en, this message translates to:
+  /// **'Login required again'**
+  String get tsStateNeedsReauth;
+
+  /// No description provided for @tsStateStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get tsStateStopped;
+
+  /// No description provided for @tsStateStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start'**
+  String get tsStateStartFailed;
+
+  /// No description provided for @tsStateUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Status unconfirmed'**
+  String get tsStateUnconfirmed;
+
+  /// No description provided for @tsStateLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load status'**
+  String get tsStateLoadFailed;
+
+  /// No description provided for @tsSignedOutTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in in your browser to authenticate this node.'**
+  String get tsSignedOutTip;
+
+  /// No description provided for @tsLoggedOutTip.
+  ///
+  /// In en, this message translates to:
+  /// **'You logged out of this node. It reconnects only after you log in.'**
+  String get tsLoggedOutTip;
+
+  /// No description provided for @tsPreparingTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting login information for this node.'**
+  String get tsPreparingTip;
+
+  /// No description provided for @tsWaitingBrowserTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish logging in in your browser. This page updates from the node\'s status afterwards.'**
+  String get tsWaitingBrowserTip;
+
+  /// No description provided for @tsNeedsApprovalTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser authentication is done. Wait for your Tailscale network admin to approve this device.'**
+  String get tsNeedsApprovalTip;
+
+  /// No description provided for @tsNeedsReauthTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This node\'s authentication has expired. Log in again.'**
+  String get tsNeedsReauthTip;
+
+  /// No description provided for @tsExpiryTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication expires at {time}. Log in again before then.'**
+  String tsExpiryTip(Object time);
+
+  /// No description provided for @tsStoppedTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This node has stopped and can\'t reach the Tailscale network for now.'**
+  String get tsStoppedTip;
+
+  /// No description provided for @tsStartFailedTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This node failed to start. Try again.'**
+  String get tsStartFailedTip;
+
+  /// No description provided for @tsUnconfirmedTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t confirm whether this node is connected. Read the status again.'**
+  String get tsUnconfirmedTip;
+
+  /// No description provided for @tsLoadFailedTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t read this node\'s status right now. Try again.'**
+  String get tsLoadFailedTip;
+
+  /// No description provided for @tsDeviceName.
+  ///
+  /// In en, this message translates to:
+  /// **'Device name'**
+  String get tsDeviceName;
+
+  /// No description provided for @tsAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get tsAccount;
+
+  /// No description provided for @tsNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get tsNetwork;
+
+  /// No description provided for @tsControlServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Control server'**
+  String get tsControlServer;
+
+  /// No description provided for @tsAfterLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Available after login'**
+  String get tsAfterLogin;
+
+  /// No description provided for @tsAccountMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Account info not provided'**
+  String get tsAccountMissing;
+
+  /// No description provided for @tsNetworkMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Network info not provided'**
+  String get tsNetworkMissing;
+
+  /// No description provided for @tsIdentityFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load account and network info'**
+  String get tsIdentityFailed;
+
+  /// No description provided for @tsCopyAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy address'**
+  String get tsCopyAddress;
+
+  /// No description provided for @tsCopyName.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy name'**
+  String get tsCopyName;
+
+  /// No description provided for @tsAddressCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Address copied'**
+  String get tsAddressCopied;
+
+  /// No description provided for @tsLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in to Tailscale'**
+  String get tsLogin;
+
+  /// No description provided for @tsRelogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in again'**
+  String get tsRelogin;
+
+  /// No description provided for @tsReopenLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen login page'**
+  String get tsReopenLogin;
+
+  /// No description provided for @tsReadStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Read status again'**
+  String get tsReadStatus;
+
+  /// No description provided for @tsLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out of this node'**
+  String get tsLogout;
+
+  /// No description provided for @tsLoggingOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Logging out…'**
+  String get tsLoggingOut;
+
+  /// No description provided for @tsLogoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out of this Tailscale node?'**
+  String get tsLogoutTitle;
+
+  /// No description provided for @tsLogoutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This logs out of “{name}” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.'**
+  String tsLogoutBody(Object name);
+
+  /// No description provided for @tsLogoutAuthKeyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'When you log in again, the auth key in the profile registers a new device identity.'**
+  String get tsLogoutAuthKeyNote;
+
+  /// No description provided for @tsLoggedOutReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Logged out of this node. It won\'t log in again until you log in.'**
+  String get tsLoggedOutReceipt;
+
+  /// No description provided for @tsLogoutFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t log out. Read the node status again, then retry.'**
+  String get tsLogoutFailed;
+
+  /// No description provided for @tsLogoutUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The logout result is unconfirmed. Read the node status again and don\'t repeat it until confirmed.'**
+  String get tsLogoutUnknown;
+
+  /// No description provided for @tsBrowserFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the login page. Try again.'**
+  String get tsBrowserFailed;
+
+  /// No description provided for @tsUrlRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'This login page can\'t be opened safely. Check the node\'s control server in the profile.'**
+  String get tsUrlRejected;
+
+  /// No description provided for @tsUrlMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'No usable login page yet. Prepare the login again.'**
+  String get tsUrlMissing;
+
+  /// No description provided for @tsPrepareAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare login again'**
+  String get tsPrepareAgain;
+
+  /// No description provided for @tsLoginUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'The login result isn\'t confirmed yet. Read the node status again.'**
+  String get tsLoginUnconfirmed;
+
+  /// No description provided for @tsNodeChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The node has changed. Start the action again on the selected node.'**
+  String get tsNodeChanged;
+
+  /// No description provided for @tsExitNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit node'**
+  String get tsExitNode;
+
+  /// No description provided for @tsNoExitNode.
+  ///
+  /// In en, this message translates to:
+  /// **'No exit node'**
+  String get tsNoExitNode;
+
+  /// No description provided for @tsNoExitNodeTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Using no exit node doesn\'t log out of Tailscale'**
+  String get tsNoExitNodeTip;
+
+  /// No description provided for @tsExitNodeTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Only affects traffic forwarded through this Tailscale node; it doesn\'t make the whole Mac use the exit.'**
+  String get tsExitNodeTip;
+
+  /// No description provided for @tsNoExitCandidates.
+  ///
+  /// In en, this message translates to:
+  /// **'No exit nodes available'**
+  String get tsNoExitCandidates;
+
+  /// No description provided for @tsNoExitCandidatesTip.
+  ///
+  /// In en, this message translates to:
+  /// **'No exit node is confirmed available'**
+  String get tsNoExitCandidatesTip;
+
+  /// No description provided for @tsExitStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh the device list before choosing an exit node.'**
+  String get tsExitStale;
+
+  /// No description provided for @tsChooseExitNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose exit node'**
+  String get tsChooseExitNode;
+
+  /// No description provided for @tsOfflineNotSelectable.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline, can\'t be chosen'**
+  String get tsOfflineNotSelectable;
+
+  /// No description provided for @tsExitChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change exit node?'**
+  String get tsExitChangeTitle;
+
+  /// No description provided for @tsExitChangeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sets the exit node of “{node}” to “{device}”. Connections through this node may drop; Flash rules stay the same.'**
+  String tsExitChangeBody(Object node, Object device);
+
+  /// No description provided for @tsExitChangeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Change exit node'**
+  String get tsExitChangeConfirm;
+
+  /// No description provided for @tsExitOffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop using the exit node?'**
+  String get tsExitOffTitle;
+
+  /// No description provided for @tsExitOffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Only turns off exit forwarding for “{node}”; it doesn\'t log out of Tailscale and Flash rules stay the same.'**
+  String tsExitOffBody(Object node);
+
+  /// No description provided for @tsExitApplying.
+  ///
+  /// In en, this message translates to:
+  /// **'Changing exit node…'**
+  String get tsExitApplying;
+
+  /// No description provided for @tsExitUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit node updated'**
+  String get tsExitUpdated;
+
+  /// No description provided for @tsExitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit node not changed. Try again.'**
+  String get tsExitFailed;
+
+  /// No description provided for @tsExitUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The exit node change is unconfirmed. Read the current settings again.'**
+  String get tsExitUnknown;
+
+  /// No description provided for @tsReadSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Read settings again'**
+  String get tsReadSettings;
+
+  /// No description provided for @tsSettingsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved, but not yet confirmed in effect. Read the current settings again.'**
+  String get tsSettingsSaved;
+
+  /// No description provided for @tsSettingsApplyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved, but couldn\'t be applied to this node. Read the current settings again.'**
+  String get tsSettingsApplyFailed;
+
+  /// No description provided for @tsSubnetRoutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Subnet routes'**
+  String get tsSubnetRoutes;
+
+  /// No description provided for @tsAcceptRoutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept subnet routes'**
+  String get tsAcceptRoutes;
+
+  /// No description provided for @tsAcceptRoutesTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; Flash rules are not changed.'**
+  String get tsAcceptRoutesTip;
+
+  /// No description provided for @tsRoutesOnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept subnet routes?'**
+  String get tsRoutesOnTitle;
+
+  /// No description provided for @tsRoutesOnBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This node will use the network\'s approved subnet routes. Flash rules stay the same.'**
+  String get tsRoutesOnBody;
+
+  /// No description provided for @tsRoutesOffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop accepting subnet routes?'**
+  String get tsRoutesOffTitle;
+
+  /// No description provided for @tsRoutesOffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This node will stop using these subnet routes; related connections may drop. Flash rules stay the same.'**
+  String get tsRoutesOffBody;
+
+  /// No description provided for @tsRoutesOffConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop accepting'**
+  String get tsRoutesOffConfirm;
+
+  /// No description provided for @tsRoutesApplying.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating subnet routes…'**
+  String get tsRoutesApplying;
+
+  /// No description provided for @tsRoutesUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Subnet routes updated'**
+  String get tsRoutesUpdated;
+
+  /// No description provided for @tsRoutesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Subnet routes not changed. Try again.'**
+  String get tsRoutesFailed;
+
+  /// No description provided for @tsRoutesUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The subnet routes change is unconfirmed. Read the current settings again.'**
+  String get tsRoutesUnknown;
+
+  /// No description provided for @tsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get tsOn;
+
+  /// No description provided for @tsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get tsOff;
+
+  /// No description provided for @tsFromSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'From subscription'**
+  String get tsFromSubscription;
+
+  /// No description provided for @tsFromProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'From current profile'**
+  String get tsFromProfile;
+
+  /// No description provided for @tsFromProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'From proxy provider'**
+  String get tsFromProvider;
+
+  /// No description provided for @tsFromLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Set on this Mac'**
+  String get tsFromLocal;
+
+  /// No description provided for @tsOverrideAmbiguous.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile has multiple nodes with the same name and control server, so their settings cannot be saved separately. Give them different names in the profile.'**
+  String get tsOverrideAmbiguous;
+
+  /// No description provided for @tsOverrideTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings saved here take priority over the same settings in the profile and never change the subscription file.'**
+  String get tsOverrideTip;
+
+  /// No description provided for @tsChangeAfterSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in and connect to change'**
+  String get tsChangeAfterSignIn;
+
+  /// No description provided for @tsSavedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved: {value}'**
+  String tsSavedValue(Object value);
+
+  /// No description provided for @tsAfterConnectSelectable.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect this node to change settings.'**
+  String get tsAfterConnectSelectable;
+
+  /// No description provided for @tsDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get tsDevices;
+
+  /// No description provided for @tsDevicesScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices this node can see, not every device in the admin console'**
+  String get tsDevicesScope;
+
+  /// No description provided for @tsAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale address'**
+  String get tsAddress;
+
+  /// No description provided for @tsOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get tsOwner;
+
+  /// No description provided for @tsSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'OS'**
+  String get tsSystem;
+
+  /// No description provided for @tsStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get tsStatus;
+
+  /// No description provided for @tsOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get tsOnline;
+
+  /// No description provided for @tsOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get tsOffline;
+
+  /// No description provided for @tsStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Status unknown'**
+  String get tsStatusUnknown;
+
+  /// No description provided for @tsExitCapable.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit node'**
+  String get tsExitCapable;
+
+  /// No description provided for @tsNameMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Name not provided'**
+  String get tsNameMissing;
+
+  /// No description provided for @tsAddressMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Address not provided'**
+  String get tsAddressMissing;
+
+  /// No description provided for @tsSystemMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'OS not provided'**
+  String get tsSystemMissing;
+
+  /// No description provided for @tsDevicesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No visible devices'**
+  String get tsDevicesEmpty;
+
+  /// No description provided for @tsDevicesEmptyTip.
+  ///
+  /// In en, this message translates to:
+  /// **'This node doesn\'t see any other devices yet.'**
+  String get tsDevicesEmptyTip;
+
+  /// No description provided for @tsDevicesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the device list. Try again.'**
+  String get tsDevicesFailed;
+
+  /// No description provided for @tsRefreshDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh device list'**
+  String get tsRefreshDevices;
+
+  /// No description provided for @tsDevicesStale.
+  ///
+  /// In en, this message translates to:
+  /// **'The device list may be out of date. Refreshing failed; this is the last list read.'**
+  String get tsDevicesStale;
+
+  /// No description provided for @tsDevicesShown.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {n} devices'**
+  String tsDevicesShown(Object n);
+
+  /// No description provided for @tsDevicesCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 device · Only devices visible to this account} other{{count} devices · Only devices visible to this account}}'**
+  String tsDevicesCompact(num count);
+
+  /// No description provided for @tsDevicesCompactFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {shown}/{total} · Devices visible to this account only'**
+  String tsDevicesCompactFiltered(Object shown, Object total);
+
+  /// No description provided for @tsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search name or address'**
+  String get tsSearchHint;
+
+  /// No description provided for @tsSearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No devices match the search'**
+  String get tsSearchEmpty;
+
+  /// No description provided for @tsOwnerFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Device owner'**
+  String get tsOwnerFilter;
+
+  /// No description provided for @tsOwnerAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get tsOwnerAll;
+
+  /// No description provided for @tsOwnerMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine'**
+  String get tsOwnerMine;
+
+  /// No description provided for @tsOwnerMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Me'**
+  String get tsOwnerMe;
+
+  /// No description provided for @tsOwnerUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner unknown'**
+  String get tsOwnerUnknown;
+
+  /// No description provided for @tsOwnerUnknownNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown · Network {network}'**
+  String tsOwnerUnknownNetwork(Object network);
+
+  /// No description provided for @tsOwnerFilterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No devices with this owner'**
+  String get tsOwnerFilterEmpty;
+
+  /// No description provided for @tsFilterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No devices match the current filters'**
+  String get tsFilterEmpty;
+
+  /// No description provided for @tsClearOwnerFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear owner filter'**
+  String get tsClearOwnerFilter;
+
+  /// No description provided for @tsShared.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared in'**
+  String get tsShared;
+
+  /// No description provided for @tsSharedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared by: {name}'**
+  String tsSharedBy(Object name);
+
+  /// No description provided for @tsLegacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Found an earlier login record'**
+  String get tsLegacyTitle;
+
+  /// No description provided for @tsLegacyAccountUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Account not confirmed'**
+  String get tsLegacyAccountUnconfirmed;
+
+  /// No description provided for @tsLegacyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You can copy this login record to this node and keep the original. It can move to only one node; make sure this is the account you want to keep using, or log in again instead.'**
+  String get tsLegacyBody;
+
+  /// No description provided for @tsLegacyAuthKeyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This node has an auth key; logging in again registers a new device identity with it, and the earlier login record is kept.'**
+  String get tsLegacyAuthKeyNote;
+
+  /// No description provided for @tsLegacyMigrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to this node'**
+  String get tsLegacyMigrate;
+
+  /// No description provided for @tsLegacyMigrating.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving login record…'**
+  String get tsLegacyMigrating;
+
+  /// No description provided for @tsLegacyRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry move'**
+  String get tsLegacyRetry;
+
+  /// No description provided for @tsLegacyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The login record was not moved and the original is kept. Try again, or log in again.'**
+  String get tsLegacyFailed;
+
+  /// No description provided for @tsLegacyClaimFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The login record was not moved; the move details couldn\'t be saved. Try again, or log in again.'**
+  String get tsLegacyClaimFailed;
+
+  /// No description provided for @tsLegacyChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The move details have changed. Check them again before confirming.'**
+  String get tsLegacyChanged;
+
+  /// No description provided for @tsLegacyUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The move result is unconfirmed. Read the status again first, and don\'t move or log in again until confirmed.'**
+  String get tsLegacyUnknown;
+
+  /// No description provided for @tsLegacyUnknownTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'The move result is unconfirmed; the login record on the target node isn\'t confirmed yet. Read the status again first, and don\'t move or log in again until confirmed.'**
+  String get tsLegacyUnknownTarget;
+
+  /// No description provided for @tsLegacyUnknownArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'The move result is unconfirmed, and the original login record can\'t be verified for now. Read the status again first, and don\'t move or log in again until confirmed.'**
+  String get tsLegacyUnknownArchive;
+
+  /// No description provided for @tsLegacyUnknownUnsaved.
+  ///
+  /// In en, this message translates to:
+  /// **'The move result is unconfirmed; the move details couldn\'t be saved. Read the status again first, and don\'t move or log in again until confirmed.'**
+  String get tsLegacyUnknownUnsaved;
+
+  /// No description provided for @tsLegacyMigrated.
+  ///
+  /// In en, this message translates to:
+  /// **'Login record moved. Reading the node status.'**
+  String get tsLegacyMigrated;
+
+  /// No description provided for @tsLegacyHasIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'This node already has its own login record; no need to move.'**
+  String get tsLegacyHasIdentity;
+
+  /// No description provided for @tsLegacyControlMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The earlier login record uses another control server than this node, so it can\'t move.'**
+  String get tsLegacyControlMismatch;
+
+  /// No description provided for @tsLegacyInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'The earlier login record is still in use and can\'t move for now.'**
+  String get tsLegacyInUse;
+
+  /// No description provided for @tsLegacyMigratedElsewhere.
+  ///
+  /// In en, this message translates to:
+  /// **'This earlier login record already moved to another node and can\'t move again.'**
+  String get tsLegacyMigratedElsewhere;
+
+  /// No description provided for @tsLegacyUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t read the earlier login record. Check again.'**
+  String get tsLegacyUnreadable;
+
+  /// No description provided for @tsLegacyUnreadableNotMigrated.
+  ///
+  /// In en, this message translates to:
+  /// **'The login record was not moved; the earlier login record can\'t be read. Check again.'**
+  String get tsLegacyUnreadableNotMigrated;
+
+  /// No description provided for @tsLegacyUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Whether the earlier login record can be used is unconfirmed. Read the status again.'**
+  String get tsLegacyUnconfirmed;
+
+  /// No description provided for @tsLegacyConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the earlier login to this node?'**
+  String get tsLegacyConfirmTitle;
+
+  /// No description provided for @tsLegacyConfirmProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile: {name}'**
+  String tsLegacyConfirmProfile(Object name);
+
+  /// No description provided for @tsLegacyConfirmNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Node: {name}'**
+  String tsLegacyConfirmNode(Object name);
+
+  /// No description provided for @tsLegacyConfirmAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account: {account}'**
+  String tsLegacyConfirmAccount(Object account);
+
+  /// No description provided for @tsLegacyConfirmControl.
+  ///
+  /// In en, this message translates to:
+  /// **'Control server: {server}'**
+  String tsLegacyConfirmControl(Object server);
+
+  /// No description provided for @tsLegacyConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This copies the login record for the node above and leaves the original untouched. The same record can\'t move to another node afterwards. Check the node\'s real connection status after the move.'**
+  String get tsLegacyConfirmBody;
+
+  /// No description provided for @tsLegacyConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm move'**
+  String get tsLegacyConfirm;
+
+  /// No description provided for @tsSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to Tailscale'**
+  String get tsSignIn;
+
+  /// No description provided for @tsSignInTip.
+  ///
+  /// In en, this message translates to:
+  /// **'After sign-in, Flash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.'**
+  String get tsSignInTip;
+
+  /// No description provided for @tsSignInBoundary.
+  ///
+  /// In en, this message translates to:
+  /// **'System proxy and TUN will not be enabled automatically.'**
+  String get tsSignInBoundary;
+
+  /// No description provided for @tsPreparingProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing a local profile…'**
+  String get tsPreparingProfile;
+
+  /// No description provided for @tsPreparingSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing sign-in…'**
+  String get tsPreparingSignIn;
+
+  /// No description provided for @tsPreparingSignInTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing Tailscale for this profile.'**
+  String get tsPreparingSignInTip;
+
+  /// No description provided for @tsAttaching.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding to current profile…'**
+  String get tsAttaching;
+
+  /// No description provided for @tsAttachingTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in is complete. Adding the node and Tailscale rules.'**
+  String get tsAttachingTip;
+
+  /// No description provided for @tsAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to current profile'**
+  String get tsAttached;
+
+  /// No description provided for @tsAttachedTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale traffic uses dedicated rules. Other traffic keeps its existing routing.'**
+  String get tsAttachedTip;
+
+  /// No description provided for @tsPrepareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale sign-in could not be prepared. Try again.'**
+  String get tsPrepareFailed;
+
+  /// No description provided for @tsAttachFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in, but not added to this profile. Your sign-in has been kept. Try adding it again.'**
+  String get tsAttachFailed;
+
+  /// No description provided for @tsRetryAttach.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry adding to profile'**
+  String get tsRetryAttach;
+
+  /// No description provided for @tsAttachUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The profile update is unconfirmed. Read the status again before adding the node or signing in again.'**
+  String get tsAttachUnknown;
+
+  /// No description provided for @tsPrepareUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in preparation is unconfirmed. Read the status again before signing in again.'**
+  String get tsPrepareUnknown;
+
+  /// No description provided for @tsAttachLockTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding to this profile. Settings cannot be changed yet.'**
+  String get tsAttachLockTip;
+
+  /// No description provided for @tsAttachUnknownLockTip.
+  ///
+  /// In en, this message translates to:
+  /// **'The profile update is unconfirmed. Read the status again first.'**
+  String get tsAttachUnknownLockTip;
+
+  /// No description provided for @tsAddedInPanel.
+  ///
+  /// In en, this message translates to:
+  /// **'Added in panel'**
+  String get tsAddedInPanel;
+
+  /// No description provided for @tsRulesManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.'**
+  String get tsRulesManaged;
+
+  /// No description provided for @tsRulesDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Network domain: {domain}'**
+  String tsRulesDomain(Object domain);
+
+  /// No description provided for @tsRulesAddresses.
+  ///
+  /// In en, this message translates to:
+  /// **'Device addresses: {count}'**
+  String tsRulesAddresses(Object count);
+
+  /// No description provided for @tsRulesPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Once added, Tailscale addresses and ts.net domains will use dedicated rules. Other traffic will keep its existing routing.'**
+  String get tsRulesPending;
+
+  /// No description provided for @tsRulesProfileNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Only traffic routed to this node by Flash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.'**
+  String get tsRulesProfileNode;
+
+  /// No description provided for @tsUnverifiedBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale addresses and domains without a verified account are blocked. They will not use another account or a direct connection.'**
+  String get tsUnverifiedBlocked;
+
+  /// No description provided for @tsManagedPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Panel-added routing and blocking rules take priority over existing rules for those targets. Rules for other traffic stay unchanged. Assign an account here to change a target’s routing.'**
+  String get tsManagedPriority;
+
+  /// No description provided for @tsSignOutRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out and remove'**
+  String get tsSignOutRemove;
+
+  /// No description provided for @tsSignOutRemoveMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out and remove…'**
+  String get tsSignOutRemoveMenu;
+
+  /// No description provided for @tsRemoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out and remove this account?'**
+  String get tsRemoveTitle;
+
+  /// No description provided for @tsRemoveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This signs out “{account}” (node “{node}”), clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.'**
+  String tsRemoveBody(Object account, Object node, Object profile);
+
+  /// No description provided for @tsRemoveBodyNode.
+  ///
+  /// In en, this message translates to:
+  /// **'This signs out “{node}”, clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.'**
+  String tsRemoveBodyNode(Object node, Object profile);
+
+  /// No description provided for @tsRemoveExtra.
+  ///
+  /// In en, this message translates to:
+  /// **'This does not delete the device from the Tailscale admin console or change the official client.'**
+  String get tsRemoveExtra;
+
+  /// No description provided for @tsRemoveTargetsKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Targets assigned to this account will not move to another account automatically. Blocking protection stays in place. Assign another account to access them.'**
+  String get tsRemoveTargetsKept;
+
+  /// No description provided for @tsRemoveLast.
+  ///
+  /// In en, this message translates to:
+  /// **'This is the last panel-added account in this profile. Removing it also removes panel-added routing and blocking rules. The original profile will handle this traffic again, which may use a direct connection or its original proxies. Confirm that you accept this change.'**
+  String get tsRemoveLast;
+
+  /// No description provided for @tsRemoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing out and removing…'**
+  String get tsRemoving;
+
+  /// No description provided for @tsRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed out and removed'**
+  String get tsRemoved;
+
+  /// No description provided for @tsRemoveLogoutUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-out is unconfirmed. The node has not been removed. Read the status again before removing it or signing in again.'**
+  String get tsRemoveLogoutUnknown;
+
+  /// No description provided for @tsRemoveIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed out, but removal is incomplete. Read the status again.'**
+  String get tsRemoveIncomplete;
+
+  /// No description provided for @tsRemoveUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Removal is unconfirmed. Read the status again before adding the node or signing in.'**
+  String get tsRemoveUnknown;
+
+  /// No description provided for @tsSignOutAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of this account'**
+  String get tsSignOutAccount;
+
+  /// No description provided for @tsSignOutAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of this account?'**
+  String get tsSignOutAccountTitle;
+
+  /// No description provided for @tsSignOutAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This signs out “{account}” (node “{node}”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.'**
+  String tsSignOutAccountBody(Object account, Object node);
+
+  /// No description provided for @tsAccountSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed out'**
+  String get tsAccountSignedOut;
+
+  /// No description provided for @tsSignedOutBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed out of this account. In Rule mode, its assigned targets stay blocked until you sign in or explicitly reassign them.'**
+  String get tsSignedOutBanner;
+
+  /// No description provided for @tsSignedOutReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed out of this account'**
+  String get tsSignedOutReceipt;
+
+  /// No description provided for @tsAccountsInProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale accounts in this profile'**
+  String get tsAccountsInProfile;
+
+  /// No description provided for @tsAddAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Tailscale account'**
+  String get tsAddAccount;
+
+  /// No description provided for @tsNewAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'New account'**
+  String get tsNewAccount;
+
+  /// No description provided for @tsNetworkOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Network: {name}'**
+  String tsNetworkOf(Object name);
+
+  /// No description provided for @tsSwitcherSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewing Tailscale account: {account}, {status}. {count} entries.'**
+  String tsSwitcherSemantics(Object account, Object status, Object count);
+
+  /// No description provided for @tsMemoryTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Each account runs a separate Tailscale device. Keeping more accounts online uses more memory.'**
+  String get tsMemoryTip;
+
+  /// No description provided for @tsDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'An entry already exists for this account. This sign-in has been kept but has not been added to routing. Review it before continuing.'**
+  String get tsDuplicate;
+
+  /// No description provided for @tsViewExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'View existing account'**
+  String get tsViewExisting;
+
+  /// No description provided for @tsCheckingAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking account…'**
+  String get tsCheckingAccount;
+
+  /// No description provided for @tsAddUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Account addition is unconfirmed. Read the status again first.'**
+  String get tsAddUnconfirmed;
+
+  /// No description provided for @tsConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose accounts for {count} targets'**
+  String tsConflictTitle(Object count);
+
+  /// No description provided for @tsConflictBody.
+  ///
+  /// In en, this message translates to:
+  /// **'These addresses or domains have multiple candidate accounts. Requests to these targets are blocked until you choose an account. They will not be sent directly.'**
+  String get tsConflictBody;
+
+  /// No description provided for @tsChooseAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose accounts'**
+  String get tsChooseAccounts;
+
+  /// No description provided for @tsAddressConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Address conflict'**
+  String get tsAddressConflict;
+
+  /// No description provided for @tsRoutingConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing conflict'**
+  String get tsRoutingConflict;
+
+  /// No description provided for @tsChooseAccountFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose account for access'**
+  String get tsChooseAccountFor;
+
+  /// No description provided for @tsAssignTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose accounts for targets'**
+  String get tsAssignTitle;
+
+  /// No description provided for @tsAssignBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose one account for each target. Unassigned targets stay blocked. Other targets are not affected. An offline account will not be replaced automatically.'**
+  String get tsAssignBody;
+
+  /// No description provided for @tsTargetAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address: {address}'**
+  String tsTargetAddress(Object address);
+
+  /// No description provided for @tsTargetDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Domain: {domain}'**
+  String tsTargetDomain(Object domain);
+
+  /// No description provided for @tsCandidate.
+  ///
+  /// In en, this message translates to:
+  /// **'{account} · {network}'**
+  String tsCandidate(Object account, Object network);
+
+  /// No description provided for @tsNotAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Not assigned'**
+  String get tsNotAssigned;
+
+  /// No description provided for @tsSaveChoices.
+  ///
+  /// In en, this message translates to:
+  /// **'Save choices'**
+  String get tsSaveChoices;
+
+  /// No description provided for @tsChoicesUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Access accounts updated'**
+  String get tsChoicesUpdated;
+
+  /// No description provided for @tsAssignedTargets.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned targets'**
+  String get tsAssignedTargets;
+
+  /// No description provided for @tsChoicesSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Choices saved; application is not yet confirmed.'**
+  String get tsChoicesSaved;
+
+  /// No description provided for @tsChoicesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Choices were not saved. Try again.'**
+  String get tsChoicesFailed;
+
+  /// No description provided for @tsChoicesUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The result is unconfirmed. Read the status again before saving again.'**
+  String get tsChoicesUnknown;
+
+  /// No description provided for @tsAssignedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned: {account}'**
+  String tsAssignedTo(Object account);
+
+  /// No description provided for @tsAssignedUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The assigned account is unavailable. This target will not use another account.'**
+  String get tsAssignedUnavailable;
+
+  /// No description provided for @tsReconfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This target’s account needs confirmation. Requests are blocked. Choose an account again.'**
+  String get tsReconfirm;
+
+  /// No description provided for @tsReassign.
+  ///
+  /// In en, this message translates to:
+  /// **'Reassign account'**
+  String get tsReassign;
+
+  /// No description provided for @tsTargetUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Target account unconfirmed'**
+  String get tsTargetUnconfirmed;
+
+  /// No description provided for @tsTargetUnconfirmedTip.
+  ///
+  /// In en, this message translates to:
+  /// **'The account for this target cannot be verified yet. Requests are blocked.'**
+  String get tsTargetUnconfirmedTip;
+
+  /// No description provided for @tsDeleteProfileManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile has {count} panel-added Tailscale accounts. Deleting it removes their profile bindings, target assignments, and dedicated routing and blocking rules. Local sign-in archives are kept. Devices in the Tailscale admin console are not deleted. Other profiles are not affected.'**
+  String tsDeleteProfileManaged(Object count);
+
+  /// No description provided for @tsDeleteProfilePending.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile has unconfirmed Tailscale operations. Read the status again before deleting it.'**
+  String get tsDeleteProfilePending;
+
+  /// No description provided for @tsDeleteProfileUnbindFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not unlink this profile from its Tailscale accounts. The profile was not deleted. Try again.'**
+  String get tsDeleteProfileUnbindFailed;
+
+  /// No description provided for @tsDeleteProfileUnlinkUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'The account-link update is unconfirmed. The profile has not been deleted. Read the status again before deleting it again.'**
+  String get tsDeleteProfileUnlinkUnconfirmed;
+
+  /// No description provided for @tsDeleteProfileUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile deletion is unconfirmed. Read the status again before deleting it again.'**
+  String get tsDeleteProfileUnconfirmed;
+
+  /// No description provided for @tsTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get tsTryAgain;
+
+  /// No description provided for @tsDirectMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.'**
+  String get tsDirectMode;
+
+  /// No description provided for @tsGlobalMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Global mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.'**
+  String get tsGlobalMode;
+
+  /// No description provided for @tsDnsUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'The current DNS settings do not confirm that target domains are preserved for rule matching. Domain routing has not been verified. Check DNS settings.'**
+  String get tsDnsUnverified;
+
+  /// No description provided for @tsCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get tsCancel;
+
+  /// No description provided for @tsSignInShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to add a node and dedicated rules.'**
+  String get tsSignInShort;
+
+  /// No description provided for @tsRulesSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{domain} · 1 device address} other{{domain} · {count} device addresses}}'**
+  String tsRulesSummary(num count, Object domain);
+
+  /// No description provided for @tsRulesUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Domain and address details are unconfirmed.'**
+  String get tsRulesUnconfirmed;
+
+  /// No description provided for @tsDevicesFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {shown} / {total}'**
+  String tsDevicesFiltered(Object shown, Object total);
+
+  /// No description provided for @tsAboutTailscale.
+  ///
+  /// In en, this message translates to:
+  /// **'About Tailscale'**
+  String get tsAboutTailscale;
+
+  /// No description provided for @tsAboutExit.
+  ///
+  /// In en, this message translates to:
+  /// **'About exit settings'**
+  String get tsAboutExit;
+
+  /// No description provided for @tsAboutRoutes.
+  ///
+  /// In en, this message translates to:
+  /// **'About subnet routes'**
+  String get tsAboutRoutes;
+
+  /// No description provided for @tsAboutRules.
+  ///
+  /// In en, this message translates to:
+  /// **'About rules'**
+  String get tsAboutRules;
+
+  /// No description provided for @infoAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get infoAbout;
+
+  /// No description provided for @mountApplyKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts could not be applied. The last confirmed running profile is still in use.'**
+  String get mountApplyKept;
+
+  /// No description provided for @mountApplyBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.'**
+  String get mountApplyBlocked;
+
+  /// No description provided for @mountApplyBlockedConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.'**
+  String get mountApplyBlockedConfirmed;
+
+  /// No description provided for @mountSourceNoNodeList.
+  ///
+  /// In en, this message translates to:
+  /// **'This subscription does not provide a mountable node list. Check its format.'**
+  String get mountSourceNoNodeList;
+
+  /// No description provided for @mountDeleteSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete subscription and unmount?'**
+  String get mountDeleteSourceTitle;
+
+  /// No description provided for @mountDeleteSourceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'“{subscriptionName}” is mounted on the following {profileCount, plural, =1{1 profile} other{{profileCount} profiles}}. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.'**
+  String mountDeleteSourceBody(Object subscriptionName, num profileCount);
+
+  /// No description provided for @mountDeleteSourceConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete and unmount'**
+  String get mountDeleteSourceConfirm;
+
+  /// No description provided for @mountDeleteSourceProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting and unmounting…'**
+  String get mountDeleteSourceProgress;
+
+  /// No description provided for @mountDeleteSourceDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription deleted and unmounted'**
+  String get mountDeleteSourceDone;
+
+  /// No description provided for @mountDeleteSourceUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription deletion and unmounting are unconfirmed. Read the status again before deleting or mounting again.'**
+  String get mountDeleteSourceUnknown;
+
+  /// No description provided for @mountDeleteSourceBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'This subscription or an affected profile has unconfirmed operations. Read the status again before deleting.'**
+  String get mountDeleteSourceBlocked;
+
+  /// No description provided for @mountReadStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Read status again'**
+  String get mountReadStatus;
+
+  /// No description provided for @mountEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Mount subscription nodes'**
+  String get mountEntry;
+
+  /// No description provided for @mountEntryMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Mount subscription nodes…'**
+  String get mountEntryMenu;
+
+  /// No description provided for @mountedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 subscription mounted} other{{count} subscriptions mounted}}'**
+  String mountedCount(num count);
+
+  /// No description provided for @mountCardFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 subscription update failed} other{{count} subscription updates failed}}'**
+  String mountCardFailed(num count);
+
+  /// No description provided for @mountCardUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read mount status'**
+  String get mountCardUnreadable;
+
+  /// No description provided for @mountPillSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, target profile {profileName}'**
+  String mountPillSemantics(Object label, Object profileName);
+
+  /// No description provided for @mountPillFailedSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'a subscription update failed'**
+  String get mountPillFailedSemantics;
+
+  /// No description provided for @mountTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target profile: {profileName}'**
+  String mountTarget(Object profileName);
+
+  /// No description provided for @mountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds nodes without changing rules or DNS.'**
+  String get mountDescription;
+
+  /// No description provided for @mountChooseSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose subscriptions'**
+  String get mountChooseSources;
+
+  /// No description provided for @mountMountedTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounted'**
+  String get mountMountedTag;
+
+  /// No description provided for @mountNotMounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not mounted'**
+  String get mountNotMounted;
+
+  /// No description provided for @mountEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No subscriptions to mount'**
+  String get mountEmptyTitle;
+
+  /// No description provided for @mountEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a subscription from a link, then choose it as a node source for this profile.'**
+  String get mountEmptyDesc;
+
+  /// No description provided for @mountImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Import subscription'**
+  String get mountImport;
+
+  /// No description provided for @mountImportHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Return here after importing to choose the subscription. Your active profile will not change.'**
+  String get mountImportHint;
+
+  /// No description provided for @mountNodeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 node} other{{count} nodes}}'**
+  String mountNodeCount(num count);
+
+  /// No description provided for @mountLastUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated: {time}'**
+  String mountLastUpdated(Object time);
+
+  /// No description provided for @mountNotFetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Nodes not fetched yet'**
+  String get mountNotFetched;
+
+  /// No description provided for @mountListFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load subscriptions. Try again.'**
+  String get mountListFailed;
+
+  /// No description provided for @mountReadAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Read again'**
+  String get mountReadAgain;
+
+  /// No description provided for @mountSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save mounts'**
+  String get mountSave;
+
+  /// No description provided for @mountSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving mounts…'**
+  String get mountSaving;
+
+  /// No description provided for @mountApplying.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts saved. Applying…'**
+  String get mountApplying;
+
+  /// No description provided for @mountUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription node mounts updated'**
+  String get mountUpdated;
+
+  /// No description provided for @mountSavedUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts saved; application is not yet confirmed.'**
+  String get mountSavedUnconfirmed;
+
+  /// No description provided for @mountUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts were not changed. Try again.'**
+  String get mountUnchanged;
+
+  /// No description provided for @mountApplyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounts were saved but could not be applied to the running profile.'**
+  String get mountApplyFailed;
+
+  /// No description provided for @mountUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The mount result is unconfirmed. Read the status again before saving or unmounting.'**
+  String get mountUnknown;
+
+  /// No description provided for @mountUpdateNodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Update nodes'**
+  String get mountUpdateNodes;
+
+  /// No description provided for @mountUpdateNodesOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Update nodes of {name}'**
+  String mountUpdateNodesOf(Object name);
+
+  /// No description provided for @mountUpdatingNodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating nodes…'**
+  String get mountUpdatingNodes;
+
+  /// No description provided for @mountNodesUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Nodes updated'**
+  String get mountNodesUpdated;
+
+  /// No description provided for @mountUpdateFailedInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed. The last successfully fetched nodes are still in use.'**
+  String get mountUpdateFailedInUse;
+
+  /// No description provided for @mountUpdateFailedKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.'**
+  String get mountUpdateFailedKept;
+
+  /// No description provided for @mountUpdateFailedKeptBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed. The last successfully fetched nodes were kept.'**
+  String get mountUpdateFailedKeptBlocked;
+
+  /// No description provided for @mountFetchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not fetch nodes from this subscription. Try again.'**
+  String get mountFetchFailed;
+
+  /// No description provided for @mountSourceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription updated. It currently has no nodes.'**
+  String get mountSourceEmpty;
+
+  /// No description provided for @mountSourceGone.
+  ///
+  /// In en, this message translates to:
+  /// **'The original subscription is unavailable. Choose a node source again.'**
+  String get mountSourceGone;
+
+  /// No description provided for @mountSelectionLost.
+  ///
+  /// In en, this message translates to:
+  /// **'The previously selected node is no longer in this subscription. Choose another node.'**
+  String get mountSelectionLost;
+
+  /// No description provided for @mountTailscaleExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale nodes were excluded from ordinary mounts.'**
+  String get mountTailscaleExcluded;
+
+  /// No description provided for @mountSourceRelayOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'All nodes in this subscription route through Tailscale and cannot be mounted. Their routing settings were not changed.'**
+  String get mountSourceRelayOnly;
+
+  /// No description provided for @mountSourceIsolatedOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'All nodes in this subscription were excluded by the mount-isolation checks and cannot be mounted. Their settings were not changed.'**
+  String get mountSourceIsolatedOnly;
+
+  /// No description provided for @mountSourceTailscaleOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This subscription contains only Tailscale nodes and cannot be mounted.'**
+  String get mountSourceTailscaleOnly;
+
+  /// No description provided for @mountSameName.
+  ///
+  /// In en, this message translates to:
+  /// **'When node names conflict across sources, the subscription name is added as a suffix. This may affect exact-match or end-of-name filters. Check the group results.'**
+  String get mountSameName;
+
+  /// No description provided for @mountGroupsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups for these nodes'**
+  String get mountGroupsTitle;
+
+  /// No description provided for @mountHintFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-collected · Group filters apply'**
+  String get mountHintFiltered;
+
+  /// No description provided for @mountNoGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile has no groups that automatically accept new nodes. Mounted nodes have not been added to any group.'**
+  String get mountNoGroupTitle;
+
+  /// No description provided for @mountNoGroupDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No groups will be created and routing rules will not be changed automatically.'**
+  String get mountNoGroupDesc;
+
+  /// No description provided for @mountGroupsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read this profile’s groups. Read them again.'**
+  String get mountGroupsFailed;
+
+  /// No description provided for @mountTypeSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual selection'**
+  String get mountTypeSelect;
+
+  /// No description provided for @mountTypeUrlTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latency selection'**
+  String get mountTypeUrlTest;
+
+  /// No description provided for @mountTypeFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Failover'**
+  String get mountTypeFallback;
+
+  /// No description provided for @mountTypeLoadBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Load balancing'**
+  String get mountTypeLoadBalance;
+
+  /// No description provided for @mountBlockTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Block when empty'**
+  String get mountBlockTag;
+
+  /// No description provided for @mountBlockDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'If this group has no selectable nodes, its connections are blocked instead of sent directly.'**
+  String get mountBlockDesc;
+
+  /// No description provided for @mountBaseFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty-group handling comes from the original profile: {target}.'**
+  String mountBaseFallback(Object target);
+
+  /// No description provided for @mountBaseDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'When no nodes are selectable, this group uses a direct connection as specified by the original profile.'**
+  String get mountBaseDirect;
+
+  /// No description provided for @mountGroupEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Group “{group}” has no selectable nodes. Check the subscriptions and group filters.'**
+  String mountGroupEmpty(Object group);
+
+  /// No description provided for @mountUnmountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmount this subscription?'**
+  String get mountUnmountTitle;
+
+  /// No description provided for @mountUnmountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes nodes from “{subscriptionName}” from “{profileName}”. Connections using those nodes may be interrupted. The subscription, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.'**
+  String mountUnmountBody(Object subscriptionName, Object profileName);
+
+  /// No description provided for @mountUnmountManyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmount these subscriptions?'**
+  String get mountUnmountManyTitle;
+
+  /// No description provided for @mountUnmountManyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes nodes provided by the following {count, plural, =1{1 subscription} other{{count} subscriptions}} from “{profileName}”. Connections using those nodes may be interrupted. The subscriptions, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.'**
+  String mountUnmountManyBody(num count, Object profileName);
+
+  /// No description provided for @mountUnmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmount'**
+  String get mountUnmount;
+
+  /// No description provided for @mountUnmounting.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmounting…'**
+  String get mountUnmounting;
+
+  /// No description provided for @mountUnmounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmounted'**
+  String get mountUnmounted;
+
+  /// No description provided for @mountUnmountUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmounting is unconfirmed. Read the status again first.'**
+  String get mountUnmountUnknown;
+
+  /// No description provided for @mountUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update subscription mounts?'**
+  String get mountUpdateTitle;
+
+  /// No description provided for @mountAlsoMounts.
+  ///
+  /// In en, this message translates to:
+  /// **'This save also mounts {count, plural, =1{1 subscription} other{{count} subscriptions}}.'**
+  String mountAlsoMounts(num count);
+
+  /// No description provided for @mountFormatHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'You can mount imported remote Clash/mihomo subscriptions and remote subscriptions successfully converted by Flash’s existing importer. Only nodes are included, not subscription rules or DNS settings.'**
+  String get mountFormatHelp;
+
+  /// No description provided for @mountGroupsExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'To keep Tailscale routing separate, {count, plural, =1{1 group does not accept subscription nodes.} other{{count} groups do not accept subscription nodes.}}'**
+  String mountGroupsExcluded(num count);
+
+  /// No description provided for @mountGroupsExcludedNames.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups: {groups}.'**
+  String mountGroupsExcludedNames(Object groups);
+
+  /// No description provided for @mountNameSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get mountNameSeparator;
+
+  /// No description provided for @mountGroupReasonRuleUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule contents are currently unavailable'**
+  String get mountGroupReasonRuleUnknown;
+
+  /// No description provided for @mountGroupReasonProviderUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The base profile’s node list is currently unavailable'**
+  String get mountGroupReasonProviderUnknown;
+
+  /// No description provided for @mountGroupReasonDns.
+  ///
+  /// In en, this message translates to:
+  /// **'DNS requests use routing rules to choose an exit'**
+  String get mountGroupReasonDns;
+
+  /// No description provided for @mountGroupReasonDialer.
+  ///
+  /// In en, this message translates to:
+  /// **'Other nodes use this group to relay traffic'**
+  String get mountGroupReasonDialer;
+
+  /// No description provided for @mountGroupReasonMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Restricted due to group membership; the underlying reason is unconfirmed'**
+  String get mountGroupReasonMember;
+
+  /// No description provided for @mountNoGroupIsolatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Current groups cannot receive mounts'**
+  String get mountNoGroupIsolatedTitle;
+
+  /// No description provided for @mountNoGroupIsolatedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'None of the existing groups passed the mount-isolation checks. No group will be created, no direct-connection fallback will be added, and the original profile file will not be rewritten automatically.'**
+  String get mountNoGroupIsolatedDesc;
+
+  /// No description provided for @mountNodesRead.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 node read} other{{count} nodes read}}'**
+  String mountNodesRead(num count);
+
+  /// No description provided for @mountNodesReadAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Nodes read: {time}'**
+  String mountNodesReadAt(Object time);
+
+  /// No description provided for @mountUpdateReadNotAppliedKept.
+  ///
+  /// In en, this message translates to:
+  /// **'New nodes were read but have not been applied. The last confirmed running profile is still in use.'**
+  String get mountUpdateReadNotAppliedKept;
+
+  /// No description provided for @mountUpdateReadNotAppliedBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'New nodes were read but have not been applied. Flash currently rejects every connection routed through it. Read the status again.'**
+  String get mountUpdateReadNotAppliedBlocked;
+
+  /// No description provided for @mountUpdateReadNotAppliedBlockedConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'New nodes were read but have not been applied. Flash still rejects every connection routed through it.'**
+  String get mountUpdateReadNotAppliedBlockedConfirmed;
+
+  /// No description provided for @mountUpdateReadEmptyNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription read. It currently has no nodes. The new result has not been applied.'**
+  String get mountUpdateReadEmptyNotApplied;
+
+  /// No description provided for @mountRunningKept.
+  ///
+  /// In en, this message translates to:
+  /// **'The last confirmed running profile is still in use.'**
+  String get mountRunningKept;
+
+  /// No description provided for @mountRunningBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash currently rejects every connection routed through it. Read the status again.'**
+  String get mountRunningBlocked;
+
+  /// No description provided for @mountRunningBlockedConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash still rejects every connection routed through it.'**
+  String get mountRunningBlockedConfirmed;
+
+  /// No description provided for @mountProviderUpdateRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'New content for “{name}” was read but did not pass the mount-isolation checks and was not applied. The previously confirmed content is still in use.'**
+  String mountProviderUpdateRefused(Object name);
+
+  /// No description provided for @mountProviderUpdateRefusedUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'New content for “{name}” was read but did not pass the mount-isolation checks and was not applied. Its current use is unconfirmed. Read the status again.'**
+  String mountProviderUpdateRefusedUnconfirmed(Object name);
+
+  /// No description provided for @mountUnsupportedExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'To keep Tailscale routing separate, {count, plural, =1{1 subscription node that is not supported for mounting was excluded. Its settings were not changed.} other{{count} subscription nodes that are not supported for mounting were excluded. Their settings were not changed.}}'**
+  String mountUnsupportedExcluded(num count);
+
+  /// No description provided for @mountAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About mounts'**
+  String get mountAbout;
+
+  /// No description provided for @mountAboutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose imported subscriptions to add nodes to this profile. Nodes are added only to groups already configured to accept new nodes automatically, using each group’s existing inclusion and exclusion filters. Groups with only fixed members and no automatic collection stay unchanged. Existing nodes, rules, and DNS settings stay unchanged.'**
+  String get mountAboutBody;
+
+  /// No description provided for @mountIsolationFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale and other mount-isolation requirements still take priority. Ineligible groups will not receive subscription nodes.'**
+  String get mountIsolationFirst;
+
+  /// No description provided for @mountGroupsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Added only to groups that automatically accept new nodes, using each group’s filters.'**
+  String get mountGroupsSummary;
+
+  /// No description provided for @mountGroupsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 group} other{{count} groups}}'**
+  String mountGroupsCount(num count);
+
+  /// No description provided for @mountGroupPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending application'**
+  String get mountGroupPending;
+
+  /// No description provided for @mountGroupNodes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 mounted node} other{{count} mounted nodes}}'**
+  String mountGroupNodes(num count);
+
+  /// No description provided for @mountGroupNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No mounted nodes match'**
+  String get mountGroupNoMatch;
+
+  /// No description provided for @mountGroupsNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 group has no match} other{{count} groups have no match}}'**
+  String mountGroupsNoMatch(num count);
+
+  /// No description provided for @mountGroupsAllNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Mounted nodes match no group filters.'**
+  String get mountGroupsAllNoMatch;
+
+  /// No description provided for @mountGroupsUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Group additions are not confirmed'**
+  String get mountGroupsUnconfirmed;
+
+  /// No description provided for @mountShowAllGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all {count} groups'**
+  String mountShowAllGroups(Object count);
+
+  /// No description provided for @mountGroupsHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden proxy groups also follow the filtering and isolation rules. They are not listed here.'**
+  String get mountGroupsHidden;
+
+  /// No description provided for @mountGroupsHiddenCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 hidden group} other{{count} hidden groups}}'**
+  String mountGroupsHiddenCount(num count);
+
+  /// No description provided for @mountGroupsHiddenBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 hidden group is empty and rejects connections.} other{{count} hidden groups are empty and reject connections.}}'**
+  String mountGroupsHiddenBlocked(num count);
+
+  /// No description provided for @mountGroupsHiddenNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 hidden group has no matching mounted node.} other{{count} hidden groups have no matching mounted node.}}'**
+  String mountGroupsHiddenNoMatch(num count);
+
+  /// No description provided for @mountDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get mountDetails;
+
+  /// No description provided for @mountShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get mountShowLess;
+
+  /// No description provided for @mountViewerSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Mount: {name} · {count, plural, =1{1 node} other{{count} nodes}}'**
+  String mountViewerSource(Object name, num count);
+
+  /// No description provided for @mountViewerPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Mount: {name} · node list not yet confirmed'**
+  String mountViewerPending(Object name);
+
+  /// No description provided for @tsViewerRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale · Added by Flash · {count, plural, =1{1 rule} other{{count} rules}} → Node {node}'**
+  String tsViewerRules(num count, Object node);
+
+  /// No description provided for @tsViewerNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale · Added by Flash · Node {node}'**
+  String tsViewerNode(Object node);
+
+  /// No description provided for @tsViewerUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale · Current rules and nodes are unconfirmed'**
+  String get tsViewerUnconfirmed;
+
+  /// No description provided for @tsViewerReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale · Could not read runtime information'**
+  String get tsViewerReadFailed;
+
+  /// No description provided for @tsViewerNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale · No rules added by Flash in this profile'**
+  String get tsViewerNone;
+
+  /// No description provided for @mountSameNameShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Matching node names use the subscription name'**
+  String get mountSameNameShort;
+
+  /// No description provided for @mountNodesExcludedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 node excluded from mounting} other{{count} nodes excluded from mounting}}'**
+  String mountNodesExcludedShort(num count);
+
+  /// No description provided for @mountGroupsExcludedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 group excludes subscription nodes} other{{count} groups exclude subscription nodes}}'**
+  String mountGroupsExcludedShort(num count);
+
+  /// No description provided for @mountNamesAndExclusions.
+  ///
+  /// In en, this message translates to:
+  /// **'Name conflicts and exclusions'**
+  String get mountNamesAndExclusions;
+
+  /// No description provided for @mountSomeExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Some nodes or groups are excluded from mounting'**
+  String get mountSomeExcluded;
+
+  /// No description provided for @processPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Process path'**
+  String get processPath;
+
+  /// No description provided for @copyPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy path'**
+  String get copyPath;
+
+  /// No description provided for @filterByThisApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by this app'**
+  String get filterByThisApp;
+
+  /// No description provided for @filterByThisProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by this process'**
+  String get filterByThisProcess;
+
+  /// No description provided for @unknownProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown process'**
+  String get unknownProcess;
+
+  /// No description provided for @otherDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Other device'**
+  String get otherDevice;
+
+  /// No description provided for @processInfoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Process information is unavailable.'**
+  String get processInfoUnavailable;
+
+  /// No description provided for @processUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get processUnavailable;
+
+  /// No description provided for @processFromOtherDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This connection is from another device. Its process information cannot be obtained on this Mac.'**
+  String get processFromOtherDevice;
+
+  /// No description provided for @appInfoUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read app information'**
+  String get appInfoUnreadable;
+
+  /// No description provided for @processLookupDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Process lookup is currently disabled.'**
+  String get processLookupDisabled;
+
+  /// No description provided for @pageSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm setting sources'**
+  String get pageSourceTitle;
+
+  /// No description provided for @pageSourceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'These settings differ between the app and profile. Choose which source to use.'**
+  String get pageSourceDesc;
+
+  /// No description provided for @pageSourceCompare.
+  ///
+  /// In en, this message translates to:
+  /// **'App: {pageValue} · Profile: {fileValue}'**
+  String pageSourceCompare(Object pageValue, Object fileValue);
+
+  /// No description provided for @keepPageSetting.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep in-app settings'**
+  String get keepPageSetting;
+
+  /// No description provided for @followBaseProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow base profile'**
+  String get followBaseProfile;
+
+  /// No description provided for @applyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get applyAction;
+
+  /// No description provided for @notSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get notSet;
+
+  /// No description provided for @notSetDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set; default {defaultValue}'**
+  String notSetDefault(Object defaultValue);
+
+  /// No description provided for @pageSourceChange.
+  ///
+  /// In en, this message translates to:
+  /// **'{field}: {oldValue} → {newValue}'**
+  String pageSourceChange(Object field, Object oldValue, Object newValue);
+
+  /// No description provided for @sourcePage.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app settings'**
+  String get sourcePage;
+
+  /// No description provided for @sourceBase.
+  ///
+  /// In en, this message translates to:
+  /// **'Base profile'**
+  String get sourceBase;
+
+  /// No description provided for @sourceDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get sourceDefault;
+
+  /// No description provided for @notYetApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet applied'**
+  String get notYetApplied;
+
+  /// No description provided for @logLevelDebug.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug'**
+  String get logLevelDebug;
+
+  /// No description provided for @logLevelInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get logLevelInfo;
+
+  /// No description provided for @logLevelWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning'**
+  String get logLevelWarning;
+
+  /// No description provided for @logLevelError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get logLevelError;
+
+  /// No description provided for @logLevelSilent.
+  ///
+  /// In en, this message translates to:
+  /// **'Silent'**
+  String get logLevelSilent;
+
+  /// No description provided for @findProcessAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Always'**
+  String get findProcessAlways;
+
+  /// No description provided for @findProcessOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get findProcessOff;
+
+  /// No description provided for @findProcessStrict.
+  ///
+  /// In en, this message translates to:
+  /// **'On demand'**
+  String get findProcessStrict;
+
+  /// No description provided for @tunMissingAuthorization.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN did not start because system permission is missing.'**
+  String get tunMissingAuthorization;
+
+  /// No description provided for @inboundNotListening.
+  ///
+  /// In en, this message translates to:
+  /// **'{listenerName} did not start: port {port} is not listening.'**
+  String inboundNotListening(Object listenerName, Object port);
+
+  /// No description provided for @controllerExposedWithoutSecret.
+  ///
+  /// In en, this message translates to:
+  /// **'The controller at {address} allows non-local access without a secret. This profile was not applied.'**
+  String controllerExposedWithoutSecret(Object address);
+
+  /// No description provided for @systemProxyNoPort.
+  ///
+  /// In en, this message translates to:
+  /// **'No usable port is available for the system proxy. Check the port settings.'**
+  String get systemProxyNoPort;
+
+  /// No description provided for @pageSourceHiddenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to profile values'**
+  String get pageSourceHiddenTitle;
+
+  /// No description provided for @pageSourceHiddenNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Defaults are used for settings not present in the profile.'**
+  String get pageSourceHiddenNote;
+
+  /// No description provided for @valueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get valueOn;
+
+  /// No description provided for @valueOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get valueOff;
+
+  /// No description provided for @valueEmptyList.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty list'**
+  String get valueEmptyList;
+
+  /// No description provided for @valueEmptyObject.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty object'**
+  String get valueEmptyObject;
+
+  /// No description provided for @valueEmptyText.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty text'**
+  String get valueEmptyText;
+
+  /// No description provided for @valueNull.
+  ///
+  /// In en, this message translates to:
+  /// **'Null'**
+  String get valueNull;
+
+  /// No description provided for @fieldStoreSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember node selections'**
+  String get fieldStoreSelected;
+
+  /// No description provided for @fieldTunAutoRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN automatic routing'**
+  String get fieldTunAutoRoute;
+
+  /// No description provided for @fieldTunAutoDetectInterface.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN interface auto-detection'**
+  String get fieldTunAutoDetectInterface;
+
+  /// No description provided for @fieldSkipAuthPrefixes.
+  ///
+  /// In en, this message translates to:
+  /// **'Source IP ranges exempt from authentication'**
+  String get fieldSkipAuthPrefixes;
+
+  /// No description provided for @fieldExternalUi.
+  ///
+  /// In en, this message translates to:
+  /// **'External dashboard'**
+  String get fieldExternalUi;
+
+  /// No description provided for @fieldDnsSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'DNS settings'**
+  String get fieldDnsSettings;
+
+  /// No description provided for @listenerMixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed proxy'**
+  String get listenerMixed;
+
+  /// No description provided for @listenerHttp.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP proxy'**
+  String get listenerHttp;
+
+  /// No description provided for @listenerSocks.
+  ///
+  /// In en, this message translates to:
+  /// **'SOCKS proxy'**
+  String get listenerSocks;
+
+  /// No description provided for @listenerRedir.
+  ///
+  /// In en, this message translates to:
+  /// **'Redir proxy'**
+  String get listenerRedir;
+
+  /// No description provided for @listenerTproxy.
+  ///
+  /// In en, this message translates to:
+  /// **'TProxy proxy'**
+  String get listenerTproxy;
+
+  /// No description provided for @tsExitGroupName.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale exit'**
+  String get tsExitGroupName;
+
+  /// No description provided for @tsExitHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.'**
+  String get tsExitHowTo;
+
+  /// No description provided for @tsExitGroupUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit group unconfirmed'**
+  String get tsExitGroupUnconfirmed;
+
+  /// No description provided for @tsExitGroupJoined.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{“{group}” added to 1 manual policy group} other{“{group}” added to {count} manual policy groups}}'**
+  String tsExitGroupJoined(num count, Object group);
+
+  /// No description provided for @tsExitGroupNoParents.
+  ///
+  /// In en, this message translates to:
+  /// **'No manual policy groups in this profile can receive the exit group'**
+  String get tsExitGroupNoParents;
+
+  /// No description provided for @tsExitNotAuthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'This exit node is not authorized for use'**
+  String get tsExitNotAuthorized;
+
+  /// No description provided for @tsExitDeviceOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit device offline'**
+  String get tsExitDeviceOffline;
+
+  /// No description provided for @tsExitNeedsLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to this account again'**
+  String get tsExitNeedsLogin;
+
+  /// No description provided for @tsExitRefusing.
+  ///
+  /// In en, this message translates to:
+  /// **'This exit node is unavailable. Connections using it will be rejected'**
+  String get tsExitRefusing;
+
+  /// No description provided for @tsExitUnavailableShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get tsExitUnavailableShort;
+
+  /// No description provided for @tsExitOffAffectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off the exit node?'**
+  String get tsExitOffAffectedTitle;
+
+  /// No description provided for @tsExitOffAffectedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning off the exit node switches policies using “{group}” to the first option in each group.'**
+  String tsExitOffAffectedBody(Object group);
+
+  /// No description provided for @tsExitTurnOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off exit node'**
+  String get tsExitTurnOff;
+
+  /// No description provided for @tsExitOffNoOption.
+  ///
+  /// In en, this message translates to:
+  /// **'No options will remain'**
+  String get tsExitOffNoOption;
+
+  /// No description provided for @tsViewerExit.
+  ///
+  /// In en, this message translates to:
+  /// **'{group} · Added by Flash · {member} · Manual policy groups: {groups}'**
+  String tsViewerExit(Object group, Object member, Object groups);
+
+  /// No description provided for @tsViewerExitUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale exit · Current exit node and groups are unconfirmed'**
+  String get tsViewerExitUnconfirmed;
+
+  /// No description provided for @macHelperTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash Helper'**
+  String get macHelperTitle;
+
+  /// No description provided for @macHelperOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper not installed'**
+  String get macHelperOff;
+
+  /// No description provided for @macHelperOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper ready'**
+  String get macHelperOn;
+
+  /// No description provided for @macHelperPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval required in macOS Settings'**
+  String get macHelperPending;
+
+  /// No description provided for @macHelperUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper unavailable'**
+  String get macHelperUnavailable;
+
+  /// No description provided for @macHelperCannotUse.
+  ///
+  /// In en, this message translates to:
+  /// **'This version can’t use the helper'**
+  String get macHelperCannotUse;
+
+  /// No description provided for @macHelperRepair.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper update required'**
+  String get macHelperRepair;
+
+  /// No description provided for @macHelperStopUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to confirm helper readiness'**
+  String get macHelperStopUnknown;
+
+  /// No description provided for @macHelperTurnOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Installer Instructions'**
+  String get macHelperTurnOn;
+
+  /// No description provided for @macHelperTurnOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn-Off Instructions'**
+  String get macHelperTurnOff;
+
+  /// No description provided for @macHelperOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open macOS Settings'**
+  String get macHelperOpenSettings;
+
+  /// No description provided for @macHelperTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get macHelperTryAgain;
+
+  /// No description provided for @macHelperRepairAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair Instructions'**
+  String get macHelperRepairAction;
+
+  /// No description provided for @macHelperCheckAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Again'**
+  String get macHelperCheckAgain;
+
+  /// No description provided for @macHelperUnavailableDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash can’t connect to the helper right now, so TUN can’t start. Your TUN setting is preserved.'**
+  String get macHelperUnavailableDetail;
+
+  /// No description provided for @macHelperPendingDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Run Flash’s administrator-approved installer to install, update, repair, or turn off the helper. Turning it off does not uninstall Flash, and administrator approval may be needed again. Installer completion alone does not mean the helper or TUN is running. Your TUN setting is preserved.'**
+  String get macHelperPendingDetail;
+
+  /// No description provided for @trayMultipleNodes.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiple nodes'**
+  String get trayMultipleNodes;
+
+  /// No description provided for @trayNoAvailableMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'No available members'**
+  String get trayNoAvailableMembers;
+
+  /// No description provided for @trayCouldNotLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t load'**
+  String get trayCouldNotLoad;
+
+  /// No description provided for @trayCouldNotSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t switch'**
+  String get trayCouldNotSwitch;
+
+  /// No description provided for @traySwitchUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t confirm the switch'**
+  String get traySwitchUnconfirmed;
+
+  /// No description provided for @traySelectionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Current selection unknown'**
+  String get traySelectionUnknown;
+
+  /// No description provided for @trayCurrentSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Current selection: {name}'**
+  String trayCurrentSelection(Object name);
+
+  /// No description provided for @trayLatencyUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Latency unknown'**
+  String get trayLatencyUnknown;
+
+  /// No description provided for @trayTesting.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing'**
+  String get trayTesting;
+
+  /// No description provided for @trayLatencyMilliseconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Latency {value} milliseconds'**
+  String trayLatencyMilliseconds(Object value);
+
+  /// No description provided for @trayLatencyLessThanOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Latency less than 1 millisecond'**
+  String get trayLatencyLessThanOne;
+
+  /// No description provided for @traySwitchingTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching to {name}'**
+  String traySwitchingTo(Object name);
+
+  /// No description provided for @traySelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get traySelected;
+
+  /// No description provided for @trayTestLatency.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Latency'**
+  String get trayTestLatency;
+
+  /// No description provided for @trayReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get trayReject;
+
+  /// No description provided for @trayLatencyBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} ms'**
+  String trayLatencyBadge(Object value);
+
+  /// No description provided for @compositionReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review Settings Before First Apply'**
+  String get compositionReviewTitle;
+
+  /// No description provided for @compositionBaselineUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.'**
+  String get compositionBaselineUnknown;
+
+  /// No description provided for @compositionCandidateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.'**
+  String get compositionCandidateNote;
+
+  /// No description provided for @compositionReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t prepare or recheck the proposed configuration. It has not been applied. Check the configuration and settings, then try again.'**
+  String get compositionReadFailed;
+
+  /// No description provided for @compositionSourceUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Source unconfirmed'**
+  String get compositionSourceUnconfirmed;
+
+  /// No description provided for @compositionRecordFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.'**
+  String get compositionRecordFailed;
+
+  /// No description provided for @macHelperInstallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Install Flash Helper?'**
+  String get macHelperInstallTitle;
+
+  /// No description provided for @macHelperUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Flash Helper?'**
+  String get macHelperUpdateTitle;
+
+  /// No description provided for @macHelperInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get macHelperInstall;
+
+  /// No description provided for @macHelperUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get macHelperUpdate;
+
+  /// No description provided for @macHelperNotNowInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Now'**
+  String get macHelperNotNowInstall;
+
+  /// No description provided for @macHelperNotNowUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Now'**
+  String get macHelperNotNowUpdate;
+
+  /// No description provided for @macHelperInstallDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper manages Flash’s network core in the background. Installation requires administrator authorization. After installation, Flash will check whether the helper is available.'**
+  String get macHelperInstallDetail;
+
+  /// No description provided for @macHelperUpdateDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The installed helper is incompatible with this version of Flash. Updating may require administrator authorization.'**
+  String get macHelperUpdateDetail;
+
+  /// No description provided for @macHelperChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking helper…'**
+  String get macHelperChecking;
+
+  /// No description provided for @macHelperAuthorizing.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for administrator authorization'**
+  String get macHelperAuthorizing;
+
+  /// No description provided for @macHelperInstalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing helper…'**
+  String get macHelperInstalling;
+
+  /// No description provided for @macHelperUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating helper…'**
+  String get macHelperUpdating;
+
+  /// No description provided for @macHelperInstallCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installation cancelled'**
+  String get macHelperInstallCancelled;
+
+  /// No description provided for @macHelperUpdateCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Update cancelled'**
+  String get macHelperUpdateCancelled;
+
+  /// No description provided for @macHelperInstallFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper installation failed'**
+  String get macHelperInstallFailed;
+
+  /// No description provided for @macHelperUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper update failed'**
+  String get macHelperUpdateFailed;
+
+  /// No description provided for @macHelperLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get macHelperLater;
+
+  /// No description provided for @macHelperMoveDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Flash to Applications, then reopen it to install the helper.'**
+  String get macHelperMoveDetail;
+
+  /// No description provided for @macHelperApprovalDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Flash Helper in macOS System Settings, then return here and check again.'**
+  String get macHelperApprovalDetail;
+
+  /// No description provided for @macHelperDeniedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrator authorization was denied. You can retry when you are ready to authorize.'**
+  String get macHelperDeniedDetail;
+
+  /// No description provided for @macHelperFailedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'macOS could not complete the operation. You can retry manually.'**
+  String get macHelperFailedDetail;
+
+  /// No description provided for @macHelperUnknownDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The operation’s outcome is unknown. Check again to confirm helper readiness; Flash will not repeat the installation while it is unconfirmed.'**
+  String get macHelperUnknownDetail;
+
+  /// No description provided for @macHelperVerificationDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper’s security or compatibility check failed. Use a trusted, compatible release of Flash.'**
+  String get macHelperVerificationDetail;
+
+  /// No description provided for @macHelperPayloadDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The installation files could not be verified. Replace Flash with a complete, trusted copy and try again.'**
+  String get macHelperPayloadDetail;
+
+  /// No description provided for @macHelperReadyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper is available. This does not mean TUN or a connection is running. Retry the feature when you are ready.'**
+  String get macHelperReadyDetail;
+
+  /// No description provided for @macHelperMoreDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Details'**
+  String get macHelperMoreDetails;
+
+  /// No description provided for @macHelperLessDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Details'**
+  String get macHelperLessDetails;
+
+  /// No description provided for @macHelperMoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Flash to Applications'**
+  String get macHelperMoveTitle;
+
+  /// No description provided for @macHelperStartupUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper update required. The core hasn’t started.'**
+  String get macHelperStartupUpdate;
+
+  /// No description provided for @macHelperStartupInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper not installed. The core hasn’t started.'**
+  String get macHelperStartupInstall;
+
+  /// No description provided for @macHelperStartupUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper unavailable. The core hasn’t started.'**
+  String get macHelperStartupUnavailable;
+
+  /// No description provided for @macHelperStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t confirm helper status'**
+  String get macHelperStatusUnknown;
+
+  /// No description provided for @macHelperCoreUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Core status unconfirmed'**
+  String get macHelperCoreUnconfirmed;
+
+  /// No description provided for @macHelperInstallAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Install Helper'**
+  String get macHelperInstallAction;
+
+  /// No description provided for @macHelperUpdateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Helper'**
+  String get macHelperUpdateAction;
+
+  /// No description provided for @macHelperVerificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper verification failed'**
+  String get macHelperVerificationFailed;
 
   /// No description provided for @liveStatus.
   ///

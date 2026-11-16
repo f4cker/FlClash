@@ -171,6 +171,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoLaunch => '自启动';
 
   @override
+  String get loginItemRequiresApproval => '需要在系统设置中允许 Flash 登录时打开。';
+
+  @override
+  String get loginItemNotFound => 'macOS 找不到当前的 Flash，无法设置登录时打开。';
+
+  @override
+  String get loginItemUnexpectedStatus => '无法确认登录时打开是否已按所选设置更新。';
+
+  @override
+  String get loginItemMissingStatus => '无法读取登录时打开的状态。';
+
+  @override
+  String get loginItemOperationFailed => '无法更改登录时打开设置。';
+
+  @override
   String get silentLaunch => '静默启动';
 
   @override
@@ -292,10 +307,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sendFromPhonePermissionDenied =>
-      '从手机接收链接需要「附近的设备」权限，FlClash 才能访问局域网。请在应用设置中开启。';
+      '从手机接收链接需要「附近的设备」权限，Flash 才能访问局域网。请在应用设置中开启。';
 
   @override
-  String get sendFromPhonePageTitle => '把链接发送到 FlClash';
+  String get sendFromPhonePageTitle => '把链接发送到 Flash';
 
   @override
   String get sendFromPhonePageHint => '订阅链接或代理分享链接';
@@ -310,7 +325,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sendFromPhoneConfirmTitle => '导入手机发来的链接？';
 
   @override
-  String get shareQrcodeTip => '在另一台设备上用 FlClash 扫码即可导入此配置。';
+  String get shareQrcodeTip => '在另一台设备上用 Flash 扫码即可导入此配置。';
 
   @override
   String get qrcodeTooLongTip => '链接过长，无法生成二维码，请改用“复制链接”。';
@@ -382,7 +397,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get project => '项目';
+  String get project => 'FlClash 上游项目';
+
+  @override
+  String get upstreamTelegram => 'FlClash 上游 Telegram';
 
   @override
   String get core => '内核';
@@ -464,6 +482,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get checkUpdateError => '当前应用已经是最新版了';
+
+  @override
+  String get updateNoReleaseFound => '暂未找到 Flash 发布版本';
+
+  @override
+  String get updateCheckFailed => '暂时无法检查更新，请重试';
 
   @override
   String get goDownload => '前往下载';
@@ -913,7 +937,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get disclaimerDesc =>
-      '在使用 FlClash（以下简称“本软件”）前，请仔细阅读并充分理解本声明。点击“同意”表示你已阅读并理解以下内容；如不想继续，可点击“退出”。';
+      '在使用 Flash（以下简称“本软件”）前，请仔细阅读并充分理解本声明。点击“同意”表示你已阅读并理解以下内容；如不想继续，可点击“退出”。';
 
   @override
   String get disclaimerSoftwareTitle => '软件性质';
@@ -1071,6 +1095,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hideTimeoutProxies => '隐藏超时代理';
 
   @override
+  String get showHiddenGroups => '显示隐藏分组';
+
+  @override
+  String get hiddenGroupTag => '隐藏';
+
+  @override
+  String hiddenGroupSemantics(Object name) {
+    return '$name，隐藏';
+  }
+
+  @override
   String get stackMode => '栈模式';
 
   @override
@@ -1134,6 +1169,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get copyEnvVar => '复制环境变量';
 
   @override
+  String get trayTunMode => 'TUN 模式';
+
+  @override
+  String get trayCopyProxyCommand => '复制终端代理命令';
+
+  @override
   String get memoryInfo => '内存信息';
 
   @override
@@ -1153,6 +1194,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memoryCoreRuntime => '运行时开销';
+
+  @override
+  String get memoryGoRuntimeDescription => 'Go 运行时统计；各项不代表进程常驻内存的构成。';
 
   @override
   String get memoryCoreNotRunning => '内核未运行';
@@ -1824,22 +1868,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inputProxyGroupName => '输入策略组名称';
 
   @override
-  String get helperCorruptTip => 'Helper 服务不可用，无法启用 TUN 模式，请重新安装 FlClash。';
+  String get helperCorruptTip => 'Helper 服务不可用，无法启用 TUN 模式，请重新安装 Flash。';
 
   @override
-  String get tunAuthorizationFailed => '虚拟网卡授权失败，已关闭。';
+  String get tunAuthorizationFailed => 'TUN 授权未完成，本次未应用。已保留页面上的设置。';
+
+  @override
+  String mixedPortUnavailable(Object port) {
+    return '无法打开端口 $port，可能已被其他应用占用。代理服务未启动。';
+  }
+
+  @override
+  String mixedPortUnavailableProxyUnchanged(Object port) {
+    return '无法打开端口 $port，可能已被其他应用占用。代理服务未启动。未更改系统代理设置。';
+  }
 
   @override
   String get sudoPasswordTitle => '输入 sudo 密码';
 
   @override
   String coreBlockedByPolicyTip(Object code) {
-    return 'Windows 拒绝运行 FlClashCore.exe（错误 $code）。智能应用控制、AppLocker 等应用控制策略会拦截未签名程序，请在该策略中放行 FlClash 或关闭策略后重试。';
+    return 'Windows 拒绝运行 FlClashCore.exe（错误 $code）。智能应用控制、AppLocker 等应用控制策略会拦截未签名程序，请在该策略中放行 Flash 或关闭策略后重试。';
   }
 
   @override
   String get coreBlockedBySmartAppControlTip =>
-      'Windows 智能应用控制拦截了未签名的 FlClashCore.exe。请打开 Windows 安全中心 → 应用和浏览器控制 → 智能应用控制设置，选择「关闭」后重新启动 FlClash。智能应用控制关闭后无法再开启，除非重装 Windows。';
+      'Windows 智能应用控制拦截了未签名的 FlClashCore.exe。请打开 Windows 安全中心 → 应用和浏览器控制 → 智能应用控制设置，选择「关闭」后重新启动 Flash。智能应用控制关闭后无法再开启，除非重装 Windows。';
 
   @override
   String get hideFromList => '从列表中隐藏';
@@ -2622,7 +2676,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get initFailedTip =>
-      'FlClash 启动时出错，无法继续运行。可以复制错误详情用于反馈；如果问题反复出现，清除数据后通常可以重新启动。';
+      'Flash 启动时出错，无法继续运行。可以复制错误详情用于反馈；如果问题反复出现，清除数据后通常可以重新启动。';
 
   @override
   String get errorDetails => '错误详情';
@@ -3172,7 +3226,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmEnableTip =>
-      '开启后，FlClash 能读取发往被解密主机的全部内容，包括 Cookie 和密码。请只为需要改写的主机开启。';
+      '开启后，Flash 能读取发往被解密主机的全部内容，包括 Cookie 和密码。请只为需要改写的主机开启。';
 
   @override
   String get certificate => '证书';
@@ -3185,7 +3239,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get regenerateCertificateTip =>
-      '新证书会替换当前证书，FlClash 会尽量把当前证书从本机信任的根证书中移除。信任当前证书的其他设备都需要安装新证书。';
+      '新证书会替换当前证书，Flash 会尽量把当前证书从本机信任的根证书中移除。信任当前证书的其他设备都需要安装新证书。';
 
   @override
   String get exportCertificate => '导出证书';
@@ -3273,7 +3327,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mitmOldSystemCertificateLeftTip(Object name) {
-    return '旧证书 $name 仍在系统信任的证书中。请在 root 管理器中允许 FlClash 使用 root 后重新生成，或在其中移除“FlClash MITM CA”模块并重启。';
+    return '旧证书 $name 仍在系统信任的证书中。请在 root 管理器中允许 Flash 使用 root 后重新生成，或在其中移除“FlClash MITM CA”模块并重启。';
   }
 
   @override
@@ -3281,7 +3335,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mitmDecryptHostTip(Object host) {
-    return '要把 $host 加入主机名列表吗？之后 FlClash 能读取发往它的内容，包括 Cookie 和密码。';
+    return '要把 $host 加入主机名列表吗？之后 Flash 能读取发往它的内容，包括 Cookie 和密码。';
   }
 
   @override
@@ -3479,7 +3533,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateNotVerified => '下载的更新未通过校验。';
 
   @override
-  String get updateRestartTip => 'FlClash 将关闭以安装更新，完成后自动重新打开。';
+  String get updateRestartTip => 'Flash 将关闭以安装更新，完成后自动重新打开。';
 
   @override
   String get updateDownloadFailed => '无法下载更新。';
@@ -3521,6 +3575,1859 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fallbackFilterDomainDesc => '这些域名直接使用 Fallback 解析。';
+
+  @override
+  String get tsCurrentDevice => '当前设备';
+
+  @override
+  String tsNodeOf(Object name) {
+    return '节点 $name';
+  }
+
+  @override
+  String tsStatusOf(Object label) {
+    return '状态：$label';
+  }
+
+  @override
+  String get tsChooseNode => '选择节点';
+
+  @override
+  String get tsRefresh => '刷新';
+
+  @override
+  String get tsHelp => '补充说明';
+
+  @override
+  String get tsHelpBody =>
+      'Flash 会在 Tailscale 网络中显示为独立设备。它不提供其他设备连入这台 Mac 的 SSH、文件共享或远程桌面功能，也不提供 Tailscale SSH 或 Taildrop。';
+
+  @override
+  String get tsNetworkNameTip => '网络名称不代表已核实的网络所有者。';
+
+  @override
+  String get tsBoundaryTip =>
+      '只有由 Flash 规则转到此节点的流量才会使用 Tailscale。登录不会自动修改规则、系统代理或虚拟网卡设置。';
+
+  @override
+  String get tsGoToRules => '前往规则';
+
+  @override
+  String get tsGoToProfiles => '前往配置';
+
+  @override
+  String get tsCoreStopped => '内核未运行';
+
+  @override
+  String get tsCoreStoppedTip => '启动内核后，才能查看此节点的 Tailscale 状态。';
+
+  @override
+  String get tsStartCore => '启动内核';
+
+  @override
+  String get tsNodeGone => '此节点已不在当前配置中';
+
+  @override
+  String get tsNodeGoneTip => '请重新选择节点。';
+
+  @override
+  String get tsStateSignedOut => '未登录';
+
+  @override
+  String get tsStatePreparing => '正在准备登录…';
+
+  @override
+  String get tsStateStarting => '正在启动…';
+
+  @override
+  String get tsStateWaitingBrowser => '等待浏览器登录';
+
+  @override
+  String get tsStateNeedsApproval => '等待管理员批准';
+
+  @override
+  String get tsStateConnected => '已连接';
+
+  @override
+  String get tsStateNeedsReauth => '需要重新登录';
+
+  @override
+  String get tsStateStopped => '已停止';
+
+  @override
+  String get tsStateStartFailed => '启动失败';
+
+  @override
+  String get tsStateUnconfirmed => '状态待确认';
+
+  @override
+  String get tsStateLoadFailed => '状态加载失败';
+
+  @override
+  String get tsSignedOutTip => '在浏览器中登录，完成此节点的认证。';
+
+  @override
+  String get tsLoggedOutTip => '你已退出此节点。点击登录后才会重新连接。';
+
+  @override
+  String get tsPreparingTip => '正在获取此节点的登录信息。';
+
+  @override
+  String get tsWaitingBrowserTip => '请在浏览器中完成登录。完成后，这里会根据节点状态更新。';
+
+  @override
+  String get tsNeedsApprovalTip => '浏览器认证已完成。请等待 Tailscale 网络管理员批准此设备。';
+
+  @override
+  String get tsNeedsReauthTip => '此节点的认证已过期，请重新登录。';
+
+  @override
+  String tsExpiryTip(Object time) {
+    return '认证将于 $time 到期，请在到期前重新登录。';
+  }
+
+  @override
+  String get tsStoppedTip => '此节点已停止，暂时无法通过它访问 Tailscale 网络。';
+
+  @override
+  String get tsStartFailedTip => '此节点未能启动，请重试。';
+
+  @override
+  String get tsUnconfirmedTip => '暂时无法确认此节点是否已连接，请重新读取状态。';
+
+  @override
+  String get tsLoadFailedTip => '暂时无法读取此节点的状态，请重试。';
+
+  @override
+  String get tsDeviceName => '设备名称';
+
+  @override
+  String get tsAccount => '登录账号';
+
+  @override
+  String get tsNetwork => '所在网络';
+
+  @override
+  String get tsControlServer => '控制服务器';
+
+  @override
+  String get tsAfterLogin => '登录后可查看';
+
+  @override
+  String get tsAccountMissing => '账号信息未提供';
+
+  @override
+  String get tsNetworkMissing => '网络信息未提供';
+
+  @override
+  String get tsIdentityFailed => '账号与网络信息加载失败';
+
+  @override
+  String get tsCopyAddress => '复制地址';
+
+  @override
+  String get tsCopyName => '复制名称';
+
+  @override
+  String get tsAddressCopied => '地址已复制';
+
+  @override
+  String get tsLogin => '登录 Tailscale';
+
+  @override
+  String get tsRelogin => '重新登录';
+
+  @override
+  String get tsReopenLogin => '重新打开登录页';
+
+  @override
+  String get tsReadStatus => '重新读取状态';
+
+  @override
+  String get tsLogout => '退出当前节点';
+
+  @override
+  String get tsLoggingOut => '正在退出…';
+
+  @override
+  String get tsLogoutTitle => '退出此 Tailscale 节点？';
+
+  @override
+  String tsLogoutBody(Object name) {
+    return '将退出“$name”，并清除本机保存的该节点登录身份。经过此节点的连接可能中断，其他节点不受影响。';
+  }
+
+  @override
+  String get tsLogoutAuthKeyNote => '再次点击登录时，将使用配置中的登录密钥注册新的设备身份。';
+
+  @override
+  String get tsLoggedOutReceipt => '已退出此节点。再次点击登录前，此节点不会自动登录。';
+
+  @override
+  String get tsLogoutFailed => '退出失败，请重新读取节点状态后重试。';
+
+  @override
+  String get tsLogoutUnknown => '退出结果待确认，请重新读取节点状态，确认前请勿重复操作。';
+
+  @override
+  String get tsBrowserFailed => '无法打开登录页，请重试。';
+
+  @override
+  String get tsUrlRejected => '无法安全打开此登录页，请检查当前节点的控制服务器配置。';
+
+  @override
+  String get tsUrlMissing => '尚未获取到可用的登录页，请重新准备登录。';
+
+  @override
+  String get tsPrepareAgain => '重新准备登录';
+
+  @override
+  String get tsLoginUnconfirmed => '尚未确认登录结果，请重新读取节点状态。';
+
+  @override
+  String get tsNodeChanged => '当前节点已变化，请在所选节点重新发起操作。';
+
+  @override
+  String get tsExitNode => '出口节点';
+
+  @override
+  String get tsNoExitNode => '不使用出口节点';
+
+  @override
+  String get tsNoExitNodeTip => '不使用出口节点不会退出 Tailscale';
+
+  @override
+  String get tsExitNodeTip => '只影响经此 Tailscale 节点转发的流量，不会让整台 Mac 自动使用该出口。';
+
+  @override
+  String get tsNoExitCandidates => '暂无可用出口节点';
+
+  @override
+  String get tsNoExitCandidatesTip => '当前没有已确认可用的出口节点';
+
+  @override
+  String get tsExitStale => '请先刷新设备列表，再选择出口节点。';
+
+  @override
+  String get tsChooseExitNode => '选择出口节点';
+
+  @override
+  String get tsOfflineNotSelectable => '离线，不可选';
+
+  @override
+  String get tsExitChangeTitle => '更改出口节点？';
+
+  @override
+  String tsExitChangeBody(Object node, Object device) {
+    return '将“$node”的出口节点设为“$device”。经过此节点的连接可能中断；Flash 的规则不变。';
+  }
+
+  @override
+  String get tsExitChangeConfirm => '更改出口节点';
+
+  @override
+  String get tsExitOffTitle => '不再使用出口节点？';
+
+  @override
+  String tsExitOffBody(Object node) {
+    return '仅关闭“$node”的出口转发，不会退出 Tailscale，Flash 的规则不变。';
+  }
+
+  @override
+  String get tsExitApplying => '正在更改出口节点…';
+
+  @override
+  String get tsExitUpdated => '出口节点已更新';
+
+  @override
+  String get tsExitFailed => '出口节点未更改，请重试。';
+
+  @override
+  String get tsExitUnknown => '出口节点的更改结果待确认，请重新读取当前设置。';
+
+  @override
+  String get tsReadSettings => '重新读取设置';
+
+  @override
+  String get tsSettingsSaved => '设置已保存，但尚未确认生效。请重新读取当前设置。';
+
+  @override
+  String get tsSettingsApplyFailed => '设置已保存，但未能应用到当前节点。请重新读取当前设置。';
+
+  @override
+  String get tsSubnetRoutes => '子网路由';
+
+  @override
+  String get tsAcceptRoutes => '接受子网路由';
+
+  @override
+  String get tsAcceptRoutesTip =>
+      '允许此节点使用 Tailscale 网络中已批准的子网路由。是否有流量经过这些路由，仍由现有规则决定；不会自动修改 Flash 的规则。';
+
+  @override
+  String get tsRoutesOnTitle => '接受子网路由？';
+
+  @override
+  String get tsRoutesOnBody => '此节点将允许使用网络中已批准的子网路由。Flash 的规则不变。';
+
+  @override
+  String get tsRoutesOffTitle => '停止接受子网路由？';
+
+  @override
+  String get tsRoutesOffBody => '此节点将不再使用这些子网路由，相关连接可能中断。Flash 的规则不变。';
+
+  @override
+  String get tsRoutesOffConfirm => '停止接受';
+
+  @override
+  String get tsRoutesApplying => '正在更新子网路由设置…';
+
+  @override
+  String get tsRoutesUpdated => '子网路由设置已更新';
+
+  @override
+  String get tsRoutesFailed => '子网路由设置未更改，请重试。';
+
+  @override
+  String get tsRoutesUnknown => '子网路由设置的更改结果待确认，请重新读取当前设置。';
+
+  @override
+  String get tsOn => '已开启';
+
+  @override
+  String get tsOff => '已关闭';
+
+  @override
+  String get tsFromSubscription => '来自订阅';
+
+  @override
+  String get tsFromProfile => '来自当前配置';
+
+  @override
+  String get tsFromProvider => '来自代理集合';
+
+  @override
+  String get tsFromLocal => '本机设置';
+
+  @override
+  String get tsOverrideAmbiguous =>
+      '当前配置中有多个同名节点使用同一控制服务器，暂时无法分别保存设置。请在配置中为它们使用不同名称。';
+
+  @override
+  String get tsOverrideTip => '此处保存的设置优先于当前配置中的同名设置，不会修改订阅文件。';
+
+  @override
+  String get tsChangeAfterSignIn => '登录并连接后可更改';
+
+  @override
+  String tsSavedValue(Object value) {
+    return '已保存：$value';
+  }
+
+  @override
+  String get tsAfterConnectSelectable => '此节点连接后可更改设置。';
+
+  @override
+  String get tsDevices => '设备';
+
+  @override
+  String get tsDevicesScope => '显示当前节点可见的设备，不代表管理后台中的全部设备';
+
+  @override
+  String get tsAddress => 'Tailscale 地址';
+
+  @override
+  String get tsOwner => '归属';
+
+  @override
+  String get tsSystem => '系统';
+
+  @override
+  String get tsStatus => '状态';
+
+  @override
+  String get tsOnline => '在线';
+
+  @override
+  String get tsOffline => '离线';
+
+  @override
+  String get tsStatusUnknown => '状态未知';
+
+  @override
+  String get tsExitCapable => '可作出口节点';
+
+  @override
+  String get tsNameMissing => '设备名称未提供';
+
+  @override
+  String get tsAddressMissing => '地址未提供';
+
+  @override
+  String get tsSystemMissing => '系统未提供';
+
+  @override
+  String get tsDevicesEmpty => '暂无可见设备';
+
+  @override
+  String get tsDevicesEmptyTip => '当前节点暂未发现其他可见设备。';
+
+  @override
+  String get tsDevicesFailed => '设备列表加载失败，请重试。';
+
+  @override
+  String get tsRefreshDevices => '刷新设备列表';
+
+  @override
+  String get tsDevicesStale => '设备列表可能已过期。刷新失败，以下为上次读取的结果。';
+
+  @override
+  String tsDevicesShown(Object n) {
+    return '当前显示 $n 台设备';
+  }
+
+  @override
+  String tsDevicesCompact(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 台设备 · 仅显示此账号可见的设备',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tsDevicesCompactFiltered(Object shown, Object total) {
+    return '显示 $shown/$total 台 · 仅限此账号可见的设备';
+  }
+
+  @override
+  String get tsSearchHint => '搜索名称或地址';
+
+  @override
+  String get tsSearchEmpty => '没有符合搜索条件的设备';
+
+  @override
+  String get tsOwnerFilter => '设备归属';
+
+  @override
+  String get tsOwnerAll => '全部';
+
+  @override
+  String get tsOwnerMine => '我的';
+
+  @override
+  String get tsOwnerMe => '我';
+
+  @override
+  String get tsOwnerUnknown => '归属未知';
+
+  @override
+  String tsOwnerUnknownNetwork(Object network) {
+    return '未知 · 网络 $network';
+  }
+
+  @override
+  String get tsOwnerFilterEmpty => '没有符合当前归属的设备';
+
+  @override
+  String get tsFilterEmpty => '没有符合当前筛选条件的设备';
+
+  @override
+  String get tsClearOwnerFilter => '清除归属筛选';
+
+  @override
+  String get tsShared => '来自共享';
+
+  @override
+  String tsSharedBy(Object name) {
+    return '分享来源：$name';
+  }
+
+  @override
+  String get tsLegacyTitle => '发现旧版登录记录';
+
+  @override
+  String get tsLegacyAccountUnconfirmed => '账号信息未确认';
+
+  @override
+  String get tsLegacyBody =>
+      '可将这份登录记录复制给当前节点，保留原记录。它只能迁移到一个节点；请确认这是你要继续使用的账号，也可以选择重新登录。';
+
+  @override
+  String get tsLegacyAuthKeyNote => '此节点配置了登录密钥，重新登录将使用该密钥注册新的设备身份，旧登录记录仍保留。';
+
+  @override
+  String get tsLegacyMigrate => '迁移到这个节点';
+
+  @override
+  String get tsLegacyMigrating => '正在迁移登录记录…';
+
+  @override
+  String get tsLegacyRetry => '重试迁移';
+
+  @override
+  String get tsLegacyFailed => '登录记录未迁移，原记录仍保留。请重试，或选择重新登录。';
+
+  @override
+  String get tsLegacyClaimFailed => '登录记录未迁移，迁移信息未能保存。请重试，或选择重新登录。';
+
+  @override
+  String get tsLegacyChanged => '迁移信息已变化，请重新核对后确认。';
+
+  @override
+  String get tsLegacyUnknown => '迁移结果待确认。请先重新读取状态，确认前请勿重复迁移或重新登录。';
+
+  @override
+  String get tsLegacyUnknownTarget =>
+      '迁移结果待确认，尚未确认目标节点的登录记录。请先重新读取状态，确认前请勿重复迁移或重新登录。';
+
+  @override
+  String get tsLegacyUnknownArchive =>
+      '迁移结果待确认，原登录记录暂时无法核验。请先重新读取状态，确认前请勿重复迁移或重新登录。';
+
+  @override
+  String get tsLegacyUnknownUnsaved =>
+      '迁移结果待确认，迁移信息未能保存。请先重新读取状态，确认前请勿重复迁移或重新登录。';
+
+  @override
+  String get tsLegacyMigrated => '登录记录已迁移，正在读取节点状态。';
+
+  @override
+  String get tsLegacyHasIdentity => '此节点已有自己的登录记录，无需迁移。';
+
+  @override
+  String get tsLegacyControlMismatch => '旧登录记录的控制服务器与此节点不一致，无法迁移。';
+
+  @override
+  String get tsLegacyInUse => '旧登录记录仍在使用中，暂时无法迁移。';
+
+  @override
+  String get tsLegacyMigratedElsewhere => '这份旧登录记录已迁移到其他节点，不能再次迁移。';
+
+  @override
+  String get tsLegacyUnreadable => '无法读取旧登录记录，请重新核对。';
+
+  @override
+  String get tsLegacyUnreadableNotMigrated => '登录记录未迁移，无法读取旧登录记录。请重新核对。';
+
+  @override
+  String get tsLegacyUnconfirmed => '旧登录记录的可用状态尚未确认，请重新读取状态。';
+
+  @override
+  String get tsLegacyConfirmTitle => '将旧登录迁移到此节点？';
+
+  @override
+  String tsLegacyConfirmProfile(Object name) {
+    return '配置：$name';
+  }
+
+  @override
+  String tsLegacyConfirmNode(Object name) {
+    return '节点：$name';
+  }
+
+  @override
+  String tsLegacyConfirmAccount(Object account) {
+    return '登录账号：$account';
+  }
+
+  @override
+  String tsLegacyConfirmControl(Object server) {
+    return '控制服务器：$server';
+  }
+
+  @override
+  String get tsLegacyConfirmBody =>
+      '将复制这份登录记录供上述节点使用，原记录保留不动。同一份旧记录不能再迁移给其他节点。迁移完成后仍需检查此节点的真实连接状态。';
+
+  @override
+  String get tsLegacyConfirm => '确认迁移';
+
+  @override
+  String get tsSignIn => '登录 Tailscale';
+
+  @override
+  String get tsSignInTip =>
+      '登录后，Flash 会为当前配置添加 Tailscale 节点和专用规则。其他流量仍按原规则分流，原配置文件保持不变。';
+
+  @override
+  String get tsSignInBoundary => '不会自动开启系统代理或虚拟网卡。';
+
+  @override
+  String get tsPreparingProfile => '正在准备本地配置…';
+
+  @override
+  String get tsPreparingSignIn => '正在准备登录…';
+
+  @override
+  String get tsPreparingSignInTip => '正在为当前配置准备 Tailscale。';
+
+  @override
+  String get tsAttaching => '正在接入当前配置…';
+
+  @override
+  String get tsAttachingTip => '登录已完成，正在添加节点和 Tailscale 专用规则。';
+
+  @override
+  String get tsAttached => '已接入当前配置';
+
+  @override
+  String get tsAttachedTip => 'Tailscale 流量使用专用规则，其他流量仍按原规则分流。';
+
+  @override
+  String get tsPrepareFailed => '暂时无法准备 Tailscale 登录，请重试。';
+
+  @override
+  String get tsAttachFailed => '已登录，尚未接入当前配置。登录记录已保留，请重试接入。';
+
+  @override
+  String get tsRetryAttach => '重试接入';
+
+  @override
+  String get tsAttachUnknown => '配置接入结果待确认。请先重新读取状态，确认前请勿重复添加或重新登录。';
+
+  @override
+  String get tsPrepareUnknown => '登录准备结果待确认。请先重新读取状态，确认前请勿重复登录。';
+
+  @override
+  String get tsAttachLockTip => '正在接入当前配置，暂时无法更改设置。';
+
+  @override
+  String get tsAttachUnknownLockTip => '配置接入结果待确认，请先重新读取状态。';
+
+  @override
+  String get tsAddedInPanel => '面板添加';
+
+  @override
+  String get tsRulesManaged =>
+      'Flash 会按此账号的网络域名和设备地址更新专用规则。其他流量仍按原规则分流，原配置文件保持不变。';
+
+  @override
+  String tsRulesDomain(Object domain) {
+    return '网络域名：$domain';
+  }
+
+  @override
+  String tsRulesAddresses(Object count) {
+    return '设备地址：$count 个';
+  }
+
+  @override
+  String get tsRulesPending =>
+      '接入完成后，Tailscale 地址和 ts.net 域名会使用专用规则，其他流量保留原分流。';
+
+  @override
+  String get tsRulesProfileNode =>
+      '只有由 Flash 规则转到此节点的流量才会使用 Tailscale。登录此节点不会自动修改现有规则，也不会开启系统代理或虚拟网卡。';
+
+  @override
+  String get tsUnverifiedBlocked =>
+      '未匹配到可靠归属的 Tailscale 地址和域名会被拦截，不会改用其他账号或直连。';
+
+  @override
+  String get tsManagedPriority =>
+      '面板添加的专用规则和拦截保护优先于对应的现有规则。普通流量的规则不变。需要更改目标归属时，请在此指定账号。';
+
+  @override
+  String get tsSignOutRemove => '退出并移除';
+
+  @override
+  String get tsSignOutRemoveMenu => '退出并移除…';
+
+  @override
+  String get tsRemoveTitle => '退出并移除此账号？';
+
+  @override
+  String tsRemoveBody(Object account, Object node, Object profile) {
+    return '将退出“$account”（节点“$node”），清除本机保存的该节点登录身份，并从“$profile”移除面板添加的节点和专用规则。经过此节点的连接可能中断。不会退出或移除其他账号。';
+  }
+
+  @override
+  String tsRemoveBodyNode(Object node, Object profile) {
+    return '将退出“$node”，清除本机保存的该节点登录身份，并从“$profile”移除面板添加的节点和专用规则。经过此节点的连接可能中断。不会退出或移除其他账号。';
+  }
+
+  @override
+  String get tsRemoveExtra => '此操作不删除 Tailscale 管理页面中的设备，也不更改官方客户端。';
+
+  @override
+  String get tsRemoveTargetsKept =>
+      '原来指定给此账号的目标不会自动交给其他账号，仍会保留拦截保护。需要继续访问时，请重新指定账号。';
+
+  @override
+  String get tsRemoveLast =>
+      '这是当前配置中最后一个面板添加的账号。移除后，面板添加的专用规则和拦截保护也会撤掉，相关流量恢复按原配置处理，可能直连或走原来的代理。请确认你接受这个变化。';
+
+  @override
+  String get tsRemoving => '正在退出并移除…';
+
+  @override
+  String get tsRemoved => '已退出并移除';
+
+  @override
+  String get tsRemoveLogoutUnknown => '退出结果待确认，暂未移除节点。请先重新读取状态，确认前请勿重复移除或重新登录。';
+
+  @override
+  String get tsRemoveIncomplete => '已退出，尚未完成移除。请先重新读取状态。';
+
+  @override
+  String get tsRemoveUnknown => '移除结果待确认。请先重新读取状态，确认前请勿重新添加或登录。';
+
+  @override
+  String get tsSignOutAccount => '退出此账号';
+
+  @override
+  String get tsSignOutAccountTitle => '退出此账号？';
+
+  @override
+  String tsSignOutAccountBody(Object account, Object node) {
+    return '将退出“$account”（节点“$node”），并清除本机保存的该节点登录身份。面板记录和目标归属会保留；发往此账号的连接可能中断，不会自动改用其他账号或直连。不会退出其他账号。再次使用时需由你点击登录。';
+  }
+
+  @override
+  String get tsAccountSignedOut => '已退出';
+
+  @override
+  String get tsSignedOutBanner =>
+      '已退出此账号。在规则模式下，原来交给此账号的目标将被拦截，直到你主动登录或明确更改归属。';
+
+  @override
+  String get tsSignedOutReceipt => '已退出此账号';
+
+  @override
+  String get tsAccountsInProfile => '当前配置中的 Tailscale 账号';
+
+  @override
+  String get tsAddAccount => '添加 Tailscale 账号';
+
+  @override
+  String get tsNewAccount => '新账号';
+
+  @override
+  String tsNetworkOf(Object name) {
+    return '所在网络：$name';
+  }
+
+  @override
+  String tsSwitcherSemantics(Object account, Object status, Object count) {
+    return '当前查看的 Tailscale 账号：$account，$status，共 $count 项';
+  }
+
+  @override
+  String get tsMemoryTip => '每个账号都会运行独立的 Tailscale 设备，同时在线会增加内存占用。';
+
+  @override
+  String get tsDuplicate => '此账号已有条目。本次登录记录已保留，尚未接入分流，请核对后处理。';
+
+  @override
+  String get tsViewExisting => '查看已有账号';
+
+  @override
+  String get tsCheckingAccount => '正在核对账号…';
+
+  @override
+  String get tsAddUnconfirmed => '账号添加结果待确认，请先重新读取状态。';
+
+  @override
+  String tsConflictTitle(Object count) {
+    return '$count 个目标需要指定账号';
+  }
+
+  @override
+  String get tsConflictBody => '这些地址或域名有多个候选账号。指定账号前，对这些目标的访问会被拦截，不会转为直连。';
+
+  @override
+  String get tsChooseAccounts => '指定账号';
+
+  @override
+  String get tsAddressConflict => '地址冲突';
+
+  @override
+  String get tsRoutingConflict => '归属冲突';
+
+  @override
+  String get tsChooseAccountFor => '指定访问账号';
+
+  @override
+  String get tsAssignTitle => '指定目标的访问账号';
+
+  @override
+  String get tsAssignBody =>
+      '每个目标只能指定一个账号。未指定的目标仍会被拦截，此选择不影响其他目标。指定后不会因账号离线而自动改用其他账号。';
+
+  @override
+  String tsTargetAddress(Object address) {
+    return '地址：$address';
+  }
+
+  @override
+  String tsTargetDomain(Object domain) {
+    return '域名：$domain';
+  }
+
+  @override
+  String tsCandidate(Object account, Object network) {
+    return '$account · $network';
+  }
+
+  @override
+  String get tsNotAssigned => '尚未指定';
+
+  @override
+  String get tsSaveChoices => '保存选择';
+
+  @override
+  String get tsChoicesUpdated => '访问账号已更新';
+
+  @override
+  String get tsAssignedTargets => '已指定的目标';
+
+  @override
+  String get tsChoicesSaved => '选择已保存，尚未确认生效。';
+
+  @override
+  String get tsChoicesFailed => '选择未保存，请重试。';
+
+  @override
+  String get tsChoicesUnknown => '选择结果待确认，请先重新读取状态，确认前请勿重复保存。';
+
+  @override
+  String tsAssignedTo(Object account) {
+    return '已指定：$account';
+  }
+
+  @override
+  String get tsAssignedUnavailable => '指定账号暂不可用，此目标不会改用其他账号。';
+
+  @override
+  String get tsReconfirm => '目标归属需要重新确认，访问已拦截。请重新指定账号。';
+
+  @override
+  String get tsReassign => '重新指定账号';
+
+  @override
+  String get tsTargetUnconfirmed => '目标归属待确认';
+
+  @override
+  String get tsTargetUnconfirmedTip => '暂时无法确认此目标应使用哪个账号，访问已拦截。';
+
+  @override
+  String tsDeleteProfileManaged(Object count) {
+    return '此配置包含 $count 个面板添加的 Tailscale 账号。删除配置会移除这些账号与此配置的关联、目标归属及专用规则和拦截保护；本机登录存档仍会保留。不会删除 Tailscale 管理页面中的设备，其他配置不受影响。';
+  }
+
+  @override
+  String get tsDeleteProfilePending =>
+      '此配置还有待确认的 Tailscale 操作，请先重新读取状态，确认后再删除配置。';
+
+  @override
+  String get tsDeleteProfileUnbindFailed =>
+      '未能解除此配置与 Tailscale 账号的关联，配置未删除。请重试。';
+
+  @override
+  String get tsDeleteProfileUnlinkUnconfirmed =>
+      '账号关联的处理结果待确认，配置尚未删除。请先重新读取状态，确认前请勿重复删除。';
+
+  @override
+  String get tsDeleteProfileUnconfirmed => '配置删除结果待确认。请先重新读取状态，确认前请勿重复删除。';
+
+  @override
+  String get tsTryAgain => '重试';
+
+  @override
+  String get tsDirectMode => '当前为直连模式，Tailscale 自动分流和拦截保护未生效。请手动切换到规则模式后再访问。';
+
+  @override
+  String get tsGlobalMode => '当前为全局模式，Tailscale 自动分流和拦截保护未生效。请手动切换到规则模式后再访问。';
+
+  @override
+  String get tsDnsUnverified =>
+      '当前 DNS 设置无法确认目标域名会保留到规则匹配，域名分流尚未核实。请检查 DNS 设置。';
+
+  @override
+  String get tsCancel => '取消';
+
+  @override
+  String get tsSignInShort => '登录后自动添加节点和专用规则。';
+
+  @override
+  String tsRulesSummary(num count, Object domain) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$domain · $count 个设备地址',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tsRulesUnconfirmed => '域名和地址信息待确认';
+
+  @override
+  String tsDevicesFiltered(Object shown, Object total) {
+    return '显示 $shown / $total 台';
+  }
+
+  @override
+  String get tsAboutTailscale => 'Tailscale 说明';
+
+  @override
+  String get tsAboutExit => '出口设置说明';
+
+  @override
+  String get tsAboutRoutes => '子网路由说明';
+
+  @override
+  String get tsAboutRules => '规则说明';
+
+  @override
+  String get infoAbout => '说明';
+
+  @override
+  String get mountApplyKept => '未能应用挂载，仍使用上次确认的运行配置。';
+
+  @override
+  String get mountApplyBlocked =>
+      '未能应用挂载。Flash 当前会拒绝所有经它转发的连接。请先重新读取状态，确认结果后再解除挂载或重新应用配置。';
+
+  @override
+  String get mountApplyBlockedConfirmed =>
+      '已确认挂载未能应用。Flash 当前仍会拒绝所有经它转发的连接。你可以解除挂载或重新应用配置。';
+
+  @override
+  String get mountSourceNoNodeList => '此订阅未提供可挂载的节点列表，请检查订阅格式。';
+
+  @override
+  String get mountDeleteSourceTitle => '删除订阅并解除挂载？';
+
+  @override
+  String mountDeleteSourceBody(Object subscriptionName, num profileCount) {
+    return '“$subscriptionName”还挂载在以下 $profileCount 份配置中。删除后，将从这些配置移除此订阅提供的节点，相关连接可能中断。其他订阅、基础配置文件和 Tailscale 登录记录不会删除。';
+  }
+
+  @override
+  String get mountDeleteSourceConfirm => '删除并解除挂载';
+
+  @override
+  String get mountDeleteSourceProgress => '正在删除并解除挂载…';
+
+  @override
+  String get mountDeleteSourceDone => '订阅已删除并解除挂载';
+
+  @override
+  String get mountDeleteSourceUnknown =>
+      '订阅删除与解除挂载的结果待确认，请先重新读取状态，确认前请勿重复删除或重新挂载。';
+
+  @override
+  String get mountDeleteSourceBlocked => '此订阅或受影响配置仍有待确认的操作，请先重新读取状态，确认后再删除。';
+
+  @override
+  String get mountReadStatus => '重新读取状态';
+
+  @override
+  String get mountEntry => '挂载订阅节点';
+
+  @override
+  String get mountEntryMenu => '挂载订阅节点…';
+
+  @override
+  String mountedCount(num count) {
+    return '已挂载 $count 份订阅';
+  }
+
+  @override
+  String mountCardFailed(num count) {
+    return '$count 份订阅更新失败';
+  }
+
+  @override
+  String get mountCardUnreadable => '挂载状态读取失败';
+
+  @override
+  String mountPillSemantics(Object label, Object profileName) {
+    return '$label, 目标配置 $profileName';
+  }
+
+  @override
+  String get mountPillFailedSemantics => '有订阅更新失败';
+
+  @override
+  String mountTarget(Object profileName) {
+    return '目标配置：$profileName';
+  }
+
+  @override
+  String get mountDescription => '只添加节点，不改规则和 DNS。';
+
+  @override
+  String get mountChooseSources => '选择订阅';
+
+  @override
+  String get mountMountedTag => '已挂载';
+
+  @override
+  String get mountNotMounted => '未挂载';
+
+  @override
+  String get mountEmptyTitle => '暂无可挂载的订阅';
+
+  @override
+  String get mountEmptyDesc => '先通过链接导入机场订阅，再选择要加入此配置的节点来源。';
+
+  @override
+  String get mountImport => '导入订阅';
+
+  @override
+  String get mountImportHint => '导入后返回此处选择订阅，不会切换你正在使用的配置。';
+
+  @override
+  String mountNodeCount(num count) {
+    return '$count 个节点';
+  }
+
+  @override
+  String mountLastUpdated(Object time) {
+    return '上次更新：$time';
+  }
+
+  @override
+  String get mountNotFetched => '尚未获取节点';
+
+  @override
+  String get mountListFailed => '订阅列表加载失败，请重试。';
+
+  @override
+  String get mountReadAgain => '重新读取';
+
+  @override
+  String get mountSave => '保存挂载';
+
+  @override
+  String get mountSaving => '正在保存挂载…';
+
+  @override
+  String get mountApplying => '挂载已保存，正在应用…';
+
+  @override
+  String get mountUpdated => '订阅节点挂载已更新';
+
+  @override
+  String get mountSavedUnconfirmed => '挂载已保存，尚未确认生效。';
+
+  @override
+  String get mountUnchanged => '挂载未更改，请重试。';
+
+  @override
+  String get mountApplyFailed => '挂载已保存，但未能应用到当前运行配置。';
+
+  @override
+  String get mountUnknown => '挂载结果待确认，请先重新读取状态，确认前请勿重复保存或解除挂载。';
+
+  @override
+  String get mountUpdateNodes => '更新节点';
+
+  @override
+  String mountUpdateNodesOf(Object name) {
+    return '更新节点 $name';
+  }
+
+  @override
+  String get mountUpdatingNodes => '正在更新节点…';
+
+  @override
+  String get mountNodesUpdated => '节点已更新';
+
+  @override
+  String get mountUpdateFailedInUse => '更新失败，继续使用上次成功获取的节点。';
+
+  @override
+  String get mountUpdateFailedKept => '更新失败，已保留上次成功获取的节点，尚未确认当前是否生效。';
+
+  @override
+  String get mountUpdateFailedKeptBlocked => '更新失败，已保留上次成功获取的节点。';
+
+  @override
+  String get mountFetchFailed => '暂时无法获取此订阅的节点，请重试。';
+
+  @override
+  String get mountSourceEmpty => '订阅已更新，目前没有节点。';
+
+  @override
+  String get mountSourceGone => '原订阅已不可用，请重新选择节点来源。';
+
+  @override
+  String get mountSelectionLost => '原来选择的节点已不在此订阅中，请重新选择。';
+
+  @override
+  String get mountTailscaleExcluded => '已从普通挂载中排除 Tailscale 节点。';
+
+  @override
+  String get mountSourceRelayOnly => '此订阅的节点均需经 Tailscale 中转，暂不支持挂载。原中转设置未更改。';
+
+  @override
+  String get mountSourceIsolatedOnly => '此订阅的节点均因挂载隔离要求被排除，暂不支持挂载；原设置未更改。';
+
+  @override
+  String get mountSourceTailscaleOnly => '此订阅仅包含 Tailscale 节点，暂不支持挂载。';
+
+  @override
+  String get mountSameName =>
+      '不同来源有同名节点时，会在名称后加上订阅名以区分。名称变化可能影响完整匹配或按结尾筛选，请核对分组结果。';
+
+  @override
+  String get mountGroupsTitle => '节点加入哪些分组';
+
+  @override
+  String get mountHintFiltered => '自动收集 · 按组筛选';
+
+  @override
+  String get mountNoGroupTitle => '当前配置没有自动接收新节点的分组，挂载节点未加入任何分组。';
+
+  @override
+  String get mountNoGroupDesc => '不会自动新建分组或更改分流规则。';
+
+  @override
+  String get mountGroupsFailed => '暂时无法读取此配置的分组，请重新读取。';
+
+  @override
+  String get mountTypeSelect => '手动选择';
+
+  @override
+  String get mountTypeUrlTest => '延迟优选';
+
+  @override
+  String get mountTypeFallback => '故障切换';
+
+  @override
+  String get mountTypeLoadBalance => '负载均衡';
+
+  @override
+  String get mountBlockTag => '空组时拦截';
+
+  @override
+  String get mountBlockDesc => '此组没有可选节点时会拦截相关连接，不会自动转为直连。';
+
+  @override
+  String mountBaseFallback(Object target) {
+    return '空组处理来自原配置：$target。';
+  }
+
+  @override
+  String get mountBaseDirect => '没有可选节点时，此组会按原配置直连。';
+
+  @override
+  String mountGroupEmpty(Object group) {
+    return '分组“$group”暂无可选节点，请检查订阅和分组筛选。';
+  }
+
+  @override
+  String get mountUnmountTitle => '解除此订阅的挂载？';
+
+  @override
+  String mountUnmountBody(Object subscriptionName, Object profileName) {
+    return '将从“$profileName”移除“$subscriptionName”提供的节点。使用这些节点的连接可能中断。订阅本身、原配置文件和其他挂载不会删除，Tailscale 专用分流不变。';
+  }
+
+  @override
+  String get mountUnmountManyTitle => '解除这些订阅的挂载？';
+
+  @override
+  String mountUnmountManyBody(num count, Object profileName) {
+    return '将从“$profileName”移除以下 $count 份订阅提供的节点。使用这些节点的连接可能中断。订阅本身、原配置文件和其他挂载不会删除，Tailscale 专用分流不变。';
+  }
+
+  @override
+  String get mountUnmount => '解除挂载';
+
+  @override
+  String get mountUnmounting => '正在解除挂载…';
+
+  @override
+  String get mountUnmounted => '已解除挂载';
+
+  @override
+  String get mountUnmountUnknown => '解除挂载结果待确认，请先重新读取状态。';
+
+  @override
+  String get mountUpdateTitle => '更新订阅挂载？';
+
+  @override
+  String mountAlsoMounts(num count) {
+    return '本次保存还将挂载 $count 份订阅。';
+  }
+
+  @override
+  String get mountFormatHelp =>
+      '可挂载已导入的远程 Clash/mihomo 订阅，以及 Flash 现有导入功能成功转换的远程订阅。只引入节点，不引入订阅中的规则或 DNS。';
+
+  @override
+  String mountGroupsExcluded(num count) {
+    return '为保持 Tailscale 分流隔离，$count 个分组不接收订阅节点。';
+  }
+
+  @override
+  String mountGroupsExcludedNames(Object groups) {
+    return '涉及分组：$groups。';
+  }
+
+  @override
+  String get mountNameSeparator => '、';
+
+  @override
+  String get mountGroupReasonRuleUnknown => '暂时无法读取规则内容';
+
+  @override
+  String get mountGroupReasonProviderUnknown => '暂时无法读取基础配置的节点列表';
+
+  @override
+  String get mountGroupReasonDns => 'DNS 请求会按分流规则选择出口';
+
+  @override
+  String get mountGroupReasonDialer => '此分组被其他节点用作中转出口';
+
+  @override
+  String get mountGroupReasonMember => '此分组因成员关联而受限，具体原因待确认';
+
+  @override
+  String get mountNoGroupIsolatedTitle => '当前分组暂不支持挂载';
+
+  @override
+  String get mountNoGroupIsolatedDesc =>
+      '现有分组均未通过挂载隔离检查。不会自动新建分组、改成直连或改写原配置文件。';
+
+  @override
+  String mountNodesRead(num count) {
+    return '已读取 $count 个节点';
+  }
+
+  @override
+  String mountNodesReadAt(Object time) {
+    return '节点读取时间：$time';
+  }
+
+  @override
+  String get mountUpdateReadNotAppliedKept => '新节点已读取，但尚未应用。仍使用上次确认的运行配置。';
+
+  @override
+  String get mountUpdateReadNotAppliedBlocked =>
+      '新节点已读取，但尚未应用。Flash 当前会拒绝所有经它转发的连接，请重新读取状态。';
+
+  @override
+  String get mountUpdateReadNotAppliedBlockedConfirmed =>
+      '新节点已读取，但尚未应用。Flash 当前仍会拒绝所有经它转发的连接。';
+
+  @override
+  String get mountUpdateReadEmptyNotApplied => '订阅已读取，目前没有节点。新结果尚未应用。';
+
+  @override
+  String get mountRunningKept => '仍使用上次确认的运行配置。';
+
+  @override
+  String get mountRunningBlocked => 'Flash 当前会拒绝所有经它转发的连接，请重新读取状态。';
+
+  @override
+  String get mountRunningBlockedConfirmed => 'Flash 当前仍会拒绝所有经它转发的连接。';
+
+  @override
+  String mountProviderUpdateRefused(Object name) {
+    return '“$name”的新内容已读取，但未通过挂载隔离检查，未应用；仍使用此前确认的内容。';
+  }
+
+  @override
+  String mountProviderUpdateRefusedUnconfirmed(Object name) {
+    return '“$name”的新内容已读取，但未通过挂载隔离检查，未应用；当前使用状态待确认，请重新读取状态。';
+  }
+
+  @override
+  String mountUnsupportedExcluded(num count) {
+    return '为保持 Tailscale 分流隔离，已排除 $count 个暂不支持挂载的订阅节点，原设置未更改。';
+  }
+
+  @override
+  String get mountAbout => '挂载说明';
+
+  @override
+  String get mountAboutBody =>
+      '选择已导入的机场订阅，为当前配置添加节点。节点只加入原配置中会自动接收新节点的分组，再按各组的筛选和排除条件过滤。只列出固定成员、且不自动接收新节点的分组保持原样。已有节点、规则和 DNS 不变。';
+
+  @override
+  String get mountIsolationFirst =>
+      'Tailscale 及其他挂载隔离要求仍优先适用，不允许接入的分组不会收到订阅节点。';
+
+  @override
+  String get mountGroupsSummary => '只加入自动接收新节点的分组，再按各组条件筛选。';
+
+  @override
+  String mountGroupsCount(num count) {
+    return '$count 个分组';
+  }
+
+  @override
+  String get mountGroupPending => '待应用';
+
+  @override
+  String mountGroupNodes(num count) {
+    return '$count 个挂载节点';
+  }
+
+  @override
+  String get mountGroupNoMatch => '无匹配挂载节点';
+
+  @override
+  String mountGroupsNoMatch(num count) {
+    return '$count 个分组无匹配';
+  }
+
+  @override
+  String get mountGroupsAllNoMatch => '挂载节点未匹配任何分组的筛选条件。';
+
+  @override
+  String get mountGroupsUnconfirmed => '分组接入尚未确认';
+
+  @override
+  String mountShowAllGroups(Object count) {
+    return '显示全部 $count 个分组';
+  }
+
+  @override
+  String get mountGroupsHidden => '隐藏的普通分组也按筛选和隔离规则处理，此处不列出。';
+
+  @override
+  String mountGroupsHiddenCount(num count) {
+    return '$count 个隐藏分组';
+  }
+
+  @override
+  String mountGroupsHiddenBlocked(num count) {
+    return '$count 个隐藏分组当前为空，连接会被拦截。';
+  }
+
+  @override
+  String mountGroupsHiddenNoMatch(num count) {
+    return '$count 个隐藏分组没有匹配的挂载节点。';
+  }
+
+  @override
+  String get mountDetails => '详情';
+
+  @override
+  String get mountShowLess => '收起';
+
+  @override
+  String mountViewerSource(Object name, num count) {
+    return '挂载：$name · $count 个节点';
+  }
+
+  @override
+  String mountViewerPending(Object name) {
+    return '挂载：$name · 节点列表待确认';
+  }
+
+  @override
+  String tsViewerRules(num count, Object node) {
+    return 'Tailscale · 由 Flash 添加 · $count 条规则 → 节点 $node';
+  }
+
+  @override
+  String tsViewerNode(Object node) {
+    return 'Tailscale · 由 Flash 添加 · 节点 $node';
+  }
+
+  @override
+  String get tsViewerUnconfirmed => 'Tailscale · 当前运行的规则和节点待确认';
+
+  @override
+  String get tsViewerReadFailed => 'Tailscale · 运行信息读取失败';
+
+  @override
+  String get tsViewerNone => 'Tailscale · 当前配置没有 Flash 添加的规则';
+
+  @override
+  String get mountSameNameShort => '同名节点以订阅名区分';
+
+  @override
+  String mountNodesExcludedShort(num count) {
+    return '$count 个节点不参与挂载';
+  }
+
+  @override
+  String mountGroupsExcludedShort(num count) {
+    return '$count 个分组不接收订阅节点';
+  }
+
+  @override
+  String get mountNamesAndExclusions => '重名及排除说明';
+
+  @override
+  String get mountSomeExcluded => '部分节点或分组不参与挂载';
+
+  @override
+  String get processPath => '进程路径';
+
+  @override
+  String get copyPath => '复制路径';
+
+  @override
+  String get filterByThisApp => '筛选此应用';
+
+  @override
+  String get filterByThisProcess => '筛选此进程';
+
+  @override
+  String get unknownProcess => '未知进程';
+
+  @override
+  String get otherDevice => '其他设备';
+
+  @override
+  String get processInfoUnavailable => '未获取到进程信息。';
+
+  @override
+  String get processUnavailable => '无法获取';
+
+  @override
+  String get processFromOtherDevice => '此连接来自其他设备，无法在这台 Mac 上获取其进程信息。';
+
+  @override
+  String get appInfoUnreadable => '无法读取应用信息';
+
+  @override
+  String get processLookupDisabled => '当前未开启进程查找。';
+
+  @override
+  String get pageSourceTitle => '确认设置来源';
+
+  @override
+  String get pageSourceDesc => '页面与文件中的以下设置不同，请选择使用的来源。';
+
+  @override
+  String pageSourceCompare(Object pageValue, Object fileValue) {
+    return '页面：$pageValue · 文件：$fileValue';
+  }
+
+  @override
+  String get keepPageSetting => '保留页面设置';
+
+  @override
+  String get followBaseProfile => '跟随基础配置';
+
+  @override
+  String get applyAction => '应用';
+
+  @override
+  String get notSet => '未填写';
+
+  @override
+  String notSetDefault(Object defaultValue) {
+    return '未填写，默认 $defaultValue';
+  }
+
+  @override
+  String pageSourceChange(Object field, Object oldValue, Object newValue) {
+    return '$field：$oldValue → $newValue';
+  }
+
+  @override
+  String get sourcePage => '页面设置';
+
+  @override
+  String get sourceBase => '基础配置';
+
+  @override
+  String get sourceDefault => '默认值';
+
+  @override
+  String get notYetApplied => '尚未应用';
+
+  @override
+  String get logLevelDebug => '调试';
+
+  @override
+  String get logLevelInfo => '信息';
+
+  @override
+  String get logLevelWarning => '警告';
+
+  @override
+  String get logLevelError => '错误';
+
+  @override
+  String get logLevelSilent => '静默';
+
+  @override
+  String get findProcessAlways => '总是';
+
+  @override
+  String get findProcessOff => '关闭';
+
+  @override
+  String get findProcessStrict => '按需';
+
+  @override
+  String get tunMissingAuthorization => '缺少系统授权，TUN 未启动。';
+
+  @override
+  String inboundNotListening(Object listenerName, Object port) {
+    return '$listenerName 未启动：端口 $port 未在监听。';
+  }
+
+  @override
+  String controllerExposedWithoutSecret(Object address) {
+    return '外部控制器 $address 允许非本机访问，但未设置密钥。此配置未应用。';
+  }
+
+  @override
+  String get systemProxyNoPort => '系统代理没有可用的目标端口，请检查端口配置。';
+
+  @override
+  String get pageSourceHiddenTitle => '改为跟随配置文件';
+
+  @override
+  String get pageSourceHiddenNote => '文件未填写的项使用默认值。';
+
+  @override
+  String get valueOn => '开启';
+
+  @override
+  String get valueOff => '关闭';
+
+  @override
+  String get valueEmptyList => '空列表';
+
+  @override
+  String get valueEmptyObject => '空对象';
+
+  @override
+  String get valueEmptyText => '空文本';
+
+  @override
+  String get valueNull => '空值（null）';
+
+  @override
+  String get fieldStoreSelected => '记住节点选择';
+
+  @override
+  String get fieldTunAutoRoute => 'TUN 自动路由';
+
+  @override
+  String get fieldTunAutoDetectInterface => 'TUN 自动检测网卡';
+
+  @override
+  String get fieldSkipAuthPrefixes => '免验证来源地址段';
+
+  @override
+  String get fieldExternalUi => '外部控制面板';
+
+  @override
+  String get fieldDnsSettings => 'DNS 设置';
+
+  @override
+  String get listenerMixed => '混合代理';
+
+  @override
+  String get listenerHttp => 'HTTP 代理';
+
+  @override
+  String get listenerSocks => 'SOCKS 代理';
+
+  @override
+  String get listenerRedir => 'Redir 代理';
+
+  @override
+  String get listenerTproxy => 'TProxy 代理';
+
+  @override
+  String get tsExitGroupName => 'Tailscale 出口';
+
+  @override
+  String get tsExitHowTo => '开启出口不会切换现有选择，只有在代理页选用“Tailscale 出口”的策略才经此出口。';
+
+  @override
+  String get tsExitGroupUnconfirmed => '出口分组待确认';
+
+  @override
+  String tsExitGroupJoined(num count, Object group) {
+    return '已作为“$group”加入 $count 个手动策略组';
+  }
+
+  @override
+  String get tsExitGroupNoParents => '当前配置没有可加入的手动策略组';
+
+  @override
+  String get tsExitNotAuthorized => '尚未获准使用此出口';
+
+  @override
+  String get tsExitDeviceOffline => '出口设备离线';
+
+  @override
+  String get tsExitNeedsLogin => '需要重新登录此账号';
+
+  @override
+  String get tsExitRefusing => '此出口不可用，选用它的连接会被拒绝';
+
+  @override
+  String get tsExitUnavailableShort => '不可用';
+
+  @override
+  String get tsExitOffAffectedTitle => '关闭出口节点？';
+
+  @override
+  String tsExitOffAffectedBody(Object group) {
+    return '关闭后，正在使用“$group”的策略将改用各组的第一个选项。';
+  }
+
+  @override
+  String get tsExitTurnOff => '关闭出口';
+
+  @override
+  String get tsExitOffNoOption => '关闭后无剩余选项';
+
+  @override
+  String tsViewerExit(Object group, Object member, Object groups) {
+    return '$group · 由 Flash 添加 · $member · 手动策略组：$groups';
+  }
+
+  @override
+  String get tsViewerExitUnconfirmed => 'Tailscale 出口 · 当前运行的出口和分组待确认';
+
+  @override
+  String get macHelperTitle => 'Flash 辅助程序';
+
+  @override
+  String get macHelperOff => '辅助程序未安装';
+
+  @override
+  String get macHelperOn => '辅助程序已就绪';
+
+  @override
+  String get macHelperPending => '需要在 macOS 设置中允许';
+
+  @override
+  String get macHelperUnavailable => '助手暂不可用';
+
+  @override
+  String get macHelperCannotUse => '此版本不能启用助手';
+
+  @override
+  String get macHelperRepair => '辅助程序需要更新';
+
+  @override
+  String get macHelperStopUnknown => '无法确认辅助程序是否已就绪';
+
+  @override
+  String get macHelperTurnOn => '查看安装说明';
+
+  @override
+  String get macHelperTurnOff => '查看停用说明';
+
+  @override
+  String get macHelperOpenSettings => '打开 macOS 设置';
+
+  @override
+  String get macHelperTryAgain => '重试';
+
+  @override
+  String get macHelperRepairAction => '查看修复说明';
+
+  @override
+  String get macHelperCheckAgain => '重新检查';
+
+  @override
+  String get macHelperUnavailableDetail =>
+      'Flash 现在连不上助手，TUN 暂时无法启动。你的 TUN 设置已保留。';
+
+  @override
+  String get macHelperPendingDetail =>
+      '请通过 Flash 的安装程序安装、更新、修复或停用助手，并明确批准管理员操作。停用不等于卸载 Flash，后续操作可能需要再次授权。安装程序完成不代表助手已就绪或 TUN 已运行。你的 TUN 设置已保留。';
+
+  @override
+  String get trayMultipleNodes => '多节点';
+
+  @override
+  String get trayNoAvailableMembers => '没有可用成员';
+
+  @override
+  String get trayCouldNotLoad => '读取失败';
+
+  @override
+  String get trayCouldNotSwitch => '切换失败';
+
+  @override
+  String get traySwitchUnconfirmed => '未能确认切换结果';
+
+  @override
+  String get traySelectionUnknown => '当前选择未知';
+
+  @override
+  String trayCurrentSelection(Object name) {
+    return '当前选择：$name';
+  }
+
+  @override
+  String get trayLatencyUnknown => '延迟未知';
+
+  @override
+  String get trayTesting => '测试中';
+
+  @override
+  String trayLatencyMilliseconds(Object value) {
+    return '延迟 $value 毫秒';
+  }
+
+  @override
+  String get trayLatencyLessThanOne => '延迟小于1毫秒';
+
+  @override
+  String traySwitchingTo(Object name) {
+    return '正在切换至 $name';
+  }
+
+  @override
+  String get traySelected => '已选择';
+
+  @override
+  String get trayTestLatency => '测试延迟';
+
+  @override
+  String get trayReject => '拒绝';
+
+  @override
+  String trayLatencyBadge(Object value) {
+    return '$value ms';
+  }
+
+  @override
+  String get compositionReviewTitle => '首次应用前确认设置';
+
+  @override
+  String get compositionBaselineUnknown =>
+      '无法确认之前运行的值和来源。以下是拟应用的配置，不代表与当前运行配置的差异。';
+
+  @override
+  String get compositionCandidateNote =>
+      '页面有的设置使用页面保存的值；页面没有的先使用配置文件中的值，文件未设置时使用默认值。以下内容基于已保存的配置准备，不会刷新订阅。密钥和较大的内容已隐藏或遮盖。TUN 显示的是拟开启或关闭，并非实际运行状态；授权、挂载内容和 Tailscale 相关内容将在应用时检查。';
+
+  @override
+  String get compositionReadFailed => '无法准备或重新核验拟应用的配置，本次尚未应用。请检查配置和设置后重试。';
+
+  @override
+  String get compositionSourceUnconfirmed => '来源待确认';
+
+  @override
+  String get compositionRecordFailed => '配置已应用，但无法保存首次确认记录。重启应用后可能需要再次确认。';
+
+  @override
+  String get macHelperInstallTitle => '安装 Flash 辅助程序？';
+
+  @override
+  String get macHelperUpdateTitle => '更新 Flash 辅助程序？';
+
+  @override
+  String get macHelperInstall => '安装';
+
+  @override
+  String get macHelperUpdate => '更新';
+
+  @override
+  String get macHelperNotNowInstall => '暂不安装';
+
+  @override
+  String get macHelperNotNowUpdate => '暂不更新';
+
+  @override
+  String get macHelperInstallDetail =>
+      '辅助程序在后台管理 Flash 的网络核心。安装时需要管理员授权；安装完成后，Flash 会检查它是否可用。';
+
+  @override
+  String get macHelperUpdateDetail => '已安装的辅助程序与当前版本不兼容。更新时可能需要管理员授权。';
+
+  @override
+  String get macHelperChecking => '正在检查辅助程序…';
+
+  @override
+  String get macHelperAuthorizing => '等待管理员授权';
+
+  @override
+  String get macHelperInstalling => '正在安装辅助程序…';
+
+  @override
+  String get macHelperUpdating => '正在更新辅助程序…';
+
+  @override
+  String get macHelperInstallCancelled => '已取消安装';
+
+  @override
+  String get macHelperUpdateCancelled => '已取消更新';
+
+  @override
+  String get macHelperInstallFailed => '辅助程序安装失败';
+
+  @override
+  String get macHelperUpdateFailed => '辅助程序更新失败';
+
+  @override
+  String get macHelperLater => '稍后再说';
+
+  @override
+  String get macHelperMoveDetail => '请将 Flash 移到“应用程序”文件夹，再重新打开以安装辅助程序。';
+
+  @override
+  String get macHelperApprovalDetail =>
+      '请在 macOS 系统设置中允许 Flash 辅助程序，然后返回此处重新检查。';
+
+  @override
+  String get macHelperDeniedDetail => '管理员授权被拒绝。准备好授权后，可以手动重试。';
+
+  @override
+  String get macHelperFailedDetail => 'macOS 未能完成操作。你可以手动重试。';
+
+  @override
+  String get macHelperUnknownDetail =>
+      '无法确认操作结果。请重新检查辅助程序是否已就绪；确认前，Flash 不会重复安装。';
+
+  @override
+  String get macHelperVerificationDetail =>
+      '辅助程序未通过安全性或兼容性检查。请使用可信且兼容的 Flash 版本。';
+
+  @override
+  String get macHelperPayloadDetail => '无法验证安装文件。请更换为完整、可信的 Flash 副本后重试。';
+
+  @override
+  String get macHelperReadyDetail => '辅助程序已可用，但不表示 TUN 或连接正在运行。准备好后，请再次启用所需功能。';
+
+  @override
+  String get macHelperMoreDetails => '展开详情';
+
+  @override
+  String get macHelperLessDetails => '收起详情';
+
+  @override
+  String get macHelperMoveTitle => '请将 Flash 移到“应用程序”';
+
+  @override
+  String get macHelperStartupUpdate => '辅助程序需要更新，内核未启动';
+
+  @override
+  String get macHelperStartupInstall => '辅助程序未安装，内核未启动';
+
+  @override
+  String get macHelperStartupUnavailable => '辅助程序暂不可用，内核未启动';
+
+  @override
+  String get macHelperStatusUnknown => '无法确认辅助程序状态';
+
+  @override
+  String get macHelperCoreUnconfirmed => '内核运行状态待确认';
+
+  @override
+  String get macHelperInstallAction => '安装辅助程序';
+
+  @override
+  String get macHelperUpdateAction => '更新辅助程序';
+
+  @override
+  String get macHelperVerificationFailed => '辅助程序验证失败';
 
   @override
   String get liveStatus => '实时状态';

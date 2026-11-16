@@ -1,3 +1,4 @@
+import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/widgets.dart';
@@ -42,7 +43,7 @@ const exitReply = {
 
 void main() {
   late AppLocalizations zh;
-  setUp(() async => zh = await AppLocalizations.load(const Locale('zh', 'CN')));
+  setUp(() async => zh = loadAppLocalizations(const Locale('zh', 'CN')));
 
   final report = TailscaleExitReport.fromJson(exitReply);
 

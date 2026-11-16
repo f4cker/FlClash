@@ -1,3 +1,4 @@
+import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -466,9 +467,7 @@ void main() {
 
   group('the viewer notes', () {
     late AppLocalizations l10n;
-    setUpAll(
-      () async => l10n = await AppLocalizations.load(const Locale('zh', 'CN')),
-    );
+    setUpAll(() async => l10n = loadAppLocalizations(const Locale('zh', 'CN')));
 
     const yaml = '''
 proxy-providers:

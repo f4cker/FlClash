@@ -87,6 +87,252 @@ final class CustomGroupNamesProvider
 
 String _$customGroupNamesHash() => r'9d3d1a6b57aeee7b4cf34afd20e28336484a5de7';
 
+@ProviderFor(mountTargets)
+final mountTargetsProvider = MountTargetsProvider._();
+
+final class MountTargetsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<int, MountTargetState>>,
+          Map<int, MountTargetState>,
+          Stream<Map<int, MountTargetState>>
+        >
+    with
+        $FutureModifier<Map<int, MountTargetState>>,
+        $StreamProvider<Map<int, MountTargetState>> {
+  MountTargetsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mountTargetsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mountTargetsHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<int, MountTargetState>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<int, MountTargetState>> create(Ref ref) {
+    return mountTargets(ref);
+  }
+}
+
+String _$mountTargetsHash() => r'a1734e6af149b4a28aa49bd592b3fed48bcd2c7c';
+
+@ProviderFor(mountTarget)
+final mountTargetProvider = MountTargetFamily._();
+
+final class MountTargetProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<MountTargetState?>,
+          MountTargetState?,
+          Stream<MountTargetState?>
+        >
+    with
+        $FutureModifier<MountTargetState?>,
+        $StreamProvider<MountTargetState?> {
+  MountTargetProvider._({
+    required MountTargetFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'mountTargetProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$mountTargetHash();
+
+  @override
+  String toString() {
+    return r'mountTargetProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<MountTargetState?> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<MountTargetState?> create(Ref ref) {
+    final argument = this.argument as int;
+    return mountTarget(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MountTargetProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$mountTargetHash() => r'643d71354d975354310bc36088c6de3cbe3060a1';
+
+final class MountTargetFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<MountTargetState?>, int> {
+  MountTargetFamily._()
+    : super(
+        retry: null,
+        name: r'mountTargetProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  MountTargetProvider call(int targetId) =>
+      MountTargetProvider._(argument: targetId, from: this);
+
+  @override
+  String toString() => r'mountTargetProvider';
+}
+
+@ProviderFor(mountSourceStatuses)
+final mountSourceStatusesProvider = MountSourceStatusesProvider._();
+
+final class MountSourceStatusesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<int, MountSourceRecord>>,
+          Map<int, MountSourceRecord>,
+          Stream<Map<int, MountSourceRecord>>
+        >
+    with
+        $FutureModifier<Map<int, MountSourceRecord>>,
+        $StreamProvider<Map<int, MountSourceRecord>> {
+  MountSourceStatusesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mountSourceStatusesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mountSourceStatusesHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<int, MountSourceRecord>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<int, MountSourceRecord>> create(Ref ref) {
+    return mountSourceStatuses(ref);
+  }
+}
+
+String _$mountSourceStatusesHash() =>
+    r'6c18041261a275ddd4acf49c5c2e785d5ca21eff';
+
+/// An error here is a status that could not be read, never zero failures.
+
+@ProviderFor(mountCardSummary)
+final mountCardSummaryProvider = MountCardSummaryFamily._();
+
+/// An error here is a status that could not be read, never zero failures.
+
+final class MountCardSummaryProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<MountCardSummary?>,
+          MountCardSummary?,
+          FutureOr<MountCardSummary?>
+        >
+    with
+        $FutureModifier<MountCardSummary?>,
+        $FutureProvider<MountCardSummary?> {
+  /// An error here is a status that could not be read, never zero failures.
+  MountCardSummaryProvider._({
+    required MountCardSummaryFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'mountCardSummaryProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$mountCardSummaryHash();
+
+  @override
+  String toString() {
+    return r'mountCardSummaryProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<MountCardSummary?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<MountCardSummary?> create(Ref ref) {
+    final argument = this.argument as int;
+    return mountCardSummary(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MountCardSummaryProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$mountCardSummaryHash() => r'655d9e64c6ebc6209bcce177f4b241848f8af037';
+
+/// An error here is a status that could not be read, never zero failures.
+
+final class MountCardSummaryFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<MountCardSummary?>, int> {
+  MountCardSummaryFamily._()
+    : super(
+        retry: null,
+        name: r'mountCardSummaryProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// An error here is a status that could not be read, never zero failures.
+
+  MountCardSummaryProvider call(int targetId) =>
+      MountCardSummaryProvider._(argument: targetId, from: this);
+
+  @override
+  String toString() => r'mountCardSummaryProvider';
+}
+
 @ProviderFor(Profiles)
 final profilesProvider = ProfilesProvider._();
 
@@ -119,7 +365,7 @@ final class ProfilesProvider
   }
 }
 
-String _$profilesHash() => r'0f7e5be5f04f855ed2ad3dc969e95b82eed7c2a5';
+String _$profilesHash() => r'c54c592f513040974dd8194943b30b2602521cd0';
 
 abstract class _$Profiles extends $Notifier<List<Profile>> {
   List<Profile> build();

@@ -541,6 +541,7 @@ List<Widget> outboundItems({required bool isDesktop, required bool isLinux}) {
 
 List<Widget> networkOptionsItems({
   required bool isDesktop,
+  bool isMacOS = false,
   required bool isCustomInterfaceName,
 }) {
   return [
@@ -625,6 +626,7 @@ class NetworkOptionsSection extends ConsumerWidget {
       title: appLocalizations.options,
       items: networkOptionsItems(
         isDesktop: system.isDesktop,
+        isMacOS: system.isMacOS,
         isCustomInterfaceName: isCustomInterfaceName,
       ),
       footer: system.isDesktop ? appLocalizations.tunDesc : null,

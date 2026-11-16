@@ -1280,6 +1280,16 @@
   "tsOfflineNotSelectable": "Offline, can't be chosen",
   "tsExitChangeTitle": "Change exit node?",
   "tsExitChangeBody": "Sets the exit node of “{node}” to “{device}”. Connections through this node may drop; Flash rules stay the same.",
+  "@tsExitChangeBody": {
+    "placeholders": {
+      "node": {
+        "type": "Object"
+      },
+      "device": {
+        "type": "Object"
+      }
+    }
+  },
   "tsExitChangeConfirm": "Change exit node",
   "tsExitOffTitle": "Stop using the exit node?",
   "tsExitOffBody": "Only turns off exit forwarding for “{node}”; it doesn't log out of Tailscale and Flash rules stay the same.",
@@ -1334,6 +1344,16 @@
   "tsDevicesShown": "Showing {n} devices",
   "tsDevicesCompact": "{count, plural, =1{1 device · Only devices visible to this account} other{{count} devices · Only devices visible to this account}}",
   "tsDevicesCompactFiltered": "Showing {shown}/{total} · Devices visible to this account only",
+  "@tsDevicesCompactFiltered": {
+    "placeholders": {
+      "shown": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "tsSearchHint": "Search name or address",
   "tsSearchEmpty": "No devices match the search",
   "tsOwnerFilter": "Device owner",
@@ -1405,7 +1425,30 @@
   "tsSignOutRemoveMenu": "Sign out and remove…",
   "tsRemoveTitle": "Sign out and remove this account?",
   "tsRemoveBody": "This signs out “{account}” (node “{node}”), clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.",
+  "@tsRemoveBody": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "node": {
+        "type": "Object"
+      },
+      "profile": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRemoveBodyNode": "This signs out “{node}”, clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.",
+  "@tsRemoveBodyNode": {
+    "placeholders": {
+      "node": {
+        "type": "Object"
+      },
+      "profile": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRemoveExtra": "This does not delete the device from the Tailscale admin console or change the official client.",
   "tsRemoveTargetsKept": "Targets assigned to this account will not move to another account automatically. Blocking protection stays in place. Assign another account to access them.",
   "tsRemoveLast": "This is the last panel-added account in this profile. Removing it also removes panel-added routing and blocking rules. The original profile will handle this traffic again, which may use a direct connection or its original proxies. Confirm that you accept this change.",
@@ -1417,6 +1460,16 @@
   "tsSignOutAccount": "Sign out of this account",
   "tsSignOutAccountTitle": "Sign out of this account?",
   "tsSignOutAccountBody": "This signs out “{account}” (node “{node}”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.",
+  "@tsSignOutAccountBody": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "node": {
+        "type": "Object"
+      }
+    }
+  },
   "tsAccountSignedOut": "Signed out",
   "tsSignedOutBanner": "Signed out of this account. In Rule mode, its assigned targets stay blocked until you sign in or explicitly reassign them.",
   "tsSignedOutReceipt": "Signed out of this account",
@@ -1425,6 +1478,19 @@
   "tsNewAccount": "New account",
   "tsNetworkOf": "Network: {name}",
   "tsSwitcherSemantics": "Viewing Tailscale account: {account}, {status}. {count} entries.",
+  "@tsSwitcherSemantics": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "status": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
   "tsMemoryTip": "Each account runs a separate Tailscale device. Keeping more accounts online uses more memory.",
   "tsDuplicate": "An entry already exists for this account. This sign-in has been kept but has not been added to routing. Review it before continuing.",
   "tsViewExisting": "View existing account",
@@ -1441,6 +1507,16 @@
   "tsTargetAddress": "Address: {address}",
   "tsTargetDomain": "Domain: {domain}",
   "tsCandidate": "{account} · {network}",
+  "@tsCandidate": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "network": {
+        "type": "Object"
+      }
+    }
+  },
   "tsNotAssigned": "Not assigned",
   "tsSaveChoices": "Save choices",
   "tsChoicesUpdated": "Access accounts updated",
@@ -1466,8 +1542,28 @@
   "tsCancel": "Cancel",
   "tsSignInShort": "Sign in to add a node and dedicated rules.",
   "tsRulesSummary": "{count, plural, =1{{domain} · 1 device address} other{{domain} · {count} device addresses}}",
+  "@tsRulesSummary": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "domain": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRulesUnconfirmed": "Domain and address details are unconfirmed.",
   "tsDevicesFiltered": "Showing {shown} / {total}",
+  "@tsDevicesFiltered": {
+    "placeholders": {
+      "shown": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "tsAboutTailscale": "About Tailscale",
   "tsAboutExit": "About exit settings",
   "tsAboutRoutes": "About subnet routes",
@@ -1479,6 +1575,16 @@
   "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format.",
   "mountDeleteSourceTitle": "Delete subscription and unmount?",
   "mountDeleteSourceBody": "“{subscriptionName}” is mounted on the following {profileCount, plural, =1{1 profile} other{{profileCount} profiles}}. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.",
+  "@mountDeleteSourceBody": {
+    "placeholders": {
+      "subscriptionName": {
+        "type": "Object"
+      },
+      "profileCount": {
+        "type": "num"
+      }
+    }
+  },
   "mountDeleteSourceConfirm": "Delete and unmount",
   "mountDeleteSourceProgress": "Deleting and unmounting…",
   "mountDeleteSourceDone": "Subscription deleted and unmounted",
@@ -1491,6 +1597,16 @@
   "mountCardFailed": "{count, plural, =1{1 subscription update failed} other{{count} subscription updates failed}}",
   "mountCardUnreadable": "Could not read mount status",
   "mountPillSemantics": "{label}, target profile {profileName}",
+  "@mountPillSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountPillFailedSemantics": "a subscription update failed",
   "mountTarget": "Target profile: {profileName}",
   "mountDescription": "Adds nodes without changing rules or DNS.",
@@ -1546,8 +1662,28 @@
   "mountGroupEmpty": "Group “{group}” has no selectable nodes. Check the subscriptions and group filters.",
   "mountUnmountTitle": "Unmount this subscription?",
   "mountUnmountBody": "This removes nodes from “{subscriptionName}” from “{profileName}”. Connections using those nodes may be interrupted. The subscription, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.",
+  "@mountUnmountBody": {
+    "placeholders": {
+      "subscriptionName": {
+        "type": "Object"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountUnmountManyTitle": "Unmount these subscriptions?",
   "mountUnmountManyBody": "This removes nodes provided by the following {count, plural, =1{1 subscription} other{{count} subscriptions}} from “{profileName}”. Connections using those nodes may be interrupted. The subscriptions, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.",
+  "@mountUnmountManyBody": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountUnmount": "Unmount",
   "mountUnmounting": "Unmounting…",
   "mountUnmounted": "Unmounted",
@@ -1596,8 +1732,28 @@
   "mountDetails": "Details",
   "mountShowLess": "Show less",
   "mountViewerSource": "Mount: {name} · {count, plural, =1{1 node} other{{count} nodes}}",
+  "@mountViewerSource": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "mountViewerPending": "Mount: {name} · node list not yet confirmed",
   "tsViewerRules": "Tailscale · Added by Flash · {count, plural, =1{1 rule} other{{count} rules}} → Node {node}",
+  "@tsViewerRules": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "node": {
+        "type": "Object"
+      }
+    }
+  },
   "tsViewerNode": "Tailscale · Added by Flash · Node {node}",
   "tsViewerUnconfirmed": "Tailscale · Current rules and nodes are unconfirmed",
   "tsViewerReadFailed": "Tailscale · Could not read runtime information",
@@ -1621,12 +1777,35 @@
   "pageSourceTitle": "Confirm setting sources",
   "pageSourceDesc": "These settings differ between the app and profile. Choose which source to use.",
   "pageSourceCompare": "App: {pageValue} · Profile: {fileValue}",
+  "@pageSourceCompare": {
+    "placeholders": {
+      "pageValue": {
+        "type": "Object"
+      },
+      "fileValue": {
+        "type": "Object"
+      }
+    }
+  },
   "keepPageSetting": "Keep in-app settings",
   "followBaseProfile": "Follow base profile",
   "applyAction": "Apply",
   "notSet": "Not set",
   "notSetDefault": "Not set; default {defaultValue}",
   "pageSourceChange": "{field}: {oldValue} → {newValue}",
+  "@pageSourceChange": {
+    "placeholders": {
+      "field": {
+        "type": "Object"
+      },
+      "oldValue": {
+        "type": "Object"
+      },
+      "newValue": {
+        "type": "Object"
+      }
+    }
+  },
   "sourcePage": "In-app settings",
   "sourceBase": "Base profile",
   "sourceDefault": "Default",
@@ -1641,6 +1820,16 @@
   "findProcessStrict": "On demand",
   "tunMissingAuthorization": "TUN did not start because system permission is missing.",
   "inboundNotListening": "{listenerName} did not start: port {port} is not listening.",
+  "@inboundNotListening": {
+    "placeholders": {
+      "listenerName": {
+        "type": "Object"
+      },
+      "port": {
+        "type": "Object"
+      }
+    }
+  },
   "controllerExposedWithoutSecret": "The controller at {address} allows non-local access without a secret. This profile was not applied.",
   "systemProxyNoPort": "No usable port is available for the system proxy. Check the port settings.",
   "pageSourceHiddenTitle": "Switch to profile values",
@@ -1666,6 +1855,16 @@
   "tsExitHowTo": "Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.",
   "tsExitGroupUnconfirmed": "Exit group unconfirmed",
   "tsExitGroupJoined": "{count, plural, =1{“{group}” added to 1 manual policy group} other{“{group}” added to {count} manual policy groups}}",
+  "@tsExitGroupJoined": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "group": {
+        "type": "Object"
+      }
+    }
+  },
   "tsExitGroupNoParents": "No manual policy groups in this profile can receive the exit group",
   "tsExitNotAuthorized": "This exit node is not authorized for use",
   "tsExitDeviceOffline": "Exit device offline",
@@ -1677,6 +1876,19 @@
   "tsExitTurnOff": "Turn off exit node",
   "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
+  "@tsViewerExit": {
+    "placeholders": {
+      "group": {
+        "type": "Object"
+      },
+      "member": {
+        "type": "Object"
+      },
+      "groups": {
+        "type": "Object"
+      }
+    }
+  },
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
   "macHelperTitle": "Flash Helper",
   "macHelperOff": "Helper not installed",

@@ -42,6 +42,7 @@ class _MountReplyCore extends _NullCore {
     required CoreMethod method,
     Object? arguments,
     Duration? timeout,
+    CoreResultModel? model,
   }) async {
     this.method = method;
     this.arguments = arguments;

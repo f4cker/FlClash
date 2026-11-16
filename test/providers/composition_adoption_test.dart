@@ -8,7 +8,6 @@ import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/core/spill.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -82,7 +81,6 @@ const _state = SetupState(
   profileId: null,
   profileLastUpdateDate: null,
   profileType: ProfileType.file,
-  extendType: ExtendType.standard,
   rules: [],
   proxyGroups: [],
   addedRules: [],
@@ -152,7 +150,7 @@ void main() {
       'compositionRevision': 0,
       appliedConfigMd5Key: 'confirmed-old',
     });
-    await AppLocalizations.load(const Locale('en'));
+    loadAppLocalizations(const Locale('en'));
     globalState.packageInfo = PackageInfo(
       appName: 'Synthetic',
       packageName: 'test',
@@ -502,35 +500,24 @@ void main() {
       await bind();
       container.read(initProvider.notifier).value = true;
       container
-          .read(networkSettingProvider.notifier)
-          .update((network) => network.copyWith(autoSetSystemDns: true));
-      container
           .read(patchClashConfigProvider.notifier)
           .update((page) => page.copyWith.tun(enable: true));
       container.read(authorizedTunEnableProvider.notifier).value =
           TunAuthorizationState.authorized;
       final runningChanges = <int?>[];
-      final dnsChanges = <bool>[];
       final runningSub = container.listen(
         runTimeProvider,
         (_, next) => runningChanges.add(next),
       );
-      final dnsSub = container.listen(
-        shouldPatchSystemDnsProvider,
-        (_, next) => dnsChanges.add(next),
-      );
       addTearDown(runningSub.close);
-      addTearDown(dnsSub.close);
       action.answer = (_) async {
         expect(container.read(runTimeProvider), isNull);
-        expect(container.read(shouldPatchSystemDnsProvider), false);
         expect(action.listenerCalls, isEmpty);
         return false;
       };
       expect(await action.setRunning(true), false);
       expect(action.listenerCalls, isEmpty);
       expect(runningChanges, isEmpty);
-      expect(dnsChanges, isEmpty);
       expect(pushes, isEmpty);
     },
   );
@@ -542,20 +529,10 @@ void main() {
       action.resumedAt = DateTime.now().subtract(const Duration(minutes: 3));
       container.read(runTimeProvider.notifier).value = 1234;
       container
-          .read(networkSettingProvider.notifier)
-          .update((network) => network.copyWith(autoSetSystemDns: true));
-      container
           .read(patchClashConfigProvider.notifier)
           .update((page) => page.copyWith.tun(enable: true));
       container.read(authorizedTunEnableProvider.notifier).value =
           TunAuthorizationState.authorized;
-      final dnsChanges = <bool>[];
-      final dnsSub = container.listen(
-        shouldPatchSystemDnsProvider,
-        (_, next) => dnsChanges.add(next),
-        fireImmediately: true,
-      );
-      addTearDown(dnsSub.close);
       final changes = <int?>[];
       final sub = container.listen(
         runTimeProvider,
@@ -573,8 +550,6 @@ void main() {
       expect(container.read(runTimeProvider), 1234);
       expect(changes, isEmpty);
       expect(globalState.needInitStatus, true);
-      expect(container.read(shouldPatchSystemDnsProvider), true);
-      expect(dnsChanges, [true]);
       expect(pushes, isEmpty);
     },
   );
@@ -584,9 +559,6 @@ void main() {
     container.read(runTimeProvider.notifier).value = 1234;
     container.read(listeningMixedPortProvider.notifier).value = 7890;
     container
-        .read(networkSettingProvider.notifier)
-        .update((network) => network.copyWith(autoSetSystemDns: true));
-    container
         .read(patchClashConfigProvider.notifier)
         .update((page) => page.copyWith.tun(enable: true));
     container.read(authorizedTunEnableProvider.notifier).value = eligible
@@ -594,24 +566,12 @@ void main() {
         : TunAuthorizationState.none;
   }
 
-  List<bool> observeDns() {
-    final changes = <bool>[];
-    final sub = container.listen(
-      shouldPatchSystemDnsProvider,
-      (_, next) => changes.add(next),
-      fireImmediately: true,
-    );
-    addTearDown(sub.close);
-    return changes;
-  }
-
   for (final previouslyEligible in [false, true]) {
     test(
-      'resumed Apply holds DNS eligibility $previouslyEligible through authorization until full ACK',
+      'resumed Apply holds prior TUN authorization $previouslyEligible until full ACK',
       () async {
         await bind();
         publishResumed(eligible: previouslyEligible);
-        final dnsChanges = observeDns();
         final runningChanges = <int?>[];
         final sub = container.listen(
           runTimeProvider,
@@ -622,10 +582,6 @@ void main() {
           // Also preserve an eligible old run if authorization is rechecked.
           container.read(authorizedTunEnableProvider.notifier).value =
               TunAuthorizationState.none;
-          expect(
-            container.read(shouldPatchSystemDnsProvider),
-            previouslyEligible,
-          );
           return true;
         };
         acknowledgement = Completer<void>();
@@ -644,11 +600,6 @@ void main() {
         );
         container.read(appVisibleProvider.notifier).value = false;
         container.read(appVisibleProvider.notifier).value = true;
-        expect(
-          container.read(shouldPatchSystemDnsProvider),
-          previouslyEligible,
-        );
-        expect(dnsChanges, [previouslyEligible]);
         expect(container.read(runTimeProvider), 1234);
         expect(runningChanges, isEmpty);
         expect(container.read(listeningMixedPortProvider), 7890);
@@ -658,8 +609,6 @@ void main() {
         expect(await preferences.getCompositionRevision(), 0);
         acknowledgement!.complete();
         await resuming;
-        expect(container.read(shouldPatchSystemDnsProvider), true);
-        expect(dnsChanges, previouslyEligible ? [true] : [false, true]);
         expect(await preferences.getCompositionRevision(), 1);
       },
     );
@@ -671,11 +620,10 @@ void main() {
       'config_rejected',
     ]) {
       test(
-        'resumed $failure preserves DNS eligibility $previouslyEligible and explicit stop restores',
+        'resumed $failure preserves prior TUN authorization $previouslyEligible and explicit stop restores',
         () async {
           await bind();
           publishResumed(eligible: previouslyEligible);
-          final dnsChanges = observeDns();
           action.answer = (_) async {
             container.read(authorizedTunEnableProvider.notifier).value =
                 TunAuthorizationState.none;
@@ -687,11 +635,6 @@ void main() {
             rejected = failure;
           }
           await action.initStatus();
-          expect(
-            container.read(shouldPatchSystemDnsProvider),
-            previouslyEligible,
-          );
-          expect(dnsChanges, [previouslyEligible]);
           expect(container.read(runTimeProvider), 1234);
           expect(container.read(listeningMixedPortProvider), 7890);
           expect(action.listenerCalls, isEmpty);
@@ -700,8 +643,6 @@ void main() {
           expect(pushes, hasLength(failure == 'authorization_refused' ? 0 : 1));
           expect(await action.setRunning(false), true);
           expect(container.read(runTimeProvider), isNull);
-          expect(container.read(shouldPatchSystemDnsProvider), false);
-          expect(dnsChanges, previouslyEligible ? [true, false] : [false]);
           expect(action.listenerCalls, [false]);
         },
       );
@@ -713,11 +654,9 @@ void main() {
     () async {
       await bind();
       publishResumed(eligible: false);
-      final dnsChanges = observeDns();
       action.answer = (_) async => false;
       await action.initStatus();
       expect(container.read(runTimeProvider), 1234);
-      expect(dnsChanges, [false]);
       expect(action.authorizations, 0);
       action.answer = (_) async => true;
       acknowledgement = Completer<void>();
@@ -733,13 +672,10 @@ void main() {
       container.read(appVisibleProvider.notifier).value = true;
       expect(container.read(runTimeProvider), 1234);
       expect(container.read(listeningMixedPortProvider), 7890);
-      expect(dnsChanges, [false]);
       verifyNever(() => core.getTraffic(any()));
       acknowledgement!.complete();
       expect(await applying, true);
       expect(container.read(runTimeProvider), greaterThan(1234));
-      expect(container.read(shouldPatchSystemDnsProvider), true);
-      expect(dnsChanges, [false, true]);
       expect(action.listenerCalls, isEmpty);
       final tick = Completer<void>();
       when(() => core.getTraffic(any())).thenAnswer((_) async {
@@ -754,7 +690,6 @@ void main() {
   test('explicit stop during held ACK is not gated or resurrected', () async {
     await bind();
     publishResumed(eligible: true);
-    final dnsChanges = observeDns();
     acknowledgement = Completer<void>();
     final invoked = Completer<void>();
     when(() => core.setupConfig(any())).thenAnswer((_) async {
@@ -763,16 +698,12 @@ void main() {
     });
     final resuming = action.initStatus();
     await invoked.future;
-    expect(dnsChanges, [true]);
     expect(await action.setRunning(false), true);
     expect(container.read(runTimeProvider), isNull);
-    expect(container.read(shouldPatchSystemDnsProvider), false);
     expect(action.listenerCalls, [false]);
     acknowledgement!.complete();
     await resuming;
     expect(container.read(runTimeProvider), isNull);
-    expect(container.read(shouldPatchSystemDnsProvider), false);
-    expect(dnsChanges, [true, false]);
     expect(action.listenerCalls, [false]);
   });
 

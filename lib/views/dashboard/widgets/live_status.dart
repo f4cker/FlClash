@@ -3,11 +3,14 @@ import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/core.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
+import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/config/macos_helper.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prism_ui/prism_ui.dart';
@@ -96,10 +99,15 @@ void showLiveStatusPreview(BuildContext context) {
 /// counts the rest. A running core alone shrinks it to a check, and with an
 /// in-app core it is gone while nothing is happening.
 class LiveStatusButton extends ConsumerWidget {
-  const LiveStatusButton({super.key, this.separateCore});
+  const LiveStatusButton({super.key, this.separateCore, this.maintenance});
 
   /// Whether the core runs in its own process; the build's core when null.
   final bool? separateCore;
+
+  /// The macOS helper flow; the app's own when null. While the helper is
+  /// being set up or is not usable, [MacHelperStatus] says why and offers
+  /// the fix, so this button stays out of the way.
+  final MacHelperMaintenance? maintenance;
 
   bool get _separateCore => separateCore ?? coreLib == null;
 
@@ -122,6 +130,27 @@ class LiveStatusButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final flow =
+        maintenance ??
+        (system.isMacOS && macosManagedHelperBuild
+            ? macHelperMaintenance
+            : null);
+    if (flow == null || ref.watch(safeModeProvider)) {
+      return _buildStatus(context, ref);
+    }
+    return ListenableBuilder(
+      listenable: flow,
+      builder: (context, _) {
+        if (!flow.busy &&
+            (flow.state == null || flow.state == MacHelperState.enabled)) {
+          return _buildStatus(context, ref);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildStatus(BuildContext context, WidgetRef ref) {
     final statuses = watchLiveStatuses(ref, separateCore: _separateCore);
     final top = statuses.firstOrNull;
     return FadeScaleBox(

@@ -48,7 +48,100 @@ final class UpdateParamsProvider
   }
 }
 
-String _$updateParamsHash() => r'1613b6a3bfcd12d659c60d1fa8289ea257d662b4';
+String _$updateParamsHash() => r'b24584f2c570a0d70bdab466bb4efc8971b8b1c0';
+
+/// The mixed port configured by the in-app control.
+
+@ProviderFor(effectiveMixedPort)
+final effectiveMixedPortProvider = EffectiveMixedPortProvider._();
+
+/// The mixed port configured by the in-app control.
+
+final class EffectiveMixedPortProvider
+    extends $FunctionalProvider<int, int, int>
+    with $Provider<int> {
+  /// The mixed port configured by the in-app control.
+  EffectiveMixedPortProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'effectiveMixedPortProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$effectiveMixedPortHash();
+
+  @$internal
+  @override
+  $ProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  int create(Ref ref) {
+    return effectiveMixedPort(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int>(value),
+    );
+  }
+}
+
+String _$effectiveMixedPortHash() =>
+    r'107581b1cbadff1beb40ee37fb2890937e040d30';
+
+@ProviderFor(shownClashConfig)
+final shownClashConfigProvider = ShownClashConfigProvider._();
+
+final class ShownClashConfigProvider
+    extends
+        $FunctionalProvider<
+          PatchClashConfig,
+          PatchClashConfig,
+          PatchClashConfig
+        >
+    with $Provider<PatchClashConfig> {
+  ShownClashConfigProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'shownClashConfigProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$shownClashConfigHash();
+
+  @$internal
+  @override
+  $ProviderElement<PatchClashConfig> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  PatchClashConfig create(Ref ref) {
+    return shownClashConfig(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PatchClashConfig value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PatchClashConfig>(value),
+    );
+  }
+}
+
+String _$shownClashConfigHash() => r'549339366004bb408df0f1f293c27b95c53657c3';
 
 @ProviderFor(coreOptions)
 final coreOptionsProvider = CoreOptionsProvider._();
@@ -220,7 +313,7 @@ final class TrayStateProvider
   }
 }
 
-String _$trayStateHash() => r'd4fe17e62e479ff316ab5deb11475b4ea533d0bb';
+String _$trayStateHash() => r'a8665e030888996ec1ae8984171bdda452b73736';
 
 /// Measured delays of the proxies the tray lists, by group and then proxy
 /// name. Resolved like a proxy card, so a nested group shows its selection.
@@ -436,7 +529,7 @@ final class SharedStateProvider
   }
 }
 
-String _$sharedStateHash() => r'bad20df240acfd1b384cad3655a58987a992a4ca';
+String _$sharedStateHash() => r'ae4493d022b73e0395f9e5724250ea19246e0c21';
 
 @ProviderFor(vpnRouteAddress)
 final vpnRouteAddressProvider = VpnRouteAddressProvider._();
@@ -1929,7 +2022,7 @@ final class CurrentGroupsStateProvider
 }
 
 String _$currentGroupsStateHash() =>
-    r'd4ea3c3271a77d8bd791f94c697cc94a41fff38f';
+    r'1806811e91a66cbb7593a58296356bf3b2f4b679';
 
 @ProviderFor(proxyState)
 final proxyStateProvider = ProxyStateProvider._();
@@ -1970,7 +2063,7 @@ final class ProxyStateProvider
   }
 }
 
-String _$proxyStateHash() => r'c34885ac363bf8ab033cb514210956e8f907f450';
+String _$proxyStateHash() => r'520ef6c339ce43ac97d9ff27a4ac58d01e4e309c';
 
 /// Watching the delay map instead would drop nodes one probe at a time, and
 /// reading it on any other rebuild would drop them whenever something
@@ -3682,7 +3775,7 @@ final class SetupStateProvider
   }
 }
 
-String _$setupStateHash() => r'9c5702474f8efddaea1fd5950e5f50ff4fae3824';
+String _$setupStateHash() => r'4b3e407412aa123afd34d9617be0e8a9464695ee';
 
 final class SetupStateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SetupState>, int?> {

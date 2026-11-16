@@ -26,7 +26,7 @@ void main() {
     () async {
       try {
         for (final locale in [const Locale('en'), const Locale('zh', 'CN')]) {
-          final localizations = await AppLocalizations.load(locale);
+          final localizations = loadAppLocalizations(locale);
           final expected = <String, String>{
             'login_item_requires_approval':
                 localizations.loginItemRequiresApproval,
@@ -56,7 +56,7 @@ void main() {
           );
         }
       } finally {
-        await AppLocalizations.load(const Locale('en'));
+        loadAppLocalizations(const Locale('en'));
       }
     },
   );

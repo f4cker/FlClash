@@ -1,4 +1,4 @@
-import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,7 +36,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Review GeoX'));
     await tester.pumpAndSettle();
-    final strings = AppLocalizations.current;
+    final strings = currentAppLocalizations;
     expect(
       find.text('geox-url.geoip: "synthetic-equal" · ${strings.sourcePage}'),
       findsOneWidget,

@@ -1059,12 +1059,12 @@ DOMAIN-SUFFIX,ads.example.com,REJECT
       },
     );
 
-    test('DNS empty fragments remain selected-only and opt-in', () {
+    test('DNS empty fragments remain selected-only', () {
       const dns = Dns(nameserver: []);
 
-      expect(dns.overrideJson({DnsOverrideKey.nameserver}), isEmpty);
-      expect(dns.overrideJson({}, keepEmpty: true), isEmpty);
-      expect(dns.overrideJson({DnsOverrideKey.nameserver}, keepEmpty: true), {
+      // Upstream e1669a63: a picked key is written as it is, empty included.
+      expect(dns.overrideJson({}), isEmpty);
+      expect(dns.overrideJson({DnsOverrideKey.nameserver}), {
         'nameserver': <String>[],
       });
     });

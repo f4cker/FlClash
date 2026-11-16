@@ -273,7 +273,7 @@ void main() {
       ),
     );
     await tester.pump();
-    final l10n = AppLocalizations.current;
+    final l10n = currentAppLocalizations;
     expect(find.text('HK'), findsNothing);
 
     await openProxiesMenu(tester);

@@ -1,3 +1,4 @@
+import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
@@ -6,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late AppLocalizations zh;
-  setUp(() async => zh = await AppLocalizations.load(const Locale('zh', 'CN')));
+  setUp(() async => zh = loadAppLocalizations(const Locale('zh', 'CN')));
 
   const yaml =
       'mode: rule\n'
@@ -81,7 +82,7 @@ void main() {
   });
 
   test('English counts one rule and many', () async {
-    final en = await AppLocalizations.load(const Locale('en'));
+    final en = loadAppLocalizations(const Locale('en'));
     final one = TailscaleRuntimeRules(
       profileId: 7,
       state: TailscaleRuntimeState.confirmed,
@@ -160,7 +161,7 @@ void main() {
   });
 
   test('English says a profile has no Flash rules', () async {
-    final en = await AppLocalizations.load(const Locale('en'));
+    final en = loadAppLocalizations(const Locale('en'));
     final text = annotateTailscaleRuntime(
       yaml,
       const TailscaleRuntimeRules(

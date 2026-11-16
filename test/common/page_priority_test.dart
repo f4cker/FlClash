@@ -1,12 +1,11 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   setUpAll(() async {
-    await AppLocalizations.load(const Locale('zh', 'CN'));
+    loadAppLocalizations(const Locale('zh', 'CN'));
   });
 
   group('pagePriorityChanges', () {

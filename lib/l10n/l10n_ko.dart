@@ -171,6 +171,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get autoLaunch => '자동 실행';
 
   @override
+  String get loginItemRequiresApproval =>
+      'Allow Flash to open at login in System Settings.';
+
+  @override
+  String get loginItemNotFound =>
+      'macOS couldn’t find the current Flash app to set it to open at login.';
+
+  @override
+  String get loginItemUnexpectedStatus =>
+      'Couldn’t confirm that Open at Login was updated as requested.';
+
+  @override
+  String get loginItemMissingStatus =>
+      'Couldn’t read the Open at Login status.';
+
+  @override
+  String get loginItemOperationFailed =>
+      'Couldn’t change the Open at Login setting.';
+
+  @override
   String get silentLaunch => '백그라운드 실행';
 
   @override
@@ -293,10 +313,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get sendFromPhonePermissionDenied =>
-      '휴대폰에서 링크를 받으려면 FlClash가 로컬 네트워크에 접근할 수 있도록 \'근처 기기\' 권한이 필요합니다. 앱 설정에서 켜 주세요.';
+      '휴대폰에서 링크를 받으려면 Flash가 로컬 네트워크에 접근할 수 있도록 \'근처 기기\' 권한이 필요합니다. 앱 설정에서 켜 주세요.';
 
   @override
-  String get sendFromPhonePageTitle => 'FlClash로 링크 보내기';
+  String get sendFromPhonePageTitle => 'Flash로 링크 보내기';
 
   @override
   String get sendFromPhonePageHint => '구독 링크 또는 프록시 공유 링크';
@@ -311,7 +331,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sendFromPhoneConfirmTitle => '휴대폰에서 받은 링크를 가져올까요?';
 
   @override
-  String get shareQrcodeTip => '다른 기기의 FlClash로 스캔하면 이 프로필을 가져올 수 있습니다.';
+  String get shareQrcodeTip => '다른 기기의 Flash로 스캔하면 이 프로필을 가져올 수 있습니다.';
 
   @override
   String get qrcodeTooLongTip => '이 링크는 너무 길어 QR 코드로 만들 수 없습니다. 링크 복사를 사용하세요.';
@@ -383,7 +403,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get project => '프로젝트';
+  String get project => 'FlClash 업스트림 프로젝트';
+
+  @override
+  String get upstreamTelegram => 'FlClash 업스트림 Telegram';
 
   @override
   String get core => '코어';
@@ -468,6 +491,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get checkUpdateError => '이미 최신 버전입니다';
+
+  @override
+  String get updateNoReleaseFound => 'No Flash release found yet';
+
+  @override
+  String get updateCheckFailed =>
+      'Couldn\'t check for updates. Please try again.';
 
   @override
   String get goDownload => '다운로드';
@@ -917,7 +947,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get disclaimerDesc =>
-      'FlClash(이하 \"본 소프트웨어\")를 사용하기 전에 본 고지를 주의 깊게 읽고 충분히 이해해 주세요. \"동의\"를 누르면 아래 내용을 읽고 이해했음을 뜻합니다. 계속하지 않으려면 \"종료\"를 누르세요.';
+      'Flash(이하 \"본 소프트웨어\")를 사용하기 전에 본 고지를 주의 깊게 읽고 충분히 이해해 주세요. \"동의\"를 누르면 아래 내용을 읽고 이해했음을 뜻합니다. 계속하지 않으려면 \"종료\"를 누르세요.';
 
   @override
   String get disclaimerSoftwareTitle => '소프트웨어의 성격';
@@ -1078,6 +1108,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get hideTimeoutProxies => '시간 초과된 프록시 숨기기';
 
   @override
+  String get showHiddenGroups => '숨겨진 그룹 표시';
+
+  @override
+  String get hiddenGroupTag => '숨김';
+
+  @override
+  String hiddenGroupSemantics(Object name) {
+    return '$name, 숨김';
+  }
+
+  @override
   String get stackMode => '스택 모드';
 
   @override
@@ -1141,6 +1182,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get copyEnvVar => '환경 변수 복사';
 
   @override
+  String get trayTunMode => 'TUN 모드';
+
+  @override
+  String get trayCopyProxyCommand => '터미널 프록시 명령 복사';
+
+  @override
   String get memoryInfo => '메모리 정보';
 
   @override
@@ -1160,6 +1207,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get memoryCoreRuntime => '런타임 오버헤드';
+
+  @override
+  String get memoryGoRuntimeDescription =>
+      'Go 런타임 통계입니다. 각 값은 프로세스 상주 메모리의 구성 항목이 아닙니다.';
 
   @override
   String get memoryCoreNotRunning => '코어가 실행 중이 아닙니다';
@@ -1888,22 +1939,33 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get helperCorruptTip =>
-      '헬퍼 서비스를 사용할 수 없어 TUN 모드를 켤 수 없습니다. FlClash를 다시 설치하여 복구하세요.';
+      '헬퍼 서비스를 사용할 수 없어 TUN 모드를 켤 수 없습니다. Flash를 다시 설치하여 복구하세요.';
 
   @override
-  String get tunAuthorizationFailed => 'TUN 권한을 얻지 못해 끄기로 되돌렸습니다.';
+  String get tunAuthorizationFailed =>
+      'TUN authorization wasn’t completed. The configuration was not applied. Your in-app setting was kept.';
+
+  @override
+  String mixedPortUnavailable(Object port) {
+    return 'Could not open port $port. Another app may be using it. The proxy service did not start.';
+  }
+
+  @override
+  String mixedPortUnavailableProxyUnchanged(Object port) {
+    return 'Could not open port $port. Another app may be using it. The proxy service did not start. System proxy settings were not changed.';
+  }
 
   @override
   String get sudoPasswordTitle => 'sudo 비밀번호를 입력하세요';
 
   @override
   String coreBlockedByPolicyTip(Object code) {
-    return 'Windows에서 FlClashCore.exe 실행을 거부했습니다(오류 $code). Smart App Control이나 AppLocker와 같은 앱 제어 정책이 서명되지 않은 프로그램을 차단합니다. 해당 정책에서 FlClash를 허용하거나 정책을 끈 후 다시 시도하세요.';
+    return 'Windows에서 FlClashCore.exe 실행을 거부했습니다(오류 $code). Smart App Control이나 AppLocker와 같은 앱 제어 정책이 서명되지 않은 프로그램을 차단합니다. 해당 정책에서 Flash를 허용하거나 정책을 끈 후 다시 시도하세요.';
   }
 
   @override
   String get coreBlockedBySmartAppControlTip =>
-      '서명되지 않아 Windows Smart App Control이 FlClashCore.exe를 차단했습니다. Windows 보안 → 앱 및 브라우저 컨트롤 → Smart App Control 설정에서 끔을 선택한 후 FlClash를 다시 시작하세요. Smart App Control은 Windows를 다시 설치하지 않으면 다시 켤 수 없습니다.';
+      '서명되지 않아 Windows Smart App Control이 FlClashCore.exe를 차단했습니다. Windows 보안 → 앱 및 브라우저 컨트롤 → Smart App Control 설정에서 끔을 선택한 후 Flash를 다시 시작하세요. Smart App Control은 Windows를 다시 설치하지 않으면 다시 켤 수 없습니다.';
 
   @override
   String get hideFromList => '목록에서 숨기기';
@@ -2697,7 +2759,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get initFailedTip =>
-      'FlClash를 시작하는 중 오류가 발생하여 계속할 수 없습니다. 세부 정보를 복사하여 문제를 보고하세요. 문제가 계속되면 데이터를 지우면 대개 앱이 다시 시작됩니다.';
+      'Flash를 시작하는 중 오류가 발생하여 계속할 수 없습니다. 세부 정보를 복사하여 문제를 보고하세요. 문제가 계속되면 데이터를 지우면 대개 앱이 다시 시작됩니다.';
 
   @override
   String get errorDetails => '오류 세부 정보';
@@ -3286,7 +3348,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmEnableTip =>
-      '켜면 FlClash가 복호화되는 호스트로 보내는 모든 내용을 읽을 수 있습니다(쿠키와 비밀번호 포함). 재작성이 필요한 호스트에만 켜세요.';
+      '켜면 Flash가 복호화되는 호스트로 보내는 모든 내용을 읽을 수 있습니다(쿠키와 비밀번호 포함). 재작성이 필요한 호스트에만 켜세요.';
 
   @override
   String get certificate => '인증서';
@@ -3299,7 +3361,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get regenerateCertificateTip =>
-      '새 인증서가 현재 인증서를 대체하며, FlClash는 가능한 경우 현재 인증서를 이 기기의 신뢰할 수 있는 루트에서 제거합니다. 현재 인증서를 신뢰하는 다른 모든 기기에는 새 인증서를 설치해야 합니다.';
+      '새 인증서가 현재 인증서를 대체하며, Flash는 가능한 경우 현재 인증서를 이 기기의 신뢰할 수 있는 루트에서 제거합니다. 현재 인증서를 신뢰하는 다른 모든 기기에는 새 인증서를 설치해야 합니다.';
 
   @override
   String get exportCertificate => '인증서 내보내기';
@@ -3388,7 +3450,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mitmOldSystemCertificateLeftTip(Object name) {
-    return '이전 인증서 $name이(가) 시스템의 신뢰할 수 있는 인증서에 남아 있습니다. 루트 관리자에서 FlClash의 루트 권한을 허용한 뒤 다시 생성하거나, 그곳에서 \'FlClash MITM CA\' 모듈을 제거하고 다시 시작하세요.';
+    return '이전 인증서 $name이(가) 시스템의 신뢰할 수 있는 인증서에 남아 있습니다. 루트 관리자에서 Flash의 루트 권한을 허용한 뒤 다시 생성하거나, 그곳에서 \'FlClash MITM CA\' 모듈을 제거하고 다시 시작하세요.';
   }
 
   @override
@@ -3396,7 +3458,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mitmDecryptHostTip(Object host) {
-    return '$host을(를) 호스트 이름 목록에 추가할까요? FlClash가 쿠키와 비밀번호를 포함해 이 호스트로 보내는 내용을 읽을 수 있습니다.';
+    return '$host을(를) 호스트 이름 목록에 추가할까요? Flash가 쿠키와 비밀번호를 포함해 이 호스트로 보내는 내용을 읽을 수 있습니다.';
   }
 
   @override
@@ -3598,7 +3660,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateNotVerified => '다운로드한 업데이트를 확인할 수 없습니다.';
 
   @override
-  String get updateRestartTip => '업데이트를 설치하기 위해 FlClash가 종료되며, 완료되면 다시 열립니다.';
+  String get updateRestartTip => '업데이트를 설치하기 위해 Flash가 종료되며, 완료되면 다시 열립니다.';
 
   @override
   String get updateDownloadFailed => '업데이트를 다운로드할 수 없습니다.';
@@ -3642,6 +3704,2112 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get fallbackFilterDomainDesc => '이 도메인은 바로 Fallback으로 확인합니다.';
+
+  @override
+  String get tsCurrentDevice => 'This device';
+
+  @override
+  String tsNodeOf(Object name) {
+    return 'Node $name';
+  }
+
+  @override
+  String tsStatusOf(Object label) {
+    return 'Status: $label';
+  }
+
+  @override
+  String get tsChooseNode => 'Choose node';
+
+  @override
+  String get tsRefresh => 'Refresh';
+
+  @override
+  String get tsHelp => 'More information';
+
+  @override
+  String get tsHelpBody =>
+      'Flash appears as a separate device on the Tailscale network. It does not let other devices connect to this Mac for SSH, file sharing, or remote desktop, and does not provide Tailscale SSH or Taildrop.';
+
+  @override
+  String get tsNetworkNameTip =>
+      'The network name does not identify a verified network owner.';
+
+  @override
+  String get tsBoundaryTip =>
+      'Only traffic that Flash rules send to this node uses Tailscale. Logging in does not change rules, the system proxy or TUN settings.';
+
+  @override
+  String get tsGoToRules => 'Go to rules';
+
+  @override
+  String get tsGoToProfiles => 'Go to profiles';
+
+  @override
+  String get tsCoreStopped => 'Core is not running';
+
+  @override
+  String get tsCoreStoppedTip =>
+      'Start the core to see this node\'s Tailscale status.';
+
+  @override
+  String get tsStartCore => 'Start core';
+
+  @override
+  String get tsNodeGone => 'This node is no longer in the current profile';
+
+  @override
+  String get tsNodeGoneTip => 'Choose a node again.';
+
+  @override
+  String get tsStateSignedOut => 'Not logged in';
+
+  @override
+  String get tsStatePreparing => 'Preparing login…';
+
+  @override
+  String get tsStateStarting => 'Starting…';
+
+  @override
+  String get tsStateWaitingBrowser => 'Waiting for browser login';
+
+  @override
+  String get tsStateNeedsApproval => 'Waiting for admin approval';
+
+  @override
+  String get tsStateConnected => 'Connected';
+
+  @override
+  String get tsStateNeedsReauth => 'Login required again';
+
+  @override
+  String get tsStateStopped => 'Stopped';
+
+  @override
+  String get tsStateStartFailed => 'Failed to start';
+
+  @override
+  String get tsStateUnconfirmed => 'Status unconfirmed';
+
+  @override
+  String get tsStateLoadFailed => 'Couldn\'t load status';
+
+  @override
+  String get tsSignedOutTip =>
+      'Log in in your browser to authenticate this node.';
+
+  @override
+  String get tsLoggedOutTip =>
+      'You logged out of this node. It reconnects only after you log in.';
+
+  @override
+  String get tsPreparingTip => 'Getting login information for this node.';
+
+  @override
+  String get tsWaitingBrowserTip =>
+      'Finish logging in in your browser. This page updates from the node\'s status afterwards.';
+
+  @override
+  String get tsNeedsApprovalTip =>
+      'Browser authentication is done. Wait for your Tailscale network admin to approve this device.';
+
+  @override
+  String get tsNeedsReauthTip =>
+      'This node\'s authentication has expired. Log in again.';
+
+  @override
+  String tsExpiryTip(Object time) {
+    return 'Authentication expires at $time. Log in again before then.';
+  }
+
+  @override
+  String get tsStoppedTip =>
+      'This node has stopped and can\'t reach the Tailscale network for now.';
+
+  @override
+  String get tsStartFailedTip => 'This node failed to start. Try again.';
+
+  @override
+  String get tsUnconfirmedTip =>
+      'Can\'t confirm whether this node is connected. Read the status again.';
+
+  @override
+  String get tsLoadFailedTip =>
+      'Can\'t read this node\'s status right now. Try again.';
+
+  @override
+  String get tsDeviceName => 'Device name';
+
+  @override
+  String get tsAccount => 'Account';
+
+  @override
+  String get tsNetwork => 'Network';
+
+  @override
+  String get tsControlServer => 'Control server';
+
+  @override
+  String get tsAfterLogin => 'Available after login';
+
+  @override
+  String get tsAccountMissing => 'Account info not provided';
+
+  @override
+  String get tsNetworkMissing => 'Network info not provided';
+
+  @override
+  String get tsIdentityFailed => 'Couldn\'t load account and network info';
+
+  @override
+  String get tsCopyAddress => 'Copy address';
+
+  @override
+  String get tsCopyName => 'Copy name';
+
+  @override
+  String get tsAddressCopied => 'Address copied';
+
+  @override
+  String get tsLogin => 'Log in to Tailscale';
+
+  @override
+  String get tsRelogin => 'Log in again';
+
+  @override
+  String get tsReopenLogin => 'Reopen login page';
+
+  @override
+  String get tsReadStatus => 'Read status again';
+
+  @override
+  String get tsLogout => 'Log out of this node';
+
+  @override
+  String get tsLoggingOut => 'Logging out…';
+
+  @override
+  String get tsLogoutTitle => 'Log out of this Tailscale node?';
+
+  @override
+  String tsLogoutBody(Object name) {
+    return 'This logs out of “$name” and clears the login identity this Mac keeps for it. Connections through this node may drop; other nodes are not affected.';
+  }
+
+  @override
+  String get tsLogoutAuthKeyNote =>
+      'When you log in again, the auth key in the profile registers a new device identity.';
+
+  @override
+  String get tsLoggedOutReceipt =>
+      'Logged out of this node. It won\'t log in again until you log in.';
+
+  @override
+  String get tsLogoutFailed =>
+      'Couldn\'t log out. Read the node status again, then retry.';
+
+  @override
+  String get tsLogoutUnknown =>
+      'The logout result is unconfirmed. Read the node status again and don\'t repeat it until confirmed.';
+
+  @override
+  String get tsBrowserFailed => 'Couldn\'t open the login page. Try again.';
+
+  @override
+  String get tsUrlRejected =>
+      'This login page can\'t be opened safely. Check the node\'s control server in the profile.';
+
+  @override
+  String get tsUrlMissing =>
+      'No usable login page yet. Prepare the login again.';
+
+  @override
+  String get tsPrepareAgain => 'Prepare login again';
+
+  @override
+  String get tsLoginUnconfirmed =>
+      'The login result isn\'t confirmed yet. Read the node status again.';
+
+  @override
+  String get tsNodeChanged =>
+      'The node has changed. Start the action again on the selected node.';
+
+  @override
+  String get tsExitNode => 'Exit node';
+
+  @override
+  String get tsNoExitNode => 'No exit node';
+
+  @override
+  String get tsNoExitNodeTip =>
+      'Using no exit node doesn\'t log out of Tailscale';
+
+  @override
+  String get tsExitNodeTip =>
+      'Only affects traffic forwarded through this Tailscale node; it doesn\'t make the whole Mac use the exit.';
+
+  @override
+  String get tsNoExitCandidates => 'No exit nodes available';
+
+  @override
+  String get tsNoExitCandidatesTip => 'No exit node is confirmed available';
+
+  @override
+  String get tsExitStale =>
+      'Refresh the device list before choosing an exit node.';
+
+  @override
+  String get tsChooseExitNode => 'Choose exit node';
+
+  @override
+  String get tsOfflineNotSelectable => 'Offline, can\'t be chosen';
+
+  @override
+  String get tsExitChangeTitle => 'Change exit node?';
+
+  @override
+  String tsExitChangeBody(Object node, Object device) {
+    return 'Sets the exit node of “$node” to “$device”. Connections through this node may drop; Flash rules stay the same.';
+  }
+
+  @override
+  String get tsExitChangeConfirm => 'Change exit node';
+
+  @override
+  String get tsExitOffTitle => 'Stop using the exit node?';
+
+  @override
+  String tsExitOffBody(Object node) {
+    return 'Only turns off exit forwarding for “$node”; it doesn\'t log out of Tailscale and Flash rules stay the same.';
+  }
+
+  @override
+  String get tsExitApplying => 'Changing exit node…';
+
+  @override
+  String get tsExitUpdated => 'Exit node updated';
+
+  @override
+  String get tsExitFailed => 'Exit node not changed. Try again.';
+
+  @override
+  String get tsExitUnknown =>
+      'The exit node change is unconfirmed. Read the current settings again.';
+
+  @override
+  String get tsReadSettings => 'Read settings again';
+
+  @override
+  String get tsSettingsSaved =>
+      'Saved, but not yet confirmed in effect. Read the current settings again.';
+
+  @override
+  String get tsSettingsApplyFailed =>
+      'Saved, but couldn\'t be applied to this node. Read the current settings again.';
+
+  @override
+  String get tsSubnetRoutes => 'Subnet routes';
+
+  @override
+  String get tsAcceptRoutes => 'Accept subnet routes';
+
+  @override
+  String get tsAcceptRoutesTip =>
+      'Lets this node use approved subnet routes in the Tailscale network. Your rules still decide whether traffic goes through them; Flash rules are not changed.';
+
+  @override
+  String get tsRoutesOnTitle => 'Accept subnet routes?';
+
+  @override
+  String get tsRoutesOnBody =>
+      'This node will use the network\'s approved subnet routes. Flash rules stay the same.';
+
+  @override
+  String get tsRoutesOffTitle => 'Stop accepting subnet routes?';
+
+  @override
+  String get tsRoutesOffBody =>
+      'This node will stop using these subnet routes; related connections may drop. Flash rules stay the same.';
+
+  @override
+  String get tsRoutesOffConfirm => 'Stop accepting';
+
+  @override
+  String get tsRoutesApplying => 'Updating subnet routes…';
+
+  @override
+  String get tsRoutesUpdated => 'Subnet routes updated';
+
+  @override
+  String get tsRoutesFailed => 'Subnet routes not changed. Try again.';
+
+  @override
+  String get tsRoutesUnknown =>
+      'The subnet routes change is unconfirmed. Read the current settings again.';
+
+  @override
+  String get tsOn => 'On';
+
+  @override
+  String get tsOff => 'Off';
+
+  @override
+  String get tsFromSubscription => 'From subscription';
+
+  @override
+  String get tsFromProfile => 'From current profile';
+
+  @override
+  String get tsFromProvider => 'From proxy provider';
+
+  @override
+  String get tsFromLocal => 'Set on this Mac';
+
+  @override
+  String get tsOverrideAmbiguous =>
+      'This profile has multiple nodes with the same name and control server, so their settings cannot be saved separately. Give them different names in the profile.';
+
+  @override
+  String get tsOverrideTip =>
+      'Settings saved here take priority over the same settings in the profile and never change the subscription file.';
+
+  @override
+  String get tsChangeAfterSignIn => 'Sign in and connect to change';
+
+  @override
+  String tsSavedValue(Object value) {
+    return 'Saved: $value';
+  }
+
+  @override
+  String get tsAfterConnectSelectable =>
+      'Connect this node to change settings.';
+
+  @override
+  String get tsDevices => 'Devices';
+
+  @override
+  String get tsDevicesScope =>
+      'Devices this node can see, not every device in the admin console';
+
+  @override
+  String get tsAddress => 'Tailscale address';
+
+  @override
+  String get tsOwner => 'Owner';
+
+  @override
+  String get tsSystem => 'OS';
+
+  @override
+  String get tsStatus => 'Status';
+
+  @override
+  String get tsOnline => 'Online';
+
+  @override
+  String get tsOffline => 'Offline';
+
+  @override
+  String get tsStatusUnknown => 'Status unknown';
+
+  @override
+  String get tsExitCapable => 'Exit node';
+
+  @override
+  String get tsNameMissing => 'Name not provided';
+
+  @override
+  String get tsAddressMissing => 'Address not provided';
+
+  @override
+  String get tsSystemMissing => 'OS not provided';
+
+  @override
+  String get tsDevicesEmpty => 'No visible devices';
+
+  @override
+  String get tsDevicesEmptyTip =>
+      'This node doesn\'t see any other devices yet.';
+
+  @override
+  String get tsDevicesFailed => 'Couldn\'t load the device list. Try again.';
+
+  @override
+  String get tsRefreshDevices => 'Refresh device list';
+
+  @override
+  String get tsDevicesStale =>
+      'The device list may be out of date. Refreshing failed; this is the last list read.';
+
+  @override
+  String tsDevicesShown(Object n) {
+    return 'Showing $n devices';
+  }
+
+  @override
+  String tsDevicesCompact(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count devices · Only devices visible to this account',
+      one: '1 device · Only devices visible to this account',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tsDevicesCompactFiltered(Object shown, Object total) {
+    return 'Showing $shown/$total · Devices visible to this account only';
+  }
+
+  @override
+  String get tsSearchHint => 'Search name or address';
+
+  @override
+  String get tsSearchEmpty => 'No devices match the search';
+
+  @override
+  String get tsOwnerFilter => 'Device owner';
+
+  @override
+  String get tsOwnerAll => 'All';
+
+  @override
+  String get tsOwnerMine => 'Mine';
+
+  @override
+  String get tsOwnerMe => 'Me';
+
+  @override
+  String get tsOwnerUnknown => 'Owner unknown';
+
+  @override
+  String tsOwnerUnknownNetwork(Object network) {
+    return 'Unknown · Network $network';
+  }
+
+  @override
+  String get tsOwnerFilterEmpty => 'No devices with this owner';
+
+  @override
+  String get tsFilterEmpty => 'No devices match the current filters';
+
+  @override
+  String get tsClearOwnerFilter => 'Clear owner filter';
+
+  @override
+  String get tsShared => 'Shared in';
+
+  @override
+  String tsSharedBy(Object name) {
+    return 'Shared by: $name';
+  }
+
+  @override
+  String get tsLegacyTitle => 'Found an earlier login record';
+
+  @override
+  String get tsLegacyAccountUnconfirmed => 'Account not confirmed';
+
+  @override
+  String get tsLegacyBody =>
+      'You can copy this login record to this node and keep the original. It can move to only one node; make sure this is the account you want to keep using, or log in again instead.';
+
+  @override
+  String get tsLegacyAuthKeyNote =>
+      'This node has an auth key; logging in again registers a new device identity with it, and the earlier login record is kept.';
+
+  @override
+  String get tsLegacyMigrate => 'Move to this node';
+
+  @override
+  String get tsLegacyMigrating => 'Moving login record…';
+
+  @override
+  String get tsLegacyRetry => 'Retry move';
+
+  @override
+  String get tsLegacyFailed =>
+      'The login record was not moved and the original is kept. Try again, or log in again.';
+
+  @override
+  String get tsLegacyClaimFailed =>
+      'The login record was not moved; the move details couldn\'t be saved. Try again, or log in again.';
+
+  @override
+  String get tsLegacyChanged =>
+      'The move details have changed. Check them again before confirming.';
+
+  @override
+  String get tsLegacyUnknown =>
+      'The move result is unconfirmed. Read the status again first, and don\'t move or log in again until confirmed.';
+
+  @override
+  String get tsLegacyUnknownTarget =>
+      'The move result is unconfirmed; the login record on the target node isn\'t confirmed yet. Read the status again first, and don\'t move or log in again until confirmed.';
+
+  @override
+  String get tsLegacyUnknownArchive =>
+      'The move result is unconfirmed, and the original login record can\'t be verified for now. Read the status again first, and don\'t move or log in again until confirmed.';
+
+  @override
+  String get tsLegacyUnknownUnsaved =>
+      'The move result is unconfirmed; the move details couldn\'t be saved. Read the status again first, and don\'t move or log in again until confirmed.';
+
+  @override
+  String get tsLegacyMigrated => 'Login record moved. Reading the node status.';
+
+  @override
+  String get tsLegacyHasIdentity =>
+      'This node already has its own login record; no need to move.';
+
+  @override
+  String get tsLegacyControlMismatch =>
+      'The earlier login record uses another control server than this node, so it can\'t move.';
+
+  @override
+  String get tsLegacyInUse =>
+      'The earlier login record is still in use and can\'t move for now.';
+
+  @override
+  String get tsLegacyMigratedElsewhere =>
+      'This earlier login record already moved to another node and can\'t move again.';
+
+  @override
+  String get tsLegacyUnreadable =>
+      'Can\'t read the earlier login record. Check again.';
+
+  @override
+  String get tsLegacyUnreadableNotMigrated =>
+      'The login record was not moved; the earlier login record can\'t be read. Check again.';
+
+  @override
+  String get tsLegacyUnconfirmed =>
+      'Whether the earlier login record can be used is unconfirmed. Read the status again.';
+
+  @override
+  String get tsLegacyConfirmTitle => 'Move the earlier login to this node?';
+
+  @override
+  String tsLegacyConfirmProfile(Object name) {
+    return 'Profile: $name';
+  }
+
+  @override
+  String tsLegacyConfirmNode(Object name) {
+    return 'Node: $name';
+  }
+
+  @override
+  String tsLegacyConfirmAccount(Object account) {
+    return 'Account: $account';
+  }
+
+  @override
+  String tsLegacyConfirmControl(Object server) {
+    return 'Control server: $server';
+  }
+
+  @override
+  String get tsLegacyConfirmBody =>
+      'This copies the login record for the node above and leaves the original untouched. The same record can\'t move to another node afterwards. Check the node\'s real connection status after the move.';
+
+  @override
+  String get tsLegacyConfirm => 'Confirm move';
+
+  @override
+  String get tsSignIn => 'Sign in to Tailscale';
+
+  @override
+  String get tsSignInTip =>
+      'After sign-in, Flash adds a Tailscale node and dedicated rules to this profile. Other traffic keeps its existing routing, and the original profile file stays unchanged.';
+
+  @override
+  String get tsSignInBoundary =>
+      'System proxy and TUN will not be enabled automatically.';
+
+  @override
+  String get tsPreparingProfile => 'Preparing a local profile…';
+
+  @override
+  String get tsPreparingSignIn => 'Preparing sign-in…';
+
+  @override
+  String get tsPreparingSignInTip => 'Preparing Tailscale for this profile.';
+
+  @override
+  String get tsAttaching => 'Adding to current profile…';
+
+  @override
+  String get tsAttachingTip =>
+      'Sign-in is complete. Adding the node and Tailscale rules.';
+
+  @override
+  String get tsAttached => 'Added to current profile';
+
+  @override
+  String get tsAttachedTip =>
+      'Tailscale traffic uses dedicated rules. Other traffic keeps its existing routing.';
+
+  @override
+  String get tsPrepareFailed =>
+      'Tailscale sign-in could not be prepared. Try again.';
+
+  @override
+  String get tsAttachFailed =>
+      'Signed in, but not added to this profile. Your sign-in has been kept. Try adding it again.';
+
+  @override
+  String get tsRetryAttach => 'Retry adding to profile';
+
+  @override
+  String get tsAttachUnknown =>
+      'The profile update is unconfirmed. Read the status again before adding the node or signing in again.';
+
+  @override
+  String get tsPrepareUnknown =>
+      'Sign-in preparation is unconfirmed. Read the status again before signing in again.';
+
+  @override
+  String get tsAttachLockTip =>
+      'Adding to this profile. Settings cannot be changed yet.';
+
+  @override
+  String get tsAttachUnknownLockTip =>
+      'The profile update is unconfirmed. Read the status again first.';
+
+  @override
+  String get tsAddedInPanel => 'Added in panel';
+
+  @override
+  String get tsRulesManaged =>
+      'Flash updates dedicated rules using this account’s network domain and device addresses. Other traffic keeps its existing routing, and the original profile file stays unchanged.';
+
+  @override
+  String tsRulesDomain(Object domain) {
+    return 'Network domain: $domain';
+  }
+
+  @override
+  String tsRulesAddresses(Object count) {
+    return 'Device addresses: $count';
+  }
+
+  @override
+  String get tsRulesPending =>
+      'Once added, Tailscale addresses and ts.net domains will use dedicated rules. Other traffic will keep its existing routing.';
+
+  @override
+  String get tsRulesProfileNode =>
+      'Only traffic routed to this node by Flash rules uses Tailscale. Signing in to this node does not change existing rules or enable system proxy or TUN.';
+
+  @override
+  String get tsUnverifiedBlocked =>
+      'Tailscale addresses and domains without a verified account are blocked. They will not use another account or a direct connection.';
+
+  @override
+  String get tsManagedPriority =>
+      'Panel-added routing and blocking rules take priority over existing rules for those targets. Rules for other traffic stay unchanged. Assign an account here to change a target’s routing.';
+
+  @override
+  String get tsSignOutRemove => 'Sign out and remove';
+
+  @override
+  String get tsSignOutRemoveMenu => 'Sign out and remove…';
+
+  @override
+  String get tsRemoveTitle => 'Sign out and remove this account?';
+
+  @override
+  String tsRemoveBody(Object account, Object node, Object profile) {
+    return 'This signs out “$account” (node “$node”), clears its sign-in from this Mac, and removes its panel-added node and rules from “$profile”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.';
+  }
+
+  @override
+  String tsRemoveBodyNode(Object node, Object profile) {
+    return 'This signs out “$node”, clears its sign-in from this Mac, and removes its panel-added node and rules from “$profile”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.';
+  }
+
+  @override
+  String get tsRemoveExtra =>
+      'This does not delete the device from the Tailscale admin console or change the official client.';
+
+  @override
+  String get tsRemoveTargetsKept =>
+      'Targets assigned to this account will not move to another account automatically. Blocking protection stays in place. Assign another account to access them.';
+
+  @override
+  String get tsRemoveLast =>
+      'This is the last panel-added account in this profile. Removing it also removes panel-added routing and blocking rules. The original profile will handle this traffic again, which may use a direct connection or its original proxies. Confirm that you accept this change.';
+
+  @override
+  String get tsRemoving => 'Signing out and removing…';
+
+  @override
+  String get tsRemoved => 'Signed out and removed';
+
+  @override
+  String get tsRemoveLogoutUnknown =>
+      'Sign-out is unconfirmed. The node has not been removed. Read the status again before removing it or signing in again.';
+
+  @override
+  String get tsRemoveIncomplete =>
+      'Signed out, but removal is incomplete. Read the status again.';
+
+  @override
+  String get tsRemoveUnknown =>
+      'Removal is unconfirmed. Read the status again before adding the node or signing in.';
+
+  @override
+  String get tsSignOutAccount => 'Sign out of this account';
+
+  @override
+  String get tsSignOutAccountTitle => 'Sign out of this account?';
+
+  @override
+  String tsSignOutAccountBody(Object account, Object node) {
+    return 'This signs out “$account” (node “$node”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.';
+  }
+
+  @override
+  String get tsAccountSignedOut => 'Signed out';
+
+  @override
+  String get tsSignedOutBanner =>
+      'Signed out of this account. In Rule mode, its assigned targets stay blocked until you sign in or explicitly reassign them.';
+
+  @override
+  String get tsSignedOutReceipt => 'Signed out of this account';
+
+  @override
+  String get tsAccountsInProfile => 'Tailscale accounts in this profile';
+
+  @override
+  String get tsAddAccount => 'Add Tailscale account';
+
+  @override
+  String get tsNewAccount => 'New account';
+
+  @override
+  String tsNetworkOf(Object name) {
+    return 'Network: $name';
+  }
+
+  @override
+  String tsSwitcherSemantics(Object account, Object status, Object count) {
+    return 'Viewing Tailscale account: $account, $status. $count entries.';
+  }
+
+  @override
+  String get tsMemoryTip =>
+      'Each account runs a separate Tailscale device. Keeping more accounts online uses more memory.';
+
+  @override
+  String get tsDuplicate =>
+      'An entry already exists for this account. This sign-in has been kept but has not been added to routing. Review it before continuing.';
+
+  @override
+  String get tsViewExisting => 'View existing account';
+
+  @override
+  String get tsCheckingAccount => 'Checking account…';
+
+  @override
+  String get tsAddUnconfirmed =>
+      'Account addition is unconfirmed. Read the status again first.';
+
+  @override
+  String tsConflictTitle(Object count) {
+    return 'Choose accounts for $count targets';
+  }
+
+  @override
+  String get tsConflictBody =>
+      'These addresses or domains have multiple candidate accounts. Requests to these targets are blocked until you choose an account. They will not be sent directly.';
+
+  @override
+  String get tsChooseAccounts => 'Choose accounts';
+
+  @override
+  String get tsAddressConflict => 'Address conflict';
+
+  @override
+  String get tsRoutingConflict => 'Routing conflict';
+
+  @override
+  String get tsChooseAccountFor => 'Choose account for access';
+
+  @override
+  String get tsAssignTitle => 'Choose accounts for targets';
+
+  @override
+  String get tsAssignBody =>
+      'Choose one account for each target. Unassigned targets stay blocked. Other targets are not affected. An offline account will not be replaced automatically.';
+
+  @override
+  String tsTargetAddress(Object address) {
+    return 'Address: $address';
+  }
+
+  @override
+  String tsTargetDomain(Object domain) {
+    return 'Domain: $domain';
+  }
+
+  @override
+  String tsCandidate(Object account, Object network) {
+    return '$account · $network';
+  }
+
+  @override
+  String get tsNotAssigned => 'Not assigned';
+
+  @override
+  String get tsSaveChoices => 'Save choices';
+
+  @override
+  String get tsChoicesUpdated => 'Access accounts updated';
+
+  @override
+  String get tsAssignedTargets => 'Assigned targets';
+
+  @override
+  String get tsChoicesSaved =>
+      'Choices saved; application is not yet confirmed.';
+
+  @override
+  String get tsChoicesFailed => 'Choices were not saved. Try again.';
+
+  @override
+  String get tsChoicesUnknown =>
+      'The result is unconfirmed. Read the status again before saving again.';
+
+  @override
+  String tsAssignedTo(Object account) {
+    return 'Assigned: $account';
+  }
+
+  @override
+  String get tsAssignedUnavailable =>
+      'The assigned account is unavailable. This target will not use another account.';
+
+  @override
+  String get tsReconfirm =>
+      'This target’s account needs confirmation. Requests are blocked. Choose an account again.';
+
+  @override
+  String get tsReassign => 'Reassign account';
+
+  @override
+  String get tsTargetUnconfirmed => 'Target account unconfirmed';
+
+  @override
+  String get tsTargetUnconfirmedTip =>
+      'The account for this target cannot be verified yet. Requests are blocked.';
+
+  @override
+  String tsDeleteProfileManaged(Object count) {
+    return 'This profile has $count panel-added Tailscale accounts. Deleting it removes their profile bindings, target assignments, and dedicated routing and blocking rules. Local sign-in archives are kept. Devices in the Tailscale admin console are not deleted. Other profiles are not affected.';
+  }
+
+  @override
+  String get tsDeleteProfilePending =>
+      'This profile has unconfirmed Tailscale operations. Read the status again before deleting it.';
+
+  @override
+  String get tsDeleteProfileUnbindFailed =>
+      'Could not unlink this profile from its Tailscale accounts. The profile was not deleted. Try again.';
+
+  @override
+  String get tsDeleteProfileUnlinkUnconfirmed =>
+      'The account-link update is unconfirmed. The profile has not been deleted. Read the status again before deleting it again.';
+
+  @override
+  String get tsDeleteProfileUnconfirmed =>
+      'Profile deletion is unconfirmed. Read the status again before deleting it again.';
+
+  @override
+  String get tsTryAgain => 'Try again';
+
+  @override
+  String get tsDirectMode =>
+      'Direct mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.';
+
+  @override
+  String get tsGlobalMode =>
+      'Global mode is active. Tailscale automatic routing and blocking protection are not in effect. Switch to Rule mode before accessing Tailscale targets.';
+
+  @override
+  String get tsDnsUnverified =>
+      'The current DNS settings do not confirm that target domains are preserved for rule matching. Domain routing has not been verified. Check DNS settings.';
+
+  @override
+  String get tsCancel => 'Cancel';
+
+  @override
+  String get tsSignInShort => 'Sign in to add a node and dedicated rules.';
+
+  @override
+  String tsRulesSummary(num count, Object domain) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$domain · $count device addresses',
+      one: '$domain · 1 device address',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tsRulesUnconfirmed =>
+      'Domain and address details are unconfirmed.';
+
+  @override
+  String tsDevicesFiltered(Object shown, Object total) {
+    return 'Showing $shown / $total';
+  }
+
+  @override
+  String get tsAboutTailscale => 'About Tailscale';
+
+  @override
+  String get tsAboutExit => 'About exit settings';
+
+  @override
+  String get tsAboutRoutes => 'About subnet routes';
+
+  @override
+  String get tsAboutRules => 'About rules';
+
+  @override
+  String get infoAbout => 'About';
+
+  @override
+  String get mountApplyKept =>
+      'Mounts could not be applied. The last confirmed running profile is still in use.';
+
+  @override
+  String get mountApplyBlocked =>
+      'Mounts could not be applied. Flash currently rejects every connection routed through it. Read the status again before unmounting or reapplying the profile.';
+
+  @override
+  String get mountApplyBlockedConfirmed =>
+      'Mounts are confirmed not to have been applied. Flash still rejects every connection routed through it. You can unmount subscriptions or reapply the profile.';
+
+  @override
+  String get mountSourceNoNodeList =>
+      'This subscription does not provide a mountable node list. Check its format.';
+
+  @override
+  String get mountDeleteSourceTitle => 'Delete subscription and unmount?';
+
+  @override
+  String mountDeleteSourceBody(Object subscriptionName, num profileCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      profileCount,
+      locale: localeName,
+      other: '$profileCount profiles',
+      one: '1 profile',
+    );
+    return '“$subscriptionName” is mounted on the following $_temp0. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.';
+  }
+
+  @override
+  String get mountDeleteSourceConfirm => 'Delete and unmount';
+
+  @override
+  String get mountDeleteSourceProgress => 'Deleting and unmounting…';
+
+  @override
+  String get mountDeleteSourceDone => 'Subscription deleted and unmounted';
+
+  @override
+  String get mountDeleteSourceUnknown =>
+      'Subscription deletion and unmounting are unconfirmed. Read the status again before deleting or mounting again.';
+
+  @override
+  String get mountDeleteSourceBlocked =>
+      'This subscription or an affected profile has unconfirmed operations. Read the status again before deleting.';
+
+  @override
+  String get mountReadStatus => 'Read status again';
+
+  @override
+  String get mountEntry => 'Mount subscription nodes';
+
+  @override
+  String get mountEntryMenu => 'Mount subscription nodes…';
+
+  @override
+  String mountedCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count subscriptions mounted',
+      one: '1 subscription mounted',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mountCardFailed(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count subscription updates failed',
+      one: '1 subscription update failed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mountCardUnreadable => 'Could not read mount status';
+
+  @override
+  String mountPillSemantics(Object label, Object profileName) {
+    return '$label, target profile $profileName';
+  }
+
+  @override
+  String get mountPillFailedSemantics => 'a subscription update failed';
+
+  @override
+  String mountTarget(Object profileName) {
+    return 'Target profile: $profileName';
+  }
+
+  @override
+  String get mountDescription => 'Adds nodes without changing rules or DNS.';
+
+  @override
+  String get mountChooseSources => 'Choose subscriptions';
+
+  @override
+  String get mountMountedTag => 'Mounted';
+
+  @override
+  String get mountNotMounted => 'Not mounted';
+
+  @override
+  String get mountEmptyTitle => 'No subscriptions to mount';
+
+  @override
+  String get mountEmptyDesc =>
+      'Import a subscription from a link, then choose it as a node source for this profile.';
+
+  @override
+  String get mountImport => 'Import subscription';
+
+  @override
+  String get mountImportHint =>
+      'Return here after importing to choose the subscription. Your active profile will not change.';
+
+  @override
+  String mountNodeCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nodes',
+      one: '1 node',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mountLastUpdated(Object time) {
+    return 'Last updated: $time';
+  }
+
+  @override
+  String get mountNotFetched => 'Nodes not fetched yet';
+
+  @override
+  String get mountListFailed => 'Could not load subscriptions. Try again.';
+
+  @override
+  String get mountReadAgain => 'Read again';
+
+  @override
+  String get mountSave => 'Save mounts';
+
+  @override
+  String get mountSaving => 'Saving mounts…';
+
+  @override
+  String get mountApplying => 'Mounts saved. Applying…';
+
+  @override
+  String get mountUpdated => 'Subscription node mounts updated';
+
+  @override
+  String get mountSavedUnconfirmed =>
+      'Mounts saved; application is not yet confirmed.';
+
+  @override
+  String get mountUnchanged => 'Mounts were not changed. Try again.';
+
+  @override
+  String get mountApplyFailed =>
+      'Mounts were saved but could not be applied to the running profile.';
+
+  @override
+  String get mountUnknown =>
+      'The mount result is unconfirmed. Read the status again before saving or unmounting.';
+
+  @override
+  String get mountUpdateNodes => 'Update nodes';
+
+  @override
+  String mountUpdateNodesOf(Object name) {
+    return 'Update nodes of $name';
+  }
+
+  @override
+  String get mountUpdatingNodes => 'Updating nodes…';
+
+  @override
+  String get mountNodesUpdated => 'Nodes updated';
+
+  @override
+  String get mountUpdateFailedInUse =>
+      'Update failed. The last successfully fetched nodes are still in use.';
+
+  @override
+  String get mountUpdateFailedKept =>
+      'Update failed. The last successfully fetched nodes were kept, but their current use is not confirmed.';
+
+  @override
+  String get mountUpdateFailedKeptBlocked =>
+      'Update failed. The last successfully fetched nodes were kept.';
+
+  @override
+  String get mountFetchFailed =>
+      'Could not fetch nodes from this subscription. Try again.';
+
+  @override
+  String get mountSourceEmpty =>
+      'Subscription updated. It currently has no nodes.';
+
+  @override
+  String get mountSourceGone =>
+      'The original subscription is unavailable. Choose a node source again.';
+
+  @override
+  String get mountSelectionLost =>
+      'The previously selected node is no longer in this subscription. Choose another node.';
+
+  @override
+  String get mountTailscaleExcluded =>
+      'Tailscale nodes were excluded from ordinary mounts.';
+
+  @override
+  String get mountSourceRelayOnly =>
+      'All nodes in this subscription route through Tailscale and cannot be mounted. Their routing settings were not changed.';
+
+  @override
+  String get mountSourceIsolatedOnly =>
+      'All nodes in this subscription were excluded by the mount-isolation checks and cannot be mounted. Their settings were not changed.';
+
+  @override
+  String get mountSourceTailscaleOnly =>
+      'This subscription contains only Tailscale nodes and cannot be mounted.';
+
+  @override
+  String get mountSameName =>
+      'When node names conflict across sources, the subscription name is added as a suffix. This may affect exact-match or end-of-name filters. Check the group results.';
+
+  @override
+  String get mountGroupsTitle => 'Groups for these nodes';
+
+  @override
+  String get mountHintFiltered => 'Auto-collected · Group filters apply';
+
+  @override
+  String get mountNoGroupTitle =>
+      'This profile has no groups that automatically accept new nodes. Mounted nodes have not been added to any group.';
+
+  @override
+  String get mountNoGroupDesc =>
+      'No groups will be created and routing rules will not be changed automatically.';
+
+  @override
+  String get mountGroupsFailed =>
+      'Could not read this profile’s groups. Read them again.';
+
+  @override
+  String get mountTypeSelect => 'Manual selection';
+
+  @override
+  String get mountTypeUrlTest => 'Latency selection';
+
+  @override
+  String get mountTypeFallback => 'Failover';
+
+  @override
+  String get mountTypeLoadBalance => 'Load balancing';
+
+  @override
+  String get mountBlockTag => 'Block when empty';
+
+  @override
+  String get mountBlockDesc =>
+      'If this group has no selectable nodes, its connections are blocked instead of sent directly.';
+
+  @override
+  String mountBaseFallback(Object target) {
+    return 'Empty-group handling comes from the original profile: $target.';
+  }
+
+  @override
+  String get mountBaseDirect =>
+      'When no nodes are selectable, this group uses a direct connection as specified by the original profile.';
+
+  @override
+  String mountGroupEmpty(Object group) {
+    return 'Group “$group” has no selectable nodes. Check the subscriptions and group filters.';
+  }
+
+  @override
+  String get mountUnmountTitle => 'Unmount this subscription?';
+
+  @override
+  String mountUnmountBody(Object subscriptionName, Object profileName) {
+    return 'This removes nodes from “$subscriptionName” from “$profileName”. Connections using those nodes may be interrupted. The subscription, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.';
+  }
+
+  @override
+  String get mountUnmountManyTitle => 'Unmount these subscriptions?';
+
+  @override
+  String mountUnmountManyBody(num count, Object profileName) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count subscriptions',
+      one: '1 subscription',
+    );
+    return 'This removes nodes provided by the following $_temp0 from “$profileName”. Connections using those nodes may be interrupted. The subscriptions, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.';
+  }
+
+  @override
+  String get mountUnmount => 'Unmount';
+
+  @override
+  String get mountUnmounting => 'Unmounting…';
+
+  @override
+  String get mountUnmounted => 'Unmounted';
+
+  @override
+  String get mountUnmountUnknown =>
+      'Unmounting is unconfirmed. Read the status again first.';
+
+  @override
+  String get mountUpdateTitle => 'Update subscription mounts?';
+
+  @override
+  String mountAlsoMounts(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count subscriptions',
+      one: '1 subscription',
+    );
+    return 'This save also mounts $_temp0.';
+  }
+
+  @override
+  String get mountFormatHelp =>
+      'You can mount imported remote Clash/mihomo subscriptions and remote subscriptions successfully converted by Flash’s existing importer. Only nodes are included, not subscription rules or DNS settings.';
+
+  @override
+  String mountGroupsExcluded(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count groups do not accept subscription nodes.',
+      one: '1 group does not accept subscription nodes.',
+    );
+    return 'To keep Tailscale routing separate, $_temp0';
+  }
+
+  @override
+  String mountGroupsExcludedNames(Object groups) {
+    return 'Groups: $groups.';
+  }
+
+  @override
+  String get mountNameSeparator => ', ';
+
+  @override
+  String get mountGroupReasonRuleUnknown =>
+      'Rule contents are currently unavailable';
+
+  @override
+  String get mountGroupReasonProviderUnknown =>
+      'The base profile’s node list is currently unavailable';
+
+  @override
+  String get mountGroupReasonDns =>
+      'DNS requests use routing rules to choose an exit';
+
+  @override
+  String get mountGroupReasonDialer =>
+      'Other nodes use this group to relay traffic';
+
+  @override
+  String get mountGroupReasonMember =>
+      'Restricted due to group membership; the underlying reason is unconfirmed';
+
+  @override
+  String get mountNoGroupIsolatedTitle =>
+      'Current groups cannot receive mounts';
+
+  @override
+  String get mountNoGroupIsolatedDesc =>
+      'None of the existing groups passed the mount-isolation checks. No group will be created, no direct-connection fallback will be added, and the original profile file will not be rewritten automatically.';
+
+  @override
+  String mountNodesRead(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nodes read',
+      one: '1 node read',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mountNodesReadAt(Object time) {
+    return 'Nodes read: $time';
+  }
+
+  @override
+  String get mountUpdateReadNotAppliedKept =>
+      'New nodes were read but have not been applied. The last confirmed running profile is still in use.';
+
+  @override
+  String get mountUpdateReadNotAppliedBlocked =>
+      'New nodes were read but have not been applied. Flash currently rejects every connection routed through it. Read the status again.';
+
+  @override
+  String get mountUpdateReadNotAppliedBlockedConfirmed =>
+      'New nodes were read but have not been applied. Flash still rejects every connection routed through it.';
+
+  @override
+  String get mountUpdateReadEmptyNotApplied =>
+      'Subscription read. It currently has no nodes. The new result has not been applied.';
+
+  @override
+  String get mountRunningKept =>
+      'The last confirmed running profile is still in use.';
+
+  @override
+  String get mountRunningBlocked =>
+      'Flash currently rejects every connection routed through it. Read the status again.';
+
+  @override
+  String get mountRunningBlockedConfirmed =>
+      'Flash still rejects every connection routed through it.';
+
+  @override
+  String mountProviderUpdateRefused(Object name) {
+    return 'New content for “$name” was read but did not pass the mount-isolation checks and was not applied. The previously confirmed content is still in use.';
+  }
+
+  @override
+  String mountProviderUpdateRefusedUnconfirmed(Object name) {
+    return 'New content for “$name” was read but did not pass the mount-isolation checks and was not applied. Its current use is unconfirmed. Read the status again.';
+  }
+
+  @override
+  String mountUnsupportedExcluded(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count subscription nodes that are not supported for mounting were excluded. Their settings were not changed.',
+      one:
+          '1 subscription node that is not supported for mounting was excluded. Its settings were not changed.',
+    );
+    return 'To keep Tailscale routing separate, $_temp0';
+  }
+
+  @override
+  String get mountAbout => 'About mounts';
+
+  @override
+  String get mountAboutBody =>
+      'Choose imported subscriptions to add nodes to this profile. Nodes are added only to groups already configured to accept new nodes automatically, using each group’s existing inclusion and exclusion filters. Groups with only fixed members and no automatic collection stay unchanged. Existing nodes, rules, and DNS settings stay unchanged.';
+
+  @override
+  String get mountIsolationFirst =>
+      'Tailscale and other mount-isolation requirements still take priority. Ineligible groups will not receive subscription nodes.';
+
+  @override
+  String get mountGroupsSummary =>
+      'Added only to groups that automatically accept new nodes, using each group’s filters.';
+
+  @override
+  String mountGroupsCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count groups',
+      one: '1 group',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mountGroupPending => 'Pending application';
+
+  @override
+  String mountGroupNodes(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mounted nodes',
+      one: '1 mounted node',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mountGroupNoMatch => 'No mounted nodes match';
+
+  @override
+  String mountGroupsNoMatch(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count groups have no match',
+      one: '1 group has no match',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mountGroupsAllNoMatch => 'Mounted nodes match no group filters.';
+
+  @override
+  String get mountGroupsUnconfirmed => 'Group additions are not confirmed';
+
+  @override
+  String mountShowAllGroups(Object count) {
+    return 'Show all $count groups';
+  }
+
+  @override
+  String get mountGroupsHidden =>
+      'Hidden proxy groups also follow the filtering and isolation rules. They are not listed here.';
+
+  @override
+  String mountGroupsHiddenCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hidden groups',
+      one: '1 hidden group',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mountGroupsHiddenBlocked(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hidden groups are empty and reject connections.',
+      one: '1 hidden group is empty and rejects connections.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mountGroupsHiddenNoMatch(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hidden groups have no matching mounted node.',
+      one: '1 hidden group has no matching mounted node.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mountDetails => 'Details';
+
+  @override
+  String get mountShowLess => 'Show less';
+
+  @override
+  String mountViewerSource(Object name, num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nodes',
+      one: '1 node',
+    );
+    return 'Mount: $name · $_temp0';
+  }
+
+  @override
+  String mountViewerPending(Object name) {
+    return 'Mount: $name · node list not yet confirmed';
+  }
+
+  @override
+  String tsViewerRules(num count, Object node) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rules',
+      one: '1 rule',
+    );
+    return 'Tailscale · Added by Flash · $_temp0 → Node $node';
+  }
+
+  @override
+  String tsViewerNode(Object node) {
+    return 'Tailscale · Added by Flash · Node $node';
+  }
+
+  @override
+  String get tsViewerUnconfirmed =>
+      'Tailscale · Current rules and nodes are unconfirmed';
+
+  @override
+  String get tsViewerReadFailed =>
+      'Tailscale · Could not read runtime information';
+
+  @override
+  String get tsViewerNone =>
+      'Tailscale · No rules added by Flash in this profile';
+
+  @override
+  String get mountSameNameShort =>
+      'Matching node names use the subscription name';
+
+  @override
+  String mountNodesExcludedShort(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nodes excluded from mounting',
+      one: '1 node excluded from mounting',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mountGroupsExcludedShort(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count groups exclude subscription nodes',
+      one: '1 group excludes subscription nodes',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mountNamesAndExclusions => 'Name conflicts and exclusions';
+
+  @override
+  String get mountSomeExcluded =>
+      'Some nodes or groups are excluded from mounting';
+
+  @override
+  String get processPath => 'Process path';
+
+  @override
+  String get copyPath => 'Copy path';
+
+  @override
+  String get filterByThisApp => 'Filter by this app';
+
+  @override
+  String get filterByThisProcess => 'Filter by this process';
+
+  @override
+  String get unknownProcess => 'Unknown process';
+
+  @override
+  String get otherDevice => 'Other device';
+
+  @override
+  String get processInfoUnavailable => 'Process information is unavailable.';
+
+  @override
+  String get processUnavailable => 'Unavailable';
+
+  @override
+  String get processFromOtherDevice =>
+      'This connection is from another device. Its process information cannot be obtained on this Mac.';
+
+  @override
+  String get appInfoUnreadable => 'Could not read app information';
+
+  @override
+  String get processLookupDisabled => 'Process lookup is currently disabled.';
+
+  @override
+  String get pageSourceTitle => 'Confirm setting sources';
+
+  @override
+  String get pageSourceDesc =>
+      'These settings differ between the app and profile. Choose which source to use.';
+
+  @override
+  String pageSourceCompare(Object pageValue, Object fileValue) {
+    return 'App: $pageValue · Profile: $fileValue';
+  }
+
+  @override
+  String get keepPageSetting => 'Keep in-app settings';
+
+  @override
+  String get followBaseProfile => 'Follow base profile';
+
+  @override
+  String get applyAction => 'Apply';
+
+  @override
+  String get notSet => 'Not set';
+
+  @override
+  String notSetDefault(Object defaultValue) {
+    return 'Not set; default $defaultValue';
+  }
+
+  @override
+  String pageSourceChange(Object field, Object oldValue, Object newValue) {
+    return '$field: $oldValue → $newValue';
+  }
+
+  @override
+  String get sourcePage => 'In-app settings';
+
+  @override
+  String get sourceBase => 'Base profile';
+
+  @override
+  String get sourceDefault => 'Default';
+
+  @override
+  String get notYetApplied => 'Not yet applied';
+
+  @override
+  String get logLevelDebug => 'Debug';
+
+  @override
+  String get logLevelInfo => 'Info';
+
+  @override
+  String get logLevelWarning => 'Warning';
+
+  @override
+  String get logLevelError => 'Error';
+
+  @override
+  String get logLevelSilent => 'Silent';
+
+  @override
+  String get findProcessAlways => 'Always';
+
+  @override
+  String get findProcessOff => 'Off';
+
+  @override
+  String get findProcessStrict => 'On demand';
+
+  @override
+  String get tunMissingAuthorization =>
+      'TUN did not start because system permission is missing.';
+
+  @override
+  String inboundNotListening(Object listenerName, Object port) {
+    return '$listenerName did not start: port $port is not listening.';
+  }
+
+  @override
+  String controllerExposedWithoutSecret(Object address) {
+    return 'The controller at $address allows non-local access without a secret. This profile was not applied.';
+  }
+
+  @override
+  String get systemProxyNoPort =>
+      'No usable port is available for the system proxy. Check the port settings.';
+
+  @override
+  String get pageSourceHiddenTitle => 'Switch to profile values';
+
+  @override
+  String get pageSourceHiddenNote =>
+      'Defaults are used for settings not present in the profile.';
+
+  @override
+  String get valueOn => 'On';
+
+  @override
+  String get valueOff => 'Off';
+
+  @override
+  String get valueEmptyList => 'Empty list';
+
+  @override
+  String get valueEmptyObject => 'Empty object';
+
+  @override
+  String get valueEmptyText => 'Empty text';
+
+  @override
+  String get valueNull => 'Null';
+
+  @override
+  String get fieldStoreSelected => 'Remember node selections';
+
+  @override
+  String get fieldTunAutoRoute => 'TUN automatic routing';
+
+  @override
+  String get fieldTunAutoDetectInterface => 'TUN interface auto-detection';
+
+  @override
+  String get fieldSkipAuthPrefixes =>
+      'Source IP ranges exempt from authentication';
+
+  @override
+  String get fieldExternalUi => 'External dashboard';
+
+  @override
+  String get fieldDnsSettings => 'DNS settings';
+
+  @override
+  String get listenerMixed => 'Mixed proxy';
+
+  @override
+  String get listenerHttp => 'HTTP proxy';
+
+  @override
+  String get listenerSocks => 'SOCKS proxy';
+
+  @override
+  String get listenerRedir => 'Redir proxy';
+
+  @override
+  String get listenerTproxy => 'TProxy proxy';
+
+  @override
+  String get tsExitGroupName => 'Tailscale exit';
+
+  @override
+  String get tsExitHowTo =>
+      'Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.';
+
+  @override
+  String get tsExitGroupUnconfirmed => 'Exit group unconfirmed';
+
+  @override
+  String tsExitGroupJoined(num count, Object group) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '“$group” added to $count manual policy groups',
+      one: '“$group” added to 1 manual policy group',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tsExitGroupNoParents =>
+      'No manual policy groups in this profile can receive the exit group';
+
+  @override
+  String get tsExitNotAuthorized => 'This exit node is not authorized for use';
+
+  @override
+  String get tsExitDeviceOffline => 'Exit device offline';
+
+  @override
+  String get tsExitNeedsLogin => 'Sign in to this account again';
+
+  @override
+  String get tsExitRefusing =>
+      'This exit node is unavailable. Connections using it will be rejected';
+
+  @override
+  String get tsExitUnavailableShort => 'Unavailable';
+
+  @override
+  String get tsExitOffAffectedTitle => 'Turn off the exit node?';
+
+  @override
+  String tsExitOffAffectedBody(Object group) {
+    return 'Turning off the exit node switches policies using “$group” to the first option in each group.';
+  }
+
+  @override
+  String get tsExitTurnOff => 'Turn off exit node';
+
+  @override
+  String get tsExitOffNoOption => 'No options will remain';
+
+  @override
+  String tsViewerExit(Object group, Object member, Object groups) {
+    return '$group · Added by Flash · $member · Manual policy groups: $groups';
+  }
+
+  @override
+  String get tsViewerExitUnconfirmed =>
+      'Tailscale exit · Current exit node and groups are unconfirmed';
+
+  @override
+  String get macHelperTitle => 'Flash 도우미';
+
+  @override
+  String get macHelperOff => '도우미가 설치되지 않음';
+
+  @override
+  String get macHelperOn => '도우미 준비 완료';
+
+  @override
+  String get macHelperPending => 'macOS 설정에서 허용 필요';
+
+  @override
+  String get macHelperUnavailable => '도우미를 사용할 수 없음';
+
+  @override
+  String get macHelperCannotUse => '이 버전에서는 도우미를 사용할 수 없음';
+
+  @override
+  String get macHelperRepair => '도우미 업데이트 필요';
+
+  @override
+  String get macHelperStopUnknown => '도우미 준비 상태를 확인할 수 없음';
+
+  @override
+  String get macHelperTurnOn => '설치 안내';
+
+  @override
+  String get macHelperTurnOff => '끄기 안내';
+
+  @override
+  String get macHelperOpenSettings => 'macOS 설정 열기';
+
+  @override
+  String get macHelperTryAgain => '다시 시도';
+
+  @override
+  String get macHelperRepairAction => '복구 안내';
+
+  @override
+  String get macHelperCheckAgain => '다시 확인';
+
+  @override
+  String get macHelperUnavailableDetail =>
+      '현재 Flash가 도우미에 연결할 수 없어 TUN을 시작할 수 없습니다. TUN 설정은 유지됩니다.';
+
+  @override
+  String get macHelperPendingDetail =>
+      'Flash 설치 프로그램에서 관리자의 명시적 승인을 받아 도우미를 설치, 업데이트, 복구하거나 끄세요. 끄기는 Flash 삭제가 아니며 다시 승인이 필요할 수 있습니다. 설치 완료만으로 도우미나 TUN 실행을 확인할 수 없습니다. TUN 설정은 유지됩니다.';
+
+  @override
+  String get trayMultipleNodes => '여러 노드';
+
+  @override
+  String get trayNoAvailableMembers => '사용 가능한 구성원이 없습니다';
+
+  @override
+  String get trayCouldNotLoad => '불러오기 실패';
+
+  @override
+  String get trayCouldNotSwitch => '전환 실패';
+
+  @override
+  String get traySwitchUnconfirmed => '전환 결과를 확인할 수 없음';
+
+  @override
+  String get traySelectionUnknown => '현재 선택 항목을 알 수 없음';
+
+  @override
+  String trayCurrentSelection(Object name) {
+    return '현재 선택: $name';
+  }
+
+  @override
+  String get trayLatencyUnknown => '지연 시간을 알 수 없음';
+
+  @override
+  String get trayTesting => '테스트 중';
+
+  @override
+  String trayLatencyMilliseconds(Object value) {
+    return '지연 시간 $value밀리초';
+  }
+
+  @override
+  String get trayLatencyLessThanOne => '지연 시간 1밀리초 미만';
+
+  @override
+  String traySwitchingTo(Object name) {
+    return '선택 전환 중: $name';
+  }
+
+  @override
+  String get traySelected => '선택됨';
+
+  @override
+  String get trayTestLatency => '지연 시간 테스트';
+
+  @override
+  String get trayReject => '거부';
+
+  @override
+  String trayLatencyBadge(Object value) {
+    return '$value ms';
+  }
+
+  @override
+  String get compositionReviewTitle => 'Review Settings Before First Apply';
+
+  @override
+  String get compositionBaselineUnknown =>
+      'The previous running values and their sources could not be confirmed. The configuration below is proposed, not a comparison with the currently running configuration.';
+
+  @override
+  String get compositionCandidateNote =>
+      'Settings available in the app use their saved in-app values. Other settings use the profile values, or defaults when the profile does not specify them. The configuration below is prepared from saved data without refreshing subscriptions. Secrets and larger sections are hidden or masked. TUN shows the requested setting, not its running state. Authorization, mounted content, and Tailscale-related settings will be checked when applying.';
+
+  @override
+  String get compositionReadFailed =>
+      'Couldn’t prepare or recheck the proposed configuration. It has not been applied. Check the configuration and settings, then try again.';
+
+  @override
+  String get compositionSourceUnconfirmed => 'Source unconfirmed';
+
+  @override
+  String get compositionRecordFailed =>
+      'The configuration was applied, but the first confirmation record couldn’t be saved. You may be asked to confirm again after restarting the app.';
+
+  @override
+  String get macHelperInstallTitle => 'Flash 도우미를 설치할까요?';
+
+  @override
+  String get macHelperUpdateTitle => 'Flash 도우미를 업데이트할까요?';
+
+  @override
+  String get macHelperInstall => '설치';
+
+  @override
+  String get macHelperUpdate => '업데이트';
+
+  @override
+  String get macHelperNotNowInstall => '지금 설치 안 함';
+
+  @override
+  String get macHelperNotNowUpdate => '지금 업데이트 안 함';
+
+  @override
+  String get macHelperInstallDetail =>
+      '도우미는 백그라운드에서 Flash의 네트워크 코어를 관리합니다. 설치하려면 관리자 승인이 필요합니다. 설치 후 Flash가 사용 가능 여부를 확인합니다.';
+
+  @override
+  String get macHelperUpdateDetail =>
+      '설치된 도우미가 현재 버전과 호환되지 않습니다. 업데이트에 관리자 승인이 필요할 수 있습니다.';
+
+  @override
+  String get macHelperChecking => '도우미 확인 중…';
+
+  @override
+  String get macHelperAuthorizing => '관리자 승인 대기 중';
+
+  @override
+  String get macHelperInstalling => '도우미 설치 중…';
+
+  @override
+  String get macHelperUpdating => '도우미 업데이트 중…';
+
+  @override
+  String get macHelperInstallCancelled => '설치 취소됨';
+
+  @override
+  String get macHelperUpdateCancelled => '업데이트 취소됨';
+
+  @override
+  String get macHelperInstallFailed => '도우미 설치 실패';
+
+  @override
+  String get macHelperUpdateFailed => '도우미 업데이트 실패';
+
+  @override
+  String get macHelperLater => '나중에';
+
+  @override
+  String get macHelperMoveDetail => 'Flash를 응용 프로그램 폴더로 옮기고 다시 열어 도우미를 설치하세요.';
+
+  @override
+  String get macHelperApprovalDetail =>
+      'macOS 시스템 설정에서 Flash 도우미를 허용한 다음 돌아와 다시 확인하세요.';
+
+  @override
+  String get macHelperDeniedDetail => '관리자 승인이 거부되었습니다. 승인할 준비가 되면 다시 시도하세요.';
+
+  @override
+  String get macHelperFailedDetail =>
+      'macOS가 작업을 완료하지 못했습니다. 수동으로 다시 시도할 수 있습니다.';
+
+  @override
+  String get macHelperUnknownDetail =>
+      '작업 결과를 확인할 수 없습니다. 다시 확인하세요. 확인될 때까지 Flash는 설치를 반복하지 않습니다.';
+
+  @override
+  String get macHelperVerificationDetail =>
+      '도우미의 보안 또는 호환성 확인에 실패했습니다. 신뢰할 수 있는 호환 버전의 Flash를 사용하세요.';
+
+  @override
+  String get macHelperPayloadDetail =>
+      '설치 파일을 검증할 수 없습니다. 완전하고 신뢰할 수 있는 Flash 사본으로 교체한 후 다시 시도하세요.';
+
+  @override
+  String get macHelperReadyDetail =>
+      '도우미를 사용할 수 있습니다. TUN이나 연결이 실행 중이라는 뜻은 아닙니다. 필요한 기능을 다시 시도하세요.';
+
+  @override
+  String get macHelperMoreDetails => '세부 정보 표시';
+
+  @override
+  String get macHelperLessDetails => '세부 정보 숨기기';
+
+  @override
+  String get macHelperMoveTitle => 'Flash를 응용 프로그램 폴더로 이동';
+
+  @override
+  String get macHelperStartupUpdate => '도우미 업데이트가 필요합니다. 코어가 시작되지 않았습니다.';
+
+  @override
+  String get macHelperStartupInstall => '도우미가 설치되지 않았습니다. 코어가 시작되지 않았습니다.';
+
+  @override
+  String get macHelperStartupUnavailable => '도우미를 사용할 수 없습니다. 코어가 시작되지 않았습니다.';
+
+  @override
+  String get macHelperStatusUnknown => '도우미 상태를 확인할 수 없습니다';
+
+  @override
+  String get macHelperCoreUnconfirmed => '코어 상태가 확인되지 않았습니다';
+
+  @override
+  String get macHelperInstallAction => '도우미 설치';
+
+  @override
+  String get macHelperUpdateAction => '도우미 업데이트';
+
+  @override
+  String get macHelperVerificationFailed => '도우미 검증 실패';
 
   @override
   String get liveStatus => '실시간 상태';

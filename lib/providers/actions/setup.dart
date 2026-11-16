@@ -1246,7 +1246,7 @@ class SetupAction extends _$SetupAction {
     final profile = ref.read(profileProvider(profileId));
     if (profile == null) throw StateError('Mount target is unavailable');
     if (profile.type != ProfileType.custom) {
-      if (profile.extendType == ExtendType.script) {
+      if (profile.scriptId != null) {
         throw StateError('Mount groups are unavailable for a script profile');
       }
       return (
@@ -1452,8 +1452,7 @@ class SetupAction extends _$SetupAction {
       materialized: materialized,
       fingerprint: fingerprint,
       basePaths: {
-        if (state.profileType != ProfileType.custom &&
-            state.extendType != ExtendType.script)
+        if (state.profileType != ProfileType.custom && state.script == null)
           for (final entry in compositionReviewValues(decoded).entries)
             if (source.containsKey(entry.key) &&
                 json.encode(source[entry.key]) == json.encode(entry.value))
