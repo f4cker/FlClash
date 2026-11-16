@@ -5805,7 +5805,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get macHelperUnavailableDetail =>
-      'The helper isn’t ready, so TUN can’t start yet. Your TUN setting is kept.';
+      'The helper isn’t ready, so TUN can’t start yet. Your TUN setting is saved.';
 
   @override
   String get trayMultipleNodes => 'Multiple nodes';

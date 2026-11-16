@@ -1934,7 +1934,7 @@
   "macHelperOpenSettings": "Open System Settings",
   "macHelperTryAgain": "Try again",
   "macHelperCheckAgain": "Check again",
-  "macHelperUnavailableDetail": "The helper isn’t ready, so TUN can’t start yet. Your TUN setting is kept.",
+  "macHelperUnavailableDetail": "The helper isn’t ready, so TUN can’t start yet. Your TUN setting is saved.",
   "trayMultipleNodes": "Multiple nodes",
   "trayNoAvailableMembers": "No available members",
   "trayCouldNotLoad": "Couldn’t load",

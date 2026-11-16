@@ -9831,7 +9831,7 @@ abstract class AppLocalizations {
   /// No description provided for @macHelperUnavailableDetail.
   ///
   /// In en, this message translates to:
-  /// **'The helper isn’t ready, so TUN can’t start yet. Your TUN setting is kept.'**
+  /// **'The helper isn’t ready, so TUN can’t start yet. Your TUN setting is saved.'**
   String get macHelperUnavailableDetail;
 
   /// No description provided for @trayMultipleNodes.
