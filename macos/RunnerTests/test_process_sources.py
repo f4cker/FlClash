@@ -34,6 +34,8 @@ class ProcessSourceTests(unittest.TestCase):
         for status in ('"none"', '"unreadable"', '"app"', '"service"'):
             self.assertIn(f'"status": {status}', channel)
         self.assertIn('answer["launchdLabel"]', channel)
+        self.assertIn('call.method == "genericIcon"', channel)
+        self.assertIn('NSWorkspace.shared.icon(for: UTType.application)', channel)
 
     def test_dart_knows_every_catalog_service(self):
         catalog = (RUNNER / 'ProcessSourceCatalog.swift').read_text()

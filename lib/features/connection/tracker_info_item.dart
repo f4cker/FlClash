@@ -190,10 +190,10 @@ class _TrackerInfoBody extends StatelessWidget {
         builder: (context, process) => Row(
           spacing: 8,
           children: [
-            if (ProcessIcon.shows(process))
+            if (process.hasProcess)
               ProcessFilterIcon(process: process, size: 24)
             else
-              const SizedBox(width: 24),
+              ProcessIcon(process: process, size: 24),
             Flexible(child: title),
           ],
         ),

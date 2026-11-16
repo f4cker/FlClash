@@ -307,13 +307,10 @@ class _TrackerInfoGroupedListState
     );
   }
 
-  Widget? _processLeading(RecordGroup<TrackerInfo> group) {
-    final process = processApps.processOf(group.items.first.metadata);
-    if (!ProcessIcon.shows(process)) {
-      return null;
-    }
-    return ProcessIcon(process: process, size: 24);
-  }
+  Widget _processLeading(RecordGroup<TrackerInfo> group) => ProcessIcon(
+    process: processApps.processOf(group.items.first.metadata),
+    size: 24,
+  );
 
   Widget _buildSpeed(BuildContext context, List<TrackerInfo> trackerInfos) {
     var upload = 0;

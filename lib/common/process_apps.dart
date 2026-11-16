@@ -11,11 +11,15 @@ import 'package:flutter/widgets.dart';
 
 typedef AppLookupInvoker = Future<Object?> Function(String path);
 typedef LocalAddressesReader = Future<Set<String>> Function();
+typedef GenericIconReader = Future<Object?> Function();
 
 const _channel = MethodChannel('$packageName/process_app');
 
 Future<Object?> _invokeChannel(String path) =>
     _channel.invokeMethod<Object?>('lookup', {'path': path});
+
+Future<Object?> _invokeGenericIcon() =>
+    _channel.invokeMethod<Object?>('genericIcon');
 
 Future<Set<String>> _readLocalAddresses() async {
   final interfaces = await NetworkInterface.list(
@@ -34,15 +38,20 @@ Future<Set<String>> _readLocalAddresses() async {
 class ProcessApps extends ChangeNotifier {
   final AppLookupInvoker? _invoke;
   final LocalAddressesReader _readAddresses;
+  final GenericIconReader? _readGenericIcon;
   final int capacity;
 
   ProcessApps({
     AppLookupInvoker? invoke,
     LocalAddressesReader? readLocalAddresses,
+    GenericIconReader? readGenericIcon,
     bool? lookupApps,
     this.capacity = 512,
   }) : _invoke = (lookupApps ?? Platform.isMacOS)
            ? (invoke ?? _invokeChannel)
+           : null,
+       _readGenericIcon = (lookupApps ?? Platform.isMacOS)
+           ? (readGenericIcon ?? (invoke == null ? _invokeGenericIcon : null))
            : null,
        _readAddresses = readLocalAddresses ?? _readLocalAddresses;
 
@@ -58,6 +67,8 @@ class ProcessApps extends ChangeNotifier {
   Set<String>? _localAddresses;
   DateTime? _addressesReadAt;
   var _readingAddresses = false;
+  MemoryImage? _genericIcon;
+  var _genericIconRequested = false;
   var _disposed = false;
 
   /// The answer for [path], or null while it is being read.
@@ -187,6 +198,31 @@ class ProcessApps extends ChangeNotifier {
     return key.startsWith('exe:') ? value.split('/').last : value;
   }
 
+  /// The Mac's plain application icon for a source nothing names, null
+  /// until read and wherever the Mac cannot give one.
+  ImageProvider? get genericIcon {
+    final read = _readGenericIcon;
+    if (read != null && !_genericIconRequested) {
+      _genericIconRequested = true;
+      unawaited(_loadGenericIcon(read));
+    }
+    return _genericIcon;
+  }
+
+  Future<void> _loadGenericIcon(GenericIconReader read) async {
+    Object? raw;
+    try {
+      raw = await read();
+    } catch (_) {
+      raw = null;
+    }
+    if (_disposed || raw is! Uint8List || raw.isEmpty) {
+      return;
+    }
+    _genericIcon = MemoryImage(raw);
+    notifyListeners();
+  }
+
   ImageProvider? iconOf(MacApp app) => _iconOf(app.bundlePath, app.icon);
 
   ImageProvider? serviceIconOf(ServiceMatch match) =>
@@ -214,8 +250,16 @@ class ProcessApps extends ChangeNotifier {
   }
 
   @visibleForTesting
-  void seed({Map<String, AppLookup> lookups = const {}, Set<String>? local}) {
+  void seed({
+    Map<String, AppLookup> lookups = const {},
+    Set<String>? local,
+    Uint8List? genericIcon,
+  }) {
     lookups.forEach(_put);
+    if (genericIcon != null) {
+      _genericIcon = MemoryImage(genericIcon);
+      _genericIconRequested = true;
+    }
     if (local != null) {
       _localAddresses = local;
       _addressesReadAt = DateTime(9999);

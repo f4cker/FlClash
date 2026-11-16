@@ -182,7 +182,7 @@ void main() {
       ]);
     });
 
-    testWidgets('no process info leaves the icon slot empty', (tester) async {
+    testWidgets('no process info gets a placeholder in line', (tester) async {
       Future<double> titleLeft(TrackerInfo info) async {
         await pump(
           tester,
@@ -196,6 +196,8 @@ void main() {
       final without = await titleLeft(_unknown);
       expect(find.text('Unknown process  ·  198.18.0.1:50100'), findsOneWidget);
       expect(find.byType(ProcessFilterIcon), findsNothing);
+      expect(find.byType(ProcessIcon), findsOneWidget);
+      expect(tester.getSize(find.byType(ProcessIcon)), const Size(24, 24));
       expect(without, withIcon);
       expect(cli, withIcon);
     });
@@ -244,6 +246,36 @@ void main() {
       );
       expect(find.text('Other device  ·  192.168.1.20:50200'), findsOneWidget);
       expect(find.byType(ProcessFilterIcon), findsNothing);
+      expect(find.byType(ProcessIcon), findsOneWidget);
+    });
+
+    testWidgets('an unnamed process shows the Mac generic app icon', (
+      tester,
+    ) async {
+      processApps.dispose();
+      var reads = 0;
+      processApps = ProcessApps(
+        lookupApps: true,
+        invoke: (_) async => null,
+        readGenericIcon: () async {
+          reads++;
+          return _pixel;
+        },
+        readLocalAddresses: () async => {'127.0.0.1'},
+      )..seed(lookups: {'/usr/bin/ssh': AppLookup.none});
+      await pump(
+        tester,
+        Column(
+          children: [
+            TrackerInfoItem(trackerInfo: _cli, detailTitle: 'detail'),
+            TrackerInfoItem(trackerInfo: _unknown, detailTitle: 'detail'),
+          ],
+        ),
+      );
+      await tester.pump();
+      expect(find.text('ssh  ·  127.0.0.1:50022'), findsOneWidget);
+      expect(find.byType(Image), findsNWidgets(2));
+      expect(reads, 1);
     });
   });
 

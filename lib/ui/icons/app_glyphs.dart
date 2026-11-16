@@ -396,6 +396,14 @@ abstract final class AppGlyphs {
     ], role: GlyphRole.detail),
   ]);
 
+  static const question = Glyph([
+    GlyphPath(
+      'M8.6 8.9A3.4 3.4 0 1 1 13.9 11.7C12.8 12.4 12 13.1 12 14.6',
+      role: GlyphRole.line,
+    ),
+    GlyphCircle(12, 18.4, 1.4, role: GlyphRole.detail, solid: true),
+  ]);
+
   static const warning = Glyph([
     GlyphPolyline([
       GlyphVertex(12, 1.6, 3),

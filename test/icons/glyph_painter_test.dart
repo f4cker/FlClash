@@ -48,6 +48,7 @@ final _glyphs = {
   'checkCircle': AppGlyphs.checkCircle,
   'block': AppGlyphs.block,
   'info': AppGlyphs.info,
+  'question': AppGlyphs.question,
   'warning': AppGlyphs.warning,
   'error': AppGlyphs.error,
   'more': AppGlyphs.more,

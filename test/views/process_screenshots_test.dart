@@ -1,6 +1,7 @@
 // Renders the request list and detail with process info to PNG for review.
 // Off by default:
 //   PROCESS_SCREENSHOTS=<dir> flutter test test/views/process_screenshots_test.dart
+// PROCESS_GENERIC_ICON=<png> stands in for the Mac's generic app icon.
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -23,6 +24,7 @@ import '../helpers/preferences.dart';
 import '../helpers/test_app.dart';
 
 final _outDir = Platform.environment['PROCESS_SCREENSHOTS'];
+final _genericIconPath = Platform.environment['PROCESS_GENERIC_ICON'];
 const _cjkCollection = '/System/Library/Fonts/Hiragino Sans GB.ttc';
 
 List<ByteData> _collectionFaces(Uint8List bytes) {
@@ -219,7 +221,7 @@ void main() {
 
   final boundary = GlobalKey();
 
-  Future<void> seed(WidgetTester tester) async {
+  Future<void> seed(WidgetTester tester, {bool genericIcon = true}) async {
     icon ??= await tester.runAsync(_placeholderIcon);
     featureIcon ??= await tester.runAsync(
       () => _placeholderIcon(
@@ -266,6 +268,9 @@ void main() {
         ),
       },
       local: {'127.0.0.1', '198.18.0.1'},
+      genericIcon: genericIcon && _genericIconPath != null
+          ? File(_genericIconPath!).readAsBytesSync()
+          : null,
     );
   }
 
@@ -420,14 +425,14 @@ void main() {
     await seed(tester);
     await pump(
       tester,
-      const Size(1000, 330),
+      const Size(1000, 370),
       SizedBox(
         width: 1000,
-        height: 330,
+        height: 370,
         child: Builder(
           builder: (context) => RecordTableFrame<TrackerInfo>(
             tableId: 'process-shot-sources',
-            items: [_app, _push, _downloads, _daemon, _unknown],
+            items: [_app, _push, _downloads, _daemon, _cli, _unknown],
             columnsOf: (width) =>
                 trackerInfoColumns(context, width: width, isLive: false),
             builder: (context, table, items) => TrackerInfoList(
@@ -440,5 +445,23 @@ void main() {
       ),
     );
     await shoot(tester, '06-table-sources');
+  }, skip: skip != null);
+
+  testWidgets('07-sources-fallback', (tester) async {
+    await seed(tester, genericIcon: false);
+    await pump(
+      tester,
+      const Size(560, 300),
+      SizedBox(
+        width: 560,
+        height: 300,
+        child: TrackerInfoList(
+          padding: const EdgeInsets.all(16),
+          trackerInfos: [_app, _cli, _unknown],
+          detailTitle: '请求详情',
+        ),
+      ),
+    );
+    await shoot(tester, '07-sources-fallback');
   }, skip: skip != null);
 }

@@ -30,23 +30,17 @@ class ConnectionProcessBuilder extends StatelessWidget {
   }
 }
 
-/// The app's or system feature's own icon, or a glyph in an inset well;
-/// nothing for a connection with no process.
+/// A source's own icon, else a glyph, else the Mac's generic app icon.
 class ProcessIcon extends StatelessWidget {
   final ConnectionProcess process;
   final double size;
 
   const ProcessIcon({super.key, required this.process, required this.size});
 
-  static bool shows(ConnectionProcess process) => process.hasProcess;
-
   @override
   Widget build(BuildContext context) {
-    if (!process.hasProcess) {
-      return const SizedBox.shrink();
-    }
-    if (process.pending) {
-      return SizedBox.square(dimension: size);
+    if (process.kind == ProcessKind.otherDevice) {
+      return _well(context, AppGlyphs.devices);
     }
     final app = process.app;
     final service = process.service;
@@ -56,24 +50,36 @@ class ProcessIcon extends StatelessWidget {
         ? processApps.serviceIconOf(service)
         : null;
     if (icon != null) {
-      return Image(
-        image: icon,
-        width: size,
-        height: size,
-        gaplessPlayback: true,
-        filterQuality: FilterQuality.medium,
-        excludeFromSemantics: true,
-      );
+      return _image(icon);
     }
+    if (service != null && !process.pending) {
+      final glyph = serviceGlyphOf(service.service);
+      if (size < 20) {
+        return GlyphIcon(
+          glyph,
+          size: size,
+          color: context.colorScheme.onSurfaceVariant,
+        );
+      }
+      return _well(context, glyph);
+    }
+    final generic = processApps.genericIcon;
+    return generic != null
+        ? _image(generic)
+        : _well(context, AppGlyphs.question);
+  }
+
+  Widget _image(ImageProvider icon) => Image(
+    image: icon,
+    width: size,
+    height: size,
+    gaplessPlayback: true,
+    filterQuality: FilterQuality.medium,
+    excludeFromSemantics: true,
+  );
+
+  Widget _well(BuildContext context, Glyph glyph) {
     final colorScheme = context.colorScheme;
-    final glyph = service != null
-        ? serviceGlyphOf(service.service)
-        : app == null
-        ? AppGlyphs.code
-        : AppGlyphs.appsList;
-    if (size < 20) {
-      return GlyphIcon(glyph, size: size, color: colorScheme.onSurfaceVariant);
-    }
     return Container(
       width: size,
       height: size,
@@ -177,7 +183,7 @@ class ProcessCell extends StatelessWidget {
           return Row(
             spacing: 6,
             children: [
-              const SizedBox(width: 16),
+              ProcessIcon(process: process, size: 16),
               Flexible(child: text),
             ],
           );

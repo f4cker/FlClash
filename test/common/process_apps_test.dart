@@ -1,6 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -114,6 +115,40 @@ void main() {
     );
     expect(apps.lookupOf('/usr/bin/ssh'), AppLookup.none);
     apps.dispose();
+  });
+
+  test('the generic app icon is read once and stays null on failure', () async {
+    var reads = 0;
+    final apps = ProcessApps(
+      lookupApps: true,
+      invoke: (_) async => null,
+      readGenericIcon: () async {
+        reads++;
+        return Uint8List.fromList([1, 2, 3]);
+      },
+    );
+    expect(apps.genericIcon, isNull);
+    await pumpEventQueue();
+    expect(apps.genericIcon, isA<MemoryImage>());
+    expect(reads, 1);
+    apps.dispose();
+
+    final failing = ProcessApps(
+      lookupApps: true,
+      invoke: (_) async => null,
+      readGenericIcon: () => Future.error(StateError('no channel')),
+    );
+    failing.genericIcon;
+    await pumpEventQueue();
+    expect(failing.genericIcon, isNull);
+    failing.dispose();
+
+    final elsewhere = ProcessApps(
+      lookupApps: false,
+      readGenericIcon: () async => fail('asked'),
+    );
+    expect(elsewhere.genericIcon, isNull);
+    elsewhere.dispose();
   });
 
   test('same-named apps group and filter apart', () async {

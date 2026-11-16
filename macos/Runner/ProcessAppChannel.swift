@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import UniformTypeIdentifiers
 
 /// Names the app or Apple system service an executable works for; nothing logged.
 final class ProcessAppChannel {
@@ -12,6 +13,7 @@ final class ProcessAppChannel {
     private let lookups = LRUCache<String, (source: ProcessSource, generation: Int)>(capacity: 256)
     private let icons = LRUCache<String, Data>(capacity: 64)
     private var missingIcons = Set<String>()
+    private var genericIcon: Data?
 
     static func register(messenger: FlutterBinaryMessenger) {
         instance = ProcessAppChannel(messenger: messenger)
@@ -21,6 +23,19 @@ final class ProcessAppChannel {
         channel = FlutterMethodChannel(
             name: "com.follow.clash/process_app", binaryMessenger: messenger)
         channel.setMethodCallHandler { [weak self] call, result in
+            if call.method == "genericIcon" {
+                guard let self else {
+                    result(nil)
+                    return
+                }
+                self.queue.async {
+                    let icon = self.genericApplicationIcon()
+                    DispatchQueue.main.async {
+                        result(icon.map { FlutterStandardTypedData(bytes: $0) })
+                    }
+                }
+                return
+            }
             guard call.method == "lookup",
                 let arguments = call.arguments as? [String: Any],
                 let path = arguments["path"] as? String
@@ -95,5 +110,15 @@ final class ProcessAppChannel {
         }
         icons.set(bundlePath, png)
         return png
+    }
+
+    /// Finder's plain application icon, for a process nothing else names.
+    private func genericApplicationIcon() -> Data? {
+        if let genericIcon {
+            return genericIcon
+        }
+        genericIcon = ProcessSourceResolver.png(
+            NSWorkspace.shared.icon(for: UTType.application), side: Self.iconSide)
+        return genericIcon
     }
 }
