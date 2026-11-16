@@ -2006,6 +2006,7 @@
   },
   "macHelperBarUpdate": "Update helper",
   "macHelperBarAllow": "Allow helper",
+  "macHelperWaitingCore": "Waiting for helper",
   "macHelperBarStarting": "Starting…",
   "macHelperBarNotReady": "Helper not ready",
   "macHelperBarFailedCheck": "Helper failed check",

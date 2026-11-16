@@ -147,18 +147,35 @@ class LiveStatusButton extends ConsumerWidget {
             (flow.busy || flow.state != MacHelperState.enabled)) {
           return const SizedBox.shrink();
         }
-        return _buildStatus(context, ref);
+        // A stopped Core that only waits for the helper is not an error.
+        final waiting =
+            flow.busy ||
+            (flow.state != null && flow.state != MacHelperState.enabled);
+        return _buildStatus(context, ref, waitingFor: waiting ? flow : null);
       },
     );
   }
 
-  Widget _buildStatus(BuildContext context, WidgetRef ref) {
+  Widget _buildStatus(
+    BuildContext context,
+    WidgetRef ref, {
+    MacHelperMaintenance? waitingFor,
+  }) {
     final statuses = watchLiveStatuses(ref, separateCore: _separateCore);
     final top = statuses.firstOrNull;
     return FadeScaleBox(
       alignment: Alignment.centerRight,
       child: switch (top) {
         null => const SizedBox.shrink(),
+        CoreLiveStatus(phase: CoreStatus.disconnected)
+            when waitingFor != null =>
+          _WaitingCoreButton(
+            key: const ValueKey(MacHelperState),
+            // The helper's own popover says what it waits for.
+            onPressed: () => unawaited(
+              showMacHelperFlow(context: context, maintenance: waitingFor),
+            ),
+          ),
         _ when _isRunningCore(top) => _RunningCoreButton(
           key: const ValueKey(CoreStatus.connected),
           onPressed: () => _open(context),
@@ -179,6 +196,43 @@ Object _pillKindOf(LiveStatus status) => switch (status) {
   CoreLiveStatus(:final phase) => phase,
   _ => status.key,
 };
+
+/// The Core is stopped only because the helper is not ready yet: grey, a
+/// clock, "Waiting for helper"; red stays for a Core that failed itself.
+class _WaitingCoreButton extends StatelessWidget {
+  const _WaitingCoreButton({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final label = context.appLocalizations.macHelperWaitingCore;
+    final color = macHelperBarColor(colorScheme, MacHelperBarTone.waiting);
+    final fill = color.withValues(alpha: 0.15);
+    final pane = TonalButtonTheme.glassOf(context)
+        ? LiquidGlassStyle.tinted(colorScheme, fill)
+        : null;
+    return Semantics(
+      label: label,
+      button: true,
+      excludeSemantics: true,
+      child: IconButton.filled(
+        tooltip: label,
+        style: ButtonStyle.from(
+          backgroundColor: pane == null ? fill : Colors.transparent,
+          foregroundColor: color,
+          backgroundBuilder: pane == null
+              ? null
+              : LiquidGlass.buttonBackground((_) => pane),
+          pressLook: PressLook.none,
+        ),
+        onPressed: onPressed,
+        icon: const GlyphIcon(AppGlyphs.clock, fill: 1),
+      ),
+    );
+  }
+}
 
 class _RunningCoreButton extends StatelessWidget {
   const _RunningCoreButton({super.key, required this.onPressed});

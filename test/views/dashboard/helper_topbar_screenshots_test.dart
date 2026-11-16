@@ -247,36 +247,41 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('00-icon-closeup', skip: skip != null, (tester) async {
-    // The helper glyph beside its neighbours, at 24, 17 and 13 points.
-    await pump(tester, size: const Size(420, 140));
+  testWidgets('00-icon-sizes', skip: skip != null, (tester) async {
+    // The helper glyph at 16, 20 and 24 points in amber, red and green, as
+    // drawn at each size: the simpler one below 20.
+    await pump(tester, size: const Size(260, 150));
     await tester.pumpWidget(
       RepaintBoundary(
         key: boundary,
         child: Container(
           color: const Color(0xFFFFFFFF),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           child: Directionality(
             textDirection: TextDirection.ltr,
             child: Column(
+              spacing: 14,
               children: [
-                for (final size in [48.0, 24.0, 17.0])
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      spacing: 16,
-                      children: [
-                        for (final (glyph, color) in [
-                          (AppGlyphs.helperDaemon, const Color(0xFF8A5100)),
-                          (AppGlyphs.helperDaemon, const Color(0xFFBA1A1A)),
-                          (AppGlyphs.helperDaemon, const Color(0xFF1E7B34)),
-                          (AppGlyphs.settings, const Color(0xFF1D1B20)),
-                          (AppGlyphs.sync, const Color(0xFF1D1B20)),
-                          (AppGlyphs.shieldAlert, const Color(0xFFBA1A1A)),
-                        ])
-                          GlyphIcon(glyph, size: size, color: color),
-                      ],
-                    ),
+                for (final color in const [
+                  Color(0xFF8A5100),
+                  Color(0xFFBA1A1A),
+                  Color(0xFF1E7B34),
+                ])
+                  Row(
+                    spacing: 24,
+                    children: [
+                      for (final size in [16.0, 20.0, 24.0])
+                        SizedBox.square(
+                          dimension: 28,
+                          child: Center(
+                            child: GlyphIcon(
+                              AppGlyphs.helperDaemonAt(size),
+                              size: size,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
               ],
             ),
@@ -285,6 +290,6 @@ void main() {
       ),
     );
     await tester.pump();
-    await shoot(tester, '00-icon-closeup');
+    await shoot(tester, '00-icon-sizes');
   });
 }

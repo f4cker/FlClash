@@ -5527,6 +5527,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperBarAllow => '允许辅助程序';
 
   @override
+  String get macHelperWaitingCore => '等待辅助程序就绪';
+
+  @override
   String get macHelperBarStarting => '正在启动…';
 
   @override

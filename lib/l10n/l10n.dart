@@ -10194,6 +10194,12 @@ abstract class AppLocalizations {
   /// **'Allow helper'**
   String get macHelperBarAllow;
 
+  /// No description provided for @macHelperWaitingCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for helper'**
+  String get macHelperWaitingCore;
+
   /// No description provided for @macHelperBarStarting.
   ///
   /// In en, this message translates to:

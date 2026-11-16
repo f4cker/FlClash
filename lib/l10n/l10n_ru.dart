@@ -6014,6 +6014,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get macHelperBarAllow => 'Allow helper';
 
   @override
+  String get macHelperWaitingCore => 'Waiting for helper';
+
+  @override
   String get macHelperBarStarting => 'Starting…';
 
   @override

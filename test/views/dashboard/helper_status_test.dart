@@ -146,6 +146,11 @@ void main() {
   test('zh copy matches the reviewed wording', () {
     final zh = lookupAppLocalizations(const Locale('zh'));
     expect(zh.macHelperVersionLine('1.2.3'), '版本 1.2.3');
+    expect(zh.macHelperWaitingCore, '等待辅助程序就绪');
+    expect(
+      lookupAppLocalizations(const Locale('en')).macHelperWaitingCore,
+      'Waiting for helper',
+    );
     expect(zh.macHelperBarUpdate, '更新辅助程序');
     expect(zh.macHelperBarAllow, '允许辅助程序');
     expect(zh.macHelperBarStarting, '正在启动…');
@@ -731,6 +736,70 @@ void main() {
         findsNothing,
       );
     }
+  });
+
+  testWidgets('a Core stopped only for the helper waits in grey', (
+    tester,
+  ) async {
+    native.state = 'notRegistered';
+    await flow.check();
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    expect(container.read(coreStatusProvider), CoreStatus.disconnected);
+    // Not red "stopped": a grey clock that waits for the helper.
+    expect(find.bySemanticsLabel(l.coreStopped), findsNothing);
+    expect(find.bySemanticsLabel(l.macHelperWaitingCore), findsOneWidget);
+    final glyph = tester.widget<GlyphIcon>(
+      find.descendant(
+        of: find.byType(LiveStatusButton),
+        matching: find.byType(GlyphIcon),
+      ),
+    );
+    expect(glyph.glyph, AppGlyphs.clock);
+    final context = tester.element(find.byType(LiveStatusButton));
+    expect(
+      tester
+          .widget<IconButton>(
+            find.descendant(
+              of: find.byType(LiveStatusButton),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .style!
+          .backgroundColor!
+          .resolve({}),
+      context.colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
+    );
+    // Its tap opens the helper's popover.
+    await tester.tap(find.bySemanticsLabel(l.macHelperWaitingCore));
+    await tester.pumpAndSettle();
+    expect(find.byType(MacHelperPopover), findsOneWidget);
+    expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
+    expect(find.byType(MacHelperDialog), findsNothing);
+    // Once the helper is ready, a stopped Core is red again.
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settleReady(tester);
+    expect(find.bySemanticsLabel(l.macHelperWaitingCore), findsNothing);
+    expect(find.bySemanticsLabel(l.coreStopped), findsOneWidget);
+  });
+
+  test('the helper glyph simplifies below 20 points', () {
+    expect(
+      macHelperBarGlyph(MacHelperBarKind.allow, size: 16),
+      AppGlyphs.helperDaemonSmall,
+    );
+    expect(
+      macHelperBarGlyph(MacHelperBarKind.notReady, size: 19.9),
+      AppGlyphs.helperDaemonSmall,
+    );
+    expect(
+      macHelperBarGlyph(MacHelperBarKind.update, size: 20),
+      AppGlyphs.helperDaemon,
+    );
+    expect(
+      macHelperBarGlyph(MacHelperBarKind.failedCheck, size: 16),
+      AppGlyphs.shieldAlert,
+    );
   });
 
   testWidgets(
