@@ -1515,7 +1515,7 @@
   "processFromOtherDevice": "This connection is from another device. Its process information cannot be obtained on this Mac.",
   "appInfoUnreadable": "Could not read app information",
   "systemService": "System service",
-  "systemServiceLabel": "System service · {feature}",
+  "systemServiceLabel": "System service: {feature}",
   "systemServiceFeatureHint": "An Apple system process, recognized by its path",
   "systemServiceSharedHint": "Many apps go through this system service; the app behind this request is not known",
   "appViaLaunchd": "Tied to this app by its launchd job {label}",

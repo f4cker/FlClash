@@ -1515,7 +1515,7 @@
   "processFromOtherDevice": "此连接来自其他设备，无法在这台 Mac 上获取其进程信息。",
   "appInfoUnreadable": "无法读取应用信息",
   "systemService": "系统服务",
-  "systemServiceLabel": "系统服务 · {feature}",
+  "systemServiceLabel": "系统服务：{feature}",
   "systemServiceFeatureHint": "Apple 系统进程，按路径识别",
   "systemServiceSharedHint": "多个应用共用此系统服务，无法确定由哪个应用发起",
   "appViaLaunchd": "由 launchd 任务 {label} 关联到此应用",

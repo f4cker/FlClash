@@ -215,12 +215,12 @@ void main() {
     expect(facet.label('svc:appStore'), 'App Store');
     expect(
       facet.label('svc:backgroundDownloads'),
-      'System service · Background downloads',
+      'System service: Background downloads',
     );
     expect(infos.last.searchFields, contains('nsurlsessiond'));
     expect(
       infos.last.searchFields,
-      contains('System service · Background downloads'),
+      contains('System service: Background downloads'),
     );
   });
 }

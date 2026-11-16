@@ -9207,7 +9207,7 @@ abstract class AppLocalizations {
   /// No description provided for @systemServiceLabel.
   ///
   /// In en, this message translates to:
-  /// **'System service · {feature}'**
+  /// **'System service: {feature}'**
   String systemServiceLabel(Object feature);
 
   /// No description provided for @systemServiceFeatureHint.

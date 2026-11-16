@@ -4997,7 +4997,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String systemServiceLabel(Object feature) {
-    return '系统服务 · $feature';
+    return '系统服务：$feature';
   }
 
   @override

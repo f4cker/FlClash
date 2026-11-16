@@ -228,7 +228,7 @@ void main() {
         TrackerInfoItem(trackerInfo: _downloads, detailTitle: 'detail'),
       );
       expect(
-        find.textContaining('System service · Background downloads'),
+        find.textContaining('System service: Background downloads'),
         findsOneWidget,
       );
       expect(find.byType(Image), findsNothing);
@@ -262,10 +262,7 @@ void main() {
       tester,
     ) async {
       await pump(tester, ProcessCell(metadata: _downloads.metadata));
-      expect(
-        find.text('System service · Background downloads'),
-        findsOneWidget,
-      );
+      expect(find.text('System service: Background downloads'), findsOneWidget);
       final tooltip = tester.widget<Tooltip>(find.byType(Tooltip));
       expect(tooltip.message, 'nsurlsessiond\n/usr/libexec/nsurlsessiond');
     });
@@ -406,10 +403,7 @@ void main() {
       tester,
     ) async {
       await pumpDetail(tester, _downloads);
-      expect(
-        find.text('System service · Background downloads'),
-        findsOneWidget,
-      );
+      expect(find.text('System service: Background downloads'), findsOneWidget);
       expect(
         find.text(
           'Many apps go through this system service; the app behind this '

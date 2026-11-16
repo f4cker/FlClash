@@ -5502,7 +5502,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String systemServiceLabel(Object feature) {
-    return 'System service · $feature';
+    return 'System service: $feature';
   }
 
   @override
