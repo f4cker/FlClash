@@ -7,7 +7,10 @@
 static xpc_object_t fixtureMessage;
 static NSMutableDictionary *runningInfo;
 static NSMutableDictionary *diskInfo;
+static NSMutableDictionary *helperRunningInfo;
+static NSMutableDictionary *helperDiskInfo;
 static BOOL messageValid, runningValid, diskValid, canonicalValid, libraryValid, compatibilityValid;
+static BOOL selfValid, helperDiskValid, daemonPlistValid, helperFileValid;
 static NSUInteger messageChecks, sealChecks;
 
 static OSStatus FixtureMessage(xpc_object_t message, SecCSFlags flags, SecCodeRef *code) {
@@ -16,8 +19,13 @@ static OSStatus FixtureMessage(xpc_object_t message, SecCSFlags flags, SecCodeRe
     *code = (SecCodeRef)CFBridgingRetain(runningInfo);
     return errSecSuccess;
 }
+static OSStatus FixtureSelf(SecCSFlags flags, SecCodeRef *code) {
+    *code = (SecCodeRef)CFBridgingRetain(helperRunningInfo);
+    return errSecSuccess;
+}
 static OSStatus FixtureRunning(SecCodeRef code, SecCSFlags flags, SecRequirementRef requirement) {
     assert(flags == kSecCSStrictValidate && requirement);
+    if ((__bridge id)code == helperRunningInfo) return selfValid ? errSecSuccess : errSecCSReqFailed;
     return runningValid ? errSecSuccess : errSecCSReqFailed;
 }
 static OSStatus FixtureInformation(SecStaticCodeRef code, SecCSFlags flags, CFDictionaryRef *info) {
@@ -26,7 +34,12 @@ static OSStatus FixtureInformation(SecStaticCodeRef code, SecCSFlags flags, CFDi
     return errSecSuccess;
 }
 static OSStatus FixtureDisk(CFURLRef path, SecCSFlags flags, SecStaticCodeRef *code) {
-    assert([((__bridge NSURL *)path).path isEqualToString:FCGUIBundle]);
+    NSString *value = ((__bridge NSURL *)path).path;
+    if ([value isEqualToString:FCInstalledExecutable(FCHelperIdentifier)]) {
+        *code = (SecStaticCodeRef)CFBridgingRetain(helperDiskInfo);
+        return errSecSuccess;
+    }
+    assert([value isEqualToString:FCGUIBundle]);
     *code = (SecStaticCodeRef)CFBridgingRetain(diskInfo);
     return errSecSuccess;
 }
@@ -34,7 +47,28 @@ static OSStatus FixtureSeal(SecStaticCodeRef code, SecCSFlags flags, SecRequirem
     sealChecks++;
     assert(flags == (kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode));
     assert(requirement);
+    if ((__bridge id)code == helperDiskInfo) return helperDiskValid ? errSecSuccess : errSecCSBadResource;
     return diskValid ? errSecSuccess : errSecCSBadResource;
+}
+static int FixtureLstat(const char *path, struct stat *state) {
+    NSString *value = @(path);
+    if ([value hasPrefix:[FCGUIBundle stringByAppendingString:@"/"]]) {
+        memset(state, 0, sizeof(*state));
+        state->st_mode = S_IFREG | 0755;
+        state->st_nlink = 1;
+        BOOL present = [value hasSuffix:FCHelperRelativePath] ? helperFileValid : YES;
+        if (!present) { errno = ENOENT; return -1; }
+        return 0;
+    }
+    return lstat(path, state);
+}
+static NSDictionary *FixtureLoadPlist(NSString *path) {
+    if (!daemonPlistValid) {
+        NSMutableDictionary *changed = FCCanonicalDaemonPlist().mutableCopy;
+        changed[@"ProgramArguments"] = @[@"/bin/sh", @"-c", @"id"];
+        return changed;
+    }
+    return FCCanonicalDaemonPlist();
 }
 static char *FixtureRealpath(const char *path, char *resolved) {
     if (!canonicalValid) return NULL;
@@ -44,8 +78,9 @@ static char *FixtureRealpath(const char *path, char *resolved) {
 
 static BOOL FixtureLibrary(NSString *bundle, NSData *hash) { return libraryValid; }
 static NSDictionary *FixtureCompatibility(NSString *bundle) {
-    return compatibilityValid ? @{@"CallerPolicy": @2, @"ServiceAPI": @1, @"CoreAPI": @1,
-        @"AcceptedCoreSHA256": @[@"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"]} : nil;
+    return compatibilityValid ? @{@"CallerPolicy": @3, @"ServiceAPI": @1, @"CoreAPI": @1,
+        @"CoreSHA256": @"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        @"CoreVersion": @"v1.19.0", @"CoreRevision": @"abcdef0"} : nil;
 }
 #define FCGUILibraryPolicy FixtureLibrary
 #define FCReadCompatibility FixtureCompatibility
@@ -54,8 +89,14 @@ static NSDictionary *FixtureCompatibility(NSString *bundle) {
 #define SecCodeCopySigningInformation FixtureInformation
 #define SecStaticCodeCreateWithPath FixtureDisk
 #define SecStaticCodeCheckValidity FixtureSeal
+#define SecCodeCopySelf FixtureSelf
 #define realpath FixtureRealpath
+#define FCLoadPlist FixtureLoadPlist
+#import <sys/stat.h>
+static int FixtureLstat(const char *path, struct stat *state);
+#define lstat FixtureLstat
 #import "../../Shared/HelperTrust.m"
+#undef lstat
 
 static NSDictionary *GUIEntitlements(void) {
     return @{@"com.apple.security.files.user-selected.read-write": @YES,
@@ -77,6 +118,67 @@ static void Reset(void) {
         (__bridge NSString *)kSecCodeInfoEntitlementsDict: GUIEntitlements(),
         (__bridge NSString *)kSecCodeInfoFlags: @(kSecCodeSignatureRuntime)} mutableCopy];
     diskInfo = runningInfo.mutableCopy;
+    selfValid = helperDiskValid = daemonPlistValid = helperFileValid = YES;
+    uint8_t bytes[20];
+    for (NSUInteger i = 0; i < sizeof(bytes); i++) bytes[i] = (uint8_t)(0xa0 + i);
+    helperRunningInfo = [@{(__bridge NSString *)kSecCodeInfoMainExecutable:
+        [NSURL fileURLWithPath:FCInstalledExecutable(FCHelperIdentifier)],
+        (__bridge NSString *)kSecCodeInfoUnique: [NSData dataWithBytes:bytes length:sizeof(bytes)],
+        (__bridge NSString *)kSecCodeInfoEntitlementsDict: @{},
+        (__bridge NSString *)kSecCodeInfoFlags: @(kSecCodeSignatureRuntime)} mutableCopy];
+    helperDiskInfo = helperRunningInfo.mutableCopy;
+}
+
+// The daemon's mandatory startup/per-operation verification: every failure is a refusal (exit 78 in main).
+static void TestSelfCheck(void) {
+    NSString *path = FCInstalledExecutable(FCHelperIdentifier);
+    Reset();
+    assert([FCHelperSelfCheck(path) isEqualToString:@"ok"]);
+    assert([FCHelperSelfCheck(@"/Library/Application Support/Flash/Flash.app/Contents/Library/HelperTools/FlashHelper")
+        isEqualToString:@"path"]);
+    Reset(); selfValid = NO;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"self"]);
+    Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:19];
+    assert([FCHelperSelfCheck(path) isEqualToString:@"self"]);
+    Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoMainExecutable] = [NSURL fileURLWithPath:@"/tmp/FlashHelper"];
+    assert([FCHelperSelfCheck(path) isEqualToString:@"path"]);
+    Reset(); canonicalValid = NO;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"path"]);
+    for (NSString *key in @[@"com.apple.security.get-task-allow", @"com.apple.security.cs.disable-library-validation",
+            @"com.apple.security.cs.allow-dyld-environment-variables"]) {
+        Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoEntitlementsDict] = @{key: @YES};
+        assert([FCHelperSelfCheck(path) isEqualToString:@"entitlements"]);
+    }
+    Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoFlags] = @0;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"entitlements"]);
+    Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoFlags] = @(kSecCodeSignatureRuntime | kSecCodeSignatureAdhoc);
+    assert([FCHelperSelfCheck(path) isEqualToString:@"entitlements"]);
+    Reset(); helperDiskValid = NO;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"disk"]);
+    Reset(); helperDiskInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
+    assert([FCHelperSelfCheck(path) isEqualToString:@"replaced"]);
+    Reset(); diskValid = NO;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"bundle"]);
+    Reset(); libraryValid = NO;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"bundle"]);
+    Reset(); compatibilityValid = NO;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"bundle"]);
+    Reset(); daemonPlistValid = NO;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"plist"]);
+    Reset(); helperFileValid = NO;
+    assert([FCHelperSelfCheck(path) isEqualToString:@"plist"]);
+    // Reply validation on the GUI side pins the daemon cdhash for the connection after the first disk match.
+    Reset();
+    FCMessageValidator *daemon = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path];
+    runningInfo = helperRunningInfo;
+    assert([daemon check:fixtureMessage]);
+    runningInfo = helperRunningInfo.mutableCopy;
+    runningInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
+    assert(![daemon check:fixtureMessage]);
+    Reset(); helperDiskInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
+    runningInfo = helperRunningInfo;
+    assert(![[[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path] check:fixtureMessage]);
+    Reset();
 }
 
 static void TestEntitlements(void) {
@@ -102,8 +204,8 @@ static void TestEntitlements(void) {
         changed[key] = @NO;
         assert(!FCGUIEntitlementsAllowed(changed, kSecCodeSignatureRuntime));
     }
-    for (NSString *role in @[FCServiceIdentifier, FCHelperLabel, FCMaintenanceIdentifier, @"com.layoute.flash.core"])
-        assert(!FCCodeEntitlementsAllowed(role, YES, allowed, kSecCodeSignatureRuntime));
+    // The GUI's library-validation exception never applies to the daemon or Core.
+    assert(!FCCodeEntitlementsAllowed(allowed, kSecCodeSignatureRuntime));
 }
 
 static void TestMessages(void) {
@@ -160,7 +262,7 @@ static void TestMessages(void) {
         assert(![validator check:fixtureMessage]);
     }
     FCMessageValidator *legacy = [[FCMessageValidator alloc] initWithIdentifier:FCClientIdentifier
-        executable:FCInstalledExecutable(FCClientIdentifier) bundle:FCGUIBundle];
+        executable:FCInstalledExecutable(FCClientIdentifier)];
     assert(![legacy check:fixtureMessage]);
 }
 
@@ -168,30 +270,30 @@ int main(void) {
     @autoreleasepool {
         fixtureMessage = xpc_dictionary_create(NULL, NULL, 0);
         TestEntitlements();
-        assert([FCServiceIdentifier isEqualToString:@"com.layoute.flash.service"]);
         assert([FCGUIBundle isEqualToString:@"/Applications/Flash.app"]);
-        assert([FCInstalledBundle isEqualToString:@"/Library/Application Support/Flash/Flash.app"]);
-        assert([FCInstalledExecutable(FCClientIdentifier) hasPrefix:[FCGUIBundle stringByAppendingString:@"/"]]);
-        assert([FCInstalledExecutable(FCHelperLabel) hasPrefix:[FCInstalledBundle stringByAppendingString:@"/"]]);
-        assert([FCInstalledExecutable(FCMaintenanceIdentifier) hasPrefix:[FCInstalledBundle stringByAppendingString:@"/"]]);
+        for (NSString *role in @[FCClientIdentifier, FCHelperIdentifier, FCCoreIdentifier])
+            assert([FCInstalledExecutable(role) hasPrefix:[FCGUIBundle stringByAppendingString:@"/"]]);
         assert(!FCValidGUIHash(nil));
         assert(!FCValidGUIHash([NSMutableData dataWithLength:19]));
         assert(!FCValidGUIHash([NSMutableData dataWithLength:21]));
         assert(FCValidGUIHash(ApprovedHash()));
         BOOL identity = [@FC_PINNED_CERTIFICATE_SHA1 isEqual:@"BBA7F8529FD271B9848EC03A2CE3F4780F585556"];
-        assert((FCSplitGUIRequirement() != nil) == identity);
+        assert((FCGUIRequirement() != nil) == identity);
         Reset();
         assert([FCGUIBundleTrust(FCGUIBundle) isEqualToString:@"trusted"] == identity);
-        assert(![FCGUIBundleTrust(FCInstalledBundle) isEqualToString:@"trusted"]);
+        assert([FCGUIBundleTrust(@"/Library/Application Support/Flash/Flash.app") isEqualToString:@"moveRequired"]);
         if (identity) {
-            assert([FCSplitGUIRequirement() isEqual:FCSigningRequirement(FCClientIdentifier)]);
-            assert(![FCSplitGUIRequirement() containsString:@"cdhash"]);
+            assert([FCGUIRequirement() isEqual:FCSigningRequirement(FCClientIdentifier)]);
+            assert(![FCGUIRequirement() containsString:@"cdhash"]);
             TestMessages();
+            TestSelfCheck();
         } else {
+            Reset();
+            assert(![FCHelperSelfCheck(FCInstalledExecutable(FCHelperIdentifier)) isEqualToString:@"ok"]);
             NSUInteger checks = messageChecks;
             assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
             assert(messageChecks == checks);
         }
-        puts("Split GUI trust fixtures passed; Security/process/filesystem validation mocked");
+        puts("GUI trust and daemon self-check fixtures passed; Security/process/filesystem validation mocked");
     }
 }

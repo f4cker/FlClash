@@ -26,17 +26,24 @@ class SplitGUITrustTests(unittest.TestCase):
                     ], check=True, capture_output=True, text=True)
                     subprocess.run([executable], check=True, capture_output=True, text=True)
 
-    def test_service_keeps_protected_identity_and_core(self):
-        payload = TRUST.split('NSString *FCPayloadTrust(NSString *bundle) {', 1)[1]
-        self.assertIn('FCCheckStatic(bundle, FCServiceIdentifier)', payload)
-        self.assertNotIn('FCCheckStatic(bundle, FCClientIdentifier)', payload)
-        self.assertIn('FCProtectedTree(bundle, YES)', payload)
-        for role in ('FCHelperLabel', 'FCMaintenanceIdentifier', '@"com.layoute.flash.core"'):
-            self.assertIn(role, payload)
-        self.assertIn('[self.bundle stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"]', SUPERVISOR)
+    def test_daemon_and_core_live_in_the_sealed_app(self):
+        self.assertIn('FCHelperLabel = @"com.layoute.flash.daemon"', TRUST)
+        self.assertIn('FCHelperRelativePath = @"Contents/Library/HelperTools/FlashHelper"', TRUST)
+        self.assertIn('FCCoreRelativePath = @"Contents/MacOS/FlClashCore"', TRUST)
+        for removed in ('FCPayloadTrust', 'FCBundleTrust', 'FCInstalledBundle', 'FCMaintenanceIdentifier',
+                        'FCServiceIdentifier', 'FCLegacyPlistTrusted'):
+            self.assertNotIn(removed, TRUST)
+        self.check = TRUST.split('NSString *FCHelperSelfCheck(NSString *runningExecutable) {', 1)[1]
+        order = ['SecCodeCopySelf', 'SecCodeCheckValidity(me, kSecCSStrictValidate, requirement)',
+                 'FCExecutableMatches(info, expected)', 'FCCodeEntitlementsAllowed',
+                 'FCStaticCodeHash(expected, FCHelperIdentifier)', '[diskHash isEqualToData:runningHash]',
+                 'FCGUIBundleTrust(FCGUIBundle)', 'FCBundledDaemonPresent(FCGUIBundle)', 'return @"ok"']
+        positions = [self.check.index(item) for item in order]
+        self.assertEqual(positions, sorted(positions))
         self.assertIn('FCReadCompatibility(FCGUIBundle)', SUPERVISOR)
         self.assertIn('gui:(FCGUIMessageValidator *)gui', SUPERVISOR)
-        self.assertIn('NSString *guiRequirement = FCSplitGUIRequirement()', SUPERVISOR)
+        self.assertIn('NSString *requirement = FCGUIRequirement()', SUPERVISOR)
+        self.assertIn('xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)', SUPERVISOR)
 
     def test_no_gui_seal_cache_or_root_requirement(self):
         gui = TRUST.split('@implementation FCGUIMessageValidator', 1)[1].split('@end', 1)[0]
@@ -50,15 +57,19 @@ class SplitGUITrustTests(unittest.TestCase):
         self.assertNotIn('sealed', gui)
         self.assertNotIn('FCProtectedTree', gui)
 
-    def test_bridge_separates_gui_and_service(self):
-        gate = BRIDGE.split('- (NSString *)gate {', 1)[1].split('- (NSString *)installationStatus', 1)[0]
-        self.assertIn('@available(macOS 14.0, *)', gate)
-        self.assertIn('FCGUIBundleTrust(NSBundle.mainBundle.bundlePath)', gate)
-        self.assertIn('FCBundleTrust(FCInstalledBundle)', gate)
-        self.assertIn('errno == ENOENT ? @"installerRequired"', gate)
+    def test_bridge_gates_on_app_trust_and_bundled_daemon(self):
+        gate = BRIDGE.split('- (NSString *)gate {', 1)[1].split('- (NSString *)currentHelperHash', 1)[0]
+        app = BRIDGE.split('- (NSString *)appGate {', 1)[1].split('- (NSString *)gate {', 1)[0]
+        self.assertIn('@available(macOS 14.0, *)', app)
+        self.assertIn('FCGUIBundleTrust(NSBundle.mainBundle.bundlePath)', app)
+        self.assertLess(gate.index('[self appGate]'), gate.index('FCBundledDaemonPresent(FCGUIBundle)'))
+        self.assertIn('return @"notFound"', gate)
+        self.assertIn('FCCheckStatic(FCInstalledExecutable(FCHelperIdentifier), FCHelperIdentifier)', gate)
+        self.assertIn('FCBundleCompatibilityValid(FCReadCompatibility(FCGUIBundle))', gate)
         self.assertNotIn('FCSHA256([NSBundle.mainBundle.bundlePath', BRIDGE)
-        self.assertIn('FCCompatibilityVersion(service[@"CallerPolicy"], 2)', gate)
-        self.assertIn('@"updateRequired"', gate)
+        for removed in ('installerPayload', 'FlashMinimumServiceBuild', 'Flash-helper-install.pkg', '/usr/sbin/installer'):
+            self.assertNotIn(removed, BRIDGE)
+        self.assertIn('daemonServiceWithPlistName:FCDaemonPlistName', BRIDGE)
         self.assertIn('self.negotiatedCoreHash.UTF8String', BRIDGE)
         self.assertIn('"coreHash"', BRIDGE)
 

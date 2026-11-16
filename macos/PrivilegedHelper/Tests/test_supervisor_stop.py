@@ -32,7 +32,7 @@ class SupervisorStopTests(unittest.TestCase):
 #import <unistd.h>
 #import "SessionPolicy.h"
 
-static int sleeps, exitAt, waitError, waits, terms, kills, unlinks, relayCloses;
+static int sleeps, exitAt, waitError, waits, terms, kills, unlinks, coreUnlinks, relayCloses;
 static BOOL unlinkFails, syncFails;
 static NSString * const FCRuntimeDirectory = @"/fixture-only";
 
@@ -55,6 +55,7 @@ static int FixtureSleep(const struct timespec *delay, struct timespec *remaining
     return 0;
 }
 static int FixtureUnlink(const char *path) {
+    if (strcmp(path, "/fixture-only/core-fixture") == 0) { coreUnlinks++; return 0; }
     assert(strcmp(path, "/fixture-only/child-owned") == 0);
     unlinks++;
     return unlinkFails ? -1 : 0;
@@ -68,6 +69,7 @@ static int FixtureUnlink(const char *path) {
 @property pid_t child;
 @property BOOL ownershipUncertain;
 @property BOOL journalOwned;
+@property NSString *corePath;
 - (BOOL)stop;
 @end
 @implementation StopFixture
@@ -84,6 +86,7 @@ int main(int argc, const char *argv[]) {
         StopFixture *supervisor = [StopFixture new];
         supervisor.child = 42;
         supervisor.journalOwned = YES;
+        supervisor.corePath = @"/fixture-only/core-fixture";
         exitAt = 201;
         if ([scenario isEqual:@"already-exited"]) exitAt = 0;
         else if ([scenario isEqual:@"graceful-exit"]) exitAt = 50;
@@ -102,6 +105,8 @@ int main(int argc, const char *argv[]) {
             assert(stopped);
             assert(supervisor.child == 0 && !supervisor.ownershipUncertain);
             assert(!supervisor.journalOwned && unlinks == 1);
+            // The verified root copy of Core is removed once its exit is confirmed.
+            assert(coreUnlinks == 1 && !supervisor.corePath);
             assert(sleeps == exitAt);
             int priorWaits = waits, priorTerms = terms, priorKills = kills;
             assert([supervisor stop]);
@@ -114,7 +119,7 @@ int main(int argc, const char *argv[]) {
                 assert(unlinks == 1);
                 assert(![supervisor stop]);
             } else {
-                assert(supervisor.child == 42 && unlinks == 0);
+                assert(supervisor.child == 42 && unlinks == 0 && coreUnlinks == 0);
                 if (waitError == ECHILD || [scenario isEqual:@"uncertain-owner"]) {
                     assert(supervisor.ownershipUncertain);
                     assert(terms == 0 && kills == 0 && sleeps == 0);

@@ -1,7 +1,9 @@
 #import "../Shared/HelperTrust.h"
 #import "Spawn.h"
 #import "SessionPolicy.h"
+#import "CoreStaging.h"
 #import "../Shared/HelperCompatibility.h"
+#import <CommonCrypto/CommonDigest.h>
 #import <libproc.h>
 #import <poll.h>
 #import <signal.h>
@@ -11,31 +13,51 @@
 #import <fcntl.h>
 #import <unistd.h>
 #import <stdio.h>
+#import <sysexits.h>
+
+#ifndef FC_HELPER_BUILD
+#define FC_HELPER_BUILD "0"
+#endif
+
+static const int64_t FCIdleSeconds = 30;
+
+static NSString *FCRunningExecutable(void) {
+    char executable[PROC_PIDPATHINFO_MAXSIZE];
+    if (proc_pidpath(getpid(), executable, sizeof(executable)) <= 0) return @"";
+    return [NSString stringWithUTF8String:executable] ?: @"";
+}
+
+static NSString *FCRunningHash(void) {
+    SecCodeRef me = NULL;
+    if (SecCodeCopySelf(kSecCSDefaultFlags, &me) || !me) return @"";
+    CFDictionaryRef information = NULL;
+    OSStatus status = SecCodeCopySigningInformation((SecStaticCodeRef)me, kSecCSSigningInformation, &information);
+    CFRelease(me);
+    if (status || !information) return @"";
+    NSDictionary *info = CFBridgingRelease(information);
+    return FCHexString(info[(__bridge NSString *)kSecCodeInfoUnique]);
+}
 
 @interface FCSupervisor : NSObject
 @property dispatch_queue_t queue;
 @property xpc_connection_t owner;
 @property NSString *session;
-@property NSString *bundle;
 @property NSString *coreHash;
-@property NSDictionary *serviceContract;
+@property NSString *corePath;
+@property NSString *runningHash;
+@property NSDictionary *contract;
 @property uid_t uid;
 @property pid_t child;
 @property int listener;
 @property int socket;
 @property NSString *socketPath;
 @property NSMutableData *incoming;
-@property BOOL maintenance;
 @property BOOL ownershipUncertain;
 @property BOOL journalOwned;
+@property NSUInteger connections;
+@property dispatch_source_t idle;
 - (void)accept:(xpc_connection_t)connection;
 @end
-
-static BOOL FCTransactionPending(void) {
-    NSString *lock = [FCInstalledBundle.stringByDeletingLastPathComponent stringByAppendingPathComponent:@".installer-lock"];
-    struct stat state;
-    return lstat(lock.fileSystemRepresentation, &state) == 0 || errno != ENOENT;
-}
 
 @implementation FCSupervisor
 - (instancetype)init {
@@ -43,23 +65,33 @@ static BOOL FCTransactionPending(void) {
         _queue = dispatch_queue_create("com.layoute.flash.supervisor", DISPATCH_QUEUE_SERIAL);
         _listener = _socket = -1;
         _incoming = [NSMutableData data];
+        _runningHash = FCRunningHash();
         NSString *journal = [FCRuntimeDirectory stringByAppendingPathComponent:@"child-owned"];
         struct stat state;
         if (lstat(journal.fileSystemRepresentation, &state) == 0 || errno != ENOENT) {
-            _ownershipUncertain = YES;
-            _child = -1;
-            _maintenance = YES;
+            // A previous daemon instance owned a Core. launchd normally kills the job's process group with it;
+            // verify that no Core copy from our runtime directory survives before the journal is released.
+            _ownershipUncertain = !FCReapOrphanedCores(FCRuntimeDirectory) ||
+                (unlink(journal.fileSystemRepresentation) && errno != ENOENT);
+            if (_ownershipUncertain) _child = -1;
         }
-        NSString *freeze = [FCRuntimeDirectory stringByAppendingPathComponent:@"maintenance"];
-        if (lstat(freeze.fileSystemRepresentation, &state) == 0 || errno != ENOENT || FCTransactionPending()) _maintenance = YES;
-        char executable[PROC_PIDPATHINFO_MAXSIZE];
-        if (proc_pidpath(getpid(), executable, sizeof(executable)) > 0) {
-            NSString *path = [NSString stringWithUTF8String:executable];
-            _bundle = path.stringByDeletingLastPathComponent.stringByDeletingLastPathComponent
-                .stringByDeletingLastPathComponent.stringByDeletingLastPathComponent;
-        }
+        if (!_ownershipUncertain) FCRemoveStagedCores(FCRuntimeDirectory);
     }
     return self;
+}
+
+- (void)armIdle {
+    if (!self.idle) {
+        self.idle = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.queue);
+        dispatch_source_set_event_handler(self.idle, ^{
+            // On-demand daemon: leave when nobody uses it so a replaced (updated) binary is picked up next time.
+            if (self.child == 0 && !self.ownershipUncertain && self.connections == 0) exit(0);
+            [self armIdle];
+        });
+        dispatch_resume(self.idle);
+    }
+    dispatch_source_set_timer(self.idle, dispatch_time(DISPATCH_TIME_NOW, FCIdleSeconds * NSEC_PER_SEC),
+        DISPATCH_TIME_FOREVER, NSEC_PER_SEC);
 }
 
 - (void)reply:(xpc_object_t)request code:(NSString *)code pid:(pid_t)pid frame:(NSData *)frame {
@@ -69,16 +101,17 @@ static BOOL FCTransactionPending(void) {
     xpc_dictionary_set_int64(reply, "protocol", 1);
     xpc_dictionary_set_int64(reply, "pid", pid);
     xpc_dictionary_set_bool(reply, "exitConfirmed", self.child == 0 && !self.ownershipUncertain);
-    xpc_dictionary_set_bool(reply, "frozen", self.maintenance);
     const char *nonce = xpc_dictionary_get_string(request, "nonce");
     if (nonce && strlen(nonce) <= 64) xpc_dictionary_set_string(reply, "nonce", nonce);
     xpc_dictionary_set_string(reply, "coreHash", self.coreHash.UTF8String ?: "");
-    if (self.serviceContract) {
-        xpc_dictionary_set_int64(reply, "callerPolicy", 2);
-        xpc_dictionary_set_int64(reply, "serviceAPI", 1);
-        xpc_dictionary_set_int64(reply, "coreAPI", 1);
-        xpc_dictionary_set_string(reply, "coreVersion", [self.serviceContract[@"CoreVersion"] UTF8String]);
-        xpc_dictionary_set_string(reply, "coreRevision", [self.serviceContract[@"CoreRevision"] UTF8String]);
+    xpc_dictionary_set_string(reply, "helperBuild", FC_HELPER_BUILD);
+    xpc_dictionary_set_string(reply, "helperCDHash", self.runningHash.UTF8String ?: "");
+    if (self.contract) {
+        xpc_dictionary_set_int64(reply, "callerPolicy", FC_CALLER_POLICY);
+        xpc_dictionary_set_int64(reply, "serviceAPI", FC_SERVICE_API);
+        xpc_dictionary_set_int64(reply, "coreAPI", FC_CORE_API);
+        xpc_dictionary_set_string(reply, "coreVersion", [self.contract[@"CoreVersion"] UTF8String]);
+        xpc_dictionary_set_string(reply, "coreRevision", [self.contract[@"CoreRevision"] UTF8String]);
     }
     if (frame) xpc_dictionary_set_data(reply, "frame", frame.bytes, frame.length);
     xpc_connection_send_message(xpc_dictionary_get_remote_connection(request), reply);
@@ -113,6 +146,7 @@ static BOOL FCTransactionPending(void) {
         if (unlink(journal.fileSystemRepresentation) || ![self syncRuntime]) { self.ownershipUncertain = YES; return NO; }
         self.journalOwned = NO;
     }
+    if (self.corePath) { unlink(self.corePath.fileSystemRepresentation); self.corePath = nil; }
     [self closeRelay];
     return YES;
 }
@@ -139,12 +173,8 @@ static BOOL FCTransactionPending(void) {
 }
 
 - (BOOL)openRelay {
-    NSString *directory = FCRuntimeDirectory;
-    if (mkdir(directory.fileSystemRepresentation, 0700) && errno != EEXIST) return NO;
-    if (!FCProtectedTree(directory, NO)) return NO;
-    struct stat st;
-    if (lstat(directory.fileSystemRepresentation, &st) || (st.st_mode & 0777) != 0700) return NO;
-    self.socketPath = [directory stringByAppendingPathComponent:
+    if (!FCPrepareRuntimeDirectory(FCRuntimeDirectory)) return NO;
+    self.socketPath = [FCRuntimeDirectory stringByAppendingPathComponent:
         [NSUUID.UUID.UUIDString stringByAppendingString:@".sock"]];
     self.listener = socket(AF_UNIX, SOCK_STREAM, 0);
     if (self.listener < 0) return NO;
@@ -175,32 +205,39 @@ static BOOL FCTransactionPending(void) {
 }
 
 - (NSString *)validateCompatibility {
-    self.serviceContract = nil;
-    NSString *trust = FCBundleTrust(self.bundle ?: @"");
-    if (![trust isEqualToString:@"trusted"]) return trust;
-    NSDictionary *contract = FCReadCompatibility(self.bundle);
-    if (!FCCompatibilityAccepts(FCReadCompatibility(FCGUIBundle), contract)) return @"incompatible";
-    NSString *hash = FCSHA256([self.bundle stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"]);
-    if (![hash isEqualToString:contract[@"CoreSHA256"]]) return @"incompatible";
-    self.serviceContract = contract;
-    self.coreHash = hash;
+    self.contract = nil;
+    NSDictionary *contract = FCReadCompatibility(FCGUIBundle);
+    if (!FCBundleCompatibilityValid(contract)) return @"incompatible";
+    self.contract = contract;
     return @"ok";
+}
+
+// Re-verify our own code and the app before every privileged operation; a failure ends the daemon.
+- (BOOL)selfCheck {
+    NSString *result = FCHelperSelfCheck(FCRunningExecutable());
+    if ([result isEqualToString:@"ok"]) return YES;
+    fprintf(stderr, "FlashHelper: self-check-failed: %s\n", result.UTF8String);
+    return NO;
 }
 
 - (NSString *)start:(xpc_object_t)request connection:(xpc_connection_t)connection session:(NSString *)session {
     if (self.ownershipUncertain) return @"exitUnconfirmed";
-    if (FCTransactionPending()) self.maintenance = YES;
-    if (self.maintenance) return @"maintenance";
     if (self.child) return @"sessionBusy";
     if (xpc_connection_get_euid(connection) == 0) return @"wrongOwner";
+    if (![self selfCheck]) return @"selfCheckFailed";
     NSString *compatibility = [self validateCompatibility];
     if (![compatibility isEqualToString:@"ok"]) return compatibility;
-    NSString *core = [self.bundle stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"];
-    NSString *hash = FCSHA256(core);
     const char *expected = xpc_dictionary_get_string(request, "coreHash");
-    if (!expected || ![hash isEqualToString:self.serviceContract[@"CoreSHA256"]] ||
-        ![hash isEqualToString:@(expected)]) return @"incompatible";
-    if (![self openRelay]) { [self closeRelay]; return @"relayFailed"; }
+    if (!expected || ![@(expected) isEqualToString:self.contract[@"CoreSHA256"]]) return @"incompatible";
+    if (!FCPrepareRuntimeDirectory(FCRuntimeDirectory)) return @"relayFailed";
+    // Copy Core (fd-based, O_NOFOLLOW) into the root-only runtime directory, hashing while copying, then
+    // verify the copy's signature (pinned identity + com.layoute.flash.core) and spawn only the copy.
+    FCRemoveStagedCores(FCRuntimeDirectory);
+    NSString *staged = FCStageCore([FCGUIBundle stringByAppendingPathComponent:FCCoreRelativePath],
+        FCRuntimeDirectory, self.contract[@"CoreSHA256"]);
+    if (!staged) return @"incompatible";
+    if (!FCCheckStatic(staged, FCCoreIdentifier)) { unlink(staged.fileSystemRepresentation); return @"signingRequired"; }
+    if (![self openRelay]) { [self closeRelay]; unlink(staged.fileSystemRepresentation); return @"relayFailed"; }
     NSString *journal = [FCRuntimeDirectory stringByAppendingPathComponent:@"child-owned"];
     int record = open(journal.fileSystemRepresentation, O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW | O_CLOEXEC, 0600);
     if (record < 0) { [self closeRelay]; self.ownershipUncertain = YES; return @"exitUnconfirmed"; }
@@ -211,8 +248,9 @@ static BOOL FCTransactionPending(void) {
     self.owner = connection;
     self.session = session;
     self.uid = xpc_connection_get_euid(connection);
-    self.coreHash = hash;
-    self.child = FCSpawnCore(core.fileSystemRepresentation, self.socketPath.fileSystemRepresentation,
+    self.coreHash = self.contract[@"CoreSHA256"];
+    self.corePath = staged;
+    self.child = FCSpawnCore(staged.fileSystemRepresentation, self.socketPath.fileSystemRepresentation,
                              self.uid, xpc_connection_get_egid(connection));
     if (self.child <= 0) {
         self.child = 0;
@@ -272,16 +310,14 @@ static BOOL FCTransactionPending(void) {
     return nil;
 }
 
-- (void)handle:(xpc_object_t)request connection:(xpc_connection_t)connection
-    gui:(FCGUIMessageValidator *)gui tool:(FCMessageValidator *)tool {
-    const char *method = xpc_dictionary_get_string(request, "method");
-    BOOL maintenanceRequest = method && !strcmp(method, "prepareMaintenance");
-    BOOL authenticated = maintenanceRequest ? xpc_connection_get_euid(connection) == 0 && [tool check:request] : [gui check:request];
-    if (!authenticated) {
+- (void)handle:(xpc_object_t)request connection:(xpc_connection_t)connection gui:(FCGUIMessageValidator *)gui {
+    [self armIdle];
+    if (![gui check:request]) {
         xpc_connection_cancel(connection);
         if (self.owner == connection) [self stop];
         return;
     }
+    const char *method = xpc_dictionary_get_string(request, "method");
     const char *rawSession = xpc_dictionary_get_string(request, "session");
     if (!method || strlen(method) > 32 || (rawSession && strlen(rawSession) > 32) ||
         xpc_dictionary_get_int64(request, "protocol") != 1) {
@@ -294,13 +330,13 @@ static BOOL FCTransactionPending(void) {
     BOOL matching = FCOwnsSession((__bridge void *)self.owner, (__bridge void *)connection,
         self.uid, xpc_connection_get_euid(connection), self.session.UTF8String, session.UTF8String);
     if ([action isEqualToString:@"hello"]) {
-        code = self.ownershipUncertain ? @"exitUnconfirmed" : self.maintenance ? @"maintenance" : [self validateCompatibility];
+        code = self.ownershipUncertain ? @"exitUnconfirmed" : [self validateCompatibility];
     } else if ([action isEqualToString:@"start"]) {
         if (FCValidSession(rawSession))
             code = [self start:request connection:connection session:session];
-    } else if ([action isEqualToString:@"prepareMaintenance"]) {
-        self.maintenance = YES;
-        code = [self stop] ? @"ok" : @"exitUnconfirmed";
+    } else if ([action isEqualToString:@"exit"]) {
+        // Lets the GUI retire a stale daemon after an app update; refused while a Core is owned.
+        code = self.child == 0 && !self.ownershipUncertain ? @"ok" : @"sessionBusy";
     } else if (!matching) code = @"wrongOwner";
     else if ([action isEqualToString:@"stop"]) code = [self stop] ? @"ok" : @"exitUnconfirmed";
     else if ([action isEqualToString:@"receive"]) frame = [self receive:&code];
@@ -310,23 +346,29 @@ static BOOL FCTransactionPending(void) {
         if (data && length <= FCMaxFrame) code = [self send:[NSData dataWithBytes:data length:length]];
     }
     [self reply:request code:code pid:self.child frame:frame];
+    if ([code isEqualToString:@"selfCheckFailed"] ||
+        ([action isEqualToString:@"exit"] && [code isEqualToString:@"ok"])) {
+        int status = [code isEqualToString:@"ok"] ? 0 : EX_CONFIG;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 200 * NSEC_PER_MSEC), self.queue, ^{ exit(status); });
+    }
 }
 
 - (void)accept:(xpc_connection_t)connection {
-    NSString *guiRequirement = FCSplitGUIRequirement();
-    NSString *toolRequirement = FCSigningRequirement(FCMaintenanceIdentifier);
-    NSString *requirement = guiRequirement && toolRequirement ?
-        [NSString stringWithFormat:@"(%@) or (%@)", guiRequirement, toolRequirement] : nil;
+    // Only the pinned Flash GUI may connect (identity at the XPC layer, then full per-message validation).
+    NSString *requirement = FCGUIRequirement();
     if (!requirement || xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)) {
         xpc_connection_cancel(connection); return;
     }
     FCGUIMessageValidator *gui = [FCGUIMessageValidator new];
-    FCMessageValidator *tool = [[FCMessageValidator alloc] initWithIdentifier:FCMaintenanceIdentifier
-        executable:FCInstalledExecutable(FCMaintenanceIdentifier) bundle:nil];
+    self.connections++;
     xpc_connection_set_target_queue(connection, self.queue);
     xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-        if (xpc_get_type(event) == XPC_TYPE_DICTIONARY) [self handle:event connection:connection gui:gui tool:tool];
-        else if (self.owner == connection) [self stop];
+        if (xpc_get_type(event) == XPC_TYPE_DICTIONARY) { [self handle:event connection:connection gui:gui]; return; }
+        if (event == XPC_ERROR_CONNECTION_INVALID) {
+            if (self.connections) self.connections--;
+            [self armIdle];
+        }
+        if (self.owner == connection) [self stop];
     });
     xpc_connection_resume(connection);
 }
@@ -334,14 +376,15 @@ static BOOL FCTransactionPending(void) {
 
 int main(void) {
     @autoreleasepool {
-        if (@available(macOS 14.0, *)) {} else return 78;
-        if (geteuid() != 0 || !FCSplitGUIRequirement()) return 78;
-        if (!FCLegacyRuntimeAbsent()) {
-            fputs("FlashHelper: legacy-runtime-recovery-required: legacy runtime exists or absence cannot be proven; preserve journals and recover before retry\n", stderr);
-            return 78;
+        if (@available(macOS 14.0, *)) {} else return EX_CONFIG;
+        if (geteuid() != 0 || !FCGUIRequirement()) return EX_CONFIG;
+        // Verify before anything else is done as root: tampered or relocated code does not run.
+        NSString *check = FCHelperSelfCheck(FCRunningExecutable());
+        if (![check isEqualToString:@"ok"]) {
+            fprintf(stderr, "FlashHelper: self-check-failed: %s\n", check.UTF8String);
+            return EX_CONFIG;
         }
         FCSupervisor *supervisor = [FCSupervisor new];
-        if (![FCBundleTrust(supervisor.bundle ?: @"") isEqualToString:@"trusted"] || !FCLegacyPlistTrusted()) return 78;
         xpc_connection_t listener = xpc_connection_create_mach_service(FCHelperLabel.UTF8String,
             supervisor.queue, XPC_CONNECTION_MACH_SERVICE_LISTENER);
         xpc_connection_set_event_handler(listener, ^(xpc_object_t connection) {
@@ -354,6 +397,7 @@ int main(void) {
             if ([supervisor stop]) exit(0);
         });
         dispatch_resume(termination);
+        dispatch_async(supervisor.queue, ^{ [supervisor armIdle]; });
         xpc_connection_resume(listener);
         dispatch_main();
     }

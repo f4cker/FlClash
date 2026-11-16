@@ -3,68 +3,70 @@
 #import <sys/acl.h>
 #import <sys/stat.h>
 #import <errno.h>
+#import <fcntl.h>
+#import <unistd.h>
 
 #import "HelperIdentity.h"
 #import "ProtectedPathPolicy.h"
 #import "LibraryConstraintPolicy.h"
 #import "HelperCompatibility.h"
 
-NSString * const FCHelperLabel = @"com.layoute.flash.helper";
+NSString * const FCHelperLabel = @"com.layoute.flash.daemon";
+NSString * const FCDaemonPlistName = @"com.layoute.flash.daemon.plist";
 NSString * const FCClientIdentifier = @"com.layoute.flash";
-NSString * const FCServiceIdentifier = @"com.layoute.flash.service";
+NSString * const FCHelperIdentifier = @"com.layoute.flash.helper";
+NSString * const FCCoreIdentifier = @"com.layoute.flash.core";
 NSString * const FCGUIBundle = @"/Applications/Flash.app";
-NSString * const FCMaintenanceIdentifier = @"com.layoute.flash.maintenance";
-NSString * const FCInstalledBundle = @"/Library/Application Support/Flash/Flash.app";
-NSString * const FCLegacyPlist = @"/Library/LaunchDaemons/com.layoute.flash.helper.plist";
-NSString * const FCRuntimeDirectory = @"/Library/Application Support/Flash/run";
-NSString * const FCLegacyRuntimeDirectory = @"/private/var/run/com.layoute.flash.helper";
-
-BOOL FCLegacyRuntimeAbsent(void) {
-    struct stat state;
-    return lstat(FCLegacyRuntimeDirectory.fileSystemRepresentation, &state) < 0 && errno == ENOENT;
-}
+NSString * const FCDaemonPlistRelativePath = @"Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist";
+NSString * const FCHelperRelativePath = @"Contents/Library/HelperTools/FlashHelper";
+NSString * const FCCoreRelativePath = @"Contents/MacOS/FlClashCore";
+NSString * const FCRuntimeDirectory = @"/Library/Application Support/com.layoute.flash.daemon";
 
 NSString *FCInstalledExecutable(NSString *role) {
     if ([role isEqualToString:FCClientIdentifier]) return [FCGUIBundle stringByAppendingPathComponent:@"Contents/MacOS/Flash"];
-    if ([role isEqualToString:FCHelperLabel]) return [FCInstalledBundle stringByAppendingPathComponent:@"Contents/Library/HelperTools/FlashHelper"];
-    if ([role isEqualToString:FCMaintenanceIdentifier]) return [FCInstalledBundle stringByAppendingPathComponent:@"Contents/Library/HelperTools/FlashMaintenance"];
+    if ([role isEqualToString:FCHelperIdentifier]) return [FCGUIBundle stringByAppendingPathComponent:FCHelperRelativePath];
+    if ([role isEqualToString:FCCoreIdentifier]) return [FCGUIBundle stringByAppendingPathComponent:FCCoreRelativePath];
     return @"";
 }
 
-NSDictionary *FCCanonicalHelperPlist(void) {
-    return @{@"Label": FCHelperLabel, @"Program": FCInstalledExecutable(FCHelperLabel),
+NSDictionary *FCCanonicalDaemonPlist(void) {
+    return @{@"Label": FCHelperLabel, @"BundleProgram": FCHelperRelativePath,
         @"MachServices": @{FCHelperLabel: @YES}, @"ProcessType": @"Interactive",
         @"AssociatedBundleIdentifiers": @[FCClientIdentifier]};
 }
 
-FCHelperPlistSchema FCClassifyHelperPlist(id plist) {
-    if (![plist isKindOfClass:NSDictionary.class]) return FCHelperPlistInvalid;
+// Exact schema: no Program/ProgramArguments/EnvironmentVariables/KeepAlive/RunAtLoad or any other key.
+BOOL FCDaemonPlistValid(id plist) {
+    if (![plist isKindOfClass:NSDictionary.class]) return NO;
     NSDictionary *dictionary = plist;
-    for (NSString *key in @[@"Label", @"Program", @"ProcessType"])
-        if (![dictionary[key] isKindOfClass:NSString.class]) return FCHelperPlistInvalid;
+    for (NSString *key in @[@"Label", @"BundleProgram", @"ProcessType"])
+        if (![dictionary[key] isKindOfClass:NSString.class]) return NO;
     NSDictionary *services = dictionary[@"MachServices"];
-    if (![services isKindOfClass:NSDictionary.class] || services.count != 1) return FCHelperPlistInvalid;
+    if (![services isKindOfClass:NSDictionary.class] || services.count != 1) return NO;
     id enabled = services[FCHelperLabel];
-    if (!enabled || CFGetTypeID((__bridge CFTypeRef)enabled) != CFBooleanGetTypeID()) return FCHelperPlistInvalid;
+    if (!enabled || CFGetTypeID((__bridge CFTypeRef)enabled) != CFBooleanGetTypeID()) return NO;
     id association = dictionary[@"AssociatedBundleIdentifiers"];
-    if (association && (![association isKindOfClass:NSArray.class] || [association count] != 1 ||
-        ![association[0] isKindOfClass:NSString.class])) return FCHelperPlistInvalid;
-    NSDictionary *canonical = FCCanonicalHelperPlist();
-    if ([dictionary isEqualToDictionary:canonical]) return FCHelperPlistAssociated;
-    NSMutableDictionary *legacy = canonical.mutableCopy;
-    [legacy removeObjectForKey:@"AssociatedBundleIdentifiers"];
-    return [dictionary isEqualToDictionary:legacy] ? FCHelperPlistLegacy : FCHelperPlistInvalid;
+    if (![association isKindOfClass:NSArray.class] || [association count] != 1 ||
+        ![association[0] isKindOfClass:NSString.class]) return NO;
+    return [dictionary isEqualToDictionary:FCCanonicalDaemonPlist()];
 }
 
-BOOL FCLegacyPlistTrusted(void) {
-    if (!FCProtectedTree(FCLegacyPlist, NO)) return NO;
-    return FCClassifyHelperPlist([NSDictionary dictionaryWithContentsOfFile:FCLegacyPlist]) == FCHelperPlistAssociated;
+static BOOL FCRegularCanonicalFile(NSString *path) {
+    struct stat state;
+    char canonical[PATH_MAX];
+    return lstat(path.fileSystemRepresentation, &state) == 0 && S_ISREG(state.st_mode) &&
+        realpath(path.fileSystemRepresentation, canonical) && [@(canonical) isEqualToString:path];
 }
 
-BOOL FCLegacyPlistTrustedForMaintenance(void) {
-    if (!FCProtectedTree(FCLegacyPlist, NO)) return NO;
-    FCHelperPlistSchema schema = FCClassifyHelperPlist([NSDictionary dictionaryWithContentsOfFile:FCLegacyPlist]);
-    return schema == FCHelperPlistLegacy || schema == FCHelperPlistAssociated;
+#ifndef FCLoadPlist
+static NSDictionary *FCLoadPlist(NSString *path) { return [NSDictionary dictionaryWithContentsOfFile:path]; }
+#endif
+
+BOOL FCBundledDaemonPresent(NSString *bundle) {
+    NSString *plist = [bundle stringByAppendingPathComponent:FCDaemonPlistRelativePath];
+    NSString *helper = [bundle stringByAppendingPathComponent:FCHelperRelativePath];
+    return FCRegularCanonicalFile(plist) && FCRegularCanonicalFile(helper) &&
+        FCDaemonPlistValid(FCLoadPlist(plist));
 }
 
 const size_t FCMaxFrame = 64 * 1024 * 1024;
@@ -92,17 +94,19 @@ NSString *FCRequirementForPolicy(NSString *identifier, NSString *certificatePin,
 }
 
 NSString *FCSigningRequirement(NSString *identifier) {
+    if (![@FC_PINNED_CERTIFICATE_SHA1 isEqualToString:@"BBA7F8529FD271B9848EC03A2CE3F4780F585556"] ||
+        @FC_PRODUCTION_TEAM_ID.length) return nil;
     return FCRequirementForPolicy(identifier, @FC_PINNED_CERTIFICATE_SHA1, @FC_PRODUCTION_TEAM_ID);
 }
 
-BOOL FCCodeEntitlementsAllowed(NSString *identifier, BOOL protectedGUI, NSDictionary *entitlements, uint32_t flags) {
-    BOOL guiException = protectedGUI && FC_MANAGED_CANDIDATE_ENABLED &&
-        @FC_PINNED_CERTIFICATE_SHA1.length == 40 && [identifier isEqualToString:FCClientIdentifier];
-    return (flags & kSecCodeSignatureRuntime) &&
-        !(flags & kSecCodeSignatureAdhoc) &&
-        ![entitlements[@"com.apple.security.get-task-allow"] boolValue] &&
-        (guiException || ![entitlements[@"com.apple.security.cs.disable-library-validation"] boolValue]) &&
-        ![entitlements[@"com.apple.security.cs.allow-dyld-environment-variables"] boolValue];
+// Daemon and Core: hardened runtime, real signature, and none of the entitlements that weaken it.
+BOOL FCCodeEntitlementsAllowed(NSDictionary *entitlements, uint32_t flags) {
+    if (entitlements && ![entitlements isKindOfClass:NSDictionary.class]) return NO;
+    for (NSString *key in @[@"com.apple.security.get-task-allow", @"com.apple.security.cs.disable-library-validation",
+            @"com.apple.security.cs.allow-dyld-environment-variables", @"com.apple.security.cs.allow-unsigned-executable-memory",
+            @"com.apple.security.cs.disable-executable-page-protection"])
+        if (entitlements[key]) return NO;
+    return (flags & kSecCodeSignatureRuntime) && !(flags & kSecCodeSignatureAdhoc);
 }
 
 BOOL FCGUIEntitlementsAllowed(NSDictionary *entitlements, uint32_t flags) {
@@ -110,7 +114,7 @@ BOOL FCGUIEntitlementsAllowed(NSDictionary *entitlements, uint32_t flags) {
         @"com.apple.security.personal-information.location": @YES,
         @"com.apple.security.cs.disable-library-validation": @YES};
     if (!(flags & kSecCodeSignatureRuntime) || (flags & kSecCodeSignatureAdhoc) ||
-        ![entitlements isEqualToDictionary:expected]) return NO;
+        ![entitlements isKindOfClass:NSDictionary.class] || ![entitlements isEqualToDictionary:expected]) return NO;
     for (id value in entitlements.allValues)
         if (CFGetTypeID((__bridge CFTypeRef)value) != CFBooleanGetTypeID()) return NO;
     return YES;
@@ -120,9 +124,7 @@ BOOL FCValidGUIHash(NSData *hash) {
     return [hash isKindOfClass:NSData.class] && hash.length == 20;
 }
 
-NSString *FCSplitGUIRequirement(void) {
-    if (![@FC_PINNED_CERTIFICATE_SHA1 isEqualToString:@"BBA7F8529FD271B9848EC03A2CE3F4780F585556"] ||
-        @FC_PRODUCTION_TEAM_ID.length) return nil;
+NSString *FCGUIRequirement(void) {
     return FCSigningRequirement(FCClientIdentifier);
 }
 
@@ -132,31 +134,32 @@ static NSDictionary *FCSigningInformation(SecStaticCodeRef code) {
     return CFBridgingRelease(information);
 }
 
-static BOOL FCGUIExecutableMatches(NSDictionary *info) {
+static BOOL FCExecutableMatches(NSDictionary *info, NSString *expected) {
     NSURL *executable = info[(__bridge NSString *)kSecCodeInfoMainExecutable];
-    NSString *expected = FCInstalledExecutable(FCClientIdentifier);
     char canonical[PATH_MAX];
-    return [executable isKindOfClass:NSURL.class] && [executable.path isEqualToString:expected] &&
+    return expected.length && [executable isKindOfClass:NSURL.class] && [executable.path isEqualToString:expected] &&
         realpath(executable.path.fileSystemRepresentation, canonical) && [@(canonical) isEqualToString:expected];
 }
 
 static BOOL FCCheckGUIStatic(SecStaticCodeRef code) {
-    NSString *text = FCSplitGUIRequirement();
+    NSString *text = FCGUIRequirement();
     SecRequirementRef requirement = NULL;
     if (!text || SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement)) return NO;
+    // The app seal covers the nested daemon, Core, the LaunchDaemons plist and the compatibility contract.
     BOOL valid = SecStaticCodeCheckValidity(code,
         kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode, requirement) == errSecSuccess;
     CFRelease(requirement);
     NSDictionary *info = valid ? FCSigningInformation(code) : nil;
-    return valid && FCGUIExecutableMatches(info) && FCGUILibraryPolicy(FCGUIBundle, info[(__bridge NSString *)kSecCodeInfoUnique]) &&
-        FCGUICompatibilityValid(FCReadCompatibility(FCGUIBundle)) && FCGUIEntitlementsAllowed(
+    return valid && FCExecutableMatches(info, FCInstalledExecutable(FCClientIdentifier)) &&
+        FCGUILibraryPolicy(FCGUIBundle, info[(__bridge NSString *)kSecCodeInfoUnique]) &&
+        FCBundleCompatibilityValid(FCReadCompatibility(FCGUIBundle)) && FCGUIEntitlementsAllowed(
         info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
         [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
 }
 
 NSString *FCGUIBundleTrust(NSString *bundle) {
     if (@available(macOS 14.0, *)) {
-        if (![bundle isEqualToString:FCGUIBundle]) return @"protectedInstallationRequired";
+        if (![bundle isEqualToString:FCGUIBundle]) return @"moveRequired";
         SecStaticCodeRef code = NULL;
         if (SecStaticCodeCreateWithPath((__bridge CFURLRef)[NSURL fileURLWithPath:bundle], 0, &code))
             return @"signingRequired";
@@ -170,7 +173,7 @@ NSString *FCGUIBundleTrust(NSString *bundle) {
 @implementation FCGUIMessageValidator
 - (BOOL)check:(xpc_object_t)message {
     if (@available(macOS 14.0, *)) {
-        NSString *text = FCSplitGUIRequirement();
+        NSString *text = FCGUIRequirement();
         if (!text) return NO;
         SecCodeRef code = NULL;
         if (SecCodeCreateWithXPCMessage(message, 0, &code)) return NO;
@@ -180,7 +183,7 @@ NSString *FCGUIBundleTrust(NSString *bundle) {
         if (requirement) CFRelease(requirement);
         NSDictionary *info = valid ? FCSigningInformation(code) : nil;
         NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
-        valid = valid && FCGUIExecutableMatches(info) && FCValidGUIHash(runningHash) &&
+        valid = valid && FCExecutableMatches(info, FCInstalledExecutable(FCClientIdentifier)) && FCValidGUIHash(runningHash) &&
             FCGUIEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
                 [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
         SecStaticCodeRef diskCode = NULL;
@@ -200,7 +203,7 @@ NSString *FCGUIBundleTrust(NSString *bundle) {
 }
 @end
 
-static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, BOOL protectedGUI) {
+static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, NSData **hash) {
     NSString *text = FCSigningRequirement(identifier);
     if (!text) return NO;
     SecRequirementRef requirement = NULL;
@@ -208,24 +211,38 @@ static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, BOOL protec
     BOOL valid = SecStaticCodeCheckValidity(code, kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode,
                                             requirement) == errSecSuccess;
     CFRelease(requirement);
-    CFDictionaryRef information = NULL;
-    if (!valid || SecCodeCopySigningInformation(code, kSecCSSigningInformation, &information)) return NO;
-    NSDictionary *info = CFBridgingRelease(information);
-    NSDictionary *entitlements = info[(__bridge NSString *)kSecCodeInfoEntitlementsDict];
-    uint32_t flags = [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue];
-    return FCCodeEntitlementsAllowed(identifier, protectedGUI, entitlements, flags);
+    NSDictionary *info = valid ? FCSigningInformation(code) : nil;
+    NSData *unique = info[(__bridge NSString *)kSecCodeInfoUnique];
+    valid = valid && FCValidGUIHash(unique) && FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
+        [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
+    if (valid && hash) *hash = unique;
+    return valid;
+}
+
+NSData *FCStaticCodeHash(NSString *path, NSString *identifier) {
+    SecStaticCodeRef code = NULL;
+    if (SecStaticCodeCreateWithPath((__bridge CFURLRef)[NSURL fileURLWithPath:path], 0, &code)) return nil;
+    NSData *hash = nil;
+    BOOL valid = FCCheckCode(code, identifier, &hash);
+    CFRelease(code);
+    return valid ? hash : nil;
+}
+
+BOOL FCCheckStatic(NSString *path, NSString *identifier) {
+    return FCStaticCodeHash(path, identifier) != nil;
 }
 
 @interface FCMessageValidator ()
 @property NSString *identifier;
 @property NSString *executable;
-@property NSString *bundle;
-@property BOOL sealed;
+@property NSData *sealedHash;
 @end
 
+// Validates replies from the daemon: pinned identity, exact bundled path, policy flags, and that the
+// running code is the code currently on disk (checked once per connection, then pinned by cdhash).
 @implementation FCMessageValidator
-- (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable bundle:(NSString *)bundle {
-    if ((self = [super init])) { _identifier = identifier; _executable = executable; _bundle = bundle; }
+- (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable {
+    if ((self = [super init])) { _identifier = identifier; _executable = executable; }
     return self;
 }
 - (BOOL)check:(xpc_object_t)message {
@@ -237,46 +254,22 @@ static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, BOOL protec
     BOOL valid = text && SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement) == errSecSuccess;
     valid = valid && SecCodeCheckValidity(code, kSecCSStrictValidate, requirement) == errSecSuccess;
     if (requirement) CFRelease(requirement);
-    CFDictionaryRef information = NULL;
-    valid = valid && SecCodeCopySigningInformation(code, kSecCSSigningInformation, &information) == errSecSuccess;
-    NSDictionary *info = information ? CFBridgingRelease(information) : nil;
-    NSURL *executable = info[(__bridge NSString *)kSecCodeInfoMainExecutable];
-    NSDictionary *entitlements = info[(__bridge NSString *)kSecCodeInfoEntitlementsDict];
-    uint32_t flags = [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue];
-    char canonical[PATH_MAX];
-    valid = valid && executable && [executable.path isEqualToString:self.executable] &&
-        realpath(executable.path.fileSystemRepresentation, canonical) && [@(canonical) isEqualToString:self.executable] &&
-        FCCodeEntitlementsAllowed(self.identifier, self.bundle != nil, entitlements, flags);
-    if (valid && !self.sealed) {
-        SecStaticCodeRef diskCode = NULL;
-        valid = FCProtectedTree(self.executable, NO) && (!self.bundle || FCProtectedTree(self.bundle, YES)) &&
-            SecCodeCopyStaticCode(code, 0, &diskCode) == errSecSuccess;
-        if (valid) valid = FCCheckCode(diskCode, self.identifier, self.bundle != nil);
-        if (diskCode) CFRelease(diskCode);
-        self.sealed = valid;
+    NSDictionary *info = valid ? FCSigningInformation(code) : nil;
+    NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
+    valid = valid && FCExecutableMatches(info, self.executable) && FCValidGUIHash(runningHash) &&
+        FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
+            [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
+    if (valid && !self.sealedHash) {
+        NSData *diskHash = FCStaticCodeHash(self.executable, self.identifier);
+        valid = diskHash && [diskHash isEqualToData:runningHash];
+        if (valid) self.sealedHash = runningHash;
+    } else if (valid) {
+        valid = [self.sealedHash isEqualToData:runningHash];
     }
     CFRelease(code);
     return valid;
 }
 @end
-
-BOOL FCCheckMessage(xpc_object_t message, NSString *identifier) {
-    return [[[FCMessageValidator alloc] initWithIdentifier:identifier executable:FCInstalledExecutable(identifier) bundle:nil] check:message];
-}
-
-BOOL FCCheckClientMessage(xpc_object_t message, NSString *expectedBundle) {
-    if (![expectedBundle isEqualToString:FCGUIBundle]) return NO;
-    return [[FCGUIMessageValidator new] check:message];
-}
-
-BOOL FCCheckStatic(NSString *path, NSString *identifier) {
-    SecStaticCodeRef code = NULL;
-    if (SecStaticCodeCreateWithPath((__bridge CFURLRef)[NSURL fileURLWithPath:path], 0, &code)) return NO;
-    BOOL gui = [identifier isEqualToString:FCClientIdentifier];
-    BOOL valid = (!gui || FCProtectedTree(path, YES)) && FCCheckCode(code, identifier, gui);
-    CFRelease(code);
-    return valid;
-}
 
 static BOOL FCProtectedNode(NSString *path) {
     struct stat st;
@@ -338,38 +331,58 @@ BOOL FCProtectedTree(NSString *path, BOOL recursive) {
 }
 
 NSString *FCSHA256(NSString *path) {
-    NSInputStream *stream = [NSInputStream inputStreamWithFileAtPath:path];
-    [stream open];
+    int fd = open(path.fileSystemRepresentation, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (fd < 0) return @"";
     CC_SHA256_CTX context;
     CC_SHA256_Init(&context);
     uint8_t buffer[65536];
-    NSInteger count;
-    while ((count = [stream read:buffer maxLength:sizeof(buffer)]) > 0)
-        CC_SHA256_Update(&context, buffer, (CC_LONG)count);
-    [stream close];
+    ssize_t count;
+    while ((count = read(fd, buffer, sizeof(buffer))) > 0) CC_SHA256_Update(&context, buffer, (CC_LONG)count);
+    close(fd);
     if (count < 0) return @"";
     uint8_t digest[CC_SHA256_DIGEST_LENGTH];
     CC_SHA256_Final(digest, &context);
-    NSMutableString *result = [NSMutableString string];
-    for (size_t i = 0; i < sizeof(digest); i++) [result appendFormat:@"%02x", digest[i]];
+    return FCHexString([NSData dataWithBytes:digest length:sizeof(digest)]);
+}
+
+NSString *FCHexString(NSData *data) {
+    if (![data isKindOfClass:NSData.class]) return @"";
+    NSMutableString *result = [NSMutableString stringWithCapacity:data.length * 2];
+    const uint8_t *bytes = data.bytes;
+    for (NSUInteger i = 0; i < data.length; i++) [result appendFormat:@"%02x", bytes[i]];
     return result;
 }
 
-NSString *FCPayloadTrust(NSString *bundle) {
-    NSString *incoming = [FCInstalledBundle.stringByDeletingLastPathComponent stringByAppendingPathComponent:@".incoming/Flash.app"];
-    NSString *retired = [FCInstalledBundle.stringByDeletingLastPathComponent stringByAppendingPathComponent:@".retired.app"];
-    if (![bundle isEqualToString:FCInstalledBundle] && ![bundle isEqualToString:incoming] && ![bundle isEqualToString:retired]) return @"protectedInstallationRequired";
-    if (@FC_PINNED_CERTIFICATE_SHA1.length && !FC_MANAGED_CANDIDATE_ENABLED) return @"signingRequired";
-    if (!FCCheckStatic(bundle, FCServiceIdentifier)) return @"signingRequired";
-    if (!FCProtectedTree(bundle, YES)) return @"protectedInstallationRequired";
-    if (!FCCheckStatic([bundle stringByAppendingPathComponent:@"Contents/Library/HelperTools/FlashHelper"],
-                       FCHelperLabel)) return @"signingRequired";
-    if (!FCCheckStatic([bundle stringByAppendingPathComponent:@"Contents/MacOS/FlClashCore"],
-                       @"com.layoute.flash.core")) return @"signingRequired";
-    if (!FCCheckStatic([bundle stringByAppendingPathComponent:@"Contents/Library/HelperTools/FlashMaintenance"], FCMaintenanceIdentifier)) return @"signingRequired";
-    return @"trusted";
-}
-
-NSString *FCBundleTrust(NSString *bundle) {
-    return [bundle isEqualToString:FCInstalledBundle] ? FCPayloadTrust(bundle) : @"protectedInstallationRequired";
+// Mandatory before the daemon serves anything as root. Tampered code does not run:
+//  1. the running process (SecCodeCopySelf) satisfies the pinned requirement for com.layoute.flash.helper;
+//  2. it runs from the exact bundled path inside /Applications/Flash.app;
+//  3. the on-disk helper validates strictly against the same requirement and has the same cdhash;
+//  4. the containing Flash.app validates strictly incl. nested code (pinned GUI identity, library
+//     constraint, entitlements, compatibility contract), which seals the daemon plist and Core;
+//  5. the bundled daemon plist has the exact expected schema.
+NSString *FCHelperSelfCheck(NSString *runningExecutable) {
+    if (@available(macOS 14.0, *)) {} else return @"unsupported";
+    NSString *expected = FCInstalledExecutable(FCHelperIdentifier);
+    NSString *text = FCSigningRequirement(FCHelperIdentifier);
+    if (!text) return @"requirement";
+    if (![runningExecutable isEqualToString:expected]) return @"path";
+    SecCodeRef me = NULL;
+    if (SecCodeCopySelf(kSecCSDefaultFlags, &me) || !me) return @"self";
+    SecRequirementRef requirement = NULL;
+    BOOL valid = SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement) == errSecSuccess;
+    valid = valid && SecCodeCheckValidity(me, kSecCSStrictValidate, requirement) == errSecSuccess;
+    if (requirement) CFRelease(requirement);
+    NSDictionary *info = valid ? FCSigningInformation((SecStaticCodeRef)me) : nil;
+    CFRelease(me);
+    NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
+    if (!valid || !FCValidGUIHash(runningHash)) return @"self";
+    if (!FCExecutableMatches(info, expected)) return @"path";
+    if (!FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
+            [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue])) return @"entitlements";
+    NSData *diskHash = FCStaticCodeHash(expected, FCHelperIdentifier);
+    if (!diskHash) return @"disk";
+    if (![diskHash isEqualToData:runningHash]) return @"replaced";
+    if (![FCGUIBundleTrust(FCGUIBundle) isEqualToString:@"trusted"]) return @"bundle";
+    if (!FCBundledDaemonPresent(FCGUIBundle)) return @"plist";
+    return @"ok";
 }

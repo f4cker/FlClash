@@ -19,35 +19,21 @@ def method(source, declaration):
 
 
 class CompatibilityTests(unittest.TestCase):
-    def test_sealed_contract_hello_actual_core_and_owned_stop(self):
+    def test_bundle_contract_hello_and_relay_gating(self):
         source = r'''
 #import "HelperCompatibility.h"
 #import <assert.h>
-#import <sys/stat.h>
 static NSString * const FCGUIBundle = @"/fixture-gui";
-static NSString * const serviceBundle = @"/fixture-service";
-static NSString * const FCInstalledBundle = @"/fixture-service";
-static NSString *trust, *actualHash;
-static NSDictionary *gui, *service;
-static NSUInteger reads, hashReads;
-static NSString *FCBundleTrust(NSString *bundle) { return trust; }
-static NSString *FCGUIBundleTrust(NSString *bundle) { return @"trusted"; }
-static int FixtureStat(const char *path, struct stat *st) { return 0; }
-#define lstat FixtureStat
+static NSDictionary *contract;
+static NSUInteger reads;
 static NSDictionary *FixtureRead(NSString *bundle) {
+    assert([bundle isEqual:FCGUIBundle]);
     reads++;
-    return [bundle isEqual:FCGUIBundle] ? gui : service;
-}
-static NSString *FCSHA256(NSString *path) {
-    assert([path isEqual:@"/fixture-service/Contents/MacOS/FlClashCore"]);
-    hashReads++;
-    return actualHash;
+    return contract;
 }
 #define FCReadCompatibility FixtureRead
 @interface SupervisorFixture : NSObject
-@property NSString *bundle;
-@property NSString *coreHash;
-@property NSDictionary *serviceContract;
+@property NSDictionary *contract;
 @end
 @implementation SupervisorFixture
 '''
@@ -57,120 +43,125 @@ static NSString *FCSHA256(NSString *path) {
 @interface BridgeFixture : NSObject
 @property dispatch_queue_t queue;
 @property BOOL connectionTrusted;
+@property BOOL operationInFlight;
 @property NSMutableArray *calls;
-@property NSString *gateCode;
+@property NSString *registration;
 @property NSString *helloCode;
+@property NSString *helperHash;
 @property NSUInteger gates;
 @end
 @implementation BridgeFixture
 - (BOOL)effectsAllowed { return YES; }
-- (NSString *)gate { self.gates++; return self.gateCode; }
-- (NSString *)installationStatus { return @"enabled"; }
-- (void)status:(void (^)(NSDictionary *))completion { completion(@{@"code": self.gateCode}); }
+- (NSDictionary *)registrationStatus { self.gates++; return @{@"code": self.registration}; }
+- (NSString *)currentHelperHash { return @"cdhash-current"; }
+- (void)status:(void (^)(NSDictionary *))completion { completion(@{@"code": self.registration}); }
+- (void)migrateWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"migrate"]; c(@{@"code": @"ok"}); }
+- (void)registerWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"register"]; c(@{@"code": @"ok"}); }
+- (void)unregisterWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"unregister"]; c(@{@"code": @"ok"}); }
+- (void)repairWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"repair"]; c(@{@"code": @"ok"}); }
+- (void)openApprovalSettings:(void (^)(NSDictionary *))c { [self.calls addObject:@"settings"]; c(@{@"code": @"ok"}); }
 - (void)request:(NSString *)method arguments:(NSDictionary *)args completion:(void (^)(NSDictionary *))completion {
     [self.calls addObject:method];
-    completion(@{@"code": [method isEqual:@"hello"] ? self.helloCode : @"ok"});
+    if ([method isEqual:@"hello"]) completion(@{@"code": self.helloCode, @"helperCDHash": self.helperHash});
+    else completion(@{@"code": @"ok"});
 }
 '''
         source += method(BRIDGE, '- (void)invoke:')
         source += r'''
 @end
-@interface GateFixture : NSObject
-@end
-@implementation GateFixture
-- (BOOL)effectsAllowed { return YES; }
-'''
-        source += method(BRIDGE, '- (NSString *)gate')
-        source += r'''
-@end
-static NSDictionary *Service(void) {
-    return @{@"CallerPolicy": @2, @"ServiceAPI": @1, @"CoreAPI": @1,
+static NSDictionary *Contract(void) {
+    return @{@"CallerPolicy": @3, @"ServiceAPI": @1, @"CoreAPI": @1,
         @"CoreSHA256": @"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         @"CoreVersion": @"1", @"CoreRevision": @"revision"};
 }
-static NSString *Invoke(BridgeFixture *bridge, NSString *method) {
+static NSString *Invoke(BridgeFixture *bridge, NSString *method, NSDictionary *arguments) {
     __block NSString *code;
-    [bridge invoke:method arguments:@{} completion:^(NSDictionary *reply) { code = reply[@"code"]; }];
+    [bridge invoke:method arguments:arguments completion:^(NSDictionary *reply) { code = reply[@"code"]; }];
     dispatch_sync(bridge.queue, ^{});
     assert(code);
     return code;
 }
 int main(void) {
     @autoreleasepool {
-        service = Service();
-        actualHash = service[@"CoreSHA256"];
-        gui = @{@"CallerPolicy": @2, @"ServiceAPI": @1, @"CoreAPI": @1,
-            @"AcceptedCoreSHA256": @[actualHash]};
-        assert(FCCompatibilityAccepts(gui, service));
-        assert(FCCompatibilityHelloMatches(gui, service, service));
-        assert(!FCCompatibilityHelloMatches(gui, service, nil));
-        assert(!FCCompatibilityAccepts(gui, @{}));
-        for (NSString *key in service) {
-            NSMutableDictionary *changed = service.mutableCopy;
+        NSDictionary *own = Contract();
+        assert(FCBundleCompatibilityValid(own));
+        assert(FCCompatibilityHelloMatches(own, own));
+        assert(!FCCompatibilityHelloMatches(own, nil));
+        assert(!FCCompatibilityHelloMatches(nil, own));
+        for (NSString *key in own) {
+            NSMutableDictionary *changed = own.mutableCopy;
             [changed removeObjectForKey:key];
-            assert(!FCCompatibilityHelloMatches(gui, service, changed));
+            assert(!FCBundleCompatibilityValid(changed));
+            assert(!FCCompatibilityHelloMatches(own, changed));
             changed[key] = @YES;
-            assert(!FCCompatibilityHelloMatches(gui, service, changed));
+            assert(!FCCompatibilityHelloMatches(own, changed));
             changed[key] = @99;
-            assert(!FCCompatibilityHelloMatches(gui, service, changed));
+            assert(!FCCompatibilityHelloMatches(own, changed));
         }
         for (NSString *key in @[@"CoreVersion", @"CoreRevision", @"CoreSHA256"]) {
-            NSMutableDictionary *changed = service.mutableCopy;
+            NSMutableDictionary *changed = own.mutableCopy;
             changed[key] = @"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            assert(!FCCompatibilityHelloMatches(gui, service, changed));
+            assert(!FCCompatibilityHelloMatches(own, changed));
         }
-        for (id bad in @[@[], @[actualHash, actualHash], @[@"bad"], @YES]) {
-            NSMutableDictionary *changed = gui.mutableCopy;
-            changed[@"AcceptedCoreSHA256"] = bad;
-            assert(!FCCompatibilityAccepts(changed, service));
-        }
-        assert(!FCCompatibilityVersion(@2.0, 2));
+        // The legacy split contracts (CallerPolicy 2, AcceptedCoreSHA256) are no longer accepted.
+        NSMutableDictionary *legacy = own.mutableCopy;
+        legacy[@"CallerPolicy"] = @2;
+        assert(!FCBundleCompatibilityValid(legacy));
+        NSMutableDictionary *extra = own.mutableCopy;
+        extra[@"AcceptedCoreSHA256"] = @[own[@"CoreSHA256"]];
+        assert(!FCBundleCompatibilityValid(extra));
+        NSMutableDictionary *upper = own.mutableCopy;
+        upper[@"CoreSHA256"] = [own[@"CoreSHA256"] uppercaseString];
+        assert(!FCBundleCompatibilityValid(upper));
+        assert(!FCCompatibilityVersion(@3.0, 3));
+        assert(!FCCompatibilityVersion(@YES, 1));
         SupervisorFixture *supervisor = [SupervisorFixture new];
-        supervisor.bundle = serviceBundle;
-        trust = @"trusted";
-        assert([[supervisor validateCompatibility] isEqual:@"ok"]);
-        assert([supervisor.coreHash isEqual:actualHash] && supervisor.serviceContract);
-        actualHash = @"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        contract = own;
+        assert([[supervisor validateCompatibility] isEqual:@"ok"] && [supervisor.contract isEqual:own]);
+        contract = legacy;
+        assert([[supervisor validateCompatibility] isEqual:@"incompatible"] && !supervisor.contract);
+        contract = nil;
         assert([[supervisor validateCompatibility] isEqual:@"incompatible"]);
-        assert(!supervisor.serviceContract);
-        actualHash = service[@"CoreSHA256"];
-        trust = @"signingRequired";
-        NSUInteger beforeReads = reads, beforeHashes = hashReads;
-        assert([[supervisor validateCompatibility] isEqual:@"signingRequired"]);
-        assert(reads == beforeReads && hashReads == beforeHashes);
-        trust = @"trusted";
-        service = @{};
-        assert([[supervisor validateCompatibility] isEqual:@"incompatible"]);
-        assert(hashReads == beforeHashes);
-        GateFixture *gate = [GateFixture new];
-        assert([[gate gate] isEqual:@"updateRequired"]);
-        service = Service();
-        assert([[gate gate] isEqual:@"trusted"]);
-        NSMutableDictionary *newer = service.mutableCopy;
-        newer[@"ServiceAPI"] = @2;
-        service = newer;
-        assert([[gate gate] isEqual:@"incompatible"]);
-        service = Service();
+
         BridgeFixture *bridge = [BridgeFixture new];
         bridge.queue = dispatch_queue_create("fixture-only", DISPATCH_QUEUE_SERIAL);
         bridge.calls = [NSMutableArray array];
-        bridge.gateCode = @"updateRequired";
         bridge.helloCode = @"ok";
-        assert([Invoke(bridge, @"start") isEqual:@"updateRequired"]);
-        assert(bridge.calls.count == 0);
-        bridge.gateCode = @"trusted";
-        assert([Invoke(bridge, @"start") isEqual:@"ok"]);
+        bridge.helperHash = @"cdhash-current";
+        for (NSString *state in @[@"migrationRequired", @"requiresApproval", @"notRegistered", @"notFound", @"signingRequired"]) {
+            bridge.registration = state;
+            assert([Invoke(bridge, @"start", @{}) isEqual:state]);
+            assert(bridge.calls.count == 0);
+        }
+        bridge.registration = @"enabled";
+        assert([Invoke(bridge, @"start", @{}) isEqual:@"ok"]);
         assert(([bridge.calls isEqual:@[@"hello", @"start"]]));
         [bridge.calls removeAllObjects];
+        bridge.helperHash = @"cdhash-previous-build";
+        assert([Invoke(bridge, @"start", @{}) isEqual:@"staleHelper"]);
+        assert(([bridge.calls isEqual:@[@"hello"]]));
+        [bridge.calls removeAllObjects];
+        bridge.helperHash = @"cdhash-current";
         bridge.helloCode = @"incompatible";
-        assert([Invoke(bridge, @"start") isEqual:@"incompatible"]);
+        assert([Invoke(bridge, @"start", @{}) isEqual:@"incompatible"]);
         assert(([bridge.calls isEqual:@[@"hello"]]));
         bridge.connectionTrusted = YES;
-        bridge.gateCode = @"incompatible";
+        bridge.registration = @"notRegistered";
         NSUInteger gates = bridge.gates;
-        assert([Invoke(bridge, @"stop") isEqual:@"ok"]);
+        assert([Invoke(bridge, @"stop", @{}) isEqual:@"ok"]);
         assert([bridge.calls.lastObject isEqual:@"stop"] && bridge.gates == gates);
-        puts("Compatibility, protected Core hash and owned-stop mocks passed; no service/Core execution");
+        assert([Invoke(bridge, @"enable", @{@"x": @1}) isEqual:@"invalidRequest"]);
+        assert([Invoke(bridge, @"bogus", @{}) isEqual:@"invalidRequest"]);
+        assert([Invoke(bridge, @"installerInstructions", @{}) isEqual:@"invalidRequest"]);
+        for (NSString *name in @[@"migrate", @"enable", @"disable", @"repair", @"openApprovalSettings"]) {
+            [bridge.calls removeAllObjects];
+            Invoke(bridge, name, @{});
+            assert(bridge.calls.count == 1);
+        }
+        bridge.operationInFlight = YES;
+        assert([Invoke(bridge, @"enable", @{}) isEqual:@"operationInProgress"]);
+        assert([Invoke(bridge, @"stop", @{}) isEqual:@"ok"]);
+        puts("Bundle contract, hello negotiation and relay gating mocks passed; no daemon/Core execution");
     }
 }
 '''
@@ -194,8 +185,12 @@ int main(void) {
         self.assertIn('self.negotiatedCoreHash.UTF8String', request)
         self.assertIn('[method isEqualToString:@"hello"] && [answer[@"code"] isEqual:@"ok"]', request)
         start = method(SUPERVISOR, '- (NSString *)start:')
-        self.assertLess(start.index('[self validateCompatibility]'), start.index('FCSpawnCore('))
-        self.assertIn('[hash isEqualToString:@(expected)]', start)
+        self.assertLess(start.index('[self selfCheck]'), start.index('[self validateCompatibility]'))
+        self.assertLess(start.index('[self validateCompatibility]'), start.index('FCStageCore('))
+        self.assertLess(start.index('FCStageCore('), start.index('FCCheckStatic(staged, FCCoreIdentifier)'))
+        self.assertLess(start.index('FCCheckStatic(staged, FCCoreIdentifier)'), start.index('FCSpawnCore('))
+        self.assertIn('FCSpawnCore(staged.fileSystemRepresentation', start)
+        self.assertIn('[@(expected) isEqualToString:self.contract[@"CoreSHA256"]]', start)
         stop = method(SUPERVISOR, '- (BOOL)stop')
         self.assertNotIn('Compatibility', stop)
 
