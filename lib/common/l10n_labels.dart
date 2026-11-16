@@ -180,3 +180,49 @@ extension LogLevelL10n on LogLevel {
     };
   }
 }
+
+extension SystemServiceL10n on SystemService {
+  /// The feature's own name, or for a shared service what it does after a
+  /// "system service" prefix.
+  String get label {
+    final appLocalizations = currentAppLocalizations;
+    final name = switch (this) {
+      SystemService.appStore => appLocalizations.svcAppStore,
+      SystemService.softwareUpdate => appLocalizations.svcSoftwareUpdate,
+      SystemService.pushNotifications => appLocalizations.svcPushNotifications,
+      SystemService.iCloud => appLocalizations.svcICloud,
+      SystemService.photos => appLocalizations.svcPhotos,
+      SystemService.messages => appLocalizations.svcMessages,
+      SystemService.maps => appLocalizations.svcMaps,
+      SystemService.weather => appLocalizations.svcWeather,
+      SystemService.siri => appLocalizations.svcSiri,
+      SystemService.spotlight => appLocalizations.svcSpotlight,
+      SystemService.appleAccount => appLocalizations.svcAppleAccount,
+      SystemService.findMy => appLocalizations.svcFindMy,
+      SystemService.dateTime => appLocalizations.svcDateTime,
+      SystemService.mail => appLocalizations.svcMail,
+      SystemService.safari => appLocalizations.svcSafari,
+      SystemService.news => appLocalizations.svcNews,
+      SystemService.home => appLocalizations.svcHome,
+      SystemService.gameCenter => appLocalizations.svcGameCenter,
+      SystemService.screenTime => appLocalizations.svcScreenTime,
+      SystemService.tips => appLocalizations.svcTips,
+      SystemService.books => appLocalizations.svcBooks,
+      SystemService.reminders => appLocalizations.svcReminders,
+      SystemService.contacts => appLocalizations.svcContacts,
+      SystemService.analytics => appLocalizations.svcAnalytics,
+      SystemService.backgroundDownloads =>
+        appLocalizations.svcBackgroundDownloads,
+      SystemService.nameResolution => appLocalizations.svcNameResolution,
+      SystemService.certificateChecks => appLocalizations.svcCertificateChecks,
+      SystemService.webContent => appLocalizations.svcWebContent,
+      SystemService.networkProxy => appLocalizations.svcNetworkProxy,
+      SystemService.systemAssets => appLocalizations.svcSystemAssets,
+      SystemService.location => appLocalizations.svcLocation,
+      SystemService.continuity => appLocalizations.svcContinuity,
+      SystemService.captivePortal => appLocalizations.svcCaptivePortal,
+      SystemService.appSecurity => appLocalizations.svcAppSecurity,
+    };
+    return shared ? appLocalizations.systemServiceLabel(name) : name;
+  }
+}

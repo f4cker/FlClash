@@ -1,6 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 TrackerInfo _info(String id, Metadata metadata) => TrackerInfo(
@@ -168,5 +169,58 @@ void main() {
     expect(processApps.processOf(metadata).kind, ProcessKind.unknown);
     await pumpEventQueue();
     expect(processApps.processOf(metadata).kind, ProcessKind.otherDevice);
+  });
+
+  test('system services group by feature and read by their label', () async {
+    loadAppLocalizations(const Locale('en'));
+    const store = '/System/Library/PrivateFrameworks/CommerceKit.framework';
+    const agent = '/System/Library/PrivateFrameworks/AppStoreDaemon.framework';
+    answers = {
+      '$store/Resources/storedownloadd': {
+        'status': 'service',
+        'serviceId': 'appStore',
+      },
+      '$agent/Support/appstoreagent': {
+        'status': 'service',
+        'serviceId': 'appStore',
+      },
+      '/usr/libexec/nsurlsessiond': {
+        'status': 'service',
+        'serviceId': 'backgroundDownloads',
+        'shared': true,
+      },
+    };
+    final infos = [
+      for (final (index, path) in answers.keys.indexed)
+        _info(
+          '$index',
+          Metadata(process: path.split('/').last, processPath: path),
+        ),
+    ];
+    for (final info in infos) {
+      info.processKey;
+    }
+    await pumpEventQueue();
+    final grouper = trackerInfoGroupers.firstWhere(
+      (grouper) => grouper.grouping == RecordGrouping.app,
+    );
+    final groups = groupRecords(infos, grouper.keyOf, sinks: grouper.sinks);
+    expect(groups.map((group) => group.key), [
+      'svc:appStore',
+      'svc:backgroundDownloads',
+    ]);
+    final facet = trackerInfoFacets.firstWhere(
+      (facet) => facet.kind == RecordFacetKind.app,
+    );
+    expect(facet.label('svc:appStore'), 'App Store');
+    expect(
+      facet.label('svc:backgroundDownloads'),
+      'System service · Background downloads',
+    );
+    expect(infos.last.searchFields, contains('nsurlsessiond'));
+    expect(
+      infos.last.searchFields,
+      contains('System service · Background downloads'),
+    );
   });
 }

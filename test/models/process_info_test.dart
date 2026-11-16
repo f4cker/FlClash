@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -244,6 +245,98 @@ void main() {
         AppLookup.fromChannel({'status': 'app', 'name': ''}).status,
         AppLookupStatus.unreadable,
       );
+    });
+  });
+
+  group('system services', () {
+    const apsd =
+        '/System/Library/PrivateFrameworks/ApplePushService.framework/apsd';
+
+    test('the Mac names a service by id with its icon', () {
+      final icon = Uint8List.fromList([4, 5]);
+      final lookup = AppLookup.fromChannel({
+        'status': 'service',
+        'serviceId': 'pushNotifications',
+        'shared': false,
+        'icon': icon,
+      });
+      expect(lookup.status, AppLookupStatus.service);
+      expect(lookup.service!.service, SystemService.pushNotifications);
+      expect(lookup.service!.icon, icon);
+      expect(lookup.app, isNull);
+    });
+
+    test('a service id this build does not know reads as a bare process', () {
+      expect(
+        AppLookup.fromChannel({'status': 'service', 'serviceId': 'later'}),
+        AppLookup.none,
+      );
+      expect(
+        AppLookup.fromChannel({'status': 'service'}).status,
+        AppLookupStatus.none,
+      );
+    });
+
+    test('a service stays a process with its raw name and path', () {
+      final process = ConnectionProcess.classify(
+        const Metadata(process: 'apsd', processPath: apsd),
+        lookup: const AppLookup.service(
+          ServiceMatch(SystemService.pushNotifications),
+        ),
+      );
+      expect(process.kind, ProcessKind.process);
+      expect(process.hasProcess, isTrue);
+      expect(process.name, 'apsd');
+      expect(process.label, 'apsd');
+      expect(process.path, apsd);
+      expect(process.app, isNull);
+      expect(process.service!.service, SystemService.pushNotifications);
+    });
+
+    test('the daemons of one feature group together', () {
+      ConnectionProcess of(String name) => ConnectionProcess.classify(
+        Metadata(process: name, processPath: '/x/$name'),
+        lookup: const AppLookup.service(ServiceMatch(SystemService.appStore)),
+      );
+      expect(of('storedownloadd').key, 'svc:appStore');
+      expect(of('appstoreagent').key, of('storedownloadd').key);
+    });
+
+    test('a launchd job keeps its label on the app it names', () {
+      final lookup = AppLookup.fromChannel({
+        'status': 'app',
+        'bundleId': 'com.example.app',
+        'name': 'Example',
+        'bundlePath': '/Applications/Example.app',
+        'launchdLabel': 'com.example.daemon',
+      });
+      expect(lookup.app!.launchdLabel, 'com.example.daemon');
+      expect(lookup.app!.key, 'app:com.example.app');
+      expect(
+        AppLookup.fromChannel({
+          'status': 'app',
+          'name': 'Example',
+          'bundlePath': '/Applications/Example.app',
+        }).app!.launchdLabel,
+        '',
+      );
+    });
+
+    test('only the listed services are shared', () {
+      expect(SystemService.values.where((service) => service.shared).toSet(), {
+        SystemService.backgroundDownloads,
+        SystemService.nameResolution,
+        SystemService.certificateChecks,
+        SystemService.webContent,
+        SystemService.networkProxy,
+        SystemService.systemAssets,
+        SystemService.location,
+        SystemService.continuity,
+        SystemService.captivePortal,
+        SystemService.appSecurity,
+      });
+      expect(SystemService.fromId('appStore'), SystemService.appStore);
+      expect(SystemService.fromId('apsd'), isNull);
     });
   });
 }

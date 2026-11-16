@@ -5445,6 +5445,129 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appInfoUnreadable => 'Could not read app information';
 
   @override
+  String get systemService => 'System service';
+
+  @override
+  String systemServiceLabel(Object feature) {
+    return 'System service · $feature';
+  }
+
+  @override
+  String get systemServiceFeatureHint =>
+      'An Apple system process, recognized by its path';
+
+  @override
+  String get systemServiceSharedHint =>
+      'Many apps go through this system service; the app behind this request is not known';
+
+  @override
+  String appViaLaunchd(Object label) {
+    return 'Tied to this app by its launchd job $label';
+  }
+
+  @override
+  String get svcAppStore => 'App Store';
+
+  @override
+  String get svcSoftwareUpdate => 'Software Update';
+
+  @override
+  String get svcPushNotifications => 'Push Notifications';
+
+  @override
+  String get svcICloud => 'iCloud';
+
+  @override
+  String get svcPhotos => 'Photos';
+
+  @override
+  String get svcMessages => 'Messages & FaceTime';
+
+  @override
+  String get svcMaps => 'Maps';
+
+  @override
+  String get svcWeather => 'Weather';
+
+  @override
+  String get svcSiri => 'Siri';
+
+  @override
+  String get svcSpotlight => 'Spotlight Suggestions';
+
+  @override
+  String get svcAppleAccount => 'Apple Account';
+
+  @override
+  String get svcFindMy => 'Find My';
+
+  @override
+  String get svcDateTime => 'Date & Time';
+
+  @override
+  String get svcMail => 'Mail';
+
+  @override
+  String get svcSafari => 'Safari';
+
+  @override
+  String get svcNews => 'News';
+
+  @override
+  String get svcHome => 'Home';
+
+  @override
+  String get svcGameCenter => 'Game Center';
+
+  @override
+  String get svcScreenTime => 'Screen Time';
+
+  @override
+  String get svcTips => 'Tips';
+
+  @override
+  String get svcBooks => 'Books';
+
+  @override
+  String get svcReminders => 'Reminders';
+
+  @override
+  String get svcContacts => 'Contacts';
+
+  @override
+  String get svcAnalytics => 'Analytics & Improvements';
+
+  @override
+  String get svcBackgroundDownloads => 'Background downloads';
+
+  @override
+  String get svcNameResolution => 'Name resolution';
+
+  @override
+  String get svcCertificateChecks => 'Certificate checks';
+
+  @override
+  String get svcWebContent => 'Web content';
+
+  @override
+  String get svcNetworkProxy => 'Network proxy';
+
+  @override
+  String get svcSystemAssets => 'System assets';
+
+  @override
+  String get svcLocation => 'Location';
+
+  @override
+  String get svcContinuity => 'Continuity';
+
+  @override
+  String get svcCaptivePortal => 'Network sign-in';
+
+  @override
+  String get svcAppSecurity => 'App security checks';
+
+  @override
   String get processLookupDisabled => 'Process lookup is currently disabled.';
 
   @override

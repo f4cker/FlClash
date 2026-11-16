@@ -30,8 +30,8 @@ class ConnectionProcessBuilder extends StatelessWidget {
   }
 }
 
-/// The app's own icon, or the command-line glyph in an inset well; nothing
-/// for a connection with no process.
+/// The app's or system feature's own icon, or a glyph in an inset well;
+/// nothing for a connection with no process.
 class ProcessIcon extends StatelessWidget {
   final ConnectionProcess process;
   final double size;
@@ -49,7 +49,12 @@ class ProcessIcon extends StatelessWidget {
       return SizedBox.square(dimension: size);
     }
     final app = process.app;
-    final icon = app == null ? null : processApps.iconOf(app);
+    final service = process.service;
+    final icon = app != null
+        ? processApps.iconOf(app)
+        : service != null
+        ? processApps.serviceIconOf(service)
+        : null;
     if (icon != null) {
       return Image(
         image: icon,
@@ -61,7 +66,11 @@ class ProcessIcon extends StatelessWidget {
       );
     }
     final colorScheme = context.colorScheme;
-    final glyph = app == null ? AppGlyphs.code : AppGlyphs.appsList;
+    final glyph = service != null
+        ? serviceGlyphOf(service.service)
+        : app == null
+        ? AppGlyphs.code
+        : AppGlyphs.appsList;
     if (size < 20) {
       return GlyphIcon(glyph, size: size, color: colorScheme.onSurfaceVariant);
     }
@@ -84,9 +93,25 @@ class ProcessIcon extends StatelessWidget {
   }
 }
 
+/// A shared service by what it does, a feature without an icon by settings.
+Glyph serviceGlyphOf(SystemService service) => switch (service) {
+  SystemService.backgroundDownloads ||
+  SystemService.systemAssets => AppGlyphs.cloudDownload,
+  SystemService.nameResolution => AppGlyphs.dns,
+  SystemService.certificateChecks ||
+  SystemService.appSecurity => AppGlyphs.lock,
+  SystemService.webContent => AppGlyphs.language,
+  SystemService.networkProxy => AppGlyphs.vpn,
+  SystemService.location => AppGlyphs.locate,
+  SystemService.continuity => AppGlyphs.devices,
+  SystemService.captivePortal => AppGlyphs.wifi,
+  _ => AppGlyphs.settings,
+};
+
 /// What a row names a connection's source by.
 String processLabelOf(ConnectionProcess process) => switch (process.kind) {
-  ProcessKind.app || ProcessKind.process => process.label,
+  ProcessKind.app ||
+  ProcessKind.process => process.service?.service.label ?? process.label,
   ProcessKind.unknown => currentAppLocalizations.unknownProcess,
   ProcessKind.otherDevice => currentAppLocalizations.otherDevice,
 };
@@ -108,11 +133,14 @@ class ProcessFilterIcon extends StatelessWidget {
     final tooltip = process.kind == ProcessKind.app
         ? appLocalizations.filterByThisApp
         : appLocalizations.filterByThisProcess;
+    final named =
+        process.service != null ||
+        (process.app?.launchdLabel.isNotEmpty ?? false);
     return Tooltip(
-      message: tooltip,
+      message: named ? '$tooltip\n${process.name}' : tooltip,
       child: Semantics(
         button: true,
-        label: '$tooltip ${process.label}',
+        label: '$tooltip ${processLabelOf(process)}',
         child: GestureDetector(
           onTap: () => RecordFilterScope.add(
             context,
@@ -199,17 +227,22 @@ List<Widget> processDetailRows(
     case ProcessKind.app || ProcessKind.process:
       return [
         if (app != null)
-          DetailRow(
+          _SourceRow(
             title: appLocalizations.app,
-            copyText: app.name,
-            value: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 8,
-              children: [
-                ProcessIcon(process: process, size: 32),
-                Flexible(child: Text(app.name)),
-              ],
-            ),
+            process: process,
+            value: app.name,
+            reason: app.launchdLabel.isEmpty
+                ? null
+                : appLocalizations.appViaLaunchd(app.launchdLabel),
+          ),
+        if (process.service case final match?)
+          _SourceRow(
+            title: appLocalizations.systemService,
+            process: process,
+            value: match.service.label,
+            reason: match.service.shared
+                ? appLocalizations.systemServiceSharedHint
+                : appLocalizations.systemServiceFeatureHint,
           ),
         if (process.appUnreadable)
           _ReasonRow(
@@ -221,6 +254,54 @@ List<Widget> processDetailRows(
           DetailRow.text(title: appLocalizations.process, value: process.name),
         if (process.path.isNotEmpty) _PathRow(path: process.path),
       ];
+  }
+}
+
+/// The app or service a process works for, and why when the path hides it.
+class _SourceRow extends StatelessWidget {
+  final String title;
+  final ConnectionProcess process;
+  final String value;
+  final String? reason;
+
+  const _SourceRow({
+    required this.title,
+    required this.process,
+    required this.value,
+    this.reason,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final reason = this.reason;
+    final label = reason == null
+        ? Text(value)
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            spacing: 2,
+            children: [
+              Text(value),
+              Text(
+                reason,
+                textAlign: TextAlign.end,
+                style: AppTextStyle.caption1
+                    .of(context)
+                    .copyWith(color: context.colorScheme.onSurfaceVariant),
+              ),
+            ],
+          );
+    return DetailRow(
+      title: title,
+      copyText: value,
+      value: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 8,
+        children: [
+          ProcessIcon(process: process, size: 32),
+          Flexible(child: label),
+        ],
+      ),
+    );
   }
 }
 

@@ -63,6 +63,22 @@ final _remote = _info(
     inboundIP: '192.168.1.5',
   ),
 );
+const _apsd =
+    '/System/Library/PrivateFrameworks/ApplePushService.framework/apsd';
+const _daemon = '/Library/PrivilegedHelperTools/com.example.daemon';
+final _push = _info(
+  const Metadata(process: 'apsd', processPath: _apsd, sourcePort: '50300'),
+);
+final _downloads = _info(
+  const Metadata(
+    process: 'nsurlsessiond',
+    processPath: '/usr/libexec/nsurlsessiond',
+    sourcePort: '50400',
+  ),
+);
+final _helper = _info(
+  const Metadata(process: 'com.example.daemon', processPath: _daemon),
+);
 final _unreadable = _info(
   const Metadata(process: 'Gone', processPath: '/Applications/Gone.app/g'),
 );
@@ -71,6 +87,7 @@ void main() {
   late ProcessApps previous;
 
   setUp(() {
+    loadAppLocalizations(const Locale('en'));
     previous = processApps;
     processApps = ProcessApps(
       lookupApps: true,
@@ -89,6 +106,21 @@ void main() {
         ),
         '/usr/bin/ssh': AppLookup.none,
         '/Applications/Gone.app/g': AppLookup.unreadable,
+        _apsd: AppLookup.service(
+          ServiceMatch(SystemService.pushNotifications, icon: _pixel),
+        ),
+        '/usr/libexec/nsurlsessiond': const AppLookup.service(
+          ServiceMatch(SystemService.backgroundDownloads),
+        ),
+        _daemon: AppLookup.app(
+          MacApp(
+            bundleId: 'com.example.app',
+            name: 'Example',
+            bundlePath: '/Applications/Example.app',
+            icon: _pixel,
+            launchdLabel: 'com.example.daemon',
+          ),
+        ),
       },
       local: {'127.0.0.1', '192.168.1.5'},
     );
@@ -168,6 +200,41 @@ void main() {
       expect(cli, withIcon);
     });
 
+    testWidgets('a feature service shows its icon, label and raw name', (
+      tester,
+    ) async {
+      final filters = <RecordFilter>[];
+      await pump(
+        tester,
+        RecordFilterScope(
+          onFilter: filters.add,
+          child: TrackerInfoItem(trackerInfo: _push, detailTitle: 'detail'),
+        ),
+      );
+      expect(find.textContaining('Push Notifications'), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
+      expect(find.byTooltip('Filter by this process\napsd'), findsOneWidget);
+      await tester.tap(find.byType(ProcessFilterIcon));
+      expect(filters, const [
+        RecordFilter(RecordFacetKind.app, 'svc:pushNotifications'),
+      ]);
+    });
+
+    testWidgets('a shared service says what it does under a glyph', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        TrackerInfoItem(trackerInfo: _downloads, detailTitle: 'detail'),
+      );
+      expect(
+        find.textContaining('System service · Background downloads'),
+        findsOneWidget,
+      );
+      expect(find.byType(Image), findsNothing);
+      expect(find.byType(ProcessFilterIcon), findsOneWidget);
+    });
+
     testWidgets('a LAN client of this Mac reads as another device', (
       tester,
     ) async {
@@ -189,6 +256,18 @@ void main() {
       expect(find.byType(Image), findsOneWidget);
       final tooltip = tester.widget<Tooltip>(find.byType(Tooltip));
       expect(tooltip.message, 'Example Browser Helper\n$_chromePath');
+    });
+
+    testWidgets('names a service with the process and path on hover', (
+      tester,
+    ) async {
+      await pump(tester, ProcessCell(metadata: _downloads.metadata));
+      expect(
+        find.text('System service · Background downloads'),
+        findsOneWidget,
+      );
+      final tooltip = tester.widget<Tooltip>(find.byType(Tooltip));
+      expect(tooltip.message, 'nsurlsessiond\n/usr/libexec/nsurlsessiond');
     });
 
     testWidgets('an unknown process lines up with named ones', (tester) async {
@@ -306,6 +385,51 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a feature service lists service, process and path', (
+      tester,
+    ) async {
+      await pumpDetail(tester, _push);
+      expect(find.text('System service'), findsOneWidget);
+      expect(find.text('Push Notifications'), findsOneWidget);
+      expect(
+        find.text('An Apple system process, recognized by its path'),
+        findsOneWidget,
+      );
+      expect(find.text('App'), findsNothing);
+      expect(find.text('apsd'), findsOneWidget);
+      expect(find.byTooltip(_apsd), findsOneWidget);
+    });
+
+    testWidgets('a shared service says no one app is behind it', (
+      tester,
+    ) async {
+      await pumpDetail(tester, _downloads);
+      expect(
+        find.text('System service · Background downloads'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Many apps go through this system service; the app behind this '
+          'request is not known',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('nsurlsessiond'), findsOneWidget);
+    });
+
+    testWidgets('a launchd daemon names its app and the job', (tester) async {
+      await pumpDetail(tester, _helper);
+      expect(find.text('App'), findsOneWidget);
+      expect(find.text('Example'), findsOneWidget);
+      expect(
+        find.text('Tied to this app by its launchd job com.example.daemon'),
+        findsOneWidget,
+      );
+      expect(find.text('com.example.daemon'), findsOneWidget);
+      expect(find.byTooltip(_daemon), findsOneWidget);
     });
 
     testWidgets('an unreadable app keeps the process', (tester) async {

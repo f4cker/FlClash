@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/common.dart';
 import 'package:fl_clash/models/process_info.dart';
 import 'package:flutter/foundation.dart';
@@ -155,6 +156,15 @@ class ProcessApps extends ChangeNotifier {
     return process;
   }
 
+  /// The names a search finds [metadata]'s source by besides its own.
+  List<String> searchLabelsOf(Metadata metadata) {
+    final process = processOf(metadata);
+    return [
+      if (process.app case final app?) app.name,
+      if (process.service case final match?) match.service.label,
+    ];
+  }
+
   /// What a filter on [key] reads as.
   String labelOf(String key) {
     if (key == otherDeviceProcessKey) {
@@ -167,21 +177,31 @@ class ProcessApps extends ChangeNotifier {
     if (label != null) {
       return label;
     }
+    if (key.startsWith('svc:')) {
+      final service = SystemService.fromId(key.substring(4));
+      if (service != null) {
+        return service.label;
+      }
+    }
     final value = key.substring(key.indexOf(':') + 1);
     return key.startsWith('exe:') ? value.split('/').last : value;
   }
 
-  ImageProvider? iconOf(MacApp app) {
-    final bytes = app.icon;
+  ImageProvider? iconOf(MacApp app) => _iconOf(app.bundlePath, app.icon);
+
+  ImageProvider? serviceIconOf(ServiceMatch match) =>
+      _iconOf(match.key, match.icon);
+
+  ImageProvider? _iconOf(String key, Uint8List? bytes) {
     if (bytes == null) {
       return null;
     }
-    final cached = _icons[app.bundlePath];
+    final cached = _icons[key];
     if (cached != null) {
       return cached;
     }
     final icon = MemoryImage(bytes);
-    _remember(_icons, app.bundlePath, icon);
+    _remember(_icons, key, icon);
     return icon;
   }
 

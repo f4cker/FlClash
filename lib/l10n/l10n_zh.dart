@@ -4993,6 +4993,127 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appInfoUnreadable => '无法读取应用信息';
 
   @override
+  String get systemService => '系统服务';
+
+  @override
+  String systemServiceLabel(Object feature) {
+    return '系统服务 · $feature';
+  }
+
+  @override
+  String get systemServiceFeatureHint => 'Apple 系统进程，按路径识别';
+
+  @override
+  String get systemServiceSharedHint => '多个应用共用此系统服务，无法确定由哪个应用发起';
+
+  @override
+  String appViaLaunchd(Object label) {
+    return '由 launchd 任务 $label 关联到此应用';
+  }
+
+  @override
+  String get svcAppStore => 'App Store';
+
+  @override
+  String get svcSoftwareUpdate => '软件更新';
+
+  @override
+  String get svcPushNotifications => '推送通知';
+
+  @override
+  String get svcICloud => 'iCloud';
+
+  @override
+  String get svcPhotos => '照片';
+
+  @override
+  String get svcMessages => '信息与 FaceTime';
+
+  @override
+  String get svcMaps => '地图';
+
+  @override
+  String get svcWeather => '天气';
+
+  @override
+  String get svcSiri => 'Siri';
+
+  @override
+  String get svcSpotlight => 'Spotlight 建议';
+
+  @override
+  String get svcAppleAccount => 'Apple 账户';
+
+  @override
+  String get svcFindMy => '查找';
+
+  @override
+  String get svcDateTime => '日期与时间';
+
+  @override
+  String get svcMail => '邮件';
+
+  @override
+  String get svcSafari => 'Safari 浏览器';
+
+  @override
+  String get svcNews => '新闻';
+
+  @override
+  String get svcHome => '家庭';
+
+  @override
+  String get svcGameCenter => 'Game Center';
+
+  @override
+  String get svcScreenTime => '屏幕使用时间';
+
+  @override
+  String get svcTips => '提示';
+
+  @override
+  String get svcBooks => '图书';
+
+  @override
+  String get svcReminders => '提醒事项';
+
+  @override
+  String get svcContacts => '通讯录';
+
+  @override
+  String get svcAnalytics => '分析与改进';
+
+  @override
+  String get svcBackgroundDownloads => '后台下载';
+
+  @override
+  String get svcNameResolution => '域名解析';
+
+  @override
+  String get svcCertificateChecks => '证书校验';
+
+  @override
+  String get svcWebContent => '网页内容';
+
+  @override
+  String get svcNetworkProxy => '网络代理';
+
+  @override
+  String get svcSystemAssets => '系统资源下载';
+
+  @override
+  String get svcLocation => '定位';
+
+  @override
+  String get svcContinuity => '连续互通';
+
+  @override
+  String get svcCaptivePortal => '网络登录';
+
+  @override
+  String get svcAppSecurity => '应用安全检查';
+
+  @override
   String get processLookupDisabled => '当前未开启进程查找。';
 
   @override

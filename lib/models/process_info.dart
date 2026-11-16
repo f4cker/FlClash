@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:fl_clash/enum/enum.dart';
 import 'package:flutter/foundation.dart';
 
 import 'common.dart';
@@ -14,7 +15,7 @@ enum ProcessKind {
   otherDevice,
 }
 
-enum AppLookupStatus { app, none, unreadable, failed }
+enum AppLookupStatus { app, service, none, unreadable, failed }
 
 @immutable
 class MacApp {
@@ -23,11 +24,15 @@ class MacApp {
   final String bundlePath;
   final Uint8List? icon;
 
+  /// The launchd job that tied a process outside any bundle to this app.
+  final String launchdLabel;
+
   const MacApp({
     required this.bundleId,
     required this.name,
     required this.bundlePath,
     this.icon,
+    this.launchdLabel = '',
   });
 
   String get key =>
@@ -39,24 +44,50 @@ class MacApp {
       other.bundleId == bundleId &&
       other.name == name &&
       other.bundlePath == bundlePath &&
-      other.icon == icon;
+      other.icon == icon &&
+      other.launchdLabel == launchdLabel;
 
   @override
-  int get hashCode => Object.hash(bundleId, name, bundlePath, icon);
+  int get hashCode =>
+      Object.hash(bundleId, name, bundlePath, icon, launchdLabel);
+}
+
+@immutable
+class ServiceMatch {
+  final SystemService service;
+  final Uint8List? icon;
+
+  const ServiceMatch(this.service, {this.icon});
+
+  String get key => 'svc:${service.name}';
+
+  @override
+  bool operator ==(Object other) =>
+      other is ServiceMatch && other.service == service && other.icon == icon;
+
+  @override
+  int get hashCode => Object.hash(service, icon);
 }
 
 @immutable
 class AppLookup {
   final AppLookupStatus status;
   final MacApp? app;
+  final ServiceMatch? service;
 
-  const AppLookup._(this.status, this.app);
+  const AppLookup._(this.status) : app = null, service = null;
 
-  const AppLookup.app(MacApp this.app) : status = AppLookupStatus.app;
+  const AppLookup.app(MacApp this.app)
+    : status = AppLookupStatus.app,
+      service = null;
 
-  static const none = AppLookup._(AppLookupStatus.none, null);
-  static const unreadable = AppLookup._(AppLookupStatus.unreadable, null);
-  static const failed = AppLookup._(AppLookupStatus.failed, null);
+  const AppLookup.service(ServiceMatch this.service)
+    : status = AppLookupStatus.service,
+      app = null;
+
+  static const none = AppLookup._(AppLookupStatus.none);
+  static const unreadable = AppLookup._(AppLookupStatus.unreadable);
+  static const failed = AppLookup._(AppLookupStatus.failed);
 
   static AppLookup fromChannel(Object? raw) {
     if (raw is! Map) {
@@ -74,17 +105,31 @@ class AppLookup {
           return unreadable;
         }
         final bundleId = raw['bundleId'];
-        final icon = raw['icon'];
+        final launchdLabel = raw['launchdLabel'];
         return AppLookup.app(
           MacApp(
             bundleId: bundleId is String ? bundleId : '',
             name: name,
             bundlePath: bundlePath,
-            icon: icon is Uint8List && icon.isNotEmpty ? icon : null,
+            icon: _iconOf(raw),
+            launchdLabel: launchdLabel is String ? launchdLabel : '',
           ),
         );
+      case 'service':
+        final id = raw['serviceId'];
+        final service = id is String ? SystemService.fromId(id) : null;
+        // An id from a newer native side reads as the bare process.
+        if (service == null) {
+          return none;
+        }
+        return AppLookup.service(ServiceMatch(service, icon: _iconOf(raw)));
     }
     return failed;
+  }
+
+  static Uint8List? _iconOf(Map<dynamic, dynamic> raw) {
+    final icon = raw['icon'];
+    return icon is Uint8List && icon.isNotEmpty ? icon : null;
   }
 }
 
@@ -99,6 +144,8 @@ class ConnectionProcess {
   final String path;
   final MacApp? app;
 
+  final ServiceMatch? service;
+
   /// The Mac has not answered for [path] yet.
   final bool pending;
 
@@ -109,6 +156,7 @@ class ConnectionProcess {
     this.name = '',
     this.path = '',
     this.app,
+    this.service,
     this.pending = false,
     this.appUnreadable = false,
   });
@@ -148,6 +196,7 @@ class ConnectionProcess {
       kind: ProcessKind.process,
       name: name,
       path: path,
+      service: lookup?.service,
       pending: lookup == null,
       appUnreadable: lookup?.status == AppLookupStatus.unreadable,
     );
@@ -159,7 +208,8 @@ class ConnectionProcess {
   /// two apps may share.
   String get key => switch (kind) {
     ProcessKind.app => app!.key,
-    ProcessKind.process => path.isNotEmpty ? 'exe:$path' : 'proc:$name',
+    ProcessKind.process =>
+      service?.key ?? (path.isNotEmpty ? 'exe:$path' : 'proc:$name'),
     ProcessKind.unknown => '',
     ProcessKind.otherDevice => otherDeviceProcessKey,
   };
@@ -173,12 +223,13 @@ class ConnectionProcess {
       other.name == name &&
       other.path == path &&
       other.app == app &&
+      other.service == service &&
       other.pending == pending &&
       other.appUnreadable == appUnreadable;
 
   @override
   int get hashCode =>
-      Object.hash(kind, name, path, app, pending, appUnreadable);
+      Object.hash(kind, name, path, app, service, pending, appUnreadable);
 }
 
 String _baseName(String path) {

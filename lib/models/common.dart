@@ -182,7 +182,7 @@ extension TrackerInfoExt on TrackerInfo {
     metadata.sourcePort,
     metadata.process,
     metadata.processPath,
-    if (!system.isAndroid) processApps.processOf(metadata).app?.name ?? '',
+    if (!system.isAndroid) ...processApps.searchLabelsOf(metadata),
     metadata.remoteDestination,
     metadata.destinationIPASN,
     ...metadata.destinationGeoIP,

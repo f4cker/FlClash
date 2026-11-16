@@ -9198,6 +9198,240 @@ abstract class AppLocalizations {
   /// **'Could not read app information'**
   String get appInfoUnreadable;
 
+  /// No description provided for @systemService.
+  ///
+  /// In en, this message translates to:
+  /// **'System service'**
+  String get systemService;
+
+  /// No description provided for @systemServiceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'System service · {feature}'**
+  String systemServiceLabel(Object feature);
+
+  /// No description provided for @systemServiceFeatureHint.
+  ///
+  /// In en, this message translates to:
+  /// **'An Apple system process, recognized by its path'**
+  String get systemServiceFeatureHint;
+
+  /// No description provided for @systemServiceSharedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Many apps go through this system service; the app behind this request is not known'**
+  String get systemServiceSharedHint;
+
+  /// No description provided for @appViaLaunchd.
+  ///
+  /// In en, this message translates to:
+  /// **'Tied to this app by its launchd job {label}'**
+  String appViaLaunchd(Object label);
+
+  /// No description provided for @svcAppStore.
+  ///
+  /// In en, this message translates to:
+  /// **'App Store'**
+  String get svcAppStore;
+
+  /// No description provided for @svcSoftwareUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Software Update'**
+  String get svcSoftwareUpdate;
+
+  /// No description provided for @svcPushNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Push Notifications'**
+  String get svcPushNotifications;
+
+  /// No description provided for @svcICloud.
+  ///
+  /// In en, this message translates to:
+  /// **'iCloud'**
+  String get svcICloud;
+
+  /// No description provided for @svcPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get svcPhotos;
+
+  /// No description provided for @svcMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages & FaceTime'**
+  String get svcMessages;
+
+  /// No description provided for @svcMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Maps'**
+  String get svcMaps;
+
+  /// No description provided for @svcWeather.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather'**
+  String get svcWeather;
+
+  /// No description provided for @svcSiri.
+  ///
+  /// In en, this message translates to:
+  /// **'Siri'**
+  String get svcSiri;
+
+  /// No description provided for @svcSpotlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotlight Suggestions'**
+  String get svcSpotlight;
+
+  /// No description provided for @svcAppleAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple Account'**
+  String get svcAppleAccount;
+
+  /// No description provided for @svcFindMy.
+  ///
+  /// In en, this message translates to:
+  /// **'Find My'**
+  String get svcFindMy;
+
+  /// No description provided for @svcDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Date & Time'**
+  String get svcDateTime;
+
+  /// No description provided for @svcMail.
+  ///
+  /// In en, this message translates to:
+  /// **'Mail'**
+  String get svcMail;
+
+  /// No description provided for @svcSafari.
+  ///
+  /// In en, this message translates to:
+  /// **'Safari'**
+  String get svcSafari;
+
+  /// No description provided for @svcNews.
+  ///
+  /// In en, this message translates to:
+  /// **'News'**
+  String get svcNews;
+
+  /// No description provided for @svcHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get svcHome;
+
+  /// No description provided for @svcGameCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Game Center'**
+  String get svcGameCenter;
+
+  /// No description provided for @svcScreenTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen Time'**
+  String get svcScreenTime;
+
+  /// No description provided for @svcTips.
+  ///
+  /// In en, this message translates to:
+  /// **'Tips'**
+  String get svcTips;
+
+  /// No description provided for @svcBooks.
+  ///
+  /// In en, this message translates to:
+  /// **'Books'**
+  String get svcBooks;
+
+  /// No description provided for @svcReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders'**
+  String get svcReminders;
+
+  /// No description provided for @svcContacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contacts'**
+  String get svcContacts;
+
+  /// No description provided for @svcAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics & Improvements'**
+  String get svcAnalytics;
+
+  /// No description provided for @svcBackgroundDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Background downloads'**
+  String get svcBackgroundDownloads;
+
+  /// No description provided for @svcNameResolution.
+  ///
+  /// In en, this message translates to:
+  /// **'Name resolution'**
+  String get svcNameResolution;
+
+  /// No description provided for @svcCertificateChecks.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate checks'**
+  String get svcCertificateChecks;
+
+  /// No description provided for @svcWebContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Web content'**
+  String get svcWebContent;
+
+  /// No description provided for @svcNetworkProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Network proxy'**
+  String get svcNetworkProxy;
+
+  /// No description provided for @svcSystemAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'System assets'**
+  String get svcSystemAssets;
+
+  /// No description provided for @svcLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get svcLocation;
+
+  /// No description provided for @svcContinuity.
+  ///
+  /// In en, this message translates to:
+  /// **'Continuity'**
+  String get svcContinuity;
+
+  /// No description provided for @svcCaptivePortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Network sign-in'**
+  String get svcCaptivePortal;
+
+  /// No description provided for @svcAppSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'App security checks'**
+  String get svcAppSecurity;
+
   /// No description provided for @processLookupDisabled.
   ///
   /// In en, this message translates to:

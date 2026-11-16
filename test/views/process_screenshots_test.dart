@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/manager/theme_manager.dart';
 import 'package:fl_clash/models/models.dart';
@@ -64,7 +65,10 @@ Future<void> _loadFont(String family, List<ByteData> fonts) async {
 }
 
 /// A stand-in app icon: a rounded tile, not any real app's artwork.
-Future<Uint8List> _placeholderIcon() async {
+Future<Uint8List> _placeholderIcon({
+  Color top = const Color(0xFF5B8DEF),
+  Color bottom = const Color(0xFF2F5BD3),
+}) async {
   const side = 64.0;
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
@@ -76,8 +80,8 @@ Future<Uint8List> _placeholderIcon() async {
     tile,
     Paint()
       ..shader = ui.Gradient.linear(const Offset(0, 0), const Offset(0, side), [
-        const Color(0xFF5B8DEF),
-        const Color(0xFF2F5BD3),
+        top,
+        bottom,
       ]),
   );
   canvas.drawCircle(
@@ -142,6 +146,37 @@ final _unknown = _info(
   3,
 );
 
+const _apsd =
+    '/System/Library/PrivateFrameworks/ApplePushService.framework/apsd';
+const _uuHelper = '/Library/PrivilegedHelperTools/com.example.vpn.helper';
+
+final _push = _info(
+  'd',
+  'courier.push.apple.com',
+  const Metadata(process: 'apsd', processPath: _apsd, sourceIP: '127.0.0.1'),
+  4,
+);
+final _downloads = _info(
+  'e',
+  'swcdn.apple.com',
+  const Metadata(
+    process: 'nsurlsessiond',
+    processPath: '/usr/libexec/nsurlsessiond',
+    sourceIP: '127.0.0.1',
+  ),
+  5,
+);
+final _daemon = _info(
+  'f',
+  'api.example.net',
+  const Metadata(
+    process: 'com.example.vpn.helper',
+    processPath: _uuHelper,
+    sourceIP: '127.0.0.1',
+  ),
+  6,
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final skip = _outDir == null || _outDir!.isEmpty
@@ -150,6 +185,8 @@ void main() {
   late ProviderContainer container;
   late ProcessApps previous;
   Uint8List? icon;
+  Uint8List? featureIcon;
+  Uint8List? daemonIcon;
 
   setUpAll(() async {
     if (skip != null) {
@@ -184,6 +221,18 @@ void main() {
 
   Future<void> seed(WidgetTester tester) async {
     icon ??= await tester.runAsync(_placeholderIcon);
+    featureIcon ??= await tester.runAsync(
+      () => _placeholderIcon(
+        top: const Color(0xFFFF6B6B),
+        bottom: const Color(0xFFE03131),
+      ),
+    );
+    daemonIcon ??= await tester.runAsync(
+      () => _placeholderIcon(
+        top: const Color(0xFF63E6BE),
+        bottom: const Color(0xFF0CA678),
+      ),
+    );
     processApps = ProcessApps(
       lookupApps: true,
       invoke: (_) async => null,
@@ -200,6 +249,21 @@ void main() {
           ),
         ),
         '/usr/bin/ssh': AppLookup.none,
+        _apsd: AppLookup.service(
+          ServiceMatch(SystemService.pushNotifications, icon: featureIcon),
+        ),
+        '/usr/libexec/nsurlsessiond': const AppLookup.service(
+          ServiceMatch(SystemService.backgroundDownloads),
+        ),
+        _uuHelper: AppLookup.app(
+          MacApp(
+            bundleId: 'com.example.vpn',
+            name: 'Example VPN',
+            bundlePath: '/Applications/Example VPN.app',
+            icon: daemonIcon,
+            launchdLabel: 'com.example.vpn.helper',
+          ),
+        ),
       },
       local: {'127.0.0.1', '198.18.0.1'},
     );
@@ -315,5 +379,66 @@ void main() {
       ),
     );
     await shoot(tester, '03-table');
+  }, skip: skip != null);
+
+  testWidgets('04-sources', (tester) async {
+    await seed(tester);
+    await pump(
+      tester,
+      const Size(560, 720),
+      SizedBox(
+        width: 560,
+        height: 720,
+        child: TrackerInfoList(
+          padding: const EdgeInsets.all(16),
+          trackerInfos: [_app, _push, _downloads, _daemon, _cli, _unknown],
+          detailTitle: '请求详情',
+        ),
+      ),
+    );
+    await shoot(tester, '04-sources');
+  }, skip: skip != null);
+
+  testWidgets('05-detail-service', (tester) async {
+    await seed(tester);
+    await pump(
+      tester,
+      const Size(480, 760),
+      SizedBox(
+        width: 480,
+        height: 760,
+        child: SheetProvider(
+          type: SheetType.page,
+          child: TrackerInfoDetailView(trackerInfo: _downloads),
+        ),
+      ),
+    );
+    await shoot(tester, '05-detail-service');
+  }, skip: skip != null);
+
+  testWidgets('06-table-sources', (tester) async {
+    await seed(tester);
+    await pump(
+      tester,
+      const Size(1000, 330),
+      SizedBox(
+        width: 1000,
+        height: 330,
+        child: Builder(
+          builder: (context) => RecordTableFrame<TrackerInfo>(
+            tableId: 'process-shot-sources',
+            items: [_app, _push, _downloads, _daemon, _unknown],
+            columnsOf: (width) =>
+                trackerInfoColumns(context, width: width, isLive: false),
+            builder: (context, table, items) => TrackerInfoList(
+              trackerInfos: items,
+              table: table,
+              detailTitle: '请求详情',
+            ),
+          ),
+        ),
+      ),
+    );
+    await shoot(tester, '06-table-sources');
   }, skip: skip != null);
 }
