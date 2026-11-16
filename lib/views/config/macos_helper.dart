@@ -318,12 +318,12 @@ MacHelperBarView? macHelperBarView(
 /// The bar button's icon, which the card's title repeats: the helper's gear
 /// in its arrows, or a shield for a failed security check. A start shows a
 /// progress ring instead.
-/// Drawn at [size] points, the helper glyph simplifies below 20.
-Glyph macHelperBarGlyph(MacHelperBarKind kind, {double size = Glyph.size}) =>
-    switch (kind) {
-      MacHelperBarKind.failedCheck => AppGlyphs.shieldAlert,
-      _ => AppGlyphs.helperDaemonAt(size),
-    };
+/// The helper glyph is always the simpler one, solid gear and big hole, so
+/// the bar, the popover and the card show one shape.
+Glyph macHelperBarGlyph(MacHelperBarKind kind) => switch (kind) {
+  MacHelperBarKind.failedCheck => AppGlyphs.shieldAlert,
+  _ => AppGlyphs.helperDaemonSmall,
+};
 
 /// Green when ready, amber for something the user does, red for a failure.
 Color macHelperBarColor(ColorScheme colorScheme, MacHelperBarTone tone) =>
@@ -474,7 +474,10 @@ class _MacHelperCardState extends State<MacHelperCard> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              GlyphIcon(AppGlyphs.helperDaemon, color: colorScheme.success),
+              GlyphIcon(
+                AppGlyphs.helperDaemonSmall,
+                color: colorScheme.success,
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(

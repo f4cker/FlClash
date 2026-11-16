@@ -386,7 +386,7 @@ void main() {
             )
             .first,
       );
-      expect(glyph.glyph, AppGlyphs.helperDaemon);
+      expect(glyph.glyph, AppGlyphs.helperDaemonSmall);
     }
     expect(find.text(l.macHelperOpenSettings), findsOneWidget);
     expect(find.text(l.macHelperCheckAgain), findsOneWidget);
@@ -512,10 +512,10 @@ void main() {
   });
 
   for (final (code, glyph) in [
-    ('migrationRequired', AppGlyphs.helperDaemon),
-    ('notRegistered', AppGlyphs.helperDaemon),
-    ('requiresApproval', AppGlyphs.helperDaemon),
-    ('migrationIncomplete', AppGlyphs.helperDaemon),
+    ('migrationRequired', AppGlyphs.helperDaemonSmall),
+    ('notRegistered', AppGlyphs.helperDaemonSmall),
+    ('requiresApproval', AppGlyphs.helperDaemonSmall),
+    ('migrationIncomplete', AppGlyphs.helperDaemonSmall),
     ('signingRequired', AppGlyphs.shieldAlert),
   ]) {
     testWidgets('$code popover title repeats the capsule icon', (tester) async {
@@ -678,7 +678,7 @@ void main() {
         matching: find.byType(GlyphIcon),
       ),
     );
-    expect(glyph.glyph, AppGlyphs.helperDaemon);
+    expect(glyph.glyph, AppGlyphs.helperDaemonSmall);
     final context = tester.element(find.byType(MacHelperCapsule));
     // The Core check's own colors.
     expect(glyph.color, context.colorScheme.onSuccessContainer);
@@ -783,23 +783,31 @@ void main() {
     expect(find.bySemanticsLabel(l.coreStopped), findsOneWidget);
   });
 
-  test('the helper glyph simplifies below 20 points', () {
+  testWidgets('capsule and round button draw one helper glyph, ring 20pt', (
+    tester,
+  ) async {
     expect(
-      macHelperBarGlyph(MacHelperBarKind.allow, size: 16),
-      AppGlyphs.helperDaemonSmall,
-    );
-    expect(
-      macHelperBarGlyph(MacHelperBarKind.notReady, size: 19.9),
-      AppGlyphs.helperDaemonSmall,
-    );
-    expect(
-      macHelperBarGlyph(MacHelperBarKind.update, size: 20),
-      AppGlyphs.helperDaemon,
-    );
-    expect(
-      macHelperBarGlyph(MacHelperBarKind.failedCheck, size: 16),
+      macHelperBarGlyph(MacHelperBarKind.failedCheck),
       AppGlyphs.shieldAlert,
     );
+    expect(AppGlyphs.helperDaemonAt(16), AppGlyphs.helperDaemonSmall);
+    expect(AppGlyphs.helperDaemonAt(24), AppGlyphs.helperDaemon);
+    Size glyphSize() => tester.getSize(
+      find.descendant(
+        of: find.byType(MacHelperCapsule),
+        matching: find.byType(GlyphIcon),
+      ),
+    );
+    native.state = 'notRegistered';
+    await flow.check();
+    await pumpStatus(tester);
+    final inCapsule = glyphSize();
+    native.state = 'enabled';
+    await flow.recheck();
+    await tester.pumpAndSettle();
+    expect(glyphSize(), inCapsule);
+    // The ring, 18.8 of 24 units across, comes to about 20.
+    expect(inCapsule.width * 18.8 / 24, closeTo(20, 0.5));
   });
 
   testWidgets(
