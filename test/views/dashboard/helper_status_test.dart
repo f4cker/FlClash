@@ -675,7 +675,32 @@ void main() {
     );
     expect(glyph.glyph, AppGlyphs.helperDaemon);
     final context = tester.element(find.byType(MacHelperCapsule));
-    expect(glyph.color, context.colorScheme.success);
+    // The Core check's own colors.
+    expect(glyph.color, context.colorScheme.onSuccessContainer);
+    final helperStyle = tester
+        .widget<IconButton>(
+          find.descendant(
+            of: find.byType(MacHelperCapsule),
+            matching: find.byType(IconButton),
+          ),
+        )
+        .style!;
+    final coreStyle = tester
+        .widget<IconButton>(
+          find.descendant(
+            of: find.byType(LiveStatusButton),
+            matching: find.byType(IconButton),
+          ),
+        )
+        .style!;
+    expect(
+      helperStyle.backgroundColor!.resolve({}),
+      coreStyle.backgroundColor!.resolve({}),
+    );
+    expect(
+      helperStyle.backgroundColor!.resolve({}),
+      context.colorScheme.successContainer,
+    );
     // As big as the Core check, 8 to its left, on one line.
     final helper = tester.getRect(find.byType(MacHelperCapsule));
     final core = tester.getRect(

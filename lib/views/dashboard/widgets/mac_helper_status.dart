@@ -299,17 +299,40 @@ class MacHelperCapsule extends StatelessWidget {
         child: Tooltip(
           message: round ? view.label : '',
           excludeFromSemantics: true,
+          // Ready wears the Core check's own colors; otherwise the tone's
+          // color on 15% of it.
           child: TweenAnimationBuilder<Color?>(
             duration: _fade,
-            tween: ColorTween(end: macHelperBarColor(colorScheme, view.tone)),
-            builder: (context, color, _) => _buildButton(color!, round: round),
+            tween: ColorTween(
+              end: view.isReady
+                  ? colorScheme.onSuccessContainer
+                  : macHelperBarColor(colorScheme, view.tone),
+            ),
+            builder: (context, color, _) => TweenAnimationBuilder<Color?>(
+              duration: _fade,
+              tween: ColorTween(
+                end: view.isReady
+                    ? colorScheme.successContainer
+                    : macHelperBarColor(
+                        colorScheme,
+                        view.tone,
+                      ).withValues(alpha: _tint),
+              ),
+              builder: (context, fill, _) =>
+                  _buildButton(context, color!, fill!, round: round),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildButton(Color color, {required bool round}) {
+  Widget _buildButton(
+    BuildContext context,
+    Color color,
+    Color fill, {
+    required bool round,
+  }) {
     // Round, the glyph is as big as the Core check's; beside text, smaller.
     final iconSize = round
         ? TonalButtonSize.bar.icon
@@ -325,14 +348,21 @@ class MacHelperCapsule extends StatelessWidget {
             ),
     );
     final height = macHelperBarHeight;
-    final fill = color.withValues(alpha: _tint);
+    // Under Liquid Glass the ready button is tinted glass, as the Core check.
+    final pane = view.isReady && TonalButtonTheme.glassOf(context)
+        ? LiquidGlassStyle.tinted(context.colorScheme, fill)
+        : null;
+    final background = pane == null ? fill : Colors.transparent;
     // Ready matches the Core check: no stroke.
     final side = view.isReady ? BorderSide.none : BorderSide(color: color);
     final style = ButtonStyle.from(
       foregroundColor: color,
       disabledForegroundColor: color,
-      backgroundColor: fill,
-      disabledBackgroundColor: fill,
+      backgroundColor: background,
+      disabledBackgroundColor: background,
+      backgroundBuilder: pane == null
+          ? null
+          : LiquidGlass.buttonBackground((_) => pane),
       shape: AppShape.full,
       minimumSize: Size.square(height),
       fixedSize: round ? Size.square(height) : Size.fromHeight(height),
