@@ -30,7 +30,7 @@ class FlutterBootstrapTests(unittest.TestCase):
         loader = body(implementation, '@implementation FlashFlutterEngine')
         self.assertEqual(loader.strip(), '(void)assetsDir;')
         self.assertRegex(implementation, r'-\s*\(void\)loadAOTData:\(NSString\s*\*\)assetsDir')
-        self.assertIn('3.47.4 private selector', implementation)
+        self.assertIn('3.50.0 private selector', implementation)
         self.assertIn('@interface FlashFlutterEngine : FlutterEngine', source('FlashFlutterEngine.h'))
 
     def test_both_paths_use_restricted_engine_and_public_controller_initializer(self):
@@ -98,7 +98,10 @@ class FlutterBootstrapTests(unittest.TestCase):
         self.assertIn('if !NativeLoadVerification.requested {\n            window.makeKeyAndOrderFront(nil)', setup)
         order = body(source('MainFlutterWindow.swift'), 'override public func order(')
         self.assertLess(order.index('if NativeLoadVerification.requested { return }'), order.index('super.order'))
-        self.assertIn('hiddenWindowAtLaunch()', order)
+        # The window plugin's hiddenWindowAtLaunch() went with upstream's
+        # rust_api window; the first order hides the window the same way.
+        self.assertLess(order.index('super.order'), order.index('setIsVisible(false)'))
+        self.assertIn('if !hiddenAtLaunch {', order)
 
     def test_native_window_and_menu_match_former_xib(self):
         delegate = source('AppDelegate.swift')

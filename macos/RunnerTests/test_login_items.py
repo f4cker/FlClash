@@ -12,7 +12,8 @@ LAUNCH = (ROOT / 'lib/common/launch.dart').read_text()
 class LoginItemSourceTests(unittest.TestCase):
     def test_main_app_route_is_available_only_on_macos_13(self):
         self.assertIn('import ServiceManagement', WINDOW)
-        self.assertIn('import LaunchAtLogin', WINDOW)
+        # Upstream dropped the LaunchAtLogin package; macOS 12 has no route.
+        self.assertNotIn('import LaunchAtLogin', WINDOW)
         self.assertLess(BRIDGE.index('guard #available(macOS 13, *)'),
                         BRIDGE.index('let service = SMAppService.mainApp'))
         self.assertIn('handleLegacy(call, result: result)', BRIDGE)
@@ -71,10 +72,12 @@ class LoginItemSourceTests(unittest.TestCase):
     def test_legacy_compatibility_is_idempotent_and_verified(self):
         legacy = BRIDGE.split('private static func handleLegacy')[1]
         legacy = legacy.split('@available(macOS 13, *)')[0]
-        self.assertIn('if LaunchAtLogin.isEnabled != enabled', legacy)
-        self.assertIn('LaunchAtLogin.isEnabled = enabled', legacy)
-        self.assertIn('let actual = LaunchAtLogin.isEnabled', legacy)
-        self.assertIn('guard actual == enabled else', legacy)
+        # macOS 12: reads off, a disable succeeds, an enable is refused with
+        # a login_item_* code rather than reported as applied.
+        self.assertIn('result(false)', legacy)
+        self.assertLess(legacy.index('if !enabled {'), legacy.index('login_item_operation_failed'))
+        self.assertIn('"status": "unsupported"', legacy)
+        self.assertNotIn('LaunchAtLogin', legacy)
         self.assertNotIn('nativeCode', legacy)
         self.assertNotIn('SMAppService', legacy)
 
@@ -125,18 +128,18 @@ class LoginItemSourceTests(unittest.TestCase):
             data = json.loads(path.read_text())
             self.assertEqual({key for key in data if not key.startswith('@')},
                              {key for key in reference if not key.startswith('@')})
-            generated = (ROOT / 'lib/l10n/intl' / ('messages_' + path.stem[5:] + '.dart')).read_text()
+            generated = (ROOT / 'lib/l10n' / ('l10n_' + path.stem[5:] + '.dart')).read_text()
             for key, values in expected.items():
-                self.assertEqual(data[key], values[path.stem == 'intl_zh_CN'])
+                self.assertEqual(data[key], values[path.stem == 'intl_zh'])
                 self.assertIn(key, generated)
 
     def test_channel_contract_uses_validated_arguments_not_force_cast(self):
         self.assertIn('MainAppLoginItem.handle(call, result: result)', WINDOW)
         self.assertIn('arguments["setEnabledValue"] as? Bool', BRIDGE)
         self.assertNotIn('as!', BRIDGE)
-        adapter = LAUNCH.split('class MacOSLoginItemLauncher')[1]
+        adapter = LAUNCH.split('class MacOSLoginItemEntry')[1]
         self.assertIn("MethodChannel('launch_at_startup')", adapter)
-        setter = adapter.split('Future<bool> _setEnabled')[1].split('@override')[0]
+        setter = adapter.split('Future<bool> setEnabled')[1].split('class AutoLaunch')[0]
         self.assertNotIn('isEnabled()', setter)
         self.assertNotIn('catch', setter)
 
