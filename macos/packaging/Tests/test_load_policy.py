@@ -120,89 +120,13 @@ Load command 0
             with self.assertRaises(ValueError):
                 POLICY.load_commands(self.gui)
 
-    def test_installer_freezes_before_atomic_swap_and_preserves_old_payload(self):
+    def test_pkg_installer_and_maintenance_tool_are_gone(self):
         base = Path(__file__).parents[1]
-        preinstall = (base / 'installer/install/preinstall').read_text()
-        postinstall = (base / 'installer/install/postinstall').read_text()
-        self.assertNotIn('/bin/rm', preinstall)
-        self.assertLess(postinstall.index('"$guard" stageReady'), postinstall.index('"$guard" arm'))
-        self.assertLess(postinstall.index('" prepare'), postinstall.index('/bin/launchctl bootout'))
-        self.assertLess(postinstall.index('"$guard" quiescent'), postinstall.index('"$guard" commitInstall'))
-        native = (base.parent / 'PrivilegedHelper/Maintenance.m').read_text()
-        self.assertIn('RENAME_SWAP', native)
-        self.assertIn('FCTransactionResumeAllowed', native)
-        self.assertNotIn('trap ', preinstall)
-
-    def test_fresh_disable_does_not_create_an_install_lock(self):
-        base = Path(__file__).parents[1]
-        disabled = (base / 'installer/disable/preinstall').read_text()
-        self.assertLess(disabled.index('[[ "$status" != 10 ]] || exit 0'), disabled.index('/bin/mkdir -m 0700 "$lock"'))
-        removed = (base / 'installer/remove/preinstall').read_text()
-        self.assertNotIn('/bin/mkdir', removed)
-        native = (base.parent / 'PrivilegedHelper/Maintenance.m').read_text()
-        begin = native[native.index('static int FCBeginRemoval'):native.index('static BOOL FCBegin(BOOL repair)')]
-        self.assertLess(begin.index('return 10;'), begin.index('mkdir('))
-
-    def test_repair_is_explicit_not_an_automatic_install_retry(self):
-        base = Path(__file__).parents[1] / 'installer'
-        self.assertIn('beginInstall', (base / 'install/preinstall').read_text())
-        self.assertIn('beginRepair', (base / 'repair/preinstall').read_text())
-
-    def test_durable_transaction_freeze_outlives_runtime_directory(self):
-        base = Path(__file__).parents[2] / 'PrivilegedHelper'
-        supervisor = (base / 'Supervisor.m').read_text()
-        self.assertIn('FCTransactionPending()', supervisor)
-        self.assertIn('@".installer-lock"', supervisor)
-        postinstall = (Path(__file__).parents[1] / 'installer/install/postinstall').read_text()
-        self.assertLess(postinstall.index('"$guard" finishInstall'), postinstall.index('"$guard" disarm'))
-        self.assertLess(postinstall.index('"$guard" disarm'), postinstall.rindex('/bin/launchctl bootstrap'))
-
-    def test_explicit_empty_lock_repair_does_not_release_unknown_children(self):
-        native = (Path(__file__).parents[2] / 'PrivilegedHelper/Maintenance.m').read_text()
-        begin = native[native.index('static BOOL FCBegin'):native.index('static BOOL FCStageReady')]
-        self.assertIn('FCEmptyLockRecoveryAllowed', begin)
-        self.assertNotIn('disarm', begin)
-        self.assertNotIn('child-owned', begin)
-        self.assertNotIn('unlink(', begin)
-
-    def test_disable_is_not_uninstall(self):
-        base = Path(__file__).parents[1] / 'installer'
-        disabled = (base / 'disable/preinstall').read_text()
-        removed = (base / 'remove/preinstall').read_text()
-        self.assertNotIn('/bin/rm ', disabled)
-        self.assertIn('"$guard" beginRemove', removed)
-        self.assertIn('"$guard" finishRemove', removed)
-        self.assertNotIn('/bin/rm', removed)
-
-    def test_removal_records_handoff_and_retirement_before_destructive_cleanup(self):
-        base = Path(__file__).parents[1]
-        native = (base.parent / 'PrivilegedHelper/Maintenance.m').read_text()
-        self.assertIn('completed && accepted && FCRecordRemovalHandoff()', native)
-        handoff = native[native.index('static BOOL FCRecordRemovalHandoff(void) {'):native.index('static BOOL FCFinishRemoval')]
-        self.assertIn('FCWriteTransaction(@"remove-stopped"', handoff)
-        finish = native[native.index('static BOOL FCFinishRemoval'):native.index('static int FCBeginRemoval')]
-        self.assertLess(finish.index('FCWriteTransaction(@"remove-ready"'), finish.index('renamex_np('))
-        self.assertIn('RENAME_EXCL', finish)
-        self.assertLess(finish.index('renamex_np('), finish.index('FCWriteTransaction(@"remove-retired"'))
-        self.assertLess(finish.index('FCWriteTransaction(@"remove-cleaning"'), finish.index('unlink(FCLegacyPlist'))
-        self.assertLess(finish.index('FCRemoveFixedTree(FCRetiredBundle())'), finish.index('FCWriteTransaction(@"remove-cleaned"'))
-        self.assertLess(finish.index('FCRemovalState(FCTransaction())'), finish.index('unlink(marker'))
-        self.assertLess(finish.index('rmdir(FCRuntimeDirectory'), finish.index('unlink(file'))
-        self.assertNotIn('child-owned', finish)
-        removed = (base / 'installer/remove/preinstall').read_text()
-        handoff_start = removed.index('if [[ "$status" == 0 ]]; then')
-        handoff_end = removed.index('\nfi\n', handoff_start)
-        self.assertIn('"$tool" prepare', removed[handoff_start:handoff_end])
-        self.assertGreater(removed.index('"$guard" finishRemove'), handoff_end)
-        self.assertNotIn('disarm', removed)
-
-    def test_repair_recognizes_only_recorded_removal_before_staging(self):
-        native = (Path(__file__).parents[2] / 'PrivilegedHelper/Maintenance.m').read_text()
-        begin = native[native.index('static BOOL FCBegin(BOOL repair)'):native.index('static BOOL FCStageReady')]
-        self.assertIn('repair ? FCTransaction() : nil', begin)
-        self.assertLess(begin.index('FCRemovalState(removal)'), begin.index('FCFinishRemoval()'))
-        self.assertLess(begin.index('action == FCRemovalReject'), begin.index('FCFinishRemoval()'))
-        self.assertLess(begin.index('!FCAbsent(FCRetiredBundle())'), begin.index('FCWriteTransaction(@"staging"'))
+        self.assertFalse((base / 'installer').exists())
+        self.assertFalse((base.parent / 'PrivilegedHelper/Maintenance.m').exists())
+        self.assertNotIn('FlashMaintenance', POLICY.FIXED_EXECUTABLES)
+        self.assertEqual(POLICY.FIXED_EXECUTABLES,
+                         ('Contents/MacOS/FlClashCore', 'Contents/Library/HelperTools/FlashHelper'))
 
 
 if __name__ == '__main__':

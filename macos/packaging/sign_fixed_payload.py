@@ -26,7 +26,7 @@ WORKTREE = Path('/Users/lavas/Library/Application Support/plus.yellow.AirBuild/e
 KEYCHAIN = '/Users/lavas/Library/Application Support/Flash Signing/FlashSigning.keychain-db'
 CERTIFICATE_SHA1 = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CERTIFICATE_SHA256 = 'E8346770F4BF2ABC94F755A136677CDA84B821A668B0983E7FBEF21F8A646E95'
-VERIFIER_SHA256 = '006b6d11b10d0875654fab009e7b6a231ebfb83f12cbb0a8c77ec0c463d65829'
+VERIFIER_SHA256 = '00125b52709a197554a51ff89a68bbb8a8fc9cedf6911654208b641ae36a02ee'
 PACKAGING = WORKTREE / 'macos/packaging'
 GUI_ENTITLEMENTS = {
     'com.apple.security.files.user-selected.read-write': True,
@@ -43,7 +43,6 @@ FRAMEWORKS = {
 FIXED = (
     ('core', 'Contents/MacOS/FlClashCore', 'com.layoute.flash.core'),
     ('helper', 'Contents/Library/HelperTools/FlashHelper', 'com.layoute.flash.helper'),
-    ('maintenance', 'Contents/Library/HelperTools/FlashMaintenance', 'com.layoute.flash.maintenance'),
 )
 ENVIRONMENT = {'PATH': '/usr/bin:/bin', 'LANG': 'C', 'LC_ALL': 'C'}
 TOOLS = {'/usr/bin/codesign', '/usr/bin/otool', '/usr/bin/lipo'}

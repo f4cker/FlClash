@@ -290,61 +290,15 @@ class QualificationTests(unittest.TestCase):
                         Q.run_approved(self.app, self.root / 'metadata.json', self.evidence_path)
                     supervise.assert_not_called()
 
-    def test_copy_and_expanded_package_must_preserve_signed_inventory(self):
+    def test_copy_must_preserve_signed_inventory(self):
         signer = MagicMock()
-        signer.inventory.return_value = {'code': {'sha256': 'exact'}}
-        expected = {'inventory': {'code': {'sha256': 'exact'},
-                                 'Contents/Library/HelperTools/FlashMaintenance': {'sha256': Q.digest(b'maintenance')}}}
+        expected = {'inventory': {'code': {'sha256': 'exact'}}}
         signer.inventory.return_value = expected['inventory']
         Q.check_copy(self.app, expected, signer)
         signer.inventory.return_value = {'code': {'sha256': 'modified'}}
         with self.assertRaises(ValueError):
             Q.check_copy(self.app, expected, signer)
-        signer.inventory.return_value = expected['inventory']
-        expanded = self.root / 'expanded'
-        required = expanded / 'Payload/Library/Application Support/Flash/.incoming/Flash.app'
-        required.mkdir(parents=True)
-        scripts = expanded / 'Scripts'
-        scripts.mkdir()
-        for name in ('preinstall', 'postinstall', 'FlashMaintenance'):
-            (scripts / name).write_bytes(b'fixture')
-        signer.read_regular.side_effect = lambda path: (
-            self.package_info if path.name == 'PackageInfo' else b'maintenance')
-        Q.check_expanded(expanded, 'install', expected, signer)
-        with self.assertRaises(ValueError):
-            Q.check_expanded(expanded, 'repair', expected, signer)
-        expected['inventory']['Contents/Library/HelperTools/FlashMaintenance']['sha256'] = 'changed'
-        with self.assertRaises(ValueError):
-            Q.check_expanded(expanded, 'install', expected, signer)
-
-    def test_package_info_enforces_fixed_root_exact_hooks_and_no_relocation(self):
-        base = self.package_info.decode()
-        mutations = (
-            ('install-location="/"', 'install-location="/tmp"'),
-            ('install-location="/"', ''),
-            ('pkg-info', 'other-info'),
-            ('<scripts>', '<scripts timeout="99">'),
-            ('<preinstall file="./preinstall"/>', ''),
-            ('<postinstall file="./postinstall"/>', ''),
-            ('file="./preinstall"', 'file="./postinstall"'),
-            ('file="./postinstall"', 'file="/tmp/postinstall"'),
-            ('file="./preinstall"', 'file="./preinstall" component="other"'),
-            ('<postinstall file="./postinstall"/>', '<preinstall file="./preinstall"/>'),
-            ('</scripts>', '<other file="./preinstall"/></scripts>'),
-            ('</scripts>', '</scripts><scripts/>'),
-            ('<scripts><preinstall file="./preinstall"/><postinstall file="./postinstall"/></scripts>', ''),
-            ('<relocate/>', '<relocate><bundle id="com.layoute.flash" path="/tmp/Flash.app"/></relocate>'),
-            ('<relocate/>', '<relocate search="true"/>'),
-            ('<relocate/>', '<relocate/><relocate/>'),
-        )
-        signer = MagicMock()
-        for original, changed in mutations:
-            metadata = base.replace(original, changed).encode()
-            self.assertNotEqual(metadata, self.package_info)
-            signer.read_regular.side_effect = lambda path: (
-                metadata if path.name == 'PackageInfo' else self.fail('Invalid metadata accepted'))
-            with self.subTest(original=original, changed=changed), self.assertRaises(ValueError):
-                Q.check_expanded(self.root / 'expanded', 'install', {}, signer)
+        self.assertFalse(hasattr(Q, 'check_expanded'))
 
     def test_frozen_state_binds_full_static_report_build_metadata_and_sources(self):
         signer = MagicMock()
@@ -409,18 +363,11 @@ class QualificationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             freeze(report, metadata)
 
-    def test_package_builder_requires_explicit_evidence_before_output_and_expands_static(self):
-        script = (Path(__file__).parents[1] / 'build_managed_packages.sh').read_text()
-        self.assertIn('"$#" == 4', script)
-        self.assertNotIn('FC_ARTIFACT_LOADS_VERIFIED', script)
-        self.assertNotIn('FC_PACKAGE_CERTIFICATE_SHA1', script)
-        self.assertLess(script.index('\nverify_evidence\n'), script.index('/bin/mkdir -m 0700'))
-        self.assertLess(script.index('/usr/bin/ditto'), script.index('verify_evidence --verify-copy'))
-        self.assertIn('/usr/sbin/pkgutil --expand-full', script)
-        self.assertLess(script.index('--expand-full'), script.index('verify_evidence --verify-expanded-package'))
-        for forbidden in ('/usr/sbin/installer', '/bin/launchctl', 'sudo ', 'open -a'):
-            self.assertNotIn(forbidden, script)
-
+    def test_no_installer_package_route_remains(self):
+        source = (Path(__file__).parents[1] / 'qualify_native_loads.py').read_text()
+        for removed in ('--verify-expanded-package', '--package-operation', 'FlashMaintenance', 'PackageInfo'):
+            self.assertNotIn(removed, source)
+        self.assertFalse((Path(__file__).parents[1] / 'build_managed_packages.sh').exists())
 
 if __name__ == '__main__':
     unittest.main()

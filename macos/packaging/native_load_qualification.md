@@ -59,32 +59,30 @@ Verification never launches GUI code:
 /usr/bin/python3 -I -S -B macos/packaging/qualify_native_loads.py \
   --verify-evidence --app "$APP" --build-metadata "$METADATA" --evidence "$EVIDENCE"
 
-/bin/bash macos/packaging/build_managed_packages.sh \
-  "$APP" "$NEW_OUTPUT" "$EVIDENCE" "$METADATA"
+/usr/bin/python3 -I -S -B macos/packaging/qualify_native_loads.py \
+  --verify-evidence --app "$APP" --build-metadata "$METADATA" --evidence "$EVIDENCE" \
+  --verify-copy "$MOUNTED_COPY"
 ```
 
-The builder rejects missing/stale/failed/partial/wrong-artifact evidence before
-creating output. Environment acceptance bits are not supported. It revalidates
-current signed bytes, public certificates/entitlements for every slice, source
-hashes, report/metadata and host binding, then checks the copied bundle and each
-statically expanded package. Expansion never installs or runs installer scripts.
-Install/repair payload inventory must exactly match the qualified signed bundle;
-script sources, the maintenance binary, payload location/count, and extra payload
-are checked. `PackageInfo` must retain install-location `/`, exactly the reviewed
-`./preinstall` and `./postinstall` execution declarations, and no relocation rules.
-Disable/remove must have no payload. Any byte, signature, define,
+Verification rejects missing/stale/failed/partial/wrong-artifact evidence.
+Environment acceptance bits are not supported. It revalidates current signed
+bytes, public certificates/entitlements for every slice, source hashes,
+report/metadata and host binding, and optionally an exact copy (for example the
+read-only mounted DMG). There is no installer package any more: the daemon ships
+inside the signed app and is registered by the app through SMAppService.
+Any byte, signature, define,
 provenance-source, report, metadata, or bound host-policy change invalidates proof.
 
 Successful load evidence is **not** helper installation, authorization, XPC, TUN,
-reboot/recovery, installer acceptance, notarization, or distribution approval.
-Package artifacts remain unsigned local candidates. Those later operations need
+reboot/recovery, SMAppService approval, notarization, or distribution approval.
+Bundled artifacts remain local candidates. Those later operations need
 their own explicit approval and acceptance evidence.
 
 ## Pure regression checks
 
 ```sh
 /usr/bin/python3 -I -S -B -m unittest discover -s macos/packaging/Tests -v
-/bin/bash -n macos/packaging/build_managed_packages.sh
+/bin/bash -n macos/packaging/stage_bundled_daemon.sh
 ```
 
 These tests use mocks and fixtures; they do not qualify a production artifact.

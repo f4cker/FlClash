@@ -60,8 +60,7 @@ export CARGO_TARGET_DIR="$out/cargo-target" GOCACHE="$out/go-build-cache"
 export FLUTTER_XCODE_ARCHS=arm64 FLUTTER_XCODE_ONLY_ACTIVE_ARCH=YES
 export FLUTTER_XCODE_FLUTTER_ROOT="$out/sdk-launchers" FLUTTER_XCODE_FLUTTER_APPLICATION_PATH="$root"
 export FLUTTER_XCODE_FLUTTER_BUILD_NAME="$version" FLUTTER_XCODE_FLUTTER_BUILD_NUMBER="$number"
-export FLUTTER_XCODE_FC_MANAGED_CANDIDATE_ENABLED=1 FLUTTER_XCODE_FC_MACOS_PACKAGE_MODE=gui-only
-export FC_MACOS_PACKAGE_MODE=gui-only
+export FLUTTER_XCODE_FC_MANAGED_CANDIDATE_ENABLED=1
 export FLUTTER_XCODE_GCC_PREPROCESSOR_DEFINITIONS='$(inherited) FC_MANAGED_CANDIDATE_ENABLED=1'
 export FLUTTER_XCODE_CODE_SIGNING_ALLOWED=NO FLUTTER_XCODE_CODE_SIGNING_REQUIRED=NO
 export FLUTTER_XCODE_CODE_SIGN_IDENTITY='' FLUTTER_XCODE_EXPANDED_CODE_SIGN_IDENTITY=''
@@ -75,7 +74,7 @@ DEVELOPMENT_TEAM =
 CODE_SIGN_STYLE = Manual
 ARCHS = arm64
 ONLY_ACTIVE_ARCH = YES
-FC_MACOS_PACKAGE_MODE = gui-only
+FC_MANAGED_CANDIDATE_ENABLED = 1
 EOF
 export XCODE_XCCONFIG_FILE="$out/unsigned.xcconfig"
 guard='(version 1)(allow default)(deny process-exec (literal "/usr/bin/codesign") (literal "/usr/bin/security"))(deny network*)(allow network* (local unix-socket) (remote unix-socket))'
@@ -83,6 +82,10 @@ guard='(version 1)(allow default)(deny process-exec (literal "/usr/bin/codesign"
   build macos --release --no-pub "--build-name=$version" "--build-number=$number" \
   --dart-define=APP_ENV=stable --dart-define=MACOS_MANAGED_HELPER=true
 app="$root/build/macos/Build/Products/Release/Flash.app"
-[[ -d "$app" && ! -e "$app/Contents/Library/HelperTools" ]] || exit 78
+[[ -d "$app" && -f "$app/Contents/MacOS/FlClashCore" &&
+   -f "$app/Contents/Library/HelperTools/FlashHelper" &&
+   -f "$app/Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist" &&
+   ! -e "$app/Contents/Library/HelperTools/FlashMaintenance" &&
+   ! -e "$app/Contents/Resources/HelperInstaller" ]] || exit 78
 mv build/macos "$out/new-xcode-macos"
-printf '%s\n' 'Fresh unsigned GUI built; generated Core is not the released Core. No output executed.'
+printf '%s\n' 'Fresh unsigned Flash.app built with bundled Core, daemon and plist. Nothing signed or executed.'

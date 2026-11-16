@@ -20,16 +20,12 @@ class LocalReleaseTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve()
-        core_patch = patch.object(RELEASE, 'CORE_SHA256', 'a' * 64)
-        core_patch.start()
-        self.addCleanup(core_patch.stop)
         self.patch = patch.object(RELEASE, 'ROOT', self.root)
         self.patch.start()
         self.addCleanup(self.patch.stop)
         self.identity = {'head': 'a' * 40, 'tag': 'v0.9.8', 'version': '0.9.8', 'build': '2026111405'}
         self.config = {'sdk': '/configured/sdk', 'signer': '/configured/protected-adapter',
-                       'signer_sha256': 'b' * 64, 'service': '/configured/Flash.app',
-                       'service_receipt': '/configured/service.json', 'service_receipt_sha256': 'c' * 64}
+                       'signer_sha256': 'b' * 64}
         self.directory = self.root / 'run'
         self.release = RELEASE.Release(self.identity, self.config, self.directory)
         self.pubspec = self.root / 'pubspec.yaml'
@@ -57,114 +53,63 @@ class LocalReleaseTests(unittest.TestCase):
         (self.root / 'changelog.json').write_text(json.dumps({'schemaVersion': 2, 'versions': [version]}))
         return version
 
-    def test_static_verification_uses_current_packaging_without_changing_signer(self):
-        spec = importlib.util.spec_from_file_location('portable_verification', PACKAGING / 'verify_split_service.py')
-        verifier = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(verifier)
-        fixed = types.SimpleNamespace(PACKAGING=Path('/old/staging'), WORKTREE=Path('/protected/signing'))
-        constraint = object()
-        signer = types.SimpleNamespace(dependencies=lambda: (fixed, constraint))
-        actual, observed = verifier.static_dependencies(signer)
-        self.assertEqual(actual.PACKAGING, PACKAGING)
-        self.assertEqual(actual.WORKTREE, Path('/protected/signing'))
-        self.assertIs(observed, constraint)
+    def stage_module(self):
+        loader = importlib.util.spec_from_file_location('bundle_stage', PACKAGING / 'stage_bundle_payload.py')
+        stage = importlib.util.module_from_spec(loader)
+        loader.loader.exec_module(stage)
+        return stage
 
-    def test_pending_service_pins_stop_before_any_artifact_access(self):
-        with patch.object(RELEASE, 'CORE_SHA256', 'PENDING_SIGNED_CORE_1503'), \
-                patch.object(RELEASE, 'pinned') as read:
-            with self.assertRaisesRegex(ValueError, 'pins are pending'):
-                RELEASE.check_service(self.config)
-            read.assert_not_called()
-
-    def test_only_exact_reviewed_ordinary_new_core_service_is_accepted(self):
-        app = self.root / '.airbuild/local-release/service-core-1503/service-payload/Flash.app'
-        (app / 'Contents/MacOS').mkdir(parents=True)
-        (app / RELEASE.CORE).write_bytes(b'new-signed-core-fixture-never-execute')
-        core_hash = RELEASE.sha(app / RELEASE.CORE)
-        (app / 'Contents/Info.plist').write_bytes(plistlib.dumps({
-            'CFBundleVersion': '2026111503', 'CFBundleShortVersionString': '0.9.14'}))
-        path = app.parent.parent / 'service-current-schema.json'
-        config = dict(self.config, service=str(app), service_receipt=str(path), service_receipt_sha256='b' * 64)
-        receipt = {'schema': 1, 'phase': 'service', 'app': str(app), 'static_verification': True,
-                   'reused_signed_core_sha256': core_hash,
-                   'before': {'entries': {RELEASE.CORE: {'sha256': core_hash}}},
-                   'compatibility': {'CallerPolicy': 2, 'CoreAPI': 1, 'ServiceAPI': 1,
-                                     'CoreSHA256': core_hash, 'CoreVersion': 'v1.19.33', 'CoreRevision': 'c' * 40}}
-        gate, stage, signer = Mock(), Mock(), object()
-        stage.inventory.return_value = {'exact': 'inventory'}
-        def module(name):
-            return {'verify_split_service': gate, 'stage_split_payload': stage, 'sign_split_payload': signer}[name]
-        with patch.object(RELEASE, 'CORE_SHA256', core_hash), patch.object(RELEASE, 'CORE_REVISION', 'c' * 40), \
-                patch.object(RELEASE, 'SERVICE_RECEIPT_SHA256', 'b' * 64), \
-                patch.object(RELEASE, 'module', side_effect=module), patch.object(RELEASE, 'pinned', return_value=receipt):
-            self.assertEqual(RELEASE.check_service(config), {'exact': 'inventory'})
-            gate.verify_bundle.assert_called_once_with(app, 'service', path, 'b' * 64, signer, stage)
-            gate.reset_mock()
-            for key, value in [('schema', True), ('phase', 'gui'), ('signing_scope', 'service-wrapper-only'),
-                               ('wrapper_derivation', {}), ('reused_signed_core_sha256', '0' * 64),
-                               ('before', {'entries': {RELEASE.CORE: {'sha256': '0' * 64}}}),
-                               ('compatibility', dict(receipt['compatibility'], CoreRevision='old'))]:
-                changed = dict(receipt, **{key: value})
-                with self.subTest(key=key), patch.object(RELEASE, 'pinned', return_value=changed):
-                    with self.assertRaisesRegex(ValueError, 'ordinary new-Core'):
-                        RELEASE.check_service(config)
-            for key in ('service', 'service_receipt', 'service_receipt_sha256'):
-                with self.subTest(key=key), self.assertRaisesRegex(ValueError, 'exact reviewed'):
-                    RELEASE.check_service(dict(config, **{key: 'arbitrary'}))
-            gate.verify_bundle.assert_not_called()
+    def bundled_app(self, app):
+        stage = self.stage_module()
+        macho = bytes.fromhex('cffaedfe') + b'synthetic-never-execute'
+        for relative, data in ((stage.CORE, macho),
+                               (stage.HELPER, macho + plistlib.dumps({'CFBundleIdentifier': stage.HELPER_ID}))):
+            path = app / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+            path.chmod(0o755)
+        plist = app / stage.DAEMON_PLIST
+        plist.parent.mkdir(parents=True)
+        plist.write_bytes(plistlib.dumps(stage.DAEMON_SCHEMA))
+        info = {'CFBundleIdentifier': 'com.layoute.flash', 'CFBundleShortVersionString': '0.9.8',
+                'CFBundleVersion': '2026111405'}
+        (app / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
+        return stage, info
 
     def test_bundle_marketing_and_build_versions_must_match(self):
         app = self.directory / 'gui/Flash.app'
-        (app / 'Contents/MacOS').mkdir(parents=True)
-        loader = importlib.util.spec_from_file_location('version_stage', PACKAGING / 'stage_split_payload.py')
-        stage = importlib.util.module_from_spec(loader)
-        loader.loader.exec_module(stage)
+        stage, info = self.bundled_app(app)
         module_patch = patch.object(RELEASE, 'module', return_value=stage)
         module_patch.start()
         self.addCleanup(module_patch.stop)
-        plist = app / 'Contents/Info.plist'
-        info = {'CFBundleShortVersionString': '0.9.8', 'CFBundleVersion': '2026111405',
-                'FlashMinimumServiceBuild': RELEASE.SERVICE_BUILD,
-                'FlashHelperCompatibility': {'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1,
-                                             'AcceptedCoreSHA256': [RELEASE.CORE_SHA256]}}
-        plist.write_bytes(plistlib.dumps(info))
-        RELEASE.check_version(app, self.identity)
+        facts = RELEASE.check_version(app, self.identity)
+        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'daemon_plist_sha256'})
         for key, value in [('version', '0.9.7'), ('build', '2026111404')]:
             with self.assertRaisesRegex(ValueError, 'version differs'):
                 RELEASE.check_version(app, dict(self.identity, **{key: value}))
-        core = app / RELEASE.CORE
-        core.write_bytes(b'non-Mach-O placeholder')
-        with self.assertRaisesRegex(ValueError, 'loose Core'):
-            RELEASE.check_version(app, self.identity)
-        core.unlink()
-        info['FlashHelperCompatibility']['AcceptedCoreSHA256'] = ['0' * 64]
-        plist.write_bytes(plistlib.dumps(info))
-        with self.assertRaisesRegex(ValueError, 'accept the released service Core'):
-            RELEASE.check_version(app, self.identity)
-        (app / 'Contents/Library').mkdir()
-        with self.assertRaisesRegex(ValueError, 'embed helper'):
+        (app / RELEASE.CORE).unlink()
+        with self.assertRaises(FileNotFoundError):
             RELEASE.check_version(app, self.identity)
 
     def test_local_config_requires_ignored_private_file_and_pinned_adapter(self):
-        config = dict(self.config, schema=1)
+        config = dict(self.config, schema=2)
         sdk = self.root / 'sdk'
         (sdk / 'bin/cache').mkdir(parents=True)
         (sdk / 'bin/cache/flutter.version.json').write_text('{"flutterVersion":"3.47.4"}')
         signer = self.root / 'adapter'
         signer.write_text('#!/bin/sh\nexit 99\n')
         signer.chmod(0o700)
-        service = self.root / 'service/Flash.app'
-        service.mkdir(parents=True)
-        receipt = self.root / 'service.json'
-        receipt.write_text('{}')
-        config.update(sdk=str(sdk), signer=str(signer), signer_sha256=RELEASE.sha(signer),
-                      service=str(service), service_receipt=str(receipt))
+        config.update(sdk=str(sdk), signer=str(signer), signer_sha256=RELEASE.sha(signer))
         path = self.root / '.airbuild/config.json'
         path.parent.mkdir()
         path.write_text(json.dumps(config))
         path.chmod(0o600)
         with patch.object(RELEASE, 'git', side_effect=lambda *a: str(path) if a[0] == 'check-ignore' else ''):
             self.assertEqual(RELEASE.configuration(path), config)
+            path.write_text(json.dumps(dict(config, schema=1, service='/legacy/Flash.app')))
+            with self.assertRaisesRegex(ValueError, 'Unexpected local config fields'):
+                RELEASE.configuration(path)
+            path.write_text(json.dumps(config))
             signer.write_text('changed adapter')
             with self.assertRaisesRegex(ValueError, 'adapter pin'):
                 RELEASE.configuration(path)
@@ -211,7 +156,7 @@ class LocalReleaseTests(unittest.TestCase):
 
     def test_resume_rejects_source_and_config_changes(self):
         for identity, config in [(dict(self.identity, head='f' * 40), self.config),
-                                 (self.identity, dict(self.config, service_receipt_sha256='d' * 64))]:
+                                 (self.identity, dict(self.config, signer_sha256='d' * 64))]:
             with self.assertRaisesRegex(ValueError, 'Resume source/config changed'):
                 RELEASE.Release(identity, config, self.directory)
         resumed = RELEASE.Release(self.identity, self.config, self.directory)
@@ -225,10 +170,11 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertIn(RELEASE.BEGIN, body)
         self.assertIn(RELEASE.END, body)
         self.assertNotIn('-->', payload)
-        for text in ('arm64', '2026111402', '2026111503', 'one embedded install package', 'not notarized', 'Self-signed', 'runtime acceptance'):
+        for text in ('arm64', 'inside Flash.app', 'SMAppService', 'Login Items', 'not notarized',
+                     'Self-signed', 'runtime acceptance', 'no separate helper download'):
             self.assertIn(text, body)
-        self.assertIn('no separate helper download', body)
-        self.assertNotIn('repair', body)
+        for text in ('2026111503', 'install package', 'repair'):
+            self.assertNotIn(text, body)
         self.assertNotIn('helper separately', body)
         with self.assertRaises(ValueError):
             RELEASE.notes(dict(self.identity, tag='v0.9.9'))
@@ -241,21 +187,21 @@ class LocalReleaseTests(unittest.TestCase):
             pass
 
     def test_real_build_then_staging_precedes_sign_request(self):
-        service = {'Core': 'immutable'}
-        staged = Mock()
-        embedded = Mock()
+        staged = Mock(SIGNING_ORDER=('core', 'helper', 'framework', 'gui'))
         events = []
-        def stage_gui(fresh, app, core, pin):
-            events.append('stage-gui')
-            self.assertEqual(pin, RELEASE.CORE_SHA256)
+        facts = {'core_sha256': '1' * 64, 'helper_sha256': '2' * 64, 'daemon_plist_sha256': '3' * 64}
+        def stage(fresh, app):
+            events.append('stage')
             self.assertIn('new-xcode-macos', str(fresh))
-            app.mkdir(parents=True)
-        staged.stage_gui.side_effect = stage_gui
-        embedded.stage.side_effect = lambda *args: events.append('embed-installers')
-        def inventory(*args):
+            return facts
+        staged.stage.side_effect = stage
+        def inventory(app):
             events.append('unsigned-inventory')
-            return {'fresh': 'code', 'embedded': 'installers'}
-        fixed = types.SimpleNamespace(inventory=inventory, trusted_verifier=lambda: None)
+            return {'fresh': 'code'}
+        staged.inventory.side_effect = inventory
+        def check_version(*args):
+            events.append('check-version')
+            return facts
         def command(argv, **kwargs):
             self.assertEqual(Path(argv[1]).name, 'build_local_gui.sh')
             output = Path(argv[3])
@@ -263,69 +209,73 @@ class LocalReleaseTests(unittest.TestCase):
             (output / 'build.log').write_text('fresh compiler output')
             return ''
         with patch.object(RELEASE, 'command', side_effect=command) as run, \
-                patch.object(RELEASE, 'module', side_effect=lambda name: embedded
-                             if name == 'embedded_helper_installer' else staged), \
-                patch.object(RELEASE, 'static_dependencies', return_value=(fixed, None)), \
-                patch.object(RELEASE, 'check_service', return_value=service), \
-                patch.object(RELEASE, 'check_version', side_effect=lambda *args: events.append('check-version')), \
+                patch.object(RELEASE, 'module', return_value=staged), \
+                patch.object(RELEASE, 'check_version', side_effect=check_version), \
                 patch.object(self.release, 'unchanged'):
             self.release.build()
             self.release.build()
-        self.assertEqual(events, ['stage-gui', 'embed-installers', 'check-version', 'unsigned-inventory'])
-        embedded.stage.assert_called_once_with(
-            self.release.app, Path(self.config['service']), self.directory / 'helper-packages',
-            Path(self.config['service_receipt']), self.config['service_receipt_sha256'],
-            RELEASE.CORE_SHA256, RELEASE.SERVICE_BUILD)
+        self.assertEqual(events, ['stage', 'check-version', 'unsigned-inventory'])
         self.assertEqual(run.call_count, 1)
         request = RELEASE.pinned(self.release.request, self.release.state['request_sha256'])
         self.assertEqual(request['source'], self.identity)
-        self.assertEqual(request['unsigned_entries'], {'fresh': 'code', 'embedded': 'installers'})
+        self.assertEqual(request['unsigned_entries'], {'fresh': 'code'})
+        self.assertEqual(request['unsigned_facts'], facts)
         self.assertEqual(request['certificate_sha1'], RELEASE.IDENTITY)
-        self.assertEqual(request['mode'], 'gui-only')
+        self.assertEqual(request['mode'], 'bundled-daemon')
+        self.assertEqual(request['signing_order'], ['core', 'helper', 'framework', 'gui'])
         self.assertFalse(self.release.response.exists())
 
-    def test_embedded_package_failure_prevents_unsigned_sign_request(self):
-        staged, embedded = Mock(), Mock()
-        embedded.stage.side_effect = ValueError('invalid released package')
-        with patch.object(RELEASE, 'command') as run, \
-                patch.object(RELEASE, 'module', side_effect=lambda name: embedded
-                             if name == 'embedded_helper_installer' else staged), \
-                patch.object(RELEASE, 'check_service', return_value={}), \
-                patch.object(RELEASE, 'static_dependencies') as signing:
-            with self.assertRaisesRegex(ValueError, 'invalid released package'):
+    def test_layout_failure_prevents_unsigned_sign_request(self):
+        staged = Mock()
+        staged.stage.side_effect = ValueError('Legacy helper artifact present')
+        with patch.object(RELEASE, 'command') as run, patch.object(RELEASE, 'module', return_value=staged):
+            with self.assertRaisesRegex(ValueError, 'Legacy helper artifact'):
                 self.release.build()
         self.assertEqual(run.call_count, 1)
-        signing.assert_not_called()
+        staged.inventory.assert_not_called()
         self.assertFalse(self.release.request.exists())
         self.assertNotIn('request_sha256', self.release.state)
-        self.assertFalse(self.release.response.exists())
 
-    def test_verify_rejects_invalid_embedded_manifest_before_signature_gate(self):
-        RELEASE.save(self.release.request, {'unsigned_entries': {}})
+    def signed_run(self, receipt_extra=None, unsigned=None):
+        facts = {'core_sha256': '1' * 64, 'helper_sha256': '2' * 64, 'daemon_plist_sha256': '3' * 64}
+        RELEASE.save(self.release.request, {'unsigned_entries': {'fresh': 'code'}, 'unsigned_facts': facts,
+                                            'signing_order': ['core', 'helper', 'framework', 'gui']})
         self.release.state['request_sha256'] = RELEASE.sha(self.release.request)
-        receipt = self.directory / 'gui-receipt.json'
-        RELEASE.save(receipt, {'before': {'entries': {}}})
-        RELEASE.save(self.release.response, {'schema': 1, 'request_sha256': self.release.state['request_sha256'],
-                     'gui_receipt': str(receipt), 'gui_receipt_sha256': RELEASE.sha(receipt)})
+        receipt = self.directory / 'bundle-receipt.json'
+        signed = dict(facts, helper_cdhash='h' * 40, core_cdhash='c' * 40)
+        body = {'schema': 2, 'mode': 'bundled-daemon', 'before': {'entries': unsigned or {'fresh': 'code'}},
+                'signing_order': ['core', 'helper', 'framework', 'gui'], **signed}
+        body.update(receipt_extra or {})
+        RELEASE.save(receipt, body)
+        RELEASE.save(self.release.response, {'schema': 2, 'request_sha256': self.release.state['request_sha256'],
+                     'receipt': str(receipt), 'receipt_sha256': RELEASE.sha(receipt)})
         self.release.state['response_sha256'] = RELEASE.sha(self.release.response)
-        embedded = Mock()
-        embedded.verify.side_effect = ValueError('invalid embedded manifest')
+        return signed
+
+    def test_verify_binds_receipt_to_signed_helper_core_and_plist(self):
+        signed = self.signed_run()
+        stage = Mock()
+        stage.verify_signed.return_value = signed
         with patch.object(self.release, 'unchanged'), patch.object(RELEASE, 'check_version'), \
-                patch.object(RELEASE, 'module', return_value=embedded) as load:
-            with self.assertRaisesRegex(ValueError, 'invalid embedded manifest'):
+                patch.object(RELEASE, 'module', return_value=stage):
+            self.release.verify()
+            for key in ('helper_cdhash', 'core_cdhash', 'core_sha256'):
+                stage.verify_signed.return_value = dict(signed, **{key: 'other'})
+                with self.subTest(key=key), self.assertRaisesRegex(ValueError, 'Receipt does not bind'):
+                    self.release.verify()
+            stage.verify_signed.return_value = dict(signed, daemon_plist_sha256='9' * 64)
+            with self.assertRaisesRegex(ValueError, 'Daemon plist changed'):
                 self.release.verify()
-        load.assert_called_once_with('embedded_helper_installer')
-        embedded.verify.assert_called_once_with(self.release.app)
+
+    def test_verify_rejects_outside_in_signing_order(self):
+        self.signed_run({'signing_order': ['gui', 'framework', 'helper', 'core']})
+        with patch.object(self.release, 'unchanged'), patch.object(RELEASE, 'module') as load:
+            with self.assertRaisesRegex(ValueError, 'inside-out'):
+                self.release.verify()
+            load.assert_not_called()
 
     def test_verify_binds_fresh_code_and_request_before_static_signatures(self):
-        self.release.state['service_inventory'] = {}
-        RELEASE.save(self.release.request, {'unsigned_entries': {'fresh': 'code'}})
-        self.release.state['request_sha256'] = RELEASE.sha(self.release.request)
-        receipt = self.directory / 'gui-receipt.json'
-        RELEASE.save(receipt, {'before': {'entries': {'old': 'code'}}})
-        RELEASE.save(self.release.response, {'schema': 1, 'request_sha256': self.release.state['request_sha256'],
-                     'gui_receipt': str(receipt), 'gui_receipt_sha256': RELEASE.sha(receipt)})
-        self.release.state['response_sha256'] = RELEASE.sha(self.release.response)
+        self.signed_run(unsigned={'old': 'code'})
         with patch.object(self.release, 'unchanged'), patch.object(RELEASE, 'module') as load:
             with self.assertRaisesRegex(ValueError, 'fresh unsigned code'):
                 self.release.verify()
@@ -334,10 +284,10 @@ class LocalReleaseTests(unittest.TestCase):
     def test_signer_failure_never_marks_signed_or_packages(self):
         RELEASE.save(self.release.request, {'unsigned_entries': {}})
         self.release.state['request_sha256'] = RELEASE.sha(self.release.request)
-        fixed = types.SimpleNamespace(inventory=lambda *args: {}, trusted_verifier=lambda: None)
+        stage = types.SimpleNamespace(inventory=lambda *args: {})
         original_sha = RELEASE.sha
         with patch.object(self.release, 'unchanged'), \
-                patch.object(RELEASE, 'static_dependencies', return_value=(fixed, None)), \
+                patch.object(RELEASE, 'module', return_value=stage), \
                 patch.object(RELEASE, 'sha', side_effect=lambda p: self.config['signer_sha256']
                              if str(p) == self.config['signer'] else original_sha(p)), \
                 patch.object(RELEASE, 'command', side_effect=subprocess.CalledProcessError(1, 'protected-adapter')):
@@ -347,13 +297,12 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertFalse((self.directory / 'public').exists())
 
     def test_package_failure_detaches_only_own_mount_and_retains_evidence(self):
-        response = {'gui_receipt': 'gui.json', 'gui_receipt_sha256': 'a' * 64}
+        response = {'receipt': 'bundle.json', 'receipt_sha256': 'a' * 64}
         calls = []
         def command(argv, **kwargs):
             calls.append([str(arg) for arg in argv])
-            if 'build_split_packages.sh' in str(argv[1]):
+            if any('make_styled_dmg.sh' in str(arg) for arg in argv):
                 output = self.directory / 'packages'
-                output.mkdir()
                 (output / 'Flash.dmg').write_bytes(b'fake')
             return ''
         stage = types.SimpleNamespace(verify_copy=Mock(side_effect=ValueError('bundle changed')))
@@ -369,12 +318,10 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertEqual(list(self.directory.glob('verify-dmg-*')), [])
 
     def test_package_success_renames_and_hashes_only_two_public_assets(self):
-        response = {'gui_receipt': 'gui.json', 'gui_receipt_sha256': 'a' * 64}
+        response = {'receipt': 'bundle.json', 'receipt_sha256': 'a' * 64}
         def command(argv, **kwargs):
-            if 'build_split_packages.sh' in str(argv[1]):
-                self.assertEqual(argv[2], 'gui-only')
+            if any('make_styled_dmg.sh' in str(arg) for arg in argv):
                 output = self.directory / 'packages'
-                output.mkdir()
                 (output / 'Flash.dmg').write_bytes(b'fake-styled-dmg')
             return ''
         stage = types.SimpleNamespace(verify_copy=Mock())
@@ -387,10 +334,9 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertEqual(list(self.directory.glob('verify-dmg-*')), [])
 
     def test_detach_failure_preserves_mountpoint_without_recursive_cleanup(self):
-        response = {'gui_receipt': 'gui.json', 'gui_receipt_sha256': 'a' * 64}
+        response = {'receipt': 'bundle.json', 'receipt_sha256': 'a' * 64}
         def command(argv, **kwargs):
-            if 'build_split_packages.sh' in str(argv[1]):
-                (self.directory / 'packages').mkdir()
+            if any('make_styled_dmg.sh' in str(arg) for arg in argv):
                 (self.directory / 'packages/Flash.dmg').write_bytes(b'fake')
             if argv[1] == 'detach':
                 raise subprocess.CalledProcessError(1, argv)
@@ -506,48 +452,53 @@ class HelperBuildModeTests(unittest.TestCase):
                 self.assertLess(source.index(record), source.index('for cache in flutter_build setup_build_cache'))
                 self.assertLess(source.index(record), source.index('/usr/bin/sandbox-exec -p "$guard"'))
 
-    def run_stage(self, mode=None, configuration='Release', candidate='0', managed=True):
+    def run_stage(self, configuration='Release', candidate='0', managed=True, prepare=None):
         import base64
         with tempfile.TemporaryDirectory() as temporary:
+            if prepare:
+                prepare(Path(temporary) / 'Flash.app/Contents')
             env = dict(os.environ, DART_DEFINES=base64.b64encode(
                 ('MACOS_MANAGED_HELPER=' + str(managed).lower()).encode()).decode(),
                 CONFIGURATION=configuration, TARGET_BUILD_DIR=temporary,
                 CONTENTS_FOLDER_PATH='Flash.app/Contents', ARCHS='arm64',
-                FC_MANAGED_CANDIDATE_ENABLED=candidate)
-            env.pop('FC_MACOS_PACKAGE_MODE', None)
-            if mode is not None:
-                env['FC_MACOS_PACKAGE_MODE'] = mode
-            return subprocess.run(['/bin/bash', str(PACKAGING / 'stage_managed_helper.sh')],
-                                  env=env, capture_output=True, text=True)
-
-    def test_explicit_gui_only_exits_without_compiler(self):
-        self.assertEqual(self.run_stage('gui-only').returncode, 0)
-
-    def test_invalid_mode_and_non_release_fail(self):
-        self.assertNotEqual(self.run_stage('invalid').returncode, 0)
-        self.assertNotEqual(self.run_stage('gui-only', configuration='Debug').returncode, 0)
-
-    def test_stale_embedded_helper_is_not_silently_deleted(self):
-        import base64
-        with tempfile.TemporaryDirectory() as temporary:
-            helper = Path(temporary) / 'Flash.app/Contents/Library/HelperTools'
-            helper.mkdir(parents=True)
-            env = dict(os.environ, FC_MACOS_PACKAGE_MODE='gui-only', CONFIGURATION='Release',
-                       DART_DEFINES=base64.b64encode(b'MACOS_MANAGED_HELPER=true').decode(),
-                       TARGET_BUILD_DIR=temporary, CONTENTS_FOLDER_PATH='Flash.app/Contents')
-            result = subprocess.run(['/bin/bash', str(PACKAGING / 'stage_managed_helper.sh')],
+                FC_MANAGED_CANDIDATE_ENABLED=candidate, SRCROOT=str(PACKAGING.parent))
+            result = subprocess.run(['/bin/bash', str(PACKAGING / 'stage_bundled_daemon.sh')],
                                     env=env, capture_output=True, text=True)
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn('fresh build', result.stderr)
-            self.assertTrue(helper.is_dir())
+            contents = Path(temporary) / 'Flash.app/Contents'
+            result.files = sorted(str(p.relative_to(contents)) for p in contents.rglob('*') if p.is_file())
+            return result
 
-    def test_default_helper_update_validation_and_unmanaged_behavior_preserved(self):
+    def test_unmanaged_build_embeds_nothing(self):
+        result = self.run_stage(managed=False)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.files, [])
+
+    def test_invalid_candidate_and_non_release_fail(self):
         result = self.run_stage(candidate='invalid')
         self.assertIn('FC_MANAGED_CANDIDATE_ENABLED', result.stderr)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('Managed helper requires Release', self.run_stage(configuration='Debug').stderr)
-        self.assertEqual(self.run_stage(managed=False).returncode, 0)
+        self.assertIn('Bundled daemon requires Release', self.run_stage(configuration='Debug').stderr)
 
+    def test_stale_legacy_artifacts_are_not_silently_deleted(self):
+        for stale in ('Library/HelperTools/FlashMaintenance',
+                      'Library/LaunchDaemons/com.layoute.flash.helper.plist', 'Resources/HelperInstaller'):
+            def prepare(contents, stale=stale):
+                (contents / stale).parent.mkdir(parents=True, exist_ok=True)
+                (contents / stale).write_text('legacy')
+            with self.subTest(stale=stale):
+                result = self.run_stage(prepare=prepare)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('Stale legacy helper artifact', result.stderr)
+                self.assertIn(stale, result.files)
+
+    def test_source_compiles_helper_with_info_plist_and_copies_daemon_plist(self):
+        script = (PACKAGING / 'stage_bundled_daemon.sh').read_text()
+        self.assertIn('-sectcreate __TEXT __info_plist "$SRCROOT/PrivilegedHelper/Info.plist"', script)
+        self.assertIn('-o "$library/HelperTools/FlashHelper"', script)
+        self.assertIn('com.layoute.flash.daemon.plist" "$library/LaunchDaemons/"', script)
+        for forbidden in ('Maintenance.m', 'com.layoute.flash.helper.plist" "$library', 'codesign',
+                          'launchctl', 'registerAndReturnError', 'pkgbuild', 'sudo '):
+            self.assertNotIn(forbidden, script)
 
 if __name__ == '__main__':
     unittest.main()

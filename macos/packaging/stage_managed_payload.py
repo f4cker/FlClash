@@ -24,7 +24,6 @@ PLATFORMS = {'arm64': 'macos_arm64', 'x86_64': 'macos_x64'}
 FIXED_EXECUTABLES = (
     'Contents/MacOS/FlClashCore',
     'Contents/Library/HelperTools/FlashHelper',
-    'Contents/Library/HelperTools/FlashMaintenance',
 )
 
 

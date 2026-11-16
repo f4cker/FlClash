@@ -37,6 +37,8 @@ class SigningPolicyTests(unittest.TestCase):
         for name, value in (
             ('WORKTREE', self.root), ('CERTIFICATE_SHA1', self.pin1),
             ('CERTIFICATE_SHA256', self.pin256),
+            # Verify the reviewed sources of this checkout, not the protected main copy.
+            ('PACKAGING', Path(__file__).resolve().parents[1]),
         ):
             replacement = patch.object(DRIVER, name, value)
             replacement.start()
@@ -128,13 +130,13 @@ class SigningPolicyTests(unittest.TestCase):
         for key in ('actualGUIloads', 'packaging_accepted', 'runtime_gate_changed'):
             self.assertIs(report[key], False)
         self.assertEqual(report['after']['tree_sha256'], DRIVER.tree_digest(report['after']['entries']))
-        self.assertEqual(len(report['targets']), 9)
+        self.assertEqual(len(report['targets']), 8)  # Core, helper, 5 frameworks, GUI
         for target in report['targets']:
             self.assertEqual(target['architectures'], ['arm64', 'x86_64'])
             self.assertEqual(set(target['verified_slices']), {'arm64', 'x86_64'})
             self.assertIn('sha256', report['after']['entries'][target['binary']])
         signing = [args for args in self.calls if '--sign' in args]
-        self.assertEqual(len(signing), 9)
+        self.assertEqual(len(signing), 8)
         self.assertEqual(signing[-1][-1], str(self.app))
         for args in signing:
             self.assertNotIn('--deep', args)
@@ -145,12 +147,12 @@ class SigningPolicyTests(unittest.TestCase):
             self.assertIn('=designated => ', args[args.index('--requirements') + 1])
         self.assertTrue(any('--deep' in args and '--verify' in args for args in self.calls))
         verify = [args for args in self.calls if '-R' in args]
-        self.assertEqual(len(verify), 9)
+        self.assertEqual(len(verify), 8)
         for arguments in verify:
             target = next(target for target in report['targets'] if str(self.app / target['path']) == arguments[-1])
             self.assertEqual(arguments[arguments.index('-R') + 1], '=' + DRIVER.requirement(target['identifier']))
         extractions = [args for args in self.calls if any(arg.startswith('--extract-certificates=') for arg in args)]
-        self.assertEqual(len(extractions), 18)
+        self.assertEqual(len(extractions), 16)  # 8 targets x 2 slices
         for arguments in extractions:
             self.assertNotIn('--extract-certificates', arguments)
             self.assertTrue(arguments[-2].startswith('--extract-certificates='))

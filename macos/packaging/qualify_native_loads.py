@@ -20,7 +20,6 @@ import sys
 import tempfile
 import time
 import types
-import xml.etree.ElementTree as ET
 
 ROOT = Path('/Users/lavas/Library/Application Support/plus.yellow.AirBuild/environment/a6604af9-17b7-4c44-9d33-261a665bd547/projects/770e9d36-b2a0-45c9-a3a3-dd6b6836c72f')
 PACKAGING = ROOT / 'macos/packaging'
@@ -387,51 +386,7 @@ def check_copy(copy, expected, signer):
         raise ValueError('Copied or expanded signed bundle differs from qualified input')
 
 
-def check_expanded(expanded, operation, expected, signer):
-    info = ET.fromstring(signer.read_regular(expanded / 'PackageInfo'))
-    if (info.tag != 'pkg-info' or
-            info.attrib.get('identifier') != 'com.layoute.flash.managed.' + operation or
-            info.attrib.get('install-location') != '/'):
-        raise ValueError('Expanded package identity/install location mismatch')
-    declarations = list(info.iter('scripts'))
-    expected_hooks = {'preinstall', 'postinstall'}
-    if (len(declarations) != 1 or declarations[0] not in list(info) or declarations[0].attrib or
-            len(declarations[0]) != 2 or {node.tag for node in declarations[0]} != expected_hooks or
-            any(node.attrib != {'file': './' + node.tag} or len(node) or (node.text or '').strip()
-                for node in declarations[0])):
-        raise ValueError('Expanded package execution declarations differ from reviewed hooks')
-    relocation = list(info.iter('relocate'))
-    if (len(relocation) > 1 or any(node not in list(info) or node.attrib or len(node) or
-                                 (node.text or '').strip() for node in relocation)):
-        raise ValueError('Expanded package must not relocate its fixed-root payload')
-    maintenance = signer.read_regular(expanded / 'Scripts/FlashMaintenance')
-    if digest(maintenance) != expected['inventory']['Contents/Library/HelperTools/FlashMaintenance']['sha256']:
-        raise ValueError('Expanded maintenance signature bytes differ from qualified input')
-    scripts = expanded / 'Scripts'
-    originals = PACKAGING / 'installer' / operation
-    expected_scripts = {path.name for path in originals.iterdir()} | {'FlashMaintenance'}
-    if {path.name for path in scripts.iterdir()} != expected_scripts:
-        raise ValueError('Unexpected or missing expanded installer script')
-    for original in originals.iterdir():
-        if signer.read_regular(scripts / original.name) != signer.read_regular(original):
-            raise ValueError('Expanded installer script differs from reviewed source')
-    apps = list(expanded.rglob('Flash.app'))
-    required = expanded / 'Payload/Library/Application Support/Flash/.incoming/Flash.app'
-    if operation in {'install', 'repair'}:
-        if apps != [required]:
-            raise ValueError('Unexpected expanded package payload location/count')
-        allowed_parents = set(required.parents)
-        for directory, names, files in os.walk(expanded / 'Payload', followlinks=False):
-            for name in names + files:
-                path = Path(directory) / name
-                if not path.is_relative_to(required) and path not in allowed_parents:
-                    raise ValueError('Unexpected additional package payload')
-        check_copy(required, expected, signer)
-    elif apps or (expanded / 'Payload').exists():
-        raise ValueError('Nonpayload operation unexpectedly contains a payload')
-
-
-def verify(app, metadata, evidence_path, copied=None, expanded=None, operation=None):
+def verify(app, metadata, evidence_path, copied=None):
     signer = driver()
     evidence, _ = protected_json(evidence_path, signer)
     with make_scratch() as temporary:
@@ -439,8 +394,6 @@ def verify(app, metadata, evidence_path, copied=None, expanded=None, operation=N
         validate_evidence(evidence, current, app)
         if copied:
             check_copy(copied, current, signer)
-        if expanded:
-            check_expanded(expanded, operation, current, signer)
     return evidence
 
 
@@ -457,8 +410,6 @@ def main():
     parser.add_argument('--build-metadata', required=True)
     parser.add_argument('--evidence', required=True)
     parser.add_argument('--verify-copy')
-    parser.add_argument('--verify-expanded-package')
-    parser.add_argument('--package-operation', choices=('install', 'repair', 'disable', 'remove'))
     args = parser.parse_args()
     try:
         app = canonical(args.app)
@@ -467,16 +418,12 @@ def main():
         if not evidence_path.is_absolute() or str(evidence_path) != args.evidence:
             raise ValueError('Evidence must use a canonical absolute path')
         if args.run_approved_probe:
-            if args.verify_copy or args.verify_expanded_package or args.package_operation:
-                raise ValueError('Probe and packaging verification cannot be combined')
+            if args.verify_copy:
+                raise ValueError('Probe and copy verification cannot be combined')
             run_approved(app, metadata, evidence_path)
         else:
-            if bool(args.verify_expanded_package) != bool(args.package_operation):
-                raise ValueError('Expanded package verification requires its operation')
             verify(app, metadata, canonical(str(evidence_path)),
-                   canonical(args.verify_copy) if args.verify_copy else None,
-                   canonical(args.verify_expanded_package) if args.verify_expanded_package else None,
-                   args.package_operation)
+                   canonical(args.verify_copy) if args.verify_copy else None)
     except (ValueError, OSError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print(f'Native-load qualification failed closed: {type(error).__name__}', file=sys.stderr)
         return 1

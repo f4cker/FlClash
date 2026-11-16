@@ -3,7 +3,7 @@
 `FC_MANAGED_CANDIDATE_ENABLED` defaults to `0`. Opting in with `1` enables
 only an unqualified, nondistributed candidate capability. It is not a statement
 that any executable was tested or that an artifact is safe to distribute.
-The existing exact certificate pin, empty Apple Team ID, protected installation,
+The existing exact certificate pin, empty Apple Team ID, daemon self-check,
 audit-message authentication, and other entitlement restrictions still apply.
 The library-validation exception remains limited to the protected GUI identity.
 
@@ -18,9 +18,9 @@ GCC_PREPROCESSOR_DEFINITIONS = $(inherited) FC_MANAGED_CANDIDATE_ENABLED=$(FC_MA
 
 Xcode exports this user-defined setting to the staging build phase. Runner
 receives the macro through `GCC_PREPROCESSOR_DEFINITIONS`;
-`stage_managed_helper.sh` validates the same setting as exactly `0` or `1`
-(default `0` when absent) and passes it explicitly to both helper and maintenance
-clang invocations. An empty or other value is an error. Do not inject a different
+`stage_bundled_daemon.sh` validates the same setting as exactly `0` or `1`
+(default `0` when absent) and passes it explicitly to the bundled daemon's clang
+invocation. An empty or other value is an error. Do not inject a different
 candidate definition through compiler flags or supply a conflicting setting.
 
 ## Qualification is external

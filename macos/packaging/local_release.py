@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local Mac release with embedded helper installers and protected GUI signing."""
+"""Local Mac release of one Flash.app with the bundled SMAppService daemon, signed inside-out."""
 import argparse
 from contextlib import contextmanager
 import fcntl
@@ -18,12 +18,11 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY = 'f4cker/FlClash'
-CORE_SHA256 = '84c3acc53eedf0a95d86badc060d72cfea9c4883126c79e276ac085041ea6ad2'
-CORE_REVISION = 'da680ef85b251e22deb01fe2a5f5b1f4424be3ab'
-SERVICE_RECEIPT_SHA256 = 'eed26f327f55df4162ab31343f3c203ec813d99637280d82ffd6fe1b47b379a6'
 IDENTITY = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CORE = 'Contents/MacOS/FlClashCore'
-SERVICE_BUILD = '2026111503'
+HELPER = 'Contents/Library/HelperTools/FlashHelper'
+DAEMON_PLIST = 'Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist'
+RECEIPT_SCHEMA = 2
 BEGIN = '<!-- flclash:changelog:begin -->'
 END = '<!-- flclash:changelog:end -->'
 JSON_BEGIN = '<!-- flclash:changelog:json'
@@ -74,10 +73,6 @@ def module(name):
     return loaded
 
 
-def static_dependencies():
-    return module('verify_split_service').static_dependencies(module('sign_split_payload'))
-
-
 def source_identity(tag):
     require(re.fullmatch(r'v\d+\.\d+\.\d+', tag), 'A stable vX.Y.Z tag is required')
     require(git('branch', '--show-current') == 'main', 'Release only from merged main')
@@ -105,10 +100,9 @@ def configuration(path):
             info.st_uid == os.getuid() and stat.S_IMODE(info.st_mode) == 0o600,
             'Local config must be an owned single-link regular file with mode 0600')
     data = json.loads(path.read_text())
-    require(set(data) == {'schema', 'sdk', 'signer', 'signer_sha256', 'service',
-                          'service_receipt', 'service_receipt_sha256'}, 'Unexpected local config fields')
-    require(data['schema'] == 1, 'Unsupported config schema')
-    for key in ('sdk', 'signer', 'service', 'service_receipt'):
+    require(set(data) == {'schema', 'sdk', 'signer', 'signer_sha256'}, 'Unexpected local config fields')
+    require(data['schema'] == 2, 'Unsupported config schema (bundled daemon requires schema 2)')
+    for key in ('sdk', 'signer'):
         item = Path(data[key])
         require(item.is_absolute() and item.resolve(strict=True) == item, 'Noncanonical configured path: ' + key)
     signer = Path(data['signer'])
@@ -120,49 +114,11 @@ def configuration(path):
     return data
 
 
-def check_service(config):
-    require(re.fullmatch('[0-9a-f]{64}', CORE_SHA256) and
-            re.fullmatch('[0-9a-f]{40}', CORE_REVISION) and
-            re.fullmatch('[0-9a-f]{64}', SERVICE_RECEIPT_SHA256),
-            'New signed Core/service pins are pending')
-    base = ROOT / '.airbuild/local-release/service-core-1503'
-    app = base / 'service-payload/Flash.app'
-    receipt_path = base / 'service-current-schema.json'
-    require(config['service'] == str(app) and config['service_receipt'] == str(receipt_path) and
-            config['service_receipt_sha256'] == SERVICE_RECEIPT_SHA256,
-            'Only the exact reviewed 1503 service is supported')
-    receipt = pinned(receipt_path, SERVICE_RECEIPT_SHA256)
-    gate = module('verify_split_service')
-    info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
-    require(info.get('CFBundleVersion') == SERVICE_BUILD and
-            info.get('CFBundleShortVersionString') == '0.9.14', 'Service version differs')
-    require(sha(app / CORE) == CORE_SHA256, 'Released service/Core changed')
-    require(type(receipt.get('schema')) is int and receipt['schema'] == 1 and
-            receipt.get('phase') == 'service' and gate.receipt_app_matches(receipt.get('app'), app, 'service') and
-            receipt.get('static_verification') is True and 'signing_scope' not in receipt and
-            'wrapper_derivation' not in receipt and
-            receipt.get('reused_signed_core_sha256') == CORE_SHA256 and
-            receipt.get('before', {}).get('entries', {}).get(CORE, {}).get('sha256') == CORE_SHA256 and
-            receipt.get('compatibility') == {
-                'CallerPolicy': 2, 'ServiceAPI': 1, 'CoreAPI': 1, 'CoreSHA256': CORE_SHA256,
-                'CoreVersion': 'v1.19.33', 'CoreRevision': CORE_REVISION},
-            'Exact ordinary new-Core service signing evidence required')
-    stage = module('stage_split_payload')
-    gate.verify_bundle(app, 'service', receipt_path, SERVICE_RECEIPT_SHA256,
-                       module('sign_split_payload'), stage)
-    return stage.inventory(app)
-
-
 def check_version(app, identity):
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
     require(info.get('CFBundleShortVersionString') == identity['version'] and
             str(info.get('CFBundleVersion')) == identity['build'], 'Built bundle version differs from source')
-    require(not (app / 'Contents/Library').exists(), 'GUI must not embed helper tools')
-    require(not (app / CORE).exists() and not (app / CORE).is_symlink(), 'GUI must not contain a loose Core')
-    stage = module('stage_split_payload')
-    require(info.get(stage.MINIMUM_SERVICE_BUILD_KEY) == SERVICE_BUILD, 'GUI minimum service build differs')
-    require(CORE_SHA256 in stage.read_compatibility(app, 'gui')['AcceptedCoreSHA256'],
-            'GUI must accept the released service Core')
+    return module('stage_bundle_payload').check_layout(app)
 
 
 def notes(identity):
@@ -185,12 +141,13 @@ def notes(identity):
                          separators=(',', ':')).replace('>', '\\u003e')
     lines += [END, '', JSON_BEGIN, payload, '-->', '',
               '## macOS release scope', '',
-              'Apple Silicon (arm64) release with one embedded install package for '
-              'service build **2026111503**, retaining helper binary build **2026111402**. Install the helper from the app '
-              'with macOS administrator authorization; no separate helper download is required.', '',
+              'Apple Silicon (arm64) release. The network helper now runs from inside Flash.app as a '
+              'macOS background item (SMAppService); no separate helper download or installer package. '
+              'Upgrading from an older version asks once for the administrator password to remove the old helper, '
+              'then macOS asks you to allow Flash under Login Items.', '',
               'Self-signed with the existing Flash identity; **not Apple Developer ID signed '
-              'and not notarized**. The helper remains unchanged; the Core is newly built and signed. Packaging '
-              'and static signature checks are not a claim of full test-suite or runtime acceptance.', '']
+              'and not notarized**. Packaging and static signature checks are not a claim of full '
+              'test-suite or runtime acceptance.', '']
     return '\n'.join(lines)
 
 
@@ -229,33 +186,24 @@ class Release:
 
     def unchanged(self):
         require(source_identity(self.identity['tag']) == self.identity, 'Source changed during release')
-        require(check_service(self.config) == self.state['service_inventory'], 'Immutable helper changed')
 
     def build(self):
         if 'request_sha256' in self.state:
             pinned(self.request, self.state['request_sha256'])
             return
-        self.state['service_inventory'] = check_service(self.config)
-        self.checkpoint()
         output = self.directory / 'build'
         command(['/bin/bash', ROOT / 'macos/packaging/build_local_gui.sh', self.config['sdk'], output,
                  self.identity['version'], self.identity['build']])
         fresh = output / 'new-xcode-macos/Build/Products/Release/Flash.app'
-        stage = module('stage_split_payload')
-        stage.stage_gui(fresh, self.app, Path(self.config['service']) / CORE, CORE_SHA256)
-        module('embedded_helper_installer').stage(
-            self.app, Path(self.config['service']), self.directory / 'helper-packages',
-            Path(self.config['service_receipt']), self.config['service_receipt_sha256'],
-            CORE_SHA256, SERVICE_BUILD)
-        check_version(self.app, self.identity)
-        fixed, _ = static_dependencies()
-        entries = fixed.inventory(self.app, fixed.trusted_verifier())
+        stage = module('stage_bundle_payload')
+        facts = stage.stage(fresh, self.app)
+        require(check_version(self.app, self.identity) == facts, 'Staged bundle changed after staging')
+        entries = stage.inventory(self.app)
         self.unchanged()
-        request = {'schema': 'flash-local-gui-sign-v1', 'source': self.identity,
-                   'app': str(self.app), 'run': str(self.directory), 'mode': 'gui-only',
-                   'certificate_sha1': IDENTITY, 'core_sha256': CORE_SHA256,
-                   'service': self.config['service'], 'service_receipt': self.config['service_receipt'],
-                   'service_receipt_sha256': self.config['service_receipt_sha256'],
+        request = {'schema': 'flash-local-bundle-sign-v2', 'source': self.identity,
+                   'app': str(self.app), 'run': str(self.directory), 'mode': 'bundled-daemon',
+                   'signing_order': list(stage.SIGNING_ORDER),
+                   'certificate_sha1': IDENTITY, 'unsigned_facts': facts,
                    'unsigned_entries': entries, 'build_log_sha256': sha(output / 'build.log'),
                    'public_sources': {str(p.relative_to(ROOT)): sha(p) for p in sorted(
                        (ROOT / 'macos/packaging').glob('*.py'))}}
@@ -267,20 +215,22 @@ class Release:
         self.unchanged()
         request = pinned(self.request, self.state['request_sha256'])
         response = pinned(self.response, self.state['response_sha256'])
-        require(set(response) == {'schema', 'request_sha256', 'gui_receipt', 'gui_receipt_sha256'} and
-                response['schema'] == 1 and response['request_sha256'] == self.state['request_sha256'],
+        require(set(response) == {'schema', 'request_sha256', 'receipt', 'receipt_sha256'} and
+                response['schema'] == RECEIPT_SCHEMA and response['request_sha256'] == self.state['request_sha256'],
                 'Signer response is not bound to this fresh build')
-        path = Path(response['gui_receipt'])
+        path = Path(response['receipt'])
         require(path.resolve() == path and path.is_relative_to(self.directory), 'Signing receipt must stay inside this run')
-        receipt = pinned(path, response['gui_receipt_sha256'])
-        require(receipt.get('before', {}).get('entries') == request['unsigned_entries'],
+        receipt = pinned(path, response['receipt_sha256'])
+        require(receipt.get('schema') == RECEIPT_SCHEMA and receipt.get('mode') == 'bundled-daemon' and
+                receipt.get('before', {}).get('entries') == request['unsigned_entries'],
                 'Signing receipt does not match fresh unsigned code')
+        require(receipt.get('signing_order') == request['signing_order'], 'Signing was not inside-out')
         check_version(self.app, self.identity)
-        module('embedded_helper_installer').verify(self.app)
-        result = module('verify_split_service').verify(
-            self.app, Path(self.config['service']), path, response['gui_receipt_sha256'],
-            Path(self.config['service_receipt']), self.config['service_receipt_sha256'])
-        require(result['delivery_mode'] == 'gui-only', 'Unexpected helper-update mode')
+        facts = module('stage_bundle_payload').verify_signed(self.app)
+        require(facts['daemon_plist_sha256'] == request['unsigned_facts']['daemon_plist_sha256'],
+                'Daemon plist changed during signing')
+        for key in ('helper_cdhash', 'core_cdhash', 'core_sha256', 'daemon_plist_sha256'):
+            require(receipt.get(key) == facts[key], 'Receipt does not bind the signed ' + key)
         return response
 
     def sign(self):
@@ -289,8 +239,7 @@ class Release:
         request = pinned(self.request, self.state['request_sha256'])
         if 'response_sha256' not in self.state:
             require(not self.response.exists(), 'Unrecorded signer response: inspect failed run; do not silently retry')
-            fixed, _ = static_dependencies()
-            require(fixed.inventory(self.app, fixed.trusted_verifier()) == request['unsigned_entries'],
+            require(module('stage_bundle_payload').inventory(self.app) == request['unsigned_entries'],
                     'Unsigned input changed before protected signing')
             require(sha(Path(self.config['signer'])) == self.config['signer_sha256'], 'Protected adapter changed')
             command([self.config['signer'], '--request', self.request, '--request-sha256',
@@ -324,11 +273,13 @@ class Release:
             self.assets()
             return
         output = self.directory / 'packages'
-        command(['/bin/bash', ROOT / 'macos/packaging/build_split_packages.sh', 'gui-only', self.app,
-                 self.config['service'], output, response['gui_receipt'], response['gui_receipt_sha256'],
-                 self.config['service_receipt'], self.config['service_receipt_sha256']])
-        self.verify()
+        output.mkdir(mode=0o700)
         dmg = output / 'Flash.dmg'
+        source = ROOT / 'macos/packaging'
+        command(['/usr/bin/env', '-i', 'PATH=/usr/bin:/bin', 'LANG=C', 'LC_ALL=C', 'VOLNAME=Flash',
+                 'APPS_NAME=应用程序', '/bin/bash', ROOT / 'tool/macos/make_styled_dmg.sh', self.app,
+                 source / 'dmg/background.png', source / 'dmg/background@2x.png', dmg])
+        self.verify()
         command(['/usr/bin/hdiutil', 'verify', dmg])
         mount = Path(tempfile.mkdtemp(prefix='verify-dmg-', dir=self.directory))
         attached = False
@@ -336,7 +287,7 @@ class Release:
             command(['/usr/bin/hdiutil', 'attach', '-readonly', '-nobrowse', '-noautoopen',
                      '-mountpoint', mount, dmg])
             attached = True
-            module('stage_split_payload').verify_copy(self.app, mount / 'Flash.app', 'gui')
+            module('stage_bundle_payload').verify_copy(self.app, mount / 'Flash.app')
         finally:
             if attached:
                 command(['/usr/bin/hdiutil', 'detach', mount])
@@ -429,7 +380,6 @@ def main(argv=None):
             base.mkdir(mode=0o700, exist_ok=True)
             require((base / args.run).resolve() == base / args.run, 'Run must not be a symlink')
             if args.phase == 'check':
-                check_service(config)
                 print('Local source/config checks passed; no build, signing or network performed.')
                 return 0
             release = Release(identity, config, base / args.run)
