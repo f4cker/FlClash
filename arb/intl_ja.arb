@@ -1677,6 +1677,23 @@
   "macHelperReinstallTitle": "The helper can’t be used",
   "macHelperReinstallDetail": "The helper inside Flash is missing or doesn’t match this version. Download and install Flash again.",
   "macHelperUnsupportedDetail": "The helper requires macOS 14 or later.",
+  "macHelperVersionLine": "バージョン {version}",
+  "@macHelperVersionLine": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "macHelperBarUpdate": "Update helper",
+  "macHelperBarAllow": "Allow helper",
+  "macHelperBarStarting": "Starting…",
+  "macHelperBarNotReady": "Helper not ready",
+  "macHelperBarFailedCheck": "Helper failed check",
+  "macHelperBarHint": "{title}, press to view steps",
+  "@macHelperBarHint": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "liveStatus": "リアルタイムの状態",
   "coreStopped": "コアが停止しました",
   "coreStoppedDesc": "アプリとコアの接続が切れました",

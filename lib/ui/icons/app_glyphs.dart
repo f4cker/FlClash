@@ -426,6 +426,70 @@ abstract final class AppGlyphs {
     GlyphCircle(12, 16.5, 1.4, role: GlyphRole.detail, solid: true),
   ]);
 
+  /// gearshape.arrow.triangle.2.circlepath: the privileged helper, a gear
+  /// that keeps running inside two clockwise arrows.
+  static const helperDaemon = Glyph([
+    GlyphPolyline([
+      GlyphVertex(10.72, 8.05, 0.4),
+      GlyphVertex(11.06, 6.38, 0.5),
+      GlyphVertex(12.94, 6.38, 0.5),
+      GlyphVertex(13.28, 8.05, 0.4),
+      GlyphVertex(14.78, 8.92, 0.4),
+      GlyphVertex(16.40, 8.37, 0.5),
+      GlyphVertex(17.34, 10.00, 0.5),
+      GlyphVertex(16.06, 11.14, 0.4),
+      GlyphVertex(16.06, 12.86, 0.4),
+      GlyphVertex(17.34, 14.00, 0.5),
+      GlyphVertex(16.40, 15.63, 0.5),
+      GlyphVertex(14.78, 15.08, 0.4),
+      GlyphVertex(13.28, 15.95, 0.4),
+      GlyphVertex(12.94, 17.62, 0.5),
+      GlyphVertex(11.06, 17.62, 0.5),
+      GlyphVertex(10.72, 15.95, 0.4),
+      GlyphVertex(9.22, 15.08, 0.4),
+      GlyphVertex(7.60, 15.63, 0.5),
+      GlyphVertex(6.66, 14.00, 0.5),
+      GlyphVertex(7.94, 12.86, 0.4),
+      GlyphVertex(7.94, 11.14, 0.4),
+      GlyphVertex(6.66, 10.00, 0.5),
+      GlyphVertex(7.60, 8.37, 0.5),
+      GlyphVertex(9.22, 8.92, 0.4),
+    ], closed: true),
+    GlyphCircle(12, 12, 1.7, role: GlyphRole.detail),
+    GlyphArc(
+      12,
+      12,
+      9.2,
+      -math.pi * 5 / 6,
+      math.pi * 7 / 9,
+      role: GlyphRole.line,
+    ),
+    GlyphPolyline([
+      GlyphVertex(22.61, 8.81),
+      GlyphVertex(21.15, 10.89, 0.4),
+      GlyphVertex(19.06, 9.43),
+    ], role: GlyphRole.line),
+    GlyphArc(12, 12, 9.2, math.pi / 6, math.pi * 7 / 9, role: GlyphRole.line),
+    GlyphPolyline([
+      GlyphVertex(1.39, 15.19),
+      GlyphVertex(2.85, 13.11, 0.4),
+      GlyphVertex(4.94, 14.57),
+    ], role: GlyphRole.line),
+  ]);
+
+  /// exclamationmark.shield: a security check did not pass.
+  static const shieldAlert = Glyph([
+    GlyphPath(
+      'M12 2.4L19.6 5.3V11.2C19.6 15.9 16.4 19.6 12 21.4'
+      'C7.6 19.6 4.4 15.9 4.4 11.2V5.3Z',
+    ),
+    GlyphPolyline([
+      GlyphVertex(12, 7.6),
+      GlyphVertex(12, 12.2),
+    ], role: GlyphRole.detail),
+    GlyphCircle(12, 15.9, 1.3, role: GlyphRole.detail, solid: true),
+  ]);
+
   static const more = Glyphs.more;
 
   static const moreCircle = Glyph([

@@ -5910,6 +5910,31 @@ class AppLocalizationsKo extends AppLocalizations {
       'The helper requires macOS 14 or later.';
 
   @override
+  String macHelperVersionLine(Object version) {
+    return '버전 $version';
+  }
+
+  @override
+  String get macHelperBarUpdate => 'Update helper';
+
+  @override
+  String get macHelperBarAllow => 'Allow helper';
+
+  @override
+  String get macHelperBarStarting => 'Starting…';
+
+  @override
+  String get macHelperBarNotReady => 'Helper not ready';
+
+  @override
+  String get macHelperBarFailedCheck => 'Helper failed check';
+
+  @override
+  String macHelperBarHint(Object title) {
+    return '$title, press to view steps';
+  }
+
+  @override
   String get liveStatus => '실시간 상태';
 
   @override

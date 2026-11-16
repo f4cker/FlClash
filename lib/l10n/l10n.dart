@@ -10176,6 +10176,48 @@ abstract class AppLocalizations {
   /// **'The helper requires macOS 14 or later.'**
   String get macHelperUnsupportedDetail;
 
+  /// No description provided for @macHelperVersionLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String macHelperVersionLine(Object version);
+
+  /// No description provided for @macHelperBarUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update helper'**
+  String get macHelperBarUpdate;
+
+  /// No description provided for @macHelperBarAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow helper'**
+  String get macHelperBarAllow;
+
+  /// No description provided for @macHelperBarStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting…'**
+  String get macHelperBarStarting;
+
+  /// No description provided for @macHelperBarNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper not ready'**
+  String get macHelperBarNotReady;
+
+  /// No description provided for @macHelperBarFailedCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper failed check'**
+  String get macHelperBarFailedCheck;
+
+  /// No description provided for @macHelperBarHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{title}, press to view steps'**
+  String macHelperBarHint(Object title);
+
   /// No description provided for @liveStatus.
   ///
   /// In en, this message translates to:

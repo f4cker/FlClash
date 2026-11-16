@@ -1677,6 +1677,23 @@
   "macHelperReinstallTitle": "The helper can’t be used",
   "macHelperReinstallDetail": "The helper inside Flash is missing or doesn’t match this version. Download and install Flash again.",
   "macHelperUnsupportedDetail": "The helper requires macOS 14 or later.",
+  "macHelperVersionLine": "버전 {version}",
+  "@macHelperVersionLine": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "macHelperBarUpdate": "Update helper",
+  "macHelperBarAllow": "Allow helper",
+  "macHelperBarStarting": "Starting…",
+  "macHelperBarNotReady": "Helper not ready",
+  "macHelperBarFailedCheck": "Helper failed check",
+  "macHelperBarHint": "{title}, press to view steps",
+  "@macHelperBarHint": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "liveStatus": "실시간 상태",
   "coreStopped": "코어가 중지됨",
   "coreStoppedDesc": "앱과 코어의 연결이 끊어졌습니다",

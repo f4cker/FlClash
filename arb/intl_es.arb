@@ -1677,6 +1677,23 @@
   "macHelperReinstallTitle": "The helper can’t be used",
   "macHelperReinstallDetail": "The helper inside Flash is missing or doesn’t match this version. Download and install Flash again.",
   "macHelperUnsupportedDetail": "The helper requires macOS 14 or later.",
+  "macHelperVersionLine": "Versión {version}",
+  "@macHelperVersionLine": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "macHelperBarUpdate": "Update helper",
+  "macHelperBarAllow": "Allow helper",
+  "macHelperBarStarting": "Starting…",
+  "macHelperBarNotReady": "Helper not ready",
+  "macHelperBarFailedCheck": "Helper failed check",
+  "macHelperBarHint": "{title}, press to view steps",
+  "@macHelperBarHint": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "liveStatus": "Estado en vivo",
   "coreStopped": "Núcleo detenido",
   "coreStoppedDesc": "La app perdió la conexión con el núcleo",

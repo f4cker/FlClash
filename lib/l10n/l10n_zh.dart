@@ -5516,6 +5516,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperUnsupportedDetail => '辅助程序需要 macOS 14 或更高版本。';
 
   @override
+  String macHelperVersionLine(Object version) {
+    return '版本 $version';
+  }
+
+  @override
+  String get macHelperBarUpdate => '更新辅助程序';
+
+  @override
+  String get macHelperBarAllow => '允许辅助程序';
+
+  @override
+  String get macHelperBarStarting => '正在启动…';
+
+  @override
+  String get macHelperBarNotReady => '辅助程序未就绪';
+
+  @override
+  String get macHelperBarFailedCheck => '辅助程序未通过检查';
+
+  @override
+  String macHelperBarHint(Object title) {
+    return '$title，按下查看步骤';
+  }
+
+  @override
   String get liveStatus => '实时状态';
 
   @override

@@ -5838,6 +5838,31 @@ class AppLocalizationsJa extends AppLocalizations {
       'The helper requires macOS 14 or later.';
 
   @override
+  String macHelperVersionLine(Object version) {
+    return 'バージョン $version';
+  }
+
+  @override
+  String get macHelperBarUpdate => 'Update helper';
+
+  @override
+  String get macHelperBarAllow => 'Allow helper';
+
+  @override
+  String get macHelperBarStarting => 'Starting…';
+
+  @override
+  String get macHelperBarNotReady => 'Helper not ready';
+
+  @override
+  String get macHelperBarFailedCheck => 'Helper failed check';
+
+  @override
+  String macHelperBarHint(Object title) {
+    return '$title, press to view steps';
+  }
+
+  @override
   String get liveStatus => 'リアルタイムの状態';
 
   @override

@@ -1677,6 +1677,23 @@
   "macHelperReinstallTitle": "无法使用辅助程序",
   "macHelperReinstallDetail": "Flash 中的辅助程序缺失或与此版本不匹配。请重新下载安装 Flash。",
   "macHelperUnsupportedDetail": "辅助程序需要 macOS 14 或更高版本。",
+  "macHelperVersionLine": "版本 {version}",
+  "@macHelperVersionLine": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "macHelperBarUpdate": "更新辅助程序",
+  "macHelperBarAllow": "允许辅助程序",
+  "macHelperBarStarting": "正在启动…",
+  "macHelperBarNotReady": "辅助程序未就绪",
+  "macHelperBarFailedCheck": "辅助程序未通过检查",
+  "macHelperBarHint": "{title}，按下查看步骤",
+  "@macHelperBarHint": {
+    "placeholders": {
+      "title": {}
+    }
+  },
   "liveStatus": "实时状态",
   "coreStopped": "核心已停止",
   "coreStoppedDesc": "应用与核心的连接已断开",
