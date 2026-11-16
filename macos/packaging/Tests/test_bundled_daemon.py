@@ -1,4 +1,7 @@
+import contextlib
+import hashlib
 import importlib.util
+import io
 from pathlib import Path
 import plistlib
 import shutil
@@ -20,6 +23,14 @@ def load(name):
 
 STAGE = load('stage_bundle_payload')
 MACHO = bytes.fromhex('cffaedfe') + b'synthetic-never-execute'
+REVISION = '13e00727c64d2cc4d0bb20e293732d02c3ed0382'
+
+
+def mock_codesign(calls):
+    def codesign(*arguments):
+        calls.append(arguments)
+        return subprocess.CompletedProcess(arguments, 0, b'', b'CDHash=' + b'ab' * 20 + b'\n')
+    return codesign
 
 
 class BundledDaemonTests(unittest.TestCase):
@@ -111,16 +122,20 @@ class BundledDaemonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'LaunchDaemons'):
             STAGE.check_layout(self.app)
 
+    def seal(self, **inputs):
+        calls = []
+        with patch.object(STAGE, 'codesign', side_effect=mock_codesign(calls)):
+            contract = STAGE.seal_compatibility(self.app, inputs.get('version', 'v1.19.34'),
+                                                inputs.get('revision', REVISION))
+        return contract, calls
+
     def test_signed_verification_requires_plist_in_code_resources_files2(self):
+        self.seal()
         files2 = {'Library/LaunchDaemons/com.layoute.flash.daemon.plist': {'hash2': b'x'},
                   'Library/HelperTools/FlashHelper': {'cdhash': b'x'}, 'MacOS/FlClashCore': {'cdhash': b'x'}}
         self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': files2}))
         calls = []
-
-        def codesign(*arguments):
-            calls.append(arguments)
-            return subprocess.CompletedProcess(arguments, 0, b'', b'CDHash=' + b'ab' * 20 + b'\n')
-        with patch.object(STAGE, 'codesign', side_effect=codesign):
+        with patch.object(STAGE, 'codesign', side_effect=mock_codesign(calls)):
             facts = STAGE.verify_signed(self.app)
             self.assertEqual(facts['helper_cdhash'], 'ab' * 20)
             verified = [args for args in calls if args[0] == '--verify']
@@ -140,13 +155,113 @@ class BundledDaemonTests(unittest.TestCase):
         self.assertEqual(dict((role, path) for role, path, _ in signer.FIXED),
                          {'core': STAGE.CORE, 'helper': STAGE.HELPER})
         self.assertEqual(dict((role, ident) for role, _, ident in signer.FIXED)['helper'], STAGE.HELPER_ID)
-        self.assertEqual(STAGE.SIGNING_ORDER, ('core', 'helper', 'framework', 'gui'))
+        self.assertEqual(STAGE.SIGNING_ORDER, ('core', 'contract', 'helper', 'framework', 'gui'))
         source = (PACKAGING / 'sign_fixed_payload.py').read_text()
         body = source[source.index('def signing_targets'):source.index('def requirement')]
         self.assertLess(body.index('for role, relative, identifier in FIXED'), body.index("role='framework'"))
         self.assertLess(body.index("role='framework'"), body.index("role='gui'"))
         self.assertNotIn('FlashMaintenance', source)
         self.assertEqual(signer.requirement('x'), STAGE.requirement('x'))
+
+    def test_contract_is_sealed_after_core_signing_with_the_signed_core_hash(self):
+        info = self.app / 'Contents/Info.plist'
+        info.chmod(0o644)
+        contract, calls = self.seal()
+        # Core signature is verified against its pinned requirement before the contract is written.
+        self.assertEqual(calls, [('--verify', '--strict', '--all-architectures',
+                                  '-R=' + STAGE.requirement('com.layoute.flash.core'), str(self.app / STAGE.CORE))])
+        self.assertEqual(contract, {'CallerPolicy': 3, 'ServiceAPI': 1, 'CoreAPI': 1,
+                                    'CoreSHA256': hashlib.sha256(MACHO).hexdigest(),
+                                    'CoreVersion': 'v1.19.34', 'CoreRevision': REVISION})
+        stored = plistlib.loads(info.read_bytes())
+        self.assertEqual(stored['FlashHelperCompatibility'], contract)
+        self.assertEqual(stored['CFBundleIdentifier'], 'com.layoute.flash')
+        self.assertEqual(info.stat().st_mode & 0o777, 0o644)
+        self.assertFalse((self.app / 'Contents/.Info.plist.contract').exists())
+        self.assertNotIn(True, [type(v) is bool for v in contract.values()])
+        subprocess.run(['/usr/bin/plutil', '-lint', str(info)], check=True, capture_output=True)
+        with self.assertRaisesRegex(ValueError, 'already present'):
+            self.seal()
+
+    def test_contract_sealing_keeps_binary_plist_format(self):
+        self.write('Contents/Info.plist', plistlib.dumps({'CFBundleIdentifier': 'com.layoute.flash'},
+                                                          fmt=plistlib.FMT_BINARY))
+        self.seal()
+        self.assertTrue((self.app / 'Contents/Info.plist').read_bytes().startswith(b'bplist00'))
+
+    def test_contract_refuses_unsigned_core_outer_seal_and_bad_inputs(self):
+        with patch.object(STAGE, 'codesign', side_effect=subprocess.CalledProcessError(1, 'codesign')):
+            with self.assertRaises(subprocess.CalledProcessError):
+                STAGE.seal_compatibility(self.app, 'v1.19.34', REVISION)
+        self.assertIsNone(STAGE.read_contract(self.app))
+        for version, revision in (('', REVISION), ('v1', ''), ('v' * 129, REVISION), (1, REVISION)):
+            with self.subTest(version=version, revision=revision), self.assertRaisesRegex(ValueError, '1-128'):
+                self.seal(version=version, revision=revision)
+        self.assertIsNone(STAGE.read_contract(self.app))
+        self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({}))
+        with self.assertRaisesRegex(ValueError, 'before the app seal'):
+            self.seal()
+        self.assertIsNone(STAGE.read_contract(self.app))
+
+    def test_contract_validation_mirrors_helper_compatibility(self):
+        contract, _ = self.seal()
+        self.assertEqual(STAGE.validate_contract(dict(contract)), contract)
+        bad = [dict(contract, CallerPolicy=2), dict(contract, CallerPolicy=True), dict(contract, ServiceAPI=1.0),
+               dict(contract, CoreAPI='1'), dict(contract, CoreSHA256=contract['CoreSHA256'].upper()),
+               dict(contract, CoreSHA256='ab'), dict(contract, AcceptedCoreSHA256=[contract['CoreSHA256']]),
+               dict(contract, CoreVersion=''), dict(contract, CoreRevision='r' * 129), [contract], None]
+        for key in contract:
+            missing = dict(contract)
+            del missing[key]
+            bad.append(missing)
+        for value in bad:
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                STAGE.validate_contract(value)
+        # A malformed contract in Info.plist also fails the layout check.
+        info = plistlib.loads((self.app / 'Contents/Info.plist').read_bytes())
+        info['FlashHelperCompatibility']['CallerPolicy'] = 2
+        self.write('Contents/Info.plist', plistlib.dumps(info))
+        with self.assertRaisesRegex(ValueError, 'CallerPolicy'):
+            STAGE.check_layout(self.app)
+
+    def test_signed_verification_requires_contract_bound_to_signed_core(self):
+        files2 = {'Library/LaunchDaemons/com.layoute.flash.daemon.plist': {'hash2': b'x'},
+                  'Library/HelperTools/FlashHelper': {'cdhash': b'x'}, 'MacOS/FlClashCore': {'cdhash': b'x'}}
+        self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': files2}))
+        with patch.object(STAGE, 'codesign', side_effect=mock_codesign([])):
+            with self.assertRaisesRegex(ValueError, 'lacks the FlashHelperCompatibility'):
+                STAGE.verify_signed(self.app)
+        (self.app / 'Contents/_CodeSignature/CodeResources').unlink()
+        (self.app / 'Contents/_CodeSignature').rmdir()
+        contract, _ = self.seal()
+        self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': files2}))
+        with patch.object(STAGE, 'codesign', side_effect=mock_codesign([])):
+            self.assertEqual(STAGE.verify_signed(self.app)['compatibility'], contract)
+            # Core bytes changed after sealing (e.g. re-signed) -> contract no longer binds Core.
+            self.write(STAGE.CORE, MACHO + b'resigned', 0o755)
+            with self.assertRaisesRegex(ValueError, 'CoreSHA256 differs'):
+                STAGE.verify_signed(self.app)
+
+    def test_seal_command_line(self):
+        with patch.object(STAGE, 'codesign', side_effect=mock_codesign([])), \
+                contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(STAGE.main(['seal-compatibility', str(self.app), '--core-version', 'v1.19.34',
+                                         '--core-revision', REVISION]), 0)
+            self.assertEqual(STAGE.main(['seal-compatibility', str(self.app), '--core-version', 'v1.19.34',
+                                         '--core-revision', REVISION]), 1)
+        self.assertIn('CoreVersion=v1.19.34', out.getvalue())
+        self.assertEqual(STAGE.read_contract(self.app)['CoreVersion'], 'v1.19.34')
+        for argv in (['seal-compatibility', str(self.app)],
+                     ['seal-compatibility', str(self.app), '--core-version', 'v1'],
+                     ['check', str(self.app), '--core-version', 'v1']):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                STAGE.main(argv)
+
+    def test_fresh_build_must_not_carry_a_contract(self):
+        self.seal()
+        with self.assertRaisesRegex(ValueError, 'only be sealed after Core signing'):
+            STAGE.stage(self.app, self.root / 'run/gui/Flash.app')
 
     def test_stage_copies_exactly_and_refuses_overwrite(self):
         destination = self.root / 'run/gui/Flash.app'

@@ -56,17 +56,30 @@ checks the exact daemon plist schema (`Label` `com.layoute.flash.daemon`,
 `Program`, `KeepAlive`, `RunAtLoad`), that `BundleProgram` is a real Mach-O whose
 `__info_plist` names `com.layoute.flash.helper`, and that no legacy artifact is
 present. The request (`flash-local-bundle-sign-v2`, mode `bundled-daemon`) binds the
-unsigned inventory, the Core/helper/plist hashes and the inside-out order
-`core → helper → frameworks → gui`. Every target is signed with the unchanged
-certificate pin and designated requirement
+unsigned inventory, the Core/helper/plist hashes, the `compatibility_inputs` and the
+inside-out order `core → contract → helper → frameworks → gui`. Every target is
+signed with the unchanged certificate pin and designated requirement
 `anchor H"PIN" and certificate leaf = H"PIN" and identifier "ID"`.
+
+The `contract` step is `stage_bundle_payload.seal_compatibility` (CLI:
+`stage_bundle_payload.py seal-compatibility APP --core-version V --core-revision R`).
+It runs after Core is signed and before any other signature, verifies the Core
+signature against its pinned requirement, refuses an existing contract or app seal,
+and writes `Info.plist` `FlashHelperCompatibility` with exactly six keys:
+`CallerPolicy` 3, `ServiceAPI` 1, `CoreAPI` 1, `CoreSHA256` (SHA256 of the signed
+Core bytes), `CoreVersion` (`build_config.yaml` `core_version`) and `CoreRevision`
+(the release source commit). `HelperTrust.m` and the daemon `Supervisor` fail closed
+(`signingRequired`/`incompatible`) without it. The fresh unsigned build must not
+carry the contract.
 
 The adapter answers `{schema: 2, request_sha256, receipt, receipt_sha256}`. The
 receipt (schema 2, no `dev0915_signing_scope`) must carry `before.entries` equal to
 the request, the same `signing_order`, and `helper_cdhash`, `core_cdhash`,
-`core_sha256` and `daemon_plist_sha256` matching what
+`core_sha256`, `daemon_plist_sha256` and `compatibility` matching what
 `stage_bundle_payload.verify_signed` reads from the signed app (strict nested
-verification with each pinned requirement, plist sealed in CodeResources `files2`).
+verification with each pinned requirement, plist sealed in CodeResources `files2`,
+contract present and valid with `CoreSHA256` equal to the signed Core, and equal to
+the request `compatibility_inputs`).
 
 ## Commands
 

@@ -28,6 +28,7 @@ class LocalReleaseTests(unittest.TestCase):
                        'signer_sha256': 'b' * 64}
         self.directory = self.root / 'run'
         self.release = RELEASE.Release(self.identity, self.config, self.directory)
+        (self.root / 'build_config.yaml').write_text('tags: with_gvisor\ncore_version: v1.19.34\n')
         self.pubspec = self.root / 'pubspec.yaml'
         self.pubspec.write_text('version: 0.9.8+2026111405\nhooks:\n  user_defines:\n'
                                '    setup:\n      build_assets: true\n    rust_api:\n      build_assets: true\n')
@@ -187,7 +188,9 @@ class LocalReleaseTests(unittest.TestCase):
             pass
 
     def test_real_build_then_staging_precedes_sign_request(self):
-        staged = Mock(SIGNING_ORDER=('core', 'helper', 'framework', 'gui'))
+        staged = Mock(SIGNING_ORDER=('core', 'contract', 'helper', 'framework', 'gui'))
+        staged.compatibility_inputs.side_effect = lambda version, revision: {
+            'CallerPolicy': 3, 'ServiceAPI': 1, 'CoreAPI': 1, 'CoreVersion': version, 'CoreRevision': revision}
         events = []
         facts = {'core_sha256': '1' * 64, 'helper_sha256': '2' * 64, 'daemon_plist_sha256': '3' * 64}
         def stage(fresh, app):
@@ -222,7 +225,19 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertEqual(request['unsigned_facts'], facts)
         self.assertEqual(request['certificate_sha1'], RELEASE.IDENTITY)
         self.assertEqual(request['mode'], 'bundled-daemon')
-        self.assertEqual(request['signing_order'], ['core', 'helper', 'framework', 'gui'])
+        self.assertEqual(request['signing_order'], ['core', 'contract', 'helper', 'framework', 'gui'])
+        self.assertEqual(request['compatibility_inputs'], {
+            'CallerPolicy': 3, 'ServiceAPI': 1, 'CoreAPI': 1, 'CoreVersion': 'v1.19.34',
+            'CoreRevision': self.identity['head']})
+
+    def test_core_version_comes_from_the_single_build_config_entry(self):
+        (self.root / 'build_config.yaml').write_text('tags: x\ncore_version: v1.2.3\ncore_dir: core\n')
+        self.assertEqual(RELEASE.core_version(), 'v1.2.3')
+        (self.root / 'build_config.yaml').write_text('core_version: v1\ncore_version: v2\n')
+        with self.assertRaisesRegex(ValueError, 'exactly one core_version'):
+            RELEASE.core_version()
+        with patch.object(RELEASE, 'ROOT', PACKAGING.parents[1]):
+            self.assertRegex(RELEASE.core_version(), r'^v\d+\.\d+\.\d+$')
         self.assertFalse(self.release.response.exists())
 
     def test_layout_failure_prevents_unsigned_sign_request(self):
@@ -238,13 +253,17 @@ class LocalReleaseTests(unittest.TestCase):
 
     def signed_run(self, receipt_extra=None, unsigned=None):
         facts = {'core_sha256': '1' * 64, 'helper_sha256': '2' * 64, 'daemon_plist_sha256': '3' * 64}
+        inputs = {'CallerPolicy': 3, 'ServiceAPI': 1, 'CoreAPI': 1, 'CoreVersion': 'v1.19.34',
+                  'CoreRevision': self.identity['head']}
         RELEASE.save(self.release.request, {'unsigned_entries': {'fresh': 'code'}, 'unsigned_facts': facts,
-                                            'signing_order': ['core', 'helper', 'framework', 'gui']})
+                                            'compatibility_inputs': inputs,
+                                            'signing_order': ['core', 'contract', 'helper', 'framework', 'gui']})
         self.release.state['request_sha256'] = RELEASE.sha(self.release.request)
         receipt = self.directory / 'bundle-receipt.json'
-        signed = dict(facts, helper_cdhash='h' * 40, core_cdhash='c' * 40)
+        signed = dict(facts, helper_cdhash='h' * 40, core_cdhash='c' * 40,
+                      compatibility=dict(inputs, CoreSHA256=facts['core_sha256']))
         body = {'schema': 2, 'mode': 'bundled-daemon', 'before': {'entries': unsigned or {'fresh': 'code'}},
-                'signing_order': ['core', 'helper', 'framework', 'gui'], **signed}
+                'signing_order': ['core', 'contract', 'helper', 'framework', 'gui'], **signed}
         body.update(receipt_extra or {})
         RELEASE.save(receipt, body)
         RELEASE.save(self.release.response, {'schema': 2, 'request_sha256': self.release.state['request_sha256'],
@@ -265,6 +284,27 @@ class LocalReleaseTests(unittest.TestCase):
                     self.release.verify()
             stage.verify_signed.return_value = dict(signed, daemon_plist_sha256='9' * 64)
             with self.assertRaisesRegex(ValueError, 'Daemon plist changed'):
+                self.release.verify()
+
+    def test_verify_binds_sealed_contract_to_request_inputs_and_signed_core(self):
+        signed = self.signed_run()
+        stage = Mock()
+        contract = signed['compatibility']
+        with patch.object(self.release, 'unchanged'), patch.object(RELEASE, 'check_version'), \
+                patch.object(RELEASE, 'module', return_value=stage):
+            for changed in (dict(contract, CoreVersion='v0'), dict(contract, CoreRevision='other'),
+                            dict(contract, CoreSHA256='9' * 64), dict(contract, CallerPolicy=2)):
+                stage.verify_signed.return_value = dict(signed, compatibility=changed)
+                with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, 'request inputs'):
+                    self.release.verify()
+
+    def test_verify_requires_receipt_to_bind_the_contract(self):
+        signed = self.signed_run({'compatibility': None})
+        stage = Mock()
+        stage.verify_signed.return_value = signed
+        with patch.object(self.release, 'unchanged'), patch.object(RELEASE, 'check_version'), \
+                patch.object(RELEASE, 'module', return_value=stage):
+            with self.assertRaisesRegex(ValueError, 'compatibility contract'):
                 self.release.verify()
 
     def test_verify_rejects_outside_in_signing_order(self):

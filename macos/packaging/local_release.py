@@ -121,6 +121,13 @@ def check_version(app, identity):
     return module('stage_bundle_payload').check_layout(app)
 
 
+def core_version():
+    """Core version the build hooks embed (build_config.yaml core_version), sealed as CoreVersion."""
+    match = re.findall(r'^core_version:\s*(\S+)\s*$', (ROOT / 'build_config.yaml').read_text(), re.M)
+    require(len(match) == 1, 'build_config.yaml must declare exactly one core_version')
+    return match[0]
+
+
 def notes(identity):
     data = json.loads((ROOT / 'changelog.json').read_text())
     require(data.get('schemaVersion') == 2, 'Unsupported structured changelog')
@@ -203,6 +210,10 @@ class Release:
         request = {'schema': 'flash-local-bundle-sign-v2', 'source': self.identity,
                    'app': str(self.app), 'run': str(self.directory), 'mode': 'bundled-daemon',
                    'signing_order': list(stage.SIGNING_ORDER),
+                   # The signer seals Info.plist FlashHelperCompatibility = these inputs plus
+                   # CoreSHA256 of the signed Core, after Core signing and before the outer seal
+                   # (stage_bundle_payload.seal_compatibility).
+                   'compatibility_inputs': stage.compatibility_inputs(core_version(), self.identity['head']),
                    'certificate_sha1': IDENTITY, 'unsigned_facts': facts,
                    'unsigned_entries': entries, 'build_log_sha256': sha(output / 'build.log'),
                    'public_sources': {str(p.relative_to(ROOT)): sha(p) for p in sorted(
@@ -231,6 +242,10 @@ class Release:
                 'Daemon plist changed during signing')
         for key in ('helper_cdhash', 'core_cdhash', 'core_sha256', 'daemon_plist_sha256'):
             require(receipt.get(key) == facts[key], 'Receipt does not bind the signed ' + key)
+        contract = facts['compatibility']
+        require(contract == dict(request['compatibility_inputs'], CoreSHA256=facts['core_sha256']),
+                'Sealed compatibility contract differs from the request inputs and signed Core')
+        require(receipt.get('compatibility') == contract, 'Receipt does not bind the sealed compatibility contract')
         return response
 
     def sign(self):

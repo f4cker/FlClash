@@ -6,6 +6,7 @@ daemon is registered by the signed app itself through SMAppService.daemon.
 """
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import plistlib
@@ -22,8 +23,16 @@ HELPER = 'Contents/Library/HelperTools/FlashHelper'
 HELPER_ID = 'com.layoute.flash.helper'
 DAEMON_PLIST = 'Contents/Library/LaunchDaemons/' + LABEL + '.plist'
 # Signing is strictly inside-out: nested code first, then frameworks, then the app
-# seal that covers the daemon plist in CodeResources files2.
-SIGNING_ORDER = ('core', 'helper', 'framework', 'gui')
+# seal that covers the daemon plist in CodeResources files2. The compatibility
+# contract is written into Info.plist right after Core is signed (it pins the signed
+# Core bytes) and before any outer signature, so the app seal covers it.
+SIGNING_ORDER = ('core', 'contract', 'helper', 'framework', 'gui')
+CORE_ID = 'com.layoute.flash.core'
+# Info.plist FlashHelperCompatibility: read by HelperTrust.m (FCBundleCompatibilityValid)
+# and the daemon Supervisor. Exactly these six keys; see macos/Shared/HelperCompatibility.h.
+CONTRACT_KEY = 'FlashHelperCompatibility'
+CONTRACT_POLICY = {'CallerPolicy': 3, 'ServiceAPI': 1, 'CoreAPI': 1}
+CONTRACT_KEYS = frozenset(CONTRACT_POLICY) | {'CoreSHA256', 'CoreVersion', 'CoreRevision'}
 DAEMON_SCHEMA = {
     'Label': LABEL,
     'BundleProgram': HELPER,  # relative to the .app root, as SMAppService expects
@@ -76,6 +85,72 @@ def embedded_info_plist(binary):
     return plistlib.loads(data[start:end + len(b'</plist>')])
 
 
+def contract_string(value):
+    return isinstance(value, str) and 0 < len(value) <= 128
+
+
+def validate_contract(contract):
+    """Python mirror of FCBundleCompatibilityValid (fail closed on any drift)."""
+    require(isinstance(contract, dict) and set(contract) == CONTRACT_KEYS,
+            CONTRACT_KEY + ' must have exactly ' + ', '.join(sorted(CONTRACT_KEYS)))
+    for key, expected in CONTRACT_POLICY.items():
+        value = contract[key]
+        require(type(value) is int and value == expected, CONTRACT_KEY + ' ' + key + ' must be integer ' + str(expected))
+    digest = contract['CoreSHA256']
+    require(isinstance(digest, str) and len(digest) == 64 and set(digest) <= set('0123456789abcdef'),
+            CONTRACT_KEY + ' CoreSHA256 must be 64 lowercase hex characters')
+    for key in ('CoreVersion', 'CoreRevision'):
+        require(contract_string(contract[key]), CONTRACT_KEY + ' ' + key + ' must be a 1-128 character string')
+    return contract
+
+
+def compatibility_inputs(core_version, core_revision):
+    """The release-bound part of the contract; CoreSHA256 is added only after Core signing."""
+    inputs = dict(CONTRACT_POLICY, CoreVersion=core_version, CoreRevision=core_revision)
+    validate_contract(dict(inputs, CoreSHA256='0' * 64))
+    return inputs
+
+
+def read_contract(app):
+    return plistlib.loads(regular(Path(app) / 'Contents/Info.plist')).get(CONTRACT_KEY)
+
+
+def seal_compatibility(app, core_version, core_revision):
+    """Write the contract after Core is signed and before helper/framework/app signing.
+
+    CoreSHA256 is the sha256 of the signed Core bytes the daemon later copies and hashes.
+    Refuses an already sealed contract, an unsigned/foreign Core and an already sealed app.
+    """
+    app = Path(app)
+    check_layout(app)
+    require(not (app / 'Contents/_CodeSignature').exists(), 'Contract must be written before the app seal')
+    codesign('--verify', '--strict', '--all-architectures', '-R=' + requirement(CORE_ID), str(app / CORE))
+    path = app / 'Contents/Info.plist'
+    data = regular(path)
+    info = plistlib.loads(data)
+    require(CONTRACT_KEY not in info, CONTRACT_KEY + ' is already present')
+    contract = validate_contract(dict(compatibility_inputs(core_version, core_revision),
+                                      CoreSHA256=sha256(app / CORE)))
+    info[CONTRACT_KEY] = contract
+    binary = data.startswith(b'bplist00')
+    output = plistlib.dumps(info, fmt=plistlib.FMT_BINARY if binary else plistlib.FMT_XML, sort_keys=True)
+    temporary = path.with_name('.Info.plist.contract')
+    mode = stat.S_IMODE(path.lstat().st_mode)
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    try:
+        with os.fdopen(descriptor, 'wb') as stream:
+            os.fchmod(stream.fileno(), mode)
+            stream.write(output)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+    require(read_contract(app) == contract, 'Sealed contract did not round-trip')
+    return contract
+
+
 def check_layout(app):
     """Validate an unsigned or signed bundled-daemon Flash.app."""
     app = Path(app)
@@ -84,6 +159,8 @@ def check_layout(app):
     require(info.get('CFBundleIdentifier') == GUI_ID, 'Unexpected GUI identifier')
     for key in FORBIDDEN_INFO_KEYS:
         require(key not in info, 'Legacy helper metadata in Info.plist: ' + key)
+    if CONTRACT_KEY in info:
+        validate_contract(info[CONTRACT_KEY])
     for relative in FORBIDDEN:
         path = app / relative
         require(not path.exists() and not path.is_symlink(), 'Legacy helper artifact present: ' + relative)
@@ -130,6 +207,7 @@ def stage(source, destination):
     source, destination = Path(source), Path(destination)
     require(not destination.exists() and not destination.is_symlink(), 'Refusing to overwrite staged app')
     check_layout(source)
+    require(read_contract(source) is None, CONTRACT_KEY + ' must only be sealed after Core signing')
     destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     subprocess.run(['/usr/bin/ditto', '--norsrc', '--noextattr', '--noacl', str(source), str(destination)],
                    check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -163,7 +241,7 @@ def verify_signed(app):
     """Static verification of the signed bundle; never launches or registers anything."""
     app = Path(app)
     facts = check_layout(app)
-    for relative, identifier in ((CORE, 'com.layoute.flash.core'), (HELPER, HELPER_ID), ('.', GUI_ID)):
+    for relative, identifier in ((CORE, CORE_ID), (HELPER, HELPER_ID), ('.', GUI_ID)):
         codesign('--verify', '--strict', '--all-architectures', '-R=' + requirement(identifier),
                  str(app / relative))
     codesign('--verify', '--deep', '--strict', '--all-architectures', str(app))
@@ -173,6 +251,12 @@ def verify_signed(app):
     require(key in sealed, 'Daemon plist is not sealed in CodeResources files2')
     require(HELPER[len('Contents/'):] in sealed and CORE[len('Contents/'):] in sealed,
             'Nested helper/Core must be sealed by the app signature')
+    contract = read_contract(app)
+    require(contract is not None, 'Signed app lacks the ' + CONTRACT_KEY + ' contract in Info.plist')
+    validate_contract(contract)
+    require(contract['CoreSHA256'] == facts['core_sha256'],
+            CONTRACT_KEY + ' CoreSHA256 differs from the signed bundled Core')
+    facts['compatibility'] = contract
     facts['helper_cdhash'] = cdhash(app / HELPER)
     facts['core_cdhash'] = cdhash(app / CORE)
     return facts
@@ -180,16 +264,27 @@ def verify_signed(app):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
-    parser.add_argument('mode', choices=('check', 'verify-signed'))
+    parser.add_argument('mode', choices=('check', 'seal-compatibility', 'verify-signed'))
     parser.add_argument('app')
+    parser.add_argument('--core-version')
+    parser.add_argument('--core-revision')
     args = parser.parse_args(argv)
+    inputs = (args.core_version, args.core_revision)
+    sealing = args.mode == 'seal-compatibility'
+    if not (all(v is not None for v in inputs) if sealing else all(v is None for v in inputs)):
+        parser.error('--core-version and --core-revision are required for (and only for) seal-compatibility')
     try:
-        result = check_layout(args.app) if args.mode == 'check' else verify_signed(args.app)
-    except (ValueError, OSError, KeyError, subprocess.SubprocessError) as error:
+        if args.mode == 'check':
+            result = check_layout(args.app)
+        elif args.mode == 'seal-compatibility':
+            result = seal_compatibility(args.app, args.core_version, args.core_revision)
+        else:
+            result = verify_signed(args.app)
+    except (ValueError, OSError, KeyError, plistlib.InvalidFileException, subprocess.SubprocessError) as error:
         print('Bundled daemon layout check failed: ' + str(error), file=sys.stderr)
         return 1
     for key, value in sorted(result.items()):
-        print(key + '=' + value)
+        print(key + '=' + (json.dumps(value, sort_keys=True) if isinstance(value, dict) else str(value)))
     return 0
 
 
