@@ -477,6 +477,45 @@ abstract final class AppGlyphs {
     ], role: GlyphRole.line),
   ]);
 
+  /// [helperDaemon] for less than 20 points: a solid gear 45% as wide as the
+  /// icon with a hole 40% of its width, at least 1.5 points clear of
+  /// the arrows, which have smaller heads.
+  static const helperDaemonSmall = Glyph([
+    GlyphPath(
+      'M10.70 8.22L10.97 6.70L13.03 6.70L13.30 8.22L14.62 8.98L16.08 8.46'
+      'L17.11 10.24L15.93 11.24L15.93 12.76L17.11 13.76L16.08 15.54'
+      'L14.62 15.02L13.30 15.78L13.03 17.30L10.97 17.30L10.70 15.78'
+      'L9.38 15.02L7.92 15.54L6.89 13.76L8.07 12.76L8.07 11.24L6.89 10.24'
+      'L7.92 8.46L9.38 8.98Z'
+      // The hole, wound the other way.
+      'M14.16 12A2.16 2.16 0 1 0 9.84 12A2.16 2.16 0 1 0 14.16 12Z',
+      solid: true,
+    ),
+    GlyphArc(
+      12,
+      12,
+      9.4,
+      -math.pi * 5 / 6,
+      math.pi * 29 / 36,
+      role: GlyphRole.line,
+    ),
+    GlyphPolyline([
+      GlyphVertex(22.67, 10.06),
+      GlyphVertex(21.40, 11.58, 0.3),
+      GlyphVertex(19.88, 10.31),
+    ], role: GlyphRole.line),
+    GlyphArc(12, 12, 9.4, math.pi / 6, math.pi * 29 / 36, role: GlyphRole.line),
+    GlyphPolyline([
+      GlyphVertex(1.33, 13.94),
+      GlyphVertex(2.60, 12.42, 0.3),
+      GlyphVertex(4.12, 13.69),
+    ], role: GlyphRole.line),
+  ]);
+
+  /// The helper glyph drawn at [size] points: the simpler one below 20.
+  static Glyph helperDaemonAt(double size) =>
+      size < 20 ? helperDaemonSmall : helperDaemon;
+
   /// exclamationmark.shield: a security check did not pass.
   static const shieldAlert = Glyph([
     GlyphPath(

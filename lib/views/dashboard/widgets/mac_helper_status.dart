@@ -34,6 +34,10 @@ String _appVersion() {
 const _fade = Duration(milliseconds: 200);
 const _tint = 0.15;
 
+/// The round button's glyph: the helper's ring, 18.4 of the glyph's 24 units
+/// across, comes to 20 points.
+const _roundGlyphSize = 26.0;
+
 /// The helper's place in the dashboard bar, left of the Core status button.
 /// Nothing while the helper is ready; otherwise a capsule naming what is
 /// wrong that opens the helper card in a popover under it. A feature that
@@ -333,16 +337,15 @@ class MacHelperCapsule extends StatelessWidget {
     Color fill, {
     required bool round,
   }) {
-    // Round, the glyph is as big as the Core check's; beside text, smaller.
-    final iconSize = round
-        ? TonalButtonSize.bar.icon
-        : TonalButtonSize.section.icon;
+    // Round, the helper's ring is 20 points across, as heavy as the Core
+    // check; beside text, the glyph is the text's size.
+    final iconSize = round ? _roundGlyphSize : TonalButtonSize.section.icon;
     final icon = SizedBox.square(
       dimension: iconSize,
       child: view.kind == MacHelperBarKind.starting
           ? ActivityIndicator(size: iconSize, color: color)
           : GlyphIcon(
-              macHelperBarGlyph(view.kind),
+              macHelperBarGlyph(view.kind, size: iconSize),
               size: iconSize,
               color: color,
             ),
