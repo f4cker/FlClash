@@ -104,9 +104,9 @@ class LiveStatusButton extends ConsumerWidget {
   /// Whether the core runs in its own process; the build's core when null.
   final bool? separateCore;
 
-  /// The macOS helper flow; the app's own when null. While the helper is
-  /// being set up or is not usable, [MacHelperStatus] says why and offers
-  /// the fix, so this button stays out of the way.
+  /// The macOS helper flow; the app's own when null. The helper's own button
+  /// sits left of this one; this button only steps aside while a Core the
+  /// old helper runs is not known to the app.
   final MacHelperMaintenance? maintenance;
 
   bool get _separateCore => separateCore ?? coreLib == null;
@@ -141,11 +141,13 @@ class LiveStatusButton extends ConsumerWidget {
     return ListenableBuilder(
       listenable: flow,
       builder: (context, _) {
-        if (!flow.busy &&
-            (flow.state == null || flow.state == MacHelperState.enabled)) {
-          return _buildStatus(context, ref);
+        // A Core the old helper still runs is not known to this app while
+        // the helper is not ready: say nothing rather than "stopped".
+        if (flow.client.hasCoreSession &&
+            (flow.busy || flow.state != MacHelperState.enabled)) {
+          return const SizedBox.shrink();
         }
-        return const SizedBox.shrink();
+        return _buildStatus(context, ref);
       },
     );
   }

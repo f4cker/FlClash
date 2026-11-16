@@ -227,6 +227,132 @@ String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
 String macHelperStatusLabel(AppLocalizations l, MacHelperMaintenance flow) =>
     macHelperCardView(l, flow).title;
 
+/// What the top bar capsule beside the Core status button says.
+enum MacHelperBarKind { ready, update, allow, starting, notReady, failedCheck }
+
+/// How loud the button is: all well, something for the user to do, a
+/// failure, or only a wait.
+enum MacHelperBarTone { ready, action, failure, waiting }
+
+final class MacHelperBarView {
+  final MacHelperBarKind kind;
+  final MacHelperBarTone tone;
+
+  /// The short capsule text.
+  final String label;
+
+  /// The card's full title, which a screen reader reads.
+  final String title;
+
+  const MacHelperBarView({
+    required this.kind,
+    required this.tone,
+    required this.label,
+    required this.title,
+  });
+
+  /// A start in progress only waits; there is nothing to open.
+  bool get opens => kind != MacHelperBarKind.starting;
+
+  /// The round green button: nothing to fix.
+  bool get isReady => kind == MacHelperBarKind.ready;
+}
+
+/// The bar button for the card the helper would show: a round green one when
+/// ready, a capsule naming the problem otherwise; null until the first check
+/// answers.
+/// Pure, so it is unit-tested without widgets.
+MacHelperBarView? macHelperBarView(
+  AppLocalizations l,
+  MacHelperMaintenance flow,
+) {
+  if (flow.state == null) return null;
+  final card = macHelperCardView(l, flow);
+  final (kind, tone) = switch (card.kind) {
+    MacHelperCardKind.ready => (MacHelperBarKind.ready, MacHelperBarTone.ready),
+    MacHelperCardKind.migration => (
+      MacHelperBarKind.update,
+      MacHelperBarTone.action,
+    ),
+    MacHelperCardKind.approval || MacHelperCardKind.disabledByUser => (
+      MacHelperBarKind.allow,
+      MacHelperBarTone.action,
+    ),
+    MacHelperCardKind.starting => (
+      MacHelperBarKind.starting,
+      MacHelperBarTone.waiting,
+    ),
+    // A slow start is not called a failure; the user can check again.
+    MacHelperCardKind.startSlow ||
+    MacHelperCardKind.exitUnconfirmed ||
+    MacHelperCardKind.move => (
+      MacHelperBarKind.notReady,
+      MacHelperBarTone.action,
+    ),
+    MacHelperCardKind.updateFailed ||
+    MacHelperCardKind.reinstall ||
+    MacHelperCardKind.unsupported => (
+      MacHelperBarKind.notReady,
+      MacHelperBarTone.failure,
+    ),
+    MacHelperCardKind.signatureFailed => (
+      MacHelperBarKind.failedCheck,
+      MacHelperBarTone.failure,
+    ),
+  };
+  return MacHelperBarView(
+    kind: kind,
+    tone: tone,
+    title: card.title,
+    label: switch (kind) {
+      MacHelperBarKind.ready => l.macHelperOn,
+      MacHelperBarKind.update => l.macHelperBarUpdate,
+      MacHelperBarKind.allow => l.macHelperBarAllow,
+      MacHelperBarKind.starting => l.macHelperBarStarting,
+      MacHelperBarKind.notReady => l.macHelperBarNotReady,
+      MacHelperBarKind.failedCheck => l.macHelperBarFailedCheck,
+    },
+  );
+}
+
+/// The bar button's icon, which the card's title repeats: the helper's gear
+/// in its arrows, or a shield for a failed security check. A start shows a
+/// progress ring instead.
+Glyph macHelperBarGlyph(MacHelperBarKind kind) => switch (kind) {
+  MacHelperBarKind.failedCheck => AppGlyphs.shieldAlert,
+  _ => AppGlyphs.helperDaemon,
+};
+
+/// Green when ready, amber for something the user does, red for a failure.
+Color macHelperBarColor(ColorScheme colorScheme, MacHelperBarTone tone) =>
+    switch (tone) {
+      MacHelperBarTone.ready => colorScheme.success,
+      MacHelperBarTone.action => colorScheme.warning,
+      MacHelperBarTone.failure => colorScheme.error,
+      MacHelperBarTone.waiting => colorScheme.onSurfaceVariant,
+    };
+
+/// The top bar capsule while it is on screen: a feature that needs the helper
+/// opens its popover instead of a dialog.
+abstract interface class MacHelperPresenter {
+  MacHelperMaintenance get maintenance;
+
+  /// Whether the capsule is visible on the current page and can open.
+  bool get canPresent;
+
+  /// Opens the popover; completes when it closes.
+  Future<void> present({required bool requiredByFeature});
+}
+
+MacHelperPresenter? _presenter;
+
+void registerMacHelperPresenter(MacHelperPresenter presenter) =>
+    _presenter = presenter;
+
+void unregisterMacHelperPresenter(MacHelperPresenter presenter) {
+  if (identical(_presenter, presenter)) _presenter = null;
+}
+
 final macHelperMaintenance = MacHelperMaintenance(
   macosHelperClient,
   stop: () => globalState.container.read(coreHandlerProvider).stop(),
@@ -240,10 +366,16 @@ class MacHelperCard extends StatefulWidget {
   /// Inside a dialog the card is not wrapped in its own [Card] surface.
   final bool embedded;
 
+  /// The helper's version, said in grey under "Helper ready". The helper
+  /// ships inside Flash and runs only when its code signature matches this
+  /// build, so it is the app's version.
+  final String? version;
+
   const MacHelperCard({
     super.key,
     required this.maintenance,
     this.embedded = false,
+    this.version,
   });
 
   @override
@@ -329,21 +461,36 @@ class _MacHelperCardState extends State<MacHelperCard> {
   }
 
   Widget _buildReady(BuildContext context, MacHelperCardView view) {
+    final colorScheme = context.colorScheme;
+    final version = widget.version;
     return Semantics(
       liveRegion: true,
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: context.colorScheme.success,
-              shape: BoxShape.circle,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GlyphIcon(AppGlyphs.helperDaemon, color: colorScheme.success),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  view.title,
+                  style: AppTextStyle.subheadline.of(context),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(view.title, style: AppTextStyle.footnote.of(context)),
+          if (version != null && version.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              context.appLocalizations.macHelperVersionLine(version),
+              style: AppTextStyle.footnote
+                  .of(context)
+                  .copyWith(color: colorScheme.onSurfaceVariant),
+            ),
+          ],
         ],
       ),
     );
@@ -356,13 +503,12 @@ class _MacHelperCardState extends State<MacHelperCard> {
     final footnote = AppTextStyle.footnote
         .of(context)
         .copyWith(height: 20 / 13);
-    final glyph = switch (view.kind) {
-      MacHelperCardKind.migration => AppGlyphs.sync,
-      MacHelperCardKind.approval ||
-      MacHelperCardKind.disabledByUser => AppGlyphs.warning,
-      _ when view.isProblem => AppGlyphs.error,
-      _ => AppGlyphs.warning,
-    };
+    // The same icon and color as the capsule in the bar.
+    final bar = macHelperBarView(l, widget.maintenance);
+    final glyph = bar == null ? AppGlyphs.warning : macHelperBarGlyph(bar.kind);
+    final glyphColor = bar == null
+        ? context.colorScheme.warning
+        : macHelperBarColor(context.colorScheme, bar.tone);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,12 +521,7 @@ class _MacHelperCardState extends State<MacHelperCard> {
               if (waiting)
                 const ActivityIndicator(size: 16)
               else
-                GlyphIcon(
-                  glyph,
-                  color: view.isProblem
-                      ? context.colorScheme.error
-                      : context.colorScheme.warning,
-                ),
+                GlyphIcon(glyph, color: glyphColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -469,6 +610,12 @@ Future<void> showMacHelperFlow({
   final visible = _visibleHelperDialog;
   if (visible != null) return visible;
   final flow = maintenance ?? macHelperMaintenance;
+  final presenter = _presenter;
+  if (presenter != null &&
+      identical(presenter.maintenance, flow) &&
+      presenter.canPresent) {
+    return presenter.present(requiredByFeature: requiredByFeature);
+  }
   final operation = dialogs.showCommonDialog<void>(
     context: context,
     child: MacHelperDialog(

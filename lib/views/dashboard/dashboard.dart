@@ -74,7 +74,11 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
           ? appLocalizations.editDashboard
           : appLocalizations.dashboard,
       actions: [
-        if (!editing) const LiveStatusButton(),
+        if (!editing)
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [MacHelperBarStatus(), LiveStatusButton()],
+          ),
         if (editable && !editing)
           AppBarActionButton(
             data: IconButtonData(
@@ -92,31 +96,29 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
             )
           : null,
       // The providers learn a resize a frame late, too late for the cards.
-      body: MacHelperStatus(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final room = constraints.biggest / scale;
-            final layout = DashboardDensity.of(room);
-            return DashboardDensityScope(
-              density: layout,
-              scale: scale,
-              child: layout.isDesktop
-                  ? _DesktopDashboard(
-                      platform: platform,
-                      columns: dashboardColumnsOf(room.width),
-                      gap: gap,
-                    )
-                  : _MobileDashboard(
-                      controller: _controller,
-                      platform: platform,
-                      gap: gap,
-                      editing: editing,
-                      cardKeyOf: _cardKeyOf,
-                      onDone: () => _setEditing(false),
-                    ),
-            );
-          },
-        ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final room = constraints.biggest / scale;
+          final layout = DashboardDensity.of(room);
+          return DashboardDensityScope(
+            density: layout,
+            scale: scale,
+            child: layout.isDesktop
+                ? _DesktopDashboard(
+                    platform: platform,
+                    columns: dashboardColumnsOf(room.width),
+                    gap: gap,
+                  )
+                : _MobileDashboard(
+                    controller: _controller,
+                    platform: platform,
+                    gap: gap,
+                    editing: editing,
+                    cardKeyOf: _cardKeyOf,
+                    onDone: () => _setEditing(false),
+                  ),
+          );
+        },
       ),
     );
   }
