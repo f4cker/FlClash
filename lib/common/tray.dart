@@ -10,6 +10,7 @@ import 'package:fl_clash/widgets/icon.dart' show groupMonogram;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:prism_ui/prism_ui.dart';
 import 'package:tray/tray.dart';
+import 'package:rust_api/tray.dart';
 
 import 'app_localizations.dart';
 import 'app_ports.dart';

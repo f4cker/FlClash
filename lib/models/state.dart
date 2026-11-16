@@ -114,6 +114,7 @@ abstract class ProxyState with _$ProxyState {
     required bool systemProxy,
     required List<String> bassDomain,
     required int port,
+    String? pacScript,
   }) = _ProxyState;
 }
 
@@ -132,6 +133,7 @@ abstract class SystemProxySelectorState with _$SystemProxySelectorState {
   const factory SystemProxySelectorState({
     required bool systemProxy,
     required List<String> bypassDomain,
+    String? pacScript,
   }) = _SystemProxySelectorState;
 }
 
@@ -202,10 +204,8 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
     required PatchClashConfig realPatchConfig,
     @Default(ProfileOverrides()) ProfileOverrides overrides,
     @Default(false) bool bypassPrivateRoute,
-
-    /// Set for a subscription, whose own DNS values an emptied entry replaces.
-    @Default(false) bool keepEmptyDnsOverrides,
     required bool appendSystemDns,
+    String? defaultTunDnsMode,
     required List<ProxyGroup> proxyGroups,
     required List<Rule> rules,
     required List<Rule> addedRules,
@@ -251,7 +251,6 @@ abstract class SetupState with _$SetupState {
     required int? profileId,
     required int? profileLastUpdateDate,
     required ProfileType profileType,
-    required ExtendType extendType,
     required List<Rule> rules,
     required List<ProxyGroup> proxyGroups,
     required List<Rule> addedRules,

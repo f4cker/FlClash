@@ -15,7 +15,7 @@ import 'package:fl_clash/widgets/icon.dart' show targetIconCacheRevision;
 import 'package:prism_ui/prism_ui.dart' show ColorScheme;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tray/tray.dart';
+import 'package:rust_api/tray.dart';
 
 class TrayManager extends ConsumerStatefulWidget {
   final Widget child;

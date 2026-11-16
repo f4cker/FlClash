@@ -16,7 +16,7 @@ packages:
     source: git
     description:
       url: https://github.com/chen08209/flutter_distributor.git
-      ref: v0.6.11-flclash.4
+      ref: v0.6.11-flclash.5
       path: packages/flutter_distributor
 ''';
 
@@ -42,7 +42,7 @@ packages:
     for (final entry in {
       'source': ['source: git', 'source: hosted'],
       'repository': ['chen08209/', 'another-owner/'],
-      'tag': ['v0.6.11-flclash.4', 'v0.6.11-flclash.3'],
+      'tag': ['v0.6.11-flclash.5', 'v0.6.11-flclash.4'],
       'package path': ['packages/flutter_distributor', 'packages/other'],
     }.entries) {
       test('reactivates when ${entry.key} differs', () {

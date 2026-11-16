@@ -31,7 +31,6 @@ Future<YamlMap> _dnsOf({
   required Map<String, dynamic> rawConfig,
   Dns dns = _dns,
   Set<DnsOverrideKey> keys = _keys,
-  bool keepEmpty = false,
   bool pagePriority = true,
 }) async {
   final result = await makeRealProfileTask(
@@ -41,7 +40,6 @@ Future<YamlMap> _dnsOf({
       rawConfig: rawConfig,
       realPatchConfig: PatchClashConfig(pagePriority: pagePriority),
       overrides: ProfileOverrides(dns: dns, dnsOverrideKeys: keys),
-      keepEmptyDnsOverrides: keepEmpty,
       appendSystemDns: false,
       proxyGroups: const [],
       rules: const [],
@@ -102,19 +100,7 @@ void main() {
     });
   });
 
-  test('a key picked without a value writes nothing', () async {
-    final dns = await _dnsOf(
-      rawConfig: {'dns': _profileDns},
-      dns: const Dns(nameserver: [], listen: ''),
-      keys: {DnsOverrideKey.nameserver, DnsOverrideKey.listen},
-    );
-
-    expect(dns['nameserver'], ['9.9.9.9']);
-    expect(dns['listen'], '0.0.0.0:53');
-  });
-
-  test('an app entry emptied over a subscription replaces its value, save '
-      'nameserver', () async {
+  test('an app entry emptied over a subscription clears its value', () async {
     final dns = await _dnsOf(
       rawConfig: {'dns': _profileDns},
       dns: const Dns(
@@ -127,10 +113,9 @@ void main() {
         DnsOverrideKey.listen,
         DnsOverrideKey.fallbackFilterDomain,
       },
-      keepEmpty: true,
     );
 
-    expect(dns['nameserver'], ['9.9.9.9']);
+    expect(dns['nameserver'], isEmpty);
     expect(dns['listen'], '');
     expect(dns['fallback-filter'], {'geoip': false, 'domain': []});
   });

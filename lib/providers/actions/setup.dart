@@ -859,9 +859,7 @@ class SetupAction extends _$SetupAction {
 
   void applyIfGlobalRulesUsed() {
     final profile = ref.read(currentProfileProvider);
-    if (profile == null ||
-        profile.type == ProfileType.custom ||
-        profile.extendType != ExtendType.standard) {
+    if (profile == null || profile.type == ProfileType.custom) {
       return;
     }
     applyProfileDebounce(silence: true);
@@ -965,7 +963,21 @@ class SetupAction extends _$SetupAction {
   }) async {
     final profileId = setupState.profileId;
     if (profileId == null) {
-      return (yaml: '', md5: '', counts: configCountsOf(const {}), base: null);
+      final yaml = await encodeYamlTask(
+        inboundConfigOf(
+          patchConfig,
+          authentication: ref
+              .read(networkSettingProvider)
+              .authentication
+              .credentials,
+        ),
+      );
+      return (
+        yaml: yaml,
+        md5: yaml.toMd5(),
+        counts: configCountsOf(const {}),
+        base: null,
+      );
     }
     final defaultUA = globalState.packageInfo.ua;
     final networkSetting = ref.read(
@@ -979,10 +991,7 @@ class SetupAction extends _$SetupAction {
     );
     final appendSystemDns = networkSetting.appendSystemDns;
     final isCustom = setupState.profileType == ProfileType.custom;
-    final scriptContent =
-        !isCustom && setupState.extendType == ExtendType.script
-        ? await setupState.script?.content
-        : null;
+    final scriptContent = isCustom ? null : await setupState.script?.content;
     final hasScript = scriptContent?.isNotEmpty == true;
     final profileBase = !isCustom && !hasScript
         ? await _core.getProfileBase(profileId)
@@ -1034,8 +1043,11 @@ class SetupAction extends _$SetupAction {
         realPatchConfig: patchConfig,
         overrides: setupState.overrides,
         bypassPrivateRoute: networkSetting.bypassPrivateRoute,
-        keepEmptyDnsOverrides: setupState.profileType != ProfileType.custom,
         appendSystemDns: appendSystemDns,
+        // sing-tun points the system resolver at the TUN by default with
+        // auto-route everywhere but macOS, where native does it through a
+        // dynamic store entry that configd drops when the Core exits.
+        defaultTunDnsMode: system.isMacOS ? 'native' : null,
         addedRules: setupState.addedRules,
         defaultUA: defaultUA,
         authentication: networkSetting.authentication.credentials,
@@ -1590,12 +1602,6 @@ class SetupAction extends _$SetupAction {
     final adoptionPending = await _compositionPending;
     if (!(owns?.call() ?? true)) return _SetupTaskResult.failed;
     if (adoptionPending &&
-        ref.read(pendingCompositionDnsEligibilityProvider) == null) {
-      final eligibility = ref.read(shouldPatchSystemDnsProvider);
-      ref.read(pendingCompositionDnsEligibilityProvider.notifier).value =
-          eligibility;
-    }
-    if (adoptionPending &&
         _compositionReview.suppressed(automatic: automatic)) {
       return _SetupTaskResult.failed;
     }
@@ -1778,10 +1784,6 @@ class SetupAction extends _$SetupAction {
               return;
             }
             if (adoptionPending) {
-              ref
-                      .read(pendingCompositionDnsEligibilityProvider.notifier)
-                      .value =
-                  null;
               if (_deferRunningPublication && _isRunning) {
                 _deferRunningPublication = false;
                 _updateRunTime();

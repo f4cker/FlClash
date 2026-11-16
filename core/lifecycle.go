@@ -61,6 +61,7 @@ func handleStopListener() {
 	setRunning(false)
 	listener.StopListener()
 	resolver.ResetConnection()
+	bumpRouteEpoch()
 }
 
 // mihomo only logs a mixed listener that failed to bind, so the host asks

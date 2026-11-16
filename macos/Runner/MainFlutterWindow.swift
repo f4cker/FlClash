@@ -1,8 +1,6 @@
 import Cocoa
 import FlutterMacOS
-import window
 import ServiceManagement
-import LaunchAtLogin
 import Darwin
 
 enum NativeLoadVerification {
@@ -50,6 +48,7 @@ enum NativeLoadVerification {
 
 class MainFlutterWindow: NSWindow {
     private var verificationChannel: FlutterMethodChannel?
+    private var hiddenAtLaunch = false
 
     private var configured = false
 
@@ -124,7 +123,11 @@ class MainFlutterWindow: NSWindow {
     override public func order(_ place: NSWindow.OrderingMode, relativeTo otherWin: Int) {
         if NativeLoadVerification.requested { return }
         super.order(place, relativeTo: otherWin)
-        hiddenWindowAtLaunch()
+        // Only the first order hides the window, which Dart shows once it is configured.
+        if !hiddenAtLaunch {
+            hiddenAtLaunch = true
+            setIsVisible(false)
+        }
     }
 }
 
@@ -200,9 +203,11 @@ private enum MainAppLoginItem {
         result(nil)
     }
 
+    // SMAppService.mainApp needs macOS 13; on macOS 12 there is no login item
+    // API this app can drive, so the toggle reads off and a change is refused.
     private static func handleLegacy(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if call.method == "launchAtStartupIsEnabled" {
-            result(LaunchAtLogin.isEnabled)
+            result(false)
             return
         }
         guard let arguments = call.arguments as? [String: Any],
@@ -211,20 +216,15 @@ private enum MainAppLoginItem {
                                 message: "setEnabledValue must be a Boolean.", details: nil))
             return
         }
-        if LaunchAtLogin.isEnabled != enabled {
-            LaunchAtLogin.isEnabled = enabled
-        }
-        let actual = LaunchAtLogin.isEnabled
-        guard actual == enabled else {
-            result(FlutterError(
-                code: "login_item_operation_failed",
-                message: "Open at Login did not reach the requested state.",
-                details: ["operation": enabled ? "enable" : "disable",
-                          "status": actual ? "enabled" : "notRegistered"]
-            ))
+        if !enabled {
+            result(nil)
             return
         }
-        result(nil)
+        result(FlutterError(
+            code: "login_item_operation_failed",
+            message: "Open at Login needs macOS 13 or later.",
+            details: ["operation": "enable", "status": "unsupported"]
+        ))
     }
 
     @available(macOS 13, *)

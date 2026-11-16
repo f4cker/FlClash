@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:fl_clash/common/proxy.dart';
 import 'package:fl_clash/models/models.dart' show ProxyState;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:proxy/proxy.dart';
 
 final _clashMac = MacosServiceProxy.applied(7893, const ['localhost']);
 

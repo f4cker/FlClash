@@ -6,7 +6,7 @@ import 'package:fl_clash/common/print.dart';
 import 'package:fl_clash/common/system.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart' show ProxyState;
-import 'package:proxy/proxy.dart';
+import 'package:rust_api/rust_api.dart' as rust_api;
 
 final proxy = system.isDesktop && hostNetworkWritable ? Proxy() : null;
 

@@ -20,6 +20,8 @@ final class MacHelperTransport implements DesktopCoreTransport {
   @override
   DesktopTransportState get state => _state;
   @override
+  TransportConnected? get connection => _connection;
+  @override
   Stream<DesktopTransportEvent> get events => _events.stream;
   @override
   Stream<Uint8List> get frames => _frames.stream;
@@ -62,6 +64,29 @@ final class MacHelperTransport implements DesktopCoreTransport {
         .cast<TransportConnected>()
         .first
         .timeout(timeout);
+  }
+
+  /// The lifecycle owns one transport and resets it to drop a peer whose
+  /// disconnect has not arrived; the relay is per session, so only the local
+  /// view of it goes. Generations keep counting across resets.
+  @override
+  Future<void> reset() async {
+    if (_state == DesktopTransportState.closed) {
+      throw StateError('Transport closed');
+    }
+    final connection = _connection;
+    _connection = null;
+    await _subscription?.cancel();
+    _subscription = null;
+    _state = DesktopTransportState.idle;
+    if (connection != null) {
+      _events.add(
+        TransportDisconnected(
+          connection.generation,
+          error: StateError('Helper transport was reset'),
+        ),
+      );
+    }
   }
 
   @override

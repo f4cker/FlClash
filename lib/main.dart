@@ -30,9 +30,6 @@ void main(List<String> args) {
           appPath.sharedPreferencesPath,
         );
       }
-      if (Platform.isLinux) {
-        linkManager.seedInitialLink(args);
-      }
       FlutterError.onError = (details) {
         Future.microtask(() {
           commonPrint.log(

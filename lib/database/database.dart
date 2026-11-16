@@ -61,7 +61,7 @@ class Database extends _$Database {
   Database([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -131,10 +131,20 @@ class Database extends _$Database {
         if (from < 23) {
           await m.alterTable(TableMigration(mitmModules));
         }
-        if (from < 24) {
+        // Flash 0.9.x and upstream FlClash both shipped a version 24: Flash's
+        // added the mount tables, upstream's merged the extend modes. A
+        // version 24 database holding the mount tables is Flash's and still
+        // needs the merge; one without them is upstream's and needs the tables.
+        if (from < 25) {
+          final flashV24 =
+              from == 24 &&
+              (await _columnsOf(profileMounts.actualTableName)).isNotEmpty;
           await _createTableIfMissing(m, profileMounts);
           await _createTableIfMissing(m, mountTargets);
           await _createTableIfMissing(m, mountSourceStatuses);
+          if (from < 24 || flashV24) {
+            await _mergeExtendModes();
+          }
         }
       }),
       beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),
@@ -177,6 +187,24 @@ class Database extends _$Database {
       return;
     }
     await m.renameColumn(table, oldName, column);
+  }
+
+  /// A profile keeps the rules it applied when it ran a script or added rules.
+  Future<void> _mergeExtendModes() async {
+    await customStatement(
+      'INSERT OR IGNORE INTO disabled_rules (profile_id, rule_id) '
+      'SELECT profiles.id, rules.id FROM profiles, rules '
+      "WHERE rules.profile_id IS NULL AND profiles.extend_type = 'script'",
+    );
+    await customStatement(
+      'UPDATE profiles SET script_id = NULL '
+      "WHERE extend_type != 'script' "
+      'OR script_id NOT IN (SELECT id FROM scripts)',
+    );
+    await customStatement(
+      'UPDATE profiles SET extend_type = '
+      "CASE WHEN script_id IS NULL THEN 'standard' ELSE 'script' END",
+    );
   }
 
   /// alterTable re-creates the old index, which names the dropped column.

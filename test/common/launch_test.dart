@@ -2,22 +2,11 @@ import 'package:fl_clash/common/launch.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:launch_at_startup/launch_at_startup.dart';
 
-class _FakeLauncher implements LaunchAtStartup {
+class _FakeLauncher implements AutostartEntry {
   bool enabled = false;
   PlatformException? readFailure;
   final calls = <String>[];
-
-  @override
-  void setup({
-    required String appName,
-    required String appPath,
-    String? packageName,
-    List<String> args = const [],
-  }) {
-    calls.add('setup');
-  }
 
   @override
   Future<bool> isEnabled() async {
@@ -27,42 +16,34 @@ class _FakeLauncher implements LaunchAtStartup {
   }
 
   @override
-  Future<bool> enable() async {
-    calls.add('enable');
-    enabled = true;
-    return true;
-  }
-
-  @override
-  Future<bool> disable() async {
-    calls.add('disable');
-    enabled = false;
+  Future<bool> setEnabled(bool enabled) async {
+    calls.add(enabled ? 'enable' : 'disable');
+    this.enabled = enabled;
     return true;
   }
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  final originalLauncher = AutoLaunch.launcher;
+  final originalLauncher = AutoLaunch.entry;
   late _FakeLauncher launcher;
   late AutoLaunch autoLaunch;
 
   setUp(() {
     launcher = _FakeLauncher();
-    AutoLaunch.launcher = launcher;
+    AutoLaunch.entry = launcher;
     autoLaunch = AutoLaunch();
-    launcher.calls.clear();
-  });
+      });
 
   tearDownAll(() {
-    AutoLaunch.launcher = originalLauncher;
+    AutoLaunch.entry = originalLauncher;
   });
 
   test('AutoLaunch is a singleton', () {
     expect(AutoLaunch(), same(autoLaunch));
   });
 
-  test('each call delegates straight to the launcher', () async {
+  test('each call delegates straight to the entry', () async {
     launcher.enabled = true;
     expect(await autoLaunch.isEnable, isTrue);
 
@@ -131,7 +112,7 @@ void main() {
   });
 
   group('macOS main-app login channel', () {
-    final macOS = MacOSLoginItemLauncher();
+    const macOS = MacOSLoginItemEntry();
     final calls = <MethodCall>[];
     Object? response;
     PlatformException? failure;
@@ -141,7 +122,7 @@ void main() {
       response = null;
       failure = null;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(MacOSLoginItemLauncher.channel, (
+          .setMockMethodCallHandler(MacOSLoginItemEntry.channel, (
             call,
           ) async {
             calls.add(call);
@@ -152,7 +133,7 @@ void main() {
 
     tearDown(() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(MacOSLoginItemLauncher.channel, null);
+          .setMockMethodCallHandler(MacOSLoginItemEntry.channel, null);
     });
 
     test('reads the existing Boolean channel contract', () async {
@@ -180,8 +161,8 @@ void main() {
     });
 
     test('both setters reach native without a Boolean preflight', () async {
-      expect(await macOS.enable(), isTrue);
-      expect(await macOS.disable(), isTrue);
+      expect(await macOS.setEnabled(true), isTrue);
+      expect(await macOS.setEnabled(false), isTrue);
       expect(calls.map((call) => call.method), [
         'launchAtStartupSetEnabled',
         'launchAtStartupSetEnabled',
@@ -209,8 +190,8 @@ void main() {
               .having((error) => error.code, 'code', code)
               .having((error) => error.details, 'details', failure!.details),
         );
-        await expectLater(macOS.enable(), matcher);
-        await expectLater(macOS.disable(), matcher);
+        await expectLater(macOS.setEnabled(true), matcher);
+        await expectLater(macOS.setEnabled(false), matcher);
         await expectLater(macOS.isEnabled(), matcher);
       });
     }

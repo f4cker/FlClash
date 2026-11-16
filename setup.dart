@@ -25,7 +25,7 @@ const _hostPlatform = {
 };
 
 const _distributorUrl = 'https://github.com/chen08209/flutter_distributor.git';
-const _distributorRef = 'v0.6.11-flclash.4';
+const _distributorRef = 'v0.6.11-flclash.5';
 const _distributorPath = 'packages/flutter_distributor';
 
 bool isDistributorActivated(String cacheDir) {
@@ -322,7 +322,6 @@ Future<int> _ensureMacosDependencies() async {
 Future<int> _ensureLinuxDependencies() async {
   const pkgGroups = <List<String>>[
     ['ninja-build', 'libgtk-3-dev'],
-    ['libayatana-appindicator3-dev'],
     ['libsecret-1-dev'],
     ['locate'],
     ['rpm', 'patchelf'],

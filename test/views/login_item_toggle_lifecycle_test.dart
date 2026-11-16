@@ -19,7 +19,7 @@ import '../helpers/test_profiles.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  final originalLauncher = AutoLaunch.launcher;
+  final originalLauncher = AutoLaunch.entry;
   late ProviderContainer container;
   late ValueNotifier<bool> settingsVisible;
   late Completer<Object?> nativeResult;
@@ -35,9 +35,9 @@ void main() {
     settingsVisible = ValueNotifier(true);
     calls.clear();
     savedValues.clear();
-    AutoLaunch.launcher = MacOSLoginItemLauncher();
+    AutoLaunch.entry = const MacOSLoginItemEntry();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(MacOSLoginItemLauncher.channel, (call) {
+        .setMockMethodCallHandler(MacOSLoginItemEntry.channel, (call) {
           calls.add(call);
           expect(call.method, 'launchAtStartupSetEnabled');
           return nativeResult.future;
@@ -46,8 +46,8 @@ void main() {
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(MacOSLoginItemLauncher.channel, null);
-    AutoLaunch.launcher = originalLauncher;
+        .setMockMethodCallHandler(MacOSLoginItemEntry.channel, null);
+    AutoLaunch.entry = originalLauncher;
     settingsVisible.dispose();
     container.dispose();
   });

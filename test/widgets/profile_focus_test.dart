@@ -96,6 +96,7 @@ Future<ProviderContainer> pumpProfiles(
   int? currentProfileId,
   ValueListenable<bool>? isActive,
   bool picker = false,
+  bool firstFrameOnly = false,
   List<Override> overrides = const [],
   Map<int, Future<MountCardSummary?> Function()> summaries = const {},
 }) async {
@@ -141,7 +142,9 @@ Future<ProviderContainer> pumpProfiles(
       ),
     ),
   );
-  await tester.pump();
+  if (!firstFrameOnly) {
+    await tester.pump();
+  }
   return container;
 }
 
@@ -624,14 +627,19 @@ void main() {
       expect(rect.bottom, lessThanOrEqualTo(viewport.bottom));
     }
 
-    testWidgets('on first build', (tester) async {
+    testWidgets('in its first frame, which a tab switch snapshots', (
+      tester,
+    ) async {
       await pumpProfiles(
         tester,
         profiles: profiles,
         currentProfileId: selected.id,
+        firstFrameOnly: true,
       );
-      await tester.pumpAndSettle();
 
+      expectRevealed(tester);
+
+      await tester.pumpAndSettle();
       expectRevealed(tester);
     });
 

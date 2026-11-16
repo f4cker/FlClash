@@ -270,7 +270,6 @@ func applyConfig(params *SetupParams) error {
 	startTailscaleManaged()
 	patchSelectGroup(followMountSelections(params.SelectedMap, report))
 	followTailscaleExitSelections(params.SelectedMap)
-	bumpRouteEpoch()
 	if blocked {
 		// The blocked profile's own listeners, a proxy: DIRECT one too, stay
 		// closed; the ports and TUN stay so nothing falls back to the system.
@@ -280,6 +279,9 @@ func applyConfig(params *SetupParams) error {
 	} else {
 		updateListeners(cfg)
 	}
+	// After the listeners: a probe sent while the TUN is rebuilt carries the
+	// older epoch, and its failure goes with it.
+	bumpRouteEpoch()
 	reconcileGeoUpdater()
 	scheduleLoadMemoryRelease()
 	if blocked {

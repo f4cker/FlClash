@@ -41,6 +41,7 @@ ProxyState proxyState(Ref ref) {
       (state) => SystemProxySelectorState(
         systemProxy: state.systemProxy,
         bypassDomain: state.bypassDomain,
+        pacScript: state.pacMode ? state.pacScript : null,
       ),
     ),
   );
@@ -53,6 +54,7 @@ ProxyState proxyState(Ref ref) {
     systemProxy: systemProxySelector.systemProxy,
     bassDomain: systemProxySelector.bypassDomain,
     port: mixedPort,
+    pacScript: systemProxySelector.pacScript,
   );
 }
 

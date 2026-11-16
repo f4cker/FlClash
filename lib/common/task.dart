@@ -109,6 +109,21 @@ String? lastMatchTarget(List<String> rules) {
   return null;
 }
 
+Map<String, dynamic> inboundConfigOf(
+  PatchClashConfig config, {
+  required List<String> authentication,
+}) => {
+  'mixed-port': config.mixedPort,
+  'port': config.port,
+  'socks-port': config.socksPort,
+  'redir-port': config.redirPort,
+  'tproxy-port': config.tproxyPort,
+  'allow-lan': config.allowLan,
+  // A profile's skip-auth-prefixes could exempt loopback from authentication.
+  'authentication': authentication,
+  'skip-auth-prefixes': const <String>[],
+};
+
 Future<RealProfile> makeRealProfileTask(MakeRealProfileState data) async {
   return compute<MakeRealProfileState, RealProfile>(_makeRealProfileTask, data);
 }
@@ -210,10 +225,7 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     rawConfig['dns'] is Map
         ? Map<String, dynamic>.from(rawConfig['dns'] as Map)
         : <String, dynamic>{},
-    overrides.dns.overrideJson(
-      overrides.dnsOverrideKeys,
-      keepEmpty: data.keepEmptyDnsOverrides,
-    ),
+    overrides.dns.overrideJson(overrides.dnsOverrideKeys),
   );
   if (dns.isNotEmpty || rawConfig.containsKey('dns')) {
     rawConfig['dns'] = dns;
@@ -222,10 +234,7 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     rawConfig['dns'] is Map
         ? Map<String, dynamic>.from(rawConfig['dns'] as Map)
         : <String, dynamic>{},
-    realPatchConfig.dns.overrideJson(
-      DnsOverrideKey.normalProfileKeys,
-      keepEmpty: true,
-    ),
+    realPatchConfig.dns.overrideJson(DnsOverrideKey.normalProfileKeys),
   );
   rawConfig['dns'] = pageDns;
   final ntpOverride = overrides.ntp.overrideJson(overrides.ntpOverrideKeys);
@@ -405,7 +414,7 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
         TunOverrideKey.excludeSrcPort,
         TunOverrideKey.excludeDstPort,
       },
-    }, keepEmpty: true),
+    }),
     'enable': page.tun.enable,
     'stack': page.tun.stack.name,
   };
@@ -417,6 +426,12 @@ void applyPageSettings(Map rawConfig, MakeRealProfileState data) {
       if (tun['route-exclude-address'] case final List routes) ...routes,
       ...privateRouteAddress,
     ];
+  }
+  // sing-tun points the system resolver at the TUN with auto-route everywhere
+  // but macOS, where native does it; a profile's own dns-mode still wins.
+  if (data.defaultTunDnsMode case final mode?
+      when tun['dns-mode'] == null || tun['dns-mode'] == '') {
+    tun['dns-mode'] = mode;
   }
   if (tun.isNotEmpty) {
     rawConfig['tun'] = tun;
@@ -613,6 +628,7 @@ Future<MigrationData> migrateLegacyConfig({
     final value = rawRule['value'] ?? '';
     rules.add(Rule.parse(value, id: id));
   }
+  final globalRuleIds = [for (final rule in rules) rule.id];
   final List rawProfiles = configMap['profiles'] as List<dynamic>? ?? [];
   final List<Profile> profiles = [];
   for (final rawProfile in rawProfiles) {
@@ -624,6 +640,7 @@ Future<MigrationData> migrateLegacyConfig({
     rawProfile['id'] = profileId;
     final overwrite = rawProfile['overwrite'] as Map?;
     if (overwrite != null) {
+      final isScript = overwrite['type'] == 'script';
       final standardOverwrite = overwrite['standardOverwrite'] as Map?;
       if (standardOverwrite != null) {
         final addedRules = standardOverwrite['addedRules'] as List? ?? [];
@@ -633,7 +650,7 @@ Future<MigrationData> migrateLegacyConfig({
           rules.add(Rule.parse(value, id: id).copyWith(profileId: profileId));
         }
         final disabledRuleIds = standardOverwrite['disabledRuleIds'] as List?;
-        if (disabledRuleIds != null) {
+        if (disabledRuleIds != null && !isScript) {
           for (final disabledRuleId in disabledRuleIds) {
             final newDisabledRuleId = idMap[disabledRuleId];
             if (newDisabledRuleId != null) {
@@ -644,14 +661,17 @@ Future<MigrationData> migrateLegacyConfig({
           }
         }
       }
-      final scriptOverwrite = overwrite['scriptOverwrite'] as Map?;
-      if (scriptOverwrite != null) {
-        final scriptId = scriptOverwrite['scriptId'] as String?;
-        rawProfile['scriptId'] = scriptId != null ? idMap[scriptId] : null;
+      // A script profile used to skip the global rules it now runs with.
+      if (isScript) {
+        for (final ruleId in globalRuleIds) {
+          disabledRules.add(DisabledRule(profileId: profileId, ruleId: ruleId));
+        }
+        final scriptId =
+            (overwrite['scriptOverwrite'] as Map?)?['scriptId'] as String?;
+        if (scriptId != null) {
+          rawProfile['scriptId'] = idMap[scriptId];
+        }
       }
-      rawProfile['extendType'] = overwrite['type'] == ExtendType.script.name
-          ? ExtendType.script.name
-          : ExtendType.standard.name;
     }
     final rawUrl = rawProfile['url'];
     rawProfile['type'] = rawUrl is String && rawUrl.isNotEmpty ? 'url' : 'file';
