@@ -6466,4 +6466,41 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get mitmPausedUnavailable =>
       'Расшифровка приостановлена: подписывающий компонент или соединение недоступно.';
+
+  @override
+  String get mitmIndicatorDecrypting => 'Идёт расшифровка';
+
+  @override
+  String get mitmIndicatorPaused => 'Расшифровка приостановлена';
+
+  @override
+  String get mitmIndicatorUnconfirmed => 'Проверка расшифровки';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return 'Расшифровка приостановлена: $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'Открыть настройки MITM';
+
+  @override
+  String get mitmPauseCoreStopped => 'ядро не запущено';
+
+  @override
+  String get mitmPauseCoreIdentity => 'проверка подлинности ядра не пройдена';
+
+  @override
+  String get mitmPauseNotTrusted =>
+      'корневой сертификат не создан или не доверен';
+
+  @override
+  String get mitmPauseLiveness => 'не удалось подтвердить доверие и подпись';
+
+  @override
+  String get mitmPauseIndicatorPending => 'постоянный индикатор ещё не включён';
+
+  @override
+  String get mitmPauseUnavailable =>
+      'подписывающий компонент или соединение недоступно';
 }

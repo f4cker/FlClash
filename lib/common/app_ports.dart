@@ -46,3 +46,7 @@ abstract interface class NavigationPort {
 WindowPort? windowPort;
 TrayPort? trayPort;
 NavigationPort? navigationPort;
+
+/// Brings the window forward with the MITM settings open: the tray's
+/// decryption status item. Set by the app, which owns the settings view.
+Future<void> Function()? mitmSettingsPort;

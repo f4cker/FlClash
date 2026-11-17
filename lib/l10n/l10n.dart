@@ -10918,6 +10918,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Decryption paused: the signer or connection is unavailable.'**
   String get mitmPausedUnavailable;
+
+  /// No description provided for @mitmIndicatorDecrypting.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrypting'**
+  String get mitmIndicatorDecrypting;
+
+  /// No description provided for @mitmIndicatorPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused'**
+  String get mitmIndicatorPaused;
+
+  /// No description provided for @mitmIndicatorUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking decryption'**
+  String get mitmIndicatorUnconfirmed;
+
+  /// No description provided for @mitmIndicatorPausedBecause.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: {reason}'**
+  String mitmIndicatorPausedBecause(String reason);
+
+  /// No description provided for @mitmIndicatorOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open MITM settings'**
+  String get mitmIndicatorOpenSettings;
+
+  /// No description provided for @mitmPauseCoreStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'the Core is not running'**
+  String get mitmPauseCoreStopped;
+
+  /// No description provided for @mitmPauseCoreIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'the Core\'s identity check failed'**
+  String get mitmPauseCoreIdentity;
+
+  /// No description provided for @mitmPauseNotTrusted.
+  ///
+  /// In en, this message translates to:
+  /// **'the root certificate is not generated or not trusted'**
+  String get mitmPauseNotTrusted;
+
+  /// No description provided for @mitmPauseLiveness.
+  ///
+  /// In en, this message translates to:
+  /// **'trust and signing could not be confirmed'**
+  String get mitmPauseLiveness;
+
+  /// No description provided for @mitmPauseIndicatorPending.
+  ///
+  /// In en, this message translates to:
+  /// **'the always-visible status is not enabled yet'**
+  String get mitmPauseIndicatorPending;
+
+  /// No description provided for @mitmPauseUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'the signer or connection is unavailable'**
+  String get mitmPauseUnavailable;
 }
 
 class _AppLocalizationsDelegate

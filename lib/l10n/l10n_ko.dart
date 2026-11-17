@@ -6367,4 +6367,39 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmPausedUnavailable => '복호화 일시 중지: 서명기 또는 연결을 사용할 수 없습니다.';
+
+  @override
+  String get mitmIndicatorDecrypting => '복호화 중';
+
+  @override
+  String get mitmIndicatorPaused => '복호화 일시 중지';
+
+  @override
+  String get mitmIndicatorUnconfirmed => '복호화 상태 확인 중';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return '복호화 일시 중지: $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'MITM 설정 열기';
+
+  @override
+  String get mitmPauseCoreStopped => '코어가 실행 중이 아닙니다';
+
+  @override
+  String get mitmPauseCoreIdentity => '코어 신원 확인에 실패했습니다';
+
+  @override
+  String get mitmPauseNotTrusted => '루트 인증서가 생성되지 않았거나 신뢰되지 않았습니다';
+
+  @override
+  String get mitmPauseLiveness => '신뢰 및 서명 상태를 확인할 수 없습니다';
+
+  @override
+  String get mitmPauseIndicatorPending => '상시 상태 표시가 아직 활성화되지 않았습니다';
+
+  @override
+  String get mitmPauseUnavailable => '서명기 또는 연결을 사용할 수 없습니다';
 }

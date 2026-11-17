@@ -402,90 +402,94 @@ class _MitmViewState extends ConsumerState<MitmView> {
       '' => null,
       _ => appLocalizations.mitmPausedUnavailable,
     };
-    return Scaffold(
-      title: appLocalizations.mitm,
-      isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
-      body: NullStatusSwitcher(
-        isLoading: certificate.isLoading && !certificate.hasValue,
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
-                top: context.contentTopPadding,
-                bottom: 16 + context.bottomInset,
-              ),
-              sliver: SliverMainAxisGroup(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        generateSection(
-                          items: [
-                            const _MitmEnableItem(),
-                            _MitmCaptureItem(isAndroid: isAndroid),
-                          ],
-                          footer: ref.watch(mitmCoreRefusedProvider)
-                              ? _pausedReason(
-                                  appLocalizations,
-                                  ref
-                                      .watch(mitmCoreIdentityStateProvider)
-                                      .value,
-                                )
-                              : pauseLabel,
-                        ),
-                        generateSection(
-                          title: appLocalizations.certificate,
-                          items: _certificateItems(
-                            context,
-                            ref,
-                            certificate,
-                            canTrust: canTrust,
+    // The page says what the bar's status would, in its first section.
+    return ScaffoldBarStatus(
+      status: null,
+      child: Scaffold(
+        title: appLocalizations.mitm,
+        isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
+        body: NullStatusSwitcher(
+          isLoading: certificate.isLoading && !certificate.hasValue,
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+                  top: context.contentTopPadding,
+                  bottom: 16 + context.bottomInset,
+                ),
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          generateSection(
+                            items: [
+                              const _MitmEnableItem(),
+                              _MitmCaptureItem(isAndroid: isAndroid),
+                            ],
+                            footer: ref.watch(mitmCoreRefusedProvider)
+                                ? _pausedReason(
+                                    appLocalizations,
+                                    ref
+                                        .watch(mitmCoreIdentityStateProvider)
+                                        .value,
+                                  )
+                                : pauseLabel,
                           ),
-                          footer: _certificateTip(
-                            appLocalizations,
-                            canTrust: canTrust,
-                            check: check,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        generateSection(
-                          items: const [_MitmHostnameItem()],
-                          footer: [
-                            appLocalizations.mitmHostnameDesc,
-                            if (ref.watch(mitmIgnoredHostnamesProvider).value
-                                case final ignored? when ignored > 0)
-                              appLocalizations.mitmIgnoredProfileHostnames(
-                                ignored,
-                              ),
-                          ].join('\n'),
-                        ),
-                        generateSection(
-                          title: appLocalizations.options,
-                          items: [
-                            ConfigToggleItem(
-                              title: (l) => l.blockQuic,
-                              selector: patchClashConfigProvider.select(
-                                (state) => state.mitm.autoQuicBlock,
-                              ),
-                              onChanged: _mitmWriter(
-                                (state, value) =>
-                                    state.copyWith(autoQuicBlock: value),
-                              ),
+                          generateSection(
+                            title: appLocalizations.certificate,
+                            items: _certificateItems(
+                              context,
+                              ref,
+                              certificate,
+                              canTrust: canTrust,
                             ),
-                          ],
-                        ),
-                      ],
+                            footer: _certificateTip(
+                              appLocalizations,
+                              canTrust: canTrust,
+                              check: check,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          generateSection(
+                            items: const [_MitmHostnameItem()],
+                            footer: [
+                              appLocalizations.mitmHostnameDesc,
+                              if (ref.watch(mitmIgnoredHostnamesProvider).value
+                                  case final ignored? when ignored > 0)
+                                appLocalizations.mitmIgnoredProfileHostnames(
+                                  ignored,
+                                ),
+                            ].join('\n'),
+                          ),
+                          generateSection(
+                            title: appLocalizations.options,
+                            items: [
+                              ConfigToggleItem(
+                                title: (l) => l.blockQuic,
+                                selector: patchClashConfigProvider.select(
+                                  (state) => state.mitm.autoQuicBlock,
+                                ),
+                                onChanged: _mitmWriter(
+                                  (state, value) =>
+                                      state.copyWith(autoQuicBlock: value),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

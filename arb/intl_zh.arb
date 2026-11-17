@@ -1808,5 +1808,16 @@
   "mitmOutcomeFailed": "解密连接失败",
   "mitmPausedLiveness": "解密已暂停：无法验证信任或签名器状态。正常情况下约 26 秒内检测到变化；睡眠或系统卡顿可能更久。",
   "mitmPausedIndicatorPending": "解密已暂停：尚未提供必需的常驻解密指示。",
-  "mitmPausedUnavailable": "解密已暂停：签名器或连接不可用。"
+  "mitmPausedUnavailable": "解密已暂停：签名器或连接不可用。",
+  "mitmIndicatorDecrypting": "正在解密",
+  "mitmIndicatorPaused": "解密已暂停",
+  "mitmIndicatorUnconfirmed": "正在确认解密状态",
+  "mitmIndicatorPausedBecause": "解密已暂停：{reason}",
+  "mitmIndicatorOpenSettings": "打开 MITM 设置",
+  "mitmPauseCoreStopped": "内核未运行",
+  "mitmPauseCoreIdentity": "内核身份核对失败",
+  "mitmPauseNotTrusted": "根证书未生成或未信任",
+  "mitmPauseLiveness": "无法确认证书信任和签名状态",
+  "mitmPauseIndicatorPending": "常驻状态提示尚未启用",
+  "mitmPauseUnavailable": "签名器或连接不可用"
 }

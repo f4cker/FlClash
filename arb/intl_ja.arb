@@ -1808,5 +1808,16 @@
   "mitmOutcomeFailed": "復号接続に失敗しました",
   "mitmPausedLiveness": "復号を一時停止：信頼または署名機能を確認できません。通常は約26秒以内に検出しますが、スリープや停止時は長くなることがあります。",
   "mitmPausedIndicatorPending": "復号を一時停止：必要な常時表示インジケーターがありません。",
-  "mitmPausedUnavailable": "復号を一時停止：署名機能または接続を利用できません。"
+  "mitmPausedUnavailable": "復号を一時停止：署名機能または接続を利用できません。",
+  "mitmIndicatorDecrypting": "復号中",
+  "mitmIndicatorPaused": "復号を一時停止",
+  "mitmIndicatorUnconfirmed": "復号の状態を確認中",
+  "mitmIndicatorPausedBecause": "復号を一時停止：{reason}",
+  "mitmIndicatorOpenSettings": "MITM 設定を開く",
+  "mitmPauseCoreStopped": "コアが実行されていません",
+  "mitmPauseCoreIdentity": "コアの身元確認に失敗しました",
+  "mitmPauseNotTrusted": "ルート証明書が未生成または未信頼です",
+  "mitmPauseLiveness": "信頼と署名の状態を確認できません",
+  "mitmPauseIndicatorPending": "常時表示の状態表示がまだ有効ではありません",
+  "mitmPauseUnavailable": "署名機能または接続を利用できません"
 }

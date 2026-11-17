@@ -1808,5 +1808,16 @@
   "mitmOutcomeFailed": "Échec de la connexion déchiffrée",
   "mitmPausedLiveness": "Déchiffrement en pause : confiance ou signature non vérifiable. Détection normalement en 26 secondes environ ; une veille ou un blocage peut la retarder.",
   "mitmPausedIndicatorPending": "Déchiffrement en pause : l’indicateur permanent requis est indisponible.",
-  "mitmPausedUnavailable": "Déchiffrement en pause : signataire ou connexion indisponible."
+  "mitmPausedUnavailable": "Déchiffrement en pause : signataire ou connexion indisponible.",
+  "mitmIndicatorDecrypting": "Déchiffrement actif",
+  "mitmIndicatorPaused": "Déchiffrement en pause",
+  "mitmIndicatorUnconfirmed": "Vérification du déchiffrement",
+  "mitmIndicatorPausedBecause": "Déchiffrement en pause : {reason}",
+  "mitmIndicatorOpenSettings": "Ouvrir les réglages MITM",
+  "mitmPauseCoreStopped": "le Core n’est pas lancé",
+  "mitmPauseCoreIdentity": "échec de la vérification d’identité du Core",
+  "mitmPauseNotTrusted": "certificat racine non généré ou non approuvé",
+  "mitmPauseLiveness": "confiance et signature non vérifiables",
+  "mitmPauseIndicatorPending": "l’état permanent n’est pas encore activé",
+  "mitmPauseUnavailable": "signataire ou connexion indisponible"
 }

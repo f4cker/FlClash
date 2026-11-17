@@ -5958,4 +5958,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmPausedUnavailable => '解密已暂停：签名器或连接不可用。';
+
+  @override
+  String get mitmIndicatorDecrypting => '正在解密';
+
+  @override
+  String get mitmIndicatorPaused => '解密已暂停';
+
+  @override
+  String get mitmIndicatorUnconfirmed => '正在确认解密状态';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return '解密已暂停：$reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => '打开 MITM 设置';
+
+  @override
+  String get mitmPauseCoreStopped => '内核未运行';
+
+  @override
+  String get mitmPauseCoreIdentity => '内核身份核对失败';
+
+  @override
+  String get mitmPauseNotTrusted => '根证书未生成或未信任';
+
+  @override
+  String get mitmPauseLiveness => '无法确认证书信任和签名状态';
+
+  @override
+  String get mitmPauseIndicatorPending => '常驻状态提示尚未启用';
+
+  @override
+  String get mitmPauseUnavailable => '签名器或连接不可用';
 }

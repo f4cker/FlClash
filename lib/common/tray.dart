@@ -17,6 +17,7 @@ import 'compute.dart';
 import 'constant.dart';
 import 'keyboard.dart';
 import 'l10n_labels.dart';
+import 'mitm_indicator.dart';
 import 'print.dart';
 import 'provider_reader.dart';
 import 'string.dart';
@@ -176,7 +177,18 @@ class AppTray implements TrayPort {
       },
     );
 
+    final mitmIndicator = trayState.mitmIndicator;
     return [
+      // Decryption is said first, whenever it is on.
+      if (mitmIndicator != null) ...[
+        TrayMenuAction(
+          label: mitmIndicatorText(appLocalizations, mitmIndicator),
+          onSelected: () {
+            if (mitmSettingsPort case final open?) unawaited(open());
+          },
+        ),
+        const TrayMenuSeparator(),
+      ],
       showItem,
       TrayMenuCheckbox(
         label: trayState.isStart

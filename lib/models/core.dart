@@ -107,6 +107,46 @@ abstract class MitmStatus with _$MitmStatus {
       _$MitmStatusFromJson(json);
 }
 
+/// What the always-visible decryption status says.
+enum MitmIndicatorKind { decrypting, paused, unconfirmed }
+
+/// Why listed connections pass through as they came.
+enum MitmPauseReason {
+  coreStopped,
+  coreIdentity,
+  notTrusted,
+  liveness,
+  indicatorPending,
+  unavailable,
+}
+
+@immutable
+class MitmIndicator {
+  const MitmIndicator.decrypting()
+    : kind = MitmIndicatorKind.decrypting,
+      reason = null;
+
+  const MitmIndicator.paused(MitmPauseReason this.reason)
+    : kind = MitmIndicatorKind.paused;
+
+  const MitmIndicator.unconfirmed()
+    : kind = MitmIndicatorKind.unconfirmed,
+      reason = null;
+
+  final MitmIndicatorKind kind;
+  final MitmPauseReason? reason;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MitmIndicator && other.kind == kind && other.reason == reason;
+
+  @override
+  int get hashCode => Object.hash(kind, reason);
+
+  @override
+  String toString() => 'MitmIndicator(${kind.name}, ${reason?.name})';
+}
+
 @freezed
 abstract class MitmCertificate with _$MitmCertificate {
   const factory MitmCertificate({

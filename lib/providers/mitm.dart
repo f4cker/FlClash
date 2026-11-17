@@ -130,6 +130,7 @@ bool mitmCoreRefused(Ref ref) {
 }
 
 // Settings-only polling: failure is not treated as evidence of active decryption.
+// The always-visible status polls it too, but only while decryption is on.
 final mitmRuntimeStatusProvider = FutureProvider.autoDispose<MitmStatus>((
   ref,
 ) async {
@@ -146,6 +147,67 @@ final mitmRuntimeStatusProvider = FutureProvider.autoDispose<MitmStatus>((
       ref.onDispose(timer.cancel);
     }
   }
+});
+
+/// The status every page's bar and the tray menu show while decryption is
+/// on, or null while it is off. A status the Core has not answered yet is
+/// unconfirmed rather than paused: only the Core knows it passes through.
+MitmIndicator? mitmIndicatorOf({
+  required bool enabled,
+  required bool coreConnected,
+  required bool coreRefused,
+  required MitmStatus? status,
+}) {
+  if (!enabled) {
+    return null;
+  }
+  if (!coreConnected) {
+    return const MitmIndicator.paused(MitmPauseReason.coreStopped);
+  }
+  if (coreRefused) {
+    return const MitmIndicator.paused(MitmPauseReason.coreIdentity);
+  }
+  if (status == null) {
+    return const MitmIndicator.unconfirmed();
+  }
+  if (!status.enable) {
+    return const MitmIndicator.paused(MitmPauseReason.notTrusted);
+  }
+  return switch (status.paused) {
+    '' => const MitmIndicator.decrypting(),
+    'livenessUnavailable' ||
+    'trustUnavailable' => const MitmIndicator.paused(MitmPauseReason.liveness),
+    'indicatorPending' => const MitmIndicator.paused(
+      MitmPauseReason.indicatorPending,
+    ),
+    'coreIdentity' => const MitmIndicator.paused(MitmPauseReason.coreIdentity),
+    _ => const MitmIndicator.paused(MitmPauseReason.unavailable),
+  };
+}
+
+final mitmIndicatorProvider = Provider.autoDispose<MitmIndicator?>((ref) {
+  final enabled = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => mitmFeature && state.mitm.enable,
+    ),
+  );
+  final coreConnected = ref.watch(
+    coreStatusProvider.select((status) => status == CoreStatus.connected),
+  );
+  if (!enabled || !coreConnected) {
+    return mitmIndicatorOf(
+      enabled: enabled,
+      coreConnected: coreConnected,
+      coreRefused: false,
+      status: null,
+    );
+  }
+  return mitmIndicatorOf(
+    enabled: enabled,
+    coreConnected: coreConnected,
+    coreRefused: ref.watch(mitmCoreRefusedProvider),
+    status: ref.watch(mitmRuntimeStatusProvider).value,
+  );
 });
 
 /// How many `mitm` hostnames the running profile wrote, all of them ignored.

@@ -6513,4 +6513,44 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get mitmPausedUnavailable =>
       'Descifrado en pausa: el firmante o la conexión no está disponible.';
+
+  @override
+  String get mitmIndicatorDecrypting => 'Descifrando';
+
+  @override
+  String get mitmIndicatorPaused => 'Descifrado en pausa';
+
+  @override
+  String get mitmIndicatorUnconfirmed => 'Comprobando el descifrado';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return 'Descifrado en pausa: $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'Abrir ajustes de MITM';
+
+  @override
+  String get mitmPauseCoreStopped => 'el Core no está en ejecución';
+
+  @override
+  String get mitmPauseCoreIdentity =>
+      'falló la verificación de identidad del Core';
+
+  @override
+  String get mitmPauseNotTrusted =>
+      'el certificado raíz no se ha generado o no es de confianza';
+
+  @override
+  String get mitmPauseLiveness =>
+      'no se pudo confirmar la confianza ni la firma';
+
+  @override
+  String get mitmPauseIndicatorPending =>
+      'el estado siempre visible aún no está activado';
+
+  @override
+  String get mitmPauseUnavailable =>
+      'el firmante o la conexión no está disponible';
 }

@@ -121,6 +121,7 @@ TrayState trayState(Ref ref) {
     monochromeTrayIcon: appSetting.monochromeTrayIcon,
     safeMode: safeMode,
     hotKeys: hotKeys,
+    mitmIndicator: ref.watch(mitmIndicatorProvider),
   );
 }
 

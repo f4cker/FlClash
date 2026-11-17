@@ -42,6 +42,9 @@ abstract class TrayState with _$TrayState {
     @Default(true) bool monochromeTrayIcon,
     required bool safeMode,
     @Default({}) Map<HotAction, HotKeyAction> hotKeys,
+
+    /// What the decryption status says, while decryption is on.
+    MitmIndicator? mitmIndicator,
   }) = _TrayState;
 }
 

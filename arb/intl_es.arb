@@ -1808,5 +1808,16 @@
   "mitmOutcomeFailed": "Falló la conexión descifrada",
   "mitmPausedLiveness": "Descifrado en pausa: no se pudo verificar la confianza o el firmante. Normalmente se detecta en unos 26 segundos; la suspensión o bloqueos pueden tardar más.",
   "mitmPausedIndicatorPending": "Descifrado en pausa: aún no está disponible el indicador permanente requerido.",
-  "mitmPausedUnavailable": "Descifrado en pausa: el firmante o la conexión no está disponible."
+  "mitmPausedUnavailable": "Descifrado en pausa: el firmante o la conexión no está disponible.",
+  "mitmIndicatorDecrypting": "Descifrando",
+  "mitmIndicatorPaused": "Descifrado en pausa",
+  "mitmIndicatorUnconfirmed": "Comprobando el descifrado",
+  "mitmIndicatorPausedBecause": "Descifrado en pausa: {reason}",
+  "mitmIndicatorOpenSettings": "Abrir ajustes de MITM",
+  "mitmPauseCoreStopped": "el Core no está en ejecución",
+  "mitmPauseCoreIdentity": "falló la verificación de identidad del Core",
+  "mitmPauseNotTrusted": "el certificado raíz no se ha generado o no es de confianza",
+  "mitmPauseLiveness": "no se pudo confirmar la confianza ni la firma",
+  "mitmPauseIndicatorPending": "el estado siempre visible aún no está activado",
+  "mitmPauseUnavailable": "el firmante o la conexión no está disponible"
 }

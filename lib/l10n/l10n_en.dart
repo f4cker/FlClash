@@ -6472,4 +6472,41 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mitmPausedUnavailable =>
       'Decryption paused: the signer or connection is unavailable.';
+
+  @override
+  String get mitmIndicatorDecrypting => 'Decrypting';
+
+  @override
+  String get mitmIndicatorPaused => 'Decryption paused';
+
+  @override
+  String get mitmIndicatorUnconfirmed => 'Checking decryption';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return 'Decryption paused: $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'Open MITM settings';
+
+  @override
+  String get mitmPauseCoreStopped => 'the Core is not running';
+
+  @override
+  String get mitmPauseCoreIdentity => 'the Core\'s identity check failed';
+
+  @override
+  String get mitmPauseNotTrusted =>
+      'the root certificate is not generated or not trusted';
+
+  @override
+  String get mitmPauseLiveness => 'trust and signing could not be confirmed';
+
+  @override
+  String get mitmPauseIndicatorPending =>
+      'the always-visible status is not enabled yet';
+
+  @override
+  String get mitmPauseUnavailable => 'the signer or connection is unavailable';
 }

@@ -19,6 +19,7 @@ import 'app.dart';
 import 'config.dart';
 import 'core.dart';
 import 'database.dart';
+import 'mitm.dart';
 import 'tailscale.dart';
 
 part 'generated/state.g.dart';

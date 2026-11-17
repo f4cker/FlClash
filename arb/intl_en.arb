@@ -2262,5 +2262,23 @@
   "mitmOutcomeFailed": "Decryption connection failed",
   "mitmPausedLiveness": "Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.",
   "mitmPausedIndicatorPending": "Decryption paused: the required always-visible indicator is not available.",
-  "mitmPausedUnavailable": "Decryption paused: the signer or connection is unavailable."
+  "mitmPausedUnavailable": "Decryption paused: the signer or connection is unavailable.",
+  "mitmIndicatorDecrypting": "Decrypting",
+  "mitmIndicatorPaused": "Decryption paused",
+  "mitmIndicatorUnconfirmed": "Checking decryption",
+  "mitmIndicatorPausedBecause": "Decryption paused: {reason}",
+  "@mitmIndicatorPausedBecause": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmIndicatorOpenSettings": "Open MITM settings",
+  "mitmPauseCoreStopped": "the Core is not running",
+  "mitmPauseCoreIdentity": "the Core's identity check failed",
+  "mitmPauseNotTrusted": "the root certificate is not generated or not trusted",
+  "mitmPauseLiveness": "trust and signing could not be confirmed",
+  "mitmPauseIndicatorPending": "the always-visible status is not enabled yet",
+  "mitmPauseUnavailable": "the signer or connection is unavailable"
 }

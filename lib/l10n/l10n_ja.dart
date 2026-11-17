@@ -6295,4 +6295,39 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mitmPausedUnavailable => '復号を一時停止：署名機能または接続を利用できません。';
+
+  @override
+  String get mitmIndicatorDecrypting => '復号中';
+
+  @override
+  String get mitmIndicatorPaused => '復号を一時停止';
+
+  @override
+  String get mitmIndicatorUnconfirmed => '復号の状態を確認中';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return '復号を一時停止：$reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'MITM 設定を開く';
+
+  @override
+  String get mitmPauseCoreStopped => 'コアが実行されていません';
+
+  @override
+  String get mitmPauseCoreIdentity => 'コアの身元確認に失敗しました';
+
+  @override
+  String get mitmPauseNotTrusted => 'ルート証明書が未生成または未信頼です';
+
+  @override
+  String get mitmPauseLiveness => '信頼と署名の状態を確認できません';
+
+  @override
+  String get mitmPauseIndicatorPending => '常時表示の状態表示がまだ有効ではありません';
+
+  @override
+  String get mitmPauseUnavailable => '署名機能または接続を利用できません';
 }

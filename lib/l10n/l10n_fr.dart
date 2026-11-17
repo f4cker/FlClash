@@ -6519,4 +6519,42 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get mitmPausedUnavailable =>
       'Déchiffrement en pause : signataire ou connexion indisponible.';
+
+  @override
+  String get mitmIndicatorDecrypting => 'Déchiffrement actif';
+
+  @override
+  String get mitmIndicatorPaused => 'Déchiffrement en pause';
+
+  @override
+  String get mitmIndicatorUnconfirmed => 'Vérification du déchiffrement';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return 'Déchiffrement en pause : $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'Ouvrir les réglages MITM';
+
+  @override
+  String get mitmPauseCoreStopped => 'le Core n’est pas lancé';
+
+  @override
+  String get mitmPauseCoreIdentity =>
+      'échec de la vérification d’identité du Core';
+
+  @override
+  String get mitmPauseNotTrusted =>
+      'certificat racine non généré ou non approuvé';
+
+  @override
+  String get mitmPauseLiveness => 'confiance et signature non vérifiables';
+
+  @override
+  String get mitmPauseIndicatorPending =>
+      'l’état permanent n’est pas encore activé';
+
+  @override
+  String get mitmPauseUnavailable => 'signataire ou connexion indisponible';
 }

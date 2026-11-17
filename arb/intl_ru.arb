@@ -1808,5 +1808,16 @@
   "mitmOutcomeFailed": "Ошибка расшифрованного соединения",
   "mitmPausedLiveness": "Расшифровка приостановлена: не удалось проверить доверие или подпись. Обычно изменения обнаруживаются примерно за 26 секунд; сон или задержки системы могут увеличить время.",
   "mitmPausedIndicatorPending": "Расшифровка приостановлена: обязательный постоянный индикатор недоступен.",
-  "mitmPausedUnavailable": "Расшифровка приостановлена: подписывающий компонент или соединение недоступно."
+  "mitmPausedUnavailable": "Расшифровка приостановлена: подписывающий компонент или соединение недоступно.",
+  "mitmIndicatorDecrypting": "Идёт расшифровка",
+  "mitmIndicatorPaused": "Расшифровка приостановлена",
+  "mitmIndicatorUnconfirmed": "Проверка расшифровки",
+  "mitmIndicatorPausedBecause": "Расшифровка приостановлена: {reason}",
+  "mitmIndicatorOpenSettings": "Открыть настройки MITM",
+  "mitmPauseCoreStopped": "ядро не запущено",
+  "mitmPauseCoreIdentity": "проверка подлинности ядра не пройдена",
+  "mitmPauseNotTrusted": "корневой сертификат не создан или не доверен",
+  "mitmPauseLiveness": "не удалось подтвердить доверие и подпись",
+  "mitmPauseIndicatorPending": "постоянный индикатор ещё не включён",
+  "mitmPauseUnavailable": "подписывающий компонент или соединение недоступно"
 }
