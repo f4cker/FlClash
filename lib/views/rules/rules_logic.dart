@@ -199,8 +199,18 @@ bool ruleShown({
 /// The rows a lookup lists, in rule order: every rule that holds the host,
 /// taken, passed over or undecided.
 List<RuleHit> lookupRows(RuleLookup lookup) {
-  return [...lookup.matches, ...lookup.uncertain]
-    ..sort((a, b) => a.index.compareTo(b.index));
+  final winner = lookup.winner?.index;
+  final shown = <int>{for (final hit in lookup.matches) hit.index};
+  // A rule the lookup cannot decide is left out: the card's hint is the one
+  // place that says so. One that waits on a re-match still shows, and the
+  // rule taken, the fallback MATCH included, always does.
+  return [
+    ...lookup.matches,
+    for (final hit in lookup.uncertain)
+      if (!shown.contains(hit.index) &&
+          (hit.reason == 'rematch' || hit.index == winner))
+        hit,
+  ]..sort((a, b) => a.index.compareTo(b.index));
 }
 
 /// The port a pasted address names, by its own port or its scheme; null

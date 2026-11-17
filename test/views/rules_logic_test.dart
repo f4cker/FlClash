@@ -1,5 +1,6 @@
 import 'package:fl_clash/common/task.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/views/rules/hit_card.dart';
 import 'package:fl_clash/views/rules/rules_logic.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -238,15 +239,51 @@ void main() {
     );
   });
 
-  test('lookupRows lists matches and undecided rules in order', () {
+  test('lookupRows lists matches in order, leaving undecided rules out', () {
     const lookup = RuleLookup(
       matches: [
         RuleHit(index: 9, status: RuleHitStatus.shadowed),
         RuleHit(index: 4, status: RuleHitStatus.winner),
       ],
-      uncertain: [RuleHit(index: 1, reason: 'process')],
+      uncertain: [
+        RuleHit(index: 1, reason: 'process'),
+        RuleHit(index: 2, reason: 'rematch'),
+      ],
     );
-    expect(lookupRows(lookup).map((hit) => hit.index), [1, 4, 9]);
+    expect(lookupRows(lookup).map((hit) => hit.index), [2, 4, 9]);
+  });
+
+  test('lookupRows keeps the fallback MATCH taken after an undecided rule', () {
+    const lookup = RuleLookup(
+      winner: RuleHit(
+        index: 7,
+        type: 'MATCH',
+        ruleType: 'Match',
+        target: '漏网之鱼',
+        status: RuleHitStatus.winner,
+      ),
+      matches: [
+        RuleHit(
+          index: 7,
+          type: 'MATCH',
+          ruleType: 'Match',
+          target: '漏网之鱼',
+          status: RuleHitStatus.winner,
+        ),
+      ],
+      uncertain: [
+        RuleHit(
+          index: 2,
+          type: 'PROCESS-NAME',
+          payload: 'Telegram',
+          status: RuleHitStatus.uncertain,
+          reason: 'process',
+        ),
+      ],
+    );
+    final rows = lookupRows(lookup);
+    expect(rows.map((hit) => hit.index), [7]);
+    expect(rows.single.status, RuleHitStatus.winner);
   });
 
   test('ruleBodyOf leaves out the target', () {
@@ -346,5 +383,10 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('spaceCjkLatin spaces Chinese from Latin, as the copy does', () {
+    expect(spaceCjkLatin('前面的规则可能因 App或端口 而优先匹配'), '前面的规则可能因 App 或端口 而优先匹配');
+    expect(spaceCjkLatin('因 App、端口或IP 而'), '因 App、端口或 IP 而');
   });
 }

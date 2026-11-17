@@ -21,6 +21,9 @@ import 'widgets.dart';
 
 const _pageSize = 200;
 const _narrowWidth = 560.0;
+
+/// How long typing rests before a host typed in looks itself up.
+const _lookupDelay = Duration(milliseconds: 400);
 const _rowExtentGuess = 43.0;
 
 /// A page of a rule set's entries as the list has read them, under the
@@ -79,6 +82,8 @@ class RulesView extends ConsumerStatefulWidget {
   @visibleForTesting
   static const resultsKey = ValueKey('rules-results');
   static const headerKey = ValueKey('rules-header');
+  static const infoKey = ValueKey('rules-lookup-info');
+  static const queryingKey = ValueKey('rules-querying');
   static const scrollEdgeKey = ValueKey('rules-scroll-edge');
 
   @override
@@ -87,10 +92,8 @@ class RulesView extends ConsumerStatefulWidget {
 
 class _RulesViewState extends ConsumerState<RulesView> {
   final _controller = TextEditingController();
-  final _focusNode = FocusNode();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late final ScrollController _scrollController;
-  final _panelLink = LayerLink();
-  final _panel = OverlayPortalController();
   final _listStartKey = GlobalKey();
   final _targetRowKey = GlobalKey();
 
@@ -103,8 +106,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
   ({String text, List<int> indexes, Map<String, int> sets})? _filter;
   Timer? _filterTimer;
   int _filterSerial = 0;
-  bool _panelDismissed = false;
-  double _boxWidth = 0;
+  Timer? _lookupTimer;
   double? _savedOffset;
 
   RuleSourceFilter _source = RuleSourceFilter.all;
@@ -157,8 +159,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
   @override
   void dispose() {
     _filterTimer?.cancel();
+    _lookupTimer?.cancel();
     _controller.dispose();
-    _focusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -166,6 +168,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
   bool get _coreRunning => ref.read(coreStatusProvider) == CoreStatus.connected;
 
   bool get _inLookup => _lookup != null;
+
+  String get _profileName => ref.read(currentProfileProvider)?.realLabel ?? '';
 
   void _refresh() {
     if (!mounted) return;
@@ -238,8 +242,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
   void _onChanged(String text) {
     final wasEmpty = _text.trim().isEmpty;
     _text = text;
-    _panelDismissed = false;
     _filterTimer?.cancel();
+    _lookupTimer?.cancel();
     if (text.trim().isEmpty) {
       _clearSearch();
       return;
@@ -248,21 +252,32 @@ class _RulesViewState extends ConsumerState<RulesView> {
       _savedOffset = _scrollController.offset;
     }
     final host = lookupHostOf(text);
-    if (_inLookup && host == null) {
+    final port = lookupPortOf(text);
+    final lookup = _lookup;
+    final same = lookup != null && lookup.host == host && lookup.port == port;
+    if (lookup != null && !same) {
+      // Only the latest query's answer may show: one for older input is
+      // dropped, in flight or not.
+      _lookupSerial++;
       _lookup = null;
       _added = null;
       _showAll = false;
+      _focusIndex = null;
     }
     _filterTimer = Timer(
       const Duration(milliseconds: 200),
       () => _runFilter(text),
     );
+    // A host, a link or an address looks itself up once typing stops.
+    if (host != null && !same) {
+      _lookupTimer = Timer(_lookupDelay, () => _runLookup(host, port: port));
+    }
     setState(() {});
-    _syncPanel();
   }
 
   void _clearSearch() {
     _filterTimer?.cancel();
+    _lookupTimer?.cancel();
     _filterSerial++;
     final offset = _savedOffset;
     setState(() {
@@ -275,7 +290,6 @@ class _RulesViewState extends ConsumerState<RulesView> {
       _focusIndex = null;
       _collapsed.clear();
     });
-    _syncPanel();
     if (offset != null) {
       _savedOffset = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -318,32 +332,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
     return filter;
   }
 
-  String? get _panelHost {
-    if (_panelDismissed) return null;
-    final host = lookupHostOf(_text);
-    if (host == null) return null;
-    final lookup = _lookup;
-    if (lookup != null && lookup.host == host) return null;
-    return host;
-  }
-
-  void _syncPanel() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_panelHost != null) {
-        _panel.show();
-      } else if (_panel.isShowing) {
-        _panel.hide();
-      }
-    });
-  }
-
-  void _dismissPanel() {
-    setState(() => _panelDismissed = true);
-    _syncPanel();
-  }
-
   void _submit() {
+    _lookupTimer?.cancel();
     final host = lookupHostOf(_text);
     if (host == null) return;
     final lookup = _lookup;
@@ -356,6 +346,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
     ref.read(rulesLookupRequestProvider.notifier).taken();
     _controller.text = ask.host;
     _text = ask.host;
+    _lookupTimer?.cancel();
+    _scaffoldKey.currentState?.openSearch();
     _filterTimer?.cancel();
     _runFilter(ask.host);
     _runLookup(
@@ -388,14 +380,12 @@ class _RulesViewState extends ConsumerState<RulesView> {
     }
     setState(() {
       _lookup = lookup;
-      _panelDismissed = true;
       if (!keep) {
         _added = null;
         _showAll = false;
         _focusIndex = null;
       }
     });
-    _syncPanel();
     if (!_coreRunning) {
       setState(() {
         lookup.loading = false;
@@ -764,7 +754,25 @@ class _RulesViewState extends ConsumerState<RulesView> {
             groupedCount(list.total),
           );
     return Scaffold(
+      key: _scaffoldKey,
       title: appLocalizations.rules,
+      searchState: AppBarSearchState(
+        onSearch: _onChanged,
+        controller: _controller,
+        hintText: appLocalizations.rulesSearchHint,
+        onSubmitted: (_) => _submit(),
+        trailing: _lookup?.loading ?? false
+            ? Padding(
+                padding: const EdgeInsetsDirectional.only(end: 4),
+                child: ActivityIndicator(
+                  key: RulesView.queryingKey,
+                  size: 16,
+                  color: colorScheme.primary,
+                  semanticLabel: appLocalizations.rulesQuerying,
+                ),
+              )
+            : null,
+      ),
       titleWidget: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -787,7 +795,12 @@ class _RulesViewState extends ConsumerState<RulesView> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < _narrowWidth;
-          return _buildBody(context, coreRunning: coreRunning, narrow: narrow);
+          return _buildBody(
+            context,
+            coreRunning: coreRunning,
+            narrow: narrow,
+            bottomInset: context.bottomInset,
+          );
         },
       ),
     );
@@ -797,6 +810,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
     BuildContext context, {
     required bool coreRunning,
     required bool narrow,
+    required double bottomInset,
   }) {
     final appLocalizations = context.appLocalizations;
     final list = _list;
@@ -846,7 +860,6 @@ class _RulesViewState extends ConsumerState<RulesView> {
                     ? appLocalizations.rulesModeGlobal
                     : appLocalizations.rulesModeDirect,
               ),
-            _buildSearchBox(context),
           ],
         ),
       ),
@@ -866,7 +879,10 @@ class _RulesViewState extends ConsumerState<RulesView> {
               onAction: _loadList,
             ),
           ),
-        if (list != null) ...[
+        // A lookup with no answer yet shows its line, or its error, alone.
+        if (lookup != null && lookup.result == null)
+          const SliverToBoxAdapter()
+        else if (list != null) ...[
           box(
             _inLookup
                 ? _buildLookupChips(context)
@@ -877,7 +893,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
             child: const SizedBox(height: 12),
           ),
           SliverPadding(
-            padding: padding.copyWith(bottom: 24 + context.bottomInset),
+            padding: padding.copyWith(bottom: 24 + bottomInset),
             sliver: SliverOpacity(
               opacity: dimmed ? 0.45 : 1,
               sliver: _buildList(context, list, sources, items, narrow),
@@ -938,185 +954,40 @@ class _RulesViewState extends ConsumerState<RulesView> {
     return '$error';
   }
 
-  Widget _buildSearchBox(BuildContext context) {
+  /// What the lookup asked and that it may resolve, under the title bar.
+  Widget? _buildLookupInfo(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    final colorScheme = context.colorScheme;
-    final loading = _lookup?.loading ?? false;
     final lookup = _lookup;
     final result = lookup?.result;
-    String? info;
-    if (lookup != null && result != null && !lookup.loading) {
-      info = [
-        lookup.host,
-        if (lookup.port != null) ':${lookup.port}',
-        if (result.resolveWanted || result.ipSource == 'dns')
-          ' · ${appLocalizations.lookupNoConnectNote}',
-      ].join();
-    }
-    final field = _SearchField(
-      controller: _controller,
-      focusNode: _focusNode,
-      loading: loading,
-      onChanged: _onChanged,
-      onSubmitted: (_) => _submit(),
-      onEscape: _dismissPanel,
-      onClear: () {
-        _controller.clear();
-        _clearSearch();
-      },
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            _boxWidth = constraints.maxWidth;
-            return CompositedTransformTarget(
-              link: _panelLink,
-              child: OverlayPortal(
-                controller: _panel,
-                overlayChildBuilder: _buildPanel,
-                child: field,
-              ),
-            );
-          },
-        ),
-        if (info != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 2),
-            child: Text(
-              info,
-              style: AppTextStyle.caption1
-                  .of(context)
-                  .copyWith(color: colorScheme.onSurfaceVariant),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildPanel(BuildContext context) {
-    final host = _panelHost;
-    if (host == null) return const SizedBox.shrink();
-    final appLocalizations = context.appLocalizations;
-    final colorScheme = context.colorScheme;
-    final filter = _filter;
-    final count = filter != null && filter.text == _text
-        ? filter.indexes.length
-        : null;
-    return CompositedTransformFollower(
-      link: _panelLink,
-      targetAnchor: Alignment.bottomLeft,
-      offset: const Offset(0, 6),
-      child: Align(
-        alignment: Alignment.topLeft,
-        child: TextFieldTapRegion(
-          child: Container(
-            width: _boxWidth,
-            padding: const EdgeInsets.all(6),
-            decoration: ShapeDecoration(
-              color: context.raisedSurfaceLevel.colorOf(colorScheme),
-              shadows: [
-                BoxShadow(
-                  color: colorScheme.shadow.withValues(alpha: 0.12),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-              shape: RoundedSuperellipseBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Semantics(
-                  button: true,
-                  label: appLocalizations.rulesLookupSuggestionLabel(host),
-                  excludeSemantics: true,
-                  child: _PanelItem(
-                    highlighted: true,
-                    onTap: _submit,
-                    child: Row(
-                      spacing: 8,
-                      children: [
-                        GlyphIcon(
-                          AppGlyphs.search,
-                          size: 16,
-                          color: colorScheme.primary,
-                        ),
-                        Expanded(
-                          child: Text.rich(
-                            _suggestionSpan(context, host),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
-                          decoration: ShapeDecoration(
-                            shape: RoundedSuperellipseBorder(
-                              borderRadius: BorderRadius.circular(4),
-                              side: BorderSide(
-                                color: colorScheme.primary.withValues(
-                                  alpha: 0.4,
-                                ),
-                              ),
-                            ),
-                          ),
-                          child: Text(
-                            '↵',
-                            style: AppTextStyle.caption1
-                                .of(context)
-                                .copyWith(
-                                  color: colorScheme.primary,
-                                  fontFamilyFallback: const ['Apple Symbols'],
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                _PanelItem(
-                  onTap: _dismissPanel,
-                  child: Text(
-                    appLocalizations.rulesFilterOnly(count ?? '…'),
-                    style: AppTextStyle.subheadline
-                        .of(context)
-                        .copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    if (lookup == null || result == null) return null;
+    final info = [
+      lookup.host,
+      if (lookup.port != null) ':${lookup.port}',
+      if (result.resolveWanted || result.ipSource == 'dns')
+        ' · ${appLocalizations.lookupNoConnectNote}',
+    ].join();
+    return Padding(
+      key: RulesView.infoKey,
+      padding: const EdgeInsets.only(left: 2),
+      child: Text(
+        info,
+        style: AppTextStyle.caption1
+            .of(context)
+            .copyWith(color: context.colorScheme.onSurfaceVariant),
       ),
     );
   }
 
-  /// The lookup suggestion with the host in bold, as the design sets it.
-  TextSpan _suggestionSpan(BuildContext context, String host) {
-    final text = context.appLocalizations.rulesLookupSuggestion(host);
-    final style = AppTextStyle.subheadline
-        .of(context)
-        .copyWith(color: context.colorScheme.onSurface);
-    final at = text.indexOf(host);
-    if (at < 0) return TextSpan(text: text, style: style);
-    return TextSpan(
-      style: style,
-      children: [
-        TextSpan(text: text.substring(0, at)),
-        TextSpan(
-          text: host,
-          style: AppTextStyle.subheadline.of(context, emphasized: true),
-        ),
-        TextSpan(text: text.substring(at + host.length)),
-      ],
+  /// Said while a lookup with nothing yet to show is on its way.
+  Widget _buildQuerying(BuildContext context, String host) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Text(
+        context.appLocalizations.rulesQueryingHost(host),
+        style: AppTextStyle.caption1
+            .of(context)
+            .copyWith(color: context.colorScheme.onSurfaceVariant),
+      ),
     );
   }
 
@@ -1147,7 +1018,9 @@ class _RulesViewState extends ConsumerState<RulesView> {
       ];
     }
     final result = lookup.result;
-    if (result == null) return const [];
+    if (result == null) {
+      return [if (lookup.loading) box(_buildQuerying(context, lookup.host))];
+    }
     final sources = _sources;
     final winner = result.winner;
     final notices = <Widget>[..._lookupNotices(context, lookup, result)];
@@ -1160,6 +1033,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
       coreStatusProvider.select((status) => status == CoreStatus.connected),
     );
     final card = RuleHitCard(
+      profile: _profileName,
       lookup: result,
       source: source,
       enabled: coreRunning,
@@ -1176,7 +1050,9 @@ class _RulesViewState extends ConsumerState<RulesView> {
       onCopyRule: () => _copy(winner?.rule.text ?? ''),
     );
     return [
+      if (_buildLookupInfo(context) case final info?) box(info),
       box(
+        top: 8,
         AnimatedOpacity(
           opacity: lookup.loading ? 0.45 : 1,
           duration: const Duration(milliseconds: 150),
@@ -1340,12 +1216,31 @@ class _RulesViewState extends ConsumerState<RulesView> {
         counts.update(kind, (count) => count + 1, ifAbsent: () => 1);
       }
     }
+    // A chip names its source when there is one of it: the profile, or the
+    // one script; rule sets are many, each named on its own rows.
+    final profile = _profileName;
+    final scripts = {
+      for (final source in sources ?? const <RuleSource?>[])
+        if (source != null &&
+            (source.kind == RuleSourceKind.script ||
+                source.kind == RuleSourceKind.mitm))
+          source.name,
+    };
     final labels = {
-      RuleSourceFilter.all: appLocalizations.ruleSourceAll,
-      RuleSourceFilter.subscription: appLocalizations.ruleSourceSubscription,
-      RuleSourceFilter.ruleSet: appLocalizations.ruleSet,
-      RuleSourceFilter.added: appLocalizations.ruleSourceAdded,
-      RuleSourceFilter.script: appLocalizations.ruleSourceScript,
+      RuleSourceFilter.all: (label: appLocalizations.ruleSourceAll, full: null),
+      RuleSourceFilter.subscription: namedSourceLabel(
+        appLocalizations.ruleSourceSubscription,
+        profile,
+      ),
+      RuleSourceFilter.ruleSet: (label: appLocalizations.ruleSet, full: null),
+      RuleSourceFilter.added: namedSourceLabel(
+        appLocalizations.ruleSourceAdded,
+        profile,
+      ),
+      RuleSourceFilter.script: namedSourceLabel(
+        appLocalizations.ruleSourceScript,
+        scripts.length == 1 ? scripts.single : '',
+      ),
     };
     final targets = _targets();
     final group = _group;
@@ -1359,7 +1254,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
               entry.key == RuleSourceFilter.all ||
               entry.key == RuleSourceFilter.ruleSet)
             RulesFilterChip(
-              label: entry.value,
+              label: entry.value.label,
+              tooltip: entry.value.full,
               count: counts[entry.key] ?? 0,
               selected: _source == entry.key,
               onPressed: () => setState(() => _source = entry.key),
@@ -1460,6 +1356,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
             final open =
                 _isExpanded(index) || _matchedEntryOf(item.hit) != null;
             row = RuleRow(
+              profile: _profileName,
               key: index == highlighted ? _targetRowKey : ValueKey(index),
               rule: rule,
               hit: item.hit,
@@ -1518,173 +1415,4 @@ class _RulesViewState extends ConsumerState<RulesView> {
 
 class _CoreStopped {
   const _CoreStopped();
-}
-
-class _PanelItem extends StatelessWidget {
-  final bool highlighted;
-  final VoidCallback onTap;
-  final Widget child;
-
-  const _PanelItem({
-    this.highlighted = false,
-    required this.onTap,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = context.colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          decoration: ShapeDecoration(
-            color: highlighted
-                ? colorScheme.primary.withValues(alpha: 0.08)
-                : null,
-            shape: RoundedSuperellipseBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-/// The search box of the rules page: 44 high, its ring the primary color
-/// with a soft halo while focused.
-class _SearchField extends StatefulWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool loading;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onEscape;
-  final VoidCallback onClear;
-
-  const _SearchField({
-    required this.controller,
-    required this.focusNode,
-    required this.loading,
-    required this.onChanged,
-    required this.onSubmitted,
-    required this.onEscape,
-    required this.onClear,
-  });
-
-  @override
-  State<_SearchField> createState() => _SearchFieldState();
-}
-
-class _SearchFieldState extends State<_SearchField> {
-  @override
-  void initState() {
-    super.initState();
-    widget.focusNode.addListener(_update);
-    widget.controller.addListener(_update);
-  }
-
-  @override
-  void dispose() {
-    widget.focusNode.removeListener(_update);
-    widget.controller.removeListener(_update);
-    super.dispose();
-  }
-
-  void _update() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final appLocalizations = context.appLocalizations;
-    final colorScheme = context.colorScheme;
-    final focused = widget.focusNode.hasFocus;
-    final hasText = widget.controller.text.isNotEmpty;
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: ShapeDecoration(
-        color: context.raisedSurfaceLevel.colorOf(colorScheme),
-        shadows: focused
-            ? [
-                BoxShadow(
-                  color: colorScheme.primary.withValues(alpha: 0.15),
-                  spreadRadius: 3,
-                ),
-              ]
-            : null,
-        shape: RoundedSuperellipseBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(
-            width: 1.5,
-            color: focused ? colorScheme.primary : colorScheme.outlineVariant,
-          ),
-        ),
-      ),
-      child: Row(
-        spacing: 8,
-        children: [
-          GlyphIcon(
-            AppGlyphs.search,
-            size: 18,
-            color: colorScheme.onSurfaceVariant,
-          ),
-          Expanded(
-            child: Semantics(
-              label: appLocalizations.rulesSearchLabel,
-              textField: true,
-              child: CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.escape):
-                      widget.onEscape,
-                },
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: widget.focusNode,
-                  onChanged: widget.onChanged,
-                  onSubmitted: widget.onSubmitted,
-                  textInputAction: TextInputAction.search,
-                  autocorrect: false,
-                  style: AppTextStyle.body.of(context),
-                  decoration: InputDecoration.collapsed(
-                    hintText: appLocalizations.rulesSearchHint,
-                    hintStyle: AppTextStyle.body
-                        .of(context)
-                        .copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (widget.loading)
-            ActivityIndicator(
-              size: 16,
-              color: colorScheme.primary,
-              semanticLabel: appLocalizations.rulesQuerying,
-            )
-          else if (hasText)
-            Semantics(
-              button: true,
-              label: appLocalizations.clearSearch,
-              child: GestureDetector(
-                onTap: widget.onClear,
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GlyphIcon(
-                    AppGlyphs.clearField,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }

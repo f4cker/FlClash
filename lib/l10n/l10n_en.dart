@@ -6085,25 +6085,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rulesSearchHint => 'Search rules, or enter a URL to look it up';
 
   @override
-  String get rulesSearchLabel => 'Search rules or URLs';
-
-  @override
-  String rulesLookupSuggestion(Object host) {
-    return 'Look up which rule $host takes';
-  }
-
-  @override
-  String rulesLookupSuggestionLabel(Object host) {
-    return 'Look up which rule $host takes';
-  }
-
-  @override
-  String rulesFilterOnly(Object count) {
-    return 'Only filter rules by text · $count';
-  }
-
-  @override
   String get rulesQuerying => 'Looking up';
+
+  @override
+  String rulesQueryingHost(Object host) {
+    return 'Looking up $host…';
+  }
 
   @override
   String get ruleSourceAll => 'All';
@@ -6203,18 +6190,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hitCardTitle => 'Lookup result';
 
   @override
-  String get hitCardTitleUncertain => 'The result may differ';
-
-  @override
   String hitCardPosition(Object index) {
     return 'Matches rule #$index';
   }
 
   @override
   String get hitGoes => 'Goes';
-
-  @override
-  String get hitFallback => 'No earlier rule matches, so the last rule applies';
 
   @override
   String get hitNoRule => 'No rule matched, goes';
@@ -6253,16 +6234,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewGroup => 'View group';
 
   @override
-  String get uncertainProcess =>
-      'An earlier rule depends on the app making the request. The actual result may change with the app.';
+  String uncertainKinds(Object kinds) {
+    return 'An earlier rule may match first depending on the $kinds; the actual result may differ.';
+  }
 
   @override
-  String get uncertainPort =>
-      'An earlier rule depends on the port. The actual result may change with the port.';
+  String get uncertainKindApp => 'app';
 
   @override
-  String get uncertainIp =>
-      'An earlier rule depends on the IP, which could not be resolved, so whether it matches first is unknown.';
+  String get uncertainKindPort => 'port';
+
+  @override
+  String get uncertainKindIp => 'IP';
+
+  @override
+  String get uncertainKindSeparator => ', ';
+
+  @override
+  String get uncertainKindLastSeparator => ' or ';
 
   @override
   String get uncertainOther =>

@@ -5592,25 +5592,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rulesSearchHint => '搜索规则，或输入网址查询';
 
   @override
-  String get rulesSearchLabel => '搜索规则或网址';
-
-  @override
-  String rulesLookupSuggestion(Object host) {
-    return '查询 $host 走哪条规则';
-  }
-
-  @override
-  String rulesLookupSuggestionLabel(Object host) {
-    return '查询 $host 走哪条规则';
-  }
-
-  @override
-  String rulesFilterOnly(Object count) {
-    return '仅按文字筛选规则 · $count 条';
-  }
-
-  @override
   String get rulesQuerying => '正在查询';
+
+  @override
+  String rulesQueryingHost(Object host) {
+    return '正在查询 $host…';
+  }
 
   @override
   String get ruleSourceAll => '全部';
@@ -5710,18 +5697,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hitCardTitle => '查询结果';
 
   @override
-  String get hitCardTitleUncertain => '结果可能不同';
-
-  @override
   String hitCardPosition(Object index) {
     return '命中第 $index 条';
   }
 
   @override
   String get hitGoes => '走';
-
-  @override
-  String get hitFallback => '没有更早匹配的规则，使用最后一条规则';
 
   @override
   String get hitNoRule => '没有规则命中，走';
@@ -5759,13 +5740,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get viewGroup => '查看策略组';
 
   @override
-  String get uncertainProcess => '前面有按发起 App 判断的规则。实际结果可能因发起请求的 App 不同而改变。';
+  String uncertainKinds(Object kinds) {
+    return '前面的规则可能因 $kinds 而优先匹配，实际结果可能不同。';
+  }
 
   @override
-  String get uncertainPort => '前面有按端口判断的规则。实际结果可能因端口不同而改变。';
+  String get uncertainKindApp => 'App';
 
   @override
-  String get uncertainIp => '前面有按 IP 判断的规则，但未能解析 IP，无法确定是否会优先匹配。';
+  String get uncertainKindPort => '端口';
+
+  @override
+  String get uncertainKindIp => 'IP';
+
+  @override
+  String get uncertainKindSeparator => '、';
+
+  @override
+  String get uncertainKindLastSeparator => '或';
 
   @override
   String get uncertainOther => '前面的规则需要更多连接信息，实际结果可能不同。';

@@ -10308,35 +10308,17 @@ abstract class AppLocalizations {
   /// **'Search rules, or enter a URL to look it up'**
   String get rulesSearchHint;
 
-  /// No description provided for @rulesSearchLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Search rules or URLs'**
-  String get rulesSearchLabel;
-
-  /// No description provided for @rulesLookupSuggestion.
-  ///
-  /// In en, this message translates to:
-  /// **'Look up which rule {host} takes'**
-  String rulesLookupSuggestion(Object host);
-
-  /// No description provided for @rulesLookupSuggestionLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Look up which rule {host} takes'**
-  String rulesLookupSuggestionLabel(Object host);
-
-  /// No description provided for @rulesFilterOnly.
-  ///
-  /// In en, this message translates to:
-  /// **'Only filter rules by text · {count}'**
-  String rulesFilterOnly(Object count);
-
   /// No description provided for @rulesQuerying.
   ///
   /// In en, this message translates to:
   /// **'Looking up'**
   String get rulesQuerying;
+
+  /// No description provided for @rulesQueryingHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up {host}…'**
+  String rulesQueryingHost(Object host);
 
   /// No description provided for @ruleSourceAll.
   ///
@@ -10500,12 +10482,6 @@ abstract class AppLocalizations {
   /// **'Lookup result'**
   String get hitCardTitle;
 
-  /// No description provided for @hitCardTitleUncertain.
-  ///
-  /// In en, this message translates to:
-  /// **'The result may differ'**
-  String get hitCardTitleUncertain;
-
   /// No description provided for @hitCardPosition.
   ///
   /// In en, this message translates to:
@@ -10517,12 +10493,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Goes'**
   String get hitGoes;
-
-  /// No description provided for @hitFallback.
-  ///
-  /// In en, this message translates to:
-  /// **'No earlier rule matches, so the last rule applies'**
-  String get hitFallback;
 
   /// No description provided for @hitNoRule.
   ///
@@ -10590,23 +10560,41 @@ abstract class AppLocalizations {
   /// **'View group'**
   String get viewGroup;
 
-  /// No description provided for @uncertainProcess.
+  /// No description provided for @uncertainKinds.
   ///
   /// In en, this message translates to:
-  /// **'An earlier rule depends on the app making the request. The actual result may change with the app.'**
-  String get uncertainProcess;
+  /// **'An earlier rule may match first depending on the {kinds}; the actual result may differ.'**
+  String uncertainKinds(Object kinds);
 
-  /// No description provided for @uncertainPort.
+  /// No description provided for @uncertainKindApp.
   ///
   /// In en, this message translates to:
-  /// **'An earlier rule depends on the port. The actual result may change with the port.'**
-  String get uncertainPort;
+  /// **'app'**
+  String get uncertainKindApp;
 
-  /// No description provided for @uncertainIp.
+  /// No description provided for @uncertainKindPort.
   ///
   /// In en, this message translates to:
-  /// **'An earlier rule depends on the IP, which could not be resolved, so whether it matches first is unknown.'**
-  String get uncertainIp;
+  /// **'port'**
+  String get uncertainKindPort;
+
+  /// No description provided for @uncertainKindIp.
+  ///
+  /// In en, this message translates to:
+  /// **'IP'**
+  String get uncertainKindIp;
+
+  /// No description provided for @uncertainKindSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get uncertainKindSeparator;
+
+  /// No description provided for @uncertainKindLastSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **' or '**
+  String get uncertainKindLastSeparator;
 
   /// No description provided for @uncertainOther.
   ///

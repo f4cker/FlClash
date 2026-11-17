@@ -12,13 +12,36 @@ part 'scaffold_actions.dart';
 part 'scaffold_search.dart';
 
 class AppBarSearchState {
-  const AppBarSearchState({required this.onSearch, this.query});
+  const AppBarSearchState({
+    required this.onSearch,
+    this.query,
+    this.controller,
+    this.onSubmitted,
+    this.hintText,
+    this.trailing,
+  });
 
   final ValueChanged<String> onSearch;
   final String? query;
 
-  AppBarSearchState withQuery(String? query) =>
-      AppBarSearchState(onSearch: onSearch, query: query);
+  /// The page's own controller, for a page that sets the text itself.
+  final TextEditingController? controller;
+
+  /// Called with the text when the keyboard's search action is pressed.
+  final ValueChanged<String>? onSubmitted;
+  final String? hintText;
+
+  /// Shown at the field's end, before its clear button.
+  final Widget? trailing;
+
+  AppBarSearchState withQuery(String? query) => AppBarSearchState(
+    onSearch: onSearch,
+    query: query,
+    controller: controller,
+    onSubmitted: onSubmitted,
+    hintText: hintText,
+    trailing: trailing,
+  );
 }
 
 class ScaffoldKeyword {
@@ -113,7 +136,9 @@ class ScaffoldState extends State<Scaffold>
     with SingleTickerProviderStateMixin {
   late final ValueNotifier<AppBarSearchState?> _appBarState;
   final ValueNotifier<bool> _loadingNotifier = ValueNotifier(false);
-  final _textController = TextEditingController();
+  final _ownTextController = TextEditingController();
+  TextEditingController get _textController =>
+      widget.searchState?.controller ?? _ownTextController;
   final _searchFocusNode = FocusNode();
   late final _searchMotion = _SearchMotion(this);
   late final Animation<double> _titleUnderSearch = _searchMotion.drive(
@@ -289,6 +314,18 @@ class ScaffoldState extends State<Scaffold>
     }
   }
 
+  /// Opens the search, as its button or the shortcut does, and focuses it.
+  void openSearch() {
+    if (_appBarState.value == null || _sorting) {
+      return;
+    }
+    if (_isSearch || _searchDocked) {
+      _searchFocusNode.requestFocus();
+    } else {
+      _handleToSearch();
+    }
+  }
+
   void _handleClearInput() {
     _textController.text = '';
     _appBarState.value?.onSearch('');
@@ -329,13 +366,17 @@ class ScaffoldState extends State<Scaffold>
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_handleSearchShortcut);
     _appBarState.dispose();
-    _textController.dispose();
+    _ownTextController.dispose();
     _searchFocusNode.dispose();
     _searchMotion.dispose();
     _searchOrigin.dispose();
     _searchCovered.dispose();
     _loadingNotifier.dispose();
     super.dispose();
+  }
+
+  void _handleSubmitted() {
+    _appBarState.value?.onSubmitted?.call(_textController.text);
   }
 
   Widget _buildDockedSearch(AppBarSearchState searchState) {
@@ -349,7 +390,10 @@ class ScaffoldState extends State<Scaffold>
           height: height,
           controller: _textController,
           focusNode: _searchFocusNode,
+          hintText: searchState.hintText,
+          trailing: searchState.trailing,
           onChanged: searchState.onSearch,
+          onSubmitted: _handleSubmitted,
         ),
       ),
     );
@@ -681,7 +725,10 @@ class ScaffoldState extends State<Scaffold>
           autofocus: true,
           controller: _textController,
           focusNode: _searchFocusNode,
+          hintText: _appBarState.value?.hintText,
+          trailing: _appBarState.value?.trailing,
           onChanged: (value) => _appBarState.value?.onSearch(value),
+          onSubmitted: _handleSubmitted,
         ),
       ),
     );

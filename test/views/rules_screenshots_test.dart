@@ -14,6 +14,7 @@ import 'package:fl_clash/manager/theme_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/rules/rules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/gestures.dart';
@@ -24,6 +25,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
 
@@ -36,6 +38,9 @@ const _size = Size(1200, 900);
 
 /// The mode the fake Core runs in.
 var _mode = 'rule';
+
+/// Whether lookups stay unanswered, for the shot of one on its way.
+var _holdLookups = false;
 
 /// Each face of a TrueType collection as a font of its own, since the engine
 /// reads only the first face of a collection.
@@ -482,6 +487,7 @@ void main() {
     });
     when(() => core.lookupRule(any())).thenAnswer((invocation) async {
       final params = invocation.positionalArguments.single as RuleLookupParams;
+      if (_holdLookups) return Completer<RuleLookup>().future;
       return lookups[params.host]!;
     });
     container = ProviderContainer(
@@ -562,8 +568,11 @@ void main() {
   }
 
   Future<void> type(WidgetTester tester, String text) async {
-    await tester.tap(find.byType(EditableText));
-    await tester.enterText(find.byType(EditableText), text);
+    if (_searchField.evaluate().isEmpty) {
+      await tester.tap(find.byGlyph(AppGlyphs.search).first);
+      await settle(tester, 12);
+    }
+    await tester.enterText(_searchField, text);
     await tester.pump(const Duration(milliseconds: 250));
     await settle(tester, 4);
   }
@@ -582,8 +591,17 @@ void main() {
 
   shot('02-typing', (tester) async {
     await pumpPage(tester, size: const Size(1200, 420));
-    await type(tester, 'www.youtube.com');
+    await type(tester, 'youtube');
     await shoot(tester, '02-typing');
+  });
+
+  shot('02b-querying', (tester) async {
+    _holdLookups = true;
+    addTearDown(() => _holdLookups = false);
+    await pumpPage(tester, size: const Size(1200, 420));
+    await type(tester, 'www.youtube.com');
+    await settle(tester);
+    await shoot(tester, '02b-querying');
   });
 
   shot('03-query', (tester) async {
@@ -837,3 +855,9 @@ void main() {
     await shoot(tester, '12-no-filter-results');
   });
 }
+
+/// The text field of the title bar's search.
+final _searchField = find.descendant(
+  of: find.byType(SearchField),
+  matching: find.byType(EditableText),
+);

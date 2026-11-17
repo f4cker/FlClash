@@ -123,6 +123,9 @@ class RuleRow extends StatelessWidget {
   final VoidCallback? onRevealGroup;
   final VoidCallback? onUpdateSet;
 
+  /// The name of the profile the rules run from, for the source badge.
+  final String profile;
+
   const RuleRow({
     super.key,
     required this.rule,
@@ -140,6 +143,7 @@ class RuleRow extends StatelessWidget {
     required this.onCopy,
     this.onRevealGroup,
     this.onUpdateSet,
+    this.profile = '',
   });
 
   List<Widget> _setExtras(BuildContext context) {
@@ -186,7 +190,7 @@ class RuleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
-    final badge = ruleSourceBadge(context, rule, source, named: false);
+    final badge = ruleSourceBadge(context, rule, source, profile: profile);
     final hit = this.hit;
     final tag = hit == null ? null : hitTagOf(context, hit, winnerIndex);
     final target = _RuleTarget(target: rule.target, showNode: showNode);
@@ -223,7 +227,8 @@ class RuleRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         RuleCode(ruleBodyOf(rule)),
-        if (badge != null) RuleBadge(label: badge.label, tone: badge.tone),
+        if (badge != null)
+          RuleBadge(label: badge.label, tone: badge.tone, tooltip: badge.full),
         ..._setExtras(context),
         ?tag,
         if (narrow) target,

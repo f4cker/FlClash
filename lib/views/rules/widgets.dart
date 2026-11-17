@@ -47,57 +47,85 @@ enum RuleTone {
   }
 }
 
-/// The source a rule badge names; null when the page cannot tell.
-({String label, RuleTone tone})? ruleSourceBadge(
+/// The longest name a badge or chip shows before it cuts the rest off.
+const sourceNameLimit = 16;
+
+/// [name] cut to [sourceNameLimit] characters, an ellipsis after the cut.
+String shortSourceName(String name) {
+  final characters = name.characters;
+  if (characters.length <= sourceNameLimit) return name;
+  return '${characters.take(sourceNameLimit)}…';
+}
+
+/// [label] with the name of the source it is, the name cut short; [full]
+/// is the whole label, for a tooltip, when the name was cut.
+({String label, String? full}) namedSourceLabel(String label, String name) {
+  if (name.isEmpty) return (label: label, full: null);
+  final short = shortSourceName(name);
+  return (
+    label: '$label · $short',
+    full: short == name ? null : '$label · $name',
+  );
+}
+
+/// The source a rule badge names, with the name of which one it is: the
+/// profile, the rule set, the script or the module; null when the page
+/// cannot tell. [profile] is the name of the profile the rules run from.
+({String label, RuleTone tone, String? full})? ruleSourceBadge(
   BuildContext context,
   CoreRule rule,
   RuleSource? source, {
-  bool named = true,
+  String profile = '',
 }) {
   final appLocalizations = context.appLocalizations;
-  // A rule set's name is in the rule's text already; a script's or a
-  // module's is not, so it shows wherever the source does.
-  String withName(String label, String name, {bool always = false}) =>
-      (named || always) && name.isNotEmpty ? '$label · $name' : label;
+  ({String label, RuleTone tone, String? full}) named(
+    String label,
+    String name,
+    RuleTone tone,
+  ) {
+    final named = namedSourceLabel(label, name);
+    return (label: named.label, tone: tone, full: named.full);
+  }
+
   if (rule.managed) {
-    return (label: appLocalizations.ruleSourceManaged, tone: RuleTone.gray);
+    return named(appLocalizations.ruleSourceManaged, '', RuleTone.gray);
   }
   final ruleSet = rule.ruleSet;
   if (ruleSet != null) {
-    return (
-      label: withName(appLocalizations.ruleSet, ruleSet.name),
-      tone: RuleTone.purple,
-    );
+    return named(appLocalizations.ruleSet, ruleSet.name, RuleTone.purple);
   }
   if (source == null) return null;
   return switch (source.kind) {
-    RuleSourceKind.subscription => (
-      label: appLocalizations.ruleSourceSubscription,
-      tone: RuleTone.blue,
+    RuleSourceKind.subscription => named(
+      appLocalizations.ruleSourceSubscription,
+      profile,
+      RuleTone.blue,
     ),
-    RuleSourceKind.custom => (
-      label: appLocalizations.ruleSourceCustom,
-      tone: RuleTone.blue,
+    RuleSourceKind.custom => named(
+      appLocalizations.ruleSourceCustom,
+      profile,
+      RuleTone.blue,
     ),
-    RuleSourceKind.addedProfile || RuleSourceKind.addedGlobal => (
-      label: appLocalizations.ruleSourceAdded,
-      tone: RuleTone.amber,
+    RuleSourceKind.addedProfile => named(
+      appLocalizations.ruleSourceAdded,
+      profile,
+      RuleTone.amber,
     ),
-    RuleSourceKind.script => (
-      label: withName(
-        appLocalizations.ruleSourceScript,
-        source.name,
-        always: true,
-      ),
-      tone: RuleTone.scriptRed,
+    // Kept for every profile, so no one profile's name fits it.
+    RuleSourceKind.addedGlobal => named(
+      appLocalizations.ruleSourceAdded,
+      '',
+      RuleTone.amber,
     ),
-    RuleSourceKind.mitm => (
-      label: withName(
-        appLocalizations.ruleSourceMitm,
-        source.name,
-        always: true,
-      ),
-      tone: RuleTone.scriptRed,
+    RuleSourceKind.script => named(
+      appLocalizations.ruleSourceScript,
+      source.name,
+      RuleTone.scriptRed,
+    ),
+    RuleSourceKind.mitm => named(
+      appLocalizations.ruleSourceMitm,
+      source.name,
+      RuleTone.scriptRed,
     ),
   };
 }
@@ -107,15 +135,25 @@ class RuleBadge extends StatelessWidget {
   final RuleTone tone;
   final bool solid;
 
+  /// The whole label, on hover, when [label] cuts a name short.
+  final String? tooltip;
+
   const RuleBadge({
     super.key,
     required this.label,
     required this.tone,
     this.solid = false,
+    this.tooltip,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tooltip = this.tooltip;
+    final badge = _buildBadge(context);
+    return tooltip == null ? badge : Tooltip(message: tooltip, child: badge);
+  }
+
+  Widget _buildBadge(BuildContext context) {
     final colors = tone.of(context);
     return Container(
       height: 22,
@@ -363,6 +401,9 @@ class RulesFilterChip extends StatelessWidget {
   final VoidCallback onPressed;
   final Widget? trailing;
 
+  /// The whole label, on hover, when [label] cuts a name short.
+  final String? tooltip;
+
   const RulesFilterChip({
     super.key,
     required this.label,
@@ -370,10 +411,17 @@ class RulesFilterChip extends StatelessWidget {
     required this.selected,
     required this.onPressed,
     this.trailing,
+    this.tooltip,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tooltip = this.tooltip;
+    final chip = _buildChip(context);
+    return tooltip == null ? chip : Tooltip(message: tooltip, child: chip);
+  }
+
+  Widget _buildChip(BuildContext context) {
     final colorScheme = context.colorScheme;
     final ink = selected ? colorScheme.onPrimary : colorScheme.onSurface;
     return Semantics(

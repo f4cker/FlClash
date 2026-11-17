@@ -36,30 +36,47 @@ List<Widget> routeChips(
   ];
 }
 
-/// What a lookup says of the rules before the winner it cannot decide, one
-/// line for each kind of information it lacks.
-List<String> uncertainNotes(BuildContext context, RuleLookup lookup) {
+/// The one line a lookup says of the rules before the winner it cannot
+/// decide: the kinds of information it lacks, listed together; the general
+/// wording only when it knows none of them. Null when it decides them all.
+String? uncertainNote(BuildContext context, RuleLookup lookup) {
   final appLocalizations = context.appLocalizations;
-  final kinds = <String>{
-    for (final hit in lookup.uncertain)
-      if (hit.reason != 'rematch')
-        switch (hit.reason) {
-          'process' || 'uid' => 'process',
-          'port' => 'port',
-          'ip' => 'ip',
-          _ => 'other',
-        },
-  };
-  return [
-    if (kinds.contains('process')) appLocalizations.uncertainProcess,
-    if (kinds.contains('port')) appLocalizations.uncertainPort,
-    if (kinds.contains('ip')) appLocalizations.uncertainIp,
-    if (kinds.contains('other')) appLocalizations.uncertainOther,
+  final hits = undecidedHits(lookup);
+  if (hits.isEmpty) return null;
+  final reasons = {for (final hit in hits) hit.reason};
+  final kinds = [
+    if (reasons.contains('process') || reasons.contains('uid'))
+      appLocalizations.uncertainKindApp,
+    if (reasons.contains('port')) appLocalizations.uncertainKindPort,
+    if (reasons.contains('ip')) appLocalizations.uncertainKindIp,
   ];
+  if (kinds.isEmpty) return appLocalizations.uncertainOther;
+  final listed = kinds.length == 1
+      ? kinds.single
+      : '${kinds.take(kinds.length - 1).join(appLocalizations.uncertainKindSeparator)}'
+            '${appLocalizations.uncertainKindLastSeparator}${kinds.last}';
+  return spaceCjkLatin(appLocalizations.uncertainKinds(listed));
 }
+
+/// The rules before the winner a lookup cannot decide, in rule order.
+List<RuleHit> undecidedHits(RuleLookup lookup) => [
+  for (final hit in lookup.uncertain)
+    if (hit.reason != 'rematch') hit,
+]..sort((a, b) => a.index.compareTo(b.index));
+
+final _cjkThenLatin = RegExp(r'([\u3400-\u9fff])([A-Za-z0-9])');
+final _latinThenCjk = RegExp(r'([A-Za-z0-9])([\u3400-\u9fff])');
+
+/// [text] with a space wherever Chinese meets a Latin letter or digit, as
+/// the copy sets them.
+String spaceCjkLatin(String text) => text
+    .replaceAllMapped(_cjkThenLatin, (m) => '${m[1]} ${m[2]}')
+    .replaceAllMapped(_latinThenCjk, (m) => '${m[1]} ${m[2]}');
 
 /// The card of the rule a lookup found the host takes.
 class RuleHitCard extends StatelessWidget {
+  static const uncertainKey = ValueKey('rules-hit-uncertain');
+
   final RuleLookup lookup;
   final RuleSource? source;
   final bool justAdded;
@@ -73,6 +90,9 @@ class RuleHitCard extends StatelessWidget {
   final VoidCallback onAddRule;
   final VoidCallback onCopyRule;
 
+  /// The name of the profile the rules run from, for the source badge.
+  final String profile;
+
   const RuleHitCard({
     super.key,
     required this.lookup,
@@ -83,6 +103,7 @@ class RuleHitCard extends StatelessWidget {
     this.onChangeNode,
     required this.onAddRule,
     required this.onCopyRule,
+    this.profile = '',
   });
 
   List<String> get _hops {
@@ -114,6 +135,39 @@ class RuleHitCard extends StatelessWidget {
     return width.ceilToDouble() + 12;
   }
 
+  /// The amber line under the source: what the lookup could not decide,
+  /// the rules it means on hover.
+  Widget _buildUncertain(BuildContext context, String note) {
+    final ink = RuleTone.amber.of(context).ink;
+    final rules = [
+      for (final hit in undecidedHits(lookup))
+        '#${hit.index + 1} ${hit.rule.text}',
+    ].join('\n');
+    return Padding(
+      key: RuleHitCard.uncertainKey,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Tooltip(
+        message: rules,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 4,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: GlyphIcon(AppGlyphs.warning, size: 14, color: ink),
+            ),
+            Expanded(
+              child: Text(
+                note,
+                style: AppTextStyle.caption1.of(context).copyWith(color: ink),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _detailRow(BuildContext context, String label, Widget value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +197,6 @@ class RuleHitCard extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final winner = lookup.winner;
     final uncertain = lookupUncertain(lookup);
-    final fallback = winner?.type == 'MATCH';
     final hops = _hops;
     final caption = AppTextStyle.caption1
         .of(context)
@@ -154,7 +207,7 @@ class RuleHitCard extends StatelessWidget {
     final conclusion = AppTextStyle.title3.of(context, emphasized: true);
     final badge = winner == null
         ? null
-        : ruleSourceBadge(context, winner.rule, source);
+        : ruleSourceBadge(context, winner.rule, source, profile: profile);
     final ruleSet = winner?.ruleSet;
     final ipNote = switch (lookup.ipSource) {
       'hosts' => appLocalizations.ipSourceHosts,
@@ -162,7 +215,7 @@ class RuleHitCard extends StatelessWidget {
       _ => null,
     };
     final showIp = lookup.ip.isNotEmpty && lookup.ipSource != 'input';
-    final notes = uncertainNotes(context, lookup);
+    final note = uncertainNote(context, lookup);
     final group = winner?.target ?? '';
     final semantics = winner == null
         ? null
@@ -204,9 +257,7 @@ class RuleHitCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      uncertain
-                          ? appLocalizations.hitCardTitleUncertain
-                          : appLocalizations.hitCardTitle,
+                      appLocalizations.hitCardTitle,
                       style: AppTextStyle.footnote
                           .of(context, emphasized: true)
                           .copyWith(color: colorScheme.onSurfaceVariant),
@@ -236,15 +287,6 @@ class RuleHitCard extends StatelessWidget {
                   ...routeChips(context, hops),
                 ],
               ),
-              if (fallback) ...[
-                const SizedBox(height: 8),
-                Text(
-                  appLocalizations.hitFallback,
-                  style: AppTextStyle.footnote
-                      .of(context)
-                      .copyWith(color: colorScheme.onSurfaceVariant),
-                ),
-              ],
               if (lookup.undetermined == 'rematch') ...[
                 const SizedBox(height: 10),
                 Text(
@@ -279,7 +321,11 @@ class RuleHitCard extends StatelessWidget {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        RuleBadge(label: badge.label, tone: badge.tone),
+                        RuleBadge(
+                          label: badge.label,
+                          tone: badge.tone,
+                          tooltip: badge.full,
+                        ),
                         if (ruleSet?.loadedAt case final loaded?)
                           Text(
                             appLocalizations.ruleUpdatedAt(
@@ -293,6 +339,7 @@ class RuleHitCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (note != null) _buildUncertain(context, note),
               ],
               if (showIp) ...[
                 const SizedBox(height: 6),
@@ -306,14 +353,6 @@ class RuleHitCard extends StatelessWidget {
                       style: AppTextStyle.footnote.of(context).toJetBrainsMono,
                     ),
                   ),
-                ),
-              ],
-              for (final note in notes) ...[
-                const SizedBox(height: 12),
-                RulesNotice(
-                  tone: RuleTone.warning,
-                  glyph: AppGlyphs.warning,
-                  text: note,
                 ),
               ],
               if (winner != null) ...[
