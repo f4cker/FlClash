@@ -6483,4 +6483,34 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get mitmOutcomeRefused =>
+      'Falló la negociación TLS del cliente (posible rechazo del certificado)';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate =>
+      'Falló la verificación del certificado del sitio';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 no es compatible';
+
+  @override
+  String get mitmOutcomeHelloPassthrough =>
+      'No se pudo inspeccionar TLS; conexión sin descifrar';
+
+  @override
+  String get mitmOutcomeFailed => 'Falló la conexión descifrada';
+
+  @override
+  String get mitmPausedLiveness =>
+      'Descifrado en pausa: no se pudo verificar la confianza o el firmante. Normalmente se detecta en unos 26 segundos; la suspensión o bloqueos pueden tardar más.';
+
+  @override
+  String get mitmPausedIndicatorPending =>
+      'Descifrado en pausa: aún no está disponible el indicador permanente requerido.';
+
+  @override
+  String get mitmPausedUnavailable =>
+      'Descifrado en pausa: el firmante o la conexión no está disponible.';
 }

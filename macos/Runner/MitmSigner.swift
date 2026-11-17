@@ -115,16 +115,32 @@ final class MitmSigner {
         leaves.removeAll()
     }
 
+    // A retained SecKey and root do not prove that either item is still in
+    // the login keychain. Re-read both before every approval or trust probe.
+    func refreshRoot() throws -> MitmRootInfo? {
+        let oldDER = root?.der
+        key = nil
+        root = nil
+        guard let fresh = try certificate() else {
+            leaves.removeAll()
+            return nil
+        }
+        if oldDER != fresh.der { leaves.removeAll() }
+        return fresh
+    }
+
     func sign(host rawHost: String, spki: Data, hostnames: [String]) -> Result<(leaf: Data, ca: Data), MitmSignError> {
         lastCoreIdentity = coreIdentity()
         guard lastCoreIdentity == "verified" else { return .failure(.coreIdentity) }
         let host = MitmHostPolicy.normalize(rawHost)
         guard host != Self.checkHost, MitmHostMatcher(hostnames).matches(host) else { return .failure(.notListed) }
         guard (try? MitmCertificateBuilder.p256Point(spki: spki)) != nil else { return .failure(.badKey) }
+        guard (try? refreshRoot()) != nil else { return .failure(.noRoot) }
         return issue(host: host, spki: spki)
     }
 
     func checkCertificate() -> Result<(leaf: Data, ca: Data), MitmSignError> {
+        guard (try? refreshRoot()) != nil else { return .failure(.noRoot) }
         let point = P256.Signing.PrivateKey().publicKey.x963Representation
         return issue(host: Self.checkHost, spki: MitmCertificateBuilder.spki(x963: point))
     }

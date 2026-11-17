@@ -158,6 +158,7 @@ _MitmStatus _$MitmStatusFromJson(Map<String, dynamic> json) => _MitmStatus(
   hostnames: (json['hostnames'] as num?)?.toInt() ?? 0,
   ignoredHostnames: (json['ignored-hostnames'] as num?)?.toInt() ?? 0,
   capture: json['capture'] as bool? ?? false,
+  paused: json['paused'] as String? ?? '',
 );
 
 Map<String, dynamic> _$MitmStatusToJson(_MitmStatus instance) =>
@@ -166,6 +167,7 @@ Map<String, dynamic> _$MitmStatusToJson(_MitmStatus instance) =>
       'hostnames': instance.hostnames,
       'ignored-hostnames': instance.ignoredHostnames,
       'capture': instance.capture,
+      'paused': instance.paused,
     };
 
 _MitmCertificate _$MitmCertificateFromJson(Map<String, dynamic> json) =>
@@ -487,6 +489,7 @@ const _$CoreEventTypeEnumMap = {
   CoreEventType.tailscaleState: 'tailscaleState',
   CoreEventType.tailscaleRoutes: 'tailscaleRoutes',
   CoreEventType.mitmSign: 'mitmSign',
+  CoreEventType.mitmConnection: 'mitmConnection',
 };
 
 _TestDelayParams _$TestDelayParamsFromJson(Map<String, dynamic> json) =>

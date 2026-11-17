@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
@@ -29,18 +30,49 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _MockCoreHandlerInterface core;
+  late _MockTrustStore trust;
   late ProviderContainer container;
   late List<MethodCall> calls;
   late Object? Function(MethodCall) answer;
   final sent = <Map<String, Object?>>[];
 
-  setUpAll(() => registerFallbackValue(const MitmSignResult()));
+  setUpAll(() {
+    registerFallbackValue(const MitmSignResult());
+    registerFallbackValue(
+      MitmCertificate(
+        pem: '',
+        fingerprint: '',
+        subject: '',
+        notBefore: DateTime.utc(2026),
+        notAfter: DateTime.utc(2027),
+      ),
+    );
+  });
+
+  Object? defaultAnswer(MethodCall call) => switch (call.method) {
+    'coreIdentity' => 'verified',
+    'certificate' => {
+      'pem': 'PEM',
+      'fingerprint': 'AB:CD',
+      'subject': 'Test',
+      'notBefore': 0,
+      'notAfter': 4102444800000,
+    },
+    'checkCertificate' => 'leaf PEM',
+    'sign' => {'cert': _leaf, 'ca': _root},
+    _ => null,
+  };
 
   setUp(() {
     mitmFeature = true;
     calls = [];
     sent.clear();
-    answer = (_) => {'cert': _leaf, 'ca': _root};
+    answer = defaultAnswer;
+    trust = _MockTrustStore();
+    when(() => trust.check(any(), any())).thenAnswer((call) async {
+      await (call.positionalArguments[1] as Future<String> Function())();
+      return const MitmTrustCheck(MitmTrust.ready);
+    });
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, (call) async {
           calls.add(call);
@@ -58,6 +90,7 @@ void main() {
       overrides: [
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
         mitmSignerProvider.overrideWithValue(const MitmSigner()),
+        mitmTrustStoreProvider.overrideWithValue(trust),
         coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
       ],
     );
@@ -65,7 +98,11 @@ void main() {
     container
         .read(patchClashConfigProvider.notifier)
         .value = const PatchClashConfig(
-      mitm: Mitm(enable: true, hostname: ['api.example.com']),
+      mitm: Mitm(
+        enable: true,
+        hostname: ['api.example.com'],
+        trustedFingerprint: 'AB:CD',
+      ),
     );
   });
 
@@ -81,6 +118,9 @@ void main() {
       .answer(
         MitmSignRequest.fromJson({
           'reqId': 7,
+          'deadlineUnixMillis': DateTime.now()
+              .add(const Duration(seconds: 8))
+              .millisecondsSinceEpoch,
           'host': host,
           'spki': base64.encode(_spki),
         }, managedRelay: managedRelay),
@@ -112,20 +152,62 @@ void main() {
     });
   });
 
+  test(
+    'slow trust and signing share one budget beyond the old core timeout',
+    () async {
+      when(() => trust.check(any(), any())).thenAnswer((_) async {
+        await Future<void>.delayed(const Duration(milliseconds: 2700));
+        return const MitmTrustCheck(MitmTrust.ready);
+      });
+      answer = (call) async {
+        if (call.method == 'sign') {
+          await Future<void>.delayed(const Duration(milliseconds: 2700));
+        }
+        return defaultAnswer(call);
+      };
+      await sign('api.example.com');
+      expect(sent.single['cert'], base64.encode(_leaf));
+    },
+  );
+
+  test('expired relay deadline refuses before trust or signing', () async {
+    await container
+        .read(mitmSignActionProvider.notifier)
+        .answer(
+          MitmSignRequest.fromJson({
+            'reqId': 8,
+            'host': 'api.example.com',
+            'spki': base64.encode(_spki),
+            'deadlineUnixMillis': DateTime.now()
+                .subtract(const Duration(seconds: 1))
+                .millisecondsSinceEpoch,
+          }, managedRelay: true),
+        );
+    expect(sent.single['error'], 'trustUnavailable');
+    expect(calls, isEmpty);
+    verifyNever(() => trust.check(any(), any()));
+  });
+
   test('the signer is handed the app list, not the Core match', () async {
     container
         .read(patchClashConfigProvider.notifier)
         .value = const PatchClashConfig(
-      mitm: Mitm(enable: true, hostname: ['-api.example.com', '*.b.test']),
+      mitm: Mitm(
+        enable: true,
+        hostname: ['-api.example.com', '*.b.test'],
+        trustedFingerprint: 'AB:CD',
+      ),
     );
-    answer = (_) => {'error': 'notListed'};
+    answer = (call) =>
+        call.method == 'sign' ? {'error': 'notListed'} : defaultAnswer(call);
 
     await sign('api.example.com');
 
-    expect((calls.single.arguments as Map)['hostnames'], [
-      '-api.example.com',
-      '*.b.test',
-    ]);
+    expect(
+      (calls.singleWhere((call) => call.method == 'sign').arguments
+          as Map)['hostnames'],
+      ['-api.example.com', '*.b.test'],
+    );
     expect(sent.single, {'reqId': 7, 'error': 'notListed'});
   });
 
@@ -145,7 +227,8 @@ void main() {
   test('a refused Core pauses decryption with the reason', () async {
     answer = (call) => switch (call.method) {
       'coreIdentity' => 'verified',
-      _ => {'error': 'coreIdentity', 'identity': 'failed:cdhash'},
+      'sign' => {'error': 'coreIdentity', 'identity': 'failed:cdhash'},
+      _ => defaultAnswer(call),
     };
     container.listen(mitmCoreRefusedProvider, (_, _) {});
     await container.read(mitmCoreIdentityStateProvider.future);
@@ -159,6 +242,45 @@ void main() {
       const MitmCoreIdentity.failed('cdhash'),
     );
     expect(container.read(mitmCoreRefusedProvider), isTrue);
+  });
+
+  test('lost trust or identity refuses signing before approval', () async {
+    when(
+      () => trust.check(any(), any()),
+    ).thenAnswer((_) async => const MitmTrustCheck(MitmTrust.untrusted));
+    await sign('api.example.com');
+    expect(sent.single, {'reqId': 7, 'error': 'trustUnavailable'});
+    expect(calls.where((c) => c.method == 'sign'), isEmpty);
+    calls.clear();
+    sent.clear();
+    answer = (call) =>
+        call.method == 'coreIdentity' ? 'none' : defaultAnswer(call);
+    await sign('api.example.com');
+    expect(sent.single, {'reqId': 7, 'error': 'trustUnavailable'});
+    expect(calls.map((c) => c.method), ['coreIdentity']);
+  });
+
+  testWidgets('stalled trust check times out and does not spawn more checks', (
+    tester,
+  ) async {
+    final stalled = Completer<MitmTrustCheck>();
+    when(() => trust.check(any(), any())).thenAnswer((_) => stalled.future);
+    final first = sign('api.example.com');
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    await tester.pump();
+    await first;
+    expect(sent.single['error'], 'trustUnavailable');
+    sent.clear();
+    final second = sign('api.example.com');
+    await tester.pump(const Duration(seconds: 8));
+    await tester.pump();
+    await second;
+    expect(sent.single['error'], 'trustUnavailable');
+    verify(() => trust.check(any(), any())).called(1);
+    expect(calls.where((c) => c.method == 'sign'), isEmpty);
+    stalled.complete(const MitmTrustCheck(MitmTrust.ready));
+    await tester.pump();
   });
 
   test('a request off the helper relay is refused unasked', () async {
@@ -192,7 +314,9 @@ void main() {
   });
 
   test('a channel failure is answered, not left to time out', () async {
-    answer = (_) => throw PlatformException(code: 'boom');
+    answer = (call) => call.method == 'sign'
+        ? throw PlatformException(code: 'boom')
+        : defaultAnswer(call);
 
     await sign('api.example.com');
 

@@ -1800,5 +1800,13 @@
   "addedNotHit": "The rule was added, but this lookup does not match it.",
   "addedNotHitBy": "Rule #{index} matches first.",
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
-  "relookup": "Look up again"
+  "relookup": "Look up again",
+  "mitmOutcomeRefused": "Échec de la négociation TLS du client (certificat peut-être refusé)",
+  "mitmOutcomeUpstreamCertificate": "Échec de la vérification du certificat du site",
+  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 non pris en charge",
+  "mitmOutcomeHelloPassthrough": "TLS non inspecté ; connexion transmise sans déchiffrement",
+  "mitmOutcomeFailed": "Échec de la connexion déchiffrée",
+  "mitmPausedLiveness": "Déchiffrement en pause : confiance ou signature non vérifiable. Détection normalement en 26 secondes environ ; une veille ou un blocage peut la retarder.",
+  "mitmPausedIndicatorPending": "Déchiffrement en pause : l’indicateur permanent requis est indisponible.",
+  "mitmPausedUnavailable": "Déchiffrement en pause : signataire ou connexion indisponible."
 }

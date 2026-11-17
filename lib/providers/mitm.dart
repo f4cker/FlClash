@@ -11,7 +11,8 @@ import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/core/method.dart' show coreFailureLogLevel;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
-import 'package:flutter/foundation.dart' show compute, visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show compute, listEquals, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' show join;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -72,6 +73,8 @@ class MitmCa extends _$MitmCa {
 
 @Riverpod(keepAlive: true)
 class MitmCoreIdentityState extends _$MitmCoreIdentityState {
+  int _reportGeneration = 0;
+
   @override
   Future<MitmCoreIdentity> build() async {
     final connected = ref.watch(
@@ -81,7 +84,9 @@ class MitmCoreIdentityState extends _$MitmCoreIdentityState {
     if (!connected || signer == null) {
       return MitmCoreIdentity.none;
     }
+    final generation = _reportGeneration;
     final identity = await signer.coreIdentity();
+    if (_reportGeneration != generation) return state.value ?? identity;
     if (identity != state.value) {
       _log(identity);
     }
@@ -98,6 +103,7 @@ class MitmCoreIdentityState extends _$MitmCoreIdentityState {
   }
 
   void report(MitmCoreIdentity identity) {
+    _reportGeneration++;
     if (state.value != identity) {
       _log(identity);
       state = AsyncData(identity);
@@ -123,6 +129,25 @@ bool mitmCoreRefused(Ref ref) {
       identity != MitmCoreIdentity.verified;
 }
 
+// Settings-only polling: failure is not treated as evidence of active decryption.
+final mitmRuntimeStatusProvider = FutureProvider.autoDispose<MitmStatus>((
+  ref,
+) async {
+  ref.watch(coreStatusProvider);
+  ref.watch(patchClashConfigProvider.select((state) => state.mitm));
+  try {
+    return await ref
+        .read(coreHandlerProvider)
+        .getMitmStatus()
+        .timeout(const Duration(seconds: 3));
+  } finally {
+    if (ref.mounted) {
+      final timer = Timer(const Duration(seconds: 2), ref.invalidateSelf);
+      ref.onDispose(timer.cancel);
+    }
+  }
+});
+
 /// How many `mitm` hostnames the running profile wrote, all of them ignored.
 @riverpod
 Future<int> mitmIgnoredHostnames(Ref ref) async {
@@ -138,6 +163,102 @@ Future<int> mitmIgnoredHostnames(Ref ref) async {
 class MitmSignAction extends _$MitmSignAction {
   @override
   void build() {}
+
+  // Coalesce concurrent checks, but never cache their result. A timed-out
+  // platform operation remains the sole in-flight check until it finishes;
+  // later requests fail closed instead of starting unbounded processes.
+  Future<bool>? _checkingTrust;
+  String? _checkingFingerprint;
+  // One app-side budget covers both stages; Core has additional headroom.
+  static const _issuanceBudget = Duration(seconds: 7);
+
+  Future<bool> _checkTrust(MitmSigner signer, String fingerprint) async {
+    if (await signer.coreIdentity() != MitmCoreIdentity.verified) return false;
+    if (!ref.mounted) return false;
+    final store = ref.read(mitmTrustStoreProvider);
+    if (store == null) return false;
+    final ca = await signer.certificate();
+    if (ca == null || ca.fingerprint != fingerprint) return false;
+    final check = await store.check(ca, signer.checkCertificate);
+    if (check.trust != MitmTrust.ready) return false;
+    final current = await signer.certificate();
+    return current != null && current.fingerprint == fingerprint;
+  }
+
+  Future<bool> _freshTrust(
+    MitmSigner signer,
+    String fingerprint,
+    Duration remaining,
+  ) async {
+    if (remaining <= Duration.zero) return false;
+    if (_checkingTrust != null && _checkingFingerprint != fingerprint) {
+      return false;
+    }
+    _checkingFingerprint = fingerprint;
+    final check = _checkingTrust ??= _checkTrust(signer, fingerprint);
+    // Attach cleanup to the underlying operation, not the timeout wrapper.
+    unawaited(
+      check.then<void>(
+        (_) {
+          if (identical(_checkingTrust, check)) {
+            _checkingTrust = null;
+            _checkingFingerprint = null;
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (identical(_checkingTrust, check)) {
+            _checkingTrust = null;
+            _checkingFingerprint = null;
+          }
+        },
+      ),
+    );
+    try {
+      return await check.timeout(remaining);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  int _signing = 0;
+  static const _maxConcurrentSigns = 16;
+
+  Future<MitmSignResult> _signBounded(
+    MitmSigner signer,
+    MitmSignRequest request,
+    List<String> hostnames,
+    Duration remaining,
+  ) async {
+    if (remaining <= Duration.zero) {
+      return const MitmSignResult(error: 'signFailed');
+    }
+    if (_signing >= _maxConcurrentSigns) {
+      return const MitmSignResult(error: 'signBusy');
+    }
+    _signing++;
+    final sign = signer.sign(
+      host: request.host,
+      spki: request.spki,
+      hostnames: hostnames,
+    );
+    // A timeout cannot cancel the platform operation. Keep its slot until
+    // it really finishes so a stuck native queue cannot grow without bound.
+    unawaited(
+      sign.then<void>(
+        (_) {
+          _signing--;
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          _signing--;
+        },
+      ),
+    );
+    try {
+      return await sign.timeout(remaining);
+    } catch (_) {
+      return const MitmSignResult(error: 'signFailed');
+    }
+  }
 
   Future<void> answer(MitmSignRequest request) async {
     final mitm = ref.read(patchClashConfigProvider).mitm;
@@ -157,11 +278,50 @@ class MitmSignAction extends _$MitmSignAction {
       }
     } else {
       try {
-        result = await signer.sign(
-          host: request.host,
-          spki: request.spki,
-          hostnames: mitm.hostname,
-        );
+        // The Core's deadline accounts for key generation and relay delay.
+        // Wall clocks are shared by the two local processes; reserve headroom
+        // and use a monotonic stopwatch once the request has arrived.
+        final transmitted =
+            Duration(
+              milliseconds:
+                  request.deadlineUnixMillis -
+                  DateTime.now().millisecondsSinceEpoch,
+            ) -
+            const Duration(seconds: 1);
+        final budget = transmitted < _issuanceBudget
+            ? transmitted
+            : _issuanceBudget;
+        final stopwatch = Stopwatch()..start();
+        Duration remaining() {
+          final left = budget - stopwatch.elapsed;
+          return left.isNegative ? Duration.zero : left;
+        }
+
+        final fingerprint = mitm.trustedFingerprint;
+        final trusted =
+            fingerprint != null &&
+            await _freshTrust(signer, fingerprint, remaining());
+        if (!ref.mounted) return;
+        final current = ref.read(patchClashConfigProvider).mitm;
+        if (!trusted ||
+            !current.enable ||
+            current.trustedFingerprint != fingerprint) {
+          result = const MitmSignResult(error: 'trustUnavailable');
+        } else {
+          result = await _signBounded(
+            signer,
+            request,
+            current.hostname,
+            remaining(),
+          );
+          if (!ref.mounted) return;
+          final afterSign = ref.read(patchClashConfigProvider).mitm;
+          if (!afterSign.enable ||
+              afterSign.trustedFingerprint != fingerprint ||
+              !listEquals(afterSign.hostname, current.hostname)) {
+            result = const MitmSignResult(error: 'disabled');
+          }
+        }
       } catch (error) {
         commonPrint.log(
           'Signing a MITM certificate failed: ${compactError(error)}',

@@ -10870,6 +10870,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Look up again'**
   String get relookup;
+
+  /// No description provided for @mitmOutcomeRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Client TLS handshake failed (certificate may have been rejected)'**
+  String get mitmOutcomeRefused;
+
+  /// No description provided for @mitmOutcomeUpstreamCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Website certificate verification failed'**
+  String get mitmOutcomeUpstreamCertificate;
+
+  /// No description provided for @mitmOutcomeHTTP1Unsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP/1.1 is not supported'**
+  String get mitmOutcomeHTTP1Unsupported;
+
+  /// No description provided for @mitmOutcomeHelloPassthrough.
+  ///
+  /// In en, this message translates to:
+  /// **'TLS hello cannot be inspected; passed through'**
+  String get mitmOutcomeHelloPassthrough;
+
+  /// No description provided for @mitmOutcomeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption connection failed'**
+  String get mitmOutcomeFailed;
+
+  /// No description provided for @mitmPausedLiveness.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.'**
+  String get mitmPausedLiveness;
+
+  /// No description provided for @mitmPausedIndicatorPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: the required always-visible indicator is not available.'**
+  String get mitmPausedIndicatorPending;
+
+  /// No description provided for @mitmPausedUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: the signer or connection is unavailable.'**
+  String get mitmPausedUnavailable;
 }
 
 class _AppLocalizationsDelegate

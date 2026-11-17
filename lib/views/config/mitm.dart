@@ -394,6 +394,14 @@ class _MitmViewState extends ConsumerState<MitmView> {
     final check = certificate.value == null
         ? null
         : ref.watch(mitmTrustStateProvider).value;
+    final corePause = ref.watch(mitmRuntimeStatusProvider).value?.paused ?? '';
+    final pauseLabel = switch (corePause) {
+      'livenessUnavailable' ||
+      'trustUnavailable' => appLocalizations.mitmPausedLiveness,
+      'indicatorPending' => appLocalizations.mitmPausedIndicatorPending,
+      '' => null,
+      _ => appLocalizations.mitmPausedUnavailable,
+    };
     return Scaffold(
       title: appLocalizations.mitm,
       isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
@@ -423,7 +431,7 @@ class _MitmViewState extends ConsumerState<MitmView> {
                                       .watch(mitmCoreIdentityStateProvider)
                                       .value,
                                 )
-                              : null,
+                              : pauseLabel,
                         ),
                         generateSection(
                           title: appLocalizations.certificate,

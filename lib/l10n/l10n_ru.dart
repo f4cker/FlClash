@@ -6436,4 +6436,34 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get mitmOutcomeRefused =>
+      'Ошибка TLS клиента (возможно, сертификат отклонён)';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate =>
+      'Не удалось проверить сертификат сайта';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 не поддерживается';
+
+  @override
+  String get mitmOutcomeHelloPassthrough =>
+      'TLS не проверен; соединение передано без расшифровки';
+
+  @override
+  String get mitmOutcomeFailed => 'Ошибка расшифрованного соединения';
+
+  @override
+  String get mitmPausedLiveness =>
+      'Расшифровка приостановлена: не удалось проверить доверие или подпись. Обычно изменения обнаруживаются примерно за 26 секунд; сон или задержки системы могут увеличить время.';
+
+  @override
+  String get mitmPausedIndicatorPending =>
+      'Расшифровка приостановлена: обязательный постоянный индикатор недоступен.';
+
+  @override
+  String get mitmPausedUnavailable =>
+      'Расшифровка приостановлена: подписывающий компонент или соединение недоступно.';
 }

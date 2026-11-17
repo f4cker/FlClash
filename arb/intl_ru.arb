@@ -1800,5 +1800,13 @@
   "addedNotHit": "The rule was added, but this lookup does not match it.",
   "addedNotHitBy": "Rule #{index} matches first.",
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
-  "relookup": "Look up again"
+  "relookup": "Look up again",
+  "mitmOutcomeRefused": "Ошибка TLS клиента (возможно, сертификат отклонён)",
+  "mitmOutcomeUpstreamCertificate": "Не удалось проверить сертификат сайта",
+  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 не поддерживается",
+  "mitmOutcomeHelloPassthrough": "TLS не проверен; соединение передано без расшифровки",
+  "mitmOutcomeFailed": "Ошибка расшифрованного соединения",
+  "mitmPausedLiveness": "Расшифровка приостановлена: не удалось проверить доверие или подпись. Обычно изменения обнаруживаются примерно за 26 секунд; сон или задержки системы могут увеличить время.",
+  "mitmPausedIndicatorPending": "Расшифровка приостановлена: обязательный постоянный индикатор недоступен.",
+  "mitmPausedUnavailable": "Расшифровка приостановлена: подписывающий компонент или соединение недоступно."
 }

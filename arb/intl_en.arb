@@ -2254,5 +2254,13 @@
     }
   },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
-  "relookup": "Look up again"
+  "relookup": "Look up again",
+  "mitmOutcomeRefused": "Client TLS handshake failed (certificate may have been rejected)",
+  "mitmOutcomeUpstreamCertificate": "Website certificate verification failed",
+  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 is not supported",
+  "mitmOutcomeHelloPassthrough": "TLS hello cannot be inspected; passed through",
+  "mitmOutcomeFailed": "Decryption connection failed",
+  "mitmPausedLiveness": "Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.",
+  "mitmPausedIndicatorPending": "Decryption paused: the required always-visible indicator is not available.",
+  "mitmPausedUnavailable": "Decryption paused: the signer or connection is unavailable."
 }

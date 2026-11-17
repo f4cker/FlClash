@@ -6270,4 +6270,29 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get mitmOutcomeRefused => 'クライアントの TLS ハンドシェイクに失敗しました（証明書が拒否された可能性）';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate => 'サイト証明書の検証に失敗しました';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 に対応していません';
+
+  @override
+  String get mitmOutcomeHelloPassthrough => 'TLS ハンドシェイクを検査できず、そのまま通過しました';
+
+  @override
+  String get mitmOutcomeFailed => '復号接続に失敗しました';
+
+  @override
+  String get mitmPausedLiveness =>
+      '復号を一時停止：信頼または署名機能を確認できません。通常は約26秒以内に検出しますが、スリープや停止時は長くなることがあります。';
+
+  @override
+  String get mitmPausedIndicatorPending => '復号を一時停止：必要な常時表示インジケーターがありません。';
+
+  @override
+  String get mitmPausedUnavailable => '復号を一時停止：署名機能または接続を利用できません。';
 }

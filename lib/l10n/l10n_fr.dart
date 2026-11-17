@@ -6489,4 +6489,34 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get mitmOutcomeRefused =>
+      'Échec de la négociation TLS du client (certificat peut-être refusé)';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate =>
+      'Échec de la vérification du certificat du site';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 non pris en charge';
+
+  @override
+  String get mitmOutcomeHelloPassthrough =>
+      'TLS non inspecté ; connexion transmise sans déchiffrement';
+
+  @override
+  String get mitmOutcomeFailed => 'Échec de la connexion déchiffrée';
+
+  @override
+  String get mitmPausedLiveness =>
+      'Déchiffrement en pause : confiance ou signature non vérifiable. Détection normalement en 26 secondes environ ; une veille ou un blocage peut la retarder.';
+
+  @override
+  String get mitmPausedIndicatorPending =>
+      'Déchiffrement en pause : l’indicateur permanent requis est indisponible.';
+
+  @override
+  String get mitmPausedUnavailable =>
+      'Déchiffrement en pause : signataire ou connexion indisponible.';
 }

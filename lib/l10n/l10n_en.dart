@@ -6442,4 +6442,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get mitmOutcomeRefused =>
+      'Client TLS handshake failed (certificate may have been rejected)';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate =>
+      'Website certificate verification failed';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 is not supported';
+
+  @override
+  String get mitmOutcomeHelloPassthrough =>
+      'TLS hello cannot be inspected; passed through';
+
+  @override
+  String get mitmOutcomeFailed => 'Decryption connection failed';
+
+  @override
+  String get mitmPausedLiveness =>
+      'Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.';
+
+  @override
+  String get mitmPausedIndicatorPending =>
+      'Decryption paused: the required always-visible indicator is not available.';
+
+  @override
+  String get mitmPausedUnavailable =>
+      'Decryption paused: the signer or connection is unavailable.';
 }

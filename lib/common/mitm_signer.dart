@@ -49,6 +49,7 @@ class MitmSignRequest {
     required this.reqId,
     required this.host,
     required this.spki,
+    required this.deadlineUnixMillis,
     this.managedRelay = false,
   });
 
@@ -60,6 +61,7 @@ class MitmSignRequest {
       reqId: (json['reqId'] as num).toInt(),
       host: json['host'] as String,
       spki: base64.decode(json['spki'] as String),
+      deadlineUnixMillis: (json['deadlineUnixMillis'] as num?)?.toInt() ?? 0,
       managedRelay: managedRelay,
     );
   }
@@ -67,6 +69,7 @@ class MitmSignRequest {
   final int reqId;
   final String host;
   final Uint8List spki;
+  final int deadlineUnixMillis;
 
   /// Whether it came over the helper's relay, the only channel whose Core
   /// the identity check speaks for.

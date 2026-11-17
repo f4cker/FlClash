@@ -1614,7 +1614,7 @@ $CoreOptionsCopyWith<$Res> get options {
 /// @nodoc
 mixin _$MitmStatus {
 
- bool get enable; int get hostnames;@JsonKey(name: 'ignored-hostnames') int get ignoredHostnames; bool get capture;
+ bool get enable; int get hostnames;@JsonKey(name: 'ignored-hostnames') int get ignoredHostnames; bool get capture; String get paused;
 /// Create a copy of MitmStatus
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1628,20 +1628,20 @@ $MitmStatusCopyWith<MitmStatus> get copyWith => _$MitmStatusCopyWithImpl<MitmSta
 @override
 bool operator ==(Object other) {
   final _this = this as MitmStatus;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmStatus&&(identical(other.enable, _this.enable) || other.enable == _this.enable)&&(identical(other.hostnames, _this.hostnames) || other.hostnames == _this.hostnames)&&(identical(other.ignoredHostnames, _this.ignoredHostnames) || other.ignoredHostnames == _this.ignoredHostnames)&&(identical(other.capture, _this.capture) || other.capture == _this.capture));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmStatus&&(identical(other.enable, _this.enable) || other.enable == _this.enable)&&(identical(other.hostnames, _this.hostnames) || other.hostnames == _this.hostnames)&&(identical(other.ignoredHostnames, _this.ignoredHostnames) || other.ignoredHostnames == _this.ignoredHostnames)&&(identical(other.capture, _this.capture) || other.capture == _this.capture)&&(identical(other.paused, _this.paused) || other.paused == _this.paused));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MitmStatus;
-  return Object.hash(runtimeType,_this.enable,_this.hostnames,_this.ignoredHostnames,_this.capture);
+  return Object.hash(runtimeType,_this.enable,_this.hostnames,_this.ignoredHostnames,_this.capture,_this.paused);
 }
 
 @override
 String toString() {
   final _this = this as MitmStatus;
-  return 'MitmStatus(enable: ${_this.enable}, hostnames: ${_this.hostnames}, ignoredHostnames: ${_this.ignoredHostnames}, capture: ${_this.capture})';
+  return 'MitmStatus(enable: ${_this.enable}, hostnames: ${_this.hostnames}, ignoredHostnames: ${_this.ignoredHostnames}, capture: ${_this.capture}, paused: ${_this.paused})';
 }
 
 
@@ -1652,7 +1652,7 @@ abstract mixin class $MitmStatusCopyWith<$Res>  {
   factory $MitmStatusCopyWith(MitmStatus value, $Res Function(MitmStatus) _then) = _$MitmStatusCopyWithImpl;
 @useResult
 $Res call({
- bool enable, int hostnames,@JsonKey(name: 'ignored-hostnames') int ignoredHostnames, bool capture
+ bool enable, int hostnames,@JsonKey(name: 'ignored-hostnames') int ignoredHostnames, bool capture, String paused
 });
 
 
@@ -1669,13 +1669,14 @@ class _$MitmStatusCopyWithImpl<$Res>
 
 /// Create a copy of MitmStatus
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? enable = null,Object? hostnames = null,Object? ignoredHostnames = null,Object? capture = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? enable = null,Object? hostnames = null,Object? ignoredHostnames = null,Object? capture = null,Object? paused = null,}) {
   return _then(MitmStatus(
 enable: null == enable ? _self.enable : enable // ignore: cast_nullable_to_non_nullable
 as bool,hostnames: null == hostnames ? _self.hostnames : hostnames // ignore: cast_nullable_to_non_nullable
 as int,ignoredHostnames: null == ignoredHostnames ? _self.ignoredHostnames : ignoredHostnames // ignore: cast_nullable_to_non_nullable
 as int,capture: null == capture ? _self.capture : capture // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,paused: null == paused ? _self.paused : paused // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -1760,10 +1761,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture,  String paused)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmStatus() when $default != null:
-return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture);case _:
+return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture,_that.paused);case _:
   return orElse();
 
 }
@@ -1781,10 +1782,10 @@ return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.captur
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture,  String paused)  $default,) {final _that = this;
 switch (_that) {
 case _MitmStatus():
-return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture);case _:
+return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture,_that.paused);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1801,10 +1802,10 @@ return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.captur
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture,  String paused)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmStatus() when $default != null:
-return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture);case _:
+return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture,_that.paused);case _:
   return null;
 
 }
@@ -1816,13 +1817,14 @@ return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.captur
 @JsonSerializable()
 
 class _MitmStatus implements MitmStatus {
-  const _MitmStatus({this.enable = false, this.hostnames = 0, @JsonKey(name: 'ignored-hostnames') this.ignoredHostnames = 0, this.capture = false});
+  const _MitmStatus({this.enable = false, this.hostnames = 0, @JsonKey(name: 'ignored-hostnames') this.ignoredHostnames = 0, this.capture = false, this.paused = ''});
   factory _MitmStatus.fromJson(Map<String, dynamic> json) => _$MitmStatusFromJson(json);
 
 @override@JsonKey() final  bool enable;
 @override@JsonKey() final  int hostnames;
 @override@JsonKey(name: 'ignored-hostnames') final  int ignoredHostnames;
 @override@JsonKey() final  bool capture;
+@override@JsonKey() final  String paused;
 
 /// Create a copy of MitmStatus
 /// with the given fields replaced by the non-null parameter values.
@@ -1837,18 +1839,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmStatus&&(identical(other.enable, enable) || other.enable == enable)&&(identical(other.hostnames, hostnames) || other.hostnames == hostnames)&&(identical(other.ignoredHostnames, ignoredHostnames) || other.ignoredHostnames == ignoredHostnames)&&(identical(other.capture, capture) || other.capture == capture));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmStatus&&(identical(other.enable, enable) || other.enable == enable)&&(identical(other.hostnames, hostnames) || other.hostnames == hostnames)&&(identical(other.ignoredHostnames, ignoredHostnames) || other.ignoredHostnames == ignoredHostnames)&&(identical(other.capture, capture) || other.capture == capture)&&(identical(other.paused, paused) || other.paused == paused));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,enable,hostnames,ignoredHostnames,capture);
+    return Object.hash(runtimeType,enable,hostnames,ignoredHostnames,capture,paused);
 }
 
 @override
 String toString() {
-    return 'MitmStatus(enable: $enable, hostnames: $hostnames, ignoredHostnames: $ignoredHostnames, capture: $capture)';
+    return 'MitmStatus(enable: $enable, hostnames: $hostnames, ignoredHostnames: $ignoredHostnames, capture: $capture, paused: $paused)';
 }
 
 
@@ -1859,7 +1861,7 @@ abstract mixin class _$MitmStatusCopyWith<$Res> implements $MitmStatusCopyWith<$
   factory _$MitmStatusCopyWith(_MitmStatus value, $Res Function(_MitmStatus) _then) = __$MitmStatusCopyWithImpl;
 @override @useResult
 $Res call({
- bool enable, int hostnames,@JsonKey(name: 'ignored-hostnames') int ignoredHostnames, bool capture
+ bool enable, int hostnames,@JsonKey(name: 'ignored-hostnames') int ignoredHostnames, bool capture, String paused
 });
 
 
@@ -1876,13 +1878,14 @@ class __$MitmStatusCopyWithImpl<$Res>
 
 /// Create a copy of MitmStatus
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? enable = null,Object? hostnames = null,Object? ignoredHostnames = null,Object? capture = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? enable = null,Object? hostnames = null,Object? ignoredHostnames = null,Object? capture = null,Object? paused = null,}) {
   return _then(_MitmStatus(
 enable: null == enable ? _self.enable : enable // ignore: cast_nullable_to_non_nullable
 as bool,hostnames: null == hostnames ? _self.hostnames : hostnames // ignore: cast_nullable_to_non_nullable
 as int,ignoredHostnames: null == ignoredHostnames ? _self.ignoredHostnames : ignoredHostnames // ignore: cast_nullable_to_non_nullable
 as int,capture: null == capture ? _self.capture : capture // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,paused: null == paused ? _self.paused : paused // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

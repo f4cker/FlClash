@@ -85,6 +85,7 @@ void main() {
     MitmTrustStore? store,
     bool safeMode = false,
     int ignoredHostnames = 0,
+    MitmStatus? status,
   }) async {
     tester.view.physicalSize = const Size(1000, 2000);
     tester.view.devicePixelRatio = 1;
@@ -96,9 +97,9 @@ void main() {
     when(
       () => core.generateMitmCertificate(),
     ).thenAnswer((_) async => _certificate);
-    when(
-      () => core.getMitmStatus(),
-    ).thenAnswer((_) async => MitmStatus(ignoredHostnames: ignoredHostnames));
+    when(() => core.getMitmStatus()).thenAnswer(
+      (_) async => status ?? MitmStatus(ignoredHostnames: ignoredHostnames),
+    );
     when(() => core.validateMitm(any())).thenAnswer((invocation) async {
       final rules = invocation.positionalArguments.single as MitmRules;
       return {
@@ -189,6 +190,34 @@ void main() {
     ]) {
       expect(find.text(hidden), findsNothing, reason: hidden);
     }
+  });
+
+  testWidgets('shows liveness pause and bounded detection wording', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      status: const MitmStatus(paused: 'livenessUnavailable'),
+    );
+    expect(
+      find.text(currentAppLocalizations.mitmPausedLiveness),
+      findsOneWidget,
+    );
+    expect(currentAppLocalizations.mitmPausedLiveness, contains('26 seconds'));
+  });
+
+  testWidgets('shows indicator gate pause rather than active decryption', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      status: const MitmStatus(paused: 'indicatorPending'),
+    );
+    expect(
+      find.text(currentAppLocalizations.mitmPausedIndicatorPending),
+      findsOneWidget,
+    );
+    expect(find.text(currentAppLocalizations.mitmPausedLiveness), findsNothing);
   });
 
   testWidgets('says how many profile hostnames it ignored', (tester) async {

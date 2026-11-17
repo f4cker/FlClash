@@ -1800,5 +1800,13 @@
   "addedNotHit": "The rule was added, but this lookup does not match it.",
   "addedNotHitBy": "Rule #{index} matches first.",
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
-  "relookup": "Look up again"
+  "relookup": "Look up again",
+  "mitmOutcomeRefused": "클라이언트 TLS 핸드셰이크 실패 (인증서 거부 가능성)",
+  "mitmOutcomeUpstreamCertificate": "웹사이트 인증서 검증에 실패했습니다",
+  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1을 지원하지 않습니다",
+  "mitmOutcomeHelloPassthrough": "TLS 핸드셰이크를 검사하지 못해 그대로 통과했습니다",
+  "mitmOutcomeFailed": "복호화 연결에 실패했습니다",
+  "mitmPausedLiveness": "복호화 일시 중지: 신뢰 또는 서명 상태를 확인할 수 없습니다. 일반적으로 약 26초 내에 감지하지만 절전이나 시스템 중단 시 더 오래 걸릴 수 있습니다.",
+  "mitmPausedIndicatorPending": "복호화 일시 중지: 필수 상시 표시기가 아직 없습니다.",
+  "mitmPausedUnavailable": "복호화 일시 중지: 서명기 또는 연결을 사용할 수 없습니다."
 }

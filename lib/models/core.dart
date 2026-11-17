@@ -100,6 +100,7 @@ abstract class MitmStatus with _$MitmStatus {
     @Default(0) int hostnames,
     @Default(0) @JsonKey(name: 'ignored-hostnames') int ignoredHostnames,
     @Default(false) bool capture,
+    @Default('') String paused,
   }) = _MitmStatus;
 
   factory MitmStatus.fromJson(Map<String, Object?> json) =>

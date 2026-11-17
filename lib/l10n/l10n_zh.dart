@@ -5933,4 +5933,29 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get relookup => '重新查询';
+
+  @override
+  String get mitmOutcomeRefused => '客户端 TLS 握手失败（可能拒绝了证书）';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate => '网站证书校验失败';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => '不支持 HTTP/1.1';
+
+  @override
+  String get mitmOutcomeHelloPassthrough => '无法检查 TLS 握手，已原样放行';
+
+  @override
+  String get mitmOutcomeFailed => '解密连接失败';
+
+  @override
+  String get mitmPausedLiveness =>
+      '解密已暂停：无法验证信任或签名器状态。正常情况下约 26 秒内检测到变化；睡眠或系统卡顿可能更久。';
+
+  @override
+  String get mitmPausedIndicatorPending => '解密已暂停：尚未提供必需的常驻解密指示。';
+
+  @override
+  String get mitmPausedUnavailable => '解密已暂停：签名器或连接不可用。';
 }

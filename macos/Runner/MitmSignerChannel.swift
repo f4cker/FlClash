@@ -50,7 +50,7 @@ final class MitmSignerChannel {
     private func handle(_ method: String, _ arguments: [String: Any]) -> Any? {
         switch method {
         case "certificate":
-            do { return try signer.certificate().map(Self.encode) } catch { return failure(error) }
+            do { return try signer.refreshRoot().map(Self.encode) } catch { return failure(error) }
         case "generate":
             do { return Self.encode(try signer.generate()) } catch { return failure(error) }
         case "delete":

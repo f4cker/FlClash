@@ -290,6 +290,18 @@ final class MitmSignerTests: XCTestCase {
         XCTAssertNil(try fresh.certificate())
     }
 
+    func testExternalKeyOrCertificateRemovalInvalidatesCachedSigner() throws {
+        _ = try signer.generate()
+        XCTAssertNotNil(signer.sign(host: "api.example.com", spki: leafSPKI(), hostnames: list).success)
+        store.key = nil
+        XCTAssertEqual(signer.sign(host: "api.example.com", spki: leafSPKI(), hostnames: list).failure, .noRoot)
+        XCTAssertEqual(signer.checkCertificate().failure, .noRoot)
+        _ = try signer.generate()
+        store.certificate = nil
+        XCTAssertEqual(signer.sign(host: "api.example.com", spki: leafSPKI(), hostnames: list).failure, .noRoot)
+        XCTAssertNil(try signer.refreshRoot())
+    }
+
     func testCachedLeafIsPerHostAndKey() throws {
         _ = try signer.generate()
         let spki = leafSPKI()
