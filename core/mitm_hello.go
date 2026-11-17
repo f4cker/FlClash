@@ -30,10 +30,15 @@ var (
 	// (a listed host visibly), never failed, so a short bound only costs
 	// decryption of an odd client, while a long one holds every such flow.
 	mitmHelloWait = 750 * time.Millisecond
-	// First-byte wait for a listed host on a port other than 443: SSH, SMTP,
-	// FTP and IMAP servers speak first, and their clients send nothing.
-	mitmFirstByteWait = 250 * time.Millisecond
+	// The longest a flow on 443 waits for its first packet before it is
+	// dialled as it is: a client that has not spoken by then is not sending
+	// a ClientHello that could be decrypted in time anyway.
+	mitmFirstByteWait = 300 * time.Millisecond
 )
+
+// The tunnel's own asynchronous first-byte peek (tunnel.go), already spent
+// when a hook runs after it.
+const mitmTunnelPeekWait = 200 * time.Millisecond
 
 var errMitmNotHello = errors.New("not a TLS ClientHello")
 

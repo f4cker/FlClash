@@ -52,13 +52,27 @@ type MitmConnection struct {
 // This is deliberately not controlled by configuration or an RPC.
 const mitmIndicatorAvailable = false
 
-// UDP is never blocked until live signer and trust state can be verified.
-const mitmQUICLivenessAvailable = false
+// The one port decryption looks at: HTTPS. Host entries carry no port, so a
+// flow to any other port is never held, read or decrypted. A variable only
+// so loopback tests can stand a server in for it.
+var mitmHTTPSPort uint16 = 443
 
 // How long a connection waits for its leaf before it is relayed untouched
-// (and decryption pauses). The app signs in memory over local IPC, so a
-// healthy answer takes milliseconds; the issuance itself keeps mitmLeafWait.
-var mitmConnectionLeafWait = 3 * time.Second
+// (and listed hosts pause). The app signs in memory over local IPC: one
+// ECDSA signature and a round trip, a few milliseconds even under load, so
+// half a second is two orders of magnitude of headroom. A signer that is
+// slower than that is treated as failing; the issuance itself goes on (up
+// to mitmLeafWait) and a leaf it brings is cached for the next connection.
+var mitmConnectionLeafWait = 500 * time.Millisecond
+
+// A signed leaf is reused for its host and CA for at most this long, and
+// never within mitmLeafExpiryMargin of its own expiry. Sessions keep proving
+// the app alive through the liveness check, which never takes a cached leaf.
+const (
+	mitmLeafReuseFor     = time.Hour
+	mitmLeafExpiryMargin = 5 * time.Minute
+	mitmLeafCacheMax     = 512
+)
 
 const (
 	mitmLeafWait      = 8 * time.Second
@@ -87,10 +101,11 @@ var (
 
 func init() {
 	// A nil hook preserves the tunnel's asynchronous peek while gated off.
+	// QUIC to listed hosts is refused exactly while their TCP is decrypted,
+	// so both hooks go in together.
 	if mitmIndicatorAvailable {
+		tunnel.TCPInterceptWanted = mitmInterceptWanted
 		tunnel.TCPIntercept = mitmIntercept
-	}
-	if mitmIndicatorAvailable && mitmQUICLivenessAvailable {
 		tunnel.UDPDrop = mitmDropsUDP
 	}
 }
@@ -106,11 +121,24 @@ type mitmLeafCall struct {
 	err  error
 }
 
-// Coalesce concurrent requests only. Do not reuse signed leaves for later
-// connections: the app may have exited, revoked trust, or removed the key.
+// Concurrent requests for a host under one setup share one issuance.
 type mitmLeafKey struct {
 	runtime *mitmRuntime
 	host    string
+}
+
+// A signed leaf is kept per host and CA. A setup that drops the CA (trust
+// revoked, the app gone) stops decryption outright, and a new CA is a new
+// key, so a kept leaf never outlives the trust it was signed under; a pause
+// (the signer failing) empties the cache too.
+type mitmReadyKey struct {
+	fingerprint string
+	host        string
+}
+
+type mitmReadyLeaf struct {
+	leaf      *mitmLeaf
+	reuseTill time.Time
 }
 
 type mitmLeafCache struct {
@@ -118,6 +146,7 @@ type mitmLeafCache struct {
 	generation uint64
 	issuer     func(context.Context, string) (*mitmLeaf, error)
 	inflight   map[mitmLeafKey]*mitmLeafCall
+	ready      map[mitmReadyKey]mitmReadyLeaf
 }
 
 var mitmLeaves = &mitmLeafCache{inflight: map[mitmLeafKey]*mitmLeafCall{}}
@@ -125,11 +154,73 @@ var mitmLeaves = &mitmLeafCache{inflight: map[mitmLeafKey]*mitmLeafCall{}}
 func (cache *mitmLeafCache) clear() {
 	cache.mu.Lock()
 	cache.inflight = map[mitmLeafKey]*mitmLeafCall{}
+	cache.ready = nil
 	cache.generation++
 	cache.mu.Unlock()
 }
 
+// Forgets every kept leaf; issuance in flight is left alone.
+func (cache *mitmLeafCache) forget() {
+	cache.mu.Lock()
+	cache.ready = nil
+	cache.mu.Unlock()
+}
+
+func mitmReadyKeyOf(runtime *mitmRuntime, host string) mitmReadyKey {
+	key := mitmReadyKey{host: host}
+	if runtime != nil {
+		key.fingerprint = runtime.setup.CAFingerprint
+	}
+	return key
+}
+
+// Under cache.mu.
+func (cache *mitmLeafCache) keep(runtime *mitmRuntime, host string, leaf *mitmLeaf) {
+	if runtime == nil || leaf == nil || runtime.setup.CAFingerprint == "" {
+		return
+	}
+	now := time.Now()
+	till := leaf.notAfter.Add(-mitmLeafExpiryMargin)
+	if limit := now.Add(mitmLeafReuseFor); till.After(limit) {
+		till = limit
+	}
+	if !till.After(now) {
+		return
+	}
+	if cache.ready == nil {
+		cache.ready = map[mitmReadyKey]mitmReadyLeaf{}
+	}
+	if len(cache.ready) >= mitmLeafCacheMax {
+		for key, kept := range cache.ready {
+			if !now.Before(kept.reuseTill) {
+				delete(cache.ready, key)
+			}
+		}
+		if len(cache.ready) >= mitmLeafCacheMax {
+			cache.ready = map[mitmReadyKey]mitmReadyLeaf{}
+		}
+	}
+	cache.ready[mitmReadyKeyOf(runtime, host)] = mitmReadyLeaf{leaf: leaf, reuseTill: till}
+}
+
+// A leaf for host: a kept one while still valid, else a new issuance.
 func (cache *mitmLeafCache) get(ctx context.Context, host string) (*mitmLeaf, error) {
+	runtime := mitmState.Load()
+	cache.mu.Lock()
+	if kept, found := cache.ready[mitmReadyKeyOf(runtime, host)]; found {
+		if time.Now().Before(kept.reuseTill) {
+			cache.mu.Unlock()
+			return kept.leaf, nil
+		}
+		delete(cache.ready, mitmReadyKeyOf(runtime, host))
+	}
+	cache.mu.Unlock()
+	return cache.fresh(ctx, host)
+}
+
+// A newly signed leaf, never a kept one: the liveness check's proof that the
+// app still signs.
+func (cache *mitmLeafCache) fresh(ctx context.Context, host string) (*mitmLeaf, error) {
 	key := mitmLeafKey{runtime: mitmState.Load(), host: host}
 	cache.mu.Lock()
 	call := cache.inflight[key]
@@ -165,6 +256,9 @@ func (cache *mitmLeafCache) issue(key mitmLeafKey, host string, call *mitmLeafCa
 		return
 	}
 	delete(cache.inflight, key)
+	if call.err == nil {
+		cache.keep(key.runtime, host, call.leaf)
+	}
 	cache.mu.Unlock()
 	close(call.done)
 }
@@ -277,6 +371,17 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 	}
 }
 
+// From the metadata alone: could decryption take this flow? Only HTTPS, and
+// there a named flow only when its name is listed; a nameless one is read
+// for its SNI. Every other flow dials at once, as without the hook.
+func mitmInterceptWanted(metadata *C.Metadata) bool {
+	runtime := mitmState.Load()
+	if !runtime.decrypting() || metadata.DstPort != mitmHTTPSPort {
+		return false
+	}
+	return metadata.Host == "" || runtime.hosts.Match(normalizeMitmHost(metadata.Host))
+}
+
 // Decides before the dial: a listed host gets a leaf first, and any failure
 // leaves the connection as it came, every byte unread.
 func mitmIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterceptor {
@@ -289,22 +394,15 @@ func mitmIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterce
 // Split out only so socket tests can exercise the real selector while the
 // production hook remains hard-gated until the always-visible indicator.
 func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterceptor {
+	if !mitmInterceptWanted(metadata) {
+		return nil
+	}
 	runtime := mitmState.Load()
-	if !runtime.decrypting() {
-		return nil
-	}
-	if metadata.Host != "" && !runtime.hosts.Match(normalizeMitmHost(metadata.Host)) {
-		return nil
-	}
-	// A flow without a name is held for its SNI only where HTTPS is: on any
-	// other port it would be some protocol's whole first exchange (SSH, SMTP,
-	// a server-first or idle client) that waits, for no decryption at all.
-	if metadata.Host == "" && metadata.DstPort != 443 {
-		return nil
-	}
-	firstByteWait := mitmHelloWait
-	if metadata.DstPort != 443 {
-		firstByteWait = mitmFirstByteWait
+	// The first packet is waited for at most mitmFirstByteWait in all; the
+	// tunnel's own peek, when it ran, already spent up to its 200 ms of it.
+	firstByteWait := mitmFirstByteWait
+	if conn.Peeked() && conn.Reader().Buffered() == 0 {
+		firstByteWait -= mitmTunnelPeekWait
 	}
 	hello, err := peekMitmClientHelloWithin(conn, firstByteWait)
 	passThroughUnsupported := mitmPassThroughReporting(mitmOutcomeUnsupportedHello)
@@ -319,7 +417,7 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 		// A listed HTTPS host whose client sent nothing within the wait
 		// (e.g. a late-binding pool) is passed through, but visibly.
 		var timeout interface{ Timeout() bool }
-		if metadata.Host != "" && metadata.DstPort == 443 && conn.Reader().Buffered() == 0 &&
+		if metadata.Host != "" && conn.Reader().Buffered() == 0 &&
 			errors.As(err, &timeout) && timeout.Timeout() {
 			return passThroughUnsupported
 		}
@@ -423,7 +521,7 @@ func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mi
 	defer remove()
 	livenessCtx, stopLiveness := context.WithCancel(context.Background())
 	defer stopLiveness()
-	go monitorMitmLiveness(livenessCtx, runtime, host, mitmLivenessInterval, mitmLeaves.get)
+	go monitorMitmLiveness(livenessCtx, runtime, host, mitmLivenessInterval, mitmLeaves.fresh)
 	remoteIdle := &mitmIdleConn{Conn: remote, timeout: mitmIdleTimeout}
 	upstream := tls.Client(mitmStrictTLSConn{remoteIdle}, &tls.Config{
 		ServerName: host,
@@ -477,16 +575,19 @@ func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mi
 	return ""
 }
 
-// QUIC to a host being decrypted is refused so the client falls back to TCP;
-// while decryption is paused it goes through.
+// QUIC to a listed host is refused while its TCP is being decrypted, so the
+// client falls back to TCP and is decrypted there (阻止 QUIC, on unless the
+// user turns it off). A host not listed, a flow without a name (its name may
+// come from QUIC sniffing), another port, decryption off or paused: the
+// datagrams go through untouched.
 func mitmDropsUDP(metadata *C.Metadata) bool {
-	if !mitmIndicatorAvailable || !mitmQUICLivenessAvailable || metadata.DstPort != 443 || metadata.Host == "" {
+	if metadata.DstPort != mitmHTTPSPort || metadata.Host == "" {
 		return false
 	}
 	runtime := mitmState.Load()
-	if runtime == nil || runtime.setup.AutoQuicBlock != nil && !*runtime.setup.AutoQuicBlock {
+	if !runtime.decrypting() || runtime.setup.AutoQuicBlock != nil && !*runtime.setup.AutoQuicBlock {
 		return false
 	}
 	host := normalizeMitmHost(metadata.Host)
-	return mitmDecrypts(host) && !mitmPausedFor(host)
+	return runtime.hosts.Match(host) && !mitmPausedFor(host)
 }

@@ -60,6 +60,8 @@ func (m *mitmConnections) pauseGlobal(runtime *mitmRuntime, reason string) (*mit
 		delete(m.active, pair)
 	}
 	m.mu.Unlock()
+	// A signer that failed is not vouched for by leaves it signed before.
+	mitmLeaves.forget()
 	for _, pair := range pairs {
 		_ = pair.client.Close()
 		_ = pair.remote.Close()

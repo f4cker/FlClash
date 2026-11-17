@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -52,27 +54,186 @@ func TestMitmHostlessOffHTTPSPortIsNeverHeld(t *testing.T) {
 	}
 }
 
-// On 443 the whole peek is bounded by the hello wait, well under two
-// seconds, even when the first byte comes late and the rest never does.
-func TestMitmHTTPSPeekIsBoundedAsAWhole(t *testing.T) {
+// On 443 a flow waits for its first packet at most mitmFirstByteWait in all,
+// counting the tunnel's own peek when it ran; once a record has begun, the
+// whole hello is bounded by mitmHelloWait.
+func TestMitmHTTPSPeekIsBounded(t *testing.T) {
 	app := newFakeMitmApp(t)
 	withMitmSigner(t, app, []string{"example.com"}, nil)
-	if mitmHelloWait >= time.Second {
-		t.Fatalf("hello wait %v", mitmHelloWait)
+	if mitmFirstByteWait > 300*time.Millisecond || mitmHelloWait >= time.Second {
+		t.Fatalf("waits %v / %v", mitmFirstByteWait, mitmHelloWait)
 	}
 	for _, host := range []string{"", "example.com"} {
+		// Silent client, no earlier peek.
 		clientRaw, proxyRaw := mitmLoopbackPair(t)
-		go func() {
-			time.Sleep(mitmHelloWait / 2)
-			_, _ = clientRaw.Write([]byte{0x16, 3, 3}) // a record begun, never ended
-		}()
 		started := time.Now()
 		mitmInterceptEligible(N.NewBufferedConn(proxyRaw), &C.Metadata{Host: host, DstPort: 443})
-		if elapsed := time.Since(started); elapsed > mitmHelloWait+150*time.Millisecond {
-			t.Fatalf("%q held %v", host, elapsed)
+		if elapsed := time.Since(started); elapsed > mitmFirstByteWait+100*time.Millisecond {
+			t.Fatalf("%q silent: held %v", host, elapsed)
 		}
 		_ = clientRaw.Close()
 		_ = proxyRaw.Close()
+
+		// Silent client after the tunnel's 200 ms peek: only the rest.
+		clientRaw, proxyRaw = mitmLoopbackPair(t)
+		conn := N.NewBufferedConn(proxyRaw)
+		_ = conn.SetReadDeadline(time.Now().Add(mitmTunnelPeekWait))
+		_, _ = conn.Peek(1)
+		_ = conn.SetReadDeadline(time.Time{})
+		started = time.Now()
+		mitmInterceptEligible(conn, &C.Metadata{Host: host, DstPort: 443})
+		if elapsed := time.Since(started); elapsed > mitmFirstByteWait-mitmTunnelPeekWait+100*time.Millisecond {
+			t.Fatalf("%q after the tunnel peek: held %v more", host, elapsed)
+		}
+		_ = clientRaw.Close()
+		_ = proxyRaw.Close()
+
+		// A record begun and never ended.
+		clientRaw, proxyRaw = mitmLoopbackPair(t)
+		_, _ = clientRaw.Write([]byte{0x16, 3, 3})
+		started = time.Now()
+		mitmInterceptEligible(N.NewBufferedConn(proxyRaw), &C.Metadata{Host: host, DstPort: 443})
+		if elapsed := time.Since(started); elapsed > mitmHelloWait+150*time.Millisecond {
+			t.Fatalf("%q stalled record: held %v", host, elapsed)
+		}
+		_ = clientRaw.Close()
+		_ = proxyRaw.Close()
+	}
+}
+
+// Only HTTPS is looked at, and there a named flow only when listed.
+func TestMitmInterceptWantedFromMetadataAlone(t *testing.T) {
+	withMitmState(t)
+	cases := []struct {
+		host string
+		port uint16
+		want bool
+	}{
+		{"", 443, true},
+		{"example.com", 443, true},
+		{"EXAMPLE.com.", 443, true},
+		{"other.test", 443, false},
+		{"example.com", 8443, false},
+		{"", 80, false},
+		{"", 22, false},
+	}
+	mitmState.Store(nil)
+	for _, tc := range cases {
+		if mitmInterceptWanted(&C.Metadata{Host: tc.host, DstPort: tc.port}) {
+			t.Fatalf("off: wanted %q:%d", tc.host, tc.port)
+		}
+	}
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com"}, nil)
+	for _, tc := range cases {
+		if got := mitmInterceptWanted(&C.Metadata{Host: tc.host, DstPort: tc.port}); got != tc.want {
+			t.Fatalf("on: %q:%d wanted=%v", tc.host, tc.port, got)
+		}
+	}
+}
+
+// QUIC to a listed host is dropped exactly while it is decrypted; nothing
+// else is ever touched.
+func TestMitmDropsQUICOnlyForListedHostsWhileDecrypting(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com"}, nil)
+	defer func() { mitmPaused.Store(nil); mitmHostPauses.Clear() }()
+	listed := &C.Metadata{NetWork: C.UDP, Host: "example.com", DstPort: 443}
+	if !mitmDropsUDP(listed) {
+		t.Fatal("listed QUIC not dropped while decrypting")
+	}
+	for _, metadata := range []*C.Metadata{
+		{NetWork: C.UDP, Host: "other.test", DstPort: 443},
+		{NetWork: C.UDP, DstPort: 443},
+		{NetWork: C.UDP, Host: "example.com", DstPort: 8443},
+	} {
+		if mitmDropsUDP(metadata) {
+			t.Fatalf("dropped %+v", metadata)
+		}
+	}
+	// Paused: TCP passes through, so QUIC may too.
+	mitmActive.pauseGlobal(mitmState.Load(), "signTimeout")
+	if mitmDropsUDP(listed) {
+		t.Fatal("dropped while paused")
+	}
+	mitmPaused.Store(nil)
+	// 阻止 QUIC turned off.
+	off := false
+	applyMitmSetup(&SetupParams{Mitm: &MitmSetup{
+		Enable: true, Hostname: []string{"example.com"}, DecryptTLS: true, CAFingerprint: app.fingerprint(), AutoQuicBlock: &off,
+	}}, nil)
+	if mitmDropsUDP(listed) {
+		t.Fatal("dropped with 阻止 QUIC off")
+	}
+	// MITM off.
+	applyMitmSetup(&SetupParams{}, nil)
+	if mitmDropsUDP(listed) {
+		t.Fatal("dropped with MITM off")
+	}
+}
+
+// A signed leaf is kept per host and CA: the next connection takes it, a new
+// CA or a pause does not, and the liveness check always signs anew.
+func TestMitmLeafIsKeptPerHostAndCA(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com", "two.test"}, nil)
+	var issued atomic.Int32
+	notAfter := time.Now().Add(7 * 24 * time.Hour)
+	mitmLeaves.clear()
+	mitmLeaves.issuer = func(context.Context, string) (*mitmLeaf, error) {
+		issued.Add(1)
+		return &mitmLeaf{notAfter: notAfter}, nil
+	}
+	defer func() { mitmLeaves.clear(); mitmLeaves.issuer = nil; mitmPaused.Store(nil) }()
+	get := func(host string) *mitmLeaf {
+		t.Helper()
+		leaf, err := mitmLeaves.get(context.Background(), host)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return leaf
+	}
+	first := get("example.com")
+	if get("example.com") != first || issued.Load() != 1 {
+		t.Fatalf("not kept: %d issuances", issued.Load())
+	}
+	// Another setup with the same CA keeps it.
+	applyMitmSetup(&SetupParams{Mitm: &MitmSetup{
+		Enable: true, Hostname: []string{"example.com", "two.test"}, DecryptTLS: true, CAFingerprint: app.fingerprint(),
+	}}, nil)
+	if get("example.com") != first || issued.Load() != 1 {
+		t.Fatal("a setup with the same CA dropped the kept leaf")
+	}
+	get("two.test")
+	if issued.Load() != 2 {
+		t.Fatal("hosts share a leaf")
+	}
+	// The liveness check signs anew.
+	if _, err := mitmLeaves.fresh(context.Background(), "example.com"); err != nil || issued.Load() != 3 {
+		t.Fatalf("fresh took a kept leaf: %v %d", err, issued.Load())
+	}
+	// A new CA is a new key.
+	applyMitmSetup(&SetupParams{Mitm: &MitmSetup{
+		Enable: true, Hostname: []string{"example.com"}, DecryptTLS: true, CAFingerprint: "AA:BB",
+	}}, nil)
+	get("example.com")
+	if issued.Load() != 4 {
+		t.Fatal("a leaf outlived its CA")
+	}
+	// A pause forgets every kept leaf.
+	mitmActive.pauseGlobal(mitmState.Load(), "signTimeout")
+	mitmPaused.Store(nil)
+	get("example.com")
+	if issued.Load() != 5 {
+		t.Fatal("a leaf outlived a failing signer")
+	}
+	// A leaf near its expiry is not kept.
+	notAfter = time.Now().Add(mitmLeafExpiryMargin / 2)
+	mitmLeaves.clear()
+	get("example.com")
+	get("example.com")
+	if issued.Load() != 7 {
+		t.Fatalf("a leaf about to expire was reused: %d", issued.Load())
 	}
 }
 
@@ -90,6 +251,9 @@ func TestMitmSlowSignerHoldsOnlyItsOwnConnection(t *testing.T) {
 		return MitmSignResultParams{Error: "slow and failing"}
 	})
 	defer func() { mitmActive.closeAll(); mitmLeaves.clear(); mitmPaused.Store(nil) }()
+	if mitmConnectionLeafWait > 500*time.Millisecond {
+		t.Fatalf("leaf wait %v", mitmConnectionLeafWait)
+	}
 	oldWait := mitmConnectionLeafWait
 	mitmConnectionLeafWait = 300 * time.Millisecond
 	defer func() { mitmConnectionLeafWait = oldWait }()

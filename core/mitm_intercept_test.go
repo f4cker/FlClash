@@ -11,21 +11,19 @@ import (
 	"time"
 
 	N "github.com/metacubex/mihomo/common/net"
-	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/tunnel"
 )
 
 func TestInterceptionBlockedWithoutVisibleIndicator(t *testing.T) {
 	if mitmIndicatorAvailable {
 		t.Fatal("remove this safety test only when the always-visible indicator is implemented")
 	}
-	if mitmQUICLivenessAvailable {
-		t.Fatal("QUIC blocking requires verified signer and trust liveness")
-	}
 	if mitmIntercept(nil, nil) != nil {
 		t.Fatal("interception must be disabled")
 	}
-	if mitmDropsUDP(&C.Metadata{DstPort: 443, Host: "example.com"}) {
-		t.Fatal("QUIC must pass through while interception is disabled")
+	// QUIC is dropped only by the hook installed with interception.
+	if tunnel.TCPIntercept != nil || tunnel.TCPInterceptWanted != nil || tunnel.UDPDrop != nil {
+		t.Fatal("hooks must stay uninstalled while interception is disabled")
 	}
 }
 
