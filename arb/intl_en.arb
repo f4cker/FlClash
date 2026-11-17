@@ -602,6 +602,7 @@
   "restoreSuccess": "Restore successful",
   "restoreOnlyConfig": "Restore profiles only",
   "restoreAllData": "Restore all data",
+  "restoreRuleSetDownloadNotice": "Backups retain rule set settings. After restoring, connect to the internet to download rule sets again; everyday restarts and profile switches do not require another download.",
   "addProfile": "Add profile",
   "delayTest": "Delay test",
   "proxyGroupEmpty": "Proxy group is empty",
@@ -2244,5 +2245,235 @@
     }
   },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
-  "relookup": "Look up again"
+  "relookup": "Look up again",
+  "addedRulesReloadTimeout": "The core did not finish reloading in 15 seconds; the change was undone.",
+  "addedRulesReloadFailed": "The core did not take the new config; the change was undone.",
+  "addedRuleSetLoadFailed": "The rule set could not be downloaded; the change was undone.",
+  "addedRuleSetLoadTimeout": "The rule set did not finish downloading in 15 seconds; the change was undone.",
+  "ruleDeleteTitle": "Delete this rule?",
+  "ruleSetDeleteTitle": "Delete rule set “{name}”?",
+  "@ruleSetDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleDeleteBody": "{text}\nThis takes effect right away.",
+  "@ruleDeleteBody": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleDuplicate": "This rule is already there (No. {number}), through {group}.",
+  "@ruleDuplicate": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleUpdateGroup": "Update Group",
+  "ruleEditAddTitle": "Add Rule",
+  "ruleEditTitle": "Edit Added Rule",
+  "ruleSetAddTitle": "Add Rule Set",
+  "ruleSetEditTitle": "Edit Added Rule Set",
+  "ruleEditCoreStopped": "Takes effect once the core starts",
+  "ruleEditPosition": "No. {number} · Added rule",
+  "@ruleEditPosition": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "ruleSetEditPosition": "No. {number} · Added rule set",
+  "@ruleSetEditPosition": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "ruleEditSaving": "Saving…",
+  "ruleTypeLabel": "Type",
+  "ruleTypeMore": "More",
+  "ruleTypeDomainSuffix": "Domain Suffix",
+  "ruleTypeDomain": "Full Domain",
+  "ruleTypeKeyword": "Domain Keyword",
+  "ruleTypeIpCidr": "IP Range",
+  "ruleTypeIpCidr6": "IPv6 Range",
+  "ruleTypeDstPort": "Destination Port",
+  "ruleTypeProcessName": "Process Name",
+  "ruleTypeSrcIpCidr": "Source IP Range",
+  "ruleValueKeyword": "Keyword",
+  "ruleHelpDomainSuffix": "Matches example.com and all its subdomains. You can paste a link.",
+  "ruleHelpDomain": "Matches only this domain, not its subdomains. You can paste a link.",
+  "ruleHelpKeyword": "Matches any domain that contains this text.",
+  "ruleHelpIpCidr": "Such as 10.0.0.0/8; a single address becomes /32.",
+  "ruleHelpIpCidr6": "Such as 2001:db8::/32; a single address becomes /128.",
+  "ruleHelpSrcIpCidr": "The range of the devices the connections come from.",
+  "ruleHelpPort": "Such as 443, or a range such as 8000-9000.",
+  "ruleHelpProcess": "The process name of an app or program, such as Safari or curl.",
+  "ruleValueEmpty": "Enter a value",
+  "ruleValueComma": "Cannot contain a comma",
+  "ruleValueDomain": "Not a valid domain",
+  "ruleValueCidr": "Not a valid IP range",
+  "ruleValueNetwork": "Must be tcp or udp",
+  "ruleValueNumberRange": "Not a valid number or range",
+  "ruleValueDscp": "DSCP takes 0 to 63",
+  "ruleValuePickCode": "Choose a code",
+  "ruleValuePickProcess": "Choose from running apps",
+  "ruleValueNoProcesses": "No apps recorded lately",
+  "rulePositionLabel": "Position",
+  "rulePositionFirst": "First of added rules",
+  "rulePositionLast": "Last of added rules",
+  "ruleSetUrlLabel": "URL",
+  "ruleSetUrlHelp": "Paste the link of a rule set; Flash downloads it and checks what it holds.",
+  "ruleSetUrlInvalid": "Only http or https links",
+  "ruleSetChecking": "Downloading and checking…",
+  "ruleSetCheckOk": "Downloaded: {kind} rules, {format} format, {count} entries",
+  "@ruleSetCheckOk": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "format": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleSetCheckOkUncounted": "Downloaded: {format} format; its entries are counted once the core runs",
+  "@ruleSetCheckOkUncounted": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleSetCheckNotFound": "Not found (404)",
+  "ruleSetCheckTimeout": "The download timed out",
+  "ruleSetCheckNetwork": "Download failed: {reason}",
+  "@ruleSetCheckNetwork": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleSetCheckNotRuleSet": "The content is not a rule set",
+  "ruleSetCheckUnknown": "The format cannot be recognized",
+  "ruleSetNameLabel": "Name",
+  "ruleSetNameTaken": "A rule set of this name already exists",
+  "ruleSetNameInvalid": "A name cannot have a comma or spaces at its ends",
+  "ruleSetBehaviorLabel": "Content",
+  "ruleSetBehaviorDomain": "Domains",
+  "ruleSetBehaviorIpcidr": "IP Ranges",
+  "ruleSetBehaviorClassical": "Mixed Rules",
+  "ruleSetBehaviorDetected": "Chosen from the downloaded content.",
+  "ruleSetBehaviorMismatch": "This differs from the downloaded content; the set may not match.",
+  "ruleSetMrsNeedsKind": "MRS holds only domains or IP ranges",
+  "ruleSetFormatText": "Text",
+  "ruleSetIntervalLabel": "Auto Update",
+  "ruleSetEvery6Hours": "Every 6 hours",
+  "ruleSetDaily": "Every day",
+  "ruleSetWeekly": "Every week",
+  "ruleSetNeverUpdate": "Never",
+  "ruleSetEverySeconds": "Every {seconds} s",
+  "@ruleSetEverySeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "ruleSetUpdateNow": "Update Now",
+  "ruleSetRefreshed": "Update started.",
+  "rulesAddTooltip": "Add",
+  "rulesAddSemantics": "Add a rule or rule set",
+  "rulesAddRuleMenu": "Add Rule",
+  "rulesAddSetMenu": "Add Rule Set",
+  "rulesAddedDivider": "Rules below come from the profile and scripts and can only be viewed here",
+  "ruleSourceAddedSet": "Added rule set",
+  "ruleEditMenu": "Edit…",
+  "ruleMoveUp": "Move Up",
+  "ruleMoveDown": "Move Down",
+  "ruleEditSemantics": "Edit rule {number}",
+  "@ruleEditSemantics": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "ruleDeleteSemantics": "Delete rule {number}",
+  "@ruleDeleteSemantics": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "ruleAddedBanner": "Rule “{text}” was added and is in effect.",
+  "@ruleAddedBanner": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleSavedBanner": "Rule “{text}” was saved and is in effect.",
+  "@ruleSavedBanner": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleSetAddedBanner": "Rule set “{name}” was added and is in effect.",
+  "@ruleSetAddedBanner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleSetSavedBanner": "Rule set “{name}” was saved and is in effect.",
+  "@ruleSetSavedBanner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleDeletedBanner": "Deleted.",
+  "ruleSavedPendingBanner": "Saved; takes effect once the core starts.",
+  "ruleBannerLookup": "Look Up a URL",
+  "ruleMoveFailed": "Could not move the rule: {reason}",
+  "@ruleMoveFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "processHelperLabel": "{name} · Helper",
+  "processCoreLabel": "{name} · Core",
+  "processHelperTag": "Helper",
+  "processCoreTag": "Core",
+  "addedRulesRollbackReloadFailed": "The changes were rolled back, but restoring the running configuration failed. Reapply the profile before relying on it.",
+  "addedRulesRollbackConflict": "Some changes were kept because another editor changed the rule set during reload. Review the rule and provider before relying on the profile.",
+  "addedRulesRollbackReloadTimeout": "Restoring the running configuration is taking too long. Its state is uncertain; further added-rule changes are paused until it finishes.",
+  "addedRulesStaleEdit": "This rule or rule set changed elsewhere. Reopen it before trying again.",
+  "addedRulesApplyPending": "Applying the rules is taking a while and is still in progress. Please wait.",
+  "addedRulesApplyRestored": "Processing has finished, and the original rules were restored.",
+  "addedRulesApplyRestoreFailed": "Processing has finished, but the original rules could not be restored. Check the current rules."
 }

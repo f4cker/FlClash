@@ -243,6 +243,18 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
       expect(await enabledAfterUpdate(ads), isTrue);
     });
 
+    test('missing prior text retains same-count script acceptance', () async {
+      final ads = await accepted();
+      await File(join(await appPath.mitmModulesDirPath, ads.fileName)).delete();
+      bodies['/ads.sgmodule'] = scripted('.*');
+
+      final updated = await action().updateModule(ads);
+
+      expect(updated.scripts, ads.scripts);
+      expect(updated.enabled, isTrue);
+      expect((await stored()).single.enabled, isTrue);
+    });
+
     test('turns off when an update replaces a script\'s content', () async {
       final ads = await accepted();
       bodies['/ads.js'] = 'two';

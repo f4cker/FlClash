@@ -5975,6 +5975,291 @@ as int?,
 
 }
 
+/// @nodoc
+mixin _$AddedRuleSet {
+
+ int get id; int get profileId; String get name; String get url; RuleProviderBehavior get behavior; RuleProviderFormat get format; int get interval; String? get cacheGeneration;
+/// Create a copy of AddedRuleSet
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AddedRuleSetCopyWith<AddedRuleSet> get copyWith => _$AddedRuleSetCopyWithImpl<AddedRuleSet>(this as AddedRuleSet, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as AddedRuleSet;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AddedRuleSet&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.behavior, _this.behavior) || other.behavior == _this.behavior)&&(identical(other.format, _this.format) || other.format == _this.format)&&(identical(other.interval, _this.interval) || other.interval == _this.interval)&&(identical(other.cacheGeneration, _this.cacheGeneration) || other.cacheGeneration == _this.cacheGeneration));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as AddedRuleSet;
+  return Object.hash(runtimeType,_this.id,_this.profileId,_this.name,_this.url,_this.behavior,_this.format,_this.interval,_this.cacheGeneration);
+}
+
+@override
+String toString() {
+  final _this = this as AddedRuleSet;
+  return 'AddedRuleSet(id: ${_this.id}, profileId: ${_this.profileId}, name: ${_this.name}, url: ${_this.url}, behavior: ${_this.behavior}, format: ${_this.format}, interval: ${_this.interval}, cacheGeneration: ${_this.cacheGeneration})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AddedRuleSetCopyWith<$Res>  {
+  factory $AddedRuleSetCopyWith(AddedRuleSet value, $Res Function(AddedRuleSet) _then) = _$AddedRuleSetCopyWithImpl;
+@useResult
+$Res call({
+ int id, int profileId, String name, String url, RuleProviderBehavior behavior, RuleProviderFormat format, int interval, String? cacheGeneration
+});
+
+
+
+
+}
+/// @nodoc
+class _$AddedRuleSetCopyWithImpl<$Res>
+    implements $AddedRuleSetCopyWith<$Res> {
+  _$AddedRuleSetCopyWithImpl(this._self, this._then);
+
+  final AddedRuleSet _self;
+  final $Res Function(AddedRuleSet) _then;
+
+/// Create a copy of AddedRuleSet
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = null,Object? name = null,Object? url = null,Object? behavior = null,Object? format = null,Object? interval = null,Object? cacheGeneration = freezed,}) {
+  return _then(AddedRuleSet(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as int,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
+as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String,behavior: null == behavior ? _self.behavior : behavior // ignore: cast_nullable_to_non_nullable
+as RuleProviderBehavior,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
+as RuleProviderFormat,interval: null == interval ? _self.interval : interval // ignore: cast_nullable_to_non_nullable
+as int,cacheGeneration: freezed == cacheGeneration ? _self.cacheGeneration : cacheGeneration // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [AddedRuleSet].
+extension AddedRuleSetPatterns on AddedRuleSet {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _AddedRuleSet value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _AddedRuleSet() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _AddedRuleSet value)  $default,){
+final _that = this;
+switch (_that) {
+case _AddedRuleSet():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _AddedRuleSet value)?  $default,){
+final _that = this;
+switch (_that) {
+case _AddedRuleSet() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int profileId,  String name,  String url,  RuleProviderBehavior behavior,  RuleProviderFormat format,  int interval,  String? cacheGeneration)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _AddedRuleSet() when $default != null:
+return $default(_that.id,_that.profileId,_that.name,_that.url,_that.behavior,_that.format,_that.interval,_that.cacheGeneration);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int profileId,  String name,  String url,  RuleProviderBehavior behavior,  RuleProviderFormat format,  int interval,  String? cacheGeneration)  $default,) {final _that = this;
+switch (_that) {
+case _AddedRuleSet():
+return $default(_that.id,_that.profileId,_that.name,_that.url,_that.behavior,_that.format,_that.interval,_that.cacheGeneration);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int profileId,  String name,  String url,  RuleProviderBehavior behavior,  RuleProviderFormat format,  int interval,  String? cacheGeneration)?  $default,) {final _that = this;
+switch (_that) {
+case _AddedRuleSet() when $default != null:
+return $default(_that.id,_that.profileId,_that.name,_that.url,_that.behavior,_that.format,_that.interval,_that.cacheGeneration);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _AddedRuleSet implements AddedRuleSet {
+  const _AddedRuleSet({required this.id, required this.profileId, required this.name, required this.url, this.behavior = RuleProviderBehavior.domain, this.format = RuleProviderFormat.yaml, this.interval = defaultAddedRuleSetInterval, this.cacheGeneration});
+  
+
+@override final  int id;
+@override final  int profileId;
+@override final  String name;
+@override final  String url;
+@override@JsonKey() final  RuleProviderBehavior behavior;
+@override@JsonKey() final  RuleProviderFormat format;
+@override@JsonKey() final  int interval;
+@override final  String? cacheGeneration;
+
+/// Create a copy of AddedRuleSet
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$AddedRuleSetCopyWith<_AddedRuleSet> get copyWith => __$AddedRuleSetCopyWithImpl<_AddedRuleSet>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AddedRuleSet&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.name, name) || other.name == name)&&(identical(other.url, url) || other.url == url)&&(identical(other.behavior, behavior) || other.behavior == behavior)&&(identical(other.format, format) || other.format == format)&&(identical(other.interval, interval) || other.interval == interval)&&(identical(other.cacheGeneration, cacheGeneration) || other.cacheGeneration == cacheGeneration));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,profileId,name,url,behavior,format,interval,cacheGeneration);
+}
+
+@override
+String toString() {
+    return 'AddedRuleSet(id: $id, profileId: $profileId, name: $name, url: $url, behavior: $behavior, format: $format, interval: $interval, cacheGeneration: $cacheGeneration)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$AddedRuleSetCopyWith<$Res> implements $AddedRuleSetCopyWith<$Res> {
+  factory _$AddedRuleSetCopyWith(_AddedRuleSet value, $Res Function(_AddedRuleSet) _then) = __$AddedRuleSetCopyWithImpl;
+@override @useResult
+$Res call({
+ int id, int profileId, String name, String url, RuleProviderBehavior behavior, RuleProviderFormat format, int interval, String? cacheGeneration
+});
+
+
+
+
+}
+/// @nodoc
+class __$AddedRuleSetCopyWithImpl<$Res>
+    implements _$AddedRuleSetCopyWith<$Res> {
+  __$AddedRuleSetCopyWithImpl(this._self, this._then);
+
+  final _AddedRuleSet _self;
+  final $Res Function(_AddedRuleSet) _then;
+
+/// Create a copy of AddedRuleSet
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = null,Object? name = null,Object? url = null,Object? behavior = null,Object? format = null,Object? interval = null,Object? cacheGeneration = freezed,}) {
+  return _then(_AddedRuleSet(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as int,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
+as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String,behavior: null == behavior ? _self.behavior : behavior // ignore: cast_nullable_to_non_nullable
+as RuleProviderBehavior,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
+as RuleProviderFormat,interval: null == interval ? _self.interval : interval // ignore: cast_nullable_to_non_nullable
+as int,cacheGeneration: freezed == cacheGeneration ? _self.cacheGeneration : cacheGeneration // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
 
 /// @nodoc
 mixin _$IconSetIcon {

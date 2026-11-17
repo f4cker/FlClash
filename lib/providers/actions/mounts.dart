@@ -10,6 +10,12 @@ class MountAction extends _$MountAction {
   CoreController get _core => ref.read(coreHandlerProvider);
   final _scheduler = SerialTaskScheduler();
   final _applyingTargets = <int>{};
+
+  /// Runs [task] on the mount mutation scheduler: no mount operation is in
+  /// its scheduled section meanwhile, and none starts until [task] ends.
+  /// [task] must not wait for the setup scheduler or another mount operation.
+  Future<T> runExclusive<T>(Future<T> Function() task) => _scheduler.run(task);
+
   Future<void> installSource(int sourceId, VoidCallback install) =>
       _scheduler.run(() async {
         if (await hasPendingRemoval(sourceId)) {

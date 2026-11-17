@@ -7,6 +7,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:flutter/widgets.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:path/path.dart' show join;
 import 'package:prism_ui/icons/glyph.dart';
 
 import 'clash_config.dart';
@@ -917,6 +918,66 @@ extension ClashProviderExt on ClashProvider {
       'path': path,
       'behavior': behavior.name,
       'format': isCompiled ? RuleProviderFormat.mrs.name : format.name,
+    };
+  }
+}
+
+/// The update intervals an added rule set offers, in seconds; zero never
+/// updates on its own.
+const addedRuleSetIntervals = [21600, 86400, 604800, 0];
+
+const defaultAddedRuleSetInterval = 86400;
+
+/// A rule set the rules page added to one profile: the Core downloads it
+/// from [url] into a file of that profile, and a `RULE-SET,name,target`
+/// rule of the same profile, kept with the added rules, uses it. Its place
+/// and group are that rule's.
+@freezed
+abstract class AddedRuleSet with _$AddedRuleSet {
+  const factory AddedRuleSet({
+    required int id,
+    required int profileId,
+    required String name,
+    required String url,
+    @Default(RuleProviderBehavior.domain) RuleProviderBehavior behavior,
+    @Default(RuleProviderFormat.yaml) RuleProviderFormat format,
+    @Default(defaultAddedRuleSetInterval) int interval,
+    String? cacheGeneration,
+  }) = _AddedRuleSet;
+}
+
+extension AddedRuleSetExt on AddedRuleSet {
+  /// Changes to either field get a fresh cache within the set's namespace.
+  String get fileKey => '$name@$url';
+
+  /// Added sets never share files with subscription providers or other sets.
+  String pathUnder(String profilesPath) {
+    final generation = cacheGeneration;
+    if (generation != null && !RegExp(r'^[0-9a-f]{32}$').hasMatch(generation)) {
+      throw StateError('Invalid rule set cache generation');
+    }
+    final base = join(
+      profilesPath,
+      providersDirectoryName,
+      profileId.toString(),
+      rulesProviderDirectoryName,
+      'added',
+      id.toString(),
+    );
+    return generation == null
+        ? join(base, fileKey.toMd5())
+        : join(base, generation, 'provider');
+  }
+
+  /// The rule-provider entry, its path always the app's.
+  Map<String, dynamic> definition(String path) {
+    return {
+      'type': 'http',
+      'url': url,
+      'path': path,
+      'behavior': behavior.name,
+      'format': format.name,
+      'interval': interval,
     };
   }
 }

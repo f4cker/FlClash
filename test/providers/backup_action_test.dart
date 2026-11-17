@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive_io.dart';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/database/database.dart';
@@ -18,6 +20,11 @@ import '../helpers/preferences.dart';
 
 Profile _profile(int id, String label) =>
     Profile(id: id, label: label, autoUpdateDuration: Duration.zero);
+
+const _pendingMessage = 'Cannot restore while a mount operation is pending';
+
+Matcher _rejectedWith(String message) =>
+    throwsA(isA<StateError>().having((e) => e.message, 'message', message));
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +65,401 @@ void main() {
   Map<String, Object?> configMapOf(ProviderContainer container) =>
       jsonDecode(jsonEncode(container.read(configProvider).toJson()))
           as Map<String, Object?>;
+
+  test(
+    'settings-only restore respects pending mounts without clearing data',
+    () async {
+      const profile = Profile(id: 1, autoUpdateDuration: Duration.zero);
+      await testDatabase.profilesDao.putAll([profile.toCompanion()]);
+      final mount = await testDatabase.mountsDao.save(
+        targetId: 1,
+        expectedVersion: null,
+        sourceIds: [],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      );
+      final container = buildContainer();
+      container.read(currentProfileIdProvider.notifier).value = 1;
+      container
+          .read(appSettingProvider.notifier)
+          .update(
+            (state) =>
+                state.copyWith(restoreStrategy: RestoreStrategy.override),
+          );
+      final config = configMapOf(container)..['currentProfileId'] = 42;
+      await expectLater(
+        actionOf(
+          container,
+        ).applyRestore(MigrationData(configMap: config), RestoreOption.all),
+        _rejectedWith(_pendingMessage),
+      );
+      expect(container.read(currentProfileIdProvider), 1);
+      expect(await testDatabase.mountsDao.target(1), mount);
+      expect((await testDatabase.profilesDao.query().get()).single.id, 1);
+      await testDatabase.mountsDao.settle(1, mount.version);
+      await actionOf(
+        container,
+      ).applyRestore(MigrationData(configMap: config), RestoreOption.all);
+      expect(container.read(currentProfileIdProvider), 42);
+      expect((await testDatabase.profilesDao.query().get()).single.id, 1);
+    },
+  );
+
+  group('restore publishes files only once mount guards accept it', () {
+    late Directory staging;
+
+    setUp(() {
+      staging = Directory.systemTemp.createTempSync('flclash-staging-');
+      addTearDown(() => staging.deleteSync(recursive: true));
+    });
+
+    Future<File> liveProfile(int id) async =>
+        File(await appPath.getProfilePath('$id'))
+          ..createSync(recursive: true)
+          ..writeAsStringSync('live');
+
+    void stageProfile(int id) =>
+        File(BackupEntries.resolve(staging.path, BackupEntries.profile(id)))
+          ..createSync(recursive: true)
+          ..writeAsStringSync('from backup');
+
+    // Publication first saves the file it replaces here, so this shows that
+    // no live file was overwritten, even briefly and then put back.
+    bool published() => Directory(join(staging.path, 'replaced')).existsSync();
+
+    Future<MountTargetState> pendingMount(int targetId, List<int> sources) =>
+        testDatabase.mountsDao.save(
+          targetId: targetId,
+          expectedVersion: null,
+          sourceIds: sources,
+          pending: (version) => MountOperation(
+            kind: MountOperationKind.save,
+            version: version,
+            sourceIds: sources,
+          ),
+        );
+
+    test('a pending mount leaves the live yaml untouched', () async {
+      await testDatabase.profilesDao.putAll([
+        _profile(77701, 'Target').toCompanion(0),
+      ]);
+      final live = await liveProfile(77701);
+      await pendingMount(77701, []);
+      stageProfile(77701);
+      final action = actionOf(buildContainer());
+      var reachedPublish = false;
+      action.beforeRestorePublish = () async => reachedPublish = true;
+
+      await expectLater(
+        action.applyRestore(
+          MigrationData(profiles: [_profile(77701, 'Restored')]),
+          RestoreOption.onlyProfiles,
+          stagingDirPath: staging.path,
+        ),
+        _rejectedWith(_pendingMessage),
+      );
+
+      expect(reachedPublish, isFalse);
+      expect(published(), isFalse);
+      expect(live.readAsStringSync(), 'live');
+      expect(
+        (await testDatabase.profilesDao.query().get())
+            .singleWhere((p) => p.id == 77701)
+            .label,
+        'Target',
+      );
+    });
+
+    test('a mounted source leaves the live yaml untouched', () async {
+      await testDatabase.profilesDao.putAll([
+        _profile(77711, 'Target').toCompanion(0),
+        _profile(77712, 'Source').toCompanion(1),
+      ]);
+      final live = await liveProfile(77712);
+      final mount = await pendingMount(77711, [77712]);
+      await testDatabase.mountsDao.settle(77711, mount.version);
+      stageProfile(77712);
+
+      await expectLater(
+        actionOf(buildContainer()).applyRestore(
+          MigrationData(profiles: [_profile(77712, 'Restored')]),
+          RestoreOption.onlyProfiles,
+          stagingDirPath: staging.path,
+        ),
+        _rejectedWith('Cannot merge profiles with mount guards'),
+      );
+
+      expect(published(), isFalse);
+      expect(live.readAsStringSync(), 'live');
+    });
+
+    test('a mount operation running first is seen by the guard', () async {
+      await testDatabase.profilesDao.putAll([
+        _profile(77721, 'Target').toCompanion(0),
+      ]);
+      final live = await liveProfile(77721);
+      stageProfile(77721);
+      final container = buildContainer();
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      // Stands in for a save that stores its pending record and then applies.
+      final operation = container
+          .read(mountActionProvider.notifier)
+          .runExclusive(() async {
+            entered.complete();
+            await release.future;
+            await pendingMount(77721, []);
+          });
+      await entered.future;
+      final rejected = expectLater(
+        actionOf(container).applyRestore(
+          MigrationData(profiles: [_profile(77721, 'Restored')]),
+          RestoreOption.onlyProfiles,
+          stagingDirPath: staging.path,
+        ),
+        _rejectedWith(_pendingMessage),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(published(), isFalse);
+      expect(live.readAsStringSync(), 'live');
+
+      release.complete();
+      await operation;
+      await rejected;
+
+      expect(published(), isFalse);
+      expect(live.readAsStringSync(), 'live');
+    });
+
+    test('a mount operation cannot start mid-restore', () async {
+      final live = await liveProfile(77731);
+      stageProfile(77731);
+      final container = buildContainer();
+      final action = actionOf(container);
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      action.beforeRestorePublish = () async {
+        entered.complete();
+        await release.future;
+      };
+      final restore = action.applyRestore(
+        MigrationData(profiles: [_profile(77731, 'Restored')]),
+        RestoreOption.onlyProfiles,
+        stagingDirPath: staging.path,
+      );
+      await entered.future;
+      String? seenByMount;
+      final mount = container
+          .read(mountActionProvider.notifier)
+          .installSource(77731, () => seenByMount = live.readAsStringSync());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(seenByMount, isNull);
+
+      release.complete();
+      await restore;
+      await mount;
+
+      expect(seenByMount, 'from backup');
+      expect(
+        (await testDatabase.profilesDao.query().get())
+            .singleWhere((p) => p.id == 77731)
+            .label,
+        'Restored',
+      );
+    });
+  });
+
+  test('postcommit work remains fenced against later restores', () async {
+    final action = actionOf(buildContainer());
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    var calls = 0;
+    action.afterRestoreCommit = () async {
+      if (calls++ == 0) {
+        entered.complete();
+        await release.future;
+      }
+    };
+    final first = action.applyRestore(
+      MigrationData(profiles: [_profile(88883, 'first')]),
+      RestoreOption.onlyProfiles,
+    );
+    await entered.future;
+    final second = action.applyRestore(
+      MigrationData(profiles: [_profile(88884, 'second')]),
+      RestoreOption.onlyProfiles,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(
+      (await testDatabase.profilesDao.query().get()).map((p) => p.id),
+      isNot(contains(88884)),
+    );
+    release.complete();
+    await first;
+    await second;
+    expect(
+      (await testDatabase.profilesDao.query().get()).map((p) => p.id),
+      contains(88884),
+    );
+  });
+
+  test('postcommit exception reports committed database', () async {
+    final action = actionOf(buildContainer());
+    action.afterRestoreCommit = () async => throw StateError('injected');
+    await expectLater(
+      action.applyRestore(
+        MigrationData(profiles: [_profile(88885, 'committed')]),
+        RestoreOption.onlyProfiles,
+      ),
+      throwsA(
+        isA<MessageException>().having(
+          (e) => e.message,
+          'message',
+          contains('database changes were committed'),
+        ),
+      ),
+    );
+    expect(
+      (await testDatabase.profilesDao.query().get()).map((p) => p.id),
+      contains(88885),
+    );
+  });
+
+  test('restore waits for added-rule lane before publishing rows', () async {
+    final container = buildContainer();
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    final blocked = container
+        .read(addedRulesActionProvider.notifier)
+        .runRestoreInLane(() async {
+          entered.complete();
+          await release.future;
+        });
+    await entered.future;
+    final restore = actionOf(container).applyRestore(
+      MigrationData(profiles: [_profile(88881, 'Pending')]),
+      RestoreOption.onlyProfiles,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(
+      (await testDatabase.profilesDao.query().get()).where(
+        (p) => p.id == 88881,
+      ),
+      isEmpty,
+    );
+    release.complete();
+    await blocked;
+    await restore;
+    expect(
+      (await testDatabase.profilesDao.query().get()).where(
+        (p) => p.id == 88881,
+      ),
+      hasLength(1),
+    );
+  });
+
+  test('restore waits for setup apply fence before publishing rows', () async {
+    final container = buildContainer();
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    final blocked = container
+        .read(setupActionProvider.notifier)
+        .runRestoreBeforeApply(() async {
+          entered.complete();
+          await release.future;
+        });
+    await entered.future;
+    final restore = actionOf(container).applyRestore(
+      MigrationData(profiles: [_profile(88882, 'Pending')]),
+      RestoreOption.onlyProfiles,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(
+      (await testDatabase.profilesDao.query().get()).where(
+        (p) => p.id == 88882,
+      ),
+      isEmpty,
+    );
+    release.complete();
+    await blocked;
+    await restore;
+    expect(
+      (await testDatabase.profilesDao.query().get()).where(
+        (p) => p.id == 88882,
+      ),
+      hasLength(1),
+    );
+  });
+
+  test('restore without cache associates a new reserved generation', () async {
+    const set = AddedRuleSet(
+      id: 98761,
+      profileId: 98760,
+      name: 'ads',
+      url: 'https://example.test/ads',
+      cacheGeneration: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    );
+    const rule = Rule(
+      id: 98761,
+      profileId: 98760,
+      ruleAction: RuleAction.RULE_SET,
+      ruleProvider: 'ads',
+      ruleTarget: 'REJECT',
+      order: 'a',
+    );
+    final old = File(set.pathUnder(join(home.path, 'profiles')));
+    await old.parent.create(recursive: true);
+    await old.writeAsString('foreign');
+    await actionOf(buildContainer()).applyRestore(
+      MigrationData(
+        profiles: [_profile(98760, 'Test')],
+        rules: [rule],
+        addedRuleSets: [set],
+      ),
+      RestoreOption.onlyProfiles,
+    );
+    final restored =
+        (await testDatabase.addedRuleSetsDao.query(98760).get()).single;
+    expect(restored.cacheGeneration, isNot(set.cacheGeneration));
+    expect(await old.readAsString(), 'foreign');
+    expect(
+      await File(restored.pathUnder(join(home.path, 'profiles'))).exists(),
+      isFalse,
+    );
+  });
+
+  test('failed database restore preserves existing cache and rows', () async {
+    const set = AddedRuleSet(
+      id: 98763,
+      profileId: 98762,
+      name: 'ads',
+      url: 'https://example.test/ads',
+    );
+    final old = File(set.pathUnder(join(home.path, 'profiles')));
+    await old.parent.create(recursive: true);
+    await old.writeAsString('foreign');
+    await testDatabase.customStatement(
+      "CREATE TRIGGER reject_added BEFORE INSERT ON added_rule_sets BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+    );
+    await expectLater(
+      actionOf(buildContainer()).applyRestore(
+        MigrationData(
+          profiles: [_profile(98762, 'Test')],
+          addedRuleSets: [set],
+        ),
+        RestoreOption.onlyProfiles,
+      ),
+      throwsA(anything),
+    );
+    expect(await old.readAsString(), 'foreign');
+    expect(await testDatabase.addedRuleSetsDao.query(98762).get(), isEmpty);
+    expect(
+      (await testDatabase.profilesDao.query().get()).where(
+        (p) => p.id == 98762,
+      ),
+      isEmpty,
+    );
+  });
 
   group('backup and restore round trip', () {
     late Directory kept;
@@ -107,6 +509,71 @@ void main() {
       expect(profileFile.readAsStringSync(), 'proxies: []');
       expect(target.read(excludeSSIDsProvider), ['home-wifi']);
       expect(workDirs(), isEmpty);
+    });
+
+    test('a rejected archive restore leaves the live yaml untouched', () async {
+      await testDatabase.profilesDao.putAll([
+        _profile(77741, 'Target').toCompanion(0),
+      ]);
+      final live = File(await appPath.getProfilePath('77741'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('from backup');
+      final archivePath = await backupToKept(actionOf(buildContainer()));
+      live.writeAsStringSync('live');
+      await testDatabase.mountsDao.save(
+        targetId: 77741,
+        expectedVersion: null,
+        sourceIds: [],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      );
+
+      await expectLater(
+        actionOf(
+          buildContainer(),
+        ).restore(RestoreOption.onlyProfiles, (_) async => archivePath),
+        _rejectedWith(_pendingMessage),
+      );
+
+      expect(live.readAsStringSync(), 'live');
+      expect(workDirs(), isEmpty);
+    });
+
+    test('restores a version zero archive with a profile file', () async {
+      final archivePath = join(kept.path, 'legacy.zip');
+      final encoder = ZipFileEncoder()..create(archivePath);
+      encoder.addArchiveFile(
+        ArchiveFile.string(
+          configJsonName,
+          jsonEncode({
+            'profiles': [
+              {'id': 'legacy', 'label': 'Old', 'autoUpdateDuration': 0},
+            ],
+            'scripts': [],
+            'rules': [],
+          }),
+        ),
+      );
+      encoder.addArchiveFile(
+        ArchiveFile.string('profiles/legacy.yaml', 'proxies: []'),
+      );
+      await encoder.close();
+
+      expect(
+        await actionOf(
+          buildContainer(),
+        ).restore(RestoreOption.onlyProfiles, (_) async => archivePath),
+        isTrue,
+      );
+      final profile = (await testDatabase.profilesDao.query().get()).single;
+      expect(profile.label, 'Old');
+      expect(
+        await File(
+          await appPath.getProfilePath('${profile.id}'),
+        ).readAsString(),
+        'proxies: []',
+      );
+      expect(await testDatabase.addedRuleSetsDao.queryAll().get(), isEmpty);
     });
 
     test('brings back the attachments of local modules and cleans the '
@@ -326,6 +793,32 @@ void main() {
 
       expect(replaced.readAsStringSync(), 'current');
       expect(added.existsSync(), isFalse);
+    });
+
+    test('duplicate file entries retain the original on rollback', () async {
+      final target = File(await appPath.getProfilePath('43'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('current');
+      final staging = Directory.systemTemp.createTempSync('flclash-staging-');
+      addTearDown(() => staging.deleteSync(recursive: true));
+      File(BackupEntries.resolve(staging.path, BackupEntries.profile(43)))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('from backup');
+      await testDatabase.customStatement(
+        'CREATE TRIGGER refuse_duplicate_profiles BEFORE INSERT ON profiles '
+        "BEGIN SELECT RAISE(ABORT, 'refused'); END",
+      );
+
+      await expectLater(
+        actionOf(buildContainer()).applyRestore(
+          MigrationData(profiles: [_profile(43, 'One'), _profile(43, 'Two')]),
+          RestoreOption.onlyProfiles,
+          stagingDirPath: staging.path,
+        ),
+        throwsA(anything),
+      );
+
+      expect(target.readAsStringSync(), 'current');
     });
 
     test('a backup carrying only proxy groups still writes them', () async {

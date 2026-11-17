@@ -214,6 +214,10 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
     @Default([]) List<String> authentication,
     @Default({}) Map<String, dynamic> injectedProxyProviders,
     @Default({}) Map<String, dynamic> injectedRuleProviders,
+
+    /// Placed under the profile's own providers, ahead of its rules' sets;
+    /// one whose name the profile's config already takes is renamed.
+    @Default([]) List<AddedRuleSet> addedRuleSets,
     String? matchTarget,
     @Default(false) bool safeMode,
     @Default([]) List<MitmModuleSource> mitmModules,
@@ -247,6 +251,7 @@ abstract class MigrationData with _$MigrationData {
     @Default([]) List<CustomProxy> customProxies,
     @Default([]) List<ProxyDialer> proxyDialers,
     @Default([]) List<MitmModule> mitmModules,
+    @Default([]) List<AddedRuleSet> addedRuleSets,
   }) = _MigrationData;
 }
 
@@ -268,5 +273,8 @@ abstract class SetupState with _$SetupState {
     String? matchTarget,
     @Default([]) List<MitmModuleSource> mitmModules,
     MountSetup? mounts,
+
+    /// The profile's added rule sets, for every kind of profile.
+    @Default([]) List<AddedRuleSet> addedRuleSets,
   }) = _SetupState;
 }

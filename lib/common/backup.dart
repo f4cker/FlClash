@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/migration.dart';
@@ -57,6 +58,26 @@ abstract final class BackupEntries {
         for (final module in localModules) ...mitmAttachments(module).values,
       }.where(_isResourceName).map(mitmResource),
     ];
+  }
+
+  static Future<List<String>> ofDatabaseSnapshot(String path) async {
+    final snapshot = Database(NativeDatabase(File(path)));
+    try {
+      final (profiles, scripts, providers, modules) = await (
+        snapshot.profilesDao.query().get(),
+        snapshot.scriptsDao.query().get(),
+        snapshot.clashProvidersDao.query().get(),
+        snapshot.mitmModulesDao.query().get(),
+      ).wait;
+      return of(
+        profileIds: profiles.map((item) => item.id),
+        scriptIds: scripts.map((item) => item.id),
+        providers: providers,
+        mitmModules: modules,
+      );
+    } finally {
+      await snapshot.close();
+    }
   }
 
   static List<String> ofData(MigrationData data) {
@@ -209,6 +230,7 @@ Future<MigrationData> readBackupArchive({
       database.customProxiesDao.query().get(),
       database.proxyDialers.readable((row) => row.toProxyDialer()).get(),
       database.mitmModulesDao.query().get(),
+      database.addedRuleSetsDao.queryAll().get(),
     ]);
     return MigrationData(
       configMap: configMap,
@@ -221,6 +243,7 @@ Future<MigrationData> readBackupArchive({
       customProxies: results[6].cast<CustomProxy>(),
       proxyDialers: results[7].cast<ProxyDialer>(),
       mitmModules: results[8].cast<MitmModule>(),
+      addedRuleSets: results[9].cast<AddedRuleSet>(),
     );
   } finally {
     await database.close();

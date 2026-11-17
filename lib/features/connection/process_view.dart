@@ -39,6 +39,9 @@ class ProcessIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (process.kind == ProcessKind.unknown) {
+      return SizedBox.square(dimension: size);
+    }
     if (process.kind == ProcessKind.otherDevice) {
       return _well(context, AppGlyphs.devices);
     }
@@ -49,24 +52,59 @@ class ProcessIcon extends StatelessWidget {
         : service != null
         ? processApps.serviceIconOf(service)
         : null;
+    Widget child;
     if (icon != null) {
-      return _image(icon);
-    }
-    if (service != null && !process.pending) {
+      child = _image(icon);
+    } else if (app?.isCore ?? false) {
+      child = Image.asset('assets/images/icon.png', width: size, height: size);
+    } else if (service != null && !process.pending) {
       final glyph = serviceGlyphOf(service.service);
-      if (size < 20) {
-        return GlyphIcon(
-          glyph,
-          size: size,
-          color: context.colorScheme.onSurfaceVariant,
-        );
-      }
-      return _well(context, glyph);
+      child = size < 20
+          ? GlyphIcon(
+              glyph,
+              size: size,
+              color: context.colorScheme.onSurfaceVariant,
+            )
+          : _well(context, glyph);
+    } else if (app == null && !process.pending) {
+      child = _well(context, AppGlyphs.terminal);
+    } else {
+      final generic = processApps.genericIcon;
+      child = generic != null
+          ? _image(generic)
+          : _well(context, AppGlyphs.question);
     }
-    final generic = processApps.genericIcon;
-    return generic != null
-        ? _image(generic)
-        : _well(context, AppGlyphs.question);
+    if (size < 20 || app == null || (!app.isHelper && !app.isCore)) {
+      return child;
+    }
+    final badgeSize = size >= 32 ? 14.0 : 12.0;
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          child,
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              key: const ValueKey('process-kind-badge'),
+              width: badgeSize,
+              height: badgeSize,
+              decoration: const ShapeDecoration(
+                color: Color(0xFF8E8C94),
+                shape: AppShape.circle,
+              ),
+              child: GlyphIcon(
+                app.isCore ? AppGlyphs.helperDaemonSmall : AppGlyphs.settings,
+                size: badgeSize - 2,
+                color: const Color(0xFFFFFFFF),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _image(ImageProvider icon) => Image(
@@ -116,7 +154,12 @@ Glyph serviceGlyphOf(SystemService service) => switch (service) {
 
 /// What a row names a connection's source by.
 String processLabelOf(ConnectionProcess process) => switch (process.kind) {
-  ProcessKind.app ||
+  ProcessKind.app =>
+    process.app!.isCore
+        ? currentAppLocalizations.processCoreLabel(process.app!.name)
+        : process.app!.isHelper
+        ? currentAppLocalizations.processHelperLabel(process.app!.name)
+        : process.label,
   ProcessKind.process => process.service?.service.label ?? process.label,
   ProcessKind.unknown => currentAppLocalizations.unknownProcess,
   ProcessKind.otherDevice => currentAppLocalizations.otherDevice,
@@ -280,13 +323,32 @@ class _SourceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reason = this.reason;
+    final app = process.app;
+    final tag = app?.isCore == true
+        ? context.appLocalizations.processCoreTag
+        : app?.isHelper == true
+        ? context.appLocalizations.processHelperTag
+        : null;
+    final name = Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 6,
+      children: [
+        Flexible(child: Text(value)),
+        if (tag != null)
+          TonalChip(
+            label: tag,
+            color: SurfaceLevel.inset.colorOf(context.colorScheme),
+            foregroundColor: context.colorScheme.onSurfaceVariant,
+          ),
+      ],
+    );
     final label = reason == null
-        ? Text(value)
+        ? name
         : Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             spacing: 2,
             children: [
-              Text(value),
+              name,
               Text(
                 reason,
                 textAlign: TextAlign.end,

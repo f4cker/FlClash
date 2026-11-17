@@ -1962,6 +1962,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get restoreAllData => 'Restaurer toutes les données';
 
   @override
+  String get restoreRuleSetDownloadNotice =>
+      'La sauvegarde conserve les paramètres des ensembles de règles. Après la restauration, connectez-vous à Internet pour les télécharger à nouveau ; les redémarrages et changements de profil habituels ne nécessitent pas de nouveau téléchargement.';
+
+  @override
   String get addProfile => 'Ajouter un profil';
 
   @override
@@ -6466,4 +6470,391 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get addedRulesReloadTimeout =>
+      'Le moteur ne s’est pas rechargé en 15 secondes ; la modification a été annulée.';
+
+  @override
+  String get addedRulesReloadFailed =>
+      'Le moteur n’a pas accepté la nouvelle configuration ; la modification a été annulée.';
+
+  @override
+  String get addedRuleSetLoadFailed =>
+      'Impossible de télécharger le jeu de règles ; la modification a été annulée.';
+
+  @override
+  String get addedRuleSetLoadTimeout =>
+      'Le jeu de règles n’a pas été téléchargé en 15 secondes ; la modification a été annulée.';
+
+  @override
+  String get ruleDeleteTitle => 'Supprimer cette règle ?';
+
+  @override
+  String ruleSetDeleteTitle(String name) {
+    return 'Supprimer le jeu de règles « $name » ?';
+  }
+
+  @override
+  String ruleDeleteBody(String text) {
+    return '$text\nCette action prend effet immédiatement.';
+  }
+
+  @override
+  String ruleDuplicate(int number, String group) {
+    return 'Cette règle existe déjà (nº $number), via $group.';
+  }
+
+  @override
+  String get ruleUpdateGroup => 'Mettre à jour le groupe';
+
+  @override
+  String get ruleEditAddTitle => 'Ajouter une règle';
+
+  @override
+  String get ruleEditTitle => 'Modifier la règle ajoutée';
+
+  @override
+  String get ruleSetAddTitle => 'Ajouter un jeu de règles';
+
+  @override
+  String get ruleSetEditTitle => 'Modifier le jeu de règles ajouté';
+
+  @override
+  String get ruleEditCoreStopped => 'Prend effet au démarrage du moteur';
+
+  @override
+  String ruleEditPosition(int number) {
+    return 'Nº $number · Règle ajoutée';
+  }
+
+  @override
+  String ruleSetEditPosition(int number) {
+    return 'Nº $number · Jeu de règles ajouté';
+  }
+
+  @override
+  String get ruleEditSaving => 'Enregistrement…';
+
+  @override
+  String get ruleTypeLabel => 'Type';
+
+  @override
+  String get ruleTypeMore => 'Plus';
+
+  @override
+  String get ruleTypeDomainSuffix => 'Suffixe de domaine';
+
+  @override
+  String get ruleTypeDomain => 'Domaine complet';
+
+  @override
+  String get ruleTypeKeyword => 'Mot-clé du domaine';
+
+  @override
+  String get ruleTypeIpCidr => 'Plage IP';
+
+  @override
+  String get ruleTypeIpCidr6 => 'Plage IPv6';
+
+  @override
+  String get ruleTypeDstPort => 'Port de destination';
+
+  @override
+  String get ruleTypeProcessName => 'Nom du processus';
+
+  @override
+  String get ruleTypeSrcIpCidr => 'Plage IP source';
+
+  @override
+  String get ruleValueKeyword => 'Mot-clé';
+
+  @override
+  String get ruleHelpDomainSuffix =>
+      'Correspond à example.com et à tous ses sous-domaines. Vous pouvez coller un lien.';
+
+  @override
+  String get ruleHelpDomain =>
+      'Correspond uniquement à ce domaine, pas à ses sous-domaines. Vous pouvez coller un lien.';
+
+  @override
+  String get ruleHelpKeyword => 'Correspond à tout domaine contenant ce texte.';
+
+  @override
+  String get ruleHelpIpCidr =>
+      'Par exemple 10.0.0.0/8 ; une adresse unique devient /32.';
+
+  @override
+  String get ruleHelpIpCidr6 =>
+      'Par exemple 2001:db8::/32 ; une adresse unique devient /128.';
+
+  @override
+  String get ruleHelpSrcIpCidr =>
+      'La plage des appareils d’où proviennent les connexions.';
+
+  @override
+  String get ruleHelpPort => 'Par exemple 443, ou une plage comme 8000-9000.';
+
+  @override
+  String get ruleHelpProcess =>
+      'Le nom du processus d’une application ou d’un programme, comme Safari ou curl.';
+
+  @override
+  String get ruleValueEmpty => 'Saisissez une valeur';
+
+  @override
+  String get ruleValueComma => 'Ne peut pas contenir de virgule';
+
+  @override
+  String get ruleValueDomain => 'Domaine non valide';
+
+  @override
+  String get ruleValueCidr => 'Plage IP non valide';
+
+  @override
+  String get ruleValueNetwork => 'Doit être tcp ou udp';
+
+  @override
+  String get ruleValueNumberRange => 'Nombre ou plage non valide';
+
+  @override
+  String get ruleValueDscp => 'DSCP accepte les valeurs de 0 à 63';
+
+  @override
+  String get ruleValuePickCode => 'Choisissez un code';
+
+  @override
+  String get ruleValuePickProcess =>
+      'Choisissez parmi les applications en cours';
+
+  @override
+  String get ruleValueNoProcesses => 'Aucune application enregistrée récemment';
+
+  @override
+  String get rulePositionLabel => 'Position';
+
+  @override
+  String get rulePositionFirst => 'En tête des règles ajoutées';
+
+  @override
+  String get rulePositionLast => 'En fin des règles ajoutées';
+
+  @override
+  String get ruleSetUrlLabel => 'URL';
+
+  @override
+  String get ruleSetUrlHelp =>
+      'Collez le lien d’un jeu de règles ; Flash le télécharge et vérifie son contenu.';
+
+  @override
+  String get ruleSetUrlInvalid => 'Liens http ou https uniquement';
+
+  @override
+  String get ruleSetChecking => 'Téléchargement et vérification…';
+
+  @override
+  String ruleSetCheckOk(String kind, String format, String count) {
+    return 'Téléchargé : règles $kind, format $format, $count entrées';
+  }
+
+  @override
+  String ruleSetCheckOkUncounted(String format) {
+    return 'Téléchargé : format $format ; les entrées seront comptées au démarrage du moteur';
+  }
+
+  @override
+  String get ruleSetCheckNotFound => 'Introuvable (404)';
+
+  @override
+  String get ruleSetCheckTimeout => 'Le téléchargement a expiré';
+
+  @override
+  String ruleSetCheckNetwork(String reason) {
+    return 'Échec du téléchargement : $reason';
+  }
+
+  @override
+  String get ruleSetCheckNotRuleSet => 'Le contenu n’est pas un jeu de règles';
+
+  @override
+  String get ruleSetCheckUnknown => 'Format non reconnu';
+
+  @override
+  String get ruleSetNameLabel => 'Nom';
+
+  @override
+  String get ruleSetNameTaken => 'Un jeu de règles porte déjà ce nom';
+
+  @override
+  String get ruleSetNameInvalid =>
+      'Le nom ne peut contenir de virgule ni d’espaces aux extrémités';
+
+  @override
+  String get ruleSetBehaviorLabel => 'Contenu';
+
+  @override
+  String get ruleSetBehaviorDomain => 'Domaines';
+
+  @override
+  String get ruleSetBehaviorIpcidr => 'Plages IP';
+
+  @override
+  String get ruleSetBehaviorClassical => 'Règles mixtes';
+
+  @override
+  String get ruleSetBehaviorDetected => 'Choisi d’après le contenu téléchargé.';
+
+  @override
+  String get ruleSetBehaviorMismatch =>
+      'Diffère du contenu téléchargé ; le jeu risque de ne pas correspondre.';
+
+  @override
+  String get ruleSetMrsNeedsKind =>
+      'MRS ne contient que des domaines ou des plages IP';
+
+  @override
+  String get ruleSetFormatText => 'Texte';
+
+  @override
+  String get ruleSetIntervalLabel => 'Mise à jour automatique';
+
+  @override
+  String get ruleSetEvery6Hours => 'Toutes les 6 heures';
+
+  @override
+  String get ruleSetDaily => 'Chaque jour';
+
+  @override
+  String get ruleSetWeekly => 'Chaque semaine';
+
+  @override
+  String get ruleSetNeverUpdate => 'Jamais';
+
+  @override
+  String ruleSetEverySeconds(int seconds) {
+    return 'Toutes les $seconds s';
+  }
+
+  @override
+  String get ruleSetUpdateNow => 'Mettre à jour';
+
+  @override
+  String get ruleSetRefreshed => 'Mise à jour lancée.';
+
+  @override
+  String get rulesAddTooltip => 'Ajouter';
+
+  @override
+  String get rulesAddSemantics => 'Ajouter une règle ou un jeu de règles';
+
+  @override
+  String get rulesAddRuleMenu => 'Ajouter une règle';
+
+  @override
+  String get rulesAddSetMenu => 'Ajouter un jeu de règles';
+
+  @override
+  String get rulesAddedDivider =>
+      'Les règles ci-dessous proviennent du profil et des scripts et ne peuvent être que consultées ici';
+
+  @override
+  String get ruleSourceAddedSet => 'Jeu de règles ajouté';
+
+  @override
+  String get ruleEditMenu => 'Modifier…';
+
+  @override
+  String get ruleMoveUp => 'Monter';
+
+  @override
+  String get ruleMoveDown => 'Descendre';
+
+  @override
+  String ruleEditSemantics(int number) {
+    return 'Modifier la règle $number';
+  }
+
+  @override
+  String ruleDeleteSemantics(int number) {
+    return 'Supprimer la règle $number';
+  }
+
+  @override
+  String ruleAddedBanner(String text) {
+    return 'La règle « $text » a été ajoutée et est active.';
+  }
+
+  @override
+  String ruleSavedBanner(String text) {
+    return 'La règle « $text » a été enregistrée et est active.';
+  }
+
+  @override
+  String ruleSetAddedBanner(String name) {
+    return 'Le jeu de règles « $name » a été ajouté et est actif.';
+  }
+
+  @override
+  String ruleSetSavedBanner(String name) {
+    return 'Le jeu de règles « $name » a été enregistré et est actif.';
+  }
+
+  @override
+  String get ruleDeletedBanner => 'Supprimé.';
+
+  @override
+  String get ruleSavedPendingBanner =>
+      'Enregistré ; prend effet au démarrage du moteur.';
+
+  @override
+  String get ruleBannerLookup => 'Rechercher une URL';
+
+  @override
+  String ruleMoveFailed(String reason) {
+    return 'Impossible de déplacer la règle : $reason';
+  }
+
+  @override
+  String processHelperLabel(Object name) {
+    return '$name · Assistant';
+  }
+
+  @override
+  String processCoreLabel(Object name) {
+    return '$name · Moteur';
+  }
+
+  @override
+  String get processHelperTag => 'Assistant';
+
+  @override
+  String get processCoreTag => 'Moteur';
+
+  @override
+  String get addedRulesRollbackReloadFailed =>
+      'Les modifications ont été annulées, mais la restauration de la configuration active a échoué. Réappliquez le profil.';
+
+  @override
+  String get addedRulesRollbackConflict =>
+      'Certaines modifications ont été conservées car un autre éditeur a modifié le jeu de règles. Vérifiez la règle et son fournisseur avant utilisation.';
+
+  @override
+  String get addedRulesRollbackReloadTimeout =>
+      'La restauration de la configuration active prend trop de temps. Son état est incertain ; les modifications des règles ajoutées sont suspendues jusqu’à sa fin.';
+
+  @override
+  String get addedRulesStaleEdit =>
+      'Cette règle ou cet ensemble de règles a été modifié ailleurs. Rouvrez-le avant de réessayer.';
+
+  @override
+  String get addedRulesApplyPending =>
+      'L’application des règles prend du temps et est toujours en cours. Veuillez patienter.';
+
+  @override
+  String get addedRulesApplyRestored =>
+      'Le traitement est terminé et les règles d’origine ont été restaurées.';
+
+  @override
+  String get addedRulesApplyRestoreFailed =>
+      'Le traitement est terminé, mais les règles d’origine n’ont pas pu être restaurées. Vérifiez les règles actuelles.';
 }

@@ -7,13 +7,16 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
-import 'package:fl_clash/views/rules/add_rule_dialog.dart';
+import 'package:fl_clash/common/added_rule_edit.dart';
+import 'package:fl_clash/common/process_apps.dart';
+import 'package:fl_clash/views/rules/rule_edit_dialogs.dart';
 import 'package:fl_clash/views/rules/hit_card.dart';
 import 'package:fl_clash/views/rules/widgets.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/rules/rule_rows.dart';
 import 'package:fl_clash/views/rules/rules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -26,6 +29,58 @@ import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
 
 class _MockCore extends Mock implements CoreHandlerInterface {}
+
+/// The added rules of the page, kept in memory; records what it was asked.
+class _FakeAddedRules extends AddedRulesAction {
+  static var rules = <Rule>[];
+  static var sets = <AddedRuleSet>[];
+  static final calls = <String>[];
+
+  @override
+  Future<AddedRulesState> load(Profile profile) async =>
+      (rules: rules, sets: sets);
+
+  @override
+  Set<String> takenRuleSetNames(Profile profile) => const {'YouTube'};
+
+  @override
+  Future<AddedRulesSave> putRule(
+    Profile profile,
+    Rule rule, {
+    Rule? previous,
+    bool last = false,
+  }) async {
+    calls.add('put ${rule.rawValue}${last ? ' last' : ''}');
+    return (error: null, pending: false, ruleId: rule.id);
+  }
+
+  @override
+  Future<AddedRulesSave> deleteRule(Profile profile, Rule rule) async {
+    calls.add('delete ${rule.rawValue}');
+    return (error: null, pending: false, ruleId: null);
+  }
+
+  @override
+  Future<AddedRulesSave> deleteSet(
+    Profile profile,
+    AddedRuleSet set, {
+    required Rule rule,
+  }) async {
+    calls.add('delete-set ${set.id} rule ${rule.id}');
+    return (error: null, pending: false, ruleId: null);
+  }
+
+  @override
+  Future<AddedRulesSave> moveRule(
+    Profile profile,
+    Rule rule, {
+    required bool up,
+    required List<Rule> expectedOrder,
+  }) async {
+    calls.add('move ${rule.rawValue} ${up ? 'up' : 'down'}');
+    return (error: null, pending: false, ruleId: rule.id);
+  }
+}
 
 const _size = Size(1100, 1000);
 
@@ -136,6 +191,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(const RuleLookupParams(host: ''));
+    registerFallbackValue(const Metadata());
   });
 
   late ProviderContainer container;
@@ -143,6 +199,9 @@ void main() {
   final profile = Profile.normal(label: 'Airport A');
 
   setUp(() {
+    _FakeAddedRules.rules = [];
+    _FakeAddedRules.sets = [];
+    _FakeAddedRules.calls.clear();
     core = _MockCore();
     when(
       () => core.listRules(filter: any(named: 'filter')),
@@ -153,6 +212,7 @@ void main() {
         profilesProvider.overrideWith(() => TestProfiles([profile])),
         currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+        addedRulesActionProvider.overrideWith(_FakeAddedRules.new),
         groupsProvider.overrideWithValue([
           const Group(
             name: 'YouTube',
@@ -719,6 +779,61 @@ void main() {
     await teardown(tester);
   });
 
+  testWidgets('a request lookup preserves process, ports and network', (
+    tester,
+  ) async {
+    const metadata = Metadata(
+      process: 'browser',
+      processPath: '/fixture/browser',
+      sourceIP: '192.0.2.5',
+      sourcePort: '51234',
+      destinationPort: '8443',
+      network: 'udp',
+    );
+    final previous = processApps;
+    processApps = ProcessApps(lookupApps: true, invoke: (_) async => null)
+      ..seed(
+        lookups: {
+          '/fixture/browser': const AppLookup.app(
+            MacApp(
+              bundleId: 'test.browser',
+              name: 'Browser',
+              bundlePath: '/fixture/Browser.app',
+            ),
+          ),
+        },
+      );
+    addTearDown(() {
+      processApps.dispose();
+      processApps = previous;
+    });
+    when(
+      () => core.lookupRule(any(), metadata: any(named: 'metadata')),
+    ).thenAnswer((_) async => _lookup());
+    container
+        .read(rulesLookupRequestProvider.notifier)
+        .ask(
+          'www.youtube.com',
+          rule: 'RuleSet',
+          rulePayload: 'YouTube',
+          metadata: metadata,
+        );
+    await pumpRules(tester);
+    await tester.pump(const Duration(milliseconds: 300));
+    final captured = verify(
+      () => core.lookupRule(
+        captureAny(),
+        metadata: captureAny(named: 'metadata'),
+      ),
+    ).captured;
+    final params = captured[0] as RuleLookupParams;
+    expect(params.port, 8443);
+    expect(params.network, 'udp');
+    expect(captured[1], metadata);
+    expect(find.text('Browser'), findsOneWidget);
+    await teardown(tester);
+  });
+
   testWidgets('says so when the Core stops', (tester) async {
     await pumpRules(tester);
 
@@ -765,7 +880,7 @@ void main() {
       await tester.tap(button.first, warnIfMissed: false);
       await tester.pump();
     }
-    expect(find.byType(AddRuleDialog), findsNothing);
+    expect(find.byType(RuleEditDialog), findsNothing);
     expect(
       tester.getSemantics(find.text('Add to added rules')),
       isSemantics(isButton: true, isEnabled: false, hasEnabledState: true),
@@ -818,6 +933,8 @@ void main() {
     );
     await lookUp(tester, 'www.youtube.com');
     await tester.tap(find.text('Add to added rules'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Add'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Add'));
     await tester.pumpAndSettle();
@@ -1058,50 +1175,634 @@ void main() {
     });
   });
 
-  group('AddRuleDialog', () {
-    Future<void> pumpDialog(
-      WidgetTester tester,
-      Future<String?> Function(String text) onAdd,
+  group('added rules on the page', () {
+    const github = Rule(
+      id: 11,
+      profileId: 1,
+      ruleAction: RuleAction.DOMAIN_SUFFIX,
+      content: 'github.com',
+      ruleTarget: 'GitHub',
+      order: 'a',
+    );
+
+    void bindAdded() {
+      _FakeAddedRules.rules = [github];
+      container.read(appliedRuleSourcesStateProvider.notifier).applied(
+        profile.id,
+        [_sources.first.copyWith(ruleId: github.id), ..._sources.skip(1)],
+      );
+    }
+
+    testWidgets('a line parts the added rules from the profile’s own', (
+      tester,
     ) async {
+      await pumpRules(tester);
+      expect(
+        find.text(
+          'Rules below come from the profile and scripts and can only be '
+          'viewed here',
+        ),
+        findsOneWidget,
+      );
+      final divider = tester.getRect(find.byType(RulesDividerRow));
+      expect(
+        divider.top,
+        greaterThan(
+          tester.getRect(find.text('DOMAIN-SUFFIX,github.com')).bottom,
+        ),
+      );
+      expect(
+        divider.bottom,
+        lessThan(tester.getRect(find.text('RULE-SET,YouTube')).top),
+      );
+
+      await teardown(tester);
+    });
+
+    testWidgets('hovering an added rule shows edit and delete', (tester) async {
+      bindAdded();
+      await pumpRules(tester);
+      await tester.pump();
+
+      expect(find.byType(RuleRowAction), findsNothing);
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(gesture.removePointer);
+      await gesture.addPointer(location: Offset.zero);
+      await gesture.moveTo(
+        tester.getCenter(find.text('DOMAIN-SUFFIX,github.com')),
+      );
+      await tester.pump();
+      expect(find.byType(RuleRowAction), findsNWidgets(2));
+      expect(find.bySemanticsLabel('Edit rule 1'), findsOneWidget);
+      expect(find.bySemanticsLabel('Delete rule 1'), findsOneWidget);
+      // A subscription rule has none.
+      await gesture.moveTo(tester.getCenter(find.text('MATCH')));
+      await tester.pump();
+      expect(find.byType(RuleRowAction), findsNothing);
+
+      await gesture.moveTo(
+        tester.getCenter(find.text('DOMAIN-SUFFIX,github.com')),
+      );
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel('Delete rule 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete this rule?'), findsOneWidget);
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+      expect(_FakeAddedRules.calls, ['delete DOMAIN-SUFFIX,github.com,GitHub']);
+      expect(find.text('Deleted.'), findsOneWidget);
+
+      await teardown(tester);
+    });
+
+    testWidgets('double-clicking an added rule edits it', (tester) async {
+      bindAdded();
+      await pumpRules(tester);
+      await tester.pump();
+
+      final row = find.text('DOMAIN-SUFFIX,github.com');
+      await tester.tap(row);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(find.text('Edit Added Rule'), findsOneWidget);
+      expect(find.text('No. 1 · Added rule'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await teardown(tester);
+    });
+
+    testWidgets('the add button offers a rule and a rule set', (tester) async {
+      await pumpRules(tester);
+
+      expect(find.bySemanticsLabel('Add a rule or rule set'), findsOneWidget);
+      await tester.tap(find.byKey(RulesView.addKey));
+      await tester.pumpAndSettle();
+      expect(find.text('Add Rule'), findsOneWidget);
+      expect(find.text('Add Rule Set'), findsOneWidget);
+      await tester.tap(find.text('Add Rule'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RuleEditDialog), findsOneWidget);
+      await tester.enterText(
+        find
+            .descendant(
+              of: find.byType(RuleEditField),
+              matching: find.byType(EditableText),
+            )
+            .first,
+        'example.org',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+      expect(_FakeAddedRules.calls, ['put DOMAIN-SUFFIX,example.org,YouTube']);
+      expect(
+        find.text(
+          'Rule “DOMAIN-SUFFIX,example.org,YouTube” was added and is in effect.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Look Up a URL'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      expect(find.byKey(RulesView.bannerKey), findsNothing);
+
+      await teardown(tester);
+    });
+
+    testWidgets('command-N adds a rule', (tester) async {
+      await pumpRules(tester);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.meta);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.meta);
+      await tester.pumpAndSettle();
+      expect(find.byType(RuleEditDialog), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await teardown(tester);
+    });
+
+    for (final kind in ['paired', 'other-profile-rule', 'global-rule']) {
+      testWidgets('deleting $kind dispatches to the correct owner only', (
+        tester,
+      ) async {
+        final set = AddedRuleSet(
+          id: 12,
+          profileId: profile.id,
+          name: 'YouTube',
+          url: 'https://example.com/youtube.yaml',
+        );
+        final pair = Rule(
+          id: 12,
+          profileId: profile.id,
+          ruleAction: RuleAction.RULE_SET,
+          ruleProvider: 'YouTube',
+          ruleTarget: 'YouTube',
+          order: 'b',
+        );
+        final selected = kind == 'paired'
+            ? pair
+            : pair.copyWith(
+                id: 13,
+                profileId: kind == 'global-rule' ? null : profile.id,
+              );
+        _FakeAddedRules.rules = kind == 'paired' ? [pair] : [pair, selected];
+        _FakeAddedRules.sets = [set];
+        container
+            .read(appliedRuleSourcesStateProvider.notifier)
+            .applied(profile.id, [
+              _sources.first,
+              RuleSource(
+                kind: kind == 'global-rule'
+                    ? RuleSourceKind.addedGlobal
+                    : RuleSourceKind.addedProfile,
+                text: 'RULE-SET,YouTube,YouTube',
+                ruleId: selected.id,
+              ),
+              ..._sources.skip(2),
+            ]);
+        await pumpRules(tester);
+        await tester.pump();
+        final rowWidget = tester.widget<RuleRow>(
+          find.ancestor(
+            of: find.text('RULE-SET,YouTube'),
+            matching: find.byType(RuleRow),
+          ),
+        );
+        expect(rowWidget.onDelete, isNotNull, reason: kind);
+        rowWidget.onDelete!();
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Delete').last);
+        await tester.pumpAndSettle();
+        expect(
+          _FakeAddedRules.calls,
+          kind == 'paired'
+              ? ['delete-set 12 rule 12']
+              : ['delete RULE-SET,YouTube,YouTube'],
+        );
+        await teardown(tester);
+      });
+    }
+
+    testWidgets('an added rule set reads as one', (tester) async {
+      final setRule = Rule(
+        id: 12,
+        profileId: profile.id,
+        ruleAction: RuleAction.RULE_SET,
+        ruleProvider: 'YouTube',
+        ruleTarget: 'YouTube',
+        order: 'b',
+      );
+      _FakeAddedRules.rules = [setRule];
+      _FakeAddedRules.sets = [
+        AddedRuleSet(
+          id: 12,
+          profileId: profile.id,
+          name: 'YouTube',
+          url: 'https://example.com/youtube.yaml',
+        ),
+      ];
+      container
+          .read(appliedRuleSourcesStateProvider.notifier)
+          .applied(profile.id, [
+            _sources.first,
+            RuleSource(
+              kind: RuleSourceKind.addedProfile,
+              text: 'RULE-SET,YouTube,YouTube',
+              ruleId: setRule.id,
+            ),
+            ..._sources.skip(2),
+          ]);
+      await pumpRules(tester);
+      await tester.pump();
+
+      expect(find.text('Added rule set · YouTube'), findsOneWidget);
+      final row = find.text('RULE-SET,YouTube');
+      await tester.tap(row);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(find.text('Edit Added Rule Set'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await teardown(tester);
+    });
+  });
+
+  group('RuleEditDialog', () {
+    Future<List<(Rule, Rule?, bool)>> pumpDialog(
+      WidgetTester tester, {
+      String? error,
+      Rule? rule,
+      List<Rule> existing = const [],
+      RuleAction? type,
+      String? value,
+      bool coreRunning = true,
+      Size size = const Size(900, 900),
+      Future<RuleEditSave> Function()? onDelete,
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final saved = <(Rule, Rule?, bool)>[];
       await tester.pumpWidget(
         TestApp(
           locale: const Locale('en'),
           child: Center(
-            child: AddRuleDialog(
-              host: 'api.example.com',
+            child: RuleEditDialog(
               profileLabel: 'Airport A',
+              coreRunning: coreRunning,
               targets: const ['Proxy', 'DIRECT', 'REJECT'],
+              existing: existing,
+              rule: rule,
+              number: rule == null ? null : 2,
+              initialType: type,
+              initialValue: value,
               initialTarget: 'Proxy',
-              onAdd: onAdd,
+              processNames: const ['Safari', 'curl'],
+              onSave: (rule, {previous, last = false}) async {
+                saved.add((rule, previous, last));
+                return (error: error, pending: false, ruleId: rule.id);
+              },
+              onDelete: onDelete,
             ),
           ),
         ),
       );
       await tester.pump();
+      return saved;
     }
 
-    testWidgets('previews the rule as the choices change', (tester) async {
-      await pumpDialog(tester, (_) async => null);
+    Finder field() => find
+        .descendant(
+          of: find.byType(RuleEditField),
+          matching: find.byType(EditableText),
+        )
+        .first;
 
-      expect(find.text('DOMAIN-SUFFIX,example.com,Proxy'), findsOneWidget);
-      await tester.tap(find.text('Only api.example.com'));
+    testWidgets('previews the rule as it is typed', (tester) async {
+      await pumpDialog(tester);
+
+      expect(find.text('Add Rule'), findsOneWidget);
+      expect(find.text('Adds to profile “Airport A”.'), findsOneWidget);
+      expect(find.text('DOMAIN-SUFFIX,…,Proxy'), findsOneWidget);
+      await tester.enterText(field(), 'https://www.example.com/a?b=1');
+      await tester.pump(const Duration(milliseconds: 400));
+      // A pasted link gives its host.
+      expect(find.text('DOMAIN-SUFFIX,www.example.com,Proxy'), findsOneWidget);
+      await tester.tap(find.text('Full Domain'));
       await tester.pump();
-      expect(find.text('DOMAIN,api.example.com,Proxy'), findsOneWidget);
+      expect(find.text('DOMAIN,www.example.com,Proxy'), findsOneWidget);
+    });
+
+    testWidgets('a single address becomes its own range', (tester) async {
+      await pumpDialog(tester, type: RuleAction.IP_CIDR, value: '10.1.2.3');
+
+      expect(find.text('IP-CIDR,10.1.2.3/32,Proxy'), findsOneWidget);
+    });
+
+    testWidgets('a bad value says why and cannot be added', (tester) async {
+      final saved = await pumpDialog(tester);
+
+      await tester.enterText(field(), 'not a domain');
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Not a valid domain'), findsOneWidget);
+      await tester.tap(find.text('Add'));
+      await tester.pump();
+      expect(saved, isEmpty);
+    });
+
+    testWidgets('a rule already added offers to update its group', (
+      tester,
+    ) async {
+      const existing = Rule(
+        id: 7,
+        ruleAction: RuleAction.DOMAIN_SUFFIX,
+        content: 'example.com',
+        ruleTarget: 'DIRECT',
+      );
+      final saved = await pumpDialog(
+        tester,
+        existing: [existing],
+        value: 'example.com',
+      );
+
+      expect(
+        find.text('This rule is already there (No. 1), through Direct.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Update Group'));
+      await tester.pump();
+      expect(saved.single.$1.id, 7);
+      expect(saved.single.$1.ruleTarget, 'Proxy');
+      expect(saved.single.$2, existing);
+    });
+
+    testWidgets('adds last when asked', (tester) async {
+      final saved = await pumpDialog(tester, value: 'example.com');
+
+      await tester.tap(find.text('Last of added rules'));
+      await tester.pump();
+      await tester.tap(find.text('Add'));
+      await tester.pump();
+      expect(saved.single.$3, isTrue);
+      expect(saved.single.$1.rawValue, 'DOMAIN-SUFFIX,example.com,Proxy');
     });
 
     testWidgets('stays open with the reason when adding fails', (tester) async {
-      final added = <String>[];
-      await pumpDialog(tester, (text) async {
-        added.add(text);
-        return 'disk full';
-      });
+      final saved = await pumpDialog(
+        tester,
+        value: 'example.com',
+        error: 'disk full',
+      );
 
       await tester.tap(find.text('Add'));
       await tester.pump();
 
-      expect(added, ['DOMAIN-SUFFIX,example.com,Proxy']);
+      expect(saved.single.$1.rawValue, 'DOMAIN-SUFFIX,example.com,Proxy');
       expect(find.text('disk full'), findsOneWidget);
-      expect(find.byType(AddRuleDialog), findsOneWidget);
+      expect(find.byType(RuleEditDialog), findsOneWidget);
+    });
+
+    testWidgets('says when the Core is not running', (tester) async {
+      await pumpDialog(tester, coreRunning: false);
+
+      expect(find.text('Takes effect once the core starts'), findsOneWidget);
+    });
+
+    testWidgets('edits a rule, saving only a change', (tester) async {
+      const rule = Rule(
+        id: 3,
+        ruleAction: RuleAction.DOMAIN,
+        content: 'a.example.com',
+        ruleTarget: 'Proxy',
+      );
+      final saved = await pumpDialog(tester, rule: rule);
+
+      expect(find.text('Edit Added Rule'), findsOneWidget);
+      expect(find.text('No. 2 · Added rule'), findsOneWidget);
+      // Unchanged, it does not save.
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      expect(saved, isEmpty);
+      await tester.enterText(field(), 'b.example.com');
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      expect(saved.single.$1.content, 'b.example.com');
+      expect(saved.single.$2, rule);
+    });
+
+    testWidgets('deletes a rule after asking', (tester) async {
+      var deleted = 0;
+      await pumpDialog(
+        tester,
+        rule: const Rule(
+          id: 3,
+          ruleAction: RuleAction.DOMAIN,
+          content: 'a.example.com',
+          ruleTarget: 'Proxy',
+        ),
+        onDelete: () async {
+          deleted++;
+          return (error: null, pending: false, ruleId: null);
+        },
+      );
+
+      await tester.ensureVisible(find.text('Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete this rule?'), findsOneWidget);
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+      expect(deleted, 1);
+    });
+
+    testWidgets('a narrow window picks the type from a menu', (tester) async {
+      await pumpDialog(tester, size: const Size(420, 800));
+
+      expect(find.byType(SegmentedControl<RuleAction?>), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(RuleEditDropdown<RuleAction>),
+          matching: find.text('Domain Suffix'),
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('RuleSetEditDialog', () {
+    Future<List<(AddedRuleSet, String)>> pumpSetDialog(
+      WidgetTester tester, {
+      required Future<RuleSetCheck> Function(String url) onCheck,
+      Set<String> taken = const {},
+      AddedRuleSet? set,
+    }) async {
+      tester.view.physicalSize = const Size(900, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final saved = <(AddedRuleSet, String)>[];
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          child: Center(
+            child: RuleSetEditDialog(
+              profileLabel: 'Airport A',
+              coreRunning: true,
+              targets: const ['Proxy', 'DIRECT', 'REJECT'],
+              takenNames: taken,
+              set: set,
+              setTarget: set == null ? null : 'DIRECT',
+              number: set == null ? null : 1,
+              initialTarget: 'Proxy',
+              onCheck: onCheck,
+              onSave: (set, {required target, check}) async {
+                saved.add((set, target));
+                return (error: null, pending: false, ruleId: 1);
+              },
+              onRefresh: () async => null,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return saved;
+    }
+
+    Finder urlField() => find
+        .descendant(
+          of: find.byType(RuleEditField),
+          matching: find.byType(EditableText),
+        )
+        .first;
+
+    testWidgets('checks the link as typing stops and names the set', (
+      tester,
+    ) async {
+      final checked = <String>[];
+      final saved = await pumpSetDialog(
+        tester,
+        onCheck: (url) async {
+          checked.add(url);
+          return const RuleSetCheck(
+            behavior: RuleProviderBehavior.ipcidr,
+            format: RuleProviderFormat.text,
+            count: 1234,
+          );
+        },
+      );
+
+      await tester.enterText(
+        urlField(),
+        'https://example.com/lists/telegram.txt',
+      );
+      await tester.pump();
+      // Nothing is downloaded until typing rests, and adding waits for it.
+      expect(checked, isEmpty);
+      await tester.tap(find.text('Add'));
+      await tester.pump();
+      expect(saved, isEmpty);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+      expect(checked, ['https://example.com/lists/telegram.txt']);
+      expect(
+        find.text('Downloaded: IP Ranges rules, Text format, 1,234 entries'),
+        findsOneWidget,
+      );
+      expect(find.text('RULE-SET,telegram,Proxy'), findsOneWidget);
+      await tester.tap(find.text('Add'));
+      await tester.pump();
+      expect(saved.single.$1.name, 'telegram');
+      expect(saved.single.$1.behavior, RuleProviderBehavior.ipcidr);
+      expect(saved.single.$1.format, RuleProviderFormat.text);
+      expect(saved.single.$1.interval, 86400);
+      expect(saved.single.$2, 'Proxy');
+    });
+
+    testWidgets('a failed check says why and blocks adding', (tester) async {
+      final saved = await pumpSetDialog(
+        tester,
+        onCheck: (_) async =>
+            const RuleSetCheck.failed(RuleSetCheckFailure.notFound),
+      );
+
+      await tester.enterText(urlField(), 'https://example.com/missing.yaml');
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump();
+      expect(find.text('Not found (404)'), findsOneWidget);
+      await tester.tap(find.text('Add'));
+      await tester.pump();
+      expect(saved, isEmpty);
+    });
+
+    testWidgets('takes only web links, and no name already taken', (
+      tester,
+    ) async {
+      var checks = 0;
+      await pumpSetDialog(
+        tester,
+        taken: {'ads'},
+        onCheck: (_) async {
+          checks++;
+          return const RuleSetCheck(
+            behavior: RuleProviderBehavior.domain,
+            format: RuleProviderFormat.yaml,
+            count: 1,
+          );
+        },
+      );
+
+      await tester.enterText(urlField(), 'file:///etc/ads.yaml');
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.text('Only http or https links'), findsOneWidget);
+      expect(checks, 0);
+      await tester.enterText(urlField(), 'https://example.com/ads.yaml');
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump();
+      expect(
+        find.text('A rule set of this name already exists'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('editing keeps the link checked until it changes', (
+      tester,
+    ) async {
+      var checks = 0;
+      final saved = await pumpSetDialog(
+        tester,
+        set: const AddedRuleSet(
+          id: 5,
+          profileId: 1,
+          name: 'ads',
+          url: 'https://example.com/ads.yaml',
+        ),
+        onCheck: (_) async {
+          checks++;
+          return const RuleSetCheck.failed(RuleSetCheckFailure.timeout);
+        },
+      );
+
+      expect(find.text('Edit Added Rule Set'), findsOneWidget);
+      expect(find.text('No. 1 · Added rule set'), findsOneWidget);
+      expect(find.text('Update Now'), findsOneWidget);
+      await tester.tap(find.text('Every day'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Every week'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      expect(checks, 0);
+      expect(saved.single.$1.interval, 604800);
+      expect(saved.single.$1.id, 5);
+      expect(saved.single.$2, 'DIRECT');
     });
   });
 }

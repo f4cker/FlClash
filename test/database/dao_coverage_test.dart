@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:fl_clash/database/database.dart';
@@ -834,7 +836,7 @@ void main() {
     }
   });
 
-  test('a restore in either mode drops every mount', () async {
+  test('disjoint merge preserves mount relationships and state', () async {
     const target = Profile(id: 1, autoUpdateDuration: Duration.zero);
     const source = Profile(
       id: 2,
@@ -842,35 +844,154 @@ void main() {
       url: 'https://example.invalid/sub',
       autoUpdateDuration: Duration.zero,
     );
-    for (final isOverride in [false, true]) {
+    await database.profilesDao.putAll([
+      target.toCompanion(),
+      source.toCompanion(),
+    ]);
+    await database.mountsDao.save(
+      targetId: 1,
+      expectedVersion: null,
+      sourceIds: [2],
+      pending: (version) =>
+          MountOperation(kind: MountOperationKind.save, version: version),
+    );
+    await database.mountsDao.settle(1, 1);
+    await database.mountsDao.recordSourceResult(2, at: DateTime(2026));
+    final oldTarget = await database.mountsDao.target(1);
+    final oldStatus = await database.mountSourceStatuses.all().get();
+    await database.restore(
+      [const Profile(id: 3, autoUpdateDuration: Duration.zero)],
+      const [],
+      const [],
+      const [],
+      const [],
+    );
+    expect(await database.mountsDao.target(1), oldTarget);
+    expect(await database.mountSourceStatuses.all().get(), oldStatus);
+    expect(await database.profileMounts.count.getSingle(), 1);
+  });
+
+  test(
+    'merge of mounted source without target fails without invalidating target',
+    () async {
+      const target = Profile(id: 1, autoUpdateDuration: Duration.zero);
+      const source = Profile(
+        id: 2,
+        type: ProfileType.url,
+        url: 'https://example.invalid/sub',
+        autoUpdateDuration: Duration.zero,
+      );
       await database.profilesDao.putAll([
         target.toCompanion(),
         source.toCompanion(),
       ]);
-      final version = (await database.mountsDao.target(1))?.version;
       await database.mountsDao.save(
         targetId: 1,
-        expectedVersion: version,
+        expectedVersion: null,
         sourceIds: [2],
         pending: (version) =>
             MountOperation(kind: MountOperationKind.save, version: version),
       );
-      await database.mountsDao.recordSourceResult(2, at: DateTime(2026));
-
-      await database.restore(
-        [target, source],
-        const [],
-        const [],
-        const [],
-        const [],
-        isOverride: isOverride,
+      final before = await database.mountsDao.target(1);
+      await expectLater(
+        database.restore([source], const [], const [], const [], const []),
+        throwsStateError,
       );
+      expect(await database.mountsDao.target(1), before);
+      expect(await database.profileMounts.count.getSingle(), 1);
+    },
+  );
 
-      expect(await database.profileMounts.count.getSingle(), 0);
-      expect(await database.mountTargets.count.getSingle(), 0);
-      expect(await database.mountSourceStatuses.count.getSingle(), 0);
-    }
-  });
+  test(
+    'merge and override preserve mount guards and pending operations',
+    () async {
+      const target = Profile(id: 1, autoUpdateDuration: Duration.zero);
+      const source = Profile(
+        id: 2,
+        type: ProfileType.url,
+        url: 'https://example.invalid/sub',
+        autoUpdateDuration: Duration.zero,
+      );
+      await database.profilesDao.putAll([
+        target.toCompanion(),
+        source.toCompanion(),
+      ]);
+      await database.mountsDao.save(
+        targetId: 1,
+        expectedVersion: null,
+        sourceIds: [2],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      );
+      for (final pending in [true, false]) {
+        if (!pending) await database.mountsDao.settle(1, 1);
+        final before = await database.mountsDao.target(1);
+        for (final isOverride in [false, true]) {
+          await expectLater(
+            database.restore(
+              [target, source],
+              const [],
+              const [],
+              const [],
+              const [],
+              isOverride: isOverride,
+            ),
+            throwsStateError,
+          );
+          expect(await database.mountsDao.target(1), before);
+          expect(await database.profileMounts.count.getSingle(), 1);
+        }
+      }
+    },
+  );
+
+  test(
+    'restore rejects pending mount until late settlement completes',
+    () async {
+      const target = Profile(id: 1, autoUpdateDuration: Duration.zero);
+      const source = Profile(id: 2, autoUpdateDuration: Duration.zero);
+      await database.profilesDao.putAll([
+        target.toCompanion(),
+        source.toCompanion(),
+      ]);
+      final state = await database.mountsDao.save(
+        targetId: 1,
+        expectedVersion: null,
+        sourceIds: [2],
+        pending: (version) =>
+            MountOperation(kind: MountOperationKind.save, version: version),
+      );
+      final release = Completer<void>();
+      final lateSettlement = () async {
+        await release.future;
+        return database.mountsDao.settle(1, state.version);
+      }();
+      await expectLater(
+        database.restore(
+          [const Profile(id: 3, autoUpdateDuration: Duration.zero)],
+          const [],
+          const [],
+          const [],
+          const [],
+        ),
+        throwsStateError,
+      );
+      expect(await database.mountsDao.target(1), state);
+      release.complete();
+      expect(await lateSettlement, isTrue);
+      await database.restore(
+        [const Profile(id: 3, autoUpdateDuration: Duration.zero)],
+        const [],
+        const [],
+        const [],
+        const [],
+      );
+      final after = await database.mountsDao.target(1);
+      expect(after?.version, state.version);
+      expect(after?.sourceIds, [2]);
+      expect(after?.pending == null, isTrue);
+    },
+  );
 
   test(
     'an override restore replaces more rules than one statement can bind',

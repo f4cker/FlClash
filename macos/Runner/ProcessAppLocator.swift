@@ -19,6 +19,15 @@ enum ProcessAppLocator {
         return nil
     }
 
+    // Display classification only; helper trust is checked independently.
+    static func isOwnCorePath(_ path: String, bundlePath: String) -> Bool {
+        if path == bundlePath + "/Contents/MacOS/FlClashCore" { return true }
+        let prefix = "/Library/Application Support/com.layoute.flash.daemon/core-"
+        guard path.hasPrefix(prefix) else { return false }
+        let hash = path.dropFirst(prefix.count)
+        return hash.count == 64 && hash.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
+    }
+
     static func displayName(_ name: String) -> String {
         if name.count > 4 && name.lowercased().hasSuffix(".app") {
             return String(name.dropLast(4))

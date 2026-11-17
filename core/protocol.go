@@ -366,6 +366,8 @@ type CompileRuleSetParams struct {
 type RuleSetInfo struct {
 	Behavior string `json:"behavior"`
 	Format   string `json:"format"`
+	// How many entries the set holds; zero for an empty set.
+	Count int64 `json:"count"`
 }
 
 type ChangeProxyParams struct {

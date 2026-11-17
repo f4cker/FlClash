@@ -10,6 +10,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+part 'added_rule_sets.dart';
 part 'clash_providers.dart';
 part 'converter.dart';
 part 'custom_proxies.dart';
@@ -41,6 +42,7 @@ part 'scripts.dart';
     ProfileMounts,
     MountTargets,
     MountSourceStatuses,
+    AddedRuleSets,
   ],
   daos: [
     ProfilesDao,
@@ -55,13 +57,14 @@ part 'scripts.dart';
     IpQualitiesDao,
     MitmModulesDao,
     MountsDao,
+    AddedRuleSetsDao,
   ],
 )
 class Database extends _$Database {
   Database([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 27;
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -145,6 +148,16 @@ class Database extends _$Database {
           if (from < 24 || flashV24) {
             await _mergeExtendModes();
           }
+        }
+        if (from < 26) {
+          await _createTableIfMissing(m, addedRuleSets);
+        }
+        if (from < 27) {
+          await _addColumnIfMissing(
+            m,
+            addedRuleSets,
+            addedRuleSets.cacheGeneration,
+          );
         }
       }),
       beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),
@@ -451,6 +464,36 @@ class Database extends _$Database {
     }
   }
 
+  /// Runs every guard [restore] runs and throws the same [StateError],
+  /// writing nothing. Live files a restore names may only be published once
+  /// this passes, with mount operations fenced until [restore] commits.
+  Future<void> checkRestore(
+    List<Profile> profiles,
+    List<Script> scripts,
+    List<Rule> rules,
+    List<DisabledRule> disabledRules,
+    List<ProxyGroup> proxyGroups, {
+    List<ClashProvider> clashProviders = const [],
+    List<CustomProxy> customProxies = const [],
+    List<ProxyDialer> proxyDialers = const [],
+    List<MitmModule> mitmModules = const [],
+    List<AddedRuleSet> addedRuleSets = const [],
+    bool isOverride = false,
+  }) => _restore(
+    profiles,
+    scripts,
+    rules,
+    disabledRules,
+    proxyGroups,
+    clashProviders: clashProviders,
+    customProxies: customProxies,
+    proxyDialers: proxyDialers,
+    mitmModules: mitmModules,
+    addedRuleSets: addedRuleSets,
+    isOverride: isOverride,
+    write: false,
+  );
+
   Future<void> restore(
     List<Profile> profiles,
     List<Script> scripts,
@@ -461,9 +504,39 @@ class Database extends _$Database {
     List<CustomProxy> customProxies = const [],
     List<ProxyDialer> proxyDialers = const [],
     List<MitmModule> mitmModules = const [],
+    List<AddedRuleSet> addedRuleSets = const [],
     bool isOverride = false,
+  }) => _restore(
+    profiles,
+    scripts,
+    rules,
+    disabledRules,
+    proxyGroups,
+    clashProviders: clashProviders,
+    customProxies: customProxies,
+    proxyDialers: proxyDialers,
+    mitmModules: mitmModules,
+    addedRuleSets: addedRuleSets,
+    isOverride: isOverride,
+    write: true,
+  );
+
+  Future<void> _restore(
+    List<Profile> profiles,
+    List<Script> scripts,
+    List<Rule> rules,
+    List<DisabledRule> disabledRules,
+    List<ProxyGroup> proxyGroups, {
+    required List<ClashProvider> clashProviders,
+    required List<CustomProxy> customProxies,
+    required List<ProxyDialer> proxyDialers,
+    required List<MitmModule> mitmModules,
+    required List<AddedRuleSet> addedRuleSets,
+    required bool isOverride,
+    required bool write,
   }) async {
-    if (profiles.isEmpty &&
+    final isEmpty =
+        profiles.isEmpty &&
         scripts.isEmpty &&
         rules.isEmpty &&
         disabledRules.isEmpty &&
@@ -471,16 +544,119 @@ class Database extends _$Database {
         clashProviders.isEmpty &&
         customProxies.isEmpty &&
         proxyDialers.isEmpty &&
-        mitmModules.isEmpty) {
-      return;
-    }
+        mitmModules.isEmpty &&
+        addedRuleSets.isEmpty;
     await transaction(() async {
+      // Even settings-only restores can change the active profile while an
+      // unresolved mount operation is still applying.
+      final mountStates = await mountsDao.targets();
+      if (mountStates.values.any((state) => state.pending != null)) {
+        throw StateError('Cannot restore while a mount operation is pending');
+      }
+      if (isEmpty) return;
+      if (!isOverride && addedRuleSets.isNotEmpty) {
+        final existing = await addedRuleSetsDao.queryAll().get();
+        final ids = {for (final set in existing) set.id: set};
+        final names = {
+          for (final set in existing) (set.profileId, set.name): set,
+        };
+        for (final set in addedRuleSets) {
+          final sameId = ids[set.id];
+          final sameName = names[(set.profileId, set.name)];
+          if ((sameId != null &&
+                  (sameId.profileId != set.profileId ||
+                      sameId.name != set.name)) ||
+              (sameName != null && sameName.id != set.id)) {
+            throw StateError(
+              'Conflicting added rule set in backup: ${set.name}',
+            );
+          }
+          ids[set.id] = set;
+          names[(set.profileId, set.name)] = set;
+        }
+      }
+      if (!isOverride) {
+        final existingSets = await addedRuleSetsDao.queryAll().get();
+        final existingById = {for (final set in existingSets) set.id: set};
+        final incomingById = {for (final set in addedRuleSets) set.id: set};
+        final existingRules = {
+          for (final row in await this.rules.all().get()) row.id: row.toRule(),
+        };
+        bool matchesPair(Rule rule, AddedRuleSet set) =>
+            rule.profileId == set.profileId &&
+            rule.ruleAction == RuleAction.RULE_SET &&
+            rule.ruleProvider == set.name;
+        // Legacy links can use a different rule ID. Name matches do not prove
+        // ownership, so never overwrite a potentially linked rule on merge.
+        for (final rule in rules) {
+          final old = existingRules[rule.id];
+          if (old == null) continue;
+          final oldLinks = existingSets.where((set) => matchesPair(old, set));
+          final newLinks = addedRuleSets.where((set) => matchesPair(rule, set));
+          if (oldLinks.any((set) => set.id != rule.id) ||
+              newLinks.any((set) => set.id != rule.id)) {
+            throw StateError(
+              'Ambiguous legacy rule link in backup: ${rule.id}',
+            );
+          }
+        }
+        for (final set in addedRuleSets) {
+          final oldRule = existingRules[set.id];
+          final oldSet = existingById[set.id];
+          if (oldRule != null &&
+              (oldSet == null || !matchesPair(oldRule, oldSet))) {
+            throw StateError('Conflicting rule ID in backup: ${set.id}');
+          }
+        }
+        for (final rule in rules) {
+          final oldSet = existingById[rule.id];
+          final newSet = incomingById[rule.id];
+          if ((oldSet != null &&
+                  (newSet == null || !matchesPair(rule, newSet))) ||
+              (newSet != null && !matchesPair(rule, newSet))) {
+            throw StateError(
+              'Conflicting added rule pair in backup: ${rule.id}',
+            );
+          }
+        }
+      }
+      // Restore has no mount journal. Never erase a version/operation guard:
+      // stale saves and in-flight applies could otherwise become current again.
+      final importedIds = profiles.map((p) => p.id).toSet();
+      if (isOverride) {
+        if (mountStates.isNotEmpty ||
+            await profileMounts.count.getSingle() != 0) {
+          throw StateError('Cannot override restore while mount guards exist');
+        }
+      } else {
+        for (final state in mountStates.values) {
+          if (importedIds.contains(state.targetId) ||
+              state.sourceIds.any(importedIds.contains)) {
+            throw StateError('Cannot merge profiles with mount guards');
+          }
+        }
+        // Also reject inconsistent orphan links lacking a target guard.
+        for (final id in importedIds) {
+          final links =
+              await (profileMounts.select()..where(
+                    (t) => t.targetId.equals(id) | t.sourceId.equals(id),
+                  ))
+                  .get();
+          if (links.isNotEmpty) {
+            throw StateError('Cannot merge profiles with mount links');
+          }
+        }
+      }
+      if (!write) return;
       // Backups taken while foreign keys were off may carry orphaned rows.
       await customStatement('PRAGMA defer_foreign_keys = ON');
-      // A backup carries no mounts; kept rows could bind reused profile ids.
-      await profileMounts.deleteAll();
-      await mountTargets.deleteAll();
-      await mountSourceStatuses.deleteAll();
+      if (isOverride) {
+        await mountSourceStatuses.deleteAll();
+      } else {
+        for (final id in importedIds) {
+          await mountSourceStatuses.remove((t) => t.sourceId.equals(id));
+        }
+      }
       await batch((b) {
         if (isOverride) {
           profilesDao.setAllWithBatch(b, profiles);
@@ -492,6 +668,7 @@ class Database extends _$Database {
           // Rewriting profiles or custom proxies cascades into these.
           proxyDialersDao.setAllWithBatch(b, proxyDialers);
           mitmModulesDao.setAllWithBatch(b, mitmModules);
+          addedRuleSetsDao.setAllWithBatch(b, addedRuleSets);
           return;
         }
         profilesDao.putAllWithBatch(
@@ -505,6 +682,7 @@ class Database extends _$Database {
         clashProvidersDao.putAllWithBatch(b, clashProviders);
         proxyDialersDao.putAllWithBatch(b, proxyDialers);
         mitmModulesDao.putAllWithBatch(b, mitmModules);
+        addedRuleSetsDao.putAllWithBatch(b, addedRuleSets);
       });
       await _purgeOrphans();
     });
@@ -527,6 +705,7 @@ class Database extends _$Database {
           t.profileId.isNotInQuery(profileIds) | t.ruleId.isNotInQuery(ruleIds),
     );
     await proxyGroups.remove((t) => t.profileId.isNotInQuery(profileIds));
+    await addedRuleSets.remove((t) => t.profileId.isNotInQuery(profileIds));
     await proxyDialers.remove(
       (t) =>
           t.profileId.isNotInQuery(profileIds) |

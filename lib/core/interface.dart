@@ -399,6 +399,23 @@ abstract class CoreHandlerInterface {
     }, arguments: {'name': name, 'url': url});
   }
 
+  /// Reads the rule set [name] of the provider cache as [compileRuleSet]
+  /// does, with the count of its entries.
+  Future<({RuleSetInfo info, int count})> inspectRuleSet(String name) {
+    return _query(CoreMethod.ruleSetCompile, (data) {
+      final info = _json(data);
+      return (
+        info: (
+          behavior: RuleProviderBehavior.values.byName(
+            info['behavior'] as String,
+          ),
+          format: RuleProviderFormat.values.byName(info['format'] as String),
+        ),
+        count: (info['count'] as num?)?.toInt() ?? 0,
+      );
+    }, arguments: {'name': name, 'url': ''});
+  }
+
   Future<void> updateGeoData(String type) {
     return _command(CoreMethod.geoUpdate, arguments: {'type': type});
   }
@@ -503,11 +520,26 @@ abstract class CoreHandlerInterface {
   /// Matches a host or IP against the running rules without connecting; with
   /// [RuleLookupParams.resolve] a name costs one query through the Core's
   /// resolver.
-  Future<RuleLookup> lookupRule(RuleLookupParams params) {
+  Future<RuleLookup> lookupRule(RuleLookupParams params, {Metadata? metadata}) {
+    final sourcePort = int.tryParse(metadata?.sourcePort ?? '');
     return _query(
       CoreMethod.ruleLookup,
       _model(RuleLookup.fromJson),
-      arguments: params.toJson(),
+      arguments: {
+        ...params.toJson(),
+        if (metadata != null) 'recordContext': true,
+        if (metadata?.process.isNotEmpty == true) 'process': metadata!.process,
+        if (metadata?.processPath.isNotEmpty == true)
+          'processPath': metadata!.processPath,
+        if (metadata?.sourceIP.isNotEmpty == true)
+          'sourceIP': metadata!.sourceIP,
+        if (metadata?.destinationIP.isNotEmpty == true)
+          'destinationIP': metadata!.destinationIP,
+        if (metadata != null && metadata.uid > 0 && metadata.uid <= 0xffffffff)
+          'uid': metadata.uid,
+        if (sourcePort != null && sourcePort > 0 && sourcePort <= 65535)
+          'sourcePort': sourcePort,
+      },
       timeout: coreGuardFor(5000),
     );
   }

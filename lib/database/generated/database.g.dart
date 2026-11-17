@@ -6151,6 +6151,526 @@ class MountSourceStatusesCompanion
   }
 }
 
+class $AddedRuleSetsTable extends AddedRuleSets
+    with TableInfo<$AddedRuleSetsTable, RawAddedRuleSet> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AddedRuleSetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cacheGenerationMeta = const VerificationMeta(
+    'cacheGeneration',
+  );
+  @override
+  late final GeneratedColumn<String> cacheGeneration = GeneratedColumn<String>(
+    'cache_generation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<RuleProviderBehavior, String>
+  behavior = GeneratedColumn<String>(
+    'behavior',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<RuleProviderBehavior>($AddedRuleSetsTable.$converterbehavior);
+  @override
+  late final GeneratedColumnWithTypeConverter<RuleProviderFormat, String>
+  format = GeneratedColumn<String>(
+    'format',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<RuleProviderFormat>($AddedRuleSetsTable.$converterformat);
+  static const VerificationMeta _intervalMeta = const VerificationMeta(
+    'interval',
+  );
+  @override
+  late final GeneratedColumn<int> interval = GeneratedColumn<int>(
+    'interval',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(defaultAddedRuleSetInterval),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    name,
+    url,
+    cacheGeneration,
+    behavior,
+    format,
+    interval,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'added_rule_sets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RawAddedRuleSet> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('url')) {
+      context.handle(
+        _urlMeta,
+        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_urlMeta);
+    }
+    if (data.containsKey('cache_generation')) {
+      context.handle(
+        _cacheGenerationMeta,
+        cacheGeneration.isAcceptableOrUnknown(
+          data['cache_generation']!,
+          _cacheGenerationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('interval')) {
+      context.handle(
+        _intervalMeta,
+        interval.isAcceptableOrUnknown(data['interval']!, _intervalMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {profileId, name},
+  ];
+  @override
+  RawAddedRuleSet map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RawAddedRuleSet(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      url: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url'],
+      )!,
+      cacheGeneration: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cache_generation'],
+      ),
+      behavior: $AddedRuleSetsTable.$converterbehavior.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}behavior'],
+        )!,
+      ),
+      format: $AddedRuleSetsTable.$converterformat.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}format'],
+        )!,
+      ),
+      interval: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}interval'],
+      )!,
+    );
+  }
+
+  @override
+  $AddedRuleSetsTable createAlias(String alias) {
+    return $AddedRuleSetsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<RuleProviderBehavior, String, String>
+  $converterbehavior = const EnumNameConverter<RuleProviderBehavior>(
+    RuleProviderBehavior.values,
+  );
+  static JsonTypeConverter2<RuleProviderFormat, String, String>
+  $converterformat = const EnumNameConverter<RuleProviderFormat>(
+    RuleProviderFormat.values,
+  );
+}
+
+class RawAddedRuleSet extends DataClass implements Insertable<RawAddedRuleSet> {
+  final int id;
+  final int profileId;
+  final String name;
+  final String url;
+  final String? cacheGeneration;
+  final RuleProviderBehavior behavior;
+  final RuleProviderFormat format;
+  final int interval;
+  const RawAddedRuleSet({
+    required this.id,
+    required this.profileId,
+    required this.name,
+    required this.url,
+    this.cacheGeneration,
+    required this.behavior,
+    required this.format,
+    required this.interval,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['name'] = Variable<String>(name);
+    map['url'] = Variable<String>(url);
+    if (!nullToAbsent || cacheGeneration != null) {
+      map['cache_generation'] = Variable<String>(cacheGeneration);
+    }
+    {
+      map['behavior'] = Variable<String>(
+        $AddedRuleSetsTable.$converterbehavior.toSql(behavior),
+      );
+    }
+    {
+      map['format'] = Variable<String>(
+        $AddedRuleSetsTable.$converterformat.toSql(format),
+      );
+    }
+    map['interval'] = Variable<int>(interval);
+    return map;
+  }
+
+  AddedRuleSetsCompanion toCompanion(bool nullToAbsent) {
+    return AddedRuleSetsCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      name: Value(name),
+      url: Value(url),
+      cacheGeneration: cacheGeneration == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cacheGeneration),
+      behavior: Value(behavior),
+      format: Value(format),
+      interval: Value(interval),
+    );
+  }
+
+  factory RawAddedRuleSet.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RawAddedRuleSet(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      name: serializer.fromJson<String>(json['name']),
+      url: serializer.fromJson<String>(json['url']),
+      cacheGeneration: serializer.fromJson<String?>(json['cacheGeneration']),
+      behavior: $AddedRuleSetsTable.$converterbehavior.fromJson(
+        serializer.fromJson<String>(json['behavior']),
+      ),
+      format: $AddedRuleSetsTable.$converterformat.fromJson(
+        serializer.fromJson<String>(json['format']),
+      ),
+      interval: serializer.fromJson<int>(json['interval']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'name': serializer.toJson<String>(name),
+      'url': serializer.toJson<String>(url),
+      'cacheGeneration': serializer.toJson<String?>(cacheGeneration),
+      'behavior': serializer.toJson<String>(
+        $AddedRuleSetsTable.$converterbehavior.toJson(behavior),
+      ),
+      'format': serializer.toJson<String>(
+        $AddedRuleSetsTable.$converterformat.toJson(format),
+      ),
+      'interval': serializer.toJson<int>(interval),
+    };
+  }
+
+  RawAddedRuleSet copyWith({
+    int? id,
+    int? profileId,
+    String? name,
+    String? url,
+    Value<String?> cacheGeneration = const Value.absent(),
+    RuleProviderBehavior? behavior,
+    RuleProviderFormat? format,
+    int? interval,
+  }) => RawAddedRuleSet(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    name: name ?? this.name,
+    url: url ?? this.url,
+    cacheGeneration: cacheGeneration.present
+        ? cacheGeneration.value
+        : this.cacheGeneration,
+    behavior: behavior ?? this.behavior,
+    format: format ?? this.format,
+    interval: interval ?? this.interval,
+  );
+  RawAddedRuleSet copyWithCompanion(AddedRuleSetsCompanion data) {
+    return RawAddedRuleSet(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      name: data.name.present ? data.name.value : this.name,
+      url: data.url.present ? data.url.value : this.url,
+      cacheGeneration: data.cacheGeneration.present
+          ? data.cacheGeneration.value
+          : this.cacheGeneration,
+      behavior: data.behavior.present ? data.behavior.value : this.behavior,
+      format: data.format.present ? data.format.value : this.format,
+      interval: data.interval.present ? data.interval.value : this.interval,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RawAddedRuleSet(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('name: $name, ')
+          ..write('url: $url, ')
+          ..write('cacheGeneration: $cacheGeneration, ')
+          ..write('behavior: $behavior, ')
+          ..write('format: $format, ')
+          ..write('interval: $interval')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    name,
+    url,
+    cacheGeneration,
+    behavior,
+    format,
+    interval,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RawAddedRuleSet &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.name == this.name &&
+          other.url == this.url &&
+          other.cacheGeneration == this.cacheGeneration &&
+          other.behavior == this.behavior &&
+          other.format == this.format &&
+          other.interval == this.interval);
+}
+
+class AddedRuleSetsCompanion extends UpdateCompanion<RawAddedRuleSet> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<String> name;
+  final Value<String> url;
+  final Value<String?> cacheGeneration;
+  final Value<RuleProviderBehavior> behavior;
+  final Value<RuleProviderFormat> format;
+  final Value<int> interval;
+  const AddedRuleSetsCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.url = const Value.absent(),
+    this.cacheGeneration = const Value.absent(),
+    this.behavior = const Value.absent(),
+    this.format = const Value.absent(),
+    this.interval = const Value.absent(),
+  });
+  AddedRuleSetsCompanion.insert({
+    this.id = const Value.absent(),
+    required int profileId,
+    required String name,
+    required String url,
+    this.cacheGeneration = const Value.absent(),
+    required RuleProviderBehavior behavior,
+    required RuleProviderFormat format,
+    this.interval = const Value.absent(),
+  }) : profileId = Value(profileId),
+       name = Value(name),
+       url = Value(url),
+       behavior = Value(behavior),
+       format = Value(format);
+  static Insertable<RawAddedRuleSet> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? name,
+    Expression<String>? url,
+    Expression<String>? cacheGeneration,
+    Expression<String>? behavior,
+    Expression<String>? format,
+    Expression<int>? interval,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (name != null) 'name': name,
+      if (url != null) 'url': url,
+      if (cacheGeneration != null) 'cache_generation': cacheGeneration,
+      if (behavior != null) 'behavior': behavior,
+      if (format != null) 'format': format,
+      if (interval != null) 'interval': interval,
+    });
+  }
+
+  AddedRuleSetsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<String>? name,
+    Value<String>? url,
+    Value<String?>? cacheGeneration,
+    Value<RuleProviderBehavior>? behavior,
+    Value<RuleProviderFormat>? format,
+    Value<int>? interval,
+  }) {
+    return AddedRuleSetsCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      name: name ?? this.name,
+      url: url ?? this.url,
+      cacheGeneration: cacheGeneration ?? this.cacheGeneration,
+      behavior: behavior ?? this.behavior,
+      format: format ?? this.format,
+      interval: interval ?? this.interval,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (cacheGeneration.present) {
+      map['cache_generation'] = Variable<String>(cacheGeneration.value);
+    }
+    if (behavior.present) {
+      map['behavior'] = Variable<String>(
+        $AddedRuleSetsTable.$converterbehavior.toSql(behavior.value),
+      );
+    }
+    if (format.present) {
+      map['format'] = Variable<String>(
+        $AddedRuleSetsTable.$converterformat.toSql(format.value),
+      );
+    }
+    if (interval.present) {
+      map['interval'] = Variable<int>(interval.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AddedRuleSetsCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('name: $name, ')
+          ..write('url: $url, ')
+          ..write('cacheGeneration: $cacheGeneration, ')
+          ..write('behavior: $behavior, ')
+          ..write('format: $format, ')
+          ..write('interval: $interval')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$Database extends GeneratedDatabase {
   _$Database(QueryExecutor e) : super(e);
   $DatabaseManager get managers => $DatabaseManager(this);
@@ -6170,6 +6690,7 @@ abstract class _$Database extends GeneratedDatabase {
   late final $MountTargetsTable mountTargets = $MountTargetsTable(this);
   late final $MountSourceStatusesTable mountSourceStatuses =
       $MountSourceStatusesTable(this);
+  late final $AddedRuleSetsTable addedRuleSets = $AddedRuleSetsTable(this);
   late final Index idxRuleTarget = Index(
     'idx_rule_target',
     'CREATE INDEX idx_rule_target ON rules (rule_target)',
@@ -6204,6 +6725,9 @@ abstract class _$Database extends GeneratedDatabase {
   late final IpQualitiesDao ipQualitiesDao = IpQualitiesDao(this as Database);
   late final MitmModulesDao mitmModulesDao = MitmModulesDao(this as Database);
   late final MountsDao mountsDao = MountsDao(this as Database);
+  late final AddedRuleSetsDao addedRuleSetsDao = AddedRuleSetsDao(
+    this as Database,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6224,6 +6748,7 @@ abstract class _$Database extends GeneratedDatabase {
     profileMounts,
     mountTargets,
     mountSourceStatuses,
+    addedRuleSets,
     idxRuleTarget,
     idxRulesProfileOrder,
     idxProxyGroupsProfileOrder,
@@ -6300,6 +6825,13 @@ abstract class _$Database extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('mount_source_statuses', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('added_rule_sets', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -6494,6 +7026,24 @@ final class $$ProfilesTableReferences
     final cache = $_typedResult.readTableOrNull(
       _mountSourceStatusesRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$AddedRuleSetsTable, List<RawAddedRuleSet>>
+  _addedRuleSetsRefsTable(_$Database db) => MultiTypedResultKey.fromTable(
+    db.addedRuleSets,
+    aliasName: 'profiles__id__added_rule_sets__profile_id',
+  );
+
+  $$AddedRuleSetsTableProcessedTableManager get addedRuleSetsRefs {
+    final manager = $$AddedRuleSetsTableTableManager(
+      $_db,
+      $_db.addedRuleSets,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_addedRuleSetsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -6794,6 +7344,31 @@ class $$ProfilesTableFilterComposer
           }) => $$MountSourceStatusesTableFilterComposer(
             $db: $db,
             $table: $db.mountSourceStatuses,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> addedRuleSetsRefs(
+    Expression<bool> Function($$AddedRuleSetsTableFilterComposer f) f,
+  ) {
+    final $$AddedRuleSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.addedRuleSets,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AddedRuleSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.addedRuleSets,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7179,6 +7754,31 @@ class $$ProfilesTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> addedRuleSetsRefs<T extends Object>(
+    Expression<T> Function($$AddedRuleSetsTableAnnotationComposer a) f,
+  ) {
+    final $$AddedRuleSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.addedRuleSets,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AddedRuleSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.addedRuleSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProfilesTableTableManager
@@ -7203,6 +7803,7 @@ class $$ProfilesTableTableManager
             bool mountsAsSource,
             bool mountTargetsRefs,
             bool mountSourceStatusesRefs,
+            bool addedRuleSetsRefs,
           })
         > {
   $$ProfilesTableTableManager(_$Database db, $ProfilesTable table)
@@ -7312,6 +7913,7 @@ class $$ProfilesTableTableManager
                 mountsAsSource = false,
                 mountTargetsRefs = false,
                 mountSourceStatusesRefs = false,
+                addedRuleSetsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -7324,6 +7926,7 @@ class $$ProfilesTableTableManager
                     if (mountsAsSource) db.profileMounts,
                     if (mountTargetsRefs) db.mountTargets,
                     if (mountSourceStatusesRefs) db.mountSourceStatuses,
+                    if (addedRuleSetsRefs) db.addedRuleSets,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -7496,6 +8099,27 @@ class $$ProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (addedRuleSetsRefs)
+                        await $_getPrefetchedData<
+                          RawProfile,
+                          $ProfilesTable,
+                          RawAddedRuleSet
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._addedRuleSetsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).addedRuleSetsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -7525,6 +8149,7 @@ typedef $$ProfilesTableProcessedTableManager =
         bool mountsAsSource,
         bool mountTargetsRefs,
         bool mountSourceStatusesRefs,
+        bool addedRuleSetsRefs,
       })
     >;
 typedef $$ScriptsTableCreateCompanionBuilder =
@@ -11717,6 +12342,386 @@ typedef $$MountSourceStatusesTableProcessedTableManager =
       MountSourceStatusRow,
       PrefetchHooks Function({bool sourceId})
     >;
+typedef $$AddedRuleSetsTableCreateCompanionBuilder =
+    AddedRuleSetsCompanion Function({
+      Value<int> id,
+      required int profileId,
+      required String name,
+      required String url,
+      Value<String?> cacheGeneration,
+      required RuleProviderBehavior behavior,
+      required RuleProviderFormat format,
+      Value<int> interval,
+    });
+typedef $$AddedRuleSetsTableUpdateCompanionBuilder =
+    AddedRuleSetsCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<String> name,
+      Value<String> url,
+      Value<String?> cacheGeneration,
+      Value<RuleProviderBehavior> behavior,
+      Value<RuleProviderFormat> format,
+      Value<int> interval,
+    });
+
+final class $$AddedRuleSetsTableReferences
+    extends BaseReferences<_$Database, $AddedRuleSetsTable, RawAddedRuleSet> {
+  $$AddedRuleSetsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ProfilesTable _profileIdTable(_$Database db) =>
+      db.profiles.createAlias('added_rule_sets__profile_id__profiles__id');
+
+  $$ProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AddedRuleSetsTableFilterComposer
+    extends Composer<_$Database, $AddedRuleSetsTable> {
+  $$AddedRuleSetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cacheGeneration => $composableBuilder(
+    column: $table.cacheGeneration,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<
+    RuleProviderBehavior,
+    RuleProviderBehavior,
+    String
+  >
+  get behavior => $composableBuilder(
+    column: $table.behavior,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<RuleProviderFormat, RuleProviderFormat, String>
+  get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<int> get interval => $composableBuilder(
+    column: $table.interval,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get profileId {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AddedRuleSetsTableOrderingComposer
+    extends Composer<_$Database, $AddedRuleSetsTable> {
+  $$AddedRuleSetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cacheGeneration => $composableBuilder(
+    column: $table.cacheGeneration,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get behavior => $composableBuilder(
+    column: $table.behavior,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get interval => $composableBuilder(
+    column: $table.interval,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get profileId {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AddedRuleSetsTableAnnotationComposer
+    extends Composer<_$Database, $AddedRuleSetsTable> {
+  $$AddedRuleSetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<String> get cacheGeneration => $composableBuilder(
+    column: $table.cacheGeneration,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<RuleProviderBehavior, String> get behavior =>
+      $composableBuilder(column: $table.behavior, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<RuleProviderFormat, String> get format =>
+      $composableBuilder(column: $table.format, builder: (column) => column);
+
+  GeneratedColumn<int> get interval =>
+      $composableBuilder(column: $table.interval, builder: (column) => column);
+
+  $$ProfilesTableAnnotationComposer get profileId {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AddedRuleSetsTableTableManager
+    extends
+        RootTableManager<
+          _$Database,
+          $AddedRuleSetsTable,
+          RawAddedRuleSet,
+          $$AddedRuleSetsTableFilterComposer,
+          $$AddedRuleSetsTableOrderingComposer,
+          $$AddedRuleSetsTableAnnotationComposer,
+          $$AddedRuleSetsTableCreateCompanionBuilder,
+          $$AddedRuleSetsTableUpdateCompanionBuilder,
+          (RawAddedRuleSet, $$AddedRuleSetsTableReferences),
+          RawAddedRuleSet,
+          PrefetchHooks Function({bool profileId})
+        > {
+  $$AddedRuleSetsTableTableManager(_$Database db, $AddedRuleSetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AddedRuleSetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AddedRuleSetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AddedRuleSetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> url = const Value.absent(),
+                Value<String?> cacheGeneration = const Value.absent(),
+                Value<RuleProviderBehavior> behavior = const Value.absent(),
+                Value<RuleProviderFormat> format = const Value.absent(),
+                Value<int> interval = const Value.absent(),
+              }) => AddedRuleSetsCompanion(
+                id: id,
+                profileId: profileId,
+                name: name,
+                url: url,
+                cacheGeneration: cacheGeneration,
+                behavior: behavior,
+                format: format,
+                interval: interval,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int profileId,
+                required String name,
+                required String url,
+                Value<String?> cacheGeneration = const Value.absent(),
+                required RuleProviderBehavior behavior,
+                required RuleProviderFormat format,
+                Value<int> interval = const Value.absent(),
+              }) => AddedRuleSetsCompanion.insert(
+                id: id,
+                profileId: profileId,
+                name: name,
+                url: url,
+                cacheGeneration: cacheGeneration,
+                behavior: behavior,
+                format: format,
+                interval: interval,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AddedRuleSetsTable, RawAddedRuleSet>(table),
+                  $$AddedRuleSetsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$AddedRuleSetsTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$AddedRuleSetsTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AddedRuleSetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$Database,
+      $AddedRuleSetsTable,
+      RawAddedRuleSet,
+      $$AddedRuleSetsTableFilterComposer,
+      $$AddedRuleSetsTableOrderingComposer,
+      $$AddedRuleSetsTableAnnotationComposer,
+      $$AddedRuleSetsTableCreateCompanionBuilder,
+      $$AddedRuleSetsTableUpdateCompanionBuilder,
+      (RawAddedRuleSet, $$AddedRuleSetsTableReferences),
+      RawAddedRuleSet,
+      PrefetchHooks Function({bool profileId})
+    >;
 
 class $DatabaseManager {
   final _$Database _db;
@@ -11751,6 +12756,8 @@ class $DatabaseManager {
       $$MountTargetsTableTableManager(_db, _db.mountTargets);
   $$MountSourceStatusesTableTableManager get mountSourceStatuses =>
       $$MountSourceStatusesTableTableManager(_db, _db.mountSourceStatuses);
+  $$AddedRuleSetsTableTableManager get addedRuleSets =>
+      $$AddedRuleSetsTableTableManager(_db, _db.addedRuleSets);
 }
 
 mixin _$ProfilesDaoMixin on DatabaseAccessor<Database> {
@@ -11926,4 +12933,22 @@ class MountsDaoManager {
         _db.attachedDatabase,
         _db.mountSourceStatuses,
       );
+}
+
+mixin _$AddedRuleSetsDaoMixin on DatabaseAccessor<Database> {
+  $ProfilesTable get profiles => attachedDatabase.profiles;
+  $AddedRuleSetsTable get addedRuleSets => attachedDatabase.addedRuleSets;
+  $RulesTable get rules => attachedDatabase.rules;
+  AddedRuleSetsDaoManager get managers => AddedRuleSetsDaoManager(this);
+}
+
+class AddedRuleSetsDaoManager {
+  final _$AddedRuleSetsDaoMixin _db;
+  AddedRuleSetsDaoManager(this._db);
+  $$ProfilesTableTableManager get profiles =>
+      $$ProfilesTableTableManager(_db.attachedDatabase, _db.profiles);
+  $$AddedRuleSetsTableTableManager get addedRuleSets =>
+      $$AddedRuleSetsTableTableManager(_db.attachedDatabase, _db.addedRuleSets);
+  $$RulesTableTableManager get rules =>
+      $$RulesTableTableManager(_db.attachedDatabase, _db.rules);
 }

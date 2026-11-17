@@ -275,6 +275,7 @@ typedef RulesLookupAsk = ({
   String host,
   String rule,
   String rulePayload,
+  Metadata? metadata,
   int serial,
 });
 
@@ -290,11 +291,17 @@ class RulesLookupRequest extends _$RulesLookupRequest
 
   /// Opens the rules page on [host], compared with the rule a connection
   /// took when [rule] is given.
-  void ask(String host, {String rule = '', String rulePayload = ''}) {
+  void ask(
+    String host, {
+    String rule = '',
+    String rulePayload = '',
+    Metadata? metadata,
+  }) {
     value = (
       host: host,
       rule: rule,
       rulePayload: rulePayload,
+      metadata: metadata,
       serial: ++_serial,
     );
     ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.rules);

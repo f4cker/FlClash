@@ -891,6 +891,9 @@ class SetupAction extends _$SetupAction {
         );
   }
 
+  Future<T> runRestoreBeforeApply<T>(Future<T> Function() task) =>
+      _setupScheduler.run(task);
+
   // Failed builds and cancelled reviews never reach the Core setup step.
   Future<bool> applyProfile({
     bool silence = false,
@@ -1050,6 +1053,7 @@ class SetupAction extends _$SetupAction {
         proxyGroups: proxyGroups,
         injectedProxyProviders: injected.proxies,
         injectedRuleProviders: injected.rules,
+        addedRuleSets: setupState.addedRuleSets,
         profilesPath: directory,
         profileId: profileId,
         rawConfig: rawConfig,

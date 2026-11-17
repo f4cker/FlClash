@@ -15,9 +15,16 @@ import (
 )
 
 type RuleLookupParams struct {
-	Host    string `json:"host"`
-	Port    uint16 `json:"port,omitempty"`
-	Network string `json:"network,omitempty"`
+	Host          string  `json:"host"`
+	Port          uint16  `json:"port,omitempty"`
+	Network       string  `json:"network,omitempty"`
+	Process       string  `json:"process,omitempty"`
+	ProcessPath   string  `json:"processPath,omitempty"`
+	SourceIP      string  `json:"sourceIP,omitempty"`
+	DestinationIP string  `json:"destinationIP,omitempty"`
+	RecordContext bool    `json:"recordContext,omitempty"`
+	UID           *uint32 `json:"uid,omitempty"`
+	SourcePort    uint16  `json:"sourcePort,omitempty"`
 	// Nil resolves: one query through the Core's own resolver, as a rule
 	// needing the address would make for a real connection.
 	Resolve *bool `json:"resolve,omitempty"`
@@ -87,6 +94,7 @@ type ruleLookup struct {
 	resolveErr   string
 	portKnown    bool
 	networkKnown bool
+	uidKnown     bool
 	neededIP     bool
 	neededProc   bool
 	ruleSets     map[string]bool
@@ -115,7 +123,7 @@ func (l *ruleLookup) helper() C.RuleMatchHelper {
 			l.ipSource = "dns"
 		},
 		FindProcess: func() {
-			l.neededProc = true
+			l.neededProc = l.metadata.Process == "" || l.metadata.ProcessPath == ""
 		},
 		CheckPassRule: func(adapterName string) bool {
 			adapter, ok := l.state.Proxies[adapterName]
@@ -136,12 +144,23 @@ func (l *ruleLookup) helper() C.RuleMatchHelper {
 // where, and through which inbound.
 func (l *ruleLookup) runtimeReason(rule C.Rule) string {
 	switch rule.RuleType() {
-	case C.ProcessName, C.ProcessPath, C.ProcessNameRegex, C.ProcessPathRegex,
-		C.ProcessNameWildcard, C.ProcessPathWildcard:
-		return "process"
+	case C.ProcessName, C.ProcessNameRegex, C.ProcessNameWildcard:
+		if l.metadata.Process == "" {
+			return "process"
+		}
+	case C.ProcessPath, C.ProcessPathRegex, C.ProcessPathWildcard:
+		if l.metadata.ProcessPath == "" {
+			return "process"
+		}
 	case C.Uid:
-		return "uid"
-	case C.SrcPort, C.InPort:
+		if !l.uidKnown {
+			return "uid"
+		}
+	case C.SrcPort:
+		if l.metadata.SrcPort == 0 {
+			return "port"
+		}
+	case C.InPort:
 		return "port"
 	case C.DstPort:
 		if !l.portKnown {
@@ -156,7 +175,9 @@ func (l *ruleLookup) runtimeReason(rule C.Rule) string {
 	case C.DSCP:
 		return "dscp"
 	case C.SrcGEOIP, C.SrcIPASN, C.SrcIPCIDR, C.SrcIPSuffix:
-		return "source"
+		if !l.metadata.SrcIP.IsValid() {
+			return "source"
+		}
 	case C.RematchName:
 		return "rematch"
 	}
@@ -180,6 +201,9 @@ func (l *ruleLookup) eval(rule C.Rule, helper C.RuleMatchHelper) evaluation {
 	}
 	l.neededIP, l.neededProc = false, false
 	matched, adapter := rule.Match(l.metadata, helper)
+	if rule.RuleType() == C.Uid && l.uidKnown {
+		l.neededProc = false
+	}
 	switch {
 	case l.neededProc:
 		return evaluation{verdict: verdictUnknown, adapter: rule.Adapter(), reason: "process", detail: rule.Payload()}
@@ -385,10 +409,19 @@ func lookupMetadata(params RuleLookupParams) (*C.Metadata, error) {
 		NetWork: C.TCP,
 		// Not INNER: rules and process lookup treat the Core's own
 		// connections apart, and this stands for an app's.
-		Type:    C.HTTP,
-		DNSMode: C.DNSNormal,
-		Host:    strings.TrimSuffix(strings.ToLower(host), "."),
-		DstPort: params.Port,
+		Type:        C.HTTP,
+		DNSMode:     C.DNSNormal,
+		Host:        strings.TrimSuffix(strings.ToLower(host), "."),
+		DstPort:     params.Port,
+		Process:     params.Process,
+		ProcessPath: params.ProcessPath,
+		SrcPort:     params.SourcePort,
+	}
+	if params.UID != nil {
+		metadata.Uid = *params.UID
+	}
+	if ip, err := netip.ParseAddr(params.SourceIP); err == nil {
+		metadata.SrcIP = ip.Unmap()
 	}
 	if strings.EqualFold(params.Network, "udp") {
 		metadata.NetWork = C.UDP
@@ -412,9 +445,10 @@ func handleLookupRule(params RuleLookupParams) (*RuleLookup, error) {
 	lookup := &ruleLookup{
 		state:        state,
 		metadata:     metadata,
-		resolve:      params.Resolve == nil || *params.Resolve,
+		resolve:      !params.RecordContext && (params.Resolve == nil || *params.Resolve),
 		portKnown:    params.Port != 0,
-		networkKnown: params.Network != "",
+		networkKnown: strings.EqualFold(params.Network, "tcp") || strings.EqualFold(params.Network, "udp"),
+		uidKnown:     params.UID != nil,
 		ruleSets:     map[string]bool{},
 	}
 	inputIP := false
@@ -430,7 +464,19 @@ func handleLookupRule(params RuleLookupParams) (*RuleLookup, error) {
 	case inputIP:
 		lookup.ipSource = "input"
 	}
-	if metadata.Host != "" {
+	recordedIP, recordedErr := netip.ParseAddr(params.DestinationIP)
+	fakeRecorded := recordedErr == nil && resolver.IsFakeIP(recordedIP)
+	if recordedErr == nil && !fakeRecorded {
+		metadata.DstIP = recordedIP.Unmap()
+		lookup.resolved = true
+		lookup.ipSource = "recorded"
+	} else if fakeRecorded {
+		// A fake address is not the destination IP used for IP rules, and
+		// today's DNS answer is not evidence of the historical one.
+		metadata.DstIP = netip.Addr{}
+		lookup.resolve = false
+	}
+	if metadata.Host != "" && recordedErr != nil && !params.RecordContext {
 		if node, ok := resolver.DefaultHosts.Search(metadata.Host, false); ok {
 			metadata.DstIP, _ = node.RandIP()
 			lookup.resolved = true

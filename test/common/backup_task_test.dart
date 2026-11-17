@@ -42,6 +42,23 @@ void main() {
     ..createSync(recursive: true)
     ..writeAsStringSync(content);
 
+  test(
+    'archive entries follow the database snapshot, not later edits',
+    () async {
+      final live = db.Database(NativeDatabase.memory());
+      addTearDown(live.close);
+      const first = Profile(id: 101, autoUpdateDuration: Duration.zero);
+      const second = Profile(id: 102, autoUpdateDuration: Duration.zero);
+      await live.profilesDao.putAll([first.toCompanion()]);
+      final snapshot = join(makeDir('snapshot').path, 'snapshot.sqlite');
+      await live.customStatement('VACUUM INTO ?', [snapshot]);
+      await live.profilesDao.putAll([second.toCompanion()]);
+      final entries = await BackupEntries.ofDatabaseSnapshot(snapshot);
+      expect(entries, contains(BackupEntries.profile(101)));
+      expect(entries, isNot(contains(BackupEntries.profile(102))));
+    },
+  );
+
   group('shakeOrphanFiles', () {
     test('reports only the files whose name is not a live id', () {
       final profiles = makeDir('profiles');
@@ -538,6 +555,16 @@ void main() {
         profileId: 1,
       );
       await database.clashProvidersDao.putAll([localProvider.toCompanion()]);
+      await database.addedRuleSetsDao.put(
+        const AddedRuleSet(
+          id: 5,
+          profileId: 1,
+          name: 'ads',
+          url: 'https://x.test/ads.yaml',
+          cacheGeneration: '0123456789abcdef0123456789abcdef',
+        ),
+        const Rule(id: 6, ruleTarget: 'REJECT', order: 'b'),
+      );
       await database.close();
     }
 
@@ -608,6 +635,71 @@ void main() {
       });
     });
 
+    test(
+      'legacy differing IDs survive backup restore into a reopened database',
+      () async {
+        await seedDatabase();
+        const savedSet = AddedRuleSet(
+          id: 5,
+          profileId: 1,
+          name: 'ads',
+          url: 'https://x.test/ads.yaml',
+          cacheGeneration: '0123456789abcdef0123456789abcdef',
+        );
+        final originalCache = File(
+          savedSet.pathUnder(join(home.path, 'profiles')),
+        );
+        await originalCache.parent.create(recursive: true);
+        await originalCache.writeAsString('payload: [example.com]');
+        final archive = await backup();
+        final data = await restore(archive);
+        expect(await originalCache.readAsString(), 'payload: [example.com]');
+        final path = join(root.path, 'restored.sqlite');
+        var restored = db.Database(NativeDatabase(File(path)));
+        await restored.restore(
+          data.profiles,
+          data.scripts,
+          data.rules,
+          data.disabledRules,
+          data.proxyGroups,
+          clashProviders: data.clashProviders,
+          customProxies: data.customProxies,
+          proxyDialers: data.proxyDialers,
+          mitmModules: data.mitmModules,
+          addedRuleSets: data.addedRuleSets,
+        );
+        await restored.close();
+        restored = db.Database(NativeDatabase(File(path)));
+        final sets = await restored.addedRuleSetsDao.query(1).get();
+        final rules = await restored.rulesDao.queryAddedRules(1).get();
+        expect(sets.single.id, 5);
+        expect(sets.single.cacheGeneration, '0123456789abcdef0123456789abcdef');
+        expect(
+          sets.single.pathUnder(staging.path),
+          data.addedRuleSets.single.pathUnder(staging.path),
+        );
+        expect(
+          await File(sets.single.pathUnder(staging.path)).exists(),
+          isFalse,
+        );
+        expect(
+          sets.single.definition(sets.single.pathUnder(staging.path))['url'],
+          'https://x.test/ads.yaml',
+        );
+        expect(
+          sets.single.definition(sets.single.pathUnder(staging.path))['type'],
+          'http',
+        );
+        expect(rules.singleWhere((r) => r.ruleProvider == 'ads').id, 6);
+        await expectLater(
+          restored.addedRuleSetsDao.remove(sets.single),
+          throwsStateError,
+        );
+        expect(await restored.addedRuleSetsDao.query(1).get(), sets);
+        await restored.close();
+      },
+    );
+
     test('restoring returns the rows and stages the files', () async {
       await seedDatabase();
       writeFile(join(home.path, 'profiles', '1.yaml'), 'proxies: []');
@@ -622,8 +714,12 @@ void main() {
 
       expect(data.profiles.single.label, 'Backed up');
       expect(data.scripts.single.label, 'Script');
-      expect(data.rules.single.content, 'example.com');
-      expect(data.rules.single.profileId, 1);
+      expect(data.rules.map((rule) => rule.id), [3, 6]);
+      expect(data.rules.first.content, 'example.com');
+      expect(data.rules.first.profileId, 1);
+      expect(data.rules.last.ruleProvider, 'ads');
+      expect(data.addedRuleSets.single.name, 'ads');
+      expect(data.addedRuleSets.single.profileId, 1);
       expect(data.clashProviders.single.label, 'Local rules');
       expect(data.configMap?['version'], 1);
       expect(

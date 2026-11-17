@@ -1939,6 +1939,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get restoreAllData => 'Восстановить все данные';
 
   @override
+  String get restoreRuleSetDownloadNotice =>
+      'Резервная копия сохраняет настройки наборов правил. После восстановления подключитесь к интернету, чтобы скачать их заново; при обычном перезапуске или переключении профиля повторная загрузка не требуется.';
+
+  @override
   String get addProfile => 'Добавить профиль';
 
   @override
@@ -6413,4 +6417,394 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get addedRulesReloadTimeout =>
+      'Ядро не перезагрузилось за 15 секунд; изменение отменено.';
+
+  @override
+  String get addedRulesReloadFailed =>
+      'Ядро не приняло новую конфигурацию; изменение отменено.';
+
+  @override
+  String get addedRuleSetLoadFailed =>
+      'Не удалось скачать набор правил; изменение отменено.';
+
+  @override
+  String get addedRuleSetLoadTimeout =>
+      'Набор правил не скачался за 15 секунд; изменение отменено.';
+
+  @override
+  String get ruleDeleteTitle => 'Удалить это правило?';
+
+  @override
+  String ruleSetDeleteTitle(String name) {
+    return 'Удалить набор правил «$name»?';
+  }
+
+  @override
+  String ruleDeleteBody(String text) {
+    return '$text\nИзменение вступит в силу сразу.';
+  }
+
+  @override
+  String ruleDuplicate(int number, String group) {
+    return 'Это правило уже существует (№ $number), через $group.';
+  }
+
+  @override
+  String get ruleUpdateGroup => 'Обновить группу';
+
+  @override
+  String get ruleEditAddTitle => 'Добавить правило';
+
+  @override
+  String get ruleEditTitle => 'Изменить добавленное правило';
+
+  @override
+  String get ruleSetAddTitle => 'Добавить набор правил';
+
+  @override
+  String get ruleSetEditTitle => 'Изменить добавленный набор правил';
+
+  @override
+  String get ruleEditCoreStopped => 'Вступит в силу после запуска ядра';
+
+  @override
+  String ruleEditPosition(int number) {
+    return '№ $number · Добавленное правило';
+  }
+
+  @override
+  String ruleSetEditPosition(int number) {
+    return '№ $number · Добавленный набор правил';
+  }
+
+  @override
+  String get ruleEditSaving => 'Сохранение…';
+
+  @override
+  String get ruleTypeLabel => 'Тип';
+
+  @override
+  String get ruleTypeMore => 'Ещё';
+
+  @override
+  String get ruleTypeDomainSuffix => 'Суффикс домена';
+
+  @override
+  String get ruleTypeDomain => 'Полный домен';
+
+  @override
+  String get ruleTypeKeyword => 'Ключевое слово домена';
+
+  @override
+  String get ruleTypeIpCidr => 'Диапазон IP';
+
+  @override
+  String get ruleTypeIpCidr6 => 'Диапазон IPv6';
+
+  @override
+  String get ruleTypeDstPort => 'Порт назначения';
+
+  @override
+  String get ruleTypeProcessName => 'Имя процесса';
+
+  @override
+  String get ruleTypeSrcIpCidr => 'Диапазон IP источника';
+
+  @override
+  String get ruleValueKeyword => 'Ключевое слово';
+
+  @override
+  String get ruleHelpDomainSuffix =>
+      'Соответствует example.com и всем его поддоменам. Можно вставить ссылку.';
+
+  @override
+  String get ruleHelpDomain =>
+      'Соответствует только этому домену, но не его поддоменам. Можно вставить ссылку.';
+
+  @override
+  String get ruleHelpKeyword =>
+      'Соответствует любому домену, содержащему этот текст.';
+
+  @override
+  String get ruleHelpIpCidr =>
+      'Например, 10.0.0.0/8; отдельный адрес станет /32.';
+
+  @override
+  String get ruleHelpIpCidr6 =>
+      'Например, 2001:db8::/32; отдельный адрес станет /128.';
+
+  @override
+  String get ruleHelpSrcIpCidr =>
+      'Диапазон устройств, от которых исходят подключения.';
+
+  @override
+  String get ruleHelpPort => 'Например, 443 или диапазон 8000-9000.';
+
+  @override
+  String get ruleHelpProcess =>
+      'Имя процесса приложения или программы, например Safari или curl.';
+
+  @override
+  String get ruleValueEmpty => 'Введите значение';
+
+  @override
+  String get ruleValueComma => 'Запятая недопустима';
+
+  @override
+  String get ruleValueDomain => 'Недопустимый домен';
+
+  @override
+  String get ruleValueCidr => 'Недопустимый диапазон IP';
+
+  @override
+  String get ruleValueNetwork => 'Укажите tcp или udp';
+
+  @override
+  String get ruleValueNumberRange => 'Недопустимое число или диапазон';
+
+  @override
+  String get ruleValueDscp => 'DSCP принимает значения от 0 до 63';
+
+  @override
+  String get ruleValuePickCode => 'Выберите код';
+
+  @override
+  String get ruleValuePickProcess => 'Выберите из запущенных приложений';
+
+  @override
+  String get ruleValueNoProcesses =>
+      'За последнее время приложения не зарегистрированы';
+
+  @override
+  String get rulePositionLabel => 'Позиция';
+
+  @override
+  String get rulePositionFirst => 'В начале добавленных правил';
+
+  @override
+  String get rulePositionLast => 'В конце добавленных правил';
+
+  @override
+  String get ruleSetUrlLabel => 'URL';
+
+  @override
+  String get ruleSetUrlHelp =>
+      'Вставьте ссылку на набор правил; Flash скачает его и проверит содержимое.';
+
+  @override
+  String get ruleSetUrlInvalid => 'Только ссылки http или https';
+
+  @override
+  String get ruleSetChecking => 'Загрузка и проверка…';
+
+  @override
+  String ruleSetCheckOk(String kind, String format, String count) {
+    return 'Скачано: правила $kind, формат $format, записей: $count';
+  }
+
+  @override
+  String ruleSetCheckOkUncounted(String format) {
+    return 'Скачано: формат $format; записи будут подсчитаны после запуска ядра';
+  }
+
+  @override
+  String get ruleSetCheckNotFound => 'Не найдено (404)';
+
+  @override
+  String get ruleSetCheckTimeout => 'Время загрузки истекло';
+
+  @override
+  String ruleSetCheckNetwork(String reason) {
+    return 'Ошибка загрузки: $reason';
+  }
+
+  @override
+  String get ruleSetCheckNotRuleSet => 'Содержимое не является набором правил';
+
+  @override
+  String get ruleSetCheckUnknown => 'Не удалось распознать формат';
+
+  @override
+  String get ruleSetNameLabel => 'Название';
+
+  @override
+  String get ruleSetNameTaken =>
+      'Набор правил с таким названием уже существует';
+
+  @override
+  String get ruleSetNameInvalid =>
+      'Название не может содержать запятые или пробелы по краям';
+
+  @override
+  String get ruleSetBehaviorLabel => 'Содержимое';
+
+  @override
+  String get ruleSetBehaviorDomain => 'Домены';
+
+  @override
+  String get ruleSetBehaviorIpcidr => 'Диапазоны IP';
+
+  @override
+  String get ruleSetBehaviorClassical => 'Смешанные правила';
+
+  @override
+  String get ruleSetBehaviorDetected =>
+      'Выбрано на основе загруженного содержимого.';
+
+  @override
+  String get ruleSetBehaviorMismatch =>
+      'Отличается от загруженного содержимого; набор может не совпадать.';
+
+  @override
+  String get ruleSetMrsNeedsKind =>
+      'MRS содержит только домены или диапазоны IP';
+
+  @override
+  String get ruleSetFormatText => 'Текст';
+
+  @override
+  String get ruleSetIntervalLabel => 'Автообновление';
+
+  @override
+  String get ruleSetEvery6Hours => 'Каждые 6 часов';
+
+  @override
+  String get ruleSetDaily => 'Каждый день';
+
+  @override
+  String get ruleSetWeekly => 'Каждую неделю';
+
+  @override
+  String get ruleSetNeverUpdate => 'Никогда';
+
+  @override
+  String ruleSetEverySeconds(int seconds) {
+    return 'Каждые $seconds с';
+  }
+
+  @override
+  String get ruleSetUpdateNow => 'Обновить сейчас';
+
+  @override
+  String get ruleSetRefreshed => 'Обновление запущено.';
+
+  @override
+  String get rulesAddTooltip => 'Добавить';
+
+  @override
+  String get rulesAddSemantics => 'Добавить правило или набор правил';
+
+  @override
+  String get rulesAddRuleMenu => 'Добавить правило';
+
+  @override
+  String get rulesAddSetMenu => 'Добавить набор правил';
+
+  @override
+  String get rulesAddedDivider =>
+      'Правила ниже взяты из профиля и скриптов и доступны здесь только для просмотра';
+
+  @override
+  String get ruleSourceAddedSet => 'Добавленный набор правил';
+
+  @override
+  String get ruleEditMenu => 'Изменить…';
+
+  @override
+  String get ruleMoveUp => 'Переместить вверх';
+
+  @override
+  String get ruleMoveDown => 'Переместить вниз';
+
+  @override
+  String ruleEditSemantics(int number) {
+    return 'Изменить правило $number';
+  }
+
+  @override
+  String ruleDeleteSemantics(int number) {
+    return 'Удалить правило $number';
+  }
+
+  @override
+  String ruleAddedBanner(String text) {
+    return 'Правило «$text» добавлено и действует.';
+  }
+
+  @override
+  String ruleSavedBanner(String text) {
+    return 'Правило «$text» сохранено и действует.';
+  }
+
+  @override
+  String ruleSetAddedBanner(String name) {
+    return 'Набор правил «$name» добавлен и действует.';
+  }
+
+  @override
+  String ruleSetSavedBanner(String name) {
+    return 'Набор правил «$name» сохранён и действует.';
+  }
+
+  @override
+  String get ruleDeletedBanner => 'Удалено.';
+
+  @override
+  String get ruleSavedPendingBanner =>
+      'Сохранено; вступит в силу после запуска ядра.';
+
+  @override
+  String get ruleBannerLookup => 'Проверить URL';
+
+  @override
+  String ruleMoveFailed(String reason) {
+    return 'Не удалось переместить правило: $reason';
+  }
+
+  @override
+  String processHelperLabel(Object name) {
+    return '$name · Помощник';
+  }
+
+  @override
+  String processCoreLabel(Object name) {
+    return '$name · Ядро';
+  }
+
+  @override
+  String get processHelperTag => 'Помощник';
+
+  @override
+  String get processCoreTag => 'Ядро';
+
+  @override
+  String get addedRulesRollbackReloadFailed =>
+      'Изменения отменены, но восстановить активную конфигурацию не удалось. Повторно примените профиль.';
+
+  @override
+  String get addedRulesRollbackConflict =>
+      'Некоторые изменения сохранены, поскольку другой редактор изменил набор правил. Проверьте правило и провайдера перед использованием профиля.';
+
+  @override
+  String get addedRulesRollbackReloadTimeout =>
+      'Восстановление активной конфигурации занимает слишком много времени. Её состояние неизвестно; изменение добавленных правил приостановлено до завершения.';
+
+  @override
+  String get addedRulesStaleEdit =>
+      'Это правило или набор правил был изменён в другом месте. Откройте его заново и повторите попытку.';
+
+  @override
+  String get addedRulesApplyPending =>
+      'Применение правил занимает больше времени и ещё продолжается. Пожалуйста, подождите.';
+
+  @override
+  String get addedRulesApplyRestored =>
+      'Обработка завершена, исходные правила восстановлены.';
+
+  @override
+  String get addedRulesApplyRestoreFailed =>
+      'Обработка завершена, но исходные правила восстановить не удалось. Проверьте текущие правила.';
 }

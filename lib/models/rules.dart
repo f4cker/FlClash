@@ -220,6 +220,10 @@ abstract class RuleSource with _$RuleSource {
     required RuleSourceKind kind,
     @Default('') String name,
     @Default('') String text,
+
+    /// The stored rule the line was written from, for one the rules page
+    /// may edit: an added rule, or a custom profile's own.
+    int? ruleId,
   }) = _RuleSource;
 }
 

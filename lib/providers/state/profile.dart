@@ -106,11 +106,13 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
   List<Rule> rules = [];
   List<Rule> addedRules = [];
   List<ClashProvider> clashProviders = [];
+  List<AddedRuleSet> addedRuleSets = [];
   Map<String, int> profileProviders = const {};
   List<CustomProxy> appProxies = [];
   Map<int, String> proxyDialers = const {};
   Script? script;
   if (profileId != null) {
+    addedRuleSets = await database.addedRuleSetsDao.query(profileId).get();
     if (profileType == ProfileType.custom) {
       rules = await database.rulesDao.queryProfileRules(profileId).get();
       proxyGroups = await database.proxyGroupsDao.query(profileId).get();
@@ -150,6 +152,7 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
     profileLastUpdateDate: profileLastUpdateDate,
     profileType: profileType,
     addedRules: addedRules,
+    addedRuleSets: addedRuleSets,
     script: script,
     overrides: overrides,
     matchTarget: profileType != ProfileType.custom

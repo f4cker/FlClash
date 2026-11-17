@@ -44,6 +44,9 @@ final _app = _info(
     sourcePort: '51234',
   ),
 );
+final _core = _info(
+  const Metadata(process: 'core-abc', processPath: '/core-fixture'),
+);
 final _cli = _info(
   const Metadata(
     process: 'ssh',
@@ -102,6 +105,16 @@ void main() {
             name: 'Example Browser',
             bundlePath: '/Applications/Example Browser.app',
             icon: _pixel,
+            isHelper: true,
+          ),
+        ),
+        '/core-fixture': AppLookup.app(
+          MacApp(
+            bundleId: 'com.layoute.flash',
+            name: 'Flash',
+            bundlePath: '/Applications/Flash.app',
+            icon: _pixel,
+            isCore: true,
           ),
         ),
         '/usr/bin/ssh': AppLookup.none,
@@ -119,6 +132,7 @@ void main() {
             bundlePath: '/Applications/Example.app',
             icon: _pixel,
             launchdLabel: 'com.example.daemon',
+            isHelper: true,
           ),
         ),
       },
@@ -154,12 +168,49 @@ void main() {
           child: TrackerInfoItem(trackerInfo: _app, detailTitle: 'detail'),
         ),
       );
-      expect(find.text('Example Browser  ·  127.0.0.1:51234'), findsOneWidget);
+      expect(
+        find.text('Example Browser · Helper  ·  127.0.0.1:51234'),
+        findsOneWidget,
+      );
       expect(find.byType(Image), findsOneWidget);
       await tester.tap(find.byType(ProcessFilterIcon));
       expect(filters, const [
         RecordFilter(RecordFacetKind.app, 'app:com.example.browser'),
       ]);
+    });
+
+    testWidgets('helper and core rows show badges and attributed names', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        Column(
+          children: [
+            TrackerInfoItem(trackerInfo: _app, detailTitle: 'detail'),
+            TrackerInfoItem(trackerInfo: _core, detailTitle: 'detail'),
+          ],
+        ),
+      );
+      expect(
+        find.byKey(const ValueKey('process-kind-badge')),
+        findsNWidgets(2),
+      );
+      expect(find.textContaining('Example Browser · Helper'), findsOneWidget);
+      expect(find.textContaining('Flash · Core'), findsOneWidget);
+    });
+
+    testWidgets('table omits helper and core badges', (tester) async {
+      await pump(
+        tester,
+        Column(
+          children: [
+            ProcessCell(metadata: _app.metadata),
+            ProcessCell(metadata: _core.metadata),
+          ],
+        ),
+      );
+      expect(find.byKey(const ValueKey('process-kind-badge')), findsNothing);
+      expect(find.text('Flash · Core'), findsOneWidget);
     });
 
     testWidgets('a command-line tool shows its name and a glyph', (
@@ -249,7 +300,7 @@ void main() {
       expect(find.byType(ProcessIcon), findsOneWidget);
     });
 
-    testWidgets('an unnamed process shows the Mac generic app icon', (
+    testWidgets('CLI and unknown processes do not use the generic app icon', (
       tester,
     ) async {
       processApps.dispose();
@@ -274,8 +325,8 @@ void main() {
       );
       await tester.pump();
       expect(find.text('ssh  ·  127.0.0.1:50022'), findsOneWidget);
-      expect(find.byType(Image), findsNWidgets(2));
-      expect(reads, 1);
+      expect(find.byType(Image), findsNothing);
+      expect(reads, 0);
     });
   });
 
@@ -284,7 +335,7 @@ void main() {
       tester,
     ) async {
       await pump(tester, ProcessCell(metadata: _app.metadata));
-      expect(find.text('Example Browser'), findsOneWidget);
+      expect(find.text('Example Browser · Helper'), findsOneWidget);
       expect(find.byType(Image), findsOneWidget);
       final tooltip = tester.widget<Tooltip>(find.byType(Tooltip));
       expect(tooltip.message, 'Example Browser Helper\n$_chromePath');
@@ -301,7 +352,7 @@ void main() {
 
     testWidgets('an unknown process lines up with named ones', (tester) async {
       await pump(tester, ProcessCell(metadata: _app.metadata));
-      final named = tester.getTopLeft(find.text('Example Browser')).dx;
+      final named = tester.getTopLeft(find.text('Example Browser · Helper')).dx;
       await pump(tester, ProcessCell(metadata: _unknown.metadata));
       expect(find.text('Unknown process'), findsOneWidget);
       expect(find.byType(Tooltip), findsNothing);

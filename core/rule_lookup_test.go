@@ -468,3 +468,54 @@ func TestRuleMethodsWaitForTheCore(t *testing.T) {
 		t.Errorf("list before init = %v", err)
 	}
 }
+
+func TestRuleLookupRecordMetadata(t *testing.T) {
+	world := newRuleWorld(t, "Proxy")
+	world.apply(t, "PROCESS-NAME,browser,Proxy", "SRC-PORT,51234,REJECT", "SRC-IP-CIDR,192.0.2.0/24,Proxy", "MATCH,DIRECT")
+	resolve := false
+	params := RuleLookupParams{Host: "example.test", Resolve: &resolve, Port: 443, Network: "tcp", Process: "browser", ProcessPath: "/app/browser", SourceIP: "192.0.2.5", SourcePort: 51234}
+	result, err := handleLookupRule(params)
+	if err != nil || winnerIndex(result) != 0 || len(result.Uncertain) != 0 {
+		t.Fatalf("request lookup = %+v, %v", result, err)
+	}
+	params.Process = "other"
+	result, err = handleLookupRule(params)
+	if err != nil || winnerIndex(result) != 1 {
+		t.Fatalf("source port = %+v, %v", result, err)
+	}
+	params.SourcePort = 1
+	result, err = handleLookupRule(params)
+	if err != nil || winnerIndex(result) != 2 {
+		t.Fatalf("source IP = %+v, %v", result, err)
+	}
+	params.SourceIP = "bad ip"
+	params.Process = ""
+	params.ProcessPath = ""
+	params.SourcePort = 0
+	result, err = handleLookupRule(params)
+	if err != nil || len(result.Uncertain) != 3 {
+		t.Fatalf("missing source context = %+v, %v", result, err)
+	}
+}
+
+func TestRuleLookupRecordedDestinationAndUID(t *testing.T) {
+	world := newRuleWorld(t, "Proxy")
+	world.apply(t, "IP-CIDR,192.0.2.0/24,REJECT", "MATCH,DIRECT")
+	withHosts(t, "example.test", "203.0.113.9")
+	uid := uint32(501)
+	params := RuleLookupParams{Host: "example.test", RecordContext: true, DestinationIP: "192.0.2.7", UID: &uid}
+	meta, err := lookupMetadata(params)
+	if err != nil || meta.Uid != 501 {
+		t.Fatalf("recorded uid: %+v, %v", meta, err)
+	}
+	result, err := handleLookupRule(params)
+	if err != nil || winnerIndex(result) != 0 || result.IP != "192.0.2.7" || result.IPSource != "recorded" {
+		t.Fatalf("recorded ip: %+v, %v", result, err)
+	}
+	params.UID = nil
+	params.DestinationIP = ""
+	result, err = handleLookupRule(params)
+	if err != nil || result.ResolveWanted || len(result.Uncertain) == 0 {
+		t.Fatalf("missing historical context: %+v, %v", result, err)
+	}
+}

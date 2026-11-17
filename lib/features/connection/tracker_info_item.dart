@@ -64,6 +64,7 @@ void lookUpTrackerRule(BuildContext context, TrackerInfo trackerInfo) {
         trackerLookupHost(trackerInfo),
         rule: trackerInfo.rule,
         rulePayload: trackerInfo.rulePayload,
+        metadata: trackerInfo.metadata,
       );
 }
 
@@ -489,7 +490,6 @@ class TrackerInfoDetailView extends ConsumerWidget {
               if (process == null)
                 (appLocalizations.process, trackerInfo.progressText),
             ]),
-            if (process != null) ...processDetailRows(context, process),
             _buildRule(context),
             ..._buildRows([
               (appLocalizations.upload, trackerInfo.upload.traffic.show),
@@ -497,6 +497,11 @@ class TrackerInfoDetailView extends ConsumerWidget {
             ]),
           ],
         ),
+        if (process != null)
+          generateSection(
+            title: appLocalizations.source,
+            items: processDetailRows(context, process),
+          ),
         generateSection(
           title: appLocalizations.address,
           items: _buildRows([

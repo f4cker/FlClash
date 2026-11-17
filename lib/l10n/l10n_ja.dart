@@ -1855,6 +1855,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreAllData => 'すべてのデータを復元';
 
   @override
+  String get restoreRuleSetDownloadNotice =>
+      'バックアップにはルールセットの設定が保存されます。復元後はインターネットに接続してルールセットを再ダウンロードする必要があります。通常の再起動やプロファイルの切り替えでは再ダウンロードは不要です。';
+
+  @override
   String get addProfile => 'プロファイルを追加';
 
   @override
@@ -6248,4 +6252,375 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get addedRulesReloadTimeout => 'コアの再読み込みが15秒以内に完了しなかったため、変更を元に戻しました。';
+
+  @override
+  String get addedRulesReloadFailed => 'コアが新しい設定を受け入れなかったため、変更を元に戻しました。';
+
+  @override
+  String get addedRuleSetLoadFailed => 'ルールセットをダウンロードできなかったため、変更を元に戻しました。';
+
+  @override
+  String get addedRuleSetLoadTimeout =>
+      'ルールセットのダウンロードが15秒以内に完了しなかったため、変更を元に戻しました。';
+
+  @override
+  String get ruleDeleteTitle => 'このルールを削除しますか？';
+
+  @override
+  String ruleSetDeleteTitle(String name) {
+    return 'ルールセット「$name」を削除しますか？';
+  }
+
+  @override
+  String ruleDeleteBody(String text) {
+    return '$text\n変更はすぐに反映されます。';
+  }
+
+  @override
+  String ruleDuplicate(int number, String group) {
+    return 'このルールは$group経由ですでに存在します（$number番）。';
+  }
+
+  @override
+  String get ruleUpdateGroup => 'グループを更新';
+
+  @override
+  String get ruleEditAddTitle => 'ルールを追加';
+
+  @override
+  String get ruleEditTitle => '追加したルールを編集';
+
+  @override
+  String get ruleSetAddTitle => 'ルールセットを追加';
+
+  @override
+  String get ruleSetEditTitle => '追加したルールセットを編集';
+
+  @override
+  String get ruleEditCoreStopped => 'コアの起動後に反映されます';
+
+  @override
+  String ruleEditPosition(int number) {
+    return '$number番 · 追加したルール';
+  }
+
+  @override
+  String ruleSetEditPosition(int number) {
+    return '$number番 · 追加したルールセット';
+  }
+
+  @override
+  String get ruleEditSaving => '保存中…';
+
+  @override
+  String get ruleTypeLabel => '種類';
+
+  @override
+  String get ruleTypeMore => 'その他';
+
+  @override
+  String get ruleTypeDomainSuffix => 'ドメインのサフィックス';
+
+  @override
+  String get ruleTypeDomain => '完全なドメイン';
+
+  @override
+  String get ruleTypeKeyword => 'ドメインのキーワード';
+
+  @override
+  String get ruleTypeIpCidr => 'IP範囲';
+
+  @override
+  String get ruleTypeIpCidr6 => 'IPv6範囲';
+
+  @override
+  String get ruleTypeDstPort => '宛先ポート';
+
+  @override
+  String get ruleTypeProcessName => 'プロセス名';
+
+  @override
+  String get ruleTypeSrcIpCidr => '送信元IP範囲';
+
+  @override
+  String get ruleValueKeyword => 'キーワード';
+
+  @override
+  String get ruleHelpDomainSuffix =>
+      'example.comとそのすべてのサブドメインに一致します。リンクを貼り付けることもできます。';
+
+  @override
+  String get ruleHelpDomain => 'このドメインのみに一致し、サブドメインには一致しません。リンクを貼り付けることもできます。';
+
+  @override
+  String get ruleHelpKeyword => 'このテキストを含むすべてのドメインに一致します。';
+
+  @override
+  String get ruleHelpIpCidr => '例：10.0.0.0/8。単一アドレスは/32になります。';
+
+  @override
+  String get ruleHelpIpCidr6 => '例：2001:db8::/32。単一アドレスは/128になります。';
+
+  @override
+  String get ruleHelpSrcIpCidr => '接続元のデバイスの範囲です。';
+
+  @override
+  String get ruleHelpPort => '例：443、または8000-9000のような範囲。';
+
+  @override
+  String get ruleHelpProcess => 'Safariやcurlなど、アプリやプログラムのプロセス名です。';
+
+  @override
+  String get ruleValueEmpty => '値を入力してください';
+
+  @override
+  String get ruleValueComma => 'カンマは使用できません';
+
+  @override
+  String get ruleValueDomain => '有効なドメインではありません';
+
+  @override
+  String get ruleValueCidr => '有効なIP範囲ではありません';
+
+  @override
+  String get ruleValueNetwork => 'tcpまたはudpを指定してください';
+
+  @override
+  String get ruleValueNumberRange => '有効な数値または範囲ではありません';
+
+  @override
+  String get ruleValueDscp => 'DSCPは0〜63で指定してください';
+
+  @override
+  String get ruleValuePickCode => 'コードを選択してください';
+
+  @override
+  String get ruleValuePickProcess => '実行中のアプリから選択してください';
+
+  @override
+  String get ruleValueNoProcesses => '最近記録されたアプリはありません';
+
+  @override
+  String get rulePositionLabel => '位置';
+
+  @override
+  String get rulePositionFirst => '追加したルールの先頭';
+
+  @override
+  String get rulePositionLast => '追加したルールの末尾';
+
+  @override
+  String get ruleSetUrlLabel => 'URL';
+
+  @override
+  String get ruleSetUrlHelp => 'ルールセットのリンクを貼り付けると、Flashがダウンロードして内容を確認します。';
+
+  @override
+  String get ruleSetUrlInvalid => 'httpまたはhttpsのリンクのみ使用できます';
+
+  @override
+  String get ruleSetChecking => 'ダウンロードして確認中…';
+
+  @override
+  String ruleSetCheckOk(String kind, String format, String count) {
+    return 'ダウンロード済み：$kindルール、$format形式、$count件';
+  }
+
+  @override
+  String ruleSetCheckOkUncounted(String format) {
+    return 'ダウンロード済み：$format形式。件数はコアの起動後に数えられます';
+  }
+
+  @override
+  String get ruleSetCheckNotFound => '見つかりません（404）';
+
+  @override
+  String get ruleSetCheckTimeout => 'ダウンロードがタイムアウトしました';
+
+  @override
+  String ruleSetCheckNetwork(String reason) {
+    return 'ダウンロードに失敗しました：$reason';
+  }
+
+  @override
+  String get ruleSetCheckNotRuleSet => '内容がルールセットではありません';
+
+  @override
+  String get ruleSetCheckUnknown => '形式を認識できません';
+
+  @override
+  String get ruleSetNameLabel => '名前';
+
+  @override
+  String get ruleSetNameTaken => '同じ名前のルールセットがすでに存在します';
+
+  @override
+  String get ruleSetNameInvalid => '名前にカンマや前後の空白は使用できません';
+
+  @override
+  String get ruleSetBehaviorLabel => '内容';
+
+  @override
+  String get ruleSetBehaviorDomain => 'ドメイン';
+
+  @override
+  String get ruleSetBehaviorIpcidr => 'IP範囲';
+
+  @override
+  String get ruleSetBehaviorClassical => '混合ルール';
+
+  @override
+  String get ruleSetBehaviorDetected => 'ダウンロードした内容から選択しました。';
+
+  @override
+  String get ruleSetBehaviorMismatch =>
+      'ダウンロードした内容と異なるため、ルールセットが一致しない可能性があります。';
+
+  @override
+  String get ruleSetMrsNeedsKind => 'MRSにはドメインまたはIP範囲のみ含められます';
+
+  @override
+  String get ruleSetFormatText => 'テキスト';
+
+  @override
+  String get ruleSetIntervalLabel => '自動更新';
+
+  @override
+  String get ruleSetEvery6Hours => '6時間ごと';
+
+  @override
+  String get ruleSetDaily => '毎日';
+
+  @override
+  String get ruleSetWeekly => '毎週';
+
+  @override
+  String get ruleSetNeverUpdate => '更新しない';
+
+  @override
+  String ruleSetEverySeconds(int seconds) {
+    return '$seconds秒ごと';
+  }
+
+  @override
+  String get ruleSetUpdateNow => '今すぐ更新';
+
+  @override
+  String get ruleSetRefreshed => '更新を開始しました。';
+
+  @override
+  String get rulesAddTooltip => '追加';
+
+  @override
+  String get rulesAddSemantics => 'ルールまたはルールセットを追加';
+
+  @override
+  String get rulesAddRuleMenu => 'ルールを追加';
+
+  @override
+  String get rulesAddSetMenu => 'ルールセットを追加';
+
+  @override
+  String get rulesAddedDivider => '以下のルールはプロファイルとスクリプトから取得され、ここでは閲覧のみ可能です';
+
+  @override
+  String get ruleSourceAddedSet => '追加したルールセット';
+
+  @override
+  String get ruleEditMenu => '編集…';
+
+  @override
+  String get ruleMoveUp => '上に移動';
+
+  @override
+  String get ruleMoveDown => '下に移動';
+
+  @override
+  String ruleEditSemantics(int number) {
+    return 'ルール$numberを編集';
+  }
+
+  @override
+  String ruleDeleteSemantics(int number) {
+    return 'ルール$numberを削除';
+  }
+
+  @override
+  String ruleAddedBanner(String text) {
+    return 'ルール「$text」を追加し、適用しました。';
+  }
+
+  @override
+  String ruleSavedBanner(String text) {
+    return 'ルール「$text」を保存し、適用しました。';
+  }
+
+  @override
+  String ruleSetAddedBanner(String name) {
+    return 'ルールセット「$name」を追加し、適用しました。';
+  }
+
+  @override
+  String ruleSetSavedBanner(String name) {
+    return 'ルールセット「$name」を保存し、適用しました。';
+  }
+
+  @override
+  String get ruleDeletedBanner => '削除しました。';
+
+  @override
+  String get ruleSavedPendingBanner => '保存しました。コアの起動後に反映されます。';
+
+  @override
+  String get ruleBannerLookup => 'URLを照会';
+
+  @override
+  String ruleMoveFailed(String reason) {
+    return 'ルールを移動できませんでした：$reason';
+  }
+
+  @override
+  String processHelperLabel(Object name) {
+    return '$name · ヘルパー';
+  }
+
+  @override
+  String processCoreLabel(Object name) {
+    return '$name · コア';
+  }
+
+  @override
+  String get processHelperTag => 'ヘルパー';
+
+  @override
+  String get processCoreTag => 'コア';
+
+  @override
+  String get addedRulesRollbackReloadFailed =>
+      '変更は元に戻されましたが、実行中の設定の復元に失敗しました。プロファイルを再適用してください。';
+
+  @override
+  String get addedRulesRollbackConflict =>
+      '再読み込み中に別の編集でルールセットが変更されたため、一部の変更を保持しました。プロファイルを使用する前にルールとプロバイダーを確認してください。';
+
+  @override
+  String get addedRulesRollbackReloadTimeout =>
+      '実行中の設定の復元に時間がかかっています。状態は不確かです。完了するまで追加ルールの変更を一時停止します。';
+
+  @override
+  String get addedRulesStaleEdit =>
+      'このルールまたはルールセットは別の場所で変更されました。開き直してから再試行してください。';
+
+  @override
+  String get addedRulesApplyPending => 'ルールの適用に時間がかかっています。処理中ですので、しばらくお待ちください。';
+
+  @override
+  String get addedRulesApplyRestored => '処理が完了し、元のルールを復元しました。';
+
+  @override
+  String get addedRulesApplyRestoreFailed =>
+      '処理は完了しましたが、元のルールを復元できませんでした。現在のルールを確認してください。';
 }

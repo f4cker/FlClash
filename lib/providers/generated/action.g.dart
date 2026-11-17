@@ -91,7 +91,7 @@ final class SetupActionProvider extends $NotifierProvider<SetupAction, void> {
   }
 }
 
-String _$setupActionHash() => r'44da72fc3427105eccf231a0ea526f0921c5cb92';
+String _$setupActionHash() => r'53556a90ec79c43c5e7ab039a515b8ff15507bfa';
 
 abstract class _$SetupAction extends $Notifier<void> {
   void build();
@@ -142,7 +142,7 @@ final class BackupActionProvider extends $NotifierProvider<BackupAction, void> {
   }
 }
 
-String _$backupActionHash() => r'99b508bc48b5717dd2bf7f5da189f81944f37643';
+String _$backupActionHash() => r'1cf03d335dfb40ab8dbdbb6d52dd2843c10b8395';
 
 abstract class _$BackupAction extends $Notifier<void> {
   void build();
@@ -610,6 +610,80 @@ String _$clashProvidersActionHash() =>
     r'03877ca6677f0ee8ae7bb59408433a1d83916487';
 
 abstract class _$ClashProvidersAction extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Adds, edits, moves and removes the rules page's added rules and rule
+/// sets. Each belongs to the profile it was added to and is written before
+/// the profile's own rules; a custom profile takes them into its own rules.
+/// A change counts once the Core reloads with it, and is undone when it
+/// does not.
+
+@ProviderFor(AddedRulesAction)
+final addedRulesActionProvider = AddedRulesActionProvider._();
+
+/// Adds, edits, moves and removes the rules page's added rules and rule
+/// sets. Each belongs to the profile it was added to and is written before
+/// the profile's own rules; a custom profile takes them into its own rules.
+/// A change counts once the Core reloads with it, and is undone when it
+/// does not.
+final class AddedRulesActionProvider
+    extends $NotifierProvider<AddedRulesAction, void> {
+  /// Adds, edits, moves and removes the rules page's added rules and rule
+  /// sets. Each belongs to the profile it was added to and is written before
+  /// the profile's own rules; a custom profile takes them into its own rules.
+  /// A change counts once the Core reloads with it, and is undone when it
+  /// does not.
+  AddedRulesActionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'addedRulesActionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$addedRulesActionHash();
+
+  @$internal
+  @override
+  AddedRulesAction create() => AddedRulesAction();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$addedRulesActionHash() => r'6f6c2618f56e4525fbd7eb62e4856007855f6c46';
+
+/// Adds, edits, moves and removes the rules page's added rules and rule
+/// sets. Each belongs to the profile it was added to and is written before
+/// the profile's own rules; a custom profile takes them into its own rules.
+/// A change counts once the Core reloads with it, and is undone when it
+/// does not.
+
+abstract class _$AddedRulesAction extends $Notifier<void> {
   void build();
   @$mustCallSuper
   @override

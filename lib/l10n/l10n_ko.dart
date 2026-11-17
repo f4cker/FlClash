@@ -1902,6 +1902,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restoreAllData => '모든 데이터 복원';
 
   @override
+  String get restoreRuleSetDownloadNotice =>
+      '백업에는 규칙 세트 설정이 저장됩니다. 복원 후에는 인터넷에 연결하여 규칙 세트를 다시 다운로드해야 합니다. 일반적인 재시작이나 프로필 전환 시에는 다시 다운로드할 필요가 없습니다.';
+
+  @override
   String get addProfile => '프로필 추가';
 
   @override
@@ -6320,4 +6324,376 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get addedRulesReloadTimeout => '코어가 15초 안에 다시 로드를 완료하지 못해 변경을 되돌렸습니다.';
+
+  @override
+  String get addedRulesReloadFailed => '코어가 새 구성을 적용하지 못해 변경을 되돌렸습니다.';
+
+  @override
+  String get addedRuleSetLoadFailed => '규칙 세트를 다운로드하지 못해 변경을 되돌렸습니다.';
+
+  @override
+  String get addedRuleSetLoadTimeout =>
+      '규칙 세트 다운로드가 15초 안에 완료되지 않아 변경을 되돌렸습니다.';
+
+  @override
+  String get ruleDeleteTitle => '이 규칙을 삭제할까요?';
+
+  @override
+  String ruleSetDeleteTitle(String name) {
+    return '규칙 세트 “$name”을(를) 삭제할까요?';
+  }
+
+  @override
+  String ruleDeleteBody(String text) {
+    return '$text\n즉시 적용됩니다.';
+  }
+
+  @override
+  String ruleDuplicate(int number, String group) {
+    return '이 규칙은 이미 $group을(를) 통해 존재합니다(번호 $number).';
+  }
+
+  @override
+  String get ruleUpdateGroup => '그룹 업데이트';
+
+  @override
+  String get ruleEditAddTitle => '규칙 추가';
+
+  @override
+  String get ruleEditTitle => '추가한 규칙 편집';
+
+  @override
+  String get ruleSetAddTitle => '규칙 세트 추가';
+
+  @override
+  String get ruleSetEditTitle => '추가한 규칙 세트 편집';
+
+  @override
+  String get ruleEditCoreStopped => '코어가 시작되면 적용됩니다';
+
+  @override
+  String ruleEditPosition(int number) {
+    return '번호 $number · 추가한 규칙';
+  }
+
+  @override
+  String ruleSetEditPosition(int number) {
+    return '번호 $number · 추가한 규칙 세트';
+  }
+
+  @override
+  String get ruleEditSaving => '저장 중…';
+
+  @override
+  String get ruleTypeLabel => '유형';
+
+  @override
+  String get ruleTypeMore => '더 보기';
+
+  @override
+  String get ruleTypeDomainSuffix => '도메인 접미사';
+
+  @override
+  String get ruleTypeDomain => '전체 도메인';
+
+  @override
+  String get ruleTypeKeyword => '도메인 키워드';
+
+  @override
+  String get ruleTypeIpCidr => 'IP 범위';
+
+  @override
+  String get ruleTypeIpCidr6 => 'IPv6 범위';
+
+  @override
+  String get ruleTypeDstPort => '대상 포트';
+
+  @override
+  String get ruleTypeProcessName => '프로세스 이름';
+
+  @override
+  String get ruleTypeSrcIpCidr => '출발지 IP 범위';
+
+  @override
+  String get ruleValueKeyword => '키워드';
+
+  @override
+  String get ruleHelpDomainSuffix =>
+      'example.com과 모든 하위 도메인에 일치합니다. 링크를 붙여넣을 수 있습니다.';
+
+  @override
+  String get ruleHelpDomain =>
+      '이 도메인에만 일치하며 하위 도메인에는 일치하지 않습니다. 링크를 붙여넣을 수 있습니다.';
+
+  @override
+  String get ruleHelpKeyword => '이 텍스트가 포함된 모든 도메인에 일치합니다.';
+
+  @override
+  String get ruleHelpIpCidr => '예: 10.0.0.0/8. 단일 주소는 /32가 됩니다.';
+
+  @override
+  String get ruleHelpIpCidr6 => '예: 2001:db8::/32. 단일 주소는 /128이 됩니다.';
+
+  @override
+  String get ruleHelpSrcIpCidr => '연결을 시작한 기기의 범위입니다.';
+
+  @override
+  String get ruleHelpPort => '예: 443 또는 8000-9000과 같은 범위.';
+
+  @override
+  String get ruleHelpProcess => 'Safari나 curl과 같은 앱 또는 프로그램의 프로세스 이름입니다.';
+
+  @override
+  String get ruleValueEmpty => '값을 입력하세요';
+
+  @override
+  String get ruleValueComma => '쉼표를 포함할 수 없습니다';
+
+  @override
+  String get ruleValueDomain => '유효한 도메인이 아닙니다';
+
+  @override
+  String get ruleValueCidr => '유효한 IP 범위가 아닙니다';
+
+  @override
+  String get ruleValueNetwork => 'tcp 또는 udp여야 합니다';
+
+  @override
+  String get ruleValueNumberRange => '유효한 숫자 또는 범위가 아닙니다';
+
+  @override
+  String get ruleValueDscp => 'DSCP는 0부터 63까지 입력하세요';
+
+  @override
+  String get ruleValuePickCode => '코드를 선택하세요';
+
+  @override
+  String get ruleValuePickProcess => '실행 중인 앱에서 선택하세요';
+
+  @override
+  String get ruleValueNoProcesses => '최근에 기록된 앱이 없습니다';
+
+  @override
+  String get rulePositionLabel => '위치';
+
+  @override
+  String get rulePositionFirst => '추가한 규칙의 맨 앞';
+
+  @override
+  String get rulePositionLast => '추가한 규칙의 맨 뒤';
+
+  @override
+  String get ruleSetUrlLabel => 'URL';
+
+  @override
+  String get ruleSetUrlHelp => '규칙 세트 링크를 붙여넣으면 Flash가 다운로드하여 내용을 확인합니다.';
+
+  @override
+  String get ruleSetUrlInvalid => 'http 또는 https 링크만 허용됩니다';
+
+  @override
+  String get ruleSetChecking => '다운로드 및 확인 중…';
+
+  @override
+  String ruleSetCheckOk(String kind, String format, String count) {
+    return '다운로드 완료: $kind 규칙, $format 형식, $count개 항목';
+  }
+
+  @override
+  String ruleSetCheckOkUncounted(String format) {
+    return '다운로드 완료: $format 형식. 항목 수는 코어가 시작되면 집계됩니다';
+  }
+
+  @override
+  String get ruleSetCheckNotFound => '찾을 수 없음 (404)';
+
+  @override
+  String get ruleSetCheckTimeout => '다운로드 시간이 초과되었습니다';
+
+  @override
+  String ruleSetCheckNetwork(String reason) {
+    return '다운로드 실패: $reason';
+  }
+
+  @override
+  String get ruleSetCheckNotRuleSet => '내용이 규칙 세트가 아닙니다';
+
+  @override
+  String get ruleSetCheckUnknown => '형식을 인식할 수 없습니다';
+
+  @override
+  String get ruleSetNameLabel => '이름';
+
+  @override
+  String get ruleSetNameTaken => '같은 이름의 규칙 세트가 이미 있습니다';
+
+  @override
+  String get ruleSetNameInvalid => '이름에 쉼표나 앞뒤 공백을 사용할 수 없습니다';
+
+  @override
+  String get ruleSetBehaviorLabel => '내용';
+
+  @override
+  String get ruleSetBehaviorDomain => '도메인';
+
+  @override
+  String get ruleSetBehaviorIpcidr => 'IP 범위';
+
+  @override
+  String get ruleSetBehaviorClassical => '혼합 규칙';
+
+  @override
+  String get ruleSetBehaviorDetected => '다운로드한 내용을 기준으로 선택했습니다.';
+
+  @override
+  String get ruleSetBehaviorMismatch => '다운로드한 내용과 달라 세트가 일치하지 않을 수 있습니다.';
+
+  @override
+  String get ruleSetMrsNeedsKind => 'MRS에는 도메인 또는 IP 범위만 포함할 수 있습니다';
+
+  @override
+  String get ruleSetFormatText => '텍스트';
+
+  @override
+  String get ruleSetIntervalLabel => '자동 업데이트';
+
+  @override
+  String get ruleSetEvery6Hours => '6시간마다';
+
+  @override
+  String get ruleSetDaily => '매일';
+
+  @override
+  String get ruleSetWeekly => '매주';
+
+  @override
+  String get ruleSetNeverUpdate => '안 함';
+
+  @override
+  String ruleSetEverySeconds(int seconds) {
+    return '$seconds초마다';
+  }
+
+  @override
+  String get ruleSetUpdateNow => '지금 업데이트';
+
+  @override
+  String get ruleSetRefreshed => '업데이트를 시작했습니다.';
+
+  @override
+  String get rulesAddTooltip => '추가';
+
+  @override
+  String get rulesAddSemantics => '규칙 또는 규칙 세트 추가';
+
+  @override
+  String get rulesAddRuleMenu => '규칙 추가';
+
+  @override
+  String get rulesAddSetMenu => '규칙 세트 추가';
+
+  @override
+  String get rulesAddedDivider => '아래 규칙은 프로필과 스크립트에서 가져왔으며 여기서는 보기만 할 수 있습니다';
+
+  @override
+  String get ruleSourceAddedSet => '추가한 규칙 세트';
+
+  @override
+  String get ruleEditMenu => '편집…';
+
+  @override
+  String get ruleMoveUp => '위로 이동';
+
+  @override
+  String get ruleMoveDown => '아래로 이동';
+
+  @override
+  String ruleEditSemantics(int number) {
+    return '규칙 $number 편집';
+  }
+
+  @override
+  String ruleDeleteSemantics(int number) {
+    return '규칙 $number 삭제';
+  }
+
+  @override
+  String ruleAddedBanner(String text) {
+    return '규칙 “$text”을(를) 추가하고 적용했습니다.';
+  }
+
+  @override
+  String ruleSavedBanner(String text) {
+    return '규칙 “$text”을(를) 저장하고 적용했습니다.';
+  }
+
+  @override
+  String ruleSetAddedBanner(String name) {
+    return '규칙 세트 “$name”을(를) 추가하고 적용했습니다.';
+  }
+
+  @override
+  String ruleSetSavedBanner(String name) {
+    return '규칙 세트 “$name”을(를) 저장하고 적용했습니다.';
+  }
+
+  @override
+  String get ruleDeletedBanner => '삭제했습니다.';
+
+  @override
+  String get ruleSavedPendingBanner => '저장했습니다. 코어가 시작되면 적용됩니다.';
+
+  @override
+  String get ruleBannerLookup => 'URL 조회';
+
+  @override
+  String ruleMoveFailed(String reason) {
+    return '규칙을 이동할 수 없습니다: $reason';
+  }
+
+  @override
+  String processHelperLabel(Object name) {
+    return '$name · 도우미';
+  }
+
+  @override
+  String processCoreLabel(Object name) {
+    return '$name · 코어';
+  }
+
+  @override
+  String get processHelperTag => '도우미';
+
+  @override
+  String get processCoreTag => '코어';
+
+  @override
+  String get addedRulesRollbackReloadFailed =>
+      '변경 사항은 되돌렸지만 실행 중인 설정 복원에 실패했습니다. 프로필을 다시 적용하세요.';
+
+  @override
+  String get addedRulesRollbackConflict =>
+      '다시 로드하는 동안 다른 편집기에서 규칙 세트를 변경하여 일부 변경 사항을 유지했습니다. 프로필을 사용하기 전에 규칙과 제공자를 확인하세요.';
+
+  @override
+  String get addedRulesRollbackReloadTimeout =>
+      '실행 중인 구성의 복원에 시간이 너무 오래 걸립니다. 상태가 불확실하므로 완료될 때까지 추가 규칙 변경을 일시 중지합니다.';
+
+  @override
+  String get addedRulesStaleEdit =>
+      '이 규칙 또는 규칙 세트가 다른 곳에서 변경되었습니다. 다시 열고 시도하세요.';
+
+  @override
+  String get addedRulesApplyPending =>
+      '규칙 적용에 시간이 걸리고 있으며 아직 처리 중입니다. 잠시 기다려 주세요.';
+
+  @override
+  String get addedRulesApplyRestored => '처리가 끝났으며 원래 규칙을 복원했습니다.';
+
+  @override
+  String get addedRulesApplyRestoreFailed =>
+      '처리가 끝났지만 원래 규칙을 복원하지 못했습니다. 현재 규칙을 확인하세요.';
 }

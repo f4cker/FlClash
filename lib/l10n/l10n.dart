@@ -3576,6 +3576,12 @@ abstract class AppLocalizations {
   /// **'Restore all data'**
   String get restoreAllData;
 
+  /// No description provided for @restoreRuleSetDownloadNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Backups retain rule set settings. After restoring, connect to the internet to download rule sets again; everyday restarts and profile switches do not require another download.'**
+  String get restoreRuleSetDownloadNotice;
+
   /// No description provided for @addProfile.
   ///
   /// In en, this message translates to:
@@ -10840,6 +10846,660 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Look up again'**
   String get relookup;
+
+  /// No description provided for @addedRulesReloadTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The core did not finish reloading in 15 seconds; the change was undone.'**
+  String get addedRulesReloadTimeout;
+
+  /// No description provided for @addedRulesReloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The core did not take the new config; the change was undone.'**
+  String get addedRulesReloadFailed;
+
+  /// No description provided for @addedRuleSetLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The rule set could not be downloaded; the change was undone.'**
+  String get addedRuleSetLoadFailed;
+
+  /// No description provided for @addedRuleSetLoadTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The rule set did not finish downloading in 15 seconds; the change was undone.'**
+  String get addedRuleSetLoadTimeout;
+
+  /// No description provided for @ruleDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this rule?'**
+  String get ruleDeleteTitle;
+
+  /// No description provided for @ruleSetDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete rule set “{name}”?'**
+  String ruleSetDeleteTitle(String name);
+
+  /// No description provided for @ruleDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{text}\nThis takes effect right away.'**
+  String ruleDeleteBody(String text);
+
+  /// No description provided for @ruleDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'This rule is already there (No. {number}), through {group}.'**
+  String ruleDuplicate(int number, String group);
+
+  /// No description provided for @ruleUpdateGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Group'**
+  String get ruleUpdateGroup;
+
+  /// No description provided for @ruleEditAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Rule'**
+  String get ruleEditAddTitle;
+
+  /// No description provided for @ruleEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Added Rule'**
+  String get ruleEditTitle;
+
+  /// No description provided for @ruleSetAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Rule Set'**
+  String get ruleSetAddTitle;
+
+  /// No description provided for @ruleSetEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Added Rule Set'**
+  String get ruleSetEditTitle;
+
+  /// No description provided for @ruleEditCoreStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Takes effect once the core starts'**
+  String get ruleEditCoreStopped;
+
+  /// No description provided for @ruleEditPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'No. {number} · Added rule'**
+  String ruleEditPosition(int number);
+
+  /// No description provided for @ruleSetEditPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'No. {number} · Added rule set'**
+  String ruleSetEditPosition(int number);
+
+  /// No description provided for @ruleEditSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get ruleEditSaving;
+
+  /// No description provided for @ruleTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get ruleTypeLabel;
+
+  /// No description provided for @ruleTypeMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get ruleTypeMore;
+
+  /// No description provided for @ruleTypeDomainSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'Domain Suffix'**
+  String get ruleTypeDomainSuffix;
+
+  /// No description provided for @ruleTypeDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Domain'**
+  String get ruleTypeDomain;
+
+  /// No description provided for @ruleTypeKeyword.
+  ///
+  /// In en, this message translates to:
+  /// **'Domain Keyword'**
+  String get ruleTypeKeyword;
+
+  /// No description provided for @ruleTypeIpCidr.
+  ///
+  /// In en, this message translates to:
+  /// **'IP Range'**
+  String get ruleTypeIpCidr;
+
+  /// No description provided for @ruleTypeIpCidr6.
+  ///
+  /// In en, this message translates to:
+  /// **'IPv6 Range'**
+  String get ruleTypeIpCidr6;
+
+  /// No description provided for @ruleTypeDstPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination Port'**
+  String get ruleTypeDstPort;
+
+  /// No description provided for @ruleTypeProcessName.
+  ///
+  /// In en, this message translates to:
+  /// **'Process Name'**
+  String get ruleTypeProcessName;
+
+  /// No description provided for @ruleTypeSrcIpCidr.
+  ///
+  /// In en, this message translates to:
+  /// **'Source IP Range'**
+  String get ruleTypeSrcIpCidr;
+
+  /// No description provided for @ruleValueKeyword.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyword'**
+  String get ruleValueKeyword;
+
+  /// No description provided for @ruleHelpDomainSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches example.com and all its subdomains. You can paste a link.'**
+  String get ruleHelpDomainSuffix;
+
+  /// No description provided for @ruleHelpDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches only this domain, not its subdomains. You can paste a link.'**
+  String get ruleHelpDomain;
+
+  /// No description provided for @ruleHelpKeyword.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches any domain that contains this text.'**
+  String get ruleHelpKeyword;
+
+  /// No description provided for @ruleHelpIpCidr.
+  ///
+  /// In en, this message translates to:
+  /// **'Such as 10.0.0.0/8; a single address becomes /32.'**
+  String get ruleHelpIpCidr;
+
+  /// No description provided for @ruleHelpIpCidr6.
+  ///
+  /// In en, this message translates to:
+  /// **'Such as 2001:db8::/32; a single address becomes /128.'**
+  String get ruleHelpIpCidr6;
+
+  /// No description provided for @ruleHelpSrcIpCidr.
+  ///
+  /// In en, this message translates to:
+  /// **'The range of the devices the connections come from.'**
+  String get ruleHelpSrcIpCidr;
+
+  /// No description provided for @ruleHelpPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Such as 443, or a range such as 8000-9000.'**
+  String get ruleHelpPort;
+
+  /// No description provided for @ruleHelpProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'The process name of an app or program, such as Safari or curl.'**
+  String get ruleHelpProcess;
+
+  /// No description provided for @ruleValueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a value'**
+  String get ruleValueEmpty;
+
+  /// No description provided for @ruleValueComma.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot contain a comma'**
+  String get ruleValueComma;
+
+  /// No description provided for @ruleValueDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a valid domain'**
+  String get ruleValueDomain;
+
+  /// No description provided for @ruleValueCidr.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a valid IP range'**
+  String get ruleValueCidr;
+
+  /// No description provided for @ruleValueNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Must be tcp or udp'**
+  String get ruleValueNetwork;
+
+  /// No description provided for @ruleValueNumberRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a valid number or range'**
+  String get ruleValueNumberRange;
+
+  /// No description provided for @ruleValueDscp.
+  ///
+  /// In en, this message translates to:
+  /// **'DSCP takes 0 to 63'**
+  String get ruleValueDscp;
+
+  /// No description provided for @ruleValuePickCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a code'**
+  String get ruleValuePickCode;
+
+  /// No description provided for @ruleValuePickProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from running apps'**
+  String get ruleValuePickProcess;
+
+  /// No description provided for @ruleValueNoProcesses.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps recorded lately'**
+  String get ruleValueNoProcesses;
+
+  /// No description provided for @rulePositionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Position'**
+  String get rulePositionLabel;
+
+  /// No description provided for @rulePositionFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'First of added rules'**
+  String get rulePositionFirst;
+
+  /// No description provided for @rulePositionLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Last of added rules'**
+  String get rulePositionLast;
+
+  /// No description provided for @ruleSetUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'URL'**
+  String get ruleSetUrlLabel;
+
+  /// No description provided for @ruleSetUrlHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the link of a rule set; Flash downloads it and checks what it holds.'**
+  String get ruleSetUrlHelp;
+
+  /// No description provided for @ruleSetUrlInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Only http or https links'**
+  String get ruleSetUrlInvalid;
+
+  /// No description provided for @ruleSetChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading and checking…'**
+  String get ruleSetChecking;
+
+  /// No description provided for @ruleSetCheckOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded: {kind} rules, {format} format, {count} entries'**
+  String ruleSetCheckOk(String kind, String format, String count);
+
+  /// No description provided for @ruleSetCheckOkUncounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded: {format} format; its entries are counted once the core runs'**
+  String ruleSetCheckOkUncounted(String format);
+
+  /// No description provided for @ruleSetCheckNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Not found (404)'**
+  String get ruleSetCheckNotFound;
+
+  /// No description provided for @ruleSetCheckTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The download timed out'**
+  String get ruleSetCheckTimeout;
+
+  /// No description provided for @ruleSetCheckNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed: {reason}'**
+  String ruleSetCheckNetwork(String reason);
+
+  /// No description provided for @ruleSetCheckNotRuleSet.
+  ///
+  /// In en, this message translates to:
+  /// **'The content is not a rule set'**
+  String get ruleSetCheckNotRuleSet;
+
+  /// No description provided for @ruleSetCheckUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The format cannot be recognized'**
+  String get ruleSetCheckUnknown;
+
+  /// No description provided for @ruleSetNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get ruleSetNameLabel;
+
+  /// No description provided for @ruleSetNameTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'A rule set of this name already exists'**
+  String get ruleSetNameTaken;
+
+  /// No description provided for @ruleSetNameInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'A name cannot have a comma or spaces at its ends'**
+  String get ruleSetNameInvalid;
+
+  /// No description provided for @ruleSetBehaviorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get ruleSetBehaviorLabel;
+
+  /// No description provided for @ruleSetBehaviorDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Domains'**
+  String get ruleSetBehaviorDomain;
+
+  /// No description provided for @ruleSetBehaviorIpcidr.
+  ///
+  /// In en, this message translates to:
+  /// **'IP Ranges'**
+  String get ruleSetBehaviorIpcidr;
+
+  /// No description provided for @ruleSetBehaviorClassical.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed Rules'**
+  String get ruleSetBehaviorClassical;
+
+  /// No description provided for @ruleSetBehaviorDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Chosen from the downloaded content.'**
+  String get ruleSetBehaviorDetected;
+
+  /// No description provided for @ruleSetBehaviorMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'This differs from the downloaded content; the set may not match.'**
+  String get ruleSetBehaviorMismatch;
+
+  /// No description provided for @ruleSetMrsNeedsKind.
+  ///
+  /// In en, this message translates to:
+  /// **'MRS holds only domains or IP ranges'**
+  String get ruleSetMrsNeedsKind;
+
+  /// No description provided for @ruleSetFormatText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get ruleSetFormatText;
+
+  /// No description provided for @ruleSetIntervalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Update'**
+  String get ruleSetIntervalLabel;
+
+  /// No description provided for @ruleSetEvery6Hours.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 6 hours'**
+  String get ruleSetEvery6Hours;
+
+  /// No description provided for @ruleSetDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get ruleSetDaily;
+
+  /// No description provided for @ruleSetWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Every week'**
+  String get ruleSetWeekly;
+
+  /// No description provided for @ruleSetNeverUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get ruleSetNeverUpdate;
+
+  /// No description provided for @ruleSetEverySeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {seconds} s'**
+  String ruleSetEverySeconds(int seconds);
+
+  /// No description provided for @ruleSetUpdateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Now'**
+  String get ruleSetUpdateNow;
+
+  /// No description provided for @ruleSetRefreshed.
+  ///
+  /// In en, this message translates to:
+  /// **'Update started.'**
+  String get ruleSetRefreshed;
+
+  /// No description provided for @rulesAddTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get rulesAddTooltip;
+
+  /// No description provided for @rulesAddSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a rule or rule set'**
+  String get rulesAddSemantics;
+
+  /// No description provided for @rulesAddRuleMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Rule'**
+  String get rulesAddRuleMenu;
+
+  /// No description provided for @rulesAddSetMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Rule Set'**
+  String get rulesAddSetMenu;
+
+  /// No description provided for @rulesAddedDivider.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules below come from the profile and scripts and can only be viewed here'**
+  String get rulesAddedDivider;
+
+  /// No description provided for @ruleSourceAddedSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Added rule set'**
+  String get ruleSourceAddedSet;
+
+  /// No description provided for @ruleEditMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit…'**
+  String get ruleEditMenu;
+
+  /// No description provided for @ruleMoveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Up'**
+  String get ruleMoveUp;
+
+  /// No description provided for @ruleMoveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Down'**
+  String get ruleMoveDown;
+
+  /// No description provided for @ruleEditSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit rule {number}'**
+  String ruleEditSemantics(int number);
+
+  /// No description provided for @ruleDeleteSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete rule {number}'**
+  String ruleDeleteSemantics(int number);
+
+  /// No description provided for @ruleAddedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule “{text}” was added and is in effect.'**
+  String ruleAddedBanner(String text);
+
+  /// No description provided for @ruleSavedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule “{text}” was saved and is in effect.'**
+  String ruleSavedBanner(String text);
+
+  /// No description provided for @ruleSetAddedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule set “{name}” was added and is in effect.'**
+  String ruleSetAddedBanner(String name);
+
+  /// No description provided for @ruleSetSavedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule set “{name}” was saved and is in effect.'**
+  String ruleSetSavedBanner(String name);
+
+  /// No description provided for @ruleDeletedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted.'**
+  String get ruleDeletedBanner;
+
+  /// No description provided for @ruleSavedPendingBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved; takes effect once the core starts.'**
+  String get ruleSavedPendingBanner;
+
+  /// No description provided for @ruleBannerLookup.
+  ///
+  /// In en, this message translates to:
+  /// **'Look Up a URL'**
+  String get ruleBannerLookup;
+
+  /// No description provided for @ruleMoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not move the rule: {reason}'**
+  String ruleMoveFailed(String reason);
+
+  /// No description provided for @processHelperLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · Helper'**
+  String processHelperLabel(Object name);
+
+  /// No description provided for @processCoreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · Core'**
+  String processCoreLabel(Object name);
+
+  /// No description provided for @processHelperTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper'**
+  String get processHelperTag;
+
+  /// No description provided for @processCoreTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Core'**
+  String get processCoreTag;
+
+  /// No description provided for @addedRulesRollbackReloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The changes were rolled back, but restoring the running configuration failed. Reapply the profile before relying on it.'**
+  String get addedRulesRollbackReloadFailed;
+
+  /// No description provided for @addedRulesRollbackConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Some changes were kept because another editor changed the rule set during reload. Review the rule and provider before relying on the profile.'**
+  String get addedRulesRollbackConflict;
+
+  /// No description provided for @addedRulesRollbackReloadTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring the running configuration is taking too long. Its state is uncertain; further added-rule changes are paused until it finishes.'**
+  String get addedRulesRollbackReloadTimeout;
+
+  /// No description provided for @addedRulesStaleEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'This rule or rule set changed elsewhere. Reopen it before trying again.'**
+  String get addedRulesStaleEdit;
+
+  /// No description provided for @addedRulesApplyPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Applying the rules is taking a while and is still in progress. Please wait.'**
+  String get addedRulesApplyPending;
+
+  /// No description provided for @addedRulesApplyRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing has finished, and the original rules were restored.'**
+  String get addedRulesApplyRestored;
+
+  /// No description provided for @addedRulesApplyRestoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing has finished, but the original rules could not be restored. Check the current rules.'**
+  String get addedRulesApplyRestoreFailed;
 }
 
 class _AppLocalizationsDelegate

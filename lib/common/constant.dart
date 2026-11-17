@@ -136,6 +136,10 @@ const providersDirectoryName = 'providers';
 const proxiesProviderDirectoryName = 'proxies';
 const rulesProviderDirectoryName = 'rules';
 
+/// What an added rule set is renamed with when the config already has a set
+/// of its name.
+const addedRuleSetPrefix = 'flash-added-';
+
 /// The Core reads the CA here, and map-local files only from [mitmResourcesDirectoryName].
 const mitmDirectoryName = 'mitm';
 const mitmModulesDirectoryName = 'modules';

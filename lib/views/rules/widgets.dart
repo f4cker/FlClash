@@ -91,6 +91,16 @@ String shortSourceName(String name) {
     return named(appLocalizations.ruleSourceManaged, '', RuleTone.gray);
   }
   final ruleSet = rule.ruleSet;
+  final added =
+      source?.kind == RuleSourceKind.addedProfile ||
+      source?.kind == RuleSourceKind.addedGlobal;
+  if (ruleSet != null && added) {
+    // A set renamed past one of the profile's shows the name it was given.
+    final name = ruleSet.name.startsWith(addedRuleSetPrefix)
+        ? ruleSet.name.substring(addedRuleSetPrefix.length)
+        : ruleSet.name;
+    return named(appLocalizations.ruleSourceAddedSet, name, RuleTone.amber);
+  }
   if (ruleSet != null) {
     return named(appLocalizations.ruleSet, ruleSet.name, RuleTone.purple);
   }

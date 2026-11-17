@@ -26,6 +26,8 @@ class MacApp {
 
   /// The launchd job that tied a process outside any bundle to this app.
   final String launchdLabel;
+  final bool isHelper;
+  final bool isCore;
 
   const MacApp({
     required this.bundleId,
@@ -33,6 +35,8 @@ class MacApp {
     required this.bundlePath,
     this.icon,
     this.launchdLabel = '',
+    this.isHelper = false,
+    this.isCore = false,
   });
 
   String get key =>
@@ -45,11 +49,20 @@ class MacApp {
       other.name == name &&
       other.bundlePath == bundlePath &&
       other.icon == icon &&
-      other.launchdLabel == launchdLabel;
+      other.launchdLabel == launchdLabel &&
+      other.isHelper == isHelper &&
+      other.isCore == isCore;
 
   @override
-  int get hashCode =>
-      Object.hash(bundleId, name, bundlePath, icon, launchdLabel);
+  int get hashCode => Object.hash(
+    bundleId,
+    name,
+    bundlePath,
+    icon,
+    launchdLabel,
+    isHelper,
+    isCore,
+  );
 }
 
 @immutable
@@ -113,6 +126,10 @@ class AppLookup {
             bundlePath: bundlePath,
             icon: _iconOf(raw),
             launchdLabel: launchdLabel is String ? launchdLabel : '',
+            isHelper:
+                raw['isHelper'] == true ||
+                (launchdLabel is String && launchdLabel.isNotEmpty),
+            isCore: raw['isCore'] == true,
           ),
         );
       case 'service':

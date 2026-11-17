@@ -318,6 +318,10 @@ class _RestoreOptionsDialogState extends State<RestoreOptionsDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
       child: Wrap(
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(appLocalizations.restoreRuleSetDownloadNotice),
+          ),
           ListItem(
             onTap: () {
               _handleOnTab(RestoreOption.onlyProfiles);

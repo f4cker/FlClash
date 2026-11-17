@@ -33,6 +33,17 @@ final class ProcessAppLocatorTests: XCTestCase {
         XCTAssertEqual(ProcessAppLocator.displayName("Safari"), "Safari")
     }
 
+    func testOnlyKnownCorePathsAreAttributedToFlash() {
+        let app = "/Applications/Flash.app"
+        let staged = "/Library/Application Support/com.layoute.flash.daemon/core-"
+        XCTAssertTrue(ProcessAppLocator.isOwnCorePath(app + "/Contents/MacOS/FlClashCore", bundlePath: app))
+        XCTAssertTrue(ProcessAppLocator.isOwnCorePath(staged + String(repeating: "a", count: 64), bundlePath: app))
+        XCTAssertFalse(ProcessAppLocator.isOwnCorePath(staged + "abc", bundlePath: app))
+        XCTAssertFalse(ProcessAppLocator.isOwnCorePath(staged + String(repeating: "z", count: 64), bundlePath: app))
+        XCTAssertFalse(ProcessAppLocator.isOwnCorePath("/tmp/FlClashCore", bundlePath: app))
+        XCTAssertFalse(ProcessAppLocator.isOwnCorePath("/Applications/Other.app/Contents/MacOS/FlClashCore", bundlePath: app))
+    }
+
     func testCacheEvictsTheLeastRecentlyUsed() {
         let cache = LRUCache<String, Int>(capacity: 2)
         cache.set("a", 1)

@@ -1963,6 +1963,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get restoreAllData => 'Restaurar todos los datos';
 
   @override
+  String get restoreRuleSetDownloadNotice =>
+      'La copia de seguridad conserva la configuración de los conjuntos de reglas. Tras restaurarla, conéctate a Internet para descargarlos de nuevo; los reinicios y cambios de perfil habituales no requieren otra descarga.';
+
+  @override
   String get addProfile => 'Añadir perfil';
 
   @override
@@ -6460,4 +6464,395 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get addedRulesReloadTimeout =>
+      'El núcleo no terminó de recargarse en 15 segundos; se deshizo el cambio.';
+
+  @override
+  String get addedRulesReloadFailed =>
+      'El núcleo no aceptó la nueva configuración; se deshizo el cambio.';
+
+  @override
+  String get addedRuleSetLoadFailed =>
+      'No se pudo descargar el conjunto de reglas; se deshizo el cambio.';
+
+  @override
+  String get addedRuleSetLoadTimeout =>
+      'El conjunto de reglas no terminó de descargarse en 15 segundos; se deshizo el cambio.';
+
+  @override
+  String get ruleDeleteTitle => '¿Eliminar esta regla?';
+
+  @override
+  String ruleSetDeleteTitle(String name) {
+    return '¿Eliminar el conjunto de reglas «$name»?';
+  }
+
+  @override
+  String ruleDeleteBody(String text) {
+    return '$text\nEsto surtirá efecto de inmediato.';
+  }
+
+  @override
+  String ruleDuplicate(int number, String group) {
+    return 'Esta regla ya existe (n.º $number), mediante $group.';
+  }
+
+  @override
+  String get ruleUpdateGroup => 'Actualizar grupo';
+
+  @override
+  String get ruleEditAddTitle => 'Añadir regla';
+
+  @override
+  String get ruleEditTitle => 'Editar regla añadida';
+
+  @override
+  String get ruleSetAddTitle => 'Añadir conjunto de reglas';
+
+  @override
+  String get ruleSetEditTitle => 'Editar conjunto de reglas añadido';
+
+  @override
+  String get ruleEditCoreStopped => 'Surte efecto cuando se inicie el núcleo';
+
+  @override
+  String ruleEditPosition(int number) {
+    return 'N.º $number · Regla añadida';
+  }
+
+  @override
+  String ruleSetEditPosition(int number) {
+    return 'N.º $number · Conjunto de reglas añadido';
+  }
+
+  @override
+  String get ruleEditSaving => 'Guardando…';
+
+  @override
+  String get ruleTypeLabel => 'Tipo';
+
+  @override
+  String get ruleTypeMore => 'Más';
+
+  @override
+  String get ruleTypeDomainSuffix => 'Sufijo de dominio';
+
+  @override
+  String get ruleTypeDomain => 'Dominio completo';
+
+  @override
+  String get ruleTypeKeyword => 'Palabra clave del dominio';
+
+  @override
+  String get ruleTypeIpCidr => 'Rango de IP';
+
+  @override
+  String get ruleTypeIpCidr6 => 'Rango de IPv6';
+
+  @override
+  String get ruleTypeDstPort => 'Puerto de destino';
+
+  @override
+  String get ruleTypeProcessName => 'Nombre del proceso';
+
+  @override
+  String get ruleTypeSrcIpCidr => 'Rango de IP de origen';
+
+  @override
+  String get ruleValueKeyword => 'Palabra clave';
+
+  @override
+  String get ruleHelpDomainSuffix =>
+      'Coincide con example.com y todos sus subdominios. Puedes pegar un enlace.';
+
+  @override
+  String get ruleHelpDomain =>
+      'Coincide solo con este dominio, no con sus subdominios. Puedes pegar un enlace.';
+
+  @override
+  String get ruleHelpKeyword =>
+      'Coincide con cualquier dominio que contenga este texto.';
+
+  @override
+  String get ruleHelpIpCidr =>
+      'Por ejemplo, 10.0.0.0/8; una dirección individual se convierte en /32.';
+
+  @override
+  String get ruleHelpIpCidr6 =>
+      'Por ejemplo, 2001:db8::/32; una dirección individual se convierte en /128.';
+
+  @override
+  String get ruleHelpSrcIpCidr =>
+      'El rango de los dispositivos de los que proceden las conexiones.';
+
+  @override
+  String get ruleHelpPort => 'Por ejemplo, 443, o un rango como 8000-9000.';
+
+  @override
+  String get ruleHelpProcess =>
+      'El nombre del proceso de una aplicación o programa, como Safari o curl.';
+
+  @override
+  String get ruleValueEmpty => 'Introduce un valor';
+
+  @override
+  String get ruleValueComma => 'No puede contener comas';
+
+  @override
+  String get ruleValueDomain => 'Dominio no válido';
+
+  @override
+  String get ruleValueCidr => 'Rango de IP no válido';
+
+  @override
+  String get ruleValueNetwork => 'Debe ser tcp o udp';
+
+  @override
+  String get ruleValueNumberRange => 'Número o rango no válido';
+
+  @override
+  String get ruleValueDscp => 'DSCP admite valores de 0 a 63';
+
+  @override
+  String get ruleValuePickCode => 'Elige un código';
+
+  @override
+  String get ruleValuePickProcess =>
+      'Elige entre las aplicaciones en ejecución';
+
+  @override
+  String get ruleValueNoProcesses =>
+      'No hay aplicaciones registradas recientemente';
+
+  @override
+  String get rulePositionLabel => 'Posición';
+
+  @override
+  String get rulePositionFirst => 'Primera entre las reglas añadidas';
+
+  @override
+  String get rulePositionLast => 'Última entre las reglas añadidas';
+
+  @override
+  String get ruleSetUrlLabel => 'URL';
+
+  @override
+  String get ruleSetUrlHelp =>
+      'Pega el enlace de un conjunto de reglas; Flash lo descargará y comprobará su contenido.';
+
+  @override
+  String get ruleSetUrlInvalid => 'Solo enlaces http o https';
+
+  @override
+  String get ruleSetChecking => 'Descargando y comprobando…';
+
+  @override
+  String ruleSetCheckOk(String kind, String format, String count) {
+    return 'Descargado: reglas de tipo $kind, formato $format, $count entradas';
+  }
+
+  @override
+  String ruleSetCheckOkUncounted(String format) {
+    return 'Descargado: formato $format; las entradas se contarán cuando se inicie el núcleo';
+  }
+
+  @override
+  String get ruleSetCheckNotFound => 'No encontrado (404)';
+
+  @override
+  String get ruleSetCheckTimeout => 'La descarga agotó el tiempo de espera';
+
+  @override
+  String ruleSetCheckNetwork(String reason) {
+    return 'Error de descarga: $reason';
+  }
+
+  @override
+  String get ruleSetCheckNotRuleSet =>
+      'El contenido no es un conjunto de reglas';
+
+  @override
+  String get ruleSetCheckUnknown => 'No se reconoce el formato';
+
+  @override
+  String get ruleSetNameLabel => 'Nombre';
+
+  @override
+  String get ruleSetNameTaken =>
+      'Ya existe un conjunto de reglas con este nombre';
+
+  @override
+  String get ruleSetNameInvalid =>
+      'El nombre no puede contener comas ni espacios en los extremos';
+
+  @override
+  String get ruleSetBehaviorLabel => 'Contenido';
+
+  @override
+  String get ruleSetBehaviorDomain => 'Dominios';
+
+  @override
+  String get ruleSetBehaviorIpcidr => 'Rangos de IP';
+
+  @override
+  String get ruleSetBehaviorClassical => 'Reglas mixtas';
+
+  @override
+  String get ruleSetBehaviorDetected =>
+      'Seleccionado según el contenido descargado.';
+
+  @override
+  String get ruleSetBehaviorMismatch =>
+      'Difiere del contenido descargado; puede que el conjunto no coincida.';
+
+  @override
+  String get ruleSetMrsNeedsKind => 'MRS solo admite dominios o rangos de IP';
+
+  @override
+  String get ruleSetFormatText => 'Texto';
+
+  @override
+  String get ruleSetIntervalLabel => 'Actualización automática';
+
+  @override
+  String get ruleSetEvery6Hours => 'Cada 6 horas';
+
+  @override
+  String get ruleSetDaily => 'Cada día';
+
+  @override
+  String get ruleSetWeekly => 'Cada semana';
+
+  @override
+  String get ruleSetNeverUpdate => 'Nunca';
+
+  @override
+  String ruleSetEverySeconds(int seconds) {
+    return 'Cada $seconds s';
+  }
+
+  @override
+  String get ruleSetUpdateNow => 'Actualizar ahora';
+
+  @override
+  String get ruleSetRefreshed => 'Actualización iniciada.';
+
+  @override
+  String get rulesAddTooltip => 'Añadir';
+
+  @override
+  String get rulesAddSemantics => 'Añadir una regla o un conjunto de reglas';
+
+  @override
+  String get rulesAddRuleMenu => 'Añadir regla';
+
+  @override
+  String get rulesAddSetMenu => 'Añadir conjunto de reglas';
+
+  @override
+  String get rulesAddedDivider =>
+      'Las reglas siguientes proceden del perfil y los scripts y aquí solo se pueden consultar';
+
+  @override
+  String get ruleSourceAddedSet => 'Conjunto de reglas añadido';
+
+  @override
+  String get ruleEditMenu => 'Editar…';
+
+  @override
+  String get ruleMoveUp => 'Subir';
+
+  @override
+  String get ruleMoveDown => 'Bajar';
+
+  @override
+  String ruleEditSemantics(int number) {
+    return 'Editar regla $number';
+  }
+
+  @override
+  String ruleDeleteSemantics(int number) {
+    return 'Eliminar regla $number';
+  }
+
+  @override
+  String ruleAddedBanner(String text) {
+    return 'Se añadió la regla «$text» y está activa.';
+  }
+
+  @override
+  String ruleSavedBanner(String text) {
+    return 'Se guardó la regla «$text» y está activa.';
+  }
+
+  @override
+  String ruleSetAddedBanner(String name) {
+    return 'Se añadió el conjunto de reglas «$name» y está activo.';
+  }
+
+  @override
+  String ruleSetSavedBanner(String name) {
+    return 'Se guardó el conjunto de reglas «$name» y está activo.';
+  }
+
+  @override
+  String get ruleDeletedBanner => 'Eliminado.';
+
+  @override
+  String get ruleSavedPendingBanner =>
+      'Guardado; surtirá efecto cuando se inicie el núcleo.';
+
+  @override
+  String get ruleBannerLookup => 'Consultar una URL';
+
+  @override
+  String ruleMoveFailed(String reason) {
+    return 'No se pudo mover la regla: $reason';
+  }
+
+  @override
+  String processHelperLabel(Object name) {
+    return '$name · Auxiliar';
+  }
+
+  @override
+  String processCoreLabel(Object name) {
+    return '$name · Núcleo';
+  }
+
+  @override
+  String get processHelperTag => 'Auxiliar';
+
+  @override
+  String get processCoreTag => 'Núcleo';
+
+  @override
+  String get addedRulesRollbackReloadFailed =>
+      'Se revirtieron los cambios, pero no se pudo restaurar la configuración activa. Vuelve a aplicar el perfil.';
+
+  @override
+  String get addedRulesRollbackConflict =>
+      'Se conservaron algunos cambios porque otro editor modificó el conjunto de reglas. Revisa la regla y el proveedor antes de usar el perfil.';
+
+  @override
+  String get addedRulesRollbackReloadTimeout =>
+      'La restauración de la configuración activa tarda demasiado. Su estado es incierto; los cambios en las reglas añadidas están pausados hasta que termine.';
+
+  @override
+  String get addedRulesStaleEdit =>
+      'Esta regla o conjunto de reglas se modificó en otro lugar. Vuelve a abrirlo antes de intentarlo de nuevo.';
+
+  @override
+  String get addedRulesApplyPending =>
+      'La aplicación de las reglas está tardando y sigue en curso. Espera, por favor.';
+
+  @override
+  String get addedRulesApplyRestored =>
+      'El proceso ha terminado y se restauraron las reglas originales.';
+
+  @override
+  String get addedRulesApplyRestoreFailed =>
+      'El proceso ha terminado, pero no se pudieron restaurar las reglas originales. Revisa las reglas actuales.';
 }

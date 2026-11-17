@@ -159,6 +159,44 @@ Map<String, dynamic> inboundConfigOf(
   'skip-auth-prefixes': const <String>[],
 };
 
+/// Puts [sets] among the config's rule providers, each at its file under
+/// the profile's own providers, where neither a subscription update nor a
+/// restart moves it. A name the config already takes leaves the config's
+/// set alone and renames the added one; the renames are returned, old name
+/// to new, for the rules that use them.
+Map<String, String> injectAddedRuleSets(
+  Map rawConfig,
+  List<AddedRuleSet> sets, {
+  required String profilesPath,
+  required int profileId,
+}) {
+  if (sets.isEmpty) return const {};
+  final existing = rawConfig['rule-providers'];
+  final providers = <String, dynamic>{
+    if (existing is Map) ...existing.cast<String, dynamic>(),
+  };
+  final taken = providers.keys.toSet();
+  final renames = <String, String>{};
+  final added = <String, dynamic>{};
+  for (final set in sets) {
+    // Only a web address downloads; anything else could reach outside.
+    final scheme = Uri.tryParse(set.url)?.scheme.toLowerCase();
+    if (scheme != 'http' && scheme != 'https') continue;
+    var key = set.name;
+    if (taken.contains(key)) {
+      key = '$addedRuleSetPrefix${set.name}';
+      for (var n = 2; taken.contains(key); n++) {
+        key = '$addedRuleSetPrefix${set.name}-$n';
+      }
+      renames[set.name] = key;
+    }
+    taken.add(key);
+    added[key] = set.definition(set.pathUnder(profilesPath));
+  }
+  rawConfig['rule-providers'] = {...added, ...providers};
+  return renames;
+}
+
 Future<RealProfile> makeRealProfileTask(MakeRealProfileState data) async {
   return compute<MakeRealProfileState, RealProfile>(_makeRealProfileTask, data);
 }
@@ -169,7 +207,6 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   final profilesPath = data.profilesPath;
   final profileId = data.profileId;
   final overrides = data.overrides;
-  final addedRules = data.addedRules;
   final appendSystemDns = data.appendSystemDns;
   String getProvidersFilePathInner(String type, String key) {
     return join(
@@ -265,6 +302,12 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   confineProviders('rule-providers', rulesProviderDirectoryName);
   injectUnconfinedProviders('proxy-providers', data.injectedProxyProviders);
   injectUnconfinedProviders('rule-providers', data.injectedRuleProviders);
+  final addedSetNames = injectAddedRuleSets(
+    rawConfig,
+    data.addedRuleSets,
+    profilesPath: profilesPath,
+    profileId: profileId,
+  );
   const systemDns = 'system://';
   final dns = mergeDnsOverride(
     rawConfig['dns'] is Map
@@ -323,9 +366,36 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       (effectiveNameservers is! List || effectiveNameservers.isEmpty)) {
     throw StateError('Enabled DNS requires a nameserver');
   }
+  // A colliding set is rewritten only through its stable paired rule id.
+  // Older rows have no persistent association; refusing an ambiguous
+  // collision preserves the previously running configuration and all rules.
+  final paired = <int, Map<String, String>>{};
+  final allProfileRules = [...data.rules, ...data.addedRules];
+  for (final set in data.addedRuleSets) {
+    final replacement = addedSetNames[set.name];
+    if (replacement == null) continue;
+    final matches = allProfileRules.where(
+      (rule) =>
+          rule.id == set.id &&
+          rule.ruleAction == RuleAction.RULE_SET &&
+          rule.ruleProvider == set.name &&
+          rule.profileId != null,
+    );
+    if (matches.length != 1) {
+      throw StateError('Ambiguous added rule set collision: ${set.name}');
+    }
+    paired[set.id] = {set.name: replacement};
+  }
+  Rule ownRule(Rule rule) {
+    final names = paired[rule.id];
+    return names == null ? rule : rule.renamedRuleSets(names);
+  }
+
+  final addedRules = [for (final rule in data.addedRules) ownRule(rule)];
+  final customRules = [for (final rule in data.rules) ownRule(rule)];
   List<String> rules = [];
   List<RuleSource> sources = [];
-  if (data.rules.isEmpty) {
+  if (customRules.isEmpty) {
     if (rawConfig['rules'] != null) {
       rules = List<String>.from(rawConfig['rules']);
     }
@@ -372,15 +442,20 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
                 ? RuleSourceKind.addedGlobal
                 : RuleSourceKind.addedProfile,
             text: rule,
+            ruleId: addedRules[index].id,
           ),
         ...sources,
       ];
     }
   } else {
-    rules = data.rules.map((item) => item.rawValue).toList();
+    rules = customRules.map((item) => item.rawValue).toList();
     sources = [
-      for (final rule in rules)
-        RuleSource(kind: RuleSourceKind.custom, text: rule),
+      for (final (index, rule) in rules.indexed)
+        RuleSource(
+          kind: RuleSourceKind.custom,
+          text: rule,
+          ruleId: customRules[index].id,
+        ),
     ];
   }
   if (data.proxyGroups.isNotEmpty) {

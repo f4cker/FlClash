@@ -112,6 +112,7 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
       CoreMethod.proxySelect => {'message': '', 'changed': true},
       CoreMethod.ruleSetCompile => {'behavior': 'ipcidr', 'format': 'text'},
       CoreMethod.ruleSetDump => '/home/responses/2.yaml',
+      CoreMethod.ruleLookup => <String, Object?>{},
       CoreMethod.configDecrypt => 'mode: rule',
       CoreMethod.connectionCount => 3,
       CoreMethod.proxyValidate || CoreMethod.filterValidate => [
@@ -743,6 +744,26 @@ void main() {
     expect(await handler.isInit, isTrue);
     expect(await handler.validateConfig('/config.yaml'), isNull);
     expect(handler.calls[CoreMethod.configValidate], {'path': '/config.yaml'});
+  });
+
+  test('rule lookup sends request process and source metadata', () async {
+    final core = _RecordingCoreHandler();
+    await core.lookupRule(
+      const RuleLookupParams(host: 'example.test', port: 443, network: 'tcp'),
+      metadata: const Metadata(
+        process: 'browser',
+        processPath: '/app/browser',
+        sourceIP: '192.0.2.5',
+        sourcePort: '51234',
+      ),
+    );
+    final args = core.calls[CoreMethod.ruleLookup] as Map;
+    expect(args['process'], 'browser');
+    expect(args['processPath'], '/app/browser');
+    expect(args['sourceIP'], '192.0.2.5');
+    expect(args['sourcePort'], 51234);
+    expect(args['port'], 443);
+    expect(args['network'], 'tcp');
   });
 
   test('dumpRuleSet sends the rule set path', () async {

@@ -3,6 +3,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,7 +11,7 @@ import 'add_rule_dialog.dart';
 import 'rules_logic.dart';
 import 'widgets.dart';
 
-enum _RowKind { rule, entry, footer }
+enum _RowKind { rule, entry, footer, divider }
 
 /// One row of the rules list: a rule, an entry of an unfolded rule set, or
 /// the foot of those entries.
@@ -43,7 +44,18 @@ class RuleRowItem {
       position = 0,
       text = '';
 
+  /// The line between the added rules and the profile's own.
+  const RuleRowItem.divider()
+    : _kind = _RowKind.divider,
+      rule = null,
+      hit = null,
+      parent = -1,
+      position = 0,
+      text = '';
+
   bool get isRule => _kind == _RowKind.rule;
+
+  bool get isDivider => _kind == _RowKind.divider;
 
   bool get isEntry => _kind == _RowKind.entry;
 }
@@ -126,6 +138,18 @@ class RuleRow extends StatelessWidget {
   /// The name of the profile the rules run from, for the source badge.
   final String profile;
 
+  /// Set on a row the page edits: an added rule or rule set, or a custom
+  /// profile's own rule. [onMoveUp] and [onMoveDown] are null at the ends.
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final VoidCallback? onMoveUp;
+  final VoidCallback? onMoveDown;
+
+  /// Lit for a moment after the rule was saved.
+  final bool flashing;
+
+  bool get editable => onDelete != null;
+
   const RuleRow({
     super.key,
     required this.rule,
@@ -144,6 +168,11 @@ class RuleRow extends StatelessWidget {
     this.onRevealGroup,
     this.onUpdateSet,
     this.profile = '',
+    this.onEdit,
+    this.onDelete,
+    this.onMoveUp,
+    this.onMoveDown,
+    this.flashing = false,
   });
 
   List<Widget> _setExtras(BuildContext context) {
@@ -189,12 +218,10 @@ class RuleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    final colorScheme = context.colorScheme;
     final badge = ruleSourceBadge(context, rule, source, profile: profile);
     final hit = this.hit;
     final tag = hit == null ? null : hitTagOf(context, hit, winnerIndex);
     final target = _RuleTarget(target: rule.target, showNode: showNode);
-    final expanded = this.expanded;
     final number = rule.index + 1;
     final semantics = appLocalizations.ruleRowSemantics(
       number,
@@ -202,25 +229,55 @@ class RuleRow extends StatelessWidget {
       badge?.label ?? '',
       ruleTargetLabel(context, rule.target),
     );
-    final menuItems = [
-      PopupMenuItem(
-        glyph: AppGlyphs.copy,
-        label: appLocalizations.copyRule,
-        onPressed: onCopy,
-      ),
-      if (onRevealGroup != null)
-        PopupMenuItem(
-          glyph: AppGlyphs.proxies,
-          label: appLocalizations.viewGroup,
-          onPressed: onRevealGroup,
-        ),
-      if (onUpdateSet != null)
-        PopupMenuItem(
-          glyph: AppGlyphs.resources,
-          label: appLocalizations.goUpdate,
-          onPressed: onUpdateSet,
-        ),
-    ];
+    final menuItems = editable
+        ? [
+            PopupMenuItem(
+              glyph: AppGlyphs.edit,
+              label: appLocalizations.ruleEditMenu,
+              onPressed: onEdit,
+            ),
+            PopupMenuItem(
+              glyph: AppGlyphs.arrowUp,
+              label: appLocalizations.ruleMoveUp,
+              onPressed: onMoveUp,
+            ),
+            PopupMenuItem(
+              glyph: AppGlyphs.arrowDown,
+              label: appLocalizations.ruleMoveDown,
+              onPressed: onMoveDown,
+            ),
+            PopupMenuItem(
+              glyph: AppGlyphs.copy,
+              label: appLocalizations.copyRule,
+              onPressed: onCopy,
+            ),
+            PopupMenuItem(
+              glyph: AppGlyphs.delete,
+              label: appLocalizations.delete,
+              danger: true,
+              section: const PopupMenuSection(),
+              onPressed: onDelete,
+            ),
+          ]
+        : [
+            PopupMenuItem(
+              glyph: AppGlyphs.copy,
+              label: appLocalizations.copyRule,
+              onPressed: onCopy,
+            ),
+            if (onRevealGroup != null)
+              PopupMenuItem(
+                glyph: AppGlyphs.proxies,
+                label: appLocalizations.viewGroup,
+                onPressed: onRevealGroup,
+              ),
+            if (onUpdateSet != null)
+              PopupMenuItem(
+                glyph: AppGlyphs.resources,
+                label: appLocalizations.goUpdate,
+                onPressed: onUpdateSet,
+              ),
+          ];
     final content = Wrap(
       spacing: 6,
       runSpacing: 4,
@@ -235,25 +292,89 @@ class RuleRow extends StatelessWidget {
       ],
     );
     final corners = _cornersOf(first: first, last: last);
+    if (!editable) {
+      return _buildRow(
+        context,
+        semantics,
+        menuItems,
+        content,
+        target,
+        corners,
+        false,
+      );
+    }
+    return _RowHover(
+      builder: (context, shown) => _buildRow(
+        context,
+        semantics,
+        menuItems,
+        content,
+        target,
+        corners,
+        shown,
+      ),
+    );
+  }
+
+  Widget _buildActions(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final number = rule.index + 1;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        if (onEdit != null)
+          RuleRowAction(
+            glyph: AppGlyphs.edit,
+            color: const Color(0xFF3F3E45),
+            label: appLocalizations.ruleEditSemantics(number),
+            onPressed: onEdit!,
+          ),
+        RuleRowAction(
+          glyph: AppGlyphs.delete,
+          color: const Color(0xFFB3261E),
+          label: appLocalizations.ruleDeleteSemantics(number),
+          onPressed: onDelete!,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRow(
+    BuildContext context,
+    String semantics,
+    List<PopupMenuItem> menuItems,
+    Widget content,
+    Widget target,
+    BorderRadius corners,
+    bool showActions,
+  ) {
+    final colorScheme = context.colorScheme;
+    final expanded = this.expanded;
+    final number = rule.index + 1;
     return Semantics(
       container: true,
       button: true,
       label: semantics,
-      excludeSemantics: true,
+      excludeSemantics: !showActions,
       expanded: expanded,
       child: ContextMenuRegion(
         menuItems: menuItems,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
+          onDoubleTap: onEdit,
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
               constraints: const BoxConstraints(minHeight: 42),
               decoration: ShapeDecoration(
-                color: highlighted
+                color: flashing
+                    ? const Color(0x1A007AFF)
+                    : highlighted
                     ? colorScheme.primary.withValues(alpha: 0.08)
-                    : null,
+                    : colorScheme.primary.withValues(alpha: 0),
                 shape: RoundedSuperellipseBorder(borderRadius: corners),
               ),
               foregroundDecoration: BoxDecoration(
@@ -305,6 +426,10 @@ class RuleRow extends StatelessWidget {
                         const SizedBox(width: 6),
                         Expanded(child: content),
                         if (!narrow) ...[const SizedBox(width: 12), target],
+                        if (showActions) ...[
+                          const SizedBox(width: 8),
+                          _buildActions(context),
+                        ],
                       ],
                     ),
                   ),
@@ -502,5 +627,140 @@ class RuleSetFooterRow extends StatelessWidget {
               style: caption,
             ),
     );
+  }
+}
+
+/// Whether a row shows its edit buttons: while the pointer is over it or
+/// focus is in it, so Tab reaches them too.
+class _RowHover extends StatefulWidget {
+  final Widget Function(BuildContext context, bool shown) builder;
+
+  const _RowHover({required this.builder});
+
+  @override
+  State<_RowHover> createState() => _RowHoverState();
+}
+
+class _RowHoverState extends State<_RowHover> {
+  bool _hovered = false;
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      skipTraversal: true,
+      canRequestFocus: false,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Focus(child: widget.builder(context, _hovered || _focused)),
+      ),
+    );
+  }
+}
+
+/// A 26-square button at the end of an editable row.
+class RuleRowAction extends StatelessWidget {
+  final Glyph glyph;
+  final Color color;
+  final String label;
+  final VoidCallback onPressed;
+
+  const RuleRowAction({
+    super.key,
+    required this.glyph,
+    required this.color,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = context.colorScheme.brightness == Brightness.dark;
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: FocusableActionDetector(
+          mouseCursor: SystemMouseCursors.click,
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                onPressed();
+                return null;
+              },
+            ),
+          },
+          // The row double-clicks to edit, which would hold a click here
+          // for the double-click wait; the button takes its press at once.
+          child: RawGestureDetector(
+            gestures: {
+              _EagerTapRecognizer:
+                  GestureRecognizerFactoryWithHandlers<_EagerTapRecognizer>(
+                    _EagerTapRecognizer.new,
+                    (recognizer) => recognizer.onTap = onPressed,
+                  ),
+            },
+            child: Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: ShapeDecoration(
+                color: dark ? const Color(0x33FFFFFF) : const Color(0xFFF2F1F5),
+                shape: RoundedSuperellipseBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: GlyphIcon(
+                glyph,
+                size: 14,
+                color: dark
+                    ? Color.lerp(color, const Color(0xFFFFFFFF), 0.5)
+                    : color,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The line under the added rules: what follows is the profile's own.
+class RulesDividerRow extends StatelessWidget {
+  const RulesDividerRow({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    return Container(
+      height: 28,
+      alignment: AlignmentDirectional.centerStart,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      color: colorScheme.brightness == Brightness.light
+          ? const Color(0xFFF2F1F5)
+          : colorScheme.onSurface.withValues(alpha: 0.06),
+      child: Text(
+        context.appLocalizations.rulesAddedDivider,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyle.caption1
+            .of(context)
+            .copyWith(color: colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+/// A tap that claims its pointer on the press, ahead of the row's.
+class _EagerTapRecognizer extends TapGestureRecognizer {
+  _EagerTapRecognizer() : super(supportedDevices: null);
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolvePointer(event.pointer, GestureDisposition.accepted);
   }
 }

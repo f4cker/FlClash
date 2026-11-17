@@ -55,6 +55,17 @@ final class ProcessAppChannel {
     }
 
     private func answer(for path: String) -> [String: Any] {
+        if ProcessAppLocator.isOwnCorePath(path, bundlePath: Bundle.main.bundlePath) {
+            let bundle = Bundle.main
+            var answer: [String: Any] = [
+                "status": "app", "bundleId": bundle.bundleIdentifier ?? "",
+                "name": "Flash", "bundlePath": bundle.bundlePath, "isCore": true,
+            ]
+            if let icon = icon(for: bundle.bundlePath) {
+                answer["icon"] = FlutterStandardTypedData(bytes: icon)
+            }
+            return answer
+        }
         let generation = resolver.generation
         let source: ProcessSource
         if let cached = lookups.get(path), cached.generation == generation {
@@ -75,6 +86,9 @@ final class ProcessAppChannel {
                 "name": name,
                 "bundlePath": bundlePath,
             ]
+            if let executable = Bundle(path: bundlePath)?.executableURL?.standardizedFileURL.path {
+                answer["isHelper"] = launchdLabel != nil || URL(fileURLWithPath: path).standardizedFileURL.path != executable
+            }
             if let launchdLabel {
                 answer["launchdLabel"] = launchdLabel
             }

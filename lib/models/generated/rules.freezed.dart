@@ -2469,7 +2469,9 @@ $RuleHitCopyWith<$Res>? get winner {
 /// @nodoc
 mixin _$RuleSource {
 
- RuleSourceKind get kind; String get name; String get text;
+ RuleSourceKind get kind; String get name; String get text;/// The stored rule the line was written from, for one the rules page
+/// may edit: an added rule, or a custom profile's own.
+ int? get ruleId;
 /// Create a copy of RuleSource
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2481,20 +2483,20 @@ $RuleSourceCopyWith<RuleSource> get copyWith => _$RuleSourceCopyWithImpl<RuleSou
 @override
 bool operator ==(Object other) {
   final _this = this as RuleSource;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RuleSource&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.text, _this.text) || other.text == _this.text));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RuleSource&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.text, _this.text) || other.text == _this.text)&&(identical(other.ruleId, _this.ruleId) || other.ruleId == _this.ruleId));
 }
 
 
 @override
 int get hashCode {
   final _this = this as RuleSource;
-  return Object.hash(runtimeType,_this.kind,_this.name,_this.text);
+  return Object.hash(runtimeType,_this.kind,_this.name,_this.text,_this.ruleId);
 }
 
 @override
 String toString() {
   final _this = this as RuleSource;
-  return 'RuleSource(kind: ${_this.kind}, name: ${_this.name}, text: ${_this.text})';
+  return 'RuleSource(kind: ${_this.kind}, name: ${_this.name}, text: ${_this.text}, ruleId: ${_this.ruleId})';
 }
 
 
@@ -2505,7 +2507,7 @@ abstract mixin class $RuleSourceCopyWith<$Res>  {
   factory $RuleSourceCopyWith(RuleSource value, $Res Function(RuleSource) _then) = _$RuleSourceCopyWithImpl;
 @useResult
 $Res call({
- RuleSourceKind kind, String name, String text
+ RuleSourceKind kind, String name, String text, int? ruleId
 });
 
 
@@ -2522,12 +2524,13 @@ class _$RuleSourceCopyWithImpl<$Res>
 
 /// Create a copy of RuleSource
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? name = null,Object? text = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? name = null,Object? text = null,Object? ruleId = freezed,}) {
   return _then(RuleSource(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as RuleSourceKind,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
-as String,
+as String,ruleId: freezed == ruleId ? _self.ruleId : ruleId // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -2612,10 +2615,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RuleSourceKind kind,  String name,  String text)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RuleSourceKind kind,  String name,  String text,  int? ruleId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RuleSource() when $default != null:
-return $default(_that.kind,_that.name,_that.text);case _:
+return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
   return orElse();
 
 }
@@ -2633,10 +2636,10 @@ return $default(_that.kind,_that.name,_that.text);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RuleSourceKind kind,  String name,  String text)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RuleSourceKind kind,  String name,  String text,  int? ruleId)  $default,) {final _that = this;
 switch (_that) {
 case _RuleSource():
-return $default(_that.kind,_that.name,_that.text);case _:
+return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2653,10 +2656,10 @@ return $default(_that.kind,_that.name,_that.text);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RuleSourceKind kind,  String name,  String text)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RuleSourceKind kind,  String name,  String text,  int? ruleId)?  $default,) {final _that = this;
 switch (_that) {
 case _RuleSource() when $default != null:
-return $default(_that.kind,_that.name,_that.text);case _:
+return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
   return null;
 
 }
@@ -2668,12 +2671,15 @@ return $default(_that.kind,_that.name,_that.text);case _:
 
 
 class _RuleSource implements RuleSource {
-  const _RuleSource({required this.kind, this.name = '', this.text = ''});
+  const _RuleSource({required this.kind, this.name = '', this.text = '', this.ruleId});
   
 
 @override final  RuleSourceKind kind;
 @override@JsonKey() final  String name;
 @override@JsonKey() final  String text;
+/// The stored rule the line was written from, for one the rules page
+/// may edit: an added rule, or a custom profile's own.
+@override final  int? ruleId;
 
 /// Create a copy of RuleSource
 /// with the given fields replaced by the non-null parameter values.
@@ -2685,18 +2691,18 @@ _$RuleSourceCopyWith<_RuleSource> get copyWith => __$RuleSourceCopyWithImpl<_Rul
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _RuleSource&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.name, name) || other.name == name)&&(identical(other.text, text) || other.text == text));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _RuleSource&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.name, name) || other.name == name)&&(identical(other.text, text) || other.text == text)&&(identical(other.ruleId, ruleId) || other.ruleId == ruleId));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,kind,name,text);
+    return Object.hash(runtimeType,kind,name,text,ruleId);
 }
 
 @override
 String toString() {
-    return 'RuleSource(kind: $kind, name: $name, text: $text)';
+    return 'RuleSource(kind: $kind, name: $name, text: $text, ruleId: $ruleId)';
 }
 
 
@@ -2707,7 +2713,7 @@ abstract mixin class _$RuleSourceCopyWith<$Res> implements $RuleSourceCopyWith<$
   factory _$RuleSourceCopyWith(_RuleSource value, $Res Function(_RuleSource) _then) = __$RuleSourceCopyWithImpl;
 @override @useResult
 $Res call({
- RuleSourceKind kind, String name, String text
+ RuleSourceKind kind, String name, String text, int? ruleId
 });
 
 
@@ -2724,12 +2730,13 @@ class __$RuleSourceCopyWithImpl<$Res>
 
 /// Create a copy of RuleSource
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? name = null,Object? text = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? name = null,Object? text = null,Object? ruleId = freezed,}) {
   return _then(_RuleSource(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as RuleSourceKind,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
-as String,
+as String,ruleId: freezed == ruleId ? _self.ruleId : ruleId // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

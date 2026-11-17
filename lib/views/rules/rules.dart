@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:fl_clash/common/added_rule_edit.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/features/connection/process_view.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
@@ -15,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'add_rule_dialog.dart';
 import 'hit_card.dart';
+import 'rule_edit_dialogs.dart';
 import 'rule_rows.dart';
 import 'rules_logic.dart';
 import 'widgets.dart';
@@ -46,12 +49,13 @@ class _SetPage {
 class _Lookup {
   final String host;
   final int? port;
+  final Metadata? metadata;
   final ({String rule, String payload, String text, bool ipOnly})? record;
   RuleLookup? result;
   Object? error;
   bool loading = true;
 
-  _Lookup(this.host, {this.port, this.record});
+  _Lookup(this.host, {this.port, this.metadata, this.record});
 }
 
 /// Whether an added rule decides the host now, as a lookup after adding
@@ -67,6 +71,10 @@ typedef _AddedOutcome = ({
   int? index,
   String text,
 });
+
+/// A row the page edits: an added rule, with its rule set when it is one,
+/// or a custom profile's own rule.
+typedef _Editable = ({Rule rule, AddedRuleSet? set});
 
 /// The rules the running Core holds, in the order they apply, and the one a
 /// host or address takes.
@@ -86,6 +94,8 @@ class RulesView extends ConsumerStatefulWidget {
   static const ruleSetNoticeKey = ValueKey('rules-rule-set-notice');
   static const queryingKey = ValueKey('rules-querying');
   static const scrollEdgeKey = ValueKey('rules-scroll-edge');
+  static const addKey = ValueKey('rules-add');
+  static const bannerKey = ValueKey('rules-banner');
 
   @override
   ConsumerState<RulesView> createState() => _RulesViewState();
@@ -126,6 +136,22 @@ class _RulesViewState extends ConsumerState<RulesView> {
   /// Whether the last added rule was written but its profile not reloaded.
   bool _addedUnapplied = false;
 
+  /// The added rules and rule sets of the profile the page shows.
+  AddedRulesState? _editable;
+  int? _editableProfileId;
+  int _editableSerial = 0;
+
+  /// The rule just saved, lit for a moment.
+  int? _flashRuleId;
+  Timer? _flashTimer;
+
+  /// The note at the top after a change: what it did, or why it failed.
+  ({String text, RuleTone tone, bool lookupAction})? _banner;
+  Timer? _bannerTimer;
+
+  /// The group the last rule added went through, for the next one.
+  static String? _lastTarget;
+
   @override
   void initState() {
     super.initState();
@@ -154,11 +180,19 @@ class _RulesViewState extends ConsumerState<RulesView> {
     ) {
       if (previous != next) _refresh();
     });
+    ref.listenManual(currentProfileIdProvider, (previous, next) {
+      if (previous != next) unawaited(_loadEditable());
+    });
+    HardwareKeyboard.instance.addHandler(_onKey);
     _loadList();
+    unawaited(_loadEditable());
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    _flashTimer?.cancel();
+    _bannerTimer?.cancel();
     _filterTimer?.cancel();
     _lookupTimer?.cancel();
     _controller.dispose();
@@ -175,11 +209,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
   void _refresh() {
     if (!mounted) return;
     _loadList();
+    unawaited(_loadEditable());
     final lookup = _lookup;
     if (lookup != null && lookup.result != null) {
       _runLookup(
         lookup.host,
         port: lookup.port,
+        metadata: lookup.metadata,
         record: lookup.record,
         keep: true,
       );
@@ -353,6 +389,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
     _runFilter(ask.host);
     _runLookup(
       ask.host,
+      port: int.tryParse(ask.metadata?.destinationPort ?? ''),
+      metadata: ask.metadata,
       record: ask.rule.isEmpty
           ? null
           : (
@@ -367,12 +405,19 @@ class _RulesViewState extends ConsumerState<RulesView> {
   Future<void> _runLookup(
     String host, {
     int? port,
+    Metadata? metadata,
     ({String rule, String payload, String text, bool ipOnly})? record,
     bool keep = false,
   }) async {
     final serial = ++_lookupSerial;
     final previous = _lookup;
-    final lookup = _Lookup(host, port: port, record: record);
+    final safePort = port != null && port > 0 && port <= 65535 ? port : null;
+    final lookup = _Lookup(
+      host,
+      port: safePort,
+      metadata: metadata,
+      record: record,
+    );
     if (keep && previous != null && previous.host == host) {
       lookup.result = previous.result;
     } else if (previous != null && previous.host == host) {
@@ -396,9 +441,16 @@ class _RulesViewState extends ConsumerState<RulesView> {
       return;
     }
     try {
-      final result = await ref
-          .read(coreHandlerProvider)
-          .lookupRule(RuleLookupParams(host: host, port: port));
+      final core = ref.read(coreHandlerProvider);
+      final network = metadata?.network.toLowerCase();
+      final params = RuleLookupParams(
+        host: host,
+        port: safePort,
+        network: network == 'tcp' || network == 'udp' ? network : null,
+      );
+      final result = metadata == null
+          ? await core.lookupRule(params)
+          : await core.lookupRule(params, metadata: metadata);
       if (!mounted || serial != _lookupSerial) return;
       setState(() {
         lookup.result = result;
@@ -544,10 +596,35 @@ class _RulesViewState extends ConsumerState<RulesView> {
           )) {
         continue;
       }
+      if (_startsOwnRules(index, sources, items)) {
+        items.add(const RuleRowItem.divider());
+      }
       items.add(RuleRowItem.rule(rule, hit: hits[index]));
       _addChildren(items, index, rule, hits[index]);
     }
     return items;
+  }
+
+  bool _isAddedSource(RuleSource? source) =>
+      source?.kind == RuleSourceKind.addedProfile ||
+      source?.kind == RuleSourceKind.addedGlobal;
+
+  /// Whether the rule at [index] is the first of the profile's own after
+  /// the added ones shown above it.
+  bool _startsOwnRules(
+    int index,
+    List<RuleSource?>? sources,
+    List<RuleRowItem> items,
+  ) {
+    if (sources == null || _isAddedSource(sources.elementAtOrNull(index))) {
+      return false;
+    }
+    if (items.any((item) => item.isDivider)) return false;
+    return items.any(
+      (item) =>
+          item.isRule &&
+          _isAddedSource(sources.elementAtOrNull(item.rule!.index)),
+    );
   }
 
   /// The child rows of a rule set: every entry (paged) when expanded,
@@ -635,7 +712,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
     });
   }
 
-  // Adding a rule
+  // Adding and editing rules
 
   List<String> _targets() {
     final groups = ref.read(groupsProvider);
@@ -647,50 +724,345 @@ class _RulesViewState extends ConsumerState<RulesView> {
     ];
   }
 
-  /// Writes [text] as an added rule of [profile] and reloads it; null once
-  /// the rule is written, or why it was not. A rule written whose reload
-  /// failed counts as added, and the page says it cannot confirm it.
-  Future<String?> _writeRule(Profile profile, String text) async {
-    _addedUnapplied = false;
-    if (widget.writeRule case final write?) return write(profile, text);
-    final appLocalizations = context.appLocalizations;
-    try {
-      await putProfileRuleFirst(profile.id, Rule.parse(text));
-    } catch (error) {
-      return appLocalizations.addRuleWriteFailed('$error');
+  AddedRulesAction get _actions => ref.read(addedRulesActionProvider.notifier);
+
+  Future<void> _loadEditable() async {
+    final profile = ref.read(currentProfileProvider);
+    final serial = ++_editableSerial;
+    if (profile == null) {
+      if (mounted) setState(() => _editable = null);
+      return;
     }
-    ref.invalidate(setupStateProvider(profile.id));
-    final applied = await ref
-        .read(setupActionProvider.notifier)
-        .applyProfile(silence: true);
-    _addedUnapplied = !applied;
-    return null;
+    try {
+      final state = await _actions.load(profile);
+      if (!mounted || serial != _editableSerial) return;
+      setState(() {
+        _editable = state;
+        _editableProfileId = profile.id;
+      });
+    } catch (_) {
+      // Without them the rows only read.
+    }
   }
 
-  Future<void> _addRule() async {
-    final lookup = _lookup;
+  /// The added rule, or custom profile's own, the row at [index] shows.
+  _Editable? _editableAt(RuleSource? source) {
+    final editable = _editable;
+    final id = source?.ruleId;
+    if (editable == null ||
+        id == null ||
+        _editableProfileId != ref.read(currentProfileIdProvider)) {
+      return null;
+    }
+    final rule = editable.rules.where((rule) => rule.id == id).firstOrNull;
+    if (rule == null) return null;
+    final set = pairedAddedRuleSetFor(rule, editable.sets, _editableProfileId!);
+    return (rule: rule, set: set);
+  }
+
+  /// The profile's own rules among the editable ones, in their order: the
+  /// ones that move.
+  List<Rule> get _ownRules => [
+    for (final rule in _editable?.rules ?? const <Rule>[])
+      if (rule.profileId != null) rule,
+  ];
+
+  List<String> _recentProcesses() {
+    final names = <String>{};
+    final requests = ref.read(requestsProvider).list;
+    for (final request in requests.reversed) {
+      final name = request.metadata.process.trim();
+      if (name.isNotEmpty) names.add(name);
+      if (names.length >= 30) break;
+    }
+    return names.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.keyN ||
+        !(HardwareKeyboard.instance.isMetaPressed ||
+            HardwareKeyboard.instance.isControlPressed) ||
+        HardwareKeyboard.instance.isShiftPressed ||
+        !mounted ||
+        !(ModalRoute.of(context)?.isCurrent ?? true) ||
+        !TickerMode.valuesOf(context).enabled) {
+      return false;
+    }
+    unawaited(_openRuleDialog());
+    return true;
+  }
+
+  /// Writes [rule] through the test hook, as the hit card's dialog did.
+  Future<AddedRulesSave> _saveRule(
+    Profile profile,
+    Rule rule, {
+    Rule? previous,
+    bool last = false,
+  }) async {
+    _addedUnapplied = false;
+    if (widget.writeRule case final write?) {
+      final error = await write(profile, rule.rawValue);
+      return (error: error, pending: false, ruleId: null);
+    }
+    final result = await _actions.putRule(
+      profile,
+      rule,
+      previous: previous,
+      last: last,
+    );
+    _addedUnapplied = result.pending;
+    return result;
+  }
+
+  /// Opens the rule dialog: to add one, prefilled for a looked-up host when
+  /// [host] is given, or to edit [editing].
+  Future<void> _openRuleDialog({
+    _Editable? editing,
+    int? number,
+    String? host,
+  }) async {
     final profile = ref.read(currentProfileProvider);
-    if (lookup == null || profile == null) return;
-    final winner = lookup.result?.winner;
+    if (profile == null || !mounted) return;
+    final prefill = host == null ? null : addedRulePrefill(host);
+    final winner = host == null ? null : _lookup?.result?.winner;
     final targets = _targets();
-    final text = await dialogs.showCommonDialog<String>(
+    final rule = editing?.rule;
+    final outcome = await dialogs.showCommonDialog<RuleEditOutcome>(
       dismissible: false,
-      child: AddRuleDialog(
-        host: lookup.host,
+      child: RuleEditDialog(
         profileLabel: profile.realLabel,
+        coreRunning: _coreRunning,
         targets: targets,
-        initialTarget: winner?.target,
-        onAdd: (text) => _writeRule(profile, text),
+        existing: _editable?.rules ?? const [],
+        rule: rule,
+        number: number,
+        initialType: prefill?.type,
+        initialValue: prefill?.value,
+        initialTarget: winner?.target ?? _lastTarget,
+        processNames: _recentProcesses(),
+        onSave: (rule, {previous, last = false}) =>
+            _saveRule(profile, rule, previous: previous, last: last),
+        onDelete: rule == null
+            ? null
+            : () => _actions.deleteRule(profile, rule),
       ),
     );
-    if (text == null || !mounted) return;
-    await _runLookup(
-      lookup.host,
-      port: lookup.port,
-      record: lookup.record,
-      keep: true,
+    if (outcome == null || !mounted) return;
+    if (!outcome.deleted) {
+      final target = outcome.text.split(',').elementAtOrNull(2);
+      if (target != null && target.isNotEmpty) _lastTarget = target;
+    }
+    await _afterSave(outcome, fromLookup: host != null);
+  }
+
+  Future<void> _openSetDialog({_Editable? editing, int? number}) async {
+    final profile = ref.read(currentProfileProvider);
+    if (profile == null || !mounted) return;
+    final set = editing?.set;
+    final rule = editing?.rule;
+    final taken = {
+      ..._actions.takenRuleSetNames(profile),
+      for (final other in _editable?.sets ?? const <AddedRuleSet>[])
+        if (other.id != set?.id) other.name,
+    };
+    final outcome = await dialogs.showCommonDialog<RuleEditOutcome>(
+      dismissible: false,
+      child: RuleSetEditDialog(
+        profileLabel: profile.realLabel,
+        coreRunning: _coreRunning,
+        targets: _targets(),
+        takenNames: taken,
+        set: set,
+        setTarget: rule?.ruleTarget,
+        number: number,
+        initialTarget: _lastTarget,
+        onCheck: _actions.checkRuleSet,
+        onSave: (built, {required target, check}) => _actions.putSet(
+          profile,
+          built.copyWith(profileId: profile.id),
+          target: target,
+          previous: set,
+          rule: rule,
+          content: check?.content,
+        ),
+        onDelete: set == null
+            ? null
+            : () => _actions.deleteSet(profile, set, rule: rule!),
+        onRefresh: set == null ? null : () => _actions.refreshSet(profile, set),
+      ),
+    );
+    if (outcome == null || !mounted) return;
+    await _afterSave(outcome, fromLookup: false);
+  }
+
+  Future<void> _edit(_Editable editable, int number) {
+    if (editable.set != null) {
+      return _openSetDialog(editing: editable, number: number);
+    }
+    return _openRuleDialog(editing: editable, number: number);
+  }
+
+  /// Whether the rule dialog can show [rule]: one of the types it offers.
+  bool _ruleDialogFits(Rule rule) =>
+      addedRuleMainTypes.contains(rule.ruleAction) ||
+      addedRuleMoreTypes.contains(rule.ruleAction);
+
+  Future<void> _delete(_Editable editable) async {
+    final profile = ref.read(currentProfileProvider);
+    if (profile == null) return;
+    final set = editable.set;
+    final text = editable.rule.rawValue;
+    if (!await confirmRuleDelete(context, text: text, setName: set?.name)) {
+      return;
+    }
+    final result = set != null
+        ? await _actions.deleteSet(profile, set, rule: editable.rule)
+        : await _actions.deleteRule(profile, editable.rule);
+    if (!mounted) return;
+    if (result.error case final error?) {
+      _showBanner(error, RuleTone.red);
+      return;
+    }
+    await _afterSave((
+      text: text,
+      name: set?.name ?? '',
+      ruleId: null,
+      pending: result.pending,
+      isSet: set != null,
+      edited: false,
+      deleted: true,
+    ), fromLookup: false);
+  }
+
+  Future<void> _move(_Editable editable, {required bool up}) async {
+    final profile = ref.read(currentProfileProvider);
+    if (profile == null) return;
+    final result = await _actions.moveRule(
+      profile,
+      editable.rule,
+      up: up,
+      expectedOrder: _ownRules,
     );
     if (!mounted) return;
+    if (result.error case final error?) {
+      _showBanner(context.appLocalizations.ruleMoveFailed(error), RuleTone.red);
+    }
+    await _loadEditable();
+    await _loadList();
+  }
+
+  void _showBanner(String text, RuleTone tone, {bool lookupAction = false}) {
+    _bannerTimer?.cancel();
+    setState(
+      () => _banner = (text: text, tone: tone, lookupAction: lookupAction),
+    );
+    // A failure stays until the next change; news goes after 4 s.
+    if (tone != RuleTone.red) {
+      _bannerTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) setState(() => _banner = null);
+      });
+    }
+  }
+
+  void _focusSearch() {
+    setState(() => _banner = null);
+    _scaffoldKey.currentState?.openSearch();
+  }
+
+  /// After a save: the list again, the saved row lit and in view, a note
+  /// of what happened, and the current lookup run again.
+  Future<void> _afterSave(
+    RuleEditOutcome outcome, {
+    required bool fromLookup,
+  }) async {
+    final appLocalizations = context.appLocalizations;
+    final shown = outcome.isSet ? outcome.name : outcome.text;
+    final text = outcome.deleted
+        ? appLocalizations.ruleDeletedBanner
+        : outcome.pending
+        ? appLocalizations.ruleSavedPendingBanner
+        : outcome.isSet
+        ? (outcome.edited
+              ? appLocalizations.ruleSetSavedBanner(shown)
+              : appLocalizations.ruleSetAddedBanner(shown))
+        : outcome.edited
+        ? appLocalizations.ruleSavedBanner(shown)
+        : appLocalizations.ruleAddedBanner(shown);
+    _showBanner(
+      text,
+      RuleTone.green,
+      lookupAction: !outcome.deleted && !outcome.pending && _lookup == null,
+    );
+    await _loadEditable();
+    await _loadList();
+    if (!mounted) return;
+    final lookup = _lookup;
+    if (lookup != null && lookup.result != null) {
+      await _runLookup(
+        lookup.host,
+        port: lookup.port,
+        metadata: lookup.metadata,
+        record: lookup.record,
+        keep: true,
+      );
+      if (!mounted) return;
+      if (fromLookup && !outcome.deleted && !outcome.isSet) {
+        _noteAddedOutcome(lookup, outcome.text);
+      }
+    }
+    final ruleId = outcome.ruleId;
+    if (ruleId != null && !outcome.deleted) _flashRule(ruleId);
+  }
+
+  void _flashRule(int ruleId) {
+    _flashTimer?.cancel();
+    setState(() => _flashRuleId = ruleId);
+    _flashTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _flashRuleId = null);
+    });
+    final sources = _sources;
+    final index = sources?.indexWhere((source) => source?.ruleId == ruleId);
+    if (index == null || index < 0 || _inLookup) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealIndex(index));
+  }
+
+  /// Brings the row of rule [index] into view in the whole list.
+  void _revealIndex(int index) {
+    if (!mounted) return;
+    final list = _list;
+    final startContext = _listStartKey.currentContext;
+    if (list == null || startContext == null || !_scrollController.hasClients) {
+      return;
+    }
+    final items = _items(list: list, sources: _sources);
+    final position = items.indexWhere(
+      (item) => item.isRule && item.rule!.index == index,
+    );
+    if (position == -1) return;
+    final sliver = startContext.findRenderObject();
+    final start = sliver is RenderSliver
+        ? sliver.constraints.precedingScrollExtent
+        : 0.0;
+    final viewport = _scrollController.position.viewportDimension;
+    final offset = start + position * _rowExtentGuess;
+    final current = _scrollController.offset;
+    if (offset >= current && offset + _rowExtentGuess <= current + viewport) {
+      return;
+    }
+    _scrollController.animateTo(
+      (offset - viewport / 3).clamp(
+        0,
+        _scrollController.position.maxScrollExtent,
+      ),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+  }
+
+  /// Says whether the rule added from the hit card now decides the host.
+  void _noteAddedOutcome(_Lookup lookup, String text) {
     final result = _lookup?.result;
     final now = result?.winner;
     final fields = text.split(',');
@@ -724,12 +1096,19 @@ class _RulesViewState extends ConsumerState<RulesView> {
     });
   }
 
+  Future<void> _addRule() async {
+    final lookup = _lookup;
+    if (lookup == null) return;
+    await _openRuleDialog(host: lookup.host);
+  }
+
   void _lookupAgain() {
     final lookup = _lookup;
     if (lookup == null) return;
     _runLookup(
       lookup.host,
       port: lookup.port,
+      metadata: lookup.metadata,
       record: lookup.record,
       keep: true,
     );
@@ -757,6 +1136,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
     return Scaffold(
       key: _scaffoldKey,
       title: appLocalizations.rules,
+      actions: [if (profile != null) _buildAddButton(context)],
       searchState: AppBarSearchState(
         onSearch: _onChanged,
         controller: _controller,
@@ -852,6 +1232,22 @@ class _RulesViewState extends ConsumerState<RulesView> {
                 tone: RuleTone.red,
                 glyph: AppGlyphs.error,
                 text: appLocalizations.rulesCoreStopped,
+              ),
+            if (_banner case final banner?)
+              Semantics(
+                liveRegion: true,
+                child: RulesNotice(
+                  key: RulesView.bannerKey,
+                  tone: banner.tone,
+                  glyph: banner.tone == RuleTone.red
+                      ? AppGlyphs.error
+                      : AppGlyphs.checkCircle,
+                  text: banner.text,
+                  actionLabel: banner.lookupAction
+                      ? appLocalizations.ruleBannerLookup
+                      : null,
+                  onAction: banner.lookupAction ? _focusSearch : null,
+                ),
               ),
             if (mode == 'global' || mode == 'direct')
               RulesNotice(
@@ -970,11 +1366,33 @@ class _RulesViewState extends ConsumerState<RulesView> {
     return Padding(
       key: RulesView.infoKey,
       padding: const EdgeInsets.only(left: 2),
-      child: Text(
-        info,
-        style: AppTextStyle.caption1
-            .of(context)
-            .copyWith(color: context.colorScheme.onSurfaceVariant),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 6,
+        children: [
+          if (lookup.metadata case final metadata?)
+            ConnectionProcessBuilder(
+              metadata: metadata,
+              builder: (context, process) => process.hasProcess
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 6,
+                      children: [
+                        ProcessIcon(process: process, size: 16),
+                        Text(processLabelOf(process)),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          Flexible(
+            child: Text(
+              info,
+              style: AppTextStyle.caption1
+                  .of(context)
+                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1012,6 +1430,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
             onAction: () => _runLookup(
               lookup.host,
               port: lookup.port,
+              metadata: lookup.metadata,
               record: lookup.record,
             ),
           ),
@@ -1296,6 +1715,73 @@ class _RulesViewState extends ConsumerState<RulesView> {
     );
   }
 
+  Widget _buildAddButton(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    return PopupAnchor(
+      key: RulesView.addKey,
+      placement: PopupPlacement.belowAnchorEnd,
+      targetBuilder: (open) => Tooltip(
+        message: appLocalizations.rulesAddTooltip,
+        child: Semantics(
+          button: true,
+          label: appLocalizations.rulesAddSemantics,
+          excludeSemantics: true,
+          child: FocusableActionDetector(
+            mouseCursor: SystemMouseCursors.click,
+            actions: {
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  open();
+                  return null;
+                },
+              ),
+            },
+            child: GestureDetector(
+              onTap: open,
+              child: Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: ShapeDecoration(
+                  color: colorScheme.brightness == Brightness.light
+                      ? const Color(0xFFFFFFFF)
+                      : context.raisedSurfaceLevel.colorOf(colorScheme),
+                  shape: const CircleBorder(),
+                  shadows: const [
+                    BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: GlyphIcon(
+                  AppGlyphs.add,
+                  size: 18,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      popupBuilder: (_) => PopupMenu(
+        width: 210,
+        items: [
+          PopupMenuItem(
+            label: appLocalizations.rulesAddRuleMenu,
+            onPressed: () => unawaited(_openRuleDialog()),
+          ),
+          PopupMenuItem(
+            label: appLocalizations.rulesAddSetMenu,
+            onPressed: () => unawaited(_openSetDialog()),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildList(
     BuildContext context,
     RuleList list,
@@ -1342,7 +1828,9 @@ class _RulesViewState extends ConsumerState<RulesView> {
           final first = position == 0;
           final last = position == items.length - 1;
           final Widget row;
-          if (item.isRule) {
+          if (item.isDivider) {
+            row = const RulesDividerRow();
+          } else if (item.isRule) {
             final rule = item.rule!;
             final index = rule.index;
             final expandable = _expandable(rule);
@@ -1352,6 +1840,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
             // the next one goes back to the matched entry alone.
             final open =
                 _isExpanded(index) || _matchedEntryOf(item.hit) != null;
+            final source = sources?.elementAtOrNull(index);
+            final editable = _editableAt(source);
+            final own = _ownRules;
+            final ownIndex = editable == null
+                ? -1
+                : own.indexWhere((rule) => rule.id == editable.rule.id);
+            final number = index + 1;
             row = RuleRow(
               profile: _profileName,
               key: index == highlighted ? _targetRowKey : ValueKey(index),
@@ -1373,6 +1868,17 @@ class _RulesViewState extends ConsumerState<RulesView> {
                   : () => _revealGroup(rule.target),
               onUpdateSet: set != null && set.status != 'ok'
                   ? _showResources
+                  : null,
+              flashing: editable != null && editable.rule.id == _flashRuleId,
+              onEdit:
+                  editable == null ||
+                      (editable.set == null && !_ruleDialogFits(editable.rule))
+                  ? null
+                  : () => _edit(editable, number),
+              onDelete: editable == null ? null : () => _delete(editable),
+              onMoveUp: ownIndex > 0 ? () => _move(editable!, up: true) : null,
+              onMoveDown: ownIndex != -1 && ownIndex < own.length - 1
+                  ? () => _move(editable!, up: false)
                   : null,
             );
           } else if (item.isEntry) {

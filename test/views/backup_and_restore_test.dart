@@ -112,6 +112,14 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
+      expect(
+        find.text(
+          'Backups retain rule set settings. After restoring, connect to the '
+          'internet to download rule sets again; everyday restarts and profile '
+          'switches do not require another download.',
+        ),
+        findsOneWidget,
+      );
       await tester.tap(find.text(label));
       await tester.pumpAndSettle();
       return chosen;

@@ -227,6 +227,244 @@ void main() {
     },
   );
 
+  test(
+    'export generated provider YAML for offline Core parser integration',
+    () async {
+      final home = Platform.environment['FLASH_GENERATED_HOME']!;
+      const set = AddedRuleSet(
+        id: 42,
+        profileId: 7,
+        name: 'ads',
+        url: 'https://example.invalid/ads',
+      );
+      final config = await decodeJSONTask<Map<String, dynamic>>(
+        jsonEncode({
+          'rule-providers': {
+            'ads': {
+              'type': 'http',
+              'url': set.url,
+              'behavior': 'ipcidr',
+              'format': 'text',
+            },
+          },
+          'rules': ['RULE-SET,ads,DIRECT', 'MATCH,DIRECT'],
+        }),
+      );
+      final result = await makeRealProfileTask(
+        MakeRealProfileState(
+          profilesPath: home,
+          profileId: 7,
+          rawConfig: config,
+          realPatchConfig: const PatchClashConfig(),
+          appendSystemDns: false,
+          proxyGroups: const [],
+          rules: const [],
+          addedRules: const [
+            Rule(
+              id: 42,
+              profileId: 7,
+              ruleAction: RuleAction.RULE_SET,
+              ruleProvider: 'ads',
+              ruleTarget: 'REJECT',
+            ),
+          ],
+          addedRuleSets: const [set],
+          defaultUA: 'test',
+        ),
+      );
+      final cache = File(set.pathUnder(home));
+      await cache.parent.create(recursive: true);
+      await cache.writeAsString(
+        "payload:\n  - localhost\n  - '+.example.test'\n",
+      );
+      await File(join(home, 'generated.yaml')).writeAsString(result.yaml);
+    },
+    skip: Platform.environment['FLASH_GENERATED_HOME'] == null,
+  );
+
+  group('added rule sets', () {
+    const ads = AddedRuleSet(
+      id: 1,
+      profileId: 7,
+      name: 'ads',
+      url: 'https://x.test/ads.yaml',
+    );
+    const news = AddedRuleSet(
+      id: 2,
+      profileId: 7,
+      name: 'news',
+      url: 'https://x.test/news.txt',
+      behavior: RuleProviderBehavior.classical,
+      format: RuleProviderFormat.text,
+    );
+
+    Future<YamlMap> make({
+      required List<AddedRuleSet> sets,
+      List<Rule> addedRules = const [],
+      List<Rule> rules = const [],
+    }) async {
+      final rawConfig = await decodeJSONTask<Map<String, dynamic>>(
+        jsonEncode({
+          'rule-providers': {
+            'ads': {'type': 'http', 'url': 'https://sub.test/ads.yaml'},
+          },
+          'rules': ['RULE-SET,ads,DIRECT', 'MATCH,Proxy'],
+        }),
+      );
+      final result = await makeRealProfileTask(
+        MakeRealProfileState(
+          profilesPath: '/profiles',
+          profileId: 7,
+          rawConfig: rawConfig,
+          realPatchConfig: const PatchClashConfig(),
+          appendSystemDns: false,
+          proxyGroups: const [],
+          rules: rules,
+          addedRules: addedRules,
+          addedRuleSets: sets,
+          defaultUA: 'FlClash-Test',
+        ),
+      );
+      return loadYaml(result.yaml) as YamlMap;
+    }
+
+    test('download into the profile\'s own folder, before its rules', () async {
+      final config = await make(
+        sets: [news],
+        addedRules: const [
+          Rule(
+            id: 1,
+            profileId: 7,
+            ruleAction: RuleAction.RULE_SET,
+            ruleProvider: 'news',
+            ruleTarget: 'Proxy',
+          ),
+        ],
+      );
+
+      final providers = config['rule-providers'] as YamlMap;
+      expect(providers.keys.toList(), ['news', 'ads']);
+      final entry = providers['news'] as YamlMap;
+      expect(entry['type'], 'http');
+      expect(entry['url'], 'https://x.test/news.txt');
+      expect(entry['behavior'], 'classical');
+      expect(entry['format'], 'text');
+      expect(entry['path'], news.pathUnder('/profiles'));
+      expect(entry['path'], startsWith('/profiles/providers/7/rules/'));
+      expect(config['rules'], [
+        'RULE-SET,news,Proxy',
+        'RULE-SET,ads,DIRECT',
+        'MATCH,Proxy',
+      ]);
+    });
+
+    test('a name the subscription takes renames only the added set', () async {
+      final config = await make(
+        sets: [ads],
+        addedRules: const [
+          Rule(
+            id: 1,
+            profileId: 7,
+            ruleAction: RuleAction.RULE_SET,
+            ruleProvider: 'ads',
+            ruleTarget: 'REJECT',
+          ),
+        ],
+      );
+
+      final providers = config['rule-providers'] as YamlMap;
+      expect(providers['ads']['url'], 'https://sub.test/ads.yaml');
+      expect(
+        providers['${addedRuleSetPrefix}ads']['url'],
+        'https://x.test/ads.yaml',
+      );
+      expect(config['rules'], [
+        'RULE-SET,${addedRuleSetPrefix}ads,REJECT',
+        'RULE-SET,ads,DIRECT',
+        'MATCH,Proxy',
+      ]);
+    });
+
+    test(
+      'collision rewrites the paired rule but leaves another rule alone',
+      () async {
+        final config = await make(
+          sets: [ads],
+          rules: const [
+            Rule(
+              id: 1,
+              profileId: 7,
+              ruleAction: RuleAction.RULE_SET,
+              ruleProvider: 'ads',
+              ruleTarget: 'REJECT',
+            ),
+            Rule(
+              id: 8,
+              profileId: 7,
+              ruleAction: RuleAction.RULE_SET,
+              ruleProvider: 'ads',
+              ruleTarget: 'DIRECT',
+            ),
+          ],
+        );
+        expect(config['rules'], [
+          'RULE-SET,${addedRuleSetPrefix}ads,REJECT',
+          'RULE-SET,ads,DIRECT',
+        ]);
+      },
+    );
+
+    test(
+      'legacy unpaired collisions fail without rewriting any rule',
+      () async {
+        await expectLater(
+          make(
+            sets: [ads],
+            rules: const [
+              Rule(
+                id: 8,
+                profileId: 7,
+                ruleAction: RuleAction.RULE_SET,
+                ruleProvider: 'ads',
+                ruleTarget: 'DIRECT',
+              ),
+            ],
+          ),
+          throwsStateError,
+        );
+      },
+    );
+
+    test('a link that is not on the web is left out', () async {
+      final config = await make(
+        sets: [news.copyWith(url: 'file:///etc/passwd')],
+      );
+
+      expect((config['rule-providers'] as YamlMap).keys, ['ads']);
+    });
+
+    test('a custom profile\'s own rules use the renamed set', () async {
+      final config = await make(
+        sets: [ads],
+        rules: const [
+          Rule(
+            id: 1,
+            profileId: 7,
+            ruleAction: RuleAction.RULE_SET,
+            ruleProvider: 'ads',
+            ruleTarget: 'REJECT',
+          ),
+          Rule(ruleAction: RuleAction.MATCH, ruleTarget: 'DIRECT'),
+        ],
+      );
+
+      expect(config['rules'], [
+        'RULE-SET,${addedRuleSetPrefix}ads,REJECT',
+        'MATCH,DIRECT',
+      ]);
+    });
+  });
+
   test('lastMatchTarget reads the last MATCH rule that names a target', () {
     expect(
       lastMatchTarget(['MATCH,A', 'DOMAIN,x.test,B', 'match,C', 'MATCH,']),

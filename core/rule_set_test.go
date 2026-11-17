@@ -10,9 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/metacubex/mihomo/component/resource"
 	"github.com/metacubex/mihomo/constant"
 	cp "github.com/metacubex/mihomo/constant/provider"
 	rp "github.com/metacubex/mihomo/rules/provider"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestClassifyRuleSetPicksTheBehaviorTheEntriesFit(t *testing.T) {
@@ -56,7 +58,7 @@ func TestClassifyRuleSetRejectsWhatHasNoBehavior(t *testing.T) {
 
 func TestCompileRuleSetReadsEachSourceFormat(t *testing.T) {
 	var domainMrs strings.Builder
-	if err := rp.ConvertToMrs([]byte("example.com\n"), cp.Domain, cp.TextRule, &domainMrs); err != nil {
+	if err := rp.ConvertToMrs([]byte("example.com\nexample.org\n"), cp.Domain, cp.TextRule, &domainMrs); err != nil {
 		t.Fatal(err)
 	}
 	cases := []struct {
@@ -65,11 +67,11 @@ func TestCompileRuleSetReadsEachSourceFormat(t *testing.T) {
 		info     RuleSetInfo
 		compiles bool
 	}{
-		{"yaml domains", "payload:\n  - '+.example.com'\n", RuleSetInfo{"domain", "yaml"}, true},
-		{"text ranges with comments", "# ranges\n10.0.0.0/8\n\n// more\n192.168.0.0/16\n", RuleSetInfo{"ipcidr", "text"}, true},
-		{"yaml classical", "payload:\n  - DOMAIN-KEYWORD,example\n", RuleSetInfo{"classical", "yaml"}, false},
-		{"text classical", "PROCESS-NAME,curl\n", RuleSetInfo{"classical", "text"}, false},
-		{"mrs", domainMrs.String(), RuleSetInfo{"domain", "mrs"}, false},
+		{"yaml domains", "payload:\n  - '+.example.com'\n", RuleSetInfo{"domain", "yaml", 1}, true},
+		{"text ranges with comments", "# ranges\n10.0.0.0/8\n\n// more\n192.168.0.0/16\n", RuleSetInfo{"ipcidr", "text", 2}, true},
+		{"yaml classical", "payload:\n  - DOMAIN-KEYWORD,example\n", RuleSetInfo{"classical", "yaml", 1}, false},
+		{"text classical", "PROCESS-NAME,curl\n", RuleSetInfo{"classical", "text", 1}, false},
+		{"mrs", domainMrs.String(), RuleSetInfo{"domain", "mrs", 2}, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -106,9 +108,9 @@ func TestCompileRuleSetRejectsUnusableSources(t *testing.T) {
 
 func TestCompileRuleSetKeepsAnEmptySetAsClassical(t *testing.T) {
 	cases := map[string]RuleSetInfo{
-		"":                {"classical", "text"},
-		"# nothing yet\n": {"classical", "text"},
-		"payload: []\n":   {"classical", "yaml"},
+		"":                {"classical", "text", 0},
+		"# nothing yet\n": {"classical", "text", 0},
+		"payload: []\n":   {"classical", "yaml", 0},
 	}
 	for source, want := range cases {
 		info, mrs, err := compileRuleSet([]byte(source), true)
@@ -146,7 +148,7 @@ func TestHandleCompileRuleSetWritesTheMrsBesideTheSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
-	if *info != (RuleSetInfo{"domain", "text"}) {
+	if *info != (RuleSetInfo{"domain", "text", 1}) {
 		t.Fatalf("info = %+v", *info)
 	}
 	dump, err := handleDumpRuleSet(PathParams{Path: filepath.Join(dir, "set.mrs")})
@@ -240,5 +242,89 @@ func TestHandleCompileRuleSetReportsAFailedRequest(t *testing.T) {
 	}
 	if details, _ := methodErr.Details.(map[string]any); details["statusCode"] != http.StatusNotFound {
 		t.Fatalf("details = %v, want the status code", methodErr.Details)
+	}
+}
+
+// Consumes the actual Flutter generator's fixture. No provider is initialized,
+// so constructing the HTTP vehicles cannot make a network request.
+func TestGeneratedProviderFixtureOffline(t *testing.T) {
+	home := os.Getenv("FLASH_GENERATED_HOME")
+	if home == "" {
+		t.Skip("set FLASH_GENERATED_HOME to the generated test fixture")
+	}
+	previous := constant.Path.HomeDir()
+	constant.SetHomeDir(home)
+	t.Cleanup(func() { constant.SetHomeDir(previous) })
+	data, err := os.ReadFile(filepath.Join(home, "generated.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config struct {
+		Providers map[string]map[string]any `yaml:"rule-providers"`
+		Rules     []string                  `yaml:"rules"`
+	}
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		t.Fatal(err)
+	}
+	added := config.Providers["flash-added-ads"]
+	subscription := config.Providers["ads"]
+	if added == nil || subscription == nil {
+		t.Fatalf("providers = %#v", config.Providers)
+	}
+	if added["path"] == subscription["path"] {
+		t.Fatal("added and subscription provider share a path")
+	}
+	if !slices.Contains(config.Rules, "RULE-SET,flash-added-ads,REJECT") || !slices.Contains(config.Rules, "RULE-SET,ads,DIRECT") {
+		t.Fatalf("rules = %v", config.Rules)
+	}
+	for name, definition := range config.Providers {
+		p, err := rp.ParseRuleProvider(name, definition, nil, func(string) resource.BundleFile { return nil })
+		if err != nil {
+			t.Fatalf("%s provider parse: %v", name, err)
+		}
+		if name == "flash-added-ads" && p.Behavior() != cp.Domain {
+			t.Fatalf("added behavior: %v", p.Behavior())
+		}
+		if name == "ads" && p.Behavior() != cp.IPCIDR {
+			t.Fatalf("subscription behavior: %v", p.Behavior())
+		}
+	}
+	content, err := os.ReadFile(added["path"].(string))
+	if err != nil {
+		t.Fatal(err)
+	}
+	strategy, err := rp.ParseRuleSet(content, cp.Domain, cp.YamlRule, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	matcher := strategy.(interface {
+		Match(*constant.Metadata, constant.RuleMatchHelper) bool
+		Count() int
+	})
+	if matcher.Count() != 2 || !matcher.Match(&constant.Metadata{Host: "localhost"}, constant.RuleMatchHelper{}) || !matcher.Match(&constant.Metadata{Host: "www.example.test"}, constant.RuleMatchHelper{}) {
+		t.Fatalf("generated content count or match failed: %d", matcher.Count())
+	}
+}
+
+func TestCoreDomainSingleLabelAndSuffixPatterns(t *testing.T) {
+	for _, source := range []string{"localhost\n", "+.localhost\n", ".localhost\n"} {
+		strategy, err := rp.ParseRuleSet([]byte(source), cp.Domain, cp.TextRule, nil)
+		if err != nil {
+			t.Fatalf("%q: %v", source, err)
+		}
+		m := strategy.(interface {
+			Count() int
+			Match(*constant.Metadata, constant.RuleMatchHelper) bool
+		})
+		if m.Count() != 1 {
+			t.Fatalf("%q count = %d", source, m.Count())
+		}
+		host := "localhost"
+		if strings.HasPrefix(source, ".") {
+			host = "x.localhost"
+		}
+		if !m.Match(&constant.Metadata{Host: host}, constant.RuleMatchHelper{}) {
+			t.Fatalf("%q did not match %q", source, host)
+		}
 	}
 }

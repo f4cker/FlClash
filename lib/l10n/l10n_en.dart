@@ -1943,6 +1943,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreAllData => 'Restore all data';
 
   @override
+  String get restoreRuleSetDownloadNotice =>
+      'Backups retain rule set settings. After restoring, connect to the internet to download rule sets again; everyday restarts and profile switches do not require another download.';
+
+  @override
   String get addProfile => 'Add profile';
 
   @override
@@ -6419,4 +6423,389 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get relookup => 'Look up again';
+
+  @override
+  String get addedRulesReloadTimeout =>
+      'The core did not finish reloading in 15 seconds; the change was undone.';
+
+  @override
+  String get addedRulesReloadFailed =>
+      'The core did not take the new config; the change was undone.';
+
+  @override
+  String get addedRuleSetLoadFailed =>
+      'The rule set could not be downloaded; the change was undone.';
+
+  @override
+  String get addedRuleSetLoadTimeout =>
+      'The rule set did not finish downloading in 15 seconds; the change was undone.';
+
+  @override
+  String get ruleDeleteTitle => 'Delete this rule?';
+
+  @override
+  String ruleSetDeleteTitle(String name) {
+    return 'Delete rule set “$name”?';
+  }
+
+  @override
+  String ruleDeleteBody(String text) {
+    return '$text\nThis takes effect right away.';
+  }
+
+  @override
+  String ruleDuplicate(int number, String group) {
+    return 'This rule is already there (No. $number), through $group.';
+  }
+
+  @override
+  String get ruleUpdateGroup => 'Update Group';
+
+  @override
+  String get ruleEditAddTitle => 'Add Rule';
+
+  @override
+  String get ruleEditTitle => 'Edit Added Rule';
+
+  @override
+  String get ruleSetAddTitle => 'Add Rule Set';
+
+  @override
+  String get ruleSetEditTitle => 'Edit Added Rule Set';
+
+  @override
+  String get ruleEditCoreStopped => 'Takes effect once the core starts';
+
+  @override
+  String ruleEditPosition(int number) {
+    return 'No. $number · Added rule';
+  }
+
+  @override
+  String ruleSetEditPosition(int number) {
+    return 'No. $number · Added rule set';
+  }
+
+  @override
+  String get ruleEditSaving => 'Saving…';
+
+  @override
+  String get ruleTypeLabel => 'Type';
+
+  @override
+  String get ruleTypeMore => 'More';
+
+  @override
+  String get ruleTypeDomainSuffix => 'Domain Suffix';
+
+  @override
+  String get ruleTypeDomain => 'Full Domain';
+
+  @override
+  String get ruleTypeKeyword => 'Domain Keyword';
+
+  @override
+  String get ruleTypeIpCidr => 'IP Range';
+
+  @override
+  String get ruleTypeIpCidr6 => 'IPv6 Range';
+
+  @override
+  String get ruleTypeDstPort => 'Destination Port';
+
+  @override
+  String get ruleTypeProcessName => 'Process Name';
+
+  @override
+  String get ruleTypeSrcIpCidr => 'Source IP Range';
+
+  @override
+  String get ruleValueKeyword => 'Keyword';
+
+  @override
+  String get ruleHelpDomainSuffix =>
+      'Matches example.com and all its subdomains. You can paste a link.';
+
+  @override
+  String get ruleHelpDomain =>
+      'Matches only this domain, not its subdomains. You can paste a link.';
+
+  @override
+  String get ruleHelpKeyword => 'Matches any domain that contains this text.';
+
+  @override
+  String get ruleHelpIpCidr =>
+      'Such as 10.0.0.0/8; a single address becomes /32.';
+
+  @override
+  String get ruleHelpIpCidr6 =>
+      'Such as 2001:db8::/32; a single address becomes /128.';
+
+  @override
+  String get ruleHelpSrcIpCidr =>
+      'The range of the devices the connections come from.';
+
+  @override
+  String get ruleHelpPort => 'Such as 443, or a range such as 8000-9000.';
+
+  @override
+  String get ruleHelpProcess =>
+      'The process name of an app or program, such as Safari or curl.';
+
+  @override
+  String get ruleValueEmpty => 'Enter a value';
+
+  @override
+  String get ruleValueComma => 'Cannot contain a comma';
+
+  @override
+  String get ruleValueDomain => 'Not a valid domain';
+
+  @override
+  String get ruleValueCidr => 'Not a valid IP range';
+
+  @override
+  String get ruleValueNetwork => 'Must be tcp or udp';
+
+  @override
+  String get ruleValueNumberRange => 'Not a valid number or range';
+
+  @override
+  String get ruleValueDscp => 'DSCP takes 0 to 63';
+
+  @override
+  String get ruleValuePickCode => 'Choose a code';
+
+  @override
+  String get ruleValuePickProcess => 'Choose from running apps';
+
+  @override
+  String get ruleValueNoProcesses => 'No apps recorded lately';
+
+  @override
+  String get rulePositionLabel => 'Position';
+
+  @override
+  String get rulePositionFirst => 'First of added rules';
+
+  @override
+  String get rulePositionLast => 'Last of added rules';
+
+  @override
+  String get ruleSetUrlLabel => 'URL';
+
+  @override
+  String get ruleSetUrlHelp =>
+      'Paste the link of a rule set; Flash downloads it and checks what it holds.';
+
+  @override
+  String get ruleSetUrlInvalid => 'Only http or https links';
+
+  @override
+  String get ruleSetChecking => 'Downloading and checking…';
+
+  @override
+  String ruleSetCheckOk(String kind, String format, String count) {
+    return 'Downloaded: $kind rules, $format format, $count entries';
+  }
+
+  @override
+  String ruleSetCheckOkUncounted(String format) {
+    return 'Downloaded: $format format; its entries are counted once the core runs';
+  }
+
+  @override
+  String get ruleSetCheckNotFound => 'Not found (404)';
+
+  @override
+  String get ruleSetCheckTimeout => 'The download timed out';
+
+  @override
+  String ruleSetCheckNetwork(String reason) {
+    return 'Download failed: $reason';
+  }
+
+  @override
+  String get ruleSetCheckNotRuleSet => 'The content is not a rule set';
+
+  @override
+  String get ruleSetCheckUnknown => 'The format cannot be recognized';
+
+  @override
+  String get ruleSetNameLabel => 'Name';
+
+  @override
+  String get ruleSetNameTaken => 'A rule set of this name already exists';
+
+  @override
+  String get ruleSetNameInvalid =>
+      'A name cannot have a comma or spaces at its ends';
+
+  @override
+  String get ruleSetBehaviorLabel => 'Content';
+
+  @override
+  String get ruleSetBehaviorDomain => 'Domains';
+
+  @override
+  String get ruleSetBehaviorIpcidr => 'IP Ranges';
+
+  @override
+  String get ruleSetBehaviorClassical => 'Mixed Rules';
+
+  @override
+  String get ruleSetBehaviorDetected => 'Chosen from the downloaded content.';
+
+  @override
+  String get ruleSetBehaviorMismatch =>
+      'This differs from the downloaded content; the set may not match.';
+
+  @override
+  String get ruleSetMrsNeedsKind => 'MRS holds only domains or IP ranges';
+
+  @override
+  String get ruleSetFormatText => 'Text';
+
+  @override
+  String get ruleSetIntervalLabel => 'Auto Update';
+
+  @override
+  String get ruleSetEvery6Hours => 'Every 6 hours';
+
+  @override
+  String get ruleSetDaily => 'Every day';
+
+  @override
+  String get ruleSetWeekly => 'Every week';
+
+  @override
+  String get ruleSetNeverUpdate => 'Never';
+
+  @override
+  String ruleSetEverySeconds(int seconds) {
+    return 'Every $seconds s';
+  }
+
+  @override
+  String get ruleSetUpdateNow => 'Update Now';
+
+  @override
+  String get ruleSetRefreshed => 'Update started.';
+
+  @override
+  String get rulesAddTooltip => 'Add';
+
+  @override
+  String get rulesAddSemantics => 'Add a rule or rule set';
+
+  @override
+  String get rulesAddRuleMenu => 'Add Rule';
+
+  @override
+  String get rulesAddSetMenu => 'Add Rule Set';
+
+  @override
+  String get rulesAddedDivider =>
+      'Rules below come from the profile and scripts and can only be viewed here';
+
+  @override
+  String get ruleSourceAddedSet => 'Added rule set';
+
+  @override
+  String get ruleEditMenu => 'Edit…';
+
+  @override
+  String get ruleMoveUp => 'Move Up';
+
+  @override
+  String get ruleMoveDown => 'Move Down';
+
+  @override
+  String ruleEditSemantics(int number) {
+    return 'Edit rule $number';
+  }
+
+  @override
+  String ruleDeleteSemantics(int number) {
+    return 'Delete rule $number';
+  }
+
+  @override
+  String ruleAddedBanner(String text) {
+    return 'Rule “$text” was added and is in effect.';
+  }
+
+  @override
+  String ruleSavedBanner(String text) {
+    return 'Rule “$text” was saved and is in effect.';
+  }
+
+  @override
+  String ruleSetAddedBanner(String name) {
+    return 'Rule set “$name” was added and is in effect.';
+  }
+
+  @override
+  String ruleSetSavedBanner(String name) {
+    return 'Rule set “$name” was saved and is in effect.';
+  }
+
+  @override
+  String get ruleDeletedBanner => 'Deleted.';
+
+  @override
+  String get ruleSavedPendingBanner =>
+      'Saved; takes effect once the core starts.';
+
+  @override
+  String get ruleBannerLookup => 'Look Up a URL';
+
+  @override
+  String ruleMoveFailed(String reason) {
+    return 'Could not move the rule: $reason';
+  }
+
+  @override
+  String processHelperLabel(Object name) {
+    return '$name · Helper';
+  }
+
+  @override
+  String processCoreLabel(Object name) {
+    return '$name · Core';
+  }
+
+  @override
+  String get processHelperTag => 'Helper';
+
+  @override
+  String get processCoreTag => 'Core';
+
+  @override
+  String get addedRulesRollbackReloadFailed =>
+      'The changes were rolled back, but restoring the running configuration failed. Reapply the profile before relying on it.';
+
+  @override
+  String get addedRulesRollbackConflict =>
+      'Some changes were kept because another editor changed the rule set during reload. Review the rule and provider before relying on the profile.';
+
+  @override
+  String get addedRulesRollbackReloadTimeout =>
+      'Restoring the running configuration is taking too long. Its state is uncertain; further added-rule changes are paused until it finishes.';
+
+  @override
+  String get addedRulesStaleEdit =>
+      'This rule or rule set changed elsewhere. Reopen it before trying again.';
+
+  @override
+  String get addedRulesApplyPending =>
+      'Applying the rules is taking a while and is still in progress. Please wait.';
+
+  @override
+  String get addedRulesApplyRestored =>
+      'Processing has finished, and the original rules were restored.';
+
+  @override
+  String get addedRulesApplyRestoreFailed =>
+      'Processing has finished, but the original rules could not be restored. Check the current rules.';
 }

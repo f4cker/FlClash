@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"io"
 	"net/netip"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/metacubex/mihomo/common/utils"
 	"github.com/metacubex/mihomo/common/yaml"
 	"github.com/metacubex/mihomo/component/resource"
@@ -118,7 +120,9 @@ func compileRuleSet(buf []byte, allowEmpty bool) (*RuleSetInfo, []byte, error) {
 	if bytes.HasPrefix(buf, zstdMagic) {
 		for _, behavior := range []cp.RuleBehavior{cp.Domain, cp.IPCIDR} {
 			if rp.ConvertToMrs(buf, behavior, cp.MrsRule, io.Discard) == nil {
-				return ruleSetInfo(cp.MrsRule, behavior), nil, nil
+				info := ruleSetInfo(cp.MrsRule, behavior)
+				info.Count = mrsCount(buf)
+				return info, nil, nil
 			}
 		}
 		return nil, nil, errRuleSetInvalid
@@ -132,6 +136,7 @@ func compileRuleSet(buf []byte, allowEmpty bool) (*RuleSetInfo, []byte, error) {
 		return nil, nil, err
 	}
 	info := ruleSetInfo(format, behavior)
+	info.Count = int64(len(entries))
 	if behavior == cp.Classical {
 		return info, nil, nil
 	}
@@ -141,6 +146,25 @@ func compileRuleSet(buf []byte, allowEmpty bool) (*RuleSetInfo, []byte, error) {
 		return nil, nil, errRuleSetEmpty
 	}
 	return info, mrs.Bytes(), nil
+}
+
+// mrsCount reads the entry count an mrs header holds after its magic and
+// behavior; zero when the header cannot be read.
+func mrsCount(buf []byte) int64 {
+	reader, err := zstd.NewReader(bytes.NewReader(buf))
+	if err != nil {
+		return 0
+	}
+	defer reader.Close()
+	var header [5]byte
+	if _, err := io.ReadFull(reader, header[:]); err != nil {
+		return 0
+	}
+	var count int64
+	if err := binary.Read(reader, binary.BigEndian, &count); err != nil || count < 0 {
+		return 0
+	}
+	return count
 }
 
 func ruleSetInfo(format cp.RuleFormat, behavior cp.RuleBehavior) *RuleSetInfo {

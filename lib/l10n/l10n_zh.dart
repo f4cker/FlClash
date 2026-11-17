@@ -1832,6 +1832,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreAllData => '恢复所有数据';
 
   @override
+  String get restoreRuleSetDownloadNotice =>
+      '备份会保留规则集设置。恢复后，需联网重新下载规则集；日常重启或切换配置无需重新下载。';
+
+  @override
   String get addProfile => '添加配置';
 
   @override
@@ -5916,4 +5920,369 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get relookup => '重新查询';
+
+  @override
+  String get addedRulesReloadTimeout => '内核 15 秒内没有完成重新加载，这次修改已撤销。';
+
+  @override
+  String get addedRulesReloadFailed => '内核没有接受新的配置，这次修改已撤销。';
+
+  @override
+  String get addedRuleSetLoadFailed => '规则集下载失败，这次修改已撤销。';
+
+  @override
+  String get addedRuleSetLoadTimeout => '规则集 15 秒内没有下载完成，这次修改已撤销。';
+
+  @override
+  String get ruleDeleteTitle => '删除这条规则？';
+
+  @override
+  String ruleSetDeleteTitle(String name) {
+    return '删除规则集「$name」？';
+  }
+
+  @override
+  String ruleDeleteBody(String text) {
+    return '$text\n删除后立刻生效。';
+  }
+
+  @override
+  String ruleDuplicate(int number, String group) {
+    return '已有这条规则（第 $number 条），走 $group。';
+  }
+
+  @override
+  String get ruleUpdateGroup => '更新策略组';
+
+  @override
+  String get ruleEditAddTitle => '添加规则';
+
+  @override
+  String get ruleEditTitle => '编辑附加规则';
+
+  @override
+  String get ruleSetAddTitle => '添加规则集';
+
+  @override
+  String get ruleSetEditTitle => '编辑附加规则集';
+
+  @override
+  String get ruleEditCoreStopped => '内核启动后生效';
+
+  @override
+  String ruleEditPosition(int number) {
+    return '第 $number 条 · 附加规则';
+  }
+
+  @override
+  String ruleSetEditPosition(int number) {
+    return '第 $number 条 · 附加规则集';
+  }
+
+  @override
+  String get ruleEditSaving => '正在保存…';
+
+  @override
+  String get ruleTypeLabel => '类型';
+
+  @override
+  String get ruleTypeMore => '更多';
+
+  @override
+  String get ruleTypeDomainSuffix => '域名后缀';
+
+  @override
+  String get ruleTypeDomain => '完整域名';
+
+  @override
+  String get ruleTypeKeyword => '域名关键词';
+
+  @override
+  String get ruleTypeIpCidr => 'IP 段';
+
+  @override
+  String get ruleTypeIpCidr6 => 'IPv6 段';
+
+  @override
+  String get ruleTypeDstPort => '目标端口';
+
+  @override
+  String get ruleTypeProcessName => '进程名';
+
+  @override
+  String get ruleTypeSrcIpCidr => '来源 IP 段';
+
+  @override
+  String get ruleValueKeyword => '关键词';
+
+  @override
+  String get ruleHelpDomainSuffix => '会同时匹配 example.com 和它的所有子域名。可以直接粘贴网址。';
+
+  @override
+  String get ruleHelpDomain => '只匹配这个域名本身，不含子域名。可以直接粘贴网址。';
+
+  @override
+  String get ruleHelpKeyword => '域名里含有这段文字就匹配。';
+
+  @override
+  String get ruleHelpIpCidr => '如 10.0.0.0/8；填单个 IP 会自动补 /32。';
+
+  @override
+  String get ruleHelpIpCidr6 => '如 2001:db8::/32；填单个地址会自动补 /128。';
+
+  @override
+  String get ruleHelpSrcIpCidr => '发起连接的设备所在的地址段。';
+
+  @override
+  String get ruleHelpPort => '如 443，或范围 8000-9000。';
+
+  @override
+  String get ruleHelpProcess => 'App 或程序的进程名，如 Safari、curl。';
+
+  @override
+  String get ruleValueEmpty => '请填写内容';
+
+  @override
+  String get ruleValueComma => '不能包含逗号';
+
+  @override
+  String get ruleValueDomain => '不是有效的域名';
+
+  @override
+  String get ruleValueCidr => '不是有效的 IP 段';
+
+  @override
+  String get ruleValueNetwork => '只能是 tcp 或 udp';
+
+  @override
+  String get ruleValueNumberRange => '不是有效的数字或范围';
+
+  @override
+  String get ruleValueDscp => 'DSCP 取值 0–63';
+
+  @override
+  String get ruleValuePickCode => '选择代码';
+
+  @override
+  String get ruleValuePickProcess => '从正在运行的 App 选择';
+
+  @override
+  String get ruleValueNoProcesses => '最近没有记录到 App';
+
+  @override
+  String get rulePositionLabel => '位置';
+
+  @override
+  String get rulePositionFirst => '附加规则最前面';
+
+  @override
+  String get rulePositionLast => '附加规则最后面';
+
+  @override
+  String get ruleSetUrlLabel => '网址';
+
+  @override
+  String get ruleSetUrlHelp => '粘贴规则集的网址，Flash 会下载并检查内容。';
+
+  @override
+  String get ruleSetUrlInvalid => '只能填 http 或 https 网址';
+
+  @override
+  String get ruleSetChecking => '正在下载，检查内容…';
+
+  @override
+  String ruleSetCheckOk(String kind, String format, String count) {
+    return '已下载并识别：$kind规则，$format 格式，$count 条';
+  }
+
+  @override
+  String ruleSetCheckOkUncounted(String format) {
+    return '已下载：$format 格式，内核运行后可识别条数';
+  }
+
+  @override
+  String get ruleSetCheckNotFound => '网址不存在（404）';
+
+  @override
+  String get ruleSetCheckTimeout => '下载超时';
+
+  @override
+  String ruleSetCheckNetwork(String reason) {
+    return '下载失败：$reason';
+  }
+
+  @override
+  String get ruleSetCheckNotRuleSet => '内容不是规则集';
+
+  @override
+  String get ruleSetCheckUnknown => '格式无法识别';
+
+  @override
+  String get ruleSetNameLabel => '名称';
+
+  @override
+  String get ruleSetNameTaken => '已有同名规则集';
+
+  @override
+  String get ruleSetNameInvalid => '名称不能含逗号，首尾不能有空格';
+
+  @override
+  String get ruleSetBehaviorLabel => '内容类型';
+
+  @override
+  String get ruleSetBehaviorDomain => '域名';
+
+  @override
+  String get ruleSetBehaviorIpcidr => 'IP 段';
+
+  @override
+  String get ruleSetBehaviorClassical => '混合规则';
+
+  @override
+  String get ruleSetBehaviorDetected => '已按下载的内容自动选好。';
+
+  @override
+  String get ruleSetBehaviorMismatch => '和下载的内容不一致，规则集可能不生效。';
+
+  @override
+  String get ruleSetMrsNeedsKind => 'MRS 格式只支持域名或 IP 段';
+
+  @override
+  String get ruleSetFormatText => '文本';
+
+  @override
+  String get ruleSetIntervalLabel => '自动更新';
+
+  @override
+  String get ruleSetEvery6Hours => '每 6 小时';
+
+  @override
+  String get ruleSetDaily => '每天';
+
+  @override
+  String get ruleSetWeekly => '每周';
+
+  @override
+  String get ruleSetNeverUpdate => '不自动更新';
+
+  @override
+  String ruleSetEverySeconds(int seconds) {
+    return '每 $seconds 秒';
+  }
+
+  @override
+  String get ruleSetUpdateNow => '立即更新';
+
+  @override
+  String get ruleSetRefreshed => '已开始更新。';
+
+  @override
+  String get rulesAddTooltip => '添加';
+
+  @override
+  String get rulesAddSemantics => '添加规则或规则集';
+
+  @override
+  String get rulesAddRuleMenu => '添加规则';
+
+  @override
+  String get rulesAddSetMenu => '添加规则集';
+
+  @override
+  String get rulesAddedDivider => '以下是订阅配置和扩展脚本的规则，只能查看，不能在这里编辑';
+
+  @override
+  String get ruleSourceAddedSet => '附加规则集';
+
+  @override
+  String get ruleEditMenu => '编辑…';
+
+  @override
+  String get ruleMoveUp => '上移';
+
+  @override
+  String get ruleMoveDown => '下移';
+
+  @override
+  String ruleEditSemantics(int number) {
+    return '编辑第 $number 条规则';
+  }
+
+  @override
+  String ruleDeleteSemantics(int number) {
+    return '删除第 $number 条规则';
+  }
+
+  @override
+  String ruleAddedBanner(String text) {
+    return '规则「$text」已添加并生效。';
+  }
+
+  @override
+  String ruleSavedBanner(String text) {
+    return '规则「$text」已保存并生效。';
+  }
+
+  @override
+  String ruleSetAddedBanner(String name) {
+    return '规则集「$name」已添加并生效。';
+  }
+
+  @override
+  String ruleSetSavedBanner(String name) {
+    return '规则集「$name」已保存并生效。';
+  }
+
+  @override
+  String get ruleDeletedBanner => '已删除。';
+
+  @override
+  String get ruleSavedPendingBanner => '已保存，内核启动后生效。';
+
+  @override
+  String get ruleBannerLookup => '查询一个网址';
+
+  @override
+  String ruleMoveFailed(String reason) {
+    return '调整顺序失败：$reason';
+  }
+
+  @override
+  String processHelperLabel(Object name) {
+    return '$name · 辅助进程';
+  }
+
+  @override
+  String processCoreLabel(Object name) {
+    return '$name · 内核';
+  }
+
+  @override
+  String get processHelperTag => '辅助进程';
+
+  @override
+  String get processCoreTag => '内核';
+
+  @override
+  String get addedRulesRollbackReloadFailed => '更改已回滚，但恢复运行中的配置失败。请重新应用配置后再使用。';
+
+  @override
+  String get addedRulesRollbackConflict =>
+      '重载期间其他编辑器更改了规则集，因此保留了部分更改。使用配置前请检查规则和提供者。';
+
+  @override
+  String get addedRulesRollbackReloadTimeout =>
+      '恢复运行中的配置耗时过长，当前状态不确定；在完成前暂停更改新增规则。';
+
+  @override
+  String get addedRulesStaleEdit => '此规则或规则集已在其他位置更改，请重新打开后再试。';
+
+  @override
+  String get addedRulesApplyPending => '规则应用时间较长，仍在处理中，请稍候。';
+
+  @override
+  String get addedRulesApplyRestored => '处理已结束，已恢复原规则。';
+
+  @override
+  String get addedRulesApplyRestoreFailed => '处理已结束，但未能恢复原规则。请检查当前规则。';
 }

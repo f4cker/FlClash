@@ -130,6 +130,27 @@ final _app = _info(
   ),
   1,
 );
+final _core = _info(
+  'g',
+  'core.example.org',
+  Metadata(
+    process: 'core-abc',
+    processPath:
+        '/Library/Application Support/com.layoute.flash.daemon/core-${'a' * 64}',
+    sourceIP: '127.0.0.1',
+  ),
+  7,
+);
+final _ordinaryApp = _info(
+  'h',
+  'normal.example.org',
+  const Metadata(
+    process: 'Example',
+    processPath: '/Applications/Example.app/Contents/MacOS/Example',
+    sourceIP: '127.0.0.1',
+  ),
+  8,
+);
 final _cli = _info(
   'b',
   'git.example.net',
@@ -248,6 +269,24 @@ void main() {
             name: 'Example Browser',
             bundlePath: '/Applications/Example Browser.app',
             icon: icon,
+            isHelper: true,
+          ),
+        ),
+        _core.metadata.processPath: AppLookup.app(
+          MacApp(
+            bundleId: 'com.layoute.flash',
+            name: 'Flash',
+            bundlePath: '/Applications/Flash.app',
+            icon: daemonIcon,
+            isCore: true,
+          ),
+        ),
+        _ordinaryApp.metadata.processPath: AppLookup.app(
+          MacApp(
+            bundleId: 'com.example.normal',
+            name: 'Example',
+            bundlePath: '/Applications/Example.app',
+            icon: icon,
           ),
         ),
         '/usr/bin/ssh': AppLookup.none,
@@ -264,6 +303,7 @@ void main() {
             bundlePath: '/Applications/Example VPN.app',
             icon: daemonIcon,
             launchdLabel: 'com.example.vpn.helper',
+            isHelper: true,
           ),
         ),
       },
@@ -329,13 +369,13 @@ void main() {
     await seed(tester);
     await pump(
       tester,
-      const Size(520, 420),
+      const Size(520, 620),
       SizedBox(
         width: 520,
-        height: 420,
+        height: 620,
         child: TrackerInfoList(
           padding: const EdgeInsets.all(16),
-          trackerInfos: [_app, _cli, _unknown],
+          trackerInfos: [_ordinaryApp, _app, _core, _cli, _unknown],
           detailTitle: '请求详情',
         ),
       ),

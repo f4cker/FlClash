@@ -11,6 +11,14 @@ class BackupAction extends _$BackupAction {
   @override
   void build() {}
 
+  @visibleForTesting
+  Future<void> Function()? afterRestoreCommit;
+
+  /// Runs once the database guards accepted a restore, under the mount fence
+  /// and before any staged file is published.
+  @visibleForTesting
+  Future<void> Function()? beforeRestorePublish;
+
   Future<bool> backup(BackupDelivery deliver) {
     return _withWorkDir((workDir) async {
       return deliver(await _createArchive(workDir));
@@ -64,12 +72,9 @@ class BackupAction extends _$BackupAction {
   Future<String> _createArchive(String workDir) async {
     final databaseSnapshotPath = join(workDir, backupDatabaseName);
     await database.customStatement('VACUUM INTO ?', [databaseSnapshotPath]);
-    final (profileIds, scriptIds, providers, mitmModules) = await (
-      database.profilesDao.query().map((item) => item.id).get(),
-      database.scriptsDao.query().map((item) => item.id).get(),
-      database.clashProvidersDao.query().get(),
-      database.mitmModulesDao.query().get(),
-    ).wait;
+    final entries = await BackupEntries.ofDatabaseSnapshot(
+      databaseSnapshotPath,
+    );
     final configMap = ref.read(configProvider).toJson();
     configMap['version'] = await preferences.getVersion();
     final archivePath = join(workDir, 'backup.zip');
@@ -78,12 +83,7 @@ class BackupAction extends _$BackupAction {
       configMap: configMap,
       databaseSnapshotPath: databaseSnapshotPath,
       homeDirPath: await appPath.homeDirPath,
-      entries: BackupEntries.of(
-        profileIds: profileIds,
-        scriptIds: scriptIds,
-        providers: providers,
-        mitmModules: mitmModules,
-      ),
+      entries: entries,
     ));
     return archivePath;
   }
@@ -98,50 +98,85 @@ class BackupAction extends _$BackupAction {
     final config = option == RestoreOption.onlyProfiles || configMap == null
         ? null
         : Config.fromJson(configMap);
-    final isOverride =
-        ref.read(appSettingProvider).restoreStrategy ==
-        RestoreStrategy.override;
-    final previousProviders = await database.clashProvidersDao.query().get();
-    final putBack = stagingDirPath == null
-        ? null
-        : await _copyStagedFiles(data, stagingDirPath);
-    try {
-      await database.restore(
-        data.profiles,
-        data.scripts,
-        data.rules,
-        data.disabledRules,
-        data.proxyGroups,
-        clashProviders: data.clashProviders,
-        customProxies: data.customProxies,
-        proxyDialers: data.proxyDialers,
-        mitmModules: data.mitmModules,
-        isOverride: isOverride,
-      );
-    } catch (_) {
-      await putBack?.call();
-      rethrow;
-    }
-    await _clearReplacedProviderCaches(previousProviders);
-    await _clearOutdatedCompiledRuleSets(data.clashProviders);
-    if (config == null) {
-      await _restoreMitmModules();
-      return;
-    }
-    // A desktop backup carries no package lists; the apps picked here stay.
-    final accessControlProps = config.vpnProps.accessControlProps.hasPackages
-        ? config.vpnProps.accessControlProps
-        : ref.read(vpnSettingProvider).accessControlProps;
-    writeConfig(
-      ref,
-      config.copyWith(
-        davProps: config.davProps ?? ref.read(davSettingProvider),
-        vpnProps: config.vpnProps.copyWith(
-          accessControlProps: accessControlProps,
-        ),
-      ),
-    );
-    await _restoreMitmModules();
+    await ref
+        .read(addedRulesActionProvider.notifier)
+        .runRestoreInLane(
+          () => ref.read(setupActionProvider.notifier).runRestoreBeforeApply(
+            () async {
+              final isOverride =
+                  ref.read(appSettingProvider).restoreStrategy ==
+                  RestoreStrategy.override;
+              final restoredSets = await compute(reserveRestoredAddedCaches, (
+                await appPath.homeDirPath,
+                data.addedRuleSets,
+              ));
+              final previous = await database.clashProvidersDao.query().get();
+              Future<void> writeRows({required bool checkOnly}) =>
+                  (checkOnly ? database.checkRestore : database.restore)(
+                    data.profiles,
+                    data.scripts,
+                    data.rules,
+                    data.disabledRules,
+                    data.proxyGroups,
+                    clashProviders: data.clashProviders,
+                    customProxies: data.customProxies,
+                    proxyDialers: data.proxyDialers,
+                    mitmModules: data.mitmModules,
+                    addedRuleSets: restoredSets,
+                    isOverride: isOverride,
+                  );
+              // Staged files replace live ones a mount apply may be reading,
+              // so none is published before the guards pass, and no mount
+              // operation starts between that check and the commit.
+              await ref.read(mountActionProvider.notifier).runExclusive(
+                () async {
+                  await writeRows(checkOnly: true);
+                  await beforeRestorePublish?.call();
+                  final putBack = stagingDirPath == null
+                      ? null
+                      : await _copyStagedFiles(data, stagingDirPath);
+                  try {
+                    await writeRows(checkOnly: false);
+                  } catch (_) {
+                    await putBack?.call();
+                    rethrow;
+                  }
+                },
+              );
+              // Keep both restore lanes until all dependent publication and
+              // cleanup completes; a later restore must not overtake these.
+              try {
+                await afterRestoreCommit?.call();
+                await _clearReplacedProviderCaches(previous);
+                await _clearOutdatedCompiledRuleSets(data.clashProviders);
+                if (config != null) {
+                  final accessControlProps =
+                      config.vpnProps.accessControlProps.hasPackages
+                      ? config.vpnProps.accessControlProps
+                      : ref.read(vpnSettingProvider).accessControlProps;
+                  writeConfig(
+                    ref,
+                    config.copyWith(
+                      davProps: config.davProps ?? ref.read(davSettingProvider),
+                      vpnProps: config.vpnProps.copyWith(
+                        accessControlProps: accessControlProps,
+                      ),
+                    ),
+                  );
+                }
+                await _restoreMitmModules();
+              } catch (error, stack) {
+                Error.throwWithStackTrace(
+                  MessageException(
+                    'Restore partially completed: database changes were committed, '
+                    'but a later step failed. $error',
+                  ),
+                  stack,
+                );
+              }
+            },
+          ),
+        );
   }
 
   Future<void> _restoreMitmModules() async {
@@ -175,7 +210,7 @@ class BackupAction extends _$BackupAction {
     }
 
     try {
-      for (final entry in BackupEntries.ofData(data)) {
+      for (final entry in BackupEntries.ofData(data).toSet()) {
         final staged = File(BackupEntries.resolve(stagingDirPath, entry));
         if (!await staged.exists()) {
           continue;
