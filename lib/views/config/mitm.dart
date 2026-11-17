@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
@@ -87,6 +88,16 @@ class _MitmViewState extends ConsumerState<MitmView> {
       return compactError(error);
     }
     return appLocalizations.mitmTrustChecking;
+  }
+
+  /// The stage names the check, for a report; it is the app's, not the Core's.
+  String _pausedReason(
+    AppLocalizations appLocalizations,
+    MitmCoreIdentity? identity,
+  ) {
+    final stage = identity?.stage;
+    final reason = appLocalizations.mitmPausedCoreIdentity;
+    return stage == null ? reason : '$reason ($stage)';
   }
 
   String? _certificateTip(
@@ -403,7 +414,12 @@ class _MitmViewState extends ConsumerState<MitmView> {
                             _MitmCaptureItem(isAndroid: isAndroid),
                           ],
                           footer: ref.watch(mitmCoreRefusedProvider)
-                              ? appLocalizations.mitmPausedCoreIdentity
+                              ? _pausedReason(
+                                  appLocalizations,
+                                  ref
+                                      .watch(mitmCoreIdentityStateProvider)
+                                      .value,
+                                )
                               : null,
                         ),
                         generateSection(

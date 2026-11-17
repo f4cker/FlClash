@@ -38,10 +38,13 @@ NSString * _Nullable FCSigningRequirement(NSString *identifier);
 BOOL FCCodeEntitlementsAllowed(NSDictionary * _Nullable entitlements, uint32_t flags);
 BOOL FCGUIEntitlementsAllowed(NSDictionary * _Nullable entitlements, uint32_t flags);
 BOOL FCCheckStatic(NSString *path, NSString *identifier);
-// The running Core behind an audit token the daemon read off the relay socket: it must be process pid and
-// carry the pinned identity, com.layoute.flash.core and a hardened runtime. The token names one process
-// lifetime, so a reused pid does not pass.
-BOOL FCCoreGuestValid(NSData * _Nullable auditToken, pid_t pid);
+// The bundled Core's cdhash, once it passes the pinned requirement for com.layoute.flash.core. The daemon
+// runs a copy whose bytes the contract's CoreSHA256 pins to this file.
+NSData * _Nullable FCBundledCoreHash(void);
+// The running Core behind the audit token the daemon read off the relay socket, from the kernel alone: the
+// staged copy is root-only, so the app cannot read it. The token names one process lifetime, so a reused pid
+// does not pass. Returns @"verified" or @"failed:<stage>" naming the first check that failed.
+NSString *FCCoreGuestCheck(NSData * _Nullable auditToken, pid_t pid, NSData * _Nullable expectedHash);
 NSData * _Nullable FCStaticCodeHash(NSString *path, NSString *identifier);
 BOOL FCProtectedTree(NSString *path, BOOL recursive);
 NSString *FCSHA256(NSString *path);

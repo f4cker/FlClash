@@ -118,10 +118,11 @@ final class MitmSignerTests: XCTestCase {
 
     func testRefusesACoreThatFailedOrSkippedTheIdentityCheck() throws {
         _ = try signer.generate()
-        for state in ["failed", "none", ""] {
+        for state in ["failed:cdhash", "failed:status 0x1", "none", "", "verified "] {
             identity = state
             XCTAssertEqual(signer.sign(host: "api.example.com", spki: leafSPKI(), hostnames: list).failure,
                            .coreIdentity, state)
+            XCTAssertEqual(signer.lastCoreIdentity, state)
         }
     }
 

@@ -142,7 +142,7 @@ void main() {
   test('a refused Core pauses decryption with the reason', () async {
     answer = (call) => switch (call.method) {
       'coreIdentity' => 'verified',
-      _ => {'error': 'coreIdentity'},
+      _ => {'error': 'coreIdentity', 'identity': 'failed:cdhash'},
     };
     container.listen(mitmCoreRefusedProvider, (_, _) {});
     await container.read(mitmCoreIdentityStateProvider.future);
@@ -153,7 +153,7 @@ void main() {
     expect(sent.single, {'reqId': 7, 'error': 'coreIdentity'});
     expect(
       container.read(mitmCoreIdentityStateProvider).value,
-      MitmCoreIdentity.failed,
+      const MitmCoreIdentity.failed('cdhash'),
     );
     expect(container.read(mitmCoreRefusedProvider), isTrue);
   });
@@ -166,7 +166,13 @@ void main() {
       MitmCoreIdentity.none,
     );
     expect(container.read(mitmCoreRefusedProvider), isTrue);
-    expect(MitmCoreIdentity.parse('anything'), MitmCoreIdentity.failed);
+    expect(MitmCoreIdentity.parse('anything'), const MitmCoreIdentity.failed());
+    expect(MitmCoreIdentity.parse('failed'), const MitmCoreIdentity.failed());
+    expect(
+      MitmCoreIdentity.parse('failed:status 0x1'),
+      const MitmCoreIdentity.failed('status 0x1'),
+    );
+    expect(MitmCoreIdentity.parse('verified'), MitmCoreIdentity.verified);
   });
 
   test('a channel failure is answered, not left to time out', () async {

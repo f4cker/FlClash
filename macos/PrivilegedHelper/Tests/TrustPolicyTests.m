@@ -101,19 +101,26 @@ static void testBundleLayout(void) {
     [files removeItemAtPath:root error:nil];
 }
 
-// The app signs for no Core it cannot place: no token, a token of another pid, or a process without the
-// pinned Core identity (this unsigned fixture) is refused.
+// The app signs for no Core it cannot place. This unsigned fixture is a real process the kernel answers for,
+// and it lacks the hardened runtime, so it stops at the status check.
 static void testCoreGuest(void) {
     audit_token_t token;
     mach_msg_type_number_t count = TASK_AUDIT_TOKEN_COUNT;
     assert(task_info(mach_task_self(), TASK_AUDIT_TOKEN, (task_info_t)&token, &count) == KERN_SUCCESS);
     NSData *own = [NSData dataWithBytes:&token length:sizeof(token)];
-    assert(!FCCoreGuestValid(nil, getpid()));
-    assert(!FCCoreGuestValid([NSData data], getpid()));
-    assert(!FCCoreGuestValid([own subdataWithRange:NSMakeRange(0, sizeof(token) - 1)], getpid()));
-    assert(!FCCoreGuestValid(own, 0));
-    assert(!FCCoreGuestValid(own, getpid() + 1));
-    assert(!FCCoreGuestValid(own, getpid()));
+    NSMutableData *hash = [NSMutableData dataWithLength:20];
+    assert([FCCoreGuestCheck(nil, getpid(), hash) isEqualToString:@"failed:token"]);
+    assert([FCCoreGuestCheck([NSData data], getpid(), hash) isEqualToString:@"failed:token"]);
+    assert([FCCoreGuestCheck([own subdataWithRange:NSMakeRange(0, sizeof(token) - 1)], getpid(), hash)
+        isEqualToString:@"failed:token"]);
+    assert([FCCoreGuestCheck(own, 0, hash) isEqualToString:@"failed:pid"]);
+    assert([FCCoreGuestCheck(own, getpid() + 1, hash) isEqualToString:@"failed:pid"]);
+    assert([FCCoreGuestCheck(own, getpid(), nil) isEqualToString:@"failed:bundled"]);
+    assert([FCCoreGuestCheck(own, getpid(), hash) hasPrefix:@"failed:status 0x"]);
+    // A token of an exited process: the kernel refuses it rather than answer for whoever has the pid now.
+    token.val[7]++;
+    NSData *stale = [NSData dataWithBytes:&token length:sizeof(token)];
+    assert([FCCoreGuestCheck(stale, getpid(), hash) hasPrefix:@"failed:status-read"]);
 }
 
 int main(void) {

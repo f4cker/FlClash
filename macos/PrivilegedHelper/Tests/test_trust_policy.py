@@ -24,6 +24,18 @@ class TrustPolicyFixtureTests(unittest.TestCase):
                     result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=20)
                     self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_core_guest_check_over_kernel_answers(self):
+        with tempfile.TemporaryDirectory(prefix='flash-core-guest-') as scratch:
+            binary = Path(scratch) / 'guest'
+            subprocess.run(['clang', '-fobjc-arc', '-fblocks', '-Werror', '-Wno-deprecated-declarations',
+                            '-DFCCodeOps=FixtureCodeOps',
+                            str(MACOS / 'Shared/HelperTrust.m'),
+                            str(MACOS / 'PrivilegedHelper/Tests/CoreGuestTests.m'),
+                            '-framework', 'Foundation', '-framework', 'Security', '-o', str(binary)],
+                           check=True, capture_output=True, text=True)
+            result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=20)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_c_policy_fixtures(self):
         with tempfile.TemporaryDirectory(prefix='flash-c-policy-') as scratch:
             for name in ('ProtectedPathPolicyTests', 'SessionPolicyTests'):

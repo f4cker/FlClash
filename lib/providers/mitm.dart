@@ -70,11 +70,25 @@ class MitmCoreIdentityState extends _$MitmCoreIdentityState {
     if (!connected || signer == null) {
       return MitmCoreIdentity.none;
     }
-    return signer.coreIdentity();
+    final identity = await signer.coreIdentity();
+    if (identity != state.value) {
+      _log(identity);
+    }
+    return identity;
+  }
+
+  void _log(MitmCoreIdentity identity) {
+    commonPrint.log(
+      'MITM Core identity: $identity',
+      logLevel: identity.status == MitmCoreStatus.failed
+          ? LogLevel.warning
+          : LogLevel.info,
+    );
   }
 
   void report(MitmCoreIdentity identity) {
     if (state.value != identity) {
+      _log(identity);
       state = AsyncData(identity);
     }
   }
@@ -139,7 +153,7 @@ class MitmSignAction extends _$MitmSignAction {
             .read(mitmCoreIdentityStateProvider.notifier)
             .report(
               result.refusedCore
-                  ? MitmCoreIdentity.failed
+                  ? MitmCoreIdentity.parse(result.coreIdentity)
                   : MitmCoreIdentity.verified,
             );
       }

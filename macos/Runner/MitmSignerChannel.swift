@@ -63,7 +63,11 @@ final class MitmSignerChannel {
                   let hostnames = arguments["hostnames"] as? [String] else {
                 return ["error": MitmSignError.badKey.rawValue]
             }
-            return Self.encode(signer.sign(host: host, spki: spki.data, hostnames: hostnames))
+            var answer = Self.encode(signer.sign(host: host, spki: spki.data, hostnames: hostnames))
+            if answer["error"] as? String == MitmSignError.coreIdentity.rawValue {
+                answer["identity"] = signer.lastCoreIdentity
+            }
+            return answer
         case "checkCertificate":
             switch signer.checkCertificate() {
             case let .success((leaf, _)): return MitmCertificateBuilder.pem(leaf)

@@ -22,10 +22,13 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
 @property BOOL operationInFlight;
 @property BOOL migrationAttempted;
 @property BOOL reRegistrationChecked;
-// The Core of the running session, as the daemon saw it on the relay socket.
+// The Core of the running session, as the daemon saw it on the relay socket; session 0 is none.
 @property NSData *coreToken;
 @property pid_t corePid;
-@property BOOL coreChecked;
+@property NSUInteger coreSession;
+@property NSUInteger coreSessions;
+@property NSUInteger hashSession;
+@property NSData *expectedCoreHash;
 @end
 
 @implementation FCManagedHelperBridge
@@ -114,12 +117,17 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
 - (void)forgetCore {
     self.coreToken = nil;
     self.corePid = 0;
-    self.coreChecked = NO;
+    self.coreSession = 0;
 }
 
+// The bundled Core is validated once per session; each call then asks the kernel about the running Core.
 - (NSString *)checkCore {
-    if (!self.coreChecked) return @"none";
-    return FCCoreGuestValid(self.coreToken, self.corePid) ? @"verified" : @"failed";
+    if (!self.coreSession) return @"none";
+    if (self.hashSession != self.coreSession) {
+        self.expectedCoreHash = FCBundledCoreHash();
+        self.hashSession = self.coreSession;
+    }
+    return FCCoreGuestCheck(self.coreToken, self.corePid, self.expectedCoreHash);
 }
 
 - (NSString *)coreIdentity {
@@ -215,7 +223,7 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
         if ([method isEqualToString:@"start"] && [answer[@"code"] isEqual:@"ok"]) {
             self.coreToken = answer[@"coreAuditToken"];
             self.corePid = (pid_t)[answer[@"pid"] intValue];
-            self.coreChecked = YES;
+            self.coreSession = ++self.coreSessions;
             answer = [answer mutableCopy];
             ((NSMutableDictionary *)answer)[@"coreIdentity"] = [self checkCore];
             [(NSMutableDictionary *)answer removeObjectForKey:@"coreAuditToken"];

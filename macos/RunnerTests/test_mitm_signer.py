@@ -60,7 +60,7 @@ class MitmSignerTests(unittest.TestCase):
         signer = (RUNNER / 'MitmSigner.swift').read_text()
         body = signer[signer.index('func sign(host'):]
         body = body[:body.index('return issue(')]
-        self.assertLess(body.index('coreIdentity() == "verified"'), body.index('MitmHostMatcher'))
+        self.assertLess(body.index('lastCoreIdentity == "verified"'), body.index('MitmHostMatcher'))
         channel = (RUNNER / 'MitmSignerChannel.swift').read_text()
         self.assertIn('coreIdentity: ManagedHelperChannel.coreIdentity', channel)
 

@@ -1,21 +1,46 @@
 import 'dart:convert';
 
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter/foundation.dart' show immutable;
 import 'package:flutter/services.dart';
+
+enum MitmCoreStatus { verified, failed, none }
 
 /// Whether the Core the app talks to is the one the helper started with the
 /// pinned identity. Anything but [verified] and the app signs nothing for it.
-enum MitmCoreIdentity {
-  verified,
-  failed,
+@immutable
+class MitmCoreIdentity {
+  const MitmCoreIdentity._(this.status, [this.stage]);
 
-  none;
+  const MitmCoreIdentity.failed([String? stage])
+    : this._(MitmCoreStatus.failed, stage);
+
+  static const verified = MitmCoreIdentity._(MitmCoreStatus.verified);
+  static const none = MitmCoreIdentity._(MitmCoreStatus.none);
+
+  final MitmCoreStatus status;
+
+  final String? stage;
 
   static MitmCoreIdentity parse(Object? value) => switch (value) {
     'verified' => verified,
     'none' => none,
-    _ => failed,
+    final String text when text.startsWith('failed:') =>
+      MitmCoreIdentity.failed(text.substring('failed:'.length)),
+    _ => const MitmCoreIdentity.failed(),
   };
+
+  @override
+  bool operator ==(Object other) =>
+      other is MitmCoreIdentity &&
+      other.status == status &&
+      other.stage == stage;
+
+  @override
+  int get hashCode => Object.hash(status, stage);
+
+  @override
+  String toString() => stage == null ? status.name : '${status.name}:$stage';
 }
 
 /// The Core's `mitmSign` event: a host and the DER SPKI of its own key.
@@ -40,11 +65,14 @@ class MitmSignRequest {
 }
 
 class MitmSignResult {
-  const MitmSignResult({this.cert, this.ca, this.error});
+  const MitmSignResult({this.cert, this.ca, this.error, this.coreIdentity});
 
   final Uint8List? cert;
   final Uint8List? ca;
   final String? error;
+
+  /// On a refused Core, the app's own account of why; never sent on.
+  final String? coreIdentity;
 
   bool get refusedCore => error == 'coreIdentity';
 
@@ -112,6 +140,7 @@ class MitmSigner {
       cert: data?['cert'] as Uint8List?,
       ca: data?['ca'] as Uint8List?,
       error: data?['error'] as String? ?? (data == null ? 'signFailed' : null),
+      coreIdentity: data?['identity'] as String?,
     );
   }
 

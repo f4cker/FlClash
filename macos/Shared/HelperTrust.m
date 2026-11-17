@@ -232,27 +232,38 @@ BOOL FCCheckStatic(NSString *path, NSString *identifier) {
     return FCStaticCodeHash(path, identifier) != nil;
 }
 
-BOOL FCCoreGuestValid(NSData *auditToken, pid_t pid) {
-    if (![auditToken isKindOfClass:NSData.class] || auditToken.length != sizeof(audit_token_t) || pid <= 0) return NO;
+NSData *FCBundledCoreHash(void) {
+    return FCStaticCodeHash(FCInstalledExecutable(FCCoreIdentifier), FCCoreIdentifier);
+}
+
+int csops_audittoken(pid_t pid, unsigned int ops, void *useraddr, size_t usersize, audit_token_t *token);
+#ifndef FCCodeOps
+#define FCCodeOps csops_audittoken
+#else
+int FCCodeOps(pid_t pid, unsigned int ops, void *useraddr, size_t usersize, audit_token_t *token);
+#endif
+
+enum { FCCodeOpsStatus = 0, FCCodeOpsCDHash = 5 };
+static const uint32_t FCCoreRequiredStatus = 0x1 | 0x100 | 0x200 | 0x10000; // VALID, HARD, KILL, RUNTIME
+static const uint32_t FCCoreDebugged = 0x10000000;
+
+NSString *FCCoreGuestCheck(NSData *auditToken, pid_t pid, NSData *expectedHash) {
+    if (![auditToken isKindOfClass:NSData.class] || auditToken.length != sizeof(audit_token_t)) return @"failed:token";
     audit_token_t token;
     memcpy(&token, auditToken.bytes, sizeof(token));
     // val[5] is the pid (audit_token_to_pid, without linking libbsm).
-    if ((pid_t)token.val[5] != pid) return NO;
-    NSString *text = FCSigningRequirement(FCCoreIdentifier);
-    SecRequirementRef requirement = NULL;
-    if (!text || SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement)) return NO;
-    SecCodeRef code = NULL;
-    NSDictionary *attributes = @{(__bridge NSString *)kSecGuestAttributeAudit: auditToken};
-    BOOL valid = SecCodeCopyGuestWithAttributes(NULL, (__bridge CFDictionaryRef)attributes, kSecCSDefaultFlags,
-        &code) == errSecSuccess && code;
-    valid = valid && SecCodeCheckValidity(code, kSecCSStrictValidate, requirement) == errSecSuccess;
-    CFRelease(requirement);
-    NSDictionary *info = valid ? FCSigningInformation((SecStaticCodeRef)code) : nil;
-    valid = valid && FCValidGUIHash(info[(__bridge NSString *)kSecCodeInfoUnique]) &&
-        FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
-            [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
-    if (code) CFRelease(code);
-    return valid;
+    if (pid <= 0 || (pid_t)token.val[5] != pid) return @"failed:pid";
+    if (!FCValidGUIHash(expectedHash)) return @"failed:bundled";
+    uint32_t status = 0;
+    if (FCCodeOps(pid, FCCodeOpsStatus, &status, sizeof(status), &token))
+        return [NSString stringWithFormat:@"failed:status-read errno=%d", errno];
+    if ((status & FCCoreRequiredStatus) != FCCoreRequiredStatus || (status & FCCoreDebugged))
+        return [NSString stringWithFormat:@"failed:status 0x%x", status];
+    uint8_t hash[20] = {0};
+    if (FCCodeOps(pid, FCCodeOpsCDHash, hash, sizeof(hash), &token))
+        return [NSString stringWithFormat:@"failed:cdhash-read errno=%d", errno];
+    if (![[NSData dataWithBytes:hash length:sizeof(hash)] isEqualToData:expectedHash]) return @"failed:cdhash";
+    return @"verified";
 }
 
 @interface FCMessageValidator ()

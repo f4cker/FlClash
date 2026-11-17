@@ -44,6 +44,8 @@ final class MitmSigner {
     private var key: MitmCAKey?
     private var root: MitmRootInfo?
     private var leaves = [String: Data]()
+    /// What the last sign was told about the Core: "verified", "none" or "failed:<stage>".
+    private(set) var lastCoreIdentity = "none"
 
     init(store: MitmCAStore, coreIdentity: @escaping () -> String, now: @escaping () -> Date = Date.init) {
         self.store = store
@@ -83,7 +85,8 @@ final class MitmSigner {
     }
 
     func sign(host rawHost: String, spki: Data, hostnames: [String]) -> Result<(leaf: Data, ca: Data), MitmSignError> {
-        guard coreIdentity() == "verified" else { return .failure(.coreIdentity) }
+        lastCoreIdentity = coreIdentity()
+        guard lastCoreIdentity == "verified" else { return .failure(.coreIdentity) }
         let host = MitmHostPolicy.normalize(rawHost)
         guard host != Self.checkHost, MitmHostMatcher(hostnames).matches(host) else { return .failure(.notListed) }
         guard (try? MitmCertificateBuilder.p256Point(spki: spki)) != nil else { return .failure(.badKey) }
