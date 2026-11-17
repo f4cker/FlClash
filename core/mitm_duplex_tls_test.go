@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -401,14 +402,18 @@ func TestMitmSelectorSlowRecordReportsPassthroughOverSockets(t *testing.T) {
 		name          string
 		first, rest   []byte
 		host          string
+		port          uint16
 		wantOutcome   bool
 		wantIntercept bool
 	}{
-		{"tls listed host", tlsRecord[:9], tlsRecord[9:], "example.com", true, true},
-		{"tls ip only", tlsRecord[:9], tlsRecord[9:], "", true, true},
-		{"tls header only", tlsRecord[:1], tlsRecord[1:], "example.com", true, true},
-		{"non tls", []byte("GET / HT"), []byte("TP/1.1\r\nHost: example.com\r\n\r\n"), "example.com", false, false},
-		{"silent", nil, []byte("late"), "example.com", false, false},
+		{"tls listed host", tlsRecord[:9], tlsRecord[9:], "example.com", 443, true, true},
+		{"tls ip only", tlsRecord[:9], tlsRecord[9:], "", 443, true, true},
+		{"tls header only", tlsRecord[:1], tlsRecord[1:], "example.com", 443, true, true},
+		{"non tls", []byte("GET / HT"), []byte("TP/1.1\r\nHost: example.com\r\n\r\n"), "example.com", 443, false, false},
+		// A listed HTTPS host whose client says nothing in time: visible.
+		{"silent https", nil, []byte("late"), "example.com", 443, true, true},
+		{"silent other port", nil, []byte("late"), "example.com", 8080, false, false},
+		{"silent ip only", nil, []byte("late"), "", 443, false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			app := newFakeMitmApp(t)
@@ -433,7 +438,7 @@ func TestMitmSelectorSlowRecordReportsPassthroughOverSockets(t *testing.T) {
 			}
 			client := N.NewBufferedConn(proxyRaw)
 			started := time.Now()
-			selected := mitmInterceptEligible(client, &C.Metadata{Host: tc.host})
+			selected := mitmInterceptEligible(client, &C.Metadata{Host: tc.host, DstPort: tc.port})
 			if elapsed := time.Since(started); elapsed > 2*time.Second {
 				t.Fatalf("selector waited %v", elapsed)
 			}
@@ -541,5 +546,377 @@ func TestMitmDuplexUploadProgressKeepsResponseReaderAlive(t *testing.T) {
 			}
 			<-siteDone
 		})
+	}
+}
+
+// Reads one response head as raw text, up to and including the blank line.
+func mitmReadRawHead(t *testing.T, r *bufio.Reader) string {
+	t.Helper()
+	var head strings.Builder
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			t.Fatalf("head %q: %v", head.String(), err)
+		}
+		head.WriteString(line)
+		if line == "\r\n" {
+			return head.String()
+		}
+	}
+}
+
+// Requests without a body keep their framing: an empty POST/PUT goes out
+// with Content-Length: 0, never as chunked, and a GET with neither.
+func TestMitmDuplexEmptyBodyRequestsKeepTheirFraming(t *testing.T) {
+	for _, tc := range []struct {
+		method, headers string
+		wantLength      bool
+	}{
+		{"POST", "Content-Length: 0\r\n", true},
+		{"PUT", "Content-Length: 0\r\n", true},
+		{"PATCH", "Content-Length: 0\r\n", true},
+		{"GET", "", false},
+		{"DELETE", "", false},
+		// net/http leaves out an explicit zero length for methods other than
+		// POST/PUT/PATCH; without Transfer-Encoding that is the same framing.
+		{"PROPFIND", "Content-Length: 0\r\n", false},
+	} {
+		t.Run(tc.method, func(t *testing.T) {
+			client, pcRaw := mitmLoopbackPair(t)
+			psRaw, site := mitmLoopbackPair(t)
+			defer client.Close()
+			defer site.Close()
+			pc := &mitmIdleConn{Conn: pcRaw, timeout: 2 * time.Second}
+			ps := &mitmIdleConn{Conn: psRaw, timeout: 2 * time.Second}
+			done := make(chan error, 1)
+			go func() {
+				err := mitmHTTP1Duplex(pc, ps, "example.com", func() bool { return true }, &mitmDuplexControl{client: pc, upstream: ps})
+				_ = pcRaw.Close()
+				_ = psRaw.Close()
+				done <- err
+			}()
+			got := make(chan string, 1)
+			go func() {
+				r := bufio.NewReader(site)
+				head := mitmReadRawHead(t, r)
+				_, _ = io.WriteString(site, "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n")
+				rest, _ := io.ReadAll(r)
+				got <- head + string(rest)
+			}()
+			if _, err := io.WriteString(client, tc.method+" / HTTP/1.1\r\nHost: example.com\r\n"+tc.headers+"\r\n"); err != nil {
+				t.Fatal(err)
+			}
+			if resp, err := http.ReadResponse(bufio.NewReader(client), nil); err != nil || resp.StatusCode != 204 {
+				t.Fatalf("response %v %v", resp, err)
+			}
+			if err := <-done; err != nil {
+				t.Fatal(err)
+			}
+			wire := <-got
+			if strings.Contains(strings.ToLower(wire), "transfer-encoding") || !strings.HasSuffix(wire, "\r\n\r\n") || strings.Contains(wire, "\r\n\r\n0\r\n") {
+				t.Fatalf("upstream bytes %q", wire)
+			}
+			if strings.Contains(wire, "Content-Length: 0\r\n") != tc.wantLength {
+				t.Fatalf("content length in %q", wire)
+			}
+		})
+	}
+}
+
+// A site closing an idle keep-alive connection is passed on to the client
+// at once with close_notify, so the client never reuses a dead session.
+func TestMitmTLSUpstreamIdleCloseReachesClient(t *testing.T) {
+	for _, mode := range []string{"close_notify", "bare FIN", "408", "unsolicited"} {
+		t.Run(mode, func(t *testing.T) {
+			h := newMitmTLSHarness(t)
+			siteDone := make(chan error, 1)
+			answered := make(chan struct{})
+			go func() {
+				site := h.site()
+				_, err := http.ReadRequest(bufio.NewReader(site))
+				if err == nil {
+					_, err = io.WriteString(site, "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+				}
+				<-answered
+				switch mode {
+				case "close_notify":
+					_ = site.Close()
+				case "bare FIN":
+					_ = h.siteRaw.Close()
+				case "408":
+					_, _ = io.WriteString(site, "HTTP/1.1 408 Request Timeout\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")
+					_ = site.Close()
+				case "unsolicited":
+					_, _ = io.WriteString(site, "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
+				}
+				siteDone <- err
+			}()
+			if _, err := io.WriteString(h.client, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"); err != nil {
+				t.Fatal(err)
+			}
+			reader := bufio.NewReader(h.client)
+			resp, err := http.ReadResponse(reader, nil)
+			if err != nil || resp.Close {
+				t.Fatalf("response %v %v", resp, err)
+			}
+			if body, err := io.ReadAll(resp.Body); err != nil || string(body) != "ok" {
+				t.Fatalf("body %q %v", body, err)
+			}
+			close(answered)
+			started := time.Now()
+			rest, err := io.ReadAll(reader)
+			if mode == "unsolicited" {
+				if err == nil {
+					t.Fatal("unsolicited bytes ended cleanly")
+				}
+			} else if err != nil || len(rest) != 0 {
+				t.Fatalf("after idle close: %q %v (want close_notify EOF)", rest, err)
+			}
+			if time.Since(started) > 2*time.Second {
+				t.Fatal("upstream close was not passed on promptly")
+			}
+			want := MitmOutcome("")
+			if mode == "unsolicited" {
+				want = mitmOutcomeHTTP1Failed
+			}
+			if outcome := h.outcome(t); outcome != want {
+				t.Fatalf("outcome %q", outcome)
+			}
+			if err := <-siteDone; err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// Idling past the timeout at a request boundary is a normal end: the client
+// gets close_notify and no failure is reported.
+func TestMitmTLSIdleTimeoutAtBoundaryIsClean(t *testing.T) {
+	old := mitmIdleTimeout
+	mitmIdleTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { mitmIdleTimeout = old })
+	h := newMitmTLSHarness(t)
+	siteDone := make(chan error, 1)
+	go func() {
+		site := h.site()
+		r := bufio.NewReader(site)
+		_, err := http.ReadRequest(r)
+		if err == nil {
+			_, err = io.WriteString(site, "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+		}
+		if err == nil {
+			// Wait for the proxy to give up on the idle session.
+			_, _ = io.ReadAll(r)
+		}
+		siteDone <- err
+	}()
+	if _, err := io.WriteString(h.client, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	reader := bufio.NewReader(h.client)
+	resp, err := http.ReadResponse(reader, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if body, err := io.ReadAll(resp.Body); err != nil || string(body) != "ok" {
+		t.Fatalf("body %q %v", body, err)
+	}
+	if rest, err := io.ReadAll(reader); err != nil || len(rest) != 0 {
+		t.Fatalf("idle end %q %v (want close_notify EOF)", rest, err)
+	}
+	if outcome := h.outcome(t); outcome != "" {
+		t.Fatalf("outcome %q", outcome)
+	}
+	if err := <-siteDone; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Bodiless responses are forwarded with their headers as received: no
+// invented Content-Length on 1xx/204 answering a POST, and a HEAD or 304
+// keeps the site's Content-Length, all on one kept-alive session.
+func TestMitmTLSBodilessResponseHeaders(t *testing.T) {
+	h := newMitmTLSHarness(t)
+	siteDone := make(chan error, 1)
+	go func() {
+		site := h.site()
+		r := bufio.NewReader(site)
+		step := func(wire string) error {
+			req, err := http.ReadRequest(r)
+			if err != nil {
+				return err
+			}
+			if _, err = io.Copy(io.Discard, req.Body); err != nil {
+				return err
+			}
+			_, err = io.WriteString(site, wire)
+			return err
+		}
+		err := step("HTTP/1.1 103 Early Hints\r\nLink: </a>; rel=preload\r\n\r\nHTTP/1.1 204 No Content\r\nX-Test: one\r\n\r\n")
+		if err == nil {
+			err = step("HTTP/1.1 200 OK\r\nContent-Length: 17\r\nX-Test: two\r\n\r\n")
+		}
+		if err == nil {
+			err = step("HTTP/1.1 304 Not Modified\r\nContent-Length: 17\r\nETag: \"x\"\r\nConnection: close\r\n\r\n")
+		}
+		_ = site.Close()
+		siteDone <- err
+	}()
+	reader := bufio.NewReader(h.client)
+	if _, err := io.WriteString(h.client, "POST /one HTTP/1.1\r\nHost: example.com\r\nContent-Length: 4\r\n\r\ndata"); err != nil {
+		t.Fatal(err)
+	}
+	hint := mitmReadRawHead(t, reader)
+	final := mitmReadRawHead(t, reader)
+	if !strings.HasPrefix(hint, "HTTP/1.1 103 Early Hints\r\n") || !strings.HasPrefix(final, "HTTP/1.1 204 No Content\r\n") ||
+		strings.Contains(hint+final, "Content-Length") || strings.Contains(hint+final, "Transfer-Encoding") || !strings.Contains(final, "X-Test: one") {
+		t.Fatalf("1xx/204 heads %q %q", hint, final)
+	}
+	if _, err := io.WriteString(h.client, "HEAD /two HTTP/1.1\r\nHost: example.com\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	head := mitmReadRawHead(t, reader)
+	if !strings.Contains(head, "Content-Length: 17\r\n") || strings.Contains(head, "Connection: close") {
+		t.Fatalf("HEAD head %q", head)
+	}
+	if _, err := io.WriteString(h.client, "GET /three HTTP/1.1\r\nHost: example.com\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	notModified := mitmReadRawHead(t, reader)
+	if !strings.HasPrefix(notModified, "HTTP/1.1 304 Not Modified\r\n") || !strings.Contains(notModified, "Content-Length: 17\r\n") {
+		t.Fatalf("304 head %q", notModified)
+	}
+	h.expectCloseNotify(t)
+	if outcome := h.outcome(t); outcome != "" {
+		t.Fatalf("outcome %q", outcome)
+	}
+	if err := <-siteDone; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Pipelined requests are served one exchange at a time, in order, each
+// sent upstream exactly once.
+func TestMitmTLSPipelinedRequests(t *testing.T) {
+	h := newMitmTLSHarness(t)
+	siteDone := make(chan error, 1)
+	go func() {
+		site := h.site()
+		r := bufio.NewReader(site)
+		var paths []string
+		for _, wire := range []string{
+			"HTTP/1.1 200 OK\r\nContent-Length: 1\r\n\r\na",
+			"HTTP/1.1 200 OK\r\nContent-Length: 1\r\n\r\nb",
+			"HTTP/1.1 200 OK\r\nContent-Length: 1\r\nConnection: close\r\n\r\nc",
+		} {
+			req, err := http.ReadRequest(r)
+			if err != nil {
+				siteDone <- err
+				return
+			}
+			body, _ := io.ReadAll(req.Body)
+			paths = append(paths, req.URL.Path+":"+string(body))
+			if _, err = io.WriteString(site, wire); err != nil {
+				siteDone <- err
+				return
+			}
+		}
+		rest, _ := io.ReadAll(r)
+		if got := strings.Join(paths, ","); got != "/a:,/b:xy,/c:" || len(rest) != 0 {
+			siteDone <- fmt.Errorf("site saw %s then %q", got, rest)
+			return
+		}
+		siteDone <- nil
+	}()
+	if _, err := io.WriteString(h.client, "GET /a HTTP/1.1\r\nHost: example.com\r\n\r\n"+
+		"POST /b HTTP/1.1\r\nHost: example.com\r\nContent-Length: 2\r\n\r\nxy"+
+		"GET /c HTTP/1.1\r\nHost: example.com\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	reader := bufio.NewReader(h.client)
+	var bodies string
+	for i := 0; i < 3; i++ {
+		resp, err := http.ReadResponse(reader, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := io.ReadAll(resp.Body)
+		bodies += string(b)
+	}
+	if bodies != "abc" {
+		t.Fatalf("bodies %q", bodies)
+	}
+	h.expectCloseNotify(t)
+	if outcome := h.outcome(t); outcome != "" {
+		t.Fatalf("outcome %q", outcome)
+	}
+	if err := <-siteDone; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// An IP-only flow to a port other than 443 whose server speaks first (SSH,
+// SMTP) is held only for the short first-byte wait, not the hello wait.
+func TestMitmSelectorServerFirstIPOnlyIsNotHeld(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com"}, nil)
+	clientRaw, proxyRaw := mitmLoopbackPair(t)
+	defer clientRaw.Close()
+	defer proxyRaw.Close()
+	started := time.Now()
+	if selected := mitmInterceptEligible(N.NewBufferedConn(proxyRaw), &C.Metadata{DstPort: 22}); selected != nil {
+		t.Fatal("selected a silent non-HTTPS flow")
+	}
+	if elapsed := time.Since(started); elapsed > mitmHelloWait/2 {
+		t.Fatalf("held %v", elapsed)
+	}
+}
+
+// net/http probes the body of a GET-like request from a second goroutine
+// while it writes the headers; a late first chunk exercises that path (run
+// under -race: the probe's flush must not overlap a header write).
+func TestMitmDuplexLateChunkedGETBody(t *testing.T) {
+	client, pcRaw := mitmLoopbackPair(t)
+	psRaw, site := mitmLoopbackPair(t)
+	defer client.Close()
+	defer site.Close()
+	pc := &mitmIdleConn{Conn: pcRaw, timeout: 2 * time.Second}
+	ps := &mitmIdleConn{Conn: psRaw, timeout: 2 * time.Second}
+	done := make(chan error, 1)
+	go func() {
+		err := mitmHTTP1Duplex(pc, ps, "example.com", func() bool { return true }, &mitmDuplexControl{client: pc, upstream: ps})
+		_ = pcRaw.Close()
+		_ = psRaw.Close()
+		done <- err
+	}()
+	siteDone := make(chan error, 1)
+	go func() {
+		req, err := http.ReadRequest(bufio.NewReader(site))
+		if err == nil {
+			var body []byte
+			if body, err = io.ReadAll(req.Body); err == nil && string(body) != "abc" {
+				err = fmt.Errorf("body %q", body)
+			}
+		}
+		if err == nil {
+			_, err = io.WriteString(site, "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n")
+		}
+		siteDone <- err
+	}()
+	if _, err := io.WriteString(client, "GET / HTTP/1.1\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(400 * time.Millisecond) // past net/http's 200 ms probe
+	if _, err := io.WriteString(client, "3\r\nabc\r\n0\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	if resp, err := http.ReadResponse(bufio.NewReader(client), nil); err != nil || resp.StatusCode != 204 {
+		t.Fatalf("response %v %v", resp, err)
+	}
+	if err := <-siteDone; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-done; err != nil {
+		t.Fatal(err)
 	}
 }

@@ -221,6 +221,11 @@ func (c *mitmIdleConn) refreshRead() {
 	if now.UnixNano()-c.readRefreshed.Load() < int64(c.timeout/4) {
 		return
 	}
+	c.extendRead(now)
+}
+
+// Gives a pending read a full idle period from now, unless interrupted.
+func (c *mitmIdleConn) extendRead(now time.Time) {
 	c.readRefreshed.Store(now.UnixNano())
 	c.readMu.Lock()
 	defer c.readMu.Unlock()

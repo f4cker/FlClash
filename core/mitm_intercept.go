@@ -55,7 +55,6 @@ const mitmQUICLivenessAvailable = false
 const (
 	mitmLeafWait      = 8 * time.Second
 	mitmHandshakeWait = 10 * time.Second
-	mitmIdleTimeout   = 30 * time.Second
 	mitmPauseFor      = 30 * time.Second
 	// A live session must obtain a fresh CA-signed leaf every interval. The
 	// app checks trust before signing; an 8-second issuance deadline bounds a
@@ -65,6 +64,10 @@ const (
 	// not instantaneous external trust-revocation notification.
 	mitmLivenessInterval = 10 * time.Second
 )
+
+// A variable only so socket tests can shorten it. An idle client or site at
+// a message boundary ends the session cleanly (close_notify, no failure).
+var mitmIdleTimeout = 30 * time.Second
 
 var (
 	sendMitmConnection = func(connection *MitmConnection) bool {
@@ -259,19 +262,30 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 	if metadata.Host != "" && !runtime.hosts.Match(normalizeMitmHost(metadata.Host)) {
 		return nil
 	}
-	hello, err := peekMitmClientHello(conn)
+	firstByteWait := mitmHelloWait
+	if metadata.Host == "" && metadata.DstPort != 443 {
+		firstByteWait = mitmFirstByteWait
+	}
+	hello, err := peekMitmClientHelloWithin(conn, firstByteWait)
+	passThroughUnsupported := func(client *N.BufferedConn, remote C.Conn) {
+		reportMitmOutcome(remote, mitmOutcomeUnsupportedHello)
+		N.Relay(client, remote)
+	}
 	if errors.Is(err, errMitmHelloUnsupported) {
-		// If SNI is recoverable, only warn for a listed host. When it cannot
-		// be recovered (e.g. oversized), surface an unclassified passthrough.
-		if hello.serverName != "" && !runtime.hosts.Match(normalizeMitmHost(hello.serverName)) {
-			return nil
-		}
-		return func(client *N.BufferedConn, remote C.Conn) {
-			reportMitmOutcome(remote, mitmOutcomeUnsupportedHello)
-			N.Relay(client, remote)
-		}
+		// A TLS record began but no hello could be read, so no SNI either.
+		// The host is listed, or (IP-only flow) unknown: in both cases this
+		// is an explicit, indeterminate passthrough, never a silent one. An
+		// IP-only flow to an unlisted site can therefore warn too.
+		return passThroughUnsupported
 	}
 	if err != nil {
+		// A listed HTTPS host whose client sent nothing within the wait
+		// (e.g. a late-binding pool) is passed through, but visibly.
+		var timeout interface{ Timeout() bool }
+		if metadata.Host != "" && metadata.DstPort == 443 && conn.Reader().Buffered() == 0 &&
+			errors.As(err, &timeout) && timeout.Timeout() {
+			return passThroughUnsupported
+		}
 		return nil
 	}
 	if hello.serverName == "" {

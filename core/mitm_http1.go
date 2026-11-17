@@ -4,10 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -86,15 +89,87 @@ func (mitmNoDrainBody) Close() error { return nil }
 // byte received goes upstream before the proxy waits for more.
 // Deliberately no ReadFrom: bufio.Writer.ReadFrom reads into its own buffer,
 // which a flush from inside the body's Read would corrupt.
-type mitmUploadWriter struct{ w *bufio.Writer }
+// The mutex covers net/http's body probe: for GET-like methods with a body,
+// Request.Write reads the body from a second goroutine while still writing
+// headers, so a Flush from that Read must not overlap a header write.
+type mitmUploadWriter struct {
+	mu sync.Mutex
+	w  *bufio.Writer
+}
 
 func newMitmUploadWriter(w io.Writer) *mitmUploadWriter {
 	return &mitmUploadWriter{w: bufio.NewWriterSize(w, 16<<10)}
 }
-func (u *mitmUploadWriter) Write(p []byte) (int, error)       { return u.w.Write(p) }
-func (u *mitmUploadWriter) WriteByte(c byte) error            { return u.w.WriteByte(c) }
-func (u *mitmUploadWriter) WriteString(s string) (int, error) { return u.w.WriteString(s) }
-func (u *mitmUploadWriter) Flush() error                      { return u.w.Flush() }
+func (u *mitmUploadWriter) Write(p []byte) (int, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.w.Write(p)
+}
+func (u *mitmUploadWriter) WriteByte(c byte) error {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.w.WriteByte(c)
+}
+func (u *mitmUploadWriter) WriteString(s string) (int, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.w.WriteString(s)
+}
+func (u *mitmUploadWriter) Flush() error {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.w.Flush()
+}
+
+// Writes a response that has no body by definition (1xx, 204, 304, or any
+// answer to HEAD) with the headers as received. Response.Write would invent
+// "Content-Length: 0" for answers to POST/PUT/PATCH (forbidden on 1xx/204)
+// and drop the Content-Length of a 304 or a HEAD answer.
+func mitmWriteHeaderOnly(w io.Writer, resp *http.Response, method string) error {
+	header := resp.Header.Clone()
+	if resp.StatusCode < 200 || resp.StatusCode == http.StatusNoContent {
+		header.Del("Content-Length")
+		header.Del("Transfer-Encoding")
+	} else if method == http.MethodHead && len(resp.TransferEncoding) > 0 {
+		// net/http moves Transfer-Encoding out of the header map.
+		header["Transfer-Encoding"] = resp.TransferEncoding
+	}
+	reason := strings.TrimSpace(strings.TrimPrefix(resp.Status, strconv.Itoa(resp.StatusCode)))
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "HTTP/1.1 %03d %s\r\n", resp.StatusCode, reason)
+	if err := header.Write(&b); err != nil {
+		return err
+	}
+	b.WriteString("\r\n")
+	_, err := w.Write(b.Bytes())
+	return err
+}
+
+func mitmHeaderOnly(resp *http.Response, method string) bool {
+	return method == http.MethodHead || resp.StatusCode < 200 ||
+		resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusNotModified
+}
+
+// What ends a session cleanly at a message boundary, when no request or
+// response is in flight: the client or the site closing (with or without
+// close_notify), resetting, or staying idle past the timeout. Nothing can
+// be truncated there, so the client gets a close_notify and no failure is
+// reported. Unsolicited upstream bytes are an error, except a 408, which
+// servers send as they drop an idle keep-alive connection.
+func mitmUpstreamIdleEnd(err error, responses *bufio.Reader) error {
+	if err != nil {
+		return nil
+	}
+	n := responses.Buffered()
+	if n > 12 {
+		n = 12
+	}
+	b, _ := responses.Peek(n)
+	if len(b) == 12 && (bytes.HasPrefix(b, []byte("HTTP/1.1 408")) || bytes.HasPrefix(b, []byte("HTTP/1.0 408"))) {
+		return nil
+	}
+	return errMitmHTTP1
+}
 
 // The request body as the upload worker reads it: flushes pending upstream
 // bytes before blocking on the client, and never drains on Close.
@@ -136,6 +211,29 @@ func (c *mitmDuplexControl) stopUpload() {
 		_ = c.upstream.Conn.Close()
 	}
 }
+func (c *mitmDuplexControl) stopClientRead() {
+	if c != nil {
+		if err := c.client.interruptRead(); err != nil {
+			_ = c.client.Conn.Close()
+		}
+	}
+}
+func (c *mitmDuplexControl) stopUpstreamRead() {
+	if c != nil {
+		if err := c.upstream.interruptRead(); err != nil {
+			_ = c.upstream.Conn.Close()
+		}
+	}
+}
+
+// An exchange starts on an upstream read that may have been waiting since
+// the connection went idle; give it a full idle period from now.
+func (c *mitmDuplexControl) exchangeStarted() {
+	if c != nil {
+		c.upstream.extendRead(time.Now())
+	}
+}
+
 func (c *mitmDuplexControl) stopAll() {
 	if c == nil {
 		return
@@ -168,27 +266,83 @@ type mitmResponseResult struct {
 func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func() bool, control *mitmDuplexControl) error {
 	requests := bufio.NewReaderSize(client, mitmHTTPHeaderLimit)
 	responses := bufio.NewReaderSize(upstream, mitmHTTPHeaderLimit)
+	// Between exchanges the watcher is the one upstream reader: it only
+	// peeks, so a response that begins later is still intact for the next
+	// exchange, which takes the watcher over before reading.
+	var watch chan error
+	stopWatch := func() {
+		if watch != nil {
+			control.stopUpstreamRead()
+			<-watch
+			watch = nil
+		}
+	}
 	for {
 		if !allowed() {
+			stopWatch()
 			return errMitmSetupChanged
 		}
-		if err := mitmPeekHeader(requests); err != nil {
-			if errors.Is(err, io.EOF) && requests.Buffered() == 0 {
-				return nil
-			}
-			return err
+		if watch == nil {
+			watch = make(chan error, 1)
+			go func(watch chan error) {
+				_, err := responses.Peek(1)
+				watch <- err
+			}(watch)
 		}
+		header := make(chan error, 1)
+		go func() { header <- mitmPeekHeader(requests) }()
+		select {
+		case err := <-header:
+			if err != nil {
+				stopWatch()
+				if !allowed() {
+					return errMitmSetupChanged
+				}
+				if requests.Buffered() == 0 {
+					// Client closed or idled out between requests (D4).
+					return nil
+				}
+				return err
+			}
+			select {
+			case err := <-watch:
+				// The site left before this request could be sent; end as the
+				// site did, without sending it.
+				watch = nil
+				return mitmUpstreamIdleEnd(err, responses)
+			default:
+			}
+		case err := <-watch:
+			// The site closed (or spoke) while idle: pass the close on now
+			// rather than let the client reuse a dead session (D3).
+			watch = nil
+			control.stopClientRead()
+			<-header
+			if !allowed() {
+				return errMitmSetupChanged
+			}
+			// A request that had begun arriving goes unanswered, as it would
+			// have from the site itself.
+			return mitmUpstreamIdleEnd(err, responses)
+		}
+		pendingWatch := watch
+		watch = nil
+		control.exchangeStarted()
 		req, err := http.ReadRequest(requests)
 		if err != nil {
+			<-joinWatch(control, pendingWatch)
 			return err
 		}
 		if req.ProtoMajor != 1 || req.ProtoMinor != 1 || req.Method == http.MethodConnect || req.URL.IsAbs() || req.URL.Host != "" || mitmRequestHost(req.Host) != host || req.Header.Get("Upgrade") != "" {
+			<-joinWatch(control, pendingWatch)
 			return errMitmHTTP1
 		}
 		if expect, present := req.Header["Expect"]; present && (len(expect) != 1 || !strings.EqualFold(strings.TrimSpace(expect[0]), "100-continue")) {
+			<-joinWatch(control, pendingWatch)
 			return errMitmHTTP1
 		}
 		if !allowed() {
+			<-joinWatch(control, pendingWatch)
 			return errMitmSetupChanged
 		}
 		if _, present := req.Header["User-Agent"]; !present {
@@ -196,7 +350,10 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 		}
 		originalBody := req.Body
 		uploadWriter := newMitmUploadWriter(upstream)
-		if req.Body != nil {
+		// http.NoBody must stay as it is: any other body with length 0 makes
+		// Request.Write send "Transfer-Encoding: chunked" for POST/PUT/PATCH
+		// instead of the client's "Content-Length: 0".
+		if req.Body != nil && req.Body != http.NoBody {
 			req.Body = mitmUploadBody{body: req.Body, writer: uploadWriter}
 		}
 		// ReadResponse consults only the immutable request method, not the live
@@ -212,7 +369,15 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 		}()
 		readResponse := func() <-chan mitmResponseResult {
 			result := make(chan mitmResponseResult, 1)
+			wait := pendingWatch
+			pendingWatch = nil
 			go func() {
+				if wait != nil {
+					if err := <-wait; err != nil {
+						result <- mitmResponseResult{err: err}
+						return
+					}
+				}
 				if err := mitmPeekHeader(responses); err != nil {
 					result <- mitmResponseResult{err: err}
 					return
@@ -282,7 +447,7 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 					// rather than blocking the coordinator in Response.Write.
 					written := make(chan error, 1)
 					go func() {
-						err := resp.Write(client)
+						err := mitmWriteHeaderOnly(client, resp, req.Method)
 						if err == nil {
 							err = resp.Body.Close()
 						}
@@ -351,7 +516,12 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				if resp.Body != nil {
 					resp.Body = mitmNoDrainBody{resp.Body}
 				}
-				err := resp.Write(client)
+				var err error
+				if mitmHeaderOnly(resp, req.Method) {
+					err = mitmWriteHeaderOnly(client, resp, req.Method)
+				} else {
+					err = resp.Write(client)
+				}
 				if err == nil && originalResponseBody != nil {
 					err = originalResponseBody.Close()
 				}
@@ -385,4 +555,16 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 		}
 	nextExchange:
 	}
+}
+
+// Joins an idle watcher that an exchange took over but never handed to a
+// response reader, interrupting the upstream read it is blocked in.
+func joinWatch(control *mitmDuplexControl, watch chan error) <-chan error {
+	if watch == nil {
+		closed := make(chan error)
+		close(closed)
+		return closed
+	}
+	control.stopUpstreamRead()
+	return watch
 }

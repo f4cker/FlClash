@@ -582,9 +582,9 @@ func TestMitmDuplexRejectsUnsafeRequests(t *testing.T) {
 		"GET / HTTP/1.1\r\nHost: example.com\r\nX: first\nY: second\r\n\r\n",
 		"GET / HTTP/1.1\r\nHost: example.com\r\nX: " + strings.Repeat("a", mitmHTTPHeaderLimit) + "\r\n\r\n",
 	} {
-		client, site := httpPeer(request), httpPeer("")
-		if err := mitmHTTP1Duplex(client, site, "example.com", func() bool { return true }, nil); err == nil || site.output.Len() != 0 {
-			t.Fatalf("accepted %q: %v", request, err)
+		got, err := runMitmDuplexSilentSite(t, request)
+		if err == nil || len(got) != 0 {
+			t.Fatalf("accepted %q: %v (upstream saw %q)", request, err, got)
 		}
 	}
 }
@@ -804,4 +804,25 @@ func (c *mitmFirstWriteConn) Write(p []byte) (int, error) {
 		close(c.started)
 	}
 	return c.Conn.Write(p)
+}
+
+// Runs one request through the duplex path against a site that never
+// answers, returning every byte the site received and the relay's result.
+func runMitmDuplexSilentSite(t *testing.T, request string) ([]byte, error) {
+	t.Helper()
+	client, pcRaw := net.Pipe()
+	psRaw, site := net.Pipe()
+	defer client.Close()
+	defer site.Close()
+	_ = client.SetDeadline(time.Now().Add(4 * time.Second))
+	_ = site.SetDeadline(time.Now().Add(4 * time.Second))
+	pc := &mitmIdleConn{Conn: pcRaw, timeout: 2 * time.Second}
+	ps := &mitmIdleConn{Conn: psRaw, timeout: 2 * time.Second}
+	received := make(chan []byte, 1)
+	go func() { b, _ := io.ReadAll(site); received <- b }()
+	go func() { _, _ = io.WriteString(client, request); _, _ = io.Copy(io.Discard, client) }()
+	err := mitmHTTP1Duplex(pc, ps, "example.com", func() bool { return true }, &mitmDuplexControl{client: pc, upstream: ps})
+	_ = pcRaw.Close()
+	_ = psRaw.Close()
+	return <-received, err
 }

@@ -720,7 +720,7 @@ func TestMitmDuplexTLSRuntimeAndLivenessShutdown(t *testing.T) {
 }
 
 func TestMitmDuplexTLSExpectContinue(t *testing.T) {
-	for _, mode := range []string{"continue", "reject"} {
+	for _, mode := range []string{"continue", "reject", "expectation failed"} {
 		t.Run(mode, func(t *testing.T) {
 			cert, roots := mitmTestIdentity(t)
 			oldRoots, oldRuntime := mitmUpstreamRoots, mitmState.Load()
@@ -754,8 +754,10 @@ func TestMitmDuplexTLSExpectContinue(t *testing.T) {
 				if err == nil {
 					if mode == "continue" {
 						_, err = io.WriteString(site, "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
-					} else {
+					} else if mode == "reject" {
 						_, err = io.WriteString(site, "HTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\n\r\n")
+					} else {
+						_, err = io.WriteString(site, "HTTP/1.1 417 Expectation Failed\r\nContent-Length: 0\r\n\r\n")
 					}
 				}
 				siteDone <- err
@@ -787,7 +789,7 @@ func TestMitmDuplexTLSExpectContinue(t *testing.T) {
 				if err != nil || string(body) != "ok" {
 					t.Fatalf("body %q %v", body, err)
 				}
-			} else if resp.StatusCode != 413 || !resp.Close {
+			} else if (mode == "reject") != (resp.StatusCode == 413) || resp.StatusCode != 413 && resp.StatusCode != 417 || !resp.Close {
 				t.Fatalf("response %+v", resp)
 			}
 			if err = <-siteDone; err != nil {

@@ -20,8 +20,13 @@ func (hello mitmClientHello) speaksHTTP1() bool {
 	return hello.alpn == nil || slices.Contains(hello.alpn, "http/1.1")
 }
 
-// A variable only so socket tests can shorten the slow-record wait.
-var mitmHelloWait = 2 * time.Second
+// Variables only so socket tests can shorten the waits.
+var (
+	mitmHelloWait = 2 * time.Second
+	// First-byte wait for IP-only flows to ports other than 443: SSH, SMTP,
+	// FTP and IMAP servers speak first, and their clients send nothing.
+	mitmFirstByteWait = 250 * time.Millisecond
+)
 
 var errMitmNotHello = errors.New("not a TLS ClientHello")
 
@@ -36,8 +41,21 @@ var errMitmHelloUnsupported = errors.New("partial or oversized TLS ClientHello")
 // handshake records is reassembled within the peek buffer and returned as
 // usual; only the record framing differs from a single-record hello.
 func peekMitmClientHello(conn *N.BufferedConn) (mitmClientHello, error) {
-	_ = conn.SetReadDeadline(time.Now().Add(mitmHelloWait))
+	return peekMitmClientHelloWithin(conn, mitmHelloWait)
+}
+
+// firstByteWait bounds the wait for the first byte separately, so that a
+// protocol where the server speaks first is not held for the whole hello
+// wait; once a byte is in, the rest of the hello gets mitmHelloWait.
+func peekMitmClientHelloWithin(conn *N.BufferedConn, firstByteWait time.Duration) (mitmClientHello, error) {
 	defer conn.SetReadDeadline(time.Time{})
+	if firstByteWait < mitmHelloWait && conn.Reader().Buffered() == 0 {
+		_ = conn.SetReadDeadline(time.Now().Add(firstByteWait))
+		if _, err := conn.Peek(1); err != nil {
+			return mitmClientHello{}, err
+		}
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(mitmHelloWait))
 	// Accumulate handshake fragments only within BufferedConn's peek capacity;
 	// Peek never consumes bytes, including for malformed or oversized records.
 	var handshake []byte
