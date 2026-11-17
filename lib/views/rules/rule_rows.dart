@@ -159,9 +159,9 @@ class RuleRow extends StatelessWidget {
       if (set.status == 'ok' || set.count > 0)
         Text(
           loaded == null
-              ? appLocalizations.ruleSetCountOnly(set.count)
+              ? appLocalizations.ruleSetCountOnly(groupedCount(set.count))
               : appLocalizations.ruleSetSummary(
-                  set.count,
+                  groupedCount(set.count),
                   loaded.getLastUpdateTimeDesc(context),
                 ),
           style: caption,
@@ -330,7 +330,10 @@ class _RuleTarget extends ConsumerWidget {
     final green = RuleTone.green.of(context).ink;
     final arrowStyle = AppTextStyle.caption1.of(context).copyWith(color: green);
     if (isBuiltinTarget(target)) {
-      return Text('→ ${ruleTargetLabel(context, target)}', style: arrowStyle);
+      return EmojiText(
+        '→ ${ruleTargetLabel(context, target)}',
+        style: arrowStyle,
+      );
     }
     final node = showNode
         ? ref.watch(
@@ -350,7 +353,7 @@ class _RuleTarget extends ConsumerWidget {
         if (node.isNotEmpty && node != target)
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 160),
-            child: Text(
+            child: EmojiText(
               '→ ${ruleTargetLabel(context, node)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -473,7 +476,13 @@ class RuleSetFooterRow extends StatelessWidget {
                 Text(appLocalizations.rulesLoadingMore, style: caption),
               ],
             )
-          : Text(appLocalizations.rulesShown(shown, total), style: caption),
+          : Text(
+              appLocalizations.rulesShown(
+                groupedCount(shown),
+                groupedCount(total),
+              ),
+              style: caption,
+            ),
     );
   }
 }

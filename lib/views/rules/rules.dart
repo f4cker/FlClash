@@ -64,7 +64,12 @@ typedef _AddedOutcome = ({
 /// The rules the running Core holds, in the order they apply, and the one a
 /// host or address takes.
 class RulesView extends ConsumerStatefulWidget {
-  const RulesView({super.key});
+  /// Writes an added rule to a profile and reloads; null by default, which
+  /// writes it to the profile's database and applies the profile.
+  @visibleForTesting
+  final Future<String?> Function(Profile profile, String text)? writeRule;
+
+  const RulesView({super.key, this.writeRule});
 
   @override
   ConsumerState<RulesView> createState() => _RulesViewState();
@@ -314,7 +319,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
       if (!mounted) return;
       if (_panelHost != null) {
         _panel.show();
-      } else {
+      } else if (_panel.isShowing) {
         _panel.hide();
       }
     });
@@ -633,6 +638,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
   }
 
   Future<String?> _writeRule(Profile profile, String text) async {
+    if (widget.writeRule case final write?) return write(profile, text);
     final appLocalizations = context.appLocalizations;
     try {
       await putProfileRuleFirst(profile.id, Rule.parse(text));
@@ -713,7 +719,10 @@ class _RulesViewState extends ConsumerState<RulesView> {
     final profileLabel = profile?.realLabel ?? '';
     final subtitle = _inLookup || list == null
         ? appLocalizations.rulesSubtitleQuery(profileLabel)
-        : appLocalizations.rulesSubtitle(profileLabel, list.total);
+        : appLocalizations.rulesSubtitle(
+            profileLabel,
+            groupedCount(list.total),
+          );
     return Scaffold(
       title: appLocalizations.rules,
       titleWidget: Row(
@@ -960,13 +969,10 @@ class _RulesViewState extends ConsumerState<RulesView> {
                           color: colorScheme.primary,
                         ),
                         Expanded(
-                          child: Text(
-                            appLocalizations.rulesLookupSuggestion(host),
+                          child: Text.rich(
+                            _suggestionSpan(context, host),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: AppTextStyle.subheadline
-                                .of(context, emphasized: true)
-                                .copyWith(color: colorScheme.primary),
                           ),
                         ),
                         Container(
@@ -1009,6 +1015,27 @@ class _RulesViewState extends ConsumerState<RulesView> {
           ),
         ),
       ),
+    );
+  }
+
+  /// The lookup suggestion with the host in bold, as the design sets it.
+  TextSpan _suggestionSpan(BuildContext context, String host) {
+    final text = context.appLocalizations.rulesLookupSuggestion(host);
+    final style = AppTextStyle.subheadline
+        .of(context)
+        .copyWith(color: context.colorScheme.onSurface);
+    final at = text.indexOf(host);
+    if (at < 0) return TextSpan(text: text, style: style);
+    return TextSpan(
+      style: style,
+      children: [
+        TextSpan(text: text.substring(0, at)),
+        TextSpan(
+          text: host,
+          style: AppTextStyle.subheadline.of(context, emphasized: true),
+        ),
+        TextSpan(text: text.substring(at + host.length)),
+      ],
     );
   }
 

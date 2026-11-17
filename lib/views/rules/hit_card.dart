@@ -5,6 +5,7 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 
 import 'add_rule_dialog.dart';
+import 'rules_logic.dart';
 import 'widgets.dart';
 
 /// The route a lookup ends on, group by group to the node, as chips; DIRECT
@@ -179,8 +180,8 @@ class RuleHitCard extends StatelessWidget {
                     fallback
                         ? appLocalizations.hitCardLast
                         : appLocalizations.hitCardPosition(
-                            winner.index + 1,
-                            lookup.total,
+                            groupedCount(winner.index + 1),
+                            groupedCount(lookup.total),
                           ),
                     style: tabular,
                   ),
@@ -196,7 +197,7 @@ class RuleHitCard extends StatelessWidget {
                   winner == null
                       ? appLocalizations.hitNoRule
                       : fallback
-                      ? '${appLocalizations.hitFallback} ${appLocalizations.hitGoes}'
+                      ? appLocalizations.hitFallback
                       : appLocalizations.hitGoes,
                   style: conclusion,
                 ),
@@ -330,7 +331,6 @@ class _CardButton extends StatelessWidget {
           child: Container(
             height: 32,
             padding: EdgeInsets.symmetric(horizontal: fill == null ? 4 : 14),
-            alignment: Alignment.center,
             decoration: ShapeDecoration(
               color: fill,
               shape: RoundedSuperellipseBorder(
@@ -340,11 +340,14 @@ class _CardButton extends StatelessWidget {
                     : BorderSide(color: border!),
               ),
             ),
-            child: Text(
-              label,
-              style: AppTextStyle.footnote
-                  .of(context, emphasized: true)
-                  .copyWith(color: ink),
+            child: Align(
+              widthFactor: 1,
+              child: Text(
+                label,
+                style: AppTextStyle.footnote
+                    .of(context, emphasized: true)
+                    .copyWith(color: ink),
+              ),
             ),
           ),
         ),

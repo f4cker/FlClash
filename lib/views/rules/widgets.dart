@@ -4,6 +4,8 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 
+import 'rules_logic.dart';
+
 /// The fixed colors of the rules page, as the design gives them for light
 /// mode; dark mode keeps their hue on a dimmed fill.
 enum RuleTone {
@@ -40,8 +42,10 @@ enum RuleTone {
   bool named = true,
 }) {
   final appLocalizations = context.appLocalizations;
-  String withName(String label, String name) =>
-      named && name.isNotEmpty ? '$label · $name' : label;
+  // A rule set's name is in the rule's text already; a script's or a
+  // module's is not, so it shows wherever the source does.
+  String withName(String label, String name, {bool always = false}) =>
+      (named || always) && name.isNotEmpty ? '$label · $name' : label;
   if (rule.managed) {
     return (label: appLocalizations.ruleSourceManaged, tone: RuleTone.gray);
   }
@@ -67,11 +71,19 @@ enum RuleTone {
       tone: RuleTone.amber,
     ),
     RuleSourceKind.script => (
-      label: withName(appLocalizations.ruleSourceScript, source.name),
+      label: withName(
+        appLocalizations.ruleSourceScript,
+        source.name,
+        always: true,
+      ),
       tone: RuleTone.scriptRed,
     ),
     RuleSourceKind.mitm => (
-      label: withName(appLocalizations.ruleSourceMitm, source.name),
+      label: withName(
+        appLocalizations.ruleSourceMitm,
+        source.name,
+        always: true,
+      ),
       tone: RuleTone.scriptRed,
     ),
   };
@@ -95,20 +107,22 @@ class RuleBadge extends StatelessWidget {
     return Container(
       height: 22,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      alignment: Alignment.center,
       decoration: ShapeDecoration(
         color: solid ? colors.ink : colors.fill,
         shape: RoundedSuperellipseBorder(
           borderRadius: BorderRadius.circular(11),
         ),
       ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppTextStyle.caption1
-            .of(context, emphasized: true)
-            .copyWith(color: solid ? colors.fill : colors.ink),
+      child: Align(
+        widthFactor: 1,
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyle.caption1
+              .of(context, emphasized: true)
+              .copyWith(color: solid ? colors.fill : colors.ink),
+        ),
       ),
     );
   }
@@ -163,6 +177,29 @@ class RuleTag extends StatelessWidget {
   }
 }
 
+/// [text] with its emoji set in the app's emoji font, for text that cannot
+/// be an [EmojiText], such as selectable text.
+TextSpan emojiSpanOf(BuildContext context, String text, TextStyle style) {
+  final emojiFont = EmojiFont.of(context);
+  if (emojiFont == null) return TextSpan(text: text, style: style);
+  final spans = <TextSpan>[];
+  var end = 0;
+  for (final match in emojiFont.pattern.allMatches(text)) {
+    if (match.start > end) {
+      spans.add(TextSpan(text: text.substring(end, match.start)));
+    }
+    spans.add(
+      TextSpan(
+        text: match.group(0),
+        style: TextStyle(fontFamily: emojiFont.family),
+      ),
+    );
+    end = match.end;
+  }
+  if (end < text.length) spans.add(TextSpan(text: text.substring(end)));
+  return TextSpan(style: style, children: spans);
+}
+
 /// A rule's text in monospace on its own fill.
 class RuleCode extends StatelessWidget {
   final String text;
@@ -188,8 +225,10 @@ class RuleCode extends StatelessWidget {
         ),
       ),
       child: selectable
-          ? SelectableText(text, style: style)
-          : Text(text, style: style),
+          ? IntrinsicWidth(
+              child: SelectableText.rich(emojiSpanOf(context, text, style)),
+            )
+          : EmojiText(text, style: style),
     );
   }
 }
@@ -275,27 +314,29 @@ class RouteChip extends StatelessWidget {
     return Container(
       height: height,
       padding: EdgeInsets.symmetric(horizontal: small ? 9 : 12),
-      alignment: Alignment.center,
       decoration: ShapeDecoration(
         color: colors.fill,
         shape: RoundedSuperellipseBorder(
           borderRadius: BorderRadius.circular(height / 2),
         ),
       ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style:
-            (small
-                    ? AppTextStyle.footnote.of(context, emphasized: true)
-                    : AppTextStyle.custom(
-                        context,
-                        size: 14,
-                        leading: 19,
-                        weight: FontWeight.w600,
-                      ))
-                .copyWith(color: colors.ink),
+      child: Align(
+        widthFactor: 1,
+        child: EmojiText(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style:
+              (small
+                      ? AppTextStyle.footnote.of(context, emphasized: true)
+                      : AppTextStyle.custom(
+                          context,
+                          size: 14,
+                          leading: 19,
+                          weight: FontWeight.w600,
+                        ))
+                  .copyWith(color: colors.ink),
+        ),
       ),
     );
   }
@@ -355,7 +396,7 @@ class RulesFilterChip extends StatelessWidget {
                 ),
                 if (count != null)
                   Text(
-                    '$count',
+                    groupedCount(count!),
                     style: AppTextStyle.caption1
                         .of(context)
                         .copyWith(

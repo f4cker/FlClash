@@ -1,6 +1,13 @@
 import 'dart:io';
 
 import 'package:fl_clash/models/models.dart';
+import 'package:intl/intl.dart' show NumberFormat;
+
+final _grouped = NumberFormat.decimalPattern('en');
+
+/// A count with its thousands grouped, as 1,862; the same in every locale
+/// the app ships.
+String groupedCount(int count) => _grouped.format(count);
 
 final _domain = RegExp(
   r'^(?:[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$',

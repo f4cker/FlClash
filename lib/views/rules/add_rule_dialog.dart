@@ -150,7 +150,7 @@ class _AddRuleDialogState extends State<AddRuleDialog> {
               spacing: 8,
               children: [
                 Expanded(
-                  child: Text(
+                  child: EmojiText(
                     ruleTargetLabel(context, _target),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -241,7 +241,7 @@ class _AddRuleDialogState extends State<AddRuleDialog> {
                       .of(context)
                       .copyWith(color: colorScheme.onSurfaceVariant),
                 ),
-                Text(
+                EmojiText(
                   _ruleText,
                   style: AppTextStyle.footnote
                       .of(context)

@@ -197,7 +197,8 @@ void main() {
     expect(find.text('MATCH'), findsOneWidget);
     // Badges and chips both name the sources.
     expect(find.text('Added rule'), findsNWidgets(2));
-    expect(find.text('Extension script'), findsNWidgets(2));
+    expect(find.text('Extension script'), findsOneWidget);
+    expect(find.text('Extension script · Enhance'), findsOneWidget);
     expect(find.textContaining('86 · updated'), findsOneWidget);
     expect(find.text('→ Japan 03'), findsOneWidget);
     // The Core's list was matched to the build, so the sources bind to it.
