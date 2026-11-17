@@ -16,6 +16,7 @@ private final class MemoryStore: MitmCAStore {
     var key: MemoryKey?
     var certificate: Data?
     var deletes = 0
+    var leftovers = [Error]()
 
     func loadKey() throws -> MitmCAKey? { key }
 
@@ -28,10 +29,11 @@ private final class MemoryStore: MitmCAStore {
     func loadCertificate() throws -> Data? { certificate }
     func saveCertificate(_ der: Data) throws { certificate = der }
 
-    func deleteAll() throws {
+    func deleteAll() throws -> [Error] {
         deletes += 1
         key = nil
         certificate = nil
+        return leftovers
     }
 }
 
@@ -240,6 +242,38 @@ final class MitmSignerTests: XCTestCase {
         XCTAssertNil(store.certificate)
         XCTAssertNil(try signer.certificate())
         XCTAssertEqual(signer.sign(host: "api.example.com", spki: leafSPKI(), hostnames: list).failure, .noRoot)
+    }
+
+    func testALeftoverCertificateFailsDeleteButNotGenerate() throws {
+        _ = try signer.generate()
+        store.leftovers = [NSError(domain: NSOSStatusErrorDomain, code: Int(errAuthorizationCanceled))]
+        XCTAssertNotNil(try signer.generate().der)
+        XCTAssertThrowsError(try signer.delete()) { XCTAssertTrue($0 is MitmLeftovers) }
+        XCTAssertNil(store.key)
+        XCTAssertNil(try signer.certificate())
+    }
+
+    func testDeletionRemovesTheKeyFirstAndTriesEveryCertificate() throws {
+        struct Refused: Error {}
+        var steps = [String]()
+        let errors = try MitmDeletion.run(
+            deleteKey: { steps.append("key") },
+            certificates: { steps.append("list"); return ["a", "b"] },
+            removeTrust: { steps.append("trust " + $0); if $0 == "a" { throw Refused() } },
+            deleteCertificate: { steps.append("delete " + $0); if $0 == "b" { throw Refused() } })
+        XCTAssertEqual(steps, ["key", "list", "trust a", "delete a", "trust b", "delete b"])
+        XCTAssertEqual(errors.count, 2)
+
+        steps = []
+        XCTAssertThrowsError(try MitmDeletion.run(
+            deleteKey: { throw Refused() }, certificates: { steps.append("list"); return ["a"] },
+            removeTrust: { _ in steps.append("trust") }, deleteCertificate: { _ in steps.append("delete") }))
+        XCTAssertEqual(steps, [])
+
+        let listing = try MitmDeletion.run(
+            deleteKey: {}, certificates: { () throws -> [String] in throw Refused() },
+            removeTrust: { _ in }, deleteCertificate: { _ in })
+        XCTAssertEqual(listing.count, 1)
     }
 
     func testCertificateNeedsTheKeyItWasMadeFor() throws {

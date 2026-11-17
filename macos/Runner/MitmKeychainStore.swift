@@ -36,16 +36,24 @@ final class MitmKeychainStore: MitmCAStore {
         }
     }
 
-    private var keyQuery: [String: Any] {
+    private func loginKeychain() throws -> SecKeychain {
+        var keychain: SecKeychain?
+        try check(SecKeychainCopyDomainDefault(.user, &keychain))
+        guard let keychain else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(errSecNoSuchKeychain)) }
+        return keychain
+    }
+
+    private func keyQuery() throws -> [String: Any] {
         [
             kSecClass as String: kSecClassKey,
             kSecAttrKeyClass as String: kSecAttrKeyClassPrivate,
             kSecAttrApplicationTag as String: Self.tag,
+            kSecMatchSearchList as String: [try loginKeychain()],
         ]
     }
 
     func loadKey() throws -> MitmCAKey? {
-        var query = keyQuery
+        var query = try keyQuery()
         query[kSecReturnRef as String] = true
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
@@ -59,6 +67,7 @@ final class MitmKeychainStore: MitmCAStore {
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
             kSecAttrKeySizeInBits as String: 256,
             kSecAttrLabel as String: Self.label,
+            kSecUseKeychain as String: try loginKeychain(),
             kSecPrivateKeyAttrs as String: [
                 kSecAttrIsPermanent as String: true,
                 kSecAttrIsExtractable as String: false,
@@ -80,6 +89,7 @@ final class MitmKeychainStore: MitmCAStore {
         let query: [String: Any] = [
             kSecClass as String: kSecClassCertificate,
             kSecAttrLabel as String: Self.label,
+            kSecMatchSearchList as String: [try loginKeychain()],
             kSecMatchLimit as String: kSecMatchLimitAll,
             kSecReturnRef as String: true,
         ]
@@ -106,22 +116,27 @@ final class MitmKeychainStore: MitmCAStore {
             kSecClass as String: kSecClassCertificate,
             kSecValueRef as String: certificate,
             kSecAttrLabel as String: Self.label,
+            kSecUseKeychain as String: try loginKeychain(),
         ]
         try check(SecItemAdd(attributes as CFDictionary, nil), allowing: [errSecDuplicateItem])
     }
 
-    func deleteAll() throws {
-        for certificate in try certificates() {
-            let removed = SecTrustSettingsRemoveTrustSettings(certificate, .user)
-            try check(removed, allowing: [errSecItemNotFound])
-            let query: [String: Any] = [kSecClass as String: kSecClassCertificate, kSecValueRef as String: certificate]
-            try check(SecItemDelete(query as CFDictionary), allowing: [errSecItemNotFound])
-        }
-        try check(SecItemDelete(keyQuery as CFDictionary), allowing: [errSecItemNotFound])
-        var publicQuery = keyQuery
-        publicQuery[kSecAttrKeyClass as String] = kSecAttrKeyClassPublic
-        publicQuery.removeValue(forKey: kSecAttrApplicationTag as String)
-        publicQuery[kSecAttrLabel as String] = Self.label
-        try check(SecItemDelete(publicQuery as CFDictionary), allowing: [errSecItemNotFound])
+    func deleteAll() throws -> [Error] {
+        let keyQuery = try keyQuery()
+        return try MitmDeletion.run(
+            deleteKey: {
+                try check(SecItemDelete(keyQuery as CFDictionary), allowing: [errSecItemNotFound])
+                var publicQuery = keyQuery
+                publicQuery[kSecAttrKeyClass as String] = kSecAttrKeyClassPublic
+                publicQuery.removeValue(forKey: kSecAttrApplicationTag as String)
+                publicQuery[kSecAttrLabel as String] = Self.label
+                try? check(SecItemDelete(publicQuery as CFDictionary), allowing: [errSecItemNotFound])
+            },
+            certificates: certificates,
+            removeTrust: { try check(SecTrustSettingsRemoveTrustSettings($0, .user), allowing: [errSecItemNotFound]) },
+            deleteCertificate: { certificate in
+                let query: [String: Any] = [kSecClass as String: kSecClassCertificate, kSecValueRef as String: certificate]
+                try check(SecItemDelete(query as CFDictionary), allowing: [errSecItemNotFound])
+            })
     }
 }

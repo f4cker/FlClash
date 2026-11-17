@@ -52,6 +52,9 @@ class MitmSignerTests(unittest.TestCase):
         store = (RUNNER / 'MitmKeychainStore.swift').read_text()
         self.assertIn('kSecAttrIsExtractable as String: false', store)
         self.assertIn('SecTrustSettingsRemoveTrustSettings', store)
+        self.assertEqual(store.count('kSecMatchSearchList as String: [try loginKeychain()]'), 2)
+        self.assertEqual(store.count('kSecUseKeychain as String: try loginKeychain()'), 2)
+        self.assertIn('MitmDeletion.run(', store)
         for forbidden in ('SecKeyCopyExternalRepresentation(privateKey', 'kSecAttrIsExtractable as String: true',
                           'SecItemExport'):
             self.assertNotIn(forbidden, store)

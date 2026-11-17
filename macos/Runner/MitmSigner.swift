@@ -8,7 +8,30 @@ protocol MitmCAStore: AnyObject {
     func createKey() throws -> MitmCAKey
     func loadCertificate() throws -> Data?
     func saveCertificate(_ der: Data) throws
-    func deleteAll() throws
+    func deleteAll() throws -> [Error]
+}
+
+struct MitmLeftovers: Error, CustomStringConvertible {
+    let errors: [Error]
+    var description: String { "key deleted; left behind: \(errors.map { String(describing: $0) })" }
+}
+
+enum MitmDeletion {
+    /// The key goes first: a certificate or trust setting left behind cannot sign anything.
+    static func run<Certificate>(
+        deleteKey: () throws -> Void, certificates: () throws -> [Certificate],
+        removeTrust: (Certificate) throws -> Void, deleteCertificate: (Certificate) throws -> Void
+    ) throws -> [Error] {
+        try deleteKey()
+        var errors = [Error]()
+        let found: [Certificate]
+        do { found = try certificates() } catch { return [error] }
+        for certificate in found {
+            do { try removeTrust(certificate) } catch { errors.append(error) }
+            do { try deleteCertificate(certificate) } catch { errors.append(error) }
+        }
+        return errors
+    }
 }
 
 struct MitmRootInfo: Equatable {
@@ -65,7 +88,8 @@ final class MitmSigner {
     }
 
     func generate() throws -> MitmRootInfo {
-        try delete()
+        forget()
+        _ = try store.deleteAll()
         let key = try store.createKey()
         let issued = now()
         let der = try MitmCertificateBuilder.root(key: key, now: issued)
@@ -78,10 +102,15 @@ final class MitmSigner {
     }
 
     func delete() throws {
+        forget()
+        let leftovers = try store.deleteAll()
+        if !leftovers.isEmpty { throw MitmLeftovers(errors: leftovers) }
+    }
+
+    private func forget() {
         key = nil
         root = nil
         leaves.removeAll()
-        try store.deleteAll()
     }
 
     func sign(host rawHost: String, spki: Data, hostnames: [String]) -> Result<(leaf: Data, ca: Data), MitmSignError> {
