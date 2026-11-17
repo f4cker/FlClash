@@ -127,7 +127,8 @@ const (
 	TailscaleStateMessage  MessageType = "tailscaleState"
 	TailscaleRoutesMessage MessageType = "tailscaleRoutes"
 	// Asks the app, which holds the CA key, for a leaf; answered by mitm.signResult.
-	MitmSignMessage MessageType = "mitmSign"
+	MitmSignMessage       MessageType = "mitmSign"
+	MitmConnectionMessage MessageType = "mitmConnection"
 )
 
 type Message struct {

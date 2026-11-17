@@ -263,3 +263,51 @@ func TestMitmLeafRequestThatCannotBeSentFails(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestMitmLeafValidityBoundaries(t *testing.T) {
+	app := newFakeMitmApp(t)
+	key := newLeafKey(t)
+	spki, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now().UTC().Truncate(time.Second)
+	end := start.Add(time.Hour)
+	der := app.leaf(t, "api.example.com", spki, func(c *x509.Certificate) { c.NotBefore = start; c.NotAfter = end })
+	for _, tc := range []struct {
+		when time.Time
+		ok   bool
+	}{{start.Add(-time.Second), false}, {start, true}, {end.Add(-time.Second), true}, {end, false}} {
+		_, err := checkMitmLeafAt(der, app.ca.Raw, "api.example.com", spki, app.fingerprint(), tc.when)
+		if (err == nil) != tc.ok {
+			t.Errorf("time %v: %v", tc.when, err)
+		}
+	}
+	for _, when := range []time.Time{app.ca.NotBefore.Add(-time.Second), app.ca.NotAfter} {
+		// A leaf spanning both tested root boundaries isolates CA validation.
+		der := app.leaf(t, "api.example.com", spki, func(c *x509.Certificate) {
+			c.NotBefore = app.ca.NotBefore.Add(-time.Hour)
+			c.NotAfter = app.ca.NotAfter.Add(time.Hour)
+		})
+		if _, err := checkMitmLeafAt(der, app.ca.Raw, "api.example.com", spki, app.fingerprint(), when); err == nil {
+			t.Errorf("accepted root at %v", when)
+		}
+	}
+}
+
+func TestMitmSignCarriesCallerDeadline(t *testing.T) {
+	app := newFakeMitmApp(t)
+	sent := withMitmSigner(t, app, []string{"api.example.com"}, func(req *MitmSignRequest) MitmSignResultParams {
+		return MitmSignResultParams{Cert: app.leaf(t, req.Host, req.SPKI, nil), CA: app.ca.Raw}
+	})
+	key := newLeafKey(t)
+	deadline := time.Now().Add(4 * time.Second)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+	if _, err := requestMitmLeaf(ctx, "api.example.com", &key.PublicKey); err != nil {
+		t.Fatal(err)
+	}
+	if len(*sent) != 1 || (*sent)[0].DeadlineUnixMillis != deadline.UnixMilli() {
+		t.Fatalf("deadline: %+v", *sent)
+	}
+}

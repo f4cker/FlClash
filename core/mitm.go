@@ -24,6 +24,8 @@ type MitmStatus struct {
 	Hostnames        int  `json:"hostnames"`
 	IgnoredHostnames int  `json:"ignored-hostnames"`
 	Capture          bool `json:"capture"`
+	// Why listed hosts are passing through undecrypted for now, if they are.
+	Paused string `json:"paused,omitempty"`
 }
 
 type MitmIssue struct {
@@ -54,7 +56,7 @@ func applyMitmSetup(params *SetupParams, candidate []byte) {
 		runtime.hosts = compileMitmHosts(params.Mitm.Hostname)
 	}
 	runtime.ignored = profileMitmHostnames(candidate)
-	mitmState.Store(runtime)
+	replaceMitmRuntime(runtime)
 }
 
 func profileMitmHostnames(config []byte) int {
@@ -87,6 +89,13 @@ func handleMitmStatus() MitmStatus {
 		status.Enable = runtime.decrypting()
 		status.Hostnames = runtime.hosts.Len()
 		status.IgnoredHostnames = runtime.ignored
+	}
+	if status.Enable {
+		if !mitmIndicatorAvailable {
+			status.Paused = "indicatorPending"
+		} else {
+			status.Paused = mitmPausedReason()
+		}
 	}
 	return status
 }

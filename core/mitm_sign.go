@@ -23,6 +23,8 @@ type MitmSignRequest struct {
 	Host  string `json:"host"`
 	// DER SubjectPublicKeyInfo of the leaf key the Core made.
 	SPKI []byte `json:"spki"`
+	// Absolute wall-clock deadline allows the app to subtract relay time.
+	DeadlineUnixMillis int64 `json:"deadlineUnixMillis,omitempty"`
 }
 
 type MitmSignResultParams struct {
@@ -62,16 +64,27 @@ var (
 // through untouched on any error.
 func requestMitmLeaf(ctx context.Context, host string, key crypto.PublicKey) (*x509.Certificate, error) {
 	host = normalizeMitmHost(host)
-	if !mitmDecrypts(host) {
+	runtime := mitmState.Load()
+	if !runtime.decrypting() || !runtime.hosts.Match(host) {
 		return nil, errMitmNotListed
 	}
 	spki, err := x509.MarshalPKIXPublicKey(key)
 	if err != nil {
 		return nil, err
 	}
-	request := &MitmSignRequest{ReqID: mitmSignSeq.Add(1), Host: host, SPKI: spki}
+	ctx, cancel := context.WithTimeout(ctx, mitmSignTimeout)
+	defer cancel()
+	deadline, _ := ctx.Deadline()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	request := &MitmSignRequest{ReqID: mitmSignSeq.Add(1), Host: host, SPKI: spki, DeadlineUnixMillis: deadline.UnixMilli()}
 	pending := &mitmSignPending{host: host, spki: spki, answer: make(chan mitmSignAnswer, 1)}
 	mitmSignMu.Lock()
+	if mitmState.Load() != runtime {
+		mitmSignMu.Unlock()
+		return nil, errMitmSetupChanged
+	}
 	mitmSignRequests[request.ReqID] = pending
 	mitmSignMu.Unlock()
 	defer func() {
@@ -82,8 +95,6 @@ func requestMitmLeaf(ctx context.Context, host string, key crypto.PublicKey) (*x
 	if !sendMitmSign(request) {
 		return nil, errMitmSignDropped
 	}
-	ctx, cancel := context.WithTimeout(ctx, mitmSignTimeout)
-	defer cancel()
 	select {
 	case result := <-pending.answer:
 		return result.leaf, result.err
@@ -105,7 +116,7 @@ func handleMitmSignResult(params MitmSignResultParams) bool {
 	var result mitmSignAnswer
 	switch {
 	case params.Error != "":
-		result.err = fmt.Errorf("the app refused to sign: %s", params.Error)
+		result.err = mitmAppRefusal(params.Error)
 	case len(params.Cert) == 0:
 		result.err = errors.New("the app answered without a certificate")
 	default:
@@ -113,6 +124,14 @@ func handleMitmSignResult(params MitmSignResultParams) bool {
 	}
 	pending.answer <- result
 	return true
+}
+
+// The app's reason, as MitmSigner names it: coreIdentity, notListed, noRoot,
+// rootExpired, badKey, signFailed or disabled.
+type mitmAppRefusal string
+
+func (refusal mitmAppRefusal) Error() string {
+	return "the app refused to sign: " + string(refusal)
 }
 
 func mitmTrustedCA() string {
@@ -129,6 +148,10 @@ func normalizeMitmFingerprint(fingerprint string) string {
 
 // Even from the app, only the leaf asked for, under the trusted root, is served.
 func checkMitmLeaf(der, caDER []byte, host string, spki []byte, trustedCA string) (*x509.Certificate, error) {
+	return checkMitmLeafAt(der, caDER, host, spki, trustedCA, time.Now())
+}
+
+func checkMitmLeafAt(der, caDER []byte, host string, spki []byte, trustedCA string, now time.Time) (*x509.Certificate, error) {
 	leaf, err := x509.ParseCertificate(der)
 	if err != nil {
 		return nil, err
@@ -139,6 +162,10 @@ func checkMitmLeaf(der, caDER []byte, host string, spki []byte, trustedCA string
 	}
 	sum := sha256.Sum256(ca.Raw)
 	switch {
+	case now.Before(leaf.NotBefore) || !now.Before(leaf.NotAfter):
+		return nil, errors.New("signed certificate is not currently valid")
+	case now.Before(ca.NotBefore) || !now.Before(ca.NotAfter):
+		return nil, errors.New("signing root is not currently valid")
 	case trustedCA == "" || hex.EncodeToString(sum[:]) != normalizeMitmFingerprint(trustedCA):
 		return nil, errors.New("signed by a root other than the trusted one")
 	case leaf.CheckSignatureFrom(ca) != nil:
