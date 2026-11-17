@@ -219,8 +219,10 @@ func TestRuleLookupFindsTheWinnerAndWhatItShadows(t *testing.T) {
 	if mixed := streaming.Matches[1]; mixed.Entry != "DOMAIN-KEYWORD,flix" {
 		t.Errorf("classical entry = %q, want the rule inside the set", mixed.Entry)
 	}
-	if len(streaming.RuleSets) != 2 || streaming.RuleSets[0].Name != "streaming" || streaming.RuleSets[0].Count != 2 {
-		t.Errorf("rule sets = %+v, want both sets the lookup read", streaming.RuleSets)
+	// The classical set after the winner is read for what it shadows, but
+	// cannot change the answer, so it is not reported.
+	if len(streaming.RuleSets) != 1 || streaming.RuleSets[0].Name != "streaming" || streaming.RuleSets[0].Count != 2 {
+		t.Errorf("rule sets = %+v, want only the set read up to the winner", streaming.RuleSets)
 	}
 	if len(streaming.Chain) == 0 || streaming.Chain[0].Name != "HK" {
 		t.Errorf("chain = %+v, want it to start at HK", streaming.Chain)
@@ -229,6 +231,9 @@ func TestRuleLookupFindsTheWinnerAndWhatItShadows(t *testing.T) {
 	fallback := lookup(t, "example.org", false)
 	if winnerIndex(fallback) != 4 || fallback.Winner.Type != "MATCH" {
 		t.Errorf("fallback = %+v, want MATCH", fallback.Winner)
+	}
+	if len(fallback.RuleSets) != 2 {
+		t.Errorf("rule sets = %+v, want both sets read before the fallback", fallback.RuleSets)
 	}
 }
 

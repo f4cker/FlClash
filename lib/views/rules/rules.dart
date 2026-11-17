@@ -83,6 +83,7 @@ class RulesView extends ConsumerStatefulWidget {
   static const resultsKey = ValueKey('rules-results');
   static const headerKey = ValueKey('rules-header');
   static const infoKey = ValueKey('rules-lookup-info');
+  static const ruleSetNoticeKey = ValueKey('rules-rule-set-notice');
   static const queryingKey = ValueKey('rules-querying');
   static const scrollEdgeKey = ValueKey('rules-scroll-edge');
 
@@ -1078,33 +1079,29 @@ class _RulesViewState extends ConsumerState<RulesView> {
     final appLocalizations = context.appLocalizations;
     final notices = <Widget>[];
     final now = DateTime.now();
-    for (final set in result.ruleSets) {
-      final text = switch (set.status) {
-        'missing' => appLocalizations.ruleSetMissingNotice(set.name),
-        'failed' => appLocalizations.ruleSetFailedNotice(set.name),
-        _ when ruleSetOverdueDays(set, now) > 0 =>
-          appLocalizations.ruleSetExpiredNotice(set.name),
-        _ => null,
-      };
-      if (text == null) continue;
+    // The rule sets this answer read that are not whole, in one line with
+    // one way to update them.
+    final issues = [
+      for (final set in result.ruleSets)
+        ?switch (set.status) {
+          'missing' => appLocalizations.ruleSetIssueMissing(set.name),
+          'failed' => appLocalizations.ruleSetIssueFailed(set.name),
+          _ when ruleSetOverdueDays(set, now) > 0 =>
+            appLocalizations.ruleSetIssueExpired(set.name),
+          _ => null,
+        },
+    ];
+    if (issues.isNotEmpty) {
       notices.add(
         RulesNotice(
+          key: RulesView.ruleSetNoticeKey,
           tone: RuleTone.warning,
           glyph: AppGlyphs.warning,
-          text: text,
+          text: appLocalizations.ruleSetIssuesNotice(
+            issues.join(appLocalizations.ruleSetIssueSeparator),
+          ),
           actionLabel: appLocalizations.goUpdate,
           onAction: _showResources,
-        ),
-      );
-    }
-    if (result.resolveWanted &&
-        result.resolveError.isNotEmpty &&
-        result.ip.isEmpty) {
-      notices.add(
-        RulesNotice(
-          tone: RuleTone.gray,
-          glyph: AppGlyphs.info,
-          text: appLocalizations.lookupResolveFailed,
         ),
       );
     }

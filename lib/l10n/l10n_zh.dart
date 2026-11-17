@@ -5766,9 +5766,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get goUpdate => '去更新';
 
   @override
-  String get lookupResolveFailed => '未能解析 IP。按 IP 判断的规则无法确定是否匹配。';
-
-  @override
   String get ipSourceHosts => 'hosts';
 
   @override
@@ -5881,18 +5878,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ruleUncertainTag => '无法确定是否匹配';
 
   @override
-  String ruleSetMissingNotice(Object name) {
-    return '规则集「$name」还没下载，结果可能不完整。';
+  String ruleSetIssuesNotice(Object issues) {
+    return '规则集$issues，结果可能不完整。';
   }
 
   @override
-  String ruleSetFailedNotice(Object name) {
-    return '规则集「$name」下载失败，结果可能不完整。';
+  String get ruleSetIssueSeparator => '，';
+
+  @override
+  String ruleSetIssueMissing(Object name) {
+    return '「$name」还没下载';
   }
 
   @override
-  String ruleSetExpiredNotice(Object name) {
-    return '规则集「$name」已过期，结果可能不完整。';
+  String ruleSetIssueFailed(Object name) {
+    return '「$name」下载失败';
+  }
+
+  @override
+  String ruleSetIssueExpired(Object name) {
+    return '「$name」已过期';
   }
 
   @override

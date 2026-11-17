@@ -14,6 +14,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/rules/rule_rows.dart';
 import 'package:fl_clash/views/rules/rules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -476,6 +477,141 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('PROCESS-NAME,Telegram'), findsOneWidget);
     expect(find.text('May or may not match'), findsNothing);
+
+    await teardown(tester);
+  });
+
+  testWidgets('rule sets not whole share one line with one update action', (
+    tester,
+  ) async {
+    when(() => core.lookupRule(any())).thenAnswer(
+      (_) async => _lookup().copyWith(
+        ruleSets: [
+          RuleSetView(
+            name: 'Netflix',
+            updatedAt: DateTime.now().subtract(const Duration(days: 5)),
+            interval: 86400,
+          ),
+          const RuleSetView(name: 'Apple', status: 'failed'),
+          _ruleSet,
+        ],
+      ),
+    );
+    await pumpRules(tester);
+
+    await lookUp(tester, 'www.youtube.com');
+
+    expect(find.byKey(RulesView.ruleSetNoticeKey), findsOneWidget);
+    expect(
+      find.text(
+        'Rule sets not ready: “Netflix” has expired, “Apple” failed to '
+        'download. The result may be incomplete.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Update'), findsOneWidget);
+
+    await teardown(tester);
+  });
+
+  for (final ipRule in [false, true]) {
+    testWidgets(
+      ipRule
+          ? 'a failed DNS names IP when an IP rule comes first'
+          : 'a failed DNS says nothing of IP with no IP rule first',
+      (tester) async {
+        when(() => core.lookupRule(any())).thenAnswer(
+          (_) async => _lookup().copyWith(
+            ip: '',
+            ipSource: '',
+            resolveError: 'i/o timeout',
+            uncertain: [
+              const RuleHit(
+                index: 0,
+                type: 'PROCESS-NAME',
+                ruleType: 'Process',
+                payload: 'Telegram',
+                target: 'Proxy',
+                status: RuleHitStatus.uncertain,
+                reason: 'process',
+              ),
+              if (ipRule)
+                const RuleHit(
+                  index: 0,
+                  type: 'IP-CIDR',
+                  ruleType: 'IPCIDR',
+                  payload: '10.0.0.0/8',
+                  target: 'DIRECT',
+                  status: RuleHitStatus.uncertain,
+                  reason: 'ip',
+                ),
+            ],
+          ),
+        );
+        await pumpRules(tester);
+
+        await lookUp(tester, 'www.youtube.com');
+
+        // No notice of its own: the card's one hint says it, if anything.
+        expect(find.textContaining('could not be resolved'), findsNothing);
+        expect(find.byKey(RuleHitCard.uncertainKey), findsOneWidget);
+        expect(
+          find.text(
+            ipRule
+                ? 'An earlier rule may match first depending on the app or IP; '
+                      'the actual result may differ.'
+                : 'An earlier rule may match first depending on the app; '
+                      'the actual result may differ.',
+          ),
+          findsOneWidget,
+        );
+        // The hint follows every detail and comes right before the buttons.
+        final hint = tester.getRect(find.byKey(RuleHitCard.uncertainKey));
+        expect(
+          hint.top,
+          greaterThan(
+            tester.getRect(find.text('Rule set · YouTube').first).bottom,
+          ),
+        );
+        expect(
+          tester.getRect(find.text('Add to added rules')).top - hint.bottom,
+          closeTo(6 + 8, 8),
+        );
+
+        await teardown(tester);
+      },
+    );
+  }
+
+  testWidgets('a narrow window wraps rule text, never cutting it', (
+    tester,
+  ) async {
+    const long =
+        'very-long-subdomain-name.another-long-label.example-company.co.uk';
+    when(() => core.listRules(filter: any(named: 'filter'))).thenAnswer(
+      (_) async => _list.copyWith(
+        rules: [
+          const CoreRule(
+            index: 0,
+            type: 'DOMAIN-SUFFIX',
+            ruleType: 'DomainSuffix',
+            payload: long,
+            target: 'GitHub',
+          ),
+          ..._list.rules.skip(1),
+        ],
+      ),
+    );
+    await pumpRules(tester, size: const Size(380, 900));
+
+    final text = find.text('DOMAIN-SUFFIX,$long');
+    expect(text, findsOneWidget);
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.descendant(of: text, matching: find.byType(RichText)),
+    );
+    expect(paragraph.didExceedMaxLines, isFalse);
+    expect(paragraph.size.height, greaterThan(30), reason: 'it wraps');
+    expect(tester.getRect(text).right, lessThanOrEqualTo(380));
 
     await teardown(tester);
   });

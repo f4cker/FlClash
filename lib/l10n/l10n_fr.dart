@@ -6308,10 +6308,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get goUpdate => 'Update';
 
   @override
-  String get lookupResolveFailed =>
-      'The IP could not be resolved. Whether rules by IP match is unknown.';
-
-  @override
   String get ipSourceHosts => 'hosts';
 
   @override
@@ -6430,18 +6426,26 @@ class AppLocalizationsFr extends AppLocalizations {
   String get ruleUncertainTag => 'May or may not match';
 
   @override
-  String ruleSetMissingNotice(Object name) {
-    return 'Rule set “$name” is not downloaded yet, so the result may be incomplete.';
+  String ruleSetIssuesNotice(Object issues) {
+    return 'Rule sets not ready: $issues. The result may be incomplete.';
   }
 
   @override
-  String ruleSetFailedNotice(Object name) {
-    return 'Rule set “$name” failed to download, so the result may be incomplete.';
+  String get ruleSetIssueSeparator => ', ';
+
+  @override
+  String ruleSetIssueMissing(Object name) {
+    return '“$name” is not downloaded yet';
   }
 
   @override
-  String ruleSetExpiredNotice(Object name) {
-    return 'Rule set “$name” has expired, so the result may be incomplete.';
+  String ruleSetIssueFailed(Object name) {
+    return '“$name” failed to download';
+  }
+
+  @override
+  String ruleSetIssueExpired(Object name) {
+    return '“$name” has expired';
   }
 
   @override

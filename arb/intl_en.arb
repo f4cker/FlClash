@@ -2115,7 +2115,6 @@
   "uncertainKindLastSeparator": " or ",
   "uncertainOther": "Earlier rules need more about the connection, so the actual result may differ.",
   "goUpdate": "Update",
-  "lookupResolveFailed": "The IP could not be resolved. Whether rules by IP match is unknown.",
   "ipSourceHosts": "hosts",
   "ipSourceMapping": "the fake-IP mapping",
   "rulesCoreStopped": "The core is not running, so rules cannot be looked up for now. Start the core and try again.",
@@ -2191,19 +2190,21 @@
     }
   },
   "ruleUncertainTag": "May or may not match",
-  "ruleSetMissingNotice": "Rule set “{name}” is not downloaded yet, so the result may be incomplete.",
+  "ruleSetIssuesNotice": "Rule sets not ready: {issues}. The result may be incomplete.",
+  "ruleSetIssueSeparator": ", ",
+  "ruleSetIssueMissing": "“{name}” is not downloaded yet",
+  "ruleSetIssueFailed": "“{name}” failed to download",
+  "ruleSetIssueExpired": "“{name}” has expired",
   "@ruleSetMissingNotice": {
     "placeholders": {
       "name": {}
     }
   },
-  "ruleSetFailedNotice": "Rule set “{name}” failed to download, so the result may be incomplete.",
   "@ruleSetFailedNotice": {
     "placeholders": {
       "name": {}
     }
   },
-  "ruleSetExpiredNotice": "Rule set “{name}” has expired, so the result may be incomplete.",
   "@ruleSetExpiredNotice": {
     "placeholders": {
       "name": {}

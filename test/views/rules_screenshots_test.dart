@@ -343,30 +343,33 @@ final _fallbackLookup = RuleLookup(
   matches: [_hit(_rules.last, status: RuleHitStatus.winner)],
 );
 
+// DNS fails, and the sets read before the rule taken are not whole: one
+// expired, one not downloaded. No IP rule comes before it, so the hint
+// names the app alone.
 final _incompleteLookup = RuleLookup(
   coreEpoch: 7,
   mode: 'rule',
-  host: 'www.netflix.com',
+  host: 'media.example.tv',
   resolveWanted: true,
   resolveError: 'i/o timeout',
   port: 443,
   network: 'tcp',
   total: _total,
-  winner: _hit(
-    _rules[3],
-    status: RuleHitStatus.winner,
-    entry: 'DOMAIN-SUFFIX,netflix.com',
-  ),
-  chain: _chainOf(_netflix),
+  winner: _hit(_rules[8], status: RuleHitStatus.winner),
+  chain: _chainOf(_select),
   matches: [
-    _hit(
-      _rules[3],
-      status: RuleHitStatus.winner,
-      entry: 'DOMAIN-SUFFIX,netflix.com',
-    ),
-    _hit(_rules[8]),
+    _hit(_rules[8], status: RuleHitStatus.winner),
+    _hit(_rules.last),
   ],
-  ruleSets: [_netflixSet, _appleSet],
+  uncertain: [
+    _hit(
+      _rules[2],
+      status: RuleHitStatus.uncertain,
+      reason: 'process',
+      detail: 'Telegram',
+    ),
+  ],
+  ruleSets: [_netflixSet, _youTubeSet, _appleSet, _googleSet],
 );
 
 TrackerInfo _tracker(
@@ -441,7 +444,7 @@ void main() {
         'i.ytimg.com': _youTubeLookup('i.ytimg.com'),
         'web.telegram.org': _telegramLookup,
         'tools.example-startup.io': _fallbackLookup,
-        'www.netflix.com': _incompleteLookup,
+        'media.example.tv': _incompleteLookup,
       });
     when(() => core.listRules(filter: any(named: 'filter'))).thenAnswer((
       invocation,
@@ -632,7 +635,7 @@ void main() {
 
   shot('06-errors', (tester) async {
     await pumpPage(tester);
-    await query(tester, 'www.netflix.com');
+    await query(tester, 'media.example.tv');
     container.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
     await shoot(tester, '06-errors');
   });
@@ -845,6 +848,20 @@ void main() {
     await pumpPage(tester);
     await query(tester, 'www.youtube.com');
     await shoot(tester, '11-global-mode');
+  });
+
+  shot('13-narrow', (tester) async {
+    await pumpPage(tester, size: const Size(420, 1000));
+    await query(tester, 'media.example.tv');
+    await shoot(tester, '13-narrow');
+  });
+
+  shot('13b-narrow-list', (tester) async {
+    await pumpPage(tester, size: const Size(420, 900));
+    await query(tester, 'web.telegram.org');
+    await tester.tap(find.text('显示全部规则'));
+    await settle(tester, 12);
+    await shoot(tester, '13b-narrow-list');
   });
 
   shot('12-no-filter-results', (tester) async {

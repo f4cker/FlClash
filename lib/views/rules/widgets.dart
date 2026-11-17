@@ -449,11 +449,17 @@ class RulesFilterChip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               spacing: 4,
               children: [
-                Text(
-                  label,
-                  style: AppTextStyle.footnote
-                      .of(context, emphasized: selected)
-                      .copyWith(color: ink),
+                // A chip wider than a narrow window cuts its label, never
+                // its count.
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyle.footnote
+                        .of(context, emphasized: selected)
+                        .copyWith(color: ink),
+                  ),
                 ),
                 if (count != null)
                   Text(

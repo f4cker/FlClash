@@ -143,9 +143,8 @@ class RuleHitCard extends StatelessWidget {
       for (final hit in undecidedHits(lookup))
         '#${hit.index + 1} ${hit.rule.text}',
     ].join('\n');
-    return Padding(
+    return KeyedSubtree(
       key: RuleHitCard.uncertainKey,
-      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Tooltip(
         message: rules,
         child: Row(
@@ -339,7 +338,6 @@ class RuleHitCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (note != null) _buildUncertain(context, note),
               ],
               if (showIp) ...[
                 const SizedBox(height: 6),
@@ -355,8 +353,13 @@ class RuleHitCard extends StatelessWidget {
                   ),
                 ),
               ],
+              // After every detail, right before the buttons.
+              if (note != null) ...[
+                const SizedBox(height: 6),
+                _buildUncertain(context, note),
+              ],
               if (winner != null) ...[
-                const SizedBox(height: 14),
+                SizedBox(height: note != null ? 6 : 14),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,

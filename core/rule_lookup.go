@@ -91,6 +91,9 @@ type ruleLookup struct {
 	neededProc   bool
 	ruleSets     map[string]bool
 	ruleSetOrder []string
+	// The rule sets read up to and including the winner; the ones read
+	// after it, for the rules it shadows, cannot change the answer.
+	setsAtWinner int
 }
 
 func (l *ruleLookup) helper() C.RuleMatchHelper {
@@ -460,7 +463,11 @@ func handleLookupRule(params RuleLookupParams) (*RuleLookup, error) {
 	}
 	result.IPSource = lookup.ipSource
 	result.ResolveError = lookup.resolveErr
-	for _, name := range lookup.ruleSetOrder {
+	sets := lookup.ruleSetOrder
+	if result.Winner != nil {
+		sets = sets[:lookup.setsAtWinner]
+	}
+	for _, name := range sets {
 		result.RuleSets = append(result.RuleSets, *ruleSetView(name, state.RuleProviders))
 	}
 	return result, nil
@@ -534,6 +541,7 @@ rules:
 		result.Matches = append(result.Matches, hit)
 		result.Chain = lookupChain(adapter, metadata)
 		decided = true
+		l.setsAtWinner = len(l.ruleSetOrder)
 	}
 	if !decided {
 		result.Chain = lookupChain(l.state.Proxies["DIRECT"], metadata)

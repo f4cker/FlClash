@@ -10608,12 +10608,6 @@ abstract class AppLocalizations {
   /// **'Update'**
   String get goUpdate;
 
-  /// No description provided for @lookupResolveFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'The IP could not be resolved. Whether rules by IP match is unknown.'**
-  String get lookupResolveFailed;
-
   /// No description provided for @ipSourceHosts.
   ///
   /// In en, this message translates to:
@@ -10787,23 +10781,35 @@ abstract class AppLocalizations {
   /// **'May or may not match'**
   String get ruleUncertainTag;
 
-  /// No description provided for @ruleSetMissingNotice.
+  /// No description provided for @ruleSetIssuesNotice.
   ///
   /// In en, this message translates to:
-  /// **'Rule set “{name}” is not downloaded yet, so the result may be incomplete.'**
-  String ruleSetMissingNotice(Object name);
+  /// **'Rule sets not ready: {issues}. The result may be incomplete.'**
+  String ruleSetIssuesNotice(Object issues);
 
-  /// No description provided for @ruleSetFailedNotice.
+  /// No description provided for @ruleSetIssueSeparator.
   ///
   /// In en, this message translates to:
-  /// **'Rule set “{name}” failed to download, so the result may be incomplete.'**
-  String ruleSetFailedNotice(Object name);
+  /// **', '**
+  String get ruleSetIssueSeparator;
 
-  /// No description provided for @ruleSetExpiredNotice.
+  /// No description provided for @ruleSetIssueMissing.
   ///
   /// In en, this message translates to:
-  /// **'Rule set “{name}” has expired, so the result may be incomplete.'**
-  String ruleSetExpiredNotice(Object name);
+  /// **'“{name}” is not downloaded yet'**
+  String ruleSetIssueMissing(Object name);
+
+  /// No description provided for @ruleSetIssueFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” failed to download'**
+  String ruleSetIssueFailed(Object name);
+
+  /// No description provided for @ruleSetIssueExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” has expired'**
+  String ruleSetIssueExpired(Object name);
 
   /// No description provided for @addRuleAdding.
   ///
