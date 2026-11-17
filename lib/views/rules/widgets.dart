@@ -32,6 +32,19 @@ enum RuleTone {
       ink: Color.lerp(ink, const Color(0xFFFFFFFF), 0.6)!,
     );
   }
+
+  /// The fill of a source badge: opaque, and a shade deeper than [fill], so
+  /// a badge reads the same on a plain row and on the highlighted one.
+  Color badgeFillOf(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    if (colorScheme.brightness == Brightness.light) {
+      return Color.lerp(fill, ink, 0.1)!;
+    }
+    return Color.alphaBlend(
+      ink.withValues(alpha: 0.32),
+      context.raisedSurfaceLevel.colorOf(colorScheme),
+    );
+  }
 }
 
 /// The source a rule badge names; null when the page cannot tell.
@@ -108,7 +121,7 @@ class RuleBadge extends StatelessWidget {
       height: 22,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: ShapeDecoration(
-        color: solid ? colors.ink : colors.fill,
+        color: solid ? colors.ink : tone.badgeFillOf(context),
         shape: RoundedSuperellipseBorder(
           borderRadius: BorderRadius.circular(11),
         ),
@@ -121,7 +134,7 @@ class RuleBadge extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: AppTextStyle.caption1
               .of(context, emphasized: true)
-              .copyWith(color: solid ? colors.fill : colors.ink),
+              .copyWith(color: solid ? tone.badgeFillOf(context) : colors.ink),
         ),
       ),
     );

@@ -231,7 +231,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
     await tester.pump();
     expect(
-      find.text('See which rule www.youtube.com actually takes'),
+      find.text('Look up which rule www.youtube.com takes'),
       findsOneWidget,
     );
 
@@ -244,10 +244,10 @@ void main() {
             as RuleLookupParams;
     expect(params.host, 'www.youtube.com');
     expect(params.port, 443);
-    expect(find.text('Actually taken'), findsOneWidget);
-    expect(find.text('#2 / 4'), findsOneWidget);
+    expect(find.text('Lookup result'), findsOneWidget);
+    expect(find.text('Matches rule #2'), findsOneWidget);
     expect(find.text('Japan 03'), findsOneWidget);
-    expect(find.text('Taken first by #2'), findsOneWidget);
+    expect(find.text('Rule #2 matches first'), findsOneWidget);
     expect(find.text('DOMAIN-SUFFIX,youtube.com'), findsWidgets);
     expect(find.text('Profile “Airport A”'), findsOneWidget);
 
@@ -265,7 +265,9 @@ void main() {
 
     expect(container.read(rulesLookupRequestProvider), isNull);
     expect(
-      find.text('This connection took RuleSet(YouTube) too; they agree.'),
+      find.text(
+        'The rule this connection matched then agrees with this lookup.',
+      ),
       findsOneWidget,
     );
 
@@ -279,7 +281,10 @@ void main() {
     await tester.pump();
 
     expect(
-      find.text('The Core is not running; the rules stopped updating'),
+      find.text(
+        'The core is not running, so rules cannot be looked up for now. '
+        'Start the core and try again.',
+      ),
       findsOneWidget,
     );
 

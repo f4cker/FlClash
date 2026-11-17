@@ -300,4 +300,51 @@ void main() {
       expect(scriptRuleSources(['MATCH,DIRECT'], null, script: 's'), isEmpty);
     });
   });
+
+  test('a request record reads in a config spelling', () {
+    expect(recordRuleText('RuleSet', 'YouTube'), 'RULE-SET,YouTube');
+    expect(
+      recordRuleText('DomainSuffix', 'github.com'),
+      'DOMAIN-SUFFIX,github.com',
+    );
+    expect(recordRuleText('IPCIDR', '10.0.0.0/8'), 'IP-CIDR,10.0.0.0/8');
+    expect(recordRuleText('Process', 'Telegram'), 'PROCESS-NAME,Telegram');
+    expect(recordRuleText('Match', ''), 'MATCH');
+  });
+
+  test('a lookup is uncertain on an undecided rule or a missing set', () {
+    expect(lookupUncertain(const RuleLookup()), isFalse);
+    expect(
+      lookupUncertain(
+        const RuleLookup(
+          uncertain: [
+            RuleHit(
+              index: 1,
+              status: RuleHitStatus.uncertain,
+              reason: 'rematch',
+            ),
+          ],
+        ),
+      ),
+      isFalse,
+    );
+    expect(
+      lookupUncertain(
+        const RuleLookup(
+          uncertain: [
+            RuleHit(index: 1, status: RuleHitStatus.uncertain, reason: 'port'),
+          ],
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      lookupUncertain(
+        const RuleLookup(
+          ruleSets: [RuleSetView(name: 'A', status: 'missing')],
+        ),
+      ),
+      isTrue,
+    );
+  });
 }

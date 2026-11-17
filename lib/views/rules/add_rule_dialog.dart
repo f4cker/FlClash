@@ -196,9 +196,9 @@ class _AddRuleDialogState extends State<AddRuleDialog> {
         ),
         TextButton(
           onPressed: _busy ? null : _add,
-          child: _busy
-              ? ActivityIndicator(size: 16, color: colorScheme.onPrimary)
-              : Text(appLocalizations.add),
+          child: Text(
+            _busy ? appLocalizations.addRuleAdding : appLocalizations.add,
+          ),
         ),
       ],
       child: Column(

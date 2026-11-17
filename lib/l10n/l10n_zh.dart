@@ -5589,14 +5589,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get rulesSearchHint => '搜索规则，或输入网址查它走哪条';
+  String get rulesSearchHint => '搜索规则，或输入网址查询';
 
   @override
   String get rulesSearchLabel => '搜索规则或网址';
 
   @override
   String rulesLookupSuggestion(Object host) {
-    return '查 $host 实际走哪条规则';
+    return '查询 $host 走哪条规则';
   }
 
   @override
@@ -5606,7 +5606,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String rulesFilterOnly(Object count) {
-    return '只按文字筛选规则 · $count 条';
+    return '仅按文字筛选规则 · $count 条';
   }
 
   @override
@@ -5670,7 +5670,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String rulesShown(Object shown, Object total) {
-    return '已显示 $shown / $total';
+    return '已显示 $shown / $total 条';
   }
 
   @override
@@ -5680,18 +5680,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String rulesContaining(Object count) {
-    return '包含它的规则 $count';
+    return '匹配的规则 $count';
   }
 
   @override
   String get rulesShowAll => '显示全部规则';
 
   @override
-  String get ruleHitTag => '实际命中';
+  String get ruleHitTag => '命中';
 
   @override
   String ruleShadowedBy(Object index) {
-    return '被第 $index 条抢先';
+    return '被第 $index 条规则优先匹配';
   }
 
   @override
@@ -5704,52 +5704,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ruleNoUdpTag => '不支持 UDP，已跳过';
 
   @override
-  String ruleOnlyForApp(Object app) {
-    return '只对 $app 发起的请求生效';
-  }
-
-  @override
-  String ruleOnlyForPort(Object port) {
-    return '只对端口 $port 生效';
-  }
-
-  @override
-  String get ruleDependsOnNetwork => '取决于 TCP 还是 UDP';
-
-  @override
-  String get ruleDependsOnInbound => '取决于入站';
-
-  @override
-  String get ruleDependsOnSource => '取决于来源地址';
-
-  @override
-  String get ruleDependsOnIp => '需要 IP，没解析出来';
-
-  @override
   String get ruleDependsOnRematch => 'REMATCH 后重新匹配';
 
   @override
-  String get ruleDependsOnOther => '取决于连接本身';
+  String get hitCardTitle => '查询结果';
 
   @override
-  String get hitCardTitle => '实际命中';
+  String get hitCardTitleUncertain => '结果可能不同';
 
   @override
-  String get hitCardTitleUncertain => '多半会命中';
-
-  @override
-  String hitCardPosition(Object index, Object total) {
-    return '第 $index / $total 条';
+  String hitCardPosition(Object index) {
+    return '命中第 $index 条';
   }
-
-  @override
-  String get hitCardLast => '最后一条';
 
   @override
   String get hitGoes => '走';
 
   @override
-  String get hitFallback => '没有专门规则，走兜底';
+  String get hitFallback => '没有更早匹配的规则，使用最后一条规则';
 
   @override
   String get hitNoRule => '没有规则命中，走';
@@ -5761,7 +5733,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hitRuleLabel => '规则';
 
   @override
-  String get hitFromLabel => '来自';
+  String get hitFromLabel => '来源';
 
   @override
   String get hitEntryLabel => '条目';
@@ -5778,7 +5750,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get changeNode => '换节点';
 
   @override
-  String get addAddedRule => '加附加规则';
+  String get addAddedRule => '添加附加规则';
 
   @override
   String get copyRule => '复制规则';
@@ -5787,67 +5759,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get viewGroup => '查看策略组';
 
   @override
-  String uncertainProcess(Object count) {
-    return '前面有 $count 条按发起的 App 判断的规则。如果是那个 App 发起的请求，会先命中它。';
-  }
+  String get uncertainProcess => '前面有按发起 App 判断的规则。实际结果可能因发起请求的 App 不同而改变。';
 
   @override
-  String uncertainPort(Object count) {
-    return '前面有 $count 条按端口判断的规则。如果是那个端口的请求，会先命中它。';
-  }
+  String get uncertainPort => '前面有按端口判断的规则。实际结果可能因端口不同而改变。';
 
   @override
-  String uncertainIp(Object count) {
-    return '前面有 $count 条按 IP 判断的规则，没解析出 IP，无法确定。';
-  }
+  String get uncertainIp => '前面有按 IP 判断的规则，但未能解析 IP，无法确定是否会优先匹配。';
 
   @override
-  String uncertainOther(Object count) {
-    return '前面有 $count 条按连接信息判断的规则，查询时无法确定。';
-  }
-
-  @override
-  String get dependsCardTitle => '取决于发起的 App 或端口';
-
-  @override
-  String ruleSetsIncomplete(Object list) {
-    return '规则集$list，结果可能不完整。';
-  }
-
-  @override
-  String ruleSetNotDownloadedItem(Object name) {
-    return '「$name」还没下载';
-  }
-
-  @override
-  String ruleSetFailedItem(Object name) {
-    return '「$name」下载失败';
-  }
-
-  @override
-  String ruleSetExpiredItem(Object name, Object days) {
-    return '「$name」已过期 $days 天';
-  }
+  String get uncertainOther => '前面的规则需要更多连接信息，实际结果可能不同。';
 
   @override
   String get goUpdate => '去更新';
 
   @override
-  String get lookupResolveFailed =>
-      '没能解析出 IP，GEOIP、IP-CIDR 这类按 IP 判断的规则无法判断，已跳过。';
-
-  @override
-  String lookupResolvedIp(Object ip, Object source) {
-    return '按 $source 解析为 $ip';
-  }
-
-  @override
-  String lookupInputIp(Object ip) {
-    return '按 $ip 匹配';
-  }
-
-  @override
-  String get ipSourceDns => '内核 DNS';
+  String get lookupResolveFailed => '未能解析 IP。按 IP 判断的规则无法确定是否匹配。';
 
   @override
   String get ipSourceHosts => 'hosts';
@@ -5856,13 +5783,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipSourceMapping => 'Fake-IP 映射';
 
   @override
-  String get lookupCoreStopped => '内核没在运行，暂时查不了。启动后再查。';
-
-  @override
-  String get toDashboard => '去仪表盘';
-
-  @override
-  String get rulesCoreStopped => '内核没在运行，规则列表已停止更新';
+  String get rulesCoreStopped => '内核未运行，暂时无法查询规则。启动内核后再试。';
 
   @override
   String lookupFailed(Object reason) {
@@ -5875,30 +5796,25 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String compareSame(Object rule) {
-    return '这次连接实际命中的也是 $rule，一致。';
-  }
+  String get compareSame => '这次连接当时命中的规则与当前查询一致。';
 
   @override
   String compareDiffer(Object rule) {
-    return '这次连接当时命中的是 $rule，和现在不同（配置可能已变，或按 App 判断）。';
+    return '这次连接当时命中「$rule」，与当前查询结果不同。配置或连接条件可能已变化。';
   }
 
   @override
-  String get compareSniffNote => '只有 IP 的连接，内核会先从流量里嗅探出域名再匹配，查询时没有这一步。';
+  String get rulesModeGlobal => '当前为全局模式，规则不参与分流。';
 
   @override
-  String get rulesModeGlobal => '当前是全局模式，规则不生效';
-
-  @override
-  String get rulesModeDirect => '当前是直连模式，规则不生效';
+  String get rulesModeDirect => '当前为直连模式，规则不参与分流。';
 
   @override
   String get addRuleTitle => '添加附加规则';
 
   @override
   String addRuleSubtitle(Object profile) {
-    return '写入当前配置「$profile」的附加规则';
+    return '添加到当前配置「$profile」。';
   }
 
   @override
@@ -5906,12 +5822,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String addRuleSuffix(Object domain) {
-    return '$domain 及所有子域名';
+    return '$domain及其所有子域名';
   }
 
   @override
   String addRuleExact(Object host) {
-    return '只匹配 $host';
+    return '仅 $host';
   }
 
   @override
@@ -5922,16 +5838,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String addedEffective(Object host, Object group) {
-    return '已添加，已生效。$host 现在走「$group」。';
+    return '规则已添加并生效。$host现在走「$group」。';
   }
 
   @override
-  String addedNotEffective(Object index, Object source) {
-    return '已添加，但没生效：仍被第 $index 条「$source」抢先。';
-  }
-
-  @override
-  String get viewThatRule => '查看那条';
+  String get viewThatRule => '查看该规则';
 
   @override
   String get lookupRule => '查规则';
@@ -5954,17 +5865,58 @@ class AppLocalizationsZh extends AppLocalizations {
     Object group,
     Object node,
   ) {
-    return '实际命中第 $index 条，$rule，来自$source，走$group，节点$node';
+    return '命中第 $index 条，$rule，来源$source，走$group，节点$node';
   }
 
   @override
-  String get uncertainPrefix => '不确定';
-
-  @override
-  String get addRuleApplyFailed => '已写入，但重载配置失败。';
+  String get uncertainPrefix => '结果可能不同';
 
   @override
   String addRuleWriteFailed(Object reason) {
-    return '没能添加：$reason';
+    return '添加失败：$reason';
   }
+
+  @override
+  String get rulesEmptyFiltered => '没有找到匹配的规则。试试其他关键词或筛选条件。';
+
+  @override
+  String get hitIpLabel => '解析出的 IP';
+
+  @override
+  String get lookupNoConnectNote => '查询可能进行 DNS 解析，不会连接目标网站。';
+
+  @override
+  String get ruleUncertainTag => '无法确定是否匹配';
+
+  @override
+  String ruleSetMissingNotice(Object name) {
+    return '规则集「$name」还没下载，结果可能不完整。';
+  }
+
+  @override
+  String ruleSetFailedNotice(Object name) {
+    return '规则集「$name」下载失败，结果可能不完整。';
+  }
+
+  @override
+  String ruleSetExpiredNotice(Object name) {
+    return '规则集「$name」已过期，结果可能不完整。';
+  }
+
+  @override
+  String get addRuleAdding => '正在添加…';
+
+  @override
+  String get addedNotHit => '规则已添加，但当前查询未命中它。';
+
+  @override
+  String addedNotHitBy(Object index) {
+    return '第 $index 条规则优先匹配。';
+  }
+
+  @override
+  String get addedUnconfirmed => '规则已添加，但暂时无法确认是否生效。';
+
+  @override
+  String get relookup => '重新查询';
 }

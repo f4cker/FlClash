@@ -37,27 +37,24 @@ List<Widget> routeChips(
 }
 
 /// What a lookup says of the rules before the winner it cannot decide, one
-/// line for each kind of condition.
+/// line for each kind of information it lacks.
 List<String> uncertainNotes(BuildContext context, RuleLookup lookup) {
   final appLocalizations = context.appLocalizations;
-  final counts = <String, int>{};
-  for (final hit in lookup.uncertain) {
-    if (hit.reason == 'rematch') continue;
-    final kind = switch (hit.reason) {
-      'process' || 'uid' => 'process',
-      'port' => 'port',
-      'ip' => 'ip',
-      _ => 'other',
-    };
-    counts.update(kind, (count) => count + 1, ifAbsent: () => 1);
-  }
+  final kinds = <String>{
+    for (final hit in lookup.uncertain)
+      if (hit.reason != 'rematch')
+        switch (hit.reason) {
+          'process' || 'uid' => 'process',
+          'port' => 'port',
+          'ip' => 'ip',
+          _ => 'other',
+        },
+  };
   return [
-    if (counts['process'] case final count?)
-      appLocalizations.uncertainProcess(count),
-    if (counts['port'] case final count?) appLocalizations.uncertainPort(count),
-    if (counts['ip'] case final count?) appLocalizations.uncertainIp(count),
-    if (counts['other'] case final count?)
-      appLocalizations.uncertainOther(count),
+    if (kinds.contains('process')) appLocalizations.uncertainProcess,
+    if (kinds.contains('port')) appLocalizations.uncertainPort,
+    if (kinds.contains('ip')) appLocalizations.uncertainIp,
+    if (kinds.contains('other')) appLocalizations.uncertainOther,
   ];
 }
 
@@ -66,6 +63,12 @@ class RuleHitCard extends StatelessWidget {
   final RuleLookup lookup;
   final RuleSource? source;
   final bool justAdded;
+
+  /// False while the Core is stopped: the card dims and its actions rest.
+  final bool enabled;
+
+  /// True in global or direct mode, where rules do not route traffic.
+  final bool rulesIdle;
   final VoidCallback? onChangeNode;
   final VoidCallback onAddRule;
   final VoidCallback onCopyRule;
@@ -75,6 +78,8 @@ class RuleHitCard extends StatelessWidget {
     required this.lookup,
     required this.source,
     this.justAdded = false,
+    this.enabled = true,
+    this.rulesIdle = false,
     this.onChangeNode,
     required this.onAddRule,
     required this.onCopyRule,
@@ -87,12 +92,34 @@ class RuleHitCard extends StatelessWidget {
     return target.isEmpty ? const ['DIRECT'] : [target];
   }
 
+  /// The width of the detail labels: the widest of them, and a gap.
+  double _labelWidth(BuildContext context) {
+    final appLocalizations = context.appLocalizations;
+    final style = AppTextStyle.caption1.of(context);
+    var width = 0.0;
+    for (final label in [
+      appLocalizations.hitRuleLabel,
+      appLocalizations.hitEntryLabel,
+      appLocalizations.hitFromLabel,
+      appLocalizations.hitIpLabel,
+    ]) {
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      if (painter.width > width) width = painter.width;
+      painter.dispose();
+    }
+    return width.ceilToDouble() + 12;
+  }
+
   Widget _detailRow(BuildContext context, String label, Widget value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 44,
+          width: _labelWidth(context),
           child: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
@@ -115,7 +142,7 @@ class RuleHitCard extends StatelessWidget {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final winner = lookup.winner;
-    final uncertain = lookup.uncertain.isNotEmpty;
+    final uncertain = lookupUncertain(lookup);
     final fallback = winner?.type == 'MATCH';
     final hops = _hops;
     final caption = AppTextStyle.caption1
@@ -129,6 +156,12 @@ class RuleHitCard extends StatelessWidget {
         ? null
         : ruleSourceBadge(context, winner.rule, source);
     final ruleSet = winner?.ruleSet;
+    final ipNote = switch (lookup.ipSource) {
+      'hosts' => appLocalizations.ipSourceHosts,
+      'mapping' => appLocalizations.ipSourceMapping,
+      _ => null,
+    };
+    final showIp = lookup.ip.isNotEmpty && lookup.ipSource != 'input';
     final notes = uncertainNotes(context, lookup);
     final group = winner?.target ?? '';
     final semantics = winner == null
@@ -146,159 +179,182 @@ class RuleHitCard extends StatelessWidget {
     return Semantics(
       container: true,
       label: semantics,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-        decoration: ShapeDecoration(
-          color: context.raisedSurfaceLevel.colorOf(colorScheme),
-          shape: RoundedSuperellipseBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(
-              width: 1.5,
-              color: uncertain
-                  ? const Color(0xFFE2B97F)
-                  : colorScheme.primary.withValues(alpha: 0.35),
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+          decoration: ShapeDecoration(
+            color: context.raisedSurfaceLevel.colorOf(colorScheme),
+            shape: RoundedSuperellipseBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(
+                width: 1.5,
+                color: rulesIdle
+                    ? const Color(0xFFD6D4DA)
+                    : uncertain
+                    ? const Color(0xFFE2B97F)
+                    : colorScheme.primary.withValues(alpha: 0.35),
+              ),
             ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    uncertain
-                        ? appLocalizations.hitCardTitleUncertain
-                        : appLocalizations.hitCardTitle,
-                    style: AppTextStyle.footnote
-                        .of(context, emphasized: true)
-                        .copyWith(color: colorScheme.onSurfaceVariant),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      uncertain
+                          ? appLocalizations.hitCardTitleUncertain
+                          : appLocalizations.hitCardTitle,
+                      style: AppTextStyle.footnote
+                          .of(context, emphasized: true)
+                          .copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
                   ),
-                ),
-                if (winner != null)
-                  Text(
-                    fallback
-                        ? appLocalizations.hitCardLast
-                        : appLocalizations.hitCardPosition(
-                            groupedCount(winner.index + 1),
-                            groupedCount(lookup.total),
-                          ),
-                    style: tabular,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(
-                  winner == null
-                      ? appLocalizations.hitNoRule
-                      : fallback
-                      ? appLocalizations.hitFallback
-                      : appLocalizations.hitGoes,
-                  style: conclusion,
-                ),
-                ...routeChips(context, hops),
-              ],
-            ),
-            if (lookup.undetermined == 'rematch') ...[
+                  if (winner != null)
+                    Text(
+                      appLocalizations.hitCardPosition(
+                        groupedCount(winner.index + 1),
+                      ),
+                      style: tabular,
+                    ),
+                ],
+              ),
               const SizedBox(height: 10),
-              Text(
-                appLocalizations.hitRematch,
-                style: AppTextStyle.footnote
-                    .of(context)
-                    .copyWith(color: colorScheme.onSurfaceVariant),
-              ),
-            ],
-            if (winner != null) ...[
-              const SizedBox(height: 14),
-              _detailRow(
-                context,
-                appLocalizations.hitRuleLabel,
-                RuleCode(winner.rule.text, selectable: true),
-              ),
-              if (winner.entry.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                _detailRow(
-                  context,
-                  appLocalizations.hitEntryLabel,
-                  RuleCode(winner.entry, selectable: true),
-                ),
-              ],
-              if (badge != null) ...[
-                const SizedBox(height: 6),
-                _detailRow(
-                  context,
-                  appLocalizations.hitFromLabel,
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      RuleBadge(label: badge.label, tone: badge.tone),
-                      if (ruleSet?.loadedAt case final loaded?)
-                        Text(
-                          appLocalizations.ruleUpdatedAt(
-                            loaded.getLastUpdateTimeDesc(context),
-                          ),
-                          style: caption,
-                        )
-                      else if (justAdded)
-                        Text(appLocalizations.ruleJustAdded, style: caption),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-            for (final note in notes) ...[
-              const SizedBox(height: 12),
-              RulesNotice(
-                tone: RuleTone.warning,
-                glyph: AppGlyphs.warning,
-                text: note,
-              ),
-            ],
-            if (winner != null) ...[
-              const SizedBox(height: 14),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  if (onChangeNode != null)
-                    _CardButton(
-                      label: appLocalizations.changeNode,
-                      fill: colorScheme.primary.withValues(alpha: 0.12),
-                      ink: colorScheme.primary,
-                      onPressed: onChangeNode!,
-                    ),
-                  _CardButton(
-                    label: appLocalizations.addAddedRule,
-                    fill: context.raisedSurfaceLevel.colorOf(colorScheme),
-                    ink: colorScheme.onSurface,
-                    border: colorScheme.outlineVariant,
-                    onPressed: onAddRule,
+                  Text(
+                    winner == null
+                        ? appLocalizations.hitNoRule
+                        : appLocalizations.hitGoes,
+                    style: conclusion,
                   ),
-                  _CardButton(
-                    label: appLocalizations.copyRule,
-                    ink: colorScheme.primary,
-                    onPressed: onCopyRule,
-                  ),
+                  ...routeChips(context, hops),
                 ],
               ),
-            ] else if (lookup.mode == 'rule' || lookup.mode.isEmpty) ...[
-              const SizedBox(height: 14),
-              _CardButton(
-                label: appLocalizations.addAddedRule,
-                fill: context.raisedSurfaceLevel.colorOf(colorScheme),
-                ink: colorScheme.onSurface,
-                border: colorScheme.outlineVariant,
-                onPressed: onAddRule,
-              ),
+              if (fallback) ...[
+                const SizedBox(height: 8),
+                Text(
+                  appLocalizations.hitFallback,
+                  style: AppTextStyle.footnote
+                      .of(context)
+                      .copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+              ],
+              if (lookup.undetermined == 'rematch') ...[
+                const SizedBox(height: 10),
+                Text(
+                  appLocalizations.hitRematch,
+                  style: AppTextStyle.footnote
+                      .of(context)
+                      .copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+              ],
+              if (winner != null) ...[
+                const SizedBox(height: 14),
+                _detailRow(
+                  context,
+                  appLocalizations.hitRuleLabel,
+                  RuleCode(winner.rule.text, selectable: true),
+                ),
+                if (winner.entry.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _detailRow(
+                    context,
+                    appLocalizations.hitEntryLabel,
+                    RuleCode(winner.entry, selectable: true),
+                  ),
+                ],
+                if (badge != null) ...[
+                  const SizedBox(height: 6),
+                  _detailRow(
+                    context,
+                    appLocalizations.hitFromLabel,
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        RuleBadge(label: badge.label, tone: badge.tone),
+                        if (ruleSet?.loadedAt case final loaded?)
+                          Text(
+                            appLocalizations.ruleUpdatedAt(
+                              loaded.getLastUpdateTimeDesc(context),
+                            ),
+                            style: caption,
+                          )
+                        else if (justAdded)
+                          Text(appLocalizations.ruleJustAdded, style: caption),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+              if (showIp) ...[
+                const SizedBox(height: 6),
+                _detailRow(
+                  context,
+                  appLocalizations.hitIpLabel,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: SelectableText(
+                      ipNote == null ? lookup.ip : '${lookup.ip} · $ipNote',
+                      style: AppTextStyle.footnote.of(context).toJetBrainsMono,
+                    ),
+                  ),
+                ),
+              ],
+              for (final note in notes) ...[
+                const SizedBox(height: 12),
+                RulesNotice(
+                  tone: RuleTone.warning,
+                  glyph: AppGlyphs.warning,
+                  text: note,
+                ),
+              ],
+              if (winner != null) ...[
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (onChangeNode != null)
+                      _CardButton(
+                        label: appLocalizations.changeNode,
+                        fill: colorScheme.primary.withValues(alpha: 0.12),
+                        ink: colorScheme.primary,
+                        onPressed: enabled ? onChangeNode : null,
+                      ),
+                    _CardButton(
+                      label: appLocalizations.addAddedRule,
+                      fill: context.raisedSurfaceLevel.colorOf(colorScheme),
+                      ink: colorScheme.onSurface,
+                      border: colorScheme.outlineVariant,
+                      onPressed: enabled ? onAddRule : null,
+                    ),
+                    _CardButton(
+                      label: appLocalizations.copyRule,
+                      ink: colorScheme.primary,
+                      onPressed: enabled ? onCopyRule : null,
+                    ),
+                  ],
+                ),
+              ] else if (lookup.mode == 'rule' || lookup.mode.isEmpty) ...[
+                const SizedBox(height: 14),
+                _CardButton(
+                  label: appLocalizations.addAddedRule,
+                  fill: context.raisedSurfaceLevel.colorOf(colorScheme),
+                  ink: colorScheme.onSurface,
+                  border: colorScheme.outlineVariant,
+                  onPressed: enabled ? onAddRule : null,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -310,7 +366,7 @@ class _CardButton extends StatelessWidget {
   final Color? fill;
   final Color ink;
   final Color? border;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const _CardButton({
     required this.label,
@@ -324,10 +380,13 @@ class _CardButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
+      enabled: onPressed != null,
       child: GestureDetector(
         onTap: onPressed,
         child: MouseRegion(
-          cursor: SystemMouseCursors.click,
+          cursor: onPressed == null
+              ? SystemMouseCursors.basic
+              : SystemMouseCursors.click,
           child: Container(
             height: 32,
             padding: EdgeInsets.symmetric(horizontal: fill == null ? 4 : 14),

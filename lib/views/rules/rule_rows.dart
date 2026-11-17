@@ -74,7 +74,6 @@ Color _childFillOf(BuildContext context) =>
 /// The tag a looked-up rule carries: taken, passed over, or what it waits on.
 Widget? hitTagOf(BuildContext context, RuleHit hit, int? winnerIndex) {
   final appLocalizations = context.appLocalizations;
-  final detail = hit.detail.isNotEmpty ? hit.detail : hit.payload;
   return switch (hit.status) {
     RuleHitStatus.winner => RuleTag.primary(
       context,
@@ -92,16 +91,13 @@ Widget? hitTagOf(BuildContext context, RuleHit hit, int? winnerIndex) {
       appLocalizations.ruleNoAdapterTag,
     ),
     RuleHitStatus.noUdp => RuleTag.gray(context, appLocalizations.ruleNoUdpTag),
-    RuleHitStatus.uncertain => RuleTag.tone(context, switch (hit.reason) {
-      'process' || 'uid' => appLocalizations.ruleOnlyForApp(detail),
-      'port' => appLocalizations.ruleOnlyForPort(detail),
-      'network' => appLocalizations.ruleDependsOnNetwork,
-      'inbound' => appLocalizations.ruleDependsOnInbound,
-      'source' => appLocalizations.ruleDependsOnSource,
-      'ip' => appLocalizations.ruleDependsOnIp,
-      'rematch' => appLocalizations.ruleDependsOnRematch,
-      _ => appLocalizations.ruleDependsOnOther,
-    }, RuleTone.amber),
+    RuleHitStatus.uncertain => RuleTag.tone(
+      context,
+      hit.reason == 'rematch'
+          ? appLocalizations.ruleDependsOnRematch
+          : appLocalizations.ruleUncertainTag,
+      RuleTone.amber,
+    ),
   };
 }
 
@@ -371,6 +367,9 @@ class RuleEntryRow extends StatelessWidget {
   final int position;
   final String text;
   final bool last;
+
+  /// Whether this is the entry a lookup matched, marked as its rule is.
+  final bool highlighted;
   final VoidCallback onTap;
 
   const RuleEntryRow({
@@ -379,6 +378,7 @@ class RuleEntryRow extends StatelessWidget {
     required this.position,
     required this.text,
     required this.last,
+    this.highlighted = false,
     required this.onTap,
   });
 
@@ -394,13 +394,26 @@ class RuleEntryRow extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 40),
           padding: const EdgeInsets.fromLTRB(0, 8, 16, 8),
           decoration: ShapeDecoration(
-            color: _childFillOf(context),
+            color: highlighted
+                ? colorScheme.primary.withValues(alpha: 0.08)
+                : _childFillOf(context),
             shape: RoundedSuperellipseBorder(
               borderRadius: _cornersOf(first: false, last: last),
             ),
           ),
           foregroundDecoration: BoxDecoration(
-            border: _separatorOf(context, last),
+            border: Border(
+              left: highlighted
+                  ? BorderSide(color: colorScheme.primary, width: 3)
+                  : BorderSide.none,
+              bottom: last
+                  ? BorderSide.none
+                  : BorderSide(
+                      color: colorScheme.outlineVariant.withValues(
+                        alpha: _separatorAlpha,
+                      ),
+                    ),
+            ),
           ),
           child: Row(
             children: [

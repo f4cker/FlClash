@@ -51,13 +51,17 @@ class _Lookup {
   _Lookup(this.host, {this.port, this.record});
 }
 
-/// What the page says after it added a rule: whether the rule now decides.
+/// Whether an added rule decides the host now, as a lookup after adding
+/// it tells: it does, it does not, or the lookup cannot say.
+enum _AddedState { effective, notHit, unconfirmed }
+
+/// What the page says after it added a rule; [index] is the rule that
+/// matches first instead, when the lookup confirms it.
 typedef _AddedOutcome = ({
-  bool effective,
+  _AddedState state,
   String host,
   String group,
-  int index,
-  String source,
+  int? index,
   String text,
 });
 
@@ -109,6 +113,9 @@ class _RulesViewState extends ConsumerState<RulesView> {
   bool _showAll = false;
   int? _focusIndex;
   _AddedOutcome? _added;
+
+  /// Whether the last added rule was written but its profile not reloaded.
+  bool _addedUnapplied = false;
 
   @override
   void initState() {
@@ -352,9 +359,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
           : (
               rule: ask.rule,
               payload: ask.rulePayload,
-              text: ask.rulePayload.isEmpty
-                  ? ask.rule
-                  : '${ask.rule}(${ask.rulePayload})',
+              text: recordRuleText(ask.rule, ask.rulePayload),
               ipOnly: isIpHost(ask.host),
             ),
     );
@@ -637,19 +642,24 @@ class _RulesViewState extends ConsumerState<RulesView> {
     ];
   }
 
+  /// Writes [text] as an added rule of [profile] and reloads it; null once
+  /// the rule is written, or why it was not. A rule written whose reload
+  /// failed counts as added, and the page says it cannot confirm it.
   Future<String?> _writeRule(Profile profile, String text) async {
+    _addedUnapplied = false;
     if (widget.writeRule case final write?) return write(profile, text);
     final appLocalizations = context.appLocalizations;
     try {
       await putProfileRuleFirst(profile.id, Rule.parse(text));
-      ref.invalidate(setupStateProvider(profile.id));
-      final applied = await ref
-          .read(setupActionProvider.notifier)
-          .applyProfile(silence: true);
-      return applied ? null : appLocalizations.addRuleApplyFailed;
     } catch (error) {
       return appLocalizations.addRuleWriteFailed('$error');
     }
+    ref.invalidate(setupStateProvider(profile.id));
+    final applied = await ref
+        .read(setupActionProvider.notifier)
+        .applyProfile(silence: true);
+    _addedUnapplied = !applied;
+    return null;
   }
 
   Future<void> _addRule() async {
@@ -680,28 +690,44 @@ class _RulesViewState extends ConsumerState<RulesView> {
     final now = result?.winner;
     final fields = text.split(',');
     final target = fields.length > 2 ? fields[2] : '';
-    final effective =
-        now != null &&
-        now.type == ruleTypeOf(text) &&
-        now.payload == (fields.length > 1 ? fields[1] : '');
-    final sources = _sources;
-    final badge = now == null
-        ? null
-        : ruleSourceBadge(
-            context,
-            now.rule,
-            sources?.elementAtOrNull(now.index),
-          );
+    final type = ruleTypeOf(text);
+    final payload = fields.length > 1 ? fields[1] : '';
+    bool isAdded(RuleHit hit) => hit.type == type && hit.payload == payload;
+    final _AddedState state;
+    int? index;
+    if (_addedUnapplied || result == null || lookupUncertain(result)) {
+      state = _AddedState.unconfirmed;
+    } else if (now != null && isAdded(now)) {
+      state = _AddedState.effective;
+    } else {
+      state = _AddedState.notHit;
+      // The lookup names the rule that went first only when it lists the
+      // added one as passed over by it.
+      final shadowed = result.matches.any(
+        (hit) => isAdded(hit) && hit.status == RuleHitStatus.shadowed,
+      );
+      if (now != null && shadowed) index = now.index;
+    }
     setState(() {
       _added = (
-        effective: effective,
+        state: state,
         host: lookup.host,
         group: ruleTargetLabel(context, target),
-        index: (now?.index ?? 0) + 1,
-        source: badge?.label ?? now?.type ?? '',
+        index: index,
         text: text,
       );
     });
+  }
+
+  void _lookupAgain() {
+    final lookup = _lookup;
+    if (lookup == null) return;
+    _runLookup(
+      lookup.host,
+      port: lookup.port,
+      record: lookup.record,
+      keep: true,
+    );
   }
 
   // Build
@@ -776,7 +802,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
       controller: _scrollController,
       slivers: [
         SliverToBoxAdapter(child: SizedBox(height: context.contentTopPadding)),
-        if (!coreRunning && lookup?.error is! _CoreStopped)
+        if (!coreRunning)
           box(
             RulesNotice(
               tone: RuleTone.red,
@@ -852,27 +878,11 @@ class _RulesViewState extends ConsumerState<RulesView> {
     final result = lookup?.result;
     String? info;
     if (lookup != null && result != null && !lookup.loading) {
-      final ip = result.ip;
-      final resolved = switch (result.ipSource) {
-        'dns' => appLocalizations.lookupResolvedIp(
-          ip,
-          appLocalizations.ipSourceDns,
-        ),
-        'hosts' => appLocalizations.lookupResolvedIp(
-          ip,
-          appLocalizations.ipSourceHosts,
-        ),
-        'mapping' => appLocalizations.lookupResolvedIp(
-          ip,
-          appLocalizations.ipSourceMapping,
-        ),
-        'input' => appLocalizations.lookupInputIp(ip),
-        _ => null,
-      };
       info = [
         lookup.host,
         if (lookup.port != null) ':${lookup.port}',
-        if (resolved != null && ip.isNotEmpty) ' · $resolved',
+        if (result.resolveWanted || result.ipSource == 'dns')
+          ' · ${appLocalizations.lookupNoConnectNote}',
       ].join();
     }
     final field = _SearchField(
@@ -994,7 +1004,10 @@ class _RulesViewState extends ConsumerState<RulesView> {
                             '↵',
                             style: AppTextStyle.caption1
                                 .of(context)
-                                .copyWith(color: colorScheme.primary),
+                                .copyWith(
+                                  color: colorScheme.primary,
+                                  fontFamilyFallback: const ['Apple Symbols'],
+                                ),
                           ),
                         ),
                       ],
@@ -1046,30 +1059,22 @@ class _RulesViewState extends ConsumerState<RulesView> {
   ) {
     final appLocalizations = context.appLocalizations;
     final error = lookup.error;
+    // A stopped Core is said once, above the search box.
+    if (error is _CoreStopped) return const [];
     if (error != null) {
       return [
         box(
-          error is _CoreStopped
-              ? RulesNotice(
-                  tone: RuleTone.red,
-                  glyph: AppGlyphs.error,
-                  text: appLocalizations.lookupCoreStopped,
-                  actionLabel: appLocalizations.toDashboard,
-                  onAction: () => ref
-                      .read(currentPageLabelProvider.notifier)
-                      .toPage(PageLabel.dashboard),
-                )
-              : RulesNotice(
-                  tone: RuleTone.red,
-                  glyph: AppGlyphs.error,
-                  text: appLocalizations.lookupFailed(_reasonOf(error)),
-                  actionLabel: appLocalizations.retry,
-                  onAction: () => _runLookup(
-                    lookup.host,
-                    port: lookup.port,
-                    record: lookup.record,
-                  ),
-                ),
+          RulesNotice(
+            tone: RuleTone.red,
+            glyph: AppGlyphs.error,
+            text: appLocalizations.lookupFailed(_reasonOf(error)),
+            actionLabel: appLocalizations.retry,
+            onAction: () => _runLookup(
+              lookup.host,
+              port: lookup.port,
+              record: lookup.record,
+            ),
+          ),
         ),
       ];
     }
@@ -1083,12 +1088,17 @@ class _RulesViewState extends ConsumerState<RulesView> {
         ? null
         : sources?.elementAtOrNull(winner.index);
     final group = winner?.target ?? '';
+    final coreRunning = ref.watch(
+      coreStatusProvider.select((status) => status == CoreStatus.connected),
+    );
     final card = RuleHitCard(
       lookup: result,
       source: source,
+      enabled: coreRunning,
+      rulesIdle: result.mode == 'global' || result.mode == 'direct',
       justAdded:
           added != null &&
-          added.effective &&
+          added.state == _AddedState.effective &&
           winner != null &&
           winner.type == ruleTypeOf(added.text),
       onChangeNode: winner == null || isBuiltinTarget(group)
@@ -1124,26 +1134,20 @@ class _RulesViewState extends ConsumerState<RulesView> {
     final appLocalizations = context.appLocalizations;
     final notices = <Widget>[];
     final now = DateTime.now();
-    final separator =
-        appLocalizations.localeName.startsWith('zh') ||
-            appLocalizations.localeName.startsWith('ja')
-        ? '，'
-        : ', ';
-    final setItems = [
-      for (final set in result.ruleSets)
-        if (set.status == 'missing')
-          appLocalizations.ruleSetNotDownloadedItem(set.name)
-        else if (set.status == 'failed')
-          appLocalizations.ruleSetFailedItem(set.name)
-        else if (ruleSetOverdueDays(set, now) case final days when days > 0)
-          appLocalizations.ruleSetExpiredItem(set.name, days),
-    ];
-    if (setItems.isNotEmpty) {
+    for (final set in result.ruleSets) {
+      final text = switch (set.status) {
+        'missing' => appLocalizations.ruleSetMissingNotice(set.name),
+        'failed' => appLocalizations.ruleSetFailedNotice(set.name),
+        _ when ruleSetOverdueDays(set, now) > 0 =>
+          appLocalizations.ruleSetExpiredNotice(set.name),
+        _ => null,
+      };
+      if (text == null) continue;
       notices.add(
         RulesNotice(
           tone: RuleTone.warning,
           glyph: AppGlyphs.warning,
-          text: appLocalizations.ruleSetsIncomplete(setItems.join(separator)),
+          text: text,
           actionLabel: appLocalizations.goUpdate,
           onAction: _showResources,
         ),
@@ -1170,43 +1174,43 @@ class _RulesViewState extends ConsumerState<RulesView> {
             recordRule: record.rule,
             recordPayload: record.payload,
           );
-      final text = same
-          ? appLocalizations.compareSame(record.text)
-          : appLocalizations.compareDiffer(record.text);
       notices.add(
         RulesNotice(
           tone: same ? RuleTone.gray : RuleTone.warning,
           glyph: same ? AppGlyphs.info : AppGlyphs.warning,
-          text: !same && record.ipOnly
-              ? '$text ${appLocalizations.compareSniffNote}'
-              : text,
+          text: same
+              ? appLocalizations.compareSame
+              : appLocalizations.compareDiffer(record.text),
         ),
       );
     }
     final added = _added;
     if (added != null) {
-      notices.add(
-        added.effective
-            ? RulesNotice(
-                tone: RuleTone.green,
-                glyph: AppGlyphs.checkCircle,
-                text: appLocalizations.addedEffective(added.host, added.group),
-              )
-            : RulesNotice(
-                tone: RuleTone.warning,
-                glyph: AppGlyphs.warning,
-                text: appLocalizations.addedNotEffective(
-                  added.index,
-                  added.source,
-                ),
-                actionLabel: winner == null
-                    ? null
-                    : appLocalizations.viewThatRule,
-                onAction: winner == null
-                    ? null
-                    : () => _scrollToRule(winner.index),
-              ),
-      );
+      final index = added.index;
+      notices.add(switch (added.state) {
+        _AddedState.effective => RulesNotice(
+          tone: RuleTone.green,
+          glyph: AppGlyphs.checkCircle,
+          text: appLocalizations.addedEffective(added.host, added.group),
+        ),
+        _AddedState.notHit => RulesNotice(
+          tone: RuleTone.warning,
+          glyph: AppGlyphs.warning,
+          text: index == null
+              ? appLocalizations.addedNotHit
+              : '${appLocalizations.addedNotHit}'
+                    '${appLocalizations.addedNotHitBy(index + 1)}',
+          actionLabel: index == null ? null : appLocalizations.viewThatRule,
+          onAction: index == null ? null : () => _scrollToRule(index),
+        ),
+        _AddedState.unconfirmed => RulesNotice(
+          tone: RuleTone.warning,
+          glyph: AppGlyphs.warning,
+          text: appLocalizations.addedUnconfirmed,
+          actionLabel: appLocalizations.relookup,
+          onAction: _lookupAgain,
+        ),
+      });
     }
     return notices;
   }
@@ -1339,7 +1343,26 @@ class _RulesViewState extends ConsumerState<RulesView> {
     bool narrow,
   ) {
     final colorScheme = context.colorScheme;
-    if (items.isEmpty) return const SliverToBoxAdapter(child: SizedBox());
+    if (items.isEmpty) {
+      final filtered =
+          !_inLookup &&
+          (_liveFilter != null ||
+              _source != RuleSourceFilter.all ||
+              _group != null);
+      if (!filtered) return const SliverToBoxAdapter(child: SizedBox());
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+          child: Text(
+            context.appLocalizations.rulesEmptyFiltered,
+            textAlign: TextAlign.center,
+            style: AppTextStyle.subheadline
+                .of(context)
+                .copyWith(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+      );
+    }
     final winner = _lookup?.result?.winner;
     final highlighted = _focusIndex ?? winner?.index;
     final filter = _inLookup ? null : _liveFilter;
@@ -1391,6 +1414,11 @@ class _RulesViewState extends ConsumerState<RulesView> {
               position: item.position,
               text: item.text,
               last: last,
+              highlighted:
+                  _inLookup &&
+                  winner != null &&
+                  item.parent == winner.index &&
+                  item.text == winner.entry,
               onTap: () => _copy(item.text),
             );
           } else {

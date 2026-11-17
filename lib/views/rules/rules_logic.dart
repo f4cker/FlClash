@@ -216,3 +216,61 @@ int? lookupPortOf(String input) {
     _ => null,
   };
 }
+
+/// Whether a lookup cannot promise its answer: a rule before the winner
+/// waits on what the lookup lacks, or a rule set it reads is not there.
+bool lookupUncertain(RuleLookup lookup) {
+  return lookup.uncertain.any((hit) => hit.reason != 'rematch') ||
+      lookup.ruleSets.any(
+        (set) => set.status == 'missing' || set.status == 'failed',
+      );
+}
+
+// mihomo's RuleType names, as a request records them, in a config's spelling.
+const _configRuleTypes = {
+  'domain': 'DOMAIN',
+  'domainsuffix': 'DOMAIN-SUFFIX',
+  'domainkeyword': 'DOMAIN-KEYWORD',
+  'domainregex': 'DOMAIN-REGEX',
+  'domainwildcard': 'DOMAIN-WILDCARD',
+  'geosite': 'GEOSITE',
+  'geoip': 'GEOIP',
+  'srcgeoip': 'SRC-GEOIP',
+  'ipasn': 'IP-ASN',
+  'srcipasn': 'SRC-IP-ASN',
+  'ipcidr': 'IP-CIDR',
+  'srcipcidr': 'SRC-IP-CIDR',
+  'ipsuffix': 'IP-SUFFIX',
+  'srcipsuffix': 'SRC-IP-SUFFIX',
+  'srcport': 'SRC-PORT',
+  'dstport': 'DST-PORT',
+  'inport': 'IN-PORT',
+  'inuser': 'IN-USER',
+  'inname': 'IN-NAME',
+  'intype': 'IN-TYPE',
+  'process': 'PROCESS-NAME',
+  'processname': 'PROCESS-NAME',
+  'processpath': 'PROCESS-PATH',
+  'processnameregex': 'PROCESS-NAME-REGEX',
+  'processpathregex': 'PROCESS-PATH-REGEX',
+  'processnamewildcard': 'PROCESS-NAME-WILDCARD',
+  'processpathwildcard': 'PROCESS-PATH-WILDCARD',
+  'ruleset': 'RULE-SET',
+  'network': 'NETWORK',
+  'dscp': 'DSCP',
+  'uid': 'UID',
+  'subrules': 'SUB-RULE',
+  'match': 'MATCH',
+  'and': 'AND',
+  'or': 'OR',
+  'not': 'NOT',
+};
+
+/// A request's rule, as its record names it (RuleSet and YouTube), in the
+/// spelling the rules card uses: RULE-SET,YouTube.
+String recordRuleText(String rule, String payload) {
+  final key = rule.toLowerCase().replaceAll(RegExp('[^a-z]'), '');
+  final type = _configRuleTypes[key] ?? rule.toUpperCase();
+  if (type == 'MATCH' || payload.isEmpty) return type;
+  return '$type,$payload';
+}

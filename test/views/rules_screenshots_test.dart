@@ -34,6 +34,9 @@ final _outDir = Platform.environment['RULES_SCREENSHOTS'];
 const _cjkCollection = '/System/Library/Fonts/Hiragino Sans GB.ttc';
 const _size = Size(1200, 900);
 
+/// The mode the fake Core runs in.
+var _mode = 'rule';
+
 /// Each face of a TrueType collection as a font of its own, since the engine
 /// reads only the first face of a collection.
 List<ByteData> _collectionFaces(Uint8List bytes) {
@@ -401,6 +404,15 @@ void main() {
       'Roboto',
       _collectionFaces(File(_cjkCollection).readAsBytesSync()),
     );
+    // Monospace text falls back to the system CJK face, PingFang SC on a
+    // Mac; the same collection stands in for it, and Apple Symbols for ↵.
+    await _loadFont(
+      'PingFang SC',
+      _collectionFaces(File(_cjkCollection).readAsBytesSync()),
+    );
+    await _loadFont('Apple Symbols', [
+      _asset('/System/Library/Fonts/Apple Symbols.ttf'),
+    ]);
     await _loadFont('JetBrainsMono', [
       _asset('assets/fonts/JetBrainsMono-Regular.ttf'),
     ]);
@@ -431,7 +443,7 @@ void main() {
     ) async {
       final filter = invocation.namedArguments[#filter] as String? ?? '';
       if (filter.isEmpty) {
-        return _list.copyWith(rules: rules, total: rules.length);
+        return _list.copyWith(rules: rules, total: rules.length, mode: _mode);
       }
       final needle = filter.contains('youtube') ? 'youtube' : filter;
       return RuleList(
@@ -609,12 +621,16 @@ void main() {
   shot('07-add-dialog', (tester) async {
     await pumpPage(tester, writeRule: (_, _) async => null);
     await query(tester, 'www.youtube.com');
-    await tester.tap(find.text('加附加规则'));
+    await tester.tap(find.text('添加附加规则'));
     await settle(tester);
     await shoot(tester, '07-add-dialog');
   });
 
-  Future<void> addRule(WidgetTester tester, {required bool effective}) async {
+  Future<void> addRule(
+    WidgetTester tester, {
+    required bool effective,
+    bool uncertain = false,
+  }) async {
     await pumpPage(
       tester,
       writeRule: (_, text) async {
@@ -647,12 +663,19 @@ void main() {
                 total: rules.length,
                 winner: shift(base.winner!),
                 matches: [for (final hit in base.matches) shift(hit)],
+                uncertain: [
+                  if (uncertain)
+                    _hit(
+                      rules[3],
+                      status: RuleHitStatus.uncertain,
+                    ).copyWith(reason: 'process'),
+                ],
               );
         return null;
       },
     );
     await query(tester, 'www.youtube.com');
-    await tester.tap(find.text('加附加规则'));
+    await tester.tap(find.text('添加附加规则'));
     await settle(tester);
     await tester.tap(find.text('添加'));
     await settle(tester, 12);
@@ -668,12 +691,25 @@ void main() {
     await shoot(tester, '08b-added-not-effective');
   });
 
+  shot('08c-added-unconfirmed', (tester) async {
+    await addRule(tester, effective: false, uncertain: true);
+    await shoot(tester, '08c-added-unconfirmed');
+  });
+
   shot('09-from-request', (tester) async {
     container
         .read(rulesLookupRequestProvider.notifier)
         .ask('i.ytimg.com', rule: 'RuleSet', rulePayload: 'YouTube');
     await pumpPage(tester);
     await shoot(tester, '09-from-request');
+  });
+
+  shot('09b-from-request-differs', (tester) async {
+    container
+        .read(rulesLookupRequestProvider.notifier)
+        .ask('www.youtube.com', rule: 'DomainKeyword', rulePayload: 'youtube');
+    await pumpPage(tester, size: const Size(1200, 560));
+    await shoot(tester, '09b-from-request-differs');
   });
 
   shot('10-request-menu', (tester) async {
@@ -714,5 +750,24 @@ void main() {
     );
     await settle(tester);
     await shoot(tester, '10-request-menu');
+  });
+
+  shot('11-global-mode', (tester) async {
+    _mode = 'global';
+    addTearDown(() => _mode = 'rule');
+    lookups['www.youtube.com'] = lookups['www.youtube.com']!.copyWith(
+      mode: 'global',
+    );
+    await pumpPage(tester);
+    await query(tester, 'www.youtube.com');
+    await shoot(tester, '11-global-mode');
+  });
+
+  shot('12-no-filter-results', (tester) async {
+    await pumpPage(tester, size: const Size(1200, 420));
+    await type(tester, 'zzz-nothing');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settle(tester);
+    await shoot(tester, '12-no-filter-results');
   });
 }

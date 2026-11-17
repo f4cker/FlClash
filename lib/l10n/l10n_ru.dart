@@ -6076,15 +6076,14 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get rulesSearchHint =>
-      'Search rules, or enter a URL to see which one it takes';
+  String get rulesSearchHint => 'Search rules, or enter a URL to look it up';
 
   @override
   String get rulesSearchLabel => 'Search rules or URLs';
 
   @override
   String rulesLookupSuggestion(Object host) {
-    return 'See which rule $host actually takes';
+    return 'Look up which rule $host takes';
   }
 
   @override
@@ -6158,7 +6157,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String rulesShown(Object shown, Object total) {
-    return 'Showing $shown / $total';
+    return 'Showing $shown of $total';
   }
 
   @override
@@ -6168,18 +6167,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String rulesContaining(Object count) {
-    return 'Rules containing it $count';
+    return 'Matching rules $count';
   }
 
   @override
   String get rulesShowAll => 'Show all rules';
 
   @override
-  String get ruleHitTag => 'Taken';
+  String get ruleHitTag => 'Matched';
 
   @override
   String ruleShadowedBy(Object index) {
-    return 'Taken first by #$index';
+    return 'Rule #$index matches first';
   }
 
   @override
@@ -6192,52 +6191,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ruleNoUdpTag => 'No UDP, skipped';
 
   @override
-  String ruleOnlyForApp(Object app) {
-    return 'Only for requests from $app';
-  }
-
-  @override
-  String ruleOnlyForPort(Object port) {
-    return 'Only for port $port';
-  }
-
-  @override
-  String get ruleDependsOnNetwork => 'Depends on TCP or UDP';
-
-  @override
-  String get ruleDependsOnInbound => 'Depends on the inbound';
-
-  @override
-  String get ruleDependsOnSource => 'Depends on the source address';
-
-  @override
-  String get ruleDependsOnIp => 'Needs the IP, which was not resolved';
-
-  @override
   String get ruleDependsOnRematch => 'Matched again after a REMATCH';
 
   @override
-  String get ruleDependsOnOther => 'Depends on the connection';
+  String get hitCardTitle => 'Lookup result';
 
   @override
-  String get hitCardTitle => 'Actually taken';
+  String get hitCardTitleUncertain => 'The result may differ';
 
   @override
-  String get hitCardTitleUncertain => 'Most likely taken';
-
-  @override
-  String hitCardPosition(Object index, Object total) {
-    return '#$index / $total';
+  String hitCardPosition(Object index) {
+    return 'Matches rule #$index';
   }
-
-  @override
-  String get hitCardLast => 'Last rule';
 
   @override
   String get hitGoes => 'Goes';
 
   @override
-  String get hitFallback => 'No specific rule, falls back to';
+  String get hitFallback => 'No earlier rule matches, so the last rule applies';
 
   @override
   String get hitNoRule => 'No rule matched, goes';
@@ -6250,7 +6221,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hitRuleLabel => 'Rule';
 
   @override
-  String get hitFromLabel => 'From';
+  String get hitFromLabel => 'Source';
 
   @override
   String get hitEntryLabel => 'Entry';
@@ -6267,7 +6238,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get changeNode => 'Change node';
 
   @override
-  String get addAddedRule => 'Add rule';
+  String get addAddedRule => 'Add to added rules';
 
   @override
   String get copyRule => 'Copy rule';
@@ -6276,67 +6247,27 @@ class AppLocalizationsRu extends AppLocalizations {
   String get viewGroup => 'View group';
 
   @override
-  String uncertainProcess(Object count) {
-    return '$count rules before it match by the app that makes the request. A request from that app takes them first.';
-  }
+  String get uncertainProcess =>
+      'An earlier rule depends on the app making the request. The actual result may change with the app.';
 
   @override
-  String uncertainPort(Object count) {
-    return '$count rules before it match by port. A request on that port takes them first.';
-  }
+  String get uncertainPort =>
+      'An earlier rule depends on the port. The actual result may change with the port.';
 
   @override
-  String uncertainIp(Object count) {
-    return '$count rules before it match by IP and no IP was resolved, so it cannot be decided.';
-  }
+  String get uncertainIp =>
+      'An earlier rule depends on the IP, which could not be resolved, so whether it matches first is unknown.';
 
   @override
-  String uncertainOther(Object count) {
-    return '$count rules before it depend on the connection itself and cannot be decided here.';
-  }
-
-  @override
-  String get dependsCardTitle => 'Depends on the app or port';
-
-  @override
-  String ruleSetsIncomplete(Object list) {
-    return 'Rule sets $list; the result may be incomplete.';
-  }
-
-  @override
-  String ruleSetNotDownloadedItem(Object name) {
-    return '“$name” not downloaded';
-  }
-
-  @override
-  String ruleSetFailedItem(Object name) {
-    return '“$name” failed to download';
-  }
-
-  @override
-  String ruleSetExpiredItem(Object name, Object days) {
-    return '“$name” expired $days days ago';
-  }
+  String get uncertainOther =>
+      'Earlier rules need more about the connection, so the actual result may differ.';
 
   @override
   String get goUpdate => 'Update';
 
   @override
   String get lookupResolveFailed =>
-      'No IP was resolved, so rules by IP such as GEOIP and IP-CIDR could not be decided and were skipped.';
-
-  @override
-  String lookupResolvedIp(Object ip, Object source) {
-    return 'Resolved to $ip by $source';
-  }
-
-  @override
-  String lookupInputIp(Object ip) {
-    return 'Matched as $ip';
-  }
-
-  @override
-  String get ipSourceDns => 'the Core\'s DNS';
+      'The IP could not be resolved. Whether rules by IP match is unknown.';
 
   @override
   String get ipSourceHosts => 'hosts';
@@ -6345,15 +6276,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ipSourceMapping => 'the fake-IP mapping';
 
   @override
-  String get lookupCoreStopped =>
-      'The Core is not running, so nothing can be looked up. Look again once it starts.';
-
-  @override
-  String get toDashboard => 'Dashboard';
-
-  @override
   String get rulesCoreStopped =>
-      'The Core is not running; the rules stopped updating';
+      'The core is not running, so rules cannot be looked up for now. Start the core and try again.';
 
   @override
   String lookupFailed(Object reason) {
@@ -6366,31 +6290,28 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String compareSame(Object rule) {
-    return 'This connection took $rule too; they agree.';
-  }
+  String get compareSame =>
+      'The rule this connection matched then agrees with this lookup.';
 
   @override
   String compareDiffer(Object rule) {
-    return 'This connection took $rule, which differs from now (the profile may have changed, or the rule goes by app).';
+    return 'This connection matched “$rule” then, unlike this lookup. The profile or the connection may have changed.';
   }
 
   @override
-  String get compareSniffNote =>
-      'For an IP-only connection the Core sniffs the domain from the traffic first; a lookup cannot.';
+  String get rulesModeGlobal =>
+      'Global mode is on; rules do not route traffic.';
 
   @override
-  String get rulesModeGlobal => 'Global mode is on; rules do not apply';
+  String get rulesModeDirect =>
+      'Direct mode is on; rules do not route traffic.';
 
   @override
-  String get rulesModeDirect => 'Direct mode is on; rules do not apply';
-
-  @override
-  String get addRuleTitle => 'Add an added rule';
+  String get addRuleTitle => 'Add to added rules';
 
   @override
   String addRuleSubtitle(Object profile) {
-    return 'Written to the added rules of profile “$profile”';
+    return 'Adds to profile “$profile”.';
   }
 
   @override
@@ -6414,12 +6335,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String addedEffective(Object host, Object group) {
-    return 'Added and in effect. $host now goes through “$group”.';
-  }
-
-  @override
-  String addedNotEffective(Object index, Object source) {
-    return 'Added, but not in effect: #$index ($source) still takes it first.';
+    return 'The rule was added and takes effect. $host now goes through “$group”.';
   }
 
   @override
@@ -6446,18 +6362,62 @@ class AppLocalizationsRu extends AppLocalizations {
     Object group,
     Object node,
   ) {
-    return 'Takes rule $index, $rule, from $source, through $group, node $node';
+    return 'Matches rule $index, $rule, from $source, through $group, node $node';
   }
 
   @override
-  String get uncertainPrefix => 'Uncertain';
-
-  @override
-  String get addRuleApplyFailed =>
-      'The rule was written, but the profile could not be reloaded.';
+  String get uncertainPrefix => 'The result may differ';
 
   @override
   String addRuleWriteFailed(Object reason) {
-    return 'Could not add the rule: $reason';
+    return 'Could not add: $reason';
   }
+
+  @override
+  String get rulesEmptyFiltered =>
+      'No matching rules. Try other words or filters.';
+
+  @override
+  String get hitIpLabel => 'Resolved IP';
+
+  @override
+  String get lookupNoConnectNote =>
+      'A lookup may resolve DNS, but never connects to the site.';
+
+  @override
+  String get ruleUncertainTag => 'May or may not match';
+
+  @override
+  String ruleSetMissingNotice(Object name) {
+    return 'Rule set “$name” is not downloaded yet, so the result may be incomplete.';
+  }
+
+  @override
+  String ruleSetFailedNotice(Object name) {
+    return 'Rule set “$name” failed to download, so the result may be incomplete.';
+  }
+
+  @override
+  String ruleSetExpiredNotice(Object name) {
+    return 'Rule set “$name” has expired, so the result may be incomplete.';
+  }
+
+  @override
+  String get addRuleAdding => 'Adding…';
+
+  @override
+  String get addedNotHit =>
+      'The rule was added, but this lookup does not match it.';
+
+  @override
+  String addedNotHitBy(Object index) {
+    return 'Rule #$index matches first.';
+  }
+
+  @override
+  String get addedUnconfirmed =>
+      'The rule was added, but whether it takes effect cannot be confirmed yet.';
+
+  @override
+  String get relookup => 'Look up again';
 }
