@@ -1,0 +1,513 @@
+package core
+
+import (
+	"bytes"
+	"compress/flate"
+	"compress/gzip"
+	"compress/zlib"
+	"encoding/base64"
+	"errors"
+	"io"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+)
+
+// What the decrypted requests carried, kept in this process's memory only:
+// never written to disk, a log or a spilled reply, and dropped when capture
+// goes off, decryption stops or changes root, the app leaves or the Core
+// shuts down. Entries and bytes are bounded; each body keeps only its start.
+type mitmCaptureStore struct {
+	mu      sync.Mutex
+	order   []*mitmCaptureEntry
+	byID    map[uint64]*mitmCaptureEntry
+	bytes   int64
+	nextID  uint64
+	since   time.Time
+	open    map[string]int
+	limits  mitmCaptureLimits
+	enabled bool
+}
+
+type mitmCaptureLimits struct {
+	entries int
+	bytes   int64
+	body    int64
+}
+
+// The desktop defaults the app sends anyway; the Core applies them when the
+// app sends none.
+var mitmDefaultCaptureLimits = mitmCaptureLimits{entries: 2000, bytes: 64 << 20, body: 4 << 20}
+
+type mitmCaptureBody struct {
+	data      []byte
+	size      int64
+	truncated bool
+}
+
+type mitmCaptureEntry struct {
+	id         uint64
+	connection string
+	start      time.Time
+	method     string
+	url        string
+	proto      string
+	reqHeader  http.Header
+	respHeader http.Header
+	status     int
+	ttfb       time.Duration
+	duration   time.Duration
+	pending    bool
+	err        string
+	req, resp  mitmCaptureBody
+	cost       int64
+	gone       bool
+}
+
+// Why an exchange did not complete, as the request list names it.
+const (
+	mitmExchangeNoResponse     = "noResponse"
+	mitmExchangeResponseFailed = "responseFailed"
+	mitmExchangeStopped        = "stopped"
+)
+
+var mitmCaptures = &mitmCaptureStore{
+	byID:   map[uint64]*mitmCaptureEntry{},
+	open:   map[string]int{},
+	limits: mitmDefaultCaptureLimits,
+}
+
+func mitmCaptureLimitsOf(runtime *mitmRuntime) mitmCaptureLimits {
+	limits := mitmDefaultCaptureLimits
+	if runtime == nil {
+		return limits
+	}
+	if v := runtime.setup.Limits["capture-entries"]; v > 0 {
+		limits.entries = int(min(v, 1_000_000))
+	}
+	if v := runtime.setup.Limits["capture-bytes"]; v > 0 {
+		limits.bytes = v
+	}
+	if v := runtime.setup.Limits["max-body-size"]; v > 0 {
+		limits.body = v
+	}
+	// Both bodies of one record fit well within the total, so a record being
+	// written never pushes itself out.
+	limits.body = min(limits.body, limits.bytes/4)
+	return limits
+}
+
+// Follows the app's capture switch; turning it on or off starts afresh.
+func (s *mitmCaptureStore) setEnabled(enabled bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.enabled != enabled {
+		s.clearLocked()
+	}
+	s.enabled = enabled
+}
+
+// A new runtime keeps the records only while it decrypts with the same root.
+func (s *mitmCaptureStore) runtimeReplaced(previous, next *mitmRuntime) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !next.decrypting() || previous == nil || previous.setup.CAFingerprint != next.setup.CAFingerprint {
+		s.clearLocked()
+	}
+	s.limits = mitmCaptureLimitsOf(next)
+	s.evictLocked()
+}
+
+func (s *mitmCaptureStore) clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.clearLocked()
+}
+
+func (s *mitmCaptureStore) clearLocked() {
+	for _, entry := range s.order {
+		entry.gone = true
+		entry.req.data, entry.resp.data = nil, nil
+	}
+	s.order = nil
+	s.byID = map[uint64]*mitmCaptureEntry{}
+	s.bytes = 0
+	s.since = time.Now()
+}
+
+func (s *mitmCaptureStore) openConnection(id string) {
+	if id == "" {
+		return
+	}
+	s.mu.Lock()
+	s.open[id]++
+	s.mu.Unlock()
+}
+
+func (s *mitmCaptureStore) closeConnection(id string) {
+	if id == "" {
+		return
+	}
+	s.mu.Lock()
+	if s.open[id]--; s.open[id] <= 0 {
+		delete(s.open, id)
+	}
+	s.mu.Unlock()
+}
+
+func mitmHeaderCost(header http.Header) int64 {
+	var n int64
+	for name, values := range header {
+		for _, value := range values {
+			n += int64(len(name) + len(value) + 4)
+		}
+	}
+	return n
+}
+
+// Starts a record for a request whose head was just read, or returns nil
+// while capture is off.
+func (s *mitmCaptureStore) begin(connection, host string, req *http.Request) *mitmCaptureEntry {
+	if connection == "" {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.enabled {
+		return nil
+	}
+	header := req.Header.Clone()
+	header["Host"] = []string{req.Host}
+	if len(req.TransferEncoding) > 0 {
+		header["Transfer-Encoding"] = append([]string(nil), req.TransferEncoding...)
+	}
+	s.nextID++
+	entry := &mitmCaptureEntry{
+		id:         s.nextID,
+		connection: connection,
+		start:      time.Now(),
+		method:     req.Method,
+		url:        "https://" + req.Host + req.RequestURI,
+		proto:      req.Proto,
+		reqHeader:  header,
+		pending:    true,
+	}
+	entry.cost = int64(len(entry.method)+len(entry.url)+len(entry.proto)) + mitmHeaderCost(header)
+	s.order = append(s.order, entry)
+	s.byID[entry.id] = entry
+	s.bytes += entry.cost
+	s.evictLocked()
+	return entry
+}
+
+func (s *mitmCaptureStore) respond(entry *mitmCaptureEntry, resp *http.Response) {
+	if entry == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if entry.gone {
+		return
+	}
+	header := resp.Header.Clone()
+	if len(resp.TransferEncoding) > 0 {
+		header["Transfer-Encoding"] = append([]string(nil), resp.TransferEncoding...)
+	}
+	entry.status = resp.StatusCode
+	entry.respHeader = header
+	entry.ttfb = time.Since(entry.start)
+	cost := mitmHeaderCost(header)
+	entry.cost += cost
+	s.bytes += cost
+	s.evictLocked()
+}
+
+func (s *mitmCaptureStore) write(entry *mitmCaptureEntry, response bool, p []byte) {
+	if entry == nil || len(p) == 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if entry.gone {
+		return
+	}
+	body := &entry.req
+	if response {
+		body = &entry.resp
+	}
+	body.size += int64(len(p))
+	room := s.limits.body - int64(len(body.data))
+	if int64(len(p)) > room {
+		body.truncated = true
+	}
+	if room <= 0 {
+		return
+	}
+	kept := p[:min(int64(len(p)), room)]
+	body.data = append(body.data, kept...)
+	entry.cost += int64(len(kept))
+	s.bytes += int64(len(kept))
+	s.evictLocked()
+}
+
+func (s *mitmCaptureStore) finish(entry *mitmCaptureEntry, failure string) {
+	if entry == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !entry.pending {
+		return
+	}
+	entry.pending = false
+	entry.err = failure
+	entry.duration = time.Since(entry.start)
+}
+
+// Ends a record the session left unfinished: stopped by a pause or new
+// settings, or failed before or after the site's response began.
+func (s *mitmCaptureStore) fail(entry *mitmCaptureEntry, err error) {
+	if entry == nil {
+		return
+	}
+	s.mu.Lock()
+	status := entry.status
+	s.mu.Unlock()
+	switch {
+	case err == nil:
+		s.finish(entry, "")
+	case errors.Is(err, errMitmSetupChanged):
+		s.finish(entry, mitmExchangeStopped)
+	case status != 0:
+		s.finish(entry, mitmExchangeResponseFailed)
+	default:
+		s.finish(entry, mitmExchangeNoResponse)
+	}
+}
+
+// The oldest records go first; every request after since is still kept.
+func (s *mitmCaptureStore) evictLocked() {
+	for len(s.order) > 0 && (len(s.order) > s.limits.entries || s.bytes > s.limits.bytes) {
+		oldest := s.order[0]
+		s.order[0] = nil
+		s.order = s.order[1:]
+		delete(s.byID, oldest.id)
+		s.bytes -= oldest.cost
+		oldest.gone = true
+		oldest.req.data, oldest.resp.data = nil, nil
+		if oldest.start.After(s.since) {
+			s.since = oldest.start
+		}
+	}
+}
+
+// A reader that records what passes through it, for a request or response
+// body as the proxy forwards it.
+type mitmCaptureReader struct {
+	r        io.Reader
+	entry    *mitmCaptureEntry
+	response bool
+}
+
+func (c mitmCaptureReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	if n > 0 {
+		mitmCaptures.write(c.entry, c.response, p[:n])
+	}
+	return n, err
+}
+
+// Their replies carry decrypted traffic, so they are never spilled to a file
+// however large; a body is bounded by max-body-size.
+var mitmCaptureMethods = map[CoreMethod]bool{
+	mitmExchangesMethod: true,
+	mitmExchangeMethod:  true,
+	mitmBodyMethod:      true,
+}
+
+type MitmExchangesParams struct {
+	ID string `json:"id"`
+}
+
+type MitmExchangeParams struct {
+	ID uint64 `json:"id"`
+}
+
+type MitmBodyParams struct {
+	ID       uint64 `json:"id"`
+	Response bool   `json:"response"`
+}
+
+type MitmExchangeSummary struct {
+	ID           uint64    `json:"id"`
+	Start        time.Time `json:"start"`
+	Pending      bool      `json:"pending"`
+	Duration     int64     `json:"duration"`
+	Method       string    `json:"method"`
+	URL          string    `json:"url"`
+	Status       int       `json:"status"`
+	RequestSize  int64     `json:"request-size"`
+	ResponseSize int64     `json:"response-size"`
+	Error        string    `json:"error"`
+}
+
+type MitmExchangeList struct {
+	Capturing bool                  `json:"capturing"`
+	Since     *time.Time            `json:"since,omitempty"`
+	Exchanges []MitmExchangeSummary `json:"exchanges"`
+	Closed    bool                  `json:"closed"`
+}
+
+type MitmExchange struct {
+	MitmExchangeSummary
+	TTFB           int64               `json:"ttfb"`
+	OriginalURL    string              `json:"original-url"`
+	Proto          string              `json:"proto"`
+	Connection     string              `json:"connection"`
+	RequestHeader  map[string][]string `json:"request-header"`
+	ResponseHeader map[string][]string `json:"response-header"`
+	Actions        []any               `json:"actions"`
+}
+
+type MitmBody struct {
+	Data      string `json:"data"`
+	Truncated bool   `json:"truncated"`
+	Encoding  string `json:"encoding"`
+}
+
+func (entry *mitmCaptureEntry) summary() MitmExchangeSummary {
+	duration := entry.duration
+	if entry.pending {
+		duration = time.Since(entry.start)
+	}
+	return MitmExchangeSummary{
+		ID:           entry.id,
+		Start:        entry.start,
+		Pending:      entry.pending,
+		Duration:     duration.Milliseconds(),
+		Method:       entry.method,
+		URL:          entry.url,
+		Status:       entry.status,
+		RequestSize:  entry.req.size,
+		ResponseSize: entry.resp.size,
+		Error:        entry.err,
+	}
+}
+
+func handleMitmExchanges(params MitmExchangesParams) MitmExchangeList {
+	s := mitmCaptures
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	list := MitmExchangeList{
+		Capturing: s.enabled,
+		Exchanges: []MitmExchangeSummary{},
+		Closed:    s.open[params.ID] == 0,
+	}
+	if !s.since.IsZero() {
+		since := s.since
+		list.Since = &since
+	}
+	for _, entry := range s.order {
+		if entry.connection == params.ID {
+			list.Exchanges = append(list.Exchanges, entry.summary())
+		}
+	}
+	return list
+}
+
+func handleMitmExchange(params MitmExchangeParams) *MitmExchange {
+	s := mitmCaptures
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	entry := s.byID[params.ID]
+	if entry == nil {
+		return nil
+	}
+	exchange := &MitmExchange{
+		MitmExchangeSummary: entry.summary(),
+		TTFB:                entry.ttfb.Milliseconds(),
+		Proto:               entry.proto,
+		Connection:          entry.connection,
+		RequestHeader:       entry.reqHeader.Clone(),
+		ResponseHeader:      entry.respHeader.Clone(),
+		Actions:             []any{},
+	}
+	if exchange.ResponseHeader == nil {
+		exchange.ResponseHeader = map[string][]string{}
+	}
+	return exchange
+}
+
+func handleMitmBody(params MitmBodyParams) *MitmBody {
+	s := mitmCaptures
+	s.mu.Lock()
+	entry := s.byID[params.ID]
+	if entry == nil {
+		s.mu.Unlock()
+		return nil
+	}
+	body, header := entry.req, entry.reqHeader
+	if params.Response {
+		body, header = entry.resp, entry.respHeader
+	}
+	data := append([]byte(nil), body.data...)
+	limit := s.limits.body
+	s.mu.Unlock()
+	decoded, truncated, encoding := mitmDecodeBody(data, body.truncated, header.Get("Content-Encoding"), limit)
+	return &MitmBody{
+		Data:      base64.StdEncoding.EncodeToString(decoded),
+		Truncated: truncated,
+		Encoding:  encoding,
+	}
+}
+
+var errMitmBodyTooLarge = errors.New("decoded body over the limit")
+
+// Undoes gzip or deflate, up to limit bytes; any other coding, or one that
+// fails, comes back as received with the coding named.
+func mitmDecodeBody(data []byte, truncated bool, contentEncoding string, limit int64) ([]byte, bool, string) {
+	coding := strings.ToLower(strings.TrimSpace(contentEncoding))
+	var open func(io.Reader) (io.ReadCloser, error)
+	switch coding {
+	case "", "identity":
+		return data, truncated, ""
+	case "gzip", "x-gzip":
+		open = func(r io.Reader) (io.ReadCloser, error) { return gzip.NewReader(r) }
+	case "deflate":
+		// Some servers send raw DEFLATE instead of the zlib stream RFC 9110 names.
+		open = func(r io.Reader) (io.ReadCloser, error) {
+			if zr, err := zlib.NewReader(r); err == nil {
+				return zr, nil
+			}
+			return flate.NewReader(bytes.NewReader(data)), nil
+		}
+	default:
+		return data, truncated, contentEncoding
+	}
+	if len(data) == 0 {
+		return data, truncated, ""
+	}
+	reader, err := open(bytes.NewReader(data))
+	if err != nil {
+		return data, truncated, contentEncoding
+	}
+	defer reader.Close()
+	var out bytes.Buffer
+	n, err := io.Copy(&out, io.LimitReader(reader, limit+1))
+	if n > limit {
+		out.Truncate(int(limit))
+		err = errMitmBodyTooLarge
+	}
+	switch {
+	case err == nil:
+		return out.Bytes(), truncated, ""
+	case errors.Is(err, errMitmBodyTooLarge):
+		return out.Bytes(), true, ""
+	case truncated && errors.Is(err, io.ErrUnexpectedEOF):
+		// The kept start of a longer body decodes as far as it goes.
+		return out.Bytes(), true, ""
+	default:
+		return data, truncated, contentEncoding
+	}
+}

@@ -3589,10 +3589,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      'El cliente rechazó el certificado. Instala la CA o excluye este host si la app fija su certificado.';
-
-  @override
   String get mitmExcludeHost => 'Excluir del descifrado';
 
   @override
@@ -6855,4 +6851,125 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get addedRulesApplyRestoreFailed =>
       'El proceso ha terminado, pero no se pudieron restaurar las reglas originales. Revisa las reglas actuales.';
+
+  @override
+  String get deleteCertificate => 'Eliminar certificado';
+
+  @override
+  String get deleteCertificateTip =>
+      'Elimina de este Mac la clave privada del certificado, el certificado y la confianza que se le dio. El descifrado se detiene hasta que se genere y se confíe en un certificado nuevo.';
+
+  @override
+  String get mitmPausedCoreIdentity =>
+      'Descifrado en pausa: falló la verificación de identidad del núcleo';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return '$count ignorados de suscripciones o scripts';
+  }
+
+  @override
+  String get mitmOutcomeRefused =>
+      'El cliente envió una alerta durante el handshake. Se desconoce la causa.';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate =>
+      'Falló la verificación del certificado del sitio';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 no es compatible';
+
+  @override
+  String get mitmOutcomeHelloPassthrough =>
+      'No se pudo inspeccionar TLS; conexión sin descifrar';
+
+  @override
+  String get mitmOutcomeFailed => 'Falló la conexión descifrada';
+
+  @override
+  String get mitmPausedLiveness =>
+      'Descifrado en pausa: no se pudo verificar la confianza o el firmante. Normalmente se detecta en unos 26 segundos; la suspensión o bloqueos pueden tardar más.';
+
+  @override
+  String get mitmPausedIndicatorPending =>
+      'Descifrado en pausa: aún no está disponible el indicador permanente requerido.';
+
+  @override
+  String get mitmPausedUnavailable =>
+      'Descifrado en pausa: el firmante o la conexión no está disponible.';
+
+  @override
+  String get mitmIndicatorDecrypting => 'Descifrando';
+
+  @override
+  String get mitmIndicatorOn => 'Descifrado activado';
+
+  @override
+  String get mitmIndicatorPaused => 'Descifrado en pausa';
+
+  @override
+  String get mitmIndicatorUnconfirmed => 'Comprobando el estado del descifrado';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return 'Descifrado en pausa: $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'Abrir ajustes de MITM';
+
+  @override
+  String get mitmPauseCoreStopped => 'el Core no está en ejecución';
+
+  @override
+  String get mitmPauseCoreIdentity =>
+      'falló la verificación de identidad del Core';
+
+  @override
+  String get mitmPauseNotTrusted =>
+      'el certificado raíz falta o no es de confianza';
+
+  @override
+  String get mitmPauseLiveness =>
+      'no se pudo verificar el estado de confianza y firma';
+
+  @override
+  String get mitmPauseIndicatorPending =>
+      'el indicador de estado permanente no está activado';
+
+  @override
+  String get mitmPauseUnavailable =>
+      'servicio de firma o conexión no disponible';
+
+  @override
+  String get mitmOutcomePaused =>
+      'Descifrado en pausa; la conexión pasó sin cambios';
+
+  @override
+  String get mitmBadgeDecrypted => 'Descifrado';
+
+  @override
+  String get mitmBadgePassedThrough => 'Sin descifrar · pasó sin cambios';
+
+  @override
+  String get mitmBadgePassedThroughSpoken => 'Sin descifrar, pasó sin cambios';
+
+  @override
+  String get mitmBadgeHandshakeFailed => 'Error en el handshake del cliente';
+
+  @override
+  String get mitmBadgeFailed => 'Error de descifrado';
+
+  @override
+  String get mitmExchangeNoResponse => 'No se recibió respuesta';
+
+  @override
+  String get mitmExchangeResponseFailed => 'Respuesta interrumpida';
+
+  @override
+  String get mitmExchangeStopped =>
+      'Solicitud detenida porque cambió la configuración de descifrado';
+
+  @override
+  String get mitmExchangeFailed => 'La solicitud no se completó';
 }

@@ -95,13 +95,6 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
       }
     });
   }
-  final mitmModules =
-      mitmFeature &&
-          ref.watch(
-            patchClashConfigProvider.select((state) => state.mitm.enable),
-          )
-      ? ref.watch(mitmModulesProvider.future)
-      : null;
   List<ProxyGroup> proxyGroups = [];
   List<Rule> rules = [];
   List<Rule> addedRules = [];
@@ -139,9 +132,6 @@ Future<SetupState> setupState(Ref ref, int? profileId) async {
       : mountSetupOf(mountTarget, profiles, await appPath.profilesPath);
   return SetupState(
     mounts: mounts,
-    mitmModules: mitmModules == null
-        ? const []
-        : await mitmModuleSources(await mitmModules),
     clashProviders: clashProviders,
     profileProviders: profileProviders,
     appProxies: appProxies,
@@ -171,32 +161,6 @@ String _mountSourceStamp(List<Profile> profiles) => json.encode([
         profile.lastUpdateDate?.millisecondsSinceEpoch,
       ],
 ]);
-
-/// A module whose content is not on disk yet adds nothing until it downloads.
-Future<List<MitmModuleSource>> mitmModuleSources(
-  Iterable<MitmModule> modules,
-) async {
-  final directory = await appPath.mitmModulesDirPath;
-  final sources = <MitmModuleSource>[];
-  for (final module in modules) {
-    if (!module.enabled) {
-      continue;
-    }
-    final file = File(join(directory, module.fileName));
-    if (!await file.exists()) {
-      continue;
-    }
-    sources.add(
-      MitmModuleSource(
-        content: await file.readAsString(),
-        name: module.name,
-        arguments: module.arguments,
-        resources: module.resources,
-      ),
-    );
-  }
-  return sources;
-}
 
 /// Subscription profiles double as proxy providers for custom profiles.
 @riverpod

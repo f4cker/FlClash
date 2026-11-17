@@ -34,6 +34,7 @@ class _RequestsViewState extends ConsumerState<RequestsView>
   final _recent = TrackerInfoListController();
   final _live = TrackerInfoListController();
   final _liveFeed = GlobalKey<_LiveFeedState>();
+  Timer? _requestRefresh;
   late final _filters = trackerInfoFilterController(ref, 'requests');
   late var _feed =
       widget.initialFeed ?? ref.read(appSettingProvider).requestFeed;
@@ -54,6 +55,7 @@ class _RequestsViewState extends ConsumerState<RequestsView>
 
   @override
   void dispose() {
+    _requestRefresh?.cancel();
     _recent.dispose();
     _live.dispose();
     _filters.dispose();
@@ -71,14 +73,13 @@ class _RequestsViewState extends ConsumerState<RequestsView>
   }
 
   void updateRequestsThrottler() {
-    throttler.call(FunctionTag.requests, () {
-      if (!mounted || _feed != RequestFeed.recent) {
-        return;
-      }
+    _requestRefresh ??= Timer(renderThrottleDuration, () {
+      _requestRefresh = null;
+      if (!mounted || _feed != RequestFeed.recent) return;
       updateWhenRouteSettled(
         () => _setRequests(ref.read(requestsProvider).list),
       );
-    }, duration: renderThrottleDuration);
+    });
   }
 
   void _search(String query) {

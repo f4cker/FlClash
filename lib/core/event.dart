@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
@@ -50,13 +51,18 @@ abstract mixin class CoreEventListener {
   void onTailscaleState(TailscaleStateEvent event) {}
 
   void onTailscaleRoutes(TailscaleRoutesEvent event) {}
+
+  void onMitmSign(MitmSignRequest request) {}
+
+  void onMitmConnection(String id, String outcome) {}
 }
 
 class CoreEventManager {
-  final _controller = StreamController<CoreEvent>();
+  final _controller = StreamController<(CoreEvent, bool)>();
 
   CoreEventManager._() {
-    _controller.stream.listen((event) {
+    _controller.stream.listen((item) {
+      final (event, managedRelay) = item;
       for (final CoreEventListener listener in List.of(_listeners)) {
         try {
           switch (event.type) {
@@ -118,6 +124,25 @@ class CoreEventManager {
                 ),
               );
               break;
+            case CoreEventType.mitmConnection:
+              final data = event.data;
+              if (data is Map &&
+                  data['id'] is String &&
+                  data['outcome'] is String) {
+                listener.onMitmConnection(
+                  data['id'] as String,
+                  data['outcome'] as String,
+                );
+              }
+              break;
+            case CoreEventType.mitmSign:
+              listener.onMitmSign(
+                MitmSignRequest.fromJson(
+                  Map<String, Object?>.from(event.data),
+                  managedRelay: managedRelay,
+                ),
+              );
+              break;
           }
         } catch (error) {
           commonPrint.log(
@@ -138,8 +163,10 @@ class CoreEventManager {
     return _listeners.isNotEmpty;
   }
 
-  void sendEvent(CoreEvent event) {
-    _controller.add(event);
+  /// [managedRelay]: the event came over the macOS helper's relay, from the
+  /// Core the helper started.
+  void sendEvent(CoreEvent event, {bool managedRelay = false}) {
+    _controller.add((event, managedRelay));
   }
 
   void addListener(CoreEventListener listener) {

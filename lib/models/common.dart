@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/ui/icons/app_glyphs.dart';
 import 'package:flutter/widgets.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:path/path.dart' show join;
@@ -130,6 +131,7 @@ abstract class TrackerInfo with _$TrackerInfo {
     required String rulePayload,
     int? downloadSpeed,
     int? uploadSpeed,
+    @Default('') String mitmOutcome,
   }) = _TrackerInfo;
 
   factory TrackerInfo.fromJson(Map<String, Object?> json) =>
@@ -271,6 +273,9 @@ final trackerInfoFacets = <RecordFacet<TrackerInfo>>[
     RecordFacetKind.mitm,
     (info) => [if (info.metadata.mitm) 'MITM'],
     offered: true,
+    // Only decrypted requests: failures and pass-throughs are not in it.
+    labelOf: (_) => currentAppLocalizations.mitmBadgeDecrypted,
+    glyph: AppGlyphs.lockOpen,
   ),
   RecordFacet(
     RecordFacetKind.app,

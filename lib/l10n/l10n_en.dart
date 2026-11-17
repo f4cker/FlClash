@@ -3553,10 +3553,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      'The client refused the certificate. Install the CA, or exclude this host if the app pins its certificate.';
-
-  @override
   String get mitmExcludeHost => 'Exclude from decryption';
 
   @override
@@ -6808,4 +6804,124 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get addedRulesApplyRestoreFailed =>
       'Processing has finished, but the original rules could not be restored. Check the current rules.';
+
+  @override
+  String get deleteCertificate => 'Delete certificate';
+
+  @override
+  String get deleteCertificateTip =>
+      'Deletes the certificate\'s private key, the certificate and the trust given to it from this Mac. Decryption stops until a new certificate is generated and trusted.';
+
+  @override
+  String get mitmPausedCoreIdentity =>
+      'Decryption paused: the Core\'s identity check failed';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return 'Ignored $count from subscriptions or scripts';
+  }
+
+  @override
+  String get mitmOutcomeRefused =>
+      'The client sent an alert during the handshake. The cause is unknown.';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate =>
+      'Website certificate verification failed';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 is not supported';
+
+  @override
+  String get mitmOutcomeHelloPassthrough =>
+      'TLS hello cannot be inspected; passed through';
+
+  @override
+  String get mitmOutcomeFailed => 'Decryption connection failed';
+
+  @override
+  String get mitmPausedLiveness =>
+      'Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.';
+
+  @override
+  String get mitmPausedIndicatorPending =>
+      'Decryption paused: the required always-visible indicator is not available.';
+
+  @override
+  String get mitmPausedUnavailable =>
+      'Decryption paused: the signer or connection is unavailable.';
+
+  @override
+  String get mitmIndicatorDecrypting => 'Decrypting';
+
+  @override
+  String get mitmIndicatorOn => 'Decryption on';
+
+  @override
+  String get mitmIndicatorPaused => 'Decryption paused';
+
+  @override
+  String get mitmIndicatorUnconfirmed => 'Checking decryption status';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return 'Decryption paused: $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'Open MITM settings';
+
+  @override
+  String get mitmPauseCoreStopped => 'core is not running';
+
+  @override
+  String get mitmPauseCoreIdentity => 'core identity check failed';
+
+  @override
+  String get mitmPauseNotTrusted =>
+      'root certificate is missing or not trusted';
+
+  @override
+  String get mitmPauseLiveness =>
+      'trust and signing status could not be verified';
+
+  @override
+  String get mitmPauseIndicatorPending =>
+      'persistent status indicator is not enabled';
+
+  @override
+  String get mitmPauseUnavailable =>
+      'signing service or connection unavailable';
+
+  @override
+  String get mitmOutcomePaused =>
+      'Decryption paused; connection passed through unchanged';
+
+  @override
+  String get mitmBadgeDecrypted => 'Decrypted';
+
+  @override
+  String get mitmBadgePassedThrough => 'Not decrypted · passed through';
+
+  @override
+  String get mitmBadgePassedThroughSpoken => 'Not decrypted, passed through';
+
+  @override
+  String get mitmBadgeHandshakeFailed => 'Client handshake failed';
+
+  @override
+  String get mitmBadgeFailed => 'Decryption failed';
+
+  @override
+  String get mitmExchangeNoResponse => 'No response received';
+
+  @override
+  String get mitmExchangeResponseFailed => 'Response interrupted';
+
+  @override
+  String get mitmExchangeStopped =>
+      'Request stopped because decryption settings changed';
+
+  @override
+  String get mitmExchangeFailed => 'Request did not complete';
 }

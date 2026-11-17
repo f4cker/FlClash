@@ -6276,12 +6276,6 @@ abstract class AppLocalizations {
   /// **'Add {host} to the hostname list? Flash can then read what is sent to it, cookies and passwords included.'**
   String mitmDecryptHostTip(Object host);
 
-  /// No description provided for @mitmClientRefusedCertificate.
-  ///
-  /// In en, this message translates to:
-  /// **'The client refused the certificate. Install the CA, or exclude this host if the app pins its certificate.'**
-  String get mitmClientRefusedCertificate;
-
   /// No description provided for @mitmExcludeHost.
   ///
   /// In en, this message translates to:
@@ -11500,6 +11494,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Processing has finished, but the original rules could not be restored. Check the current rules.'**
   String get addedRulesApplyRestoreFailed;
+
+  /// No description provided for @deleteCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete certificate'**
+  String get deleteCertificate;
+
+  /// No description provided for @deleteCertificateTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletes the certificate\'s private key, the certificate and the trust given to it from this Mac. Decryption stops until a new certificate is generated and trusted.'**
+  String get deleteCertificateTip;
+
+  /// No description provided for @mitmPausedCoreIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: the Core\'s identity check failed'**
+  String get mitmPausedCoreIdentity;
+
+  /// No description provided for @mitmIgnoredProfileHostnames.
+  ///
+  /// In en, this message translates to:
+  /// **'Ignored {count} from subscriptions or scripts'**
+  String mitmIgnoredProfileHostnames(Object count);
+
+  /// No description provided for @mitmOutcomeRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'The client sent an alert during the handshake. The cause is unknown.'**
+  String get mitmOutcomeRefused;
+
+  /// No description provided for @mitmOutcomeUpstreamCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Website certificate verification failed'**
+  String get mitmOutcomeUpstreamCertificate;
+
+  /// No description provided for @mitmOutcomeHTTP1Unsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP/1.1 is not supported'**
+  String get mitmOutcomeHTTP1Unsupported;
+
+  /// No description provided for @mitmOutcomeHelloPassthrough.
+  ///
+  /// In en, this message translates to:
+  /// **'TLS hello cannot be inspected; passed through'**
+  String get mitmOutcomeHelloPassthrough;
+
+  /// No description provided for @mitmOutcomeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption connection failed'**
+  String get mitmOutcomeFailed;
+
+  /// No description provided for @mitmPausedLiveness.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.'**
+  String get mitmPausedLiveness;
+
+  /// No description provided for @mitmPausedIndicatorPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: the required always-visible indicator is not available.'**
+  String get mitmPausedIndicatorPending;
+
+  /// No description provided for @mitmPausedUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: the signer or connection is unavailable.'**
+  String get mitmPausedUnavailable;
+
+  /// No description provided for @mitmIndicatorDecrypting.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrypting'**
+  String get mitmIndicatorDecrypting;
+
+  /// No description provided for @mitmIndicatorOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption on'**
+  String get mitmIndicatorOn;
+
+  /// No description provided for @mitmIndicatorPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused'**
+  String get mitmIndicatorPaused;
+
+  /// No description provided for @mitmIndicatorUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking decryption status'**
+  String get mitmIndicatorUnconfirmed;
+
+  /// No description provided for @mitmIndicatorPausedBecause.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: {reason}'**
+  String mitmIndicatorPausedBecause(String reason);
+
+  /// No description provided for @mitmIndicatorOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open MITM settings'**
+  String get mitmIndicatorOpenSettings;
+
+  /// No description provided for @mitmPauseCoreStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'core is not running'**
+  String get mitmPauseCoreStopped;
+
+  /// No description provided for @mitmPauseCoreIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'core identity check failed'**
+  String get mitmPauseCoreIdentity;
+
+  /// No description provided for @mitmPauseNotTrusted.
+  ///
+  /// In en, this message translates to:
+  /// **'root certificate is missing or not trusted'**
+  String get mitmPauseNotTrusted;
+
+  /// No description provided for @mitmPauseLiveness.
+  ///
+  /// In en, this message translates to:
+  /// **'trust and signing status could not be verified'**
+  String get mitmPauseLiveness;
+
+  /// No description provided for @mitmPauseIndicatorPending.
+  ///
+  /// In en, this message translates to:
+  /// **'persistent status indicator is not enabled'**
+  String get mitmPauseIndicatorPending;
+
+  /// No description provided for @mitmPauseUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'signing service or connection unavailable'**
+  String get mitmPauseUnavailable;
+
+  /// No description provided for @mitmOutcomePaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused; connection passed through unchanged'**
+  String get mitmOutcomePaused;
+
+  /// No description provided for @mitmBadgeDecrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrypted'**
+  String get mitmBadgeDecrypted;
+
+  /// No description provided for @mitmBadgePassedThrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Not decrypted · passed through'**
+  String get mitmBadgePassedThrough;
+
+  /// No description provided for @mitmBadgePassedThroughSpoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Not decrypted, passed through'**
+  String get mitmBadgePassedThroughSpoken;
+
+  /// No description provided for @mitmBadgeHandshakeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Client handshake failed'**
+  String get mitmBadgeHandshakeFailed;
+
+  /// No description provided for @mitmBadgeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption failed'**
+  String get mitmBadgeFailed;
+
+  /// No description provided for @mitmExchangeNoResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'No response received'**
+  String get mitmExchangeNoResponse;
+
+  /// No description provided for @mitmExchangeResponseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Response interrupted'**
+  String get mitmExchangeResponseFailed;
+
+  /// No description provided for @mitmExchangeStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Request stopped because decryption settings changed'**
+  String get mitmExchangeStopped;
+
+  /// No description provided for @mitmExchangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Request did not complete'**
+  String get mitmExchangeFailed;
 }
 
 class _AppLocalizationsDelegate

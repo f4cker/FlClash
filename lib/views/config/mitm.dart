@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
@@ -13,7 +14,6 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/state.dart';
-import 'package:fl_clash/views/config/mitm_modules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -88,6 +88,16 @@ class _MitmViewState extends ConsumerState<MitmView> {
       return compactError(error);
     }
     return appLocalizations.mitmTrustChecking;
+  }
+
+  /// The stage names the check, for a report; it is the app's, not the Core's.
+  String _pausedReason(
+    AppLocalizations appLocalizations,
+    MitmCoreIdentity? identity,
+  ) {
+    final stage = identity?.stage;
+    final reason = appLocalizations.mitmPausedCoreIdentity;
+    return stage == null ? reason : '$reason ($stage)';
   }
 
   String? _certificateTip(
@@ -310,6 +320,8 @@ class _MitmViewState extends ConsumerState<MitmView> {
         ),
       ];
     }
+    final signs = ref.watch(mitmSignerProvider) != null;
+    final keepsRoot = signs && ref.watch(safeModeProvider);
     final trust = ref.watch(mitmTrustStateProvider);
     final installable = switch (trust.value) {
       MitmTrustCheck(trust: MitmTrust.notInstalled || MitmTrust.untrusted) =>
@@ -341,12 +353,35 @@ class _MitmViewState extends ConsumerState<MitmView> {
         title: Text(appLocalizations.exportCertificate),
         onTap: () => _export(context, certificate),
       ),
-      ListItem(
-        title: Text(appLocalizations.regenerateCertificate),
-        onTap: () =>
-            _regenerate(context, ref, old: certificate, canTrust: canTrust),
-      ),
+      if (!keepsRoot)
+        ListItem(
+          title: Text(appLocalizations.regenerateCertificate),
+          onTap: () =>
+              _regenerate(context, ref, old: certificate, canTrust: canTrust),
+        ),
+      if (signs && !keepsRoot)
+        ListItem(
+          title: Text(appLocalizations.deleteCertificate),
+          onTap: () => _delete(context, ref),
+        ),
     ];
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final appLocalizations = context.appLocalizations;
+    final res = await dialogs.showMessage(
+      title: appLocalizations.deleteCertificate,
+      message: TextSpan(text: appLocalizations.deleteCertificateTip),
+      destructive: true,
+    );
+    if (res != true || !context.mounted) {
+      return;
+    }
+    await globalState.loadingRun<void>(
+      ref.read(mitmCaProvider.notifier).delete,
+      tag: LoadingTag.mitm,
+      title: appLocalizations.deleteCertificate,
+    );
   }
 
   @override
@@ -359,108 +394,102 @@ class _MitmViewState extends ConsumerState<MitmView> {
     final check = certificate.value == null
         ? null
         : ref.watch(mitmTrustStateProvider).value;
-    return Scaffold(
-      title: appLocalizations.mitm,
-      isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
-      body: NullStatusSwitcher(
-        isLoading: certificate.isLoading && !certificate.hasValue,
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
-                top: context.contentTopPadding,
-                bottom: 16 + context.bottomInset,
-              ),
-              sliver: SliverMainAxisGroup(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        generateSection(
-                          items: [
-                            const _MitmEnableItem(),
-                            _MitmCaptureItem(isAndroid: isAndroid),
-                          ],
-                        ),
-                        generateSection(
-                          title: appLocalizations.certificate,
-                          items: _certificateItems(
-                            context,
-                            ref,
-                            certificate,
-                            canTrust: canTrust,
+    final corePause = ref.watch(mitmRuntimeStatusProvider).value?.paused ?? '';
+    final pauseLabel = switch (corePause) {
+      'livenessUnavailable' ||
+      'trustUnavailable' => appLocalizations.mitmPausedLiveness,
+      'indicatorPending' => appLocalizations.mitmPausedIndicatorPending,
+      '' => null,
+      _ => appLocalizations.mitmPausedUnavailable,
+    };
+    // The page says what the bar's status would, in its first section.
+    return ScaffoldBarStatus(
+      status: null,
+      child: Scaffold(
+        title: appLocalizations.mitm,
+        isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
+        body: NullStatusSwitcher(
+          isLoading: certificate.isLoading && !certificate.hasValue,
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+                  top: context.contentTopPadding,
+                  bottom: 16 + context.bottomInset,
+                ),
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          generateSection(
+                            items: [
+                              const _MitmEnableItem(),
+                              _MitmCaptureItem(isAndroid: isAndroid),
+                            ],
+                            footer: ref.watch(mitmCoreRefusedProvider)
+                                ? _pausedReason(
+                                    appLocalizations,
+                                    ref
+                                        .watch(mitmCoreIdentityStateProvider)
+                                        .value,
+                                  )
+                                : pauseLabel,
                           ),
-                          footer: _certificateTip(
-                            appLocalizations,
-                            canTrust: canTrust,
-                            check: check,
+                          generateSection(
+                            title: appLocalizations.certificate,
+                            items: _certificateItems(
+                              context,
+                              ref,
+                              certificate,
+                              canTrust: canTrust,
+                            ),
+                            footer: _certificateTip(
+                              appLocalizations,
+                              canTrust: canTrust,
+                              check: check,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        generateSection(
-                          title: appLocalizations.mitmModules,
-                          items: const [MitmModulesItem()],
-                        ),
-                        generateSection(
-                          items: const [_MitmHostnameItem()],
-                          footer: appLocalizations.mitmHostnameDesc,
-                        ),
-                        generateSection(
-                          title: appLocalizations.options,
-                          items: [
-                            ConfigToggleItem(
-                              title: (l) => l.skipServerCertVerify,
-                              selector: patchClashConfigProvider.select(
-                                (state) => state.mitm.skipServerCertVerify,
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          generateSection(
+                            items: const [_MitmHostnameItem()],
+                            footer: [
+                              appLocalizations.mitmHostnameDesc,
+                              if (ref.watch(mitmIgnoredHostnamesProvider).value
+                                  case final ignored? when ignored > 0)
+                                appLocalizations.mitmIgnoredProfileHostnames(
+                                  ignored,
+                                ),
+                            ].join('\n'),
+                          ),
+                          generateSection(
+                            title: appLocalizations.options,
+                            items: [
+                              ConfigToggleItem(
+                                title: (l) => l.blockQuic,
+                                selector: patchClashConfigProvider.select(
+                                  (state) => state.mitm.autoQuicBlock,
+                                ),
+                                onChanged: _mitmWriter(
+                                  (state, value) =>
+                                      state.copyWith(autoQuicBlock: value),
+                                ),
                               ),
-                              onChanged: _mitmWriter(
-                                (state, value) =>
-                                    state.copyWith(skipServerCertVerify: value),
-                              ),
-                            ),
-                            ConfigToggleItem(
-                              title: (l) => l.blockQuic,
-                              selector: patchClashConfigProvider.select(
-                                (state) => state.mitm.autoQuicBlock,
-                              ),
-                              onChanged: _mitmWriter(
-                                (state, value) =>
-                                    state.copyWith(autoQuicBlock: value),
-                              ),
-                            ),
-                            ConfigToggleItem(
-                              title: (l) => l.http2,
-                              selector: patchClashConfigProvider.select(
-                                (state) => state.mitm.h2,
-                              ),
-                              onChanged: _mitmWriter(
-                                (state, value) => state.copyWith(h2: value),
-                              ),
-                            ),
-                            ConfigToggleItem(
-                              title: (l) => l.decryptUntrusted,
-                              selector: patchClashConfigProvider.select(
-                                (state) => state.mitm.decryptUntrusted,
-                              ),
-                              onChanged: _mitmWriter(
-                                (state, value) =>
-                                    state.copyWith(decryptUntrusted: value),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

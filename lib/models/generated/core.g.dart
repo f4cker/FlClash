@@ -18,6 +18,7 @@ _SetupParams _$SetupParamsFromJson(Map<String, dynamic> json) => _SetupParams(
   mounts: json['mounts'] == null
       ? null
       : MountSetup.fromJson(json['mounts'] as Map<String, dynamic>),
+  mitm: json['mitm'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$SetupParamsToJson(_SetupParams instance) =>
@@ -27,6 +28,7 @@ Map<String, dynamic> _$SetupParamsToJson(_SetupParams instance) =>
       'options': instance.options,
       'tailscale': ?instance.tailscale,
       'mounts': ?instance.mounts,
+      'mitm': ?instance.mitm,
     };
 
 _CoreOptions _$CoreOptionsFromJson(Map<String, dynamic> json) => _CoreOptions(
@@ -150,6 +152,23 @@ const _$ExternalControllerStatusEnumMap = {
   ExternalControllerStatus.close: '',
   ExternalControllerStatus.open: '127.0.0.1:9090',
 };
+
+_MitmStatus _$MitmStatusFromJson(Map<String, dynamic> json) => _MitmStatus(
+  enable: json['enable'] as bool? ?? false,
+  hostnames: (json['hostnames'] as num?)?.toInt() ?? 0,
+  ignoredHostnames: (json['ignored-hostnames'] as num?)?.toInt() ?? 0,
+  capture: json['capture'] as bool? ?? false,
+  paused: json['paused'] as String? ?? '',
+);
+
+Map<String, dynamic> _$MitmStatusToJson(_MitmStatus instance) =>
+    <String, dynamic>{
+      'enable': instance.enable,
+      'hostnames': instance.hostnames,
+      'ignored-hostnames': instance.ignoredHostnames,
+      'capture': instance.capture,
+      'paused': instance.paused,
+    };
 
 _MitmCertificate _$MitmCertificateFromJson(Map<String, dynamic> json) =>
     _MitmCertificate(
@@ -469,6 +488,8 @@ const _$CoreEventTypeEnumMap = {
   CoreEventType.dialerLoop: 'dialerLoop',
   CoreEventType.tailscaleState: 'tailscaleState',
   CoreEventType.tailscaleRoutes: 'tailscaleRoutes',
+  CoreEventType.mitmSign: 'mitmSign',
+  CoreEventType.mitmConnection: 'mitmConnection',
 };
 
 _TestDelayParams _$TestDelayParamsFromJson(Map<String, dynamic> json) =>

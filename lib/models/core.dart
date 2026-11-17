@@ -14,6 +14,9 @@ abstract class SetupParams with _$SetupParams {
     required CoreOptions options,
     @JsonKey(includeIfNull: false) TailscaleSetup? tailscale,
     @JsonKey(includeIfNull: false) MountSetup? mounts,
+
+    /// The user's decryption setup; the Core ignores a profile's own.
+    @JsonKey(includeIfNull: false) Map<String, Object?>? mitm,
   }) = _SetupParams;
 
   factory SetupParams.fromJson(Map<String, dynamic> json) =>
@@ -88,6 +91,65 @@ abstract class UpdateParams with _$UpdateParams {
 }
 
 /// The CA the Core signs decrypted hosts' certificates with.
+/// What the Core decrypts now, and how many of the profile's own `mitm`
+/// hostnames it ignored, since only the user's list counts.
+@freezed
+abstract class MitmStatus with _$MitmStatus {
+  const factory MitmStatus({
+    @Default(false) bool enable,
+    @Default(0) int hostnames,
+    @Default(0) @JsonKey(name: 'ignored-hostnames') int ignoredHostnames,
+    @Default(false) bool capture,
+    @Default('') String paused,
+  }) = _MitmStatus;
+
+  factory MitmStatus.fromJson(Map<String, Object?> json) =>
+      _$MitmStatusFromJson(json);
+}
+
+/// What the always-visible decryption status says: [on] once decryption is
+/// ready, [decrypting] only while a connection is being decrypted.
+enum MitmIndicatorKind { on, decrypting, paused, unconfirmed }
+
+/// Why listed connections pass through as they came.
+enum MitmPauseReason {
+  coreStopped,
+  coreIdentity,
+  notTrusted,
+  liveness,
+  indicatorPending,
+  unavailable,
+}
+
+@immutable
+class MitmIndicator {
+  const MitmIndicator.on() : kind = MitmIndicatorKind.on, reason = null;
+
+  const MitmIndicator.decrypting()
+    : kind = MitmIndicatorKind.decrypting,
+      reason = null;
+
+  const MitmIndicator.paused(MitmPauseReason this.reason)
+    : kind = MitmIndicatorKind.paused;
+
+  const MitmIndicator.unconfirmed()
+    : kind = MitmIndicatorKind.unconfirmed,
+      reason = null;
+
+  final MitmIndicatorKind kind;
+  final MitmPauseReason? reason;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MitmIndicator && other.kind == kind && other.reason == reason;
+
+  @override
+  int get hashCode => Object.hash(kind, reason);
+
+  @override
+  String toString() => 'MitmIndicator(${kind.name}, ${reason?.name})';
+}
+
 @freezed
 abstract class MitmCertificate with _$MitmCertificate {
   const factory MitmCertificate({

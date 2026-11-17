@@ -12,6 +12,121 @@ import 'detail_tabs.dart';
 import 'mitm_exchanges.dart';
 import 'process_view.dart';
 
+String mitmOutcomeText(BuildContext context, String outcome) {
+  final l = context.appLocalizations;
+  return switch (outcome) {
+    'refused' => l.mitmOutcomeRefused,
+    'upstreamCertificate' => l.mitmOutcomeUpstreamCertificate,
+    'http2Only' => l.mitmOutcomeHTTP1Unsupported,
+    'unsupportedHello' || 'missingSNI' => l.mitmOutcomeHelloPassthrough,
+    'paused' => l.mitmOutcomePaused,
+    'upstreamFailed' || 'clientFailed' || 'http1Failed' => l.mitmOutcomeFailed,
+    _ => '',
+  };
+}
+
+/// The mark a row in the request list carries for a decryption host: a
+/// small glyph beside the host, its words in the tooltip and the detail.
+/// Only connections the Core reported on have one; unlisted traffic has
+/// none. The glyph and color of each are set here and nowhere else.
+enum MitmBadge {
+  decrypted(AppGlyphs.lockOpen),
+  passedThrough(AppGlyphs.arrowForward),
+  // The client sent an alert in its handshake; why is unknown.
+  handshakeFailed(AppGlyphs.warning),
+  failed(AppGlyphs.lockError);
+
+  const MitmBadge(this.glyph);
+
+  final Glyph glyph;
+
+  /// The glyph's side in a row, and its gap after the host.
+  static const iconSize = 14.0;
+  static const gap = 6.0;
+  static const tooltipDelay = Duration(milliseconds: 300);
+
+  // Amber #B25E00 is under 3:1 on the dark surfaces, so dark mode takes
+  // iOS's dark orange; grey #8E8C94 reads on both.
+  static const _grey = Color(0xFF8E8C94);
+  static const _amber = Color(0xFFB25E00);
+  static const _amberDark = Color(0xFFFF9F0A);
+
+  Color color(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    return switch (this) {
+      MitmBadge.decrypted => colorScheme.primary,
+      MitmBadge.passedThrough => _grey,
+      MitmBadge.handshakeFailed =>
+        colorScheme.brightness == Brightness.dark ? _amberDark : _amber,
+      MitmBadge.failed => colorScheme.error,
+    };
+  }
+
+  static MitmBadge? of(TrackerInfo trackerInfo) {
+    return switch (trackerInfo.mitmOutcome) {
+      'refused' => MitmBadge.handshakeFailed,
+      'unsupportedHello' ||
+      'missingSNI' ||
+      'http2Only' ||
+      'paused' => MitmBadge.passedThrough,
+      // A later HTTP failure leaves the connection decrypted all the same.
+      _ when trackerInfo.metadata.mitm => MitmBadge.decrypted,
+      'upstreamCertificate' ||
+      'upstreamFailed' ||
+      'clientFailed' ||
+      'http1Failed' => MitmBadge.failed,
+      _ => null,
+    };
+  }
+
+  String label(BuildContext context) {
+    final l = context.appLocalizations;
+    return switch (this) {
+      MitmBadge.decrypted => l.mitmBadgeDecrypted,
+      MitmBadge.passedThrough => l.mitmBadgePassedThrough,
+      MitmBadge.handshakeFailed => l.mitmBadgeHandshakeFailed,
+      MitmBadge.failed => l.mitmBadgeFailed,
+    };
+  }
+
+  /// [label] as a screen reader says it.
+  String semanticsLabel(BuildContext context) => switch (this) {
+    MitmBadge.passedThrough =>
+      context.appLocalizations.mitmBadgePassedThroughSpoken,
+    _ => label(context),
+  };
+}
+
+/// [MitmBadge.of] as a glyph that names itself on hover and to a screen
+/// reader, or nothing for unlisted traffic.
+class MitmBadgeIcon extends StatelessWidget {
+  final TrackerInfo trackerInfo;
+
+  const MitmBadgeIcon(this.trackerInfo, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = MitmBadge.of(trackerInfo);
+    if (badge == null) {
+      return const SizedBox.shrink();
+    }
+    return Tooltip(
+      message: badge.label(context),
+      hoverDelay: MitmBadge.tooltipDelay,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: badge.semanticsLabel(context),
+        excludeSemantics: true,
+        child: GlyphIcon(
+          badge.glyph,
+          size: MitmBadge.iconSize,
+          color: badge.color(context),
+        ),
+      ),
+    );
+  }
+}
+
 String _endpointText(String ip, String port) {
   if (ip.isEmpty) {
     return '';
@@ -29,9 +144,28 @@ void showTrackerInfoDetail(
 ) {
   showNestedSheet<void>(
     context,
-    builder: (_) => Scaffold(
-      body: TrackerInfoDetailView(trackerInfo: trackerInfo),
-      title: title,
+    builder: (_) => Consumer(
+      builder: (context, ref, _) {
+        final status = ref.watch(
+          requestsProvider.select((requests) {
+            for (final request in requests.list.reversed) {
+              if (request.id == trackerInfo.id) {
+                return (request.mitmOutcome, request.metadata.mitm);
+              }
+            }
+            return (trackerInfo.mitmOutcome, trackerInfo.metadata.mitm);
+          }),
+        );
+        return Scaffold(
+          body: TrackerInfoDetailView(
+            trackerInfo: trackerInfo.copyWith(
+              mitmOutcome: status.$1,
+              metadata: trackerInfo.metadata.copyWith(mitm: status.$2),
+            ),
+          ),
+          title: title,
+        );
+      },
     ),
   );
 }
@@ -160,14 +294,9 @@ class TrackerInfoItem extends ConsumerWidget {
           .of(context, emphasized: true)
           .copyWith(color: context.colorScheme.onSurfaceVariant),
     );
-    final mitm = trackerInfo.metadata.mitm;
     if (!isLive) {
       return RecordHeader(
-        children: [
-          RecordTimestamp(trackerInfo.start.showFull),
-          network,
-          if (mitm) const RecordLabel(label: 'MITM'),
-        ],
+        children: [RecordTimestamp(trackerInfo.start.showFull), network],
       );
     }
     final color = context.colorScheme.onSurfaceVariant;
@@ -193,7 +322,6 @@ class TrackerInfoItem extends ConsumerWidget {
       children: [
         Text(trackerInfo.start.getLastUpdateTimeDesc(context, compact: true)),
         network,
-        if (mitm) const RecordLabel(label: 'MITM'),
       ],
     );
   }
@@ -214,6 +342,14 @@ class _TrackerInfoBody extends StatelessWidget {
             text: _endpointText(trackerInfo.title, metadata.destinationPort),
             style: styles.title,
           ),
+          if (MitmBadge.of(trackerInfo) != null)
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(start: MitmBadge.gap),
+                child: MitmBadgeIcon(trackerInfo),
+              ),
+            ),
           if (metadata.host.isNotEmpty && metadata.destinationIP.isNotEmpty)
             TextSpan(
               text: '  ${metadata.destinationIP}',
@@ -384,9 +520,6 @@ class _MitmHostSection extends ConsumerWidget {
           ),
         ),
       ],
-      footer: metadata.mitmRefused
-          ? appLocalizations.mitmClientRefusedCertificate
-          : null,
     );
   }
 }
@@ -486,6 +619,14 @@ class TrackerInfoDetailView extends ConsumerWidget {
           items: [
             ..._buildRows([
               (appLocalizations.creationTime, trackerInfo.start.showFull),
+              if (MitmBadge.of(trackerInfo) case final badge?)
+                (
+                  appLocalizations.mitm,
+                  switch (mitmOutcomeText(context, trackerInfo.mitmOutcome)) {
+                    '' => badge.label(context),
+                    final outcome => outcome,
+                  },
+                ),
               (appLocalizations.networkType, metadata.network),
               if (process == null)
                 (appLocalizations.process, trackerInfo.progressText),

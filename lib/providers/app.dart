@@ -68,6 +68,58 @@ class Logs extends _$Logs with AutoDisposeNotifierMixin {
 
 @Riverpod(keepAlive: true)
 class Requests extends _$Requests with AutoDisposeNotifierMixin {
+  // The connection event can arrive before its request event. Bound memory
+  // and lifetime so a dropped request never leaves an unbounded pending map.
+  final _mitmPending =
+      <String, ({String outcome, bool decrypted, DateTime at})>{};
+  static const _mitmOutcomes = {
+    'decrypted',
+    'refused',
+    'upstreamCertificate',
+    'upstreamFailed',
+    'clientFailed',
+    'http2Only',
+    'http1Failed',
+    'unsupportedHello',
+    'missingSNI',
+    'paused',
+  };
+
+  void setMitmOutcome(String id, String outcome) {
+    if (!ref.mounted ||
+        id.isEmpty ||
+        id.length > 128 ||
+        !_mitmOutcomes.contains(outcome)) {
+      return;
+    }
+    for (var i = state.length - 1; i >= 0; i--) {
+      if (state[i].id == id) {
+        final request = state[i];
+        value = state.replace({
+          i: outcome == 'decrypted'
+              ? request.copyWith(
+                  metadata: request.metadata.copyWith(mitm: true),
+                )
+              : request.copyWith(mitmOutcome: outcome),
+        });
+        return;
+      }
+    }
+    final now = DateTime.now();
+    _mitmPending.removeWhere(
+      (_, pending) => now.difference(pending.at) > const Duration(minutes: 1),
+    );
+    if (_mitmPending.length >= 512) {
+      _mitmPending.remove(_mitmPending.keys.first);
+    }
+    final previous = _mitmPending[id];
+    _mitmPending[id] = (
+      outcome: outcome == 'decrypted' ? previous?.outcome ?? '' : outcome,
+      decrypted: outcome == 'decrypted' || (previous?.decrypted ?? false),
+      at: now,
+    );
+  }
+
   @override
   FixedList<TrackerInfo> build() {
     return FixedList(maxRequestsLength);
@@ -77,7 +129,20 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
     if (!ref.mounted) {
       return;
     }
-    this.value = state.append(value);
+    final pending = _mitmPending.remove(value.id);
+    final fresh =
+        pending != null &&
+        DateTime.now().difference(pending.at) <= const Duration(minutes: 1);
+    this.value = state.append(
+      fresh
+          ? value.copyWith(
+              mitmOutcome: pending.outcome,
+              metadata: pending.decrypted
+                  ? value.metadata.copyWith(mitm: true)
+                  : value.metadata,
+            )
+          : value,
+    );
   }
 
   void updateTraffic(Map<String, RequestTraffic> traffic) {

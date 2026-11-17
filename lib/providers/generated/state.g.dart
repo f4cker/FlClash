@@ -184,6 +184,58 @@ final class CoreOptionsProvider
 
 String _$coreOptionsHash() => r'43945407c97ebce7e8106973f53ca83ce95c861a';
 
+/// Null, and so no decryption, unless the user turned it on.
+
+@ProviderFor(mitmSetup)
+final mitmSetupProvider = MitmSetupProvider._();
+
+/// Null, and so no decryption, unless the user turned it on.
+
+final class MitmSetupProvider
+    extends
+        $FunctionalProvider<
+          Map<String, Object?>?,
+          Map<String, Object?>?,
+          Map<String, Object?>?
+        >
+    with $Provider<Map<String, Object?>?> {
+  /// Null, and so no decryption, unless the user turned it on.
+  MitmSetupProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mitmSetupProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmSetupHash();
+
+  @$internal
+  @override
+  $ProviderElement<Map<String, Object?>?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  Map<String, Object?>? create(Ref ref) {
+    return mitmSetup(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<String, Object?>? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<String, Object?>?>(value),
+    );
+  }
+}
+
+String _$mitmSetupHash() => r'15e041a4aabe792ea5b27c0eecd286474d9aa018';
+
 @ProviderFor(setupPatch)
 final setupPatchProvider = SetupPatchProvider._();
 
@@ -313,7 +365,7 @@ final class TrayStateProvider
   }
 }
 
-String _$trayStateHash() => r'a8665e030888996ec1ae8984171bdda452b73736';
+String _$trayStateHash() => r'8404da7d145cc048ef054246df51e322ba2d41ba';
 
 /// Measured delays of the proxies the tray lists, by group and then proxy
 /// name. Resolved like a proxy card, so a nested group shows its selection.
@@ -529,7 +581,7 @@ final class SharedStateProvider
   }
 }
 
-String _$sharedStateHash() => r'ae4493d022b73e0395f9e5724250ea19246e0c21';
+String _$sharedStateHash() => r'5d9d1ab78d2f6e74b33c6a4532f7ea7945f1a2ef';
 
 @ProviderFor(vpnRouteAddress)
 final vpnRouteAddressProvider = VpnRouteAddressProvider._();
@@ -3775,7 +3827,7 @@ final class SetupStateProvider
   }
 }
 
-String _$setupStateHash() => r'd340b381bc5f16c10d60999457c9c251c931c10c';
+String _$setupStateHash() => r'cc1ce695a25eeaedb203bdc3efea20ce35e47463';
 
 final class SetupStateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SetupState>, int?> {

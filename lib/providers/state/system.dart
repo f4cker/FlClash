@@ -50,6 +50,18 @@ CoreOptions coreOptions(Ref ref) {
   );
 }
 
+/// Null, and so no decryption, unless the user turned it on.
+@riverpod
+Map<String, Object?>? mitmSetup(Ref ref) {
+  final mitm = ref.watch(
+    patchClashConfigProvider.select((state) => state.mitm),
+  );
+  if (!mitmFeature || !mitm.enable) {
+    return null;
+  }
+  return mitm.coreJson;
+}
+
 @riverpod
 ({PatchClashConfig patchConfig, bool appendSystemDns, bool bypassPrivateRoute})
 setupPatch(Ref ref) {
@@ -109,6 +121,7 @@ TrayState trayState(Ref ref) {
     monochromeTrayIcon: appSetting.monochromeTrayIcon,
     safeMode: safeMode,
     hotKeys: hotKeys,
+    mitmIndicator: ref.watch(mitmIndicatorProvider),
   );
 }
 
@@ -215,6 +228,7 @@ SharedState sharedState(Ref ref) {
       selectedMap: selectedMap,
       options: ref.watch(coreOptionsProvider),
       tailscale: ref.watch(tailscaleSetupProvider),
+      mitm: ref.watch(mitmSetupProvider),
     ),
     vpnOptions: ref.watch(vpnOptionsProvider).value,
   );

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
+import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/mitm.dart';
@@ -662,7 +664,128 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('MITM'), findsOneWidget);
+    expect(find.byGlyph(MitmBadge.decrypted.glyph), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('a request that did not complete says why in words', () {
+    final l = lookupAppLocalizations(const Locale('en'));
+    expect(mitmExchangeErrorText(l, 'noResponse'), 'No response received');
+    expect(mitmExchangeErrorText(l, 'responseFailed'), 'Response interrupted');
+    expect(
+      mitmExchangeErrorText(l, 'stopped'),
+      'Request stopped because decryption settings changed',
+    );
+    expect(
+      mitmExchangeErrorText(l, 'somethingNew'),
+      'Request did not complete',
+    );
+  });
+
+  test('the filter that keeps decrypted requests is named for them', () {
+    final facet = trackerInfoFacets.firstWhere(
+      (facet) => facet.kind == RecordFacetKind.mitm,
+    );
+    expect(facet.label('MITM'), currentAppLocalizations.mitmBadgeDecrypted);
+  });
+
+  test('a handshake alert is named without guessing its cause', () {
+    final zh = lookupAppLocalizations(const Locale('zh'));
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(zh.mitmBadgeHandshakeFailed, '客户端握手失败');
+    expect(zh.mitmOutcomeRefused, '客户端在握手时发出了警报，原因无法确定。');
+    expect(en.mitmBadgeHandshakeFailed, 'Client handshake failed');
+    expect(
+      en.mitmOutcomeRefused,
+      'The client sent an alert during the handshake. The cause is unknown.',
+    );
+    expect(zh.mitmBadgePassedThrough, '未解密 · 原样放行');
+    expect(zh.mitmBadgeFailed, '解密失败');
+  });
+
+  testWidgets('each row marks what decryption did with a glyph only', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    TrackerInfo row(String id, {String outcome = '', bool mitm = false}) =>
+        _decrypted.copyWith(
+          id: id,
+          mitmOutcome: outcome,
+          metadata: Metadata(network: 'tcp', host: '$id.test', mitm: mitm),
+        );
+    const passed = (
+      'Not decrypted · passed through',
+      'Not decrypted, passed through',
+      MitmBadge.passedThrough,
+    );
+    const failed = ('Decryption failed', 'Decryption failed', MitmBadge.failed);
+    final cases = <TrackerInfo, (String, String, MitmBadge)?>{
+      row('plain'): null,
+      row('ok', mitm: true): ('Decrypted', 'Decrypted', MitmBadge.decrypted),
+      row('late', mitm: true, outcome: 'http1Failed'): (
+        'Decrypted',
+        'Decrypted',
+        MitmBadge.decrypted,
+      ),
+      row('paused', outcome: 'paused'): passed,
+      row('hello', outcome: 'unsupportedHello'): passed,
+      row('sni', outcome: 'missingSNI'): passed,
+      row('h2', outcome: 'http2Only'): passed,
+      row('alert', outcome: 'refused'): (
+        'Client handshake failed',
+        'Client handshake failed',
+        MitmBadge.handshakeFailed,
+      ),
+      row('cert', outcome: 'upstreamCertificate'): failed,
+      row('client', outcome: 'clientFailed'): failed,
+    };
+    for (final MapEntry(key: info, value: want) in cases.entries) {
+      await tester.pumpWidget(
+        TestApp(
+          wrapInProviderScope: true,
+          homeBuilder: (child) => HostScaffold(body: child),
+          child: TrackerInfoItem(trackerInfo: info, detailTitle: 'detail'),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(RecordLabel), findsNothing, reason: info.id);
+      final icon = find.byType(MitmBadgeIcon);
+      if (want == null) {
+        expect(
+          find.descendant(of: icon, matching: find.byType(GlyphIcon)),
+          findsNothing,
+          reason: info.id,
+        );
+        continue;
+      }
+      final (tooltip, spoken, badge) = want;
+      expect(MitmBadge.of(info), badge, reason: info.id);
+      final glyph = tester.widget<GlyphIcon>(
+        find.descendant(of: icon, matching: find.byType(GlyphIcon)),
+      );
+      expect(glyph.glyph, badge.glyph, reason: info.id);
+      expect(glyph.size, 14);
+      expect(find.text(tooltip), findsNothing, reason: info.id);
+      expect(
+        tester
+            .widget<Tooltip>(
+              find.descendant(of: icon, matching: find.byType(Tooltip)),
+            )
+            .message,
+        tooltip,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp(RegExp.escape(spoken))),
+        findsWidgets,
+        reason: info.id,
+      );
+    }
+
+    final context = tester.element(find.byType(TrackerInfoItem));
+    expect(MitmBadge.passedThrough.color(context), const Color(0xFF8E8C94));
+    expect(MitmBadge.handshakeFailed.color(context), const Color(0xFFB25E00));
+    semantics.dispose();
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

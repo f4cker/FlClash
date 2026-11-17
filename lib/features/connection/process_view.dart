@@ -35,12 +35,23 @@ class ProcessIcon extends StatelessWidget {
   final ConnectionProcess process;
   final double size;
 
-  const ProcessIcon({super.key, required this.process, required this.size});
+  /// Whether an unrecognized process keeps the icon's room, empty, so rows
+  /// stay aligned; otherwise it takes none. It never shows a placeholder.
+  final bool keepsRoom;
+
+  const ProcessIcon({
+    super.key,
+    required this.process,
+    required this.size,
+    this.keepsRoom = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (process.kind == ProcessKind.unknown) {
-      return SizedBox.square(dimension: size);
+      return keepsRoom
+          ? SizedBox.square(dimension: size)
+          : const SizedBox.shrink();
     }
     if (process.kind == ProcessKind.otherDevice) {
       return _well(context, AppGlyphs.devices);
@@ -70,9 +81,12 @@ class ProcessIcon extends StatelessWidget {
       child = _well(context, AppGlyphs.terminal);
     } else {
       final generic = processApps.genericIcon;
-      child = generic != null
-          ? _image(generic)
-          : _well(context, AppGlyphs.question);
+      if (generic == null) {
+        return keepsRoom
+            ? SizedBox.square(dimension: size)
+            : const SizedBox.shrink();
+      }
+      child = _image(generic);
     }
     if (size < 20 || app == null || (!app.isHelper && !app.isCore)) {
       return child;
@@ -190,7 +204,9 @@ class ProcessFilterIcon extends StatelessWidget {
       child: Semantics(
         button: true,
         label: '$tooltip ${processLabelOf(process)}',
+        // The room an unrecognized process leaves empty still filters.
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () => RecordFilterScope.add(
             context,
             RecordFilter(RecordFacetKind.app, process.key),
@@ -365,7 +381,7 @@ class _SourceRow extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: 8,
         children: [
-          ProcessIcon(process: process, size: 32),
+          ProcessIcon(process: process, size: 32, keepsRoom: false),
           Flexible(child: label),
         ],
       ),

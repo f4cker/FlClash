@@ -157,6 +157,7 @@ int main(void) {
         assert([Invoke(bridge, @"enable", @{@"x": @1}) isEqual:@"invalidRequest"]);
         assert([Invoke(bridge, @"bogus", @{}) isEqual:@"invalidRequest"]);
         assert([Invoke(bridge, @"installerInstructions", @{}) isEqual:@"invalidRequest"]);
+        assert([Invoke(bridge, @"coreIdentity", @{}) isEqual:@"invalidRequest"]);
         for (NSString *name in @[@"migrate", @"enable", @"disable", @"repair", @"openApprovalSettings"]) {
             [bridge.calls removeAllObjects];
             Invoke(bridge, name, @{});
@@ -332,6 +333,14 @@ int main(void) {
 }
 '''
         self.assertIn('Missing/invalid contract fails closed', self.compile_and_run(source))
+
+    def test_core_identity_checks_off_the_bridge_queue(self):
+        identity = method(BRIDGE, '- (NSString *)coreIdentity')
+        on_queue = method(identity, 'dispatch_sync(self.queue, ^')
+        for check in ('FCCoreGuestCheck', 'FCBundledCoreHash'):
+            self.assertNotIn(check, on_queue)
+            self.assertEqual(BRIDGE.count(check + '('), 1, check)
+        self.assertLess(identity.index('self.hashSession != session'), identity.index('FCBundledCoreHash()'))
 
     def test_authentication_precedes_capabilities_and_only_hello_negotiates(self):
         request = method(BRIDGE, '- (void)request:')

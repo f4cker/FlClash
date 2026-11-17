@@ -3393,10 +3393,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      'クライアントが証明書を拒否しました。証明書をインストールするか、アプリが証明書を固定している場合はこのホストを除外してください。';
-
-  @override
   String get mitmExcludeHost => '復号から除外';
 
   @override
@@ -6623,4 +6619,112 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get addedRulesApplyRestoreFailed =>
       '処理は完了しましたが、元のルールを復元できませんでした。現在のルールを確認してください。';
+
+  @override
+  String get deleteCertificate => '証明書を削除';
+
+  @override
+  String get deleteCertificateTip =>
+      '証明書の秘密鍵、証明書、およびその信頼設定をこの Mac から削除します。新しい証明書を生成して信頼するまで復号は停止します。';
+
+  @override
+  String get mitmPausedCoreIdentity => '復号を一時停止中：コアの身元確認に失敗しました';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return 'サブスクリプション/スクリプトの $count 件を無視しました';
+  }
+
+  @override
+  String get mitmOutcomeRefused => 'クライアントがハンドシェイク中にアラートを送信しました。原因は特定できません。';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate => 'サイト証明書の検証に失敗しました';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 に対応していません';
+
+  @override
+  String get mitmOutcomeHelloPassthrough => 'TLS ハンドシェイクを検査できず、そのまま通過しました';
+
+  @override
+  String get mitmOutcomeFailed => '復号接続に失敗しました';
+
+  @override
+  String get mitmPausedLiveness =>
+      '復号を一時停止：信頼または署名機能を確認できません。通常は約26秒以内に検出しますが、スリープや停止時は長くなることがあります。';
+
+  @override
+  String get mitmPausedIndicatorPending => '復号を一時停止：必要な常時表示インジケーターがありません。';
+
+  @override
+  String get mitmPausedUnavailable => '復号を一時停止：署名機能または接続を利用できません。';
+
+  @override
+  String get mitmIndicatorDecrypting => '復号中';
+
+  @override
+  String get mitmIndicatorOn => '復号オン';
+
+  @override
+  String get mitmIndicatorPaused => '復号を一時停止';
+
+  @override
+  String get mitmIndicatorUnconfirmed => '復号の状態を確認中';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return '復号を一時停止：$reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'MITM 設定を開く';
+
+  @override
+  String get mitmPauseCoreStopped => 'コアが実行されていない';
+
+  @override
+  String get mitmPauseCoreIdentity => 'コアの身元確認に失敗';
+
+  @override
+  String get mitmPauseNotTrusted => 'ルート証明書がないか信頼されていない';
+
+  @override
+  String get mitmPauseLiveness => '信頼と署名の状態を確認できない';
+
+  @override
+  String get mitmPauseIndicatorPending => '常時表示の状態インジケーターが有効になっていない';
+
+  @override
+  String get mitmPauseUnavailable => '署名サービスまたは接続を利用できない';
+
+  @override
+  String get mitmOutcomePaused => '復号が一時停止中のため、接続をそのまま通過させました';
+
+  @override
+  String get mitmBadgeDecrypted => '復号済み';
+
+  @override
+  String get mitmBadgePassedThrough => '未復号 · そのまま通過';
+
+  @override
+  String get mitmBadgePassedThroughSpoken => '未復号、そのまま通過';
+
+  @override
+  String get mitmBadgeHandshakeFailed => 'クライアントのハンドシェイク失敗';
+
+  @override
+  String get mitmBadgeFailed => '復号失敗';
+
+  @override
+  String get mitmExchangeNoResponse => '応答を受信していません';
+
+  @override
+  String get mitmExchangeResponseFailed => '応答が途中で中断されました';
+
+  @override
+  String get mitmExchangeStopped => '復号設定が変更されたため、リクエストを中止しました';
+
+  @override
+  String get mitmExchangeFailed => 'リクエストが完了しませんでした';
 }

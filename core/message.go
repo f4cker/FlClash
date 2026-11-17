@@ -38,7 +38,8 @@ func classOfMessage(message Message) messageClass {
 	switch message.Type {
 	case LoadedMessage, GeoUpdateMessage, RouteChangedMessage, TailscaleStateMessage, TailscaleRoutesMessage:
 		return stateMessageClass
-	case LogMessage, RequestMessage:
+	// A connection's MITM outcome follows its request on the same queue.
+	case LogMessage, RequestMessage, MitmConnectionMessage:
 		return bulkMessageClass
 	case DnsMessage, RequestTrafficMessage:
 		return yieldingBulkMessageClass

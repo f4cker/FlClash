@@ -1,5 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
+
+import 'package:fl_clash/common/mitm_signer.dart';
+import 'package:fl_clash/core/desktop/rpc_client.dart';
+import 'package:fl_clash/core/event.dart';
+import 'package:fl_clash/core/method.dart';
 
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_launcher.dart';
@@ -13,6 +19,15 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _session = '0123456789abcdef0123456789abcdef';
+
+final class _SignListener with CoreEventListener {
+  _SignListener(this.requests);
+
+  final Completer<MitmSignRequest> requests;
+
+  @override
+  void onMitmSign(MitmSignRequest request) => requests.complete(request);
+}
 
 class _Native implements MacHelperNativeApi {
   final calls = <String>[];
@@ -401,6 +416,38 @@ void main() {
       await transport.close();
     },
   );
+
+  test('a sign request over the helper relay is marked as such', () async {
+    final native = _Native();
+    final client = MacHelperClient(native: native);
+    final transport = MacHelperTransport(client);
+    final rpc = CoreRpcClient(transport);
+    final requests = Completer<MitmSignRequest>();
+    final listener = _SignListener(requests);
+    coreEventManager.addListener(listener);
+    addTearDown(() => coreEventManager.removeListener(listener));
+    await transport.open();
+    await client.start(_session);
+    native.receive.complete({
+      'code': 'ok',
+      'frame': Uint8List.fromList(
+        utf8.encode(
+          jsonEncode({
+            'method': CoreMethod.message.wireName,
+            'arguments': {
+              'type': 'mitmSign',
+              'data': {'reqId': 1, 'host': 'a.test', 'spki': 'AQ=='},
+            },
+          }),
+        ),
+      ),
+    });
+
+    expect((await requests.future).managedRelay, isTrue);
+    await client.stop(_session);
+    await rpc.close();
+    await transport.close();
+  });
 
   test(
     'maintenance stops through its lifecycle owner before migration',

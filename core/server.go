@@ -178,6 +178,7 @@ func StartServer(arg string) {
 
 func serve(dialed ipcConn) {
 	defer releaseOnExit()
+	defer mitmSignerGone()
 	defer func() {
 		connMu.Lock()
 		c := conn

@@ -84,6 +84,8 @@ void main() {
     Mitm mitm = defaultMitm,
     MitmTrustStore? store,
     bool safeMode = false,
+    int ignoredHostnames = 0,
+    MitmStatus? status,
   }) async {
     tester.view.physicalSize = const Size(1000, 2000);
     tester.view.devicePixelRatio = 1;
@@ -95,6 +97,9 @@ void main() {
     when(
       () => core.generateMitmCertificate(),
     ).thenAnswer((_) async => _certificate);
+    when(() => core.getMitmStatus()).thenAnswer(
+      (_) async => status ?? MitmStatus(ignoredHostnames: ignoredHostnames),
+    );
     when(() => core.validateMitm(any())).thenAnswer((invocation) async {
       final rules = invocation.positionalArguments.single as MitmRules;
       return {
@@ -111,6 +116,7 @@ void main() {
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
         safeModeProvider.overrideWithValue(safeMode),
         mitmTrustStoreProvider.overrideWithValue(store),
+        mitmSignerProvider.overrideWithValue(null),
       ],
     );
     addTearDown(container.dispose);
@@ -166,6 +172,63 @@ void main() {
     await openCapture(tester);
     expect(find.text(currentAppLocalizations.httpCaptureNoHosts), findsNothing);
     expect(find.text(currentAppLocalizations.httpCaptureDesc), findsOneWidget);
+  });
+
+  testWidgets('offers none of the second phase, nor untrusted decryption', (
+    tester,
+  ) async {
+    await pumpView(tester, certificate: _certificate);
+    final l = currentAppLocalizations;
+
+    expect(find.text(l.hostname), findsOneWidget);
+    expect(find.text(l.blockQuic), findsOneWidget);
+    for (final hidden in [
+      l.mitmModules,
+      l.skipServerCertVerify,
+      l.http2,
+      l.decryptUntrusted,
+    ]) {
+      expect(find.text(hidden), findsNothing, reason: hidden);
+    }
+  });
+
+  testWidgets('shows liveness pause and bounded detection wording', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      status: const MitmStatus(paused: 'livenessUnavailable'),
+    );
+    expect(
+      find.text(currentAppLocalizations.mitmPausedLiveness),
+      findsOneWidget,
+    );
+    expect(currentAppLocalizations.mitmPausedLiveness, contains('26 seconds'));
+  });
+
+  testWidgets('shows indicator gate pause rather than active decryption', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      status: const MitmStatus(paused: 'indicatorPending'),
+    );
+    expect(
+      find.text(currentAppLocalizations.mitmPausedIndicatorPending),
+      findsOneWidget,
+    );
+    expect(find.text(currentAppLocalizations.mitmPausedLiveness), findsNothing);
+  });
+
+  testWidgets('says how many profile hostnames it ignored', (tester) async {
+    await pumpView(tester, ignoredHostnames: 3);
+
+    expect(
+      find.textContaining(
+        currentAppLocalizations.mitmIgnoredProfileHostnames(3),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('offers a certificate until one is generated', (tester) async {
@@ -377,7 +440,7 @@ void main() {
     );
 
     expect(saved().trustedFingerprint, _certificate.fingerprint);
-    final json = saved().coreJson(const MitmRules());
+    final json = saved().coreJson;
     expect(json['ca-fingerprint'], _certificate.fingerprint);
     expect(json['decrypt-tls'], isTrue);
   });

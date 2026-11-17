@@ -1124,7 +1124,6 @@
   "mitmOldSystemCertificateLeftTip": "The old certificate, {name}, is still among the system's trusted CAs. Allow Flash root access in your root manager and regenerate, or remove the FlClash MITM CA module there and restart.",
   "mitmDecryptHost": "Decrypt this host",
   "mitmDecryptHostTip": "Add {host} to the hostname list? Flash can then read what is sent to it, cookies and passwords included.",
-  "mitmClientRefusedCertificate": "The client refused the certificate. Install the CA, or exclude this host if the app pins its certificate.",
   "mitmExcludeHost": "Exclude from decryption",
   "mitmExcludeHostTip": "Add -{host} to the top of the hostname list? The host is then never decrypted.",
   "urlRewrite": "URL rewrite",
@@ -2475,5 +2474,51 @@
   "addedRulesStaleEdit": "This rule or rule set changed elsewhere. Reopen it before trying again.",
   "addedRulesApplyPending": "Applying the rules is taking a while and is still in progress. Please wait.",
   "addedRulesApplyRestored": "Processing has finished, and the original rules were restored.",
-  "addedRulesApplyRestoreFailed": "Processing has finished, but the original rules could not be restored. Check the current rules."
+  "addedRulesApplyRestoreFailed": "Processing has finished, but the original rules could not be restored. Check the current rules.",
+  "deleteCertificate": "Delete certificate",
+  "deleteCertificateTip": "Deletes the certificate's private key, the certificate and the trust given to it from this Mac. Decryption stops until a new certificate is generated and trusted.",
+  "mitmPausedCoreIdentity": "Decryption paused: the Core's identity check failed",
+  "mitmIgnoredProfileHostnames": "Ignored {count} from subscriptions or scripts",
+  "@mitmIgnoredProfileHostnames": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "mitmOutcomeRefused": "The client sent an alert during the handshake. The cause is unknown.",
+  "mitmOutcomeUpstreamCertificate": "Website certificate verification failed",
+  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 is not supported",
+  "mitmOutcomeHelloPassthrough": "TLS hello cannot be inspected; passed through",
+  "mitmOutcomeFailed": "Decryption connection failed",
+  "mitmPausedLiveness": "Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.",
+  "mitmPausedIndicatorPending": "Decryption paused: the required always-visible indicator is not available.",
+  "mitmPausedUnavailable": "Decryption paused: the signer or connection is unavailable.",
+  "mitmIndicatorDecrypting": "Decrypting",
+  "mitmIndicatorOn": "Decryption on",
+  "mitmIndicatorPaused": "Decryption paused",
+  "mitmIndicatorUnconfirmed": "Checking decryption status",
+  "mitmIndicatorPausedBecause": "Decryption paused: {reason}",
+  "@mitmIndicatorPausedBecause": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmIndicatorOpenSettings": "Open MITM settings",
+  "mitmPauseCoreStopped": "core is not running",
+  "mitmPauseCoreIdentity": "core identity check failed",
+  "mitmPauseNotTrusted": "root certificate is missing or not trusted",
+  "mitmPauseLiveness": "trust and signing status could not be verified",
+  "mitmPauseIndicatorPending": "persistent status indicator is not enabled",
+  "mitmPauseUnavailable": "signing service or connection unavailable",
+  "mitmOutcomePaused": "Decryption paused; connection passed through unchanged",
+  "mitmBadgeDecrypted": "Decrypted",
+  "mitmBadgePassedThrough": "Not decrypted · passed through",
+  "mitmBadgePassedThroughSpoken": "Not decrypted, passed through",
+  "mitmBadgeHandshakeFailed": "Client handshake failed",
+  "mitmBadgeFailed": "Decryption failed",
+  "mitmExchangeNoResponse": "No response received",
+  "mitmExchangeResponseFailed": "Response interrupted",
+  "mitmExchangeStopped": "Request stopped because decryption settings changed",
+  "mitmExchangeFailed": "Request did not complete"
 }

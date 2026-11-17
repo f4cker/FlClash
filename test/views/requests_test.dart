@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:fl_clash/core/event.dart';
+import 'package:fl_clash/manager/core_manager.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/features/features.dart';
@@ -77,6 +81,7 @@ void main() {
   Future<void> pumpRequests(
     WidgetTester tester, {
     Size size = _tableSize,
+    bool withCoreManager = false,
   }) async {
     container.read(viewSizeProvider.notifier).update((_) => size);
     tester.view.physicalSize = size;
@@ -87,8 +92,12 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const TestApp(
-          child: RequestsView(initialFeed: RequestFeed.recent),
+        child: TestApp(
+          child: withCoreManager
+              ? const CoreManager(
+                  child: RequestsView(initialFeed: RequestFeed.recent),
+                )
+              : const RequestsView(initialFeed: RequestFeed.recent),
         ),
       ),
     );
@@ -513,6 +522,123 @@ void main() {
     expect(find.textContaining('alpha.test'), findsNothing);
     expect(find.textContaining('beta.test'), findsWidgets);
 
+    await teardownView(tester);
+  });
+
+  testWidgets(
+    'ordered core outcomes update mounted list and detail including early arrival',
+    (tester) async {
+      seedRequests([
+        _tracker(id: 'a', host: 'alpha.test'),
+        _tracker(id: 'b', host: 'beta.test'),
+      ]);
+      await pumpRequests(tester, size: _listSize, withCoreManager: true);
+      coreEventsFromData({
+        'type': 'mitmConnection',
+        'data': {'id': 'a', 'outcome': 'clientFailed'},
+      }).forEach(coreEventManager.sendEvent);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      expect(find.byGlyph(MitmBadge.failed.glyph), findsOneWidget);
+      await tester.tap(find.textContaining('alpha.test').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(TrackerInfoDetailView), findsOneWidget);
+      expect(
+        find.text('Website certificate verification failed'),
+        findsNothing,
+      );
+      coreEventsFromData(
+        jsonDecode(
+          jsonEncode({
+            'type': 'mitmConnection',
+            'data': {'id': 'a', 'outcome': 'upstreamCertificate'},
+          }),
+        ),
+      ).forEach(coreEventManager.sendEvent);
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.descendant(
+          of: find.byType(TrackerInfoDetailView),
+          matching: find.text('Website certificate verification failed'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        container
+            .read(requestsProvider)
+            .list
+            .firstWhere((r) => r.id == 'b')
+            .mitmOutcome,
+        '',
+      );
+      Navigator.of(tester.element(find.byType(TrackerInfoDetailView))).pop();
+      await tester.pumpAndSettle();
+      final request = _tracker(id: 'early', host: 'early.test');
+      final messages = jsonDecode(
+        jsonEncode([
+          {
+            'type': 'mitmConnection',
+            'data': {'id': 'early', 'outcome': 'upstreamCertificate'},
+          },
+          {
+            'type': 'mitmConnection',
+            'data': {'id': 'missing', 'outcome': 'refused'},
+          },
+          {'type': 'request', 'data': request.toJson()},
+        ]),
+      );
+      coreEventsFromData(messages).forEach(coreEventManager.sendEvent);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      expect(find.byGlyph(MitmBadge.failed.glyph), findsNWidgets(2));
+      expect(find.textContaining('early.test'), findsWidgets);
+      expect(
+        container
+            .read(requestsProvider)
+            .list
+            .firstWhere((r) => r.id == 'early')
+            .mitmOutcome,
+        'upstreamCertificate',
+      );
+      await teardownView(tester);
+    },
+  );
+
+  testWidgets('two mounted feeds independently refresh on outcome', (
+    tester,
+  ) async {
+    seedRequests([_tracker(id: 'shared', host: 'shared.test')]);
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    container.read(viewSizeProvider.notifier).update((_) => _listSize);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TestApp(
+          child: Row(
+            children: [
+              Expanded(child: RequestsView(initialFeed: RequestFeed.recent)),
+              Expanded(child: RequestsView(initialFeed: RequestFeed.recent)),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    container
+        .read(requestsProvider.notifier)
+        .setMitmOutcome('shared', 'upstreamCertificate');
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(find.byGlyph(MitmBadge.failed.glyph), findsNWidgets(2));
     await teardownView(tester);
   });
 

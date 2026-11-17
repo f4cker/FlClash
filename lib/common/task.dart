@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
@@ -265,25 +264,6 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       }
     }
   }
-  final mitmContents = [
-    for (final module in data.mitmModules)
-      parseMitmModule(
-        module.content,
-        values: module.arguments,
-        resources: module.resources,
-      ),
-  ];
-  final mitm = mergeMitmModules(realPatchConfig.mitm.hostname, mitmContents);
-  final mitmSources = [
-    for (final (index, content) in mitmContents.indexed)
-      for (final rule in content.rules)
-        RuleSource(
-          kind: RuleSourceKind.mitm,
-          name: data.mitmModules[index].name,
-          text: rule,
-        ),
-  ];
-  rawConfig['mitm'] = realPatchConfig.mitm.coreJson(mitm.mitm);
   void injectUnconfinedProviders(
     String section,
     Map<String, dynamic> injected,
@@ -463,13 +443,13 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
         .map((item) => item.definition)
         .toList();
   }
-  rawConfig['rules'] = [...mitm.rules, ...rules];
+  rawConfig['rules'] = rules;
   final yaml = await _encodeYaml(Map<String, dynamic>.from(rawConfig));
   return (
     yaml: yaml,
     md5: yaml.toMd5(),
     counts: configCountsOf(rawConfig),
-    ruleSources: [...mitmSources, ...sources],
+    ruleSources: sources,
   );
 }
 

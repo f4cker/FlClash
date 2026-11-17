@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -9,6 +10,7 @@ import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/database.dart';
+import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/route_state.dart';
 import 'package:fl_clash/providers/state.dart';
 import 'package:fl_clash/providers/tailscale.dart';
@@ -74,6 +76,7 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     );
     ref.listenManual(mitmModulesProvider, (prev, next) {
       if (mitmFeature &&
+          mitmModulesFeature &&
           prev?.value != null &&
           next.hasValue &&
           ref.read(patchClashConfigProvider).mitm.enable) {
@@ -113,6 +116,16 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   void dispose() {
     coreEventManager.removeListener(this);
     super.dispose();
+  }
+
+  @override
+  void onMitmConnection(String id, String outcome) {
+    ref.read(requestsProvider.notifier).setMitmOutcome(id, outcome);
+  }
+
+  @override
+  void onMitmSign(MitmSignRequest request) {
+    unawaited(ref.read(mitmSignActionProvider.notifier).answer(request));
   }
 
   @override

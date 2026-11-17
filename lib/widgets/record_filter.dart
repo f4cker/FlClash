@@ -92,6 +92,7 @@ class RecordFilterController<T> extends ValueNotifier<RecordFilterState> {
     return ScaffoldKeyword(
       key: filter,
       label: facetOf(filter.kind)?.label(filter.value) ?? filter.value,
+      glyph: facetOf(filter.kind)?.glyph,
       onDeleted: () => remove(filter),
       startsSection: startsSection,
     );
@@ -108,6 +109,7 @@ class RecordFilterController<T> extends ValueNotifier<RecordFilterState> {
           ScaffoldKeyword(
             key: filter,
             label: facet.label(option),
+            glyph: facet.glyph,
             selected: filters.contains(filter),
             onPressed: () => toggle(filter),
             startsSection: index == 0 && pinned.isNotEmpty,

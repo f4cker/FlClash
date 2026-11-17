@@ -120,6 +120,7 @@ func updateListeners(cfg *config.Config) {
 }
 
 func handleShutdown() {
+	mitmSignerGone()
 	handleStopLog()
 	stopRouteWatch()
 

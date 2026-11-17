@@ -3466,10 +3466,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      '클라이언트가 인증서를 거부했습니다. 인증서를 설치하거나, 앱이 인증서를 고정한 경우 이 호스트를 제외하세요.';
-
-  @override
   String get mitmExcludeHost => '복호화에서 제외';
 
   @override
@@ -6696,4 +6692,112 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get addedRulesApplyRestoreFailed =>
       '처리가 끝났지만 원래 규칙을 복원하지 못했습니다. 현재 규칙을 확인하세요.';
+
+  @override
+  String get deleteCertificate => '인증서 삭제';
+
+  @override
+  String get deleteCertificateTip =>
+      '이 Mac에서 인증서의 개인 키, 인증서, 인증서에 부여한 신뢰를 삭제합니다. 새 인증서를 생성하고 신뢰할 때까지 복호화가 중지됩니다.';
+
+  @override
+  String get mitmPausedCoreIdentity => '복호화 일시 중지됨: 코어 신원 확인 실패';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return '구독/스크립트의 $count개 항목을 무시함';
+  }
+
+  @override
+  String get mitmOutcomeRefused => '클라이언트가 핸드셰이크 중 경고를 보냈습니다. 원인은 알 수 없습니다.';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate => '웹사이트 인증서 검증에 실패했습니다';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1을 지원하지 않습니다';
+
+  @override
+  String get mitmOutcomeHelloPassthrough => 'TLS 핸드셰이크를 검사하지 못해 그대로 통과했습니다';
+
+  @override
+  String get mitmOutcomeFailed => '복호화 연결에 실패했습니다';
+
+  @override
+  String get mitmPausedLiveness =>
+      '복호화 일시 중지: 신뢰 또는 서명 상태를 확인할 수 없습니다. 일반적으로 약 26초 내에 감지하지만 절전이나 시스템 중단 시 더 오래 걸릴 수 있습니다.';
+
+  @override
+  String get mitmPausedIndicatorPending => '복호화 일시 중지: 필수 상시 표시기가 아직 없습니다.';
+
+  @override
+  String get mitmPausedUnavailable => '복호화 일시 중지: 서명기 또는 연결을 사용할 수 없습니다.';
+
+  @override
+  String get mitmIndicatorDecrypting => '복호화 중';
+
+  @override
+  String get mitmIndicatorOn => '복호화 켜짐';
+
+  @override
+  String get mitmIndicatorPaused => '복호화 일시 중지';
+
+  @override
+  String get mitmIndicatorUnconfirmed => '복호화 상태 확인 중';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return '복호화 일시 중지: $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'MITM 설정 열기';
+
+  @override
+  String get mitmPauseCoreStopped => '코어가 실행 중이 아님';
+
+  @override
+  String get mitmPauseCoreIdentity => '코어 신원 확인 실패';
+
+  @override
+  String get mitmPauseNotTrusted => '루트 인증서가 없거나 신뢰되지 않음';
+
+  @override
+  String get mitmPauseLiveness => '신뢰 및 서명 상태를 확인할 수 없음';
+
+  @override
+  String get mitmPauseIndicatorPending => '상시 상태 표시가 활성화되지 않음';
+
+  @override
+  String get mitmPauseUnavailable => '서명 서비스 또는 연결을 사용할 수 없음';
+
+  @override
+  String get mitmOutcomePaused => '복호화가 일시 중지되어 연결을 그대로 통과시켰습니다';
+
+  @override
+  String get mitmBadgeDecrypted => '복호화됨';
+
+  @override
+  String get mitmBadgePassedThrough => '복호화 안 됨 · 그대로 통과';
+
+  @override
+  String get mitmBadgePassedThroughSpoken => '복호화 안 됨, 그대로 통과';
+
+  @override
+  String get mitmBadgeHandshakeFailed => '클라이언트 핸드셰이크 실패';
+
+  @override
+  String get mitmBadgeFailed => '복호화 실패';
+
+  @override
+  String get mitmExchangeNoResponse => '응답을 받지 못했습니다';
+
+  @override
+  String get mitmExchangeResponseFailed => '응답이 중간에 끊겼습니다';
+
+  @override
+  String get mitmExchangeStopped => '복호화 설정이 변경되어 요청을 중단했습니다';
+
+  @override
+  String get mitmExchangeFailed => '요청이 완료되지 않았습니다';
 }

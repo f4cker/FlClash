@@ -96,6 +96,7 @@ _TrackerInfo _$TrackerInfoFromJson(Map<String, dynamic> json) => _TrackerInfo(
   rulePayload: json['rulePayload'] as String,
   downloadSpeed: (json['downloadSpeed'] as num?)?.toInt(),
   uploadSpeed: (json['uploadSpeed'] as num?)?.toInt(),
+  mitmOutcome: json['mitmOutcome'] as String? ?? '',
 );
 
 Map<String, dynamic> _$TrackerInfoToJson(_TrackerInfo instance) =>
@@ -110,6 +111,7 @@ Map<String, dynamic> _$TrackerInfoToJson(_TrackerInfo instance) =>
       'rulePayload': instance.rulePayload,
       'downloadSpeed': instance.downloadSpeed,
       'uploadSpeed': instance.uploadSpeed,
+      'mitmOutcome': instance.mitmOutcome,
     };
 
 _Log _$LogFromJson(Map<String, dynamic> json) => _Log(

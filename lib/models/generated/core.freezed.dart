@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SetupParams {
 
-@JsonKey(includeIfNull: false) SetupBase? get base;@JsonKey(name: 'selected-map') Map<String, String> get selectedMap; CoreOptions get options;@JsonKey(includeIfNull: false) TailscaleSetup? get tailscale;@JsonKey(includeIfNull: false) MountSetup? get mounts;
+@JsonKey(includeIfNull: false) SetupBase? get base;@JsonKey(name: 'selected-map') Map<String, String> get selectedMap; CoreOptions get options;@JsonKey(includeIfNull: false) TailscaleSetup? get tailscale;@JsonKey(includeIfNull: false) MountSetup? get mounts;/// The user's decryption setup; the Core ignores a profile's own.
+@JsonKey(includeIfNull: false) Map<String, Object?>? get mitm;
 /// Create a copy of SetupParams
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $SetupParamsCopyWith<SetupParams> get copyWith => _$SetupParamsCopyWithImpl<Setu
 @override
 bool operator ==(Object other) {
   final _this = this as SetupParams;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SetupParams&&(identical(other.base, _this.base) || other.base == _this.base)&&const DeepCollectionEquality().equals(other.selectedMap, _this.selectedMap)&&(identical(other.options, _this.options) || other.options == _this.options)&&(identical(other.tailscale, _this.tailscale) || other.tailscale == _this.tailscale)&&(identical(other.mounts, _this.mounts) || other.mounts == _this.mounts));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SetupParams&&(identical(other.base, _this.base) || other.base == _this.base)&&const DeepCollectionEquality().equals(other.selectedMap, _this.selectedMap)&&(identical(other.options, _this.options) || other.options == _this.options)&&(identical(other.tailscale, _this.tailscale) || other.tailscale == _this.tailscale)&&(identical(other.mounts, _this.mounts) || other.mounts == _this.mounts)&&const DeepCollectionEquality().equals(other.mitm, _this.mitm));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as SetupParams;
-  return Object.hash(runtimeType,_this.base,const DeepCollectionEquality().hash(_this.selectedMap),_this.options,_this.tailscale,_this.mounts);
+  return Object.hash(runtimeType,_this.base,const DeepCollectionEquality().hash(_this.selectedMap),_this.options,_this.tailscale,_this.mounts,const DeepCollectionEquality().hash(_this.mitm));
 }
 
 @override
 String toString() {
   final _this = this as SetupParams;
-  return 'SetupParams(base: ${_this.base}, selectedMap: ${_this.selectedMap}, options: ${_this.options}, tailscale: ${_this.tailscale}, mounts: ${_this.mounts})';
+  return 'SetupParams(base: ${_this.base}, selectedMap: ${_this.selectedMap}, options: ${_this.options}, tailscale: ${_this.tailscale}, mounts: ${_this.mounts}, mitm: ${_this.mitm})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $SetupParamsCopyWith<$Res>  {
   factory $SetupParamsCopyWith(SetupParams value, $Res Function(SetupParams) _then) = _$SetupParamsCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(includeIfNull: false) SetupBase? base,@JsonKey(name: 'selected-map') Map<String, String> selectedMap, CoreOptions options,@JsonKey(includeIfNull: false) TailscaleSetup? tailscale,@JsonKey(includeIfNull: false) MountSetup? mounts
+@JsonKey(includeIfNull: false) SetupBase? base,@JsonKey(name: 'selected-map') Map<String, String> selectedMap, CoreOptions options,@JsonKey(includeIfNull: false) TailscaleSetup? tailscale,@JsonKey(includeIfNull: false) MountSetup? mounts,@JsonKey(includeIfNull: false) Map<String, Object?>? mitm
 });
 
 
@@ -71,14 +72,15 @@ class _$SetupParamsCopyWithImpl<$Res>
 
 /// Create a copy of SetupParams
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? base = freezed,Object? selectedMap = null,Object? options = null,Object? tailscale = freezed,Object? mounts = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? base = freezed,Object? selectedMap = null,Object? options = null,Object? tailscale = freezed,Object? mounts = freezed,Object? mitm = freezed,}) {
   return _then(SetupParams(
 base: freezed == base ? _self.base : base // ignore: cast_nullable_to_non_nullable
 as SetupBase?,selectedMap: null == selectedMap ? _self.selectedMap : selectedMap // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
 as CoreOptions,tailscale: freezed == tailscale ? _self.tailscale : tailscale // ignore: cast_nullable_to_non_nullable
 as TailscaleSetup?,mounts: freezed == mounts ? _self.mounts : mounts // ignore: cast_nullable_to_non_nullable
-as MountSetup?,
+as MountSetup?,mitm: freezed == mitm ? _self.mitm : mitm // ignore: cast_nullable_to_non_nullable
+as Map<String, Object?>?,
   ));
 }
 /// Create a copy of SetupParams
@@ -208,10 +210,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts, @JsonKey(includeIfNull: false)  Map<String, Object?>? mitm)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SetupParams() when $default != null:
-return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts);case _:
+return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts,_that.mitm);case _:
   return orElse();
 
 }
@@ -229,10 +231,10 @@ return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts, @JsonKey(includeIfNull: false)  Map<String, Object?>? mitm)  $default,) {final _that = this;
 switch (_that) {
 case _SetupParams():
-return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts);case _:
+return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts,_that.mitm);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -249,10 +251,10 @@ return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeIfNull: false)  SetupBase? base, @JsonKey(name: 'selected-map')  Map<String, String> selectedMap,  CoreOptions options, @JsonKey(includeIfNull: false)  TailscaleSetup? tailscale, @JsonKey(includeIfNull: false)  MountSetup? mounts, @JsonKey(includeIfNull: false)  Map<String, Object?>? mitm)?  $default,) {final _that = this;
 switch (_that) {
 case _SetupParams() when $default != null:
-return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts);case _:
+return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that.mounts,_that.mitm);case _:
   return null;
 
 }
@@ -264,7 +266,7 @@ return $default(_that.base,_that.selectedMap,_that.options,_that.tailscale,_that
 @JsonSerializable()
 
 class _SetupParams implements SetupParams {
-  const _SetupParams({@JsonKey(includeIfNull: false) this.base, @JsonKey(name: 'selected-map') required  Map<String, String> selectedMap, required this.options, @JsonKey(includeIfNull: false) this.tailscale, @JsonKey(includeIfNull: false) this.mounts}): _selectedMap = selectedMap;
+  const _SetupParams({@JsonKey(includeIfNull: false) this.base, @JsonKey(name: 'selected-map') required  Map<String, String> selectedMap, required this.options, @JsonKey(includeIfNull: false) this.tailscale, @JsonKey(includeIfNull: false) this.mounts, @JsonKey(includeIfNull: false)  Map<String, Object?>? mitm}): _selectedMap = selectedMap,_mitm = mitm;
   factory _SetupParams.fromJson(Map<String, dynamic> json) => _$SetupParamsFromJson(json);
 
 @override@JsonKey(includeIfNull: false) final  SetupBase? base;
@@ -278,6 +280,17 @@ class _SetupParams implements SetupParams {
 @override final  CoreOptions options;
 @override@JsonKey(includeIfNull: false) final  TailscaleSetup? tailscale;
 @override@JsonKey(includeIfNull: false) final  MountSetup? mounts;
+/// The user's decryption setup; the Core ignores a profile's own.
+ final  Map<String, Object?>? _mitm;
+/// The user's decryption setup; the Core ignores a profile's own.
+@override@JsonKey(includeIfNull: false) Map<String, Object?>? get mitm {
+  final value = _mitm;
+  if (value == null) return null;
+  if (_mitm is EqualUnmodifiableMapView) return _mitm;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 
 /// Create a copy of SetupParams
 /// with the given fields replaced by the non-null parameter values.
@@ -292,18 +305,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _SetupParams&&(identical(other.base, base) || other.base == base)&&const DeepCollectionEquality().equals(other.selectedMap, _selectedMap)&&(identical(other.options, options) || other.options == options)&&(identical(other.tailscale, tailscale) || other.tailscale == tailscale)&&(identical(other.mounts, mounts) || other.mounts == mounts));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _SetupParams&&(identical(other.base, base) || other.base == base)&&const DeepCollectionEquality().equals(other.selectedMap, _selectedMap)&&(identical(other.options, options) || other.options == options)&&(identical(other.tailscale, tailscale) || other.tailscale == tailscale)&&(identical(other.mounts, mounts) || other.mounts == mounts)&&const DeepCollectionEquality().equals(other.mitm, _mitm));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,base,const DeepCollectionEquality().hash(_selectedMap),options,tailscale,mounts);
+    return Object.hash(runtimeType,base,const DeepCollectionEquality().hash(_selectedMap),options,tailscale,mounts,const DeepCollectionEquality().hash(_mitm));
 }
 
 @override
 String toString() {
-    return 'SetupParams(base: $base, selectedMap: $selectedMap, options: $options, tailscale: $tailscale, mounts: $mounts)';
+    return 'SetupParams(base: $base, selectedMap: $selectedMap, options: $options, tailscale: $tailscale, mounts: $mounts, mitm: $mitm)';
 }
 
 
@@ -314,7 +327,7 @@ abstract mixin class _$SetupParamsCopyWith<$Res> implements $SetupParamsCopyWith
   factory _$SetupParamsCopyWith(_SetupParams value, $Res Function(_SetupParams) _then) = __$SetupParamsCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(includeIfNull: false) SetupBase? base,@JsonKey(name: 'selected-map') Map<String, String> selectedMap, CoreOptions options,@JsonKey(includeIfNull: false) TailscaleSetup? tailscale,@JsonKey(includeIfNull: false) MountSetup? mounts
+@JsonKey(includeIfNull: false) SetupBase? base,@JsonKey(name: 'selected-map') Map<String, String> selectedMap, CoreOptions options,@JsonKey(includeIfNull: false) TailscaleSetup? tailscale,@JsonKey(includeIfNull: false) MountSetup? mounts,@JsonKey(includeIfNull: false) Map<String, Object?>? mitm
 });
 
 
@@ -331,14 +344,15 @@ class __$SetupParamsCopyWithImpl<$Res>
 
 /// Create a copy of SetupParams
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? base = freezed,Object? selectedMap = null,Object? options = null,Object? tailscale = freezed,Object? mounts = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? base = freezed,Object? selectedMap = null,Object? options = null,Object? tailscale = freezed,Object? mounts = freezed,Object? mitm = freezed,}) {
   return _then(_SetupParams(
 base: freezed == base ? _self.base : base // ignore: cast_nullable_to_non_nullable
 as SetupBase?,selectedMap: null == selectedMap ? _self._selectedMap : selectedMap // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
 as CoreOptions,tailscale: freezed == tailscale ? _self.tailscale : tailscale // ignore: cast_nullable_to_non_nullable
 as TailscaleSetup?,mounts: freezed == mounts ? _self.mounts : mounts // ignore: cast_nullable_to_non_nullable
-as MountSetup?,
+as MountSetup?,mitm: freezed == mitm ? _self._mitm : mitm // ignore: cast_nullable_to_non_nullable
+as Map<String, Object?>?,
   ));
 }
 
@@ -1594,6 +1608,288 @@ $CoreOptionsCopyWith<$Res> get options {
     return _then(_self.copyWith(options: value));
   });
 }
+}
+
+
+/// @nodoc
+mixin _$MitmStatus {
+
+ bool get enable; int get hostnames;@JsonKey(name: 'ignored-hostnames') int get ignoredHostnames; bool get capture; String get paused;
+/// Create a copy of MitmStatus
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MitmStatusCopyWith<MitmStatus> get copyWith => _$MitmStatusCopyWithImpl<MitmStatus>(this as MitmStatus, _$identity);
+
+  /// Serializes this MitmStatus to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MitmStatus;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmStatus&&(identical(other.enable, _this.enable) || other.enable == _this.enable)&&(identical(other.hostnames, _this.hostnames) || other.hostnames == _this.hostnames)&&(identical(other.ignoredHostnames, _this.ignoredHostnames) || other.ignoredHostnames == _this.ignoredHostnames)&&(identical(other.capture, _this.capture) || other.capture == _this.capture)&&(identical(other.paused, _this.paused) || other.paused == _this.paused));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as MitmStatus;
+  return Object.hash(runtimeType,_this.enable,_this.hostnames,_this.ignoredHostnames,_this.capture,_this.paused);
+}
+
+@override
+String toString() {
+  final _this = this as MitmStatus;
+  return 'MitmStatus(enable: ${_this.enable}, hostnames: ${_this.hostnames}, ignoredHostnames: ${_this.ignoredHostnames}, capture: ${_this.capture}, paused: ${_this.paused})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MitmStatusCopyWith<$Res>  {
+  factory $MitmStatusCopyWith(MitmStatus value, $Res Function(MitmStatus) _then) = _$MitmStatusCopyWithImpl;
+@useResult
+$Res call({
+ bool enable, int hostnames,@JsonKey(name: 'ignored-hostnames') int ignoredHostnames, bool capture, String paused
+});
+
+
+
+
+}
+/// @nodoc
+class _$MitmStatusCopyWithImpl<$Res>
+    implements $MitmStatusCopyWith<$Res> {
+  _$MitmStatusCopyWithImpl(this._self, this._then);
+
+  final MitmStatus _self;
+  final $Res Function(MitmStatus) _then;
+
+/// Create a copy of MitmStatus
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? enable = null,Object? hostnames = null,Object? ignoredHostnames = null,Object? capture = null,Object? paused = null,}) {
+  return _then(MitmStatus(
+enable: null == enable ? _self.enable : enable // ignore: cast_nullable_to_non_nullable
+as bool,hostnames: null == hostnames ? _self.hostnames : hostnames // ignore: cast_nullable_to_non_nullable
+as int,ignoredHostnames: null == ignoredHostnames ? _self.ignoredHostnames : ignoredHostnames // ignore: cast_nullable_to_non_nullable
+as int,capture: null == capture ? _self.capture : capture // ignore: cast_nullable_to_non_nullable
+as bool,paused: null == paused ? _self.paused : paused // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MitmStatus].
+extension MitmStatusPatterns on MitmStatus {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MitmStatus value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MitmStatus() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MitmStatus value)  $default,){
+final _that = this;
+switch (_that) {
+case _MitmStatus():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MitmStatus value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MitmStatus() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture,  String paused)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MitmStatus() when $default != null:
+return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture,_that.paused);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture,  String paused)  $default,) {final _that = this;
+switch (_that) {
+case _MitmStatus():
+return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture,_that.paused);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enable,  int hostnames, @JsonKey(name: 'ignored-hostnames')  int ignoredHostnames,  bool capture,  String paused)?  $default,) {final _that = this;
+switch (_that) {
+case _MitmStatus() when $default != null:
+return $default(_that.enable,_that.hostnames,_that.ignoredHostnames,_that.capture,_that.paused);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _MitmStatus implements MitmStatus {
+  const _MitmStatus({this.enable = false, this.hostnames = 0, @JsonKey(name: 'ignored-hostnames') this.ignoredHostnames = 0, this.capture = false, this.paused = ''});
+  factory _MitmStatus.fromJson(Map<String, dynamic> json) => _$MitmStatusFromJson(json);
+
+@override@JsonKey() final  bool enable;
+@override@JsonKey() final  int hostnames;
+@override@JsonKey(name: 'ignored-hostnames') final  int ignoredHostnames;
+@override@JsonKey() final  bool capture;
+@override@JsonKey() final  String paused;
+
+/// Create a copy of MitmStatus
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MitmStatusCopyWith<_MitmStatus> get copyWith => __$MitmStatusCopyWithImpl<_MitmStatus>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$MitmStatusToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmStatus&&(identical(other.enable, enable) || other.enable == enable)&&(identical(other.hostnames, hostnames) || other.hostnames == hostnames)&&(identical(other.ignoredHostnames, ignoredHostnames) || other.ignoredHostnames == ignoredHostnames)&&(identical(other.capture, capture) || other.capture == capture)&&(identical(other.paused, paused) || other.paused == paused));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,enable,hostnames,ignoredHostnames,capture,paused);
+}
+
+@override
+String toString() {
+    return 'MitmStatus(enable: $enable, hostnames: $hostnames, ignoredHostnames: $ignoredHostnames, capture: $capture, paused: $paused)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MitmStatusCopyWith<$Res> implements $MitmStatusCopyWith<$Res> {
+  factory _$MitmStatusCopyWith(_MitmStatus value, $Res Function(_MitmStatus) _then) = __$MitmStatusCopyWithImpl;
+@override @useResult
+$Res call({
+ bool enable, int hostnames,@JsonKey(name: 'ignored-hostnames') int ignoredHostnames, bool capture, String paused
+});
+
+
+
+
+}
+/// @nodoc
+class __$MitmStatusCopyWithImpl<$Res>
+    implements _$MitmStatusCopyWith<$Res> {
+  __$MitmStatusCopyWithImpl(this._self, this._then);
+
+  final _MitmStatus _self;
+  final $Res Function(_MitmStatus) _then;
+
+/// Create a copy of MitmStatus
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? enable = null,Object? hostnames = null,Object? ignoredHostnames = null,Object? capture = null,Object? paused = null,}) {
+  return _then(_MitmStatus(
+enable: null == enable ? _self.enable : enable // ignore: cast_nullable_to_non_nullable
+as bool,hostnames: null == hostnames ? _self.hostnames : hostnames // ignore: cast_nullable_to_non_nullable
+as int,ignoredHostnames: null == ignoredHostnames ? _self.ignoredHostnames : ignoredHostnames // ignore: cast_nullable_to_non_nullable
+as int,capture: null == capture ? _self.capture : capture // ignore: cast_nullable_to_non_nullable
+as bool,paused: null == paused ? _self.paused : paused // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
 }
 
 

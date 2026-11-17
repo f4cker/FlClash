@@ -6,10 +6,13 @@ import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
 import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
+import 'package:fl_clash/core/method.dart' show coreFailureLogLevel;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
-import 'package:flutter/foundation.dart' show compute, visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show compute, listEquals, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' show join;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -24,21 +27,435 @@ part 'generated/mitm.g.dart';
 
 const _exchangesRefreshInterval = Duration(seconds: 2);
 
+/// On macOS the app, not the Core, holds the CA: its key stays in the login
+/// keychain and the Core asks the app to sign each leaf.
+@Riverpod(keepAlive: true)
+MitmSigner? mitmSigner(Ref ref) => system.isMacOS ? const MitmSigner() : null;
+
 @Riverpod(keepAlive: true)
 class MitmCa extends _$MitmCa {
   @override
   Future<MitmCertificate?> build() {
-    return ref.read(coreHandlerProvider).getMitmCertificate();
+    final signer = ref.read(mitmSignerProvider);
+    return signer?.certificate() ??
+        ref.read(coreHandlerProvider).getMitmCertificate();
+  }
+
+  /// On macOS a new or deleted root also takes the old one's keychain trust
+  /// with it, which safe mode leaves as it is.
+  void _checkSafeMode(MitmSigner? signer) {
+    if (signer != null && ref.read(safeModeProvider)) {
+      throw StateError('Safe mode keeps the MITM certificate as it is');
+    }
   }
 
   Future<void> generate() async {
-    final certificate = await ref
-        .read(coreHandlerProvider)
-        .generateMitmCertificate();
+    final signer = ref.read(mitmSignerProvider);
+    _checkSafeMode(signer);
+    final certificate =
+        await signer?.generate() ??
+        await ref.read(coreHandlerProvider).generateMitmCertificate();
     if (!ref.mounted) {
       return;
     }
     state = AsyncData(certificate);
+  }
+
+  Future<void> delete() async {
+    final signer = ref.read(mitmSignerProvider);
+    _checkSafeMode(signer);
+    await signer?.delete();
+    if (ref.mounted) {
+      state = const AsyncData(null);
+    }
+  }
+}
+
+@Riverpod(keepAlive: true)
+class MitmCoreIdentityState extends _$MitmCoreIdentityState {
+  int _reportGeneration = 0;
+
+  @override
+  Future<MitmCoreIdentity> build() async {
+    final connected = ref.watch(
+      coreStatusProvider.select((status) => status == CoreStatus.connected),
+    );
+    final signer = ref.read(mitmSignerProvider);
+    if (!connected || signer == null) {
+      return MitmCoreIdentity.none;
+    }
+    final generation = _reportGeneration;
+    final identity = await signer.coreIdentity();
+    if (_reportGeneration != generation) return state.value ?? identity;
+    if (identity != state.value) {
+      _log(identity);
+    }
+    return identity;
+  }
+
+  void _log(MitmCoreIdentity identity) {
+    commonPrint.log(
+      'MITM Core identity: $identity',
+      logLevel: identity.status == MitmCoreStatus.failed
+          ? LogLevel.warning
+          : LogLevel.info,
+    );
+  }
+
+  void report(MitmCoreIdentity identity) {
+    _reportGeneration++;
+    if (state.value != identity) {
+      _log(identity);
+      state = AsyncData(identity);
+    }
+  }
+}
+
+@riverpod
+bool mitmCoreRefused(Ref ref) {
+  final enable = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => mitmFeature && state.mitm.enable,
+    ),
+  );
+  final connected = ref.watch(
+    coreStatusProvider.select((status) => status == CoreStatus.connected),
+  );
+  final identity = ref.watch(mitmCoreIdentityStateProvider).value;
+  return enable &&
+      connected &&
+      ref.watch(mitmSignerProvider) != null &&
+      identity != null &&
+      identity != MitmCoreIdentity.verified;
+}
+
+// Settings-only polling: failure is not treated as evidence of active decryption.
+// The always-visible status polls it too, but only while decryption is on.
+final mitmRuntimeStatusProvider = FutureProvider.autoDispose<MitmStatus>((
+  ref,
+) async {
+  ref.watch(coreStatusProvider);
+  ref.watch(patchClashConfigProvider.select((state) => state.mitm));
+  try {
+    return await ref
+        .read(coreHandlerProvider)
+        .getMitmStatus()
+        .timeout(const Duration(seconds: 3));
+  } finally {
+    if (ref.mounted) {
+      final timer = Timer(const Duration(seconds: 2), ref.invalidateSelf);
+      ref.onDispose(timer.cancel);
+    }
+  }
+});
+
+/// Whether a connection the request list saw the Core decrypt is still open:
+/// the IDs of the requests marked decrypted, matched against the Core's live
+/// connection list. Unknown, or no decrypted request, is false, so the status
+/// claims decryption only on that evidence. Polled while it is watched.
+final mitmDecryptingProvider = FutureProvider.autoDispose<bool>((ref) async {
+  ref.watch(coreStatusProvider);
+  try {
+    final decrypted = {
+      for (final request in ref.read(requestsProvider).list)
+        if (request.metadata.mitm) request.id,
+    };
+    if (decrypted.isEmpty) {
+      return false;
+    }
+    return await ref
+        .read(coreHandlerProvider)
+        .getConnectionsWith(
+          (connections) => connections.any(
+            (connection) => decrypted.contains(connection.id),
+          ),
+        )
+        .timeout(const Duration(seconds: 3));
+  } finally {
+    if (ref.mounted) {
+      final timer = Timer(const Duration(seconds: 2), ref.invalidateSelf);
+      ref.onDispose(timer.cancel);
+    }
+  }
+});
+
+/// The status every page's bar and the tray menu show while decryption is
+/// on, or null while it is off. A status the Core has not answered yet is
+/// unconfirmed rather than paused: only the Core knows it passes through.
+/// Ready is "on"; "decrypting" needs [decrypting], a decrypted connection
+/// that is still open.
+MitmIndicator? mitmIndicatorOf({
+  required bool enabled,
+  required bool coreConnected,
+  required bool coreRefused,
+  required MitmStatus? status,
+  bool decrypting = false,
+}) {
+  if (!enabled) {
+    return null;
+  }
+  if (!coreConnected) {
+    return const MitmIndicator.paused(MitmPauseReason.coreStopped);
+  }
+  if (coreRefused) {
+    return const MitmIndicator.paused(MitmPauseReason.coreIdentity);
+  }
+  if (status == null) {
+    return const MitmIndicator.unconfirmed();
+  }
+  if (!status.enable) {
+    return const MitmIndicator.paused(MitmPauseReason.notTrusted);
+  }
+  return switch (status.paused) {
+    '' when decrypting => const MitmIndicator.decrypting(),
+    '' => const MitmIndicator.on(),
+    'livenessUnavailable' ||
+    'trustUnavailable' => const MitmIndicator.paused(MitmPauseReason.liveness),
+    'indicatorPending' => const MitmIndicator.paused(
+      MitmPauseReason.indicatorPending,
+    ),
+    'coreIdentity' => const MitmIndicator.paused(MitmPauseReason.coreIdentity),
+    _ => const MitmIndicator.paused(MitmPauseReason.unavailable),
+  };
+}
+
+final mitmIndicatorProvider = Provider.autoDispose<MitmIndicator?>((ref) {
+  final enabled = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => mitmFeature && state.mitm.enable,
+    ),
+  );
+  final coreConnected = ref.watch(
+    coreStatusProvider.select((status) => status == CoreStatus.connected),
+  );
+  if (!enabled || !coreConnected) {
+    return mitmIndicatorOf(
+      enabled: enabled,
+      coreConnected: coreConnected,
+      coreRefused: false,
+      status: null,
+    );
+  }
+  final coreRefused = ref.watch(mitmCoreRefusedProvider);
+  final status = ref.watch(mitmRuntimeStatusProvider).value;
+  MitmIndicator? of({bool decrypting = false}) => mitmIndicatorOf(
+    enabled: enabled,
+    coreConnected: coreConnected,
+    coreRefused: coreRefused,
+    status: status,
+    decrypting: decrypting,
+  );
+  // The live connections are read only while decryption is ready.
+  if (of()?.kind != MitmIndicatorKind.on) {
+    return of();
+  }
+  return of(decrypting: ref.watch(mitmDecryptingProvider).value == true);
+});
+
+/// How many `mitm` hostnames the running profile wrote, all of them ignored.
+@riverpod
+Future<int> mitmIgnoredHostnames(Ref ref) async {
+  ref.watch(coreStatusProvider);
+  ref.watch(patchClashConfigProvider.select((state) => state.mitm));
+  final status = await ref.read(coreHandlerProvider).getMitmStatus();
+  return status.ignoredHostnames;
+}
+
+/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
+/// list, or with why not; the Core passes the connection through on a refusal.
+@Riverpod(keepAlive: true)
+class MitmSignAction extends _$MitmSignAction {
+  @override
+  void build() {}
+
+  // Coalesce concurrent checks, but never cache their result. A timed-out
+  // platform operation remains the sole in-flight check until it finishes;
+  // later requests fail closed instead of starting unbounded processes.
+  Future<bool>? _checkingTrust;
+  String? _checkingFingerprint;
+  // One app-side budget covers both stages; Core has additional headroom.
+  static const _issuanceBudget = Duration(seconds: 7);
+
+  Future<bool> _checkTrust(MitmSigner signer, String fingerprint) async {
+    if (await signer.coreIdentity() != MitmCoreIdentity.verified) return false;
+    if (!ref.mounted) return false;
+    final store = ref.read(mitmTrustStoreProvider);
+    if (store == null) return false;
+    final ca = await signer.certificate();
+    if (ca == null || ca.fingerprint != fingerprint) return false;
+    final check = await store.check(ca, signer.checkCertificate);
+    if (check.trust != MitmTrust.ready) return false;
+    final current = await signer.certificate();
+    return current != null && current.fingerprint == fingerprint;
+  }
+
+  Future<bool> _freshTrust(
+    MitmSigner signer,
+    String fingerprint,
+    Duration remaining,
+  ) async {
+    if (remaining <= Duration.zero) return false;
+    if (_checkingTrust != null && _checkingFingerprint != fingerprint) {
+      return false;
+    }
+    _checkingFingerprint = fingerprint;
+    final check = _checkingTrust ??= _checkTrust(signer, fingerprint);
+    // Attach cleanup to the underlying operation, not the timeout wrapper.
+    unawaited(
+      check.then<void>(
+        (_) {
+          if (identical(_checkingTrust, check)) {
+            _checkingTrust = null;
+            _checkingFingerprint = null;
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (identical(_checkingTrust, check)) {
+            _checkingTrust = null;
+            _checkingFingerprint = null;
+          }
+        },
+      ),
+    );
+    try {
+      return await check.timeout(remaining);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  int _signing = 0;
+  static const _maxConcurrentSigns = 16;
+
+  Future<MitmSignResult> _signBounded(
+    MitmSigner signer,
+    MitmSignRequest request,
+    List<String> hostnames,
+    Duration remaining,
+  ) async {
+    if (remaining <= Duration.zero) {
+      return const MitmSignResult(error: 'signFailed');
+    }
+    if (_signing >= _maxConcurrentSigns) {
+      return const MitmSignResult(error: 'signBusy');
+    }
+    _signing++;
+    final sign = signer.sign(
+      host: request.host,
+      spki: request.spki,
+      hostnames: hostnames,
+    );
+    // A timeout cannot cancel the platform operation. Keep its slot until
+    // it really finishes so a stuck native queue cannot grow without bound.
+    unawaited(
+      sign.then<void>(
+        (_) {
+          _signing--;
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          _signing--;
+        },
+      ),
+    );
+    try {
+      return await sign.timeout(remaining);
+    } catch (_) {
+      return const MitmSignResult(error: 'signFailed');
+    }
+  }
+
+  Future<void> answer(MitmSignRequest request) async {
+    final mitm = ref.read(patchClashConfigProvider).mitm;
+    final signer = ref.read(mitmSignerProvider);
+    MitmSignResult result;
+    if (signer == null || !mitmFeature || !mitm.enable) {
+      result = const MitmSignResult(error: 'disabled');
+    } else if (!request.managedRelay) {
+      result = const MitmSignResult(
+        error: 'coreIdentity',
+        coreIdentity: 'failed:channel',
+      );
+      if (ref.mounted) {
+        ref
+            .read(mitmCoreIdentityStateProvider.notifier)
+            .report(const MitmCoreIdentity.failed('channel'));
+      }
+    } else {
+      try {
+        // The Core's deadline accounts for key generation and relay delay.
+        // Wall clocks are shared by the two local processes; reserve headroom
+        // and use a monotonic stopwatch once the request has arrived.
+        final transmitted =
+            Duration(
+              milliseconds:
+                  request.deadlineUnixMillis -
+                  DateTime.now().millisecondsSinceEpoch,
+            ) -
+            const Duration(seconds: 1);
+        final budget = transmitted < _issuanceBudget
+            ? transmitted
+            : _issuanceBudget;
+        final stopwatch = Stopwatch()..start();
+        Duration remaining() {
+          final left = budget - stopwatch.elapsed;
+          return left.isNegative ? Duration.zero : left;
+        }
+
+        final fingerprint = mitm.trustedFingerprint;
+        final trusted =
+            fingerprint != null &&
+            await _freshTrust(signer, fingerprint, remaining());
+        if (!ref.mounted) return;
+        final current = ref.read(patchClashConfigProvider).mitm;
+        if (!trusted ||
+            !current.enable ||
+            current.trustedFingerprint != fingerprint) {
+          result = const MitmSignResult(error: 'trustUnavailable');
+        } else {
+          result = await _signBounded(
+            signer,
+            request,
+            current.hostname,
+            remaining(),
+          );
+          if (!ref.mounted) return;
+          final afterSign = ref.read(patchClashConfigProvider).mitm;
+          if (!afterSign.enable ||
+              afterSign.trustedFingerprint != fingerprint ||
+              !listEquals(afterSign.hostname, current.hostname)) {
+            result = const MitmSignResult(error: 'disabled');
+          }
+        }
+      } catch (error) {
+        commonPrint.log(
+          'Signing a MITM certificate failed: ${compactError(error)}',
+          logLevel: LogLevel.warning,
+        );
+        result = const MitmSignResult(error: 'signFailed');
+      }
+      if (ref.mounted && (result.refusedCore || result.cert != null)) {
+        ref
+            .read(mitmCoreIdentityStateProvider.notifier)
+            .report(
+              result.refusedCore
+                  ? MitmCoreIdentity.parse(result.coreIdentity)
+                  : MitmCoreIdentity.verified,
+            );
+      }
+    }
+    if (!ref.mounted) {
+      return;
+    }
+    try {
+      await ref
+          .read(coreHandlerProvider)
+          .sendMitmSignResult(request.reqId, result);
+    } catch (error) {
+      commonPrint.log(
+        'Answering a MITM signing request failed: ${compactError(error)}',
+        logLevel: coreFailureLogLevel(error),
+      );
+    }
   }
 }
 
@@ -62,10 +479,13 @@ class MitmTrustState extends _$MitmTrustState {
     } else if (store == null) {
       check = const MitmTrustCheck(MitmTrust.notInstalled);
     } else {
+      final signer = ref.read(mitmSignerProvider);
       final core = ref.read(coreHandlerProvider);
       check = await store.check(
         ca,
-        () => core.issueMitmCertificate(mitmCheckHost),
+        () =>
+            signer?.checkCertificate() ??
+            core.issueMitmCertificate(mitmCheckHost),
       );
     }
     if (ref.mounted) {
@@ -136,7 +556,9 @@ class MitmTrustState extends _$MitmTrustState {
     final store = ref.read(mitmTrustStoreProvider);
     final trust = state.value?.trust;
     var removed = true;
-    if (old != null &&
+    // The macOS signer removes the old root and its trust as it generates.
+    if (ref.read(mitmSignerProvider) == null &&
+        old != null &&
         store != null &&
         (trust == MitmTrust.ready || trust == MitmTrust.untrusted)) {
       try {

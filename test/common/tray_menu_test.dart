@@ -59,6 +59,7 @@ TrayState _trayState({
   List<Group> groups = const [],
   Map<HotAction, HotKeyAction> hotKeys = const {},
   Map<String, String> selectedMap = const {},
+  MitmIndicator? mitmIndicator,
 }) {
   return TrayState(
     mode: mode,
@@ -73,6 +74,7 @@ TrayState _trayState({
     monochromeTrayIcon: monochromeTrayIcon,
     safeMode: safeMode,
     hotKeys: hotKeys,
+    mitmIndicator: mitmIndicator,
   );
 }
 
@@ -235,6 +237,42 @@ void main() {
       expect(
         content.image.pngs.first,
         File('assets/images/tray/macos/status_4.png').readAsBytesSync(),
+      );
+    });
+  });
+
+  group('decryption status', () {
+    test('is absent while decryption is off', () async {
+      await update(_trayState());
+
+      final l10n = currentAppLocalizations;
+      expect(_labels(showCall()).first, l10n.show);
+    });
+
+    test('leads the menu, paused with its reason', () async {
+      await update(
+        _trayState(
+          mitmIndicator: const MitmIndicator.paused(MitmPauseReason.liveness),
+        ),
+      );
+
+      final l10n = currentAppLocalizations;
+      final items = _items(showCall());
+      expect(
+        items.first['label'],
+        l10n.mitmIndicatorPausedBecause(l10n.mitmPauseLiveness),
+      );
+      expect(items.first['enabled'], isTrue);
+      expect(items[1]['type'], 'separator');
+      expect(items[2]['label'], l10n.show);
+    });
+
+    test('says when it decrypts', () async {
+      await update(_trayState(mitmIndicator: const MitmIndicator.decrypting()));
+
+      expect(
+        _labels(showCall()).first,
+        currentAppLocalizations.mitmIndicatorDecrypting,
       );
     });
   });
@@ -582,6 +620,17 @@ void main() {
     );
     await pumpEventQueue();
   }
+
+  test('the decryption status opens the MITM settings', () async {
+    var opened = 0;
+    mitmSettingsPort = () async => opened++;
+    addTearDown(() => mitmSettingsPort = null);
+    await update(_trayState(mitmIndicator: const MitmIndicator.decrypting()));
+
+    await select(_items(showCall()).first);
+
+    expect(opened, 1);
+  });
 
   test('members have no icons, including subgroup members and flags', () async {
     final nested = _proxyGroup.copyWith(name: 'Nested', icon: 'nested-icon');

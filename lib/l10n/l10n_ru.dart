@@ -3547,10 +3547,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      'Клиент отклонил сертификат. Установите сертификат или исключите этот хост, если приложение закрепляет свой сертификат.';
-
-  @override
   String get mitmExcludeHost => 'Исключить из расшифровки';
 
   @override
@@ -6807,4 +6803,123 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get addedRulesApplyRestoreFailed =>
       'Обработка завершена, но исходные правила восстановить не удалось. Проверьте текущие правила.';
+
+  @override
+  String get deleteCertificate => 'Удалить сертификат';
+
+  @override
+  String get deleteCertificateTip =>
+      'Удаляет с этого Mac закрытый ключ сертификата, сам сертификат и доверие к нему. Расшифровка остановится, пока не будет создан и подтверждён новый сертификат.';
+
+  @override
+  String get mitmPausedCoreIdentity =>
+      'Расшифровка приостановлена: проверка подлинности ядра не пройдена';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return 'Пропущено из подписок или скриптов: $count';
+  }
+
+  @override
+  String get mitmOutcomeRefused =>
+      'Клиент отправил предупреждение (alert) во время рукопожатия. Причина неизвестна.';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate =>
+      'Не удалось проверить сертификат сайта';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 не поддерживается';
+
+  @override
+  String get mitmOutcomeHelloPassthrough =>
+      'TLS не проверен; соединение передано без расшифровки';
+
+  @override
+  String get mitmOutcomeFailed => 'Ошибка расшифрованного соединения';
+
+  @override
+  String get mitmPausedLiveness =>
+      'Расшифровка приостановлена: не удалось проверить доверие или подпись. Обычно изменения обнаруживаются примерно за 26 секунд; сон или задержки системы могут увеличить время.';
+
+  @override
+  String get mitmPausedIndicatorPending =>
+      'Расшифровка приостановлена: обязательный постоянный индикатор недоступен.';
+
+  @override
+  String get mitmPausedUnavailable =>
+      'Расшифровка приостановлена: подписывающий компонент или соединение недоступно.';
+
+  @override
+  String get mitmIndicatorDecrypting => 'Идёт расшифровка';
+
+  @override
+  String get mitmIndicatorOn => 'Расшифровка включена';
+
+  @override
+  String get mitmIndicatorPaused => 'Расшифровка приостановлена';
+
+  @override
+  String get mitmIndicatorUnconfirmed => 'Проверка состояния расшифровки';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return 'Расшифровка приостановлена: $reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => 'Открыть настройки MITM';
+
+  @override
+  String get mitmPauseCoreStopped => 'ядро не запущено';
+
+  @override
+  String get mitmPauseCoreIdentity => 'проверка подлинности ядра не пройдена';
+
+  @override
+  String get mitmPauseNotTrusted =>
+      'корневой сертификат отсутствует или не доверен';
+
+  @override
+  String get mitmPauseLiveness =>
+      'не удалось проверить состояние доверия и подписи';
+
+  @override
+  String get mitmPauseIndicatorPending =>
+      'постоянный индикатор состояния не включён';
+
+  @override
+  String get mitmPauseUnavailable => 'служба подписи или соединение недоступны';
+
+  @override
+  String get mitmOutcomePaused =>
+      'Расшифровка приостановлена; соединение пропущено без изменений';
+
+  @override
+  String get mitmBadgeDecrypted => 'Расшифровано';
+
+  @override
+  String get mitmBadgePassedThrough => 'Не расшифровано · пропущено';
+
+  @override
+  String get mitmBadgePassedThroughSpoken => 'Не расшифровано, пропущено';
+
+  @override
+  String get mitmBadgeHandshakeFailed => 'Сбой рукопожатия клиента';
+
+  @override
+  String get mitmBadgeFailed => 'Ошибка расшифровки';
+
+  @override
+  String get mitmExchangeNoResponse => 'Ответ не получен';
+
+  @override
+  String get mitmExchangeResponseFailed => 'Ответ прерван';
+
+  @override
+  String get mitmExchangeStopped =>
+      'Запрос остановлен: изменены настройки расшифровки';
+
+  @override
+  String get mitmExchangeFailed => 'Запрос не завершён';
 }

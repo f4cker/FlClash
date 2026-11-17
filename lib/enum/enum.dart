@@ -119,7 +119,7 @@ enum ViewMode { mobile, laptop, desktop }
 
 enum LogLevel { debug, info, warning, error, silent }
 
-enum RecordTone { neutral, warning, error }
+enum RecordTone { neutral, accent, warning, error }
 
 enum RecordFacetKind {
   network,
@@ -142,6 +142,7 @@ extension RecordToneExt on RecordTone {
     return switch (this) {
       RecordTone.warning => colorScheme.warning,
       RecordTone.error => colorScheme.error,
+      RecordTone.accent => colorScheme.primary,
       RecordTone.neutral => null,
     };
   }
@@ -150,6 +151,7 @@ extension RecordToneExt on RecordTone {
     final colorScheme = Theme.of(context).colorScheme;
     return switch (this) {
       RecordTone.neutral => colorScheme.onSurfaceVariant,
+      RecordTone.accent => colorScheme.onPrimaryContainer,
       RecordTone.warning => colorScheme.onWarningContainer,
       RecordTone.error => colorScheme.onErrorContainer,
     };
@@ -159,6 +161,7 @@ extension RecordToneExt on RecordTone {
     final colorScheme = Theme.of(context).colorScheme;
     return switch (this) {
       RecordTone.neutral => context.raisedSurfaceLevel.colorOf(colorScheme),
+      RecordTone.accent => colorScheme.primaryContainer,
       RecordTone.warning => colorScheme.warningContainer,
       RecordTone.error => colorScheme.errorContainer,
     };
@@ -199,6 +202,8 @@ enum CoreEventType {
   dialerLoop,
   tailscaleState,
   tailscaleRoutes,
+  mitmSign,
+  mitmConnection,
 }
 
 /// `ipn.State` as tsnet names it; [none] is a node that has not started.

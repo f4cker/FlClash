@@ -1060,6 +1060,33 @@ abstract final class AppGlyphs {
     ], role: GlyphRole.detail),
   ]);
 
+  /// A lock that failed: [lock] with a cross for its keyhole.
+  static const lockError = Glyph([
+    GlyphBox(5, 10.5, 19, 20.8, 2.5),
+    GlyphPath('M8.5 10.5V7A3.5 3.5 0 0 1 15.5 7V10.5', role: GlyphRole.line),
+    GlyphPolyline([
+      GlyphVertex(9.9, 13.55),
+      GlyphVertex(14.1, 17.75),
+    ], role: GlyphRole.detail),
+    GlyphPolyline([
+      GlyphVertex(14.1, 13.55),
+      GlyphVertex(9.9, 17.75),
+    ], role: GlyphRole.detail),
+  ]);
+
+  /// An arrow going straight on: what passes through untouched.
+  static const arrowForward = Glyph([
+    GlyphPolyline([
+      GlyphVertex(4, 12),
+      GlyphVertex(19.5, 12),
+    ], role: GlyphRole.line),
+    GlyphPolyline([
+      GlyphVertex(13.5, 6),
+      GlyphVertex(19.5, 12, 0.6),
+      GlyphVertex(13.5, 18),
+    ], role: GlyphRole.line),
+  ]);
+
   static const key = Glyph([
     GlyphCircle(9.27, 7.99, 5),
     GlyphCircle(9.27, 7.99, 1.4, role: GlyphRole.detail, solid: true),

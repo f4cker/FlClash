@@ -3343,9 +3343,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate => '客户端拒绝了证书。请安装证书；如果应用固定了证书，请排除此主机。';
-
-  @override
   String get mitmExcludeHost => '排除解密';
 
   @override
@@ -6285,4 +6282,111 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get addedRulesApplyRestoreFailed => '处理已结束，但未能恢复原规则。请检查当前规则。';
+
+  @override
+  String get deleteCertificate => '删除证书';
+
+  @override
+  String get deleteCertificateTip => '从本机删除证书私钥、证书本身和对它的信任。之后需重新生成并信任新证书才能解密。';
+
+  @override
+  String get mitmPausedCoreIdentity => '解密已暂停：内核身份核对失败';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return '已忽略来自订阅/脚本的 $count 条';
+  }
+
+  @override
+  String get mitmOutcomeRefused => '客户端在握手时发出了警报，原因无法确定。';
+
+  @override
+  String get mitmOutcomeUpstreamCertificate => '网站证书校验失败';
+
+  @override
+  String get mitmOutcomeHTTP1Unsupported => '不支持 HTTP/1.1';
+
+  @override
+  String get mitmOutcomeHelloPassthrough => '无法检查 TLS 握手，已原样放行';
+
+  @override
+  String get mitmOutcomeFailed => '解密连接失败';
+
+  @override
+  String get mitmPausedLiveness =>
+      '解密已暂停：无法验证信任或签名器状态。正常情况下约 26 秒内检测到变化；睡眠或系统卡顿可能更久。';
+
+  @override
+  String get mitmPausedIndicatorPending => '解密已暂停：尚未提供必需的常驻解密指示。';
+
+  @override
+  String get mitmPausedUnavailable => '解密已暂停：签名器或连接不可用。';
+
+  @override
+  String get mitmIndicatorDecrypting => '正在解密';
+
+  @override
+  String get mitmIndicatorOn => '解密已开启';
+
+  @override
+  String get mitmIndicatorPaused => '解密已暂停';
+
+  @override
+  String get mitmIndicatorUnconfirmed => '正在确认解密状态';
+
+  @override
+  String mitmIndicatorPausedBecause(String reason) {
+    return '解密已暂停：$reason';
+  }
+
+  @override
+  String get mitmIndicatorOpenSettings => '打开 MITM 设置';
+
+  @override
+  String get mitmPauseCoreStopped => '内核未运行';
+
+  @override
+  String get mitmPauseCoreIdentity => '内核身份核对失败';
+
+  @override
+  String get mitmPauseNotTrusted => '根证书未生成或未受信任';
+
+  @override
+  String get mitmPauseLiveness => '无法确认信任和签名状态';
+
+  @override
+  String get mitmPauseIndicatorPending => '常驻状态提示尚未启用';
+
+  @override
+  String get mitmPauseUnavailable => '签名服务或连接不可用';
+
+  @override
+  String get mitmOutcomePaused => '解密暂停中，已原样放行';
+
+  @override
+  String get mitmBadgeDecrypted => '已解密';
+
+  @override
+  String get mitmBadgePassedThrough => '未解密 · 原样放行';
+
+  @override
+  String get mitmBadgePassedThroughSpoken => '未解密，原样放行';
+
+  @override
+  String get mitmBadgeHandshakeFailed => '客户端握手失败';
+
+  @override
+  String get mitmBadgeFailed => '解密失败';
+
+  @override
+  String get mitmExchangeNoResponse => '未收到响应';
+
+  @override
+  String get mitmExchangeResponseFailed => '响应中途中断';
+
+  @override
+  String get mitmExchangeStopped => '解密设置已更改，请求已中止';
+
+  @override
+  String get mitmExchangeFailed => '请求未完成';
 }

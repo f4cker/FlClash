@@ -22,7 +22,11 @@ import '../helpers/app_paths.dart';
 void main() {
   setUp(() {
     mitmFeature = true;
-    addTearDown(() => mitmFeature = false);
+    mitmModulesFeature = true;
+    addTearDown(() {
+      mitmFeature = false;
+      mitmModulesFeature = false;
+    });
   });
 
   late HttpServer server;

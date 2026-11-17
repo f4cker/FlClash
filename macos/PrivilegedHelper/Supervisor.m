@@ -52,6 +52,8 @@ static NSString *FCRunningHash(void) {
 @property int socket;
 @property NSString *socketPath;
 @property NSMutableData *incoming;
+// The accepted Core's audit token, for the app to check the Core's identity before it signs for it.
+@property NSData *coreToken;
 @property BOOL ownershipUncertain;
 @property BOOL journalOwned;
 @property NSUInteger connections;
@@ -94,7 +96,13 @@ static NSString *FCRunningHash(void) {
         DISPATCH_TIME_FOREVER, NSEC_PER_SEC);
 }
 
-- (void)reply:(xpc_object_t)request code:(NSString *)code pid:(pid_t)pid frame:(NSData *)frame {
+// The Core's audit token goes only to the connection that just started it.
+static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
+    return [action isEqualToString:@"start"] && [code isEqualToString:@"ok"];
+}
+
+- (void)reply:(xpc_object_t)request code:(NSString *)code pid:(pid_t)pid frame:(NSData *)frame
+    coreToken:(NSData *)coreToken {
     xpc_object_t reply = xpc_dictionary_create_reply(request);
     if (!reply) return;
     xpc_dictionary_set_string(reply, "code", code.UTF8String);
@@ -114,6 +122,7 @@ static NSString *FCRunningHash(void) {
         xpc_dictionary_set_string(reply, "coreRevision", [self.contract[@"CoreRevision"] UTF8String]);
     }
     if (frame) xpc_dictionary_set_data(reply, "frame", frame.bytes, frame.length);
+    if (coreToken) xpc_dictionary_set_data(reply, "coreAuditToken", coreToken.bytes, coreToken.length);
     xpc_connection_send_message(xpc_dictionary_get_remote_connection(request), reply);
 }
 
@@ -122,6 +131,7 @@ static NSString *FCRunningHash(void) {
     if (self.listener >= 0) { close(self.listener); self.listener = -1; }
     if (self.socketPath) unlink(self.socketPath.fileSystemRepresentation);
     self.socketPath = nil;
+    self.coreToken = nil;
     [self.incoming setLength:0];
 }
 
@@ -195,6 +205,11 @@ static NSString *FCRunningHash(void) {
     pid_t peer = 0;
     socklen_t length = sizeof(peer);
     if (getsockopt(self.socket, SOL_LOCAL, LOCAL_PEERPID, &peer, &length) || peer != self.child) return NO;
+    audit_token_t token;
+    length = sizeof(token);
+    if (getsockopt(self.socket, SOL_LOCAL, LOCAL_PEERTOKEN, &token, &length) || length != sizeof(token) ||
+        (pid_t)token.val[5] != self.child) return NO;
+    self.coreToken = [NSData dataWithBytes:&token length:sizeof(token)];
     fcntl(self.socket, F_SETFD, FD_CLOEXEC);
     fcntl(self.socket, F_SETFL, O_NONBLOCK);
     int yes = 1;
@@ -321,7 +336,7 @@ static NSString *FCRunningHash(void) {
     const char *rawSession = xpc_dictionary_get_string(request, "session");
     if (!method || strlen(method) > 32 || (rawSession && strlen(rawSession) > 32) ||
         xpc_dictionary_get_int64(request, "protocol") != 1) {
-        [self reply:request code:@"incompatible" pid:0 frame:nil]; return;
+        [self reply:request code:@"incompatible" pid:0 frame:nil coreToken:nil]; return;
     }
     NSString *action = @(method);
     NSString *session = rawSession ? @(rawSession) : @"";
@@ -345,7 +360,8 @@ static NSString *FCRunningHash(void) {
         const void *data = xpc_dictionary_get_data(request, "frame", &length);
         if (data && length <= FCMaxFrame) code = [self send:[NSData dataWithBytes:data length:length]];
     }
-    [self reply:request code:code pid:self.child frame:frame];
+    [self reply:request code:code pid:self.child frame:frame
+        coreToken:FCRepliesWithCoreToken(action, code) ? self.coreToken : nil];
     if ([code isEqualToString:@"selfCheckFailed"] ||
         ([action isEqualToString:@"exit"] && [code isEqualToString:@"ok"])) {
         int status = [code isEqualToString:@"ok"] ? 0 : EX_CONFIG;

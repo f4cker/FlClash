@@ -48,6 +48,7 @@ class ScaffoldKeyword {
   const ScaffoldKeyword({
     required this.key,
     required this.label,
+    this.glyph,
     this.onDeleted,
     this.onPressed,
     this.selected = false,
@@ -56,12 +57,33 @@ class ScaffoldKeyword {
 
   final Object key;
   final String label;
+  final Glyph? glyph;
   final VoidCallback? onDeleted;
 
   final VoidCallback? onPressed;
   final bool selected;
 
   final bool startsSection;
+}
+
+/// A status the bar of each page under it shows ahead of the page's own
+/// actions, never folded; a sheet's bar and a bar inside the page's body
+/// leave it out.
+class ScaffoldBarStatus extends InheritedWidget {
+  const ScaffoldBarStatus({
+    super.key,
+    required this.status,
+    required super.child,
+  });
+
+  final Widget? status;
+
+  static Widget? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ScaffoldBarStatus>()?.status;
+
+  @override
+  bool updateShouldNotify(ScaffoldBarStatus oldWidget) =>
+      status != oldWidget.status;
 }
 
 typedef AppBarSearchStateBuilder =
@@ -615,7 +637,8 @@ class ScaffoldState extends State<Scaffold>
             onPressed: _handleToSearch,
           )
         : null;
-    final widgets = widget.actions ?? const <Widget>[];
+    final status = form.pop == null ? ScaffoldBarStatus.of(context) : null;
+    final widgets = [?status, ...?widget.actions];
     final selection = _SelectionButtons(widget.selectionActions);
     final atFoot = form.pop?.atFoot == true;
     final fold = _foldBarActions(
@@ -657,7 +680,8 @@ class ScaffoldState extends State<Scaffold>
               : null,
         ),
       ...selection.build(),
-      for (final action in widgets) ElasticPress(child: action),
+      for (final action in widgets)
+        identical(action, status) ? action : ElasticPress(child: action),
       if (fold.overflow.isNotEmpty)
         ElasticPress(child: _OverflowMenuButton(items: fold.overflow)),
     ];
@@ -887,7 +911,12 @@ class ScaffoldState extends State<Scaffold>
     final docked = form.dockedSearch;
     return PrismScaffold(
       bar: _buildAppBar(backAction, form),
-      body: SortModeScope(sorting: _sorting, child: widget.body),
+      body: SortModeScope(
+        sorting: _sorting,
+        child: ScaffoldBarStatus.of(context) == null
+            ? widget.body
+            : ScaffoldBarStatus(status: null, child: widget.body),
+      ),
       headerListenable: keywords,
       headerBuilder: keywords == null
           ? null

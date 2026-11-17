@@ -12,12 +12,12 @@ import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/views/connection/requests.dart';
-import 'package:fl_clash/widgets/record.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../helpers/glyph_finders.dart';
 import '../helpers/core_connections.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
@@ -333,7 +333,7 @@ void main() {
     await pumpSettled(tester);
 
     expect(find.byType(TrackerInfoTableRow), findsNWidgets(2));
-    final label = find.widgetWithText(RecordLabel, 'MITM');
+    final label = find.byGlyph(MitmBadge.decrypted.glyph);
     expect(label, findsOneWidget);
     expect(
       find.ancestor(

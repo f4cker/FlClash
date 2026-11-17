@@ -16,6 +16,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/config/mitm_status.dart';
 import 'package:fl_clash/views/disclaimer.dart';
 import 'package:fl_clash/views/navigation.dart';
 import 'package:flutter/widgets.dart';
@@ -44,6 +45,7 @@ class Bootstrap {
     windowPort = window;
     trayPort = appTray;
     navigationPort = navigation;
+    mitmSettingsPort = openMitmSettingsFromTray;
     final dynamicColor = await _initDynamicColor();
     return _initData(version, dynamicColor);
   }

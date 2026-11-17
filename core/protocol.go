@@ -90,6 +90,8 @@ const (
 	mitmExchangesMethod           CoreMethod = "mitm.exchanges"
 	mitmExchangeMethod            CoreMethod = "mitm.exchange"
 	mitmBodyMethod                CoreMethod = "mitm.body"
+	mitmStatusMethod              CoreMethod = "mitm.status"
+	mitmSignResultMethod          CoreMethod = "mitm.signResult"
 
 	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
 	tailscaleStatusMethod        CoreMethod = "tailscale.status"
@@ -124,6 +126,9 @@ const (
 	RequestTrafficMessage  MessageType = "requestTraffic"
 	TailscaleStateMessage  MessageType = "tailscaleState"
 	TailscaleRoutesMessage MessageType = "tailscaleRoutes"
+	// Asks the app, which holds the CA key, for a leaf; answered by mitm.signResult.
+	MitmSignMessage       MessageType = "mitmSign"
+	MitmConnectionMessage MessageType = "mitmConnection"
 )
 
 type Message struct {
@@ -149,6 +154,7 @@ type SetupParams struct {
 	// Set for a profile with mounts, even none left: its failure must not
 	// fall back to mihomo's direct-only default.
 	Mounts *MountSetup `json:"mounts,omitempty"`
+	Mitm   *MitmSetup  `json:"mitm,omitempty"`
 }
 
 type TailscaleSetup struct {

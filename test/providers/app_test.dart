@@ -286,6 +286,64 @@ void main() {
       expect(container.read(requestsProvider).length, 1);
     });
 
+    test(
+      'MITM outcomes correlate exactly before and after request arrival',
+      () {
+        TrackerInfo request(String id) => TrackerInfo(
+          id: id,
+          start: DateTime.utc(2026),
+          metadata: const Metadata(network: 'tcp', host: 'example.com'),
+          chains: const ['Proxy'],
+          rule: 'DOMAIN',
+          rulePayload: 'example.com',
+        );
+        final notifier = container.read(requestsProvider.notifier);
+        notifier.value = FixedList(3);
+        notifier.setMitmOutcome('early', 'refused');
+        notifier.setMitmOutcome('ignored', 'unrecognized');
+        notifier.addRequest(request('early'));
+        notifier.addRequest(request('other'));
+        notifier.addRequest(request('ignored'));
+        expect(
+          container.read(requestsProvider).list.map((r) => r.mitmOutcome),
+          ['refused', '', ''],
+        );
+        notifier.setMitmOutcome('other', 'upstreamCertificate');
+        notifier.setMitmOutcome('ignored', 'paused');
+        notifier.setMitmOutcome('missing', 'http1Failed');
+        expect(
+          container.read(requestsProvider).list.map((r) => r.mitmOutcome),
+          ['refused', 'upstreamCertificate', 'paused'],
+        );
+        notifier.addRequest(request('missing'));
+        expect(
+          container.read(requestsProvider).list.last.mitmOutcome,
+          'http1Failed',
+        );
+      },
+    );
+
+    test('MITM success survives early ordering and later HTTP failure', () {
+      TrackerInfo request(String id) => TrackerInfo(
+        id: id,
+        start: DateTime.utc(2026),
+        metadata: const Metadata(network: 'tcp', host: 'example.com'),
+        chains: const ['Proxy'],
+        rule: 'DOMAIN',
+        rulePayload: 'example.com',
+      );
+      final notifier = container.read(requestsProvider.notifier);
+      notifier.value = FixedList(3);
+      notifier.setMitmOutcome('early', 'decrypted');
+      notifier.setMitmOutcome('early', 'http1Failed');
+      notifier.addRequest(request('early'));
+      notifier.addRequest(request('late'));
+      notifier.setMitmOutcome('late', 'decrypted');
+      final rows = container.read(requestsProvider).list;
+      expect(rows.map((r) => r.metadata.mitm), [true, true]);
+      expect(rows.map((r) => r.mitmOutcome), ['http1Failed', '']);
+    });
+
     test('Requests.updateTraffic updates the requests it names', () {
       TrackerInfo request(String id) => TrackerInfo(
         id: id,

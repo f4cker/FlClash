@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:fl_clash/core/desktop/rpc_client.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/core/event.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/core/spill.dart';
@@ -395,6 +396,26 @@ void main() {
     await transport.close();
   });
 
+  test('a sign request off the helper relay is marked as such', () async {
+    final transport = FakeDesktopCoreTransport.connected();
+    final client = CoreRpcClient(transport);
+    final listener = _SignListener();
+    coreEventManager.addListener(listener);
+    addTearDown(() => coreEventManager.removeListener(listener));
+
+    transport.addJson({
+      'method': CoreMethod.message.wireName,
+      'arguments': {
+        'type': 'mitmSign',
+        'data': {'reqId': 1, 'host': 'a.test', 'spki': 'AQ=='},
+      },
+    });
+
+    expect((await listener.request.future).managedRelay, isFalse);
+    await client.close();
+    await transport.close();
+  });
+
   test('close fails pending requests and is idempotent', () async {
     final transport = FakeDesktopCoreTransport.connected();
     final client = CoreRpcClient(transport);
@@ -440,6 +461,15 @@ void main() {
     await client.close();
     await transport.close();
   });
+}
+
+final class _SignListener with CoreEventListener {
+  final Completer<MitmSignRequest> request = Completer<MitmSignRequest>();
+
+  @override
+  void onMitmSign(MitmSignRequest request) {
+    this.request.complete(request);
+  }
 }
 
 final class _LoadedListener with CoreEventListener {

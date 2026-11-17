@@ -112,6 +112,17 @@ class MitmExchangesView extends ConsumerWidget {
   }
 }
 
+/// Why the Core says a request did not complete, in words; a code this app
+/// does not know reads as a plain failure.
+String mitmExchangeErrorText(AppLocalizations l, String error) {
+  return switch (error) {
+    'noResponse' => l.mitmExchangeNoResponse,
+    'responseFailed' => l.mitmExchangeResponseFailed,
+    'stopped' => l.mitmExchangeStopped,
+    _ => l.mitmExchangeFailed,
+  };
+}
+
 class _MitmExchangeItem extends ConsumerWidget {
   final MitmExchangeSummary exchange;
 
@@ -122,7 +133,7 @@ class _MitmExchangeItem extends ConsumerWidget {
     final colorScheme = context.colorScheme;
     final failed = exchange.error.isNotEmpty;
     final outcome = failed
-        ? exchange.error
+        ? mitmExchangeErrorText(context.appLocalizations, exchange.error)
         : exchange.status == 0
         ? ''
         : '${exchange.status}';
@@ -228,7 +239,12 @@ class _MitmExchangeDetail extends StatelessWidget {
           status: exchange.status,
         ),
       ),
-      (appLocalizations.error, exchange.error),
+      (
+        appLocalizations.error,
+        exchange.error.isEmpty
+            ? ''
+            : mitmExchangeErrorText(appLocalizations, exchange.error),
+      ),
       (appLocalizations.creationTime, exchange.start.showFull),
       if (exchange.status != 0)
         (appLocalizations.timeToFirstByte, _millis(exchange.ttfb)),

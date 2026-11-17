@@ -238,14 +238,14 @@ class TrackerTargetText extends StatelessWidget {
         ],
       ),
     );
-    if (!trackerInfo.metadata.mitm) {
+    if (MitmBadge.of(trackerInfo) == null) {
       return target;
     }
     return Row(
-      spacing: 6,
+      spacing: MitmBadge.gap,
       children: [
         Flexible(child: target),
-        const RecordLabel(label: 'MITM'),
+        MitmBadgeIcon(trackerInfo),
       ],
     );
   }

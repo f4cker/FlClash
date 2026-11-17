@@ -29,6 +29,7 @@ class _KeywordStrip extends StatelessWidget {
               ),
               child: Chip(
                 label: keyword.label,
+                glyph: keyword.glyph,
                 onDeleted: keyword.onDeleted,
                 onPressed: keyword.onPressed,
                 selected: keyword.selected,
