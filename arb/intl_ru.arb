@@ -1622,6 +1622,7 @@
   "macHelperOpenSettings": "Открыть настройки macOS",
   "macHelperTryAgain": "Повторить",
   "macHelperCheckAgain": "Проверить снова",
+  "macHelperRepair": "Repair",
   "macHelperUnavailableDetail": "Сейчас Flash не может подключиться к помощнику, поэтому TUN не запускается. Настройка TUN сохранена.",
   "trayMultipleNodes": "Несколько узлов",
   "trayNoAvailableMembers": "Нет доступных участников",

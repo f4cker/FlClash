@@ -1622,6 +1622,7 @@
   "macHelperOpenSettings": "打开系统设置",
   "macHelperTryAgain": "重试",
   "macHelperCheckAgain": "重新检查",
+  "macHelperRepair": "修复",
   "macHelperUnavailableDetail": "辅助程序尚未就绪，TUN 暂时无法启动。你的 TUN 设置已保留。",
   "trayMultipleNodes": "多节点",
   "trayNoAvailableMembers": "没有可用成员",

@@ -10,6 +10,22 @@ static NSString * const FCRegisteredHelperDefault = @"FlashDaemonRegisteredHelpe
 // Set once the daemon was seen enabled; distinguishes "turned off by the user" from "never approved".
 static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
 
+// How long a request may wait for the daemon's reply. `start` validates the app, stages and verifies the Core
+// and waits for it on the relay; right after an update (cold caches, files still being scanned) that can take
+// well over the 8 s that every other request gets.
+static int64_t FCRequestTimeoutSeconds(NSString *method) {
+    return [method isEqualToString:@"start"] ? 30 : 8;
+}
+
+// The card state for the daemon's answer to `hello`. A request that ran out of time is `timeout`, never
+// `exitUnconfirmed`: only the daemon itself can say that a Core's exit is unconfirmed.
+static NSString *FCStatusForHello(NSString *reply) {
+    if ([reply isEqual:@"ok"]) return @"enabled";
+    for (NSString *code in @[@"exitUnconfirmed", @"incompatible", @"staleHelper", @"timeout"])
+        if ([reply isEqual:code]) return code;
+    return @"unavailable";
+}
+
 @interface FCManagedHelperBridge ()
 @property dispatch_queue_t queue;
 @property xpc_connection_t connection;
@@ -22,6 +38,7 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
 @property BOOL operationInFlight;
 @property BOOL migrationAttempted;
 @property BOOL reRegistrationChecked;
+@property NSUInteger reRegistrationAttempts;
 // The Core of the running session, as the daemon saw it on the relay socket; session 0 is none.
 @property NSData *coreToken;
 @property pid_t corePid;
@@ -145,42 +162,63 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
     return FCCoreGuestCheck(token, pid, expected);
 }
 
-// After an app update the registered job may still describe the previous build; re-register once per launch
-// while no session runs so launchd/BTM pick up the new helper.
-- (void)reRegisterIfUpdated {
-    if (self.reRegistrationChecked || self.sessionActive) return;
-    self.reRegistrationChecked = YES;
+// After an app update the registered job may still describe the previous build; re-register while no session
+// runs so launchd/BTM pick up the new helper. Done once per launch, but only marked done after a registration
+// that took (or when nothing changed); a failed attempt is retried on a later status, at most a few times.
+// A job that went missing (notRegistered/notFound) is registered again only when an older build was
+// registered before. Returns YES when it changed the registration.
+- (BOOL)reRegisterIfUpdated:(NSString *)code {
+    if (self.reRegistrationChecked || self.sessionActive) return NO;
     NSString *current = [self currentHelperHash];
+    if (!current.length) return NO;
     NSString *stored = [NSUserDefaults.standardUserDefaults stringForKey:FCRegisteredHelperDefault];
-    if (!current.length || [stored isEqualToString:current]) return;
+    if ([stored isEqualToString:current]) { self.reRegistrationChecked = YES; return NO; }
+    BOOL registered = [code isEqual:@"enabled"] || [code isEqual:@"requiresApproval"];
+    if (!registered && !stored.length) return NO;
+    if (self.reRegistrationAttempts >= 3) { self.reRegistrationChecked = YES; return NO; }
+    self.reRegistrationAttempts++;
     if (@available(macOS 14.0, *)) {
-        if (stored.length) {
+        if (stored.length && registered) {
             [self resetConnection];
             [[self daemon] unregisterAndReturnError:nil];
         }
-        if ([[self daemon] registerAndReturnError:nil] || [self daemon].status != SMAppServiceStatusNotRegistered)
+        // The new registration has to be approved on its own: show the approval steps, not "turned off".
+        [NSUserDefaults.standardUserDefaults removeObjectForKey:FCApprovedDefault];
+        NSError *error = nil;
+        BOOL done = [[self daemon] registerAndReturnError:&error];
+        SMAppServiceStatus status = [self daemon].status;
+        if (done || error.code == kSMErrorAlreadyRegistered ||
+            status == SMAppServiceStatusEnabled || status == SMAppServiceStatusRequiresApproval) {
             [NSUserDefaults.standardUserDefaults setObject:current forKey:FCRegisteredHelperDefault];
+            self.reRegistrationChecked = YES;
+        }
+        return YES;
     }
+    return NO;
 }
 
 - (void)status:(void (^)(NSDictionary *))completion {
     NSDictionary *registration = [self registrationStatus];
     NSString *code = registration[@"code"];
-    if ([@[@"enabled", @"requiresApproval"] containsObject:code]) {
-        [self reRegisterIfUpdated];
+    if ([@[@"enabled", @"requiresApproval", @"notRegistered", @"notFound"] containsObject:code] &&
+        [self reRegisterIfUpdated:code]) {
         registration = [self registrationStatus];
         code = registration[@"code"];
     }
     if (![code isEqualToString:@"enabled"]) { completion(registration); return; }
     [self request:@"hello" arguments:@{} completion:^(NSDictionary *answer) {
-        NSString *reply = answer[@"code"];
-        NSString *result = [reply isEqual:@"ok"] ? @"enabled" :
-            [reply isEqual:@"exitUnconfirmed"] ? @"exitUnconfirmed" :
-            [reply isEqual:@"incompatible"] ? @"incompatible" : @"unavailable";
+        NSString *result = FCStatusForHello(answer[@"code"]);
         // A helper process from the previous app build is still running: retire it before use.
         if ([result isEqualToString:@"enabled"] && ![answer[@"helperCDHash"] isEqual:[self currentHelperHash]])
             result = @"staleHelper";
-        completion(@{@"code": result});
+        NSMutableDictionary *status = [@{@"code": result} mutableCopy];
+        // From an authenticated reply only: whether the daemon still owns a Core, so the app can let go of a
+        // session it could not stop itself.
+        if ([answer[@"protocol"] isEqual:@1]) {
+            status[@"pid"] = answer[@"pid"] ?: @0;
+            status[@"exitConfirmed"] = answer[@"exitConfirmed"] ?: @NO;
+        }
+        completion(status);
     }];
 }
 
@@ -207,6 +245,7 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
         xpc_connection_resume(connection);
     }
     xpc_connection_t connection = self.connection;
+    FCMessageValidator *validator = self.validator;
     xpc_object_t message = xpc_dictionary_create(NULL, NULL, 0);
     xpc_dictionary_set_string(message, "method", method.UTF8String);
     xpc_dictionary_set_int64(message, "protocol", 1);
@@ -241,11 +280,14 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
     };
     xpc_connection_send_message_with_reply(connection, message, self.queue, ^(xpc_object_t reply) {
         if (finished) return;
-        if (xpc_get_type(reply) != XPC_TYPE_DICTIONARY || ![self.validator check:reply] ||
-            xpc_dictionary_get_int64(reply, "protocol") != 1) {
+        BOOL dictionary = xpc_get_type(reply) == XPC_TYPE_DICTIONARY;
+        if (!dictionary || ![validator check:reply] || xpc_dictionary_get_int64(reply, "protocol") != 1) {
+            // The pinned helper at the bundled path, but a previous build of it: report it so the stale daemon
+            // is retired (repair asks it to exit). Nothing else in the reply is read.
+            BOOL stale = dictionary && validator.runningCodeStale;
             xpc_connection_cancel(connection);
             if (self.connection == connection) [self resetConnection];
-            finish(@{@"code": @"unavailable"}); return;
+            finish(@{@"code": stale ? @"staleHelper" : @"unavailable"}); return;
         }
         const char *code = xpc_dictionary_get_string(reply, "code");
         const char *hash = xpc_dictionary_get_string(reply, "coreHash");
@@ -279,11 +321,13 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
         }
         finish(answer);
     });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 8 * NSEC_PER_SEC), self.queue, ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, FCRequestTimeoutSeconds(method) * NSEC_PER_SEC), self.queue, ^{
         if (finished) return;
         xpc_connection_cancel(connection);
         if (self.connection == connection) [self resetConnection];
-        finish(@{@"code": @"exitUnconfirmed"});
+        // No answer is not a statement about the Core: the daemon stops the Core of a connection that goes
+        // away, and a later `hello` reports whether it still owns one.
+        finish(@{@"code": @"timeout"});
     });
 }
 

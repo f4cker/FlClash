@@ -5717,6 +5717,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get macHelperCheckAgain => '다시 확인';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       '현재 Flash가 도우미에 연결할 수 없어 TUN을 시작할 수 없습니다. TUN 설정은 유지됩니다.';
 

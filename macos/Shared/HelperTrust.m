@@ -266,7 +266,13 @@ NSString *FCCoreGuestCheck(NSData *auditToken, pid_t pid, NSData *expectedHash) 
     return @"verified";
 }
 
+FCRunningHashVerdict FCCompareRunningHash(NSData *runningHash, NSData *diskHash) {
+    if (!FCValidGUIHash(runningHash) || !FCValidGUIHash(diskHash)) return FCRunningHashInvalid;
+    return [runningHash isEqualToData:diskHash] ? FCRunningHashCurrent : FCRunningHashStale;
+}
+
 @interface FCMessageValidator ()
+@property BOOL runningCodeStale;
 @property NSString *identifier;
 @property NSString *executable;
 @property NSData *sealedHash;
@@ -280,6 +286,7 @@ NSString *FCCoreGuestCheck(NSData *auditToken, pid_t pid, NSData *expectedHash) 
     return self;
 }
 - (BOOL)check:(xpc_object_t)message {
+    self.runningCodeStale = NO;
     if ([self.identifier isEqualToString:FCClientIdentifier]) return NO;
     SecCodeRef code = NULL;
     if (SecCodeCreateWithXPCMessage(message, 0, &code)) return NO;
@@ -294,8 +301,10 @@ NSString *FCCoreGuestCheck(NSData *auditToken, pid_t pid, NSData *expectedHash) 
         FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
             [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
     if (valid && !self.sealedHash) {
-        NSData *diskHash = FCStaticCodeHash(self.executable, self.identifier);
-        valid = diskHash && [diskHash isEqualToData:runningHash];
+        FCRunningHashVerdict verdict = FCCompareRunningHash(runningHash,
+            FCStaticCodeHash(self.executable, self.identifier));
+        valid = verdict == FCRunningHashCurrent;
+        self.runningCodeStale = verdict == FCRunningHashStale;
         if (valid) self.sealedHash = runningHash;
     } else if (valid) {
         valid = [self.sealedHash isEqualToData:runningHash];

@@ -154,6 +154,28 @@ final class MacHelperMaintenance extends ChangeNotifier {
     });
   }
 
+  /// Repair from "Core state unconfirmed" (and the like): stop the Core through
+  /// the app, then let the native side retire a stale daemon or register it
+  /// again. The daemon still refuses to leave while it owns a Core.
+  Future<MacHelperState> repair() {
+    return _singleFlight(MacHelperProgress.updating, () async {
+      return client.maintain(() async {
+        try {
+          final stopped = await _stop();
+          if (stopped.outcome != CoreLifecycleOutcome.superseded &&
+              stopped.session == null) {
+            _stopUnknown = false;
+          }
+        } catch (_) {
+          // The native repair still runs; the daemon answers for the Core.
+        }
+        _staleRetried = false;
+        final next = await client.repair();
+        return _stopUnknown ? MacHelperState.exitUnconfirmed : next;
+      });
+    });
+  }
+
   /// Retry after "update did not complete": the native side resumes from
   /// whatever residue remains, or only registers when nothing old is left.
   Future<MacHelperState> retry() => migrate(confirmed: true);

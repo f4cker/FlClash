@@ -5816,6 +5816,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get macHelperCheckAgain => 'Check again';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       'The helper isn’t ready, so TUN can’t start yet. Your TUN setting is saved.';
 

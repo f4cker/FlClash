@@ -344,7 +344,7 @@ int main(void) {
 
     def test_authentication_precedes_capabilities_and_only_hello_negotiates(self):
         request = method(BRIDGE, '- (void)request:')
-        self.assertLess(request.index('[self.validator check:reply]'), request.index('FCCompatibilityHelloMatches'))
+        self.assertLess(request.index('[validator check:reply]'), request.index('FCCompatibilityHelloMatches'))
         self.assertLess(request.index('FCCompatibilityHelloMatches'), request.index('self.connectionTrusted = YES'))
         self.assertIn('self.negotiatedCoreHash = nil', request)
         self.assertNotIn('FCSHA256', request)

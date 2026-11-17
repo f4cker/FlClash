@@ -9846,6 +9846,12 @@ abstract class AppLocalizations {
   /// **'Check again'**
   String get macHelperCheckAgain;
 
+  /// No description provided for @macHelperRepair.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair'**
+  String get macHelperRepair;
+
   /// No description provided for @macHelperUnavailableDetail.
   ///
   /// In en, this message translates to:

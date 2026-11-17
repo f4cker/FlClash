@@ -5856,6 +5856,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get macHelperCheckAgain => 'Comprobar de nuevo';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       'Flash no puede conectar con el asistente ahora, por lo que TUN no puede iniciarse. Se conserva tu ajuste de TUN.';
 

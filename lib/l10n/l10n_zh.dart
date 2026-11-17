@@ -5339,6 +5339,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperCheckAgain => '重新检查';
 
   @override
+  String get macHelperRepair => '修复';
+
+  @override
   String get macHelperUnavailableDetail => '辅助程序尚未就绪，TUN 暂时无法启动。你的 TUN 设置已保留。';
 
   @override

@@ -1622,6 +1622,7 @@
   "macHelperOpenSettings": "macOS 설정 열기",
   "macHelperTryAgain": "다시 시도",
   "macHelperCheckAgain": "다시 확인",
+  "macHelperRepair": "Repair",
   "macHelperUnavailableDetail": "현재 Flash가 도우미에 연결할 수 없어 TUN을 시작할 수 없습니다. TUN 설정은 유지됩니다.",
   "trayMultipleNodes": "여러 노드",
   "trayNoAvailableMembers": "사용 가능한 구성원이 없습니다",

@@ -15,8 +15,16 @@ int main(void) {
     assert(!FCOwnsSession(&owner, &owner, 501, 502, session, session));
     assert(!FCOwnsSession(&owner, &owner, 501, 501, session, "wrong"));
     assert(!FCOwnsSession(NULL, NULL, 501, 501, session, session));
+    // stop from a later connection of the same user naming the running session.
+    assert(FCMayStopSession(&owner, 501, 501, session, session));
+    assert(!FCMayStopSession(&owner, 501, 502, session, session));
+    assert(!FCMayStopSession(&owner, 501, 501, session, "0123456789abcdef0123456789abcde0"));
+    assert(!FCMayStopSession(&owner, 501, 501, session, "wrong"));
+    assert(!FCMayStopSession(&owner, 501, 501, session, NULL));
+    assert(!FCMayStopSession(&owner, 501, 501, NULL, session));
+    assert(!FCMayStopSession(NULL, 501, 501, session, session));
     assert(FCWaitOwnershipUnknown(-1, ECHILD));
     assert(!FCWaitOwnershipUnknown(-1, EINTR));
     assert(!FCWaitOwnershipUnknown(0, 0));
-    puts("13 session-policy assertions passed; no child processes or services used");
+    puts("20 session-policy assertions passed; no child processes or services used");
 }

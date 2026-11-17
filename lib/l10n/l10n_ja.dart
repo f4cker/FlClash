@@ -5644,6 +5644,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get macHelperCheckAgain => '再確認';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       '現在 Flash はヘルパーに接続できないため、TUN を開始できません。TUN の設定は保持されています。';
 
