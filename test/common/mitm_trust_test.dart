@@ -289,6 +289,8 @@ void main() {
           'add-trusted-cert',
           '-r',
           'trustRoot',
+          '-p',
+          'ssl',
           '-k',
           '/Users/someone/Library/Keychains/login.keychain-db',
           '${root.path}/temp-0.pem',

@@ -210,6 +210,9 @@ final class MitmSignerTests: XCTestCase {
         XCTAssertEqual(root.fingerprint.count, 32 * 3 - 1)
         let certificate = SecCertificateCreateWithData(nil, root.der as CFData)
         XCTAssertNotNil(certificate)
+        // extKeyUsage: serverAuth alone.
+        XCTAssertNotNil(root.der.range(of: Data([0x06, 0x03, 0x55, 0x1d, 0x25, 0x04, 0x0c, 0x30, 0x0a, 0x06, 0x08,
+                                                 0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x01])))
         // basicConstraints: critical, cA true, pathLen 0.
         XCTAssertNotNil(root.der.range(of: Data([0x01, 0x01, 0xff, 0x04, 0x08, 0x30, 0x06, 0x01, 0x01, 0xff,
                                                  0x02, 0x01, 0x00])))

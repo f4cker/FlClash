@@ -99,6 +99,7 @@ enum MitmCertificateBuilder {
     /// Clocks a little behind still accept a new certificate.
     static let backdate: TimeInterval = 5 * 60
 
+    static let serverAuth = "1.3.6.1.5.5.7.3.1"
     static let ecdsaWithSHA256 = DER.sequence(DER.oid("1.2.840.10045.4.3.2"))
     /// SEQUENCE { id-ecPublicKey, prime256v1 } and the BIT STRING header of a 65-byte point.
     static let p256SPKIPrefix = Data([
@@ -170,8 +171,8 @@ enum MitmCertificateBuilder {
         return DER.sequence(tbs, ecdsaWithSHA256, DER.bitString(signature))
     }
 
-    /// Self-signed, one year, a CA that signs only end certificates: path length 0,
-    /// keyCertSign and cRLSign.
+    /// Self-signed, one year, a CA that signs only server certificates: path length 0, keyCertSign and
+    /// cRLSign, EKU serverAuth. No name constraints: the user's list changes and the root would have to follow.
     static func root(key: MitmCAKey, now: Date = Date(), serial: Data = serial()) throws -> Data {
         let x963 = key.publicKeyX963
         let identifier = keyIdentifier(x963: x963)
@@ -182,6 +183,7 @@ enum MitmCertificateBuilder {
             extensions: [
                 extensionField("2.5.29.19", critical: true, DER.sequence(DER.boolean(true), DER.integer(0))),
                 extensionField("2.5.29.15", critical: true, DER.bitString(Data([0x06]), unusedBits: 1)),
+                extensionField("2.5.29.37", critical: false, DER.sequence(DER.oid(serverAuth))),
                 extensionField("2.5.29.14", critical: false, DER.octetString(identifier)),
             ])
         return try signed(tbs, with: key)
@@ -202,7 +204,7 @@ enum MitmCertificateBuilder {
             extensions: [
                 extensionField("2.5.29.19", critical: true, DER.sequence()),
                 extensionField("2.5.29.15", critical: true, DER.bitString(Data([0x80]), unusedBits: 7)),
-                extensionField("2.5.29.37", critical: false, DER.sequence(DER.oid("1.3.6.1.5.5.7.3.1"))),
+                extensionField("2.5.29.37", critical: false, DER.sequence(DER.oid(serverAuth))),
                 extensionField("2.5.29.17", critical: false, DER.sequence(DER.tlv(0x82, Data(host.utf8)))),
                 extensionField("2.5.29.35", critical: false,
                                DER.sequence(DER.tlv(0x80, keyIdentifier(x963: key.publicKeyX963)))),

@@ -189,8 +189,8 @@ class MacOSMitmTrustStore implements MitmTrustStore {
     );
   }
 
-  /// Adds the CA to the login keychain and trusts it for this user, which
-  /// asks for the user's password.
+  /// Adds the CA to the login keychain and trusts it for this user, for SSL
+  /// alone, which asks for the user's password.
   @override
   Future<MitmInstallOutcome> install(MitmCertificate ca) async {
     await _withTempFile(
@@ -200,6 +200,8 @@ class MacOSMitmTrustStore implements MitmTrustStore {
         'add-trusted-cert',
         '-r',
         'trustRoot',
+        '-p',
+        'ssl',
         '-k',
         _keychain,
         path,
