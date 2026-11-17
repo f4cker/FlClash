@@ -2,7 +2,9 @@ import FlutterMacOS
 
 final class ManagedHelperChannel {
     private static var instance: ManagedHelperChannel?
-    private let bridge = FCManagedHelperBridge()
+    // A static let initialises once under a lock, so the signer queue may read it while main registers.
+    private static let bridge = FCManagedHelperBridge()
+    private var bridge: FCManagedHelperBridge { Self.bridge }
     private let channel: FlutterMethodChannel
 
     static func register(messenger: FlutterBinaryMessenger) {
@@ -11,7 +13,7 @@ final class ManagedHelperChannel {
 
     /// Of the Core started through the daemon, checked again on each call; call off the main thread.
     static func coreIdentity() -> String {
-        instance?.bridge.coreIdentity() ?? "none"
+        bridge.coreIdentity()
     }
 
     private init(messenger: FlutterBinaryMessenger) {
