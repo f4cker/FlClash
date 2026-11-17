@@ -84,6 +84,7 @@ void main() {
     Mitm mitm = defaultMitm,
     MitmTrustStore? store,
     bool safeMode = false,
+    int ignoredHostnames = 0,
   }) async {
     tester.view.physicalSize = const Size(1000, 2000);
     tester.view.devicePixelRatio = 1;
@@ -95,6 +96,9 @@ void main() {
     when(
       () => core.generateMitmCertificate(),
     ).thenAnswer((_) async => _certificate);
+    when(
+      () => core.getMitmStatus(),
+    ).thenAnswer((_) async => MitmStatus(ignoredHostnames: ignoredHostnames));
     when(() => core.validateMitm(any())).thenAnswer((invocation) async {
       final rules = invocation.positionalArguments.single as MitmRules;
       return {
@@ -111,6 +115,7 @@ void main() {
         coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
         safeModeProvider.overrideWithValue(safeMode),
         mitmTrustStoreProvider.overrideWithValue(store),
+        mitmSignerProvider.overrideWithValue(null),
       ],
     );
     addTearDown(container.dispose);
@@ -184,6 +189,17 @@ void main() {
     ]) {
       expect(find.text(hidden), findsNothing, reason: hidden);
     }
+  });
+
+  testWidgets('says how many profile hostnames it ignored', (tester) async {
+    await pumpView(tester, ignoredHostnames: 3);
+
+    expect(
+      find.textContaining(
+        currentAppLocalizations.mitmIgnoredProfileHostnames(3),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('offers a certificate until one is generated', (tester) async {

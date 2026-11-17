@@ -248,8 +248,9 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	probeOutboundIPMethod: withArguments(handleOutboundIp),
 	probeServicesMethod:   withArguments(handleServiceCheck),
 
-	mitmValidateMethod: withArguments(handleMitmValidate),
-	mitmStatusMethod:   withoutArguments(handleMitmStatus),
+	mitmValidateMethod:   withArguments(handleMitmValidate),
+	mitmStatusMethod:     withoutArguments(handleMitmStatus),
+	mitmSignResultMethod: withArguments(handleMitmSignResult),
 
 	tailscaleNodesMethod:         withoutArguments(handleTailscaleNodes),
 	tailscaleStatusMethod:        withFallible(handleTailscaleStatus),

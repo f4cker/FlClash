@@ -3577,6 +3577,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'A leading - excludes a host, and the first match decides.';
 
   @override
+  String get deleteCertificate => 'Delete certificate';
+
+  @override
+  String get deleteCertificateTip =>
+      'Deletes the certificate\'s private key, the certificate and the trust given to it from this Mac. Decryption stops until a new certificate is generated and trusted.';
+
+  @override
+  String get mitmPausedCoreIdentity =>
+      'Decryption paused: the Core\'s identity check failed';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return 'Ignored $count from subscriptions or scripts';
+  }
+
+  @override
   String get mitmModules => 'Modules';
 
   @override

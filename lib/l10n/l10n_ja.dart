@@ -3416,6 +3416,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmHostnameDesc => '先頭の - は除外を表し、最初に一致した項目が優先されます。';
 
   @override
+  String get deleteCertificate => '証明書を削除';
+
+  @override
+  String get deleteCertificateTip =>
+      '証明書の秘密鍵、証明書、およびその信頼設定をこの Mac から削除します。新しい証明書を生成して信頼するまで復号は停止します。';
+
+  @override
+  String get mitmPausedCoreIdentity => '復号を一時停止中：コアの身元確認に失敗しました';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return 'サブスクリプション/スクリプトの $count 件を無視しました';
+  }
+
+  @override
   String get mitmModules => 'モジュール';
 
   @override

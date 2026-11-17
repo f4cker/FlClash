@@ -71,6 +71,7 @@ enum CoreMethod {
   mitmExchange('mitm.exchange'),
   mitmBody('mitm.body'),
   mitmStatus('mitm.status'),
+  mitmSignResult('mitm.signResult'),
   tailscaleNodes('tailscale.nodes'),
   tailscaleStatus('tailscale.status'),
   tailscaleStart('tailscale.start'),

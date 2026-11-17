@@ -6,7 +6,9 @@ import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
 import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
+import 'package:fl_clash/core/method.dart' show coreFailureLogLevel;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart' show compute, visibleForTesting;
@@ -24,21 +26,137 @@ part 'generated/mitm.g.dart';
 
 const _exchangesRefreshInterval = Duration(seconds: 2);
 
+/// On macOS the app, not the Core, holds the CA: its key stays in the login
+/// keychain and the Core asks the app to sign each leaf.
+@Riverpod(keepAlive: true)
+MitmSigner? mitmSigner(Ref ref) => system.isMacOS ? const MitmSigner() : null;
+
 @Riverpod(keepAlive: true)
 class MitmCa extends _$MitmCa {
   @override
   Future<MitmCertificate?> build() {
-    return ref.read(coreHandlerProvider).getMitmCertificate();
+    final signer = ref.read(mitmSignerProvider);
+    return signer?.certificate() ??
+        ref.read(coreHandlerProvider).getMitmCertificate();
   }
 
   Future<void> generate() async {
-    final certificate = await ref
-        .read(coreHandlerProvider)
-        .generateMitmCertificate();
+    final signer = ref.read(mitmSignerProvider);
+    final certificate =
+        await signer?.generate() ??
+        await ref.read(coreHandlerProvider).generateMitmCertificate();
     if (!ref.mounted) {
       return;
     }
     state = AsyncData(certificate);
+  }
+
+  Future<void> delete() async {
+    await ref.read(mitmSignerProvider)?.delete();
+    if (ref.mounted) {
+      state = const AsyncData(null);
+    }
+  }
+}
+
+@Riverpod(keepAlive: true)
+class MitmCoreIdentityState extends _$MitmCoreIdentityState {
+  @override
+  Future<MitmCoreIdentity> build() async {
+    final connected = ref.watch(
+      coreStatusProvider.select((status) => status == CoreStatus.connected),
+    );
+    final signer = ref.read(mitmSignerProvider);
+    if (!connected || signer == null) {
+      return MitmCoreIdentity.none;
+    }
+    return signer.coreIdentity();
+  }
+
+  void report(MitmCoreIdentity identity) {
+    if (state.value != identity) {
+      state = AsyncData(identity);
+    }
+  }
+}
+
+@riverpod
+bool mitmCoreRefused(Ref ref) {
+  final enable = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => mitmFeature && state.mitm.enable,
+    ),
+  );
+  final connected = ref.watch(
+    coreStatusProvider.select((status) => status == CoreStatus.connected),
+  );
+  final identity = ref.watch(mitmCoreIdentityStateProvider).value;
+  return enable &&
+      connected &&
+      ref.watch(mitmSignerProvider) != null &&
+      identity != null &&
+      identity != MitmCoreIdentity.verified;
+}
+
+/// How many `mitm` hostnames the running profile wrote, all of them ignored.
+@riverpod
+Future<int> mitmIgnoredHostnames(Ref ref) async {
+  ref.watch(coreStatusProvider);
+  ref.watch(patchClashConfigProvider.select((state) => state.mitm));
+  final status = await ref.read(coreHandlerProvider).getMitmStatus();
+  return status.ignoredHostnames;
+}
+
+/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
+/// list, or with why not; the Core passes the connection through on a refusal.
+@Riverpod(keepAlive: true)
+class MitmSignAction extends _$MitmSignAction {
+  @override
+  void build() {}
+
+  Future<void> answer(MitmSignRequest request) async {
+    final mitm = ref.read(patchClashConfigProvider).mitm;
+    final signer = ref.read(mitmSignerProvider);
+    MitmSignResult result;
+    if (signer == null || !mitmFeature || !mitm.enable) {
+      result = const MitmSignResult(error: 'disabled');
+    } else {
+      try {
+        result = await signer.sign(
+          host: request.host,
+          spki: request.spki,
+          hostnames: mitm.hostname,
+        );
+      } catch (error) {
+        commonPrint.log(
+          'Signing a MITM certificate failed: ${compactError(error)}',
+          logLevel: LogLevel.warning,
+        );
+        result = const MitmSignResult(error: 'signFailed');
+      }
+      if (ref.mounted && (result.refusedCore || result.cert != null)) {
+        ref
+            .read(mitmCoreIdentityStateProvider.notifier)
+            .report(
+              result.refusedCore
+                  ? MitmCoreIdentity.failed
+                  : MitmCoreIdentity.verified,
+            );
+      }
+    }
+    if (!ref.mounted) {
+      return;
+    }
+    try {
+      await ref
+          .read(coreHandlerProvider)
+          .sendMitmSignResult(request.reqId, result);
+    } catch (error) {
+      commonPrint.log(
+        'Answering a MITM signing request failed: ${compactError(error)}',
+        logLevel: coreFailureLogLevel(error),
+      );
+    }
   }
 }
 
@@ -62,10 +180,13 @@ class MitmTrustState extends _$MitmTrustState {
     } else if (store == null) {
       check = const MitmTrustCheck(MitmTrust.notInstalled);
     } else {
+      final signer = ref.read(mitmSignerProvider);
       final core = ref.read(coreHandlerProvider);
       check = await store.check(
         ca,
-        () => core.issueMitmCertificate(mitmCheckHost),
+        () =>
+            signer?.checkCertificate() ??
+            core.issueMitmCertificate(mitmCheckHost),
       );
     }
     if (ref.mounted) {

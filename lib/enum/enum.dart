@@ -199,6 +199,7 @@ enum CoreEventType {
   dialerLoop,
   tailscaleState,
   tailscaleRoutes,
+  mitmSign,
 }
 
 /// `ipn.State` as tsnet names it; [none] is a node that has not started.

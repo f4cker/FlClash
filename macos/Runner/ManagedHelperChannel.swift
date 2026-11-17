@@ -9,6 +9,11 @@ final class ManagedHelperChannel {
         instance = ManagedHelperChannel(messenger: messenger)
     }
 
+    /// Of the Core started through the daemon, checked again on each call; call off the main thread.
+    static func coreIdentity() -> String {
+        instance?.bridge.coreIdentity() ?? "none"
+    }
+
     private init(messenger: FlutterBinaryMessenger) {
         channel = FlutterMethodChannel(name: "com.layoute.flash/managed_helper", binaryMessenger: messenger)
         channel.setMethodCallHandler { [weak self] call, result in

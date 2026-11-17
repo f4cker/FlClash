@@ -2,6 +2,7 @@
 #import "../../Shared/HelperIdentity.h"
 #include <assert.h>
 #include <unistd.h>
+#include <mach/mach.h>
 
 #ifndef FC_TRUST_TEST_EXPECT_CANDIDATE_ENABLED
 #define FC_TRUST_TEST_EXPECT_CANDIDATE_ENABLED 0
@@ -100,8 +101,24 @@ static void testBundleLayout(void) {
     [files removeItemAtPath:root error:nil];
 }
 
+// The app signs for no Core it cannot place: no token, a token of another pid, or a process without the
+// pinned Core identity (this unsigned fixture) is refused.
+static void testCoreGuest(void) {
+    audit_token_t token;
+    mach_msg_type_number_t count = TASK_AUDIT_TOKEN_COUNT;
+    assert(task_info(mach_task_self(), TASK_AUDIT_TOKEN, (task_info_t)&token, &count) == KERN_SUCCESS);
+    NSData *own = [NSData dataWithBytes:&token length:sizeof(token)];
+    assert(!FCCoreGuestValid(nil, getpid()));
+    assert(!FCCoreGuestValid([NSData data], getpid()));
+    assert(!FCCoreGuestValid([own subdataWithRange:NSMakeRange(0, sizeof(token) - 1)], getpid()));
+    assert(!FCCoreGuestValid(own, 0));
+    assert(!FCCoreGuestValid(own, getpid() + 1));
+    assert(!FCCoreGuestValid(own, getpid()));
+}
+
 int main(void) {
     @autoreleasepool {
+        testCoreGuest();
         NSString *pin = @"0123456789abcdef0123456789abcdef01234567";
         assert([@FC_PINNED_CERTIFICATE_SHA1 isEqualToString:@"BBA7F8529FD271B9848EC03A2CE3F4780F585556"]);
         assert(@FC_PRODUCTION_TEAM_ID.length == 0);

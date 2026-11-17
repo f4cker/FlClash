@@ -52,6 +52,8 @@ static NSString *FCRunningHash(void) {
 @property int socket;
 @property NSString *socketPath;
 @property NSMutableData *incoming;
+// The accepted Core's audit token, for the app to check the Core's identity before it signs for it.
+@property NSData *coreToken;
 @property BOOL ownershipUncertain;
 @property BOOL journalOwned;
 @property NSUInteger connections;
@@ -114,6 +116,7 @@ static NSString *FCRunningHash(void) {
         xpc_dictionary_set_string(reply, "coreRevision", [self.contract[@"CoreRevision"] UTF8String]);
     }
     if (frame) xpc_dictionary_set_data(reply, "frame", frame.bytes, frame.length);
+    if (self.coreToken) xpc_dictionary_set_data(reply, "coreAuditToken", self.coreToken.bytes, self.coreToken.length);
     xpc_connection_send_message(xpc_dictionary_get_remote_connection(request), reply);
 }
 
@@ -122,6 +125,7 @@ static NSString *FCRunningHash(void) {
     if (self.listener >= 0) { close(self.listener); self.listener = -1; }
     if (self.socketPath) unlink(self.socketPath.fileSystemRepresentation);
     self.socketPath = nil;
+    self.coreToken = nil;
     [self.incoming setLength:0];
 }
 
@@ -195,6 +199,11 @@ static NSString *FCRunningHash(void) {
     pid_t peer = 0;
     socklen_t length = sizeof(peer);
     if (getsockopt(self.socket, SOL_LOCAL, LOCAL_PEERPID, &peer, &length) || peer != self.child) return NO;
+    audit_token_t token;
+    length = sizeof(token);
+    if (getsockopt(self.socket, SOL_LOCAL, LOCAL_PEERTOKEN, &token, &length) || length != sizeof(token) ||
+        (pid_t)token.val[5] != self.child) return NO;
+    self.coreToken = [NSData dataWithBytes:&token length:sizeof(token)];
     fcntl(self.socket, F_SETFD, FD_CLOEXEC);
     fcntl(self.socket, F_SETFL, O_NONBLOCK);
     int yes = 1;

@@ -3571,6 +3571,22 @@ class AppLocalizationsRu extends AppLocalizations {
       'Префикс - исключает хост; действует первое совпадение.';
 
   @override
+  String get deleteCertificate => 'Удалить сертификат';
+
+  @override
+  String get deleteCertificateTip =>
+      'Удаляет с этого Mac закрытый ключ сертификата, сам сертификат и доверие к нему. Расшифровка остановится, пока не будет создан и подтверждён новый сертификат.';
+
+  @override
+  String get mitmPausedCoreIdentity =>
+      'Расшифровка приостановлена: проверка подлинности ядра не пройдена';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return 'Пропущено из подписок или скриптов: $count';
+  }
+
+  @override
   String get mitmModules => 'Модули';
 
   @override

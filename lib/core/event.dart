@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
@@ -50,6 +51,8 @@ abstract mixin class CoreEventListener {
   void onTailscaleState(TailscaleStateEvent event) {}
 
   void onTailscaleRoutes(TailscaleRoutesEvent event) {}
+
+  void onMitmSign(MitmSignRequest request) {}
 }
 
 class CoreEventManager {
@@ -116,6 +119,11 @@ class CoreEventManager {
                 TailscaleRoutesEvent.fromJson(
                   Map<String, Object?>.from(event.data),
                 ),
+              );
+              break;
+            case CoreEventType.mitmSign:
+              listener.onMitmSign(
+                MitmSignRequest.fromJson(Map<String, Object?>.from(event.data)),
               );
               break;
           }

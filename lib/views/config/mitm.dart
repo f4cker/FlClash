@@ -345,7 +345,29 @@ class _MitmViewState extends ConsumerState<MitmView> {
         onTap: () =>
             _regenerate(context, ref, old: certificate, canTrust: canTrust),
       ),
+      if (ref.watch(mitmSignerProvider) != null)
+        ListItem(
+          title: Text(appLocalizations.deleteCertificate),
+          onTap: () => _delete(context, ref),
+        ),
     ];
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final appLocalizations = context.appLocalizations;
+    final res = await dialogs.showMessage(
+      title: appLocalizations.deleteCertificate,
+      message: TextSpan(text: appLocalizations.deleteCertificateTip),
+      destructive: true,
+    );
+    if (res != true || !context.mounted) {
+      return;
+    }
+    await globalState.loadingRun<void>(
+      ref.read(mitmCaProvider.notifier).delete,
+      tag: LoadingTag.mitm,
+      title: appLocalizations.deleteCertificate,
+    );
   }
 
   @override
@@ -380,6 +402,9 @@ class _MitmViewState extends ConsumerState<MitmView> {
                             const _MitmEnableItem(),
                             _MitmCaptureItem(isAndroid: isAndroid),
                           ],
+                          footer: ref.watch(mitmCoreRefusedProvider)
+                              ? appLocalizations.mitmPausedCoreIdentity
+                              : null,
                         ),
                         generateSection(
                           title: appLocalizations.certificate,
@@ -403,7 +428,14 @@ class _MitmViewState extends ConsumerState<MitmView> {
                       children: [
                         generateSection(
                           items: const [_MitmHostnameItem()],
-                          footer: appLocalizations.mitmHostnameDesc,
+                          footer: [
+                            appLocalizations.mitmHostnameDesc,
+                            if (ref.watch(mitmIgnoredHostnamesProvider).value
+                                case final ignored? when ignored > 0)
+                              appLocalizations.mitmIgnoredProfileHostnames(
+                                ignored,
+                              ),
+                          ].join('\n'),
                         ),
                         generateSection(
                           title: appLocalizations.options,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 
@@ -573,6 +574,10 @@ abstract class CoreHandlerInterface {
 
   Future<MitmStatus> getMitmStatus() {
     return _query(CoreMethod.mitmStatus, _model(MitmStatus.fromJson));
+  }
+
+  Future<void> sendMitmSignResult(int reqId, MitmSignResult result) {
+    return _command(CoreMethod.mitmSignResult, arguments: result.toJson(reqId));
   }
 
   Future<String> issueMitmCertificate(String host) {

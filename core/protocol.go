@@ -91,6 +91,7 @@ const (
 	mitmExchangeMethod            CoreMethod = "mitm.exchange"
 	mitmBodyMethod                CoreMethod = "mitm.body"
 	mitmStatusMethod              CoreMethod = "mitm.status"
+	mitmSignResultMethod          CoreMethod = "mitm.signResult"
 
 	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
 	tailscaleStatusMethod        CoreMethod = "tailscale.status"
@@ -125,6 +126,8 @@ const (
 	RequestTrafficMessage  MessageType = "requestTraffic"
 	TailscaleStateMessage  MessageType = "tailscaleState"
 	TailscaleRoutesMessage MessageType = "tailscaleRoutes"
+	// Asks the app, which holds the CA key, for a leaf; answered by mitm.signResult.
+	MitmSignMessage MessageType = "mitmSign"
 )
 
 type Message struct {

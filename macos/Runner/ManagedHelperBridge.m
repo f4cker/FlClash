@@ -22,6 +22,10 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
 @property BOOL operationInFlight;
 @property BOOL migrationAttempted;
 @property BOOL reRegistrationChecked;
+// The Core of the running session, as the daemon saw it on the relay socket.
+@property NSData *coreToken;
+@property pid_t corePid;
+@property BOOL coreChecked;
 @end
 
 @implementation FCManagedHelperBridge
@@ -104,6 +108,24 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
     self.connectionTrusted = NO;
     self.negotiatedCoreHash = nil;
     self.sessionActive = NO;
+    [self forgetCore];
+}
+
+- (void)forgetCore {
+    self.coreToken = nil;
+    self.corePid = 0;
+    self.coreChecked = NO;
+}
+
+- (NSString *)checkCore {
+    if (!self.coreChecked) return @"none";
+    return FCCoreGuestValid(self.coreToken, self.corePid) ? @"verified" : @"failed";
+}
+
+- (NSString *)coreIdentity {
+    __block NSString *identity = @"none";
+    dispatch_sync(self.queue, ^{ identity = [self checkCore]; });
+    return identity;
 }
 
 // After an app update the registered job may still describe the previous build; re-register once per launch
@@ -189,6 +211,15 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
         self.pending--;
         self.pendingBytes -= bytes;
         if ([method isEqualToString:@"start"] && [answer[@"code"] isEqual:@"ok"]) self.sessionActive = YES;
+        if ([method isEqualToString:@"start"] || [method isEqualToString:@"stop"]) [self forgetCore];
+        if ([method isEqualToString:@"start"] && [answer[@"code"] isEqual:@"ok"]) {
+            self.coreToken = answer[@"coreAuditToken"];
+            self.corePid = (pid_t)[answer[@"pid"] intValue];
+            self.coreChecked = YES;
+            answer = [answer mutableCopy];
+            ((NSMutableDictionary *)answer)[@"coreIdentity"] = [self checkCore];
+            [(NSMutableDictionary *)answer removeObjectForKey:@"coreAuditToken"];
+        }
         if ([answer[@"exitConfirmed"] isEqual:@YES]) self.sessionActive = NO;
         completion(answer);
     };
@@ -209,6 +240,9 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
             @"exitConfirmed": @(xpc_dictionary_get_bool(reply, "exitConfirmed")),
             @"coreHash": hash ? @(hash) : @"", @"helperCDHash": helper ? @(helper) : @"",
             @"helperBuild": build ? @(build) : @""} mutableCopy];
+        size_t tokenSize = 0;
+        const void *token = xpc_dictionary_get_data(reply, "coreAuditToken", &tokenSize);
+        if (token && tokenSize == sizeof(audit_token_t)) answer[@"coreAuditToken"] = [NSData dataWithBytes:token length:tokenSize];
         size_t size = 0;
         const void *data = xpc_dictionary_get_data(reply, "frame", &size);
         if (size > FCMaxFrame) { finish(@{@"code": @"incompatible"}); return; }
@@ -398,6 +432,7 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
         if (self.operationInFlight && !relay) { completion(@{@"code": @"operationInProgress"}); return; }
         BOOL argumentless = !arguments.count;
         if ([method isEqualToString:@"status"]) { [self status:completion]; return; }
+        if ([method isEqualToString:@"coreIdentity"]) { completion(@{@"code": [self checkCore]}); return; }
         if ([method isEqualToString:@"migrate"]) { [self migrateWithArguments:arguments completion:completion]; return; }
         if ([@[@"enable", @"disable", @"repair", @"openApprovalSettings"] containsObject:method] && !argumentless) {
             completion(@{@"code": @"invalidRequest"}); return;

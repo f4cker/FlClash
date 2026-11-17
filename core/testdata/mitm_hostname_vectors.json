@@ -51,7 +51,12 @@
     {"line": "ex..ample.com", "issue": "invalid"},
     {"line": "bücher.example", "issue": "invalid"},
     {"line": "1.2.3", "issue": "invalid"},
-    {"line": "https://example.com", "issue": "address"}
+    {"line": "https://example.com", "issue": "address"},
+    {"line": "*.www.ck", "issue": ""},
+    {"line": "*.city.kobe.jp", "issue": ""},
+    {"line": "*.b.ck", "issue": "over-broad"},
+    {"line": "*.foo.kobe.jp", "issue": "over-broad"},
+    {"line": "*.ck", "issue": "over-broad"}
   ],
   "match": [
     {"list": ["api.example.com"], "host": "api.example.com", "decrypt": true},

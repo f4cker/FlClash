@@ -38,6 +38,10 @@ NSString * _Nullable FCSigningRequirement(NSString *identifier);
 BOOL FCCodeEntitlementsAllowed(NSDictionary * _Nullable entitlements, uint32_t flags);
 BOOL FCGUIEntitlementsAllowed(NSDictionary * _Nullable entitlements, uint32_t flags);
 BOOL FCCheckStatic(NSString *path, NSString *identifier);
+// The running Core behind an audit token the daemon read off the relay socket: it must be process pid and
+// carry the pinned identity, com.layoute.flash.core and a hardened runtime. The token names one process
+// lifetime, so a reused pid does not pass.
+BOOL FCCoreGuestValid(NSData * _Nullable auditToken, pid_t pid);
 NSData * _Nullable FCStaticCodeHash(NSString *path, NSString *identifier);
 BOOL FCProtectedTree(NSString *path, BOOL recursive);
 NSString *FCSHA256(NSString *path);

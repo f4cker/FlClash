@@ -6318,6 +6318,30 @@ abstract class AppLocalizations {
   /// **'A leading - excludes a host, and the first match decides.'**
   String get mitmHostnameDesc;
 
+  /// No description provided for @deleteCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete certificate'**
+  String get deleteCertificate;
+
+  /// No description provided for @deleteCertificateTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletes the certificate\'s private key, the certificate and the trust given to it from this Mac. Decryption stops until a new certificate is generated and trusted.'**
+  String get deleteCertificateTip;
+
+  /// No description provided for @mitmPausedCoreIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption paused: the Core\'s identity check failed'**
+  String get mitmPausedCoreIdentity;
+
+  /// No description provided for @mitmIgnoredProfileHostnames.
+  ///
+  /// In en, this message translates to:
+  /// **'Ignored {count} from subscriptions or scripts'**
+  String mitmIgnoredProfileHostnames(Object count);
+
   /// No description provided for @mitmModules.
   ///
   /// In en, this message translates to:

@@ -1131,6 +1131,15 @@
   "bodyRewrite": "Body rewrite",
   "mapLocal": "Map local",
   "mitmHostnameDesc": "A leading - excludes a host, and the first match decides.",
+  "deleteCertificate": "Delete certificate",
+  "deleteCertificateTip": "Deletes the certificate's private key, the certificate and the trust given to it from this Mac. Decryption stops until a new certificate is generated and trusted.",
+  "mitmPausedCoreIdentity": "Decryption paused: the Core's identity check failed",
+  "mitmIgnoredProfileHostnames": "Ignored {count} from subscriptions or scripts",
+  "@mitmIgnoredProfileHostnames": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "mitmModules": "Modules",
   "mitmModule": "Module",
   "mitmModuleInvalid": "This is not a Surge module, a Loon plugin, a Quantumult X snippet or a Stash override",

@@ -59,6 +59,7 @@ static NSDictionary *FixtureRead(NSString *bundle) {
 - (NSDictionary *)registrationStatus { self.gates++; return @{@"code": self.registration}; }
 - (NSString *)currentHelperHash { return @"cdhash-current"; }
 - (void)status:(void (^)(NSDictionary *))completion { completion(@{@"code": self.registration}); }
+- (NSString *)checkCore { [self.calls addObject:@"checkCore"]; return @"failed"; }
 - (void)migrateWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"migrate"]; c(@{@"code": @"ok"}); }
 - (void)registerWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"register"]; c(@{@"code": @"ok"}); }
 - (void)unregisterWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"unregister"]; c(@{@"code": @"ok"}); }
@@ -157,6 +158,9 @@ int main(void) {
         assert([Invoke(bridge, @"enable", @{@"x": @1}) isEqual:@"invalidRequest"]);
         assert([Invoke(bridge, @"bogus", @{}) isEqual:@"invalidRequest"]);
         assert([Invoke(bridge, @"installerInstructions", @{}) isEqual:@"invalidRequest"]);
+        [bridge.calls removeAllObjects];
+        assert([Invoke(bridge, @"coreIdentity", @{}) isEqual:@"failed"]);
+        assert(([bridge.calls isEqual:@[@"checkCore"]]));
         for (NSString *name in @[@"migrate", @"enable", @"disable", @"repair", @"openApprovalSettings"]) {
             [bridge.calls removeAllObjects];
             Invoke(bridge, name, @{});

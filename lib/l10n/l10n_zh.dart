@@ -3365,6 +3365,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmHostnameDesc => '以 - 开头表示排除，第一条匹配的生效。';
 
   @override
+  String get deleteCertificate => '删除证书';
+
+  @override
+  String get deleteCertificateTip => '从本机删除证书私钥、证书本身和对它的信任。之后需重新生成并信任新证书才能解密。';
+
+  @override
+  String get mitmPausedCoreIdentity => '解密已暂停：内核身份核对失败';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return '已忽略来自订阅/脚本的 $count 条';
+  }
+
+  @override
   String get mitmModules => '模块';
 
   @override

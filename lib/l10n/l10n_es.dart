@@ -3613,6 +3613,22 @@ class AppLocalizationsEs extends AppLocalizations {
       'Un - al principio excluye un host, y decide la primera coincidencia.';
 
   @override
+  String get deleteCertificate => 'Eliminar certificado';
+
+  @override
+  String get deleteCertificateTip =>
+      'Elimina de este Mac la clave privada del certificado, el certificado y la confianza que se le dio. El descifrado se detiene hasta que se genere y se confíe en un certificado nuevo.';
+
+  @override
+  String get mitmPausedCoreIdentity =>
+      'Descifrado en pausa: falló la verificación de identidad del núcleo';
+
+  @override
+  String mitmIgnoredProfileHostnames(Object count) {
+    return '$count ignorados de suscripciones o scripts';
+  }
+
+  @override
   String get mitmModules => 'Módulos';
 
   @override

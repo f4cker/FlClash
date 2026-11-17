@@ -232,6 +232,29 @@ BOOL FCCheckStatic(NSString *path, NSString *identifier) {
     return FCStaticCodeHash(path, identifier) != nil;
 }
 
+BOOL FCCoreGuestValid(NSData *auditToken, pid_t pid) {
+    if (![auditToken isKindOfClass:NSData.class] || auditToken.length != sizeof(audit_token_t) || pid <= 0) return NO;
+    audit_token_t token;
+    memcpy(&token, auditToken.bytes, sizeof(token));
+    // val[5] is the pid (audit_token_to_pid, without linking libbsm).
+    if ((pid_t)token.val[5] != pid) return NO;
+    NSString *text = FCSigningRequirement(FCCoreIdentifier);
+    SecRequirementRef requirement = NULL;
+    if (!text || SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement)) return NO;
+    SecCodeRef code = NULL;
+    NSDictionary *attributes = @{(__bridge NSString *)kSecGuestAttributeAudit: auditToken};
+    BOOL valid = SecCodeCopyGuestWithAttributes(NULL, (__bridge CFDictionaryRef)attributes, kSecCSDefaultFlags,
+        &code) == errSecSuccess && code;
+    valid = valid && SecCodeCheckValidity(code, kSecCSStrictValidate, requirement) == errSecSuccess;
+    CFRelease(requirement);
+    NSDictionary *info = valid ? FCSigningInformation((SecStaticCodeRef)code) : nil;
+    valid = valid && FCValidGUIHash(info[(__bridge NSString *)kSecCodeInfoUnique]) &&
+        FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
+            [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
+    if (code) CFRelease(code);
+    return valid;
+}
+
 @interface FCMessageValidator ()
 @property NSString *identifier;
 @property NSString *executable;

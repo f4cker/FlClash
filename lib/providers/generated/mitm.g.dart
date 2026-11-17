@@ -8,6 +8,54 @@ part of '../mitm.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// On macOS the app, not the Core, holds the CA: its key stays in the login
+/// keychain and the Core asks the app to sign each leaf.
+
+@ProviderFor(mitmSigner)
+final mitmSignerProvider = MitmSignerProvider._();
+
+/// On macOS the app, not the Core, holds the CA: its key stays in the login
+/// keychain and the Core asks the app to sign each leaf.
+
+final class MitmSignerProvider
+    extends $FunctionalProvider<MitmSigner?, MitmSigner?, MitmSigner?>
+    with $Provider<MitmSigner?> {
+  /// On macOS the app, not the Core, holds the CA: its key stays in the login
+  /// keychain and the Core asks the app to sign each leaf.
+  MitmSignerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mitmSignerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmSignerHash();
+
+  @$internal
+  @override
+  $ProviderElement<MitmSigner?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  MitmSigner? create(Ref ref) {
+    return mitmSigner(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(MitmSigner? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<MitmSigner?>(value),
+    );
+  }
+}
+
+String _$mitmSignerHash() => r'ab8de0f9cd6a25e1f2dbdf96297f19f916c0b591';
 
 @ProviderFor(MitmCa)
 final mitmCaProvider = MitmCaProvider._();
@@ -33,7 +81,7 @@ final class MitmCaProvider
   MitmCa create() => MitmCa();
 }
 
-String _$mitmCaHash() => r'a3c0701e935a4b1949cca7baa07b0860cc814ba6';
+String _$mitmCaHash() => r'7d0f15b20d86d2d19a32bfe84d41fde34f0c8d3f';
 
 abstract class _$MitmCa extends $AsyncNotifier<MitmCertificate?> {
   FutureOr<MitmCertificate?> build();
@@ -47,6 +95,206 @@ abstract class _$MitmCa extends $AsyncNotifier<MitmCertificate?> {
             as $ClassProviderElement<
               AnyNotifier<AsyncValue<MitmCertificate?>, MitmCertificate?>,
               AsyncValue<MitmCertificate?>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Checked again whenever the Core connects and on every signing answer.
+
+@ProviderFor(MitmCoreIdentityState)
+final mitmCoreIdentityStateProvider = MitmCoreIdentityStateProvider._();
+
+/// Checked again whenever the Core connects and on every signing answer.
+final class MitmCoreIdentityStateProvider
+    extends $AsyncNotifierProvider<MitmCoreIdentityState, MitmCoreIdentity> {
+  /// Checked again whenever the Core connects and on every signing answer.
+  MitmCoreIdentityStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mitmCoreIdentityStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmCoreIdentityStateHash();
+
+  @$internal
+  @override
+  MitmCoreIdentityState create() => MitmCoreIdentityState();
+}
+
+String _$mitmCoreIdentityStateHash() =>
+    r'264f2a832f7a1e1998f5e9bb4480cd080477c72f';
+
+/// Checked again whenever the Core connects and on every signing answer.
+
+abstract class _$MitmCoreIdentityState
+    extends $AsyncNotifier<MitmCoreIdentity> {
+  FutureOr<MitmCoreIdentity> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<MitmCoreIdentity>, MitmCoreIdentity>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<MitmCoreIdentity>, MitmCoreIdentity>,
+              AsyncValue<MitmCoreIdentity>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Whether decryption is paused because the Core failed its identity check.
+
+@ProviderFor(mitmCoreRefused)
+final mitmCoreRefusedProvider = MitmCoreRefusedProvider._();
+
+/// Whether decryption is paused because the Core failed its identity check.
+
+final class MitmCoreRefusedProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether decryption is paused because the Core failed its identity check.
+  MitmCoreRefusedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mitmCoreRefusedProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmCoreRefusedHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return mitmCoreRefused(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$mitmCoreRefusedHash() => r'5d09203ae306fc893ff3194f4f26975d63d42cd5';
+
+/// How many `mitm` hostnames the running profile wrote, all of them ignored.
+
+@ProviderFor(mitmIgnoredHostnames)
+final mitmIgnoredHostnamesProvider = MitmIgnoredHostnamesProvider._();
+
+/// How many `mitm` hostnames the running profile wrote, all of them ignored.
+
+final class MitmIgnoredHostnamesProvider
+    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
+    with $FutureModifier<int>, $FutureProvider<int> {
+  /// How many `mitm` hostnames the running profile wrote, all of them ignored.
+  MitmIgnoredHostnamesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mitmIgnoredHostnamesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmIgnoredHostnamesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<int> create(Ref ref) {
+    return mitmIgnoredHostnames(ref);
+  }
+}
+
+String _$mitmIgnoredHostnamesHash() =>
+    r'79208567cf4cf68f68e262bb6be630681ef12327';
+
+/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
+/// list, or with why not; the Core passes the connection through on a refusal.
+
+@ProviderFor(MitmSignAction)
+final mitmSignActionProvider = MitmSignActionProvider._();
+
+/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
+/// list, or with why not; the Core passes the connection through on a refusal.
+final class MitmSignActionProvider
+    extends $NotifierProvider<MitmSignAction, void> {
+  /// Answers the Core's `mitmSign` with a leaf for a host on the user's own
+  /// list, or with why not; the Core passes the connection through on a refusal.
+  MitmSignActionProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mitmSignActionProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmSignActionHash();
+
+  @$internal
+  @override
+  MitmSignAction create() => MitmSignAction();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$mitmSignActionHash() => r'87b19e365bc132e925ed76df049f20221bb31222';
+
+/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
+/// list, or with why not; the Core passes the connection through on a refusal.
+
+abstract class _$MitmSignAction extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
               Object?,
               Object?
             >;
@@ -127,7 +375,7 @@ final class MitmTrustStateProvider
   MitmTrustState create() => MitmTrustState();
 }
 
-String _$mitmTrustStateHash() => r'94078270dd9682be591a28b1f0e1c92b55ce2f31';
+String _$mitmTrustStateHash() => r'2b856f7cdae1d594028c3016dfb37d020a8f0d8e';
 
 /// Whether this device trusts the CA. A check records the CA it found
 /// trusted, which is the one the Core decrypts HTTPS with.
