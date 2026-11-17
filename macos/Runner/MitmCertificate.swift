@@ -147,14 +147,14 @@ enum MitmCertificateBuilder {
             : DER.sequence(DER.oid(oid), DER.octetString(value))
     }
 
-    private static func tbs(serial: Data, issuer: Data, notBefore: Date, lifetime: TimeInterval,
+    private static func tbs(serial: Data, issuer: Data, notBefore: Date, notAfter: Date,
                             subject: Data, spki: Data, extensions: [Data]) -> Data {
         DER.sequence(
             DER.explicit(0, DER.integer(2)),
             DER.integer(serial),
             ecdsaWithSHA256,
             issuer,
-            DER.sequence(DER.time(notBefore), DER.time(notBefore.addingTimeInterval(lifetime))),
+            DER.sequence(DER.time(notBefore), DER.time(notAfter)),
             subject,
             spki,
             DER.explicit(3, DER.sequence(extensions)))
@@ -175,9 +175,10 @@ enum MitmCertificateBuilder {
     static func root(key: MitmCAKey, now: Date = Date(), serial: Data = serial()) throws -> Data {
         let x963 = key.publicKeyX963
         let identifier = keyIdentifier(x963: x963)
+        let notBefore = now.addingTimeInterval(-backdate)
         let tbs = tbs(
-            serial: serial, issuer: rootSubject, notBefore: now.addingTimeInterval(-backdate),
-            lifetime: rootLifetime, subject: rootSubject, spki: spki(x963: x963),
+            serial: serial, issuer: rootSubject, notBefore: notBefore,
+            notAfter: notBefore.addingTimeInterval(rootLifetime), subject: rootSubject, spki: spki(x963: x963),
             extensions: [
                 extensionField("2.5.29.19", critical: true, DER.sequence(DER.boolean(true), DER.integer(0))),
                 extensionField("2.5.29.15", critical: true, DER.bitString(Data([0x06]), unusedBits: 1)),
@@ -186,16 +187,18 @@ enum MitmCertificateBuilder {
         return try signed(tbs, with: key)
     }
 
-    /// A server certificate for host alone, seven days, never a CA.
-    static func leaf(host: String, spki: Data, key: MitmCAKey, now: Date = Date(),
+    /// A server certificate for host alone, seven days but never past notAfterLimit (the root's), never a CA.
+    static func leaf(host: String, spki: Data, key: MitmCAKey, now: Date = Date(), notAfterLimit: Date = .distantFuture,
                      serial: Data = serial()) throws -> Data {
         guard MitmHostPolicy.validDNSName(host), host == MitmHostPolicy.normalize(host) else {
             throw MitmCertificateError.badHost
         }
         let point = try p256Point(spki: spki)
+        let notBefore = now.addingTimeInterval(-backdate)
         let tbs = tbs(
-            serial: serial, issuer: rootSubject, notBefore: now.addingTimeInterval(-backdate),
-            lifetime: leafLifetime, subject: name(commonName: host), spki: self.spki(x963: point),
+            serial: serial, issuer: rootSubject, notBefore: notBefore,
+            notAfter: leafNotAfter(now: now, limit: notAfterLimit), subject: name(commonName: host),
+            spki: self.spki(x963: point),
             extensions: [
                 extensionField("2.5.29.19", critical: true, DER.sequence()),
                 extensionField("2.5.29.15", critical: true, DER.bitString(Data([0x80]), unusedBits: 7)),
@@ -205,6 +208,10 @@ enum MitmCertificateBuilder {
                                DER.sequence(DER.tlv(0x80, keyIdentifier(x963: key.publicKeyX963)))),
             ])
         return try signed(tbs, with: key)
+    }
+
+    static func leafNotAfter(now: Date, limit: Date) -> Date {
+        min(now.addingTimeInterval(leafLifetime - backdate), limit)
     }
 
     static func pem(_ der: Data) -> String {

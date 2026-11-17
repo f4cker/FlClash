@@ -60,13 +60,15 @@ final class MitmSigner {
     /// The trust check's own host, signed for the app and never for the Core.
     static let checkHost = "mitm-check.flclash.invalid"
     static let cacheLimit = 1024
+    /// A cached leaf is issued again once less than this is left of it.
+    static let leafRenewal: TimeInterval = 24 * 3600
 
     private let store: MitmCAStore
     private let coreIdentity: () -> String
     private let now: () -> Date
     private var key: MitmCAKey?
     private var root: MitmRootInfo?
-    private var leaves = [String: Data]()
+    private var leaves = [String: (der: Data, notAfter: Date)]()
     /// What the last sign was told about the Core: "verified", "none" or "failed:<stage>".
     private(set) var lastCoreIdentity = "none"
 
@@ -131,12 +133,17 @@ final class MitmSigner {
         guard let root = try? certificate(), let key else { return .failure(.noRoot) }
         guard now() < root.notAfter else { return .failure(.rootExpired) }
         let cacheKey = host + "\n" + spki.base64EncodedString()
-        if let leaf = leaves[cacheKey] { return .success((leaf, root.der)) }
-        guard let leaf = try? MitmCertificateBuilder.leaf(host: host, spki: spki, key: key, now: now()) else {
+        let issued = now()
+        if let cached = leaves[cacheKey],
+           cached.notAfter.timeIntervalSince(issued) >= Self.leafRenewal || cached.notAfter >= root.notAfter {
+            return .success((cached.der, root.der))
+        }
+        guard let leaf = try? MitmCertificateBuilder.leaf(
+            host: host, spki: spki, key: key, now: issued, notAfterLimit: root.notAfter) else {
             return .failure(.signFailed)
         }
         if leaves.count >= Self.cacheLimit { leaves.removeAll() }
-        leaves[cacheKey] = leaf
+        leaves[cacheKey] = (leaf, MitmCertificateBuilder.leafNotAfter(now: issued, limit: root.notAfter))
         return .success((leaf, root.der))
     }
 }

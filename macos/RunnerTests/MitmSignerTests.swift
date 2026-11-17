@@ -296,6 +296,34 @@ final class MitmSignerTests: XCTestCase {
         // A cached leaf still needs the host on the list now.
         XCTAssertEqual(signer.sign(host: "api.example.com", spki: spki, hostnames: []).failure, .notListed)
     }
+
+    func testCachedLeafIsIssuedAgainBeforeItExpires() throws {
+        _ = try signer.generate()
+        let spki = leafSPKI()
+        let first = try XCTUnwrap(signer.sign(host: "api.example.com", spki: spki, hostnames: list).success)
+        let expiry = try MitmRootReader.validity(of: first).notAfter
+        clock = expiry.addingTimeInterval(-MitmSigner.leafRenewal - 60)
+        XCTAssertEqual(signer.sign(host: "api.example.com", spki: spki, hostnames: list).success, first)
+        clock = expiry.addingTimeInterval(-MitmSigner.leafRenewal + 60)
+        let second = try XCTUnwrap(signer.sign(host: "api.example.com", spki: spki, hostnames: list).success)
+        XCTAssertNotEqual(second, first)
+        XCTAssertGreaterThan(try MitmRootReader.validity(of: second).notAfter, expiry)
+        clock = expiry.addingTimeInterval(3600)
+        let third = try XCTUnwrap(signer.sign(host: "api.example.com", spki: spki, hostnames: list).success)
+        XCTAssertEqual(signer.sign(host: "api.example.com", spki: spki, hostnames: list).success, third)
+    }
+
+    func testLeafNeverOutlivesTheRoot() throws {
+        let root = try signer.generate()
+        let rootExpiry = try MitmRootReader.validity(of: root.der).notAfter
+        clock = rootExpiry.addingTimeInterval(-2 * 24 * 3600)
+        let spki = leafSPKI()
+        let leaf = try XCTUnwrap(signer.sign(host: "api.example.com", spki: spki, hostnames: list).success)
+        XCTAssertEqual(try MitmRootReader.validity(of: leaf).notAfter, rootExpiry)
+        // The last day of the root reuses its leaf rather than signing one per request.
+        clock = rootExpiry.addingTimeInterval(-3600)
+        XCTAssertEqual(signer.sign(host: "api.example.com", spki: spki, hostnames: list).success, leaf)
+    }
 }
 
 private extension Result where Success == (leaf: Data, ca: Data), Failure == MitmSignError {
