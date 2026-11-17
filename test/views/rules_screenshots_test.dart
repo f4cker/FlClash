@@ -618,6 +618,13 @@ void main() {
     await shoot(tester, '06b-lookup-core-stopped');
   });
 
+  shot('06c-core-stopped-after-result', (tester) async {
+    await pumpPage(tester);
+    await query(tester, 'www.youtube.com');
+    container.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    await shoot(tester, '06c-core-stopped-after-result');
+  });
+
   shot('07-add-dialog', (tester) async {
     await pumpPage(tester, writeRule: (_, _) async => null);
     await query(tester, 'www.youtube.com');
@@ -630,12 +637,51 @@ void main() {
     WidgetTester tester, {
     required bool effective,
     bool uncertain = false,
+    bool beaten = false,
   }) async {
     await pumpPage(
       tester,
       writeRule: (_, text) async {
         final fields = text.split(',');
         final group = fields[2];
+        if (beaten) {
+          // The extension script puts a rule of its own ahead of the added
+          // ones, and it holds the host too.
+          final first = _rule(0, 'DOMAIN-KEYWORD', 'youtube', _select);
+          final added = _rule(1, fields[0], fields[1], group);
+          rules = [
+            first,
+            added,
+            for (final rule in _rules) rule.copyWith(index: rule.index + 2),
+          ];
+          container
+              .read(appliedRuleSourcesStateProvider.notifier)
+              .applied(profile.id, [
+                RuleSource(
+                  kind: RuleSourceKind.script,
+                  name: '分流增强',
+                  text: first.text,
+                ),
+                RuleSource(kind: RuleSourceKind.addedProfile, text: added.text),
+                for (final (index, source) in _sourcesOf(_rules).indexed)
+                  source.copyWith(text: rules[index + 2].text),
+              ]);
+          final base = _youTubeLookup('www.youtube.com');
+          RuleHit shift(RuleHit hit) => hit.copyWith(index: hit.index + 2);
+          lookups['www.youtube.com'] = base.copyWith(
+            coreEpoch: 8,
+            total: rules.length,
+            winner: _hit(first, status: RuleHitStatus.winner),
+            chain: _chainOf(_select),
+            matches: [
+              _hit(first, status: RuleHitStatus.winner),
+              _hit(added),
+              for (final hit in base.matches)
+                shift(hit).copyWith(status: RuleHitStatus.shadowed),
+            ],
+          );
+          return null;
+        }
         final added = _rule(0, fields[0], fields[1], group);
         rules = [
           added,
@@ -687,8 +733,20 @@ void main() {
   });
 
   shot('08b-added-not-effective', (tester) async {
-    await addRule(tester, effective: false);
+    await addRule(tester, effective: false, beaten: true);
     await shoot(tester, '08b-added-not-effective');
+  });
+
+  shot('08b2-view-that-rule', (tester) async {
+    await addRule(tester, effective: false, beaten: true);
+    await tester.tap(find.text('查看该规则'));
+    await settle(tester, 12);
+    await shoot(tester, '08b2-view-that-rule');
+  });
+
+  shot('08b3-added-not-hit-unknown', (tester) async {
+    await addRule(tester, effective: false);
+    await shoot(tester, '08b3-added-not-hit-unknown');
   });
 
   shot('08c-added-unconfirmed', (tester) async {

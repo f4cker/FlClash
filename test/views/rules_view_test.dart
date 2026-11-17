@@ -163,7 +163,10 @@ void main() {
 
   tearDown(() => container.dispose());
 
-  Future<void> pumpRules(WidgetTester tester) async {
+  Future<void> pumpRules(
+    WidgetTester tester, {
+    Future<String?> Function(Profile profile, String text)? writeRule,
+  }) async {
     tester.view.physicalSize = _size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -171,7 +174,10 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const TestApp(locale: Locale('en'), child: RulesView()),
+        child: TestApp(
+          locale: const Locale('en'),
+          child: RulesView(writeRule: writeRule),
+        ),
       ),
     );
     await tester.pump();
@@ -287,6 +293,132 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    await teardown(tester);
+  });
+
+  testWidgets('a result shown when the Core stops dims and rests its actions', (
+    tester,
+  ) async {
+    await pumpRules(tester);
+    await tester.enterText(find.byType(EditableText), 'www.youtube.com');
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('Lookup result'), findsOneWidget);
+
+    double cardOpacity() => tester
+        .widget<Opacity>(
+          find
+              .ancestor(
+                of: find.text('Lookup result'),
+                matching: find.byType(Opacity),
+              )
+              .first,
+        )
+        .opacity;
+    expect(cardOpacity(), 1);
+
+    container.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    await tester.pump();
+
+    expect(cardOpacity(), 0.45);
+    for (final label in ['Change node', 'Add to added rules', 'Copy rule']) {
+      final button = find.text(label);
+      if (button.evaluate().isEmpty) continue;
+      await tester.tap(button.first, warnIfMissed: false);
+      await tester.pump();
+    }
+    expect(find.byType(AddRuleDialog), findsNothing);
+    expect(
+      tester.getSemantics(find.text('Add to added rules')),
+      isSemantics(isButton: true, isEnabled: false, hasEnabledState: true),
+    );
+
+    await teardown(tester);
+  });
+
+  /// Adds youtube.com through the card's dialog; the lookup after it has
+  /// an earlier rule [first] match, listing the added rule as passed over
+  /// by it when [listed].
+  Future<void> addBeaten(WidgetTester tester, {required bool listed}) async {
+    await pumpRules(
+      tester,
+      writeRule: (_, text) async {
+        const first = RuleHit(
+          index: 0,
+          type: 'DOMAIN-KEYWORD',
+          ruleType: 'DomainKeyword',
+          payload: 'youtube',
+          target: 'Proxy',
+          status: RuleHitStatus.winner,
+        );
+        when(() => core.lookupRule(any())).thenAnswer(
+          (_) async => _lookup().copyWith(
+            total: 5,
+            winner: first,
+            chain: const [ChainHop(name: 'Proxy', type: 'Selector')],
+            matches: [
+              first,
+              if (listed)
+                const RuleHit(
+                  index: 1,
+                  type: 'DOMAIN-SUFFIX',
+                  ruleType: 'DomainSuffix',
+                  payload: 'youtube.com',
+                  target: 'YouTube',
+                  status: RuleHitStatus.shadowed,
+                ),
+            ],
+          ),
+        );
+        return null;
+      },
+    );
+    await tester.enterText(find.byType(EditableText), 'www.youtube.com');
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(find.text('Add to added rules'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('an added rule another one beats names it and shows it', (
+    tester,
+  ) async {
+    await addBeaten(tester, listed: true);
+
+    expect(
+      find.text(
+        'The rule was added, but this lookup does not match it.'
+        'Rule #1 matches first.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('View that rule'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(find.text('Show all rules')),
+      isSemantics(isButton: true, isSelected: true, hasSelectedState: true),
+    );
+
+    await teardown(tester);
+  });
+
+  testWidgets('an added rule not hit for no confirmed reason names none', (
+    tester,
+  ) async {
+    await addBeaten(tester, listed: false);
+
+    expect(
+      find.text('The rule was added, but this lookup does not match it.'),
+      findsOneWidget,
+    );
+    expect(find.text('View that rule'), findsNothing);
 
     await teardown(tester);
   });
