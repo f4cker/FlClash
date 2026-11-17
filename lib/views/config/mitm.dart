@@ -320,6 +320,8 @@ class _MitmViewState extends ConsumerState<MitmView> {
         ),
       ];
     }
+    final signs = ref.watch(mitmSignerProvider) != null;
+    final keepsRoot = signs && ref.watch(safeModeProvider);
     final trust = ref.watch(mitmTrustStateProvider);
     final installable = switch (trust.value) {
       MitmTrustCheck(trust: MitmTrust.notInstalled || MitmTrust.untrusted) =>
@@ -351,12 +353,13 @@ class _MitmViewState extends ConsumerState<MitmView> {
         title: Text(appLocalizations.exportCertificate),
         onTap: () => _export(context, certificate),
       ),
-      ListItem(
-        title: Text(appLocalizations.regenerateCertificate),
-        onTap: () =>
-            _regenerate(context, ref, old: certificate, canTrust: canTrust),
-      ),
-      if (ref.watch(mitmSignerProvider) != null)
+      if (!keepsRoot)
+        ListItem(
+          title: Text(appLocalizations.regenerateCertificate),
+          onTap: () =>
+              _regenerate(context, ref, old: certificate, canTrust: canTrust),
+        ),
+      if (signs && !keepsRoot)
         ListItem(
           title: Text(appLocalizations.deleteCertificate),
           onTap: () => _delete(context, ref),

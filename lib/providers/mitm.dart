@@ -40,8 +40,17 @@ class MitmCa extends _$MitmCa {
         ref.read(coreHandlerProvider).getMitmCertificate();
   }
 
+  /// On macOS a new or deleted root also takes the old one's keychain trust
+  /// with it, which safe mode leaves as it is.
+  void _checkSafeMode(MitmSigner? signer) {
+    if (signer != null && ref.read(safeModeProvider)) {
+      throw StateError('Safe mode keeps the MITM certificate as it is');
+    }
+  }
+
   Future<void> generate() async {
     final signer = ref.read(mitmSignerProvider);
+    _checkSafeMode(signer);
     final certificate =
         await signer?.generate() ??
         await ref.read(coreHandlerProvider).generateMitmCertificate();
@@ -52,7 +61,9 @@ class MitmCa extends _$MitmCa {
   }
 
   Future<void> delete() async {
-    await ref.read(mitmSignerProvider)?.delete();
+    final signer = ref.read(mitmSignerProvider);
+    _checkSafeMode(signer);
+    await signer?.delete();
     if (ref.mounted) {
       state = const AsyncData(null);
     }
@@ -271,7 +282,9 @@ class MitmTrustState extends _$MitmTrustState {
     final store = ref.read(mitmTrustStoreProvider);
     final trust = state.value?.trust;
     var removed = true;
-    if (old != null &&
+    // The macOS signer removes the old root and its trust as it generates.
+    if (ref.read(mitmSignerProvider) == null &&
+        old != null &&
         store != null &&
         (trust == MitmTrust.ready || trust == MitmTrust.untrusted)) {
       try {
