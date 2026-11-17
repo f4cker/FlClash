@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import 'macos_helper_client.dart';
 import 'model.dart';
@@ -21,6 +21,9 @@ final class MacHelperMaintenance extends ChangeNotifier {
   bool _stopUnknown = false;
   bool _awaitingSettings = false;
   bool _startSlow = false;
+  bool _resumeCheckPending = false;
+  bool _resumeChecking = false;
+  AppLifecycleListener? _lifecycle;
   Timer? _startTimer;
   Timer? _pollTimer;
   bool _disposed = false;
@@ -31,7 +34,10 @@ final class MacHelperMaintenance extends ChangeNotifier {
     this.startTimeout = const Duration(seconds: 10),
     this.startPoll = const Duration(seconds: 2),
     this.stalePoll = const Duration(seconds: 42),
-  }) : _stop = stop;
+    bool observeLifecycle = false,
+  }) : _stop = stop {
+    if (observeLifecycle) _lifecycle = AppLifecycleListener(onResume: resumed);
+  }
 
   MacHelperState? get state => _state;
   MacHelperProgress get progress => _progress;
@@ -68,12 +74,29 @@ final class MacHelperMaintenance extends ChangeNotifier {
         _setState(await action());
       } catch (_) {
         _setState(MacHelperState.unavailable);
-      } finally {
-        _progress = MacHelperProgress.idle;
-        _operation = null;
-        completion.complete(_state!);
-        _notify();
       }
+      final initialState = _state!;
+      if (_resumeCheckPending && !_disposed) {
+        _resumeCheckPending = false;
+        _resumeChecking = true;
+        try {
+          _setState(await _status());
+        } catch (_) {
+          _setState(MacHelperState.unavailable);
+        } finally {
+          _resumeChecking = false;
+        }
+      }
+      _progress = MacHelperProgress.idle;
+      _operation = null;
+      // A later ready answer must not unblock a startup that saw a failure.
+      completion.complete(
+        initialState != MacHelperState.enabled &&
+                _state == MacHelperState.enabled
+            ? initialState
+            : _state!,
+      );
+      _notify();
     }());
     return completion.future;
   }
@@ -210,15 +233,24 @@ final class MacHelperMaintenance extends ChangeNotifier {
 
   /// Called when Flash becomes the active app again.
   void resumed() {
-    if (_awaitingSettings || needsApproval) {
+    if (_awaitingSettings ||
+        needsApproval ||
+        (_startSlow && _state == MacHelperState.starting)) {
       _awaitingSettings = false;
-      unawaited(check());
+      if (_resumeChecking) return;
+      if (busy) {
+        _resumeCheckPending = true;
+      } else {
+        _resumeChecking = true;
+        unawaited(check().whenComplete(() => _resumeChecking = false));
+      }
     }
   }
 
   @override
   void dispose() {
     _disposed = true;
+    _lifecycle?.dispose();
     _startTimer?.cancel();
     _pollTimer?.cancel();
     super.dispose();

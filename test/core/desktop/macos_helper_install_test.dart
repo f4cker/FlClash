@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/core/desktop/model.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,6 +19,7 @@ class InstallNative implements MacHelperNativeApi {
   Map<Object?, Object?> enableAnswer = const {'code': 'requiresApproval'};
   Map<Object?, Object?> repairAnswer = const {'code': 'enabled'};
   Completer<Map<Object?, Object?>>? pending;
+  Completer<Map<Object?, Object?>>? pendingStatus;
   final calls = <String>[];
   final arguments = <Map<String, Object?>>[];
 
@@ -31,7 +33,7 @@ class InstallNative implements MacHelperNativeApi {
     calls.add(method);
     this.arguments.add(arguments);
     return switch (method) {
-      'status' => statusAnswer,
+      'status' => pendingStatus?.future ?? statusAnswer,
       'migrate' => pending?.future ?? migrateAnswer,
       'enable' => enableAnswer,
       'repair' => repairAnswer,
@@ -476,6 +478,133 @@ void main() {
       expect(flow.startSlow, isFalse);
     },
   );
+
+  test(
+    'slow timeout refreshes approval on resume without registration',
+    () async {
+      final native = InstallNative()..state = 'timeout';
+      final flow = MacHelperMaintenance(
+        MacHelperClient(native: native, safeMode: () => false),
+        stop: () async => throw StateError('must not stop'),
+        startPoll: const Duration(hours: 1),
+        startTimeout: const Duration(milliseconds: 10),
+      );
+      addTearDown(flow.dispose);
+      expect(await flow.check(), MacHelperState.starting);
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(flow.startSlow, isTrue);
+      native.state = 'requiresApproval';
+      flow.resumed();
+      await Future<void>.delayed(Duration.zero);
+      expect(flow.state, MacHelperState.requiresApproval);
+      expect(flow.startSlow, isFalse);
+      expect(native.calls, ['status', 'status']);
+    },
+  );
+
+  test('repeated resumes join a slow timeout check', () async {
+    final native = InstallNative()..state = 'timeout';
+    final flow = MacHelperMaintenance(
+      MacHelperClient(native: native, safeMode: () => false),
+      stop: () async => throw StateError('must not stop'),
+      startPoll: const Duration(hours: 1),
+      startTimeout: const Duration(milliseconds: 10),
+    );
+    addTearDown(flow.dispose);
+    await flow.check();
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    final pending = native.pendingStatus = Completer();
+    flow.resumed();
+    flow.resumed();
+    expect(flow.busy, isTrue);
+    expect(native.calls, ['status', 'status']);
+    pending.complete({'code': 'timeout'});
+    await Future<void>.delayed(Duration.zero);
+    expect(flow.state, MacHelperState.starting);
+    expect(flow.startSlow, isTrue);
+    expect(flow.lastCode, 'timeout');
+    expect(flow.busy, isFalse);
+    expect(native.calls, ['status', 'status']);
+  });
+
+  testWidgets('lifecycle refresh works without a mounted helper card', (
+    tester,
+  ) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    final native = InstallNative()..state = 'timeout';
+    final flow = MacHelperMaintenance(
+      MacHelperClient(native: native, safeMode: () => false),
+      stop: () async => throw StateError('must not stop'),
+      observeLifecycle: true,
+      startPoll: const Duration(hours: 1),
+      startTimeout: const Duration(milliseconds: 10),
+    );
+    addTearDown(flow.dispose);
+    await flow.check();
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(flow.startSlow, isTrue);
+    native.state = 'requiresApproval';
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(flow.state, MacHelperState.requiresApproval);
+    expect(native.calls, ['status', 'status']);
+  });
+
+  test('resume queues one check behind an older in-flight status', () async {
+    final native = InstallNative()..state = 'timeout';
+    final flow = MacHelperMaintenance(
+      MacHelperClient(native: native, safeMode: () => false),
+      stop: () async => throw StateError('must not stop'),
+      startPoll: const Duration(hours: 1),
+      startTimeout: const Duration(milliseconds: 10),
+    );
+    addTearDown(flow.dispose);
+    await flow.check();
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    final pending = native.pendingStatus = Completer();
+    final old = flow.check();
+    flow.resumed();
+    flow.resumed();
+    expect(native.calls, ['status', 'status']);
+    native.pendingStatus = null;
+    native.state = 'requiresApproval';
+    pending.complete({'code': 'timeout'});
+    expect(await old, MacHelperState.requiresApproval);
+    expect(flow.state, MacHelperState.requiresApproval);
+    expect(native.calls, ['status', 'status', 'status']);
+  });
+
+  test('queued resume cannot turn a blocked startup into ready', () async {
+    final native = InstallNative()..state = 'timeout';
+    final flow = MacHelperMaintenance(
+      MacHelperClient(native: native, safeMode: () => false),
+      stop: () async => throw StateError('must not stop'),
+      startPoll: const Duration(hours: 1),
+      startTimeout: const Duration(milliseconds: 10),
+    );
+    addTearDown(flow.dispose);
+    await flow.check();
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    final pending = native.pendingStatus = Completer();
+    var blocked = false;
+    final startup = prepareMacHelperStartup(
+      maintenance: flow,
+      foreground: false,
+      onBlocked: () => blocked = true,
+      wasOffered: () async => false,
+      markOffered: () async {},
+      show: () async {},
+    );
+    flow.resumed();
+    native.pendingStatus = null;
+    native.state = 'enabled';
+    pending.complete({'code': 'timeout'});
+    expect(await startup, isFalse);
+    expect(blocked, isTrue);
+    expect(flow.state, MacHelperState.enabled);
+    expect(native.calls, ['status', 'status', 'status']);
+  });
 
   test(
     'startup invitation persists across launches; passive check still runs',

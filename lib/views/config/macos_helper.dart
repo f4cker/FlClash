@@ -368,6 +368,7 @@ void unregisterMacHelperPresenter(MacHelperPresenter presenter) {
 final macHelperMaintenance = MacHelperMaintenance(
   macosHelperClient,
   stop: () => globalState.container.read(coreHandlerProvider).stop(),
+  observeLifecycle: true,
 );
 
 /// The "Helper" card. Switches content by state; collapses to one line when
@@ -395,23 +396,15 @@ class MacHelperCard extends StatefulWidget {
 }
 
 class _MacHelperCardState extends State<MacHelperCard> {
-  late final AppLifecycleListener _lifecycle;
   bool _details = false;
   String? _announced;
 
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(onResume: widget.maintenance.resumed);
     if (widget.maintenance.state == null && !widget.maintenance.busy) {
       unawaited(widget.maintenance.check());
     }
-  }
-
-  @override
-  void dispose() {
-    _lifecycle.dispose();
-    super.dispose();
   }
 
   void _announce(BuildContext context, String title) {
