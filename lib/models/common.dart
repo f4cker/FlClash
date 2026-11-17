@@ -129,6 +129,7 @@ abstract class TrackerInfo with _$TrackerInfo {
     required String rulePayload,
     int? downloadSpeed,
     int? uploadSpeed,
+    @Default('') String mitmOutcome,
   }) = _TrackerInfo;
 
   factory TrackerInfo.fromJson(Map<String, Object?> json) =>

@@ -200,6 +200,7 @@ enum CoreEventType {
   tailscaleState,
   tailscaleRoutes,
   mitmSign,
+  mitmConnection,
 }
 
 /// `ipn.State` as tsnet names it; [none] is a node that has not started.

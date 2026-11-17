@@ -12,6 +12,18 @@ import 'detail_tabs.dart';
 import 'mitm_exchanges.dart';
 import 'process_view.dart';
 
+String mitmOutcomeText(BuildContext context, String outcome) {
+  final l = context.appLocalizations;
+  return switch (outcome) {
+    'refused' => l.mitmOutcomeRefused,
+    'upstreamCertificate' => l.mitmOutcomeUpstreamCertificate,
+    'http2Only' => l.mitmOutcomeHTTP1Unsupported,
+    'unsupportedHello' || 'missingSNI' => l.mitmOutcomeHelloPassthrough,
+    'upstreamFailed' || 'clientFailed' || 'http1Failed' => l.mitmOutcomeFailed,
+    _ => '',
+  };
+}
+
 String _endpointText(String ip, String port) {
   if (ip.isEmpty) {
     return '';
@@ -29,9 +41,28 @@ void showTrackerInfoDetail(
 ) {
   showNestedSheet<void>(
     context,
-    builder: (_) => Scaffold(
-      body: TrackerInfoDetailView(trackerInfo: trackerInfo),
-      title: title,
+    builder: (_) => Consumer(
+      builder: (context, ref, _) {
+        final status = ref.watch(
+          requestsProvider.select((requests) {
+            for (final request in requests.list.reversed) {
+              if (request.id == trackerInfo.id) {
+                return (request.mitmOutcome, request.metadata.mitm);
+              }
+            }
+            return (trackerInfo.mitmOutcome, trackerInfo.metadata.mitm);
+          }),
+        );
+        return Scaffold(
+          body: TrackerInfoDetailView(
+            trackerInfo: trackerInfo.copyWith(
+              mitmOutcome: status.$1,
+              metadata: trackerInfo.metadata.copyWith(mitm: status.$2),
+            ),
+          ),
+          title: title,
+        );
+      },
     ),
   );
 }
@@ -160,12 +191,16 @@ class TrackerInfoItem extends ConsumerWidget {
           .copyWith(color: context.colorScheme.onSurfaceVariant),
     );
     final mitm = trackerInfo.metadata.mitm;
+    final outcome = mitmOutcomeText(context, trackerInfo.mitmOutcome);
     if (!isLive) {
       return RecordHeader(
         children: [
           RecordTimestamp(trackerInfo.start.showFull),
           network,
-          if (mitm) const RecordLabel(label: 'MITM'),
+          if (outcome.isNotEmpty)
+            RecordLabel(label: outcome)
+          else if (mitm)
+            const RecordLabel(label: 'MITM'),
         ],
       );
     }
@@ -192,7 +227,10 @@ class TrackerInfoItem extends ConsumerWidget {
       children: [
         Text(trackerInfo.start.getLastUpdateTimeDesc(context, compact: true)),
         network,
-        if (mitm) const RecordLabel(label: 'MITM'),
+        if (outcome.isNotEmpty)
+          RecordLabel(label: outcome)
+        else if (mitm)
+          const RecordLabel(label: 'MITM'),
       ],
     );
   }
@@ -485,6 +523,11 @@ class TrackerInfoDetailView extends ConsumerWidget {
           items: [
             ..._buildRows([
               (appLocalizations.creationTime, trackerInfo.start.showFull),
+              if (trackerInfo.mitmOutcome.isNotEmpty)
+                (
+                  appLocalizations.mitm,
+                  mitmOutcomeText(context, trackerInfo.mitmOutcome),
+                ),
               (appLocalizations.networkType, metadata.network),
               if (process == null)
                 (appLocalizations.process, trackerInfo.progressText),

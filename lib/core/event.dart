@@ -53,6 +53,8 @@ abstract mixin class CoreEventListener {
   void onTailscaleRoutes(TailscaleRoutesEvent event) {}
 
   void onMitmSign(MitmSignRequest request) {}
+
+  void onMitmConnection(String id, String outcome) {}
 }
 
 class CoreEventManager {
@@ -121,6 +123,17 @@ class CoreEventManager {
                   Map<String, Object?>.from(event.data),
                 ),
               );
+              break;
+            case CoreEventType.mitmConnection:
+              final data = event.data;
+              if (data is Map &&
+                  data['id'] is String &&
+                  data['outcome'] is String) {
+                listener.onMitmConnection(
+                  data['id'] as String,
+                  data['outcome'] as String,
+                );
+              }
               break;
             case CoreEventType.mitmSign:
               listener.onMitmSign(
