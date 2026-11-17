@@ -85,6 +85,7 @@ class SetupAction extends _$SetupAction {
   DateTime? _startTime;
   _SetupInputs? _appliedInputs;
   var _lastPushDuration = Duration.zero;
+  var _pendingShownApply = false;
   var _pendingForceApply = false;
   List<String> _lostMountSelections = const [];
 
@@ -159,6 +160,7 @@ class SetupAction extends _$SetupAction {
       _startTime = null;
       debouncer.cancel(FunctionTag.applyProfile);
       _pendingForceApply = false;
+      _pendingShownApply = false;
       _updateRunTime();
       return;
     }
@@ -814,14 +816,19 @@ class SetupAction extends _$SetupAction {
   @protected
   Duration get maxApplyDebounce => const Duration(seconds: 10);
 
+  /// Calls within one debounce window merge: forced if any call forces, and
+  /// shown (not silent) if any call asks to be shown.
   void applyProfileDebounce({bool silence = false, bool force = false}) {
     _pendingForceApply |= force;
+    _pendingShownApply |= !silence;
     debouncer.call(
       FunctionTag.applyProfile,
-      (silence) {
+      (_) {
         final force = _pendingForceApply;
+        final shown = _pendingShownApply;
         _pendingForceApply = false;
-        _applyAutomatic(silence: silence, force: force);
+        _pendingShownApply = false;
+        _applyAutomatic(silence: !shown, force: force);
       },
       args: [silence],
       duration: Duration(

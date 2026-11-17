@@ -6465,6 +6465,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
   String get mitmPausedIndicatorPending =>
       'Decryption paused: the required always-visible indicator is not available.';
 

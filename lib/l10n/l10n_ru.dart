@@ -6459,6 +6459,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Расшифровка приостановлена: не удалось проверить доверие или подпись. Обычно изменения обнаруживаются примерно за 26 секунд; сон или задержки системы могут увеличить время.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
   String get mitmPausedIndicatorPending =>
       'Расшифровка приостановлена: обязательный постоянный индикатор недоступен.';
 

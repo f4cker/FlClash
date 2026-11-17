@@ -184,12 +184,18 @@ final mitmDecryptingProvider = FutureProvider.autoDispose<bool>((ref) async {
 /// unconfirmed rather than paused: only the Core knows it passes through.
 /// Ready is "on"; "decrypting" needs [decrypting], a decrypted connection
 /// that is still open.
+///
+/// A Core that does not decrypt is "not trusted" only when this device has
+/// not found the CA trusted ([trusted]); with trust and listed hosts it has
+/// not received the settings yet ([MitmPauseReason.notApplied]).
 MitmIndicator? mitmIndicatorOf({
   required bool enabled,
   required bool coreConnected,
   required bool coreRefused,
   required MitmStatus? status,
   bool decrypting = false,
+  bool trusted = false,
+  bool hostsListed = false,
 }) {
   if (!enabled) {
     return null;
@@ -204,7 +210,14 @@ MitmIndicator? mitmIndicatorOf({
     return const MitmIndicator.unconfirmed();
   }
   if (!status.enable) {
-    return const MitmIndicator.paused(MitmPauseReason.notTrusted);
+    if (!trusted) {
+      return const MitmIndicator.paused(MitmPauseReason.notTrusted);
+    }
+    // Trusted with nothing listed: there is nothing to decrypt, and nothing
+    // for the Core to be missing either.
+    return hostsListed
+        ? const MitmIndicator.paused(MitmPauseReason.notApplied)
+        : const MitmIndicator.on();
   }
   return switch (status.paused) {
     '' when decrypting => const MitmIndicator.decrypting(),
@@ -238,12 +251,26 @@ final mitmIndicatorProvider = Provider.autoDispose<MitmIndicator?>((ref) {
   }
   final coreRefused = ref.watch(mitmCoreRefusedProvider);
   final status = ref.watch(mitmRuntimeStatusProvider).value;
+  final trusted = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => state.mitm.trustedFingerprint != null,
+    ),
+  );
+  final listed = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => state.mitm.hostname.any(
+        (line) => line.trim().isNotEmpty && !line.trim().startsWith('-'),
+      ),
+    ),
+  );
   MitmIndicator? of({bool decrypting = false}) => mitmIndicatorOf(
     enabled: enabled,
     coreConnected: coreConnected,
     coreRefused: coreRefused,
     status: status,
     decrypting: decrypting,
+    trusted: trusted,
+    hostsListed: listed || (status?.hostnames ?? 0) > 0,
   );
   // The live connections are read only while decryption is ready.
   if (of()?.kind != MitmIndicatorKind.on) {
@@ -459,6 +486,20 @@ class MitmSignAction extends _$MitmSignAction {
   }
 }
 
+/// Counts the times a check found the CA trusted where it was not before. The
+/// app layer applies the settings then, visibly, so a setup failure is shown
+/// rather than left behind a silent retry.
+final mitmTrustGainedProvider = NotifierProvider<MitmTrustGained, int>(
+  MitmTrustGained.new,
+);
+
+class MitmTrustGained extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void gained() => state++;
+}
+
 @Riverpod(keepAlive: true)
 MitmTrustStore? mitmTrustStore(Ref ref) => mitmTrustStoreForPlatform();
 
@@ -496,7 +537,8 @@ class MitmTrustState extends _$MitmTrustState {
 
   void _record(MitmCertificate? ca, MitmTrustCheck check) {
     final trusted = check.trust == MitmTrust.ready ? ca?.fingerprint : null;
-    if (ref.read(patchClashConfigProvider).mitm.trustedFingerprint == trusted) {
+    final previous = ref.read(patchClashConfigProvider).mitm.trustedFingerprint;
+    if (previous == trusted) {
       return;
     }
     ref
@@ -506,6 +548,9 @@ class MitmTrustState extends _$MitmTrustState {
             mitm: state.mitm.copyWith(trustedFingerprint: trusted),
           ),
         );
+    if (previous == null && trusted != null) {
+      ref.read(mitmTrustGainedProvider.notifier).gained();
+    }
   }
 
   Future<void>? _refreshing;

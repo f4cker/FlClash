@@ -395,13 +395,20 @@ class _MitmViewState extends ConsumerState<MitmView> {
         ? null
         : ref.watch(mitmTrustStateProvider).value;
     final corePause = ref.watch(mitmRuntimeStatusProvider).value?.paused ?? '';
-    final pauseLabel = switch (corePause) {
-      'livenessUnavailable' ||
-      'trustUnavailable' => appLocalizations.mitmPausedLiveness,
-      'indicatorPending' => appLocalizations.mitmPausedIndicatorPending,
-      '' => null,
-      _ => appLocalizations.mitmPausedUnavailable,
-    };
+    // The Core does not decrypt at all (`enable: false`): with this device's
+    // trust in place that means the settings have not reached it, which the
+    // trust row below cannot show.
+    final notApplied =
+        ref.watch(mitmIndicatorProvider)?.reason == MitmPauseReason.notApplied;
+    final pauseLabel = notApplied
+        ? appLocalizations.mitmNotApplied
+        : switch (corePause) {
+            'livenessUnavailable' ||
+            'trustUnavailable' => appLocalizations.mitmPausedLiveness,
+            'indicatorPending' => appLocalizations.mitmPausedIndicatorPending,
+            '' => null,
+            _ => appLocalizations.mitmPausedUnavailable,
+          };
     // The page says what the bar's status would, in its first section.
     return ScaffoldBarStatus(
       status: null,

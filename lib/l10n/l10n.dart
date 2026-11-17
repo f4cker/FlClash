@@ -10907,6 +10907,12 @@ abstract class AppLocalizations {
   /// **'Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.'**
   String get mitmPausedLiveness;
 
+  /// No description provided for @mitmNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption not active: settings not applied to the core yet'**
+  String get mitmNotApplied;
+
   /// No description provided for @mitmPausedIndicatorPending.
   ///
   /// In en, this message translates to:

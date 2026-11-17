@@ -6512,6 +6512,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Déchiffrement en pause : confiance ou signature non vérifiable. Détection normalement en 26 secondes environ ; une veille ou un blocage peut la retarder.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
   String get mitmPausedIndicatorPending =>
       'Déchiffrement en pause : l’indicateur permanent requis est indisponible.';
 

@@ -6506,6 +6506,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Descifrado en pausa: no se pudo verificar la confianza o el firmante. Normalmente se detecta en unos 26 segundos; la suspensión o bloqueos pueden tardar más.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
   String get mitmPausedIndicatorPending =>
       'Descifrado en pausa: aún no está disponible el indicador permanente requerido.';
 

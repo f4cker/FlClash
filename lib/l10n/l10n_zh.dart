@@ -5954,6 +5954,9 @@ class AppLocalizationsZh extends AppLocalizations {
       '解密已暂停：无法验证信任或签名器状态。正常情况下约 26 秒内检测到变化；睡眠或系统卡顿可能更久。';
 
   @override
+  String get mitmNotApplied => '解密未生效：设置还没应用到内核';
+
+  @override
   String get mitmPausedIndicatorPending => '解密已暂停：尚未提供必需的常驻解密指示。';
 
   @override

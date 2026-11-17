@@ -34,12 +34,16 @@ void main() {
       bool coreRefused = false,
       MitmStatus? status = const MitmStatus(enable: true),
       bool decrypting = false,
+      bool trusted = false,
+      bool hostsListed = false,
     }) => mitmIndicatorOf(
       enabled: enabled,
       coreConnected: coreConnected,
       coreRefused: coreRefused,
       status: status,
       decrypting: decrypting,
+      trusted: trusted,
+      hostsListed: hostsListed,
     );
 
     test('says nothing while decryption is off', () {
@@ -91,6 +95,53 @@ void main() {
       expect(
         of(status: const MitmStatus()),
         const MitmIndicator.paused(MitmPauseReason.notTrusted),
+      );
+    });
+
+    test(
+      'a Core that does not decrypt is "not trusted" only without trust',
+      () {
+        // Trust missing on this device: the old wording, listed hosts or not.
+        for (final listed in [false, true]) {
+          expect(
+            of(status: const MitmStatus(), hostsListed: listed),
+            const MitmIndicator.paused(MitmPauseReason.notTrusted),
+          );
+        }
+        // Trusted and hosts listed: the settings did not reach the Core.
+        expect(
+          of(status: const MitmStatus(), trusted: true, hostsListed: true),
+          const MitmIndicator.paused(MitmPauseReason.notApplied),
+        );
+        // Trusted with nothing listed: nothing to decrypt, nothing missing.
+        expect(
+          of(status: const MitmStatus(), trusted: true),
+          const MitmIndicator.on(),
+        );
+        // The Core's own answer still wins once it decrypts.
+        expect(of(trusted: true, hostsListed: true), const MitmIndicator.on());
+        expect(
+          of(status: null, trusted: true, hostsListed: true),
+          const MitmIndicator.unconfirmed(),
+        );
+      },
+    );
+
+    test('"not applied" reads as its own sentence', () {
+      const indicator = MitmIndicator.paused(MitmPauseReason.notApplied);
+      expect(
+        mitmIndicatorText(
+          lookupAppLocalizations(const Locale('zh')),
+          indicator,
+        ),
+        '解密未生效：设置还没应用到内核',
+      );
+      expect(
+        mitmIndicatorText(
+          lookupAppLocalizations(const Locale('en')),
+          indicator,
+        ),
+        'Decryption not active: settings not applied to the core yet',
       );
     });
 

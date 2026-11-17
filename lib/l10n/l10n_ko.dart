@@ -6362,6 +6362,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '복호화 일시 중지: 신뢰 또는 서명 상태를 확인할 수 없습니다. 일반적으로 약 26초 내에 감지하지만 절전이나 시스템 중단 시 더 오래 걸릴 수 있습니다.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
   String get mitmPausedIndicatorPending => '복호화 일시 중지: 필수 상시 표시기가 아직 없습니다.';
 
   @override

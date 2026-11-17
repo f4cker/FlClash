@@ -36,6 +36,22 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     return widget.child;
   }
 
+  DateTime? _mitmReapplied;
+
+  void _applyMitm({bool throttled = false}) {
+    final now = DateTime.now();
+    final last = _mitmReapplied;
+    if (throttled &&
+        last != null &&
+        now.difference(last) < const Duration(seconds: 30)) {
+      return;
+    }
+    _mitmReapplied = now;
+    ref
+        .read(setupActionProvider.notifier)
+        .applyProfileDebounce(force: true, silence: false);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +88,27 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         if (prev == false && next) {
           unawaited(ref.read(mitmModulesActionProvider.notifier).autoUpdate());
         }
+        // Turning decryption on or off is applied visibly: a setup that
+        // fails says so instead of leaving the Core without it.
+        if (mitmFeature && prev != null && prev != next) _applyMitm();
+      },
+    );
+    ref.listenManual(mitmTrustGainedProvider, (prev, next) {
+      if (mitmFeature &&
+          prev != next &&
+          ref.read(patchClashConfigProvider).mitm.enable) {
+        _applyMitm();
+      }
+    });
+    // Trusted, hosts listed, yet the Core does not decrypt: its settings did
+    // not arrive. Apply them again, at most once a while, so a failing setup
+    // is reported rather than retried in a loop.
+    ref.listenManual(
+      mitmIndicatorProvider.select(
+        (indicator) => indicator?.reason == MitmPauseReason.notApplied,
+      ),
+      (prev, next) {
+        if (next && prev != true) _applyMitm(throttled: true);
       },
     );
     ref.listenManual(mitmModulesProvider, (prev, next) {

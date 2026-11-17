@@ -6,6 +6,7 @@ String mitmPauseReasonText(AppLocalizations l, MitmPauseReason reason) =>
       MitmPauseReason.coreStopped => l.mitmPauseCoreStopped,
       MitmPauseReason.coreIdentity => l.mitmPauseCoreIdentity,
       MitmPauseReason.notTrusted => l.mitmPauseNotTrusted,
+      MitmPauseReason.notApplied => l.mitmNotApplied,
       MitmPauseReason.liveness => l.mitmPauseLiveness,
       MitmPauseReason.indicatorPending => l.mitmPauseIndicatorPending,
       MitmPauseReason.unavailable => l.mitmPauseUnavailable,
@@ -23,6 +24,8 @@ String mitmIndicatorLabel(AppLocalizations l, MitmIndicator indicator) =>
 /// The whole status, with why it is paused: the tray item and the tooltip.
 String mitmIndicatorText(AppLocalizations l, MitmIndicator indicator) =>
     switch (indicator.reason) {
+      // A whole sentence of its own: decryption is not paused, it never began.
+      MitmPauseReason.notApplied => l.mitmNotApplied,
       final reason? => l.mitmIndicatorPausedBecause(
         mitmPauseReasonText(l, reason),
       ),

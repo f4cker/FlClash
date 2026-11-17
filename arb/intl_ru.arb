@@ -1807,6 +1807,7 @@
   "mitmOutcomeHelloPassthrough": "TLS не проверен; соединение передано без расшифровки",
   "mitmOutcomeFailed": "Ошибка расшифрованного соединения",
   "mitmPausedLiveness": "Расшифровка приостановлена: не удалось проверить доверие или подпись. Обычно изменения обнаруживаются примерно за 26 секунд; сон или задержки системы могут увеличить время.",
+  "mitmNotApplied": "Decryption not active: settings not applied to the core yet",
   "mitmPausedIndicatorPending": "Расшифровка приостановлена: обязательный постоянный индикатор недоступен.",
   "mitmPausedUnavailable": "Расшифровка приостановлена: подписывающий компонент или соединение недоступно.",
   "mitmIndicatorDecrypting": "Идёт расшифровка",

@@ -86,6 +86,7 @@ void main() {
     bool safeMode = false,
     int ignoredHostnames = 0,
     MitmStatus? status,
+    bool coreConnected = false,
   }) async {
     tester.view.physicalSize = const Size(1000, 2000);
     tester.view.devicePixelRatio = 1;
@@ -117,6 +118,8 @@ void main() {
         safeModeProvider.overrideWithValue(safeMode),
         mitmTrustStoreProvider.overrideWithValue(store),
         mitmSignerProvider.overrideWithValue(null),
+        if (coreConnected)
+          coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
       ],
     );
     addTearDown(container.dispose);
@@ -429,6 +432,42 @@ void main() {
       expect(install(), findsNothing);
       expect(find.text(currentAppLocalizations.mitmTrustReady), findsOneWidget);
       expect(saved().trustedFingerprint, _certificate.fingerprint);
+    });
+  });
+
+  group('a Core that does not decrypt', () {
+    setUp(() => mitmFeature = true);
+    tearDown(() => mitmFeature = false);
+
+    testWidgets('with trust and hosts listed has not had the settings', (
+      tester,
+    ) async {
+      await pumpView(
+        tester,
+        certificate: _certificate,
+        store: _FakeStore(MitmTrust.ready),
+        mitm: const Mitm(enable: true, hostname: ['baidu.com']),
+        status: const MitmStatus(),
+        coreConnected: true,
+      );
+      final l = currentAppLocalizations;
+      expect(saved().trustedFingerprint, _certificate.fingerprint);
+      expect(find.text(l.mitmNotApplied), findsOneWidget);
+    });
+
+    testWidgets('without trust is not said to lack the settings', (
+      tester,
+    ) async {
+      await pumpView(
+        tester,
+        certificate: _certificate,
+        store: _FakeStore(MitmTrust.notInstalled),
+        mitm: const Mitm(enable: true, hostname: ['baidu.com']),
+        status: const MitmStatus(),
+        coreConnected: true,
+      );
+      expect(saved().trustedFingerprint, isNull);
+      expect(find.text(currentAppLocalizations.mitmNotApplied), findsNothing);
     });
   });
 

@@ -6290,6 +6290,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '復号を一時停止：信頼または署名機能を確認できません。通常は約26秒以内に検出しますが、スリープや停止時は長くなることがあります。';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
   String get mitmPausedIndicatorPending => '復号を一時停止：必要な常時表示インジケーターがありません。';
 
   @override
