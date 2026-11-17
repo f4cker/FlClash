@@ -2,7 +2,7 @@
 
 Covers: request timeouts are `timeout`, not `exitUnconfirmed`; `stop` from a later connection of the same
 user naming the session; uncertain ownership is retried on hello/start; a previous build's daemon is reported
-as `staleHelper` and retired; re-registration after an update is retried and asks for approval again.
+as `staleHelper` and retired; status must not change service registration.
 """
 import subprocess
 import tempfile
@@ -277,12 +277,16 @@ int main(void) {
         # The flag is reset per message and set only from the first, full check (identity, path, policy passed).
         self.assertLess(check.index('self.runningCodeStale = NO;'), check.index('SecCodeCreateWithXPCMessage'))
         self.assertIn('valid = verdict == FCRunningHashCurrent;', check)
+        for condition in ('SecCodeCreateWithXPCMessage', 'SecCodeCheckValidity', 'FCSigningRequirement',
+                          'FCExecutableMatches', 'FCCodeEntitlementsAllowed', 'FCStaticCodeHash'):
+            self.assertIn(condition, check)
 
     def test_old_daemon_running_with_new_bundle_then_timeout_then_recover(self):
         source = BRIDGE_FIXTURE + method(BRIDGE, 'static NSString *FCStatusForHello') + r'''
 @interface BridgeFixture : NSObject
 @property dispatch_queue_t queue;
 @property BOOL sessionActive;
+@property NSDate *staleRetryAfter;
 @property NSMutableArray *calls;
 @property BOOL oldDaemon;      // dev.6 daemon (previous cdhash) still runs beside the new bundle
 @property BOOL oldDaemonBusy;  // ... and refuses to leave while it owns a Core
@@ -290,7 +294,6 @@ int main(void) {
 @end
 @implementation BridgeFixture
 - (NSDictionary *)registrationStatus { return @{@"code": @"enabled"}; }
-- (BOOL)reRegisterIfUpdated:(NSString *)code { return NO; }
 - (NSString *)currentHelperHash { return @"cdhash-new"; }
 - (void)resetConnection { [self.calls addObject:@"reset"]; }
 - (void)unregisterWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"unregister"]; c(@{@"code": @"ok"}); }
@@ -324,152 +327,53 @@ int main(void) {
         BridgeFixture *b = [BridgeFixture new];
         b.queue = dispatch_queue_create("fixture-only", DISPATCH_QUEUE_SERIAL);
         b.calls = [NSMutableArray array];
-        // New bundle installed over a running old daemon: status says staleHelper, not unavailable.
         b.oldDaemon = YES; b.oldDaemonBusy = YES;
         assert([Run(b, NO)[@"code"] isEqual:@"staleHelper"]);
-        // The old daemon still owns a Core: it refuses to exit and repair keeps reporting it.
+        assert(([b.calls isEqual:@[@"hello", @"reset"]]));
+        // Polls and repair do not reconnect, read the stale reply, or alter registration.
+        for (int i = 0; i < 10; i++) assert([Run(b, NO)[@"code"] isEqual:@"staleHelper"]);
         assert([Run(b, YES)[@"code"] isEqual:@"staleHelper"] && b.oldDaemon);
-        assert(([b.calls isEqual:@[@"hello", @"hello", @"exit", @"reset", @"hello"]]));
-        // Once idle it leaves on request and the next hello reaches this build's daemon.
-        b.oldDaemonBusy = NO;
-        [b.calls removeAllObjects];
-        NSDictionary *repaired = Run(b, YES);
+        assert(([b.calls isEqual:@[@"hello", @"reset"]]));
+        // Simulate idle retirement and the cooldown expiring.
+        b.oldDaemon = NO;
+        b.staleRetryAfter = [NSDate distantPast];
+        NSDictionary *repaired = Run(b, NO);
         assert([repaired[@"code"] isEqual:@"enabled"] && !b.oldDaemon);
         assert([repaired[@"pid"] isEqual:@0] && [repaired[@"exitConfirmed"] isEqual:@YES]);
-        assert(([b.calls isEqual:@[@"hello", @"exit", @"reset", @"hello"]]));
-        assert(![b.calls containsObject:@"unregister"]);
-        // A hello that runs out of time is a wait (`timeout`), not "exit unconfirmed"; the next one recovers.
+        assert(([b.calls isEqual:@[@"hello", @"reset", @"hello"]]));
         b.slow = YES;
-        NSDictionary *late = Run(b, NO);
+        NSDictionary *late = Run(b, YES);
         assert([late[@"code"] isEqual:@"timeout"] && !late[@"exitConfirmed"] && !late[@"pid"]);
-        assert([Run(b, NO)[@"code"] isEqual:@"enabled"]);
-        // Repair from a timeout re-registers (the existing repair path for anything not otherwise handled).
-        b.slow = YES;
-        [b.calls removeAllObjects];
-        assert([Run(b, YES)[@"code"] isEqual:@"enabled"]);
-        assert(([b.calls isEqual:@[@"hello", @"unregister", @"register", @"hello"]]));
+        assert(![b.calls containsObject:@"unregister"] && ![b.calls containsObject:@"register"] &&
+               ![b.calls containsObject:@"exit"]);
         puts("old-daemon-then-timeout-then-recover");
     }
 }
 '''
         self.assertIn('old-daemon-then-timeout-then-recover', compile_and_run(self, source))
 
-    def test_re_registration_after_update(self):
-        source = BRIDGE_FIXTURE + r'''
-static NSMutableDictionary *store;
-@interface FixtureDefaults : NSObject
-@property (class, readonly) FixtureDefaults *standardUserDefaults;
-@end
-@implementation FixtureDefaults
-+ (FixtureDefaults *)standardUserDefaults { static FixtureDefaults *d; if (!d) d = [FixtureDefaults new]; return d; }
-- (NSString *)stringForKey:(NSString *)k { return store[k]; }
-- (BOOL)boolForKey:(NSString *)k { return [store[k] boolValue]; }
-- (void)setBool:(BOOL)v forKey:(NSString *)k { store[k] = @(v); }
-- (void)setObject:(id)v forKey:(NSString *)k { store[k] = v; }
-- (void)removeObjectForKey:(NSString *)k { [store removeObjectForKey:k]; }
-@end
-#define NSUserDefaults FixtureDefaults
-static NSString * const FCRegisteredHelperDefault = @"FlashDaemonRegisteredHelperCDHash";
-static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
-typedef NSUInteger FCLegacyResidue;
-#define FCDetectLegacyResidue() ((FCLegacyResidue)0)
+    def test_status_does_not_mutate_registration(self):
+        status = method(BRIDGE, '- (void)status:')
+        for operation in ('registerAndReturnError', 'unregisterAndReturnError',
+                          'registerWithCompletion', 'unregisterWithCompletion',
+                          'reRegisterIfUpdated'):
+            self.assertNotIn(operation, status)
+        self.assertIn('[self registrationStatus]', status)
+        self.assertIn('[self request:@"hello"', status)
+        repair = method(BRIDGE, '- (void)repairWithCompletion:')
+        self.assertIn('[self status:completion]', repair)
+        self.assertNotIn('unregister', repair)
+        self.assertNotIn('registerWithCompletion', repair)
+        self.assertNotIn('@"exit"', repair)
 
-@interface FakeDaemon : NSObject
-@property SMAppServiceStatus status;
-@property SMAppServiceStatus afterRegister;
-@property BOOL registerSucceeds;
-@property int registers, unregisters;
-@end
-@implementation FakeDaemon
-- (BOOL)registerAndReturnError:(NSError **)error {
-    self.registers++;
-    self.status = self.afterRegister;
-    if (!self.registerSucceeds && error) *error = [NSError errorWithDomain:@"SMAppServiceErrorDomain" code:1 userInfo:nil];
-    return self.registerSucceeds;
-}
-- (BOOL)unregisterAndReturnError:(NSError **)error { self.unregisters++; self.status = SMAppServiceStatusNotRegistered; return YES; }
-@end
-
-@interface BridgeFixture : NSObject
-@property BOOL reRegistrationChecked;
-@property NSUInteger reRegistrationAttempts;
-@property BOOL sessionActive;
-@property BOOL migrationAttempted;
-@property FakeDaemon *fake;
-@property int resets;
-@end
-@implementation BridgeFixture
-- (FakeDaemon *)daemon { return self.fake; }
-- (NSString *)gate { return @"trusted"; }
-- (NSString *)currentHelperHash { return @"cdhash-new"; }
-- (void)resetConnection { self.resets++; }
-- (NSDictionary *)residueAnswer:(FCLegacyResidue)r code:(NSString *)code { return @{@"code": code}; }
-'''
-        source += method(BRIDGE, '- (NSDictionary *)registrationStatus') + '\n'
-        source += method(BRIDGE, '- (BOOL)reRegisterIfUpdated:') + '\n@end\n'
-        source += r'''
-static BridgeFixture *Fresh(SMAppServiceStatus status, NSString *stored) {
-    store = [NSMutableDictionary dictionary];
-    if (stored) store[FCRegisteredHelperDefault] = stored;
-    store[FCApprovedDefault] = @YES;
-    BridgeFixture *b = [BridgeFixture new];
-    b.fake = [FakeDaemon new];
-    b.fake.status = status;
-    return b;
-}
-static NSString *Code(SMAppServiceStatus s) {
-    return s == SMAppServiceStatusEnabled ? @"enabled" : s == SMAppServiceStatusRequiresApproval ? @"requiresApproval" :
-        s == SMAppServiceStatusNotRegistered ? @"notRegistered" : @"notFound";
-}
-int main(void) {
-    @autoreleasepool {
-        // Enabled with the previous build's hash: unregister, register; approval asked again (not "turned off").
-        BridgeFixture *b = Fresh(SMAppServiceStatusEnabled, @"cdhash-old");
-        b.fake.registerSucceeds = YES; b.fake.afterRegister = SMAppServiceStatusRequiresApproval;
-        assert([b reRegisterIfUpdated:@"enabled"]);
-        assert(b.fake.unregisters == 1 && b.fake.registers == 1 && b.resets == 1 && b.reRegistrationChecked);
-        assert([store[FCRegisteredHelperDefault] isEqual:@"cdhash-new"] && !store[FCApprovedDefault]);
-        NSDictionary *now = [b registrationStatus];
-        assert([now[@"code"] isEqual:@"requiresApproval"] && [now[@"previouslyEnabled"] isEqual:@NO]);
-        assert(![b reRegisterIfUpdated:@"requiresApproval"] && b.fake.registers == 1);
-
-        // Register fails and the job reads notRegistered: not marked done, retried on the next status
-        // (without another unregister), at most three times per launch.
-        b = Fresh(SMAppServiceStatusEnabled, @"cdhash-old");
-        b.fake.registerSucceeds = NO; b.fake.afterRegister = SMAppServiceStatusNotRegistered;
-        assert([b reRegisterIfUpdated:@"enabled"] && !b.reRegistrationChecked);
-        assert([store[FCRegisteredHelperDefault] isEqual:@"cdhash-old"]);
-        assert([b reRegisterIfUpdated:Code(b.fake.status)] && b.fake.unregisters == 1 && b.fake.registers == 2);
-        b.fake.registerSucceeds = YES; b.fake.afterRegister = SMAppServiceStatusEnabled;
-        assert([b reRegisterIfUpdated:Code(b.fake.status)] && b.reRegistrationChecked && b.fake.registers == 3);
-        assert([store[FCRegisteredHelperDefault] isEqual:@"cdhash-new"]);
-        assert([[b registrationStatus][@"code"] isEqual:@"enabled"] && [store[FCApprovedDefault] isEqual:@YES]);
-        b = Fresh(SMAppServiceStatusNotRegistered, @"cdhash-old");
-        for (int i = 0; i < 5; i++) [b reRegisterIfUpdated:@"notRegistered"];
-        assert(b.fake.registers == 3 && b.reRegistrationChecked && b.fake.unregisters == 0);
-
-        // The job went missing after the app swap (notRegistered / notFound) with a stale stored hash.
-        for (NSNumber *status in @[@(SMAppServiceStatusNotRegistered), @(SMAppServiceStatusNotFound)]) {
-            b = Fresh((SMAppServiceStatus)status.integerValue, @"cdhash-old");
-            b.fake.registerSucceeds = YES; b.fake.afterRegister = SMAppServiceStatusRequiresApproval;
-            assert([b reRegisterIfUpdated:Code(b.fake.status)] && b.fake.registers == 1 && b.fake.unregisters == 0);
-            assert([[b registrationStatus][@"previouslyEnabled"] isEqual:@NO]);
-        }
-        // Never registered by this app, or turned off with "disable" (no stored hash): left alone.
-        b = Fresh(SMAppServiceStatusNotRegistered, nil);
-        assert(![b reRegisterIfUpdated:@"notRegistered"] && b.fake.registers == 0);
-        // Same build, or a session running: nothing.
-        b = Fresh(SMAppServiceStatusEnabled, @"cdhash-new");
-        assert(![b reRegisterIfUpdated:@"enabled"] && b.reRegistrationChecked && b.fake.registers == 0);
-        b = Fresh(SMAppServiceStatusEnabled, @"cdhash-old");
-        b.sessionActive = YES;
-        assert(![b reRegisterIfUpdated:@"enabled"] && b.fake.registers == 0 && b.fake.unregisters == 0);
-        puts("re-registration");
-    }
-}
-'''
-        self.assertIn('re-registration', compile_and_run(
-            self, source, frameworks=('Foundation', 'ServiceManagement')))
+    def test_idle_retirement_requires_no_core_or_uncertainty(self):
+        idle = method(SUPERVISOR, '- (void)armIdle')
+        self.assertIn('self.child == 0 && !self.ownershipUncertain && self.connections == 0', idle)
+        self.assertIn('[self recoverOwnership]', idle)
+        status = method(BRIDGE, '- (void)status:')
+        self.assertLess(status.index('staleRetryAfter timeIntervalSinceNow'), status.index('[self request:@"hello"'))
+        self.assertIn('dateWithTimeIntervalSinceNow:40', status)
+        self.assertIn('[self resetConnection]', status)
 
 
 if __name__ == '__main__':

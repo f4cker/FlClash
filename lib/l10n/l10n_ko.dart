@@ -6405,6 +6405,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmPauseNotTrusted => '루트 인증서가 없거나 신뢰되지 않음';
 
   @override
+  String get mitmPartialConnections => '일부 연결이 복호화되지 않을 수 있습니다';
+
+  @override
   String get mitmPauseLiveness => '신뢰 및 서명 상태를 확인할 수 없음';
 
   @override

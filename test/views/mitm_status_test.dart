@@ -69,6 +69,7 @@ void main() {
 
     test('names why it is paused', () {
       const cases = {
+        'partialConnections': MitmPauseReason.partialConnections,
         'livenessUnavailable': MitmPauseReason.liveness,
         'trustUnavailable': MitmPauseReason.liveness,
         'indicatorPending': MitmPauseReason.indicatorPending,
@@ -147,6 +148,14 @@ void main() {
 
     test('reads in full with its reason', () {
       final l = lookupAppLocalizations(const Locale('zh'));
+      final en = lookupAppLocalizations(const Locale('en'));
+      const partial = MitmIndicator.paused(MitmPauseReason.partialConnections);
+      expect(mitmIndicatorLabel(l, partial), '部分连接可能未解密');
+      expect(mitmIndicatorText(l, partial), '部分连接可能未解密');
+      expect(
+        mitmIndicatorLabel(en, partial),
+        'Some connections may not be decrypted',
+      );
       expect(mitmIndicatorText(l, const MitmIndicator.on()), '解密已开启');
       expect(mitmIndicatorText(l, const MitmIndicator.decrypting()), '正在解密');
       expect(
@@ -156,7 +165,6 @@ void main() {
         ),
         '解密已暂停：根证书未生成或未受信任',
       );
-      final en = lookupAppLocalizations(const Locale('en'));
       expect(mitmIndicatorText(en, const MitmIndicator.on()), 'Decryption on');
       expect(
         mitmIndicatorText(

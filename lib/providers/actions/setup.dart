@@ -125,7 +125,6 @@ class SetupAction extends _$SetupAction {
     selectedMap: ref.read(selectedMapProvider),
     options: ref.read(coreOptionsProvider),
     tailscale: ref.read(tailscaleSetupProvider),
-    mitm: ref.read(mitmSetupProvider),
   );
 
   // The selection reaches the Core through changeProxy, and MITM settings
@@ -1891,19 +1890,6 @@ class SetupAction extends _$SetupAction {
           realProfile.yaml,
         );
         globalState.lastConfigMd5 = yamlMd5;
-        // The setup carried the MITM settings of when it was built; ones
-        // changed while it ran were sent ahead of it and must not lose.
-        final mitmNow = ref.read(mitmSetupProvider);
-        if (!const DeepCollectionEquality().equals(mitmNow, setupParams.mitm)) {
-          unawaited(
-            _core.updateMitm(mitmNow).catchError((Object error) {
-              commonPrint.log(
-                'mitm.update after setup failed: $error',
-                logLevel: LogLevel.error,
-              );
-            }),
-          );
-        }
         // A new apply starts a new Core epoch, so the binding starts over.
         ref
             .read(appliedRuleSourcesStateProvider.notifier)

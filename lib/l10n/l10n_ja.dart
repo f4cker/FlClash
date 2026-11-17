@@ -6333,6 +6333,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmPauseNotTrusted => 'ルート証明書がないか信頼されていない';
 
   @override
+  String get mitmPartialConnections => '一部の接続は復号されない可能性があります';
+
+  @override
   String get mitmPauseLiveness => '信頼と署名の状態を確認できない';
 
   @override

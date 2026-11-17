@@ -65,11 +65,11 @@ var mitmHTTPSPort uint16 = 443
 // to mitmLeafWait) and a leaf it brings is cached for the next connection.
 var mitmConnectionLeafWait = 500 * time.Millisecond
 
-// A signed leaf is reused for its host and CA for at most this long, and
-// never within mitmLeafExpiryMargin of its own expiry. Sessions keep proving
-// the app alive through the liveness check, which never takes a cached leaf.
+// A signed leaf may only be reused while its signing proof is recent, and
+// never within mitmLeafExpiryMargin of its own expiry. Long sessions also
+// prove the app alive through the liveness check, which never takes a cached leaf.
 const (
-	mitmLeafReuseFor     = time.Hour
+	mitmLeafReuseFor     = mitmLivenessInterval
 	mitmLeafExpiryMargin = 5 * time.Minute
 	mitmLeafCacheMax     = 512
 )
@@ -147,6 +147,7 @@ type mitmLeafCache struct {
 	issuer     func(context.Context, string) (*mitmLeaf, error)
 	inflight   map[mitmLeafKey]*mitmLeafCall
 	ready      map[mitmReadyKey]mitmReadyLeaf
+	quicProof  map[mitmLeafKey]time.Time
 }
 
 var mitmLeaves = &mitmLeafCache{inflight: map[mitmLeafKey]*mitmLeafCall{}}
@@ -155,14 +156,18 @@ func (cache *mitmLeafCache) clear() {
 	cache.mu.Lock()
 	cache.inflight = map[mitmLeafKey]*mitmLeafCall{}
 	cache.ready = nil
+	cache.quicProof = nil
 	cache.generation++
 	cache.mu.Unlock()
 }
 
-// Forgets every kept leaf; issuance in flight is left alone.
+// Forgets kept leaves and prevents in-flight issuances from repopulating them.
 func (cache *mitmLeafCache) forget() {
 	cache.mu.Lock()
 	cache.ready = nil
+	cache.quicProof = nil
+	cache.inflight = map[mitmLeafKey]*mitmLeafCall{}
+	cache.generation++
 	cache.mu.Unlock()
 }
 
@@ -256,8 +261,12 @@ func (cache *mitmLeafCache) issue(key mitmLeafKey, host string, call *mitmLeafCa
 		return
 	}
 	delete(cache.inflight, key)
-	if call.err == nil {
+	if call.err == nil && call.leaf != nil {
 		cache.keep(key.runtime, host, call.leaf)
+		if cache.quicProof == nil || len(cache.quicProof) >= mitmLeafCacheMax {
+			cache.quicProof = make(map[mitmLeafKey]time.Time)
+		}
+		cache.quicProof[key] = time.Now().Add(mitmLivenessInterval)
 	}
 	cache.mu.Unlock()
 	close(call.done)
@@ -575,11 +584,10 @@ func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mi
 	return ""
 }
 
-// QUIC to a listed host is refused while its TCP is being decrypted, so the
-// client falls back to TCP and is decrypted there (阻止 QUIC, on unless the
-// user turns it off). A host not listed, a flow without a name (its name may
-// come from QUIC sniffing), another port, decryption off or paused: the
-// datagrams go through untouched.
+var mitmQuicProbe = make(chan struct{}, 1)
+
+// Without a recent host-specific signing proof, QUIC passes while one bounded
+// probe runs. A dead signer must not strand a QUIC-only client indefinitely.
 func mitmDropsUDP(metadata *C.Metadata) bool {
 	if metadata.DstPort != mitmHTTPSPort || metadata.Host == "" {
 		return false
@@ -589,5 +597,26 @@ func mitmDropsUDP(metadata *C.Metadata) bool {
 		return false
 	}
 	host := normalizeMitmHost(metadata.Host)
-	return runtime.hosts.Match(host) && !mitmPausedFor(host)
+	if !runtime.hosts.Match(host) || mitmPausedFor(host) {
+		return false
+	}
+	mitmLeaves.mu.Lock()
+	proof := mitmLeaves.quicProof[mitmLeafKey{runtime: runtime, host: host}]
+	mitmLeaves.mu.Unlock()
+	if time.Now().Before(proof) && mitmState.Load() == runtime && !mitmPausedFor(host) {
+		return true
+	}
+	select {
+	case mitmQuicProbe <- struct{}{}:
+		go func() {
+			defer func() { <-mitmQuicProbe }()
+			ctx, cancel := context.WithTimeout(context.Background(), mitmLeafWait)
+			defer cancel()
+			if _, err := mitmLeaves.fresh(ctx, host); err != nil {
+				pauseMitm(runtime, host, err)
+			}
+		}()
+	default:
+	}
+	return false
 }

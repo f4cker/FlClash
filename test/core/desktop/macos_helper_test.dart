@@ -1296,30 +1296,31 @@ void main() {
       expect(client.hasCoreSession, isFalse);
     });
 
-    test(
-      'old daemon running beside a new bundle is retired without a stuck card',
-      () async {
-        var oldDaemon = true;
-        final native = _ScriptNative(
-          (method) => switch (method) {
-            'status' =>
-              oldDaemon ? {'code': 'staleHelper'} : _daemon('enabled'),
-            'repair' => () {
-              oldDaemon = false;
-              return _daemon('enabled');
-            }(),
-            _ => {'code': 'ok'},
-          },
-        );
-        final flow = MacHelperMaintenance(
-          MacHelperClient(native: native),
-          stop: () async => _applied,
-        );
-        expect(await flow.check(), MacHelperState.enabled);
-        expect(native.calls, ['status', 'repair']);
-        flow.dispose();
-      },
-    );
+    test('stale daemon is rechecked without registration changes', () async {
+      var oldDaemon = true;
+      final native = _ScriptNative(
+        (method) => method == 'status'
+            ? oldDaemon
+                  ? {'code': 'staleHelper'}
+                  : _daemon('enabled')
+            : {'code': 'ok'},
+      );
+      final flow = MacHelperMaintenance(
+        MacHelperClient(native: native),
+        stop: () async => _applied,
+        startTimeout: const Duration(milliseconds: 20),
+        stalePoll: const Duration(milliseconds: 40),
+      );
+      expect(await flow.check(), MacHelperState.staleHelper);
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+      expect(flow.startSlow, isTrue);
+      expect(native.calls, ['status']);
+      oldDaemon = false;
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      expect(flow.state, MacHelperState.enabled);
+      expect(native.calls, ['status', 'status']);
+      flow.dispose();
+    });
 
     test('repair from "Core state unconfirmed" stops the Core first and '
         'clears the state once the daemon confirms', () async {

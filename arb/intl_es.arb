@@ -1820,6 +1820,7 @@
   "mitmPauseCoreStopped": "el Core no está en ejecución",
   "mitmPauseCoreIdentity": "falló la verificación de identidad del Core",
   "mitmPauseNotTrusted": "el certificado raíz falta o no es de confianza",
+  "mitmPartialConnections": "Es posible que algunas conexiones no se descifren",
   "mitmPauseLiveness": "no se pudo verificar el estado de confianza y firma",
   "mitmPauseIndicatorPending": "el indicador de estado permanente no está activado",
   "mitmPauseUnavailable": "servicio de firma o conexión no disponible",

@@ -93,6 +93,10 @@ func (m *mitmConnections) pauseHost(runtime *mitmRuntime, host, reason string) {
 // Publish configuration and clear its pauses atomically with session
 // registration. Old sessions are closed after releasing the registry lock.
 func replaceMitmRuntime(runtime *mitmRuntime) {
+	replaceMitmRuntimeClearing(runtime, false)
+}
+
+func replaceMitmRuntimeClearing(runtime *mitmRuntime, clearReady bool) {
 	mitmActive.mu.Lock()
 	// Block both new cache calls and sign registration while detaching old
 	// work. No new-runtime work can be invalidated after publication.
@@ -101,6 +105,10 @@ func replaceMitmRuntime(runtime *mitmRuntime) {
 	pending := mitmSignRequests
 	mitmSignRequests = map[uint64]*mitmSignPending{}
 	mitmLeaves.inflight = map[mitmLeafKey]*mitmLeafCall{}
+	if clearReady {
+		mitmLeaves.ready = nil
+	}
+	mitmLeaves.quicProof = nil
 	mitmLeaves.generation++
 	previous := mitmState.Load()
 	mitmState.Store(runtime)
@@ -125,7 +133,12 @@ func replaceMitmRuntime(runtime *mitmRuntime) {
 }
 
 // Desktop control relay closure means the signer can no longer approve leaves.
-func mitmSignerGone() { replaceMitmRuntime(nil) }
+func mitmSignerGone() {
+	mitmIntentMu.Lock()
+	mitmIntentSeq = methodCallSeq.Add(1)
+	replaceMitmRuntimeClearing(nil, true)
+	mitmIntentMu.Unlock()
+}
 
 // Bound stalled readers/writers without imposing a total body-size/time cap;
 // progress refreshes the appropriate deadline on every operation. Writing

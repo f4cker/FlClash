@@ -136,8 +136,13 @@ func TestMitmInterceptWantedFromMetadataAlone(t *testing.T) {
 // else is ever touched.
 func TestMitmDropsQUICOnlyForListedHostsWhileDecrypting(t *testing.T) {
 	app := newFakeMitmApp(t)
-	withMitmSigner(t, app, []string{"example.com"}, nil)
+	withMitmSigner(t, app, []string{"example.com"}, func(req *MitmSignRequest) MitmSignResultParams {
+		return MitmSignResultParams{Cert: app.leaf(t, req.Host, req.SPKI, nil), CA: app.ca.Raw}
+	})
 	defer func() { mitmPaused.Store(nil); mitmHostPauses.Clear() }()
+	if _, err := mitmLeaves.fresh(context.Background(), "example.com"); err != nil {
+		t.Fatal(err)
+	}
 	listed := &C.Metadata{NetWork: C.UDP, Host: "example.com", DstPort: 443}
 	if !mitmDropsUDP(listed) {
 		t.Fatal("listed QUIC not dropped while decrypting")
@@ -234,6 +239,52 @@ func TestMitmLeafIsKeptPerHostAndCA(t *testing.T) {
 	get("example.com")
 	if issued.Load() != 7 {
 		t.Fatalf("a leaf about to expire was reused: %d", issued.Load())
+	}
+}
+
+// Short connections cannot keep reusing a leaf after the signer stops trusting
+// the root, even when no connection lasts long enough for a liveness probe.
+func TestMitmShortConnectionsRecheckRevokedTrust(t *testing.T) {
+	app := newFakeMitmApp(t)
+	var checks atomic.Int32
+	withMitmSigner(t, app, []string{"example.com"}, func(req *MitmSignRequest) MitmSignResultParams {
+		if checks.Add(1) > 1 {
+			return MitmSignResultParams{Error: "trustUnavailable"}
+		}
+		return MitmSignResultParams{Cert: app.leaf(t, req.Host, req.SPKI, nil), CA: app.ca.Raw}
+	})
+	mitmLeaves.clear()
+	defer mitmLeaves.clear()
+	first, err := mitmLeaves.get(context.Background(), "example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Multiple short connections may reuse only the original, unextended proof.
+	for i := 0; i < 3; i++ {
+		leaf, err := mitmLeaves.get(context.Background(), "example.com")
+		if err != nil || leaf != first || checks.Load() != 1 {
+			t.Fatalf("fresh proof not reused: leaf=%v err=%v checks=%d", leaf, err, checks.Load())
+		}
+	}
+	mitmLeaves.mu.Lock()
+	key := mitmReadyKeyOf(mitmState.Load(), "example.com")
+	kept := mitmLeaves.ready[key]
+	if remaining := time.Until(kept.reuseTill); remaining > mitmLivenessInterval || remaining <= 0 {
+		mitmLeaves.mu.Unlock()
+		t.Fatalf("incorrect trust proof lifetime: %v", remaining)
+	}
+	// Advance just the cached proof deadline without a real ten-second wait.
+	kept.reuseTill = time.Now().Add(-time.Second)
+	mitmLeaves.ready[key] = kept
+	mitmLeaves.mu.Unlock()
+	for i := 0; i < 2; i++ {
+		leaf, err := mitmLeaves.get(context.Background(), "example.com")
+		if err == nil || leaf != nil {
+			t.Fatalf("revoked trust reused old leaf: leaf=%v err=%v", leaf, err)
+		}
+	}
+	if checks.Load() != 3 {
+		t.Fatalf("expected fresh signer refusals, got %d checks", checks.Load())
 	}
 }
 
@@ -334,5 +385,165 @@ func TestMitmSlowSignerHoldsOnlyItsOwnConnection(t *testing.T) {
 	case event := <-events:
 		t.Fatalf("an event without a tracker: %+v", event)
 	default:
+	}
+}
+
+func TestMitmQUICRequiresRecentSignerProof(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com"}, nil)
+	entered := make(chan struct{}, 1)
+	resume := make(chan struct{})
+	oldIssuer := mitmLeaves.issuer
+	t.Cleanup(func() { mitmLeaves.issuer = oldIssuer })
+	mitmLeaves.issuer = func(ctx context.Context, host string) (*mitmLeaf, error) {
+		entered <- struct{}{}
+		<-resume
+		return &mitmLeaf{notAfter: time.Now().Add(time.Hour)}, nil
+	}
+	listed := &C.Metadata{NetWork: C.UDP, Host: "example.com", DstPort: 443}
+	if mitmDropsUDP(listed) {
+		t.Fatal("unproved signer blocked QUIC")
+	}
+	<-entered
+	if mitmDropsUDP(listed) {
+		t.Fatal("pending signer blocked QUIC")
+	}
+	mitmLeaves.mu.Lock()
+	call := mitmLeaves.inflight[mitmLeafKey{runtime: mitmState.Load(), host: "example.com"}]
+	mitmLeaves.mu.Unlock()
+	if call == nil {
+		t.Fatal("probe not registered")
+	}
+	close(resume)
+	<-call.done
+	mitmQuicProbe <- struct{}{}
+	<-mitmQuicProbe
+	if !mitmDropsUDP(listed) {
+		t.Fatal("fresh proof did not block QUIC")
+	}
+	mitmLeaves.mu.Lock()
+	mitmLeaves.quicProof[mitmLeafKey{runtime: mitmState.Load(), host: "example.com"}] = time.Now().Add(-time.Second)
+	mitmLeaves.mu.Unlock()
+	// Keep the proof-expiry check from starting another asynchronous probe.
+	mitmQuicProbe <- struct{}{}
+	if mitmDropsUDP(listed) {
+		t.Fatal("expired proof blocked QUIC")
+	}
+	<-mitmQuicProbe
+	mitmSignerGone()
+	if mitmDropsUDP(listed) {
+		t.Fatal("disconnected signer blocked QUIC")
+	}
+}
+
+func TestMitmQUICFailedProbePassesThroughAndPauses(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com"}, nil)
+	called := make(chan struct{})
+	oldIssuer := mitmLeaves.issuer
+	t.Cleanup(func() { mitmLeaves.issuer = oldIssuer })
+	mitmLeaves.issuer = func(ctx context.Context, host string) (*mitmLeaf, error) {
+		close(called)
+		return nil, errMitmSignDropped
+	}
+	listed := &C.Metadata{NetWork: C.UDP, Host: "example.com", DstPort: 443}
+	if mitmDropsUDP(listed) {
+		t.Fatal("unproved signer blocked QUIC")
+	}
+	<-called
+	mitmQuicProbe <- struct{}{}
+	<-mitmQuicProbe
+	if mitmDropsUDP(listed) {
+		t.Fatal("failed signer blocked QUIC")
+	}
+	if reason := mitmPausedReason(); reason != "appUnavailable" {
+		t.Fatalf("pause = %q", reason)
+	}
+}
+
+func TestMitmSignerReconnectDoesNotReuseOldLeaf(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com"}, nil)
+	oldIssuer := mitmLeaves.issuer
+	t.Cleanup(func() { mitmLeaves.issuer = oldIssuer })
+	mitmLeaves.clear()
+	var issued int
+	mitmLeaves.issuer = func(ctx context.Context, host string) (*mitmLeaf, error) {
+		issued++
+		if issued == 1 {
+			return &mitmLeaf{notAfter: time.Now().Add(time.Hour)}, nil
+		}
+		return nil, errMitmSignDropped
+	}
+	if _, err := mitmLeaves.get(context.Background(), "example.com"); err != nil {
+		t.Fatal(err)
+	}
+	same := mitmState.Load().setup
+	mitmSignerGone()
+	applyMitmSetup(&SetupParams{Mitm: &same}, nil)
+	if _, err := mitmLeaves.get(context.Background(), "example.com"); err == nil {
+		t.Fatal("reused a leaf from the disconnected signer")
+	}
+	if issued != 2 {
+		t.Fatalf("issuer called %d times", issued)
+	}
+}
+
+func TestUnverifiedQUICCannotReportReadyWhileIndicatorGated(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com"}, nil)
+	mitmQuicProbe <- struct{}{}
+	defer func() { <-mitmQuicProbe }()
+	metadata := &C.Metadata{NetWork: C.UDP, Host: "example.com", DstPort: 443}
+	if mitmDropsUDP(metadata) {
+		t.Fatal("unverified QUIC did not pass")
+	}
+	if status := handleMitmStatus(); !status.Enable || status.Paused != "indicatorPending" {
+		t.Fatalf("unverified state was reported ready: %+v", status)
+	}
+	if status := mitmStatus(true); status.Paused != "partialConnections" {
+		t.Fatalf("potential passthrough not reported: %+v", status)
+	}
+}
+
+func TestMitmGlobalPauseRejectsLateLeafAndProof(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"a.example", "b.example"}, nil)
+	mitmLeaves.clear()
+	oldIssuer := mitmLeaves.issuer
+	t.Cleanup(func() { mitmLeaves.issuer = oldIssuer })
+	entered := make(chan struct{})
+	resume := make(chan struct{})
+	var issued atomic.Int32
+	mitmLeaves.issuer = func(ctx context.Context, host string) (*mitmLeaf, error) {
+		issued.Add(1)
+		if host == "b.example" && issued.Load() == 1 {
+			close(entered)
+			<-resume
+			return &mitmLeaf{notAfter: time.Now().Add(time.Hour)}, nil
+		}
+		return nil, errMitmSignDropped
+	}
+	result := make(chan error, 1)
+	go func() { _, err := mitmLeaves.fresh(context.Background(), "b.example"); result <- err }()
+	<-entered
+	runtime := mitmState.Load()
+	pauseMitm(runtime, "a.example", errMitmSignDropped)
+	close(resume)
+	if err := <-result; err != errMitmSetupChanged {
+		t.Fatalf("late issuance: %v", err)
+	}
+	mitmLeaves.mu.Lock()
+	ready, proof := len(mitmLeaves.ready), len(mitmLeaves.quicProof)
+	mitmLeaves.mu.Unlock()
+	if ready != 0 || proof != 0 {
+		t.Fatal("late issuance repopulated cache")
+	}
+	mitmPaused.Store(nil)
+	if _, err := mitmLeaves.get(context.Background(), "b.example"); err != errMitmSignDropped {
+		t.Fatalf("old leaf survived pause: %v", err)
+	}
+	if issued.Load() != 2 {
+		t.Fatalf("issuer called %d times", issued.Load())
 	}
 }

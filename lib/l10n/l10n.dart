@@ -10985,6 +10985,12 @@ abstract class AppLocalizations {
   /// **'root certificate is missing or not trusted'**
   String get mitmPauseNotTrusted;
 
+  /// No description provided for @mitmPartialConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'Some connections may not be decrypted'**
+  String get mitmPartialConnections;
+
   /// No description provided for @mitmPauseLiveness.
   ///
   /// In en, this message translates to:

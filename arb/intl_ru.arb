@@ -1820,6 +1820,7 @@
   "mitmPauseCoreStopped": "ядро не запущено",
   "mitmPauseCoreIdentity": "проверка подлинности ядра не пройдена",
   "mitmPauseNotTrusted": "корневой сертификат отсутствует или не доверен",
+  "mitmPartialConnections": "Некоторые соединения могут не расшифровываться",
   "mitmPauseLiveness": "не удалось проверить состояние доверия и подписи",
   "mitmPauseIndicatorPending": "постоянный индикатор состояния не включён",
   "mitmPauseUnavailable": "служба подписи или соединение недоступны",

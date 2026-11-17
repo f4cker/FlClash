@@ -2281,6 +2281,7 @@
   "mitmPauseCoreStopped": "core is not running",
   "mitmPauseCoreIdentity": "core identity check failed",
   "mitmPauseNotTrusted": "root certificate is missing or not trusted",
+  "mitmPartialConnections": "Some connections may not be decrypted",
   "mitmPauseLiveness": "trust and signing status could not be verified",
   "mitmPauseIndicatorPending": "persistent status indicator is not enabled",
   "mitmPauseUnavailable": "signing service or connection unavailable",

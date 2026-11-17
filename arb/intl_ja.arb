@@ -1820,6 +1820,7 @@
   "mitmPauseCoreStopped": "コアが実行されていない",
   "mitmPauseCoreIdentity": "コアの身元確認に失敗",
   "mitmPauseNotTrusted": "ルート証明書がないか信頼されていない",
+  "mitmPartialConnections": "一部の接続は復号されない可能性があります",
   "mitmPauseLiveness": "信頼と署名の状態を確認できない",
   "mitmPauseIndicatorPending": "常時表示の状態インジケーターが有効になっていない",
   "mitmPauseUnavailable": "署名サービスまたは接続を利用できない",

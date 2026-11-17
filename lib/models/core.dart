@@ -122,6 +122,7 @@ enum MitmPauseReason {
   notApplied,
   liveness,
   indicatorPending,
+  partialConnections,
   unavailable,
 }
 

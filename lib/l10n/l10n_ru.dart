@@ -6505,6 +6505,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'корневой сертификат отсутствует или не доверен';
 
   @override
+  String get mitmPartialConnections =>
+      'Некоторые соединения могут не расшифровываться';
+
+  @override
   String get mitmPauseLiveness =>
       'не удалось проверить состояние доверия и подписи';
 

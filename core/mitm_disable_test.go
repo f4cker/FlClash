@@ -12,14 +12,14 @@ func TestMitmDisableEndsDecryptionAndKeepsTheCount(t *testing.T) {
 	app := newFakeMitmApp(t)
 	withMitmSigner(t, app, []string{"example.com"}, nil)
 	on := mitmState.Load()
-	on.ignored = 3
+	on.ignored.Store(3)
 	if !on.decrypting() {
 		t.Fatal("setup")
 	}
 	handleMitmDisable()
 	off := mitmState.Load()
-	if off.decrypting() || off.ignored != 3 {
-		t.Fatalf("after disable: decrypting=%v ignored=%d", off.decrypting(), off.ignored)
+	if off.decrypting() || off.ignored.Load() != 3 {
+		t.Fatalf("after disable: decrypting=%v ignored=%d", off.decrypting(), off.ignored.Load())
 	}
 	if status := handleMitmStatus(); status.Enable {
 		t.Fatalf("status %+v", status)

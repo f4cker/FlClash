@@ -227,6 +227,9 @@ MitmIndicator? mitmIndicatorOf({
     'indicatorPending' => const MitmIndicator.paused(
       MitmPauseReason.indicatorPending,
     ),
+    'partialConnections' => const MitmIndicator.paused(
+      MitmPauseReason.partialConnections,
+    ),
     'coreIdentity' => const MitmIndicator.paused(MitmPauseReason.coreIdentity),
     _ => const MitmIndicator.paused(MitmPauseReason.unavailable),
   };

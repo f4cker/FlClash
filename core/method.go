@@ -39,6 +39,9 @@ var methodCallSeq atomic.Uint64
 // transport has to deliver calls in the order the host sent them.
 func dispatchMethodCall(call *MethodCall, reply func(data []byte)) {
 	call.seq = methodCallSeq.Add(1)
+	if call.Method == mitmUpdateMethod || call.Method == mitmDisableMethod {
+		markMitmIntent(call.seq)
+	}
 	// A developer-only fatal-path test. It runs outside every recovery so the
 	// core process terminates; on Android that is the whole application.
 	if call.Method == coreCrashMethod {
@@ -191,7 +194,7 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	coreGCMethod:          action(handleForceGC),
 	coreMemoryMethod:      withoutArguments(handleGetMemoryStats),
 
-	configSetupMethod:    command(handleSetupConfig),
+	configSetupMethod:    handleManagedSetupCall,
 	configUpdateMethod:   command(updateConfig),
 	configValidateMethod: withArguments(handleValidateConfig),
 	configDecryptMethod:  withFallible(handleDecryptConfig),
@@ -255,8 +258,8 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	mitmValidateMethod:   withArguments(handleMitmValidate),
 	mitmStatusMethod:     withoutArguments(handleMitmStatus),
 	mitmSignResultMethod: withArguments(handleMitmSignResult),
-	mitmDisableMethod:    action(handleMitmDisable),
-	mitmUpdateMethod:     command(handleMitmUpdate),
+	mitmDisableMethod:    handleMitmDisableCall,
+	mitmUpdateMethod:     handleMitmUpdateCall,
 	mitmExchangesMethod:  withArguments(handleMitmExchanges),
 	mitmExchangeMethod:   withArguments(handleMitmExchange),
 	mitmBodyMethod:       withArguments(handleMitmBody),
@@ -282,4 +285,28 @@ func watchRouteHandler(call *MethodCall) (any, error) {
 		return nil, err
 	}
 	return handleWatchRoute(params.Watch, call.seq), nil
+}
+
+func handleManagedSetupCall(call *MethodCall) (any, error) {
+	params, err := decodeArguments[*SetupParams](call)
+	if err != nil {
+		return nil, err
+	}
+	if params == nil {
+		return nil, errors.New("missing setup")
+	}
+	params.mitmManaged = true
+	return nil, handleSetupConfig(params)
+}
+
+func handleMitmUpdateCall(call *MethodCall) (any, error) {
+	params, err := decodeArguments[MitmUpdateParams](call)
+	if err != nil {
+		return nil, err
+	}
+	return nil, handleMitmUpdateSeq(params, call.seq)
+}
+
+func handleMitmDisableCall(call *MethodCall) (any, error) {
+	return nil, handleMitmUpdateSeq(MitmUpdateParams{}, call.seq)
 }

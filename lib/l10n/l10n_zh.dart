@@ -5995,6 +5995,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmPauseNotTrusted => '根证书未生成或未受信任';
 
   @override
+  String get mitmPartialConnections => '部分连接可能未解密';
+
+  @override
   String get mitmPauseLiveness => '无法确认信任和签名状态';
 
   @override

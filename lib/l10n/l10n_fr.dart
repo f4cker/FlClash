@@ -6559,6 +6559,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mitmPauseNotTrusted => 'certificat racine absent ou non approuvé';
 
   @override
+  String get mitmPartialConnections =>
+      'Certaines connexions peuvent ne pas être déchiffrées';
+
+  @override
   String get mitmPauseLiveness =>
       'état de confiance et de signature non vérifiable';
 

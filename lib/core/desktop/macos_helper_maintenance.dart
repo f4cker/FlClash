@@ -14,11 +14,11 @@ final class MacHelperMaintenance extends ChangeNotifier {
   final Future<CoreLifecycleResult> Function() _stop;
   final Duration startTimeout;
   final Duration startPoll;
+  final Duration stalePoll;
   Future<MacHelperState>? _operation;
   MacHelperState? _state;
   MacHelperProgress _progress = MacHelperProgress.idle;
   bool _stopUnknown = false;
-  bool _staleRetried = false;
   bool _awaitingSettings = false;
   bool _startSlow = false;
   Timer? _startTimer;
@@ -30,6 +30,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
     required Future<CoreLifecycleResult> Function() stop,
     this.startTimeout = const Duration(seconds: 10),
     this.startPoll = const Duration(seconds: 2),
+    this.stalePoll = const Duration(seconds: 42),
   }) : _stop = stop;
 
   MacHelperState? get state => _state;
@@ -97,10 +98,13 @@ final class MacHelperMaintenance extends ChangeNotifier {
       _startSlow = true;
       _pollTimer?.cancel();
       _pollTimer = null;
+      if (_state == MacHelperState.staleHelper) _scheduleStalePoll();
       _notify();
     });
-    if (!_startSlow) {
-      _pollTimer?.cancel();
+    _pollTimer?.cancel();
+    if (next == MacHelperState.staleHelper) {
+      _scheduleStalePoll();
+    } else if (!_startSlow) {
       _pollTimer = Timer(startPoll, () {
         _pollTimer = null;
         if (!busy && !_startSlow) unawaited(check());
@@ -108,14 +112,15 @@ final class MacHelperMaintenance extends ChangeNotifier {
     }
   }
 
+  void _scheduleStalePoll() {
+    _pollTimer = Timer(stalePoll, () {
+      _pollTimer = null;
+      if (!busy) unawaited(check());
+    });
+  }
+
   Future<MacHelperState> _status() async {
-    var next = await client.status();
-    if (next == MacHelperState.staleHelper && !_staleRetried) {
-      // Ask the previous build's daemon to exit once; launchd then starts this build.
-      _staleRetried = true;
-      next = await client.repair();
-    }
-    if (next == MacHelperState.enabled) _staleRetried = false;
+    final next = await client.status();
     return _stopUnknown ? MacHelperState.exitUnconfirmed : next;
   }
 
@@ -155,8 +160,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
   }
 
   /// Repair from "Core state unconfirmed" (and the like): stop the Core through
-  /// the app, then let the native side retire a stale daemon or register it
-  /// again. The daemon still refuses to leave while it owns a Core.
+  /// the app, then re-check the native state.
   Future<MacHelperState> repair() {
     return _singleFlight(MacHelperProgress.updating, () async {
       return client.maintain(() async {
@@ -169,7 +173,6 @@ final class MacHelperMaintenance extends ChangeNotifier {
         } catch (_) {
           // The native repair still runs; the daemon answers for the Core.
         }
-        _staleRetried = false;
         final next = await client.repair();
         return _stopUnknown ? MacHelperState.exitUnconfirmed : next;
       });

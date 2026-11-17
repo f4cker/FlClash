@@ -6553,6 +6553,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'el certificado raíz falta o no es de confianza';
 
   @override
+  String get mitmPartialConnections =>
+      'Es posible que algunas conexiones no se descifren';
+
+  @override
   String get mitmPauseLiveness =>
       'no se pudo verificar el estado de confianza y firma';
 

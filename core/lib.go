@@ -281,6 +281,10 @@ func QuickSetup(initParamsString, setupParamsString string, answer func(string))
 			answer(err.Error())
 			return
 		}
+		setupParams.mitmManaged = true
+		if setupParams.Mitm != nil && setupParams.Mitm.Enable {
+			log.Warnln("[MITM] unversioned startup settings skipped until current settings arrive")
+		}
 		setRunning(true)
 		if err := handleSetupConfig(setupParams); err != nil {
 			answer(err.Error())

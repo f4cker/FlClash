@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:fl_clash/common/app_localizations.dart';
@@ -428,11 +429,11 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
-    testWidgets('is asserted on every connection while off, never while on', (
+    testWidgets('an obsolete failed update does not hide the latest off', (
       tester,
     ) async {
       final coreInterface = _coreInterface();
-      when(() => coreInterface.disableMitm()).thenAnswer((_) async {});
+      when(() => coreInterface.updateMitm(any())).thenAnswer((_) async {});
       final container = await _pumpCoreManager(
         tester,
         coreInterface,
@@ -442,29 +443,62 @@ void main() {
       );
       container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
       await tester.pump();
-      verify(() => coreInterface.disableMitm()).called(1);
-
-      container.read(coreStatusProvider.notifier).value =
-          CoreStatus.disconnected;
-      await tester.pump();
-      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
-      await tester.pump();
-      verify(() => coreInterface.disableMitm()).called(1);
-
+      final pending = Completer<void>();
+      when(() => coreInterface.updateMitm(any())).thenAnswer((invocation) {
+        return invocation.positionalArguments.first == null
+            ? Future<void>.value()
+            : pending.future;
+      });
       setMitm(container, true);
+      await tester.pump();
+      setMitm(container, false);
+      await tester.pump();
+      pending.completeError(StateError('old request failed'));
+      await tester.pump();
+      expect(find.text(currentAppLocalizations.mitmNotApplied), findsNothing);
+      verify(
+        () => coreInterface.updateMitm(null),
+      ).called(greaterThanOrEqualTo(1));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('current settings are sent on every connection', (
+      tester,
+    ) async {
+      final coreInterface = _coreInterface();
+      when(() => coreInterface.updateMitm(any())).thenAnswer((_) async {});
+      final container = await _pumpCoreManager(
+        tester,
+        coreInterface,
+        overrides: [
+          setupActionProvider.overrideWith(_ApplyRecordingSetupAction.new),
+        ],
+      );
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      verify(() => coreInterface.updateMitm(null)).called(1);
+
       container.read(coreStatusProvider.notifier).value =
           CoreStatus.disconnected;
       await tester.pump();
       container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
       await tester.pump();
-      verifyNever(() => coreInterface.disableMitm());
+      verify(() => coreInterface.updateMitm(null)).called(1);
+
+      container.read(coreStatusProvider.notifier).value =
+          CoreStatus.disconnected;
+      setMitm(container, true);
+      await tester.pump();
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      verify(() => coreInterface.updateMitm(any())).called(1);
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
     testWidgets('that does not reach the Core says so', (tester) async {
       final coreInterface = _coreInterface();
       when(
-        () => coreInterface.disableMitm(),
+        () => coreInterface.updateMitm(any()),
       ).thenAnswer((_) async => throw StateError('relay gone'));
       final container = await _pumpCoreManager(
         tester,

@@ -6511,6 +6511,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'root certificate is missing or not trusted';
 
   @override
+  String get mitmPartialConnections => 'Some connections may not be decrypted';
+
+  @override
   String get mitmPauseLiveness =>
       'trust and signing status could not be verified';
 

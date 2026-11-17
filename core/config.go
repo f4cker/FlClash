@@ -168,9 +168,8 @@ func applyConfig(params *SetupParams) error {
 	defer configMu.Unlock()
 
 	refreshGuardSuffixes()
-	// A setup without MITM turns it off once applied; one refused, or kept
-	// out by its mounts, still may not leave an earlier decryption running.
-	if params.Mitm == nil {
+	// Legacy direct setups without MITM turn it off even when refused.
+	if !params.mitmManaged && params.Mitm == nil {
 		handleMitmDisable()
 	}
 	var err error
@@ -218,7 +217,11 @@ func applyConfig(params *SetupParams) error {
 	}
 	clearTailscaleExit()
 	applyOptions(params.Options)
-	applyMitmSetup(params, candidateBytes)
+	if params.mitmManaged {
+		updateMitmIgnored(candidateBytes)
+	} else {
+		applyMitmSetup(params, candidateBytes)
+	}
 	setTailscaleSetup(params.Tailscale)
 	replaced := tailscaleGenerationMark()
 	markTailscaleReplaced(replaced)

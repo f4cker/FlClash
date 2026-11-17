@@ -45,7 +45,7 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   /// MITM settings (on/off, trusted CA, hosts, limits) reach the Core on
   /// their own, never through a config reload: a change of trust or hosts
   /// then ends only decrypted sessions, not every connection. A Core not
-  /// connected gets them in the setup that connects it.
+  /// connected gets the current settings when it reconnects.
   Future<void> _updateMitm({bool throttled = false}) async {
     final now = DateTime.now();
     final last = _mitmResent;
@@ -147,32 +147,9 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     ref.listenManual(coreStatusProvider, (prev, next) {
       if (next == CoreStatus.connected && prev != CoreStatus.connected) {
         _syncLogStream();
-        // A Core reached again may be one that kept decrypting while the
-        // app was away; with decryption off here, it is told so.
-        if (mitmFeature && !ref.read(patchClashConfigProvider).mitm.enable) {
-          unawaited(_assertMitmOff());
-        }
+        if (mitmFeature) unawaited(_updateMitm());
       }
     }, fireImmediately: true);
-  }
-
-  Future<void> _assertMitmOff() async {
-    if (ref.read(coreStatusProvider) != CoreStatus.connected) {
-      // The next connection asserts it.
-      return;
-    }
-    try {
-      await _core.disableMitm();
-    } catch (error) {
-      commonPrint.log('mitm.disable failed: $error', logLevel: LogLevel.error);
-      if (!mounted || ref.read(patchClashConfigProvider).mitm.enable) {
-        return;
-      }
-      dialogs.showBanner(
-        currentAppLocalizations.mitmTurnOffFailed,
-        level: BannerLevel.error,
-      );
-    }
   }
 
   void _syncLogStream() {

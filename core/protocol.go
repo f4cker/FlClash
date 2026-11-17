@@ -149,6 +149,8 @@ type DecryptConfigParams struct {
 }
 
 type SetupParams struct {
+	mitmManaged bool
+
 	Base        *SetupBase        `json:"base,omitempty"`
 	SelectedMap map[string]string `json:"selected-map"`
 	Options     CoreOptions       `json:"options"`
