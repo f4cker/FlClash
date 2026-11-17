@@ -6,6 +6,15 @@ import Security
 final class MitmKeychainStore: MitmCAStore {
     static let label = MitmCertificateBuilder.rootName
     static let tag = Data("com.layoute.flash.mitm.ca".utf8)
+    /// What was made here, so a same-user process adding its own tagged key or certificate is not picked up.
+    static let keyLabelDefault = "mitmCAKeyApplicationLabel"
+    static let certificateDefault = "mitmCACertificateFingerprint"
+
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     private final class Key: MitmCAKey {
         let privateKey: SecKey
@@ -53,7 +62,9 @@ final class MitmKeychainStore: MitmCAStore {
     }
 
     func loadKey() throws -> MitmCAKey? {
+        guard let label = defaults.data(forKey: Self.keyLabelDefault) else { return nil }
         var query = try keyQuery()
+        query[kSecAttrApplicationLabel as String] = label
         query[kSecReturnRef as String] = true
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
@@ -79,7 +90,12 @@ final class MitmKeychainStore: MitmCAStore {
         guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &error) else {
             throw error!.takeRetainedValue() as Error
         }
-        guard let key = Key(privateKey) else { throw MitmCertificateError.badKey }
+        guard let key = Key(privateKey),
+              let attributes = SecKeyCopyAttributes(privateKey) as? [String: Any],
+              let label = attributes[kSecAttrApplicationLabel as String] as? Data else {
+            throw MitmCertificateError.badKey
+        }
+        defaults.set(label, forKey: Self.keyLabelDefault)
         return key
     }
 
@@ -101,11 +117,13 @@ final class MitmKeychainStore: MitmCAStore {
     }
 
     func loadCertificate() throws -> Data? {
-        guard let key = try loadKey() else { return nil }
+        guard let key = try loadKey(), let fingerprint = defaults.string(forKey: Self.certificateDefault) else {
+            return nil
+        }
         let spki = MitmCertificateBuilder.spki(x963: key.publicKeyX963)
         return try certificates()
             .map { SecCertificateCopyData($0) as Data }
-            .first { (try? MitmRootReader.spki(of: $0)) == spki }
+            .first { MitmCertificateBuilder.fingerprint($0) == fingerprint && (try? MitmRootReader.spki(of: $0)) == spki }
     }
 
     func saveCertificate(_ der: Data) throws {
@@ -119,6 +137,7 @@ final class MitmKeychainStore: MitmCAStore {
             kSecUseKeychain as String: try loginKeychain(),
         ]
         try check(SecItemAdd(attributes as CFDictionary, nil), allowing: [errSecDuplicateItem])
+        defaults.set(MitmCertificateBuilder.fingerprint(der), forKey: Self.certificateDefault)
     }
 
     func deleteAll() throws -> [Error] {
@@ -126,6 +145,8 @@ final class MitmKeychainStore: MitmCAStore {
         return try MitmDeletion.run(
             deleteKey: {
                 try check(SecItemDelete(keyQuery as CFDictionary), allowing: [errSecItemNotFound])
+                defaults.removeObject(forKey: Self.keyLabelDefault)
+                defaults.removeObject(forKey: Self.certificateDefault)
                 var publicQuery = keyQuery
                 publicQuery[kSecAttrKeyClass as String] = kSecAttrKeyClassPublic
                 publicQuery.removeValue(forKey: kSecAttrApplicationTag as String)

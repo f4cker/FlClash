@@ -55,6 +55,9 @@ class MitmSignerTests(unittest.TestCase):
         self.assertEqual(store.count('kSecMatchSearchList as String: [try loginKeychain()]'), 2)
         self.assertEqual(store.count('kSecUseKeychain as String: try loginKeychain()'), 2)
         self.assertIn('MitmDeletion.run(', store)
+        load = store[store.index('func loadKey()'):store.index('func createKey()')]
+        self.assertIn('query[kSecAttrApplicationLabel as String] = label', load)
+        self.assertIn('defaults.string(forKey: Self.certificateDefault)', store)
         for forbidden in ('SecKeyCopyExternalRepresentation(privateKey', 'kSecAttrIsExtractable as String: true',
                           'SecItemExport'):
             self.assertNotIn(forbidden, store)
