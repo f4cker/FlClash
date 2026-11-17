@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../helpers/core_connections.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
 
@@ -32,20 +33,34 @@ void main() {
       bool coreConnected = true,
       bool coreRefused = false,
       MitmStatus? status = const MitmStatus(enable: true),
+      bool decrypting = false,
     }) => mitmIndicatorOf(
       enabled: enabled,
       coreConnected: coreConnected,
       coreRefused: coreRefused,
       status: status,
+      decrypting: decrypting,
     );
 
     test('says nothing while decryption is off', () {
       expect(of(enabled: false), isNull);
     });
 
-    test('decrypts only when the Core says so', () {
-      expect(of(), const MitmIndicator.decrypting());
+    test('is on when the Core says so, decrypting only with a connection', () {
+      expect(of(), const MitmIndicator.on());
+      expect(of(decrypting: true), const MitmIndicator.decrypting());
       expect(of(status: null), const MitmIndicator.unconfirmed());
+      expect(
+        of(status: null, decrypting: true),
+        const MitmIndicator.unconfirmed(),
+      );
+      expect(
+        of(
+          status: const MitmStatus(enable: true, paused: 'indicatorPending'),
+          decrypting: true,
+        ),
+        const MitmIndicator.paused(MitmPauseReason.indicatorPending),
+      );
     });
 
     test('names why it is paused', () {
@@ -81,13 +96,27 @@ void main() {
 
     test('reads in full with its reason', () {
       final l = lookupAppLocalizations(const Locale('zh'));
+      expect(mitmIndicatorText(l, const MitmIndicator.on()), '解密已开启');
       expect(mitmIndicatorText(l, const MitmIndicator.decrypting()), '正在解密');
       expect(
         mitmIndicatorText(
           l,
           const MitmIndicator.paused(MitmPauseReason.notTrusted),
         ),
-        '解密已暂停：根证书未生成或未信任',
+        '解密已暂停：根证书未生成或未受信任',
+      );
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(mitmIndicatorText(en, const MitmIndicator.on()), 'Decryption on');
+      expect(
+        mitmIndicatorText(
+          en,
+          const MitmIndicator.paused(MitmPauseReason.coreStopped),
+        ),
+        'Decryption paused: core is not running',
+      );
+      expect(
+        mitmIndicatorLabel(en, const MitmIndicator.unconfirmed()),
+        'Checking decryption status',
       );
       expect(
         mitmIndicatorLabel(l, const MitmIndicator.unconfirmed()),
@@ -113,6 +142,8 @@ void main() {
       required Mitm mitm,
       MitmStatus status = const MitmStatus(enable: true),
       Widget? page,
+      List<TrackerInfo> requests = const [],
+      List<TrackerInfo> connections = const [],
     }) async {
       tester.view.physicalSize = const Size(1000, 800);
       tester.view.devicePixelRatio = 1;
@@ -121,6 +152,7 @@ void main() {
       core = _MockCore();
       when(() => core.getMitmStatus()).thenAnswer((_) async => status);
       when(() => core.getMitmCertificate()).thenAnswer((_) async => null);
+      whenConnections<bool>(core, () async => connections);
       when(
         () => core.validateMitm(any()),
       ).thenAnswer((_) async => {for (final list in MitmList.values) list: {}});
@@ -141,6 +173,9 @@ void main() {
           .update((_) => const Size(1000, 800));
       container.read(patchClashConfigProvider.notifier).value =
           PatchClashConfig(mitm: mitm);
+      for (final request in requests) {
+        container.read(requestsProvider.notifier).addRequest(request);
+      }
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -193,12 +228,68 @@ void main() {
       await settle(tester);
     });
 
+    testWidgets('says decrypting only while a decrypted connection is open', (
+      tester,
+    ) async {
+      TrackerInfo info(String id, {bool mitm = false}) => TrackerInfo(
+        id: id,
+        start: DateTime(2026),
+        metadata: Metadata(network: 'tcp', host: '$id.test', mitm: mitm),
+        chains: const [],
+        rule: '',
+        rulePayload: '',
+      );
+      final l = currentAppLocalizations;
+
+      // Decrypted earlier, but that connection has closed.
+      await pump(
+        tester,
+        mitm: const Mitm(enable: true),
+        requests: [info('old', mitm: true), info('plain')],
+        connections: [info('plain')],
+      );
+      await tester.pump();
+      expect(find.text(l.mitmIndicatorOn), findsOneWidget);
+      expect(find.text(l.mitmIndicatorDecrypting), findsNothing);
+      await settle(tester);
+
+      await pump(
+        tester,
+        mitm: const Mitm(enable: true),
+        requests: [info('live', mitm: true), info('plain')],
+        connections: [info('live'), info('plain')],
+      );
+      await tester.pump();
+      expect(find.text(l.mitmIndicatorDecrypting), findsOneWidget);
+      await settle(tester);
+    });
+
+    testWidgets('does not read the connections while paused', (tester) async {
+      await pump(
+        tester,
+        mitm: const Mitm(enable: true),
+        status: const MitmStatus(enable: true, paused: 'indicatorPending'),
+        requests: [
+          TrackerInfo(
+            id: 'live',
+            start: DateTime(2026),
+            metadata: const Metadata(mitm: true),
+            chains: const [],
+            rule: '',
+            rulePayload: '',
+          ),
+        ],
+      );
+      verifyNever(() => core.getConnectionsWith<bool>(any()));
+      await settle(tester);
+    });
+
     testWidgets('opens the MITM settings, whose own bar leaves it out', (
       tester,
     ) async {
       await pump(tester, mitm: const Mitm(enable: true));
       expect(
-        find.text(currentAppLocalizations.mitmIndicatorDecrypting),
+        find.text(currentAppLocalizations.mitmIndicatorOn),
         findsOneWidget,
       );
       await tester.tap(find.byType(MitmStatusCapsule));

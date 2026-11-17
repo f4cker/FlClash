@@ -3543,10 +3543,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      'Клиент отклонил сертификат. Установите сертификат или исключите этот хост, если приложение закрепляет свой сертификат.';
-
-  @override
   String get mitmExcludeHost => 'Исключить из расшифровки';
 
   @override
@@ -6439,7 +6435,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmOutcomeRefused =>
-      'Ошибка TLS клиента (возможно, сертификат отклонён)';
+      'Клиент отправил предупреждение (alert) во время рукопожатия. Причина неизвестна.';
 
   @override
   String get mitmOutcomeUpstreamCertificate =>
@@ -6471,10 +6467,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmIndicatorDecrypting => 'Идёт расшифровка';
 
   @override
+  String get mitmIndicatorOn => 'Расшифровка включена';
+
+  @override
   String get mitmIndicatorPaused => 'Расшифровка приостановлена';
 
   @override
-  String get mitmIndicatorUnconfirmed => 'Проверка расшифровки';
+  String get mitmIndicatorUnconfirmed => 'Проверка состояния расшифровки';
 
   @override
   String mitmIndicatorPausedBecause(String reason) {
@@ -6492,21 +6491,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmPauseNotTrusted =>
-      'корневой сертификат не создан или не доверен';
+      'корневой сертификат отсутствует или не доверен';
 
   @override
-  String get mitmPauseLiveness => 'не удалось подтвердить доверие и подпись';
+  String get mitmPauseLiveness =>
+      'не удалось проверить состояние доверия и подписи';
 
   @override
-  String get mitmPauseIndicatorPending => 'постоянный индикатор ещё не включён';
+  String get mitmPauseIndicatorPending =>
+      'постоянный индикатор состояния не включён';
 
   @override
-  String get mitmPauseUnavailable =>
-      'подписывающий компонент или соединение недоступно';
+  String get mitmPauseUnavailable => 'служба подписи или соединение недоступны';
 
   @override
   String get mitmOutcomePaused =>
-      'Расшифровка приостановлена; пропущено без изменений';
+      'Расшифровка приостановлена; соединение пропущено без изменений';
 
   @override
   String get mitmBadgeDecrypted => 'Расшифровано';
@@ -6515,7 +6515,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmBadgePassedThrough => 'Не расшифровано · пропущено';
 
   @override
-  String get mitmBadgeRefused => 'Клиент отклонил расшифровку';
+  String get mitmBadgeHandshakeFailed => 'Сбой рукопожатия клиента';
 
   @override
   String get mitmBadgeFailed => 'Ошибка расшифровки';
@@ -6528,7 +6528,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmExchangeStopped =>
-      'Остановлено: изменены настройки расшифровки';
+      'Запрос остановлен: изменены настройки расшифровки';
 
   @override
   String get mitmExchangeFailed => 'Запрос не завершён';

@@ -30,7 +30,8 @@ String mitmOutcomeText(BuildContext context, String outcome) {
 enum MitmBadge {
   decrypted(RecordTone.accent),
   passedThrough(RecordTone.warning),
-  refused(RecordTone.error),
+  // The client sent an alert in its handshake; why is unknown.
+  handshakeFailed(RecordTone.error),
   failed(RecordTone.error);
 
   const MitmBadge(this.tone);
@@ -39,7 +40,7 @@ enum MitmBadge {
 
   static MitmBadge? of(TrackerInfo trackerInfo) {
     return switch (trackerInfo.mitmOutcome) {
-      'refused' => MitmBadge.refused,
+      'refused' => MitmBadge.handshakeFailed,
       'unsupportedHello' ||
       'missingSNI' ||
       'http2Only' ||
@@ -59,7 +60,7 @@ enum MitmBadge {
     return switch (this) {
       MitmBadge.decrypted => l.mitmBadgeDecrypted,
       MitmBadge.passedThrough => l.mitmBadgePassedThrough,
-      MitmBadge.refused => l.mitmBadgeRefused,
+      MitmBadge.handshakeFailed => l.mitmBadgeHandshakeFailed,
       MitmBadge.failed => l.mitmBadgeFailed,
     };
   }
@@ -471,9 +472,6 @@ class _MitmHostSection extends ConsumerWidget {
           ),
         ),
       ],
-      footer: metadata.mitmRefused
-          ? appLocalizations.mitmClientRefusedCertificate
-          : null,
     );
   }
 }

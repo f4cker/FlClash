@@ -675,12 +675,33 @@ void main() {
     expect(mitmExchangeErrorText(l, 'responseFailed'), 'Response interrupted');
     expect(
       mitmExchangeErrorText(l, 'stopped'),
-      'Stopped: decryption settings changed',
+      'Request stopped because decryption settings changed',
     );
     expect(
       mitmExchangeErrorText(l, 'somethingNew'),
       'Request did not complete',
     );
+  });
+
+  test('the filter that keeps decrypted requests is named for them', () {
+    final facet = trackerInfoFacets.firstWhere(
+      (facet) => facet.kind == RecordFacetKind.mitm,
+    );
+    expect(facet.label('MITM'), currentAppLocalizations.mitmBadgeDecrypted);
+  });
+
+  test('a handshake alert is named without guessing its cause', () {
+    final zh = lookupAppLocalizations(const Locale('zh'));
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(zh.mitmBadgeHandshakeFailed, '客户端握手失败');
+    expect(zh.mitmOutcomeRefused, '客户端在握手时发出了警报，原因无法确定。');
+    expect(en.mitmBadgeHandshakeFailed, 'Client handshake failed');
+    expect(
+      en.mitmOutcomeRefused,
+      'The client sent an alert during the handshake. The cause is unknown.',
+    );
+    expect(zh.mitmBadgePassedThrough, '未解密 · 原样放行');
+    expect(zh.mitmBadgeFailed, '解密失败');
   });
 
   testWidgets('each row says what decryption did, and unlisted rows nothing', (
@@ -715,8 +736,8 @@ void main() {
         'Not decrypted · passed through',
         RecordTone.warning,
       ),
-      row('pinned', outcome: 'refused'): (
-        'Decryption refused by the app',
+      row('alert', outcome: 'refused'): (
+        'Client handshake failed',
         RecordTone.error,
       ),
       row('cert', outcome: 'upstreamCertificate'): (

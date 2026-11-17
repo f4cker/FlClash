@@ -6270,12 +6270,6 @@ abstract class AppLocalizations {
   /// **'Add {host} to the hostname list? Flash can then read what is sent to it, cookies and passwords included.'**
   String mitmDecryptHostTip(Object host);
 
-  /// No description provided for @mitmClientRefusedCertificate.
-  ///
-  /// In en, this message translates to:
-  /// **'The client refused the certificate. Install the CA, or exclude this host if the app pins its certificate.'**
-  String get mitmClientRefusedCertificate;
-
   /// No description provided for @mitmExcludeHost.
   ///
   /// In en, this message translates to:
@@ -10874,7 +10868,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmOutcomeRefused.
   ///
   /// In en, this message translates to:
-  /// **'Client TLS handshake failed (certificate may have been rejected)'**
+  /// **'The client sent an alert during the handshake. The cause is unknown.'**
   String get mitmOutcomeRefused;
 
   /// No description provided for @mitmOutcomeUpstreamCertificate.
@@ -10925,6 +10919,12 @@ abstract class AppLocalizations {
   /// **'Decrypting'**
   String get mitmIndicatorDecrypting;
 
+  /// No description provided for @mitmIndicatorOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption on'**
+  String get mitmIndicatorOn;
+
   /// No description provided for @mitmIndicatorPaused.
   ///
   /// In en, this message translates to:
@@ -10934,7 +10934,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmIndicatorUnconfirmed.
   ///
   /// In en, this message translates to:
-  /// **'Checking decryption'**
+  /// **'Checking decryption status'**
   String get mitmIndicatorUnconfirmed;
 
   /// No description provided for @mitmIndicatorPausedBecause.
@@ -10952,43 +10952,43 @@ abstract class AppLocalizations {
   /// No description provided for @mitmPauseCoreStopped.
   ///
   /// In en, this message translates to:
-  /// **'the Core is not running'**
+  /// **'core is not running'**
   String get mitmPauseCoreStopped;
 
   /// No description provided for @mitmPauseCoreIdentity.
   ///
   /// In en, this message translates to:
-  /// **'the Core\'s identity check failed'**
+  /// **'core identity check failed'**
   String get mitmPauseCoreIdentity;
 
   /// No description provided for @mitmPauseNotTrusted.
   ///
   /// In en, this message translates to:
-  /// **'the root certificate is not generated or not trusted'**
+  /// **'root certificate is missing or not trusted'**
   String get mitmPauseNotTrusted;
 
   /// No description provided for @mitmPauseLiveness.
   ///
   /// In en, this message translates to:
-  /// **'trust and signing could not be confirmed'**
+  /// **'trust and signing status could not be verified'**
   String get mitmPauseLiveness;
 
   /// No description provided for @mitmPauseIndicatorPending.
   ///
   /// In en, this message translates to:
-  /// **'the always-visible status is not enabled yet'**
+  /// **'persistent status indicator is not enabled'**
   String get mitmPauseIndicatorPending;
 
   /// No description provided for @mitmPauseUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'the signer or connection is unavailable'**
+  /// **'signing service or connection unavailable'**
   String get mitmPauseUnavailable;
 
   /// No description provided for @mitmOutcomePaused.
   ///
   /// In en, this message translates to:
-  /// **'Decryption was paused; passed through unchanged'**
+  /// **'Decryption paused; connection passed through unchanged'**
   String get mitmOutcomePaused;
 
   /// No description provided for @mitmBadgeDecrypted.
@@ -11003,11 +11003,11 @@ abstract class AppLocalizations {
   /// **'Not decrypted · passed through'**
   String get mitmBadgePassedThrough;
 
-  /// No description provided for @mitmBadgeRefused.
+  /// No description provided for @mitmBadgeHandshakeFailed.
   ///
   /// In en, this message translates to:
-  /// **'Decryption refused by the app'**
-  String get mitmBadgeRefused;
+  /// **'Client handshake failed'**
+  String get mitmBadgeHandshakeFailed;
 
   /// No description provided for @mitmBadgeFailed.
   ///
@@ -11030,7 +11030,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmExchangeStopped.
   ///
   /// In en, this message translates to:
-  /// **'Stopped: decryption settings changed'**
+  /// **'Request stopped because decryption settings changed'**
   String get mitmExchangeStopped;
 
   /// No description provided for @mitmExchangeFailed.

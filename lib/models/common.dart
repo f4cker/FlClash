@@ -271,6 +271,8 @@ final trackerInfoFacets = <RecordFacet<TrackerInfo>>[
     RecordFacetKind.mitm,
     (info) => [if (info.metadata.mitm) 'MITM'],
     offered: true,
+    // Only decrypted requests: failures and pass-throughs are not in it.
+    labelOf: (_) => currentAppLocalizations.mitmBadgeDecrypted,
   ),
   RecordFacet(
     RecordFacetKind.app,

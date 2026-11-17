@@ -149,14 +149,47 @@ final mitmRuntimeStatusProvider = FutureProvider.autoDispose<MitmStatus>((
   }
 });
 
+/// Whether a connection the request list saw the Core decrypt is still open:
+/// the IDs of the requests marked decrypted, matched against the Core's live
+/// connection list. Unknown, or no decrypted request, is false, so the status
+/// claims decryption only on that evidence. Polled while it is watched.
+final mitmDecryptingProvider = FutureProvider.autoDispose<bool>((ref) async {
+  ref.watch(coreStatusProvider);
+  try {
+    final decrypted = {
+      for (final request in ref.read(requestsProvider).list)
+        if (request.metadata.mitm) request.id,
+    };
+    if (decrypted.isEmpty) {
+      return false;
+    }
+    return await ref
+        .read(coreHandlerProvider)
+        .getConnectionsWith(
+          (connections) => connections.any(
+            (connection) => decrypted.contains(connection.id),
+          ),
+        )
+        .timeout(const Duration(seconds: 3));
+  } finally {
+    if (ref.mounted) {
+      final timer = Timer(const Duration(seconds: 2), ref.invalidateSelf);
+      ref.onDispose(timer.cancel);
+    }
+  }
+});
+
 /// The status every page's bar and the tray menu show while decryption is
 /// on, or null while it is off. A status the Core has not answered yet is
 /// unconfirmed rather than paused: only the Core knows it passes through.
+/// Ready is "on"; "decrypting" needs [decrypting], a decrypted connection
+/// that is still open.
 MitmIndicator? mitmIndicatorOf({
   required bool enabled,
   required bool coreConnected,
   required bool coreRefused,
   required MitmStatus? status,
+  bool decrypting = false,
 }) {
   if (!enabled) {
     return null;
@@ -174,7 +207,8 @@ MitmIndicator? mitmIndicatorOf({
     return const MitmIndicator.paused(MitmPauseReason.notTrusted);
   }
   return switch (status.paused) {
-    '' => const MitmIndicator.decrypting(),
+    '' when decrypting => const MitmIndicator.decrypting(),
+    '' => const MitmIndicator.on(),
     'livenessUnavailable' ||
     'trustUnavailable' => const MitmIndicator.paused(MitmPauseReason.liveness),
     'indicatorPending' => const MitmIndicator.paused(
@@ -202,12 +236,20 @@ final mitmIndicatorProvider = Provider.autoDispose<MitmIndicator?>((ref) {
       status: null,
     );
   }
-  return mitmIndicatorOf(
+  final coreRefused = ref.watch(mitmCoreRefusedProvider);
+  final status = ref.watch(mitmRuntimeStatusProvider).value;
+  MitmIndicator? of({bool decrypting = false}) => mitmIndicatorOf(
     enabled: enabled,
     coreConnected: coreConnected,
-    coreRefused: ref.watch(mitmCoreRefusedProvider),
-    status: ref.watch(mitmRuntimeStatusProvider).value,
+    coreRefused: coreRefused,
+    status: status,
+    decrypting: decrypting,
   );
+  // The live connections are read only while decryption is ready.
+  if (of()?.kind != MitmIndicatorKind.on) {
+    return of();
+  }
+  return of(decrypting: ref.watch(mitmDecryptingProvider).value == true);
 });
 
 /// How many `mitm` hostnames the running profile wrote, all of them ignored.

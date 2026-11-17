@@ -3339,9 +3339,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate => '客户端拒绝了证书。请安装证书；如果应用固定了证书，请排除此主机。';
-
-  @override
   String get mitmExcludeHost => '排除解密';
 
   @override
@@ -5935,7 +5932,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get relookup => '重新查询';
 
   @override
-  String get mitmOutcomeRefused => '客户端 TLS 握手失败（可能拒绝了证书）';
+  String get mitmOutcomeRefused => '客户端在握手时发出了警报，原因无法确定。';
 
   @override
   String get mitmOutcomeUpstreamCertificate => '网站证书校验失败';
@@ -5963,6 +5960,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmIndicatorDecrypting => '正在解密';
 
   @override
+  String get mitmIndicatorOn => '解密已开启';
+
+  @override
   String get mitmIndicatorPaused => '解密已暂停';
 
   @override
@@ -5983,16 +5983,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmPauseCoreIdentity => '内核身份核对失败';
 
   @override
-  String get mitmPauseNotTrusted => '根证书未生成或未信任';
+  String get mitmPauseNotTrusted => '根证书未生成或未受信任';
 
   @override
-  String get mitmPauseLiveness => '无法确认证书信任和签名状态';
+  String get mitmPauseLiveness => '无法确认信任和签名状态';
 
   @override
   String get mitmPauseIndicatorPending => '常驻状态提示尚未启用';
 
   @override
-  String get mitmPauseUnavailable => '签名器或连接不可用';
+  String get mitmPauseUnavailable => '签名服务或连接不可用';
 
   @override
   String get mitmOutcomePaused => '解密暂停中，已原样放行';
@@ -6001,10 +6001,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmBadgeDecrypted => '已解密';
 
   @override
-  String get mitmBadgePassedThrough => '未解密·原样放行';
+  String get mitmBadgePassedThrough => '未解密 · 原样放行';
 
   @override
-  String get mitmBadgeRefused => '对方不接受解密';
+  String get mitmBadgeHandshakeFailed => '客户端握手失败';
 
   @override
   String get mitmBadgeFailed => '解密失败';
@@ -6016,7 +6016,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmExchangeResponseFailed => '响应中途中断';
 
   @override
-  String get mitmExchangeStopped => '解密设置已更改，已中止';
+  String get mitmExchangeStopped => '解密设置已更改，请求已中止';
 
   @override
   String get mitmExchangeFailed => '请求未完成';

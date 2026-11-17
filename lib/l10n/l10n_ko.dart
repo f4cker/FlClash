@@ -3462,10 +3462,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      '클라이언트가 인증서를 거부했습니다. 인증서를 설치하거나, 앱이 인증서를 고정한 경우 이 호스트를 제외하세요.';
-
-  @override
   String get mitmExcludeHost => '복호화에서 제외';
 
   @override
@@ -6344,7 +6340,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get relookup => 'Look up again';
 
   @override
-  String get mitmOutcomeRefused => '클라이언트 TLS 핸드셰이크 실패 (인증서 거부 가능성)';
+  String get mitmOutcomeRefused => '클라이언트가 핸드셰이크 중 경고를 보냈습니다. 원인은 알 수 없습니다.';
 
   @override
   String get mitmOutcomeUpstreamCertificate => '웹사이트 인증서 검증에 실패했습니다';
@@ -6372,6 +6368,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmIndicatorDecrypting => '복호화 중';
 
   @override
+  String get mitmIndicatorOn => '복호화 켜짐';
+
+  @override
   String get mitmIndicatorPaused => '복호화 일시 중지';
 
   @override
@@ -6386,25 +6385,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmIndicatorOpenSettings => 'MITM 설정 열기';
 
   @override
-  String get mitmPauseCoreStopped => '코어가 실행 중이 아닙니다';
+  String get mitmPauseCoreStopped => '코어가 실행 중이 아님';
 
   @override
-  String get mitmPauseCoreIdentity => '코어 신원 확인에 실패했습니다';
+  String get mitmPauseCoreIdentity => '코어 신원 확인 실패';
 
   @override
-  String get mitmPauseNotTrusted => '루트 인증서가 생성되지 않았거나 신뢰되지 않았습니다';
+  String get mitmPauseNotTrusted => '루트 인증서가 없거나 신뢰되지 않음';
 
   @override
-  String get mitmPauseLiveness => '신뢰 및 서명 상태를 확인할 수 없습니다';
+  String get mitmPauseLiveness => '신뢰 및 서명 상태를 확인할 수 없음';
 
   @override
-  String get mitmPauseIndicatorPending => '상시 상태 표시가 아직 활성화되지 않았습니다';
+  String get mitmPauseIndicatorPending => '상시 상태 표시가 활성화되지 않음';
 
   @override
-  String get mitmPauseUnavailable => '서명기 또는 연결을 사용할 수 없습니다';
+  String get mitmPauseUnavailable => '서명 서비스 또는 연결을 사용할 수 없음';
 
   @override
-  String get mitmOutcomePaused => '복호화가 일시 중지되어 그대로 통과했습니다';
+  String get mitmOutcomePaused => '복호화가 일시 중지되어 연결을 그대로 통과시켰습니다';
 
   @override
   String get mitmBadgeDecrypted => '복호화됨';
@@ -6413,7 +6412,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmBadgePassedThrough => '복호화 안 됨 · 그대로 통과';
 
   @override
-  String get mitmBadgeRefused => '상대가 복호화 거부';
+  String get mitmBadgeHandshakeFailed => '클라이언트 핸드셰이크 실패';
 
   @override
   String get mitmBadgeFailed => '복호화 실패';
@@ -6425,7 +6424,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmExchangeResponseFailed => '응답이 중간에 끊겼습니다';
 
   @override
-  String get mitmExchangeStopped => '복호화 설정이 변경되어 중단했습니다';
+  String get mitmExchangeStopped => '복호화 설정이 변경되어 요청을 중단했습니다';
 
   @override
   String get mitmExchangeFailed => '요청이 완료되지 않았습니다';

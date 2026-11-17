@@ -3585,10 +3585,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      'El cliente rechazó el certificado. Instala la CA o excluye este host si la app fija su certificado.';
-
-  @override
   String get mitmExcludeHost => 'Excluir del descifrado';
 
   @override
@@ -6486,7 +6482,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmOutcomeRefused =>
-      'Falló la negociación TLS del cliente (posible rechazo del certificado)';
+      'El cliente envió una alerta durante el handshake. Se desconoce la causa.';
 
   @override
   String get mitmOutcomeUpstreamCertificate =>
@@ -6518,10 +6514,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmIndicatorDecrypting => 'Descifrando';
 
   @override
+  String get mitmIndicatorOn => 'Descifrado activado';
+
+  @override
   String get mitmIndicatorPaused => 'Descifrado en pausa';
 
   @override
-  String get mitmIndicatorUnconfirmed => 'Comprobando el descifrado';
+  String get mitmIndicatorUnconfirmed => 'Comprobando el estado del descifrado';
 
   @override
   String mitmIndicatorPausedBecause(String reason) {
@@ -6540,23 +6539,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmPauseNotTrusted =>
-      'el certificado raíz no se ha generado o no es de confianza';
+      'el certificado raíz falta o no es de confianza';
 
   @override
   String get mitmPauseLiveness =>
-      'no se pudo confirmar la confianza ni la firma';
+      'no se pudo verificar el estado de confianza y firma';
 
   @override
   String get mitmPauseIndicatorPending =>
-      'el estado siempre visible aún no está activado';
+      'el indicador de estado permanente no está activado';
 
   @override
   String get mitmPauseUnavailable =>
-      'el firmante o la conexión no está disponible';
+      'servicio de firma o conexión no disponible';
 
   @override
   String get mitmOutcomePaused =>
-      'El descifrado estaba en pausa; se dejó pasar sin cambios';
+      'Descifrado en pausa; la conexión pasó sin cambios';
 
   @override
   String get mitmBadgeDecrypted => 'Descifrado';
@@ -6565,7 +6564,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mitmBadgePassedThrough => 'Sin descifrar · pasó sin cambios';
 
   @override
-  String get mitmBadgeRefused => 'El cliente rechazó el descifrado';
+  String get mitmBadgeHandshakeFailed => 'Error en el handshake del cliente';
 
   @override
   String get mitmBadgeFailed => 'Error de descifrado';
@@ -6578,7 +6577,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmExchangeStopped =>
-      'Detenido: cambió la configuración de descifrado';
+      'Solicitud detenida porque cambió la configuración de descifrado';
 
   @override
   String get mitmExchangeFailed => 'La solicitud no se completó';

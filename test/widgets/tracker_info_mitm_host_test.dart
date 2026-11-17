@@ -108,23 +108,25 @@ void main() {
     expect(find.text(currentAppLocalizations.mitmExcludeHost), findsOneWidget);
   });
 
-  testWidgets('a refused host says so and is excluded ahead of the list', (
-    tester,
-  ) async {
-    await pumpDetail(
-      tester,
-      _tracker(mitmRefused: true),
-      mitm: const Mitm(enable: true, hostname: ['*.example.com']),
-    );
+  testWidgets(
+    'a refused host is excluded ahead of the list, guessing no cause',
+    (tester) async {
+      await pumpDetail(
+        tester,
+        _tracker(mitmRefused: true),
+        mitm: const Mitm(enable: true, hostname: ['*.example.com']),
+      );
 
-    expect(
-      find.text(currentAppLocalizations.mitmClientRefusedCertificate),
-      findsOneWidget,
-    );
-    await confirm(tester, currentAppLocalizations.mitmExcludeHost);
+      // A handshake alert does not say whether the app pins its certificate
+      // or does not trust ours, so the section offers no such hint.
+      for (final hint in ['pin', 'refused', 'trust', '固定', '拒绝', '信任']) {
+        expect(find.textContaining(hint), findsNothing, reason: hint);
+      }
+      await confirm(tester, currentAppLocalizations.mitmExcludeHost);
 
-    expect(saved().hostname, ['-app.example.com', '*.example.com']);
-  });
+      expect(saved().hostname, ['-app.example.com', '*.example.com']);
+    },
+  );
 
   testWidgets('an excluded host can be decrypted again', (tester) async {
     await pumpDetail(

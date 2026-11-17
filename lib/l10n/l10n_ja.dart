@@ -3389,10 +3389,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      'クライアントが証明書を拒否しました。証明書をインストールするか、アプリが証明書を固定している場合はこのホストを除外してください。';
-
-  @override
   String get mitmExcludeHost => '復号から除外';
 
   @override
@@ -6272,7 +6268,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get relookup => 'Look up again';
 
   @override
-  String get mitmOutcomeRefused => 'クライアントの TLS ハンドシェイクに失敗しました（証明書が拒否された可能性）';
+  String get mitmOutcomeRefused => 'クライアントがハンドシェイク中にアラートを送信しました。原因は特定できません。';
 
   @override
   String get mitmOutcomeUpstreamCertificate => 'サイト証明書の検証に失敗しました';
@@ -6300,6 +6296,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmIndicatorDecrypting => '復号中';
 
   @override
+  String get mitmIndicatorOn => '復号オン';
+
+  @override
   String get mitmIndicatorPaused => '復号を一時停止';
 
   @override
@@ -6314,34 +6313,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmIndicatorOpenSettings => 'MITM 設定を開く';
 
   @override
-  String get mitmPauseCoreStopped => 'コアが実行されていません';
+  String get mitmPauseCoreStopped => 'コアが実行されていない';
 
   @override
-  String get mitmPauseCoreIdentity => 'コアの身元確認に失敗しました';
+  String get mitmPauseCoreIdentity => 'コアの身元確認に失敗';
 
   @override
-  String get mitmPauseNotTrusted => 'ルート証明書が未生成または未信頼です';
+  String get mitmPauseNotTrusted => 'ルート証明書がないか信頼されていない';
 
   @override
-  String get mitmPauseLiveness => '信頼と署名の状態を確認できません';
+  String get mitmPauseLiveness => '信頼と署名の状態を確認できない';
 
   @override
-  String get mitmPauseIndicatorPending => '常時表示の状態表示がまだ有効ではありません';
+  String get mitmPauseIndicatorPending => '常時表示の状態インジケーターが有効になっていない';
 
   @override
-  String get mitmPauseUnavailable => '署名機能または接続を利用できません';
+  String get mitmPauseUnavailable => '署名サービスまたは接続を利用できない';
 
   @override
-  String get mitmOutcomePaused => '復号が一時停止中のため、そのまま通過しました';
+  String get mitmOutcomePaused => '復号が一時停止中のため、接続をそのまま通過させました';
 
   @override
   String get mitmBadgeDecrypted => '復号済み';
 
   @override
-  String get mitmBadgePassedThrough => '未復号・そのまま通過';
+  String get mitmBadgePassedThrough => '未復号 · そのまま通過';
 
   @override
-  String get mitmBadgeRefused => '相手が復号を拒否';
+  String get mitmBadgeHandshakeFailed => 'クライアントのハンドシェイク失敗';
 
   @override
   String get mitmBadgeFailed => '復号失敗';
@@ -6353,7 +6352,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmExchangeResponseFailed => '応答が途中で中断されました';
 
   @override
-  String get mitmExchangeStopped => '復号設定が変更されたため中止しました';
+  String get mitmExchangeStopped => '復号設定が変更されたため、リクエストを中止しました';
 
   @override
   String get mitmExchangeFailed => 'リクエストが完了しませんでした';

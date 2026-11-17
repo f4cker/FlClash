@@ -14,6 +14,7 @@ String mitmPauseReasonText(AppLocalizations l, MitmPauseReason reason) =>
 /// The status in a few words.
 String mitmIndicatorLabel(AppLocalizations l, MitmIndicator indicator) =>
     switch (indicator.kind) {
+      MitmIndicatorKind.on => l.mitmIndicatorOn,
       MitmIndicatorKind.decrypting => l.mitmIndicatorDecrypting,
       MitmIndicatorKind.paused => l.mitmIndicatorPaused,
       MitmIndicatorKind.unconfirmed => l.mitmIndicatorUnconfirmed,

@@ -36,7 +36,8 @@ Future<void> openMitmSettingsFromTray() async {
   await openMitmSettings(context);
 }
 
-/// Every page's bar while decryption is on: amber while it decrypts,
+/// Every page's bar while decryption is on: amber while it is ready or
+/// decrypting,
 /// muted while paused, red when the Core failed its identity check. It opens
 /// the MITM settings.
 class MitmBarStatus extends ConsumerWidget {
@@ -79,16 +80,22 @@ class MitmStatusCapsule extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final l = context.appLocalizations;
     final color = switch (indicator) {
-      MitmIndicator(kind: MitmIndicatorKind.decrypting) => colorScheme.warning,
+      MitmIndicator(
+        kind: MitmIndicatorKind.on || MitmIndicatorKind.decrypting,
+      ) =>
+        colorScheme.warning,
       MitmIndicator(reason: MitmPauseReason.coreIdentity) => colorScheme.error,
       _ => colorScheme.onSurfaceVariant,
     };
     final text = mitmIndicatorText(l, indicator);
     final height = TonalButtonSize.bar.button;
     final icon = GlyphIcon(
-      indicator.kind == MitmIndicatorKind.decrypting
-          ? AppGlyphs.lockOpen
-          : AppGlyphs.lock,
+      switch (indicator.kind) {
+        MitmIndicatorKind.on ||
+        MitmIndicatorKind.decrypting => AppGlyphs.lockOpen,
+        MitmIndicatorKind.paused ||
+        MitmIndicatorKind.unconfirmed => AppGlyphs.lock,
+      },
       size: TonalButtonSize.section.icon,
       color: color,
     );

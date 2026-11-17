@@ -172,6 +172,7 @@ void main() {
 
   const shots = {
     '01-decrypting': MitmIndicator.decrypting(),
+    '01b-on': MitmIndicator.on(),
     '02-paused-indicator': MitmIndicator.paused(
       MitmPauseReason.indicatorPending,
     ),
@@ -360,6 +361,7 @@ void main() {
     String name,
     Size size, {
     Brightness brightness = Brightness.light,
+    String? openHost,
   }) async {
     tester.view.physicalSize = size * 2;
     tester.view.devicePixelRatio = 2;
@@ -439,6 +441,12 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
+    if (openHost != null) {
+      await tester.tap(find.textContaining(openHost, findRichText: true).first);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
     final render =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {
@@ -473,6 +481,17 @@ void main() {
       '15-request-badges-list-dark',
       const Size(600, 1100),
       brightness: Brightness.dark,
+    );
+  });
+
+  testWidgets('16-request-detail-handshake', skip: skip != null, (
+    tester,
+  ) async {
+    await shootRequests(
+      tester,
+      '16-request-detail-handshake',
+      const Size(600, 1100),
+      openHost: 'bank.example.com',
     );
   });
 

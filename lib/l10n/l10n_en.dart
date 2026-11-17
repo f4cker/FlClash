@@ -3549,10 +3549,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mitmClientRefusedCertificate =>
-      'The client refused the certificate. Install the CA, or exclude this host if the app pins its certificate.';
-
-  @override
   String get mitmExcludeHost => 'Exclude from decryption';
 
   @override
@@ -6445,7 +6441,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mitmOutcomeRefused =>
-      'Client TLS handshake failed (certificate may have been rejected)';
+      'The client sent an alert during the handshake. The cause is unknown.';
 
   @override
   String get mitmOutcomeUpstreamCertificate =>
@@ -6477,10 +6473,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mitmIndicatorDecrypting => 'Decrypting';
 
   @override
+  String get mitmIndicatorOn => 'Decryption on';
+
+  @override
   String get mitmIndicatorPaused => 'Decryption paused';
 
   @override
-  String get mitmIndicatorUnconfirmed => 'Checking decryption';
+  String get mitmIndicatorUnconfirmed => 'Checking decryption status';
 
   @override
   String mitmIndicatorPausedBecause(String reason) {
@@ -6491,28 +6490,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mitmIndicatorOpenSettings => 'Open MITM settings';
 
   @override
-  String get mitmPauseCoreStopped => 'the Core is not running';
+  String get mitmPauseCoreStopped => 'core is not running';
 
   @override
-  String get mitmPauseCoreIdentity => 'the Core\'s identity check failed';
+  String get mitmPauseCoreIdentity => 'core identity check failed';
 
   @override
   String get mitmPauseNotTrusted =>
-      'the root certificate is not generated or not trusted';
+      'root certificate is missing or not trusted';
 
   @override
-  String get mitmPauseLiveness => 'trust and signing could not be confirmed';
+  String get mitmPauseLiveness =>
+      'trust and signing status could not be verified';
 
   @override
   String get mitmPauseIndicatorPending =>
-      'the always-visible status is not enabled yet';
+      'persistent status indicator is not enabled';
 
   @override
-  String get mitmPauseUnavailable => 'the signer or connection is unavailable';
+  String get mitmPauseUnavailable =>
+      'signing service or connection unavailable';
 
   @override
   String get mitmOutcomePaused =>
-      'Decryption was paused; passed through unchanged';
+      'Decryption paused; connection passed through unchanged';
 
   @override
   String get mitmBadgeDecrypted => 'Decrypted';
@@ -6521,7 +6522,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mitmBadgePassedThrough => 'Not decrypted · passed through';
 
   @override
-  String get mitmBadgeRefused => 'Decryption refused by the app';
+  String get mitmBadgeHandshakeFailed => 'Client handshake failed';
 
   @override
   String get mitmBadgeFailed => 'Decryption failed';
@@ -6533,7 +6534,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mitmExchangeResponseFailed => 'Response interrupted';
 
   @override
-  String get mitmExchangeStopped => 'Stopped: decryption settings changed';
+  String get mitmExchangeStopped =>
+      'Request stopped because decryption settings changed';
 
   @override
   String get mitmExchangeFailed => 'Request did not complete';

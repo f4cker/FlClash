@@ -107,8 +107,9 @@ abstract class MitmStatus with _$MitmStatus {
       _$MitmStatusFromJson(json);
 }
 
-/// What the always-visible decryption status says.
-enum MitmIndicatorKind { decrypting, paused, unconfirmed }
+/// What the always-visible decryption status says: [on] once decryption is
+/// ready, [decrypting] only while a connection is being decrypted.
+enum MitmIndicatorKind { on, decrypting, paused, unconfirmed }
 
 /// Why listed connections pass through as they came.
 enum MitmPauseReason {
@@ -122,6 +123,8 @@ enum MitmPauseReason {
 
 @immutable
 class MitmIndicator {
+  const MitmIndicator.on() : kind = MitmIndicatorKind.on, reason = null;
+
   const MitmIndicator.decrypting()
     : kind = MitmIndicatorKind.decrypting,
       reason = null;
