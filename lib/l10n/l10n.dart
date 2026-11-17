@@ -10984,6 +10984,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'the signer or connection is unavailable'**
   String get mitmPauseUnavailable;
+
+  /// No description provided for @mitmOutcomePaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption was paused; passed through unchanged'**
+  String get mitmOutcomePaused;
+
+  /// No description provided for @mitmBadgeDecrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrypted'**
+  String get mitmBadgeDecrypted;
+
+  /// No description provided for @mitmBadgePassedThrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Not decrypted · passed through'**
+  String get mitmBadgePassedThrough;
+
+  /// No description provided for @mitmBadgeRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption refused by the app'**
+  String get mitmBadgeRefused;
+
+  /// No description provided for @mitmBadgeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption failed'**
+  String get mitmBadgeFailed;
+
+  /// No description provided for @mitmExchangeNoResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'No response received'**
+  String get mitmExchangeNoResponse;
+
+  /// No description provided for @mitmExchangeResponseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Response interrupted'**
+  String get mitmExchangeResponseFailed;
+
+  /// No description provided for @mitmExchangeStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped: decryption settings changed'**
+  String get mitmExchangeStopped;
+
+  /// No description provided for @mitmExchangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Request did not complete'**
+  String get mitmExchangeFailed;
 }
 
 class _AppLocalizationsDelegate

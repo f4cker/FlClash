@@ -1819,5 +1819,14 @@
   "mitmPauseNotTrusted": "el certificado raíz no se ha generado o no es de confianza",
   "mitmPauseLiveness": "no se pudo confirmar la confianza ni la firma",
   "mitmPauseIndicatorPending": "el estado siempre visible aún no está activado",
-  "mitmPauseUnavailable": "el firmante o la conexión no está disponible"
+  "mitmPauseUnavailable": "el firmante o la conexión no está disponible",
+  "mitmOutcomePaused": "El descifrado estaba en pausa; se dejó pasar sin cambios",
+  "mitmBadgeDecrypted": "Descifrado",
+  "mitmBadgePassedThrough": "Sin descifrar · pasó sin cambios",
+  "mitmBadgeRefused": "El cliente rechazó el descifrado",
+  "mitmBadgeFailed": "Error de descifrado",
+  "mitmExchangeNoResponse": "No se recibió respuesta",
+  "mitmExchangeResponseFailed": "Respuesta interrumpida",
+  "mitmExchangeStopped": "Detenido: cambió la configuración de descifrado",
+  "mitmExchangeFailed": "La solicitud no se completó"
 }

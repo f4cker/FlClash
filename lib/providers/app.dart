@@ -82,6 +82,7 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
     'http1Failed',
     'unsupportedHello',
     'missingSNI',
+    'paused',
   };
 
   void setMitmOutcome(String id, String outcome) {

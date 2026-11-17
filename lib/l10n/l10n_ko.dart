@@ -6402,4 +6402,31 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmPauseUnavailable => '서명기 또는 연결을 사용할 수 없습니다';
+
+  @override
+  String get mitmOutcomePaused => '복호화가 일시 중지되어 그대로 통과했습니다';
+
+  @override
+  String get mitmBadgeDecrypted => '복호화됨';
+
+  @override
+  String get mitmBadgePassedThrough => '복호화 안 됨 · 그대로 통과';
+
+  @override
+  String get mitmBadgeRefused => '상대가 복호화 거부';
+
+  @override
+  String get mitmBadgeFailed => '복호화 실패';
+
+  @override
+  String get mitmExchangeNoResponse => '응답을 받지 못했습니다';
+
+  @override
+  String get mitmExchangeResponseFailed => '응답이 중간에 끊겼습니다';
+
+  @override
+  String get mitmExchangeStopped => '복호화 설정이 변경되어 중단했습니다';
+
+  @override
+  String get mitmExchangeFailed => '요청이 완료되지 않았습니다';
 }

@@ -540,7 +540,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
-      expect(find.text('Decryption connection failed'), findsOneWidget);
+      expect(find.text('Decryption failed'), findsOneWidget);
       await tester.tap(find.textContaining('alpha.test').first);
       await tester.pumpAndSettle();
       expect(find.byType(TrackerInfoDetailView), findsOneWidget);
@@ -595,10 +595,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
-      expect(
-        find.text('Website certificate verification failed'),
-        findsNWidgets(2),
-      );
+      expect(find.text('Decryption failed'), findsNWidgets(2));
       expect(find.textContaining('early.test'), findsWidgets);
       expect(
         container
@@ -641,10 +638,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     await tester.pump();
-    expect(
-      find.text('Website certificate verification failed'),
-      findsNWidgets(2),
-    );
+    expect(find.text('Decryption failed'), findsNWidgets(2));
     await teardownView(tester);
   });
 

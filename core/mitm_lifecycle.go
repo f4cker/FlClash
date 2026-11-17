@@ -67,13 +67,13 @@ func (m *mitmConnections) pauseGlobal(runtime *mitmRuntime, reason string) (*mit
 	return previous, true
 }
 
-func (m *mitmConnections) pauseHost(runtime *mitmRuntime, host string) {
+func (m *mitmConnections) pauseHost(runtime *mitmRuntime, host, reason string) {
 	m.mu.Lock()
 	if mitmState.Load() != runtime {
 		m.mu.Unlock()
 		return
 	}
-	mitmHostPauses.Store(host, mitmPause{runtime: runtime, until: time.Now().Add(mitmPauseFor)})
+	mitmHostPauses.Store(host, mitmPause{runtime: runtime, until: time.Now().Add(mitmPauseFor), reason: reason})
 	var pairs []*mitmPair
 	for pair := range m.active {
 		if pair.host == host {

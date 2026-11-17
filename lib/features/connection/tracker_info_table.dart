@@ -238,18 +238,14 @@ class TrackerTargetText extends StatelessWidget {
         ],
       ),
     );
-    final outcome = mitmOutcomeText(context, trackerInfo.mitmOutcome);
-    if (!trackerInfo.metadata.mitm && outcome.isEmpty) {
+    if (MitmBadge.of(trackerInfo) == null) {
       return target;
     }
     return Row(
       spacing: 6,
       children: [
         Flexible(child: target),
-        if (outcome.isNotEmpty)
-          Flexible(child: RecordLabel(label: outcome))
-        else
-          const RecordLabel(label: 'MITM'),
+        MitmBadgeLabel(trackerInfo),
       ],
     );
   }

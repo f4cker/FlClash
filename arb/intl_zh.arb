@@ -1819,5 +1819,14 @@
   "mitmPauseNotTrusted": "根证书未生成或未信任",
   "mitmPauseLiveness": "无法确认证书信任和签名状态",
   "mitmPauseIndicatorPending": "常驻状态提示尚未启用",
-  "mitmPauseUnavailable": "签名器或连接不可用"
+  "mitmPauseUnavailable": "签名器或连接不可用",
+  "mitmOutcomePaused": "解密暂停中，已原样放行",
+  "mitmBadgeDecrypted": "已解密",
+  "mitmBadgePassedThrough": "未解密·原样放行",
+  "mitmBadgeRefused": "对方不接受解密",
+  "mitmBadgeFailed": "解密失败",
+  "mitmExchangeNoResponse": "未收到响应",
+  "mitmExchangeResponseFailed": "响应中途中断",
+  "mitmExchangeStopped": "解密设置已更改，已中止",
+  "mitmExchangeFailed": "请求未完成"
 }

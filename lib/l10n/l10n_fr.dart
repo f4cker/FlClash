@@ -6557,4 +6557,32 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mitmPauseUnavailable => 'signataire ou connexion indisponible';
+
+  @override
+  String get mitmOutcomePaused => 'Déchiffrement en pause ; transmis tel quel';
+
+  @override
+  String get mitmBadgeDecrypted => 'Déchiffré';
+
+  @override
+  String get mitmBadgePassedThrough => 'Non déchiffré · transmis tel quel';
+
+  @override
+  String get mitmBadgeRefused => 'Déchiffrement refusé par le client';
+
+  @override
+  String get mitmBadgeFailed => 'Échec du déchiffrement';
+
+  @override
+  String get mitmExchangeNoResponse => 'Aucune réponse reçue';
+
+  @override
+  String get mitmExchangeResponseFailed => 'Réponse interrompue';
+
+  @override
+  String get mitmExchangeStopped =>
+      'Arrêté : paramètres de déchiffrement modifiés';
+
+  @override
+  String get mitmExchangeFailed => 'La requête n\'a pas abouti';
 }

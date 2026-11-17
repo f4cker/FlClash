@@ -6503,4 +6503,33 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get mitmPauseUnavailable =>
       'подписывающий компонент или соединение недоступно';
+
+  @override
+  String get mitmOutcomePaused =>
+      'Расшифровка приостановлена; пропущено без изменений';
+
+  @override
+  String get mitmBadgeDecrypted => 'Расшифровано';
+
+  @override
+  String get mitmBadgePassedThrough => 'Не расшифровано · пропущено';
+
+  @override
+  String get mitmBadgeRefused => 'Клиент отклонил расшифровку';
+
+  @override
+  String get mitmBadgeFailed => 'Ошибка расшифровки';
+
+  @override
+  String get mitmExchangeNoResponse => 'Ответ не получен';
+
+  @override
+  String get mitmExchangeResponseFailed => 'Ответ прерван';
+
+  @override
+  String get mitmExchangeStopped =>
+      'Остановлено: изменены настройки расшифровки';
+
+  @override
+  String get mitmExchangeFailed => 'Запрос не завершён';
 }

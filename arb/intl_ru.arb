@@ -1819,5 +1819,14 @@
   "mitmPauseNotTrusted": "корневой сертификат не создан или не доверен",
   "mitmPauseLiveness": "не удалось подтвердить доверие и подпись",
   "mitmPauseIndicatorPending": "постоянный индикатор ещё не включён",
-  "mitmPauseUnavailable": "подписывающий компонент или соединение недоступно"
+  "mitmPauseUnavailable": "подписывающий компонент или соединение недоступно",
+  "mitmOutcomePaused": "Расшифровка приостановлена; пропущено без изменений",
+  "mitmBadgeDecrypted": "Расшифровано",
+  "mitmBadgePassedThrough": "Не расшифровано · пропущено",
+  "mitmBadgeRefused": "Клиент отклонил расшифровку",
+  "mitmBadgeFailed": "Ошибка расшифровки",
+  "mitmExchangeNoResponse": "Ответ не получен",
+  "mitmExchangeResponseFailed": "Ответ прерван",
+  "mitmExchangeStopped": "Остановлено: изменены настройки расшифровки",
+  "mitmExchangeFailed": "Запрос не завершён"
 }

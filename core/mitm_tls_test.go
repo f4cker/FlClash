@@ -522,26 +522,88 @@ func TestMitmSelectorFragmentedHelloSignerUnavailableRelaysExactly(t *testing.T)
 	proxySite, siteRaw := mitmLoopbackPair(t)
 	defer proxySite.Close()
 	defer siteRaw.Close()
+	events := make(chan MitmConnection, 1)
+	oldConnection := sendMitmConnection
+	sendMitmConnection = func(event *MitmConnection) bool { events <- *event; return true }
+	defer func() { sendMitmConnection = oldConnection }()
 	done := make(chan bool, 1)
 	go func() {
 		client := N.NewBufferedConn(proxyRaw)
 		selected := mitmInterceptEligible(client, &C.Metadata{Host: "example.com"})
-		if selected != nil {
+		if selected == nil {
 			done <- false
 			return
 		}
 		done <- true
-		N.Relay(client, proxySite)
+		selected(client, mitmSelectionConn{N.NewExtendedConn(proxySite)})
 	}()
 	if _, err := clientRaw.Write(original); err != nil {
 		t.Fatal(err)
 	}
 	if !<-done {
-		t.Fatal("unavailable signer selected interception")
+		t.Fatal("an unavailable signer left the listed host unmarked")
 	}
 	got := make([]byte, len(original))
 	if _, err := io.ReadFull(siteRaw, got); err != nil || !bytes.Equal(got, original) {
 		t.Fatalf("relayed %x: %v", got, err)
+	}
+	if event := <-events; event.Id != "selection-test" || event.Outcome != mitmOutcomePaused {
+		t.Fatalf("event %+v", event)
+	}
+	if mitmPausedReason() != "appUnavailable" {
+		t.Fatalf("pause %q", mitmPausedReason())
+	}
+}
+
+// While paused, a listed host is relayed byte for byte and marked as passed
+// through; a host the app said is not listed is relayed with no mark.
+func TestMitmSelectorPausedHostIsMarkedPassedThrough(t *testing.T) {
+	app := newFakeMitmApp(t)
+	withMitmSigner(t, app, []string{"example.com", "other.example.com"}, nil)
+	defer func() { mitmActive.closeAll(); mitmLeaves.clear(); mitmPaused.Store(nil); mitmHostPauses.Clear() }()
+	oldSign := sendMitmSign
+	sendMitmSign = func(*MitmSignRequest) bool { t.Error("asked for a leaf while paused"); return false }
+	defer func() { sendMitmSign = oldSign }()
+	events := make(chan MitmConnection, 2)
+	oldConnection := sendMitmConnection
+	sendMitmConnection = func(event *MitmConnection) bool { events <- *event; return true }
+	defer func() { sendMitmConnection = oldConnection }()
+	runtime := mitmState.Load()
+	mitmActive.pauseHost(runtime, "other.example.com", "notListed")
+	if _, ok := mitmActive.pauseGlobal(runtime, "signTimeout"); !ok {
+		t.Fatal("pause not published")
+	}
+	selectHost := func(host string) (func(*N.BufferedConn, C.Conn), []byte, *N.BufferedConn) {
+		sni := append([]byte{0, 0, 0, byte(len(host) + 5), 0, byte(len(host) + 3), 0, 0, byte(len(host))}, host...)
+		hello := helloFixture(sni)
+		original := append([]byte{0x16, 3, 3, byte(len(hello) >> 8), byte(len(hello))}, hello...)
+		original = append(original, []byte("later bytes")...)
+		clientRaw, proxyRaw := mitmLoopbackPair(t)
+		t.Cleanup(func() { clientRaw.Close(); proxyRaw.Close() })
+		if _, err := clientRaw.Write(original); err != nil {
+			t.Fatal(err)
+		}
+		client := N.NewBufferedConn(proxyRaw)
+		return mitmInterceptEligible(client, &C.Metadata{Host: host}), original, client
+	}
+	selected, original, client := selectHost("example.com")
+	if selected == nil {
+		t.Fatal("a paused listed host was not marked")
+	}
+	proxySite, siteRaw := mitmLoopbackPair(t)
+	defer proxySite.Close()
+	defer siteRaw.Close()
+	go selected(client, mitmSelectionConn{N.NewExtendedConn(proxySite)})
+	got := make([]byte, len(original))
+	if _, err := io.ReadFull(siteRaw, got); err != nil || !bytes.Equal(got, original) {
+		t.Fatalf("relayed %x: %v", got, err)
+	}
+	if event := <-events; event.Outcome != mitmOutcomePaused {
+		t.Fatalf("event %+v", event)
+	}
+	mitmPaused.Store(nil)
+	if selected, _, _ := selectHost("other.example.com"); selected != nil {
+		t.Fatal("a host the app does not list was marked")
 	}
 }
 

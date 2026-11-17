@@ -1819,5 +1819,14 @@
   "mitmPauseNotTrusted": "ルート証明書が未生成または未信頼です",
   "mitmPauseLiveness": "信頼と署名の状態を確認できません",
   "mitmPauseIndicatorPending": "常時表示の状態表示がまだ有効ではありません",
-  "mitmPauseUnavailable": "署名機能または接続を利用できません"
+  "mitmPauseUnavailable": "署名機能または接続を利用できません",
+  "mitmOutcomePaused": "復号が一時停止中のため、そのまま通過しました",
+  "mitmBadgeDecrypted": "復号済み",
+  "mitmBadgePassedThrough": "未復号・そのまま通過",
+  "mitmBadgeRefused": "相手が復号を拒否",
+  "mitmBadgeFailed": "復号失敗",
+  "mitmExchangeNoResponse": "応答を受信していません",
+  "mitmExchangeResponseFailed": "応答が途中で中断されました",
+  "mitmExchangeStopped": "復号設定が変更されたため中止しました",
+  "mitmExchangeFailed": "リクエストが完了しませんでした"
 }

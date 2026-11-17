@@ -333,7 +333,7 @@ void main() {
     await pumpSettled(tester);
 
     expect(find.byType(TrackerInfoTableRow), findsNWidgets(2));
-    final label = find.widgetWithText(RecordLabel, 'MITM');
+    final label = find.widgetWithText(RecordLabel, 'Decrypted');
     expect(label, findsOneWidget);
     expect(
       find.ancestor(

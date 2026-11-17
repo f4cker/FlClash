@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
+import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/mitm.dart';
@@ -662,7 +664,89 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('MITM'), findsOneWidget);
+    expect(find.text('Decrypted'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('a request that did not complete says why in words', () {
+    final l = lookupAppLocalizations(const Locale('en'));
+    expect(mitmExchangeErrorText(l, 'noResponse'), 'No response received');
+    expect(mitmExchangeErrorText(l, 'responseFailed'), 'Response interrupted');
+    expect(
+      mitmExchangeErrorText(l, 'stopped'),
+      'Stopped: decryption settings changed',
+    );
+    expect(
+      mitmExchangeErrorText(l, 'somethingNew'),
+      'Request did not complete',
+    );
+  });
+
+  testWidgets('each row says what decryption did, and unlisted rows nothing', (
+    tester,
+  ) async {
+    TrackerInfo row(String id, {String outcome = '', bool mitm = false}) =>
+        _decrypted.copyWith(
+          id: id,
+          mitmOutcome: outcome,
+          metadata: Metadata(network: 'tcp', host: '$id.test', mitm: mitm),
+        );
+    final cases = <TrackerInfo, (String, RecordTone)?>{
+      row('plain'): null,
+      row('ok', mitm: true): ('Decrypted', RecordTone.accent),
+      row('late', mitm: true, outcome: 'http1Failed'): (
+        'Decrypted',
+        RecordTone.accent,
+      ),
+      row('paused', outcome: 'paused'): (
+        'Not decrypted · passed through',
+        RecordTone.warning,
+      ),
+      row('hello', outcome: 'unsupportedHello'): (
+        'Not decrypted · passed through',
+        RecordTone.warning,
+      ),
+      row('sni', outcome: 'missingSNI'): (
+        'Not decrypted · passed through',
+        RecordTone.warning,
+      ),
+      row('h2', outcome: 'http2Only'): (
+        'Not decrypted · passed through',
+        RecordTone.warning,
+      ),
+      row('pinned', outcome: 'refused'): (
+        'Decryption refused by the app',
+        RecordTone.error,
+      ),
+      row('cert', outcome: 'upstreamCertificate'): (
+        'Decryption failed',
+        RecordTone.error,
+      ),
+      row('client', outcome: 'clientFailed'): (
+        'Decryption failed',
+        RecordTone.error,
+      ),
+    };
+    for (final MapEntry(key: info, value: want) in cases.entries) {
+      await tester.pumpWidget(
+        TestApp(
+          wrapInProviderScope: true,
+          homeBuilder: (child) => HostScaffold(body: child),
+          child: TrackerInfoItem(trackerInfo: info, detailTitle: 'detail'),
+        ),
+      );
+      await tester.pump();
+      final labels = tester.widgetList<RecordLabel>(find.byType(RecordLabel));
+      if (want == null) {
+        expect(labels, isEmpty, reason: info.id);
+        expect(find.text('MITM'), findsNothing);
+      } else {
+        expect(labels.map((label) => (label.label, label.tone)), [
+          want,
+        ], reason: info.id);
+      }
+    }
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

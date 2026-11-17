@@ -1819,5 +1819,14 @@
   "mitmPauseNotTrusted": "루트 인증서가 생성되지 않았거나 신뢰되지 않았습니다",
   "mitmPauseLiveness": "신뢰 및 서명 상태를 확인할 수 없습니다",
   "mitmPauseIndicatorPending": "상시 상태 표시가 아직 활성화되지 않았습니다",
-  "mitmPauseUnavailable": "서명기 또는 연결을 사용할 수 없습니다"
+  "mitmPauseUnavailable": "서명기 또는 연결을 사용할 수 없습니다",
+  "mitmOutcomePaused": "복호화가 일시 중지되어 그대로 통과했습니다",
+  "mitmBadgeDecrypted": "복호화됨",
+  "mitmBadgePassedThrough": "복호화 안 됨 · 그대로 통과",
+  "mitmBadgeRefused": "상대가 복호화 거부",
+  "mitmBadgeFailed": "복호화 실패",
+  "mitmExchangeNoResponse": "응답을 받지 못했습니다",
+  "mitmExchangeResponseFailed": "응답이 중간에 끊겼습니다",
+  "mitmExchangeStopped": "복호화 설정이 변경되어 중단했습니다",
+  "mitmExchangeFailed": "요청이 완료되지 않았습니다"
 }

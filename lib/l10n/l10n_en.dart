@@ -6509,4 +6509,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mitmPauseUnavailable => 'the signer or connection is unavailable';
+
+  @override
+  String get mitmOutcomePaused =>
+      'Decryption was paused; passed through unchanged';
+
+  @override
+  String get mitmBadgeDecrypted => 'Decrypted';
+
+  @override
+  String get mitmBadgePassedThrough => 'Not decrypted · passed through';
+
+  @override
+  String get mitmBadgeRefused => 'Decryption refused by the app';
+
+  @override
+  String get mitmBadgeFailed => 'Decryption failed';
+
+  @override
+  String get mitmExchangeNoResponse => 'No response received';
+
+  @override
+  String get mitmExchangeResponseFailed => 'Response interrupted';
+
+  @override
+  String get mitmExchangeStopped => 'Stopped: decryption settings changed';
+
+  @override
+  String get mitmExchangeFailed => 'Request did not complete';
 }

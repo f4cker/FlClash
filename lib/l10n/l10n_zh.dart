@@ -5993,4 +5993,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmPauseUnavailable => '签名器或连接不可用';
+
+  @override
+  String get mitmOutcomePaused => '解密暂停中，已原样放行';
+
+  @override
+  String get mitmBadgeDecrypted => '已解密';
+
+  @override
+  String get mitmBadgePassedThrough => '未解密·原样放行';
+
+  @override
+  String get mitmBadgeRefused => '对方不接受解密';
+
+  @override
+  String get mitmBadgeFailed => '解密失败';
+
+  @override
+  String get mitmExchangeNoResponse => '未收到响应';
+
+  @override
+  String get mitmExchangeResponseFailed => '响应中途中断';
+
+  @override
+  String get mitmExchangeStopped => '解密设置已更改，已中止';
+
+  @override
+  String get mitmExchangeFailed => '请求未完成';
 }

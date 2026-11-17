@@ -38,6 +38,9 @@ const (
 	mitmOutcomeDecrypted           MitmOutcome = "decrypted"
 	// The client offered only protocols other than HTTP/1.1; passed through.
 	mitmOutcomeHTTP2Only MitmOutcome = "http2Only"
+	// Decryption is paused (for every listed host or this one); the
+	// connection went through untouched.
+	mitmOutcomePaused MitmOutcome = "paused"
 )
 
 type MitmConnection struct {
@@ -196,15 +199,41 @@ func mitmPausedReason() string {
 }
 
 func mitmPausedFor(host string) bool {
-	if mitmPausedReason() != "" {
-		return true
+	return mitmPauseReasonFor(host) != ""
+}
+
+// Why host passes through now, or "": the global pause first, else its own.
+func mitmPauseReasonFor(host string) string {
+	if reason := mitmPausedReason(); reason != "" {
+		return reason
 	}
 	value, found := mitmHostPauses.Load(host)
 	if !found {
-		return false
+		return ""
 	}
 	pause := value.(mitmPause)
-	return pause.runtime == mitmState.Load() && time.Now().Before(pause.until)
+	if pause.runtime == mitmState.Load() && time.Now().Before(pause.until) {
+		return pause.reason
+	}
+	return ""
+}
+
+// A paused listed host goes through untouched, and the request list says
+// so. A host the app itself says is not listed gets no mark: to the user it
+// is not a decryption host at all.
+func mitmPausedOutcomeFor(host string) MitmOutcome {
+	switch mitmPauseReasonFor(host) {
+	case "", "notListed":
+		return ""
+	}
+	return mitmOutcomePaused
+}
+
+func mitmPassThroughReporting(outcome MitmOutcome) tunnel.TCPInterceptor {
+	return func(client *N.BufferedConn, remote C.Conn) {
+		reportMitmOutcome(remote, outcome)
+		N.Relay(client, remote)
+	}
 }
 
 // A failure that says nothing about host alone pauses every listed host, so
@@ -221,7 +250,7 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 	case errors.As(err, &refusal):
 		switch refusal {
 		case "notListed", "badKey":
-			mitmActive.pauseHost(runtime, host)
+			mitmActive.pauseHost(runtime, host, string(refusal))
 			log.Debugln("[MITM] %s passed through: the app refused it (%s)", host, string(refusal))
 			return
 		}
@@ -267,10 +296,7 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 		firstByteWait = mitmFirstByteWait
 	}
 	hello, err := peekMitmClientHelloWithin(conn, firstByteWait)
-	passThroughUnsupported := func(client *N.BufferedConn, remote C.Conn) {
-		reportMitmOutcome(remote, mitmOutcomeUnsupportedHello)
-		N.Relay(client, remote)
-	}
+	passThroughUnsupported := mitmPassThroughReporting(mitmOutcomeUnsupportedHello)
 	if errors.Is(err, errMitmHelloUnsupported) {
 		// A TLS record began but no hello could be read, so no SNI either.
 		// The host is listed, or (IP-only flow) unknown: in both cases this
@@ -292,22 +318,21 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 		if metadata.Host == "" {
 			return nil
 		}
-		return func(client *N.BufferedConn, remote C.Conn) {
-			reportMitmOutcome(remote, mitmOutcomeMissingSNI)
-			N.Relay(client, remote)
-		}
+		return mitmPassThroughReporting(mitmOutcomeMissingSNI)
 	}
 	host := normalizeMitmHost(hello.serverName)
 	if !runtime.hosts.Match(host) || (metadata.Host != "" && normalizeMitmHost(metadata.Host) != host) {
 		return nil
 	}
 	if !hello.speaksHTTP1() {
-		return func(client *N.BufferedConn, remote C.Conn) {
-			reportMitmOutcome(remote, mitmOutcomeHTTP2Only)
-			N.Relay(client, remote)
-		}
+		return mitmPassThroughReporting(mitmOutcomeHTTP2Only)
 	}
+	// A pause is reported only for the host as listed now; the relay is the
+	// same untouched one a nil result gets.
 	if mitmPausedFor(host) {
+		if outcome := mitmPausedOutcomeFor(host); outcome != "" {
+			return mitmPassThroughReporting(outcome)
+		}
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), mitmLeafWait)
@@ -315,6 +340,9 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 	leaf, err := mitmLeaves.get(ctx, host)
 	if err != nil {
 		pauseMitm(runtime, host, err)
+		if outcome := mitmPausedOutcomeFor(host); outcome != "" && mitmState.Load() == runtime {
+			return mitmPassThroughReporting(outcome)
+		}
 		return nil
 	}
 	if mitmState.Load() != runtime || !runtime.hosts.Match(host) {
@@ -331,6 +359,12 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 // safe point for replay-free passthrough on this same connection.
 func mitmServeSelected(client *N.BufferedConn, remote C.Conn, host string, leaf *mitmLeaf, runtime *mitmRuntime) {
 	if outcome := serveMitm(client, remote, host, leaf, runtime); outcome == mitmOutcomePrecommit {
+		// A pause that won the race is still shown; a new setup is not.
+		if mitmState.Load() == runtime {
+			if paused := mitmPausedOutcomeFor(host); paused != "" {
+				reportMitmOutcome(remote, paused)
+			}
+		}
 		N.Relay(client, remote)
 	} else if outcome != "" {
 		reportMitmOutcome(remote, outcome)

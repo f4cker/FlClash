@@ -6330,4 +6330,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mitmPauseUnavailable => '署名機能または接続を利用できません';
+
+  @override
+  String get mitmOutcomePaused => '復号が一時停止中のため、そのまま通過しました';
+
+  @override
+  String get mitmBadgeDecrypted => '復号済み';
+
+  @override
+  String get mitmBadgePassedThrough => '未復号・そのまま通過';
+
+  @override
+  String get mitmBadgeRefused => '相手が復号を拒否';
+
+  @override
+  String get mitmBadgeFailed => '復号失敗';
+
+  @override
+  String get mitmExchangeNoResponse => '応答を受信していません';
+
+  @override
+  String get mitmExchangeResponseFailed => '応答が途中で中断されました';
+
+  @override
+  String get mitmExchangeStopped => '復号設定が変更されたため中止しました';
+
+  @override
+  String get mitmExchangeFailed => 'リクエストが完了しませんでした';
 }

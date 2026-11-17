@@ -19,9 +19,66 @@ String mitmOutcomeText(BuildContext context, String outcome) {
     'upstreamCertificate' => l.mitmOutcomeUpstreamCertificate,
     'http2Only' => l.mitmOutcomeHTTP1Unsupported,
     'unsupportedHello' || 'missingSNI' => l.mitmOutcomeHelloPassthrough,
+    'paused' => l.mitmOutcomePaused,
     'upstreamFailed' || 'clientFailed' || 'http1Failed' => l.mitmOutcomeFailed,
     _ => '',
   };
+}
+
+/// The mark a row in the request list carries for a decryption host. Only
+/// connections the Core reported on have one; unlisted traffic has none.
+enum MitmBadge {
+  decrypted(RecordTone.accent),
+  passedThrough(RecordTone.warning),
+  refused(RecordTone.error),
+  failed(RecordTone.error);
+
+  const MitmBadge(this.tone);
+
+  final RecordTone tone;
+
+  static MitmBadge? of(TrackerInfo trackerInfo) {
+    return switch (trackerInfo.mitmOutcome) {
+      'refused' => MitmBadge.refused,
+      'unsupportedHello' ||
+      'missingSNI' ||
+      'http2Only' ||
+      'paused' => MitmBadge.passedThrough,
+      // A later HTTP failure leaves the connection decrypted all the same.
+      _ when trackerInfo.metadata.mitm => MitmBadge.decrypted,
+      'upstreamCertificate' ||
+      'upstreamFailed' ||
+      'clientFailed' ||
+      'http1Failed' => MitmBadge.failed,
+      _ => null,
+    };
+  }
+
+  String label(BuildContext context) {
+    final l = context.appLocalizations;
+    return switch (this) {
+      MitmBadge.decrypted => l.mitmBadgeDecrypted,
+      MitmBadge.passedThrough => l.mitmBadgePassedThrough,
+      MitmBadge.refused => l.mitmBadgeRefused,
+      MitmBadge.failed => l.mitmBadgeFailed,
+    };
+  }
+}
+
+/// [MitmBadge.of] as a label, or nothing for unlisted traffic.
+class MitmBadgeLabel extends StatelessWidget {
+  final TrackerInfo trackerInfo;
+
+  const MitmBadgeLabel(this.trackerInfo, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = MitmBadge.of(trackerInfo);
+    if (badge == null) {
+      return const SizedBox.shrink();
+    }
+    return RecordLabel(label: badge.label(context), tone: badge.tone);
+  }
 }
 
 String _endpointText(String ip, String port) {
@@ -190,17 +247,13 @@ class TrackerInfoItem extends ConsumerWidget {
           .of(context, emphasized: true)
           .copyWith(color: context.colorScheme.onSurfaceVariant),
     );
-    final mitm = trackerInfo.metadata.mitm;
-    final outcome = mitmOutcomeText(context, trackerInfo.mitmOutcome);
+    final badge = MitmBadge.of(trackerInfo) != null;
     if (!isLive) {
       return RecordHeader(
         children: [
           RecordTimestamp(trackerInfo.start.showFull),
           network,
-          if (outcome.isNotEmpty)
-            RecordLabel(label: outcome)
-          else if (mitm)
-            const RecordLabel(label: 'MITM'),
+          if (badge) MitmBadgeLabel(trackerInfo),
         ],
       );
     }
@@ -227,10 +280,7 @@ class TrackerInfoItem extends ConsumerWidget {
       children: [
         Text(trackerInfo.start.getLastUpdateTimeDesc(context, compact: true)),
         network,
-        if (outcome.isNotEmpty)
-          RecordLabel(label: outcome)
-        else if (mitm)
-          const RecordLabel(label: 'MITM'),
+        if (badge) MitmBadgeLabel(trackerInfo),
       ],
     );
   }
@@ -523,10 +573,13 @@ class TrackerInfoDetailView extends ConsumerWidget {
           items: [
             ..._buildRows([
               (appLocalizations.creationTime, trackerInfo.start.showFull),
-              if (trackerInfo.mitmOutcome.isNotEmpty)
+              if (MitmBadge.of(trackerInfo) case final badge?)
                 (
                   appLocalizations.mitm,
-                  mitmOutcomeText(context, trackerInfo.mitmOutcome),
+                  switch (mitmOutcomeText(context, trackerInfo.mitmOutcome)) {
+                    '' => badge.label(context),
+                    final outcome => outcome,
+                  },
                 ),
               (appLocalizations.networkType, metadata.network),
               if (process == null)

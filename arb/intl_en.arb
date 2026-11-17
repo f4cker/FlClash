@@ -2280,5 +2280,14 @@
   "mitmPauseNotTrusted": "the root certificate is not generated or not trusted",
   "mitmPauseLiveness": "trust and signing could not be confirmed",
   "mitmPauseIndicatorPending": "the always-visible status is not enabled yet",
-  "mitmPauseUnavailable": "the signer or connection is unavailable"
+  "mitmPauseUnavailable": "the signer or connection is unavailable",
+  "mitmOutcomePaused": "Decryption was paused; passed through unchanged",
+  "mitmBadgeDecrypted": "Decrypted",
+  "mitmBadgePassedThrough": "Not decrypted · passed through",
+  "mitmBadgeRefused": "Decryption refused by the app",
+  "mitmBadgeFailed": "Decryption failed",
+  "mitmExchangeNoResponse": "No response received",
+  "mitmExchangeResponseFailed": "Response interrupted",
+  "mitmExchangeStopped": "Stopped: decryption settings changed",
+  "mitmExchangeFailed": "Request did not complete"
 }

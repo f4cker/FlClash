@@ -309,10 +309,11 @@ void main() {
           ['refused', '', ''],
         );
         notifier.setMitmOutcome('other', 'upstreamCertificate');
+        notifier.setMitmOutcome('ignored', 'paused');
         notifier.setMitmOutcome('missing', 'http1Failed');
         expect(
           container.read(requestsProvider).list.map((r) => r.mitmOutcome),
-          ['refused', 'upstreamCertificate', ''],
+          ['refused', 'upstreamCertificate', 'paused'],
         );
         notifier.addRequest(request('missing'));
         expect(

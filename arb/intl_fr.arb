@@ -1819,5 +1819,14 @@
   "mitmPauseNotTrusted": "certificat racine non généré ou non approuvé",
   "mitmPauseLiveness": "confiance et signature non vérifiables",
   "mitmPauseIndicatorPending": "l’état permanent n’est pas encore activé",
-  "mitmPauseUnavailable": "signataire ou connexion indisponible"
+  "mitmPauseUnavailable": "signataire ou connexion indisponible",
+  "mitmOutcomePaused": "Déchiffrement en pause ; transmis tel quel",
+  "mitmBadgeDecrypted": "Déchiffré",
+  "mitmBadgePassedThrough": "Non déchiffré · transmis tel quel",
+  "mitmBadgeRefused": "Déchiffrement refusé par le client",
+  "mitmBadgeFailed": "Échec du déchiffrement",
+  "mitmExchangeNoResponse": "Aucune réponse reçue",
+  "mitmExchangeResponseFailed": "Réponse interrompue",
+  "mitmExchangeStopped": "Arrêté : paramètres de déchiffrement modifiés",
+  "mitmExchangeFailed": "La requête n'a pas abouti"
 }
