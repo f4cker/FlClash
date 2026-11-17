@@ -15,10 +15,15 @@ import (
 )
 
 // The only socket is a loopback listener; no Flash process, proxy service or TUN.
-func TestMitmGateOffDoesNotDelayActualTunnelDial(t *testing.T) {
-	if tunnel.TCPIntercept != nil || tunnel.UDPDrop != nil {
-		t.Fatal("disabled hooks must be nil")
+// The installed hook must not hold up a server-first dial while decryption is
+// not set up.
+func TestMitmIdleHookDoesNotDelayActualTunnelDial(t *testing.T) {
+	if tunnel.TCPIntercept == nil || tunnel.TCPInterceptWanted == nil || tunnel.UDPDrop != nil {
+		t.Fatal("the TCP hooks must be installed and the UDP hook must stay nil")
 	}
+	oldRuntime := mitmState.Load()
+	defer mitmState.Store(oldRuntime)
+	mitmState.Store(nil)
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -81,9 +86,10 @@ func TestMitmPrecommitConfigChangeRelaysThroughActualTunnel(t *testing.T) {
 	defer listener.Close()
 	oldMode, oldStatus := tunnel.Mode(), tunnel.Status()
 	oldProxies, oldProviders := tunnel.Proxies(), tunnel.Providers()
-	oldHook, oldRuntime := tunnel.TCPIntercept, mitmState.Load()
+	oldHook, oldWanted, oldRuntime := tunnel.TCPIntercept, tunnel.TCPInterceptWanted, mitmState.Load()
 	defer func() {
 		tunnel.TCPIntercept = oldHook
+		tunnel.TCPInterceptWanted = oldWanted
 		mitmState.Store(oldRuntime)
 		tunnel.UpdateProxies(oldProxies, oldProviders)
 		tunnel.SetMode(oldMode)
@@ -101,6 +107,7 @@ func TestMitmPrecommitConfigChangeRelaysThroughActualTunnel(t *testing.T) {
 	tunnel.OnRunning()
 	old := &mitmRuntime{}
 	mitmState.Store(old)
+	tunnel.TCPInterceptWanted = nil
 	tunnel.TCPIntercept = func(_ *N.BufferedConn, _ *C.Metadata) tunnel.TCPInterceptor {
 		return func(client *N.BufferedConn, remote C.Conn) {
 			// Deterministically replace configuration after the interceptor was selected,

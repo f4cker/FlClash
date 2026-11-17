@@ -48,9 +48,10 @@ type MitmConnection struct {
 	Outcome MitmOutcome `json:"outcome"`
 }
 
-// Decryption must remain disabled until step 5 supplies an always-visible indicator.
-// This is deliberately not controlled by configuration or an RPC.
-const mitmIndicatorAvailable = false
+// Step 5 supplies the always-visible indicator (page bar and tray), so listed
+// hosts may be decrypted. This is deliberately not controlled by configuration
+// or an RPC; setting it to false disables decryption entirely.
+const mitmIndicatorAvailable = true
 
 // UDP is never blocked until live signer and trust state can be verified.
 const mitmQUICLivenessAvailable = false
@@ -81,8 +82,9 @@ var (
 )
 
 func init() {
-	// A nil hook preserves the tunnel's asynchronous peek while gated off.
+	// A nil hook preserves the tunnel's asynchronous peek if gated off.
 	if mitmIndicatorAvailable {
+		tunnel.TCPInterceptWanted = mitmInterceptWanted
 		tunnel.TCPIntercept = mitmIntercept
 	}
 	if mitmIndicatorAvailable && mitmQUICLivenessAvailable {
@@ -279,6 +281,21 @@ func mitmIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterce
 		return nil
 	}
 	return mitmInterceptEligible(conn, metadata)
+}
+
+// Answered before the tunnel waits for the client's first bytes: only a flow
+// that mitmInterceptEligible could take (decryption set up, and a listed host
+// or no host at all) waits; every other flow dials at once. Eligibility is
+// checked again in full after the peek.
+func mitmInterceptWanted(metadata *C.Metadata) bool {
+	if !mitmIndicatorAvailable {
+		return false
+	}
+	runtime := mitmState.Load()
+	if !runtime.decrypting() {
+		return false
+	}
+	return metadata.Host == "" || runtime.hosts.Match(normalizeMitmHost(metadata.Host))
 }
 
 // Split out only so socket tests can exercise the real selector while the

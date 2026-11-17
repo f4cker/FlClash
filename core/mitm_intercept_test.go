@@ -12,20 +12,65 @@ import (
 
 	N "github.com/metacubex/mihomo/common/net"
 	C "github.com/metacubex/mihomo/constant"
+	"github.com/metacubex/mihomo/tunnel"
 )
 
-func TestInterceptionBlockedWithoutVisibleIndicator(t *testing.T) {
-	if mitmIndicatorAvailable {
-		t.Fatal("remove this safety test only when the always-visible indicator is implemented")
+// The always-visible indicator exists, so the TCP hook is installed; it still
+// decrypts nothing unless decryption is set up with a CA and listed hosts.
+// QUIC blocking stays off until signer and trust liveness can be verified.
+func TestInterceptionGatedOnVisibleIndicator(t *testing.T) {
+	if !mitmIndicatorAvailable {
+		t.Fatal("the always-visible indicator gate is expected on for this build")
 	}
 	if mitmQUICLivenessAvailable {
 		t.Fatal("QUIC blocking requires verified signer and trust liveness")
 	}
-	if mitmIntercept(nil, nil) != nil {
-		t.Fatal("interception must be disabled")
+	if tunnel.TCPIntercept == nil || tunnel.TCPInterceptWanted == nil {
+		t.Fatal("the TCP interception hooks must be installed when the indicator is available")
+	}
+	if tunnel.UDPDrop != nil {
+		t.Fatal("the UDP drop hook must stay uninstalled while QUIC liveness is unavailable")
+	}
+	original := mitmState.Load()
+	defer mitmState.Store(original)
+	mitmState.Store(nil)
+	if mitmInterceptWanted(&C.Metadata{DstPort: 443, Host: "example.com"}) ||
+		mitmInterceptWanted(&C.Metadata{DstPort: 443}) {
+		t.Fatal("no flow may wait for a peek while decryption is not set up")
+	}
+	if mitmIntercept(nil, &C.Metadata{DstPort: 443, Host: "example.com"}) != nil {
+		t.Fatal("nothing may be intercepted while decryption is not set up")
+	}
+	if status := handleMitmStatus(); status.Enable || status.Paused != "" {
+		t.Fatalf("status without setup = %+v", status)
 	}
 	if mitmDropsUDP(&C.Metadata{DstPort: 443, Host: "example.com"}) {
-		t.Fatal("QUIC must pass through while interception is disabled")
+		t.Fatal("QUIC must pass through while QUIC liveness is unavailable")
+	}
+}
+
+// Only flows the selector could take wait for the client's first bytes.
+func TestMitmInterceptWantedOnlyListedOrHostless(t *testing.T) {
+	original := mitmState.Load()
+	defer mitmState.Store(original)
+	mitmState.Store(&mitmRuntime{
+		setup: MitmSetup{Enable: true, DecryptTLS: true, CAFingerprint: "fp", Hostname: []string{"example.com"}},
+		hosts: compileMitmHosts([]string{"example.com"}),
+	})
+	for _, tc := range []struct {
+		host string
+		want bool
+	}{{"example.com", true}, {"EXAMPLE.com.", true}, {"other.org", false}, {"", true}} {
+		if got := mitmInterceptWanted(&C.Metadata{DstPort: 443, Host: tc.host}); got != tc.want {
+			t.Errorf("host %q: wanted %v, want %v", tc.host, got, tc.want)
+		}
+	}
+	mitmState.Store(&mitmRuntime{
+		setup: MitmSetup{Enable: false, DecryptTLS: true, CAFingerprint: "fp", Hostname: []string{"example.com"}},
+		hosts: compileMitmHosts([]string{"example.com"}),
+	})
+	if mitmInterceptWanted(&C.Metadata{DstPort: 443, Host: "example.com"}) {
+		t.Error("a listed host waits while decryption is off")
 	}
 }
 
