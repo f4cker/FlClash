@@ -213,6 +213,7 @@ func applyConfig(params *SetupParams) error {
 	}
 	clearTailscaleExit()
 	applyOptions(params.Options)
+	applyMitmSetup(params, candidateBytes)
 	setTailscaleSetup(params.Tailscale)
 	replaced := tailscaleGenerationMark()
 	markTailscaleReplaced(replaced)
@@ -370,6 +371,7 @@ func applyOptions(options CoreOptions) {
 	setTestURL(options.TestURL)
 	provider.SetDefaultTestTimeout(timeoutFromMillis(options.DelayTestTimeout, 0))
 	skipCertVerify.Store(options.SkipCertVerify)
+	mitmCapture.Store(options.MITMCapture)
 }
 
 func patchTun(target *LC.Tun, params *tunSchema) {

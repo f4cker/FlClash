@@ -216,7 +216,6 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
     @Default({}) Map<String, dynamic> injectedRuleProviders,
     String? matchTarget,
     @Default(false) bool safeMode,
-    @Default([]) List<MitmModuleSource> mitmModules,
 
     /// One per rule of [rawConfig]; empty reads them all as the profile's.
     @Default([]) List<RuleSource> profileRuleSources,
@@ -266,7 +265,6 @@ abstract class SetupState with _$SetupState {
     @Default([]) List<CustomProxy> appProxies,
     @Default({}) Map<int, String> proxyDialers,
     String? matchTarget,
-    @Default([]) List<MitmModuleSource> mitmModules,
     MountSetup? mounts,
   }) = _SetupState;
 }

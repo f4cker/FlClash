@@ -184,6 +184,58 @@ final class CoreOptionsProvider
 
 String _$coreOptionsHash() => r'43945407c97ebce7e8106973f53ca83ce95c861a';
 
+/// Null, and so no decryption, unless the user turned it on.
+
+@ProviderFor(mitmSetup)
+final mitmSetupProvider = MitmSetupProvider._();
+
+/// Null, and so no decryption, unless the user turned it on.
+
+final class MitmSetupProvider
+    extends
+        $FunctionalProvider<
+          Map<String, Object?>?,
+          Map<String, Object?>?,
+          Map<String, Object?>?
+        >
+    with $Provider<Map<String, Object?>?> {
+  /// Null, and so no decryption, unless the user turned it on.
+  MitmSetupProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mitmSetupProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmSetupHash();
+
+  @$internal
+  @override
+  $ProviderElement<Map<String, Object?>?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  Map<String, Object?>? create(Ref ref) {
+    return mitmSetup(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<String, Object?>? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<String, Object?>?>(value),
+    );
+  }
+}
+
+String _$mitmSetupHash() => r'15e041a4aabe792ea5b27c0eecd286474d9aa018';
+
 @ProviderFor(setupPatch)
 final setupPatchProvider = SetupPatchProvider._();
 
@@ -529,7 +581,7 @@ final class SharedStateProvider
   }
 }
 
-String _$sharedStateHash() => r'ae4493d022b73e0395f9e5724250ea19246e0c21';
+String _$sharedStateHash() => r'5d9d1ab78d2f6e74b33c6a4532f7ea7945f1a2ef';
 
 @ProviderFor(vpnRouteAddress)
 final vpnRouteAddressProvider = VpnRouteAddressProvider._();
@@ -3775,7 +3827,7 @@ final class SetupStateProvider
   }
 }
 
-String _$setupStateHash() => r'4b3e407412aa123afd34d9617be0e8a9464695ee';
+String _$setupStateHash() => r'17a3b6a576d5fcb050af53b8520b616bf476f251';
 
 final class SetupStateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SetupState>, int?> {

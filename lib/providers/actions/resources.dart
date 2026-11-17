@@ -97,7 +97,7 @@ class ResourcesAction extends _$ResourcesAction {
         if (script.url != null)
           update(script.updatingKey, script.label, () => updateScript(script)),
       for (final module in modules)
-        if (mitmFeature && module.isRemote)
+        if (mitmFeature && mitmModulesFeature && module.isRemote)
           update(
             module.updatingKey,
             module.name,

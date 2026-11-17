@@ -90,6 +90,7 @@ const (
 	mitmExchangesMethod           CoreMethod = "mitm.exchanges"
 	mitmExchangeMethod            CoreMethod = "mitm.exchange"
 	mitmBodyMethod                CoreMethod = "mitm.body"
+	mitmStatusMethod              CoreMethod = "mitm.status"
 
 	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
 	tailscaleStatusMethod        CoreMethod = "tailscale.status"
@@ -149,6 +150,7 @@ type SetupParams struct {
 	// Set for a profile with mounts, even none left: its failure must not
 	// fall back to mihomo's direct-only default.
 	Mounts *MountSetup `json:"mounts,omitempty"`
+	Mitm   *MitmSetup  `json:"mitm,omitempty"`
 }
 
 type TailscaleSetup struct {

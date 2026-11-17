@@ -13,7 +13,6 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/state.dart';
-import 'package:fl_clash/views/config/mitm_modules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -403,26 +402,12 @@ class _MitmViewState extends ConsumerState<MitmView> {
                     child: Column(
                       children: [
                         generateSection(
-                          title: appLocalizations.mitmModules,
-                          items: const [MitmModulesItem()],
-                        ),
-                        generateSection(
                           items: const [_MitmHostnameItem()],
                           footer: appLocalizations.mitmHostnameDesc,
                         ),
                         generateSection(
                           title: appLocalizations.options,
                           items: [
-                            ConfigToggleItem(
-                              title: (l) => l.skipServerCertVerify,
-                              selector: patchClashConfigProvider.select(
-                                (state) => state.mitm.skipServerCertVerify,
-                              ),
-                              onChanged: _mitmWriter(
-                                (state, value) =>
-                                    state.copyWith(skipServerCertVerify: value),
-                              ),
-                            ),
                             ConfigToggleItem(
                               title: (l) => l.blockQuic,
                               selector: patchClashConfigProvider.select(
@@ -431,25 +416,6 @@ class _MitmViewState extends ConsumerState<MitmView> {
                               onChanged: _mitmWriter(
                                 (state, value) =>
                                     state.copyWith(autoQuicBlock: value),
-                              ),
-                            ),
-                            ConfigToggleItem(
-                              title: (l) => l.http2,
-                              selector: patchClashConfigProvider.select(
-                                (state) => state.mitm.h2,
-                              ),
-                              onChanged: _mitmWriter(
-                                (state, value) => state.copyWith(h2: value),
-                              ),
-                            ),
-                            ConfigToggleItem(
-                              title: (l) => l.decryptUntrusted,
-                              selector: patchClashConfigProvider.select(
-                                (state) => state.mitm.decryptUntrusted,
-                              ),
-                              onChanged: _mitmWriter(
-                                (state, value) =>
-                                    state.copyWith(decryptUntrusted: value),
                               ),
                             ),
                           ],

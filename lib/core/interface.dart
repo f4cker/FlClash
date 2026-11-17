@@ -571,6 +571,10 @@ abstract class CoreHandlerInterface {
     }, arguments: rules.toJson());
   }
 
+  Future<MitmStatus> getMitmStatus() {
+    return _query(CoreMethod.mitmStatus, _model(MitmStatus.fromJson));
+  }
+
   Future<String> issueMitmCertificate(String host) {
     return _query(
       CoreMethod.mitmIssueCertificate,

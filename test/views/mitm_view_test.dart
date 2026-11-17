@@ -168,6 +168,24 @@ void main() {
     expect(find.text(currentAppLocalizations.httpCaptureDesc), findsOneWidget);
   });
 
+  testWidgets('offers none of the second phase, nor untrusted decryption', (
+    tester,
+  ) async {
+    await pumpView(tester, certificate: _certificate);
+    final l = currentAppLocalizations;
+
+    expect(find.text(l.hostname), findsOneWidget);
+    expect(find.text(l.blockQuic), findsOneWidget);
+    for (final hidden in [
+      l.mitmModules,
+      l.skipServerCertVerify,
+      l.http2,
+      l.decryptUntrusted,
+    ]) {
+      expect(find.text(hidden), findsNothing, reason: hidden);
+    }
+  });
+
   testWidgets('offers a certificate until one is generated', (tester) async {
     await pumpView(tester);
 
@@ -377,7 +395,7 @@ void main() {
     );
 
     expect(saved().trustedFingerprint, _certificate.fingerprint);
-    final json = saved().coreJson(const MitmRules());
+    final json = saved().coreJson;
     expect(json['ca-fingerprint'], _certificate.fingerprint);
     expect(json['decrypt-tls'], isTrue);
   });

@@ -83,9 +83,7 @@ void main() {
     fail('timed out waiting for $finder');
   }
 
-  testWidgets('only a subscribed module is listed among the resources', (
-    tester,
-  ) async {
+  Future<void> pumpModules(WidgetTester tester) async {
     final date = DateTime(2026);
     final container = createContainer(
       modules: [
@@ -104,9 +102,25 @@ void main() {
         child: const TestApp(child: ResourcesView()),
       ),
     );
+  }
+
+  testWidgets('only a subscribed module is listed among the resources', (
+    tester,
+  ) async {
+    mitmModulesFeature = true;
+    addTearDown(() => mitmModulesFeature = false);
+    await pumpModules(tester);
     await pumpUntilFound(tester, find.text('Subscribed'));
 
     expect(find.text('Written here'), findsNothing);
+  });
+
+  testWidgets('modules wait for the second MITM phase', (tester) async {
+    await pumpModules(tester);
+    await pumpUntilFound(tester, find.text(GeoResource.MMDB.name));
+
+    expect(find.text('Subscribed'), findsNothing);
+    expect(find.text(currentAppLocalizations.mitmModules), findsNothing);
   });
 
   testWidgets('a geo row opens its link editor without a per-row action', (

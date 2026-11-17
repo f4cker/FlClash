@@ -14,6 +14,9 @@ abstract class SetupParams with _$SetupParams {
     required CoreOptions options,
     @JsonKey(includeIfNull: false) TailscaleSetup? tailscale,
     @JsonKey(includeIfNull: false) MountSetup? mounts,
+
+    /// The user's decryption setup; the Core ignores a profile's own.
+    @JsonKey(includeIfNull: false) Map<String, Object?>? mitm,
   }) = _SetupParams;
 
   factory SetupParams.fromJson(Map<String, dynamic> json) =>
@@ -88,6 +91,21 @@ abstract class UpdateParams with _$UpdateParams {
 }
 
 /// The CA the Core signs decrypted hosts' certificates with.
+/// What the Core decrypts now, and how many of the profile's own `mitm`
+/// hostnames it ignored, since only the user's list counts.
+@freezed
+abstract class MitmStatus with _$MitmStatus {
+  const factory MitmStatus({
+    @Default(false) bool enable,
+    @Default(0) int hostnames,
+    @Default(0) @JsonKey(name: 'ignored-hostnames') int ignoredHostnames,
+    @Default(false) bool capture,
+  }) = _MitmStatus;
+
+  factory MitmStatus.fromJson(Map<String, Object?> json) =>
+      _$MitmStatusFromJson(json);
+}
+
 @freezed
 abstract class MitmCertificate with _$MitmCertificate {
   const factory MitmCertificate({

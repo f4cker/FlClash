@@ -462,7 +462,6 @@ void main() {
         skipServerCertVerify: true,
         autoQuicBlock: false,
         h2: true,
-        decryptUntrusted: true,
         trustedFingerprint: 'AB:CD',
         capture: true,
         captureEntries: 5000,
@@ -476,7 +475,6 @@ void main() {
         'skip-server-cert-verify': true,
         'auto-quic-block': false,
         'h2': true,
-        'decrypt-untrusted': true,
         'trusted-fingerprint': 'AB:CD',
         'capture': true,
         'capture-entries': 5000,
@@ -486,11 +484,9 @@ void main() {
 
     group('the Core section', () {
       test('decrypts HTTPS only with the CA this device trusts', () {
-        expect(defaultMitm.coreJson(const MitmRules())['decrypt-tls'], isFalse);
+        expect(defaultMitm.coreJson['decrypt-tls'], isFalse);
 
-        final trusted = const Mitm(
-          trustedFingerprint: 'AB:CD',
-        ).coreJson(const MitmRules());
+        final trusted = const Mitm(trustedFingerprint: 'AB:CD').coreJson;
 
         expect(trusted['decrypt-tls'], isTrue);
         expect(trusted['ca-fingerprint'], 'AB:CD');
@@ -499,9 +495,7 @@ void main() {
       });
 
       test('bounds what decryption holds with the keys the Core reads', () {
-        final limits =
-            defaultMitm.coreJson(const MitmRules())['limits']
-                as Map<String, Object?>;
+        final limits = defaultMitm.coreJson['limits'] as Map<String, Object?>;
 
         expect(limits['max-body-size'], 4 << 20);
         expect(
@@ -520,27 +514,32 @@ void main() {
       });
 
       test('the capture limit reaches the Core among the limits', () {
-        final json = const Mitm(
-          captureEntries: 5000,
-        ).coreJson(const MitmRules());
+        final json = const Mitm(captureEntries: 5000).coreJson;
 
         expect(json, isNot(contains('capture-entries')));
         expect((json['limits'] as Map)['capture-entries'], 5000);
         expect(
-          (defaultMitm.coreJson(const MitmRules())['limits']
-              as Map)['capture-entries'],
+          (defaultMitm.coreJson['limits'] as Map)['capture-entries'],
           2000,
         );
       });
 
-      test('decrypts with any CA for the LAN', () {
-        final json = const Mitm(
-          decryptUntrusted: true,
-          trustedFingerprint: 'AB:CD',
-        ).coreJson(const MitmRules());
+      test('a legacy decrypt-untrusted setting no longer decrypts', () {
+        final mitm = Mitm.fromJson({'enable': true, 'decrypt-untrusted': true});
 
-        expect(json['decrypt-tls'], isTrue);
-        expect(json['ca-fingerprint'], '');
+        expect(mitm.coreJson['decrypt-tls'], isFalse);
+        expect(mitm.coreJson['ca-fingerprint'], '');
+      });
+
+      test('offers neither HTTP/2 nor an unverified upstream', () {
+        final json = const Mitm(
+          skipServerCertVerify: true,
+          h2: true,
+          trustedFingerprint: 'AB:CD',
+        ).coreJson;
+
+        expect(json, isNot(contains('skip-server-cert-verify')));
+        expect(json, isNot(contains('h2')));
       });
     });
 
@@ -552,21 +551,19 @@ void main() {
       expect(config.mitm.autoQuicBlock, isTrue);
     });
 
-    test('the Core section takes every list, hostnames included, from the '
-        'rules', () {
-      const rules = MitmRules(
-        hostname: ['-own.a.com', 'a.com'],
-        urlRewrite: ['u'],
-        headerRewrite: ['h'],
-        bodyRewrite: ['b'],
-        mapLocal: ['m'],
-        script: ['s'],
-      );
+    test('the Core section carries the user hostnames alone, and no list '
+        'of the second phase', () {
+      final json = const Mitm(
+        enable: true,
+        hostname: ['-own.a.com', '*.a.com'],
+      ).coreJson;
 
-      final json = const Mitm(hostname: ['ignored.com']).coreJson(rules);
-
+      expect(json['enable'], isTrue);
+      expect(json['hostname'], ['-own.a.com', '*.a.com']);
       for (final list in MitmList.values) {
-        expect(json[list.key], rules.linesOf(list));
+        if (list != MitmList.hostname) {
+          expect(json, isNot(contains(list.key)));
+        }
       }
     });
 
@@ -583,7 +580,7 @@ void main() {
         const PatchClashConfig(mitm: mitm).setupOnly.mitm,
         mitm.copyWith(capture: false),
       );
-      expect(mitm.coreJson(const MitmRules()), isNot(contains('capture')));
+      expect(mitm.coreJson, isNot(contains('capture')));
     });
   });
 

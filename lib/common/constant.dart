@@ -45,6 +45,11 @@ final hostNetworkWritable =
 /// Not const so tests can cover both states.
 bool mitmFeature = const bool.fromEnvironment('FEATURE_MITM');
 
+/// Rewrites, local maps, scripts and modules come in the second MITM phase;
+/// until then the Core takes the user's hostnames alone. Not const so tests
+/// can still cover the module code kept for that phase.
+bool mitmModulesFeature = false;
+
 const disclaimerVersion = 1;
 
 String _randomPipeId() {

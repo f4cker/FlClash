@@ -2214,7 +2214,8 @@ abstract class PatchClashConfig with _$PatchClashConfig {
   }
 }
 
-/// Written over every profile's `mitm` section, so only the app turns it on.
+/// Reaches the Core beside the profile, in [SetupParams.mitm]; the Core only
+/// counts the hostnames of a profile's own `mitm` section.
 @freezed
 abstract class Mitm with _$Mitm {
   const factory Mitm({
@@ -2225,7 +2226,6 @@ abstract class Mitm with _$Mitm {
     bool skipServerCertVerify,
     @Default(true) @JsonKey(name: 'auto-quic-block') bool autoQuicBlock,
     @Default(false) bool h2,
-    @Default(false) @JsonKey(name: 'decrypt-untrusted') bool decryptUntrusted,
     @JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint,
     @Default(false) bool capture,
     @JsonKey(name: 'capture-entries') int? captureEntries,
@@ -2295,25 +2295,19 @@ extension MitmExt on Mitm {
     ],
   );
 
-  /// The hostnames come from [rules] alone, which the user's own lead.
-  Map<String, Object?> coreJson(MitmRules rules) {
-    final json = toJson()
-      ..remove('hostname')
-      ..remove('decrypt-untrusted')
-      ..remove('trusted-fingerprint')
-      ..remove('capture')
-      ..remove('capture-entries');
-    return {
-      ...json,
-      ...rules.toJson(),
-      'decrypt-tls': decryptUntrusted || trustedFingerprint != null,
-      'ca-fingerprint': decryptUntrusted ? '' : trustedFingerprint ?? '',
-      'limits': {
-        ..._mitmLimits(isAndroid: system.isAndroid),
-        'capture-entries': ?captureEntries,
-      },
-    };
-  }
+  /// Decrypts only with the CA this device was found to trust, and with
+  /// neither HTTP/2 nor an unverified upstream, which the Core does not offer.
+  Map<String, Object?> get coreJson => {
+    'enable': enable,
+    'hostname': hostname,
+    'auto-quic-block': autoQuicBlock,
+    'decrypt-tls': trustedFingerprint != null,
+    'ca-fingerprint': trustedFingerprint ?? '',
+    'limits': {
+      ..._mitmLimits(isAndroid: system.isAndroid),
+      'capture-entries': ?captureEntries,
+    },
+  };
 }
 
 class MitmRules {

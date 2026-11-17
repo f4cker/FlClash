@@ -124,6 +124,7 @@ class SetupAction extends _$SetupAction {
     selectedMap: ref.read(selectedMapProvider),
     options: ref.read(coreOptionsProvider),
     tailscale: ref.read(tailscaleSetupProvider),
+    mitm: ref.read(mitmSetupProvider),
   );
 
   // The selection reaches the Core through changeProxy, not through an apply.
@@ -1070,7 +1071,6 @@ class SetupAction extends _$SetupAction {
             ? setupState.matchTarget
             : lastMatchTarget(profileBase.base.matchRules),
         safeMode: ref.read(safeModeProvider),
-        mitmModules: setupState.mitmModules,
         profileRuleSources: profileRuleSources,
       ),
     );
@@ -1723,9 +1723,12 @@ class SetupAction extends _$SetupAction {
     // The panel-added accounts are not in the YAML, yet change what runs.
     final managed = setupParams.tailscale?.managed ?? const [];
     final mountRevision = setupParams.mounts?.revision ?? '';
-    final yamlMd5 = (managed.isEmpty && mountRevision.isEmpty)
+    final mitm = setupParams.mitm;
+    final yamlMd5 = (managed.isEmpty && mountRevision.isEmpty && mitm == null)
         ? realProfile.md5
-        : '${realProfile.md5}${json.encode(managed)}$mountRevision'.toMd5();
+        : '${realProfile.md5}${json.encode(managed)}$mountRevision'
+                  '${mitm == null ? '' : json.encode(mitm)}'
+              .toMd5();
     if (!adoptionPending && yamlMd5 == globalState.lastConfigMd5 && !force) {
       _appliedInputs = inputs;
       ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(

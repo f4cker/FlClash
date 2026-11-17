@@ -74,6 +74,7 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     );
     ref.listenManual(mitmModulesProvider, (prev, next) {
       if (mitmFeature &&
+          mitmModulesFeature &&
           prev?.value != null &&
           next.hasValue &&
           ref.read(patchClashConfigProvider).mitm.enable) {
