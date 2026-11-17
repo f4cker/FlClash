@@ -55,6 +55,11 @@ const mitmIndicatorAvailable = false
 // UDP is never blocked until live signer and trust state can be verified.
 const mitmQUICLivenessAvailable = false
 
+// How long a connection waits for its leaf before it is relayed untouched
+// (and decryption pauses). The app signs in memory over local IPC, so a
+// healthy answer takes milliseconds; the issuance itself keeps mitmLeafWait.
+var mitmConnectionLeafWait = 3 * time.Second
+
 const (
 	mitmLeafWait      = 8 * time.Second
 	mitmHandshakeWait = 10 * time.Second
@@ -291,8 +296,14 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 	if metadata.Host != "" && !runtime.hosts.Match(normalizeMitmHost(metadata.Host)) {
 		return nil
 	}
-	firstByteWait := mitmHelloWait
+	// A flow without a name is held for its SNI only where HTTPS is: on any
+	// other port it would be some protocol's whole first exchange (SSH, SMTP,
+	// a server-first or idle client) that waits, for no decryption at all.
 	if metadata.Host == "" && metadata.DstPort != 443 {
+		return nil
+	}
+	firstByteWait := mitmHelloWait
+	if metadata.DstPort != 443 {
 		firstByteWait = mitmFirstByteWait
 	}
 	hello, err := peekMitmClientHelloWithin(conn, firstByteWait)
@@ -335,7 +346,7 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 		}
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), mitmLeafWait)
+	ctx, cancel := context.WithTimeout(context.Background(), mitmConnectionLeafWait)
 	defer cancel()
 	leaf, err := mitmLeaves.get(ctx, host)
 	if err != nil {
