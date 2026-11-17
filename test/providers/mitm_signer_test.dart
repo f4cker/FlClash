@@ -76,14 +76,14 @@ void main() {
         .setMockMethodCallHandler(_channel, null);
   });
 
-  Future<void> sign(String host) => container
+  Future<void> sign(String host, {bool managedRelay = true}) => container
       .read(mitmSignActionProvider.notifier)
       .answer(
         MitmSignRequest.fromJson({
           'reqId': 7,
           'host': host,
           'spki': base64.encode(_spki),
-        }),
+        }, managedRelay: managedRelay),
       );
 
   test('the request reads the base64 key Go writes', () {
@@ -159,6 +159,19 @@ void main() {
       const MitmCoreIdentity.failed('cdhash'),
     );
     expect(container.read(mitmCoreRefusedProvider), isTrue);
+  });
+
+  test('a request off the helper relay is refused unasked', () async {
+    container.listen(mitmCoreRefusedProvider, (_, _) {});
+
+    await sign('api.example.com', managedRelay: false);
+
+    expect(calls.map((call) => call.method), isNot(contains('sign')));
+    expect(sent.single, {'reqId': 7, 'error': 'coreIdentity'});
+    expect(
+      container.read(mitmCoreIdentityStateProvider).value,
+      const MitmCoreIdentity.failed('channel'),
+    );
   });
 
   test('a Core the helper did not start is not trusted', () async {

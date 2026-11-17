@@ -10,6 +10,7 @@ import 'package:fl_clash/core/spill.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 
+import 'macos_helper_transport.dart';
 import 'transport.dart';
 
 /// How many timeout windows a request may be extended across while Core keeps
@@ -290,8 +291,9 @@ final class CoreRpcClient implements CoreRpcChannel {
       );
       return;
     }
+    final managedRelay = transport is MacHelperTransport;
     for (final event in coreEventsFromData(call.arguments)) {
-      coreEventManager.sendEvent(event);
+      coreEventManager.sendEvent(event, managedRelay: managedRelay);
     }
   }
 

@@ -145,6 +145,16 @@ class MitmSignAction extends _$MitmSignAction {
     MitmSignResult result;
     if (signer == null || !mitmFeature || !mitm.enable) {
       result = const MitmSignResult(error: 'disabled');
+    } else if (!request.managedRelay) {
+      result = const MitmSignResult(
+        error: 'coreIdentity',
+        coreIdentity: 'failed:channel',
+      );
+      if (ref.mounted) {
+        ref
+            .read(mitmCoreIdentityStateProvider.notifier)
+            .report(const MitmCoreIdentity.failed('channel'));
+      }
     } else {
       try {
         result = await signer.sign(

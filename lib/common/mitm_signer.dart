@@ -49,19 +49,28 @@ class MitmSignRequest {
     required this.reqId,
     required this.host,
     required this.spki,
+    this.managedRelay = false,
   });
 
-  factory MitmSignRequest.fromJson(Map<String, Object?> json) {
+  factory MitmSignRequest.fromJson(
+    Map<String, Object?> json, {
+    bool managedRelay = false,
+  }) {
     return MitmSignRequest(
       reqId: (json['reqId'] as num).toInt(),
       host: json['host'] as String,
       spki: base64.decode(json['spki'] as String),
+      managedRelay: managedRelay,
     );
   }
 
   final int reqId;
   final String host;
   final Uint8List spki;
+
+  /// Whether it came over the helper's relay, the only channel whose Core
+  /// the identity check speaks for.
+  final bool managedRelay;
 }
 
 class MitmSignResult {

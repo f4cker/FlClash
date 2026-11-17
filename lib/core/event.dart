@@ -56,10 +56,11 @@ abstract mixin class CoreEventListener {
 }
 
 class CoreEventManager {
-  final _controller = StreamController<CoreEvent>();
+  final _controller = StreamController<(CoreEvent, bool)>();
 
   CoreEventManager._() {
-    _controller.stream.listen((event) {
+    _controller.stream.listen((item) {
+      final (event, managedRelay) = item;
       for (final CoreEventListener listener in List.of(_listeners)) {
         try {
           switch (event.type) {
@@ -123,7 +124,10 @@ class CoreEventManager {
               break;
             case CoreEventType.mitmSign:
               listener.onMitmSign(
-                MitmSignRequest.fromJson(Map<String, Object?>.from(event.data)),
+                MitmSignRequest.fromJson(
+                  Map<String, Object?>.from(event.data),
+                  managedRelay: managedRelay,
+                ),
               );
               break;
           }
@@ -146,8 +150,10 @@ class CoreEventManager {
     return _listeners.isNotEmpty;
   }
 
-  void sendEvent(CoreEvent event) {
-    _controller.add(event);
+  /// [managedRelay]: the event came over the macOS helper's relay, from the
+  /// Core the helper started.
+  void sendEvent(CoreEvent event, {bool managedRelay = false}) {
+    _controller.add((event, managedRelay));
   }
 
   void addListener(CoreEventListener listener) {
