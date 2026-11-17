@@ -5329,6 +5329,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperCheckAgain => '重新检查';
 
   @override
+  String get macHelperRepair => '修复';
+
+  @override
   String get macHelperUnavailableDetail => '辅助程序尚未就绪，TUN 暂时无法启动。你的 TUN 设置已保留。';
 
   @override
@@ -6317,6 +6320,12 @@ class AppLocalizationsZh extends AppLocalizations {
       '解密已暂停：无法验证信任或签名器状态。正常情况下约 26 秒内检测到变化；睡眠或系统卡顿可能更久。';
 
   @override
+  String get mitmNotApplied => '解密未生效：设置还没应用到内核';
+
+  @override
+  String get mitmTurnOffFailed => '没能在内核中关闭解密，请重启内核';
+
+  @override
   String get mitmPausedIndicatorPending => '解密已暂停：尚未提供必需的常驻解密指示。';
 
   @override
@@ -6350,6 +6359,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmPauseNotTrusted => '根证书未生成或未受信任';
+
+  @override
+  String get mitmPartialConnections => '部分连接可能未解密';
 
   @override
   String get mitmPauseLiveness => '无法确认信任和签名状态';

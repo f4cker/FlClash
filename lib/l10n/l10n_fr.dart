@@ -5850,6 +5850,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get macHelperCheckAgain => 'Vérifier à nouveau';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       'Flash ne peut pas joindre l’assistant pour le moment. TUN ne peut pas démarrer. Votre réglage TUN est conservé.';
 
@@ -6893,6 +6896,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Déchiffrement en pause : confiance ou signature non vérifiable. Détection normalement en 26 secondes environ ; une veille ou un blocage peut la retarder.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
+  String get mitmTurnOffFailed =>
+      'Could not turn decryption off in the core. Restart the core.';
+
+  @override
   String get mitmPausedIndicatorPending =>
       'Déchiffrement en pause : l’indicateur permanent requis est indisponible.';
 
@@ -6930,6 +6941,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mitmPauseNotTrusted => 'certificat racine absent ou non approuvé';
+
+  @override
+  String get mitmPartialConnections =>
+      'Certaines connexions peuvent ne pas être déchiffrées';
 
   @override
   String get mitmPauseLiveness =>

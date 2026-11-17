@@ -65,8 +65,10 @@ enum MacHelperState {
     'unsupported' => unsupported,
     'disabled' => disabled,
     'exitUnconfirmed' => exitUnconfirmed,
-    // The bridge reports `unavailable` when an approved daemon does not answer yet.
-    'unavailable' => starting,
+    // The bridge reports `unavailable` when an approved daemon does not answer
+    // yet, and `timeout` when it did not answer in time: both are a wait (and
+    // "taking longer" after the bounded start-up wait), never a Core claim.
+    'unavailable' || 'timeout' => starting,
     _ => unavailable,
   };
 }
@@ -247,9 +249,17 @@ final class MacHelperClient {
   ]) async {
     if (_safeMode()) return MacHelperState.disabled;
     try {
-      final state = _record(await _native.invoke(method, arguments));
-      if (_session != null && _relay?.active != true) {
-        return MacHelperState.exitUnconfirmed;
+      final answer = await _native.invoke(method, arguments);
+      final state = _record(answer);
+      // A session this app could not stop. Only the daemon can settle it: once
+      // it answers that it owns no Core, the session is gone; while it still
+      // owns one (or cannot tell), the ready state is not claimed. Any other
+      // state describes the helper itself and is shown as is.
+      if (_session != null &&
+          _relay?.active != true &&
+          state == MacHelperState.enabled) {
+        if (!_confirmsNoCore(answer)) return MacHelperState.exitUnconfirmed;
+        _forgetSession();
       }
       return state;
     } on Exception {
@@ -259,6 +269,19 @@ final class MacHelperClient {
   }
 
   Future<MacHelperState> status() => _call('status');
+
+  /// The daemon's own word that no Core of it runs: no child and its exit
+  /// confirmed. Absent fields (no authenticated reply) never confirm.
+  static bool _confirmsNoCore(Map<Object?, Object?> answer) =>
+      answer['exitConfirmed'] == true && answer['pid'] == 0;
+
+  void _forgetSession() {
+    final session = _session;
+    final relay = _relay;
+    _session = null;
+    _lastStopped = session;
+    if (relay != null) _disconnect(relay);
+  }
 
   /// Remove the old helper (one administrator prompt) and register the daemon.
   Future<MacHelperState> migrate({required bool confirmed}) {
@@ -344,9 +367,13 @@ final class MacHelperClient {
       final result = await _invokeWithBackpressure('stop', {
         'session': session,
       }, () => identical(relay, _relay) && _session == session);
-      if (result['code'] != 'ok' || result['exitConfirmed'] != true) {
-        return false;
-      }
+      // Stopped, or the daemon owns no Core at all (for example it was
+      // restarted and no longer knows this session).
+      final confirmed =
+          result['exitConfirmed'] == true &&
+          (result['code'] == 'ok' || result['pid'] == 0);
+      // A status meanwhile may have heard from the daemon that no Core runs.
+      if (!confirmed) return _session == null && _lastStopped == session;
       if (!identical(relay, _relay)) return true;
       _session = null;
       _lastStopped = session;

@@ -34,12 +34,16 @@ void main() {
       bool coreRefused = false,
       MitmStatus? status = const MitmStatus(enable: true),
       bool decrypting = false,
+      bool trusted = false,
+      bool hostsListed = false,
     }) => mitmIndicatorOf(
       enabled: enabled,
       coreConnected: coreConnected,
       coreRefused: coreRefused,
       status: status,
       decrypting: decrypting,
+      trusted: trusted,
+      hostsListed: hostsListed,
     );
 
     test('says nothing while decryption is off', () {
@@ -65,6 +69,7 @@ void main() {
 
     test('names why it is paused', () {
       const cases = {
+        'partialConnections': MitmPauseReason.partialConnections,
         'livenessUnavailable': MitmPauseReason.liveness,
         'trustUnavailable': MitmPauseReason.liveness,
         'indicatorPending': MitmPauseReason.indicatorPending,
@@ -94,8 +99,63 @@ void main() {
       );
     });
 
+    test(
+      'a Core that does not decrypt is "not trusted" only without trust',
+      () {
+        // Trust missing on this device: the old wording, listed hosts or not.
+        for (final listed in [false, true]) {
+          expect(
+            of(status: const MitmStatus(), hostsListed: listed),
+            const MitmIndicator.paused(MitmPauseReason.notTrusted),
+          );
+        }
+        // Trusted and hosts listed: the settings did not reach the Core.
+        expect(
+          of(status: const MitmStatus(), trusted: true, hostsListed: true),
+          const MitmIndicator.paused(MitmPauseReason.notApplied),
+        );
+        // Trusted with nothing listed: nothing to decrypt, nothing missing.
+        expect(
+          of(status: const MitmStatus(), trusted: true),
+          const MitmIndicator.on(),
+        );
+        // The Core's own answer still wins once it decrypts.
+        expect(of(trusted: true, hostsListed: true), const MitmIndicator.on());
+        expect(
+          of(status: null, trusted: true, hostsListed: true),
+          const MitmIndicator.unconfirmed(),
+        );
+      },
+    );
+
+    test('"not applied" reads as its own sentence', () {
+      const indicator = MitmIndicator.paused(MitmPauseReason.notApplied);
+      expect(
+        mitmIndicatorText(
+          lookupAppLocalizations(const Locale('zh')),
+          indicator,
+        ),
+        '解密未生效：设置还没应用到内核',
+      );
+      expect(
+        mitmIndicatorText(
+          lookupAppLocalizations(const Locale('en')),
+          indicator,
+        ),
+        'Decryption not active: settings not applied to the core yet',
+      );
+    });
+
     test('reads in full with its reason', () {
       final l = lookupAppLocalizations(const Locale('zh'));
+      final en = lookupAppLocalizations(const Locale('en'));
+      const partial = MitmIndicator.paused(MitmPauseReason.partialConnections);
+      expect(mitmIndicatorLabel(l, partial), '部分连接可能未解密');
+      expect(mitmIndicatorText(l, partial), '部分连接可能未解密');
+      expect(
+        mitmIndicatorLabel(en, partial),
+        'Some connections may not be decrypted',
+      );
       expect(mitmIndicatorText(l, const MitmIndicator.on()), '解密已开启');
       expect(mitmIndicatorText(l, const MitmIndicator.decrypting()), '正在解密');
       expect(
@@ -105,7 +165,6 @@ void main() {
         ),
         '解密已暂停：根证书未生成或未受信任',
       );
-      final en = lookupAppLocalizations(const Locale('en'));
       expect(mitmIndicatorText(en, const MitmIndicator.on()), 'Decryption on');
       expect(
         mitmIndicatorText(

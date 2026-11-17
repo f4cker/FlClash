@@ -31,7 +31,14 @@ enum MacHelperCardKind {
   exitUnconfirmed,
 }
 
-enum MacHelperCardAction { migrate, retry, openSettings, recheck, viewDetails }
+enum MacHelperCardAction {
+  migrate,
+  retry,
+  openSettings,
+  recheck,
+  repair,
+  viewDetails,
+}
 
 final class MacHelperCardView {
   final MacHelperCardKind kind;
@@ -210,6 +217,8 @@ MacHelperCardView macHelperCardView(
       detail: l.macHelperStatusUnknown,
       progress: busyText,
       primary: MacHelperCardAction.recheck,
+      // Stops the Core, then retires a stale daemon or registers it again.
+      secondary: MacHelperCardAction.repair,
     ),
   };
 }
@@ -220,6 +229,7 @@ String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
       MacHelperCardAction.retry => l.macHelperTryAgain,
       MacHelperCardAction.openSettings => l.macHelperOpenSettings,
       MacHelperCardAction.recheck => l.macHelperCheckAgain,
+      MacHelperCardAction.repair => l.macHelperRepair,
       MacHelperCardAction.viewDetails => l.macHelperViewDetails,
     };
 
@@ -429,6 +439,9 @@ class _MacHelperCardState extends State<MacHelperCard> {
         unawaited(flow.openSettings());
       case MacHelperCardAction.recheck:
         unawaited(flow.recheck());
+      case MacHelperCardAction.repair:
+        setState(() => _details = false);
+        unawaited(flow.repair());
       case MacHelperCardAction.viewDetails:
         setState(() => _details = !_details);
     }

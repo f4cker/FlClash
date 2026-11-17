@@ -5797,6 +5797,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get macHelperCheckAgain => 'Проверить снова';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       'Сейчас Flash не может подключиться к помощнику, поэтому TUN не запускается. Настройка TUN сохранена.';
 
@@ -6843,6 +6846,14 @@ class AppLocalizationsRu extends AppLocalizations {
       'Расшифровка приостановлена: не удалось проверить доверие или подпись. Обычно изменения обнаруживаются примерно за 26 секунд; сон или задержки системы могут увеличить время.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
+  String get mitmTurnOffFailed =>
+      'Could not turn decryption off in the core. Restart the core.';
+
+  @override
   String get mitmPausedIndicatorPending =>
       'Расшифровка приостановлена: обязательный постоянный индикатор недоступен.';
 
@@ -6879,6 +6890,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get mitmPauseNotTrusted =>
       'корневой сертификат отсутствует или не доверен';
+
+  @override
+  String get mitmPartialConnections =>
+      'Некоторые соединения могут не расшифровываться';
 
   @override
   String get mitmPauseLiveness =>

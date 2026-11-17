@@ -183,6 +183,35 @@ Future<void> _until(bool Function() condition) async {
 Matcher _helperCode(String code) =>
     isA<MacHelperException>().having((error) => error.code, 'code', code);
 
+/// A native side driven by a script, for update / lost-connection sequences.
+final class _ScriptNative implements MacHelperNativeApi {
+  final calls = <String>[];
+  final Map<Object?, Object?> Function(String method) answer;
+
+  _ScriptNative(this.answer);
+
+  @override
+  Future<Map<Object?, Object?>> invoke(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) async {
+    calls.add(method);
+    return answer(method);
+  }
+}
+
+Map<Object?, Object?> _daemon(String code, {int pid = 0, bool? confirmed}) => {
+  'code': code,
+  'protocol': 1,
+  'pid': pid,
+  'exitConfirmed': confirmed ?? pid == 0,
+};
+
+const _applied = CoreLifecycleResult(
+  revision: 1,
+  outcome: CoreLifecycleOutcome.applied,
+);
+
 void main() {
   test('helper migration is explicit and never blocks owned stop', () async {
     final native = _Native()..state = 'migrationRequired';
@@ -1166,4 +1195,181 @@ void main() {
       },
     );
   }
+
+  group('recovery after a helper update or a lost connection', () {
+    test('a request timeout is a wait, never "exit unconfirmed"', () async {
+      expect(MacHelperState.parse('timeout'), MacHelperState.starting);
+      final client = MacHelperClient(
+        native: _ScriptNative((_) => {'code': 'timeout'}),
+      );
+      expect(await client.status(), MacHelperState.starting);
+      expect(client.lastCode, 'timeout');
+    });
+
+    test(
+      'a start that timed out and a stop on the reset connection that failed '
+      'are settled by the daemon reporting no Core',
+      () async {
+        var core = 0;
+        var stopAnswer = <Object?, Object?>{'code': 'timeout'};
+        final native = _ScriptNative(
+          (method) => switch (method) {
+            'status' => {
+              'code': 'enabled',
+              'protocol': 1,
+              'pid': core,
+              'exitConfirmed': core == 0,
+            },
+            // The bridge gave up waiting (cold first start after an update).
+            'start' => {'code': 'timeout'},
+            'stop' => stopAnswer,
+            _ => {'code': 'ok'},
+          },
+        );
+        final client = MacHelperClient(native: native);
+        await expectLater(
+          client.start(_session),
+          throwsA(_helperCode('timeout')),
+        );
+        expect(native.calls, ['status', 'start', 'stop']);
+        expect(client.hasCoreSession, isTrue);
+        // The daemon still owns the Core: nothing claims "ready".
+        core = 42;
+        expect(await client.status(), MacHelperState.exitUnconfirmed);
+        expect(client.hasCoreSession, isTrue);
+        // It stopped the Core of the connection that went away.
+        core = 0;
+        expect(await client.status(), MacHelperState.enabled);
+        expect(client.hasCoreSession, isFalse);
+        expect(await client.stop(_session), isTrue);
+        // And a new start is possible again.
+        stopAnswer = _daemon('ok');
+        expect(await client.status(), MacHelperState.enabled);
+      },
+    );
+
+    test('the session is not masked over other helper states', () async {
+      var state = <Object?, Object?>{'code': 'timeout'};
+      final native = _ScriptNative(
+        (method) => switch (method) {
+          'status' => state,
+          'start' => {'code': 'timeout'},
+          _ => {'code': 'timeout'},
+        },
+      );
+      final client = MacHelperClient(native: native);
+      state = _daemon('enabled');
+      await expectLater(client.start(_session), throwsA(anything));
+      expect(client.hasCoreSession, isTrue);
+      state = {'code': 'timeout'};
+      expect(await client.status(), MacHelperState.starting);
+      state = {'code': 'staleHelper'};
+      expect(await client.status(), MacHelperState.staleHelper);
+      // Unauthenticated or partial answers never release the session.
+      state = {'code': 'enabled'};
+      expect(await client.status(), MacHelperState.exitUnconfirmed);
+      state = {'code': 'enabled', 'pid': 0};
+      expect(await client.status(), MacHelperState.exitUnconfirmed);
+      expect(client.hasCoreSession, isTrue);
+    });
+
+    test('stop accepts the daemon saying it owns no Core, even for an unknown '
+        'session', () async {
+      var stop = _daemon('wrongOwner', pid: 42, confirmed: false);
+      final native = _ScriptNative(
+        (method) => switch (method) {
+          'status' => _daemon('enabled'),
+          'start' => _daemon('ok', pid: 42, confirmed: false),
+          'stop' => stop,
+          _ => {'code': 'ok'},
+        },
+      );
+      final client = MacHelperClient(native: native);
+      expect(await client.start(_session), 42);
+      expect(await client.stop(_session), isFalse);
+      expect(client.hasCoreSession, isTrue);
+      // wrongOwner with a running child is not a confirmation either.
+      stop = {...stop, 'exitConfirmed': true};
+      expect(await client.stop(_session), isFalse);
+      stop = _daemon('wrongOwner');
+      expect(await client.stop(_session), isTrue);
+      expect(client.hasCoreSession, isFalse);
+    });
+
+    test('stale daemon is rechecked without registration changes', () async {
+      var oldDaemon = true;
+      final native = _ScriptNative(
+        (method) => method == 'status'
+            ? oldDaemon
+                  ? {'code': 'staleHelper'}
+                  : _daemon('enabled')
+            : {'code': 'ok'},
+      );
+      final flow = MacHelperMaintenance(
+        MacHelperClient(native: native),
+        stop: () async => _applied,
+        startTimeout: const Duration(milliseconds: 20),
+        stalePoll: const Duration(milliseconds: 40),
+      );
+      expect(await flow.check(), MacHelperState.staleHelper);
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+      expect(flow.startSlow, isTrue);
+      expect(native.calls, ['status']);
+      oldDaemon = false;
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      expect(flow.state, MacHelperState.enabled);
+      expect(native.calls, ['status', 'status']);
+      flow.dispose();
+    });
+
+    test('repair from "Core state unconfirmed" stops the Core first and '
+        'clears the state once the daemon confirms', () async {
+      final steps = <String>[];
+      var core = 42;
+      final native = _ScriptNative((method) {
+        steps.add(method);
+        return switch (method) {
+          'status' => _daemon('enabled', pid: core, confirmed: core == 0),
+          'start' => {'code': 'timeout'},
+          'stop' => {'code': 'timeout'},
+          'repair' => () {
+            core = 0;
+            return _daemon('enabled');
+          }(),
+          _ => {'code': 'ok'},
+        };
+      });
+      final client = MacHelperClient(native: native);
+      core = 0;
+      await expectLater(client.start(_session), throwsA(anything));
+      core = 42;
+      final flow = MacHelperMaintenance(
+        client,
+        stop: () async {
+          steps.add('appStop');
+          return _applied;
+        },
+      );
+      expect(await flow.check(), MacHelperState.exitUnconfirmed);
+      final l = lookupAppLocalizations(const Locale('en'));
+      final view = macHelperCardView(l, flow);
+      expect(view.kind, MacHelperCardKind.exitUnconfirmed);
+      expect(view.primary, MacHelperCardAction.recheck);
+      expect(view.secondary, MacHelperCardAction.repair);
+      expect(macHelperActionLabel(l, MacHelperCardAction.repair), 'Repair');
+      expect(
+        macHelperActionLabel(
+          lookupAppLocalizations(const Locale('zh')),
+          MacHelperCardAction.repair,
+        ),
+        '修复',
+      );
+      steps.clear();
+      expect(await flow.repair(), MacHelperState.enabled);
+      expect(steps, ['appStop', 'repair']);
+      expect(client.hasCoreSession, isFalse);
+      expect(macHelperCardView(l, flow).kind, MacHelperCardKind.ready);
+      flow.dispose();
+    });
+  });
 }

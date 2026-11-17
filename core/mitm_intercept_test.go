@@ -17,19 +17,16 @@ import (
 
 // The always-visible indicator exists, so the TCP hook is installed; it still
 // decrypts nothing unless decryption is set up with a CA and listed hosts.
-// QUIC blocking stays off until signer and trust liveness can be verified.
+// QUIC blocking also requires a recent host-specific signer proof.
 func TestInterceptionGatedOnVisibleIndicator(t *testing.T) {
 	if !mitmIndicatorAvailable {
 		t.Fatal("the always-visible indicator gate is expected on for this build")
 	}
-	if mitmQUICLivenessAvailable {
-		t.Fatal("QUIC blocking requires verified signer and trust liveness")
-	}
 	if tunnel.TCPIntercept == nil || tunnel.TCPInterceptWanted == nil {
 		t.Fatal("the TCP interception hooks must be installed when the indicator is available")
 	}
-	if tunnel.UDPDrop != nil {
-		t.Fatal("the UDP drop hook must stay uninstalled while QUIC liveness is unavailable")
+	if tunnel.UDPDrop == nil {
+		t.Fatal("the UDP drop hook must be installed when the indicator is available")
 	}
 	original := mitmState.Load()
 	defer mitmState.Store(original)
@@ -45,7 +42,7 @@ func TestInterceptionGatedOnVisibleIndicator(t *testing.T) {
 		t.Fatalf("status without setup = %+v", status)
 	}
 	if mitmDropsUDP(&C.Metadata{DstPort: 443, Host: "example.com"}) {
-		t.Fatal("QUIC must pass through while QUIC liveness is unavailable")
+		t.Fatal("QUIC must pass through while decryption is not set up")
 	}
 }
 

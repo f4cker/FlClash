@@ -691,6 +691,20 @@ void main() {
     });
   });
 
+  test('MITM settings are sent on their own, null for off', () async {
+    final handler = _RecordingCoreHandler();
+    const setup = {
+      'enable': true,
+      'hostname': ['a.example'],
+    };
+
+    await handler.updateMitm(setup);
+    expect(handler.calls[CoreMethod.mitmUpdate], {'setup': setup});
+
+    await handler.updateMitm(null);
+    expect(handler.calls[CoreMethod.mitmUpdate], {'setup': null});
+  });
+
   test('captured requests are listed by connection and read by id', () async {
     final handler = _RecordingCoreHandler();
 

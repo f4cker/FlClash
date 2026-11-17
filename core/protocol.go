@@ -92,6 +92,8 @@ const (
 	mitmBodyMethod                CoreMethod = "mitm.body"
 	mitmStatusMethod              CoreMethod = "mitm.status"
 	mitmSignResultMethod          CoreMethod = "mitm.signResult"
+	mitmDisableMethod             CoreMethod = "mitm.disable"
+	mitmUpdateMethod              CoreMethod = "mitm.update"
 
 	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
 	tailscaleStatusMethod        CoreMethod = "tailscale.status"
@@ -147,6 +149,8 @@ type DecryptConfigParams struct {
 }
 
 type SetupParams struct {
+	mitmManaged bool
+
 	Base        *SetupBase        `json:"base,omitempty"`
 	SelectedMap map[string]string `json:"selected-map"`
 	Options     CoreOptions       `json:"options"`

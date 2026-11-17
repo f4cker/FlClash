@@ -5633,6 +5633,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get macHelperCheckAgain => '再確認';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       '現在 Flash はヘルパーに接続できないため、TUN を開始できません。TUN の設定は保持されています。';
 
@@ -6655,6 +6658,14 @@ class AppLocalizationsJa extends AppLocalizations {
       '復号を一時停止：信頼または署名機能を確認できません。通常は約26秒以内に検出しますが、スリープや停止時は長くなることがあります。';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
+  String get mitmTurnOffFailed =>
+      'Could not turn decryption off in the core. Restart the core.';
+
+  @override
   String get mitmPausedIndicatorPending => '復号を一時停止：必要な常時表示インジケーターがありません。';
 
   @override
@@ -6688,6 +6699,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mitmPauseNotTrusted => 'ルート証明書がないか信頼されていない';
+
+  @override
+  String get mitmPartialConnections => '一部の接続は復号されない可能性があります';
 
   @override
   String get mitmPauseLiveness => '信頼と署名の状態を確認できない';

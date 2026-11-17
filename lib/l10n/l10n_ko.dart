@@ -5706,6 +5706,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get macHelperCheckAgain => '다시 확인';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       '현재 Flash가 도우미에 연결할 수 없어 TUN을 시작할 수 없습니다. TUN 설정은 유지됩니다.';
 
@@ -6728,6 +6731,14 @@ class AppLocalizationsKo extends AppLocalizations {
       '복호화 일시 중지: 신뢰 또는 서명 상태를 확인할 수 없습니다. 일반적으로 약 26초 내에 감지하지만 절전이나 시스템 중단 시 더 오래 걸릴 수 있습니다.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
+  String get mitmTurnOffFailed =>
+      'Could not turn decryption off in the core. Restart the core.';
+
+  @override
   String get mitmPausedIndicatorPending => '복호화 일시 중지: 필수 상시 표시기가 아직 없습니다.';
 
   @override
@@ -6761,6 +6772,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmPauseNotTrusted => '루트 인증서가 없거나 신뢰되지 않음';
+
+  @override
+  String get mitmPartialConnections => '일부 연결이 복호화되지 않을 수 있습니다';
 
   @override
   String get mitmPauseLiveness => '신뢰 및 서명 상태를 확인할 수 없음';

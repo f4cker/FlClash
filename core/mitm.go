@@ -1,8 +1,11 @@
 package core
 
 import (
+	"reflect"
+	"sync"
 	"sync/atomic"
 
+	"github.com/metacubex/mihomo/log"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -39,12 +42,14 @@ var mitmRuleLists = []string{"hostname", "url-rewrite", "header-rewrite", "body-
 type mitmRuntime struct {
 	setup   MitmSetup
 	hosts   *mitmHostMatcher
-	ignored int
+	ignored atomic.Int64
 }
 
 var (
-	mitmState   atomic.Pointer[mitmRuntime]
-	mitmCapture atomic.Bool
+	mitmState     atomic.Pointer[mitmRuntime]
+	mitmCapture   atomic.Bool
+	mitmIntentMu  sync.Mutex
+	mitmIntentSeq uint64
 )
 
 // The candidate is the whole config about to run, the subscription's base and
@@ -55,8 +60,31 @@ func applyMitmSetup(params *SetupParams, candidate []byte) {
 		runtime.setup = *params.Mitm
 		runtime.hosts = compileMitmHosts(params.Mitm.Hostname)
 	}
-	runtime.ignored = profileMitmHostnames(candidate)
+	runtime.ignored.Store(int64(profileMitmHostnames(candidate)))
 	replaceMitmRuntime(runtime)
+}
+
+func updateMitmIgnored(candidate []byte) {
+	ignored := int64(profileMitmHostnames(candidate))
+	for {
+		runtime := mitmState.Load()
+		if runtime == nil {
+			runtime = &mitmRuntime{}
+			if !mitmState.CompareAndSwap(nil, runtime) {
+				continue
+			}
+		}
+		runtime.ignored.Store(ignored)
+		return
+	}
+}
+
+func markMitmIntent(seq uint64) {
+	mitmIntentMu.Lock()
+	if seq > mitmIntentSeq {
+		mitmIntentSeq = seq
+	}
+	mitmIntentMu.Unlock()
 }
 
 func profileMitmHostnames(config []byte) int {
@@ -82,19 +110,77 @@ func mitmDecrypts(host string) bool {
 	return runtime.decrypting() && runtime.hosts.Match(host)
 }
 
+// Turns decryption off without a setup, so the app's "off" reaches the Core
+// even when a setup cannot be made or is refused. Ending decryption needs
+// nothing checked; a Core already not decrypting is left as it is.
+func handleMitmDisable() {
+	previous := mitmState.Load()
+	if !previous.decrypting() {
+		return
+	}
+	runtime := &mitmRuntime{}
+	runtime.ignored.Store(previous.ignored.Load())
+	replaceMitmRuntime(runtime)
+	log.Infoln("[MITM] decryption turned off")
+}
+
+type MitmUpdateParams struct {
+	// Null turns decryption off.
+	Setup *MitmSetup `json:"setup"`
+}
+
+// Hands the Core new MITM settings (on/off, trusted CA, hosts, limits)
+// without a config reload, so no connection outside decryption is touched:
+// only decrypted sessions end, and only when the settings really changed.
+// Serialised with profile setup, which does not change these settings.
+func handleMitmUpdate(params MitmUpdateParams) error {
+	return handleMitmUpdateSeq(params, 0)
+}
+
+func handleMitmUpdateSeq(params MitmUpdateParams, seq uint64) error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	mitmIntentMu.Lock()
+	defer mitmIntentMu.Unlock()
+	if seq != 0 && seq != mitmIntentSeq {
+		return nil
+	}
+	previous := mitmState.Load()
+	runtime := &mitmRuntime{}
+	if previous != nil {
+		runtime.ignored.Store(previous.ignored.Load())
+	}
+	if params.Setup != nil {
+		runtime.setup = *params.Setup
+		runtime.hosts = compileMitmHosts(params.Setup.Hostname)
+	}
+	if previous != nil && reflect.DeepEqual(previous.setup, runtime.setup) {
+		return nil
+	}
+	replaceMitmRuntime(runtime)
+	log.Infoln("[MITM] settings updated: decrypting=%v hosts=%d", runtime.decrypting(), runtime.hosts.Len())
+	return nil
+}
+
 func handleMitmStatus() MitmStatus {
+	return mitmStatus(mitmIndicatorAvailable)
+}
+
+func mitmStatus(indicatorAvailable bool) MitmStatus {
 	runtime := mitmState.Load()
 	status := MitmStatus{Capture: mitmCapture.Load()}
 	if runtime != nil {
 		status.Enable = runtime.decrypting()
 		status.Hostnames = runtime.hosts.Len()
-		status.IgnoredHostnames = runtime.ignored
+		status.IgnoredHostnames = int(runtime.ignored.Load())
 	}
 	if status.Enable {
-		if !mitmIndicatorAvailable {
+		if !indicatorAvailable {
 			status.Paused = "indicatorPending"
+		} else if reason := mitmPausedReason(); reason != "" {
+			status.Paused = reason
 		} else {
-			status.Paused = mitmPausedReason()
+			status.Paused = "partialConnections"
 		}
 	}
 	return status

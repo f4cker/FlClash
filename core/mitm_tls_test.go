@@ -472,7 +472,7 @@ func TestMitmSelectorInterceptsFragmentedHello(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		client := N.NewBufferedConn(proxyRaw)
-		selected := mitmInterceptEligible(client, &C.Metadata{Host: "example.com"})
+		selected := mitmInterceptEligible(client, &C.Metadata{Host: "example.com", DstPort: 443})
 		if selected == nil {
 			done <- errors.New("selector returned passthrough")
 			return
@@ -529,7 +529,7 @@ func TestMitmSelectorFragmentedHelloSignerUnavailableRelaysExactly(t *testing.T)
 	done := make(chan bool, 1)
 	go func() {
 		client := N.NewBufferedConn(proxyRaw)
-		selected := mitmInterceptEligible(client, &C.Metadata{Host: "example.com"})
+		selected := mitmInterceptEligible(client, &C.Metadata{Host: "example.com", DstPort: 443})
 		if selected == nil {
 			done <- false
 			return
@@ -584,7 +584,7 @@ func TestMitmSelectorPausedHostIsMarkedPassedThrough(t *testing.T) {
 			t.Fatal(err)
 		}
 		client := N.NewBufferedConn(proxyRaw)
-		return mitmInterceptEligible(client, &C.Metadata{Host: host}), original, client
+		return mitmInterceptEligible(client, &C.Metadata{Host: host, DstPort: 443}), original, client
 	}
 	selected, original, client := selectHost("example.com")
 	if selected == nil {

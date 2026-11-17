@@ -87,6 +87,8 @@ static NSString *FCRunningHash(void) {
         self.idle = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.queue);
         dispatch_source_set_event_handler(self.idle, ^{
             // On-demand daemon: leave when nobody uses it so a replaced (updated) binary is picked up next time.
+            // Uncertain ownership is retried here too so an unused daemon does not stay forever.
+            if (self.ownershipUncertain) [self recoverOwnership];
             if (self.child == 0 && !self.ownershipUncertain && self.connections == 0) exit(0);
             [self armIdle];
         });
@@ -141,6 +143,29 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     BOOL synced = fsync(directory) == 0;
     close(directory);
     return synced;
+}
+
+// While ownership is uncertain a Core copy from our runtime directory may still run. Retried on every
+// hello/start/stop/exit and on idle: prove (reaping if needed) that none survives, release the journal, and
+// only then accept work again. Fails closed: any doubt keeps the flag.
+- (BOOL)recoverOwnership {
+    if (!self.ownershipUncertain) return YES;
+    if (!FCReapOrphanedCores(FCRuntimeDirectory)) return NO;
+    NSString *journal = [FCRuntimeDirectory stringByAppendingPathComponent:@"child-owned"];
+    if (unlink(journal.fileSystemRepresentation)) {
+        if (errno != ENOENT) return NO;
+    } else if (![self syncRuntime]) return NO;
+    if (self.child > 0) {
+        int status;
+        waitpid(self.child, &status, WNOHANG);
+    }
+    self.child = 0;
+    self.journalOwned = NO;
+    if (self.corePath) { unlink(self.corePath.fileSystemRepresentation); self.corePath = nil; }
+    [self closeRelay];
+    FCRemoveStagedCores(FCRuntimeDirectory);
+    self.ownershipUncertain = NO;
+    return YES;
 }
 
 - (BOOL)confirmExit {
@@ -342,6 +367,8 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     NSString *session = rawSession ? @(rawSession) : @"";
     NSString *code = @"invalidRequest";
     NSData *frame = nil;
+    if (self.ownershipUncertain && ![action isEqualToString:@"send"] && ![action isEqualToString:@"receive"])
+        [self recoverOwnership];
     BOOL matching = FCOwnsSession((__bridge void *)self.owner, (__bridge void *)connection,
         self.uid, xpc_connection_get_euid(connection), self.session.UTF8String, session.UTF8String);
     if ([action isEqualToString:@"hello"]) {
@@ -352,8 +379,12 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     } else if ([action isEqualToString:@"exit"]) {
         // Lets the GUI retire a stale daemon after an app update; refused while a Core is owned.
         code = self.child == 0 && !self.ownershipUncertain ? @"ok" : @"sessionBusy";
+    } else if ([action isEqualToString:@"stop"]) {
+        // The owning connection, or a later one of the same user naming the running session.
+        BOOL mayStop = matching || FCMayStopSession((__bridge void *)self.owner, self.uid,
+            xpc_connection_get_euid(connection), self.session.UTF8String, session.UTF8String);
+        code = !mayStop ? @"wrongOwner" : [self stop] ? @"ok" : @"exitUnconfirmed";
     } else if (!matching) code = @"wrongOwner";
-    else if ([action isEqualToString:@"stop"]) code = [self stop] ? @"ok" : @"exitUnconfirmed";
     else if ([action isEqualToString:@"receive"]) frame = [self receive:&code];
     else if ([action isEqualToString:@"send"]) {
         size_t length = 0;
@@ -410,7 +441,7 @@ int main(void) {
         dispatch_source_t termination = dispatch_source_create(DISPATCH_SOURCE_TYPE_SIGNAL,
             SIGTERM, 0, supervisor.queue);
         dispatch_source_set_event_handler(termination, ^{
-            if ([supervisor stop]) exit(0);
+            if ([supervisor recoverOwnership] && [supervisor stop]) exit(0);
         });
         dispatch_resume(termination);
         dispatch_async(supervisor.queue, ^{ [supervisor armIdle]; });

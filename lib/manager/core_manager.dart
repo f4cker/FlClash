@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/core/core.dart';
@@ -18,6 +19,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prism_ui/banner.dart';
 
+bool _sameMitm(Map<String, Object?>? a, Map<String, Object?>? b) =>
+    const DeepCollectionEquality().equals(a, b);
+
 class CoreManager extends ConsumerStatefulWidget {
   final Widget child;
 
@@ -34,6 +38,38 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   @override
   Widget build(BuildContext context) {
     return widget.child;
+  }
+
+  DateTime? _mitmResent;
+
+  /// MITM settings (on/off, trusted CA, hosts, limits) reach the Core on
+  /// their own, never through a config reload: a change of trust or hosts
+  /// then ends only decrypted sessions, not every connection. A Core not
+  /// connected gets the current settings when it reconnects.
+  Future<void> _updateMitm({bool throttled = false}) async {
+    final now = DateTime.now();
+    final last = _mitmResent;
+    if (throttled &&
+        last != null &&
+        now.difference(last) < const Duration(seconds: 30)) {
+      return;
+    }
+    _mitmResent = now;
+    if (ref.read(coreStatusProvider) != CoreStatus.connected) return;
+    final setup = ref.read(mitmSetupProvider);
+    try {
+      await _core.updateMitm(setup);
+    } catch (error) {
+      commonPrint.log('mitm.update failed: $error', logLevel: LogLevel.error);
+      // Only the latest settings are worth a word.
+      if (!mounted || !_sameMitm(ref.read(mitmSetupProvider), setup)) return;
+      dialogs.showBanner(
+        setup == null
+            ? currentAppLocalizations.mitmTurnOffFailed
+            : currentAppLocalizations.mitmNotApplied,
+        level: BannerLevel.error,
+      );
+    }
   }
 
   @override
@@ -74,6 +110,20 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         }
       },
     );
+    ref.listenManual(mitmSetupProvider, (prev, next) {
+      if (mitmFeature && !_sameMitm(prev, next)) unawaited(_updateMitm());
+    });
+    // Trusted, hosts listed, yet the Core does not decrypt: its settings did
+    // not arrive. Send them again, at most once a while, so a failing update
+    // is reported rather than retried in a loop.
+    ref.listenManual(
+      mitmIndicatorProvider.select(
+        (indicator) => indicator?.reason == MitmPauseReason.notApplied,
+      ),
+      (prev, next) {
+        if (next && prev != true) unawaited(_updateMitm(throttled: true));
+      },
+    );
     ref.listenManual(mitmModulesProvider, (prev, next) {
       if (mitmFeature &&
           mitmModulesFeature &&
@@ -97,6 +147,7 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     ref.listenManual(coreStatusProvider, (prev, next) {
       if (next == CoreStatus.connected && prev != CoreStatus.connected) {
         _syncLogStream();
+        if (mitmFeature) unawaited(_updateMitm());
       }
     }, fireImmediately: true);
   }

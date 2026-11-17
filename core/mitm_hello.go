@@ -22,11 +22,23 @@ func (hello mitmClientHello) speaksHTTP1() bool {
 
 // Variables only so socket tests can shorten the waits.
 var (
-	mitmHelloWait = 2 * time.Second
-	// First-byte wait for IP-only flows to ports other than 443: SSH, SMTP,
-	// FTP and IMAP servers speak first, and their clients send nothing.
-	mitmFirstByteWait = 250 * time.Millisecond
+	// The whole peek, first byte to the end of the hello. A TLS client sends
+	// its ClientHello as its first flight, at once, and the leg it crosses
+	// here is the local one (TUN or a loopback/LAN inbound), already set up
+	// before the tunnel sees the connection; the tunnel's own 200 ms peek has
+	// run too. A hello still missing after this is passed through untouched
+	// (a listed host visibly), never failed, so a short bound only costs
+	// decryption of an odd client, while a long one holds every such flow.
+	mitmHelloWait = 750 * time.Millisecond
+	// The longest a flow on 443 waits for its first packet before it is
+	// dialled as it is: a client that has not spoken by then is not sending
+	// a ClientHello that could be decrypted in time anyway.
+	mitmFirstByteWait = 300 * time.Millisecond
 )
+
+// The tunnel's own asynchronous first-byte peek (tunnel.go), already spent
+// when a hook runs after it.
+const mitmTunnelPeekWait = 200 * time.Millisecond
 
 var errMitmNotHello = errors.New("not a TLS ClientHello")
 
@@ -49,13 +61,16 @@ func peekMitmClientHello(conn *N.BufferedConn) (mitmClientHello, error) {
 // wait; once a byte is in, the rest of the hello gets mitmHelloWait.
 func peekMitmClientHelloWithin(conn *N.BufferedConn, firstByteWait time.Duration) (mitmClientHello, error) {
 	defer conn.SetReadDeadline(time.Time{})
+	// One bound for the whole peek, so a slow first byte cannot add a second
+	// full wait for the rest.
+	deadline := time.Now().Add(mitmHelloWait)
 	if firstByteWait < mitmHelloWait && conn.Reader().Buffered() == 0 {
 		_ = conn.SetReadDeadline(time.Now().Add(firstByteWait))
 		if _, err := conn.Peek(1); err != nil {
 			return mitmClientHello{}, err
 		}
 	}
-	_ = conn.SetReadDeadline(time.Now().Add(mitmHelloWait))
+	_ = conn.SetReadDeadline(deadline)
 	// Accumulate handshake fragments only within BufferedConn's peek capacity;
 	// Peek never consumes bytes, including for malformed or oversized records.
 	var handshake []byte

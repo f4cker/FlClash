@@ -85,6 +85,7 @@ class SetupAction extends _$SetupAction {
   DateTime? _startTime;
   _SetupInputs? _appliedInputs;
   var _lastPushDuration = Duration.zero;
+  var _pendingShownApply = false;
   var _pendingForceApply = false;
   List<String> _lostMountSelections = const [];
 
@@ -124,12 +125,12 @@ class SetupAction extends _$SetupAction {
     selectedMap: ref.read(selectedMapProvider),
     options: ref.read(coreOptionsProvider),
     tailscale: ref.read(tailscaleSetupProvider),
-    mitm: ref.read(mitmSetupProvider),
   );
 
-  // The selection reaches the Core through changeProxy, not through an apply.
+  // The selection reaches the Core through changeProxy, and MITM settings
+  // through mitm.update, not through an apply.
   SetupParams get _appliedParams =>
-      _setupParams.copyWith(selectedMap: const {});
+      _setupParams.copyWith(selectedMap: const {}, mitm: null);
 
   Future<bool> fullSetup() async {
     if (!ref.read(initProvider)) return true;
@@ -159,6 +160,7 @@ class SetupAction extends _$SetupAction {
       _startTime = null;
       debouncer.cancel(FunctionTag.applyProfile);
       _pendingForceApply = false;
+      _pendingShownApply = false;
       _updateRunTime();
       return;
     }
@@ -814,14 +816,19 @@ class SetupAction extends _$SetupAction {
   @protected
   Duration get maxApplyDebounce => const Duration(seconds: 10);
 
+  /// Calls within one debounce window merge: forced if any call forces, and
+  /// shown (not silent) if any call asks to be shown.
   void applyProfileDebounce({bool silence = false, bool force = false}) {
     _pendingForceApply |= force;
+    _pendingShownApply |= !silence;
     debouncer.call(
       FunctionTag.applyProfile,
-      (silence) {
+      (_) {
         final force = _pendingForceApply;
+        final shown = _pendingShownApply;
         _pendingForceApply = false;
-        _applyAutomatic(silence: silence, force: force);
+        _pendingShownApply = false;
+        _applyAutomatic(silence: !shown, force: force);
       },
       args: [silence],
       duration: Duration(
@@ -1727,12 +1734,12 @@ class SetupAction extends _$SetupAction {
     // The panel-added accounts are not in the YAML, yet change what runs.
     final managed = setupParams.tailscale?.managed ?? const [];
     final mountRevision = setupParams.mounts?.revision ?? '';
-    final mitm = setupParams.mitm;
-    final yamlMd5 = (managed.isEmpty && mountRevision.isEmpty && mitm == null)
+    // MITM settings are not part of it: they reach the Core through
+    // mitm.update, so a change of trust or hosts never reloads the config
+    // (which would close every connection).
+    final yamlMd5 = (managed.isEmpty && mountRevision.isEmpty)
         ? realProfile.md5
-        : '${realProfile.md5}${json.encode(managed)}$mountRevision'
-                  '${mitm == null ? '' : json.encode(mitm)}'
-              .toMd5();
+        : '${realProfile.md5}${json.encode(managed)}$mountRevision'.toMd5();
     if (!adoptionPending && yamlMd5 == globalState.lastConfigMd5 && !force) {
       _appliedInputs = inputs;
       ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(

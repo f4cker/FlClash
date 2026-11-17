@@ -5804,6 +5804,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get macHelperCheckAgain => 'Check again';
 
   @override
+  String get macHelperRepair => 'Repair';
+
+  @override
   String get macHelperUnavailableDetail =>
       'The helper isn’t ready, so TUN can’t start yet. Your TUN setting is saved.';
 
@@ -6844,6 +6847,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.';
 
   @override
+  String get mitmNotApplied =>
+      'Decryption not active: settings not applied to the core yet';
+
+  @override
+  String get mitmTurnOffFailed =>
+      'Could not turn decryption off in the core. Restart the core.';
+
+  @override
   String get mitmPausedIndicatorPending =>
       'Decryption paused: the required always-visible indicator is not available.';
 
@@ -6880,6 +6891,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mitmPauseNotTrusted =>
       'root certificate is missing or not trusted';
+
+  @override
+  String get mitmPartialConnections => 'Some connections may not be decrypted';
 
   @override
   String get mitmPauseLiveness =>

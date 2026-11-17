@@ -9828,6 +9828,12 @@ abstract class AppLocalizations {
   /// **'Check again'**
   String get macHelperCheckAgain;
 
+  /// No description provided for @macHelperRepair.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair'**
+  String get macHelperRepair;
+
   /// No description provided for @macHelperUnavailableDetail.
   ///
   /// In en, this message translates to:
@@ -11555,6 +11561,18 @@ abstract class AppLocalizations {
   /// **'Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.'**
   String get mitmPausedLiveness;
 
+  /// No description provided for @mitmNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption not active: settings not applied to the core yet'**
+  String get mitmNotApplied;
+
+  /// No description provided for @mitmTurnOffFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not turn decryption off in the core. Restart the core.'**
+  String get mitmTurnOffFailed;
+
   /// No description provided for @mitmPausedIndicatorPending.
   ///
   /// In en, this message translates to:
@@ -11620,6 +11638,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'root certificate is missing or not trusted'**
   String get mitmPauseNotTrusted;
+
+  /// No description provided for @mitmPartialConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'Some connections may not be decrypted'**
+  String get mitmPartialConnections;
 
   /// No description provided for @mitmPauseLiveness.
   ///

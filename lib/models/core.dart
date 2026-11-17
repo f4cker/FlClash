@@ -116,8 +116,13 @@ enum MitmPauseReason {
   coreStopped,
   coreIdentity,
   notTrusted,
+
+  /// This device trusts the CA and hosts are listed, yet the Core does not
+  /// decrypt: the settings have not reached it (a setup failed or is pending).
+  notApplied,
   liveness,
   indicatorPending,
+  partialConnections,
   unavailable,
 }
 

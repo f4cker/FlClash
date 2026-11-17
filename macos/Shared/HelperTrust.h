@@ -23,9 +23,16 @@ NSDictionary *FCCanonicalDaemonPlist(void);
 BOOL FCDaemonPlistValid(id _Nullable plist);
 BOOL FCBundledDaemonPresent(NSString *bundle);
 
+// How the running daemon's cdhash compares with the bundled (on-disk) one, for a sender that passed every
+// other identity check: current, an older build still running after an app update (stale), or not acceptable.
+typedef NS_ENUM(NSInteger, FCRunningHashVerdict) { FCRunningHashCurrent, FCRunningHashStale, FCRunningHashInvalid };
+FCRunningHashVerdict FCCompareRunningHash(NSData * _Nullable runningHash, NSData * _Nullable diskHash);
 @interface FCMessageValidator : NSObject
 - (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable;
 - (BOOL)check:(xpc_object_t)message;
+// After a failed check: the sender is the pinned helper at the bundled path, only its running cdhash is not
+// the bundled one (a previous build's daemon still runs). Nothing in such a message is trusted or read.
+@property (readonly) BOOL runningCodeStale;
 @end
 @interface FCGUIMessageValidator : NSObject
 - (BOOL)check:(xpc_object_t)message;

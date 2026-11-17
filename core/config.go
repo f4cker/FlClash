@@ -168,6 +168,10 @@ func applyConfig(params *SetupParams) error {
 	defer configMu.Unlock()
 
 	refreshGuardSuffixes()
+	// Legacy direct setups without MITM turn it off even when refused.
+	if !params.mitmManaged && params.Mitm == nil {
+		handleMitmDisable()
+	}
 	var err error
 	if params.Mounts != nil {
 		err = checkMountedSetup(params)
@@ -213,7 +217,11 @@ func applyConfig(params *SetupParams) error {
 	}
 	clearTailscaleExit()
 	applyOptions(params.Options)
-	applyMitmSetup(params, candidateBytes)
+	if params.mitmManaged {
+		updateMitmIgnored(candidateBytes)
+	} else {
+		applyMitmSetup(params, candidateBytes)
+	}
 	setTailscaleSetup(params.Tailscale)
 	replaced := tailscaleGenerationMark()
 	markTailscaleReplaced(replaced)

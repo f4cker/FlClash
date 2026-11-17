@@ -567,18 +567,17 @@ void main() {
       }
     });
 
-    test('is applied with the profile, so setupOnly keeps it', () {
-      const mitm = Mitm(enable: true, hostname: ['a.com']);
-
-      expect(const PatchClashConfig(mitm: mitm).setupOnly.mitm, mitm);
-    });
-
-    test('capture reaches the Core in its options, so setupOnly drops it', () {
-      const mitm = Mitm(enable: true, capture: true);
+    test('reaches the Core through mitm.update, so setupOnly drops it', () {
+      const mitm = Mitm(
+        enable: true,
+        hostname: ['a.com'],
+        capture: true,
+        trustedFingerprint: 'fp',
+      );
 
       expect(
-        const PatchClashConfig(mitm: mitm).setupOnly.mitm,
-        mitm.copyWith(capture: false),
+        const PatchClashConfig(mitm: mitm).setupOnly,
+        defaultClashConfig.setupOnly,
       );
       expect(mitm.coreJson, isNot(contains('capture')));
     });
