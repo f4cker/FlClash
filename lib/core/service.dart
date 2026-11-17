@@ -11,8 +11,10 @@ import 'desktop/launcher.dart';
 import 'desktop/lifecycle.dart';
 import 'desktop/model.dart';
 import 'desktop/macos_helper_client.dart';
+import 'desktop/macos_boot_session.dart';
 import 'desktop/macos_helper_launcher.dart';
 import 'desktop/macos_helper_transport.dart';
+import 'desktop/macos_repair_record.dart';
 import 'desktop/rpc_client.dart';
 import 'desktop/transport.dart';
 import 'event.dart';
@@ -42,7 +44,8 @@ class CoreService extends CoreHandlerInterface {
     final directLauncher = DirectCoreLauncher();
 
     final managedMac = system.isMacOS && macosManagedHelperBuild;
-    final lifecycle = DesktopCoreLifecycle(
+    late final DesktopCoreLifecycle lifecycle;
+    lifecycle = DesktopCoreLifecycle(
       transport: managedMac
           ? MacHelperTransport(macosHelperClient)
           : IpcCoreTransport(address: address),
@@ -55,6 +58,29 @@ class CoreService extends CoreHandlerInterface {
               helperReady: () => helperClient.readiness(),
             ),
       verifyPeerPid: system.isWindows,
+      startBlocked: system.isMacOS
+          ? () => macosHelperClient.maintenanceInProgress
+          : null,
+      startGate: system.isMacOS
+          ? () async {
+              final record = await macRepairRecord();
+              if (!await record.isPending()) return;
+              await lifecycle.exclusiveStartCheck(() async {
+                if (managedMac && lifecycle.hasNoCore) {
+                  await record.clearAfterVerifiedReboot(
+                    verification: _MacRepairVerification(
+                      lifecycle,
+                      macosHelperClient,
+                      readMacBootSession,
+                    ),
+                  );
+                }
+                await requireMacRepairComplete(
+                  recordFactory: () async => record,
+                );
+              });
+            }
+          : null,
     );
     return CoreService._(
       lifecycle: lifecycle,
@@ -81,6 +107,56 @@ class CoreService extends CoreHandlerInterface {
         ),
       );
     });
+  }
+
+  Future<bool> canRetryMacExplicitRepair() async => (await macRepairRecord())
+      .canRetryExplicit(readBootSession: readMacBootSession);
+
+  Future<bool> recoverMacRepair() async {
+    final record = await macRepairRecord();
+    if (!await record.isPending()) return false;
+    if (!system.isMacOS ||
+        !macosManagedHelperBuild ||
+        _lifecycle is! DesktopCoreLifecycle) {
+      return true;
+    }
+    final lifecycle = _lifecycle;
+    return recoverMacRepairWithOwner(
+      lifecycle: lifecycle,
+      client: macosHelperClient,
+      record: record,
+      readBootSession: readMacBootSession,
+    );
+  }
+
+  Future<String> registerPendingMacRepair() async {
+    if (!system.isMacOS ||
+        !macosManagedHelperBuild ||
+        _lifecycle is! DesktopCoreLifecycle) {
+      throw const MacHelperException('unsupported');
+    }
+    return registerPendingMacRepairWithOwner(
+      lifecycle: _lifecycle,
+      client: macosHelperClient,
+      record: await macRepairRecord(),
+      readBootSession: readMacBootSession,
+    );
+  }
+
+  Future<String> repairMacHelper({required bool confirmed}) {
+    if (!confirmed ||
+        !system.isMacOS ||
+        !macosManagedHelperBuild ||
+        _lifecycle is! DesktopCoreLifecycle) {
+      throw const MacHelperException('consentRequired');
+    }
+    final lifecycle = _lifecycle;
+    return performMacExplicitRepair(
+      lifecycle: lifecycle,
+      client: macosHelperClient,
+      recordFactory: macRepairRecord,
+      readBootSession: readMacBootSession,
+    );
   }
 
   @override
@@ -123,3 +199,93 @@ class CoreService extends CoreHandlerInterface {
 }
 
 final coreService = system.isDesktop ? CoreService() : null;
+
+@visibleForTesting
+Future<String> performMacExplicitRepair({
+  required DesktopCoreLifecycle lifecycle,
+  required MacHelperClient client,
+  required Future<MacRepairRecord> Function() recordFactory,
+  required Future<String> Function() readBootSession,
+}) => client.maintain(
+  () => lifecycle.maintain(() async {
+    final record = await recordFactory();
+    if (await record.isPending()) {
+      await record.setExplicitNotStarted(
+        notStarted: false,
+        readBootSession: readBootSession,
+      );
+    } else {
+      await record.markPending(readBootSession: readBootSession);
+    }
+    // Only native's explicit pre-dispatch evidence permits another call.
+    // The record is made unknown again before every retry, including crashes.
+    for (var attempt = 0; ; attempt++) {
+      final result = await client.repairExplicit(confirmed: true);
+      if (!client.lastExplicitNotStarted) return result;
+      await record.setExplicitNotStarted(
+        notStarted: true,
+        readBootSession: readBootSession,
+      );
+      if (attempt == 10) return result;
+      await Future<void>.delayed(const Duration(seconds: 1));
+      await record.setExplicitNotStarted(
+        notStarted: false,
+        readBootSession: readBootSession,
+      );
+    }
+  }, allowUnconfirmedStop: true),
+);
+
+@visibleForTesting
+Future<String> registerPendingMacRepairWithOwner({
+  required DesktopCoreLifecycle lifecycle,
+  required MacHelperClient client,
+  required MacRepairRecord record,
+  required Future<String> Function() readBootSession,
+}) => client.maintain(
+  () => lifecycle.maintain(() async {
+    await record.markRegistrationAttemptAfterReboot(
+      readBootSession: readBootSession,
+    );
+    final result = await client.repairRegisterOnly();
+    if (client.lastRegistrationSettled) {
+      await record.markRegistrationSettled(readBootSession: readBootSession);
+    }
+    return result;
+  }),
+);
+
+@visibleForTesting
+Future<bool> recoverMacRepairWithOwner({
+  required DesktopCoreLifecycle lifecycle,
+  required MacHelperClient client,
+  required MacRepairRecord record,
+  required Future<String> Function() readBootSession,
+}) => client.maintain(
+  () => lifecycle.maintain(() async {
+    await record.clearAfterVerifiedReboot(
+      verification: _MacRepairVerification(lifecycle, client, readBootSession),
+    );
+    return record.isPending();
+  }),
+);
+
+final class _MacRepairVerification implements MacRepairVerification {
+  final DesktopCoreLifecycle lifecycle;
+  final MacHelperClient client;
+  final Future<String> Function() bootSession;
+
+  const _MacRepairVerification(this.lifecycle, this.client, this.bootSession);
+
+  @override
+  Future<String> readBootSession() => bootSession();
+
+  @override
+  Future<bool> verifyCurrentSignedAuthenticatedHelperAndNoGuiCore() async {
+    if (!lifecycle.hasNoCore || client.hasCoreSession) return false;
+    final state = await client.status();
+    return state == MacHelperState.enabled &&
+        lifecycle.hasNoCore &&
+        !client.hasCoreSession;
+  }
+}

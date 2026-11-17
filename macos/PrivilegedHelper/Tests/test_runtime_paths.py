@@ -61,9 +61,6 @@ int main(int argc, const char *argv[]) {
             assert(!FCStageCore(source, directory, FCSHA256(source)));
         } else if ([scenario isEqual:@"remove"]) {
             FCRemoveStagedCores(directory);
-        } else if ([scenario isEqual:@"no-orphans"]) {
-            assert(FCStagedCoreProcesses(directory).count == 0);
-            assert(FCReapOrphanedCores(directory));
         } else assert(NO);
     }
 }
@@ -116,7 +113,6 @@ class RuntimePathTests(unittest.TestCase):
             (runtime / 'child-owned').write_text('owned\n')
             self.run_fixture('remove', runtime)
             self.assertEqual(sorted(p.name for p in runtime.iterdir()), ['child-owned'])
-            self.run_fixture('no-orphans', runtime)
 
     def test_supervisor_spawns_only_the_verified_copy(self):
         start = function(SUPERVISOR, '- (NSString *)start:')

@@ -37,7 +37,7 @@ class InstallNative implements MacHelperNativeApi {
       'migrate' => pending?.future ?? migrateAnswer,
       'enable' => enableAnswer,
       'repair' => repairAnswer,
-      'openApprovalSettings' => const {'code': 'requiresApproval'},
+      'openApprovalSettings' => const {'code': 'settingsOpened'},
       _ => throw StateError('Unexpected native call: $method'),
     };
   }
@@ -228,7 +228,7 @@ void main() {
     );
   }
 
-  test('stale helper is asked to exit once, then waits', () async {
+  test('stale helper checks do not attempt repair', () async {
     final native = InstallNative()
       ..state = 'staleHelper'
       ..repairAnswer = {'code': 'staleHelper'};
@@ -236,16 +236,17 @@ void main() {
     addTearDown(flow.dispose);
     expect(await flow.check(), MacHelperState.staleHelper);
     expect(await flow.check(), MacHelperState.staleHelper);
-    expect(native.calls, ['status', 'repair', 'status']);
+    expect(native.calls, ['status', 'status']);
     native.state = 'enabled';
     expect(await flow.check(), MacHelperState.enabled);
   });
 
-  test('stale helper replaced by repair is ready', () async {
+  test('stale helper is not repaired by a status check', () async {
     final native = InstallNative()..state = 'staleHelper';
     final flow = makeMaintenance(native);
-    expect(await flow.check(), MacHelperState.enabled);
-    expect(native.calls, ['status', 'repair']);
+    addTearDown(flow.dispose);
+    expect(await flow.check(), MacHelperState.staleHelper);
+    expect(native.calls, ['status']);
   });
 
   test('startup joining migration cannot resume the feature', () async {

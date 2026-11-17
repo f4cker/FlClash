@@ -12,6 +12,13 @@ enum MacHelperProgress { idle, checking, updating, opening }
 final class MacHelperMaintenance extends ChangeNotifier {
   final MacHelperClient client;
   final Future<CoreLifecycleResult> Function() _stop;
+  final Future<String> Function()? _explicitRepair;
+  final Future<bool> Function()? _recoverRepair;
+  final Future<String> Function()? _registerRepair;
+  final Future<bool> Function()? _canRetryExplicit;
+  bool _explicitRetryAvailable = false;
+  bool _repairPending = false;
+  String? _repairError;
   final Duration startTimeout;
   final Duration startPoll;
   final Duration stalePoll;
@@ -31,17 +38,28 @@ final class MacHelperMaintenance extends ChangeNotifier {
   MacHelperMaintenance(
     this.client, {
     required Future<CoreLifecycleResult> Function() stop,
+    Future<String> Function()? explicitRepair,
+    Future<bool> Function()? recoverRepair,
+    Future<String> Function()? registerRepair,
+    Future<bool> Function()? canRetryExplicit,
     this.startTimeout = const Duration(seconds: 10),
     this.startPoll = const Duration(seconds: 2),
     this.stalePoll = const Duration(seconds: 42),
     bool observeLifecycle = false,
-  }) : _stop = stop {
+  }) : _stop = stop,
+       _explicitRepair = explicitRepair,
+       _recoverRepair = recoverRepair,
+       _registerRepair = registerRepair,
+       _canRetryExplicit = canRetryExplicit {
     if (observeLifecycle) _lifecycle = AppLifecycleListener(onResume: resumed);
   }
 
   MacHelperState? get state => _state;
   MacHelperProgress get progress => _progress;
   bool get busy => _operation != null;
+  bool get repairPending => _repairPending;
+  bool get explicitRetryAvailable => _explicitRetryAvailable;
+  String? get repairError => _repairError;
 
   /// The start-up wait exceeded [startTimeout]. This is not a failure: the
   /// daemon may still come up, so the card offers "Check again".
@@ -143,6 +161,19 @@ final class MacHelperMaintenance extends ChangeNotifier {
   }
 
   Future<MacHelperState> _status() async {
+    if (_recoverRepair != null) {
+      try {
+        _repairPending = await _recoverRepair();
+      } catch (_) {
+        _repairPending = true;
+      }
+      if (_repairPending) {
+        await _updateExplicitRetry();
+        return MacHelperState.exitUnconfirmed;
+      }
+      _explicitRetryAvailable = false;
+      _repairError = null;
+    }
     final next = await client.status();
     return _stopUnknown ? MacHelperState.exitUnconfirmed : next;
   }
@@ -200,6 +231,68 @@ final class MacHelperMaintenance extends ChangeNotifier {
         return _stopUnknown ? MacHelperState.exitUnconfirmed : next;
       });
     });
+  }
+
+  Future<void> _updateExplicitRetry() async {
+    try {
+      _explicitRetryAvailable =
+          _repairPending &&
+          _canRetryExplicit != null &&
+          await _canRetryExplicit();
+    } catch (_) {
+      _explicitRetryAvailable = false;
+    }
+  }
+
+  Future<MacHelperState> explicitRepair({required bool confirmed}) {
+    if (!confirmed || _explicitRepair == null) {
+      throw const MacHelperException('consentRequired');
+    }
+    return _singleFlight(MacHelperProgress.updating, () async {
+      _repairError = null;
+      try {
+        final result = await _explicitRepair();
+        if (result != 'repairRegistered') _repairError = result;
+      } catch (error) {
+        _repairError = error.toString();
+      } finally {
+        if (_recoverRepair != null) {
+          try {
+            _repairPending = await _recoverRepair();
+          } catch (_) {
+            _repairPending = true;
+          }
+        }
+        await _updateExplicitRetry();
+      }
+      return MacHelperState.exitUnconfirmed;
+    });
+  }
+
+  Future<MacHelperState> registerPendingRepair() {
+    if (_registerRepair == null) throw const MacHelperException('unsupported');
+    return _singleFlight(MacHelperProgress.updating, () async {
+      _repairError = null;
+      client.lastRegistrationSettled = false;
+      try {
+        final result = await _registerRepair();
+        if (result != 'repairRegistered') _repairError = result;
+      } catch (error) {
+        client.lastRegistrationSettled = false;
+        _repairError = error.toString();
+      }
+      return _status();
+    });
+  }
+
+  Future<void> openRepairSettings() async {
+    try {
+      await client.openSettings();
+      _awaitingSettings = true;
+    } on Exception catch (error) {
+      _repairError = error.toString();
+      _notify();
+    }
   }
 
   /// Retry after "update did not complete": the native side resumes from

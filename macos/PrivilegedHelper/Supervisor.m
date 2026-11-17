@@ -146,7 +146,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 }
 
 // While ownership is uncertain a Core copy from our runtime directory may still run. Retried on every
-// hello/start/stop/exit and on idle: prove (reaping if needed) that none survives, release the journal, and
+// hello/start/stop/exit and on idle: check that none survives, release the journal, and
 // only then accept work again. Fails closed: any doubt keeps the flag.
 - (BOOL)recoverOwnership {
     if (!self.ownershipUncertain) return YES;

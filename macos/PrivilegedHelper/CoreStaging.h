@@ -91,30 +91,35 @@ static inline NSString *FCStageCore(NSString *source, NSString *directory, NSStr
     return staged;
 }
 
+// nil means the snapshot cannot prove absence; a full buffer may have been truncated.
 static inline NSArray<NSNumber *> *FCStagedCoreProcesses(NSString *directory) {
-    NSMutableArray *found = [NSMutableArray array];
+    const int maxPids = 65536;
     int count = proc_listallpids(NULL, 0);
-    if (count <= 0) return found;
-    pid_t *pids = calloc((size_t)count + 64, sizeof(pid_t));
-    if (!pids) return found;
-    count = proc_listallpids(pids, (int)(((size_t)count + 64) * sizeof(pid_t)));
-    NSString *prefix = [directory stringByAppendingString:@"/core-"];
+    if (count <= 0 || count > maxPids - 64) return nil;
+    int capacity = count + 64;
+    pid_t *pids = calloc((size_t)capacity, sizeof(pid_t));
+    if (!pids) return nil;
+    count = proc_listallpids(pids, capacity * (int)sizeof(pid_t));
+    if (count <= 0 || count >= capacity) { free(pids); return nil; }
+    NSMutableArray *found = [NSMutableArray array];
+    const char *prefix = [directory stringByAppendingString:@"/core-"].fileSystemRepresentation;
+    size_t prefixLength = strlen(prefix);
     for (int i = 0; i < count; i++) {
-        char path[PROC_PIDPATHINFO_MAXSIZE];
-        if (pids[i] > 1 && proc_pidpath(pids[i], path, sizeof(path)) > 0 && [@(path) hasPrefix:prefix])
-            [found addObject:@(pids[i])];
+        if (pids[i] <= 1) continue;
+        char path[PROC_PIDPATHINFO_MAXSIZE] = {0};
+        int length = proc_pidpath(pids[i], path, sizeof(path));
+        if (length <= 0 || (size_t)length >= sizeof(path) || !memchr(path, 0, sizeof(path))) {
+            free(pids); return nil;
+        }
+        if (!strncmp(path, prefix, prefixLength)) [found addObject:@(pids[i])];
     }
     free(pids);
     return found;
 }
 
-// Recovery after a daemon crash: any surviving Core copy is stopped (TERM, then KILL). YES when none remain.
+// A snapshot PID is not an identity: it may be reused before a signal is delivered.
+// Wait for launchd or the Core to finish instead of signalling an unverified process.
 static inline BOOL FCReapOrphanedCores(NSString *directory) {
     NSArray<NSNumber *> *running = FCStagedCoreProcesses(directory);
-    if (!running.count) return YES;
-    for (NSNumber *pid in running) kill(pid.intValue, SIGTERM);
-    for (int i = 0; i < 30 && FCStagedCoreProcesses(directory).count; i++) usleep(100000);
-    for (NSNumber *pid in FCStagedCoreProcesses(directory)) kill(pid.intValue, SIGKILL);
-    for (int i = 0; i < 10 && FCStagedCoreProcesses(directory).count; i++) usleep(100000);
-    return FCStagedCoreProcesses(directory).count == 0;
+    return running != nil && running.count == 0;
 }

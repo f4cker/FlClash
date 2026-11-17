@@ -5329,7 +5329,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperCheckAgain => '重新检查';
 
   @override
-  String get macHelperRepair => '修复';
+  String get macHelperRegisterPending => '仅重新登记';
+
+  @override
+  String get macHelperRepairUnknownOutcome =>
+      '系统操作结果可能仍未知。请勿反复尝试；重启 Mac 后再尝试登记。如无法打开设置，请手动打开系统设置 → 通用 → 登录项与扩展。';
+
+  @override
+  String get macHelperRepairFailedDetail =>
+      '修复未完成。请检查 Flash 应用支持目录的访问权限；如果 Core 停止状态不明，请重启 Mac。若仍失败，请联系支持。';
+
+  @override
+  String get macHelperExplicitRepairWarning =>
+      '原因尚不确定。修复将注销并重新登记辅助程序，可能中断仍在运行的旧 Core，系统可能要求重新批准。修复后暂不启动 Core；请在系统设置批准并重启 Mac，然后重新检查。仅适用于未并行运行其他版本的 Flash。';
+
+  @override
+  String get macHelperRepairPendingDetail =>
+      '修复尚未完成，Core 已阻止启动。请先重启 Mac，选择“仅重新登记”，然后在系统设置批准辅助程序并检查；如登记结果未知，请再次重启 Mac。若重新登记失败或仍无法验证，请重新安装 Flash 或联系支持。不要同时运行其他版本。';
+
+  @override
+  String get macHelperRepair => '尝试修复';
 
   @override
   String get macHelperUnavailableDetail => '辅助程序尚未就绪，TUN 暂时无法启动。你的 TUN 设置已保留。';

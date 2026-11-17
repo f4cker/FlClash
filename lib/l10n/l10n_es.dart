@@ -5844,6 +5844,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get macHelperCheckAgain => 'Comprobar de nuevo';
 
   @override
+  String get macHelperRegisterPending => 'Register helper only';
+
+  @override
+  String get macHelperRepairUnknownOutcome =>
+      'The system operation may still be in flight. Do not retry until after restarting the Mac. If Settings cannot open, manually open System Settings → General → Login Items & Extensions.';
+
+  @override
+  String get macHelperRepairFailedDetail =>
+      'Repair did not complete. Check access to the Flash application support directory. If Core stop is unconfirmed, restart the Mac. If it still fails, contact support.';
+
+  @override
+  String get macHelperExplicitRepairWarning =>
+      'The cause is uncertain. Repair unregisters and registers the helper, may interrupt an old Core that is still running, and may require approval again. Core will stay stopped; approve it in System Settings and restart the Mac, then check again. Do not run another version of Flash concurrently.';
+
+  @override
+  String get macHelperRepairPendingDetail =>
+      'Repair is not complete and Core startup is blocked. Restart the Mac, choose Register helper only, then approve it in System Settings and check again. If the registration outcome is unknown, restart the Mac again. If registration failed or verification still fails, reinstall Flash or contact support. Do not run another version concurrently.';
+
+  @override
   String get macHelperRepair => 'Repair';
 
   @override

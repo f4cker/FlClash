@@ -71,6 +71,8 @@ final class DesktopCoreLifecycle implements DesktopCoreLifecycleController {
   final DesktopCoreTimeouts timeouts;
   final String Function() sessionIdFactory;
   final bool verifyPeerPid;
+  final bool Function()? startBlocked;
+  final Future<void> Function()? startGate;
 
   final StreamController<DesktopCoreState> _states =
       StreamController<DesktopCoreState>.broadcast();
@@ -86,6 +88,8 @@ final class DesktopCoreLifecycle implements DesktopCoreLifecycleController {
   Future<CoreLifecycleResult>? _closing;
   int _revision = 0;
   bool _working = false;
+  bool _maintaining = false;
+  bool _gatingStart = false;
   bool _crashCleanupDue = false;
 
   DesktopCoreLifecycle({
@@ -94,11 +98,15 @@ final class DesktopCoreLifecycle implements DesktopCoreLifecycleController {
     this.timeouts = const DesktopCoreTimeouts(),
     this.sessionIdFactory = createCoreSessionId,
     this.verifyPeerPid = false,
+    this.startBlocked,
+    this.startGate,
   }) {
     _transportEvents = transport.events.listen(_handleTransportEvent);
   }
 
   DesktopCoreState get state => _state;
+
+  bool get hasNoCore => _core is _Absent;
 
   Stream<DesktopCoreState> get states => _states.stream;
 
@@ -117,11 +125,59 @@ final class DesktopCoreLifecycle implements DesktopCoreLifecycleController {
   @override
   Future<CoreLifecycleResult> close() => _closing ??= _submit(_Goal.closed);
 
+  Future<T> maintain<T>(
+    Future<T> Function() action, {
+    bool allowUnconfirmedStop = false,
+  }) async {
+    if (_maintaining || _closingDown) {
+      throw _failure(
+        code: 'maintenance',
+        phase: _state.phase,
+        revision: _revision,
+      );
+    }
+    _maintaining = true;
+    try {
+      CoreLifecycleResult? stopped;
+      try {
+        stopped = await stop();
+      } on DesktopCoreFailure catch (error) {
+        if (!allowUnconfirmedStop ||
+            (error.code != 'process_exit_unconfirmed' &&
+                error.code != 'stop_failed')) {
+          rethrow;
+        }
+      }
+      if (stopped?.outcome == CoreLifecycleOutcome.superseded ||
+          stopped?.session != null ||
+          _closingDown) {
+        throw _failure(
+          code: 'maintenance_stop_unconfirmed',
+          phase: _state.phase,
+          revision: _revision,
+        );
+      }
+      return await action();
+    } finally {
+      _maintaining = false;
+    }
+  }
+
   bool get _wantsCore => _desired.goal == _Goal.running;
 
   bool get _closingDown => _desired.goal == _Goal.closed;
 
   Future<CoreLifecycleResult> _submit(_Goal goal, {bool fresh = false}) {
+    if (goal == _Goal.running &&
+        (_maintaining || _gatingStart || startBlocked?.call() == true)) {
+      return Future.error(
+        DesktopCoreFailure(
+          code: 'maintenance',
+          phase: _state.phase,
+          revision: _revision,
+        ),
+      );
+    }
     if (_closingDown) {
       return Future.error(
         DesktopCoreFailure(
@@ -194,7 +250,27 @@ final class DesktopCoreLifecycle implements DesktopCoreLifecycleController {
     }
   }
 
+  Future<void> exclusiveStartCheck(Future<void> Function() check) async {
+    _gatingStart = true;
+    try {
+      await check();
+    } finally {
+      _gatingStart = false;
+    }
+  }
+
   Future<void> _reconcile(_Intent intent) async {
+    if (intent.goal == _Goal.running && startGate != null) {
+      await startGate!();
+      if (!_wantsCore) return;
+      if (startBlocked?.call() == true) {
+        throw _failure(
+          code: 'maintenance',
+          phase: _state.phase,
+          revision: intent.revision,
+        );
+      }
+    }
     switch (_core) {
       case final _Live core when intent.keeps(core):
         return;
@@ -244,6 +320,17 @@ final class DesktopCoreLifecycle implements DesktopCoreLifecycleController {
       final launcher = await launcherResolver.resolve();
       if (!_wantsCore) {
         return;
+      }
+      if (startGate != null) {
+        await startGate!();
+        if (!_wantsCore) return;
+      }
+      if (startBlocked?.call() == true) {
+        throw _failure(
+          code: 'maintenance',
+          phase: DesktopCorePhase.starting,
+          revision: revision,
+        );
       }
       lease = await launcher.start(
         sessionId: sessionId,

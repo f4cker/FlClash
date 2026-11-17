@@ -9,6 +9,83 @@ import 'fakes.dart';
 const _sessionId = '0123456789abcdef0123456789abcdef';
 
 void main() {
+  test('exclusive maintenance waits for launch and prevents starts', () async {
+    final transport = FakeDesktopCoreTransport();
+    final launcher = FakeLauncher(owner: CoreProcessOwner.direct, pid: 42);
+    final lifecycle = _createLifecycle(
+      transport: transport,
+      resolver: MutableLauncherResolver(launcher),
+    );
+    final start = lifecycle.start();
+    transport.ready();
+    await launcher.started;
+    launcher.lease.stopGate = Completer<void>();
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    final maintenance = lifecycle.maintain(() async {
+      entered.complete();
+      await release.future;
+    });
+    await launcher.lease.stopStarted;
+    expect(entered.isCompleted, isFalse);
+    await expectLater(lifecycle.start(), throwsA(isA<DesktopCoreFailure>()));
+    await expectLater(lifecycle.restart(), throwsA(isA<DesktopCoreFailure>()));
+    launcher.lease.stopGate!.complete();
+    await entered.future;
+    await expectLater(lifecycle.start(), throwsA(isA<DesktopCoreFailure>()));
+    release.complete();
+    await maintenance;
+    expect((await start).outcome, CoreLifecycleOutcome.superseded);
+    await lifecycle.close();
+  });
+
+  test('maintenance waits for an in-flight gate', () async {
+    final gate = Completer<void>();
+    final entered = Completer<void>();
+    late final DesktopCoreLifecycle lifecycle;
+    lifecycle = DesktopCoreLifecycle(
+      transport: FakeDesktopCoreTransport(),
+      launcherResolver: MutableLauncherResolver(
+        FakeLauncher(owner: CoreProcessOwner.direct, pid: 42),
+      ),
+      startGate: () => lifecycle.exclusiveStartCheck(() => gate.future),
+    );
+    final start = lifecycle.start();
+    await expectLater(lifecycle.restart(), throwsA(isA<DesktopCoreFailure>()));
+    final maintenance = lifecycle.maintain(() async => entered.complete());
+    await pumpEventQueue();
+    expect(entered.isCompleted, isFalse);
+    gate.complete();
+    await maintenance;
+    expect((await start).outcome, CoreLifecycleOutcome.superseded);
+    await lifecycle.close();
+  });
+
+  test(
+    'maintenance blocks new starts while stop supersedes an in-flight start',
+    () async {
+      var blocked = false;
+      final transport = FakeDesktopCoreTransport();
+      final launcher = FakeLauncher(owner: CoreProcessOwner.direct, pid: 42);
+      final lifecycle = DesktopCoreLifecycle(
+        transport: transport,
+        launcherResolver: MutableLauncherResolver(launcher),
+        startBlocked: () => blocked,
+      );
+      final start = lifecycle.start();
+      blocked = true;
+      final stop = lifecycle.stop();
+      await expectLater(lifecycle.start(), throwsA(isA<DesktopCoreFailure>()));
+      await expectLater(
+        lifecycle.restart(),
+        throwsA(isA<DesktopCoreFailure>()),
+      );
+      expect((await start).outcome, CoreLifecycleOutcome.superseded);
+      expect((await stop).session, isNull);
+      expect(launcher.startCount, 0);
+      await lifecycle.close();
+    },
+  );
   test(
     'publishes running only after ready, launch, connection, and PID match',
     () async {

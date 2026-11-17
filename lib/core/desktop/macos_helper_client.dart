@@ -205,6 +205,10 @@ final class MacHelperClient {
   /// Raw code of the last native answer, shown under "View details".
   String? lastCode;
 
+  /// True only when native explicitly certifies that registration settled.
+  bool lastRegistrationSettled = false;
+  bool lastExplicitNotStarted = false;
+
   /// Failed update step; kept until a later answer reports another outcome so
   /// a generic `migrationIncomplete` does not hide the step that failed.
   MacHelperFailure? failure;
@@ -222,6 +226,7 @@ final class MacHelperClient {
 
   Stream<MacHelperEvent> get events => _events.stream;
   bool get hasCoreSession => _session != null;
+  bool get maintenanceInProgress => _maintenance;
 
   void _requireEffects() {
     if (_safeMode()) throw const MacHelperException('disabled');
@@ -249,13 +254,17 @@ final class MacHelperClient {
   ]) async {
     if (_safeMode()) return MacHelperState.disabled;
     try {
+      final sessionAtRequest = _session;
+      final relayAtRequest = _relay;
       final answer = await _native.invoke(method, arguments);
       final state = _record(answer);
       // A session this app could not stop. Only the daemon can settle it: once
       // it answers that it owns no Core, the session is gone; while it still
       // owns one (or cannot tell), the ready state is not claimed. Any other
       // state describes the helper itself and is shown as is.
-      if (_session != null &&
+      if (sessionAtRequest != null &&
+          _session == sessionAtRequest &&
+          identical(_relay, relayAtRequest) &&
           _relay?.active != true &&
           state == MacHelperState.enabled) {
         if (!_confirmsNoCore(answer)) return MacHelperState.exitUnconfirmed;
@@ -303,14 +312,45 @@ final class MacHelperClient {
     return _call('repair');
   }
 
-  Future<void> openSettings() async {
+  Future<String> repairExplicit({required bool confirmed}) async {
+    if (!confirmed || !_maintenance) {
+      throw const MacHelperException('consentRequired');
+    }
     _requireEffects();
-    await _native.invoke('openApprovalSettings');
+    lastExplicitNotStarted = false;
+    final result = await _native.invoke('repairExplicit', {
+      'confirmed': true,
+      'repairRecordWritten': true,
+    });
+    lastExplicitNotStarted = result['explicitNotStarted'] == true;
+    final code = result['code'];
+    lastCode = code is String ? code : 'unavailable';
+    return lastCode!;
   }
 
-  Future<MacHelperState> maintain(
-    Future<MacHelperState> Function() action,
-  ) async {
+  Future<String> repairRegisterOnly() async {
+    if (!_maintenance) throw const MacHelperException('maintenance');
+    _requireEffects();
+    lastRegistrationSettled = false;
+    final answer = await _native.invoke('repairRegisterOnly', {
+      'repairRecordWritten': true,
+    });
+    lastRegistrationSettled = answer['registrationSettled'] == true;
+    final code = answer['code'];
+    lastCode = code is String ? code : 'unavailable';
+    return lastCode!;
+  }
+
+  Future<void> openSettings() async {
+    _requireEffects();
+    final answer = await _native.invoke('openApprovalSettings');
+    final code = answer['code'];
+    if (code != 'settingsOpened') {
+      throw MacHelperException(code is String ? code : 'unavailable');
+    }
+  }
+
+  Future<T> maintain<T>(Future<T> Function() action) async {
     _requireEffects();
     if (_maintenance) throw const MacHelperException('maintenance');
     _maintenance = true;

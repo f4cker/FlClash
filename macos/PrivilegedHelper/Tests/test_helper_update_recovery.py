@@ -376,5 +376,106 @@ int main(void) {
         self.assertIn('[self resetConnection]', status)
 
 
+
+class ExplicitRepairTests(unittest.TestCase):
+    def test_async_unregistration_is_fail_closed(self):
+        source = BRIDGE_FIXTURE + method(BRIDGE, 'static void FCPerformRepairCall') + r'''
+typedef int FCLegacyResidue;
+static FCLegacyResidue FCDetectLegacyResidue(void) { return 0; }
+@interface Fixture : NSObject
+@property BOOL operationInFlight, sessionActive, throwUnregister, throwRegister, callbackThenThrow, blockUnregister, blockRegister, blockBeforeCheck;
+@property dispatch_semaphore_t began, registrationBegan, unblock;
+@property NSUInteger pending, unregisters, registers, completions;
+@property dispatch_queue_t queue;
+@property NSString *gateCode, *result;
+@property (copy) void (^callback)(NSError *);
+@property (copy) void (^registered)(NSDictionary *);
+@end
+@implementation Fixture
+- (NSString *)gate { return self.gateCode; }
+- (NSDictionary *)residueAnswer:(FCLegacyResidue)r code:(NSString *)c { return @{@"code": c}; }
+- (NSTimeInterval)repairUnregisterTimeout { return 0.1; }
+- (void)resetConnection { self.sessionActive = NO; }
+- (void)beginRepairUnregister:(void (^)(NSError *))callback {
+    self.unregisters++; self.callback = callback; dispatch_semaphore_signal(self.began);
+    if (self.blockUnregister) dispatch_semaphore_wait(self.unblock, DISPATCH_TIME_FOREVER);
+    if (self.callbackThenThrow) callback(nil);
+    if (self.throwUnregister) @throw [NSException exceptionWithName:@"fixture" reason:nil userInfo:nil];
+}
+- (void)registerAfterRepairIfPermitted:(BOOL (^)(void))permitted completion:(void (^)(NSDictionary *))callback {
+    if (self.blockBeforeCheck) {
+        dispatch_semaphore_signal(self.registrationBegan);
+        dispatch_semaphore_wait(self.unblock, DISPATCH_TIME_FOREVER);
+    }
+    if (!permitted()) { callback(@{@"code": @"timeout"}); return; }
+    self.registers++; self.registered = callback; dispatch_semaphore_signal(self.registrationBegan);
+    if (self.blockRegister) dispatch_semaphore_wait(self.unblock, DISPATCH_TIME_FOREVER);
+    if (self.throwRegister) @throw [NSException exceptionWithName:@"fixture" reason:nil userInfo:nil];
+    self.registered = callback;
+}
+''' + method(BRIDGE, '- (void)repairExplicitWithArguments:') + r'''
+@end
+static Fixture *New(void) {
+    Fixture *f = [Fixture new]; f.queue = dispatch_queue_create("fixture", DISPATCH_QUEUE_SERIAL);
+    f.gateCode = @"trusted"; f.began = dispatch_semaphore_create(0);
+    f.registrationBegan = dispatch_semaphore_create(0); f.unblock = dispatch_semaphore_create(0); return f;
+}
+static NSDictionary *Args(void) { return @{@"confirmed": @YES, @"repairRecordWritten": @YES}; }
+static void Invoke(Fixture *f, NSDictionary *args) {
+    dispatch_sync(f.queue, ^{ [f repairExplicitWithArguments:args completion:^(NSDictionary *answer) {
+        f.completions++; f.result = answer[@"code"];
+    }]; });
+}
+static void Drain(Fixture *f) { dispatch_sync(f.queue, ^{}); }
+static void Wait(dispatch_semaphore_t sem) {
+    assert(!dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC)));
+}
+static void Until(Fixture *f, BOOL (^test)(void)) {
+    for (int i = 0; i < 1000; i++) {
+        __block BOOL ok; dispatch_sync(f.queue, ^{ ok = test(); });
+        if (ok) return;
+        [NSThread sleepForTimeInterval:0.001];
+    }
+    assert(0);
+}
+int main(void) { @autoreleasepool {
+    Fixture *f = New(); Invoke(f, @{}); assert([f.result isEqual:@"invalidRequest"] && !f.unregisters);
+    Invoke(f, @{@"confirmed": @1, @"repairRecordWritten": @YES}); assert([f.result isEqual:@"consentRequired"]);
+    f.pending = 1; Invoke(f, Args()); assert([f.result isEqual:@"sessionBusy"]); f.pending = 0;
+    f.gateCode = @"signingRequired"; Invoke(f, Args()); assert([f.result isEqual:@"signingRequired"]);
+    f = New(); Invoke(f, Args()); Wait(f.began); assert(f.unregisters == 1 && !f.registers && f.operationInFlight);
+    Invoke(f, Args()); assert([f.result isEqual:@"operationInProgress"] && f.unregisters == 1);
+    f.callback(nil); Wait(f.registrationBegan); assert(f.registers == 1 && f.operationInFlight);
+    f.callback(nil); Drain(f); assert(f.registers == 1);
+    f.registered(@{@"code": @"ok"}); Until(f, ^BOOL{ return !f.operationInFlight; }); assert([f.result isEqual:@"ok"]);
+    f = New(); Invoke(f, Args()); Wait(f.began); f.callback([NSError errorWithDomain:@"mock" code:7 userInfo:nil]);
+    Until(f, ^BOOL{ return !f.operationInFlight; }); assert(!f.registers && [f.result isEqual:@"registrationFailed"]);
+    f = New(); f.sessionActive = YES; Invoke(f, Args()); Wait(f.began); f.callback(nil);
+    Wait(f.registrationBegan); assert(f.registers == 1 && !f.sessionActive);
+    f.registered(@{@"code": @"ok"}); Until(f, ^BOOL{ return !f.operationInFlight; });
+    f = New(); Invoke(f, Args()); Wait(f.began); f.pending = 1; f.callback(nil);
+    Until(f, ^BOOL{ return !f.operationInFlight; }); assert(!f.registers && [f.result isEqual:@"sessionBusy"]);
+    f = New(); f.throwUnregister = YES; Invoke(f, Args()); Wait(f.began);
+    Until(f, ^BOOL{ return f.completions != 0; }); assert(!f.registers && f.operationInFlight);
+    f.callback(nil); Drain(f); assert(!f.registers);
+    f = New(); f.throwUnregister = YES; f.callbackThenThrow = YES; Invoke(f, Args()); Wait(f.began);
+    Until(f, ^BOOL{ return f.completions != 0; }); assert(!f.registers && f.operationInFlight);
+    f = New(); f.throwRegister = YES; Invoke(f, Args()); Wait(f.began); f.callback(nil); Wait(f.registrationBegan);
+    Until(f, ^BOOL{ return f.completions != 0; }); assert(f.operationInFlight && [f.result isEqual:@"registrationOutcomeUnknown"]);
+    f = New(); f.blockUnregister = YES; Invoke(f, Args()); Wait(f.began);
+    Until(f, ^BOOL{ return f.completions != 0; }); assert([f.result isEqual:@"timeout"] && f.operationInFlight && !f.registers);
+    NSUInteger count = f.completions; f.callback(nil); dispatch_semaphore_signal(f.unblock);
+    Until(f, ^BOOL{ return !f.operationInFlight; }); assert(!f.registers && f.completions == count);
+    f = New(); f.blockBeforeCheck = YES; Invoke(f, Args()); Wait(f.began); f.callback(nil); Wait(f.registrationBegan);
+    Until(f, ^BOOL{ return f.completions != 0; }); assert([f.result isEqual:@"registrationOutcomeUnknown"]);
+    dispatch_semaphore_signal(f.unblock); Until(f, ^BOOL{ return !f.operationInFlight; }); assert(!f.registers);
+    f = New(); f.blockRegister = YES; Invoke(f, Args()); Wait(f.began); f.callback(nil); Wait(f.registrationBegan);
+    Until(f, ^BOOL{ return f.completions != 0; }); assert([f.result isEqual:@"registrationOutcomeUnknown"] && f.operationInFlight);
+    count = f.completions; f.registered(@{@"code": @"ok"}); dispatch_semaphore_signal(f.unblock);
+    Until(f, ^BOOL{ return !f.operationInFlight; }); assert(f.completions == count && f.registers == 1);
+} }
+'''
+        compile_and_run(self, source)
+
 if __name__ == '__main__':
     unittest.main()

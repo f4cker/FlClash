@@ -4,6 +4,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/core/desktop/model.dart';
+import 'package:fl_clash/core/service.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -37,6 +38,7 @@ enum MacHelperCardAction {
   openSettings,
   recheck,
   repair,
+  registerRepair,
   viewDetails,
 }
 
@@ -108,6 +110,35 @@ MacHelperCardView macHelperCardView(
   MacHelperMaintenance flow,
 ) {
   final state = flow.state;
+  if (flow.repairError != null && !flow.repairPending) {
+    return MacHelperCardView(
+      kind: MacHelperCardKind.exitUnconfirmed,
+      title: l.macHelperCoreUnconfirmed,
+      detail: l.macHelperRepairFailedDetail,
+      progress: flow.busy ? l.macHelperChecking : null,
+      primary: MacHelperCardAction.recheck,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: flow.repairError,
+    );
+  }
+  if (flow.repairPending) {
+    return MacHelperCardView(
+      kind: MacHelperCardKind.exitUnconfirmed,
+      title: l.macHelperCoreUnconfirmed,
+      detail: flow.explicitRetryAvailable
+          ? l.macHelperRepairFailedDetail
+          : flow.repairError == null
+          ? l.macHelperRepairPendingDetail
+          : flow.client.lastRegistrationSettled
+          ? '${l.macHelperRepairPendingDetail}\n${flow.repairError}'
+          : '${l.macHelperRepairPendingDetail}\n${l.macHelperRepairUnknownOutcome}\n${flow.repairError}',
+      progress: flow.busy ? l.macHelperChecking : null,
+      primary: flow.explicitRetryAvailable
+          ? MacHelperCardAction.repair
+          : MacHelperCardAction.registerRepair,
+      secondary: MacHelperCardAction.openSettings,
+    );
+  }
   if (state == null) {
     return MacHelperCardView(
       kind: MacHelperCardKind.starting,
@@ -171,7 +202,7 @@ MacHelperCardView macHelperCardView(
       detail: l.macHelperStartSlowDetail,
       progress: busyText,
       primary: MacHelperCardAction.recheck,
-      secondary: MacHelperCardAction.viewDetails,
+      secondary: MacHelperCardAction.repair,
       rawDetail: raw,
     ),
     MacHelperCardKind.signatureFailed => MacHelperCardView(
@@ -230,6 +261,7 @@ String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
       MacHelperCardAction.openSettings => l.macHelperOpenSettings,
       MacHelperCardAction.recheck => l.macHelperCheckAgain,
       MacHelperCardAction.repair => l.macHelperRepair,
+      MacHelperCardAction.registerRepair => l.macHelperRegisterPending,
       MacHelperCardAction.viewDetails => l.macHelperViewDetails,
     };
 
@@ -368,6 +400,10 @@ void unregisterMacHelperPresenter(MacHelperPresenter presenter) {
 final macHelperMaintenance = MacHelperMaintenance(
   macosHelperClient,
   stop: () => globalState.container.read(coreHandlerProvider).stop(),
+  explicitRepair: () => coreService!.repairMacHelper(confirmed: true),
+  recoverRepair: () => coreService!.recoverMacRepair(),
+  canRetryExplicit: () => coreService!.canRetryMacExplicitRepair(),
+  registerRepair: () => coreService!.registerPendingMacRepair(),
   observeLifecycle: true,
 );
 
@@ -429,14 +465,31 @@ class _MacHelperCardState extends State<MacHelperCard> {
         setState(() => _details = false);
         unawaited(flow.migrate(confirmed: true));
       case MacHelperCardAction.openSettings:
-        unawaited(flow.openSettings());
+        unawaited(
+          flow.repairPending ? flow.openRepairSettings() : flow.openSettings(),
+        );
       case MacHelperCardAction.recheck:
         unawaited(flow.recheck());
       case MacHelperCardAction.repair:
         setState(() => _details = false);
-        unawaited(flow.repair());
+        unawaited(_confirmRepair());
+      case MacHelperCardAction.registerRepair:
+        unawaited(flow.registerPendingRepair());
       case MacHelperCardAction.viewDetails:
         setState(() => _details = !_details);
+    }
+  }
+
+  Future<void> _confirmRepair() async {
+    final l = context.appLocalizations;
+    final confirmed = await dialogs.showMessage(
+      context: context,
+      title: l.macHelperRepair,
+      message: TextSpan(text: l.macHelperExplicitRepairWarning),
+      confirmText: l.macHelperRepair,
+    );
+    if (confirmed == true && mounted) {
+      await widget.maintenance.explicitRepair(confirmed: true);
     }
   }
 
@@ -579,6 +632,15 @@ class _MacHelperCardState extends State<MacHelperCard> {
                 TextButton(
                   onPressed: busy ? null : () => _run(view.secondary!),
                   child: Text(macHelperActionLabel(l, view.secondary!)),
+                ),
+              if (view.kind == MacHelperCardKind.startSlow &&
+                  view.rawDetail != null &&
+                  view.rawDetail!.isNotEmpty)
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => _run(MacHelperCardAction.viewDetails),
+                  child: Text(l.macHelperViewDetails),
                 ),
             ],
           ),

@@ -26,6 +26,37 @@ static NSString *FCStatusForHello(NSString *reply) {
     return @"unavailable";
 }
 
+static void FCPerformRepairCall(dispatch_queue_t queue, BOOL (^shouldStart)(void), void (^call)(void (^)(id)),
+                                void (^completion)(id, BOOL)) {
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{
+        __block BOOL allowed = NO;
+        dispatch_sync(queue, ^{ allowed = shouldStart(); });
+        if (!allowed) { dispatch_async(queue, ^{ completion(nil, NO); }); return; }
+        NSObject *lock = [NSObject new];
+        __block BOOL returned = NO, called = NO, failed = NO;
+        __block id buffered = nil;
+        void (^deliver)(id) = ^(id result) {
+            @synchronized (lock) {
+                if (called || failed) return;
+                called = YES;
+                if (!returned) { buffered = result; return; }
+            }
+            dispatch_async(queue, ^{ completion(result, NO); });
+        };
+        @try {
+            call(deliver);
+            @synchronized (lock) {
+                returned = YES;
+                if (!called) return;
+            }
+            dispatch_async(queue, ^{ completion(buffered, NO); });
+        } @catch (NSException *exception) {
+            @synchronized (lock) { failed = YES; }
+            dispatch_async(queue, ^{ completion(nil, YES); });
+        }
+    });
+}
+
 @interface FCManagedHelperBridge ()
 @property dispatch_queue_t queue;
 @property xpc_connection_t connection;
@@ -413,6 +444,154 @@ static NSString *FCStatusForHello(NSString *reply) {
     completion(@{@"code": @"unsupported"});
 }
 
+- (void)beginRepairUnregister:(void (^)(NSError *))completion API_AVAILABLE(macos(14.0)) {
+    [[self daemon] unregisterWithCompletionHandler:completion];
+}
+
+- (NSTimeInterval)repairUnregisterTimeout { return 15; }
+
+- (void)registerAfterRepairIfPermitted:(BOOL (^)(void))permitted completion:(void (^)(NSDictionary *))completion {
+    NSString *gate = [self gate];
+    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    FCLegacyResidue residue = FCDetectLegacyResidue();
+    if (residue) { completion([self residueAnswer:residue code:@"migrationRequired"]); return; }
+    if (@available(macOS 14.0, *)) {
+        if (!permitted()) { completion(@{@"code": @"timeout"}); return; }
+        NSError *error = nil;
+        if ([[self daemon] registerAndReturnError:&error]) {
+            NSString *current = [self currentHelperHash];
+            if (current.length) [NSUserDefaults.standardUserDefaults setObject:current forKey:FCRegisteredHelperDefault];
+            completion(@{@"code": @"repairRegistered"});
+        } else {
+            completion(@{@"code": @"registrationFailed", @"error": @(error.code), @"domain": error.domain ?: @""});
+        }
+        return;
+    }
+    completion(@{@"code": @"unsupported"});
+}
+
+- (void)repairExplicitWithArguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {
+    if (self.operationInFlight) { completion(@{@"code": @"operationInProgress"}); return; }
+    if (self.pending) { completion(@{@"code": @"sessionBusy", @"explicitNotStarted": @YES}); return; }
+    if (arguments.count != 2 || !arguments[@"confirmed"] || !arguments[@"repairRecordWritten"]) {
+        completion(@{@"code": @"invalidRequest"}); return;
+    }
+    for (id value in @[arguments[@"confirmed"], arguments[@"repairRecordWritten"]]) {
+        if (CFGetTypeID((__bridge CFTypeRef)value) != CFBooleanGetTypeID() || ![value boolValue]) {
+            completion(@{@"code": @"consentRequired"}); return;
+        }
+    }
+    NSString *gate = [self gate];
+    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    FCLegacyResidue residue = FCDetectLegacyResidue();
+    if (residue) { completion([self residueAnswer:residue code:@"migrationRequired"]); return; }
+    if (@available(macOS 14.0, *)) {
+        self.operationInFlight = YES;
+        __block BOOL unregisterSettled = NO;
+        __block BOOL registrationSettled = NO;
+        __block BOOL completed = NO;
+        NSTimeInterval timeout = [self repairUnregisterTimeout];
+        NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + timeout;
+        void (^finish)(NSDictionary *) = ^(NSDictionary *answer) {
+            if (completed) return;
+            completed = YES;
+            self.operationInFlight = NO;
+            completion(answer);
+        };
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC)), self.queue, ^{
+            if (unregisterSettled || completed) return;
+            completed = YES;
+            completion(@{@"code": @"timeout"});
+        });
+        FCPerformRepairCall(self.queue, ^BOOL{ return !completed; }, ^(void (^done)(id)) {
+            [self beginRepairUnregister:^(NSError *error) { done(error); }];
+        }, ^(id result, BOOL exception) {
+            unregisterSettled = YES;
+            if (completed) { if (!exception) self.operationInFlight = NO; return; }
+            if (exception) {
+                completed = YES;
+                completion(@{@"code": @"registrationFailed"}); return;
+            }
+            if (NSProcessInfo.processInfo.systemUptime >= deadline) {
+                finish(@{@"code": @"timeout"}); return;
+            }
+            NSError *error = result;
+            if (error) {
+                finish(@{@"code": @"registrationFailed", @"error": @(error.code), @"domain": error.domain ?: @""}); return;
+            }
+            if (self.pending) { finish(@{@"code": @"sessionBusy"}); return; }
+            [self resetConnection];
+            NSTimeInterval registrationDeadline = NSProcessInfo.processInfo.systemUptime + timeout;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC)), self.queue, ^{
+                if (registrationSettled || completed) return;
+                completed = YES;
+                completion(@{@"code": @"registrationOutcomeUnknown"});
+            });
+            FCPerformRepairCall(self.queue, ^BOOL{ return !completed; }, ^(void (^done)(id)) {
+                [self registerAfterRepairIfPermitted:^BOOL{
+                    __block BOOL allowed = NO;
+                    dispatch_sync(self.queue, ^{
+                        allowed = !completed && NSProcessInfo.processInfo.systemUptime < registrationDeadline;
+                    });
+                    return allowed;
+                } completion:^(NSDictionary *answer) { done(answer); }];
+            }, ^(id answer, BOOL registrationException) {
+                registrationSettled = YES;
+                if (completed) { if (!registrationException) self.operationInFlight = NO; return; }
+                if (registrationException) {
+                    completed = YES;
+                    completion(@{@"code": @"registrationOutcomeUnknown"}); return;
+                }
+                finish(answer);
+            });
+        });
+        return;
+    }
+    completion(@{@"code": @"unsupported"});
+}
+
+- (void)repairRegisterOnlyWithArguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {
+    if (arguments.count != 1 || !arguments[@"repairRecordWritten"] || CFGetTypeID((__bridge CFTypeRef)arguments[@"repairRecordWritten"]) != CFBooleanGetTypeID() ||
+        ![arguments[@"repairRecordWritten"] boolValue]) { completion(@{@"code": @"invalidRequest"}); return; }
+    if (self.operationInFlight) { completion(@{@"code": @"operationInProgress"}); return; }
+    if (self.sessionActive || self.pending) { completion(@{@"code": @"sessionBusy"}); return; }
+    NSString *gate = [self gate];
+    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    FCLegacyResidue residue = FCDetectLegacyResidue();
+    if (residue) { completion([self residueAnswer:residue code:@"migrationRequired"]); return; }
+    if (@available(macOS 14.0, *)) {
+        SMAppServiceStatus status = [self daemon].status;
+        if (status == SMAppServiceStatusEnabled || status == SMAppServiceStatusRequiresApproval) {
+            completion(@{@"code": @"repairRegistered"}); return;
+        }
+        if (status != SMAppServiceStatusNotRegistered) { completion(@{@"code": @"unavailable"}); return; }
+        self.operationInFlight = YES;
+        __block BOOL completed = NO;
+        NSTimeInterval timeout = [self repairUnregisterTimeout];
+        NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + timeout;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC)), self.queue, ^{
+            if (completed) return;
+            completed = YES;
+            completion(@{@"code": @"registrationOutcomeUnknown"});
+        });
+        FCPerformRepairCall(self.queue, ^BOOL{ return !completed; }, ^(void (^done)(id)) {
+            [self registerAfterRepairIfPermitted:^BOOL{
+                __block BOOL allowed = NO;
+                dispatch_sync(self.queue, ^{ allowed = !completed && NSProcessInfo.processInfo.systemUptime < deadline; });
+                return allowed;
+            } completion:^(NSDictionary *answer) { done(answer); }];
+        }, ^(id answer, BOOL exception) {
+            if (completed) { if (!exception) self.operationInFlight = NO; return; }
+            completed = YES;
+            if (exception) { completion(@{@"code": @"registrationOutcomeUnknown"}); return; }
+            self.operationInFlight = NO;
+            completion(answer);
+        });
+        return;
+    }
+    completion(@{@"code": @"unsupported"});
+}
+
 - (void)repairWithCompletion:(void (^)(NSDictionary *))completion {
     if (self.sessionActive) { completion(@{@"code": @"sessionBusy"}); return; }
     [self status:completion];
@@ -424,7 +603,7 @@ static NSString *FCStatusForHello(NSString *reply) {
     if (@available(macOS 14.0, *)) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [SMAppService openSystemSettingsLoginItems];
-            dispatch_async(self.queue, ^{ completion([self registrationStatus]); });
+            dispatch_async(self.queue, ^{ completion(@{@"code": @"settingsOpened"}); });
         });
         return;
     }
@@ -435,10 +614,24 @@ static NSString *FCStatusForHello(NSString *reply) {
     dispatch_async(self.queue, ^{
         if (![self effectsAllowed]) { completion(@{@"code": @"disabled"}); return; }
         BOOL relay = [@[@"stop", @"send", @"receive"] containsObject:method];
-        if (self.operationInFlight && !relay) { completion(@{@"code": @"operationInProgress"}); return; }
+        if (self.operationInFlight && !relay && ![method isEqualToString:@"openApprovalSettings"]) { completion(@{@"code": @"operationInProgress"}); return; }
         BOOL argumentless = !arguments.count;
         if ([method isEqualToString:@"status"]) { [self status:completion]; return; }
         if ([method isEqualToString:@"migrate"]) { [self migrateWithArguments:arguments completion:completion]; return; }
+        if ([method isEqualToString:@"repairExplicit"]) { [self repairExplicitWithArguments:arguments completion:completion]; return; }
+        if ([method isEqualToString:@"repairRegisterOnly"]) {
+            [self repairRegisterOnlyWithArguments:arguments completion:^(NSDictionary *answer) {
+                // This callback runs on the bridge queue. Only a quiescent bridge
+                // can certify that no registration from this attempt is running.
+                if (!self.operationInFlight && answer && ![answer[@"code"] isEqual:@"registrationOutcomeUnknown"]) {
+                    NSMutableDictionary *settled = [answer mutableCopy];
+                    settled[@"registrationSettled"] = @YES;
+                    completion(settled);
+                } else {
+                    completion(answer);
+                }
+            }]; return;
+        }
         if ([@[@"enable", @"disable", @"repair", @"openApprovalSettings"] containsObject:method] && !argumentless) {
             completion(@{@"code": @"invalidRequest"}); return;
         }

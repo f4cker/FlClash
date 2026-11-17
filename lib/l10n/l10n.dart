@@ -9828,6 +9828,36 @@ abstract class AppLocalizations {
   /// **'Check again'**
   String get macHelperCheckAgain;
 
+  /// No description provided for @macHelperRegisterPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Register helper only'**
+  String get macHelperRegisterPending;
+
+  /// No description provided for @macHelperRepairUnknownOutcome.
+  ///
+  /// In en, this message translates to:
+  /// **'The system operation may still be in flight. Do not retry until after restarting the Mac. If Settings cannot open, manually open System Settings → General → Login Items & Extensions.'**
+  String get macHelperRepairUnknownOutcome;
+
+  /// No description provided for @macHelperRepairFailedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair did not complete. Check access to the Flash application support directory. If Core stop is unconfirmed, restart the Mac. If it still fails, contact support.'**
+  String get macHelperRepairFailedDetail;
+
+  /// No description provided for @macHelperExplicitRepairWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The cause is uncertain. Repair unregisters and registers the helper, may interrupt an old Core that is still running, and may require approval again. Core will stay stopped; approve it in System Settings and restart the Mac, then check again. Do not run another version of Flash concurrently.'**
+  String get macHelperExplicitRepairWarning;
+
+  /// No description provided for @macHelperRepairPendingDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair is not complete and Core startup is blocked. Restart the Mac, choose Register helper only, then approve it in System Settings and check again. If the registration outcome is unknown, restart the Mac again. If registration failed or verification still fails, reinstall Flash or contact support. Do not run another version concurrently.'**
+  String get macHelperRepairPendingDetail;
+
   /// No description provided for @macHelperRepair.
   ///
   /// In en, this message translates to:

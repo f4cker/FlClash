@@ -65,6 +65,25 @@ class _Native implements MacHelperNativeApi {
   }
 }
 
+class _StaleStatusNative extends _Native {
+  Completer<Map<Object?, Object?>>? delayedStatus;
+  Completer<Map<Object?, Object?>>? delayedStop;
+
+  @override
+  Future<Map<Object?, Object?>> invoke(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) {
+    if (method == 'status' && delayedStatus != null) {
+      final reply = delayedStatus!;
+      delayedStatus = null;
+      return reply.future;
+    }
+    if (method == 'stop' && delayedStop != null) return delayedStop!.future;
+    return super.invoke(method, arguments);
+  }
+}
+
 final class _RelayCall {
   final Map<String, Object?> arguments;
   final reply = Completer<Map<Object?, Object?>>();
@@ -213,6 +232,29 @@ const _applied = CoreLifecycleResult(
 );
 
 void main() {
+  test('old status cannot forget a newer stopping session', () async {
+    final native = _StaleStatusNative();
+    final client = MacHelperClient(native: native, safeMode: () => false);
+    await client.start(_session);
+    native.stopExitConfirmed = false;
+    expect(await client.stop(_session), isFalse);
+    final statusReply = Completer<Map<Object?, Object?>>();
+    native.delayedStatus = statusReply;
+    final status = client.status();
+    native.stopExitConfirmed = true;
+    expect(await client.stop(_session), isTrue);
+    const next = '1123456789abcdef0123456789abcdef';
+    await client.start(next);
+    final stopReply = Completer<Map<Object?, Object?>>();
+    native.delayedStop = stopReply;
+    final stop = client.stop(next);
+    statusReply.complete({'code': 'enabled', 'exitConfirmed': true, 'pid': 0});
+    await status;
+    expect(client.hasCoreSession, isTrue);
+    stopReply.complete({'code': 'unavailable'});
+    expect(await stop, isFalse);
+    expect(client.hasCoreSession, isTrue);
+  });
   test('helper migration is explicit and never blocks owned stop', () async {
     final native = _Native()..state = 'migrationRequired';
     final client = MacHelperClient(native: native, safeMode: () => false);
@@ -1362,7 +1404,7 @@ void main() {
           lookupAppLocalizations(const Locale('zh')),
           MacHelperCardAction.repair,
         ),
-        '修复',
+        '尝试修复',
       );
       steps.clear();
       expect(await flow.repair(), MacHelperState.enabled);
