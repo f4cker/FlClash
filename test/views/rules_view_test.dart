@@ -5,6 +5,8 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/rules/add_rule_dialog.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/rules/rule_rows.dart';
 import 'package:fl_clash/views/rules/rules.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -445,6 +447,26 @@ void main() {
         find.byKey(RulesView.resultsKey),
       );
       expect(clip.paintBounds.top, 0);
+      // The header, gap below the info line included, is opaque and the
+      // results start exactly where it ends, clipped right there.
+      final header = find.byKey(RulesView.headerKey);
+      expect(tester.widget<ColoredBox>(header).color.a, 1);
+      final headerRect = tester.getRect(header);
+      expect(headerRect.bottom, results.top);
+      expect(headerRect.bottom, greaterThan(field.bottom));
+      final cut = find
+          .ancestor(
+            of: find.byKey(RulesView.resultsKey),
+            matching: find.byType(ClipRect),
+          )
+          .first;
+      expect(tester.getRect(cut).top, headerRect.bottom);
+      // A hairline marks the cut while the results are scrolled.
+      expect(find.byKey(RulesView.scrollEdgeKey), findsOneWidget);
+      expect(
+        tester.getRect(find.byKey(RulesView.scrollEdgeKey)).top,
+        results.top,
+      );
     }
 
     Future<Rect> lookUp(WidgetTester tester) async {
@@ -494,6 +516,8 @@ void main() {
         const Offset(0, -400),
       );
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('View that rule'));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('View that rule'));
       await tester.pumpAndSettle();
@@ -517,6 +541,108 @@ void main() {
 
       expect(offset(tester), greaterThan(0));
       expectClear(tester, search);
+      await teardown(tester);
+    });
+  });
+
+  group('a rule set row with entries showing reads as open', () {
+    Glyph chevronOf(WidgetTester tester) {
+      final row = find.ancestor(
+        of: find.text('RULE-SET,YouTube'),
+        matching: find.byType(RuleRow),
+      );
+      return tester
+          .widget<GlyphIcon>(
+            find.descendant(of: row, matching: find.byType(GlyphIcon)).first,
+          )
+          .glyph;
+    }
+
+    Future<void> lookUp(WidgetTester tester) async {
+      await tester.enterText(
+        find.byType(EditableText).first,
+        'www.youtube.com',
+      );
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+
+    setUp(() {
+      when(
+        () => core.getRuleSetEntries(
+          'YouTube',
+          offset: any(named: 'offset'),
+          limit: any(named: 'limit'),
+          filter: any(named: 'filter'),
+        ),
+      ).thenAnswer(
+        (_) async => const RuleSetEntries(
+          name: 'YouTube',
+          total: 3,
+          entries: [
+            'DOMAIN-SUFFIX,googlevideo.com',
+            'DOMAIN-SUFFIX,youtube.com',
+            'DOMAIN-SUFFIX,ytimg.com',
+          ],
+        ),
+      );
+    });
+
+    for (final all in [false, true]) {
+      testWidgets(all ? 'among all rules' : 'among the matching rules', (
+        tester,
+      ) async {
+        await pumpRules(tester);
+        await lookUp(tester);
+        if (all) {
+          await tester.tap(find.text('Show all rules'));
+          await tester.pumpAndSettle();
+        }
+        expect(find.byType(RuleEntryRow), findsOneWidget);
+        expect(chevronOf(tester), AppGlyphs.chevronDown);
+
+        // Open: every entry, the matched one still marked.
+        await tester.tap(find.text('RULE-SET,YouTube'));
+        await tester.pumpAndSettle();
+        expect(find.byType(RuleEntryRow), findsNWidgets(3));
+        expect(find.text('DOMAIN-SUFFIX,ytimg.com'), findsOneWidget);
+        expect(chevronOf(tester), AppGlyphs.chevronDown);
+        final matched = tester.widget<RuleEntryRow>(
+          find.ancestor(
+            of: find.text('DOMAIN-SUFFIX,youtube.com').last,
+            matching: find.byType(RuleEntryRow),
+          ),
+        );
+        expect(matched.highlighted, isTrue);
+
+        // Closed again: back to the matched entry alone.
+        await tester.tap(find.text('RULE-SET,YouTube'));
+        await tester.pumpAndSettle();
+        expect(find.byType(RuleEntryRow), findsOneWidget);
+        expect(find.text('DOMAIN-SUFFIX,ytimg.com'), findsNothing);
+        expect(chevronOf(tester), AppGlyphs.chevronDown);
+        await teardown(tester);
+      });
+    }
+
+    testWidgets('and without a lookup it opens and closes plainly', (
+      tester,
+    ) async {
+      await pumpRules(tester);
+      expect(find.byType(RuleEntryRow), findsNothing);
+      expect(chevronOf(tester), AppGlyphs.chevronForward);
+
+      await tester.tap(find.text('RULE-SET,YouTube'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RuleEntryRow), findsNWidgets(3));
+      expect(chevronOf(tester), AppGlyphs.chevronDown);
+
+      await tester.tap(find.text('RULE-SET,YouTube'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RuleEntryRow), findsNothing);
+      expect(chevronOf(tester), AppGlyphs.chevronForward);
       await teardown(tester);
     });
   });

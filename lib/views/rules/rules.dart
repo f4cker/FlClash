@@ -78,6 +78,8 @@ class RulesView extends ConsumerStatefulWidget {
   /// The scrolling part of the page, under its fixed title and search box.
   @visibleForTesting
   static const resultsKey = ValueKey('rules-results');
+  static const headerKey = ValueKey('rules-header');
+  static const scrollEdgeKey = ValueKey('rules-scroll-edge');
 
   @override
   ConsumerState<RulesView> createState() => _RulesViewState();
@@ -528,11 +530,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
       if (lookup == null) return items;
       for (final hit in lookupRows(lookup)) {
         items.add(RuleRowItem.rule(hit.rule, hit: hit));
-        if (hit.ruleSet != null && hit.entry.isNotEmpty) {
-          items.add(
-            RuleRowItem.entry(parent: hit.index, position: 0, text: hit.entry),
-          );
-        }
+        _addChildren(items, hit.index, hit.rule, hit);
       }
       return items;
     }
@@ -556,24 +554,36 @@ class _RulesViewState extends ConsumerState<RulesView> {
         continue;
       }
       items.add(RuleRowItem.rule(rule, hit: hits[index]));
-      if (_expandable(rule) && _isExpanded(index)) {
-        final page = _pageOf(index);
-        for (final (position, entry) in page.entries.indexed) {
-          items.add(
-            RuleRowItem.entry(parent: index, position: position, text: entry),
-          );
-        }
-        items.add(RuleRowItem.footer(parent: index));
-      } else {
-        final hit = hits[index];
-        if (hit != null && hit.ruleSet != null && hit.entry.isNotEmpty) {
-          items.add(
-            RuleRowItem.entry(parent: index, position: 0, text: hit.entry),
-          );
-        }
-      }
+      _addChildren(items, index, rule, hits[index]);
     }
     return items;
+  }
+
+  /// The child rows of a rule set: every entry (paged) when expanded,
+  /// otherwise just the entry that matched the lookup, if any.
+  void _addChildren(
+    List<RuleRowItem> items,
+    int index,
+    CoreRule rule,
+    RuleHit? hit,
+  ) {
+    if (_expandable(rule) && _isExpanded(index)) {
+      final page = _pageOf(index);
+      for (final (position, entry) in page.entries.indexed) {
+        items.add(
+          RuleRowItem.entry(parent: index, position: position, text: entry),
+        );
+      }
+      items.add(RuleRowItem.footer(parent: index));
+    } else if (_matchedEntryOf(hit) case final entry?) {
+      items.add(RuleRowItem.entry(parent: index, position: 0, text: entry));
+    }
+  }
+
+  /// The rule-set entry [hit] matched, shown under its row while collapsed.
+  String? _matchedEntryOf(RuleHit? hit) {
+    if (!_inLookup || hit == null || hit.ruleSet == null) return null;
+    return hit.entry.isEmpty ? null : hit.entry;
   }
 
   void _copy(String text) {
@@ -797,36 +807,48 @@ class _RulesViewState extends ConsumerState<RulesView> {
         ? const <RuleRowItem>[]
         : _items(list: list, sources: sources);
     const padding = EdgeInsets.symmetric(horizontal: 16);
-    Widget box(Widget child, {double top = 12}) => SliverPadding(
-      padding: padding.copyWith(top: top),
-      sliver: SliverToBoxAdapter(child: child),
-    );
+    // The gap above the first block belongs to the pinned header, so
+    // the scroll area starts right where the header's background ends.
+    var first = true;
+    Widget box(Widget child, {double top = 12}) {
+      final gap = first ? 0.0 : top;
+      first = false;
+      return SliverPadding(
+        padding: padding.copyWith(top: gap),
+        sliver: SliverToBoxAdapter(child: child),
+      );
+    }
+
     final dimmed = !coreRunning;
     // The notices of the page's state and the search box stay put under
     // the title; only the results and rules below them scroll, clipped at
     // their own top, so nothing slides under the title or the search box.
-    final header = Padding(
-      padding: padding.copyWith(top: context.contentTopPadding),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 12,
-        children: [
-          if (!coreRunning)
-            RulesNotice(
-              tone: RuleTone.red,
-              glyph: AppGlyphs.error,
-              text: appLocalizations.rulesCoreStopped,
-            ),
-          if (mode == 'global' || mode == 'direct')
-            RulesNotice(
-              tone: RuleTone.gray,
-              glyph: AppGlyphs.info,
-              text: mode == 'global'
-                  ? appLocalizations.rulesModeGlobal
-                  : appLocalizations.rulesModeDirect,
-            ),
-          _buildSearchBox(context),
-        ],
+    final header = ColoredBox(
+      key: RulesView.headerKey,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Padding(
+        padding: padding.copyWith(top: context.contentTopPadding, bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 12,
+          children: [
+            if (!coreRunning)
+              RulesNotice(
+                tone: RuleTone.red,
+                glyph: AppGlyphs.error,
+                text: appLocalizations.rulesCoreStopped,
+              ),
+            if (mode == 'global' || mode == 'direct')
+              RulesNotice(
+                tone: RuleTone.gray,
+                glyph: AppGlyphs.info,
+                text: mode == 'global'
+                    ? appLocalizations.rulesModeGlobal
+                    : appLocalizations.rulesModeDirect,
+              ),
+            _buildSearchBox(context),
+          ],
+        ),
       ),
     );
     final results = CustomScrollView(
@@ -874,7 +896,39 @@ class _RulesViewState extends ConsumerState<RulesView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         header,
-        Expanded(child: results),
+        Expanded(
+          child: ClipRect(
+            child: Stack(
+              children: [
+                Positioned.fill(child: results),
+                // Once the results scroll, a hairline marks the cut so a
+                // sliver of a card never reads as a stray line.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: ListenableBuilder(
+                    listenable: _scrollController,
+                    builder: (context, _) {
+                      final scrolled =
+                          _scrollController.hasClients &&
+                          _scrollController.positions.length == 1 &&
+                          _scrollController.offset > 0;
+                      return Visibility(
+                        visible: scrolled,
+                        child: const Divider(
+                          key: RulesView.scrollEdgeKey,
+                          height: 1,
+                          thickness: 1,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1398,8 +1452,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
           if (item.isRule) {
             final rule = item.rule!;
             final index = rule.index;
-            final expandable = !(_inLookup && !_showAll) && _expandable(rule);
+            final expandable = _expandable(rule);
             final set = rule.ruleSet;
+            // Any visible child row, even only the matched entry, means
+            // the row reads as open; a tap then shows every entry, and
+            // the next one goes back to the matched entry alone.
+            final open =
+                _isExpanded(index) || _matchedEntryOf(item.hit) != null;
             row = RuleRow(
               key: index == highlighted ? _targetRowKey : ValueKey(index),
               rule: rule,
@@ -1409,7 +1468,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
               narrow: narrow,
               highlighted: index == highlighted && _inLookup,
               showNode: !_inLookup || item.hit?.status == RuleHitStatus.winner,
-              expanded: expandable ? _isExpanded(index) : null,
+              expanded: expandable ? open : null,
               setMatches: set == null ? null : filter?.sets[set.name],
               first: first,
               last: last,
