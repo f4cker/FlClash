@@ -255,6 +255,7 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	mitmValidateMethod:   withArguments(handleMitmValidate),
 	mitmStatusMethod:     withoutArguments(handleMitmStatus),
 	mitmSignResultMethod: withArguments(handleMitmSignResult),
+	mitmDisableMethod:    action(handleMitmDisable),
 	mitmExchangesMethod:  withArguments(handleMitmExchanges),
 	mitmExchangeMethod:   withArguments(handleMitmExchange),
 	mitmBodyMethod:       withArguments(handleMitmBody),

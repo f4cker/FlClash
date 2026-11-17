@@ -10913,6 +10913,12 @@ abstract class AppLocalizations {
   /// **'Decryption not active: settings not applied to the core yet'**
   String get mitmNotApplied;
 
+  /// No description provided for @mitmTurnOffFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not turn decryption off in the core. Restart the core.'**
+  String get mitmTurnOffFailed;
+
   /// No description provided for @mitmPausedIndicatorPending.
   ///
   /// In en, this message translates to:

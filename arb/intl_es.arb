@@ -1808,6 +1808,7 @@
   "mitmOutcomeFailed": "Falló la conexión descifrada",
   "mitmPausedLiveness": "Descifrado en pausa: no se pudo verificar la confianza o el firmante. Normalmente se detecta en unos 26 segundos; la suspensión o bloqueos pueden tardar más.",
   "mitmNotApplied": "Decryption not active: settings not applied to the core yet",
+  "mitmTurnOffFailed": "Could not turn decryption off in the core. Restart the core.",
   "mitmPausedIndicatorPending": "Descifrado en pausa: aún no está disponible el indicador permanente requerido.",
   "mitmPausedUnavailable": "Descifrado en pausa: el firmante o la conexión no está disponible.",
   "mitmIndicatorDecrypting": "Descifrando",

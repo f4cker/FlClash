@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/app_localizations.dart';
+import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -298,6 +299,101 @@ void main() {
     verifyNever(() => coreInterface.stopLog());
 
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  group('decryption off', () {
+    setUp(() => mitmFeature = true);
+    tearDown(() => mitmFeature = false);
+
+    void setMitm(ProviderContainer container, bool enable) {
+      container
+          .read(patchClashConfigProvider.notifier)
+          .update(
+            (state) =>
+                state.copyWith(mitm: state.mitm.copyWith(enable: enable)),
+          );
+    }
+
+    testWidgets('is told to the Core on its own when turned off', (
+      tester,
+    ) async {
+      final coreInterface = _coreInterface();
+      when(() => coreInterface.disableMitm()).thenAnswer((_) async {});
+      final setupAction = _ApplyRecordingSetupAction();
+      final container = await _pumpCoreManager(
+        tester,
+        coreInterface,
+        overrides: [setupActionProvider.overrideWith(() => setupAction)],
+      );
+      setMitm(container, true);
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      verifyNever(() => coreInterface.disableMitm());
+
+      setMitm(container, false);
+      await tester.pump();
+
+      verify(() => coreInterface.disableMitm()).called(1);
+      // The visible setup still runs as well.
+      expect(setupAction.applies, greaterThanOrEqualTo(1));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('is asserted on every connection while off, never while on', (
+      tester,
+    ) async {
+      final coreInterface = _coreInterface();
+      when(() => coreInterface.disableMitm()).thenAnswer((_) async {});
+      final container = await _pumpCoreManager(
+        tester,
+        coreInterface,
+        overrides: [
+          setupActionProvider.overrideWith(_ApplyRecordingSetupAction.new),
+        ],
+      );
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      verify(() => coreInterface.disableMitm()).called(1);
+
+      container.read(coreStatusProvider.notifier).value =
+          CoreStatus.disconnected;
+      await tester.pump();
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      verify(() => coreInterface.disableMitm()).called(1);
+
+      setMitm(container, true);
+      container.read(coreStatusProvider.notifier).value =
+          CoreStatus.disconnected;
+      await tester.pump();
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      verifyNever(() => coreInterface.disableMitm());
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('that does not reach the Core says so', (tester) async {
+      final coreInterface = _coreInterface();
+      when(
+        () => coreInterface.disableMitm(),
+      ).thenAnswer((_) async => throw StateError('relay gone'));
+      final container = await _pumpCoreManager(
+        tester,
+        coreInterface,
+        overrides: [
+          setupActionProvider.overrideWith(_ApplyRecordingSetupAction.new),
+        ],
+      );
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text(currentAppLocalizations.mitmTurnOffFailed),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   });
 
   testWidgets('a setting the Core patches live is not re-applied', (

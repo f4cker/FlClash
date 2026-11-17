@@ -6366,6 +6366,10 @@ class AppLocalizationsKo extends AppLocalizations {
       'Decryption not active: settings not applied to the core yet';
 
   @override
+  String get mitmTurnOffFailed =>
+      'Could not turn decryption off in the core. Restart the core.';
+
+  @override
   String get mitmPausedIndicatorPending => '복호화 일시 중지: 필수 상시 표시기가 아직 없습니다.';
 
   @override

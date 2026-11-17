@@ -5957,6 +5957,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmNotApplied => '解密未生效：设置还没应用到内核';
 
   @override
+  String get mitmTurnOffFailed => '没能在内核中关闭解密，请重启内核';
+
+  @override
   String get mitmPausedIndicatorPending => '解密已暂停：尚未提供必需的常驻解密指示。';
 
   @override

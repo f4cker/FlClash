@@ -1808,6 +1808,7 @@
   "mitmOutcomeFailed": "Échec de la connexion déchiffrée",
   "mitmPausedLiveness": "Déchiffrement en pause : confiance ou signature non vérifiable. Détection normalement en 26 secondes environ ; une veille ou un blocage peut la retarder.",
   "mitmNotApplied": "Decryption not active: settings not applied to the core yet",
+  "mitmTurnOffFailed": "Could not turn decryption off in the core. Restart the core.",
   "mitmPausedIndicatorPending": "Déchiffrement en pause : l’indicateur permanent requis est indisponible.",
   "mitmPausedUnavailable": "Déchiffrement en pause : signataire ou connexion indisponible.",
   "mitmIndicatorDecrypting": "Déchiffrement en cours",

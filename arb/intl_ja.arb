@@ -1808,6 +1808,7 @@
   "mitmOutcomeFailed": "復号接続に失敗しました",
   "mitmPausedLiveness": "復号を一時停止：信頼または署名機能を確認できません。通常は約26秒以内に検出しますが、スリープや停止時は長くなることがあります。",
   "mitmNotApplied": "Decryption not active: settings not applied to the core yet",
+  "mitmTurnOffFailed": "Could not turn decryption off in the core. Restart the core.",
   "mitmPausedIndicatorPending": "復号を一時停止：必要な常時表示インジケーターがありません。",
   "mitmPausedUnavailable": "復号を一時停止：署名機能または接続を利用できません。",
   "mitmIndicatorDecrypting": "復号中",

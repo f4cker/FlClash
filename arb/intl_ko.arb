@@ -1808,6 +1808,7 @@
   "mitmOutcomeFailed": "복호화 연결에 실패했습니다",
   "mitmPausedLiveness": "복호화 일시 중지: 신뢰 또는 서명 상태를 확인할 수 없습니다. 일반적으로 약 26초 내에 감지하지만 절전이나 시스템 중단 시 더 오래 걸릴 수 있습니다.",
   "mitmNotApplied": "Decryption not active: settings not applied to the core yet",
+  "mitmTurnOffFailed": "Could not turn decryption off in the core. Restart the core.",
   "mitmPausedIndicatorPending": "복호화 일시 중지: 필수 상시 표시기가 아직 없습니다.",
   "mitmPausedUnavailable": "복호화 일시 중지: 서명기 또는 연결을 사용할 수 없습니다.",
   "mitmIndicatorDecrypting": "복호화 중",

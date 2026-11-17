@@ -3,6 +3,7 @@ package core
 import (
 	"sync/atomic"
 
+	"github.com/metacubex/mihomo/log"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -80,6 +81,18 @@ func (runtime *mitmRuntime) decrypting() bool {
 func mitmDecrypts(host string) bool {
 	runtime := mitmState.Load()
 	return runtime.decrypting() && runtime.hosts.Match(host)
+}
+
+// Turns decryption off without a setup, so the app's "off" reaches the Core
+// even when a setup cannot be made or is refused. Ending decryption needs
+// nothing checked; a Core already not decrypting is left as it is.
+func handleMitmDisable() {
+	previous := mitmState.Load()
+	if !previous.decrypting() {
+		return
+	}
+	replaceMitmRuntime(&mitmRuntime{ignored: previous.ignored})
+	log.Infoln("[MITM] decryption turned off")
 }
 
 func handleMitmStatus() MitmStatus {

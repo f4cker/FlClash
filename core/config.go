@@ -168,6 +168,11 @@ func applyConfig(params *SetupParams) error {
 	defer configMu.Unlock()
 
 	refreshGuardSuffixes()
+	// A setup without MITM turns it off once applied; one refused, or kept
+	// out by its mounts, still may not leave an earlier decryption running.
+	if params.Mitm == nil {
+		handleMitmDisable()
+	}
 	var err error
 	if params.Mounts != nil {
 		err = checkMountedSetup(params)

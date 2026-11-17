@@ -6294,6 +6294,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'Decryption not active: settings not applied to the core yet';
 
   @override
+  String get mitmTurnOffFailed =>
+      'Could not turn decryption off in the core. Restart the core.';
+
+  @override
   String get mitmPausedIndicatorPending => '復号を一時停止：必要な常時表示インジケーターがありません。';
 
   @override

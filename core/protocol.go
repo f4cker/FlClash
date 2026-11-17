@@ -92,6 +92,7 @@ const (
 	mitmBodyMethod                CoreMethod = "mitm.body"
 	mitmStatusMethod              CoreMethod = "mitm.status"
 	mitmSignResultMethod          CoreMethod = "mitm.signResult"
+	mitmDisableMethod             CoreMethod = "mitm.disable"
 
 	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
 	tailscaleStatusMethod        CoreMethod = "tailscale.status"

@@ -91,6 +91,9 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         // Turning decryption on or off is applied visibly: a setup that
         // fails says so instead of leaving the Core without it.
         if (mitmFeature && prev != null && prev != next) _applyMitm();
+        // Off is also told to the Core on its own, so it holds even when
+        // that setup cannot be made or is refused.
+        if (mitmFeature && prev == true && !next) unawaited(_assertMitmOff());
       },
     );
     ref.listenManual(mitmTrustGainedProvider, (prev, next) {
@@ -134,8 +137,32 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     ref.listenManual(coreStatusProvider, (prev, next) {
       if (next == CoreStatus.connected && prev != CoreStatus.connected) {
         _syncLogStream();
+        // A Core reached again may be one that kept decrypting while the
+        // app was away; with decryption off here, it is told so.
+        if (mitmFeature && !ref.read(patchClashConfigProvider).mitm.enable) {
+          unawaited(_assertMitmOff());
+        }
       }
     }, fireImmediately: true);
+  }
+
+  Future<void> _assertMitmOff() async {
+    if (ref.read(coreStatusProvider) != CoreStatus.connected) {
+      // The next connection asserts it.
+      return;
+    }
+    try {
+      await _core.disableMitm();
+    } catch (error) {
+      commonPrint.log('mitm.disable failed: $error', logLevel: LogLevel.error);
+      if (!mounted || ref.read(patchClashConfigProvider).mitm.enable) {
+        return;
+      }
+      dialogs.showBanner(
+        currentAppLocalizations.mitmTurnOffFailed,
+        level: BannerLevel.error,
+      );
+    }
   }
 
   void _syncLogStream() {

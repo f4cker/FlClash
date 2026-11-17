@@ -572,6 +572,10 @@ abstract class CoreHandlerInterface {
     }, arguments: rules.toJson());
   }
 
+  /// Ends decryption in the Core without a setup; a Core not decrypting is
+  /// left alone.
+  Future<void> disableMitm() => _command(CoreMethod.mitmDisable);
+
   Future<MitmStatus> getMitmStatus() {
     return _query(CoreMethod.mitmStatus, _model(MitmStatus.fromJson));
   }
