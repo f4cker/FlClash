@@ -53,6 +53,7 @@ class _CountingSetup extends SetupAction {
       md5: 'fixture',
       counts: configCountsOf(const {}),
       base: null,
+      ruleSources: const <RuleSource>[],
     );
   }
 }

@@ -2,8 +2,10 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/test_app.dart';
@@ -235,6 +237,54 @@ void main() {
       tester.getCenter(find.text('Group')).dx,
       lessThan(tester.getCenter(find.text('Node')).dx),
     );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the rule row looks the request up while the Core runs', (
+    tester,
+  ) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    container
+        .read(viewSizeProvider.notifier)
+        .update((_) => const Size(1200, 900));
+    final trackerInfo = _tracker(
+      rule: 'RuleSet',
+      rulePayload: 'YouTube',
+      host: 'www.youtube.com',
+    );
+
+    Future<void> pumpDetail() async {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: TestApp(
+            homeBuilder: (child) => HostScaffold(body: child),
+            child: SheetProvider(
+              type: SheetType.page,
+              child: TrackerInfoDetailView(trackerInfo: trackerInfo),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    await pumpDetail();
+    expect(find.text('Look up rule'), findsNothing);
+    expect(find.text('RuleSet(YouTube)'), findsOneWidget);
+
+    container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+    await pumpDetail();
+    await tester.tap(find.text('Look up rule'));
+    await tester.pump();
+
+    final ask = container.read(rulesLookupRequestProvider);
+    expect(ask?.host, 'www.youtube.com');
+    expect(ask?.rule, 'RuleSet');
+    expect(ask?.rulePayload, 'YouTube');
+    expect(container.read(currentPageLabelProvider), PageLabel.rules);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

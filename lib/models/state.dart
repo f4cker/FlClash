@@ -8,6 +8,7 @@ import 'common.dart';
 import 'core.dart';
 import 'mount.dart';
 import 'profile.dart';
+import 'rules.dart';
 
 part 'generated/state.freezed.dart';
 part 'generated/state.g.dart';
@@ -216,6 +217,9 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
     String? matchTarget,
     @Default(false) bool safeMode,
     @Default([]) List<MitmModuleSource> mitmModules,
+
+    /// One per rule of [rawConfig]; empty reads them all as the profile's.
+    @Default([]) List<RuleSource> profileRuleSources,
   }) = _MakeRealProfileState;
 }
 
@@ -224,6 +228,7 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
 abstract class MitmModuleSource with _$MitmModuleSource {
   const factory MitmModuleSource({
     required String content,
+    @Default('') String name,
     @Default({}) Map<String, String> arguments,
     @Default({}) Map<String, String> resources,
   }) = _MitmModuleSource;

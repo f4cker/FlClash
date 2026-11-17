@@ -1164,3 +1164,14 @@ class ProfileDisabledRuleIds extends _$ProfileDisabledRuleIds
     optimistic(next, () => database.rulesDao.putDisabled(profileId, ruleId));
   }
 }
+
+/// Writes [rule] ahead of the profile's own rules, where it takes effect
+/// before them; for a normal profile those are its added rules.
+Future<void> putProfileRuleFirst(int profileId, Rule rule) async {
+  final existing = await database.rulesDao.queryProfileRules(profileId).get();
+  final first = existing.firstOrNull?.order;
+  await database.rulesDao.putRule(
+    rule.copyWith(order: indexing.generateKeyBetween(null, first)),
+    profileId: profileId,
+  );
+}

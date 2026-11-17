@@ -245,6 +245,87 @@ class BuiltInbounds extends _$BuiltInbounds with AutoDisposeNotifierMixin {
   }
 }
 
+/// Where each rule of the config last applied came from. The rules page
+/// shows them only while the Core's list agrees with them.
+@Riverpod(keepAlive: true)
+class AppliedRuleSourcesState extends _$AppliedRuleSourcesState
+    with AutoDisposeNotifierMixin {
+  @override
+  AppliedRuleSources build() {
+    return const AppliedRuleSources();
+  }
+
+  void applied(int? profileId, List<RuleSource> sources) {
+    final next = AppliedRuleSources(profileId: profileId, sources: sources);
+    if (state.copyWith(epoch: null) == next) return;
+    value = next;
+  }
+
+  /// Ties the sources to the first Core epoch whose rules they matched.
+  void bind(int epoch) {
+    if (state.epoch == null) {
+      value = state.copyWith(epoch: epoch);
+    }
+  }
+}
+
+/// A lookup asked for from elsewhere, a request record mostly, that the rules
+/// page runs when it opens; [serial] tells two asks for one host apart.
+typedef RulesLookupAsk = ({
+  String host,
+  String rule,
+  String rulePayload,
+  int serial,
+});
+
+@Riverpod(keepAlive: true)
+class RulesLookupRequest extends _$RulesLookupRequest
+    with AutoDisposeNotifierMixin {
+  int _serial = 0;
+
+  @override
+  RulesLookupAsk? build() {
+    return null;
+  }
+
+  /// Opens the rules page on [host], compared with the rule a connection
+  /// took when [rule] is given.
+  void ask(String host, {String rule = '', String rulePayload = ''}) {
+    value = (
+      host: host,
+      rule: rule,
+      rulePayload: rulePayload,
+      serial: ++_serial,
+    );
+    ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.rules);
+  }
+
+  void taken() {
+    value = null;
+  }
+}
+
+/// A group the proxies page is asked to bring into view, unfolded and
+/// briefly marked.
+@Riverpod(keepAlive: true)
+class ProxiesReveal extends _$ProxiesReveal with AutoDisposeNotifierMixin {
+  int _serial = 0;
+
+  @override
+  ({String group, int serial})? build() {
+    return null;
+  }
+
+  void reveal(String group) {
+    value = (group: group, serial: ++_serial);
+    ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.proxies);
+  }
+
+  void taken() {
+    value = null;
+  }
+}
+
 /// The current profile's own settings, as the last build read them.
 @Riverpod(keepAlive: true)
 class ProfileSettings extends _$ProfileSettings with AutoDisposeNotifierMixin {

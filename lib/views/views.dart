@@ -10,5 +10,6 @@ export 'logs.dart';
 export 'profiles/profiles.dart';
 export 'proxies/proxies.dart';
 export 'resources.dart';
+export 'rules/rules.dart';
 export 'tailscale/tailscale.dart';
 export 'tools.dart';

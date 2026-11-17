@@ -5971,4 +5971,400 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get forceRestartCore => '강제 다시 시작';
+
+  @override
+  String rulesSubtitle(Object profile, Object count) {
+    return 'Profile “$profile” · $count rules, in the order they apply';
+  }
+
+  @override
+  String rulesSubtitleQuery(Object profile) {
+    return 'Profile “$profile”';
+  }
+
+  @override
+  String get rulesSearchHint =>
+      'Search rules, or enter a URL to see which one it takes';
+
+  @override
+  String get rulesSearchLabel => 'Search rules or URLs';
+
+  @override
+  String rulesLookupSuggestion(Object host) {
+    return 'See which rule $host actually takes';
+  }
+
+  @override
+  String rulesLookupSuggestionLabel(Object host) {
+    return 'Look up which rule $host takes';
+  }
+
+  @override
+  String rulesFilterOnly(Object count) {
+    return 'Only filter rules by text · $count';
+  }
+
+  @override
+  String get rulesQuerying => 'Looking up';
+
+  @override
+  String get ruleSourceAll => 'All';
+
+  @override
+  String get ruleSourceSubscription => 'Subscription';
+
+  @override
+  String get ruleSourceAdded => 'Added rule';
+
+  @override
+  String get ruleSourceScript => 'Extension script';
+
+  @override
+  String get ruleSourceMitm => 'MITM module';
+
+  @override
+  String get ruleSourceCustom => 'Profile rule';
+
+  @override
+  String get ruleSourceManaged => 'Tailscale';
+
+  @override
+  String rulesGroupFilter(Object name) {
+    return 'Group: $name';
+  }
+
+  @override
+  String get ruleReject => 'Reject';
+
+  @override
+  String ruleSetSummary(Object count, Object time) {
+    return '$count · updated $time';
+  }
+
+  @override
+  String ruleSetCountOnly(Object count) {
+    return '$count';
+  }
+
+  @override
+  String ruleSetExpired(Object days) {
+    return 'Expired $days days';
+  }
+
+  @override
+  String get ruleSetFailed => 'Download failed';
+
+  @override
+  String get ruleSetMissing => 'Not downloaded';
+
+  @override
+  String get ruleSetAbsent => 'Not in this profile';
+
+  @override
+  String get rulesLoadingMore => 'Loading…';
+
+  @override
+  String rulesShown(Object shown, Object total) {
+    return 'Showing $shown / $total';
+  }
+
+  @override
+  String ruleSetFilterMatches(Object count, Object name) {
+    return '$count matches in rule set $name';
+  }
+
+  @override
+  String rulesContaining(Object count) {
+    return 'Rules containing it $count';
+  }
+
+  @override
+  String get rulesShowAll => 'Show all rules';
+
+  @override
+  String get ruleHitTag => 'Taken';
+
+  @override
+  String ruleShadowedBy(Object index) {
+    return 'Taken first by #$index';
+  }
+
+  @override
+  String get rulePassTag => 'PASS, skipped';
+
+  @override
+  String get ruleNoAdapterTag => 'Target missing, skipped';
+
+  @override
+  String get ruleNoUdpTag => 'No UDP, skipped';
+
+  @override
+  String ruleOnlyForApp(Object app) {
+    return 'Only for requests from $app';
+  }
+
+  @override
+  String ruleOnlyForPort(Object port) {
+    return 'Only for port $port';
+  }
+
+  @override
+  String get ruleDependsOnNetwork => 'Depends on TCP or UDP';
+
+  @override
+  String get ruleDependsOnInbound => 'Depends on the inbound';
+
+  @override
+  String get ruleDependsOnSource => 'Depends on the source address';
+
+  @override
+  String get ruleDependsOnIp => 'Needs the IP, which was not resolved';
+
+  @override
+  String get ruleDependsOnRematch => 'Matched again after a REMATCH';
+
+  @override
+  String get ruleDependsOnOther => 'Depends on the connection';
+
+  @override
+  String get hitCardTitle => 'Actually taken';
+
+  @override
+  String get hitCardTitleUncertain => 'Most likely taken';
+
+  @override
+  String hitCardPosition(Object index, Object total) {
+    return '#$index / $total';
+  }
+
+  @override
+  String get hitCardLast => 'Last rule';
+
+  @override
+  String get hitGoes => 'Goes';
+
+  @override
+  String get hitFallback => 'No specific rule, falls back to';
+
+  @override
+  String get hitNoRule => 'No rule matched, goes';
+
+  @override
+  String get hitRematch =>
+      'A REMATCH decides it when the connection is made; the lookup stops here.';
+
+  @override
+  String get hitRuleLabel => 'Rule';
+
+  @override
+  String get hitFromLabel => 'From';
+
+  @override
+  String get hitEntryLabel => 'Entry';
+
+  @override
+  String ruleUpdatedAt(Object time) {
+    return 'updated $time';
+  }
+
+  @override
+  String get ruleJustAdded => 'just added';
+
+  @override
+  String get changeNode => 'Change node';
+
+  @override
+  String get addAddedRule => 'Add rule';
+
+  @override
+  String get copyRule => 'Copy rule';
+
+  @override
+  String get viewGroup => 'View group';
+
+  @override
+  String uncertainProcess(Object count) {
+    return '$count rules before it match by the app that makes the request. A request from that app takes them first.';
+  }
+
+  @override
+  String uncertainPort(Object count) {
+    return '$count rules before it match by port. A request on that port takes them first.';
+  }
+
+  @override
+  String uncertainIp(Object count) {
+    return '$count rules before it match by IP and no IP was resolved, so it cannot be decided.';
+  }
+
+  @override
+  String uncertainOther(Object count) {
+    return '$count rules before it depend on the connection itself and cannot be decided here.';
+  }
+
+  @override
+  String get dependsCardTitle => 'Depends on the app or port';
+
+  @override
+  String ruleSetsIncomplete(Object list) {
+    return 'Rule sets $list; the result may be incomplete.';
+  }
+
+  @override
+  String ruleSetNotDownloadedItem(Object name) {
+    return '“$name” not downloaded';
+  }
+
+  @override
+  String ruleSetFailedItem(Object name) {
+    return '“$name” failed to download';
+  }
+
+  @override
+  String ruleSetExpiredItem(Object name, Object days) {
+    return '“$name” expired $days days ago';
+  }
+
+  @override
+  String get goUpdate => 'Update';
+
+  @override
+  String get lookupResolveFailed =>
+      'No IP was resolved, so rules by IP such as GEOIP and IP-CIDR could not be decided and were skipped.';
+
+  @override
+  String lookupResolvedIp(Object ip, Object source) {
+    return 'Resolved to $ip by $source';
+  }
+
+  @override
+  String lookupInputIp(Object ip) {
+    return 'Matched as $ip';
+  }
+
+  @override
+  String get ipSourceDns => 'the Core\'s DNS';
+
+  @override
+  String get ipSourceHosts => 'hosts';
+
+  @override
+  String get ipSourceMapping => 'the fake-IP mapping';
+
+  @override
+  String get lookupCoreStopped =>
+      'The Core is not running, so nothing can be looked up. Look again once it starts.';
+
+  @override
+  String get toDashboard => 'Dashboard';
+
+  @override
+  String get rulesCoreStopped =>
+      'The Core is not running; the rules stopped updating';
+
+  @override
+  String lookupFailed(Object reason) {
+    return 'Lookup failed: $reason';
+  }
+
+  @override
+  String rulesLoadFailed(Object reason) {
+    return 'Rules could not be read: $reason';
+  }
+
+  @override
+  String compareSame(Object rule) {
+    return 'This connection took $rule too; they agree.';
+  }
+
+  @override
+  String compareDiffer(Object rule) {
+    return 'This connection took $rule, which differs from now (the profile may have changed, or the rule goes by app).';
+  }
+
+  @override
+  String get compareSniffNote =>
+      'For an IP-only connection the Core sniffs the domain from the traffic first; a lookup cannot.';
+
+  @override
+  String get rulesModeGlobal => 'Global mode is on; rules do not apply';
+
+  @override
+  String get rulesModeDirect => 'Direct mode is on; rules do not apply';
+
+  @override
+  String get addRuleTitle => 'Add an added rule';
+
+  @override
+  String addRuleSubtitle(Object profile) {
+    return 'Written to the added rules of profile “$profile”';
+  }
+
+  @override
+  String get addRuleScope => 'Matches';
+
+  @override
+  String addRuleSuffix(Object domain) {
+    return '$domain and all its subdomains';
+  }
+
+  @override
+  String addRuleExact(Object host) {
+    return 'Only $host';
+  }
+
+  @override
+  String get addRuleTarget => 'Goes through';
+
+  @override
+  String get addRulePreview => 'Will add';
+
+  @override
+  String addedEffective(Object host, Object group) {
+    return 'Added and in effect. $host now goes through “$group”.';
+  }
+
+  @override
+  String addedNotEffective(Object index, Object source) {
+    return 'Added, but not in effect: #$index ($source) still takes it first.';
+  }
+
+  @override
+  String get viewThatRule => 'View that rule';
+
+  @override
+  String get lookupRule => 'Look up rule';
+
+  @override
+  String ruleRowSemantics(
+    Object index,
+    Object rule,
+    Object source,
+    Object group,
+  ) {
+    return 'Rule $index, $rule, from $source, to $group';
+  }
+
+  @override
+  String hitSemantics(
+    Object index,
+    Object rule,
+    Object source,
+    Object group,
+    Object node,
+  ) {
+    return 'Takes rule $index, $rule, from $source, through $group, node $node';
+  }
+
+  @override
+  String get uncertainPrefix => 'Uncertain';
+
+  @override
+  String get addRuleApplyFailed =>
+      'The rule was written, but the profile could not be reloaded.';
+
+  @override
+  String addRuleWriteFailed(Object reason) {
+    return 'Could not add the rule: $reason';
+  }
 }

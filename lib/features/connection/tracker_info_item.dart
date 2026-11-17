@@ -1,7 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
-import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +36,37 @@ void showTrackerInfoDetail(
   );
 }
 
+/// The host a rule lookup reads for a request: its name, else the address
+/// it went to.
+String trackerLookupHost(TrackerInfo trackerInfo) {
+  final metadata = trackerInfo.metadata;
+  return metadata.host.isNotEmpty ? metadata.host : metadata.destinationIP;
+}
+
+/// Whether the rules page can be opened on a request: it is in the desktop
+/// navigation while the Core runs. Read from those two alone, so a request
+/// row never builds the profile list the navigation reads.
+bool canLookUpTrackerRule(BuildContext context, TrackerInfo trackerInfo) {
+  if (trackerLookupHost(trackerInfo).isEmpty) return false;
+  final container = ProviderScope.containerOf(context, listen: false);
+  return container.read(viewWidthProvider) > maxMobileWidth &&
+      container.read(coreStatusProvider) == CoreStatus.connected;
+}
+
+/// Opens the rules page on a request's host, compared there with the rule
+/// the request took.
+void lookUpTrackerRule(BuildContext context, TrackerInfo trackerInfo) {
+  final container = ProviderScope.containerOf(context, listen: false);
+  rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+  container
+      .read(rulesLookupRequestProvider.notifier)
+      .ask(
+        trackerLookupHost(trackerInfo),
+        rule: trackerInfo.rule,
+        rulePayload: trackerInfo.rulePayload,
+      );
+}
+
 List<PopupMenuItem> trackerInfoMenuItems(
   BuildContext context,
   TrackerInfo trackerInfo, {
@@ -64,6 +95,12 @@ List<PopupMenuItem> trackerInfoMenuItems(
         glyph: AppGlyphs.copy,
         label: appLocalizations.copyDestination,
         onPressed: () => copy(destination),
+      ),
+    if (canLookUpTrackerRule(context, trackerInfo))
+      PopupMenuItem(
+        glyph: AppGlyphs.search,
+        label: appLocalizations.lookupRule,
+        onPressed: () => lookUpTrackerRule(context, trackerInfo),
       ),
     if (onClose != null)
       PopupMenuItem(
@@ -381,6 +418,42 @@ class TrackerInfoDetailView extends ConsumerWidget {
     );
   }
 
+  Widget _buildRule(BuildContext context) {
+    final ruleText = trackerInfo.ruleText;
+    if (!canLookUpTrackerRule(context, trackerInfo)) {
+      return ruleText.isEmpty
+          ? const SizedBox.shrink()
+          : DetailRow.text(
+              title: context.appLocalizations.rule,
+              value: ruleText,
+            );
+    }
+    final colorScheme = context.colorScheme;
+    return DetailRow(
+      title: context.appLocalizations.rule,
+      copyText: ruleText.isEmpty ? null : ruleText,
+      value: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 10,
+        children: [
+          Flexible(child: Text(ruleText)),
+          GestureDetector(
+            onTap: () => lookUpTrackerRule(context, trackerInfo),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Text(
+                context.appLocalizations.lookupRule,
+                style: AppTextStyle.footnote
+                    .of(context, emphasized: true)
+                    .copyWith(color: colorScheme.primary),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildRows(List<(String, String)> entries) {
     return [
       for (final (title, value) in entries)
@@ -417,8 +490,8 @@ class TrackerInfoDetailView extends ConsumerWidget {
                 (appLocalizations.process, trackerInfo.progressText),
             ]),
             if (process != null) ...processDetailRows(context, process),
+            _buildRule(context),
             ..._buildRows([
-              (appLocalizations.rule, trackerInfo.ruleText),
               (appLocalizations.upload, trackerInfo.upload.traffic.show),
               (appLocalizations.download, trackerInfo.download.traffic.show),
             ]),

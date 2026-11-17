@@ -186,6 +186,7 @@ Future<List<MitmModuleSource>> mitmModuleSources(
     sources.add(
       MitmModuleSource(
         content: await file.readAsString(),
+        name: module.name,
         arguments: module.arguments,
         resources: module.resources,
       ),

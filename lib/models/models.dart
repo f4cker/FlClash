@@ -10,6 +10,7 @@ export 'process_info.dart';
 export 'profile.dart';
 export 'record_filter.dart';
 export 'references.dart';
+export 'rules.dart';
 export 'state.dart';
 export 'tailscale.dart';
 export 'tailscale_runtime.dart';

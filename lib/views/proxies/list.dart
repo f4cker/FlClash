@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:fl_clash/common/common.dart';
@@ -38,12 +39,46 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
   void initState() {
     super.initState();
     _controller = sheetScrollController(context);
+    ref.listenManual(proxiesRevealProvider, (_, next) {
+      if (next != null) _reveal(next.group, next.serial);
+    }, fireImmediately: true);
   }
 
   @override
   void dispose() {
+    _revealTimer?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  Timer? _revealTimer;
+
+  /// Unfolds a group the rules page asked for, brings it into view and lets
+  /// its header's mark fade after a moment.
+  void _reveal(String groupName, int serial) {
+    final unfoldSet = ref.read(unfoldSetProvider);
+    if (!unfoldSet.contains(groupName)) {
+      ref.read(proxiesActionProvider.notifier).updateCurrentUnfoldSet({
+        ...unfoldSet,
+        groupName,
+      });
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.hasClients) return;
+      final offset = _getGroupOffset(groupName);
+      _controller.jumpTo(
+        offset.clamp(
+          _controller.position.minScrollExtent,
+          _controller.position.maxScrollExtent,
+        ),
+      );
+    });
+    _revealTimer?.cancel();
+    _revealTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (ref.read(proxiesRevealProvider)?.serial == serial) {
+        ref.read(proxiesRevealProvider.notifier).taken();
+      }
+    });
   }
 
   void _handleChange(String groupName) {
@@ -617,6 +652,9 @@ class ListHeader extends ConsumerWidget {
         ? SurfaceLevel.floatingOf(colorScheme)
         : context.raisedSurfaceLevel;
     final radius = AppCorner.xl.ap(context);
+    final revealed = ref.watch(
+      proxiesRevealProvider.select((reveal) => reveal?.group == groupName),
+    );
     final card = Card(
       enterActionsOnRight: true,
       enterAnimated: enterAnimated,
@@ -663,22 +701,41 @@ class ListHeader extends ConsumerWidget {
         onChange(groupName);
       },
     );
+    final shape = AppShape.vertical(
+      top: radius,
+      bottom: unfolded ? radius * floating : radius,
+    );
     return DecoratedBox(
       decoration: ShapeDecoration(
         color: level.colorOf(colorScheme),
-        shape: AppShape.vertical(
-          top: radius,
-          bottom: unfolded ? radius * floating : radius,
-        ),
+        shape: shape,
         shadows: lift == 0 ? null : _floatingShadows(colorScheme, lift),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(_headerButtonInset),
-        child: SurfaceScope(
-          // Card fills one level above its scope.
-          level: SurfaceLevel.values[level.index - 1],
-          child: card,
-        ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: revealed ? 1 : 0,
+                duration: const Duration(milliseconds: 400),
+                child: DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: colorScheme.primary.withValues(alpha: 0.12),
+                    shape: shape,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(_headerButtonInset),
+            child: SurfaceScope(
+              // Card fills one level above its scope.
+              level: SurfaceLevel.values[level.index - 1],
+              child: card,
+            ),
+          ),
+        ],
       ),
     );
   }

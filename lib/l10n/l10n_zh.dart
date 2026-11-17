@@ -5577,4 +5577,394 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get forceRestartCore => '强制重启';
+
+  @override
+  String rulesSubtitle(Object profile, Object count) {
+    return '当前配置「$profile」· $count 条，按生效顺序';
+  }
+
+  @override
+  String rulesSubtitleQuery(Object profile) {
+    return '当前配置「$profile」';
+  }
+
+  @override
+  String get rulesSearchHint => '搜索规则，或输入网址查它走哪条';
+
+  @override
+  String get rulesSearchLabel => '搜索规则或网址';
+
+  @override
+  String rulesLookupSuggestion(Object host) {
+    return '查 $host 实际走哪条规则';
+  }
+
+  @override
+  String rulesLookupSuggestionLabel(Object host) {
+    return '查询 $host 走哪条规则';
+  }
+
+  @override
+  String rulesFilterOnly(Object count) {
+    return '只按文字筛选规则 · $count 条';
+  }
+
+  @override
+  String get rulesQuerying => '正在查询';
+
+  @override
+  String get ruleSourceAll => '全部';
+
+  @override
+  String get ruleSourceSubscription => '订阅配置';
+
+  @override
+  String get ruleSourceAdded => '附加规则';
+
+  @override
+  String get ruleSourceScript => '扩展脚本';
+
+  @override
+  String get ruleSourceMitm => 'MITM 模块';
+
+  @override
+  String get ruleSourceCustom => '配置规则';
+
+  @override
+  String get ruleSourceManaged => 'Tailscale';
+
+  @override
+  String rulesGroupFilter(Object name) {
+    return '策略组：$name';
+  }
+
+  @override
+  String get ruleReject => '拒绝';
+
+  @override
+  String ruleSetSummary(Object count, Object time) {
+    return '$count 条 · $time更新';
+  }
+
+  @override
+  String ruleSetCountOnly(Object count) {
+    return '$count 条';
+  }
+
+  @override
+  String ruleSetExpired(Object days) {
+    return '已过期 $days 天';
+  }
+
+  @override
+  String get ruleSetFailed => '下载失败';
+
+  @override
+  String get ruleSetMissing => '还没下载';
+
+  @override
+  String get ruleSetAbsent => '配置里没有这个规则集';
+
+  @override
+  String get rulesLoadingMore => '正在加载…';
+
+  @override
+  String rulesShown(Object shown, Object total) {
+    return '已显示 $shown / $total';
+  }
+
+  @override
+  String ruleSetFilterMatches(Object count, Object name) {
+    return '规则集 · $name 里有 $count 条匹配';
+  }
+
+  @override
+  String rulesContaining(Object count) {
+    return '包含它的规则 $count';
+  }
+
+  @override
+  String get rulesShowAll => '显示全部规则';
+
+  @override
+  String get ruleHitTag => '实际命中';
+
+  @override
+  String ruleShadowedBy(Object index) {
+    return '被第 $index 条抢先';
+  }
+
+  @override
+  String get rulePassTag => 'PASS，跳过';
+
+  @override
+  String get ruleNoAdapterTag => '目标不存在，已跳过';
+
+  @override
+  String get ruleNoUdpTag => '不支持 UDP，已跳过';
+
+  @override
+  String ruleOnlyForApp(Object app) {
+    return '只对 $app 发起的请求生效';
+  }
+
+  @override
+  String ruleOnlyForPort(Object port) {
+    return '只对端口 $port 生效';
+  }
+
+  @override
+  String get ruleDependsOnNetwork => '取决于 TCP 还是 UDP';
+
+  @override
+  String get ruleDependsOnInbound => '取决于入站';
+
+  @override
+  String get ruleDependsOnSource => '取决于来源地址';
+
+  @override
+  String get ruleDependsOnIp => '需要 IP，没解析出来';
+
+  @override
+  String get ruleDependsOnRematch => 'REMATCH 后重新匹配';
+
+  @override
+  String get ruleDependsOnOther => '取决于连接本身';
+
+  @override
+  String get hitCardTitle => '实际命中';
+
+  @override
+  String get hitCardTitleUncertain => '多半会命中';
+
+  @override
+  String hitCardPosition(Object index, Object total) {
+    return '第 $index / $total 条';
+  }
+
+  @override
+  String get hitCardLast => '最后一条';
+
+  @override
+  String get hitGoes => '走';
+
+  @override
+  String get hitFallback => '没有专门规则，走兜底';
+
+  @override
+  String get hitNoRule => '没有规则命中，走';
+
+  @override
+  String get hitRematch => '这条规则交给 REMATCH 在连接时重新判断，查询到这里为止。';
+
+  @override
+  String get hitRuleLabel => '规则';
+
+  @override
+  String get hitFromLabel => '来自';
+
+  @override
+  String get hitEntryLabel => '条目';
+
+  @override
+  String ruleUpdatedAt(Object time) {
+    return '更新于 $time';
+  }
+
+  @override
+  String get ruleJustAdded => '刚刚添加';
+
+  @override
+  String get changeNode => '换节点';
+
+  @override
+  String get addAddedRule => '加附加规则';
+
+  @override
+  String get copyRule => '复制规则';
+
+  @override
+  String get viewGroup => '查看策略组';
+
+  @override
+  String uncertainProcess(Object count) {
+    return '前面有 $count 条按发起的 App 判断的规则。如果是那个 App 发起的请求，会先命中它。';
+  }
+
+  @override
+  String uncertainPort(Object count) {
+    return '前面有 $count 条按端口判断的规则。如果是那个端口的请求，会先命中它。';
+  }
+
+  @override
+  String uncertainIp(Object count) {
+    return '前面有 $count 条按 IP 判断的规则，没解析出 IP，无法确定。';
+  }
+
+  @override
+  String uncertainOther(Object count) {
+    return '前面有 $count 条按连接信息判断的规则，查询时无法确定。';
+  }
+
+  @override
+  String get dependsCardTitle => '取决于发起的 App 或端口';
+
+  @override
+  String ruleSetsIncomplete(Object list) {
+    return '规则集$list，结果可能不完整。';
+  }
+
+  @override
+  String ruleSetNotDownloadedItem(Object name) {
+    return '「$name」还没下载';
+  }
+
+  @override
+  String ruleSetFailedItem(Object name) {
+    return '「$name」下载失败';
+  }
+
+  @override
+  String ruleSetExpiredItem(Object name, Object days) {
+    return '「$name」已过期 $days 天';
+  }
+
+  @override
+  String get goUpdate => '去更新';
+
+  @override
+  String get lookupResolveFailed =>
+      '没能解析出 IP，GEOIP、IP-CIDR 这类按 IP 判断的规则无法判断，已跳过。';
+
+  @override
+  String lookupResolvedIp(Object ip, Object source) {
+    return '按 $source 解析为 $ip';
+  }
+
+  @override
+  String lookupInputIp(Object ip) {
+    return '按 $ip 匹配';
+  }
+
+  @override
+  String get ipSourceDns => '内核 DNS';
+
+  @override
+  String get ipSourceHosts => 'hosts';
+
+  @override
+  String get ipSourceMapping => 'Fake-IP 映射';
+
+  @override
+  String get lookupCoreStopped => '内核没在运行，暂时查不了。启动后再查。';
+
+  @override
+  String get toDashboard => '去仪表盘';
+
+  @override
+  String get rulesCoreStopped => '内核没在运行，规则列表已停止更新';
+
+  @override
+  String lookupFailed(Object reason) {
+    return '查询失败：$reason';
+  }
+
+  @override
+  String rulesLoadFailed(Object reason) {
+    return '读取规则失败：$reason';
+  }
+
+  @override
+  String compareSame(Object rule) {
+    return '这次连接实际命中的也是 $rule，一致。';
+  }
+
+  @override
+  String compareDiffer(Object rule) {
+    return '这次连接当时命中的是 $rule，和现在不同（配置可能已变，或按 App 判断）。';
+  }
+
+  @override
+  String get compareSniffNote => '只有 IP 的连接，内核会先从流量里嗅探出域名再匹配，查询时没有这一步。';
+
+  @override
+  String get rulesModeGlobal => '当前是全局模式，规则不生效';
+
+  @override
+  String get rulesModeDirect => '当前是直连模式，规则不生效';
+
+  @override
+  String get addRuleTitle => '添加附加规则';
+
+  @override
+  String addRuleSubtitle(Object profile) {
+    return '写入当前配置「$profile」的附加规则';
+  }
+
+  @override
+  String get addRuleScope => '匹配范围';
+
+  @override
+  String addRuleSuffix(Object domain) {
+    return '$domain 及所有子域名';
+  }
+
+  @override
+  String addRuleExact(Object host) {
+    return '只匹配 $host';
+  }
+
+  @override
+  String get addRuleTarget => '走哪个策略组';
+
+  @override
+  String get addRulePreview => '将添加';
+
+  @override
+  String addedEffective(Object host, Object group) {
+    return '已添加，已生效。$host 现在走「$group」。';
+  }
+
+  @override
+  String addedNotEffective(Object index, Object source) {
+    return '已添加，但没生效：仍被第 $index 条「$source」抢先。';
+  }
+
+  @override
+  String get viewThatRule => '查看那条';
+
+  @override
+  String get lookupRule => '查规则';
+
+  @override
+  String ruleRowSemantics(
+    Object index,
+    Object rule,
+    Object source,
+    Object group,
+  ) {
+    return '第 $index 条，$rule，来自$source，去$group';
+  }
+
+  @override
+  String hitSemantics(
+    Object index,
+    Object rule,
+    Object source,
+    Object group,
+    Object node,
+  ) {
+    return '实际命中第 $index 条，$rule，来自$source，走$group，节点$node';
+  }
+
+  @override
+  String get uncertainPrefix => '不确定';
+
+  @override
+  String get addRuleApplyFailed => '已写入，但重载配置失败。';
+
+  @override
+  String addRuleWriteFailed(Object reason) {
+    return '没能添加：$reason';
+  }
 }

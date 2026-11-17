@@ -85,6 +85,7 @@ class _HeldBuildSetupAction extends SetupAction {
       md5: 'synthetic',
       counts: configCountsOf(const {}),
       base: null,
+      ruleSources: const <RuleSource>[],
     );
   }
 }

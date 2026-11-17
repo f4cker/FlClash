@@ -472,6 +472,46 @@ abstract class CoreHandlerInterface {
     );
   }
 
+  Future<RuleList> listRules({String filter = ''}) {
+    return _query(
+      CoreMethod.ruleList,
+      _model(RuleList.fromJson),
+      arguments: {if (filter.isNotEmpty) 'filter': filter},
+    );
+  }
+
+  /// A page of a rule set's entries, read by the name the running config
+  /// gave the set; never by a path.
+  Future<RuleSetEntries> getRuleSetEntries(
+    String name, {
+    int offset = 0,
+    int limit = 500,
+    String filter = '',
+  }) {
+    return _query(
+      CoreMethod.ruleSetEntries,
+      _model(RuleSetEntries.fromJson),
+      arguments: {
+        'name': name,
+        'offset': offset,
+        'limit': limit,
+        if (filter.isNotEmpty) 'filter': filter,
+      },
+    );
+  }
+
+  /// Matches a host or IP against the running rules without connecting; with
+  /// [RuleLookupParams.resolve] a name costs one query through the Core's
+  /// resolver.
+  Future<RuleLookup> lookupRule(RuleLookupParams params) {
+    return _query(
+      CoreMethod.ruleLookup,
+      _model(RuleLookup.fromJson),
+      arguments: params.toJson(),
+      timeout: coreGuardFor(5000),
+    );
+  }
+
   Future<RouteSnapshot> watchRoute(bool watch) {
     return _query(
       CoreMethod.routeWatch,

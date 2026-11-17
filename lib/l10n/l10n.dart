@@ -10289,6 +10289,617 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Force restart'**
   String get forceRestartCore;
+
+  /// No description provided for @rulesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile “{profile}” · {count} rules, in the order they apply'**
+  String rulesSubtitle(Object profile, Object count);
+
+  /// No description provided for @rulesSubtitleQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile “{profile}”'**
+  String rulesSubtitleQuery(Object profile);
+
+  /// No description provided for @rulesSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search rules, or enter a URL to see which one it takes'**
+  String get rulesSearchHint;
+
+  /// No description provided for @rulesSearchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search rules or URLs'**
+  String get rulesSearchLabel;
+
+  /// No description provided for @rulesLookupSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'See which rule {host} actually takes'**
+  String rulesLookupSuggestion(Object host);
+
+  /// No description provided for @rulesLookupSuggestionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Look up which rule {host} takes'**
+  String rulesLookupSuggestionLabel(Object host);
+
+  /// No description provided for @rulesFilterOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only filter rules by text · {count}'**
+  String rulesFilterOnly(Object count);
+
+  /// No description provided for @rulesQuerying.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up'**
+  String get rulesQuerying;
+
+  /// No description provided for @ruleSourceAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get ruleSourceAll;
+
+  /// No description provided for @ruleSourceSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription'**
+  String get ruleSourceSubscription;
+
+  /// No description provided for @ruleSourceAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added rule'**
+  String get ruleSourceAdded;
+
+  /// No description provided for @ruleSourceScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Extension script'**
+  String get ruleSourceScript;
+
+  /// No description provided for @ruleSourceMitm.
+  ///
+  /// In en, this message translates to:
+  /// **'MITM module'**
+  String get ruleSourceMitm;
+
+  /// No description provided for @ruleSourceCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile rule'**
+  String get ruleSourceCustom;
+
+  /// No description provided for @ruleSourceManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Tailscale'**
+  String get ruleSourceManaged;
+
+  /// No description provided for @rulesGroupFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Group: {name}'**
+  String rulesGroupFilter(Object name);
+
+  /// No description provided for @ruleReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get ruleReject;
+
+  /// No description provided for @ruleSetSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} · updated {time}'**
+  String ruleSetSummary(Object count, Object time);
+
+  /// No description provided for @ruleSetCountOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}'**
+  String ruleSetCountOnly(Object count);
+
+  /// No description provided for @ruleSetExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired {days} days'**
+  String ruleSetExpired(Object days);
+
+  /// No description provided for @ruleSetFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed'**
+  String get ruleSetFailed;
+
+  /// No description provided for @ruleSetMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Not downloaded'**
+  String get ruleSetMissing;
+
+  /// No description provided for @ruleSetAbsent.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in this profile'**
+  String get ruleSetAbsent;
+
+  /// No description provided for @rulesLoadingMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get rulesLoadingMore;
+
+  /// No description provided for @rulesShown.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {shown} / {total}'**
+  String rulesShown(Object shown, Object total);
+
+  /// No description provided for @ruleSetFilterMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} matches in rule set {name}'**
+  String ruleSetFilterMatches(Object count, Object name);
+
+  /// No description provided for @rulesContaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules containing it {count}'**
+  String rulesContaining(Object count);
+
+  /// No description provided for @rulesShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all rules'**
+  String get rulesShowAll;
+
+  /// No description provided for @ruleHitTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Taken'**
+  String get ruleHitTag;
+
+  /// No description provided for @ruleShadowedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Taken first by #{index}'**
+  String ruleShadowedBy(Object index);
+
+  /// No description provided for @rulePassTag.
+  ///
+  /// In en, this message translates to:
+  /// **'PASS, skipped'**
+  String get rulePassTag;
+
+  /// No description provided for @ruleNoAdapterTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Target missing, skipped'**
+  String get ruleNoAdapterTag;
+
+  /// No description provided for @ruleNoUdpTag.
+  ///
+  /// In en, this message translates to:
+  /// **'No UDP, skipped'**
+  String get ruleNoUdpTag;
+
+  /// No description provided for @ruleOnlyForApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Only for requests from {app}'**
+  String ruleOnlyForApp(Object app);
+
+  /// No description provided for @ruleOnlyForPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Only for port {port}'**
+  String ruleOnlyForPort(Object port);
+
+  /// No description provided for @ruleDependsOnNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Depends on TCP or UDP'**
+  String get ruleDependsOnNetwork;
+
+  /// No description provided for @ruleDependsOnInbound.
+  ///
+  /// In en, this message translates to:
+  /// **'Depends on the inbound'**
+  String get ruleDependsOnInbound;
+
+  /// No description provided for @ruleDependsOnSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Depends on the source address'**
+  String get ruleDependsOnSource;
+
+  /// No description provided for @ruleDependsOnIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs the IP, which was not resolved'**
+  String get ruleDependsOnIp;
+
+  /// No description provided for @ruleDependsOnRematch.
+  ///
+  /// In en, this message translates to:
+  /// **'Matched again after a REMATCH'**
+  String get ruleDependsOnRematch;
+
+  /// No description provided for @ruleDependsOnOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Depends on the connection'**
+  String get ruleDependsOnOther;
+
+  /// No description provided for @hitCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Actually taken'**
+  String get hitCardTitle;
+
+  /// No description provided for @hitCardTitleUncertain.
+  ///
+  /// In en, this message translates to:
+  /// **'Most likely taken'**
+  String get hitCardTitleUncertain;
+
+  /// No description provided for @hitCardPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'#{index} / {total}'**
+  String hitCardPosition(Object index, Object total);
+
+  /// No description provided for @hitCardLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Last rule'**
+  String get hitCardLast;
+
+  /// No description provided for @hitGoes.
+  ///
+  /// In en, this message translates to:
+  /// **'Goes'**
+  String get hitGoes;
+
+  /// No description provided for @hitFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'No specific rule, falls back to'**
+  String get hitFallback;
+
+  /// No description provided for @hitNoRule.
+  ///
+  /// In en, this message translates to:
+  /// **'No rule matched, goes'**
+  String get hitNoRule;
+
+  /// No description provided for @hitRematch.
+  ///
+  /// In en, this message translates to:
+  /// **'A REMATCH decides it when the connection is made; the lookup stops here.'**
+  String get hitRematch;
+
+  /// No description provided for @hitRuleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule'**
+  String get hitRuleLabel;
+
+  /// No description provided for @hitFromLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get hitFromLabel;
+
+  /// No description provided for @hitEntryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Entry'**
+  String get hitEntryLabel;
+
+  /// No description provided for @ruleUpdatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'updated {time}'**
+  String ruleUpdatedAt(Object time);
+
+  /// No description provided for @ruleJustAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'just added'**
+  String get ruleJustAdded;
+
+  /// No description provided for @changeNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Change node'**
+  String get changeNode;
+
+  /// No description provided for @addAddedRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Add rule'**
+  String get addAddedRule;
+
+  /// No description provided for @copyRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy rule'**
+  String get copyRule;
+
+  /// No description provided for @viewGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'View group'**
+  String get viewGroup;
+
+  /// No description provided for @uncertainProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} rules before it match by the app that makes the request. A request from that app takes them first.'**
+  String uncertainProcess(Object count);
+
+  /// No description provided for @uncertainPort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} rules before it match by port. A request on that port takes them first.'**
+  String uncertainPort(Object count);
+
+  /// No description provided for @uncertainIp.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} rules before it match by IP and no IP was resolved, so it cannot be decided.'**
+  String uncertainIp(Object count);
+
+  /// No description provided for @uncertainOther.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} rules before it depend on the connection itself and cannot be decided here.'**
+  String uncertainOther(Object count);
+
+  /// No description provided for @dependsCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Depends on the app or port'**
+  String get dependsCardTitle;
+
+  /// No description provided for @ruleSetsIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule sets {list}; the result may be incomplete.'**
+  String ruleSetsIncomplete(Object list);
+
+  /// No description provided for @ruleSetNotDownloadedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” not downloaded'**
+  String ruleSetNotDownloadedItem(Object name);
+
+  /// No description provided for @ruleSetFailedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” failed to download'**
+  String ruleSetFailedItem(Object name);
+
+  /// No description provided for @ruleSetExpiredItem.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” expired {days} days ago'**
+  String ruleSetExpiredItem(Object name, Object days);
+
+  /// No description provided for @goUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get goUpdate;
+
+  /// No description provided for @lookupResolveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'No IP was resolved, so rules by IP such as GEOIP and IP-CIDR could not be decided and were skipped.'**
+  String get lookupResolveFailed;
+
+  /// No description provided for @lookupResolvedIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved to {ip} by {source}'**
+  String lookupResolvedIp(Object ip, Object source);
+
+  /// No description provided for @lookupInputIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Matched as {ip}'**
+  String lookupInputIp(Object ip);
+
+  /// No description provided for @ipSourceDns.
+  ///
+  /// In en, this message translates to:
+  /// **'the Core\'s DNS'**
+  String get ipSourceDns;
+
+  /// No description provided for @ipSourceHosts.
+  ///
+  /// In en, this message translates to:
+  /// **'hosts'**
+  String get ipSourceHosts;
+
+  /// No description provided for @ipSourceMapping.
+  ///
+  /// In en, this message translates to:
+  /// **'the fake-IP mapping'**
+  String get ipSourceMapping;
+
+  /// No description provided for @lookupCoreStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'The Core is not running, so nothing can be looked up. Look again once it starts.'**
+  String get lookupCoreStopped;
+
+  /// No description provided for @toDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get toDashboard;
+
+  /// No description provided for @rulesCoreStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'The Core is not running; the rules stopped updating'**
+  String get rulesCoreStopped;
+
+  /// No description provided for @lookupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Lookup failed: {reason}'**
+  String lookupFailed(Object reason);
+
+  /// No description provided for @rulesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules could not be read: {reason}'**
+  String rulesLoadFailed(Object reason);
+
+  /// No description provided for @compareSame.
+  ///
+  /// In en, this message translates to:
+  /// **'This connection took {rule} too; they agree.'**
+  String compareSame(Object rule);
+
+  /// No description provided for @compareDiffer.
+  ///
+  /// In en, this message translates to:
+  /// **'This connection took {rule}, which differs from now (the profile may have changed, or the rule goes by app).'**
+  String compareDiffer(Object rule);
+
+  /// No description provided for @compareSniffNote.
+  ///
+  /// In en, this message translates to:
+  /// **'For an IP-only connection the Core sniffs the domain from the traffic first; a lookup cannot.'**
+  String get compareSniffNote;
+
+  /// No description provided for @rulesModeGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global mode is on; rules do not apply'**
+  String get rulesModeGlobal;
+
+  /// No description provided for @rulesModeDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct mode is on; rules do not apply'**
+  String get rulesModeDirect;
+
+  /// No description provided for @addRuleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an added rule'**
+  String get addRuleTitle;
+
+  /// No description provided for @addRuleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Written to the added rules of profile “{profile}”'**
+  String addRuleSubtitle(Object profile);
+
+  /// No description provided for @addRuleScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches'**
+  String get addRuleScope;
+
+  /// No description provided for @addRuleSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'{domain} and all its subdomains'**
+  String addRuleSuffix(Object domain);
+
+  /// No description provided for @addRuleExact.
+  ///
+  /// In en, this message translates to:
+  /// **'Only {host}'**
+  String addRuleExact(Object host);
+
+  /// No description provided for @addRuleTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Goes through'**
+  String get addRuleTarget;
+
+  /// No description provided for @addRulePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Will add'**
+  String get addRulePreview;
+
+  /// No description provided for @addedEffective.
+  ///
+  /// In en, this message translates to:
+  /// **'Added and in effect. {host} now goes through “{group}”.'**
+  String addedEffective(Object host, Object group);
+
+  /// No description provided for @addedNotEffective.
+  ///
+  /// In en, this message translates to:
+  /// **'Added, but not in effect: #{index} ({source}) still takes it first.'**
+  String addedNotEffective(Object index, Object source);
+
+  /// No description provided for @viewThatRule.
+  ///
+  /// In en, this message translates to:
+  /// **'View that rule'**
+  String get viewThatRule;
+
+  /// No description provided for @lookupRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Look up rule'**
+  String get lookupRule;
+
+  /// No description provided for @ruleRowSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule {index}, {rule}, from {source}, to {group}'**
+  String ruleRowSemantics(
+    Object index,
+    Object rule,
+    Object source,
+    Object group,
+  );
+
+  /// No description provided for @hitSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Takes rule {index}, {rule}, from {source}, through {group}, node {node}'**
+  String hitSemantics(
+    Object index,
+    Object rule,
+    Object source,
+    Object group,
+    Object node,
+  );
+
+  /// No description provided for @uncertainPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncertain'**
+  String get uncertainPrefix;
+
+  /// No description provided for @addRuleApplyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The rule was written, but the profile could not be reloaded.'**
+  String get addRuleApplyFailed;
+
+  /// No description provided for @addRuleWriteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not add the rule: {reason}'**
+  String addRuleWriteFailed(Object reason);
 }
 
 class _AppLocalizationsDelegate

@@ -32,6 +32,10 @@ typedef BuiltProfile = ({
   String md5,
   ConfigCounts counts,
   SetupBase? base,
+
+  /// One per rule of the config the Core builds, after the Core's own
+  /// managed rules.
+  List<RuleSource> ruleSources,
 });
 
 typedef _CompositionCandidate = ({
@@ -977,6 +981,7 @@ class SetupAction extends _$SetupAction {
         md5: yaml.toMd5(),
         counts: configCountsOf(const {}),
         base: null,
+        ruleSources: const <RuleSource>[],
       );
     }
     final defaultUA = globalState.packageInfo.ua;
@@ -1007,8 +1012,16 @@ class SetupAction extends _$SetupAction {
         : profileBase?.base.config ?? await _core.readConfig(profileId);
     final proxyGroups = isCustom ? setupState.proxyGroups : <ProxyGroup>[];
     final rules = isCustom ? setupState.rules : <Rule>[];
+    var profileRuleSources = const <RuleSource>[];
     if (hasScript) {
+      final before = rawConfig['rules'];
+      final beforeRules = before is List ? List.of(before) : null;
       rawConfig = await handleEvaluate(scriptContent!, rawConfig);
+      profileRuleSources = scriptRuleSources(
+        beforeRules,
+        rawConfig['rules'],
+        script: setupState.script?.label ?? '',
+      );
     }
     if (profileId == ref.read(currentProfileIdProvider)) {
       ref.read(profileSettingsProvider.notifier).value = Map.of(rawConfig);
@@ -1058,10 +1071,17 @@ class SetupAction extends _$SetupAction {
             : lastMatchTarget(profileBase.base.matchRules),
         safeMode: ref.read(safeModeProvider),
         mitmModules: setupState.mitmModules,
+        profileRuleSources: profileRuleSources,
       ),
     );
     if (profileBase == null) {
-      return (yaml: res.yaml, md5: res.md5, counts: res.counts, base: null);
+      return (
+        yaml: res.yaml,
+        md5: res.md5,
+        counts: res.counts,
+        base: null,
+        ruleSources: res.ruleSources,
+      );
     }
     final (:base, :path) = profileBase;
     return (
@@ -1073,6 +1093,12 @@ class SetupAction extends _$SetupAction {
         rules: res.counts.rules + base.rules,
       ),
       base: SetupBase(path: path, overlay: res.yaml),
+      // The Core puts the profile's own rules after the overlay's.
+      ruleSources: [
+        ...res.ruleSources,
+        for (var i = 0; i < base.rules; i++)
+          const RuleSource(kind: RuleSourceKind.subscription),
+      ],
     );
   }
 
@@ -1705,6 +1731,9 @@ class SetupAction extends _$SetupAction {
       ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(
         realProfile.yaml,
       );
+      ref
+          .read(appliedRuleSourcesStateProvider.notifier)
+          .applied(profile?.id, realProfile.ruleSources);
       globalState.lastConfigCounts = realProfile.counts;
       ref.read(runningFindProcessModeProvider.notifier).value =
           builtFindProcessModeOf(yamlString);
@@ -1851,6 +1880,13 @@ class SetupAction extends _$SetupAction {
           realProfile.yaml,
         );
         globalState.lastConfigMd5 = yamlMd5;
+        // A new apply starts a new Core epoch, so the binding starts over.
+        ref
+            .read(appliedRuleSourcesStateProvider.notifier)
+            .value = AppliedRuleSources(
+          profileId: profile?.id,
+          sources: realProfile.ruleSources,
+        );
         ref.read(runningFindProcessModeProvider.notifier).value =
             builtFindProcessModeOf(yamlString);
         ref.read(appliedFollowKeysProvider.notifier).value = const {};

@@ -988,6 +988,195 @@ abstract class _$BuiltInbounds extends $Notifier<Map<String, Object?>> {
   }
 }
 
+/// Where each rule of the config last applied came from. The rules page
+/// shows them only while the Core's list agrees with them.
+
+@ProviderFor(AppliedRuleSourcesState)
+final appliedRuleSourcesStateProvider = AppliedRuleSourcesStateProvider._();
+
+/// Where each rule of the config last applied came from. The rules page
+/// shows them only while the Core's list agrees with them.
+final class AppliedRuleSourcesStateProvider
+    extends $NotifierProvider<AppliedRuleSourcesState, AppliedRuleSources> {
+  /// Where each rule of the config last applied came from. The rules page
+  /// shows them only while the Core's list agrees with them.
+  AppliedRuleSourcesStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appliedRuleSourcesStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appliedRuleSourcesStateHash();
+
+  @$internal
+  @override
+  AppliedRuleSourcesState create() => AppliedRuleSourcesState();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppliedRuleSources value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppliedRuleSources>(value),
+    );
+  }
+}
+
+String _$appliedRuleSourcesStateHash() =>
+    r'eaa7b6bef22acbbd33eb223c1b4dbd2220559aed';
+
+/// Where each rule of the config last applied came from. The rules page
+/// shows them only while the Core's list agrees with them.
+
+abstract class _$AppliedRuleSourcesState extends $Notifier<AppliedRuleSources> {
+  AppliedRuleSources build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AppliedRuleSources, AppliedRuleSources>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AppliedRuleSources, AppliedRuleSources>,
+              AppliedRuleSources,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(RulesLookupRequest)
+final rulesLookupRequestProvider = RulesLookupRequestProvider._();
+
+final class RulesLookupRequestProvider
+    extends $NotifierProvider<RulesLookupRequest, RulesLookupAsk?> {
+  RulesLookupRequestProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'rulesLookupRequestProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$rulesLookupRequestHash();
+
+  @$internal
+  @override
+  RulesLookupRequest create() => RulesLookupRequest();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RulesLookupAsk? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RulesLookupAsk?>(value),
+    );
+  }
+}
+
+String _$rulesLookupRequestHash() =>
+    r'23093dd058fba9a33295d17566361beda7eddfe9';
+
+abstract class _$RulesLookupRequest extends $Notifier<RulesLookupAsk?> {
+  RulesLookupAsk? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<RulesLookupAsk?, RulesLookupAsk?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<RulesLookupAsk?, RulesLookupAsk?>,
+              RulesLookupAsk?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// A group the proxies page is asked to bring into view, unfolded and
+/// briefly marked.
+
+@ProviderFor(ProxiesReveal)
+final proxiesRevealProvider = ProxiesRevealProvider._();
+
+/// A group the proxies page is asked to bring into view, unfolded and
+/// briefly marked.
+final class ProxiesRevealProvider
+    extends $NotifierProvider<ProxiesReveal, ({String group, int serial})?> {
+  /// A group the proxies page is asked to bring into view, unfolded and
+  /// briefly marked.
+  ProxiesRevealProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'proxiesRevealProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$proxiesRevealHash();
+
+  @$internal
+  @override
+  ProxiesReveal create() => ProxiesReveal();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(({String group, int serial})? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<({String group, int serial})?>(
+        value,
+      ),
+    );
+  }
+}
+
+String _$proxiesRevealHash() => r'627e89925a7b031db637854e8114fd238b115d94';
+
+/// A group the proxies page is asked to bring into view, unfolded and
+/// briefly marked.
+
+abstract class _$ProxiesReveal
+    extends $Notifier<({String group, int serial})?> {
+  ({String group, int serial})? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref
+            as $Ref<
+              ({String group, int serial})?,
+              ({String group, int serial})?
+            >;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                ({String group, int serial})?,
+                ({String group, int serial})?
+              >,
+              ({String group, int serial})?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// The current profile's own settings, as the last build read them.
 
 @ProviderFor(ProfileSettings)

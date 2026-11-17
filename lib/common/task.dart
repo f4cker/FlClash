@@ -84,7 +84,12 @@ ClashConfig _buildClashConfig(Map<String, dynamic> configMap) {
 
 typedef ConfigCounts = ({int groups, int proxies, int rules});
 
-typedef RealProfile = ({String yaml, String md5, ConfigCounts counts});
+typedef RealProfile = ({
+  String yaml,
+  String md5,
+  ConfigCounts counts,
+  List<RuleSource> ruleSources,
+});
 
 /// Counts what the Core was handed, not what the profile file declares.
 ConfigCounts configCountsOf(Map<Object?, Object?> config) {
@@ -94,6 +99,36 @@ ConfigCounts configCountsOf(Map<Object?, Object?> config) {
     proxies: lengthOf(config['proxies']),
     rules: lengthOf(config['rules']),
   );
+}
+
+/// Which rules an extension script wrote, read by count: a line the script
+/// left as many times as the profile had it stays the profile's, every other
+/// one is the script's. A rule the script moved reads as the profile's.
+List<RuleSource> scriptRuleSources(
+  Object? before,
+  Object? after, {
+  required String script,
+}) {
+  final remaining = <String, int>{};
+  if (before is List) {
+    for (final rule in before) {
+      remaining.update('$rule', (count) => count + 1, ifAbsent: () => 1);
+    }
+  }
+  if (after is! List) return const [];
+  final sources = <RuleSource>[];
+  for (final rule in after.map((rule) => '$rule')) {
+    final left = remaining[rule] ?? 0;
+    if (left > 0) {
+      remaining[rule] = left - 1;
+      sources.add(RuleSource(kind: RuleSourceKind.subscription, text: rule));
+    } else {
+      sources.add(
+        RuleSource(kind: RuleSourceKind.script, name: script, text: rule),
+      );
+    }
+  }
+  return sources;
 }
 
 String? lastMatchTarget(List<String> rules) {
@@ -193,14 +228,24 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
       }
     }
   }
-  final mitm = mergeMitmModules(realPatchConfig.mitm.hostname, [
+  final mitmContents = [
     for (final module in data.mitmModules)
       parseMitmModule(
         module.content,
         values: module.arguments,
         resources: module.resources,
       ),
-  ]);
+  ];
+  final mitm = mergeMitmModules(realPatchConfig.mitm.hostname, mitmContents);
+  final mitmSources = [
+    for (final (index, content) in mitmContents.indexed)
+      for (final rule in content.rules)
+        RuleSource(
+          kind: RuleSourceKind.mitm,
+          name: data.mitmModules[index].name,
+          text: rule,
+        ),
+  ];
   rawConfig['mitm'] = realPatchConfig.mitm.coreJson(mitm.mitm);
   void injectUnconfinedProviders(
     String section,
@@ -279,10 +324,17 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     throw StateError('Enabled DNS requires a nameserver');
   }
   List<String> rules = [];
+  List<RuleSource> sources = [];
   if (data.rules.isEmpty) {
     if (rawConfig['rules'] != null) {
       rules = List<String>.from(rawConfig['rules']);
     }
+    sources = data.profileRuleSources.length == rules.length
+        ? data.profileRuleSources
+        : [
+            for (final rule in rules)
+              RuleSource(kind: RuleSourceKind.subscription, text: rule),
+          ];
     if (addedRules.isNotEmpty) {
       final hasMatchPlaceholder = addedRules.any(
         (item) => item.ruleTarget?.toUpperCase() == 'MATCH',
@@ -313,9 +365,23 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
         finalAddedRules = addedRules.map((e) => e.rawValue).toList();
       }
       rules = [...finalAddedRules, ...rules];
+      sources = [
+        for (final (index, rule) in finalAddedRules.indexed)
+          RuleSource(
+            kind: addedRules[index].profileId == null
+                ? RuleSourceKind.addedGlobal
+                : RuleSourceKind.addedProfile,
+            text: rule,
+          ),
+        ...sources,
+      ];
     }
   } else {
     rules = data.rules.map((item) => item.rawValue).toList();
+    sources = [
+      for (final rule in rules)
+        RuleSource(kind: RuleSourceKind.custom, text: rule),
+    ];
   }
   if (data.proxyGroups.isNotEmpty) {
     rawConfig['proxy-groups'] = data.proxyGroups
@@ -324,7 +390,12 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   }
   rawConfig['rules'] = [...mitm.rules, ...rules];
   final yaml = await _encodeYaml(Map<String, dynamic>.from(rawConfig));
-  return (yaml: yaml, md5: yaml.toMd5(), counts: configCountsOf(rawConfig));
+  return (
+    yaml: yaml,
+    md5: yaml.toMd5(),
+    counts: configCountsOf(rawConfig),
+    ruleSources: [...mitmSources, ...sources],
+  );
 }
 
 /// Writes each field a page control owns, and only that field; every other

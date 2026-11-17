@@ -700,6 +700,7 @@ enum PageLabel {
   dashboard,
   proxies,
   profiles,
+  rules,
   tailscale,
   tools,
   logs,

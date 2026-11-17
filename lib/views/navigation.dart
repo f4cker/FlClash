@@ -11,6 +11,7 @@ class Navigation implements NavigationPort {
   List<NavigationItem> getItems({
     bool openLogs = false,
     bool hasProxies = false,
+    bool showRules = false,
   }) {
     return [
       NavigationItem(
@@ -30,6 +31,12 @@ class Navigation implements NavigationPort {
         glyph: AppGlyphs.profiles,
         label: PageLabel.profiles,
         builder: (_) => const ProfilesView(),
+      ),
+      NavigationItem(
+        glyph: AppGlyphs.rules,
+        label: PageLabel.rules,
+        builder: (_) => const RulesView(),
+        modes: showRules ? [NavigationItemMode.desktop] : [],
       ),
       NavigationItem(
         glyph: AppGlyphs.devices,

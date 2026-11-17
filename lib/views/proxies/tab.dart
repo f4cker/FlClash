@@ -42,6 +42,16 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
         _updateTabController(groupNames.length, index);
       }
     }, fireImmediately: true);
+    ref.listenManual(proxiesRevealProvider, (_, next) {
+      if (next == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final groups = ref.read(proxiesTabStateProvider).groups;
+        final index = groups.indexWhere((group) => group.name == next.group);
+        if (index != -1) _tabController?.animateTo(index);
+        ref.read(proxiesRevealProvider.notifier).taken();
+      });
+    }, fireImmediately: true);
   }
 
   @override

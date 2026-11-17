@@ -5376,7 +5376,8 @@ $ProxiesDataCopyWith<$Res> get proxiesData {
 /// @nodoc
 mixin _$MakeRealProfileState {
 
- String get profilesPath; int get profileId; Map<String, dynamic> get rawConfig; PatchClashConfig get realPatchConfig; ProfileOverrides get overrides; bool get bypassPrivateRoute; bool get appendSystemDns; String? get defaultTunDnsMode; List<ProxyGroup> get proxyGroups; List<Rule> get rules; List<Rule> get addedRules; String get defaultUA; List<String> get authentication; Map<String, dynamic> get injectedProxyProviders; Map<String, dynamic> get injectedRuleProviders; String? get matchTarget; bool get safeMode; List<MitmModuleSource> get mitmModules;
+ String get profilesPath; int get profileId; Map<String, dynamic> get rawConfig; PatchClashConfig get realPatchConfig; ProfileOverrides get overrides; bool get bypassPrivateRoute; bool get appendSystemDns; String? get defaultTunDnsMode; List<ProxyGroup> get proxyGroups; List<Rule> get rules; List<Rule> get addedRules; String get defaultUA; List<String> get authentication; Map<String, dynamic> get injectedProxyProviders; Map<String, dynamic> get injectedRuleProviders; String? get matchTarget; bool get safeMode; List<MitmModuleSource> get mitmModules;/// One per rule of [rawConfig]; empty reads them all as the profile's.
+ List<RuleSource> get profileRuleSources;
 /// Create a copy of MakeRealProfileState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -5388,20 +5389,20 @@ $MakeRealProfileStateCopyWith<MakeRealProfileState> get copyWith => _$MakeRealPr
 @override
 bool operator ==(Object other) {
   final _this = this as MakeRealProfileState;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MakeRealProfileState&&(identical(other.profilesPath, _this.profilesPath) || other.profilesPath == _this.profilesPath)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&const DeepCollectionEquality().equals(other.rawConfig, _this.rawConfig)&&(identical(other.realPatchConfig, _this.realPatchConfig) || other.realPatchConfig == _this.realPatchConfig)&&(identical(other.overrides, _this.overrides) || other.overrides == _this.overrides)&&(identical(other.bypassPrivateRoute, _this.bypassPrivateRoute) || other.bypassPrivateRoute == _this.bypassPrivateRoute)&&(identical(other.appendSystemDns, _this.appendSystemDns) || other.appendSystemDns == _this.appendSystemDns)&&(identical(other.defaultTunDnsMode, _this.defaultTunDnsMode) || other.defaultTunDnsMode == _this.defaultTunDnsMode)&&const DeepCollectionEquality().equals(other.proxyGroups, _this.proxyGroups)&&const DeepCollectionEquality().equals(other.rules, _this.rules)&&const DeepCollectionEquality().equals(other.addedRules, _this.addedRules)&&(identical(other.defaultUA, _this.defaultUA) || other.defaultUA == _this.defaultUA)&&const DeepCollectionEquality().equals(other.authentication, _this.authentication)&&const DeepCollectionEquality().equals(other.injectedProxyProviders, _this.injectedProxyProviders)&&const DeepCollectionEquality().equals(other.injectedRuleProviders, _this.injectedRuleProviders)&&(identical(other.matchTarget, _this.matchTarget) || other.matchTarget == _this.matchTarget)&&(identical(other.safeMode, _this.safeMode) || other.safeMode == _this.safeMode)&&const DeepCollectionEquality().equals(other.mitmModules, _this.mitmModules));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MakeRealProfileState&&(identical(other.profilesPath, _this.profilesPath) || other.profilesPath == _this.profilesPath)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&const DeepCollectionEquality().equals(other.rawConfig, _this.rawConfig)&&(identical(other.realPatchConfig, _this.realPatchConfig) || other.realPatchConfig == _this.realPatchConfig)&&(identical(other.overrides, _this.overrides) || other.overrides == _this.overrides)&&(identical(other.bypassPrivateRoute, _this.bypassPrivateRoute) || other.bypassPrivateRoute == _this.bypassPrivateRoute)&&(identical(other.appendSystemDns, _this.appendSystemDns) || other.appendSystemDns == _this.appendSystemDns)&&(identical(other.defaultTunDnsMode, _this.defaultTunDnsMode) || other.defaultTunDnsMode == _this.defaultTunDnsMode)&&const DeepCollectionEquality().equals(other.proxyGroups, _this.proxyGroups)&&const DeepCollectionEquality().equals(other.rules, _this.rules)&&const DeepCollectionEquality().equals(other.addedRules, _this.addedRules)&&(identical(other.defaultUA, _this.defaultUA) || other.defaultUA == _this.defaultUA)&&const DeepCollectionEquality().equals(other.authentication, _this.authentication)&&const DeepCollectionEquality().equals(other.injectedProxyProviders, _this.injectedProxyProviders)&&const DeepCollectionEquality().equals(other.injectedRuleProviders, _this.injectedRuleProviders)&&(identical(other.matchTarget, _this.matchTarget) || other.matchTarget == _this.matchTarget)&&(identical(other.safeMode, _this.safeMode) || other.safeMode == _this.safeMode)&&const DeepCollectionEquality().equals(other.mitmModules, _this.mitmModules)&&const DeepCollectionEquality().equals(other.profileRuleSources, _this.profileRuleSources));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MakeRealProfileState;
-  return Object.hash(runtimeType,_this.profilesPath,_this.profileId,const DeepCollectionEquality().hash(_this.rawConfig),_this.realPatchConfig,_this.overrides,_this.bypassPrivateRoute,_this.appendSystemDns,_this.defaultTunDnsMode,const DeepCollectionEquality().hash(_this.proxyGroups),const DeepCollectionEquality().hash(_this.rules),const DeepCollectionEquality().hash(_this.addedRules),_this.defaultUA,const DeepCollectionEquality().hash(_this.authentication),const DeepCollectionEquality().hash(_this.injectedProxyProviders),const DeepCollectionEquality().hash(_this.injectedRuleProviders),_this.matchTarget,_this.safeMode,const DeepCollectionEquality().hash(_this.mitmModules));
+  return Object.hashAll([runtimeType,_this.profilesPath,_this.profileId,const DeepCollectionEquality().hash(_this.rawConfig),_this.realPatchConfig,_this.overrides,_this.bypassPrivateRoute,_this.appendSystemDns,_this.defaultTunDnsMode,const DeepCollectionEquality().hash(_this.proxyGroups),const DeepCollectionEquality().hash(_this.rules),const DeepCollectionEquality().hash(_this.addedRules),_this.defaultUA,const DeepCollectionEquality().hash(_this.authentication),const DeepCollectionEquality().hash(_this.injectedProxyProviders),const DeepCollectionEquality().hash(_this.injectedRuleProviders),_this.matchTarget,_this.safeMode,const DeepCollectionEquality().hash(_this.mitmModules),const DeepCollectionEquality().hash(_this.profileRuleSources)]);
 }
 
 @override
 String toString() {
   final _this = this as MakeRealProfileState;
-  return 'MakeRealProfileState(profilesPath: ${_this.profilesPath}, profileId: ${_this.profileId}, rawConfig: ${_this.rawConfig}, realPatchConfig: ${_this.realPatchConfig}, overrides: ${_this.overrides}, bypassPrivateRoute: ${_this.bypassPrivateRoute}, appendSystemDns: ${_this.appendSystemDns}, defaultTunDnsMode: ${_this.defaultTunDnsMode}, proxyGroups: ${_this.proxyGroups}, rules: ${_this.rules}, addedRules: ${_this.addedRules}, defaultUA: ${_this.defaultUA}, authentication: ${_this.authentication}, injectedProxyProviders: ${_this.injectedProxyProviders}, injectedRuleProviders: ${_this.injectedRuleProviders}, matchTarget: ${_this.matchTarget}, safeMode: ${_this.safeMode}, mitmModules: ${_this.mitmModules})';
+  return 'MakeRealProfileState(profilesPath: ${_this.profilesPath}, profileId: ${_this.profileId}, rawConfig: ${_this.rawConfig}, realPatchConfig: ${_this.realPatchConfig}, overrides: ${_this.overrides}, bypassPrivateRoute: ${_this.bypassPrivateRoute}, appendSystemDns: ${_this.appendSystemDns}, defaultTunDnsMode: ${_this.defaultTunDnsMode}, proxyGroups: ${_this.proxyGroups}, rules: ${_this.rules}, addedRules: ${_this.addedRules}, defaultUA: ${_this.defaultUA}, authentication: ${_this.authentication}, injectedProxyProviders: ${_this.injectedProxyProviders}, injectedRuleProviders: ${_this.injectedRuleProviders}, matchTarget: ${_this.matchTarget}, safeMode: ${_this.safeMode}, mitmModules: ${_this.mitmModules}, profileRuleSources: ${_this.profileRuleSources})';
 }
 
 
@@ -5412,7 +5413,7 @@ abstract mixin class $MakeRealProfileStateCopyWith<$Res>  {
   factory $MakeRealProfileStateCopyWith(MakeRealProfileState value, $Res Function(MakeRealProfileState) _then) = _$MakeRealProfileStateCopyWithImpl;
 @useResult
 $Res call({
- String profilesPath, int profileId, Map<String, dynamic> rawConfig, PatchClashConfig realPatchConfig, ProfileOverrides overrides, bool bypassPrivateRoute, bool appendSystemDns, String? defaultTunDnsMode, List<ProxyGroup> proxyGroups, List<Rule> rules, List<Rule> addedRules, String defaultUA, List<String> authentication, Map<String, dynamic> injectedProxyProviders, Map<String, dynamic> injectedRuleProviders, String? matchTarget, bool safeMode, List<MitmModuleSource> mitmModules
+ String profilesPath, int profileId, Map<String, dynamic> rawConfig, PatchClashConfig realPatchConfig, ProfileOverrides overrides, bool bypassPrivateRoute, bool appendSystemDns, String? defaultTunDnsMode, List<ProxyGroup> proxyGroups, List<Rule> rules, List<Rule> addedRules, String defaultUA, List<String> authentication, Map<String, dynamic> injectedProxyProviders, Map<String, dynamic> injectedRuleProviders, String? matchTarget, bool safeMode, List<MitmModuleSource> mitmModules, List<RuleSource> profileRuleSources
 });
 
 
@@ -5429,7 +5430,7 @@ class _$MakeRealProfileStateCopyWithImpl<$Res>
 
 /// Create a copy of MakeRealProfileState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? profilesPath = null,Object? profileId = null,Object? rawConfig = null,Object? realPatchConfig = null,Object? overrides = null,Object? bypassPrivateRoute = null,Object? appendSystemDns = null,Object? defaultTunDnsMode = freezed,Object? proxyGroups = null,Object? rules = null,Object? addedRules = null,Object? defaultUA = null,Object? authentication = null,Object? injectedProxyProviders = null,Object? injectedRuleProviders = null,Object? matchTarget = freezed,Object? safeMode = null,Object? mitmModules = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? profilesPath = null,Object? profileId = null,Object? rawConfig = null,Object? realPatchConfig = null,Object? overrides = null,Object? bypassPrivateRoute = null,Object? appendSystemDns = null,Object? defaultTunDnsMode = freezed,Object? proxyGroups = null,Object? rules = null,Object? addedRules = null,Object? defaultUA = null,Object? authentication = null,Object? injectedProxyProviders = null,Object? injectedRuleProviders = null,Object? matchTarget = freezed,Object? safeMode = null,Object? mitmModules = null,Object? profileRuleSources = null,}) {
   return _then(MakeRealProfileState(
 profilesPath: null == profilesPath ? _self.profilesPath : profilesPath // ignore: cast_nullable_to_non_nullable
 as String,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
@@ -5449,7 +5450,8 @@ as Map<String, dynamic>,injectedRuleProviders: null == injectedRuleProviders ? _
 as Map<String, dynamic>,matchTarget: freezed == matchTarget ? _self.matchTarget : matchTarget // ignore: cast_nullable_to_non_nullable
 as String?,safeMode: null == safeMode ? _self.safeMode : safeMode // ignore: cast_nullable_to_non_nullable
 as bool,mitmModules: null == mitmModules ? _self.mitmModules : mitmModules // ignore: cast_nullable_to_non_nullable
-as List<MitmModuleSource>,
+as List<MitmModuleSource>,profileRuleSources: null == profileRuleSources ? _self.profileRuleSources : profileRuleSources // ignore: cast_nullable_to_non_nullable
+as List<RuleSource>,
   ));
 }
 /// Create a copy of MakeRealProfileState
@@ -5552,10 +5554,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String profilesPath,  int profileId,  Map<String, dynamic> rawConfig,  PatchClashConfig realPatchConfig,  ProfileOverrides overrides,  bool bypassPrivateRoute,  bool appendSystemDns,  String? defaultTunDnsMode,  List<ProxyGroup> proxyGroups,  List<Rule> rules,  List<Rule> addedRules,  String defaultUA,  List<String> authentication,  Map<String, dynamic> injectedProxyProviders,  Map<String, dynamic> injectedRuleProviders,  String? matchTarget,  bool safeMode,  List<MitmModuleSource> mitmModules)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String profilesPath,  int profileId,  Map<String, dynamic> rawConfig,  PatchClashConfig realPatchConfig,  ProfileOverrides overrides,  bool bypassPrivateRoute,  bool appendSystemDns,  String? defaultTunDnsMode,  List<ProxyGroup> proxyGroups,  List<Rule> rules,  List<Rule> addedRules,  String defaultUA,  List<String> authentication,  Map<String, dynamic> injectedProxyProviders,  Map<String, dynamic> injectedRuleProviders,  String? matchTarget,  bool safeMode,  List<MitmModuleSource> mitmModules,  List<RuleSource> profileRuleSources)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MakeRealProfileState() when $default != null:
-return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPatchConfig,_that.overrides,_that.bypassPrivateRoute,_that.appendSystemDns,_that.defaultTunDnsMode,_that.proxyGroups,_that.rules,_that.addedRules,_that.defaultUA,_that.authentication,_that.injectedProxyProviders,_that.injectedRuleProviders,_that.matchTarget,_that.safeMode,_that.mitmModules);case _:
+return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPatchConfig,_that.overrides,_that.bypassPrivateRoute,_that.appendSystemDns,_that.defaultTunDnsMode,_that.proxyGroups,_that.rules,_that.addedRules,_that.defaultUA,_that.authentication,_that.injectedProxyProviders,_that.injectedRuleProviders,_that.matchTarget,_that.safeMode,_that.mitmModules,_that.profileRuleSources);case _:
   return orElse();
 
 }
@@ -5573,10 +5575,10 @@ return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPat
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String profilesPath,  int profileId,  Map<String, dynamic> rawConfig,  PatchClashConfig realPatchConfig,  ProfileOverrides overrides,  bool bypassPrivateRoute,  bool appendSystemDns,  String? defaultTunDnsMode,  List<ProxyGroup> proxyGroups,  List<Rule> rules,  List<Rule> addedRules,  String defaultUA,  List<String> authentication,  Map<String, dynamic> injectedProxyProviders,  Map<String, dynamic> injectedRuleProviders,  String? matchTarget,  bool safeMode,  List<MitmModuleSource> mitmModules)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String profilesPath,  int profileId,  Map<String, dynamic> rawConfig,  PatchClashConfig realPatchConfig,  ProfileOverrides overrides,  bool bypassPrivateRoute,  bool appendSystemDns,  String? defaultTunDnsMode,  List<ProxyGroup> proxyGroups,  List<Rule> rules,  List<Rule> addedRules,  String defaultUA,  List<String> authentication,  Map<String, dynamic> injectedProxyProviders,  Map<String, dynamic> injectedRuleProviders,  String? matchTarget,  bool safeMode,  List<MitmModuleSource> mitmModules,  List<RuleSource> profileRuleSources)  $default,) {final _that = this;
 switch (_that) {
 case _MakeRealProfileState():
-return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPatchConfig,_that.overrides,_that.bypassPrivateRoute,_that.appendSystemDns,_that.defaultTunDnsMode,_that.proxyGroups,_that.rules,_that.addedRules,_that.defaultUA,_that.authentication,_that.injectedProxyProviders,_that.injectedRuleProviders,_that.matchTarget,_that.safeMode,_that.mitmModules);case _:
+return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPatchConfig,_that.overrides,_that.bypassPrivateRoute,_that.appendSystemDns,_that.defaultTunDnsMode,_that.proxyGroups,_that.rules,_that.addedRules,_that.defaultUA,_that.authentication,_that.injectedProxyProviders,_that.injectedRuleProviders,_that.matchTarget,_that.safeMode,_that.mitmModules,_that.profileRuleSources);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -5593,10 +5595,10 @@ return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPat
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String profilesPath,  int profileId,  Map<String, dynamic> rawConfig,  PatchClashConfig realPatchConfig,  ProfileOverrides overrides,  bool bypassPrivateRoute,  bool appendSystemDns,  String? defaultTunDnsMode,  List<ProxyGroup> proxyGroups,  List<Rule> rules,  List<Rule> addedRules,  String defaultUA,  List<String> authentication,  Map<String, dynamic> injectedProxyProviders,  Map<String, dynamic> injectedRuleProviders,  String? matchTarget,  bool safeMode,  List<MitmModuleSource> mitmModules)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String profilesPath,  int profileId,  Map<String, dynamic> rawConfig,  PatchClashConfig realPatchConfig,  ProfileOverrides overrides,  bool bypassPrivateRoute,  bool appendSystemDns,  String? defaultTunDnsMode,  List<ProxyGroup> proxyGroups,  List<Rule> rules,  List<Rule> addedRules,  String defaultUA,  List<String> authentication,  Map<String, dynamic> injectedProxyProviders,  Map<String, dynamic> injectedRuleProviders,  String? matchTarget,  bool safeMode,  List<MitmModuleSource> mitmModules,  List<RuleSource> profileRuleSources)?  $default,) {final _that = this;
 switch (_that) {
 case _MakeRealProfileState() when $default != null:
-return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPatchConfig,_that.overrides,_that.bypassPrivateRoute,_that.appendSystemDns,_that.defaultTunDnsMode,_that.proxyGroups,_that.rules,_that.addedRules,_that.defaultUA,_that.authentication,_that.injectedProxyProviders,_that.injectedRuleProviders,_that.matchTarget,_that.safeMode,_that.mitmModules);case _:
+return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPatchConfig,_that.overrides,_that.bypassPrivateRoute,_that.appendSystemDns,_that.defaultTunDnsMode,_that.proxyGroups,_that.rules,_that.addedRules,_that.defaultUA,_that.authentication,_that.injectedProxyProviders,_that.injectedRuleProviders,_that.matchTarget,_that.safeMode,_that.mitmModules,_that.profileRuleSources);case _:
   return null;
 
 }
@@ -5608,7 +5610,7 @@ return $default(_that.profilesPath,_that.profileId,_that.rawConfig,_that.realPat
 
 
 class _MakeRealProfileState implements MakeRealProfileState {
-  const _MakeRealProfileState({required this.profilesPath, required this.profileId, required  Map<String, dynamic> rawConfig, required this.realPatchConfig, this.overrides = const ProfileOverrides(), this.bypassPrivateRoute = false, required this.appendSystemDns, this.defaultTunDnsMode, required  List<ProxyGroup> proxyGroups, required  List<Rule> rules, required  List<Rule> addedRules, required this.defaultUA,  List<String> authentication = const [],  Map<String, dynamic> injectedProxyProviders = const {},  Map<String, dynamic> injectedRuleProviders = const {}, this.matchTarget, this.safeMode = false,  List<MitmModuleSource> mitmModules = const []}): _rawConfig = rawConfig,_proxyGroups = proxyGroups,_rules = rules,_addedRules = addedRules,_authentication = authentication,_injectedProxyProviders = injectedProxyProviders,_injectedRuleProviders = injectedRuleProviders,_mitmModules = mitmModules;
+  const _MakeRealProfileState({required this.profilesPath, required this.profileId, required  Map<String, dynamic> rawConfig, required this.realPatchConfig, this.overrides = const ProfileOverrides(), this.bypassPrivateRoute = false, required this.appendSystemDns, this.defaultTunDnsMode, required  List<ProxyGroup> proxyGroups, required  List<Rule> rules, required  List<Rule> addedRules, required this.defaultUA,  List<String> authentication = const [],  Map<String, dynamic> injectedProxyProviders = const {},  Map<String, dynamic> injectedRuleProviders = const {}, this.matchTarget, this.safeMode = false,  List<MitmModuleSource> mitmModules = const [],  List<RuleSource> profileRuleSources = const []}): _rawConfig = rawConfig,_proxyGroups = proxyGroups,_rules = rules,_addedRules = addedRules,_authentication = authentication,_injectedProxyProviders = injectedProxyProviders,_injectedRuleProviders = injectedRuleProviders,_mitmModules = mitmModules,_profileRuleSources = profileRuleSources;
   
 
 @override final  String profilesPath;
@@ -5677,6 +5679,15 @@ class _MakeRealProfileState implements MakeRealProfileState {
   return EqualUnmodifiableListView(_mitmModules);
 }
 
+/// One per rule of [rawConfig]; empty reads them all as the profile's.
+ final  List<RuleSource> _profileRuleSources;
+/// One per rule of [rawConfig]; empty reads them all as the profile's.
+@override@JsonKey() List<RuleSource> get profileRuleSources {
+  if (_profileRuleSources is EqualUnmodifiableListView) return _profileRuleSources;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_profileRuleSources);
+}
+
 
 /// Create a copy of MakeRealProfileState
 /// with the given fields replaced by the non-null parameter values.
@@ -5688,18 +5699,18 @@ _$MakeRealProfileStateCopyWith<_MakeRealProfileState> get copyWith => __$MakeRea
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MakeRealProfileState&&(identical(other.profilesPath, profilesPath) || other.profilesPath == profilesPath)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&const DeepCollectionEquality().equals(other.rawConfig, _rawConfig)&&(identical(other.realPatchConfig, realPatchConfig) || other.realPatchConfig == realPatchConfig)&&(identical(other.overrides, overrides) || other.overrides == overrides)&&(identical(other.bypassPrivateRoute, bypassPrivateRoute) || other.bypassPrivateRoute == bypassPrivateRoute)&&(identical(other.appendSystemDns, appendSystemDns) || other.appendSystemDns == appendSystemDns)&&(identical(other.defaultTunDnsMode, defaultTunDnsMode) || other.defaultTunDnsMode == defaultTunDnsMode)&&const DeepCollectionEquality().equals(other.proxyGroups, _proxyGroups)&&const DeepCollectionEquality().equals(other.rules, _rules)&&const DeepCollectionEquality().equals(other.addedRules, _addedRules)&&(identical(other.defaultUA, defaultUA) || other.defaultUA == defaultUA)&&const DeepCollectionEquality().equals(other.authentication, _authentication)&&const DeepCollectionEquality().equals(other.injectedProxyProviders, _injectedProxyProviders)&&const DeepCollectionEquality().equals(other.injectedRuleProviders, _injectedRuleProviders)&&(identical(other.matchTarget, matchTarget) || other.matchTarget == matchTarget)&&(identical(other.safeMode, safeMode) || other.safeMode == safeMode)&&const DeepCollectionEquality().equals(other.mitmModules, _mitmModules));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MakeRealProfileState&&(identical(other.profilesPath, profilesPath) || other.profilesPath == profilesPath)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&const DeepCollectionEquality().equals(other.rawConfig, _rawConfig)&&(identical(other.realPatchConfig, realPatchConfig) || other.realPatchConfig == realPatchConfig)&&(identical(other.overrides, overrides) || other.overrides == overrides)&&(identical(other.bypassPrivateRoute, bypassPrivateRoute) || other.bypassPrivateRoute == bypassPrivateRoute)&&(identical(other.appendSystemDns, appendSystemDns) || other.appendSystemDns == appendSystemDns)&&(identical(other.defaultTunDnsMode, defaultTunDnsMode) || other.defaultTunDnsMode == defaultTunDnsMode)&&const DeepCollectionEquality().equals(other.proxyGroups, _proxyGroups)&&const DeepCollectionEquality().equals(other.rules, _rules)&&const DeepCollectionEquality().equals(other.addedRules, _addedRules)&&(identical(other.defaultUA, defaultUA) || other.defaultUA == defaultUA)&&const DeepCollectionEquality().equals(other.authentication, _authentication)&&const DeepCollectionEquality().equals(other.injectedProxyProviders, _injectedProxyProviders)&&const DeepCollectionEquality().equals(other.injectedRuleProviders, _injectedRuleProviders)&&(identical(other.matchTarget, matchTarget) || other.matchTarget == matchTarget)&&(identical(other.safeMode, safeMode) || other.safeMode == safeMode)&&const DeepCollectionEquality().equals(other.mitmModules, _mitmModules)&&const DeepCollectionEquality().equals(other.profileRuleSources, _profileRuleSources));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,profilesPath,profileId,const DeepCollectionEquality().hash(_rawConfig),realPatchConfig,overrides,bypassPrivateRoute,appendSystemDns,defaultTunDnsMode,const DeepCollectionEquality().hash(_proxyGroups),const DeepCollectionEquality().hash(_rules),const DeepCollectionEquality().hash(_addedRules),defaultUA,const DeepCollectionEquality().hash(_authentication),const DeepCollectionEquality().hash(_injectedProxyProviders),const DeepCollectionEquality().hash(_injectedRuleProviders),matchTarget,safeMode,const DeepCollectionEquality().hash(_mitmModules));
+    return Object.hashAll([runtimeType,profilesPath,profileId,const DeepCollectionEquality().hash(_rawConfig),realPatchConfig,overrides,bypassPrivateRoute,appendSystemDns,defaultTunDnsMode,const DeepCollectionEquality().hash(_proxyGroups),const DeepCollectionEquality().hash(_rules),const DeepCollectionEquality().hash(_addedRules),defaultUA,const DeepCollectionEquality().hash(_authentication),const DeepCollectionEquality().hash(_injectedProxyProviders),const DeepCollectionEquality().hash(_injectedRuleProviders),matchTarget,safeMode,const DeepCollectionEquality().hash(_mitmModules),const DeepCollectionEquality().hash(_profileRuleSources)]);
 }
 
 @override
 String toString() {
-    return 'MakeRealProfileState(profilesPath: $profilesPath, profileId: $profileId, rawConfig: $rawConfig, realPatchConfig: $realPatchConfig, overrides: $overrides, bypassPrivateRoute: $bypassPrivateRoute, appendSystemDns: $appendSystemDns, defaultTunDnsMode: $defaultTunDnsMode, proxyGroups: $proxyGroups, rules: $rules, addedRules: $addedRules, defaultUA: $defaultUA, authentication: $authentication, injectedProxyProviders: $injectedProxyProviders, injectedRuleProviders: $injectedRuleProviders, matchTarget: $matchTarget, safeMode: $safeMode, mitmModules: $mitmModules)';
+    return 'MakeRealProfileState(profilesPath: $profilesPath, profileId: $profileId, rawConfig: $rawConfig, realPatchConfig: $realPatchConfig, overrides: $overrides, bypassPrivateRoute: $bypassPrivateRoute, appendSystemDns: $appendSystemDns, defaultTunDnsMode: $defaultTunDnsMode, proxyGroups: $proxyGroups, rules: $rules, addedRules: $addedRules, defaultUA: $defaultUA, authentication: $authentication, injectedProxyProviders: $injectedProxyProviders, injectedRuleProviders: $injectedRuleProviders, matchTarget: $matchTarget, safeMode: $safeMode, mitmModules: $mitmModules, profileRuleSources: $profileRuleSources)';
 }
 
 
@@ -5710,7 +5721,7 @@ abstract mixin class _$MakeRealProfileStateCopyWith<$Res> implements $MakeRealPr
   factory _$MakeRealProfileStateCopyWith(_MakeRealProfileState value, $Res Function(_MakeRealProfileState) _then) = __$MakeRealProfileStateCopyWithImpl;
 @override @useResult
 $Res call({
- String profilesPath, int profileId, Map<String, dynamic> rawConfig, PatchClashConfig realPatchConfig, ProfileOverrides overrides, bool bypassPrivateRoute, bool appendSystemDns, String? defaultTunDnsMode, List<ProxyGroup> proxyGroups, List<Rule> rules, List<Rule> addedRules, String defaultUA, List<String> authentication, Map<String, dynamic> injectedProxyProviders, Map<String, dynamic> injectedRuleProviders, String? matchTarget, bool safeMode, List<MitmModuleSource> mitmModules
+ String profilesPath, int profileId, Map<String, dynamic> rawConfig, PatchClashConfig realPatchConfig, ProfileOverrides overrides, bool bypassPrivateRoute, bool appendSystemDns, String? defaultTunDnsMode, List<ProxyGroup> proxyGroups, List<Rule> rules, List<Rule> addedRules, String defaultUA, List<String> authentication, Map<String, dynamic> injectedProxyProviders, Map<String, dynamic> injectedRuleProviders, String? matchTarget, bool safeMode, List<MitmModuleSource> mitmModules, List<RuleSource> profileRuleSources
 });
 
 
@@ -5727,7 +5738,7 @@ class __$MakeRealProfileStateCopyWithImpl<$Res>
 
 /// Create a copy of MakeRealProfileState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? profilesPath = null,Object? profileId = null,Object? rawConfig = null,Object? realPatchConfig = null,Object? overrides = null,Object? bypassPrivateRoute = null,Object? appendSystemDns = null,Object? defaultTunDnsMode = freezed,Object? proxyGroups = null,Object? rules = null,Object? addedRules = null,Object? defaultUA = null,Object? authentication = null,Object? injectedProxyProviders = null,Object? injectedRuleProviders = null,Object? matchTarget = freezed,Object? safeMode = null,Object? mitmModules = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? profilesPath = null,Object? profileId = null,Object? rawConfig = null,Object? realPatchConfig = null,Object? overrides = null,Object? bypassPrivateRoute = null,Object? appendSystemDns = null,Object? defaultTunDnsMode = freezed,Object? proxyGroups = null,Object? rules = null,Object? addedRules = null,Object? defaultUA = null,Object? authentication = null,Object? injectedProxyProviders = null,Object? injectedRuleProviders = null,Object? matchTarget = freezed,Object? safeMode = null,Object? mitmModules = null,Object? profileRuleSources = null,}) {
   return _then(_MakeRealProfileState(
 profilesPath: null == profilesPath ? _self.profilesPath : profilesPath // ignore: cast_nullable_to_non_nullable
 as String,profileId: null == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
@@ -5747,7 +5758,8 @@ as Map<String, dynamic>,injectedRuleProviders: null == injectedRuleProviders ? _
 as Map<String, dynamic>,matchTarget: freezed == matchTarget ? _self.matchTarget : matchTarget // ignore: cast_nullable_to_non_nullable
 as String?,safeMode: null == safeMode ? _self.safeMode : safeMode // ignore: cast_nullable_to_non_nullable
 as bool,mitmModules: null == mitmModules ? _self._mitmModules : mitmModules // ignore: cast_nullable_to_non_nullable
-as List<MitmModuleSource>,
+as List<MitmModuleSource>,profileRuleSources: null == profileRuleSources ? _self._profileRuleSources : profileRuleSources // ignore: cast_nullable_to_non_nullable
+as List<RuleSource>,
   ));
 }
 
@@ -5775,7 +5787,7 @@ $ProfileOverridesCopyWith<$Res> get overrides {
 /// @nodoc
 mixin _$MitmModuleSource {
 
- String get content; Map<String, String> get arguments; Map<String, String> get resources;
+ String get content; String get name; Map<String, String> get arguments; Map<String, String> get resources;
 /// Create a copy of MitmModuleSource
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -5787,20 +5799,20 @@ $MitmModuleSourceCopyWith<MitmModuleSource> get copyWith => _$MitmModuleSourceCo
 @override
 bool operator ==(Object other) {
   final _this = this as MitmModuleSource;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmModuleSource&&(identical(other.content, _this.content) || other.content == _this.content)&&const DeepCollectionEquality().equals(other.arguments, _this.arguments)&&const DeepCollectionEquality().equals(other.resources, _this.resources));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmModuleSource&&(identical(other.content, _this.content) || other.content == _this.content)&&(identical(other.name, _this.name) || other.name == _this.name)&&const DeepCollectionEquality().equals(other.arguments, _this.arguments)&&const DeepCollectionEquality().equals(other.resources, _this.resources));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MitmModuleSource;
-  return Object.hash(runtimeType,_this.content,const DeepCollectionEquality().hash(_this.arguments),const DeepCollectionEquality().hash(_this.resources));
+  return Object.hash(runtimeType,_this.content,_this.name,const DeepCollectionEquality().hash(_this.arguments),const DeepCollectionEquality().hash(_this.resources));
 }
 
 @override
 String toString() {
   final _this = this as MitmModuleSource;
-  return 'MitmModuleSource(content: ${_this.content}, arguments: ${_this.arguments}, resources: ${_this.resources})';
+  return 'MitmModuleSource(content: ${_this.content}, name: ${_this.name}, arguments: ${_this.arguments}, resources: ${_this.resources})';
 }
 
 
@@ -5811,7 +5823,7 @@ abstract mixin class $MitmModuleSourceCopyWith<$Res>  {
   factory $MitmModuleSourceCopyWith(MitmModuleSource value, $Res Function(MitmModuleSource) _then) = _$MitmModuleSourceCopyWithImpl;
 @useResult
 $Res call({
- String content, Map<String, String> arguments, Map<String, String> resources
+ String content, String name, Map<String, String> arguments, Map<String, String> resources
 });
 
 
@@ -5828,9 +5840,10 @@ class _$MitmModuleSourceCopyWithImpl<$Res>
 
 /// Create a copy of MitmModuleSource
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? content = null,Object? arguments = null,Object? resources = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? content = null,Object? name = null,Object? arguments = null,Object? resources = null,}) {
   return _then(MitmModuleSource(
 content: null == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,arguments: null == arguments ? _self.arguments : arguments // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,resources: null == resources ? _self.resources : resources // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,
@@ -5918,10 +5931,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String content,  Map<String, String> arguments,  Map<String, String> resources)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String content,  String name,  Map<String, String> arguments,  Map<String, String> resources)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmModuleSource() when $default != null:
-return $default(_that.content,_that.arguments,_that.resources);case _:
+return $default(_that.content,_that.name,_that.arguments,_that.resources);case _:
   return orElse();
 
 }
@@ -5939,10 +5952,10 @@ return $default(_that.content,_that.arguments,_that.resources);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String content,  Map<String, String> arguments,  Map<String, String> resources)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String content,  String name,  Map<String, String> arguments,  Map<String, String> resources)  $default,) {final _that = this;
 switch (_that) {
 case _MitmModuleSource():
-return $default(_that.content,_that.arguments,_that.resources);case _:
+return $default(_that.content,_that.name,_that.arguments,_that.resources);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -5959,10 +5972,10 @@ return $default(_that.content,_that.arguments,_that.resources);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String content,  Map<String, String> arguments,  Map<String, String> resources)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String content,  String name,  Map<String, String> arguments,  Map<String, String> resources)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmModuleSource() when $default != null:
-return $default(_that.content,_that.arguments,_that.resources);case _:
+return $default(_that.content,_that.name,_that.arguments,_that.resources);case _:
   return null;
 
 }
@@ -5974,10 +5987,11 @@ return $default(_that.content,_that.arguments,_that.resources);case _:
 
 
 class _MitmModuleSource implements MitmModuleSource {
-  const _MitmModuleSource({required this.content,  Map<String, String> arguments = const {},  Map<String, String> resources = const {}}): _arguments = arguments,_resources = resources;
+  const _MitmModuleSource({required this.content, this.name = '',  Map<String, String> arguments = const {},  Map<String, String> resources = const {}}): _arguments = arguments,_resources = resources;
   
 
 @override final  String content;
+@override@JsonKey() final  String name;
  final  Map<String, String> _arguments;
 @override@JsonKey() Map<String, String> get arguments {
   if (_arguments is EqualUnmodifiableMapView) return _arguments;
@@ -6003,18 +6017,18 @@ _$MitmModuleSourceCopyWith<_MitmModuleSource> get copyWith => __$MitmModuleSourc
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmModuleSource&&(identical(other.content, content) || other.content == content)&&const DeepCollectionEquality().equals(other.arguments, _arguments)&&const DeepCollectionEquality().equals(other.resources, _resources));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmModuleSource&&(identical(other.content, content) || other.content == content)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.arguments, _arguments)&&const DeepCollectionEquality().equals(other.resources, _resources));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,content,const DeepCollectionEquality().hash(_arguments),const DeepCollectionEquality().hash(_resources));
+    return Object.hash(runtimeType,content,name,const DeepCollectionEquality().hash(_arguments),const DeepCollectionEquality().hash(_resources));
 }
 
 @override
 String toString() {
-    return 'MitmModuleSource(content: $content, arguments: $arguments, resources: $resources)';
+    return 'MitmModuleSource(content: $content, name: $name, arguments: $arguments, resources: $resources)';
 }
 
 
@@ -6025,7 +6039,7 @@ abstract mixin class _$MitmModuleSourceCopyWith<$Res> implements $MitmModuleSour
   factory _$MitmModuleSourceCopyWith(_MitmModuleSource value, $Res Function(_MitmModuleSource) _then) = __$MitmModuleSourceCopyWithImpl;
 @override @useResult
 $Res call({
- String content, Map<String, String> arguments, Map<String, String> resources
+ String content, String name, Map<String, String> arguments, Map<String, String> resources
 });
 
 
@@ -6042,9 +6056,10 @@ class __$MitmModuleSourceCopyWithImpl<$Res>
 
 /// Create a copy of MitmModuleSource
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? content = null,Object? arguments = null,Object? resources = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? content = null,Object? name = null,Object? arguments = null,Object? resources = null,}) {
   return _then(_MitmModuleSource(
 content: null == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,arguments: null == arguments ? _self._arguments : arguments // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,resources: null == resources ? _self._resources : resources // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,

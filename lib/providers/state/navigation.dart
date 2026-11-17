@@ -10,11 +10,23 @@ NavigationItemsState navigationItemsState(Ref ref) {
     currentGroupsStateProvider.select((state) => state.value.isNotEmpty),
   );
   final isInit = ref.watch(initProvider);
+  // The rules are the running Core's: they show with a profile it runs, and
+  // stay while open when the Core stops, so the page can say it did.
+  final hasProfile = ref.watch(
+    currentProfileProvider.select((profile) => profile != null),
+  );
+  final coreRunning = ref.watch(
+    coreStatusProvider.select((status) => status == CoreStatus.connected),
+  );
+  final onRules = ref.watch(
+    currentPageLabelProvider.select((label) => label == PageLabel.rules),
+  );
   return NavigationItemsState(
     value:
         navigationPort?.getItems(
           openLogs: openLogs,
           hasProxies: !isInit ? hasProfiles : hasProxies,
+          showRules: hasProfile && (coreRunning || onRules),
         ) ??
         const [],
   );
