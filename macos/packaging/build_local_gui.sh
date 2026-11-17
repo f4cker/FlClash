@@ -80,7 +80,7 @@ export XCODE_XCCONFIG_FILE="$out/unsigned.xcconfig"
 guard='(version 1)(allow default)(deny process-exec (literal "/usr/bin/codesign") (literal "/usr/bin/security"))(deny network*)(allow network* (local unix-socket) (remote unix-socket))'
 /usr/bin/sandbox-exec -p "$guard" "$dart" "$snapshot" --no-version-check --suppress-analytics \
   build macos --release --no-pub "--build-name=$version" "--build-number=$number" \
-  --dart-define=APP_ENV=stable --dart-define=MACOS_MANAGED_HELPER=true
+  --dart-define=APP_ENV=stable --dart-define=MACOS_MANAGED_HELPER=true --dart-define=FEATURE_MITM=true
 app="$root/build/macos/Build/Products/Release/Flash.app"
 [[ -d "$app" && -f "$app/Contents/MacOS/FlClashCore" &&
    -f "$app/Contents/Library/HelperTools/FlashHelper" &&
