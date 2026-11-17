@@ -54,6 +54,9 @@ const (
 	providerSideLoadMethod CoreMethod = "provider.sideLoad"
 	ruleSetDumpMethod      CoreMethod = "ruleSet.dump"
 	ruleSetCompileMethod   CoreMethod = "ruleSet.compile"
+	ruleSetEntriesMethod   CoreMethod = "ruleSet.entries"
+	ruleListMethod         CoreMethod = "rule.list"
+	ruleLookupMethod       CoreMethod = "rule.lookup"
 	geoUpdateMethod        CoreMethod = "geo.update"
 
 	trafficCurrentMethod     CoreMethod = "traffic.current"
