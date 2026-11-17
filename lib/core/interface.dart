@@ -576,6 +576,11 @@ abstract class CoreHandlerInterface {
   /// left alone.
   Future<void> disableMitm() => _command(CoreMethod.mitmDisable);
 
+  /// Hands the Core new MITM settings without a config reload; null turns
+  /// decryption off. Connections outside decryption are left alone.
+  Future<void> updateMitm(Map<String, Object?>? setup) =>
+      _command(CoreMethod.mitmUpdate, arguments: {'setup': setup});
+
   Future<MitmStatus> getMitmStatus() {
     return _query(CoreMethod.mitmStatus, _model(MitmStatus.fromJson));
   }

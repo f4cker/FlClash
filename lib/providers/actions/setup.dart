@@ -128,9 +128,10 @@ class SetupAction extends _$SetupAction {
     mitm: ref.read(mitmSetupProvider),
   );
 
-  // The selection reaches the Core through changeProxy, not through an apply.
+  // The selection reaches the Core through changeProxy, and MITM settings
+  // through mitm.update, not through an apply.
   SetupParams get _appliedParams =>
-      _setupParams.copyWith(selectedMap: const {});
+      _setupParams.copyWith(selectedMap: const {}, mitm: null);
 
   Future<bool> fullSetup() async {
     if (!ref.read(initProvider)) return true;
@@ -1730,12 +1731,12 @@ class SetupAction extends _$SetupAction {
     // The panel-added accounts are not in the YAML, yet change what runs.
     final managed = setupParams.tailscale?.managed ?? const [];
     final mountRevision = setupParams.mounts?.revision ?? '';
-    final mitm = setupParams.mitm;
-    final yamlMd5 = (managed.isEmpty && mountRevision.isEmpty && mitm == null)
+    // MITM settings are not part of it: they reach the Core through
+    // mitm.update, so a change of trust or hosts never reloads the config
+    // (which would close every connection).
+    final yamlMd5 = (managed.isEmpty && mountRevision.isEmpty)
         ? realProfile.md5
-        : '${realProfile.md5}${json.encode(managed)}$mountRevision'
-                  '${mitm == null ? '' : json.encode(mitm)}'
-              .toMd5();
+        : '${realProfile.md5}${json.encode(managed)}$mountRevision'.toMd5();
     if (!adoptionPending && yamlMd5 == globalState.lastConfigMd5 && !force) {
       _appliedInputs = inputs;
       ref.read(builtInboundsProvider.notifier).value = builtInboundsOf(
@@ -1890,6 +1891,19 @@ class SetupAction extends _$SetupAction {
           realProfile.yaml,
         );
         globalState.lastConfigMd5 = yamlMd5;
+        // The setup carried the MITM settings of when it was built; ones
+        // changed while it ran were sent ahead of it and must not lose.
+        final mitmNow = ref.read(mitmSetupProvider);
+        if (!const DeepCollectionEquality().equals(mitmNow, setupParams.mitm)) {
+          unawaited(
+            _core.updateMitm(mitmNow).catchError((Object error) {
+              commonPrint.log(
+                'mitm.update after setup failed: $error',
+                logLevel: LogLevel.error,
+              );
+            }),
+          );
+        }
         // A new apply starts a new Core epoch, so the binding starts over.
         ref
             .read(appliedRuleSourcesStateProvider.notifier)

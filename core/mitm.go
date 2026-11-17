@@ -1,6 +1,7 @@
 package core
 
 import (
+	"reflect"
 	"sync/atomic"
 
 	"github.com/metacubex/mihomo/log"
@@ -93,6 +94,35 @@ func handleMitmDisable() {
 	}
 	replaceMitmRuntime(&mitmRuntime{ignored: previous.ignored})
 	log.Infoln("[MITM] decryption turned off")
+}
+
+type MitmUpdateParams struct {
+	// Null turns decryption off.
+	Setup *MitmSetup `json:"setup"`
+}
+
+// Hands the Core new MITM settings (on/off, trusted CA, hosts, limits)
+// without a config reload, so no connection outside decryption is touched:
+// only decrypted sessions end, and only when the settings really changed.
+// Serialised with applyConfig, which carries the same settings in a setup.
+func handleMitmUpdate(params MitmUpdateParams) error {
+	configMu.Lock()
+	defer configMu.Unlock()
+	previous := mitmState.Load()
+	runtime := &mitmRuntime{}
+	if previous != nil {
+		runtime.ignored = previous.ignored
+	}
+	if params.Setup != nil {
+		runtime.setup = *params.Setup
+		runtime.hosts = compileMitmHosts(params.Setup.Hostname)
+	}
+	if previous != nil && reflect.DeepEqual(previous.setup, runtime.setup) {
+		return nil
+	}
+	replaceMitmRuntime(runtime)
+	log.Infoln("[MITM] settings updated: decrypting=%v hosts=%d", runtime.decrypting(), runtime.hosts.Len())
+	return nil
 }
 
 func handleMitmStatus() MitmStatus {

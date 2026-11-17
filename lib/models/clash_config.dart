@@ -2514,7 +2514,9 @@ extension PatchClashConfigExt on PatchClashConfig {
     geoUpdateInterval: defaultClashConfig.geoUpdateInterval,
     geoXUrl: defaultClashConfig.geoXUrl,
     testUrl: defaultClashConfig.testUrl,
-    mitm: mitm.copyWith(capture: defaultClashConfig.mitm.capture),
+    // MITM settings reach the Core through mitm.update, never in a setup's
+    // profile, so a change of trust or hosts reloads nothing.
+    mitm: defaultClashConfig.mitm,
   );
 
   PatchClashConfig ensureControllerSecret() {

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart' show DeepCollectionEquality;
 import 'package:crypto/crypto.dart' show sha256;
 import 'package:dio/dio.dart' show CancelToken, DioException;
 import 'package:fl_clash/common/app_data.dart';

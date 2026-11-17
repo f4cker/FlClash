@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/core/core.dart';
@@ -17,6 +18,9 @@ import 'package:fl_clash/providers/tailscale.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prism_ui/banner.dart';
+
+bool _sameMitm(Map<String, Object?>? a, Map<String, Object?>? b) =>
+    const DeepCollectionEquality().equals(a, b);
 
 class CoreManager extends ConsumerStatefulWidget {
   final Widget child;
@@ -36,20 +40,36 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     return widget.child;
   }
 
-  DateTime? _mitmReapplied;
+  DateTime? _mitmResent;
 
-  void _applyMitm({bool throttled = false}) {
+  /// MITM settings (on/off, trusted CA, hosts, limits) reach the Core on
+  /// their own, never through a config reload: a change of trust or hosts
+  /// then ends only decrypted sessions, not every connection. A Core not
+  /// connected gets them in the setup that connects it.
+  Future<void> _updateMitm({bool throttled = false}) async {
     final now = DateTime.now();
-    final last = _mitmReapplied;
+    final last = _mitmResent;
     if (throttled &&
         last != null &&
         now.difference(last) < const Duration(seconds: 30)) {
       return;
     }
-    _mitmReapplied = now;
-    ref
-        .read(setupActionProvider.notifier)
-        .applyProfileDebounce(force: true, silence: false);
+    _mitmResent = now;
+    if (ref.read(coreStatusProvider) != CoreStatus.connected) return;
+    final setup = ref.read(mitmSetupProvider);
+    try {
+      await _core.updateMitm(setup);
+    } catch (error) {
+      commonPrint.log('mitm.update failed: $error', logLevel: LogLevel.error);
+      // Only the latest settings are worth a word.
+      if (!mounted || !_sameMitm(ref.read(mitmSetupProvider), setup)) return;
+      dialogs.showBanner(
+        setup == null
+            ? currentAppLocalizations.mitmTurnOffFailed
+            : currentAppLocalizations.mitmNotApplied,
+        level: BannerLevel.error,
+      );
+    }
   }
 
   @override
@@ -88,30 +108,20 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         if (prev == false && next) {
           unawaited(ref.read(mitmModulesActionProvider.notifier).autoUpdate());
         }
-        // Turning decryption on or off is applied visibly: a setup that
-        // fails says so instead of leaving the Core without it.
-        if (mitmFeature && prev != null && prev != next) _applyMitm();
-        // Off is also told to the Core on its own, so it holds even when
-        // that setup cannot be made or is refused.
-        if (mitmFeature && prev == true && !next) unawaited(_assertMitmOff());
       },
     );
-    ref.listenManual(mitmTrustGainedProvider, (prev, next) {
-      if (mitmFeature &&
-          prev != next &&
-          ref.read(patchClashConfigProvider).mitm.enable) {
-        _applyMitm();
-      }
+    ref.listenManual(mitmSetupProvider, (prev, next) {
+      if (mitmFeature && !_sameMitm(prev, next)) unawaited(_updateMitm());
     });
     // Trusted, hosts listed, yet the Core does not decrypt: its settings did
-    // not arrive. Apply them again, at most once a while, so a failing setup
+    // not arrive. Send them again, at most once a while, so a failing update
     // is reported rather than retried in a loop.
     ref.listenManual(
       mitmIndicatorProvider.select(
         (indicator) => indicator?.reason == MitmPauseReason.notApplied,
       ),
       (prev, next) {
-        if (next && prev != true) _applyMitm(throttled: true);
+        if (next && prev != true) unawaited(_updateMitm(throttled: true));
       },
     );
     ref.listenManual(mitmModulesProvider, (prev, next) {

@@ -314,11 +314,18 @@ void main() {
           );
     }
 
-    testWidgets('is told to the Core on its own when turned off', (
+    void editMitm(ProviderContainer container, Mitm Function(Mitm) edit) {
+      container
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mitm: edit(state.mitm)));
+    }
+
+    testWidgets('settings reach the Core through mitm.update, never a reload', (
       tester,
     ) async {
       final coreInterface = _coreInterface();
       when(() => coreInterface.disableMitm()).thenAnswer((_) async {});
+      when(() => coreInterface.updateMitm(any())).thenAnswer((_) async {});
       final setupAction = _ApplyRecordingSetupAction();
       final container = await _pumpCoreManager(
         tester,
@@ -328,14 +335,96 @@ void main() {
       setMitm(container, true);
       container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
       await tester.pump();
-      verifyNever(() => coreInterface.disableMitm());
+      clearInteractions(coreInterface);
+
+      editMitm(container, (m) => m.copyWith(trustedFingerprint: 'fp'));
+      await tester.pump();
+      editMitm(container, (m) => m.copyWith(hostname: ['a.example']));
+      await tester.pump();
+      // Unchanged settings send nothing.
+      editMitm(container, (m) => m.copyWith(hostname: ['a.example']));
+      await tester.pump();
+
+      final sent = verify(
+        () => coreInterface.updateMitm(captureAny()),
+      ).captured.cast<Map<String, Object?>?>();
+      expect(sent, hasLength(2));
+      expect(sent.first?['ca-fingerprint'], 'fp');
+      expect(sent.last?['hostname'], ['a.example']);
+      expect(
+        setupAction.applies,
+        0,
+        reason: 'a reload closes every connection',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('turning it off is sent as an empty setup', (tester) async {
+      final coreInterface = _coreInterface();
+      when(() => coreInterface.disableMitm()).thenAnswer((_) async {});
+      when(() => coreInterface.updateMitm(any())).thenAnswer((_) async {});
+      final setupAction = _ApplyRecordingSetupAction();
+      final container = await _pumpCoreManager(
+        tester,
+        coreInterface,
+        overrides: [setupActionProvider.overrideWith(() => setupAction)],
+      );
+      setMitm(container, true);
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      clearInteractions(coreInterface);
 
       setMitm(container, false);
       await tester.pump();
 
-      verify(() => coreInterface.disableMitm()).called(1);
-      // The visible setup still runs as well.
-      expect(setupAction.applies, greaterThanOrEqualTo(1));
+      verify(() => coreInterface.updateMitm(null)).called(1);
+      expect(setupAction.applies, 0);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('a Core not connected is not sent settings', (tester) async {
+      final coreInterface = _coreInterface();
+      when(() => coreInterface.updateMitm(any())).thenAnswer((_) async {});
+      final container = await _pumpCoreManager(
+        tester,
+        coreInterface,
+        overrides: [
+          setupActionProvider.overrideWith(_ApplyRecordingSetupAction.new),
+        ],
+      );
+      setMitm(container, true);
+      await tester.pump();
+
+      verifyNever(() => coreInterface.updateMitm(any()));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('an off that does not reach the Core says so', (tester) async {
+      final coreInterface = _coreInterface();
+      when(() => coreInterface.disableMitm()).thenAnswer((_) async {});
+      when(() => coreInterface.updateMitm(any())).thenAnswer((_) async {});
+      final container = await _pumpCoreManager(
+        tester,
+        coreInterface,
+        overrides: [
+          setupActionProvider.overrideWith(_ApplyRecordingSetupAction.new),
+        ],
+      );
+      setMitm(container, true);
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+      await tester.pump();
+      when(
+        () => coreInterface.updateMitm(any()),
+      ).thenAnswer((_) async => throw StateError('relay gone'));
+
+      setMitm(container, false);
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text(currentAppLocalizations.mitmTurnOffFailed),
+        findsOneWidget,
+      );
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
