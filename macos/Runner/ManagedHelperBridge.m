@@ -27,6 +27,7 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
 @property pid_t corePid;
 @property NSUInteger coreSession;
 @property NSUInteger coreSessions;
+@property NSObject *identityLock;
 @property NSUInteger hashSession;
 @property NSData *expectedCoreHash;
 @end
@@ -35,6 +36,7 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
 - (instancetype)init {
     if ((self = [super init])) {
         _queue = dispatch_queue_create("com.layoute.flash.daemon.bridge", DISPATCH_QUEUE_SERIAL);
+        _identityLock = [NSObject new];
         // R6: the legacy installer's pending marker needs no admin rights; drop it.
         [NSUserDefaults.standardUserDefaults removeObjectForKey:FCLegacyPendingDefault];
     }
@@ -120,20 +122,27 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
     self.coreSession = 0;
 }
 
-// The bundled Core is validated once per session; each call then asks the kernel about the running Core.
-- (NSString *)checkCore {
-    if (!self.coreSession) return @"none";
-    if (self.hashSession != self.coreSession) {
-        self.expectedCoreHash = FCBundledCoreHash();
-        self.hashSession = self.coreSession;
-    }
-    return FCCoreGuestCheck(self.coreToken, self.corePid, self.expectedCoreHash);
-}
-
+// The bridge queue only hands out the session; the bundled Core is validated once per session, and each
+// call then asks the kernel about the running Core, both on the caller's queue.
 - (NSString *)coreIdentity {
-    __block NSString *identity = @"none";
-    dispatch_sync(self.queue, ^{ identity = [self checkCore]; });
-    return identity;
+    __block NSData *token = nil;
+    __block pid_t pid = 0;
+    __block NSUInteger session = 0;
+    dispatch_sync(self.queue, ^{
+        token = self.coreToken;
+        pid = self.corePid;
+        session = self.coreSession;
+    });
+    if (!session) return @"none";
+    NSData *expected = nil;
+    @synchronized (self.identityLock) {
+        if (self.hashSession != session) {
+            self.expectedCoreHash = FCBundledCoreHash();
+            self.hashSession = session;
+        }
+        expected = self.expectedCoreHash;
+    }
+    return FCCoreGuestCheck(token, pid, expected);
 }
 
 // After an app update the registered job may still describe the previous build; re-register once per launch
@@ -225,7 +234,6 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
             self.corePid = (pid_t)[answer[@"pid"] intValue];
             self.coreSession = ++self.coreSessions;
             answer = [answer mutableCopy];
-            ((NSMutableDictionary *)answer)[@"coreIdentity"] = [self checkCore];
             [(NSMutableDictionary *)answer removeObjectForKey:@"coreAuditToken"];
         }
         if ([answer[@"exitConfirmed"] isEqual:@YES]) self.sessionActive = NO;
@@ -440,7 +448,6 @@ static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
         if (self.operationInFlight && !relay) { completion(@{@"code": @"operationInProgress"}); return; }
         BOOL argumentless = !arguments.count;
         if ([method isEqualToString:@"status"]) { [self status:completion]; return; }
-        if ([method isEqualToString:@"coreIdentity"]) { completion(@{@"code": [self checkCore]}); return; }
         if ([method isEqualToString:@"migrate"]) { [self migrateWithArguments:arguments completion:completion]; return; }
         if ([@[@"enable", @"disable", @"repair", @"openApprovalSettings"] containsObject:method] && !argumentless) {
             completion(@{@"code": @"invalidRequest"}); return;
