@@ -338,9 +338,17 @@ func mitmServeSelected(client *N.BufferedConn, remote C.Conn, host string, leaf 
 }
 
 func reportMitmOutcome(remote net.Conn, outcome MitmOutcome) {
-	if tracker, ok := remote.(interface{ ID() string }); ok {
-		sendMitmConnection(&MitmConnection{Id: tracker.ID(), Outcome: outcome})
+	if id := mitmTrackerID(remote); id != "" {
+		sendMitmConnection(&MitmConnection{Id: id, Outcome: outcome})
 	}
+}
+
+// The ID the request list knows a connection by, from its tracker.
+func mitmTrackerID(remote net.Conn) string {
+	if tracker, ok := remote.(interface{ ID() string }); ok {
+		return tracker.ID()
+	}
+	return ""
 }
 
 // Go TLS accepts bare transport EOF at a record boundary as clean EOF. That
@@ -412,7 +420,10 @@ func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mi
 	// The tracker exists by now; neither fallback nor a failed handshake may
 	// publish success. Later HTTP failure can still be reported separately.
 	reportMitmOutcome(remote, mitmOutcomeDecrypted)
-	if err := mitmHTTP1Duplex(server, upstream, host, func() bool { return mitmState.Load() == runtime && !mitmPausedFor(host) }, &mitmDuplexControl{client: clientIdle, upstream: remoteIdle}); err != nil {
+	connection := mitmTrackerID(remote)
+	mitmCaptures.openConnection(connection)
+	defer mitmCaptures.closeConnection(connection)
+	if err := mitmHTTP1Duplex(server, upstream, host, func() bool { return mitmState.Load() == runtime && !mitmPausedFor(host) }, &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection}); err != nil {
 		// Do not authenticate a truncated close-delimited response with a
 		// close_notify. Abort the raw transport before deferred TLS cleanup.
 		_ = client.Close()

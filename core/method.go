@@ -76,6 +76,10 @@ func handleMethodCall(call *MethodCall) (data []byte) {
 	if err != nil {
 		return encodeResponse(MethodResponse{ID: call.ID, Error: asMethodError(err)})
 	}
+	if mitmCaptureMethods[call.Method] {
+		// Decrypted traffic stays in memory: never a spilled reply file.
+		return encodeResponse(MethodResponse{ID: call.ID, Result: result})
+	}
 	return spillResponse(call.ID, encodeResponse(MethodResponse{ID: call.ID, Result: result}))
 }
 
@@ -251,6 +255,9 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	mitmValidateMethod:   withArguments(handleMitmValidate),
 	mitmStatusMethod:     withoutArguments(handleMitmStatus),
 	mitmSignResultMethod: withArguments(handleMitmSignResult),
+	mitmExchangesMethod:  withArguments(handleMitmExchanges),
+	mitmExchangeMethod:   withArguments(handleMitmExchange),
+	mitmBodyMethod:       withArguments(handleMitmBody),
 
 	tailscaleNodesMethod:         withoutArguments(handleTailscaleNodes),
 	tailscaleStatusMethod:        withFallible(handleTailscaleStatus),

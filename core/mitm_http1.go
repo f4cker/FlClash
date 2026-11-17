@@ -188,6 +188,8 @@ func (mitmUploadBody) Close() error { return nil }
 
 type mitmDuplexControl struct {
 	client, upstream *mitmIdleConn
+	// The tracker ID the exchanges are recorded under; none when empty.
+	connection string
 	// Optional nonblocking observer, used to synchronize exchange tests.
 	uploadComplete func(error)
 }
@@ -234,6 +236,13 @@ func (c *mitmDuplexControl) exchangeStarted() {
 	}
 }
 
+func (c *mitmDuplexControl) captureConnection() string {
+	if c == nil {
+		return ""
+	}
+	return c.connection
+}
+
 func (c *mitmDuplexControl) stopAll() {
 	if c == nil {
 		return
@@ -263,7 +272,11 @@ type mitmResponseResult struct {
 // The caller owns the TLS connections and closes them only after every
 // worker has stopped. Exactly one goroutine reads upstream at any moment.
 // A nil control is accepted only by tests whose peers never block.
-func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func() bool, control *mitmDuplexControl) error {
+func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func() bool, control *mitmDuplexControl) (result error) {
+	// The exchange in progress, if capture records it; whatever ends the
+	// session ends its record too.
+	var entry *mitmCaptureEntry
+	defer func() { mitmCaptures.fail(entry, result) }()
 	requests := bufio.NewReaderSize(client, mitmHTTPHeaderLimit)
 	responses := bufio.NewReaderSize(upstream, mitmHTTPHeaderLimit)
 	// Between exchanges the watcher is the one upstream reader: it only
@@ -345,6 +358,7 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 			<-joinWatch(control, pendingWatch)
 			return errMitmSetupChanged
 		}
+		entry = mitmCaptures.begin(control.captureConnection(), host, req)
 		if _, present := req.Header["User-Agent"]; !present {
 			req.Header["User-Agent"] = []string{""}
 		}
@@ -354,7 +368,11 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 		// Request.Write send "Transfer-Encoding: chunked" for POST/PUT/PATCH
 		// instead of the client's "Content-Length: 0".
 		if req.Body != nil && req.Body != http.NoBody {
-			req.Body = mitmUploadBody{body: req.Body, writer: uploadWriter}
+			var body io.Reader = req.Body
+			if entry != nil {
+				body = mitmCaptureReader{r: body, entry: entry}
+			}
+			req.Body = mitmUploadBody{body: body, writer: uploadWriter}
 		}
 		// ReadResponse consults only the immutable request method, not the live
 		// request whose Body and trailers are in use by the upload goroutine.
@@ -488,6 +506,7 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				if failureTimer != nil {
 					failureTimer.Stop()
 				}
+				mitmCaptures.respond(entry, resp)
 				// Conservatively allow reuse only when completed upload is observable.
 				if uploadPending {
 					select {
@@ -514,7 +533,11 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				}
 				originalResponseBody := resp.Body
 				if resp.Body != nil {
-					resp.Body = mitmNoDrainBody{resp.Body}
+					var body io.Reader = resp.Body
+					if entry != nil {
+						body = mitmCaptureReader{r: body, entry: entry, response: true}
+					}
+					resp.Body = mitmNoDrainBody{body}
 				}
 				var err error
 				if mitmHeaderOnly(resp, req.Method) {
@@ -529,6 +552,7 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 					join()
 					return err
 				}
+				mitmCaptures.finish(entry, "")
 				if early {
 					if uploadPending {
 						<-upload

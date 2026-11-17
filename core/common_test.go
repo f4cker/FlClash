@@ -177,7 +177,7 @@ func coreMethodConstants(t *testing.T) []CoreMethod {
 
 const (
 	mitmAppOwned = "the app holds the CA key and signs every certificate itself"
-	mitmLater    = "decryption and capture land in a later MITM step"
+	mitmLater    = "scripts are phase 2 of MITM"
 )
 
 func TestEveryCoreMethodConstantIsDispatchable(t *testing.T) {
@@ -188,9 +188,6 @@ func TestEveryCoreMethodConstantIsDispatchable(t *testing.T) {
 		mitmGenerateCertificateMethod: mitmAppOwned,
 		mitmIssueCertificateMethod:    mitmAppOwned,
 		mitmRunScriptMethod:           mitmLater,
-		mitmExchangesMethod:           mitmLater,
-		mitmExchangeMethod:            mitmLater,
-		mitmBodyMethod:                mitmLater,
 	}
 
 	for _, method := range coreMethodConstants(t) {

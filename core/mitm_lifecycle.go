@@ -100,7 +100,9 @@ func replaceMitmRuntime(runtime *mitmRuntime) {
 	mitmSignRequests = map[uint64]*mitmSignPending{}
 	mitmLeaves.inflight = map[mitmLeafKey]*mitmLeafCall{}
 	mitmLeaves.generation++
+	previous := mitmState.Load()
 	mitmState.Store(runtime)
+	mitmCaptures.runtimeReplaced(previous, runtime)
 	mitmPaused.Store(nil)
 	mitmHostPauses.Clear()
 	pairs := make([]*mitmPair, 0, len(mitmActive.active))

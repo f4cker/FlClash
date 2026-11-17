@@ -372,6 +372,7 @@ func applyOptions(options CoreOptions) {
 	provider.SetDefaultTestTimeout(timeoutFromMillis(options.DelayTestTimeout, 0))
 	skipCertVerify.Store(options.SkipCertVerify)
 	mitmCapture.Store(options.MITMCapture)
+	mitmCaptures.setEnabled(options.MITMCapture)
 }
 
 func patchTun(target *LC.Tun, params *tunSchema) {
