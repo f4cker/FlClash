@@ -75,6 +75,10 @@ class RulesView extends ConsumerStatefulWidget {
 
   const RulesView({super.key, this.writeRule});
 
+  /// The scrolling part of the page, under its fixed title and search box.
+  @visibleForTesting
+  static const resultsKey = ValueKey('rules-results');
+
   @override
   ConsumerState<RulesView> createState() => _RulesViewState();
 }
@@ -798,21 +802,22 @@ class _RulesViewState extends ConsumerState<RulesView> {
       sliver: SliverToBoxAdapter(child: child),
     );
     final dimmed = !coreRunning;
-    return CustomScrollView(
-      controller: _scrollController,
-      slivers: [
-        SliverToBoxAdapter(child: SizedBox(height: context.contentTopPadding)),
-        if (!coreRunning)
-          box(
+    // The notices of the page's state and the search box stay put under
+    // the title; only the results and rules below them scroll, clipped at
+    // their own top, so nothing slides under the title or the search box.
+    final header = Padding(
+      padding: padding.copyWith(top: context.contentTopPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 12,
+        children: [
+          if (!coreRunning)
             RulesNotice(
               tone: RuleTone.red,
               glyph: AppGlyphs.error,
               text: appLocalizations.rulesCoreStopped,
             ),
-            top: 0,
-          ),
-        if (mode == 'global' || mode == 'direct')
-          box(
+          if (mode == 'global' || mode == 'direct')
             RulesNotice(
               tone: RuleTone.gray,
               glyph: AppGlyphs.info,
@@ -820,12 +825,14 @@ class _RulesViewState extends ConsumerState<RulesView> {
                   ? appLocalizations.rulesModeGlobal
                   : appLocalizations.rulesModeDirect,
             ),
-            top: coreRunning ? 0 : 12,
-          ),
-        box(
           _buildSearchBox(context),
-          top: coreRunning && mode == 'rule' ? 0 : 12,
-        ),
+        ],
+      ),
+    );
+    final results = CustomScrollView(
+      key: RulesView.resultsKey,
+      controller: _scrollController,
+      slivers: [
         if (lookup != null) ..._buildLookupSlivers(context, lookup, box),
         if (_listError case final error? when list == null)
           box(
@@ -861,6 +868,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
               child: Center(child: ActivityIndicator()),
             ),
           ),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header,
+        Expanded(child: results),
       ],
     );
   }

@@ -592,6 +592,14 @@ void main() {
     await shoot(tester, '03-query');
   });
 
+  shot('03b-show-all-jump', (tester) async {
+    await pumpPage(tester, size: const Size(1200, 640));
+    await query(tester, 'www.youtube.com');
+    await tester.tap(find.text('显示全部规则'));
+    await settle(tester, 12);
+    await shoot(tester, '03b-show-all-jump');
+  });
+
   shot('04-uncertain', (tester) async {
     await pumpPage(tester);
     await query(tester, 'web.telegram.org');

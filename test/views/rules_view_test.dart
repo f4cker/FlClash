@@ -166,8 +166,10 @@ void main() {
   Future<void> pumpRules(
     WidgetTester tester, {
     Future<String?> Function(Profile profile, String text)? writeRule,
+    Size size = _size,
   }) async {
-    tester.view.physicalSize = _size;
+    container.read(viewSizeProvider.notifier).update((_) => size);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -342,9 +344,14 @@ void main() {
   /// Adds youtube.com through the card's dialog; the lookup after it has
   /// an earlier rule [first] match, listing the added rule as passed over
   /// by it when [listed].
-  Future<void> addBeaten(WidgetTester tester, {required bool listed}) async {
+  Future<void> addBeaten(
+    WidgetTester tester, {
+    required bool listed,
+    Size size = _size,
+  }) async {
     await pumpRules(
       tester,
+      size: size,
       writeRule: (_, text) async {
         const first = RuleHit(
           index: 0,
@@ -421,6 +428,97 @@ void main() {
     expect(find.text('View that rule'), findsNothing);
 
     await teardown(tester);
+  });
+
+  group('the title and search box stay clear of the scrolled rules', () {
+    const short = Size(1100, 560);
+
+    void expectClear(WidgetTester tester, Rect search) {
+      final title = tester.getRect(find.text('Rules').first);
+      final field = tester.getRect(find.byType(EditableText).first);
+      final results = tester.getRect(find.byKey(RulesView.resultsKey));
+      expect(field, search, reason: 'the search box stays put');
+      expect(title.bottom, lessThanOrEqualTo(field.top));
+      expect(results.top, greaterThanOrEqualTo(field.bottom));
+      // Whatever the results show is clipped to their own box.
+      final clip = tester.renderObject<RenderBox>(
+        find.byKey(RulesView.resultsKey),
+      );
+      expect(clip.paintBounds.top, 0);
+    }
+
+    Future<Rect> lookUp(WidgetTester tester) async {
+      await tester.enterText(
+        find.byType(EditableText).first,
+        'www.youtube.com',
+      );
+      await tester.pump(const Duration(milliseconds: 250));
+      final search = tester.getRect(find.byType(EditableText).first);
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      return search;
+    }
+
+    double offset(WidgetTester tester) => tester
+        .state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byKey(RulesView.resultsKey),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        )
+        .position
+        .pixels;
+
+    testWidgets('after showing all rules at the one taken', (tester) async {
+      await pumpRules(tester, size: short);
+      final search = await lookUp(tester);
+
+      await tester.tap(find.text('Show all rules'));
+      await tester.pumpAndSettle();
+
+      expect(offset(tester), greaterThan(0));
+      expectClear(tester, search);
+      await teardown(tester);
+    });
+
+    testWidgets('after the jump to the rule that beat an added one', (
+      tester,
+    ) async {
+      await addBeaten(tester, listed: true, size: short);
+      final search = tester.getRect(find.byType(EditableText).first);
+      await tester.drag(
+        find.byKey(RulesView.resultsKey),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('View that rule'));
+      await tester.pumpAndSettle();
+
+      expectClear(tester, search);
+      await teardown(tester);
+    });
+
+    testWidgets('on a lookup opened from a request', (tester) async {
+      container
+          .read(rulesLookupRequestProvider.notifier)
+          .ask('www.youtube.com', rule: 'RuleSet', rulePayload: 'YouTube');
+      await pumpRules(tester, size: short);
+      await tester.pump(const Duration(milliseconds: 200));
+      final search = tester.getRect(find.byType(EditableText).first);
+      await tester.drag(
+        find.byKey(RulesView.resultsKey),
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+
+      expect(offset(tester), greaterThan(0));
+      expectClear(tester, search);
+      await teardown(tester);
+    });
   });
 
   group('AddRuleDialog', () {
