@@ -1823,6 +1823,7 @@
   "mitmOutcomePaused": "Descifrado en pausa; la conexión pasó sin cambios",
   "mitmBadgeDecrypted": "Descifrado",
   "mitmBadgePassedThrough": "Sin descifrar · pasó sin cambios",
+  "mitmBadgePassedThroughSpoken": "Sin descifrar, pasó sin cambios",
   "mitmBadgeHandshakeFailed": "Error en el handshake del cliente",
   "mitmBadgeFailed": "Error de descifrado",
   "mitmExchangeNoResponse": "No se recibió respuesta",

@@ -242,10 +242,10 @@ class TrackerTargetText extends StatelessWidget {
       return target;
     }
     return Row(
-      spacing: 6,
+      spacing: MitmBadge.gap,
       children: [
         Flexible(child: target),
-        MitmBadgeLabel(trackerInfo),
+        MitmBadgeIcon(trackerInfo),
       ],
     );
   }

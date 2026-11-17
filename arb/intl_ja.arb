@@ -1823,6 +1823,7 @@
   "mitmOutcomePaused": "復号が一時停止中のため、接続をそのまま通過させました",
   "mitmBadgeDecrypted": "復号済み",
   "mitmBadgePassedThrough": "未復号 · そのまま通過",
+  "mitmBadgePassedThroughSpoken": "未復号、そのまま通過",
   "mitmBadgeHandshakeFailed": "クライアントのハンドシェイク失敗",
   "mitmBadgeFailed": "復号失敗",
   "mitmExchangeNoResponse": "応答を受信していません",

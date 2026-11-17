@@ -25,18 +25,42 @@ String mitmOutcomeText(BuildContext context, String outcome) {
   };
 }
 
-/// The mark a row in the request list carries for a decryption host. Only
-/// connections the Core reported on have one; unlisted traffic has none.
+/// The mark a row in the request list carries for a decryption host: a
+/// small glyph beside the host, its words in the tooltip and the detail.
+/// Only connections the Core reported on have one; unlisted traffic has
+/// none. The glyph and color of each are set here and nowhere else.
 enum MitmBadge {
-  decrypted(RecordTone.accent),
-  passedThrough(RecordTone.warning),
+  decrypted(AppGlyphs.lockOpen),
+  passedThrough(AppGlyphs.arrowForward),
   // The client sent an alert in its handshake; why is unknown.
-  handshakeFailed(RecordTone.error),
-  failed(RecordTone.error);
+  handshakeFailed(AppGlyphs.warning),
+  failed(AppGlyphs.lockError);
 
-  const MitmBadge(this.tone);
+  const MitmBadge(this.glyph);
 
-  final RecordTone tone;
+  final Glyph glyph;
+
+  /// The glyph's side in a row, and its gap after the host.
+  static const iconSize = 14.0;
+  static const gap = 6.0;
+  static const tooltipDelay = Duration(milliseconds: 300);
+
+  // Amber #B25E00 is under 3:1 on the dark surfaces, so dark mode takes
+  // iOS's dark orange; grey #8E8C94 reads on both.
+  static const _grey = Color(0xFF8E8C94);
+  static const _amber = Color(0xFFB25E00);
+  static const _amberDark = Color(0xFFFF9F0A);
+
+  Color color(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    return switch (this) {
+      MitmBadge.decrypted => colorScheme.primary,
+      MitmBadge.passedThrough => _grey,
+      MitmBadge.handshakeFailed =>
+        colorScheme.brightness == Brightness.dark ? _amberDark : _amber,
+      MitmBadge.failed => colorScheme.error,
+    };
+  }
 
   static MitmBadge? of(TrackerInfo trackerInfo) {
     return switch (trackerInfo.mitmOutcome) {
@@ -64,13 +88,21 @@ enum MitmBadge {
       MitmBadge.failed => l.mitmBadgeFailed,
     };
   }
+
+  /// [label] as a screen reader says it.
+  String semanticsLabel(BuildContext context) => switch (this) {
+    MitmBadge.passedThrough =>
+      context.appLocalizations.mitmBadgePassedThroughSpoken,
+    _ => label(context),
+  };
 }
 
-/// [MitmBadge.of] as a label, or nothing for unlisted traffic.
-class MitmBadgeLabel extends StatelessWidget {
+/// [MitmBadge.of] as a glyph that names itself on hover and to a screen
+/// reader, or nothing for unlisted traffic.
+class MitmBadgeIcon extends StatelessWidget {
   final TrackerInfo trackerInfo;
 
-  const MitmBadgeLabel(this.trackerInfo, {super.key});
+  const MitmBadgeIcon(this.trackerInfo, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +110,20 @@ class MitmBadgeLabel extends StatelessWidget {
     if (badge == null) {
       return const SizedBox.shrink();
     }
-    return RecordLabel(label: badge.label(context), tone: badge.tone);
+    return Tooltip(
+      message: badge.label(context),
+      hoverDelay: MitmBadge.tooltipDelay,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: badge.semanticsLabel(context),
+        excludeSemantics: true,
+        child: GlyphIcon(
+          badge.glyph,
+          size: MitmBadge.iconSize,
+          color: badge.color(context),
+        ),
+      ),
+    );
   }
 }
 
@@ -248,14 +293,9 @@ class TrackerInfoItem extends ConsumerWidget {
           .of(context, emphasized: true)
           .copyWith(color: context.colorScheme.onSurfaceVariant),
     );
-    final badge = MitmBadge.of(trackerInfo) != null;
     if (!isLive) {
       return RecordHeader(
-        children: [
-          RecordTimestamp(trackerInfo.start.showFull),
-          network,
-          if (badge) MitmBadgeLabel(trackerInfo),
-        ],
+        children: [RecordTimestamp(trackerInfo.start.showFull), network],
       );
     }
     final color = context.colorScheme.onSurfaceVariant;
@@ -281,7 +321,6 @@ class TrackerInfoItem extends ConsumerWidget {
       children: [
         Text(trackerInfo.start.getLastUpdateTimeDesc(context, compact: true)),
         network,
-        if (badge) MitmBadgeLabel(trackerInfo),
       ],
     );
   }
@@ -302,6 +341,14 @@ class _TrackerInfoBody extends StatelessWidget {
             text: _endpointText(trackerInfo.title, metadata.destinationPort),
             style: styles.title,
           ),
+          if (MitmBadge.of(trackerInfo) != null)
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(start: MitmBadge.gap),
+                child: MitmBadgeIcon(trackerInfo),
+              ),
+            ),
           if (metadata.host.isNotEmpty && metadata.destinationIP.isNotEmpty)
             TextSpan(
               text: '  ${metadata.destinationIP}',

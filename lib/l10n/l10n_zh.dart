@@ -6004,6 +6004,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmBadgePassedThrough => '未解密 · 原样放行';
 
   @override
+  String get mitmBadgePassedThroughSpoken => '未解密，原样放行';
+
+  @override
   String get mitmBadgeHandshakeFailed => '客户端握手失败';
 
   @override

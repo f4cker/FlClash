@@ -1823,6 +1823,7 @@
   "mitmOutcomePaused": "解密暂停中，已原样放行",
   "mitmBadgeDecrypted": "已解密",
   "mitmBadgePassedThrough": "未解密 · 原样放行",
+  "mitmBadgePassedThroughSpoken": "未解密，原样放行",
   "mitmBadgeHandshakeFailed": "客户端握手失败",
   "mitmBadgeFailed": "解密失败",
   "mitmExchangeNoResponse": "未收到响应",

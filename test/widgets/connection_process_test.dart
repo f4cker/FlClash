@@ -5,6 +5,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +13,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/glyph_finders.dart';
 import '../helpers/host_scaffold.dart';
 import '../helpers/test_app.dart';
 
@@ -162,7 +164,7 @@ void main() {
       ]);
     });
 
-    testWidgets('a command-line tool shows its name and a glyph', (
+    testWidgets('a command-line tool shows its name, no placeholder', (
       tester,
     ) async {
       final filters = <RecordFilter>[];
@@ -175,6 +177,7 @@ void main() {
       );
       expect(find.text('ssh  ·  127.0.0.1:50022'), findsOneWidget);
       expect(find.byType(Image), findsNothing);
+      expect(find.byGlyph(AppGlyphs.question), findsNothing);
       expect(find.byType(ProcessFilterIcon), findsOneWidget);
       await tester.tap(find.byType(ProcessFilterIcon));
       expect(filters, const [
@@ -182,7 +185,7 @@ void main() {
       ]);
     });
 
-    testWidgets('no process info gets a placeholder in line', (tester) async {
+    testWidgets('no process info keeps the icon room, empty', (tester) async {
       Future<double> titleLeft(TrackerInfo info) async {
         await pump(
           tester,
@@ -198,6 +201,7 @@ void main() {
       expect(find.byType(ProcessFilterIcon), findsNothing);
       expect(find.byType(ProcessIcon), findsOneWidget);
       expect(tester.getSize(find.byType(ProcessIcon)), const Size(24, 24));
+      expect(find.byGlyph(AppGlyphs.question), findsNothing);
       expect(without, withIcon);
       expect(cli, withIcon);
     });

@@ -11003,6 +11003,12 @@ abstract class AppLocalizations {
   /// **'Not decrypted · passed through'**
   String get mitmBadgePassedThrough;
 
+  /// No description provided for @mitmBadgePassedThroughSpoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Not decrypted, passed through'**
+  String get mitmBadgePassedThroughSpoken;
+
   /// No description provided for @mitmBadgeHandshakeFailed.
   ///
   /// In en, this message translates to:

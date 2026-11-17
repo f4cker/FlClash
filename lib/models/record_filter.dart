@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:flutter/foundation.dart';
+import 'package:prism_ui/icons/glyph.dart';
 
 const recordFacetMaxOptions = 12;
 
@@ -34,12 +35,16 @@ class RecordFacet<T> {
   final List<String> order;
   final String Function(String value)? labelOf;
 
+  /// A small glyph ahead of a value's chip.
+  final Glyph? glyph;
+
   const RecordFacet(
     this.kind,
     this.valuesOf, {
     this.offered = false,
     this.order = const [],
     this.labelOf,
+    this.glyph,
   });
 
   String label(String value) => labelOf?.call(value) ?? value;

@@ -2284,6 +2284,7 @@
   "mitmOutcomePaused": "Decryption paused; connection passed through unchanged",
   "mitmBadgeDecrypted": "Decrypted",
   "mitmBadgePassedThrough": "Not decrypted · passed through",
+  "mitmBadgePassedThroughSpoken": "Not decrypted, passed through",
   "mitmBadgeHandshakeFailed": "Client handshake failed",
   "mitmBadgeFailed": "Decryption failed",
   "mitmExchangeNoResponse": "No response received",

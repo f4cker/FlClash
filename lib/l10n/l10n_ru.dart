@@ -6515,6 +6515,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmBadgePassedThrough => 'Не расшифровано · пропущено';
 
   @override
+  String get mitmBadgePassedThroughSpoken => 'Не расшифровано, пропущено';
+
+  @override
   String get mitmBadgeHandshakeFailed => 'Сбой рукопожатия клиента';
 
   @override

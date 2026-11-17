@@ -664,7 +664,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Decrypted'), findsOneWidget);
+    expect(find.byGlyph(MitmBadge.decrypted.glyph), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -704,50 +704,41 @@ void main() {
     expect(zh.mitmBadgeFailed, '解密失败');
   });
 
-  testWidgets('each row says what decryption did, and unlisted rows nothing', (
+  testWidgets('each row marks what decryption did with a glyph only', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     TrackerInfo row(String id, {String outcome = '', bool mitm = false}) =>
         _decrypted.copyWith(
           id: id,
           mitmOutcome: outcome,
           metadata: Metadata(network: 'tcp', host: '$id.test', mitm: mitm),
         );
-    final cases = <TrackerInfo, (String, RecordTone)?>{
+    const passed = (
+      'Not decrypted · passed through',
+      'Not decrypted, passed through',
+      MitmBadge.passedThrough,
+    );
+    const failed = ('Decryption failed', 'Decryption failed', MitmBadge.failed);
+    final cases = <TrackerInfo, (String, String, MitmBadge)?>{
       row('plain'): null,
-      row('ok', mitm: true): ('Decrypted', RecordTone.accent),
+      row('ok', mitm: true): ('Decrypted', 'Decrypted', MitmBadge.decrypted),
       row('late', mitm: true, outcome: 'http1Failed'): (
         'Decrypted',
-        RecordTone.accent,
+        'Decrypted',
+        MitmBadge.decrypted,
       ),
-      row('paused', outcome: 'paused'): (
-        'Not decrypted · passed through',
-        RecordTone.warning,
-      ),
-      row('hello', outcome: 'unsupportedHello'): (
-        'Not decrypted · passed through',
-        RecordTone.warning,
-      ),
-      row('sni', outcome: 'missingSNI'): (
-        'Not decrypted · passed through',
-        RecordTone.warning,
-      ),
-      row('h2', outcome: 'http2Only'): (
-        'Not decrypted · passed through',
-        RecordTone.warning,
-      ),
+      row('paused', outcome: 'paused'): passed,
+      row('hello', outcome: 'unsupportedHello'): passed,
+      row('sni', outcome: 'missingSNI'): passed,
+      row('h2', outcome: 'http2Only'): passed,
       row('alert', outcome: 'refused'): (
         'Client handshake failed',
-        RecordTone.error,
+        'Client handshake failed',
+        MitmBadge.handshakeFailed,
       ),
-      row('cert', outcome: 'upstreamCertificate'): (
-        'Decryption failed',
-        RecordTone.error,
-      ),
-      row('client', outcome: 'clientFailed'): (
-        'Decryption failed',
-        RecordTone.error,
-      ),
+      row('cert', outcome: 'upstreamCertificate'): failed,
+      row('client', outcome: 'clientFailed'): failed,
     };
     for (final MapEntry(key: info, value: want) in cases.entries) {
       await tester.pumpWidget(
@@ -758,16 +749,43 @@ void main() {
         ),
       );
       await tester.pump();
-      final labels = tester.widgetList<RecordLabel>(find.byType(RecordLabel));
+      expect(find.byType(RecordLabel), findsNothing, reason: info.id);
+      final icon = find.byType(MitmBadgeIcon);
       if (want == null) {
-        expect(labels, isEmpty, reason: info.id);
-        expect(find.text('MITM'), findsNothing);
-      } else {
-        expect(labels.map((label) => (label.label, label.tone)), [
-          want,
-        ], reason: info.id);
+        expect(
+          find.descendant(of: icon, matching: find.byType(GlyphIcon)),
+          findsNothing,
+          reason: info.id,
+        );
+        continue;
       }
+      final (tooltip, spoken, badge) = want;
+      expect(MitmBadge.of(info), badge, reason: info.id);
+      final glyph = tester.widget<GlyphIcon>(
+        find.descendant(of: icon, matching: find.byType(GlyphIcon)),
+      );
+      expect(glyph.glyph, badge.glyph, reason: info.id);
+      expect(glyph.size, 14);
+      expect(find.text(tooltip), findsNothing, reason: info.id);
+      expect(
+        tester
+            .widget<Tooltip>(
+              find.descendant(of: icon, matching: find.byType(Tooltip)),
+            )
+            .message,
+        tooltip,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp(RegExp.escape(spoken))),
+        findsWidgets,
+        reason: info.id,
+      );
     }
+
+    final context = tester.element(find.byType(TrackerInfoItem));
+    expect(MitmBadge.passedThrough.color(context), const Color(0xFF8E8C94));
+    expect(MitmBadge.handshakeFailed.color(context), const Color(0xFFB25E00));
+    semantics.dispose();
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

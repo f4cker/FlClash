@@ -6570,6 +6570,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mitmBadgePassedThrough => 'Non déchiffré · transmis tel quel';
 
   @override
+  String get mitmBadgePassedThroughSpoken => 'Non déchiffré, transmis tel quel';
+
+  @override
   String get mitmBadgeHandshakeFailed => 'Échec de la négociation du client';
 
   @override

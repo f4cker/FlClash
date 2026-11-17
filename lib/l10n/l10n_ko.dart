@@ -6412,6 +6412,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmBadgePassedThrough => '복호화 안 됨 · 그대로 통과';
 
   @override
+  String get mitmBadgePassedThroughSpoken => '복호화 안 됨, 그대로 통과';
+
+  @override
   String get mitmBadgeHandshakeFailed => '클라이언트 핸드셰이크 실패';
 
   @override

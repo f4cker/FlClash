@@ -6340,6 +6340,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmBadgePassedThrough => '未復号 · そのまま通過';
 
   @override
+  String get mitmBadgePassedThroughSpoken => '未復号、そのまま通過';
+
+  @override
   String get mitmBadgeHandshakeFailed => 'クライアントのハンドシェイク失敗';
 
   @override

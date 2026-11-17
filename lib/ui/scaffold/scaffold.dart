@@ -25,6 +25,7 @@ class ScaffoldKeyword {
   const ScaffoldKeyword({
     required this.key,
     required this.label,
+    this.glyph,
     this.onDeleted,
     this.onPressed,
     this.selected = false,
@@ -33,6 +34,7 @@ class ScaffoldKeyword {
 
   final Object key;
   final String label;
+  final Glyph? glyph;
   final VoidCallback? onDeleted;
 
   final VoidCallback? onPressed;

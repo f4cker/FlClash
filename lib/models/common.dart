@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/ui/icons/app_glyphs.dart';
 import 'package:flutter/widgets.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:prism_ui/icons/glyph.dart';
@@ -273,6 +274,7 @@ final trackerInfoFacets = <RecordFacet<TrackerInfo>>[
     offered: true,
     // Only decrypted requests: failures and pass-throughs are not in it.
     labelOf: (_) => currentAppLocalizations.mitmBadgeDecrypted,
+    glyph: AppGlyphs.lockOpen,
   ),
   RecordFacet(
     RecordFacetKind.app,

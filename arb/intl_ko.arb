@@ -1823,6 +1823,7 @@
   "mitmOutcomePaused": "복호화가 일시 중지되어 연결을 그대로 통과시켰습니다",
   "mitmBadgeDecrypted": "복호화됨",
   "mitmBadgePassedThrough": "복호화 안 됨 · 그대로 통과",
+  "mitmBadgePassedThroughSpoken": "복호화 안 됨, 그대로 통과",
   "mitmBadgeHandshakeFailed": "클라이언트 핸드셰이크 실패",
   "mitmBadgeFailed": "복호화 실패",
   "mitmExchangeNoResponse": "응답을 받지 못했습니다",

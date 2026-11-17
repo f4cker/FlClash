@@ -1823,6 +1823,7 @@
   "mitmOutcomePaused": "Déchiffrement en pause ; connexion transmise telle quelle",
   "mitmBadgeDecrypted": "Déchiffré",
   "mitmBadgePassedThrough": "Non déchiffré · transmis tel quel",
+  "mitmBadgePassedThroughSpoken": "Non déchiffré, transmis tel quel",
   "mitmBadgeHandshakeFailed": "Échec de la négociation du client",
   "mitmBadgeFailed": "Échec du déchiffrement",
   "mitmExchangeNoResponse": "Aucune réponse reçue",

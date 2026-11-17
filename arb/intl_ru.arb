@@ -1823,6 +1823,7 @@
   "mitmOutcomePaused": "Расшифровка приостановлена; соединение пропущено без изменений",
   "mitmBadgeDecrypted": "Расшифровано",
   "mitmBadgePassedThrough": "Не расшифровано · пропущено",
+  "mitmBadgePassedThroughSpoken": "Не расшифровано, пропущено",
   "mitmBadgeHandshakeFailed": "Сбой рукопожатия клиента",
   "mitmBadgeFailed": "Ошибка расшифровки",
   "mitmExchangeNoResponse": "Ответ не получен",

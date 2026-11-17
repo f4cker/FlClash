@@ -362,9 +362,10 @@ void main() {
     Size size, {
     Brightness brightness = Brightness.light,
     String? openHost,
+    double pixelRatio = 2,
   }) async {
-    tester.view.physicalSize = size * 2;
-    tester.view.devicePixelRatio = 2;
+    tester.view.physicalSize = size * pixelRatio;
+    tester.view.devicePixelRatio = pixelRatio;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final requests = ProviderContainer(
@@ -450,12 +451,22 @@ void main() {
     final render =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {
-      final image = await render.toImage(pixelRatio: 2);
+      final image = await render.toImage(pixelRatio: pixelRatio);
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
       await File('$_outDir/$name.png').writeAsBytes(data!.buffer.asUint8List());
     });
   }
+
+  // 13 at 4x, cropped to the rows afterwards (13b) so the glyphs read.
+  testWidgets('13-request-badges-table-4x', skip: skip != null, (tester) async {
+    await shootRequests(
+      tester,
+      '13-request-badges-table-4x',
+      const Size(1300, 560),
+      pixelRatio: 4,
+    );
+  });
 
   testWidgets('13-request-badges-table', skip: skip != null, (tester) async {
     await shootRequests(

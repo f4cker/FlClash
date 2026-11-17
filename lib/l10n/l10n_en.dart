@@ -6522,6 +6522,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mitmBadgePassedThrough => 'Not decrypted · passed through';
 
   @override
+  String get mitmBadgePassedThroughSpoken => 'Not decrypted, passed through';
+
+  @override
   String get mitmBadgeHandshakeFailed => 'Client handshake failed';
 
   @override
