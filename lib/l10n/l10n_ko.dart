@@ -7575,4 +7575,81 @@ class AppLocalizationsKo extends AppLocalizations {
   String mitmRewriteNotAppliedTitle(String value) {
     return 'Rewrite not applied: $value';
   }
+
+  @override
+  String get navGroupRouting => '라우팅';
+
+  @override
+  String get navGroupDecryption => '복호화 및 재작성';
+
+  @override
+  String get navGroupDebug => '디버그';
+
+  @override
+  String navGroupExpanded(Object group) {
+    return '$group, 그룹, 펼침';
+  }
+
+  @override
+  String navGroupCollapsed(Object group) {
+    return '$group, 그룹, 접힘';
+  }
+
+  @override
+  String navBadgeUpdates(Object count) {
+    return '업데이트 $count개';
+  }
+
+  @override
+  String get navBadgeError => '오류 있음';
+
+  @override
+  String get exitIpRow => '출구';
+
+  @override
+  String get exitIp => '출구 IP';
+
+  @override
+  String get localPublicIpRow => '로컬';
+
+  @override
+  String get localPublicIp => '로컬 공인 IP';
+
+  @override
+  String get copyLocalPublicIp => '로컬 공인 IP 복사';
+
+  @override
+  String get sameAsExit => '출구와 동일';
+
+  @override
+  String get querying => '조회 중';
+
+  @override
+  String get queryFailed => '조회 실패';
+
+  @override
+  String get exitNotRunning => 'Flash가 실행 중이 아니어서 출구 정보가 없습니다';
+
+  @override
+  String get exitIpLookupFailed => '출구 IP를 찾지 못했습니다';
+
+  @override
+  String get ipxNoResponse => 'ipx.al 응답 없음';
+
+  @override
+  String get ipxNativeShort => '네이티브';
+
+  @override
+  String get ipxBroadcastShort => '브로드캐스트';
+
+  @override
+  String ipxScoreSemantics(String score, String grade) {
+    return '건강 점수 $score, 등급 $grade';
+  }
+
+  @override
+  String get exitIpOpenHint => '눌러서 전체 보고서 보기';
+
+  @override
+  String get semanticsSeparator => ', ';
 }

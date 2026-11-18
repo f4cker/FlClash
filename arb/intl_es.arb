@@ -2523,5 +2523,28 @@
   },
   "@mitmRewriteFailureGeneric": {
     "description": "PROVISIONAL: English text, awaiting translation"
-  }
+  },
+  "navGroupRouting": "Enrutamiento",
+  "navGroupDecryption": "Descifrado y reescritura",
+  "navGroupDebug": "Depuración",
+  "navGroupExpanded": "{group}, grupo, expandido",
+  "navGroupCollapsed": "{group}, grupo, contraído",
+  "navBadgeUpdates": "Actualizaciones: {count}",
+  "navBadgeError": "Con errores",
+  "exitIpRow": "Salida",
+  "exitIp": "IP de salida",
+  "localPublicIpRow": "Local",
+  "localPublicIp": "IP pública local",
+  "copyLocalPublicIp": "Copiar IP pública local",
+  "sameAsExit": "Igual que la salida",
+  "querying": "Consultando",
+  "queryFailed": "Error de consulta",
+  "exitNotRunning": "Flash no se está ejecutando; no hay salida",
+  "exitIpLookupFailed": "No se pudo obtener la IP de salida",
+  "ipxNoResponse": "ipx.al no respondió",
+  "ipxNativeShort": "Nativa",
+  "ipxBroadcastShort": "Difundida",
+  "ipxScoreSemantics": "Puntuación {score}, nivel {grade}",
+  "exitIpOpenHint": "Pulsa para ver el informe completo",
+  "semanticsSeparator": ", "
 }

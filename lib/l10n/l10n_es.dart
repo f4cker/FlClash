@@ -7757,4 +7757,81 @@ class AppLocalizationsEs extends AppLocalizations {
   String mitmRewriteNotAppliedTitle(String value) {
     return 'Rewrite not applied: $value';
   }
+
+  @override
+  String get navGroupRouting => 'Enrutamiento';
+
+  @override
+  String get navGroupDecryption => 'Descifrado y reescritura';
+
+  @override
+  String get navGroupDebug => 'Depuración';
+
+  @override
+  String navGroupExpanded(Object group) {
+    return '$group, grupo, expandido';
+  }
+
+  @override
+  String navGroupCollapsed(Object group) {
+    return '$group, grupo, contraído';
+  }
+
+  @override
+  String navBadgeUpdates(Object count) {
+    return 'Actualizaciones: $count';
+  }
+
+  @override
+  String get navBadgeError => 'Con errores';
+
+  @override
+  String get exitIpRow => 'Salida';
+
+  @override
+  String get exitIp => 'IP de salida';
+
+  @override
+  String get localPublicIpRow => 'Local';
+
+  @override
+  String get localPublicIp => 'IP pública local';
+
+  @override
+  String get copyLocalPublicIp => 'Copiar IP pública local';
+
+  @override
+  String get sameAsExit => 'Igual que la salida';
+
+  @override
+  String get querying => 'Consultando';
+
+  @override
+  String get queryFailed => 'Error de consulta';
+
+  @override
+  String get exitNotRunning => 'Flash no se está ejecutando; no hay salida';
+
+  @override
+  String get exitIpLookupFailed => 'No se pudo obtener la IP de salida';
+
+  @override
+  String get ipxNoResponse => 'ipx.al no respondió';
+
+  @override
+  String get ipxNativeShort => 'Nativa';
+
+  @override
+  String get ipxBroadcastShort => 'Difundida';
+
+  @override
+  String ipxScoreSemantics(String score, String grade) {
+    return 'Puntuación $score, nivel $grade';
+  }
+
+  @override
+  String get exitIpOpenHint => 'Pulsa para ver el informe completo';
+
+  @override
+  String get semanticsSeparator => ', ';
 }

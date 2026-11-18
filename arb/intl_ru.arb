@@ -2523,5 +2523,28 @@
   },
   "@mitmRewriteFailureGeneric": {
     "description": "PROVISIONAL: English text, awaiting translation"
-  }
+  },
+  "navGroupRouting": "Маршрутизация",
+  "navGroupDecryption": "Расшифровка и перезапись",
+  "navGroupDebug": "Отладка",
+  "navGroupExpanded": "{group}, группа, развёрнута",
+  "navGroupCollapsed": "{group}, группа, свёрнута",
+  "navBadgeUpdates": "Обновлений: {count}",
+  "navBadgeError": "Есть ошибки",
+  "exitIpRow": "Выход",
+  "exitIp": "IP выхода",
+  "localPublicIpRow": "Локальный",
+  "localPublicIp": "Локальный публичный IP",
+  "copyLocalPublicIp": "Скопировать локальный публичный IP",
+  "sameAsExit": "Совпадает с выходом",
+  "querying": "Запрос…",
+  "queryFailed": "Ошибка запроса",
+  "exitNotRunning": "Flash не запущен, данных о выходе нет",
+  "exitIpLookupFailed": "Не удалось определить IP выхода",
+  "ipxNoResponse": "ipx.al не ответил",
+  "ipxNativeShort": "Нативный",
+  "ipxBroadcastShort": "Вещательный",
+  "ipxScoreSemantics": "Оценка {score}, класс {grade}",
+  "exitIpOpenHint": "Нажмите, чтобы открыть полный отчёт",
+  "semanticsSeparator": ", "
 }

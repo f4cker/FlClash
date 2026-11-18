@@ -7502,4 +7502,81 @@ class AppLocalizationsJa extends AppLocalizations {
   String mitmRewriteNotAppliedTitle(String value) {
     return 'Rewrite not applied: $value';
   }
+
+  @override
+  String get navGroupRouting => 'ルーティング';
+
+  @override
+  String get navGroupDecryption => '復号と書き換え';
+
+  @override
+  String get navGroupDebug => 'デバッグ';
+
+  @override
+  String navGroupExpanded(Object group) {
+    return '$group、グループ、展開';
+  }
+
+  @override
+  String navGroupCollapsed(Object group) {
+    return '$group、グループ、折りたたみ';
+  }
+
+  @override
+  String navBadgeUpdates(Object count) {
+    return '更新 $count 件';
+  }
+
+  @override
+  String get navBadgeError => 'エラーあり';
+
+  @override
+  String get exitIpRow => '出口';
+
+  @override
+  String get exitIp => '出口 IP';
+
+  @override
+  String get localPublicIpRow => 'ローカル';
+
+  @override
+  String get localPublicIp => 'ローカルのパブリック IP';
+
+  @override
+  String get copyLocalPublicIp => 'ローカルのパブリック IP をコピー';
+
+  @override
+  String get sameAsExit => '出口と同じ';
+
+  @override
+  String get querying => '照会中';
+
+  @override
+  String get queryFailed => '照会に失敗';
+
+  @override
+  String get exitNotRunning => 'Flash が実行されていないため、出口情報はありません';
+
+  @override
+  String get exitIpLookupFailed => '出口 IP を取得できませんでした';
+
+  @override
+  String get ipxNoResponse => 'ipx.al から応答がありません';
+
+  @override
+  String get ipxNativeShort => 'ネイティブ';
+
+  @override
+  String get ipxBroadcastShort => 'ブロードキャスト';
+
+  @override
+  String ipxScoreSemantics(String score, String grade) {
+    return 'ヘルススコア $score、グレード $grade';
+  }
+
+  @override
+  String get exitIpOpenHint => '押すと完全なレポートを表示';
+
+  @override
+  String get semanticsSeparator => '、';
 }

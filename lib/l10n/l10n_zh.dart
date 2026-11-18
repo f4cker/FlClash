@@ -7099,4 +7099,81 @@ class AppLocalizationsZh extends AppLocalizations {
   String mitmRewriteNotAppliedTitle(String value) {
     return '未应用改写：$value';
   }
+
+  @override
+  String get navGroupRouting => '分流';
+
+  @override
+  String get navGroupDecryption => '解密与改写';
+
+  @override
+  String get navGroupDebug => '调试';
+
+  @override
+  String navGroupExpanded(Object group) {
+    return '$group，分组，已展开';
+  }
+
+  @override
+  String navGroupCollapsed(Object group) {
+    return '$group，分组，已收起';
+  }
+
+  @override
+  String navBadgeUpdates(Object count) {
+    return '$count 个更新';
+  }
+
+  @override
+  String get navBadgeError => '有错误';
+
+  @override
+  String get exitIpRow => '出口';
+
+  @override
+  String get exitIp => '出口 IP';
+
+  @override
+  String get localPublicIpRow => '本地公网';
+
+  @override
+  String get localPublicIp => '本地公网 IP';
+
+  @override
+  String get copyLocalPublicIp => '复制本地公网 IP';
+
+  @override
+  String get sameAsExit => '与出口相同';
+
+  @override
+  String get querying => '查询中';
+
+  @override
+  String get queryFailed => '查询失败';
+
+  @override
+  String get exitNotRunning => 'Flash 未运行，暂无出口信息';
+
+  @override
+  String get exitIpLookupFailed => '没有查到出口 IP';
+
+  @override
+  String get ipxNoResponse => 'ipx.al 没有响应';
+
+  @override
+  String get ipxNativeShort => '原生';
+
+  @override
+  String get ipxBroadcastShort => '广播';
+
+  @override
+  String ipxScoreSemantics(String score, String grade) {
+    return '健康分 $score，等级 $grade';
+  }
+
+  @override
+  String get exitIpOpenHint => '按下查看完整报告';
+
+  @override
+  String get semanticsSeparator => '，';
 }

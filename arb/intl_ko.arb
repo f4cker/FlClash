@@ -2523,5 +2523,28 @@
   },
   "@mitmRewriteFailureGeneric": {
     "description": "PROVISIONAL: English text, awaiting translation"
-  }
+  },
+  "navGroupRouting": "라우팅",
+  "navGroupDecryption": "복호화 및 재작성",
+  "navGroupDebug": "디버그",
+  "navGroupExpanded": "{group}, 그룹, 펼침",
+  "navGroupCollapsed": "{group}, 그룹, 접힘",
+  "navBadgeUpdates": "업데이트 {count}개",
+  "navBadgeError": "오류 있음",
+  "exitIpRow": "출구",
+  "exitIp": "출구 IP",
+  "localPublicIpRow": "로컬",
+  "localPublicIp": "로컬 공인 IP",
+  "copyLocalPublicIp": "로컬 공인 IP 복사",
+  "sameAsExit": "출구와 동일",
+  "querying": "조회 중",
+  "queryFailed": "조회 실패",
+  "exitNotRunning": "Flash가 실행 중이 아니어서 출구 정보가 없습니다",
+  "exitIpLookupFailed": "출구 IP를 찾지 못했습니다",
+  "ipxNoResponse": "ipx.al 응답 없음",
+  "ipxNativeShort": "네이티브",
+  "ipxBroadcastShort": "브로드캐스트",
+  "ipxScoreSemantics": "건강 점수 {score}, 등급 {grade}",
+  "exitIpOpenHint": "눌러서 전체 보고서 보기",
+  "semanticsSeparator": ", "
 }
