@@ -32,8 +32,9 @@ class OverlayHandshakeTests(unittest.TestCase):
         self.assertIn('#define FC_HELPER_LABEL "com.layoute.flash.helperd"', header)
         self.assertIn('#define FC_RETIRED_HELPER_LABEL "com.layoute.flash.daemon"', header)
         # The app only ever connects to the current name, so a daemon of the old name never answers it.
-        self.assertEqual(bridge.count('xpc_connection_create_mach_service('), 1)
-        self.assertIn('xpc_connection_create_mach_service(FCHelperLabel.UTF8String', bridge)
+        # Two connections (requests, and the exit request to a stale helper), both to the current name.
+        self.assertEqual(bridge.count('xpc_connection_create_mach_service('), 2)
+        self.assertEqual(bridge.count('xpc_connection_create_mach_service(FCHelperLabel.UTF8String'), 2)
         checked = 0
         for tag in ('v0.9.15-dev.6', 'v0.9.15-mitm.1', 'v0.9.15-mitm.3', 'v0.9.15-mitm.4'):
             trust = at_tag(tag, 'macos/Shared/HelperTrust.m')
