@@ -276,6 +276,10 @@ abstract class AppSettingProps with _$AppSettingProps {
     @Default(true)
     @JsonKey(readValue: _readSidebarExpanded)
     bool sidebarExpanded,
+
+    /// [NavigationGroup] names the user opened (false) or closed (true);
+    /// the rest follow their defaults.
+    @Default({}) Map<String, bool> sidebarCollapsedGroups,
     @Default(0) int acceptedDisclaimerVersion,
     @Default(true) bool minimizeOnExit,
     @Default(false) bool hidden,

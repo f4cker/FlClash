@@ -470,7 +470,7 @@ void main() {
 
     container
         .read(currentPageLabelProvider.notifier)
-        .toPage(PageLabel.resources);
+        .toPage(PageLabel.mitmScripts);
     expect(container.read(navigationStateProvider).currentIndex, 0);
   });
 

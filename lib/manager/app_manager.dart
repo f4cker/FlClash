@@ -160,11 +160,71 @@ class _Sidebar extends ConsumerWidget {
       appSettingProvider.select((state) => state.sidebarExpanded),
     );
     final version = ref.watch(versionProvider);
+    final collapsed = ref.watch(sidebarCollapsedGroupsProvider);
+    final badges = ref.watch(navigationBadgesProvider);
+    // A page opened from elsewhere opens the section it sits in.
+    ref.listen(shownPageLabelProvider, (previous, next) {
+      final group = NavigationGroup.of(next);
+      if (previous != next &&
+          group != null &&
+          (ref.read(sidebarCollapsedGroupsProvider)[group] ?? false)) {
+        setSidebarGroupCollapsed(ref, group, collapsed: false);
+      }
+    });
+    final pinnedCount = items.isNotEmpty && items.last.label == PageLabel.tools
+        ? 1
+        : 0;
+    final sections = <SidebarSection>[];
+    NavigationGroup? currentGroup;
+    var length = 0;
+    void close() {
+      if (length == 0) {
+        return;
+      }
+      final group = currentGroup;
+      final isCollapsed = group != null && (collapsed[group] ?? false);
+      sections.add(
+        SidebarSection(
+          title: group?.label,
+          length: length,
+          collapsed: isCollapsed,
+          onToggle: group == null
+              ? null
+              : () => setSidebarGroupCollapsed(
+                  ref,
+                  group,
+                  collapsed: !isCollapsed,
+                ),
+          semanticLabel: group == null
+              ? null
+              : isCollapsed
+              ? context.appLocalizations.navGroupCollapsed(group.label)
+              : context.appLocalizations.navGroupExpanded(group.label),
+        ),
+      );
+      length = 0;
+    }
+
+    for (final item in items.take(items.length - pinnedCount)) {
+      final group = NavigationGroup.of(item.label);
+      if (group != currentGroup) {
+        close();
+        currentGroup = group;
+      }
+      length++;
+    }
+    close();
     return NavigationSidebar(
       destinations: [
         for (final item in items)
-          SidebarDestination(glyph: item.glyph, label: item.label.label),
+          SidebarDestination(
+            glyph: item.glyph,
+            label: item.label.label,
+            badge: badges[item.label],
+          ),
       ],
+      sections: sections,
+      pinnedCount: pinnedCount,
       selectedIndex: currentIndex,
       expanded: canExpand && sidebarExpanded,
       onSelected: onSelected,

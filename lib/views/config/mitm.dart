@@ -420,7 +420,9 @@ class _MitmViewState extends ConsumerState<MitmView> {
     return ScaffoldBarStatus(
       status: null,
       child: Scaffold(
-        title: appLocalizations.mitm,
+        title: isAndroid
+            ? appLocalizations.mitm
+            : appLocalizations.httpsDecryption,
         isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
         body: NullStatusSwitcher(
           isLoading: certificate.isLoading && !certificate.hasValue,
@@ -481,10 +483,13 @@ class _MitmViewState extends ConsumerState<MitmView> {
                                 ),
                             ].join('\n'),
                           ),
-                          generateSection(
-                            title: appLocalizations.mitmRewriteAndScripts,
-                            items: const [MitmRewriteEntryItem()],
-                          ),
+                          // The sidebar lists the rewrite page wherever it
+                          // shows, with its errors.
+                          if (ref.watch(isMobileViewProvider))
+                            generateSection(
+                              title: appLocalizations.mitmRewriteAndScripts,
+                              items: const [MitmRewriteEntryItem()],
+                            ),
                           generateSection(
                             title: appLocalizations.options,
                             items: [

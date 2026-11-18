@@ -44,6 +44,11 @@ _AppSettingProps _$AppSettingPropsFromJson(
   autoCheckUpdate: json['autoCheckUpdate'] as bool? ?? true,
   sidebarExpanded:
       _readSidebarExpanded(json, 'sidebarExpanded') as bool? ?? true,
+  sidebarCollapsedGroups:
+      (json['sidebarCollapsedGroups'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, e as bool),
+      ) ??
+      const {},
   acceptedDisclaimerVersion:
       (json['acceptedDisclaimerVersion'] as num?)?.toInt() ?? 0,
   minimizeOnExit: json['minimizeOnExit'] as bool? ?? true,
@@ -116,6 +121,7 @@ Map<String, dynamic> _$AppSettingPropsToJson(_AppSettingProps instance) =>
       'floatingNavigationBar': instance.floatingNavigationBar,
       'autoCheckUpdate': instance.autoCheckUpdate,
       'sidebarExpanded': instance.sidebarExpanded,
+      'sidebarCollapsedGroups': instance.sidebarCollapsedGroups,
       'acceptedDisclaimerVersion': instance.acceptedDisclaimerVersion,
       'minimizeOnExit': instance.minimizeOnExit,
       'hidden': instance.hidden,

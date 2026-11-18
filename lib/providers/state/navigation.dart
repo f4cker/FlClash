@@ -135,3 +135,73 @@ double overlayTopOffset(Ref ref) {
   // The window controls over a page sit within its app bar.
   return (showsHeader ? kHeaderHeight : 0) + bannerBarClearance;
 }
+
+bool defaultSidebarGroupCollapsed(
+  NavigationGroup group, {
+  required bool decrypting,
+}) => switch (group) {
+  NavigationGroup.decryption => !decrypting,
+  NavigationGroup.network => true,
+  NavigationGroup.routing || NavigationGroup.debug => false,
+};
+
+/// Whether each sidebar section is closed: the user's own choice once made,
+/// otherwise its default, which for decryption follows whether it is on.
+@riverpod
+Map<NavigationGroup, bool> sidebarCollapsedGroups(Ref ref) {
+  final chosen = ref.watch(
+    appSettingProvider.select((state) => state.sidebarCollapsedGroups),
+  );
+  final decrypting = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => mitmFeature && state.mitm.enable,
+    ),
+  );
+  return {
+    for (final group in NavigationGroup.values)
+      group:
+          chosen[group.name] ??
+          defaultSidebarGroupCollapsed(group, decrypting: decrypting),
+  };
+}
+
+/// What each sidebar row has to tell. Scripts and modules report here once
+/// they track pending updates and errors.
+@riverpod
+Map<PageLabel, SidebarBadge> navigationBadges(Ref ref) {
+  final profileId = ref.watch(currentProfileIdProvider);
+  final rewriteIssues = !mitmFeature || profileId == null
+      ? 0
+      : ref.watch(
+              mitmRewriteIssuesProvider(
+                profileId,
+              ).select((value) => value.value?.length),
+            ) ??
+            0;
+  return {
+    if (rewriteIssues > 0)
+      PageLabel.mitmRewrite: SidebarBadge(
+        error: true,
+        semanticLabel: currentAppLocalizations.navBadgeError,
+      ),
+  };
+}
+
+/// Remembers the user's choice for [group], which from then on outranks its
+/// default.
+void setSidebarGroupCollapsed(
+  WidgetRef ref,
+  NavigationGroup group, {
+  required bool collapsed,
+}) {
+  ref
+      .read(appSettingProvider.notifier)
+      .update(
+        (state) => state.copyWith(
+          sidebarCollapsedGroups: {
+            ...state.sidebarCollapsedGroups,
+            group.name: collapsed,
+          },
+        ),
+      );
+}

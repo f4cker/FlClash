@@ -343,10 +343,26 @@ void main() {
       await settle(tester);
     });
 
+    testWidgets('beside a sidebar, opens its decryption page', (tester) async {
+      await pump(tester, mitm: const Mitm(enable: true));
+
+      await tester.tap(find.byType(MitmStatusCapsule));
+      await tester.pump();
+
+      expect(container.read(currentPageLabelProvider), PageLabel.mitm);
+      expect(find.byType(MitmView), findsNothing);
+      await settle(tester);
+    });
+
     testWidgets('opens the MITM settings, whose own bar leaves it out', (
       tester,
     ) async {
       await pump(tester, mitm: const Mitm(enable: true));
+      // A phone-wide window has no sidebar to list the page in.
+      container
+          .read(viewSizeProvider.notifier)
+          .update((_) => const Size(400, 800));
+      await tester.pump();
       expect(
         find.text(currentAppLocalizations.mitmIndicatorOn),
         findsOneWidget,
@@ -356,7 +372,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(find.byType(MitmView), findsOneWidget);
-      expect(find.byType(MitmStatusCapsule), findsOneWidget);
+      // The page covers the one it came from, and its own bar adds none.
+      expect(find.byType(MitmStatusCapsule), findsNothing);
       await settle(tester);
     });
   });
