@@ -415,6 +415,9 @@ final class MacHelperMaintenance extends ChangeNotifier {
       MacHelperState.notReady ||
       MacHelperState.staleCore ||
       MacHelperState.registrationStale ||
+      MacHelperState.launcherCheckFailed ||
+      MacHelperState.launcherDowngrade ||
+      MacHelperState.launcherFailed ||
       MacHelperState.unavailable => true,
       MacHelperState.starting => _startSlow,
       _ => false,

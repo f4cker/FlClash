@@ -6821,4 +6821,27 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macHelperStatusUnreadable => '지금은 헬퍼 상태를 읽을 수 없습니다. 세부 정보를 확인하세요.';
+
+  @override
+  String get macHelperLauncherCheckTitle =>
+      'Flash didn’t pass the security check';
+
+  @override
+  String get macHelperLauncherCheckDetail =>
+      'The helper didn’t start. Install the latest trusted version of Flash again.';
+
+  @override
+  String get macHelperLauncherDowngradeTitle =>
+      'This version of Flash is too old';
+
+  @override
+  String get macHelperLauncherDowngradeDetail =>
+      'The helper didn’t start. Install the latest version of Flash.';
+
+  @override
+  String get macHelperLauncherFailedTitle => 'The helper couldn’t start';
+
+  @override
+  String get macHelperLauncherFailedDetail =>
+      'The system couldn’t prepare or start the helper. See details.';
 }

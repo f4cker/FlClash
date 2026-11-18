@@ -6407,4 +6407,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get macHelperStatusUnreadable => '暂时无法读取辅助程序状态，请查看详情。';
+
+  @override
+  String get macHelperLauncherCheckTitle => 'Flash 未通过安全检查';
+
+  @override
+  String get macHelperLauncherCheckDetail => '辅助程序未启动，请重新安装最新的可信版本。';
+
+  @override
+  String get macHelperLauncherDowngradeTitle => 'Flash 版本过旧';
+
+  @override
+  String get macHelperLauncherDowngradeDetail => '辅助程序未启动，请安装最新版本的 Flash。';
+
+  @override
+  String get macHelperLauncherFailedTitle => '辅助程序未能启动';
+
+  @override
+  String get macHelperLauncherFailedDetail => '系统未能完成辅助程序的准备或启动，请查看详情。';
 }

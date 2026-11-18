@@ -33,6 +33,7 @@ class _Native implements MacHelperNativeApi {
   final calls = <String>[];
   final arguments = <Map<String, Object?>>[];
   String state = 'enabled';
+  Map<String, Object?> statusExtra = const {};
   String stopCode = 'ok';
   bool stopExitConfirmed = true;
   String startCode = 'ok';
@@ -47,7 +48,7 @@ class _Native implements MacHelperNativeApi {
     calls.add(method);
     this.arguments.add(arguments);
     return switch (method) {
-      'status' => {'code': state},
+      'status' => {'code': state, ...statusExtra},
       'start' => {
         'code': startCode,
         'protocol': 1,
@@ -602,6 +603,90 @@ void main() {
       }
     },
   );
+
+  group('launcher status cards', () {
+    const detail =
+        'launcher result: downgrade\n'
+        'launcher detail: helper 2026111707 < recorded 2026111708\n'
+        'helper version: 2026111707; highest version run: 2026111708; '
+        'app version: 2026111707; launcher version: 1';
+    const cards = {
+      'launcherCheckFailed': (
+        MacHelperState.launcherCheckFailed,
+        MacHelperCardKind.launcherCheckFailed,
+        MacHelperBarKind.failedCheck,
+        'Flash 未通过安全检查',
+        '辅助程序未启动，请重新安装最新的可信版本。',
+      ),
+      'launcherDowngrade': (
+        MacHelperState.launcherDowngrade,
+        MacHelperCardKind.launcherDowngrade,
+        MacHelperBarKind.notReady,
+        'Flash 版本过旧',
+        '辅助程序未启动，请安装最新版本的 Flash。',
+      ),
+      'launcherFailed': (
+        MacHelperState.launcherFailed,
+        MacHelperCardKind.launcherFailed,
+        MacHelperBarKind.notReady,
+        '辅助程序未能启动',
+        '系统未能完成辅助程序的准备或启动，请查看详情。',
+      ),
+    };
+    for (final MapEntry(key: code, value: expected) in cards.entries) {
+      test('$code shows its card with only "View details"', () async {
+        final (state, kind, bar, title, body) = expected;
+        expect(MacHelperState.parse(code), state);
+        expect(macHelperCardKind(state, false), kind);
+        expect(macHelperCardKind(state, true), kind);
+        final native = _Native()
+          ..state = code
+          ..statusExtra = {'detail': detail};
+        final flow = MacHelperMaintenance(
+          MacHelperClient(native: native, safeMode: () => false),
+          stop: () async => const CoreLifecycleResult(
+            revision: 1,
+            outcome: CoreLifecycleOutcome.applied,
+          ),
+        );
+        expect(await flow.check(), state);
+        final zh = lookupAppLocalizations(const Locale('zh'));
+        final view = macHelperCardView(zh, flow);
+        expect(view.kind, kind);
+        expect(view.title, title);
+        expect(view.detail, body);
+        expect(view.isProblem, isTrue);
+        // Nothing can run the helper anyway: details only.
+        expect(view.primary, isNull);
+        expect(view.secondary, MacHelperCardAction.viewDetails);
+        expect(view.rawDetail, contains(detail));
+        expect(view.rawDetail, contains('status: $code'));
+        final barView = macHelperBarView(zh, flow)!;
+        expect(barView.kind, bar);
+        expect(barView.tone, MacHelperBarTone.failure);
+        expect(barView.title, title);
+        // Reading the status never acts on the registration or the daemon.
+        expect(native.calls, ['status']);
+        final en = macHelperCardView(
+          lookupAppLocalizations(const Locale('en')),
+          flow,
+        );
+        expect(en.title, isNotEmpty);
+        expect(en.title, isNot(title));
+        flow.dispose();
+      });
+    }
+
+    test('an answering helper or an ordinary wait keeps its own card', () {
+      // The bridge adds launcher detail to a wait (launcher "ok" within its
+      // grace period) without changing the code.
+      expect(MacHelperState.parse('timeout'), MacHelperState.starting);
+      expect(
+        macHelperCardKind(MacHelperState.parse('launcherUnknown'), false),
+        MacHelperCardKind.startSlow,
+      );
+    });
+  });
 
   test('card kinds and actions follow the helper state', () {
     expect(

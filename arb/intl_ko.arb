@@ -1944,5 +1944,11 @@
   "macHelperNotReadyTitle": "헬퍼가 아직 준비되지 않았습니다",
   "macHelperRegistrationFailedDetail": "지금은 등록을 완료할 수 없습니다. 세부 정보를 확인하세요.",
   "macHelperStaleCoreDetail": "이전 코어가 중지되었는지 아직 확인되지 않았습니다. 세부 정보를 확인하세요.",
-  "macHelperStatusUnreadable": "지금은 헬퍼 상태를 읽을 수 없습니다. 세부 정보를 확인하세요."
+  "macHelperStatusUnreadable": "지금은 헬퍼 상태를 읽을 수 없습니다. 세부 정보를 확인하세요.",
+  "macHelperLauncherCheckTitle": "Flash didn’t pass the security check",
+  "macHelperLauncherCheckDetail": "The helper didn’t start. Install the latest trusted version of Flash again.",
+  "macHelperLauncherDowngradeTitle": "This version of Flash is too old",
+  "macHelperLauncherDowngradeDetail": "The helper didn’t start. Install the latest version of Flash.",
+  "macHelperLauncherFailedTitle": "The helper couldn’t start",
+  "macHelperLauncherFailedDetail": "The system couldn’t prepare or start the helper. See details."
 }

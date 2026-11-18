@@ -324,6 +324,32 @@ void main() {
     expect(native.calls, ['status']);
   });
 
+  for (final code in [
+    'launcherCheckFailed',
+    'launcherDowngrade',
+    'launcherFailed',
+  ]) {
+    testWidgets('$code offers details only, never a bypass', (tester) async {
+      native.state = code;
+      await flow.check();
+      await pumpStatus(tester);
+      final l = currentAppLocalizations;
+      await openPopover(tester);
+      expect(
+        find.descendant(
+          of: find.byType(MacHelperPopover),
+          matching: find.byType(FilledButton),
+        ),
+        findsNothing,
+      );
+      expect(find.text(l.macHelperViewDetails), findsOneWidget);
+      await tester.tap(find.text(l.macHelperViewDetails));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('status: $code'), findsOneWidget);
+      expect(native.calls, ['status']);
+    });
+  }
+
   testWidgets(
     'approved daemon that does not answer shows starting, no buttons',
     (tester) async {
@@ -354,6 +380,9 @@ void main() {
     'incompatible': 'macHelperReinstallTitle',
     'moveRequired': 'macHelperMoveTitle',
     'unsupported': 'macHelperReinstallTitle',
+    'launcherCheckFailed': 'macHelperLauncherCheckTitle',
+    'launcherDowngrade': 'macHelperLauncherDowngradeTitle',
+    'launcherFailed': 'macHelperLauncherFailedTitle',
     'garbage': 'macHelperNotReadyTitle',
   };
   for (final MapEntry(key: code, value: key) in titles.entries) {
@@ -374,6 +403,9 @@ void main() {
         'macHelperReinstallTitle' => l.macHelperReinstallTitle,
         'macHelperMoveTitle' => l.macHelperMoveTitle,
         'macHelperNotReadyTitle' => l.macHelperNotReadyTitle,
+        'macHelperLauncherCheckTitle' => l.macHelperLauncherCheckTitle,
+        'macHelperLauncherDowngradeTitle' => l.macHelperLauncherDowngradeTitle,
+        'macHelperLauncherFailedTitle' => l.macHelperLauncherFailedTitle,
         _ => l.macHelperStartSlowTitle,
       };
       expect(find.text(title), findsOneWidget);
@@ -538,6 +570,9 @@ void main() {
     ('requiresApproval', AppGlyphs.helperDaemonSmall),
     ('migrationIncomplete', AppGlyphs.helperDaemonSmall),
     ('signingRequired', AppGlyphs.shieldAlert),
+    ('launcherCheckFailed', AppGlyphs.shieldAlert),
+    ('launcherDowngrade', AppGlyphs.helperDaemonSmall),
+    ('launcherFailed', AppGlyphs.helperDaemonSmall),
   ]) {
     testWidgets('$code popover title repeats the capsule icon', (tester) async {
       native.state = code;

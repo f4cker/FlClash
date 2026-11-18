@@ -11734,6 +11734,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The helper status cannot be read right now. See details.'**
   String get macHelperStatusUnreadable;
+
+  /// No description provided for @macHelperLauncherCheckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash didn’t pass the security check'**
+  String get macHelperLauncherCheckTitle;
+
+  /// No description provided for @macHelperLauncherCheckDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper didn’t start. Install the latest trusted version of Flash again.'**
+  String get macHelperLauncherCheckDetail;
+
+  /// No description provided for @macHelperLauncherDowngradeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of Flash is too old'**
+  String get macHelperLauncherDowngradeTitle;
+
+  /// No description provided for @macHelperLauncherDowngradeDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper didn’t start. Install the latest version of Flash.'**
+  String get macHelperLauncherDowngradeDetail;
+
+  /// No description provided for @macHelperLauncherFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper couldn’t start'**
+  String get macHelperLauncherFailedTitle;
+
+  /// No description provided for @macHelperLauncherFailedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The system couldn’t prepare or start the helper. See details.'**
+  String get macHelperLauncherFailedDetail;
 }
 
 class _AppLocalizationsDelegate

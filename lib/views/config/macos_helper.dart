@@ -34,6 +34,14 @@ enum MacHelperCardKind {
   /// The helper did not become ready after a recovery, or old Cores are not
   /// confirmed stopped: "not ready yet", with the raw text behind details.
   notReady,
+
+  /// FlashHelperLauncher refused the helper (signature, location or version
+  /// unreadable), refused an older version than one that already ran, or
+  /// could not prepare or start it. Only "View details": nothing here can
+  /// run the helper anyway.
+  launcherCheckFailed,
+  launcherDowngrade,
+  launcherFailed,
 }
 
 enum MacHelperCardAction {
@@ -75,7 +83,10 @@ final class MacHelperCardView {
     MacHelperCardKind.signatureFailed ||
     MacHelperCardKind.updateFailed ||
     MacHelperCardKind.reinstall ||
-    MacHelperCardKind.unsupported => true,
+    MacHelperCardKind.unsupported ||
+    MacHelperCardKind.launcherCheckFailed ||
+    MacHelperCardKind.launcherDowngrade ||
+    MacHelperCardKind.launcherFailed => true,
     _ => false,
   };
 }
@@ -103,6 +114,10 @@ MacHelperCardKind macHelperCardKind(MacHelperState state, bool startSlow) =>
       MacHelperState.unsupported ||
       MacHelperState.disabled => MacHelperCardKind.unsupported,
       MacHelperState.exitUnconfirmed => MacHelperCardKind.exitUnconfirmed,
+      MacHelperState.launcherCheckFailed =>
+        MacHelperCardKind.launcherCheckFailed,
+      MacHelperState.launcherDowngrade => MacHelperCardKind.launcherDowngrade,
+      MacHelperState.launcherFailed => MacHelperCardKind.launcherFailed,
       // A status that could not be read is handled like a slow start: no
       // failure is claimed, the user can check again or view the raw code.
       MacHelperState.unavailable => MacHelperCardKind.startSlow,
@@ -249,6 +264,29 @@ MacHelperCardView macHelperCardView(
       secondary: MacHelperCardAction.viewDetails,
       rawDetail: raw,
     ),
+    // What the launcher reported; the reason (result, detail, versions) is
+    // only behind "View details". No action could make it run anyway.
+    MacHelperCardKind.launcherCheckFailed => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperLauncherCheckTitle,
+      detail: l.macHelperLauncherCheckDetail,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
+    MacHelperCardKind.launcherDowngrade => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperLauncherDowngradeTitle,
+      detail: l.macHelperLauncherDowngradeDetail,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
+    MacHelperCardKind.launcherFailed => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperLauncherFailedTitle,
+      detail: l.macHelperLauncherFailedDetail,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
   };
 }
 
@@ -332,11 +370,14 @@ MacHelperBarView? macHelperBarView(
     ),
     MacHelperCardKind.updateFailed ||
     MacHelperCardKind.reinstall ||
-    MacHelperCardKind.unsupported => (
+    MacHelperCardKind.unsupported ||
+    MacHelperCardKind.launcherDowngrade ||
+    MacHelperCardKind.launcherFailed => (
       MacHelperBarKind.notReady,
       MacHelperBarTone.failure,
     ),
-    MacHelperCardKind.signatureFailed => (
+    MacHelperCardKind.signatureFailed ||
+    MacHelperCardKind.launcherCheckFailed => (
       MacHelperBarKind.failedCheck,
       MacHelperBarTone.failure,
     ),

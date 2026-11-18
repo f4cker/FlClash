@@ -1944,5 +1944,11 @@
   "macHelperNotReadyTitle": "辅助程序暂未就绪",
   "macHelperRegistrationFailedDetail": "暂时无法完成登记，请查看详情。",
   "macHelperStaleCoreDetail": "旧内核尚未确认停止，请查看详情。",
-  "macHelperStatusUnreadable": "暂时无法读取辅助程序状态，请查看详情。"
+  "macHelperStatusUnreadable": "暂时无法读取辅助程序状态，请查看详情。",
+  "macHelperLauncherCheckTitle": "Flash 未通过安全检查",
+  "macHelperLauncherCheckDetail": "辅助程序未启动，请重新安装最新的可信版本。",
+  "macHelperLauncherDowngradeTitle": "Flash 版本过旧",
+  "macHelperLauncherDowngradeDetail": "辅助程序未启动，请安装最新版本的 Flash。",
+  "macHelperLauncherFailedTitle": "辅助程序未能启动",
+  "macHelperLauncherFailedDetail": "系统未能完成辅助程序的准备或启动，请查看详情。"
 }

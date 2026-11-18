@@ -54,6 +54,17 @@ enum MacHelperState {
   /// The new helper answered, but could not confirm that no old Core runs.
   staleCore,
 
+  /// The daemon is enabled but does not answer, and FlashHelperLauncher
+  /// reported why (read-only status file; display only, never trusted):
+  /// the helper failed its signature/location/version check,
+  launcherCheckFailed,
+
+  /// is older than one that already ran (downgrade refused),
+  launcherDowngrade,
+
+  /// or could not be prepared or started (or the status is unreadable).
+  launcherFailed,
+
   unsupported,
   disabled,
   exitUnconfirmed,
@@ -85,6 +96,9 @@ enum MacHelperState {
     'unsupported' => unsupported,
     'disabled' => disabled,
     'exitUnconfirmed' => exitUnconfirmed,
+    'launcherCheckFailed' => launcherCheckFailed,
+    'launcherDowngrade' => launcherDowngrade,
+    'launcherFailed' => launcherFailed,
     // The bridge reports `unavailable` when an approved daemon does not answer
     // yet, and `timeout` when it did not answer in time: both are a wait (and
     // "taking longer" after the bounded start-up wait), never a Core claim.

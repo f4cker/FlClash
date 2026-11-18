@@ -1944,5 +1944,11 @@
   "macHelperNotReadyTitle": "L’assistant n’est pas encore prêt",
   "macHelperRegistrationFailedDetail": "L’enregistrement ne peut pas être terminé pour le moment. Consultez les détails.",
   "macHelperStaleCoreDetail": "L’arrêt de l’ancien cœur n’est pas encore confirmé. Consultez les détails.",
-  "macHelperStatusUnreadable": "L’état de l’assistant ne peut pas être lu pour le moment. Consultez les détails."
+  "macHelperStatusUnreadable": "L’état de l’assistant ne peut pas être lu pour le moment. Consultez les détails.",
+  "macHelperLauncherCheckTitle": "Flash didn’t pass the security check",
+  "macHelperLauncherCheckDetail": "The helper didn’t start. Install the latest trusted version of Flash again.",
+  "macHelperLauncherDowngradeTitle": "This version of Flash is too old",
+  "macHelperLauncherDowngradeDetail": "The helper didn’t start. Install the latest version of Flash.",
+  "macHelperLauncherFailedTitle": "The helper couldn’t start",
+  "macHelperLauncherFailedDetail": "The system couldn’t prepare or start the helper. See details."
 }
