@@ -402,11 +402,17 @@ class _MitmViewState extends ConsumerState<MitmView> {
         ref.watch(mitmIndicatorProvider)?.reason == MitmPauseReason.notApplied;
     final pauseLabel = notApplied
         ? appLocalizations.mitmNotApplied
-        : switch (corePause) {
-            'livenessUnavailable' ||
-            'trustUnavailable' => appLocalizations.mitmPausedLiveness,
-            'indicatorPending' => appLocalizations.mitmPausedIndicatorPending,
-            '' => null,
+        : switch (mitmCorePauseReason(corePause)) {
+            null => null,
+            // Decrypting: the page says only that some connections may not
+            // be, never that decryption paused.
+            MitmPauseReason.partialConnections =>
+              appLocalizations.mitmPartialConnections,
+            MitmPauseReason.liveness => appLocalizations.mitmPausedLiveness,
+            MitmPauseReason.indicatorPending =>
+              appLocalizations.mitmPausedIndicatorPending,
+            MitmPauseReason.coreIdentity =>
+              appLocalizations.mitmPausedCoreIdentity,
             _ => appLocalizations.mitmPausedUnavailable,
           };
     // The page says what the bar's status would, in its first section.

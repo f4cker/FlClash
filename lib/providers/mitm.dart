@@ -219,21 +219,36 @@ MitmIndicator? mitmIndicatorOf({
         ? const MitmIndicator.paused(MitmPauseReason.notApplied)
         : const MitmIndicator.on();
   }
-  return switch (status.paused) {
-    '' when decrypting => const MitmIndicator.decrypting(),
-    '' => const MitmIndicator.on(),
-    'livenessUnavailable' ||
-    'trustUnavailable' => const MitmIndicator.paused(MitmPauseReason.liveness),
-    'indicatorPending' => const MitmIndicator.paused(
-      MitmPauseReason.indicatorPending,
-    ),
-    'partialConnections' => const MitmIndicator.paused(
-      MitmPauseReason.partialConnections,
-    ),
-    'coreIdentity' => const MitmIndicator.paused(MitmPauseReason.coreIdentity),
-    _ => const MitmIndicator.paused(MitmPauseReason.unavailable),
+  return switch (mitmCorePauseReason(status.paused)) {
+    null when decrypting => const MitmIndicator.decrypting(),
+    null => const MitmIndicator.on(),
+    final reason => MitmIndicator.paused(reason),
   };
 }
+
+/// Every `paused` value the Core reports (core/mitm.go `mitmStatus`, and the
+/// global pause reasons of core/mitm_intercept.go `pauseMitm`), mapped once
+/// for the bar, the tray and the decryption page alike; null when not paused.
+MitmPauseReason? mitmCorePauseReason(String paused) => switch (paused) {
+  '' => null,
+  // Decrypting; connections opened before it began, or while a host's own
+  // pause lasted, may have passed through. Not a pause of decryption.
+  'partialConnections' => MitmPauseReason.partialConnections,
+  'indicatorPending' => MitmPauseReason.indicatorPending,
+  'livenessUnavailable' || 'trustUnavailable' => MitmPauseReason.liveness,
+  'coreIdentity' => MitmPauseReason.coreIdentity,
+  // The app's signer could not answer: refused (signFailed, signBusy,
+  // disabled), no reply in time (signTimeout), the relay to it dropped the
+  // request (appUnavailable), or its certificate was not accepted
+  // (leafRejected).
+  'signFailed' ||
+  'signBusy' ||
+  'disabled' ||
+  'appUnavailable' ||
+  'signTimeout' ||
+  'leafRejected' => MitmPauseReason.unavailable,
+  _ => MitmPauseReason.unavailable,
+};
 
 final mitmIndicatorProvider = Provider.autoDispose<MitmIndicator?>((ref) {
   final enabled = ref.watch(

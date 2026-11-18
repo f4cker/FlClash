@@ -21,6 +21,20 @@
 #endif
 
 static const int64_t FCIdleSeconds = 30;
+// How long a Core outlives its app's connection while that same app process may resume the relay on a new one.
+static const int64_t FCOwnerGraceSeconds = 10;
+// How often one session's relay may move to a new connection within FCAdoptionWindowSeconds; a GUI stuck
+// reconnecting cannot keep its Core alive by itself (each move re-arms the grace period).
+static const int FCMaxAdoptions = 3;
+static const uint64_t FCAdoptionWindowSeconds = 600;
+// One receive answers with every frame queued, up to FCRelayBatchFrames and this many bytes (a larger single frame
+// still goes alone).
+static const size_t FCBatchBytes = 4 * 1024 * 1024;
+
+#ifndef FCMessageAuditToken
+void xpc_dictionary_get_audit_token(xpc_object_t message, audit_token_t *token);
+#define FCMessageAuditToken xpc_dictionary_get_audit_token
+#endif
 
 // Unified log (subsystem com.layoute.flash, category helper): step names and reasons only, no user paths or names.
 static os_log_t FCHelperLog(void) {
@@ -64,6 +78,16 @@ static NSString *FCRunningHash(void) {
 @property int socket;
 @property NSString *socketPath;
 @property NSMutableData *incoming;
+// Frames read from the Core that the app has not acknowledged yet, the first being frame number `outgoingBase`;
+// and how many app frames were written to the Core. Both count from the start of the session.
+@property NSMutableArray<NSData *> *outgoing;
+@property uint64_t outgoingBase;
+@property uint64_t written;
+// The app process (audit token pid and pid version) that started the session.
+@property pid_t ownerPid;
+@property uint32_t ownerPidVersion;
+@property int adoptions;
+@property uint64_t adoptionsSince;  // CLOCK_MONOTONIC ns of the first move in the window
 // The accepted Core's audit token, for the app to check the Core's identity before it signs for it.
 @property NSData *coreToken;
 @property BOOL ownershipUncertain;
@@ -82,6 +106,7 @@ static NSString *FCRunningHash(void) {
         _queue = dispatch_queue_create("com.layoute.flash.supervisor", DISPATCH_QUEUE_SERIAL);
         _listener = _socket = -1;
         _incoming = [NSMutableData data];
+        _outgoing = [NSMutableArray array];
         _runningHash = FCRunningHash();
         NSString *journal = [FCRuntimeDirectory stringByAppendingPathComponent:@"child-owned"];
         // No Core of this daemon runs yet, so any running Flash Core is left over from an earlier daemon or
@@ -119,8 +144,8 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     return [action isEqualToString:@"start"] && [code isEqualToString:@"ok"];
 }
 
-- (void)reply:(xpc_object_t)request code:(NSString *)code pid:(pid_t)pid frame:(NSData *)frame
-    coreToken:(NSData *)coreToken sweep:(NSDictionary *)sweep {
+- (void)reply:(xpc_object_t)request code:(NSString *)code pid:(pid_t)pid frames:(NSArray<NSData *> *)frames
+    base:(uint64_t)base coreToken:(NSData *)coreToken sweep:(NSDictionary *)sweep {
     xpc_object_t reply = xpc_dictionary_create_reply(request);
     if (!reply) return;
     xpc_dictionary_set_string(reply, "code", code.UTF8String);
@@ -139,7 +164,12 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
         xpc_dictionary_set_string(reply, "coreVersion", [self.contract[@"CoreVersion"] UTF8String]);
         xpc_dictionary_set_string(reply, "coreRevision", [self.contract[@"CoreRevision"] UTF8String]);
     }
-    if (frame) xpc_dictionary_set_data(reply, "frame", frame.bytes, frame.length);
+    if (frames) {
+        xpc_object_t list = xpc_array_create(NULL, 0);
+        for (NSData *frame in frames) xpc_array_set_data(list, XPC_ARRAY_APPEND, frame.bytes, frame.length);
+        xpc_dictionary_set_value(reply, "frames", list);
+        xpc_dictionary_set_uint64(reply, "seq", base);
+    }
     if (coreToken) xpc_dictionary_set_data(reply, "coreAuditToken", coreToken.bytes, coreToken.length);
     if (sweep) {
         xpc_dictionary_set_string(reply, "reason", [sweep[@"reason"] UTF8String] ?: "");
@@ -155,6 +185,9 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     self.socketPath = nil;
     self.coreToken = nil;
     [self.incoming setLength:0];
+    [self.outgoing removeAllObjects];
+    self.outgoingBase = 0;
+    self.written = 0;
 }
 
 - (BOOL)syncRuntime {
@@ -308,6 +341,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     if (!recorded) { [self closeRelay]; self.ownershipUncertain = YES; return @"exitUnconfirmed"; }
     self.journalOwned = YES;
     self.owner = connection;
+    [self noteOwner:request];
     self.session = session;
     self.uid = xpc_connection_get_euid(connection);
     self.coreHash = self.contract[@"CoreSHA256"];
@@ -339,8 +373,11 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
         @"staleCoreUnconfirmed";
 }
 
-- (NSString *)send:(NSData *)frame {
+// `seq` numbers the app's frames: a retry of one already written (its reply was lost) is not written again.
+- (NSString *)send:(NSData *)frame seq:(uint64_t)seq {
     if (self.socket < 0 || frame.length > FCMaxFrame) return @"disconnected";
+    if (seq < self.written) return @"ok";
+    if (seq > self.written) return @"invalidRequest";
     uint32_t size = CFSwapInt32HostToLittle((uint32_t)frame.length);
     NSMutableData *wire = [NSMutableData dataWithBytes:&size length:4];
     [wire appendData:frame];
@@ -354,36 +391,105 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
             poll(&ready, 1, 20);
         } else break;
     }
-    if (offset == wire.length) return @"ok";
+    if (offset == wire.length) {
+        self.written++;
+        return @"ok";
+    }
     [self stop];
     return @"disconnected";
 }
 
-- (NSData *)receive:(NSString **)code {
+// Answers with every queued frame from `ack` on (the number of frames the app has taken); frames stay queued until
+// a later receive acknowledges them, so one whose reply was lost is sent again, never dropped or duplicated.
+- (NSArray<NSData *> *)receive:(uint64_t)ack base:(uint64_t *)base code:(NSString **)code {
     *code = @"ok";
-    if (self.socket < 0 || [self confirmExit]) { *code = @"disconnected"; return nil; }
-    for (int attempt = 0; attempt < 1025; attempt++) {
+    *base = self.outgoingBase;
+    if (self.socket < 0) { *code = @"disconnected"; return nil; }
+    if (ack < self.outgoingBase || ack - self.outgoingBase > self.outgoing.count) { *code = @"invalidRequest"; return nil; }
+    [self.outgoing removeObjectsInRange:NSMakeRange(0, (NSUInteger)(ack - self.outgoingBase))];
+    self.outgoingBase = *base = ack;
+    size_t bytes = 0;
+    for (NSData *queued in self.outgoing) bytes += queued.length;
+    BOOL failed = NO;
+    for (int attempt = 0; attempt < 1025 && self.outgoing.count < FCRelayBatchFrames && bytes < FCBatchBytes; attempt++) {
         if (self.incoming.length >= 4) {
             uint32_t size;
             memcpy(&size, self.incoming.bytes, 4);
             size = CFSwapInt32LittleToHost(size);
-            if (size > FCMaxFrame) break;
+            if (size > FCMaxFrame) { failed = YES; break; }
             if (self.incoming.length >= (size_t)size + 4) {
-                NSData *frame = [self.incoming subdataWithRange:NSMakeRange(4, size)];
+                // A batch stays within FCMaxFrame in total (the bridge's limit); a frame that does not fit goes
+                // alone in the next one.
+                if (self.outgoing.count && bytes + size > FCMaxFrame) break;
+                [self.outgoing addObject:[self.incoming subdataWithRange:NSMakeRange(4, size)]];
                 [self.incoming replaceBytesInRange:NSMakeRange(0, size + 4) withBytes:NULL length:0];
-                return frame;
+                bytes += size;
+                continue;
             }
         }
         uint8_t buffer[65536];
         ssize_t n = read(self.socket, buffer, sizeof(buffer));
         if (n > 0) { [self.incoming appendBytes:buffer length:n]; continue; }
         if (n < 0 && errno == EINTR) continue;
-        if (n < 0 && errno == EAGAIN) return nil;
+        if (n < 0 && errno == EAGAIN) return [self.outgoing copy];
+        failed = YES;
         break;
     }
+    // The Core's last frames are delivered before its end is reported: its exit is confirmed (which closes the
+    // relay) only once nothing it wrote is left.
+    if (self.outgoing.count) return [self.outgoing copy];
+    if (!failed && ![self confirmExit]) return @[];
     [self stop];
     *code = @"disconnected";
     return nil;
+}
+
+- (void)noteOwner:(xpc_object_t)request {
+    audit_token_t token;
+    memset(&token, 0, sizeof(token));
+    FCMessageAuditToken(request, &token);
+    self.ownerPid = (pid_t)token.val[5];
+    self.ownerPidVersion = token.val[7];
+    self.adoptions = 0;
+}
+
+// The app process that started the session, back on a new connection after its previous one was reset (a request
+// timed out or a reply was refused), takes the relay over: same process lifetime by audit token, same user, the
+// session's secret id, and the full per-connection GUI validation that `handle:` already passed.
+- (BOOL)adopt:(xpc_object_t)request connection:(xpc_connection_t)connection session:(NSString *)session {
+    audit_token_t token;
+    memset(&token, 0, sizeof(token));
+    FCMessageAuditToken(request, &token);
+    if (!FCMayAdoptSession((__bridge void *)self.owner, self.child > 0, self.ownerPid, self.ownerPidVersion,
+            (pid_t)token.val[5], token.val[7], self.uid, xpc_connection_get_euid(connection),
+            self.session.UTF8String, session.UTF8String)) return NO;
+    uint64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC);
+    if (!self.adoptions || now - self.adoptionsSince > FCAdoptionWindowSeconds * NSEC_PER_SEC) {
+        self.adoptions = 0;
+        self.adoptionsSince = now;
+    }
+    if (self.adoptions >= FCMaxAdoptions) {
+        os_log(FCHelperLog(), "relay moved %d times already; not resumed again", self.adoptions);
+        return NO;
+    }
+    self.adoptions++;
+    os_log(FCHelperLog(), "relay resumed on a new connection of the same app process (%d/%d)", self.adoptions,
+        FCMaxAdoptions);
+    self.owner = connection;
+    return YES;
+}
+
+// The owning connection went away. Its Core is stopped unless the same app process resumes the relay within the
+// grace period; at once when that process is gone.
+- (void)ownerLost:(xpc_connection_t)connection {
+    if (self.owner != connection) return;
+    if (self.child <= 0 || self.ownerPid <= 0 || (kill(self.ownerPid, 0) && errno == ESRCH)) { [self stop]; return; }
+    os_log(FCHelperLog(), "app connection lost; Core kept for %lld s for the app to resume", FCOwnerGraceSeconds);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, FCOwnerGraceSeconds * NSEC_PER_SEC), self.queue, ^{
+        if (self.owner != connection) return;
+        os_log(FCHelperLog(), "app did not resume the relay; stopping its Core");
+        [self stop];
+    });
 }
 
 - (void)handle:(xpc_object_t)request connection:(xpc_connection_t)connection gui:(FCGUIMessageValidator *)gui {
@@ -392,19 +498,23 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
         os_log_error(FCHelperLog(), "request from pid %d rejected: GUI verification failed: %{public}s",
             xpc_connection_get_pid(connection), gui.failure.UTF8String ?: "unknown step");
         xpc_connection_cancel(connection);
-        if (self.owner == connection) [self stop];
+        // A kernel read that failed says nothing against the app: its process may resume on a new connection,
+        // which is validated in full again.
+        if (FCGUIReadFailure(gui.failure.UTF8String)) [self ownerLost:connection];
+        else if (self.owner == connection) [self stop];
         return;
     }
     const char *method = xpc_dictionary_get_string(request, "method");
     const char *rawSession = xpc_dictionary_get_string(request, "session");
     if (!method || strlen(method) > 32 || (rawSession && strlen(rawSession) > 32) ||
         xpc_dictionary_get_int64(request, "protocol") != 1) {
-        [self reply:request code:@"incompatible" pid:0 frame:nil coreToken:nil sweep:nil]; return;
+        [self reply:request code:@"incompatible" pid:0 frames:nil base:0 coreToken:nil sweep:nil]; return;
     }
     NSString *action = @(method);
     NSString *session = rawSession ? @(rawSession) : @"";
     NSString *code = @"invalidRequest";
-    NSData *frame = nil;
+    NSArray<NSData *> *frames = nil;
+    uint64_t base = 0;
     NSDictionary *sweep = nil;
     if (self.ownershipUncertain && ![action isEqualToString:@"send"] && ![action isEqualToString:@"receive"])
         [self recoverOwnership];
@@ -425,14 +535,20 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
         BOOL mayStop = matching || FCMayStopSession((__bridge void *)self.owner, self.uid,
             xpc_connection_get_euid(connection), self.session.UTF8String, session.UTF8String);
         code = !mayStop ? @"wrongOwner" : [self stop] ? @"ok" : @"exitUnconfirmed";
-    } else if (!matching) code = @"wrongOwner";
-    else if ([action isEqualToString:@"receive"]) frame = [self receive:&code];
-    else if ([action isEqualToString:@"send"]) {
+    } else if (!matching && !(FCRelayAction(method) && [self adopt:request connection:connection session:session]))
+        code = @"wrongOwner";
+    else if ([action isEqualToString:@"receive"]) {
+        xpc_object_t ack = xpc_dictionary_get_value(request, "ack");
+        if (ack && xpc_get_type(ack) == XPC_TYPE_UINT64)
+            frames = [self receive:xpc_uint64_get_value(ack) base:&base code:&code];
+    } else if ([action isEqualToString:@"send"]) {
         size_t length = 0;
         const void *data = xpc_dictionary_get_data(request, "frame", &length);
-        if (data && length <= FCMaxFrame) code = [self send:[NSData dataWithBytes:data length:length]];
+        xpc_object_t seq = xpc_dictionary_get_value(request, "seq");
+        if (data && length <= FCMaxFrame && seq && xpc_get_type(seq) == XPC_TYPE_UINT64)
+            code = [self send:[NSData dataWithBytes:data length:length] seq:xpc_uint64_get_value(seq)];
     }
-    [self reply:request code:code pid:self.child frame:frame
+    [self reply:request code:code pid:self.child frames:frames base:base
         coreToken:FCRepliesWithCoreToken(action, code) ? self.coreToken : nil sweep:sweep];
     if ([code isEqualToString:@"selfCheckFailed"] ||
         ([action isEqualToString:@"exit"] && [code isEqualToString:@"ok"])) {
@@ -457,7 +573,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
             if (self.connections) self.connections--;
             [self armIdle];
         }
-        if (self.owner == connection) [self stop];
+        [self ownerLost:connection];
     });
     xpc_connection_resume(connection);
 }

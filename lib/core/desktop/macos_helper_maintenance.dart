@@ -79,6 +79,14 @@ final class MacHelperMaintenance extends ChangeNotifier {
   MacHelperProgress get progress => _progress;
   bool get busy => _operation != null;
 
+  /// Only re-reading a helper that was ready (a config apply or start asks
+  /// again): nothing about it is in doubt until the answer says otherwise, so
+  /// views keep showing the running Core instead of a waiting state.
+  bool get routineCheck =>
+      busy &&
+      _progress == MacHelperProgress.checking &&
+      _state == MacHelperState.enabled;
+
   /// A recovery is not settled yet; Core starts stay blocked.
   bool get repairPending => _repairPending;
 

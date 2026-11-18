@@ -90,6 +90,8 @@ FCRunningHashVerdict FCCompareRunningHash(NSData * _Nullable runningHash, NSData
 @property (readonly, nullable) NSString *failure;
 @end
 extern const size_t FCMaxFrame;
+// The most frames one relay `receive` answers with.
+static const NSUInteger FCRelayBatchFrames = 64;
 NSString * _Nullable FCGUIRequirement(void);
 NSString *FCGUIBundleTrust(NSString *bundle);
 NSString * _Nullable FCRequirementForPolicy(NSString *identifier, NSString *certificatePin, NSString *team);

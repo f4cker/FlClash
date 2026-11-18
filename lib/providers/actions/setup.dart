@@ -237,6 +237,15 @@ class SetupAction extends _$SetupAction {
   @protected
   Future<MacHelperState> checkMacHelper() => macHelperMaintenance.check();
 
+  /// The helper runs this app's Core right now and its last check was ready:
+  /// applying a config does not ask it again (each ask is an SMAppService
+  /// read plus a hello, and a busy check hid the dashboard's Core status).
+  @protected
+  bool get macHelperServesCore =>
+      macHelperMaintenance.client.relayLive &&
+      macHelperMaintenance.state == MacHelperState.enabled &&
+      !macHelperBusy;
+
   @protected
   Future<void> presentMacHelper() => showMacHelperFlow(requiredByFeature: true);
 
@@ -1373,7 +1382,9 @@ class SetupAction extends _$SetupAction {
       return true;
     }
     if (usesManagedMacHelper) {
-      final state = await checkMacHelper();
+      final state = macHelperServesCore
+          ? MacHelperState.enabled
+          : await checkMacHelper();
       if (!(owns?.call() ?? true)) return false;
       if (state != MacHelperState.enabled) {
         throw MessageException(
