@@ -790,7 +790,10 @@ Future<MitmModuleDetails?> mitmModuleDetails(Ref ref, int id) async {
 /// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
 /// disabled rules are checked too.
 @riverpod
-Future<Map<int, String>> mitmRewriteIssues(Ref ref, int profileId) async {
+Future<Map<int, MitmRewriteIssue>> mitmRewriteIssues(
+  Ref ref,
+  int profileId,
+) async {
   final rewrites = await ref.watch(
     profileMitmRewritesProvider(profileId).future,
   );
@@ -802,7 +805,7 @@ Future<Map<int, String>> mitmRewriteIssues(Ref ref, int profileId) async {
       .read(coreHandlerProvider)
       .parseMitmRewrite(check.text);
   return {
-    for (final issue in parsed.issues) ?check.lines[issue.line]: issue.message,
+    for (final issue in parsed.issues) ?check.lines[issue.line]: issue,
   };
 }
 

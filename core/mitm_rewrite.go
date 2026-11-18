@@ -74,8 +74,36 @@ type MitmRewriteIssue struct {
 	Rule    string `json:"rule,omitempty"`
 	Section string `json:"section,omitempty"`
 	// 1-based, within pasted text; 0 for rules sent one by one.
-	Line    int    `json:"line,omitempty"`
-	Message string `json:"message"`
+	Line int `json:"line,omitempty"`
+	// A stable code for what is wrong, and the values its text names, so
+	// the app can say it in the user's language; Message is the English
+	// text, kept for details.
+	Kind    string   `json:"kind,omitempty"`
+	Args    []string `json:"args,omitempty"`
+	Message string   `json:"message"`
+}
+
+// A rule line the Core cannot take: kind and args travel to the app as
+// MitmRewriteIssue.Kind/Args; Error is the English text.
+type mitmRuleError struct {
+	kind string
+	args []string
+	msg  string
+}
+
+func (e *mitmRuleError) Error() string { return e.msg }
+
+func mitmRuleErr(kind string, args []string, format string, a ...any) error {
+	return &mitmRuleError{kind: kind, args: args, msg: fmt.Sprintf(format, a...)}
+}
+
+func mitmIssue(issue MitmRewriteIssue, err error) MitmRewriteIssue {
+	issue.Message = err.Error()
+	var ruleErr *mitmRuleError
+	if errors.As(err, &ruleErr) {
+		issue.Kind, issue.Args = ruleErr.kind, ruleErr.args
+	}
+	return issue
 }
 
 // What a rule did to one message, for the request record.
@@ -89,6 +117,9 @@ type MitmRewriteHit struct {
 	// Set when the rule matched but could not apply; the message passed
 	// on unchanged by it.
 	Skipped string `json:"skipped,omitempty"`
+	// How long applying the rule took, for one that applied; 0 when not
+	// measured.
+	TookNs int64 `json:"took-ns,omitempty"`
 }
 
 // Why a matching rule left a message as it was.
@@ -314,7 +345,7 @@ func compileMitmRewrite(rules []MitmRewriteRule, bodyLimit int64, previous *mitm
 	for i, spec := range rules {
 		rule, err := parseMitmRewriteLine(spec.Section, spec.Line)
 		if err != nil {
-			engine.issues = append(engine.issues, MitmRewriteIssue{Rule: spec.ID, Section: spec.Section, Message: err.Error()})
+			engine.issues = append(engine.issues, mitmIssue(MitmRewriteIssue{Rule: spec.ID, Section: spec.Section}, err))
 			continue
 		}
 		if rule == nil {
@@ -322,7 +353,7 @@ func compileMitmRewrite(rules []MitmRewriteRule, bodyLimit int64, previous *mitm
 		}
 		if rule.local != nil && rule.local.file != "" {
 			if err := loadMitmLocalFile(rule.local); err != nil {
-				engine.issues = append(engine.issues, MitmRewriteIssue{Rule: spec.ID, Section: spec.Section, Message: err.Error()})
+				engine.issues = append(engine.issues, mitmIssue(MitmRewriteIssue{Rule: spec.ID, Section: spec.Section}, err))
 				continue
 			}
 		}
@@ -369,15 +400,15 @@ var mitmResourcesDir = func() string {
 func loadMitmLocalFile(local *mitmLocalResponse) error {
 	f, err := os.Open(filepath.Join(mitmResourcesDir(), local.file))
 	if err != nil {
-		return fmt.Errorf("map-local file %s cannot be read", local.file)
+		return mitmRuleErr("localUnreadable", []string{local.file}, "map-local file %s cannot be read", local.file)
 	}
 	defer f.Close()
 	body, err := io.ReadAll(io.LimitReader(f, mitmLocalFileLimit+1))
 	if err != nil {
-		return fmt.Errorf("map-local file %s cannot be read", local.file)
+		return mitmRuleErr("localUnreadable", []string{local.file}, "map-local file %s cannot be read", local.file)
 	}
 	if len(body) > mitmLocalFileLimit {
-		return fmt.Errorf("map-local file %s is over 16 MiB", local.file)
+		return mitmRuleErr("localTooLarge", []string{local.file}, "map-local file %s is over 16 MiB", local.file)
 	}
 	local.body = body
 	return nil
@@ -457,7 +488,7 @@ func parseMitmRewriteLine(section, line string) (*mitmRewriteRule, error) {
 	case mitmSectionMap:
 		rule, err = parseMitmMapLocal(line)
 	default:
-		return nil, fmt.Errorf("unknown section %q", section)
+		return nil, mitmRuleErr("section", []string{strconv.Quote(section)}, "unknown section %q", section)
 	}
 	if err != nil {
 		return nil, err
@@ -468,9 +499,13 @@ func parseMitmRewriteLine(section, line string) (*mitmRewriteRule, error) {
 }
 
 func compileMitmURLPattern(field string) (*mitmRegex, error) {
-	re, err := compileMitmRegex(mitmUnquote(field, true), false)
+	source := mitmUnquote(field, true)
+	if source == "" {
+		return nil, mitmRuleErr("emptyRegex", nil, "empty regex")
+	}
+	re, err := compileMitmRegex(source, false)
 	if err != nil {
-		return nil, fmt.Errorf("invalid URL regex: %v", err)
+		return nil, mitmRuleErr("urlRegex", nil, "invalid URL regex: %v", err)
 	}
 	return re, nil
 }
@@ -497,11 +532,11 @@ func parseMitmURLRewrite(line string) (*mitmRewriteRule, error) {
 			}
 		}
 	default:
-		return nil, fmt.Errorf("expected <regex> <replacement> <type>, got %d fields", len(fields))
+		return nil, mitmRuleErr("urlFieldCount", []string{strconv.Itoa(len(fields))}, "expected <regex> <replacement> <type>, got %d fields", len(fields))
 	}
 	action, ok := mitmURLActions[strings.ToLower(kind)]
 	if !ok {
-		return nil, fmt.Errorf("unknown URL rewrite type %q", kind)
+		return nil, mitmRuleErr("urlType", []string{strconv.Quote(kind)}, "unknown URL rewrite type %q", kind)
 	}
 	re, err := compileMitmURLPattern(pattern)
 	if err != nil {
@@ -511,7 +546,7 @@ func parseMitmURLRewrite(line string) (*mitmRewriteRule, error) {
 	switch action {
 	case mitmURLHeader, mitmURL302, mitmURL307:
 		if replacement == "" || replacement == "-" || replacement == "_" {
-			return nil, errors.New("a redirect or header rewrite needs a replacement URL")
+			return nil, mitmRuleErr("needsReplacementURL", nil, "a redirect or header rewrite needs a replacement URL")
 		}
 	}
 	return &mitmRewriteRule{url: re, urlAction: action, replacement: replacement}, nil
@@ -531,7 +566,7 @@ func parseMitmHeaderRewrite(line string) (*mitmRewriteRule, error) {
 		}
 	}
 	if len(fields) < 3 {
-		return nil, errors.New("expected [http-request|http-response] <regex> <action> <header> [value]")
+		return nil, mitmRuleErr("headerFields", nil, "expected [http-request|http-response] <regex> <action> <header> [value]")
 	}
 	re, err := compileMitmURLPattern(fields[0])
 	if err != nil {
@@ -541,10 +576,10 @@ func parseMitmHeaderRewrite(line string) (*mitmRewriteRule, error) {
 	rule.headerOp = mitmHeaderOp(strings.ToLower(fields[1]))
 	rule.field = textproto.CanonicalMIMEHeaderKey(mitmUnquote(fields[2], false))
 	if rule.field == "" || strings.ContainsAny(rule.field, " :\r\n") {
-		return nil, fmt.Errorf("invalid header name %q", fields[2])
+		return nil, mitmRuleErr("headerName", []string{strconv.Quote(fields[2])}, "invalid header name %q", fields[2])
 	}
 	if mitmFramingHeader(rule.field) {
-		return nil, fmt.Errorf("%s cannot be rewritten: it frames the message", rule.field)
+		return nil, mitmRuleErr("framingHeader", []string{rule.field}, "%s cannot be rewritten: it frames the message", rule.field)
 	}
 	rest := fields[3:]
 	join := func(parts []string) string {
@@ -558,22 +593,25 @@ func parseMitmHeaderRewrite(line string) (*mitmRewriteRule, error) {
 	case mitmHeaderDel:
 	case mitmHeaderAdd, mitmHeaderReplace:
 		if len(rest) == 0 {
-			return nil, fmt.Errorf("%s needs a value", rule.headerOp)
+			return nil, mitmRuleErr("needsValue", []string{string(rule.headerOp)}, "%s needs a value", rule.headerOp)
 		}
 		rule.value = join(rest)
 	case mitmHeaderReplaceRegex:
 		if len(rest) < 2 {
-			return nil, errors.New("header-replace-regex needs <regex> <replacement>")
+			return nil, mitmRuleErr("headerReplaceRegex", nil, "header-replace-regex needs <regex> <replacement>")
+		}
+		if mitmUnquote(rest[0], true) == "" {
+			return nil, mitmRuleErr("emptyRegex", nil, "empty regex")
 		}
 		if rule.valueRegex, err = compileMitmRegex(mitmUnquote(rest[0], true), false); err != nil {
-			return nil, fmt.Errorf("invalid header regex: %v", err)
+			return nil, mitmRuleErr("headerRegex", nil, "invalid header regex: %v", err)
 		}
 		rule.valueResult = join(rest[1:])
 	default:
-		return nil, fmt.Errorf("unknown header action %q", fields[1])
+		return nil, mitmRuleErr("headerAction", []string{strconv.Quote(fields[1])}, "unknown header action %q", fields[1])
 	}
 	if strings.ContainsAny(rule.value+rule.valueResult, "\r\n") {
-		return nil, errors.New("a header value cannot contain a line break")
+		return nil, mitmRuleErr("headerLineBreak", nil, "a header value cannot contain a line break")
 	}
 	return rule, nil
 }
@@ -593,7 +631,7 @@ func mitmFramingHeader(field string) bool {
 func parseMitmBodyRewrite(line string) (*mitmRewriteRule, error) {
 	fields := mitmFields(line)
 	if len(fields) == 0 {
-		return nil, errors.New("empty rule")
+		return nil, mitmRuleErr("emptyRule", nil, "empty rule")
 	}
 	rule := &mitmRewriteRule{}
 	switch strings.ToLower(fields[0]) {
@@ -601,13 +639,13 @@ func parseMitmBodyRewrite(line string) (*mitmRewriteRule, error) {
 	case "http-response":
 		rule.response = true
 	case "http-request-jq", "http-response-jq":
-		return nil, errors.New("jq body rewrite is not supported yet")
+		return nil, mitmRuleErr("jq", nil, "jq body rewrite is not supported yet")
 	default:
-		return nil, errors.New("a body rewrite starts with http-request or http-response")
+		return nil, mitmRuleErr("bodyHead", nil, "a body rewrite starts with http-request or http-response")
 	}
 	fields = fields[1:]
 	if len(fields) < 3 || len(fields)%2 != 1 {
-		return nil, errors.New("expected <url-regex> followed by pairs of <regex> <replacement>")
+		return nil, mitmRuleErr("bodyPairs", nil, "expected <url-regex> followed by pairs of <regex> <replacement>")
 	}
 	re, err := compileMitmURLPattern(fields[0])
 	if err != nil {
@@ -615,9 +653,12 @@ func parseMitmBodyRewrite(line string) (*mitmRewriteRule, error) {
 	}
 	rule.url = re
 	for i := 1; i < len(fields); i += 2 {
+		if mitmUnquote(fields[i], true) == "" {
+			return nil, mitmRuleErr("emptyRegex", nil, "empty regex")
+		}
 		pair, err := compileMitmRegex(mitmUnquote(fields[i], true), true)
 		if err != nil {
-			return nil, fmt.Errorf("invalid body regex %q: %v", fields[i], err)
+			return nil, mitmRuleErr("bodyRegex", []string{strconv.Quote(fields[i])}, "invalid body regex %q: %v", fields[i], err)
 		}
 		rule.pairs = append(rule.pairs, mitmBodyPair{re: pair, replacement: mitmUnquote(fields[i+1], true)})
 	}
@@ -642,7 +683,7 @@ func mitmParams(text string) (map[string]string, error) {
 			if end < 0 {
 				end = len(text) - i
 			}
-			return nil, fmt.Errorf("expected key=value, got %q", text[i:i+end])
+			return nil, mitmRuleErr("keyValue", []string{strconv.Quote(text[i : i+end])}, "expected key=value, got %q", text[i:i+end])
 		}
 		key := strings.ToLower(strings.TrimSpace(text[i : i+eq]))
 		i += eq + 1
@@ -656,7 +697,7 @@ func mitmParams(text string) (map[string]string, error) {
 				}
 			}
 			if end < 0 {
-				return nil, fmt.Errorf("unterminated quote in %s", key)
+				return nil, mitmRuleErr("unterminatedQuote", []string{key}, "unterminated quote in %s", key)
 			}
 			value = text[i+1 : end]
 			i = end + 1
@@ -705,7 +746,7 @@ func parseMitmMapLocal(line string) (*mitmRewriteRule, error) {
 		contentType = "image/gif"
 	case "base64":
 		if local.body, err = base64.StdEncoding.DecodeString(strings.TrimSpace(data)); err != nil {
-			return nil, fmt.Errorf("data is not valid base64: %v", err)
+			return nil, mitmRuleErr("dataBase64", nil, "data is not valid base64: %v", err)
 		}
 		contentType = "application/octet-stream"
 	case "file":
@@ -713,13 +754,13 @@ func parseMitmMapLocal(line string) (*mitmRewriteRule, error) {
 		// the app's resources directory (mitm/resources), by the bare name
 		// the app saved a download or attachment under.
 		if !hasData || data == "" {
-			return nil, errors.New("data-type=file needs data")
+			return nil, mitmRuleErr("fileNeedsData", nil, "data-type=file needs data")
 		}
 		if strings.HasPrefix(data, "http://") || strings.HasPrefix(data, "https://") {
-			return nil, errors.New("data from a URL must be downloaded by the app first")
+			return nil, mitmRuleErr("dataURL", nil, "data from a URL must be downloaded by the app first")
 		}
 		if strings.ContainsAny(data, `/\`) || data == "." || data == ".." || strings.HasPrefix(data, ".") {
-			return nil, fmt.Errorf("data must name a file in the resources directory, got %q", data)
+			return nil, mitmRuleErr("dataFileName", []string{strconv.Quote(data)}, "data must name a file in the resources directory, got %q", data)
 		}
 		local.file = data
 		contentType = mime.TypeByExtension(filepath.Ext(data))
@@ -727,12 +768,12 @@ func parseMitmMapLocal(line string) (*mitmRewriteRule, error) {
 			contentType = "application/octet-stream"
 		}
 	default:
-		return nil, fmt.Errorf("unknown data-type %q", dataType)
+		return nil, mitmRuleErr("dataType", []string{strconv.Quote(dataType)}, "unknown data-type %q", dataType)
 	}
 	if code, present := params["status-code"]; present {
 		status, err := strconv.Atoi(code)
 		if err != nil || status < 200 || status > 999 {
-			return nil, fmt.Errorf("status-code must be 200-999, got %q", code)
+			return nil, mitmRuleErr("statusCode", []string{strconv.Quote(code)}, "status-code must be 200-999, got %q", code)
 		}
 		local.status = status
 	}
@@ -748,7 +789,7 @@ func parseMitmMapLocal(line string) (*mitmRewriteRule, error) {
 		switch key {
 		case "data-type", "data", "status-code", "header":
 		default:
-			return nil, fmt.Errorf("unknown parameter %q", key)
+			return nil, mitmRuleErr("parameter", []string{strconv.Quote(key)}, "unknown parameter %q", key)
 		}
 	}
 	return &mitmRewriteRule{url: re, local: local}, nil
@@ -761,7 +802,7 @@ func parseMitmLocalHeader(header http.Header, value string) error {
 	if !strings.Contains(value, ":") {
 		decoded, err := base64.StdEncoding.DecodeString(value)
 		if err != nil {
-			return fmt.Errorf("header is neither a:b|c:d nor base64: %v", err)
+			return mitmRuleErr("headerFormat", nil, "header is neither a:b|c:d nor base64: %v", err)
 		}
 		lines = strings.Split(strings.ReplaceAll(string(decoded), "\r\n", "\n"), "\n")
 	} else {
@@ -774,7 +815,7 @@ func parseMitmLocalHeader(header http.Header, value string) error {
 		name, val, ok := strings.Cut(line, ":")
 		name = textproto.CanonicalMIMEHeaderKey(strings.TrimSpace(name))
 		if !ok || name == "" || strings.ContainsAny(name, " \r\n") || strings.ContainsAny(val, "\r\n") {
-			return fmt.Errorf("invalid header %q", line)
+			return mitmRuleErr("invalidHeader", []string{strconv.Quote(line)}, "invalid header %q", line)
 		}
 		if mitmFramingHeader(name) {
 			continue
@@ -815,7 +856,7 @@ func parseMitmRewriteText(text string) MitmRewriteParse {
 				section, skipping = known, false
 			} else {
 				section, skipping = "", true
-				result.Issues = append(result.Issues, MitmRewriteIssue{Line: number, Message: fmt.Sprintf("section %s is not a rewrite section; its lines are skipped", line)})
+				result.Issues = append(result.Issues, MitmRewriteIssue{Line: number, Kind: "section", Args: []string{strconv.Quote(line)}, Message: fmt.Sprintf("section %s is not a rewrite section; its lines are skipped", line)})
 			}
 			continue
 		}
@@ -838,12 +879,12 @@ func parseMitmRewriteText(text string) MitmRewriteParse {
 			if len(fits) == 1 {
 				result.Rules = append(result.Rules, MitmRewriteLine{Section: fits[0], Line: line, Number: number})
 			} else {
-				result.Issues = append(result.Issues, MitmRewriteIssue{Line: number, Message: "line outside [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local]"})
+				result.Issues = append(result.Issues, MitmRewriteIssue{Line: number, Kind: "outsideSection", Message: "line outside [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local]"})
 			}
 			continue
 		}
 		if _, err := parseMitmRewriteLine(section, line); err != nil {
-			result.Issues = append(result.Issues, MitmRewriteIssue{Section: section, Line: number, Message: err.Error()})
+			result.Issues = append(result.Issues, mitmIssue(MitmRewriteIssue{Section: section, Line: number}, err))
 			continue
 		}
 		result.Rules = append(result.Rules, MitmRewriteLine{Section: section, Line: line, Number: number})

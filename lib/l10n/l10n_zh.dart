@@ -6762,7 +6762,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get mitmRewriteOff => 'HTTPS 解密已关闭，改写规则暂不生效。';
+  String get mitmRewriteOff => '解密已关闭，改写规则不会生效。';
 
   @override
   String get mitmRewriteGoTurnOn => '去开启';
@@ -6938,5 +6938,165 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String mitmRewriteRejectDetail(Object text, Object type) {
     return '$text（$type）';
+  }
+
+  @override
+  String mitmRewriteErrorFramingHeader(String value) {
+    return '$value 控制消息传输，不能改写。';
+  }
+
+  @override
+  String mitmRewriteErrorNeedsValue(String value) {
+    return '$value 缺少值。';
+  }
+
+  @override
+  String get mitmRewriteErrorBodyHead =>
+      '内容改写规则须以 http-request 或 http-response 开头。';
+
+  @override
+  String get mitmRewriteErrorHeaderLineBreak => '请求头或响应头的值不能包含换行。';
+
+  @override
+  String get mitmRewriteErrorNeedsReplacementUrl => '重定向或 URL 直接改写缺少目标 URL。';
+
+  @override
+  String get mitmRewriteErrorDataUrl => '远程内容需要先下载，才能用于本地映射。';
+
+  @override
+  String get mitmRewriteErrorDataBase64 => '内容不是有效的 Base64。';
+
+  @override
+  String mitmRewriteErrorDataFileName(String value) {
+    return '内容须指定资源目录中的文件；当前值为 $value。';
+  }
+
+  @override
+  String get mitmRewriteErrorFileNeedsData => '使用文件类型时，须指定文件。';
+
+  @override
+  String get mitmRewriteErrorBodyTooLarge => '解码后的内容超过改写大小上限。';
+
+  @override
+  String get mitmRewriteErrorEmptyRegex => '正则表达式不能为空。';
+
+  @override
+  String get mitmRewriteErrorEmptyRule => '规则不能为空。';
+
+  @override
+  String mitmRewriteErrorUrlFieldCount(String value) {
+    return '应填写正则表达式、替换内容和类型；当前有 $value 项。';
+  }
+
+  @override
+  String get mitmRewriteErrorBodyPairs => 'URL 正则表达式后应成对填写匹配表达式和替换内容。';
+
+  @override
+  String get mitmRewriteErrorHeaderFields =>
+      '请依次填写请求或响应类型、正则表达式、操作和头字段；需要时还须填写值。';
+
+  @override
+  String mitmRewriteErrorKeyValue(String value) {
+    return '应使用 key=value 格式；当前为 $value。';
+  }
+
+  @override
+  String get mitmRewriteErrorHeaderFormat => '头字段格式无效，应使用 a:b|c:d 或 Base64。';
+
+  @override
+  String get mitmRewriteErrorHeaderReplaceRegex =>
+      'header-replace-regex 需要正则表达式和替换内容。';
+
+  @override
+  String get mitmRewriteErrorUrlRegex => 'URL 正则表达式无效。';
+
+  @override
+  String mitmRewriteErrorBodyRegex(String value) {
+    return '内容正则表达式 $value 无效。';
+  }
+
+  @override
+  String mitmRewriteErrorInvalidHeader(String value) {
+    return '头字段 $value 无效。';
+  }
+
+  @override
+  String mitmRewriteErrorHeaderName(String value) {
+    return '头字段名称 $value 无效。';
+  }
+
+  @override
+  String get mitmRewriteErrorHeaderRegex => '头字段正则表达式无效。';
+
+  @override
+  String get mitmRewriteErrorJq => '暂不支持使用 jq 改写内容。';
+
+  @override
+  String mitmRewriteErrorLocalUnreadable(String value) {
+    return '无法读取本地映射文件 $value。';
+  }
+
+  @override
+  String mitmRewriteErrorLocalTooLarge(String value) {
+    return '本地映射文件 $value 超过 16 MiB。';
+  }
+
+  @override
+  String get mitmRewriteErrorRegexTimeout => '正则表达式匹配超时。';
+
+  @override
+  String mitmRewriteErrorStatusCode(String value) {
+    return '状态码须在 200–999 之间；当前为 $value。';
+  }
+
+  @override
+  String mitmRewriteErrorUrlType(String value) {
+    return '不支持的 URL 改写类型：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorDataType(String value) {
+    return '不支持的内容类型：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorHeaderAction(String value) {
+    return '不支持的头字段操作：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorParameter(String value) {
+    return '不支持的参数：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorSection(String value) {
+    return '不支持的配置段：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorUnterminatedQuote(String value) {
+    return '$value 中的引号未闭合。';
+  }
+
+  @override
+  String get mitmRewriteErrorOutsideSection =>
+      '这一行不在 [URL Rewrite]、[Header Rewrite]、[Body Rewrite] 或 [Map Local] 段落中。';
+
+  @override
+  String get mitmRewriteErrorGeneric => '规则格式无效。';
+
+  @override
+  String get mitmRewriteErrorDetails => '查看详情';
+
+  @override
+  String get mitmRewriteFailureGeneric => '出现错误，规则保持不变。';
+
+  @override
+  String get mitmRewriteMatchedTitle => '命中规则';
+
+  @override
+  String mitmRewriteNotAppliedTitle(String value) {
+    return '未应用改写：$value';
   }
 }

@@ -162,9 +162,18 @@ Future<void> _expectClosesWithoutIssues(WidgetTester tester) async {
 Finder _menuItem(String label) =>
     find.descendant(of: find.byType(PopupMenu), matching: find.text(label));
 
+// Padded below the bar as the profile page pads it: the bar is opaque and
+// the body is cut at its foot, so a header left under it is out of reach.
 Widget _proxyGroupsPage(int profileId) => Scaffold(
   title: 'Groups',
-  body: CustomScrollView(slivers: [CustomProxyGroupsSection(profileId)]),
+  body: Builder(
+    builder: (context) => CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: SizedBox(height: context.sectionsTopPadding)),
+        CustomProxyGroupsSection(profileId),
+      ],
+    ),
+  ),
 );
 
 void _setViewport(WidgetTester tester) {

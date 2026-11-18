@@ -12350,7 +12350,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmRewriteOff.
   ///
   /// In en, this message translates to:
-  /// **'HTTPS decryption is off, so rewrite rules aren\'t running.'**
+  /// **'Decryption is off, so rewrite rules won\'t take effect.'**
   String get mitmRewriteOff;
 
   /// No description provided for @mitmRewriteGoTurnOn.
@@ -12646,6 +12646,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{text} ({type})'**
   String mitmRewriteRejectDetail(Object text, Object type);
+
+  /// No description provided for @mitmRewriteErrorFramingHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} controls how the message is sent and can\'t be rewritten.'**
+  String mitmRewriteErrorFramingHeader(String value);
+
+  /// No description provided for @mitmRewriteErrorNeedsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} needs a value.'**
+  String mitmRewriteErrorNeedsValue(String value);
+
+  /// No description provided for @mitmRewriteErrorBodyHead.
+  ///
+  /// In en, this message translates to:
+  /// **'A body rewrite must start with http-request or http-response.'**
+  String get mitmRewriteErrorBodyHead;
+
+  /// No description provided for @mitmRewriteErrorHeaderLineBreak.
+  ///
+  /// In en, this message translates to:
+  /// **'A header value can\'t contain a line break.'**
+  String get mitmRewriteErrorHeaderLineBreak;
+
+  /// No description provided for @mitmRewriteErrorNeedsReplacementUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'A redirect or URL rewrite needs a target URL.'**
+  String get mitmRewriteErrorNeedsReplacementUrl;
+
+  /// No description provided for @mitmRewriteErrorDataUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote content must be downloaded before a local response can use it.'**
+  String get mitmRewriteErrorDataUrl;
+
+  /// No description provided for @mitmRewriteErrorDataBase64.
+  ///
+  /// In en, this message translates to:
+  /// **'The content isn\'t valid Base64.'**
+  String get mitmRewriteErrorDataBase64;
+
+  /// No description provided for @mitmRewriteErrorDataFileName.
+  ///
+  /// In en, this message translates to:
+  /// **'The content must name a file in the resources folder; got {value}.'**
+  String mitmRewriteErrorDataFileName(String value);
+
+  /// No description provided for @mitmRewriteErrorFileNeedsData.
+  ///
+  /// In en, this message translates to:
+  /// **'The file type needs a file.'**
+  String get mitmRewriteErrorFileNeedsData;
+
+  /// No description provided for @mitmRewriteErrorBodyTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The decoded content is over the rewrite size limit.'**
+  String get mitmRewriteErrorBodyTooLarge;
+
+  /// No description provided for @mitmRewriteErrorEmptyRegex.
+  ///
+  /// In en, this message translates to:
+  /// **'The regular expression can\'t be empty.'**
+  String get mitmRewriteErrorEmptyRegex;
+
+  /// No description provided for @mitmRewriteErrorEmptyRule.
+  ///
+  /// In en, this message translates to:
+  /// **'The rule can\'t be empty.'**
+  String get mitmRewriteErrorEmptyRule;
+
+  /// No description provided for @mitmRewriteErrorUrlFieldCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a regular expression, a replacement and a type; found {value} items.'**
+  String mitmRewriteErrorUrlFieldCount(String value);
+
+  /// No description provided for @mitmRewriteErrorBodyPairs.
+  ///
+  /// In en, this message translates to:
+  /// **'After the URL regular expression, enter pairs of a pattern and its replacement.'**
+  String get mitmRewriteErrorBodyPairs;
+
+  /// No description provided for @mitmRewriteErrorHeaderFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the request or response type, a regular expression, an action and a header, plus a value when needed.'**
+  String get mitmRewriteErrorHeaderFields;
+
+  /// No description provided for @mitmRewriteErrorKeyValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the key=value format; got {value}.'**
+  String mitmRewriteErrorKeyValue(String value);
+
+  /// No description provided for @mitmRewriteErrorHeaderFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'The header is invalid; use a:b|c:d or Base64.'**
+  String get mitmRewriteErrorHeaderFormat;
+
+  /// No description provided for @mitmRewriteErrorHeaderReplaceRegex.
+  ///
+  /// In en, this message translates to:
+  /// **'header-replace-regex needs a regular expression and a replacement.'**
+  String get mitmRewriteErrorHeaderReplaceRegex;
+
+  /// No description provided for @mitmRewriteErrorUrlRegex.
+  ///
+  /// In en, this message translates to:
+  /// **'The URL regular expression is invalid.'**
+  String get mitmRewriteErrorUrlRegex;
+
+  /// No description provided for @mitmRewriteErrorBodyRegex.
+  ///
+  /// In en, this message translates to:
+  /// **'The content regular expression {value} is invalid.'**
+  String mitmRewriteErrorBodyRegex(String value);
+
+  /// No description provided for @mitmRewriteErrorInvalidHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'The header {value} is invalid.'**
+  String mitmRewriteErrorInvalidHeader(String value);
+
+  /// No description provided for @mitmRewriteErrorHeaderName.
+  ///
+  /// In en, this message translates to:
+  /// **'The header name {value} is invalid.'**
+  String mitmRewriteErrorHeaderName(String value);
+
+  /// No description provided for @mitmRewriteErrorHeaderRegex.
+  ///
+  /// In en, this message translates to:
+  /// **'The header regular expression is invalid.'**
+  String get mitmRewriteErrorHeaderRegex;
+
+  /// No description provided for @mitmRewriteErrorJq.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewriting content with jq isn\'t supported yet.'**
+  String get mitmRewriteErrorJq;
+
+  /// No description provided for @mitmRewriteErrorLocalUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t read the local response file {value}.'**
+  String mitmRewriteErrorLocalUnreadable(String value);
+
+  /// No description provided for @mitmRewriteErrorLocalTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The local response file {value} is over 16 MiB.'**
+  String mitmRewriteErrorLocalTooLarge(String value);
+
+  /// No description provided for @mitmRewriteErrorRegexTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The regular expression took too long to match.'**
+  String get mitmRewriteErrorRegexTimeout;
+
+  /// No description provided for @mitmRewriteErrorStatusCode.
+  ///
+  /// In en, this message translates to:
+  /// **'The status code must be between 200 and 999; got {value}.'**
+  String mitmRewriteErrorStatusCode(String value);
+
+  /// No description provided for @mitmRewriteErrorUrlType.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported URL rewrite type: {value}.'**
+  String mitmRewriteErrorUrlType(String value);
+
+  /// No description provided for @mitmRewriteErrorDataType.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported content type: {value}.'**
+  String mitmRewriteErrorDataType(String value);
+
+  /// No description provided for @mitmRewriteErrorHeaderAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported header action: {value}.'**
+  String mitmRewriteErrorHeaderAction(String value);
+
+  /// No description provided for @mitmRewriteErrorParameter.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported parameter: {value}.'**
+  String mitmRewriteErrorParameter(String value);
+
+  /// No description provided for @mitmRewriteErrorSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported section: {value}.'**
+  String mitmRewriteErrorSection(String value);
+
+  /// No description provided for @mitmRewriteErrorUnterminatedQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Unclosed quote in {value}.'**
+  String mitmRewriteErrorUnterminatedQuote(String value);
+
+  /// No description provided for @mitmRewriteErrorOutsideSection.
+  ///
+  /// In en, this message translates to:
+  /// **'This line isn\'t under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].'**
+  String get mitmRewriteErrorOutsideSection;
+
+  /// No description provided for @mitmRewriteErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'The rule\'s format is invalid.'**
+  String get mitmRewriteErrorGeneric;
+
+  /// No description provided for @mitmRewriteErrorDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get mitmRewriteErrorDetails;
+
+  /// No description provided for @mitmRewriteFailureGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'something went wrong, and the rules are unchanged.'**
+  String get mitmRewriteFailureGeneric;
+
+  /// No description provided for @mitmRewriteMatchedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule matched'**
+  String get mitmRewriteMatchedTitle;
+
+  /// No description provided for @mitmRewriteNotAppliedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite not applied: {value}'**
+  String mitmRewriteNotAppliedTitle(String value);
 }
 
 class _AppLocalizationsDelegate

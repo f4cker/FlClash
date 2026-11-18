@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_rewrite.dart';
+import 'package:fl_clash/core/method.dart' show CoreMethodException;
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
@@ -13,6 +15,14 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'rewrite.dart' show mitmRewriteErrorColor, mitmRewriteListSeparator;
+
+/// What a failed save or check says: the app's own words for a failure it
+/// knows, never an exception's or the Core's English, which goes to logs.
+String mitmRewriteFailureText(AppLocalizations l, Object error) {
+  final text = userFacingErrorMessage(error, l);
+  final raw = error is CoreMethodException ? error.message : error.toString();
+  return text == raw ? l.mitmRewriteFailureGeneric : text;
+}
 
 const _dialogWidth = 520.0;
 const _validateDelay = Duration(milliseconds: 300);
@@ -367,7 +377,9 @@ class _RewritePasteDialogState extends ConsumerState<_RewritePasteDialog> {
     } catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
-        _error = userFacingErrorMessage(error, context.appLocalizations);
+        _error = context.appLocalizations.mitmRewriteNotApplied(
+          mitmRewriteFailureText(context.appLocalizations, error),
+        );
       });
     }
   }
@@ -411,7 +423,7 @@ class _RewritePasteDialogState extends ConsumerState<_RewritePasteDialog> {
       setState(() {
         _busy = false;
         _error = context.appLocalizations.mitmRewriteNotApplied(
-          userFacingErrorMessage(error, context.appLocalizations),
+          mitmRewriteFailureText(context.appLocalizations, error),
         );
       });
     }
@@ -446,13 +458,16 @@ class _RewritePasteDialogState extends ConsumerState<_RewritePasteDialog> {
           caption.copyWith(color: _okColor(context)),
         ),
       for (final issue in issues.take(_maxListedErrors))
-        _markedLine(
-          AppGlyphs.close,
-          appLocalizations.mitmRewriteImportLineError(
-            issue.line,
-            issue.message,
+        Tooltip(
+          message: issue.message,
+          child: _markedLine(
+            AppGlyphs.close,
+            appLocalizations.mitmRewriteImportLineError(
+              issue.line,
+              mitmRewriteIssueText(appLocalizations, issue),
+            ),
+            caption.copyWith(color: mitmRewriteErrorColor(context)),
           ),
-          caption.copyWith(color: mitmRewriteErrorColor(context)),
         ),
       if (issues.length > _maxListedErrors)
         Text(
@@ -559,11 +574,14 @@ class _RewriteEditDialog extends ConsumerStatefulWidget {
   ConsumerState<_RewriteEditDialog> createState() => _RewriteEditDialogState();
 }
 
+const _emptyRule = MitmRewriteIssue(kind: 'emptyRule', message: 'empty rule');
+
 class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
   late final _controller = TextEditingController(text: widget.rewrite.line);
   Timer? _timer;
-  String? _issue;
-  String _checked = '';
+  MitmRewriteIssue? _issue;
+  String? _checked;
+  bool _details = false;
   bool _busy = false;
   bool _deleting = false;
   String? _error;
@@ -593,7 +611,7 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
     final generation = ++_generation;
     if (line.isEmpty) {
       setState(() {
-        _issue = null;
+        _issue = _emptyRule;
         _checked = '';
       });
       return;
@@ -606,16 +624,19 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
           );
       if (!mounted || generation != _generation) return;
       setState(() {
+        // A line the Core reads as neither a rule nor an issue is a comment:
+        // saved alone, it is an empty rule.
         _issue = parse.rules.isNotEmpty
             ? null
-            : parse.issues.firstOrNull?.message ??
-                  context.appLocalizations.mitmRewriteUnparsable;
+            : parse.issues.firstOrNull ?? _emptyRule;
         _checked = line;
       });
     } catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
-        _error = userFacingErrorMessage(error, context.appLocalizations);
+        _error = context.appLocalizations.mitmRewriteNotApplied(
+          mitmRewriteFailureText(context.appLocalizations, error),
+        );
       });
     }
   }
@@ -635,7 +656,7 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
         _busy = false;
         _deleting = false;
         _error = context.appLocalizations.mitmRewriteNotApplied(
-          userFacingErrorMessage(error, context.appLocalizations),
+          mitmRewriteFailureText(context.appLocalizations, error),
         );
       });
     }
@@ -660,7 +681,7 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final line = _controller.text.trim();
-    final checked = _checked == line && line.isNotEmpty;
+    final checked = _checked == line;
     final issue = checked ? _issue : null;
     final valid = checked && issue == null;
     final description = valid
@@ -730,11 +751,31 @@ class _RewriteEditDialogState extends ConsumerState<_RewriteEditDialog> {
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  appLocalizations.mitmRewriteInvalid(issue),
+                  appLocalizations.mitmRewriteInvalid(
+                    mitmRewriteIssueText(appLocalizations, issue),
+                  ),
                   style: AppTextStyle.footnote
                       .of(context)
                       .copyWith(color: mitmRewriteErrorColor(context)),
                 ),
+              ),
+            // The Core's own words, for a report: behind a tap, not in the
+            // red line.
+            if (issue != null && issue.kind != 'emptyRule')
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: _details
+                    ? SelectableText(
+                        issue.message,
+                        style: label.toJetBrainsMono,
+                      )
+                    : TextButton(
+                        onPressed: () => setState(() => _details = true),
+                        child: Text(
+                          appLocalizations.mitmRewriteErrorDetails,
+                          style: label.copyWith(color: colorScheme.primary),
+                        ),
+                      ),
               ),
           ],
         ),

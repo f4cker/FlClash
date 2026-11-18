@@ -7389,7 +7389,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmRewriteOff =>
-      'HTTPS decryption is off, so rewrite rules aren\'t running.';
+      'Decryption is off, so rewrite rules won\'t take effect.';
 
   @override
   String get mitmRewriteGoTurnOn => 'Turn On';
@@ -7584,5 +7584,177 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String mitmRewriteRejectDetail(Object text, Object type) {
     return '$text ($type)';
+  }
+
+  @override
+  String mitmRewriteErrorFramingHeader(String value) {
+    return '$value controls how the message is sent and can\'t be rewritten.';
+  }
+
+  @override
+  String mitmRewriteErrorNeedsValue(String value) {
+    return '$value needs a value.';
+  }
+
+  @override
+  String get mitmRewriteErrorBodyHead =>
+      'A body rewrite must start with http-request or http-response.';
+
+  @override
+  String get mitmRewriteErrorHeaderLineBreak =>
+      'A header value can\'t contain a line break.';
+
+  @override
+  String get mitmRewriteErrorNeedsReplacementUrl =>
+      'A redirect or URL rewrite needs a target URL.';
+
+  @override
+  String get mitmRewriteErrorDataUrl =>
+      'Remote content must be downloaded before a local response can use it.';
+
+  @override
+  String get mitmRewriteErrorDataBase64 => 'The content isn\'t valid Base64.';
+
+  @override
+  String mitmRewriteErrorDataFileName(String value) {
+    return 'The content must name a file in the resources folder; got $value.';
+  }
+
+  @override
+  String get mitmRewriteErrorFileNeedsData => 'The file type needs a file.';
+
+  @override
+  String get mitmRewriteErrorBodyTooLarge =>
+      'The decoded content is over the rewrite size limit.';
+
+  @override
+  String get mitmRewriteErrorEmptyRegex =>
+      'The regular expression can\'t be empty.';
+
+  @override
+  String get mitmRewriteErrorEmptyRule => 'The rule can\'t be empty.';
+
+  @override
+  String mitmRewriteErrorUrlFieldCount(String value) {
+    return 'Enter a regular expression, a replacement and a type; found $value items.';
+  }
+
+  @override
+  String get mitmRewriteErrorBodyPairs =>
+      'After the URL regular expression, enter pairs of a pattern and its replacement.';
+
+  @override
+  String get mitmRewriteErrorHeaderFields =>
+      'Enter the request or response type, a regular expression, an action and a header, plus a value when needed.';
+
+  @override
+  String mitmRewriteErrorKeyValue(String value) {
+    return 'Use the key=value format; got $value.';
+  }
+
+  @override
+  String get mitmRewriteErrorHeaderFormat =>
+      'The header is invalid; use a:b|c:d or Base64.';
+
+  @override
+  String get mitmRewriteErrorHeaderReplaceRegex =>
+      'header-replace-regex needs a regular expression and a replacement.';
+
+  @override
+  String get mitmRewriteErrorUrlRegex =>
+      'The URL regular expression is invalid.';
+
+  @override
+  String mitmRewriteErrorBodyRegex(String value) {
+    return 'The content regular expression $value is invalid.';
+  }
+
+  @override
+  String mitmRewriteErrorInvalidHeader(String value) {
+    return 'The header $value is invalid.';
+  }
+
+  @override
+  String mitmRewriteErrorHeaderName(String value) {
+    return 'The header name $value is invalid.';
+  }
+
+  @override
+  String get mitmRewriteErrorHeaderRegex =>
+      'The header regular expression is invalid.';
+
+  @override
+  String get mitmRewriteErrorJq =>
+      'Rewriting content with jq isn\'t supported yet.';
+
+  @override
+  String mitmRewriteErrorLocalUnreadable(String value) {
+    return 'Can\'t read the local response file $value.';
+  }
+
+  @override
+  String mitmRewriteErrorLocalTooLarge(String value) {
+    return 'The local response file $value is over 16 MiB.';
+  }
+
+  @override
+  String get mitmRewriteErrorRegexTimeout =>
+      'The regular expression took too long to match.';
+
+  @override
+  String mitmRewriteErrorStatusCode(String value) {
+    return 'The status code must be between 200 and 999; got $value.';
+  }
+
+  @override
+  String mitmRewriteErrorUrlType(String value) {
+    return 'Unsupported URL rewrite type: $value.';
+  }
+
+  @override
+  String mitmRewriteErrorDataType(String value) {
+    return 'Unsupported content type: $value.';
+  }
+
+  @override
+  String mitmRewriteErrorHeaderAction(String value) {
+    return 'Unsupported header action: $value.';
+  }
+
+  @override
+  String mitmRewriteErrorParameter(String value) {
+    return 'Unsupported parameter: $value.';
+  }
+
+  @override
+  String mitmRewriteErrorSection(String value) {
+    return 'Unsupported section: $value.';
+  }
+
+  @override
+  String mitmRewriteErrorUnterminatedQuote(String value) {
+    return 'Unclosed quote in $value.';
+  }
+
+  @override
+  String get mitmRewriteErrorOutsideSection =>
+      'This line isn\'t under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].';
+
+  @override
+  String get mitmRewriteErrorGeneric => 'The rule\'s format is invalid.';
+
+  @override
+  String get mitmRewriteErrorDetails => 'Details';
+
+  @override
+  String get mitmRewriteFailureGeneric =>
+      'something went wrong, and the rules are unchanged.';
+
+  @override
+  String get mitmRewriteMatchedTitle => 'Rule matched';
+
+  @override
+  String mitmRewriteNotAppliedTitle(String value) {
+    return 'Rewrite not applied: $value';
   }
 }

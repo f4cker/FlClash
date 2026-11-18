@@ -320,3 +320,48 @@ String mitmRewriteSurgeText(Iterable<MitmRewrite> rewrites) {
   }
   return (text: buffer.join('\n'), lines: lines);
 }
+
+/// Why a rule cannot be taken, in the user's language, from the stable code
+/// the Core gives it; a code this app does not know reads as a generic
+/// format error, with the Core's own text left for the details.
+String mitmRewriteIssueText(AppLocalizations l, MitmRewriteIssue issue) {
+  final value = issue.args.firstOrNull ?? '';
+  return switch (issue.kind) {
+    'framingHeader' => l.mitmRewriteErrorFramingHeader(value),
+    'needsValue' => l.mitmRewriteErrorNeedsValue(value),
+    'bodyHead' => l.mitmRewriteErrorBodyHead,
+    'headerLineBreak' => l.mitmRewriteErrorHeaderLineBreak,
+    'needsReplacementURL' => l.mitmRewriteErrorNeedsReplacementUrl,
+    'dataURL' => l.mitmRewriteErrorDataUrl,
+    'dataBase64' => l.mitmRewriteErrorDataBase64,
+    'dataFileName' => l.mitmRewriteErrorDataFileName(value),
+    'fileNeedsData' => l.mitmRewriteErrorFileNeedsData,
+    'bodyTooLarge' => l.mitmRewriteErrorBodyTooLarge,
+    'emptyRegex' => l.mitmRewriteErrorEmptyRegex,
+    'emptyRule' => l.mitmRewriteErrorEmptyRule,
+    'urlFieldCount' => l.mitmRewriteErrorUrlFieldCount(value),
+    'bodyPairs' => l.mitmRewriteErrorBodyPairs,
+    'headerFields' => l.mitmRewriteErrorHeaderFields,
+    'keyValue' => l.mitmRewriteErrorKeyValue(value),
+    'headerFormat' => l.mitmRewriteErrorHeaderFormat,
+    'headerReplaceRegex' => l.mitmRewriteErrorHeaderReplaceRegex,
+    'urlRegex' => l.mitmRewriteErrorUrlRegex,
+    'bodyRegex' => l.mitmRewriteErrorBodyRegex(value),
+    'invalidHeader' => l.mitmRewriteErrorInvalidHeader(value),
+    'headerName' => l.mitmRewriteErrorHeaderName(value),
+    'headerRegex' => l.mitmRewriteErrorHeaderRegex,
+    'jq' => l.mitmRewriteErrorJq,
+    'localUnreadable' => l.mitmRewriteErrorLocalUnreadable(value),
+    'localTooLarge' => l.mitmRewriteErrorLocalTooLarge(value),
+    'regexTimeout' => l.mitmRewriteErrorRegexTimeout,
+    'statusCode' => l.mitmRewriteErrorStatusCode(value),
+    'urlType' => l.mitmRewriteErrorUrlType(value),
+    'dataType' => l.mitmRewriteErrorDataType(value),
+    'headerAction' => l.mitmRewriteErrorHeaderAction(value),
+    'parameter' => l.mitmRewriteErrorParameter(value),
+    'section' => l.mitmRewriteErrorSection(value),
+    'unterminatedQuote' => l.mitmRewriteErrorUnterminatedQuote(value),
+    'outsideSection' => l.mitmRewriteErrorOutsideSection,
+    _ => l.mitmRewriteErrorGeneric,
+  };
+}

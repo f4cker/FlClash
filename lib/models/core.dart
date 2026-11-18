@@ -233,6 +233,8 @@ abstract class MitmAction with _$MitmAction {
     @Default('') String detail,
     @Default('') String rule,
     @Default('') String skipped,
+    // How long the rule took to apply; 0 when the Core did not measure it.
+    @Default(0) @JsonKey(name: 'took-ns') int tookNs,
   }) = _MitmAction;
 
   factory MitmAction.fromJson(Map<String, Object?> json) =>
@@ -308,6 +310,10 @@ abstract class MitmRewriteIssue with _$MitmRewriteIssue {
     @Default('') String section,
     // 1-based within pasted text; 0 for a stored rule.
     @Default(0) int line,
+    // What is wrong as a stable code and the values its text names; message
+    // is the Core's English, for details only.
+    @Default('') String kind,
+    @Default([]) List<String> args,
     @Default('') String message,
   }) = _MitmRewriteIssue;
 

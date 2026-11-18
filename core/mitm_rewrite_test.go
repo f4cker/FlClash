@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -310,8 +311,14 @@ func TestMitmRewriteURLDecisions(t *testing.T) {
 	if d.local == nil || string(d.local.body) != "m" || x.url != "https://a.com/v2/local?q=1" || x.originalURL != "https://a.com/v1/local?q=1" {
 		t.Fatalf("header then map local: %+v %s", d, x.url)
 	}
+	// An applied rule says how long it took; one that could not apply, nothing.
+	for _, hit := range x.hits {
+		if hit.TookNs <= 0 {
+			t.Fatalf("applied hit untimed: %+v", hit)
+		}
+	}
 	x = mitmRewriteBegin("https", "a.com", 0, "/cross", false)
-	if d := x.request(http.Header{}); d.requestURI != "" || d.local != nil || x.hits[0].Skipped != mitmSkipCrossHost {
+	if d := x.request(http.Header{}); d.requestURI != "" || d.local != nil || x.hits[0].Skipped != mitmSkipCrossHost || x.hits[0].TookNs != 0 {
 		t.Fatalf("cross host: %+v %+v", d, x.hits)
 	}
 	x = mitmRewriteBegin("https", "a.com", 0, "/bad", false)
@@ -1061,5 +1068,65 @@ func TestMitmRewriteTellsTheRequestListOncePerState(t *testing.T) {
 	}
 	if !second.Rewrite.Applied || !second.Rewrite.Failed || second.Rewrite.Hit.Skipped != mitmSkipNotText {
 		t.Fatalf("second %+v %+v", second.Rewrite, second.Rewrite.Hit)
+	}
+}
+
+// The app says what is wrong from Kind and Args, in the user's language; a
+// failure without them would reach the user as the Core's English.
+func TestMitmRewriteIssuesCarryAKind(t *testing.T) {
+	cases := []struct {
+		section, line, kind string
+		args                []string
+	}{
+		{mitmSectionURL, `^x a b c`, "urlFieldCount", []string{"4"}},
+		{mitmSectionURL, `^x https://y 999`, "urlType", []string{`"999"`}},
+		{mitmSectionURL, `^x - 302`, "needsReplacementURL", nil},
+		{mitmSectionURL, `^( https://y 302`, "urlRegex", nil},
+		{mitmSectionHeader, `^x header-add`, "headerFields", nil},
+		{mitmSectionHeader, `^x header-add Content-Length 1`, "framingHeader", []string{"Content-Length"}},
+		{mitmSectionHeader, `^x header-add X-A`, "needsValue", []string{"header-add"}},
+		{mitmSectionHeader, `^x header-replace-regex X-A a`, "headerReplaceRegex", nil},
+		{mitmSectionHeader, `^x header-replace-regex X-A ( b`, "headerRegex", nil},
+		{mitmSectionHeader, `^x header-move X-A`, "headerAction", []string{`"header-move"`}},
+		{mitmSectionBody, `http-response-jq ^x .a`, "jq", nil},
+		{mitmSectionBody, `^x a b`, "bodyHead", nil},
+		{mitmSectionBody, `http-response ^x a`, "bodyPairs", nil},
+		{mitmSectionBody, `http-response ^x ( b`, "bodyRegex", []string{`"("`}},
+		{mitmSectionMap, `^x nope`, "keyValue", []string{`"nope"`}},
+		{mitmSectionMap, `^x data-type=text data="a`, "unterminatedQuote", []string{"data"}},
+		{mitmSectionMap, `^x data-type=base64 data=!!`, "dataBase64", nil},
+		{mitmSectionMap, `^x data-type=file`, "fileNeedsData", nil},
+		{mitmSectionMap, `^x data=https://a/b`, "dataURL", nil},
+		{mitmSectionMap, `^x data=../a`, "dataFileName", []string{`"../a"`}},
+		{mitmSectionMap, `^x data-type=zip`, "dataType", []string{`"zip"`}},
+		{mitmSectionMap, `^x data-type=text status-code=99`, "statusCode", []string{`"99"`}},
+		{mitmSectionMap, `^x data-type=text header=@@`, "headerFormat", nil},
+		{mitmSectionMap, `^x data-type=text header=a`, "headerFormat", nil},
+		{mitmSectionMap, `^x data-type=text header=:b`, "invalidHeader", []string{`":b"`}},
+		{mitmSectionMap, `^x data-type=text foo=1`, "parameter", []string{`"foo"`}},
+		{"other", `^x`, "section", []string{`"other"`}},
+	}
+	for _, c := range cases {
+		_, err := parseMitmRewriteLine(c.section, c.line)
+		if err == nil {
+			t.Errorf("%s %q: no error", c.section, c.line)
+			continue
+		}
+		issue := mitmIssue(MitmRewriteIssue{}, err)
+		if issue.Kind != c.kind || !slices.Equal(issue.Args, c.args) || issue.Message == "" {
+			t.Errorf("%s %q: got %q %q (%s), want %q %q", c.section, c.line, issue.Kind, issue.Args, issue.Message, c.kind, c.args)
+		}
+	}
+
+	// Comments and blank lines are neither rules nor issues.
+	parsed := parseMitmRewriteText("[URL Rewrite]\n\n# a comment\n; another\n// and another\n^x - reject\n   \n[General]\nloglevel = info\n^y z\n")
+	if len(parsed.Rules) != 1 {
+		t.Fatalf("rules = %+v", parsed.Rules)
+	}
+	if len(parsed.Issues) != 1 || parsed.Issues[0].Kind != "section" || parsed.Issues[0].Line != 8 {
+		t.Fatalf("issues = %+v", parsed.Issues)
+	}
+	if loose := parseMitmRewriteText("nonsense"); len(loose.Issues) != 1 || loose.Issues[0].Kind != "outsideSection" {
+		t.Fatalf("loose = %+v", loose.Issues)
 	}
 }

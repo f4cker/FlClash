@@ -3051,7 +3051,7 @@ as bool,
 /// @nodoc
 mixin _$MitmAction {
 
- String get kind; String get phase; String get detail; String get rule; String get skipped;
+ String get kind; String get phase; String get detail; String get rule; String get skipped;@JsonKey(name: 'took-ns') int get tookNs;
 /// Create a copy of MitmAction
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3065,20 +3065,20 @@ $MitmActionCopyWith<MitmAction> get copyWith => _$MitmActionCopyWithImpl<MitmAct
 @override
 bool operator ==(Object other) {
   final _this = this as MitmAction;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmAction&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.phase, _this.phase) || other.phase == _this.phase)&&(identical(other.detail, _this.detail) || other.detail == _this.detail)&&(identical(other.rule, _this.rule) || other.rule == _this.rule)&&(identical(other.skipped, _this.skipped) || other.skipped == _this.skipped));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmAction&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.phase, _this.phase) || other.phase == _this.phase)&&(identical(other.detail, _this.detail) || other.detail == _this.detail)&&(identical(other.rule, _this.rule) || other.rule == _this.rule)&&(identical(other.skipped, _this.skipped) || other.skipped == _this.skipped)&&(identical(other.tookNs, _this.tookNs) || other.tookNs == _this.tookNs));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MitmAction;
-  return Object.hash(runtimeType,_this.kind,_this.phase,_this.detail,_this.rule,_this.skipped);
+  return Object.hash(runtimeType,_this.kind,_this.phase,_this.detail,_this.rule,_this.skipped,_this.tookNs);
 }
 
 @override
 String toString() {
   final _this = this as MitmAction;
-  return 'MitmAction(kind: ${_this.kind}, phase: ${_this.phase}, detail: ${_this.detail}, rule: ${_this.rule}, skipped: ${_this.skipped})';
+  return 'MitmAction(kind: ${_this.kind}, phase: ${_this.phase}, detail: ${_this.detail}, rule: ${_this.rule}, skipped: ${_this.skipped}, tookNs: ${_this.tookNs})';
 }
 
 
@@ -3089,7 +3089,7 @@ abstract mixin class $MitmActionCopyWith<$Res>  {
   factory $MitmActionCopyWith(MitmAction value, $Res Function(MitmAction) _then) = _$MitmActionCopyWithImpl;
 @useResult
 $Res call({
- String kind, String phase, String detail, String rule, String skipped
+ String kind, String phase, String detail, String rule, String skipped,@JsonKey(name: 'took-ns') int tookNs
 });
 
 
@@ -3106,14 +3106,15 @@ class _$MitmActionCopyWithImpl<$Res>
 
 /// Create a copy of MitmAction
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? phase = null,Object? detail = null,Object? rule = null,Object? skipped = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? phase = null,Object? detail = null,Object? rule = null,Object? skipped = null,Object? tookNs = null,}) {
   return _then(MitmAction(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
 as String,detail: null == detail ? _self.detail : detail // ignore: cast_nullable_to_non_nullable
 as String,rule: null == rule ? _self.rule : rule // ignore: cast_nullable_to_non_nullable
 as String,skipped: null == skipped ? _self.skipped : skipped // ignore: cast_nullable_to_non_nullable
-as String,
+as String,tookNs: null == tookNs ? _self.tookNs : tookNs // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 
@@ -3198,10 +3199,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String kind,  String phase,  String detail,  String rule,  String skipped)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmAction() when $default != null:
-return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped);case _:
+return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs);case _:
   return orElse();
 
 }
@@ -3219,10 +3220,10 @@ return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped);ca
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String kind,  String phase,  String detail,  String rule,  String skipped)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs)  $default,) {final _that = this;
 switch (_that) {
 case _MitmAction():
-return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped);case _:
+return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3239,10 +3240,10 @@ return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped);ca
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String kind,  String phase,  String detail,  String rule,  String skipped)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmAction() when $default != null:
-return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped);case _:
+return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs);case _:
   return null;
 
 }
@@ -3254,7 +3255,7 @@ return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped);ca
 @JsonSerializable()
 
 class _MitmAction implements MitmAction {
-  const _MitmAction({required this.kind, this.phase = '', this.detail = '', this.rule = '', this.skipped = ''});
+  const _MitmAction({required this.kind, this.phase = '', this.detail = '', this.rule = '', this.skipped = '', @JsonKey(name: 'took-ns') this.tookNs = 0});
   factory _MitmAction.fromJson(Map<String, dynamic> json) => _$MitmActionFromJson(json);
 
 @override final  String kind;
@@ -3262,6 +3263,7 @@ class _MitmAction implements MitmAction {
 @override@JsonKey() final  String detail;
 @override@JsonKey() final  String rule;
 @override@JsonKey() final  String skipped;
+@override@JsonKey(name: 'took-ns') final  int tookNs;
 
 /// Create a copy of MitmAction
 /// with the given fields replaced by the non-null parameter values.
@@ -3276,18 +3278,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmAction&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.phase, phase) || other.phase == phase)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.skipped, skipped) || other.skipped == skipped));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmAction&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.phase, phase) || other.phase == phase)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.skipped, skipped) || other.skipped == skipped)&&(identical(other.tookNs, tookNs) || other.tookNs == tookNs));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,kind,phase,detail,rule,skipped);
+    return Object.hash(runtimeType,kind,phase,detail,rule,skipped,tookNs);
 }
 
 @override
 String toString() {
-    return 'MitmAction(kind: $kind, phase: $phase, detail: $detail, rule: $rule, skipped: $skipped)';
+    return 'MitmAction(kind: $kind, phase: $phase, detail: $detail, rule: $rule, skipped: $skipped, tookNs: $tookNs)';
 }
 
 
@@ -3298,7 +3300,7 @@ abstract mixin class _$MitmActionCopyWith<$Res> implements $MitmActionCopyWith<$
   factory _$MitmActionCopyWith(_MitmAction value, $Res Function(_MitmAction) _then) = __$MitmActionCopyWithImpl;
 @override @useResult
 $Res call({
- String kind, String phase, String detail, String rule, String skipped
+ String kind, String phase, String detail, String rule, String skipped,@JsonKey(name: 'took-ns') int tookNs
 });
 
 
@@ -3315,14 +3317,15 @@ class __$MitmActionCopyWithImpl<$Res>
 
 /// Create a copy of MitmAction
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? phase = null,Object? detail = null,Object? rule = null,Object? skipped = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? phase = null,Object? detail = null,Object? rule = null,Object? skipped = null,Object? tookNs = null,}) {
   return _then(_MitmAction(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
 as String,detail: null == detail ? _self.detail : detail // ignore: cast_nullable_to_non_nullable
 as String,rule: null == rule ? _self.rule : rule // ignore: cast_nullable_to_non_nullable
 as String,skipped: null == skipped ? _self.skipped : skipped // ignore: cast_nullable_to_non_nullable
-as String,
+as String,tookNs: null == tookNs ? _self.tookNs : tookNs // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 
@@ -3999,7 +4002,7 @@ as bool,
 /// @nodoc
 mixin _$MitmRewriteIssue {
 
- String get rule; String get section; int get line; String get message;
+ String get rule; String get section; int get line; String get kind; List<String> get args; String get message;
 /// Create a copy of MitmRewriteIssue
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4013,20 +4016,20 @@ $MitmRewriteIssueCopyWith<MitmRewriteIssue> get copyWith => _$MitmRewriteIssueCo
 @override
 bool operator ==(Object other) {
   final _this = this as MitmRewriteIssue;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmRewriteIssue&&(identical(other.rule, _this.rule) || other.rule == _this.rule)&&(identical(other.section, _this.section) || other.section == _this.section)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.message, _this.message) || other.message == _this.message));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmRewriteIssue&&(identical(other.rule, _this.rule) || other.rule == _this.rule)&&(identical(other.section, _this.section) || other.section == _this.section)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&const DeepCollectionEquality().equals(other.args, _this.args)&&(identical(other.message, _this.message) || other.message == _this.message));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MitmRewriteIssue;
-  return Object.hash(runtimeType,_this.rule,_this.section,_this.line,_this.message);
+  return Object.hash(runtimeType,_this.rule,_this.section,_this.line,_this.kind,const DeepCollectionEquality().hash(_this.args),_this.message);
 }
 
 @override
 String toString() {
   final _this = this as MitmRewriteIssue;
-  return 'MitmRewriteIssue(rule: ${_this.rule}, section: ${_this.section}, line: ${_this.line}, message: ${_this.message})';
+  return 'MitmRewriteIssue(rule: ${_this.rule}, section: ${_this.section}, line: ${_this.line}, kind: ${_this.kind}, args: ${_this.args}, message: ${_this.message})';
 }
 
 
@@ -4037,7 +4040,7 @@ abstract mixin class $MitmRewriteIssueCopyWith<$Res>  {
   factory $MitmRewriteIssueCopyWith(MitmRewriteIssue value, $Res Function(MitmRewriteIssue) _then) = _$MitmRewriteIssueCopyWithImpl;
 @useResult
 $Res call({
- String rule, String section, int line, String message
+ String rule, String section, int line, String kind, List<String> args, String message
 });
 
 
@@ -4054,12 +4057,14 @@ class _$MitmRewriteIssueCopyWithImpl<$Res>
 
 /// Create a copy of MitmRewriteIssue
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? rule = null,Object? section = null,Object? line = null,Object? message = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? rule = null,Object? section = null,Object? line = null,Object? kind = null,Object? args = null,Object? message = null,}) {
   return _then(MitmRewriteIssue(
 rule: null == rule ? _self.rule : rule // ignore: cast_nullable_to_non_nullable
 as String,section: null == section ? _self.section : section // ignore: cast_nullable_to_non_nullable
 as String,line: null == line ? _self.line : line // ignore: cast_nullable_to_non_nullable
-as int,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as int,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as String,args: null == args ? _self.args : args // ignore: cast_nullable_to_non_nullable
+as List<String>,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -4145,10 +4150,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String rule,  String section,  int line,  String message)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String rule,  String section,  int line,  String kind,  List<String> args,  String message)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmRewriteIssue() when $default != null:
-return $default(_that.rule,_that.section,_that.line,_that.message);case _:
+return $default(_that.rule,_that.section,_that.line,_that.kind,_that.args,_that.message);case _:
   return orElse();
 
 }
@@ -4166,10 +4171,10 @@ return $default(_that.rule,_that.section,_that.line,_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String rule,  String section,  int line,  String message)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String rule,  String section,  int line,  String kind,  List<String> args,  String message)  $default,) {final _that = this;
 switch (_that) {
 case _MitmRewriteIssue():
-return $default(_that.rule,_that.section,_that.line,_that.message);case _:
+return $default(_that.rule,_that.section,_that.line,_that.kind,_that.args,_that.message);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4186,10 +4191,10 @@ return $default(_that.rule,_that.section,_that.line,_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String rule,  String section,  int line,  String message)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String rule,  String section,  int line,  String kind,  List<String> args,  String message)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmRewriteIssue() when $default != null:
-return $default(_that.rule,_that.section,_that.line,_that.message);case _:
+return $default(_that.rule,_that.section,_that.line,_that.kind,_that.args,_that.message);case _:
   return null;
 
 }
@@ -4201,12 +4206,20 @@ return $default(_that.rule,_that.section,_that.line,_that.message);case _:
 @JsonSerializable()
 
 class _MitmRewriteIssue implements MitmRewriteIssue {
-  const _MitmRewriteIssue({this.rule = '', this.section = '', this.line = 0, this.message = ''});
+  const _MitmRewriteIssue({this.rule = '', this.section = '', this.line = 0, this.kind = '',  List<String> args = const [], this.message = ''}): _args = args;
   factory _MitmRewriteIssue.fromJson(Map<String, dynamic> json) => _$MitmRewriteIssueFromJson(json);
 
 @override@JsonKey() final  String rule;
 @override@JsonKey() final  String section;
 @override@JsonKey() final  int line;
+@override@JsonKey() final  String kind;
+ final  List<String> _args;
+@override@JsonKey() List<String> get args {
+  if (_args is EqualUnmodifiableListView) return _args;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_args);
+}
+
 @override@JsonKey() final  String message;
 
 /// Create a copy of MitmRewriteIssue
@@ -4222,18 +4235,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmRewriteIssue&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.section, section) || other.section == section)&&(identical(other.line, line) || other.line == line)&&(identical(other.message, message) || other.message == message));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmRewriteIssue&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.section, section) || other.section == section)&&(identical(other.line, line) || other.line == line)&&(identical(other.kind, kind) || other.kind == kind)&&const DeepCollectionEquality().equals(other.args, _args)&&(identical(other.message, message) || other.message == message));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,rule,section,line,message);
+    return Object.hash(runtimeType,rule,section,line,kind,const DeepCollectionEquality().hash(_args),message);
 }
 
 @override
 String toString() {
-    return 'MitmRewriteIssue(rule: $rule, section: $section, line: $line, message: $message)';
+    return 'MitmRewriteIssue(rule: $rule, section: $section, line: $line, kind: $kind, args: $args, message: $message)';
 }
 
 
@@ -4244,7 +4257,7 @@ abstract mixin class _$MitmRewriteIssueCopyWith<$Res> implements $MitmRewriteIss
   factory _$MitmRewriteIssueCopyWith(_MitmRewriteIssue value, $Res Function(_MitmRewriteIssue) _then) = __$MitmRewriteIssueCopyWithImpl;
 @override @useResult
 $Res call({
- String rule, String section, int line, String message
+ String rule, String section, int line, String kind, List<String> args, String message
 });
 
 
@@ -4261,12 +4274,14 @@ class __$MitmRewriteIssueCopyWithImpl<$Res>
 
 /// Create a copy of MitmRewriteIssue
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? rule = null,Object? section = null,Object? line = null,Object? message = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? rule = null,Object? section = null,Object? line = null,Object? kind = null,Object? args = null,Object? message = null,}) {
   return _then(_MitmRewriteIssue(
 rule: null == rule ? _self.rule : rule // ignore: cast_nullable_to_non_nullable
 as String,section: null == section ? _self.section : section // ignore: cast_nullable_to_non_nullable
 as String,line: null == line ? _self.line : line // ignore: cast_nullable_to_non_nullable
-as int,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as int,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as String,args: null == args ? _self._args : args // ignore: cast_nullable_to_non_nullable
+as List<String>,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

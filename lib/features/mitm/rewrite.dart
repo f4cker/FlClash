@@ -20,7 +20,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'rewrite_dialogs.dart';
 
 const mitmRewriteErrorInk = Color(0xFFB3261E);
-const _errorInkDark = Color(0xFFF2B8B5);
+// #FF8A80 on the dark invalid fill below reads at over 4.5:1.
+const _errorInkDark = Color(0xFFFF8A80);
+
+// An invalid row's fill, design review 1 §3: a light tint, and on dark the
+// error red at 12% over the card. Its turned-off switch keeps a grey track
+// rather than the fill showing through.
+const _invalidFillLight = Color(0xFFFFF8F7);
+const _invalidFillDark = Color(0xFF3A2424);
+const _disabledTrackLight = Color(0xFFE5E5EA);
+const _disabledTrackDark = Color(0xFF3A3A3C);
 const _flashFill = Color(0x1A007AFF);
 const _flashDuration = Duration(milliseconds: 1500);
 
@@ -221,7 +230,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
       if (mounted) {
         setState(() {
           _error = context.appLocalizations.mitmRewriteNotApplied(
-            userFacingErrorMessage(error, context.appLocalizations),
+            mitmRewriteFailureText(context.appLocalizations, error),
           );
         });
       }
@@ -320,11 +329,18 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
       ),
     );
     if (result == null || result.isEmpty || !mounted) return;
+    // The count is of rules now stored, not of lines the check passed; that
+    // they are saved says nothing yet of traffic, so the banner says
+    // imported, not applied.
+    final ids = {
+      for (final rewrite in _rewrites(profileId))
+        if (result.any((added) => added.id == rewrite.id)) rewrite.id,
+    };
+    if (ids.isEmpty) return;
     dialogs.showBanner(
-      context.appLocalizations.mitmRewriteImported(result.length),
+      context.appLocalizations.mitmRewriteImported(ids.length),
       level: BannerLevel.success,
     );
-    final ids = result.map((rewrite) => rewrite.id).toSet();
     final first = _rewrites(profileId).firstWhere(
       (rewrite) => ids.contains(rewrite.id),
       orElse: () => result.first,
@@ -370,9 +386,9 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
         : ref.watch(profileMitmRewritesProvider(profileId));
     final rewrites = value?.value ?? const <MitmRewrite>[];
     final issues = profileId == null
-        ? const <int, String>{}
+        ? const <int, MitmRewriteIssue>{}
         : ref.watch(mitmRewriteIssuesProvider(profileId)).value ??
-              const <int, String>{};
+              const <int, MitmRewriteIssue>{};
     final bodyLimit = ref.watch(mitmRewriteBodyLimitProvider).value ?? 0;
     final invalid = {
       for (final rewrite in rewrites)
@@ -421,8 +437,9 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
               onSearch: (query) => setState(() => _query = query),
               hintText: appLocalizations.mitmRewriteSearchHint,
             ),
+      // With no rules the empty state's own button is the one way in.
       actions: [
-        if (profileId != null)
+        if (profileId != null && rewrites.isNotEmpty)
           FilledButton(
             key: MitmRewriteView.pasteKey,
             onPressed: () => _paste(profileId),
@@ -486,7 +503,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
     required int? profileId,
     required bool loading,
     required List<MitmRewrite> rewrites,
-    required Map<int, String> issues,
+    required Map<int, MitmRewriteIssue> issues,
     required int bodyLimit,
     required bool decrypting,
   }) {
@@ -636,7 +653,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
 class _MitmRewriteRow extends StatelessWidget {
   final MitmRewrite rewrite;
   final MitmRewriteDescription? description;
-  final String? issue;
+  final MitmRewriteIssue? issue;
   final bool pending;
   final bool flashing;
   final ValueChanged<bool> onToggle;
@@ -737,31 +754,41 @@ class _MitmRewriteRow extends StatelessWidget {
             style: secondary,
           ),
         if (issue != null)
-          Text.rich(
-            TextSpan(
-              children: [
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.middle,
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 4),
-                    child: GlyphIcon(
-                      AppGlyphs.warning,
-                      size: 13,
-                      color: mitmRewriteErrorColor(context),
+          // The Core's own words stay in the details, never in the red line.
+          Tooltip(
+            message: issue.message,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 4),
+                      child: GlyphIcon(
+                        AppGlyphs.warning,
+                        size: 13,
+                        color: mitmRewriteErrorColor(context),
+                      ),
                     ),
                   ),
-                ),
-                TextSpan(text: appLocalizations.mitmRewriteInvalid(issue)),
-              ],
+                  TextSpan(
+                    text: appLocalizations.mitmRewriteInvalid(
+                      mitmRewriteIssueText(appLocalizations, issue),
+                    ),
+                  ),
+                ],
+              ),
+              style: AppTextStyle.footnote
+                  .of(context)
+                  .copyWith(color: mitmRewriteErrorColor(context)),
             ),
-            style: AppTextStyle.footnote
-                .of(context)
-                .copyWith(color: mitmRewriteErrorColor(context)),
           ),
       ],
     );
     final toggleLabel = issue != null
-        ? appLocalizations.mitmRewriteInvalidSpoken(issue)
+        ? appLocalizations.mitmRewriteInvalidSpoken(
+            mitmRewriteIssueText(appLocalizations, issue),
+          )
         : appLocalizations.mitmRewriteToggleLabel(
             description?.action ?? rewrite.section.key,
             description?.match ?? rewrite.line,
@@ -783,6 +810,25 @@ class _MitmRewriteRow extends StatelessWidget {
             fadeWhenDisabled: true,
             onChanged: issue != null ? null : onToggle,
           );
+    final dark = colorScheme.brightness == Brightness.dark;
+    final shownToggle = issue == null || pending
+        ? toggle
+        : Stack(
+            alignment: Alignment.center,
+            children: [
+              DecoratedBox(
+                decoration: ShapeDecoration(
+                  color: dark ? _disabledTrackDark : _disabledTrackLight,
+                  shape: AppShape.full,
+                ),
+                child: const SizedBox(
+                  width: Switch.trackWidth,
+                  height: Switch.trackHeight,
+                ),
+              ),
+              toggle,
+            ],
+          );
     final desktop = system.isDesktop;
     return RuleRowHover(
       builder: (context, shown) => ContextMenuRegion(
@@ -799,35 +845,63 @@ class _MitmRewriteRow extends StatelessWidget {
                 listItemRadiusOf(ItemPositionProvider.of(context)?.position),
               ),
             ),
-            child: DecorationListItem(
+            child: _InvalidFill(
               invalid: issue != null,
-              onPressed: desktop ? null : onEdit,
-              title: title,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 8,
-                children: [
-                  if (shown && desktop) ...[
-                    RuleRowAction(
-                      glyph: AppGlyphs.edit,
-                      color: const Color(0xFF3F3E45),
-                      label: appLocalizations.edit,
-                      onPressed: onEdit,
-                    ),
-                    RuleRowAction(
-                      glyph: AppGlyphs.delete,
-                      color: mitmRewriteErrorInk,
-                      label: appLocalizations.delete,
-                      onPressed: onDelete,
-                    ),
+              child: DecorationListItem(
+                invalid: issue != null,
+                onPressed: desktop ? null : onEdit,
+                title: title,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 8,
+                  children: [
+                    if (shown && desktop) ...[
+                      RuleRowAction(
+                        glyph: AppGlyphs.edit,
+                        color: const Color(0xFF3F3E45),
+                        label: appLocalizations.edit,
+                        onPressed: onEdit,
+                      ),
+                      RuleRowAction(
+                        glyph: AppGlyphs.delete,
+                        color: mitmRewriteErrorInk,
+                        label: appLocalizations.delete,
+                        onPressed: onDelete,
+                      ),
+                    ],
+                    shownToggle,
                   ],
-                  toggle,
-                ],
+                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Gives an invalid row the rewrite page's own fill in place of the shared
+/// error container.
+class _InvalidFill extends StatelessWidget {
+  const _InvalidFill({required this.invalid, required this.child});
+
+  final bool invalid;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!invalid) return child;
+    final theme = Theme.of(context);
+    final dark = theme.colorScheme.brightness == Brightness.dark;
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
+          errorContainer: dark ? _invalidFillDark : _invalidFillLight,
+        ),
+        scaffoldBackgroundColor: theme.scaffoldBackgroundColor,
+      ),
+      child: child,
     );
   }
 }
