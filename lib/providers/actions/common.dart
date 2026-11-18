@@ -5,6 +5,7 @@ class CommonAction extends _$CommonAction {
   CoreController get _core => ref.read(coreHandlerProvider);
   bool _isUpdatingTraffic = false;
   CancelToken? _updateCancelToken;
+  _MacStagedUpdate? _macStaged;
 
   @override
   void build() {}
@@ -85,12 +86,24 @@ class CommonAction extends _$CommonAction {
 
   Future<bool> autoCheckUpdate() async {
     if (!ref.read(appSettingProvider).autoCheckUpdate) return false;
-    final result = await request.checkForUpdate(
+    final result = await checkForAppUpdate();
+    await checkUpdateResultHandle(result);
+    return result is UpdateAvailable;
+  }
+
+  /// macOS reads the signed manifest and compares build numbers; elsewhere
+  /// the latest GitHub release and its version are compared.
+  Future<UpdateCheck> checkForAppUpdate() {
+    if (system.isMacOS) {
+      return request.checkForMacUpdate(
+        installedBuild: macBuildNumber(globalState.packageInfo.buildNumber),
+        arch: macUpdateArch(Abi.current()),
+      );
+    }
+    return request.checkForUpdate(
       version: globalState.packageInfo.version,
       assetSuffix: releaseAssetSuffix,
     );
-    await checkUpdateResultHandle(result);
-    return result is UpdateAvailable;
   }
 
   TextSpan _releaseSpan(BuildContext context, String tagName, String? body) {
@@ -142,7 +155,9 @@ class CommonAction extends _$CommonAction {
     UpdateCheck result, {
     bool isUser = false,
   }) async {
-    if (result case UpdateAvailable(release: final data)) {
+    if (result case UpdateAvailable(:final MacUpdateManifest manifest)) {
+      await _offerMacUpdate(manifest, isUser: isUser);
+    } else if (result case UpdateAvailable(release: final data)) {
       final context = globalState.navigatorKey.currentContext!;
       final tag = data['tag_name'] as String;
       final suffix = selfUpdateSuffix;
@@ -168,6 +183,12 @@ class CommonAction extends _$CommonAction {
     } else if (isUser) {
       final message = switch (result) {
         UpdateNoRelease() => currentAppLocalizations.updateNoReleaseFound,
+        UpdateCheckFailed(
+          error: MacUpdateManifestException(
+            reason: MacUpdateRejection.notConfigured,
+          ),
+        ) =>
+          currentAppLocalizations.macUpdateNotConfigured,
         UpdateCheckFailed() => currentAppLocalizations.updateCheckFailed,
         UpdateUpToDate() ||
         UpdateAvailable() => currentAppLocalizations.checkUpdateError,
@@ -184,9 +205,226 @@ class CommonAction extends _$CommonAction {
   void _openReleasePage() {
     unawaited(
       launchUrl(
-        Uri.parse('https://github.com/$updateRepository/releases/latest'),
+        Uri.parse(
+          system.isMacOS
+              ? macUpdateReleasesPage
+              : 'https://github.com/$updateRepository/releases/latest',
+        ),
       ),
     );
+  }
+
+  Future<void> _offerMacUpdate(
+    MacUpdateManifest manifest, {
+    required bool isUser,
+  }) async {
+    final context = globalState.navigatorKey.currentContext!;
+    final asset = manifest.assetFor(macUpdateArch(Abi.current()) ?? '')!;
+    final res = await dialogs.showMessage(
+      title: currentAppLocalizations.discoverNewVersion,
+      message: TextSpan(
+        children: [
+          _releaseSpan(context, manifest.tag, manifest.notes),
+          TextSpan(
+            text:
+                '\n${currentAppLocalizations.macUpdateSize(asset.size.traffic.show)}',
+            style: AppTextStyle.subheadline.of(context),
+          ),
+        ],
+      ),
+      confirmText: currentAppLocalizations.macUpdateDownloadAndInstall,
+      cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
+    );
+    if (res == true) {
+      unawaited(_downloadMacUpdate(manifest, asset));
+    } else if (!isUser && res == false) {
+      ref
+          .read(appSettingProvider.notifier)
+          .update((state) => state.copyWith(autoCheckUpdate: false));
+    }
+  }
+
+  Future<void> _downloadMacUpdate(
+    MacUpdateManifest manifest,
+    MacUpdateAsset asset,
+  ) async {
+    final updater = macUpdater;
+    final download = ref.read(updateDownloadStateProvider.notifier);
+    if (updater == null || download.value != null) return;
+    final cancelToken = CancelToken();
+    _updateCancelToken = cancelToken;
+    _macStaged = null;
+    final tag = manifest.tag;
+    download.value = UpdateDownloading(tag, total: asset.size);
+    dialogs.showBanner(currentAppLocalizations.updateDownloadStarted);
+    try {
+      final directory = await appPath.updateDirPath;
+      await clearUpdateDownloads();
+      await Directory(directory).create(recursive: true);
+      var shown = 0;
+      final path = await request.downloadMacUpdate(
+        asset: asset,
+        directory: directory,
+        cancelToken: cancelToken,
+        onReceiveProgress: (received, total) {
+          if (received - shown < total / 100 && received != total) return;
+          shown = received;
+          download.value = UpdateDownloading(
+            tag,
+            received: received,
+            total: total,
+          );
+        },
+      );
+      final prepared = await updater.prepare(
+        manifest: manifest.envelope,
+        archive: path,
+      );
+      if (prepared.needsManualInstall) {
+        download.value = null;
+        await _revealMacUpdate(updater, path, manifest.version, prepared);
+        return;
+      }
+      if (!prepared.ok || prepared.staged == null) {
+        throw _MacUpdateFailure(prepared);
+      }
+      _macStaged = _MacStagedUpdate(manifest, prepared.staged!, path);
+      download.value = UpdateReady(tag, path);
+      dialogs.showBanner(
+        currentAppLocalizations.updateReadyTip,
+        level: BannerLevel.success,
+        onTap: () => unawaited(installUpdate()),
+      );
+      final res = await dialogs.showMessage(
+        title: currentAppLocalizations.macUpdateReadyTitle,
+        message: TextSpan(
+          text: [
+            currentAppLocalizations.macUpdateReadyMessage(manifest.version),
+            if (prepared.recordUnreadable)
+              currentAppLocalizations.macUpdateRecordHint,
+          ].join('\n\n'),
+        ),
+        confirmText: currentAppLocalizations.macUpdateRestartNow,
+        cancelText: currentAppLocalizations.macUpdateLater,
+      );
+      if (res == true) await installUpdate();
+    } catch (error) {
+      download.value = null;
+      _macStaged = null;
+      await clearUpdateDownloads();
+      unawaited(updater.cleanup());
+      if (error is DioException && CancelToken.isCancel(error)) {
+        return;
+      }
+      commonPrint.log(
+        'Update download failed: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+      await _showUpdateFailure(
+        error is _MacUpdateFailure
+            ? _macUpdateMessage(error.result)
+            : userFacingErrorMessage(error, currentAppLocalizations),
+      );
+    } finally {
+      if (identical(_updateCancelToken, cancelToken)) {
+        _updateCancelToken = null;
+      }
+    }
+  }
+
+  Future<void> _revealMacUpdate(
+    MacUpdater updater,
+    String archive,
+    String version,
+    MacUpdateResult reason,
+  ) async {
+    final shown = await updater.reveal(archive: archive, version: version);
+    commonPrint.log(
+      'Update shown in Finder (${reason.code}): ${shown.code} ${shown.detail}',
+      logLevel: LogLevel.warning,
+    );
+    if (!shown.ok) {
+      await _showUpdateFailure(currentAppLocalizations.updateInstallFailed);
+      return;
+    }
+    await dialogs.showAlert(
+      title: currentAppLocalizations.checkUpdate,
+      message: TextSpan(text: _macUpdateMessage(reason)),
+    );
+  }
+
+  String _macUpdateMessage(MacUpdateResult result) {
+    final l10n = currentAppLocalizations;
+    return switch (result.code) {
+      'notWritable' => l10n.macUpdateNotWritable,
+      'notInApplications' => l10n.macUpdateNotInApplications,
+      'notConfigured' => l10n.macUpdateNotConfigured,
+      'notNewer' => l10n.macUpdateNotNewer,
+      'launcherChanged' => l10n.macUpdateLauncherChanged,
+      'helperOlder' => l10n.macUpdateHelperOlder,
+      'rolledBack' => l10n.macUpdateRolledBack,
+      'rollbackFailed' => l10n.macUpdateRollbackFailed,
+      'coreStopFailed' => l10n.macUpdateCoreStopFailed,
+      'rejected' => l10n.macUpdateRejected,
+      _ => l10n.macUpdateInstallFailed,
+    };
+  }
+
+  /// Stops the Core first: once the bundle changes, the helper no longer
+  /// accepts this (old) app's requests, a stop request included.
+  Future<void> _installMacUpdate(UpdateReady download) async {
+    final staged = _macStaged;
+    final updater = macUpdater;
+    if (staged == null || updater == null || staged.archive != download.path) {
+      return;
+    }
+    dialogs.showBanner(currentAppLocalizations.macUpdateInstalling);
+    try {
+      await _core.stop();
+    } catch (error) {
+      commonPrint.log(
+        'Core stop before update failed: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+      await _restartAfterFailedMacUpdate();
+      await _showUpdateFailure(
+        _macUpdateMessage(const MacUpdateResult('coreStopFailed')),
+      );
+      return;
+    }
+    final result = await updater.install(staged.path);
+    if (result.ok) {
+      _macStaged = null;
+      ref.read(updateDownloadStateProvider.notifier).value = null;
+      await updater.relaunchAfterExit();
+      await ref.read(systemActionProvider.notifier).handleExit();
+      return;
+    }
+    commonPrint.log(
+      'Update install failed: ${result.code} ${result.detail}',
+      logLevel: LogLevel.warning,
+    );
+    _macStaged = null;
+    ref.read(updateDownloadStateProvider.notifier).value = null;
+    await _restartAfterFailedMacUpdate();
+    if (result.needsManualInstall) {
+      await _revealMacUpdate(
+        updater,
+        staged.archive,
+        staged.manifest.version,
+        result,
+      );
+    } else {
+      await _showUpdateFailure(_macUpdateMessage(result));
+    }
+    if (result.code != 'rollbackFailed') {
+      await clearUpdateDownloads();
+      unawaited(updater.cleanup());
+    }
+  }
+
+  Future<void> _restartAfterFailedMacUpdate() async {
+    await ref.read(coreActionProvider.notifier).restartCore();
   }
 
   /// Downloads the latest release for this build even when it is not newer.
@@ -273,6 +511,10 @@ class CommonAction extends _$CommonAction {
   Future<void> installUpdate() async {
     final download = ref.read(updateDownloadStateProvider);
     if (download is! UpdateReady) return;
+    if (system.isMacOS) {
+      await _installMacUpdate(download);
+      return;
+    }
     if (system.isAndroid) {
       ref.read(updateDownloadStateProvider.notifier).value = null;
       final status = await app?.installPackage(download.path);
@@ -300,4 +542,21 @@ class CommonAction extends _$CommonAction {
       _openReleasePage();
     }
   }
+}
+
+final class _MacStagedUpdate {
+  final MacUpdateManifest manifest;
+  final String path;
+  final String archive;
+
+  const _MacStagedUpdate(this.manifest, this.path, this.archive);
+}
+
+final class _MacUpdateFailure implements Exception {
+  final MacUpdateResult result;
+
+  const _MacUpdateFailure(this.result);
+
+  @override
+  String toString() => 'MacUpdateFailure(${result.code}): ${result.detail}';
 }

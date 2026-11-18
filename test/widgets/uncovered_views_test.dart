@@ -5,6 +5,9 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:fl_clash/common/app_update.dart';
 import 'package:fl_clash/common/app_localizations.dart';
+import 'package:fl_clash/common/constant.dart';
+import 'package:fl_clash/common/mac_update.dart';
+import 'package:fl_clash/common/system.dart';
 import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/common/l10n_labels.dart';
 import 'package:fl_clash/common/request.dart';
@@ -355,9 +358,14 @@ void main() {
   ) async {
     final container = _containerFor(tester);
     final originalAdapter = request.dio.httpClientAdapter;
-    addTearDown(() => request.dio.httpClientAdapter = originalAdapter);
+    final originalReleaseAdapter = request.releaseDio.httpClientAdapter;
+    addTearDown(() {
+      request.dio.httpClientAdapter = originalAdapter;
+      request.releaseDio.httpClientAdapter = originalReleaseAdapter;
+    });
     final adapter = _PendingAdapter();
     request.dio.httpClientAdapter = adapter;
+    request.releaseDio.httpClientAdapter = adapter;
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -367,6 +375,24 @@ void main() {
     );
     await tester.pump();
     expect(tester.widget<LoadingBar>(find.byType(LoadingBar)).active, isFalse);
+
+    if (system.isMacOS && !macUpdateKeyPinned(macUpdatePublicKey)) {
+      // A build without a pinned update key answers without the network.
+      await tester.tap(find.text('Check for updates'));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(adapter.requests, 0);
+      expect(
+        tester.widget<LoadingBar>(find.byType(LoadingBar)).active,
+        isFalse,
+      );
+      expect(
+        find.text(currentAppLocalizations.macUpdateNotConfigured),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), null);
+      return;
+    }
 
     await tester.tap(find.text('Check for updates'));
     await tester.pump();

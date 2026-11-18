@@ -6630,6 +6630,120 @@ abstract class AppLocalizations {
   /// **'The downloaded update could not be verified.'**
   String get updateNotVerified;
 
+  /// No description provided for @macUpdateDownloadAndInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Download and install'**
+  String get macUpdateDownloadAndInstall;
+
+  /// No description provided for @macUpdateSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Size: {size}'**
+  String macUpdateSize(Object size);
+
+  /// No description provided for @macUpdateReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update ready'**
+  String get macUpdateReadyTitle;
+
+  /// No description provided for @macUpdateReadyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash {version} has been downloaded and verified. Restarting briefly stops the connection, replaces Flash and opens it again.'**
+  String macUpdateReadyMessage(Object version);
+
+  /// No description provided for @macUpdateRestartNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart and install'**
+  String get macUpdateRestartNow;
+
+  /// No description provided for @macUpdateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get macUpdateLater;
+
+  /// No description provided for @macUpdateInstalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing the update…'**
+  String get macUpdateInstalling;
+
+  /// No description provided for @macUpdateNotWritable.
+  ///
+  /// In en, this message translates to:
+  /// **'This account can\'t change the Applications folder (it may not be an administrator). The verified new version is shown in Finder: drag it into Applications to replace the old one. An administrator password is needed.'**
+  String get macUpdateNotWritable;
+
+  /// No description provided for @macUpdateNotInApplications.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash is not in the Applications folder, so it can\'t replace itself. The verified new version is shown in Finder: drag it into Applications.'**
+  String get macUpdateNotInApplications;
+
+  /// No description provided for @macUpdateNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'This build can\'t update itself yet. Download the new version from the release page.'**
+  String get macUpdateNotConfigured;
+
+  /// No description provided for @macUpdateRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The update did not pass Flash\'s checks and was deleted. Nothing was changed. Try again later, or download it from the release page.'**
+  String get macUpdateRejected;
+
+  /// No description provided for @macUpdateNotNewer.
+  ///
+  /// In en, this message translates to:
+  /// **'The downloaded version is not newer than this one, so nothing was installed.'**
+  String get macUpdateNotNewer;
+
+  /// No description provided for @macUpdateLauncherChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'This version changes the helper\'s launcher, so it can\'t be installed from inside Flash. Download it from the release page and install it by hand.'**
+  String get macUpdateLauncherChanged;
+
+  /// No description provided for @macUpdateHelperOlder.
+  ///
+  /// In en, this message translates to:
+  /// **'The new version\'s helper is older than one this Mac has already run, so the update was cancelled.'**
+  String get macUpdateHelperOlder;
+
+  /// No description provided for @macUpdateRolledBack.
+  ///
+  /// In en, this message translates to:
+  /// **'The new version failed its check after installing, so the previous version was put back.'**
+  String get macUpdateRolledBack;
+
+  /// No description provided for @macUpdateRollbackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The update failed and the previous version could not be put back. Download Flash from the release page and install it again.'**
+  String get macUpdateRollbackFailed;
+
+  /// No description provided for @macUpdateInstallFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash could not replace itself. The current version is unchanged.'**
+  String get macUpdateInstallFailed;
+
+  /// No description provided for @macUpdateCoreStopFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The core could not be stopped, so the update was not installed.'**
+  String get macUpdateCoreStopFailed;
+
+  /// No description provided for @macUpdateRecordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper\'s version record on this Mac can\'t be read. The update installs, but does not fix that record; follow the helper card afterwards.'**
+  String get macUpdateRecordHint;
+
   /// No description provided for @updateRestartTip.
   ///
   /// In en, this message translates to:

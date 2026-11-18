@@ -132,6 +132,129 @@ class Request {
     }
   }
 
+  /// The signed manifest at [url]; any HTTPS host, following redirects.
+  Future<UpdateCheck> checkForMacUpdate({
+    required int? installedBuild,
+    required String? arch,
+    String url = macUpdateManifestUrl,
+    String publicKey = macUpdatePublicKey,
+  }) async {
+    try {
+      if (!macUpdateKeyPinned(publicKey)) {
+        throw const MacUpdateManifestException(
+          MacUpdateRejection.notConfigured,
+        );
+      }
+      if (installedBuild == null || arch == null) {
+        throw StateError('No build number or architecture to update from');
+      }
+      final response = await _getHttps<List<int>>(
+        Uri.parse(url),
+        ResponseType.bytes,
+      );
+      final manifest = openMacUpdateManifest(
+        response.data ?? const [],
+        publicKey: publicKey,
+      );
+      if (manifest.assetFor(arch) == null) return const UpdateNoRelease();
+      if (!macUpdateIsNewer(manifest, installedBuild)) {
+        return const UpdateUpToDate();
+      }
+      return UpdateAvailable({
+        'tag_name': manifest.tag,
+        'body': manifest.notes,
+      }, manifest: manifest);
+    } catch (error) {
+      commonPrint.log(
+        'checkForMacUpdate failed: ${compactError(error)}',
+        logLevel: LogLevel.warning,
+      );
+      return UpdateCheckFailed(error);
+    }
+  }
+
+  /// Downloads [asset] into [directory] and keeps it only when its size and
+  /// SHA-256 are the ones the signed manifest names.
+  Future<String> downloadMacUpdate({
+    required MacUpdateAsset asset,
+    required String directory,
+    ProgressCallback? onReceiveProgress,
+    CancelToken? cancelToken,
+  }) async {
+    final path = join(directory, asset.name);
+    final response = await _getHttps<ResponseBody>(
+      asset.url,
+      ResponseType.stream,
+      cancelToken: cancelToken,
+    );
+    final file = File(path).openWrite();
+    var received = 0;
+    try {
+      try {
+        await for (final chunk in response.data!.stream) {
+          received += chunk.length;
+          if (received > asset.size) {
+            throw ReleaseNotVerifiedException(asset.name);
+          }
+          file.add(chunk);
+          onReceiveProgress?.call(received, asset.size);
+        }
+      } finally {
+        await file.close();
+      }
+      if (received != asset.size || await fileSha256(path) != asset.sha256) {
+        throw ReleaseNotVerifiedException(asset.name);
+      }
+    } catch (_) {
+      await safeDeletePath(path);
+      rethrow;
+    }
+    return path;
+  }
+
+  Future<Response<T>> _getHttps<T>(
+    Uri uri,
+    ResponseType responseType, {
+    CancelToken? cancelToken,
+  }) async {
+    var target = uri;
+    for (var hop = 0; hop <= _maxRedirects; hop++) {
+      if (target.scheme != 'https' || target.host.isEmpty) {
+        throw const MacUpdateManifestException(MacUpdateRejection.insecureUrl);
+      }
+      final response = await releaseDio.getUri<T>(
+        target,
+        options: Options(
+          responseType: responseType,
+          followRedirects: false,
+          validateStatus: (status) =>
+              status == HttpStatus.ok || _redirect(status),
+        ),
+        cancelToken: cancelToken,
+      );
+      if (!_redirect(response.statusCode)) return response;
+      if (response.data case final ResponseBody body) {
+        await body.stream.drain<void>();
+      }
+      final location = response.headers.value(HttpHeaders.locationHeader);
+      if (location == null) {
+        throw const FormatException('A redirect without a location');
+      }
+      target = target.resolve(location);
+    }
+    throw const FormatException('Too many redirects');
+  }
+
+  static const _maxRedirects = 10;
+
+  static bool _redirect(int? status) => const {
+    HttpStatus.movedPermanently,
+    HttpStatus.found,
+    HttpStatus.seeOther,
+    HttpStatus.temporaryRedirect,
+    HttpStatus.permanentRedirect,
+  }.contains(status);
+
   /// Null when nothing is published; the page answers past the API quota.
   Future<Map<String, dynamic>?> latestRelease() async {
     try {

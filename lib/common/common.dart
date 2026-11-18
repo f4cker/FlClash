@@ -29,6 +29,7 @@ export 'link_receiver.dart';
 export 'linux_elevation.dart';
 export 'log_payload.dart';
 export 'lock.dart';
+export 'mac_update.dart';
 export 'mixin.dart';
 export 'network.dart';
 export 'network_error.dart';

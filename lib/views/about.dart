@@ -29,10 +29,7 @@ class AboutView extends ConsumerWidget {
     if (ref.read(loadingProvider(LoadingTag.checkUpdate))) return;
     final commonAction = ref.read(commonActionProvider.notifier);
     final result = await globalState.loadingRun(
-      () => request.checkForUpdate(
-        version: globalState.packageInfo.version,
-        assetSuffix: releaseAssetSuffix,
-      ),
+      commonAction.checkForAppUpdate,
       title: context.appLocalizations.checkUpdate,
       tag: LoadingTag.checkUpdate,
     );

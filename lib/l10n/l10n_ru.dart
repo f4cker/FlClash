@@ -3747,6 +3747,79 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось проверить загруженное обновление.';
 
   @override
+  String get macUpdateDownloadAndInstall => 'Загрузить и установить';
+
+  @override
+  String macUpdateSize(Object size) {
+    return 'Размер: $size';
+  }
+
+  @override
+  String get macUpdateReadyTitle => 'Обновление готово';
+
+  @override
+  String macUpdateReadyMessage(Object version) {
+    return 'Flash $version загружен и проверен. При перезапуске соединение ненадолго прервётся, Flash будет заменён и снова открыт.';
+  }
+
+  @override
+  String get macUpdateRestartNow => 'Перезапустить и установить';
+
+  @override
+  String get macUpdateLater => 'Позже';
+
+  @override
+  String get macUpdateInstalling => 'Установка обновления…';
+
+  @override
+  String get macUpdateNotWritable =>
+      'Эта учётная запись не может изменять папку «Программы» (возможно, это не администратор). Проверенная новая версия показана в Finder: перетащите её в «Программы», чтобы заменить старую. Потребуется пароль администратора.';
+
+  @override
+  String get macUpdateNotInApplications =>
+      'Flash находится не в папке «Программы», поэтому не может заменить себя. Проверенная новая версия показана в Finder: перетащите её в «Программы».';
+
+  @override
+  String get macUpdateNotConfigured =>
+      'Эта сборка пока не умеет обновляться сама. Загрузите новую версию со страницы релизов.';
+
+  @override
+  String get macUpdateRejected =>
+      'Обновление не прошло проверки Flash и удалено. Ничего не изменено. Повторите позже или загрузите его со страницы релизов.';
+
+  @override
+  String get macUpdateNotNewer =>
+      'Загруженная версия не новее текущей, поэтому ничего не установлено.';
+
+  @override
+  String get macUpdateLauncherChanged =>
+      'В этой версии изменён загрузчик помощника, поэтому её нельзя установить из Flash. Загрузите её со страницы релизов и установите вручную.';
+
+  @override
+  String get macUpdateHelperOlder =>
+      'Помощник новой версии старше уже запускавшегося на этом Mac, поэтому обновление отменено.';
+
+  @override
+  String get macUpdateRolledBack =>
+      'Новая версия не прошла проверку после установки, поэтому восстановлена прежняя версия.';
+
+  @override
+  String get macUpdateRollbackFailed =>
+      'Обновление не удалось, и прежнюю версию восстановить не получилось. Загрузите Flash со страницы релизов и установите заново.';
+
+  @override
+  String get macUpdateInstallFailed =>
+      'Flash не удалось заменить. Текущая версия не изменена.';
+
+  @override
+  String get macUpdateCoreStopFailed =>
+      'Не удалось остановить ядро, поэтому обновление не установлено.';
+
+  @override
+  String get macUpdateRecordHint =>
+      'Запись о версии помощника на этом Mac не читается. Обновление установится, но эту запись не исправит; затем следуйте карточке помощника.';
+
+  @override
   String get updateRestartTip =>
       'Flash закроется для установки обновления и снова откроется после завершения.';
 

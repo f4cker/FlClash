@@ -27,6 +27,9 @@
 		FA2633000000000000000104 /* LegacyResidue.m in Sources */ = {isa = PBXBuildFile; fileRef = FA2633000000000000000004; };
 		FA2633000000000000000101 /* ManagedHelperBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = FA2633000000000000000001; };
 		F5A1C0012F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */; };
+		F5A1E0012F10000100A1B2C3 /* UpdaterChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1E0022F10000100A1B2C3 /* UpdaterChannel.swift */; };
+		F5A1E0032F10000100A1B2C3 /* UpdateInstaller.m in Sources */ = {isa = PBXBuildFile; fileRef = F5A1E0042F10000100A1B2C3 /* UpdateInstaller.m */; };
+		F5A1E0062F10000100A1B2C3 /* UpdateManifestSignature.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1E0072F10000100A1B2C3 /* UpdateManifestSignature.swift */; };
 		F5A1C0032F10000100A1B2C3 /* ProcessAppChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */; };
 		F5A1C0052F10000100A1B2C3 /* ProcessAppLocatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */; };
 		F5A1C0072F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */; };
@@ -104,6 +107,10 @@
 		FA2633000000000000000004 /* LegacyResidue.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Shared/LegacyResidue.m; sourceTree = SOURCE_ROOT; };
 		FA2633000000000000000001 /* ManagedHelperBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Runner/ManagedHelperBridge.m; sourceTree = SOURCE_ROOT; };
 		F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppLocator.swift; sourceTree = "<group>"; };
+		F5A1E0022F10000100A1B2C3 /* UpdaterChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterChannel.swift; sourceTree = "<group>"; };
+		F5A1E0042F10000100A1B2C3 /* UpdateInstaller.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = UpdateInstaller.m; sourceTree = "<group>"; };
+		F5A1E0052F10000100A1B2C3 /* UpdateInstaller.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UpdateInstaller.h; sourceTree = "<group>"; };
+		F5A1E0072F10000100A1B2C3 /* UpdateManifestSignature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManifestSignature.swift; sourceTree = "<group>"; };
 		F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppChannel.swift; sourceTree = "<group>"; };
 		F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppLocatorTests.swift; sourceTree = "<group>"; };
 		F5A1C0122F10000100A1B2C3 /* ProcessSourceCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSourceCatalog.swift; sourceTree = "<group>"; };
@@ -243,6 +250,10 @@
 				F5A1D00A2F10000100A1B2C3 /* MitmSigner.swift */,
 				F5A1D00D2F10000100A1B2C3 /* MitmKeychainStore.swift */,
 				F5A1D00F2F10000100A1B2C3 /* MitmSignerChannel.swift */,
+				F5A1E0022F10000100A1B2C3 /* UpdaterChannel.swift */,
+				F5A1E0042F10000100A1B2C3 /* UpdateInstaller.m */,
+				F5A1E0052F10000100A1B2C3 /* UpdateInstaller.h */,
+				F5A1E0072F10000100A1B2C3 /* UpdateManifestSignature.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -485,6 +496,9 @@
 				F5A1D00B2F10000100A1B2C3 /* MitmSigner.swift in Sources */,
 				F5A1D00E2F10000100A1B2C3 /* MitmKeychainStore.swift in Sources */,
 				F5A1D0102F10000100A1B2C3 /* MitmSignerChannel.swift in Sources */,
+				F5A1E0012F10000100A1B2C3 /* UpdaterChannel.swift in Sources */,
+				F5A1E0032F10000100A1B2C3 /* UpdateInstaller.m in Sources */,
+				F5A1E0062F10000100A1B2C3 /* UpdateManifestSignature.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

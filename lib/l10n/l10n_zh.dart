@@ -3534,6 +3534,72 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateNotVerified => '下载的更新未通过校验。';
 
   @override
+  String get macUpdateDownloadAndInstall => '下载并安装';
+
+  @override
+  String macUpdateSize(Object size) {
+    return '大小：$size';
+  }
+
+  @override
+  String get macUpdateReadyTitle => '更新已就绪';
+
+  @override
+  String macUpdateReadyMessage(Object version) {
+    return 'Flash $version 已下载并通过校验。重启时会短暂断开连接，替换 Flash 后自动重新打开。';
+  }
+
+  @override
+  String get macUpdateRestartNow => '重启并安装';
+
+  @override
+  String get macUpdateLater => '稍后';
+
+  @override
+  String get macUpdateInstalling => '正在安装更新…';
+
+  @override
+  String get macUpdateNotWritable =>
+      '当前账户无法修改「应用程序」文件夹（可能不是管理员账户）。已在访达中显示校验过的新版本：请把它拖到「应用程序」文件夹替换旧版，需要输入管理员密码。';
+
+  @override
+  String get macUpdateNotInApplications =>
+      'Flash 不在「应用程序」文件夹中，无法自动替换。已在访达中显示校验过的新版本，请把它拖到「应用程序」文件夹。';
+
+  @override
+  String get macUpdateNotConfigured => '这个版本暂不支持应用内更新，请到发布页下载新版本。';
+
+  @override
+  String get macUpdateRejected =>
+      '更新未通过 Flash 的安全校验，已删除，当前版本没有任何改动。请稍后重试，或到发布页下载。';
+
+  @override
+  String get macUpdateNotNewer => '下载的版本并不比当前版本新，已取消安装。';
+
+  @override
+  String get macUpdateLauncherChanged =>
+      '这个版本更换了辅助程序的启动组件，无法在应用内安装。请到发布页下载后手动安装。';
+
+  @override
+  String get macUpdateHelperOlder => '新版本的辅助程序比这台 Mac 已运行过的版本旧，已取消更新。';
+
+  @override
+  String get macUpdateRolledBack => '新版本安装后未通过校验，已恢复为原来的版本。';
+
+  @override
+  String get macUpdateRollbackFailed => '更新失败，且未能恢复原来的版本。请到发布页重新下载并安装 Flash。';
+
+  @override
+  String get macUpdateInstallFailed => '无法替换 Flash，当前版本没有改动。';
+
+  @override
+  String get macUpdateCoreStopFailed => '无法先停止内核，已取消安装更新。';
+
+  @override
+  String get macUpdateRecordHint =>
+      '这台 Mac 上辅助程序的版本记录无法读取。更新可以安装，但不会修复该记录，安装后请按辅助程序卡片的提示处理。';
+
+  @override
   String get updateRestartTip => 'Flash 将关闭以安装更新，完成后自动重新打开。';
 
   @override

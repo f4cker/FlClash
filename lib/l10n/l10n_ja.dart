@@ -3586,6 +3586,76 @@ class AppLocalizationsJa extends AppLocalizations {
   String get updateNotVerified => 'ダウンロードした更新を検証できませんでした。';
 
   @override
+  String get macUpdateDownloadAndInstall => 'ダウンロードしてインストール';
+
+  @override
+  String macUpdateSize(Object size) {
+    return 'サイズ：$size';
+  }
+
+  @override
+  String get macUpdateReadyTitle => 'アップデートの準備完了';
+
+  @override
+  String macUpdateReadyMessage(Object version) {
+    return 'Flash $version をダウンロードして検証しました。再起動すると接続が一時的に切断され、Flash を置き換えて再度開きます。';
+  }
+
+  @override
+  String get macUpdateRestartNow => '再起動してインストール';
+
+  @override
+  String get macUpdateLater => '後で';
+
+  @override
+  String get macUpdateInstalling => 'アップデートをインストール中…';
+
+  @override
+  String get macUpdateNotWritable =>
+      'このアカウントでは「アプリケーション」フォルダを変更できません（管理者ではない可能性があります）。検証済みの新しいバージョンを Finder に表示しました。「アプリケーション」へドラッグして置き換えてください。管理者パスワードが必要です。';
+
+  @override
+  String get macUpdateNotInApplications =>
+      'Flash が「アプリケーション」フォルダにないため、自動で置き換えられません。検証済みの新しいバージョンを Finder に表示しました。「アプリケーション」へドラッグしてください。';
+
+  @override
+  String get macUpdateNotConfigured =>
+      'このビルドはまだアプリ内アップデートに対応していません。リリースページから新しいバージョンをダウンロードしてください。';
+
+  @override
+  String get macUpdateRejected =>
+      'アップデートが Flash の検証に通らなかったため削除しました。何も変更されていません。後でもう一度試すか、リリースページからダウンロードしてください。';
+
+  @override
+  String get macUpdateNotNewer => 'ダウンロードしたバージョンは現在より新しくないため、インストールしませんでした。';
+
+  @override
+  String get macUpdateLauncherChanged =>
+      'このバージョンはヘルパーのランチャーが変わっているため、アプリ内ではインストールできません。リリースページからダウンロードして手動でインストールしてください。';
+
+  @override
+  String get macUpdateHelperOlder =>
+      '新しいバージョンのヘルパーが、この Mac で実行済みのものより古いため、アップデートを中止しました。';
+
+  @override
+  String get macUpdateRolledBack => 'インストール後の検証に失敗したため、元のバージョンに戻しました。';
+
+  @override
+  String get macUpdateRollbackFailed =>
+      'アップデートに失敗し、元のバージョンにも戻せませんでした。リリースページから Flash をダウンロードして再インストールしてください。';
+
+  @override
+  String get macUpdateInstallFailed =>
+      'Flash を置き換えられませんでした。現在のバージョンは変更されていません。';
+
+  @override
+  String get macUpdateCoreStopFailed => 'コアを停止できなかったため、アップデートをインストールしませんでした。';
+
+  @override
+  String get macUpdateRecordHint =>
+      'この Mac のヘルパーのバージョン記録を読み取れません。アップデートはインストールできますが、その記録は修復されません。インストール後にヘルパーカードの案内に従ってください。';
+
+  @override
   String get updateRestartTip => '更新をインストールするため Flash を終了し、完了後に再び起動します。';
 
   @override
