@@ -167,7 +167,16 @@ class ApplicationState extends ConsumerState<Application> {
               isDesktop: system.isDesktop,
               onConnectivityChanged: _handleConnectivityChanged,
               terminateSignals: _terminateSignals,
-              child: child!,
+              // While the window is hidden or minimized no animation asks for
+              // frames (each one would still be built, rasterized and
+              // committed); they resume where they were once it shows again.
+              child: Consumer(
+                builder: (_, ref, child) => TickerMode(
+                  enabled: ref.watch(appVisibleProvider),
+                  child: child!,
+                ),
+                child: child,
+              ),
             );
           },
           title: appName,

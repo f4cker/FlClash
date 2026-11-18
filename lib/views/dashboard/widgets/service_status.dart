@@ -882,9 +882,12 @@ class _ServiceRowState extends ConsumerState<_ServiceRow>
             : _OutboundIpLine(
                 ip: outboundIp,
                 region: check?.region,
+                // Only while a probe is out: an entry nothing is probing for
+                // (the Core is not connected) shows the node instead of a
+                // placeholder that would wait forever.
                 pending:
                     ipEntry != null &&
-                    ipEntry.phase != ProbePhase.failed &&
+                    ipEntry.phase == ProbePhase.probing &&
                     outboundIp == null,
                 fallback: node,
                 style: secondary,
