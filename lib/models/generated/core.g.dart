@@ -267,6 +267,17 @@ _MitmAction _$MitmActionFromJson(Map<String, dynamic> json) => _MitmAction(
   rule: json['rule'] as String? ?? '',
   skipped: json['skipped'] as String? ?? '',
   tookNs: (json['took-ns'] as num?)?.toInt() ?? 0,
+  logs:
+      (json['logs'] as List<dynamic>?)
+          ?.map((e) => MitmScriptLog.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  requests:
+      (json['requests'] as List<dynamic>?)
+          ?.map((e) => MitmScriptRequest.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  error: json['error'] as String? ?? '',
 );
 
 Map<String, dynamic> _$MitmActionToJson(_MitmAction instance) =>
@@ -276,6 +287,36 @@ Map<String, dynamic> _$MitmActionToJson(_MitmAction instance) =>
       'detail': instance.detail,
       'rule': instance.rule,
       'skipped': instance.skipped,
+      'took-ns': instance.tookNs,
+      'logs': instance.logs,
+      'requests': instance.requests,
+      'error': instance.error,
+    };
+
+_MitmScriptLog _$MitmScriptLogFromJson(Map<String, dynamic> json) =>
+    _MitmScriptLog(
+      level: json['level'] as String? ?? '',
+      text: json['text'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$MitmScriptLogToJson(_MitmScriptLog instance) =>
+    <String, dynamic>{'level': instance.level, 'text': instance.text};
+
+_MitmScriptRequest _$MitmScriptRequestFromJson(Map<String, dynamic> json) =>
+    _MitmScriptRequest(
+      method: json['method'] as String? ?? '',
+      url: json['url'] as String? ?? '',
+      status: (json['status'] as num?)?.toInt() ?? 0,
+      error: json['error'] as String? ?? '',
+      tookNs: (json['took-ns'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$MitmScriptRequestToJson(_MitmScriptRequest instance) =>
+    <String, dynamic>{
+      'method': instance.method,
+      'url': instance.url,
+      'status': instance.status,
+      'error': instance.error,
       'took-ns': instance.tookNs,
     };
 

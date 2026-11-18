@@ -177,7 +177,7 @@ void main() {
     expect(find.text(currentAppLocalizations.httpCaptureDesc), findsOneWidget);
   });
 
-  testWidgets('offers none of the second phase, nor untrusted decryption', (
+  testWidgets('offers no unsafe verification, nor untrusted decryption', (
     tester,
   ) async {
     await pumpView(tester, certificate: _certificate);
@@ -186,7 +186,6 @@ void main() {
     expect(find.text(l.hostname), findsOneWidget);
     expect(find.text(l.blockQuic), findsOneWidget);
     for (final hidden in [
-      l.mitmModules,
       l.skipServerCertVerify,
       l.http2,
       l.decryptUntrusted,

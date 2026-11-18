@@ -235,10 +235,39 @@ abstract class MitmAction with _$MitmAction {
     @Default('') String skipped,
     // How long the rule took to apply; 0 when the Core did not measure it.
     @Default(0) @JsonKey(name: 'took-ns') int tookNs,
+    @Default([]) List<MitmScriptLog> logs,
+    @Default([]) List<MitmScriptRequest> requests,
+    @Default('') String error,
   }) = _MitmAction;
 
   factory MitmAction.fromJson(Map<String, Object?> json) =>
       _$MitmActionFromJson(json);
+}
+
+@freezed
+abstract class MitmScriptLog with _$MitmScriptLog {
+  const factory MitmScriptLog({
+    @Default('') String level,
+    @Default('') String text,
+  }) = _MitmScriptLog;
+
+  factory MitmScriptLog.fromJson(Map<String, Object?> json) =>
+      _$MitmScriptLogFromJson(json);
+}
+
+/// A request a script made with `$httpClient`.
+@freezed
+abstract class MitmScriptRequest with _$MitmScriptRequest {
+  const factory MitmScriptRequest({
+    @Default('') String method,
+    @Default('') String url,
+    @Default(0) int status,
+    @Default('') String error,
+    @Default(0) @JsonKey(name: 'took-ns') int tookNs,
+  }) = _MitmScriptRequest;
+
+  factory MitmScriptRequest.fromJson(Map<String, Object?> json) =>
+      _$MitmScriptRequestFromJson(json);
 }
 
 /// What rewrite rules did on one connection so far: [applied] when any

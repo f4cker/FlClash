@@ -59,6 +59,10 @@ Future<void> commitMitmScripts(
   }
 }
 
+/// What a failed download or load says, already in the app's words.
+String? mitmScriptErrorMessage(Object error) =>
+    error is _ScriptException ? error.message : null;
+
 Future<List<int>> downloadMitmScript(String url) async {
   final bytes = (await request.getFileResponseForUrl(url)).data;
   if (bytes == null) {

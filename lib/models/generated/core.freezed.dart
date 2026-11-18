@@ -3051,7 +3051,7 @@ as bool,
 /// @nodoc
 mixin _$MitmAction {
 
- String get kind; String get phase; String get detail; String get rule; String get skipped;@JsonKey(name: 'took-ns') int get tookNs;
+ String get kind; String get phase; String get detail; String get rule; String get skipped;@JsonKey(name: 'took-ns') int get tookNs; List<MitmScriptLog> get logs; List<MitmScriptRequest> get requests; String get error;
 /// Create a copy of MitmAction
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3065,20 +3065,20 @@ $MitmActionCopyWith<MitmAction> get copyWith => _$MitmActionCopyWithImpl<MitmAct
 @override
 bool operator ==(Object other) {
   final _this = this as MitmAction;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmAction&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.phase, _this.phase) || other.phase == _this.phase)&&(identical(other.detail, _this.detail) || other.detail == _this.detail)&&(identical(other.rule, _this.rule) || other.rule == _this.rule)&&(identical(other.skipped, _this.skipped) || other.skipped == _this.skipped)&&(identical(other.tookNs, _this.tookNs) || other.tookNs == _this.tookNs));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmAction&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.phase, _this.phase) || other.phase == _this.phase)&&(identical(other.detail, _this.detail) || other.detail == _this.detail)&&(identical(other.rule, _this.rule) || other.rule == _this.rule)&&(identical(other.skipped, _this.skipped) || other.skipped == _this.skipped)&&(identical(other.tookNs, _this.tookNs) || other.tookNs == _this.tookNs)&&const DeepCollectionEquality().equals(other.logs, _this.logs)&&const DeepCollectionEquality().equals(other.requests, _this.requests)&&(identical(other.error, _this.error) || other.error == _this.error));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MitmAction;
-  return Object.hash(runtimeType,_this.kind,_this.phase,_this.detail,_this.rule,_this.skipped,_this.tookNs);
+  return Object.hash(runtimeType,_this.kind,_this.phase,_this.detail,_this.rule,_this.skipped,_this.tookNs,const DeepCollectionEquality().hash(_this.logs),const DeepCollectionEquality().hash(_this.requests),_this.error);
 }
 
 @override
 String toString() {
   final _this = this as MitmAction;
-  return 'MitmAction(kind: ${_this.kind}, phase: ${_this.phase}, detail: ${_this.detail}, rule: ${_this.rule}, skipped: ${_this.skipped}, tookNs: ${_this.tookNs})';
+  return 'MitmAction(kind: ${_this.kind}, phase: ${_this.phase}, detail: ${_this.detail}, rule: ${_this.rule}, skipped: ${_this.skipped}, tookNs: ${_this.tookNs}, logs: ${_this.logs}, requests: ${_this.requests}, error: ${_this.error})';
 }
 
 
@@ -3089,7 +3089,7 @@ abstract mixin class $MitmActionCopyWith<$Res>  {
   factory $MitmActionCopyWith(MitmAction value, $Res Function(MitmAction) _then) = _$MitmActionCopyWithImpl;
 @useResult
 $Res call({
- String kind, String phase, String detail, String rule, String skipped,@JsonKey(name: 'took-ns') int tookNs
+ String kind, String phase, String detail, String rule, String skipped,@JsonKey(name: 'took-ns') int tookNs, List<MitmScriptLog> logs, List<MitmScriptRequest> requests, String error
 });
 
 
@@ -3106,7 +3106,7 @@ class _$MitmActionCopyWithImpl<$Res>
 
 /// Create a copy of MitmAction
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? phase = null,Object? detail = null,Object? rule = null,Object? skipped = null,Object? tookNs = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? phase = null,Object? detail = null,Object? rule = null,Object? skipped = null,Object? tookNs = null,Object? logs = null,Object? requests = null,Object? error = null,}) {
   return _then(MitmAction(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
@@ -3114,7 +3114,10 @@ as String,detail: null == detail ? _self.detail : detail // ignore: cast_nullabl
 as String,rule: null == rule ? _self.rule : rule // ignore: cast_nullable_to_non_nullable
 as String,skipped: null == skipped ? _self.skipped : skipped // ignore: cast_nullable_to_non_nullable
 as String,tookNs: null == tookNs ? _self.tookNs : tookNs // ignore: cast_nullable_to_non_nullable
-as int,
+as int,logs: null == logs ? _self.logs : logs // ignore: cast_nullable_to_non_nullable
+as List<MitmScriptLog>,requests: null == requests ? _self.requests : requests // ignore: cast_nullable_to_non_nullable
+as List<MitmScriptRequest>,error: null == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -3199,10 +3202,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs,  List<MitmScriptLog> logs,  List<MitmScriptRequest> requests,  String error)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmAction() when $default != null:
-return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs);case _:
+return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs,_that.logs,_that.requests,_that.error);case _:
   return orElse();
 
 }
@@ -3220,10 +3223,10 @@ return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs,  List<MitmScriptLog> logs,  List<MitmScriptRequest> requests,  String error)  $default,) {final _that = this;
 switch (_that) {
 case _MitmAction():
-return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs);case _:
+return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs,_that.logs,_that.requests,_that.error);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3240,10 +3243,10 @@ return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String kind,  String phase,  String detail,  String rule,  String skipped, @JsonKey(name: 'took-ns')  int tookNs,  List<MitmScriptLog> logs,  List<MitmScriptRequest> requests,  String error)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmAction() when $default != null:
-return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs);case _:
+return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_that.tookNs,_that.logs,_that.requests,_that.error);case _:
   return null;
 
 }
@@ -3255,7 +3258,7 @@ return $default(_that.kind,_that.phase,_that.detail,_that.rule,_that.skipped,_th
 @JsonSerializable()
 
 class _MitmAction implements MitmAction {
-  const _MitmAction({required this.kind, this.phase = '', this.detail = '', this.rule = '', this.skipped = '', @JsonKey(name: 'took-ns') this.tookNs = 0});
+  const _MitmAction({required this.kind, this.phase = '', this.detail = '', this.rule = '', this.skipped = '', @JsonKey(name: 'took-ns') this.tookNs = 0,  List<MitmScriptLog> logs = const [],  List<MitmScriptRequest> requests = const [], this.error = ''}): _logs = logs,_requests = requests;
   factory _MitmAction.fromJson(Map<String, dynamic> json) => _$MitmActionFromJson(json);
 
 @override final  String kind;
@@ -3264,6 +3267,21 @@ class _MitmAction implements MitmAction {
 @override@JsonKey() final  String rule;
 @override@JsonKey() final  String skipped;
 @override@JsonKey(name: 'took-ns') final  int tookNs;
+ final  List<MitmScriptLog> _logs;
+@override@JsonKey() List<MitmScriptLog> get logs {
+  if (_logs is EqualUnmodifiableListView) return _logs;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_logs);
+}
+
+ final  List<MitmScriptRequest> _requests;
+@override@JsonKey() List<MitmScriptRequest> get requests {
+  if (_requests is EqualUnmodifiableListView) return _requests;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_requests);
+}
+
+@override@JsonKey() final  String error;
 
 /// Create a copy of MitmAction
 /// with the given fields replaced by the non-null parameter values.
@@ -3278,18 +3296,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmAction&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.phase, phase) || other.phase == phase)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.skipped, skipped) || other.skipped == skipped)&&(identical(other.tookNs, tookNs) || other.tookNs == tookNs));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmAction&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.phase, phase) || other.phase == phase)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.skipped, skipped) || other.skipped == skipped)&&(identical(other.tookNs, tookNs) || other.tookNs == tookNs)&&const DeepCollectionEquality().equals(other.logs, _logs)&&const DeepCollectionEquality().equals(other.requests, _requests)&&(identical(other.error, error) || other.error == error));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,kind,phase,detail,rule,skipped,tookNs);
+    return Object.hash(runtimeType,kind,phase,detail,rule,skipped,tookNs,const DeepCollectionEquality().hash(_logs),const DeepCollectionEquality().hash(_requests),error);
 }
 
 @override
 String toString() {
-    return 'MitmAction(kind: $kind, phase: $phase, detail: $detail, rule: $rule, skipped: $skipped, tookNs: $tookNs)';
+    return 'MitmAction(kind: $kind, phase: $phase, detail: $detail, rule: $rule, skipped: $skipped, tookNs: $tookNs, logs: $logs, requests: $requests, error: $error)';
 }
 
 
@@ -3300,7 +3318,7 @@ abstract mixin class _$MitmActionCopyWith<$Res> implements $MitmActionCopyWith<$
   factory _$MitmActionCopyWith(_MitmAction value, $Res Function(_MitmAction) _then) = __$MitmActionCopyWithImpl;
 @override @useResult
 $Res call({
- String kind, String phase, String detail, String rule, String skipped,@JsonKey(name: 'took-ns') int tookNs
+ String kind, String phase, String detail, String rule, String skipped,@JsonKey(name: 'took-ns') int tookNs, List<MitmScriptLog> logs, List<MitmScriptRequest> requests, String error
 });
 
 
@@ -3317,13 +3335,571 @@ class __$MitmActionCopyWithImpl<$Res>
 
 /// Create a copy of MitmAction
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? phase = null,Object? detail = null,Object? rule = null,Object? skipped = null,Object? tookNs = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? phase = null,Object? detail = null,Object? rule = null,Object? skipped = null,Object? tookNs = null,Object? logs = null,Object? requests = null,Object? error = null,}) {
   return _then(_MitmAction(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
 as String,detail: null == detail ? _self.detail : detail // ignore: cast_nullable_to_non_nullable
 as String,rule: null == rule ? _self.rule : rule // ignore: cast_nullable_to_non_nullable
 as String,skipped: null == skipped ? _self.skipped : skipped // ignore: cast_nullable_to_non_nullable
+as String,tookNs: null == tookNs ? _self.tookNs : tookNs // ignore: cast_nullable_to_non_nullable
+as int,logs: null == logs ? _self._logs : logs // ignore: cast_nullable_to_non_nullable
+as List<MitmScriptLog>,requests: null == requests ? _self._requests : requests // ignore: cast_nullable_to_non_nullable
+as List<MitmScriptRequest>,error: null == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$MitmScriptLog {
+
+ String get level; String get text;
+/// Create a copy of MitmScriptLog
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MitmScriptLogCopyWith<MitmScriptLog> get copyWith => _$MitmScriptLogCopyWithImpl<MitmScriptLog>(this as MitmScriptLog, _$identity);
+
+  /// Serializes this MitmScriptLog to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MitmScriptLog;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmScriptLog&&(identical(other.level, _this.level) || other.level == _this.level)&&(identical(other.text, _this.text) || other.text == _this.text));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as MitmScriptLog;
+  return Object.hash(runtimeType,_this.level,_this.text);
+}
+
+@override
+String toString() {
+  final _this = this as MitmScriptLog;
+  return 'MitmScriptLog(level: ${_this.level}, text: ${_this.text})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MitmScriptLogCopyWith<$Res>  {
+  factory $MitmScriptLogCopyWith(MitmScriptLog value, $Res Function(MitmScriptLog) _then) = _$MitmScriptLogCopyWithImpl;
+@useResult
+$Res call({
+ String level, String text
+});
+
+
+
+
+}
+/// @nodoc
+class _$MitmScriptLogCopyWithImpl<$Res>
+    implements $MitmScriptLogCopyWith<$Res> {
+  _$MitmScriptLogCopyWithImpl(this._self, this._then);
+
+  final MitmScriptLog _self;
+  final $Res Function(MitmScriptLog) _then;
+
+/// Create a copy of MitmScriptLog
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? level = null,Object? text = null,}) {
+  return _then(MitmScriptLog(
+level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
+as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MitmScriptLog].
+extension MitmScriptLogPatterns on MitmScriptLog {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MitmScriptLog value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MitmScriptLog() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MitmScriptLog value)  $default,){
+final _that = this;
+switch (_that) {
+case _MitmScriptLog():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MitmScriptLog value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MitmScriptLog() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String level,  String text)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MitmScriptLog() when $default != null:
+return $default(_that.level,_that.text);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String level,  String text)  $default,) {final _that = this;
+switch (_that) {
+case _MitmScriptLog():
+return $default(_that.level,_that.text);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String level,  String text)?  $default,) {final _that = this;
+switch (_that) {
+case _MitmScriptLog() when $default != null:
+return $default(_that.level,_that.text);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _MitmScriptLog implements MitmScriptLog {
+  const _MitmScriptLog({this.level = '', this.text = ''});
+  factory _MitmScriptLog.fromJson(Map<String, dynamic> json) => _$MitmScriptLogFromJson(json);
+
+@override@JsonKey() final  String level;
+@override@JsonKey() final  String text;
+
+/// Create a copy of MitmScriptLog
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MitmScriptLogCopyWith<_MitmScriptLog> get copyWith => __$MitmScriptLogCopyWithImpl<_MitmScriptLog>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$MitmScriptLogToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmScriptLog&&(identical(other.level, level) || other.level == level)&&(identical(other.text, text) || other.text == text));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,level,text);
+}
+
+@override
+String toString() {
+    return 'MitmScriptLog(level: $level, text: $text)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MitmScriptLogCopyWith<$Res> implements $MitmScriptLogCopyWith<$Res> {
+  factory _$MitmScriptLogCopyWith(_MitmScriptLog value, $Res Function(_MitmScriptLog) _then) = __$MitmScriptLogCopyWithImpl;
+@override @useResult
+$Res call({
+ String level, String text
+});
+
+
+
+
+}
+/// @nodoc
+class __$MitmScriptLogCopyWithImpl<$Res>
+    implements _$MitmScriptLogCopyWith<$Res> {
+  __$MitmScriptLogCopyWithImpl(this._self, this._then);
+
+  final _MitmScriptLog _self;
+  final $Res Function(_MitmScriptLog) _then;
+
+/// Create a copy of MitmScriptLog
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? level = null,Object? text = null,}) {
+  return _then(_MitmScriptLog(
+level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
+as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$MitmScriptRequest {
+
+ String get method; String get url; int get status; String get error;@JsonKey(name: 'took-ns') int get tookNs;
+/// Create a copy of MitmScriptRequest
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MitmScriptRequestCopyWith<MitmScriptRequest> get copyWith => _$MitmScriptRequestCopyWithImpl<MitmScriptRequest>(this as MitmScriptRequest, _$identity);
+
+  /// Serializes this MitmScriptRequest to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MitmScriptRequest;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmScriptRequest&&(identical(other.method, _this.method) || other.method == _this.method)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.error, _this.error) || other.error == _this.error)&&(identical(other.tookNs, _this.tookNs) || other.tookNs == _this.tookNs));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as MitmScriptRequest;
+  return Object.hash(runtimeType,_this.method,_this.url,_this.status,_this.error,_this.tookNs);
+}
+
+@override
+String toString() {
+  final _this = this as MitmScriptRequest;
+  return 'MitmScriptRequest(method: ${_this.method}, url: ${_this.url}, status: ${_this.status}, error: ${_this.error}, tookNs: ${_this.tookNs})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MitmScriptRequestCopyWith<$Res>  {
+  factory $MitmScriptRequestCopyWith(MitmScriptRequest value, $Res Function(MitmScriptRequest) _then) = _$MitmScriptRequestCopyWithImpl;
+@useResult
+$Res call({
+ String method, String url, int status, String error,@JsonKey(name: 'took-ns') int tookNs
+});
+
+
+
+
+}
+/// @nodoc
+class _$MitmScriptRequestCopyWithImpl<$Res>
+    implements $MitmScriptRequestCopyWith<$Res> {
+  _$MitmScriptRequestCopyWithImpl(this._self, this._then);
+
+  final MitmScriptRequest _self;
+  final $Res Function(MitmScriptRequest) _then;
+
+/// Create a copy of MitmScriptRequest
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? method = null,Object? url = null,Object? status = null,Object? error = null,Object? tookNs = null,}) {
+  return _then(MitmScriptRequest(
+method: null == method ? _self.method : method // ignore: cast_nullable_to_non_nullable
+as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as int,error: null == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as String,tookNs: null == tookNs ? _self.tookNs : tookNs // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MitmScriptRequest].
+extension MitmScriptRequestPatterns on MitmScriptRequest {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MitmScriptRequest value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MitmScriptRequest() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MitmScriptRequest value)  $default,){
+final _that = this;
+switch (_that) {
+case _MitmScriptRequest():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MitmScriptRequest value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MitmScriptRequest() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String method,  String url,  int status,  String error, @JsonKey(name: 'took-ns')  int tookNs)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MitmScriptRequest() when $default != null:
+return $default(_that.method,_that.url,_that.status,_that.error,_that.tookNs);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String method,  String url,  int status,  String error, @JsonKey(name: 'took-ns')  int tookNs)  $default,) {final _that = this;
+switch (_that) {
+case _MitmScriptRequest():
+return $default(_that.method,_that.url,_that.status,_that.error,_that.tookNs);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String method,  String url,  int status,  String error, @JsonKey(name: 'took-ns')  int tookNs)?  $default,) {final _that = this;
+switch (_that) {
+case _MitmScriptRequest() when $default != null:
+return $default(_that.method,_that.url,_that.status,_that.error,_that.tookNs);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _MitmScriptRequest implements MitmScriptRequest {
+  const _MitmScriptRequest({this.method = '', this.url = '', this.status = 0, this.error = '', @JsonKey(name: 'took-ns') this.tookNs = 0});
+  factory _MitmScriptRequest.fromJson(Map<String, dynamic> json) => _$MitmScriptRequestFromJson(json);
+
+@override@JsonKey() final  String method;
+@override@JsonKey() final  String url;
+@override@JsonKey() final  int status;
+@override@JsonKey() final  String error;
+@override@JsonKey(name: 'took-ns') final  int tookNs;
+
+/// Create a copy of MitmScriptRequest
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MitmScriptRequestCopyWith<_MitmScriptRequest> get copyWith => __$MitmScriptRequestCopyWithImpl<_MitmScriptRequest>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$MitmScriptRequestToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmScriptRequest&&(identical(other.method, method) || other.method == method)&&(identical(other.url, url) || other.url == url)&&(identical(other.status, status) || other.status == status)&&(identical(other.error, error) || other.error == error)&&(identical(other.tookNs, tookNs) || other.tookNs == tookNs));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,method,url,status,error,tookNs);
+}
+
+@override
+String toString() {
+    return 'MitmScriptRequest(method: $method, url: $url, status: $status, error: $error, tookNs: $tookNs)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MitmScriptRequestCopyWith<$Res> implements $MitmScriptRequestCopyWith<$Res> {
+  factory _$MitmScriptRequestCopyWith(_MitmScriptRequest value, $Res Function(_MitmScriptRequest) _then) = __$MitmScriptRequestCopyWithImpl;
+@override @useResult
+$Res call({
+ String method, String url, int status, String error,@JsonKey(name: 'took-ns') int tookNs
+});
+
+
+
+
+}
+/// @nodoc
+class __$MitmScriptRequestCopyWithImpl<$Res>
+    implements _$MitmScriptRequestCopyWith<$Res> {
+  __$MitmScriptRequestCopyWithImpl(this._self, this._then);
+
+  final _MitmScriptRequest _self;
+  final $Res Function(_MitmScriptRequest) _then;
+
+/// Create a copy of MitmScriptRequest
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? method = null,Object? url = null,Object? status = null,Object? error = null,Object? tookNs = null,}) {
+  return _then(_MitmScriptRequest(
+method: null == method ? _self.method : method // ignore: cast_nullable_to_non_nullable
+as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as int,error: null == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as String,tookNs: null == tookNs ? _self.tookNs : tookNs // ignore: cast_nullable_to_non_nullable
 as int,
   ));

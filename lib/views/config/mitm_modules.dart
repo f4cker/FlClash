@@ -1,11 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/common/mitm_script.dart';
 import 'package:fl_clash/features/features.dart';
+import 'package:fl_clash/features/mitm/rewrite.dart' show mitmRewriteErrorColor;
+import 'package:fl_clash/features/mitm/script.dart' show MitmCountLine;
+import 'package:fl_clash/features/mitm/script_dialogs.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
@@ -19,6 +24,9 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' show join;
+
+import 'mitm_module_confirm.dart';
 
 MitmModule? _moduleOf(WidgetRef ref, int id) => ref.watch(
   mitmModulesProvider.select(
@@ -127,12 +135,71 @@ String? _resultText(String result) {
   };
 }
 
-Future<void> _updateModule(WidgetRef ref, MitmModule module) async {
-  await globalState.safeRun<void>(
-    () => updateMitmModule(ref, module),
+Future<void> _updateModule(
+  BuildContext context,
+  WidgetRef ref,
+  MitmModule module,
+) async {
+  final updated = await globalState.safeRun<MitmModule>(
+    () => ref.read(mitmModulesActionProvider.notifier).updateModule(module),
     title: module.name,
     silence: false,
   );
+  if (updated != null && updated.hasPending && context.mounted) {
+    await _viewModuleUpdate(context, ref, updated);
+  }
+}
+
+Future<void> _viewModuleUpdate(
+  BuildContext context,
+  WidgetRef ref,
+  MitmModule module,
+) async {
+  final action = ref.read(mitmModulesActionProvider.notifier);
+  final after = await action.pendingText(module);
+  final path = join(await appPath.mitmModulesDirPath, module.fileName);
+  final file = File(path);
+  final before = await file.exists() ? await file.readAsString() : '';
+  if (after == null || !context.mounted) return;
+  final change = mitmModuleChange(
+    previewMitmModule(before, values: module.arguments),
+    previewMitmModule(after, values: module.arguments),
+  );
+  await showMitmUpdateDialog(
+    context,
+    name: module.name,
+    before: before,
+    after: after,
+    summary: MitmModuleChangeSummary(change: change),
+    onAdopt: () => action.adopt(module),
+  );
+}
+
+/// Downloads or reads a module, shows what it brings, and saves it only
+/// once the user confirms.
+Future<void> _confirmImport(
+  BuildContext context,
+  String text, {
+  required String name,
+  required String source,
+  required Future<void> Function(bool enable) onImport,
+}) async {
+  final l = context.appLocalizations;
+  final content = previewMitmModule(text);
+  if (content.isEmpty) {
+    dialogs.showBanner(l.mitmModuleInvalid, level: BannerLevel.error);
+    return;
+  }
+  final res = await showMitmModuleConfirmDialog(
+    context,
+    content: content,
+    name: content.name ?? name,
+    source: source,
+    onImport: onImport,
+  );
+  if (res != null) {
+    dialogs.showBanner(l.mitmModuleImported, level: BannerLevel.success);
+  }
 }
 
 class MitmModulesItem extends ConsumerWidget {
@@ -141,13 +208,20 @@ class MitmModulesItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
-    final count = ref.watch(
-      mitmModulesProvider.select((state) => state.value?.length ?? 0),
-    );
+    final modules =
+        ref.watch(mitmModulesProvider).value ?? const <MitmModule>[];
     return ListItem.open(
+      leading: const GlyphIcon(AppGlyphs.puzzle),
       title: Text(appLocalizations.mitmModules),
-      subtitle: Text(
-        count == 0 ? appLocalizations.none : appLocalizations.itemsCount(count),
+      subtitle: MitmCountLine(
+        text: modules.isEmpty
+            ? appLocalizations.mitmRewriteNoneAdded
+            : appLocalizations.mitmModuleCount(
+                modules.length,
+                modules.where((m) => m.enabled).length,
+              ),
+        updates: modules.where((m) => m.hasPending).length,
+        errors: modules.where((m) => m.error != null).length,
       ),
       widget: const MitmModulesView(),
     );
@@ -176,13 +250,23 @@ class MitmModulesView extends ConsumerWidget {
       );
       return;
     }
+    final action = ref.read(mitmModulesActionProvider.notifier);
     for (final url in urls) {
-      final added = await globalState.loadingRun(
-        () => ref.read(mitmModulesActionProvider.notifier).addFromUrl(url),
+      final text = await globalState.loadingRun(
+        () => action.download(url),
         title: appLocalizations.importUrl,
         tag: LoadingTag.mitm,
       );
-      await offerMitmScripts(ref, added);
+      if (text == null || !context.mounted) return;
+      final uri = Uri.tryParse(url);
+      await _confirmImport(
+        context,
+        text,
+        name: uri?.pathSegments.lastOrNull ?? url,
+        source: uri?.host ?? url,
+        onImport: (enable) =>
+            action.addFromUrl(url, enable: enable, text: text),
+      );
     }
   }
 
@@ -192,14 +276,20 @@ class MitmModulesView extends ConsumerWidget {
     if (file == null) {
       return;
     }
-    final added = await globalState.loadingRun(
-      () async => ref
-          .read(mitmModulesActionProvider.notifier)
-          .addFromFile(utf8.decode(await file.readBytes()), file.name),
+    final text = await globalState.safeRun(
+      () async => utf8.decode(await file.readBytes()),
       title: appLocalizations.importFile,
-      tag: LoadingTag.mitm,
     );
-    await offerMitmScripts(ref, added);
+    if (text == null || !context.mounted) return;
+    await _confirmImport(
+      context,
+      text,
+      name: file.name,
+      source: file.name,
+      onImport: (enable) => ref
+          .read(mitmModulesActionProvider.notifier)
+          .addFromFile(text, file.name, enable: enable),
+    );
   }
 
   @override
@@ -213,22 +303,28 @@ class MitmModulesView extends ConsumerWidget {
       isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
       actions: [
         PopupAnchor(
-          targetBuilder: (open) => IconButton(
-            tooltip: appLocalizations.add,
+          targetBuilder: (open) => FilledButton(
             onPressed: open,
-            icon: const GlyphIcon(AppGlyphs.addCircle),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: [
+                Text(appLocalizations.mitmImportModule),
+                const GlyphIcon(AppGlyphs.chevronDown, size: 14, fill: 1),
+              ],
+            ),
           ),
           popupBuilder: (_) => PopupMenu(
             items: [
               PopupMenuItem(
-                glyph: AppGlyphs.compose,
-                label: appLocalizations.mitmNewModule,
-                onPressed: () => openMitmModuleEditor(context, ref),
-              ),
-              PopupMenuItem(
                 glyph: AppGlyphs.cloudDownload,
                 label: appLocalizations.importUrl,
                 onPressed: () => _importFromUrl(context, ref),
+              ),
+              PopupMenuItem(
+                glyph: AppGlyphs.compose,
+                label: appLocalizations.mitmNewModule,
+                onPressed: () => openMitmModuleEditor(context, ref),
               ),
               PopupMenuItem(
                 glyph: AppGlyphs.importFile,
@@ -244,7 +340,12 @@ class MitmModulesView extends ConsumerWidget {
         isEmpty: modules.isEmpty,
         nullStatus: NullStatus(
           illustration: NullStatusIllustration.scripts,
-          label: appLocalizations.nullTip(appLocalizations.mitmModule),
+          label: appLocalizations.mitmModulesEmptyTitle,
+          description: appLocalizations.mitmModulesEmptyBody,
+          action: FilledButton(
+            onPressed: () => _importFromUrl(context, ref),
+            child: Text(appLocalizations.mitmImportModule),
+          ),
         ),
         child: PrismReorderableListView(
           padding: const EdgeInsets.all(16).copyWith(
@@ -316,7 +417,7 @@ class _MitmModuleRow extends ConsumerWidget {
                   PopupMenuItem(
                     glyph: AppGlyphs.sync,
                     label: appLocalizations.update,
-                    onPressed: () => _updateModule(ref, module),
+                    onPressed: () => _updateModule(context, ref, module),
                   )
                 else
                   PopupMenuItem(
@@ -341,12 +442,7 @@ class _MitmModuleRow extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            subtitle: Text(
-              module.isRemote
-                  ? appLocalizations.remote
-                  : appLocalizations.local,
-              style: context.listCaptionStyle,
-            ),
+            subtitle: _MitmModuleSummary(module: module),
             trailing: Padding(
               padding: const EdgeInsetsDirectional.only(end: 8),
               child: isUpdating
@@ -372,29 +468,6 @@ class MitmModuleView extends ConsumerWidget {
   const MitmModuleView({super.key, required this.id});
 
   final int id;
-
-  String _skipReason(AppLocalizations appLocalizations, MitmModuleSkip skip) {
-    return switch (skip.reason) {
-      MitmModuleSkipReason.section => appLocalizations.mitmSkipSection(
-        skip.section,
-      ),
-      MitmModuleSkipReason.setting => appLocalizations.mitmSkipSetting,
-      MitmModuleSkipReason.scriptType => appLocalizations.mitmSkipScriptType,
-      MitmModuleSkipReason.event => appLocalizations.mitmSkipEvent,
-      MitmModuleSkipReason.disabled => appLocalizations.mitmSkipDisabled,
-      MitmModuleSkipReason.rule => appLocalizations.mitmSkipRule,
-      MitmModuleSkipReason.policy => appLocalizations.mitmSkipPolicy,
-      MitmModuleSkipReason.jq => appLocalizations.mitmSkipJq,
-      MitmModuleSkipReason.jsonBody => appLocalizations.mitmSkipJsonBody,
-      MitmModuleSkipReason.rawHeader => appLocalizations.mitmSkipRawHeader,
-      MitmModuleSkipReason.conditional => appLocalizations.mitmSkipConditional,
-      MitmModuleSkipReason.relativeData =>
-        appLocalizations.mitmSkipRelativeData,
-      MitmModuleSkipReason.notDownloaded =>
-        appLocalizations.mitmSkipNotDownloaded,
-      MitmModuleSkipReason.unreadable => appLocalizations.mitmSkipUnreadable,
-    };
-  }
 
   /// A module written for Apple systems still applies, so this only warns.
   String? _systemTip(AppLocalizations appLocalizations, String? target) {
@@ -470,7 +543,9 @@ class MitmModuleView extends ConsumerWidget {
             return ListItem(
               title: Text(appLocalizations.update),
               trailing: isUpdating ? const ActivityIndicator(size: 24) : null,
-              onTap: isUpdating ? null : () => _updateModule(ref, module),
+              onTap: isUpdating
+                  ? null
+                  : () => _updateModule(context, ref, module),
             );
           },
         ),
@@ -674,7 +749,7 @@ class MitmModuleView extends ConsumerWidget {
                                 for (final skip in content.skipped)
                                   (
                                     skip.line,
-                                    _skipReason(appLocalizations, skip),
+                                    mitmSkipReasonText(appLocalizations, skip),
                                   ),
                               ],
                             ),
@@ -739,6 +814,116 @@ class _MitmModuleLinesView extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// What a module brings, where it is from, and whether an update waits or
+/// failed.
+class _MitmModuleSummary extends ConsumerWidget {
+  const _MitmModuleSummary({required this.module});
+
+  final MitmModule module;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    final content = ref
+        .watch(mitmModuleDetailsProvider(module.id))
+        .value
+        ?.content;
+    final style = context.listCaptionStyle;
+    final hosts = content == null
+        ? 0
+        : [
+            ...content.insertedHostname,
+            ...content.hostname,
+          ].where((host) => !host.startsWith('-')).length;
+    final rewrites = content == null
+        ? 0
+        : content.urlRewrite.length +
+              content.headerRewrite.length +
+              content.bodyRewrite.length +
+              content.mapLocal.length;
+    final scripts = content?.script.length ?? 0;
+    final skipped = content?.skipped.length ?? 0;
+    final parts = [
+      if (hosts > 0) TextSpan(text: l.mitmModuleHostCount(hosts)),
+      if (rewrites > 0) TextSpan(text: l.mitmModuleRewriteCount(rewrites)),
+      if (scripts > 0)
+        TextSpan(
+          text: l.mitmScriptCount(scripts),
+          style: TextStyle(color: mitmScriptColor(context)),
+        ),
+    ];
+    final error = module.error;
+    final link = AppTextStyle.footnote
+        .of(context)
+        .copyWith(color: colorScheme.primary);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 2,
+      children: [
+        if (parts.isNotEmpty || skipped > 0)
+          Text.rich(
+            TextSpan(
+              children: [
+                for (final (index, part) in parts.indexed) ...[
+                  if (index > 0) const TextSpan(text: ' · '),
+                  part,
+                ],
+                if (skipped > 0)
+                  TextSpan(
+                    text:
+                        '${parts.isEmpty ? '' : ' · '}${l.mitmModuleUnsupportedLines(skipped)}',
+                  ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          ),
+        if (error != null)
+          Text(
+            '⚠︎ $error',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: style.copyWith(color: mitmRewriteErrorColor(context)),
+          )
+        else
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: module.isRemote
+                      ? l.mitmModuleRemoteSource(
+                          module.lastUpdateTime.getLastUpdateTimeDesc(context),
+                        )
+                      : l.mitmModuleLocalSource,
+                ),
+                if (module.hasPending)
+                  TextSpan(
+                    text: ' · ${l.mitmHasUpdate}',
+                    style: TextStyle(color: mitmAmberColor(context)),
+                  ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          ),
+        if (module.hasPending || (error != null && module.isRemote))
+          TextButton(
+            onPressed: () => module.hasPending
+                ? _viewModuleUpdate(context, ref, module)
+                : _updateModule(context, ref, module),
+            child: Text(
+              module.hasPending ? l.mitmViewUpdate : l.retry,
+              style: link,
+            ),
+          ),
+      ],
     );
   }
 }

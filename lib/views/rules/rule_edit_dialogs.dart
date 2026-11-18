@@ -406,6 +406,9 @@ class RuleEditFrame extends StatelessWidget {
   final VoidCallback? onDelete;
   final bool deleting;
 
+  /// In the footer's start, where [onDelete] would go.
+  final Widget? leading;
+
   const RuleEditFrame({
     super.key,
     required this.title,
@@ -418,6 +421,7 @@ class RuleEditFrame extends StatelessWidget {
     this.busy = false,
     this.onDelete,
     this.deleting = false,
+    this.leading,
   });
 
   @override
@@ -451,6 +455,7 @@ class RuleEditFrame extends StatelessWidget {
               ],
             ),
           ),
+        ?leading,
         const Spacer(),
         TextButton(
           onPressed: busy ? null : cancel,

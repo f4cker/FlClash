@@ -554,7 +554,7 @@ final class MitmModulesActionProvider
   }
 }
 
-String _$mitmModulesActionHash() => r'57706a2d4bc10a3e328a330d14dc080f0360e4b0';
+String _$mitmModulesActionHash() => r'f6c0a2e612040eff78b68f1143abe21c7c90997a';
 
 abstract class _$MitmModulesAction extends $Notifier<void> {
   void build();

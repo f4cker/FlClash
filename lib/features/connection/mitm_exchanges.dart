@@ -1,6 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
 import 'package:fl_clash/common/mitm_rewrite.dart';
+import 'package:fl_clash/features/connection/mitm_script_hits.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/core.dart';
@@ -272,12 +273,17 @@ class _MitmExchangeDetail extends StatelessWidget {
     ];
     final others = [
       for (final action in exchange.actions)
-        if (mitmListOfKey(action.kind) == null) action,
+        if (mitmListOfKey(action.kind) == null && action.kind != mitmScriptKind)
+          action,
     ];
+    final scripted = exchange.actions.any(
+      (action) => action.kind == mitmScriptKind,
+    );
     return ListView(
       padding: _detailPadding(context),
       children: [
         if (rewrites.isNotEmpty) MitmRewriteHitsSection(exchange: exchange),
+        if (scripted) MitmScriptHitsSection(exchange: exchange),
         generateSection(
           title: appLocalizations.basicInfo,
           items: [

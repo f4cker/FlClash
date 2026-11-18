@@ -122,9 +122,18 @@ void main() {
     await pump(tester, const MitmModulesView());
 
     expect(find.text('Ads'), findsOneWidget);
-    expect(find.text(currentAppLocalizations.remote), findsOneWidget);
+    expect(
+      find.textContaining('Remote · updated', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.text('Mine'), findsOneWidget);
-    expect(find.text(currentAppLocalizations.local), findsOneWidget);
+    expect(
+      find.text(
+        currentAppLocalizations.mitmModuleLocalSource,
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byType(Switch).first);
     await tester.pumpAndSettle();
@@ -281,7 +290,7 @@ void main() {
     await pump(tester, const MitmModulesView());
     final l10n = currentAppLocalizations;
 
-    await tester.tap(find.byTooltip(l10n.add));
+    await tester.tap(find.text(l10n.mitmImportModule));
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10n.importUrl));
     await tester.pumpAndSettle();
@@ -299,7 +308,7 @@ void main() {
   testWidgets('a module can be written from the add menu', (tester) async {
     await pump(tester, const MitmModulesView());
 
-    await tester.tap(find.byTooltip(currentAppLocalizations.add));
+    await tester.tap(find.text(currentAppLocalizations.mitmImportModule));
     await tester.pumpAndSettle();
 
     expect(find.text(currentAppLocalizations.mitmNewModule), findsOneWidget);

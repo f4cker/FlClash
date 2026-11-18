@@ -38,8 +38,16 @@ class MitmModulesAction extends _$MitmModulesAction {
   @override
   void build() {}
 
-  Future<MitmModule> addFromUrl(String url, {bool? enable}) async {
-    final response = await request.getTextResponseForUrl(url);
+  Future<String> download(String url) async =>
+      (await request.getTextResponseForUrl(url)).data ?? '';
+
+  /// [text], when given, is what the import confirm showed.
+  Future<MitmModule> addFromUrl(
+    String url, {
+    bool? enable,
+    String? text,
+  }) async {
+    text ??= await download(url);
     final segments = Uri.tryParse(url)?.pathSegments ?? const <String>[];
     final name = segments.where((segment) => segment.isNotEmpty).lastOrNull;
     return _save(
@@ -49,7 +57,7 @@ class MitmModulesAction extends _$MitmModulesAction {
         url: url,
         lastUpdateTime: DateTime.now(),
       ),
-      response.data ?? '',
+      text,
       added: true,
       enable: enable,
     );

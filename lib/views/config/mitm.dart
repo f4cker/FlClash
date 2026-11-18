@@ -7,6 +7,7 @@ import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/features/mitm/rewrite.dart';
+import 'package:fl_clash/features/mitm/script.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/app.dart';
@@ -15,6 +16,7 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/config/mitm_modules.dart' show MitmModulesItem;
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -483,7 +485,11 @@ class _MitmViewState extends ConsumerState<MitmView> {
                           ),
                           generateSection(
                             title: appLocalizations.mitmRewriteAndScripts,
-                            items: const [MitmRewriteEntryItem()],
+                            items: const [
+                              MitmRewriteEntryItem(),
+                              MitmScriptEntryItem(),
+                              MitmModulesItem(),
+                            ],
                           ),
                           generateSection(
                             title: appLocalizations.options,

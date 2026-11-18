@@ -338,7 +338,7 @@ final class EnabledMitmModuleRulesProvider
 }
 
 String _$enabledMitmModuleRulesHash() =>
-    r'ff6ea58d2fb840e1d76ba92cc06f6080dbc53996';
+    r'69f2ee2021392f8f77340713cea6922e99d0a09c';
 
 /// Null, and so no decryption, unless the user turned it on.
 

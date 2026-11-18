@@ -92,14 +92,15 @@ class _RewriteTextController extends TextEditingController {
 
 /// A monospaced text area with line numbers whose lines in [errorLines]
 /// are tinted; 7 to 16 lines tall, scrolling past that.
-class _RewriteLineEditor extends StatelessWidget {
+class MitmLineEditor extends StatelessWidget {
   final TextEditingController controller;
   final Set<int> errorLines;
   final bool autofocus;
   final String semanticLabel;
   final ValueChanged<String>? onChanged;
 
-  const _RewriteLineEditor({
+  const MitmLineEditor({
+    super.key,
     required this.controller,
     required this.semanticLabel,
     this.errorLines = const {},
@@ -495,7 +496,7 @@ class _RewritePasteDialogState extends ConsumerState<_RewritePasteDialog> {
           ? null
           : () => _import(sorted.rules),
       children: [
-        _RewriteLineEditor(
+        MitmLineEditor(
           controller: _controller,
           autofocus: true,
           semanticLabel: appLocalizations.mitmRewriteImportTitle,
