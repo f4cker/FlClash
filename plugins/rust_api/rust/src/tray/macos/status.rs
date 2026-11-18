@@ -30,13 +30,19 @@ const TITLE_MIN_WIDTH: f64 = 42.0;
 const TITLE_FONT_SIZE: f64 = 8.75;
 const TITLE_LINE_HEIGHT: f64 = 9.0;
 
+// The dot mirrors the TUN dot drawn into the `*_tun.png` icons to the
+// top-right corner, as measured from their pixels at every scale: on an
+// 18pt icon, a 3pt dot centred 2pt in from the corner, in a cut 2.5pt in
+// radius.
+/// The icon size the geometry below is for; other sizes scale it.
+const DOT_ICON_SIZE: f64 = 18.0;
 /// The status dot's diameter, in points.
-const DOT_DIAMETER: f64 = 6.0;
-/// How far the dot's centre sits inside the icon's top-right corner.
-const DOT_INSET: f64 = 1.0;
-/// The ring cut out of the icon around the dot, through which the menu bar
-/// shows; it reads as a stroke in the bar's own colour.
-const DOT_STROKE: f64 = 1.0;
+const DOT_DIAMETER: f64 = 3.0;
+/// How far the dot's centre sits in from the icon's top and right edges.
+const DOT_INSET: f64 = 2.0;
+/// The gap cut out of the icon around the dot, through which the menu bar
+/// shows.
+const DOT_GAP: f64 = 1.0;
 /// Breathing fades to this opacity and back.
 const DOT_DIM_OPACITY: f32 = 0.4;
 /// Half of the two-second breathing cycle; the animation autoreverses.
@@ -50,11 +56,11 @@ const DOT_FRAME_RATE: CAFrameRateRange = CAFrameRateRange {
 const BREATHING_KEY: &str = "flashBreathing";
 
 /// The dot's rect in the unflipped coordinates of an icon `size` points
-/// square, grown by `outset` on every side; it overhangs the icon's top and
-/// right edges.
+/// square, grown by `outset` on every side.
 pub(super) fn dot_rect(size: f64, outset: f64) -> NSRect {
-    let centre = size - DOT_INSET;
-    let radius = DOT_DIAMETER / 2.0 + outset;
+    let scale = size / DOT_ICON_SIZE;
+    let centre = size - DOT_INSET * scale;
+    let radius = (DOT_DIAMETER / 2.0 + outset) * scale;
     NSRect::new(
         NSPoint::new(centre - radius, centre - radius),
         NSSize::new(radius * 2.0, radius * 2.0),
@@ -90,7 +96,7 @@ pub(super) fn image(spec: &TrayImage) -> Option<Retained<NSImage>> {
 /// Draws [base] with the ring around the dot cleared, so the dot reads as
 /// stroked in whatever colour the menu bar has, and the icon stays template.
 fn knock_out(base: Retained<NSImage>, size: NSSize, template: bool) -> Retained<NSImage> {
-    let ring = dot_rect(size.width, DOT_STROKE);
+    let ring = dot_rect(size.width, DOT_GAP);
     let handler = RcBlock::new(move |rect: NSRect| -> Bool {
         base.drawInRect(rect);
         if let Some(context) = NSGraphicsContext::currentContext() {
@@ -214,6 +220,7 @@ pub(super) struct ContentIvars {
     dot: Retained<DotView>,
     dot_x: Retained<NSLayoutConstraint>,
     dot_y: Retained<NSLayoutConstraint>,
+    dot_size: Retained<NSLayoutConstraint>,
 }
 
 define_class!(
@@ -260,6 +267,7 @@ impl ContentView {
         let dot_y = dot
             .centerYAnchor()
             .constraintEqualToAnchor(&image.centerYAnchor());
+        let dot_size = dot.widthAnchor().constraintEqualToConstant(DOT_DIAMETER);
 
         let this = Self::alloc(mtm).set_ivars(ContentIvars {
             image,
@@ -268,6 +276,7 @@ impl ContentView {
             dot,
             dot_x,
             dot_y,
+            dot_size,
         });
         let view: Retained<Self> = unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] };
         let ivars = view.ivars();
@@ -299,14 +308,11 @@ impl ContentView {
         activate(&[
             ivars.dot_x.clone(),
             ivars.dot_y.clone(),
-            ivars
-                .dot
-                .widthAnchor()
-                .constraintEqualToConstant(DOT_DIAMETER),
+            ivars.dot_size.clone(),
             ivars
                 .dot
                 .heightAnchor()
-                .constraintEqualToConstant(DOT_DIAMETER),
+                .constraintEqualToAnchor(&ivars.dot.widthAnchor()),
         ]);
         ivars
             .title
@@ -348,7 +354,8 @@ impl ContentView {
             return;
         };
         let rect = dot_rect(size, 0.0);
-        let offset = rect.origin.x + DOT_DIAMETER / 2.0 - size / 2.0;
+        let offset = rect.origin.x + rect.size.width / 2.0 - size / 2.0;
+        ivars.dot_size.setConstant(rect.size.width);
         ivars.dot_x.setConstant(offset);
         // Layout anchors grow downwards.
         ivars.dot_y.setConstant(-offset);
@@ -584,21 +591,31 @@ fn title_attributes() -> Retained<NSDictionary<NSAttributedStringKey, AnyObject>
 mod tests {
     use super::*;
 
+    // The TUN icons' dot: centre (16, 16) from the top left of 18pt, 3pt
+    // across, in a 5pt cut. Mirrored to the top it sits at (16, 2), which is
+    // (16, 16) in unflipped coordinates.
     #[test]
-    fn dot_is_centred_one_point_inside_the_top_right_corner() {
+    fn dot_mirrors_the_tun_dot_to_the_top_right_corner() {
         let rect = dot_rect(18.0, 0.0);
-        assert_eq!(rect.size, NSSize::new(6.0, 6.0));
-        assert_eq!(rect.origin.x + rect.size.width / 2.0, 17.0);
-        assert_eq!(rect.origin.y + rect.size.height / 2.0, 17.0);
+        assert_eq!(rect.size, NSSize::new(3.0, 3.0));
+        assert_eq!(rect.origin.x + rect.size.width / 2.0, 16.0);
+        assert_eq!(rect.origin.y + rect.size.height / 2.0, 16.0);
     }
 
     #[test]
-    fn knockout_ring_is_one_point_wider_than_the_dot() {
-        let dot = dot_rect(16.0, 0.0);
-        let ring = dot_rect(16.0, DOT_STROKE);
-        assert_eq!(ring.size, NSSize::new(8.0, 8.0));
-        assert_eq!(ring.origin.x, dot.origin.x - 1.0);
-        assert_eq!(ring.origin.y, dot.origin.y - 1.0);
+    fn the_gap_matches_the_tun_dot() {
+        let dot = dot_rect(18.0, 0.0);
+        let cut = dot_rect(18.0, DOT_GAP);
+        assert_eq!(cut.size, NSSize::new(5.0, 5.0));
+        assert_eq!(cut.origin.x, dot.origin.x - 1.0);
+        assert_eq!(cut.origin.y, dot.origin.y - 1.0);
+    }
+
+    #[test]
+    fn other_icon_sizes_scale_the_geometry() {
+        let rect = dot_rect(36.0, 0.0);
+        assert_eq!(rect.size, NSSize::new(6.0, 6.0));
+        assert_eq!(rect.origin.x + rect.size.width / 2.0, 32.0);
     }
 
     #[test]

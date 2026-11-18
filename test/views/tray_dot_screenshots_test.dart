@@ -1,7 +1,8 @@
 // Renders the menu bar icon's MITM dot in each state, on a light and a dark
-// menu bar, to PNG for review, with the geometry the macOS host draws:
-// a 6pt dot centred 1pt inside the icon's top-right corner, and a 1pt ring
-// cut from the template icon around it. Off by default:
+// menu bar, with and without the TUN dot, to PNG for review, with the
+// geometry the macOS host draws: the TUN icons' dot mirrored to the top-right
+// corner, a 3pt dot centred 2pt in from the corner in a cut 2.5pt in radius.
+// Off by default:
 //   UI6_SCREENSHOTS=<dir> flutter test test/views/tray_dot_screenshots_test.dart
 // With RULES_REQUESTS_PAIR=<rules.png>,<requests.png> it also sets the two
 // pages side by side in rules-vs-requests-scrolled.png.
@@ -18,16 +19,22 @@ import 'package:rust_api/tray.dart';
 final _outDir = Platform.environment['UI6_SCREENSHOTS'];
 final _pair = Platform.environment['RULES_REQUESTS_PAIR'];
 
-/// Points to pixels; 4x so the 1pt ring reads.
+/// Points to pixels; 4x so the 1pt gap reads.
 const _scale = 4.0;
 const _icon = 18.0;
 const _barHeight = 24.0;
 const _cell = Size(64, _barHeight);
 const _label = 14.0;
 
-const _dotDiameter = 6.0;
-const _dotInset = 1.0;
-const _dotStroke = 1.0;
+const _dotDiameter = 3.0;
+const _dotInset = 2.0;
+const _dotGap = 1.0;
+
+/// The icon the menu bar shows, with the TUN dot or without.
+const _icons = [
+  ('plain', 'assets/images/tray/macos/4.0x/rule.png'),
+  ('tun', 'assets/images/tray/macos/4.0x/rule_tun.png'),
+];
 
 final class _Bar {
   const _Bar(this.name, this.background, this.foreground);
@@ -94,7 +101,7 @@ void _paintCell(
   if (dot != null) {
     canvas.drawCircle(
       centre,
-      _dotDiameter / 2 + _dotStroke,
+      _dotDiameter / 2 + _dotGap,
       Paint()..blendMode = BlendMode.clear,
     );
   }
@@ -125,25 +132,30 @@ void main() {
           ),
         ))
         .load();
-    final icon = await _decode(
-      File('assets/images/tray/macos/4.0x/rule.png').readAsBytesSync(),
-    );
+    final icons = [
+      for (final (name, path) in _icons)
+        (name, await _decode(File(path).readAsBytesSync())),
+    ];
+    final rows = [
+      for (final bar in _bars)
+        for (final icon in icons) (bar, icon),
+    ];
     final labels = <(String, Offset)>[];
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..scale(_scale);
     final width = _cell.width * _states.length;
-    final height = (_cell.height + _label) * _bars.length;
+    final height = (_cell.height + _label) * rows.length;
     canvas.drawRect(
       Rect.fromLTWH(0, 0, width, height),
       Paint()..color = const Color(0xFFFFFFFF),
     );
-    for (final (row, bar) in _bars.indexed) {
+    for (final (row, (bar, (iconName, icon))) in rows.indexed) {
       for (final (column, (name, indicator, opacity)) in _states.indexed) {
         final origin = Offset(
           column * _cell.width,
           row * (_cell.height + _label) + _label,
         );
-        labels.add(('${bar.name}\n$name', origin));
+        labels.add(('${bar.name} $iconName\n$name', origin));
         _paintCell(canvas, origin, bar, icon, mitmTrayDot(indicator), opacity);
         // Each cell on its own too.
         final single = ui.PictureRecorder();
@@ -159,7 +171,7 @@ void main() {
           (_cell.width * _scale).round(),
           (_cell.height * _scale).round(),
         );
-        await _write(image, 'tray-dot-${bar.name}-$name');
+        await _write(image, 'tray-dot-${bar.name}-$iconName-$name');
         image.dispose();
       }
     }
