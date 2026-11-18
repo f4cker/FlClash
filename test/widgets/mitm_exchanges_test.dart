@@ -741,6 +741,14 @@ void main() {
       ),
       row('cert', outcome: 'upstreamCertificate'): failed,
       row('client', outcome: 'clientFailed'): failed,
+      // Decrypted by the Core's word: never also called passed through.
+      row('both', mitm: true, outcome: 'http2Only'): (
+        'Decrypted',
+        'Decrypted',
+        MitmBadge.decrypted,
+      ),
+      // No word from the Core, or one it never sends: no claim at all.
+      row('unknown', outcome: 'protocolUnsupported'): null,
     };
     for (final MapEntry(key: info, value: want) in cases.entries) {
       await tester.pumpWidget(
@@ -791,4 +799,77 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets(
+    'an unsupported protocol says why, and passed through only when the Core said so',
+    (tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final requests = container.read(requestsProvider.notifier);
+      TrackerInfo base(String id) => _decrypted.copyWith(
+        id: id,
+        mitmOutcome: '',
+        metadata: Metadata(network: 'tcp', host: '$id.test'),
+      );
+      requests.addRequest(base('confirmed'));
+      requests.addRequest(base('unconfirmed'));
+      requests.addRequest(base('unknown'));
+      // The Core reports http2Only as it relays the connection untouched.
+      requests.setMitmOutcome('confirmed', 'http2Only');
+      requests.setMitmOutcome('unknown', 'protocolUnsupported');
+      final state = container.read(requestsProvider);
+      TrackerInfo byId(String id) => state.list.firstWhere((r) => r.id == id);
+      expect(byId('confirmed').mitmOutcome, 'http2Only');
+      expect(MitmBadge.of(byId('confirmed')), MitmBadge.passedThrough);
+      expect(MitmBadge.of(byId('unconfirmed')), isNull);
+      expect(byId('unknown').mitmOutcome, '');
+      expect(MitmBadge.of(byId('unknown')), isNull);
+
+      for (final (locale, reason, passed) in [
+        (const Locale('zh'), '当前连接使用的协议不支持解密。', '未解密 · 原样放行'),
+        (
+          const Locale('en'),
+          "This connection uses a protocol that can't be decrypted.",
+          'Not decrypted · passed through',
+        ),
+      ]) {
+        final l = lookupAppLocalizations(locale);
+        expect(l.mitmOutcomeHTTP1Unsupported, reason);
+        expect(l.mitmBadgePassedThrough, passed);
+      }
+      final zh = lookupAppLocalizations(const Locale('zh'));
+      expect(zh.mitmHttp2, 'HTTP/2 解密');
+      expect(zh.mitmHttp2Desc, '关闭后，仅解密 HTTP/1.1 连接；仅支持 HTTP/2 的连接不会解密。');
+      final en = lookupAppLocalizations(const Locale('en'));
+      expect(en.mitmHttp2, 'Decrypt HTTP/2');
+      expect(
+        en.mitmHttp2Desc,
+        "When off, only HTTP/1.1 connections are decrypted; connections that support only HTTP/2 won't be decrypted.",
+      );
+
+      // The detail names the reason; the glyph's words say passed through.
+      for (final (info, passedThrough) in [
+        (byId('confirmed'), true),
+        (byId('unconfirmed'), false),
+      ]) {
+        await tester.pumpWidget(
+          TestApp(
+            wrapInProviderScope: true,
+            homeBuilder: (child) => HostScaffold(body: child),
+            child: TrackerInfoItem(trackerInfo: info, detailTitle: 'detail'),
+          ),
+        );
+        await tester.pump();
+        final tooltips = tester
+            .widgetList<Tooltip>(find.byType(Tooltip))
+            .map((t) => t.message);
+        expect(
+          tooltips.contains('Not decrypted · passed through'),
+          passedThrough,
+          reason: info.id,
+        );
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

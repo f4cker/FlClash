@@ -11654,7 +11654,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmOutcomeHTTP1Unsupported.
   ///
   /// In en, this message translates to:
-  /// **'HTTP/1.1 is not supported'**
+  /// **'This connection uses a protocol that can\'t be decrypted.'**
   String get mitmOutcomeHTTP1Unsupported;
 
   /// No description provided for @mitmOutcomeHelloPassthrough.
@@ -12086,7 +12086,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmHttp2Desc.
   ///
   /// In en, this message translates to:
-  /// **'When off, only HTTP/1.1 is decrypted; connections that use only HTTP/2 (such as gRPC) pass through undecrypted.'**
+  /// **'When off, only HTTP/1.1 connections are decrypted; connections that support only HTTP/2 won\'t be decrypted.'**
   String get mitmHttp2Desc;
 }
 

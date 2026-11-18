@@ -133,7 +133,7 @@ type mitmHTTP2Handler struct {
 }
 
 // Sent on unchanged except where HTTP/2 itself requires otherwise; Go's
-// server would add Content-Type and Date, which are suppressed when the
+// server would add Content-Type, Date and Content-Length, suppressed when the
 // site sent none.
 func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !h.allowed() {
@@ -213,7 +213,7 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Trailers are sent below, after the body, by name.
 	delete(fields, "Trailer")
-	for _, name := range []string{"Content-Type", "Date"} {
+	for _, name := range []string{"Content-Type", "Date", "Content-Length"} {
 		if _, present := resp.Header[name]; !present {
 			fields[name] = nil
 		}
@@ -230,7 +230,10 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body = mitmCaptureReader{r: body, entry: entry, response: true}
 	}
 	flusher, _ := w.(http.Flusher)
-	if flusher != nil {
+	// A response the site ended with its headers (gRPC's trailers-only
+	// status) must reach the client as one HEADERS frame ending the stream;
+	// sent early, the client would wait for trailers that never come.
+	if flusher != nil && resp.ContentLength != 0 {
 		flusher.Flush()
 	}
 	buf := make([]byte, 32<<10)

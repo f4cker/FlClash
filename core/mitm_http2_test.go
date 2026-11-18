@@ -411,6 +411,7 @@ func TestMitmH2GRPCShapedStreams(t *testing.T) {
 			w.Header().Del("Trailer")
 			w.Header().Set("Grpc-Status", "5")
 			w.Header().Set("Grpc-Message", "not found")
+			w.Header()["Content-Length"] = nil // as grpc-go: none
 			w.WriteHeader(200)
 			return
 		}
@@ -480,6 +481,12 @@ func TestMitmH2GRPCShapedStreams(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	if len(body) != 0 || resp.Header.Get("Grpc-Status") != "5" || resp.Header.Get("Grpc-Message") != "not found" {
 		t.Fatalf("trailers-only: %q %v", body, resp.Header)
+	}
+	// It must stay one HEADERS frame that ends the stream (the transport
+	// then knows the length is 0): grpc-go fails a status sent as headers
+	// followed by an empty DATA frame, "closed without sending trailers".
+	if resp.ContentLength != 0 || resp.Header["Content-Length"] != nil {
+		t.Fatalf("trailers-only was split from the end of the stream: length %d %v", resp.ContentLength, resp.Header)
 	}
 
 	list := handleMitmExchanges(MitmExchangesParams{ID: "h2-connection"})

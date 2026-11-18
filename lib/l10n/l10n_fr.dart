@@ -6956,7 +6956,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Échec de la vérification du certificat du site';
 
   @override
-  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 non pris en charge';
+  String get mitmOutcomeHTTP1Unsupported =>
+      'Cette connexion utilise un protocole qui ne peut pas être déchiffré.';
 
   @override
   String get mitmOutcomeHelloPassthrough =>
@@ -7207,5 +7208,5 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mitmHttp2Desc =>
-      'Désactivé, seul HTTP/1.1 est déchiffré ; les connexions uniquement HTTP/2 (comme gRPC) passent sans être déchiffrées.';
+      'Désactivé, seules les connexions HTTP/1.1 sont déchiffrées ; les connexions qui ne prennent en charge que HTTP/2 ne seront pas déchiffrées.';
 }

@@ -1931,7 +1931,7 @@
   "mitmIgnoredProfileHostnames": "{count} ignorados de suscripciones o scripts",
   "mitmOutcomeRefused": "El cliente envió una alerta durante el handshake. Se desconoce la causa.",
   "mitmOutcomeUpstreamCertificate": "Falló la verificación del certificado del sitio",
-  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 no es compatible",
+  "mitmOutcomeHTTP1Unsupported": "Esta conexión usa un protocolo que no se puede descifrar.",
   "mitmOutcomeHelloPassthrough": "No se pudo inspeccionar TLS; conexión sin descifrar",
   "mitmOutcomeFailed": "Falló la conexión descifrada",
   "mitmPausedLiveness": "Descifrado en pausa: no se pudo verificar la confianza o el firmante. Normalmente se detecta en unos 26 segundos; la suspensión o bloqueos pueden tardar más.",
@@ -2003,5 +2003,5 @@
   "ipxViaExit": "Queried through the current exit",
   "ipxUnknown": "Unknown",
   "mitmHttp2": "Descifrar HTTP/2",
-  "mitmHttp2Desc": "Si está desactivado, solo se descifra HTTP/1.1; las conexiones que solo usan HTTP/2 (como gRPC) pasan sin descifrar."
+  "mitmHttp2Desc": "Si está desactivado, solo se descifran las conexiones HTTP/1.1; las conexiones que solo admiten HTTP/2 no se descifrarán."
 }
