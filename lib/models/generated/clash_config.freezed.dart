@@ -8387,4 +8387,298 @@ as String?,
 
 }
 
+/// @nodoc
+mixin _$MitmScript {
+
+ int get id; int? get profileId; String get line; bool get enabled; String? get order; String? get url; String get source; String get file; String? get pendingFile; DateTime? get checkedAt; String? get error;
+/// Create a copy of MitmScript
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MitmScriptCopyWith<MitmScript> get copyWith => _$MitmScriptCopyWithImpl<MitmScript>(this as MitmScript, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MitmScript;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmScript&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.enabled, _this.enabled) || other.enabled == _this.enabled)&&(identical(other.order, _this.order) || other.order == _this.order)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.source, _this.source) || other.source == _this.source)&&(identical(other.file, _this.file) || other.file == _this.file)&&(identical(other.pendingFile, _this.pendingFile) || other.pendingFile == _this.pendingFile)&&(identical(other.checkedAt, _this.checkedAt) || other.checkedAt == _this.checkedAt)&&(identical(other.error, _this.error) || other.error == _this.error));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as MitmScript;
+  return Object.hash(runtimeType,_this.id,_this.profileId,_this.line,_this.enabled,_this.order,_this.url,_this.source,_this.file,_this.pendingFile,_this.checkedAt,_this.error);
+}
+
+@override
+String toString() {
+  final _this = this as MitmScript;
+  return 'MitmScript(id: ${_this.id}, profileId: ${_this.profileId}, line: ${_this.line}, enabled: ${_this.enabled}, order: ${_this.order}, url: ${_this.url}, source: ${_this.source}, file: ${_this.file}, pendingFile: ${_this.pendingFile}, checkedAt: ${_this.checkedAt}, error: ${_this.error})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MitmScriptCopyWith<$Res>  {
+  factory $MitmScriptCopyWith(MitmScript value, $Res Function(MitmScript) _then) = _$MitmScriptCopyWithImpl;
+@useResult
+$Res call({
+ int id, int? profileId, String line, bool enabled, String? order, String? url, String source, String file, String? pendingFile, DateTime? checkedAt, String? error
+});
+
+
+
+
+}
+/// @nodoc
+class _$MitmScriptCopyWithImpl<$Res>
+    implements $MitmScriptCopyWith<$Res> {
+  _$MitmScriptCopyWithImpl(this._self, this._then);
+
+  final MitmScript _self;
+  final $Res Function(MitmScript) _then;
+
+/// Create a copy of MitmScript
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = freezed,Object? line = null,Object? enabled = null,Object? order = freezed,Object? url = freezed,Object? source = null,Object? file = null,Object? pendingFile = freezed,Object? checkedAt = freezed,Object? error = freezed,}) {
+  return _then(MitmScript(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as int,profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
+as int?,line: null == line ? _self.line : line // ignore: cast_nullable_to_non_nullable
+as String,enabled: null == enabled ? _self.enabled : enabled // ignore: cast_nullable_to_non_nullable
+as bool,order: freezed == order ? _self.order : order // ignore: cast_nullable_to_non_nullable
+as String?,url: freezed == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String?,source: null == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
+as String,file: null == file ? _self.file : file // ignore: cast_nullable_to_non_nullable
+as String,pendingFile: freezed == pendingFile ? _self.pendingFile : pendingFile // ignore: cast_nullable_to_non_nullable
+as String?,checkedAt: freezed == checkedAt ? _self.checkedAt : checkedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MitmScript].
+extension MitmScriptPatterns on MitmScript {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MitmScript value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MitmScript() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MitmScript value)  $default,){
+final _that = this;
+switch (_that) {
+case _MitmScript():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MitmScript value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MitmScript() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MitmScript() when $default != null:
+return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error)  $default,) {final _that = this;
+switch (_that) {
+case _MitmScript():
+return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error)?  $default,) {final _that = this;
+switch (_that) {
+case _MitmScript() when $default != null:
+return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _MitmScript implements MitmScript {
+  const _MitmScript({required this.id, this.profileId, required this.line, this.enabled = true, this.order, this.url, this.source = '', required this.file, this.pendingFile, this.checkedAt, this.error});
+  
+
+@override final  int id;
+@override final  int? profileId;
+@override final  String line;
+@override@JsonKey() final  bool enabled;
+@override final  String? order;
+@override final  String? url;
+@override@JsonKey() final  String source;
+@override final  String file;
+@override final  String? pendingFile;
+@override final  DateTime? checkedAt;
+@override final  String? error;
+
+/// Create a copy of MitmScript
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MitmScriptCopyWith<_MitmScript> get copyWith => __$MitmScriptCopyWithImpl<_MitmScript>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmScript&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.line, line) || other.line == line)&&(identical(other.enabled, enabled) || other.enabled == enabled)&&(identical(other.order, order) || other.order == order)&&(identical(other.url, url) || other.url == url)&&(identical(other.source, source) || other.source == source)&&(identical(other.file, file) || other.file == file)&&(identical(other.pendingFile, pendingFile) || other.pendingFile == pendingFile)&&(identical(other.checkedAt, checkedAt) || other.checkedAt == checkedAt)&&(identical(other.error, error) || other.error == error));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,profileId,line,enabled,order,url,source,file,pendingFile,checkedAt,error);
+}
+
+@override
+String toString() {
+    return 'MitmScript(id: $id, profileId: $profileId, line: $line, enabled: $enabled, order: $order, url: $url, source: $source, file: $file, pendingFile: $pendingFile, checkedAt: $checkedAt, error: $error)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MitmScriptCopyWith<$Res> implements $MitmScriptCopyWith<$Res> {
+  factory _$MitmScriptCopyWith(_MitmScript value, $Res Function(_MitmScript) _then) = __$MitmScriptCopyWithImpl;
+@override @useResult
+$Res call({
+ int id, int? profileId, String line, bool enabled, String? order, String? url, String source, String file, String? pendingFile, DateTime? checkedAt, String? error
+});
+
+
+
+
+}
+/// @nodoc
+class __$MitmScriptCopyWithImpl<$Res>
+    implements _$MitmScriptCopyWith<$Res> {
+  __$MitmScriptCopyWithImpl(this._self, this._then);
+
+  final _MitmScript _self;
+  final $Res Function(_MitmScript) _then;
+
+/// Create a copy of MitmScript
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = freezed,Object? line = null,Object? enabled = null,Object? order = freezed,Object? url = freezed,Object? source = null,Object? file = null,Object? pendingFile = freezed,Object? checkedAt = freezed,Object? error = freezed,}) {
+  return _then(_MitmScript(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as int,profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
+as int?,line: null == line ? _self.line : line // ignore: cast_nullable_to_non_nullable
+as String,enabled: null == enabled ? _self.enabled : enabled // ignore: cast_nullable_to_non_nullable
+as bool,order: freezed == order ? _self.order : order // ignore: cast_nullable_to_non_nullable
+as String?,url: freezed == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String?,source: null == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
+as String,file: null == file ? _self.file : file // ignore: cast_nullable_to_non_nullable
+as String,pendingFile: freezed == pendingFile ? _self.pendingFile : pendingFile // ignore: cast_nullable_to_non_nullable
+as String?,checkedAt: freezed == checkedAt ? _self.checkedAt : checkedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
 // dart format on

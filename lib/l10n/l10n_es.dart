@@ -7757,4 +7757,429 @@ class AppLocalizationsEs extends AppLocalizations {
   String mitmRewriteNotAppliedTitle(String value) {
     return 'Rewrite not applied: $value';
   }
+
+  @override
+  String get mitmScripts => 'Scripts';
+
+  @override
+  String mitmScriptCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count scripts',
+      one: '1 script',
+      zero: 'None added',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmUpdateCount(int count) {
+    return '$count with updates';
+  }
+
+  @override
+  String mitmScriptInvalidCount(int count) {
+    return '$count invalid';
+  }
+
+  @override
+  String mitmModuleCount(int count, int enabled) {
+    return '$count modules, $enabled on';
+  }
+
+  @override
+  String mitmScriptSubtitle(Object profile, int count, int enabled) {
+    return 'Profile “$profile” · $count scripts, $enabled on';
+  }
+
+  @override
+  String get mitmScriptGroupRequest => 'Request Scripts';
+
+  @override
+  String get mitmScriptGroupResponse => 'Response Scripts';
+
+  @override
+  String get mitmScriptKindRequest => 'Request';
+
+  @override
+  String get mitmScriptKindResponse => 'Response';
+
+  @override
+  String get mitmScriptNeedsBody => 'Needs body';
+
+  @override
+  String mitmScriptRemoteSource(Object source, Object time) {
+    return '$source · checked $time';
+  }
+
+  @override
+  String mitmScriptLocalSource(Object file) {
+    return 'Local file · $file';
+  }
+
+  @override
+  String get mitmScriptHasUpdate => 'Content updated';
+
+  @override
+  String get mitmHasUpdate => 'Update available';
+
+  @override
+  String get mitmViewUpdate => 'View Update';
+
+  @override
+  String mitmScriptsFromModules(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more scripts come from modules',
+      one: '1 more script comes from modules',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mitmScriptsOff =>
+      'HTTPS decryption is off, so scripts don\'t run.';
+
+  @override
+  String get mitmScriptHostNotDecrypted =>
+      'This host isn\'t decrypted, so the script won\'t run';
+
+  @override
+  String get mitmAddToDecryption => 'Add to Decryption';
+
+  @override
+  String get mitmScriptsEmptyTitle => 'No scripts yet';
+
+  @override
+  String get mitmScriptsEmptyBody =>
+      'Once added, a script runs on the requests or responses it matches.';
+
+  @override
+  String get mitmAddScript => 'Add Script';
+
+  @override
+  String get mitmCheckAllUpdates => 'Check All for Updates';
+
+  @override
+  String get mitmScriptCopyAll => 'Copy All Lines';
+
+  @override
+  String get mitmScriptDeleteInvalid => 'Delete Invalid Scripts';
+
+  @override
+  String mitmScriptDeleteInvalidConfirm(int count) {
+    return 'Delete $count invalid scripts?';
+  }
+
+  @override
+  String get mitmCheckUpdate => 'Check for Update';
+
+  @override
+  String get mitmCopyLine => 'Copy Line';
+
+  @override
+  String get mitmAddScriptHint =>
+      'Paste lines from a Surge config\'s [Script] section, one script per line, or just a script URL.';
+
+  @override
+  String get mitmScriptType => 'Type';
+
+  @override
+  String get mitmScriptPattern => 'URL Pattern';
+
+  @override
+  String get mitmScriptTimeout => 'Timeout';
+
+  @override
+  String mitmScriptPasteOk(int count, int requests, int responses) {
+    return '$count can be added: $requests request, $responses response';
+  }
+
+  @override
+  String mitmScriptPasteLineError(int line, Object reason) {
+    return 'Line $line can\'t be added: $reason';
+  }
+
+  @override
+  String get mitmScriptUnsupportedType =>
+      'This kind of script isn\'t supported yet';
+
+  @override
+  String get mitmScriptUnreadable => 'Not a script line';
+
+  @override
+  String get mitmScriptNoPattern => 'No URL pattern';
+
+  @override
+  String get mitmScriptNoPath =>
+      'script-path must be a URL; add a local script with “From File…”';
+
+  @override
+  String get mitmAddFromFile => 'From File…';
+
+  @override
+  String get mitmContinue => 'Continue';
+
+  @override
+  String get mitmScriptConfirmTitle => 'Confirm Scripts';
+
+  @override
+  String get mitmScriptConfirmBody =>
+      'These scripts can see and change the plaintext requests and responses of the hosts they match, which may include accounts and passwords. Only turn on scripts you trust.';
+
+  @override
+  String get mitmCapabilityRead =>
+      'See and change plaintext requests and responses of the matched hosts';
+
+  @override
+  String get mitmCapabilitySend => 'Send requests of its own (through Flash)';
+
+  @override
+  String get mitmCapabilityStore => 'Keep a little data on this Mac';
+
+  @override
+  String get mitmCapabilityLimits =>
+      'Can\'t read or write files or run commands; each run gets at most 10 seconds, after which the message passes unchanged.';
+
+  @override
+  String mitmHostNotDecrypted(Object host) {
+    return '$host isn\'t decrypted';
+  }
+
+  @override
+  String get mitmAlsoDecryptHosts => 'Also add these hosts to decryption';
+
+  @override
+  String get mitmAddAndEnable => 'Add and Turn On';
+
+  @override
+  String get mitmScriptDownloading => 'Downloading and checking…';
+
+  @override
+  String mitmScriptsAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Added $count scripts',
+      one: 'Added 1 script',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mitmScriptEmpty => 'The script is empty';
+
+  @override
+  String mitmScriptDownloadFailed(Object name, Object reason) {
+    return 'Couldn\'t download $name: $reason';
+  }
+
+  @override
+  String mitmScriptCannotLoad(Object name, Object reason) {
+    return '$name can\'t be loaded: $reason';
+  }
+
+  @override
+  String mitmScriptCheckFailed(Object reason) {
+    return 'Couldn\'t check for updates: $reason';
+  }
+
+  @override
+  String mitmUpdateTitle(Object name) {
+    return '$name has an update';
+  }
+
+  @override
+  String mitmUpdateSubtitle(Object before, Object after) {
+    return 'Last $before · This $after';
+  }
+
+  @override
+  String mitmDiffCounts(int added, int removed) {
+    return '+$added lines −$removed lines';
+  }
+
+  @override
+  String mitmDiffFolded(int count) {
+    return '… $count unchanged lines';
+  }
+
+  @override
+  String get mitmNotNow => 'Not Now';
+
+  @override
+  String get mitmAdoptUpdate => 'Use New Version';
+
+  @override
+  String get mitmChangeHosts => 'Decrypted hosts';
+
+  @override
+  String get mitmChangeScripts => 'Scripts';
+
+  @override
+  String get mitmChangeRewrites => 'Rewrites';
+
+  @override
+  String get mitmNoChange => 'No change';
+
+  @override
+  String get mitmModuleConfirmTitle => 'Confirm Module Import';
+
+  @override
+  String get mitmModuleHostsHint =>
+      'This module will add the decrypted hosts below. Check them before you import.';
+
+  @override
+  String get mitmModuleNoHosts => 'This module adds no decrypted hosts.';
+
+  @override
+  String get mitmAlreadyListed => 'Already listed';
+
+  @override
+  String get mitmNewHost => 'New';
+
+  @override
+  String mitmExcludedCount(int count) {
+    return '$count excluded';
+  }
+
+  @override
+  String mitmMoreHosts(int count) {
+    return '$count more';
+  }
+
+  @override
+  String get mitmModuleRewrites => 'Rewrite rules';
+
+  @override
+  String get mitmModuleRoutingRules => 'Routing rules';
+
+  @override
+  String mitmModuleRoutingRulesNote(int count) {
+    return '$count rules, not imported yet';
+  }
+
+  @override
+  String get mitmModuleUnsupported => 'Not supported';
+
+  @override
+  String mitmModuleUnsupportedCount(int count) {
+    return '$count lines won\'t be imported';
+  }
+
+  @override
+  String get mitmImportOnly => 'Import Only';
+
+  @override
+  String get mitmImportAndEnable => 'Import and Turn On';
+
+  @override
+  String get mitmImportModule => 'Import Module';
+
+  @override
+  String get mitmModuleImported => 'Module imported';
+
+  @override
+  String mitmModuleHostCount(int count) {
+    return '$count hosts';
+  }
+
+  @override
+  String mitmModuleRewriteCount(int count) {
+    return '$count rewrites';
+  }
+
+  @override
+  String mitmModuleUnsupportedLines(int count) {
+    return '$count lines not supported';
+  }
+
+  @override
+  String mitmModuleRemoteSource(Object time) {
+    return 'Remote · updated $time';
+  }
+
+  @override
+  String get mitmModuleLocalSource => 'Local';
+
+  @override
+  String get mitmModulesEmptyTitle => 'No modules yet';
+
+  @override
+  String get mitmModulesEmptyBody =>
+      'Once imported, you can see what a module sets up.';
+
+  @override
+  String mitmScriptsRan(int count) {
+    return 'Scripts ran · $count';
+  }
+
+  @override
+  String mitmScriptsPassed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count scripts didn\'t finish; the message passed unchanged',
+      one: '1 script didn\'t finish; the message passed unchanged',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmScriptDone(Object took) {
+    return 'Finished · $took';
+  }
+
+  @override
+  String mitmScriptTimedOut(int seconds) {
+    return 'Timed out ($seconds s)';
+  }
+
+  @override
+  String mitmScriptFailed(Object reason) {
+    return 'Failed: $reason';
+  }
+
+  @override
+  String mitmScriptNotRun(Object reason) {
+    return 'Didn\'t run: $reason';
+  }
+
+  @override
+  String get mitmScriptMemory => 'over the memory limit';
+
+  @override
+  String get mitmScriptBusy => 'too many scripts running';
+
+  @override
+  String get mitmScriptNoDone => 'the script never called \$done';
+
+  @override
+  String mitmScriptLogExpand(int count) {
+    return 'Show All ($count lines)';
+  }
+
+  @override
+  String mitmScriptRequestsSent(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Sent $count requests',
+      one: 'Sent 1 request',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mitmViewInScripts => 'Show in Scripts';
+
+  @override
+  String get mitmViewInModule => 'Show in Module';
+
+  @override
+  String mitmFromModule(Object name) {
+    return 'Module · $name';
+  }
 }

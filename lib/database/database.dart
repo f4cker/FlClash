@@ -21,6 +21,7 @@ part 'icons.dart';
 part 'ip_qualities.dart';
 part 'mitm_modules.dart';
 part 'mitm_rewrites.dart';
+part 'mitm_scripts.dart';
 part 'mounts.dart';
 part 'profiles.dart';
 part 'rules.dart';
@@ -45,6 +46,7 @@ part 'scripts.dart';
     MountSourceStatuses,
     AddedRuleSets,
     MitmRewrites,
+    MitmScripts,
   ],
   daos: [
     ProfilesDao,
@@ -61,13 +63,14 @@ part 'scripts.dart';
     MountsDao,
     AddedRuleSetsDao,
     MitmRewritesDao,
+    MitmScriptsDao,
   ],
 )
 class Database extends _$Database {
   Database([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -135,6 +138,9 @@ class Database extends _$Database {
           await _createTableIfMissing(m, mitmModules);
         }
         if (from < 23) {
+          // The copy below names every column the table has today.
+          await _addColumnIfMissing(m, mitmModules, mitmModules.pendingTime);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.error);
           await m.alterTable(TableMigration(mitmModules));
         }
         // Flash 0.9.x and upstream FlClash both shipped a version 24: Flash's
@@ -164,6 +170,11 @@ class Database extends _$Database {
         }
         if (from < 28) {
           await _createTableIfMissing(m, mitmRewrites);
+        }
+        if (from < 29) {
+          await _createTableIfMissing(m, mitmScripts);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.pendingTime);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.error);
         }
       }),
       beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),

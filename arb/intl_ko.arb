@@ -467,15 +467,40 @@
   "invalidLinkTip": "구독 링크 또는 프록시 공유 링크가 아닙니다",
   "numberTip": "{label}은(는) 숫자여야 합니다",
   "numberRangeTip": "{label}은(는) {min}에서 {max} 사이여야 합니다",
+  "@numberRangeTip": {
+    "placeholders": {
+      "label": {},
+      "min": {},
+      "max": {}
+    }
+  },
   "interval": "간격",
   "existsTip": "{label}이(가) 이미 있습니다",
   "maxLengthTip": "{label}은(는) 최대 {max}자까지 입력할 수 있습니다",
+  "@maxLengthTip": {
+    "placeholders": {
+      "label": {},
+      "max": {}
+    }
+  },
   "singleImport": "개별 가져오기",
   "batchImport": "일괄 가져오기",
   "batchUrlInputTip": "한 줄에 URL 하나씩",
   "batchLinkInputTip": "한 줄에 링크 하나씩",
   "batchPreviewTip": "추가 {count}개, 이미 있어서 건너뜀 {skipped}개",
+  "@batchPreviewTip": {
+    "placeholders": {
+      "count": {},
+      "skipped": {}
+    }
+  },
   "lineIssueTip": "{line}행: {message}",
+  "@lineIssueTip": {
+    "placeholders": {
+      "line": {},
+      "message": {}
+    }
+  },
   "singleValueTip": "{label}은(는) 하나만 입력해야 합니다",
   "deleteTip": "이 {label}을(를) 삭제하시겠습니까?",
   "deleteMultipTip": "선택한 {label}을(를) 삭제하시겠습니까?",
@@ -698,8 +723,26 @@
   "geoUpdated": "{name}: 업데이트됨",
   "secondsCount": "{count, plural, other{{count}초}}",
   "proxiesCount": "{count, plural, other{프록시 {label}개}}",
+  "@proxiesCount": {
+    "placeholders": {
+      "count": {},
+      "label": {}
+    }
+  },
   "rulesCount": "{count, plural, other{규칙 {label}개}}",
+  "@rulesCount": {
+    "placeholders": {
+      "count": {},
+      "label": {}
+    }
+  },
   "proxyGroupsCount": "{count, plural, other{프록시 그룹 {label}개}}",
+  "@proxyGroupsCount": {
+    "placeholders": {
+      "count": {},
+      "label": {}
+    }
+  },
   "changelogBreaking": "호환성 변경",
   "changelogFeatures": "새로운 기능",
   "changelogFixes": "버그 수정",
@@ -780,6 +823,12 @@
   "shareLinksInvalid": "링크에서 읽을 수 있는 프록시가 없습니다",
   "shareLinkUnreadable": "읽을 수 있는 프록시가 없습니다: {link}",
   "proxiesProfileLabel": "{name} 외 (프록시 {count}개)",
+  "@proxiesProfileLabel": {
+    "placeholders": {
+      "name": {},
+      "count": {}
+    }
+  },
   "singleShareLinkOnly": "여기에는 링크를 하나만 입력하세요. 여러 개는 목록의 빠른 편집에서 편집하세요",
   "username": "사용자 이름",
   "emptyFallback": "빈 폴백",
@@ -798,14 +847,38 @@
   "customIssueGroupLoop": "프록시 그룹이 서로를 순환 참조합니다: {path}",
   "customIssueInvalidEmptyFallback": "빈 폴백은 프록시여야 하지만 존재하지 않거나 프록시 그룹입니다: {name}",
   "customIssueInvalidFilter": "올바른 정규식이 아닙니다({name}): {message}",
+  "@customIssueInvalidFilter": {
+    "placeholders": {
+      "name": {},
+      "message": {}
+    }
+  },
   "customIssueMissingDialer": "존재하지 않는 다이얼러 프록시: {name}",
   "customIssueDialerLoop": "{proxy}이(가) {target}을(를) 거쳐 다시 {proxy}(으)로 돌아오므로 다이얼이 순환합니다",
+  "@customIssueDialerLoop": {
+    "placeholders": {
+      "proxy": {},
+      "target": {}
+    }
+  },
   "dialerProxyLoopStopped": "{name}을(를) 거치는 다이얼이 이를 사용하는 프록시로 되돌아와 연결을 중단했습니다",
   "customIssuesSummary": "문제가 있는 항목 {count}개, 이 프로필을 적용하면 실패할 수 있습니다",
   "providerInUse": "{label}은(는) 아직 {profiles}에서 사용 중이며, 삭제하면 해당 프로필이 제대로 작동하지 않습니다. 삭제하시겠습니까?",
+  "@providerInUse": {
+    "placeholders": {
+      "label": {},
+      "profiles": {}
+    }
+  },
   "proxyGroupInUse": "{label}은(는) 이 프로필의 규칙, 프록시 그룹, 다이얼러 프록시, DNS 또는 NTP에서 아직 참조 중이며, 삭제하면 작동하지 않게 됩니다. 삭제하시겠습니까?",
   "proxiesRemovedTip": "다음 프록시가 삭제됩니다: {removed}. 이름이 바뀐 줄은 새 프록시로 간주되며, 삭제된 프록시를 지정한 사용자 지정 프로필에는 누락으로 표시됩니다. 그래도 적용하시겠습니까?",
   "proxiesReplacedTip": "다음 프록시가 삭제됩니다: {removed}. 다음 프록시가 추가됩니다: {added}. 이름이 바뀐 줄은 새 프록시로 간주되며, 삭제된 프록시를 지정한 사용자 지정 프로필에는 누락으로 표시됩니다. 그래도 적용하시겠습니까?",
+  "@proxiesReplacedTip": {
+    "placeholders": {
+      "removed": {},
+      "added": {}
+    }
+  },
   "fontSize": "크기",
   "large": "크게",
   "extraLarge": "매우 크게",
@@ -860,6 +933,12 @@
   "ipVersion": "IP 버전",
   "addFilters": "필터 추가",
   "failedItem": "{label}: {message}",
+  "@failedItem": {
+    "placeholders": {
+      "label": {},
+      "message": {}
+    }
+  },
   "failedCount": "{count}개 항목 실패. 눌러서 보기",
   "importConfigInvalid": "가져올 수 있는 구성 파일이 아닙니다",
   "importConfigReplaceTip": "가져오면 이 프로필의 현재 프록시 그룹, 규칙, 설정이 대체됩니다",
@@ -927,6 +1006,12 @@
   "usedShort": "사용",
   "profileUpdatedAt": "{time} 업데이트",
   "profileExpiresIn": "{date} 만료, {days, plural, other{{days}일}} 남음",
+  "@profileExpiresIn": {
+    "placeholders": {
+      "date": {},
+      "days": {}
+    }
+  },
   "profileDaysLeft": "{days, plural, other{{days}일 남음}}",
   "target": "대상",
   "outboundExit": "출구",
@@ -944,6 +1029,12 @@
   "done": "완료",
   "dashboardAddableSection": "추가 가능",
   "customImportDroppedSubRules": "{count, plural, other{사용자 지정 프로필은 하위 규칙을 지원하지 않아 SUB-RULE 규칙 {label}개를 제외했습니다}}",
+  "@customImportDroppedSubRules": {
+    "placeholders": {
+      "count": {},
+      "label": {}
+    }
+  },
   "autoInclude": "자동 포함",
   "allReferencedProxies": "참조된 모든 프록시",
   "allReferencedProxyProviders": "참조된 모든 프록시 공급자",
@@ -962,6 +1053,12 @@
   "httpCaptureNoHosts": "나열된 호스트가 없어 아무것도 기록되지 않습니다. MITM 페이지의 호스트 이름이나 연결 세부 정보에서 추가하세요.",
   "httpCaptureLimit": "최대 기록 수",
   "httpCaptureLimitDesc": "이 개수에 도달하거나 메모리 {memory}를 채우면 가장 오래된 기록부터 삭제됩니다. 본문은 앞부분 {body}만 보관합니다.",
+  "@httpCaptureLimitDesc": {
+    "placeholders": {
+      "memory": {},
+      "body": {}
+    }
+  },
   "httpRequests": "HTTP 요청",
   "httpRequestsMissing": "캡처를 켜기 전에 보냈거나 이미 지워진 요청은 표시되지 않습니다.",
   "httpRequestCleared": "이 요청의 기록은 지워졌습니다",
@@ -1071,6 +1168,12 @@
   "http2": "HTTP/2",
   "decryptUntrusted": "로컬 신뢰 없이 복호화",
   "invalidOfCount": "{total}개 중 {invalid}개 무효",
+  "@invalidOfCount": {
+    "placeholders": {
+      "invalid": {},
+      "total": {}
+    }
+  },
   "batchLineInputTip": "한 줄에 한 항목",
   "downloadingUpdate": "업데이트 다운로드 중",
   "updateFailed": "업데이트 실패",
@@ -1199,6 +1302,16 @@
   "tsOfflineNotSelectable": "Offline, can't be chosen",
   "tsExitChangeTitle": "Change exit node?",
   "tsExitChangeBody": "Sets the exit node of “{node}” to “{device}”. Connections through this node may drop; Flash rules stay the same.",
+  "@tsExitChangeBody": {
+    "placeholders": {
+      "node": {
+        "type": "Object"
+      },
+      "device": {
+        "type": "Object"
+      }
+    }
+  },
   "tsExitChangeConfirm": "Change exit node",
   "tsExitOffTitle": "Stop using the exit node?",
   "tsExitOffBody": "Only turns off exit forwarding for “{node}”; it doesn't log out of Tailscale and Flash rules stay the same.",
@@ -1253,6 +1366,16 @@
   "tsDevicesShown": "Showing {n} devices",
   "tsDevicesCompact": "{count, plural, =1{1 device · Only devices visible to this account} other{{count} devices · Only devices visible to this account}}",
   "tsDevicesCompactFiltered": "Showing {shown}/{total} · Devices visible to this account only",
+  "@tsDevicesCompactFiltered": {
+    "placeholders": {
+      "shown": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "tsSearchHint": "Search name or address",
   "tsSearchEmpty": "No devices match the search",
   "tsOwnerFilter": "Device owner",
@@ -1324,7 +1447,30 @@
   "tsSignOutRemoveMenu": "Sign out and remove…",
   "tsRemoveTitle": "Sign out and remove this account?",
   "tsRemoveBody": "This signs out “{account}” (node “{node}”), clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.",
+  "@tsRemoveBody": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "node": {
+        "type": "Object"
+      },
+      "profile": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRemoveBodyNode": "This signs out “{node}”, clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.",
+  "@tsRemoveBodyNode": {
+    "placeholders": {
+      "node": {
+        "type": "Object"
+      },
+      "profile": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRemoveExtra": "This does not delete the device from the Tailscale admin console or change the official client.",
   "tsRemoveTargetsKept": "Targets assigned to this account will not move to another account automatically. Blocking protection stays in place. Assign another account to access them.",
   "tsRemoveLast": "This is the last panel-added account in this profile. Removing it also removes panel-added routing and blocking rules. The original profile will handle this traffic again, which may use a direct connection or its original proxies. Confirm that you accept this change.",
@@ -1336,6 +1482,16 @@
   "tsSignOutAccount": "Sign out of this account",
   "tsSignOutAccountTitle": "Sign out of this account?",
   "tsSignOutAccountBody": "This signs out “{account}” (node “{node}”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.",
+  "@tsSignOutAccountBody": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "node": {
+        "type": "Object"
+      }
+    }
+  },
   "tsAccountSignedOut": "Signed out",
   "tsSignedOutBanner": "Signed out of this account. In Rule mode, its assigned targets stay blocked until you sign in or explicitly reassign them.",
   "tsSignedOutReceipt": "Signed out of this account",
@@ -1344,6 +1500,19 @@
   "tsNewAccount": "New account",
   "tsNetworkOf": "Network: {name}",
   "tsSwitcherSemantics": "Viewing Tailscale account: {account}, {status}. {count} entries.",
+  "@tsSwitcherSemantics": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "status": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
   "tsMemoryTip": "Each account runs a separate Tailscale device. Keeping more accounts online uses more memory.",
   "tsDuplicate": "An entry already exists for this account. This sign-in has been kept but has not been added to routing. Review it before continuing.",
   "tsViewExisting": "View existing account",
@@ -1360,6 +1529,16 @@
   "tsTargetAddress": "Address: {address}",
   "tsTargetDomain": "Domain: {domain}",
   "tsCandidate": "{account} · {network}",
+  "@tsCandidate": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "network": {
+        "type": "Object"
+      }
+    }
+  },
   "tsNotAssigned": "Not assigned",
   "tsSaveChoices": "Save choices",
   "tsChoicesUpdated": "Access accounts updated",
@@ -1385,8 +1564,28 @@
   "tsCancel": "Cancel",
   "tsSignInShort": "Sign in to add a node and dedicated rules.",
   "tsRulesSummary": "{count, plural, =1{{domain} · 1 device address} other{{domain} · {count} device addresses}}",
+  "@tsRulesSummary": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "domain": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRulesUnconfirmed": "Domain and address details are unconfirmed.",
   "tsDevicesFiltered": "Showing {shown} / {total}",
+  "@tsDevicesFiltered": {
+    "placeholders": {
+      "shown": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "tsAboutTailscale": "About Tailscale",
   "tsAboutExit": "About exit settings",
   "tsAboutRoutes": "About subnet routes",
@@ -1398,6 +1597,16 @@
   "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format.",
   "mountDeleteSourceTitle": "Delete subscription and unmount?",
   "mountDeleteSourceBody": "“{subscriptionName}” is mounted on the following {profileCount, plural, =1{1 profile} other{{profileCount} profiles}}. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.",
+  "@mountDeleteSourceBody": {
+    "placeholders": {
+      "subscriptionName": {
+        "type": "Object"
+      },
+      "profileCount": {
+        "type": "num"
+      }
+    }
+  },
   "mountDeleteSourceConfirm": "Delete and unmount",
   "mountDeleteSourceProgress": "Deleting and unmounting…",
   "mountDeleteSourceDone": "Subscription deleted and unmounted",
@@ -1410,6 +1619,16 @@
   "mountCardFailed": "{count, plural, =1{1 subscription update failed} other{{count} subscription updates failed}}",
   "mountCardUnreadable": "Could not read mount status",
   "mountPillSemantics": "{label}, target profile {profileName}",
+  "@mountPillSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountPillFailedSemantics": "a subscription update failed",
   "mountTarget": "Target profile: {profileName}",
   "mountDescription": "Adds nodes without changing rules or DNS.",
@@ -1465,8 +1684,28 @@
   "mountGroupEmpty": "Group “{group}” has no selectable nodes. Check the subscriptions and group filters.",
   "mountUnmountTitle": "Unmount this subscription?",
   "mountUnmountBody": "This removes nodes from “{subscriptionName}” from “{profileName}”. Connections using those nodes may be interrupted. The subscription, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.",
+  "@mountUnmountBody": {
+    "placeholders": {
+      "subscriptionName": {
+        "type": "Object"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountUnmountManyTitle": "Unmount these subscriptions?",
   "mountUnmountManyBody": "This removes nodes provided by the following {count, plural, =1{1 subscription} other{{count} subscriptions}} from “{profileName}”. Connections using those nodes may be interrupted. The subscriptions, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.",
+  "@mountUnmountManyBody": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountUnmount": "Unmount",
   "mountUnmounting": "Unmounting…",
   "mountUnmounted": "Unmounted",
@@ -1515,8 +1754,28 @@
   "mountDetails": "Details",
   "mountShowLess": "Show less",
   "mountViewerSource": "Mount: {name} · {count, plural, =1{1 node} other{{count} nodes}}",
+  "@mountViewerSource": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "mountViewerPending": "Mount: {name} · node list not yet confirmed",
   "tsViewerRules": "Tailscale · Added by Flash · {count, plural, =1{1 rule} other{{count} rules}} → Node {node}",
+  "@tsViewerRules": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "node": {
+        "type": "Object"
+      }
+    }
+  },
   "tsViewerNode": "Tailscale · Added by Flash · Node {node}",
   "tsViewerUnconfirmed": "Tailscale · Current rules and nodes are unconfirmed",
   "tsViewerReadFailed": "Tailscale · Could not read runtime information",
@@ -1579,12 +1838,35 @@
   "pageSourceTitle": "Confirm setting sources",
   "pageSourceDesc": "These settings differ between the app and profile. Choose which source to use.",
   "pageSourceCompare": "App: {pageValue} · Profile: {fileValue}",
+  "@pageSourceCompare": {
+    "placeholders": {
+      "pageValue": {
+        "type": "Object"
+      },
+      "fileValue": {
+        "type": "Object"
+      }
+    }
+  },
   "keepPageSetting": "Keep in-app settings",
   "followBaseProfile": "Follow base profile",
   "applyAction": "Apply",
   "notSet": "Not set",
   "notSetDefault": "Not set; default {defaultValue}",
   "pageSourceChange": "{field}: {oldValue} → {newValue}",
+  "@pageSourceChange": {
+    "placeholders": {
+      "field": {
+        "type": "Object"
+      },
+      "oldValue": {
+        "type": "Object"
+      },
+      "newValue": {
+        "type": "Object"
+      }
+    }
+  },
   "sourcePage": "In-app settings",
   "sourceBase": "Base profile",
   "sourceDefault": "Default",
@@ -1599,6 +1881,16 @@
   "findProcessStrict": "On demand",
   "tunMissingAuthorization": "TUN did not start because system permission is missing.",
   "inboundNotListening": "{listenerName} did not start: port {port} is not listening.",
+  "@inboundNotListening": {
+    "placeholders": {
+      "listenerName": {
+        "type": "Object"
+      },
+      "port": {
+        "type": "Object"
+      }
+    }
+  },
   "controllerExposedWithoutSecret": "The controller at {address} allows non-local access without a secret. This profile was not applied.",
   "systemProxyNoPort": "No usable port is available for the system proxy. Check the port settings.",
   "pageSourceHiddenTitle": "Switch to profile values",
@@ -1624,6 +1916,16 @@
   "tsExitHowTo": "Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.",
   "tsExitGroupUnconfirmed": "Exit group unconfirmed",
   "tsExitGroupJoined": "{count, plural, =1{“{group}” added to 1 manual policy group} other{“{group}” added to {count} manual policy groups}}",
+  "@tsExitGroupJoined": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "group": {
+        "type": "Object"
+      }
+    }
+  },
   "tsExitGroupNoParents": "No manual policy groups in this profile can receive the exit group",
   "tsExitNotAuthorized": "This exit node is not authorized for use",
   "tsExitDeviceOffline": "Exit device offline",
@@ -1635,6 +1937,19 @@
   "tsExitTurnOff": "Turn off exit node",
   "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
+  "@tsViewerExit": {
+    "placeholders": {
+      "group": {
+        "type": "Object"
+      },
+      "member": {
+        "type": "Object"
+      },
+      "groups": {
+        "type": "Object"
+      }
+    }
+  },
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
   "macHelperTitle": "Flash 도우미",
   "macHelperOn": "도우미 준비 완료",
@@ -1679,6 +1994,12 @@
   "macHelperApprovalStep2": "Under Allow in the Background, find Flash.",
   "macHelperApprovalStep3": "Flash 옆의 스위치를 껐다가 다시 켠 다음 Flash로 돌아옵니다.",
   "macHelperStepLabel": "Step {number}: {text}",
+  "@macHelperStepLabel": {
+    "placeholders": {
+      "number": {},
+      "text": {}
+    }
+  },
   "macHelperStartingTitle": "Starting helper…",
   "macHelperStartingDetail": "Please wait.",
   "macHelperStartSlowTitle": "The helper is taking longer to start",
@@ -1721,12 +2042,24 @@
   "restartCore": "코어 다시 시작",
   "installUpdate": "업데이트 설치",
   "liveStatusPosition": "{count}개 중 {index}번째",
+  "@liveStatusPosition": {
+    "placeholders": {
+      "index": {},
+      "count": {}
+    }
+  },
   "coreStarting": "코어 시작 중",
   "coreStartingDesc": "코어에 연결하는 중",
   "coreRunning": "코어 실행 중",
   "coreRunningDesc": "앱이 코어에 연결되어 있습니다",
   "forceRestartCore": "강제 다시 시작",
   "rulesSubtitle": "Profile “{profile}” · {count} rules, in the order they apply",
+  "@rulesSubtitle": {
+    "placeholders": {
+      "profile": {},
+      "count": {}
+    }
+  },
   "rulesSubtitleQuery": "Profile “{profile}”",
   "rulesSearchHint": "Search rules, or enter a URL to look it up",
   "rulesQuerying": "Looking up",
@@ -1741,6 +2074,12 @@
   "rulesGroupFilter": "Group: {name}",
   "ruleReject": "Reject",
   "ruleSetSummary": "{count} · updated {time}",
+  "@ruleSetSummary": {
+    "placeholders": {
+      "count": {},
+      "time": {}
+    }
+  },
   "ruleSetCountOnly": "{count}",
   "ruleSetExpired": "Expired {days} days",
   "ruleSetFailed": "Download failed",
@@ -1748,7 +2087,19 @@
   "ruleSetAbsent": "Not in this profile",
   "rulesLoadingMore": "Loading…",
   "rulesShown": "Showing {shown} of {total}",
+  "@rulesShown": {
+    "placeholders": {
+      "shown": {},
+      "total": {}
+    }
+  },
   "ruleSetFilterMatches": "{count} matches in rule set {name}",
+  "@ruleSetFilterMatches": {
+    "placeholders": {
+      "count": {},
+      "name": {}
+    }
+  },
   "rulesContaining": "Matching rules {count}",
   "rulesShowAll": "Show all rules",
   "ruleHitTag": "Matched",
@@ -1759,6 +2110,11 @@
   "ruleDependsOnRematch": "Matched again after a REMATCH",
   "hitCardTitle": "Lookup result",
   "hitCardPosition": "Matches rule #{index}",
+  "@hitCardPosition": {
+    "placeholders": {
+      "index": {}
+    }
+  },
   "hitGoes": "Goes",
   "hitNoRule": "No rule matched, goes",
   "hitRematch": "A REMATCH decides it when the connection is made; the lookup stops here.",
@@ -1796,24 +2152,117 @@
   "addRuleTarget": "Goes through",
   "addRulePreview": "Will add",
   "addedEffective": "The rule was added and takes effect. {host} now goes through “{group}”.",
+  "@addedEffective": {
+    "placeholders": {
+      "host": {},
+      "group": {}
+    }
+  },
   "viewThatRule": "View that rule",
   "lookupRule": "Look up rule",
   "ruleRowSemantics": "Rule {index}, {rule}, from {source}, to {group}",
+  "@ruleRowSemantics": {
+    "placeholders": {
+      "index": {},
+      "rule": {},
+      "source": {},
+      "group": {}
+    }
+  },
   "hitSemantics": "Matches rule {index}, {rule}, from {source}, through {group}, node {node}",
+  "@hitSemantics": {
+    "placeholders": {
+      "index": {},
+      "rule": {},
+      "source": {},
+      "group": {},
+      "node": {}
+    }
+  },
   "uncertainPrefix": "The result may differ",
   "addRuleWriteFailed": "Could not add: {reason}",
+  "@rulesLookupSuggestion": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "@rulesLookupSuggestionLabel": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "@rulesFilterOnly": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "rulesEmptyFiltered": "No matching rules. Try other words or filters.",
+  "@rulesContaining": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "hitIpLabel": "Resolved IP",
   "lookupNoConnectNote": "A lookup may resolve DNS, but never connects to the site.",
+  "@ruleShadowedBy": {
+    "placeholders": {
+      "index": {}
+    }
+  },
   "ruleUncertainTag": "May or may not match",
   "ruleSetIssuesNotice": "Rule sets not ready: {issues}. The result may be incomplete.",
   "ruleSetIssueSeparator": ", ",
   "ruleSetIssueMissing": "“{name}” is not downloaded yet",
   "ruleSetIssueFailed": "“{name}” failed to download",
   "ruleSetIssueExpired": "“{name}” has expired",
+  "@ruleSetMissingNotice": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "@ruleSetFailedNotice": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "@ruleSetExpiredNotice": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "@compareDiffer": {
+    "placeholders": {
+      "rule": {}
+    }
+  },
+  "@addRuleSubtitle": {
+    "placeholders": {
+      "profile": {}
+    }
+  },
+  "@addRuleSuffix": {
+    "placeholders": {
+      "domain": {}
+    }
+  },
+  "@addRuleExact": {
+    "placeholders": {
+      "host": {}
+    }
+  },
   "addRuleAdding": "Adding…",
+  "@addRuleWriteFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
   "addedNotHit": "The rule was added, but this lookup does not match it.",
   "addedNotHitBy": "Rule #{index} matches first.",
+  "@addedNotHitBy": {
+    "placeholders": {
+      "index": {}
+    }
+  },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
   "relookup": "Look up again",
   "addedRulesReloadTimeout": "코어가 15초 안에 다시 로드를 완료하지 못해 변경을 되돌렸습니다.",
@@ -1822,8 +2271,32 @@
   "addedRuleSetLoadTimeout": "규칙 세트 다운로드가 15초 안에 완료되지 않아 변경을 되돌렸습니다.",
   "ruleDeleteTitle": "이 규칙을 삭제할까요?",
   "ruleSetDeleteTitle": "규칙 세트 “{name}”을(를) 삭제할까요?",
+  "@ruleSetDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "ruleDeleteBody": "{text}\n즉시 적용됩니다.",
+  "@ruleDeleteBody": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
   "ruleDuplicate": "이 규칙은 이미 {group}을(를) 통해 존재합니다(번호 {number}).",
+  "@ruleDuplicate": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "group": {
+        "type": "String"
+      }
+    }
+  },
   "ruleUpdateGroup": "그룹 업데이트",
   "ruleEditAddTitle": "규칙 추가",
   "ruleEditTitle": "추가한 규칙 편집",
@@ -1831,7 +2304,21 @@
   "ruleSetEditTitle": "추가한 규칙 세트 편집",
   "ruleEditCoreStopped": "코어가 시작되면 적용됩니다",
   "ruleEditPosition": "번호 {number} · 추가한 규칙",
+  "@ruleEditPosition": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "ruleSetEditPosition": "번호 {number} · 추가한 규칙 세트",
+  "@ruleSetEditPosition": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "ruleEditSaving": "저장 중…",
   "ruleTypeLabel": "유형",
   "ruleTypeMore": "더 보기",
@@ -1870,10 +2357,37 @@
   "ruleSetUrlInvalid": "http 또는 https 링크만 허용됩니다",
   "ruleSetChecking": "다운로드 및 확인 중…",
   "ruleSetCheckOk": "다운로드 완료: {kind} 규칙, {format} 형식, {count}개 항목",
+  "@ruleSetCheckOk": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "format": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetCheckOkUncounted": "다운로드 완료: {format} 형식. 항목 수는 코어가 시작되면 집계됩니다",
+  "@ruleSetCheckOkUncounted": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetCheckNotFound": "찾을 수 없음 (404)",
   "ruleSetCheckTimeout": "다운로드 시간이 초과되었습니다",
   "ruleSetCheckNetwork": "다운로드 실패: {reason}",
+  "@ruleSetCheckNetwork": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetCheckNotRuleSet": "내용이 규칙 세트가 아닙니다",
   "ruleSetCheckUnknown": "형식을 인식할 수 없습니다",
   "ruleSetNameLabel": "이름",
@@ -1893,6 +2407,13 @@
   "ruleSetWeekly": "매주",
   "ruleSetNeverUpdate": "안 함",
   "ruleSetEverySeconds": "{seconds}초마다",
+  "@ruleSetEverySeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "ruleSetUpdateNow": "지금 업데이트",
   "ruleSetRefreshed": "업데이트를 시작했습니다.",
   "rulesAddTooltip": "추가",
@@ -1905,15 +2426,64 @@
   "ruleMoveUp": "위로 이동",
   "ruleMoveDown": "아래로 이동",
   "ruleEditSemantics": "규칙 {number} 편집",
+  "@ruleEditSemantics": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "ruleDeleteSemantics": "규칙 {number} 삭제",
+  "@ruleDeleteSemantics": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "ruleAddedBanner": "규칙 “{text}”을(를) 추가하고 적용했습니다.",
+  "@ruleAddedBanner": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSavedBanner": "규칙 “{text}”을(를) 저장하고 적용했습니다.",
+  "@ruleSavedBanner": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetAddedBanner": "규칙 세트 “{name}”을(를) 추가하고 적용했습니다.",
+  "@ruleSetAddedBanner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetSavedBanner": "규칙 세트 “{name}”을(를) 저장하고 적용했습니다.",
+  "@ruleSetSavedBanner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "ruleDeletedBanner": "삭제했습니다.",
   "ruleSavedPendingBanner": "저장했습니다. 코어가 시작되면 적용됩니다.",
   "ruleBannerLookup": "URL 조회",
   "ruleMoveFailed": "규칙을 이동할 수 없습니다: {reason}",
+  "@ruleMoveFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "processHelperLabel": "{name} · 도우미",
   "processCoreLabel": "{name} · 코어",
   "processHelperTag": "도우미",
@@ -1929,6 +2499,11 @@
   "deleteCertificateTip": "이 Mac에서 인증서의 개인 키, 인증서, 인증서에 부여한 신뢰를 삭제합니다. 새 인증서를 생성하고 신뢰할 때까지 복호화가 중지됩니다.",
   "mitmPausedCoreIdentity": "복호화 일시 중지됨: 코어 신원 확인 실패",
   "mitmIgnoredProfileHostnames": "구독/스크립트의 {count}개 항목을 무시함",
+  "@mitmIgnoredProfileHostnames": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "mitmOutcomeRefused": "클라이언트가 핸드셰이크 중 경고를 보냈습니다. 원인은 알 수 없습니다.",
   "mitmOutcomeUpstreamCertificate": "웹사이트 인증서 검증에 실패했습니다",
   "mitmOutcomeHTTP1Unsupported": "이 연결이 사용하는 프로토콜은 복호화할 수 없습니다.",
@@ -1944,6 +2519,13 @@
   "mitmIndicatorPaused": "복호화 일시 중지",
   "mitmIndicatorUnconfirmed": "복호화 상태 확인 중",
   "mitmIndicatorPausedBecause": "복호화 일시 중지: {reason}",
+  "@mitmIndicatorPausedBecause": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "mitmIndicatorOpenSettings": "MITM 설정 열기",
   "mitmPauseCoreStopped": "코어가 실행 중이 아님",
   "mitmPauseCoreIdentity": "코어 신원 확인 실패",
@@ -1985,6 +2567,13 @@
   "ipxScore": "Health score",
   "ipxScoreOutOf": "/ 100",
   "ipxScoreCeiling": "Type cap {value}",
+  "@ipxScoreCeiling": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "ipxGradeExcellent": "Excellent",
   "ipxGradeGood": "Good",
   "ipxGradeFair": "Fair",
@@ -1995,12 +2584,29 @@
   "ipxNative": "Native IP",
   "ipxBroadcast": "Broadcast IP",
   "ipxNativeDetail": "Registered {registered} · used in {used}",
+  "@ipxNativeDetail": {
+    "placeholders": {
+      "registered": {
+        "type": "String"
+      },
+      "used": {
+        "type": "String"
+      }
+    }
+  },
   "ipxIsp": "ISP",
   "ipxTypeEducation": "Education",
   "ipxTypePseudo": "Likely pseudo-residential",
   "ipxDeductions": "Score breakdown",
   "ipxFullReport": "Full report on ipx.al",
   "ipxDataFrom": "Data from {source}, for reference only",
+  "@ipxDataFrom": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "ipxSourceSeparator": ", ",
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
@@ -2520,6 +3126,363 @@
   "mitmRewriteNotAppliedTitle": "Rewrite not applied: {value}",
   "@mitmRewriteNotAppliedTitle": {
     "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmScripts": "Scripts",
+  "mitmScriptCount": "{count, plural, =1{1 script} other{{count} scripts}}",
+  "@mitmScriptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmUpdateCount": "{count} with updates",
+  "@mitmUpdateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptInvalidCount": "{count} invalid",
+  "@mitmScriptInvalidCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleCount": "{count} modules, {enabled} on",
+  "@mitmModuleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "enabled": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptSubtitle": "Profile “{profile}” · {count} scripts, {enabled} on",
+  "@mitmScriptSubtitle": {
+    "placeholders": {
+      "profile": {},
+      "count": {
+        "type": "int"
+      },
+      "enabled": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptGroupRequest": "Request Scripts",
+  "mitmScriptGroupResponse": "Response Scripts",
+  "mitmScriptKindRequest": "Request",
+  "mitmScriptKindResponse": "Response",
+  "mitmScriptNeedsBody": "Needs body",
+  "mitmScriptRemoteSource": "{source} · checked {time}",
+  "@mitmScriptRemoteSource": {
+    "placeholders": {
+      "source": {},
+      "time": {}
+    }
+  },
+  "mitmScriptLocalSource": "Local file · {file}",
+  "@mitmScriptLocalSource": {
+    "placeholders": {
+      "file": {}
+    }
+  },
+  "mitmScriptHasUpdate": "Content updated",
+  "mitmHasUpdate": "Update available",
+  "mitmViewUpdate": "View Update",
+  "mitmScriptsFromModules": "{count, plural, =1{1 more script comes from modules} other{{count} more scripts come from modules}}",
+  "@mitmScriptsFromModules": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptsOff": "HTTPS decryption is off, so scripts don't run.",
+  "mitmScriptHostNotDecrypted": "This host isn't decrypted, so the script won't run",
+  "mitmAddToDecryption": "Add to Decryption",
+  "mitmScriptsEmptyTitle": "No scripts yet",
+  "mitmScriptsEmptyBody": "Once added, a script runs on the requests or responses it matches.",
+  "mitmAddScript": "Add Script",
+  "mitmCheckAllUpdates": "Check All for Updates",
+  "mitmScriptCopyAll": "Copy All Lines",
+  "mitmScriptDeleteInvalid": "Delete Invalid Scripts",
+  "mitmScriptDeleteInvalidConfirm": "Delete {count} invalid scripts?",
+  "@mitmScriptDeleteInvalidConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmCheckUpdate": "Check for Update",
+  "mitmCopyLine": "Copy Line",
+  "mitmAddScriptHint": "Paste lines from a Surge config's [Script] section, one script per line, or just a script URL.",
+  "mitmScriptType": "Type",
+  "mitmScriptPattern": "URL Pattern",
+  "mitmScriptTimeout": "Timeout",
+  "mitmScriptPasteOk": "{count} can be added: {requests} request, {responses} response",
+  "@mitmScriptPasteOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "requests": {
+        "type": "int"
+      },
+      "responses": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptPasteLineError": "Line {line} can't be added: {reason}",
+  "@mitmScriptPasteLineError": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      },
+      "reason": {}
+    }
+  },
+  "mitmScriptUnsupportedType": "This kind of script isn't supported yet",
+  "mitmScriptUnreadable": "Not a script line",
+  "mitmScriptNoPattern": "No URL pattern",
+  "mitmScriptNoPath": "script-path must be a URL; add a local script with “From File…”",
+  "mitmAddFromFile": "From File…",
+  "mitmContinue": "Continue",
+  "mitmScriptConfirmTitle": "Confirm Scripts",
+  "mitmScriptConfirmBody": "These scripts can see and change the plaintext requests and responses of the hosts they match, which may include accounts and passwords. Only turn on scripts you trust.",
+  "mitmCapabilityRead": "See and change plaintext requests and responses of the matched hosts",
+  "mitmCapabilitySend": "Send requests of its own (through Flash)",
+  "mitmCapabilityStore": "Keep a little data on this Mac",
+  "mitmCapabilityLimits": "Can't read or write files or run commands; each run gets at most 10 seconds, after which the message passes unchanged.",
+  "mitmHostNotDecrypted": "{host} isn't decrypted",
+  "@mitmHostNotDecrypted": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "mitmAlsoDecryptHosts": "Also add these hosts to decryption",
+  "mitmAddAndEnable": "Add and Turn On",
+  "mitmScriptDownloading": "Downloading and checking…",
+  "mitmScriptsAdded": "{count, plural, =1{1 script added} other{{count} scripts added}}",
+  "@mitmScriptsAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptEmpty": "The script is empty",
+  "mitmScriptDownloadFailed": "Couldn't download {name}: {reason}",
+  "@mitmScriptDownloadFailed": {
+    "placeholders": {
+      "name": {},
+      "reason": {}
+    }
+  },
+  "mitmScriptCannotLoad": "{name} can't be loaded: {reason}",
+  "@mitmScriptCannotLoad": {
+    "placeholders": {
+      "name": {},
+      "reason": {}
+    }
+  },
+  "mitmScriptCheckFailed": "Couldn't check for updates: {reason}",
+  "@mitmScriptCheckFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmUpdateTitle": "{name} has an update",
+  "@mitmUpdateTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "mitmUpdateSubtitle": "Last {before} · This {after}",
+  "@mitmUpdateSubtitle": {
+    "placeholders": {
+      "before": {},
+      "after": {}
+    }
+  },
+  "mitmDiffCounts": "+{added} lines −{removed} lines",
+  "@mitmDiffCounts": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "removed": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmDiffFolded": "… {count} unchanged lines",
+  "@mitmDiffFolded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmNotNow": "Not Now",
+  "mitmAdoptUpdate": "Use New Version",
+  "mitmChangeHosts": "Decrypted hosts",
+  "mitmChangeScripts": "Scripts",
+  "mitmChangeRewrites": "Rewrites",
+  "mitmNoChange": "No change",
+  "mitmModuleConfirmTitle": "Confirm Module Import",
+  "mitmModuleHostsHint": "This module will add the decrypted hosts below. Check them before you import.",
+  "mitmModuleNoHosts": "This module adds no decrypted hosts.",
+  "mitmAlreadyListed": "Already listed",
+  "mitmNewHost": "New",
+  "mitmExcludedCount": "{count} excluded",
+  "@mitmExcludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmMoreHosts": "{count} more",
+  "@mitmMoreHosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRewrites": "Rewrite rules",
+  "mitmModuleRoutingRules": "Routing rules",
+  "mitmModuleRoutingRulesNote": "{count} rules, not imported yet",
+  "@mitmModuleRoutingRulesNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleUnsupported": "Not supported",
+  "mitmModuleUnsupportedCount": "{count} lines won't be imported",
+  "@mitmModuleUnsupportedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmImportOnly": "Import Only",
+  "mitmImportAndEnable": "Import and Turn On",
+  "mitmImportModule": "Import Module",
+  "mitmModuleImported": "Module imported",
+  "mitmModuleHostCount": "{count} hosts",
+  "@mitmModuleHostCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRewriteCount": "{count} rewrites",
+  "@mitmModuleRewriteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleUnsupportedLines": "{count} lines not supported",
+  "@mitmModuleUnsupportedLines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRemoteSource": "Remote · updated {time}",
+  "@mitmModuleRemoteSource": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "mitmModuleLocalSource": "Local",
+  "mitmModulesEmptyTitle": "No modules yet",
+  "mitmModulesEmptyBody": "Once imported, you can see what a module sets up.",
+  "mitmScriptsRan": "Scripts ran · {count}",
+  "@mitmScriptsRan": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptsPassed": "{count, plural, =1{1 script didn't finish; the message passed unchanged} other{{count} scripts didn't finish; the message passed unchanged}}",
+  "@mitmScriptsPassed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptDone": "Finished · {took}",
+  "@mitmScriptDone": {
+    "placeholders": {
+      "took": {}
+    }
+  },
+  "mitmScriptTimedOut": "Timed out ({seconds} s)",
+  "@mitmScriptTimedOut": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptFailed": "Failed: {reason}",
+  "@mitmScriptFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmScriptNotRun": "Didn't run: {reason}",
+  "@mitmScriptNotRun": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmScriptMemory": "over the memory limit",
+  "mitmScriptBusy": "too many scripts running",
+  "mitmScriptNoDone": "the script never called $done",
+  "mitmScriptLogExpand": "Show All ({count} lines)",
+  "@mitmScriptLogExpand": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptRequestsSent": "{count, plural, =1{1 request sent} other{{count} requests sent}}",
+  "@mitmScriptRequestsSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmViewInScripts": "Show in Scripts",
+  "mitmViewInModule": "Show in Module",
+  "mitmFromModule": "Module · {name}",
+  "@mitmFromModule": {
+    "placeholders": {
+      "name": {}
+    }
   },
   "@mitmRewriteFailureGeneric": {
     "description": "PROVISIONAL: English text, awaiting translation"

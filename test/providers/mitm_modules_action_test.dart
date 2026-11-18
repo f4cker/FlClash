@@ -4,6 +4,7 @@ import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/database/database.dart' as db;
+import 'package:fl_clash/features/mitm/script_actions.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/config.dart';
@@ -199,21 +200,65 @@ Extra = type=http-response,pattern=^https://b,script-path=${urlOf('/extra.js')},
     },
   );
 
-  test('an update that brings more scripts turns the module off', () async {
+  test('an update with new text waits for the user to adopt it', () async {
     bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
     await action().addFromUrl(urlOf('/ads.sgmodule'));
     expect((await stored()).single.enabled, isTrue);
-    bodies['/ads.sgmodule'] =
+    final next =
         '''
 ${module('Ads')}[Script]
 Ads = type=http-response,pattern=^https://a,script-path=${urlOf('/ads.js')}
 ''';
+    bodies['/ads.sgmodule'] = next;
     bodies['/ads.js'] = r'$done({})';
 
     final updated = await action().updateModule((await stored()).single);
 
-    expect(updated.enabled, isFalse);
-    expect((await stored()).single.scripts, 1);
+    expect(updated.enabled, isTrue);
+    expect(updated.hasPending, isTrue);
+    expect((await stored()).single.scripts, 0);
+    final path = join(await appPath.mitmModulesDirPath, updated.fileName);
+    expect(await File(path).readAsString(), module('Ads'));
+    expect(await action().pendingText(updated), next);
+
+    final adopted = await action().adopt((await stored()).single);
+
+    expect(adopted.hasPending, isFalse);
+    expect(adopted.enabled, isTrue);
+    expect(adopted.scripts, 1);
+    expect(adopted.resources.keys, contains(urlOf('/ads.js')));
+    expect(await File(path).readAsString(), next);
+    expect(await action().pendingText(adopted), isNull);
+  });
+
+  test('an update back to the running text drops what waited', () async {
+    bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
+    await action().addFromUrl(urlOf('/ads.sgmodule'));
+    bodies['/ads.sgmodule'] = module('Other');
+    final pending = await action().updateModule((await stored()).single);
+    expect(pending.hasPending, isTrue);
+    bodies['/ads.sgmodule'] = module('Ads');
+
+    final back = await action().updateModule((await stored()).single);
+
+    expect(back.hasPending, isFalse);
+    expect(await action().pendingText(back), isNull);
+  });
+
+  test('a failed update keeps why, and the next one clears it', () async {
+    bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
+    await action().addFromUrl(urlOf('/ads.sgmodule'));
+    bodies.remove('/ads.sgmodule');
+
+    await expectLater(
+      action().updateModule((await stored()).single),
+      throwsA(anything),
+    );
+    expect((await stored()).single.error, isNotNull);
+
+    bodies['/ads.sgmodule'] = module('Ads');
+    await action().updateModule((await stored()).single);
+    expect((await stored()).single.error, isNull);
   });
 
   group('an accepted module', () {
@@ -266,11 +311,12 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
       expect(await enabledAfterUpdate(ads), isFalse);
     });
 
-    test('turns off when an update changes a script line', () async {
+    test('a changed script line waits; the old one keeps running', () async {
       final ads = await accepted();
       bodies['/ads.sgmodule'] = scripted('.*');
 
-      expect(await enabledAfterUpdate(ads), isFalse);
+      expect(await enabledAfterUpdate(ads), isTrue);
+      expect((await stored()).single.hasPending, isTrue);
     });
 
     test('stays on when an update drops a script', () async {
@@ -487,5 +533,73 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
     expect(await stored(), isEmpty);
     expect(await files(appPath.mitmModulesDirPath), isEmpty);
     expect(await files(appPath.mitmResourcesDirPath), isEmpty);
+  });
+
+  group('a remote script', () {
+    Future<MitmScript> stored0() async {
+      await testDatabase.profilesDao.putAll([
+        const Profile(id: 1, autoUpdateDuration: Duration.zero).toCompanion(),
+      ]);
+      bodies = {'/s.js': 'one'};
+      final url = urlOf('/s.js');
+      final file = await storeMitmScript(url, 'one'.codeUnits);
+      final script = MitmScript(
+        id: 3,
+        line: 'S = type=http-request,pattern=^https://a,script-path=$file',
+        url: url,
+        source: url,
+        file: file,
+      );
+      container.listen(profileMitmScriptsProvider(1), (_, _) {});
+      await container.read(profileMitmScriptsProvider(1).notifier).commit([
+        script,
+      ]);
+      return (await container.read(
+        profileMitmScriptsProvider(1).future,
+      )).single;
+    }
+
+    test('new content waits; the same content clears it', () async {
+      final script = await stored0();
+      bodies['/s.js'] = 'two';
+
+      final checked = await checkMitmScriptUpdate(container.read, 1, script);
+
+      expect(checked.file, script.file);
+      expect(checked.hasPending, isTrue);
+      expect(await readMitmScript(checked.pendingFile!), 'two');
+      expect(checked.checkedAt, isNotNull);
+      final saved = (await testDatabase.mitmScriptsDao.queryAll().get()).single;
+      expect(saved.pendingFile, checked.pendingFile);
+
+      bodies['/s.js'] = 'one';
+      final again = await checkMitmScriptUpdate(container.read, 1, saved);
+      expect(again.hasPending, isFalse);
+    });
+
+    test('a failed check keeps why and what runs', () async {
+      final script = await stored0();
+      bodies.remove('/s.js');
+
+      final checked = await checkMitmScriptUpdate(container.read, 1, script);
+
+      expect(checked.error, isNotNull);
+      expect(checked.file, script.file);
+      expect(checked.hasPending, isFalse);
+    });
+
+    test('adopting runs the waiting file', () async {
+      final script = await stored0();
+      bodies['/s.js'] = 'two';
+      final checked = await checkMitmScriptUpdate(container.read, 1, script);
+
+      await adoptMitmScript(container.read, 1, checked);
+
+      final saved = (await testDatabase.mitmScriptsDao.queryAll().get()).single;
+      expect(saved.file, checked.pendingFile);
+      expect(saved.hasPending, isFalse);
+      expect(saved.line, endsWith('script-path=${checked.pendingFile}'));
+      expect(await mitmScriptFiles(), {checked.pendingFile});
+    });
   });
 }

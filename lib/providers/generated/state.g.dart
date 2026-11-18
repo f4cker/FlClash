@@ -240,6 +240,106 @@ final class CurrentMitmRewritesProvider
 String _$currentMitmRewritesHash() =>
     r'87783571f2ee2b56b6cc42522e17892ccb3abf8f';
 
+/// The current profile's enabled scripts; empty while none is selected or
+/// they are still being read.
+
+@ProviderFor(currentMitmScripts)
+final currentMitmScriptsProvider = CurrentMitmScriptsProvider._();
+
+/// The current profile's enabled scripts; empty while none is selected or
+/// they are still being read.
+
+final class CurrentMitmScriptsProvider
+    extends
+        $FunctionalProvider<
+          List<MitmScript>,
+          List<MitmScript>,
+          List<MitmScript>
+        >
+    with $Provider<List<MitmScript>> {
+  /// The current profile's enabled scripts; empty while none is selected or
+  /// they are still being read.
+  CurrentMitmScriptsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentMitmScriptsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentMitmScriptsHash();
+
+  @$internal
+  @override
+  $ProviderElement<List<MitmScript>> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  List<MitmScript> create(Ref ref) {
+    return currentMitmScripts(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<MitmScript> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<MitmScript>>(value),
+    );
+  }
+}
+
+String _$currentMitmScriptsHash() =>
+    r'2097fa3cd1919ce941c0c0b1e914d36945f2c2da';
+
+/// Read from the enabled modules' files; empty while modules are off.
+
+@ProviderFor(enabledMitmModuleRules)
+final enabledMitmModuleRulesProvider = EnabledMitmModuleRulesProvider._();
+
+/// Read from the enabled modules' files; empty while modules are off.
+
+final class EnabledMitmModuleRulesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<MitmModuleRules>,
+          MitmModuleRules,
+          FutureOr<MitmModuleRules>
+        >
+    with $FutureModifier<MitmModuleRules>, $FutureProvider<MitmModuleRules> {
+  /// Read from the enabled modules' files; empty while modules are off.
+  EnabledMitmModuleRulesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'enabledMitmModuleRulesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$enabledMitmModuleRulesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<MitmModuleRules> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<MitmModuleRules> create(Ref ref) {
+    return enabledMitmModuleRules(ref);
+  }
+}
+
+String _$enabledMitmModuleRulesHash() =>
+    r'ff6ea58d2fb840e1d76ba92cc06f6080dbc53996';
+
 /// Null, and so no decryption, unless the user turned it on.
 
 @ProviderFor(mitmSetup)
@@ -290,7 +390,7 @@ final class MitmSetupProvider
   }
 }
 
-String _$mitmSetupHash() => r'0f219f6ae8ecbf03278f11aabedbef2b2303eb86';
+String _$mitmSetupHash() => r'b317651c5fe5f2e99cf12c41f7ca927f64af1901';
 
 @ProviderFor(setupPatch)
 final setupPatchProvider = SetupPatchProvider._();

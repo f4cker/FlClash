@@ -740,6 +740,15 @@ Map<String, String>? _scriptParams(String text) {
   );
 }
 
+/// A [Script] line's name, type and `key=value` parameters; null when it is
+/// not one.
+({String name, String type, Map<String, String> params})? mitmScriptLineParts(
+  String line,
+) => _scriptLine(line.trim());
+
+/// [value] as a script line's parameter value, quoted when it must be.
+String mitmScriptValue(String value) => _scriptValue(value);
+
 /// The name the Core runs a cron, event or generic script line by, for the
 /// user to run it now; null for any other line.
 String? mitmTaskName(String line) {

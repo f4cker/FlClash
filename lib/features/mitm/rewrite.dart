@@ -55,16 +55,16 @@ Future<void> commitMitmRewrites(
       ref.read(currentProfileIdProvider) == profileId &&
       ref.read(coreStatusProvider) == CoreStatus.connected;
   if (live) {
-    final enabled = [
-      for (final rewrite in next)
-        if (rewrite.enabled && mitmRewriteLists.contains(rewrite.section))
-          rewrite.coreJson,
-    ];
-    await core.updateMitm({
-      for (final MapEntry(:key, :value) in setup.entries)
-        if (key != 'rewrite') key: value,
-      if (enabled.isNotEmpty) 'rewrite': enabled,
-    });
+    await core.updateMitm(
+      composeMitmSetup(
+        ref.read(patchClashConfigProvider).mitm,
+        rewrites: next,
+        scripts: ref.read(currentMitmScriptsProvider),
+        modules:
+            ref.read(enabledMitmModuleRulesProvider).value ??
+            MitmModuleRules.empty,
+      ),
+    );
   }
   try {
     await notifier.commit(next);

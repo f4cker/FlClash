@@ -31,6 +31,11 @@ class MitmModules extends Table {
 
   DateTimeColumn get lastUpdateTime => dateTime()();
 
+  /// When an update left new content waiting in `<id>.pending.txt`.
+  DateTimeColumn get pendingTime => dateTime().nullable()();
+
+  TextColumn get error => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -87,6 +92,8 @@ extension RawMitmModuleExt on RawMitmModule {
       system: this.system,
       scripts: scripts,
       lastUpdateTime: lastUpdateTime,
+      pendingTime: pendingTime,
+      error: error,
     );
   }
 }
@@ -105,6 +112,8 @@ extension MitmModulesCompanionExt on MitmModule {
       system: Value(this.system),
       scripts: Value(scripts),
       lastUpdateTime: lastUpdateTime,
+      pendingTime: Value(pendingTime),
+      error: Value(error),
     );
   }
 }

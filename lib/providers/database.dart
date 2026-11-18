@@ -896,6 +896,42 @@ class ProfileMitmRewrites extends _$ProfileMitmRewrites
   }
 }
 
+/// A profile's own scripts, in order (see [MitmScripts]).
+@riverpod
+class ProfileMitmScripts extends _$ProfileMitmScripts
+    with AsyncNotifierMixin, OptimisticMixin {
+  @override
+  Stream<List<MitmScript>> build(int profileId) {
+    final query = database.mitmScriptsDao.queryProfile(profileId);
+    return settled(query.watch(), query.get);
+  }
+
+  @override
+  List<MitmScript> get value => state.value ?? [];
+
+  @override
+  bool updateShouldNotify(
+    AsyncValue<List<MitmScript>> previous,
+    AsyncValue<List<MitmScript>> next,
+  ) {
+    return !const ListEquality<MitmScript>().equals(previous.value, next.value);
+  }
+
+  Future<void> commit(List<MitmScript> scripts) {
+    final orders = indexing.generateNKeys(scripts.length);
+    return optimisticAsync(
+      [
+        for (final (index, script) in scripts.indexed)
+          script.copyWith(order: orders[index]),
+      ],
+      () => database.batch(
+        (b) =>
+            database.mitmScriptsDao.setProfileWithBatch(profileId, b, scripts),
+      ),
+    );
+  }
+}
+
 /// Unless [group] says the name is a group's, a profile whose own group takes
 /// either name is left alone: there the name stands for that group.
 Future<Profile Function(Profile profile)?> _renameProxyIn(

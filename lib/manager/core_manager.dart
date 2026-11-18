@@ -124,17 +124,6 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         if (next && prev != true) unawaited(_updateMitm(throttled: true));
       },
     );
-    ref.listenManual(mitmModulesProvider, (prev, next) {
-      if (mitmFeature &&
-          mitmModulesFeature &&
-          prev?.value != null &&
-          next.hasValue &&
-          ref.read(patchClashConfigProvider).mitm.enable) {
-        ref
-            .read(setupActionProvider.notifier)
-            .applyProfileDebounce(silence: true);
-      }
-    });
     ref.listenManual(appSettingProvider.select((state) => state.openLogs), (
       prev,
       next,

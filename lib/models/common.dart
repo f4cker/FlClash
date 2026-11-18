@@ -868,6 +868,13 @@ abstract class MitmModule with _$MitmModule {
     /// Its scripts FlClash runs, which turning it on asks about first.
     @Default(0) int scripts,
     required DateTime lastUpdateTime,
+
+    /// Set while an update's new content waits for the user to adopt it;
+    /// the content in [fileName] keeps running until then.
+    DateTime? pendingTime,
+
+    /// Why the last update failed.
+    String? error,
   }) = _MitmModule;
 }
 
@@ -875,6 +882,10 @@ extension MitmModuleExt on MitmModule {
   bool get isRemote => url != null;
 
   String get fileName => '$id.txt';
+
+  String get pendingFileName => '$id.pending.txt';
+
+  bool get hasPending => pendingTime != null;
 
   String get updatingKey => 'mitm_module_$id';
 }

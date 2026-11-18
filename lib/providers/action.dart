@@ -19,6 +19,7 @@ import 'package:fl_clash/common/composition_review.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/restored_added_cache.dart';
 import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/features/mitm/script_actions.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';

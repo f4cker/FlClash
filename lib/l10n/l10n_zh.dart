@@ -7099,4 +7099,395 @@ class AppLocalizationsZh extends AppLocalizations {
   String mitmRewriteNotAppliedTitle(String value) {
     return '未应用改写：$value';
   }
+
+  @override
+  String get mitmScripts => '脚本';
+
+  @override
+  String mitmScriptCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个脚本',
+      zero: '未添加',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmUpdateCount(int count) {
+    return '$count 个有更新';
+  }
+
+  @override
+  String mitmScriptInvalidCount(int count) {
+    return '$count 个有误';
+  }
+
+  @override
+  String mitmModuleCount(int count, int enabled) {
+    return '$count 个模块，$enabled 个开启';
+  }
+
+  @override
+  String mitmScriptSubtitle(Object profile, int count, int enabled) {
+    return '当前配置「$profile」· $count 个脚本，$enabled 个开启';
+  }
+
+  @override
+  String get mitmScriptGroupRequest => '请求脚本';
+
+  @override
+  String get mitmScriptGroupResponse => '响应脚本';
+
+  @override
+  String get mitmScriptKindRequest => '请求';
+
+  @override
+  String get mitmScriptKindResponse => '响应';
+
+  @override
+  String get mitmScriptNeedsBody => '需要内容';
+
+  @override
+  String mitmScriptRemoteSource(Object source, Object time) {
+    return '$source · $time检查';
+  }
+
+  @override
+  String mitmScriptLocalSource(Object file) {
+    return '本地文件 · $file';
+  }
+
+  @override
+  String get mitmScriptHasUpdate => '内容有更新';
+
+  @override
+  String get mitmHasUpdate => '有更新';
+
+  @override
+  String get mitmViewUpdate => '查看更新';
+
+  @override
+  String mitmScriptsFromModules(int count) {
+    return '另有 $count 个脚本来自模块';
+  }
+
+  @override
+  String get mitmScriptsOff => 'HTTPS 解密已关闭，脚本暂不运行。';
+
+  @override
+  String get mitmScriptHostNotDecrypted => '这个域名没有解密，脚本不会运行';
+
+  @override
+  String get mitmAddToDecryption => '加入解密';
+
+  @override
+  String get mitmScriptsEmptyTitle => '还没有脚本';
+
+  @override
+  String get mitmScriptsEmptyBody => '添加脚本后，可在符合条件的请求或响应上运行。';
+
+  @override
+  String get mitmAddScript => '添加脚本';
+
+  @override
+  String get mitmCheckAllUpdates => '检查全部更新';
+
+  @override
+  String get mitmScriptCopyAll => '复制全部配置行';
+
+  @override
+  String get mitmScriptDeleteInvalid => '删除有误的脚本';
+
+  @override
+  String mitmScriptDeleteInvalidConfirm(int count) {
+    return '删除 $count 个有误的脚本？';
+  }
+
+  @override
+  String get mitmCheckUpdate => '检查更新';
+
+  @override
+  String get mitmCopyLine => '复制配置行';
+
+  @override
+  String get mitmAddScriptHint =>
+      '粘贴 Surge 配置里 [Script] 段的行，每行一个脚本；也可以只粘贴脚本地址。';
+
+  @override
+  String get mitmScriptType => '类型';
+
+  @override
+  String get mitmScriptPattern => '匹配网址';
+
+  @override
+  String get mitmScriptTimeout => '超时';
+
+  @override
+  String mitmScriptPasteOk(int count, int requests, int responses) {
+    return '可以添加 $count 个：请求脚本 $requests、响应脚本 $responses';
+  }
+
+  @override
+  String mitmScriptPasteLineError(int line, Object reason) {
+    return '第 $line 行无法添加：$reason';
+  }
+
+  @override
+  String get mitmScriptUnsupportedType => '暂不支持这类脚本';
+
+  @override
+  String get mitmScriptUnreadable => '不是脚本配置行';
+
+  @override
+  String get mitmScriptNoPattern => '缺少匹配网址';
+
+  @override
+  String get mitmScriptNoPath => 'script-path 需要是网址；本地脚本请用「从文件添加…」';
+
+  @override
+  String get mitmAddFromFile => '从文件添加…';
+
+  @override
+  String get mitmContinue => '继续';
+
+  @override
+  String get mitmScriptConfirmTitle => '确认启用脚本';
+
+  @override
+  String get mitmScriptConfirmBody =>
+      '此脚本可以查看和修改所选域名的明文请求与响应，可能接触账号、密码等敏感信息。请只启用你信任的脚本。';
+
+  @override
+  String get mitmCapabilityRead => '查看和修改所选域名的明文请求与响应';
+
+  @override
+  String get mitmCapabilitySend => '可以自己发出网络请求（经 Flash 出去）';
+
+  @override
+  String get mitmCapabilityStore => '可以在本机保存少量数据';
+
+  @override
+  String get mitmCapabilityLimits => '不能读写本机文件、不能执行命令；单次最多运行 10 秒，超时原样放行。';
+
+  @override
+  String mitmHostNotDecrypted(Object host) {
+    return '$host 没有解密';
+  }
+
+  @override
+  String get mitmAlsoDecryptHosts => '同时把这些域名加入解密';
+
+  @override
+  String get mitmAddAndEnable => '添加并启用';
+
+  @override
+  String get mitmScriptDownloading => '正在下载并检查…';
+
+  @override
+  String mitmScriptsAdded(int count) {
+    return '已添加 $count 个脚本';
+  }
+
+  @override
+  String get mitmScriptEmpty => '脚本是空的';
+
+  @override
+  String mitmScriptDownloadFailed(Object name, Object reason) {
+    return '无法下载 $name：$reason';
+  }
+
+  @override
+  String mitmScriptCannotLoad(Object name, Object reason) {
+    return '$name 无法加载：$reason';
+  }
+
+  @override
+  String mitmScriptCheckFailed(Object reason) {
+    return '无法检查脚本更新：$reason';
+  }
+
+  @override
+  String mitmUpdateTitle(Object name) {
+    return '$name 有更新';
+  }
+
+  @override
+  String mitmUpdateSubtitle(Object before, Object after) {
+    return '上次 $before · 这次 $after';
+  }
+
+  @override
+  String mitmDiffCounts(int added, int removed) {
+    return '+$added 行 −$removed 行';
+  }
+
+  @override
+  String mitmDiffFolded(int count) {
+    return '… $count 行未改动';
+  }
+
+  @override
+  String get mitmNotNow => '暂不更新';
+
+  @override
+  String get mitmAdoptUpdate => '采用新版';
+
+  @override
+  String get mitmChangeHosts => '解密域名';
+
+  @override
+  String get mitmChangeScripts => '脚本';
+
+  @override
+  String get mitmChangeRewrites => '改写';
+
+  @override
+  String get mitmNoChange => '无变化';
+
+  @override
+  String get mitmModuleConfirmTitle => '确认导入模块';
+
+  @override
+  String get mitmModuleHostsHint => '此模块将添加以下解密域名，请确认后再导入。';
+
+  @override
+  String get mitmModuleNoHosts => '此模块未添加解密域名。';
+
+  @override
+  String get mitmAlreadyListed => '已在名单';
+
+  @override
+  String get mitmNewHost => '新增';
+
+  @override
+  String mitmExcludedCount(int count) {
+    return '排除 $count 个';
+  }
+
+  @override
+  String mitmMoreHosts(int count) {
+    return '另外 $count 个';
+  }
+
+  @override
+  String get mitmModuleRewrites => '改写规则';
+
+  @override
+  String get mitmModuleRoutingRules => '分流规则';
+
+  @override
+  String mitmModuleRoutingRulesNote(int count) {
+    return '$count 条，暂不导入';
+  }
+
+  @override
+  String get mitmModuleUnsupported => '暂不支持';
+
+  @override
+  String mitmModuleUnsupportedCount(int count) {
+    return '$count 行不会导入';
+  }
+
+  @override
+  String get mitmImportOnly => '仅导入';
+
+  @override
+  String get mitmImportAndEnable => '导入并启用';
+
+  @override
+  String get mitmImportModule => '导入模块';
+
+  @override
+  String get mitmModuleImported => '模块已导入';
+
+  @override
+  String mitmModuleHostCount(int count) {
+    return '$count 个解密域名';
+  }
+
+  @override
+  String mitmModuleRewriteCount(int count) {
+    return '$count 条改写';
+  }
+
+  @override
+  String mitmModuleUnsupportedLines(int count) {
+    return '$count 行暂不支持';
+  }
+
+  @override
+  String mitmModuleRemoteSource(Object time) {
+    return '远程 · $time更新';
+  }
+
+  @override
+  String get mitmModuleLocalSource => '本地';
+
+  @override
+  String get mitmModulesEmptyTitle => '还没有模块';
+
+  @override
+  String get mitmModulesEmptyBody => '导入模块后，可以查看其中的设置。';
+
+  @override
+  String mitmScriptsRan(int count) {
+    return '脚本已运行 · $count 个';
+  }
+
+  @override
+  String mitmScriptsPassed(int count) {
+    return '$count 个脚本未完成，已原样放行';
+  }
+
+  @override
+  String mitmScriptDone(Object took) {
+    return '脚本执行完成 · $took';
+  }
+
+  @override
+  String mitmScriptTimedOut(int seconds) {
+    return '执行超时（$seconds 秒）';
+  }
+
+  @override
+  String mitmScriptFailed(Object reason) {
+    return '执行出错：$reason';
+  }
+
+  @override
+  String mitmScriptNotRun(Object reason) {
+    return '未运行：$reason';
+  }
+
+  @override
+  String get mitmScriptMemory => '超出内存上限';
+
+  @override
+  String get mitmScriptBusy => '同时运行的脚本过多';
+
+  @override
+  String get mitmScriptNoDone => '脚本没有调用 \$done';
+
+  @override
+  String mitmScriptLogExpand(int count) {
+    return '展开全部（$count 行）';
+  }
+
+  @override
+  String mitmScriptRequestsSent(int count) {
+    return '发出 $count 个请求';
+  }
+
+  @override
+  String get mitmViewInScripts => '在脚本中查看';
+
+  @override
+  String get mitmViewInModule => '在模块中查看';
+
+  @override
+  String mitmFromModule(Object name) {
+    return '模块 · $name';
+  }
 }
