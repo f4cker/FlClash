@@ -12,7 +12,8 @@ import 'labels.dart';
 /// The exit address as ipx.al reports it. What the card already knows (the
 /// address, its country, the organization a quality source named) shows at
 /// once; the location and network fill in from `/api/me` within a second,
-/// the score, type and breakdown when the report lands.
+/// the score, type and breakdown when the report lands. Whatever the report
+/// leaves out reads as unknown: its estimates are never filled in.
 class IpxReportSections extends StatelessWidget {
   const IpxReportSections({
     super.key,
@@ -39,6 +40,7 @@ class IpxReportSections extends StatelessWidget {
     final report = lookup.report;
     final brief = lookup.brief;
     final pending = report == null;
+    final unknown = localizations.ipxUnknown;
     final country = report?.countryCode ?? brief?.countryCode ?? countryCode;
     final city = report?.city ?? brief?.city;
     final organization =
@@ -50,28 +52,24 @@ class IpxReportSections extends StatelessWidget {
         switch ((text, pending)) {
           (final text?, _) => Text(text),
           (null, true) => SkeletonText(width: width),
-          (null, false) => const Text('—'),
+          (null, false) => Text(unknown),
         };
 
     final location = [?country, ?city].join(' · ');
-    final nativity = report?.nativity.label(context);
     final registered = report?.registeredCountry;
     final used = report?.usedCountry;
+    final asnText = asn == null ? null : 'AS$asn';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         generateSection(
           title: localizations.ipxScore,
-          items: [_ScoreItem(report: report)],
+          items: [IpxScoreItem(report: report)],
         ),
         generateSection(
           title: localizations.basicInfo,
           items: [
-            DetailRow(
-              title: localizations.ipAddress,
-              copyText: ip,
-              value: IpQualityText(ip: ip),
-            ),
+            IpxAddressRow(ip: ip),
             DetailRow(
               title: localizations.ipxLocation,
               copyText: location.isEmpty ? null : location,
@@ -94,12 +92,13 @@ class IpxReportSections extends StatelessWidget {
               title: localizations.ipxNativity,
               value: switch (report) {
                 null => const SkeletonText(width: 72),
-                _ when nativity == null => const Text('—'),
-                _ => Column(
+                final report => Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(nativity),
-                    if (registered != null && used != null)
+                    Text(report.nativity.label(context)),
+                    if (report.nativity != IpxNativity.unknown &&
+                        registered != null &&
+                        used != null)
                       Text(
                         localizations.ipxNativeDetail(registered, used),
                         style: AppTextStyle.footnote
@@ -122,27 +121,34 @@ class IpxReportSections extends StatelessWidget {
             ),
             DetailRow(
               title: localizations.ipAsn,
-              copyText: asn == null ? null : 'AS$asn',
-              value: valueOf(asn == null ? null : 'AS$asn', width: 56),
+              copyText: asnText,
+              value: valueOf(asnText, width: 56),
             ),
           ],
         ),
-        generateSection(
-          title: localizations.ipxDeductions,
-          items: switch (report) {
-            null => [
-              for (var i = 0; i < _pendingDeductions; i++)
-                const DecorationListItem(
-                  title: SkeletonText(width: 160),
-                  trailing: SkeletonText(width: 24),
-                ),
-            ],
-            final report => [
-              for (final deduction in report.deductions)
-                _DeductionItem(deduction: deduction),
-            ],
-          },
-        ),
+        // A scored report that lists nothing took nothing off.
+        if (report == null ||
+            report.deductions.isNotEmpty ||
+            report.score == null)
+          generateSection(
+            title: localizations.ipxDeductions,
+            items: switch (report) {
+              null => [
+                for (var i = 0; i < _pendingDeductions; i++)
+                  const DecorationListItem(
+                    title: SkeletonText(width: 160),
+                    trailing: SkeletonText(width: 24),
+                  ),
+              ],
+              IpxReport(deductions: []) => [
+                DecorationListItem(title: Text(unknown)),
+              ],
+              final report => [
+                for (final deduction in report.sortedDeductions)
+                  _DeductionItem(deduction: deduction),
+              ],
+            },
+          ),
         generateSection(
           items: [
             ListItem(
@@ -151,15 +157,64 @@ class IpxReportSections extends StatelessWidget {
               onTap: onOpenReport,
             ),
           ],
-          footer: localizations.ipxAttribution,
+        ),
+        IpxFootnote(
+          lines: [
+            localizations.ipxAttribution,
+            // Only what the Core says the report took, never the setting.
+            if (lookup.viaProxy) localizations.ipxViaExit,
+          ],
         ),
       ],
     );
   }
 }
 
-class _ScoreItem extends StatelessWidget {
-  const _ScoreItem({required this.report});
+/// The address, plain and monospaced: the grade beside it carries the
+/// colour.
+class IpxAddressRow extends StatelessWidget {
+  const IpxAddressRow({super.key, required this.ip});
+
+  final String ip;
+
+  @override
+  Widget build(BuildContext context) {
+    return DetailRow(
+      title: context.appLocalizations.ipAddress,
+      copyText: ip,
+      value: IpQualityText(
+        ip: ip,
+        tinted: false,
+        style: const TextStyle().toJetBrainsMono,
+      ),
+    );
+  }
+}
+
+/// A section footer set in from the edge as far as the section titles.
+class IpxFootnote extends StatelessWidget {
+  const IpxFootnote({super.key, required this.lines});
+
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    final inset = listHeaderPaddingOf(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(inset.left, 8, inset.right, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 2,
+        children: [
+          for (final line in lines) Text(line, style: context.listCaptionStyle),
+        ],
+      ),
+    );
+  }
+}
+
+class IpxScoreItem extends StatelessWidget {
+  const IpxScoreItem({super.key, required this.report});
 
   final IpxReport? report;
 
@@ -182,8 +237,9 @@ class _ScoreItem extends StatelessWidget {
         ),
       );
     }
+    final score = report.score;
     final grade = report.grade;
-    final color = grade.color(context);
+    final color = grade?.color(context);
     final ceiling = report.ceiling;
     return DecorationListItem(
       title: Row(
@@ -191,26 +247,27 @@ class _ScoreItem extends StatelessWidget {
         textBaseline: TextBaseline.alphabetic,
         spacing: 6,
         children: [
-          Text('${report.score}', style: scoreStyle.copyWith(color: color)),
-          Text(localizations.ipxScoreOutOf, style: secondary),
+          if (score != null) ...[
+            Text('$score', style: scoreStyle.copyWith(color: color)),
+            Text(localizations.ipxScoreOutOf, style: secondary),
+          ] else
+            Text(
+              localizations.ipxUnknown,
+              style: AppTextStyle.headline.of(context),
+            ),
           const Spacer(),
-          Text(
-            '${grade.letter} · ${grade.label(context)}',
-            style: AppTextStyle.headline.of(context).copyWith(color: color),
-          ),
+          if (grade != null)
+            Text(
+              '${grade.letter} · ${grade.label(context)}',
+              style: AppTextStyle.headline.of(context).copyWith(color: color),
+            ),
         ],
       ),
-      subtitle: Wrap(
-        spacing: 6,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          MetaChip(label: report.type.label(context)),
-          if (report.nativity.label(context) case final nativity?)
-            MetaChip(label: nativity),
-          if (ceiling != null)
-            Text(localizations.ipxScoreCeiling(ceiling), style: secondary),
-        ],
+      subtitle: Text(
+        localizations.ipxScoreCeiling(
+          ceiling == null ? localizations.ipxUnknown : '$ceiling',
+        ),
+        style: secondary,
       ),
     );
   }
@@ -227,6 +284,7 @@ class _DeductionItem extends StatelessWidget {
     final points = deduction.points;
     final source = deduction.source;
     final note = deduction.note;
+    final deducted = points != null && points < 0;
     // "pass" marks a check that found nothing; it is no note to read.
     final detail = [
       ?source,
@@ -243,11 +301,15 @@ class _DeductionItem extends StatelessWidget {
                   .copyWith(color: colorScheme.onSurfaceVariant),
             ),
       trailing: Text(
-        points < 0 ? '−${-points}' : '0',
+        switch (points) {
+          null => context.appLocalizations.ipxUnknown,
+          < 0 => '−${-points}',
+          _ => '$points',
+        },
         style: AppTextStyle.subheadline
-            .of(context, emphasized: points < 0)
+            .of(context, emphasized: deducted)
             .copyWith(
-              color: points < 0
+              color: deducted
                   ? colorScheme.error
                   : colorScheme.onSurfaceVariant,
             )
@@ -257,22 +319,38 @@ class _DeductionItem extends StatelessWidget {
   }
 }
 
-/// Where the detail offers ipx.al again after it did not answer: no error,
-/// just the way back.
-class IpxRetryItem extends StatelessWidget {
-  const IpxRetryItem({super.key, required this.onPressed});
+/// Where the score would be when ipx.al did not answer: no error colour,
+/// just the way to ask again, which spins and holds still until it answers.
+class IpxFailedItem extends StatelessWidget {
+  const IpxFailedItem({
+    super.key,
+    required this.retrying,
+    required this.onRetry,
+  });
 
-  final VoidCallback onPressed;
+  final bool retrying;
+  final VoidCallback onRetry;
+
+  static const _spinnerSize = 18.0;
 
   @override
   Widget build(BuildContext context) {
-    return ListItem(
+    final localizations = context.appLocalizations;
+    return DecorationListItem(
       title: Text(
-        context.appLocalizations.ipxLoadReport,
+        localizations.ipxReportFailed,
         style: TextStyle(color: context.colorScheme.onSurfaceVariant),
       ),
-      trailing: const GlyphIcon(AppGlyphs.refresh),
-      onTap: onPressed,
+      trailing: retrying
+          ? Semantics(
+              label: localizations.ipxRetry,
+              enabled: false,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: ActivityIndicator(size: _spinnerSize),
+              ),
+            )
+          : TextButton(onPressed: onRetry, child: Text(localizations.ipxRetry)),
     );
   }
 }

@@ -7026,7 +7026,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ipxScoreOutOf => '/ 100';
 
   @override
-  String ipxScoreCeiling(int value) {
+  String ipxScoreCeiling(String value) {
     return 'Type cap $value';
   }
 
@@ -7049,7 +7049,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ipxLocation => 'Location';
 
   @override
-  String get ipxNativity => 'Nativity';
+  String get ipxNativity => 'IP origin';
 
   @override
   String get ipxNative => 'Native IP';
@@ -7078,9 +7078,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ipxFullReport => 'Full report on ipx.al';
 
   @override
-  String get ipxAttribution =>
-      'Report by ipx.al, an unofficial API, asked through the current exit. For reference only.';
+  String get ipxAttribution => 'Data from ipx.al, for reference only';
 
   @override
-  String get ipxLoadReport => 'Get the ipx.al report';
+  String get ipxReportFailed => 'Couldn’t get report';
+
+  @override
+  String get ipxRetry => 'Retry';
+
+  @override
+  String get ipxViaExit => 'Queried through the current exit';
+
+  @override
+  String get ipxUnknown => 'Unknown';
 }

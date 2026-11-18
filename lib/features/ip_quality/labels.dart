@@ -58,7 +58,7 @@ extension IpxIpTypeLabel on IpxIpType {
       IpxIpType.business => localizations.ipTypeBusiness,
       IpxIpType.hosting => localizations.ipTypeHosting,
       IpxIpType.pseudo => localizations.ipxTypePseudo,
-      IpxIpType.unknown => localizations.ipTypeUnknown,
+      IpxIpType.unknown => localizations.ipxUnknown,
     };
   }
 }
@@ -86,12 +86,12 @@ extension IpxGradeView on IpxGrade {
 }
 
 extension IpxNativityLabel on IpxNativity {
-  String? label(BuildContext context) {
+  String label(BuildContext context) {
     final localizations = context.appLocalizations;
     return switch (this) {
       IpxNativity.native => localizations.ipxNative,
       IpxNativity.broadcast => localizations.ipxBroadcast,
-      IpxNativity.unknown => null,
+      IpxNativity.unknown => localizations.ipxUnknown,
     };
   }
 }

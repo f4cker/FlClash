@@ -1960,7 +1960,7 @@
   "ipxGradePoor": "Poor",
   "ipxGradeRisky": "High risk",
   "ipxLocation": "Location",
-  "ipxNativity": "Nativity",
+  "ipxNativity": "IP origin",
   "ipxNative": "Native IP",
   "ipxBroadcast": "Broadcast IP",
   "ipxNativeDetail": "Registered {registered} · used in {used}",
@@ -1969,6 +1969,9 @@
   "ipxTypePseudo": "Likely pseudo-residential",
   "ipxDeductions": "Score breakdown",
   "ipxFullReport": "Full report on ipx.al",
-  "ipxAttribution": "Report by ipx.al, an unofficial API, asked through the current exit. For reference only.",
-  "ipxLoadReport": "Get the ipx.al report"
+  "ipxAttribution": "Data from ipx.al, for reference only",
+  "ipxReportFailed": "Couldn’t get report",
+  "ipxRetry": "Retry",
+  "ipxViaExit": "Queried through the current exit",
+  "ipxUnknown": "Unknown"
 }

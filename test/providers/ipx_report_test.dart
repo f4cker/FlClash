@@ -29,14 +29,19 @@ class _FakeFetch {
   final calls = <String>[];
   final maxBodies = <String, int?>{};
 
-  Future<String?> call(String url, {required Duration timeout, int? maxBody}) {
+  Future<IpxAnswer?> call(
+    String url, {
+    required Duration timeout,
+    int? maxBody,
+  }) async {
     calls.add(url);
     maxBodies[url] = maxBody;
-    return switch (bodies[url]) {
-      final Completer<String?> completer => completer.future,
-      final String body => Future.value(body),
-      _ => Future.value(null),
+    final body = switch (bodies[url]) {
+      final Completer<String?> completer => await completer.future,
+      final String body => body,
+      _ => null,
     };
+    return body == null ? null : IpxAnswer(body, viaProxy: true);
   }
 }
 
@@ -88,6 +93,7 @@ void main() {
     expect(done.phase, IpxPhase.done);
     expect(done.report?.score, 55);
     expect(done.brief?.city, 'Irvine');
+    expect(done.viaProxy, isTrue);
     expect(fetch.maxBodies[ipxAlReportUrl(_ip)], ipxReportMaxBody);
   });
 
@@ -147,11 +153,35 @@ void main() {
       expect(failed.phase, IpxPhase.failed);
       expect(failed.report, isNull);
 
-      fetch.bodies[ipxAlReportUrl(_ip)] = _fixture('report_8.8.8.8.json');
+      final report = Completer<String?>();
+      fetch.bodies[ipxAlReportUrl(_ip)] = report;
       container.read(ipxLookupProvider(_ip).notifier).retry();
+      // The fallback stays up while ipx.al is asked again, once.
+      final retrying = container.read(ipxLookupProvider(_ip));
+      expect(retrying.phase, IpxPhase.failed);
+      expect(retrying.retrying, isTrue);
+      expect(retrying.isLoading, isTrue);
+      container.read(ipxLookupProvider(_ip).notifier).retry();
+      container.read(ipxLookupProvider(_ip).notifier).reload();
+      expect(
+        fetch.calls.where((url) => url == ipxAlReportUrl(_ip)),
+        hasLength(2),
+      );
+
+      report.complete(_fixture('report_8.8.8.8.json'));
       expect((await _settled(container, _ip)).phase, IpxPhase.done);
     });
   }
+
+  test('starts over from the skeletons on reload', () async {
+    final fetch = _FakeFetch({ipxAlMeUrl: _me(_ip)});
+    final container = _container(fetch);
+    expect((await _settled(container, _ip)).phase, IpxPhase.failed);
+
+    container.read(ipxLookupProvider(_ip).notifier).reload();
+    expect(container.read(ipxLookupProvider(_ip)).phase, IpxPhase.loading);
+    expect((await _settled(container, _ip)).phase, IpxPhase.failed);
+  });
 
   group('ipxFetch', () {
     late _MockCore core;
@@ -173,16 +203,20 @@ void main() {
     test('asks the Core through the routed exit', () async {
       final container = build(live: true, proxied: true);
       when(() => core.outboundIp(any())).thenAnswer(
-        (_) async => const OutboundIpResult(body: '{"ip":"8.8.8.8"}'),
+        (_) async => const OutboundIpResult(
+          body: '{"ip":"8.8.8.8"}',
+          chains: ['HK 01', 'Auto', 'Proxy'],
+        ),
       );
 
-      final body = await container.read(ipxFetchProvider)(
+      final answer = await container.read(ipxFetchProvider)(
         ipxAlReportUrl(_ip),
         timeout: ipxReportTimeout,
         maxBody: ipxReportMaxBody,
       );
 
-      expect(body, '{"ip":"8.8.8.8"}');
+      expect(answer?.body, '{"ip":"8.8.8.8"}');
+      expect(answer?.viaProxy, isTrue);
       final params =
           verify(() => core.outboundIp(captureAny())).captured.single
               as OutboundIpParams;
@@ -221,6 +255,26 @@ void main() {
         isNull,
       );
     });
+
+    for (final (name, chains) in [
+      ('a rule picked DIRECT', [directOutbound]),
+      ('the Core named no route', <String>[]),
+    ]) {
+      test('claims no proxy exit when $name', () async {
+        final container = build(live: true, proxied: true);
+        when(
+          () => core.outboundIp(any()),
+        ).thenAnswer((_) async => OutboundIpResult(body: '{}', chains: chains));
+
+        final answer = await container.read(ipxFetchProvider)(
+          ipxAlMeUrl,
+          timeout: ipxBriefTimeout,
+        );
+
+        expect(answer?.body, '{}');
+        expect(answer?.viaProxy, isFalse);
+      });
+    }
 
     test('does not ask without a live route', () async {
       final container = build(live: false, proxied: true);

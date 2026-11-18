@@ -8,10 +8,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'labels.dart';
 
 class IpQualityText extends ConsumerWidget {
-  const IpQualityText({super.key, required this.ip, this.style});
+  const IpQualityText({
+    super.key,
+    required this.ip,
+    this.style,
+    this.tinted = true,
+  });
 
   final String ip;
   final TextStyle? style;
+
+  /// Colours the address by its quality level; a detail that states the
+  /// level elsewhere leaves it plain.
+  final bool tinted;
 
   static const _mask = '*****';
 
@@ -22,7 +31,7 @@ class IpQualityText extends ConsumerWidget {
       appSettingProvider.select((state) => state.hideIp),
     );
     final shownIp = hideIp ? _mask : ip;
-    final color = quality?.level.color(context);
+    final color = tinted ? quality?.level.color(context) : null;
     var style = this.style;
     if (hideIp) {
       style = (style ?? const TextStyle()).toJetBrainsMono;

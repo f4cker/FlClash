@@ -11787,7 +11787,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Type cap {value}'**
-  String ipxScoreCeiling(int value);
+  String ipxScoreCeiling(String value);
 
   /// No description provided for @ipxGradeExcellent.
   ///
@@ -11828,7 +11828,7 @@ abstract class AppLocalizations {
   /// No description provided for @ipxNativity.
   ///
   /// In en, this message translates to:
-  /// **'Nativity'**
+  /// **'IP origin'**
   String get ipxNativity;
 
   /// No description provided for @ipxNative.
@@ -11882,14 +11882,32 @@ abstract class AppLocalizations {
   /// No description provided for @ipxAttribution.
   ///
   /// In en, this message translates to:
-  /// **'Report by ipx.al, an unofficial API, asked through the current exit. For reference only.'**
+  /// **'Data from ipx.al, for reference only'**
   String get ipxAttribution;
 
-  /// No description provided for @ipxLoadReport.
+  /// No description provided for @ipxReportFailed.
   ///
   /// In en, this message translates to:
-  /// **'Get the ipx.al report'**
-  String get ipxLoadReport;
+  /// **'Couldn’t get report'**
+  String get ipxReportFailed;
+
+  /// No description provided for @ipxRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get ipxRetry;
+
+  /// No description provided for @ipxViaExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Queried through the current exit'**
+  String get ipxViaExit;
+
+  /// No description provided for @ipxUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get ipxUnknown;
 }
 
 class _AppLocalizationsDelegate

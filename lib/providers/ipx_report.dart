@@ -13,10 +13,20 @@ import 'route_state.dart';
 
 part 'generated/ipx_report.g.dart';
 
-/// Fetches [url] through the exit the dashboard shows and answers its raw
-/// body, or null for anything short of a usable answer.
+/// One answer of [IpxFetch]: the raw body, and whether the Core says it
+/// left through a proxy node rather than DIRECT.
+@immutable
+class IpxAnswer {
+  const IpxAnswer(this.body, {this.viaProxy = false});
+
+  final String body;
+  final bool viaProxy;
+}
+
+/// Fetches [url] through the exit the dashboard shows, or answers null for
+/// anything short of a usable answer.
 typedef IpxFetch =
-    Future<String?> Function(
+    Future<IpxAnswer?> Function(
       String url, {
       required Duration timeout,
       int? maxBody,
@@ -54,7 +64,13 @@ IpxFetch ipxFetch(Ref ref) {
       if (result.error != null || result.body.isEmpty) {
         return null;
       }
-      return result.body;
+      // The chain the request actually took, exit first: what the rules
+      // picked for ipx.al, which may be DIRECT even while proxying.
+      final exit = result.chains.firstOrNull;
+      return IpxAnswer(
+        result.body,
+        viaProxy: exit != null && !_directExits.contains(exit),
+      );
     } catch (error) {
       commonPrint.log(
         'ipx.al fetch failed: ${compactError(error)}',
@@ -64,6 +80,8 @@ IpxFetch ipxFetch(Ref ref) {
     }
   };
 }
+
+const _directExits = {directOutbound, 'REJECT', 'REJECT-DROP', 'PASS'};
 
 enum IpxPhase {
   loading,
@@ -82,23 +100,34 @@ class IpxLookupState {
     this.phase = IpxPhase.loading,
     this.brief,
     this.report,
+    this.viaProxy = false,
+    this.retrying = false,
   });
 
   final IpxPhase phase;
   final IpxBrief? brief;
   final IpxReport? report;
 
-  bool get isLoading => phase == IpxPhase.loading || phase == IpxPhase.partial;
+  /// The report left through a proxy node, as the Core saw it.
+  final bool viaProxy;
+
+  /// A failed lookup asked again: the fallback stays until it answers.
+  final bool retrying;
+
+  bool get isLoading =>
+      phase == IpxPhase.loading || phase == IpxPhase.partial || retrying;
 
   @override
   bool operator ==(Object other) =>
       other is IpxLookupState &&
       other.phase == phase &&
       other.brief == brief &&
-      other.report == report;
+      other.report == report &&
+      other.viaProxy == viaProxy &&
+      other.retrying == retrying;
 
   @override
-  int get hashCode => Object.hash(phase, brief, report);
+  int get hashCode => Object.hash(phase, brief, report, viaProxy, retrying);
 }
 
 /// The ipx.al report of one exit address, asked for the first time the
@@ -113,12 +142,28 @@ class IpxLookup extends _$IpxLookup {
     return const IpxLookupState();
   }
 
-  /// A report already in hand stays: ipx.al caches it for hours anyway.
-  void retry() {
-    if (state.phase != IpxPhase.failed) {
+  /// A new look at a lookup that failed, from the skeletons up, as on
+  /// opening the detail again. A report already in hand stays: ipx.al
+  /// caches it for hours anyway.
+  void reload() {
+    if (state.phase != IpxPhase.failed || state.retrying) {
       return;
     }
     state = const IpxLookupState();
+    unawaited(_query(++_run));
+  }
+
+  /// A failed lookup asked again in place: the fallback stays up, marked as
+  /// [IpxLookupState.retrying], until ipx.al answers.
+  void retry() {
+    if (state.phase != IpxPhase.failed || state.retrying) {
+      return;
+    }
+    state = IpxLookupState(
+      phase: IpxPhase.failed,
+      brief: state.brief,
+      retrying: true,
+    );
     unawaited(_query(++_run));
   }
 
@@ -127,21 +172,30 @@ class IpxLookup extends _$IpxLookup {
   Future<void> _query(int run) async {
     final fetch = ref.read(ipxFetchProvider);
     unawaited(
-      fetch(ipxAlMeUrl, timeout: ipxBriefTimeout).then((body) {
-        if (body == null || !_current(run)) {
+      fetch(ipxAlMeUrl, timeout: ipxBriefTimeout).then((answer) {
+        if (answer == null || !_current(run)) {
           return;
         }
-        final brief = _tryParse(() => IpxBrief.parse(body));
+        final brief = _tryParse(() => IpxBrief.parse(answer.body));
         // Another exit answered: the route moved under the card.
         if (brief == null || brief.ip != ip) {
           return;
         }
-        if (state.phase == IpxPhase.loading) {
-          state = IpxLookupState(phase: IpxPhase.partial, brief: brief);
-        }
+        state = switch (state) {
+          IpxLookupState(phase: IpxPhase.loading) => IpxLookupState(
+            phase: IpxPhase.partial,
+            brief: brief,
+          ),
+          IpxLookupState(retrying: true) => IpxLookupState(
+            phase: IpxPhase.failed,
+            brief: brief,
+            retrying: true,
+          ),
+          final other => other,
+        };
       }),
     );
-    final body = await fetch(
+    final answer = await fetch(
       ipxAlReportUrl(ip),
       timeout: ipxReportTimeout,
       maxBody: ipxReportMaxBody,
@@ -149,7 +203,9 @@ class IpxLookup extends _$IpxLookup {
     if (!_current(run)) {
       return;
     }
-    final report = body == null ? null : _tryParse(() => IpxReport.parse(body));
+    final report = answer == null
+        ? null
+        : _tryParse(() => IpxReport.parse(answer.body));
     if (report == null || report.ip != ip) {
       commonPrint.log(
         'ipx.al report unavailable for this exit',
@@ -162,6 +218,7 @@ class IpxLookup extends _$IpxLookup {
       phase: IpxPhase.done,
       brief: state.brief,
       report: report,
+      viaProxy: answer!.viaProxy,
     );
   }
 }

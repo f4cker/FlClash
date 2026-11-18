@@ -110,8 +110,8 @@ class IpxDeduction {
 
   final String label;
 
-  /// Zero or negative.
-  final int points;
+  /// Zero or negative; null when the report left it out.
+  final int? points;
   final String? source;
   final String? note;
   final String? tag;
@@ -133,7 +133,7 @@ class IpxDeduction {
 class IpxReport {
   const IpxReport({
     required this.ip,
-    required this.score,
+    this.score,
     this.ceiling,
     this.type = IpxIpType.unknown,
     this.nativity = IpxNativity.unknown,
@@ -146,20 +146,23 @@ class IpxReport {
     this.deductions = const [],
   });
 
-  /// Throws a [FormatException] for anything without an address and a score.
+  /// Throws a [FormatException] for anything without an address and a health
+  /// section. Whatever
+  /// else is missing stays null or unknown: a third party's estimate is
+  /// never filled in.
   factory IpxReport.parse(String body) {
     final json = _decode(body);
-    final health = _object(json['health']);
+    final health = switch (json['health']) {
+      final Map<String, dynamic> health => health,
+      _ => throw const FormatException('ipx.al report without a health check'),
+    };
     final score = health['score'];
-    if (score is! num) {
-      throw const FormatException('ipx.al report without a score');
-    }
     final native = _object(json['native']);
     final type = _object(json['type']);
     final location = _object(json['location']);
     return IpxReport(
       ip: _requireIp(json),
-      score: score.round().clamp(0, 100),
+      score: score is num ? score.round().clamp(0, 100) : null,
       ceiling: switch (health['ceiling']) {
         final num ceiling => ceiling.round(),
         _ => null,
@@ -183,7 +186,7 @@ class IpxReport {
               label: label,
               points: switch (item['pts']) {
                 final num points => points.round(),
-                _ => 0,
+                _ => null,
               },
               source: _text(item['src']),
               note: _text(item['note']),
@@ -195,8 +198,8 @@ class IpxReport {
 
   final String ip;
 
-  /// 0–100.
-  final int score;
+  /// 0–100, or null when ipx.al gave none.
+  final int? score;
 
   /// What the type allows at most before any deduction.
   final int? ceiling;
@@ -210,7 +213,28 @@ class IpxReport {
   final String? organization;
   final List<IpxDeduction> deductions;
 
-  IpxGrade get grade => IpxGrade.of(score);
+  /// Only ever read off a score ipx.al gave.
+  IpxGrade? get grade => switch (score) {
+    final score? => IpxGrade.of(score),
+    null => null,
+  };
+
+  /// The ones that took points off first, the most first; checks that took
+  /// none, or did not say, last.
+  List<IpxDeduction> get sortedDeductions {
+    int key(IpxDeduction deduction) => switch (deduction.points) {
+      final points? when points < 0 => points,
+      0 => 1,
+      _ => 2,
+    };
+    // List.sort is not stable; ties keep ipx.al's order.
+    final order = [for (var i = 0; i < deductions.length; i++) i]
+      ..sort((a, b) {
+        final byPoints = key(deductions[a]).compareTo(key(deductions[b]));
+        return byPoints != 0 ? byPoints : a.compareTo(b);
+      });
+    return [for (final i in order) deductions[i]];
+  }
 
   @override
   bool operator ==(Object other) =>

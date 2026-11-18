@@ -61,7 +61,37 @@ void main() {
       expect(report.type, IpxIpType.unknown);
       expect(report.asn, 64500);
       expect(report.deductions.single.label, 'x');
-      expect(report.deductions.single.points, 0);
+      expect(report.deductions.single.points, isNull);
+    });
+
+    test('leaves out what ipx.al left out', () {
+      final report = IpxReport.parse(
+        '{"ip":"192.0.2.1","health":{"items":[{"label":"x","pts":-5}]}}',
+      );
+
+      expect(report.score, isNull);
+      expect(report.grade, isNull);
+      expect(report.ceiling, isNull);
+      expect(report.type, IpxIpType.unknown);
+      expect(report.nativity, IpxNativity.unknown);
+      expect(report.deductions.single.points, -5);
+    });
+
+    test('sorts the deductions most points first, none last', () {
+      final report = IpxReport.parse(fixture('report_185.220.101.1.json'));
+
+      expect(report.sortedDeductions.map((d) => d.points), [
+        -40,
+        -15,
+        -5,
+        -3,
+        0,
+      ]);
+      final mixed = IpxReport.parse(
+        '{"ip":"192.0.2.1","health":{"items":[{"label":"a"},'
+        '{"label":"b","pts":0},{"label":"c","pts":-1},{"label":"d","pts":0}]}}',
+      );
+      expect(mixed.sortedDeductions.map((d) => d.label), ['c', 'b', 'd', 'a']);
     });
 
     test('refuses what is no report', () {
@@ -70,8 +100,8 @@ void main() {
         '<!doctype html>',
         '[]',
         '{"error":{"message":"rate limited"}}',
-        '{"ip":"192.0.2.1","health":{}}',
         '{"health":{"score":50}}',
+        '{"ip":"192.0.2.1"}',
       ]) {
         expect(
           () => IpxReport.parse(body),

@@ -6433,7 +6433,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipxScoreOutOf => '/ 100';
 
   @override
-  String ipxScoreCeiling(int value) {
+  String ipxScoreCeiling(String value) {
     return '类型上限 $value';
   }
 
@@ -6485,8 +6485,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipxFullReport => 'ipx.al 查看完整报告';
 
   @override
-  String get ipxAttribution => '数据来自 ipx.al（非官方接口），经当前出口查询，仅供参考';
+  String get ipxAttribution => '数据来自 ipx.al，仅供参考';
 
   @override
-  String get ipxLoadReport => '获取 ipx.al 报告';
+  String get ipxReportFailed => '报告获取失败';
+
+  @override
+  String get ipxRetry => '重试';
+
+  @override
+  String get ipxViaExit => '经当前出口查询';
+
+  @override
+  String get ipxUnknown => '未知';
 }

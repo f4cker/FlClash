@@ -10,7 +10,6 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/widgets.dart';
 
-import 'ip_quality_text.dart';
 import 'ipx_report_view.dart';
 import 'labels.dart';
 
@@ -41,7 +40,7 @@ class _IpQualitySheetState extends ConsumerState<_IpQualitySheet> {
   @override
   void initState() {
     super.initState();
-    ref.read(ipxLookupProvider(widget.ip).notifier).retry();
+    ref.read(ipxLookupProvider(widget.ip).notifier).reload();
   }
 
   @override
@@ -93,9 +92,6 @@ class _HideIpItem extends ConsumerWidget {
 class _IpQualityDetail extends ConsumerWidget {
   const _IpQualityDetail({required this.ip, this.countryCode});
 
-  /// The optical edge of the xl-radius cards, as in the memory sheet.
-  static const _tipInset = 5.0;
-
   final String ip;
   final String? countryCode;
 
@@ -107,15 +103,6 @@ class _IpQualityDetail extends ConsumerWidget {
     final error = result.error;
     final failed = quality == null && !result.isLoading;
     final ipx = ref.watch(ipxLookupProvider(ip));
-    final tip = Padding(
-      padding: const EdgeInsets.fromLTRB(_tipInset, 8, _tipInset, 0),
-      child: Text(
-        localizations.detectionTip,
-        style: AppTextStyle.body
-            .of(context)
-            .copyWith(color: context.colorScheme.onSurfaceVariant),
-      ),
-    );
     final padding = const EdgeInsets.symmetric(horizontal: 16).copyWith(
       bottom: 20 + context.bottomInset,
       top: context.contentTopPadding,
@@ -125,7 +112,6 @@ class _IpQualityDetail extends ConsumerWidget {
         shrinkWrap: true,
         padding: padding,
         children: [
-          tip,
           IpxReportSections(
             ip: ip,
             lookup: ipx,
@@ -141,20 +127,24 @@ class _IpQualityDetail extends ConsumerWidget {
       );
     }
     // ipx.al did not answer: the detail is what it was before, with a quiet
-    // way to ask again.
+    // way to ask again where the score would be.
     return ListView(
       shrinkWrap: true,
       padding: padding,
       children: [
-        tip,
+        generateSection(
+          title: localizations.ipxScore,
+          items: [
+            IpxFailedItem(
+              retrying: ipx.retrying,
+              onRetry: () => ref.read(ipxLookupProvider(ip).notifier).retry(),
+            ),
+          ],
+        ),
         generateSection(
           title: localizations.basicInfo,
           items: [
-            DetailRow(
-              title: localizations.ipAddress,
-              copyText: ip,
-              value: IpQualityText(ip: ip),
-            ),
+            IpxAddressRow(ip: ip),
             if (failed)
               DetailRow(
                 title: localizations.ipType,
@@ -185,12 +175,7 @@ class _IpQualityDetail extends ConsumerWidget {
           ),
         generateSection(
           title: localizations.other,
-          items: [
-            const _HideIpItem(),
-            IpxRetryItem(
-              onPressed: () => ref.read(ipxLookupProvider(ip).notifier).retry(),
-            ),
-          ],
+          items: const [_HideIpItem()],
         ),
       ],
     );
@@ -254,7 +239,7 @@ class _IpQualityDetail extends ConsumerWidget {
         switch ((quality, text)) {
           (null, _) => SkeletonText(width: width),
           (_, final text?) => Text(text),
-          _ => const Text('—'),
+          _ => Text(localizations.ipxUnknown),
         };
     final organization = quality?.organization;
     final asn = switch (quality?.asn) {
@@ -263,7 +248,7 @@ class _IpQualityDetail extends ConsumerWidget {
     };
     return [
       DetailRow(
-        title: localizations.ipOrganization,
+        title: localizations.ipxIsp,
         copyText: organization,
         value: valueOf(organization, width: 120),
       ),

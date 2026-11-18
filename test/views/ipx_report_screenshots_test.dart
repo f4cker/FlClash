@@ -77,7 +77,18 @@ String _brief(String report) {
   });
 }
 
-enum _Stage { loading, partial, full, failure }
+enum _Stage {
+  loading('1-loading'),
+  partial('2-partial'),
+  full('3-full'),
+  failure('4-failure'),
+  // Retry tapped on the failure, ipx.al not yet answered.
+  retrying('4b-retrying');
+
+  const _Stage(this.file);
+
+  final String file;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -120,16 +131,21 @@ void main() {
     Size size = const Size(1100, 1400),
   }) async {
     final ip = quality.ip;
-    Future<String?> fetch(String url, {required timeout, maxBody}) {
+    var reportCalls = 0;
+    Future<IpxAnswer?> fetch(String url, {required timeout, maxBody}) {
       if (url == ipxAlMeUrl) {
         return stage == _Stage.loading
-            ? Completer<String?>().future
-            : Future.value(_brief(_fixture(report)));
+            ? Completer<IpxAnswer?>().future
+            : Future.value(IpxAnswer(_brief(_fixture(report))));
       }
+      reportCalls++;
       return switch (stage) {
-        _Stage.full => Future.value(_fixture(report)),
+        _Stage.full => Future.value(
+          IpxAnswer(_fixture(report), viaProxy: true),
+        ),
         _Stage.failure => Future.value(null),
-        _ => Completer<String?>().future,
+        _Stage.retrying when reportCalls == 1 => Future.value(null),
+        _ => Completer<IpxAnswer?>().future,
       };
     }
 
@@ -184,6 +200,12 @@ void main() {
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
+    if (stage == _Stage.retrying) {
+      await tester.tap(find.text('重试'));
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
     final render =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {
@@ -217,7 +239,7 @@ void main() {
       testWidgets('$theme-${stage.name}', skip: skip != null, (tester) async {
         await shoot(
           tester,
-          'ipx-$theme-${stage.index + 1}-${stage.name}',
+          'ipx-$theme-${stage.file}',
           quality: tor,
           report: 'report_185.220.101.1.json',
           countryCode: 'DE',
