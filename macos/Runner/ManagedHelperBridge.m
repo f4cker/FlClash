@@ -90,6 +90,17 @@ static BOOL FCAlreadyUnregistered(NSError *error) {
     return !error || error.code == kSMErrorJobNotFound;
 }
 
+// The trust gate's notFound means the bundle's own daemon files (plist, helper, launcher) are missing or not as
+// built: only a reinstall helps. SMAppService reporting notFound for an intact, trusted bundle is a different
+// problem (the system's record does not match this copy) and has its own code, serviceNotFound. Both say which
+// one in a non-secret `source` and in the details.
+static NSDictionary *FCGateAnswer(NSString *gate) {
+    if ([gate isEqualToString:@"notFound"])
+        return @{@"code": @"notFound", @"source": @"bundle",
+            @"detail": @"source: bundle (bundled daemon plist, helper or launcher missing or not as built)"};
+    return @{@"code": gate};
+}
+
 static NSString *FCServiceStatusName(NSInteger status) {
     switch (status) {
         case SMAppServiceStatusEnabled: return @"enabled";
@@ -149,6 +160,8 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 @property NSTimeInterval launchedAt;
 @property NSTimeInterval okUnansweredSince;
 @property NSTimeInterval recordRepairedAt;
+// SMAppService read notFound right before the user started this recovery: unregister even without a launchd job.
+@property BOOL serviceWasNotFound;
 @end
 
 @implementation FCManagedHelperBridge
@@ -268,7 +281,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 
 - (NSDictionary *)registrationStatus {
     NSString *gate = [self gate];
-    if (![gate isEqualToString:@"trusted"]) return @{@"code": gate};
+    if (![gate isEqualToString:@"trusted"]) return FCGateAnswer(gate);
     if (@available(macOS 14.0, *)) {
         FCLegacyResidue residue = [self legacyResidue];
         if (residue) return [self residueAnswer:residue code:self.migrationAttempted ? @"migrationIncomplete" : @"migrationRequired"];
@@ -283,7 +296,11 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
                 return @{@"code": @"requiresApproval",
                     @"previouslyEnabled": @([NSUserDefaults.standardUserDefaults boolForKey:FCApprovedDefault])};
             case SMAppServiceStatusNotRegistered: return @{@"code": @"notRegistered"};
-            case SMAppServiceStatusNotFound: return @{@"code": @"notFound"};
+            // The bundle passed the full gate above (seal, pinned identity, daemon files present and exact): the
+            // system has no record that matches this copy. The user can re-register it (serviceNotFound card).
+            case SMAppServiceStatusNotFound:
+                return @{@"code": @"serviceNotFound", @"source": @"service", @"serviceStatus": @"notFound",
+                    @"detail": @"source: service (SMAppService status notFound; bundled daemon intact and trusted)"};
             default: return @{@"code": @"unavailable"};
         }
     }
@@ -639,7 +656,7 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
     }
     if (![self confirmed:arguments]) { completion(@{@"code": @"consentRequired"}); return; }
     NSString *gate = [self gate];
-    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    if (![gate isEqualToString:@"trusted"]) { completion(FCGateAnswer(gate)); return; }
     if (!FCDetectLegacyResidue()) { [self registerWithCompletion:completion]; return; }
     self.operationInFlight = YES;
     [self authorize:FCLegacyCleanupScript() completion:^(NSString *outcome, NSString *output) {
@@ -677,7 +694,7 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
     }
     if (![self confirmed:arguments]) { completion(@{@"code": @"consentRequired"}); return; }
     NSString *gate = [self gate];
-    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    if (![gate isEqualToString:@"trusted"]) { completion(FCGateAnswer(gate)); return; }
     NSString *problem = nil;
     if (!FCLauncherRecordDamaged(FCReadLauncherStatus(FCLauncherStatusDirectory, 0, &problem))) {
         [self status:^(NSDictionary *answer) {
@@ -716,7 +733,7 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
 
 - (void)registerWithCompletion:(void (^)(NSDictionary *))completion {
     NSString *gate = [self gate];
-    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    if (![gate isEqualToString:@"trusted"]) { completion(FCGateAnswer(gate)); return; }
     FCLegacyResidue residue = FCDetectLegacyResidue();
     if (residue) { completion([self residueAnswer:residue code:@"migrationRequired"]); return; }
     if (@available(macOS 14.0, *)) {
@@ -865,7 +882,10 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
         ![@[@"broken", @"missing"] containsObject:job[@"state"]]) {
         return [self awaitNewHelper:log done:done];
     }
-    if (![job[@"state"] isEqual:@"missing"]) {
+    // Recovering from serviceNotFound: the system's record does not match this copy, whatever launchd shows, so it
+    // is unregistered first; an error here (not found / not registered) is recorded and does not stop the register.
+    if (self.serviceWasNotFound) [log addObject:@"service status before: notFound (unregister, then register)"];
+    if (self.serviceWasNotFound || ![job[@"state"] isEqual:@"missing"]) {
         BOOL timedOut = NO;
         NSError *error = [self unregisterDaemonWithin:15 timedOut:&timedOut];
         [log addObject:timedOut ? @"unregister: no completion within 15 s" :
@@ -894,7 +914,13 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
     // Re-adding a daemon leaves its Background Task item disabled: the user allows it once in System Settings.
     if ([status isEqual:@"requiresApproval"] || FCApprovalError(registerError, status))
         return done(@"requiresApproval", errorFields);
-    if ([status isEqual:@"notFound"]) return done(@"notFound", errorFields);
+    // Still notFound after a fresh register: reported once with the register error and status; never retried here.
+    if ([status isEqual:@"notFound"]) {
+        NSMutableDictionary *fields = [errorFields mutableCopy];
+        fields[@"source"] = @"service";
+        fields[@"afterRepair"] = @YES;
+        return done(@"serviceNotFound", fields);
+    }
     if (![status isEqual:@"enabled"]) return done(@"registrationFailed", errorFields);
     return [self awaitNewHelper:log done:done];
 }
@@ -934,12 +960,13 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
     if (self.operationInFlight) { completion(@{@"code": @"operationInProgress"}); return; }
     if (self.pending) { completion(@{@"code": @"sessionBusy"}); return; }
     NSString *gate = [self gate];
-    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    if (![gate isEqualToString:@"trusted"]) { completion(FCGateAnswer(gate)); return; }
     FCLegacyResidue residue = FCDetectLegacyResidue();
     if (residue) { completion([self residueAnswer:residue code:@"migrationRequired"]); return; }
     if (@available(macOS 14.0, *)) {
         self.operationInFlight = YES;
         self.staleRetryAfter = nil;
+        self.serviceWasNotFound = [[self serviceStatusCode] isEqual:@"notFound"];
         os_log(FCBridgeLog(), "recovery: connection reset");
         [self resetConnection];
         dispatch_async(self.repairQueue, ^{

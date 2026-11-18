@@ -514,6 +514,191 @@ void main() {
     },
   );
 
+  group(
+    'serviceNotFound (SMAppService has no record of the intact bundle)',
+    () {
+      MacHelperMaintenance userRepairFlow() => MacHelperMaintenance(
+        client,
+        stop: () async => _applied,
+        // The real recovery entry: the native `recover` answer goes through the
+        // client (stop Core, record, unregister, register live on that side).
+        recover: () async {
+          steps.add('recover');
+          return client.maintain(() => client.recover());
+        },
+        settleRepair: () async => false,
+        repairPending: () async => false,
+        startPoll: const Duration(hours: 1),
+        startTimeout: const Duration(hours: 1),
+        recoveryRetryDelay: Duration.zero,
+      );
+
+      test(
+        'maps to its own state; the bundle source stays reinstall',
+        () async {
+          native.status = const {
+            'code': 'serviceNotFound',
+            'source': 'service',
+            'detail': 'source: service (SMAppService status notFound)',
+          };
+          expect(await client.status(), MacHelperState.serviceNotFound);
+          expect(client.lastDetail, contains('source: service'));
+          native.status = const {
+            'code': 'notFound',
+            'source': 'bundle',
+            'detail': 'source: bundle (bundled daemon missing)',
+          };
+          expect(await client.status(), MacHelperState.reinstallRequired);
+          expect(client.lastDetail, contains('source: bundle'));
+        },
+      );
+
+      test('registers by itself once per launch; approval needed is the '
+          'existing approval card, never reinstall', () async {
+        native.status = const {'code': 'serviceNotFound', 'source': 'service'};
+        native.enable = const {
+          'code': 'requiresApproval',
+          'serviceStatus': 'requiresApproval',
+        };
+        final flow = userRepairFlow();
+        expect(await flow.check(), MacHelperState.requiresApproval);
+        expect(native.calls, ['status', 'enable']);
+        expect(steps, isEmpty);
+        final l = lookupAppLocalizations(const Locale('zh'));
+        expect(macHelperCardView(l, flow).kind, MacHelperCardKind.approval);
+        // The system still reads notFound later this launch: no second
+        // automatic register, the Repair card instead.
+        native.status = const {'code': 'serviceNotFound', 'source': 'service'};
+        await flow.recheck();
+        flow.resumed();
+        await settle();
+        expect(native.calls.where((c) => c == 'enable'), hasLength(1));
+        expect(flow.state, MacHelperState.serviceNotFound);
+        expect(native.calls, isNot(contains('recover')));
+        flow.dispose();
+      });
+
+      test('automatic register failing leaves the Repair card (details keep '
+          'the error and code); nothing recovers by itself', () async {
+        native.status = const {
+          'code': 'serviceNotFound',
+          'source': 'service',
+          'detail': 'source: service',
+        };
+        native.enable = const {
+          'code': 'registrationFailed',
+          'serviceStatus': 'notFound',
+          'domain': 'SMAppServiceErrorDomain',
+          'error': 3,
+          'detail': 'register: code=3; status: notFound',
+        };
+        final flow = userRepairFlow();
+        expect(await flow.check(), MacHelperState.serviceNotFound);
+        expect(native.calls, ['status', 'enable']);
+        expect(flow.autoRegisterTried, isTrue);
+        final l = lookupAppLocalizations(const Locale('zh'));
+        final view = macHelperCardView(l, flow);
+        expect(view.kind, MacHelperCardKind.serviceNotFound);
+        expect(view.title, '辅助程序需要修复');
+        expect(view.detail, l.macHelperServiceNotFoundDetail);
+        expect(view.primary, MacHelperCardAction.repairRegistration);
+        expect(macHelperActionLabel(l, view.primary!), '修复');
+        expect(view.secondary, MacHelperCardAction.viewDetails);
+        expect(view.rawDetail, contains('code=3'));
+        expect(view.rawDetail, contains('error: SMAppServiceErrorDomain 3'));
+        expect(view.rawDetail, contains('status: registrationFailed'));
+        expect(macHelperBarView(l, flow)!.tone, MacHelperBarTone.action);
+
+        await flow.recheck();
+        flow.resumed();
+        await settle();
+        await flow.check();
+        await settle();
+        expect(steps, isEmpty);
+        expect(native.calls, isNot(contains('recover')));
+        expect(native.calls.where((c) => c == 'enable'), hasLength(1));
+        expect(flow.autoRecoveries, 0);
+        flow.dispose();
+      });
+
+      test('Repair (user tap) runs the recovery once; approval needed is the '
+          'existing approval card, not a failure', () async {
+        native.status = const {'code': 'serviceNotFound', 'source': 'service'};
+        native.recover = const {
+          'code': 'requiresApproval',
+          'serviceStatus': 'requiresApproval',
+          'domain': 'SMAppServiceErrorDomain',
+          'error': 1,
+          'detail':
+              'service status before: notFound (unregister, then register)\n'
+              'unregister: code=6\nregister: code=1; status: requiresApproval',
+        };
+        native.enable = const {
+          'code': 'registrationFailed',
+          'serviceStatus': 'notFound',
+        };
+        final flow = userRepairFlow();
+        await flow.check();
+        expect(native.calls, ['status', 'enable']);
+        expect(steps, isEmpty);
+        expect(await flow.retryRecovery(), MacHelperState.requiresApproval);
+        expect(native.calls, ['status', 'enable', 'status', 'recover']);
+        expect(steps, ['recover']);
+        final l = lookupAppLocalizations(const Locale('zh'));
+        final view = macHelperCardView(l, flow);
+        expect(view.kind, MacHelperCardKind.approval);
+        expect(view.primary, MacHelperCardAction.openSettings);
+        expect(view.detail, l.macHelperAllowInSettings);
+        flow.dispose();
+      });
+
+      test('still notFound after the repair: a failure with the error and its '
+          'code in the details, no loop', () async {
+        native.status = const {'code': 'serviceNotFound', 'source': 'service'};
+        native.recover = const {
+          'code': 'serviceNotFound',
+          'source': 'service',
+          'afterRepair': true,
+          'serviceStatus': 'notFound',
+          'domain': 'SMAppServiceErrorDomain',
+          'error': 3,
+          'detail':
+              'register: SMAppServiceErrorDomain code=3; status: notFound',
+        };
+        native.enable = const {
+          'code': 'registrationFailed',
+          'serviceStatus': 'notFound',
+        };
+        final flow = userRepairFlow();
+        await flow.check();
+        expect(await flow.retryRecovery(), MacHelperState.serviceRepairFailed);
+        expect(steps, ['recover']);
+        final l = lookupAppLocalizations(const Locale('zh'));
+        final view = macHelperCardView(l, flow);
+        expect(view.kind, MacHelperCardKind.serviceRepairFailed);
+        expect(view.detail, '修复未完成，macOS 仍无法识别辅助程序。请查看详情。');
+        expect(view.primary, isNull);
+        expect(view.secondary, MacHelperCardAction.viewDetails);
+        expect(view.isProblem, isTrue);
+        expect(view.rawDetail, contains('code=3'));
+        expect(view.rawDetail, contains('error: SMAppServiceErrorDomain 3'));
+        // A later read of the same state keeps the failure; nothing re-runs.
+        await flow.recheck();
+        flow.resumed();
+        await settle();
+        expect(flow.state, MacHelperState.serviceRepairFailed);
+        expect(steps, ['recover']);
+        expect(native.calls.where((c) => c == 'recover'), hasLength(1));
+        // Another state (e.g. fixed in System Settings) clears it.
+        native.status = const {'code': 'enabled'};
+        native.recover = const {'code': 'enabled'};
+        await flow.recheck();
+        expect(flow.state, isNot(MacHelperState.serviceRepairFailed));
+        flow.dispose();
+      });
+    },
+  );
+
   test('helper start failures are not banners', () {
     expect(isMacHelperStartFailure(const MacHelperException('x')), isTrue);
     expect(isMacHelperStartFailure(const MacRepairPendingException()), isTrue);

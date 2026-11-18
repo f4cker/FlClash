@@ -78,6 +78,7 @@ const nativeCodes = [
   'registrationFailed',
   'signingRequired',
   'notFound',
+  'serviceNotFound',
   'incompatible',
   'moveRequired',
   'unsupported',
@@ -125,6 +126,11 @@ void main() {
       expect(
         MacHelperState.parse('incompatible'),
         MacHelperState.reinstallRequired,
+      );
+      // SMAppService's own notFound for an intact bundle is not "reinstall".
+      expect(
+        MacHelperState.parse('serviceNotFound'),
+        MacHelperState.serviceNotFound,
       );
       expect(MacHelperState.parse('moveRequired'), MacHelperState.moveRequired);
       expect(MacHelperState.parse('staleHelper'), MacHelperState.staleHelper);
@@ -224,7 +230,12 @@ void main() {
           container.read(coreStatusProvider),
           ready ? CoreStatus.connecting : CoreStatus.disconnected,
         );
-        expect(native.calls, ['status']);
+        // serviceNotFound: the one automatic register of this launch (product
+        // decision: Flash registers its own helper; no recovery, no Core).
+        expect(
+          native.calls,
+          code == 'serviceNotFound' ? ['status', 'enable'] : ['status'],
+        );
       },
     );
   }
