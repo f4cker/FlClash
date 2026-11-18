@@ -885,10 +885,8 @@ class _MitmModuleSummary extends ConsumerWidget {
             style: style,
           ),
         if (error != null)
-          Text(
-            '⚠︎ $error',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          MitmMarkedLine(
+            error,
             style: style.copyWith(color: mitmRewriteErrorColor(context)),
           )
         else

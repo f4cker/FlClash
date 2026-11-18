@@ -126,6 +126,43 @@ class MitmScriptCapabilities extends StatelessWidget {
 }
 
 /// A host pill: new ones outlined in blue, listed ones grey.
+/// A line of [style]'s colour led by [glyph]: a row's reason, or a check.
+class MitmMarkedLine extends StatelessWidget {
+  const MitmMarkedLine(
+    this.text, {
+    super.key,
+    required this.style,
+    this.glyph = AppGlyphs.warning,
+    this.maxLines = 2,
+  });
+
+  final String text;
+  final TextStyle style;
+  final Glyph glyph;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(end: 4),
+              child: GlyphIcon(glyph, size: 13, color: style.color),
+            ),
+          ),
+          TextSpan(text: text),
+        ],
+      ),
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+      style: style,
+    );
+  }
+}
+
 class MitmHostPill extends StatelessWidget {
   const MitmHostPill({
     super.key,
@@ -402,15 +439,21 @@ class _ScriptAddDialogState extends ConsumerState<_ScriptAddDialog> {
         .length;
     final status = <Widget>[
       if (drafts.isNotEmpty && _patternValid)
-        Text(
-          '✓ ${l.mitmScriptPasteOk(drafts.length, requests, drafts.length - requests)}',
+        MitmMarkedLine(
+          l.mitmScriptPasteOk(
+            drafts.length,
+            requests,
+            drafts.length - requests,
+          ),
+          glyph: AppGlyphs.check,
           style: caption.copyWith(
             color: _dark(context) ? const Color(0xFF7DD99A) : _addedInk,
           ),
         ),
       for (final MapEntry(key: line, value: error) in _paste.errors.entries)
-        Text(
-          '✕ ${l.mitmScriptPasteLineError(line, mitmScriptPasteErrorText(l, error))}',
+        MitmMarkedLine(
+          l.mitmScriptPasteLineError(line, mitmScriptPasteErrorText(l, error)),
+          glyph: AppGlyphs.close,
           style: caption.copyWith(color: mitmRewriteErrorColor(context)),
         ),
     ];

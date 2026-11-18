@@ -606,10 +606,8 @@ class MitmScriptRow extends StatelessWidget {
     ].join(l.localeName.startsWith('zh') ? '，' : ', ');
     final Widget third;
     if (error != null) {
-      third = Text(
-        '⚠︎ $error',
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
+      third = MitmMarkedLine(
+        error,
         style: AppTextStyle.footnote
             .of(context)
             .copyWith(color: mitmRewriteErrorColor(context)),
