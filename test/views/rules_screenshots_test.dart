@@ -598,6 +598,13 @@ void main() {
 
   // Scrolled up under the shared bar: frosted past reading, easing out
   // below its foot (design review 2).
+  // At the top: the band past the header's foot covers nothing, the first
+  // row is crisp.
+  shot('blur-rules-top-light', (tester) async {
+    await pumpPage(tester, size: const Size(760, 420), pixelRatio: 2);
+    await shoot(tester, 'blur-rules-top-light');
+  });
+
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     shot('blur-rules-${mode.name}', (tester) async {
       await pumpPage(

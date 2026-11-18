@@ -1,6 +1,8 @@
 // The shared page bar is frosted (design review 2): unscrolled it is the
 // page itself; scrolled, what passes under it is blurred past reading but
-// still shows, and the blur eases out past its foot with no edge.
+// still shows, and the blur eases out past its foot with no edge. The band
+// past the foot comes in over the first 20pt of scroll: at rest it covers
+// nothing.
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -72,6 +74,7 @@ void main() {
     for (final size in [const Size(1100, 800), const Size(390, 844)]) {
       final label = '${mode.name}, ${size.width.toInt()} wide';
       late double barFoot;
+      late double listTop;
       late Color page;
       final boundary = GlobalKey();
 
@@ -79,6 +82,8 @@ void main() {
         WidgetTester tester, {
         double scroll = 0,
       }) async {
+        final controller = ScrollController();
+        addTearDown(controller.dispose);
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.reset);
@@ -94,8 +99,10 @@ void main() {
                 body: Builder(
                   builder: (context) {
                     barFoot = context.appBarInset;
+                    listTop = context.contentTopPadding;
                     page = SurfaceLevel.page.colorOf(context.colorScheme);
                     return ListView.builder(
+                      controller: controller,
                       padding: EdgeInsets.only(
                         top: context.contentTopPadding,
                         left: 16,
@@ -113,7 +120,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         if (scroll > 0) {
-          await tester.drag(find.byType(ListView), Offset(0, -scroll));
+          controller.jumpTo(scroll);
           await tester.pumpAndSettle();
         }
         final render =
@@ -221,6 +228,56 @@ void main() {
             reason: 'sharpness falls at row $y',
           );
           sharpness = c;
+        }
+      });
+
+      // The band past the foot covers nothing at rest: it would blur and
+      // shade the first row. It comes in over the first barFadeExtent of
+      // scroll.
+      testWidgets('at the top the band past the foot is the bare content, '
+          'once scrolled its full extent it blurs ($label)', (tester) async {
+        final width = size.width.toInt();
+        final x0 = (width * 0.3).round(), x1 = (width * 0.6).round();
+        final atTop = await pumpAndShoot(tester);
+        final foot = barFoot.ceil();
+        const band = 20;
+        // The stripes are the same down every row: a row below the band is
+        // what each row in it is, unblurred.
+        final rowTop = listTop.ceil();
+        final bare = atTop.at(4, size.height.toInt() - 4);
+        for (var y = foot + 1; y < foot + band; y++) {
+          for (var x = x0; x < x1; x++) {
+            final got = atTop.at(x, y);
+            final want = y < rowTop - 1
+                ? bare
+                : y <= rowTop
+                ? null
+                : atTop.at(x, y + 200);
+            if (want == null) continue;
+            for (final (g, w) in [
+              (got.r, want.r),
+              (got.g, want.g),
+              (got.b, want.b),
+            ]) {
+              expect(
+                ((g - w) * 255).abs(),
+                lessThan(2.5),
+                reason: 'band at $x,$y is $got, not the content $want',
+              );
+            }
+          }
+        }
+
+        final scrolled = await pumpAndShoot(tester, scroll: band.toDouble());
+        final sharp = scrolled.contrast(foot + band + 10, x0, x1);
+        expect(sharp, greaterThan(200));
+        // Rows scrolled into the band's top are blurred and shaded there.
+        for (var y = foot + 1; y < foot + band ~/ 3; y++) {
+          expect(
+            scrolled.contrast(y, x0, x1),
+            lessThan(sharp * 0.6),
+            reason: 'row $y in the band is still sharp after a full band',
+          );
         }
       });
     }
