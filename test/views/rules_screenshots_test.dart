@@ -602,8 +602,12 @@ void main() {
   // row is crisp.
   // Two modules' routing rules sit between the added rules and the
   // profile's, each run under its module's name.
-  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
-    shot('module-rules-${mode.name}', (tester) async {
+  for (final (name, mode, scripts) in [
+    ('module-rules-light', ThemeMode.light, true),
+    ('module-rules-dark', ThemeMode.dark, true),
+    ('module-rules-no-scripts-light', ThemeMode.light, false),
+  ]) {
+    shot(name, (tester) async {
       final modules = [
         ('去广告合集', 1, _rule(0, 'DOMAIN-SUFFIX', 'ads.example.net', 'REJECT')),
         ('去广告合集', 1, _rule(0, 'DOMAIN', 'track.example.net', 'REJECT')),
@@ -617,7 +621,12 @@ void main() {
         for (final rule in _rules.skip(2))
           rule.copyWith(index: rule.index + modules.length),
       ];
-      final sources = _sourcesOf(_rules);
+      final sources = [
+        for (final source in _sourcesOf(_rules))
+          scripts || source.kind != RuleSourceKind.script
+              ? source
+              : source.copyWith(kind: RuleSourceKind.subscription, name: ''),
+      ];
       container
           .read(appliedRuleSourcesStateProvider.notifier)
           .applied(profile.id, [
@@ -637,7 +646,7 @@ void main() {
         themeMode: mode,
         pixelRatio: 2,
       );
-      await shoot(tester, 'module-rules-${mode.name}');
+      await shoot(tester, name);
     });
   }
 

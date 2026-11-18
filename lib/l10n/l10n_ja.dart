@@ -6595,7 +6595,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get rulesAddSetMenu => 'ルールセットを追加';
 
   @override
-  String get rulesAddedDivider => '以下のルールはプロファイルとスクリプトから取得され、ここでは閲覧のみ可能です';
+  String rulesAddedDivider(String sources) {
+    return '以下は$sourcesのルールです。';
+  }
 
   @override
   String get ruleSourceAddedSet => '追加したルールセット';
@@ -8033,7 +8035,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mitmRoutingRulesRevertFailed =>
-      'The routing rules couldn\'t be applied, and the previous setting couldn\'t be restored either.';
+      'ルーティングルールを適用できず、元の設定にも戻せませんでした。現在のルールを確認してください。';
 
   @override
   String get mitmPauseLeafUnusable => 'the certificate couldn\'t be used';
@@ -8044,4 +8046,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mitmChecking => 'Checking…';
+
+  @override
+  String rulesBelowListLast(String head, String last) {
+    return '$headと$last';
+  }
+
+  @override
+  String get rulesBelowSubscription => 'サブスクリプション設定';
+
+  @override
+  String get rulesBelowScript => '拡張スクリプト';
+
+  @override
+  String get rulesBelowModule => 'モジュール';
 }

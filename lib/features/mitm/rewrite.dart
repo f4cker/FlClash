@@ -20,14 +20,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'rewrite_dialogs.dart';
 
 const mitmRewriteErrorInk = Color(0xFFB3261E);
-// #FF8A80 on the dark invalid fill below reads at over 4.5:1.
+// #FF8A80 on the dark card reads at over 4.5:1.
 const _errorInkDark = Color(0xFFFF8A80);
 
-// An invalid row's fill, design review 1 §3: a light tint, and on dark the
-// error red at 12% over the card. Its turned-off switch keeps a grey track
-// rather than the fill showing through.
-const _invalidFillLight = Color(0xFFFFF8F7);
-const _invalidFillDark = Color(0xFF3A2424);
+// An invalid row keeps the plain card, with red text and an icon only, as
+// on the scripts and modules pages. Its turned-off switch keeps a grey track.
 const _disabledTrackLight = Color(0xFFE5E5EA);
 const _disabledTrackDark = Color(0xFF3A3A3C);
 const _flashFill = Color(0x1A007AFF);
@@ -845,63 +842,34 @@ class _MitmRewriteRow extends StatelessWidget {
                 listItemRadiusOf(ItemPositionProvider.of(context)?.position),
               ),
             ),
-            child: _InvalidFill(
-              invalid: issue != null,
-              child: DecorationListItem(
-                invalid: issue != null,
-                onPressed: desktop ? null : onEdit,
-                title: title,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 8,
-                  children: [
-                    if (shown && desktop) ...[
-                      RuleRowAction(
-                        glyph: AppGlyphs.edit,
-                        color: const Color(0xFF3F3E45),
-                        label: appLocalizations.edit,
-                        onPressed: onEdit,
-                      ),
-                      RuleRowAction(
-                        glyph: AppGlyphs.delete,
-                        color: mitmRewriteErrorInk,
-                        label: appLocalizations.delete,
-                        onPressed: onDelete,
-                      ),
-                    ],
-                    shownToggle,
+            child: DecorationListItem(
+              onPressed: desktop ? null : onEdit,
+              title: title,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 8,
+                children: [
+                  if (shown && desktop) ...[
+                    RuleRowAction(
+                      glyph: AppGlyphs.edit,
+                      color: const Color(0xFF3F3E45),
+                      label: appLocalizations.edit,
+                      onPressed: onEdit,
+                    ),
+                    RuleRowAction(
+                      glyph: AppGlyphs.delete,
+                      color: mitmRewriteErrorInk,
+                      label: appLocalizations.delete,
+                      onPressed: onDelete,
+                    ),
                   ],
-                ),
+                  shownToggle,
+                ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Gives an invalid row the rewrite page's own fill in place of the shared
-/// error container.
-class _InvalidFill extends StatelessWidget {
-  const _InvalidFill({required this.invalid, required this.child});
-
-  final bool invalid;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!invalid) return child;
-    final theme = Theme.of(context);
-    final dark = theme.colorScheme.brightness == Brightness.dark;
-    return Theme(
-      data: theme.copyWith(
-        colorScheme: theme.colorScheme.copyWith(
-          errorContainer: dark ? _invalidFillDark : _invalidFillLight,
-        ),
-        scaffoldBackgroundColor: theme.scaffoldBackgroundColor,
-      ),
-      child: child,
     );
   }
 }

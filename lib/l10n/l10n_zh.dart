@@ -6253,7 +6253,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rulesAddSetMenu => '添加规则集';
 
   @override
-  String get rulesAddedDivider => '以下是订阅配置和扩展脚本的规则，只能查看，不能在这里编辑';
+  String rulesAddedDivider(String sources) {
+    return '以下是$sources的规则。';
+  }
 
   @override
   String get ruleSourceAddedSet => '附加规则集';
@@ -7553,7 +7555,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmRoutingRulesNotApplied => '分流规则未能应用，已恢复原来的设置。';
 
   @override
-  String get mitmRoutingRulesRevertFailed => '分流规则未能应用，也没能恢复原来的设置。';
+  String get mitmRoutingRulesRevertFailed => '分流规则未能应用，也未能恢复原来的设置。请检查当前规则。';
 
   @override
   String get mitmPauseLeafUnusable => '证书未能使用';
@@ -7563,4 +7565,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmChecking => '检查中…';
+
+  @override
+  String rulesBelowListLast(String head, String last) {
+    return '$head和$last';
+  }
+
+  @override
+  String get rulesBelowSubscription => '订阅配置';
+
+  @override
+  String get rulesBelowScript => '扩展脚本';
+
+  @override
+  String get rulesBelowModule => '模块';
 }

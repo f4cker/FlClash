@@ -1899,7 +1899,7 @@
   "rulesAddSemantics": "添加规则或规则集",
   "rulesAddRuleMenu": "添加规则",
   "rulesAddSetMenu": "添加规则集",
-  "rulesAddedDivider": "以下是订阅配置和扩展脚本的规则，只能查看，不能在这里编辑",
+  "rulesAddedDivider": "以下是{sources}的规则。",
   "ruleSourceAddedSet": "附加规则集",
   "ruleEditMenu": "编辑…",
   "ruleMoveUp": "上移",
@@ -2259,8 +2259,12 @@
   "rulesFromModule": "来自模块 · {name}",
   "rulesViewInModule": "在模块中查看",
   "mitmRoutingRulesNotApplied": "分流规则未能应用，已恢复原来的设置。",
-  "mitmRoutingRulesRevertFailed": "分流规则未能应用，也没能恢复原来的设置。",
+  "mitmRoutingRulesRevertFailed": "分流规则未能应用，也未能恢复原来的设置。请检查当前规则。",
   "mitmPauseLeafUnusable": "证书未能使用",
   "mitmPauseLeafUnusableHint": "请稍候，暂停结束后新连接会重新尝试解密。",
-  "mitmChecking": "检查中…"
+  "mitmChecking": "检查中…",
+  "rulesBelowListLast": "{head}和{last}",
+  "rulesBelowSubscription": "订阅配置",
+  "rulesBelowScript": "扩展脚本",
+  "rulesBelowModule": "模块"
 }

@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
@@ -13,6 +14,39 @@ import 'widgets.dart';
 
 enum _RowKind { rule, entry, footer, divider }
 
+/// The sources the note under the added rules can name, in its order.
+enum RulesBelow { subscription, script, module }
+
+RulesBelow? rulesBelowOf(RuleSource? source) => switch (source?.kind) {
+  RuleSourceKind.subscription ||
+  RuleSourceKind.custom => RulesBelow.subscription,
+  RuleSourceKind.script => RulesBelow.script,
+  RuleSourceKind.mitm => RulesBelow.module,
+  _ => null,
+};
+
+String rulesBelowText(AppLocalizations l, List<RulesBelow> below) {
+  final names = [
+    for (final kind in below)
+      switch (kind) {
+        RulesBelow.subscription => l.rulesBelowSubscription,
+        RulesBelow.script => l.rulesBelowScript,
+        RulesBelow.module => l.rulesBelowModule,
+      },
+  ];
+  final separator =
+      l.localeName.startsWith('zh') || l.localeName.startsWith('ja')
+      ? '、'
+      : ', ';
+  final list = names.length < 2
+      ? names.join()
+      : l.rulesBelowListLast(
+          names.sublist(0, names.length - 1).join(separator),
+          names.last,
+        );
+  return l.rulesAddedDivider(list);
+}
+
 /// One row of the rules list: a rule, an entry of an unfolded rule set, or
 /// the foot of those entries.
 class RuleRowItem {
@@ -20,6 +54,8 @@ class RuleRowItem {
   final CoreRule? rule;
 
   final RuleSource? module;
+
+  final List<RulesBelow> below;
   final RuleHit? hit;
   final int parent;
   final int position;
@@ -28,6 +64,7 @@ class RuleRowItem {
   const RuleRowItem.rule(CoreRule this.rule, {this.hit})
     : _kind = _RowKind.rule,
       module = null,
+      below = const [],
       parent = -1,
       position = 0,
       text = '';
@@ -38,18 +75,20 @@ class RuleRowItem {
     required this.text,
   }) : _kind = _RowKind.entry,
        module = null,
+       below = const [],
        rule = null,
        hit = null;
 
   const RuleRowItem.footer({required this.parent})
     : _kind = _RowKind.footer,
       module = null,
+      below = const [],
       rule = null,
       hit = null,
       position = 0,
       text = '';
 
-  const RuleRowItem.divider({this.module})
+  const RuleRowItem.divider({this.module, this.below = const []})
     : _kind = _RowKind.divider,
       rule = null,
       hit = null,
@@ -734,9 +773,15 @@ class RuleRowAction extends StatelessWidget {
 
 /// Under the added rules; over a module's rules, names and links to it.
 class RulesDividerRow extends StatelessWidget {
-  const RulesDividerRow({super.key, this.module, this.onOpenModule});
+  const RulesDividerRow({
+    super.key,
+    this.module,
+    this.below = const [],
+    this.onOpenModule,
+  });
 
   final String? module;
+  final List<RulesBelow> below;
   final VoidCallback? onOpenModule;
 
   @override
@@ -757,7 +802,9 @@ class RulesDividerRow extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              module == null ? l.rulesAddedDivider : l.rulesFromModule(module),
+              module == null
+                  ? rulesBelowText(l, below)
+                  : l.rulesFromModule(module),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: caption.copyWith(color: colorScheme.onSurfaceVariant),

@@ -6665,7 +6665,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get rulesAddSetMenu => '규칙 세트 추가';
 
   @override
-  String get rulesAddedDivider => '아래 규칙은 프로필과 스크립트에서 가져왔으며 여기서는 보기만 할 수 있습니다';
+  String rulesAddedDivider(String sources) {
+    return '아래는 $sources의 규칙입니다.';
+  }
 
   @override
   String get ruleSourceAddedSet => '추가한 규칙 세트';
@@ -8106,7 +8108,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmRoutingRulesRevertFailed =>
-      'The routing rules couldn\'t be applied, and the previous setting couldn\'t be restored either.';
+      '라우팅 규칙을 적용하지 못했고 이전 설정도 복원하지 못했습니다. 현재 규칙을 확인하세요.';
 
   @override
   String get mitmPauseLeafUnusable => 'the certificate couldn\'t be used';
@@ -8117,4 +8119,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmChecking => 'Checking…';
+
+  @override
+  String rulesBelowListLast(String head, String last) {
+    return '$head 및 $last';
+  }
+
+  @override
+  String get rulesBelowSubscription => '구독 프로필';
+
+  @override
+  String get rulesBelowScript => '확장 스크립트';
+
+  @override
+  String get rulesBelowModule => '모듈';
 }

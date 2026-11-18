@@ -2420,7 +2420,7 @@
   "rulesAddSemantics": "Добавить правило или набор правил",
   "rulesAddRuleMenu": "Добавить правило",
   "rulesAddSetMenu": "Добавить набор правил",
-  "rulesAddedDivider": "Правила ниже взяты из профиля и скриптов и доступны здесь только для просмотра",
+  "rulesAddedDivider": "Правила ниже взяты из следующих источников: {sources}.",
   "ruleSourceAddedSet": "Добавленный набор правил",
   "ruleEditMenu": "Изменить…",
   "ruleMoveUp": "Переместить вверх",
@@ -3483,8 +3483,12 @@
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
   "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
-  "mitmRoutingRulesRevertFailed": "The routing rules couldn't be applied, and the previous setting couldn't be restored either.",
+  "mitmRoutingRulesRevertFailed": "Не удалось применить правила маршрутизации и восстановить прежнюю настройку. Проверьте текущие правила.",
   "mitmPauseLeafUnusable": "the certificate couldn't be used",
   "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
-  "mitmChecking": "Checking…"
+  "mitmChecking": "Checking…",
+  "rulesBelowListLast": "{head} и {last}",
+  "rulesBelowSubscription": "профиль подписки",
+  "rulesBelowScript": "скрипты расширений",
+  "rulesBelowModule": "модули"
 }

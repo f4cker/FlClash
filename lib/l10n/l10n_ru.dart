@@ -6777,8 +6777,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get rulesAddSetMenu => 'Добавить набор правил';
 
   @override
-  String get rulesAddedDivider =>
-      'Правила ниже взяты из профиля и скриптов и доступны здесь только для просмотра';
+  String rulesAddedDivider(String sources) {
+    return 'Правила ниже взяты из следующих источников: $sources.';
+  }
 
   @override
   String get ruleSourceAddedSet => 'Добавленный набор правил';
@@ -8236,7 +8237,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmRoutingRulesRevertFailed =>
-      'The routing rules couldn\'t be applied, and the previous setting couldn\'t be restored either.';
+      'Не удалось применить правила маршрутизации и восстановить прежнюю настройку. Проверьте текущие правила.';
 
   @override
   String get mitmPauseLeafUnusable => 'the certificate couldn\'t be used';
@@ -8247,4 +8248,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmChecking => 'Checking…';
+
+  @override
+  String rulesBelowListLast(String head, String last) {
+    return '$head и $last';
+  }
+
+  @override
+  String get rulesBelowSubscription => 'профиль подписки';
+
+  @override
+  String get rulesBelowScript => 'скрипты расширений';
+
+  @override
+  String get rulesBelowModule => 'модули';
 }

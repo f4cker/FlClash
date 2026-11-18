@@ -11462,8 +11462,8 @@ abstract class AppLocalizations {
   /// No description provided for @rulesAddedDivider.
   ///
   /// In en, this message translates to:
-  /// **'Rules below come from the profile and scripts and can only be viewed here'**
-  String get rulesAddedDivider;
+  /// **'The rules below come from {sources}.'**
+  String rulesAddedDivider(String sources);
 
   /// No description provided for @ruleSourceAddedSet.
   ///
@@ -13622,7 +13622,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmRoutingRulesRevertFailed.
   ///
   /// In en, this message translates to:
-  /// **'The routing rules couldn\'t be applied, and the previous setting couldn\'t be restored either.'**
+  /// **'The routing rules couldn\'t be applied, and the previous setting couldn\'t be restored. Check the current rules.'**
   String get mitmRoutingRulesRevertFailed;
 
   /// No description provided for @mitmPauseLeafUnusable.
@@ -13642,6 +13642,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Checking…'**
   String get mitmChecking;
+
+  /// No description provided for @rulesBelowListLast.
+  ///
+  /// In en, this message translates to:
+  /// **'{head} and {last}'**
+  String rulesBelowListLast(String head, String last);
+
+  /// No description provided for @rulesBelowSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'the subscription profile'**
+  String get rulesBelowSubscription;
+
+  /// No description provided for @rulesBelowScript.
+  ///
+  /// In en, this message translates to:
+  /// **'extension scripts'**
+  String get rulesBelowScript;
+
+  /// No description provided for @rulesBelowModule.
+  ///
+  /// In en, this message translates to:
+  /// **'modules'**
+  String get rulesBelowModule;
 }
 
 class _AppLocalizationsDelegate

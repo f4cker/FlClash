@@ -2420,7 +2420,7 @@
   "rulesAddSemantics": "Añadir una regla o un conjunto de reglas",
   "rulesAddRuleMenu": "Añadir regla",
   "rulesAddSetMenu": "Añadir conjunto de reglas",
-  "rulesAddedDivider": "Las reglas siguientes proceden del perfil y los scripts y aquí solo se pueden consultar",
+  "rulesAddedDivider": "Las reglas siguientes proceden de {sources}.",
   "ruleSourceAddedSet": "Conjunto de reglas añadido",
   "ruleEditMenu": "Editar…",
   "ruleMoveUp": "Subir",
@@ -3483,8 +3483,12 @@
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
   "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
-  "mitmRoutingRulesRevertFailed": "The routing rules couldn't be applied, and the previous setting couldn't be restored either.",
+  "mitmRoutingRulesRevertFailed": "No se pudieron aplicar las reglas de enrutamiento ni restaurar la configuración anterior. Revisa las reglas actuales.",
   "mitmPauseLeafUnusable": "the certificate couldn't be used",
   "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
-  "mitmChecking": "Checking…"
+  "mitmChecking": "Checking…",
+  "rulesBelowListLast": "{head} y {last}",
+  "rulesBelowSubscription": "el perfil de suscripción",
+  "rulesBelowScript": "los scripts de extensión",
+  "rulesBelowModule": "los módulos"
 }

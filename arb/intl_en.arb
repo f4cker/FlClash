@@ -2420,7 +2420,7 @@
   "rulesAddSemantics": "Add a rule or rule set",
   "rulesAddRuleMenu": "Add Rule",
   "rulesAddSetMenu": "Add Rule Set",
-  "rulesAddedDivider": "Rules below come from the profile and scripts and can only be viewed here",
+  "rulesAddedDivider": "The rules below come from {sources}.",
   "ruleSourceAddedSet": "Added rule set",
   "ruleEditMenu": "Edit…",
   "ruleMoveUp": "Move Up",
@@ -3450,8 +3450,29 @@
   },
   "rulesViewInModule": "View in module",
   "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
-  "mitmRoutingRulesRevertFailed": "The routing rules couldn't be applied, and the previous setting couldn't be restored either.",
+  "mitmRoutingRulesRevertFailed": "The routing rules couldn't be applied, and the previous setting couldn't be restored. Check the current rules.",
   "mitmPauseLeafUnusable": "the certificate couldn't be used",
   "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
-  "mitmChecking": "Checking…"
+  "mitmChecking": "Checking…",
+  "@rulesAddedDivider": {
+    "placeholders": {
+      "sources": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesBelowListLast": "{head} and {last}",
+  "@rulesBelowListLast": {
+    "placeholders": {
+      "head": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesBelowSubscription": "the subscription profile",
+  "rulesBelowScript": "extension scripts",
+  "rulesBelowModule": "modules"
 }

@@ -2420,7 +2420,7 @@
   "rulesAddSemantics": "ルールまたはルールセットを追加",
   "rulesAddRuleMenu": "ルールを追加",
   "rulesAddSetMenu": "ルールセットを追加",
-  "rulesAddedDivider": "以下のルールはプロファイルとスクリプトから取得され、ここでは閲覧のみ可能です",
+  "rulesAddedDivider": "以下は{sources}のルールです。",
   "ruleSourceAddedSet": "追加したルールセット",
   "ruleEditMenu": "編集…",
   "ruleMoveUp": "上に移動",
@@ -3483,8 +3483,12 @@
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
   "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
-  "mitmRoutingRulesRevertFailed": "The routing rules couldn't be applied, and the previous setting couldn't be restored either.",
+  "mitmRoutingRulesRevertFailed": "ルーティングルールを適用できず、元の設定にも戻せませんでした。現在のルールを確認してください。",
   "mitmPauseLeafUnusable": "the certificate couldn't be used",
   "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
-  "mitmChecking": "Checking…"
+  "mitmChecking": "Checking…",
+  "rulesBelowListLast": "{head}と{last}",
+  "rulesBelowSubscription": "サブスクリプション設定",
+  "rulesBelowScript": "拡張スクリプト",
+  "rulesBelowModule": "モジュール"
 }

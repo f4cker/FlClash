@@ -590,6 +590,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
     var divided = false;
     // Each run of one module's rules sits under that module's title.
     (int?, String)? lastModule;
+    final shown = <(int, CoreRule, RuleSource?)>[];
     for (final index in indexes) {
       final rule = list.rules.elementAtOrNull(index);
       if (rule == null) continue;
@@ -603,9 +604,25 @@ class _RulesViewState extends ConsumerState<RulesView> {
           )) {
         continue;
       }
+      shown.add((index, rule, source));
+    }
+    for (final (position, (index, rule, source)) in shown.indexed) {
       final added = _isAddedSource(source);
       if (sources != null && !added && addedAbove && !divided) {
-        items.add(const RuleRowItem.divider());
+        final below = {
+          for (final (_, _, source) in shown.skip(position))
+            ?rulesBelowOf(source),
+        };
+        if (below.isNotEmpty) {
+          items.add(
+            RuleRowItem.divider(
+              below: [
+                for (final kind in RulesBelow.values)
+                  if (below.contains(kind)) kind,
+              ],
+            ),
+          );
+        }
         divided = true;
       }
       final module = source?.kind == RuleSourceKind.mitm ? source : null;
@@ -1743,6 +1760,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
             final moduleId = item.module?.moduleId;
             row = RulesDividerRow(
               module: item.module?.name,
+              below: item.below,
               onOpenModule: moduleId == null
                   ? null
                   : () => BaseNavigator.push(
