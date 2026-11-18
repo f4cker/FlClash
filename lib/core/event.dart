@@ -54,7 +54,8 @@ abstract mixin class CoreEventListener {
 
   void onMitmSign(MitmSignRequest request) {}
 
-  void onMitmConnection(String id, String outcome) {}
+  /// [pauseReason] is the Core's `paused` reason when [outcome] is paused.
+  void onMitmConnection(String id, String outcome, {String pauseReason = ''}) {}
 
   void onMitmConnectionRewrite(String id, MitmConnectionRewrite rewrite) {}
 }
@@ -147,6 +148,10 @@ class CoreEventManager {
                 listener.onMitmConnection(
                   data['id'] as String,
                   data['outcome'] as String,
+                  pauseReason: switch (data['pauseReason']) {
+                    final String reason => reason,
+                    _ => '',
+                  },
                 );
               }
               break;

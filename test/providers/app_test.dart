@@ -344,6 +344,31 @@ void main() {
       expect(rows.map((r) => r.mitmOutcome), ['http1Failed', '']);
     });
 
+    test('a paused outcome keeps why, before and after the request', () {
+      TrackerInfo request(String id) => TrackerInfo(
+        id: id,
+        start: DateTime.utc(2026),
+        metadata: const Metadata(network: 'tcp', host: 'example.com'),
+        chains: const ['Proxy'],
+        rule: 'DOMAIN',
+        rulePayload: 'example.com',
+      );
+      final notifier = container.read(requestsProvider.notifier);
+      notifier.value = FixedList(3);
+      notifier.setMitmOutcome('early', 'paused', pauseReason: 'signTimeout');
+      notifier.addRequest(request('early'));
+      notifier.addRequest(request('late'));
+      notifier.addRequest(request('other'));
+      notifier.setMitmOutcome('late', 'paused', pauseReason: 'leafRejected');
+      notifier.setMitmOutcome('other', 'refused', pauseReason: 'signTimeout');
+      final rows = container.read(requestsProvider).list;
+      expect(rows.map((r) => r.mitmPauseReason), [
+        'signTimeout',
+        'leafRejected',
+        '',
+      ]);
+    });
+
     test('Requests.updateTraffic updates the requests it names', () {
       TrackerInfo request(String id) => TrackerInfo(
         id: id,

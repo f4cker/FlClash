@@ -123,6 +123,16 @@ enum MitmPauseReason {
   liveness,
   indicatorPending,
   partialConnections,
+
+  /// The app's signer: dropped the request on the way ([appUnavailable]),
+  /// did not answer in time ([signTimeout]), refused it ([signRefused]), or
+  /// its certificate was not accepted ([leafRejected]).
+  appUnavailable,
+  signTimeout,
+  signRefused,
+  leafRejected,
+
+  /// A reason this app version does not know.
   unavailable,
 }
 

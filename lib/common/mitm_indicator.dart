@@ -10,7 +10,22 @@ String mitmPauseReasonText(AppLocalizations l, MitmPauseReason reason) =>
       MitmPauseReason.liveness => l.mitmPauseLiveness,
       MitmPauseReason.indicatorPending => l.mitmPauseIndicatorPending,
       MitmPauseReason.partialConnections => l.mitmPartialConnections,
+      MitmPauseReason.appUnavailable => l.mitmPauseAppUnavailable,
+      MitmPauseReason.signTimeout => l.mitmPauseSignTimeout,
+      MitmPauseReason.signRefused => l.mitmPauseSignRefused,
+      MitmPauseReason.leafRejected => l.mitmPauseLeafRejected,
       MitmPauseReason.unavailable => l.mitmPauseUnavailable,
+    };
+
+/// What to do about a pause the signer caused, or null when nothing helps.
+String? mitmPauseReasonHint(AppLocalizations l, MitmPauseReason reason) =>
+    switch (reason) {
+      MitmPauseReason.appUnavailable => l.mitmPauseAppUnavailableHint,
+      MitmPauseReason.signTimeout => l.mitmPauseSignTimeoutHint,
+      MitmPauseReason.signRefused => l.mitmPauseSignRefusedHint,
+      MitmPauseReason.leafRejected => l.mitmPauseLeafRejectedHint,
+      MitmPauseReason.unavailable => l.mitmPauseUnavailableHint,
+      _ => null,
     };
 
 /// The status in a few words.

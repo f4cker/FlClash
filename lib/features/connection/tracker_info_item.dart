@@ -1,7 +1,10 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_indicator.dart';
 import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/features/mitm/script_dialogs.dart' show mitmAmberColor;
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/mitm.dart' show mitmCorePauseReason;
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
@@ -702,6 +705,45 @@ class TrackerInfoDetailView extends ConsumerWidget {
     ];
   }
 
+  /// A paused connection says why, and what to do, as the Core told it.
+  Widget _buildMitmRow(BuildContext context, MitmBadge badge) {
+    final l = context.appLocalizations;
+    final reason = trackerInfo.mitmOutcome == 'paused'
+        ? mitmCorePauseReason(trackerInfo.mitmPauseReason)
+        : null;
+    if (reason == null) {
+      return DetailRow.text(
+        title: l.mitm,
+        value: switch (mitmOutcomeText(context, trackerInfo.mitmOutcome)) {
+          '' => badge.label(context),
+          final outcome => outcome,
+        },
+      );
+    }
+    final sentence = l.mitmIndicatorPausedBecause(
+      mitmPauseReasonText(l, reason),
+    );
+    final hint = mitmPauseReasonHint(l, reason);
+    return DetailRow(
+      title: l.mitm,
+      copyText: sentence,
+      value: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        spacing: 2,
+        children: [
+          Text(sentence, style: TextStyle(color: mitmAmberColor(context))),
+          if (hint != null)
+            Text(
+              hint,
+              style: AppTextStyle.caption1
+                  .of(context)
+                  .copyWith(color: context.colorScheme.onSurfaceVariant),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOverview(BuildContext context) {
     if (system.isAndroid) {
       return _buildOverviewWith(context, null);
@@ -726,14 +768,10 @@ class TrackerInfoDetailView extends ConsumerWidget {
           items: [
             ..._buildRows([
               (appLocalizations.creationTime, trackerInfo.start.showFull),
-              if (MitmBadge.of(trackerInfo) case final badge?)
-                (
-                  appLocalizations.mitm,
-                  switch (mitmOutcomeText(context, trackerInfo.mitmOutcome)) {
-                    '' => badge.label(context),
-                    final outcome => outcome,
-                  },
-                ),
+            ]),
+            if (MitmBadge.of(trackerInfo) case final badge?)
+              _buildMitmRow(context, badge),
+            ..._buildRows([
               if (MitmRewriteBadge.of(trackerInfo) case final badge?)
                 (
                   appLocalizations.mitmRewrite,

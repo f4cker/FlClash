@@ -159,8 +159,10 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   }
 
   @override
-  void onMitmConnection(String id, String outcome) {
-    ref.read(requestsProvider.notifier).setMitmOutcome(id, outcome);
+  void onMitmConnection(String id, String outcome, {String pauseReason = ''}) {
+    ref
+        .read(requestsProvider.notifier)
+        .setMitmOutcome(id, outcome, pauseReason: pauseReason);
   }
 
   @override

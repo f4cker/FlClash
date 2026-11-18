@@ -13558,6 +13558,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{−1 line} other{−{count} lines}}'**
   String mitmDiffRemoved(int count);
+
+  /// No description provided for @mitmPauseAppUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash didn\'t answer the signing request'**
+  String get mitmPauseAppUnavailable;
+
+  /// No description provided for @mitmPauseSignTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'signing timed out'**
+  String get mitmPauseSignTimeout;
+
+  /// No description provided for @mitmPauseSignRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash refused the signing request'**
+  String get mitmPauseSignRefused;
+
+  /// No description provided for @mitmPauseLeafRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'the certificate wasn\'t accepted'**
+  String get mitmPauseLeafRejected;
+
+  /// No description provided for @mitmPauseAppUnavailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption retries on its own after 30 seconds. If this keeps happening, quit and reopen Flash.'**
+  String get mitmPauseAppUnavailableHint;
+
+  /// No description provided for @mitmPauseSignTimeoutHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This happens when Flash is busy. Decryption retries on its own after 30 seconds.'**
+  String get mitmPauseSignTimeoutHint;
+
+  /// No description provided for @mitmPauseSignRefusedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check that HTTPS decryption is still on. Decryption retries on its own after 30 seconds.'**
+  String get mitmPauseSignRefusedHint;
+
+  /// No description provided for @mitmPauseLeafRejectedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'In decryption settings, check again that the root certificate is installed and trusted.'**
+  String get mitmPauseLeafRejectedHint;
+
+  /// No description provided for @mitmPauseUnavailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption retries on its own after 30 seconds.'**
+  String get mitmPauseUnavailableHint;
 }
 
 class _AppLocalizationsDelegate

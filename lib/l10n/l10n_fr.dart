@@ -8247,4 +8247,37 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mitmPauseAppUnavailable =>
+      'Flash didn\'t answer the signing request';
+
+  @override
+  String get mitmPauseSignTimeout => 'signing timed out';
+
+  @override
+  String get mitmPauseSignRefused => 'Flash refused the signing request';
+
+  @override
+  String get mitmPauseLeafRejected => 'the certificate wasn\'t accepted';
+
+  @override
+  String get mitmPauseAppUnavailableHint =>
+      'Decryption retries on its own after 30 seconds. If this keeps happening, quit and reopen Flash.';
+
+  @override
+  String get mitmPauseSignTimeoutHint =>
+      'This happens when Flash is busy. Decryption retries on its own after 30 seconds.';
+
+  @override
+  String get mitmPauseSignRefusedHint =>
+      'Check that HTTPS decryption is still on. Decryption retries on its own after 30 seconds.';
+
+  @override
+  String get mitmPauseLeafRejectedHint =>
+      'In decryption settings, check again that the root certificate is installed and trusted.';
+
+  @override
+  String get mitmPauseUnavailableHint =>
+      'Decryption retries on its own after 30 seconds.';
 }

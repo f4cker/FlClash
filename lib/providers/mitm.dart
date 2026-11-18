@@ -239,16 +239,11 @@ MitmPauseReason? mitmCorePauseReason(String paused) => switch (paused) {
   'indicatorPending' => MitmPauseReason.indicatorPending,
   'livenessUnavailable' || 'trustUnavailable' => MitmPauseReason.liveness,
   'coreIdentity' => MitmPauseReason.coreIdentity,
-  // The app's signer could not answer: refused (signFailed, signBusy,
-  // disabled), no reply in time (signTimeout), the relay to it dropped the
-  // request (appUnavailable), or its certificate was not accepted
-  // (leafRejected).
-  'signFailed' ||
-  'signBusy' ||
-  'disabled' ||
-  'appUnavailable' ||
-  'signTimeout' ||
-  'leafRejected' => MitmPauseReason.unavailable,
+  'appUnavailable' => MitmPauseReason.appUnavailable,
+  'signTimeout' => MitmPauseReason.signTimeout,
+  'leafRejected' => MitmPauseReason.leafRejected,
+  // The signer's own refusals (lib/providers/mitm.dart MitmSignResult).
+  'signFailed' || 'signBusy' || 'disabled' => MitmPauseReason.signRefused,
   _ => MitmPauseReason.unavailable,
 };
 
@@ -804,9 +799,7 @@ Future<Map<int, MitmRewriteIssue>> mitmRewriteIssues(
   final parsed = await ref
       .read(coreHandlerProvider)
       .parseMitmRewrite(check.text);
-  return {
-    for (final issue in parsed.issues) ?check.lines[issue.line]: issue,
-  };
+  return {for (final issue in parsed.issues) ?check.lines[issue.line]: issue};
 }
 
 /// The size up to which the Core rewrites a body, or 0 while it runs no

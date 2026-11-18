@@ -74,9 +74,11 @@ void main() {
         'trustUnavailable': MitmPauseReason.liveness,
         'indicatorPending': MitmPauseReason.indicatorPending,
         'coreIdentity': MitmPauseReason.coreIdentity,
-        'appUnavailable': MitmPauseReason.unavailable,
-        'signTimeout': MitmPauseReason.unavailable,
-        'leafRejected': MitmPauseReason.unavailable,
+        'appUnavailable': MitmPauseReason.appUnavailable,
+        'signTimeout': MitmPauseReason.signTimeout,
+        'leafRejected': MitmPauseReason.leafRejected,
+        'signBusy': MitmPauseReason.signRefused,
+        'somethingNew': MitmPauseReason.unavailable,
       };
       for (final MapEntry(key: paused, value: reason) in cases.entries) {
         expect(

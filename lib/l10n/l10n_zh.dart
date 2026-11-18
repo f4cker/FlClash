@@ -7519,4 +7519,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String mitmDiffRemoved(int count) {
     return '−$count 行';
   }
+
+  @override
+  String get mitmPauseAppUnavailable => 'Flash 没有响应签名请求';
+
+  @override
+  String get mitmPauseSignTimeout => '签名超时';
+
+  @override
+  String get mitmPauseSignRefused => 'Flash 拒绝了签名请求';
+
+  @override
+  String get mitmPauseLeafRejected => '证书没有被接受';
+
+  @override
+  String get mitmPauseAppUnavailableHint =>
+      '解密会在 30 秒后自动重试；如果一直这样，请退出并重新打开 Flash。';
+
+  @override
+  String get mitmPauseSignTimeoutHint => 'Flash 较忙时会出现，解密会在 30 秒后自动重试。';
+
+  @override
+  String get mitmPauseSignRefusedHint => '请确认 HTTPS 解密仍然开启；解密会在 30 秒后自动重试。';
+
+  @override
+  String get mitmPauseLeafRejectedHint => '请在解密设置中重新确认根证书已安装并受信任。';
+
+  @override
+  String get mitmPauseUnavailableHint => '解密会在 30 秒后自动重试。';
 }

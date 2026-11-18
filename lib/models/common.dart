@@ -133,6 +133,8 @@ abstract class TrackerInfo with _$TrackerInfo {
     int? downloadSpeed,
     int? uploadSpeed,
     @Default('') String mitmOutcome,
+    // The Core's reason, when [mitmOutcome] is paused.
+    @Default('') String mitmPauseReason,
     // Set once a rewrite rule applied or failed on the connection.
     MitmConnectionRewrite? mitmRewrite,
   }) = _TrackerInfo;

@@ -2248,5 +2248,14 @@
   "mitmScriptFoundUpdate": "{time}检查到新版",
   "mitmAlsoDecryptHost": "同时把 {host} 加入解密",
   "mitmDiffAdded": "+{count} 行",
-  "mitmDiffRemoved": "−{count} 行"
+  "mitmDiffRemoved": "−{count} 行",
+  "mitmPauseAppUnavailable": "Flash 没有响应签名请求",
+  "mitmPauseSignTimeout": "签名超时",
+  "mitmPauseSignRefused": "Flash 拒绝了签名请求",
+  "mitmPauseLeafRejected": "证书没有被接受",
+  "mitmPauseAppUnavailableHint": "解密会在 30 秒后自动重试；如果一直这样，请退出并重新打开 Flash。",
+  "mitmPauseSignTimeoutHint": "Flash 较忙时会出现，解密会在 30 秒后自动重试。",
+  "mitmPauseSignRefusedHint": "请确认 HTTPS 解密仍然开启；解密会在 30 秒后自动重试。",
+  "mitmPauseLeafRejectedHint": "请在解密设置中重新确认根证书已安装并受信任。",
+  "mitmPauseUnavailableHint": "解密会在 30 秒后自动重试。"
 }
