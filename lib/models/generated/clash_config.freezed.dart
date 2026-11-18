@@ -8108,4 +8108,283 @@ as int?,
 
 }
 
+/// @nodoc
+mixin _$MitmRewrite {
+
+ int get id; int? get profileId; MitmList get section; String get line; bool get enabled; String? get order;
+/// Create a copy of MitmRewrite
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MitmRewriteCopyWith<MitmRewrite> get copyWith => _$MitmRewriteCopyWithImpl<MitmRewrite>(this as MitmRewrite, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MitmRewrite;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmRewrite&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.section, _this.section) || other.section == _this.section)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.enabled, _this.enabled) || other.enabled == _this.enabled)&&(identical(other.order, _this.order) || other.order == _this.order));
+}
+
+
+@override
+int get hashCode {
+  final _this = this as MitmRewrite;
+  return Object.hash(runtimeType,_this.id,_this.profileId,_this.section,_this.line,_this.enabled,_this.order);
+}
+
+@override
+String toString() {
+  final _this = this as MitmRewrite;
+  return 'MitmRewrite(id: ${_this.id}, profileId: ${_this.profileId}, section: ${_this.section}, line: ${_this.line}, enabled: ${_this.enabled}, order: ${_this.order})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MitmRewriteCopyWith<$Res>  {
+  factory $MitmRewriteCopyWith(MitmRewrite value, $Res Function(MitmRewrite) _then) = _$MitmRewriteCopyWithImpl;
+@useResult
+$Res call({
+ int id, int? profileId, MitmList section, String line, bool enabled, String? order
+});
+
+
+
+
+}
+/// @nodoc
+class _$MitmRewriteCopyWithImpl<$Res>
+    implements $MitmRewriteCopyWith<$Res> {
+  _$MitmRewriteCopyWithImpl(this._self, this._then);
+
+  final MitmRewrite _self;
+  final $Res Function(MitmRewrite) _then;
+
+/// Create a copy of MitmRewrite
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = freezed,Object? section = null,Object? line = null,Object? enabled = null,Object? order = freezed,}) {
+  return _then(MitmRewrite(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as int,profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
+as int?,section: null == section ? _self.section : section // ignore: cast_nullable_to_non_nullable
+as MitmList,line: null == line ? _self.line : line // ignore: cast_nullable_to_non_nullable
+as String,enabled: null == enabled ? _self.enabled : enabled // ignore: cast_nullable_to_non_nullable
+as bool,order: freezed == order ? _self.order : order // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MitmRewrite].
+extension MitmRewritePatterns on MitmRewrite {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MitmRewrite value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MitmRewrite() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MitmRewrite value)  $default,){
+final _that = this;
+switch (_that) {
+case _MitmRewrite():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MitmRewrite value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MitmRewrite() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int? profileId,  MitmList section,  String line,  bool enabled,  String? order)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MitmRewrite() when $default != null:
+return $default(_that.id,_that.profileId,_that.section,_that.line,_that.enabled,_that.order);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int? profileId,  MitmList section,  String line,  bool enabled,  String? order)  $default,) {final _that = this;
+switch (_that) {
+case _MitmRewrite():
+return $default(_that.id,_that.profileId,_that.section,_that.line,_that.enabled,_that.order);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int? profileId,  MitmList section,  String line,  bool enabled,  String? order)?  $default,) {final _that = this;
+switch (_that) {
+case _MitmRewrite() when $default != null:
+return $default(_that.id,_that.profileId,_that.section,_that.line,_that.enabled,_that.order);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _MitmRewrite implements MitmRewrite {
+  const _MitmRewrite({required this.id, this.profileId, required this.section, required this.line, this.enabled = true, this.order});
+  
+
+@override final  int id;
+@override final  int? profileId;
+@override final  MitmList section;
+@override final  String line;
+@override@JsonKey() final  bool enabled;
+@override final  String? order;
+
+/// Create a copy of MitmRewrite
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MitmRewriteCopyWith<_MitmRewrite> get copyWith => __$MitmRewriteCopyWithImpl<_MitmRewrite>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmRewrite&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.section, section) || other.section == section)&&(identical(other.line, line) || other.line == line)&&(identical(other.enabled, enabled) || other.enabled == enabled)&&(identical(other.order, order) || other.order == order));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,profileId,section,line,enabled,order);
+}
+
+@override
+String toString() {
+    return 'MitmRewrite(id: $id, profileId: $profileId, section: $section, line: $line, enabled: $enabled, order: $order)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MitmRewriteCopyWith<$Res> implements $MitmRewriteCopyWith<$Res> {
+  factory _$MitmRewriteCopyWith(_MitmRewrite value, $Res Function(_MitmRewrite) _then) = __$MitmRewriteCopyWithImpl;
+@override @useResult
+$Res call({
+ int id, int? profileId, MitmList section, String line, bool enabled, String? order
+});
+
+
+
+
+}
+/// @nodoc
+class __$MitmRewriteCopyWithImpl<$Res>
+    implements _$MitmRewriteCopyWith<$Res> {
+  __$MitmRewriteCopyWithImpl(this._self, this._then);
+
+  final _MitmRewrite _self;
+  final $Res Function(_MitmRewrite) _then;
+
+/// Create a copy of MitmRewrite
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = freezed,Object? section = null,Object? line = null,Object? enabled = null,Object? order = freezed,}) {
+  return _then(_MitmRewrite(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as int,profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
+as int?,section: null == section ? _self.section : section // ignore: cast_nullable_to_non_nullable
+as MitmList,line: null == line ? _self.line : line // ignore: cast_nullable_to_non_nullable
+as String,enabled: null == enabled ? _self.enabled : enabled // ignore: cast_nullable_to_non_nullable
+as bool,order: freezed == order ? _self.order : order // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
 // dart format on

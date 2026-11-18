@@ -223,5 +223,19 @@ func handleMitmValidate(params map[string][]string) map[string][]MitmIssue {
 			})
 		}
 	}
+	for _, section := range mitmRewriteSections {
+		for index, line := range params[section] {
+			if _, err := parseMitmRewriteLine(section, line); err != nil {
+				result[section] = append(result[section], MitmIssue{
+					Index:   index,
+					Code:    mitmRewriteInvalid,
+					Message: err.Error(),
+				})
+			}
+		}
+	}
 	return result
 }
+
+// The one issue code of a rewrite rule; the message says what is wrong.
+const mitmRewriteInvalid mitmHostIssue = "invalidRule"

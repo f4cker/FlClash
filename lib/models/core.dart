@@ -197,6 +197,11 @@ abstract class MitmExchangeSummary with _$MitmExchangeSummary {
     @Default(0) @JsonKey(name: 'request-size') int requestSize,
     @Default(0) @JsonKey(name: 'response-size') int responseSize,
     @Default('') String error,
+    // A rewrite rule changed or answered it.
+    @Default(false) bool rewritten,
+    // A rewrite rule matched but left a message as it was; the actions say
+    // which and why.
+    @Default(false) @JsonKey(name: 'rewrite-skipped') bool rewriteSkipped,
   }) = _MitmExchangeSummary;
 
   factory MitmExchangeSummary.fromJson(Map<String, Object?> json) =>
@@ -217,12 +222,17 @@ abstract class MitmExchangeList with _$MitmExchangeList {
       _$MitmExchangeListFromJson(json);
 }
 
+/// What one rewrite rule did: [kind] is its list ([MitmList.key]),
+/// [detail] the action it took, [rule] the ID the app gave it, and
+/// [skipped] why it left the message as it was, if it did.
 @freezed
 abstract class MitmAction with _$MitmAction {
   const factory MitmAction({
     required String kind,
     @Default('') String phase,
     @Default('') String detail,
+    @Default('') String rule,
+    @Default('') String skipped,
   }) = _MitmAction;
 
   factory MitmAction.fromJson(Map<String, Object?> json) =>
@@ -253,10 +263,81 @@ abstract class MitmExchange with _$MitmExchange {
     @JsonKey(name: 'response-header')
     Map<String, List<String>> responseHeader,
     @Default([]) List<MitmAction> actions,
+    @Default(false) bool rewritten,
+    @Default(false) @JsonKey(name: 'rewrite-skipped') bool rewriteSkipped,
   }) = _MitmExchange;
 
   factory MitmExchange.fromJson(Map<String, Object?> json) =>
       _$MitmExchangeFromJson(json);
+}
+
+/// A rewrite rule the Core left out, or a pasted line it could not take.
+@freezed
+abstract class MitmRewriteIssue with _$MitmRewriteIssue {
+  const factory MitmRewriteIssue({
+    @Default('') String rule,
+    @Default('') String section,
+    // 1-based within pasted text; 0 for a stored rule.
+    @Default(0) int line,
+    @Default('') String message,
+  }) = _MitmRewriteIssue;
+
+  factory MitmRewriteIssue.fromJson(Map<String, Object?> json) =>
+      _$MitmRewriteIssueFromJson(json);
+}
+
+@freezed
+abstract class MitmRewriteRuleStatus with _$MitmRewriteRuleStatus {
+  const factory MitmRewriteRuleStatus({
+    required String rule,
+    @Default('') String section,
+    @Default(0) int hits,
+    @Default(0) int skips,
+    @Default('') @JsonKey(name: 'last-skip') String lastSkip,
+    @JsonKey(name: 'last-skip-at') DateTime? lastSkipAt,
+  }) = _MitmRewriteRuleStatus;
+
+  factory MitmRewriteRuleStatus.fromJson(Map<String, Object?> json) =>
+      _$MitmRewriteRuleStatusFromJson(json);
+}
+
+/// The rewrite rules in force; inactive while MITM is off.
+@freezed
+abstract class MitmRewriteStatus with _$MitmRewriteStatus {
+  const factory MitmRewriteStatus({
+    @Default(false) bool active,
+    @Default(0) @JsonKey(name: 'body-limit') int bodyLimit,
+    @Default([]) List<MitmRewriteIssue> issues,
+    @Default([]) List<MitmRewriteRuleStatus> rules,
+  }) = _MitmRewriteStatus;
+
+  factory MitmRewriteStatus.fromJson(Map<String, Object?> json) =>
+      _$MitmRewriteStatusFromJson(json);
+}
+
+@freezed
+abstract class MitmRewriteLine with _$MitmRewriteLine {
+  const factory MitmRewriteLine({
+    required String section,
+    required String line,
+    @Default(0) int number,
+  }) = _MitmRewriteLine;
+
+  factory MitmRewriteLine.fromJson(Map<String, Object?> json) =>
+      _$MitmRewriteLineFromJson(json);
+}
+
+/// Pasted Surge sections, split into rule lines the Core takes and the
+/// lines it does not, each with its line number.
+@freezed
+abstract class MitmRewriteParse with _$MitmRewriteParse {
+  const factory MitmRewriteParse({
+    @Default([]) List<MitmRewriteLine> rules,
+    @Default([]) List<MitmRewriteIssue> issues,
+  }) = _MitmRewriteParse;
+
+  factory MitmRewriteParse.fromJson(Map<String, Object?> json) =>
+      _$MitmRewriteParseFromJson(json);
 }
 
 /// One side of a request as kept, decoded unless [encoding] names the coding

@@ -765,6 +765,132 @@ class ProfileRules extends _$ProfileRules
   }
 }
 
+/// A profile's own rewrite rules, in order (see [MitmRewrites]).
+@riverpod
+class ProfileMitmRewrites extends _$ProfileMitmRewrites
+    with AsyncNotifierMixin, OptimisticMixin {
+  @override
+  Stream<List<MitmRewrite>> build(int profileId) {
+    final query = database.mitmRewritesDao.queryProfile(profileId);
+    return settled(query.watch(), query.get);
+  }
+
+  @override
+  List<MitmRewrite> get value => state.value ?? [];
+
+  @override
+  bool updateShouldNotify(
+    AsyncValue<List<MitmRewrite>> previous,
+    AsyncValue<List<MitmRewrite>> next,
+  ) {
+    return !const ListEquality<MitmRewrite>().equals(
+      previous.value,
+      next.value,
+    );
+  }
+
+  /// Adds or replaces [rewrite]; a new one goes last.
+  void put(MitmRewrite rewrite) {
+    final existing = value.firstWhereOrNull((item) => item.id == rewrite.id);
+    if (existing == null && _unkeyed) {
+      setAll([...value, rewrite]);
+      return;
+    }
+    final placed = existing != null
+        ? rewrite.copyWith(order: rewrite.order ?? existing.order)
+        : rewrite.copyWith(
+            order: indexing.generateKeyBetween(value.lastOrNull?.order, null),
+          );
+    optimistic(
+      value.copyAndPut(placed, (item) => item.id == placed.id),
+      () => database.mitmRewritesDao.put(placed, profileId: profileId),
+    );
+  }
+
+  /// Appends [rewrites] in the order given, as a paste adds them.
+  void addAll(List<MitmRewrite> rewrites) {
+    if (rewrites.isEmpty) {
+      return;
+    }
+    if (_unkeyed) {
+      setAll([...value, ...rewrites]);
+      return;
+    }
+    final orders = indexing.generateNKeysBetween(
+      value.lastOrNull?.order,
+      null,
+      rewrites.length,
+    );
+    final added = [
+      for (final (index, rewrite) in rewrites.indexed)
+        rewrite.copyWith(order: orders[index]),
+    ];
+    optimistic(
+      [...value, ...added],
+      () => database.transaction(() async {
+        for (final rewrite in added) {
+          await database.mitmRewritesDao.put(rewrite, profileId: profileId);
+        }
+      }),
+    );
+  }
+
+  /// Rows written without an order key sort last; appending after them
+  /// needs every row keyed first.
+  bool get _unkeyed => value.any((item) => item.order == null);
+
+  void setEnabled(int id, bool enabled) {
+    final rewrite = value.firstWhereOrNull((item) => item.id == id);
+    if (rewrite == null || rewrite.enabled == enabled) {
+      return;
+    }
+    put(rewrite.copyWith(enabled: enabled));
+  }
+
+  void delAll(Iterable<int> ids) {
+    final removed = ids.toSet();
+    optimistic(
+      value.where((item) => !removed.contains(item.id)).toList(),
+      () => database.mitmRewritesDao.delAll(removed),
+    );
+  }
+
+  void order(int oldIndex, int newIndex) {
+    final item = value[oldIndex];
+    final next = value.copyAndReorder(oldIndex, newIndex);
+    if (_unkeyed) {
+      setAll(next);
+      return;
+    }
+    final newOrder = indexing.generateKeyBetween(
+      next.safeGet(newIndex - 1)?.order,
+      next.safeGet(newIndex + 1)?.order,
+    )!;
+    next[newIndex] = item.copyWith(order: newOrder);
+    optimistic(
+      next,
+      () => database.mitmRewritesDao.order(id: item.id, order: newOrder),
+    );
+  }
+
+  void setAll(List<MitmRewrite> rewrites) {
+    final orders = indexing.generateNKeys(rewrites.length);
+    optimistic(
+      [
+        for (final (index, rewrite) in rewrites.indexed)
+          rewrite.copyWith(order: orders[index]),
+      ],
+      () => database.batch(
+        (b) => database.mitmRewritesDao.setProfileWithBatch(
+          profileId,
+          b,
+          rewrites,
+        ),
+      ),
+    );
+  }
+}
+
 /// Unless [group] says the name is a group's, a profile whose own group takes
 /// either name is left alone: there the name stands for that group.
 Future<Profile Function(Profile profile)?> _renameProxyIn(

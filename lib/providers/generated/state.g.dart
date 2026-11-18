@@ -184,6 +184,62 @@ final class CoreOptionsProvider
 
 String _$coreOptionsHash() => r'43945407c97ebce7e8106973f53ca83ce95c861a';
 
+/// The current profile's enabled rewrite rules, as the Core takes them;
+/// empty while none is selected or they are still being read.
+
+@ProviderFor(currentMitmRewrites)
+final currentMitmRewritesProvider = CurrentMitmRewritesProvider._();
+
+/// The current profile's enabled rewrite rules, as the Core takes them;
+/// empty while none is selected or they are still being read.
+
+final class CurrentMitmRewritesProvider
+    extends
+        $FunctionalProvider<
+          List<MitmRewrite>,
+          List<MitmRewrite>,
+          List<MitmRewrite>
+        >
+    with $Provider<List<MitmRewrite>> {
+  /// The current profile's enabled rewrite rules, as the Core takes them;
+  /// empty while none is selected or they are still being read.
+  CurrentMitmRewritesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentMitmRewritesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentMitmRewritesHash();
+
+  @$internal
+  @override
+  $ProviderElement<List<MitmRewrite>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  List<MitmRewrite> create(Ref ref) {
+    return currentMitmRewrites(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<MitmRewrite> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<MitmRewrite>>(value),
+    );
+  }
+}
+
+String _$currentMitmRewritesHash() =>
+    r'87783571f2ee2b56b6cc42522e17892ccb3abf8f';
+
 /// Null, and so no decryption, unless the user turned it on.
 
 @ProviderFor(mitmSetup)
@@ -234,7 +290,7 @@ final class MitmSetupProvider
   }
 }
 
-String _$mitmSetupHash() => r'15e041a4aabe792ea5b27c0eecd286474d9aa018';
+String _$mitmSetupHash() => r'0f219f6ae8ecbf03278f11aabedbef2b2303eb86';
 
 @ProviderFor(setupPatch)
 final setupPatchProvider = SetupPatchProvider._();

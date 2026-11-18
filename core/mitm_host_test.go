@@ -67,7 +67,7 @@ func TestEveryAppleDomainIsRefusedAndNeverMatched(t *testing.T) {
 func TestMitmValidateAnswersEveryList(t *testing.T) {
 	result := handleMitmValidate(map[string][]string{
 		"hostname":    {"api.example.com", "*.com", "apple.com", "-x.example.com", "bad host"},
-		"url-rewrite": {"anything"},
+		"url-rewrite": {`^https:\/\/a\.com\/ad - reject`},
 	})
 	if len(result) != len(mitmRuleLists) {
 		t.Fatalf("lists %v", result)

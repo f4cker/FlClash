@@ -613,6 +613,22 @@ abstract class CoreHandlerInterface {
   Future<void> updateMitm(Map<String, Object?>? setup) =>
       _command(CoreMethod.mitmUpdate, arguments: {'setup': setup});
 
+  Future<MitmRewriteStatus> getMitmRewriteStatus() {
+    return _query(
+      CoreMethod.mitmRewriteStatus,
+      _model(MitmRewriteStatus.fromJson),
+    );
+  }
+
+  /// Splits pasted Surge sections into the rule lines the Core takes.
+  Future<MitmRewriteParse> parseMitmRewrite(String text) {
+    return _query(
+      CoreMethod.mitmRewriteParse,
+      _model(MitmRewriteParse.fromJson),
+      arguments: {'text': text},
+    );
+  }
+
   Future<MitmStatus> getMitmStatus() {
     return _query(CoreMethod.mitmStatus, _model(MitmStatus.fromJson));
   }

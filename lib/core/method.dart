@@ -74,6 +74,8 @@ enum CoreMethod {
   mitmSignResult('mitm.signResult'),
   mitmDisable('mitm.disable'),
   mitmUpdate('mitm.update'),
+  mitmRewriteStatus('mitm.rewriteStatus'),
+  mitmRewriteParse('mitm.rewriteParse'),
   tailscaleNodes('tailscale.nodes'),
   tailscaleStatus('tailscale.status'),
   tailscaleStart('tailscale.start'),

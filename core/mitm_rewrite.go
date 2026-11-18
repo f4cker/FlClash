@@ -4,13 +4,19 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
+	"mime"
 	"net/http"
 	"net/textproto"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/metacubex/mihomo/constant"
 )
 
 // Phase 2b: Surge-compatible rewriting of decrypted traffic.
@@ -155,6 +161,9 @@ type mitmLocalResponse struct {
 	status int
 	header http.Header
 	body   []byte
+	// For data-type=file: the resources directory's file the body is read
+	// from when the rules are installed.
+	file string
 }
 
 type mitmRewriteRule struct {
@@ -308,6 +317,12 @@ func compileMitmRewrite(rules []MitmRewriteRule, bodyLimit int64, previous *mitm
 		if rule == nil {
 			continue
 		}
+		if rule.local != nil && rule.local.file != "" {
+			if err := loadMitmLocalFile(rule.local); err != nil {
+				engine.issues = append(engine.issues, MitmRewriteIssue{Rule: spec.ID, Section: spec.Section, Message: err.Error()})
+				continue
+			}
+		}
 		rule.id, rule.order, rule.line = spec.ID, i, spec.Line
 		if old := kept[spec.ID+"\x00"+spec.Section]; old != nil && old.line == spec.Line {
 			rule.stats = old.stats
@@ -338,6 +353,31 @@ func compileMitmRewrite(rules []MitmRewriteRule, bodyLimit int64, previous *mitm
 		}
 	}
 	return engine
+}
+
+// The most a Map Local file may hold (the app's maxMitmResourceSize).
+const mitmLocalFileLimit = 16 << 20
+
+// Where the app keeps Map Local files; a variable only for tests.
+var mitmResourcesDir = func() string {
+	return filepath.Join(constant.Path.HomeDir(), "mitm", "resources")
+}
+
+func loadMitmLocalFile(local *mitmLocalResponse) error {
+	f, err := os.Open(filepath.Join(mitmResourcesDir(), local.file))
+	if err != nil {
+		return fmt.Errorf("map-local file %s cannot be read", local.file)
+	}
+	defer f.Close()
+	body, err := io.ReadAll(io.LimitReader(f, mitmLocalFileLimit+1))
+	if err != nil {
+		return fmt.Errorf("map-local file %s cannot be read", local.file)
+	}
+	if len(body) > mitmLocalFileLimit {
+		return fmt.Errorf("map-local file %s is over 16 MiB", local.file)
+	}
+	local.body = body
+	return nil
 }
 
 // ---- Parsing ----
@@ -666,15 +706,23 @@ func parseMitmMapLocal(line string) (*mitmRewriteRule, error) {
 		}
 		contentType = "application/octet-stream"
 	case "file":
-		// The Core never reads local files or fetches URLs for a rule: the
-		// app embeds a chosen file's content as base64 when it is added.
-		if !hasData {
+		// The Core never fetches a URL for a rule, and reads files only from
+		// the app's resources directory (mitm/resources), by the bare name
+		// the app saved a download or attachment under.
+		if !hasData || data == "" {
 			return nil, errors.New("data-type=file needs data")
 		}
 		if strings.HasPrefix(data, "http://") || strings.HasPrefix(data, "https://") {
-			return nil, errors.New("data from a URL is not supported yet; use data-type=text or base64")
+			return nil, errors.New("data from a URL must be downloaded by the app first")
 		}
-		return nil, errors.New("a file must be embedded by the app (it is saved as data-type=base64)")
+		if strings.ContainsAny(data, `/\`) || data == "." || data == ".." || strings.HasPrefix(data, ".") {
+			return nil, fmt.Errorf("data must name a file in the resources directory, got %q", data)
+		}
+		local.file = data
+		contentType = mime.TypeByExtension(filepath.Ext(data))
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
 	default:
 		return nil, fmt.Errorf("unknown data-type %q", dataType)
 	}

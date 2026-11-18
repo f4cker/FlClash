@@ -3,6 +3,7 @@ package core
 import (
 	"bufio"
 	"bytes"
+	"net"
 	"net/http"
 	"time"
 
@@ -67,6 +68,11 @@ func mitmPlainFirstRequest(conn *N.BufferedConn, host string, firstByteWait time
 			return false
 		}
 	}
+	// A request line starts with a method in capitals; TLS and the rest
+	// are left alone at once.
+	if first, err := conn.Peek(1); err != nil || first[0] < 'A' || first[0] > 'Z' {
+		return false
+	}
 	_ = conn.SetReadDeadline(time.Now().Add(mitmHelloWait))
 	// Within BufferedConn's buffer: a larger head is relayed untouched.
 	if err := mitmPeekHeader(conn.Reader()); err != nil {
@@ -87,7 +93,7 @@ func mitmPlainFirstRequest(conn *N.BufferedConn, host string, firstByteWait time
 
 // Serves a taken plain flow until either side ends it or the switch goes
 // off; the tunnel closes both connections afterwards.
-func serveMitmPlain(client *N.BufferedConn, remote C.Conn, host string) {
+func serveMitmPlain(client net.Conn, remote net.Conn, host string) {
 	connection := mitmTrackerID(remote)
 	mitmCaptures.openConnection(connection)
 	defer mitmCaptures.closeConnection(connection)
