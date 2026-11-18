@@ -2,9 +2,9 @@
   "schema": 1,
   "identifier": "com.layoute.flash.helper-launcher",
   "certificate_sha1": "BBA7F8529FD271B9848EC03A2CE3F4780F585556",
-  "sha256": "",
+  "sha256": "ebab194a9456adda364fb7de21b967479387d6981020f6135472997825ea03f1",
   "cdhashes": {
-    "arm64": "",
-    "x86_64": ""
+    "arm64": "96b6278d19e7afe4d42f83b4f2014da57c9a5a78",
+    "x86_64": "c055556e2a7954b71f239c1324011123e4b7f071"
   }
 }
