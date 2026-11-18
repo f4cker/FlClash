@@ -603,7 +603,7 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	mitmCaptures.openConnection(connection)
 	defer mitmCaptures.closeConnection(connection)
 	allowed := func() bool { return mitmState.Load() == runtime && !mitmPausedFor(host) }
-	control := &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection}
+	control := &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection, port: mitmHTTPSPort}
 	if http2 {
 		if err := mitmHTTP2Proxy(server, upstream, host, allowed, control); err != nil {
 			_ = client.Close()

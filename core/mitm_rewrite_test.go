@@ -203,7 +203,7 @@ func TestMitmRewriteValidateAndInstallKeepGoodRules(t *testing.T) {
 func TestMitmRewriteCountersSurviveAnUnchangedReinstall(t *testing.T) {
 	rules := []MitmRewriteRule{rwRule("a", mitmSectionURL, `^https:\/\/a\.com\/ad - reject`), rwRule("b", mitmSectionURL, `^https:\/\/a\.com\/x - reject`)}
 	withMitmRewrite(t, 0, rules...)
-	x := mitmRewriteBegin("https", "a.com", "/ad", false)
+	x := mitmRewriteBegin("https", "a.com", 0, "/ad", false)
 	x.request(http.Header{})
 	rules[1].Line = `^https:\/\/a\.com\/y - reject`
 	installMitmRewrite(&MitmSetup{Enable: true, Rewrite: rules})
@@ -274,7 +274,7 @@ func TestMitmPatternHostIndex(t *testing.T) {
 		t.Fatalf("candidates %v", order)
 	}
 	if allocs := testing.AllocsPerRun(100, func() {
-		if mitmRewriteBegin("https", "b.com", "/x", false) == nil {
+		if mitmRewriteBegin("https", "b.com", 0, "/x", false) == nil {
 			t.Fatal("generic rule ignored")
 		}
 	}); allocs > 2 {
@@ -282,7 +282,7 @@ func TestMitmPatternHostIndex(t *testing.T) {
 	}
 	withMitmRewrite(t, 0, rwRule("1", mitmSectionURL, `^https:\/\/a\.com\/ - reject`))
 	if allocs := testing.AllocsPerRun(100, func() {
-		if mitmRewriteBegin("https", "b.com", "/x", false) != nil {
+		if mitmRewriteBegin("https", "b.com", 0, "/x", false) != nil {
 			t.Fatal("unnamed host")
 		}
 	}); allocs != 0 {
@@ -298,20 +298,20 @@ func TestMitmRewriteURLDecisions(t *testing.T) {
 		rwRule("after", mitmSectionMap, `^https:\/\/a\.com\/v2\/local data-type=text data="m"`),
 		rwRule("307", mitmSectionURL, `^https:\/\/a\.com\/t(.*) https://c.com/t$1 307`),
 	)
-	x := mitmRewriteBegin("https", "a.com", "/v1/local?q=1", false)
+	x := mitmRewriteBegin("https", "a.com", 0, "/v1/local?q=1", false)
 	d := x.request(http.Header{})
 	if d.local == nil || string(d.local.body) != "m" || x.url != "https://a.com/v2/local?q=1" || x.originalURL != "https://a.com/v1/local?q=1" {
 		t.Fatalf("header then map local: %+v %s", d, x.url)
 	}
-	x = mitmRewriteBegin("https", "a.com", "/cross", false)
+	x = mitmRewriteBegin("https", "a.com", 0, "/cross", false)
 	if d := x.request(http.Header{}); d.requestURI != "" || d.local != nil || x.hits[0].Skipped != mitmSkipCrossHost {
 		t.Fatalf("cross host: %+v %+v", d, x.hits)
 	}
-	x = mitmRewriteBegin("https", "a.com", "/bad", false)
+	x = mitmRewriteBegin("https", "a.com", 0, "/bad", false)
 	if d := x.request(http.Header{}); d.local != nil || x.hits[0].Skipped != mitmSkipInvalidURL {
 		t.Fatalf("bad target: %+v %+v", d, x.hits)
 	}
-	x = mitmRewriteBegin("https", "a.com", "/tx?y", false)
+	x = mitmRewriteBegin("https", "a.com", 0, "/tx?y", false)
 	if d := x.request(http.Header{}); d.local == nil || d.local.status != 307 || d.local.header.Get("Location") != "https://c.com/tx?y" {
 		t.Fatalf("307: %+v", d)
 	}
@@ -328,7 +328,7 @@ func gzipped(t *testing.T, s string) []byte {
 func TestMitmRewriteBodyCases(t *testing.T) {
 	withMitmRewrite(t, 64, rwRule("ads", mitmSectionBody, `http-response ^https:\/\/a\.com\/ "ads":\[.*?\] "ads":[]`))
 	run := func(contentType, encoding string, body []byte, length int64) (*mitmRewriteExchange, mitmBodyResult, http.Header) {
-		x := mitmRewriteBegin("https", "a.com", "/", false)
+		x := mitmRewriteBegin("https", "a.com", 0, "/", false)
 		header := http.Header{"Content-Type": {contentType}}
 		if encoding != "" {
 			header.Set("Content-Encoding", encoding)
@@ -440,10 +440,10 @@ func get(path string) string {
 
 func rewriteTestRules() []MitmRewriteRule {
 	return []MitmRewriteRule{
-		rwRule("dict", mitmSectionURL, `^https?:\/\/example\.com\/ad - reject-dict`),
-		rwRule("moved", mitmSectionURL, `^https?:\/\/example\.com\/old https://example.com/new 302`),
+		rwRule("dict", mitmSectionURL, `^https?:\/\/example\.com:?\d*\/ad - reject-dict`),
+		rwRule("moved", mitmSectionURL, `^https?:\/\/example\.com:?\d*\/old https://example.com/new 302`),
 		rwRule("v2", mitmSectionURL, `^https?:\/\/example\.com\/v1\/(.*) https://example.com/v2/$1 header`),
-		rwRule("drop", mitmSectionURL, `^https?:\/\/example\.com\/drop - reject-drop`),
+		rwRule("drop", mitmSectionURL, `^https?:\/\/example\.com:?\d*\/drop - reject-drop`),
 		rwRule("addreq", mitmSectionHeader, `http-request ^https?:\/\/example\.com\/ header-add X-Req 1`),
 		rwRule("ua", mitmSectionHeader, `http-request ^https?:\/\/example\.com\/ header-replace-regex User-Agent iPhone Mac`),
 		rwRule("delresp", mitmSectionHeader, `http-response ^https?:\/\/example\.com\/ header-del X-Remove`),
@@ -679,6 +679,7 @@ func TestMitmPlainHTTPRejectAndRedirectOnly(t *testing.T) {
 	withMitmRewrite(t, 0, rewriteTestRules()...)
 	mitmState.Store(&mitmRuntime{setup: MitmSetup{Enable: true}})
 	oldPort := mitmPlainHTTPPort
+	// Port 80 stands in as 8080: the rewritten URL carries it.
 	mitmPlainHTTPPort = 8080
 	t.Cleanup(func() { mitmPlainHTTPPort = oldPort })
 
@@ -762,7 +763,7 @@ func TestMitmRewriteOffMeansNoRewrite(t *testing.T) {
 	if mitmInterceptWanted(&C.Metadata{DstPort: mitmPlainHTTPPort, Host: "example.com"}) {
 		t.Fatal("port 80 held with the switch off")
 	}
-	if mitmRewriteBegin("https", "example.com", "/ad", false) != nil || mitmRewriteBegin("http", "example.com", "/ad", true) != nil {
+	if mitmRewriteBegin("https", "example.com", 0, "/ad", false) != nil || mitmRewriteBegin("http", "example.com", 0, "/ad", true) != nil {
 		t.Fatal("rewrite began with the switch off")
 	}
 
@@ -791,7 +792,7 @@ func TestMitmRewriteOffMeansNoRewrite(t *testing.T) {
 	// nothing on port 80.
 	mitmRewrite.Store(compileMitmRewrite(rules, mitmDefaultRewriteBodyLimit, nil))
 	mitmState.Store(&mitmRuntime{setup: MitmSetup{Enable: false}})
-	if mitmPlainWanted(&C.Metadata{DstPort: mitmPlainHTTPPort, Host: "example.com"}) || mitmRewriteBegin("http", "example.com", "/ad", true) != nil {
+	if mitmPlainWanted(&C.Metadata{DstPort: mitmPlainHTTPPort, Host: "example.com"}) || mitmRewriteBegin("http", "example.com", 0, "/ad", true) != nil {
 		t.Fatal("plain rewrite ran with the switch off")
 	}
 
@@ -823,5 +824,184 @@ func TestMitmRewriteRuleChangeKeepsTheRuntime(t *testing.T) {
 	}
 	if !strings.Contains(strconv.Quote(handleMitmRewriteStatus().Rules[0].Rule), "1") {
 		t.Fatal("status")
+	}
+}
+
+// ---- Streams the rewrite must not hold up ----
+
+func rewriteHits(t *testing.T, connection string) []MitmRewriteHit {
+	t.Helper()
+	list := handleMitmExchanges(MitmExchangesParams{ID: connection})
+	if len(list.Exchanges) == 0 {
+		t.Fatal("nothing recorded")
+	}
+	return handleMitmExchange(MitmExchangeParams{ID: list.Exchanges[len(list.Exchanges)-1].ID}).Actions
+}
+
+func hasSkip(hits []MitmRewriteHit, phase, skip string) bool {
+	for _, hit := range hits {
+		if hit.Phase == phase && hit.Skipped == skip {
+			return true
+		}
+	}
+	return false
+}
+
+// A site that answers while the client is still uploading, and a client
+// that sends the rest only once it has seen the answer's start: holding the
+// answer back to rewrite it would stall both until the idle timeout.
+func TestMitmRewriteHTTP1ResponseDuringUploadStreams(t *testing.T) {
+	withMitmCapture(t, mitmDefaultCaptureLimits)
+	withMitmRewrite(t, 0, rewriteTestRules()...)
+	h := startRewriteH1(t, false, func(w http.ResponseWriter, r *http.Request) {
+		_ = http.NewResponseController(w).EnableFullDuplex()
+		w.Header().Set("Content-Type", "text/plain")
+		first := make([]byte, 3)
+		_, _ = io.ReadFull(r.Body, first)
+		fmt.Fprintf(w, `"ads":[%s]`, first)
+		_ = http.NewResponseController(w).Flush()
+		rest, _ := io.ReadAll(r.Body)
+		fmt.Fprintf(w, "|%s", rest)
+	})
+	if _, err := io.WriteString(h.conn, "POST /up HTTP/1.1\r\nHost: example.com\r\nContent-Type: text/plain\r\nContent-Length: 6\r\n\r\nabc"); err != nil {
+		t.Fatal(err)
+	}
+	_ = h.conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	resp, err := http.ReadResponse(h.r, nil)
+	if err != nil {
+		t.Fatalf("no answer while uploading: %v", err)
+	}
+	want := `"ads":[abc]`
+	got := make([]byte, len(want))
+	if _, err := io.ReadFull(resp.Body, got); err != nil || string(got) != want {
+		t.Fatalf("first part %q %v", got, err)
+	}
+	// (An early answer ends the upload, as in any decrypted session.)
+	if hits := rewriteHits(t, "rw-conn"); !hasSkip(hits, "response", mitmSkipUploading) {
+		t.Fatalf("hits %+v", hits)
+	}
+	// A plain upload finished before the answer is still rewritten.
+	h2 := startRewriteH1(t, false, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = io.WriteString(w, `"ads":[1]`)
+	})
+	if _, body := h2.do(t, "POST /up HTTP/1.1\r\nHost: example.com\r\nContent-Length: 3\r\n\r\nabc"); body != `"ads":[]` {
+		t.Fatalf("completed upload: %q", body)
+	}
+}
+
+// An HTTP/2 stream of unknown length both ways (bidi), with body rules
+// that match it both ways: each message goes through as it comes.
+func TestMitmRewriteHTTP2BidiTextStreams(t *testing.T) {
+	withMitmCapture(t, mitmDefaultCaptureLimits)
+	withMitmRewrite(t, 0, rewriteTestRules()...)
+	site := newMitmH2Site(t, true, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(200)
+		w.(http.Flusher).Flush()
+		lines := bufio.NewScanner(r.Body)
+		for lines.Scan() {
+			fmt.Fprintf(w, "echo %s\n", lines.Text())
+			w.(http.Flusher).Flush()
+		}
+	}))
+	h := newMitmH2Harness(t, site, []string{"h2", "http/1.1"}, nil)
+	cc := h.h2(t)
+	pr, pw := io.Pipe()
+	req, _ := http.NewRequest("POST", "https://example.com/form", pr)
+	req.Header.Set("Content-Type", "text/plain")
+	type result struct {
+		resp *http.Response
+		err  error
+	}
+	got := make(chan result, 1)
+	go func() {
+		resp, err := cc.RoundTrip(req)
+		got <- result{resp, err}
+	}()
+	if _, err := io.WriteString(pw, "a=1\n"); err != nil {
+		t.Fatal(err)
+	}
+	var res result
+	select {
+	case res = <-got:
+	case <-time.After(3 * time.Second):
+		t.Fatal("stream held up")
+	}
+	if res.err != nil {
+		t.Fatal(res.err)
+	}
+	lines := bufio.NewReader(res.resp.Body)
+	readLine := func() string {
+		line := make(chan string, 1)
+		go func() { s, _ := lines.ReadString('\n'); line <- s }()
+		select {
+		case s := <-line:
+			return s
+		case <-time.After(3 * time.Second):
+			t.Fatal("echo held up")
+			return ""
+		}
+	}
+	if line := readLine(); line != "echo a=1\n" {
+		t.Fatalf("echo %q", line)
+	}
+	_, _ = io.WriteString(pw, `"ads":[1]`+"\n")
+	if line := readLine(); line != `echo "ads":[1]`+"\n" {
+		t.Fatalf("echo %q", line)
+	}
+	_ = pw.Close()
+	if rest, _ := io.ReadAll(lines); len(rest) != 0 {
+		t.Fatalf("rest %q", rest)
+	}
+	_ = res.resp.Body.Close()
+	hits := rewriteHits(t, "h2-connection")
+	if !hasSkip(hits, "request", mitmSkipStreaming) || !hasSkip(hits, "response", mitmSkipUploading) {
+		t.Fatalf("hits %+v", hits)
+	}
+	// A request of declared length is still rewritten, and so its answer.
+	body := strings.NewReader("a=1")
+	req, _ = http.NewRequest("POST", "https://example.com/form", body)
+	req.ContentLength = 3
+	resp, err := cc.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	echoed, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if string(echoed) != "echo a=2\n" {
+		t.Fatalf("bounded %q", echoed)
+	}
+	_ = cc.Close()
+	if outcome := h.outcome(t); outcome != "" {
+		t.Fatalf("outcome %q", outcome)
+	}
+}
+
+func TestMitmRewriteKeepsANonDefaultPort(t *testing.T) {
+	withMitmRewrite(t, 0,
+		rwRule("same", mitmSectionURL, `^https:\/\/example\.com:8443\/a https://example.com:8443/b header`),
+		rwRule("other", mitmSectionURL, `^https:\/\/example\.com:8443\/c https://example.com/d header`),
+		rwRule("ad", mitmSectionURL, `^https:\/\/example\.com\/ad - reject`),
+	)
+	x := mitmRewriteBegin("https", "example.com", 8443, "/a?q", false)
+	if x.url != "https://example.com:8443/a?q" {
+		t.Fatalf("url %q", x.url)
+	}
+	if d := x.request(http.Header{}); d.requestURI != "/b?q" || x.url != "https://example.com:8443/b?q" {
+		t.Fatalf("same port: %+v %q", d, x.url)
+	}
+	x = mitmRewriteBegin("https", "example.com", 8443, "/c", false)
+	if d := x.request(http.Header{}); d.requestURI != "" || x.hits[0].Skipped != mitmSkipCrossHost {
+		t.Fatalf("other port: %+v %+v", d, x.hits)
+	}
+	// A pattern without the port does not match on another port...
+	if x = mitmRewriteBegin("https", "example.com", 8443, "/ad", false); x.request(http.Header{}).local != nil {
+		t.Fatal("matched without the port")
+	}
+	// ...and the default port is left out, as browsers do.
+	if x = mitmRewriteBegin("https", "example.com", 443, "/ad", false); x.url != "https://example.com/ad" || x.request(http.Header{}).local == nil {
+		t.Fatalf("default port: %q", x.url)
 	}
 }

@@ -193,10 +193,19 @@ type mitmDuplexControl struct {
 	connection string
 	// Optional nonblocking observer, used to synchronize exchange tests.
 	uploadComplete func(error)
+	// The port the flow was to; 0 for the scheme's default.
+	port uint16
 	// Plain HTTP (port 80), served only for URL Rewrite's reject and
 	// redirects: nothing else is rewritten and only answered requests are
 	// recorded.
 	plain bool
+}
+
+func (c *mitmDuplexControl) flowPort() uint16 {
+	if c == nil {
+		return 0
+	}
+	return c.port
 }
 
 func (c *mitmDuplexControl) isPlain() bool {
@@ -371,7 +380,7 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 		if control.isPlain() {
 			scheme = "http"
 		}
-		rw := mitmRewriteBegin(scheme, host, req.RequestURI, control.isPlain())
+		rw := mitmRewriteBegin(scheme, host, control.flowPort(), req.RequestURI, control.isPlain())
 		decision := rw.request(req.Header)
 		if decision.drop {
 			<-joinWatch(control, pendingWatch)
@@ -575,7 +584,17 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				var rewrittenBody io.Reader
 				if rw != nil && !rw.plain {
 					rw.responseHeader(resp.Header)
-					if rules := rw.bodyRules(true); len(rules) > 0 && !mitmHeaderOnly(resp, req.Method) {
+					if rules := rw.bodyRules(true); len(rules) == 0 || mitmHeaderOnly(resp, req.Method) {
+					} else if !mitmUploadSettles(upload, &uploadPending, &uploadErr, control) {
+						// The site answers while the client is still sending:
+						// holding the answer back to rewrite it could stall a
+						// client that waits for it, so it streams on unchanged.
+						if !uploadPending {
+							upload = nil
+						}
+						rw.skipAll(rules, "response", mitmSkipUploading)
+					} else {
+						upload = nil
 						result := rw.rewriteBody(rules, resp.Header, resp.Body, resp.ContentLength, true)
 						rewrittenBody = result.body
 						if result.changed {
@@ -665,6 +684,30 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 
 // Joins an idle watcher that an exchange took over but never handed to a
 // response reader, interrupting the upstream read it is blocked in.
+// How long a response to be rewritten waits for the upload it answers to
+// finish: a site normally answers once it has read the whole request, as
+// the upload's last write returns.
+var mitmUploadSettleWait = 200 * time.Millisecond
+
+// Whether the upload has finished, or does within mitmUploadSettleWait,
+// without error. A result read here is taken as the duplex loop takes it;
+// an upload still running stays pending for the loop.
+func mitmUploadSettles(upload chan error, pending *bool, uploadErr *error, control *mitmDuplexControl) bool {
+	if !*pending {
+		return *uploadErr == nil
+	}
+	timer := time.NewTimer(mitmUploadSettleWait)
+	defer timer.Stop()
+	select {
+	case err := <-upload:
+		*pending, *uploadErr = false, err
+		control.uploaded(err)
+		return err == nil
+	case <-timer.C:
+		return false
+	}
+}
+
 func joinWatch(control *mitmDuplexControl, watch chan error) <-chan error {
 	if watch == nil {
 		closed := make(chan error)

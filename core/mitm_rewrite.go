@@ -92,16 +92,18 @@ type MitmRewriteHit struct {
 
 // Why a matching rule left a message as it was.
 const (
-	mitmSkipOversize     = "oversize"
-	mitmSkipNotText      = "notText"
-	mitmSkipNotUTF8      = "notUTF8"
-	mitmSkipDecode       = "decodeFailed"
-	mitmSkipEncoding     = "unsupportedEncoding"
-	mitmSkipTimeout      = "regexTimeout"
-	mitmSkipCrossHost    = "crossHost"
-	mitmSkipInvalidURL   = "invalidURL"
-	mitmSkipFraming      = "framing"
-	mitmSkipStreaming    = "streaming"
+	mitmSkipOversize   = "oversize"
+	mitmSkipNotText    = "notText"
+	mitmSkipNotUTF8    = "notUTF8"
+	mitmSkipDecode     = "decodeFailed"
+	mitmSkipEncoding   = "unsupportedEncoding"
+	mitmSkipTimeout    = "regexTimeout"
+	mitmSkipCrossHost  = "crossHost"
+	mitmSkipInvalidURL = "invalidURL"
+	mitmSkipFraming    = "framing"
+	mitmSkipStreaming  = "streaming"
+	// The site answered while the request was still being uploaded.
+	mitmSkipUploading    = "uploading"
 	mitmSkipBodyReadFail = "bodyReadFailed"
 )
 

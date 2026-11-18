@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/metacubex/mihomo/log"
 	"golang.org/x/net/http2"
@@ -121,7 +122,7 @@ func mitmHTTP2Proxy(client, upstream net.Conn, host string, allowed func() bool,
 		ReadIdleTimeout: ping,
 		PingTimeout:     ping,
 	}
-	handler := &mitmHTTP2Handler{cc: cc, host: host, allowed: allowed, connection: control.captureConnection()}
+	handler := &mitmHTTP2Handler{cc: cc, host: host, port: control.flowPort(), allowed: allowed, connection: control.captureConnection()}
 	server.ServeConn(client, &http2.ServeConnOpts{Context: ctx, Handler: handler})
 	return nil
 }
@@ -129,6 +130,7 @@ func mitmHTTP2Proxy(client, upstream net.Conn, host string, allowed func() bool,
 type mitmHTTP2Handler struct {
 	cc         *http2.ClientConn
 	host       string
+	port       uint16
 	allowed    func() bool
 	connection string
 }
@@ -152,7 +154,7 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMisdirectedRequest)
 		return
 	}
-	rw := mitmRewriteBegin("https", h.host, r.RequestURI, false)
+	rw := mitmRewriteBegin("https", h.host, h.port, r.RequestURI, false)
 	decision := rw.request(r.Header)
 	if decision.requestURI != "" {
 		if target, err := url.ParseRequestURI(decision.requestURI); err == nil {
@@ -173,8 +175,10 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rules := rw.bodyRules(false); len(rules) > 0 {
-		if r.ContentLength < 0 && len(r.Trailer) > 0 {
-			// A body with trailers to follow is a stream (gRPC and the like).
+		if r.ContentLength < 0 {
+			// Without a declared length the body may be a stream (gRPC,
+			// bidi) the client keeps open while it waits for answers;
+			// waiting for its end to rewrite it could stall both sides.
 			rw.skipAll(rules, "request", mitmSkipStreaming)
 		} else {
 			res := rw.rewriteBody(rules, r.Header, r.Body, r.ContentLength, false)
@@ -202,14 +206,16 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Otherwise the transport adds its own.
 		out.Header["User-Agent"] = []string{""}
 	}
+	uploaded := make(chan struct{})
 	if r.ContentLength == 0 {
 		out.Body = http.NoBody
+		close(uploaded)
 	} else {
 		var body io.Reader = r.Body
 		if entry != nil {
 			body = mitmCaptureReader{r: body, entry: entry}
 		}
-		out.Body = io.NopCloser(body)
+		out.Body = io.NopCloser(&mitmUploadTracker{r: body, left: r.ContentLength, done: uploaded})
 	}
 	trace := &httptrace.ClientTrace{
 		// Early hints and other informational answers go on as they come;
@@ -242,7 +248,15 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var rewrittenBody io.Reader
 	if rw != nil {
 		rw.responseHeader(resp.Header)
-		if rules := rw.bodyRules(true); len(rules) > 0 && r.Method != http.MethodHead && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotModified {
+		if rules := rw.bodyRules(true); len(rules) == 0 || r.Method == http.MethodHead || resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusNotModified {
+		} else if resp.ContentLength < 0 && len(resp.Trailer) > 0 {
+			// A body with trailers to follow is a stream (gRPC and the like).
+			rw.skipAll(rules, "response", mitmSkipStreaming)
+		} else if !mitmSettled(uploaded) {
+			// The client is still sending: a bidi stream may wait for the
+			// answer before it sends more, so the answer is not held back.
+			rw.skipAll(rules, "response", mitmSkipUploading)
+		} else {
 			res := rw.rewriteBody(rules, resp.Header, resp.Body, resp.ContentLength, true)
 			rewrittenBody = res.body
 			if res.changed {
@@ -338,4 +352,41 @@ func mitmAnswerHTTP2(w http.ResponseWriter, r *http.Request, local *mitmLocalRes
 		mitmCaptures.write(entry, true, local.body)
 	}
 	mitmCaptures.finish(entry, "")
+}
+
+// Passes a request body on and closes done once all of it has been read:
+// the declared length (left, -1 when unknown) or EOF.
+type mitmUploadTracker struct {
+	r    io.Reader
+	left int64
+	done chan struct{}
+	once sync.Once
+}
+
+func (t *mitmUploadTracker) Read(p []byte) (int, error) {
+	n, err := t.r.Read(p)
+	if t.left > 0 {
+		t.left -= int64(n)
+	}
+	if err != nil || t.left == 0 {
+		t.once.Do(func() { close(t.done) })
+	}
+	return n, err
+}
+
+// Whether done is closed, or closes within mitmUploadSettleWait.
+func mitmSettled(done <-chan struct{}) bool {
+	select {
+	case <-done:
+		return true
+	default:
+	}
+	timer := time.NewTimer(mitmUploadSettleWait)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return true
+	case <-timer.C:
+		return false
+	}
 }

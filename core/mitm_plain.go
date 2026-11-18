@@ -103,6 +103,6 @@ func serveMitmPlain(client net.Conn, remote net.Conn, host string) {
 		runtime := mitmState.Load()
 		return runtime != nil && runtime.setup.Enable
 	}
-	control := &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection, plain: true}
+	control := &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection, port: mitmPlainHTTPPort, plain: true}
 	_ = mitmHTTP1Duplex(clientIdle, remoteIdle, host, allowed, control)
 }

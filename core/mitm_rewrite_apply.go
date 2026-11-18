@@ -23,9 +23,11 @@ import (
 // host, which is the case for nearly every request: the check is one atomic
 // load and a few map lookups, and allocates nothing.
 type mitmRewriteExchange struct {
-	engine      *mitmRewriteEngine
-	scheme      string
-	host        string
+	engine *mitmRewriteEngine
+	scheme string
+	host   string
+	// host, with the connection's port when it is not the scheme's default.
+	authority   string
 	url         string
 	originalURL string
 	plain       bool
@@ -33,8 +35,9 @@ type mitmRewriteExchange struct {
 }
 
 // For a decrypted request (plain false) or a plain-HTTP one, given its host
-// as the connection knows it and its request-target.
-func mitmRewriteBegin(scheme, host, requestURI string, plain bool) *mitmRewriteExchange {
+// and port as the connection knows them (port 0: the scheme's default) and
+// its request-target.
+func mitmRewriteBegin(scheme, host string, port uint16, requestURI string, plain bool) *mitmRewriteExchange {
 	engine := mitmRewrite.Load()
 	if engine.empty() || requestURI == "" || requestURI[0] != '/' {
 		return nil
@@ -48,8 +51,15 @@ func mitmRewriteBegin(scheme, host, requestURI string, plain bool) *mitmRewriteE
 		!engine.responseBody.mayMatch(host) && !engine.mapLocal.mayMatch(host) {
 		return nil
 	}
-	u := scheme + "://" + host + requestURI
-	return &mitmRewriteExchange{engine: engine, scheme: scheme, host: host, url: u, originalURL: u, plain: plain}
+	authority := host
+	if strings.Contains(host, ":") {
+		authority = "[" + host + "]"
+	}
+	if port != 0 && strconv.Itoa(int(port)) != mitmDefaultPort(scheme) {
+		authority = net.JoinHostPort(host, strconv.Itoa(int(port)))
+	}
+	u := scheme + "://" + authority + requestURI
+	return &mitmRewriteExchange{engine: engine, scheme: scheme, host: host, authority: authority, url: u, originalURL: u, plain: plain}
 }
 
 func (x *mitmRewriteExchange) record(rule *mitmRewriteRule, phase, action, skip string) {
@@ -167,17 +177,28 @@ func (x *mitmRewriteExchange) applyURL(rule *mitmRewriteRule) mitmRequestDecisio
 		return mitmRequestDecision{local: &mitmLocalResponse{status: status, header: http.Header{"Location": {target}}}}
 	}
 	// Header mode rewrites in place, on the connection the request came
-	// on: only a target on the same host (and default port) can be served
-	// there. The scheme of the connection stays.
+	// on: only a target on the same host and port can be served there. The
+	// scheme of the connection stays.
 	host, port := parsed.Hostname(), parsed.Port()
-	if normalizeMitmHost(host) != x.host || port != "" && port != mitmDefaultPort(parsed.Scheme) {
+	if port == "" {
+		port = mitmDefaultPort(parsed.Scheme)
+	}
+	if normalizeMitmHost(host) != x.host || port != x.port() {
 		x.record(rule, "request", action, mitmSkipCrossHost)
 		return mitmRequestDecision{}
 	}
 	requestURI := parsed.RequestURI()
-	x.url = x.scheme + "://" + x.host + requestURI
+	x.url = x.scheme + "://" + x.authority + requestURI
 	x.record(rule, "request", action, "")
 	return mitmRequestDecision{requestURI: requestURI}
+}
+
+// The connection's port.
+func (x *mitmRewriteExchange) port() string {
+	if _, port, err := net.SplitHostPort(x.authority); err == nil {
+		return port
+	}
+	return mitmDefaultPort(x.scheme)
 }
 
 func mitmDefaultPort(scheme string) string {
