@@ -389,7 +389,8 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 - (void)handle:(xpc_object_t)request connection:(xpc_connection_t)connection gui:(FCGUIMessageValidator *)gui {
     [self armIdle];
     if (![gui check:request]) {
-        os_log_error(FCHelperLog(), "request from pid %d rejected: GUI verification failed", xpc_connection_get_pid(connection));
+        os_log_error(FCHelperLog(), "request from pid %d rejected: GUI verification failed: %{public}s",
+            xpc_connection_get_pid(connection), gui.failure.UTF8String ?: "unknown step");
         xpc_connection_cancel(connection);
         if (self.owner == connection) [self stop];
         return;

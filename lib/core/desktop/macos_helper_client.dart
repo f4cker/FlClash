@@ -65,6 +65,11 @@ enum MacHelperState {
   /// or could not be prepared or started (or the status is unreadable).
   launcherFailed,
 
+  /// The helper answered, but its reply failed the app's own verification
+  /// (the failed step is in the details). Waiting or re-registering cannot
+  /// change that, so nothing is retried or re-registered for it.
+  untrustedReply,
+
   unsupported,
   disabled,
   exitUnconfirmed,
@@ -99,6 +104,7 @@ enum MacHelperState {
     'launcherCheckFailed' => launcherCheckFailed,
     'launcherDowngrade' => launcherDowngrade,
     'launcherFailed' => launcherFailed,
+    'untrustedReply' => untrustedReply,
     // The bridge reports `unavailable` when an approved daemon does not answer
     // yet, and `timeout` when it did not answer in time: both are a wait (and
     // "taking longer" after the bounded start-up wait), never a Core claim.

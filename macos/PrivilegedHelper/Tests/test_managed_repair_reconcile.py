@@ -383,7 +383,31 @@ class RecoverySequenceTests(unittest.TestCase):
     f = New(@[Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
     f.hellos = [@[@{@"code": @"exitUnconfirmed"}] mutableCopy];
     assert([[f recoverySequence][@"code"] isEqual:@"exitUnconfirmed"]);
+    // mitm.4 on the field Mac: the helper answered but the app could not verify the reply. One hello, then stop
+    // with the reason; no 15 s hello loop (that was ~15 replies the helper answered for nothing).
+    f = New(@[Job(@"missing"), Job(@"running")], @[NSNull.null], @[@"enabled"]);
+    f.hellos = [@[@{@"code": @"untrustedReply", @"detail": @"helper reply rejected by the app's verification: x"}] mutableCopy];
+    NSDictionary *untrusted = [f recoverySequence];
+    NSUInteger hellos = 0; for (NSString *c in f.calls) hellos += [c isEqual:@"hello"];
+    assert([untrusted[@"code"] isEqual:@"untrustedReply"] && hellos == 1);
+    assert([untrusted[@"detail"] containsString:@"hello: untrustedReply — helper reply rejected"]);
 ''')
+
+    def test_untrusted_reply_is_its_own_code_and_never_re_registers(self):
+        request = BRIDGE.split('- (void)request:(NSString *)method', 1)[1].split('\n}\n', 1)[0]
+        self.assertIn('untrusted = !transient;', request)
+        self.assertLess(request.index('[validator check:reply]'), request.index('untrusted = !transient;'))
+        # A kernel read that failed (the helper exited right after replying) is "not answering", asked again; only
+        # what the kernel answered and the app refused is untrustedReply.
+        self.assertLess(request.index('[validator check:reply]'), request.index('transient = validator.transientFailure;'))
+        self.assertLess(request.index('transient = validator.transientFailure;'), request.index('untrusted = !transient;'))
+        self.assertIn('stale ? @"staleHelper" : untrusted ? @"untrustedReply" : @"unavailable"', request)
+        # The card code passes through status unchanged, and status only maps "unavailable"/"timeout" to the
+        # launcher's report; nothing in status re-registers.
+        self.assertIn('@"timeout", @"untrustedReply"])', BRIDGE)
+        status = BRIDGE.split('- (void)status:(void (^)(NSDictionary *))completion {', 1)[1].split('\n}\n', 1)[0]
+        for call in ('recoverySequence', 'registerDaemon', 'unregisterDaemon'):
+            self.assertNotIn(call, status)
 
 
 class RetiredNameTests(unittest.TestCase):

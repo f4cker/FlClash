@@ -118,6 +118,20 @@ int FixtureProcPath(int pid, void *buffer, uint32_t size) {
     return (int)strlen(path);
 }
 void FixtureAuditToken(xpc_object_t message, audit_token_t *token) { *token = messageToken; }
+// The app bundle on disk as stat(2) sees it: `bundleGeneration` stands for its inode/mtime, `bundleStatFails` for
+// an entry that cannot be read.
+static int64_t bundleGeneration;
+static BOOL bundleStatFails;
+static NSUInteger bundleStats;
+int FixtureBundleStat(const char *path, struct stat *state) {
+    bundleStats++;
+    assert([@(path) hasPrefix:FCGUIBundle]);
+    if (bundleStatFails) { errno = ENOENT; return -1; }
+    memset(state, 0, sizeof(*state));
+    state->st_ino = 1000 + bundleGeneration;
+    state->st_mtimespec.tv_sec = 1700000000 + bundleGeneration;
+    return 0;
+}
 
 static BOOL FixtureLibrary(NSString *bundle, NSData *hash) { return libraryValid; }
 static NSDictionary *FixtureCompatibility(NSString *bundle) {
@@ -138,6 +152,7 @@ static NSDictionary *FixtureCompatibility(NSString *bundle) {
 #define FCCodeOps FixtureCodeOps
 #define FCProcPath FixtureProcPath
 #define FCMessageAuditToken FixtureAuditToken
+#define FCBundleStat FixtureBundleStat
 #import <sys/stat.h>
 static int FixtureLstat(const char *path, struct stat *state);
 #define lstat FixtureLstat
@@ -185,6 +200,14 @@ static void Reset(void) {
     memset(&messageToken, 0, sizeof(messageToken));
     messageToken.val[5] = 4242;
     messageToken.val[7] = 9;
+    bundleGeneration = 0;
+    bundleStatFails = NO;
+}
+
+// The app as the kernel reports it (the GUI's cdhash) for the GUI validator.
+static void ResetGUI(void) {
+    Reset();
+    memcpy(kernelHash, ApprovedHash().bytes, sizeof(kernelHash));
 }
 
 // The daemon's mandatory startup/per-operation verification: every failure is a refusal (exit FC_HELPER_REFUSED_EXIT = 79 in main).
@@ -256,34 +279,37 @@ static void TestCopyValidator(void) {
     Reset(); messageValid = runningValid = NO;
     NSUInteger messages = messageChecks;
     FCMessageValidator *daemon = CopyValidator();
-    assert([daemon check:fixtureMessage] && !daemon.failure);
+    assert([daemon check:fixtureMessage] && !daemon.failure && !daemon.transientFailure);
     assert(messageChecks == messages);
     // Pinned for the connection after the first match; nothing in the copy is resolved (no realpath).
     canonicalValid = NO;
     assert([daemon check:fixtureMessage]);
     kernelHash[0] ^= 1;
     assert(![daemon check:fixtureMessage] && [daemon.failure containsString:@"cdhash"] && !daemon.runningCodeStale);
+    // Refusals of what the kernel answered are never transient (a wrong cdhash, status or path).
+    assert(!daemon.transientFailure);
     // A running cdhash other than the bundled helper's: a previous build (stale), never trusted.
     Reset(); kernelHash[19] ^= 1;
     FCMessageValidator *stale = CopyValidator();
     assert(![stale check:fixtureMessage] && stale.runningCodeStale && [stale.failure hasPrefix:@"failed:cdhash running="]);
+    assert(!stale.transientFailure);
     // The bundled helper must itself pass the pinned static requirement.
     Reset(); helperDiskValid = NO;
     FCMessageValidator *unsealed = CopyValidator();
     assert(![unsealed check:fixtureMessage] && !unsealed.runningCodeStale);
-    assert([unsealed.failure isEqualToString:@"failed:bundled helper signature"]);
+    assert([unsealed.failure isEqualToString:@"failed:bundled helper signature"] && !unsealed.transientFailure);
     Reset(); helperDiskInfo[(__bridge NSString *)kSecCodeInfoEntitlementsDict] = @{@"com.apple.security.get-task-allow": @YES};
     assert(![CopyValidator() check:fixtureMessage]);
     // Kernel status: valid, hard, kill and hardened runtime required; ad hoc, get-task-allow, debugged refused.
     for (NSNumber *missing in @[@0x1, @0x100, @0x200, @0x10000]) {
         Reset(); kernelStatus = KernelHardened & ~missing.unsignedIntValue;
         FCMessageValidator *validator = CopyValidator();
-        assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"failed:status 0x"]);
+        assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"failed:status 0x"] && !validator.transientFailure);
     }
     for (NSNumber *extra in @[@0x2, @0x4, @0x10000000]) {
         Reset(); kernelStatus = KernelHardened | extra.unsignedIntValue;
         FCMessageValidator *validator = CopyValidator();
-        assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"failed:status 0x"]);
+        assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"failed:status 0x"] && !validator.transientFailure);
     }
     // Exactly the launcher's copy; the path itself never goes into the failure text.
     for (NSString *other in @[FCInstalledExecutable(FCHelperIdentifier), @"/tmp/FlashHelper",
@@ -291,27 +317,33 @@ static void TestCopyValidator(void) {
             [FCHelperCopyPath lowercaseString], [FCHelperCopyPath stringByAppendingString:@"/"]]) {
         Reset(); kernelPath = other;
         FCMessageValidator *validator = CopyValidator();
-        assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"failed:path"]);
+        assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"failed:path"] && !validator.transientFailure);
     }
     // pid reuse: a token of an earlier lifetime of the pid, or the pid handed over while its path is read.
     Reset(); messageToken.val[7] = 8;
     FCMessageValidator *reused = CopyValidator();
+    // Reads the kernel could not answer (the daemon is gone, ESRCH): refused, but transient ("not answering").
     assert(![reused check:fixtureMessage] && [reused.failure isEqualToString:@"failed:status-read errno=3"]);
+    assert(reused.transientFailure && !reused.runningCodeStale);
     Reset(); reuseDuringPath = YES;
     reused = CopyValidator();
-    assert(![reused check:fixtureMessage] && [reused.failure isEqualToString:@"failed:pid-reused errno=3"]);
+    assert(![reused check:fixtureMessage] && [reused.failure isEqualToString:@"failed:pid-reused errno=3"] && reused.transientFailure);
     // Kernel reads that fail are named with their errno.
     Reset(); kernelFailOp = 5;
     FCMessageValidator *unread = CopyValidator();
-    assert(![unread check:fixtureMessage] && [unread.failure isEqualToString:@"failed:cdhash-read errno=1"]);
+    assert(![unread check:fixtureMessage] && [unread.failure isEqualToString:@"failed:cdhash-read errno=1"] && unread.transientFailure);
     Reset(); pathFails = YES;
     unread = CopyValidator();
-    assert(![unread check:fixtureMessage] && [unread.failure isEqualToString:@"failed:path-read errno=3"]);
+    assert(![unread check:fixtureMessage] && [unread.failure isEqualToString:@"failed:path-read errno=3"] && unread.transientFailure);
+    // The next check of the same validator starts clean.
+    pathFails = NO;
+    assert([unread check:fixtureMessage] && !unread.transientFailure && !unread.failure);
     // A reply without a sender token reaches no kernel call.
     Reset(); memset(&messageToken, 0, sizeof(messageToken));
     kernelCalls = 0;
     FCMessageValidator *anonymous = CopyValidator();
     assert(![anonymous check:fixtureMessage] && [anonymous.failure isEqualToString:@"failed:token"] && kernelCalls == 0);
+    assert(!anonymous.transientFailure);
     // The in-bundle path (executable == sealed executable) keeps the Security validation, now with the failed step.
     Reset(); runningValid = NO;
     FCMessageValidator *bundled = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier
@@ -378,61 +410,126 @@ static void TestEntitlements(void) {
 }
 
 static void TestMessages(void) {
+    // Full validation on the first message: running app, then the whole bundle (one nested seal check).
+    ResetGUI();
     FCGUIMessageValidator *validator = [FCGUIMessageValidator new];
-    Reset();
+    NSUInteger seals = sealChecks, messages = messageChecks;
+    assert([validator check:fixtureMessage] && !validator.failure);
+    assert(sealChecks == seals + 1 && messageChecks == messages + 1);
+    // Later messages of the same connection: no Security call, only the kernel for the same process lifetime.
+    for (int i = 0; i < 100; i++) assert([validator check:fixtureMessage]);
+    assert(sealChecks == seals + 1 && messageChecks == messages + 1);
+    // The bundle changed on disk (update moved in, or a file was rewritten): validated in full again.
+    bundleGeneration = 1;
+    assert([validator check:fixtureMessage] && sealChecks == seals + 2 && messageChecks == messages + 2);
+    assert([validator check:fixtureMessage] && sealChecks == seals + 2);
+    // ... and a changed bundle that no longer validates is refused, and stays refused.
+    bundleGeneration = 2; diskValid = NO;
+    assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"bundle seal"]);
+    diskValid = YES; runningValid = NO;
+    assert(![validator check:fixtureMessage]);
+    // Bundle entries that cannot be read: no fast path.
+    ResetGUI();
+    validator = [FCGUIMessageValidator new];
     assert([validator check:fixtureMessage]);
-    NSUInteger seals = sealChecks;
+    bundleStatFails = YES;
+    assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"bundle-stat"]);
+    // Per message: the cached cdhash, the same pid and pid version, and the kernel's status flags.
+    ResetGUI();
+    validator = [FCGUIMessageValidator new];
     assert([validator check:fixtureMessage]);
-    assert(sealChecks == seals + 1);
-    diskValid = NO;
-    assert(![validator check:fixtureMessage]);
-    Reset(); libraryValid = NO;
-    assert(![validator check:fixtureMessage]);
-    Reset(); compatibilityValid = NO;
-    assert(![validator check:fixtureMessage]);
-    Reset();
+    kernelHash[3] ^= 1;
+    assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"cdhash"]);
+    // A failure forgets the connection's verification: the next message needs the full validation again.
+    kernelHash[3] ^= 1; seals = sealChecks;
+    assert([validator check:fixtureMessage] && sealChecks == seals + 1);
+    messageToken.val[7] = 10; kernelVersion = 10;
+    assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"sender changed"]);
+    ResetGUI();
+    validator = [FCGUIMessageValidator new];
+    assert([validator check:fixtureMessage]);
+    messageToken.val[5] = 4243;
+    assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"sender changed"]);
+    ResetGUI();
+    validator = [FCGUIMessageValidator new];
+    assert([validator check:fixtureMessage]);
+    kernelVersion = 10; // The token's process lifetime ended.
+    assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"status-read errno=3"]);
+    for (NSNumber *missing in @[@0x1, @0x100, @0x200, @0x10000]) {
+        ResetGUI();
+        validator = [FCGUIMessageValidator new];
+        assert([validator check:fixtureMessage]);
+        kernelStatus = KernelHardened & ~missing.unsignedIntValue;
+        assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"status 0x"]);
+    }
+    for (NSNumber *extra in @[@0x2, @0x4, @0x10000000]) {
+        ResetGUI();
+        validator = [FCGUIMessageValidator new];
+        assert([validator check:fixtureMessage]);
+        kernelStatus = KernelHardened | extra.unsignedIntValue;
+        assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"status 0x"]);
+        // The full validation asks the kernel too.
+        assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
+    }
+    // The full validation: the kernel's cdhash for the message's token must be the one Security validated.
+    ResetGUI(); kernelHash[0] ^= 1;
+    validator = [FCGUIMessageValidator new];
+    assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"cdhash"]);
+    ResetGUI(); memset(&messageToken, 0, sizeof(messageToken));
+    validator = [FCGUIMessageValidator new];
+    assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"token"]);
+    ResetGUI(); diskValid = NO;
+    assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
+    ResetGUI(); libraryValid = NO;
+    assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
+    ResetGUI(); compatibilityValid = NO;
+    assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
+    ResetGUI();
     runningInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
     diskInfo[(__bridge NSString *)kSecCodeInfoUnique] = runningInfo[(__bridge NSString *)kSecCodeInfoUnique];
-    assert([validator check:fixtureMessage]);
+    memset(kernelHash, 0, sizeof(kernelHash));
+    assert([[FCGUIMessageValidator new] check:fixtureMessage]);
     for (id malformed in @[[NSData data], [NSMutableData dataWithLength:19], [NSMutableData dataWithLength:21], @"hash"]) {
-        Reset();
+        ResetGUI();
         runningInfo[(__bridge NSString *)kSecCodeInfoUnique] = malformed;
         diskInfo[(__bridge NSString *)kSecCodeInfoUnique] = malformed;
-        assert(![validator check:fixtureMessage]);
+        assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
     }
-    Reset();
+    ResetGUI();
     [runningInfo removeObjectForKey:(__bridge NSString *)kSecCodeInfoUnique];
     [diskInfo removeObjectForKey:(__bridge NSString *)kSecCodeInfoUnique];
-    assert(![validator check:fixtureMessage]);
-    Reset(); runningValid = NO;
-    assert(![validator check:fixtureMessage]);
-    Reset(); messageValid = NO;
-    assert(![validator check:fixtureMessage]);
-    Reset(); canonicalValid = NO;
-    assert(![validator check:fixtureMessage]);
+    assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
+    ResetGUI(); runningValid = NO;
+    validator = [FCGUIMessageValidator new];
+    assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"SecCodeCheckValidity OSStatus"]);
+    ResetGUI(); messageValid = NO;
+    assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
+    ResetGUI(); canonicalValid = NO;
+    assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
     for (NSNumber *disk in @[@NO, @YES]) {
-        Reset();
+        ResetGUI();
         NSMutableDictionary *info = disk.boolValue ? diskInfo : runningInfo;
         info[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
-        assert(![validator check:fixtureMessage]);
+        assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
     }
     for (NSNumber *disk in @[@NO, @YES]) {
         for (NSString *path in @[@"/tmp/Flash.app/Contents/MacOS/Flash",
             @"/Applications/Flash Copy.app/Contents/MacOS/Flash",
             @"/Library/Application Support/Flash/Flash.app/Contents/MacOS/Flash"]) {
-            Reset();
+            ResetGUI();
             NSMutableDictionary *info = disk.boolValue ? diskInfo : runningInfo;
             info[(__bridge NSString *)kSecCodeInfoMainExecutable] = [NSURL fileURLWithPath:path];
-            assert(![validator check:fixtureMessage]);
+            assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
         }
-        Reset();
+        ResetGUI();
         NSMutableDictionary *info = disk.boolValue ? diskInfo : runningInfo;
         info[(__bridge NSString *)kSecCodeInfoEntitlementsDict] = @{};
-        assert(![validator check:fixtureMessage]);
+        assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
     }
     FCMessageValidator *legacy = [[FCMessageValidator alloc] initWithIdentifier:FCClientIdentifier
         executable:FCInstalledExecutable(FCClientIdentifier)];
     assert(![legacy check:fixtureMessage]);
+    Reset();
 }
 
 int main(void) {

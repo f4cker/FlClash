@@ -37,7 +37,7 @@ static int64_t FCRequestTimeoutSeconds(NSString *method) {
 // `exitUnconfirmed`: only the daemon itself can say that a Core's exit is unconfirmed.
 static NSString *FCStatusForHello(NSString *reply) {
     if ([reply isEqual:@"ok"]) return @"enabled";
-    for (NSString *code in @[@"exitUnconfirmed", @"incompatible", @"staleHelper", @"timeout"])
+    for (NSString *code in @[@"exitUnconfirmed", @"incompatible", @"staleHelper", @"timeout", @"untrustedReply"])
         if ([reply isEqual:code]) return code;
     return @"unavailable";
 }
@@ -436,14 +436,23 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         if (finished) return;
         BOOL dictionary = xpc_get_type(reply) == XPC_TYPE_DICTIONARY;
         NSString *refusal = nil;
+        // The helper answered, but its reply failed the app's verification: `untrustedReply`, never `unavailable`
+        // (that reads as "not answering" and leads to the launcher's report and a re-registration, which cannot
+        // change what the app verifies). Nothing in the reply is read.
+        BOOL untrusted = NO;
+        // The kernel could not be asked about the sender (it exited right after replying, ESRCH): refused all the
+        // same, but reported as not answering (`unavailable`, asked again), never as a failed verification.
+        BOOL transient = NO;
         if (!dictionary) {
             const char *description = reply == XPC_ERROR_CONNECTION_INVALID ? "connection invalid" :
                 reply == XPC_ERROR_CONNECTION_INTERRUPTED ? "connection interrupted" :
                 xpc_get_type(reply) == XPC_TYPE_ERROR ? xpc_dictionary_get_string(reply, XPC_ERROR_KEY_DESCRIPTION) : NULL;
             refusal = [NSString stringWithFormat:@"helper reply: XPC error (%s)", description ?: "unknown"];
         } else if (![validator check:reply]) {
-            refusal = [NSString stringWithFormat:@"helper reply rejected by the app's verification: %@",
-                validator.failure ?: @"unknown step"];
+            transient = validator.transientFailure;
+            refusal = [NSString stringWithFormat:@"%@: %@", transient ? @"helper reply not verifiable (helper gone?)" :
+                @"helper reply rejected by the app's verification", validator.failure ?: @"unknown step"];
+            untrusted = !transient;
         } else if (xpc_dictionary_get_int64(reply, "protocol") != 1) {
             refusal = @"helper reply rejected: protocol is not 1";
         }
@@ -453,7 +462,8 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             os_log_error(FCBridgeLog(), "%{public}s %{public}s", method.UTF8String, refusal.UTF8String);
             xpc_connection_cancel(connection);
             if (self.connection == connection) [self resetConnection];
-            finish(@{@"code": stale ? @"staleHelper" : @"unavailable", @"detail": refusal}); return;
+            finish(@{@"code": stale ? @"staleHelper" : untrusted ? @"untrustedReply" : @"unavailable",
+                @"detail": refusal}); return;
         }
         const char *code = xpc_dictionary_get_string(reply, "code");
         const char *hash = xpc_dictionary_get_string(reply, "coreHash");
@@ -782,7 +792,8 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         }
         [log addObject:[NSString stringWithFormat:@"hello: %@%@", code ?: @"?",
             [hello[@"detail"] isKindOfClass:NSString.class] ? [@" — " stringByAppendingString:hello[@"detail"]] : @""]];
-        if ([@[@"exitUnconfirmed", @"incompatible", @"signingRequired"] containsObject:code ?: @""])
+        // A reply the app cannot verify does not change with more waiting or another registration: stop here.
+        if ([@[@"exitUnconfirmed", @"incompatible", @"signingRequired", @"untrustedReply"] containsObject:code ?: @""])
             return done(code, nil);
         [self pause:1];
     }

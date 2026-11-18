@@ -460,6 +460,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
       MacHelperState.launcherCheckFailed ||
       MacHelperState.launcherDowngrade ||
       MacHelperState.launcherFailed ||
+      // Re-read only (one hello); never a recovery.
+      MacHelperState.untrustedReply ||
       MacHelperState.unavailable => true,
       MacHelperState.starting => _startSlow,
       _ => false,

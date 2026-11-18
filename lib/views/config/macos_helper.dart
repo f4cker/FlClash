@@ -107,7 +107,10 @@ MacHelperCardKind macHelperCardKind(MacHelperState state, bool startSlow) =>
       MacHelperState.registrationStale ||
       MacHelperState.notReady ||
       MacHelperState.staleCore => MacHelperCardKind.notReady,
-      MacHelperState.signatureFailed => MacHelperCardKind.signatureFailed,
+      // A reply that fails the app's verification is a failed security
+      // check, never "the helper couldn't start": it is running.
+      MacHelperState.signatureFailed ||
+      MacHelperState.untrustedReply => MacHelperCardKind.signatureFailed,
       MacHelperState.updateFailed => MacHelperCardKind.updateFailed,
       MacHelperState.reinstallRequired => MacHelperCardKind.reinstall,
       MacHelperState.moveRequired => MacHelperCardKind.move,

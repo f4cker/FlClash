@@ -688,6 +688,57 @@ void main() {
     });
   });
 
+  test('a reply that fails the app\'s verification is its own state: '
+      'a failed check, details only, never a recovery', () async {
+    const detail =
+        'helper reply rejected by the app\'s verification: '
+        'failed:status-read errno=1';
+    expect(
+      MacHelperState.parse('untrustedReply'),
+      MacHelperState.untrustedReply,
+    );
+    for (final slow in [false, true]) {
+      expect(
+        macHelperCardKind(MacHelperState.untrustedReply, slow),
+        MacHelperCardKind.signatureFailed,
+      );
+    }
+    final native = _Native()
+      ..state = 'untrustedReply'
+      ..statusExtra = {'detail': detail};
+    var recoveries = 0;
+    final flow = MacHelperMaintenance(
+      MacHelperClient(native: native, safeMode: () => false),
+      stop: () async => const CoreLifecycleResult(
+        revision: 1,
+        outcome: CoreLifecycleOutcome.applied,
+      ),
+      recover: () async {
+        recoveries++;
+        return MacHelperState.enabled;
+      },
+    );
+    expect(await flow.check(), MacHelperState.untrustedReply);
+    final zh = lookupAppLocalizations(const Locale('zh'));
+    final view = macHelperCardView(zh, flow);
+    expect(view.kind, MacHelperCardKind.signatureFailed);
+    expect(view.title, isNot('辅助程序未能启动'));
+    expect(view.isProblem, isTrue);
+    expect(view.primary, isNull);
+    expect(view.secondary, MacHelperCardAction.viewDetails);
+    expect(view.rawDetail, contains(detail));
+    expect(macHelperBarView(zh, flow)!.kind, MacHelperBarKind.failedCheck);
+    // Even the explicit "try again" path and a return to the foreground only
+    // read the status again: nothing is unregistered or registered.
+    expect(await flow.retryRecovery(), MacHelperState.untrustedReply);
+    flow.resumed();
+    await Future<void>.delayed(Duration.zero);
+    await flow.check();
+    expect(recoveries, 0);
+    expect(native.calls.where((call) => call != 'status'), isEmpty);
+    flow.dispose();
+  });
+
   test('card kinds and actions follow the helper state', () {
     expect(
       macHelperCardKind(MacHelperState.signatureFailed, false),

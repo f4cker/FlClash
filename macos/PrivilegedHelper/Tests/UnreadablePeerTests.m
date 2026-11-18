@@ -5,7 +5,14 @@
 //      SecCodeCopySigningInformation) and SecCodeCopyGuestWithAttributes by audit token or pid: expected to fail.
 //   2. What the kernel answers anyway: csops_audittoken / csops (CS_OPS_STATUS, CS_OPS_CDHASH), proc_pidpath.
 //   3. FCHelperGuestCheck (the fix) over that reply's audit token: verified, with the peer's static cdhash.
-// Usage: unreadable-peer <directory> <peer path in it> <XPC peer requirement>. Prints one JSON object; exit 0 when
+//   4. FCMessageValidator itself, the class the app uses, on real replies: as mitm.4 configured it for a peer it
+//      cannot read (executable == sealed executable: Security path) it fails, naming SecCodeCheckValidity; as the
+//      app now configures it (running copy unreadable, sealed copy readable: kernel path) it accepts, twice; a
+//      sealed copy with other bytes makes the same reply "stale". The pinned certificate cannot be had here, so the
+//      requirement is the peer's identifier and ad hoc is allowed (FCPinnedRequirement and
+//      FCPinnedCodePolicy, set when compiling); every Security, kernel and file access is real.
+// Usage: unreadable-peer <directory> <peer path in it> <XPC peer requirement> <readable copy of the peer>
+//        <readable, differently built peer>. Prints one JSON object; exit 0 when
 // every expectation held, 3 when the Security calls did not fail (the root cause is not reproduced), 1 otherwise.
 #import "../../Shared/HelperTrust.h"
 #import <libproc.h>
@@ -19,6 +26,14 @@ mach_port_t xpc_endpoint_copy_listener_port_4sim(xpc_endpoint_t endpoint);
 void xpc_dictionary_get_audit_token(xpc_object_t message, audit_token_t *token);
 int csops_audittoken(pid_t pid, unsigned int ops, void *address, size_t size, audit_token_t *token);
 int csops(pid_t pid, unsigned int ops, void *address, size_t size);
+
+// Stands in for the pinned certificate requirement: the identifier only (the XPC peer requirement adds the cdhash).
+NSString *TestPinnedRequirement(NSString *identifier) {
+    return [identifier isEqualToString:@"com.layoute.flash.test.peer"] ? @"identifier \"com.layoute.flash.test.peer\"" : nil;
+}
+BOOL TestPinnedCodePolicy(NSDictionary *entitlements, uint32_t flags) {
+    return (flags & kSecCodeSignatureRuntime) && !entitlements[@"com.apple.security.get-task-allow"];
+}
 
 static NSMutableDictionary *results;
 static NSMutableArray<NSString *> *problems;
@@ -39,8 +54,9 @@ static NSData *StaticHash(NSString *path) {
 
 int main(int argc, char **argv) {
     @autoreleasepool {
-        if (argc != 4) return 64;
+        if (argc != 6) return 64;
         NSString *directory = @(argv[1]), *peer = @(argv[2]), *text = @(argv[3]);
+        NSString *sealed = @(argv[4]), *otherBuild = @(argv[5]);
         results = [NSMutableDictionary dictionary];
         problems = [NSMutableArray array];
         NSData *staticHash = StaticHash(peer);
@@ -152,12 +168,51 @@ int main(int argc, char **argv) {
             NSString *otherLifetime = FCHelperGuestCheck(&other, peer, &running);
             results[@"fixOtherPidVersion"] = otherLifetime;
             Expect([otherLifetime hasPrefix:@"failed:status-read"], @"token of another lifetime refused");
+
+            // 4. The app's validator on real replies.
+            FCMessageValidator *mitm4 = [[FCMessageValidator alloc] initWithIdentifier:@"com.layoute.flash.test.peer"
+                executable:peer];
+            BOOL mitm4Accepted = [mitm4 check:reply];
+            results[@"validatorAsMitm4"] = mitm4Accepted ? @"accepted" : mitm4.failure ?: @"?";
+            Expect(!mitm4Accepted && [mitm4.failure hasPrefix:@"SecCodeCheckValidity OSStatus"],
+                @"mitm.4's validator configuration did not fail at SecCodeCheckValidity");
+            FCMessageValidator *fixed = [[FCMessageValidator alloc] initWithIdentifier:@"com.layoute.flash.test.peer"
+                executable:peer sealedExecutable:sealed];
+            BOOL first = [fixed check:reply];
+            results[@"validatorFixed"] = first ? @"accepted" : fixed.failure ?: @"?";
+            xpc_object_t again = xpc_connection_send_message_with_reply_sync(connection, request);
+            BOOL second = xpc_get_type(again) == XPC_TYPE_DICTIONARY && [fixed check:again];
+            results[@"validatorFixedSecondReply"] = second ? @"accepted" : fixed.failure ?: @"?";
+            Expect(first && second && !fixed.runningCodeStale, @"FCMessageValidator (copy path) on real replies");
+            FCMessageValidator *stale = [[FCMessageValidator alloc] initWithIdentifier:@"com.layoute.flash.test.peer"
+                executable:peer sealedExecutable:otherBuild];
+            BOOL staleAccepted = [stale check:reply];
+            results[@"validatorOtherBuild"] = staleAccepted ? @"accepted" : stale.failure ?: @"?";
+            Expect(!staleAccepted && stale.runningCodeStale && !stale.transientFailure &&
+                [stale.failure hasPrefix:@"failed:cdhash running="],
+                @"a different sealed build was not reported stale");
+            FCMessageValidator *elsewhere = [[FCMessageValidator alloc] initWithIdentifier:@"com.layoute.flash.test.peer"
+                executable:[directory stringByAppendingPathComponent:@"Other"] sealedExecutable:sealed];
+            BOOL elsewhereAccepted = [elsewhere check:reply];
+            results[@"validatorWrongPath"] = elsewhereAccepted ? @"accepted" : elsewhere.failure ?: @"?";
+            Expect(!elsewhereAccepted && [elsewhere.failure isEqualToString:@"failed:path"] && !elsewhere.transientFailure,
+                @"wrong copy path accepted, or its refusal called transient");
+
             kill(child, SIGKILL);
             int ignored;
             waitpid(child, &ignored, 0);
             NSString *gone = FCHelperGuestCheck(&token, peer, &running);
             results[@"fixAfterExit"] = gone;
             Expect([gone hasPrefix:@"failed:status-read"], @"exited peer refused");
+            // The daemon exits right after replying: its reply is refused, as transient (the app says "not
+            // answering" and asks again), never as a failed verification.
+            FCMessageValidator *late = [[FCMessageValidator alloc] initWithIdentifier:@"com.layoute.flash.test.peer"
+                executable:peer sealedExecutable:sealed];
+            BOOL lateAccepted = [late check:reply];
+            results[@"validatorAfterExit"] = lateAccepted ? @"accepted" :
+                [NSString stringWithFormat:@"%@ transient=%d", late.failure ?: @"?", late.transientFailure];
+            Expect(!lateAccepted && late.transientFailure && !late.runningCodeStale &&
+                [late.failure hasPrefix:@"failed:status-read errno=3"], @"reply of an exited peer not transient");
             child = 0;
             exit = problems.count ? 1 : securityFailed ? 0 : 3;
             if (!securityFailed) [problems addObject:@"Security calls did not fail: root cause NOT reproduced"];

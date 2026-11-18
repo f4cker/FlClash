@@ -60,16 +60,32 @@ class SplitGUITrustTests(unittest.TestCase):
         self.assertIn('NSString *requirement = FCGUIRequirement()', SUPERVISOR)
         self.assertIn('xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)', SUPERVISOR)
 
-    def test_no_gui_seal_cache_or_root_requirement(self):
-        gui = TRUST.split('@implementation FCGUIMessageValidator', 1)[1].split('@end', 1)[0]
-        self.assertIn('@available(macOS 14.0, *)', gui)
-        self.assertIn('SecCodeCreateWithXPCMessage(message', gui)
-        self.assertIn('fileURLWithPath:FCGUIBundle', gui)
-        self.assertIn('FCCheckGUIStatic(diskCode)', gui)
-        self.assertIn('FCValidGUIHash(runningHash)', gui)
-        self.assertIn('FCValidGUIHash(diskHash)', gui)
-        self.assertIn('[diskHash isEqualToData:runningHash]', gui)
-        self.assertNotIn('sealed', gui)
+    def test_gui_full_check_once_per_connection_then_kernel_per_message(self):
+        gui = TRUST.split('@implementation FCGUIMessageValidator', 1)[1].split('\n@end\n', 1)[0]
+        check = gui.split('- (BOOL)check:(xpc_object_t)message {', 1)[1].split('\n}\n', 1)[0]
+        kernel = gui.split('- (NSString *)kernelCheck:', 1)[1].split('\n}\n', 1)[0]
+        full = gui.split('- (NSString *)fullCheck:', 1)[1].split('\n}\n', 1)[0]
+        self.assertIn('@available(macOS 14.0, *)', check)
+        # Same standard as before for the full validation: pinned requirement (strict), exact path, entitlements,
+        # the whole bundle statically incl. nested code, and running cdhash == bundle cdhash.
+        order = ['SecCodeCreateWithXPCMessage(message', 'SecCodeCheckValidity(code, kSecCSStrictValidate, requirement)',
+                 'FCExecutableMatches(info, FCInstalledExecutable(FCClientIdentifier))', 'FCValidGUIHash(runningHash)',
+                 'FCGUIEntitlementsAllowed', 'fileURLWithPath:FCGUIBundle', 'FCCheckGUIStatic(diskCode)',
+                 'FCValidGUIHash(diskHash)', '[diskHash isEqualToData:runningHash]',
+                 '[self kernelCheck:token hash:runningHash]', 'self.verifiedHash = runningHash']
+        positions = [full.index(item) for item in order]
+        self.assertEqual(positions, sorted(positions))
+        # The fast path: same pid and pid version, unchanged bundle, kernel status and cached cdhash.
+        order = ['FCGUIRequirement()', 'FCMessageAuditToken(message, &token)', 'FCGUIBundleFingerprint()',
+                 'self.verifiedHash', 'self.verifiedPid', 'self.verifiedPidVersion',
+                 '[bundle isEqualToData:self.verifiedBundle]', '[self kernelCheck:&token hash:self.verifiedHash]',
+                 '[self fullCheck:message requirement:text token:&token]']
+        positions = [check.index(item) for item in order]
+        self.assertEqual(positions, sorted(positions))
+        for item in ('FCCodeOpsStatus', 'FCCoreRequiredStatus', 'FCHelperForbiddenStatus', 'FCCodeOpsCDHash',
+                     'isEqualToData:expected'):
+            self.assertIn(item, kernel)
+        self.assertNotIn('SecCode', kernel)
         self.assertNotIn('FCProtectedTree', gui)
 
     def test_copy_replies_are_checked_by_the_kernel_only(self):
@@ -87,7 +103,8 @@ class SplitGUITrustTests(unittest.TestCase):
                  'FCProcPath(pid', 'failed:pid-reused', '[running isEqualToString:expectedPath]']
         positions = [guest.index(item) for item in steps]
         self.assertEqual(positions, sorted(positions))
-        check = TRUST.split('- (BOOL)check:(xpc_object_t)message {', 2)[2].split('\n}\n', 1)[0]
+        validator = TRUST.split('@implementation FCMessageValidator', 1)[1].split('\n@end\n', 1)[0]
+        check = validator.split('- (BOOL)check:(xpc_object_t)message {', 1)[1].split('\n}\n', 1)[0]
         self.assertLess(check.index('[self checkCopy:message]'), check.index('SecCodeCreateWithXPCMessage'))
         # The bridge keeps the XPC-level pin and reports the failed step instead of a bare "unavailable".
         self.assertIn('xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)', BRIDGE)

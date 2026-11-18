@@ -4,6 +4,7 @@ Covers: request timeouts are `timeout`, not `exitUnconfirmed`; `stop` from a lat
 user naming the session; uncertain ownership is retried on hello/start; a previous build's daemon is reported
 as `staleHelper` and retired; status must not change service registration.
 """
+import re
 import subprocess
 import tempfile
 import unittest
@@ -82,6 +83,7 @@ static void FixtureCancel(xpc_connection_t c) { [replies addObject:@"cancelled"]
 static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) { return NO; }
 
 @interface FCGUIMessageValidator : NSObject
+@property NSString *failure;
 @end
 @implementation FCGUIMessageValidator
 - (BOOL)check:(xpc_object_t)message { return YES; }
@@ -341,7 +343,7 @@ int main(void) {
         # A stale reply is recognised only after the validator rejected it; nothing else of it is read.
         rejected = request[request.index('[validator check:reply]'):request.index('const char *code')]
         self.assertIn('validator.runningCodeStale', rejected)
-        self.assertIn('@"staleHelper" : @"unavailable"', rejected)
+        self.assertIn('stale ? @"staleHelper" : untrusted ? @"untrustedReply" : @"unavailable"', rejected)
 
     def test_running_hash_verdict(self):
         source = r'''
@@ -368,9 +370,59 @@ int main(void) {
         # The flag is reset per message and set only from the first, full check (identity, path, policy passed).
         self.assertLess(check.index('self.runningCodeStale = NO;'), check.index('SecCodeCreateWithXPCMessage'))
         self.assertIn('valid = verdict == FCRunningHashCurrent;', check)
-        for condition in ('SecCodeCreateWithXPCMessage', 'SecCodeCheckValidity', 'FCSigningRequirement',
-                          'FCExecutableMatches', 'FCCodeEntitlementsAllowed', 'FCStaticCodeHash'):
+        for condition in ('SecCodeCreateWithXPCMessage', 'SecCodeCheckValidity', 'FCPinnedRequirement',
+                          'FCExecutableMatches', 'FCPinnedCodePolicy', 'FCStaticCodeHash'):
             self.assertIn(condition, check)
+        # Only a test compiles in another requirement or policy; the app and the daemon get the pinned ones.
+        self.assertIn('#ifndef FCPinnedRequirement\n#define FCPinnedRequirement FCSigningRequirement\n', trust)
+        self.assertIn('#ifndef FCPinnedCodePolicy\n#define FCPinnedCodePolicy FCCodeEntitlementsAllowed\n', trust)
+        for build in [MACOS / 'Runner.xcodeproj/project.pbxproj', *MACOS.glob('PrivilegedHelper/*.sh'),
+                      *MACOS.glob('**/*.xcconfig')]:
+            if build.exists():
+                self.assertNotIn('FCPinned', build.read_text(errors='ignore'), build)
+
+    def test_no_test_hook_reaches_a_production_build(self):
+        # Every trust-relevant call a test may replace (`#ifndef FCx` / `#define FCx real`) and what it is in
+        # production. A new hook must be added here, with its production meaning.
+        production = {
+            'FCLoadPlist': None,  # a static function in the #ifndef branch
+            'FCPinnedRequirement': 'FCSigningRequirement',
+            'FCPinnedCodePolicy': 'FCCodeEntitlementsAllowed',
+            'FCCodeOps': 'csops_audittoken',
+            'FCProcPath': 'proc_pidpath',
+            'FCPidCodeOps': 'csops',
+            'FCMessageAuditToken': 'xpc_dictionary_get_audit_token',
+            'FCBundleStat': 'stat',
+            'FCProcessToken': 'FCProcessTokenFromTask',
+            'FCSweepPause': 'FCSweepPause() usleep(50000)',
+        }
+        sources = [*MACOS.glob('Shared/*.[mh]'), *MACOS.glob('PrivilegedHelper/*.[mhc]'), *MACOS.glob('Runner/*.[mh]')]
+        hooks = set()
+        for source in sources:
+            text = source.read_text(errors='ignore')
+            for name in re.findall(r'^#ifndef (FC[A-Z][A-Za-z]+)$', text, re.M):
+                hooks.add(name)
+                real = production.get(name, '?')
+                if real:
+                    branch = text.split(f'#ifndef {name}\n', 1)[1].split('#e', 1)[0]
+                    defined = real if real.startswith(name + '(') else f'{name} {real}'
+                    self.assertIn(f'\n#define {defined}\n', '\n' + branch, (source, name))
+        self.assertEqual(hooks, set(production), 'test hooks changed: list each with its production meaning')
+        listed = subprocess.run(['git', '-C', str(MACOS.parent), 'ls-files', '-z'], capture_output=True)
+        if listed.returncode:
+            self.skipTest('not a git checkout')
+        allowed = {source.resolve() for source in sources}
+        leaks = []
+        for relative in listed.stdout.decode().split('\0'):
+            if not relative or '/Tests/' in f'/{relative}' or relative.startswith(('core/', 'plugins/')):
+                continue
+            path = MACOS.parent / relative
+            if path.resolve() in allowed or not path.is_file() or path.stat().st_size > 4 << 20:
+                continue
+            text = path.read_text(errors='ignore')
+            leaks += [f'{relative}: {name}' for name in hooks if re.search(rf'\b{name}\b', text)]
+        # Not in the Xcode project, xcconfigs, packaging and signing scripts, CI workflows, Makefile or docs.
+        self.assertEqual(leaks, [])
 
     def test_old_daemon_running_with_new_bundle_then_timeout_then_recover(self):
         source = BRIDGE_FIXTURE + method(BRIDGE, 'static NSString *FCStatusForHello') + r'''

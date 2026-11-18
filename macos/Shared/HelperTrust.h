@@ -76,9 +76,18 @@ FCRunningHashVerdict FCCompareRunningHash(NSData * _Nullable runningHash, NSData
 // After a failed check: the sender is the pinned helper at the bundled path, only its running cdhash is not
 // the bundled one (a previous build's daemon still runs). Nothing in such a message is trusted or read.
 @property (readonly) BOOL runningCodeStale;
+// After a failed check: the kernel could not be asked about the sender (its status, cdhash or path read failed,
+// typically ESRCH because the daemon exited right after replying). The message is still refused; this only says
+// that nothing was found wrong with it, so the app reports "not answering" and asks again, not a failed check.
+@property (readonly) BOOL transientFailure;
 @end
+// One per connection: the full validation (running app and the whole sealed bundle) for the first message and
+// again whenever the bundle changes on disk; in between, the same process lifetime with the same cdhash, from the
+// kernel through the message's audit token.
 @interface FCGUIMessageValidator : NSObject
 - (BOOL)check:(xpc_object_t)message;
+// After a failed check: the step that failed (diagnostics only, never trusted, no paths).
+@property (readonly, nullable) NSString *failure;
 @end
 extern const size_t FCMaxFrame;
 NSString * _Nullable FCGUIRequirement(void);

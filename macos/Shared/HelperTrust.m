@@ -201,41 +201,21 @@ NSString *FCGUIBundleTrust(NSString *bundle) {
     return @"unsupported";
 }
 
-@implementation FCGUIMessageValidator
-- (BOOL)check:(xpc_object_t)message {
-    if (@available(macOS 14.0, *)) {
-        NSString *text = FCGUIRequirement();
-        if (!text) return NO;
-        SecCodeRef code = NULL;
-        if (SecCodeCreateWithXPCMessage(message, 0, &code)) return NO;
-        SecRequirementRef requirement = NULL;
-        BOOL valid = SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement) == errSecSuccess;
-        valid = valid && SecCodeCheckValidity(code, kSecCSStrictValidate, requirement) == errSecSuccess;
-        if (requirement) CFRelease(requirement);
-        NSDictionary *info = valid ? FCSigningInformation(code) : nil;
-        NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
-        valid = valid && FCExecutableMatches(info, FCInstalledExecutable(FCClientIdentifier)) && FCValidGUIHash(runningHash) &&
-            FCGUIEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
-                [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
-        SecStaticCodeRef diskCode = NULL;
-        valid = valid && SecStaticCodeCreateWithPath((__bridge CFURLRef)[NSURL fileURLWithPath:FCGUIBundle],
-            0, &diskCode) == errSecSuccess;
-        if (valid) {
-            valid = FCCheckGUIStatic(diskCode);
-            NSDictionary *diskInfo = valid ? FCSigningInformation(diskCode) : nil;
-            NSData *diskHash = diskInfo[(__bridge NSString *)kSecCodeInfoUnique];
-            valid = valid && FCValidGUIHash(diskHash) && [diskHash isEqualToData:runningHash];
-        }
-        if (diskCode) CFRelease(diskCode);
-        CFRelease(code);
-        return valid;
-    }
-    return NO;
-}
-@end
+// The pinned requirement and code policy for the daemon and Core. A test may substitute both (for an ad hoc signed
+// peer it can build itself) to run the rest of the validation, Security and kernel included, on real processes.
+#ifndef FCPinnedRequirement
+#define FCPinnedRequirement FCSigningRequirement
+#else
+NSString *FCPinnedRequirement(NSString *identifier);
+#endif
+#ifndef FCPinnedCodePolicy
+#define FCPinnedCodePolicy FCCodeEntitlementsAllowed
+#else
+BOOL FCPinnedCodePolicy(NSDictionary *entitlements, uint32_t flags);
+#endif
 
 static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, NSData **hash) {
-    NSString *text = FCSigningRequirement(identifier);
+    NSString *text = FCPinnedRequirement(identifier);
     if (!text) return NO;
     SecRequirementRef requirement = NULL;
     if (SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement)) return NO;
@@ -244,7 +224,7 @@ static BOOL FCCheckCode(SecStaticCodeRef code, NSString *identifier, NSData **ha
     CFRelease(requirement);
     NSDictionary *info = valid ? FCSigningInformation(code) : nil;
     NSData *unique = info[(__bridge NSString *)kSecCodeInfoUnique];
-    valid = valid && FCValidGUIHash(unique) && FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
+    valid = valid && FCValidGUIHash(unique) && FCPinnedCodePolicy(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
         [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
     if (valid && hash) *hash = unique;
     return valid;
@@ -392,8 +372,16 @@ void xpc_dictionary_get_audit_token(xpc_object_t message, audit_token_t *token);
 void FCMessageAuditToken(xpc_object_t message, audit_token_t *token);
 #endif
 
+// FCHelperGuestCheck steps that failed to read from the kernel, as opposed to reads whose answer was refused.
+static BOOL FCKernelReadFailed(NSString *step) {
+    for (NSString *prefix in @[@"failed:status-read ", @"failed:cdhash-read ", @"failed:path-read ", @"failed:pid-reused "])
+        if ([step hasPrefix:prefix]) return YES;
+    return NO;
+}
+
 @interface FCMessageValidator ()
 @property BOOL runningCodeStale;
+@property BOOL transientFailure;
 @property NSString *failure;
 @property NSString *identifier;
 @property NSString *executable;
@@ -418,13 +406,14 @@ void FCMessageAuditToken(xpc_object_t message, audit_token_t *token);
 }
 - (BOOL)check:(xpc_object_t)message {
     self.runningCodeStale = NO;
+    self.transientFailure = NO;
     self.failure = nil;
     if ([self.identifier isEqualToString:FCClientIdentifier]) return [self fail:@"identifier"];
     if (![self.executable isEqualToString:self.sealedExecutable]) return [self checkCopy:message];
     SecCodeRef code = NULL;
     OSStatus status = SecCodeCreateWithXPCMessage(message, 0, &code);
     if (status) return [self fail:[NSString stringWithFormat:@"SecCodeCreateWithXPCMessage OSStatus %d", (int)status]];
-    NSString *text = FCSigningRequirement(self.identifier);
+    NSString *text = FCPinnedRequirement(self.identifier);
     SecRequirementRef requirement = NULL;
     BOOL valid = text && SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement) == errSecSuccess;
     if (!valid) self.failure = @"requirement";
@@ -438,7 +427,7 @@ void FCMessageAuditToken(xpc_object_t message, audit_token_t *token);
     NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
     if (valid && !info) self.failure = @"SecCodeCopySigningInformation";
     valid = valid && FCExecutableMatches(info, self.executable) && FCValidGUIHash(runningHash) &&
-        FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
+        FCPinnedCodePolicy(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
             [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
     if (!valid && !self.failure) self.failure = @"path, cdhash or code flags";
     if (valid && !self.sealedHash) {
@@ -462,13 +451,18 @@ void FCMessageAuditToken(xpc_object_t message, audit_token_t *token);
 // sender's audit token. The connection's peer requirement (pinned certificate and identifier) was also enforced by
 // XPC for this message.
 - (BOOL)checkCopy:(xpc_object_t)message {
-    if (!FCSigningRequirement(self.identifier)) return [self fail:@"requirement"];
+    if (!FCPinnedRequirement(self.identifier)) return [self fail:@"requirement"];
     audit_token_t token;
     memset(&token, 0, sizeof(token));
     FCMessageAuditToken(message, &token);
     NSData *runningHash = nil;
     NSString *kernel = FCHelperGuestCheck(&token, self.executable, &runningHash);
-    if (![kernel isEqualToString:@"verified"]) return [self fail:kernel];
+    if (![kernel isEqualToString:@"verified"]) {
+        // A read the kernel could not answer (the process is gone or its pid names another lifetime) says nothing
+        // about the code; a wrong status, path or cdhash does, and stays a refusal of the reply's identity.
+        self.transientFailure = FCKernelReadFailed(kernel);
+        return [self fail:kernel];
+    }
     if (self.sealedHash) {
         if ([self.sealedHash isEqualToData:runningHash]) return YES;
         return [self fail:@"failed:cdhash differs from the connection's"];
@@ -480,6 +474,137 @@ void FCMessageAuditToken(xpc_object_t message, audit_token_t *token);
     self.runningCodeStale = verdict == FCRunningHashStale;
     return [self fail:[NSString stringWithFormat:@"failed:cdhash running=%@ bundled=%@",
         FCHexString(runningHash), FCHexString(sealedHash)]];
+}
+@end
+
+#ifndef FCBundleStat
+#define FCBundleStat stat
+#else
+int FCBundleStat(const char *path, struct stat *state);
+#endif
+
+// What a replaced or modified app changes: the bundle directory and the entries that carry or seal its code
+// (identity, inode, size, modification and status-change times, with nanoseconds). An update moves a new bundle in
+// (new inode); an in-place write changes the file's or its directory's times. Any difference, or any entry that
+// cannot be read, sends the next message through the full validation again. Identity only, never trust.
+static NSData *FCGUIBundleFingerprint(void) {
+    NSMutableData *fingerprint = [NSMutableData data];
+    for (NSString *relative in @[@"", @"Contents", @"Contents/Info.plist", @"Contents/MacOS", @"Contents/MacOS/Flash",
+            @"Contents/_CodeSignature", @"Contents/_CodeSignature/CodeResources", @"Contents/Frameworks",
+            @"Contents/Resources", @"Contents/Library", @"Contents/Library/HelperTools",
+            @"Contents/Library/LaunchDaemons", FCHelperRelativePath, FCLauncherRelativePath, FCCoreRelativePath,
+            FCDaemonPlistRelativePath]) {
+        NSString *path = relative.length ? [FCGUIBundle stringByAppendingPathComponent:relative] : FCGUIBundle;
+        struct stat state;
+        if (FCBundleStat(path.fileSystemRepresentation, &state)) return nil;
+        int64_t fields[] = {(int64_t)state.st_dev, (int64_t)state.st_ino, (int64_t)state.st_mode, (int64_t)state.st_size,
+            (int64_t)state.st_mtimespec.tv_sec, (int64_t)state.st_mtimespec.tv_nsec,
+            (int64_t)state.st_ctimespec.tv_sec, (int64_t)state.st_ctimespec.tv_nsec};
+        [fingerprint appendBytes:fields length:sizeof(fields)];
+    }
+    return fingerprint;
+}
+
+@interface FCGUIMessageValidator ()
+@property NSString *failure;
+@property pid_t verifiedPid;
+@property uint32_t verifiedPidVersion;
+@property NSData *verifiedHash;
+@property NSData *verifiedBundle;
+@end
+
+// Validates requests from the app on one connection (Supervisor makes one per connection). The first message,
+// and the first after the app bundle changed on disk, gets the full validation: the running app against the
+// pinned requirement (strict), its exact executable path, entitlements and flags, then the whole bundle statically
+// (strict, all architectures, nested code: daemon, launcher, Core, plist, contract) with the running cdhash equal
+// to the bundle's. Every later message must come from that same process lifetime (audit token pid and pid
+// version, which also change on exec) whose code the kernel still reports valid, hardened and not debugged, with
+// the same cdhash. The cdhash binds certificate, identifier, entitlements and flags, so nothing pinned is dropped;
+// XPC also enforces the pinned requirement for every message on the connection.
+@implementation FCGUIMessageValidator
+- (BOOL)fail:(NSString *)failure {
+    self.failure = failure;
+    self.verifiedHash = nil;
+    return NO;
+}
+- (BOOL)check:(xpc_object_t)message {
+    self.failure = nil;
+    if (@available(macOS 14.0, *)) {
+        NSString *text = FCGUIRequirement();
+        if (!text) return [self fail:@"requirement"];
+        audit_token_t token;
+        memset(&token, 0, sizeof(token));
+        FCMessageAuditToken(message, &token);
+        pid_t pid = (pid_t)token.val[5];
+        if (pid <= 0) return [self fail:@"token"];
+        NSData *bundle = FCGUIBundleFingerprint();
+        if (!bundle) return [self fail:@"bundle-stat"];
+        if (self.verifiedHash) {
+            if (pid != self.verifiedPid || token.val[7] != self.verifiedPidVersion) return [self fail:@"sender changed"];
+            if ([bundle isEqualToData:self.verifiedBundle]) {
+                NSString *kernel = [self kernelCheck:&token hash:self.verifiedHash];
+                return kernel ? [self fail:kernel] : YES;
+            }
+        }
+        NSString *full = [self fullCheck:message requirement:text token:&token];
+        if (full) return [self fail:full];
+        self.verifiedPid = pid;
+        self.verifiedPidVersion = token.val[7];
+        self.verifiedBundle = bundle;
+        return YES;
+    }
+    return [self fail:@"unsupported"];
+}
+// The kernel's view of the sender, through its audit token: nil, or the failed step.
+- (NSString *)kernelCheck:(audit_token_t *)token hash:(NSData *)expected {
+    pid_t pid = (pid_t)token->val[5];
+    uint32_t status = 0;
+    if (FCCodeOps(pid, FCCodeOpsStatus, &status, sizeof(status), token))
+        return [NSString stringWithFormat:@"status-read errno=%d", errno];
+    if ((status & FCCoreRequiredStatus) != FCCoreRequiredStatus || (status & FCHelperForbiddenStatus))
+        return [NSString stringWithFormat:@"status 0x%x", status];
+    uint8_t hash[20] = {0};
+    if (FCCodeOps(pid, FCCodeOpsCDHash, hash, sizeof(hash), token))
+        return [NSString stringWithFormat:@"cdhash-read errno=%d", errno];
+    if (!FCValidGUIHash(expected) || ![[NSData dataWithBytes:hash length:sizeof(hash)] isEqualToData:expected])
+        return @"cdhash";
+    return nil;
+}
+- (NSString *)fullCheck:(xpc_object_t)message requirement:(NSString *)text token:(audit_token_t *)token {
+    self.verifiedHash = nil;
+    SecCodeRef code = NULL;
+    OSStatus status = SecCodeCreateWithXPCMessage(message, 0, &code);
+    if (status) return [NSString stringWithFormat:@"SecCodeCreateWithXPCMessage OSStatus %d", (int)status];
+    SecRequirementRef requirement = NULL;
+    BOOL valid = SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement) == errSecSuccess;
+    NSString *failure = valid ? nil : @"requirement";
+    if (valid) {
+        status = SecCodeCheckValidity(code, kSecCSStrictValidate, requirement);
+        valid = status == errSecSuccess;
+        if (!valid) failure = [NSString stringWithFormat:@"SecCodeCheckValidity OSStatus %d", (int)status];
+    }
+    if (requirement) CFRelease(requirement);
+    NSDictionary *info = valid ? FCSigningInformation(code) : nil;
+    CFRelease(code);
+    NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
+    valid = valid && FCExecutableMatches(info, FCInstalledExecutable(FCClientIdentifier)) && FCValidGUIHash(runningHash) &&
+        FCGUIEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
+            [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
+    if (!valid) return failure ?: @"path, cdhash, entitlements or flags";
+    SecStaticCodeRef diskCode = NULL;
+    if (SecStaticCodeCreateWithPath((__bridge CFURLRef)[NSURL fileURLWithPath:FCGUIBundle], 0, &diskCode))
+        return @"bundle";
+    valid = FCCheckGUIStatic(diskCode);
+    NSDictionary *diskInfo = valid ? FCSigningInformation(diskCode) : nil;
+    CFRelease(diskCode);
+    NSData *diskHash = diskInfo[(__bridge NSString *)kSecCodeInfoUnique];
+    if (!valid || !FCValidGUIHash(diskHash)) return @"bundle seal";
+    if (![diskHash isEqualToData:runningHash]) return @"cdhash differs from the bundle";
+    // The same process the kernel reports for this message, with the cdhash just validated.
+    NSString *kernel = [self kernelCheck:token hash:runningHash];
+    if (kernel) return kernel;
+    self.verifiedHash = runningHash;
+    return nil;
 }
 @end
 
