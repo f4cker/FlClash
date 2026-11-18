@@ -160,7 +160,7 @@ class IpxReportSections extends StatelessWidget {
         ),
         IpxFootnote(
           lines: [
-            localizations.ipxAttribution,
+            ipxAttribution(context, const ['ipx.al']),
             // Only what the Core says the report took, never the setting.
             if (lookup.viaProxy) localizations.ipxViaExit,
           ],
@@ -191,11 +191,24 @@ class IpxAddressRow extends StatelessWidget {
   }
 }
 
+/// Names the services [sources] the shown data actually came from; the
+/// caller leaves out any it cannot tell.
+String ipxAttribution(BuildContext context, Iterable<String> sources) {
+  final localizations = context.appLocalizations;
+  return localizations.ipxDataFrom(
+    sources.join(localizations.ipxSourceSeparator),
+  );
+}
+
 /// A section footer set in from the edge as far as the section titles.
 class IpxFootnote extends StatelessWidget {
-  const IpxFootnote({super.key, required this.lines});
+  const IpxFootnote({super.key, required this.lines}) : pending = false;
+
+  /// Holds a line's place while what it will name is on its way.
+  const IpxFootnote.pending({super.key}) : lines = const [], pending = true;
 
   final List<String> lines;
+  final bool pending;
 
   @override
   Widget build(BuildContext context) {
@@ -207,6 +220,8 @@ class IpxFootnote extends StatelessWidget {
         spacing: 2,
         children: [
           for (final line in lines) Text(line, style: context.listCaptionStyle),
+          if (pending)
+            SkeletonText(width: 160, style: context.listCaptionStyle),
         ],
       ),
     );
@@ -341,16 +356,23 @@ class IpxFailedItem extends StatelessWidget {
         localizations.ipxReportFailed,
         style: TextStyle(color: context.colorScheme.onSurfaceVariant),
       ),
+      // Both end on the value column, as the rows' values below do.
       trailing: retrying
           ? Semantics(
               label: localizations.ipxRetry,
               enabled: false,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: ActivityIndicator(size: _spinnerSize),
-              ),
+              child: const ActivityIndicator(size: _spinnerSize),
             )
-          : TextButton(onPressed: onRetry, child: Text(localizations.ipxRetry)),
+          : TextButton(
+              onPressed: onRetry,
+              // No inset or minimum width to centre a short label in.
+              style: const ButtonStyle(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                minimumSize: Size(0, 40),
+                tapTargetSize: TapTargetSize.shrinkWrap,
+              ),
+              child: Text(localizations.ipxRetry),
+            ),
     );
   }
 }

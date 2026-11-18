@@ -11879,11 +11879,17 @@ abstract class AppLocalizations {
   /// **'Full report on ipx.al'**
   String get ipxFullReport;
 
-  /// No description provided for @ipxAttribution.
+  /// No description provided for @ipxDataFrom.
   ///
   /// In en, this message translates to:
-  /// **'Data from ipx.al, for reference only'**
-  String get ipxAttribution;
+  /// **'Data from {source}, for reference only'**
+  String ipxDataFrom(String source);
+
+  /// No description provided for @ipxSourceSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get ipxSourceSeparator;
 
   /// No description provided for @ipxReportFailed.
   ///

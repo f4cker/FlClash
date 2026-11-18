@@ -6827,7 +6827,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ipxFullReport => 'Full report on ipx.al';
 
   @override
-  String get ipxAttribution => 'Data from ipx.al, for reference only';
+  String ipxDataFrom(String source) {
+    return 'Data from $source, for reference only';
+  }
+
+  @override
+  String get ipxSourceSeparator => ', ';
 
   @override
   String get ipxReportFailed => 'Couldn’t get report';

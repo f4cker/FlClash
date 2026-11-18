@@ -6485,7 +6485,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipxFullReport => 'ipx.al 查看完整报告';
 
   @override
-  String get ipxAttribution => '数据来自 ipx.al，仅供参考';
+  String ipxDataFrom(String source) {
+    return '数据来自 $source，仅供参考';
+  }
+
+  @override
+  String get ipxSourceSeparator => '、';
 
   @override
   String get ipxReportFailed => '报告获取失败';

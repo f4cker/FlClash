@@ -6,6 +6,7 @@ import 'package:fl_clash/common/ipx_al.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/ip_quality/ip_quality.dart';
 import 'package:fl_clash/features/ip_quality/ipx_report_view.dart';
+import 'package:fl_clash/features/ip_quality/labels.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/ip_quality.dart';
 import 'package:fl_clash/providers/ipx_report.dart';
@@ -63,10 +64,14 @@ String _reportWith(void Function(Map<String, dynamic> report) edit) {
 Color? _colorOf(WidgetTester tester, String text) =>
     tester.widget<Text>(find.text(text)).style?.color;
 
-Widget _app(_Fetch fetch, {Locale locale = const Locale('en')}) => TestApp(
+Widget _app(
+  _Fetch fetch, {
+  Locale locale = const Locale('en'),
+  IpQuality quality = _quality,
+}) => TestApp(
   locale: locale,
   overrides: [
-    ipQualityProvider.overrideWith((_, _) async => _quality),
+    ipQualityProvider.overrideWith((_, _) async => quality),
     ipxFetchProvider.overrideWithValue(fetch.call),
   ],
   child: HostScaffold(
@@ -195,10 +200,28 @@ void main() {
     expect(find.text('Couldn’t get report'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('Couldn’t get report')).dy,
-      lessThan(tester.getTopLeft(find.text('Answered by')).dy),
+      lessThan(tester.getTopLeft(find.text('IP address')).dy),
     );
-    expect(find.text('Answered by'), findsOneWidget);
     expect(find.text('ISP'), findsOneWidget);
+    // The source the rows came from is named under them, not as a row.
+    expect(find.text('Answered by'), findsNothing);
+    final attribution = find.text('Data from iplocate.io, for reference only');
+    expect(attribution, findsOneWidget);
+    expect(
+      tester.getTopLeft(attribution).dy,
+      greaterThan(tester.getBottomLeft(find.text('AS64500')).dy),
+    );
+    expect(
+      tester.getTopLeft(attribution).dx,
+      tester.getTopLeft(find.text('Network')).dx,
+    );
+
+    // The retry ends on the value column, as the address does.
+    final valueRight = tester.getTopRight(find.text(_ip)).dx;
+    expect(
+      tester.getTopRight(find.text('Retry')).dx,
+      moreOrLessEquals(valueRight, epsilon: 0.01),
+    );
     expect(find.text('Organization'), findsNothing);
     expect(find.text('Example Hosting'), findsOneWidget);
     expect(find.text('Data center'), findsOneWidget);
@@ -224,6 +247,17 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Couldn’t get report'), findsOneWidget);
+    expect(
+      tester
+          .getTopRight(
+            find.descendant(
+              of: find.byType(IpxFailedItem),
+              matching: find.byType(ActivityIndicator),
+            ),
+          )
+          .dx,
+      moreOrLessEquals(valueRight, epsilon: 0.01),
+    );
     final refresh = find.byTooltip('Check again');
     expect(
       tester
@@ -253,6 +287,34 @@ void main() {
       hasLength(2),
     );
   });
+
+  for (final (name, quality, risky) in [
+    ('risk in red', _quality.copyWith(isTor: true), true),
+    ('a normal level as plain text', _quality, false),
+    (
+      'a good level as plain text',
+      _quality.copyWith(type: IpType.residential),
+      false,
+    ),
+  ]) {
+    testWidgets('shows $name without ipx.al', (tester) async {
+      _useTallView(tester);
+      await tester.pumpWidget(_app(_Fetch({}), quality: quality));
+      await _open(tester);
+
+      final label = quality.level.label(tester.element(find.text(_ip)));
+      final level = find.text(label);
+      final colors = tester.element(level).colorScheme;
+      final color = tester.widget<Text>(level).style?.color;
+      expect(color, risky ? colors.error : isNull);
+      expect(color, isNot(colors.success));
+      // Text only: no chip or tint behind it.
+      expect(
+        find.ancestor(of: level, matching: find.byType(MetaChip)),
+        findsNothing,
+      );
+    });
+  }
 
   testWidgets('the refresh spinner cannot be tapped while loading', (
     tester,
@@ -331,6 +393,17 @@ void main() {
     expect(
       fetch.calls.where((url) => url == ipxAlReportUrl(_ip)),
       hasLength(1),
+    );
+  });
+
+  testWidgets('ends a short retry label on the value column', (tester) async {
+    _useTallView(tester);
+    await tester.pumpWidget(_app(_Fetch({}), locale: const Locale('zh', 'CN')));
+    await _open(tester);
+
+    expect(
+      tester.getTopRight(find.text('重试')).dx,
+      moreOrLessEquals(tester.getTopRight(find.text(_ip)).dx, epsilon: 0.01),
     );
   });
 

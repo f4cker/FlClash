@@ -1,6 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/ip_quality.dart';
 import 'package:fl_clash/common/ipx_al.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/ip_quality.dart';
@@ -173,6 +174,16 @@ class _IpQualityDetail extends ConsumerWidget {
                 ),
             ],
           ),
+        // Every row a lookup fills comes whole from the one source that
+        // answered; the address is the card's, so it names none.
+        if (quality != null)
+          IpxFootnote(
+            lines: [
+              ipxAttribution(context, [quality.source.label]),
+            ],
+          )
+        else if (!failed)
+          const IpxFootnote.pending(),
         generateSection(
           title: localizations.other,
           items: const [_HideIpItem()],
@@ -180,6 +191,13 @@ class _IpQualityDetail extends ConsumerWidget {
       ],
     );
   }
+
+  /// Risk alone is called out; a good or normal level reads as plain text.
+  static Color? _levelColor(BuildContext context, IpQualityLevel level) =>
+      switch (level) {
+        IpQualityLevel.risky => context.colorScheme.error,
+        IpQualityLevel.good || IpQualityLevel.normal => null,
+      };
 
   /// A lookup still running lays out every row it will fill, so the page
   /// keeps its height when the values arrive.
@@ -212,7 +230,7 @@ class _IpQualityDetail extends ConsumerWidget {
         title: localizations.ipQualityLevel,
         value: Text(
           quality.level.label(context),
-          style: TextStyle(color: quality.level.color(context)),
+          style: TextStyle(color: _levelColor(context, quality.level)),
         ),
       ),
       DetailRow(
@@ -256,10 +274,6 @@ class _IpQualityDetail extends ConsumerWidget {
         title: localizations.ipAsn,
         copyText: asn,
         value: valueOf(asn, width: 56),
-      ),
-      DetailRow(
-        title: localizations.ipQualitySource,
-        value: valueOf(quality?.source.label, width: 72),
       ),
     ];
   }
