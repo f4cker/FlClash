@@ -6906,7 +6906,8 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось проверить сертификат сайта';
 
   @override
-  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 не поддерживается';
+  String get mitmOutcomeHTTP1Unsupported =>
+      'Это соединение использует протокол, который нельзя расшифровать.';
 
   @override
   String get mitmOutcomeHelloPassthrough =>
@@ -7149,4 +7150,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'Расшифровывать HTTP/2';
+
+  @override
+  String get mitmHttp2Desc =>
+      'Если выключено, расшифровываются только соединения HTTP/1.1; соединения, поддерживающие только HTTP/2, не расшифровываются.';
 }

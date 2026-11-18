@@ -1931,7 +1931,7 @@
   "mitmIgnoredProfileHostnames": "Пропущено из подписок или скриптов: {count}",
   "mitmOutcomeRefused": "Клиент отправил предупреждение (alert) во время рукопожатия. Причина неизвестна.",
   "mitmOutcomeUpstreamCertificate": "Не удалось проверить сертификат сайта",
-  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 не поддерживается",
+  "mitmOutcomeHTTP1Unsupported": "Это соединение использует протокол, который нельзя расшифровать.",
   "mitmOutcomeHelloPassthrough": "TLS не проверен; соединение передано без расшифровки",
   "mitmOutcomeFailed": "Ошибка расшифрованного соединения",
   "mitmPausedLiveness": "Расшифровка приостановлена: не удалось проверить доверие или подпись. Обычно изменения обнаруживаются примерно за 26 секунд; сон или задержки системы могут увеличить время.",
@@ -2001,5 +2001,7 @@
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
   "ipxViaExit": "Queried through the current exit",
-  "ipxUnknown": "Unknown"
+  "ipxUnknown": "Unknown",
+  "mitmHttp2": "Расшифровывать HTTP/2",
+  "mitmHttp2Desc": "Если выключено, расшифровываются только соединения HTTP/1.1; соединения, поддерживающие только HTTP/2, не расшифровываются."
 }

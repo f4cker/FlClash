@@ -2225,7 +2225,9 @@ abstract class Mitm with _$Mitm {
     @JsonKey(name: 'skip-server-cert-verify')
     bool skipServerCertVerify,
     @Default(true) @JsonKey(name: 'auto-quic-block') bool autoQuicBlock,
-    @Default(false) bool h2,
+    // Surge's h2: HTTP/2 decryption, on by default. Saved under its own key:
+    // an older `h2: false` was never a user choice and is not read back.
+    @Default(true) @JsonKey(name: 'decrypt-h2') bool h2,
     @JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint,
     @Default(false) bool capture,
     @JsonKey(name: 'capture-entries') int? captureEntries,
@@ -2295,12 +2297,13 @@ extension MitmExt on Mitm {
     ],
   );
 
-  /// Decrypts only with the CA this device was found to trust, and with
-  /// neither HTTP/2 nor an unverified upstream, which the Core does not offer.
+  /// Decrypts only with the CA this device was found to trust, and never
+  /// with an unverified upstream, which the Core does not offer.
   Map<String, Object?> get coreJson => {
     'enable': enable,
     'hostname': hostname,
     'auto-quic-block': autoQuicBlock,
+    'h2': h2,
     'decrypt-tls': trustedFingerprint != null,
     'ca-fingerprint': trustedFingerprint ?? '',
     'limits': {

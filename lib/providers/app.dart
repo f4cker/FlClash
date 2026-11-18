@@ -80,6 +80,7 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
     'clientFailed',
     'http2Only',
     'http1Failed',
+    'http2Failed',
     'unsupportedHello',
     'missingSNI',
     'paused',

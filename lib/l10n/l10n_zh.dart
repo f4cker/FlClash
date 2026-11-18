@@ -6371,7 +6371,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmOutcomeUpstreamCertificate => '网站证书校验失败';
 
   @override
-  String get mitmOutcomeHTTP1Unsupported => '不支持 HTTP/1.1';
+  String get mitmOutcomeHTTP1Unsupported => '当前连接使用的协议不支持解密。';
 
   @override
   String get mitmOutcomeHelloPassthrough => '无法检查 TLS 握手，已原样放行';
@@ -6593,4 +6593,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ipxUnknown => '未知';
+
+  @override
+  String get mitmHttp2 => 'HTTP/2 解密';
+
+  @override
+  String get mitmHttp2Desc => '关闭后，仅解密 HTTP/1.1 连接；仅支持 HTTP/2 的连接不会解密。';
 }

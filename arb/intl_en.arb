@@ -2506,7 +2506,7 @@
   },
   "mitmOutcomeRefused": "The client sent an alert during the handshake. The cause is unknown.",
   "mitmOutcomeUpstreamCertificate": "Website certificate verification failed",
-  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 is not supported",
+  "mitmOutcomeHTTP1Unsupported": "This connection uses a protocol that can't be decrypted.",
   "mitmOutcomeHelloPassthrough": "TLS hello cannot be inspected; passed through",
   "mitmOutcomeFailed": "Decryption connection failed",
   "mitmPausedLiveness": "Decryption paused: trust or signing liveness could not be verified. Normally changes are detected within about 26 seconds; sleep or system stalls may take longer.",
@@ -2586,5 +2586,7 @@
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
   "ipxViaExit": "Queried through the current exit",
-  "ipxUnknown": "Unknown"
+  "ipxUnknown": "Unknown",
+  "mitmHttp2": "Decrypt HTTP/2",
+  "mitmHttp2Desc": "When off, only HTTP/1.1 connections are decrypted; connections that support only HTTP/2 won't be decrypted."
 }

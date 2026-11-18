@@ -6787,7 +6787,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmOutcomeUpstreamCertificate => '웹사이트 인증서 검증에 실패했습니다';
 
   @override
-  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1을 지원하지 않습니다';
+  String get mitmOutcomeHTTP1Unsupported => '이 연결이 사용하는 프로토콜은 복호화할 수 없습니다.';
 
   @override
   String get mitmOutcomeHelloPassthrough => 'TLS 핸드셰이크를 검사하지 못해 그대로 통과했습니다';
@@ -7018,4 +7018,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'HTTP/2 복호화';
+
+  @override
+  String get mitmHttp2Desc =>
+      '끄면 HTTP/1.1 연결만 복호화합니다. HTTP/2만 지원하는 연결은 복호화하지 않습니다.';
 }

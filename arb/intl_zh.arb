@@ -1931,7 +1931,7 @@
   "mitmIgnoredProfileHostnames": "已忽略来自订阅/脚本的 {count} 条",
   "mitmOutcomeRefused": "客户端在握手时发出了警报，原因无法确定。",
   "mitmOutcomeUpstreamCertificate": "网站证书校验失败",
-  "mitmOutcomeHTTP1Unsupported": "不支持 HTTP/1.1",
+  "mitmOutcomeHTTP1Unsupported": "当前连接使用的协议不支持解密。",
   "mitmOutcomeHelloPassthrough": "无法检查 TLS 握手，已原样放行",
   "mitmOutcomeFailed": "解密连接失败",
   "mitmPausedLiveness": "解密已暂停：无法验证信任或签名器状态。正常情况下约 26 秒内检测到变化；睡眠或系统卡顿可能更久。",
@@ -2001,5 +2001,7 @@
   "ipxReportFailed": "报告获取失败",
   "ipxRetry": "重试",
   "ipxViaExit": "经当前出口查询",
-  "ipxUnknown": "未知"
+  "ipxUnknown": "未知",
+  "mitmHttp2": "HTTP/2 解密",
+  "mitmHttp2Desc": "关闭后，仅解密 HTTP/1.1 连接；仅支持 HTTP/2 的连接不会解密。"
 }

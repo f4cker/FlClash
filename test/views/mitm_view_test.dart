@@ -195,6 +195,30 @@ void main() {
     }
   });
 
+  testWidgets('HTTP/2 decryption is a toggle, on by default, saved as h2', (
+    tester,
+  ) async {
+    await pumpView(tester, certificate: _certificate);
+    final l = currentAppLocalizations;
+    final row = find.ancestor(
+      of: find.text(l.mitmHttp2),
+      matching: find.byType(ListItem),
+    );
+
+    expect(row, findsOneWidget);
+    expect(find.text(l.mitmHttp2Desc), findsOneWidget);
+    expect(saved().h2, isTrue);
+    expect(saved().coreJson['h2'], isTrue);
+
+    final toggle = find.descendant(of: row, matching: find.byType(Switch));
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+
+    expect(saved().h2, isFalse);
+    expect(saved().coreJson['h2'], isFalse);
+  });
+
   testWidgets('shows liveness pause and bounded detection wording', (
     tester,
   ) async {

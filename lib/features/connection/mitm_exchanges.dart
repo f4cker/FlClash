@@ -123,6 +123,14 @@ String mitmExchangeErrorText(AppLocalizations l, String error) {
   };
 }
 
+/// The protocol of an exchange as a row shows it: h2 or 1.1.
+String mitmProtoLabel(String proto) => switch (proto) {
+  'HTTP/2.0' || 'HTTP/2' => 'h2',
+  'HTTP/1.1' => '1.1',
+  'HTTP/1.0' => '1.0',
+  _ => '',
+};
+
 class _MitmExchangeItem extends ConsumerWidget {
   final MitmExchangeSummary exchange;
 
@@ -132,11 +140,13 @@ class _MitmExchangeItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = context.colorScheme;
     final failed = exchange.error.isNotEmpty;
-    final outcome = failed
+    final result = failed
         ? mitmExchangeErrorText(context.appLocalizations, exchange.error)
         : exchange.status == 0
         ? ''
         : '${exchange.status}';
+    final proto = mitmProtoLabel(exchange.proto);
+    final outcome = [result, proto].where((s) => s.isNotEmpty).join(' · ');
     return ContextMenuRegion(
       menuItems: mitmExchangeMenuItems(
         context,

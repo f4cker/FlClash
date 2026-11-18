@@ -6954,7 +6954,8 @@ class AppLocalizationsEs extends AppLocalizations {
       'Falló la verificación del certificado del sitio';
 
   @override
-  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 no es compatible';
+  String get mitmOutcomeHTTP1Unsupported =>
+      'Esta conexión usa un protocolo que no se puede descifrar.';
 
   @override
   String get mitmOutcomeHelloPassthrough =>
@@ -7199,4 +7200,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'Descifrar HTTP/2';
+
+  @override
+  String get mitmHttp2Desc =>
+      'Si está desactivado, solo se descifran las conexiones HTTP/1.1; las conexiones que solo admiten HTTP/2 no se descifrarán.';
 }

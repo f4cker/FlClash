@@ -6716,7 +6716,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmOutcomeUpstreamCertificate => 'サイト証明書の検証に失敗しました';
 
   @override
-  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 に対応していません';
+  String get mitmOutcomeHTTP1Unsupported => 'この接続のプロトコルは復号に対応していません。';
 
   @override
   String get mitmOutcomeHelloPassthrough => 'TLS ハンドシェイクを検査できず、そのまま通過しました';
@@ -6945,4 +6945,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'HTTP/2 を復号';
+
+  @override
+  String get mitmHttp2Desc =>
+      'オフにすると、HTTP/1.1 の接続のみ復号します。HTTP/2 のみに対応した接続は復号しません。';
 }

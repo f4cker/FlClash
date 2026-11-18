@@ -2460,7 +2460,7 @@ as String,
 /// @nodoc
 mixin _$MitmExchangeSummary {
 
- int get id; DateTime get start; bool get pending; int get duration; String get method; String get url; int get status;@JsonKey(name: 'request-size') int get requestSize;@JsonKey(name: 'response-size') int get responseSize; String get error;
+ int get id; DateTime get start; bool get pending; int get duration; String get method; String get proto; String get url; int get status;@JsonKey(name: 'request-size') int get requestSize;@JsonKey(name: 'response-size') int get responseSize; String get error;
 /// Create a copy of MitmExchangeSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2474,20 +2474,20 @@ $MitmExchangeSummaryCopyWith<MitmExchangeSummary> get copyWith => _$MitmExchange
 @override
 bool operator ==(Object other) {
   final _this = this as MitmExchangeSummary;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmExchangeSummary&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.start, _this.start) || other.start == _this.start)&&(identical(other.pending, _this.pending) || other.pending == _this.pending)&&(identical(other.duration, _this.duration) || other.duration == _this.duration)&&(identical(other.method, _this.method) || other.method == _this.method)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.requestSize, _this.requestSize) || other.requestSize == _this.requestSize)&&(identical(other.responseSize, _this.responseSize) || other.responseSize == _this.responseSize)&&(identical(other.error, _this.error) || other.error == _this.error));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmExchangeSummary&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.start, _this.start) || other.start == _this.start)&&(identical(other.pending, _this.pending) || other.pending == _this.pending)&&(identical(other.duration, _this.duration) || other.duration == _this.duration)&&(identical(other.method, _this.method) || other.method == _this.method)&&(identical(other.proto, _this.proto) || other.proto == _this.proto)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.requestSize, _this.requestSize) || other.requestSize == _this.requestSize)&&(identical(other.responseSize, _this.responseSize) || other.responseSize == _this.responseSize)&&(identical(other.error, _this.error) || other.error == _this.error));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MitmExchangeSummary;
-  return Object.hash(runtimeType,_this.id,_this.start,_this.pending,_this.duration,_this.method,_this.url,_this.status,_this.requestSize,_this.responseSize,_this.error);
+  return Object.hash(runtimeType,_this.id,_this.start,_this.pending,_this.duration,_this.method,_this.proto,_this.url,_this.status,_this.requestSize,_this.responseSize,_this.error);
 }
 
 @override
 String toString() {
   final _this = this as MitmExchangeSummary;
-  return 'MitmExchangeSummary(id: ${_this.id}, start: ${_this.start}, pending: ${_this.pending}, duration: ${_this.duration}, method: ${_this.method}, url: ${_this.url}, status: ${_this.status}, requestSize: ${_this.requestSize}, responseSize: ${_this.responseSize}, error: ${_this.error})';
+  return 'MitmExchangeSummary(id: ${_this.id}, start: ${_this.start}, pending: ${_this.pending}, duration: ${_this.duration}, method: ${_this.method}, proto: ${_this.proto}, url: ${_this.url}, status: ${_this.status}, requestSize: ${_this.requestSize}, responseSize: ${_this.responseSize}, error: ${_this.error})';
 }
 
 
@@ -2498,7 +2498,7 @@ abstract mixin class $MitmExchangeSummaryCopyWith<$Res>  {
   factory $MitmExchangeSummaryCopyWith(MitmExchangeSummary value, $Res Function(MitmExchangeSummary) _then) = _$MitmExchangeSummaryCopyWithImpl;
 @useResult
 $Res call({
- int id, DateTime start, bool pending, int duration, String method, String url, int status,@JsonKey(name: 'request-size') int requestSize,@JsonKey(name: 'response-size') int responseSize, String error
+ int id, DateTime start, bool pending, int duration, String method, String proto, String url, int status,@JsonKey(name: 'request-size') int requestSize,@JsonKey(name: 'response-size') int responseSize, String error
 });
 
 
@@ -2515,13 +2515,14 @@ class _$MitmExchangeSummaryCopyWithImpl<$Res>
 
 /// Create a copy of MitmExchangeSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? start = null,Object? pending = null,Object? duration = null,Object? method = null,Object? url = null,Object? status = null,Object? requestSize = null,Object? responseSize = null,Object? error = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? start = null,Object? pending = null,Object? duration = null,Object? method = null,Object? proto = null,Object? url = null,Object? status = null,Object? requestSize = null,Object? responseSize = null,Object? error = null,}) {
   return _then(MitmExchangeSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,start: null == start ? _self.start : start // ignore: cast_nullable_to_non_nullable
 as DateTime,pending: null == pending ? _self.pending : pending // ignore: cast_nullable_to_non_nullable
 as bool,duration: null == duration ? _self.duration : duration // ignore: cast_nullable_to_non_nullable
 as int,method: null == method ? _self.method : method // ignore: cast_nullable_to_non_nullable
+as String,proto: null == proto ? _self.proto : proto // ignore: cast_nullable_to_non_nullable
 as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as int,requestSize: null == requestSize ? _self.requestSize : requestSize // ignore: cast_nullable_to_non_nullable
@@ -2612,10 +2613,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  DateTime start,  bool pending,  int duration,  String method,  String url,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  DateTime start,  bool pending,  int duration,  String method,  String proto,  String url,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmExchangeSummary() when $default != null:
-return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_that.url,_that.status,_that.requestSize,_that.responseSize,_that.error);case _:
+return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_that.proto,_that.url,_that.status,_that.requestSize,_that.responseSize,_that.error);case _:
   return orElse();
 
 }
@@ -2633,10 +2634,10 @@ return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  DateTime start,  bool pending,  int duration,  String method,  String url,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  DateTime start,  bool pending,  int duration,  String method,  String proto,  String url,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error)  $default,) {final _that = this;
 switch (_that) {
 case _MitmExchangeSummary():
-return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_that.url,_that.status,_that.requestSize,_that.responseSize,_that.error);case _:
+return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_that.proto,_that.url,_that.status,_that.requestSize,_that.responseSize,_that.error);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2653,10 +2654,10 @@ return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  DateTime start,  bool pending,  int duration,  String method,  String url,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  DateTime start,  bool pending,  int duration,  String method,  String proto,  String url,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmExchangeSummary() when $default != null:
-return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_that.url,_that.status,_that.requestSize,_that.responseSize,_that.error);case _:
+return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_that.proto,_that.url,_that.status,_that.requestSize,_that.responseSize,_that.error);case _:
   return null;
 
 }
@@ -2668,7 +2669,7 @@ return $default(_that.id,_that.start,_that.pending,_that.duration,_that.method,_
 @JsonSerializable()
 
 class _MitmExchangeSummary implements MitmExchangeSummary {
-  const _MitmExchangeSummary({required this.id, required this.start, this.pending = false, this.duration = 0, this.method = '', this.url = '', this.status = 0, @JsonKey(name: 'request-size') this.requestSize = 0, @JsonKey(name: 'response-size') this.responseSize = 0, this.error = ''});
+  const _MitmExchangeSummary({required this.id, required this.start, this.pending = false, this.duration = 0, this.method = '', this.proto = '', this.url = '', this.status = 0, @JsonKey(name: 'request-size') this.requestSize = 0, @JsonKey(name: 'response-size') this.responseSize = 0, this.error = ''});
   factory _MitmExchangeSummary.fromJson(Map<String, dynamic> json) => _$MitmExchangeSummaryFromJson(json);
 
 @override final  int id;
@@ -2676,6 +2677,7 @@ class _MitmExchangeSummary implements MitmExchangeSummary {
 @override@JsonKey() final  bool pending;
 @override@JsonKey() final  int duration;
 @override@JsonKey() final  String method;
+@override@JsonKey() final  String proto;
 @override@JsonKey() final  String url;
 @override@JsonKey() final  int status;
 @override@JsonKey(name: 'request-size') final  int requestSize;
@@ -2695,18 +2697,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmExchangeSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.start, start) || other.start == start)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.method, method) || other.method == method)&&(identical(other.url, url) || other.url == url)&&(identical(other.status, status) || other.status == status)&&(identical(other.requestSize, requestSize) || other.requestSize == requestSize)&&(identical(other.responseSize, responseSize) || other.responseSize == responseSize)&&(identical(other.error, error) || other.error == error));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmExchangeSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.start, start) || other.start == start)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.method, method) || other.method == method)&&(identical(other.proto, proto) || other.proto == proto)&&(identical(other.url, url) || other.url == url)&&(identical(other.status, status) || other.status == status)&&(identical(other.requestSize, requestSize) || other.requestSize == requestSize)&&(identical(other.responseSize, responseSize) || other.responseSize == responseSize)&&(identical(other.error, error) || other.error == error));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,start,pending,duration,method,url,status,requestSize,responseSize,error);
+    return Object.hash(runtimeType,id,start,pending,duration,method,proto,url,status,requestSize,responseSize,error);
 }
 
 @override
 String toString() {
-    return 'MitmExchangeSummary(id: $id, start: $start, pending: $pending, duration: $duration, method: $method, url: $url, status: $status, requestSize: $requestSize, responseSize: $responseSize, error: $error)';
+    return 'MitmExchangeSummary(id: $id, start: $start, pending: $pending, duration: $duration, method: $method, proto: $proto, url: $url, status: $status, requestSize: $requestSize, responseSize: $responseSize, error: $error)';
 }
 
 
@@ -2717,7 +2719,7 @@ abstract mixin class _$MitmExchangeSummaryCopyWith<$Res> implements $MitmExchang
   factory _$MitmExchangeSummaryCopyWith(_MitmExchangeSummary value, $Res Function(_MitmExchangeSummary) _then) = __$MitmExchangeSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- int id, DateTime start, bool pending, int duration, String method, String url, int status,@JsonKey(name: 'request-size') int requestSize,@JsonKey(name: 'response-size') int responseSize, String error
+ int id, DateTime start, bool pending, int duration, String method, String proto, String url, int status,@JsonKey(name: 'request-size') int requestSize,@JsonKey(name: 'response-size') int responseSize, String error
 });
 
 
@@ -2734,13 +2736,14 @@ class __$MitmExchangeSummaryCopyWithImpl<$Res>
 
 /// Create a copy of MitmExchangeSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? start = null,Object? pending = null,Object? duration = null,Object? method = null,Object? url = null,Object? status = null,Object? requestSize = null,Object? responseSize = null,Object? error = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? start = null,Object? pending = null,Object? duration = null,Object? method = null,Object? proto = null,Object? url = null,Object? status = null,Object? requestSize = null,Object? responseSize = null,Object? error = null,}) {
   return _then(_MitmExchangeSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,start: null == start ? _self.start : start // ignore: cast_nullable_to_non_nullable
 as DateTime,pending: null == pending ? _self.pending : pending // ignore: cast_nullable_to_non_nullable
 as bool,duration: null == duration ? _self.duration : duration // ignore: cast_nullable_to_non_nullable
 as int,method: null == method ? _self.method : method // ignore: cast_nullable_to_non_nullable
+as String,proto: null == proto ? _self.proto : proto // ignore: cast_nullable_to_non_nullable
 as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as int,requestSize: null == requestSize ? _self.requestSize : requestSize // ignore: cast_nullable_to_non_nullable

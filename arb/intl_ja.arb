@@ -1931,7 +1931,7 @@
   "mitmIgnoredProfileHostnames": "サブスクリプション/スクリプトの {count} 件を無視しました",
   "mitmOutcomeRefused": "クライアントがハンドシェイク中にアラートを送信しました。原因は特定できません。",
   "mitmOutcomeUpstreamCertificate": "サイト証明書の検証に失敗しました",
-  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 に対応していません",
+  "mitmOutcomeHTTP1Unsupported": "この接続のプロトコルは復号に対応していません。",
   "mitmOutcomeHelloPassthrough": "TLS ハンドシェイクを検査できず、そのまま通過しました",
   "mitmOutcomeFailed": "復号接続に失敗しました",
   "mitmPausedLiveness": "復号を一時停止：信頼または署名機能を確認できません。通常は約26秒以内に検出しますが、スリープや停止時は長くなることがあります。",
@@ -2001,5 +2001,7 @@
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
   "ipxViaExit": "Queried through the current exit",
-  "ipxUnknown": "Unknown"
+  "ipxUnknown": "Unknown",
+  "mitmHttp2": "HTTP/2 を復号",
+  "mitmHttp2Desc": "オフにすると、HTTP/1.1 の接続のみ復号します。HTTP/2 のみに対応した接続は復号しません。"
 }

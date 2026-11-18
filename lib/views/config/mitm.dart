@@ -493,6 +493,16 @@ class _MitmViewState extends ConsumerState<MitmView> {
                                       state.copyWith(autoQuicBlock: value),
                                 ),
                               ),
+                              ConfigToggleItem(
+                                title: (l) => l.mitmHttp2,
+                                subtitle: (l) => l.mitmHttp2Desc,
+                                selector: patchClashConfigProvider.select(
+                                  (state) => state.mitm.h2,
+                                ),
+                                onChanged: _mitmWriter(
+                                  (state, value) => state.copyWith(h2: value),
+                                ),
+                              ),
                             ],
                           ),
                         ],

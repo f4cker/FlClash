@@ -1931,7 +1931,7 @@
   "mitmIgnoredProfileHostnames": "{count} ignoré(s) depuis les abonnements ou scripts",
   "mitmOutcomeRefused": "Le client a envoyé une alerte pendant la négociation. La cause est inconnue.",
   "mitmOutcomeUpstreamCertificate": "Échec de la vérification du certificat du site",
-  "mitmOutcomeHTTP1Unsupported": "HTTP/1.1 non pris en charge",
+  "mitmOutcomeHTTP1Unsupported": "Cette connexion utilise un protocole qui ne peut pas être déchiffré.",
   "mitmOutcomeHelloPassthrough": "TLS non inspecté ; connexion transmise sans déchiffrement",
   "mitmOutcomeFailed": "Échec de la connexion déchiffrée",
   "mitmPausedLiveness": "Déchiffrement en pause : confiance ou signature non vérifiable. Détection normalement en 26 secondes environ ; une veille ou un blocage peut la retarder.",
@@ -2001,5 +2001,7 @@
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
   "ipxViaExit": "Queried through the current exit",
-  "ipxUnknown": "Unknown"
+  "ipxUnknown": "Unknown",
+  "mitmHttp2": "Déchiffrer HTTP/2",
+  "mitmHttp2Desc": "Désactivé, seules les connexions HTTP/1.1 sont déchiffrées ; les connexions qui ne prennent en charge que HTTP/2 ne seront pas déchiffrées."
 }

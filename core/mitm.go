@@ -16,10 +16,13 @@ type MitmSetup struct {
 	Enable   bool     `json:"enable"`
 	Hostname []string `json:"hostname"`
 	// Sent only once the app has checked the CA is trusted.
-	DecryptTLS    bool             `json:"decrypt-tls"`
-	CAFingerprint string           `json:"ca-fingerprint"`
-	AutoQuicBlock *bool            `json:"auto-quic-block,omitempty"`
-	Limits        map[string]int64 `json:"limits,omitempty"`
+	DecryptTLS    bool   `json:"decrypt-tls"`
+	CAFingerprint string `json:"ca-fingerprint"`
+	AutoQuicBlock *bool  `json:"auto-quic-block,omitempty"`
+	// Surge's h2: decrypt HTTP/2 as well. Absent means on; off advertises
+	// HTTP/1.1 alone, and a client that offers only h2 passes through.
+	H2     *bool            `json:"h2,omitempty"`
+	Limits map[string]int64 `json:"limits,omitempty"`
 }
 
 type MitmStatus struct {
@@ -102,6 +105,11 @@ func profileMitmHostnames(config []byte) int {
 func (runtime *mitmRuntime) decrypting() bool {
 	return runtime != nil && runtime.setup.Enable && runtime.setup.DecryptTLS &&
 		runtime.setup.CAFingerprint != "" && runtime.hosts.Len() > 0
+}
+
+// Whether HTTP/2 is offered to both sides of a decrypted connection.
+func (runtime *mitmRuntime) http2() bool {
+	return runtime != nil && (runtime.setup.H2 == nil || *runtime.setup.H2)
 }
 
 // Whether a TLS connection to host is to be decrypted.

@@ -190,6 +190,8 @@ abstract class MitmExchangeSummary with _$MitmExchangeSummary {
     @Default(false) bool pending,
     @Default(0) int duration,
     @Default('') String method,
+    // HTTP/1.1 or HTTP/2.0, as the client spoke it; empty from an older Core.
+    @Default('') String proto,
     @Default('') String url,
     @Default(0) int status,
     @Default(0) @JsonKey(name: 'request-size') int requestSize,

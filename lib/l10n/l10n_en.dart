@@ -6907,7 +6907,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Website certificate verification failed';
 
   @override
-  String get mitmOutcomeHTTP1Unsupported => 'HTTP/1.1 is not supported';
+  String get mitmOutcomeHTTP1Unsupported =>
+      'This connection uses a protocol that can\'t be decrypted.';
 
   @override
   String get mitmOutcomeHelloPassthrough =>
@@ -7150,4 +7151,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'Decrypt HTTP/2';
+
+  @override
+  String get mitmHttp2Desc =>
+      'When off, only HTTP/1.1 connections are decrypted; connections that support only HTTP/2 won\'t be decrypted.';
 }

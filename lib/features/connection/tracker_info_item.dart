@@ -20,7 +20,10 @@ String mitmOutcomeText(BuildContext context, String outcome) {
     'http2Only' => l.mitmOutcomeHTTP1Unsupported,
     'unsupportedHello' || 'missingSNI' => l.mitmOutcomeHelloPassthrough,
     'paused' => l.mitmOutcomePaused,
-    'upstreamFailed' || 'clientFailed' || 'http1Failed' => l.mitmOutcomeFailed,
+    'upstreamFailed' ||
+    'clientFailed' ||
+    'http1Failed' ||
+    'http2Failed' => l.mitmOutcomeFailed,
     _ => '',
   };
 }
@@ -62,19 +65,25 @@ enum MitmBadge {
     };
   }
 
+  /// "Passed through" is claimed only on the Core's word: each of those
+  /// outcomes is sent by the Core as it hands the connection, untouched, to
+  /// its relay. A reason alone (an unsupported protocol) or a protocol
+  /// label never implies it, and a connection the Core decrypted is never
+  /// called passed through.
   static MitmBadge? of(TrackerInfo trackerInfo) {
     return switch (trackerInfo.mitmOutcome) {
+      // A later HTTP failure leaves the connection decrypted all the same.
+      _ when trackerInfo.metadata.mitm => MitmBadge.decrypted,
       'refused' => MitmBadge.handshakeFailed,
       'unsupportedHello' ||
       'missingSNI' ||
       'http2Only' ||
       'paused' => MitmBadge.passedThrough,
-      // A later HTTP failure leaves the connection decrypted all the same.
-      _ when trackerInfo.metadata.mitm => MitmBadge.decrypted,
       'upstreamCertificate' ||
       'upstreamFailed' ||
       'clientFailed' ||
-      'http1Failed' => MitmBadge.failed,
+      'http1Failed' ||
+      'http2Failed' => MitmBadge.failed,
       _ => null,
     };
   }
