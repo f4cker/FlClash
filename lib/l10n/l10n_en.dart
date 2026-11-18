@@ -8261,4 +8261,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rulesBelowModule => 'modules';
+
+  @override
+  String get navGroupRouting => 'Routing';
+
+  @override
+  String get navGroupDecryption => 'Decryption & Rewrite';
+
+  @override
+  String get navGroupDebug => 'Debugging';
+
+  @override
+  String navGroupExpanded(Object group) {
+    return '$group, group, expanded';
+  }
+
+  @override
+  String navGroupCollapsed(Object group) {
+    return '$group, group, collapsed';
+  }
+
+  @override
+  String navBadgeUpdates(Object count) {
+    return 'Updates: $count';
+  }
+
+  @override
+  String get navBadgeError => 'Has errors';
+
+  @override
+  String get exitIpRow => 'Exit';
+
+  @override
+  String get exitIp => 'Exit IP';
+
+  @override
+  String get localPublicIpRow => 'Local';
+
+  @override
+  String get localPublicIp => 'Local public IP';
+
+  @override
+  String get copyLocalPublicIp => 'Copy local public IP';
+
+  @override
+  String get sameAsExit => 'Same as exit';
+
+  @override
+  String get querying => 'Looking up';
+
+  @override
+  String get queryFailed => 'Lookup failed';
+
+  @override
+  String get exitNotRunning => 'Flash isn’t running, so there’s no exit';
+
+  @override
+  String get exitIpLookupFailed => 'Couldn’t look up the exit IP';
+
+  @override
+  String get ipxNoResponse => 'Couldn’t get the report';
+
+  @override
+  String get ipxNativeShort => 'Native';
+
+  @override
+  String get ipxBroadcastShort => 'Broadcast';
+
+  @override
+  String ipxScoreSemantics(String score, String grade) {
+    return 'Health score $score, grade $grade';
+  }
+
+  @override
+  String get exitIpOpenHint => 'Press to view exit IP details';
+
+  @override
+  String get semanticsSeparator => ', ';
 }

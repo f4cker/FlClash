@@ -8262,4 +8262,81 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get rulesBelowModule => 'модули';
+
+  @override
+  String get navGroupRouting => 'Маршрутизация';
+
+  @override
+  String get navGroupDecryption => 'Расшифровка и перезапись';
+
+  @override
+  String get navGroupDebug => 'Отладка';
+
+  @override
+  String navGroupExpanded(Object group) {
+    return '$group, группа, развёрнута';
+  }
+
+  @override
+  String navGroupCollapsed(Object group) {
+    return '$group, группа, свёрнута';
+  }
+
+  @override
+  String navBadgeUpdates(Object count) {
+    return 'Обновлений: $count';
+  }
+
+  @override
+  String get navBadgeError => 'Есть ошибки';
+
+  @override
+  String get exitIpRow => 'Выход';
+
+  @override
+  String get exitIp => 'IP выхода';
+
+  @override
+  String get localPublicIpRow => 'Локальный';
+
+  @override
+  String get localPublicIp => 'Локальный публичный IP';
+
+  @override
+  String get copyLocalPublicIp => 'Скопировать локальный публичный IP';
+
+  @override
+  String get sameAsExit => 'Совпадает с выходом';
+
+  @override
+  String get querying => 'Запрос…';
+
+  @override
+  String get queryFailed => 'Ошибка запроса';
+
+  @override
+  String get exitNotRunning => 'Flash не запущен, данных о выходе нет';
+
+  @override
+  String get exitIpLookupFailed => 'Не удалось запросить IP выхода';
+
+  @override
+  String get ipxNoResponse => 'Не удалось получить отчёт';
+
+  @override
+  String get ipxNativeShort => 'Нативный';
+
+  @override
+  String get ipxBroadcastShort => 'Вещательный';
+
+  @override
+  String ipxScoreSemantics(String score, String grade) {
+    return 'Оценка $score, класс $grade';
+  }
+
+  @override
+  String get exitIpOpenHint => 'Нажмите, чтобы открыть сведения об IP выхода';
+
+  @override
+  String get semanticsSeparator => ', ';
 }

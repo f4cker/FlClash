@@ -13666,6 +13666,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'modules'**
   String get rulesBelowModule;
+
+  /// No description provided for @navGroupRouting.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing'**
+  String get navGroupRouting;
+
+  /// No description provided for @navGroupDecryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption & Rewrite'**
+  String get navGroupDecryption;
+
+  /// No description provided for @navGroupDebug.
+  ///
+  /// In en, this message translates to:
+  /// **'Debugging'**
+  String get navGroupDebug;
+
+  /// No description provided for @navGroupExpanded.
+  ///
+  /// In en, this message translates to:
+  /// **'{group}, group, expanded'**
+  String navGroupExpanded(Object group);
+
+  /// No description provided for @navGroupCollapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'{group}, group, collapsed'**
+  String navGroupCollapsed(Object group);
+
+  /// No description provided for @navBadgeUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates: {count}'**
+  String navBadgeUpdates(Object count);
+
+  /// No description provided for @navBadgeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Has errors'**
+  String get navBadgeError;
+
+  /// No description provided for @exitIpRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get exitIpRow;
+
+  /// No description provided for @exitIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit IP'**
+  String get exitIp;
+
+  /// No description provided for @localPublicIpRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Local'**
+  String get localPublicIpRow;
+
+  /// No description provided for @localPublicIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Local public IP'**
+  String get localPublicIp;
+
+  /// No description provided for @copyLocalPublicIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy local public IP'**
+  String get copyLocalPublicIp;
+
+  /// No description provided for @sameAsExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as exit'**
+  String get sameAsExit;
+
+  /// No description provided for @querying.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up'**
+  String get querying;
+
+  /// No description provided for @queryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Lookup failed'**
+  String get queryFailed;
+
+  /// No description provided for @exitNotRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash isn’t running, so there’s no exit'**
+  String get exitNotRunning;
+
+  /// No description provided for @exitIpLookupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t look up the exit IP'**
+  String get exitIpLookupFailed;
+
+  /// No description provided for @ipxNoResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t get the report'**
+  String get ipxNoResponse;
+
+  /// No description provided for @ipxNativeShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Native'**
+  String get ipxNativeShort;
+
+  /// No description provided for @ipxBroadcastShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcast'**
+  String get ipxBroadcastShort;
+
+  /// No description provided for @ipxScoreSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Health score {score}, grade {grade}'**
+  String ipxScoreSemantics(String score, String grade);
+
+  /// No description provided for @exitIpOpenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Press to view exit IP details'**
+  String get exitIpOpenHint;
+
+  /// No description provided for @semanticsSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get semanticsSeparator;
 }
 
 class _AppLocalizationsDelegate

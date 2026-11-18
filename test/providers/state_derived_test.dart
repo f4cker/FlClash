@@ -468,9 +468,7 @@ void main() {
       PageLabel.requests,
     );
 
-    container
-        .read(currentPageLabelProvider.notifier)
-        .toPage(PageLabel.resources);
+    container.read(currentPageLabelProvider.notifier).toPage(PageLabel.logs);
     expect(container.read(navigationStateProvider).currentIndex, 0);
   });
 

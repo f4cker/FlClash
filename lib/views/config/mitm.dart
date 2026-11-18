@@ -425,7 +425,9 @@ class _MitmViewState extends ConsumerState<MitmView> {
     return ScaffoldBarStatus(
       status: null,
       child: Scaffold(
-        title: appLocalizations.mitm,
+        title: isAndroid
+            ? appLocalizations.mitm
+            : appLocalizations.httpsDecryption,
         isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
         body: NullStatusSwitcher(
           isLoading: certificate.isLoading && !certificate.hasValue,
@@ -486,14 +488,17 @@ class _MitmViewState extends ConsumerState<MitmView> {
                                 ),
                             ].join('\n'),
                           ),
-                          generateSection(
-                            title: appLocalizations.mitmRewriteAndScripts,
-                            items: const [
-                              MitmRewriteEntryItem(),
-                              MitmScriptEntryItem(),
-                              MitmModulesItem(),
-                            ],
-                          ),
+                          // The sidebar lists these pages wherever it shows,
+                          // with their updates and errors.
+                          if (ref.watch(isMobileViewProvider))
+                            generateSection(
+                              title: appLocalizations.mitmRewriteAndScripts,
+                              items: const [
+                                MitmRewriteEntryItem(),
+                                MitmScriptEntryItem(),
+                                MitmModulesItem(),
+                              ],
+                            ),
                           generateSection(
                             title: appLocalizations.options,
                             items: [

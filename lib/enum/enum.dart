@@ -714,6 +714,33 @@ enum PageLabel {
   requests,
   resources,
   dns,
+  mitm,
+  mitmRewrite,
+  mitmScripts,
+  mitmModules,
+}
+
+/// The sidebar's titled sections, in their order; a page outside them sits
+/// in the untitled section at the top, or pinned at the foot.
+enum NavigationGroup {
+  routing,
+  decryption,
+  debug,
+  network;
+
+  static NavigationGroup? of(PageLabel label) => switch (label) {
+    PageLabel.rules || PageLabel.resources => routing,
+    PageLabel.mitm ||
+    PageLabel.mitmRewrite ||
+    PageLabel.mitmScripts ||
+    PageLabel.mitmModules => decryption,
+    PageLabel.requests || PageLabel.dns || PageLabel.logs => debug,
+    PageLabel.tailscale => network,
+    PageLabel.dashboard ||
+    PageLabel.proxies ||
+    PageLabel.profiles ||
+    PageLabel.tools => null,
+  };
 }
 
 enum RuleAction {

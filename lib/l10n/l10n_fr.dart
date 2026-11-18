@@ -8312,4 +8312,82 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get rulesBelowModule => 'les modules';
+
+  @override
+  String get navGroupRouting => 'Routage';
+
+  @override
+  String get navGroupDecryption => 'Déchiffrement et réécriture';
+
+  @override
+  String get navGroupDebug => 'Débogage';
+
+  @override
+  String navGroupExpanded(Object group) {
+    return '$group, groupe, développé';
+  }
+
+  @override
+  String navGroupCollapsed(Object group) {
+    return '$group, groupe, réduit';
+  }
+
+  @override
+  String navBadgeUpdates(Object count) {
+    return 'Mises à jour : $count';
+  }
+
+  @override
+  String get navBadgeError => 'Erreurs';
+
+  @override
+  String get exitIpRow => 'Sortie';
+
+  @override
+  String get exitIp => 'IP de sortie';
+
+  @override
+  String get localPublicIpRow => 'Locale';
+
+  @override
+  String get localPublicIp => 'IP publique locale';
+
+  @override
+  String get copyLocalPublicIp => 'Copier l’IP publique locale';
+
+  @override
+  String get sameAsExit => 'Identique à la sortie';
+
+  @override
+  String get querying => 'Recherche…';
+
+  @override
+  String get queryFailed => 'Échec de la recherche';
+
+  @override
+  String get exitNotRunning => 'Flash n’est pas lancé, aucune sortie';
+
+  @override
+  String get exitIpLookupFailed => 'Impossible de rechercher l’IP de sortie';
+
+  @override
+  String get ipxNoResponse => 'Impossible d’obtenir le rapport';
+
+  @override
+  String get ipxNativeShort => 'Native';
+
+  @override
+  String get ipxBroadcastShort => 'Diffusée';
+
+  @override
+  String ipxScoreSemantics(String score, String grade) {
+    return 'Score $score, note $grade';
+  }
+
+  @override
+  String get exitIpOpenHint =>
+      'Appuyez pour voir les détails de l’IP de sortie';
+
+  @override
+  String get semanticsSeparator => ', ';
 }

@@ -135,3 +135,117 @@ double overlayTopOffset(Ref ref) {
   // The window controls over a page sit within its app bar.
   return (showsHeader ? kHeaderHeight : 0) + bannerBarClearance;
 }
+
+bool defaultSidebarGroupCollapsed(
+  NavigationGroup group, {
+  required bool decrypting,
+}) => switch (group) {
+  NavigationGroup.decryption => !decrypting,
+  NavigationGroup.network => true,
+  NavigationGroup.routing || NavigationGroup.debug => false,
+};
+
+/// Whether each sidebar section is closed: the user's own choice once made,
+/// otherwise its default, which for decryption follows whether it is on.
+@riverpod
+Map<NavigationGroup, bool> sidebarCollapsedGroups(Ref ref) {
+  final chosen = ref.watch(
+    appSettingProvider.select((state) => state.sidebarCollapsedGroups),
+  );
+  final decrypting = ref.watch(
+    patchClashConfigProvider.select(
+      (state) => mitmFeature && state.mitm.enable,
+    ),
+  );
+  return {
+    for (final group in NavigationGroup.values)
+      group:
+          chosen[group.name] ??
+          defaultSidebarGroupCollapsed(group, decrypting: decrypting),
+  };
+}
+
+/// A row's badge for [updates] pending updates and [errors] unloadable
+/// items; an error outranks the count.
+SidebarBadge? _updatesBadge({required int updates, required int errors}) {
+  final appLocalizations = currentAppLocalizations;
+  if (errors > 0) {
+    return SidebarBadge(
+      error: true,
+      semanticLabel: appLocalizations.navBadgeError,
+    );
+  }
+  if (updates > 0) {
+    return SidebarBadge(
+      count: updates,
+      semanticLabel: appLocalizations.navBadgeUpdates(updates),
+    );
+  }
+  return null;
+}
+
+/// What each sidebar row has to tell: the rewrite page its errors, the
+/// scripts and modules pages their pending updates and unloadable items.
+@riverpod
+Map<PageLabel, SidebarBadge> navigationBadges(Ref ref) {
+  if (!mitmFeature) {
+    return const {};
+  }
+  final profileId = ref.watch(currentProfileIdProvider);
+  final rewriteIssues = profileId == null
+      ? 0
+      : ref.watch(
+              mitmRewriteIssuesProvider(
+                profileId,
+              ).select((value) => value.value?.length),
+            ) ??
+            0;
+  final scripts = profileId == null
+      ? null
+      : ref.watch(
+          profileMitmScriptsProvider(profileId).select(
+            (value) => _updatesBadge(
+              updates: value.value?.where((s) => s.hasPending).length ?? 0,
+              errors: value.value?.where((s) => s.unloadable).length ?? 0,
+            ),
+          ),
+        );
+  final modules = !mitmModulesFeature
+      ? null
+      : ref.watch(
+          mitmModulesProvider.select(
+            (value) => _updatesBadge(
+              updates: value.value?.where((m) => m.hasPending).length ?? 0,
+              errors: value.value?.where((m) => m.unloadable).length ?? 0,
+            ),
+          ),
+        );
+  return {
+    if (rewriteIssues > 0)
+      PageLabel.mitmRewrite: SidebarBadge(
+        error: true,
+        semanticLabel: currentAppLocalizations.navBadgeError,
+      ),
+    PageLabel.mitmScripts: ?scripts,
+    PageLabel.mitmModules: ?modules,
+  };
+}
+
+/// Remembers the user's choice for [group], which from then on outranks its
+/// default.
+void setSidebarGroupCollapsed(
+  WidgetRef ref,
+  NavigationGroup group, {
+  required bool collapsed,
+}) {
+  ref
+      .read(appSettingProvider.notifier)
+      .update(
+        (state) => state.copyWith(
+          sidebarCollapsedGroups: {
+            ...state.sidebarCollapsedGroups,
+            group.name: collapsed,
+          },
+        ),
+      );
+}

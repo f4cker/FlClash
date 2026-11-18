@@ -3611,6 +3611,117 @@ final class OverlayTopOffsetProvider
 
 String _$overlayTopOffsetHash() => r'65469afec2a8ea45bddf916c8e61c7d6cbfc3c85';
 
+/// Whether each sidebar section is closed: the user's own choice once made,
+/// otherwise its default, which for decryption follows whether it is on.
+
+@ProviderFor(sidebarCollapsedGroups)
+final sidebarCollapsedGroupsProvider = SidebarCollapsedGroupsProvider._();
+
+/// Whether each sidebar section is closed: the user's own choice once made,
+/// otherwise its default, which for decryption follows whether it is on.
+
+final class SidebarCollapsedGroupsProvider
+    extends
+        $FunctionalProvider<
+          Map<NavigationGroup, bool>,
+          Map<NavigationGroup, bool>,
+          Map<NavigationGroup, bool>
+        >
+    with $Provider<Map<NavigationGroup, bool>> {
+  /// Whether each sidebar section is closed: the user's own choice once made,
+  /// otherwise its default, which for decryption follows whether it is on.
+  SidebarCollapsedGroupsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sidebarCollapsedGroupsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sidebarCollapsedGroupsHash();
+
+  @$internal
+  @override
+  $ProviderElement<Map<NavigationGroup, bool>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  Map<NavigationGroup, bool> create(Ref ref) {
+    return sidebarCollapsedGroups(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<NavigationGroup, bool> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<NavigationGroup, bool>>(value),
+    );
+  }
+}
+
+String _$sidebarCollapsedGroupsHash() =>
+    r'e1fe8530eaba4bd04102e37c291c4bb92e26562e';
+
+/// What each sidebar row has to tell: the rewrite page its errors, the
+/// scripts and modules pages their pending updates and unloadable items.
+
+@ProviderFor(navigationBadges)
+final navigationBadgesProvider = NavigationBadgesProvider._();
+
+/// What each sidebar row has to tell: the rewrite page its errors, the
+/// scripts and modules pages their pending updates and unloadable items.
+
+final class NavigationBadgesProvider
+    extends
+        $FunctionalProvider<
+          Map<PageLabel, SidebarBadge>,
+          Map<PageLabel, SidebarBadge>,
+          Map<PageLabel, SidebarBadge>
+        >
+    with $Provider<Map<PageLabel, SidebarBadge>> {
+  /// What each sidebar row has to tell: the rewrite page its errors, the
+  /// scripts and modules pages their pending updates and unloadable items.
+  NavigationBadgesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'navigationBadgesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$navigationBadgesHash();
+
+  @$internal
+  @override
+  $ProviderElement<Map<PageLabel, SidebarBadge>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  Map<PageLabel, SidebarBadge> create(Ref ref) {
+    return navigationBadges(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<PageLabel, SidebarBadge> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<PageLabel, SidebarBadge>>(value),
+    );
+  }
+}
+
+String _$navigationBadgesHash() => r'cb43a06ec0b64d132e80d8232016e16b5a980d6c';
+
 @ProviderFor(profilesState)
 final profilesStateProvider = ProfilesStateProvider._();
 

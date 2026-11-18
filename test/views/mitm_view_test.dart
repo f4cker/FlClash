@@ -353,7 +353,8 @@ void main() {
   testWidgets('capture waits for decryption to be on', (tester) async {
     await pumpView(tester, certificate: _certificate);
 
-    expect(find.text(currentAppLocalizations.mitm), findsOneWidget);
+    // Off Android the page goes by its sidebar name.
+    expect(find.text(currentAppLocalizations.httpsDecryption), findsWidgets);
     await openCapture(tester);
     expect(tester.widget<Switch>(captureSwitch()).onChanged, isNull);
   });

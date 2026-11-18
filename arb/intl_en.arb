@@ -3474,5 +3474,38 @@
   },
   "rulesBelowSubscription": "the subscription profile",
   "rulesBelowScript": "extension scripts",
-  "rulesBelowModule": "modules"
+  "rulesBelowModule": "modules",
+  "navGroupRouting": "Routing",
+  "navGroupDecryption": "Decryption & Rewrite",
+  "navGroupDebug": "Debugging",
+  "navGroupExpanded": "{group}, group, expanded",
+  "navGroupCollapsed": "{group}, group, collapsed",
+  "navBadgeUpdates": "Updates: {count}",
+  "navBadgeError": "Has errors",
+  "exitIpRow": "Exit",
+  "exitIp": "Exit IP",
+  "localPublicIpRow": "Local",
+  "localPublicIp": "Local public IP",
+  "copyLocalPublicIp": "Copy local public IP",
+  "sameAsExit": "Same as exit",
+  "querying": "Looking up",
+  "queryFailed": "Lookup failed",
+  "exitNotRunning": "Flash isn’t running, so there’s no exit",
+  "exitIpLookupFailed": "Couldn’t look up the exit IP",
+  "ipxNoResponse": "Couldn’t get the report",
+  "ipxNativeShort": "Native",
+  "ipxBroadcastShort": "Broadcast",
+  "ipxScoreSemantics": "Health score {score}, grade {grade}",
+  "@ipxScoreSemantics": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      },
+      "grade": {
+        "type": "String"
+      }
+    }
+  },
+  "exitIpOpenHint": "Press to view exit IP details",
+  "semanticsSeparator": ", "
 }
