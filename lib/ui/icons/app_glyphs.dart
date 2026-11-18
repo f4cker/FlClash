@@ -1074,6 +1074,46 @@ abstract final class AppGlyphs {
     ], role: GlyphRole.detail),
   ]);
 
+  /// A magic wand with a spark at its tip: a rewrite rule applied.
+  static const wand = Glyph([
+    GlyphPolyline([
+      GlyphVertex(4, 20),
+      GlyphVertex(14.5, 9.5),
+    ], role: GlyphRole.line),
+    GlyphPolyline([
+      GlyphVertex(17.5, 2.6, 0.5),
+      GlyphVertex(18.5, 5.5, 1),
+      GlyphVertex(21.4, 6.5, 0.5),
+      GlyphVertex(18.5, 7.5, 1),
+      GlyphVertex(17.5, 10.4, 0.5),
+      GlyphVertex(16.5, 7.5, 1),
+      GlyphVertex(13.6, 6.5, 0.5),
+      GlyphVertex(16.5, 5.5, 1),
+    ], closed: true),
+    GlyphPolyline([
+      GlyphVertex(8, 4),
+      GlyphVertex(8, 7),
+    ], role: GlyphRole.detail),
+    GlyphPolyline([
+      GlyphVertex(6.5, 5.5),
+      GlyphVertex(9.5, 5.5),
+    ], role: GlyphRole.detail),
+  ]);
+
+  /// [wand] with an exclamation mark for its spark: a rewrite rule matched
+  /// but let the message pass as it was.
+  static const wandError = Glyph([
+    GlyphPolyline([
+      GlyphVertex(4, 20),
+      GlyphVertex(13, 11),
+    ], role: GlyphRole.line),
+    GlyphPolyline([
+      GlyphVertex(18.5, 2.8),
+      GlyphVertex(18.5, 9.2),
+    ], role: GlyphRole.detail),
+    GlyphCircle(18.5, 13.4, 1.4, role: GlyphRole.detail, solid: true),
+  ]);
+
   /// An arrow going straight on: what passes through untouched.
   static const arrowForward = Glyph([
     GlyphPolyline([

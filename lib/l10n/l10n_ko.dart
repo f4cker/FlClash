@@ -7039,4 +7039,368 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get mitmHttp2Desc =>
       '끄면 HTTP/1.1 연결만 복호화합니다. HTTP/2만 지원하는 연결은 복호화하지 않습니다.';
+
+  @override
+  String get mitmRewriteAndScripts => 'Rewrite & Scripts';
+
+  @override
+  String get mitmRewrite => 'Rewrite';
+
+  @override
+  String mitmRewriteRuleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rules',
+      one: '1 rule',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmRewriteInvalidCount(int count) {
+    return '$count invalid';
+  }
+
+  @override
+  String get mitmRewriteNoneAdded => 'None added';
+
+  @override
+  String mitmRewriteSubtitle(Object profile, int count, int enabled) {
+    return 'Profile “$profile” · $count rewrite rules, $enabled on';
+  }
+
+  @override
+  String get mitmRewriteGroupReject => 'URL Reject';
+
+  @override
+  String get mitmRewriteGroupRedirect => 'URL Redirect';
+
+  @override
+  String get mitmRewriteGroupHeader => 'Request & Response Headers';
+
+  @override
+  String get mitmRewriteGroupBody => 'Request & Response Bodies';
+
+  @override
+  String get mitmRewriteActReject => 'Block';
+
+  @override
+  String mitmRewriteActRedirect(Object code) {
+    return '$code redirect';
+  }
+
+  @override
+  String get mitmRewriteActUrl => 'Rewrite URL';
+
+  @override
+  String get mitmRewriteActRequestHeader => 'Request header';
+
+  @override
+  String get mitmRewriteActResponseHeader => 'Response header';
+
+  @override
+  String get mitmRewriteActRequestBody => 'Request body';
+
+  @override
+  String get mitmRewriteActResponseBody => 'Response body';
+
+  @override
+  String get mitmRewriteActMapLocal => 'Local response';
+
+  @override
+  String get mitmRewriteRejectError => 'Return an error';
+
+  @override
+  String get mitmRewriteReject200 => 'Return an empty page';
+
+  @override
+  String get mitmRewriteRejectImage => 'Return a blank image';
+
+  @override
+  String get mitmRewriteRejectDict => 'Return an empty JSON object';
+
+  @override
+  String get mitmRewriteRejectArray => 'Return an empty JSON array';
+
+  @override
+  String get mitmRewriteRejectDrop => 'Drop the connection';
+
+  @override
+  String mitmRewriteHeaderAdd(Object name) {
+    return 'Add $name';
+  }
+
+  @override
+  String mitmRewriteHeaderDel(Object name) {
+    return 'Remove $name';
+  }
+
+  @override
+  String mitmRewriteHeaderReplace(Object name) {
+    return 'Replace $name';
+  }
+
+  @override
+  String mitmRewriteHeaderReplaceRegex(Object name) {
+    return 'Replace in $name';
+  }
+
+  @override
+  String mitmRewriteBodyReplace(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count replacements',
+      one: '1 replacement',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmRewriteBodyLimit(Object size) {
+    return 'Up to $size';
+  }
+
+  @override
+  String mitmRewriteInvalid(Object reason) {
+    return 'Invalid rule: $reason';
+  }
+
+  @override
+  String mitmRewriteInvalidSpoken(Object reason) {
+    return 'Invalid rule, $reason';
+  }
+
+  @override
+  String mitmRewriteToggleLabel(Object action, Object url) {
+    return '$action, $url';
+  }
+
+  @override
+  String mitmRewriteNotApplied(Object reason) {
+    return 'The change didn\'t take effect: $reason';
+  }
+
+  @override
+  String get mitmRewriteEnableAll => 'Turn All On';
+
+  @override
+  String get mitmRewriteDisableAll => 'Turn All Off';
+
+  @override
+  String get mitmRewriteCopyAll => 'Copy All Rules';
+
+  @override
+  String get mitmRewriteDeleteInvalid => 'Delete Invalid Rules';
+
+  @override
+  String mitmRewriteDeleteInvalidConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count invalid rules',
+      one: '1 invalid rule',
+    );
+    return 'Delete $_temp0?';
+  }
+
+  @override
+  String get mitmRewriteOff =>
+      'HTTPS decryption is off, so rewrite rules aren\'t running.';
+
+  @override
+  String get mitmRewriteGoTurnOn => 'Turn On';
+
+  @override
+  String get mitmRewriteEmptyTitle => 'No rewrite rules yet';
+
+  @override
+  String get mitmRewriteEmptyDesc => 'Paste rules to import them.';
+
+  @override
+  String get mitmRewritePaste => 'Paste to Import';
+
+  @override
+  String get mitmRewriteSearchHint => 'Search rewrite rules';
+
+  @override
+  String get mitmRewriteImportTitle => 'Import Rewrite Rules';
+
+  @override
+  String get mitmRewriteImportDesc =>
+      'Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.';
+
+  @override
+  String mitmRewriteImportReady(int count, Object detail) {
+    return 'Ready to import $count: $detail';
+  }
+
+  @override
+  String mitmRewriteImportLineError(int line, Object reason) {
+    return 'Line $line can\'t be imported: $reason';
+  }
+
+  @override
+  String mitmRewriteImportMoreErrors(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more lines have errors',
+      one: '1 more line has errors',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmRewriteImportDuplicate(int line) {
+    return 'Line $line is already there and will be skipped';
+  }
+
+  @override
+  String get mitmRewritePlace => 'Place';
+
+  @override
+  String get mitmRewritePlaceEnd => 'End of each group';
+
+  @override
+  String get mitmRewritePlaceStart => 'Start of each group';
+
+  @override
+  String mitmRewriteImportButton(int count) {
+    return 'Import $count';
+  }
+
+  @override
+  String get mitmRewriteImporting => 'Importing…';
+
+  @override
+  String mitmRewriteImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rules',
+      one: '1 rule',
+    );
+    return 'Imported $_temp0';
+  }
+
+  @override
+  String get mitmRewriteEditTitle => 'Edit Rewrite Rule';
+
+  @override
+  String mitmRewriteEditSubtitle(Object group, int number) {
+    return '$group · Rule $number';
+  }
+
+  @override
+  String get mitmRewritePreviewType => 'Type';
+
+  @override
+  String get mitmRewritePreviewMatch => 'Matches';
+
+  @override
+  String get mitmRewritePreviewAction => 'Action';
+
+  @override
+  String get mitmRewriteUnparsable => 'Can\'t parse';
+
+  @override
+  String mitmRewriteSectionChanged(Object group) {
+    return 'This line belongs in $group; it will move there.';
+  }
+
+  @override
+  String mitmRewriteBadgeApplied(Object type) {
+    return 'Rewritten · $type';
+  }
+
+  @override
+  String mitmRewriteBadgeFailed(Object reason) {
+    return 'Rewrite failed · $reason';
+  }
+
+  @override
+  String get mitmRewriteRewritten => 'Rewritten';
+
+  @override
+  String get mitmRewriteFailedShort => 'Rewrite failed';
+
+  @override
+  String get mitmRewriteAppliedTitle => 'Rewrite applied';
+
+  @override
+  String mitmRewriteHitCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rules',
+      one: '1 rule',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmRewriteFailedTitle(Object reason) {
+    return 'Rewrite failed: $reason';
+  }
+
+  @override
+  String get mitmRewritePassedThrough => 'Not rewritten; passed on unchanged';
+
+  @override
+  String mitmRewriteRuleRef(Object rule) {
+    return 'Rule $rule';
+  }
+
+  @override
+  String get mitmRewriteViewInList => 'Show in Rewrite';
+
+  @override
+  String get mitmRewriteBefore => 'Before';
+
+  @override
+  String get mitmRewriteAfter => 'After';
+
+  @override
+  String get mitmRewriteRuleRemoved => 'The rule is no longer in this profile';
+
+  @override
+  String get mitmRewriteSkipOversize => 'Content over the size limit';
+
+  @override
+  String get mitmRewriteSkipDecode => 'Couldn\'t decompress the content';
+
+  @override
+  String get mitmRewriteSkipNotText =>
+      'Content isn\'t in a supported text format';
+
+  @override
+  String get mitmRewriteSkipEncoding => 'Unsupported content encoding';
+
+  @override
+  String get mitmRewriteSkipTimeout => 'The pattern took too long to match';
+
+  @override
+  String get mitmRewriteSkipCrossHost => 'Can\'t rewrite to another host';
+
+  @override
+  String get mitmRewriteSkipInvalidUrl => 'The rewritten URL is invalid';
+
+  @override
+  String get mitmRewriteSkipStreaming => 'The content is a stream';
+
+  @override
+  String get mitmRewriteSkipUploading => 'The request was still uploading';
+
+  @override
+  String get mitmRewriteSkipRead => 'Couldn\'t read the content';
+
+  @override
+  String get mitmRewriteSkipOther => 'Rewrite not applied';
+
+  @override
+  String mitmRewriteRejectDetail(Object text, Object type) {
+    return '$text ($type)';
+  }
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -174,8 +176,13 @@ func TestMitmRewriteParsesPastedText(t *testing.T) {
 	if fmt.Sprint(issues) != "[2 6 11 15]" {
 		t.Fatalf("issues at %v: %+v", issues, result.Issues)
 	}
-	if loose := parseMitmRewriteText("^x - reject\n"); len(loose.Rules) != 0 || len(loose.Issues) != 1 || loose.Issues[0].Line != 1 {
-		t.Fatalf("a line outside every section: %+v", loose)
+	// A line outside every section is taken when only one section reads it.
+	loose := parseMitmRewriteText("^x - reject\nhttp-response ^x header-del X-A\nhttp-response ^x a b\nnonsense\n")
+	if len(loose.Rules) != 3 || loose.Rules[0].Section != mitmSectionURL || loose.Rules[1].Section != mitmSectionHeader || loose.Rules[2].Section != mitmSectionBody {
+		t.Fatalf("lines outside every section: %+v", loose)
+	}
+	if len(loose.Issues) != 1 || loose.Issues[0].Line != 4 {
+		t.Fatalf("a line no section reads: %+v", loose.Issues)
 	}
 }
 
@@ -532,6 +539,25 @@ func TestMitmRewriteHTTP1Session(t *testing.T) {
 	}
 	if text, _ := mitmBodyText(t, list.Exchanges[3].ID, true); text != `{"ads":[],"ok":true}` {
 		t.Fatalf("recorded body %q", text)
+	}
+	// What each side was before the rules changed it stays viewable.
+	if moved.OriginalRequestHeader["User-Agent"][0] != "iPhone" || moved.RequestHeader["User-Agent"][0] != "Mac" {
+		t.Fatalf("request headers before %v after %v", moved.OriginalRequestHeader, moved.RequestHeader)
+	}
+	if moved.OriginalResponseHeader["X-Remove"] == nil || moved.OriginalResponseHeader["Content-Encoding"][0] != "gzip" || !moved.OriginalResponseBody || moved.OriginalRequestBody {
+		t.Fatalf("response before %+v", moved)
+	}
+	before := handleMitmBody(MitmBodyParams{ID: moved.ID, Response: true, Original: true})
+	if raw, _ := base64.StdEncoding.DecodeString(before.Data); string(raw) != `{"ads":[1,2],"ok":true}` || before.Encoding != "" {
+		t.Fatalf("original body %q %+v", raw, before)
+	}
+	if form := handleMitmExchange(MitmExchangeParams{ID: list.Exchanges[5].ID}); !form.OriginalRequestBody {
+		t.Fatalf("form %+v", form)
+	} else if raw, _ := base64.StdEncoding.DecodeString(handleMitmBody(MitmBodyParams{ID: form.ID, Original: true}).Data); string(raw) != "a=1&b=1" {
+		t.Fatalf("original upload %q", raw)
+	}
+	if plain := handleMitmExchange(MitmExchangeParams{ID: list.Exchanges[4].ID}); plain.OriginalResponseBody || handleMitmBody(MitmBodyParams{ID: plain.ID, Response: true, Original: true}) != nil {
+		t.Fatalf("an unchanged body has an original: %+v", plain)
 	}
 	if _, err := io.WriteString(h.conn, get("/drop")); err != nil {
 		t.Fatal(err)
@@ -1003,5 +1029,37 @@ func TestMitmRewriteKeepsANonDefaultPort(t *testing.T) {
 	// ...and the default port is left out, as browsers do.
 	if x = mitmRewriteBegin("https", "example.com", 443, "/ad", false); x.url != "https://example.com/ad" || x.request(http.Header{}).local == nil {
 		t.Fatalf("default port: %q", x.url)
+	}
+}
+
+func TestMitmRewriteTellsTheRequestListOncePerState(t *testing.T) {
+	withMitmCapture(t, mitmDefaultCaptureLimits)
+	withMitmRewrite(t, 0, rewriteTestRules()...)
+	var events []MitmConnection
+	var mu sync.Mutex
+	oldSend := sendMitmConnection
+	sendMitmConnection = func(event *MitmConnection) bool {
+		mu.Lock()
+		events = append(events, *event)
+		mu.Unlock()
+		return true
+	}
+	t.Cleanup(func() { sendMitmConnection = oldSend })
+	h := startRewriteH1(t, false, rewriteTestSite)
+	h.do(t, get("/ad"))
+	h.do(t, get("/ad"))
+	h.do(t, get("/bin"))
+	h.do(t, get("/bin"))
+	mu.Lock()
+	defer mu.Unlock()
+	if len(events) != 2 {
+		t.Fatalf("events %+v", events)
+	}
+	first, second := events[0], events[1]
+	if first.Id != "rw-conn" || first.Outcome != "" || !first.Rewrite.Applied || first.Rewrite.Failed || first.Rewrite.Hit.Action != "reject-dict" {
+		t.Fatalf("first %+v %+v", first, first.Rewrite)
+	}
+	if !second.Rewrite.Applied || !second.Rewrite.Failed || second.Rewrite.Hit.Skipped != mitmSkipNotText {
+		t.Fatalf("second %+v %+v", second.Rewrite, second.Rewrite.Hit)
 	}
 }

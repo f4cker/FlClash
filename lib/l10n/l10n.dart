@@ -12112,6 +12112,540 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'When off, only HTTP/1.1 connections are decrypted; connections that support only HTTP/2 won\'t be decrypted.'**
   String get mitmHttp2Desc;
+
+  /// No description provided for @mitmRewriteAndScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite & Scripts'**
+  String get mitmRewriteAndScripts;
+
+  /// No description provided for @mitmRewrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite'**
+  String get mitmRewrite;
+
+  /// No description provided for @mitmRewriteRuleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 rule} other{{count} rules}}'**
+  String mitmRewriteRuleCount(int count);
+
+  /// No description provided for @mitmRewriteInvalidCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} invalid'**
+  String mitmRewriteInvalidCount(int count);
+
+  /// No description provided for @mitmRewriteNoneAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'None added'**
+  String get mitmRewriteNoneAdded;
+
+  /// No description provided for @mitmRewriteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile “{profile}” · {count} rewrite rules, {enabled} on'**
+  String mitmRewriteSubtitle(Object profile, int count, int enabled);
+
+  /// No description provided for @mitmRewriteGroupReject.
+  ///
+  /// In en, this message translates to:
+  /// **'URL Reject'**
+  String get mitmRewriteGroupReject;
+
+  /// No description provided for @mitmRewriteGroupRedirect.
+  ///
+  /// In en, this message translates to:
+  /// **'URL Redirect'**
+  String get mitmRewriteGroupRedirect;
+
+  /// No description provided for @mitmRewriteGroupHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Request & Response Headers'**
+  String get mitmRewriteGroupHeader;
+
+  /// No description provided for @mitmRewriteGroupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Request & Response Bodies'**
+  String get mitmRewriteGroupBody;
+
+  /// No description provided for @mitmRewriteActReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get mitmRewriteActReject;
+
+  /// No description provided for @mitmRewriteActRedirect.
+  ///
+  /// In en, this message translates to:
+  /// **'{code} redirect'**
+  String mitmRewriteActRedirect(Object code);
+
+  /// No description provided for @mitmRewriteActUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite URL'**
+  String get mitmRewriteActUrl;
+
+  /// No description provided for @mitmRewriteActRequestHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Request header'**
+  String get mitmRewriteActRequestHeader;
+
+  /// No description provided for @mitmRewriteActResponseHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Response header'**
+  String get mitmRewriteActResponseHeader;
+
+  /// No description provided for @mitmRewriteActRequestBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Request body'**
+  String get mitmRewriteActRequestBody;
+
+  /// No description provided for @mitmRewriteActResponseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Response body'**
+  String get mitmRewriteActResponseBody;
+
+  /// No description provided for @mitmRewriteActMapLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Local response'**
+  String get mitmRewriteActMapLocal;
+
+  /// No description provided for @mitmRewriteRejectError.
+  ///
+  /// In en, this message translates to:
+  /// **'Return an error'**
+  String get mitmRewriteRejectError;
+
+  /// No description provided for @mitmRewriteReject200.
+  ///
+  /// In en, this message translates to:
+  /// **'Return an empty page'**
+  String get mitmRewriteReject200;
+
+  /// No description provided for @mitmRewriteRejectImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Return a blank image'**
+  String get mitmRewriteRejectImage;
+
+  /// No description provided for @mitmRewriteRejectDict.
+  ///
+  /// In en, this message translates to:
+  /// **'Return an empty JSON object'**
+  String get mitmRewriteRejectDict;
+
+  /// No description provided for @mitmRewriteRejectArray.
+  ///
+  /// In en, this message translates to:
+  /// **'Return an empty JSON array'**
+  String get mitmRewriteRejectArray;
+
+  /// No description provided for @mitmRewriteRejectDrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop the connection'**
+  String get mitmRewriteRejectDrop;
+
+  /// No description provided for @mitmRewriteHeaderAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {name}'**
+  String mitmRewriteHeaderAdd(Object name);
+
+  /// No description provided for @mitmRewriteHeaderDel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}'**
+  String mitmRewriteHeaderDel(Object name);
+
+  /// No description provided for @mitmRewriteHeaderReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace {name}'**
+  String mitmRewriteHeaderReplace(Object name);
+
+  /// No description provided for @mitmRewriteHeaderReplaceRegex.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace in {name}'**
+  String mitmRewriteHeaderReplaceRegex(Object name);
+
+  /// No description provided for @mitmRewriteBodyReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 replacement} other{{count} replacements}}'**
+  String mitmRewriteBodyReplace(int count);
+
+  /// No description provided for @mitmRewriteBodyLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {size}'**
+  String mitmRewriteBodyLimit(Object size);
+
+  /// No description provided for @mitmRewriteInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid rule: {reason}'**
+  String mitmRewriteInvalid(Object reason);
+
+  /// No description provided for @mitmRewriteInvalidSpoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid rule, {reason}'**
+  String mitmRewriteInvalidSpoken(Object reason);
+
+  /// No description provided for @mitmRewriteToggleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{action}, {url}'**
+  String mitmRewriteToggleLabel(Object action, Object url);
+
+  /// No description provided for @mitmRewriteNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'The change didn\'t take effect: {reason}'**
+  String mitmRewriteNotApplied(Object reason);
+
+  /// No description provided for @mitmRewriteEnableAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn All On'**
+  String get mitmRewriteEnableAll;
+
+  /// No description provided for @mitmRewriteDisableAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn All Off'**
+  String get mitmRewriteDisableAll;
+
+  /// No description provided for @mitmRewriteCopyAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy All Rules'**
+  String get mitmRewriteCopyAll;
+
+  /// No description provided for @mitmRewriteDeleteInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Invalid Rules'**
+  String get mitmRewriteDeleteInvalid;
+
+  /// No description provided for @mitmRewriteDeleteInvalidConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count, plural, =1{1 invalid rule} other{{count} invalid rules}}?'**
+  String mitmRewriteDeleteInvalidConfirm(int count);
+
+  /// No description provided for @mitmRewriteOff.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTPS decryption is off, so rewrite rules aren\'t running.'**
+  String get mitmRewriteOff;
+
+  /// No description provided for @mitmRewriteGoTurnOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn On'**
+  String get mitmRewriteGoTurnOn;
+
+  /// No description provided for @mitmRewriteEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No rewrite rules yet'**
+  String get mitmRewriteEmptyTitle;
+
+  /// No description provided for @mitmRewriteEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste rules to import them.'**
+  String get mitmRewriteEmptyDesc;
+
+  /// No description provided for @mitmRewritePaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste to Import'**
+  String get mitmRewritePaste;
+
+  /// No description provided for @mitmRewriteSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search rewrite rules'**
+  String get mitmRewriteSearchHint;
+
+  /// No description provided for @mitmRewriteImportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Rewrite Rules'**
+  String get mitmRewriteImportTitle;
+
+  /// No description provided for @mitmRewriteImportDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.'**
+  String get mitmRewriteImportDesc;
+
+  /// No description provided for @mitmRewriteImportReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to import {count}: {detail}'**
+  String mitmRewriteImportReady(int count, Object detail);
+
+  /// No description provided for @mitmRewriteImportLineError.
+  ///
+  /// In en, this message translates to:
+  /// **'Line {line} can\'t be imported: {reason}'**
+  String mitmRewriteImportLineError(int line, Object reason);
+
+  /// No description provided for @mitmRewriteImportMoreErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 more line has errors} other{{count} more lines have errors}}'**
+  String mitmRewriteImportMoreErrors(int count);
+
+  /// No description provided for @mitmRewriteImportDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Line {line} is already there and will be skipped'**
+  String mitmRewriteImportDuplicate(int line);
+
+  /// No description provided for @mitmRewritePlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Place'**
+  String get mitmRewritePlace;
+
+  /// No description provided for @mitmRewritePlaceEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End of each group'**
+  String get mitmRewritePlaceEnd;
+
+  /// No description provided for @mitmRewritePlaceStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start of each group'**
+  String get mitmRewritePlaceStart;
+
+  /// No description provided for @mitmRewriteImportButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import {count}'**
+  String mitmRewriteImportButton(int count);
+
+  /// No description provided for @mitmRewriteImporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing…'**
+  String get mitmRewriteImporting;
+
+  /// No description provided for @mitmRewriteImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {count, plural, =1{1 rule} other{{count} rules}}'**
+  String mitmRewriteImported(int count);
+
+  /// No description provided for @mitmRewriteEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Rewrite Rule'**
+  String get mitmRewriteEditTitle;
+
+  /// No description provided for @mitmRewriteEditSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{group} · Rule {number}'**
+  String mitmRewriteEditSubtitle(Object group, int number);
+
+  /// No description provided for @mitmRewritePreviewType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get mitmRewritePreviewType;
+
+  /// No description provided for @mitmRewritePreviewMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches'**
+  String get mitmRewritePreviewMatch;
+
+  /// No description provided for @mitmRewritePreviewAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Action'**
+  String get mitmRewritePreviewAction;
+
+  /// No description provided for @mitmRewriteUnparsable.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t parse'**
+  String get mitmRewriteUnparsable;
+
+  /// No description provided for @mitmRewriteSectionChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'This line belongs in {group}; it will move there.'**
+  String mitmRewriteSectionChanged(Object group);
+
+  /// No description provided for @mitmRewriteBadgeApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewritten · {type}'**
+  String mitmRewriteBadgeApplied(Object type);
+
+  /// No description provided for @mitmRewriteBadgeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite failed · {reason}'**
+  String mitmRewriteBadgeFailed(Object reason);
+
+  /// No description provided for @mitmRewriteRewritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewritten'**
+  String get mitmRewriteRewritten;
+
+  /// No description provided for @mitmRewriteFailedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite failed'**
+  String get mitmRewriteFailedShort;
+
+  /// No description provided for @mitmRewriteAppliedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite applied'**
+  String get mitmRewriteAppliedTitle;
+
+  /// No description provided for @mitmRewriteHitCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 rule} other{{count} rules}}'**
+  String mitmRewriteHitCount(int count);
+
+  /// No description provided for @mitmRewriteFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite failed: {reason}'**
+  String mitmRewriteFailedTitle(Object reason);
+
+  /// No description provided for @mitmRewritePassedThrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Not rewritten; passed on unchanged'**
+  String get mitmRewritePassedThrough;
+
+  /// No description provided for @mitmRewriteRuleRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule {rule}'**
+  String mitmRewriteRuleRef(Object rule);
+
+  /// No description provided for @mitmRewriteViewInList.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in Rewrite'**
+  String get mitmRewriteViewInList;
+
+  /// No description provided for @mitmRewriteBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get mitmRewriteBefore;
+
+  /// No description provided for @mitmRewriteAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get mitmRewriteAfter;
+
+  /// No description provided for @mitmRewriteRuleRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'The rule is no longer in this profile'**
+  String get mitmRewriteRuleRemoved;
+
+  /// No description provided for @mitmRewriteSkipOversize.
+  ///
+  /// In en, this message translates to:
+  /// **'Content over the size limit'**
+  String get mitmRewriteSkipOversize;
+
+  /// No description provided for @mitmRewriteSkipDecode.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t decompress the content'**
+  String get mitmRewriteSkipDecode;
+
+  /// No description provided for @mitmRewriteSkipNotText.
+  ///
+  /// In en, this message translates to:
+  /// **'Content isn\'t in a supported text format'**
+  String get mitmRewriteSkipNotText;
+
+  /// No description provided for @mitmRewriteSkipEncoding.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported content encoding'**
+  String get mitmRewriteSkipEncoding;
+
+  /// No description provided for @mitmRewriteSkipTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The pattern took too long to match'**
+  String get mitmRewriteSkipTimeout;
+
+  /// No description provided for @mitmRewriteSkipCrossHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t rewrite to another host'**
+  String get mitmRewriteSkipCrossHost;
+
+  /// No description provided for @mitmRewriteSkipInvalidUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'The rewritten URL is invalid'**
+  String get mitmRewriteSkipInvalidUrl;
+
+  /// No description provided for @mitmRewriteSkipStreaming.
+  ///
+  /// In en, this message translates to:
+  /// **'The content is a stream'**
+  String get mitmRewriteSkipStreaming;
+
+  /// No description provided for @mitmRewriteSkipUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'The request was still uploading'**
+  String get mitmRewriteSkipUploading;
+
+  /// No description provided for @mitmRewriteSkipRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the content'**
+  String get mitmRewriteSkipRead;
+
+  /// No description provided for @mitmRewriteSkipOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite not applied'**
+  String get mitmRewriteSkipOther;
+
+  /// No description provided for @mitmRewriteRejectDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'{text} ({type})'**
+  String mitmRewriteRejectDetail(Object text, Object type);
 }
 
 class _AppLocalizationsDelegate

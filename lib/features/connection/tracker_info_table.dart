@@ -238,7 +238,7 @@ class TrackerTargetText extends StatelessWidget {
         ],
       ),
     );
-    if (MitmBadge.of(trackerInfo) == null) {
+    if (!hasMitmMarks(trackerInfo)) {
       return target;
     }
     return Row(

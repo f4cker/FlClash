@@ -874,8 +874,13 @@ class ProfileMitmRewrites extends _$ProfileMitmRewrites
   }
 
   void setAll(List<MitmRewrite> rewrites) {
+    unawaited(commit(rewrites).catchError(_reportOptimisticFailure));
+  }
+
+  /// [setAll], done once the rules are stored; throws if they are not.
+  Future<void> commit(List<MitmRewrite> rewrites) {
     final orders = indexing.generateNKeys(rewrites.length);
-    optimistic(
+    return optimisticAsync(
       [
         for (final (index, rewrite) in rewrites.indexed)
           rewrite.copyWith(order: orders[index]),

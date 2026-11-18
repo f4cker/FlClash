@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -106,8 +107,65 @@ enum MitmBadge {
   };
 }
 
-/// [MitmBadge.of] as a glyph that names itself on hover and to a screen
-/// reader, or nothing for unlisted traffic.
+/// The mark a row carries once rewrite rules acted on its connection: a
+/// wand when one applied, a wand with an exclamation mark when one matched
+/// but let a message pass as it was. A failure outranks an applied rule on
+/// the same connection, so it is not hidden behind it.
+enum MitmRewriteBadge {
+  applied(AppGlyphs.wand),
+  failed(AppGlyphs.wandError);
+
+  const MitmRewriteBadge(this.glyph);
+
+  final Glyph glyph;
+
+  static const _purple = Color(0xFF7A4FD6);
+  static const _purpleDark = Color(0xFFB69CF5);
+
+  Color color(BuildContext context) {
+    final dark = context.colorScheme.brightness == Brightness.dark;
+    return switch (this) {
+      MitmRewriteBadge.applied => dark ? _purpleDark : _purple,
+      MitmRewriteBadge.failed => dark ? MitmBadge._amberDark : MitmBadge._amber,
+    };
+  }
+
+  static MitmRewriteBadge? of(TrackerInfo trackerInfo) {
+    final rewrite = trackerInfo.mitmRewrite;
+    return switch (rewrite) {
+      MitmConnectionRewrite(failed: true) => MitmRewriteBadge.failed,
+      MitmConnectionRewrite(applied: true) => MitmRewriteBadge.applied,
+      _ => null,
+    };
+  }
+
+  /// Names the latest hit's kind, or the reason it failed.
+  String label(BuildContext context, MitmConnectionRewrite rewrite) {
+    final l = context.appLocalizations;
+    final hit = rewrite.hit;
+    return switch (this) {
+      MitmRewriteBadge.applied when hit != null && hit.skipped.isEmpty =>
+        l.mitmRewriteBadgeApplied(mitmRewriteHitType(l, hit)),
+      MitmRewriteBadge.applied => l.mitmRewriteRewritten,
+      MitmRewriteBadge.failed when hit != null && hit.skipped.isNotEmpty =>
+        l.mitmRewriteBadgeFailed(mitmRewriteSkipText(l, hit.skipped)),
+      MitmRewriteBadge.failed => l.mitmRewriteFailedShort,
+    };
+  }
+
+  String semanticsLabel(BuildContext context) => switch (this) {
+    MitmRewriteBadge.applied => context.appLocalizations.mitmRewriteRewritten,
+    MitmRewriteBadge.failed => context.appLocalizations.mitmRewriteFailedShort,
+  };
+}
+
+/// Whether a row shows [MitmBadgeIcon].
+bool hasMitmMarks(TrackerInfo trackerInfo) =>
+    MitmBadge.of(trackerInfo) != null ||
+    MitmRewriteBadge.of(trackerInfo) != null;
+
+/// [MitmBadge.of] and [MitmRewriteBadge.of] as glyphs that name themselves
+/// on hover and to a screen reader, or nothing for unlisted traffic.
 class MitmBadgeIcon extends StatelessWidget {
   final TrackerInfo trackerInfo;
 
@@ -116,9 +174,40 @@ class MitmBadgeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badge = MitmBadge.of(trackerInfo);
-    if (badge == null) {
-      return const SizedBox.shrink();
-    }
+    final rewrite = MitmRewriteBadge.of(trackerInfo);
+    final marks = [
+      if (badge != null) _decryptionMark(context, badge),
+      if (rewrite != null) _rewriteMark(context, rewrite),
+    ];
+    return switch (marks) {
+      [] => const SizedBox.shrink(),
+      [final mark] => mark,
+      _ => Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: MitmBadge.gap,
+        children: marks,
+      ),
+    };
+  }
+
+  Widget _rewriteMark(BuildContext context, MitmRewriteBadge badge) {
+    return Tooltip(
+      message: badge.label(context, trackerInfo.mitmRewrite!),
+      hoverDelay: MitmBadge.tooltipDelay,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: badge.semanticsLabel(context),
+        excludeSemantics: true,
+        child: GlyphIcon(
+          badge.glyph,
+          size: MitmBadge.iconSize,
+          color: badge.color(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _decryptionMark(BuildContext context, MitmBadge badge) {
     return Tooltip(
       message: badge.label(context),
       hoverDelay: MitmBadge.tooltipDelay,
@@ -159,10 +248,18 @@ void showTrackerInfoDetail(
           requestsProvider.select((requests) {
             for (final request in requests.list.reversed) {
               if (request.id == trackerInfo.id) {
-                return (request.mitmOutcome, request.metadata.mitm);
+                return (
+                  request.mitmOutcome,
+                  request.metadata.mitm,
+                  request.mitmRewrite,
+                );
               }
             }
-            return (trackerInfo.mitmOutcome, trackerInfo.metadata.mitm);
+            return (
+              trackerInfo.mitmOutcome,
+              trackerInfo.metadata.mitm,
+              trackerInfo.mitmRewrite,
+            );
           }),
         );
         return Scaffold(
@@ -170,6 +267,7 @@ void showTrackerInfoDetail(
             trackerInfo: trackerInfo.copyWith(
               mitmOutcome: status.$1,
               metadata: trackerInfo.metadata.copyWith(mitm: status.$2),
+              mitmRewrite: status.$3,
             ),
           ),
           title: title,
@@ -351,7 +449,7 @@ class _TrackerInfoBody extends StatelessWidget {
             text: _endpointText(trackerInfo.title, metadata.destinationPort),
             style: styles.title,
           ),
-          if (MitmBadge.of(trackerInfo) != null)
+          if (hasMitmMarks(trackerInfo))
             WidgetSpan(
               alignment: PlaceholderAlignment.middle,
               child: Padding(
@@ -635,6 +733,11 @@ class TrackerInfoDetailView extends ConsumerWidget {
                     '' => badge.label(context),
                     final outcome => outcome,
                   },
+                ),
+              if (MitmRewriteBadge.of(trackerInfo) case final badge?)
+                (
+                  appLocalizations.mitmRewrite,
+                  badge.label(context, trackerInfo.mitmRewrite!),
                 ),
               (appLocalizations.networkType, metadata.network),
               if (process == null)

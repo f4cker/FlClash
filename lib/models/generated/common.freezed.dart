@@ -922,7 +922,7 @@ as bool,
 /// @nodoc
 mixin _$TrackerInfo {
 
- String get id; int get upload; int get download; DateTime get start; Metadata get metadata; List<String> get chains; String get rule; String get rulePayload; int? get downloadSpeed; int? get uploadSpeed; String get mitmOutcome;
+ String get id; int get upload; int get download; DateTime get start; Metadata get metadata; List<String> get chains; String get rule; String get rulePayload; int? get downloadSpeed; int? get uploadSpeed; String get mitmOutcome; MitmConnectionRewrite? get mitmRewrite;
 /// Create a copy of TrackerInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -936,20 +936,20 @@ $TrackerInfoCopyWith<TrackerInfo> get copyWith => _$TrackerInfoCopyWithImpl<Trac
 @override
 bool operator ==(Object other) {
   final _this = this as TrackerInfo;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TrackerInfo&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.upload, _this.upload) || other.upload == _this.upload)&&(identical(other.download, _this.download) || other.download == _this.download)&&(identical(other.start, _this.start) || other.start == _this.start)&&(identical(other.metadata, _this.metadata) || other.metadata == _this.metadata)&&const DeepCollectionEquality().equals(other.chains, _this.chains)&&(identical(other.rule, _this.rule) || other.rule == _this.rule)&&(identical(other.rulePayload, _this.rulePayload) || other.rulePayload == _this.rulePayload)&&(identical(other.downloadSpeed, _this.downloadSpeed) || other.downloadSpeed == _this.downloadSpeed)&&(identical(other.uploadSpeed, _this.uploadSpeed) || other.uploadSpeed == _this.uploadSpeed)&&(identical(other.mitmOutcome, _this.mitmOutcome) || other.mitmOutcome == _this.mitmOutcome));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TrackerInfo&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.upload, _this.upload) || other.upload == _this.upload)&&(identical(other.download, _this.download) || other.download == _this.download)&&(identical(other.start, _this.start) || other.start == _this.start)&&(identical(other.metadata, _this.metadata) || other.metadata == _this.metadata)&&const DeepCollectionEquality().equals(other.chains, _this.chains)&&(identical(other.rule, _this.rule) || other.rule == _this.rule)&&(identical(other.rulePayload, _this.rulePayload) || other.rulePayload == _this.rulePayload)&&(identical(other.downloadSpeed, _this.downloadSpeed) || other.downloadSpeed == _this.downloadSpeed)&&(identical(other.uploadSpeed, _this.uploadSpeed) || other.uploadSpeed == _this.uploadSpeed)&&(identical(other.mitmOutcome, _this.mitmOutcome) || other.mitmOutcome == _this.mitmOutcome)&&(identical(other.mitmRewrite, _this.mitmRewrite) || other.mitmRewrite == _this.mitmRewrite));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TrackerInfo;
-  return Object.hash(runtimeType,_this.id,_this.upload,_this.download,_this.start,_this.metadata,const DeepCollectionEquality().hash(_this.chains),_this.rule,_this.rulePayload,_this.downloadSpeed,_this.uploadSpeed,_this.mitmOutcome);
+  return Object.hash(runtimeType,_this.id,_this.upload,_this.download,_this.start,_this.metadata,const DeepCollectionEquality().hash(_this.chains),_this.rule,_this.rulePayload,_this.downloadSpeed,_this.uploadSpeed,_this.mitmOutcome,_this.mitmRewrite);
 }
 
 @override
 String toString() {
   final _this = this as TrackerInfo;
-  return 'TrackerInfo(id: ${_this.id}, upload: ${_this.upload}, download: ${_this.download}, start: ${_this.start}, metadata: ${_this.metadata}, chains: ${_this.chains}, rule: ${_this.rule}, rulePayload: ${_this.rulePayload}, downloadSpeed: ${_this.downloadSpeed}, uploadSpeed: ${_this.uploadSpeed}, mitmOutcome: ${_this.mitmOutcome})';
+  return 'TrackerInfo(id: ${_this.id}, upload: ${_this.upload}, download: ${_this.download}, start: ${_this.start}, metadata: ${_this.metadata}, chains: ${_this.chains}, rule: ${_this.rule}, rulePayload: ${_this.rulePayload}, downloadSpeed: ${_this.downloadSpeed}, uploadSpeed: ${_this.uploadSpeed}, mitmOutcome: ${_this.mitmOutcome}, mitmRewrite: ${_this.mitmRewrite})';
 }
 
 
@@ -960,11 +960,11 @@ abstract mixin class $TrackerInfoCopyWith<$Res>  {
   factory $TrackerInfoCopyWith(TrackerInfo value, $Res Function(TrackerInfo) _then) = _$TrackerInfoCopyWithImpl;
 @useResult
 $Res call({
- String id, int upload, int download, DateTime start, Metadata metadata, List<String> chains, String rule, String rulePayload, int? downloadSpeed, int? uploadSpeed, String mitmOutcome
+ String id, int upload, int download, DateTime start, Metadata metadata, List<String> chains, String rule, String rulePayload, int? downloadSpeed, int? uploadSpeed, String mitmOutcome, MitmConnectionRewrite? mitmRewrite
 });
 
 
-$MetadataCopyWith<$Res> get metadata;
+$MetadataCopyWith<$Res> get metadata;$MitmConnectionRewriteCopyWith<$Res>? get mitmRewrite;
 
 }
 /// @nodoc
@@ -977,7 +977,7 @@ class _$TrackerInfoCopyWithImpl<$Res>
 
 /// Create a copy of TrackerInfo
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? upload = null,Object? download = null,Object? start = null,Object? metadata = null,Object? chains = null,Object? rule = null,Object? rulePayload = null,Object? downloadSpeed = freezed,Object? uploadSpeed = freezed,Object? mitmOutcome = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? upload = null,Object? download = null,Object? start = null,Object? metadata = null,Object? chains = null,Object? rule = null,Object? rulePayload = null,Object? downloadSpeed = freezed,Object? uploadSpeed = freezed,Object? mitmOutcome = null,Object? mitmRewrite = freezed,}) {
   return _then(TrackerInfo(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,upload: null == upload ? _self.upload : upload // ignore: cast_nullable_to_non_nullable
@@ -990,7 +990,8 @@ as String,rulePayload: null == rulePayload ? _self.rulePayload : rulePayload // 
 as String,downloadSpeed: freezed == downloadSpeed ? _self.downloadSpeed : downloadSpeed // ignore: cast_nullable_to_non_nullable
 as int?,uploadSpeed: freezed == uploadSpeed ? _self.uploadSpeed : uploadSpeed // ignore: cast_nullable_to_non_nullable
 as int?,mitmOutcome: null == mitmOutcome ? _self.mitmOutcome : mitmOutcome // ignore: cast_nullable_to_non_nullable
-as String,
+as String,mitmRewrite: freezed == mitmRewrite ? _self.mitmRewrite : mitmRewrite // ignore: cast_nullable_to_non_nullable
+as MitmConnectionRewrite?,
   ));
 }
 /// Create a copy of TrackerInfo
@@ -1001,6 +1002,18 @@ $MetadataCopyWith<$Res> get metadata {
   
   return $MetadataCopyWith<$Res>(_self.metadata, (value) {
     return _then(_self.copyWith(metadata: value));
+  });
+}/// Create a copy of TrackerInfo
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmConnectionRewriteCopyWith<$Res>? get mitmRewrite {
+    if (_self.mitmRewrite == null) {
+    return null;
+  }
+
+  return $MitmConnectionRewriteCopyWith<$Res>(_self.mitmRewrite!, (value) {
+    return _then(_self.copyWith(mitmRewrite: value));
   });
 }
 }
@@ -1084,10 +1097,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int upload,  int download,  DateTime start,  Metadata metadata,  List<String> chains,  String rule,  String rulePayload,  int? downloadSpeed,  int? uploadSpeed,  String mitmOutcome)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int upload,  int download,  DateTime start,  Metadata metadata,  List<String> chains,  String rule,  String rulePayload,  int? downloadSpeed,  int? uploadSpeed,  String mitmOutcome,  MitmConnectionRewrite? mitmRewrite)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TrackerInfo() when $default != null:
-return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,_that.chains,_that.rule,_that.rulePayload,_that.downloadSpeed,_that.uploadSpeed,_that.mitmOutcome);case _:
+return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,_that.chains,_that.rule,_that.rulePayload,_that.downloadSpeed,_that.uploadSpeed,_that.mitmOutcome,_that.mitmRewrite);case _:
   return orElse();
 
 }
@@ -1105,10 +1118,10 @@ return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int upload,  int download,  DateTime start,  Metadata metadata,  List<String> chains,  String rule,  String rulePayload,  int? downloadSpeed,  int? uploadSpeed,  String mitmOutcome)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int upload,  int download,  DateTime start,  Metadata metadata,  List<String> chains,  String rule,  String rulePayload,  int? downloadSpeed,  int? uploadSpeed,  String mitmOutcome,  MitmConnectionRewrite? mitmRewrite)  $default,) {final _that = this;
 switch (_that) {
 case _TrackerInfo():
-return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,_that.chains,_that.rule,_that.rulePayload,_that.downloadSpeed,_that.uploadSpeed,_that.mitmOutcome);case _:
+return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,_that.chains,_that.rule,_that.rulePayload,_that.downloadSpeed,_that.uploadSpeed,_that.mitmOutcome,_that.mitmRewrite);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1125,10 +1138,10 @@ return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int upload,  int download,  DateTime start,  Metadata metadata,  List<String> chains,  String rule,  String rulePayload,  int? downloadSpeed,  int? uploadSpeed,  String mitmOutcome)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int upload,  int download,  DateTime start,  Metadata metadata,  List<String> chains,  String rule,  String rulePayload,  int? downloadSpeed,  int? uploadSpeed,  String mitmOutcome,  MitmConnectionRewrite? mitmRewrite)?  $default,) {final _that = this;
 switch (_that) {
 case _TrackerInfo() when $default != null:
-return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,_that.chains,_that.rule,_that.rulePayload,_that.downloadSpeed,_that.uploadSpeed,_that.mitmOutcome);case _:
+return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,_that.chains,_that.rule,_that.rulePayload,_that.downloadSpeed,_that.uploadSpeed,_that.mitmOutcome,_that.mitmRewrite);case _:
   return null;
 
 }
@@ -1140,7 +1153,7 @@ return $default(_that.id,_that.upload,_that.download,_that.start,_that.metadata,
 @JsonSerializable()
 
 class _TrackerInfo implements TrackerInfo {
-  const _TrackerInfo({required this.id, this.upload = 0, this.download = 0, required this.start, required this.metadata, required  List<String> chains, required this.rule, required this.rulePayload, this.downloadSpeed, this.uploadSpeed, this.mitmOutcome = ''}): _chains = chains;
+  const _TrackerInfo({required this.id, this.upload = 0, this.download = 0, required this.start, required this.metadata, required  List<String> chains, required this.rule, required this.rulePayload, this.downloadSpeed, this.uploadSpeed, this.mitmOutcome = '', this.mitmRewrite}): _chains = chains;
   factory _TrackerInfo.fromJson(Map<String, dynamic> json) => _$TrackerInfoFromJson(json);
 
 @override final  String id;
@@ -1160,6 +1173,7 @@ class _TrackerInfo implements TrackerInfo {
 @override final  int? downloadSpeed;
 @override final  int? uploadSpeed;
 @override@JsonKey() final  String mitmOutcome;
+@override final  MitmConnectionRewrite? mitmRewrite;
 
 /// Create a copy of TrackerInfo
 /// with the given fields replaced by the non-null parameter values.
@@ -1174,18 +1188,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TrackerInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.upload, upload) || other.upload == upload)&&(identical(other.download, download) || other.download == download)&&(identical(other.start, start) || other.start == start)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&const DeepCollectionEquality().equals(other.chains, _chains)&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.rulePayload, rulePayload) || other.rulePayload == rulePayload)&&(identical(other.downloadSpeed, downloadSpeed) || other.downloadSpeed == downloadSpeed)&&(identical(other.uploadSpeed, uploadSpeed) || other.uploadSpeed == uploadSpeed)&&(identical(other.mitmOutcome, mitmOutcome) || other.mitmOutcome == mitmOutcome));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TrackerInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.upload, upload) || other.upload == upload)&&(identical(other.download, download) || other.download == download)&&(identical(other.start, start) || other.start == start)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&const DeepCollectionEquality().equals(other.chains, _chains)&&(identical(other.rule, rule) || other.rule == rule)&&(identical(other.rulePayload, rulePayload) || other.rulePayload == rulePayload)&&(identical(other.downloadSpeed, downloadSpeed) || other.downloadSpeed == downloadSpeed)&&(identical(other.uploadSpeed, uploadSpeed) || other.uploadSpeed == uploadSpeed)&&(identical(other.mitmOutcome, mitmOutcome) || other.mitmOutcome == mitmOutcome)&&(identical(other.mitmRewrite, mitmRewrite) || other.mitmRewrite == mitmRewrite));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,upload,download,start,metadata,const DeepCollectionEquality().hash(_chains),rule,rulePayload,downloadSpeed,uploadSpeed,mitmOutcome);
+    return Object.hash(runtimeType,id,upload,download,start,metadata,const DeepCollectionEquality().hash(_chains),rule,rulePayload,downloadSpeed,uploadSpeed,mitmOutcome,mitmRewrite);
 }
 
 @override
 String toString() {
-    return 'TrackerInfo(id: $id, upload: $upload, download: $download, start: $start, metadata: $metadata, chains: $chains, rule: $rule, rulePayload: $rulePayload, downloadSpeed: $downloadSpeed, uploadSpeed: $uploadSpeed, mitmOutcome: $mitmOutcome)';
+    return 'TrackerInfo(id: $id, upload: $upload, download: $download, start: $start, metadata: $metadata, chains: $chains, rule: $rule, rulePayload: $rulePayload, downloadSpeed: $downloadSpeed, uploadSpeed: $uploadSpeed, mitmOutcome: $mitmOutcome, mitmRewrite: $mitmRewrite)';
 }
 
 
@@ -1196,11 +1210,11 @@ abstract mixin class _$TrackerInfoCopyWith<$Res> implements $TrackerInfoCopyWith
   factory _$TrackerInfoCopyWith(_TrackerInfo value, $Res Function(_TrackerInfo) _then) = __$TrackerInfoCopyWithImpl;
 @override @useResult
 $Res call({
- String id, int upload, int download, DateTime start, Metadata metadata, List<String> chains, String rule, String rulePayload, int? downloadSpeed, int? uploadSpeed, String mitmOutcome
+ String id, int upload, int download, DateTime start, Metadata metadata, List<String> chains, String rule, String rulePayload, int? downloadSpeed, int? uploadSpeed, String mitmOutcome, MitmConnectionRewrite? mitmRewrite
 });
 
 
-@override $MetadataCopyWith<$Res> get metadata;
+@override $MetadataCopyWith<$Res> get metadata;@override $MitmConnectionRewriteCopyWith<$Res>? get mitmRewrite;
 
 }
 /// @nodoc
@@ -1213,7 +1227,7 @@ class __$TrackerInfoCopyWithImpl<$Res>
 
 /// Create a copy of TrackerInfo
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? upload = null,Object? download = null,Object? start = null,Object? metadata = null,Object? chains = null,Object? rule = null,Object? rulePayload = null,Object? downloadSpeed = freezed,Object? uploadSpeed = freezed,Object? mitmOutcome = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? upload = null,Object? download = null,Object? start = null,Object? metadata = null,Object? chains = null,Object? rule = null,Object? rulePayload = null,Object? downloadSpeed = freezed,Object? uploadSpeed = freezed,Object? mitmOutcome = null,Object? mitmRewrite = freezed,}) {
   return _then(_TrackerInfo(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,upload: null == upload ? _self.upload : upload // ignore: cast_nullable_to_non_nullable
@@ -1226,7 +1240,8 @@ as String,rulePayload: null == rulePayload ? _self.rulePayload : rulePayload // 
 as String,downloadSpeed: freezed == downloadSpeed ? _self.downloadSpeed : downloadSpeed // ignore: cast_nullable_to_non_nullable
 as int?,uploadSpeed: freezed == uploadSpeed ? _self.uploadSpeed : uploadSpeed // ignore: cast_nullable_to_non_nullable
 as int?,mitmOutcome: null == mitmOutcome ? _self.mitmOutcome : mitmOutcome // ignore: cast_nullable_to_non_nullable
-as String,
+as String,mitmRewrite: freezed == mitmRewrite ? _self.mitmRewrite : mitmRewrite // ignore: cast_nullable_to_non_nullable
+as MitmConnectionRewrite?,
   ));
 }
 
@@ -1238,6 +1253,18 @@ $MetadataCopyWith<$Res> get metadata {
   
   return $MetadataCopyWith<$Res>(_self.metadata, (value) {
     return _then(_self.copyWith(metadata: value));
+  });
+}/// Create a copy of TrackerInfo
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmConnectionRewriteCopyWith<$Res>? get mitmRewrite {
+    if (_self.mitmRewrite == null) {
+    return null;
+  }
+
+  return $MitmConnectionRewriteCopyWith<$Res>(_self.mitmRewrite!, (value) {
+    return _then(_self.copyWith(mitmRewrite: value));
   });
 }
 }

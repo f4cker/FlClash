@@ -303,7 +303,7 @@ class RuleRow extends StatelessWidget {
         false,
       );
     }
-    return _RowHover(
+    return RuleRowHover(
       builder: (context, shown) => _buildRow(
         context,
         semantics,
@@ -632,16 +632,16 @@ class RuleSetFooterRow extends StatelessWidget {
 
 /// Whether a row shows its edit buttons: while the pointer is over it or
 /// focus is in it, so Tab reaches them too.
-class _RowHover extends StatefulWidget {
+class RuleRowHover extends StatefulWidget {
   final Widget Function(BuildContext context, bool shown) builder;
 
-  const _RowHover({required this.builder});
+  const RuleRowHover({super.key, required this.builder});
 
   @override
-  State<_RowHover> createState() => _RowHoverState();
+  State<RuleRowHover> createState() => _RuleRowHoverState();
 }
 
-class _RowHoverState extends State<_RowHover> {
+class _RuleRowHoverState extends State<RuleRowHover> {
   bool _hovered = false;
   bool _focused = false;
 

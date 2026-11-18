@@ -277,6 +277,24 @@ Map<String, dynamic> _$MitmActionToJson(_MitmAction instance) =>
       'skipped': instance.skipped,
     };
 
+_MitmConnectionRewrite _$MitmConnectionRewriteFromJson(
+  Map<String, dynamic> json,
+) => _MitmConnectionRewrite(
+  applied: json['applied'] as bool? ?? false,
+  failed: json['failed'] as bool? ?? false,
+  hit: json['hit'] == null
+      ? null
+      : MitmAction.fromJson(json['hit'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$MitmConnectionRewriteToJson(
+  _MitmConnectionRewrite instance,
+) => <String, dynamic>{
+  'applied': instance.applied,
+  'failed': instance.failed,
+  'hit': instance.hit,
+};
+
 _MitmExchange _$MitmExchangeFromJson(
   Map<String, dynamic> json,
 ) => _MitmExchange(
@@ -313,6 +331,20 @@ _MitmExchange _$MitmExchangeFromJson(
       const [],
   rewritten: json['rewritten'] as bool? ?? false,
   rewriteSkipped: json['rewrite-skipped'] as bool? ?? false,
+  originalRequestHeader:
+      (json['original-request-header'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, (e as List<dynamic>).map((e) => e as String).toList()),
+      ) ??
+      const {},
+  originalResponseHeader:
+      (json['original-response-header'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, (e as List<dynamic>).map((e) => e as String).toList()),
+      ) ??
+      const {},
+  originalRequestBody: json['original-request-body'] as bool? ?? false,
+  originalResponseBody: json['original-response-body'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$MitmExchangeToJson(_MitmExchange instance) =>
@@ -336,6 +368,10 @@ Map<String, dynamic> _$MitmExchangeToJson(_MitmExchange instance) =>
       'actions': instance.actions,
       'rewritten': instance.rewritten,
       'rewrite-skipped': instance.rewriteSkipped,
+      'original-request-header': instance.originalRequestHeader,
+      'original-response-header': instance.originalResponseHeader,
+      'original-request-body': instance.originalRequestBody,
+      'original-response-body': instance.originalResponseBody,
     };
 
 _MitmRewriteIssue _$MitmRewriteIssueFromJson(Map<String, dynamic> json) =>

@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
 import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/core/method.dart' show coreFailureLogLevel;
@@ -22,6 +23,7 @@ import 'app.dart';
 import 'config.dart';
 import 'core.dart';
 import 'database.dart';
+import 'state.dart';
 
 part 'generated/mitm.g.dart';
 
@@ -674,10 +676,11 @@ Future<MitmBodyContent?> mitmBody(
   int id, {
   required bool response,
   required String contentType,
+  bool original = false,
 }) async {
   final body = await ref
       .read(coreHandlerProvider)
-      .getMitmBody(id, response: response);
+      .getMitmBody(id, response: response, original: original);
   if (body == null) {
     return null;
   }
@@ -782,4 +785,32 @@ Future<MitmModuleDetails?> mitmModuleDetails(Ref ref, int id) async {
     ),
   );
   return (content: content, issues: await _issuesOf(ref, content.mitm));
+}
+
+/// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
+/// disabled rules are checked too.
+@riverpod
+Future<Map<int, String>> mitmRewriteIssues(Ref ref, int profileId) async {
+  final rewrites = await ref.watch(
+    profileMitmRewritesProvider(profileId).future,
+  );
+  if (rewrites.isEmpty) {
+    return const {};
+  }
+  final check = mitmRewriteCheckText(rewrites);
+  final parsed = await ref
+      .read(coreHandlerProvider)
+      .parseMitmRewrite(check.text);
+  return {
+    for (final issue in parsed.issues) ?check.lines[issue.line]: issue.message,
+  };
+}
+
+/// The size up to which the Core rewrites a body, or 0 while it runs no
+/// rewrite rules.
+@riverpod
+Future<int> mitmRewriteBodyLimit(Ref ref) async {
+  ref.watch(mitmSetupProvider);
+  final status = await ref.read(coreHandlerProvider).getMitmRewriteStatus();
+  return status.active ? status.bodyLimit : 0;
 }

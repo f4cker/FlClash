@@ -10,6 +10,7 @@ import (
 	"net/textproto"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -822,7 +823,23 @@ func parseMitmRewriteText(text string) MitmRewriteParse {
 			continue
 		}
 		if section == "" {
-			result.Issues = append(result.Issues, MitmRewriteIssue{Line: number, Message: "line outside [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local]"})
+			// A line pasted without its section header is taken when exactly
+			// one section reads it.
+			var fits []string
+			for _, candidate := range mitmRewriteSections {
+				if _, err := parseMitmRewriteLine(candidate, line); err == nil {
+					fits = append(fits, candidate)
+				}
+			}
+			if len(fits) > 1 && slices.Contains(fits, mitmSectionHeader) && mitmLooksLikeHeaderRule(line) {
+				// header-del X-A reads as a body replacement too.
+				fits = []string{mitmSectionHeader}
+			}
+			if len(fits) == 1 {
+				result.Rules = append(result.Rules, MitmRewriteLine{Section: fits[0], Line: line, Number: number})
+			} else {
+				result.Issues = append(result.Issues, MitmRewriteIssue{Line: number, Message: "line outside [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local]"})
+			}
 			continue
 		}
 		if _, err := parseMitmRewriteLine(section, line); err != nil {
@@ -832,6 +849,15 @@ func parseMitmRewriteText(text string) MitmRewriteParse {
 		result.Rules = append(result.Rules, MitmRewriteLine{Section: section, Line: line, Number: number})
 	}
 	return result
+}
+
+// A Header Rewrite line names a header-* action after its pattern.
+func mitmLooksLikeHeaderRule(line string) bool {
+	fields := strings.Fields(line)
+	if len(fields) > 0 && (fields[0] == "http-request" || fields[0] == "http-response") {
+		fields = fields[1:]
+	}
+	return len(fields) > 1 && strings.HasPrefix(fields[1], "header-")
 }
 
 // ---- Status ----

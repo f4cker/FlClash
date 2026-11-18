@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/andybalholm/brotli"
@@ -355,6 +356,8 @@ type mitmBodyResult struct {
 	// Its length when changed (identity coding, framed by Content-Length).
 	length  int64
 	changed bool
+	// When changed: the body as it came, still in its content coding.
+	original []byte
 }
 
 // Rewrites a body with rules (from bodyRules). Reads it only up to the
@@ -434,7 +437,7 @@ func (x *mitmRewriteExchange) rewriteBody(rules []*mitmRewriteRule, header http.
 	if current == string(text) {
 		return original
 	}
-	return mitmBodyResult{body: strings.NewReader(current), length: int64(len(current)), changed: true}
+	return mitmBodyResult{body: strings.NewReader(current), length: int64(len(current)), changed: true, original: raw}
 }
 
 // Fixes up the headers of a body rewriteBody changed: it is sent decoded,
@@ -481,4 +484,42 @@ func mitmRewriteHost(host string) string {
 		host = h
 	}
 	return normalizeMitmHost(host)
+}
+
+// What the request list was told of one connection's rewrites, so that it
+// hears once of the first applied rule and once of the first failed one.
+type mitmRewriteReport struct {
+	mu              sync.Mutex
+	applied, failed bool
+}
+
+func (r *mitmRewriteReport) note(connection string, rw *mitmRewriteExchange) {
+	if r == nil || connection == "" || !rw.rewritten() {
+		return
+	}
+	var applied, failed *MitmRewriteHit
+	for i := range rw.hits {
+		if rw.hits[i].Skipped == "" {
+			applied = &rw.hits[i]
+		} else {
+			failed = &rw.hits[i]
+		}
+	}
+	r.mu.Lock()
+	var hit *MitmRewriteHit
+	switch {
+	case failed != nil && !r.failed:
+		hit, r.failed = failed, true
+		r.applied = r.applied || applied != nil
+	case applied != nil && !r.applied:
+		hit, r.applied = applied, true
+	}
+	event := MitmConnectionRewrite{Applied: r.applied, Failed: r.failed}
+	r.mu.Unlock()
+	if hit == nil {
+		return
+	}
+	copied := *hit
+	event.Hit = &copied
+	sendMitmConnection(&MitmConnection{Id: connection, Rewrite: &event})
 }

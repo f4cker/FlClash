@@ -195,10 +195,21 @@ type mitmDuplexControl struct {
 	uploadComplete func(error)
 	// The port the flow was to; 0 for the scheme's default.
 	port uint16
+	// What the request list has been told of the connection's rewrites.
+	rewrites mitmRewriteReport
 	// Plain HTTP (port 80), served only for URL Rewrite's reject and
 	// redirects: nothing else is rewritten and only answered requests are
 	// recorded.
 	plain bool
+}
+
+// Records what rw did with the exchange, and tells the request list the
+// first time the connection had a rule apply or fail.
+func (c *mitmDuplexControl) noteRewrite(entry *mitmCaptureEntry, rw *mitmRewriteExchange) {
+	mitmCaptures.noteRewrite(entry, rw)
+	if c != nil {
+		c.rewrites.note(c.connection, rw)
+	}
 }
 
 func (c *mitmDuplexControl) flowPort() uint16 {
@@ -381,17 +392,21 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 			scheme = "http"
 		}
 		rw := mitmRewriteBegin(scheme, host, control.flowPort(), req.RequestURI, control.isPlain())
+		var requestBefore http.Header
+		if rw != nil {
+			requestBefore = req.Header.Clone()
+		}
 		decision := rw.request(req.Header)
 		if decision.drop {
 			<-joinWatch(control, pendingWatch)
 			entry = mitmCaptures.beginScheme(control.captureConnection(), scheme, host, req)
-			mitmCaptures.noteRewrite(entry, rw)
+			control.noteRewrite(entry, rw)
 			mitmCaptures.finish(entry, mitmExchangeDropped)
 			return nil
 		}
 		if decision.local != nil {
 			entry = mitmCaptures.beginScheme(control.captureConnection(), scheme, host, req)
-			mitmCaptures.noteRewrite(entry, rw)
+			control.noteRewrite(entry, rw)
 			keep, err := mitmAnswerHTTP1(client, req, decision.local, entry)
 			if err != nil || !keep {
 				<-joinWatch(control, pendingWatch)
@@ -408,7 +423,8 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 		}
 		if !control.isPlain() {
 			entry = mitmCaptures.beginScheme(control.captureConnection(), scheme, host, req)
-			mitmCaptures.noteRewrite(entry, rw)
+			control.noteRewrite(entry, rw)
+			mitmCaptures.originalHeader(entry, false, requestBefore, req.Header)
 		}
 		if _, present := req.Header["User-Agent"]; !present {
 			req.Header["User-Agent"] = []string{""}
@@ -419,7 +435,12 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				// As Surge: chunked or 100-continue uploads go on unchanged.
 				rw.skipAll(rules, "request", mitmSkipFraming)
 			} else {
+				coding := req.Header.Get("Content-Encoding")
 				result := rw.rewriteBody(rules, req.Header, req.Body, req.ContentLength, false)
+				if result.changed {
+					mitmCaptures.originalHeader(entry, false, requestBefore, nil)
+					mitmCaptures.originalBody(entry, false, result.original, coding)
+				}
 				switch {
 				case result.changed && result.length == 0:
 					req.Header.Del("Content-Encoding")
@@ -431,7 +452,7 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 					req.Body = io.NopCloser(result.body)
 				}
 			}
-			mitmCaptures.noteRewrite(entry, rw)
+			control.noteRewrite(entry, rw)
 		}
 		uploadWriter := newMitmUploadWriter(upstream)
 		// http.NoBody must stay as it is: any other body with length 0 makes
@@ -583,6 +604,7 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				}
 				var rewrittenBody io.Reader
 				if rw != nil && !rw.plain {
+					responseBefore := resp.Header.Clone()
 					rw.responseHeader(resp.Header)
 					if rules := rw.bodyRules(true); len(rules) == 0 || mitmHeaderOnly(resp, req.Method) {
 					} else if !mitmUploadSettles(upload, &uploadPending, &uploadErr, control) {
@@ -598,11 +620,13 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 						result := rw.rewriteBody(rules, resp.Header, resp.Body, resp.ContentLength, true)
 						rewrittenBody = result.body
 						if result.changed {
+							mitmCaptures.originalBody(entry, true, result.original, responseBefore.Get("Content-Encoding"))
 							mitmRewrittenBodyHeader(resp.Header, result.length)
 							resp.ContentLength, resp.TransferEncoding, resp.Trailer = result.length, nil, nil
 						}
 					}
-					mitmCaptures.noteRewrite(entry, rw)
+					control.noteRewrite(entry, rw)
+					mitmCaptures.originalHeader(entry, true, responseBefore, resp.Header)
 				}
 				mitmCaptures.respond(entry, resp)
 				// Conservatively allow reuse only when completed upload is observable.

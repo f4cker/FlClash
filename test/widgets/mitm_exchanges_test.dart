@@ -74,6 +74,7 @@ Future<ProviderContainer> _pumpDetail(
   MitmExchange? exchange,
   bool capture = true,
   MitmBody responseBody = const MitmBody(),
+  MitmBody originalResponseBody = const MitmBody(),
   List<MitmModule> modules = const [],
   bool inSheet = false,
 }) async {
@@ -95,6 +96,14 @@ Future<ProviderContainer> _pumpDetail(
         (ref) async => bodyError == null
             ? readMitmBody((responseBody, contentType))
             : throw bodyError,
+      ),
+      mitmBodyProvider(
+        7,
+        response: true,
+        contentType: contentType,
+        original: true,
+      ).overrideWith(
+        (ref) async => readMitmBody((originalResponseBody, contentType)),
       ),
       mitmModulesProvider.overrideWith(() => _Modules(modules)),
     ],
@@ -277,8 +286,22 @@ void main() {
     expect(find.text('https://a.test/old?x=1'), findsOneWidget);
     expect(find.text('HTTP/2.0'), findsOneWidget);
     expect(find.text('X-Upstream'), findsNothing);
-    await _scrollTo(tester, find.text(appLocalizations.urlRewrite));
-    expect(find.text('header'), findsOneWidget);
+    // The rewrite hit leads, under its own section; a rule no longer in
+    // the profile says so rather than offer to show it.
+    expect(
+      find.text(
+        '${appLocalizations.mitmRewriteAppliedTitle} · '
+        '${appLocalizations.mitmRewriteHitCount(1)}',
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(appLocalizations.mitmRewriteActUrl), findsOneWidget);
+    expect(find.text(appLocalizations.mitmRewriteRuleRemoved), findsOneWidget);
+    expect(find.text(appLocalizations.mitmRewriteViewInList), findsNothing);
+    expect(find.text(appLocalizations.mitmRewritePassedThrough), findsNothing);
+    await _scrollTo(tester, find.text(appLocalizations.script));
+    expect(find.text('sign'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(MetaChip),
@@ -427,6 +450,80 @@ void main() {
     await _openTab(tester, currentAppLocalizations.response);
     return find.byType(MitmExchangeView);
   }
+
+  testWidgets('a rule that failed says why, and passed on only once over', (
+    tester,
+  ) async {
+    final l = currentAppLocalizations;
+    Future<void> open(MitmExchange exchange) async {
+      await _pumpDetail(
+        tester,
+        list: MitmExchangeList(
+          capturing: true,
+          since: _start,
+          exchanges: [_summary(exchange)],
+        ),
+        exchange: exchange,
+      );
+      await _openRequest(tester);
+    }
+
+    const hit = MitmAction(
+      kind: 'body-rewrite',
+      phase: 'response',
+      skipped: 'oversize',
+    );
+    final failed = l.mitmRewriteFailedTitle(l.mitmRewriteSkipOversize);
+    await open(_exchange.copyWith(actions: const [hit]));
+    expect(find.text(failed, findRichText: true), findsOneWidget);
+    expect(find.text(l.mitmRewritePassedThrough), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await open(_exchange.copyWith(actions: const [hit], error: 'reset'));
+    expect(find.text(failed, findRichText: true), findsOneWidget);
+    expect(find.text(l.mitmRewritePassedThrough), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a side the rules changed shows as it came on request', (
+    tester,
+  ) async {
+    final l = currentAppLocalizations;
+    final exchange = _exchange.copyWith(
+      actions: const [MitmAction(kind: 'body-rewrite', phase: 'response')],
+      originalResponseHeader: const {
+        'X-Upstream': ['no'],
+      },
+      originalResponseBody: true,
+    );
+    await _pumpDetail(
+      tester,
+      list: MitmExchangeList(
+        capturing: true,
+        since: _start,
+        exchanges: [_summary(exchange)],
+      ),
+      exchange: exchange,
+      responseBody: MitmBody(data: base64Encode(utf8.encode('after'))),
+      originalResponseBody: MitmBody(data: base64Encode(utf8.encode('before'))),
+    );
+    await _openRequest(tester);
+    await _openTab(tester, l.request);
+    // Only a side the rules changed offers its original.
+    expect(find.text(l.mitmRewriteBefore), findsNothing);
+
+    await _openTab(tester, l.response);
+    expect(find.text('yes'), findsOneWidget);
+    expect(find.textContaining('after'), findsWidgets);
+
+    await tester.tap(find.text(l.mitmRewriteBefore));
+    await tester.pumpAndSettle();
+    expect(find.text('no'), findsOneWidget);
+    expect(find.text('yes'), findsNothing);
+    expect(find.textContaining('before'), findsWidgets);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('a finished request shows its body, and says when only its '
       'start was kept', (tester) async {

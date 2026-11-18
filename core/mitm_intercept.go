@@ -49,6 +49,18 @@ const (
 type MitmConnection struct {
 	Id      string      `json:"id"`
 	Outcome MitmOutcome `json:"outcome"`
+	// Set, with no outcome, when a rewrite rule first applied or first
+	// failed on the connection.
+	Rewrite *MitmConnectionRewrite `json:"rewrite,omitempty"`
+}
+
+// What rewrite rules did on one connection so far: applied when any
+// changed or answered a request, failed when any matched but left the
+// message as it was. The hit is the latest of its kind.
+type MitmConnectionRewrite struct {
+	Applied bool            `json:"applied"`
+	Failed  bool            `json:"failed"`
+	Hit     *MitmRewriteHit `json:"hit,omitempty"`
 }
 
 // Step 5 supplies the always-visible indicator (page bar and tray), so listed

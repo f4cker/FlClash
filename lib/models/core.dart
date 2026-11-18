@@ -239,6 +239,21 @@ abstract class MitmAction with _$MitmAction {
       _$MitmActionFromJson(json);
 }
 
+/// What rewrite rules did on one connection so far: [applied] when any
+/// changed or answered a request, [failed] when any matched but let a
+/// message pass as it was; [hit] is the latest that set one of them.
+@freezed
+abstract class MitmConnectionRewrite with _$MitmConnectionRewrite {
+  const factory MitmConnectionRewrite({
+    @Default(false) bool applied,
+    @Default(false) bool failed,
+    MitmAction? hit,
+  }) = _MitmConnectionRewrite;
+
+  factory MitmConnectionRewrite.fromJson(Map<String, Object?> json) =>
+      _$MitmConnectionRewriteFromJson(json);
+}
+
 @freezed
 abstract class MitmExchange with _$MitmExchange {
   const factory MitmExchange({
@@ -265,6 +280,20 @@ abstract class MitmExchange with _$MitmExchange {
     @Default([]) List<MitmAction> actions,
     @Default(false) bool rewritten,
     @Default(false) @JsonKey(name: 'rewrite-skipped') bool rewriteSkipped,
+    // A side's headers before rewrite rules changed them, and whether its
+    // body as it came is kept; set only for a side the rules changed.
+    @Default({})
+    @JsonKey(name: 'original-request-header')
+    Map<String, List<String>> originalRequestHeader,
+    @Default({})
+    @JsonKey(name: 'original-response-header')
+    Map<String, List<String>> originalResponseHeader,
+    @Default(false)
+    @JsonKey(name: 'original-request-body')
+    bool originalRequestBody,
+    @Default(false)
+    @JsonKey(name: 'original-response-body')
+    bool originalResponseBody,
   }) = _MitmExchange;
 
   factory MitmExchange.fromJson(Map<String, Object?> json) =>

@@ -125,6 +125,7 @@ enum RecordFacetKind {
   network,
   rule,
   mitm,
+  rewrite,
   app,
   proxy,
   level,

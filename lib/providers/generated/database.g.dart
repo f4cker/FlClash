@@ -822,7 +822,7 @@ final class ProfileMitmRewritesProvider
 }
 
 String _$profileMitmRewritesHash() =>
-    r'464ec13b0f0717a0095c818a3d6e9b25bf4d050f';
+    r'5371377c6f27fcf83cd8eef181f3efc81b45b393';
 
 /// A profile's own rewrite rules, in order (see [MitmRewrites]).
 

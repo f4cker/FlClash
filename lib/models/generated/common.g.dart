@@ -97,6 +97,11 @@ _TrackerInfo _$TrackerInfoFromJson(Map<String, dynamic> json) => _TrackerInfo(
   downloadSpeed: (json['downloadSpeed'] as num?)?.toInt(),
   uploadSpeed: (json['uploadSpeed'] as num?)?.toInt(),
   mitmOutcome: json['mitmOutcome'] as String? ?? '',
+  mitmRewrite: json['mitmRewrite'] == null
+      ? null
+      : MitmConnectionRewrite.fromJson(
+          json['mitmRewrite'] as Map<String, dynamic>,
+        ),
 );
 
 Map<String, dynamic> _$TrackerInfoToJson(_TrackerInfo instance) =>
@@ -112,6 +117,7 @@ Map<String, dynamic> _$TrackerInfoToJson(_TrackerInfo instance) =>
       'downloadSpeed': instance.downloadSpeed,
       'uploadSpeed': instance.uploadSpeed,
       'mitmOutcome': instance.mitmOutcome,
+      'mitmRewrite': instance.mitmRewrite,
     };
 
 _Log _$LogFromJson(Map<String, dynamic> json) => _Log(

@@ -3331,9 +3331,309 @@ as String,
 
 
 /// @nodoc
+mixin _$MitmConnectionRewrite {
+
+ bool get applied; bool get failed; MitmAction? get hit;
+/// Create a copy of MitmConnectionRewrite
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MitmConnectionRewriteCopyWith<MitmConnectionRewrite> get copyWith => _$MitmConnectionRewriteCopyWithImpl<MitmConnectionRewrite>(this as MitmConnectionRewrite, _$identity);
+
+  /// Serializes this MitmConnectionRewrite to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as MitmConnectionRewrite;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmConnectionRewrite&&(identical(other.applied, _this.applied) || other.applied == _this.applied)&&(identical(other.failed, _this.failed) || other.failed == _this.failed)&&(identical(other.hit, _this.hit) || other.hit == _this.hit));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as MitmConnectionRewrite;
+  return Object.hash(runtimeType,_this.applied,_this.failed,_this.hit);
+}
+
+@override
+String toString() {
+  final _this = this as MitmConnectionRewrite;
+  return 'MitmConnectionRewrite(applied: ${_this.applied}, failed: ${_this.failed}, hit: ${_this.hit})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MitmConnectionRewriteCopyWith<$Res>  {
+  factory $MitmConnectionRewriteCopyWith(MitmConnectionRewrite value, $Res Function(MitmConnectionRewrite) _then) = _$MitmConnectionRewriteCopyWithImpl;
+@useResult
+$Res call({
+ bool applied, bool failed, MitmAction? hit
+});
+
+
+$MitmActionCopyWith<$Res>? get hit;
+
+}
+/// @nodoc
+class _$MitmConnectionRewriteCopyWithImpl<$Res>
+    implements $MitmConnectionRewriteCopyWith<$Res> {
+  _$MitmConnectionRewriteCopyWithImpl(this._self, this._then);
+
+  final MitmConnectionRewrite _self;
+  final $Res Function(MitmConnectionRewrite) _then;
+
+/// Create a copy of MitmConnectionRewrite
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? applied = null,Object? failed = null,Object? hit = freezed,}) {
+  return _then(MitmConnectionRewrite(
+applied: null == applied ? _self.applied : applied // ignore: cast_nullable_to_non_nullable
+as bool,failed: null == failed ? _self.failed : failed // ignore: cast_nullable_to_non_nullable
+as bool,hit: freezed == hit ? _self.hit : hit // ignore: cast_nullable_to_non_nullable
+as MitmAction?,
+  ));
+}
+/// Create a copy of MitmConnectionRewrite
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmActionCopyWith<$Res>? get hit {
+    if (_self.hit == null) {
+    return null;
+  }
+
+  return $MitmActionCopyWith<$Res>(_self.hit!, (value) {
+    return _then(_self.copyWith(hit: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [MitmConnectionRewrite].
+extension MitmConnectionRewritePatterns on MitmConnectionRewrite {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MitmConnectionRewrite value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MitmConnectionRewrite() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MitmConnectionRewrite value)  $default,){
+final _that = this;
+switch (_that) {
+case _MitmConnectionRewrite():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MitmConnectionRewrite value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MitmConnectionRewrite() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool applied,  bool failed,  MitmAction? hit)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MitmConnectionRewrite() when $default != null:
+return $default(_that.applied,_that.failed,_that.hit);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool applied,  bool failed,  MitmAction? hit)  $default,) {final _that = this;
+switch (_that) {
+case _MitmConnectionRewrite():
+return $default(_that.applied,_that.failed,_that.hit);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool applied,  bool failed,  MitmAction? hit)?  $default,) {final _that = this;
+switch (_that) {
+case _MitmConnectionRewrite() when $default != null:
+return $default(_that.applied,_that.failed,_that.hit);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _MitmConnectionRewrite implements MitmConnectionRewrite {
+  const _MitmConnectionRewrite({this.applied = false, this.failed = false, this.hit});
+  factory _MitmConnectionRewrite.fromJson(Map<String, dynamic> json) => _$MitmConnectionRewriteFromJson(json);
+
+@override@JsonKey() final  bool applied;
+@override@JsonKey() final  bool failed;
+@override final  MitmAction? hit;
+
+/// Create a copy of MitmConnectionRewrite
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MitmConnectionRewriteCopyWith<_MitmConnectionRewrite> get copyWith => __$MitmConnectionRewriteCopyWithImpl<_MitmConnectionRewrite>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$MitmConnectionRewriteToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmConnectionRewrite&&(identical(other.applied, applied) || other.applied == applied)&&(identical(other.failed, failed) || other.failed == failed)&&(identical(other.hit, hit) || other.hit == hit));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,applied,failed,hit);
+}
+
+@override
+String toString() {
+    return 'MitmConnectionRewrite(applied: $applied, failed: $failed, hit: $hit)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MitmConnectionRewriteCopyWith<$Res> implements $MitmConnectionRewriteCopyWith<$Res> {
+  factory _$MitmConnectionRewriteCopyWith(_MitmConnectionRewrite value, $Res Function(_MitmConnectionRewrite) _then) = __$MitmConnectionRewriteCopyWithImpl;
+@override @useResult
+$Res call({
+ bool applied, bool failed, MitmAction? hit
+});
+
+
+@override $MitmActionCopyWith<$Res>? get hit;
+
+}
+/// @nodoc
+class __$MitmConnectionRewriteCopyWithImpl<$Res>
+    implements _$MitmConnectionRewriteCopyWith<$Res> {
+  __$MitmConnectionRewriteCopyWithImpl(this._self, this._then);
+
+  final _MitmConnectionRewrite _self;
+  final $Res Function(_MitmConnectionRewrite) _then;
+
+/// Create a copy of MitmConnectionRewrite
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? applied = null,Object? failed = null,Object? hit = freezed,}) {
+  return _then(_MitmConnectionRewrite(
+applied: null == applied ? _self.applied : applied // ignore: cast_nullable_to_non_nullable
+as bool,failed: null == failed ? _self.failed : failed // ignore: cast_nullable_to_non_nullable
+as bool,hit: freezed == hit ? _self.hit : hit // ignore: cast_nullable_to_non_nullable
+as MitmAction?,
+  ));
+}
+
+/// Create a copy of MitmConnectionRewrite
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MitmActionCopyWith<$Res>? get hit {
+    if (_self.hit == null) {
+    return null;
+  }
+
+  return $MitmActionCopyWith<$Res>(_self.hit!, (value) {
+    return _then(_self.copyWith(hit: value));
+  });
+}
+}
+
+
+/// @nodoc
 mixin _$MitmExchange {
 
- int get id; DateTime get start; bool get pending; int get duration; int get ttfb; String get method; String get url;@JsonKey(name: 'original-url') String get originalUrl; String get proto; int get status;@JsonKey(name: 'request-size') int get requestSize;@JsonKey(name: 'response-size') int get responseSize; String get error; String get connection;@JsonKey(name: 'request-header') Map<String, List<String>> get requestHeader;@JsonKey(name: 'response-header') Map<String, List<String>> get responseHeader; List<MitmAction> get actions; bool get rewritten;@JsonKey(name: 'rewrite-skipped') bool get rewriteSkipped;
+ int get id; DateTime get start; bool get pending; int get duration; int get ttfb; String get method; String get url;@JsonKey(name: 'original-url') String get originalUrl; String get proto; int get status;@JsonKey(name: 'request-size') int get requestSize;@JsonKey(name: 'response-size') int get responseSize; String get error; String get connection;@JsonKey(name: 'request-header') Map<String, List<String>> get requestHeader;@JsonKey(name: 'response-header') Map<String, List<String>> get responseHeader; List<MitmAction> get actions; bool get rewritten;@JsonKey(name: 'rewrite-skipped') bool get rewriteSkipped;@JsonKey(name: 'original-request-header') Map<String, List<String>> get originalRequestHeader;@JsonKey(name: 'original-response-header') Map<String, List<String>> get originalResponseHeader;@JsonKey(name: 'original-request-body') bool get originalRequestBody;@JsonKey(name: 'original-response-body') bool get originalResponseBody;
 /// Create a copy of MitmExchange
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3347,20 +3647,20 @@ $MitmExchangeCopyWith<MitmExchange> get copyWith => _$MitmExchangeCopyWithImpl<M
 @override
 bool operator ==(Object other) {
   final _this = this as MitmExchange;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmExchange&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.start, _this.start) || other.start == _this.start)&&(identical(other.pending, _this.pending) || other.pending == _this.pending)&&(identical(other.duration, _this.duration) || other.duration == _this.duration)&&(identical(other.ttfb, _this.ttfb) || other.ttfb == _this.ttfb)&&(identical(other.method, _this.method) || other.method == _this.method)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.originalUrl, _this.originalUrl) || other.originalUrl == _this.originalUrl)&&(identical(other.proto, _this.proto) || other.proto == _this.proto)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.requestSize, _this.requestSize) || other.requestSize == _this.requestSize)&&(identical(other.responseSize, _this.responseSize) || other.responseSize == _this.responseSize)&&(identical(other.error, _this.error) || other.error == _this.error)&&(identical(other.connection, _this.connection) || other.connection == _this.connection)&&const DeepCollectionEquality().equals(other.requestHeader, _this.requestHeader)&&const DeepCollectionEquality().equals(other.responseHeader, _this.responseHeader)&&const DeepCollectionEquality().equals(other.actions, _this.actions)&&(identical(other.rewritten, _this.rewritten) || other.rewritten == _this.rewritten)&&(identical(other.rewriteSkipped, _this.rewriteSkipped) || other.rewriteSkipped == _this.rewriteSkipped));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmExchange&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.start, _this.start) || other.start == _this.start)&&(identical(other.pending, _this.pending) || other.pending == _this.pending)&&(identical(other.duration, _this.duration) || other.duration == _this.duration)&&(identical(other.ttfb, _this.ttfb) || other.ttfb == _this.ttfb)&&(identical(other.method, _this.method) || other.method == _this.method)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.originalUrl, _this.originalUrl) || other.originalUrl == _this.originalUrl)&&(identical(other.proto, _this.proto) || other.proto == _this.proto)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.requestSize, _this.requestSize) || other.requestSize == _this.requestSize)&&(identical(other.responseSize, _this.responseSize) || other.responseSize == _this.responseSize)&&(identical(other.error, _this.error) || other.error == _this.error)&&(identical(other.connection, _this.connection) || other.connection == _this.connection)&&const DeepCollectionEquality().equals(other.requestHeader, _this.requestHeader)&&const DeepCollectionEquality().equals(other.responseHeader, _this.responseHeader)&&const DeepCollectionEquality().equals(other.actions, _this.actions)&&(identical(other.rewritten, _this.rewritten) || other.rewritten == _this.rewritten)&&(identical(other.rewriteSkipped, _this.rewriteSkipped) || other.rewriteSkipped == _this.rewriteSkipped)&&const DeepCollectionEquality().equals(other.originalRequestHeader, _this.originalRequestHeader)&&const DeepCollectionEquality().equals(other.originalResponseHeader, _this.originalResponseHeader)&&(identical(other.originalRequestBody, _this.originalRequestBody) || other.originalRequestBody == _this.originalRequestBody)&&(identical(other.originalResponseBody, _this.originalResponseBody) || other.originalResponseBody == _this.originalResponseBody));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MitmExchange;
-  return Object.hashAll([runtimeType,_this.id,_this.start,_this.pending,_this.duration,_this.ttfb,_this.method,_this.url,_this.originalUrl,_this.proto,_this.status,_this.requestSize,_this.responseSize,_this.error,_this.connection,const DeepCollectionEquality().hash(_this.requestHeader),const DeepCollectionEquality().hash(_this.responseHeader),const DeepCollectionEquality().hash(_this.actions),_this.rewritten,_this.rewriteSkipped]);
+  return Object.hashAll([runtimeType,_this.id,_this.start,_this.pending,_this.duration,_this.ttfb,_this.method,_this.url,_this.originalUrl,_this.proto,_this.status,_this.requestSize,_this.responseSize,_this.error,_this.connection,const DeepCollectionEquality().hash(_this.requestHeader),const DeepCollectionEquality().hash(_this.responseHeader),const DeepCollectionEquality().hash(_this.actions),_this.rewritten,_this.rewriteSkipped,const DeepCollectionEquality().hash(_this.originalRequestHeader),const DeepCollectionEquality().hash(_this.originalResponseHeader),_this.originalRequestBody,_this.originalResponseBody]);
 }
 
 @override
 String toString() {
   final _this = this as MitmExchange;
-  return 'MitmExchange(id: ${_this.id}, start: ${_this.start}, pending: ${_this.pending}, duration: ${_this.duration}, ttfb: ${_this.ttfb}, method: ${_this.method}, url: ${_this.url}, originalUrl: ${_this.originalUrl}, proto: ${_this.proto}, status: ${_this.status}, requestSize: ${_this.requestSize}, responseSize: ${_this.responseSize}, error: ${_this.error}, connection: ${_this.connection}, requestHeader: ${_this.requestHeader}, responseHeader: ${_this.responseHeader}, actions: ${_this.actions}, rewritten: ${_this.rewritten}, rewriteSkipped: ${_this.rewriteSkipped})';
+  return 'MitmExchange(id: ${_this.id}, start: ${_this.start}, pending: ${_this.pending}, duration: ${_this.duration}, ttfb: ${_this.ttfb}, method: ${_this.method}, url: ${_this.url}, originalUrl: ${_this.originalUrl}, proto: ${_this.proto}, status: ${_this.status}, requestSize: ${_this.requestSize}, responseSize: ${_this.responseSize}, error: ${_this.error}, connection: ${_this.connection}, requestHeader: ${_this.requestHeader}, responseHeader: ${_this.responseHeader}, actions: ${_this.actions}, rewritten: ${_this.rewritten}, rewriteSkipped: ${_this.rewriteSkipped}, originalRequestHeader: ${_this.originalRequestHeader}, originalResponseHeader: ${_this.originalResponseHeader}, originalRequestBody: ${_this.originalRequestBody}, originalResponseBody: ${_this.originalResponseBody})';
 }
 
 
@@ -3371,7 +3671,7 @@ abstract mixin class $MitmExchangeCopyWith<$Res>  {
   factory $MitmExchangeCopyWith(MitmExchange value, $Res Function(MitmExchange) _then) = _$MitmExchangeCopyWithImpl;
 @useResult
 $Res call({
- int id, DateTime start, bool pending, int duration, int ttfb, String method, String url,@JsonKey(name: 'original-url') String originalUrl, String proto, int status,@JsonKey(name: 'request-size') int requestSize,@JsonKey(name: 'response-size') int responseSize, String error, String connection,@JsonKey(name: 'request-header') Map<String, List<String>> requestHeader,@JsonKey(name: 'response-header') Map<String, List<String>> responseHeader, List<MitmAction> actions, bool rewritten,@JsonKey(name: 'rewrite-skipped') bool rewriteSkipped
+ int id, DateTime start, bool pending, int duration, int ttfb, String method, String url,@JsonKey(name: 'original-url') String originalUrl, String proto, int status,@JsonKey(name: 'request-size') int requestSize,@JsonKey(name: 'response-size') int responseSize, String error, String connection,@JsonKey(name: 'request-header') Map<String, List<String>> requestHeader,@JsonKey(name: 'response-header') Map<String, List<String>> responseHeader, List<MitmAction> actions, bool rewritten,@JsonKey(name: 'rewrite-skipped') bool rewriteSkipped,@JsonKey(name: 'original-request-header') Map<String, List<String>> originalRequestHeader,@JsonKey(name: 'original-response-header') Map<String, List<String>> originalResponseHeader,@JsonKey(name: 'original-request-body') bool originalRequestBody,@JsonKey(name: 'original-response-body') bool originalResponseBody
 });
 
 
@@ -3388,7 +3688,7 @@ class _$MitmExchangeCopyWithImpl<$Res>
 
 /// Create a copy of MitmExchange
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? start = null,Object? pending = null,Object? duration = null,Object? ttfb = null,Object? method = null,Object? url = null,Object? originalUrl = null,Object? proto = null,Object? status = null,Object? requestSize = null,Object? responseSize = null,Object? error = null,Object? connection = null,Object? requestHeader = null,Object? responseHeader = null,Object? actions = null,Object? rewritten = null,Object? rewriteSkipped = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? start = null,Object? pending = null,Object? duration = null,Object? ttfb = null,Object? method = null,Object? url = null,Object? originalUrl = null,Object? proto = null,Object? status = null,Object? requestSize = null,Object? responseSize = null,Object? error = null,Object? connection = null,Object? requestHeader = null,Object? responseHeader = null,Object? actions = null,Object? rewritten = null,Object? rewriteSkipped = null,Object? originalRequestHeader = null,Object? originalResponseHeader = null,Object? originalRequestBody = null,Object? originalResponseBody = null,}) {
   return _then(MitmExchange(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,start: null == start ? _self.start : start // ignore: cast_nullable_to_non_nullable
@@ -3409,6 +3709,10 @@ as Map<String, List<String>>,responseHeader: null == responseHeader ? _self.resp
 as Map<String, List<String>>,actions: null == actions ? _self.actions : actions // ignore: cast_nullable_to_non_nullable
 as List<MitmAction>,rewritten: null == rewritten ? _self.rewritten : rewritten // ignore: cast_nullable_to_non_nullable
 as bool,rewriteSkipped: null == rewriteSkipped ? _self.rewriteSkipped : rewriteSkipped // ignore: cast_nullable_to_non_nullable
+as bool,originalRequestHeader: null == originalRequestHeader ? _self.originalRequestHeader : originalRequestHeader // ignore: cast_nullable_to_non_nullable
+as Map<String, List<String>>,originalResponseHeader: null == originalResponseHeader ? _self.originalResponseHeader : originalResponseHeader // ignore: cast_nullable_to_non_nullable
+as Map<String, List<String>>,originalRequestBody: null == originalRequestBody ? _self.originalRequestBody : originalRequestBody // ignore: cast_nullable_to_non_nullable
+as bool,originalResponseBody: null == originalResponseBody ? _self.originalResponseBody : originalResponseBody // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -3494,10 +3798,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  DateTime start,  bool pending,  int duration,  int ttfb,  String method,  String url, @JsonKey(name: 'original-url')  String originalUrl,  String proto,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error,  String connection, @JsonKey(name: 'request-header')  Map<String, List<String>> requestHeader, @JsonKey(name: 'response-header')  Map<String, List<String>> responseHeader,  List<MitmAction> actions,  bool rewritten, @JsonKey(name: 'rewrite-skipped')  bool rewriteSkipped)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  DateTime start,  bool pending,  int duration,  int ttfb,  String method,  String url, @JsonKey(name: 'original-url')  String originalUrl,  String proto,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error,  String connection, @JsonKey(name: 'request-header')  Map<String, List<String>> requestHeader, @JsonKey(name: 'response-header')  Map<String, List<String>> responseHeader,  List<MitmAction> actions,  bool rewritten, @JsonKey(name: 'rewrite-skipped')  bool rewriteSkipped, @JsonKey(name: 'original-request-header')  Map<String, List<String>> originalRequestHeader, @JsonKey(name: 'original-response-header')  Map<String, List<String>> originalResponseHeader, @JsonKey(name: 'original-request-body')  bool originalRequestBody, @JsonKey(name: 'original-response-body')  bool originalResponseBody)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmExchange() when $default != null:
-return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_that.method,_that.url,_that.originalUrl,_that.proto,_that.status,_that.requestSize,_that.responseSize,_that.error,_that.connection,_that.requestHeader,_that.responseHeader,_that.actions,_that.rewritten,_that.rewriteSkipped);case _:
+return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_that.method,_that.url,_that.originalUrl,_that.proto,_that.status,_that.requestSize,_that.responseSize,_that.error,_that.connection,_that.requestHeader,_that.responseHeader,_that.actions,_that.rewritten,_that.rewriteSkipped,_that.originalRequestHeader,_that.originalResponseHeader,_that.originalRequestBody,_that.originalResponseBody);case _:
   return orElse();
 
 }
@@ -3515,10 +3819,10 @@ return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  DateTime start,  bool pending,  int duration,  int ttfb,  String method,  String url, @JsonKey(name: 'original-url')  String originalUrl,  String proto,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error,  String connection, @JsonKey(name: 'request-header')  Map<String, List<String>> requestHeader, @JsonKey(name: 'response-header')  Map<String, List<String>> responseHeader,  List<MitmAction> actions,  bool rewritten, @JsonKey(name: 'rewrite-skipped')  bool rewriteSkipped)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  DateTime start,  bool pending,  int duration,  int ttfb,  String method,  String url, @JsonKey(name: 'original-url')  String originalUrl,  String proto,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error,  String connection, @JsonKey(name: 'request-header')  Map<String, List<String>> requestHeader, @JsonKey(name: 'response-header')  Map<String, List<String>> responseHeader,  List<MitmAction> actions,  bool rewritten, @JsonKey(name: 'rewrite-skipped')  bool rewriteSkipped, @JsonKey(name: 'original-request-header')  Map<String, List<String>> originalRequestHeader, @JsonKey(name: 'original-response-header')  Map<String, List<String>> originalResponseHeader, @JsonKey(name: 'original-request-body')  bool originalRequestBody, @JsonKey(name: 'original-response-body')  bool originalResponseBody)  $default,) {final _that = this;
 switch (_that) {
 case _MitmExchange():
-return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_that.method,_that.url,_that.originalUrl,_that.proto,_that.status,_that.requestSize,_that.responseSize,_that.error,_that.connection,_that.requestHeader,_that.responseHeader,_that.actions,_that.rewritten,_that.rewriteSkipped);case _:
+return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_that.method,_that.url,_that.originalUrl,_that.proto,_that.status,_that.requestSize,_that.responseSize,_that.error,_that.connection,_that.requestHeader,_that.responseHeader,_that.actions,_that.rewritten,_that.rewriteSkipped,_that.originalRequestHeader,_that.originalResponseHeader,_that.originalRequestBody,_that.originalResponseBody);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3535,10 +3839,10 @@ return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  DateTime start,  bool pending,  int duration,  int ttfb,  String method,  String url, @JsonKey(name: 'original-url')  String originalUrl,  String proto,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error,  String connection, @JsonKey(name: 'request-header')  Map<String, List<String>> requestHeader, @JsonKey(name: 'response-header')  Map<String, List<String>> responseHeader,  List<MitmAction> actions,  bool rewritten, @JsonKey(name: 'rewrite-skipped')  bool rewriteSkipped)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  DateTime start,  bool pending,  int duration,  int ttfb,  String method,  String url, @JsonKey(name: 'original-url')  String originalUrl,  String proto,  int status, @JsonKey(name: 'request-size')  int requestSize, @JsonKey(name: 'response-size')  int responseSize,  String error,  String connection, @JsonKey(name: 'request-header')  Map<String, List<String>> requestHeader, @JsonKey(name: 'response-header')  Map<String, List<String>> responseHeader,  List<MitmAction> actions,  bool rewritten, @JsonKey(name: 'rewrite-skipped')  bool rewriteSkipped, @JsonKey(name: 'original-request-header')  Map<String, List<String>> originalRequestHeader, @JsonKey(name: 'original-response-header')  Map<String, List<String>> originalResponseHeader, @JsonKey(name: 'original-request-body')  bool originalRequestBody, @JsonKey(name: 'original-response-body')  bool originalResponseBody)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmExchange() when $default != null:
-return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_that.method,_that.url,_that.originalUrl,_that.proto,_that.status,_that.requestSize,_that.responseSize,_that.error,_that.connection,_that.requestHeader,_that.responseHeader,_that.actions,_that.rewritten,_that.rewriteSkipped);case _:
+return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_that.method,_that.url,_that.originalUrl,_that.proto,_that.status,_that.requestSize,_that.responseSize,_that.error,_that.connection,_that.requestHeader,_that.responseHeader,_that.actions,_that.rewritten,_that.rewriteSkipped,_that.originalRequestHeader,_that.originalResponseHeader,_that.originalRequestBody,_that.originalResponseBody);case _:
   return null;
 
 }
@@ -3550,7 +3854,7 @@ return $default(_that.id,_that.start,_that.pending,_that.duration,_that.ttfb,_th
 @JsonSerializable()
 
 class _MitmExchange implements MitmExchange {
-  const _MitmExchange({required this.id, required this.start, this.pending = false, this.duration = 0, this.ttfb = 0, this.method = '', this.url = '', @JsonKey(name: 'original-url') this.originalUrl = '', this.proto = '', this.status = 0, @JsonKey(name: 'request-size') this.requestSize = 0, @JsonKey(name: 'response-size') this.responseSize = 0, this.error = '', this.connection = '', @JsonKey(name: 'request-header')  Map<String, List<String>> requestHeader = const {}, @JsonKey(name: 'response-header')  Map<String, List<String>> responseHeader = const {},  List<MitmAction> actions = const [], this.rewritten = false, @JsonKey(name: 'rewrite-skipped') this.rewriteSkipped = false}): _requestHeader = requestHeader,_responseHeader = responseHeader,_actions = actions;
+  const _MitmExchange({required this.id, required this.start, this.pending = false, this.duration = 0, this.ttfb = 0, this.method = '', this.url = '', @JsonKey(name: 'original-url') this.originalUrl = '', this.proto = '', this.status = 0, @JsonKey(name: 'request-size') this.requestSize = 0, @JsonKey(name: 'response-size') this.responseSize = 0, this.error = '', this.connection = '', @JsonKey(name: 'request-header')  Map<String, List<String>> requestHeader = const {}, @JsonKey(name: 'response-header')  Map<String, List<String>> responseHeader = const {},  List<MitmAction> actions = const [], this.rewritten = false, @JsonKey(name: 'rewrite-skipped') this.rewriteSkipped = false, @JsonKey(name: 'original-request-header')  Map<String, List<String>> originalRequestHeader = const {}, @JsonKey(name: 'original-response-header')  Map<String, List<String>> originalResponseHeader = const {}, @JsonKey(name: 'original-request-body') this.originalRequestBody = false, @JsonKey(name: 'original-response-body') this.originalResponseBody = false}): _requestHeader = requestHeader,_responseHeader = responseHeader,_actions = actions,_originalRequestHeader = originalRequestHeader,_originalResponseHeader = originalResponseHeader;
   factory _MitmExchange.fromJson(Map<String, dynamic> json) => _$MitmExchangeFromJson(json);
 
 @override final  int id;
@@ -3590,6 +3894,22 @@ class _MitmExchange implements MitmExchange {
 
 @override@JsonKey() final  bool rewritten;
 @override@JsonKey(name: 'rewrite-skipped') final  bool rewriteSkipped;
+ final  Map<String, List<String>> _originalRequestHeader;
+@override@JsonKey(name: 'original-request-header') Map<String, List<String>> get originalRequestHeader {
+  if (_originalRequestHeader is EqualUnmodifiableMapView) return _originalRequestHeader;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_originalRequestHeader);
+}
+
+ final  Map<String, List<String>> _originalResponseHeader;
+@override@JsonKey(name: 'original-response-header') Map<String, List<String>> get originalResponseHeader {
+  if (_originalResponseHeader is EqualUnmodifiableMapView) return _originalResponseHeader;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_originalResponseHeader);
+}
+
+@override@JsonKey(name: 'original-request-body') final  bool originalRequestBody;
+@override@JsonKey(name: 'original-response-body') final  bool originalResponseBody;
 
 /// Create a copy of MitmExchange
 /// with the given fields replaced by the non-null parameter values.
@@ -3604,18 +3924,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmExchange&&(identical(other.id, id) || other.id == id)&&(identical(other.start, start) || other.start == start)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.ttfb, ttfb) || other.ttfb == ttfb)&&(identical(other.method, method) || other.method == method)&&(identical(other.url, url) || other.url == url)&&(identical(other.originalUrl, originalUrl) || other.originalUrl == originalUrl)&&(identical(other.proto, proto) || other.proto == proto)&&(identical(other.status, status) || other.status == status)&&(identical(other.requestSize, requestSize) || other.requestSize == requestSize)&&(identical(other.responseSize, responseSize) || other.responseSize == responseSize)&&(identical(other.error, error) || other.error == error)&&(identical(other.connection, connection) || other.connection == connection)&&const DeepCollectionEquality().equals(other.requestHeader, _requestHeader)&&const DeepCollectionEquality().equals(other.responseHeader, _responseHeader)&&const DeepCollectionEquality().equals(other.actions, _actions)&&(identical(other.rewritten, rewritten) || other.rewritten == rewritten)&&(identical(other.rewriteSkipped, rewriteSkipped) || other.rewriteSkipped == rewriteSkipped));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmExchange&&(identical(other.id, id) || other.id == id)&&(identical(other.start, start) || other.start == start)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.ttfb, ttfb) || other.ttfb == ttfb)&&(identical(other.method, method) || other.method == method)&&(identical(other.url, url) || other.url == url)&&(identical(other.originalUrl, originalUrl) || other.originalUrl == originalUrl)&&(identical(other.proto, proto) || other.proto == proto)&&(identical(other.status, status) || other.status == status)&&(identical(other.requestSize, requestSize) || other.requestSize == requestSize)&&(identical(other.responseSize, responseSize) || other.responseSize == responseSize)&&(identical(other.error, error) || other.error == error)&&(identical(other.connection, connection) || other.connection == connection)&&const DeepCollectionEquality().equals(other.requestHeader, _requestHeader)&&const DeepCollectionEquality().equals(other.responseHeader, _responseHeader)&&const DeepCollectionEquality().equals(other.actions, _actions)&&(identical(other.rewritten, rewritten) || other.rewritten == rewritten)&&(identical(other.rewriteSkipped, rewriteSkipped) || other.rewriteSkipped == rewriteSkipped)&&const DeepCollectionEquality().equals(other.originalRequestHeader, _originalRequestHeader)&&const DeepCollectionEquality().equals(other.originalResponseHeader, _originalResponseHeader)&&(identical(other.originalRequestBody, originalRequestBody) || other.originalRequestBody == originalRequestBody)&&(identical(other.originalResponseBody, originalResponseBody) || other.originalResponseBody == originalResponseBody));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hashAll([runtimeType,id,start,pending,duration,ttfb,method,url,originalUrl,proto,status,requestSize,responseSize,error,connection,const DeepCollectionEquality().hash(_requestHeader),const DeepCollectionEquality().hash(_responseHeader),const DeepCollectionEquality().hash(_actions),rewritten,rewriteSkipped]);
+    return Object.hashAll([runtimeType,id,start,pending,duration,ttfb,method,url,originalUrl,proto,status,requestSize,responseSize,error,connection,const DeepCollectionEquality().hash(_requestHeader),const DeepCollectionEquality().hash(_responseHeader),const DeepCollectionEquality().hash(_actions),rewritten,rewriteSkipped,const DeepCollectionEquality().hash(_originalRequestHeader),const DeepCollectionEquality().hash(_originalResponseHeader),originalRequestBody,originalResponseBody]);
 }
 
 @override
 String toString() {
-    return 'MitmExchange(id: $id, start: $start, pending: $pending, duration: $duration, ttfb: $ttfb, method: $method, url: $url, originalUrl: $originalUrl, proto: $proto, status: $status, requestSize: $requestSize, responseSize: $responseSize, error: $error, connection: $connection, requestHeader: $requestHeader, responseHeader: $responseHeader, actions: $actions, rewritten: $rewritten, rewriteSkipped: $rewriteSkipped)';
+    return 'MitmExchange(id: $id, start: $start, pending: $pending, duration: $duration, ttfb: $ttfb, method: $method, url: $url, originalUrl: $originalUrl, proto: $proto, status: $status, requestSize: $requestSize, responseSize: $responseSize, error: $error, connection: $connection, requestHeader: $requestHeader, responseHeader: $responseHeader, actions: $actions, rewritten: $rewritten, rewriteSkipped: $rewriteSkipped, originalRequestHeader: $originalRequestHeader, originalResponseHeader: $originalResponseHeader, originalRequestBody: $originalRequestBody, originalResponseBody: $originalResponseBody)';
 }
 
 
@@ -3626,7 +3946,7 @@ abstract mixin class _$MitmExchangeCopyWith<$Res> implements $MitmExchangeCopyWi
   factory _$MitmExchangeCopyWith(_MitmExchange value, $Res Function(_MitmExchange) _then) = __$MitmExchangeCopyWithImpl;
 @override @useResult
 $Res call({
- int id, DateTime start, bool pending, int duration, int ttfb, String method, String url,@JsonKey(name: 'original-url') String originalUrl, String proto, int status,@JsonKey(name: 'request-size') int requestSize,@JsonKey(name: 'response-size') int responseSize, String error, String connection,@JsonKey(name: 'request-header') Map<String, List<String>> requestHeader,@JsonKey(name: 'response-header') Map<String, List<String>> responseHeader, List<MitmAction> actions, bool rewritten,@JsonKey(name: 'rewrite-skipped') bool rewriteSkipped
+ int id, DateTime start, bool pending, int duration, int ttfb, String method, String url,@JsonKey(name: 'original-url') String originalUrl, String proto, int status,@JsonKey(name: 'request-size') int requestSize,@JsonKey(name: 'response-size') int responseSize, String error, String connection,@JsonKey(name: 'request-header') Map<String, List<String>> requestHeader,@JsonKey(name: 'response-header') Map<String, List<String>> responseHeader, List<MitmAction> actions, bool rewritten,@JsonKey(name: 'rewrite-skipped') bool rewriteSkipped,@JsonKey(name: 'original-request-header') Map<String, List<String>> originalRequestHeader,@JsonKey(name: 'original-response-header') Map<String, List<String>> originalResponseHeader,@JsonKey(name: 'original-request-body') bool originalRequestBody,@JsonKey(name: 'original-response-body') bool originalResponseBody
 });
 
 
@@ -3643,7 +3963,7 @@ class __$MitmExchangeCopyWithImpl<$Res>
 
 /// Create a copy of MitmExchange
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? start = null,Object? pending = null,Object? duration = null,Object? ttfb = null,Object? method = null,Object? url = null,Object? originalUrl = null,Object? proto = null,Object? status = null,Object? requestSize = null,Object? responseSize = null,Object? error = null,Object? connection = null,Object? requestHeader = null,Object? responseHeader = null,Object? actions = null,Object? rewritten = null,Object? rewriteSkipped = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? start = null,Object? pending = null,Object? duration = null,Object? ttfb = null,Object? method = null,Object? url = null,Object? originalUrl = null,Object? proto = null,Object? status = null,Object? requestSize = null,Object? responseSize = null,Object? error = null,Object? connection = null,Object? requestHeader = null,Object? responseHeader = null,Object? actions = null,Object? rewritten = null,Object? rewriteSkipped = null,Object? originalRequestHeader = null,Object? originalResponseHeader = null,Object? originalRequestBody = null,Object? originalResponseBody = null,}) {
   return _then(_MitmExchange(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,start: null == start ? _self.start : start // ignore: cast_nullable_to_non_nullable
@@ -3664,6 +3984,10 @@ as Map<String, List<String>>,responseHeader: null == responseHeader ? _self._res
 as Map<String, List<String>>,actions: null == actions ? _self._actions : actions // ignore: cast_nullable_to_non_nullable
 as List<MitmAction>,rewritten: null == rewritten ? _self.rewritten : rewritten // ignore: cast_nullable_to_non_nullable
 as bool,rewriteSkipped: null == rewriteSkipped ? _self.rewriteSkipped : rewriteSkipped // ignore: cast_nullable_to_non_nullable
+as bool,originalRequestHeader: null == originalRequestHeader ? _self._originalRequestHeader : originalRequestHeader // ignore: cast_nullable_to_non_nullable
+as Map<String, List<String>>,originalResponseHeader: null == originalResponseHeader ? _self._originalResponseHeader : originalResponseHeader // ignore: cast_nullable_to_non_nullable
+as Map<String, List<String>>,originalRequestBody: null == originalRequestBody ? _self.originalRequestBody : originalRequestBody // ignore: cast_nullable_to_non_nullable
+as bool,originalResponseBody: null == originalResponseBody ? _self.originalResponseBody : originalResponseBody // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

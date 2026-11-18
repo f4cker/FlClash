@@ -131,6 +131,7 @@ type mitmHTTP2Handler struct {
 	cc         *http2.ClientConn
 	host       string
 	port       uint16
+	rewrites   mitmRewriteReport
 	allowed    func() bool
 	connection string
 }
@@ -155,6 +156,10 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rw := mitmRewriteBegin("https", h.host, h.port, r.RequestURI, false)
+	var requestBefore http.Header
+	if rw != nil {
+		requestBefore = r.Header.Clone()
+	}
 	decision := rw.request(r.Header)
 	if decision.requestURI != "" {
 		if target, err := url.ParseRequestURI(decision.requestURI); err == nil {
@@ -163,6 +168,8 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	entry := mitmCaptures.begin(h.connection, h.host, r)
 	mitmCaptures.noteRewrite(entry, rw)
+	mitmCaptures.originalHeader(entry, false, requestBefore, r.Header)
+	h.rewrites.note(h.connection, rw)
 	var result error
 	defer func() { mitmCaptures.fail(entry, result) }()
 	if decision.drop {
@@ -181,9 +188,12 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// waiting for its end to rewrite it could stall both sides.
 			rw.skipAll(rules, "request", mitmSkipStreaming)
 		} else {
+			coding := r.Header.Get("Content-Encoding")
 			res := rw.rewriteBody(rules, r.Header, r.Body, r.ContentLength, false)
 			switch {
 			case res.changed:
+				mitmCaptures.originalHeader(entry, false, requestBefore, nil)
+				mitmCaptures.originalBody(entry, false, res.original, coding)
 				mitmRewrittenBodyHeader(r.Header, res.length)
 				r.Body, r.ContentLength = io.NopCloser(res.body), res.length
 			case r.ContentLength != 0:
@@ -191,6 +201,7 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		mitmCaptures.noteRewrite(entry, rw)
+		h.rewrites.note(h.connection, rw)
 	}
 
 	out := r.Clone(r.Context())
@@ -247,6 +258,7 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer resp.Body.Close()
 	var rewrittenBody io.Reader
 	if rw != nil {
+		responseBefore := resp.Header.Clone()
 		rw.responseHeader(resp.Header)
 		if rules := rw.bodyRules(true); len(rules) == 0 || r.Method == http.MethodHead || resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusNotModified {
 		} else if resp.ContentLength < 0 && len(resp.Trailer) > 0 {
@@ -260,12 +272,15 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			res := rw.rewriteBody(rules, resp.Header, resp.Body, resp.ContentLength, true)
 			rewrittenBody = res.body
 			if res.changed {
+				mitmCaptures.originalBody(entry, true, res.original, responseBefore.Get("Content-Encoding"))
 				// Trailers, read with the body, still follow it.
 				mitmRewrittenBodyHeader(resp.Header, res.length)
 				resp.ContentLength = res.length
 			}
 		}
 		mitmCaptures.noteRewrite(entry, rw)
+		h.rewrites.note(h.connection, rw)
+		mitmCaptures.originalHeader(entry, true, responseBefore, resp.Header)
 	}
 	mitmCaptures.respond(entry, resp)
 
