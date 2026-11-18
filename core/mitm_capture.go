@@ -223,6 +223,27 @@ func (s *mitmCaptureStore) beginScheme(connection, scheme, host string, req *htt
 	return entry
 }
 
+// After a request script changed the request line or headers.
+func (s *mitmCaptureStore) scriptedRequest(entry *mitmCaptureEntry, scheme string, req *http.Request) {
+	if entry == nil {
+		return
+	}
+	header := req.Header.Clone()
+	header["Host"] = []string{req.Host}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if entry.gone {
+		return
+	}
+	cost := mitmHeaderCost(header) - mitmHeaderCost(entry.reqHeader)
+	url := scheme + "://" + req.Host + req.RequestURI
+	cost += int64(len(url) - len(entry.url))
+	entry.reqHeader, entry.url = header, url
+	entry.cost += cost
+	s.bytes += cost
+	s.evictLocked()
+}
+
 // Records what the rewrite rules did so far to entry's exchange.
 func (s *mitmCaptureStore) noteRewrite(entry *mitmCaptureEntry, rw *mitmRewriteExchange) {
 	if entry == nil || !rw.rewritten() {
@@ -239,7 +260,13 @@ func (s *mitmCaptureStore) noteRewrite(entry *mitmCaptureEntry, rw *mitmRewriteE
 		cost += int64(len(rw.originalURL))
 	}
 	for _, hit := range rw.hits[len(entry.rewrites):] {
-		cost += int64(len(hit.Rule) + len(hit.Section) + len(hit.Phase) + len(hit.Action) + len(hit.Skipped))
+		cost += int64(len(hit.Rule) + len(hit.Section) + len(hit.Phase) + len(hit.Action) + len(hit.Skipped) + len(hit.Error))
+		for _, line := range hit.Logs {
+			cost += int64(len(line.Level) + len(line.Text))
+		}
+		for _, request := range hit.Requests {
+			cost += int64(len(request.Method) + len(request.URL) + len(request.Error))
+		}
 	}
 	entry.rewrites = append(entry.rewrites, rw.hits[len(entry.rewrites):]...)
 	entry.cost += cost
@@ -271,6 +298,15 @@ func (s *mitmCaptureStore) originalHeader(entry *mitmCaptureEntry, response bool
 	entry.cost += cost
 	s.bytes += cost
 	s.evictLocked()
+}
+
+func (s *mitmCaptureStore) hasOriginalBody(entry *mitmCaptureEntry, response bool) bool {
+	if entry == nil {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return entry.before[mitmSide(response)].body != nil
 }
 
 // Keeps a side's body as it came (in coding) when a rule rewrote it.

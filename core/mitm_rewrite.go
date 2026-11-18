@@ -120,6 +120,10 @@ type MitmRewriteHit struct {
 	// How long applying the rule took, for one that applied; 0 when not
 	// measured.
 	TookNs int64 `json:"took-ns,omitempty"`
+	// A script's run: what it logged, the requests it made, its error.
+	Logs     []MitmScriptLog     `json:"logs,omitempty"`
+	Requests []MitmScriptRequest `json:"requests,omitempty"`
+	Error    string              `json:"error,omitempty"`
 }
 
 // Why a matching rule left a message as it was.
@@ -223,6 +227,8 @@ type mitmRewriteRule struct {
 
 	local *mitmLocalResponse
 
+	script *mitmScript
+
 	stats *mitmRewriteStats
 }
 
@@ -304,6 +310,8 @@ type mitmRewriteEngine struct {
 	requestBody    mitmRuleIndex
 	responseBody   mitmRuleIndex
 	mapLocal       mitmRuleIndex
+	requestScript  mitmRuleIndex
+	responseScript mitmRuleIndex
 	bodyLimit      int64
 }
 
@@ -327,14 +335,15 @@ func installMitmRewrite(setup *MitmSetup) {
 	if v := setup.Limits["rewrite-body-size"]; v > 0 {
 		limit = v
 	}
-	engine := compileMitmRewrite(setup.Rewrite, limit, mitmRewrite.Load())
+	engine := compileMitmRewrite(setup.Rewrite, setup.Script, limit, mitmRewrite.Load())
 	if engine.empty() && len(engine.issues) == 0 {
 		engine = nil
 	}
 	mitmRewrite.Store(engine)
 }
 
-func compileMitmRewrite(rules []MitmRewriteRule, bodyLimit int64, previous *mitmRewriteEngine) *mitmRewriteEngine {
+func compileMitmRewrite(rules []MitmRewriteRule, scripts []MitmScriptRule, bodyLimit int64, previous *mitmRewriteEngine) *mitmRewriteEngine {
+	programs := previous.scriptPrograms()
 	kept := map[string]*mitmRewriteRule{}
 	if previous != nil {
 		for _, rule := range previous.rules {
@@ -384,6 +393,31 @@ func compileMitmRewrite(rules []MitmRewriteRule, bodyLimit int64, previous *mitm
 			}
 		case mitmSectionMap:
 			engine.mapLocal.add(rule)
+		}
+	}
+	for i, spec := range scripts {
+		rule, err := parseMitmScriptLine(spec.Line)
+		if err == nil && rule != nil {
+			err = loadMitmScript(rule.script, programs)
+		}
+		if err != nil {
+			engine.issues = append(engine.issues, mitmIssue(MitmRewriteIssue{Rule: spec.ID, Section: mitmSectionScript}, err))
+			continue
+		}
+		if rule == nil {
+			continue
+		}
+		rule.id, rule.order, rule.line = spec.ID, len(rules)+i, spec.Line
+		if old := kept[spec.ID+"\x00"+mitmSectionScript]; old != nil && old.line == spec.Line {
+			rule.stats = old.stats
+		} else {
+			rule.stats = &mitmRewriteStats{}
+		}
+		engine.rules = append(engine.rules, rule)
+		if rule.response {
+			engine.responseScript.add(rule)
+		} else {
+			engine.requestScript.add(rule)
 		}
 	}
 	return engine
