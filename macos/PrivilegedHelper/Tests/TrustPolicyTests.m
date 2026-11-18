@@ -41,13 +41,24 @@ static void testDaemonPlist(void) {
     NSDictionary *canonical = FCCanonicalDaemonPlist();
     assert(canonical.count == 5);
     assert(FCDaemonPlistValid(canonical));
-    assert([canonical[@"Label"] isEqualToString:@"com.layoute.flash.daemon"]);
+    assert([canonical[@"Label"] isEqualToString:@"com.layoute.flash.helperd"]);
+    assert([canonical[@"MachServices"] isEqual:@{@"com.layoute.flash.helperd": @YES}]);
+    assert([FCDaemonPlistName isEqualToString:@"com.layoute.flash.helperd.plist"]);
+    assert([FCDaemonPlistRelativePath isEqualToString:@"Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist"]);
     assert(![canonical[@"Label"] isEqualToString:@"com.layoute.flash.helper"]);
     assert([canonical[@"BundleProgram"] isEqualToString:@"Contents/Library/HelperTools/FlashHelper"]);
     assert(!canonical[@"Program"] && !canonical[@"ProgramArguments"] && !canonical[@"KeepAlive"] && !canonical[@"RunAtLoad"]);
     NSDictionary *disk = [NSDictionary dictionaryWithContentsOfFile:
-        [@FC_SOURCE_ROOT stringByAppendingPathComponent:@"PrivilegedHelper/com.layoute.flash.daemon.plist"]];
+        [@FC_SOURCE_ROOT stringByAppendingPathComponent:@"PrivilegedHelper/com.layoute.flash.helperd.plist"]];
     assert([disk isEqualToDictionary:canonical]);
+    // The retired name: same schema under its own label, only valid as the retired plist.
+    NSDictionary *retired = [NSDictionary dictionaryWithContentsOfFile:
+        [@FC_SOURCE_ROOT stringByAppendingPathComponent:@"PrivilegedHelper/com.layoute.flash.daemon.plist"]];
+    assert([FCRetiredHelperLabel isEqualToString:@"com.layoute.flash.daemon"]);
+    assert([FCRetiredDaemonPlistName isEqualToString:@"com.layoute.flash.daemon.plist"]);
+    assert([retired isEqualToDictionary:FCCanonicalDaemonPlistForLabel(FCRetiredHelperLabel)]);
+    assert(FCRetiredDaemonPlistValid(retired) && !FCDaemonPlistValid(retired) && !FCRetiredDaemonPlistValid(canonical));
+    assert([retired[@"BundleProgram"] isEqualToString:canonical[@"BundleProgram"]]);
     for (NSString *key in canonical) {
         NSMutableDictionary *invalid = canonical.mutableCopy;
         [invalid removeObjectForKey:key];
@@ -88,6 +99,12 @@ static void testBundleLayout(void) {
     assert([FCCanonicalDaemonPlist() writeToFile:plist atomically:YES]);
     assert(!FCBundledDaemonPresent(bundle));
     assert([[NSData data] writeToFile:helper atomically:YES]);
+    assert(FCBundledDaemonPresent(bundle));
+    // The retired plist is optional, but exact when present.
+    NSString *retired = [bundle stringByAppendingPathComponent:FCRetiredDaemonPlistRelativePath];
+    assert([FCCanonicalDaemonPlist() writeToFile:retired atomically:YES]);
+    assert(!FCBundledDaemonPresent(bundle));
+    assert([FCCanonicalDaemonPlistForLabel(FCRetiredHelperLabel) writeToFile:retired atomically:YES]);
     assert(FCBundledDaemonPresent(bundle));
     NSMutableDictionary *changed = FCCanonicalDaemonPlist().mutableCopy;
     changed[@"ProgramArguments"] = @[@"/bin/sh"];
@@ -130,7 +147,8 @@ int main(void) {
         assert([@FC_PINNED_CERTIFICATE_SHA1 isEqualToString:@"BBA7F8529FD271B9848EC03A2CE3F4780F585556"]);
         assert(@FC_PRODUCTION_TEAM_ID.length == 0);
         assert(FC_MANAGED_CANDIDATE_ENABLED == FC_TRUST_TEST_EXPECT_CANDIDATE_ENABLED);
-        assert([FCHelperLabel isEqualToString:@"com.layoute.flash.daemon"]);
+        assert([FCHelperLabel isEqualToString:@"com.layoute.flash.helperd"]);
+        assert([@FC_HELPER_LABEL isEqualToString:FCHelperLabel] && [@FC_RETIRED_HELPER_LABEL isEqualToString:FCRetiredHelperLabel]);
         assert([FCHelperIdentifier isEqualToString:@"com.layoute.flash.helper"]);
         assert([FCInstalledExecutable(FCHelperIdentifier) isEqualToString:
             @"/Applications/Flash.app/Contents/Library/HelperTools/FlashHelper"]);

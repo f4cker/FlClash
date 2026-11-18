@@ -6,6 +6,7 @@ from pathlib import Path
 
 MACOS = Path(__file__).resolve().parents[2]
 TRUST = (MACOS / 'Shared/HelperTrust.m').read_text()
+TRUST_HEADER = (MACOS / 'Shared/HelperTrust.h').read_text()
 BRIDGE = (MACOS / 'Runner/ManagedHelperBridge.m').read_text()
 SUPERVISOR = (MACOS / 'PrivilegedHelper/Supervisor.m').read_text()
 
@@ -27,7 +28,8 @@ class SplitGUITrustTests(unittest.TestCase):
                     subprocess.run([executable], check=True, capture_output=True, text=True)
 
     def test_daemon_and_core_live_in_the_sealed_app(self):
-        self.assertIn('FCHelperLabel = @"com.layoute.flash.daemon"', TRUST)
+        self.assertIn('FCHelperLabel = @FC_HELPER_LABEL;', TRUST)
+        self.assertIn('#define FC_HELPER_LABEL "com.layoute.flash.helperd"', TRUST_HEADER)
         self.assertIn('FCHelperRelativePath = @"Contents/Library/HelperTools/FlashHelper"', TRUST)
         self.assertIn('FCCoreRelativePath = @"Contents/MacOS/FlClashCore"', TRUST)
         for removed in ('FCPayloadTrust', 'FCBundleTrust', 'FCInstalledBundle', 'FCMaintenanceIdentifier',

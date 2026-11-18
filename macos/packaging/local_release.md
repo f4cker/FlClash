@@ -12,11 +12,19 @@ side needs; there is no separate service bundle, helper package or installer:
 Contents/MacOS/Flash                                            GUI
 Contents/MacOS/FlClashCore                                      Core (copied by the daemon before use)
 Contents/Library/HelperTools/FlashHelper                        daemon (BundleProgram)
-Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist   SMAppService.daemon plist
+Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist  SMAppService.daemon plist
+Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist   retired name (unregister only)
 ```
 
 The app registers the daemon itself with `SMAppService.daemon(plistName:)`; macOS
-then asks the user to allow Flash under Login Items. Upgrading from a pkg-installed
+then asks the user to allow Flash under Login Items.
+`com.layoute.flash.daemon` was the registration name up to 0.9.15-mitm.3. A new
+name makes the system create a fresh background-item record (and launch
+constraint) instead of re-using the one pinned to an older helper; the app
+unregisters the retired name once, before it registers the new one. Its plist
+(the same schema under the old label) stays in the bundle only for that
+unregister. The helper's signing identifier `com.layoute.flash.helper` and the
+certificate requirement are unchanged. Upgrading from a pkg-installed
 helper runs one constant cleanup script with administrator authorization.
 The existing self-signed identity is retained; this is not Apple Developer ID
 signing or notarization. Static checks are not runtime acceptance.
@@ -51,7 +59,7 @@ authentication.
 ## Signing contract (schema 2)
 
 `build` stages the fresh unsigned app with `stage_bundle_payload.stage`, which
-checks the exact daemon plist schema (`Label` `com.layoute.flash.daemon`,
+checks the exact daemon plist schema (`Label` `com.layoute.flash.helperd`,
 `BundleProgram`, `MachServices`, `AssociatedBundleIdentifiers`, `ProcessType`; no
 `Program`, `KeepAlive`, `RunAtLoad`), that `BundleProgram` is a real Mach-O whose
 `__info_plist` names `com.layoute.flash.helper`, and that no legacy artifact is

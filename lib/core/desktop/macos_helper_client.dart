@@ -41,7 +41,8 @@ enum MacHelperState {
   updateFailed,
 
   /// launchd still holds the previous build's job and cannot start this
-  /// helper (launch constraint not refreshed): the app re-registers it.
+  /// helper (launch constraint not refreshed), or the daemon is still
+  /// registered under its retired name: the app re-registers it.
   registrationStale,
 
   /// A recovery of the registration is running; nothing reconnects meanwhile.
@@ -67,7 +68,9 @@ enum MacHelperState {
       previouslyEnabled == true ? disabledByUser : requiresApproval,
     'notRegistered' => notRegistered,
     'migrationRequired' || 'authorizationCancelled' => migrationRequired,
-    'registrationStale' => registrationStale,
+    // A registration under the retired name (com.layoute.flash.daemon) is
+    // still there: the same recovery moves it to the current name.
+    'registrationStale' || 'retiredRegistration' => registrationStale,
     'repairInProgress' || 'operationInProgress' => repairing,
     'helperNotReady' => notReady,
     'staleCoreUnconfirmed' => staleCore,

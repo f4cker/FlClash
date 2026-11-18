@@ -63,6 +63,8 @@ static int FixtureLstat(const char *path, struct stat *state) {
     return lstat(path, state);
 }
 static NSDictionary *FixtureLoadPlist(NSString *path) {
+    // The retired name's plist (kept for unregister only) is present in the bundle with its own exact schema.
+    if ([path hasSuffix:FCRetiredDaemonPlistRelativePath]) return FCCanonicalDaemonPlistForLabel(FCRetiredHelperLabel);
     if (!daemonPlistValid) {
         NSMutableDictionary *changed = FCCanonicalDaemonPlist().mutableCopy;
         changed[@"ProgramArguments"] = @[@"/bin/sh", @"-c", @"id"];

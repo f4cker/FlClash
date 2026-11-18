@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 final class _Native implements MacHelperNativeApi {
   final calls = <String>[];
   Map<Object?, Object?> status = const {'code': 'enabled'};
+  Map<Object?, Object?> recover = const {'code': 'enabled'};
 
   @override
   Future<Map<Object?, Object?>> invoke(
@@ -22,6 +23,7 @@ final class _Native implements MacHelperNativeApi {
     return switch (method) {
       'status' || 'approvalStatus' => status,
       'enable' => const {'code': 'requiresApproval'},
+      'recover' => recover,
       'openApprovalSettings' => const {'code': 'settingsOpened'},
       _ => throw StateError('Unexpected native call: $method'),
     };
@@ -127,6 +129,100 @@ void main() {
     await settle();
     expect(started, 1);
     flow.dispose();
+  });
+
+  test(
+    'a registration under the retired name is moved by the same recovery; '
+    'the new name needing approval continues after the user returns',
+    () async {
+      native.status = const {
+        'code': 'retiredRegistration',
+        'detail': 'com.layoute.flash.daemon: enabled',
+      };
+      recoverAnswers = [MacHelperState.requiresApproval];
+      final flow = flowWith();
+      var started = 0;
+      flow.runOnceReady(() async => started++);
+
+      expect(await flow.check(), MacHelperState.requiresApproval);
+      expect(steps, ['recover']);
+      expect(flow.failure, isNull);
+      expect(flow.rawDetail, contains('com.layoute.flash.daemon'));
+      final view = macHelperCardView(
+        lookupAppLocalizations(const Locale('zh')),
+        flow,
+      );
+      expect(view.kind, MacHelperCardKind.approval);
+      expect(view.primary, MacHelperCardAction.openSettings);
+      expect(view.detail, contains('关掉再打开'));
+      expect(started, 0);
+
+      // The retired name is gone; the new one waits for the user.
+      native.status = const {'code': 'requiresApproval'};
+      await flow.openSettings();
+      native.status = const {'code': 'enabled'};
+      flow.resumed();
+      await settle();
+      expect(flow.state, MacHelperState.enabled);
+      expect(steps, ['recover', 'settle']);
+      expect(started, 1);
+      flow.dispose();
+    },
+  );
+
+  test('without a retired name nothing is recovered', () async {
+    native.status = const {'code': 'notRegistered'};
+    final flow = flowWith();
+    expect(await flow.check(), MacHelperState.notRegistered);
+    expect(steps, isEmpty);
+    await flow.openSettings();
+    expect(
+      native.calls,
+      containsAllInOrder(['enable', 'openApprovalSettings']),
+    );
+    expect(steps, isEmpty);
+    flow.dispose();
+  });
+
+  test('a retired unregister that timed out or failed is only a detail of '
+      'the new registration', () async {
+    native.recover = const {
+      'code': 'enabled',
+      'retiredUnregister': 'timeout',
+      'detail':
+          'retired com.layoute.flash.daemon (enabled): unregister: no '
+          'completion within 15 s; status: enabled\nnew helper answered',
+    };
+    expect(
+      await client.maintain(() => client.recover()),
+      MacHelperState.enabled,
+    );
+    expect(client.failure, isNull);
+    expect(client.lastDetail, contains('no completion within 15 s'));
+
+    native.recover = const {
+      'code': 'requiresApproval',
+      'retiredUnregister': 'failed',
+      'domain': 'SMAppServiceErrorDomain',
+      'error': 1,
+      'detail':
+          'retired com.layoute.flash.daemon (enabled): unregister: '
+          'SMAppServiceErrorDomain 1; status: enabled\n'
+          'register: SMAppServiceErrorDomain 1; status: requiresApproval',
+    };
+    expect(
+      await client.maintain(() => client.recover()),
+      MacHelperState.requiresApproval,
+    );
+    expect(client.failure, isNull);
+    expect(client.lastDetail, contains('unregister: SMAppServiceErrorDomain'));
+  });
+
+  test('the retired registration reads as a stale registration', () {
+    expect(
+      MacHelperState.parse('retiredRegistration'),
+      MacHelperState.registrationStale,
+    );
   });
 
   test('returning to the foreground continues without any poll', () async {

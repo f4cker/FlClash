@@ -84,6 +84,7 @@ guard='(version 1)(allow default)(deny process-exec (literal "/usr/bin/codesign"
 app="$root/build/macos/Build/Products/Release/Flash.app"
 [[ -d "$app" && -f "$app/Contents/MacOS/FlClashCore" &&
    -f "$app/Contents/Library/HelperTools/FlashHelper" &&
+   -f "$app/Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist" &&
    -f "$app/Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist" &&
    ! -e "$app/Contents/Library/HelperTools/FlashMaintenance" &&
    ! -e "$app/Contents/Resources/HelperInstaller" ]] || exit 78

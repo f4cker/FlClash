@@ -21,7 +21,9 @@ REPOSITORY = 'f4cker/FlClash'
 IDENTITY = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CORE = 'Contents/MacOS/FlClashCore'
 HELPER = 'Contents/Library/HelperTools/FlashHelper'
-DAEMON_PLIST = 'Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist'
+DAEMON_PLIST = 'Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist'
+# Retired registration name: bundled only so the app can unregister it (see macos/Shared/HelperTrust.h).
+RETIRED_DAEMON_PLIST = 'Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist'
 RECEIPT_SCHEMA = 2
 BEGIN = '<!-- flclash:changelog:begin -->'
 END = '<!-- flclash:changelog:end -->'
@@ -240,6 +242,8 @@ class Release:
         facts = module('stage_bundle_payload').verify_signed(self.app)
         require(facts['daemon_plist_sha256'] == request['unsigned_facts']['daemon_plist_sha256'],
                 'Daemon plist changed during signing')
+        require(facts['retired_daemon_plist_sha256'] == request['unsigned_facts'].get('retired_daemon_plist_sha256'),
+                'Retired daemon plist changed during signing')
         for key in ('helper_cdhash', 'core_cdhash', 'core_sha256', 'daemon_plist_sha256'):
             require(receipt.get(key) == facts[key], 'Receipt does not bind the signed ' + key)
         contract = facts['compatibility']

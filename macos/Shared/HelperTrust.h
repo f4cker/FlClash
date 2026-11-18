@@ -2,10 +2,23 @@
 #import <Security/Security.h>
 #import <xpc/xpc.h>
 
+// The daemon's registration name, in one place: launchd label, Mach service and plist file name
+// (Contents/Library/LaunchDaemons/<label>.plist). A new name makes the system create a fresh Background Task
+// record, and with it a launch constraint computed from the current helper, instead of re-using the record (and
+// the constraint pinned to an older helper's cdhash) of the previous name. The code-signing identifier of the
+// helper (com.layoute.flash.helper), its BundleProgram path and the certificate requirement do not change with it.
+#define FC_HELPER_LABEL "com.layoute.flash.helperd"
+// The name used up to 0.9.15-mitm.3. Its plist stays in the bundle only so SMAppService can unregister it
+// (daemonServiceWithPlistName: requires the plist in Contents/Library/LaunchDaemons); it is never registered.
+#define FC_RETIRED_HELPER_LABEL "com.layoute.flash.daemon"
+
 NS_ASSUME_NONNULL_BEGIN
 // launchd label and Mach service of the SMAppService daemon (distinct from the legacy com.layoute.flash.helper job).
 extern NSString * const FCHelperLabel;
 extern NSString * const FCDaemonPlistName;
+extern NSString * const FCRetiredHelperLabel;
+extern NSString * const FCRetiredDaemonPlistName;
+extern NSString * const FCRetiredDaemonPlistRelativePath;
 // Code-signing identifiers (pinned leaf certificate + identifier).
 extern NSString * const FCClientIdentifier;
 extern NSString * const FCHelperIdentifier;
@@ -16,11 +29,15 @@ extern NSString * const FCDaemonPlistRelativePath;
 extern NSString * const FCHelperRelativePath;
 extern NSString * const FCCoreRelativePath;
 // Root-only (root:wheel 0700) runtime directory owned by the daemon: relay sockets and the verified Core copy.
+// Deliberately not renamed with the label: the new helper finds the previous helper's Core journal there.
 extern NSString * const FCRuntimeDirectory;
 
 NSString *FCInstalledExecutable(NSString *role);
 NSDictionary *FCCanonicalDaemonPlist(void);
+NSDictionary *FCCanonicalDaemonPlistForLabel(NSString *label);
 BOOL FCDaemonPlistValid(id _Nullable plist);
+// The retired name's plist: the same exact schema under the retired label (and its Mach service).
+BOOL FCRetiredDaemonPlistValid(id _Nullable plist);
 BOOL FCBundledDaemonPresent(NSString *bundle);
 
 // How the running daemon's cdhash compares with the bundled (on-disk) one, for a sender that passed every

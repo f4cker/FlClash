@@ -41,7 +41,8 @@ class BundledDaemonTests(unittest.TestCase):
         self.app = self.root / 'Flash.app'
         self.write(STAGE.CORE, MACHO, 0o755)
         self.write(STAGE.HELPER, MACHO + plistlib.dumps({'CFBundleIdentifier': STAGE.HELPER_ID}), 0o755)
-        self.write(STAGE.DAEMON_PLIST, (MACOS / 'PrivilegedHelper/com.layoute.flash.daemon.plist').read_bytes())
+        self.write(STAGE.DAEMON_PLIST, (MACOS / 'PrivilegedHelper/com.layoute.flash.helperd.plist').read_bytes())
+        self.write(STAGE.RETIRED_DAEMON_PLIST, (MACOS / 'PrivilegedHelper/com.layoute.flash.daemon.plist').read_bytes())
         self.write('Contents/Info.plist', plistlib.dumps({'CFBundleIdentifier': 'com.layoute.flash'}))
 
     def write(self, relative, data, mode=0o644):
@@ -59,19 +60,27 @@ class BundledDaemonTests(unittest.TestCase):
         self.write(STAGE.DAEMON_PLIST, plistlib.dumps(data))
 
     def test_repository_plist_is_the_exact_schema_and_lints(self):
-        source = MACOS / 'PrivilegedHelper/com.layoute.flash.daemon.plist'
+        source = MACOS / 'PrivilegedHelper/com.layoute.flash.helperd.plist'
         self.assertEqual(plistlib.loads(source.read_bytes()), STAGE.DAEMON_SCHEMA)
         subprocess.run(['/usr/bin/plutil', '-lint', str(source)], check=True, capture_output=True)
+        retired = MACOS / 'PrivilegedHelper/com.layoute.flash.daemon.plist'
+        self.assertEqual(plistlib.loads(retired.read_bytes()), STAGE.RETIRED_DAEMON_SCHEMA)
+        subprocess.run(['/usr/bin/plutil', '-lint', str(retired)], check=True, capture_output=True)
         self.assertFalse((MACOS / 'PrivilegedHelper/com.layoute.flash.helper.plist').exists())
 
     def test_plist_schema_label_and_bundle_program(self):
         facts = STAGE.check_layout(self.app)
-        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'daemon_plist_sha256'})
+        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'daemon_plist_sha256',
+                                      'retired_daemon_plist_sha256'})
         schema = STAGE.DAEMON_SCHEMA
-        self.assertEqual(schema['Label'], 'com.layoute.flash.daemon')
+        self.assertEqual(STAGE.DAEMON_PLIST, 'Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist')
+        self.assertEqual(schema['Label'], 'com.layoute.flash.helperd')
         self.assertNotEqual(schema['Label'], STAGE.LEGACY_LABEL)
         self.assertEqual(schema['BundleProgram'], 'Contents/Library/HelperTools/FlashHelper')
-        self.assertEqual(schema['MachServices'], {'com.layoute.flash.daemon': True})
+        self.assertEqual(schema['MachServices'], {'com.layoute.flash.helperd': True})
+        # The retired name keeps its old schema (only unregistered), with the same BundleProgram.
+        self.assertEqual(STAGE.RETIRED_DAEMON_SCHEMA, dict(schema, Label='com.layoute.flash.daemon',
+                                                           MachServices={'com.layoute.flash.daemon': True}))
         self.assertEqual(schema['AssociatedBundleIdentifiers'], ['com.layoute.flash'])
         for key in ('KeepAlive', 'RunAtLoad', 'Program', 'ProgramArguments', 'UserName'):
             self.assertNotIn(key, schema)
@@ -122,6 +131,16 @@ class BundledDaemonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'LaunchDaemons'):
             STAGE.check_layout(self.app)
 
+    def test_retired_plist_is_required_and_exact(self):
+        retired = self.app / STAGE.RETIRED_DAEMON_PLIST
+        # Under the retired label but registering the new Mach service (or any drift): rejected.
+        self.write(STAGE.RETIRED_DAEMON_PLIST, plistlib.dumps(dict(STAGE.DAEMON_SCHEMA, Label=STAGE.RETIRED_LABEL)))
+        with self.assertRaisesRegex(ValueError, 'exact bundled schema'):
+            STAGE.check_layout(self.app)
+        retired.unlink()
+        with self.assertRaisesRegex(ValueError, 'LaunchDaemons'):
+            STAGE.check_layout(self.app)
+
     def seal(self, **inputs):
         calls = []
         with patch.object(STAGE, 'codesign', side_effect=mock_codesign(calls)):
@@ -131,7 +150,8 @@ class BundledDaemonTests(unittest.TestCase):
 
     def test_signed_verification_requires_plist_in_code_resources_files2(self):
         self.seal()
-        files2 = {'Library/LaunchDaemons/com.layoute.flash.daemon.plist': {'hash2': b'x'},
+        files2 = {'Library/LaunchDaemons/com.layoute.flash.helperd.plist': {'hash2': b'x'},
+                  'Library/LaunchDaemons/com.layoute.flash.daemon.plist': {'hash2': b'x'},
                   'Library/HelperTools/FlashHelper': {'cdhash': b'x'}, 'MacOS/FlClashCore': {'cdhash': b'x'}}
         self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': files2}))
         calls = []
@@ -143,10 +163,12 @@ class BundledDaemonTests(unittest.TestCase):
             for identifier in ('com.layoute.flash.core', 'com.layoute.flash.helper', 'com.layoute.flash'):
                 self.assertIn('-R=' + STAGE.requirement(identifier), requirements)
             self.assertTrue(all('certificate leaf = H"' + STAGE.CERTIFICATE_SHA1 + '"' in r for r in requirements))
-            del files2['Library/LaunchDaemons/com.layoute.flash.daemon.plist']
-            self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': files2}))
-            with self.assertRaisesRegex(ValueError, 'not sealed in CodeResources files2'):
-                STAGE.verify_signed(self.app)
+            for plist in ('com.layoute.flash.helperd.plist', 'com.layoute.flash.daemon.plist'):
+                unsealed = dict(files2)
+                del unsealed['Library/LaunchDaemons/' + plist]
+                self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': unsealed}))
+                with self.assertRaisesRegex(ValueError, 'not sealed in CodeResources files2'):
+                    STAGE.verify_signed(self.app)
 
     def test_signing_order_is_inside_out_with_the_unchanged_identity(self):
         signer = load('sign_fixed_payload')
@@ -225,7 +247,8 @@ class BundledDaemonTests(unittest.TestCase):
             STAGE.check_layout(self.app)
 
     def test_signed_verification_requires_contract_bound_to_signed_core(self):
-        files2 = {'Library/LaunchDaemons/com.layoute.flash.daemon.plist': {'hash2': b'x'},
+        files2 = {'Library/LaunchDaemons/com.layoute.flash.helperd.plist': {'hash2': b'x'},
+                  'Library/LaunchDaemons/com.layoute.flash.daemon.plist': {'hash2': b'x'},
                   'Library/HelperTools/FlashHelper': {'cdhash': b'x'}, 'MacOS/FlClashCore': {'cdhash': b'x'}}
         self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': files2}))
         with patch.object(STAGE, 'codesign', side_effect=mock_codesign([])):

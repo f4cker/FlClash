@@ -1,7 +1,9 @@
 #!/bin/bash
 # Xcode build phase: embed the SMAppService daemon inside Flash.app.
 #   Contents/Library/HelperTools/FlashHelper                       (BundleProgram)
-#   Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist  (SMAppService.daemon plist)
+#   Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist (SMAppService.daemon plist)
+#   Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist  (retired name; only so the app can
+#                                                                   unregister it, never registered)
 # The Core stays at Contents/MacOS/FlClashCore (Copy Core phase). Nothing is signed,
 # installed, registered or launched here; signing is the separate inside-out route.
 set -euo pipefail
@@ -37,6 +39,8 @@ for architecture in $ARCHS; do architectures+=(-arch "$architecture"); done
   -sectcreate __TEXT __info_plist "$SRCROOT/PrivilegedHelper/Info.plist" \
   "$SRCROOT/Shared/HelperTrust.m" "$SRCROOT/PrivilegedHelper/Supervisor.m" \
   "$SRCROOT/PrivilegedHelper/Spawn.c" -o "$library/HelperTools/FlashHelper"
-/usr/bin/plutil -lint "$SRCROOT/PrivilegedHelper/com.layoute.flash.daemon.plist"
-/bin/cp "$SRCROOT/PrivilegedHelper/com.layoute.flash.daemon.plist" "$library/LaunchDaemons/"
-/bin/chmod 0644 "$library/LaunchDaemons/com.layoute.flash.daemon.plist"
+for plist in com.layoute.flash.helperd.plist com.layoute.flash.daemon.plist; do
+  /usr/bin/plutil -lint "$SRCROOT/PrivilegedHelper/$plist"
+  /bin/cp "$SRCROOT/PrivilegedHelper/$plist" "$library/LaunchDaemons/"
+  /bin/chmod 0644 "$library/LaunchDaemons/$plist"
+done

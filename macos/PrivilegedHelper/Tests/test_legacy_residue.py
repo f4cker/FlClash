@@ -58,6 +58,7 @@ class LegacyResidueTests(unittest.TestCase):
             for call in calls:
                 self.assertNotIn('/Applications', call)
                 self.assertNotIn('com.layoute.flash.daemon', call)
+                self.assertNotIn('com.layoute.flash.helperd', call)
 
     def test_bridge_runs_only_the_constant_script_and_reports_steps(self):
         migrate = BRIDGE.split('- (void)migrateWithArguments:', 1)[1].split('#pragma mark', 1)[0]

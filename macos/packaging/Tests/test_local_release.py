@@ -72,6 +72,7 @@ class LocalReleaseTests(unittest.TestCase):
         plist = app / stage.DAEMON_PLIST
         plist.parent.mkdir(parents=True)
         plist.write_bytes(plistlib.dumps(stage.DAEMON_SCHEMA))
+        (app / stage.RETIRED_DAEMON_PLIST).write_bytes(plistlib.dumps(stage.RETIRED_DAEMON_SCHEMA))
         info = {'CFBundleIdentifier': 'com.layoute.flash', 'CFBundleShortVersionString': '0.9.8',
                 'CFBundleVersion': '2026111405'}
         (app / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
@@ -84,7 +85,8 @@ class LocalReleaseTests(unittest.TestCase):
         module_patch.start()
         self.addCleanup(module_patch.stop)
         facts = RELEASE.check_version(app, self.identity)
-        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'daemon_plist_sha256'})
+        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'daemon_plist_sha256',
+                                      'retired_daemon_plist_sha256'})
         for key, value in [('version', '0.9.7'), ('build', '2026111404')]:
             with self.assertRaisesRegex(ValueError, 'version differs'):
                 RELEASE.check_version(app, dict(self.identity, **{key: value}))
@@ -252,7 +254,8 @@ class LocalReleaseTests(unittest.TestCase):
         self.assertNotIn('request_sha256', self.release.state)
 
     def signed_run(self, receipt_extra=None, unsigned=None):
-        facts = {'core_sha256': '1' * 64, 'helper_sha256': '2' * 64, 'daemon_plist_sha256': '3' * 64}
+        facts = {'core_sha256': '1' * 64, 'helper_sha256': '2' * 64, 'daemon_plist_sha256': '3' * 64,
+                 'retired_daemon_plist_sha256': '4' * 64}
         inputs = {'CallerPolicy': 3, 'ServiceAPI': 1, 'CoreAPI': 1, 'CoreVersion': 'v1.19.34',
                   'CoreRevision': self.identity['head']}
         RELEASE.save(self.release.request, {'unsigned_entries': {'fresh': 'code'}, 'unsigned_facts': facts,
@@ -284,6 +287,9 @@ class LocalReleaseTests(unittest.TestCase):
                     self.release.verify()
             stage.verify_signed.return_value = dict(signed, daemon_plist_sha256='9' * 64)
             with self.assertRaisesRegex(ValueError, 'Daemon plist changed'):
+                self.release.verify()
+            stage.verify_signed.return_value = dict(signed, retired_daemon_plist_sha256='9' * 64)
+            with self.assertRaisesRegex(ValueError, 'Retired daemon plist changed'):
                 self.release.verify()
 
     def test_verify_binds_sealed_contract_to_request_inputs_and_signed_core(self):
@@ -508,6 +514,14 @@ class HelperBuildModeTests(unittest.TestCase):
             result.files = sorted(str(p.relative_to(contents)) for p in contents.rglob('*') if p.is_file())
             return result
 
+    def test_release_stage_copies_both_daemon_plists(self):
+        result = self.run_stage()
+        if result.returncode != 0 and 'xcrun' in result.stderr + result.stdout:
+            self.skipTest('no compiler')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Library/LaunchDaemons/com.layoute.flash.helperd.plist', result.files)
+        self.assertIn('Library/LaunchDaemons/com.layoute.flash.daemon.plist', result.files)
+
     def test_unmanaged_build_embeds_nothing(self):
         result = self.run_stage(managed=False)
         self.assertEqual(result.returncode, 0)
@@ -535,7 +549,8 @@ class HelperBuildModeTests(unittest.TestCase):
         script = (PACKAGING / 'stage_bundled_daemon.sh').read_text()
         self.assertIn('-sectcreate __TEXT __info_plist "$SRCROOT/PrivilegedHelper/Info.plist"', script)
         self.assertIn('-o "$library/HelperTools/FlashHelper"', script)
-        self.assertIn('com.layoute.flash.daemon.plist" "$library/LaunchDaemons/"', script)
+        self.assertIn('for plist in com.layoute.flash.helperd.plist com.layoute.flash.daemon.plist; do', script)
+        self.assertIn('/bin/cp "$SRCROOT/PrivilegedHelper/$plist" "$library/LaunchDaemons/"', script)
         for forbidden in ('Maintenance.m', 'com.layoute.flash.helper.plist" "$library', 'codesign',
                           'launchctl', 'registerAndReturnError', 'pkgbuild', 'sudo '):
             self.assertNotIn(forbidden, script)

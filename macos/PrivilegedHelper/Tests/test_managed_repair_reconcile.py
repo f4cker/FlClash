@@ -1,9 +1,10 @@
 """Stale-registration recovery after an app update (pure fixtures: launchctl, SMAppService and the daemon are
 simulated; nothing here runs launchctl, registers or unregisters anything).
 
-Covers: parsing of `launchctl print system/com.layoute.flash.daemon` (running, needs LWCR update + spawn failed,
-job not found); every branch of the recovery sequence; registration errors that only mean "allow it in System
-Settings"; status reporting a stale registration without sending hello.
+Covers: parsing of `launchctl print system/com.layoute.flash.helperd` (running, needs LWCR update + spawn failed,
+job not found); every branch of the recovery sequence; the move from the retired registration name
+(com.layoute.flash.daemon) to the new one; registration errors that only mean "allow it in System Settings";
+status reporting a stale registration without sending hello.
 """
 import subprocess
 import tempfile
@@ -38,7 +39,7 @@ def compile_and_run(test, source):
         return result.stdout
 
 
-RUNNING = r'''system/com.layoute.flash.daemon = {
+RUNNING = r'''system/com.layoute.flash.helperd = {
 	active count = 1
 	path = (submitted by smd.412)
 	type = LaunchDaemon
@@ -58,7 +59,7 @@ RUNNING = r'''system/com.layoute.flash.daemon = {
 	last exit code = (never exited)
 
 	endpoints = {
-		"com.layoute.flash.daemon" = {
+		"com.layoute.flash.helperd" = {
 			port = 0x6b03
 			active = 1
 		}
@@ -68,7 +69,7 @@ RUNNING = r'''system/com.layoute.flash.daemon = {
 }
 '''
 
-BROKEN = r'''system/com.layoute.flash.daemon = {
+BROKEN = r'''system/com.layoute.flash.helperd = {
 	active count = 0
 	path = (submitted by smd.412)
 	type = LaunchDaemon
@@ -85,7 +86,7 @@ BROKEN = r'''system/com.layoute.flash.daemon = {
 	jetsam priority = 40
 
 	endpoints = {
-		"com.layoute.flash.daemon" = {
+		"com.layoute.flash.helperd" = {
 			port = 0x2a03
 			active = 0
 		}
@@ -95,7 +96,7 @@ BROKEN = r'''system/com.layoute.flash.daemon = {
 }
 '''
 
-MISSING = 'Bad request.\nCould not find service "com.layoute.flash.daemon" in domain for system\n'
+MISSING = 'Bad request.\nCould not find service "com.layoute.flash.helperd" in domain for system\n'
 
 
 def objc_string(text):
@@ -150,8 +151,9 @@ SEQUENCE_FIXTURE = r'''
 #import <Foundation/Foundation.h>
 #import <assert.h>
 #import <errno.h>
-enum { kSMErrorLaunchDeniedByUser = 11 };
-''' + method('static NSString *FCErrorText') + '\n' + method('static BOOL FCApprovalError') + r'''
+enum { kSMErrorJobNotFound = 6, kSMErrorLaunchDeniedByUser = 11 };
+static NSString * const FCRetiredHelperLabel = @"com.layoute.flash.daemon";
+''' + method('static NSString *FCErrorText') + '\n' + method('static BOOL FCApprovalError') + '\n' + method('static BOOL FCAlreadyUnregistered') + r'''
 @interface Fixture : NSObject
 @property NSMutableArray<NSString *> *calls;
 @property NSMutableArray<NSDictionary *> *jobs;      // launchctl answers, in order; the last one repeats
@@ -160,10 +162,16 @@ enum { kSMErrorLaunchDeniedByUser = 11 };
 @property NSMutableArray<NSDictionary *> *hellos;    // hello answers; the last one repeats
 @property BOOL unregisterTimesOut;
 @property NSTimeInterval clock;
+@property NSMutableArray<NSString *> *retiredStatuses;  // retired name's status, in order; the last one repeats
+@property id retiredUnregister;                         // NSError, NSNull (ok) or @"timeout"
+@property BOOL retiredSettled;
 @end
 @implementation Fixture
 - (instancetype)init {
-    if ((self = [super init])) { _calls = [NSMutableArray array]; _hellos = [@[@{@"code": @"ok", @"helperCDHash": @"new"}] mutableCopy]; }
+    if ((self = [super init])) {
+        _calls = [NSMutableArray array]; _hellos = [@[@{@"code": @"ok", @"helperCDHash": @"new"}] mutableCopy];
+        _retiredStatuses = [@[@"notRegistered"] mutableCopy]; _retiredUnregister = NSNull.null;
+    }
     return self;
 }
 static id Next(NSMutableArray *queue) { id value = queue.firstObject; if (queue.count > 1) [queue removeObjectAtIndex:0]; return value; }
@@ -179,6 +187,13 @@ static id Next(NSMutableArray *queue) { id value = queue.firstObject; if (queue.
     return value == NSNull.null ? nil : value;
 }
 - (NSString *)serviceStatusCode { [self.calls addObject:@"status"]; return Next(self.statuses); }
+- (NSString *)retiredStatusCode { [self.calls addObject:@"retiredStatus"]; return Next(self.retiredStatuses); }
+- (NSError *)unregisterRetiredWithin:(NSTimeInterval)timeout timedOut:(BOOL *)timedOut {
+    [self.calls addObject:@"retiredUnregister"];
+    *timedOut = [self.retiredUnregister isEqual:@"timeout"];
+    if (*timedOut) { self.clock += timeout; return nil; }
+    return self.retiredUnregister == NSNull.null ? nil : self.retiredUnregister;
+}
 - (NSDictionary *)helloFromRepairQueue {
     [self.calls addObject:@"hello"];
     NSDictionary *answer = Next(self.hellos);
@@ -188,7 +203,7 @@ static id Next(NSMutableArray *queue) { id value = queue.firstObject; if (queue.
 - (NSString *)currentHelperHash { return @"new"; }
 - (void)pause:(NSTimeInterval)seconds { [self.calls addObject:[NSString stringWithFormat:@"pause %.2f", seconds]]; self.clock += seconds; }
 - (NSTimeInterval)uptime { return self.clock; }
-''' + method('- (NSDictionary *)recoverySequence') + '\n' + method('- (NSDictionary *)awaitNewHelper:') + r'''
+''' + method('- (NSString *)retireOldRegistration:') + '\n' + method('- (NSDictionary *)recoverySequence') + '\n' + method('- (NSDictionary *)awaitNewHelper:') + r'''
 @end
 static NSDictionary *Job(NSString *state) { return @{@"state": state, @"summary": [@"job " stringByAppendingString:state]}; }
 static NSError *Denied(void) {
@@ -305,6 +320,96 @@ class RecoverySequenceTests(unittest.TestCase):
     f.hellos = [@[@{@"code": @"exitUnconfirmed"}] mutableCopy];
     assert([[f recoverySequence][@"code"] isEqual:@"exitUnconfirmed"]);
 ''')
+
+
+class RetiredNameTests(unittest.TestCase):
+    """The move from com.layoute.flash.daemon (mitm.1-3) to com.layoute.flash.helperd."""
+
+    def run_main(self, body):
+        return compile_and_run(self, SEQUENCE_FIXTURE + 'int main(void) { @autoreleasepool {\n' + body + '\n} }\n')
+
+    def test_retired_name_is_unregistered_first_then_the_new_name_registered(self):
+        self.run_main(r'''
+    // mitm.3 on the trial Mac: the old name is enabled (its job cannot spawn), the new name was never registered.
+    Fixture *f = New(@[Job(@"missing"), Job(@"idle")], @[Denied()], @[@"requiresApproval"]);
+    f.retiredStatuses = [@[@"enabled", @"notRegistered"] mutableCopy];
+    NSDictionary *r = [f recoverySequence];
+    // The retired unregister completes (its completion ran) before anything touches the new name.
+    assert(Index(f, @"retiredUnregister") < Index(f, @"launchd") && Index(f, @"retiredUnregister") < Index(f, @"register"));
+    // The new name had no job: nothing of it is unregistered; register error 1 means "allow it", not a failure.
+    assert(![f.calls containsObject:@"unregister"]);
+    assert([r[@"code"] isEqual:@"requiresApproval"] && [r[@"retiredUnregister"] isEqual:@"ok"]);
+    assert([r[@"detail"] containsString:@"retired com.layoute.flash.daemon (enabled): unregister: ok; status: notRegistered"]);
+    assert(f.retiredSettled && ![f.calls containsObject:@"hello"]);
+    puts("ok");
+''')
+
+    def test_no_retired_name_goes_straight_to_the_new_name(self):
+        self.run_main(r'''
+    Fixture *f = New(@[Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
+    NSDictionary *r = [f recoverySequence];
+    assert([r[@"code"] isEqual:@"enabled"] && !r[@"retiredUnregister"]);
+    assert(![f.calls containsObject:@"retiredUnregister"] && [f.calls containsObject:@"register"]);
+    assert(f.retiredSettled && ![r[@"detail"] containsString:@"retired"]);
+    f = New(@[Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
+    f.retiredStatuses = [@[@"notFound"] mutableCopy];
+    assert([[f recoverySequence][@"code"] isEqual:@"enabled"] && ![f.calls containsObject:@"retiredUnregister"]);
+''')
+
+    def test_retired_unregister_timeout_or_failure_does_not_block_the_new_name(self):
+        self.run_main(r'''
+    Fixture *f = New(@[Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
+    f.retiredStatuses = [@[@"requiresApproval"] mutableCopy];
+    f.retiredUnregister = @"timeout";
+    NSDictionary *r = [f recoverySequence];
+    assert([r[@"code"] isEqual:@"enabled"] && [r[@"retiredUnregister"] isEqual:@"timeout"]);
+    assert([r[@"detail"] containsString:@"unregister: no completion within 15 s; status: requiresApproval"]);
+    assert([f.calls containsObject:@"register"] && f.retiredSettled);
+
+    f = New(@[Job(@"missing"), Job(@"idle")], @[Denied()], @[@"requiresApproval"]);
+    f.retiredStatuses = [@[@"enabled"] mutableCopy];
+    f.retiredUnregister = [NSError errorWithDomain:@"SMAppServiceErrorDomain" code:1 userInfo:@{@"why": @"denied"}];
+    r = [f recoverySequence];
+    assert([r[@"code"] isEqual:@"requiresApproval"] && [r[@"retiredUnregister"] isEqual:@"failed"]);
+    assert([r[@"detail"] containsString:@"why = denied"] && [f.calls containsObject:@"register"]);
+
+    // Already gone by the time it is unregistered: done, not a failure.
+    f = New(@[Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
+    f.retiredStatuses = [@[@"enabled", @"notRegistered"] mutableCopy];
+    f.retiredUnregister = [NSError errorWithDomain:@"SMAppServiceErrorDomain" code:kSMErrorJobNotFound userInfo:nil];
+    assert([[f recoverySequence][@"retiredUnregister"] isEqual:@"ok"]);
+''')
+
+    def test_healthy_new_registration_is_kept_while_only_the_retired_name_goes(self):
+        self.run_main(r'''
+    // A later launch after a retired unregister that failed: the new name is enabled and its helper runs.
+    Fixture *f = New(@[Job(@"running")], @[NSNull.null], @[@"enabled"]);
+    f.retiredStatuses = [@[@"enabled"] mutableCopy];
+    NSDictionary *r = [f recoverySequence];
+    assert([r[@"code"] isEqual:@"enabled"] && [f.calls containsObject:@"retiredUnregister"]);
+    assert(![f.calls containsObject:@"unregister"] && ![f.calls containsObject:@"register"]);
+    // But a broken new job is still replaced.
+    f = New(@[Job(@"broken"), Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
+    f.retiredStatuses = [@[@"enabled"] mutableCopy];
+    assert([[f recoverySequence][@"code"] isEqual:@"enabled"]);
+    assert([f.calls containsObject:@"unregister"] && [f.calls containsObject:@"register"]);
+''')
+
+    def test_status_reports_the_retired_name_once_and_never_registers_it(self):
+        retired = method('- (NSDictionary *)retiredRegistration')
+        self.assertIn('if (self.retiredSettled) return nil;', retired)
+        self.assertIn('@"retiredRegistration"', retired)
+        registration = method('- (NSDictionary *)registrationStatus')
+        self.assertLess(registration.index('[self legacyResidue]'), registration.index('[self retiredRegistration]'))
+        self.assertLess(registration.index('[self retiredRegistration]'), registration.index('[self daemon].status'))
+        # The retired service is only ever asked for its status and unregistered.
+        self.assertEqual(BRIDGE.count('[self retiredDaemon]'), 2)  # .status and FCUnregisterWithin
+        self.assertNotIn('[[self retiredDaemon] register', BRIDGE)
+        self.assertIn('FCUnregisterWithin([self retiredDaemon]', BRIDGE)
+        unregister = BRIDGE[BRIDGE.index('static NSError *FCUnregisterWithin'):]
+        unregister = unregister[:unregister.index('\n}\n')]
+        self.assertIn('unregisterWithCompletionHandler', unregister)
+        self.assertIn('dispatch_semaphore_wait', unregister)
 
 
 class RecoveryEntryTests(unittest.TestCase):

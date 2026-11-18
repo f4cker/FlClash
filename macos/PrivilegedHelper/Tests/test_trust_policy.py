@@ -47,8 +47,9 @@ class TrustPolicyFixtureTests(unittest.TestCase):
                     subprocess.run([str(binary)], check=True, capture_output=True, text=True, timeout=20)
 
     def test_daemon_plist_file(self):
-        plist = MACOS / 'PrivilegedHelper/com.layoute.flash.daemon.plist'
-        subprocess.run(['plutil', '-lint', str(plist)], check=True, capture_output=True, text=True)
+        for name in ('com.layoute.flash.helperd.plist', 'com.layoute.flash.daemon.plist'):
+            plist = MACOS / 'PrivilegedHelper' / name
+            subprocess.run(['plutil', '-lint', str(plist)], check=True, capture_output=True, text=True)
         self.assertFalse((MACOS / 'PrivilegedHelper/com.layoute.flash.helper.plist').exists())
 
 

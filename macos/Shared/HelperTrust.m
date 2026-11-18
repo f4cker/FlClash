@@ -11,15 +11,19 @@
 #import "LibraryConstraintPolicy.h"
 #import "HelperCompatibility.h"
 
-NSString * const FCHelperLabel = @"com.layoute.flash.daemon";
-NSString * const FCDaemonPlistName = @"com.layoute.flash.daemon.plist";
+NSString * const FCHelperLabel = @FC_HELPER_LABEL;
+NSString * const FCDaemonPlistName = @FC_HELPER_LABEL ".plist";
+NSString * const FCRetiredHelperLabel = @FC_RETIRED_HELPER_LABEL;
+NSString * const FCRetiredDaemonPlistName = @FC_RETIRED_HELPER_LABEL ".plist";
+NSString * const FCRetiredDaemonPlistRelativePath = @"Contents/Library/LaunchDaemons/" FC_RETIRED_HELPER_LABEL ".plist";
 NSString * const FCClientIdentifier = @"com.layoute.flash";
 NSString * const FCHelperIdentifier = @"com.layoute.flash.helper";
 NSString * const FCCoreIdentifier = @"com.layoute.flash.core";
 NSString * const FCGUIBundle = @"/Applications/Flash.app";
-NSString * const FCDaemonPlistRelativePath = @"Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist";
+NSString * const FCDaemonPlistRelativePath = @"Contents/Library/LaunchDaemons/" FC_HELPER_LABEL ".plist";
 NSString * const FCHelperRelativePath = @"Contents/Library/HelperTools/FlashHelper";
 NSString * const FCCoreRelativePath = @"Contents/MacOS/FlClashCore";
+// Kept across the label change (see HelperTrust.h): the new helper recovers the previous helper's Core from here.
 NSString * const FCRuntimeDirectory = @"/Library/Application Support/com.layoute.flash.daemon";
 
 NSString *FCInstalledExecutable(NSString *role) {
@@ -29,26 +33,38 @@ NSString *FCInstalledExecutable(NSString *role) {
     return @"";
 }
 
-NSDictionary *FCCanonicalDaemonPlist(void) {
-    return @{@"Label": FCHelperLabel, @"BundleProgram": FCHelperRelativePath,
-        @"MachServices": @{FCHelperLabel: @YES}, @"ProcessType": @"Interactive",
+NSDictionary *FCCanonicalDaemonPlistForLabel(NSString *label) {
+    return @{@"Label": label, @"BundleProgram": FCHelperRelativePath,
+        @"MachServices": @{label: @YES}, @"ProcessType": @"Interactive",
         @"AssociatedBundleIdentifiers": @[FCClientIdentifier]};
 }
 
+NSDictionary *FCCanonicalDaemonPlist(void) {
+    return FCCanonicalDaemonPlistForLabel(FCHelperLabel);
+}
+
 // Exact schema: no Program/ProgramArguments/EnvironmentVariables/KeepAlive/RunAtLoad or any other key.
-BOOL FCDaemonPlistValid(id plist) {
+static BOOL FCDaemonPlistValidForLabel(id plist, NSString *label) {
     if (![plist isKindOfClass:NSDictionary.class]) return NO;
     NSDictionary *dictionary = plist;
     for (NSString *key in @[@"Label", @"BundleProgram", @"ProcessType"])
         if (![dictionary[key] isKindOfClass:NSString.class]) return NO;
     NSDictionary *services = dictionary[@"MachServices"];
     if (![services isKindOfClass:NSDictionary.class] || services.count != 1) return NO;
-    id enabled = services[FCHelperLabel];
+    id enabled = services[label];
     if (!enabled || CFGetTypeID((__bridge CFTypeRef)enabled) != CFBooleanGetTypeID()) return NO;
     id association = dictionary[@"AssociatedBundleIdentifiers"];
     if (![association isKindOfClass:NSArray.class] || [association count] != 1 ||
         ![association[0] isKindOfClass:NSString.class]) return NO;
-    return [dictionary isEqualToDictionary:FCCanonicalDaemonPlist()];
+    return [dictionary isEqualToDictionary:FCCanonicalDaemonPlistForLabel(label)];
+}
+
+BOOL FCDaemonPlistValid(id plist) {
+    return FCDaemonPlistValidForLabel(plist, FCHelperLabel);
+}
+
+BOOL FCRetiredDaemonPlistValid(id plist) {
+    return FCDaemonPlistValidForLabel(plist, FCRetiredHelperLabel);
 }
 
 static BOOL FCRegularCanonicalFile(NSString *path) {
@@ -65,8 +81,13 @@ static NSDictionary *FCLoadPlist(NSString *path) { return [NSDictionary dictiona
 BOOL FCBundledDaemonPresent(NSString *bundle) {
     NSString *plist = [bundle stringByAppendingPathComponent:FCDaemonPlistRelativePath];
     NSString *helper = [bundle stringByAppendingPathComponent:FCHelperRelativePath];
+    // The retired name's plist is optional (it only serves unregister), but when present it must be exact.
+    NSString *retired = [bundle stringByAppendingPathComponent:FCRetiredDaemonPlistRelativePath];
+    struct stat state;
+    BOOL retiredAbsent = lstat(retired.fileSystemRepresentation, &state) != 0 && errno == ENOENT;
     return FCRegularCanonicalFile(plist) && FCRegularCanonicalFile(helper) &&
-        FCDaemonPlistValid(FCLoadPlist(plist));
+        FCDaemonPlistValid(FCLoadPlist(plist)) &&
+        (retiredAbsent || (FCRegularCanonicalFile(retired) && FCRetiredDaemonPlistValid(FCLoadPlist(retired))));
 }
 
 const size_t FCMaxFrame = 64 * 1024 * 1024;

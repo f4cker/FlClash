@@ -42,6 +42,39 @@ static BOOL FCApprovalError(NSError *error) {
     return error && (error.code == EPERM || error.code == kSMErrorLaunchDeniedByUser);
 }
 
+// Unregister of a name that is not registered (any more) reports kSMErrorJobNotFound: already done.
+static BOOL FCAlreadyUnregistered(NSError *error) {
+    return !error || error.code == kSMErrorJobNotFound;
+}
+
+static NSString *FCServiceStatusName(NSInteger status) {
+    switch (status) {
+        case SMAppServiceStatusEnabled: return @"enabled";
+        case SMAppServiceStatusRequiresApproval: return @"requiresApproval";
+        case SMAppServiceStatusNotRegistered: return @"notRegistered";
+        case SMAppServiceStatusNotFound: return @"notFound";
+        default: return @"unknown";
+    }
+}
+
+// The completion runs only after launchd killed the service's process. Bounded; a missing completion is reported.
+static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout, BOOL *timedOut) API_AVAILABLE(macos(13.0)) {
+    *timedOut = NO;
+    __block NSError *result = nil;
+    dispatch_semaphore_t done = dispatch_semaphore_create(0);
+    @try {
+        [service unregisterWithCompletionHandler:^(NSError *error) {
+            result = error;
+            dispatch_semaphore_signal(done);
+        }];
+    } @catch (NSException *exception) {
+        return [NSError errorWithDomain:@"FlashBridge" code:-1
+            userInfo:@{NSLocalizedDescriptionKey: exception.reason ?: exception.name}];
+    }
+    *timedOut = dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC))) != 0;
+    return *timedOut ? nil : result;
+}
+
 @interface FCManagedHelperBridge ()
 @property dispatch_queue_t queue;
 @property dispatch_queue_t repairQueue;
@@ -56,6 +89,8 @@ static BOOL FCApprovalError(NSError *error) {
 @property BOOL operationInFlight;
 @property BOOL migrationAttempted;
 @property NSDate *staleRetryAfter;
+// The retired registration name was seen absent, or one unregister of it was attempted in this launch.
+@property (atomic) BOOL retiredSettled;
 // The Core of the running session, as the daemon saw it on the relay socket; session 0 is none.
 @property NSData *coreToken;
 @property pid_t corePid;
@@ -69,8 +104,8 @@ static BOOL FCApprovalError(NSError *error) {
 @implementation FCManagedHelperBridge
 - (instancetype)init {
     if ((self = [super init])) {
-        _queue = dispatch_queue_create("com.layoute.flash.daemon.bridge", DISPATCH_QUEUE_SERIAL);
-        _repairQueue = dispatch_queue_create("com.layoute.flash.daemon.repair", DISPATCH_QUEUE_SERIAL);
+        _queue = dispatch_queue_create("com.layoute.flash.bridge", DISPATCH_QUEUE_SERIAL);
+        _repairQueue = dispatch_queue_create("com.layoute.flash.bridge.repair", DISPATCH_QUEUE_SERIAL);
         _identityLock = [NSObject new];
         // R6: the legacy installer's pending marker needs no admin rights; drop it.
         [NSUserDefaults.standardUserDefaults removeObjectForKey:FCLegacyPendingDefault];
@@ -93,6 +128,32 @@ static BOOL FCApprovalError(NSError *error) {
 
 - (SMAppService *)daemon API_AVAILABLE(macos(13.0)) {
     return [SMAppService daemonServiceWithPlistName:FCDaemonPlistName];
+}
+
+// Only ever asked for its status and unregistered; never registered.
+- (SMAppService *)retiredDaemon API_AVAILABLE(macos(13.0)) {
+    return [SMAppService daemonServiceWithPlistName:FCRetiredDaemonPlistName];
+}
+
+- (NSString *)retiredStatusCode {
+    if (@available(macOS 13.0, *)) {
+        @try {
+            return FCServiceStatusName([self retiredDaemon].status);
+        } @catch (NSException *exception) {
+            return @"unknown";
+        }
+    }
+    return @"notFound";
+}
+
+// A registration under the retired name still exists: the app migrates it (under its maintenance exclusion) before
+// the new name is used. Read once per launch until seen absent; after one attempt it is a detail, never a block.
+- (NSDictionary *)retiredRegistration {
+    if (self.retiredSettled) return nil;
+    NSString *status = [self retiredStatusCode];
+    if ([status isEqual:@"notRegistered"] || [status isEqual:@"notFound"]) { self.retiredSettled = YES; return nil; }
+    return @{@"code": @"retiredRegistration",
+        @"detail": [NSString stringWithFormat:@"%@: %@", FCRetiredHelperLabel, status]};
 }
 
 // Trust of the running app only: pinned identity, exact install path, seal (covers daemon, plist, Core, contract).
@@ -137,6 +198,8 @@ static BOOL FCApprovalError(NSError *error) {
     if (@available(macOS 14.0, *)) {
         FCLegacyResidue residue = [self legacyResidue];
         if (residue) return [self residueAnswer:residue code:self.migrationAttempted ? @"migrationIncomplete" : @"migrationRequired"];
+        NSDictionary *retired = [self retiredRegistration];
+        if (retired) return retired;
         switch ([self daemon].status) {
             case SMAppServiceStatusEnabled:
                 [NSUserDefaults.standardUserDefaults setBool:YES forKey:FCApprovedDefault];
@@ -478,37 +541,35 @@ static BOOL FCApprovalError(NSError *error) {
 }
 
 - (NSString *)serviceStatusCode {
-    if (@available(macOS 13.0, *)) {
-        switch ([self daemon].status) {
-            case SMAppServiceStatusEnabled: return @"enabled";
-            case SMAppServiceStatusRequiresApproval: return @"requiresApproval";
-            case SMAppServiceStatusNotRegistered: return @"notRegistered";
-            case SMAppServiceStatusNotFound: return @"notFound";
-            default: return @"unknown";
-        }
-    }
+    if (@available(macOS 13.0, *)) return FCServiceStatusName([self daemon].status);
     return @"unknown";
 }
 
-// The SDK runs the completion only after launchd killed the service's process.
 - (NSError *)unregisterDaemonWithin:(NSTimeInterval)timeout timedOut:(BOOL *)timedOut {
     *timedOut = NO;
-    if (@available(macOS 13.0, *)) {
-        __block NSError *result = nil;
-        dispatch_semaphore_t done = dispatch_semaphore_create(0);
-        @try {
-            [[self daemon] unregisterWithCompletionHandler:^(NSError *error) {
-                result = error;
-                dispatch_semaphore_signal(done);
-            }];
-        } @catch (NSException *exception) {
-            return [NSError errorWithDomain:@"FlashBridge" code:-1
-                userInfo:@{NSLocalizedDescriptionKey: exception.reason ?: exception.name}];
-        }
-        *timedOut = dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeout * NSEC_PER_SEC))) != 0;
-        return *timedOut ? nil : result;
-    }
+    if (@available(macOS 13.0, *)) return FCUnregisterWithin([self daemon], timeout, timedOut);
     return [NSError errorWithDomain:@"FlashBridge" code:-3 userInfo:@{NSLocalizedDescriptionKey: @"unsupported"}];
+}
+
+- (NSError *)unregisterRetiredWithin:(NSTimeInterval)timeout timedOut:(BOOL *)timedOut {
+    *timedOut = NO;
+    if (@available(macOS 13.0, *)) return FCUnregisterWithin([self retiredDaemon], timeout, timedOut);
+    return [NSError errorWithDomain:@"FlashBridge" code:-3 userInfo:@{NSLocalizedDescriptionKey: @"unsupported"}];
+}
+
+// Step 0 of a recovery: unregister the retired name, asynchronously, and count it done only in the completion (or
+// report that none came). Its outcome is recorded; a failure never stops the new name from being registered.
+// Returns nil when the retired name was not registered.
+- (NSString *)retireOldRegistration:(NSMutableArray<NSString *> *)log {
+    NSString *before = [self retiredStatusCode];
+    if ([before isEqual:@"notRegistered"] || [before isEqual:@"notFound"]) { self.retiredSettled = YES; return nil; }
+    BOOL timedOut = NO;
+    NSError *error = [self unregisterRetiredWithin:15 timedOut:&timedOut];
+    NSString *outcome = timedOut ? @"timeout" : FCAlreadyUnregistered(error) ? @"ok" : @"failed";
+    [log addObject:[NSString stringWithFormat:@"retired %@ (%@): unregister: %@; status: %@", FCRetiredHelperLabel, before,
+        timedOut ? @"no completion within 15 s" : error ? FCErrorText(error) : @"ok", [self retiredStatusCode]]];
+    self.retiredSettled = YES;
+    return outcome;
 }
 
 - (NSError *)registerDaemon {
@@ -544,19 +605,28 @@ static BOOL FCApprovalError(NSError *error) {
     return answer ?: @{@"code": @"unavailable"};
 }
 
-// Re-registers a stale daemon registration. Every step asks the system what happened instead of assuming it:
-// unregister (only if launchd still has the job) → wait until launchd dropped it → register → SMAppService.status →
+// Re-registers a stale daemon registration (or moves from the retired name to the current one). Every step asks the
+// system what happened instead of assuming it: unregister the retired name if it is still registered (its outcome is
+// only recorded) → unregister (only if launchd still has the job) → wait until launchd dropped it → register → SMAppService.status →
 // when enabled, wait for the new helper's authenticated hello. Nothing here starts a Core; the caller stopped its
 // Core first, and the new helper stops any leftover Core by signature before the app starts one again.
 - (NSDictionary *)recoverySequence {
     NSMutableArray<NSString *> *log = [NSMutableArray array];
+    NSString *retired = [self retireOldRegistration:log];
     NSDictionary *(^done)(NSString *, NSDictionary *) = ^NSDictionary *(NSString *code, NSDictionary *extra) {
         NSMutableDictionary *answer = [@{@"code": code, @"detail": [log componentsJoinedByString:@"\n"]} mutableCopy];
+        if (retired) answer[@"retiredUnregister"] = retired;
         if (extra) [answer addEntriesFromDictionary:extra];
         return answer;
     };
     NSDictionary *job = [self launchdSnapshot];
     [log addObject:[@"launchd before: " stringByAppendingString:job[@"summary"] ?: @"?"]];
+    // Migrating only the retired name: a healthy, enabled registration under the new name is kept as it is
+    // (re-adding it would ask the user to allow Flash again for nothing).
+    if (retired && [[self serviceStatusCode] isEqual:@"enabled"] &&
+        [@[@"running", @"idle"] containsObject:job[@"state"] ?: @""] && ![job[@"versionStale"] isEqual:@YES]) {
+        return [self awaitNewHelper:log done:done];
+    }
     if (![job[@"state"] isEqual:@"missing"]) {
         BOOL timedOut = NO;
         NSError *error = [self unregisterDaemonWithin:15 timedOut:&timedOut];

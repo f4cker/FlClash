@@ -49,7 +49,7 @@ int main(void) {
         assert([FCParseCleanupReport(@"detail=a=b\ndetail=second")[@"detail"] isEqual:@"a=b"]);
 
         NSString *script = FCLegacyCleanupScript();
-        for (NSString *forbidden in @[@"%@", @"$HOME", @"/Applications", @"com.layoute.flash.daemon", @"curl", @"eval"])
+        for (NSString *forbidden in @[@"%@", @"$HOME", @"/Applications", @"com.layoute.flash.daemon", @"com.layoute.flash.helperd", @"curl", @"eval"])
             assert(![script containsString:forbidden]);
         assert([script hasPrefix:@"set -u; PATH=/usr/bin:/bin:/usr/sbin:/sbin;"]);
         assert(![script containsString:@"set -e"]);

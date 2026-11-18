@@ -256,6 +256,7 @@ int main(int argc, char **argv) {
                         (stage.CORE, macho, 0o755),
                         (stage.HELPER, macho + plistlib.dumps({'CFBundleIdentifier': stage.HELPER_ID}), 0o755),
                         (stage.DAEMON_PLIST, plistlib.dumps(stage.DAEMON_SCHEMA), 0o644),
+                        (stage.RETIRED_DAEMON_PLIST, plistlib.dumps(stage.RETIRED_DAEMON_SCHEMA), 0o644),
                         ('Contents/Info.plist', plistlib.dumps(
                             info, fmt=plistlib.FMT_BINARY if binary else plistlib.FMT_XML), 0o644)):
                     path = app / relative

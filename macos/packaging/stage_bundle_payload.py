@@ -16,12 +16,16 @@ import subprocess
 import sys
 
 GUI_ID = 'com.layoute.flash'
-LABEL = 'com.layoute.flash.daemon'
+# Registration name of the daemon (launchd label, Mach service, plist file name); see macos/Shared/HelperTrust.h.
+LABEL = 'com.layoute.flash.helperd'
+# The name used up to 0.9.15-mitm.3. Its plist rides along only so the app can unregister it; never registered.
+RETIRED_LABEL = 'com.layoute.flash.daemon'
 LEGACY_LABEL = 'com.layoute.flash.helper'
 CORE = 'Contents/MacOS/FlClashCore'
 HELPER = 'Contents/Library/HelperTools/FlashHelper'
 HELPER_ID = 'com.layoute.flash.helper'
 DAEMON_PLIST = 'Contents/Library/LaunchDaemons/' + LABEL + '.plist'
+RETIRED_DAEMON_PLIST = 'Contents/Library/LaunchDaemons/' + RETIRED_LABEL + '.plist'
 # Signing is strictly inside-out: nested code first, then frameworks, then the app
 # seal that covers the daemon plist in CodeResources files2. The compatibility
 # contract is written into Info.plist right after Core is signed (it pins the signed
@@ -33,13 +37,18 @@ CORE_ID = 'com.layoute.flash.core'
 CONTRACT_KEY = 'FlashHelperCompatibility'
 CONTRACT_POLICY = {'CallerPolicy': 3, 'ServiceAPI': 1, 'CoreAPI': 1}
 CONTRACT_KEYS = frozenset(CONTRACT_POLICY) | {'CoreSHA256', 'CoreVersion', 'CoreRevision'}
-DAEMON_SCHEMA = {
-    'Label': LABEL,
-    'BundleProgram': HELPER,  # relative to the .app root, as SMAppService expects
-    'MachServices': {LABEL: True},
-    'AssociatedBundleIdentifiers': [GUI_ID],
-    'ProcessType': 'Interactive',
-}
+def daemon_schema(label):
+    return {
+        'Label': label,
+        'BundleProgram': HELPER,  # relative to the .app root, as SMAppService expects
+        'MachServices': {label: True},
+        'AssociatedBundleIdentifiers': [GUI_ID],
+        'ProcessType': 'Interactive',
+    }
+
+
+DAEMON_SCHEMA = daemon_schema(LABEL)
+RETIRED_DAEMON_SCHEMA = daemon_schema(RETIRED_LABEL)
 FORBIDDEN = (
     'Contents/Library/HelperTools/FlashMaintenance',
     'Contents/Library/LaunchDaemons/' + LEGACY_LABEL + '.plist',
@@ -66,12 +75,12 @@ def sha256(path):
     return hashlib.sha256(regular(path)).hexdigest()
 
 
-def daemon_plist(app):
-    data = plistlib.loads(regular(app / DAEMON_PLIST))
+def daemon_plist(app, relative=DAEMON_PLIST, schema=DAEMON_SCHEMA):
+    data = plistlib.loads(regular(app / relative))
     require(isinstance(data, dict), 'Daemon plist must be a dictionary')
     require('Program' not in data and 'ProgramArguments' not in data,
             'Daemon plist must use BundleProgram only (no Program/ProgramArguments)')
-    require(data == DAEMON_SCHEMA, 'Daemon plist differs from the exact bundled schema')
+    require(data == schema, 'Daemon plist differs from the exact bundled schema: ' + relative)
     require(data['Label'] != LEGACY_LABEL, 'Daemon label must differ from the legacy helper label')
     return data
 
@@ -175,11 +184,14 @@ def check_layout(app):
     helper_info = embedded_info_plist(app / HELPER)
     require(helper_info.get('CFBundleIdentifier') == HELPER_ID, 'Helper __info_plist identifier differs')
     launch = app / 'Contents/Library/LaunchDaemons'
-    require(sorted(p.name for p in launch.iterdir()) == [LABEL + '.plist'], 'Unexpected LaunchDaemons content')
+    require(sorted(p.name for p in launch.iterdir()) == sorted([LABEL + '.plist', RETIRED_LABEL + '.plist']),
+            'Unexpected LaunchDaemons content')
+    daemon_plist(app, RETIRED_DAEMON_PLIST, RETIRED_DAEMON_SCHEMA)
     tools = app / 'Contents/Library/HelperTools'
     require(sorted(p.name for p in tools.iterdir()) == ['FlashHelper'], 'Unexpected HelperTools content')
     return {'core_sha256': sha256(app / CORE), 'helper_sha256': sha256(app / HELPER),
-            'daemon_plist_sha256': sha256(app / DAEMON_PLIST)}
+            'daemon_plist_sha256': sha256(app / DAEMON_PLIST),
+            'retired_daemon_plist_sha256': sha256(app / RETIRED_DAEMON_PLIST)}
 
 
 def inventory(app):
@@ -247,8 +259,8 @@ def verify_signed(app):
     codesign('--verify', '--deep', '--strict', '--all-architectures', str(app))
     resources = plistlib.loads(regular(app / 'Contents/_CodeSignature/CodeResources'))
     sealed = resources.get('files2', {})
-    key = DAEMON_PLIST[len('Contents/'):]
-    require(key in sealed, 'Daemon plist is not sealed in CodeResources files2')
+    for plist in (DAEMON_PLIST, RETIRED_DAEMON_PLIST):
+        require(plist[len('Contents/'):] in sealed, 'Daemon plist is not sealed in CodeResources files2: ' + plist)
     require(HELPER[len('Contents/'):] in sealed and CORE[len('Contents/'):] in sealed,
             'Nested helper/Core must be sealed by the app signature')
     contract = read_contract(app)
