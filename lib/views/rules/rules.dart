@@ -584,21 +584,29 @@ class _RulesViewState extends ConsumerState<RulesView> {
     final filter = _inLookup ? null : _liveFilter;
     final indexes =
         filter?.indexes ?? [for (var i = 0; i < list.rules.length; i++) i];
+    // The profile's own rules start under a divider once added ones show
+    // above them; tracked as the rows are laid, since this runs every build.
+    var addedAbove = false;
+    var divided = false;
     for (final index in indexes) {
       final rule = list.rules.elementAtOrNull(index);
       if (rule == null) continue;
+      final source = sources?.elementAtOrNull(index);
       if (!_inLookup &&
           !ruleShown(
             rule: rule,
-            source: sources?.elementAtOrNull(index),
+            source: source,
             filter: _source,
             group: _group,
           )) {
         continue;
       }
-      if (_startsOwnRules(index, sources, items)) {
+      final added = _isAddedSource(source);
+      if (sources != null && !added && addedAbove && !divided) {
         items.add(const RuleRowItem.divider());
+        divided = true;
       }
+      addedAbove |= added;
       items.add(RuleRowItem.rule(rule, hit: hits[index]));
       _addChildren(items, index, rule, hits[index]);
     }
@@ -608,24 +616,6 @@ class _RulesViewState extends ConsumerState<RulesView> {
   bool _isAddedSource(RuleSource? source) =>
       source?.kind == RuleSourceKind.addedProfile ||
       source?.kind == RuleSourceKind.addedGlobal;
-
-  /// Whether the rule at [index] is the first of the profile's own after
-  /// the added ones shown above it.
-  bool _startsOwnRules(
-    int index,
-    List<RuleSource?>? sources,
-    List<RuleRowItem> items,
-  ) {
-    if (sources == null || _isAddedSource(sources.elementAtOrNull(index))) {
-      return false;
-    }
-    if (items.any((item) => item.isDivider)) return false;
-    return items.any(
-      (item) =>
-          item.isRule &&
-          _isAddedSource(sources.elementAtOrNull(item.rule!.index)),
-    );
-  }
 
   /// The child rows of a rule set: every entry (paged) when expanded,
   /// otherwise just the entry that matched the lookup, if any.
