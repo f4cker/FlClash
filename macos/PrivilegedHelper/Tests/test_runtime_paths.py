@@ -116,7 +116,7 @@ class RuntimePathTests(unittest.TestCase):
 
     def test_supervisor_spawns_only_the_verified_copy(self):
         start = function(SUPERVISOR, '- (NSString *)start:')
-        self.assertIn('FCStageCore([FCGUIBundle stringByAppendingPathComponent:FCCoreRelativePath]', start)
+        self.assertIn('FCStageCore([self.bundle stringByAppendingPathComponent:FCCoreRelativePath]', start)
         self.assertIn('FCCheckStatic(staged, FCCoreIdentifier)', start)
         self.assertIn('FCSpawnCore(staged.fileSystemRepresentation', start)
         self.assertNotIn('FCSpawnCore(core', start)
@@ -133,10 +133,15 @@ class RuntimePathTests(unittest.TestCase):
         self.assertIn('if (_ownershipUncertain) _child = -1;', init)
 
     def test_daemon_refuses_before_serving(self):
-        main = function(SUPERVISOR, 'int main(void)')
-        self.assertLess(main.index('FCHelperSelfCheck(FCRunningExecutable())'), main.index('[FCSupervisor new]'))
-        self.assertLess(main.index('FCHelperSelfCheck(FCRunningExecutable())'),
+        main = function(SUPERVISOR, 'int main(int argc, const char *argv[])')
+        # The launcher's arguments are checked first, then the self-check, then anything else.
+        self.assertLess(main.index('FCHelperBundleFromArguments(arguments, &reason)'),
+                        main.index('FCHelperSelfCheck(FCRunningExecutable(), bundle)'))
+        self.assertLess(main.index('FCHelperSelfCheck(FCRunningExecutable(), bundle)'),
+                        main.index('[[FCSupervisor alloc] initWithBundle:bundle]'))
+        self.assertLess(main.index('FCHelperSelfCheck(FCRunningExecutable(), bundle)'),
                         main.index('xpc_connection_create_mach_service'))
+        self.assertNotIn('getenv', SUPERVISOR)
         self.assertIn('return EX_CONFIG;', main)
         self.assertIn('geteuid() != 0', main)
 

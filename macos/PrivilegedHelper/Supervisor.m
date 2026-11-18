@@ -39,6 +39,9 @@ static NSString *FCRunningHash(void) {
 }
 
 @interface FCSupervisor : NSObject
+// The app bundle the launcher named (--flash-bundle), already checked to be the canonical /Applications/Flash.app;
+// every path into the app (Core, compatibility contract, self-check) is derived from it.
+@property (readonly) NSString *bundle;
 @property dispatch_queue_t queue;
 @property xpc_connection_t owner;
 @property NSString *session;
@@ -59,12 +62,14 @@ static NSString *FCRunningHash(void) {
 @property NSDictionary *lastSweep;
 @property NSUInteger connections;
 @property dispatch_source_t idle;
+- (instancetype)initWithBundle:(NSString *)bundle;
 - (void)accept:(xpc_connection_t)connection;
 @end
 
 @implementation FCSupervisor
-- (instancetype)init {
+- (instancetype)initWithBundle:(NSString *)bundle {
     if ((self = [super init])) {
+        _bundle = [bundle copy];
         _queue = dispatch_queue_create("com.layoute.flash.supervisor", DISPATCH_QUEUE_SERIAL);
         _listener = _socket = -1;
         _incoming = [NSMutableData data];
@@ -253,7 +258,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 
 - (NSString *)validateCompatibility {
     self.contract = nil;
-    NSDictionary *contract = FCReadCompatibility(FCGUIBundle);
+    NSDictionary *contract = FCReadCompatibility(self.bundle);
     if (!FCBundleCompatibilityValid(contract)) return @"incompatible";
     self.contract = contract;
     return @"ok";
@@ -261,7 +266,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 
 // Re-verify our own code and the app before every privileged operation; a failure ends the daemon.
 - (BOOL)selfCheck {
-    NSString *result = FCHelperSelfCheck(FCRunningExecutable());
+    NSString *result = FCHelperSelfCheck(FCRunningExecutable(), self.bundle);
     if ([result isEqualToString:@"ok"]) return YES;
     fprintf(stderr, "FlashHelper: self-check-failed: %s\n", result.UTF8String);
     return NO;
@@ -280,7 +285,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     // Copy Core (fd-based, O_NOFOLLOW) into the root-only runtime directory, hashing while copying, then
     // verify the copy's signature (pinned identity + com.layoute.flash.core) and spawn only the copy.
     FCRemoveStagedCores(FCRuntimeDirectory);
-    NSString *staged = FCStageCore([FCGUIBundle stringByAppendingPathComponent:FCCoreRelativePath],
+    NSString *staged = FCStageCore([self.bundle stringByAppendingPathComponent:FCCoreRelativePath],
         FCRuntimeDirectory, self.contract[@"CoreSHA256"]);
     if (!staged) return @"incompatible";
     if (!FCCheckStatic(staged, FCCoreIdentifier)) { unlink(staged.fileSystemRepresentation); return @"signingRequired"; }
@@ -445,17 +450,28 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 }
 @end
 
-int main(void) {
+int main(int argc, const char *argv[]) {
     @autoreleasepool {
         if (@available(macOS 14.0, *)) {} else return EX_CONFIG;
         if (geteuid() != 0 || !FCGUIRequirement()) return EX_CONFIG;
+        // Only the launcher's verified copy runs, and it is told which app it belongs to. Started any other way
+        // (directly from the bundle, e.g. by a registration that still names FlashHelper as its BundleProgram) the
+        // helper refuses: that path skips the launcher's downgrade check. Environment variables are not read.
+        NSMutableArray<NSString *> *arguments = [NSMutableArray array];
+        for (int i = 0; i < argc; i++) [arguments addObject:@(argv[i]) ?: @""];
+        NSString *reason = nil;
+        NSString *bundle = FCHelperBundleFromArguments(arguments, &reason);
+        if (!bundle) {
+            fprintf(stderr, "FlashHelper: launch-refused: %s\n", reason.UTF8String ?: "invalid arguments");
+            return EX_CONFIG;
+        }
         // Verify before anything else is done as root: tampered or relocated code does not run.
-        NSString *check = FCHelperSelfCheck(FCRunningExecutable());
+        NSString *check = FCHelperSelfCheck(FCRunningExecutable(), bundle);
         if (![check isEqualToString:@"ok"]) {
             fprintf(stderr, "FlashHelper: self-check-failed: %s\n", check.UTF8String);
             return EX_CONFIG;
         }
-        FCSupervisor *supervisor = [FCSupervisor new];
+        FCSupervisor *supervisor = [[FCSupervisor alloc] initWithBundle:bundle];
         xpc_connection_t listener = xpc_connection_create_mach_service(FCHelperLabel.UTF8String,
             supervisor.queue, XPC_CONNECTION_MACH_SERVICE_LISTENER);
         xpc_connection_set_event_handler(listener, ^(xpc_object_t connection) {

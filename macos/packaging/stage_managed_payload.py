@@ -25,6 +25,11 @@ FIXED_EXECUTABLES = (
     'Contents/MacOS/FlClashCore',
     'Contents/Library/HelperTools/FlashHelper',
 )
+# Signed once and copied byte for byte (macos/PrivilegedHelper/Launcher): never rewritten here. It is universal
+# (arm64 + x86_64) and must cover at least the GUI's architectures.
+PINNED_EXECUTABLES = (
+    'Contents/Library/HelperTools/FlashHelperLauncher',
+)
 
 
 def inside(path, root):
@@ -224,11 +229,12 @@ def audit(destination, mutate=False):
     gui = app / 'Contents/MacOS/Flash'
     if gui not in binaries:
         raise ValueError('Missing fixed GUI executable')
+    pinned = {app / relative for relative in PINNED_EXECUTABLES}
     commands = {}
     for binary in binaries:
         slices = load_commands(binary)
         if any(BAD_RPATH in rpaths for rpaths, _ in slices.values()):
-            if not mutate:
+            if not mutate or binary in pinned:
                 raise ValueError('External rpath remains in sealed artifact')
             subprocess.run(['/usr/bin/install_name_tool', '-delete_rpath', BAD_RPATH, str(binary)], check=True)
             slices = load_commands(binary)
@@ -247,8 +253,11 @@ def audit(destination, mutate=False):
     for binary in fixed | native_assets:
         if binary not in commands or set(commands[binary]) != required:
             raise ValueError(f'Mismatched fixed payload architecture coverage: {binary}')
+    for binary in pinned:
+        if binary not in commands or not required <= set(commands[binary]):
+            raise ValueError(f'Pinned launcher does not cover the GUI architectures: {binary}')
     for binary, slices in commands.items():
-        standalone = binary in fixed
+        standalone = binary in fixed or binary in pinned
         executable = binary if standalone else gui
         for architecture, (paths, dependencies) in slices.items():
             rpaths = [check_rpath(path, binary, executable, app) for path in paths]

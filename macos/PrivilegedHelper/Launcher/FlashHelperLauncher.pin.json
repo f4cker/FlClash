@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "identifier": "com.layoute.flash.helper-launcher",
+  "certificate_sha1": "BBA7F8529FD271B9848EC03A2CE3F4780F585556",
+  "sha256": "",
+  "cdhashes": {
+    "arm64": "",
+    "x86_64": ""
+  }
+}

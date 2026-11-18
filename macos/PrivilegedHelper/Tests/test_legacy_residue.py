@@ -27,6 +27,16 @@ class LegacyResidueTests(unittest.TestCase):
                             '-o', str(binary)], check=True, capture_output=True, text=True)
             subprocess.run([str(binary)], check=True, capture_output=True, text=True, timeout=10)
 
+    def test_launcher_directories_are_known_and_never_cleaned(self):
+        # Removing the launcher's max-version would re-allow a downgrade; neither its directories nor the helper's
+        # runtime directory are legacy residue.
+        script = cleanup_script()
+        header = (MACOS / 'Shared/LegacyResidue.h').read_text()
+        for directory in ('com.layoute.flash.helperd', 'com.layoute.flash.helperd-status', 'com.layoute.flash.daemon'):
+            self.assertNotIn(directory, script)
+            self.assertNotIn(directory, RESIDUE)
+            self.assertIn('/Library/Application Support/' + directory + ' ', header)
+
     def test_cleanup_script_dry_run_with_stubbed_commands(self):
         script = cleanup_script()
         self.assertIn('PATH=/usr/bin:/bin:/usr/sbin:/sbin;', script)

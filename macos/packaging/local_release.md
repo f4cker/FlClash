@@ -11,7 +11,8 @@ side needs; there is no separate service bundle, helper package or installer:
 ```text
 Contents/MacOS/Flash                                            GUI
 Contents/MacOS/FlClashCore                                      Core (copied by the daemon before use)
-Contents/Library/HelperTools/FlashHelper                        daemon (BundleProgram)
+Contents/Library/HelperTools/FlashHelperLauncher                fixed launcher (BundleProgram; signed once, pinned)
+Contents/Library/HelperTools/FlashHelper                        daemon (run by the launcher from a verified root copy)
 Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist  SMAppService.daemon plist
 Contents/Library/LaunchDaemons/com.layoute.flash.daemon.plist   retired name (unregister only)
 ```
@@ -35,9 +36,15 @@ Use the proven local Flutter SDK with dependencies already resolved, Go/Rust/Xco
 available on `PATH`, cached native dependencies, and a graphical Mac session for the
 Finder-styled DMG. The build is offline, disables Xcode signing, and denies
 `codesign`/`security` execution inside the unsigned build. The Xcode phase
-`stage_bundled_daemon.sh` compiles `FlashHelper` (with its `__info_plist`) and copies
-the daemon plist; it refuses stale `FlashMaintenance`, legacy plist or
-`Resources/HelperInstaller` artifacts instead of deleting them.
+`stage_bundled_daemon.sh` compiles `FlashHelper` (with its `__info_plist`, whose
+`CFBundleVersion` is set to the release build number `FLUTTER_BUILD_NUMBER`), copies the
+daemon plist and copies the signed `FlashHelperLauncher` master
+(`macos/PrivilegedHelper/Launcher/FlashHelperLauncher`) byte for byte after checking it
+against `macos/PrivilegedHelper/Launcher/FlashHelperLauncher.pin.json`. The launcher is
+never rebuilt or re-signed; the signer only verifies its pinned sha256, identity and
+arm64/x86_64 cdhashes and that the app seal covers it. Until the master is signed and
+pinned, every managed build refuses. The phase refuses stale `FlashMaintenance`, legacy
+plist or `Resources/HelperInstaller` artifacts instead of deleting them.
 
 Create `.airbuild/local-release/config.json` privately with mode `0600`; do not
 commit it or copy credentials into it. Paths must be canonical and absolute:

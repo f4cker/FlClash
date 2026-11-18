@@ -1,8 +1,10 @@
+import hashlib
 import importlib.util
 import json
 import os
 from pathlib import Path
 import plistlib
+import shutil
 import subprocess
 import tempfile
 import types
@@ -63,8 +65,14 @@ class LocalReleaseTests(unittest.TestCase):
     def bundled_app(self, app):
         stage = self.stage_module()
         macho = bytes.fromhex('cffaedfe') + b'synthetic-never-execute'
-        for relative, data in ((stage.CORE, macho),
-                               (stage.HELPER, macho + plistlib.dumps({'CFBundleIdentifier': stage.HELPER_ID}))):
+        launcher = macho + b'signed-launcher-master'
+        stage.LAUNCHER_PIN = self.root / 'FlashHelperLauncher.pin.json'
+        stage.LAUNCHER_PIN.write_text(json.dumps({
+            'schema': 1, 'identifier': stage.LAUNCHER_ID, 'certificate_sha1': stage.CERTIFICATE_SHA1,
+            'sha256': hashlib.sha256(launcher).hexdigest(), 'cdhashes': {'arm64': 'ab' * 20, 'x86_64': 'cd' * 20}}))
+        helper_info = {'CFBundleIdentifier': stage.HELPER_ID, 'CFBundleVersion': '2026111405'}
+        for relative, data in ((stage.CORE, macho), (stage.LAUNCHER, launcher),
+                               (stage.HELPER, macho + plistlib.dumps(helper_info))):
             path = app / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
@@ -85,8 +93,9 @@ class LocalReleaseTests(unittest.TestCase):
         module_patch.start()
         self.addCleanup(module_patch.stop)
         facts = RELEASE.check_version(app, self.identity)
-        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'daemon_plist_sha256',
-                                      'retired_daemon_plist_sha256'})
+        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'helper_version', 'launcher_sha256',
+                                      'daemon_plist_sha256', 'retired_daemon_plist_sha256'})
+        self.assertEqual(facts['helper_version'], self.identity['build'])
         for key, value in [('version', '0.9.7'), ('build', '2026111404')]:
             with self.assertRaisesRegex(ValueError, 'version differs'):
                 RELEASE.check_version(app, dict(self.identity, **{key: value}))
@@ -498,21 +507,75 @@ class HelperBuildModeTests(unittest.TestCase):
                 self.assertLess(source.index(record), source.index('for cache in flutter_build setup_build_cache'))
                 self.assertLess(source.index(record), source.index('/usr/bin/sandbox-exec -p "$guard"'))
 
-    def run_stage(self, configuration='Release', candidate='0', managed=True, prepare=None):
+    LAUNCHER_MASTER = bytes.fromhex('cffaedfe') + b'synthetic-signed-launcher-master-never-execute'
+
+    def run_stage(self, configuration='Release', candidate='0', managed=True, prepare=None, build='2026111405',
+                  master=LAUNCHER_MASTER, pinned=None, inspect=None):
         import base64
         with tempfile.TemporaryDirectory() as temporary:
+            # A private SRCROOT: the repository sources plus a synthetic signed master and its pin.
+            source = Path(temporary) / 'src'
+            for name in ('PrivilegedHelper', 'Shared'):
+                shutil.copytree(PACKAGING.parent / name, source / name)
+            launcher = source / 'PrivilegedHelper/Launcher/FlashHelperLauncher'
+            if master is not None:
+                launcher.write_bytes(master)
+            pin = json.loads((launcher.parent / 'FlashHelperLauncher.pin.json').read_text())
+            pin['sha256'] = hashlib.sha256(self.LAUNCHER_MASTER).hexdigest() if pinned is None else pinned
+            (launcher.parent / 'FlashHelperLauncher.pin.json').write_text(json.dumps(pin))
             if prepare:
                 prepare(Path(temporary) / 'Flash.app/Contents')
             env = dict(os.environ, DART_DEFINES=base64.b64encode(
                 ('MACOS_MANAGED_HELPER=' + str(managed).lower()).encode()).decode(),
                 CONFIGURATION=configuration, TARGET_BUILD_DIR=temporary,
                 CONTENTS_FOLDER_PATH='Flash.app/Contents', ARCHS='arm64',
-                FC_MANAGED_CANDIDATE_ENABLED=candidate, SRCROOT=str(PACKAGING.parent))
+                DERIVED_FILE_DIR=str(Path(temporary) / 'derived'),
+                FC_MANAGED_CANDIDATE_ENABLED=candidate, SRCROOT=str(source))
+            env.pop('FLUTTER_BUILD_NUMBER', None)
+            if build is not None:
+                env['FLUTTER_BUILD_NUMBER'] = build
             result = subprocess.run(['/bin/bash', str(PACKAGING / 'stage_bundled_daemon.sh')],
                                     env=env, capture_output=True, text=True)
             contents = Path(temporary) / 'Flash.app/Contents'
             result.files = sorted(str(p.relative_to(contents)) for p in contents.rglob('*') if p.is_file())
+            if inspect and result.returncode == 0:
+                inspect(contents)
             return result
+
+    def test_release_stage_writes_build_number_and_copies_pinned_launcher(self):
+        loader = importlib.util.spec_from_file_location('bundle_stage', PACKAGING / 'stage_bundle_payload.py')
+        stage = importlib.util.module_from_spec(loader)
+        loader.loader.exec_module(stage)
+        seen = {}
+        def inspect(contents):
+            helper = contents / 'Library/HelperTools/FlashHelper'
+            seen['info'] = stage.embedded_info_plist(helper)
+            launcher = contents / 'Library/HelperTools/FlashHelperLauncher'
+            seen['launcher'] = (launcher.read_bytes(), launcher.stat().st_mode & 0o7777)
+        result = self.run_stage(inspect=inspect)
+        if result.returncode != 0 and 'xcrun' in result.stderr + result.stdout:
+            self.skipTest('no compiler')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(seen['info']['CFBundleVersion'], '2026111405')
+        self.assertEqual(seen['info']['CFBundleIdentifier'], 'com.layoute.flash.helper')
+        self.assertEqual(seen['launcher'], (self.LAUNCHER_MASTER, 0o755))
+        self.assertIn('Library/HelperTools/FlashHelperLauncher', result.files)
+
+    def test_release_stage_refuses_missing_build_number_or_unpinned_launcher(self):
+        for build in (None, '', '1.0', '0123', '1' * 20, 'SET_AT_BUILD_TIME'):
+            with self.subTest(build=build):
+                result = self.run_stage(build=build)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('FLUTTER_BUILD_NUMBER must be the release build number', result.stderr)
+                self.assertNotIn('Library/HelperTools/FlashHelper', result.files)
+        for options, message in (({'pinned': ''}, 'not pinned yet'),
+                                 ({'master': None}, 'Missing signed launcher master'),
+                                 ({'master': self.LAUNCHER_MASTER + b'rebuilt'}, 'differs from its pinned sha256')):
+            with self.subTest(options=list(options)):
+                result = self.run_stage(**options)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(message, result.stderr)
+                self.assertEqual(result.files, [])
 
     def test_release_stage_copies_both_daemon_plists(self):
         result = self.run_stage()
@@ -547,7 +610,8 @@ class HelperBuildModeTests(unittest.TestCase):
 
     def test_source_compiles_helper_with_info_plist_and_copies_daemon_plist(self):
         script = (PACKAGING / 'stage_bundled_daemon.sh').read_text()
-        self.assertIn('-sectcreate __TEXT __info_plist "$SRCROOT/PrivilegedHelper/Info.plist"', script)
+        self.assertIn('/bin/cp "$SRCROOT/PrivilegedHelper/Info.plist" "$info"', script)
+        self.assertIn('-sectcreate __TEXT __info_plist "$info"', script)
         self.assertIn('-o "$library/HelperTools/FlashHelper"', script)
         self.assertIn('for plist in com.layoute.flash.helperd.plist com.layoute.flash.daemon.plist; do', script)
         self.assertIn('/bin/cp "$SRCROOT/PrivilegedHelper/$plist" "$library/LaunchDaemons/"', script)

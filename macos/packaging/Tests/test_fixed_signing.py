@@ -19,6 +19,8 @@ SPEC = importlib.util.spec_from_file_location(
 )
 DRIVER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(DRIVER)
+LAUNCHER_BYTES = bytes.fromhex('cffaedfe') + b'synthetic-signed-launcher-master-never-execute'
+LAUNCHER_CDHASHES = {'arm64': 'a1' * 20, 'x86_64': 'b2' * 20}
 
 
 class SigningPolicyTests(unittest.TestCase):
@@ -31,11 +33,13 @@ class SigningPolicyTests(unittest.TestCase):
         self.app = self.root / '.airbuild/candidate/Flash.app'
         self.app.mkdir(parents=True, mode=0o755)
         self.calls = []
+        self.code_resources = self.launcher_sealed()
         self.certificate = b'synthetic-public-certificate-not-a-real-identity'
         self.pin1 = hashlib.sha1(self.certificate).hexdigest().upper()
         self.pin256 = hashlib.sha256(self.certificate).hexdigest().upper()
+        self.pin_path = self.root / 'macos/PrivilegedHelper/Launcher/FlashHelperLauncher.pin.json'
         for name, value in (
-            ('WORKTREE', self.root), ('CERTIFICATE_SHA1', self.pin1),
+            ('WORKTREE', self.root), ('CERTIFICATE_SHA1', self.pin1), ('LAUNCHER_PIN', self.pin_path),
             ('CERTIFICATE_SHA256', self.pin256),
             # Verify the reviewed sources of this checkout, not the protected main copy.
             ('PACKAGING', Path(__file__).resolve().parents[1]),
@@ -48,6 +52,7 @@ class SigningPolicyTests(unittest.TestCase):
         self.addCleanup(acl.stop)
         self.verifier = DRIVER.trusted_verifier()
         self.make_payload()
+        self.pin()
         for directory, _, _ in os.walk(self.root):
             Path(directory).chmod(0o755)
         self.root.chmod(0o700)
@@ -65,6 +70,16 @@ class SigningPolicyTests(unittest.TestCase):
         path.chmod(mode)
         return path
 
+    def pin(self, **changes):
+        self.pin_path.parent.mkdir(parents=True, exist_ok=True)
+        data = dict({'schema': 1, 'identifier': DRIVER.LAUNCHER[2], 'certificate_sha1': self.pin1,
+                     'sha256': hashlib.sha256(LAUNCHER_BYTES).hexdigest(), 'cdhashes': dict(LAUNCHER_CDHASHES)},
+                    **changes)
+        if self.pin_path.exists():
+            self.pin_path.unlink()
+        self.pin_path.write_text(json.dumps(data))
+        self.pin_path.chmod(0o644)
+
     def binary(self, relative):
         return self.write(relative, bytes.fromhex('cffaedfe') + b'synthetic-never-execute', 0o755)
 
@@ -75,6 +90,7 @@ class SigningPolicyTests(unittest.TestCase):
         }))
         for _, relative, _ in DRIVER.FIXED:
             self.binary(relative)
+        self.write(DRIVER.LAUNCHER[1], LAUNCHER_BYTES, 0o755)
         for name, identifier in DRIVER.FRAMEWORKS.items():
             framework = self.app / f'Contents/Frameworks/{name}.framework'
             self.binary(f'Contents/Frameworks/{name}.framework/Versions/A/{name}')
@@ -95,6 +111,12 @@ class SigningPolicyTests(unittest.TestCase):
     def targets(self):
         return DRIVER.signing_targets(self.app, DRIVER.inventory(self.app, self.verifier))
 
+    def launcher_sealed(self, sealed=True):
+        files2 = {'MacOS/Flash': {'cdhash': b'x'}}
+        if sealed:
+            files2['Library/HelperTools/FlashHelperLauncher'] = {'cdhash': b'x'}
+        return plistlib.dumps({'files2': files2})
+
     def tool(self, arguments):
         self.calls.append(arguments)
         stdout, stderr = b'', b''
@@ -104,12 +126,22 @@ class SigningPolicyTests(unittest.TestCase):
             stdout = '\n'.join(f'{arguments[-1]} (architecture {architecture}):'
                                for architecture in ('arm64', 'x86_64')).encode()
         elif arguments[0] == '/usr/bin/codesign':
-            if '--verbose=4' in arguments:
-                target = next(target for target in self.targets()
-                              if str(self.app / target['path']) == arguments[-1])
-                stderr = (f'Identifier={target["identifier"]}\n'
+            if '--sign' in arguments and arguments[-1] == str(self.app):
+                signature = self.app / 'Contents/_CodeSignature'
+                signature.mkdir(exist_ok=True)
+                (signature / 'CodeResources').write_bytes(self.code_resources)
+            elif '--verbose=4' in arguments:
+                if arguments[-1] == str(self.app / DRIVER.LAUNCHER[1]):
+                    identifier = DRIVER.LAUNCHER[2]
+                    architecture = arguments[arguments.index('--arch') + 1]
+                    extra = f'CDHash={LAUNCHER_CDHASHES[architecture]}\n'
+                else:
+                    identifier = next(target for target in self.targets()
+                                      if str(self.app / target['path']) == arguments[-1])['identifier']
+                    extra = ''
+                stderr = (f'Identifier={identifier}\n'
                           'CodeDirectory v=20500 size=1 flags=0x10000(runtime) hashes=1+1\n'
-                          'TeamIdentifier=not set\n').encode()
+                          'TeamIdentifier=not set\n' + extra).encode()
             elif any(argument.startswith('--extract-certificates=') for argument in arguments):
                 prefix = next(argument.split('=', 1)[1] for argument in arguments
                               if argument.startswith('--extract-certificates='))
@@ -147,18 +179,93 @@ class SigningPolicyTests(unittest.TestCase):
             self.assertIn('=designated => ', args[args.index('--requirements') + 1])
         self.assertTrue(any('--deep' in args and '--verify' in args for args in self.calls))
         verify = [args for args in self.calls if '-R' in args]
-        self.assertEqual(len(verify), 8)
+        self.assertEqual(len(verify), 10)  # 8 signed targets + the launcher before and after signing
         for arguments in verify:
-            target = next(target for target in report['targets'] if str(self.app / target['path']) == arguments[-1])
+            target = next(target for target in report['targets'] + [report['launcher']]
+                          if str(self.app / target['path']) == arguments[-1])
             self.assertEqual(arguments[arguments.index('-R') + 1], '=' + DRIVER.requirement(target['identifier']))
         extractions = [args for args in self.calls if any(arg.startswith('--extract-certificates=') for arg in args)]
-        self.assertEqual(len(extractions), 16)  # 8 targets x 2 slices
+        self.assertEqual(len(extractions), 20)  # (8 targets + launcher twice) x 2 slices
+        # The launcher is verified against its pins, never signed, and its bytes are unchanged by signing.
+        launcher = str(self.app / DRIVER.LAUNCHER[1])
+        self.assertFalse(any('--sign' in args and args[-1] == launcher for args in self.calls))
+        self.assertNotIn(DRIVER.LAUNCHER[1], [target['binary'] for target in report['targets']])
+        self.assertEqual(report['launcher']['identifier'], 'com.layoute.flash.helper-launcher')
+        self.assertEqual(set(report['launcher']['verified_slices']), {'arm64', 'x86_64'})
+        self.assertEqual(report['pins']['launcher'], {'sha256': hashlib.sha256(LAUNCHER_BYTES).hexdigest(),
+                                                      'cdhashes': LAUNCHER_CDHASHES})
+        self.assertEqual(report['before']['entries'][DRIVER.LAUNCHER[1]],
+                         report['after']['entries'][DRIVER.LAUNCHER[1]])
+        first_sign = next(index for index, args in enumerate(self.calls) if '--sign' in args)
+        self.assertTrue(any('-R' in args and args[-1] == launcher for args in self.calls[:first_sign]))
         for arguments in extractions:
             self.assertNotIn('--extract-certificates', arguments)
             self.assertTrue(arguments[-2].startswith('--extract-certificates='))
         self.assertEqual(report['defines']['artifact_values'], 'not established by static signing')
         self.assertEqual(report['defines']['intended_static_candidate']['FC_MANAGED_CANDIDATE_ENABLED'], 1)
         self.assertNotIn('FC_MANAGED_GUI_LOADS_VERIFIED', report['defines'])
+
+    def test_launcher_must_be_the_pinned_signed_master(self):
+        def fails_before_signing(message):
+            report = self.app.parent / 'Flash.signing-static.json'
+            report.unlink(missing_ok=True)
+            with self.assertRaisesRegex(ValueError, message):
+                self.execute()
+            self.assertFalse(any('--sign' in args for args in self.calls))
+            self.calls.clear()
+        # Rebuilt or re-signed launcher bytes.
+        self.write(DRIVER.LAUNCHER[1], LAUNCHER_BYTES + b'rebuilt', 0o755)
+        fails_before_signing('pinned signed master')
+        self.write(DRIVER.LAUNCHER[1], LAUNCHER_BYTES, 0o755)
+        # Bundled signature differs from the pinned cdhash of one architecture.
+        self.pin(cdhashes=dict(LAUNCHER_CDHASHES, x86_64='c3' * 20))
+        fails_before_signing('cdhash')
+        # Not pinned yet / malformed pin.
+        for changes in ({'sha256': ''}, {'cdhashes': {'arm64': 'a1' * 20}}, {'identifier': 'com.layoute.flash.helper'},
+                        {'certificate_sha1': '0' * 40}, {'extra': True}):
+            with self.subTest(changes=changes):
+                self.pin(**changes)
+                fails_before_signing('Launcher')
+        self.pin()
+        # The launcher is a known Mach-O: missing it is a layout error.
+        (self.app / DRIVER.LAUNCHER[1]).unlink()
+        with self.assertRaisesRegex(ValueError, 'Mach-O'):
+            self.targets()
+
+    def test_launcher_must_be_universal_and_sealed_by_the_app(self):
+        def arm64_only(arguments):
+            result = self.tool(arguments)
+            if arguments[-1].endswith('/FlashHelperLauncher') and arguments[0] in ('/usr/bin/lipo', '/usr/bin/otool'):
+                result.stdout = (b'arm64' if arguments[0] == '/usr/bin/lipo'
+                                 else f'{arguments[-1]} (architecture arm64):'.encode())
+            return result
+        with patch.object(DRIVER, 'run_tool', side_effect=arm64_only), \
+                self.assertRaisesRegex(ValueError, 'launcher does not cover the GUI architectures'):
+            self.execute()
+        self.assertFalse(any('--sign' in args for args in self.calls))
+        self.code_resources = self.launcher_sealed(False)
+        with self.assertRaisesRegex(ValueError, 'not sealed'):
+            self.execute()
+        report = json.loads((self.app.parent / 'Flash.signing-static.json').read_text())
+        self.assertIs(report['static_verification'], False)
+
+    def test_launcher_may_cover_more_architectures_than_the_gui(self):
+        def gui_arm64(arguments):
+            result = self.tool(arguments)
+            if arguments[0] in ('/usr/bin/lipo', '/usr/bin/otool') and not arguments[-1].endswith('/FlashHelperLauncher'):
+                result.stdout = (b'arm64' if arguments[0] == '/usr/bin/lipo'
+                                 else f'{arguments[-1]} (architecture arm64):'.encode())
+            return result
+        manifest = self.app / ('Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/'
+                               'NativeAssetsManifest.json')
+        data = json.loads(manifest.read_text())
+        del data['native-assets']['macos_x64']
+        manifest.write_text(json.dumps(data))
+        with patch.object(DRIVER, 'run_tool', side_effect=gui_arm64):
+            report = json.loads(self.execute().read_text())
+        self.assertTrue(report['static_verification'])
+        self.assertTrue(all(target['architectures'] == ['arm64'] for target in report['targets']))
+        self.assertEqual(set(report['launcher']['verified_slices']), {'arm64', 'x86_64'})
 
     def test_only_gui_gets_minimal_library_exception(self):
         for target in self.targets():

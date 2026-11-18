@@ -26,8 +26,14 @@ WORKTREE = Path('/Users/lavas/Library/Application Support/plus.yellow.AirBuild/e
 KEYCHAIN = '/Users/lavas/Library/Application Support/Flash Signing/FlashSigning.keychain-db'
 CERTIFICATE_SHA1 = 'BBA7F8529FD271B9848EC03A2CE3F4780F585556'
 CERTIFICATE_SHA256 = 'E8346770F4BF2ABC94F755A136677CDA84B821A668B0983E7FBEF21F8A646E95'
-VERIFIER_SHA256 = '00125b52709a197554a51ff89a68bbb8a8fc9cedf6911654208b641ae36a02ee'
+VERIFIER_SHA256 = '0f49532e8819088ed66a41fc22c7eddcb89010adbbbff6f54c629ea7a7225e37'
 PACKAGING = WORKTREE / 'macos/packaging'
+# The fixed launcher is already signed (once, by the signing owner) and pinned; this driver never signs it. It only
+# proves the bundled copy is the pinned master (sha256, identity, per-architecture cdhash) and that the app seal
+# covers it.
+LAUNCHER_PIN = WORKTREE / 'macos/PrivilegedHelper/Launcher/FlashHelperLauncher.pin.json'
+LAUNCHER = ('launcher', 'Contents/Library/HelperTools/FlashHelperLauncher', 'com.layoute.flash.helper-launcher')
+LAUNCHER_ARCHITECTURES = ('arm64', 'x86_64')
 GUI_ENTITLEMENTS = {
     'com.apple.security.files.user-selected.read-write': True,
     'com.apple.security.personal-information.location': True,
@@ -199,6 +205,34 @@ def plist_identifier(path, identifier, executable):
         raise ValueError(f'Unexpected bundle identity: {path}')
 
 
+def launcher_pin():
+    pin = json.loads(read_regular(LAUNCHER_PIN))
+    hashes = pin.get('cdhashes') if isinstance(pin, dict) else None
+    if (not isinstance(pin, dict) or set(pin) != {'schema', 'identifier', 'certificate_sha1', 'sha256', 'cdhashes'}
+            or pin['schema'] != 1 or pin['identifier'] != LAUNCHER[2] or pin['certificate_sha1'] != CERTIFICATE_SHA1
+            or not isinstance(hashes, dict) or sorted(hashes) != sorted(LAUNCHER_ARCHITECTURES)):
+        raise ValueError('Launcher pin schema or identity mismatch')
+    values = [(pin['sha256'], 64)] + [(hashes[name], 40) for name in LAUNCHER_ARCHITECTURES]
+    if not all(isinstance(value, str) and re.fullmatch('[0-9a-f]{%d}' % size, value) for value, size in values):
+        raise ValueError('Launcher is not pinned (sha256 and arm64/x86_64 cdhashes required)')
+    return pin
+
+
+def launcher_target(pin):
+    role, relative, identifier = LAUNCHER
+    return dict(role=role, path=relative, binary=relative, identifier=identifier, entitlements={},
+                designated_requirement=requirement(identifier), architectures=list(LAUNCHER_ARCHITECTURES),
+                cdhashes=dict(pin['cdhashes']), sha256=pin['sha256'])
+
+
+def verify_launcher(app, launcher, entries, scratch):
+    """The bundled launcher is the pinned, already signed master; it is verified, never signed."""
+    entry = entries.get(launcher['binary'])
+    if not entry or entry.get('kind') != 'file' or not entry.get('macho') or entry.get('sha256') != launcher['sha256']:
+        raise ValueError('Bundled launcher differs from the pinned signed master')
+    return verify_target(app, launcher, scratch)
+
+
 def signing_targets(app, entries):
     plist_identifier(app / 'Contents/Info.plist', 'com.layoute.flash', 'Flash')
     targets = []
@@ -217,7 +251,7 @@ def signing_targets(app, entries):
         targets.append(dict(role='framework', path=str(framework.relative_to(app)),
                             binary=str(binary.relative_to(app)), identifier=identifier))
     targets.append(dict(role='gui', path='.', binary='Contents/MacOS/Flash', identifier='com.layoute.flash'))
-    expected = {target['binary'] for target in targets}
+    expected = {target['binary'] for target in targets} | {LAUNCHER[1]}
     actual = {path for path, entry in entries.items() if entry.get('macho')}
     if actual != expected:
         raise ValueError(f'Unknown or missing Mach-O code: {sorted(actual ^ expected)}')
@@ -266,6 +300,9 @@ def verify_target(app, target, scratch):
             raise ValueError('Expected only hardened runtime signature flags')
         if f'Identifier={target["identifier"]}\n' not in detail or 'Signature=adhoc' in detail:
             raise ValueError('Signature identifier/identity mismatch')
+        if 'cdhashes' in target and re.findall(r'^CDHash=([0-9a-f]{40})$', detail, re.M) != [
+                target['cdhashes'][architecture]]:
+            raise ValueError('Pinned cdhash mismatch')
         if 'TeamIdentifier=not set\n' not in detail or 'Timestamp=' in detail:
             raise ValueError('Expected fixed no-Team, no-timestamp identity')
         entitlements = displayed_entitlements(run_tool([
@@ -286,6 +323,13 @@ def verify_target(app, target, scratch):
                                 'certificate_sha256': CERTIFICATE_SHA256,
                                 'display_sha256': sha256(detail.encode())}
     return slices
+
+
+def check_launcher_sealed(app):
+    resources = plistlib.loads(read_regular(app / 'Contents/_CodeSignature/CodeResources'))
+    sealed = resources.get('files2') if isinstance(resources, dict) else None
+    if not isinstance(sealed, dict) or LAUNCHER[1][len('Contents/'):] not in sealed:
+        raise ValueError('Launcher is not sealed by the app signature')
 
 
 def check_signing_delta(before, after, targets):
@@ -351,6 +395,9 @@ def execute(app_value, keychain, certificate):
         target['architectures'] = sorted(verifier.load_commands(app / target['binary']))
     if any(target['architectures'] != targets[-1]['architectures'] for target in targets):
         raise ValueError('Every nested code object must exactly match GUI architectures')
+    launcher = launcher_target(launcher_pin())
+    if sorted(verifier.load_commands(app / launcher['binary'])) != launcher['architectures']:
+        raise ValueError('Launcher must be the pinned arm64 + x86_64 master')
     entitlement_source = read_regular(PACKAGING / 'FixedGUI.entitlements')
     if plistlib.loads(entitlement_source) != GUI_ENTITLEMENTS:
         raise ValueError('Dedicated GUI entitlements changed')
@@ -360,7 +407,8 @@ def execute(app_value, keychain, certificate):
     report = {
         'schema': 1, 'app': str(app), 'static_verification': False, 'actualGUIloads': False,
         'packaging_accepted': False, 'runtime_gate_changed': False,
-        'pins': {'certificate_sha1': CERTIFICATE_SHA1, 'certificate_sha256': CERTIFICATE_SHA256},
+        'pins': {'certificate_sha1': CERTIFICATE_SHA1, 'certificate_sha256': CERTIFICATE_SHA256,
+                 'launcher': {'sha256': launcher['sha256'], 'cdhashes': launcher['cdhashes']}},
         'inputs': {'driver_sha256': sha256(read_regular(Path(__file__))),
                    'verifier_sha256': VERIFIER_SHA256, 'gui_entitlements_sha256': sha256(entitlement_source)},
         'defines': {'artifact_values': 'not established by static signing',
@@ -379,6 +427,7 @@ def execute(app_value, keychain, certificate):
                         'codesign child authorization UI cannot be guaranteed quiet.',
                         'No automatic retry; failures may leave a partially signed stage.'],
         'before': {'tree_sha256': tree_digest(before), 'entries': before}, 'targets': targets,
+        'launcher': launcher,
     }
     descriptor = os.open(report_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, 'w') as stream:
@@ -393,6 +442,10 @@ def execute(app_value, keychain, certificate):
         try:
             with tempfile.TemporaryDirectory(prefix='.fixed-sign-', dir=app.parent) as temporary:
                 scratch = Path(temporary)
+                # Before anything is signed: the launcher is the pinned signed master.
+                launcher_scratch = scratch / 'launcher-before'
+                launcher_scratch.mkdir(mode=0o700)
+                verify_launcher(app, launcher, before, launcher_scratch)
                 gui_entitlements = scratch / 'gui.plist'
                 gui_entitlements.write_bytes(entitlement_source)
                 empty_entitlements = scratch / 'empty.plist'
@@ -410,12 +463,16 @@ def execute(app_value, keychain, certificate):
                 after = inventory(app, verifier)
                 signing_targets(app, after)
                 check_signing_delta(before, after, targets)
+                launcher_scratch = scratch / 'launcher-after'
+                launcher_scratch.mkdir(mode=0o700)
+                launcher['verified_slices'] = verify_launcher(app, launcher, after, launcher_scratch)
+                check_launcher_sealed(app)
                 report['after'] = {'tree_sha256': tree_digest(after), 'entries': after}
                 report['static_verification'] = True
         except BaseException as error:
             report['failure'] = type(error).__name__
             if isinstance(error, (subprocess.CalledProcessError, subprocess.TimeoutExpired)):
-                report['failure_details'] = tool_failure_details(error, app, targets)
+                report['failure_details'] = tool_failure_details(error, app, targets + [launcher])
             save_report()
             raise
         save_report()

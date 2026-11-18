@@ -13,6 +13,12 @@ typedef NS_OPTIONS(NSUInteger, FCLegacyResidue) {
     FCLegacyResidueRuntime = 1 << 4,   // R5 /private/var/run/com.layoute.flash.helper
 };
 
+// Known, current (not legacy) root paths that detection and cleanup deliberately leave alone:
+//   /Library/Application Support/com.layoute.flash.helperd         launcher's verified helper copy + max-version
+//   /Library/Application Support/com.layoute.flash.helperd-status  launcher.json (read by the app for display)
+//   /Library/Application Support/com.layoute.flash.daemon          the helper's runtime directory (Core copy, relay)
+// They are never reported as residue and never removed: removing max-version would re-allow a downgrade, and only
+// root may do that deliberately (see PrivilegedHelper/Launcher/README.md).
 extern NSString * const FCLegacyLabel;
 extern NSString * const FCLegacyPlist;
 extern NSString * const FCLegacyServiceDirectory;

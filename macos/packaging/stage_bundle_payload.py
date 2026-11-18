@@ -24,6 +24,18 @@ LEGACY_LABEL = 'com.layoute.flash.helper'
 CORE = 'Contents/MacOS/FlClashCore'
 HELPER = 'Contents/Library/HelperTools/FlashHelper'
 HELPER_ID = 'com.layoute.flash.helper'
+# The fixed launcher (macos/PrivilegedHelper/Launcher) is the daemon's BundleProgram. It is signed once; the signed
+# master is copied into every build byte for byte and never rebuilt or re-signed. Its sha256 and per-architecture
+# cdhashes are pinned in LAUNCHER_PIN.
+LAUNCHER = 'Contents/Library/HelperTools/FlashHelperLauncher'
+LAUNCHER_ID = 'com.layoute.flash.helper-launcher'
+LAUNCHER_ARCHITECTURES = ('arm64', 'x86_64')
+LAUNCHER_PIN = Path(__file__).resolve().parents[1] / 'PrivilegedHelper/Launcher/FlashHelperLauncher.pin.json'
+LAUNCHER_PIN_KEYS = frozenset({'schema', 'identifier', 'certificate_sha1', 'sha256', 'cdhashes'})
+# The helper's CFBundleVersion is the release build number (pubspec +N), written at build time; the launcher
+# refuses a helper whose number is below the highest it has run. Same rule as the launcher (decimal, fits uint64),
+# without leading zeros.
+BUILD_NUMBER_DIGITS = 19
 DAEMON_PLIST = 'Contents/Library/LaunchDaemons/' + LABEL + '.plist'
 RETIRED_DAEMON_PLIST = 'Contents/Library/LaunchDaemons/' + RETIRED_LABEL + '.plist'
 # Signing is strictly inside-out: nested code first, then frameworks, then the app
@@ -40,7 +52,9 @@ CONTRACT_KEYS = frozenset(CONTRACT_POLICY) | {'CoreSHA256', 'CoreVersion', 'Core
 def daemon_schema(label):
     return {
         'Label': label,
-        'BundleProgram': HELPER,  # relative to the .app root, as SMAppService expects
+        # Relative to the .app root, as SMAppService expects. The current name runs the fixed launcher; the retired
+        # name's plist keeps the program it was registered with (it is only ever unregistered).
+        'BundleProgram': HELPER if label == RETIRED_LABEL else LAUNCHER,
         'MachServices': {label: True},
         'AssociatedBundleIdentifiers': [GUI_ID],
         'ProcessType': 'Interactive',
@@ -92,6 +106,33 @@ def embedded_info_plist(binary):
     end = data.find(b'</plist>', start)
     require(start >= 0 and end > start, 'Helper lacks an embedded __info_plist')
     return plistlib.loads(data[start:end + len(b'</plist>')])
+
+
+def build_number(value):
+    return (isinstance(value, str) and 0 < len(value) <= BUILD_NUMBER_DIGITS and value.isascii() and
+            value.isdigit() and value[0] != '0')
+
+
+def launcher_pin(path=None):
+    """The reviewed pins of the signed launcher master; fails closed until the master has been signed and pinned."""
+    path = Path(path or LAUNCHER_PIN)
+    pin = json.loads(regular(path))
+    require(isinstance(pin, dict) and set(pin) == LAUNCHER_PIN_KEYS and pin['schema'] == 1,
+            'Launcher pin must have exactly ' + ', '.join(sorted(LAUNCHER_PIN_KEYS)))
+    require(pin['identifier'] == LAUNCHER_ID and pin['certificate_sha1'] == CERTIFICATE_SHA1,
+            'Launcher pin identity differs from ' + LAUNCHER_ID + ' / the fixed certificate')
+    hashes = pin['cdhashes']
+    require(isinstance(hashes, dict) and sorted(hashes) == sorted(LAUNCHER_ARCHITECTURES),
+            'Launcher pin needs one cdhash for each of ' + ', '.join(LAUNCHER_ARCHITECTURES))
+    hexadecimal = set('0123456789abcdef')
+    values = [(pin['sha256'], 64)] + [(hashes[name], 40) for name in LAUNCHER_ARCHITECTURES]
+    require(all(isinstance(value, str) for value, _ in values), 'Launcher pin values must be strings')
+    require(all(value for value, _ in values),
+            'FlashHelperLauncher is not pinned yet: sign the master once and record its sha256 and cdhashes in ' +
+            str(path))
+    require(all(len(value) == size and set(value) <= hexadecimal for value, size in values),
+            'Launcher pin values must be lowercase hex (sha256: 64, cdhash: 40)')
+    return pin
 
 
 def contract_string(value):
@@ -174,7 +215,8 @@ def check_layout(app):
         path = app / relative
         require(not path.exists() and not path.is_symlink(), 'Legacy helper artifact present: ' + relative)
     plist = daemon_plist(app)
-    for relative in (CORE, plist['BundleProgram']):
+    require(plist['BundleProgram'] == LAUNCHER, 'The daemon must start through the fixed launcher')
+    for relative in (CORE, HELPER, LAUNCHER):
         path = app / relative
         require(path.resolve(strict=True) == path, 'Nested code must not be reached through symlinks: ' + relative)
         data = regular(path)
@@ -183,13 +225,25 @@ def check_layout(app):
                 'Nested code must be owner-executable and not group/other writable: ' + relative)
     helper_info = embedded_info_plist(app / HELPER)
     require(helper_info.get('CFBundleIdentifier') == HELPER_ID, 'Helper __info_plist identifier differs')
+    # The launcher's downgrade check reads this number from the signed helper: it must be the app's build number.
+    helper_version = helper_info.get('CFBundleVersion')
+    require(build_number(helper_version),
+            'Helper CFBundleVersion must be the release build number (decimal, no leading zero, at most ' +
+            str(BUILD_NUMBER_DIGITS) + ' digits), written at build time')
+    require(helper_version == str(info.get('CFBundleVersion')),
+            'Helper CFBundleVersion differs from the app CFBundleVersion')
+    pin = launcher_pin()
+    require(sha256(app / LAUNCHER) == pin['sha256'],
+            'Bundled FlashHelperLauncher differs from the pinned signed master (never rebuild or re-sign it)')
     launch = app / 'Contents/Library/LaunchDaemons'
     require(sorted(p.name for p in launch.iterdir()) == sorted([LABEL + '.plist', RETIRED_LABEL + '.plist']),
             'Unexpected LaunchDaemons content')
     daemon_plist(app, RETIRED_DAEMON_PLIST, RETIRED_DAEMON_SCHEMA)
     tools = app / 'Contents/Library/HelperTools'
-    require(sorted(p.name for p in tools.iterdir()) == ['FlashHelper'], 'Unexpected HelperTools content')
+    require(sorted(p.name for p in tools.iterdir()) == ['FlashHelper', 'FlashHelperLauncher'],
+            'Unexpected HelperTools content')
     return {'core_sha256': sha256(app / CORE), 'helper_sha256': sha256(app / HELPER),
+            'helper_version': helper_version, 'launcher_sha256': pin['sha256'],
             'daemon_plist_sha256': sha256(app / DAEMON_PLIST),
             'retired_daemon_plist_sha256': sha256(app / RETIRED_DAEMON_PLIST)}
 
@@ -242,8 +296,9 @@ def codesign(*arguments):
                           env={'PATH': '/usr/bin:/bin', 'LANG': 'C', 'LC_ALL': 'C'}, timeout=120)
 
 
-def cdhash(path):
-    output = codesign('-d', '--verbose=4', str(path)).stderr.decode('utf-8', errors='strict')
+def cdhash(path, architecture=None):
+    selector = ('--arch', architecture) if architecture else ()
+    output = codesign('-d', '--verbose=4', *selector, str(path)).stderr.decode('utf-8', errors='strict')
     hashes = [line.split('=', 1)[1] for line in output.splitlines() if line.startswith('CDHash=')]
     require(len(hashes) == 1, 'Expected one CDHash for ' + str(path))
     return hashes[0]
@@ -253,7 +308,7 @@ def verify_signed(app):
     """Static verification of the signed bundle; never launches or registers anything."""
     app = Path(app)
     facts = check_layout(app)
-    for relative, identifier in ((CORE, CORE_ID), (HELPER, HELPER_ID), ('.', GUI_ID)):
+    for relative, identifier in ((CORE, CORE_ID), (HELPER, HELPER_ID), (LAUNCHER, LAUNCHER_ID), ('.', GUI_ID)):
         codesign('--verify', '--strict', '--all-architectures', '-R=' + requirement(identifier),
                  str(app / relative))
     codesign('--verify', '--deep', '--strict', '--all-architectures', str(app))
@@ -261,8 +316,13 @@ def verify_signed(app):
     sealed = resources.get('files2', {})
     for plist in (DAEMON_PLIST, RETIRED_DAEMON_PLIST):
         require(plist[len('Contents/'):] in sealed, 'Daemon plist is not sealed in CodeResources files2: ' + plist)
-    require(HELPER[len('Contents/'):] in sealed and CORE[len('Contents/'):] in sealed,
-            'Nested helper/Core must be sealed by the app signature')
+    require(all(path[len('Contents/'):] in sealed for path in (HELPER, LAUNCHER, CORE)),
+            'Nested helper/launcher/Core must be sealed by the app signature')
+    pin = launcher_pin()
+    for architecture in LAUNCHER_ARCHITECTURES:
+        require(cdhash(app / LAUNCHER, architecture) == pin['cdhashes'][architecture],
+                'FlashHelperLauncher ' + architecture + ' cdhash differs from the pinned signed master')
+    facts['launcher_cdhashes'] = dict(pin['cdhashes'])
     contract = read_contract(app)
     require(contract is not None, 'Signed app lacks the ' + CONTRACT_KEY + ' contract in Info.plist')
     validate_contract(contract)

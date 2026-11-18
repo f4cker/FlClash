@@ -2,6 +2,7 @@ import contextlib
 import hashlib
 import importlib.util
 import io
+import json
 from pathlib import Path
 import plistlib
 import shutil
@@ -24,6 +25,9 @@ def load(name):
 STAGE = load('stage_bundle_payload')
 MACHO = bytes.fromhex('cffaedfe') + b'synthetic-never-execute'
 REVISION = '13e00727c64d2cc4d0bb20e293732d02c3ed0382'
+LAUNCHER = MACHO + b'signed-launcher-master'
+BUILD = '2026111709'
+INFO = {'CFBundleIdentifier': 'com.layoute.flash', 'CFBundleVersion': BUILD}
 
 
 def mock_codesign(calls):
@@ -40,10 +44,26 @@ class BundledDaemonTests(unittest.TestCase):
         self.root = Path(temporary.name).resolve()
         self.app = self.root / 'Flash.app'
         self.write(STAGE.CORE, MACHO, 0o755)
-        self.write(STAGE.HELPER, MACHO + plistlib.dumps({'CFBundleIdentifier': STAGE.HELPER_ID}), 0o755)
+        self.helper()
+        self.write(STAGE.LAUNCHER, LAUNCHER, 0o755)
         self.write(STAGE.DAEMON_PLIST, (MACOS / 'PrivilegedHelper/com.layoute.flash.helperd.plist').read_bytes())
         self.write(STAGE.RETIRED_DAEMON_PLIST, (MACOS / 'PrivilegedHelper/com.layoute.flash.daemon.plist').read_bytes())
-        self.write('Contents/Info.plist', plistlib.dumps({'CFBundleIdentifier': 'com.layoute.flash'}))
+        self.write('Contents/Info.plist', plistlib.dumps(INFO))
+        self.pin_path = self.root / 'FlashHelperLauncher.pin.json'
+        self.pin()
+        replacement = patch.object(STAGE, 'LAUNCHER_PIN', self.pin_path)
+        replacement.start()
+        self.addCleanup(replacement.stop)
+
+    def helper(self, **info):
+        data = dict({'CFBundleIdentifier': STAGE.HELPER_ID, 'CFBundleVersion': BUILD}, **info)
+        self.write(STAGE.HELPER, MACHO + plistlib.dumps({k: v for k, v in data.items() if v is not None}), 0o755)
+
+    def pin(self, **changes):
+        data = dict({'schema': 1, 'identifier': STAGE.LAUNCHER_ID, 'certificate_sha1': STAGE.CERTIFICATE_SHA1,
+                     'sha256': hashlib.sha256(LAUNCHER).hexdigest(),
+                     'cdhashes': {'arm64': 'ab' * 20, 'x86_64': 'ab' * 20}}, **changes)
+        self.pin_path.write_text(json.dumps(data))
 
     def write(self, relative, data, mode=0o644):
         path = self.app / relative
@@ -70,16 +90,18 @@ class BundledDaemonTests(unittest.TestCase):
 
     def test_plist_schema_label_and_bundle_program(self):
         facts = STAGE.check_layout(self.app)
-        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'daemon_plist_sha256',
-                                      'retired_daemon_plist_sha256'})
+        self.assertEqual(set(facts), {'core_sha256', 'helper_sha256', 'helper_version', 'launcher_sha256',
+                                      'daemon_plist_sha256', 'retired_daemon_plist_sha256'})
+        self.assertEqual(facts['helper_version'], BUILD)
         schema = STAGE.DAEMON_SCHEMA
         self.assertEqual(STAGE.DAEMON_PLIST, 'Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist')
         self.assertEqual(schema['Label'], 'com.layoute.flash.helperd')
         self.assertNotEqual(schema['Label'], STAGE.LEGACY_LABEL)
-        self.assertEqual(schema['BundleProgram'], 'Contents/Library/HelperTools/FlashHelper')
+        self.assertEqual(schema['BundleProgram'], 'Contents/Library/HelperTools/FlashHelperLauncher')
         self.assertEqual(schema['MachServices'], {'com.layoute.flash.helperd': True})
-        # The retired name keeps its old schema (only unregistered), with the same BundleProgram.
+        # The retired name keeps its old schema (only unregistered), with its old BundleProgram.
         self.assertEqual(STAGE.RETIRED_DAEMON_SCHEMA, dict(schema, Label='com.layoute.flash.daemon',
+                                                           BundleProgram='Contents/Library/HelperTools/FlashHelper',
                                                            MachServices={'com.layoute.flash.daemon': True}))
         self.assertEqual(schema['AssociatedBundleIdentifiers'], ['com.layoute.flash'])
         for key in ('KeepAlive', 'RunAtLoad', 'Program', 'ProgramArguments', 'UserName'):
@@ -91,7 +113,8 @@ class BundledDaemonTests(unittest.TestCase):
                                  ({'Label': STAGE.LEGACY_LABEL}, 'exact bundled schema'),
                                  ({'RunAtLoad': True}, 'exact bundled schema'),
                                  ({'AssociatedBundleIdentifiers': None}, 'exact bundled schema'),
-                                 ({'BundleProgram': '/Library/PrivilegedHelperTools/x'}, 'exact bundled schema')]:
+                                 ({'BundleProgram': '/Library/PrivilegedHelperTools/x'}, 'exact bundled schema'),
+                                 ({'BundleProgram': STAGE.HELPER}, 'exact bundled schema')]:
             with self.subTest(changes=changes):
                 self.plist(**changes)
                 with self.assertRaisesRegex(ValueError, message):
@@ -104,13 +127,92 @@ class BundledDaemonTests(unittest.TestCase):
         self.write(STAGE.HELPER, b'#!/bin/sh\n', 0o755)
         with self.assertRaisesRegex(ValueError, 'Mach-O'):
             STAGE.check_layout(self.app)
-        self.write(STAGE.HELPER, MACHO + plistlib.dumps({'CFBundleIdentifier': 'other'}), 0o755)
+        self.helper(CFBundleIdentifier='other')
         with self.assertRaisesRegex(ValueError, '__info_plist'):
             STAGE.check_layout(self.app)
         (self.app / STAGE.HELPER).unlink()
         (self.app / STAGE.HELPER).symlink_to(self.app / STAGE.CORE)
         with self.assertRaises(ValueError):
             STAGE.check_layout(self.app)
+
+    def test_launcher_is_the_pinned_master_and_present(self):
+        self.assertEqual(STAGE.LAUNCHER, 'Contents/Library/HelperTools/FlashHelperLauncher')
+        self.assertEqual(STAGE.LAUNCHER_ID, 'com.layoute.flash.helper-launcher')
+        self.assertEqual(STAGE.check_layout(self.app)['launcher_sha256'], hashlib.sha256(LAUNCHER).hexdigest())
+        # Rebuilt or re-signed (any byte differs): rejected.
+        self.write(STAGE.LAUNCHER, LAUNCHER + b'rebuilt', 0o755)
+        with self.assertRaisesRegex(ValueError, 'pinned signed master'):
+            STAGE.check_layout(self.app)
+        self.write(STAGE.LAUNCHER, b'#!/bin/sh\n', 0o755)
+        with self.assertRaisesRegex(ValueError, 'Mach-O'):
+            STAGE.check_layout(self.app)
+        self.write(STAGE.LAUNCHER, LAUNCHER, 0o775)
+        with self.assertRaisesRegex(ValueError, 'not group/other writable'):
+            STAGE.check_layout(self.app)
+        (self.app / STAGE.LAUNCHER).unlink()
+        with self.assertRaises(FileNotFoundError):
+            STAGE.check_layout(self.app)
+        (self.app / STAGE.LAUNCHER).symlink_to(self.app / STAGE.HELPER)
+        with self.assertRaises(ValueError):
+            STAGE.check_layout(self.app)
+
+    def test_unpinned_or_malformed_launcher_pin_fails_closed(self):
+        self.assertEqual(STAGE.LAUNCHER_PIN.name, 'FlashHelperLauncher.pin.json')
+        for changes, message in (({'sha256': ''}, 'not pinned yet'),
+                                 ({'cdhashes': {'arm64': 'ab' * 20, 'x86_64': ''}}, 'not pinned yet'),
+                                 ({'cdhashes': {'arm64': 'ab' * 20}}, 'one cdhash'),
+                                 ({'sha256': 'AB' * 32}, 'lowercase hex'),
+                                 ({'sha256': None}, 'strings'),
+                                 ({'identifier': 'com.layoute.flash.helper'}, 'identity'),
+                                 ({'certificate_sha1': '0' * 40}, 'identity'),
+                                 ({'schema': 2}, 'exactly'), ({'extra': 1}, 'exactly')):
+            with self.subTest(changes=changes):
+                self.pin(**changes)
+                with self.assertRaisesRegex(ValueError, message):
+                    STAGE.check_layout(self.app)
+
+    def test_repository_launcher_pin_is_well_formed(self):
+        source = MACOS / 'PrivilegedHelper/Launcher/FlashHelperLauncher.pin.json'
+        data = json.loads(source.read_text())
+        self.assertEqual(data['identifier'], 'com.layoute.flash.helper-launcher')
+        self.assertEqual(data['certificate_sha1'], STAGE.CERTIFICATE_SHA1)
+        self.assertEqual(sorted(data['cdhashes']), ['arm64', 'x86_64'])
+        if not data['sha256']:  # Not signed yet: every packaging route refuses until it is pinned.
+            with self.assertRaisesRegex(ValueError, 'not pinned yet'):
+                STAGE.launcher_pin(source)
+        else:
+            STAGE.launcher_pin(source)
+
+    def test_helper_version_is_the_app_build_number(self):
+        for version, message in (('1x', 'release build number'), ('', 'release build number'),
+                                 ('0123', 'release build number'), ('1' * 20, 'release build number'),
+                                 ('SET_AT_BUILD_TIME', 'release build number'), (None, 'release build number'),
+                                 ('2026111708', 'differs from the app CFBundleVersion')):
+            with self.subTest(version=version):
+                self.helper(CFBundleVersion=version)
+                with self.assertRaisesRegex(ValueError, message):
+                    STAGE.check_layout(self.app)
+        self.helper()
+        self.assertEqual(STAGE.check_layout(self.app)['helper_version'], BUILD)
+        # The repository Info.plist carries a placeholder the launcher would refuse; the build writes the number.
+        source = plistlib.loads((MACOS / 'PrivilegedHelper/Info.plist').read_bytes())
+        self.assertFalse(STAGE.build_number(source['CFBundleVersion']))
+        script = (PACKAGING / 'stage_bundled_daemon.sh').read_text()
+        self.assertIn('build="${FLUTTER_BUILD_NUMBER-}"', script)
+        self.assertIn('/usr/bin/plutil -replace CFBundleVersion -string "$build" "$info"', script)
+        self.assertIn('-sectcreate __TEXT __info_plist "$info"', script)
+        self.assertNotIn('__info_plist "$SRCROOT/PrivilegedHelper/Info.plist"', script)
+
+    def test_xcode_phase_copies_the_pinned_launcher_master_unchanged(self):
+        script = (PACKAGING / 'stage_bundled_daemon.sh').read_text()
+        self.assertIn('launcher="$SRCROOT/PrivilegedHelper/Launcher/FlashHelperLauncher"', script)
+        self.assertIn('/bin/cp -X "$launcher" "$library/HelperTools/FlashHelperLauncher"', script)
+        self.assertIn('/bin/chmod 0755 "$library/HelperTools/FlashHelperLauncher"', script)
+        self.assertNotIn('Launcher/main.c', script)
+        self.assertNotIn('Launcher/build.sh', script)
+        self.assertNotIn('codesign', script)
+        self.assertLess(script.index('Launcher master differs from its pinned sha256'), script.index('/bin/cp -X'))
+        self.assertGreater(script.index('Copied launcher differs from the pinned master'), script.index('/bin/cp -X'))
 
     def test_no_pkg_installer_or_legacy_artifacts(self):
         for relative in ('Contents/Resources/HelperInstaller/Flash-helper-install.pkg',
@@ -121,14 +223,17 @@ class BundledDaemonTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'Legacy helper artifact'):
                     STAGE.check_layout(self.app)
                 path.unlink()
-        self.write('Contents/Info.plist', plistlib.dumps({'CFBundleIdentifier': 'com.layoute.flash',
-                                                          'FlashMinimumServiceBuild': '2026111503'}))
+        self.write('Contents/Info.plist', plistlib.dumps(dict(INFO, FlashMinimumServiceBuild='2026111503')))
         with self.assertRaisesRegex(ValueError, 'FlashMinimumServiceBuild'):
             STAGE.check_layout(self.app)
 
     def test_extra_launch_daemons_or_tools_are_rejected(self):
-        self.write('Contents/Library/LaunchDaemons/extra.plist', plistlib.dumps({}))
+        extra = self.write('Contents/Library/LaunchDaemons/extra.plist', plistlib.dumps({}))
         with self.assertRaisesRegex(ValueError, 'LaunchDaemons'):
+            STAGE.check_layout(self.app)
+        extra.unlink()
+        self.write('Contents/Library/HelperTools/extra', b'x')
+        with self.assertRaisesRegex(ValueError, 'HelperTools'):
             STAGE.check_layout(self.app)
 
     def test_retired_plist_is_required_and_exact(self):
@@ -152,7 +257,8 @@ class BundledDaemonTests(unittest.TestCase):
         self.seal()
         files2 = {'Library/LaunchDaemons/com.layoute.flash.helperd.plist': {'hash2': b'x'},
                   'Library/LaunchDaemons/com.layoute.flash.daemon.plist': {'hash2': b'x'},
-                  'Library/HelperTools/FlashHelper': {'cdhash': b'x'}, 'MacOS/FlClashCore': {'cdhash': b'x'}}
+                  'Library/HelperTools/FlashHelper': {'cdhash': b'x'}, 'MacOS/FlClashCore': {'cdhash': b'x'},
+                  'Library/HelperTools/FlashHelperLauncher': {'cdhash': b'x'}}
         self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': files2}))
         calls = []
         with patch.object(STAGE, 'codesign', side_effect=mock_codesign(calls)):
@@ -160,8 +266,22 @@ class BundledDaemonTests(unittest.TestCase):
             self.assertEqual(facts['helper_cdhash'], 'ab' * 20)
             verified = [args for args in calls if args[0] == '--verify']
             requirements = [arg for args in verified for arg in args if arg.startswith('-R=')]
-            for identifier in ('com.layoute.flash.core', 'com.layoute.flash.helper', 'com.layoute.flash'):
+            for identifier in ('com.layoute.flash.core', 'com.layoute.flash.helper',
+                               'com.layoute.flash.helper-launcher', 'com.layoute.flash'):
                 self.assertIn('-R=' + STAGE.requirement(identifier), requirements)
+            self.assertEqual(facts['launcher_cdhashes'], {'arm64': 'ab' * 20, 'x86_64': 'ab' * 20})
+            for architecture in ('arm64', 'x86_64'):
+                self.assertIn(('-d', '--verbose=4', '--arch', architecture, str(self.app / STAGE.LAUNCHER)), calls)
+            # The bundled launcher's signature is not the pinned one (cdhash per architecture).
+            self.pin(cdhashes={'arm64': 'ab' * 20, 'x86_64': 'cd' * 20})
+            with self.assertRaisesRegex(ValueError, 'x86_64 cdhash differs'):
+                STAGE.verify_signed(self.app)
+            self.pin()
+            unsealed = dict(files2)
+            del unsealed['Library/HelperTools/FlashHelperLauncher']
+            self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': unsealed}))
+            with self.assertRaisesRegex(ValueError, 'sealed by the app signature'):
+                STAGE.verify_signed(self.app)
             self.assertTrue(all('certificate leaf = H"' + STAGE.CERTIFICATE_SHA1 + '"' in r for r in requirements))
             for plist in ('com.layoute.flash.helperd.plist', 'com.layoute.flash.daemon.plist'):
                 unsealed = dict(files2)
@@ -206,8 +326,7 @@ class BundledDaemonTests(unittest.TestCase):
             self.seal()
 
     def test_contract_sealing_keeps_binary_plist_format(self):
-        self.write('Contents/Info.plist', plistlib.dumps({'CFBundleIdentifier': 'com.layoute.flash'},
-                                                          fmt=plistlib.FMT_BINARY))
+        self.write('Contents/Info.plist', plistlib.dumps(INFO, fmt=plistlib.FMT_BINARY))
         self.seal()
         self.assertTrue((self.app / 'Contents/Info.plist').read_bytes().startswith(b'bplist00'))
 
@@ -249,7 +368,8 @@ class BundledDaemonTests(unittest.TestCase):
     def test_signed_verification_requires_contract_bound_to_signed_core(self):
         files2 = {'Library/LaunchDaemons/com.layoute.flash.helperd.plist': {'hash2': b'x'},
                   'Library/LaunchDaemons/com.layoute.flash.daemon.plist': {'hash2': b'x'},
-                  'Library/HelperTools/FlashHelper': {'cdhash': b'x'}, 'MacOS/FlClashCore': {'cdhash': b'x'}}
+                  'Library/HelperTools/FlashHelper': {'cdhash': b'x'}, 'MacOS/FlClashCore': {'cdhash': b'x'},
+                  'Library/HelperTools/FlashHelperLauncher': {'cdhash': b'x'}}
         self.write('Contents/_CodeSignature/CodeResources', plistlib.dumps({'files2': files2}))
         with patch.object(STAGE, 'codesign', side_effect=mock_codesign([])):
             with self.assertRaisesRegex(ValueError, 'lacks the FlashHelperCompatibility'):

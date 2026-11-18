@@ -23,6 +23,11 @@ NSString * const FCGUIBundle = @"/Applications/Flash.app";
 NSString * const FCDaemonPlistRelativePath = @"Contents/Library/LaunchDaemons/" FC_HELPER_LABEL ".plist";
 NSString * const FCHelperRelativePath = @"Contents/Library/HelperTools/FlashHelper";
 NSString * const FCCoreRelativePath = @"Contents/MacOS/FlClashCore";
+NSString * const FCLauncherRelativePath = @"Contents/Library/HelperTools/FlashHelperLauncher";
+NSString * const FCLauncherStateDirectory = @"/Library/Application Support/com.layoute.flash.helperd";
+NSString * const FCLauncherStatusDirectory = @"/Library/Application Support/com.layoute.flash.helperd-status";
+NSString * const FCHelperCopyPath = @"/Library/Application Support/com.layoute.flash.helperd/FlashHelper";
+NSString * const FCHelperBundleArgument = @"--flash-bundle";
 // Kept across the label change (see HelperTrust.h): the new helper recovers the previous helper's Core from here.
 NSString * const FCRuntimeDirectory = @"/Library/Application Support/com.layoute.flash.daemon";
 
@@ -33,8 +38,11 @@ NSString *FCInstalledExecutable(NSString *role) {
     return @"";
 }
 
+// The current name runs the fixed launcher; the retired name's plist (never registered again, only unregistered)
+// keeps the BundleProgram it was registered with.
 NSDictionary *FCCanonicalDaemonPlistForLabel(NSString *label) {
-    return @{@"Label": label, @"BundleProgram": FCHelperRelativePath,
+    NSString *program = [label isEqualToString:FCRetiredHelperLabel] ? FCHelperRelativePath : FCLauncherRelativePath;
+    return @{@"Label": label, @"BundleProgram": program,
         @"MachServices": @{label: @YES}, @"ProcessType": @"Interactive",
         @"AssociatedBundleIdentifiers": @[FCClientIdentifier]};
 }
@@ -81,11 +89,12 @@ static NSDictionary *FCLoadPlist(NSString *path) { return [NSDictionary dictiona
 BOOL FCBundledDaemonPresent(NSString *bundle) {
     NSString *plist = [bundle stringByAppendingPathComponent:FCDaemonPlistRelativePath];
     NSString *helper = [bundle stringByAppendingPathComponent:FCHelperRelativePath];
+    NSString *launcher = [bundle stringByAppendingPathComponent:FCLauncherRelativePath];
     // The retired name's plist is optional (it only serves unregister), but when present it must be exact.
     NSString *retired = [bundle stringByAppendingPathComponent:FCRetiredDaemonPlistRelativePath];
     struct stat state;
     BOOL retiredAbsent = lstat(retired.fileSystemRepresentation, &state) != 0 && errno == ENOENT;
-    return FCRegularCanonicalFile(plist) && FCRegularCanonicalFile(helper) &&
+    return FCRegularCanonicalFile(plist) && FCRegularCanonicalFile(helper) && FCRegularCanonicalFile(launcher) &&
         FCDaemonPlistValid(FCLoadPlist(plist)) &&
         (retiredAbsent || (FCRegularCanonicalFile(retired) && FCRetiredDaemonPlistValid(FCLoadPlist(retired))));
 }
@@ -334,6 +343,7 @@ FCRunningHashVerdict FCCompareRunningHash(NSData *runningHash, NSData *diskHash)
 @property BOOL runningCodeStale;
 @property NSString *identifier;
 @property NSString *executable;
+@property NSString *sealedExecutable;
 @property NSData *sealedHash;
 @end
 
@@ -341,8 +351,20 @@ FCRunningHashVerdict FCCompareRunningHash(NSData *runningHash, NSData *diskHash)
 // running code is the code currently on disk (checked once per connection, then pinned by cdhash).
 @implementation FCMessageValidator
 - (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable {
-    if ((self = [super init])) { _identifier = identifier; _executable = executable; }
+    return [self initWithIdentifier:identifier executable:executable sealedExecutable:executable];
+}
+- (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable
+    sealedExecutable:(NSString *)sealedExecutable {
+    if ((self = [super init])) { _identifier = identifier; _executable = executable; _sealedExecutable = sealedExecutable; }
     return self;
+}
+// The running path as the kernel reports it. Where the peer runs from a file this process cannot resolve (the
+// launcher's copy inside a root 0700 directory, whose parents are root-owned), the path must match exactly;
+// otherwise it must also be canonical on disk.
+- (BOOL)pathMatches:(NSDictionary *)info {
+    if ([self.executable isEqualToString:self.sealedExecutable]) return FCExecutableMatches(info, self.executable);
+    NSURL *executable = info[(__bridge NSString *)kSecCodeInfoMainExecutable];
+    return self.executable.length && [executable isKindOfClass:NSURL.class] && [executable.path isEqualToString:self.executable];
 }
 - (BOOL)check:(xpc_object_t)message {
     self.runningCodeStale = NO;
@@ -356,12 +378,12 @@ FCRunningHashVerdict FCCompareRunningHash(NSData *runningHash, NSData *diskHash)
     if (requirement) CFRelease(requirement);
     NSDictionary *info = valid ? FCSigningInformation(code) : nil;
     NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
-    valid = valid && FCExecutableMatches(info, self.executable) && FCValidGUIHash(runningHash) &&
+    valid = valid && [self pathMatches:info] && FCValidGUIHash(runningHash) &&
         FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
             [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
     if (valid && !self.sealedHash) {
         FCRunningHashVerdict verdict = FCCompareRunningHash(runningHash,
-            FCStaticCodeHash(self.executable, self.identifier));
+            FCStaticCodeHash(self.sealedExecutable, self.identifier));
         valid = verdict == FCRunningHashCurrent;
         self.runningCodeStale = verdict == FCRunningHashStale;
         if (valid) self.sealedHash = runningHash;
@@ -455,19 +477,41 @@ NSString *FCHexString(NSData *data) {
     return result;
 }
 
+NSString *FCHelperBundleFromArguments(NSArray<NSString *> *arguments, NSString **reason) {
+    NSString *problem = nil, *bundle = arguments.count == 3 ? arguments[2] : nil;
+    char canonical[PATH_MAX];
+    if (arguments.count < 3 || ![arguments containsObject:FCHelperBundleArgument])
+        problem = @"missing --flash-bundle: the helper only runs as the copy started by FlashHelperLauncher";
+    else if (arguments.count != 3 || ![arguments[1] isEqualToString:FCHelperBundleArgument])
+        problem = @"unexpected arguments";
+    else if (![arguments[0] isEqualToString:FCHelperCopyPath])
+        problem = @"argv[0] is not the launcher's verified copy";
+    else if (![bundle isEqualToString:FCGUIBundle])
+        problem = @"--flash-bundle is not /Applications/Flash.app";
+    else if (!realpath(bundle.fileSystemRepresentation, canonical) || ![@(canonical) isEqualToString:bundle])
+        problem = @"--flash-bundle is not a canonical path";
+    if (reason) *reason = problem;
+    return problem ? nil : bundle;
+}
+
 // Mandatory before the daemon serves anything as root. Tampered code does not run:
 //  1. the running process (SecCodeCopySelf) satisfies the pinned requirement for com.layoute.flash.helper;
-//  2. it runs from the exact bundled path inside /Applications/Flash.app;
-//  3. the on-disk helper validates strictly against the same requirement and has the same cdhash;
-//  4. the containing Flash.app validates strictly incl. nested code (pinned GUI identity, library
-//     constraint, entitlements, compatibility contract), which seals the daemon plist and Core;
-//  5. the bundled daemon plist has the exact expected schema.
-NSString *FCHelperSelfCheck(NSString *runningExecutable) {
+//  2. it runs from the launcher's root-only copy, and the bundle the launcher named is /Applications/Flash.app
+//     (canonical);
+//  3. the copy on disk validates strictly against the same requirement and has the running cdhash;
+//  4. the helper inside that bundle validates strictly and has the running cdhash too: what runs is exactly the
+//     helper the sealed app carries (the launcher's own checks are not relied on);
+//  5. the containing Flash.app validates strictly incl. nested code (pinned GUI identity, library
+//     constraint, entitlements, compatibility contract), which seals the daemon plist, launcher and Core;
+//  6. the bundled daemon plist has the exact expected schema, and helper and launcher are present.
+NSString *FCHelperSelfCheck(NSString *runningExecutable, NSString *bundle) {
     if (@available(macOS 14.0, *)) {} else return @"unsupported";
-    NSString *expected = FCInstalledExecutable(FCHelperIdentifier);
     NSString *text = FCSigningRequirement(FCHelperIdentifier);
     if (!text) return @"requirement";
-    if (![runningExecutable isEqualToString:expected]) return @"path";
+    if (![runningExecutable isEqualToString:FCHelperCopyPath]) return @"path";
+    char canonical[PATH_MAX];
+    if (![bundle isEqualToString:FCGUIBundle] || !realpath(bundle.fileSystemRepresentation, canonical) ||
+        ![@(canonical) isEqualToString:bundle]) return @"bundlePath";
     SecCodeRef me = NULL;
     if (SecCodeCopySelf(kSecCSDefaultFlags, &me) || !me) return @"self";
     SecRequirementRef requirement = NULL;
@@ -478,13 +522,18 @@ NSString *FCHelperSelfCheck(NSString *runningExecutable) {
     CFRelease(me);
     NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
     if (!valid || !FCValidGUIHash(runningHash)) return @"self";
-    if (!FCExecutableMatches(info, expected)) return @"path";
+    if (!FCExecutableMatches(info, FCHelperCopyPath)) return @"path";
     if (!FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
             [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue])) return @"entitlements";
-    NSData *diskHash = FCStaticCodeHash(expected, FCHelperIdentifier);
+    NSData *diskHash = FCStaticCodeHash(FCHelperCopyPath, FCHelperIdentifier);
     if (!diskHash) return @"disk";
     if (![diskHash isEqualToData:runningHash]) return @"replaced";
-    if (![FCGUIBundleTrust(FCGUIBundle) isEqualToString:@"trusted"]) return @"bundle";
-    if (!FCBundledDaemonPresent(FCGUIBundle)) return @"plist";
+    NSData *bundledHash = FCStaticCodeHash([bundle stringByAppendingPathComponent:FCHelperRelativePath], FCHelperIdentifier);
+    if (!bundledHash) return @"bundledHelper";
+    if (![bundledHash isEqualToData:runningHash])
+        return [NSString stringWithFormat:@"bundledHelperMismatch running=%@ bundled=%@",
+            FCHexString(runningHash), FCHexString(bundledHash)];
+    if (![FCGUIBundleTrust(bundle) isEqualToString:@"trusted"]) return @"bundle";
+    if (!FCBundledDaemonPresent(bundle)) return @"plist";
     return @"ok";
 }

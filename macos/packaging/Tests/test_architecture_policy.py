@@ -47,6 +47,9 @@ class ArchitecturePolicyTests(unittest.TestCase):
         self.add_binary('Contents/MacOS/Flash', architectures)
         for relative in POLICY.FIXED_EXECUTABLES:
             self.add_binary(relative, architectures)
+        # The signed launcher master is always universal, whatever the GUI is built for.
+        for relative in POLICY.PINNED_EXECUTABLES:
+            self.add_binary(relative, ('arm64', 'x86_64'))
         for name in POLICY.ASSETS.values():
             self.add_binary(f'Contents/Frameworks/{name}.framework/{name}', architectures)
         self.write_manifest(architectures)
@@ -132,6 +135,41 @@ class ArchitecturePolicyTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'fixed payload architecture'):
                     self.audit()
                 self.architectures[path] = ('arm64',)
+
+    def test_pinned_launcher_must_cover_the_gui_and_is_never_rewritten(self):
+        self.assertEqual(POLICY.PINNED_EXECUTABLES, ('Contents/Library/HelperTools/FlashHelperLauncher',))
+        launcher = self.app / POLICY.PINNED_EXECUTABLES[0]
+        for architectures in (('arm64',), ('x86_64',)):
+            with self.subTest(architectures=architectures):
+                self.architectures[launcher] = architectures
+                with self.assertRaisesRegex(ValueError, 'launcher does not cover the GUI architectures'):
+                    self.audit()
+        self.architectures[launcher] = ('arm64', 'x86_64')
+        self.audit()
+        # Extra slices beyond a thin GUI are fine; the launcher is checked on its own (system libraries only).
+        self.make_payload(('arm64',))
+        self.dependencies[launcher, 'x86_64'] = ['/usr/lib/libSystem.B.dylib']
+        self.audit()
+        self.dependencies[launcher, 'x86_64'] = ['@rpath/rust_api.framework/rust_api']
+        with self.assertRaisesRegex(ValueError, 'Unresolved bundled dependency'):
+            self.audit()
+        self.dependencies.pop((launcher, 'x86_64'))
+        launcher.unlink()
+        with self.assertRaisesRegex(ValueError, 'launcher does not cover'):
+            self.audit()
+
+    def test_pinned_launcher_with_external_rpath_fails_even_when_staging(self):
+        launcher = self.app / POLICY.PINNED_EXECUTABLES[0]
+        original = self.inspect
+        def inspect(arguments, text):
+            output = original(arguments, text)
+            if Path(arguments[-1]) == launcher and arguments[0] == '/usr/bin/otool':
+                output = output.replace('(architecture arm64):', '(architecture arm64):\ncmd LC_RPATH\n'
+                                        f'path {POLICY.BAD_RPATH} (offset 12)')
+            return output
+        with patch.object(POLICY.subprocess, 'check_output', side_effect=inspect), patch('builtins.print'):
+            with self.assertRaisesRegex(ValueError, 'External rpath'):
+                POLICY.audit(self.app, mutate=True)
 
     def test_missing_fixed_executables_rejected(self):
         for relative in POLICY.FIXED_EXECUTABLES:

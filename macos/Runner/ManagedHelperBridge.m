@@ -4,6 +4,7 @@
 #import "../Shared/HelperCompatibility.h"
 #import "../Shared/LegacyResidue.h"
 #import "../Shared/LaunchdProbe.h"
+#import "../Shared/LauncherStatus.h"
 #import <ServiceManagement/ServiceManagement.h>
 
 // Bookkeeping of the helper build last registered with SMAppService.
@@ -99,6 +100,9 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 @property NSObject *identityLock;
 @property NSUInteger hashSession;
 @property NSData *expectedCoreHash;
+// Wall-clock start of this launch, and since when (uptime; 0 = not) a launcher "ok" has gone unanswered.
+@property NSTimeInterval launchedAt;
+@property NSTimeInterval okUnansweredSince;
 @end
 
 @implementation FCManagedHelperBridge
@@ -107,6 +111,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         _queue = dispatch_queue_create("com.layoute.flash.bridge", DISPATCH_QUEUE_SERIAL);
         _repairQueue = dispatch_queue_create("com.layoute.flash.bridge.repair", DISPATCH_QUEUE_SERIAL);
         _identityLock = [NSObject new];
+        _launchedAt = NSDate.date.timeIntervalSince1970;
         // R6: the legacy installer's pending marker needs no admin rights; drop it.
         [NSUserDefaults.standardUserDefaults removeObjectForKey:FCLegacyPendingDefault];
     }
@@ -293,8 +298,29 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         if (versionStale && [@[@"timeout", @"unavailable", @"staleHelper"] containsObject:result])
             status[@"code"] = @"registrationStale";
         if (job[@"summary"]) status[@"launchd"] = job[@"summary"];
+        // Enabled, yet the helper does not answer: say what the launcher reported (display only).
+        if ([@[@"timeout", @"unavailable"] containsObject:status[@"code"]]) {
+            NSDictionary *launcher = [self launcherReport];
+            if (launcher[@"code"]) status[@"code"] = launcher[@"code"];
+            if (launcher[@"detail"]) status[@"detail"] = launcher[@"detail"];
+        } else {
+            self.okUnansweredSince = 0;
+        }
         completion(status);
     }];
+}
+
+// FlashHelperLauncher's last outcome (root-owned status file), mapped to a card for an enabled helper that does not
+// answer. Display only: it never enables, retries or trusts anything.
+- (NSDictionary *)launcherReport {
+    NSString *problem = nil;
+    NSDictionary *launcher = FCReadLauncherStatus(FCLauncherStatusDirectory, 0, &problem);
+    BOOL ok = !problem && [launcher[@"result"] isEqual:@"ok"];
+    NSTimeInterval now = [self uptime];
+    if (!ok) self.okUnansweredSince = 0;
+    else if (!self.okUnansweredSince) self.okUnansweredSince = now;
+    return FCLauncherAnswer(launcher, problem, self.launchedAt, ok ? now - self.okUnansweredSince : 0,
+        [self bundleVersion]);
 }
 
 - (void)request:(NSString *)method arguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {
@@ -312,8 +338,9 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             xpc_connection_cancel(connection); completion(@{@"code": @"signingRequired"}); return;
         }
         self.connection = connection;
+        // The daemon runs as the launcher's root-only copy; its cdhash must be that of the helper sealed in the app.
         self.validator = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier
-            executable:FCInstalledExecutable(FCHelperIdentifier)];
+            executable:FCHelperCopyPath sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)];
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
             if (xpc_get_type(event) == XPC_TYPE_ERROR && self.connection == connection) [self resetConnection];
         });

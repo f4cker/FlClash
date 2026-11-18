@@ -35,14 +35,27 @@ class SplitGUITrustTests(unittest.TestCase):
         for removed in ('FCPayloadTrust', 'FCBundleTrust', 'FCInstalledBundle', 'FCMaintenanceIdentifier',
                         'FCServiceIdentifier', 'FCLegacyPlistTrusted'):
             self.assertNotIn(removed, TRUST)
-        self.check = TRUST.split('NSString *FCHelperSelfCheck(NSString *runningExecutable) {', 1)[1]
-        order = ['SecCodeCopySelf', 'SecCodeCheckValidity(me, kSecCSStrictValidate, requirement)',
-                 'FCExecutableMatches(info, expected)', 'FCCodeEntitlementsAllowed',
-                 'FCStaticCodeHash(expected, FCHelperIdentifier)', '[diskHash isEqualToData:runningHash]',
-                 'FCGUIBundleTrust(FCGUIBundle)', 'FCBundledDaemonPresent(FCGUIBundle)', 'return @"ok"']
+        self.assertIn('FCLauncherRelativePath = @"Contents/Library/HelperTools/FlashHelperLauncher"', TRUST)
+        self.assertIn('FCHelperCopyPath = @"/Library/Application Support/com.layoute.flash.helperd/FlashHelper"', TRUST)
+        self.check = TRUST.split('NSString *FCHelperSelfCheck(NSString *runningExecutable, NSString *bundle) {', 1)[1]
+        self.check = self.check.split('\n}\n', 1)[0]
+        order = ['[runningExecutable isEqualToString:FCHelperCopyPath]', '[bundle isEqualToString:FCGUIBundle]',
+                 'realpath(bundle.fileSystemRepresentation', 'SecCodeCopySelf',
+                 'SecCodeCheckValidity(me, kSecCSStrictValidate, requirement)',
+                 'FCExecutableMatches(info, FCHelperCopyPath)', 'FCCodeEntitlementsAllowed',
+                 'FCStaticCodeHash(FCHelperCopyPath, FCHelperIdentifier)', '[diskHash isEqualToData:runningHash]',
+                 'FCStaticCodeHash([bundle stringByAppendingPathComponent:FCHelperRelativePath], FCHelperIdentifier)',
+                 '[bundledHash isEqualToData:runningHash]', 'FCGUIBundleTrust(bundle)', 'FCBundledDaemonPresent(bundle)',
+                 'return @"ok"']
         positions = [self.check.index(item) for item in order]
         self.assertEqual(positions, sorted(positions))
-        self.assertIn('FCReadCompatibility(FCGUIBundle)', SUPERVISOR)
+        self.assertNotIn('FCInstalledExecutable', self.check)
+        # Every path the helper derives from the app comes from the checked --flash-bundle argument.
+        self.assertNotIn('FCGUIBundle', SUPERVISOR)
+        self.assertIn('FCReadCompatibility(self.bundle)', SUPERVISOR)
+        self.assertIn('FCHelperSelfCheck(FCRunningExecutable(), self.bundle)', SUPERVISOR)
+        for directory in ('com.layoute.flash.helperd', 'FCLauncherStateDirectory', 'FCLauncherStatusDirectory'):
+            self.assertNotIn(directory, SUPERVISOR)
         self.assertIn('gui:(FCGUIMessageValidator *)gui', SUPERVISOR)
         self.assertIn('NSString *requirement = FCGUIRequirement()', SUPERVISOR)
         self.assertIn('xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)', SUPERVISOR)
@@ -67,6 +80,9 @@ class SplitGUITrustTests(unittest.TestCase):
         self.assertLess(gate.index('[self appGate]'), gate.index('FCBundledDaemonPresent(FCGUIBundle)'))
         self.assertIn('return @"notFound"', gate)
         self.assertIn('FCCheckStatic(FCInstalledExecutable(FCHelperIdentifier), FCHelperIdentifier)', gate)
+        # The daemon runs as the launcher's copy; its cdhash is compared with the helper sealed in the app.
+        self.assertIn('executable:FCHelperCopyPath sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)', BRIDGE)
+        self.assertNotIn('executable:FCInstalledExecutable(FCHelperIdentifier)]', BRIDGE)
         self.assertIn('FCBundleCompatibilityValid(FCReadCompatibility(FCGUIBundle))', gate)
         self.assertNotIn('FCSHA256([NSBundle.mainBundle.bundlePath', BRIDGE)
         for removed in ('installerPayload', 'FlashMinimumServiceBuild', 'Flash-helper-install.pkg', '/usr/sbin/installer'):

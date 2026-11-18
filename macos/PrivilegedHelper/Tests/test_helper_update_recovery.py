@@ -214,7 +214,7 @@ int main(void) {
     def test_idle_and_termination_retry_recovery(self):
         idle = method(SUPERVISOR, '- (void)armIdle')
         self.assertLess(idle.index('[self recoverOwnership]'), idle.index('exit(0)'))
-        main = method(SUPERVISOR, 'int main(void)')
+        main = method(SUPERVISOR, 'int main(int argc, const char *argv[])')
         self.assertIn('[supervisor recoverOwnership] && [supervisor stop]', main)
         handle = method(SUPERVISOR, '- (void)handle:')
         # Per-message caller validation still comes first.
@@ -297,8 +297,11 @@ int main(void) {
 @property BOOL oldDaemonBusy;  // ... and refuses to leave while it owns a Core
 @property BOOL slow;           // the next hello runs out of time
 @property BOOL operationInFlight;
+@property NSTimeInterval okUnansweredSince;
+@property NSDictionary *launcher;  // what the launcher status reports (nil: nothing to add)
 @end
 @implementation BridgeFixture
+- (NSDictionary *)launcherReport { return self.launcher; }
 - (NSDictionary *)registrationStatus { return @{@"code": @"enabled"}; }
 - (NSString *)currentHelperHash { return @"cdhash-new"; }
 - (NSDictionary *)launchdSnapshot { return @{@"state": @"idle", @"versionStale": @NO, @"summary": @"idle"}; }
@@ -351,6 +354,21 @@ int main(void) {
         b.slow = YES;
         NSDictionary *late = Run(b, YES);
         assert([late[@"code"] isEqual:@"timeout"] && !late[@"exitConfirmed"] && !late[@"pid"]);
+        assert(![b.calls containsObject:@"unregister"] && ![b.calls containsObject:@"register"] &&
+               ![b.calls containsObject:@"exit"]);
+        // An enabled helper that does not answer shows what the launcher reported (display only, no side effects).
+        b.launcher = @{@"code": @"launcherDowngrade", @"detail": @"launcher result: downgrade"};
+        b.slow = YES;
+        NSDictionary *refused = Run(b, NO);
+        assert([refused[@"code"] isEqual:@"launcherDowngrade"] && [refused[@"detail"] isEqual:@"launcher result: downgrade"]);
+        // An "ok" still within its grace period adds detail only; the code stays the bridge's own.
+        b.launcher = @{@"detail": @"launcher result: ok"};
+        b.slow = YES;
+        NSDictionary *waiting = Run(b, NO);
+        assert([waiting[@"code"] isEqual:@"timeout"] && [waiting[@"detail"] isEqual:@"launcher result: ok"]);
+        // An answering helper never consults the launcher status.
+        b.launcher = @{@"code": @"launcherFailed"};
+        assert([Run(b, NO)[@"code"] isEqual:@"enabled"]);
         assert(![b.calls containsObject:@"unregister"] && ![b.calls containsObject:@"register"] &&
                ![b.calls containsObject:@"exit"]);
         puts("old-daemon-then-timeout-then-recover");

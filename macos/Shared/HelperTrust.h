@@ -28,6 +28,17 @@ extern NSString * const FCGUIBundle;
 extern NSString * const FCDaemonPlistRelativePath;
 extern NSString * const FCHelperRelativePath;
 extern NSString * const FCCoreRelativePath;
+// FlashHelperLauncher (macos/PrivilegedHelper/Launcher, signed once and never rebuilt) is the daemon's BundleProgram:
+// launchd pins the job's launch constraint to its cdhash, which never changes. It copies the bundled FlashHelper to
+// FCHelperCopyPath (root 0700 directory), verifies the copy (pinned certificate + identifier, no downgrade) and execs
+// it with argv [FCHelperCopyPath, FCHelperBundleArgument, <bundle>]. The helper treats <bundle> as untrusted input.
+extern NSString * const FCLauncherRelativePath;
+extern NSString * const FCHelperCopyPath;
+extern NSString * const FCHelperBundleArgument;
+// Written by the launcher only (root:wheel, 0755 directory, 0644 file); the app reads it for display, never for trust.
+// The helper never reads or writes either launcher directory.
+extern NSString * const FCLauncherStateDirectory;
+extern NSString * const FCLauncherStatusDirectory;
 // Root-only (root:wheel 0700) runtime directory owned by the daemon: relay sockets and the verified Core copy.
 // Deliberately not renamed with the label: the new helper finds the previous helper's Core journal there.
 extern NSString * const FCRuntimeDirectory;
@@ -46,6 +57,11 @@ typedef NS_ENUM(NSInteger, FCRunningHashVerdict) { FCRunningHashCurrent, FCRunni
 FCRunningHashVerdict FCCompareRunningHash(NSData * _Nullable runningHash, NSData * _Nullable diskHash);
 @interface FCMessageValidator : NSObject
 - (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable;
+// `executable` is where the peer must run; `sealedExecutable` the file whose static cdhash it must have. They differ
+// for the daemon: it runs as the launcher's root-only copy (FCHelperCopyPath, unreadable for the app) of the helper
+// sealed in the app (FCInstalledExecutable(FCHelperIdentifier)); the bytes, and so the cdhash, are the same.
+- (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable
+    sealedExecutable:(NSString *)sealedExecutable;
 - (BOOL)check:(xpc_object_t)message;
 // After a failed check: the sender is the pinned helper at the bundled path, only its running cdhash is not
 // the bundled one (a previous build's daemon still runs). Nothing in such a message is trusted or read.
@@ -77,7 +93,10 @@ FCCoreMatch FCRunningFlashCore(pid_t pid, NSString * _Nullable * _Nullable reaso
 BOOL FCProtectedTree(NSString *path, BOOL recursive);
 NSString *FCSHA256(NSString *path);
 NSString *FCHexString(NSData * _Nullable data);
-// Daemon startup/per-operation self verification. Returns @"ok" or a short reason; any other value means
-// the daemon must exit (EX_CONFIG) without doing privileged work.
-NSString *FCHelperSelfCheck(NSString *runningExecutable);
+// The daemon's argv as set by the launcher: exactly [FCHelperCopyPath, FCHelperBundleArgument, <bundle>], where
+// <bundle> is canonical (realpath) and is FCGUIBundle. Returns the bundle, or nil and a reason to refuse to run.
+NSString * _Nullable FCHelperBundleFromArguments(NSArray<NSString *> *arguments, NSString * _Nullable * _Nullable reason);
+// Daemon startup/per-operation self verification against the bundle the launcher named. Returns @"ok" or a short
+// reason; any other value means the daemon must exit (EX_CONFIG) without doing privileged work.
+NSString *FCHelperSelfCheck(NSString *runningExecutable, NSString *bundle);
 NS_ASSUME_NONNULL_END

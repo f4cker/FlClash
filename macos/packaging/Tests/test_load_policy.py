@@ -127,6 +127,8 @@ Load command 0
         self.assertNotIn('FlashMaintenance', POLICY.FIXED_EXECUTABLES)
         self.assertEqual(POLICY.FIXED_EXECUTABLES,
                          ('Contents/MacOS/FlClashCore', 'Contents/Library/HelperTools/FlashHelper'))
+        # The signed launcher master is audited but never rewritten (no rpath normalization).
+        self.assertEqual(POLICY.PINNED_EXECUTABLES, ('Contents/Library/HelperTools/FlashHelperLauncher',))
 
 
 if __name__ == '__main__':

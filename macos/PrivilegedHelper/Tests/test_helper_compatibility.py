@@ -1,5 +1,6 @@
 import hashlib
 import importlib.util
+import json
 import plistlib
 import subprocess
 import tempfile
@@ -38,8 +39,10 @@ static NSDictionary *FixtureRead(NSString *bundle) {
 #define FCReadCompatibility FixtureRead
 @interface SupervisorFixture : NSObject
 @property NSDictionary *contract;
+@property (readonly) NSString *bundle;  // the checked --flash-bundle argument
 @end
 @implementation SupervisorFixture
+- (NSString *)bundle { return FCGUIBundle; }
 '''
         source += method(SUPERVISOR, '- (NSString *)validateCompatibility')
         source += r'''
@@ -249,12 +252,20 @@ int main(int argc, char **argv) {
         with tempfile.TemporaryDirectory(prefix='flash-compat-bundles-') as directory:
             root = Path(directory).resolve()
             macho = bytes.fromhex('cffaedfe') + b'synthetic-never-execute'
+            launcher = macho + b'signed-launcher-master'
+            pin_path = root / 'FlashHelperLauncher.pin.json'
+            pin_path.write_text(json.dumps({
+                'schema': 1, 'identifier': stage.LAUNCHER_ID, 'certificate_sha1': stage.CERTIFICATE_SHA1,
+                'sha256': hashlib.sha256(launcher).hexdigest(),
+                'cdhashes': {name: 'ab' * 20 for name in stage.LAUNCHER_ARCHITECTURES}}))
 
             def bundle(name, info, binary=False):
                 app = root / name / 'Flash.app'
                 for relative, data, mode in (
                         (stage.CORE, macho, 0o755),
-                        (stage.HELPER, macho + plistlib.dumps({'CFBundleIdentifier': stage.HELPER_ID}), 0o755),
+                        (stage.HELPER, macho + plistlib.dumps(
+                            {'CFBundleIdentifier': stage.HELPER_ID, 'CFBundleVersion': '2026111701'}), 0o755),
+                        (stage.LAUNCHER, launcher, 0o755),
                         (stage.DAEMON_PLIST, plistlib.dumps(stage.DAEMON_SCHEMA), 0o644),
                         (stage.RETIRED_DAEMON_PLIST, plistlib.dumps(stage.RETIRED_DAEMON_SCHEMA), 0o644),
                         ('Contents/Info.plist', plistlib.dumps(
@@ -265,10 +276,10 @@ int main(int argc, char **argv) {
                     path.chmod(mode)
                 return app
 
-            base = {'CFBundleIdentifier': 'com.layoute.flash'}
+            base = {'CFBundleIdentifier': 'com.layoute.flash', 'CFBundleVersion': '2026111701'}
             sealed, sealed_binary = bundle('xml', base), bundle('binary', base, binary=True)
             verified = lambda *args: subprocess.CompletedProcess(args, 0, b'', b'')
-            with patch.object(stage, 'codesign', side_effect=verified):
+            with patch.object(stage, 'codesign', side_effect=verified), patch.object(stage, 'LAUNCHER_PIN', pin_path):
                 for app in (sealed, sealed_binary):
                     stage.seal_compatibility(app, 'v1.19.34', '13e00727c64d2cc4d0bb20e293732d02c3ed0382')
             contract = stage.read_contract(sealed)
@@ -318,8 +329,10 @@ static pid_t FCSpawnCore(const char *c, const char *s, uid_t u, gid_t g) { [effe
 @property NSString *coreHash;
 @property NSString *corePath;
 @property NSString *socketPath;
+@property (readonly) NSString *bundle;  // the checked --flash-bundle argument
 @end
 @implementation SupervisorFixture
+- (NSString *)bundle { return FCGUIBundle; }
 - (BOOL)selfCheck { return YES; }
 - (BOOL)openRelay { [effects addObject:@"relay"]; return NO; }
 - (void)closeRelay {}

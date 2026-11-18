@@ -9,8 +9,9 @@ static NSMutableDictionary *runningInfo;
 static NSMutableDictionary *diskInfo;
 static NSMutableDictionary *helperRunningInfo;
 static NSMutableDictionary *helperDiskInfo;
+static NSMutableDictionary *helperCopyInfo;
 static BOOL messageValid, runningValid, diskValid, canonicalValid, libraryValid, compatibilityValid;
-static BOOL selfValid, helperDiskValid, daemonPlistValid, helperFileValid;
+static BOOL selfValid, helperDiskValid, helperCopyValid, daemonPlistValid, helperFileValid, launcherFileValid;
 static NSUInteger messageChecks, sealChecks;
 
 static OSStatus FixtureMessage(xpc_object_t message, SecCSFlags flags, SecCodeRef *code) {
@@ -39,6 +40,10 @@ static OSStatus FixtureDisk(CFURLRef path, SecCSFlags flags, SecStaticCodeRef *c
         *code = (SecStaticCodeRef)CFBridgingRetain(helperDiskInfo);
         return errSecSuccess;
     }
+    if ([value isEqualToString:FCHelperCopyPath]) {
+        *code = (SecStaticCodeRef)CFBridgingRetain(helperCopyInfo);
+        return errSecSuccess;
+    }
     assert([value isEqualToString:FCGUIBundle]);
     *code = (SecStaticCodeRef)CFBridgingRetain(diskInfo);
     return errSecSuccess;
@@ -48,6 +53,7 @@ static OSStatus FixtureSeal(SecStaticCodeRef code, SecCSFlags flags, SecRequirem
     assert(flags == (kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode));
     assert(requirement);
     if ((__bridge id)code == helperDiskInfo) return helperDiskValid ? errSecSuccess : errSecCSBadResource;
+    if ((__bridge id)code == helperCopyInfo) return helperCopyValid ? errSecSuccess : errSecCSBadResource;
     return diskValid ? errSecSuccess : errSecCSBadResource;
 }
 static int FixtureLstat(const char *path, struct stat *state) {
@@ -56,7 +62,8 @@ static int FixtureLstat(const char *path, struct stat *state) {
         memset(state, 0, sizeof(*state));
         state->st_mode = S_IFREG | 0755;
         state->st_nlink = 1;
-        BOOL present = [value hasSuffix:FCHelperRelativePath] ? helperFileValid : YES;
+        BOOL present = [value hasSuffix:FCHelperRelativePath] ? helperFileValid :
+            [value hasSuffix:FCLauncherRelativePath] ? launcherFileValid : YES;
         if (!present) { errno = ENOENT; return -1; }
         return 0;
     }
@@ -120,66 +127,129 @@ static void Reset(void) {
         (__bridge NSString *)kSecCodeInfoEntitlementsDict: GUIEntitlements(),
         (__bridge NSString *)kSecCodeInfoFlags: @(kSecCodeSignatureRuntime)} mutableCopy];
     diskInfo = runningInfo.mutableCopy;
-    selfValid = helperDiskValid = daemonPlistValid = helperFileValid = YES;
+    selfValid = helperDiskValid = helperCopyValid = daemonPlistValid = helperFileValid = launcherFileValid = YES;
     uint8_t bytes[20];
     for (NSUInteger i = 0; i < sizeof(bytes); i++) bytes[i] = (uint8_t)(0xa0 + i);
-    helperRunningInfo = [@{(__bridge NSString *)kSecCodeInfoMainExecutable:
-        [NSURL fileURLWithPath:FCInstalledExecutable(FCHelperIdentifier)],
+    // The daemon runs as the launcher's copy of the bundled helper: same bytes, same cdhash.
+    helperRunningInfo = [@{(__bridge NSString *)kSecCodeInfoMainExecutable: [NSURL fileURLWithPath:FCHelperCopyPath],
         (__bridge NSString *)kSecCodeInfoUnique: [NSData dataWithBytes:bytes length:sizeof(bytes)],
         (__bridge NSString *)kSecCodeInfoEntitlementsDict: @{},
         (__bridge NSString *)kSecCodeInfoFlags: @(kSecCodeSignatureRuntime)} mutableCopy];
     helperDiskInfo = helperRunningInfo.mutableCopy;
+    helperDiskInfo[(__bridge NSString *)kSecCodeInfoMainExecutable] =
+        [NSURL fileURLWithPath:FCInstalledExecutable(FCHelperIdentifier)];
+    helperCopyInfo = helperRunningInfo.mutableCopy;
 }
 
 // The daemon's mandatory startup/per-operation verification: every failure is a refusal (exit 78 in main).
 static void TestSelfCheck(void) {
-    NSString *path = FCInstalledExecutable(FCHelperIdentifier);
+    NSString *path = FCHelperCopyPath, *bundle = FCGUIBundle;
     Reset();
-    assert([FCHelperSelfCheck(path) isEqualToString:@"ok"]);
-    assert([FCHelperSelfCheck(@"/Library/Application Support/Flash/Flash.app/Contents/Library/HelperTools/FlashHelper")
-        isEqualToString:@"path"]);
-    Reset(); selfValid = NO;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"self"]);
-    Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:19];
-    assert([FCHelperSelfCheck(path) isEqualToString:@"self"]);
-    Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoMainExecutable] = [NSURL fileURLWithPath:@"/tmp/FlashHelper"];
-    assert([FCHelperSelfCheck(path) isEqualToString:@"path"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"ok"]);
+    // Started directly from the bundle (a registration that still names FlashHelper) or from anywhere else.
+    for (NSString *other in @[FCInstalledExecutable(FCHelperIdentifier),
+            @"/Library/Application Support/Flash/Flash.app/Contents/Library/HelperTools/FlashHelper", @""])
+        assert([FCHelperSelfCheck(other, bundle) isEqualToString:@"path"]);
+    // The bundle argument is untrusted: only the canonical /Applications/Flash.app.
+    for (NSString *other in @[@"/Applications/Flash Copy.app", @"/Applications/Flash.app/", @"/tmp/Flash.app", @""])
+        assert([FCHelperSelfCheck(path, other) isEqualToString:@"bundlePath"]);
     Reset(); canonicalValid = NO;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"path"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"bundlePath"]);
+    Reset(); selfValid = NO;
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"self"]);
+    Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:19];
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"self"]);
+    Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoMainExecutable] = [NSURL fileURLWithPath:@"/tmp/FlashHelper"];
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"path"]);
     for (NSString *key in @[@"com.apple.security.get-task-allow", @"com.apple.security.cs.disable-library-validation",
             @"com.apple.security.cs.allow-dyld-environment-variables"]) {
         Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoEntitlementsDict] = @{key: @YES};
-        assert([FCHelperSelfCheck(path) isEqualToString:@"entitlements"]);
+        assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"entitlements"]);
     }
     Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoFlags] = @0;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"entitlements"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"entitlements"]);
     Reset(); helperRunningInfo[(__bridge NSString *)kSecCodeInfoFlags] = @(kSecCodeSignatureRuntime | kSecCodeSignatureAdhoc);
-    assert([FCHelperSelfCheck(path) isEqualToString:@"entitlements"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"entitlements"]);
+    // The copy on disk.
+    Reset(); helperCopyValid = NO;
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"disk"]);
+    Reset(); helperCopyInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"replaced"]);
+    // The helper the sealed app carries must be the one running (static check, then cdhash comparison).
     Reset(); helperDiskValid = NO;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"disk"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"bundledHelper"]);
     Reset(); helperDiskInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
-    assert([FCHelperSelfCheck(path) isEqualToString:@"replaced"]);
+    NSString *mismatch = FCHelperSelfCheck(path, bundle);
+    assert([mismatch hasPrefix:@"bundledHelperMismatch running=a0a1"] &&
+        [mismatch hasSuffix:@"bundled=0000000000000000000000000000000000000000"]);
     Reset(); diskValid = NO;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"bundle"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"bundle"]);
     Reset(); libraryValid = NO;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"bundle"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"bundle"]);
     Reset(); compatibilityValid = NO;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"bundle"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"bundle"]);
     Reset(); daemonPlistValid = NO;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"plist"]);
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"plist"]);
     Reset(); helperFileValid = NO;
-    assert([FCHelperSelfCheck(path) isEqualToString:@"plist"]);
-    // Reply validation on the GUI side pins the daemon cdhash for the connection after the first disk match.
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"plist"]);
+    Reset(); launcherFileValid = NO;
+    assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"plist"]);
+    // Reply validation on the GUI side: the daemon runs at the copy path (exact, the app cannot resolve inside the
+    // root-only directory) with the cdhash of the bundled helper; pinned for the connection after the first match.
     Reset();
-    FCMessageValidator *daemon = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path];
+    FCMessageValidator *daemon = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path
+        sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)];
     runningInfo = helperRunningInfo;
     assert([daemon check:fixtureMessage]);
     runningInfo = helperRunningInfo.mutableCopy;
     runningInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
     assert(![daemon check:fixtureMessage]);
-    Reset(); helperDiskInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
+    Reset(); canonicalValid = NO;
     runningInfo = helperRunningInfo;
-    assert(![[[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path] check:fixtureMessage]);
+    assert([[[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path
+        sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)] check:fixtureMessage]);
+    // A peer running from the bundle (or anywhere but the copy) is not the daemon.
+    for (NSString *other in @[FCInstalledExecutable(FCHelperIdentifier), @"/tmp/FlashHelper",
+            @"/Library/Application Support/com.layoute.flash.daemon/FlashHelper",
+            [FCHelperCopyPath lowercaseString]]) {
+        Reset();
+        runningInfo = helperRunningInfo.mutableCopy;
+        runningInfo[(__bridge NSString *)kSecCodeInfoMainExecutable] = [NSURL fileURLWithPath:other];
+        assert(![[[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path
+            sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)] check:fixtureMessage]);
+    }
+    // A previous build still running: stale, not trusted. The copy is never read by the app.
+    Reset(); helperDiskInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
+    helperCopyValid = NO;
+    runningInfo = helperRunningInfo;
+    FCMessageValidator *stale = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path
+        sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)];
+    assert(![stale check:fixtureMessage] && stale.runningCodeStale);
+    Reset();
+}
+
+static void TestArguments(void) {
+    NSString *reason = nil;
+    Reset();
+    assert([FCHelperBundleFromArguments(@[FCHelperCopyPath, @"--flash-bundle", FCGUIBundle], &reason)
+        isEqualToString:FCGUIBundle] && !reason);
+    // Started without the launcher: refused, with the reason.
+    assert(!FCHelperBundleFromArguments(@[FCInstalledExecutable(FCHelperIdentifier)], &reason));
+    assert([reason hasPrefix:@"missing --flash-bundle"]);
+    for (NSArray *arguments in @[@[FCHelperCopyPath, @"--flash-bundle"],
+            @[FCHelperCopyPath, @"--flash-bundle", FCGUIBundle, @"extra"],
+            @[FCHelperCopyPath, @"--bundle", FCGUIBundle],
+            @[FCHelperCopyPath, FCGUIBundle, @"--flash-bundle"],
+            @[FCInstalledExecutable(FCHelperIdentifier), @"--flash-bundle", FCGUIBundle],
+            @[FCHelperCopyPath, @"--flash-bundle", @"/Applications/Flash Copy.app"],
+            @[FCHelperCopyPath, @"--flash-bundle", @"/Applications/../Applications/Flash.app"],
+            @[FCHelperCopyPath, @"--flash-bundle", @""], @[]]) {
+        reason = nil;
+        assert(!FCHelperBundleFromArguments(arguments, &reason) && reason.length);
+    }
+    Reset(); canonicalValid = NO;
+    assert(!FCHelperBundleFromArguments(@[FCHelperCopyPath, @"--flash-bundle", FCGUIBundle], &reason));
+    assert([reason containsString:@"canonical"]);
     Reset();
 }
 
@@ -289,9 +359,10 @@ int main(void) {
             assert(![FCGUIRequirement() containsString:@"cdhash"]);
             TestMessages();
             TestSelfCheck();
+            TestArguments();
         } else {
             Reset();
-            assert(![FCHelperSelfCheck(FCInstalledExecutable(FCHelperIdentifier)) isEqualToString:@"ok"]);
+            assert(![FCHelperSelfCheck(FCHelperCopyPath, FCGUIBundle) isEqualToString:@"ok"]);
             NSUInteger checks = messageChecks;
             assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
             assert(messageChecks == checks);

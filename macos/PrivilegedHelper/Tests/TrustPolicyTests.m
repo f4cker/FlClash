@@ -31,10 +31,21 @@ static void testEntitlements(void) {
     assert(!FCProtectedTree(@"relative/Flash.app", YES));
     assert([FCGUIBundleTrust(@"/unqualified/Flash.app") isEqualToString:@"moveRequired"]);
     assert([FCGUIBundleTrust(@"/Applications/Flash Copy.app") isEqualToString:@"moveRequired"]);
-    // Self-check refuses anything not running from the exact bundled path before touching Security.
+    // Self-check refuses anything not running as the launcher's copy before touching Security, including the
+    // helper started directly from the bundle.
     for (NSString *path in @[fixture, @"/Library/Application Support/Flash/Flash.app/Contents/Library/HelperTools/FlashHelper",
-            @"/Applications/Flash.app/Contents/Library/HelperTools/../HelperTools/FlashHelper", @""])
-        assert([FCHelperSelfCheck(path) isEqualToString:@"path"]);
+            @"/Applications/Flash.app/Contents/Library/HelperTools/FlashHelper",
+            @"/Library/Application Support/com.layoute.flash.helperd/../com.layoute.flash.helperd/FlashHelper", @""])
+        assert([FCHelperSelfCheck(path, FCGUIBundle) isEqualToString:@"path"]);
+    // ... and any bundle argument other than the canonical /Applications/Flash.app.
+    for (NSString *bundle in @[@"/Applications/Flash Copy.app", @"/tmp/Flash.app", @"/Applications/./Flash.app", @""])
+        assert([FCHelperSelfCheck(FCHelperCopyPath, bundle) isEqualToString:@"bundlePath"]);
+    assert([FCHelperCopyPath isEqualToString:@"/Library/Application Support/com.layoute.flash.helperd/FlashHelper"]);
+    assert([FCLauncherRelativePath isEqualToString:@"Contents/Library/HelperTools/FlashHelperLauncher"]);
+    assert([FCHelperBundleArgument isEqualToString:@"--flash-bundle"]);
+    assert([FCLauncherStatusDirectory isEqualToString:@"/Library/Application Support/com.layoute.flash.helperd-status"]);
+    assert([[FCLauncherStateDirectory stringByAppendingPathComponent:@"FlashHelper"] isEqualToString:FCHelperCopyPath]);
+    assert(![FCRuntimeDirectory isEqualToString:FCLauncherStateDirectory]);
 }
 
 static void testDaemonPlist(void) {
@@ -46,7 +57,7 @@ static void testDaemonPlist(void) {
     assert([FCDaemonPlistName isEqualToString:@"com.layoute.flash.helperd.plist"]);
     assert([FCDaemonPlistRelativePath isEqualToString:@"Contents/Library/LaunchDaemons/com.layoute.flash.helperd.plist"]);
     assert(![canonical[@"Label"] isEqualToString:@"com.layoute.flash.helper"]);
-    assert([canonical[@"BundleProgram"] isEqualToString:@"Contents/Library/HelperTools/FlashHelper"]);
+    assert([canonical[@"BundleProgram"] isEqualToString:@"Contents/Library/HelperTools/FlashHelperLauncher"]);
     assert(!canonical[@"Program"] && !canonical[@"ProgramArguments"] && !canonical[@"KeepAlive"] && !canonical[@"RunAtLoad"]);
     NSDictionary *disk = [NSDictionary dictionaryWithContentsOfFile:
         [@FC_SOURCE_ROOT stringByAppendingPathComponent:@"PrivilegedHelper/com.layoute.flash.helperd.plist"]];
@@ -58,7 +69,8 @@ static void testDaemonPlist(void) {
     assert([FCRetiredDaemonPlistName isEqualToString:@"com.layoute.flash.daemon.plist"]);
     assert([retired isEqualToDictionary:FCCanonicalDaemonPlistForLabel(FCRetiredHelperLabel)]);
     assert(FCRetiredDaemonPlistValid(retired) && !FCDaemonPlistValid(retired) && !FCRetiredDaemonPlistValid(canonical));
-    assert([retired[@"BundleProgram"] isEqualToString:canonical[@"BundleProgram"]]);
+    // The retired name keeps the BundleProgram it was registered with; it is only ever unregistered.
+    assert([retired[@"BundleProgram"] isEqualToString:@"Contents/Library/HelperTools/FlashHelper"]);
     for (NSString *key in canonical) {
         NSMutableDictionary *invalid = canonical.mutableCopy;
         [invalid removeObjectForKey:key];
@@ -69,6 +81,7 @@ static void testDaemonPlist(void) {
     for (NSDictionary *mutation in @[@{@"Label": @"com.layoute.flash.helper"},
             @{@"BundleProgram": @"/Applications/Flash.app/Contents/Library/HelperTools/FlashHelper"},
             @{@"BundleProgram": @"Contents/MacOS/FlClashCore"},
+            @{@"BundleProgram": @"Contents/Library/HelperTools/FlashHelper"},
             @{@"Program": @"/tmp/FlashHelper"}, @{@"ProgramArguments": @[@"/bin/sh"]},
             @{@"EnvironmentVariables": @{@"DYLD_INSERT_LIBRARIES": @"/tmp/x.dylib"}},
             @{@"KeepAlive": @YES}, @{@"RunAtLoad": @YES}, @{@"UserName": @"root"},
@@ -99,6 +112,9 @@ static void testBundleLayout(void) {
     assert([FCCanonicalDaemonPlist() writeToFile:plist atomically:YES]);
     assert(!FCBundledDaemonPresent(bundle));
     assert([[NSData data] writeToFile:helper atomically:YES]);
+    assert(!FCBundledDaemonPresent(bundle));
+    NSString *launcher = [bundle stringByAppendingPathComponent:FCLauncherRelativePath];
+    assert([[NSData data] writeToFile:launcher atomically:YES]);
     assert(FCBundledDaemonPresent(bundle));
     // The retired plist is optional, but exact when present.
     NSString *retired = [bundle stringByAppendingPathComponent:FCRetiredDaemonPlistRelativePath];
