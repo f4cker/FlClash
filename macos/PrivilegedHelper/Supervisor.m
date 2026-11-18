@@ -14,12 +14,21 @@
 #import <unistd.h>
 #import <stdio.h>
 #import <sysexits.h>
+#import <os/log.h>
 
 #ifndef FC_HELPER_BUILD
 #define FC_HELPER_BUILD "0"
 #endif
 
 static const int64_t FCIdleSeconds = 30;
+
+// Unified log (subsystem com.layoute.flash, category helper): step names and reasons only, no user paths or names.
+static os_log_t FCHelperLog(void) {
+    static os_log_t log;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ log = os_log_create("com.layoute.flash", "helper"); });
+    return log;
+}
 
 static NSString *FCRunningExecutable(void) {
     char executable[PROC_PIDPATHINFO_MAXSIZE];
@@ -269,6 +278,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     NSString *result = FCHelperSelfCheck(FCRunningExecutable(), self.bundle);
     if ([result isEqualToString:@"ok"]) return YES;
     fprintf(stderr, "FlashHelper: self-check-failed: %s\n", result.UTF8String);
+    os_log_error(FCHelperLog(), "self-check failed before an operation: %{public}s", result.UTF8String);
     return NO;
 }
 
@@ -379,6 +389,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 - (void)handle:(xpc_object_t)request connection:(xpc_connection_t)connection gui:(FCGUIMessageValidator *)gui {
     [self armIdle];
     if (![gui check:request]) {
+        os_log_error(FCHelperLog(), "request from pid %d rejected: GUI verification failed", xpc_connection_get_pid(connection));
         xpc_connection_cancel(connection);
         if (self.owner == connection) [self stop];
         return;
@@ -433,6 +444,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     // Only the pinned Flash GUI may connect (identity at the XPC layer, then full per-message validation).
     NSString *requirement = FCGUIRequirement();
     if (!requirement || xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)) {
+        os_log_error(FCHelperLog(), "connection refused: GUI requirement unavailable");
         xpc_connection_cancel(connection); return;
     }
     FCGUIMessageValidator *gui = [FCGUIMessageValidator new];
@@ -463,14 +475,17 @@ int main(int argc, const char *argv[]) {
         NSString *bundle = FCHelperBundleFromArguments(arguments, &reason);
         if (!bundle) {
             fprintf(stderr, "FlashHelper: launch-refused: %s\n", reason.UTF8String ?: "invalid arguments");
+            os_log_error(FCHelperLog(), "launch refused: %{public}s", reason.UTF8String ?: "invalid arguments");
             return FC_HELPER_REFUSED_EXIT;
         }
         // Verify before anything else is done as root: tampered or relocated code does not run.
         NSString *check = FCHelperSelfCheck(FCRunningExecutable(), bundle);
         if (![check isEqualToString:@"ok"]) {
             fprintf(stderr, "FlashHelper: self-check-failed: %s\n", check.UTF8String);
+            os_log_error(FCHelperLog(), "self-check failed at startup: %{public}s", check.UTF8String);
             return FC_HELPER_REFUSED_EXIT;
         }
+        os_log(FCHelperLog(), "self-check ok; serving %{public}s", FCHelperLabel.UTF8String);
         FCSupervisor *supervisor = [[FCSupervisor alloc] initWithBundle:bundle];
         xpc_connection_t listener = xpc_connection_create_mach_service(FCHelperLabel.UTF8String,
             supervisor.queue, XPC_CONNECTION_MACH_SERVICE_LISTENER);

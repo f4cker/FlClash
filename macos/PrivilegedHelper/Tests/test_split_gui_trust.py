@@ -72,6 +72,29 @@ class SplitGUITrustTests(unittest.TestCase):
         self.assertNotIn('sealed', gui)
         self.assertNotIn('FCProtectedTree', gui)
 
+    def test_copy_replies_are_checked_by_the_kernel_only(self):
+        # The launcher's copy is unreadable for the app: no Security call about the running code on that path.
+        copy = TRUST.split('- (BOOL)checkCopy:(xpc_object_t)message {', 1)[1].split('\n}\n', 1)[0]
+        guest = TRUST.split('NSString *FCHelperGuestCheck(', 1)[1].split('\n}\n', 1)[0]
+        for body in (copy, guest):
+            self.assertNotIn('SecCode', body)
+            self.assertNotIn('SecStaticCodeCreateWithPath', body)
+        order = ['FCMessageAuditToken(message, &token)', 'FCHelperGuestCheck(&token, self.executable, &runningHash)',
+                 'FCStaticCodeHash(self.sealedExecutable, self.identifier)', 'FCCompareRunningHash(runningHash, sealedHash)']
+        positions = [copy.index(item) for item in order]
+        self.assertEqual(positions, sorted(positions))
+        steps = ['FCCodeOpsStatus', 'FCCoreRequiredStatus', 'FCHelperForbiddenStatus', 'FCCodeOpsCDHash',
+                 'FCProcPath(pid', 'failed:pid-reused', '[running isEqualToString:expectedPath]']
+        positions = [guest.index(item) for item in steps]
+        self.assertEqual(positions, sorted(positions))
+        check = TRUST.split('- (BOOL)check:(xpc_object_t)message {', 2)[2].split('\n}\n', 1)[0]
+        self.assertLess(check.index('[self checkCopy:message]'), check.index('SecCodeCreateWithXPCMessage'))
+        # The bridge keeps the XPC-level pin and reports the failed step instead of a bare "unavailable".
+        self.assertIn('xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)', BRIDGE)
+        self.assertIn('validator.failure', BRIDGE)
+        self.assertIn('os_log_create("com.layoute.flash", "bridge")', BRIDGE)
+        self.assertIn('os_log_create("com.layoute.flash", "helper")', SUPERVISOR)
+
     def test_bridge_gates_on_app_trust_and_bundled_daemon(self):
         gate = BRIDGE.split('- (NSString *)gate {', 1)[1].split('- (NSString *)currentHelperHash', 1)[0]
         app = BRIDGE.split('- (NSString *)appGate {', 1)[1].split('- (NSString *)gate {', 1)[0]

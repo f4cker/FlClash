@@ -50,7 +50,9 @@ SUPERVISOR_FIXTURE = r'''
 #import <assert.h>
 #import <sysexits.h>
 #import <sys/wait.h>
+#import <os/log.h>
 #import "SessionPolicy.h"
+static os_log_t FCHelperLog(void) { return OS_LOG_DEFAULT; }
 ''' + REFUSED_EXIT + r'''
 static NSString * const FCRuntimeDirectory = @"/fixture-runtime";
 static const size_t FCMaxFrame = 1024;
@@ -334,7 +336,7 @@ int main(void) {
         compile_and_run(self, source)
         request = method(BRIDGE, '- (void)request:')
         timer = request[request.index('FCRequestTimeoutSeconds(method)'):]
-        self.assertIn('finish(@{@"code": @"timeout"})', timer)
+        self.assertIn('finish(@{@"code": @"timeout", @"detail":', timer)
         self.assertNotIn('exitUnconfirmed', request)
         # A stale reply is recognised only after the validator rejected it; nothing else of it is read.
         rejected = request[request.index('[validator check:reply]'):request.index('const char *code')]

@@ -6,6 +6,16 @@
 #import "../Shared/LaunchdProbe.h"
 #import "../Shared/LauncherStatus.h"
 #import <ServiceManagement/ServiceManagement.h>
+#import <os/log.h>
+
+// Unified log (subsystem com.layoute.flash, category bridge). Only step names, codes, OSStatus/errno and hashes;
+// never paths or user names.
+static os_log_t FCBridgeLog(void) {
+    static os_log_t log;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ log = os_log_create("com.layoute.flash", "bridge"); });
+    return log;
+}
 
 // Bookkeeping of the helper build last registered with SMAppService.
 static NSString * const FCRegisteredHelperDefault = @"FlashDaemonRegisteredHelperCDHash";
@@ -319,6 +329,9 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             self.staleRetryAfter = nil;
         }
         NSMutableDictionary *status = [@{@"code": result} mutableCopy];
+        // Why a reply was refused (verification step, XPC error) or that none came: "View details" only.
+        NSString *replyDetail = [answer[@"detail"] isKindOfClass:NSString.class] ? answer[@"detail"] : nil;
+        if (replyDetail.length) status[@"detail"] = replyDetail;
         // From an authenticated reply only: whether the daemon still owns a Core, so the app can let go of a
         // session it could not stop itself.
         if ([answer[@"protocol"] isEqual:@1]) {
@@ -337,7 +350,8 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             }
             NSDictionary *launcher = FCRefusalExitAnswer(after, [self launcherReport]);
             if (launcher[@"code"]) status[@"code"] = launcher[@"code"];
-            if (launcher[@"detail"]) status[@"detail"] = launcher[@"detail"];
+            if (launcher[@"detail"]) status[@"detail"] = replyDetail.length ?
+                [NSString stringWithFormat:@"%@\n%@", replyDetail, launcher[@"detail"]] : launcher[@"detail"];
         } else {
             self.okUnansweredSince = 0;
         }
@@ -377,7 +391,10 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         self.validator = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier
             executable:FCHelperCopyPath sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)];
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-            if (xpc_get_type(event) == XPC_TYPE_ERROR && self.connection == connection) [self resetConnection];
+            if (xpc_get_type(event) != XPC_TYPE_ERROR) return;
+            const char *description = xpc_dictionary_get_string(event, XPC_ERROR_KEY_DESCRIPTION);
+            os_log(FCBridgeLog(), "helper connection: %{public}s", description ?: "error");
+            if (self.connection == connection) [self resetConnection];
         });
         xpc_connection_resume(connection);
     }
@@ -418,12 +435,25 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     xpc_connection_send_message_with_reply(connection, message, self.queue, ^(xpc_object_t reply) {
         if (finished) return;
         BOOL dictionary = xpc_get_type(reply) == XPC_TYPE_DICTIONARY;
-        if (!dictionary || ![validator check:reply] || xpc_dictionary_get_int64(reply, "protocol") != 1) {
+        NSString *refusal = nil;
+        if (!dictionary) {
+            const char *description = reply == XPC_ERROR_CONNECTION_INVALID ? "connection invalid" :
+                reply == XPC_ERROR_CONNECTION_INTERRUPTED ? "connection interrupted" :
+                xpc_get_type(reply) == XPC_TYPE_ERROR ? xpc_dictionary_get_string(reply, XPC_ERROR_KEY_DESCRIPTION) : NULL;
+            refusal = [NSString stringWithFormat:@"helper reply: XPC error (%s)", description ?: "unknown"];
+        } else if (![validator check:reply]) {
+            refusal = [NSString stringWithFormat:@"helper reply rejected by the app's verification: %@",
+                validator.failure ?: @"unknown step"];
+        } else if (xpc_dictionary_get_int64(reply, "protocol") != 1) {
+            refusal = @"helper reply rejected: protocol is not 1";
+        }
+        if (refusal) {
             // Do not read payloads from a previous build even when its identity is pinned.
             BOOL stale = dictionary && validator.runningCodeStale;
+            os_log_error(FCBridgeLog(), "%{public}s %{public}s", method.UTF8String, refusal.UTF8String);
             xpc_connection_cancel(connection);
             if (self.connection == connection) [self resetConnection];
-            finish(@{@"code": stale ? @"staleHelper" : @"unavailable"}); return;
+            finish(@{@"code": stale ? @"staleHelper" : @"unavailable", @"detail": refusal}); return;
         }
         const char *code = xpc_dictionary_get_string(reply, "code");
         const char *hash = xpc_dictionary_get_string(reply, "coreHash");
@@ -468,7 +498,10 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         if (self.connection == connection) [self resetConnection];
         // No answer is not a statement about the Core: the daemon stops the Core of a connection that goes
         // away, and a later `hello` reports whether it still owns one.
-        finish(@{@"code": @"timeout"});
+        os_log_error(FCBridgeLog(), "%{public}s: no reply within %lld s", method.UTF8String,
+            FCRequestTimeoutSeconds(method));
+        finish(@{@"code": @"timeout", @"detail": [NSString stringWithFormat:@"helper reply: none within %lld s",
+            FCRequestTimeoutSeconds(method)]});
     });
 }
 
@@ -747,7 +780,8 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             return done(@"enabled", @{@"protocol": @1, @"pid": hello[@"pid"] ?: @0,
                 @"exitConfirmed": hello[@"exitConfirmed"] ?: @NO});
         }
-        [log addObject:[@"hello: " stringByAppendingString:code ?: @"?"]];
+        [log addObject:[NSString stringWithFormat:@"hello: %@%@", code ?: @"?",
+            [hello[@"detail"] isKindOfClass:NSString.class] ? [@" — " stringByAppendingString:hello[@"detail"]] : @""]];
         if ([@[@"exitUnconfirmed", @"incompatible", @"signingRequired"] containsObject:code ?: @""])
             return done(code, nil);
         [self pause:1];

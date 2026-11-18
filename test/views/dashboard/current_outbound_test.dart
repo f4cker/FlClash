@@ -654,4 +654,25 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  testWidgets('rests without pulsing while no Core can answer', (tester) async {
+    // The Core never connected (the helper cannot start it): the route is
+    // not live and the probe never launches.
+    await tester.pumpWidget(
+      TestApp(
+        locale: const Locale('en'),
+        overrides: [
+          profilesProvider.overrideWithValue(const [_profile]),
+          suspendProvider.overrideWithValue(false),
+        ],
+        child: _card(),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('Not running'), findsOneWidget);
+    // The placeholders stay where they are, but hold still: no frame is due.
+    expect(find.byType(SkeletonPill), findsWidgets);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+  });
 }

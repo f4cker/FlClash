@@ -85,6 +85,40 @@ static char *FixtureRealpath(const char *path, char *resolved) {
     return resolved;
 }
 
+// The kernel's view of the daemon (launcher's copy in a root-only directory): csops_audittoken, proc_pidpath and
+// the sender's audit token of an XPC reply.
+static uint32_t kernelStatus;
+static uint8_t kernelHash[20];
+static NSString *kernelPath;
+static uint32_t kernelVersion;
+static BOOL reuseDuringPath, pathFails;
+static int kernelFailOp;
+static NSUInteger kernelCalls;
+static audit_token_t messageToken;
+static const uint32_t KernelHardened = 0x1 | 0x100 | 0x200 | 0x10000 | 0x20000000;
+
+int FixtureCodeOps(pid_t pid, unsigned int ops, void *address, size_t size, audit_token_t *token) {
+    kernelCalls++;
+    assert(token && (pid_t)token->val[5] == pid);
+    // The token names one process lifetime: the kernel refuses it once the pid is held by another one.
+    if (pid != 4242 || token->val[7] != kernelVersion) { errno = ESRCH; return -1; }
+    if ((int)ops == kernelFailOp) { errno = EPERM; return -1; }
+    if (ops == 0) { assert(size == sizeof(kernelStatus)); memcpy(address, &kernelStatus, size); return 0; }
+    assert(ops == 5 && size == sizeof(kernelHash));
+    memcpy(address, kernelHash, size);
+    return 0;
+}
+int FixtureProcPath(int pid, void *buffer, uint32_t size) {
+    kernelCalls++;
+    if (pathFails) { errno = ESRCH; return 0; }
+    // The process exits and its pid is handed to another one while the path is read.
+    if (reuseDuringPath) kernelVersion++;
+    const char *path = kernelPath.fileSystemRepresentation;
+    strlcpy(buffer, path, size);
+    return (int)strlen(path);
+}
+void FixtureAuditToken(xpc_object_t message, audit_token_t *token) { *token = messageToken; }
+
 static BOOL FixtureLibrary(NSString *bundle, NSData *hash) { return libraryValid; }
 static NSDictionary *FixtureCompatibility(NSString *bundle) {
     return compatibilityValid ? @{@"CallerPolicy": @3, @"ServiceAPI": @1, @"CoreAPI": @1,
@@ -101,6 +135,9 @@ static NSDictionary *FixtureCompatibility(NSString *bundle) {
 #define SecCodeCopySelf FixtureSelf
 #define realpath FixtureRealpath
 #define FCLoadPlist FixtureLoadPlist
+#define FCCodeOps FixtureCodeOps
+#define FCProcPath FixtureProcPath
+#define FCMessageAuditToken FixtureAuditToken
 #import <sys/stat.h>
 static int FixtureLstat(const char *path, struct stat *state);
 #define lstat FixtureLstat
@@ -139,6 +176,15 @@ static void Reset(void) {
     helperDiskInfo[(__bridge NSString *)kSecCodeInfoMainExecutable] =
         [NSURL fileURLWithPath:FCInstalledExecutable(FCHelperIdentifier)];
     helperCopyInfo = helperRunningInfo.mutableCopy;
+    kernelStatus = KernelHardened;
+    memcpy(kernelHash, bytes, sizeof(kernelHash));
+    kernelPath = FCHelperCopyPath;
+    kernelVersion = 9;
+    reuseDuringPath = pathFails = NO;
+    kernelFailOp = -1;
+    memset(&messageToken, 0, sizeof(messageToken));
+    messageToken.val[5] = 4242;
+    messageToken.val[7] = 9;
 }
 
 // The daemon's mandatory startup/per-operation verification: every failure is a refusal (exit FC_HELPER_REFUSED_EXIT = 79 in main).
@@ -194,37 +240,88 @@ static void TestSelfCheck(void) {
     assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"plist"]);
     Reset(); launcherFileValid = NO;
     assert([FCHelperSelfCheck(path, bundle) isEqualToString:@"plist"]);
-    // Reply validation on the GUI side: the daemon runs at the copy path (exact, the app cannot resolve inside the
-    // root-only directory) with the cdhash of the bundled helper; pinned for the connection after the first match.
     Reset();
-    FCMessageValidator *daemon = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path
+}
+
+static FCMessageValidator *CopyValidator(void) {
+    return [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:FCHelperCopyPath
         sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)];
-    runningInfo = helperRunningInfo;
+}
+
+// Reply validation on the GUI side for the daemon running as the launcher's root-only copy: the app cannot read
+// that file, so Security is never asked about the running code; the kernel's status, cdhash and path for the
+// reply's audit token decide, against the bundled helper's statically validated cdhash.
+static void TestCopyValidator(void) {
+    // The copy's directory is unreadable: every Security call about the running code would fail (EACCES).
+    Reset(); messageValid = runningValid = NO;
+    NSUInteger messages = messageChecks;
+    FCMessageValidator *daemon = CopyValidator();
+    assert([daemon check:fixtureMessage] && !daemon.failure);
+    assert(messageChecks == messages);
+    // Pinned for the connection after the first match; nothing in the copy is resolved (no realpath).
+    canonicalValid = NO;
     assert([daemon check:fixtureMessage]);
-    runningInfo = helperRunningInfo.mutableCopy;
-    runningInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
-    assert(![daemon check:fixtureMessage]);
-    Reset(); canonicalValid = NO;
-    runningInfo = helperRunningInfo;
-    assert([[[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path
-        sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)] check:fixtureMessage]);
-    // A peer running from the bundle (or anywhere but the copy) is not the daemon.
+    kernelHash[0] ^= 1;
+    assert(![daemon check:fixtureMessage] && [daemon.failure containsString:@"cdhash"] && !daemon.runningCodeStale);
+    // A running cdhash other than the bundled helper's: a previous build (stale), never trusted.
+    Reset(); kernelHash[19] ^= 1;
+    FCMessageValidator *stale = CopyValidator();
+    assert(![stale check:fixtureMessage] && stale.runningCodeStale && [stale.failure hasPrefix:@"failed:cdhash running="]);
+    // The bundled helper must itself pass the pinned static requirement.
+    Reset(); helperDiskValid = NO;
+    FCMessageValidator *unsealed = CopyValidator();
+    assert(![unsealed check:fixtureMessage] && !unsealed.runningCodeStale);
+    assert([unsealed.failure isEqualToString:@"failed:bundled helper signature"]);
+    Reset(); helperDiskInfo[(__bridge NSString *)kSecCodeInfoEntitlementsDict] = @{@"com.apple.security.get-task-allow": @YES};
+    assert(![CopyValidator() check:fixtureMessage]);
+    // Kernel status: valid, hard, kill and hardened runtime required; ad hoc, get-task-allow, debugged refused.
+    for (NSNumber *missing in @[@0x1, @0x100, @0x200, @0x10000]) {
+        Reset(); kernelStatus = KernelHardened & ~missing.unsignedIntValue;
+        FCMessageValidator *validator = CopyValidator();
+        assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"failed:status 0x"]);
+    }
+    for (NSNumber *extra in @[@0x2, @0x4, @0x10000000]) {
+        Reset(); kernelStatus = KernelHardened | extra.unsignedIntValue;
+        FCMessageValidator *validator = CopyValidator();
+        assert(![validator check:fixtureMessage] && [validator.failure hasPrefix:@"failed:status 0x"]);
+    }
+    // Exactly the launcher's copy; the path itself never goes into the failure text.
     for (NSString *other in @[FCInstalledExecutable(FCHelperIdentifier), @"/tmp/FlashHelper",
             @"/Library/Application Support/com.layoute.flash.daemon/FlashHelper",
-            [FCHelperCopyPath lowercaseString]]) {
-        Reset();
-        runningInfo = helperRunningInfo.mutableCopy;
-        runningInfo[(__bridge NSString *)kSecCodeInfoMainExecutable] = [NSURL fileURLWithPath:other];
-        assert(![[[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path
-            sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)] check:fixtureMessage]);
+            [FCHelperCopyPath lowercaseString], [FCHelperCopyPath stringByAppendingString:@"/"]]) {
+        Reset(); kernelPath = other;
+        FCMessageValidator *validator = CopyValidator();
+        assert(![validator check:fixtureMessage] && [validator.failure isEqualToString:@"failed:path"]);
     }
-    // A previous build still running: stale, not trusted. The copy is never read by the app.
-    Reset(); helperDiskInfo[(__bridge NSString *)kSecCodeInfoUnique] = [NSMutableData dataWithLength:20];
-    helperCopyValid = NO;
-    runningInfo = helperRunningInfo;
-    FCMessageValidator *stale = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier executable:path
-        sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)];
-    assert(![stale check:fixtureMessage] && stale.runningCodeStale);
+    // pid reuse: a token of an earlier lifetime of the pid, or the pid handed over while its path is read.
+    Reset(); messageToken.val[7] = 8;
+    FCMessageValidator *reused = CopyValidator();
+    assert(![reused check:fixtureMessage] && [reused.failure isEqualToString:@"failed:status-read errno=3"]);
+    Reset(); reuseDuringPath = YES;
+    reused = CopyValidator();
+    assert(![reused check:fixtureMessage] && [reused.failure isEqualToString:@"failed:pid-reused errno=3"]);
+    // Kernel reads that fail are named with their errno.
+    Reset(); kernelFailOp = 5;
+    FCMessageValidator *unread = CopyValidator();
+    assert(![unread check:fixtureMessage] && [unread.failure isEqualToString:@"failed:cdhash-read errno=1"]);
+    Reset(); pathFails = YES;
+    unread = CopyValidator();
+    assert(![unread check:fixtureMessage] && [unread.failure isEqualToString:@"failed:path-read errno=3"]);
+    // A reply without a sender token reaches no kernel call.
+    Reset(); memset(&messageToken, 0, sizeof(messageToken));
+    kernelCalls = 0;
+    FCMessageValidator *anonymous = CopyValidator();
+    assert(![anonymous check:fixtureMessage] && [anonymous.failure isEqualToString:@"failed:token"] && kernelCalls == 0);
+    // The in-bundle path (executable == sealed executable) keeps the Security validation, now with the failed step.
+    Reset(); runningValid = NO;
+    FCMessageValidator *bundled = [[FCMessageValidator alloc] initWithIdentifier:FCHelperIdentifier
+        executable:FCInstalledExecutable(FCHelperIdentifier)];
+    runningInfo = helperDiskInfo;
+    kernelCalls = 0;
+    assert(![bundled check:fixtureMessage] && [bundled.failure hasPrefix:@"SecCodeCheckValidity OSStatus"]);
+    assert(kernelCalls == 0);
+    Reset(); runningInfo = helperDiskInfo;
+    assert([bundled check:fixtureMessage]);
     Reset();
 }
 
@@ -359,6 +456,7 @@ int main(void) {
             assert(![FCGUIRequirement() containsString:@"cdhash"]);
             TestMessages();
             TestSelfCheck();
+            TestCopyValidator();
             TestArguments();
         } else {
             Reset();
@@ -366,6 +464,9 @@ int main(void) {
             NSUInteger checks = messageChecks;
             assert(![[FCGUIMessageValidator new] check:fixtureMessage]);
             assert(messageChecks == checks);
+            kernelCalls = 0;
+            FCMessageValidator *copy = CopyValidator();
+            assert(![copy check:fixtureMessage] && [copy.failure isEqualToString:@"requirement"] && kernelCalls == 0);
         }
         puts("GUI trust and daemon self-check fixtures passed; Security/process/filesystem validation mocked");
     }

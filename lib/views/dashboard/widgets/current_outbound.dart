@@ -85,6 +85,13 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     final qualityLoading =
         qualityState != null && quality == null && qualityState.isLoading;
     final loading = ipInfo == null ? !failed : qualityLoading;
+    // No live route (the Core is not connected, e.g. while the helper cannot
+    // start it) and nothing out: no answer is coming, so the placeholders hold
+    // still instead of pulsing, which would redraw the window every frame.
+    final still =
+        ipInfo == null &&
+        phase != ProbePhase.probing &&
+        !ref.watch(routeTrackerProvider.select((state) => state.live));
     final metrics = _OutboundMetrics.of(density);
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
@@ -177,6 +184,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                         info: ipInfo,
                         failed: failed,
                         loading: loading,
+                        still: still,
                         checking: phase == ProbePhase.probing || qualityLoading,
                         onRefresh: () => _refresh(ipInfo?.ip),
                         quality: quality,
@@ -188,11 +196,14 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                         const Spacer()
                       else
                         const SizedBox(height: 16),
-                      _Cells(
-                        quality: quality,
-                        loading: loading,
-                        active: isStart && !suspended,
-                        gap: metrics.cellGap,
+                      TickerMode(
+                        enabled: !still,
+                        child: _Cells(
+                          quality: quality,
+                          loading: loading,
+                          active: isStart && !suspended,
+                          gap: metrics.cellGap,
+                        ),
                       ),
                     ],
                   ),
@@ -292,6 +303,7 @@ class _ExitRow extends StatelessWidget {
     required this.info,
     required this.failed,
     required this.loading,
+    required this.still,
     required this.checking,
     required this.onRefresh,
     required this.quality,
@@ -303,6 +315,9 @@ class _ExitRow extends StatelessWidget {
   final IpInfo? info;
   final bool failed;
   final bool loading;
+
+  /// Placeholders do not pulse: nothing is on its way.
+  final bool still;
   final bool checking;
   final VoidCallback onRefresh;
   final IpQuality? quality;
@@ -341,7 +356,10 @@ class _ExitRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: style.copyWith(color: colorScheme.error),
           )
-        : SkeletonText(width: 140, style: style);
+        : TickerMode(
+            enabled: !still,
+            child: SkeletonText(width: 140, style: style),
+          );
     return Row(
       spacing: 12,
       children: [
@@ -379,7 +397,14 @@ class _ExitRow extends StatelessWidget {
                   ),
                 )
               else
-                _IpChips(quality: quality, loading: loading, large: large),
+                TickerMode(
+                  enabled: !still,
+                  child: _IpChips(
+                    quality: quality,
+                    loading: loading,
+                    large: large,
+                  ),
+                ),
             ],
           ),
         ),

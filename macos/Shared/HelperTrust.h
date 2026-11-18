@@ -71,6 +71,8 @@ FCRunningHashVerdict FCCompareRunningHash(NSData * _Nullable runningHash, NSData
 - (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable
     sealedExecutable:(NSString *)sealedExecutable;
 - (BOOL)check:(xpc_object_t)message;
+// After a failed check: the first step that failed, with its OSStatus/errno (diagnostics only, never trusted).
+@property (readonly, nullable) NSString *failure;
 // After a failed check: the sender is the pinned helper at the bundled path, only its running cdhash is not
 // the bundled one (a previous build's daemon still runs). Nothing in such a message is trusted or read.
 @property (readonly) BOOL runningCodeStale;
@@ -94,6 +96,12 @@ NSData * _Nullable FCBundledCoreHash(void);
 // does not pass. Returns @"verified" or @"failed:<stage>" naming the first check that failed.
 NSString *FCCoreGuestCheck(NSData * _Nullable auditToken, pid_t pid, NSData * _Nullable expectedHash);
 NSData * _Nullable FCStaticCodeHash(NSString *path, NSString *identifier);
+// The daemon behind an audit token, from the kernel alone (its executable may be unreadable for the caller): code
+// signature status valid, hardened runtime, hard/kill, not ad hoc, not debuggable or debugged; running image exactly
+// at `expectedPath`; the token's process lifetime unchanged across the reads (no pid reuse, no exec). Returns
+// @"verified" with the running cdhash, or @"failed:<step>" naming the first failed step (with errno/status).
+NSString *FCHelperGuestCheck(const audit_token_t * _Nullable token, NSString *expectedPath,
+    NSData * _Nullable * _Nullable runningHash);
 // Whether a running process is a Flash Core, from its code signature alone (pinned certificate and
 // com.layoute.flash.core); `reason` explains FCCoreMatchUnknown.
 typedef NS_ENUM(NSInteger, FCCoreMatch) { FCCoreMatchOther, FCCoreMatchFlash, FCCoreMatchGone, FCCoreMatchUnknown };

@@ -4,6 +4,7 @@
 #import <sys/stat.h>
 #import <errno.h>
 #import <fcntl.h>
+#import <libproc.h>
 #import <unistd.h>
 
 #import "HelperIdentity.h"
@@ -296,6 +297,51 @@ NSString *FCCoreGuestCheck(NSData *auditToken, pid_t pid, NSData *expectedHash) 
     return @"verified";
 }
 
+#ifndef FCProcPath
+#define FCProcPath proc_pidpath
+#else
+int FCProcPath(int pid, void *buffer, uint32_t size);
+#endif
+
+// CS_ADHOC, CS_GET_TASK_ALLOW, CS_DEBUGGED (kern/cs_blobs.h).
+static const uint32_t FCHelperForbiddenStatus = 0x2 | 0x4 | 0x10000000;
+
+// The daemon behind a reply, from the kernel alone. It runs as the launcher's copy inside a root 0700 directory:
+// Security's dynamic validation (SecCodeCheckValidity, SecCodeCopySigningInformation) opens that file and fails
+// with EACCES for the app, so the running code is identified by what the kernel enforces for it. Every read goes
+// through the audit token or is bracketed by two of them: csops_audittoken fails once the token's pid no longer
+// names the same process lifetime (pid version, which also changes on exec), so the path read by pid in between
+// belongs to the process the token names.
+NSString *FCHelperGuestCheck(const audit_token_t *token, NSString *expectedPath, NSData **runningHash) {
+    if (runningHash) *runningHash = nil;
+    if (!token || !expectedPath.length) return @"failed:token";
+    audit_token_t copy = *token;
+    pid_t pid = (pid_t)copy.val[5];
+    if (pid <= 0) return @"failed:token";
+    uint32_t status = 0;
+    if (FCCodeOps(pid, FCCodeOpsStatus, &status, sizeof(status), &copy))
+        return [NSString stringWithFormat:@"failed:status-read errno=%d", errno];
+    if ((status & FCCoreRequiredStatus) != FCCoreRequiredStatus || (status & FCHelperForbiddenStatus))
+        return [NSString stringWithFormat:@"failed:status 0x%x", status];
+    uint8_t hash[20] = {0};
+    if (FCCodeOps(pid, FCCodeOpsCDHash, hash, sizeof(hash), &copy))
+        return [NSString stringWithFormat:@"failed:cdhash-read errno=%d", errno];
+    char path[PROC_PIDPATHINFO_MAXSIZE] = {0};
+    int length = FCProcPath(pid, path, sizeof(path));
+    if (length <= 0 || length >= (int)sizeof(path)) return [NSString stringWithFormat:@"failed:path-read errno=%d", errno];
+    path[length] = 0;
+    uint32_t after = 0;
+    if (FCCodeOps(pid, FCCodeOpsStatus, &after, sizeof(after), &copy))
+        return [NSString stringWithFormat:@"failed:pid-reused errno=%d", errno];
+    if ((after & FCCoreRequiredStatus) != FCCoreRequiredStatus || (after & FCHelperForbiddenStatus))
+        return [NSString stringWithFormat:@"failed:status 0x%x", after];
+    // Exact: the kernel's path of the running image. The path itself is not reported (it may name a user folder).
+    NSString *running = [[NSString alloc] initWithBytes:path length:(NSUInteger)length encoding:NSUTF8StringEncoding];
+    if (![running isEqualToString:expectedPath]) return @"failed:path";
+    if (runningHash) *runningHash = [NSData dataWithBytes:hash length:sizeof(hash)];
+    return @"verified";
+}
+
 int csops(pid_t pid, unsigned int ops, void *useraddr, size_t usersize);
 #ifndef FCPidCodeOps
 #define FCPidCodeOps csops
@@ -339,8 +385,16 @@ FCRunningHashVerdict FCCompareRunningHash(NSData *runningHash, NSData *diskHash)
     return [runningHash isEqualToData:diskHash] ? FCRunningHashCurrent : FCRunningHashStale;
 }
 
+#ifndef FCMessageAuditToken
+void xpc_dictionary_get_audit_token(xpc_object_t message, audit_token_t *token);
+#define FCMessageAuditToken xpc_dictionary_get_audit_token
+#else
+void FCMessageAuditToken(xpc_object_t message, audit_token_t *token);
+#endif
+
 @interface FCMessageValidator ()
 @property BOOL runningCodeStale;
+@property NSString *failure;
 @property NSString *identifier;
 @property NSString *executable;
 @property NSString *sealedExecutable;
@@ -358,40 +412,74 @@ FCRunningHashVerdict FCCompareRunningHash(NSData *runningHash, NSData *diskHash)
     if ((self = [super init])) { _identifier = identifier; _executable = executable; _sealedExecutable = sealedExecutable; }
     return self;
 }
-// The running path as the kernel reports it. Where the peer runs from a file this process cannot resolve (the
-// launcher's copy inside a root 0700 directory, whose parents are root-owned), the path must match exactly;
-// otherwise it must also be canonical on disk.
-- (BOOL)pathMatches:(NSDictionary *)info {
-    if ([self.executable isEqualToString:self.sealedExecutable]) return FCExecutableMatches(info, self.executable);
-    NSURL *executable = info[(__bridge NSString *)kSecCodeInfoMainExecutable];
-    return self.executable.length && [executable isKindOfClass:NSURL.class] && [executable.path isEqualToString:self.executable];
+- (BOOL)fail:(NSString *)failure {
+    self.failure = failure;
+    return NO;
 }
 - (BOOL)check:(xpc_object_t)message {
     self.runningCodeStale = NO;
-    if ([self.identifier isEqualToString:FCClientIdentifier]) return NO;
+    self.failure = nil;
+    if ([self.identifier isEqualToString:FCClientIdentifier]) return [self fail:@"identifier"];
+    if (![self.executable isEqualToString:self.sealedExecutable]) return [self checkCopy:message];
     SecCodeRef code = NULL;
-    if (SecCodeCreateWithXPCMessage(message, 0, &code)) return NO;
+    OSStatus status = SecCodeCreateWithXPCMessage(message, 0, &code);
+    if (status) return [self fail:[NSString stringWithFormat:@"SecCodeCreateWithXPCMessage OSStatus %d", (int)status]];
     NSString *text = FCSigningRequirement(self.identifier);
     SecRequirementRef requirement = NULL;
     BOOL valid = text && SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement) == errSecSuccess;
-    valid = valid && SecCodeCheckValidity(code, kSecCSStrictValidate, requirement) == errSecSuccess;
+    if (!valid) self.failure = @"requirement";
+    if (valid) {
+        status = SecCodeCheckValidity(code, kSecCSStrictValidate, requirement);
+        valid = status == errSecSuccess;
+        if (!valid) self.failure = [NSString stringWithFormat:@"SecCodeCheckValidity OSStatus %d", (int)status];
+    }
     if (requirement) CFRelease(requirement);
     NSDictionary *info = valid ? FCSigningInformation(code) : nil;
     NSData *runningHash = info[(__bridge NSString *)kSecCodeInfoUnique];
-    valid = valid && [self pathMatches:info] && FCValidGUIHash(runningHash) &&
+    if (valid && !info) self.failure = @"SecCodeCopySigningInformation";
+    valid = valid && FCExecutableMatches(info, self.executable) && FCValidGUIHash(runningHash) &&
         FCCodeEntitlementsAllowed(info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
             [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
+    if (!valid && !self.failure) self.failure = @"path, cdhash or code flags";
     if (valid && !self.sealedHash) {
         FCRunningHashVerdict verdict = FCCompareRunningHash(runningHash,
             FCStaticCodeHash(self.sealedExecutable, self.identifier));
         valid = verdict == FCRunningHashCurrent;
         self.runningCodeStale = verdict == FCRunningHashStale;
         if (valid) self.sealedHash = runningHash;
+        else self.failure = self.runningCodeStale ? @"cdhash differs from the bundled helper" : @"bundled helper";
     } else if (valid) {
         valid = [self.sealedHash isEqualToData:runningHash];
+        if (!valid) self.failure = @"cdhash differs from the connection's";
     }
     CFRelease(code);
     return valid;
+}
+// The daemon as the launcher's root-only copy (executable != sealedExecutable): the app cannot read that file, so
+// nothing here asks Security about the running code. Identity comes from the bundled helper, which must validate
+// statically against the pinned requirement (FCStaticCodeHash: certificate, identifier, strict seal, entitlements,
+// hardened runtime, not ad hoc) and whose cdhash the running process must have, as the kernel reports it for the
+// sender's audit token. The connection's peer requirement (pinned certificate and identifier) was also enforced by
+// XPC for this message.
+- (BOOL)checkCopy:(xpc_object_t)message {
+    if (!FCSigningRequirement(self.identifier)) return [self fail:@"requirement"];
+    audit_token_t token;
+    memset(&token, 0, sizeof(token));
+    FCMessageAuditToken(message, &token);
+    NSData *runningHash = nil;
+    NSString *kernel = FCHelperGuestCheck(&token, self.executable, &runningHash);
+    if (![kernel isEqualToString:@"verified"]) return [self fail:kernel];
+    if (self.sealedHash) {
+        if ([self.sealedHash isEqualToData:runningHash]) return YES;
+        return [self fail:@"failed:cdhash differs from the connection's"];
+    }
+    NSData *sealedHash = FCStaticCodeHash(self.sealedExecutable, self.identifier);
+    if (!sealedHash) return [self fail:@"failed:bundled helper signature"];
+    FCRunningHashVerdict verdict = FCCompareRunningHash(runningHash, sealedHash);
+    if (verdict == FCRunningHashCurrent) { self.sealedHash = runningHash; return YES; }
+    self.runningCodeStale = verdict == FCRunningHashStale;
+    return [self fail:[NSString stringWithFormat:@"failed:cdhash running=%@ bundled=%@",
+        FCHexString(runningHash), FCHexString(sealedHash)]];
 }
 @end
 
