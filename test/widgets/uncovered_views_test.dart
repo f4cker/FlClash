@@ -422,7 +422,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.widget<LoadingBar>(find.byType(LoadingBar)).active, isFalse);
-    expect(find.text('The app is already up to date'), findsOneWidget);
+    if (system.isMacOS) {
+      // With the release key pinned, macOS only trusts a manifest signed by
+      // it; an unsigned answer is refused (no test fixture is ever signed
+      // with the release key).
+      expect(
+        find.text(currentAppLocalizations.updateCheckFailed),
+        findsOneWidget,
+      );
+    } else {
+      expect(find.text('The app is already up to date'), findsOneWidget);
+    }
     expect(tester.takeException(), null);
   });
 

@@ -170,11 +170,11 @@ const macUpdateManifestUrl =
 const macUpdateReleasesPage =
     'https://github.com/f4cker/flash-releases/releases/latest';
 
-// TODO(release): pin the release Ed25519 public key (base64 of 32 bytes,
-// `tool/macos/make_update_manifest.py genkey`) here and as
+// The release Ed25519 public key (base64 of 32 bytes,
+// `tool/macos/make_update_manifest.py genkey`). Keep it equal to
 // UpdaterChannel.pinnedPublicKey in macos/Runner/UpdaterChannel.swift.
 // Empty keeps the in-app updater off. Never pin a test key.
-const macUpdatePublicKey = '';
+const macUpdatePublicKey = '/gB2YEHz3Dz+2I9M7fT7evxP9q3kdQngJ7B9L8S5mTc=';
 const maxMobileWidth = 600;
 const maxLaptopWidth = 840;
 const defaultTestUrl = 'https://www.gstatic.com/generate_204';

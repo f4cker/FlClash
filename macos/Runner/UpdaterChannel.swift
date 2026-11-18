@@ -4,9 +4,9 @@ import FlutterMacOS
 /// In-app update: the app downloads (lib/common/request.dart) and the steps that
 /// touch the installed app run here, each verifying the signed manifest again.
 final class UpdaterChannel {
-    // TODO(release): pin the release Ed25519 public key (base64 of 32 bytes), the same value as
+    // The release Ed25519 public key (base64 of 32 bytes), the same value as
     // macUpdatePublicKey in lib/common/constant.dart. Empty keeps the in-app updater off.
-    static let pinnedPublicKey = ""
+    static let pinnedPublicKey = "/gB2YEHz3Dz+2I9M7fT7evxP9q3kdQngJ7B9L8S5mTc="
 
     private static var instance: UpdaterChannel?
     private let channel: FlutterMethodChannel
