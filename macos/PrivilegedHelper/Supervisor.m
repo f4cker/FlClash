@@ -23,6 +23,10 @@
 static const int64_t FCIdleSeconds = 30;
 // How long a Core outlives its app's connection while that same app process may resume the relay on a new one.
 static const int64_t FCOwnerGraceSeconds = 10;
+// How often one session's relay may move to a new connection within FCAdoptionWindowSeconds; a GUI stuck
+// reconnecting cannot keep its Core alive by itself (each move re-arms the grace period).
+static const int FCMaxAdoptions = 3;
+static const uint64_t FCAdoptionWindowSeconds = 600;
 // One receive answers with every frame queued, up to FCRelayBatchFrames and this many bytes (a larger single frame
 // still goes alone).
 static const size_t FCBatchBytes = 4 * 1024 * 1024;
@@ -82,6 +86,8 @@ static NSString *FCRunningHash(void) {
 // The app process (audit token pid and pid version) that started the session.
 @property pid_t ownerPid;
 @property uint32_t ownerPidVersion;
+@property int adoptions;
+@property uint64_t adoptionsSince;  // CLOCK_MONOTONIC ns of the first move in the window
 // The accepted Core's audit token, for the app to check the Core's identity before it signs for it.
 @property NSData *coreToken;
 @property BOOL ownershipUncertain;
@@ -398,7 +404,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 - (NSArray<NSData *> *)receive:(uint64_t)ack base:(uint64_t *)base code:(NSString **)code {
     *code = @"ok";
     *base = self.outgoingBase;
-    if (self.socket < 0 || [self confirmExit]) { *code = @"disconnected"; return nil; }
+    if (self.socket < 0) { *code = @"disconnected"; return nil; }
     if (ack < self.outgoingBase || ack - self.outgoingBase > self.outgoing.count) { *code = @"invalidRequest"; return nil; }
     [self.outgoing removeObjectsInRange:NSMakeRange(0, (NSUInteger)(ack - self.outgoingBase))];
     self.outgoingBase = *base = ack;
@@ -412,6 +418,9 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
             size = CFSwapInt32LittleToHost(size);
             if (size > FCMaxFrame) { failed = YES; break; }
             if (self.incoming.length >= (size_t)size + 4) {
+                // A batch stays within FCMaxFrame in total (the bridge's limit); a frame that does not fit goes
+                // alone in the next one.
+                if (self.outgoing.count && bytes + size > FCMaxFrame) break;
                 [self.outgoing addObject:[self.incoming subdataWithRange:NSMakeRange(4, size)]];
                 [self.incoming replaceBytesInRange:NSMakeRange(0, size + 4) withBytes:NULL length:0];
                 bytes += size;
@@ -426,9 +435,10 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
         failed = YES;
         break;
     }
-    // The Core's last frames are delivered before its end is reported.
+    // The Core's last frames are delivered before its end is reported: its exit is confirmed (which closes the
+    // relay) only once nothing it wrote is left.
     if (self.outgoing.count) return [self.outgoing copy];
-    if (!failed) return @[];
+    if (!failed && ![self confirmExit]) return @[];
     [self stop];
     *code = @"disconnected";
     return nil;
@@ -440,6 +450,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     FCMessageAuditToken(request, &token);
     self.ownerPid = (pid_t)token.val[5];
     self.ownerPidVersion = token.val[7];
+    self.adoptions = 0;
 }
 
 // The app process that started the session, back on a new connection after its previous one was reset (a request
@@ -452,7 +463,18 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     if (!FCMayAdoptSession((__bridge void *)self.owner, self.child > 0, self.ownerPid, self.ownerPidVersion,
             (pid_t)token.val[5], token.val[7], self.uid, xpc_connection_get_euid(connection),
             self.session.UTF8String, session.UTF8String)) return NO;
-    os_log(FCHelperLog(), "relay resumed on a new connection of the same app process");
+    uint64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC);
+    if (!self.adoptions || now - self.adoptionsSince > FCAdoptionWindowSeconds * NSEC_PER_SEC) {
+        self.adoptions = 0;
+        self.adoptionsSince = now;
+    }
+    if (self.adoptions >= FCMaxAdoptions) {
+        os_log(FCHelperLog(), "relay moved %d times already; not resumed again", self.adoptions);
+        return NO;
+    }
+    self.adoptions++;
+    os_log(FCHelperLog(), "relay resumed on a new connection of the same app process (%d/%d)", self.adoptions,
+        FCMaxAdoptions);
     self.owner = connection;
     return YES;
 }

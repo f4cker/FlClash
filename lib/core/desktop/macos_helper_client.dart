@@ -233,7 +233,11 @@ final class _MacHelperRelay {
   /// Recent transient relay failures (see [MacHelperClient._relayFailed]).
   final failures = ListQueue<DateTime>();
 
-  _MacHelperRelay(this.session);
+  /// When the daemon last answered a relay request with ok (or the session
+  /// started).
+  DateTime lastOk;
+
+  _MacHelperRelay(this.session, this.lastOk);
 
   void invalidate() {
     active = false;
@@ -264,6 +268,7 @@ final class MacHelperClient {
   final int _backpressureRetries;
   final int _maxRelayFailures;
   final Duration _relayFailureWindow;
+  final Duration _relayLostAfter;
   final Duration _relayRetryDelay;
   final DateTime Function() _now;
   final _events = StreamController<MacHelperEvent>.broadcast();
@@ -296,6 +301,7 @@ final class MacHelperClient {
     int backpressureRetries = 500,
     int maxRelayFailures = 3,
     Duration relayFailureWindow = const Duration(seconds: 10),
+    Duration relayLostAfter = const Duration(seconds: 12),
     Duration relayRetryDelay = const Duration(milliseconds: 250),
     DateTime Function()? now,
   }) : assert(backpressureRetries >= 0),
@@ -305,11 +311,19 @@ final class MacHelperClient {
        _backpressureRetries = backpressureRetries,
        _maxRelayFailures = maxRelayFailures,
        _relayFailureWindow = relayFailureWindow,
+       _relayLostAfter = relayLostAfter,
        _relayRetryDelay = relayRetryDelay,
        _now = now ?? DateTime.now;
 
   Stream<MacHelperEvent> get events => _events.stream;
   bool get hasCoreSession => _session != null;
+
+  /// A session whose relay to the daemon is still up (not lost or stopped).
+  bool get relayLive {
+    final relay = _relay;
+    return relay != null && _session != null && _isLive(relay);
+  }
+
   bool get maintenanceInProgress => _maintenance;
 
   void _requireEffects() {
@@ -488,7 +502,7 @@ final class MacHelperClient {
     }
     if (state != MacHelperState.enabled) throw MacHelperException(state.name);
     _session = session;
-    final relay = _relay = _MacHelperRelay(session);
+    final relay = _relay = _MacHelperRelay(session, _now());
     _lastStopped = null;
     try {
       final result = await _native.invoke('start', {'session': session});
@@ -548,16 +562,18 @@ final class MacHelperClient {
     relay.disconnected = true;
     // A relay that ends while still wanted is a lost session: say why in the
     // system log too (the bridge's own lines only cover its side).
-    if (error != null) _note('relay lost: $error');
+    // The bridge then no longer holds the session either (repair and disable
+    // are not refused for it).
+    if (error != null) _note('relay lost: $error', method: 'relayLost');
     _events.add(MacHelperDisconnected(error));
   }
 
   /// Leaves [reason] in the unified log (subsystem com.layoute.flash) through
   /// the bridge; best effort, never awaited by the relay.
-  void _note(String reason) {
+  void _note(String reason, {String method = 'note'}) {
     unawaited(
       Future.sync(
-        () => _native.invoke('note', {'reason': reason}),
+        () => _native.invoke(method, {'reason': reason}),
       ).then<void>((_) {}, onError: (Object _) {}),
     );
   }
@@ -569,14 +585,19 @@ final class MacHelperClient {
     _ => false,
   };
 
-  /// One relay request failed. A transient failure is retried (after a short,
-  /// growing delay) unless [_maxRelayFailures] of them fell within
-  /// [_relayFailureWindow]; then, and on any other failure, the relay is lost.
+  /// One relay request, sent at [sent], failed. A transient failure is
+  /// retried (after a short, growing delay) unless [_maxRelayFailures]
+  /// failures fell within [_relayFailureWindow], or no request got ok for
+  /// [_relayLostAfter] (a daemon that hangs fails each request only after the
+  /// bridge's timeout); then, and on any other failure, the relay is lost.
+  /// Requests that were already in flight when a failure was counted share
+  /// it: one dropped connection fails `send` and `receive` alike.
   /// Returns whether to retry.
   Future<bool> _relayFailed(
     _MacHelperRelay relay,
     String method,
     Object error,
+    DateTime sent,
   ) async {
     if (!_isLive(relay)) return false;
     if (!_transient(error)) {
@@ -584,12 +605,15 @@ final class MacHelperClient {
       return false;
     }
     final now = _now();
-    relay.failures.addLast(now);
+    if (relay.failures.isEmpty || !sent.isBefore(relay.failures.last)) {
+      relay.failures.addLast(now);
+    }
     while (relay.failures.isNotEmpty &&
         now.difference(relay.failures.first) > _relayFailureWindow) {
       relay.failures.removeFirst();
     }
-    if (relay.failures.length >= _maxRelayFailures) {
+    if (relay.failures.length >= _maxRelayFailures ||
+        now.difference(relay.lastOk) >= _relayLostAfter) {
       _disconnect(relay, error);
       return false;
     }
@@ -622,6 +646,7 @@ final class MacHelperClient {
 
   Future<void> _receive(_MacHelperRelay relay) async {
     while (_isLive(relay)) {
+      final sent = _now();
       try {
         final result = await _invokeWithBackpressure('receive', {
           'session': relay.session,
@@ -631,6 +656,7 @@ final class MacHelperClient {
         if (result['code'] != 'ok') {
           throw MacHelperException(result['code'] as String? ?? 'unavailable');
         }
+        relay.lastOk = _now();
         final frames = result['frames'];
         final base = result['seq'];
         // Every queued frame from `ack` on: the batch starts at a frame not
@@ -655,7 +681,7 @@ final class MacHelperClient {
           await Future<void>.delayed(_relayDelay);
         }
       } catch (error) {
-        if (!await _relayFailed(relay, 'receive', error)) return;
+        if (!await _relayFailed(relay, 'receive', error, sent)) return;
       }
     }
   }
@@ -687,6 +713,7 @@ final class MacHelperClient {
         final relay = _relay;
         if (relay == null || !_isLive(relay) || relay.frames.isEmpty) return;
         final frame = relay.frames.first;
+        final sent = _now();
         try {
           final answer = await _invokeWithBackpressure('send', {
             'session': relay.session,
@@ -699,11 +726,12 @@ final class MacHelperClient {
               answer['code'] as String? ?? 'unavailable',
             );
           }
+          relay.lastOk = _now();
           relay.frames.removeFirst();
           relay.queuedBytes -= frame.length;
           relay.sent++;
         } catch (error) {
-          await _relayFailed(relay, 'send', error);
+          await _relayFailed(relay, 'send', error, sent);
         }
       }
     } finally {

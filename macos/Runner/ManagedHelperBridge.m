@@ -128,6 +128,8 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 @property BOOL connectionTrusted;
 @property NSString *negotiatedCoreHash;
 @property BOOL sessionActive;
+// systemUptime of the last reply that passed verification while a session runs (see -expireSilentSession).
+@property NSTimeInterval lastVerifiedReply;
 @property BOOL operationInFlight;
 @property BOOL migrationAttempted;
 @property NSDate *staleRetryAfter;
@@ -301,6 +303,17 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         [answer[@"pid"] isEqual:@(self.corePid)];
 }
 
+// The session is held only while the daemon still answers: with no verified reply for FCSessionSilenceSeconds (it
+// cannot be started, reached or verified), this app stops treating it as running, so repair, disable and the
+// launchd check work again. Its Core, if any, is the daemon's to stop (grace period, or its own exit).
+static const NSTimeInterval FCSessionSilenceSeconds = 30;
+- (void)expireSilentSession {
+    if (!self.sessionActive || [self uptime] - self.lastVerifiedReply < FCSessionSilenceSeconds) return;
+    os_log(FCBridgeLog(), "no verified helper reply for %.0f s; session no longer held", [self uptime] - self.lastVerifiedReply);
+    self.sessionActive = NO;
+    [self forgetCore];
+}
+
 - (void)forgetCore {
     self.coreToken = nil;
     self.corePid = 0;
@@ -341,6 +354,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     // registration stale. Its parent bundle version lags after every app update until the next login and says
     // nothing: an old helper copy still idling (staleHelper) or a slow first start (timeout) is waited for, and a
     // refusal exit code (helper 79, launcher 81–87) is a card of its own.
+    [self expireSilentSession];
     NSDictionary *job = self.sessionActive ? nil : [self launchdSnapshot];
     if ([job[@"state"] isEqual:@"broken"]) {
         completion(@{@"code": @"registrationStale", @"launchd": job[@"summary"] ?: @""}); return;
@@ -509,9 +523,11 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             os_log_error(FCBridgeLog(), "%{public}s %{public}s", method.UTF8String, refusal.UTF8String);
             xpc_connection_cancel(connection);
             if (self.connection == connection) [self resetConnection];
+            [self expireSilentSession];
             finish(@{@"code": stale ? @"staleHelper" : untrusted ? @"untrustedReply" : @"unavailable",
                 @"detail": refusal}); return;
         }
+        self.lastVerifiedReply = [self uptime];
         const char *code = xpc_dictionary_get_string(reply, "code");
         const char *hash = xpc_dictionary_get_string(reply, "coreHash");
         const char *helper = xpc_dictionary_get_string(reply, "helperCDHash");
@@ -564,6 +580,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         // relay on a new connection, then stops it; a later `hello` reports whether it still owns one.
         os_log_error(FCBridgeLog(), "%{public}s: no reply within %lld s", method.UTF8String,
             FCRequestTimeoutSeconds(method));
+        [self expireSilentSession];
         finish(@{@"code": @"timeout", @"detail": [NSString stringWithFormat:@"helper reply: none within %lld s",
             FCRequestTimeoutSeconds(method)]});
     });
@@ -671,6 +688,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 }
 
 - (void)unregisterWithCompletion:(void (^)(NSDictionary *))completion {
+    [self expireSilentSession];
     if (self.sessionActive) { completion(@{@"code": @"sessionBusy"}); return; }
     NSString *gate = [self appGate];
     if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
@@ -889,6 +907,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 }
 
 - (void)repairWithCompletion:(void (^)(NSDictionary *))completion {
+    [self expireSilentSession];
     if (self.sessionActive) { completion(@{@"code": @"sessionBusy"}); return; }
     [self status:completion];
 }
@@ -914,6 +933,17 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         if (reason.length > 300) reason = [reason substringToIndex:300];
         os_log(FCBridgeLog(), "app: %{public}s", reason.UTF8String);
         reply(@{@"code": @"ok"}); return;
+    }
+    // The app declared its relay lost: the session is no longer held here (its Core is the daemon's to stop), so
+    // repair and disable are not refused for it. A later verified `exitConfirmed` or start settles the rest.
+    if ([method isEqualToString:@"relayLost"]) {
+        dispatch_async(self.queue, ^{
+            if (self.sessionActive) os_log(FCBridgeLog(), "app declared the relay lost; session no longer held");
+            self.sessionActive = NO;
+            [self forgetCore];
+            reply(@{@"code": @"ok"});
+        });
+        return;
     }
     BOOL relay = [@[@"stop", @"send", @"receive"] containsObject:method];
     // Every relay answer other than ok (and the bridge's own predispatch backpressure) is logged at default level.
@@ -948,9 +978,12 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             completion(@{@"code": @"invalidRequest"}); return;
         }
         if (relay && self.connectionTrusted) { [self request:method arguments:arguments completion:completion]; return; }
-        // The relay of a running session reconnects with a fresh hello (verified in full) only: SMAppService's
+        // The relay of a running session reconnects with a fresh hello (verified in full): SMAppService's
         // registration was read when it started, and a momentary misread there must not end the session.
-        NSDictionary *registration = relay && self.sessionActive ? @{@"code": @"enabled"} : [self registrationStatus];
+        // The app's own trust gate (bundle seal and location) is kept; only the SMAppService read is skipped.
+        NSString *appGate = relay && self.sessionActive ? [self appGate] : nil;
+        NSDictionary *registration = !appGate ? [self registrationStatus] :
+            [appGate isEqualToString:@"trusted"] ? @{@"code": @"enabled"} : @{@"code": appGate};
         if (![registration[@"code"] isEqual:@"enabled"]) { completion(registration); return; }
         [self request:@"hello" arguments:@{} completion:^(NSDictionary *answer) {
             if (![answer[@"code"] isEqual:@"ok"]) { completion(answer); return; }

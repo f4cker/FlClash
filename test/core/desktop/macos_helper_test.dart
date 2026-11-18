@@ -97,6 +97,7 @@ final class _RelayNative implements MacHelperNativeApi {
   final receives = <_RelayCall>[];
   final calls = <String>[];
   final notes = <String>[];
+  final lost = <String>[];
   int externalPending = 0;
   int maxPending = 0;
   String stopCode = 'ok';
@@ -141,6 +142,9 @@ final class _RelayNative implements MacHelperNativeApi {
         return _hold(receives, arguments);
       case 'note':
         notes.add(arguments['reason'] as String);
+        return Future.value({'code': 'ok'});
+      case 'relayLost':
+        lost.add(arguments['reason'] as String);
         return Future.value({'code': 'ok'});
       default:
         throw StateError('Unexpected fake method: $method');
@@ -1540,38 +1544,110 @@ void main() {
         await _until(() => fixture.disconnects.isNotEmpty);
         expect(fixture.disconnects.single.error, _helperCode('timeout'));
         expect(receives, hasLength(3));
-        expect(
-          fixture.native.notes.last,
-          contains('relay lost: MacHelperException(timeout)'),
-        );
+        expect(fixture.native.lost, [
+          'relay lost: MacHelperException(timeout)',
+        ]);
+        expect(fixture.client.relayLive, isFalse);
+        expect(fixture.client.hasCoreSession, isTrue);
         await fixture.close();
         expect(fixture.disconnects, hasLength(1));
       },
     );
 
+    MacHelperClient clock(_RelayNative native, DateTime Function() now) =>
+        MacHelperClient(
+          native: native,
+          safeMode: () => false,
+          relayRetryDelay: Duration.zero,
+          now: now,
+        );
+
     test('failures spread beyond the window do not add up', () async {
       var now = DateTime(2026);
       final native = _RelayNative();
-      final client = MacHelperClient(
-        native: native,
-        safeMode: () => false,
-        relayRetryDelay: Duration.zero,
-        now: () => now,
-      );
+      final client = clock(native, () => now);
       final events = <MacHelperEvent>[];
       final subscription = client.events.listen(events.add);
       await client.start(_session);
-      for (var attempt = 1; attempt <= 5; attempt++) {
-        native.receives.last.reply.complete({'code': 'unavailable'});
-        await _until(() => native.receives.length == attempt + 1);
+      for (var attempt = 0; attempt < 5; attempt++) {
         now = now.add(const Duration(seconds: 6));
+        native.receives.last.reply.complete({'code': 'unavailable'});
+        await _until(() => native.receives.length == 2 * attempt + 2);
+        native.receives.last.reply.complete(
+          batch(attempt, [
+            [attempt],
+          ]),
+        );
+        await _until(() => native.receives.length == 2 * attempt + 3);
       }
       expect(events.whereType<MacHelperDisconnected>(), isEmpty);
+      expect(client.relayLive, isTrue);
       expect(await client.stop(_session), isTrue);
       native.receives.last.reply.complete({'code': 'stopped'});
       await _flush();
       await subscription.cancel();
     });
+
+    test('a hung daemon is lost after 12 s without an ok reply', () async {
+      var now = DateTime(2026);
+      final native = _RelayNative();
+      final client = clock(native, () => now);
+      final events = <MacHelperEvent>[];
+      final subscription = client.events.listen(events.add);
+      await client.start(_session);
+      // Every request only fails at the bridge's 8 s timeout (and the
+      // reconnecting hello takes as long): never 3 failures within 10 s.
+      now = now.add(const Duration(seconds: 8));
+      native.receives.last.reply.complete({'code': 'timeout'});
+      await _until(() => native.receives.length == 2);
+      expect(events.whereType<MacHelperDisconnected>(), isEmpty);
+      now = now.add(const Duration(milliseconds: 8250));
+      native.receives.last.reply.complete({'code': 'timeout'});
+      await _until(() => events.whereType<MacHelperDisconnected>().isNotEmpty);
+      expect(native.receives, hasLength(2));
+      expect(client.relayLive, isFalse);
+      expect(native.lost.single, contains('timeout'));
+      expect(await client.stop(_session), isTrue);
+      await subscription.cancel();
+    });
+
+    test(
+      'one dropped connection failing send and receive is one failure',
+      () async {
+        var now = DateTime(2026);
+        final native = _RelayNative();
+        final client = clock(native, () => now);
+        final events = <MacHelperEvent>[];
+        final subscription = client.events.listen(events.add);
+        await client.start(_session);
+        client.send([1]);
+        now = now.add(const Duration(seconds: 1));
+        native.receives.last.reply.complete({'code': 'timeout'});
+        native.sends.last.reply.complete({'code': 'unavailable'});
+        await _until(
+          () => native.receives.length == 2 && native.sends.length == 2,
+        );
+        now = now.add(const Duration(milliseconds: 100));
+        native.receives.last.reply.complete({'code': 'unavailable'});
+        await _until(() => native.receives.length == 3);
+        // Two events so far (the retry was sent after the first failure); a
+        // third one ends the relay.
+        expect(events.whereType<MacHelperDisconnected>(), isEmpty);
+        now = now.add(const Duration(milliseconds: 100));
+        native.receives.last.reply.complete({'code': 'unavailable'});
+        await _until(
+          () => events.whereType<MacHelperDisconnected>().isNotEmpty,
+        );
+        expect(await client.stop(_session), isTrue);
+        for (final call in [...native.sends, ...native.receives]) {
+          if (!call.reply.isCompleted) {
+            call.reply.complete({'code': 'stopped'});
+          }
+        }
+        await _flush();
+        await subscription.cancel();
+      },
+    );
 
     for (final code in ['disconnected', 'wrongOwner', 'invalidRequest']) {
       test('$code is not retried: the Core or its session is gone', () async {

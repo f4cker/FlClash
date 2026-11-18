@@ -242,7 +242,7 @@ class SetupAction extends _$SetupAction {
   /// read plus a hello, and a busy check hid the dashboard's Core status).
   @protected
   bool get macHelperServesCore =>
-      macHelperMaintenance.client.hasCoreSession &&
+      macHelperMaintenance.client.relayLive &&
       macHelperMaintenance.state == MacHelperState.enabled &&
       !macHelperBusy;
 

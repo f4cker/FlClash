@@ -446,6 +446,7 @@ int main(void) {
 @end
 @implementation BridgeFixture
 - (BOOL)servesSession:(NSDictionary *)answer { return NO; }
+- (void)expireSilentSession {}
 - (NSDictionary *)launcherReport { return self.launcher; }
 - (NSDictionary *)registrationStatus { return @{@"code": @"enabled"}; }
 - (NSString *)currentHelperHash { return @"cdhash-new"; }

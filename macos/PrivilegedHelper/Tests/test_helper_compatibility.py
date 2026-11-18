@@ -53,6 +53,7 @@ static os_log_t FCBridgeLog(void) { return OS_LOG_DEFAULT; }
 @property dispatch_queue_t queue;
 @property BOOL connectionTrusted;
 @property BOOL sessionActive;
+@property NSString *appTrust;
 @property BOOL operationInFlight;
 @property NSMutableArray *calls;
 @property NSString *registration;
@@ -65,6 +66,8 @@ static os_log_t FCBridgeLog(void) { return OS_LOG_DEFAULT; }
 - (NSDictionary *)registrationStatus { self.gates++; return @{@"code": self.registration}; }
 - (NSString *)currentHelperHash { return @"cdhash-current"; }
 - (BOOL)servesSession:(NSDictionary *)answer { return NO; }
+- (NSString *)appGate { return self.appTrust ?: @"trusted"; }
+- (void)forgetCore {}
 - (void)status:(void (^)(NSDictionary *))completion { completion(@{@"code": self.registration}); }
 - (void)migrateWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"migrate"]; c(@{@"code": @"ok"}); }
 - (void)registerWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"register"]; c(@{@"code": @"ok"}); }
@@ -217,6 +220,14 @@ int main(void) {
         bridge.sessionActive = NO;
         [bridge.calls removeAllObjects];
         assert([Invoke(bridge, @"receive", @{}) isEqual:@"notFound"] && bridge.calls.count == 0);
+        // With a session the app's own trust gate is still asked (only the SMAppService read is skipped).
+        bridge.sessionActive = YES;
+        bridge.appTrust = @"untrustedApp";
+        assert([Invoke(bridge, @"receive", @{}) isEqual:@"untrustedApp"] && bridge.calls.count == 0);
+        bridge.appTrust = nil;
+        // The app declared its relay lost: the session is no longer held.
+        assert([Invoke(bridge, @"relayLost", @{@"reason": @"relay lost"}) isEqual:@"ok"]);
+        assert(!bridge.sessionActive && bridge.calls.count == 0);
         // The app's note is logged only; it reaches neither the gate nor the helper.
         gates = bridge.gates;
         assert([Invoke(bridge, @"note", @{@"reason": @"relay lost"}) isEqual:@"ok"]);
