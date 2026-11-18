@@ -976,41 +976,22 @@ void main() {
     await teardown(tester);
   });
 
-  group('the title bar and its search stay clear of the scrolled rules', () {
+  group('the rules scroll under the shared bar, which keeps its search', () {
     const short = Size(1100, 560);
 
     void expectClear(WidgetTester tester, Rect search) {
-      final title = tester.getRect(find.text('Rules').first);
       final field = tester.getRect(_searchField);
       final results = tester.getRect(find.byKey(RulesView.resultsKey));
       expect(field, search, reason: 'the search box stays put');
-      expect(title.bottom, lessThanOrEqualTo(results.top));
-      expect(results.top, greaterThanOrEqualTo(field.bottom));
-      // Whatever the results show is clipped to their own box.
-      final clip = tester.renderObject<RenderBox>(
-        find.byKey(RulesView.resultsKey),
-      );
-      expect(clip.paintBounds.top, 0);
-      // The header, gap below the info line included, is opaque and the
-      // results start exactly where it ends, clipped right there.
-      final header = find.byKey(RulesView.headerKey);
-      expect(tester.widget<ColoredBox>(header).color.a, 1);
-      final headerRect = tester.getRect(header);
-      expect(headerRect.bottom, results.top);
-      expect(headerRect.bottom, greaterThan(field.bottom));
-      final cut = find
-          .ancestor(
-            of: find.byKey(RulesView.resultsKey),
-            matching: find.byType(ClipRect),
-          )
-          .first;
-      expect(tester.getRect(cut).top, headerRect.bottom);
-      // A hairline marks the cut while the results are scrolled.
-      expect(find.byKey(RulesView.scrollEdgeKey), findsOneWidget);
-      expect(
-        tester.getRect(find.byKey(RulesView.scrollEdgeKey)).top,
-        results.top,
-      );
+      // No header of the page's own: the scroll view starts at the top of
+      // the window and runs under the bar, whose fade covers what scrolled.
+      expect(results.top, 0);
+      final bar = tester.getRect(find.byType(ScaffoldBar));
+      expect(bar.bottom, greaterThan(field.bottom));
+      final subtitle = find.byKey(RulesView.subtitleKey);
+      if (subtitle.evaluate().isNotEmpty) {
+        expect(tester.getRect(subtitle).top, lessThan(bar.bottom));
+      }
     }
 
     Future<Rect> lookUpAt(WidgetTester tester) async {

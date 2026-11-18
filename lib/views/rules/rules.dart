@@ -86,14 +86,13 @@ class RulesView extends ConsumerStatefulWidget {
 
   const RulesView({super.key, this.writeRule});
 
-  /// The scrolling part of the page, under its fixed title and search box.
+  /// The page's scroll view, which runs under its bar.
   @visibleForTesting
   static const resultsKey = ValueKey('rules-results');
-  static const headerKey = ValueKey('rules-header');
+  static const subtitleKey = ValueKey('rules-subtitle');
   static const infoKey = ValueKey('rules-lookup-info');
   static const ruleSetNoticeKey = ValueKey('rules-rule-set-notice');
   static const queryingKey = ValueKey('rules-querying');
-  static const scrollEdgeKey = ValueKey('rules-scroll-edge');
   static const addKey = ValueKey('rules-add');
   static const bannerKey = ValueKey('rules-banner');
 
@@ -1144,30 +1143,12 @@ class _RulesViewState extends ConsumerState<RulesView> {
               )
             : null,
       ),
-      titleWidget: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        spacing: 10,
-        children: [
-          Text(appLocalizations.rules),
-          Flexible(
-            child: Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyle.footnote
-                  .of(context)
-                  .copyWith(color: colorScheme.onSurfaceVariant),
-            ),
-          ),
-        ],
-      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < _narrowWidth;
           return _buildBody(
             context,
+            subtitle: subtitle,
             coreRunning: coreRunning,
             narrow: narrow,
             bottomInset: context.bottomInset,
@@ -1179,11 +1160,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
 
   Widget _buildBody(
     BuildContext context, {
+    required String subtitle,
     required bool coreRunning,
     required bool narrow,
     required double bottomInset,
   }) {
     final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
     final list = _list;
     final sources = _sources;
     final lookup = _lookup;
@@ -1192,69 +1175,67 @@ class _RulesViewState extends ConsumerState<RulesView> {
         ? const <RuleRowItem>[]
         : _items(list: list, sources: sources);
     const padding = EdgeInsets.symmetric(horizontal: 16);
-    // The gap above the first block belongs to the pinned header, so
-    // the scroll area starts right where the header's background ends.
-    var first = true;
-    Widget box(Widget child, {double top = 12}) {
-      final gap = first ? 0.0 : top;
-      first = false;
-      return SliverPadding(
-        padding: padding.copyWith(top: gap),
-        sliver: SliverToBoxAdapter(child: child),
-      );
-    }
+    Widget box(Widget child, {double top = 12}) => SliverPadding(
+      padding: padding.copyWith(top: top),
+      sliver: SliverToBoxAdapter(child: child),
+    );
 
     final dimmed = !coreRunning;
-    // The notices of the page's state and the search box stay put under
-    // the title; only the results and rules below them scroll, clipped at
-    // their own top, so nothing slides under the title or the search box.
-    final header = ColoredBox(
-      key: RulesView.headerKey,
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Padding(
-        padding: padding.copyWith(top: context.contentTopPadding, bottom: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 12,
-          children: [
-            if (!coreRunning)
-              RulesNotice(
-                tone: RuleTone.red,
-                glyph: AppGlyphs.error,
-                text: appLocalizations.rulesCoreStopped,
-              ),
-            if (_banner case final banner?)
-              Semantics(
-                liveRegion: true,
-                child: RulesNotice(
-                  key: RulesView.bannerKey,
-                  tone: banner.tone,
-                  glyph: banner.tone == RuleTone.red
-                      ? AppGlyphs.error
-                      : AppGlyphs.checkCircle,
-                  text: banner.text,
-                  actionLabel: banner.lookupAction
-                      ? appLocalizations.ruleBannerLookup
-                      : null,
-                  onAction: banner.lookupAction ? _focusSearch : null,
-                ),
-              ),
-            if (mode == 'global' || mode == 'direct')
-              RulesNotice(
-                tone: RuleTone.gray,
-                glyph: AppGlyphs.info,
-                text: mode == 'global'
-                    ? appLocalizations.rulesModeGlobal
-                    : appLocalizations.rulesModeDirect,
-              ),
-          ],
-        ),
-      ),
-    );
-    final results = CustomScrollView(
+    // Everything scrolls under the page's bar, as on every other page.
+    return CustomScrollView(
       key: RulesView.resultsKey,
       controller: _scrollController,
       slivers: [
+        SliverPadding(
+          padding: padding.copyWith(top: context.contentTopPadding),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              subtitle,
+              key: RulesView.subtitleKey,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyle.footnote
+                  .of(context)
+                  .copyWith(color: colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ),
+        if (!coreRunning)
+          box(
+            RulesNotice(
+              tone: RuleTone.red,
+              glyph: AppGlyphs.error,
+              text: appLocalizations.rulesCoreStopped,
+            ),
+          ),
+        if (_banner case final banner?)
+          box(
+            Semantics(
+              liveRegion: true,
+              child: RulesNotice(
+                key: RulesView.bannerKey,
+                tone: banner.tone,
+                glyph: banner.tone == RuleTone.red
+                    ? AppGlyphs.error
+                    : AppGlyphs.checkCircle,
+                text: banner.text,
+                actionLabel: banner.lookupAction
+                    ? appLocalizations.ruleBannerLookup
+                    : null,
+                onAction: banner.lookupAction ? _focusSearch : null,
+              ),
+            ),
+          ),
+        if (mode == 'global' || mode == 'direct')
+          box(
+            RulesNotice(
+              tone: RuleTone.gray,
+              glyph: AppGlyphs.info,
+              text: mode == 'global'
+                  ? appLocalizations.rulesModeGlobal
+                  : appLocalizations.rulesModeDirect,
+            ),
+          ),
         if (lookup != null) ..._buildLookupSlivers(context, lookup, box),
         if (_listError case final error? when list == null)
           box(
@@ -1293,45 +1274,6 @@ class _RulesViewState extends ConsumerState<RulesView> {
               child: Center(child: ActivityIndicator()),
             ),
           ),
-      ],
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        header,
-        Expanded(
-          child: ClipRect(
-            child: Stack(
-              children: [
-                Positioned.fill(child: results),
-                // Once the results scroll, a hairline marks the cut so a
-                // sliver of a card never reads as a stray line.
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  child: ListenableBuilder(
-                    listenable: _scrollController,
-                    builder: (context, _) {
-                      final scrolled =
-                          _scrollController.hasClients &&
-                          _scrollController.positions.length == 1 &&
-                          _scrollController.offset > 0;
-                      return Visibility(
-                        visible: scrolled,
-                        child: const Divider(
-                          key: RulesView.scrollEdgeKey,
-                          height: 1,
-                          thickness: 1,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -1407,7 +1349,7 @@ class _RulesViewState extends ConsumerState<RulesView> {
   ) {
     final appLocalizations = context.appLocalizations;
     final error = lookup.error;
-    // A stopped Core is said once, above the search box.
+    // A stopped Core is said once, at the top.
     if (error is _CoreStopped) return const [];
     if (error != null) {
       return [
@@ -1707,53 +1649,17 @@ class _RulesViewState extends ConsumerState<RulesView> {
 
   Widget _buildAddButton(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    final colorScheme = context.colorScheme;
     return PopupAnchor(
       key: RulesView.addKey,
       placement: PopupPlacement.belowAnchorEnd,
-      targetBuilder: (open) => Tooltip(
-        message: appLocalizations.rulesAddTooltip,
-        child: Semantics(
-          button: true,
-          label: appLocalizations.rulesAddSemantics,
-          excludeSemantics: true,
-          child: FocusableActionDetector(
-            mouseCursor: SystemMouseCursors.click,
-            actions: {
-              ActivateIntent: CallbackAction<ActivateIntent>(
-                onInvoke: (_) {
-                  open();
-                  return null;
-                },
-              ),
-            },
-            child: GestureDetector(
-              onTap: open,
-              child: Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: ShapeDecoration(
-                  color: colorScheme.brightness == Brightness.light
-                      ? const Color(0xFFFFFFFF)
-                      : context.raisedSurfaceLevel.colorOf(colorScheme),
-                  shape: const CircleBorder(),
-                  shadows: const [
-                    BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 3,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: GlyphIcon(
-                  AppGlyphs.add,
-                  size: 18,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ),
+      targetBuilder: (open) => Semantics(
+        button: true,
+        label: appLocalizations.rulesAddSemantics,
+        excludeSemantics: true,
+        child: IconButton(
+          tooltip: appLocalizations.rulesAddTooltip,
+          onPressed: open,
+          icon: const GlyphIcon(AppGlyphs.add),
         ),
       ),
       popupBuilder: (_) => PopupMenu(
