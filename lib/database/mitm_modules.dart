@@ -29,6 +29,8 @@ class MitmModules extends Table {
 
   IntColumn get scripts => integer().withDefault(const Constant(0))();
 
+  BoolColumn get rulesEnabled => boolean().withDefault(const Constant(true))();
+
   DateTimeColumn get lastUpdateTime => dateTime()();
 
   /// When an update left new content waiting in `<id>.pending.txt`.
@@ -93,6 +95,7 @@ extension RawMitmModuleExt on RawMitmModule {
       resources: resources,
       system: this.system,
       scripts: scripts,
+      rulesEnabled: rulesEnabled,
       lastUpdateTime: lastUpdateTime,
       pendingTime: pendingTime,
       error: error,
@@ -114,6 +117,7 @@ extension MitmModulesCompanionExt on MitmModule {
       resources: Value(resources),
       system: Value(this.system),
       scripts: Value(scripts),
+      rulesEnabled: Value(rulesEnabled),
       lastUpdateTime: lastUpdateTime,
       pendingTime: Value(pendingTime),
       error: Value(error),

@@ -93,17 +93,23 @@ void main() {
     raw.execute('DROP TABLE mitm_scripts');
     raw.execute('ALTER TABLE mitm_modules DROP COLUMN pending_time');
     raw.execute('ALTER TABLE mitm_modules DROP COLUMN error');
+    raw.execute('ALTER TABLE mitm_modules DROP COLUMN rules_enabled');
     raw.execute('PRAGMA user_version = 28');
     raw.close();
 
     disk = Database(NativeDatabase(file));
-    expect(disk.schemaVersion, 30);
+    expect(disk.schemaVersion, 31);
     final read = (await disk.mitmModulesDao.query().get()).single;
     expect(read.id, 7);
+    expect(read.rulesEnabled, isTrue);
     expect(read.hasPending, isFalse);
     await disk.mitmModulesDao.putAll([
       read
-          .copyWith(pendingTime: DateTime(2026, 11, 18), error: 'x')
+          .copyWith(
+            pendingTime: DateTime(2026, 11, 18),
+            error: 'x',
+            rulesEnabled: false,
+          )
           .toCompanion(),
     ]);
     await disk.batch(
@@ -115,6 +121,7 @@ void main() {
     final again = (await disk.mitmModulesDao.query().get()).single;
     expect(again.hasPending, isTrue);
     expect(again.error, 'x');
+    expect(again.rulesEnabled, isFalse);
     expect((await disk.mitmScriptsDao.queryProfile(1).get()).single.id, 11);
     await disk.close();
   });

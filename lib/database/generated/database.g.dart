@@ -4705,6 +4705,21 @@ class $MitmModulesTable extends MitmModules
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _rulesEnabledMeta = const VerificationMeta(
+    'rulesEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> rulesEnabled = GeneratedColumn<bool>(
+    'rules_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("rules_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _lastUpdateTimeMeta = const VerificationMeta(
     'lastUpdateTime',
   );
@@ -4758,6 +4773,7 @@ class $MitmModulesTable extends MitmModules
     resources,
     system,
     scripts,
+    rulesEnabled,
     lastUpdateTime,
     pendingTime,
     error,
@@ -4823,6 +4839,15 @@ class $MitmModulesTable extends MitmModules
       context.handle(
         _scriptsMeta,
         scripts.isAcceptableOrUnknown(data['scripts']!, _scriptsMeta),
+      );
+    }
+    if (data.containsKey('rules_enabled')) {
+      context.handle(
+        _rulesEnabledMeta,
+        rulesEnabled.isAcceptableOrUnknown(
+          data['rules_enabled']!,
+          _rulesEnabledMeta,
+        ),
       );
     }
     if (data.containsKey('last_update_time')) {
@@ -4904,6 +4929,10 @@ class $MitmModulesTable extends MitmModules
         DriftSqlType.int,
         data['${effectivePrefix}scripts'],
       )!,
+      rulesEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}rules_enabled'],
+      )!,
       lastUpdateTime: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_update_time'],
@@ -4953,6 +4982,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
   final Map<String, String> resources;
   final String? system;
   final int scripts;
+  final bool rulesEnabled;
   final DateTime lastUpdateTime;
 
   /// When an update left new content waiting in `<id>.pending.txt`.
@@ -4970,6 +5000,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     required this.resources,
     this.system,
     required this.scripts,
+    required this.rulesEnabled,
     required this.lastUpdateTime,
     this.pendingTime,
     this.error,
@@ -5002,6 +5033,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       map['system'] = Variable<String>(system);
     }
     map['scripts'] = Variable<int>(scripts);
+    map['rules_enabled'] = Variable<bool>(rulesEnabled);
     map['last_update_time'] = Variable<DateTime>(lastUpdateTime);
     if (!nullToAbsent || pendingTime != null) {
       map['pending_time'] = Variable<DateTime>(pendingTime);
@@ -5033,6 +5065,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           ? const Value.absent()
           : Value(system),
       scripts: Value(scripts),
+      rulesEnabled: Value(rulesEnabled),
       lastUpdateTime: Value(lastUpdateTime),
       pendingTime: pendingTime == null && nullToAbsent
           ? const Value.absent()
@@ -5062,6 +5095,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       resources: serializer.fromJson<Map<String, String>>(json['resources']),
       system: serializer.fromJson<String?>(json['system']),
       scripts: serializer.fromJson<int>(json['scripts']),
+      rulesEnabled: serializer.fromJson<bool>(json['rulesEnabled']),
       lastUpdateTime: serializer.fromJson<DateTime>(json['lastUpdateTime']),
       pendingTime: serializer.fromJson<DateTime?>(json['pendingTime']),
       error: serializer.fromJson<String?>(json['error']),
@@ -5084,6 +5118,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       'resources': serializer.toJson<Map<String, String>>(resources),
       'system': serializer.toJson<String?>(system),
       'scripts': serializer.toJson<int>(scripts),
+      'rulesEnabled': serializer.toJson<bool>(rulesEnabled),
       'lastUpdateTime': serializer.toJson<DateTime>(lastUpdateTime),
       'pendingTime': serializer.toJson<DateTime?>(pendingTime),
       'error': serializer.toJson<String?>(error),
@@ -5104,6 +5139,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     Map<String, String>? resources,
     Value<String?> system = const Value.absent(),
     int? scripts,
+    bool? rulesEnabled,
     DateTime? lastUpdateTime,
     Value<DateTime?> pendingTime = const Value.absent(),
     Value<String?> error = const Value.absent(),
@@ -5119,6 +5155,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     resources: resources ?? this.resources,
     system: system.present ? system.value : this.system,
     scripts: scripts ?? this.scripts,
+    rulesEnabled: rulesEnabled ?? this.rulesEnabled,
     lastUpdateTime: lastUpdateTime ?? this.lastUpdateTime,
     pendingTime: pendingTime.present ? pendingTime.value : this.pendingTime,
     error: error.present ? error.value : this.error,
@@ -5138,6 +5175,9 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       resources: data.resources.present ? data.resources.value : this.resources,
       system: data.system.present ? data.system.value : this.system,
       scripts: data.scripts.present ? data.scripts.value : this.scripts,
+      rulesEnabled: data.rulesEnabled.present
+          ? data.rulesEnabled.value
+          : this.rulesEnabled,
       lastUpdateTime: data.lastUpdateTime.present
           ? data.lastUpdateTime.value
           : this.lastUpdateTime,
@@ -5162,6 +5202,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           ..write('resources: $resources, ')
           ..write('system: $system, ')
           ..write('scripts: $scripts, ')
+          ..write('rulesEnabled: $rulesEnabled, ')
           ..write('lastUpdateTime: $lastUpdateTime, ')
           ..write('pendingTime: $pendingTime, ')
           ..write('error: $error, ')
@@ -5182,6 +5223,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     resources,
     system,
     scripts,
+    rulesEnabled,
     lastUpdateTime,
     pendingTime,
     error,
@@ -5201,6 +5243,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           other.resources == this.resources &&
           other.system == this.system &&
           other.scripts == this.scripts &&
+          other.rulesEnabled == this.rulesEnabled &&
           other.lastUpdateTime == this.lastUpdateTime &&
           other.pendingTime == this.pendingTime &&
           other.error == this.error &&
@@ -5218,6 +5261,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
   final Value<Map<String, String>> resources;
   final Value<String?> system;
   final Value<int> scripts;
+  final Value<bool> rulesEnabled;
   final Value<DateTime> lastUpdateTime;
   final Value<DateTime?> pendingTime;
   final Value<String?> error;
@@ -5233,6 +5277,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     this.resources = const Value.absent(),
     this.system = const Value.absent(),
     this.scripts = const Value.absent(),
+    this.rulesEnabled = const Value.absent(),
     this.lastUpdateTime = const Value.absent(),
     this.pendingTime = const Value.absent(),
     this.error = const Value.absent(),
@@ -5249,6 +5294,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     this.resources = const Value.absent(),
     this.system = const Value.absent(),
     this.scripts = const Value.absent(),
+    this.rulesEnabled = const Value.absent(),
     required DateTime lastUpdateTime,
     this.pendingTime = const Value.absent(),
     this.error = const Value.absent(),
@@ -5266,6 +5312,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     Expression<String>? resources,
     Expression<String>? system,
     Expression<int>? scripts,
+    Expression<bool>? rulesEnabled,
     Expression<DateTime>? lastUpdateTime,
     Expression<DateTime>? pendingTime,
     Expression<String>? error,
@@ -5282,6 +5329,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
       if (resources != null) 'resources': resources,
       if (system != null) 'system': system,
       if (scripts != null) 'scripts': scripts,
+      if (rulesEnabled != null) 'rules_enabled': rulesEnabled,
       if (lastUpdateTime != null) 'last_update_time': lastUpdateTime,
       if (pendingTime != null) 'pending_time': pendingTime,
       if (error != null) 'error': error,
@@ -5300,6 +5348,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     Value<Map<String, String>>? resources,
     Value<String?>? system,
     Value<int>? scripts,
+    Value<bool>? rulesEnabled,
     Value<DateTime>? lastUpdateTime,
     Value<DateTime?>? pendingTime,
     Value<String?>? error,
@@ -5316,6 +5365,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
       resources: resources ?? this.resources,
       system: system ?? this.system,
       scripts: scripts ?? this.scripts,
+      rulesEnabled: rulesEnabled ?? this.rulesEnabled,
       lastUpdateTime: lastUpdateTime ?? this.lastUpdateTime,
       pendingTime: pendingTime ?? this.pendingTime,
       error: error ?? this.error,
@@ -5360,6 +5410,9 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     if (scripts.present) {
       map['scripts'] = Variable<int>(scripts.value);
     }
+    if (rulesEnabled.present) {
+      map['rules_enabled'] = Variable<bool>(rulesEnabled.value);
+    }
     if (lastUpdateTime.present) {
       map['last_update_time'] = Variable<DateTime>(lastUpdateTime.value);
     }
@@ -5390,6 +5443,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
           ..write('resources: $resources, ')
           ..write('system: $system, ')
           ..write('scripts: $scripts, ')
+          ..write('rulesEnabled: $rulesEnabled, ')
           ..write('lastUpdateTime: $lastUpdateTime, ')
           ..write('pendingTime: $pendingTime, ')
           ..write('error: $error, ')
@@ -12514,6 +12568,7 @@ typedef $$MitmModulesTableCreateCompanionBuilder =
       Value<Map<String, String>> resources,
       Value<String?> system,
       Value<int> scripts,
+      Value<bool> rulesEnabled,
       required DateTime lastUpdateTime,
       Value<DateTime?> pendingTime,
       Value<String?> error,
@@ -12531,6 +12586,7 @@ typedef $$MitmModulesTableUpdateCompanionBuilder =
       Value<Map<String, String>> resources,
       Value<String?> system,
       Value<int> scripts,
+      Value<bool> rulesEnabled,
       Value<DateTime> lastUpdateTime,
       Value<DateTime?> pendingTime,
       Value<String?> error,
@@ -12603,6 +12659,11 @@ class $$MitmModulesTableFilterComposer
 
   ColumnFilters<int> get scripts => $composableBuilder(
     column: $table.scripts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get rulesEnabled => $composableBuilder(
+    column: $table.rulesEnabled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12687,6 +12748,11 @@ class $$MitmModulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get rulesEnabled => $composableBuilder(
+    column: $table.rulesEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastUpdateTime => $composableBuilder(
     column: $table.lastUpdateTime,
     builder: (column) => ColumnOrderings(column),
@@ -12749,6 +12815,11 @@ class $$MitmModulesTableAnnotationComposer
   GeneratedColumn<int> get scripts =>
       $composableBuilder(column: $table.scripts, builder: (column) => column);
 
+  GeneratedColumn<bool> get rulesEnabled => $composableBuilder(
+    column: $table.rulesEnabled,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get lastUpdateTime => $composableBuilder(
     column: $table.lastUpdateTime,
     builder: (column) => column,
@@ -12807,6 +12878,7 @@ class $$MitmModulesTableTableManager
                 Value<Map<String, String>> resources = const Value.absent(),
                 Value<String?> system = const Value.absent(),
                 Value<int> scripts = const Value.absent(),
+                Value<bool> rulesEnabled = const Value.absent(),
                 Value<DateTime> lastUpdateTime = const Value.absent(),
                 Value<DateTime?> pendingTime = const Value.absent(),
                 Value<String?> error = const Value.absent(),
@@ -12822,6 +12894,7 @@ class $$MitmModulesTableTableManager
                 resources: resources,
                 system: system,
                 scripts: scripts,
+                rulesEnabled: rulesEnabled,
                 lastUpdateTime: lastUpdateTime,
                 pendingTime: pendingTime,
                 error: error,
@@ -12839,6 +12912,7 @@ class $$MitmModulesTableTableManager
                 Value<Map<String, String>> resources = const Value.absent(),
                 Value<String?> system = const Value.absent(),
                 Value<int> scripts = const Value.absent(),
+                Value<bool> rulesEnabled = const Value.absent(),
                 required DateTime lastUpdateTime,
                 Value<DateTime?> pendingTime = const Value.absent(),
                 Value<String?> error = const Value.absent(),
@@ -12854,6 +12928,7 @@ class $$MitmModulesTableTableManager
                 resources: resources,
                 system: system,
                 scripts: scripts,
+                rulesEnabled: rulesEnabled,
                 lastUpdateTime: lastUpdateTime,
                 pendingTime: pendingTime,
                 error: error,

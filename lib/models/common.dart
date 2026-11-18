@@ -869,6 +869,10 @@ abstract class MitmModule with _$MitmModule {
 
     /// Its scripts FlClash runs, which turning it on asks about first.
     @Default(0) int scripts,
+
+    /// Whether its routing rules go ahead of the profile's own; its other
+    /// content follows [enabled] alone.
+    @Default(true) bool rulesEnabled,
     required DateTime lastUpdateTime,
 
     /// Set while an update's new content waits for the user to adopt it;
