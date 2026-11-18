@@ -7,6 +7,7 @@ import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/features/connection/mitm_script_hits.dart';
 import 'package:fl_clash/features/mitm/script.dart';
 import 'package:fl_clash/features/mitm/script_dialogs.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -28,6 +29,7 @@ MitmScript _script(
   String? url,
   String? pending,
   String? error,
+  MitmUpdateFailure? failure,
 }) => MitmScript(
   id: id,
   profileId: 1,
@@ -39,6 +41,7 @@ MitmScript _script(
   pendingFile: pending,
   checkedAt: DateTime(2026, 11, 18),
   error: error,
+  failure: failure,
 );
 
 final _scripts = [
@@ -64,6 +67,15 @@ final _scripts = [
     'script-path=s4.js',
     url: 'https://x.com/broken.js',
     error: 'HTTP 404',
+    failure: MitmUpdateFailure.load,
+  ),
+  _script(
+    5,
+    r'Stale = type=http-response,pattern=^https://api\.a\.com/y,'
+    'script-path=s5.js',
+    url: 'https://x.com/stale.js',
+    error: 'HTTP 503',
+    failure: MitmUpdateFailure.check,
   ),
 ];
 
@@ -160,7 +172,7 @@ void main() {
     expect(find.text(l.mitmScripts), findsOneWidget);
     expect(
       find.text(
-        '${l.mitmScriptCount(4)} · ${l.mitmUpdateCount(1)} · '
+        '${l.mitmScriptCount(5)} · ${l.mitmUpdateCount(1)} · '
         '${l.mitmScriptInvalidCount(1)}',
         findRichText: true,
       ),
@@ -175,7 +187,18 @@ void main() {
     expect(find.text(l.mitmScriptGroupRequest), findsOneWidget);
     expect(find.text(l.mitmScriptGroupResponse), findsOneWidget);
     expect(find.text(l.mitmViewUpdate), findsOneWidget);
-    expect(find.textContaining('HTTP 404', findRichText: true), findsOneWidget);
+    expect(
+      find.textContaining(
+        l.mitmScriptLoadFailed('HTTP 404'),
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(l.mitmUpdateCheckFailedKept, findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.text(l.retry), findsNWidgets(2));
     expect(
       find.text(l.mitmScriptHostNotDecrypted, findRichText: true),
       findsOneWidget,
@@ -246,7 +269,7 @@ void main() {
     expect(find.text(l.mitmCapabilitySend), findsOneWidget);
     expect(find.text(l.mitmCapabilityStore), findsOneWidget);
     expect(find.text(l.mitmHostNotDecrypted('d.net')), findsOneWidget);
-    expect(find.text(l.mitmAlsoDecryptHosts), findsOneWidget);
+    expect(find.text(l.mitmAlsoDecryptHost('d.net')), findsOneWidget);
     expect(find.text(l.mitmAddAndEnable), findsOneWidget);
   });
 
@@ -259,6 +282,7 @@ void main() {
     final result = showMitmUpdateDialog(
       context,
       name: 'Feed',
+      subtitle: 'Found today',
       before: 'a\nb\nc',
       after: 'a\nB\nc\nd',
       onAdopt: () async => adopted++,
@@ -267,7 +291,14 @@ void main() {
     final l = currentAppLocalizations;
 
     expect(find.text(l.mitmUpdateTitle('Feed')), findsOneWidget);
-    expect(find.text(l.mitmDiffCounts(2, 1)), findsOneWidget);
+    expect(find.text('Found today'), findsOneWidget);
+    expect(
+      find.text(
+        '${l.mitmDiffAdded(2)}  ${l.mitmDiffRemoved(1)}',
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text(l.mitmAdoptUpdate));
     await tester.pumpAndSettle();
 
@@ -348,9 +379,12 @@ void main() {
     final l = currentAppLocalizations;
 
     expect(find.text(l.mitmScriptsPassed(1)), findsOneWidget);
-    expect(find.text(l.mitmScriptTimedOut(10)), findsOneWidget);
+    expect(find.text(l.mitmScriptTimedOut), findsOneWidget);
     expect(find.textContaining('signed', findRichText: true), findsOneWidget);
-    expect(find.text(l.mitmScriptRequestsSent(1)), findsOneWidget);
+    expect(
+      find.textContaining(l.mitmScriptRequestsSent(1), findRichText: true),
+      findsOneWidget,
+    );
     expect(find.text(l.mitmViewInScripts), findsNWidgets(2));
   });
 }

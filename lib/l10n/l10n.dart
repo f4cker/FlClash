@@ -12896,7 +12896,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmScriptCount.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =0{None added} =1{1 script} other{{count} scripts}}'**
+  /// **'{count, plural, =1{1 script} other{{count} scripts}}'**
   String mitmScriptCount(int count);
 
   /// No description provided for @mitmUpdateCount.
@@ -12968,7 +12968,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmScriptHasUpdate.
   ///
   /// In en, this message translates to:
-  /// **'Content updated'**
+  /// **'Update available'**
   String get mitmScriptHasUpdate;
 
   /// No description provided for @mitmHasUpdate.
@@ -13142,7 +13142,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmScriptConfirmBody.
   ///
   /// In en, this message translates to:
-  /// **'These scripts can see and change the plaintext requests and responses of the hosts they match, which may include accounts and passwords. Only turn on scripts you trust.'**
+  /// **'Scripts may read and change the plaintext requests and responses of the hosts they match, which may include accounts, passwords and other sensitive information. Turn on only scripts you trust.'**
   String get mitmScriptConfirmBody;
 
   /// No description provided for @mitmCapabilityRead.
@@ -13154,19 +13154,19 @@ abstract class AppLocalizations {
   /// No description provided for @mitmCapabilitySend.
   ///
   /// In en, this message translates to:
-  /// **'Send requests of its own (through Flash)'**
+  /// **'Send network requests through Flash'**
   String get mitmCapabilitySend;
 
   /// No description provided for @mitmCapabilityStore.
   ///
   /// In en, this message translates to:
-  /// **'Keep a little data on this Mac'**
+  /// **'Save data on this Mac; all scripts share this data and can read each other\'s'**
   String get mitmCapabilityStore;
 
   /// No description provided for @mitmCapabilityLimits.
   ///
   /// In en, this message translates to:
-  /// **'Can\'t read or write files or run commands; each run gets at most 10 seconds, after which the message passes unchanged.'**
+  /// **'Can\'t read or write files on this Mac or run commands; each run lasts at most 10 seconds.'**
   String get mitmCapabilityLimits;
 
   /// No description provided for @mitmHostNotDecrypted.
@@ -13196,7 +13196,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmScriptsAdded.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Added 1 script} other{Added {count} scripts}}'**
+  /// **'{count, plural, =1{1 script added} other{{count} scripts added}}'**
   String mitmScriptsAdded(int count);
 
   /// No description provided for @mitmScriptEmpty.
@@ -13234,12 +13234,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last {before} · This {after}'**
   String mitmUpdateSubtitle(Object before, Object after);
-
-  /// No description provided for @mitmDiffCounts.
-  ///
-  /// In en, this message translates to:
-  /// **'+{added} lines −{removed} lines'**
-  String mitmDiffCounts(int added, int removed);
 
   /// No description provided for @mitmDiffFolded.
   ///
@@ -13292,7 +13286,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmModuleHostsHint.
   ///
   /// In en, this message translates to:
-  /// **'This module will add the decrypted hosts below. Check them before you import.'**
+  /// **'Check the decrypted hosts this module includes before you decide whether to import it.'**
   String get mitmModuleHostsHint;
 
   /// No description provided for @mitmModuleNoHosts.
@@ -13340,7 +13334,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmModuleRoutingRulesNote.
   ///
   /// In en, this message translates to:
-  /// **'{count} rules, not imported yet'**
+  /// **'{count, plural, =1{1 routing rule won\'t be imported.} other{{count} routing rules won\'t be imported.}}'**
   String mitmModuleRoutingRulesNote(int count);
 
   /// No description provided for @mitmModuleUnsupported.
@@ -13352,7 +13346,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmModuleUnsupportedCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} lines won\'t be imported'**
+  /// **'{count, plural, =1{1 line won\'t be imported.} other{{count} lines won\'t be imported.}}'**
   String mitmModuleUnsupportedCount(int count);
 
   /// No description provided for @mitmImportOnly.
@@ -13430,7 +13424,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmScriptsPassed.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 script didn\'t finish; the message passed unchanged} other{{count} scripts didn\'t finish; the message passed unchanged}}'**
+  /// **'{count, plural, =1{1 script didn\'t finish; the message passed unchanged.} other{{count} scripts didn\'t finish; the message passed unchanged.}}'**
   String mitmScriptsPassed(int count);
 
   /// No description provided for @mitmScriptDone.
@@ -13442,19 +13436,19 @@ abstract class AppLocalizations {
   /// No description provided for @mitmScriptTimedOut.
   ///
   /// In en, this message translates to:
-  /// **'Timed out ({seconds} s)'**
-  String mitmScriptTimedOut(int seconds);
+  /// **'Script timed out'**
+  String get mitmScriptTimedOut;
 
   /// No description provided for @mitmScriptFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed: {reason}'**
+  /// **'Script failed: {reason}'**
   String mitmScriptFailed(Object reason);
 
   /// No description provided for @mitmScriptNotRun.
   ///
   /// In en, this message translates to:
-  /// **'Didn\'t run: {reason}'**
+  /// **'Script didn\'t run: {reason}'**
   String mitmScriptNotRun(Object reason);
 
   /// No description provided for @mitmScriptMemory.
@@ -13484,7 +13478,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmScriptRequestsSent.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Sent 1 request} other{Sent {count} requests}}'**
+  /// **'{count, plural, =1{1 request sent} other{{count} requests sent}}'**
   String mitmScriptRequestsSent(int count);
 
   /// No description provided for @mitmViewInScripts.
@@ -13504,6 +13498,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Module · {name}'**
   String mitmFromModule(Object name);
+
+  /// No description provided for @mitmUpdateCheckFailedKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check for updates; the current version still works.'**
+  String get mitmUpdateCheckFailedKept;
+
+  /// No description provided for @mitmUpdateDownloadFailedKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the new version; the current version still works.'**
+  String get mitmUpdateDownloadFailedKept;
+
+  /// No description provided for @mitmUpdateInvalidKept.
+  ///
+  /// In en, this message translates to:
+  /// **'The new version can\'t be loaded; the current version still works.'**
+  String get mitmUpdateInvalidKept;
+
+  /// No description provided for @mitmScriptLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The script can\'t be loaded: {reason}.'**
+  String mitmScriptLoadFailed(Object reason);
+
+  /// No description provided for @mitmModuleLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The module can\'t be loaded: {reason}.'**
+  String mitmModuleLoadFailed(Object reason);
+
+  /// No description provided for @mitmPendingKept.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version is waiting; the current version keeps running.'**
+  String get mitmPendingKept;
+
+  /// No description provided for @mitmScriptFoundUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'New version found {time}'**
+  String mitmScriptFoundUpdate(Object time);
+
+  /// No description provided for @mitmAlsoDecryptHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Also add {host} to decryption'**
+  String mitmAlsoDecryptHost(Object host);
+
+  /// No description provided for @mitmDiffAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{+1 line} other{+{count} lines}}'**
+  String mitmDiffAdded(int count);
+
+  /// No description provided for @mitmDiffRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{−1 line} other{−{count} lines}}'**
+  String mitmDiffRemoved(int count);
 }
 
 class _AppLocalizationsDelegate

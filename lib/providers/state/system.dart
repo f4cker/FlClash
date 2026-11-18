@@ -207,7 +207,7 @@ Map<String, Object?> composeMitmSetup(
   ];
   final script = [
     for (final item in scripts)
-      if (item.enabled) item.coreJson,
+      if (item.enabled && !item.unloadable) item.coreJson,
     ...modules.script,
   ];
   return {

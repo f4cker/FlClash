@@ -168,6 +168,12 @@ Future<void> _viewModuleUpdate(
   await showMitmUpdateDialog(
     context,
     name: module.name,
+    subtitle: switch (module.pendingTime) {
+      final found? => context.appLocalizations.mitmScriptFoundUpdate(
+        found.getLastUpdateTimeDesc(context),
+      ),
+      null => context.appLocalizations.mitmViewUpdate,
+    },
     before: before,
     after: after,
     summary: MitmModuleChangeSummary(change: change),
@@ -221,7 +227,7 @@ class MitmModulesItem extends ConsumerWidget {
                 modules.where((m) => m.enabled).length,
               ),
         updates: modules.where((m) => m.hasPending).length,
-        errors: modules.where((m) => m.error != null).length,
+        errors: modules.where((m) => m.unloadable).length,
       ),
       widget: const MitmModulesView(),
     );
@@ -437,23 +443,49 @@ class _MitmModuleRow extends ConsumerWidget {
           position: ItemPosition.get(index, total),
           child: DecorationListItem(
             contentPadding: const EdgeInsets.only(left: 16),
+            invalid: module.unloadable,
             title: Text(
               module.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: AppTextStyle.subheadline.of(context, emphasized: true),
             ),
             subtitle: _MitmModuleSummary(module: module),
             trailing: Padding(
               padding: const EdgeInsetsDirectional.only(end: 8),
-              child: isUpdating
-                  ? const Padding(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 12,
+                children: [
+                  if (!isUpdating && module.hasPending)
+                    MitmLinkButton(
+                      label: appLocalizations.mitmViewUpdate,
+                      onPressed: () => _viewModuleUpdate(context, ref, module),
+                    )
+                  else if (!isUpdating &&
+                      module.error != null &&
+                      module.isRemote)
+                    MitmLinkButton(
+                      label: appLocalizations.retry,
+                      onPressed: () => _updateModule(context, ref, module),
+                    ),
+                  if (isUpdating)
+                    const Padding(
                       padding: EdgeInsetsDirectional.only(end: 8),
                       child: ActivityIndicator(size: 24),
                     )
-                  : Switch(
+                  else if (module.unloadable)
+                    const Opacity(
+                      opacity: 0.4,
+                      child: Switch(value: false, onChanged: null),
+                    )
+                  else
+                    Switch(
                       value: module.enabled,
                       onChanged: (value) => _setEnabled(ref, module, value),
                     ),
+                ],
+              ),
             ),
             onPressed: () =>
                 BaseNavigator.push(context, MitmModuleView(id: module.id)),
@@ -828,7 +860,6 @@ class _MitmModuleSummary extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.appLocalizations;
-    final colorScheme = context.colorScheme;
     final content = ref
         .watch(mitmModuleDetailsProvider(module.id))
         .value
@@ -858,9 +889,6 @@ class _MitmModuleSummary extends ConsumerWidget {
         ),
     ];
     final error = module.error;
-    final link = AppTextStyle.footnote
-        .of(context)
-        .copyWith(color: colorScheme.primary);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 2,
@@ -885,9 +913,19 @@ class _MitmModuleSummary extends ConsumerWidget {
             style: style,
           ),
         if (error != null)
-          MitmMarkedLine(
-            error,
-            style: style.copyWith(color: mitmRewriteErrorColor(context)),
+          Tooltip(
+            message: error,
+            hoverDelay: const Duration(milliseconds: 500),
+            child: MitmMarkedLine(
+              module.unloadable
+                  ? l.mitmModuleLoadFailed(error)
+                  : mitmKeptFailureText(l, module.failure),
+              style: style.copyWith(
+                color: module.unloadable
+                    ? mitmRewriteErrorColor(context)
+                    : mitmAmberColor(context),
+              ),
+            ),
           )
         else
           Text.rich(
@@ -910,16 +948,6 @@ class _MitmModuleSummary extends ConsumerWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: style,
-          ),
-        if (module.hasPending || (error != null && module.isRemote))
-          TextButton(
-            onPressed: () => module.hasPending
-                ? _viewModuleUpdate(context, ref, module)
-                : _updateModule(context, ref, module),
-            child: Text(
-              module.hasPending ? l.mitmViewUpdate : l.retry,
-              style: link,
-            ),
           ),
       ],
     );

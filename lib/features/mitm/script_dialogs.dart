@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_script.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -26,12 +27,22 @@ const _amberFill = Color(0xFFFFF4E5);
 const _addedInk = Color(0xFF16632C);
 const _addedFill = Color(0xFFE8F5EC);
 const _removedFill = Color(0xFFFDECEA);
+const _excludedFill = Color(0xFFF2F1F5);
+const _excludedInk = Color(0xFF8E8C94);
 const _dialogWidth = 560.0;
 const _diffWidth = 640.0;
 const _validateDelay = Duration(milliseconds: 300);
 
 String mitmScriptFailureText(AppLocalizations l, Object error) =>
     mitmScriptErrorMessage(error) ?? mitmRewriteFailureText(l, error);
+
+/// A failed update that left the current version running.
+String mitmKeptFailureText(AppLocalizations l, MitmUpdateFailure? failure) =>
+    switch (failure) {
+      MitmUpdateFailure.download => l.mitmUpdateDownloadFailedKept,
+      MitmUpdateFailure.invalid => l.mitmUpdateInvalidKept,
+      _ => l.mitmUpdateCheckFailedKept,
+    };
 
 bool _dark(BuildContext context) =>
     context.colorScheme.brightness == Brightness.dark;
@@ -125,7 +136,59 @@ class MitmScriptCapabilities extends StatelessWidget {
   }
 }
 
-/// A host pill: new ones outlined in blue, listed ones grey.
+/// A text link whose words line up with the column it sits in.
+class MitmLinkButton extends StatelessWidget {
+  const MitmLinkButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.color,
+    this.glyph,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Color? color;
+
+  /// A chevron after [label], for a link that opens in place.
+  final Glyph? glyph;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      style: const ButtonStyle(
+        padding: EdgeInsets.zero,
+        minimumSize: Size(0, 24),
+        tapTargetSize: TapTargetSize.shrinkWrap,
+      ),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: label),
+            if (glyph case final glyph?)
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 2),
+                  child: GlyphIcon(
+                    glyph,
+                    size: 12,
+                    color: color ?? context.colorScheme.primary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        maxLines: 1,
+        style: AppTextStyle.footnote
+            .of(context, emphasized: true)
+            .copyWith(color: color ?? context.colorScheme.primary),
+      ),
+    );
+  }
+}
+
 /// A line of [style]'s colour led by [glyph]: a row's reason, or a check.
 class MitmMarkedLine extends StatelessWidget {
   const MitmMarkedLine(
@@ -163,6 +226,8 @@ class MitmMarkedLine extends StatelessWidget {
   }
 }
 
+/// A host pill: new ones outlined in blue, listed ones grey, excluded ones
+/// struck through.
 class MitmHostPill extends StatelessWidget {
   const MitmHostPill({
     super.key,
@@ -185,6 +250,11 @@ class MitmHostPill extends StatelessWidget {
     final (fill, border, ink) = switch (change) {
       true => (_addedColor(context), null, _dark(context) ? null : _addedInk),
       false => (_removedColor(context), null, mitmRewriteErrorColor(context)),
+      null when excluded => (
+        _dark(context) ? colorScheme.surfaceContainerHighest : _excludedFill,
+        null,
+        _dark(context) ? colorScheme.onSurfaceVariant : _excludedInk,
+      ),
       null when listed => (
         colorScheme.surfaceContainerHighest,
         null,
@@ -580,24 +650,49 @@ class _ScriptAddDialogState extends ConsumerState<_ScriptAddDialog> {
                 ),
               const MitmScriptCapabilities(),
               if (uncovered.isNotEmpty)
-                Row(
-                  spacing: 8,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 6,
                   children: [
-                    Checkbox(
-                      value: _alsoDecrypt,
-                      onChanged: (value) =>
-                          setState(() => _alsoDecrypt = value ?? false),
+                    Row(
+                      spacing: 8,
+                      children: [
+                        SizedBox.square(
+                          dimension: 24,
+                          child: OverflowBox(
+                            maxWidth: 48,
+                            maxHeight: 48,
+                            child: Checkbox(
+                              value: _alsoDecrypt,
+                              onChanged: (value) =>
+                                  setState(() => _alsoDecrypt = value ?? false),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            uncovered.length == 1
+                                ? l.mitmAlsoDecryptHost(uncovered.single)
+                                : l.mitmAlsoDecryptHosts,
+                            style: AppTextStyle.footnote.of(context),
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: Text(
-                        l.mitmAlsoDecryptHosts,
-                        style: AppTextStyle.footnote.of(context),
+                    if (uncovered.length > 1)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 32),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 4,
+                          children: [
+                            for (final host in uncovered)
+                              Text(host, style: secondary.toJetBrainsMono),
+                          ],
+                        ),
                       ),
-                    ),
                   ],
                 ),
-              if (uncovered.isNotEmpty)
-                Text(uncovered.join(', '), style: secondary.toJetBrainsMono),
             ],
           ),
         ),
@@ -882,11 +977,23 @@ class MitmDiffView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 6,
       children: [
-        Text(
-          l.mitmDiffCounts(counts.added, counts.removed),
-          style: AppTextStyle.caption1
-              .of(context)
-              .copyWith(color: colorScheme.onSurfaceVariant),
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: l.mitmDiffAdded(counts.added),
+                style: TextStyle(
+                  color: _dark(context) ? const Color(0xFF7DD99A) : _addedInk,
+                ),
+              ),
+              const TextSpan(text: '  '),
+              TextSpan(
+                text: l.mitmDiffRemoved(counts.removed),
+                style: TextStyle(color: mitmRewriteErrorColor(context)),
+              ),
+            ],
+          ),
+          style: AppTextStyle.caption1.of(context).toJetBrainsMono,
         ),
         Container(
           decoration: ShapeDecoration(
@@ -1019,6 +1126,7 @@ class MitmModuleChangeSummary extends StatelessWidget {
 Future<bool?> showMitmUpdateDialog(
   BuildContext context, {
   required String name,
+  required String subtitle,
   required String before,
   required String after,
   required Future<void> Function() onAdopt,
@@ -1029,6 +1137,7 @@ Future<bool?> showMitmUpdateDialog(
     dismissible: false,
     child: _UpdateDialog(
       name: name,
+      subtitle: subtitle,
       before: before,
       after: after,
       onAdopt: onAdopt,
@@ -1040,6 +1149,7 @@ Future<bool?> showMitmUpdateDialog(
 class _UpdateDialog extends StatefulWidget {
   const _UpdateDialog({
     required this.name,
+    required this.subtitle,
     required this.before,
     required this.after,
     required this.onAdopt,
@@ -1047,6 +1157,7 @@ class _UpdateDialog extends StatefulWidget {
   });
 
   final String name;
+  final String subtitle;
   final String before;
   final String after;
   final Future<void> Function() onAdopt;
@@ -1084,7 +1195,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
     final summary = widget.summary;
     return RuleEditFrame(
       title: l.mitmUpdateTitle(widget.name),
-      subtitle: l.mitmViewUpdate,
+      subtitle: widget.subtitle,
       width: _diffWidth,
       error: _error,
       busy: _busy,
@@ -1100,6 +1211,12 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 12,
             children: [
+              Text(
+                l.mitmPendingKept,
+                style: AppTextStyle.footnote
+                    .of(context)
+                    .copyWith(color: context.colorScheme.onSurfaceVariant),
+              ),
               ?summary,
               MitmDiffView(lines: _diff),
             ],

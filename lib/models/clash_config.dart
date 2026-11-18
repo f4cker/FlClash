@@ -2360,6 +2360,7 @@ abstract class MitmScript with _$MitmScript {
     String? pendingFile,
     DateTime? checkedAt,
     String? error,
+    MitmUpdateFailure? failure,
   }) = _MitmScript;
 }
 
@@ -2369,6 +2370,9 @@ extension MitmScriptExt on MitmScript {
   bool get isRemote => url != null;
 
   bool get hasPending => pendingFile != null;
+
+  /// Nothing of it can run, unlike a failed update that keeps [file].
+  bool get unloadable => failure == MitmUpdateFailure.load;
 }
 
 class MitmRules {

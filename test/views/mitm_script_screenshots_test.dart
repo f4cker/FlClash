@@ -77,6 +77,7 @@ MitmScript _script(
   String? url,
   String? pending,
   String? error,
+  MitmUpdateFailure? failure,
 }) => MitmScript(
   id: id,
   profileId: 1,
@@ -88,6 +89,7 @@ MitmScript _script(
   pendingFile: pending,
   checkedAt: DateTime.now().subtract(const Duration(hours: 3)),
   error: error,
+  failure: failure,
 );
 
 final _scripts = [
@@ -116,6 +118,15 @@ final _scripts = [
     'requires-body=1,script-path=s4.js',
     url: 'https://raw.example.io/x/vip.js',
     error: 'HTTP 404',
+    failure: MitmUpdateFailure.check,
+  ),
+  _script(
+    5,
+    r'比价 = type=http-response,pattern=^https://item\.example\.com/,'
+    'requires-body=1,script-path=s5.js',
+    url: 'https://raw.example.io/x/price.js',
+    error: 'HTTP 404',
+    failure: MitmUpdateFailure.load,
   ),
 ];
 
@@ -375,7 +386,17 @@ void main() {
       url: 'https://raw.example.io/modules/price.sgmodule',
       lastUpdateTime: DateTime.now().subtract(const Duration(days: 9)),
       order: 2,
-      error: '下载失败：HTTP 503',
+      error: 'HTTP 503',
+      failure: MitmUpdateFailure.check,
+    ),
+    MitmModule(
+      id: 4,
+      name: '跳过开屏',
+      url: 'https://raw.example.io/modules/splash.sgmodule',
+      lastUpdateTime: DateTime.now().subtract(const Duration(days: 30)),
+      order: 3,
+      error: 'HTTP 404',
+      failure: MitmUpdateFailure.load,
     ),
   ];
 
@@ -505,6 +526,7 @@ void main() {
         showMitmUpdateDialog(
           host(tester),
           name: '去广告',
+          subtitle: '2 小时前检查到新版',
           before: _before.trim(),
           after: _after.trim(),
           onAdopt: () async {},
@@ -527,6 +549,7 @@ void main() {
         showMitmUpdateDialog(
           host(tester),
           name: '去广告合集',
+          subtitle: '10 分钟前检查到新版',
           before: _module.trim(),
           after: _updated.trim(),
           summary: MitmModuleChangeSummary(

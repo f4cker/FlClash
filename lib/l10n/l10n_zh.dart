@@ -7105,13 +7105,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mitmScriptCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 个脚本',
-      zero: '未添加',
-    );
-    return '$_temp0';
+    return '$count 个脚本';
   }
 
   @override
@@ -7160,7 +7154,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get mitmScriptHasUpdate => '内容有更新';
+  String get mitmScriptHasUpdate => '有更新';
 
   @override
   String get mitmHasUpdate => '有更新';
@@ -7257,19 +7251,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmScriptConfirmBody =>
-      '此脚本可以查看和修改所选域名的明文请求与响应，可能接触账号、密码等敏感信息。请只启用你信任的脚本。';
+      '脚本可能读取和修改匹配域名的明文请求与响应，其中可能包含账号、密码等敏感信息。请只启用你信任的脚本。';
 
   @override
-  String get mitmCapabilityRead => '查看和修改所选域名的明文请求与响应';
+  String get mitmCapabilityRead => '查看和修改匹配域名的明文请求与响应';
 
   @override
-  String get mitmCapabilitySend => '可以自己发出网络请求（经 Flash 出去）';
+  String get mitmCapabilitySend => '通过 Flash 发出网络请求';
 
   @override
-  String get mitmCapabilityStore => '可以在本机保存少量数据';
+  String get mitmCapabilityStore => '在本机保存数据；所有脚本共用这份数据，彼此可以读取';
 
   @override
-  String get mitmCapabilityLimits => '不能读写本机文件、不能执行命令；单次最多运行 10 秒，超时原样放行。';
+  String get mitmCapabilityLimits => '不能读写本机文件或执行命令；每次运行最长 10 秒。';
 
   @override
   String mitmHostNotDecrypted(Object host) {
@@ -7319,11 +7313,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String mitmDiffCounts(int added, int removed) {
-    return '+$added 行 −$removed 行';
-  }
-
-  @override
   String mitmDiffFolded(int count) {
     return '… $count 行未改动';
   }
@@ -7350,7 +7339,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmModuleConfirmTitle => '确认导入模块';
 
   @override
-  String get mitmModuleHostsHint => '此模块将添加以下解密域名，请确认后再导入。';
+  String get mitmModuleHostsHint => '请确认此模块包含的解密域名，再决定是否导入。';
 
   @override
   String get mitmModuleNoHosts => '此模块未添加解密域名。';
@@ -7379,7 +7368,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mitmModuleRoutingRulesNote(int count) {
-    return '$count 条，暂不导入';
+    return '$count 条分流规则不会导入。';
   }
 
   @override
@@ -7387,7 +7376,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mitmModuleUnsupportedCount(int count) {
-    return '$count 行不会导入';
+    return '$count 行不会导入。';
   }
 
   @override
@@ -7438,7 +7427,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mitmScriptsPassed(int count) {
-    return '$count 个脚本未完成，已原样放行';
+    return '$count 个脚本未完成，已原样放行。';
   }
 
   @override
@@ -7447,18 +7436,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String mitmScriptTimedOut(int seconds) {
-    return '执行超时（$seconds 秒）';
-  }
+  String get mitmScriptTimedOut => '脚本执行超时';
 
   @override
   String mitmScriptFailed(Object reason) {
-    return '执行出错：$reason';
+    return '脚本执行出错：$reason';
   }
 
   @override
   String mitmScriptNotRun(Object reason) {
-    return '未运行：$reason';
+    return '脚本未运行：$reason';
   }
 
   @override
@@ -7489,5 +7476,47 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String mitmFromModule(Object name) {
     return '模块 · $name';
+  }
+
+  @override
+  String get mitmUpdateCheckFailedKept => '更新检查失败，当前版本仍可使用。';
+
+  @override
+  String get mitmUpdateDownloadFailedKept => '新版下载失败，当前版本仍可使用。';
+
+  @override
+  String get mitmUpdateInvalidKept => '新版无法加载，当前版本仍可使用。';
+
+  @override
+  String mitmScriptLoadFailed(Object reason) {
+    return '脚本无法加载：$reason。';
+  }
+
+  @override
+  String mitmModuleLoadFailed(Object reason) {
+    return '模块无法加载：$reason。';
+  }
+
+  @override
+  String get mitmPendingKept => '新版待采用，当前版本继续运行。';
+
+  @override
+  String mitmScriptFoundUpdate(Object time) {
+    return '$time检查到新版';
+  }
+
+  @override
+  String mitmAlsoDecryptHost(Object host) {
+    return '同时把 $host 加入解密';
+  }
+
+  @override
+  String mitmDiffAdded(int count) {
+    return '+$count 行';
+  }
+
+  @override
+  String mitmDiffRemoved(int count) {
+    return '−$count 行';
   }
 }

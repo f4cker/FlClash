@@ -1,7 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_rewrite.dart';
-import 'package:fl_clash/common/mitm_script.dart';
 import 'package:fl_clash/features/mitm/rewrite.dart' show mitmRewriteErrorColor;
 import 'package:fl_clash/features/mitm/script.dart';
 import 'package:fl_clash/features/mitm/script_dialogs.dart';
@@ -25,19 +24,16 @@ const _logFillLight = Color(0xFFF6F5F8);
 bool mitmScriptFailed(MitmAction hit) => hit.skipped.isNotEmpty;
 
 /// The result line of one script run, in the app's words.
-String mitmScriptResultText(
-  AppLocalizations l,
-  MitmAction hit, {
-  int timeout = 10,
-}) => switch (hit.skipped) {
-  '' => l.mitmScriptDone(mitmRewriteTookText(hit) ?? ''),
-  'scriptTimeout' => l.mitmScriptTimedOut(timeout),
-  'scriptError' => l.mitmScriptFailed(hit.error),
-  'scriptNoDone' => l.mitmScriptFailed(l.mitmScriptNoDone),
-  'scriptMemory' => l.mitmScriptNotRun(l.mitmScriptMemory),
-  'scriptBusy' => l.mitmScriptNotRun(l.mitmScriptBusy),
-  final other => l.mitmScriptNotRun(mitmRewriteSkipText(l, other)),
-};
+String mitmScriptResultText(AppLocalizations l, MitmAction hit) =>
+    switch (hit.skipped) {
+      '' => l.mitmScriptDone(mitmRewriteTookText(hit) ?? ''),
+      'scriptTimeout' => l.mitmScriptTimedOut,
+      'scriptError' => l.mitmScriptFailed(hit.error),
+      'scriptNoDone' => l.mitmScriptFailed(l.mitmScriptNoDone),
+      'scriptMemory' => l.mitmScriptNotRun(l.mitmScriptMemory),
+      'scriptBusy' => l.mitmScriptNotRun(l.mitmScriptBusy),
+      final other => l.mitmScriptNotRun(mitmRewriteSkipText(l, other)),
+    };
 
 /// The scripts that ran on one request, in the order they ran.
 class MitmScriptHitsSection extends ConsumerWidget {
@@ -99,7 +95,6 @@ class _MitmScriptHitRowState extends ConsumerState<_MitmScriptHitRow> {
     final hit = widget.hit;
     final footnote = AppTextStyle.footnote.of(context);
     final secondary = footnote.copyWith(color: colorScheme.onSurfaceVariant);
-    final link = footnote.copyWith(color: colorScheme.primary);
     final rule = hit.rule;
     final profileId = ref.watch(currentProfileIdProvider);
     final own = rule.startsWith('s') && profileId != null
@@ -115,9 +110,6 @@ class _MitmScriptHitRowState extends ConsumerState<_MitmScriptHitRow> {
               .watch(mitmModulesProvider)
               .value
               ?.firstWhereOrNull((item) => item.id == moduleId);
-    final timeout = own == null
-        ? 10
-        : parseMitmScriptInfo(own.line)?.timeout ?? 10;
     final failed = mitmScriptFailed(hit);
     final logs = hit.logs;
     final shownLogs = _allLogs ? logs : logs.take(_shownLogLines).toList();
@@ -154,7 +146,6 @@ class _MitmScriptHitRowState extends ConsumerState<_MitmScriptHitRow> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 4,
               children: [
                 Text.rich(
                   TextSpan(
@@ -176,13 +167,12 @@ class _MitmScriptHitRowState extends ConsumerState<_MitmScriptHitRow> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 4),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Expanded(
                       child: Text(
-                        mitmScriptResultText(l, hit, timeout: timeout),
+                        mitmScriptResultText(l, hit),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: failed
@@ -191,13 +181,11 @@ class _MitmScriptHitRowState extends ConsumerState<_MitmScriptHitRow> {
                       ),
                     ),
                     if (reveal != null)
-                      TextButton(
-                        onPressed: reveal,
-                        child: Text(revealLabel!, maxLines: 1, style: link),
-                      ),
+                      MitmLinkButton(label: revealLabel!, onPressed: reveal),
                   ],
                 ),
-                if (logs.isNotEmpty)
+                if (logs.isNotEmpty) ...[
+                  const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
                     decoration: ShapeDecoration(
@@ -238,12 +226,12 @@ class _MitmScriptHitRowState extends ConsumerState<_MitmScriptHitRow> {
                                 style: mono,
                               ),
                               if (!_allLogs && logs.length > _shownLogLines)
-                                TextButton(
-                                  onPressed: () =>
-                                      setState(() => _allLogs = true),
-                                  child: Text(
-                                    l.mitmScriptLogExpand(logs.length),
-                                    style: link,
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: MitmLinkButton(
+                                    label: l.mitmScriptLogExpand(logs.length),
+                                    onPressed: () =>
+                                        setState(() => _allLogs = true),
                                   ),
                                 ),
                             ],
@@ -261,17 +249,21 @@ class _MitmScriptHitRowState extends ConsumerState<_MitmScriptHitRow> {
                       ],
                     ),
                   ),
-                if (hit.requests.isNotEmpty)
+                ],
+                if (hit.requests.isNotEmpty) ...[
+                  const SizedBox(height: 6),
                   Align(
                     alignment: AlignmentDirectional.centerStart,
-                    child: TextButton(
+                    child: MitmLinkButton(
+                      label: l.mitmScriptRequestsSent(hit.requests.length),
+                      glyph: _requests
+                          ? AppGlyphs.chevronDown
+                          : AppGlyphs.chevronForward,
+                      color: colorScheme.onSurfaceVariant,
                       onPressed: () => setState(() => _requests = !_requests),
-                      child: Text(
-                        l.mitmScriptRequestsSent(hit.requests.length),
-                        style: secondary,
-                      ),
                     ),
                   ),
+                ],
                 if (_requests)
                   for (final request in hit.requests)
                     Text(

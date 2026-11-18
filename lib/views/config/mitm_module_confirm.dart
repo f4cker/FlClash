@@ -11,6 +11,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const _shownHosts = 12;
+const _footerRule = Color(0xFFE3E1E6);
 
 String mitmSkipReasonText(AppLocalizations l, MitmModuleSkip skip) =>
     switch (skip.reason) {
@@ -108,8 +109,30 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
 
   Widget _more(String label, VoidCallback onPressed) => Align(
     alignment: AlignmentDirectional.centerStart,
-    child: TextButton(onPressed: onPressed, child: Text(label)),
+    child: MitmLinkButton(label: label, onPressed: onPressed),
   );
+
+  /// [line] with Show More after it, 8 apart, until [shown].
+  Widget _withMore(Widget line, bool shown, VoidCallback onPressed) => shown
+      ? line
+      : Row(
+          spacing: 8,
+          children: [
+            Flexible(child: line),
+            MitmLinkButton(
+              label: context.appLocalizations.showMore,
+              onPressed: onPressed,
+            ),
+          ],
+        );
+
+  bool _overflows = false;
+
+  bool _onMetrics(ScrollMetricsNotification notification) {
+    final overflows = notification.metrics.maxScrollExtent > 0;
+    if (overflows != _overflows) setState(() => _overflows = overflows);
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,8 +214,18 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
           spacing: 4,
           children: [
             _title(context, l.mitmModuleRewrites, rewriteCount),
-            for (final MapEntry(key: group, value: lines) in rewrites.entries)
-              Text('${group.label(l)} ${lines.length}', style: secondary),
+            for (final (index, MapEntry(key: group, value: lines))
+                in rewrites.entries.indexed)
+              index == rewrites.length - 1
+                  ? _withMore(
+                      Text(
+                        '${group.label(l)} ${lines.length}',
+                        style: secondary,
+                      ),
+                      _rewriteLines,
+                      () => setState(() => _rewriteLines = true),
+                    )
+                  : Text('${group.label(l)} ${lines.length}', style: secondary),
             if (_rewriteLines)
               for (final lines in rewrites.values)
                 for (final line in lines)
@@ -201,9 +234,7 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: mono,
-                  )
-            else
-              _more(l.more, () => setState(() => _rewriteLines = true)),
+                  ),
           ],
         ),
       if (scripts.isNotEmpty)
@@ -238,9 +269,13 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
           spacing: 4,
           children: [
             _title(context, l.mitmModuleUnsupported, content.skipped.length),
-            Text(
-              l.mitmModuleUnsupportedCount(content.skipped.length),
-              style: secondary,
+            _withMore(
+              Text(
+                l.mitmModuleUnsupportedCount(content.skipped.length),
+                style: secondary,
+              ),
+              _skipped,
+              () => setState(() => _skipped = true),
             ),
             if (_skipped)
               for (final skip in content.skipped)
@@ -249,9 +284,7 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: mono,
-                )
-            else
-              _more(l.more, () => setState(() => _skipped = true)),
+                ),
           ],
         ),
     ];
@@ -273,14 +306,24 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
           constraints: BoxConstraints(
             maxHeight: (height * 0.8 - 160).clamp(200, 2000),
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 16,
-              children: sections,
+          child: NotificationListener<ScrollMetricsNotification>(
+            onNotification: _onMetrics,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 16,
+                children: sections,
+              ),
             ),
           ),
         ),
+        if (_overflows)
+          Container(
+            height: 1,
+            color: context.colorScheme.brightness == Brightness.dark
+                ? colorScheme.outlineVariant
+                : _footerRule,
+          ),
       ],
     );
   }

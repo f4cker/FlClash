@@ -3115,7 +3115,7 @@
       "file": {}
     }
   },
-  "mitmScriptHasUpdate": "Content updated",
+  "mitmScriptHasUpdate": "Update available",
   "mitmHasUpdate": "Update available",
   "mitmViewUpdate": "View Update",
   "mitmScriptsFromModules": "{count, plural, =1{1 more script comes from modules} other{{count} more scripts come from modules}}",
@@ -3179,11 +3179,11 @@
   "mitmAddFromFile": "From File…",
   "mitmContinue": "Continue",
   "mitmScriptConfirmTitle": "Confirm Scripts",
-  "mitmScriptConfirmBody": "These scripts can see and change the plaintext requests and responses of the hosts they match, which may include accounts and passwords. Only turn on scripts you trust.",
+  "mitmScriptConfirmBody": "Scripts may read and change the plaintext requests and responses of the hosts they match, which may include accounts, passwords and other sensitive information. Turn on only scripts you trust.",
   "mitmCapabilityRead": "See and change plaintext requests and responses of the matched hosts",
-  "mitmCapabilitySend": "Send requests of its own (through Flash)",
-  "mitmCapabilityStore": "Keep a little data on this Mac",
-  "mitmCapabilityLimits": "Can't read or write files or run commands; each run gets at most 10 seconds, after which the message passes unchanged.",
+  "mitmCapabilitySend": "Send network requests through Flash",
+  "mitmCapabilityStore": "Save data on this Mac; all scripts share this data and can read each other's",
+  "mitmCapabilityLimits": "Can't read or write files on this Mac or run commands; each run lasts at most 10 seconds.",
   "mitmHostNotDecrypted": "{host} isn't decrypted",
   "@mitmHostNotDecrypted": {
     "placeholders": {
@@ -3235,17 +3235,6 @@
       "after": {}
     }
   },
-  "mitmDiffCounts": "+{added} lines −{removed} lines",
-  "@mitmDiffCounts": {
-    "placeholders": {
-      "added": {
-        "type": "int"
-      },
-      "removed": {
-        "type": "int"
-      }
-    }
-  },
   "mitmDiffFolded": "… {count} unchanged lines",
   "@mitmDiffFolded": {
     "placeholders": {
@@ -3261,7 +3250,7 @@
   "mitmChangeRewrites": "Rewrites",
   "mitmNoChange": "No change",
   "mitmModuleConfirmTitle": "Confirm Module Import",
-  "mitmModuleHostsHint": "This module will add the decrypted hosts below. Check them before you import.",
+  "mitmModuleHostsHint": "Check the decrypted hosts this module includes before you decide whether to import it.",
   "mitmModuleNoHosts": "This module adds no decrypted hosts.",
   "mitmAlreadyListed": "Already listed",
   "mitmNewHost": "New",
@@ -3283,7 +3272,7 @@
   },
   "mitmModuleRewrites": "Rewrite rules",
   "mitmModuleRoutingRules": "Routing rules",
-  "mitmModuleRoutingRulesNote": "{count} rules, not imported yet",
+  "mitmModuleRoutingRulesNote": "{count, plural, =1{1 routing rule won't be imported.} other{{count} routing rules won't be imported.}}",
   "@mitmModuleRoutingRulesNote": {
     "placeholders": {
       "count": {
@@ -3292,7 +3281,7 @@
     }
   },
   "mitmModuleUnsupported": "Not supported",
-  "mitmModuleUnsupportedCount": "{count} lines won't be imported",
+  "mitmModuleUnsupportedCount": "{count, plural, =1{1 line won't be imported.} other{{count} lines won't be imported.}}",
   "@mitmModuleUnsupportedCount": {
     "placeholders": {
       "count": {
@@ -3345,7 +3334,7 @@
       }
     }
   },
-  "mitmScriptsPassed": "{count, plural, =1{1 script didn't finish; the message passed unchanged} other{{count} scripts didn't finish; the message passed unchanged}}",
+  "mitmScriptsPassed": "{count, plural, =1{1 script didn't finish; the message passed unchanged.} other{{count} scripts didn't finish; the message passed unchanged.}}",
   "@mitmScriptsPassed": {
     "placeholders": {
       "count": {
@@ -3359,21 +3348,14 @@
       "took": {}
     }
   },
-  "mitmScriptTimedOut": "Timed out ({seconds} s)",
-  "@mitmScriptTimedOut": {
-    "placeholders": {
-      "seconds": {
-        "type": "int"
-      }
-    }
-  },
-  "mitmScriptFailed": "Failed: {reason}",
+  "mitmScriptTimedOut": "Script timed out",
+  "mitmScriptFailed": "Script failed: {reason}",
   "@mitmScriptFailed": {
     "placeholders": {
       "reason": {}
     }
   },
-  "mitmScriptNotRun": "Didn't run: {reason}",
+  "mitmScriptNotRun": "Script didn't run: {reason}",
   "@mitmScriptNotRun": {
     "placeholders": {
       "reason": {}
@@ -3404,6 +3386,50 @@
   "@mitmFromModule": {
     "placeholders": {
       "name": {}
+    }
+  },
+  "mitmUpdateCheckFailedKept": "Couldn't check for updates; the current version still works.",
+  "mitmUpdateDownloadFailedKept": "Couldn't download the new version; the current version still works.",
+  "mitmUpdateInvalidKept": "The new version can't be loaded; the current version still works.",
+  "mitmScriptLoadFailed": "The script can't be loaded: {reason}.",
+  "@mitmScriptLoadFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmModuleLoadFailed": "The module can't be loaded: {reason}.",
+  "@mitmModuleLoadFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmPendingKept": "A new version is waiting; the current version keeps running.",
+  "mitmScriptFoundUpdate": "New version found {time}",
+  "@mitmScriptFoundUpdate": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "mitmAlsoDecryptHost": "Also add {host} to decryption",
+  "@mitmAlsoDecryptHost": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "mitmDiffAdded": "{count, plural, =1{+1 line} other{+{count} lines}}",
+  "@mitmDiffAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmDiffRemoved": "{count, plural, =1{−1 line} other{−{count} lines}}",
+  "@mitmDiffRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
     }
   }
 }

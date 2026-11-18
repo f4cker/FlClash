@@ -36,6 +36,8 @@ class MitmModules extends Table {
 
   TextColumn get error => text().nullable()();
 
+  TextColumn get failure => textEnum<MitmUpdateFailure>().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -94,6 +96,7 @@ extension RawMitmModuleExt on RawMitmModule {
       lastUpdateTime: lastUpdateTime,
       pendingTime: pendingTime,
       error: error,
+      failure: failure,
     );
   }
 }
@@ -114,6 +117,7 @@ extension MitmModulesCompanionExt on MitmModule {
       lastUpdateTime: lastUpdateTime,
       pendingTime: Value(pendingTime),
       error: Value(error),
+      failure: Value(failure),
     );
   }
 }

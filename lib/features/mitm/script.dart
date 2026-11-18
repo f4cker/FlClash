@@ -45,7 +45,7 @@ class MitmScriptEntryItem extends ConsumerWidget {
             ? l.mitmRewriteNoneAdded
             : l.mitmScriptCount(scripts.length),
         updates: scripts.where((s) => s.hasPending).length,
-        errors: scripts.where((s) => s.error != null).length,
+        errors: scripts.where((s) => s.unloadable).length,
       ),
       widget: const MitmScriptView(),
     );
@@ -223,9 +223,16 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
       return;
     }
     if (!mounted) return;
+    final l = context.appLocalizations;
     await showMitmUpdateDialog(
       context,
       name: info?.name ?? script.source,
+      subtitle: switch (script.checkedAt) {
+        final checked? => l.mitmScriptFoundUpdate(
+          checked.getLastUpdateTimeDesc(context),
+        ),
+        null => l.mitmViewUpdate,
+      },
       before: before,
       after: after,
       onAdopt: () => adoptMitmScript(ref.read, profileId, script),
@@ -276,7 +283,7 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
     final scripts = value?.value ?? const <MitmScript>[];
     final invalid = {
       for (final script in scripts)
-        if (script.error != null) script.id,
+        if (script.unloadable) script.id,
     };
     final updates = scripts.where((s) => s.hasPending).length;
     final enabled = scripts.where((s) => s.enabled).length;
@@ -592,9 +599,6 @@ class MitmScriptRow extends StatelessWidget {
         .of(context)
         .copyWith(color: colorScheme.onSurfaceVariant);
     final amber = TextStyle(color: mitmAmberColor(context));
-    final link = AppTextStyle.footnote
-        .of(context)
-        .copyWith(color: colorScheme.primary);
     final kind = info.kind == MitmScriptKind.request
         ? l.mitmScriptGroupRequest
         : l.mitmScriptGroupResponse;
@@ -604,13 +608,24 @@ class MitmScriptRow extends StatelessWidget {
       info.pattern,
       if (script.hasPending) l.mitmHasUpdate,
     ].join(l.localeName.startsWith('zh') ? '，' : ', ');
+    final unloadable = script.unloadable;
     final Widget third;
     if (error != null) {
-      third = MitmMarkedLine(
-        error,
-        style: AppTextStyle.footnote
-            .of(context)
-            .copyWith(color: mitmRewriteErrorColor(context)),
+      third = Tooltip(
+        message: error,
+        hoverDelay: const Duration(milliseconds: 500),
+        child: MitmMarkedLine(
+          unloadable
+              ? l.mitmScriptLoadFailed(error)
+              : mitmKeptFailureText(l, script.failure),
+          style: AppTextStyle.footnote
+              .of(context)
+              .copyWith(
+                color: unloadable
+                    ? mitmRewriteErrorColor(context)
+                    : mitmAmberColor(context),
+              ),
+        ),
       );
     } else if (notDecrypted) {
       third = Text(
@@ -643,7 +658,7 @@ class MitmScriptRow extends StatelessWidget {
                 info.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyle.footnote.of(context, emphasized: true),
+                style: AppTextStyle.subheadline.of(context, emphasized: true),
               ),
             ),
             if (info.requiresBody)
@@ -679,17 +694,17 @@ class MitmScriptRow extends StatelessWidget {
       ],
     );
     final Widget? action = switch (true) {
-      _ when error != null && onCheck != null => TextButton(
+      _ when error != null && onCheck != null => MitmLinkButton(
+        label: l.retry,
         onPressed: onCheck,
-        child: Text(l.retry, style: link),
       ),
-      _ when script.hasPending => TextButton(
+      _ when script.hasPending => MitmLinkButton(
+        label: l.mitmViewUpdate,
         onPressed: onViewUpdate,
-        child: Text(l.mitmViewUpdate, style: link),
       ),
-      _ when notDecrypted => TextButton(
+      _ when notDecrypted => MitmLinkButton(
+        label: l.mitmAddToDecryption,
         onPressed: onDecrypt,
-        child: Text(l.mitmAddToDecryption, style: link),
       ),
       _ => null,
     };
@@ -702,6 +717,15 @@ class MitmScriptRow extends StatelessWidget {
                 color: colorScheme.primary,
                 semanticLabel: toggleLabel,
               ),
+            ),
+          )
+        : unloadable
+        ? Opacity(
+            opacity: 0.4,
+            child: Switch(
+              value: false,
+              semanticLabel: toggleLabel,
+              onChanged: null,
             ),
           )
         : Switch(
@@ -736,12 +760,12 @@ class MitmScriptRow extends StatelessWidget {
     ];
     final desktop = system.isDesktop;
     Widget row(bool hovered) => DecorationListItem(
-      invalid: error != null,
+      invalid: unloadable,
       onPressed: desktop ? null : onEdit,
       title: title,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: 8,
+        spacing: 12,
         children: [
           ?action,
           if (hovered && desktop) ...[
@@ -776,7 +800,7 @@ class MitmScriptRow extends StatelessWidget {
                 listItemRadiusOf(ItemPositionProvider.of(context)?.position),
               ),
             ),
-            child: error == null
+            child: !unloadable
                 ? row(hovered)
                 : Theme(
                     data: Theme.of(context).copyWith(

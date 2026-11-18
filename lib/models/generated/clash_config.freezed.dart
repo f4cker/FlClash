@@ -8390,7 +8390,7 @@ as String?,
 /// @nodoc
 mixin _$MitmScript {
 
- int get id; int? get profileId; String get line; bool get enabled; String? get order; String? get url; String get source; String get file; String? get pendingFile; DateTime? get checkedAt; String? get error;
+ int get id; int? get profileId; String get line; bool get enabled; String? get order; String? get url; String get source; String get file; String? get pendingFile; DateTime? get checkedAt; String? get error; MitmUpdateFailure? get failure;
 /// Create a copy of MitmScript
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -8402,20 +8402,20 @@ $MitmScriptCopyWith<MitmScript> get copyWith => _$MitmScriptCopyWithImpl<MitmScr
 @override
 bool operator ==(Object other) {
   final _this = this as MitmScript;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmScript&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.enabled, _this.enabled) || other.enabled == _this.enabled)&&(identical(other.order, _this.order) || other.order == _this.order)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.source, _this.source) || other.source == _this.source)&&(identical(other.file, _this.file) || other.file == _this.file)&&(identical(other.pendingFile, _this.pendingFile) || other.pendingFile == _this.pendingFile)&&(identical(other.checkedAt, _this.checkedAt) || other.checkedAt == _this.checkedAt)&&(identical(other.error, _this.error) || other.error == _this.error));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmScript&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.profileId, _this.profileId) || other.profileId == _this.profileId)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.enabled, _this.enabled) || other.enabled == _this.enabled)&&(identical(other.order, _this.order) || other.order == _this.order)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.source, _this.source) || other.source == _this.source)&&(identical(other.file, _this.file) || other.file == _this.file)&&(identical(other.pendingFile, _this.pendingFile) || other.pendingFile == _this.pendingFile)&&(identical(other.checkedAt, _this.checkedAt) || other.checkedAt == _this.checkedAt)&&(identical(other.error, _this.error) || other.error == _this.error)&&(identical(other.failure, _this.failure) || other.failure == _this.failure));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MitmScript;
-  return Object.hash(runtimeType,_this.id,_this.profileId,_this.line,_this.enabled,_this.order,_this.url,_this.source,_this.file,_this.pendingFile,_this.checkedAt,_this.error);
+  return Object.hash(runtimeType,_this.id,_this.profileId,_this.line,_this.enabled,_this.order,_this.url,_this.source,_this.file,_this.pendingFile,_this.checkedAt,_this.error,_this.failure);
 }
 
 @override
 String toString() {
   final _this = this as MitmScript;
-  return 'MitmScript(id: ${_this.id}, profileId: ${_this.profileId}, line: ${_this.line}, enabled: ${_this.enabled}, order: ${_this.order}, url: ${_this.url}, source: ${_this.source}, file: ${_this.file}, pendingFile: ${_this.pendingFile}, checkedAt: ${_this.checkedAt}, error: ${_this.error})';
+  return 'MitmScript(id: ${_this.id}, profileId: ${_this.profileId}, line: ${_this.line}, enabled: ${_this.enabled}, order: ${_this.order}, url: ${_this.url}, source: ${_this.source}, file: ${_this.file}, pendingFile: ${_this.pendingFile}, checkedAt: ${_this.checkedAt}, error: ${_this.error}, failure: ${_this.failure})';
 }
 
 
@@ -8426,7 +8426,7 @@ abstract mixin class $MitmScriptCopyWith<$Res>  {
   factory $MitmScriptCopyWith(MitmScript value, $Res Function(MitmScript) _then) = _$MitmScriptCopyWithImpl;
 @useResult
 $Res call({
- int id, int? profileId, String line, bool enabled, String? order, String? url, String source, String file, String? pendingFile, DateTime? checkedAt, String? error
+ int id, int? profileId, String line, bool enabled, String? order, String? url, String source, String file, String? pendingFile, DateTime? checkedAt, String? error, MitmUpdateFailure? failure
 });
 
 
@@ -8443,7 +8443,7 @@ class _$MitmScriptCopyWithImpl<$Res>
 
 /// Create a copy of MitmScript
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = freezed,Object? line = null,Object? enabled = null,Object? order = freezed,Object? url = freezed,Object? source = null,Object? file = null,Object? pendingFile = freezed,Object? checkedAt = freezed,Object? error = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? profileId = freezed,Object? line = null,Object? enabled = null,Object? order = freezed,Object? url = freezed,Object? source = null,Object? file = null,Object? pendingFile = freezed,Object? checkedAt = freezed,Object? error = freezed,Object? failure = freezed,}) {
   return _then(MitmScript(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
@@ -8456,7 +8456,8 @@ as String,file: null == file ? _self.file : file // ignore: cast_nullable_to_non
 as String,pendingFile: freezed == pendingFile ? _self.pendingFile : pendingFile // ignore: cast_nullable_to_non_nullable
 as String?,checkedAt: freezed == checkedAt ? _self.checkedAt : checkedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
+as MitmUpdateFailure?,
   ));
 }
 
@@ -8541,10 +8542,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error,  MitmUpdateFailure? failure)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmScript() when $default != null:
-return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error);case _:
+return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error,_that.failure);case _:
   return orElse();
 
 }
@@ -8562,10 +8563,10 @@ return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error,  MitmUpdateFailure? failure)  $default,) {final _that = this;
 switch (_that) {
 case _MitmScript():
-return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error);case _:
+return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error,_that.failure);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -8582,10 +8583,10 @@ return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int? profileId,  String line,  bool enabled,  String? order,  String? url,  String source,  String file,  String? pendingFile,  DateTime? checkedAt,  String? error,  MitmUpdateFailure? failure)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmScript() when $default != null:
-return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error);case _:
+return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_that.url,_that.source,_that.file,_that.pendingFile,_that.checkedAt,_that.error,_that.failure);case _:
   return null;
 
 }
@@ -8597,7 +8598,7 @@ return $default(_that.id,_that.profileId,_that.line,_that.enabled,_that.order,_t
 
 
 class _MitmScript implements MitmScript {
-  const _MitmScript({required this.id, this.profileId, required this.line, this.enabled = true, this.order, this.url, this.source = '', required this.file, this.pendingFile, this.checkedAt, this.error});
+  const _MitmScript({required this.id, this.profileId, required this.line, this.enabled = true, this.order, this.url, this.source = '', required this.file, this.pendingFile, this.checkedAt, this.error, this.failure});
   
 
 @override final  int id;
@@ -8611,6 +8612,7 @@ class _MitmScript implements MitmScript {
 @override final  String? pendingFile;
 @override final  DateTime? checkedAt;
 @override final  String? error;
+@override final  MitmUpdateFailure? failure;
 
 /// Create a copy of MitmScript
 /// with the given fields replaced by the non-null parameter values.
@@ -8622,18 +8624,18 @@ _$MitmScriptCopyWith<_MitmScript> get copyWith => __$MitmScriptCopyWithImpl<_Mit
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmScript&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.line, line) || other.line == line)&&(identical(other.enabled, enabled) || other.enabled == enabled)&&(identical(other.order, order) || other.order == order)&&(identical(other.url, url) || other.url == url)&&(identical(other.source, source) || other.source == source)&&(identical(other.file, file) || other.file == file)&&(identical(other.pendingFile, pendingFile) || other.pendingFile == pendingFile)&&(identical(other.checkedAt, checkedAt) || other.checkedAt == checkedAt)&&(identical(other.error, error) || other.error == error));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmScript&&(identical(other.id, id) || other.id == id)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.line, line) || other.line == line)&&(identical(other.enabled, enabled) || other.enabled == enabled)&&(identical(other.order, order) || other.order == order)&&(identical(other.url, url) || other.url == url)&&(identical(other.source, source) || other.source == source)&&(identical(other.file, file) || other.file == file)&&(identical(other.pendingFile, pendingFile) || other.pendingFile == pendingFile)&&(identical(other.checkedAt, checkedAt) || other.checkedAt == checkedAt)&&(identical(other.error, error) || other.error == error)&&(identical(other.failure, failure) || other.failure == failure));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,profileId,line,enabled,order,url,source,file,pendingFile,checkedAt,error);
+    return Object.hash(runtimeType,id,profileId,line,enabled,order,url,source,file,pendingFile,checkedAt,error,failure);
 }
 
 @override
 String toString() {
-    return 'MitmScript(id: $id, profileId: $profileId, line: $line, enabled: $enabled, order: $order, url: $url, source: $source, file: $file, pendingFile: $pendingFile, checkedAt: $checkedAt, error: $error)';
+    return 'MitmScript(id: $id, profileId: $profileId, line: $line, enabled: $enabled, order: $order, url: $url, source: $source, file: $file, pendingFile: $pendingFile, checkedAt: $checkedAt, error: $error, failure: $failure)';
 }
 
 
@@ -8644,7 +8646,7 @@ abstract mixin class _$MitmScriptCopyWith<$Res> implements $MitmScriptCopyWith<$
   factory _$MitmScriptCopyWith(_MitmScript value, $Res Function(_MitmScript) _then) = __$MitmScriptCopyWithImpl;
 @override @useResult
 $Res call({
- int id, int? profileId, String line, bool enabled, String? order, String? url, String source, String file, String? pendingFile, DateTime? checkedAt, String? error
+ int id, int? profileId, String line, bool enabled, String? order, String? url, String source, String file, String? pendingFile, DateTime? checkedAt, String? error, MitmUpdateFailure? failure
 });
 
 
@@ -8661,7 +8663,7 @@ class __$MitmScriptCopyWithImpl<$Res>
 
 /// Create a copy of MitmScript
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = freezed,Object? line = null,Object? enabled = null,Object? order = freezed,Object? url = freezed,Object? source = null,Object? file = null,Object? pendingFile = freezed,Object? checkedAt = freezed,Object? error = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? profileId = freezed,Object? line = null,Object? enabled = null,Object? order = freezed,Object? url = freezed,Object? source = null,Object? file = null,Object? pendingFile = freezed,Object? checkedAt = freezed,Object? error = freezed,Object? failure = freezed,}) {
   return _then(_MitmScript(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
@@ -8674,7 +8676,8 @@ as String,file: null == file ? _self.file : file // ignore: cast_nullable_to_non
 as String,pendingFile: freezed == pendingFile ? _self.pendingFile : pendingFile // ignore: cast_nullable_to_non_nullable
 as String?,checkedAt: freezed == checkedAt ? _self.checkedAt : checkedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
+as MitmUpdateFailure?,
   ));
 }
 

@@ -33,6 +33,8 @@ class MitmScripts extends Table {
 
   TextColumn get error => text().nullable()();
 
+  TextColumn get failure => textEnum<MitmUpdateFailure>().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -82,6 +84,7 @@ extension RawMitmScriptExt on RawMitmScript {
     pendingFile: pendingFile,
     checkedAt: checkedAt,
     error: error,
+    failure: failure,
   );
 }
 
@@ -99,6 +102,7 @@ extension MitmScriptsCompanionExt on MitmScript {
       pendingFile: Value(pendingFile),
       checkedAt: Value(checkedAt),
       error: Value(error),
+      failure: Value(failure),
     );
   }
 }

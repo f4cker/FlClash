@@ -4738,6 +4738,15 @@ class $MitmModulesTable extends MitmModules
     requiredDuringInsert: false,
   );
   @override
+  late final GeneratedColumnWithTypeConverter<MitmUpdateFailure?, String>
+  failure = GeneratedColumn<String>(
+    'failure',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<MitmUpdateFailure?>($MitmModulesTable.$converterfailuren);
+  @override
   List<GeneratedColumn> get $columns => [
     id,
     name,
@@ -4752,6 +4761,7 @@ class $MitmModulesTable extends MitmModules
     lastUpdateTime,
     pendingTime,
     error,
+    failure,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4906,6 +4916,12 @@ class $MitmModulesTable extends MitmModules
         DriftSqlType.string,
         data['${effectivePrefix}error'],
       ),
+      failure: $MitmModulesTable.$converterfailuren.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}failure'],
+        ),
+      ),
     );
   }
 
@@ -4918,6 +4934,12 @@ class $MitmModulesTable extends MitmModules
       const StringMapConverter();
   static TypeConverter<Map<String, String>, String> $converterresources =
       const StringMapConverter();
+  static JsonTypeConverter2<MitmUpdateFailure, String, String>
+  $converterfailure = const EnumNameConverter<MitmUpdateFailure>(
+    MitmUpdateFailure.values,
+  );
+  static JsonTypeConverter2<MitmUpdateFailure?, String?, String?>
+  $converterfailuren = JsonTypeConverter2.asNullable($converterfailure);
 }
 
 class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
@@ -4936,6 +4958,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
   /// When an update left new content waiting in `<id>.pending.txt`.
   final DateTime? pendingTime;
   final String? error;
+  final MitmUpdateFailure? failure;
   const RawMitmModule({
     required this.id,
     required this.name,
@@ -4950,6 +4973,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     required this.lastUpdateTime,
     this.pendingTime,
     this.error,
+    this.failure,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4985,6 +5009,11 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     if (!nullToAbsent || error != null) {
       map['error'] = Variable<String>(error);
     }
+    if (!nullToAbsent || failure != null) {
+      map['failure'] = Variable<String>(
+        $MitmModulesTable.$converterfailuren.toSql(failure),
+      );
+    }
     return map;
   }
 
@@ -5011,6 +5040,9 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       error: error == null && nullToAbsent
           ? const Value.absent()
           : Value(error),
+      failure: failure == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failure),
     );
   }
 
@@ -5033,6 +5065,9 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       lastUpdateTime: serializer.fromJson<DateTime>(json['lastUpdateTime']),
       pendingTime: serializer.fromJson<DateTime?>(json['pendingTime']),
       error: serializer.fromJson<String?>(json['error']),
+      failure: $MitmModulesTable.$converterfailuren.fromJson(
+        serializer.fromJson<String?>(json['failure']),
+      ),
     );
   }
   @override
@@ -5052,6 +5087,9 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       'lastUpdateTime': serializer.toJson<DateTime>(lastUpdateTime),
       'pendingTime': serializer.toJson<DateTime?>(pendingTime),
       'error': serializer.toJson<String?>(error),
+      'failure': serializer.toJson<String?>(
+        $MitmModulesTable.$converterfailuren.toJson(failure),
+      ),
     };
   }
 
@@ -5069,6 +5107,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     DateTime? lastUpdateTime,
     Value<DateTime?> pendingTime = const Value.absent(),
     Value<String?> error = const Value.absent(),
+    Value<MitmUpdateFailure?> failure = const Value.absent(),
   }) => RawMitmModule(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -5083,6 +5122,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     lastUpdateTime: lastUpdateTime ?? this.lastUpdateTime,
     pendingTime: pendingTime.present ? pendingTime.value : this.pendingTime,
     error: error.present ? error.value : this.error,
+    failure: failure.present ? failure.value : this.failure,
   );
   RawMitmModule copyWithCompanion(MitmModulesCompanion data) {
     return RawMitmModule(
@@ -5105,6 +5145,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           ? data.pendingTime.value
           : this.pendingTime,
       error: data.error.present ? data.error.value : this.error,
+      failure: data.failure.present ? data.failure.value : this.failure,
     );
   }
 
@@ -5123,7 +5164,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           ..write('scripts: $scripts, ')
           ..write('lastUpdateTime: $lastUpdateTime, ')
           ..write('pendingTime: $pendingTime, ')
-          ..write('error: $error')
+          ..write('error: $error, ')
+          ..write('failure: $failure')
           ..write(')'))
         .toString();
   }
@@ -5143,6 +5185,7 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     lastUpdateTime,
     pendingTime,
     error,
+    failure,
   );
   @override
   bool operator ==(Object other) =>
@@ -5160,7 +5203,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           other.scripts == this.scripts &&
           other.lastUpdateTime == this.lastUpdateTime &&
           other.pendingTime == this.pendingTime &&
-          other.error == this.error);
+          other.error == this.error &&
+          other.failure == this.failure);
 }
 
 class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
@@ -5177,6 +5221,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
   final Value<DateTime> lastUpdateTime;
   final Value<DateTime?> pendingTime;
   final Value<String?> error;
+  final Value<MitmUpdateFailure?> failure;
   const MitmModulesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -5191,6 +5236,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     this.lastUpdateTime = const Value.absent(),
     this.pendingTime = const Value.absent(),
     this.error = const Value.absent(),
+    this.failure = const Value.absent(),
   });
   MitmModulesCompanion.insert({
     this.id = const Value.absent(),
@@ -5206,6 +5252,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     required DateTime lastUpdateTime,
     this.pendingTime = const Value.absent(),
     this.error = const Value.absent(),
+    this.failure = const Value.absent(),
   }) : name = Value(name),
        lastUpdateTime = Value(lastUpdateTime);
   static Insertable<RawMitmModule> custom({
@@ -5222,6 +5269,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     Expression<DateTime>? lastUpdateTime,
     Expression<DateTime>? pendingTime,
     Expression<String>? error,
+    Expression<String>? failure,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5237,6 +5285,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
       if (lastUpdateTime != null) 'last_update_time': lastUpdateTime,
       if (pendingTime != null) 'pending_time': pendingTime,
       if (error != null) 'error': error,
+      if (failure != null) 'failure': failure,
     });
   }
 
@@ -5254,6 +5303,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     Value<DateTime>? lastUpdateTime,
     Value<DateTime?>? pendingTime,
     Value<String?>? error,
+    Value<MitmUpdateFailure?>? failure,
   }) {
     return MitmModulesCompanion(
       id: id ?? this.id,
@@ -5269,6 +5319,7 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
       lastUpdateTime: lastUpdateTime ?? this.lastUpdateTime,
       pendingTime: pendingTime ?? this.pendingTime,
       error: error ?? this.error,
+      failure: failure ?? this.failure,
     );
   }
 
@@ -5318,6 +5369,11 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     if (error.present) {
       map['error'] = Variable<String>(error.value);
     }
+    if (failure.present) {
+      map['failure'] = Variable<String>(
+        $MitmModulesTable.$converterfailuren.toSql(failure.value),
+      );
+    }
     return map;
   }
 
@@ -5336,7 +5392,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
           ..write('scripts: $scripts, ')
           ..write('lastUpdateTime: $lastUpdateTime, ')
           ..write('pendingTime: $pendingTime, ')
-          ..write('error: $error')
+          ..write('error: $error, ')
+          ..write('failure: $failure')
           ..write(')'))
         .toString();
   }
@@ -7298,6 +7355,15 @@ class $MitmScriptsTable extends MitmScripts
     requiredDuringInsert: false,
   );
   @override
+  late final GeneratedColumnWithTypeConverter<MitmUpdateFailure?, String>
+  failure = GeneratedColumn<String>(
+    'failure',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<MitmUpdateFailure?>($MitmScriptsTable.$converterfailuren);
+  @override
   List<GeneratedColumn> get $columns => [
     id,
     profileId,
@@ -7310,6 +7376,7 @@ class $MitmScriptsTable extends MitmScripts
     pendingFile,
     checkedAt,
     error,
+    failure,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7446,6 +7513,12 @@ class $MitmScriptsTable extends MitmScripts
         DriftSqlType.string,
         data['${effectivePrefix}error'],
       ),
+      failure: $MitmScriptsTable.$converterfailuren.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}failure'],
+        ),
+      ),
     );
   }
 
@@ -7453,6 +7526,13 @@ class $MitmScriptsTable extends MitmScripts
   $MitmScriptsTable createAlias(String alias) {
     return $MitmScriptsTable(attachedDatabase, alias);
   }
+
+  static JsonTypeConverter2<MitmUpdateFailure, String, String>
+  $converterfailure = const EnumNameConverter<MitmUpdateFailure>(
+    MitmUpdateFailure.values,
+  );
+  static JsonTypeConverter2<MitmUpdateFailure?, String?, String?>
+  $converterfailuren = JsonTypeConverter2.asNullable($converterfailure);
 }
 
 class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
@@ -7467,6 +7547,7 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
   final String? pendingFile;
   final DateTime? checkedAt;
   final String? error;
+  final MitmUpdateFailure? failure;
   const RawMitmScript({
     required this.id,
     this.profileId,
@@ -7479,6 +7560,7 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
     this.pendingFile,
     this.checkedAt,
     this.error,
+    this.failure,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7506,6 +7588,11 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
     if (!nullToAbsent || error != null) {
       map['error'] = Variable<String>(error);
     }
+    if (!nullToAbsent || failure != null) {
+      map['failure'] = Variable<String>(
+        $MitmScriptsTable.$converterfailuren.toSql(failure),
+      );
+    }
     return map;
   }
 
@@ -7532,6 +7619,9 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
       error: error == null && nullToAbsent
           ? const Value.absent()
           : Value(error),
+      failure: failure == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failure),
     );
   }
 
@@ -7552,6 +7642,9 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
       pendingFile: serializer.fromJson<String?>(json['pendingFile']),
       checkedAt: serializer.fromJson<DateTime?>(json['checkedAt']),
       error: serializer.fromJson<String?>(json['error']),
+      failure: $MitmScriptsTable.$converterfailuren.fromJson(
+        serializer.fromJson<String?>(json['failure']),
+      ),
     );
   }
   @override
@@ -7569,6 +7662,9 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
       'pendingFile': serializer.toJson<String?>(pendingFile),
       'checkedAt': serializer.toJson<DateTime?>(checkedAt),
       'error': serializer.toJson<String?>(error),
+      'failure': serializer.toJson<String?>(
+        $MitmScriptsTable.$converterfailuren.toJson(failure),
+      ),
     };
   }
 
@@ -7584,6 +7680,7 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
     Value<String?> pendingFile = const Value.absent(),
     Value<DateTime?> checkedAt = const Value.absent(),
     Value<String?> error = const Value.absent(),
+    Value<MitmUpdateFailure?> failure = const Value.absent(),
   }) => RawMitmScript(
     id: id ?? this.id,
     profileId: profileId.present ? profileId.value : this.profileId,
@@ -7596,6 +7693,7 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
     pendingFile: pendingFile.present ? pendingFile.value : this.pendingFile,
     checkedAt: checkedAt.present ? checkedAt.value : this.checkedAt,
     error: error.present ? error.value : this.error,
+    failure: failure.present ? failure.value : this.failure,
   );
   RawMitmScript copyWithCompanion(MitmScriptsCompanion data) {
     return RawMitmScript(
@@ -7612,6 +7710,7 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
           : this.pendingFile,
       checkedAt: data.checkedAt.present ? data.checkedAt.value : this.checkedAt,
       error: data.error.present ? data.error.value : this.error,
+      failure: data.failure.present ? data.failure.value : this.failure,
     );
   }
 
@@ -7628,7 +7727,8 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
           ..write('file: $file, ')
           ..write('pendingFile: $pendingFile, ')
           ..write('checkedAt: $checkedAt, ')
-          ..write('error: $error')
+          ..write('error: $error, ')
+          ..write('failure: $failure')
           ..write(')'))
         .toString();
   }
@@ -7646,6 +7746,7 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
     pendingFile,
     checkedAt,
     error,
+    failure,
   );
   @override
   bool operator ==(Object other) =>
@@ -7661,7 +7762,8 @@ class RawMitmScript extends DataClass implements Insertable<RawMitmScript> {
           other.file == this.file &&
           other.pendingFile == this.pendingFile &&
           other.checkedAt == this.checkedAt &&
-          other.error == this.error);
+          other.error == this.error &&
+          other.failure == this.failure);
 }
 
 class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
@@ -7676,6 +7778,7 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
   final Value<String?> pendingFile;
   final Value<DateTime?> checkedAt;
   final Value<String?> error;
+  final Value<MitmUpdateFailure?> failure;
   const MitmScriptsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -7688,6 +7791,7 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
     this.pendingFile = const Value.absent(),
     this.checkedAt = const Value.absent(),
     this.error = const Value.absent(),
+    this.failure = const Value.absent(),
   });
   MitmScriptsCompanion.insert({
     this.id = const Value.absent(),
@@ -7701,6 +7805,7 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
     this.pendingFile = const Value.absent(),
     this.checkedAt = const Value.absent(),
     this.error = const Value.absent(),
+    this.failure = const Value.absent(),
   }) : line = Value(line),
        file = Value(file);
   static Insertable<RawMitmScript> custom({
@@ -7715,6 +7820,7 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
     Expression<String>? pendingFile,
     Expression<DateTime>? checkedAt,
     Expression<String>? error,
+    Expression<String>? failure,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -7728,6 +7834,7 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
       if (pendingFile != null) 'pending_file': pendingFile,
       if (checkedAt != null) 'checked_at': checkedAt,
       if (error != null) 'error': error,
+      if (failure != null) 'failure': failure,
     });
   }
 
@@ -7743,6 +7850,7 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
     Value<String?>? pendingFile,
     Value<DateTime?>? checkedAt,
     Value<String?>? error,
+    Value<MitmUpdateFailure?>? failure,
   }) {
     return MitmScriptsCompanion(
       id: id ?? this.id,
@@ -7756,6 +7864,7 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
       pendingFile: pendingFile ?? this.pendingFile,
       checkedAt: checkedAt ?? this.checkedAt,
       error: error ?? this.error,
+      failure: failure ?? this.failure,
     );
   }
 
@@ -7795,6 +7904,11 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
     if (error.present) {
       map['error'] = Variable<String>(error.value);
     }
+    if (failure.present) {
+      map['failure'] = Variable<String>(
+        $MitmScriptsTable.$converterfailuren.toSql(failure.value),
+      );
+    }
     return map;
   }
 
@@ -7811,7 +7925,8 @@ class MitmScriptsCompanion extends UpdateCompanion<RawMitmScript> {
           ..write('file: $file, ')
           ..write('pendingFile: $pendingFile, ')
           ..write('checkedAt: $checkedAt, ')
-          ..write('error: $error')
+          ..write('error: $error, ')
+          ..write('failure: $failure')
           ..write(')'))
         .toString();
   }
@@ -12402,6 +12517,7 @@ typedef $$MitmModulesTableCreateCompanionBuilder =
       required DateTime lastUpdateTime,
       Value<DateTime?> pendingTime,
       Value<String?> error,
+      Value<MitmUpdateFailure?> failure,
     });
 typedef $$MitmModulesTableUpdateCompanionBuilder =
     MitmModulesCompanion Function({
@@ -12418,6 +12534,7 @@ typedef $$MitmModulesTableUpdateCompanionBuilder =
       Value<DateTime> lastUpdateTime,
       Value<DateTime?> pendingTime,
       Value<String?> error,
+      Value<MitmUpdateFailure?> failure,
     });
 
 class $$MitmModulesTableFilterComposer
@@ -12503,6 +12620,12 @@ class $$MitmModulesTableFilterComposer
     column: $table.error,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnWithTypeConverterFilters<MitmUpdateFailure?, MitmUpdateFailure, String>
+  get failure => $composableBuilder(
+    column: $table.failure,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
 }
 
 class $$MitmModulesTableOrderingComposer
@@ -12578,6 +12701,11 @@ class $$MitmModulesTableOrderingComposer
     column: $table.error,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get failure => $composableBuilder(
+    column: $table.failure,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MitmModulesTableAnnotationComposer
@@ -12633,6 +12761,9 @@ class $$MitmModulesTableAnnotationComposer
 
   GeneratedColumn<String> get error =>
       $composableBuilder(column: $table.error, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<MitmUpdateFailure?, String> get failure =>
+      $composableBuilder(column: $table.failure, builder: (column) => column);
 }
 
 class $$MitmModulesTableTableManager
@@ -12679,6 +12810,7 @@ class $$MitmModulesTableTableManager
                 Value<DateTime> lastUpdateTime = const Value.absent(),
                 Value<DateTime?> pendingTime = const Value.absent(),
                 Value<String?> error = const Value.absent(),
+                Value<MitmUpdateFailure?> failure = const Value.absent(),
               }) => MitmModulesCompanion(
                 id: id,
                 name: name,
@@ -12693,6 +12825,7 @@ class $$MitmModulesTableTableManager
                 lastUpdateTime: lastUpdateTime,
                 pendingTime: pendingTime,
                 error: error,
+                failure: failure,
               ),
           createCompanionCallback:
               ({
@@ -12709,6 +12842,7 @@ class $$MitmModulesTableTableManager
                 required DateTime lastUpdateTime,
                 Value<DateTime?> pendingTime = const Value.absent(),
                 Value<String?> error = const Value.absent(),
+                Value<MitmUpdateFailure?> failure = const Value.absent(),
               }) => MitmModulesCompanion.insert(
                 id: id,
                 name: name,
@@ -12723,6 +12857,7 @@ class $$MitmModulesTableTableManager
                 lastUpdateTime: lastUpdateTime,
                 pendingTime: pendingTime,
                 error: error,
+                failure: failure,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -14465,6 +14600,7 @@ typedef $$MitmScriptsTableCreateCompanionBuilder =
       Value<String?> pendingFile,
       Value<DateTime?> checkedAt,
       Value<String?> error,
+      Value<MitmUpdateFailure?> failure,
     });
 typedef $$MitmScriptsTableUpdateCompanionBuilder =
     MitmScriptsCompanion Function({
@@ -14479,6 +14615,7 @@ typedef $$MitmScriptsTableUpdateCompanionBuilder =
       Value<String?> pendingFile,
       Value<DateTime?> checkedAt,
       Value<String?> error,
+      Value<MitmUpdateFailure?> failure,
     });
 
 final class $$MitmScriptsTableReferences
@@ -14560,6 +14697,12 @@ class $$MitmScriptsTableFilterComposer
   ColumnFilters<String> get error => $composableBuilder(
     column: $table.error,
     builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<MitmUpdateFailure?, MitmUpdateFailure, String>
+  get failure => $composableBuilder(
+    column: $table.failure,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   $$ProfilesTableFilterComposer get profileId {
@@ -14645,6 +14788,11 @@ class $$MitmScriptsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get failure => $composableBuilder(
+    column: $table.failure,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$ProfilesTableOrderingComposer get profileId {
     final $$ProfilesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -14710,6 +14858,9 @@ class $$MitmScriptsTableAnnotationComposer
   GeneratedColumn<String> get error =>
       $composableBuilder(column: $table.error, builder: (column) => column);
 
+  GeneratedColumnWithTypeConverter<MitmUpdateFailure?, String> get failure =>
+      $composableBuilder(column: $table.failure, builder: (column) => column);
+
   $$ProfilesTableAnnotationComposer get profileId {
     final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -14773,6 +14924,7 @@ class $$MitmScriptsTableTableManager
                 Value<String?> pendingFile = const Value.absent(),
                 Value<DateTime?> checkedAt = const Value.absent(),
                 Value<String?> error = const Value.absent(),
+                Value<MitmUpdateFailure?> failure = const Value.absent(),
               }) => MitmScriptsCompanion(
                 id: id,
                 profileId: profileId,
@@ -14785,6 +14937,7 @@ class $$MitmScriptsTableTableManager
                 pendingFile: pendingFile,
                 checkedAt: checkedAt,
                 error: error,
+                failure: failure,
               ),
           createCompanionCallback:
               ({
@@ -14799,6 +14952,7 @@ class $$MitmScriptsTableTableManager
                 Value<String?> pendingFile = const Value.absent(),
                 Value<DateTime?> checkedAt = const Value.absent(),
                 Value<String?> error = const Value.absent(),
+                Value<MitmUpdateFailure?> failure = const Value.absent(),
               }) => MitmScriptsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -14811,6 +14965,7 @@ class $$MitmScriptsTableTableManager
                 pendingFile: pendingFile,
                 checkedAt: checkedAt,
                 error: error,
+                failure: failure,
               ),
           withReferenceMapper: (p0) => p0
               .map(

@@ -3,15 +3,20 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/core/controller.dart';
+import 'package:fl_clash/core/interface.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/database/database.dart' as db;
 import 'package:fl_clash/features/mitm/script_actions.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart';
 import 'package:riverpod/riverpod.dart';
@@ -255,10 +260,20 @@ Ads = type=http-response,pattern=^https://a,script-path=${urlOf('/ads.js')}
       throwsA(anything),
     );
     expect((await stored()).single.error, isNotNull);
+    expect((await stored()).single.failure, MitmUpdateFailure.check);
+
+    bodies['/ads.sgmodule'] = 'not a module';
+    await expectLater(
+      action().updateModule((await stored()).single),
+      throwsA(anything),
+    );
+    expect((await stored()).single.failure, MitmUpdateFailure.invalid);
+    expect((await stored()).single.unloadable, isFalse);
 
     bodies['/ads.sgmodule'] = module('Ads');
     await action().updateModule((await stored()).single);
     expect((await stored()).single.error, isNull);
+    expect((await stored()).single.failure, isNull);
   });
 
   group('an accepted module', () {
@@ -536,6 +551,32 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
   });
 
   group('a remote script', () {
+    late _MockCore core;
+
+    setUp(() {
+      registerFallbackValue(const MitmRules());
+      _badScript = '\u0000';
+      core = _MockCore();
+      when(() => core.validateMitm(any())).thenAnswer((invocation) async {
+        final rules = invocation.positionalArguments.single as MitmRules;
+        return {
+          MitmList.script: {
+            for (final (index, line) in rules.script.indexed)
+              if (line.contains(_badScript)) index: 'SyntaxError',
+          },
+        };
+      });
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+        ],
+      );
+      globalState.container = container;
+      container.listen(mitmModulesProvider, (_, _) {});
+      container.listen(patchClashConfigProvider, (_, _) {});
+    });
+
     Future<MitmScript> stored0() async {
       await testDatabase.profilesDao.putAll([
         const Profile(id: 1, autoUpdateDuration: Duration.zero).toCompanion(),
@@ -584,8 +625,43 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
       final checked = await checkMitmScriptUpdate(container.read, 1, script);
 
       expect(checked.error, isNotNull);
+      expect(checked.failure, MitmUpdateFailure.check);
+      expect(checked.unloadable, isFalse);
       expect(checked.file, script.file);
       expect(checked.hasPending, isFalse);
+    });
+
+    test('new content the Core cannot load does not wait', () async {
+      final script = await stored0();
+      bodies['/s.js'] = 'two';
+      final bad = await storeMitmScript(urlOf('/s.js'), 'two'.codeUnits);
+      _badScript = bad;
+
+      final checked = await checkMitmScriptUpdate(container.read, 1, script);
+
+      expect(checked.failure, MitmUpdateFailure.invalid);
+      expect(checked.error, 'SyntaxError');
+      expect(checked.hasPending, isFalse);
+      expect(checked.file, script.file);
+    });
+
+    test('with its own file gone, a failed check leaves nothing to run, and '
+        'a good one runs at once', () async {
+      final script = await stored0();
+      await File(
+        join(await appPath.mitmResourcesDirPath, script.file),
+      ).delete();
+      bodies.remove('/s.js');
+
+      final failed = await checkMitmScriptUpdate(container.read, 1, script);
+      expect(failed.unloadable, isTrue);
+
+      bodies['/s.js'] = 'two';
+      final fixed = await checkMitmScriptUpdate(container.read, 1, failed);
+      expect(fixed.unloadable, isFalse);
+      expect(fixed.error, isNull);
+      expect(fixed.hasPending, isFalse);
+      expect(await readMitmScript(fixed.file), 'two');
     });
 
     test('adopting runs the waiting file', () async {
@@ -603,3 +679,8 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
     });
   });
 }
+
+class _MockCore extends Mock implements CoreHandlerInterface {}
+
+/// A script file the mocked Core refuses to load.
+var _badScript = '\u0000';

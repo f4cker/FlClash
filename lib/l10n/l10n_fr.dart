@@ -7770,7 +7770,6 @@ class AppLocalizationsFr extends AppLocalizations {
       locale: localeName,
       other: '$count scripts',
       one: '1 script',
-      zero: 'None added',
     );
     return '$_temp0';
   }
@@ -7821,7 +7820,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get mitmScriptHasUpdate => 'Content updated';
+  String get mitmScriptHasUpdate => 'Update available';
 
   @override
   String get mitmHasUpdate => 'Update available';
@@ -7929,21 +7928,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mitmScriptConfirmBody =>
-      'These scripts can see and change the plaintext requests and responses of the hosts they match, which may include accounts and passwords. Only turn on scripts you trust.';
+      'Scripts may read and change the plaintext requests and responses of the hosts they match, which may include accounts, passwords and other sensitive information. Turn on only scripts you trust.';
 
   @override
   String get mitmCapabilityRead =>
       'See and change plaintext requests and responses of the matched hosts';
 
   @override
-  String get mitmCapabilitySend => 'Send requests of its own (through Flash)';
+  String get mitmCapabilitySend => 'Send network requests through Flash';
 
   @override
-  String get mitmCapabilityStore => 'Keep a little data on this Mac';
+  String get mitmCapabilityStore =>
+      'Save data on this Mac; all scripts share this data and can read each other\'s';
 
   @override
   String get mitmCapabilityLimits =>
-      'Can\'t read or write files or run commands; each run gets at most 10 seconds, after which the message passes unchanged.';
+      'Can\'t read or write files on this Mac or run commands; each run lasts at most 10 seconds.';
 
   @override
   String mitmHostNotDecrypted(Object host) {
@@ -7964,8 +7964,8 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Added $count scripts',
-      one: 'Added 1 script',
+      other: '$count scripts added',
+      one: '1 script added',
     );
     return '$_temp0';
   }
@@ -7999,11 +7999,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String mitmDiffCounts(int added, int removed) {
-    return '+$added lines −$removed lines';
-  }
-
-  @override
   String mitmDiffFolded(int count) {
     return '… $count unchanged lines';
   }
@@ -8031,7 +8026,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mitmModuleHostsHint =>
-      'This module will add the decrypted hosts below. Check them before you import.';
+      'Check the decrypted hosts this module includes before you decide whether to import it.';
 
   @override
   String get mitmModuleNoHosts => 'This module adds no decrypted hosts.';
@@ -8060,7 +8055,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String mitmModuleRoutingRulesNote(int count) {
-    return '$count rules, not imported yet';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count routing rules won\'t be imported.',
+      one: '1 routing rule won\'t be imported.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -8068,7 +8069,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String mitmModuleUnsupportedCount(int count) {
-    return '$count lines won\'t be imported';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count lines won\'t be imported.',
+      one: '1 line won\'t be imported.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -8123,8 +8130,8 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count scripts didn\'t finish; the message passed unchanged',
-      one: '1 script didn\'t finish; the message passed unchanged',
+      other: '$count scripts didn\'t finish; the message passed unchanged.',
+      one: '1 script didn\'t finish; the message passed unchanged.',
     );
     return '$_temp0';
   }
@@ -8135,18 +8142,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String mitmScriptTimedOut(int seconds) {
-    return 'Timed out ($seconds s)';
-  }
+  String get mitmScriptTimedOut => 'Script timed out';
 
   @override
   String mitmScriptFailed(Object reason) {
-    return 'Failed: $reason';
+    return 'Script failed: $reason';
   }
 
   @override
   String mitmScriptNotRun(Object reason) {
-    return 'Didn\'t run: $reason';
+    return 'Script didn\'t run: $reason';
   }
 
   @override
@@ -8168,8 +8173,8 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Sent $count requests',
-      one: 'Sent 1 request',
+      other: '$count requests sent',
+      one: '1 request sent',
     );
     return '$_temp0';
   }
@@ -8183,5 +8188,63 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String mitmFromModule(Object name) {
     return 'Module · $name';
+  }
+
+  @override
+  String get mitmUpdateCheckFailedKept =>
+      'Couldn\'t check for updates; the current version still works.';
+
+  @override
+  String get mitmUpdateDownloadFailedKept =>
+      'Couldn\'t download the new version; the current version still works.';
+
+  @override
+  String get mitmUpdateInvalidKept =>
+      'The new version can\'t be loaded; the current version still works.';
+
+  @override
+  String mitmScriptLoadFailed(Object reason) {
+    return 'The script can\'t be loaded: $reason.';
+  }
+
+  @override
+  String mitmModuleLoadFailed(Object reason) {
+    return 'The module can\'t be loaded: $reason.';
+  }
+
+  @override
+  String get mitmPendingKept =>
+      'A new version is waiting; the current version keeps running.';
+
+  @override
+  String mitmScriptFoundUpdate(Object time) {
+    return 'New version found $time';
+  }
+
+  @override
+  String mitmAlsoDecryptHost(Object host) {
+    return 'Also add $host to decryption';
+  }
+
+  @override
+  String mitmDiffAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count lines',
+      one: '+1 line',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmDiffRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '−$count lines',
+      one: '−1 line',
+    );
+    return '$_temp0';
   }
 }

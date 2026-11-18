@@ -875,6 +875,7 @@ abstract class MitmModule with _$MitmModule {
 
     /// Why the last update failed.
     String? error,
+    MitmUpdateFailure? failure,
   }) = _MitmModule;
 }
 
@@ -886,6 +887,9 @@ extension MitmModuleExt on MitmModule {
   String get pendingFileName => '$id.pending.txt';
 
   bool get hasPending => pendingTime != null;
+
+  /// Nothing of it can run, unlike a failed update that keeps [fileName].
+  bool get unloadable => failure == MitmUpdateFailure.load;
 
   String get updatingKey => 'mitm_module_$id';
 }

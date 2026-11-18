@@ -105,17 +105,32 @@ class MitmModulesAction extends _$MitmModulesAction {
           await File(await _pathOf(module)).readAsString(),
         );
       }
+      final missing = await _readText(module) == null;
+      Future<void> fail(MitmUpdateFailure failure, Object e) => _mark(
+        module,
+        (current) => current.copyWith(
+          error: e is MessageException ? e.message : compactError(e),
+          failure: missing ? MitmUpdateFailure.load : failure,
+        ),
+      );
       final String text;
       try {
         text = (await request.getTextResponseForUrl(url)).data ?? '';
       } catch (e) {
-        await _mark(
-          module,
-          (current) => current.copyWith(error: compactError(e)),
+        await fail(MitmUpdateFailure.check, e);
+        rethrow;
+      }
+      try {
+        return await _offer(module, text);
+      } catch (e) {
+        await fail(
+          e is MessageException
+              ? MitmUpdateFailure.invalid
+              : MitmUpdateFailure.download,
+          e,
         );
         rethrow;
       }
-      return await _offer(module, text);
     } finally {
       updatingKeys.stop(module.updatingKey, operation);
     }
@@ -125,7 +140,10 @@ class MitmModulesAction extends _$MitmModulesAction {
   Future<MitmModule> _offer(MitmModule module, String text) async {
     final current = await _readText(module);
     if (current == null) {
-      return _save(module, text);
+      return _mark(
+        await _save(module, text),
+        (item) => item.copyWith(error: null, failure: null),
+      );
     }
     final pending = File(
       join(await appPath.mitmModulesDirPath, module.pendingFileName),
@@ -136,7 +154,7 @@ class MitmModulesAction extends _$MitmModulesAction {
       await pending.safeDelete();
       return _mark(
         saved,
-        (item) => item.copyWith(pendingTime: null, error: null),
+        (item) => item.copyWith(pendingTime: null, error: null, failure: null),
       );
     }
     final content = await compute(_parseMitmModule, (text, module.arguments));
@@ -155,6 +173,7 @@ class MitmModulesAction extends _$MitmModulesAction {
         lastUpdateTime: DateTime.now(),
         pendingTime: DateTime.now(),
         error: null,
+        failure: null,
       ),
     );
   }
@@ -190,7 +209,7 @@ class MitmModulesAction extends _$MitmModulesAction {
     ).safeDelete();
     return _mark(
       saved,
-      (item) => item.copyWith(pendingTime: null, error: null),
+      (item) => item.copyWith(pendingTime: null, error: null, failure: null),
     );
   }
 

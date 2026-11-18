@@ -144,6 +144,7 @@ Future<List<MitmScript>> prepareMitmScripts(
 }
 
 /// New content waits in [MitmScript.pendingFile]; the old keeps running.
+/// A script whose own file is gone takes the new content at once.
 Future<MitmScript> checkMitmScriptUpdate(
   MitmReader read,
   int profileId,
@@ -153,26 +154,57 @@ Future<MitmScript> checkMitmScriptUpdate(
   if (url == null) {
     return script;
   }
+  final missing = !await File(
+    join(await appPath.mitmResourcesDirPath, script.file),
+  ).exists();
+  MitmScript failed(MitmUpdateFailure failure, String error) => script.copyWith(
+    checkedAt: DateTime.now(),
+    error: error,
+    failure: missing ? MitmUpdateFailure.load : failure,
+  );
   MitmScript checked;
   try {
     final bytes = await downloadMitmScript(url);
     final name = await storeMitmScript(url, bytes);
-    checked = script.copyWith(
-      pendingFile: name == script.file ? null : name,
-      checkedAt: DateTime.now(),
-      error: null,
-    );
+    final line =
+        parseMitmScriptInfo(script.line)?.lineWith(name) ?? script.line;
+    final issues = await read(
+      coreHandlerProvider,
+    ).validateMitm(MitmRules(script: [line]));
+    final problem = issues[MitmList.script]?.values.firstOrNull;
+    if (problem != null) {
+      checked = failed(MitmUpdateFailure.invalid, problem);
+    } else if (missing) {
+      checked = script.copyWith(
+        line: line,
+        file: name,
+        pendingFile: null,
+        checkedAt: DateTime.now(),
+        error: null,
+        failure: null,
+      );
+    } else {
+      checked = script.copyWith(
+        pendingFile: name == script.file ? null : name,
+        checkedAt: DateTime.now(),
+        error: null,
+        failure: null,
+      );
+    }
+  } on _ScriptException catch (e) {
+    checked = failed(MitmUpdateFailure.download, e.message);
   } catch (e) {
-    checked = script.copyWith(
-      checkedAt: DateTime.now(),
-      error: e is _ScriptException ? e.message : compactError(e),
-    );
+    checked = failed(MitmUpdateFailure.check, compactError(e));
   }
-  final notifier = read(profileMitmScriptsProvider(profileId).notifier);
   final current = read(profileMitmScriptsProvider(profileId)).value ?? [];
-  await notifier.commit([
+  final next = [
     for (final item in current) item.id == script.id ? checked : item,
-  ]);
+  ];
+  if (checked.file != script.file) {
+    await commitMitmScripts(read, profileId, next);
+  } else {
+    await read(profileMitmScriptsProvider(profileId).notifier).commit(next);
+  }
   return checked;
 }
 
@@ -191,6 +223,7 @@ Future<void> adoptMitmScript(
     file: pending,
     pendingFile: null,
     error: null,
+    failure: null,
   );
   final current = read(profileMitmScriptsProvider(profileId)).value ?? [];
   await commitMitmScripts(read, profileId, [

@@ -70,7 +70,7 @@ class Database extends _$Database {
   Database([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 30;
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -141,6 +141,7 @@ class Database extends _$Database {
           // The copy below names every column the table has today.
           await _addColumnIfMissing(m, mitmModules, mitmModules.pendingTime);
           await _addColumnIfMissing(m, mitmModules, mitmModules.error);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.failure);
           await m.alterTable(TableMigration(mitmModules));
         }
         // Flash 0.9.x and upstream FlClash both shipped a version 24: Flash's
@@ -175,6 +176,10 @@ class Database extends _$Database {
           await _createTableIfMissing(m, mitmScripts);
           await _addColumnIfMissing(m, mitmModules, mitmModules.pendingTime);
           await _addColumnIfMissing(m, mitmModules, mitmModules.error);
+        }
+        if (from < 30) {
+          await _addColumnIfMissing(m, mitmScripts, mitmScripts.failure);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.failure);
         }
       }),
       beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),

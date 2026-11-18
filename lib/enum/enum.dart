@@ -1035,6 +1035,10 @@ enum MitmList {
   const MitmList(this.key);
 }
 
+/// Why a remote script or module's last update failed. Only [load] leaves
+/// nothing to run; the others keep the current version running.
+enum MitmUpdateFailure { check, download, invalid, load }
+
 enum MitmTrust { notGenerated, notInstalled, untrusted, ready }
 
 enum MitmInstallOutcome { installed, untilReboot, prompted, saved }
