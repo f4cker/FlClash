@@ -830,12 +830,14 @@ class DashboardIconButton extends StatelessWidget {
     required this.glyph,
     required this.tooltip,
     required this.onPressed,
+    this.glyphSize = defaultGlyphSize,
   });
 
   static const size = 32.0;
-  static const glyphSize = 18.0;
+  static const defaultGlyphSize = 18.0;
 
   final Glyph glyph;
+  final double glyphSize;
   final String tooltip;
   final VoidCallback? onPressed;
 

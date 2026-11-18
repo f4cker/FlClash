@@ -20,18 +20,23 @@ Future<void> showIpQualitySheet(
   BuildContext context, {
   required String ip,
   String? countryCode,
+  String? title,
 }) {
   return showNestedSheet<void>(
     context,
-    builder: (_) => _IpQualitySheet(ip: ip, countryCode: countryCode),
+    builder: (_) =>
+        _IpQualitySheet(ip: ip, countryCode: countryCode, title: title),
   );
 }
 
 class _IpQualitySheet extends ConsumerStatefulWidget {
-  const _IpQualitySheet({required this.ip, this.countryCode});
+  const _IpQualitySheet({required this.ip, this.countryCode, this.title});
 
   final String ip;
   final String? countryCode;
+
+  /// Names whose address this is; a plain outbound IP otherwise.
+  final String? title;
 
   @override
   ConsumerState<_IpQualitySheet> createState() => _IpQualitySheetState();
@@ -52,7 +57,7 @@ class _IpQualitySheetState extends ConsumerState<_IpQualitySheet> {
         ref.watch(ipQualityProvider(ip).select((result) => result.isLoading)) ||
         ref.watch(ipxLookupProvider(ip).select((state) => state.isLoading));
     return Scaffold(
-      title: localizations.outboundIp,
+      title: widget.title ?? localizations.outboundIp,
       actions: [
         AppBarActionButton(
           data: IconButtonData(
