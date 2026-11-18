@@ -63,6 +63,10 @@ type mitmCaptureEntry struct {
 	req, resp  mitmCaptureBody
 	cost       int64
 	gone       bool
+	// Set when a rewrite rule matched: the URL the client asked for and
+	// what each rule did.
+	originalURL string
+	rewrites    []MitmRewriteHit
 }
 
 // Why an exchange did not complete, as the request list names it.
@@ -70,6 +74,8 @@ const (
 	mitmExchangeNoResponse     = "noResponse"
 	mitmExchangeResponseFailed = "responseFailed"
 	mitmExchangeStopped        = "stopped"
+	// URL Rewrite's reject-drop closed the connection without an answer.
+	mitmExchangeDropped = "dropped"
 )
 
 var mitmCaptures = &mitmCaptureStore{
@@ -169,6 +175,11 @@ func mitmHeaderCost(header http.Header) int64 {
 // Starts a record for a request whose head was just read, or returns nil
 // while capture is off.
 func (s *mitmCaptureStore) begin(connection, host string, req *http.Request) *mitmCaptureEntry {
+	return s.beginScheme(connection, "https", host, req)
+}
+
+// begin for a request of scheme (http for plain HTTP on port 80).
+func (s *mitmCaptureStore) beginScheme(connection, scheme, host string, req *http.Request) *mitmCaptureEntry {
 	if connection == "" {
 		return nil
 	}
@@ -188,7 +199,7 @@ func (s *mitmCaptureStore) begin(connection, host string, req *http.Request) *mi
 		connection: connection,
 		start:      time.Now(),
 		method:     req.Method,
-		url:        "https://" + req.Host + req.RequestURI,
+		url:        scheme + "://" + req.Host + req.RequestURI,
 		proto:      req.Proto,
 		reqHeader:  header,
 		pending:    true,
@@ -199,6 +210,30 @@ func (s *mitmCaptureStore) begin(connection, host string, req *http.Request) *mi
 	s.bytes += entry.cost
 	s.evictLocked()
 	return entry
+}
+
+// Records what the rewrite rules did so far to entry's exchange.
+func (s *mitmCaptureStore) noteRewrite(entry *mitmCaptureEntry, rw *mitmRewriteExchange) {
+	if entry == nil || !rw.rewritten() {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if entry.gone {
+		return
+	}
+	var cost int64
+	if entry.originalURL == "" && rw.originalURL != entry.url {
+		entry.originalURL = rw.originalURL
+		cost += int64(len(rw.originalURL))
+	}
+	for _, hit := range rw.hits[len(entry.rewrites):] {
+		cost += int64(len(hit.Rule) + len(hit.Section) + len(hit.Phase) + len(hit.Action) + len(hit.Skipped))
+	}
+	entry.rewrites = append(entry.rewrites, rw.hits[len(entry.rewrites):]...)
+	entry.cost += cost
+	s.bytes += cost
+	s.evictLocked()
 }
 
 func (s *mitmCaptureStore) respond(entry *mitmCaptureEntry, resp *http.Response) {
@@ -375,6 +410,11 @@ type MitmExchangeSummary struct {
 	RequestSize  int64  `json:"request-size"`
 	ResponseSize int64  `json:"response-size"`
 	Error        string `json:"error"`
+	// A rewrite rule changed or answered this exchange.
+	Rewritten bool `json:"rewritten,omitempty"`
+	// A rewrite rule matched but left a message as it was (an oversized,
+	// binary or undecodable body, say); Actions say which and why.
+	RewriteSkipped bool `json:"rewrite-skipped,omitempty"`
 }
 
 type MitmExchangeList struct {
@@ -392,7 +432,8 @@ type MitmExchange struct {
 	Connection     string              `json:"connection"`
 	RequestHeader  map[string][]string `json:"request-header"`
 	ResponseHeader map[string][]string `json:"response-header"`
-	Actions        []any               `json:"actions"`
+	// What the rewrite rules did, in order; empty when none matched.
+	Actions []MitmRewriteHit `json:"actions"`
 }
 
 type MitmBody struct {
@@ -406,7 +447,7 @@ func (entry *mitmCaptureEntry) summary() MitmExchangeSummary {
 	if entry.pending {
 		duration = time.Since(entry.start)
 	}
-	return MitmExchangeSummary{
+	summary := MitmExchangeSummary{
 		ID:           entry.id,
 		Start:        entry.start,
 		Pending:      entry.pending,
@@ -419,6 +460,14 @@ func (entry *mitmCaptureEntry) summary() MitmExchangeSummary {
 		ResponseSize: entry.resp.size,
 		Error:        entry.err,
 	}
+	for _, hit := range entry.rewrites {
+		if hit.Skipped != "" {
+			summary.RewriteSkipped = true
+		} else {
+			summary.Rewritten = true
+		}
+	}
+	return summary
 }
 
 func handleMitmExchanges(params MitmExchangesParams) MitmExchangeList {
@@ -457,8 +506,10 @@ func handleMitmExchange(params MitmExchangeParams) *MitmExchange {
 		Connection:          entry.connection,
 		RequestHeader:       entry.reqHeader.Clone(),
 		ResponseHeader:      entry.respHeader.Clone(),
-		Actions:             []any{},
+		OriginalURL:         entry.originalURL,
+		Actions:             append([]MitmRewriteHit{}, entry.rewrites...),
 	}
+
 	if exchange.ResponseHeader == nil {
 		exchange.ResponseHeader = map[string][]string{}
 	}

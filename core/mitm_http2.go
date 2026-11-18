@@ -10,6 +10,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -151,9 +152,42 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMisdirectedRequest)
 		return
 	}
+	rw := mitmRewriteBegin("https", h.host, r.RequestURI, false)
+	decision := rw.request(r.Header)
+	if decision.requestURI != "" {
+		if target, err := url.ParseRequestURI(decision.requestURI); err == nil {
+			r.URL, r.RequestURI = target, decision.requestURI
+		}
+	}
 	entry := mitmCaptures.begin(h.connection, h.host, r)
+	mitmCaptures.noteRewrite(entry, rw)
 	var result error
 	defer func() { mitmCaptures.fail(entry, result) }()
+	if decision.drop {
+		// reject-drop: the stream is reset, the connection kept.
+		mitmCaptures.finish(entry, mitmExchangeDropped)
+		panic(http.ErrAbortHandler)
+	}
+	if decision.local != nil {
+		mitmAnswerHTTP2(w, r, decision.local, entry)
+		return
+	}
+	if rules := rw.bodyRules(false); len(rules) > 0 {
+		if r.ContentLength < 0 && len(r.Trailer) > 0 {
+			// A body with trailers to follow is a stream (gRPC and the like).
+			rw.skipAll(rules, "request", mitmSkipStreaming)
+		} else {
+			res := rw.rewriteBody(rules, r.Header, r.Body, r.ContentLength, false)
+			switch {
+			case res.changed:
+				mitmRewrittenBodyHeader(r.Header, res.length)
+				r.Body, r.ContentLength = io.NopCloser(res.body), res.length
+			case r.ContentLength != 0:
+				r.Body = io.NopCloser(res.body)
+			}
+		}
+		mitmCaptures.noteRewrite(entry, rw)
+	}
 
 	out := r.Clone(r.Context())
 	out.RequestURI = ""
@@ -205,6 +239,20 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		panic(http.ErrAbortHandler)
 	}
 	defer resp.Body.Close()
+	var rewrittenBody io.Reader
+	if rw != nil {
+		rw.responseHeader(resp.Header)
+		if rules := rw.bodyRules(true); len(rules) > 0 && r.Method != http.MethodHead && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotModified {
+			res := rw.rewriteBody(rules, resp.Header, resp.Body, resp.ContentLength, true)
+			rewrittenBody = res.body
+			if res.changed {
+				// Trailers, read with the body, still follow it.
+				mitmRewrittenBodyHeader(resp.Header, res.length)
+				resp.ContentLength = res.length
+			}
+		}
+		mitmCaptures.noteRewrite(entry, rw)
+	}
 	mitmCaptures.respond(entry, resp)
 
 	fields := w.Header()
@@ -226,6 +274,9 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(resp.StatusCode)
 
 	var body io.Reader = resp.Body
+	if rewrittenBody != nil {
+		body = rewrittenBody
+	}
 	if entry != nil {
 		body = mitmCaptureReader{r: body, entry: entry, response: true}
 	}
@@ -264,4 +315,27 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header()[http.TrailerPrefix+name] = values
 	}
 	mitmCaptures.trailers(entry, resp.Trailer)
+}
+
+// Answers r with local (reject, redirect, Map Local) without the site.
+func mitmAnswerHTTP2(w http.ResponseWriter, r *http.Request, local *mitmLocalResponse, entry *mitmCaptureEntry) {
+	resp := local.http1()
+	mitmCaptures.respond(entry, resp)
+	fields := w.Header()
+	for name, values := range resp.Header {
+		fields[name] = values
+	}
+	fields["Content-Length"] = []string{strconv.Itoa(len(local.body))}
+	if _, present := resp.Header["Content-Type"]; !present {
+		fields["Content-Type"] = nil
+	}
+	w.WriteHeader(local.status)
+	if r.Method != http.MethodHead && len(local.body) > 0 {
+		if _, err := w.Write(local.body); err != nil {
+			mitmCaptures.finish(entry, mitmExchangeResponseFailed)
+			return
+		}
+		mitmCaptures.write(entry, true, local.body)
+	}
+	mitmCaptures.finish(entry, "")
 }

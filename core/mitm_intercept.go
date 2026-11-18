@@ -384,8 +384,12 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 
 // From the metadata alone: could decryption take this flow? Only HTTPS, and
 // there a named flow only when its name is listed; a nameless one is read
-// for its SNI. Every other flow dials at once, as without the hook.
+// for its SNI. Plain HTTP only for URL Rewrite (mitm_plain.go). Every other
+// flow dials at once, as without the hook.
 func mitmInterceptWanted(metadata *C.Metadata) bool {
+	if metadata.DstPort == mitmPlainHTTPPort {
+		return mitmPlainWanted(metadata)
+	}
 	runtime := mitmState.Load()
 	if !runtime.decrypting() || metadata.DstPort != mitmHTTPSPort {
 		return false
@@ -405,6 +409,9 @@ func mitmIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterce
 // Split out only so socket tests can exercise the real selector while the
 // production hook remains hard-gated until the always-visible indicator.
 func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterceptor {
+	if metadata.DstPort == mitmPlainHTTPPort {
+		return mitmPlainIntercept(conn, metadata)
+	}
 	if !mitmInterceptWanted(metadata) {
 		return nil
 	}
