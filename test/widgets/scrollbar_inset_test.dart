@@ -209,7 +209,7 @@ void main() {
 
   for (final type in [null, SheetType.page, SheetType.sideSheet]) {
     testWidgets(
-      '${type?.name ?? 'a page'} keeps its bar opaque over the list cut under it',
+      '${type?.name ?? 'a page'} floats its bar over the list under it',
       variant: _everyPlatform,
       (tester) async {
         final scaffold = Scaffold(title: 'title', body: _list());
@@ -223,14 +223,12 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // An opaque bar, not a fade the list shows through; the body is
-        // still laid out from the top and cut at the bar's foot.
         expect(
           find.ancestor(
             of: find.byType(AppBar),
             matching: find.byType(FloatingHeader),
           ),
-          findsNothing,
+          findsOneWidget,
         );
         final barBottom = tester.getRect(find.byType(AppBar)).bottom;
         expect(tester.getRect(find.text('0')).top, barBottom);
@@ -243,7 +241,7 @@ void main() {
     );
   }
 
-  testWidgets('a page with a title widget keeps its bar opaque as a titled one', (
+  testWidgets('a page with a title widget floats its bar as a titled one', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -267,7 +265,7 @@ void main() {
         of: find.byType(AppBar),
         matching: find.byType(FloatingHeader),
       ),
-      findsNothing,
+      findsOneWidget,
     );
     final barBottom = tester.getRect(find.byType(AppBar)).bottom;
     expect(tester.getRect(find.text('0')).top, barBottom);
