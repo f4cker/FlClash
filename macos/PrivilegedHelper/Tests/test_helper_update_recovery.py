@@ -119,10 +119,13 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) { return NO
     self.owner = connection; self.session = session; self.uid = FixtureEuid(connection); self.child = 42;
     return @"ok";
 }
-- (NSData *)receive:(NSString **)code { *code = @"ok"; return nil; }
+- (NSArray<NSData *> *)receive:(uint64_t)ack base:(uint64_t *)base code:(NSString **)code { *code = @"ok"; return @[]; }
 - (NSString *)retireCores:(NSDictionary **)sweep { return @"noStaleCore"; }
-- (NSString *)send:(NSData *)frame { return @"ok"; }
-- (void)reply:(xpc_object_t)request code:(NSString *)code pid:(pid_t)pid frame:(NSData *)frame coreToken:(NSData *)token sweep:(NSDictionary *)sweep {
+- (NSString *)send:(NSData *)frame seq:(uint64_t)seq { return @"ok"; }
+// Adoption by the same app process is covered by test_supervisor_stop; connections here are other processes.
+- (BOOL)adopt:(xpc_object_t)request connection:(xpc_connection_t)connection session:(NSString *)session { return NO; }
+- (void)ownerLost:(xpc_connection_t)connection { if (self.owner == connection) [self stop]; }
+- (void)reply:(xpc_object_t)request code:(NSString *)code pid:(pid_t)pid frames:(NSArray<NSData *> *)frames base:(uint64_t)base coreToken:(NSData *)token sweep:(NSDictionary *)sweep {
     [replies addObject:@{@"code": code, @"pid": @(pid), @"exitConfirmed": @(self.child == 0 && !self.ownershipUncertain)}];
 }
 '''
@@ -250,6 +253,8 @@ BRIDGE_FIXTURE = r'''
 #import <assert.h>
 #import "LauncherStatus.h"
 #import "LaunchdProbe.h"
+#import <os/log.h>
+static os_log_t FCBridgeLog(void) { return OS_LOG_DEFAULT; }
 '''
 
 
@@ -440,6 +445,7 @@ int main(void) {
 @property NSMutableArray<NSDictionary *> *jobs;  // launchctl answers in order (last repeats); nil: idle
 @end
 @implementation BridgeFixture
+- (BOOL)servesSession:(NSDictionary *)answer { return NO; }
 - (NSDictionary *)launcherReport { return self.launcher; }
 - (NSDictionary *)registrationStatus { return @{@"code": @"enabled"}; }
 - (NSString *)currentHelperHash { return @"cdhash-new"; }

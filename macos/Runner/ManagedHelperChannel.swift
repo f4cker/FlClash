@@ -29,6 +29,9 @@ final class ManagedHelperChannel {
                 if let frame = payload["frame"] as? Data {
                     payload["frame"] = FlutterStandardTypedData(bytes: frame)
                 }
+                if let frames = payload["frames"] as? [Data] {
+                    payload["frames"] = frames.map { FlutterStandardTypedData(bytes: $0) }
+                }
                 DispatchQueue.main.async { result(payload) }
             }
         }

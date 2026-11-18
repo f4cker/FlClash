@@ -42,6 +42,24 @@ static NSString *FCStatusForHello(NSString *reply) {
     return @"unavailable";
 }
 
+// A relay batch: data items only, each and all together within FCMaxFrame; nil otherwise.
+static NSArray<NSData *> *FCRelayFrames(xpc_object_t frames) {
+    if (xpc_get_type(frames) != XPC_TYPE_ARRAY || xpc_array_get_count(frames) > FCRelayBatchFrames) return nil;
+    NSMutableArray<NSData *> *list = [NSMutableArray array];
+    size_t total = 0;
+    for (size_t index = 0; index < xpc_array_get_count(frames); index++) {
+        xpc_object_t item = xpc_array_get_value(frames, index);
+        if (xpc_get_type(item) != XPC_TYPE_DATA) return nil;
+        size_t size = xpc_data_get_length(item);
+        total += size;
+        if (size > FCMaxFrame || total > FCMaxFrame) return nil;
+        const void *bytes = xpc_data_get_bytes_ptr(item);
+        if (size && !bytes) return nil;
+        [list addObject:size ? [NSData dataWithBytes:bytes length:size] : [NSData data]];
+    }
+    return list;
+}
+
 // Full error text for "View details": domain, code and every userInfo entry (underlying errors included).
 static NSString *FCErrorText(NSError *error) {
     if (!error) return @"none";
@@ -191,11 +209,19 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 // A registration under the retired name still exists: the app migrates it (under its maintenance exclusion) before
 // the new name is used. Read until seen absent; after one attempt by this build (persisted across launches) it is a
 // detail, never a block.
+// Seen absent once by this build (persisted too): later launches do not ask launchd about the retired label again.
 - (NSDictionary *)retiredRegistration {
     if (self.retiredSettled) return nil;
     if ([self retiredAttemptedThisBuild]) { self.retiredSettled = YES; return nil; }
+    NSString *build = [self bundleVersion];
+    if (build.length && [[[self preferences] stringForKey:@"FlashRetiredAbsentBuild"] isEqual:build]) {
+        self.retiredSettled = YES; return nil;
+    }
     NSString *status = [self retiredStatusCode];
-    if ([status isEqual:@"notRegistered"] || [status isEqual:@"notFound"]) { self.retiredSettled = YES; return nil; }
+    if ([status isEqual:@"notRegistered"] || [status isEqual:@"notFound"]) {
+        if (build.length) [[self preferences] setObject:build forKey:@"FlashRetiredAbsentBuild"];
+        self.retiredSettled = YES; return nil;
+    }
     return @{@"code": @"retiredRegistration",
         @"detail": [NSString stringWithFormat:@"%@: %@", FCRetiredHelperLabel, status]};
 }
@@ -260,13 +286,19 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     return @{@"code": @"unsupported"};
 }
 
+// The session outlives its connection: the daemon keeps the Core while this app process resumes the relay on a new
+// one (verified again in full). The session ends only on the daemon's word (stop, or exit confirmed).
 - (void)resetConnection {
     if (self.connection) xpc_connection_cancel(self.connection);
     self.connection = nil;
     self.connectionTrusted = NO;
     self.negotiatedCoreHash = nil;
-    self.sessionActive = NO;
-    [self forgetCore];
+}
+
+// An authenticated reply from the daemon that runs this app's Core: it reports the very pid it started.
+- (BOOL)servesSession:(NSDictionary *)answer {
+    return self.sessionActive && self.corePid > 0 && [answer[@"protocol"] isEqual:@1] &&
+        [answer[@"pid"] isEqual:@(self.corePid)];
 }
 
 - (void)forgetCore {
@@ -318,12 +350,17 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     }
     [self request:@"hello" arguments:@{} completion:^(NSDictionary *answer) {
         NSString *result = FCStatusForHello(answer[@"code"]);
-        // A helper process from the previous app build is still running: retire it before use.
-        if ([result isEqualToString:@"enabled"] && ![answer[@"helperCDHash"] isEqual:[self currentHelperHash]])
+        // A helper process from the previous app build is still running: retire it before use. The daemon serving
+        // this app's Core passed the reply check against the bundled helper; a different hash read here (the file
+        // momentarily unreadable) does not take its session away.
+        BOOL served = [self servesSession:answer];
+        if ([result isEqualToString:@"enabled"] && !served && ![answer[@"helperCDHash"] isEqual:[self currentHelperHash]])
             result = @"staleHelper";
         if ([result isEqualToString:@"staleHelper"]) {
             // Do not keep the old daemon alive with status polling; its idle timeout is 30 seconds.
             self.staleRetryAfter = [NSDate dateWithTimeIntervalSinceNow:40];
+            os_log(FCBridgeLog(), "status: helper of another build answered (session %{public}s); connection reset",
+                self.sessionActive ? "running" : "none");
             [self resetConnection];
         } else {
             self.staleRetryAfter = nil;
@@ -406,6 +443,11 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     NSString *session = arguments[@"session"];
     if ([session isKindOfClass:NSString.class]) xpc_dictionary_set_string(message, "session", session.UTF8String);
     if (frame && [frame isKindOfClass:NSData.class]) xpc_dictionary_set_data(message, "frame", frame.bytes, bytes);
+    for (NSString *key in @[@"ack", @"seq"]) {
+        NSNumber *number = arguments[key];
+        if ([number isKindOfClass:NSNumber.class] && number.longLongValue >= 0)
+            xpc_dictionary_set_uint64(message, key.UTF8String, number.unsignedLongLongValue);
+    }
     if ([method isEqualToString:@"start"]) {
         if (!self.connectionTrusted || !FCCoreHashValid(self.negotiatedCoreHash)) {
             completion(@{@"code": @"incompatible"}); return;
@@ -429,7 +471,12 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             answer = [answer mutableCopy];
             [(NSMutableDictionary *)answer removeObjectForKey:@"coreAuditToken"];
         }
-        if ([answer[@"exitConfirmed"] isEqual:@YES]) self.sessionActive = NO;
+        if ([answer[@"exitConfirmed"] isEqual:@YES]) {
+            if (self.sessionActive)
+                os_log(FCBridgeLog(), "%{public}s: helper confirmed the Core exited; session over", method.UTF8String);
+            self.sessionActive = NO;
+            [self forgetCore];
+        }
         completion(answer);
     };
     xpc_connection_send_message_with_reply(connection, message, self.queue, ^(xpc_object_t reply) {
@@ -486,6 +533,13 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         const void *data = xpc_dictionary_get_data(reply, "frame", &size);
         if (size > FCMaxFrame) { finish(@{@"code": @"incompatible"}); return; }
         if (data) answer[@"frame"] = [NSData dataWithBytes:data length:size];
+        xpc_object_t frames = xpc_dictionary_get_value(reply, "frames");
+        if (frames) {
+            NSArray<NSData *> *list = FCRelayFrames(frames);
+            if (!list) { finish(@{@"code": @"incompatible"}); return; }
+            answer[@"frames"] = list;
+            answer[@"seq"] = @(xpc_dictionary_get_uint64(reply, "seq"));
+        }
         if ([method isEqualToString:@"hello"] && [answer[@"code"] isEqual:@"ok"]) {
             const char *version = xpc_dictionary_get_string(reply, "coreVersion");
             const char *revision = xpc_dictionary_get_string(reply, "coreRevision");
@@ -506,8 +560,8 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         if (finished) return;
         xpc_connection_cancel(connection);
         if (self.connection == connection) [self resetConnection];
-        // No answer is not a statement about the Core: the daemon stops the Core of a connection that goes
-        // away, and a later `hello` reports whether it still owns one.
+        // No answer is not a statement about the Core: the daemon keeps it briefly for this process to resume the
+        // relay on a new connection, then stops it; a later `hello` reports whether it still owns one.
         os_log_error(FCBridgeLog(), "%{public}s: no reply within %lld s", method.UTF8String,
             FCRequestTimeoutSeconds(method));
         finish(@{@"code": @"timeout", @"detail": [NSString stringWithFormat:@"helper reply: none within %lld s",
@@ -621,6 +675,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     NSString *gate = [self appGate];
     if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
     if (@available(macOS 14.0, *)) {
+        os_log(FCBridgeLog(), "unregister: connection reset");
         [self resetConnection];
         NSError *error = nil;
         BOOL removed = [[self daemon] unregisterAndReturnError:&error];
@@ -813,6 +868,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     if (@available(macOS 14.0, *)) {
         self.operationInFlight = YES;
         self.staleRetryAfter = nil;
+        os_log(FCBridgeLog(), "recovery: connection reset");
         [self resetConnection];
         dispatch_async(self.repairQueue, ^{
             NSDictionary *answer = nil;
@@ -850,10 +906,27 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     completion(@{@"code": @"unsupported"});
 }
 
-- (void)invoke:(NSString *)method arguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {
+- (void)invoke:(NSString *)method arguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))reply {
+    // The app's own account of a relay it retried or lost (it grants nothing): the unified log then holds every
+    // reason a session ended, from both sides of the bridge.
+    if ([method isEqualToString:@"note"]) {
+        NSString *reason = [arguments[@"reason"] isKindOfClass:NSString.class] ? arguments[@"reason"] : @"";
+        if (reason.length > 300) reason = [reason substringToIndex:300];
+        os_log(FCBridgeLog(), "app: %{public}s", reason.UTF8String);
+        reply(@{@"code": @"ok"}); return;
+    }
+    BOOL relay = [@[@"stop", @"send", @"receive"] containsObject:method];
+    // Every relay answer other than ok (and the bridge's own predispatch backpressure) is logged at default level.
+    void (^completion)(NSDictionary *) = !relay ? reply : ^(NSDictionary *answer) {
+        NSString *code = [answer[@"code"] isKindOfClass:NSString.class] ? answer[@"code"] : @"none";
+        if (![code isEqual:@"ok"] && ![code isEqual:@"backpressure"])
+            os_log(FCBridgeLog(), "%{public}s answered %{public}s (session %{public}s, connection %{public}s)",
+                method.UTF8String, code.UTF8String, self.sessionActive ? "running" : "none",
+                self.connectionTrusted ? "trusted" : "new");
+        reply(answer);
+    };
     dispatch_async(self.queue, ^{
         if (![self effectsAllowed]) { completion(@{@"code": @"disabled"}); return; }
-        BOOL relay = [@[@"stop", @"send", @"receive"] containsObject:method];
         BOOL allowedDuringRepair = relay || [method isEqualToString:@"openApprovalSettings"] ||
             [method isEqualToString:@"status"] || [method isEqualToString:@"approvalStatus"];
         if (self.operationInFlight && !allowedDuringRepair) { completion(@{@"code": @"operationInProgress"}); return; }
@@ -875,11 +948,16 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             completion(@{@"code": @"invalidRequest"}); return;
         }
         if (relay && self.connectionTrusted) { [self request:method arguments:arguments completion:completion]; return; }
-        NSDictionary *registration = [self registrationStatus];
+        // The relay of a running session reconnects with a fresh hello (verified in full) only: SMAppService's
+        // registration was read when it started, and a momentary misread there must not end the session.
+        NSDictionary *registration = relay && self.sessionActive ? @{@"code": @"enabled"} : [self registrationStatus];
         if (![registration[@"code"] isEqual:@"enabled"]) { completion(registration); return; }
         [self request:@"hello" arguments:@{} completion:^(NSDictionary *answer) {
             if (![answer[@"code"] isEqual:@"ok"]) { completion(answer); return; }
-            if (![answer[@"helperCDHash"] isEqual:[self currentHelperHash]]) { completion(@{@"code": @"staleHelper"}); return; }
+            if (![self servesSession:answer] && ![answer[@"helperCDHash"] isEqual:[self currentHelperHash]]) {
+                os_log(FCBridgeLog(), "%{public}s: helper of another build answered", method.UTF8String);
+                completion(@{@"code": @"staleHelper"}); return;
+            }
             if ([method isEqualToString:@"hello"]) completion(answer);
             else [self request:method arguments:arguments completion:completion];
         }];

@@ -143,13 +143,15 @@ class LiveStatusButton extends ConsumerWidget {
       builder: (context, _) {
         // A Core the old helper still runs is not known to this app while
         // the helper is not ready: say nothing rather than "stopped".
+        // A routine re-check of a ready helper changes nothing here.
+        final unsettled = flow.busy && !flow.routineCheck;
         if (flow.client.hasCoreSession &&
-            (flow.busy || flow.state != MacHelperState.enabled)) {
+            (unsettled || flow.state != MacHelperState.enabled)) {
           return const SizedBox.shrink();
         }
         // A stopped Core that only waits for the helper is not an error.
         final waiting =
-            flow.busy ||
+            unsettled ||
             (flow.state != null && flow.state != MacHelperState.enabled);
         return _buildStatus(context, ref, waitingFor: waiting ? flow : null);
       },

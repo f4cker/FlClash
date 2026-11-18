@@ -47,9 +47,12 @@ static NSDictionary *FixtureRead(NSString *bundle) {
         source += method(SUPERVISOR, '- (NSString *)validateCompatibility')
         source += r'''
 @end
+#import <os/log.h>
+static os_log_t FCBridgeLog(void) { return OS_LOG_DEFAULT; }
 @interface BridgeFixture : NSObject
 @property dispatch_queue_t queue;
 @property BOOL connectionTrusted;
+@property BOOL sessionActive;
 @property BOOL operationInFlight;
 @property NSMutableArray *calls;
 @property NSString *registration;
@@ -61,6 +64,7 @@ static NSDictionary *FixtureRead(NSString *bundle) {
 - (BOOL)effectsAllowed { return YES; }
 - (NSDictionary *)registrationStatus { self.gates++; return @{@"code": self.registration}; }
 - (NSString *)currentHelperHash { return @"cdhash-current"; }
+- (BOOL)servesSession:(NSDictionary *)answer { return NO; }
 - (void)status:(void (^)(NSDictionary *))completion { completion(@{@"code": self.registration}); }
 - (void)migrateWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"migrate"]; c(@{@"code": @"ok"}); }
 - (void)registerWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"register"]; c(@{@"code": @"ok"}); }
@@ -195,6 +199,28 @@ int main(void) {
         assert(([bridge.calls isEqual:@[@"serviceStatus"]]));
         assert([Invoke(bridge, @"openApprovalSettings", @{}) isEqual:@"ok"]);
         assert([Invoke(bridge, @"stop", @{}) isEqual:@"ok"]);
+        // The relay of a running session reconnects through a fresh hello only: a momentary SMAppService misread
+        // does not answer it, while a reply from another build is still refused. Without a session the gate holds.
+        bridge.operationInFlight = NO;
+        bridge.connectionTrusted = NO;
+        bridge.sessionActive = YES;
+        bridge.registration = @"notFound";
+        gates = bridge.gates;
+        [bridge.calls removeAllObjects];
+        assert([Invoke(bridge, @"receive", @{}) isEqual:@"ok"]);
+        assert(([bridge.calls isEqual:@[@"hello", @"receive"]]) && bridge.gates == gates);
+        bridge.helperHash = @"cdhash-previous-build";
+        [bridge.calls removeAllObjects];
+        assert([Invoke(bridge, @"send", @{}) isEqual:@"staleHelper"]);
+        assert(([bridge.calls isEqual:@[@"hello"]]));
+        bridge.helperHash = @"cdhash-current";
+        bridge.sessionActive = NO;
+        [bridge.calls removeAllObjects];
+        assert([Invoke(bridge, @"receive", @{}) isEqual:@"notFound"] && bridge.calls.count == 0);
+        // The app's note is logged only; it reaches neither the gate nor the helper.
+        gates = bridge.gates;
+        assert([Invoke(bridge, @"note", @{@"reason": @"relay lost"}) isEqual:@"ok"]);
+        assert(bridge.calls.count == 0 && bridge.gates == gates);
         puts("Bundle contract, hello negotiation and relay gating mocks passed; no daemon/Core execution");
     }
 }
@@ -339,6 +365,7 @@ static pid_t FCSpawnCore(const char *c, const char *s, uid_t u, gid_t g) { [effe
 - (BOOL)syncRuntime { return YES; }
 - (BOOL)acceptCore { return NO; }
 - (BOOL)stop { return YES; }
+- (void)noteOwner:(xpc_object_t)request {}
 '''
         source += method(SUPERVISOR, '- (NSString *)validateCompatibility')
         source += method(SUPERVISOR, '- (NSString *)start:')

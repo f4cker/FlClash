@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
 
@@ -26,6 +27,24 @@ static inline bool FCMayStopSession(const void *owner, uid_t uid, uid_t callerUI
                                     const char *requested) {
     return owner && uid == callerUID && session && requested && FCValidSession(requested) &&
         strcmp(session, requested) == 0;
+}
+
+static inline bool FCRelayAction(const char *method) {
+    return method && (strcmp(method, "send") == 0 || strcmp(method, "receive") == 0);
+}
+
+// Relay traffic may move to a new connection only from the very app process that started the running session
+// (audit token pid and pid version), of the same user, naming the session.
+static inline bool FCMayAdoptSession(const void *owner, bool coreRunning, pid_t ownerPid, uint32_t ownerPidVersion,
+                                     pid_t callerPid, uint32_t callerPidVersion, uid_t uid, uid_t callerUID,
+                                     const char *session, const char *requested) {
+    return owner && coreRunning && ownerPid > 0 && callerPid == ownerPid && callerPidVersion == ownerPidVersion &&
+        uid == callerUID && session && requested && FCValidSession(requested) && strcmp(session, requested) == 0;
+}
+
+// A GUI check that failed only because the kernel could not be read (FCGUIMessageValidator's kernel steps).
+static inline bool FCGUIReadFailure(const char *failure) {
+    return failure && (strncmp(failure, "status-read ", 12) == 0 || strncmp(failure, "cdhash-read ", 12) == 0);
 }
 
 static inline bool FCWaitOwnershipUnknown(pid_t result, int waitError) {

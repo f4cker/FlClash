@@ -96,6 +96,7 @@ final class _RelayNative implements MacHelperNativeApi {
   final sends = <_RelayCall>[];
   final receives = <_RelayCall>[];
   final calls = <String>[];
+  final notes = <String>[];
   int externalPending = 0;
   int maxPending = 0;
   String stopCode = 'ok';
@@ -138,6 +139,9 @@ final class _RelayNative implements MacHelperNativeApi {
         return _hold(sends, arguments);
       case 'receive':
         return _hold(receives, arguments);
+      case 'note':
+        notes.add(arguments['reason'] as String);
+        return Future.value({'code': 'ok'});
       default:
         throw StateError('Unexpected fake method: $method');
     }
@@ -152,11 +156,19 @@ final class _RelayFixture {
   String session = _session;
   bool _closed = false;
 
-  _RelayFixture({int backpressureRetries = 500}) {
+  /// [maxRelayFailures] 1: the first failed relay request ends the relay
+  /// (the retry budget has tests of its own).
+  _RelayFixture({
+    int backpressureRetries = 500,
+    int maxRelayFailures = 1,
+    Duration relayRetryDelay = Duration.zero,
+  }) {
     client = MacHelperClient(
       native: native,
       safeMode: () => false,
       backpressureRetries: backpressureRetries,
+      maxRelayFailures: maxRelayFailures,
+      relayRetryDelay: relayRetryDelay,
     );
     subscription = client.events.listen(events.add);
     addTearDown(close);
@@ -474,7 +486,10 @@ void main() {
       expect(connected.pid, 42);
       native.receive.complete({
         'code': 'ok',
-        'frame': Uint8List.fromList([123, 125]),
+        'frames': [
+          Uint8List.fromList([123, 125]),
+        ],
+        'seq': 0,
       });
       expect(await frame, [123, 125]);
       final disconnected = transport.events.firstWhere(
@@ -502,17 +517,20 @@ void main() {
     await client.start(_session);
     native.receive.complete({
       'code': 'ok',
-      'frame': Uint8List.fromList(
-        utf8.encode(
-          jsonEncode({
-            'method': CoreMethod.message.wireName,
-            'arguments': {
-              'type': 'mitmSign',
-              'data': {'reqId': 1, 'host': 'a.test', 'spki': 'AQ=='},
-            },
-          }),
+      'seq': 0,
+      'frames': [
+        Uint8List.fromList(
+          utf8.encode(
+            jsonEncode({
+              'method': CoreMethod.message.wireName,
+              'arguments': {
+                'type': 'mitmSign',
+                'data': {'reqId': 1, 'host': 'a.test', 'spki': 'AQ=='},
+              },
+            }),
+          ),
         ),
-      ),
+      ],
     });
 
     expect((await requests.future).managedRelay, isTrue);
@@ -870,7 +888,10 @@ void main() {
       expect(native.receives, hasLength(3));
       native.receives.last.reply.complete({
         'code': 'ok',
-        'frame': Uint8List.fromList([3, 4]),
+        'frames': [
+          Uint8List.fromList([3, 4]),
+        ],
+        'seq': 0,
       });
       await _flush();
       expect(fixture.events.whereType<MacHelperFrame>().single.data, [3, 4]);
@@ -1010,7 +1031,10 @@ void main() {
           }
           fixture.native.receives.first.reply.complete({
             'code': 'ok',
-            'frame': Uint8List.fromList([97]),
+            'frames': [
+              Uint8List.fromList([97]),
+            ],
+            'seq': 0,
           });
           await _flush();
           expect(fixture.native.sends, hasLength(2));
@@ -1251,14 +1275,20 @@ void main() {
       await _until(() => receives.length == 2);
       receives.last.reply.complete({
         'code': 'ok',
-        'frame': Uint8List.fromList([1]),
+        'frames': [
+          Uint8List.fromList([1]),
+        ],
+        'seq': 0,
       });
       await _until(() => receives.length == 3);
       receives.last.reply.complete({'code': 'backpressure'});
       await _until(() => receives.length == 4);
       receives.last.reply.complete({
         'code': 'ok',
-        'frame': Uint8List.fromList([2]),
+        'frames': [
+          Uint8List.fromList([2]),
+        ],
+        'seq': 1,
       });
       await _flush();
       expect(
@@ -1384,6 +1414,177 @@ void main() {
       },
     );
   }
+
+  test('a re-check of a ready helper is routine until it answers', () async {
+    final native = _StaleStatusNative();
+    final maintenance = MacHelperMaintenance(
+      MacHelperClient(native: native),
+      stop: () async => const CoreLifecycleResult(
+        revision: 1,
+        outcome: CoreLifecycleOutcome.superseded,
+      ),
+    );
+    addTearDown(maintenance.dispose);
+    expect(maintenance.routineCheck, isFalse);
+    await maintenance.check();
+    final reply = native.delayedStatus = Completer();
+    final pending = maintenance.check();
+    expect(maintenance.busy, isTrue);
+    expect(maintenance.routineCheck, isTrue);
+    reply.complete({'code': 'requiresApproval'});
+    await pending;
+    final next = native.delayedStatus = Completer();
+    final again = maintenance.check();
+    expect(maintenance.busy && !maintenance.routineCheck, isTrue);
+    next.complete({'code': 'enabled'});
+    await again;
+  });
+
+  group('relay retries and batches', () {
+    Map<Object?, Object?> batch(int seq, List<List<int>> frames) => {
+      'code': 'ok',
+      'seq': seq,
+      'frames': [for (final frame in frames) Uint8List.fromList(frame)],
+    };
+
+    test(
+      'a batch delivers every frame once; a resent one is skipped',
+      () async {
+        final fixture = _RelayFixture(maxRelayFailures: 3);
+        await fixture.start();
+        final receives = fixture.native.receives;
+        expect(receives.single.arguments['ack'], 0);
+        receives.single.reply.complete(
+          batch(0, [
+            [1],
+            [2],
+            [3],
+          ]),
+        );
+        await _until(() => receives.length == 2);
+        expect(receives.last.arguments['ack'], 3);
+        // Its reply was lost: the daemon answers from the old ack again.
+        receives.last.reply.complete(
+          batch(2, [
+            [3],
+            [4],
+          ]),
+        );
+        await _until(() => receives.length == 3);
+        expect(receives.last.arguments['ack'], 4);
+        expect(
+          fixture.events.whereType<MacHelperFrame>().map((event) => event.data),
+          [
+            [1],
+            [2],
+            [3],
+            [4],
+          ],
+        );
+        expect(fixture.disconnects, isEmpty);
+        await fixture.close();
+      },
+    );
+
+    test('a batch that skips frames ends the relay', () async {
+      final fixture = _RelayFixture(maxRelayFailures: 3);
+      await fixture.start();
+      fixture.native.receives.single.reply.complete(
+        batch(1, [
+          [9],
+        ]),
+      );
+      await _until(() => fixture.disconnects.isNotEmpty);
+      expect(fixture.disconnects.single.error, _helperCode('invalidFrame'));
+      expect(fixture.events.whereType<MacHelperFrame>(), isEmpty);
+      await fixture.close();
+    });
+
+    test('transient failures are retried with the same ack and seq', () async {
+      final fixture = _RelayFixture(maxRelayFailures: 3);
+      await fixture.start();
+      final native = fixture.native;
+      fixture.client.send([7]);
+      expect(native.sends.single.arguments['seq'], 0);
+      native.sends.single.reply.complete({'code': 'timeout'});
+      native.receives.single.reply.complete({'code': 'unavailable'});
+      await _until(
+        () => native.sends.length == 2 && native.receives.length == 2,
+      );
+      expect(native.sends.last.arguments['seq'], 0);
+      expect(native.sends.last.arguments['frame'], [7]);
+      expect(native.receives.last.arguments['ack'], 0);
+      native.sends.last.reply.complete({'code': 'ok'});
+      fixture.client.send([8]);
+      await _until(() => native.sends.length == 3);
+      expect(native.sends.last.arguments['seq'], 1);
+      native.sends.last.reply.complete({'code': 'ok'});
+      expect(fixture.disconnects, isEmpty);
+      expect(
+        native.notes.where((note) => note.contains('retry')),
+        hasLength(2),
+      );
+      await fixture.close();
+    });
+
+    test(
+      'the third transient failure within the window ends the relay',
+      () async {
+        final fixture = _RelayFixture(maxRelayFailures: 3);
+        await fixture.start();
+        final receives = fixture.native.receives;
+        for (var attempt = 1; attempt <= 3; attempt++) {
+          receives.last.reply.complete({'code': 'timeout'});
+          if (attempt < 3) await _until(() => receives.length == attempt + 1);
+        }
+        await _until(() => fixture.disconnects.isNotEmpty);
+        expect(fixture.disconnects.single.error, _helperCode('timeout'));
+        expect(receives, hasLength(3));
+        expect(
+          fixture.native.notes.last,
+          contains('relay lost: MacHelperException(timeout)'),
+        );
+        await fixture.close();
+        expect(fixture.disconnects, hasLength(1));
+      },
+    );
+
+    test('failures spread beyond the window do not add up', () async {
+      var now = DateTime(2026);
+      final native = _RelayNative();
+      final client = MacHelperClient(
+        native: native,
+        safeMode: () => false,
+        relayRetryDelay: Duration.zero,
+        now: () => now,
+      );
+      final events = <MacHelperEvent>[];
+      final subscription = client.events.listen(events.add);
+      await client.start(_session);
+      for (var attempt = 1; attempt <= 5; attempt++) {
+        native.receives.last.reply.complete({'code': 'unavailable'});
+        await _until(() => native.receives.length == attempt + 1);
+        now = now.add(const Duration(seconds: 6));
+      }
+      expect(events.whereType<MacHelperDisconnected>(), isEmpty);
+      expect(await client.stop(_session), isTrue);
+      native.receives.last.reply.complete({'code': 'stopped'});
+      await _flush();
+      await subscription.cancel();
+    });
+
+    for (final code in ['disconnected', 'wrongOwner', 'invalidRequest']) {
+      test('$code is not retried: the Core or its session is gone', () async {
+        final fixture = _RelayFixture(maxRelayFailures: 3);
+        await fixture.start();
+        fixture.native.receives.single.reply.complete({'code': code});
+        await _until(() => fixture.disconnects.isNotEmpty);
+        expect(fixture.disconnects.single.error, _helperCode(code));
+        expect(fixture.native.receives, hasLength(1));
+        await fixture.close();
+      });
+    }
+  });
 
   group('recovery after a helper update or a lost connection', () {
     test('a request timeout is a wait, never "exit unconfirmed"', () async {
