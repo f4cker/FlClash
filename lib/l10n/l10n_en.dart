@@ -6027,6 +6027,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get macHelperStartingDetail => 'Please wait.';
 
   @override
+  String get macHelperSwitchingTitle => 'Switching to the new helper…';
+
+  @override
   String get macHelperStartSlowTitle => 'The helper is taking longer to start';
 
   @override

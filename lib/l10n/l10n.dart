@@ -10200,6 +10200,12 @@ abstract class AppLocalizations {
   /// **'Please wait.'**
   String get macHelperStartingDetail;
 
+  /// No description provided for @macHelperSwitchingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching to the new helper…'**
+  String get macHelperSwitchingTitle;
+
   /// No description provided for @macHelperStartSlowTitle.
   ///
   /// In en, this message translates to:

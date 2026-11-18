@@ -18,6 +18,13 @@ enum MacHelperProgress { idle, checking, updating, opening, repairingRecord }
 /// daemon needs the user to allow it once in System Settings, which is the
 /// only thing the user is asked to do. Once the helper answers, a pending
 /// recovery is settled by the helper's own sweep of old Cores.
+///
+/// After an app update the previous build's helper may still run
+/// (`staleHelper`). The native side asks it to exit (never a re-registration)
+/// and says so (`retiring`); for at most [switchWindow] the card then shows
+/// the switch to the new helper and checks every [switchPoll], and the Core
+/// starts by itself ([runOnceReady]) once the new helper answers. A switch
+/// that does not complete falls back to the "taking longer" card.
 final class MacHelperMaintenance extends ChangeNotifier {
   final MacHelperClient client;
   final Future<CoreLifecycleResult> Function() _stop;
@@ -27,6 +34,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
   final Duration startTimeout;
   final Duration startPoll;
   final Duration stalePoll;
+  final Duration switchWindow;
+  final Duration switchPoll;
   final Duration approvalPoll;
   final int maxApprovalPolls;
   final Duration recoveryRetryDelay;
@@ -41,6 +50,14 @@ final class MacHelperMaintenance extends ChangeNotifier {
   bool _resumeCheckPending = false;
   bool _resumeChecking = false;
   bool _repairPending = false;
+
+  /// A switch to the bundled helper is under way (see [switchingHelper]).
+  bool _switching = false;
+
+  /// The switch for the helper now running ran out or failed: it is not
+  /// started again by itself, only by the user's "Check again".
+  bool _switchSpent = false;
+  Timer? _switchTimer;
 
   /// A repair from [MacHelperState.serviceNotFound] ended still notFound: a
   /// later read of the same state keeps the failure (with its details)
@@ -70,6 +87,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
     this.startTimeout = const Duration(seconds: 10),
     this.startPoll = const Duration(seconds: 2),
     this.stalePoll = const Duration(seconds: 42),
+    this.switchWindow = const Duration(seconds: 45),
+    this.switchPoll = const Duration(seconds: 2),
     this.approvalPoll = const Duration(seconds: 2),
     this.maxApprovalPolls = 90,
     this.recoveryRetryDelay = const Duration(seconds: 2),
@@ -108,6 +127,10 @@ final class MacHelperMaintenance extends ChangeNotifier {
   /// The start-up wait exceeded [startTimeout]. This is not a failure: the
   /// daemon may still come up, so the card offers "Check again".
   bool get startSlow => _startSlow;
+
+  /// The previous build's helper was asked to exit and the bundled one is
+  /// awaited: a transition, not a problem. Bounded by [switchWindow].
+  bool get switchingHelper => _switching;
 
   /// True while the app waits for the user to come back from System Settings.
   bool get awaitingSettings => _awaitingSettings;
@@ -212,6 +235,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
     _state = next;
     if (!needsApproval) _enableOnResume = false;
     _scheduleApprovalPoll();
+    _trackSwitch(next);
     final waiting =
         next == MacHelperState.starting ||
         next == MacHelperState.staleHelper ||
@@ -225,6 +249,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
       return;
     }
     _startTimer ??= Timer(startTimeout, () {
+      // A switch ends by itself (ready, failed, or after its window).
+      if (_switching) return;
       _startSlow = true;
       _pollTimer?.cancel();
       _pollTimer = null;
@@ -232,7 +258,12 @@ final class MacHelperMaintenance extends ChangeNotifier {
       _notify();
     });
     _pollTimer?.cancel();
-    if (next == MacHelperState.staleHelper) {
+    if (_switching) {
+      _pollTimer = Timer(switchPoll, () {
+        _pollTimer = null;
+        if (!busy && _switching) unawaited(check());
+      });
+    } else if (next == MacHelperState.staleHelper) {
       _scheduleStalePoll();
     } else if (!_startSlow) {
       // Polls only inside the bounded start-up window; afterwards the card
@@ -242,6 +273,48 @@ final class MacHelperMaintenance extends ChangeNotifier {
         if (!busy && !_startSlow) unawaited(check());
       });
     }
+  }
+
+  /// Starts a switch when the native side asked the previous build's helper
+  /// to exit, keeps it while the bundled helper is starting, and ends it on
+  /// any other answer: ready, a real problem (shown as is), or `staleHelper`
+  /// without a new exit request (the tries are used up), which reads as
+  /// "taking longer".
+  void _trackSwitch(MacHelperState next) {
+    if (next == MacHelperState.staleHelper && client.lastRetiring) {
+      if (!_switching && !_switchSpent) {
+        _switching = true;
+        _switchTimer = Timer(switchWindow, _switchTimedOut);
+      }
+      return;
+    }
+    if (!_switching) {
+      if (next == MacHelperState.enabled) _switchSpent = false;
+      return;
+    }
+    if (next == MacHelperState.starting) return;
+    _switchTimer?.cancel();
+    _switchTimer = null;
+    _switching = false;
+    if (next == MacHelperState.staleHelper) {
+      _switchSpent = true;
+      _startSlow = true;
+    }
+  }
+
+  void _switchTimedOut() {
+    _switchTimer = null;
+    if (!_switching || _disposed) return;
+    _switching = false;
+    _switchSpent = true;
+    if (_state == MacHelperState.staleHelper ||
+        _state == MacHelperState.starting) {
+      _startSlow = true;
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      if (_state == MacHelperState.staleHelper) _scheduleStalePoll();
+    }
+    _notify();
   }
 
   void _scheduleStalePoll() {
@@ -404,13 +477,27 @@ final class MacHelperMaintenance extends ChangeNotifier {
       _singleFlight(MacHelperProgress.checking, _status);
 
   /// Explicit re-check from the card: restarts the bounded start-up wait.
+  /// For the previous build's helper this asks it to exit once more (native
+  /// `repair`, which never re-registers), allowing one more switch.
   Future<MacHelperState> recheck() {
     if (!busy) {
       _startTimer?.cancel();
       _startTimer = null;
       _startSlow = false;
+      if (_state == MacHelperState.staleHelper) {
+        _switchSpent = false;
+        return _singleFlight(MacHelperProgress.checking, _retireStale);
+      }
     }
     return check();
+  }
+
+  /// Native `repair`: the status, with one more exit request for a stale
+  /// helper. Refused while a Core session runs: then only the status.
+  Future<MacHelperState> _retireStale() async {
+    var next = await client.repair();
+    if (client.lastCode == 'sessionBusy') next = await client.status();
+    return _settle(next);
   }
 
   /// The card's button after the helper did not become ready, or "Repair"
@@ -426,9 +513,13 @@ final class MacHelperMaintenance extends ChangeNotifier {
       if (next == MacHelperState.registrationStale ||
           next == MacHelperState.notReady ||
           next == MacHelperState.starting ||
-          next == MacHelperState.staleHelper ||
           next == MacHelperState.serviceNotFound) {
         next = await _recoverWithinBudget(automatic: false);
+      } else if (next == MacHelperState.staleHelper) {
+        // The previous build's helper: ask it to exit, never re-register
+        // (that would turn the approval in System Settings off).
+        _switchSpent = false;
+        return _retireStale();
       }
       return _settle(next);
     });
@@ -563,6 +654,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
     _startTimer?.cancel();
     _pollTimer?.cancel();
     _approvalTimer?.cancel();
+    _switchTimer?.cancel();
     super.dispose();
   }
 }

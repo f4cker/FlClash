@@ -313,6 +313,11 @@ final class MacHelperClient {
   /// `denied`, `failed`, `notNeeded`), from the answer that carried it; null
   /// after any other answer.
   String? lastRecordRepair;
+
+  /// The last answer was `staleHelper` and the native side asked that
+  /// previous build's helper to exit (`retiring`): the bundled helper takes
+  /// over within seconds. False for any other answer.
+  bool lastRetiring = false;
   _MacHelperRelay? _relay;
   bool _sending = false;
 
@@ -372,6 +377,7 @@ final class MacHelperClient {
     lastServiceStatus = serviceStatus is String ? serviceStatus : null;
     final recordRepair = answer['recordRepair'];
     lastRecordRepair = recordRepair is String ? recordRepair : null;
+    lastRetiring = code == 'staleHelper' && answer['retiring'] == true;
     final detail = describeAnswer(answer);
     if (detail != null) lastDetail = detail;
     final state = code == 'authorizationCancelled'
@@ -414,6 +420,7 @@ final class MacHelperClient {
       return state;
     } on Exception {
       lastCode = 'channelError';
+      lastRetiring = false;
       return MacHelperState.unavailable;
     }
   }

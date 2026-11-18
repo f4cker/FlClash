@@ -1681,6 +1681,7 @@
   "macHelperStepLabel": "第 {number} 步：{text}",
   "macHelperStartingTitle": "正在启动辅助程序…",
   "macHelperStartingDetail": "请稍候。",
+  "macHelperSwitchingTitle": "正在切换到新版辅助程序…",
   "macHelperStartSlowTitle": "辅助程序启动时间较长",
   "macHelperStartSlowDetail": "暂时无法确认辅助程序是否已启动。请重新检查；如果仍未就绪，请查看详情。",
   "macHelperViewDetails": "查看详情",

@@ -5535,6 +5535,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperStartingDetail => '请稍候。';
 
   @override
+  String get macHelperSwitchingTitle => '正在切换到新版辅助程序…';
+
+  @override
   String get macHelperStartSlowTitle => '辅助程序启动时间较长';
 
   @override

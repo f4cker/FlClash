@@ -2002,6 +2002,7 @@
   },
   "macHelperStartingTitle": "Starting helper…",
   "macHelperStartingDetail": "Please wait.",
+  "macHelperSwitchingTitle": "Switching to the new helper…",
   "macHelperStartSlowTitle": "The helper is taking longer to start",
   "macHelperStartSlowDetail": "Flash can’t confirm yet whether the helper has started. Check again; if it’s still not ready, view the details.",
   "macHelperViewDetails": "View details",

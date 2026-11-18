@@ -23,6 +23,10 @@ enum MacHelperCardKind {
   approval,
   disabledByUser,
   starting,
+
+  /// The previous build's helper was asked to exit after an app update and
+  /// the new one is awaited: a calm wait, bounded by the switch window.
+  switchingHelper,
   startSlow,
   signatureFailed,
   updateFailed,
@@ -109,8 +113,9 @@ final class MacHelperCardView {
 
 MacHelperCardKind macHelperCardKind(
   MacHelperState state,
-  bool startSlow,
-) => switch (state) {
+  bool startSlow, {
+  bool switching = false,
+}) => switch (state) {
   MacHelperState.enabled => MacHelperCardKind.ready,
   MacHelperState.migrationRequired => MacHelperCardKind.migration,
   // The system shows one switch for Flash; its daemon item may be off
@@ -118,6 +123,8 @@ MacHelperCardKind macHelperCardKind(
   MacHelperState.requiresApproval ||
   MacHelperState.disabledByUser ||
   MacHelperState.notRegistered => MacHelperCardKind.approval,
+  MacHelperState.starting || MacHelperState.staleHelper when switching =>
+    MacHelperCardKind.switchingHelper,
   MacHelperState.starting ||
   MacHelperState.staleHelper ||
   MacHelperState.repairing =>
@@ -167,7 +174,11 @@ MacHelperCardView macHelperCardView(
       progress: l.macHelperChecking,
     );
   }
-  final kind = macHelperCardKind(state, flow.startSlow);
+  final kind = macHelperCardKind(
+    state,
+    flow.startSlow,
+    switching: flow.switchingHelper,
+  );
   final busyText = switch (flow.progress) {
     MacHelperProgress.updating => l.macHelperUpdating,
     MacHelperProgress.repairingRecord => l.macHelperRecordRepairing,
@@ -217,6 +228,12 @@ MacHelperCardView macHelperCardView(
           : l.macHelperStartingTitle,
       detail: l.macHelperStartingDetail,
       progress: l.macHelperStartingTitle,
+    ),
+    MacHelperCardKind.switchingHelper => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperSwitchingTitle,
+      detail: l.macHelperStartingDetail,
+      progress: l.macHelperSwitchingTitle,
     ),
     MacHelperCardKind.notReady => MacHelperCardView(
       kind: kind,
@@ -413,7 +430,7 @@ MacHelperBarView? macHelperBarView(
       MacHelperBarKind.allow,
       MacHelperBarTone.action,
     ),
-    MacHelperCardKind.starting => (
+    MacHelperCardKind.starting || MacHelperCardKind.switchingHelper => (
       MacHelperBarKind.starting,
       MacHelperBarTone.waiting,
     ),
@@ -652,7 +669,9 @@ class _MacHelperCardState extends State<MacHelperCard> {
   Widget _buildContent(BuildContext context, MacHelperCardView view) {
     final l = context.appLocalizations;
     final busy = widget.maintenance.busy;
-    final waiting = view.kind == MacHelperCardKind.starting;
+    final waiting =
+        view.kind == MacHelperCardKind.starting ||
+        view.kind == MacHelperCardKind.switchingHelper;
     final footnote = AppTextStyle.footnote
         .of(context)
         .copyWith(height: 20 / 13);
