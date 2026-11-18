@@ -294,6 +294,9 @@ class MitmModuleChange {
     required this.removedScripts,
     required this.rewritesBefore,
     required this.rewritesAfter,
+    this.addedRules = const [],
+    this.removedRules = const [],
+    this.hasRules = false,
   });
 
   final List<String> addedHosts;
@@ -302,6 +305,11 @@ class MitmModuleChange {
   final List<String> removedScripts;
   final int rewritesBefore;
   final int rewritesAfter;
+  final List<String> addedRules;
+  final List<String> removedRules;
+
+  /// Whether either side has routing rules, so the summary lists them.
+  final bool hasRules;
 
   bool get bringsAccess => addedHosts.isNotEmpty || addedScripts.isNotEmpty;
 }
@@ -335,6 +343,9 @@ MitmModuleChange mitmModuleChange(
     removedScripts: [...scriptsBefore.difference(scriptsAfter)],
     rewritesBefore: rewrites(before),
     rewritesAfter: rewrites(after),
+    addedRules: [...after.rules.toSet().difference(before.rules.toSet())],
+    removedRules: [...before.rules.toSet().difference(after.rules.toSet())],
+    hasRules: before.rules.isNotEmpty || after.rules.isNotEmpty,
   );
 }
 

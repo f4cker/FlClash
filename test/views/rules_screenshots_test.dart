@@ -600,6 +600,47 @@ void main() {
   // below its foot (design review 2).
   // At the top: the band past the header's foot covers nothing, the first
   // row is crisp.
+  // Two modules' routing rules sit between the added rules and the
+  // profile's, each run under its module's name.
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    shot('module-rules-${mode.name}', (tester) async {
+      final modules = [
+        ('去广告合集', 1, _rule(0, 'DOMAIN-SUFFIX', 'ads.example.net', 'REJECT')),
+        ('去广告合集', 1, _rule(0, 'DOMAIN', 'track.example.net', 'REJECT')),
+        ('流媒体解锁', 2, _rule(0, 'DOMAIN-SUFFIX', 'video.example.com', _netflix)),
+      ];
+      rules = [
+        for (final (index, rule) in _rules.take(2).indexed)
+          rule.copyWith(index: index),
+        for (final (index, (_, _, rule)) in modules.indexed)
+          rule.copyWith(index: index + 2),
+        for (final rule in _rules.skip(2))
+          rule.copyWith(index: rule.index + modules.length),
+      ];
+      final sources = _sourcesOf(_rules);
+      container
+          .read(appliedRuleSourcesStateProvider.notifier)
+          .applied(profile.id, [
+            ...sources.take(2),
+            for (final (index, (name, id, _)) in modules.indexed)
+              RuleSource(
+                kind: RuleSourceKind.mitm,
+                name: name,
+                moduleId: id,
+                text: rules[index + 2].text,
+              ),
+            ...sources.skip(2),
+          ]);
+      await pumpPage(
+        tester,
+        size: const Size(760, 520),
+        themeMode: mode,
+        pixelRatio: 2,
+      );
+      await shoot(tester, 'module-rules-${mode.name}');
+    });
+  }
+
   shot('blur-rules-top-light', (tester) async {
     await pumpPage(tester, size: const Size(760, 420), pixelRatio: 2);
     await shoot(tester, 'blur-rules-top-light');

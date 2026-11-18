@@ -99,23 +99,20 @@ void main() {
       );
     });
 
-    test('keeps only rules mihomo can run with DIRECT or REJECT', () {
+    test('keeps the rules mihomo can run, naming their policy', () {
       expect(content.rules, [
         'DOMAIN-SUFFIX,ads.example.com,REJECT',
         'DOMAIN,track.example.com,REJECT',
         'IP-CIDR,10.0.0.1/32,REJECT-DROP,no-resolve',
         'AND,((DOMAIN-SUFFIX,googlevideo.com),(NETWORK,UDP)),REJECT',
+        'DOMAIN,proxied.example.com,PROXY',
       ]);
       expect(
         [
           for (final skip in content.skipped)
             if (skip.section == 'Rule') skip.reason,
         ],
-        [
-          MitmModuleSkipReason.rule,
-          MitmModuleSkipReason.policy,
-          MitmModuleSkipReason.rule,
-        ],
+        [MitmModuleSkipReason.rule, MitmModuleSkipReason.rule],
       );
     });
 
@@ -480,6 +477,7 @@ some text that is not a line of a snippet
         'DOMAIN-SUFFIX,ads.a.com,REJECT',
         'DOMAIN,track.a.com,DIRECT',
         'IP-CIDR,10.0.0.0/8,REJECT,no-resolve',
+        'DOMAIN-KEYWORD,ad,proxy',
       ]);
       expect(content.urlRewrite, [
         r'^https?://a\.com/ad reject-dict',
@@ -510,7 +508,6 @@ some text that is not a line of a snippet
       expect(
         [for (final skip in content.skipped) (skip.section, skip.reason)],
         [
-          ('filter_local', MitmModuleSkipReason.policy),
           ('filter_local', MitmModuleSkipReason.rule),
           ('rewrite_local', MitmModuleSkipReason.rawHeader),
           ('rewrite_local', MitmModuleSkipReason.jq),
@@ -519,7 +516,7 @@ some text that is not a line of a snippet
           ('task_local', MitmModuleSkipReason.disabled),
         ],
       );
-      expect(content.skipped.first.line, 'host-keyword, ad, proxy');
+      expect(content.skipped.first.line, 'user-agent, App*, reject');
     });
 
     test('reads its sections when it has them', () {

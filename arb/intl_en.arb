@@ -1143,7 +1143,7 @@
   "mitmSkipSetting": "This setting is not supported",
   "mitmSkipScriptType": "This script type is not supported",
   "mitmSkipRule": "This rule type is not supported",
-  "mitmSkipPolicy": "Only the DIRECT and REJECT policies are supported",
+  "mitmSkipPolicy": "This policy can't be used here",
   "mitmSkipJq": "jq rewrites are not supported",
   "mitmSkipJsonBody": "JSON body rewrites are not supported",
   "mitmSkipRawHeader": "Rewriting all headers as one text is not supported",
@@ -3272,14 +3272,6 @@
   },
   "mitmModuleRewrites": "Rewrite rules",
   "mitmModuleRoutingRules": "Routing rules",
-  "mitmModuleRoutingRulesNote": "{count, plural, =1{1 routing rule won't be imported.} other{{count} routing rules won't be imported.}}",
-  "@mitmModuleRoutingRulesNote": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "mitmModuleUnsupported": "Not supported",
   "mitmModuleUnsupportedCount": "{count, plural, =1{1 line won't be imported.} other{{count} lines won't be imported.}}",
   "@mitmModuleUnsupportedCount": {
@@ -3441,5 +3433,31 @@
   "mitmPauseSignRefusedHint": "Check that HTTPS decryption is still on. Decryption retries on its own after 30 seconds.",
   "mitmPauseLeafRejectedHint": "In decryption settings, check again that the root certificate is installed and trusted.",
   "mitmPauseUnavailableHint": "Decryption retries on its own after 30 seconds.",
-  "mitmCapabilityNotify": "Send system notifications"
+  "mitmCapabilityNotify": "Send system notifications",
+  "mitmModuleRuleCount": "{count, plural, =1{1 routing rule} other{{count} routing rules}}",
+  "@mitmModuleRuleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule is left out",
+  "@mitmRulePolicyMissing": {
+    "placeholders": {
+      "policy": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesFromModule": "From module · {name}",
+  "@rulesFromModule": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesViewInModule": "View in module",
+  "mitmRoutingRulesNotApplied": "The routing rules didn't take effect, so the previous setting is back"
 }

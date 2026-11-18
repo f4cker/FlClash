@@ -8,6 +8,7 @@ import 'package:fl_clash/features/connection/process_view.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/config/mitm_modules.dart' show MitmModuleView;
 import 'package:fl_clash/views/resources.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/rendering.dart' show RenderSliver;
@@ -587,6 +588,8 @@ class _RulesViewState extends ConsumerState<RulesView> {
     // above them; tracked as the rows are laid, since this runs every build.
     var addedAbove = false;
     var divided = false;
+    // Each run of one module's rules sits under that module's title.
+    (int?, String)? lastModule;
     for (final index in indexes) {
       final rule = list.rules.elementAtOrNull(index);
       if (rule == null) continue;
@@ -601,11 +604,19 @@ class _RulesViewState extends ConsumerState<RulesView> {
         continue;
       }
       final added = _isAddedSource(source);
-      if (sources != null && !added && addedAbove && !divided) {
-        items.add(const RuleRowItem.divider());
-        divided = true;
+      final module = source?.kind == RuleSourceKind.mitm ? source : null;
+      if (module != null) {
+        final key = (module.moduleId, module.name);
+        if (key != lastModule) items.add(RuleRowItem.divider(module: module));
+        lastModule = key;
+      } else {
+        lastModule = null;
+        if (sources != null && !added && addedAbove && !divided) {
+          items.add(const RuleRowItem.divider());
+          divided = true;
+        }
       }
-      addedAbove |= added;
+      addedAbove |= added || module != null;
       items.add(RuleRowItem.rule(rule, hit: hits[index]));
       _addChildren(items, index, rule, hits[index]);
     }
@@ -1723,7 +1734,16 @@ class _RulesViewState extends ConsumerState<RulesView> {
           final last = position == items.length - 1;
           final Widget row;
           if (item.isDivider) {
-            row = const RulesDividerRow();
+            final moduleId = item.module?.moduleId;
+            row = RulesDividerRow(
+              module: item.module?.name,
+              onOpenModule: moduleId == null
+                  ? null
+                  : () => BaseNavigator.push(
+                      context,
+                      MitmModuleView(id: moduleId),
+                    ),
+            );
           } else if (item.isRule) {
             final rule = item.rule!;
             final index = rule.index;

@@ -311,10 +311,13 @@ RuleSetCheck classifyRuleSet(Uint8List bytes) {
         final label = RegExp(
           r'^[A-Za-z0-9_](?:[A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?$',
         );
-        return value.split('.').every((part) => part == '*' || label.hasMatch(part));
+        return value
+            .split('.')
+            .every((part) => part == '*' || label.hasMatch(part));
       }
 
-      final hasDomainContext = format == RuleProviderFormat.yaml ||
+      final hasDomainContext =
+          format == RuleProviderFormat.yaml ||
           entries.any((entry) => entry.contains('.'));
       if (!hasDomainContext || entries.any((entry) => !domainEntry(entry))) {
         return const RuleSetCheck.failed(RuleSetCheckFailure.notRuleSet);

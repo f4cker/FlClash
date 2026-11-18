@@ -144,6 +144,12 @@ http-response ^https://api\.example\.com/v1/feed "ads":\[[^\]]*\] "ads":[]
 信息流 = type=http-response,pattern=^https://api\.example\.com/v1/feed,requires-body=1,script-path=https://cdn.example.net/feed.js
 [Rule]
 DOMAIN-SUFFIX,ads.example.net,REJECT
+DOMAIN,track.example.net,REJECT
+IP-CIDR,203.0.113.0/24,REJECT,no-resolve
+DOMAIN-SUFFIX,video.example.com,Media
+DOMAIN-SUFFIX,stream.example.com,Netflix
+DOMAIN-KEYWORD,adservice,REJECT
+DOMAIN,stats.example.net,DIRECT
 [General]
 skip-proxy = example.com
 ''';
@@ -161,6 +167,13 @@ http-response ^https://api\.example\.com/v1/feed "ads":\[[^\]]*\] "ads":[]
 [Script]
 信息流 = type=http-response,pattern=^https://api\.example\.com/v1/feed,requires-body=1,script-path=https://cdn.example.net/feed.js
 开屏 = type=http-response,pattern=^https://cdn\.ads\.example\.com/,requires-body=1,script-path=https://cdn.example.net/splash.js
+[Rule]
+DOMAIN-SUFFIX,ads.example.net,REJECT
+DOMAIN,track.example.net,REJECT
+IP-CIDR,203.0.113.0/24,REJECT,no-resolve
+DOMAIN-SUFFIX,video.example.com,Media
+DOMAIN-SUFFIX,stream.example.com,Netflix
+DOMAIN-SUFFIX,adx.example.org,REJECT
 ''';
 
 const _before = '''
@@ -308,6 +321,13 @@ void main() {
     globalState.container = container;
     container.listen(patchClashConfigProvider, (_, _) {});
     container.listen(currentProfileIdProvider, (_, _) {});
+    container.listen(profileSettingsProvider, (_, _) {});
+    container.read(profileSettingsProvider.notifier).value = {
+      'proxy-groups': [
+        {'name': '节点选择'},
+        {'name': 'Media'},
+      ],
+    };
     container.read(viewSizeProvider.notifier).value = size;
     container.read(currentProfileIdProvider.notifier).value = 1;
     container.read(patchClashConfigProvider.notifier).value = PatchClashConfig(
@@ -566,6 +586,19 @@ void main() {
       await done(tester);
     });
 
+    testWidgets('sm-module-detail-$tone', skip: skip != null, (tester) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        modules: modules,
+        pushed: true,
+        size: const Size(760, 1500),
+        const MitmModuleView(id: 1),
+      );
+      await capture(tester, 'sm-module-detail-$tone');
+      await done(tester);
+    });
+
     testWidgets('sm-modules-$tone', skip: skip != null, (tester) async {
       await pump(
         tester,
@@ -593,7 +626,7 @@ void main() {
           content: previewMitmModule(_module),
           name: '去广告合集',
           source: 'raw.example.io',
-          onImport: (_) async {},
+          onImport: (_, _) async {},
         ),
       );
       await settle(tester, 10);

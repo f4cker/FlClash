@@ -1083,6 +1083,33 @@ class MitmModuleChangeSummary extends StatelessWidget {
                 MitmHostPill(host: host, change: false),
             ],
           ),
+        if (change.hasRules) ...[
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '${l.mitmRoutingRules}  ', style: label),
+                TextSpan(
+                  text: counts(
+                    change.addedRules.length,
+                    change.removedRules.length,
+                  ),
+                ),
+              ],
+            ),
+            style: secondary,
+          ),
+          if (change.addedRules.isNotEmpty || change.removedRules.isNotEmpty)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final rule in change.addedRules)
+                  MitmHostPill(host: rule, change: true),
+                for (final rule in change.removedRules)
+                  MitmHostPill(host: rule, change: false),
+              ],
+            ),
+        ],
         Text.rich(
           TextSpan(
             children: [

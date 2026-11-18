@@ -3407,7 +3407,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmSkipRule => '不支持此规则类型';
 
   @override
-  String get mitmSkipPolicy => '只支持 DIRECT 和 REJECT 策略';
+  String get mitmSkipPolicy => '无法使用这个策略';
 
   @override
   String get mitmSkipJq => '不支持 jq 重写';
@@ -7367,11 +7367,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmModuleRoutingRules => '分流规则';
 
   @override
-  String mitmModuleRoutingRulesNote(int count) {
-    return '$count 条分流规则不会导入。';
-  }
-
-  @override
   String get mitmModuleUnsupported => '暂不支持';
 
   @override
@@ -7550,4 +7545,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmCapabilityNotify => '发送系统通知';
+
+  @override
+  String mitmModuleRuleCount(int count) {
+    return '$count 条分流';
+  }
+
+  @override
+  String mitmRulePolicyMissing(String policy) {
+    return '当前配置没有「$policy」，这条不会生效';
+  }
+
+  @override
+  String rulesFromModule(String name) {
+    return '来自模块 · $name';
+  }
+
+  @override
+  String get rulesViewInModule => '在模块中查看';
+
+  @override
+  String get mitmRoutingRulesNotApplied => '分流规则没有生效，已恢复原来的设置';
 }

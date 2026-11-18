@@ -188,7 +188,7 @@ Future<void> _confirmImport(
   String text, {
   required String name,
   required String source,
-  required Future<void> Function(bool enable) onImport,
+  required Future<void> Function(bool enable, bool rules) onImport,
 }) async {
   final l = context.appLocalizations;
   final content = previewMitmModule(text);
@@ -270,8 +270,12 @@ class MitmModulesView extends ConsumerWidget {
         text,
         name: uri?.pathSegments.lastOrNull ?? url,
         source: uri?.host ?? url,
-        onImport: (enable) =>
-            action.addFromUrl(url, enable: enable, text: text),
+        onImport: (enable, rules) => action.addFromUrl(
+          url,
+          enable: enable,
+          rulesEnabled: rules,
+          text: text,
+        ),
       );
     }
   }
@@ -292,9 +296,9 @@ class MitmModulesView extends ConsumerWidget {
       text,
       name: file.name,
       source: file.name,
-      onImport: (enable) => ref
+      onImport: (enable, rules) => ref
           .read(mitmModulesActionProvider.notifier)
-          .addFromFile(text, file.name, enable: enable),
+          .addFromFile(text, file.name, enable: enable, rulesEnabled: rules),
     );
   }
 
@@ -761,11 +765,6 @@ class MitmModuleView extends ConsumerWidget {
                                   ? (line) => [?mitmRunScriptItem(ref, line)]
                                   : null,
                             ),
-                        if (content.rules.isNotEmpty)
-                          _linesItem(
-                            appLocalizations.mitmRoutingRules,
-                            content.rules,
-                          ),
                         if (content.skipped.isNotEmpty)
                           ListItem.open(
                             title: Text(appLocalizations.mitmIgnoredLines),
@@ -787,11 +786,95 @@ class MitmModuleView extends ConsumerWidget {
                             ),
                           ),
                       ],
-                      footer: appLocalizations.mitmModuleRulesDesc,
                     ),
+                  if (content != null && content.rules.isNotEmpty)
+                    _MitmRoutingSection(module: module, rules: content.rules),
                 ],
               ),
       ),
+    );
+  }
+}
+
+/// A module's routing rules and the switch that puts them ahead of the
+/// profile's own. The switch spins until the profile runs with the change,
+/// and stays as it was if that fails.
+class _MitmRoutingSection extends ConsumerStatefulWidget {
+  const _MitmRoutingSection({required this.module, required this.rules});
+
+  final MitmModule module;
+  final List<String> rules;
+
+  @override
+  ConsumerState<_MitmRoutingSection> createState() =>
+      _MitmRoutingSectionState();
+}
+
+class _MitmRoutingSectionState extends ConsumerState<_MitmRoutingSection> {
+  bool _busy = false;
+
+  Future<void> _set(bool value) async {
+    final module = widget.module;
+    final action = ref.read(mitmModulesActionProvider.notifier);
+    setState(() => _busy = true);
+    action.putModule(module.copyWith(rulesEnabled: value));
+    final applies =
+        module.enabled && ref.read(patchClashConfigProvider).mitm.enable;
+    final applied =
+        !applies ||
+        await ref
+            .read(setupActionProvider.notifier)
+            .applyProfile(silence: true);
+    if (!applied) {
+      final current =
+          ref
+              .read(mitmModulesProvider)
+              .value
+              ?.firstWhereOrNull((item) => item.id == module.id) ??
+          module;
+      action.putModule(current.copyWith(rulesEnabled: !value));
+      dialogs.showBanner(
+        currentAppLocalizations.mitmRoutingRulesNotApplied,
+        level: BannerLevel.error,
+      );
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.appLocalizations;
+    final policies = mitmCurrentPolicies(ref);
+    final rules = widget.rules;
+    final count = l.mitmModuleRuleCount(rules.length);
+    return generateSection(
+      title: l.mitmRoutingRules,
+      items: [
+        ListItem(
+          title: Text(l.enabled),
+          trailing: _busy
+              ? const ActivityIndicator(size: 24)
+              : Switch(value: widget.module.rulesEnabled, onChanged: _set),
+        ),
+        ListItem.open(
+          title: Text(count),
+          widget: _MitmModuleLinesView(
+            title: l.mitmRoutingRules,
+            notes: true,
+            noteColor: mitmAmberColor(context),
+            lines: [
+              for (final rule in rules)
+                (
+                  rule,
+                  policies == null || mitmRuleUsable(rule, policies)
+                      ? null
+                      : l.mitmRulePolicyMissing(mitmRulePolicy(rule)),
+                ),
+            ],
+          ),
+        ),
+      ],
+      footer: l.mitmModuleRulesDesc,
     );
   }
 }
@@ -801,6 +884,7 @@ class _MitmModuleLinesView extends StatelessWidget {
     required this.title,
     required this.lines,
     this.notes = false,
+    this.noteColor,
     this.menuItemsOf,
   });
 
@@ -810,12 +894,13 @@ class _MitmModuleLinesView extends StatelessWidget {
   /// reader left it out.
   final List<(String, String?)> lines;
   final bool notes;
+  final Color? noteColor;
   final List<PopupMenuItem> Function(String line)? menuItemsOf;
 
   @override
   Widget build(BuildContext context) {
     final noteStyle = notes
-        ? context.listCaptionStyle
+        ? context.listCaptionStyle.copyWith(color: noteColor)
         : TextStyle(color: context.colorScheme.error);
     return Scaffold(
       title: title,
@@ -878,10 +963,12 @@ class _MitmModuleSummary extends ConsumerWidget {
               content.bodyRewrite.length +
               content.mapLocal.length;
     final scripts = content?.script.length ?? 0;
+    final rules = content?.rules.length ?? 0;
     final skipped = content?.skipped.length ?? 0;
     final parts = [
       if (hosts > 0) TextSpan(text: l.mitmModuleHostCount(hosts)),
       if (rewrites > 0) TextSpan(text: l.mitmModuleRewriteCount(rewrites)),
+      if (rules > 0) TextSpan(text: l.mitmModuleRuleCount(rules)),
       if (scripts > 0)
         TextSpan(
           text: l.mitmScriptCount(scripts),

@@ -3530,7 +3530,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmSkipRule => '이 규칙 유형은 지원되지 않습니다';
 
   @override
-  String get mitmSkipPolicy => 'DIRECT 및 REJECT 정책만 지원됩니다';
+  String get mitmSkipPolicy => 'This policy can\'t be used here';
 
   @override
   String get mitmSkipJq => 'jq 재작성은 지원되지 않습니다';
@@ -7870,17 +7870,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmModuleRoutingRules => 'Routing rules';
 
   @override
-  String mitmModuleRoutingRulesNote(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count routing rules won\'t be imported.',
-      one: '1 routing rule won\'t be imported.',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get mitmModuleUnsupported => 'Not supported';
 
   @override
@@ -8099,4 +8088,32 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmCapabilityNotify => 'Send system notifications';
+
+  @override
+  String mitmModuleRuleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count routing rules',
+      one: '1 routing rule',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mitmRulePolicyMissing(String policy) {
+    return 'The current profile has no “$policy”, so this rule is left out';
+  }
+
+  @override
+  String rulesFromModule(String name) {
+    return 'From module · $name';
+  }
+
+  @override
+  String get rulesViewInModule => 'View in module';
+
+  @override
+  String get mitmRoutingRulesNotApplied =>
+      'The routing rules didn\'t take effect, so the previous setting is back';
 }

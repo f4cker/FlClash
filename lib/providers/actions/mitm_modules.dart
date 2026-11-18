@@ -45,6 +45,7 @@ class MitmModulesAction extends _$MitmModulesAction {
   Future<MitmModule> addFromUrl(
     String url, {
     bool? enable,
+    bool rulesEnabled = true,
     String? text,
   }) async {
     text ??= await download(url);
@@ -55,6 +56,7 @@ class MitmModulesAction extends _$MitmModulesAction {
         id: snowflake.id,
         name: basenameWithoutExtension(name ?? url),
         url: url,
+        rulesEnabled: rulesEnabled,
         lastUpdateTime: DateTime.now(),
       ),
       text,
@@ -63,11 +65,17 @@ class MitmModulesAction extends _$MitmModulesAction {
     );
   }
 
-  Future<MitmModule> addFromFile(String text, String fileName, {bool? enable}) {
+  Future<MitmModule> addFromFile(
+    String text,
+    String fileName, {
+    bool? enable,
+    bool rulesEnabled = true,
+  }) {
     return _save(
       MitmModule(
         id: snowflake.id,
         name: basenameWithoutExtension(fileName),
+        rulesEnabled: rulesEnabled,
         lastUpdateTime: DateTime.now(),
       ),
       text,

@@ -1046,7 +1046,7 @@
   "mitmSkipSetting": "不支持此设置",
   "mitmSkipScriptType": "不支持此类脚本",
   "mitmSkipRule": "不支持此规则类型",
-  "mitmSkipPolicy": "只支持 DIRECT 和 REJECT 策略",
+  "mitmSkipPolicy": "无法使用这个策略",
   "mitmSkipJq": "不支持 jq 重写",
   "mitmSkipJsonBody": "不支持 JSON 正文重写",
   "mitmSkipRawHeader": "不支持把全部标头作为一段文本改写",
@@ -2211,7 +2211,6 @@
   "mitmMoreHosts": "另外 {count} 个",
   "mitmModuleRewrites": "改写规则",
   "mitmModuleRoutingRules": "分流规则",
-  "mitmModuleRoutingRulesNote": "{count} 条分流规则不会导入。",
   "mitmModuleUnsupported": "暂不支持",
   "mitmModuleUnsupportedCount": "{count} 行不会导入。",
   "mitmImportOnly": "仅导入",
@@ -2258,5 +2257,10 @@
   "mitmPauseSignRefusedHint": "请确认 HTTPS 解密仍然开启；解密会在 30 秒后自动重试。",
   "mitmPauseLeafRejectedHint": "请在解密设置中重新确认根证书已安装并受信任。",
   "mitmPauseUnavailableHint": "解密会在 30 秒后自动重试。",
-  "mitmCapabilityNotify": "发送系统通知"
+  "mitmCapabilityNotify": "发送系统通知",
+  "mitmModuleRuleCount": "{count} 条分流",
+  "mitmRulePolicyMissing": "当前配置没有「{policy}」，这条不会生效",
+  "rulesFromModule": "来自模块 · {name}",
+  "rulesViewInModule": "在模块中查看",
+  "mitmRoutingRulesNotApplied": "分流规则没有生效，已恢复原来的设置"
 }

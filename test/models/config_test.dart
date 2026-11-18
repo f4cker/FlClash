@@ -550,10 +550,7 @@ void main() {
         final mitm = Mitm.fromJson({'enable': true, 'h2': false});
 
         expect(mitm.h2, isTrue);
-        expect(
-          Mitm.fromJson(const Mitm(h2: false).toJson()).h2,
-          isFalse,
-        );
+        expect(Mitm.fromJson(const Mitm(h2: false).toJson()).h2, isFalse);
       });
     });
 

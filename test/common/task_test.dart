@@ -516,6 +516,69 @@ void main() {
     },
   );
 
+  test('module routing rules follow the added rules and lead the '
+      'profile\'s, leaving out a policy the profile lacks', () async {
+    final result = await makeRealProfileTask(
+      MakeRealProfileState(
+        profilesPath: '/profiles',
+        profileId: 7,
+        rawConfig: await decodeJSONTask<Map<String, dynamic>>(
+          jsonEncode({
+            'proxies': [
+              {'name': 'HK', 'type': 'direct'},
+            ],
+            'proxy-groups': [
+              {
+                'name': 'Media',
+                'type': 'select',
+                'proxies': ['HK'],
+              },
+            ],
+            'rules': ['MATCH,HK'],
+          }),
+        ),
+        realPatchConfig: const PatchClashConfig(),
+        appendSystemDns: false,
+        proxyGroups: const [],
+        rules: const [],
+        addedRules: const [
+          Rule(
+            ruleAction: RuleAction.DOMAIN,
+            content: 'own.example',
+            ruleTarget: 'DIRECT',
+          ),
+        ],
+        defaultUA: 'FlClash-Test',
+        mitmModules: const [
+          MitmModuleSource(
+            name: 'Ads',
+            content: '''
+[Rule]
+DOMAIN-SUFFIX,ads.example,REJECT
+DOMAIN,video.example,Media
+DOMAIN,gone.example,Missing
+IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+''',
+          ),
+        ],
+      ),
+    );
+    expect((loadYaml(result.yaml) as YamlMap)['rules'], [
+      'DOMAIN,own.example,DIRECT',
+      'DOMAIN-SUFFIX,ads.example,REJECT',
+      'DOMAIN,video.example,Media',
+      'IP-CIDR,10.0.0.0/8,DIRECT,no-resolve',
+      'MATCH,HK',
+    ]);
+    expect(result.ruleSources.map((source) => (source.kind, source.name)), [
+      (RuleSourceKind.addedGlobal, ''),
+      (RuleSourceKind.mitm, 'Ads'),
+      (RuleSourceKind.mitm, 'Ads'),
+      (RuleSourceKind.mitm, 'Ads'),
+      (RuleSourceKind.subscription, ''),
+    ]);
+  });
+
   // The core re-reads these two keys out of the generated config on every
   // profile apply and adopts whatever it finds, so a subscription that ships
   // them would otherwise decide whether GEO databases auto-update — including

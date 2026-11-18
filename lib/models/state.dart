@@ -226,6 +226,10 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
 
     /// One per rule of [rawConfig]; empty reads them all as the profile's.
     @Default([]) List<RuleSource> profileRuleSources,
+
+    /// Enabled modules whose routing rules are on; their rules follow the
+    /// added rules and lead the profile's own.
+    @Default([]) List<MitmModuleSource> mitmModules,
   }) = _MakeRealProfileState;
 }
 
@@ -233,6 +237,7 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
 @freezed
 abstract class MitmModuleSource with _$MitmModuleSource {
   const factory MitmModuleSource({
+    int? id,
     required String content,
     @Default('') String name,
     @Default({}) Map<String, String> arguments,
@@ -277,5 +282,6 @@ abstract class SetupState with _$SetupState {
 
     /// The profile's added rule sets, for every kind of profile.
     @Default([]) List<AddedRuleSet> addedRuleSets,
+    @Default([]) List<MitmModuleSource> mitmModules,
   }) = _SetupState;
 }

@@ -6393,7 +6393,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmSkipPolicy.
   ///
   /// In en, this message translates to:
-  /// **'Only the DIRECT and REJECT policies are supported'**
+  /// **'This policy can\'t be used here'**
   String get mitmSkipPolicy;
 
   /// No description provided for @mitmSkipJq.
@@ -13331,12 +13331,6 @@ abstract class AppLocalizations {
   /// **'Routing rules'**
   String get mitmModuleRoutingRules;
 
-  /// No description provided for @mitmModuleRoutingRulesNote.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 routing rule won\'t be imported.} other{{count} routing rules won\'t be imported.}}'**
-  String mitmModuleRoutingRulesNote(int count);
-
   /// No description provided for @mitmModuleUnsupported.
   ///
   /// In en, this message translates to:
@@ -13618,6 +13612,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send system notifications'**
   String get mitmCapabilityNotify;
+
+  /// No description provided for @mitmModuleRuleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 routing rule} other{{count} routing rules}}'**
+  String mitmModuleRuleCount(int count);
+
+  /// No description provided for @mitmRulePolicyMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The current profile has no “{policy}”, so this rule is left out'**
+  String mitmRulePolicyMissing(String policy);
+
+  /// No description provided for @rulesFromModule.
+  ///
+  /// In en, this message translates to:
+  /// **'From module · {name}'**
+  String rulesFromModule(String name);
+
+  /// No description provided for @rulesViewInModule.
+  ///
+  /// In en, this message translates to:
+  /// **'View in module'**
+  String get rulesViewInModule;
+
+  /// No description provided for @mitmRoutingRulesNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'The routing rules didn\'t take effect, so the previous setting is back'**
+  String get mitmRoutingRulesNotApplied;
 }
 
 class _AppLocalizationsDelegate

@@ -312,14 +312,16 @@ void main() {
     await pump(tester, const SizedBox(), scripts: const []);
     final context = tester.element(find.byType(SizedBox));
     bool? enabled;
+    bool? rules;
     final result = showMitmModuleConfirmDialog(
       context,
       content: previewMitmModule(_module),
       name: 'Ads',
       source: 'x.com',
-      onImport: (enable) async {
+      onImport: (enable, withRules) async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
         enabled = enable;
+        rules = withRules;
       },
     );
     await tester.pumpAndSettle();
@@ -333,11 +335,18 @@ void main() {
     );
     expect(find.text(l.mitmExcludedCount(1)), findsOneWidget);
     expect(find.text(l.mitmCapabilityRead), findsOneWidget);
-    expect(find.text(l.mitmModuleRoutingRulesNote(1)), findsOneWidget);
+    expect(find.text(l.mitmModuleRulesDesc), findsOneWidget);
+    expect(
+      find.text('DOMAIN,ads.b.com,REJECT', findRichText: true),
+      findsOneWidget,
+    );
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(l.mitmImportOnly));
     await tester.pumpAndSettle();
 
     expect(enabled, isFalse);
+    expect(rules, isFalse);
     expect(await result, isNotNull);
   });
 

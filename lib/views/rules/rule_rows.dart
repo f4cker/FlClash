@@ -18,6 +18,8 @@ enum _RowKind { rule, entry, footer, divider }
 class RuleRowItem {
   final _RowKind _kind;
   final CoreRule? rule;
+
+  final RuleSource? module;
   final RuleHit? hit;
   final int parent;
   final int position;
@@ -25,6 +27,7 @@ class RuleRowItem {
 
   const RuleRowItem.rule(CoreRule this.rule, {this.hit})
     : _kind = _RowKind.rule,
+      module = null,
       parent = -1,
       position = 0,
       text = '';
@@ -34,18 +37,19 @@ class RuleRowItem {
     required this.position,
     required this.text,
   }) : _kind = _RowKind.entry,
+       module = null,
        rule = null,
        hit = null;
 
   const RuleRowItem.footer({required this.parent})
     : _kind = _RowKind.footer,
+      module = null,
       rule = null,
       hit = null,
       position = 0,
       text = '';
 
-  /// The line between the added rules and the profile's own.
-  const RuleRowItem.divider()
+  const RuleRowItem.divider({this.module})
     : _kind = _RowKind.divider,
       rule = null,
       hit = null,
@@ -728,13 +732,19 @@ class RuleRowAction extends StatelessWidget {
   }
 }
 
-/// The line under the added rules: what follows is the profile's own.
+/// Under the added rules; over a module's rules, names and links to it.
 class RulesDividerRow extends StatelessWidget {
-  const RulesDividerRow({super.key});
+  const RulesDividerRow({super.key, this.module, this.onOpenModule});
+
+  final String? module;
+  final VoidCallback? onOpenModule;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
+    final l = context.appLocalizations;
+    final module = this.module;
+    final caption = AppTextStyle.caption1.of(context);
     return Container(
       height: 28,
       alignment: AlignmentDirectional.centerStart,
@@ -742,13 +752,29 @@ class RulesDividerRow extends StatelessWidget {
       color: colorScheme.brightness == Brightness.light
           ? const Color(0xFFF2F1F5)
           : colorScheme.onSurface.withValues(alpha: 0.06),
-      child: Text(
-        context.appLocalizations.rulesAddedDivider,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppTextStyle.caption1
-            .of(context)
-            .copyWith(color: colorScheme.onSurfaceVariant),
+      child: Row(
+        spacing: 12,
+        children: [
+          Expanded(
+            child: Text(
+              module == null ? l.rulesAddedDivider : l.rulesFromModule(module),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: caption.copyWith(color: colorScheme.onSurfaceVariant),
+            ),
+          ),
+          if (onOpenModule case final open?)
+            GestureDetector(
+              onTap: open,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Text(
+                  l.rulesViewInModule,
+                  style: caption.copyWith(color: colorScheme.primary),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
