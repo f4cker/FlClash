@@ -324,6 +324,7 @@ class UpdateManifestSignatureTests(unittest.TestCase):
         seed = bytes(range(32))
         key = base64.b64encode(tool.public_key(seed)).decode()
         other = base64.b64encode(tool.public_key(bytes(32))).decode()
+        third = base64.b64encode(tool.public_key(bytes([7]) * 32)).decode()
         payload = {'schema': 1, 'product': 'com.layoute.flash', 'version': '1.0.0', 'build': 2}
         good = json.dumps(tool.envelope(payload, seed))
         bad = json.loads(good)
@@ -333,7 +334,9 @@ class UpdateManifestSignatureTests(unittest.TestCase):
 import Foundation
 let arguments = CommandLine.arguments
 let data = try! Data(contentsOf: URL(fileURLWithPath: arguments[1]))
-let content = UpdateManifestSignature.open(data, publicKey: arguments[2])
+let content = arguments.count == 3
+    ? UpdateManifestSignature.open(data, publicKey: arguments[2])
+    : UpdateManifestSignature.open(data, publicKeys: Array(arguments.dropFirst(2)))
 print(content.map { "\\($0["version"] ?? "")" } ?? "nil")
 '''
         with tempfile.TemporaryDirectory(prefix='flash-signature-') as scratch:
@@ -342,21 +345,37 @@ print(content.map { "\\($0["version"] ?? "")" } ?? "nil")
             binary = scratch / 'verify'
             run('swiftc', '-O', MACOS / 'Runner/UpdateManifestSignature.swift', scratch / 'main.swift',
                 '-o', binary)
-            for name, text, public, expected in (('good', good, key, '1.0.0'), ('tampered', json.dumps(bad), key, 'nil'),
-                                                  ('wrong key', good, other, 'nil'), ('product', wrong, key, 'nil'),
-                                                  ('not configured', good, '', 'nil')):
+            for name, text, public, expected in (('good', good, [key], '1.0.0'),
+                                                  ('tampered', json.dumps(bad), [key], 'nil'),
+                                                  ('wrong key', good, [other], 'nil'), ('product', wrong, [key], 'nil'),
+                                                  ('not configured', good, [''], 'nil'),
+                                                  ('primary of two', good, [key, other], '1.0.0'),
+                                                  ('backup of two', good, [other, key], '1.0.0'),
+                                                  ('backup after empty', good, ['', key], '1.0.0'),
+                                                  ('neither of two', good, [other, third], 'nil'),
+                                                  ('tampered of two', json.dumps(bad), [other, key], 'nil')):
                 with self.subTest(name):
                     path = scratch / f'{name}.json'
                     path.write_text(text)
-                    self.assertEqual(run(binary, path, public).stdout.strip(), expected)
+                    self.assertEqual(run(binary, path, *public).stdout.strip(), expected)
 
     def test_the_pinned_keys_agree(self):
         dart = (ROOT / 'lib/common/constant.dart').read_text()
         swift = (MACOS / 'Runner/UpdaterChannel.swift').read_text()
-        dart_key = re.search(r"const macUpdatePublicKey = '([^']*)';", dart).group(1)
-        swift_key = re.search(r'static let pinnedPublicKey = "([^"]*)"', swift).group(1)
-        self.assertEqual(dart_key, swift_key)
-        self.assertTrue(dart_key == '' or len(base64.b64decode(dart_key)) == 32)
+        pairs = ((r"const macUpdatePublicKey = '([^']*)';", r'static let pinnedPublicKey = "([^"]*)"'),
+                 (r"const macUpdateBackupPublicKey = '([^']*)';", r'static let pinnedBackupPublicKey = "([^"]*)"'))
+        keys = []
+        for dart_pattern, swift_pattern in pairs:
+            dart_key = re.search(dart_pattern, dart).group(1)
+            swift_key = re.search(swift_pattern, swift).group(1)
+            self.assertEqual(dart_key, swift_key)
+            self.assertTrue(dart_key == '' or len(base64.b64decode(dart_key)) == 32)
+            keys.append(dart_key)
+        self.assertTrue(all(keys) or not any(keys), 'pin both keys or neither')
+        self.assertTrue(keys[0] == '' or keys[0] != keys[1])
+        self.assertIn('const macUpdatePublicKeys = [macUpdatePublicKey, macUpdateBackupPublicKey];', dart)
+        self.assertIn('static let pinnedPublicKeys = [pinnedPublicKey, pinnedBackupPublicKey]', swift)
+        self.assertIn('UpdateManifestSignature.open(manifest, publicKeys: Self.pinnedPublicKeys)', swift)
 
 
 class UpdateManifestToolTests(unittest.TestCase):

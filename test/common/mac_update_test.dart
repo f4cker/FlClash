@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:fl_clash/common/app_update.dart';
+import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/ed25519.dart';
 import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/common/mac_update.dart';
@@ -128,7 +129,7 @@ void main() {
     test('reads a manifest signed with the pinned key', () {
       final manifest = openMacUpdateManifest(
         _fixture('newer'),
-        publicKey: _key(),
+        publicKeys: [_key()],
       );
       expect(manifest.version, '0.9.15-mitm.7');
       expect(manifest.build, 2026111901);
@@ -142,14 +143,72 @@ void main() {
       expect(manifest.envelope, _fixture('newer'));
     });
 
-    MacUpdateRejection rejection(List<int> bytes, {String? key}) {
+    MacUpdateRejection rejection(
+      List<int> bytes, {
+      String? key,
+      List<String>? keys,
+    }) {
       try {
-        openMacUpdateManifest(bytes, publicKey: key ?? _key());
+        openMacUpdateManifest(bytes, publicKeys: keys ?? [key ?? _key()]);
       } on MacUpdateManifestException catch (error) {
         return error.reason;
       }
       fail('accepted');
     }
+
+    // The fixtures' test key stands in for either pinned key; the other
+    // slot holds a key that did not sign them.
+    test('accepts a manifest signed by the primary key', () {
+      final manifest = openMacUpdateManifest(
+        _fixture('newer'),
+        publicKeys: [_key(), _rfcPublicKey],
+      );
+      expect(manifest.build, 2026111901);
+    });
+
+    test('accepts a manifest signed by the backup key', () {
+      final manifest = openMacUpdateManifest(
+        _fixture('newer'),
+        publicKeys: [_rfcPublicKey, _key()],
+      );
+      expect(manifest.build, 2026111901);
+      expect(
+        openMacUpdateManifest(
+          _fixture('newer'),
+          publicKeys: ['', _key()],
+        ).build,
+        2026111901,
+      );
+    });
+
+    test('refuses a manifest signed by neither pinned key', () {
+      expect(
+        rejection(_fixture('newer'), keys: [_rfcPublicKey, macUpdatePublicKey]),
+        MacUpdateRejection.badSignature,
+      );
+      expect(
+        rejection(
+          _fixture('newer'),
+          keys: [macUpdatePublicKey, macUpdateBackupPublicKey],
+        ),
+        MacUpdateRejection.badSignature,
+      );
+      expect(
+        rejection(_fixture('newer'), keys: const []),
+        MacUpdateRejection.notConfigured,
+      );
+      expect(
+        rejection(_fixture('newer'), keys: const ['', 'AAAA']),
+        MacUpdateRejection.notConfigured,
+      );
+    });
+
+    test('pins two distinct release keys', () {
+      expect(macUpdatePublicKeys, hasLength(2));
+      expect(macUpdatePublicKeys.every(macUpdateKeyPinned), isTrue);
+      expect(macUpdatePublicKeys.toSet(), hasLength(2));
+      expect(macUpdatePublicKeys, isNot(contains(_key())));
+    });
 
     test('refuses a changed payload', () {
       final envelope =
@@ -200,7 +259,7 @@ void main() {
 
     test('offers only a strictly higher build', () {
       bool newer(String name) => macUpdateIsNewer(
-        openMacUpdateManifest(_fixture(name), publicKey: _key()),
+        openMacUpdateManifest(_fixture(name), publicKeys: [_key()]),
         _installedBuild,
       );
       expect(newer('newer'), isTrue);
@@ -221,7 +280,7 @@ void main() {
         arch: arch,
         url:
             'https://github.com/f4cker/flash-releases/releases/latest/download/manifest.json',
-        publicKey: _key(),
+        publicKeys: [_key()],
       );
       return (result, adapter);
     }
@@ -232,7 +291,7 @@ void main() {
       final result = await request.checkForMacUpdate(
         installedBuild: _installedBuild,
         arch: 'arm64',
-        publicKey: '',
+        publicKeys: const [''],
       );
       expect(
         result,

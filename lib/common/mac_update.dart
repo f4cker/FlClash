@@ -89,14 +89,23 @@ String macUpdateAssetName(String version, String arch) =>
 /// Whether [publicKey] is a pinned Ed25519 key (base64 of 32 bytes).
 bool macUpdateKeyPinned(String publicKey) => _base64(publicKey)?.length == 32;
 
+/// Whether any of [publicKeys] is a pinned Ed25519 key.
+bool macUpdateKeysPinned(Iterable<String> publicKeys) =>
+    publicKeys.any(macUpdateKeyPinned);
+
 /// Opens a manifest.json envelope `{schema, payload, signature}`: the
 /// signature covers the payload's raw bytes, so nothing is canonicalized.
+/// The signature has to verify with one of [publicKeys] (the primary and
+/// backup release keys); entries that are not 32-byte keys are ignored.
 MacUpdateManifest openMacUpdateManifest(
   List<int> bytes, {
-  required String publicKey,
+  required Iterable<String> publicKeys,
 }) {
-  final key = _base64(publicKey);
-  if (key == null || key.length != 32) {
+  final keys = [
+    for (final publicKey in publicKeys)
+      if (_base64(publicKey) case final key? when key.length == 32) key,
+  ];
+  if (keys.isEmpty) {
     throw const MacUpdateManifestException(MacUpdateRejection.notConfigured);
   }
   if (bytes.length > macUpdateManifestMaxBytes) {
@@ -124,7 +133,10 @@ MacUpdateManifest openMacUpdateManifest(
       'encoding',
     );
   }
-  if (!ed25519Verify(publicKey: key, message: payload, signature: signature)) {
+  if (!keys.any(
+    (key) =>
+        ed25519Verify(publicKey: key, message: payload, signature: signature),
+  )) {
     throw const MacUpdateManifestException(MacUpdateRejection.badSignature);
   }
   return _parsePayload(payload, Uint8List.fromList(bytes));

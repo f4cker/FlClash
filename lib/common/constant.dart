@@ -170,11 +170,16 @@ const macUpdateManifestUrl =
 const macUpdateReleasesPage =
     'https://github.com/f4cker/flash-releases/releases/latest';
 
-// The release Ed25519 public key (base64 of 32 bytes,
-// `tool/macos/make_update_manifest.py genkey`). Keep it equal to
-// UpdaterChannel.pinnedPublicKey in macos/Runner/UpdaterChannel.swift.
-// Empty keeps the in-app updater off. Never pin a test key.
+// The release Ed25519 public keys (base64 of 32 bytes,
+// `tool/macos/make_update_manifest.py genkey`). A manifest signed by either
+// one is accepted: releases are signed with the primary key, and the backup
+// key (its private half kept offline) is only for when the primary is lost.
+// Keep both equal to UpdaterChannel.pinnedPublicKey / pinnedBackupPublicKey in
+// macos/Runner/UpdaterChannel.swift. Empty keeps the in-app updater off.
+// Never pin a test key.
 const macUpdatePublicKey = '/gB2YEHz3Dz+2I9M7fT7evxP9q3kdQngJ7B9L8S5mTc=';
+const macUpdateBackupPublicKey = 'd54SUOSgNZN08KhWSlbk0cCCoIZLwCiXh1L+Yfb0nsE=';
+const macUpdatePublicKeys = [macUpdatePublicKey, macUpdateBackupPublicKey];
 const maxMobileWidth = 600;
 const maxLaptopWidth = 840;
 const defaultTestUrl = 'https://www.gstatic.com/generate_204';

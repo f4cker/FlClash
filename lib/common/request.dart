@@ -137,10 +137,10 @@ class Request {
     required int? installedBuild,
     required String? arch,
     String url = macUpdateManifestUrl,
-    String publicKey = macUpdatePublicKey,
+    Iterable<String> publicKeys = macUpdatePublicKeys,
   }) async {
     try {
-      if (!macUpdateKeyPinned(publicKey)) {
+      if (!macUpdateKeysPinned(publicKeys)) {
         throw const MacUpdateManifestException(
           MacUpdateRejection.notConfigured,
         );
@@ -154,7 +154,7 @@ class Request {
       );
       final manifest = openMacUpdateManifest(
         response.data ?? const [],
-        publicKey: publicKey,
+        publicKeys: publicKeys,
       );
       if (manifest.assetFor(arch) == null) return const UpdateNoRelease();
       if (!macUpdateIsNewer(manifest, installedBuild)) {

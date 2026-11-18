@@ -376,7 +376,7 @@ void main() {
     await tester.pump();
     expect(tester.widget<LoadingBar>(find.byType(LoadingBar)).active, isFalse);
 
-    if (system.isMacOS && !macUpdateKeyPinned(macUpdatePublicKey)) {
+    if (system.isMacOS && !macUpdateKeysPinned(macUpdatePublicKeys)) {
       // A build without a pinned update key answers without the network.
       await tester.tap(find.text('Check for updates'));
       await tester.pump(const Duration(seconds: 1));

@@ -4,9 +4,13 @@ import FlutterMacOS
 /// In-app update: the app downloads (lib/common/request.dart) and the steps that
 /// touch the installed app run here, each verifying the signed manifest again.
 final class UpdaterChannel {
-    // The release Ed25519 public key (base64 of 32 bytes), the same value as
-    // macUpdatePublicKey in lib/common/constant.dart. Empty keeps the in-app updater off.
+    // The release Ed25519 public keys (base64 of 32 bytes), the same values as
+    // macUpdatePublicKey / macUpdateBackupPublicKey in lib/common/constant.dart.
+    // A manifest signed by either one is accepted; the backup key is only for
+    // when the primary is lost. Empty keeps the in-app updater off.
     static let pinnedPublicKey = "/gB2YEHz3Dz+2I9M7fT7evxP9q3kdQngJ7B9L8S5mTc="
+    static let pinnedBackupPublicKey = "d54SUOSgNZN08KhWSlbk0cCCoIZLwCiXh1L+Yfb0nsE="
+    static let pinnedPublicKeys = [pinnedPublicKey, pinnedBackupPublicKey]
 
     private static var instance: UpdaterChannel?
     private let channel: FlutterMethodChannel
@@ -69,7 +73,7 @@ final class UpdaterChannel {
     }
 
     private func prepare(manifest: Data, archive: String) -> [AnyHashable: Any] {
-        guard let payload = UpdateManifestSignature.open(manifest, publicKey: Self.pinnedPublicKey) else {
+        guard let payload = UpdateManifestSignature.open(manifest, publicKeys: Self.pinnedPublicKeys) else {
             return ["code": "rejected", "detail": "manifest signature"]
         }
         #if arch(arm64)
