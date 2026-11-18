@@ -423,7 +423,7 @@ void main() {
       await done(tester);
     });
 
-    testWidgets('scrolled-rewrite-$tone', skip: skip != null, (tester) async {
+    testWidgets('blur-rewrite-$tone', skip: skip != null, (tester) async {
       await pump(
         tester,
         brightness: brightness,
@@ -431,7 +431,7 @@ void main() {
         const MitmRewriteView(),
       );
       await scroll(tester, find.byType(Scrollable).last);
-      await capture(tester, 'scrolled-rewrite-$tone');
+      await capture(tester, 'blur-rewrite-$tone');
       await done(tester);
     });
 
@@ -615,7 +615,7 @@ void main() {
       await settle(tester);
       await capture(tester, 'rw-reqlist-$tone');
       await scroll(tester, find.byType(Scrollable).first);
-      await capture(tester, 'scrolled-requests-$tone');
+      await capture(tester, 'blur-requests-$tone');
       await done(tester);
     });
 
