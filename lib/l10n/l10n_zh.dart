@@ -6427,11 +6427,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperLauncherFailedDetail => '系统未能完成辅助程序的准备或启动，请查看详情。';
 
   @override
-  String get macHelperRecordDamagedTitle => '辅助程序的版本记录已损坏';
+  String get macHelperRecordDamagedTitle => '无法读取或更新版本记录';
 
   @override
   String get macHelperRecordDamagedDetail =>
-      '这条记录用于阻止旧版本 Flash 运行，重新安装无法修复；点击修复并输入管理员密码后，Flash 会按当前版本重建它。';
+      'Flash 需要修复辅助程序的版本记录。修复时需要输入管理员密码，并会重新检查辅助程序。';
 
   @override
   String get macHelperRecordRepairAction => '修复版本记录';
@@ -6440,5 +6440,5 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperRecordRepairing => '正在修复版本记录…';
 
   @override
-  String get macHelperRecordRepairFailed => '修复没有完成，请查看详情。';
+  String get macHelperRecordRepairFailed => '版本记录未能修复，请查看详情。';
 }

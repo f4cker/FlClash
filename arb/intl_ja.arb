@@ -1951,9 +1951,9 @@
   "macHelperLauncherDowngradeDetail": "ヘルパーは起動しませんでした。最新バージョンの Flash をインストールしてください。",
   "macHelperLauncherFailedTitle": "ヘルパーを起動できませんでした",
   "macHelperLauncherFailedDetail": "システムがヘルパーの準備または起動を完了できませんでした。詳細を確認してください。",
-  "macHelperRecordDamagedTitle": "The helper’s version record is damaged",
-  "macHelperRecordDamagedDetail": "This record keeps older versions of Flash from running, and reinstalling won’t fix it. Repair rebuilds it for this version after you enter an administrator password.",
+  "macHelperRecordDamagedTitle": "Can’t read or update the version record",
+  "macHelperRecordDamagedDetail": "Flash needs to repair the helper’s version record. You’ll be asked for an administrator password, and the helper will be checked again.",
   "macHelperRecordRepairAction": "Repair record",
   "macHelperRecordRepairing": "Repairing the version record…",
-  "macHelperRecordRepairFailed": "The repair didn’t finish. See details."
+  "macHelperRecordRepairFailed": "The version record couldn’t be repaired. See details."
 }

@@ -11774,13 +11774,13 @@ abstract class AppLocalizations {
   /// No description provided for @macHelperRecordDamagedTitle.
   ///
   /// In en, this message translates to:
-  /// **'The helper’s version record is damaged'**
+  /// **'Can’t read or update the version record'**
   String get macHelperRecordDamagedTitle;
 
   /// No description provided for @macHelperRecordDamagedDetail.
   ///
   /// In en, this message translates to:
-  /// **'This record keeps older versions of Flash from running, and reinstalling won’t fix it. Repair rebuilds it for this version after you enter an administrator password.'**
+  /// **'Flash needs to repair the helper’s version record. You’ll be asked for an administrator password, and the helper will be checked again.'**
   String get macHelperRecordDamagedDetail;
 
   /// No description provided for @macHelperRecordRepairAction.
@@ -11798,7 +11798,7 @@ abstract class AppLocalizations {
   /// No description provided for @macHelperRecordRepairFailed.
   ///
   /// In en, this message translates to:
-  /// **'The repair didn’t finish. See details.'**
+  /// **'The version record couldn’t be repaired. See details.'**
   String get macHelperRecordRepairFailed;
 }
 

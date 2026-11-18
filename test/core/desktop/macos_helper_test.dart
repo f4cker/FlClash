@@ -747,7 +747,7 @@ void main() {
         final zh = lookupAppLocalizations(const Locale('zh'));
         final view = macHelperCardView(zh, flow);
         expect(view.kind, MacHelperCardKind.launcherRecordDamaged);
-        expect(view.title, '辅助程序的版本记录已损坏');
+        expect(view.title, '无法读取或更新版本记录');
         expect(view.detail, zh.macHelperRecordDamagedDetail);
         expect(view.detail, isNot(contains('重启')));
         expect(view.primary, MacHelperCardAction.repairRecord);

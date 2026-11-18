@@ -7023,11 +7023,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get macHelperRecordDamagedTitle =>
-      'The helper’s version record is damaged';
+      'Can’t read or update the version record';
 
   @override
   String get macHelperRecordDamagedDetail =>
-      'This record keeps older versions of Flash from running, and reinstalling won’t fix it. Repair rebuilds it for this version after you enter an administrator password.';
+      'Flash needs to repair the helper’s version record. You’ll be asked for an administrator password, and the helper will be checked again.';
 
   @override
   String get macHelperRecordRepairAction => 'Repair record';
@@ -7037,5 +7037,5 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get macHelperRecordRepairFailed =>
-      'The repair didn’t finish. See details.';
+      'The version record couldn’t be repaired. See details.';
 }
