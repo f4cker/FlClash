@@ -455,7 +455,7 @@ class RuleEditFrame extends StatelessWidget {
               ],
             ),
           ),
-        ?leading,
+        if (leading case final leading?) Flexible(child: leading),
         const Spacer(),
         TextButton(
           onPressed: busy ? null : cancel,

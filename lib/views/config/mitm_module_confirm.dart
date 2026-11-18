@@ -265,7 +265,7 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
       primaryLabel: l.mitmImportAndEnable,
       onPrimary: () => _import(true),
       leading: TextButton(
-        onPressed: busy ? null : () => _import(false),
+        onPressed: busy ? () {} : () => _import(false),
         child: Text(l.mitmImportOnly),
       ),
       children: [

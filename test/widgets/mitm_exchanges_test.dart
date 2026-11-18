@@ -284,8 +284,6 @@ void main() {
     await tester.tap(find.text('GET /new?x=1'));
     await tester.pumpAndSettle();
 
-    expect(find.text('https://a.test/old?x=1'), findsOneWidget);
-    expect(find.text('HTTP/2.0'), findsOneWidget);
     expect(find.text('X-Upstream'), findsNothing);
     // The rewrite hit leads, under its own section; a rule no longer in
     // the profile says so rather than offer to show it.
@@ -301,15 +299,12 @@ void main() {
     expect(find.text(appLocalizations.mitmRewriteRuleRemoved), findsOneWidget);
     expect(find.text(appLocalizations.mitmRewriteViewInList), findsNothing);
     expect(find.text(appLocalizations.mitmRewritePassedThrough), findsNothing);
-    await _scrollTo(tester, find.text(appLocalizations.script));
-    expect(find.text('sign'), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(MetaChip),
-        matching: find.text(appLocalizations.response),
-      ),
-      findsOneWidget,
-    );
+    // Scripts follow, in a section of their own.
+    expect(find.text(appLocalizations.mitmScriptsRan(1)), findsOneWidget);
+    expect(find.text('sign', findRichText: true), findsOneWidget);
+    expect(find.text(appLocalizations.mitmScriptGroupResponse), findsOneWidget);
+    await _scrollTo(tester, find.text('https://a.test/old?x=1'));
+    expect(find.text('HTTP/2.0'), findsOneWidget);
 
     await _openTab(tester, appLocalizations.request);
     expect(find.text('Host'), findsOneWidget);
