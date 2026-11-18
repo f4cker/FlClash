@@ -8280,4 +8280,7 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get mitmPauseUnavailableHint =>
       'Decryption retries on its own after 30 seconds.';
+
+  @override
+  String get mitmCapabilityNotify => 'Send system notifications';
 }

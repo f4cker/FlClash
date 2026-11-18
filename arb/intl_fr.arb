@@ -3494,5 +3494,6 @@
   "mitmPauseSignTimeoutHint": "This happens when Flash is busy. Decryption retries on its own after 30 seconds.",
   "mitmPauseSignRefusedHint": "Check that HTTPS decryption is still on. Decryption retries on its own after 30 seconds.",
   "mitmPauseLeafRejectedHint": "In decryption settings, check again that the root certificate is installed and trusted.",
-  "mitmPauseUnavailableHint": "Decryption retries on its own after 30 seconds."
+  "mitmPauseUnavailableHint": "Decryption retries on its own after 30 seconds.",
+  "mitmCapabilityNotify": "Send system notifications"
 }

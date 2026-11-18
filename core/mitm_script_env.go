@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dop251/goja"
 	mihomoHttp "github.com/metacubex/mihomo/component/http"
@@ -128,11 +129,97 @@ func (r *mitmScriptRun) storeWrite(value, key goja.Value) bool {
 	return true
 }
 
-// $notification.post shows in the script's log; Flash posts no system
-// notification for a script.
+// $notification.post shows in the script's log and, within the limits
+// below, as a system notification the app posts.
+const (
+	mitmNotificationWindow    = time.Minute
+	mitmNotificationPerScript = 3
+	mitmNotificationTotal     = 10
+	mitmNotificationTitleCap  = 256
+	mitmNotificationBodyCap   = 2048
+)
+
+type MitmNotification struct {
+	Script   string `json:"script"`
+	Title    string `json:"title"`
+	Subtitle string `json:"subtitle,omitempty"`
+	Body     string `json:"body,omitempty"`
+}
+
+var (
+	sendMitmNotification = func(notification *MitmNotification) bool {
+		return sendMessage(MitmNotificationMessage, notification)
+	}
+	mitmNotificationClock = time.Now
+	mitmNotificationTimes struct {
+		mu       sync.Mutex
+		all      []time.Time
+		byScript map[string][]time.Time
+	}
+)
+
+// Whether one more notification from script fits the per-script and total
+// limits over the last mitmNotificationWindow; a fitting one is counted.
+func mitmNotificationAllowed(script string) bool {
+	times := &mitmNotificationTimes
+	times.mu.Lock()
+	defer times.mu.Unlock()
+	now := mitmNotificationClock()
+	recent := func(list []time.Time) []time.Time {
+		kept := list[:0]
+		for _, at := range list {
+			if now.Sub(at) < mitmNotificationWindow {
+				kept = append(kept, at)
+			}
+		}
+		return kept
+	}
+	if times.byScript == nil {
+		times.byScript = map[string][]time.Time{}
+	}
+	times.all = recent(times.all)
+	for name, list := range times.byScript {
+		if list = recent(list); len(list) == 0 {
+			delete(times.byScript, name)
+		} else {
+			times.byScript[name] = list
+		}
+	}
+	if len(times.all) >= mitmNotificationTotal || len(times.byScript[script]) >= mitmNotificationPerScript {
+		return false
+	}
+	times.all = append(times.all, now)
+	times.byScript[script] = append(times.byScript[script], now)
+	return true
+}
+
+func mitmTruncate(text string, limit int) string {
+	if len(text) <= limit {
+		return text
+	}
+	text = text[:limit]
+	for len(text) > 0 && !utf8.ValidString(text) {
+		text = text[:len(text)-1]
+	}
+	return text
+}
+
 func (r *mitmScriptRun) notify(title, subtitle, body string) {
 	text := strings.Join(slicesNonEmpty(title, subtitle, body), " · ")
+	if text == "" {
+		return
+	}
+	if !mitmNotificationAllowed(r.script.name) {
+		r.log("notify", text+" (not shown: too many notifications)")
+		return
+	}
 	r.log("notify", text)
+	sendMitmNotification(&MitmNotification{
+		Script:   r.script.name,
+		Title:    mitmTruncate(title, mitmNotificationTitleCap),
+		Subtitle: mitmTruncate(subtitle, mitmNotificationTitleCap),
+		Body:     mitmTruncate(body, mitmNotificationBodyCap),
+	})
 }
 
 func slicesNonEmpty(values ...string) []string {

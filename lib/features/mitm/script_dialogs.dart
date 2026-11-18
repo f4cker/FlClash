@@ -124,6 +124,7 @@ class MitmScriptCapabilities extends StatelessWidget {
           line(AppGlyphs.eye, l.mitmCapabilityRead),
           line(AppGlyphs.send, l.mitmCapabilitySend),
           line(AppGlyphs.key, l.mitmCapabilityStore),
+          line(AppGlyphs.bell, l.mitmCapabilityNotify),
           Text(
             l.mitmCapabilityLimits,
             style: AppTextStyle.caption1

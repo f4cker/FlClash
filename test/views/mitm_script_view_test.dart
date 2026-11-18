@@ -268,6 +268,7 @@ void main() {
     expect(find.text(l.mitmCapabilityRead), findsOneWidget);
     expect(find.text(l.mitmCapabilitySend), findsOneWidget);
     expect(find.text(l.mitmCapabilityStore), findsOneWidget);
+    expect(find.text(l.mitmCapabilityNotify), findsOneWidget);
     expect(find.text(l.mitmHostNotDecrypted('d.net')), findsOneWidget);
     expect(find.text(l.mitmAlsoDecryptHost('d.net')), findsOneWidget);
     expect(find.text(l.mitmAddAndEnable), findsOneWidget);

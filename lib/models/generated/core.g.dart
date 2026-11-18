@@ -687,6 +687,7 @@ const _$CoreEventTypeEnumMap = {
   CoreEventType.tailscaleRoutes: 'tailscaleRoutes',
   CoreEventType.mitmSign: 'mitmSign',
   CoreEventType.mitmConnection: 'mitmConnection',
+  CoreEventType.mitmNotification: 'mitmNotification',
 };
 
 _TestDelayParams _$TestDelayParamsFromJson(Map<String, dynamic> json) =>

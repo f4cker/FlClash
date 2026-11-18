@@ -2257,5 +2257,6 @@
   "mitmPauseSignTimeoutHint": "Flash 较忙时会出现，解密会在 30 秒后自动重试。",
   "mitmPauseSignRefusedHint": "请确认 HTTPS 解密仍然开启；解密会在 30 秒后自动重试。",
   "mitmPauseLeafRejectedHint": "请在解密设置中重新确认根证书已安装并受信任。",
-  "mitmPauseUnavailableHint": "解密会在 30 秒后自动重试。"
+  "mitmPauseUnavailableHint": "解密会在 30 秒后自动重试。",
+  "mitmCapabilityNotify": "发送系统通知"
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_signer.dart';
+import 'package:fl_clash/common/script_notification.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
@@ -58,6 +59,8 @@ abstract mixin class CoreEventListener {
   void onMitmConnection(String id, String outcome, {String pauseReason = ''}) {}
 
   void onMitmConnectionRewrite(String id, MitmConnectionRewrite rewrite) {}
+
+  void onScriptNotification(ScriptNotification notification) {}
 }
 
 class CoreEventManager {
@@ -153,6 +156,12 @@ class CoreEventManager {
                     _ => '',
                   },
                 );
+              }
+              break;
+            case CoreEventType.mitmNotification:
+              if (ScriptNotification.fromData(event.data)
+                  case final notification?) {
+                listener.onScriptNotification(notification);
               }
               break;
             case CoreEventType.mitmSign:

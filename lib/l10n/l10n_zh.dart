@@ -7547,4 +7547,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmPauseUnavailableHint => '解密会在 30 秒后自动重试。';
+
+  @override
+  String get mitmCapabilityNotify => '发送系统通知';
 }

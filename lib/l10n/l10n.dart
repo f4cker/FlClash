@@ -13612,6 +13612,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Decryption retries on its own after 30 seconds.'**
   String get mitmPauseUnavailableHint;
+
+  /// No description provided for @mitmCapabilityNotify.
+  ///
+  /// In en, this message translates to:
+  /// **'Send system notifications'**
+  String get mitmCapabilityNotify;
 }
 
 class _AppLocalizationsDelegate

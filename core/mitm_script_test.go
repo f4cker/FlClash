@@ -16,6 +16,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 // Writes each script into a fresh resources directory, named by its hash
@@ -379,5 +380,55 @@ func TestMitmScriptValidateReportsSyntax(t *testing.T) {
 	engine := withMitmScriptRules(t, scriptLine("x", "http-request", "", names[0]))
 	if engine == nil || len(engine.issues) != 1 || len(engine.rules) != 0 {
 		t.Fatalf("engine %+v", engine)
+	}
+}
+
+func TestMitmScriptNotificationsPostWithinLimits(t *testing.T) {
+	var posted []MitmNotification
+	oldSend, oldClock := sendMitmNotification, mitmNotificationClock
+	now := time.Unix(1_700_000_000, 0)
+	mitmNotificationClock = func() time.Time { return now }
+	sendMitmNotification = func(n *MitmNotification) bool { posted = append(posted, *n); return true }
+	mitmNotificationTimes.mu.Lock()
+	mitmNotificationTimes.all, mitmNotificationTimes.byScript = nil, nil
+	mitmNotificationTimes.mu.Unlock()
+	t.Cleanup(func() { sendMitmNotification, mitmNotificationClock = oldSend, oldClock })
+
+	s := testScript(t, `n = type=http-response,pattern=^https,script-path=FILE`, `
+		for (let i = 0; i < 5; i++) $notification.post('T' + i, i ? '' : 'S', 'é'.repeat(2000));
+		$notification.post();
+		$done({});`)
+	result := s.run(scriptResponseInput(""))
+	if len(posted) != mitmNotificationPerScript {
+		t.Fatalf("posted %d, want %d", len(posted), mitmNotificationPerScript)
+	}
+	first := posted[0]
+	if first.Script != "n" || first.Title != "T0" || first.Subtitle != "S" ||
+		len(first.Body) != mitmNotificationBodyCap || !utf8.ValidString(first.Body) {
+		t.Fatalf("%+v", first)
+	}
+	var notes, held int
+	for _, line := range result.logs {
+		if line.Level == "notify" {
+			notes++
+			if strings.HasSuffix(line.Text, "(not shown: too many notifications)") {
+				held++
+			}
+		}
+	}
+	if notes != 5 || held != 2 {
+		t.Fatalf("logs %+v", result.logs)
+	}
+
+	now = now.Add(mitmNotificationWindow)
+	s.run(scriptResponseInput(""))
+	if len(posted) != 2*mitmNotificationPerScript {
+		t.Fatalf("after the window: posted %d", len(posted))
+	}
+	for i := 0; i < mitmNotificationTotal; i++ {
+		mitmNotificationAllowed(string(rune('a' + i)))
+	}
+	if mitmNotificationAllowed("z") {
+		t.Fatal("the total limit let one more through")
 	}
 }

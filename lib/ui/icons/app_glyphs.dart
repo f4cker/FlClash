@@ -1141,6 +1141,11 @@ abstract final class AppGlyphs {
     ], role: GlyphRole.line),
   ]);
 
+  static const bell = Glyph([
+    GlyphPath('M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9'),
+    GlyphPath('M10.3 21a1.94 1.94 0 0 0 3.4 0', role: GlyphRole.line),
+  ]);
+
   static const password = Glyph([
     GlyphBox(2.9, 6, 21.1, 18, 3),
     GlyphCircle(7.4, 12, 1.4, role: GlyphRole.detail, solid: true),
