@@ -53,6 +53,10 @@ NSData * _Nullable FCBundledCoreHash(void);
 // does not pass. Returns @"verified" or @"failed:<stage>" naming the first check that failed.
 NSString *FCCoreGuestCheck(NSData * _Nullable auditToken, pid_t pid, NSData * _Nullable expectedHash);
 NSData * _Nullable FCStaticCodeHash(NSString *path, NSString *identifier);
+// Whether a running process is a Flash Core, from its code signature alone (pinned certificate and
+// com.layoute.flash.core); `reason` explains FCCoreMatchUnknown.
+typedef NS_ENUM(NSInteger, FCCoreMatch) { FCCoreMatchOther, FCCoreMatchFlash, FCCoreMatchGone, FCCoreMatchUnknown };
+FCCoreMatch FCRunningFlashCore(pid_t pid, NSString * _Nullable * _Nullable reason);
 BOOL FCProtectedTree(NSString *path, BOOL recursive);
 NSString *FCSHA256(NSString *path);
 NSString *FCHexString(NSData * _Nullable data);

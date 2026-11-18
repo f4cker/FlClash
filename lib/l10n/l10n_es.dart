@@ -5844,25 +5844,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get macHelperCheckAgain => 'Comprobar de nuevo';
 
   @override
-  String get macHelperRegisterPending => 'Register helper only';
-
-  @override
-  String get macHelperRepairUnknownOutcome =>
-      'The system operation may still be in flight. Do not retry until after restarting the Mac. If Settings cannot open, manually open System Settings → General → Login Items & Extensions.';
-
-  @override
-  String get macHelperRepairFailedDetail =>
-      'Repair did not complete. Check access to the Flash application support directory. If Core stop is unconfirmed, restart the Mac. If it still fails, contact support.';
-
-  @override
-  String get macHelperExplicitRepairWarning =>
-      'The cause is uncertain. Repair unregisters and registers the helper, may interrupt an old Core that is still running, and may require approval again. Core will stay stopped; approve it in System Settings and restart the Mac, then check again. Do not run another version of Flash concurrently.';
-
-  @override
-  String get macHelperRepairPendingDetail =>
-      'Repair is not complete and Core startup is blocked. Restart the Mac, choose Register helper only, then approve it in System Settings and check again. If the registration outcome is unknown, restart the Mac again. If registration failed or verification still fails, reinstall Flash or contact support. Do not run another version concurrently.';
-
-  @override
   String get macHelperRepair => 'Repair';
 
   @override
@@ -5958,10 +5939,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mueve Flash a Aplicaciones y vuelve a abrirlo para instalar el asistente.';
 
   @override
-  String get macHelperApprovalDetail =>
-      'Permite el asistente de Flash en los Ajustes del Sistema de macOS y vuelve aquí para comprobarlo.';
-
-  @override
   String get macHelperMoveTitle => 'Mover Flash a Aplicaciones';
 
   @override
@@ -5993,7 +5970,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get macHelperApprovalStep3 =>
-      'Turn on the switch next to Flash, then come back to Flash.';
+      'Desactiva y vuelve a activar el interruptor junto a Flash y luego vuelve a Flash.';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -6023,13 +6000,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get macHelperSignatureDetail =>
       'Flash didn’t run the helper. Download and install Flash again.';
-
-  @override
-  String get macHelperDisabledTitle => 'The helper is turned off';
-
-  @override
-  String get macHelperDisabledDetail =>
-      'In System Settings, go to Login Items & Extensions, turn on Flash’s background switch, then come back to Flash.';
 
   @override
   String get macHelperFailedTitle => 'The helper update didn’t finish';
@@ -6083,7 +6053,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get macHelperBarAllow => 'Allow helper';
 
   @override
-  String get macHelperWaitingCore => 'Waiting for helper';
+  String get macHelperWaitingCore => 'Esperando al asistente';
 
   @override
   String get macHelperBarStarting => 'Starting…';
@@ -7006,4 +6976,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmExchangeFailed => 'La solicitud no se completó';
+
+  @override
+  String get macHelperAllowInSettings =>
+      'En Ajustes del Sistema → Ítems de inicio y extensiones, desactiva y vuelve a activar el interruptor de Flash y luego vuelve a Flash.';
+
+  @override
+  String get macHelperNotReadyTitle => 'El asistente aún no está listo';
+
+  @override
+  String get macHelperRegistrationFailedDetail =>
+      'Por ahora no se puede completar el registro. Consulta los detalles.';
+
+  @override
+  String get macHelperStaleCoreDetail =>
+      'Aún no se ha confirmado que el núcleo anterior se haya detenido. Consulta los detalles.';
+
+  @override
+  String get macHelperStatusUnreadable =>
+      'Por ahora no se puede leer el estado del asistente. Consulta los detalles.';
 }

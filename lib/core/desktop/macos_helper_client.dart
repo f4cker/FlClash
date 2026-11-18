@@ -40,6 +40,19 @@ enum MacHelperState {
   /// Removing the old helper or registering the new one did not finish.
   updateFailed,
 
+  /// launchd still holds the previous build's job and cannot start this
+  /// helper (launch constraint not refreshed): the app re-registers it.
+  registrationStale,
+
+  /// A recovery of the registration is running; nothing reconnects meanwhile.
+  repairing,
+
+  /// The recovery finished but the new helper did not answer in time.
+  notReady,
+
+  /// The new helper answered, but could not confirm that no old Core runs.
+  staleCore,
+
   unsupported,
   disabled,
   exitUnconfirmed,
@@ -54,6 +67,10 @@ enum MacHelperState {
       previouslyEnabled == true ? disabledByUser : requiresApproval,
     'notRegistered' => notRegistered,
     'migrationRequired' || 'authorizationCancelled' => migrationRequired,
+    'registrationStale' => registrationStale,
+    'repairInProgress' || 'operationInProgress' => repairing,
+    'helperNotReady' => notReady,
+    'staleCoreUnconfirmed' => staleCore,
     'migrationIncomplete' ||
     'migrationFailed' ||
     'registrationFailed' ||
@@ -205,9 +222,10 @@ final class MacHelperClient {
   /// Raw code of the last native answer, shown under "View details".
   String? lastCode;
 
-  /// True only when native explicitly certifies that registration settled.
-  bool lastRegistrationSettled = false;
-  bool lastExplicitNotStarted = false;
+  /// Raw native text of the last answer that carried any (system errors with
+  /// their domain, code and userInfo, launchd's view of the job, the helper's
+  /// sweep result). Only ever shown under "View details".
+  String? lastDetail;
 
   /// Failed update step; kept until a later answer reports another outcome so
   /// a generic `migrationIncomplete` does not hide the step that failed.
@@ -232,9 +250,25 @@ final class MacHelperClient {
     if (_safeMode()) throw const MacHelperException('disabled');
   }
 
+  /// The raw native text of [answer] for "View details", or null.
+  static String? describeAnswer(Map<Object?, Object?> answer) {
+    String? text(Object? value) =>
+        value is String && value.isNotEmpty ? value : null;
+    final lines = [
+      ?text(answer['detail']),
+      if (text(answer['domain']) case final domain?)
+        'error: $domain ${answer['error'] ?? ''}'.trim(),
+      if (text(answer['launchd']) case final launchd?) 'launchd: $launchd',
+      if (text(answer['reason']) case final reason?) 'helper: $reason',
+    ];
+    return lines.isEmpty ? null : lines.join('\n');
+  }
+
   MacHelperState _record(Map<Object?, Object?> answer) {
     final code = answer['code'];
     lastCode = code is String ? code : null;
+    final detail = describeAnswer(answer);
+    if (detail != null) lastDetail = detail;
     final state = code == 'authorizationCancelled'
         ? MacHelperState.parse(answer['status'] ?? 'migrationRequired')
         : MacHelperState.parse(code, answer['previouslyEnabled']);
@@ -312,33 +346,46 @@ final class MacHelperClient {
     return _call('repair');
   }
 
-  Future<String> repairExplicit({required bool confirmed}) async {
-    if (!confirmed || !_maintenance) {
-      throw const MacHelperException('consentRequired');
-    }
-    _requireEffects();
-    lastExplicitNotStarted = false;
-    final result = await _native.invoke('repairExplicit', {
-      'confirmed': true,
-      'repairRecordWritten': true,
-    });
-    lastExplicitNotStarted = result['explicitNotStarted'] == true;
-    final code = result['code'];
-    lastCode = code is String ? code : 'unavailable';
-    return lastCode!;
-  }
-
-  Future<String> repairRegisterOnly() async {
+  /// Re-register a stale registration (native: unregister, wait for launchd,
+  /// register, ask SMAppService.status, wait for the new helper). Only inside
+  /// [maintain], after the app wrote its repair record and stopped its Core.
+  Future<MacHelperState> recover() {
     if (!_maintenance) throw const MacHelperException('maintenance');
     _requireEffects();
-    lastRegistrationSettled = false;
-    final answer = await _native.invoke('repairRegisterOnly', {
-      'repairRecordWritten': true,
-    });
-    lastRegistrationSettled = answer['registrationSettled'] == true;
-    final code = answer['code'];
-    lastCode = code is String ? code : 'unavailable';
-    return lastCode!;
+    lastDetail = null;
+    return _call('recover', {'repairRecordWritten': true});
+  }
+
+  /// Asks the new helper to stop every Core it does not run itself, found by
+  /// code signature, and to confirm they exited. Returns the helper's code:
+  /// `noStaleCore`, `staleCoreStopped`, `staleCoreUnconfirmed`, or a reason
+  /// the helper could not be asked.
+  Future<String> retireStaleCores() async {
+    if (!_maintenance) throw const MacHelperException('maintenance');
+    _requireEffects();
+    try {
+      final answer = await _native.invoke('retireCores');
+      final code = answer['code'];
+      lastCode = code is String ? code : 'unavailable';
+      final detail = describeAnswer(answer);
+      if (detail != null) lastDetail = detail;
+      return lastCode!;
+    } on Exception {
+      lastCode = 'channelError';
+      return lastCode!;
+    }
+  }
+
+  /// SMAppService.status only (no trust checks, no hello): cheap enough to
+  /// poll while the user is in System Settings.
+  Future<MacHelperState> approvalStatus() async {
+    if (_safeMode()) return MacHelperState.disabled;
+    try {
+      final answer = await _native.invoke('approvalStatus');
+      return MacHelperState.parse(answer['code']);
+    } on Exception {
+      return MacHelperState.unavailable;
+    }
   }
 
   Future<void> openSettings() async {

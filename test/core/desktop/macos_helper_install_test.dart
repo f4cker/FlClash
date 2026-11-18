@@ -38,6 +38,7 @@ class InstallNative implements MacHelperNativeApi {
       'enable' => enableAnswer,
       'repair' => repairAnswer,
       'openApprovalSettings' => const {'code': 'settingsOpened'},
+      'approvalStatus' => statusAnswer,
       _ => throw StateError('Unexpected native call: $method'),
     };
   }

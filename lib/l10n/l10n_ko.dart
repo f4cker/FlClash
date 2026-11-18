@@ -5706,25 +5706,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get macHelperCheckAgain => '다시 확인';
 
   @override
-  String get macHelperRegisterPending => 'Register helper only';
-
-  @override
-  String get macHelperRepairUnknownOutcome =>
-      'The system operation may still be in flight. Do not retry until after restarting the Mac. If Settings cannot open, manually open System Settings → General → Login Items & Extensions.';
-
-  @override
-  String get macHelperRepairFailedDetail =>
-      'Repair did not complete. Check access to the Flash application support directory. If Core stop is unconfirmed, restart the Mac. If it still fails, contact support.';
-
-  @override
-  String get macHelperExplicitRepairWarning =>
-      'The cause is uncertain. Repair unregisters and registers the helper, may interrupt an old Core that is still running, and may require approval again. Core will stay stopped; approve it in System Settings and restart the Mac, then check again. Do not run another version of Flash concurrently.';
-
-  @override
-  String get macHelperRepairPendingDetail =>
-      'Repair is not complete and Core startup is blocked. Restart the Mac, choose Register helper only, then approve it in System Settings and check again. If the registration outcome is unknown, restart the Mac again. If registration failed or verification still fails, reinstall Flash or contact support. Do not run another version concurrently.';
-
-  @override
   String get macHelperRepair => 'Repair';
 
   @override
@@ -5819,10 +5800,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get macHelperMoveDetail => 'Flash를 응용 프로그램 폴더로 옮기고 다시 열어 도우미를 설치하세요.';
 
   @override
-  String get macHelperApprovalDetail =>
-      'macOS 시스템 설정에서 Flash 도우미를 허용한 다음 돌아와 다시 확인하세요.';
-
-  @override
   String get macHelperMoveTitle => 'Flash를 응용 프로그램 폴더로 이동';
 
   @override
@@ -5853,7 +5830,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macHelperApprovalStep3 =>
-      'Turn on the switch next to Flash, then come back to Flash.';
+      'Flash 옆의 스위치를 껐다가 다시 켠 다음 Flash로 돌아옵니다.';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -5883,13 +5860,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get macHelperSignatureDetail =>
       'Flash didn’t run the helper. Download and install Flash again.';
-
-  @override
-  String get macHelperDisabledTitle => 'The helper is turned off';
-
-  @override
-  String get macHelperDisabledDetail =>
-      'In System Settings, go to Login Items & Extensions, turn on Flash’s background switch, then come back to Flash.';
 
   @override
   String get macHelperFailedTitle => 'The helper update didn’t finish';
@@ -5943,7 +5913,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get macHelperBarAllow => 'Allow helper';
 
   @override
-  String get macHelperWaitingCore => 'Waiting for helper';
+  String get macHelperWaitingCore => '헬퍼 대기 중';
 
   @override
   String get macHelperBarStarting => 'Starting…';
@@ -6833,4 +6803,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmExchangeFailed => '요청이 완료되지 않았습니다';
+
+  @override
+  String get macHelperAllowInSettings =>
+      '시스템 설정의 ‘로그인 항목 및 확장 프로그램’에서 Flash 스위치를 껐다가 다시 켠 다음 Flash로 돌아오세요.';
+
+  @override
+  String get macHelperNotReadyTitle => '헬퍼가 아직 준비되지 않았습니다';
+
+  @override
+  String get macHelperRegistrationFailedDetail =>
+      '지금은 등록을 완료할 수 없습니다. 세부 정보를 확인하세요.';
+
+  @override
+  String get macHelperStaleCoreDetail =>
+      '이전 코어가 중지되었는지 아직 확인되지 않았습니다. 세부 정보를 확인하세요.';
+
+  @override
+  String get macHelperStatusUnreadable => '지금은 헬퍼 상태를 읽을 수 없습니다. 세부 정보를 확인하세요.';
 }

@@ -61,25 +61,10 @@ class CoreService extends CoreHandlerInterface {
       startBlocked: system.isMacOS
           ? () => macosHelperClient.maintenanceInProgress
           : null,
+      // A pending helper recovery blocks the start; only the helper card
+      // settles it (the new helper confirms that no old Core runs).
       startGate: system.isMacOS
-          ? () async {
-              final record = await macRepairRecord();
-              if (!await record.isPending()) return;
-              await lifecycle.exclusiveStartCheck(() async {
-                if (managedMac && lifecycle.hasNoCore) {
-                  await record.clearAfterVerifiedReboot(
-                    verification: _MacRepairVerification(
-                      lifecycle,
-                      macosHelperClient,
-                      readMacBootSession,
-                    ),
-                  );
-                }
-                await requireMacRepairComplete(
-                  recordFactory: () async => record,
-                );
-              });
-            }
+          ? () => lifecycle.exclusiveStartCheck(requireMacRepairComplete)
           : null,
     );
     return CoreService._(
@@ -109,53 +94,35 @@ class CoreService extends CoreHandlerInterface {
     });
   }
 
-  Future<bool> canRetryMacExplicitRepair() async => (await macRepairRecord())
-      .canRetryExplicit(readBootSession: readMacBootSession);
+  bool get _managedMac =>
+      system.isMacOS &&
+      macosManagedHelperBuild &&
+      _lifecycle is DesktopCoreLifecycle;
 
-  Future<bool> recoverMacRepair() async {
-    final record = await macRepairRecord();
-    if (!await record.isPending()) return false;
-    if (!system.isMacOS ||
-        !macosManagedHelperBuild ||
-        _lifecycle is! DesktopCoreLifecycle) {
-      return true;
-    }
-    final lifecycle = _lifecycle;
-    return recoverMacRepairWithOwner(
-      lifecycle: lifecycle,
-      client: macosHelperClient,
-      record: record,
-      readBootSession: readMacBootSession,
-    );
-  }
+  Future<bool> macRepairPending() async =>
+      (await macRepairRecord()).isPending();
 
-  Future<String> registerPendingMacRepair() async {
-    if (!system.isMacOS ||
-        !macosManagedHelperBuild ||
-        _lifecycle is! DesktopCoreLifecycle) {
-      throw const MacHelperException('unsupported');
-    }
-    return registerPendingMacRepairWithOwner(
-      lifecycle: _lifecycle,
+  /// Re-registers a stale helper registration: stops the Core, records the
+  /// recovery, then lets native unregister/register and wait for the helper.
+  Future<MacHelperState> recoverMacHelper() async {
+    if (!_managedMac) throw const MacHelperException('unsupported');
+    return recoverMacHelperWithOwner(
+      lifecycle: _lifecycle as DesktopCoreLifecycle,
       client: macosHelperClient,
       record: await macRepairRecord(),
       readBootSession: readMacBootSession,
     );
   }
 
-  Future<String> repairMacHelper({required bool confirmed}) {
-    if (!confirmed ||
-        !system.isMacOS ||
-        !macosManagedHelperBuild ||
-        _lifecycle is! DesktopCoreLifecycle) {
-      throw const MacHelperException('consentRequired');
-    }
-    final lifecycle = _lifecycle;
-    return performMacExplicitRepair(
-      lifecycle: lifecycle,
+  /// Settles a pending recovery; returns whether it is still pending.
+  Future<bool> settleMacRepair() async {
+    final record = await macRepairRecord();
+    if (!await record.isPending()) return false;
+    if (!_managedMac) return true;
+    return settleMacRepairWithOwner(
+      lifecycle: _lifecycle as DesktopCoreLifecycle,
       client: macosHelperClient,
-      recordFactory: macRepairRecord,
-      readBootSession: readMacBootSession,
+      record: record,
     );
   }
 
@@ -201,91 +168,46 @@ class CoreService extends CoreHandlerInterface {
 final coreService = system.isDesktop ? CoreService() : null;
 
 @visibleForTesting
-Future<String> performMacExplicitRepair({
+Future<MacHelperState> recoverMacHelperWithOwner({
   required DesktopCoreLifecycle lifecycle,
   required MacHelperClient client,
-  required Future<MacRepairRecord> Function() recordFactory,
-  required Future<String> Function() readBootSession,
+  required MacRepairRecord record,
+  Future<String> Function()? readBootSession,
 }) => client.maintain(
   () => lifecycle.maintain(() async {
-    final record = await recordFactory();
-    if (await record.isPending()) {
-      await record.setExplicitNotStarted(
-        notStarted: false,
-        readBootSession: readBootSession,
-      );
-    } else {
-      await record.markPending(readBootSession: readBootSession);
-    }
-    // Only native's explicit pre-dispatch evidence permits another call.
-    // The record is made unknown again before every retry, including crashes.
-    for (var attempt = 0; ; attempt++) {
-      final result = await client.repairExplicit(confirmed: true);
-      if (!client.lastExplicitNotStarted) return result;
-      await record.setExplicitNotStarted(
-        notStarted: true,
-        readBootSession: readBootSession,
-      );
-      if (attempt == 10) return result;
-      await Future<void>.delayed(const Duration(seconds: 1));
-      await record.setExplicitNotStarted(
-        notStarted: false,
-        readBootSession: readBootSession,
-      );
-    }
+    // The boot session is a diagnostic field only; it decides nothing.
+    String? boot;
+    try {
+      boot = await readBootSession?.call();
+    } catch (_) {}
+    await record.markPending(diagnostics: {'boot': ?boot});
+    return client.recover();
   }, allowUnconfirmedStop: true),
+  // The Core may be unreachable while the helper is broken; the new helper
+  // stops it by signature, and the record blocks starts until it confirms.
 );
 
+/// Asks the ready helper to stop every old Core (found by signature) and
+/// clears the record only when it confirms none runs. Returns whether the
+/// recovery is still pending.
 @visibleForTesting
-Future<String> registerPendingMacRepairWithOwner({
+Future<bool> settleMacRepairWithOwner({
   required DesktopCoreLifecycle lifecycle,
   required MacHelperClient client,
   required MacRepairRecord record,
-  required Future<String> Function() readBootSession,
-}) => client.maintain(
-  () => lifecycle.maintain(() async {
-    await record.markRegistrationAttemptAfterReboot(
-      readBootSession: readBootSession,
-    );
-    final result = await client.repairRegisterOnly();
-    if (client.lastRegistrationSettled) {
-      await record.markRegistrationSettled(readBootSession: readBootSession);
-    }
-    return result;
-  }),
-);
-
-@visibleForTesting
-Future<bool> recoverMacRepairWithOwner({
-  required DesktopCoreLifecycle lifecycle,
-  required MacHelperClient client,
-  required MacRepairRecord record,
-  required Future<String> Function() readBootSession,
-}) => client.maintain(
-  () => lifecycle.maintain(() async {
-    await record.clearAfterVerifiedReboot(
-      verification: _MacRepairVerification(lifecycle, client, readBootSession),
-    );
-    return record.isPending();
-  }),
-);
-
-final class _MacRepairVerification implements MacRepairVerification {
-  final DesktopCoreLifecycle lifecycle;
-  final MacHelperClient client;
-  final Future<String> Function() bootSession;
-
-  const _MacRepairVerification(this.lifecycle, this.client, this.bootSession);
-
-  @override
-  Future<String> readBootSession() => bootSession();
-
-  @override
-  Future<bool> verifyCurrentSignedAuthenticatedHelperAndNoGuiCore() async {
-    if (!lifecycle.hasNoCore || client.hasCoreSession) return false;
-    final state = await client.status();
-    return state == MacHelperState.enabled &&
-        lifecycle.hasNoCore &&
-        !client.hasCoreSession;
-  }
+}) async {
+  if (!await record.isPending()) return false;
+  if (client.maintenanceInProgress) return true;
+  final cleared = await client.maintain(
+    () => lifecycle.maintain(
+      () => record.clearIf(() async {
+        if (!lifecycle.hasNoCore || client.hasCoreSession) return false;
+        final code = await client.retireStaleCores();
+        return (code == 'noStaleCore' || code == 'staleCoreStopped') &&
+            lifecycle.hasNoCore &&
+            !client.hasCoreSession;
+      }),
+    ),
+  );
+  return !cleared;
 }

@@ -62,8 +62,8 @@ static NSDictionary *FixtureRead(NSString *bundle) {
 - (void)migrateWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"migrate"]; c(@{@"code": @"ok"}); }
 - (void)registerWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"register"]; c(@{@"code": @"ok"}); }
 - (void)unregisterWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"unregister"]; c(@{@"code": @"ok"}); }
-- (void)repairExplicitWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"explicit"]; c(@{@"code": @"ok"}); }
-- (void)repairRegisterOnlyWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"registerOnly"]; c(@{@"code": @"ok"}); }
+- (void)recoverWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"recover"]; c(@{@"code": @"ok"}); }
+- (NSString *)serviceStatusCode { [self.calls addObject:@"serviceStatus"]; return @"requiresApproval"; }
 - (void)repairWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"repair"]; c(@{@"code": @"ok"}); }
 - (void)openApprovalSettings:(void (^)(NSDictionary *))c { [self.calls addObject:@"settings"]; c(@{@"code": @"ok"}); }
 - (void)request:(NSString *)method arguments:(NSDictionary *)args completion:(void (^)(NSDictionary *))completion {
@@ -165,9 +165,31 @@ int main(void) {
             Invoke(bridge, name, @{});
             assert(bridge.calls.count == 1);
         }
+        // retireCores only reaches the helper after the trust gate and an authenticated hello.
+        bridge.connectionTrusted = NO;
+        bridge.registration = @"enabled";
+        bridge.helloCode = @"ok";
+        [bridge.calls removeAllObjects];
+        assert([Invoke(bridge, @"retireCores", @{}) isEqual:@"ok"]);
+        assert(([bridge.calls isEqual:@[@"hello", @"retireCores"]]));
+        bridge.helperHash = @"cdhash-previous-build";
+        [bridge.calls removeAllObjects];
+        assert([Invoke(bridge, @"retireCores", @{}) isEqual:@"staleHelper"]);
+        assert(([bridge.calls isEqual:@[@"hello"]]));
+        bridge.helperHash = @"cdhash-current";
+        bridge.connectionTrusted = YES;
+        bridge.registration = @"notRegistered";
+        [bridge.calls removeAllObjects];
+        assert([Invoke(bridge, @"recover", @{@"repairRecordWritten": @YES}) isEqual:@"ok"]);
+        assert(([bridge.calls isEqual:@[@"recover"]]));
         bridge.operationInFlight = YES;
         assert([Invoke(bridge, @"enable", @{}) isEqual:@"operationInProgress"]);
-        assert([Invoke(bridge, @"repairRegisterOnly", @{}) isEqual:@"operationInProgress"]);
+        assert([Invoke(bridge, @"recover", @{@"repairRecordWritten": @YES}) isEqual:@"operationInProgress"]);
+        assert([Invoke(bridge, @"retireCores", @{}) isEqual:@"operationInProgress"]);
+        // While a recovery runs only read-only status and the Settings shortcut pass; no hello is sent.
+        [bridge.calls removeAllObjects];
+        assert([Invoke(bridge, @"approvalStatus", @{}) isEqual:@"requiresApproval"]);
+        assert(([bridge.calls isEqual:@[@"serviceStatus"]]));
         assert([Invoke(bridge, @"openApprovalSettings", @{}) isEqual:@"ok"]);
         assert([Invoke(bridge, @"stop", @{}) isEqual:@"ok"]);
         puts("Bundle contract, hello negotiation and relay gating mocks passed; no daemon/Core execution");

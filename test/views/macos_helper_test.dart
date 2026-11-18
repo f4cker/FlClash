@@ -92,8 +92,13 @@ void main() {
     await tester.tap(find.text(l.macHelperOpenSettings));
     await tester.pumpAndSettle();
     expect(native.calls, ['status', 'enable', 'openApprovalSettings']);
+    // Returning to Flash re-checks and ends the short Settings poll.
+    flow.resumed();
+    await tester.pumpAndSettle();
+    expect(native.calls.last, 'status');
     await tester.tap(find.text(l.close));
     await tester.pumpAndSettle();
+    flow.dispose();
   });
 
   testWidgets(

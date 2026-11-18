@@ -618,7 +618,18 @@ void main() {
     );
     expect(
       macHelperCardKind(MacHelperState.disabledByUser, false),
-      MacHelperCardKind.disabledByUser,
+      MacHelperCardKind.approval,
+    );
+    for (final state in [
+      MacHelperState.registrationStale,
+      MacHelperState.notReady,
+      MacHelperState.staleCore,
+    ]) {
+      expect(macHelperCardKind(state, false), MacHelperCardKind.notReady);
+    }
+    expect(
+      macHelperCardKind(MacHelperState.repairing, false),
+      MacHelperCardKind.starting,
     );
     expect(
       macHelperCardKind(MacHelperState.starting, false),
@@ -1396,8 +1407,10 @@ void main() {
       final l = lookupAppLocalizations(const Locale('en'));
       final view = macHelperCardView(l, flow);
       expect(view.kind, MacHelperCardKind.exitUnconfirmed);
-      expect(view.primary, MacHelperCardAction.recheck);
-      expect(view.secondary, MacHelperCardAction.repair);
+      // Stopping the Core through the app is the one action; the raw text
+      // stays behind "View details".
+      expect(view.primary, MacHelperCardAction.repair);
+      expect(view.secondary, MacHelperCardAction.viewDetails);
       expect(macHelperActionLabel(l, MacHelperCardAction.repair), 'Repair');
       expect(
         macHelperActionLabel(

@@ -266,6 +266,44 @@ NSString *FCCoreGuestCheck(NSData *auditToken, pid_t pid, NSData *expectedHash) 
     return @"verified";
 }
 
+int csops(pid_t pid, unsigned int ops, void *useraddr, size_t usersize);
+#ifndef FCPidCodeOps
+#define FCPidCodeOps csops
+#else
+int FCPidCodeOps(pid_t pid, unsigned int ops, void *useraddr, size_t usersize);
+#endif
+enum { FCCodeOpsIdentity = 11 };
+
+// The kernel's identifier only selects candidates; the pinned requirement decides. The identity blob is an
+// 8-byte header followed by the NUL-terminated identifier.
+FCCoreMatch FCRunningFlashCore(pid_t pid, NSString **reason) {
+    char identity[8 + 128] = {0};
+    if (FCPidCodeOps(pid, FCCodeOpsIdentity, identity, sizeof(identity) - 1)) {
+        if (errno == ESRCH) return FCCoreMatchGone;
+        if (errno == ENOENT || errno == ERANGE || errno == EINVAL) return FCCoreMatchOther;
+        if (reason) *reason = [NSString stringWithFormat:@"identity errno=%d", errno];
+        return FCCoreMatchUnknown;
+    }
+    if (strcmp(identity + 8, FCCoreIdentifier.UTF8String)) return FCCoreMatchOther;
+    NSString *text = FCSigningRequirement(FCCoreIdentifier);
+    SecRequirementRef requirement = NULL;
+    if (!text || SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement)) {
+        if (reason) *reason = @"requirement unavailable";
+        return FCCoreMatchUnknown;
+    }
+    SecCodeRef code = NULL;
+    OSStatus status = SecCodeCopyGuestWithAttributes(NULL,
+        (__bridge CFDictionaryRef)@{(__bridge NSString *)kSecGuestAttributePid: @(pid)}, kSecCSDefaultFlags, &code);
+    if (!status) status = SecCodeCheckValidity(code, kSecCSDefaultFlags, requirement);
+    if (code) CFRelease(code);
+    CFRelease(requirement);
+    if (!status) return FCCoreMatchFlash;
+    if (status == errSecCSReqFailed) return FCCoreMatchOther;
+    if (status == errSecCSNoSuchCode) return FCCoreMatchGone;
+    if (reason) *reason = [NSString stringWithFormat:@"signature check OSStatus %d", (int)status];
+    return FCCoreMatchUnknown;
+}
+
 FCRunningHashVerdict FCCompareRunningHash(NSData *runningHash, NSData *diskHash) {
     if (!FCValidGUIHash(runningHash) || !FCValidGUIHash(diskHash)) return FCRunningHashInvalid;
     return [runningHash isEqualToData:diskHash] ? FCRunningHashCurrent : FCRunningHashStale;

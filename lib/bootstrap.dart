@@ -217,11 +217,19 @@ class Bootstrap {
           markOffered: preferences.markMacHelperInvitationShown,
           show: showMacHelperFlow,
         );
-    if (helperReady) {
+    Future<void> startCore() async {
       await _container.read(coreActionProvider.notifier).startCore();
       if (!_bootDecision.isDegraded) {
         await _container.read(setupActionProvider.notifier).initStatus();
       }
+    }
+
+    if (helperReady) {
+      await startCore();
+    } else if (!_container.read(safeModeProvider)) {
+      // The helper was not ready at launch (waiting for the user to allow it,
+      // or being recovered): start the Core once, as soon as it is.
+      macHelperMaintenance.runOnceReady(startCore);
     }
     _container.read(initProvider.notifier).value = true;
     unawaited(_container.read(resourcesActionProvider.notifier).autoUpdate());

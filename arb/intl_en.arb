@@ -1934,11 +1934,6 @@
   "macHelperOpenSettings": "Open System Settings",
   "macHelperTryAgain": "Try again",
   "macHelperCheckAgain": "Check again",
-  "macHelperRegisterPending": "Register helper only",
-  "macHelperRepairUnknownOutcome": "The system operation may still be in flight. Do not retry until after restarting the Mac. If Settings cannot open, manually open System Settings → General → Login Items & Extensions.",
-  "macHelperRepairFailedDetail": "Repair did not complete. Check access to the Flash application support directory. If Core stop is unconfirmed, restart the Mac. If it still fails, contact support.",
-  "macHelperExplicitRepairWarning": "The cause is uncertain. Repair unregisters and registers the helper, may interrupt an old Core that is still running, and may require approval again. Core will stay stopped; approve it in System Settings and restart the Mac, then check again. Do not run another version of Flash concurrently.",
-  "macHelperRepairPendingDetail": "Repair is not complete and Core startup is blocked. Restart the Mac, choose Register helper only, then approve it in System Settings and check again. If the registration outcome is unknown, restart the Mac again. If registration failed or verification still fails, reinstall Flash or contact support. Do not run another version concurrently.",
   "macHelperRepair": "Repair",
   "macHelperUnavailableDetail": "The helper isn’t ready, so TUN can’t start yet. Your TUN setting is saved.",
   "trayMultipleNodes": "Multiple nodes",
@@ -1966,7 +1961,6 @@
   "macHelperChecking": "Checking…",
   "macHelperUpdating": "Updating helper…",
   "macHelperMoveDetail": "Move Flash to the Applications folder, then open Flash again.",
-  "macHelperApprovalDetail": "Turn on Flash’s background switch in System Settings.",
   "macHelperMoveTitle": "Move Flash to Applications",
   "macHelperStatusUnknown": "Couldn’t confirm helper status",
   "macHelperCoreUnconfirmed": "Core status unconfirmed",
@@ -1976,7 +1970,7 @@
   "macHelperApprovalTitle": "Allow Flash to run in the background",
   "macHelperApprovalStep1": "Open Login Items & Extensions.",
   "macHelperApprovalStep2": "Under Allow in the Background, find Flash.",
-  "macHelperApprovalStep3": "Turn on the switch next to Flash, then come back to Flash.",
+  "macHelperApprovalStep3": "Turn the switch next to Flash off and on again, then come back to Flash.",
   "macHelperStepLabel": "Step {number}: {text}",
   "@macHelperStepLabel": {
     "placeholders": {
@@ -1991,8 +1985,6 @@
   "macHelperViewDetails": "View details",
   "macHelperSignatureTitle": "The helper didn’t pass the security check",
   "macHelperSignatureDetail": "Flash didn’t run the helper. Download and install Flash again.",
-  "macHelperDisabledTitle": "The helper is turned off",
-  "macHelperDisabledDetail": "In System Settings, go to Login Items & Extensions, turn on Flash’s background switch, then come back to Flash.",
   "macHelperFailedTitle": "The helper update didn’t finish",
   "macHelperFailedStopOld": "Couldn’t stop the old helper. Try again.",
   "macHelperFailedRemoveOld": "Couldn’t remove the old helper. Try again.",
@@ -2529,5 +2521,10 @@
   "mitmExchangeNoResponse": "No response received",
   "mitmExchangeResponseFailed": "Response interrupted",
   "mitmExchangeStopped": "Request stopped because decryption settings changed",
-  "mitmExchangeFailed": "Request did not complete"
+  "mitmExchangeFailed": "Request did not complete",
+  "macHelperAllowInSettings": "In System Settings → Login Items & Extensions, turn the switch next to Flash off and on again, then come back to Flash.",
+  "macHelperNotReadyTitle": "Helper not ready yet",
+  "macHelperRegistrationFailedDetail": "Registration could not be completed for now. See details.",
+  "macHelperStaleCoreDetail": "The old core is not yet confirmed stopped. See details.",
+  "macHelperStatusUnreadable": "The helper status cannot be read right now. See details."
 }

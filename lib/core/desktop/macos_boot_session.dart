@@ -21,9 +21,10 @@ typedef MacBootSysctlByName =
       int,
     );
 
-/// Reads the kernel boot-session UUID. The kern.bootsessionuuid name is not
-/// declared in the public SDK; availability and behavior across a real reboot
-/// must be verified. An unavailable or malformed value always fails closed.
+/// Reads the kernel boot-session UUID. Recorded in the helper repair record as
+/// a diagnostic field only: no decision depends on it (nothing waits for a
+/// reboot). The kern.bootsessionuuid name is not declared in the public SDK;
+/// an unavailable or malformed value throws and is simply not recorded.
 Future<String> readMacBootSession() async {
   if (!Platform.isMacOS) throw UnsupportedError('macOS sysctl required');
   final sysctl = DynamicLibrary.process()

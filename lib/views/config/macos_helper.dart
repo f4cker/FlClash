@@ -30,6 +30,10 @@ enum MacHelperCardKind {
   move,
   unsupported,
   exitUnconfirmed,
+
+  /// The helper did not become ready after a recovery, or old Cores are not
+  /// confirmed stopped: "not ready yet", with the raw text behind details.
+  notReady,
 }
 
 enum MacHelperCardAction {
@@ -38,7 +42,7 @@ enum MacHelperCardAction {
   openSettings,
   recheck,
   repair,
-  registerRepair,
+  recover,
   viewDetails,
 }
 
@@ -80,11 +84,18 @@ MacHelperCardKind macHelperCardKind(MacHelperState state, bool startSlow) =>
     switch (state) {
       MacHelperState.enabled => MacHelperCardKind.ready,
       MacHelperState.migrationRequired => MacHelperCardKind.migration,
+      // The system shows one switch for Flash; its daemon item may be off
+      // while the switch reads on, so both read "turn it off and on again".
       MacHelperState.requiresApproval ||
+      MacHelperState.disabledByUser ||
       MacHelperState.notRegistered => MacHelperCardKind.approval,
-      MacHelperState.disabledByUser => MacHelperCardKind.disabledByUser,
-      MacHelperState.starting || MacHelperState.staleHelper =>
+      MacHelperState.starting ||
+      MacHelperState.staleHelper ||
+      MacHelperState.repairing =>
         startSlow ? MacHelperCardKind.startSlow : MacHelperCardKind.starting,
+      MacHelperState.registrationStale ||
+      MacHelperState.notReady ||
+      MacHelperState.staleCore => MacHelperCardKind.notReady,
       MacHelperState.signatureFailed => MacHelperCardKind.signatureFailed,
       MacHelperState.updateFailed => MacHelperCardKind.updateFailed,
       MacHelperState.reinstallRequired => MacHelperCardKind.reinstall,
@@ -110,35 +121,6 @@ MacHelperCardView macHelperCardView(
   MacHelperMaintenance flow,
 ) {
   final state = flow.state;
-  if (flow.repairError != null && !flow.repairPending) {
-    return MacHelperCardView(
-      kind: MacHelperCardKind.exitUnconfirmed,
-      title: l.macHelperCoreUnconfirmed,
-      detail: l.macHelperRepairFailedDetail,
-      progress: flow.busy ? l.macHelperChecking : null,
-      primary: MacHelperCardAction.recheck,
-      secondary: MacHelperCardAction.viewDetails,
-      rawDetail: flow.repairError,
-    );
-  }
-  if (flow.repairPending) {
-    return MacHelperCardView(
-      kind: MacHelperCardKind.exitUnconfirmed,
-      title: l.macHelperCoreUnconfirmed,
-      detail: flow.explicitRetryAvailable
-          ? l.macHelperRepairFailedDetail
-          : flow.repairError == null
-          ? l.macHelperRepairPendingDetail
-          : flow.client.lastRegistrationSettled
-          ? '${l.macHelperRepairPendingDetail}\n${flow.repairError}'
-          : '${l.macHelperRepairPendingDetail}\n${l.macHelperRepairUnknownOutcome}\n${flow.repairError}',
-      progress: flow.busy ? l.macHelperChecking : null,
-      primary: flow.explicitRetryAvailable
-          ? MacHelperCardAction.repair
-          : MacHelperCardAction.registerRepair,
-      secondary: MacHelperCardAction.openSettings,
-    );
-  }
   if (state == null) {
     return MacHelperCardView(
       kind: MacHelperCardKind.starting,
@@ -153,10 +135,7 @@ MacHelperCardView macHelperCardView(
     MacHelperProgress.opening => l.macHelperChecking,
     MacHelperProgress.idle => null,
   };
-  final raw = [
-    if (flow.failure?.detail.isNotEmpty == true) flow.failure!.detail,
-    if (flow.lastCode != null) 'status: ${flow.lastCode}',
-  ].join('\n');
+  final raw = flow.rawDetail;
   return switch (kind) {
     MacHelperCardKind.ready => MacHelperCardView(
       kind: kind,
@@ -172,37 +151,55 @@ MacHelperCardView macHelperCardView(
     MacHelperCardKind.approval => MacHelperCardView(
       kind: kind,
       title: l.macHelperApprovalTitle,
-      detail: l.macHelperApprovalDetail,
+      detail: l.macHelperAllowInSettings,
       steps: [
         l.macHelperApprovalStep1,
         l.macHelperApprovalStep2,
         l.macHelperApprovalStep3,
       ],
       progress: busyText,
+      // The only thing the user is asked to do; Flash re-checks by itself.
       primary: MacHelperCardAction.openSettings,
-      secondary: MacHelperCardAction.recheck,
     ),
     MacHelperCardKind.disabledByUser => MacHelperCardView(
       kind: kind,
-      title: l.macHelperDisabledTitle,
-      detail: l.macHelperDisabledDetail,
+      title: l.macHelperApprovalTitle,
+      detail: l.macHelperAllowInSettings,
       progress: busyText,
       primary: MacHelperCardAction.openSettings,
-      secondary: MacHelperCardAction.recheck,
     ),
     MacHelperCardKind.starting => MacHelperCardView(
       kind: kind,
-      title: l.macHelperStartingTitle,
+      title:
+          state == MacHelperState.repairing ||
+              flow.progress == MacHelperProgress.updating
+          ? l.macHelperUpdating
+          : l.macHelperStartingTitle,
       detail: l.macHelperStartingDetail,
       progress: l.macHelperStartingTitle,
     ),
+    MacHelperCardKind.notReady => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperNotReadyTitle,
+      detail: state == MacHelperState.staleCore
+          ? l.macHelperStaleCoreDetail
+          : l.macHelperRegistrationFailedDetail,
+      progress: busyText,
+      primary: MacHelperCardAction.recover,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
     MacHelperCardKind.startSlow => MacHelperCardView(
       kind: kind,
-      title: l.macHelperStartSlowTitle,
-      detail: l.macHelperStartSlowDetail,
+      title: state == MacHelperState.unavailable
+          ? l.macHelperNotReadyTitle
+          : l.macHelperStartSlowTitle,
+      detail: state == MacHelperState.unavailable
+          ? l.macHelperStatusUnreadable
+          : l.macHelperStartSlowDetail,
       progress: busyText,
       primary: MacHelperCardAction.recheck,
-      secondary: MacHelperCardAction.repair,
+      secondary: MacHelperCardAction.viewDetails,
       rawDetail: raw,
     ),
     MacHelperCardKind.signatureFailed => MacHelperCardView(
@@ -247,9 +244,10 @@ MacHelperCardView macHelperCardView(
       title: l.macHelperCoreUnconfirmed,
       detail: l.macHelperStatusUnknown,
       progress: busyText,
-      primary: MacHelperCardAction.recheck,
-      // Stops the Core, then retires a stale daemon or registers it again.
-      secondary: MacHelperCardAction.repair,
+      // Stops the Core through the app, then asks the helper again.
+      primary: MacHelperCardAction.repair,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
     ),
   };
 }
@@ -261,7 +259,7 @@ String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
       MacHelperCardAction.openSettings => l.macHelperOpenSettings,
       MacHelperCardAction.recheck => l.macHelperCheckAgain,
       MacHelperCardAction.repair => l.macHelperRepair,
-      MacHelperCardAction.registerRepair => l.macHelperRegisterPending,
+      MacHelperCardAction.recover => l.macHelperTryAgain,
       MacHelperCardAction.viewDetails => l.macHelperViewDetails,
     };
 
@@ -327,6 +325,7 @@ MacHelperBarView? macHelperBarView(
     // A slow start is not called a failure; the user can check again.
     MacHelperCardKind.startSlow ||
     MacHelperCardKind.exitUnconfirmed ||
+    MacHelperCardKind.notReady ||
     MacHelperCardKind.move => (
       MacHelperBarKind.notReady,
       MacHelperBarTone.action,
@@ -400,10 +399,9 @@ void unregisterMacHelperPresenter(MacHelperPresenter presenter) {
 final macHelperMaintenance = MacHelperMaintenance(
   macosHelperClient,
   stop: () => globalState.container.read(coreHandlerProvider).stop(),
-  explicitRepair: () => coreService!.repairMacHelper(confirmed: true),
-  recoverRepair: () => coreService!.recoverMacRepair(),
-  canRetryExplicit: () => coreService!.canRetryMacExplicitRepair(),
-  registerRepair: () => coreService!.registerPendingMacRepair(),
+  recover: () => coreService!.recoverMacHelper(),
+  settleRepair: () => coreService!.settleMacRepair(),
+  repairPending: () => coreService!.macRepairPending(),
   observeLifecycle: true,
 );
 
@@ -465,31 +463,17 @@ class _MacHelperCardState extends State<MacHelperCard> {
         setState(() => _details = false);
         unawaited(flow.migrate(confirmed: true));
       case MacHelperCardAction.openSettings:
-        unawaited(
-          flow.repairPending ? flow.openRepairSettings() : flow.openSettings(),
-        );
+        unawaited(flow.openSettings());
       case MacHelperCardAction.recheck:
         unawaited(flow.recheck());
       case MacHelperCardAction.repair:
         setState(() => _details = false);
-        unawaited(_confirmRepair());
-      case MacHelperCardAction.registerRepair:
-        unawaited(flow.registerPendingRepair());
+        unawaited(flow.repair());
+      case MacHelperCardAction.recover:
+        setState(() => _details = false);
+        unawaited(flow.retryRecovery());
       case MacHelperCardAction.viewDetails:
         setState(() => _details = !_details);
-    }
-  }
-
-  Future<void> _confirmRepair() async {
-    final l = context.appLocalizations;
-    final confirmed = await dialogs.showMessage(
-      context: context,
-      title: l.macHelperRepair,
-      message: TextSpan(text: l.macHelperExplicitRepairWarning),
-      confirmText: l.macHelperRepair,
-    );
-    if (confirmed == true && mounted) {
-      await widget.maintenance.explicitRepair(confirmed: true);
     }
   }
 
@@ -628,19 +612,12 @@ class _MacHelperCardState extends State<MacHelperCard> {
                   onPressed: busy ? null : () => _run(view.primary!),
                   child: Text(macHelperActionLabel(l, view.primary!)),
                 ),
-              if (view.secondary != null)
+              if (view.secondary != null &&
+                  (view.secondary != MacHelperCardAction.viewDetails ||
+                      view.rawDetail?.isNotEmpty == true))
                 TextButton(
                   onPressed: busy ? null : () => _run(view.secondary!),
                   child: Text(macHelperActionLabel(l, view.secondary!)),
-                ),
-              if (view.kind == MacHelperCardKind.startSlow &&
-                  view.rawDetail != null &&
-                  view.rawDetail!.isNotEmpty)
-                TextButton(
-                  onPressed: busy
-                      ? null
-                      : () => _run(MacHelperCardAction.viewDetails),
-                  child: Text(l.macHelperViewDetails),
                 ),
             ],
           ),

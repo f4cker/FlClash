@@ -50,41 +50,40 @@ Future<MacRepairRecord> macRepairRecord() async {
   );
 }
 
+/// Blocks a Core start while a helper recovery has not been settled. A record
+/// that cannot be read blocks too.
 Future<void> requireMacRepairComplete({
   Future<MacRepairRecord> Function() recordFactory = macRepairRecord,
 }) async {
+  bool pending;
   try {
-    if (await (await recordFactory()).isPending()) {
-      throw const MacRepairPendingException();
-    }
-  } on MacRepairPendingException {
-    rethrow;
+    pending = await (await recordFactory()).isPending();
   } catch (error) {
-    throw StateError(
-      'Cannot read the helper repair record; Core startup is blocked. '
-      'Check access to the application support directory and contact support: $error',
-    );
+    throw MacRepairPendingException(error.toString());
   }
+  if (pending) throw const MacRepairPendingException();
 }
 
+/// The helper is being recovered: old Cores are not yet confirmed stopped by
+/// the new helper. Shown only through the helper card ("View details" holds
+/// [detail]); it is never a reason to restart the Mac.
 final class MacRepairPendingException implements Exception {
-  const MacRepairPendingException();
+  final String? detail;
+
+  const MacRepairPendingException([this.detail]);
 
   @override
-  String toString() =>
-      'Helper repair is unfinished and the old Core cannot be verified. '
-      '若已确认辅助程序已重新登记，请重启 Mac 后继续；否则请联系支持。';
+  String toString() => detail == null
+      ? 'MacRepairPendingException'
+      : 'MacRepairPendingException($detail)';
 }
 
-abstract interface class MacRepairVerification {
-  /// A stable identifier for this OS boot, not the application process.
-  Future<String> readBootSession();
-
-  /// Performs fresh signature and peer authentication and verifies that this
-  /// GUI has not launched a Core since that verification.
-  Future<bool> verifyCurrentSignedAuthenticatedHelperAndNoGuiCore();
-}
-
+/// Persisted across app launches: a helper recovery began, so a Core may only
+/// start once the new helper has confirmed that no old Core still runs.
+///
+/// Settling depends only on the helper's answers (signature-checked hello and
+/// its signature-based sweep of old Cores), never on a reboot. A record left by
+/// an earlier build (it carried a boot-session id) is settled the same way.
 final class MacRepairRecord {
   final File file;
   static final Map<String, Future<void>> _operations = {};
@@ -128,46 +127,28 @@ final class MacRepairRecord {
 
   Future<bool> isPending() async {
     await _requireParent();
-    try {
-      final handle = await file.open();
-      try {
-        await handle.read(1);
-      } finally {
-        await handle.close();
-      }
-      return true;
-    } on FileSystemException catch (error) {
-      if (error.osError?.errorCode != 2) rethrow;
-      await _requireParent();
-      final type = await FileSystemEntity.type(file.path, followLinks: false);
-      if (type != FileSystemEntityType.notFound) rethrow;
-      return false;
-    }
+    final type = await FileSystemEntity.type(file.path, followLinks: false);
+    return type != FileSystemEntityType.notFound;
   }
 
-  static String _validBootSession(String session) {
-    if (session.isEmpty || session.trim() != session || session.length > 512) {
-      throw const FormatException('Invalid boot session identifier');
-    }
-    return session;
-  }
-
-  Future<void> markPending({
-    required Future<String> Function() readBootSession,
-  }) {
+  /// Durably records that a recovery begins. [diagnostics] (for example the
+  /// boot session) is informational only and never decides anything.
+  Future<void> markPending({Map<String, Object?> diagnostics = const {}}) {
     return _serialized(() async {
       await _requireParent();
-      final boot = _validBootSession(await readBootSession());
-      final type = await FileSystemEntity.type(file.path, followLinks: false);
-      if (type != FileSystemEntityType.notFound) {
-        throw FileSystemException('Repair record already exists', file.path);
-      }
+      if (await isPending()) return;
       final temp = await file.parent.createTemp('.mac-repair-');
       try {
         final staging = File(p.join(temp.path, 'pending'));
         final handle = await staging.open(mode: FileMode.write);
         try {
-          await handle.writeString(jsonEncode({'version': 1, 'boot': boot}));
+          await handle.writeString(
+            jsonEncode({
+              'version': 2,
+              'started': DateTime.now().toUtc().toIso8601String(),
+              ...diagnostics,
+            }),
+          );
           await handle.flush();
         } finally {
           await handle.close();
@@ -180,240 +161,16 @@ final class MacRepairRecord {
     });
   }
 
-  Future<bool> canRetryExplicit({
-    required Future<String> Function() readBootSession,
-  }) async {
-    await _requireParent();
-    if (await FileSystemEntity.type(file.path, followLinks: false) !=
-        FileSystemEntityType.file) {
-      return false;
-    }
-    final handle = await file.open();
-    final List<int> bytes;
-    try {
-      bytes = await handle.read(4097);
-    } finally {
-      await handle.close();
-    }
-    if (bytes.length > 4096) return false;
-    final value = jsonDecode(utf8.decode(bytes));
-    final boot = _validBootSession(await readBootSession());
-    return value is Map &&
-        value['version'] == 1 &&
-        value['boot'] == boot &&
-        value['registrationBoot'] == null &&
-        value['explicitNotStarted'] == true;
-  }
-
-  // The absence of this flag always means the call may have started. Each
-  // retry first durably removes it, before crossing the native channel.
-  Future<void> setExplicitNotStarted({
-    required bool notStarted,
-    required Future<String> Function() readBootSession,
-  }) => _serialized(() async {
-    await _requireParent();
-    if (await FileSystemEntity.type(file.path, followLinks: false) !=
-        FileSystemEntityType.file) {
-      throw FileSystemException('Invalid repair record', file.path);
-    }
-    final handle = await file.open();
-    final List<int> bytes;
-    try {
-      bytes = await handle.read(4097);
-    } finally {
-      await handle.close();
-    }
-    if (bytes.length > 4096) {
-      throw const FormatException('Invalid repair record');
-    }
-    final value = jsonDecode(utf8.decode(bytes));
-    final boot = _validBootSession(await readBootSession());
-    if (value is! Map ||
-        value['version'] != 1 ||
-        value['boot'] != boot ||
-        value['registrationBoot'] != null ||
-        (!notStarted && value['explicitNotStarted'] != true) ||
-        (notStarted && value['explicitNotStarted'] != null)) {
-      throw const FormatException('Invalid explicit repair state');
-    }
-    final temp = await file.parent.createTemp('.mac-repair-');
-    try {
-      final staging = File(p.join(temp.path, 'pending'));
-      final output = await staging.open(mode: FileMode.write);
-      try {
-        await output.writeString(
-          jsonEncode({
-            'version': 1,
-            'boot': boot,
-            if (notStarted) 'explicitNotStarted': true,
-          }),
-        );
-        await output.flush();
-      } finally {
-        await output.close();
-      }
-      await staging.rename(file.path);
-      await _syncParents();
-    } finally {
-      await temp.delete(recursive: true);
-    }
-  });
-
-  // A new process cannot know whether an earlier system registration returned.
-  Future<void> markRegistrationAttemptAfterReboot({
-    required Future<String> Function() readBootSession,
-  }) => _serialized(() async {
-    await _requireParent();
-    if (await FileSystemEntity.type(file.path, followLinks: false) !=
-        FileSystemEntityType.file) {
-      throw FileSystemException('Invalid repair record', file.path);
-    }
-    final handle = await file.open();
-    final List<int> bytes;
-    try {
-      bytes = await handle.read(4097);
-    } finally {
-      await handle.close();
-    }
-    if (bytes.length > 4096) {
-      throw const FormatException('Invalid repair record');
-    }
-    final value = jsonDecode(utf8.decode(bytes));
-    if (value is! Map ||
-        value['version'] != 1 ||
-        value['boot'] is! String ||
-        (value['registrationBoot'] != null &&
-            value['registrationBoot'] is! String)) {
-      throw const FormatException('Invalid repair record');
-    }
-    final oldBoot = _validBootSession(value['boot'] as String);
-    final currentBoot = _validBootSession(await readBootSession());
-    if (oldBoot == currentBoot ||
-        (value['registrationBoot'] == currentBoot &&
-            value['registrationSettledBoot'] != currentBoot)) {
-      throw StateError(
-        'Registration outcome may still be in flight; restart the Mac before trying again',
-      );
-    }
-    final temp = await file.parent.createTemp('.mac-repair-');
-    try {
-      final staging = File(p.join(temp.path, 'pending'));
-      final output = await staging.open(mode: FileMode.write);
-      try {
-        await output.writeString(
-          jsonEncode({
-            'version': 1,
-            'boot': oldBoot,
-            'registrationBoot': currentBoot,
-          }),
-        );
-        await output.flush();
-      } finally {
-        await output.close();
-      }
-      await staging.rename(file.path);
-      await _syncParents();
-    } finally {
-      await temp.delete(recursive: true);
-    }
-  });
-
-  Future<void> markRegistrationSettled({
-    required Future<String> Function() readBootSession,
-  }) => _serialized(() async {
-    await _requireParent();
-    if (await FileSystemEntity.type(file.path, followLinks: false) !=
-        FileSystemEntityType.file) {
-      throw FileSystemException('Invalid repair record', file.path);
-    }
-    final handle = await file.open();
-    final List<int> bytes;
-    try {
-      bytes = await handle.read(4097);
-    } finally {
-      await handle.close();
-    }
-    if (bytes.length > 4096) {
-      throw const FormatException('Invalid repair record');
-    }
-    final value = jsonDecode(utf8.decode(bytes));
-    final boot = _validBootSession(await readBootSession());
-    if (value is! Map ||
-        value['version'] != 1 ||
-        value['boot'] is! String ||
-        value['registrationBoot'] != boot ||
-        value['boot'] == boot) {
-      throw const FormatException('Invalid registration attempt');
-    }
-    final temp = await file.parent.createTemp('.mac-repair-');
-    try {
-      final staging = File(p.join(temp.path, 'pending'));
-      final output = await staging.open(mode: FileMode.write);
-      try {
-        await output.writeString(
-          jsonEncode({
-            'version': 1,
-            'boot': _validBootSession(value['boot'] as String),
-            'registrationBoot': boot,
-            'registrationSettledBoot': boot,
-          }),
-        );
-        await output.flush();
-      } finally {
-        await output.close();
-      }
-      await staging.rename(file.path);
-      await _syncParents();
-    } finally {
-      await temp.delete(recursive: true);
-    }
-  });
-
-  Future<bool> clearAfterVerifiedReboot({
-    required MacRepairVerification verification,
-  }) {
+  /// Removes the record once [confirmed] (run inside the serialization)
+  /// reports that the new helper answered and no old Core runs.
+  Future<bool> clearIf(Future<bool> Function() confirmed) {
     return _serialized(() async {
       await _requireParent();
+      if (!await isPending()) return true;
+      if (!await confirmed()) return false;
       final type = await FileSystemEntity.type(file.path, followLinks: false);
-      if (type == FileSystemEntityType.notFound) {
-        if (await isPending()) throw StateError('Repair record changed');
-        return false;
-      }
-      if (type != FileSystemEntityType.file) {
+      if (type == FileSystemEntityType.directory) {
         throw FileSystemException('Invalid repair record', file.path);
-      }
-      final handle = await file.open();
-      final List<int> bytes;
-      try {
-        bytes = await handle.read(4097);
-      } finally {
-        await handle.close();
-      }
-      if (bytes.length > 4096) {
-        throw const FormatException('Invalid repair record');
-      }
-      final value = jsonDecode(utf8.decode(bytes));
-      if (value is! Map ||
-          value['version'] != 1 ||
-          value['boot'] is! String ||
-          (value['registrationBoot'] != null &&
-              value['registrationBoot'] is! String) ||
-          (value['registrationSettledBoot'] != null &&
-              value['registrationSettledBoot'] is! String)) {
-        throw const FormatException('Invalid repair record');
-      }
-      final oldBoot = _validBootSession(value['boot'] as String);
-      final currentBoot = _validBootSession(
-        await verification.readBootSession(),
-      );
-      if (oldBoot == currentBoot ||
-          (value['registrationBoot'] == currentBoot &&
-              value['registrationSettledBoot'] != currentBoot)) {
-        return false;
-      }
-      if (!await verification
-          .verifyCurrentSignedAuthenticatedHelperAndNoGuiCore()) {
-        return false;
       }
       await file.delete();
       await _syncParents();

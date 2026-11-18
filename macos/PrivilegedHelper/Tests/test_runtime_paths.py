@@ -127,8 +127,9 @@ class RuntimePathTests(unittest.TestCase):
     def test_persistent_journal_uncertainty_is_not_reset_blindly(self):
         init = function(SUPERVISOR, '- (instancetype)init')
         self.assertIn('lstat(journal.fileSystemRepresentation, &state) == 0 || errno != ENOENT', init)
-        # The journal is released only after proving no Core copy from our runtime directory survives.
-        self.assertLess(init.index('FCReapOrphanedCores(FCRuntimeDirectory)'), init.index('unlink(journal'))
+        # The journal is released only after every Flash Core, found by signature, is stopped and confirmed gone.
+        self.assertLess(init.index('_lastSweep = FCRetireFlashCores(0);'), init.index('unlink(journal'))
+        self.assertIn('[_lastSweep[@"outcome"] isEqual:@"unconfirmed"]', init)
         self.assertIn('if (_ownershipUncertain) _child = -1;', init)
 
     def test_daemon_refuses_before_serving(self):

@@ -5329,25 +5329,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperCheckAgain => '重新检查';
 
   @override
-  String get macHelperRegisterPending => '仅重新登记';
-
-  @override
-  String get macHelperRepairUnknownOutcome =>
-      '系统操作结果可能仍未知。请勿反复尝试；重启 Mac 后再尝试登记。如无法打开设置，请手动打开系统设置 → 通用 → 登录项与扩展。';
-
-  @override
-  String get macHelperRepairFailedDetail =>
-      '修复未完成。请检查 Flash 应用支持目录的访问权限；如果 Core 停止状态不明，请重启 Mac。若仍失败，请联系支持。';
-
-  @override
-  String get macHelperExplicitRepairWarning =>
-      '原因尚不确定。修复将注销并重新登记辅助程序，可能中断仍在运行的旧 Core，系统可能要求重新批准。修复后暂不启动 Core；请在系统设置批准并重启 Mac，然后重新检查。仅适用于未并行运行其他版本的 Flash。';
-
-  @override
-  String get macHelperRepairPendingDetail =>
-      '修复尚未完成，Core 已阻止启动。请先重启 Mac，选择“仅重新登记”，然后在系统设置批准辅助程序并检查；如登记结果未知，请再次重启 Mac。若重新登记失败或仍无法验证，请重新安装 Flash 或联系支持。不要同时运行其他版本。';
-
-  @override
   String get macHelperRepair => '尝试修复';
 
   @override
@@ -5439,9 +5420,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperMoveDetail => '请将 Flash 移到“应用程序”文件夹，然后重新打开 Flash。';
 
   @override
-  String get macHelperApprovalDetail => '在系统设置中打开 Flash 的后台运行开关。';
-
-  @override
   String get macHelperMoveTitle => '请将 Flash 移到“应用程序”';
 
   @override
@@ -5469,7 +5447,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperApprovalStep2 => '在“允许在后台”中找到 Flash。';
 
   @override
-  String get macHelperApprovalStep3 => '打开 Flash 旁边的开关，然后返回 Flash。';
+  String get macHelperApprovalStep3 => '把 Flash 旁边的开关关掉再打开，然后返回 Flash。';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -5496,13 +5474,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get macHelperSignatureDetail => 'Flash 未运行辅助程序。请重新下载安装 Flash。';
-
-  @override
-  String get macHelperDisabledTitle => '辅助程序已关闭';
-
-  @override
-  String get macHelperDisabledDetail =>
-      '请在系统设置的“登录项与扩展”中，打开 Flash 的后台运行开关，然后返回 Flash。';
 
   @override
   String get macHelperFailedTitle => '辅助程序更新未完成';
@@ -5550,7 +5521,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperBarAllow => '允许辅助程序';
 
   @override
-  String get macHelperWaitingCore => '等待辅助程序就绪';
+  String get macHelperWaitingCore => '等待辅助程序';
 
   @override
   String get macHelperBarStarting => '正在启动…';
@@ -6420,4 +6391,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmExchangeFailed => '请求未完成';
+
+  @override
+  String get macHelperAllowInSettings =>
+      '请在系统设置的“登录项与扩展”里，把 Flash 的开关关掉再打开，然后返回 Flash。';
+
+  @override
+  String get macHelperNotReadyTitle => '辅助程序暂未就绪';
+
+  @override
+  String get macHelperRegistrationFailedDetail => '暂时无法完成登记，请查看详情。';
+
+  @override
+  String get macHelperStaleCoreDetail => '旧内核尚未确认停止，请查看详情。';
+
+  @override
+  String get macHelperStatusUnreadable => '暂时无法读取辅助程序状态，请查看详情。';
 }

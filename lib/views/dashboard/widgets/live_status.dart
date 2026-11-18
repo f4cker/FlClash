@@ -167,7 +167,10 @@ class LiveStatusButton extends ConsumerWidget {
       alignment: Alignment.centerRight,
       child: switch (top) {
         null => const SizedBox.shrink(),
-        CoreLiveStatus(phase: CoreStatus.disconnected)
+        // Stopped, or a start that can only wait for the helper: a static
+        // "Waiting for helper" button, never a spinner that runs (and wakes
+        // the app every frame) for as long as the helper is not ready.
+        CoreLiveStatus(phase: CoreStatus.disconnected || CoreStatus.connecting)
             when waitingFor != null =>
           _WaitingCoreButton(
             key: const ValueKey(MacHelperState),

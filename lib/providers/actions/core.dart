@@ -29,9 +29,20 @@ class CoreAction extends _$CoreAction {
       await _applyLifecycleResult(result);
     } catch (error) {
       ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+      // The helper is not ready (or is being recovered): its card says why and
+      // holds the raw text; no banner, just check the helper again.
+      if (isMacHelperStartFailure(error)) {
+        if (usesManagedMacHelper && !macHelperMaintenance.busy) {
+          unawaited(macHelperMaintenance.check());
+        }
+        return;
+      }
       dialogs.showBanner(error.toString(), level: BannerLevel.error);
     }
   }
+
+  @protected
+  bool get usesManagedMacHelper => system.isMacOS && macosManagedHelperBuild;
 
   @protected
   Future<CoreLifecycleResult> startLifecycle() {

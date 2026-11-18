@@ -56,6 +56,7 @@ static NSString *FCRunningHash(void) {
 @property NSData *coreToken;
 @property BOOL ownershipUncertain;
 @property BOOL journalOwned;
+@property NSDictionary *lastSweep;
 @property NSUInteger connections;
 @property dispatch_source_t idle;
 - (void)accept:(xpc_connection_t)connection;
@@ -69,11 +70,12 @@ static NSString *FCRunningHash(void) {
         _incoming = [NSMutableData data];
         _runningHash = FCRunningHash();
         NSString *journal = [FCRuntimeDirectory stringByAppendingPathComponent:@"child-owned"];
+        // No Core of this daemon runs yet, so any running Flash Core is left over from an earlier daemon or
+        // app build. Stop it while its staged copy still exists, so its signature can still be checked.
+        _lastSweep = FCRetireFlashCores(0);
         struct stat state;
         if (lstat(journal.fileSystemRepresentation, &state) == 0 || errno != ENOENT) {
-            // A previous daemon instance owned a Core. launchd normally kills the job's process group with it;
-            // verify that no Core copy from our runtime directory survives before the journal is released.
-            _ownershipUncertain = !FCReapOrphanedCores(FCRuntimeDirectory) ||
+            _ownershipUncertain = [_lastSweep[@"outcome"] isEqual:@"unconfirmed"] ||
                 (unlink(journal.fileSystemRepresentation) && errno != ENOENT);
             if (_ownershipUncertain) _child = -1;
         }
@@ -104,7 +106,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 }
 
 - (void)reply:(xpc_object_t)request code:(NSString *)code pid:(pid_t)pid frame:(NSData *)frame
-    coreToken:(NSData *)coreToken {
+    coreToken:(NSData *)coreToken sweep:(NSDictionary *)sweep {
     xpc_object_t reply = xpc_dictionary_create_reply(request);
     if (!reply) return;
     xpc_dictionary_set_string(reply, "code", code.UTF8String);
@@ -125,6 +127,10 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     }
     if (frame) xpc_dictionary_set_data(reply, "frame", frame.bytes, frame.length);
     if (coreToken) xpc_dictionary_set_data(reply, "coreAuditToken", coreToken.bytes, coreToken.length);
+    if (sweep) {
+        xpc_dictionary_set_string(reply, "reason", [sweep[@"reason"] UTF8String] ?: "");
+        xpc_dictionary_set_int64(reply, "stopped", [sweep[@"stopped"] longLongValue]);
+    }
     xpc_connection_send_message(xpc_dictionary_get_remote_connection(request), reply);
 }
 
@@ -145,12 +151,13 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     return synced;
 }
 
-// While ownership is uncertain a Core copy from our runtime directory may still run. Retried on every
-// hello/start/stop/exit and on idle: check that none survives, release the journal, and
-// only then accept work again. Fails closed: any doubt keeps the flag.
+// While ownership is uncertain a Core of ours may still run. Retried on every hello/start/stop/exit and on
+// idle: stop every Flash Core, confirm none survives, release the journal, and only then accept work again.
+// Fails closed: any doubt keeps the flag.
 - (BOOL)recoverOwnership {
     if (!self.ownershipUncertain) return YES;
-    if (!FCReapOrphanedCores(FCRuntimeDirectory)) return NO;
+    self.lastSweep = FCRetireFlashCores(0);
+    if ([self.lastSweep[@"outcome"] isEqual:@"unconfirmed"]) return NO;
     NSString *journal = [FCRuntimeDirectory stringByAppendingPathComponent:@"child-owned"];
     if (unlink(journal.fileSystemRepresentation)) {
         if (errno != ENOENT) return NO;
@@ -303,6 +310,20 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     return @"ok";
 }
 
+// Old Cores are stopped by the daemon itself: identified by signature, never by path, and the Core this
+// daemon runs now is kept.
+- (NSString *)retireCores:(NSDictionary **)sweep {
+    if (![self selfCheck]) return @"selfCheckFailed";
+    if (self.ownershipUncertain) {
+        *sweep = self.lastSweep;
+        return @"staleCoreUnconfirmed";
+    }
+    *sweep = self.lastSweep = FCRetireFlashCores(self.child > 0 ? self.child : 0);
+    NSString *outcome = (*sweep)[@"outcome"];
+    return [outcome isEqual:@"none"] ? @"noStaleCore" : [outcome isEqual:@"stopped"] ? @"staleCoreStopped" :
+        @"staleCoreUnconfirmed";
+}
+
 - (NSString *)send:(NSData *)frame {
     if (self.socket < 0 || frame.length > FCMaxFrame) return @"disconnected";
     uint32_t size = CFSwapInt32HostToLittle((uint32_t)frame.length);
@@ -361,12 +382,13 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     const char *rawSession = xpc_dictionary_get_string(request, "session");
     if (!method || strlen(method) > 32 || (rawSession && strlen(rawSession) > 32) ||
         xpc_dictionary_get_int64(request, "protocol") != 1) {
-        [self reply:request code:@"incompatible" pid:0 frame:nil coreToken:nil]; return;
+        [self reply:request code:@"incompatible" pid:0 frame:nil coreToken:nil sweep:nil]; return;
     }
     NSString *action = @(method);
     NSString *session = rawSession ? @(rawSession) : @"";
     NSString *code = @"invalidRequest";
     NSData *frame = nil;
+    NSDictionary *sweep = nil;
     if (self.ownershipUncertain && ![action isEqualToString:@"send"] && ![action isEqualToString:@"receive"])
         [self recoverOwnership];
     BOOL matching = FCOwnsSession((__bridge void *)self.owner, (__bridge void *)connection,
@@ -376,6 +398,8 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     } else if ([action isEqualToString:@"start"]) {
         if (FCValidSession(rawSession))
             code = [self start:request connection:connection session:session];
+    } else if ([action isEqualToString:@"retireCores"]) {
+        code = [self retireCores:&sweep];
     } else if ([action isEqualToString:@"exit"]) {
         // Lets the GUI retire a stale daemon after an app update; refused while a Core is owned.
         code = self.child == 0 && !self.ownershipUncertain ? @"ok" : @"sessionBusy";
@@ -392,7 +416,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
         if (data && length <= FCMaxFrame) code = [self send:[NSData dataWithBytes:data length:length]];
     }
     [self reply:request code:code pid:self.child frame:frame
-        coreToken:FCRepliesWithCoreToken(action, code) ? self.coreToken : nil];
+        coreToken:FCRepliesWithCoreToken(action, code) ? self.coreToken : nil sweep:sweep];
     if ([code isEqualToString:@"selfCheckFailed"] ||
         ([action isEqualToString:@"exit"] && [code isEqualToString:@"ok"])) {
         int status = [code isEqualToString:@"ok"] ? 0 : EX_CONFIG;

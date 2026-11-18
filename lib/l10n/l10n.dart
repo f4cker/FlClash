@@ -9828,36 +9828,6 @@ abstract class AppLocalizations {
   /// **'Check again'**
   String get macHelperCheckAgain;
 
-  /// No description provided for @macHelperRegisterPending.
-  ///
-  /// In en, this message translates to:
-  /// **'Register helper only'**
-  String get macHelperRegisterPending;
-
-  /// No description provided for @macHelperRepairUnknownOutcome.
-  ///
-  /// In en, this message translates to:
-  /// **'The system operation may still be in flight. Do not retry until after restarting the Mac. If Settings cannot open, manually open System Settings → General → Login Items & Extensions.'**
-  String get macHelperRepairUnknownOutcome;
-
-  /// No description provided for @macHelperRepairFailedDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Repair did not complete. Check access to the Flash application support directory. If Core stop is unconfirmed, restart the Mac. If it still fails, contact support.'**
-  String get macHelperRepairFailedDetail;
-
-  /// No description provided for @macHelperExplicitRepairWarning.
-  ///
-  /// In en, this message translates to:
-  /// **'The cause is uncertain. Repair unregisters and registers the helper, may interrupt an old Core that is still running, and may require approval again. Core will stay stopped; approve it in System Settings and restart the Mac, then check again. Do not run another version of Flash concurrently.'**
-  String get macHelperExplicitRepairWarning;
-
-  /// No description provided for @macHelperRepairPendingDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Repair is not complete and Core startup is blocked. Restart the Mac, choose Register helper only, then approve it in System Settings and check again. If the registration outcome is unknown, restart the Mac again. If registration failed or verification still fails, reinstall Flash or contact support. Do not run another version concurrently.'**
-  String get macHelperRepairPendingDetail;
-
   /// No description provided for @macHelperRepair.
   ///
   /// In en, this message translates to:
@@ -10020,12 +9990,6 @@ abstract class AppLocalizations {
   /// **'Move Flash to the Applications folder, then open Flash again.'**
   String get macHelperMoveDetail;
 
-  /// No description provided for @macHelperApprovalDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Turn on Flash’s background switch in System Settings.'**
-  String get macHelperApprovalDetail;
-
   /// No description provided for @macHelperMoveTitle.
   ///
   /// In en, this message translates to:
@@ -10083,7 +10047,7 @@ abstract class AppLocalizations {
   /// No description provided for @macHelperApprovalStep3.
   ///
   /// In en, this message translates to:
-  /// **'Turn on the switch next to Flash, then come back to Flash.'**
+  /// **'Turn the switch next to Flash off and on again, then come back to Flash.'**
   String get macHelperApprovalStep3;
 
   /// No description provided for @macHelperStepLabel.
@@ -10133,18 +10097,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Flash didn’t run the helper. Download and install Flash again.'**
   String get macHelperSignatureDetail;
-
-  /// No description provided for @macHelperDisabledTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'The helper is turned off'**
-  String get macHelperDisabledTitle;
-
-  /// No description provided for @macHelperDisabledDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'In System Settings, go to Login Items & Extensions, turn on Flash’s background switch, then come back to Flash.'**
-  String get macHelperDisabledDetail;
 
   /// No description provided for @macHelperFailedTitle.
   ///
@@ -11752,6 +11704,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Request did not complete'**
   String get mitmExchangeFailed;
+
+  /// No description provided for @macHelperAllowInSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'In System Settings → Login Items & Extensions, turn the switch next to Flash off and on again, then come back to Flash.'**
+  String get macHelperAllowInSettings;
+
+  /// No description provided for @macHelperNotReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper not ready yet'**
+  String get macHelperNotReadyTitle;
+
+  /// No description provided for @macHelperRegistrationFailedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration could not be completed for now. See details.'**
+  String get macHelperRegistrationFailedDetail;
+
+  /// No description provided for @macHelperStaleCoreDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The old core is not yet confirmed stopped. See details.'**
+  String get macHelperStaleCoreDetail;
+
+  /// No description provided for @macHelperStatusUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper status cannot be read right now. See details.'**
+  String get macHelperStatusUnreadable;
 }
 
 class _AppLocalizationsDelegate

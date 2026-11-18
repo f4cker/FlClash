@@ -3,25 +3,34 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import 'macos_helper_client.dart';
+import 'macos_repair_record.dart';
 import 'model.dart';
 
 enum MacHelperProgress { idle, checking, updating, opening }
 
 /// Drives the single "Helper" card: one operation at a time, a bounded
 /// start-up wait, and a re-check when the user returns from System Settings.
+///
+/// It also recovers a stale registration without the user: when the helper
+/// reports that launchd cannot start this build (`registrationStale`), the app
+/// stops its Core and re-registers the daemon, at most [maxAutoRecoveries]
+/// times per launch; later attempts come from the card's button. Re-adding a
+/// daemon needs the user to allow it once in System Settings, which is the
+/// only thing the user is asked to do. Once the helper answers, a pending
+/// recovery is settled by the helper's own sweep of old Cores.
 final class MacHelperMaintenance extends ChangeNotifier {
   final MacHelperClient client;
   final Future<CoreLifecycleResult> Function() _stop;
-  final Future<String> Function()? _explicitRepair;
-  final Future<bool> Function()? _recoverRepair;
-  final Future<String> Function()? _registerRepair;
-  final Future<bool> Function()? _canRetryExplicit;
-  bool _explicitRetryAvailable = false;
-  bool _repairPending = false;
-  String? _repairError;
+  final Future<MacHelperState> Function()? _recover;
+  final Future<bool> Function()? _settleRepair;
+  final Future<bool> Function()? _repairIsPending;
   final Duration startTimeout;
   final Duration startPoll;
   final Duration stalePoll;
+  final Duration approvalPoll;
+  final int maxApprovalPolls;
+  final Duration recoveryRetryDelay;
+  final int maxAutoRecoveries;
   Future<MacHelperState>? _operation;
   MacHelperState? _state;
   MacHelperProgress _progress = MacHelperProgress.idle;
@@ -30,36 +39,47 @@ final class MacHelperMaintenance extends ChangeNotifier {
   bool _startSlow = false;
   bool _resumeCheckPending = false;
   bool _resumeChecking = false;
+  bool _repairPending = false;
+  int _autoRecoveries = 0;
+  int _approvalPolls = 0;
+  String? _repairDetail;
+  final List<Future<void> Function()> _onReady = [];
   AppLifecycleListener? _lifecycle;
   Timer? _startTimer;
   Timer? _pollTimer;
+  Timer? _approvalTimer;
   bool _disposed = false;
 
   MacHelperMaintenance(
     this.client, {
     required Future<CoreLifecycleResult> Function() stop,
-    Future<String> Function()? explicitRepair,
-    Future<bool> Function()? recoverRepair,
-    Future<String> Function()? registerRepair,
-    Future<bool> Function()? canRetryExplicit,
+    Future<MacHelperState> Function()? recover,
+    Future<bool> Function()? settleRepair,
+    Future<bool> Function()? repairPending,
     this.startTimeout = const Duration(seconds: 10),
     this.startPoll = const Duration(seconds: 2),
     this.stalePoll = const Duration(seconds: 42),
+    this.approvalPoll = const Duration(seconds: 2),
+    this.maxApprovalPolls = 90,
+    this.recoveryRetryDelay = const Duration(seconds: 2),
+    this.maxAutoRecoveries = 2,
     bool observeLifecycle = false,
   }) : _stop = stop,
-       _explicitRepair = explicitRepair,
-       _recoverRepair = recoverRepair,
-       _registerRepair = registerRepair,
-       _canRetryExplicit = canRetryExplicit {
+       _recover = recover,
+       _settleRepair = settleRepair,
+       _repairIsPending = repairPending {
     if (observeLifecycle) _lifecycle = AppLifecycleListener(onResume: resumed);
   }
 
   MacHelperState? get state => _state;
   MacHelperProgress get progress => _progress;
   bool get busy => _operation != null;
+
+  /// A recovery is not settled yet; Core starts stay blocked.
   bool get repairPending => _repairPending;
-  bool get explicitRetryAvailable => _explicitRetryAvailable;
-  String? get repairError => _repairError;
+
+  /// Automatic recoveries used in this launch.
+  int get autoRecoveries => _autoRecoveries;
 
   /// The start-up wait exceeded [startTimeout]. This is not a failure: the
   /// daemon may still come up, so the card offers "Check again".
@@ -70,12 +90,31 @@ final class MacHelperMaintenance extends ChangeNotifier {
   MacHelperFailure? get failure => client.failure;
   String? get lastCode => client.lastCode;
 
+  /// Copyable raw text for "View details"; never shown elsewhere.
+  String get rawDetail => [
+    if (client.lastDetail?.isNotEmpty == true) client.lastDetail!,
+    if (failure?.detail.isNotEmpty == true) failure!.detail,
+    if (_repairDetail?.isNotEmpty == true) _repairDetail!,
+    if (lastCode != null) 'status: $lastCode',
+  ].join('\n');
+
   bool get needsApproval => switch (_state) {
     MacHelperState.requiresApproval ||
     MacHelperState.disabledByUser ||
     MacHelperState.notRegistered => true,
     _ => false,
   };
+
+  /// Runs [action] once, the first time a check ends with the helper ready
+  /// and no recovery pending (for example the Core start that was skipped at
+  /// launch because the helper was not ready).
+  void runOnceReady(Future<void> Function() action) {
+    if (_state == MacHelperState.enabled && !busy && !_repairPending) {
+      unawaited(action());
+      return;
+    }
+    _onReady.add(action);
+  }
 
   Future<MacHelperState> _singleFlight(
     MacHelperProgress progress,
@@ -90,7 +129,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
     unawaited(() async {
       try {
         _setState(await action());
-      } catch (_) {
+      } catch (error) {
+        _repairDetail = _describe(error);
         _setState(MacHelperState.unavailable);
       }
       final initialState = _state!;
@@ -99,7 +139,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
         _resumeChecking = true;
         try {
           _setState(await _status());
-        } catch (_) {
+        } catch (error) {
+          _repairDetail = _describe(error);
           _setState(MacHelperState.unavailable);
         } finally {
           _resumeChecking = false;
@@ -115,6 +156,16 @@ final class MacHelperMaintenance extends ChangeNotifier {
             : _state!,
       );
       _notify();
+      if (_state == MacHelperState.enabled &&
+          !_repairPending &&
+          _onReady.isNotEmpty &&
+          !_disposed) {
+        final ready = List.of(_onReady);
+        _onReady.clear();
+        for (final action in ready) {
+          unawaited(action());
+        }
+      }
     }());
     return completion.future;
   }
@@ -123,10 +174,16 @@ final class MacHelperMaintenance extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  /// Raw text of an error for "View details" only.
+  static String _describe(Object error) => error.toString();
+
   void _setState(MacHelperState next) {
     _state = next;
+    _scheduleApprovalPoll();
     final waiting =
-        next == MacHelperState.starting || next == MacHelperState.staleHelper;
+        next == MacHelperState.starting ||
+        next == MacHelperState.staleHelper ||
+        next == MacHelperState.repairing;
     if (!waiting) {
       _startTimer?.cancel();
       _startTimer = null;
@@ -146,6 +203,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
     if (next == MacHelperState.staleHelper) {
       _scheduleStalePoll();
     } else if (!_startSlow) {
+      // Polls only inside the bounded start-up window; afterwards the card
+      // waits for the user (or the app returning to the foreground).
       _pollTimer = Timer(startPoll, () {
         _pollTimer = null;
         if (!busy && !_startSlow) unawaited(check());
@@ -160,21 +219,92 @@ final class MacHelperMaintenance extends ChangeNotifier {
     });
   }
 
-  Future<MacHelperState> _status() async {
-    if (_recoverRepair != null) {
-      try {
-        _repairPending = await _recoverRepair();
-      } catch (_) {
-        _repairPending = true;
-      }
-      if (_repairPending) {
-        await _updateExplicitRetry();
-        return MacHelperState.exitUnconfirmed;
-      }
-      _explicitRetryAvailable = false;
-      _repairError = null;
+  /// Only after the user opened System Settings (and until Flash is active
+  /// again, which re-checks by itself), read SMAppService.status every
+  /// [approvalPoll], at most [maxApprovalPolls] times; once it reads enabled,
+  /// a full check (trust gate and authenticated hello) continues by itself.
+  /// Nothing polls while the card merely shows the approval step.
+  void _scheduleApprovalPoll() {
+    final registered =
+        _state == MacHelperState.requiresApproval ||
+        _state == MacHelperState.disabledByUser;
+    if (!registered ||
+        !_awaitingSettings ||
+        _approvalPolls >= maxApprovalPolls ||
+        _disposed) {
+      _approvalTimer?.cancel();
+      _approvalTimer = null;
+      return;
     }
-    final next = await client.status();
+    _approvalTimer ??= Timer(approvalPoll, () async {
+      _approvalTimer = null;
+      _approvalPolls++;
+      if (_disposed || busy) {
+        _scheduleApprovalPoll();
+        return;
+      }
+      final system = await client.approvalStatus();
+      if (_disposed) return;
+      if (system == MacHelperState.enabled && !busy) {
+        unawaited(check());
+      } else {
+        _scheduleApprovalPoll();
+      }
+    });
+  }
+
+  Future<MacHelperState> _status() async {
+    var next = await client.status();
+    if (next == MacHelperState.registrationStale) {
+      next = await _recoverWithinBudget(automatic: true);
+    }
+    return _settle(next);
+  }
+
+  /// One recovery, repeated while the system keeps reporting a stale
+  /// registration and the automatic budget allows. Each automatic attempt
+  /// (and every repeat) counts; a repeat waits [recoveryRetryDelay].
+  Future<MacHelperState> _recoverWithinBudget({required bool automatic}) async {
+    final recover = _recover;
+    if (recover == null) return MacHelperState.registrationStale;
+    var next = MacHelperState.registrationStale;
+    var first = true;
+    while (next == MacHelperState.registrationStale) {
+      if (automatic || !first) {
+        if (_autoRecoveries >= maxAutoRecoveries) break;
+        _autoRecoveries++;
+      }
+      if (!first) await Future<void>.delayed(recoveryRetryDelay);
+      first = false;
+      _progress = MacHelperProgress.updating;
+      _notify();
+      try {
+        next = await recover();
+      } catch (error) {
+        _repairDetail = _describe(error);
+        return MacHelperState.notReady;
+      }
+    }
+    return next;
+  }
+
+  /// A pending recovery is settled only when the helper is ready: it stops
+  /// every old Core it finds by signature and confirms they exited.
+  Future<MacHelperState> _settle(MacHelperState next) async {
+    final settle = _settleRepair;
+    if (settle != null) {
+      try {
+        _repairPending = next == MacHelperState.enabled
+            ? await settle()
+            : await (_repairIsPending?.call() ?? Future.value(false));
+      } catch (error) {
+        _repairPending = true;
+        _repairDetail = _describe(error);
+      }
+      if (next == MacHelperState.enabled && _repairPending) {
+        return MacHelperState.staleCore;
+      }
+    }
     return _stopUnknown ? MacHelperState.exitUnconfirmed : next;
   }
 
@@ -189,6 +319,22 @@ final class MacHelperMaintenance extends ChangeNotifier {
       _startSlow = false;
     }
     return check();
+  }
+
+  /// The card's button after the helper did not become ready: one more
+  /// recovery (re-registration), whatever the automatic budget says.
+  Future<MacHelperState> retryRecovery() {
+    return _singleFlight(MacHelperProgress.updating, () async {
+      _repairDetail = null;
+      var next = await client.status();
+      if (next == MacHelperState.registrationStale ||
+          next == MacHelperState.notReady ||
+          next == MacHelperState.starting ||
+          next == MacHelperState.staleHelper) {
+        next = await _recoverWithinBudget(automatic: false);
+      }
+      return _settle(next);
+    });
   }
 
   /// Remove the old helper (administrator prompt) and register the daemon.
@@ -217,7 +363,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
   /// the app, then re-check the native state.
   Future<MacHelperState> repair() {
     return _singleFlight(MacHelperProgress.updating, () async {
-      return client.maintain(() async {
+      final next = await client.maintain(() async {
         try {
           final stopped = await _stop();
           if (stopped.outcome != CoreLifecycleOutcome.superseded &&
@@ -227,72 +373,10 @@ final class MacHelperMaintenance extends ChangeNotifier {
         } catch (_) {
           // The native repair still runs; the daemon answers for the Core.
         }
-        final next = await client.repair();
-        return _stopUnknown ? MacHelperState.exitUnconfirmed : next;
+        return client.repair();
       });
+      return _settle(next);
     });
-  }
-
-  Future<void> _updateExplicitRetry() async {
-    try {
-      _explicitRetryAvailable =
-          _repairPending &&
-          _canRetryExplicit != null &&
-          await _canRetryExplicit();
-    } catch (_) {
-      _explicitRetryAvailable = false;
-    }
-  }
-
-  Future<MacHelperState> explicitRepair({required bool confirmed}) {
-    if (!confirmed || _explicitRepair == null) {
-      throw const MacHelperException('consentRequired');
-    }
-    return _singleFlight(MacHelperProgress.updating, () async {
-      _repairError = null;
-      try {
-        final result = await _explicitRepair();
-        if (result != 'repairRegistered') _repairError = result;
-      } catch (error) {
-        _repairError = error.toString();
-      } finally {
-        if (_recoverRepair != null) {
-          try {
-            _repairPending = await _recoverRepair();
-          } catch (_) {
-            _repairPending = true;
-          }
-        }
-        await _updateExplicitRetry();
-      }
-      return MacHelperState.exitUnconfirmed;
-    });
-  }
-
-  Future<MacHelperState> registerPendingRepair() {
-    if (_registerRepair == null) throw const MacHelperException('unsupported');
-    return _singleFlight(MacHelperProgress.updating, () async {
-      _repairError = null;
-      client.lastRegistrationSettled = false;
-      try {
-        final result = await _registerRepair();
-        if (result != 'repairRegistered') _repairError = result;
-      } catch (error) {
-        client.lastRegistrationSettled = false;
-        _repairError = error.toString();
-      }
-      return _status();
-    });
-  }
-
-  Future<void> openRepairSettings() async {
-    try {
-      await client.openSettings();
-      _awaitingSettings = true;
-    } on Exception catch (error) {
-      _repairError = error.toString();
-      _notify();
-    }
   }
 
   /// Retry after "update did not complete": the native side resumes from
@@ -300,7 +384,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
   Future<MacHelperState> retry() => migrate(confirmed: true);
 
   /// Register if needed, then open Login Items & Extensions. The card re-checks
-  /// automatically when Flash returns to the foreground.
+  /// when Flash returns to the foreground and while it waits.
   Future<void> openSettings() async {
     if (busy || !needsApproval) return;
     await _singleFlight(MacHelperProgress.opening, () async {
@@ -315,6 +399,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
         }
       }
       _awaitingSettings = true;
+      _approvalPolls = 0;
       try {
         await client.openSettings();
       } on Exception {
@@ -326,10 +411,18 @@ final class MacHelperMaintenance extends ChangeNotifier {
 
   /// Called when Flash becomes the active app again.
   void resumed() {
-    if (_awaitingSettings ||
-        needsApproval ||
-        (_startSlow && _state == MacHelperState.starting)) {
+    final retry = switch (_state) {
+      MacHelperState.notReady ||
+      MacHelperState.staleCore ||
+      MacHelperState.registrationStale ||
+      MacHelperState.unavailable => true,
+      MacHelperState.starting => _startSlow,
+      _ => false,
+    };
+    if (_awaitingSettings || needsApproval || retry) {
       _awaitingSettings = false;
+      _approvalTimer?.cancel();
+      _approvalTimer = null;
       if (_resumeChecking) return;
       if (busy) {
         _resumeCheckPending = true;
@@ -346,6 +439,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
     _lifecycle?.dispose();
     _startTimer?.cancel();
     _pollTimer?.cancel();
+    _approvalTimer?.cancel();
     super.dispose();
   }
 }
@@ -367,12 +461,25 @@ Future<bool> prepareMacHelperStartup({
   final offer = switch (state) {
     MacHelperState.migrationRequired ||
     MacHelperState.notRegistered ||
-    MacHelperState.requiresApproval => true,
+    MacHelperState.requiresApproval ||
+    MacHelperState.disabledByUser => true,
     _ => false,
   };
-  if (foreground && offer && !await wasOffered()) {
+  // A recovery that needs the user to allow Flash again is always shown.
+  final recovered = maintenance.autoRecoveries > 0 && maintenance.needsApproval;
+  if (foreground && offer && (recovered || !await wasOffered())) {
     await markOffered();
     await show();
   }
   return false;
 }
+
+/// Whether a failed Core start only means that the helper is not ready (or is
+/// being recovered). Those are shown by the helper card, never as a banner.
+bool isMacHelperStartFailure(Object error) => switch (error) {
+  MacHelperException() || MacRepairPendingException() => true,
+  DesktopCoreFailure(code: 'maintenance' || 'maintenance_stop_unconfirmed') =>
+    true,
+  DesktopCoreFailure(:final cause?) => isMacHelperStartFailure(cause),
+  _ => false,
+};

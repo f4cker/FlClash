@@ -146,7 +146,23 @@ void main() {
   test('zh copy matches the reviewed wording', () {
     final zh = lookupAppLocalizations(const Locale('zh'));
     expect(zh.macHelperVersionLine('1.2.3'), '版本 1.2.3');
-    expect(zh.macHelperWaitingCore, '等待辅助程序就绪');
+    expect(zh.macHelperWaitingCore, '等待辅助程序');
+    expect(
+      zh.macHelperAllowInSettings,
+      '请在系统设置的“登录项与扩展”里，把 Flash 的开关关掉再打开，然后返回 Flash。',
+    );
+    expect(zh.macHelperNotReadyTitle, '辅助程序暂未就绪');
+    for (final text in [
+      zh.macHelperAllowInSettings,
+      zh.macHelperApprovalStep3,
+      zh.macHelperNotReadyTitle,
+      zh.macHelperRegistrationFailedDetail,
+      zh.macHelperStaleCoreDetail,
+      zh.macHelperStatusUnreadable,
+    ]) {
+      expect(text, isNot(contains('重启')));
+      expect(text, isNot(contains('重新安装')));
+    }
     expect(
       lookupAppLocalizations(const Locale('en')).macHelperWaitingCore,
       'Waiting for helper',
@@ -274,7 +290,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(native.calls, ['status', 'enable', 'openApprovalSettings']);
     expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
-    await tester.tap(find.text(l.macHelperCheckAgain));
+    // One action only: Flash re-checks by itself on return.
+    expect(find.text(l.macHelperCheckAgain), findsNothing);
+    // Back in the foreground: SMAppService.status is read again and the
+    // short-lived Settings poll ends.
+    flow.resumed();
     await tester.pumpAndSettle();
     expect(native.calls.last, 'status');
   });
@@ -334,7 +354,7 @@ void main() {
     'incompatible': 'macHelperReinstallTitle',
     'moveRequired': 'macHelperMoveTitle',
     'unsupported': 'macHelperReinstallTitle',
-    'garbage': 'macHelperStartSlowTitle',
+    'garbage': 'macHelperNotReadyTitle',
   };
   for (final MapEntry(key: code, value: key) in titles.entries) {
     testWidgets('$code has a visible reason without side effects', (
@@ -353,6 +373,7 @@ void main() {
         'macHelperFailedTitle' => l.macHelperFailedTitle,
         'macHelperReinstallTitle' => l.macHelperReinstallTitle,
         'macHelperMoveTitle' => l.macHelperMoveTitle,
+        'macHelperNotReadyTitle' => l.macHelperNotReadyTitle,
         _ => l.macHelperStartSlowTitle,
       };
       expect(find.text(title), findsOneWidget);
@@ -362,7 +383,7 @@ void main() {
     });
   }
 
-  testWidgets('disabled by user asks to turn the switch back on', (
+  testWidgets('disabled by user asks to turn the switch off and on', (
     tester,
   ) async {
     native.statusAnswer = {
@@ -374,8 +395,8 @@ void main() {
     final l = currentAppLocalizations;
     expect(find.text(l.macHelperBarAllow), findsOneWidget);
     await openPopover(tester);
-    expect(find.text(l.macHelperDisabledTitle), findsOneWidget);
-    expect(find.text(l.macHelperDisabledDetail), findsOneWidget);
+    expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
+    expect(find.text(l.macHelperAllowInSettings), findsOneWidget);
     // The capsule and the card title both show the switch, no warning.
     for (final scope in [MacHelperCapsule, MacHelperPopover]) {
       final glyph = tester.widget<GlyphIcon>(
@@ -389,7 +410,7 @@ void main() {
       expect(glyph.glyph, AppGlyphs.helperDaemonSmall);
     }
     expect(find.text(l.macHelperOpenSettings), findsOneWidget);
-    expect(find.text(l.macHelperCheckAgain), findsOneWidget);
+    expect(find.text(l.macHelperCheckAgain), findsNothing);
   });
 
   testWidgets('feature gate opens the same popover, not a dialog', (
