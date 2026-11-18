@@ -65,6 +65,11 @@ enum MacHelperState {
   /// or could not be prepared or started (or the status is unreadable).
   launcherFailed,
 
+  /// The launcher verified the helper but cannot read or write its root-only
+  /// version record. Reinstalling does not change that record; the card's
+  /// repair (one administrator prompt) rebuilds it.
+  launcherRecordDamaged,
+
   /// The helper answered, but its reply failed the app's own verification
   /// (the failed step is in the details). Waiting or re-registering cannot
   /// change that, so nothing is retried or re-registered for it.
@@ -104,6 +109,7 @@ enum MacHelperState {
     'launcherCheckFailed' => launcherCheckFailed,
     'launcherDowngrade' => launcherDowngrade,
     'launcherFailed' => launcherFailed,
+    'launcherRecordDamaged' => launcherRecordDamaged,
     'untrustedReply' => untrustedReply,
     // The bridge reports `unavailable` when an approved daemon does not answer
     // yet, and `timeout` when it did not answer in time: both are a wait (and
@@ -292,6 +298,11 @@ final class MacHelperClient {
   /// Failed update step; kept until a later answer reports another outcome so
   /// a generic `migrationIncomplete` does not hide the step that failed.
   MacHelperFailure? failure;
+
+  /// Outcome of the last version record repair (`ok`, `cancelled`,
+  /// `denied`, `failed`, `notNeeded`), from the answer that carried it; null
+  /// after any other answer.
+  String? lastRecordRepair;
   _MacHelperRelay? _relay;
   bool _sending = false;
 
@@ -349,6 +360,8 @@ final class MacHelperClient {
     lastCode = code is String ? code : null;
     final serviceStatus = answer['serviceStatus'];
     lastServiceStatus = serviceStatus is String ? serviceStatus : null;
+    final recordRepair = answer['recordRepair'];
+    lastRecordRepair = recordRepair is String ? recordRepair : null;
     final detail = describeAnswer(answer);
     if (detail != null) lastDetail = detail;
     final state = code == 'authorizationCancelled'
@@ -414,6 +427,15 @@ final class MacHelperClient {
     _requireEffects();
     if (_session != null) return Future.value(MacHelperState.exitUnconfirmed);
     return _call('migrate', {'confirmed': true});
+  }
+
+  /// Rebuild the launcher's version record (one administrator prompt), then
+  /// ask the helper again. The native side runs it only while the launcher
+  /// reports that record unreadable.
+  Future<MacHelperState> repairLauncherRecord({required bool confirmed}) {
+    if (!confirmed) throw const MacHelperException('consentRequired');
+    _requireEffects();
+    return _call('repairRecord', {'confirmed': true});
   }
 
   /// Register with SMAppService; no administrator prompt.

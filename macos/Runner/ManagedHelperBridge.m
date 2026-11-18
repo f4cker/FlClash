@@ -5,6 +5,7 @@
 #import "../Shared/LegacyResidue.h"
 #import "../Shared/LaunchdProbe.h"
 #import "../Shared/LauncherStatus.h"
+#import "../Shared/LauncherRecordRepair.h"
 #import <ServiceManagement/ServiceManagement.h>
 #import <os/log.h>
 
@@ -147,6 +148,7 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 // Wall-clock start of this launch, and since when (uptime; 0 = not) a launcher "ok" has gone unanswered.
 @property NSTimeInterval launchedAt;
 @property NSTimeInterval okUnansweredSince;
+@property NSTimeInterval recordRepairedAt;
 @end
 
 @implementation FCManagedHelperBridge
@@ -415,6 +417,13 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
 - (NSDictionary *)launcherReport {
     NSString *problem = nil;
     NSDictionary *launcher = FCReadLauncherStatus(FCLauncherStatusDirectory, 0, &problem);
+    // After a record repair, the refusal it repaired (and launchd's exit code for it) is not shown again: until the
+    // launcher has run once more, this is an ordinary start.
+    if (self.recordRepairedAt && !problem && launcher) {
+        if ([launcher[@"time"] doubleValue] < floor(self.recordRepairedAt))
+            return @{@"superseded": @YES, @"detail": @"max-version repaired; the launcher has not run since"};
+        self.recordRepairedAt = 0;
+    }
     BOOL ok = !problem && [launcher[@"result"] isEqual:@"ok"];
     NSTimeInterval now = [self uptime];
     if (!ok) self.okUnansweredSince = 0;
@@ -595,15 +604,14 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
         number == -60005 || number == -1743 ? @"authorizationDenied" : @"migrationFailed";
 }
 
-- (NSString *)migrationAppleScript {
-    NSString *command = FCLegacyCleanupScript();
+- (NSString *)administratorAppleScript:(NSString *)command {
     NSString *escaped = [[command stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
         stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""];
     return [NSString stringWithFormat:@"do shell script \"%@\" with administrator privileges without altering line endings", escaped];
 }
 
-- (void)authorizeCleanup:(void (^)(NSString *, NSString *))completion {
-    NSString *source = [self migrationAppleScript];
+- (void)authorize:(NSString *)command completion:(void (^)(NSString *, NSString *))completion {
+    NSString *source = [self administratorAppleScript:command];
     dispatch_async(dispatch_get_main_queue(), ^{
         NSDictionary *error = nil;
         NSAppleEventDescriptor *answer = [[[NSAppleScript alloc] initWithSource:source] executeAndReturnError:&error];
@@ -634,7 +642,7 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
     if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
     if (!FCDetectLegacyResidue()) { [self registerWithCompletion:completion]; return; }
     self.operationInFlight = YES;
-    [self authorizeCleanup:^(NSString *outcome, NSString *output) {
+    [self authorize:FCLegacyCleanupScript() completion:^(NSString *outcome, NSString *output) {
         self.operationInFlight = NO;
         FCLegacyResidue residue = FCDetectLegacyResidue();
         if ([outcome isEqualToString:@"authorizationCancelled"] || [outcome isEqualToString:@"authorizationDenied"]) {
@@ -654,6 +662,52 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
             if (![answer[@"code"] isEqual:@"registrationFailed"]) { completion(answer); return; }
             completion([self migrationFailure:@"registerNew"
                 detail:[NSString stringWithFormat:@"%@ %@", answer[@"domain"], answer[@"error"]] residue:FCLegacyResidueNone]);
+        }];
+    }];
+}
+
+#pragma mark - Repair of the launcher's version record
+
+// The launcher refused because its root-only max-version record is unreadable: one administrator prompt runs the
+// fixed repair script (LauncherRecordRepair.h), then the helper is asked again (launchd starts the launcher on
+// demand). Offered only while the launcher's own status says exactly that; never touches a valid record.
+- (void)repairRecordWithArguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {
+    if (arguments.count > 1 || (arguments.count && !arguments[@"confirmed"])) {
+        completion(@{@"code": @"invalidRequest"}); return;
+    }
+    if (![self confirmed:arguments]) { completion(@{@"code": @"consentRequired"}); return; }
+    NSString *gate = [self gate];
+    if (![gate isEqualToString:@"trusted"]) { completion(@{@"code": gate}); return; }
+    NSString *problem = nil;
+    if (!FCLauncherRecordDamaged(FCReadLauncherStatus(FCLauncherStatusDirectory, 0, &problem))) {
+        [self status:^(NSDictionary *answer) {
+            NSMutableDictionary *result = [answer mutableCopy];
+            result[@"recordRepair"] = @"notNeeded";
+            completion(result);
+        }];
+        return;
+    }
+    self.operationInFlight = YES;
+    [self authorize:FCLauncherRecordRepairScript() completion:^(NSString *authorization, NSString *output) {
+        self.operationInFlight = NO;
+        NSDictionary *report = FCParseRecordRepairReport(output);
+        NSString *outcome = FCRecordRepairOutcome(authorization, report);
+        os_log(FCBridgeLog(), "record repair: %{public}s (record=%{public}s reason=%{public}s)", outcome.UTF8String,
+            [report[@"record"] ?: @"" UTF8String], [report[@"reason"] ?: @"" UTF8String]);
+        NSString *line = report.count ? [NSString stringWithFormat:@"record repair: %@ (record=%@ reason=%@ version=%@)",
+            outcome, report[@"record"] ?: @"", report[@"reason"] ?: @"", report[@"version"] ?: @""] :
+            [NSString stringWithFormat:@"record repair: %@ %@", outcome, output.length > 400 ? [output substringToIndex:400] : output];
+        if ([outcome isEqualToString:@"ok"]) {
+            self.recordRepairedAt = NSDate.date.timeIntervalSince1970;
+            self.staleRetryAfter = nil;
+            [self resetConnection];
+        }
+        [self status:^(NSDictionary *answer) {
+            NSMutableDictionary *result = [answer mutableCopy];
+            result[@"recordRepair"] = outcome;
+            NSString *detail = [answer[@"detail"] isKindOfClass:NSString.class] ? answer[@"detail"] : nil;
+            result[@"detail"] = detail.length ? [NSString stringWithFormat:@"%@\n%@", line, detail] : line;
+            completion(result);
         }];
     }];
 }
@@ -967,6 +1021,9 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
         if ([method isEqualToString:@"status"]) { [self status:completion]; return; }
         if ([method isEqualToString:@"migrate"]) { [self migrateWithArguments:arguments completion:completion]; return; }
         if ([method isEqualToString:@"recover"]) { [self recoverWithArguments:arguments completion:completion]; return; }
+        if ([method isEqualToString:@"repairRecord"]) {
+            [self repairRecordWithArguments:arguments completion:completion]; return;
+        }
         if ([@[@"enable", @"disable", @"repair", @"openApprovalSettings"] containsObject:method] && !argumentless) {
             completion(@{@"code": @"invalidRequest"}); return;
         }

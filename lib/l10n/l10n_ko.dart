@@ -6842,4 +6842,22 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get macHelperLauncherFailedDetail =>
       '시스템이 헬퍼의 준비 또는 시작을 완료하지 못했습니다. 세부 정보를 확인하세요.';
+
+  @override
+  String get macHelperRecordDamagedTitle =>
+      'The helper’s version record is damaged';
+
+  @override
+  String get macHelperRecordDamagedDetail =>
+      'This record keeps older versions of Flash from running, and reinstalling won’t fix it. Repair rebuilds it for this version after you enter an administrator password.';
+
+  @override
+  String get macHelperRecordRepairAction => 'Repair record';
+
+  @override
+  String get macHelperRecordRepairing => 'Repairing the version record…';
+
+  @override
+  String get macHelperRecordRepairFailed =>
+      'The repair didn’t finish. See details.';
 }

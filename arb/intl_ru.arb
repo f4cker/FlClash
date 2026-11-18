@@ -1950,5 +1950,10 @@
   "macHelperLauncherDowngradeTitle": "Эта версия Flash слишком старая",
   "macHelperLauncherDowngradeDetail": "Помощник не запустился. Установите последнюю версию Flash.",
   "macHelperLauncherFailedTitle": "Не удалось запустить помощника",
-  "macHelperLauncherFailedDetail": "Системе не удалось подготовить или запустить помощника. Посмотрите подробности."
+  "macHelperLauncherFailedDetail": "Системе не удалось подготовить или запустить помощника. Посмотрите подробности.",
+  "macHelperRecordDamagedTitle": "The helper’s version record is damaged",
+  "macHelperRecordDamagedDetail": "This record keeps older versions of Flash from running, and reinstalling won’t fix it. Repair rebuilds it for this version after you enter an administrator password.",
+  "macHelperRecordRepairAction": "Repair record",
+  "macHelperRecordRepairing": "Repairing the version record…",
+  "macHelperRecordRepairFailed": "The repair didn’t finish. See details."
 }

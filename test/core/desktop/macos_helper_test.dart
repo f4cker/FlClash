@@ -66,6 +66,30 @@ class _Native implements MacHelperNativeApi {
   }
 }
 
+class _RecordNative extends _Native {
+  final Map<String, Object?> repairAnswer;
+
+  _RecordNative({required this.repairAnswer}) {
+    state = 'launcherRecordDamaged';
+    statusExtra = const {
+      'detail':
+          'launcher result: version_unreadable\n'
+          'launcher detail: max-version unreadable errno=0',
+    };
+  }
+
+  @override
+  Future<Map<Object?, Object?>> invoke(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) async {
+    if (method != 'repairRecord') return super.invoke(method, arguments);
+    calls.add(method);
+    this.arguments.add(arguments);
+    return repairAnswer;
+  }
+}
+
 class _StaleStatusNative extends _Native {
   Completer<Map<Object?, Object?>>? delayedStatus;
   Completer<Map<Object?, Object?>>? delayedStop;
@@ -698,6 +722,134 @@ void main() {
         flow.dispose();
       });
     }
+
+    group('damaged version record', () {
+      const detail =
+          'launcher result: version_unreadable\n'
+          'launcher detail: max-version unreadable errno=0';
+      MacHelperMaintenance flowFor(_RecordNative native) =>
+          MacHelperMaintenance(
+            MacHelperClient(native: native, safeMode: () => false),
+            stop: () async => const CoreLifecycleResult(
+              revision: 1,
+              outcome: CoreLifecycleOutcome.applied,
+            ),
+          );
+
+      test('offers one repair button and keeps the raw reason', () async {
+        expect(
+          MacHelperState.parse('launcherRecordDamaged'),
+          MacHelperState.launcherRecordDamaged,
+        );
+        final native = _RecordNative(repairAnswer: const {});
+        final flow = flowFor(native);
+        expect(await flow.check(), MacHelperState.launcherRecordDamaged);
+        final zh = lookupAppLocalizations(const Locale('zh'));
+        final view = macHelperCardView(zh, flow);
+        expect(view.kind, MacHelperCardKind.launcherRecordDamaged);
+        expect(view.title, '辅助程序的版本记录已损坏');
+        expect(view.detail, zh.macHelperRecordDamagedDetail);
+        expect(view.detail, isNot(contains('重启')));
+        expect(view.primary, MacHelperCardAction.repairRecord);
+        expect(macHelperActionLabel(zh, view.primary!), '修复版本记录');
+        expect(view.secondary, MacHelperCardAction.viewDetails);
+        expect(view.rawDetail, contains('max-version unreadable errno=0'));
+        expect(view.rawDetail, contains('status: launcherRecordDamaged'));
+        expect(view.isProblem, isTrue);
+        final bar = macHelperBarView(zh, flow)!;
+        expect(bar.kind, MacHelperBarKind.notReady);
+        expect(bar.tone, MacHelperBarTone.failure);
+        // Reading the status never prompts or repairs.
+        expect(native.calls, ['status']);
+        flow.dispose();
+      });
+
+      test(
+        'a successful repair asks the helper again and reads as a start',
+        () async {
+          final native = _RecordNative(
+            repairAnswer: const {
+              'code': 'timeout',
+              'recordRepair': 'ok',
+              'detail': 'record repair: ok (record=repaired reason=record)',
+            },
+          );
+          final flow = flowFor(native);
+          await flow.check();
+          final pending = flow.repairRecord();
+          expect(flow.progress, MacHelperProgress.repairingRecord);
+          final en = lookupAppLocalizations(const Locale('en'));
+          expect(
+            macHelperCardView(en, flow).progress,
+            en.macHelperRecordRepairing,
+          );
+          expect(await pending, MacHelperState.starting);
+          expect(native.calls, ['status', 'repairRecord']);
+          expect(native.arguments.last, {'confirmed': true});
+          expect(flow.recordRepair, 'ok');
+          expect(flow.rawDetail, contains('record=repaired'));
+          flow.dispose();
+        },
+      );
+
+      test(
+        'a failed repair says so; a cancelled one changes nothing',
+        () async {
+          final zh = lookupAppLocalizations(const Locale('zh'));
+          for (final (outcome, text) in [
+            ('failed', zh.macHelperRecordRepairFailed),
+            ('denied', zh.macHelperRecordRepairFailed),
+            ('cancelled', zh.macHelperRecordDamagedDetail),
+          ]) {
+            final native = _RecordNative(
+              repairAnswer: {
+                'code': 'launcherRecordDamaged',
+                'recordRepair': outcome,
+                'detail':
+                    'record repair: $outcome (record=refused '
+                    'reason=signature)\n$detail',
+              },
+            );
+            final flow = flowFor(native);
+            await flow.check();
+            expect(
+              await flow.repairRecord(),
+              MacHelperState.launcherRecordDamaged,
+            );
+            final view = macHelperCardView(zh, flow);
+            expect(view.detail, text, reason: outcome);
+            expect(view.primary, MacHelperCardAction.repairRecord);
+            expect(view.rawDetail, contains('record repair: $outcome'));
+            // The next plain check shows the card's own text again.
+            await flow.check();
+            expect(
+              macHelperCardView(zh, flow).detail,
+              zh.macHelperRecordDamagedDetail,
+            );
+            flow.dispose();
+          }
+        },
+      );
+
+      test('the client refuses without consent or in safe mode', () {
+        final native = _RecordNative(repairAnswer: const {});
+        expect(
+          () => MacHelperClient(
+            native: native,
+            safeMode: () => false,
+          ).repairLauncherRecord(confirmed: false),
+          throwsA(isA<MacHelperException>()),
+        );
+        expect(
+          () => MacHelperClient(
+            native: native,
+            safeMode: () => true,
+          ).repairLauncherRecord(confirmed: true),
+          throwsA(isA<MacHelperException>()),
+        );
+        expect(native.calls, isEmpty);
+      });
+    });
 
     test('an answering helper or an ordinary wait keeps its own card', () {
       // The bridge adds launcher detail to a wait (launcher "ok" within its

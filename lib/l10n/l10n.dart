@@ -11770,6 +11770,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The system couldn’t prepare or start the helper. See details.'**
   String get macHelperLauncherFailedDetail;
+
+  /// No description provided for @macHelperRecordDamagedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper’s version record is damaged'**
+  String get macHelperRecordDamagedTitle;
+
+  /// No description provided for @macHelperRecordDamagedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'This record keeps older versions of Flash from running, and reinstalling won’t fix it. Repair rebuilds it for this version after you enter an administrator password.'**
+  String get macHelperRecordDamagedDetail;
+
+  /// No description provided for @macHelperRecordRepairAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair record'**
+  String get macHelperRecordRepairAction;
+
+  /// No description provided for @macHelperRecordRepairing.
+  ///
+  /// In en, this message translates to:
+  /// **'Repairing the version record…'**
+  String get macHelperRecordRepairing;
+
+  /// No description provided for @macHelperRecordRepairFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The repair didn’t finish. See details.'**
+  String get macHelperRecordRepairFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -42,6 +42,10 @@ enum MacHelperCardKind {
   launcherCheckFailed,
   launcherDowngrade,
   launcherFailed,
+
+  /// The launcher's version record is unreadable: one button rebuilds it
+  /// (administrator prompt), the raw reason stays behind "View details".
+  launcherRecordDamaged,
 }
 
 enum MacHelperCardAction {
@@ -51,6 +55,7 @@ enum MacHelperCardAction {
   recheck,
   repair,
   recover,
+  repairRecord,
   viewDetails,
 }
 
@@ -86,7 +91,8 @@ final class MacHelperCardView {
     MacHelperCardKind.unsupported ||
     MacHelperCardKind.launcherCheckFailed ||
     MacHelperCardKind.launcherDowngrade ||
-    MacHelperCardKind.launcherFailed => true,
+    MacHelperCardKind.launcherFailed ||
+    MacHelperCardKind.launcherRecordDamaged => true,
     _ => false,
   };
 }
@@ -121,6 +127,8 @@ MacHelperCardKind macHelperCardKind(MacHelperState state, bool startSlow) =>
         MacHelperCardKind.launcherCheckFailed,
       MacHelperState.launcherDowngrade => MacHelperCardKind.launcherDowngrade,
       MacHelperState.launcherFailed => MacHelperCardKind.launcherFailed,
+      MacHelperState.launcherRecordDamaged =>
+        MacHelperCardKind.launcherRecordDamaged,
       // A status that could not be read is handled like a slow start: no
       // failure is claimed, the user can check again or view the raw code.
       MacHelperState.unavailable => MacHelperCardKind.startSlow,
@@ -149,6 +157,7 @@ MacHelperCardView macHelperCardView(
   final kind = macHelperCardKind(state, flow.startSlow);
   final busyText = switch (flow.progress) {
     MacHelperProgress.updating => l.macHelperUpdating,
+    MacHelperProgress.repairingRecord => l.macHelperRecordRepairing,
     MacHelperProgress.checking ||
     MacHelperProgress.opening => l.macHelperChecking,
     MacHelperProgress.idle => null,
@@ -290,6 +299,18 @@ MacHelperCardView macHelperCardView(
       secondary: MacHelperCardAction.viewDetails,
       rawDetail: raw,
     ),
+    MacHelperCardKind.launcherRecordDamaged => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperRecordDamagedTitle,
+      detail: switch (flow.recordRepair) {
+        'failed' || 'denied' => l.macHelperRecordRepairFailed,
+        _ => l.macHelperRecordDamagedDetail,
+      },
+      progress: busyText,
+      primary: MacHelperCardAction.repairRecord,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
   };
 }
 
@@ -301,6 +322,7 @@ String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
       MacHelperCardAction.recheck => l.macHelperCheckAgain,
       MacHelperCardAction.repair => l.macHelperRepair,
       MacHelperCardAction.recover => l.macHelperTryAgain,
+      MacHelperCardAction.repairRecord => l.macHelperRecordRepairAction,
       MacHelperCardAction.viewDetails => l.macHelperViewDetails,
     };
 
@@ -375,7 +397,8 @@ MacHelperBarView? macHelperBarView(
     MacHelperCardKind.reinstall ||
     MacHelperCardKind.unsupported ||
     MacHelperCardKind.launcherDowngrade ||
-    MacHelperCardKind.launcherFailed => (
+    MacHelperCardKind.launcherFailed ||
+    MacHelperCardKind.launcherRecordDamaged => (
       MacHelperBarKind.notReady,
       MacHelperBarTone.failure,
     ),
@@ -516,6 +539,9 @@ class _MacHelperCardState extends State<MacHelperCard> {
       case MacHelperCardAction.recover:
         setState(() => _details = false);
         unawaited(flow.retryRecovery());
+      case MacHelperCardAction.repairRecord:
+        setState(() => _details = false);
+        unawaited(flow.repairRecord());
       case MacHelperCardAction.viewDetails:
         setState(() => _details = !_details);
     }

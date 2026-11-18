@@ -6969,4 +6969,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get macHelperLauncherFailedDetail =>
       'The system couldn’t prepare or start the helper. See details.';
+
+  @override
+  String get macHelperRecordDamagedTitle =>
+      'The helper’s version record is damaged';
+
+  @override
+  String get macHelperRecordDamagedDetail =>
+      'This record keeps older versions of Flash from running, and reinstalling won’t fix it. Repair rebuilds it for this version after you enter an administrator password.';
+
+  @override
+  String get macHelperRecordRepairAction => 'Repair record';
+
+  @override
+  String get macHelperRecordRepairing => 'Repairing the version record…';
+
+  @override
+  String get macHelperRecordRepairFailed =>
+      'The repair didn’t finish. See details.';
 }

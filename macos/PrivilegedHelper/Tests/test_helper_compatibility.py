@@ -73,6 +73,7 @@ static os_log_t FCBridgeLog(void) { return OS_LOG_DEFAULT; }
 - (void)registerWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"register"]; c(@{@"code": @"ok"}); }
 - (void)unregisterWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"unregister"]; c(@{@"code": @"ok"}); }
 - (void)recoverWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"recover"]; c(@{@"code": @"ok"}); }
+- (void)repairRecordWithArguments:(NSDictionary *)a completion:(void (^)(NSDictionary *))c { [self.calls addObject:@"repairRecord"]; c(@{@"code": @"ok"}); }
 - (NSString *)serviceStatusCode { [self.calls addObject:@"serviceStatus"]; return @"requiresApproval"; }
 - (void)repairWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"repair"]; c(@{@"code": @"ok"}); }
 - (void)openApprovalSettings:(void (^)(NSDictionary *))c { [self.calls addObject:@"settings"]; c(@{@"code": @"ok"}); }

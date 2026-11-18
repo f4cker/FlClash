@@ -6,7 +6,7 @@ import 'macos_helper_client.dart';
 import 'macos_repair_record.dart';
 import 'model.dart';
 
-enum MacHelperProgress { idle, checking, updating, opening }
+enum MacHelperProgress { idle, checking, updating, opening, repairingRecord }
 
 /// Drives the single "Helper" card: one operation at a time, a bounded
 /// start-up wait, and a re-check when the user returns from System Settings.
@@ -428,6 +428,18 @@ final class MacHelperMaintenance extends ChangeNotifier {
     });
   }
 
+  /// The launcher's version record is unreadable: rebuild it (administrator
+  /// prompt) and ask the helper again; a successful repair reads as a start.
+  Future<MacHelperState> repairRecord() {
+    return _singleFlight(MacHelperProgress.repairingRecord, () async {
+      _repairDetail = null;
+      return _settle(await client.repairLauncherRecord(confirmed: true));
+    });
+  }
+
+  /// Outcome of the last record repair, while its card is still shown.
+  String? get recordRepair => client.lastRecordRepair;
+
   /// Retry after "update did not complete": the native side resumes from
   /// whatever residue remains, or only registers when nothing old is left.
   Future<MacHelperState> retry() => migrate(confirmed: true);
@@ -468,6 +480,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
       MacHelperState.launcherCheckFailed ||
       MacHelperState.launcherDowngrade ||
       MacHelperState.launcherFailed ||
+      MacHelperState.launcherRecordDamaged ||
       // Re-read only (one hello); never a recovery.
       MacHelperState.untrustedReply ||
       MacHelperState.unavailable => true,

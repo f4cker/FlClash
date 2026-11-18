@@ -71,6 +71,15 @@ static inline NSDictionary *FCReadLauncherStatus(NSString *directory, uid_t owne
     return status;
 }
 
+// The launcher stopped only because its root-owned max-version record could not be read or written, after it had
+// verified the helper copy and read that helper's version. Reinstalling cannot change that record; only the
+// administrator repair (LauncherRecordRepair.h) can.
+static inline BOOL FCLauncherRecordDamaged(NSDictionary *status) {
+    NSString *detail = [status[@"detail"] isKindOfClass:NSString.class] ? status[@"detail"] : @"";
+    return [status[@"result"] isEqual:@"version_unreadable"] && FCLauncherNumber(status[@"helperVersion"]) &&
+        ([detail hasPrefix:@"max-version unreadable errno="] || [detail hasPrefix:@"max-version write errno="]);
+}
+
 // The card code for a launcher result: a failed security check, an older Flash than one that already ran, or a
 // helper that could not be prepared or started.
 static inline NSString *FCLauncherCardCode(NSString *result) {
@@ -98,6 +107,7 @@ static inline NSDictionary *FCLauncherAnswer(NSDictionary *status, NSString *pro
         return @{@"code": @"launcherFailed", @"detail": [@"launcher status unreadable: " stringByAppendingString:problem]};
     if (!status || [status[@"time"] doubleValue] < appStarted - FCLauncherStatusMaxAgeBeforeLaunch) return nil;
     NSString *detail = FCLauncherDetail(status, appVersion);
+    if (FCLauncherRecordDamaged(status)) return @{@"code": @"launcherRecordDamaged", @"detail": detail};
     if (![status[@"result"] isEqualToString:@"ok"])
         return @{@"code": FCLauncherCardCode(status[@"result"]), @"detail": detail};
     detail = [detail stringByAppendingString:@"\nThe launcher verified and started the helper, but the helper did not "
@@ -119,9 +129,10 @@ static inline NSString *FCLauncherResultForExit(NSInteger code) {
 // launcher had exec'd it, so its "ok" says nothing more) or the launcher stopped before exec (81–87; a card the
 // launcher status already gave is kept, it names the same step). A definite card, never a registration problem; the
 // exit code goes into the details. `launcher` is FCLauncherAnswer's result (may be nil); returned unchanged when the
-// job did not end with a refusal.
+// job did not end with a refusal, or when it is marked `superseded` (the record was repaired after that refusal and
+// the launcher has not run since).
 static inline NSDictionary *FCRefusalExitAnswer(NSDictionary *job, NSDictionary *launcher) {
-    if (![job[@"refused"] isEqual:@YES]) return launcher;
+    if (![job[@"refused"] isEqual:@YES] || [launcher[@"superseded"] isEqual:@YES]) return launcher;
     NSInteger code = [job[@"lastExit"] integerValue];
     NSString *result = FCLauncherResultForExit(code);
     NSString *meaning = code == FC_HELPER_REFUSED_EXIT ?
