@@ -1,0 +1,492 @@
+{
+  "ip": "8.8.8.8",
+  "version": 4,
+  "generatedAt": "2026-11-18T06:47:24.431Z",
+  "tookMs": 2655,
+  "asn": 15169,
+  "org": "GOOGLE - Google LLC",
+  "hostname": "dns.google",
+  "location": {
+    "country": "US",
+    "city": "Mountain View",
+    "timezone": "America/Chicago"
+  },
+  "health": {
+    "score": 55,
+    "grade": "一般",
+    "ceiling": 55,
+    "ipType": "hosting",
+    "items": [
+      {
+        "label": "仅 1 源标记为代理",
+        "pts": 0,
+        "src": "IP-API",
+        "note": "单一来源的标记误报较多，至少 2 个来源一致才扣分",
+        "tag": "提示",
+        "code": "single_source_proxy"
+      },
+      {
+        "label": "所在网络人类流量仅 1.3%",
+        "pts": 0,
+        "src": "Cloudflare Radar",
+        "note": "整个 ASN 的统计，不代表这个 IP，类型上限已体现，不重复扣分",
+        "tag": "提示",
+        "code": "low_human_traffic"
+      },
+      {
+        "label": "DNSBL 命中 0/13",
+        "pts": 0,
+        "src": "DNSBL",
+        "note": "",
+        "tag": "",
+        "code": "dnsbl_listed"
+      },
+      {
+        "label": "公共 DNS/anycast 地址，常被误列",
+        "pts": 0,
+        "src": "DShield 攻击源",
+        "note": "Google Public DNS 官方公布的服务地址；伪造源地址和 DNS 反射常让它被攻击源名单、DNSBL 误列，名单命中不扣分",
+        "tag": "提示",
+        "code": "public_dns_anycast",
+        "lib": [
+          "dshield"
+        ]
+      },
+      {
+        "label": "未发现 Tor 出口",
+        "pts": 0,
+        "src": "4 个情报源",
+        "note": "pass",
+        "tag": "",
+        "code": "no_tor"
+      }
+    ],
+    "model": "v3.6-2026-11-06",
+    "coverage": {
+      "intel": 4,
+      "intelTotal": 5,
+      "intelOk": [
+        "ipapi.is",
+        "IPQuery",
+        "IP-API",
+        "IPLocate"
+      ],
+      "low": false,
+      "typeFromCache": false,
+      "keylessFail": {
+        "proxycheck": "HTTP 200 denied: 100 queries exhausted, if you sign up for a free API key you'll be able to make "
+      },
+      "skipped": []
+    }
+  },
+  "native": {
+    "verdict": "native",
+    "useCountry": "US",
+    "regCountry": "US",
+    "regSrc": "rir",
+    "regWhois": null,
+    "regRir": "US",
+    "rir": "ARIN",
+    "geoAgree": 8,
+    "geoReg": 8,
+    "geoTotal": 8,
+    "cityAgree": 4,
+    "cityTotal": 5
+  },
+  "type": {
+    "verdict": "hosting",
+    "votes": [
+      {
+        "src": "IPQuery",
+        "v": "hosting"
+      },
+      {
+        "src": "IP-API",
+        "v": "hosting"
+      },
+      {
+        "src": "IPLocate",
+        "v": "hosting"
+      },
+      {
+        "src": "ipx 机房段库",
+        "v": "hosting",
+        "note": "Google"
+      }
+    ],
+    "tally": {
+      "hosting": 4
+    },
+    "pseudoResi": false,
+    "pseudoVia": null,
+    "weak": false,
+    "youngAsn": false,
+    "fromCache": false
+  },
+  "sources": [
+    {
+      "name": "MaxMind GeoLite",
+      "country": "US",
+      "city": "",
+      "date": "2026-11-17"
+    },
+    {
+      "name": "IPinfo",
+      "country": "US",
+      "city": null,
+      "asn": 15169,
+      "org": "Google LLC",
+      "date": "实时"
+    },
+    {
+      "name": "IP.SB",
+      "country": "US",
+      "city": "Mountain View",
+      "asn": 15169,
+      "org": "Google LLC",
+      "date": "实时"
+    },
+    {
+      "name": "ipapi.is",
+      "country": "US",
+      "city": "Mountain View",
+      "asn": 15169,
+      "org": "Google LLC",
+      "type": null,
+      "date": "实时"
+    },
+    {
+      "name": "IPQuery",
+      "country": "US",
+      "city": "Mountain View",
+      "asn": 15169,
+      "org": "Google LLC",
+      "type": "hosting",
+      "date": "实时"
+    },
+    {
+      "name": "IP-API",
+      "country": "US",
+      "city": "Ashburn",
+      "asn": 15169,
+      "org": "Google LLC",
+      "type": "hosting",
+      "date": "实时"
+    },
+    {
+      "name": "IPLocate",
+      "country": "US",
+      "city": "Mountain View",
+      "asn": 15169,
+      "org": "Google LLC",
+      "type": "hosting",
+      "date": "实时"
+    },
+    {
+      "name": "ip2region",
+      "country": "US",
+      "city": null,
+      "date": "每周"
+    }
+  ],
+  "ipdb": {
+    "rir_date": "2023-12-28",
+    "lease": null,
+    "datacenter": {
+      "src": 1,
+      "provider": "Google",
+      "built": "2026-11-17T21:00:26Z"
+    },
+    "geofeed": null,
+    "vpn": null,
+    "crawler": null,
+    "tor_relay": null,
+    "corp_proxy": null,
+    "scanner": null
+  },
+  "cn": [
+    {
+      "name": "ip2region",
+      "text": "California Google LLC",
+      "cc": "US",
+      "pre": true,
+      "city": null,
+      "region": "California"
+    },
+    {
+      "name": "纯真 (zxinc)",
+      "text": "美国 加利福尼亚州 圣克拉拉 山景城 谷歌公司DNS服务器"
+    },
+    {
+      "name": "百度",
+      "text": "美国"
+    },
+    {
+      "name": "太平洋",
+      "text": "美国"
+    }
+  ],
+  "rdap": {
+    "name": "GOGL",
+    "handle": "NET-8-8-8-0-2",
+    "start": "8.8.8.0",
+    "end": "8.8.8.255",
+    "cidr": "8.8.8.0/24",
+    "type": "Direct Allocation",
+    "country": null,
+    "registered": "2023-12-28",
+    "changed": null,
+    "org": "Google LLC",
+    "abuse": "network-abuse@google.com",
+    "port": null,
+    "via": "RIPEstat whois"
+  },
+  "routing": {
+    "prefix": "8.8.8.0/24",
+    "announced": true,
+    "originAsn": 15169,
+    "holder": "GOOGLE - Google LLC",
+    "rpki": "valid",
+    "originHistory": [
+      {
+        "asn": 21284,
+        "first": "2002-10-28",
+        "last": "2002-12-26"
+      },
+      {
+        "asn": 15169,
+        "first": "2009-09-21",
+        "last": "2026-11-18"
+      }
+    ]
+  },
+  "risk": {
+    "proxycheck": null,
+    "ipapi": {},
+    "scamalytics": null,
+    "ipquery": {
+      "risk": 0,
+      "vpn": false,
+      "proxy": false,
+      "tor": false
+    },
+    "iplocate": {
+      "vpn": false,
+      "proxy": false,
+      "tor": false,
+      "abuser": false,
+      "relay": false,
+      "anonymous": false
+    },
+    "ipapicom": {
+      "proxy": true
+    },
+    "abuseipdb": null
+  },
+  "dnsbl": {
+    "supported": true,
+    "list": [
+      {
+        "name": "SpamCop",
+        "zone": "bl.spamcop.net",
+        "status": "clean"
+      },
+      {
+        "name": "PSBL",
+        "zone": "psbl.surriel.com",
+        "status": "clean"
+      },
+      {
+        "name": "UCEPROTECT L1",
+        "zone": "dnsbl-1.uceprotect.net",
+        "status": "clean"
+      },
+      {
+        "name": "UCEPROTECT L2",
+        "zone": "dnsbl-2.uceprotect.net",
+        "status": "clean"
+      },
+      {
+        "name": "Mailspike",
+        "zone": "bl.mailspike.net",
+        "status": "clean"
+      },
+      {
+        "name": "s5h",
+        "zone": "all.s5h.net",
+        "status": "clean"
+      },
+      {
+        "name": "DroneBL",
+        "zone": "dnsbl.dronebl.org",
+        "status": "clean"
+      },
+      {
+        "name": "Blocklist.de",
+        "zone": "bl.blocklist.de",
+        "status": "clean"
+      },
+      {
+        "name": "0spam",
+        "zone": "bl.0spam.org",
+        "status": "clean"
+      },
+      {
+        "name": "Anonmails",
+        "zone": "spam.dnsbl.anonmails.de",
+        "status": "clean"
+      },
+      {
+        "name": "Backscatterer",
+        "zone": "ips.backscatterer.org",
+        "status": "clean"
+      },
+      {
+        "name": "JustSpam",
+        "zone": "dnsbl.justspam.org",
+        "status": "clean"
+      },
+      {
+        "name": "Truncate",
+        "zone": "truncate.gbudb.net",
+        "status": "clean"
+      }
+    ]
+  },
+  "exposure": {
+    "ports": [
+      53,
+      443
+    ],
+    "tags": [
+      "pqc"
+    ],
+    "vulns": 0,
+    "hostnames": [
+      "dns.google",
+      "homeloan-uat.kbzbank.com"
+    ],
+    "cpes": []
+  },
+  "network": {
+    "humanPct": 1.3,
+    "radarDate": "2026-10-30",
+    "company": "Google LLC",
+    "companyDomain": "google.com",
+    "abuseEmail": "network-abuse@google.com"
+  },
+  "categories": [
+    {
+      "key": "anon",
+      "label": "匿名",
+      "checks": [
+        {
+          "label": "代理",
+          "hit": true
+        },
+        {
+          "label": "VPN",
+          "hit": false
+        },
+        {
+          "label": "Tor",
+          "hit": false
+        },
+        {
+          "label": "iCloud 中继",
+          "hit": false
+        },
+        {
+          "label": "匿名出口",
+          "hit": false
+        }
+      ],
+      "hits": 1
+    },
+    {
+      "key": "abuse",
+      "label": "滥用",
+      "checks": [
+        {
+          "label": "滥用标记",
+          "hit": false
+        },
+        {
+          "label": "代理风险 ≥67",
+          "hit": null
+        },
+        {
+          "label": "爬虫",
+          "hit": false
+        },
+        {
+          "label": "威胁情报名单",
+          "hit": true
+        },
+        {
+          "label": "恶意扫描",
+          "hit": false
+        }
+      ],
+      "hits": 1
+    },
+    {
+      "key": "bl",
+      "label": "黑名单",
+      "checks": [
+        {
+          "label": "邮件 DNSBL",
+          "hit": false
+        },
+        {
+          "label": "Shodan 标签",
+          "hit": false
+        }
+      ],
+      "hits": 0
+    },
+    {
+      "key": "expose",
+      "label": "暴露面",
+      "checks": [
+        {
+          "label": "开放端口",
+          "hit": true
+        },
+        {
+          "label": "已知漏洞",
+          "hit": false
+        },
+        {
+          "label": "自签证书",
+          "hit": false
+        }
+      ],
+      "hits": 1
+    },
+    {
+      "key": "net",
+      "label": "网络",
+      "checks": [
+        {
+          "label": "机房 IP",
+          "hit": true
+        },
+        {
+          "label": "伪家宽",
+          "hit": false
+        },
+        {
+          "label": "人类流量 <50%",
+          "hit": true
+        },
+        {
+          "label": "广播 IP",
+          "hit": false
+        }
+      ],
+      "hits": 2
+    }
+  ],
+  "query": null
+}

@@ -496,7 +496,8 @@ class _OutboundIpLine extends StatelessWidget {
     return Tooltip(
       message: context.appLocalizations.outboundIp,
       child: PressRegion(
-        onTap: () => showIpQualitySheet(context, ip: ip.ip),
+        onTap: () =>
+            showIpQualitySheet(context, ip: ip.ip, countryCode: ip.countryCode),
         shape: AppShape.xs,
         overlay: PressRegion.focusOverlay,
         child: line,

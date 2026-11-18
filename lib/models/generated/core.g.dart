@@ -525,6 +525,7 @@ _OutboundIpParams _$OutboundIpParamsFromJson(Map<String, dynamic> json) =>
           (json['urls'] as List<dynamic>?)?.map((e) => e as String).toList() ??
           const [],
       timeout: (json['timeout'] as num).toInt(),
+      maxBody: (json['max-body'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$OutboundIpParamsToJson(_OutboundIpParams instance) =>
@@ -532,6 +533,7 @@ Map<String, dynamic> _$OutboundIpParamsToJson(_OutboundIpParams instance) =>
       'proxy-name': instance.proxyName,
       'urls': instance.urls,
       'timeout': instance.timeout,
+      'max-body': ?instance.maxBody,
     };
 
 _OutboundIpResult _$OutboundIpResultFromJson(Map<String, dynamic> json) =>

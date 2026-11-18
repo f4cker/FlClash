@@ -364,7 +364,10 @@ void main() {
       );
       expect(organization.textAlign, TextAlign.end);
       expect(find.text('AS64500'), findsOneWidget);
-      expect(find.text('iplocate.io'), findsOneWidget);
+      expect(
+        find.text('Data from iplocate.io, for reference only'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('lists every source when none found a type and checks again', (

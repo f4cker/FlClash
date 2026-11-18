@@ -342,7 +342,11 @@ class _ExitRow extends StatelessWidget {
               shape: AppShape.xs,
               standsOff: true,
               child: PressRegion(
-                onTap: () => showIpQualitySheet(context, ip: info.ip),
+                onTap: () => showIpQualitySheet(
+                  context,
+                  ip: info.ip,
+                  countryCode: info.countryCode,
+                ),
                 shape: AppShape.xs,
                 overlay: PressRegion.focusOverlay,
                 child: _IpText(ip: info.ip, style: style),
