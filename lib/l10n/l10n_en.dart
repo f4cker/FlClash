@@ -7150,4 +7150,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'Decrypt HTTP/2';
+
+  @override
+  String get mitmHttp2Desc =>
+      'When off, only HTTP/1.1 is decrypted; connections that use only HTTP/2 (such as gRPC) pass through undecrypted.';
 }

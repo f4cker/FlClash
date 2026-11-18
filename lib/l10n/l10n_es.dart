@@ -7199,4 +7199,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'Descifrar HTTP/2';
+
+  @override
+  String get mitmHttp2Desc =>
+      'Si está desactivado, solo se descifra HTTP/1.1; las conexiones que solo usan HTTP/2 (como gRPC) pasan sin descifrar.';
 }

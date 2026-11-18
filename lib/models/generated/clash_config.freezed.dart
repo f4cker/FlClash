@@ -7815,7 +7815,7 @@ $MitmCopyWith<$Res> get mitm {
 /// @nodoc
 mixin _$Mitm {
 
- bool get enable; List<String> get hostname;@JsonKey(name: 'skip-server-cert-verify') bool get skipServerCertVerify;@JsonKey(name: 'auto-quic-block') bool get autoQuicBlock; bool get h2;@JsonKey(name: 'trusted-fingerprint') String? get trustedFingerprint; bool get capture;@JsonKey(name: 'capture-entries') int? get captureEntries;
+ bool get enable; List<String> get hostname;@JsonKey(name: 'skip-server-cert-verify') bool get skipServerCertVerify;@JsonKey(name: 'auto-quic-block') bool get autoQuicBlock;@JsonKey(name: 'decrypt-h2') bool get h2;@JsonKey(name: 'trusted-fingerprint') String? get trustedFingerprint; bool get capture;@JsonKey(name: 'capture-entries') int? get captureEntries;
 /// Create a copy of Mitm
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -7853,7 +7853,7 @@ abstract mixin class $MitmCopyWith<$Res>  {
   factory $MitmCopyWith(Mitm value, $Res Function(Mitm) _then) = _$MitmCopyWithImpl;
 @useResult
 $Res call({
- bool enable, List<String> hostname,@JsonKey(name: 'skip-server-cert-verify') bool skipServerCertVerify,@JsonKey(name: 'auto-quic-block') bool autoQuicBlock, bool h2,@JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint, bool capture,@JsonKey(name: 'capture-entries') int? captureEntries
+ bool enable, List<String> hostname,@JsonKey(name: 'skip-server-cert-verify') bool skipServerCertVerify,@JsonKey(name: 'auto-quic-block') bool autoQuicBlock,@JsonKey(name: 'decrypt-h2') bool h2,@JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint, bool capture,@JsonKey(name: 'capture-entries') int? captureEntries
 });
 
 
@@ -7965,7 +7965,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock,  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Mitm() when $default != null:
 return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries);case _:
@@ -7986,7 +7986,7 @@ return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.aut
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock,  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)  $default,) {final _that = this;
 switch (_that) {
 case _Mitm():
 return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries);case _:
@@ -8006,7 +8006,7 @@ return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.aut
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock,  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enable,  List<String> hostname, @JsonKey(name: 'skip-server-cert-verify')  bool skipServerCertVerify, @JsonKey(name: 'auto-quic-block')  bool autoQuicBlock, @JsonKey(name: 'decrypt-h2')  bool h2, @JsonKey(name: 'trusted-fingerprint')  String? trustedFingerprint,  bool capture, @JsonKey(name: 'capture-entries')  int? captureEntries)?  $default,) {final _that = this;
 switch (_that) {
 case _Mitm() when $default != null:
 return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.autoQuicBlock,_that.h2,_that.trustedFingerprint,_that.capture,_that.captureEntries);case _:
@@ -8021,7 +8021,7 @@ return $default(_that.enable,_that.hostname,_that.skipServerCertVerify,_that.aut
 @JsonSerializable()
 
 class _Mitm implements Mitm {
-  const _Mitm({this.enable = false,  List<String> hostname = const [], @JsonKey(name: 'skip-server-cert-verify') this.skipServerCertVerify = false, @JsonKey(name: 'auto-quic-block') this.autoQuicBlock = true, this.h2 = false, @JsonKey(name: 'trusted-fingerprint') this.trustedFingerprint, this.capture = false, @JsonKey(name: 'capture-entries') this.captureEntries}): _hostname = hostname;
+  const _Mitm({this.enable = false,  List<String> hostname = const [], @JsonKey(name: 'skip-server-cert-verify') this.skipServerCertVerify = false, @JsonKey(name: 'auto-quic-block') this.autoQuicBlock = true, @JsonKey(name: 'decrypt-h2') this.h2 = true, @JsonKey(name: 'trusted-fingerprint') this.trustedFingerprint, this.capture = false, @JsonKey(name: 'capture-entries') this.captureEntries}): _hostname = hostname;
   factory _Mitm.fromJson(Map<String, dynamic> json) => _$MitmFromJson(json);
 
 @override@JsonKey() final  bool enable;
@@ -8034,7 +8034,7 @@ class _Mitm implements Mitm {
 
 @override@JsonKey(name: 'skip-server-cert-verify') final  bool skipServerCertVerify;
 @override@JsonKey(name: 'auto-quic-block') final  bool autoQuicBlock;
-@override@JsonKey() final  bool h2;
+@override@JsonKey(name: 'decrypt-h2') final  bool h2;
 @override@JsonKey(name: 'trusted-fingerprint') final  String? trustedFingerprint;
 @override@JsonKey() final  bool capture;
 @override@JsonKey(name: 'capture-entries') final  int? captureEntries;
@@ -8074,7 +8074,7 @@ abstract mixin class _$MitmCopyWith<$Res> implements $MitmCopyWith<$Res> {
   factory _$MitmCopyWith(_Mitm value, $Res Function(_Mitm) _then) = __$MitmCopyWithImpl;
 @override @useResult
 $Res call({
- bool enable, List<String> hostname,@JsonKey(name: 'skip-server-cert-verify') bool skipServerCertVerify,@JsonKey(name: 'auto-quic-block') bool autoQuicBlock, bool h2,@JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint, bool capture,@JsonKey(name: 'capture-entries') int? captureEntries
+ bool enable, List<String> hostname,@JsonKey(name: 'skip-server-cert-verify') bool skipServerCertVerify,@JsonKey(name: 'auto-quic-block') bool autoQuicBlock,@JsonKey(name: 'decrypt-h2') bool h2,@JsonKey(name: 'trusted-fingerprint') String? trustedFingerprint, bool capture,@JsonKey(name: 'capture-entries') int? captureEntries
 });
 
 

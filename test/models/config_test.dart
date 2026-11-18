@@ -474,7 +474,7 @@ void main() {
         'hostname': ['*.example.com'],
         'skip-server-cert-verify': true,
         'auto-quic-block': false,
-        'h2': true,
+        'decrypt-h2': true,
         'trusted-fingerprint': 'AB:CD',
         'capture': true,
         'capture-entries': 5000,
@@ -531,15 +531,29 @@ void main() {
         expect(mitm.coreJson['ca-fingerprint'], '');
       });
 
-      test('offers neither HTTP/2 nor an unverified upstream', () {
+      test('never offers an unverified upstream', () {
         final json = const Mitm(
           skipServerCertVerify: true,
-          h2: true,
           trustedFingerprint: 'AB:CD',
         ).coreJson;
 
         expect(json, isNot(contains('skip-server-cert-verify')));
-        expect(json, isNot(contains('h2')));
+      });
+
+      test('HTTP/2 decryption is on by default and reaches the Core as h2', () {
+        expect(defaultMitm.h2, isTrue);
+        expect(defaultMitm.coreJson['h2'], isTrue);
+        expect(const Mitm(h2: false).coreJson['h2'], isFalse);
+      });
+
+      test('a legacy h2: false, never a user choice, is not read back', () {
+        final mitm = Mitm.fromJson({'enable': true, 'h2': false});
+
+        expect(mitm.h2, isTrue);
+        expect(
+          Mitm.fromJson(const Mitm(h2: false).toJson()).h2,
+          isFalse,
+        );
       });
     });
 

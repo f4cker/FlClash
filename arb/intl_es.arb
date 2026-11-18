@@ -2001,5 +2001,7 @@
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
   "ipxViaExit": "Queried through the current exit",
-  "ipxUnknown": "Unknown"
+  "ipxUnknown": "Unknown",
+  "mitmHttp2": "Descifrar HTTP/2",
+  "mitmHttp2Desc": "Si está desactivado, solo se descifra HTTP/1.1; las conexiones que solo usan HTTP/2 (como gRPC) pasan sin descifrar."
 }

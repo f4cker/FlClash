@@ -20,7 +20,10 @@ String mitmOutcomeText(BuildContext context, String outcome) {
     'http2Only' => l.mitmOutcomeHTTP1Unsupported,
     'unsupportedHello' || 'missingSNI' => l.mitmOutcomeHelloPassthrough,
     'paused' => l.mitmOutcomePaused,
-    'upstreamFailed' || 'clientFailed' || 'http1Failed' => l.mitmOutcomeFailed,
+    'upstreamFailed' ||
+    'clientFailed' ||
+    'http1Failed' ||
+    'http2Failed' => l.mitmOutcomeFailed,
     _ => '',
   };
 }
@@ -74,7 +77,8 @@ enum MitmBadge {
       'upstreamCertificate' ||
       'upstreamFailed' ||
       'clientFailed' ||
-      'http1Failed' => MitmBadge.failed,
+      'http1Failed' ||
+      'http2Failed' => MitmBadge.failed,
       _ => null,
     };
   }

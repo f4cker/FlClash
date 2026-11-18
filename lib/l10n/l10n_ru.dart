@@ -7149,4 +7149,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'Расшифровывать HTTP/2';
+
+  @override
+  String get mitmHttp2Desc =>
+      'Если выключено, расшифровывается только HTTP/1.1; соединения только по HTTP/2 (например, gRPC) проходят без расшифровки.';
 }

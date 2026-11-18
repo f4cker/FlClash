@@ -15,9 +15,19 @@ type mitmClientHello struct {
 }
 
 // A client that names protocols but not HTTP/1.1 (gRPC, an h2-only stack)
-// cannot be served by phase 1, which decrypts HTTP/1.1 alone.
+// can be served only over HTTP/2, when HTTP/2 decryption is on.
 func (hello mitmClientHello) speaksHTTP1() bool {
 	return hello.alpn == nil || slices.Contains(hello.alpn, "http/1.1")
+}
+
+func (hello mitmClientHello) speaksHTTP2() bool {
+	return slices.Contains(hello.alpn, mitmALPNHTTP2)
+}
+
+// Whether decryption can serve this client at all: HTTP/1.1 always, HTTP/2
+// only while it is turned on.
+func (hello mitmClientHello) decryptable(http2 bool) bool {
+	return hello.speaksHTTP1() || http2 && hello.speaksHTTP2()
 }
 
 // Variables only so socket tests can shorten the waits.

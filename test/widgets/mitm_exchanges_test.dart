@@ -60,6 +60,7 @@ MitmExchangeSummary _summary(MitmExchange exchange) => MitmExchangeSummary(
   pending: exchange.pending,
   duration: exchange.duration,
   method: exchange.method,
+  proto: exchange.proto,
   url: exchange.url,
   status: exchange.status,
   responseSize: exchange.responseSize,
@@ -263,7 +264,8 @@ void main() {
 
     expect(find.text(appLocalizations.basicInfo), findsNothing);
     expect(find.text('GET /new?x=1'), findsOneWidget);
-    expect(find.text('200'), findsOneWidget);
+    // Each request names its protocol beside its status.
+    expect(find.text('200 · h2'), findsOneWidget);
     expect(find.text('35 ms'), findsOneWidget);
     expect(find.text('POST /upload'), findsOneWidget);
     expect(find.text(appLocalizations.inProgress), findsOneWidget);

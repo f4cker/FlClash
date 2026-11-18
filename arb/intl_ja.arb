@@ -2001,5 +2001,7 @@
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
   "ipxViaExit": "Queried through the current exit",
-  "ipxUnknown": "Unknown"
+  "ipxUnknown": "Unknown",
+  "mitmHttp2": "HTTP/2 を復号",
+  "mitmHttp2Desc": "オフにすると HTTP/1.1 のみ復号します。HTTP/2 だけを使う接続（gRPC など）は復号せずそのまま通します。"
 }

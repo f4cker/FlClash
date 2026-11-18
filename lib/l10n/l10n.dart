@@ -12076,6 +12076,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unknown'**
   String get ipxUnknown;
+
+  /// No description provided for @mitmHttp2.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrypt HTTP/2'**
+  String get mitmHttp2;
+
+  /// No description provided for @mitmHttp2Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'When off, only HTTP/1.1 is decrypted; connections that use only HTTP/2 (such as gRPC) pass through undecrypted.'**
+  String get mitmHttp2Desc;
 }
 
 class _AppLocalizationsDelegate

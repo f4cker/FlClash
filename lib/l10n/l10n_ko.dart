@@ -7018,4 +7018,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'HTTP/2 복호화';
+
+  @override
+  String get mitmHttp2Desc =>
+      '끄면 HTTP/1.1만 복호화합니다. HTTP/2만 사용하는 연결(gRPC 등)은 복호화하지 않고 그대로 통과합니다.';
 }

@@ -223,6 +223,29 @@ func (s *mitmCaptureStore) respond(entry *mitmCaptureEntry, resp *http.Response)
 	s.evictLocked()
 }
 
+// Adds the response trailers (gRPC's grpc-status, for one) to the recorded
+// response headers once the body has ended.
+func (s *mitmCaptureStore) trailers(entry *mitmCaptureEntry, trailer http.Header) {
+	if entry == nil || len(trailer) == 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if entry.gone {
+		return
+	}
+	if entry.respHeader == nil {
+		entry.respHeader = http.Header{}
+	}
+	for name, values := range trailer {
+		entry.respHeader[name] = append(entry.respHeader[name], values...)
+	}
+	cost := mitmHeaderCost(trailer)
+	entry.cost += cost
+	s.bytes += cost
+	s.evictLocked()
+}
+
 func (s *mitmCaptureStore) write(entry *mitmCaptureEntry, response bool, p []byte) {
 	if entry == nil || len(p) == 0 {
 		return
@@ -340,16 +363,18 @@ type MitmBodyParams struct {
 }
 
 type MitmExchangeSummary struct {
-	ID           uint64    `json:"id"`
-	Start        time.Time `json:"start"`
-	Pending      bool      `json:"pending"`
-	Duration     int64     `json:"duration"`
-	Method       string    `json:"method"`
-	URL          string    `json:"url"`
-	Status       int       `json:"status"`
-	RequestSize  int64     `json:"request-size"`
-	ResponseSize int64     `json:"response-size"`
-	Error        string    `json:"error"`
+	ID       uint64    `json:"id"`
+	Start    time.Time `json:"start"`
+	Pending  bool      `json:"pending"`
+	Duration int64     `json:"duration"`
+	Method   string    `json:"method"`
+	// HTTP/1.1 or HTTP/2.0, as the client spoke it.
+	Proto        string `json:"proto"`
+	URL          string `json:"url"`
+	Status       int    `json:"status"`
+	RequestSize  int64  `json:"request-size"`
+	ResponseSize int64  `json:"response-size"`
+	Error        string `json:"error"`
 }
 
 type MitmExchangeList struct {
@@ -387,6 +412,7 @@ func (entry *mitmCaptureEntry) summary() MitmExchangeSummary {
 		Pending:      entry.pending,
 		Duration:     duration.Milliseconds(),
 		Method:       entry.method,
+		Proto:        entry.proto,
 		URL:          entry.url,
 		Status:       entry.status,
 		RequestSize:  entry.req.size,

@@ -32,11 +32,14 @@ const (
 	mitmOutcomeUpstreamFailed      MitmOutcome = "upstreamFailed"
 	mitmOutcomeClientFailed        MitmOutcome = "clientFailed"
 	mitmOutcomeHTTP1Failed         MitmOutcome = "http1Failed"
-	mitmOutcomeUnsupportedHello    MitmOutcome = "unsupportedHello"
-	mitmOutcomeMissingSNI          MitmOutcome = "missingSNI"
-	mitmOutcomePrecommit           MitmOutcome = "precommit"
-	mitmOutcomeDecrypted           MitmOutcome = "decrypted"
-	// The client offered only protocols other than HTTP/1.1; passed through.
+	// Decrypted over HTTP/2, then the HTTP/2 session to the site failed.
+	mitmOutcomeHTTP2Failed      MitmOutcome = "http2Failed"
+	mitmOutcomeUnsupportedHello MitmOutcome = "unsupportedHello"
+	mitmOutcomeMissingSNI       MitmOutcome = "missingSNI"
+	mitmOutcomePrecommit        MitmOutcome = "precommit"
+	mitmOutcomeDecrypted        MitmOutcome = "decrypted"
+	// The client offered no protocol decryption serves (HTTP/1.1, or h2
+	// while HTTP/2 decryption is on); passed through.
 	mitmOutcomeHTTP2Only MitmOutcome = "http2Only"
 	// Decryption is paused (for every listed host or this one); the
 	// connection went through untouched.
@@ -441,7 +444,7 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 	if !runtime.hosts.Match(host) || (metadata.Host != "" && normalizeMitmHost(metadata.Host) != host) {
 		return nil
 	}
-	if !hello.speaksHTTP1() {
+	if !hello.decryptable(runtime.http2()) {
 		return mitmPassThroughReporting(mitmOutcomeHTTP2Only)
 	}
 	// A pause is reported only for the host as listed now; the relay is the
@@ -468,14 +471,14 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 	// Do not mark the tracker as decrypted before TLS commits; this may
 	// still take the untouched precommit passthrough path.
 	return func(client *N.BufferedConn, remote C.Conn) {
-		mitmServeSelected(client, remote, host, leaf, runtime)
+		mitmServeSelected(client, remote, host, leaf, runtime, hello.alpn)
 	}
 }
 
 // No bytes have been sent upstream at registration; rejection is the last
 // safe point for replay-free passthrough on this same connection.
-func mitmServeSelected(client *N.BufferedConn, remote C.Conn, host string, leaf *mitmLeaf, runtime *mitmRuntime) {
-	if outcome := serveMitm(client, remote, host, leaf, runtime); outcome == mitmOutcomePrecommit {
+func mitmServeSelected(client *N.BufferedConn, remote C.Conn, host string, leaf *mitmLeaf, runtime *mitmRuntime, clientALPN []string) {
+	if outcome := serveMitmOffering(client, remote, host, leaf, runtime, clientALPN); outcome == mitmOutcomePrecommit {
 		// A pause that won the race is still shown; a new setup is not.
 		if mitmState.Load() == runtime {
 			if paused := mitmPausedOutcomeFor(host); paused != "" {
@@ -519,9 +522,15 @@ func (c mitmStrictTLSConn) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// The site is verified in full before the client sees a certificate, and
-// both sides speak HTTP/1.1 alone.
+// As serveMitm with a client that offered no ALPN: HTTP/1.1 on both sides.
 func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mitmRuntime) MitmOutcome {
+	return serveMitmOffering(client, remote, host, leaf, runtime, nil)
+}
+
+// The site is verified in full before the client sees a certificate. The
+// site is offered what the client offered and decryption serves (see
+// mitmUpstreamProtos); the client is then offered the site's choice alone.
+func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mitmRuntime, clientALPN []string) MitmOutcome {
 	remove, ok := mitmActive.add(runtime, host, client, remote)
 	if !ok {
 		return mitmOutcomePrecommit
@@ -534,7 +543,7 @@ func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mi
 	upstream := tls.Client(mitmStrictTLSConn{remoteIdle}, &tls.Config{
 		ServerName: host,
 		RootCAs:    mitmUpstreamRoots,
-		NextProtos: []string{"http/1.1"},
+		NextProtos: mitmUpstreamProtos(clientALPN, runtime.http2()),
 		MinVersion: tls.VersionTLS12,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), mitmHandshakeWait)
@@ -550,10 +559,17 @@ func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mi
 	}
 	// Once the upstream handshake commits, close its TLS wrapper on exit.
 	defer func() { remoteIdle.closing.Store(true); _ = upstream.Close() }()
+	negotiated := upstream.ConnectionState().NegotiatedProtocol
+	clientProtos := mitmClientProtos(clientALPN, negotiated)
+	if clientProtos == nil {
+		// The client offered h2 alone and the site does not speak it.
+		log.Warnln("[MITM] %s: the client speaks only HTTP/2 and the site does not", host)
+		return mitmOutcomeUpstreamFailed
+	}
 	clientIdle := &mitmIdleConn{Conn: client, timeout: mitmIdleTimeout}
 	server := tls.Server(clientIdle, &tls.Config{
 		Certificates: []tls.Certificate{leaf.cert},
-		NextProtos:   []string{"http/1.1"},
+		NextProtos:   clientProtos,
 		MinVersion:   tls.VersionTLS12,
 	})
 	if err := server.HandshakeContext(ctx); err != nil {
@@ -568,13 +584,27 @@ func serveMitm(client, remote net.Conn, host string, leaf *mitmLeaf, runtime *mi
 	// Closing the wrapper emits close_notify before the tunnel closes raw TCP.
 	// The idle wrapper caps the alert write so a stalled peer cannot hang exit.
 	defer func() { clientIdle.closing.Store(true); _ = server.Close() }()
+	http2 := negotiated == mitmALPNHTTP2
+	if http2 && server.ConnectionState().NegotiatedProtocol != mitmALPNHTTP2 {
+		log.Debugln("[MITM] %s: the client did not take HTTP/2", host)
+		return mitmOutcomeClientFailed
+	}
 	// The tracker exists by now; neither fallback nor a failed handshake may
 	// publish success. Later HTTP failure can still be reported separately.
 	reportMitmOutcome(remote, mitmOutcomeDecrypted)
 	connection := mitmTrackerID(remote)
 	mitmCaptures.openConnection(connection)
 	defer mitmCaptures.closeConnection(connection)
-	if err := mitmHTTP1Duplex(server, upstream, host, func() bool { return mitmState.Load() == runtime && !mitmPausedFor(host) }, &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection}); err != nil {
+	allowed := func() bool { return mitmState.Load() == runtime && !mitmPausedFor(host) }
+	control := &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection}
+	if http2 {
+		if err := mitmHTTP2Proxy(server, upstream, host, allowed, control); err != nil {
+			_ = client.Close()
+			return mitmOutcomeHTTP2Failed
+		}
+		return ""
+	}
+	if err := mitmHTTP1Duplex(server, upstream, host, allowed, control); err != nil {
 		// Do not authenticate a truncated close-delimited response with a
 		// close_notify. Abort the raw transport before deferred TLS cleanup.
 		_ = client.Close()

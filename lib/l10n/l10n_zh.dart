@@ -6593,4 +6593,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ipxUnknown => '未知';
+
+  @override
+  String get mitmHttp2 => 'HTTP/2 解密';
+
+  @override
+  String get mitmHttp2Desc => '关闭后只解密 HTTP/1.1；只用 HTTP/2 的连接（如 gRPC）将不解密、原样放行。';
 }

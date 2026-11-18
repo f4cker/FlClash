@@ -6945,4 +6945,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ipxUnknown => 'Unknown';
+
+  @override
+  String get mitmHttp2 => 'HTTP/2 を復号';
+
+  @override
+  String get mitmHttp2Desc =>
+      'オフにすると HTTP/1.1 のみ復号します。HTTP/2 だけを使う接続（gRPC など）は復号せずそのまま通します。';
 }

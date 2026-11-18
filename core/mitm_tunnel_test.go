@@ -18,8 +18,8 @@ import (
 // The installed hook must not hold up a server-first dial while decryption is
 // not set up.
 func TestMitmIdleHookDoesNotDelayActualTunnelDial(t *testing.T) {
-	if tunnel.TCPIntercept == nil || tunnel.TCPInterceptWanted == nil || tunnel.UDPDrop != nil {
-		t.Fatal("the TCP hooks must be installed and the UDP hook must stay nil")
+	if tunnel.TCPIntercept == nil || tunnel.TCPInterceptWanted == nil || tunnel.UDPDrop == nil {
+		t.Fatal("the TCP hooks and the UDP hook must be installed")
 	}
 	oldRuntime := mitmState.Load()
 	defer mitmState.Store(oldRuntime)
@@ -113,7 +113,7 @@ func TestMitmPrecommitConfigChangeRelaysThroughActualTunnel(t *testing.T) {
 			// Deterministically replace configuration after the interceptor was selected,
 			// immediately before active-session registration (before any upstream TLS).
 			mitmState.Store(&mitmRuntime{})
-			mitmServeSelected(client, remote, "example.com", nil, old)
+			mitmServeSelected(client, remote, "example.com", nil, old, nil)
 		}
 	}
 	client, inbound := net.Pipe()
