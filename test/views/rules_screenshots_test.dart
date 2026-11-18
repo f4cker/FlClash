@@ -25,6 +25,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../helpers/app_paths.dart';
 import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_profiles.dart';
@@ -426,6 +427,7 @@ void main() {
     ]);
     await _loadFont('Twemoji', [_asset('assets/fonts/Twemoji.Mozilla.ttf')]);
     Directory(_outDir!).createSync(recursive: true);
+    await useAppPaths(Directory.systemTemp.createTempSync('rules_shots'));
   });
 
   late ProviderContainer container;
@@ -862,6 +864,15 @@ void main() {
     await tester.tap(find.text('显示全部规则'));
     await settle(tester, 12);
     await shoot(tester, '13b-narrow-list');
+  });
+
+  // Scrolled under the title bar, for setting beside the requests page.
+  shot('14-scrolled', (tester) async {
+    await pumpPage(tester, size: const Size(700, 640));
+    final pointer = TestPointer(1, PointerDeviceKind.mouse)
+      ..hover(const Offset(350, 400));
+    await tester.sendEventToBinding(pointer.scroll(const Offset(0, 300)));
+    await shoot(tester, '14-scrolled');
   });
 
   shot('12-no-filter-results', (tester) async {

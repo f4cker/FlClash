@@ -19,7 +19,9 @@ import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/mitm_status.dart';
 import 'package:fl_clash/views/connection/requests.dart';
+import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -363,6 +365,8 @@ void main() {
     Brightness brightness = Brightness.light,
     String? openHost,
     double pixelRatio = 2,
+    int filler = 0,
+    double scroll = 0,
   }) async {
     tester.view.physicalSize = size * pixelRatio;
     tester.view.devicePixelRatio = pixelRatio;
@@ -417,6 +421,8 @@ void main() {
         seconds: 6,
       ),
       row('8', 'api.example.com', 'Safari', mitm: true, seconds: 7),
+      for (var i = 0; i < filler; i++)
+        row('${9 + i}', 'host$i.example.com', 'Safari', seconds: 8 + i),
     ]) {
       notifier.addRequest(request);
     }
@@ -441,6 +447,14 @@ void main() {
     );
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 100));
+    }
+    if (scroll != 0) {
+      final pointer = TestPointer(1, PointerDeviceKind.mouse)
+        ..hover(size.center(Offset.zero));
+      await tester.sendEventToBinding(pointer.scroll(Offset(0, scroll)));
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
     if (openHost != null) {
       await tester.tap(find.textContaining(openHost, findRichText: true).first);
@@ -503,6 +517,90 @@ void main() {
       '16-request-detail-handshake',
       const Size(600, 1100),
       openHost: 'bank.example.com',
+    );
+  });
+
+  // Scrolled under the title bar, for setting beside the rules page.
+  testWidgets('17-requests-scrolled', skip: skip != null, (tester) async {
+    await shootRequests(
+      tester,
+      '17-requests-scrolled',
+      const Size(700, 640),
+      pixelRatio: 1,
+      filler: 40,
+      scroll: 300,
+    );
+  });
+
+  // The decryption bar on the dashboard, and the requests page without it.
+  Future<void> shootPage(
+    WidgetTester tester,
+    String name,
+    Widget page, {
+    Size size = const Size(1220, 760),
+  }) async {
+    mitmFeature = true;
+    addTearDown(() => mitmFeature = false);
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final scoped = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(TestProfiles.new),
+        mitmIndicatorProvider.overrideWithValue(
+          const MitmIndicator.decrypting(),
+        ),
+      ],
+    );
+    addTearDown(scoped.dispose);
+    globalState.container = scoped;
+    scoped.read(viewSizeProvider.notifier).value = size;
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: boundary,
+        child: UncontrolledProviderScope(
+          container: scoped,
+          child: Consumer(
+            builder: (context, ref, _) => TestApp(
+              locale: const Locale('zh', 'CN'),
+              theme: watchAppTheme(ref, Brightness.light),
+              darkTheme: watchAppTheme(ref, Brightness.dark),
+              themeMode: ThemeMode.light,
+              child: page,
+            ),
+          ),
+        ),
+      ),
+    );
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    final render =
+        boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    await tester.runAsync(() async {
+      final image = await render.toImage(pixelRatio: 1);
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      await File('$_outDir/$name.png').writeAsBytes(data!.buffer.asUint8List());
+    });
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 5));
+  }
+
+  testWidgets('18-dashboard-with-bar', skip: skip != null, (tester) async {
+    await shootPage(
+      tester,
+      '18-dashboard-with-bar',
+      const DashboardView(platform: SupportPlatform.MacOS),
+    );
+  });
+
+  testWidgets('19-requests-without-bar', skip: skip != null, (tester) async {
+    await shootPage(
+      tester,
+      '19-requests-without-bar',
+      const RequestsView(initialFeed: RequestFeed.recent),
     );
   });
 
