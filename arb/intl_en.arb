@@ -2743,7 +2743,7 @@
       }
     }
   },
-  "mitmRewriteOff": "HTTPS decryption is off, so rewrite rules aren't running.",
+  "mitmRewriteOff": "Decryption is off, so rewrite rules won't take effect.",
   "mitmRewriteGoTurnOn": "Turn On",
   "mitmRewriteEmptyTitle": "No rewrite rules yet",
   "mitmRewriteEmptyDesc": "Paste rules to import them.",
@@ -2881,6 +2881,172 @@
     "placeholders": {
       "text": {},
       "type": {}
+    }
+  },
+  "mitmRewriteErrorFramingHeader": "{value} controls how the message is sent and can't be rewritten.",
+  "mitmRewriteErrorNeedsValue": "{value} needs a value.",
+  "mitmRewriteErrorBodyHead": "A body rewrite must start with http-request or http-response.",
+  "mitmRewriteErrorHeaderLineBreak": "A header value can't contain a line break.",
+  "mitmRewriteErrorNeedsReplacementUrl": "A redirect or URL rewrite needs a target URL.",
+  "mitmRewriteErrorDataUrl": "Remote content must be downloaded before a local response can use it.",
+  "mitmRewriteErrorDataBase64": "The content isn't valid Base64.",
+  "mitmRewriteErrorDataFileName": "The content must name a file in the resources folder; got {value}.",
+  "mitmRewriteErrorFileNeedsData": "The file type needs a file.",
+  "mitmRewriteErrorBodyTooLarge": "The decoded content is over the rewrite size limit.",
+  "mitmRewriteErrorEmptyRegex": "The regular expression can't be empty.",
+  "mitmRewriteErrorEmptyRule": "The rule can't be empty.",
+  "mitmRewriteErrorUrlFieldCount": "Enter a regular expression, a replacement and a type; found {value} items.",
+  "mitmRewriteErrorBodyPairs": "After the URL regular expression, enter pairs of a pattern and its replacement.",
+  "mitmRewriteErrorHeaderFields": "Enter the request or response type, a regular expression, an action and a header, plus a value when needed.",
+  "mitmRewriteErrorKeyValue": "Use the key=value format; got {value}.",
+  "mitmRewriteErrorHeaderFormat": "The header is invalid; use a:b|c:d or Base64.",
+  "mitmRewriteErrorHeaderReplaceRegex": "header-replace-regex needs a regular expression and a replacement.",
+  "mitmRewriteErrorUrlRegex": "The URL regular expression is invalid.",
+  "mitmRewriteErrorBodyRegex": "The content regular expression {value} is invalid.",
+  "mitmRewriteErrorInvalidHeader": "The header {value} is invalid.",
+  "mitmRewriteErrorHeaderName": "The header name {value} is invalid.",
+  "mitmRewriteErrorHeaderRegex": "The header regular expression is invalid.",
+  "mitmRewriteErrorJq": "Rewriting content with jq isn't supported yet.",
+  "mitmRewriteErrorLocalUnreadable": "Can't read the local response file {value}.",
+  "mitmRewriteErrorLocalTooLarge": "The local response file {value} is over 16 MiB.",
+  "mitmRewriteErrorRegexTimeout": "The regular expression took too long to match.",
+  "mitmRewriteErrorStatusCode": "The status code must be between 200 and 999; got {value}.",
+  "mitmRewriteErrorUrlType": "Unsupported URL rewrite type: {value}.",
+  "mitmRewriteErrorDataType": "Unsupported content type: {value}.",
+  "mitmRewriteErrorHeaderAction": "Unsupported header action: {value}.",
+  "mitmRewriteErrorParameter": "Unsupported parameter: {value}.",
+  "mitmRewriteErrorSection": "Unsupported section: {value}.",
+  "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
+  "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
+  "mitmRewriteErrorGeneric": "The rule's format is invalid.",
+  "mitmRewriteErrorDetails": "Details",
+  "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "@mitmRewriteErrorFramingHeader": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorNeedsValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorDataFileName": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorUrlFieldCount": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorKeyValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorBodyRegex": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorInvalidHeader": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorHeaderName": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorLocalUnreadable": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorLocalTooLarge": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorStatusCode": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorUrlType": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorDataType": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorHeaderAction": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorParameter": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorSection": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorUnterminatedQuote": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmRewriteMatchedTitle": "Rule matched",
+  "mitmRewriteNotAppliedTitle": "Rewrite not applied: {value}",
+  "@mitmRewriteNotAppliedTitle": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
     }
   }
 }

@@ -266,6 +266,7 @@ _MitmAction _$MitmActionFromJson(Map<String, dynamic> json) => _MitmAction(
   detail: json['detail'] as String? ?? '',
   rule: json['rule'] as String? ?? '',
   skipped: json['skipped'] as String? ?? '',
+  tookNs: (json['took-ns'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$MitmActionToJson(_MitmAction instance) =>
@@ -275,6 +276,7 @@ Map<String, dynamic> _$MitmActionToJson(_MitmAction instance) =>
       'detail': instance.detail,
       'rule': instance.rule,
       'skipped': instance.skipped,
+      'took-ns': instance.tookNs,
     };
 
 _MitmConnectionRewrite _$MitmConnectionRewriteFromJson(
@@ -379,6 +381,10 @@ _MitmRewriteIssue _$MitmRewriteIssueFromJson(Map<String, dynamic> json) =>
       rule: json['rule'] as String? ?? '',
       section: json['section'] as String? ?? '',
       line: (json['line'] as num?)?.toInt() ?? 0,
+      kind: json['kind'] as String? ?? '',
+      args:
+          (json['args'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+          const [],
       message: json['message'] as String? ?? '',
     );
 
@@ -387,6 +393,8 @@ Map<String, dynamic> _$MitmRewriteIssueToJson(_MitmRewriteIssue instance) =>
       'rule': instance.rule,
       'section': instance.section,
       'line': instance.line,
+      'kind': instance.kind,
+      'args': instance.args,
       'message': instance.message,
     };
 

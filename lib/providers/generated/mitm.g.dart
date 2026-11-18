@@ -858,11 +858,13 @@ final mitmRewriteIssuesProvider = MitmRewriteIssuesFamily._();
 final class MitmRewriteIssuesProvider
     extends
         $FunctionalProvider<
-          AsyncValue<Map<int, String>>,
-          Map<int, String>,
-          FutureOr<Map<int, String>>
+          AsyncValue<Map<int, MitmRewriteIssue>>,
+          Map<int, MitmRewriteIssue>,
+          FutureOr<Map<int, MitmRewriteIssue>>
         >
-    with $FutureModifier<Map<int, String>>, $FutureProvider<Map<int, String>> {
+    with
+        $FutureModifier<Map<int, MitmRewriteIssue>>,
+        $FutureProvider<Map<int, MitmRewriteIssue>> {
   /// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
   /// disabled rules are checked too.
   MitmRewriteIssuesProvider._({
@@ -888,12 +890,12 @@ final class MitmRewriteIssuesProvider
 
   @$internal
   @override
-  $FutureProviderElement<Map<int, String>> $createElement(
+  $FutureProviderElement<Map<int, MitmRewriteIssue>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<Map<int, String>> create(Ref ref) {
+  FutureOr<Map<int, MitmRewriteIssue>> create(Ref ref) {
     final argument = this.argument as int;
     return mitmRewriteIssues(ref, argument);
   }
@@ -909,13 +911,13 @@ final class MitmRewriteIssuesProvider
   }
 }
 
-String _$mitmRewriteIssuesHash() => r'6c74d4cb4c32ea29703001716f66bd44cea6d86c';
+String _$mitmRewriteIssuesHash() => r'25f56810e07fb3173c9482d61a84b12bbb867c6e';
 
 /// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
 /// disabled rules are checked too.
 
 final class MitmRewriteIssuesFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<Map<int, String>>, int> {
+    with $FunctionalFamilyOverride<FutureOr<Map<int, MitmRewriteIssue>>, int> {
   MitmRewriteIssuesFamily._()
     : super(
         retry: null,

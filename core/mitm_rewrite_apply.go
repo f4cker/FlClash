@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/andybalholm/brotli"
@@ -61,6 +62,13 @@ func mitmRewriteBegin(scheme, host string, port uint16, requestURI string, plain
 	}
 	u := scheme + "://" + authority + requestURI
 	return &mitmRewriteExchange{engine: engine, scheme: scheme, host: host, authority: authority, url: u, originalURL: u, plain: plain}
+}
+
+// Records an applied rule with the time since start, at least 1ns so a
+// measured rule never reads as unmeasured.
+func (x *mitmRewriteExchange) recordApplied(rule *mitmRewriteRule, phase, action string, start time.Time) {
+	x.record(rule, phase, action, "")
+	x.hits[len(x.hits)-1].TookNs = max(int64(time.Since(start)), 1)
 }
 
 func (x *mitmRewriteExchange) record(rule *mitmRewriteRule, phase, action, skip string) {
@@ -122,8 +130,9 @@ func (x *mitmRewriteExchange) request(header http.Header) (decision mitmRequestD
 		return decision
 	}
 	for _, rule := range x.engine.mapLocal.candidates(x.host) {
+		start := time.Now()
 		if x.matches(rule, "request") {
-			x.record(rule, "request", "map-local", "")
+			x.recordApplied(rule, "request", "map-local", start)
 			decision.local = rule.local
 			return decision
 		}
@@ -132,25 +141,26 @@ func (x *mitmRewriteExchange) request(header http.Header) (decision mitmRequestD
 }
 
 func (x *mitmRewriteExchange) applyURL(rule *mitmRewriteRule) mitmRequestDecision {
+	start := time.Now()
 	action := string(rule.urlAction)
 	switch rule.urlAction {
 	case mitmURLRejectDrop:
-		x.record(rule, "request", action, "")
+		x.recordApplied(rule, "request", action, start)
 		return mitmRequestDecision{drop: true}
 	case mitmURLReject, mitmURLRejectNoDrop:
-		x.record(rule, "request", action, "")
+		x.recordApplied(rule, "request", action, start)
 		return mitmRequestDecision{local: &mitmLocalResponse{status: http.StatusNotFound, header: http.Header{}}}
 	case mitmURLReject200:
-		x.record(rule, "request", action, "")
+		x.recordApplied(rule, "request", action, start)
 		return mitmRequestDecision{local: &mitmLocalResponse{status: http.StatusOK, header: http.Header{}}}
 	case mitmURLRejectImg:
-		x.record(rule, "request", action, "")
+		x.recordApplied(rule, "request", action, start)
 		return mitmRequestDecision{local: &mitmLocalResponse{status: http.StatusOK, header: http.Header{"Content-Type": {"image/gif"}}, body: mitmTinyGIF}}
 	case mitmURLRejectDict:
-		x.record(rule, "request", action, "")
+		x.recordApplied(rule, "request", action, start)
 		return mitmRequestDecision{local: &mitmLocalResponse{status: http.StatusOK, header: http.Header{"Content-Type": {"application/json"}}, body: []byte("{}")}}
 	case mitmURLRejectArray:
-		x.record(rule, "request", action, "")
+		x.recordApplied(rule, "request", action, start)
 		return mitmRequestDecision{local: &mitmLocalResponse{status: http.StatusOK, header: http.Header{"Content-Type": {"application/json"}}, body: []byte("[]")}}
 	}
 	target, _, err := rule.url.replaceAll(x.url, rule.replacement)
@@ -170,7 +180,7 @@ func (x *mitmRewriteExchange) applyURL(rule *mitmRewriteRule) mitmRequestDecisio
 		return mitmRequestDecision{}
 	}
 	if rule.urlAction == mitmURL302 || rule.urlAction == mitmURL307 {
-		x.record(rule, "request", action, "")
+		x.recordApplied(rule, "request", action, start)
 		status := http.StatusFound
 		if rule.urlAction == mitmURL307 {
 			status = http.StatusTemporaryRedirect
@@ -190,7 +200,7 @@ func (x *mitmRewriteExchange) applyURL(rule *mitmRewriteRule) mitmRequestDecisio
 	}
 	requestURI := parsed.RequestURI()
 	x.url = x.scheme + "://" + x.authority + requestURI
-	x.record(rule, "request", action, "")
+	x.recordApplied(rule, "request", action, start)
 	return mitmRequestDecision{requestURI: requestURI}
 }
 
@@ -223,6 +233,7 @@ func (x *mitmRewriteExchange) rewriteHeader(index *mitmRuleIndex, header http.He
 		if !x.matches(rule, phase) {
 			continue
 		}
+		start := time.Now()
 		_, present := header[rule.field]
 		switch rule.headerOp {
 		case mitmHeaderAdd:
@@ -253,7 +264,7 @@ func (x *mitmRewriteExchange) rewriteHeader(index *mitmRuleIndex, header http.He
 				header[rule.field] = replaced
 			}
 		}
-		x.record(rule, phase, string(rule.headerOp), "")
+		x.recordApplied(rule, phase, string(rule.headerOp), start)
 	}
 }
 
@@ -418,6 +429,7 @@ func (x *mitmRewriteExchange) rewriteBody(rules []*mitmRewriteRule, header http.
 	}
 	current := string(text)
 	for _, rule := range rules {
+		start := time.Now()
 		next, failed := current, false
 		for _, pair := range rule.pairs {
 			result, _, err := pair.re.replaceAll(next, pair.replacement)
@@ -432,7 +444,7 @@ func (x *mitmRewriteExchange) rewriteBody(rules []*mitmRewriteRule, header http.
 			continue
 		}
 		current = next
-		x.record(rule, phase, "body", "")
+		x.recordApplied(rule, phase, "body", start)
 	}
 	if current == string(text) {
 		return original

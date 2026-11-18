@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/features/features.dart';
@@ -451,9 +452,8 @@ void main() {
     return find.byType(MitmExchangeView);
   }
 
-  testWidgets('a rule that failed says why, and passed on only once over', (
-    tester,
-  ) async {
+  testWidgets('a rule not applied or failed says why, passed on only once '
+      'over', (tester) async {
     final l = currentAppLocalizations;
     Future<void> open(MitmExchange exchange) async {
       await _pumpDetail(
@@ -468,20 +468,75 @@ void main() {
       await _openRequest(tester);
     }
 
-    const hit = MitmAction(
+    // Too big is what the message is, not an error: not applied.
+    const oversize = MitmAction(
       kind: 'body-rewrite',
       phase: 'response',
       skipped: 'oversize',
     );
-    final failed = l.mitmRewriteFailedTitle(l.mitmRewriteSkipOversize);
-    await open(_exchange.copyWith(actions: const [hit]));
-    expect(find.text(failed, findRichText: true), findsOneWidget);
+    final notApplied = l.mitmRewriteNotAppliedTitle(l.mitmRewriteSkipOversize);
+    await open(_exchange.copyWith(actions: const [oversize]));
+    expect(find.text(notApplied, findRichText: true), findsOneWidget);
     expect(find.text(l.mitmRewritePassedThrough), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
-    await open(_exchange.copyWith(actions: const [hit], error: 'reset'));
-    expect(find.text(failed, findRichText: true), findsOneWidget);
+    await open(_exchange.copyWith(actions: const [oversize], error: 'reset'));
+    expect(find.text(notApplied, findRichText: true), findsOneWidget);
     expect(find.text(l.mitmRewritePassedThrough), findsNothing);
+
+    // A body that could not be decoded is a failure.
+    await tester.pumpWidget(const SizedBox.shrink());
+    const broken = MitmAction(
+      kind: 'body-rewrite',
+      phase: 'response',
+      skipped: 'decodeFailed',
+    );
+    await open(_exchange.copyWith(actions: const [broken]));
+    expect(
+      find.text(
+        l.mitmRewriteFailedTitle(mitmRewriteSkipText(l, 'decodeFailed')),
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('an applied rule says it matched until the request is over, '
+      'then applied with its time', (tester) async {
+    final l = currentAppLocalizations;
+    const hit = MitmAction(
+      kind: 'body-rewrite',
+      phase: 'response',
+      detail: 'body',
+      tookNs: 1300000,
+    );
+    Future<void> open(MitmExchange exchange) async {
+      await _pumpDetail(
+        tester,
+        list: MitmExchangeList(
+          capturing: true,
+          since: _start,
+          exchanges: [_summary(exchange)],
+        ),
+        exchange: exchange,
+      );
+      await _openRequest(tester);
+    }
+
+    await open(_exchange.copyWith(actions: const [hit], pending: true));
+    expect(
+      find.textContaining(l.mitmRewriteMatchedTitle, findRichText: true),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await open(_exchange.copyWith(actions: const [hit]));
+    expect(
+      find.textContaining(l.mitmRewriteAppliedTitle, findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('1.3\u00a0ms'), findsOneWidget);
+    expect(mitmRewriteTookText(hit.copyWith(tookNs: 0)), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

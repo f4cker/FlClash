@@ -10,6 +10,7 @@ import 'dart:ui' as ui;
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
+import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/core/interface.dart';
@@ -23,6 +24,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/config/mitm.dart';
 import 'package:fl_clash/views/connection/requests.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/rendering.dart';
@@ -119,9 +121,17 @@ const _rules = [
   ),
 ];
 
-const _issues = {8: 'unknown rewrite type "999"'};
+const _issues = {
+  8: MitmRewriteIssue(
+    kind: 'urlType',
+    args: ['"999"'],
+    message: 'unknown URL rewrite type "999"',
+  ),
+};
 
-const _pasted = '''[URL Rewrite]
+const _pasted = '''# 广告与跟踪
+[URL Rewrite]
+
 ^https?:\\/\\/ads\\.example\\.net - reject
 ^https:\\/\\/a\\.example\\.net\\/v1 https://b.example.net/v1 307
 [Header Rewrite]
@@ -147,7 +157,7 @@ class _ParseCore extends CoreHandlerInterface {
     final lines = text.split('\n');
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      if (line.isEmpty) continue;
+      if (line.isEmpty || line.startsWith('#')) continue;
       if (line.startsWith('[')) {
         section = switch (line) {
           '[Header Rewrite]' => 'header-rewrite',
@@ -158,11 +168,24 @@ class _ParseCore extends CoreHandlerInterface {
         continue;
       }
       if (line.contains(r'\/(') || line.endsWith(' 999')) {
-        issues.add({
-          'section': section,
-          'line': i + 1,
-          'message': 'missing closing parenthesis',
-        });
+        issues.add(
+          line.endsWith(' 999')
+              ? {
+                  'section': section,
+                  'line': i + 1,
+                  'kind': 'urlType',
+                  'args': ['"999"'],
+                  'message': 'unknown URL rewrite type "999"',
+                }
+              : {
+                  'section': section,
+                  'line': i + 1,
+                  'kind': 'urlRegex',
+                  'message':
+                      'invalid URL regex: error parsing regexp: missing '
+                      'closing ): `^https:\\/\\/a\\.example\\.net\\/(`',
+                },
+        );
         continue;
       }
       rules.add({'section': section, 'line': line, 'number': i + 1});
@@ -256,13 +279,16 @@ void main() {
     required Brightness brightness,
     Size size = const Size(760, 900),
     List<MitmRewrite> rules = _rules,
-    Map<int, String> issues = _issues,
+    Map<int, MitmRewriteIssue> issues = _issues,
     bool decrypting = true,
     bool hang = false,
     bool fail = false,
     List<Override> overrides = const [],
     bool host = true,
   }) async {
+    // The rewrite page is a second-level page, opened from the decryption
+    // page: pushed over it, it has the bar's back button as in the app.
+    final pushed = child is MitmRewriteView;
     mitmFeature = true;
     addTearDown(() => mitmFeature = false);
     tester.view.physicalSize = size * 2;
@@ -316,14 +342,27 @@ void main() {
               homeBuilder: host
                   ? (child) => HostScaffold(body: child)
                   : (child) => child,
-              child: child,
+              child: pushed ? const SizedBox.shrink() : child,
             ),
           ),
         ),
       ),
     );
     await settle(tester);
+    if (pushed) {
+      unawaited(
+        globalState.navigatorKey.currentState!.push(
+          HostPageRoute<void>(builder: (_) => child),
+        ),
+      );
+      await settle(tester, 10);
+    }
     return container;
+  }
+
+  Future<void> scroll(WidgetTester tester, Finder scrollable) async {
+    await tester.drag(scrollable, const Offset(0, -260));
+    await settle(tester, 6);
   }
 
   Future<void> done(WidgetTester tester) async {
@@ -366,6 +405,53 @@ void main() {
       await tester.tap(find.byType(Switch).at(2));
       await settle(tester, 3);
       await capture(tester, 'rw-list-pending-$tone');
+      await done(tester);
+    });
+
+    testWidgets('rw-invalid-$tone', skip: skip != null, (tester) async {
+      await pump(tester, brightness: brightness, const MitmRewriteView());
+      final row = find.textContaining('broken', findRichText: true).first;
+      await tester.tap(row);
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.tap(row);
+      await settle(tester, 12);
+      await tester.tap(
+        find.text(currentAppLocalizations.mitmRewriteErrorDetails),
+      );
+      await settle(tester, 3);
+      await capture(tester, 'rw-invalid-$tone');
+      await done(tester);
+    });
+
+    testWidgets('scrolled-rewrite-$tone', skip: skip != null, (tester) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        size: const Size(760, 560),
+        const MitmRewriteView(),
+      );
+      await scroll(tester, find.byType(Scrollable).last);
+      await capture(tester, 'scrolled-rewrite-$tone');
+      await done(tester);
+    });
+
+    // The decryption page scrolled up under its bar.
+    testWidgets('scrolled-decryption-$tone', skip: skip != null, (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        size: const Size(760, 380),
+        host: false,
+        const MitmView(isAndroid: false),
+        overrides: [
+          mitmTrustStoreProvider.overrideWithValue(_ReadyStore()),
+          mitmSignerProvider.overrideWithValue(null),
+        ],
+      );
+      await scroll(tester, find.byType(Scrollable).first);
+      await capture(tester, 'scrolled-decryption-$tone');
       await done(tester);
     });
 
@@ -502,6 +588,8 @@ void main() {
           4,
           rewrite: const MitmConnectionRewrite(applied: true),
         ),
+        for (var i = 6; i < 26; i++)
+          row('$i', 'host$i.example.org', i, mitm: i.isEven),
       ]) {
         notifier.addRequest(request);
       }
@@ -526,6 +614,8 @@ void main() {
       );
       await settle(tester);
       await capture(tester, 'rw-reqlist-$tone');
+      await scroll(tester, find.byType(Scrollable).first);
+      await capture(tester, 'scrolled-requests-$tone');
       await done(tester);
     });
 
@@ -617,6 +707,12 @@ void main() {
       await tester.tap(find.textContaining('/v1/feed').first);
       await settle(tester);
       await capture(tester, '$name-$tone');
+      if (name == 'rw-detail') {
+        await scroll(tester, find.byType(Scrollable).last);
+        await capture(tester, 'scrolled-detail-$tone');
+        await tester.drag(find.byType(Scrollable).last, const Offset(0, 600));
+        await settle(tester, 6);
+      }
       if (before) {
         await tab(l.response);
         await capture(tester, '$name-after-$tone');
@@ -659,12 +755,14 @@ void main() {
               phase: 'request',
               detail: 'header-add',
               rule: '4',
+              tookNs: 200000,
             ),
             MitmAction(
               kind: 'body-rewrite',
               phase: 'response',
               detail: 'body',
               rule: '6',
+              tookNs: 1300000,
             ),
           ],
           originalRequestHeader: const {
@@ -695,4 +793,19 @@ void main() {
       );
     });
   }
+}
+
+class _ReadyStore implements MitmTrustStore {
+  @override
+  Future<MitmTrustCheck> check(
+    MitmCertificate ca,
+    Future<String> Function() issueLeaf,
+  ) async => const MitmTrustCheck(MitmTrust.ready);
+
+  @override
+  Future<MitmInstallOutcome> install(MitmCertificate ca) async =>
+      MitmInstallOutcome.installed;
+
+  @override
+  Future<bool> remove(MitmCertificate ca) async => true;
 }

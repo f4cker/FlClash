@@ -594,6 +594,13 @@ void main() {
     await shoot(tester, '01-list');
   });
 
+  // Scrolled up under the shared bar: the rows are cut at its foot.
+  shot('01b-scrolled', (tester) async {
+    await pumpPage(tester, size: const Size(1200, 420));
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -220));
+    await shoot(tester, '01b-scrolled');
+  });
+
   shot('02-typing', (tester) async {
     await pumpPage(tester, size: const Size(1200, 420));
     await type(tester, 'youtube');

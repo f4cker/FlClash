@@ -383,23 +383,17 @@ class _MitmSideViewState extends ConsumerState<_MitmSideView> {
         content != null && (content.bytes.isNotEmpty || content.truncated);
     final bodyError = body != null && !body.hasValue ? body.error : null;
     final names = header.keys.toList()..sort();
+    // Small, at the end of the headers' title row, not a row of its own
+    // (design review 1 §5).
     final toggle = changed
-        ? Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: SizedBox(
-                width: 200,
-                child: SegmentedControl<bool>(
-                  segments: [
-                    (true, appLocalizations.mitmRewriteBefore),
-                    (false, appLocalizations.mitmRewriteAfter),
-                  ],
-                  value: before,
-                  onChanged: (value) => setState(() => _before = value),
-                ),
-              ),
-            ),
+        ? SegmentedControl<bool>(
+            dense: true,
+            segments: [
+              (true, appLocalizations.mitmRewriteBefore),
+              (false, appLocalizations.mitmRewriteAfter),
+            ],
+            value: before,
+            onChanged: (value) => setState(() => _before = value),
           )
         : null;
     return NullStatusSwitcher(
@@ -422,17 +416,18 @@ class _MitmSideViewState extends ConsumerState<_MitmSideView> {
       child: ListView(
         padding: _detailPadding(context),
         children: [
-          ?toggle,
-          generateSection(
-            title: response
-                ? appLocalizations.responseHeaders
-                : appLocalizations.requestHeaders,
-            items: [
-              for (final name in names)
-                for (final value in header[name]!)
-                  DetailRow.text(title: name, value: value),
-            ],
-          ),
+          if (names.isNotEmpty || toggle != null)
+            ListHeader(
+              title: response
+                  ? appLocalizations.responseHeaders
+                  : appLocalizations.requestHeaders,
+              trailing: toggle,
+            ),
+          generateGroup([
+            for (final name in names)
+              for (final value in header[name]!)
+                DetailRow.text(title: name, value: value),
+          ]),
           if (sending)
             generateSection(
               title: bodyTitle,

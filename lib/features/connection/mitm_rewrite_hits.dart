@@ -35,34 +35,49 @@ class MitmRewriteHitsSection extends ConsumerWidget {
                 const <MitmRewrite>[])
           '${rule.id}': rule,
     };
-    final failed = hits.where((hit) => hit.skipped.isNotEmpty).firstOrNull;
-    final badge = failed != null
+    // A skip from an error is a failure; one for what the message is (too
+    // big, not text, still streaming) is a rewrite not applied.
+    final failed = hits.where(_isFailure).firstOrNull;
+    final notApplied = hits
+        .where((hit) => hit.skipped.isNotEmpty && !_isFailure(hit))
+        .firstOrNull;
+    final applied = hits.where((hit) => hit.skipped.isEmpty).length;
+    // Applied is said once the request is over with no error; until then a
+    // rule has only matched.
+    final settled = !exchange.pending && exchange.error.isEmpty;
+    final skipped = failed ?? (applied == 0 ? notApplied : null);
+    final badge = skipped != null
         ? MitmRewriteBadge.failed
         : MitmRewriteBadge.applied;
     final color = badge.color(context);
     final secondary = context.colorScheme.onSurfaceVariant;
     final footnote = AppTextStyle.footnote.of(context);
-    final failedRule = failed == null ? null : rules[failed.rule];
-    // "Passed on unchanged" is said only once the request is over with no
-    // error: before then, or after one, it is not known to be so.
-    final passedThrough =
-        failed != null && !exchange.pending && exchange.error.isEmpty;
+    final String title;
+    if (failed != null) {
+      title = l.mitmRewriteFailedTitle(mitmRewriteSkipText(l, failed.skipped));
+    } else if (skipped != null) {
+      title = l.mitmRewriteNotAppliedTitle(
+        mitmRewriteSkipText(l, skipped.skipped),
+      );
+    } else {
+      title = settled ? l.mitmRewriteAppliedTitle : l.mitmRewriteMatchedTitle;
+    }
+    // "Passed on unchanged" only when no rule changed the request and it is
+    // over with no error: before then, or after one, it is not known. The
+    // rule itself is in its row below, said once.
+    final passedThrough = applied == 0 && skipped != null && settled;
     final header = ListItem(
       leading: GlyphIcon(badge.glyph, size: 18, color: color),
       title: Text.rich(
         TextSpan(
           children: [
             TextSpan(
-              text: failed != null
-                  ? l.mitmRewriteFailedTitle(
-                      mitmRewriteSkipText(l, failed.skipped),
-                    )
-                  : l.mitmRewriteAppliedTitle,
+              text: title,
               style: AppTextStyle.body
                   .of(context, emphasized: true)
-                  .copyWith(color: failed != null ? color : null),
+                  .copyWith(color: skipped != null ? color : null),
             ),
-            if (failed == null)
+            if (skipped == null)
               TextSpan(
                 text: ' · ${l.mitmRewriteHitCount(hits.length)}',
                 style: TextStyle(color: secondary),
@@ -70,16 +85,7 @@ class MitmRewriteHitsSection extends ConsumerWidget {
           ],
         ),
       ),
-      subtitle: passedThrough
-          ? Text(
-              [
-                l.mitmRewritePassedThrough,
-                if (failedRule != null) l.mitmRewriteRuleRef(failedRule.line),
-              ].join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-          : null,
+      subtitle: passedThrough ? Text(l.mitmRewritePassedThrough) : null,
     );
     return generateSection(
       title: l.mitmRewrite,
@@ -94,6 +100,20 @@ class MitmRewriteHitsSection extends ConsumerWidget {
       ],
     );
   }
+}
+
+bool _isFailure(MitmAction hit) => switch (hit.skipped) {
+  'decodeFailed' || 'regexTimeout' || 'bodyReadFailed' || 'invalidURL' => true,
+  _ => false,
+};
+
+/// How long an applied rule took, as the detail ends its result with; null
+/// when the Core did not measure it, never a zero.
+String? mitmRewriteTookText(MitmAction hit) {
+  if (hit.skipped.isNotEmpty || hit.tookNs <= 0) return null;
+  final ms = hit.tookNs / 1e6;
+  if (ms < 0.1) return '<0.1\u00a0ms';
+  return ms < 10 ? '${ms.toStringAsFixed(1)}\u00a0ms' : '${ms.round()}\u00a0ms';
 }
 
 class _MitmRewriteHitRow extends StatelessWidget {
@@ -150,27 +170,42 @@ class _MitmRewriteHitRow extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (result.isNotEmpty)
-                  Text(
-                    result,
-                    style: footnote.copyWith(
-                      color: hit.skipped.isNotEmpty
-                          ? MitmRewriteBadge.failed.color(context)
-                          : typeStyle.color,
-                    ),
-                  ),
-                if (rule != null)
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: TextButton(
-                      onPressed: () => _reveal(context, rule),
-                      child: Text(
-                        l.mitmRewriteViewInList,
-                        style: footnote.copyWith(
-                          color: context.colorScheme.primary,
+                // The result, its time, and the way to the rule share one
+                // line: the result gives way, the button never wraps.
+                if (result.isNotEmpty ||
+                    rule != null ||
+                    mitmRewriteTookText(hit) != null)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          [
+                            result,
+                            ?mitmRewriteTookText(hit),
+                          ].where((part) => part.isNotEmpty).join('\u00a0· '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: footnote.copyWith(
+                            color: hit.skipped.isNotEmpty
+                                ? MitmRewriteBadge.failed.color(context)
+                                : typeStyle.color,
+                          ),
                         ),
                       ),
-                    ),
+                      if (rule != null)
+                        TextButton(
+                          onPressed: () => _reveal(context, rule),
+                          child: Text(
+                            l.mitmRewriteViewInList,
+                            maxLines: 1,
+                            style: footnote.copyWith(
+                              color: context.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
               ],
             ),
