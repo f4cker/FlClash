@@ -6,6 +6,7 @@ replace github.com/metacubex/mihomo => ./Clash.Meta
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
+	github.com/andybalholm/brotli v1.1.1
 	github.com/dlclark/regexp2 v1.12.0
 	github.com/metacubex/http v0.1.8
 	github.com/metacubex/mihomo v0.0.0-00010101000000-000000000000
@@ -21,7 +22,6 @@ require (
 	github.com/Yawning/aez v0.0.0-20211027044916-e49e68abd344 // indirect
 	github.com/ajg/form v1.7.1 // indirect
 	github.com/akutz/memconn v0.1.0 // indirect
-	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect

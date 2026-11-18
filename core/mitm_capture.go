@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +64,20 @@ type mitmCaptureEntry struct {
 	req, resp  mitmCaptureBody
 	cost       int64
 	gone       bool
+	// Set when a rewrite rule matched: the URL the client asked for and
+	// what each rule did.
+	originalURL string
+	rewrites    []MitmRewriteHit
+	// What a side was before rewrite rules changed it, set only for a side
+	// they changed: its headers, and its body when that changed too.
+	before [2]mitmCaptureOriginal
+}
+
+type mitmCaptureOriginal struct {
+	header http.Header
+	body   *mitmCaptureBody
+	// The content coding body is in.
+	encoding string
 }
 
 // Why an exchange did not complete, as the request list names it.
@@ -70,6 +85,8 @@ const (
 	mitmExchangeNoResponse     = "noResponse"
 	mitmExchangeResponseFailed = "responseFailed"
 	mitmExchangeStopped        = "stopped"
+	// URL Rewrite's reject-drop closed the connection without an answer.
+	mitmExchangeDropped = "dropped"
 )
 
 var mitmCaptures = &mitmCaptureStore{
@@ -128,7 +145,7 @@ func (s *mitmCaptureStore) clear() {
 func (s *mitmCaptureStore) clearLocked() {
 	for _, entry := range s.order {
 		entry.gone = true
-		entry.req.data, entry.resp.data = nil, nil
+		entry.req.data, entry.resp.data, entry.before = nil, nil, [2]mitmCaptureOriginal{}
 	}
 	s.order = nil
 	s.byID = map[uint64]*mitmCaptureEntry{}
@@ -169,6 +186,11 @@ func mitmHeaderCost(header http.Header) int64 {
 // Starts a record for a request whose head was just read, or returns nil
 // while capture is off.
 func (s *mitmCaptureStore) begin(connection, host string, req *http.Request) *mitmCaptureEntry {
+	return s.beginScheme(connection, "https", host, req)
+}
+
+// begin for a request of scheme (http for plain HTTP on port 80).
+func (s *mitmCaptureStore) beginScheme(connection, scheme, host string, req *http.Request) *mitmCaptureEntry {
 	if connection == "" {
 		return nil
 	}
@@ -188,7 +210,7 @@ func (s *mitmCaptureStore) begin(connection, host string, req *http.Request) *mi
 		connection: connection,
 		start:      time.Now(),
 		method:     req.Method,
-		url:        "https://" + req.Host + req.RequestURI,
+		url:        scheme + "://" + req.Host + req.RequestURI,
 		proto:      req.Proto,
 		reqHeader:  header,
 		pending:    true,
@@ -199,6 +221,75 @@ func (s *mitmCaptureStore) begin(connection, host string, req *http.Request) *mi
 	s.bytes += entry.cost
 	s.evictLocked()
 	return entry
+}
+
+// Records what the rewrite rules did so far to entry's exchange.
+func (s *mitmCaptureStore) noteRewrite(entry *mitmCaptureEntry, rw *mitmRewriteExchange) {
+	if entry == nil || !rw.rewritten() {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if entry.gone {
+		return
+	}
+	var cost int64
+	if entry.originalURL == "" && rw.originalURL != entry.url {
+		entry.originalURL = rw.originalURL
+		cost += int64(len(rw.originalURL))
+	}
+	for _, hit := range rw.hits[len(entry.rewrites):] {
+		cost += int64(len(hit.Rule) + len(hit.Section) + len(hit.Phase) + len(hit.Action) + len(hit.Skipped))
+	}
+	entry.rewrites = append(entry.rewrites, rw.hits[len(entry.rewrites):]...)
+	entry.cost += cost
+	s.bytes += cost
+	s.evictLocked()
+}
+
+func mitmSide(response bool) int {
+	if response {
+		return 1
+	}
+	return 0
+}
+
+// Keeps before, a side's headers as they came, when rewrite rules made
+// them after.
+func (s *mitmCaptureStore) originalHeader(entry *mitmCaptureEntry, response bool, before, after http.Header) {
+	if entry == nil || before == nil || reflect.DeepEqual(before, after) {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	original := &entry.before[mitmSide(response)]
+	if entry.gone || original.header != nil {
+		return
+	}
+	original.header = before
+	cost := mitmHeaderCost(before)
+	entry.cost += cost
+	s.bytes += cost
+	s.evictLocked()
+}
+
+// Keeps a side's body as it came (in coding) when a rule rewrote it.
+func (s *mitmCaptureStore) originalBody(entry *mitmCaptureEntry, response bool, data []byte, coding string) {
+	if entry == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if entry.gone {
+		return
+	}
+	original := &entry.before[mitmSide(response)]
+	kept := data[:min(int64(len(data)), s.limits.body)]
+	original.body = &mitmCaptureBody{data: append([]byte(nil), kept...), size: int64(len(data)), truncated: len(kept) < len(data)}
+	original.encoding = coding
+	entry.cost += int64(len(kept))
+	s.bytes += int64(len(kept))
+	s.evictLocked()
 }
 
 func (s *mitmCaptureStore) respond(entry *mitmCaptureEntry, resp *http.Response) {
@@ -318,7 +409,7 @@ func (s *mitmCaptureStore) evictLocked() {
 		delete(s.byID, oldest.id)
 		s.bytes -= oldest.cost
 		oldest.gone = true
-		oldest.req.data, oldest.resp.data = nil, nil
+		oldest.req.data, oldest.resp.data, oldest.before = nil, nil, [2]mitmCaptureOriginal{}
 		if oldest.start.After(s.since) {
 			s.since = oldest.start
 		}
@@ -360,6 +451,8 @@ type MitmExchangeParams struct {
 type MitmBodyParams struct {
 	ID       uint64 `json:"id"`
 	Response bool   `json:"response"`
+	// The body as it came, before a rewrite rule changed it.
+	Original bool `json:"original,omitempty"`
 }
 
 type MitmExchangeSummary struct {
@@ -375,6 +468,11 @@ type MitmExchangeSummary struct {
 	RequestSize  int64  `json:"request-size"`
 	ResponseSize int64  `json:"response-size"`
 	Error        string `json:"error"`
+	// A rewrite rule changed or answered this exchange.
+	Rewritten bool `json:"rewritten,omitempty"`
+	// A rewrite rule matched but left a message as it was (an oversized,
+	// binary or undecodable body, say); Actions say which and why.
+	RewriteSkipped bool `json:"rewrite-skipped,omitempty"`
 }
 
 type MitmExchangeList struct {
@@ -392,7 +490,15 @@ type MitmExchange struct {
 	Connection     string              `json:"connection"`
 	RequestHeader  map[string][]string `json:"request-header"`
 	ResponseHeader map[string][]string `json:"response-header"`
-	Actions        []any               `json:"actions"`
+	// What the rewrite rules did, in order; empty when none matched.
+	Actions []MitmRewriteHit `json:"actions"`
+	// A side's headers before rewrite rules changed them, and whether its
+	// body as it came is kept (MitmBodyParams.Original); set only for a
+	// side the rules changed.
+	OriginalRequestHeader  map[string][]string `json:"original-request-header,omitempty"`
+	OriginalResponseHeader map[string][]string `json:"original-response-header,omitempty"`
+	OriginalRequestBody    bool                `json:"original-request-body,omitempty"`
+	OriginalResponseBody   bool                `json:"original-response-body,omitempty"`
 }
 
 type MitmBody struct {
@@ -406,7 +512,7 @@ func (entry *mitmCaptureEntry) summary() MitmExchangeSummary {
 	if entry.pending {
 		duration = time.Since(entry.start)
 	}
-	return MitmExchangeSummary{
+	summary := MitmExchangeSummary{
 		ID:           entry.id,
 		Start:        entry.start,
 		Pending:      entry.pending,
@@ -419,6 +525,14 @@ func (entry *mitmCaptureEntry) summary() MitmExchangeSummary {
 		ResponseSize: entry.resp.size,
 		Error:        entry.err,
 	}
+	for _, hit := range entry.rewrites {
+		if hit.Skipped != "" {
+			summary.RewriteSkipped = true
+		} else {
+			summary.Rewritten = true
+		}
+	}
+	return summary
 }
 
 func handleMitmExchanges(params MitmExchangesParams) MitmExchangeList {
@@ -457,8 +571,14 @@ func handleMitmExchange(params MitmExchangeParams) *MitmExchange {
 		Connection:          entry.connection,
 		RequestHeader:       entry.reqHeader.Clone(),
 		ResponseHeader:      entry.respHeader.Clone(),
-		Actions:             []any{},
+		OriginalURL:         entry.originalURL,
+		Actions:             append([]MitmRewriteHit{}, entry.rewrites...),
 	}
+	exchange.OriginalRequestHeader = entry.before[0].header.Clone()
+	exchange.OriginalResponseHeader = entry.before[1].header.Clone()
+	exchange.OriginalRequestBody = entry.before[0].body != nil
+	exchange.OriginalResponseBody = entry.before[1].body != nil
+
 	if exchange.ResponseHeader == nil {
 		exchange.ResponseHeader = map[string][]string{}
 	}
@@ -476,6 +596,14 @@ func handleMitmBody(params MitmBodyParams) *MitmBody {
 	body, header := entry.req, entry.reqHeader
 	if params.Response {
 		body, header = entry.resp, entry.respHeader
+	}
+	if params.Original {
+		original := entry.before[mitmSide(params.Response)]
+		if original.body == nil {
+			s.mu.Unlock()
+			return nil
+		}
+		body, header = *original.body, http.Header{"Content-Encoding": {original.encoding}}
 	}
 	data := append([]byte(nil), body.data...)
 	limit := s.limits.body

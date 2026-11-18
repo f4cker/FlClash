@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/features/features.dart';
@@ -74,6 +75,7 @@ Future<ProviderContainer> _pumpDetail(
   MitmExchange? exchange,
   bool capture = true,
   MitmBody responseBody = const MitmBody(),
+  MitmBody originalResponseBody = const MitmBody(),
   List<MitmModule> modules = const [],
   bool inSheet = false,
 }) async {
@@ -95,6 +97,14 @@ Future<ProviderContainer> _pumpDetail(
         (ref) async => bodyError == null
             ? readMitmBody((responseBody, contentType))
             : throw bodyError,
+      ),
+      mitmBodyProvider(
+        7,
+        response: true,
+        contentType: contentType,
+        original: true,
+      ).overrideWith(
+        (ref) async => readMitmBody((originalResponseBody, contentType)),
       ),
       mitmModulesProvider.overrideWith(() => _Modules(modules)),
     ],
@@ -277,8 +287,22 @@ void main() {
     expect(find.text('https://a.test/old?x=1'), findsOneWidget);
     expect(find.text('HTTP/2.0'), findsOneWidget);
     expect(find.text('X-Upstream'), findsNothing);
-    await _scrollTo(tester, find.text(appLocalizations.urlRewrite));
-    expect(find.text('header'), findsOneWidget);
+    // The rewrite hit leads, under its own section; a rule no longer in
+    // the profile says so rather than offer to show it.
+    expect(
+      find.text(
+        '${appLocalizations.mitmRewriteAppliedTitle} · '
+        '${appLocalizations.mitmRewriteHitCount(1)}',
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(appLocalizations.mitmRewriteActUrl), findsOneWidget);
+    expect(find.text(appLocalizations.mitmRewriteRuleRemoved), findsOneWidget);
+    expect(find.text(appLocalizations.mitmRewriteViewInList), findsNothing);
+    expect(find.text(appLocalizations.mitmRewritePassedThrough), findsNothing);
+    await _scrollTo(tester, find.text(appLocalizations.script));
+    expect(find.text('sign'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(MetaChip),
@@ -427,6 +451,134 @@ void main() {
     await _openTab(tester, currentAppLocalizations.response);
     return find.byType(MitmExchangeView);
   }
+
+  testWidgets('a rule not applied or failed says why, passed on only once '
+      'over', (tester) async {
+    final l = currentAppLocalizations;
+    Future<void> open(MitmExchange exchange) async {
+      await _pumpDetail(
+        tester,
+        list: MitmExchangeList(
+          capturing: true,
+          since: _start,
+          exchanges: [_summary(exchange)],
+        ),
+        exchange: exchange,
+      );
+      await _openRequest(tester);
+    }
+
+    // Too big is what the message is, not an error: not applied.
+    const oversize = MitmAction(
+      kind: 'body-rewrite',
+      phase: 'response',
+      skipped: 'oversize',
+    );
+    final notApplied = l.mitmRewriteNotAppliedTitle(l.mitmRewriteSkipOversize);
+    await open(_exchange.copyWith(actions: const [oversize]));
+    expect(find.text(notApplied, findRichText: true), findsOneWidget);
+    expect(find.text(l.mitmRewritePassedThrough), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await open(_exchange.copyWith(actions: const [oversize], error: 'reset'));
+    expect(find.text(notApplied, findRichText: true), findsOneWidget);
+    expect(find.text(l.mitmRewritePassedThrough), findsNothing);
+
+    // A body that could not be decoded is a failure.
+    await tester.pumpWidget(const SizedBox.shrink());
+    const broken = MitmAction(
+      kind: 'body-rewrite',
+      phase: 'response',
+      skipped: 'decodeFailed',
+    );
+    await open(_exchange.copyWith(actions: const [broken]));
+    expect(
+      find.text(
+        l.mitmRewriteFailedTitle(mitmRewriteSkipText(l, 'decodeFailed')),
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('an applied rule says it matched until the request is over, '
+      'then applied with its time', (tester) async {
+    final l = currentAppLocalizations;
+    const hit = MitmAction(
+      kind: 'body-rewrite',
+      phase: 'response',
+      detail: 'body',
+      tookNs: 1300000,
+    );
+    Future<void> open(MitmExchange exchange) async {
+      await _pumpDetail(
+        tester,
+        list: MitmExchangeList(
+          capturing: true,
+          since: _start,
+          exchanges: [_summary(exchange)],
+        ),
+        exchange: exchange,
+      );
+      await _openRequest(tester);
+    }
+
+    await open(_exchange.copyWith(actions: const [hit], pending: true));
+    expect(
+      find.textContaining(l.mitmRewriteMatchedTitle, findRichText: true),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await open(_exchange.copyWith(actions: const [hit]));
+    expect(
+      find.textContaining(l.mitmRewriteAppliedTitle, findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('1.3\u00a0ms'), findsOneWidget);
+    expect(mitmRewriteTookText(hit.copyWith(tookNs: 0)), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a side the rules changed shows as it came on request', (
+    tester,
+  ) async {
+    final l = currentAppLocalizations;
+    final exchange = _exchange.copyWith(
+      actions: const [MitmAction(kind: 'body-rewrite', phase: 'response')],
+      originalResponseHeader: const {
+        'X-Upstream': ['no'],
+      },
+      originalResponseBody: true,
+    );
+    await _pumpDetail(
+      tester,
+      list: MitmExchangeList(
+        capturing: true,
+        since: _start,
+        exchanges: [_summary(exchange)],
+      ),
+      exchange: exchange,
+      responseBody: MitmBody(data: base64Encode(utf8.encode('after'))),
+      originalResponseBody: MitmBody(data: base64Encode(utf8.encode('before'))),
+    );
+    await _openRequest(tester);
+    await _openTab(tester, l.request);
+    // Only a side the rules changed offers its original.
+    expect(find.text(l.mitmRewriteBefore), findsNothing);
+
+    await _openTab(tester, l.response);
+    expect(find.text('yes'), findsOneWidget);
+    expect(find.textContaining('after'), findsWidgets);
+
+    await tester.tap(find.text(l.mitmRewriteBefore));
+    await tester.pumpAndSettle();
+    expect(find.text('no'), findsOneWidget);
+    expect(find.text('yes'), findsNothing);
+    expect(find.textContaining('before'), findsWidgets);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('a finished request shows its body, and says when only its '
       'start was kept', (tester) async {

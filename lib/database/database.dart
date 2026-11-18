@@ -20,6 +20,7 @@ part 'groups.dart';
 part 'icons.dart';
 part 'ip_qualities.dart';
 part 'mitm_modules.dart';
+part 'mitm_rewrites.dart';
 part 'mounts.dart';
 part 'profiles.dart';
 part 'rules.dart';
@@ -43,6 +44,7 @@ part 'scripts.dart';
     MountTargets,
     MountSourceStatuses,
     AddedRuleSets,
+    MitmRewrites,
   ],
   daos: [
     ProfilesDao,
@@ -58,13 +60,14 @@ part 'scripts.dart';
     MitmModulesDao,
     MountsDao,
     AddedRuleSetsDao,
+    MitmRewritesDao,
   ],
 )
 class Database extends _$Database {
   Database([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -158,6 +161,9 @@ class Database extends _$Database {
             addedRuleSets,
             addedRuleSets.cacheGeneration,
           );
+        }
+        if (from < 28) {
+          await _createTableIfMissing(m, mitmRewrites);
         }
       }),
       beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),

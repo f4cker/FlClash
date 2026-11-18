@@ -613,6 +613,22 @@ abstract class CoreHandlerInterface {
   Future<void> updateMitm(Map<String, Object?>? setup) =>
       _command(CoreMethod.mitmUpdate, arguments: {'setup': setup});
 
+  Future<MitmRewriteStatus> getMitmRewriteStatus() {
+    return _query(
+      CoreMethod.mitmRewriteStatus,
+      _model(MitmRewriteStatus.fromJson),
+    );
+  }
+
+  /// Splits pasted Surge sections into the rule lines the Core takes.
+  Future<MitmRewriteParse> parseMitmRewrite(String text) {
+    return _query(
+      CoreMethod.mitmRewriteParse,
+      _model(MitmRewriteParse.fromJson),
+      arguments: {'text': text},
+    );
+  }
+
   Future<MitmStatus> getMitmStatus() {
     return _query(CoreMethod.mitmStatus, _model(MitmStatus.fromJson));
   }
@@ -647,11 +663,21 @@ abstract class CoreHandlerInterface {
   }
 
   /// Null once the Core no longer keeps the request.
-  Future<MitmBody?> getMitmBody(int id, {required bool response}) {
+  /// [original] asks for the body as it came, before a rewrite rule
+  /// changed it.
+  Future<MitmBody?> getMitmBody(
+    int id, {
+    required bool response,
+    bool original = false,
+  }) {
     return _find(
       CoreMethod.mitmBody,
       _model(MitmBody.fromJson),
-      arguments: {'id': id, 'response': response},
+      arguments: {
+        'id': id,
+        'response': response,
+        if (original) 'original': true,
+      },
     );
   }
 

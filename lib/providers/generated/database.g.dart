@@ -776,6 +776,108 @@ abstract class _$ProfileRules extends $StreamNotifier<List<Rule>> {
   }
 }
 
+/// A profile's own rewrite rules, in order (see [MitmRewrites]).
+
+@ProviderFor(ProfileMitmRewrites)
+final profileMitmRewritesProvider = ProfileMitmRewritesFamily._();
+
+/// A profile's own rewrite rules, in order (see [MitmRewrites]).
+final class ProfileMitmRewritesProvider
+    extends $StreamNotifierProvider<ProfileMitmRewrites, List<MitmRewrite>> {
+  /// A profile's own rewrite rules, in order (see [MitmRewrites]).
+  ProfileMitmRewritesProvider._({
+    required ProfileMitmRewritesFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'profileMitmRewritesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileMitmRewritesHash();
+
+  @override
+  String toString() {
+    return r'profileMitmRewritesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  ProfileMitmRewrites create() => ProfileMitmRewrites();
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProfileMitmRewritesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$profileMitmRewritesHash() =>
+    r'5371377c6f27fcf83cd8eef181f3efc81b45b393';
+
+/// A profile's own rewrite rules, in order (see [MitmRewrites]).
+
+final class ProfileMitmRewritesFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          ProfileMitmRewrites,
+          AsyncValue<List<MitmRewrite>>,
+          List<MitmRewrite>,
+          Stream<List<MitmRewrite>>,
+          int
+        > {
+  ProfileMitmRewritesFamily._()
+    : super(
+        retry: null,
+        name: r'profileMitmRewritesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A profile's own rewrite rules, in order (see [MitmRewrites]).
+
+  ProfileMitmRewritesProvider call(int profileId) =>
+      ProfileMitmRewritesProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'profileMitmRewritesProvider';
+}
+
+/// A profile's own rewrite rules, in order (see [MitmRewrites]).
+
+abstract class _$ProfileMitmRewrites
+    extends $StreamNotifier<List<MitmRewrite>> {
+  late final _$args = ref.$arg as int;
+  int get profileId => _$args;
+
+  Stream<List<MitmRewrite>> build(int profileId);
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<List<MitmRewrite>>, List<MitmRewrite>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<MitmRewrite>>, List<MitmRewrite>>,
+              AsyncValue<List<MitmRewrite>>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, () => build(_$args));
+  }
+}
+
 @ProviderFor(ProxyGroups)
 final proxyGroupsProvider = ProxyGroupsFamily._();
 

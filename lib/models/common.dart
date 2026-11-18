@@ -12,6 +12,7 @@ import 'package:path/path.dart' show join;
 import 'package:prism_ui/icons/glyph.dart';
 
 import 'clash_config.dart';
+import 'core.dart';
 import 'process_info.dart';
 import 'record_filter.dart';
 
@@ -132,6 +133,8 @@ abstract class TrackerInfo with _$TrackerInfo {
     int? downloadSpeed,
     int? uploadSpeed,
     @Default('') String mitmOutcome,
+    // Set once a rewrite rule applied or failed on the connection.
+    MitmConnectionRewrite? mitmRewrite,
   }) = _TrackerInfo;
 
   factory TrackerInfo.fromJson(Map<String, Object?> json) =>
@@ -276,6 +279,14 @@ final trackerInfoFacets = <RecordFacet<TrackerInfo>>[
     // Only decrypted requests: failures and pass-throughs are not in it.
     labelOf: (_) => currentAppLocalizations.mitmBadgeDecrypted,
     glyph: AppGlyphs.lockOpen,
+  ),
+  RecordFacet(
+    RecordFacetKind.rewrite,
+    (info) => [if (info.mitmRewrite != null) 'rewrite'],
+    offered: true,
+    // Failed rewrites are in it too.
+    labelOf: (_) => currentAppLocalizations.mitmRewriteRewritten,
+    glyph: AppGlyphs.wand,
   ),
   RecordFacet(
     RecordFacetKind.app,

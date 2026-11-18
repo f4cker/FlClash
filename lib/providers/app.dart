@@ -66,12 +66,19 @@ class Logs extends _$Logs with AutoDisposeNotifierMixin {
   }
 }
 
+/// What the Core said of a connection before its request arrived.
+typedef _MitmPending = ({
+  String outcome,
+  bool decrypted,
+  MitmConnectionRewrite? rewrite,
+  DateTime at,
+});
+
 @Riverpod(keepAlive: true)
 class Requests extends _$Requests with AutoDisposeNotifierMixin {
   // The connection event can arrive before its request event. Bound memory
   // and lifetime so a dropped request never leaves an unbounded pending map.
-  final _mitmPending =
-      <String, ({String outcome, bool decrypted, DateTime at})>{};
+  final _mitmPending = <String, _MitmPending>{};
   static const _mitmOutcomes = {
     'decrypted',
     'refused',
@@ -106,18 +113,55 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
         return;
       }
     }
+    _keepPending(
+      id,
+      (previous) => (
+        outcome: outcome == 'decrypted' ? previous?.outcome ?? '' : outcome,
+        decrypted: outcome == 'decrypted' || (previous?.decrypted ?? false),
+        rewrite: previous?.rewrite,
+        at: DateTime.now(),
+      ),
+    );
+  }
+
+  void _keepPending(
+    String id,
+    _MitmPending Function(_MitmPending? previous) next,
+  ) {
     final now = DateTime.now();
     _mitmPending.removeWhere(
       (_, pending) => now.difference(pending.at) > const Duration(minutes: 1),
     );
-    if (_mitmPending.length >= 512) {
+    final previous = _mitmPending[id];
+    if (previous == null && _mitmPending.length >= 512) {
       _mitmPending.remove(_mitmPending.keys.first);
     }
-    final previous = _mitmPending[id];
-    _mitmPending[id] = (
-      outcome: outcome == 'decrypted' ? previous?.outcome ?? '' : outcome,
-      decrypted: outcome == 'decrypted' || (previous?.decrypted ?? false),
-      at: now,
+    _mitmPending[id] = next(previous);
+  }
+
+  /// What rewrite rules did on the connection [id]; each event carries the
+  /// connection's whole state so far.
+  void setMitmRewrite(String id, MitmConnectionRewrite rewrite) {
+    if (!ref.mounted ||
+        id.isEmpty ||
+        id.length > 128 ||
+        (!rewrite.applied && !rewrite.failed)) {
+      return;
+    }
+    for (var i = state.length - 1; i >= 0; i--) {
+      if (state[i].id == id) {
+        value = state.replace({i: state[i].copyWith(mitmRewrite: rewrite)});
+        return;
+      }
+    }
+    _keepPending(
+      id,
+      (previous) => (
+        outcome: previous?.outcome ?? '',
+        decrypted: previous?.decrypted ?? false,
+        rewrite: rewrite,
+        at: DateTime.now(),
+      ),
     );
   }
 
@@ -138,6 +182,7 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
       fresh
           ? value.copyWith(
               mitmOutcome: pending.outcome,
+              mitmRewrite: pending.rewrite,
               metadata: pending.decrypted
                   ? value.metadata.copyWith(mitm: true)
                   : value.metadata,

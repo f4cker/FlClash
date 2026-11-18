@@ -119,6 +119,7 @@ List<Object?> _shownInList(TrackerInfo trackerInfo) => [
   trackerInfo.rule,
   trackerInfo.rulePayload,
   trackerInfo.mitmOutcome,
+  trackerInfo.mitmRewrite,
 ];
 
 /// Same rows as [TrackerInfoList], but diffed by connection id so closed

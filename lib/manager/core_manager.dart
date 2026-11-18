@@ -175,6 +175,11 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   }
 
   @override
+  void onMitmConnectionRewrite(String id, MitmConnectionRewrite rewrite) {
+    ref.read(requestsProvider.notifier).setMitmRewrite(id, rewrite);
+  }
+
+  @override
   void onMitmSign(MitmSignRequest request) {
     unawaited(ref.read(mitmSignActionProvider.notifier).answer(request));
   }

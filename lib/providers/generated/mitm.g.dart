@@ -364,7 +364,7 @@ final class MitmTrustStateProvider
   MitmTrustState create() => MitmTrustState();
 }
 
-String _$mitmTrustStateHash() => r'5ea25e25b0bbf20e0ab02e530553ffd4f1d2598d';
+String _$mitmTrustStateHash() => r'6bbafa5264b279e1456e095e5373d72097b83d8a';
 
 /// Whether this device trusts the CA. A check records the CA it found
 /// trusted, which is the one the Core decrypts HTTPS with.
@@ -564,7 +564,8 @@ final class MitmBodyProvider
     with $FutureModifier<MitmBodyContent?>, $FutureProvider<MitmBodyContent?> {
   MitmBodyProvider._({
     required MitmBodyFamily super.from,
-    required (int, {bool response, String contentType}) super.argument,
+    required (int, {bool response, String contentType, bool original})
+    super.argument,
   }) : super(
          retry: null,
          name: r'mitmBodyProvider',
@@ -592,12 +593,14 @@ final class MitmBodyProvider
   @override
   FutureOr<MitmBodyContent?> create(Ref ref) {
     final argument =
-        this.argument as (int, {bool response, String contentType});
+        this.argument
+            as (int, {bool response, String contentType, bool original});
     return mitmBody(
       ref,
       argument.$1,
       response: argument.response,
       contentType: argument.contentType,
+      original: argument.original,
     );
   }
 
@@ -612,13 +615,13 @@ final class MitmBodyProvider
   }
 }
 
-String _$mitmBodyHash() => r'd6bf14762381cc5eaf6280a53e460babca946a91';
+String _$mitmBodyHash() => r'90ff0f16d18c09f299e2d872bca7b490b91cb25c';
 
 final class MitmBodyFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<MitmBodyContent?>,
-          (int, {bool response, String contentType})
+          (int, {bool response, String contentType, bool original})
         > {
   MitmBodyFamily._()
     : super(
@@ -633,8 +636,14 @@ final class MitmBodyFamily extends $Family
     int id, {
     required bool response,
     required String contentType,
+    bool original = false,
   }) => MitmBodyProvider._(
-    argument: (id, response: response, contentType: contentType),
+    argument: (
+      id,
+      response: response,
+      contentType: contentType,
+      original: original,
+    ),
     from: this,
   );
 
@@ -836,3 +845,136 @@ final class MitmModuleDetailsFamily extends $Family
   @override
   String toString() => r'mitmModuleDetailsProvider';
 }
+
+/// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
+/// disabled rules are checked too.
+
+@ProviderFor(mitmRewriteIssues)
+final mitmRewriteIssuesProvider = MitmRewriteIssuesFamily._();
+
+/// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
+/// disabled rules are checked too.
+
+final class MitmRewriteIssuesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<int, MitmRewriteIssue>>,
+          Map<int, MitmRewriteIssue>,
+          FutureOr<Map<int, MitmRewriteIssue>>
+        >
+    with
+        $FutureModifier<Map<int, MitmRewriteIssue>>,
+        $FutureProvider<Map<int, MitmRewriteIssue>> {
+  /// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
+  /// disabled rules are checked too.
+  MitmRewriteIssuesProvider._({
+    required MitmRewriteIssuesFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'mitmRewriteIssuesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmRewriteIssuesHash();
+
+  @override
+  String toString() {
+    return r'mitmRewriteIssuesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<int, MitmRewriteIssue>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<int, MitmRewriteIssue>> create(Ref ref) {
+    final argument = this.argument as int;
+    return mitmRewriteIssues(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MitmRewriteIssuesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$mitmRewriteIssuesHash() => r'25f56810e07fb3173c9482d61a84b12bbb867c6e';
+
+/// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
+/// disabled rules are checked too.
+
+final class MitmRewriteIssuesFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<Map<int, MitmRewriteIssue>>, int> {
+  MitmRewriteIssuesFamily._()
+    : super(
+        retry: null,
+        name: r'mitmRewriteIssuesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Why the Core cannot take each of a profile's rewrite rules, by rule ID;
+  /// disabled rules are checked too.
+
+  MitmRewriteIssuesProvider call(int profileId) =>
+      MitmRewriteIssuesProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'mitmRewriteIssuesProvider';
+}
+
+/// The size up to which the Core rewrites a body, or 0 while it runs no
+/// rewrite rules.
+
+@ProviderFor(mitmRewriteBodyLimit)
+final mitmRewriteBodyLimitProvider = MitmRewriteBodyLimitProvider._();
+
+/// The size up to which the Core rewrites a body, or 0 while it runs no
+/// rewrite rules.
+
+final class MitmRewriteBodyLimitProvider
+    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
+    with $FutureModifier<int>, $FutureProvider<int> {
+  /// The size up to which the Core rewrites a body, or 0 while it runs no
+  /// rewrite rules.
+  MitmRewriteBodyLimitProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mitmRewriteBodyLimitProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mitmRewriteBodyLimitHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<int> create(Ref ref) {
+    return mitmRewriteBodyLimit(ref);
+  }
+}
+
+String _$mitmRewriteBodyLimitHash() =>
+    r'6da8b5caf30d2a17f7888f83ef85d1e3e2255db7';

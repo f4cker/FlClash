@@ -2007,5 +2007,521 @@
   "ipxViaExit": "Queried through the current exit",
   "ipxUnknown": "Unknown",
   "mitmHttp2": "HTTP/2 を復号",
-  "mitmHttp2Desc": "オフにすると、HTTP/1.1 の接続のみ復号します。HTTP/2 のみに対応した接続は復号しません。"
+  "mitmHttp2Desc": "オフにすると、HTTP/1.1 の接続のみ復号します。HTTP/2 のみに対応した接続は復号しません。",
+  "mitmRewriteAndScripts": "Rewrite & Scripts",
+  "@mitmRewriteAndScripts": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewrite": "Rewrite",
+  "@mitmRewrite": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRuleCount": "{count, plural, =1{1 rule} other{{count} rules}}",
+  "@mitmRewriteRuleCount": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteInvalidCount": "{count} invalid",
+  "@mitmRewriteInvalidCount": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteNoneAdded": "None added",
+  "@mitmRewriteNoneAdded": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSubtitle": "Profile “{profile}” · {count} rewrite rules, {enabled} on",
+  "@mitmRewriteSubtitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteGroupReject": "URL Reject",
+  "@mitmRewriteGroupReject": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteGroupRedirect": "URL Redirect",
+  "@mitmRewriteGroupRedirect": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteGroupHeader": "Request & Response Headers",
+  "@mitmRewriteGroupHeader": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteGroupBody": "Request & Response Bodies",
+  "@mitmRewriteGroupBody": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteActReject": "Block",
+  "@mitmRewriteActReject": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteActRedirect": "{code} redirect",
+  "@mitmRewriteActRedirect": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteActUrl": "Rewrite URL",
+  "@mitmRewriteActUrl": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteActRequestHeader": "Request header",
+  "@mitmRewriteActRequestHeader": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteActResponseHeader": "Response header",
+  "@mitmRewriteActResponseHeader": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteActRequestBody": "Request body",
+  "@mitmRewriteActRequestBody": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteActResponseBody": "Response body",
+  "@mitmRewriteActResponseBody": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteActMapLocal": "Local response",
+  "@mitmRewriteActMapLocal": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRejectError": "Return an error",
+  "@mitmRewriteRejectError": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteReject200": "Return an empty page",
+  "@mitmRewriteReject200": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRejectImage": "Return a blank image",
+  "@mitmRewriteRejectImage": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRejectDict": "Return an empty JSON object",
+  "@mitmRewriteRejectDict": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRejectArray": "Return an empty JSON array",
+  "@mitmRewriteRejectArray": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRejectDrop": "Drop the connection",
+  "@mitmRewriteRejectDrop": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteHeaderAdd": "Add {name}",
+  "@mitmRewriteHeaderAdd": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteHeaderDel": "Remove {name}",
+  "@mitmRewriteHeaderDel": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteHeaderReplace": "Replace {name}",
+  "@mitmRewriteHeaderReplace": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteHeaderReplaceRegex": "Replace in {name}",
+  "@mitmRewriteHeaderReplaceRegex": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteBodyReplace": "{count, plural, =1{1 replacement} other{{count} replacements}}",
+  "@mitmRewriteBodyReplace": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteBodyLimit": "Up to {size}",
+  "@mitmRewriteBodyLimit": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteInvalid": "Invalid rule: {reason}",
+  "@mitmRewriteInvalid": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteInvalidSpoken": "Invalid rule, {reason}",
+  "@mitmRewriteInvalidSpoken": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteToggleLabel": "{action}, {url}",
+  "@mitmRewriteToggleLabel": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteNotApplied": "The change didn't take effect: {reason}",
+  "@mitmRewriteNotApplied": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteEnableAll": "Turn All On",
+  "@mitmRewriteEnableAll": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteDisableAll": "Turn All Off",
+  "@mitmRewriteDisableAll": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteCopyAll": "Copy All Rules",
+  "@mitmRewriteCopyAll": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteDeleteInvalid": "Delete Invalid Rules",
+  "@mitmRewriteDeleteInvalid": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteDeleteInvalidConfirm": "Delete {count, plural, =1{1 invalid rule} other{{count} invalid rules}}?",
+  "@mitmRewriteDeleteInvalidConfirm": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteOff": "Decryption is off, so rewrite rules won't take effect.",
+  "@mitmRewriteOff": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteGoTurnOn": "Turn On",
+  "@mitmRewriteGoTurnOn": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteEmptyTitle": "No rewrite rules yet",
+  "@mitmRewriteEmptyTitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteEmptyDesc": "Paste rules to import them.",
+  "@mitmRewriteEmptyDesc": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewritePaste": "Paste to Import",
+  "@mitmRewritePaste": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSearchHint": "Search rewrite rules",
+  "@mitmRewriteSearchHint": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImportTitle": "Import Rewrite Rules",
+  "@mitmRewriteImportTitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImportDesc": "Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.",
+  "@mitmRewriteImportDesc": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImportReady": "Ready to import {count}: {detail}",
+  "@mitmRewriteImportReady": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImportLineError": "Line {line} can't be imported: {reason}",
+  "@mitmRewriteImportLineError": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImportMoreErrors": "{count, plural, =1{1 more line has errors} other{{count} more lines have errors}}",
+  "@mitmRewriteImportMoreErrors": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImportDuplicate": "Line {line} is already there and will be skipped",
+  "@mitmRewriteImportDuplicate": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewritePlace": "Place",
+  "@mitmRewritePlace": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewritePlaceEnd": "End of each group",
+  "@mitmRewritePlaceEnd": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewritePlaceStart": "Start of each group",
+  "@mitmRewritePlaceStart": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImportButton": "Import {count}",
+  "@mitmRewriteImportButton": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImporting": "Importing…",
+  "@mitmRewriteImporting": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteImported": "Imported {count, plural, =1{1 rule} other{{count} rules}}",
+  "@mitmRewriteImported": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteEditTitle": "Edit Rewrite Rule",
+  "@mitmRewriteEditTitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteEditSubtitle": "{group} · Rule {number}",
+  "@mitmRewriteEditSubtitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewritePreviewType": "Type",
+  "@mitmRewritePreviewType": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewritePreviewMatch": "Matches",
+  "@mitmRewritePreviewMatch": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewritePreviewAction": "Action",
+  "@mitmRewritePreviewAction": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteUnparsable": "Can't parse",
+  "@mitmRewriteUnparsable": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSectionChanged": "This line belongs in {group}; it will move there.",
+  "@mitmRewriteSectionChanged": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteBadgeApplied": "Rewritten · {type}",
+  "@mitmRewriteBadgeApplied": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteBadgeFailed": "Rewrite failed · {reason}",
+  "@mitmRewriteBadgeFailed": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRewritten": "Rewritten",
+  "@mitmRewriteRewritten": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteFailedShort": "Rewrite failed",
+  "@mitmRewriteFailedShort": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteAppliedTitle": "Rewrite applied",
+  "@mitmRewriteAppliedTitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteHitCount": "{count, plural, =1{1 rule} other{{count} rules}}",
+  "@mitmRewriteHitCount": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteFailedTitle": "Rewrite failed: {reason}",
+  "@mitmRewriteFailedTitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewritePassedThrough": "Not rewritten; passed on unchanged",
+  "@mitmRewritePassedThrough": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRuleRef": "Rule {rule}",
+  "@mitmRewriteRuleRef": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteViewInList": "Show in Rewrite",
+  "@mitmRewriteViewInList": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteBefore": "Before",
+  "@mitmRewriteBefore": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteAfter": "After",
+  "@mitmRewriteAfter": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRuleRemoved": "The rule is no longer in this profile",
+  "@mitmRewriteRuleRemoved": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipOversize": "Content over the size limit",
+  "@mitmRewriteSkipOversize": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipDecode": "Couldn't decompress the content",
+  "@mitmRewriteSkipDecode": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipNotText": "Content isn't in a supported text format",
+  "@mitmRewriteSkipNotText": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipEncoding": "Unsupported content encoding",
+  "@mitmRewriteSkipEncoding": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipTimeout": "The pattern took too long to match",
+  "@mitmRewriteSkipTimeout": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipCrossHost": "Can't rewrite to another host",
+  "@mitmRewriteSkipCrossHost": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipInvalidUrl": "The rewritten URL is invalid",
+  "@mitmRewriteSkipInvalidUrl": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipStreaming": "The content is a stream",
+  "@mitmRewriteSkipStreaming": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipUploading": "The request was still uploading",
+  "@mitmRewriteSkipUploading": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipRead": "Couldn't read the content",
+  "@mitmRewriteSkipRead": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteSkipOther": "Rewrite not applied",
+  "@mitmRewriteSkipOther": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteRejectDetail": "{text} ({type})",
+  "@mitmRewriteRejectDetail": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteErrorFramingHeader": "{value} controls how the message is sent and can't be rewritten.",
+  "mitmRewriteErrorNeedsValue": "{value} needs a value.",
+  "mitmRewriteErrorBodyHead": "A body rewrite must start with http-request or http-response.",
+  "mitmRewriteErrorHeaderLineBreak": "A header value can't contain a line break.",
+  "mitmRewriteErrorNeedsReplacementUrl": "A redirect or URL rewrite needs a target URL.",
+  "mitmRewriteErrorDataUrl": "Remote content must be downloaded before a local response can use it.",
+  "mitmRewriteErrorDataBase64": "The content isn't valid Base64.",
+  "mitmRewriteErrorDataFileName": "The content must name a file in the resources folder; got {value}.",
+  "mitmRewriteErrorFileNeedsData": "The file type needs a file.",
+  "mitmRewriteErrorBodyTooLarge": "The decoded content is over the rewrite size limit.",
+  "mitmRewriteErrorEmptyRegex": "The regular expression can't be empty.",
+  "mitmRewriteErrorEmptyRule": "The rule can't be empty.",
+  "mitmRewriteErrorUrlFieldCount": "Enter a regular expression, a replacement and a type; found {value} items.",
+  "mitmRewriteErrorBodyPairs": "After the URL regular expression, enter pairs of a pattern and its replacement.",
+  "mitmRewriteErrorHeaderFields": "Enter the request or response type, a regular expression, an action and a header, plus a value when needed.",
+  "mitmRewriteErrorKeyValue": "Use the key=value format; got {value}.",
+  "mitmRewriteErrorHeaderFormat": "The header is invalid; use a:b|c:d or Base64.",
+  "mitmRewriteErrorHeaderReplaceRegex": "header-replace-regex needs a regular expression and a replacement.",
+  "mitmRewriteErrorUrlRegex": "The URL regular expression is invalid.",
+  "mitmRewriteErrorBodyRegex": "The content regular expression {value} is invalid.",
+  "mitmRewriteErrorInvalidHeader": "The header {value} is invalid.",
+  "mitmRewriteErrorHeaderName": "The header name {value} is invalid.",
+  "mitmRewriteErrorHeaderRegex": "The header regular expression is invalid.",
+  "mitmRewriteErrorJq": "Rewriting content with jq isn't supported yet.",
+  "mitmRewriteErrorLocalUnreadable": "Can't read the local response file {value}.",
+  "mitmRewriteErrorLocalTooLarge": "The local response file {value} is over 16 MiB.",
+  "mitmRewriteErrorRegexTimeout": "The regular expression took too long to match.",
+  "mitmRewriteErrorStatusCode": "The status code must be between 200 and 999; got {value}.",
+  "mitmRewriteErrorUrlType": "Unsupported URL rewrite type: {value}.",
+  "mitmRewriteErrorDataType": "Unsupported content type: {value}.",
+  "mitmRewriteErrorHeaderAction": "Unsupported header action: {value}.",
+  "mitmRewriteErrorParameter": "Unsupported parameter: {value}.",
+  "mitmRewriteErrorSection": "Unsupported section: {value}.",
+  "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
+  "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
+  "mitmRewriteErrorGeneric": "The rule's format is invalid.",
+  "mitmRewriteErrorDetails": "Details",
+  "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "@mitmRewriteErrorFramingHeader": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorNeedsValue": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorBodyHead": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorHeaderLineBreak": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorNeedsReplacementUrl": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorDataUrl": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorDataBase64": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorDataFileName": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorFileNeedsData": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorBodyTooLarge": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorEmptyRegex": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorEmptyRule": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorUrlFieldCount": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorBodyPairs": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorHeaderFields": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorKeyValue": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorHeaderFormat": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorHeaderReplaceRegex": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorUrlRegex": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorBodyRegex": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorInvalidHeader": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorHeaderName": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorHeaderRegex": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorJq": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorLocalUnreadable": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorLocalTooLarge": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorRegexTimeout": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorStatusCode": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorUrlType": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorDataType": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorHeaderAction": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorParameter": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorSection": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorUnterminatedQuote": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorOutsideSection": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorGeneric": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteErrorDetails": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteMatchedTitle": "Rule matched",
+  "@mitmRewriteMatchedTitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "mitmRewriteNotAppliedTitle": "Rewrite not applied: {value}",
+  "@mitmRewriteNotAppliedTitle": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  },
+  "@mitmRewriteFailureGeneric": {
+    "description": "PROVISIONAL: English text, awaiting translation"
+  }
 }

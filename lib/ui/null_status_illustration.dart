@@ -24,6 +24,7 @@ enum NullStatusIllustration implements Illustration {
   camera,
   devices,
   core,
+  rewrites,
   error;
 
   @override
@@ -48,6 +49,7 @@ enum NullStatusIllustration implements Illustration {
     camera => AppGlyphs.camera,
     devices => AppGlyphs.devices,
     core => AppGlyphs.bolt,
+    rewrites => AppGlyphs.wand,
     error => AppGlyphs.error,
   };
 

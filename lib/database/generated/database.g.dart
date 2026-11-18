@@ -6671,6 +6671,408 @@ class AddedRuleSetsCompanion extends UpdateCompanion<RawAddedRuleSet> {
   }
 }
 
+class $MitmRewritesTable extends MitmRewrites
+    with TableInfo<$MitmRewritesTable, RawMitmRewrite> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MitmRewritesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<MitmList, String> section =
+      GeneratedColumn<String>(
+        'section',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<MitmList>($MitmRewritesTable.$convertersection);
+  static const VerificationMeta _lineMeta = const VerificationMeta('line');
+  @override
+  late final GeneratedColumn<String> line = GeneratedColumn<String>(
+    'line',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _orderMeta = const VerificationMeta('order');
+  @override
+  late final GeneratedColumn<String> order = GeneratedColumn<String>(
+    'order',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    section,
+    line,
+    enabled,
+    order,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mitm_rewrites';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RawMitmRewrite> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    }
+    if (data.containsKey('line')) {
+      context.handle(
+        _lineMeta,
+        line.isAcceptableOrUnknown(data['line']!, _lineMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lineMeta);
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    }
+    if (data.containsKey('order')) {
+      context.handle(
+        _orderMeta,
+        order.isAcceptableOrUnknown(data['order']!, _orderMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RawMitmRewrite map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RawMitmRewrite(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      ),
+      section: $MitmRewritesTable.$convertersection.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}section'],
+        )!,
+      ),
+      line: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}line'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+      order: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}order'],
+      ),
+    );
+  }
+
+  @override
+  $MitmRewritesTable createAlias(String alias) {
+    return $MitmRewritesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<MitmList, String, String> $convertersection =
+      const EnumNameConverter<MitmList>(MitmList.values);
+}
+
+class RawMitmRewrite extends DataClass implements Insertable<RawMitmRewrite> {
+  final int id;
+  final int? profileId;
+  final MitmList section;
+  final String line;
+  final bool enabled;
+  final String? order;
+  const RawMitmRewrite({
+    required this.id,
+    this.profileId,
+    required this.section,
+    required this.line,
+    required this.enabled,
+    this.order,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || profileId != null) {
+      map['profile_id'] = Variable<int>(profileId);
+    }
+    {
+      map['section'] = Variable<String>(
+        $MitmRewritesTable.$convertersection.toSql(section),
+      );
+    }
+    map['line'] = Variable<String>(line);
+    map['enabled'] = Variable<bool>(enabled);
+    if (!nullToAbsent || order != null) {
+      map['order'] = Variable<String>(order);
+    }
+    return map;
+  }
+
+  MitmRewritesCompanion toCompanion(bool nullToAbsent) {
+    return MitmRewritesCompanion(
+      id: Value(id),
+      profileId: profileId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(profileId),
+      section: Value(section),
+      line: Value(line),
+      enabled: Value(enabled),
+      order: order == null && nullToAbsent
+          ? const Value.absent()
+          : Value(order),
+    );
+  }
+
+  factory RawMitmRewrite.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RawMitmRewrite(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int?>(json['profileId']),
+      section: $MitmRewritesTable.$convertersection.fromJson(
+        serializer.fromJson<String>(json['section']),
+      ),
+      line: serializer.fromJson<String>(json['line']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      order: serializer.fromJson<String?>(json['order']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int?>(profileId),
+      'section': serializer.toJson<String>(
+        $MitmRewritesTable.$convertersection.toJson(section),
+      ),
+      'line': serializer.toJson<String>(line),
+      'enabled': serializer.toJson<bool>(enabled),
+      'order': serializer.toJson<String?>(order),
+    };
+  }
+
+  RawMitmRewrite copyWith({
+    int? id,
+    Value<int?> profileId = const Value.absent(),
+    MitmList? section,
+    String? line,
+    bool? enabled,
+    Value<String?> order = const Value.absent(),
+  }) => RawMitmRewrite(
+    id: id ?? this.id,
+    profileId: profileId.present ? profileId.value : this.profileId,
+    section: section ?? this.section,
+    line: line ?? this.line,
+    enabled: enabled ?? this.enabled,
+    order: order.present ? order.value : this.order,
+  );
+  RawMitmRewrite copyWithCompanion(MitmRewritesCompanion data) {
+    return RawMitmRewrite(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      section: data.section.present ? data.section.value : this.section,
+      line: data.line.present ? data.line.value : this.line,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      order: data.order.present ? data.order.value : this.order,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RawMitmRewrite(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('section: $section, ')
+          ..write('line: $line, ')
+          ..write('enabled: $enabled, ')
+          ..write('order: $order')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, profileId, section, line, enabled, order);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RawMitmRewrite &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.section == this.section &&
+          other.line == this.line &&
+          other.enabled == this.enabled &&
+          other.order == this.order);
+}
+
+class MitmRewritesCompanion extends UpdateCompanion<RawMitmRewrite> {
+  final Value<int> id;
+  final Value<int?> profileId;
+  final Value<MitmList> section;
+  final Value<String> line;
+  final Value<bool> enabled;
+  final Value<String?> order;
+  const MitmRewritesCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.section = const Value.absent(),
+    this.line = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.order = const Value.absent(),
+  });
+  MitmRewritesCompanion.insert({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    required MitmList section,
+    required String line,
+    this.enabled = const Value.absent(),
+    this.order = const Value.absent(),
+  }) : section = Value(section),
+       line = Value(line);
+  static Insertable<RawMitmRewrite> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? section,
+    Expression<String>? line,
+    Expression<bool>? enabled,
+    Expression<String>? order,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (section != null) 'section': section,
+      if (line != null) 'line': line,
+      if (enabled != null) 'enabled': enabled,
+      if (order != null) 'order': order,
+    });
+  }
+
+  MitmRewritesCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? profileId,
+    Value<MitmList>? section,
+    Value<String>? line,
+    Value<bool>? enabled,
+    Value<String?>? order,
+  }) {
+    return MitmRewritesCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      section: section ?? this.section,
+      line: line ?? this.line,
+      enabled: enabled ?? this.enabled,
+      order: order ?? this.order,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (section.present) {
+      map['section'] = Variable<String>(
+        $MitmRewritesTable.$convertersection.toSql(section.value),
+      );
+    }
+    if (line.present) {
+      map['line'] = Variable<String>(line.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (order.present) {
+      map['order'] = Variable<String>(order.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MitmRewritesCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('section: $section, ')
+          ..write('line: $line, ')
+          ..write('enabled: $enabled, ')
+          ..write('order: $order')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$Database extends GeneratedDatabase {
   _$Database(QueryExecutor e) : super(e);
   $DatabaseManager get managers => $DatabaseManager(this);
@@ -6691,6 +7093,7 @@ abstract class _$Database extends GeneratedDatabase {
   late final $MountSourceStatusesTable mountSourceStatuses =
       $MountSourceStatusesTable(this);
   late final $AddedRuleSetsTable addedRuleSets = $AddedRuleSetsTable(this);
+  late final $MitmRewritesTable mitmRewrites = $MitmRewritesTable(this);
   late final Index idxRuleTarget = Index(
     'idx_rule_target',
     'CREATE INDEX idx_rule_target ON rules (rule_target)',
@@ -6706,6 +7109,10 @@ abstract class _$Database extends GeneratedDatabase {
   late final Index lastAccessedUrl = Index(
     'last_accessed_url',
     'CREATE INDEX last_accessed_url ON icon_records (last_accessed, url)',
+  );
+  late final Index idxMitmRewritesProfileOrder = Index(
+    'idx_mitm_rewrites_profile_order',
+    'CREATE INDEX idx_mitm_rewrites_profile_order ON mitm_rewrites (profile_id, "order")',
   );
   late final ProfilesDao profilesDao = ProfilesDao(this as Database);
   late final ScriptsDao scriptsDao = ScriptsDao(this as Database);
@@ -6726,6 +7133,9 @@ abstract class _$Database extends GeneratedDatabase {
   late final MitmModulesDao mitmModulesDao = MitmModulesDao(this as Database);
   late final MountsDao mountsDao = MountsDao(this as Database);
   late final AddedRuleSetsDao addedRuleSetsDao = AddedRuleSetsDao(
+    this as Database,
+  );
+  late final MitmRewritesDao mitmRewritesDao = MitmRewritesDao(
     this as Database,
   );
   @override
@@ -6749,10 +7159,12 @@ abstract class _$Database extends GeneratedDatabase {
     mountTargets,
     mountSourceStatuses,
     addedRuleSets,
+    mitmRewrites,
     idxRuleTarget,
     idxRulesProfileOrder,
     idxProxyGroupsProfileOrder,
     lastAccessedUrl,
+    idxMitmRewritesProfileOrder,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -6832,6 +7244,13 @@ abstract class _$Database extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('added_rule_sets', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('mitm_rewrites', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -7044,6 +7463,24 @@ final class $$ProfilesTableReferences
     ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_addedRuleSetsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$MitmRewritesTable, List<RawMitmRewrite>>
+  _mitmRewritesRefsTable(_$Database db) => MultiTypedResultKey.fromTable(
+    db.mitmRewrites,
+    aliasName: 'profiles__id__mitm_rewrites__profile_id',
+  );
+
+  $$MitmRewritesTableProcessedTableManager get mitmRewritesRefs {
+    final manager = $$MitmRewritesTableTableManager(
+      $_db,
+      $_db.mitmRewrites,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_mitmRewritesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -7369,6 +7806,31 @@ class $$ProfilesTableFilterComposer
           }) => $$AddedRuleSetsTableFilterComposer(
             $db: $db,
             $table: $db.addedRuleSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> mitmRewritesRefs(
+    Expression<bool> Function($$MitmRewritesTableFilterComposer f) f,
+  ) {
+    final $$MitmRewritesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.mitmRewrites,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MitmRewritesTableFilterComposer(
+            $db: $db,
+            $table: $db.mitmRewrites,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7779,6 +8241,31 @@ class $$ProfilesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> mitmRewritesRefs<T extends Object>(
+    Expression<T> Function($$MitmRewritesTableAnnotationComposer a) f,
+  ) {
+    final $$MitmRewritesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.mitmRewrites,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MitmRewritesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.mitmRewrites,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProfilesTableTableManager
@@ -7804,6 +8291,7 @@ class $$ProfilesTableTableManager
             bool mountTargetsRefs,
             bool mountSourceStatusesRefs,
             bool addedRuleSetsRefs,
+            bool mitmRewritesRefs,
           })
         > {
   $$ProfilesTableTableManager(_$Database db, $ProfilesTable table)
@@ -7914,6 +8402,7 @@ class $$ProfilesTableTableManager
                 mountTargetsRefs = false,
                 mountSourceStatusesRefs = false,
                 addedRuleSetsRefs = false,
+                mitmRewritesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -7927,6 +8416,7 @@ class $$ProfilesTableTableManager
                     if (mountTargetsRefs) db.mountTargets,
                     if (mountSourceStatusesRefs) db.mountSourceStatuses,
                     if (addedRuleSetsRefs) db.addedRuleSets,
+                    if (mitmRewritesRefs) db.mitmRewrites,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -8120,6 +8610,27 @@ class $$ProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (mitmRewritesRefs)
+                        await $_getPrefetchedData<
+                          RawProfile,
+                          $ProfilesTable,
+                          RawMitmRewrite
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._mitmRewritesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).mitmRewritesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -8150,6 +8661,7 @@ typedef $$ProfilesTableProcessedTableManager =
         bool mountTargetsRefs,
         bool mountSourceStatusesRefs,
         bool addedRuleSetsRefs,
+        bool mitmRewritesRefs,
       })
     >;
 typedef $$ScriptsTableCreateCompanionBuilder =
@@ -12722,6 +13234,337 @@ typedef $$AddedRuleSetsTableProcessedTableManager =
       RawAddedRuleSet,
       PrefetchHooks Function({bool profileId})
     >;
+typedef $$MitmRewritesTableCreateCompanionBuilder =
+    MitmRewritesCompanion Function({
+      Value<int> id,
+      Value<int?> profileId,
+      required MitmList section,
+      required String line,
+      Value<bool> enabled,
+      Value<String?> order,
+    });
+typedef $$MitmRewritesTableUpdateCompanionBuilder =
+    MitmRewritesCompanion Function({
+      Value<int> id,
+      Value<int?> profileId,
+      Value<MitmList> section,
+      Value<String> line,
+      Value<bool> enabled,
+      Value<String?> order,
+    });
+
+final class $$MitmRewritesTableReferences
+    extends BaseReferences<_$Database, $MitmRewritesTable, RawMitmRewrite> {
+  $$MitmRewritesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProfilesTable _profileIdTable(_$Database db) =>
+      db.profiles.createAlias('mitm_rewrites__profile_id__profiles__id');
+
+  $$ProfilesTableProcessedTableManager? get profileId {
+    final $_column = $_itemColumn<int>('profile_id');
+    if ($_column == null) return null;
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MitmRewritesTableFilterComposer
+    extends Composer<_$Database, $MitmRewritesTable> {
+  $$MitmRewritesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<MitmList, MitmList, String> get section =>
+      $composableBuilder(
+        column: $table.section,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get line => $composableBuilder(
+    column: $table.line,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get profileId {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MitmRewritesTableOrderingComposer
+    extends Composer<_$Database, $MitmRewritesTable> {
+  $$MitmRewritesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get section => $composableBuilder(
+    column: $table.section,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get line => $composableBuilder(
+    column: $table.line,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get profileId {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MitmRewritesTableAnnotationComposer
+    extends Composer<_$Database, $MitmRewritesTable> {
+  $$MitmRewritesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<MitmList, String> get section =>
+      $composableBuilder(column: $table.section, builder: (column) => column);
+
+  GeneratedColumn<String> get line =>
+      $composableBuilder(column: $table.line, builder: (column) => column);
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<String> get order =>
+      $composableBuilder(column: $table.order, builder: (column) => column);
+
+  $$ProfilesTableAnnotationComposer get profileId {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MitmRewritesTableTableManager
+    extends
+        RootTableManager<
+          _$Database,
+          $MitmRewritesTable,
+          RawMitmRewrite,
+          $$MitmRewritesTableFilterComposer,
+          $$MitmRewritesTableOrderingComposer,
+          $$MitmRewritesTableAnnotationComposer,
+          $$MitmRewritesTableCreateCompanionBuilder,
+          $$MitmRewritesTableUpdateCompanionBuilder,
+          (RawMitmRewrite, $$MitmRewritesTableReferences),
+          RawMitmRewrite,
+          PrefetchHooks Function({bool profileId})
+        > {
+  $$MitmRewritesTableTableManager(_$Database db, $MitmRewritesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MitmRewritesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MitmRewritesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MitmRewritesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> profileId = const Value.absent(),
+                Value<MitmList> section = const Value.absent(),
+                Value<String> line = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<String?> order = const Value.absent(),
+              }) => MitmRewritesCompanion(
+                id: id,
+                profileId: profileId,
+                section: section,
+                line: line,
+                enabled: enabled,
+                order: order,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> profileId = const Value.absent(),
+                required MitmList section,
+                required String line,
+                Value<bool> enabled = const Value.absent(),
+                Value<String?> order = const Value.absent(),
+              }) => MitmRewritesCompanion.insert(
+                id: id,
+                profileId: profileId,
+                section: section,
+                line: line,
+                enabled: enabled,
+                order: order,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MitmRewritesTable, RawMitmRewrite>(table),
+                  $$MitmRewritesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable: $$MitmRewritesTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$MitmRewritesTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MitmRewritesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$Database,
+      $MitmRewritesTable,
+      RawMitmRewrite,
+      $$MitmRewritesTableFilterComposer,
+      $$MitmRewritesTableOrderingComposer,
+      $$MitmRewritesTableAnnotationComposer,
+      $$MitmRewritesTableCreateCompanionBuilder,
+      $$MitmRewritesTableUpdateCompanionBuilder,
+      (RawMitmRewrite, $$MitmRewritesTableReferences),
+      RawMitmRewrite,
+      PrefetchHooks Function({bool profileId})
+    >;
 
 class $DatabaseManager {
   final _$Database _db;
@@ -12758,6 +13601,8 @@ class $DatabaseManager {
       $$MountSourceStatusesTableTableManager(_db, _db.mountSourceStatuses);
   $$AddedRuleSetsTableTableManager get addedRuleSets =>
       $$AddedRuleSetsTableTableManager(_db, _db.addedRuleSets);
+  $$MitmRewritesTableTableManager get mitmRewrites =>
+      $$MitmRewritesTableTableManager(_db, _db.mitmRewrites);
 }
 
 mixin _$ProfilesDaoMixin on DatabaseAccessor<Database> {
@@ -12951,4 +13796,19 @@ class AddedRuleSetsDaoManager {
       $$AddedRuleSetsTableTableManager(_db.attachedDatabase, _db.addedRuleSets);
   $$RulesTableTableManager get rules =>
       $$RulesTableTableManager(_db.attachedDatabase, _db.rules);
+}
+
+mixin _$MitmRewritesDaoMixin on DatabaseAccessor<Database> {
+  $ProfilesTable get profiles => attachedDatabase.profiles;
+  $MitmRewritesTable get mitmRewrites => attachedDatabase.mitmRewrites;
+  MitmRewritesDaoManager get managers => MitmRewritesDaoManager(this);
+}
+
+class MitmRewritesDaoManager {
+  final _$MitmRewritesDaoMixin _db;
+  MitmRewritesDaoManager(this._db);
+  $$ProfilesTableTableManager get profiles =>
+      $$ProfilesTableTableManager(_db.attachedDatabase, _db.profiles);
+  $$MitmRewritesTableTableManager get mitmRewrites =>
+      $$MitmRewritesTableTableManager(_db.attachedDatabase, _db.mitmRewrites);
 }

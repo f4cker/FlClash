@@ -55,6 +55,8 @@ abstract mixin class CoreEventListener {
   void onMitmSign(MitmSignRequest request) {}
 
   void onMitmConnection(String id, String outcome) {}
+
+  void onMitmConnectionRewrite(String id, MitmConnectionRewrite rewrite) {}
 }
 
 class CoreEventManager {
@@ -127,6 +129,19 @@ class CoreEventManager {
             case CoreEventType.mitmConnection:
               final data = event.data;
               if (data is Map &&
+                  data['id'] is String &&
+                  data['rewrite'] is Map) {
+                try {
+                  listener.onMitmConnectionRewrite(
+                    data['id'] as String,
+                    MitmConnectionRewrite.fromJson(
+                      Map<String, Object?>.from(data['rewrite'] as Map),
+                    ),
+                  );
+                } catch (error) {
+                  commonPrint.log('Bad rewrite event: $error');
+                }
+              } else if (data is Map &&
                   data['id'] is String &&
                   data['outcome'] is String) {
                 listener.onMitmConnection(

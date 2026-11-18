@@ -2313,6 +2313,38 @@ extension MitmExt on Mitm {
   };
 }
 
+/// One of a profile's own rewrite rules: a Surge line of [section], which
+/// is one of the rewrite lists (never hostname or script).
+@freezed
+abstract class MitmRewrite with _$MitmRewrite {
+  const factory MitmRewrite({
+    required int id,
+    int? profileId,
+    required MitmList section,
+    required String line,
+    @Default(true) bool enabled,
+    String? order,
+  }) = _MitmRewrite;
+}
+
+/// The lists a rewrite rule may be in, in the Core's order of evaluation.
+const mitmRewriteLists = [
+  MitmList.headerRewrite,
+  MitmList.urlRewrite,
+  MitmList.mapLocal,
+  MitmList.bodyRewrite,
+];
+
+extension MitmRewriteExt on MitmRewrite {
+  /// As `mitm.update` takes it: the ID is what the Core reports back in its
+  /// status and request records.
+  Map<String, Object?> get coreJson => {
+    'id': '$id',
+    'section': section.key,
+    'line': line,
+  };
+}
+
 class MitmRules {
   const MitmRules({
     this.hostname = const [],

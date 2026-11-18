@@ -1,5 +1,6 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_body.dart';
+import 'package:fl_clash/common/mitm_rewrite.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/core.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'detail_tabs.dart';
 import 'mitm_body.dart';
 import 'mitm_exchange_menu.dart';
+import 'mitm_rewrite_hits.dart';
 
 String _millis(int milliseconds) {
   if (milliseconds < 1000) {
@@ -264,9 +266,18 @@ class _MitmExchangeDetail extends StatelessWidget {
         (appLocalizations.requestBody, exchange.requestSize.traffic.show),
       (appLocalizations.responseBody, exchange.responseSize.traffic.show),
     ];
+    final rewrites = [
+      for (final action in exchange.actions)
+        if (mitmListOfKey(action.kind) != null) action,
+    ];
+    final others = [
+      for (final action in exchange.actions)
+        if (mitmListOfKey(action.kind) == null) action,
+    ];
     return ListView(
       padding: _detailPadding(context),
       children: [
+        if (rewrites.isNotEmpty) MitmRewriteHitsSection(exchange: exchange),
         generateSection(
           title: appLocalizations.basicInfo,
           items: [
@@ -277,7 +288,7 @@ class _MitmExchangeDetail extends StatelessWidget {
         generateSection(
           title: appLocalizations.matchedRules,
           items: [
-            for (final action in exchange.actions)
+            for (final action in others)
               DetailRow(
                 title: _actionLabel(appLocalizations, action),
                 value: Wrap(
@@ -320,27 +331,50 @@ class _MitmExchangeDetail extends StatelessWidget {
 }
 
 /// One side of a request: its headers, then its body once the request ends.
-class _MitmSideView extends ConsumerWidget {
+/// A side rewrite rules changed shows as it went on, or as it came.
+class _MitmSideView extends ConsumerStatefulWidget {
   final MitmExchange exchange;
   final bool response;
 
   const _MitmSideView({required this.exchange, required this.response});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MitmSideView> createState() => _MitmSideViewState();
+}
+
+class _MitmSideViewState extends ConsumerState<_MitmSideView> {
+  bool _before = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final exchange = widget.exchange;
+    final response = widget.response;
     final appLocalizations = context.appLocalizations;
-    final header = response ? exchange.responseHeader : exchange.requestHeader;
+    final originalHeader = response
+        ? exchange.originalResponseHeader
+        : exchange.originalRequestHeader;
+    final originalBody = response
+        ? exchange.originalResponseBody
+        : exchange.originalRequestBody;
+    final changed = originalHeader.isNotEmpty || originalBody;
+    final before = changed && _before;
+    final header = before && originalHeader.isNotEmpty
+        ? originalHeader
+        : response
+        ? exchange.responseHeader
+        : exchange.requestHeader;
     final size = response ? exchange.responseSize : exchange.requestSize;
     final bodyTitle = response
         ? appLocalizations.responseBody
         : appLocalizations.requestBody;
     final sending = size > 0 && exchange.pending;
-    final body = size > 0 && !exchange.pending
+    final body = (size > 0 || (before && originalBody)) && !exchange.pending
         ? ref.watch(
             mitmBodyProvider(
               exchange.id,
               response: response,
               contentType: mitmHeaderValue(header, 'Content-Type'),
+              original: before && originalBody,
             ),
           )
         : null;
@@ -349,10 +383,28 @@ class _MitmSideView extends ConsumerWidget {
         content != null && (content.bytes.isNotEmpty || content.truncated);
     final bodyError = body != null && !body.hasValue ? body.error : null;
     final names = header.keys.toList()..sort();
+    // Small, at the end of the headers' title row, not a row of its own
+    // (design review 1 §5).
+    final toggle = changed
+        ? SegmentedControl<bool>(
+            dense: true,
+            segments: [
+              (true, appLocalizations.mitmRewriteBefore),
+              (false, appLocalizations.mitmRewriteAfter),
+            ],
+            value: before,
+            onChanged: (value) => setState(() => _before = value),
+          )
+        : null;
     return NullStatusSwitcher(
       isLoading:
           body != null && body.isLoading && !body.hasValue && bodyError == null,
-      isEmpty: header.isEmpty && !sending && !kept && bodyError == null,
+      isEmpty:
+          header.isEmpty &&
+          !sending &&
+          !kept &&
+          bodyError == null &&
+          toggle == null,
       nullStatus: NullStatus(
         label: exchange.pending
             ? appLocalizations.inProgress
@@ -364,16 +416,18 @@ class _MitmSideView extends ConsumerWidget {
       child: ListView(
         padding: _detailPadding(context),
         children: [
-          generateSection(
-            title: response
-                ? appLocalizations.responseHeaders
-                : appLocalizations.requestHeaders,
-            items: [
-              for (final name in names)
-                for (final value in header[name]!)
-                  DetailRow.text(title: name, value: value),
-            ],
-          ),
+          if (names.isNotEmpty || toggle != null)
+            ListHeader(
+              title: response
+                  ? appLocalizations.responseHeaders
+                  : appLocalizations.requestHeaders,
+              trailing: toggle,
+            ),
+          generateGroup([
+            for (final name in names)
+              for (final value in header[name]!)
+                DetailRow.text(title: name, value: value),
+          ]),
           if (sending)
             generateSection(
               title: bodyTitle,

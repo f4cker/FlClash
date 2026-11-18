@@ -6,6 +6,7 @@ import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
+import 'package:fl_clash/features/mitm/rewrite.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/app.dart';
@@ -479,6 +480,10 @@ class _MitmViewState extends ConsumerState<MitmView> {
                                   ignored,
                                 ),
                             ].join('\n'),
+                          ),
+                          generateSection(
+                            title: appLocalizations.mitmRewriteAndScripts,
+                            items: const [MitmRewriteEntryItem()],
                           ),
                           generateSection(
                             title: appLocalizations.options,

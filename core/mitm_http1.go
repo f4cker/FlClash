@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -192,6 +193,34 @@ type mitmDuplexControl struct {
 	connection string
 	// Optional nonblocking observer, used to synchronize exchange tests.
 	uploadComplete func(error)
+	// The port the flow was to; 0 for the scheme's default.
+	port uint16
+	// What the request list has been told of the connection's rewrites.
+	rewrites mitmRewriteReport
+	// Plain HTTP (port 80), served only for URL Rewrite's reject and
+	// redirects: nothing else is rewritten and only answered requests are
+	// recorded.
+	plain bool
+}
+
+// Records what rw did with the exchange, and tells the request list the
+// first time the connection had a rule apply or fail.
+func (c *mitmDuplexControl) noteRewrite(entry *mitmCaptureEntry, rw *mitmRewriteExchange) {
+	mitmCaptures.noteRewrite(entry, rw)
+	if c != nil {
+		c.rewrites.note(c.connection, rw)
+	}
+}
+
+func (c *mitmDuplexControl) flowPort() uint16 {
+	if c == nil {
+		return 0
+	}
+	return c.port
+}
+
+func (c *mitmDuplexControl) isPlain() bool {
+	return c != nil && c.plain
 }
 
 func (c *mitmDuplexControl) uploaded(err error) {
@@ -358,11 +387,73 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 			<-joinWatch(control, pendingWatch)
 			return errMitmSetupChanged
 		}
-		entry = mitmCaptures.begin(control.captureConnection(), host, req)
+		scheme := "https"
+		if control.isPlain() {
+			scheme = "http"
+		}
+		rw := mitmRewriteBegin(scheme, host, control.flowPort(), req.RequestURI, control.isPlain())
+		var requestBefore http.Header
+		if rw != nil {
+			requestBefore = req.Header.Clone()
+		}
+		decision := rw.request(req.Header)
+		if decision.drop {
+			<-joinWatch(control, pendingWatch)
+			entry = mitmCaptures.beginScheme(control.captureConnection(), scheme, host, req)
+			control.noteRewrite(entry, rw)
+			mitmCaptures.finish(entry, mitmExchangeDropped)
+			return nil
+		}
+		if decision.local != nil {
+			entry = mitmCaptures.beginScheme(control.captureConnection(), scheme, host, req)
+			control.noteRewrite(entry, rw)
+			keep, err := mitmAnswerHTTP1(client, req, decision.local, entry)
+			if err != nil || !keep {
+				<-joinWatch(control, pendingWatch)
+				return err
+			}
+			// The site was never asked; the idle watch carries on.
+			watch = pendingWatch
+			continue
+		}
+		if decision.requestURI != "" {
+			if target, err := url.ParseRequestURI(decision.requestURI); err == nil {
+				req.URL, req.RequestURI = target, decision.requestURI
+			}
+		}
+		if !control.isPlain() {
+			entry = mitmCaptures.beginScheme(control.captureConnection(), scheme, host, req)
+			control.noteRewrite(entry, rw)
+			mitmCaptures.originalHeader(entry, false, requestBefore, req.Header)
+		}
 		if _, present := req.Header["User-Agent"]; !present {
 			req.Header["User-Agent"] = []string{""}
 		}
 		originalBody := req.Body
+		if rules := rw.bodyRules(false); len(rules) > 0 {
+			if len(req.TransferEncoding) > 0 || req.Header.Get("Expect") != "" {
+				// As Surge: chunked or 100-continue uploads go on unchanged.
+				rw.skipAll(rules, "request", mitmSkipFraming)
+			} else {
+				coding := req.Header.Get("Content-Encoding")
+				result := rw.rewriteBody(rules, req.Header, req.Body, req.ContentLength, false)
+				if result.changed {
+					mitmCaptures.originalHeader(entry, false, requestBefore, nil)
+					mitmCaptures.originalBody(entry, false, result.original, coding)
+				}
+				switch {
+				case result.changed && result.length == 0:
+					req.Header.Del("Content-Encoding")
+					req.Body, req.ContentLength = http.NoBody, 0
+				case result.changed:
+					mitmRewrittenBodyHeader(req.Header, result.length)
+					req.Body, req.ContentLength = io.NopCloser(result.body), result.length
+				case req.Body != nil && req.Body != http.NoBody:
+					req.Body = io.NopCloser(result.body)
+				}
+			}
+			control.noteRewrite(entry, rw)
+		}
 		uploadWriter := newMitmUploadWriter(upstream)
 		// http.NoBody must stay as it is: any other body with length 0 makes
 		// Request.Write send "Transfer-Encoding: chunked" for POST/PUT/PATCH
@@ -444,6 +535,11 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 					return result.err
 				}
 				resp := result.response
+				if control.isPlain() && resp.ProtoMajor == 1 && resp.ProtoMinor == 0 {
+					// Plain sites still answer in HTTP/1.0; the client asked in
+					// HTTP/1.1, and the session ends with this response.
+					resp.Proto, resp.ProtoMinor, resp.Close = "HTTP/1.1", 1, true
+				}
 				if resp.ProtoMajor != 1 || resp.ProtoMinor != 1 || resp.StatusCode == http.StatusSwitchingProtocols || resp.Header.Get("Upgrade") != "" {
 					if failureTimer != nil {
 						failureTimer.Stop()
@@ -506,6 +602,32 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				if failureTimer != nil {
 					failureTimer.Stop()
 				}
+				var rewrittenBody io.Reader
+				if rw != nil && !rw.plain {
+					responseBefore := resp.Header.Clone()
+					rw.responseHeader(resp.Header)
+					if rules := rw.bodyRules(true); len(rules) == 0 || mitmHeaderOnly(resp, req.Method) {
+					} else if !mitmUploadSettles(upload, &uploadPending, &uploadErr, control) {
+						// The site answers while the client is still sending:
+						// holding the answer back to rewrite it could stall a
+						// client that waits for it, so it streams on unchanged.
+						if !uploadPending {
+							upload = nil
+						}
+						rw.skipAll(rules, "response", mitmSkipUploading)
+					} else {
+						upload = nil
+						result := rw.rewriteBody(rules, resp.Header, resp.Body, resp.ContentLength, true)
+						rewrittenBody = result.body
+						if result.changed {
+							mitmCaptures.originalBody(entry, true, result.original, responseBefore.Get("Content-Encoding"))
+							mitmRewrittenBodyHeader(resp.Header, result.length)
+							resp.ContentLength, resp.TransferEncoding, resp.Trailer = result.length, nil, nil
+						}
+					}
+					control.noteRewrite(entry, rw)
+					mitmCaptures.originalHeader(entry, true, responseBefore, resp.Header)
+				}
 				mitmCaptures.respond(entry, resp)
 				// Conservatively allow reuse only when completed upload is observable.
 				if uploadPending {
@@ -534,6 +656,9 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 				originalResponseBody := resp.Body
 				if resp.Body != nil {
 					var body io.Reader = resp.Body
+					if rewrittenBody != nil {
+						body = rewrittenBody
+					}
 					if entry != nil {
 						body = mitmCaptureReader{r: body, entry: entry, response: true}
 					}
@@ -583,6 +708,30 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 
 // Joins an idle watcher that an exchange took over but never handed to a
 // response reader, interrupting the upstream read it is blocked in.
+// How long a response to be rewritten waits for the upload it answers to
+// finish: a site normally answers once it has read the whole request, as
+// the upload's last write returns.
+var mitmUploadSettleWait = 200 * time.Millisecond
+
+// Whether the upload has finished, or does within mitmUploadSettleWait,
+// without error. A result read here is taken as the duplex loop takes it;
+// an upload still running stays pending for the loop.
+func mitmUploadSettles(upload chan error, pending *bool, uploadErr *error, control *mitmDuplexControl) bool {
+	if !*pending {
+		return *uploadErr == nil
+	}
+	timer := time.NewTimer(mitmUploadSettleWait)
+	defer timer.Stop()
+	select {
+	case err := <-upload:
+		*pending, *uploadErr = false, err
+		control.uploaded(err)
+		return err == nil
+	case <-timer.C:
+		return false
+	}
+}
+
 func joinWatch(control *mitmDuplexControl, watch chan error) <-chan error {
 	if watch == nil {
 		closed := make(chan error)
@@ -591,4 +740,42 @@ func joinWatch(control *mitmDuplexControl, watch chan error) <-chan error {
 	}
 	control.stopUpstreamRead()
 	return watch
+}
+
+// The most of a request body read and dropped so a locally answered
+// request can keep its connection; a larger or unframed one closes it.
+const mitmLocalDrainLimit = 1 << 20
+
+// Answers req with local (reject, redirect, Map Local) without the site.
+// keep reports whether the connection can take the next request.
+func mitmAnswerHTTP1(client io.Writer, req *http.Request, local *mitmLocalResponse, entry *mitmCaptureEntry) (keep bool, err error) {
+	keep = !req.Close
+	if req.Body != nil && req.Body != http.NoBody {
+		if _, expect := req.Header["Expect"]; expect || req.ContentLength < 0 || req.ContentLength > mitmLocalDrainLimit {
+			keep = false
+		} else if _, err := io.Copy(io.Discard, req.Body); err != nil {
+			return false, err
+		}
+	}
+	resp := local.http1()
+	resp.Request = req
+	if !keep {
+		resp.Close = true
+	}
+	mitmCaptures.respond(entry, resp)
+	mitmCaptures.write(entry, true, local.body)
+	if req.Method == http.MethodHead {
+		resp.Header.Set("Content-Length", strconv.Itoa(len(local.body)))
+		if !keep {
+			resp.Header.Set("Connection", "close")
+		}
+		err = mitmWriteHeaderOnly(client, resp, req.Method)
+	} else {
+		err = resp.Write(client)
+	}
+	if err != nil {
+		return false, err
+	}
+	mitmCaptures.finish(entry, "")
+	return keep, nil
 }

@@ -10,8 +10,10 @@ import (
 	"net/textproto"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/metacubex/mihomo/log"
 	"golang.org/x/net/http2"
@@ -120,7 +122,7 @@ func mitmHTTP2Proxy(client, upstream net.Conn, host string, allowed func() bool,
 		ReadIdleTimeout: ping,
 		PingTimeout:     ping,
 	}
-	handler := &mitmHTTP2Handler{cc: cc, host: host, allowed: allowed, connection: control.captureConnection()}
+	handler := &mitmHTTP2Handler{cc: cc, host: host, port: control.flowPort(), allowed: allowed, connection: control.captureConnection()}
 	server.ServeConn(client, &http2.ServeConnOpts{Context: ctx, Handler: handler})
 	return nil
 }
@@ -128,6 +130,8 @@ func mitmHTTP2Proxy(client, upstream net.Conn, host string, allowed func() bool,
 type mitmHTTP2Handler struct {
 	cc         *http2.ClientConn
 	host       string
+	port       uint16
+	rewrites   mitmRewriteReport
 	allowed    func() bool
 	connection string
 }
@@ -151,9 +155,54 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMisdirectedRequest)
 		return
 	}
+	rw := mitmRewriteBegin("https", h.host, h.port, r.RequestURI, false)
+	var requestBefore http.Header
+	if rw != nil {
+		requestBefore = r.Header.Clone()
+	}
+	decision := rw.request(r.Header)
+	if decision.requestURI != "" {
+		if target, err := url.ParseRequestURI(decision.requestURI); err == nil {
+			r.URL, r.RequestURI = target, decision.requestURI
+		}
+	}
 	entry := mitmCaptures.begin(h.connection, h.host, r)
+	mitmCaptures.noteRewrite(entry, rw)
+	mitmCaptures.originalHeader(entry, false, requestBefore, r.Header)
+	h.rewrites.note(h.connection, rw)
 	var result error
 	defer func() { mitmCaptures.fail(entry, result) }()
+	if decision.drop {
+		// reject-drop: the stream is reset, the connection kept.
+		mitmCaptures.finish(entry, mitmExchangeDropped)
+		panic(http.ErrAbortHandler)
+	}
+	if decision.local != nil {
+		mitmAnswerHTTP2(w, r, decision.local, entry)
+		return
+	}
+	if rules := rw.bodyRules(false); len(rules) > 0 {
+		if r.ContentLength < 0 {
+			// Without a declared length the body may be a stream (gRPC,
+			// bidi) the client keeps open while it waits for answers;
+			// waiting for its end to rewrite it could stall both sides.
+			rw.skipAll(rules, "request", mitmSkipStreaming)
+		} else {
+			coding := r.Header.Get("Content-Encoding")
+			res := rw.rewriteBody(rules, r.Header, r.Body, r.ContentLength, false)
+			switch {
+			case res.changed:
+				mitmCaptures.originalHeader(entry, false, requestBefore, nil)
+				mitmCaptures.originalBody(entry, false, res.original, coding)
+				mitmRewrittenBodyHeader(r.Header, res.length)
+				r.Body, r.ContentLength = io.NopCloser(res.body), res.length
+			case r.ContentLength != 0:
+				r.Body = io.NopCloser(res.body)
+			}
+		}
+		mitmCaptures.noteRewrite(entry, rw)
+		h.rewrites.note(h.connection, rw)
+	}
 
 	out := r.Clone(r.Context())
 	out.RequestURI = ""
@@ -168,14 +217,16 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Otherwise the transport adds its own.
 		out.Header["User-Agent"] = []string{""}
 	}
+	uploaded := make(chan struct{})
 	if r.ContentLength == 0 {
 		out.Body = http.NoBody
+		close(uploaded)
 	} else {
 		var body io.Reader = r.Body
 		if entry != nil {
 			body = mitmCaptureReader{r: body, entry: entry}
 		}
-		out.Body = io.NopCloser(body)
+		out.Body = io.NopCloser(&mitmUploadTracker{r: body, left: r.ContentLength, done: uploaded})
 	}
 	trace := &httptrace.ClientTrace{
 		// Early hints and other informational answers go on as they come;
@@ -205,6 +256,32 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		panic(http.ErrAbortHandler)
 	}
 	defer resp.Body.Close()
+	var rewrittenBody io.Reader
+	if rw != nil {
+		responseBefore := resp.Header.Clone()
+		rw.responseHeader(resp.Header)
+		if rules := rw.bodyRules(true); len(rules) == 0 || r.Method == http.MethodHead || resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusNotModified {
+		} else if resp.ContentLength < 0 && len(resp.Trailer) > 0 {
+			// A body with trailers to follow is a stream (gRPC and the like).
+			rw.skipAll(rules, "response", mitmSkipStreaming)
+		} else if !mitmSettled(uploaded) {
+			// The client is still sending: a bidi stream may wait for the
+			// answer before it sends more, so the answer is not held back.
+			rw.skipAll(rules, "response", mitmSkipUploading)
+		} else {
+			res := rw.rewriteBody(rules, resp.Header, resp.Body, resp.ContentLength, true)
+			rewrittenBody = res.body
+			if res.changed {
+				mitmCaptures.originalBody(entry, true, res.original, responseBefore.Get("Content-Encoding"))
+				// Trailers, read with the body, still follow it.
+				mitmRewrittenBodyHeader(resp.Header, res.length)
+				resp.ContentLength = res.length
+			}
+		}
+		mitmCaptures.noteRewrite(entry, rw)
+		h.rewrites.note(h.connection, rw)
+		mitmCaptures.originalHeader(entry, true, responseBefore, resp.Header)
+	}
 	mitmCaptures.respond(entry, resp)
 
 	fields := w.Header()
@@ -226,6 +303,9 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(resp.StatusCode)
 
 	var body io.Reader = resp.Body
+	if rewrittenBody != nil {
+		body = rewrittenBody
+	}
 	if entry != nil {
 		body = mitmCaptureReader{r: body, entry: entry, response: true}
 	}
@@ -264,4 +344,64 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header()[http.TrailerPrefix+name] = values
 	}
 	mitmCaptures.trailers(entry, resp.Trailer)
+}
+
+// Answers r with local (reject, redirect, Map Local) without the site.
+func mitmAnswerHTTP2(w http.ResponseWriter, r *http.Request, local *mitmLocalResponse, entry *mitmCaptureEntry) {
+	resp := local.http1()
+	mitmCaptures.respond(entry, resp)
+	fields := w.Header()
+	for name, values := range resp.Header {
+		fields[name] = values
+	}
+	fields["Content-Length"] = []string{strconv.Itoa(len(local.body))}
+	if _, present := resp.Header["Content-Type"]; !present {
+		fields["Content-Type"] = nil
+	}
+	w.WriteHeader(local.status)
+	if r.Method != http.MethodHead && len(local.body) > 0 {
+		if _, err := w.Write(local.body); err != nil {
+			mitmCaptures.finish(entry, mitmExchangeResponseFailed)
+			return
+		}
+		mitmCaptures.write(entry, true, local.body)
+	}
+	mitmCaptures.finish(entry, "")
+}
+
+// Passes a request body on and closes done once all of it has been read:
+// the declared length (left, -1 when unknown) or EOF.
+type mitmUploadTracker struct {
+	r    io.Reader
+	left int64
+	done chan struct{}
+	once sync.Once
+}
+
+func (t *mitmUploadTracker) Read(p []byte) (int, error) {
+	n, err := t.r.Read(p)
+	if t.left > 0 {
+		t.left -= int64(n)
+	}
+	if err != nil || t.left == 0 {
+		t.once.Do(func() { close(t.done) })
+	}
+	return n, err
+}
+
+// Whether done is closed, or closes within mitmUploadSettleWait.
+func mitmSettled(done <-chan struct{}) bool {
+	select {
+	case <-done:
+		return true
+	default:
+	}
+	timer := time.NewTimer(mitmUploadSettleWait)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return true
+	case <-timer.C:
+		return false
+	}
 }

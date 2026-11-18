@@ -23,6 +23,15 @@ type MitmSetup struct {
 	// HTTP/1.1 alone, and a client that offers only h2 passes through.
 	H2     *bool            `json:"h2,omitempty"`
 	Limits map[string]int64 `json:"limits,omitempty"`
+	// The current profile's rewrite rules (phase 2b). They change without
+	// ending any session: only the settings above do that.
+	Rewrite []MitmRewriteRule `json:"rewrite,omitempty"`
+}
+
+// The setup without its rewrite rules, which are installed on their own.
+func (setup MitmSetup) withoutRewrite() MitmSetup {
+	setup.Rewrite = nil
+	return setup
 }
 
 type MitmStatus struct {
@@ -60,10 +69,11 @@ var (
 func applyMitmSetup(params *SetupParams, candidate []byte) {
 	runtime := &mitmRuntime{}
 	if params.Mitm != nil {
-		runtime.setup = *params.Mitm
+		runtime.setup = params.Mitm.withoutRewrite()
 		runtime.hosts = compileMitmHosts(params.Mitm.Hostname)
 	}
 	runtime.ignored.Store(int64(profileMitmHostnames(candidate)))
+	installMitmRewrite(params.Mitm)
 	replaceMitmRuntime(runtime)
 }
 
@@ -123,7 +133,9 @@ func mitmDecrypts(host string) bool {
 // nothing checked; a Core already not decrypting is left as it is.
 func handleMitmDisable() {
 	previous := mitmState.Load()
-	if !previous.decrypting() {
+	// Rewriting stops with the switch, plain HTTP included.
+	installMitmRewrite(nil)
+	if !previous.decrypting() && (previous == nil || !previous.setup.Enable) {
 		return
 	}
 	runtime := &mitmRuntime{}
@@ -159,9 +171,12 @@ func handleMitmUpdateSeq(params MitmUpdateParams, seq uint64) error {
 		runtime.ignored.Store(previous.ignored.Load())
 	}
 	if params.Setup != nil {
-		runtime.setup = *params.Setup
+		runtime.setup = params.Setup.withoutRewrite()
 		runtime.hosts = compileMitmHosts(params.Setup.Hostname)
 	}
+	// Rewrite rules take effect for the next message on every session; a
+	// change to them alone leaves the sessions as they are.
+	installMitmRewrite(params.Setup)
 	if previous != nil && reflect.DeepEqual(previous.setup, runtime.setup) {
 		return nil
 	}
@@ -208,5 +223,19 @@ func handleMitmValidate(params map[string][]string) map[string][]MitmIssue {
 			})
 		}
 	}
+	for _, section := range mitmRewriteSections {
+		for index, line := range params[section] {
+			if _, err := parseMitmRewriteLine(section, line); err != nil {
+				result[section] = append(result[section], MitmIssue{
+					Index:   index,
+					Code:    mitmRewriteInvalid,
+					Message: err.Error(),
+				})
+			}
+		}
+	}
 	return result
 }
+
+// The one issue code of a rewrite rule; the message says what is wrong.
+const mitmRewriteInvalid mitmHostIssue = "invalidRule"

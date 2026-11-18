@@ -50,6 +50,23 @@ CoreOptions coreOptions(Ref ref) {
   );
 }
 
+/// The current profile's enabled rewrite rules, as the Core takes them;
+/// empty while none is selected or they are still being read.
+@riverpod
+List<MitmRewrite> currentMitmRewrites(Ref ref) {
+  final profileId = ref.watch(currentProfileIdProvider);
+  if (profileId == null) {
+    return const [];
+  }
+  final rewrites =
+      ref.watch(profileMitmRewritesProvider(profileId)).value ?? const [];
+  return [
+    for (final rewrite in rewrites)
+      if (rewrite.enabled && mitmRewriteLists.contains(rewrite.section))
+        rewrite,
+  ];
+}
+
 /// Null, and so no decryption, unless the user turned it on.
 @riverpod
 Map<String, Object?>? mitmSetup(Ref ref) {
@@ -59,7 +76,12 @@ Map<String, Object?>? mitmSetup(Ref ref) {
   if (!mitmFeature || !mitm.enable) {
     return null;
   }
-  return mitm.coreJson;
+  final rewrites = ref.watch(currentMitmRewritesProvider);
+  return {
+    ...mitm.coreJson,
+    if (rewrites.isNotEmpty)
+      'rewrite': [for (final rewrite in rewrites) rewrite.coreJson],
+  };
 }
 
 @riverpod

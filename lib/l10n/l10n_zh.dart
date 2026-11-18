@@ -6613,4 +6613,490 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mitmHttp2Desc => '关闭后，仅解密 HTTP/1.1 连接；仅支持 HTTP/2 的连接不会解密。';
+
+  @override
+  String get mitmRewriteAndScripts => '改写与脚本';
+
+  @override
+  String get mitmRewrite => '改写';
+
+  @override
+  String mitmRewriteRuleCount(int count) {
+    return '$count 条规则';
+  }
+
+  @override
+  String mitmRewriteInvalidCount(int count) {
+    return '$count 条有误';
+  }
+
+  @override
+  String get mitmRewriteNoneAdded => '未添加';
+
+  @override
+  String mitmRewriteSubtitle(Object profile, int count, int enabled) {
+    return '当前配置「$profile」· $count 条改写规则，$enabled 条开启';
+  }
+
+  @override
+  String get mitmRewriteGroupReject => 'URL 拦截';
+
+  @override
+  String get mitmRewriteGroupRedirect => 'URL 重定向';
+
+  @override
+  String get mitmRewriteGroupHeader => '请求头与响应头';
+
+  @override
+  String get mitmRewriteGroupBody => '请求体与响应体';
+
+  @override
+  String get mitmRewriteActReject => '拦截';
+
+  @override
+  String mitmRewriteActRedirect(Object code) {
+    return '$code 重定向';
+  }
+
+  @override
+  String get mitmRewriteActUrl => '直接改写 URL';
+
+  @override
+  String get mitmRewriteActRequestHeader => '请求头';
+
+  @override
+  String get mitmRewriteActResponseHeader => '响应头';
+
+  @override
+  String get mitmRewriteActRequestBody => '请求体';
+
+  @override
+  String get mitmRewriteActResponseBody => '响应体';
+
+  @override
+  String get mitmRewriteActMapLocal => '本地返回';
+
+  @override
+  String get mitmRewriteRejectError => '返回错误';
+
+  @override
+  String get mitmRewriteReject200 => '返回空白页';
+
+  @override
+  String get mitmRewriteRejectImage => '返回空白图片';
+
+  @override
+  String get mitmRewriteRejectDict => '返回空 JSON 对象';
+
+  @override
+  String get mitmRewriteRejectArray => '返回空 JSON 数组';
+
+  @override
+  String get mitmRewriteRejectDrop => '直接断开';
+
+  @override
+  String mitmRewriteHeaderAdd(Object name) {
+    return '添加 $name';
+  }
+
+  @override
+  String mitmRewriteHeaderDel(Object name) {
+    return '删除 $name';
+  }
+
+  @override
+  String mitmRewriteHeaderReplace(Object name) {
+    return '替换 $name';
+  }
+
+  @override
+  String mitmRewriteHeaderReplaceRegex(Object name) {
+    return '正则替换 $name';
+  }
+
+  @override
+  String mitmRewriteBodyReplace(int count) {
+    return '替换 $count 处';
+  }
+
+  @override
+  String mitmRewriteBodyLimit(Object size) {
+    return '上限 $size';
+  }
+
+  @override
+  String mitmRewriteInvalid(Object reason) {
+    return '规则有误：$reason';
+  }
+
+  @override
+  String mitmRewriteInvalidSpoken(Object reason) {
+    return '规则有误，$reason';
+  }
+
+  @override
+  String mitmRewriteToggleLabel(Object action, Object url) {
+    return '$action，$url';
+  }
+
+  @override
+  String mitmRewriteNotApplied(Object reason) {
+    return '未能生效：$reason';
+  }
+
+  @override
+  String get mitmRewriteEnableAll => '全部开启';
+
+  @override
+  String get mitmRewriteDisableAll => '全部关闭';
+
+  @override
+  String get mitmRewriteCopyAll => '复制全部规则';
+
+  @override
+  String get mitmRewriteDeleteInvalid => '删除有误的规则';
+
+  @override
+  String mitmRewriteDeleteInvalidConfirm(int count) {
+    return '删除 $count 条有误的规则？';
+  }
+
+  @override
+  String get mitmRewriteOff => '解密已关闭，改写规则不会生效。';
+
+  @override
+  String get mitmRewriteGoTurnOn => '去开启';
+
+  @override
+  String get mitmRewriteEmptyTitle => '还没有改写规则';
+
+  @override
+  String get mitmRewriteEmptyDesc => '粘贴规则后即可导入。';
+
+  @override
+  String get mitmRewritePaste => '粘贴导入';
+
+  @override
+  String get mitmRewriteSearchHint => '搜索改写规则';
+
+  @override
+  String get mitmRewriteImportTitle => '导入改写规则';
+
+  @override
+  String get mitmRewriteImportDesc =>
+      '粘贴改写规则，每行一条。支持 Surge 的 [URL Rewrite]、[Header Rewrite]、[Body Rewrite]、[Map Local] 四个段落，段落标题自动识别。';
+
+  @override
+  String mitmRewriteImportReady(int count, Object detail) {
+    return '可以导入 $count 条：$detail';
+  }
+
+  @override
+  String mitmRewriteImportLineError(int line, Object reason) {
+    return '第 $line 行无法导入：$reason';
+  }
+
+  @override
+  String mitmRewriteImportMoreErrors(int count) {
+    return '另有 $count 行有误';
+  }
+
+  @override
+  String mitmRewriteImportDuplicate(int line) {
+    return '第 $line 行已存在，会跳过';
+  }
+
+  @override
+  String get mitmRewritePlace => '放在';
+
+  @override
+  String get mitmRewritePlaceEnd => '各分组最后';
+
+  @override
+  String get mitmRewritePlaceStart => '各分组最前';
+
+  @override
+  String mitmRewriteImportButton(int count) {
+    return '导入 $count 条';
+  }
+
+  @override
+  String get mitmRewriteImporting => '正在导入…';
+
+  @override
+  String mitmRewriteImported(int count) {
+    return '已导入 $count 条规则';
+  }
+
+  @override
+  String get mitmRewriteEditTitle => '编辑改写规则';
+
+  @override
+  String mitmRewriteEditSubtitle(Object group, int number) {
+    return '$group · 第 $number 条';
+  }
+
+  @override
+  String get mitmRewritePreviewType => '类型';
+
+  @override
+  String get mitmRewritePreviewMatch => '匹配网址';
+
+  @override
+  String get mitmRewritePreviewAction => '操作';
+
+  @override
+  String get mitmRewriteUnparsable => '无法解析';
+
+  @override
+  String mitmRewriteSectionChanged(Object group) {
+    return '这一行属于「$group」，保存后会移到那里。';
+  }
+
+  @override
+  String mitmRewriteBadgeApplied(Object type) {
+    return '已改写 · $type';
+  }
+
+  @override
+  String mitmRewriteBadgeFailed(Object reason) {
+    return '改写失败 · $reason';
+  }
+
+  @override
+  String get mitmRewriteRewritten => '已改写';
+
+  @override
+  String get mitmRewriteFailedShort => '改写失败';
+
+  @override
+  String get mitmRewriteAppliedTitle => '改写已应用';
+
+  @override
+  String mitmRewriteHitCount(int count) {
+    return '$count 条';
+  }
+
+  @override
+  String mitmRewriteFailedTitle(Object reason) {
+    return '改写失败：$reason';
+  }
+
+  @override
+  String get mitmRewritePassedThrough => '未改写，已原样放行';
+
+  @override
+  String mitmRewriteRuleRef(Object rule) {
+    return '规则 $rule';
+  }
+
+  @override
+  String get mitmRewriteViewInList => '在改写中查看';
+
+  @override
+  String get mitmRewriteBefore => '改写前';
+
+  @override
+  String get mitmRewriteAfter => '改写后';
+
+  @override
+  String get mitmRewriteRuleRemoved => '规则已不在当前配置中';
+
+  @override
+  String get mitmRewriteSkipOversize => '内容超过大小上限';
+
+  @override
+  String get mitmRewriteSkipDecode => '无法解压内容';
+
+  @override
+  String get mitmRewriteSkipNotText => '内容不是受支持的文本格式';
+
+  @override
+  String get mitmRewriteSkipEncoding => '不支持的内容编码';
+
+  @override
+  String get mitmRewriteSkipTimeout => '匹配超时';
+
+  @override
+  String get mitmRewriteSkipCrossHost => '不能改写到其他主机';
+
+  @override
+  String get mitmRewriteSkipInvalidUrl => '改写后的网址无效';
+
+  @override
+  String get mitmRewriteSkipStreaming => '内容是持续传输的流';
+
+  @override
+  String get mitmRewriteSkipUploading => '请求仍在上传';
+
+  @override
+  String get mitmRewriteSkipRead => '读取内容失败';
+
+  @override
+  String get mitmRewriteSkipOther => '未应用改写';
+
+  @override
+  String mitmRewriteRejectDetail(Object text, Object type) {
+    return '$text（$type）';
+  }
+
+  @override
+  String mitmRewriteErrorFramingHeader(String value) {
+    return '$value 控制消息传输，不能改写。';
+  }
+
+  @override
+  String mitmRewriteErrorNeedsValue(String value) {
+    return '$value 缺少值。';
+  }
+
+  @override
+  String get mitmRewriteErrorBodyHead =>
+      '内容改写规则须以 http-request 或 http-response 开头。';
+
+  @override
+  String get mitmRewriteErrorHeaderLineBreak => '请求头或响应头的值不能包含换行。';
+
+  @override
+  String get mitmRewriteErrorNeedsReplacementUrl => '重定向或 URL 直接改写缺少目标 URL。';
+
+  @override
+  String get mitmRewriteErrorDataUrl => '远程内容需要先下载，才能用于本地映射。';
+
+  @override
+  String get mitmRewriteErrorDataBase64 => '内容不是有效的 Base64。';
+
+  @override
+  String mitmRewriteErrorDataFileName(String value) {
+    return '内容须指定资源目录中的文件；当前值为 $value。';
+  }
+
+  @override
+  String get mitmRewriteErrorFileNeedsData => '使用文件类型时，须指定文件。';
+
+  @override
+  String get mitmRewriteErrorBodyTooLarge => '解码后的内容超过改写大小上限。';
+
+  @override
+  String get mitmRewriteErrorEmptyRegex => '正则表达式不能为空。';
+
+  @override
+  String get mitmRewriteErrorEmptyRule => '规则不能为空。';
+
+  @override
+  String mitmRewriteErrorUrlFieldCount(String value) {
+    return '应填写正则表达式、替换内容和类型；当前有 $value 项。';
+  }
+
+  @override
+  String get mitmRewriteErrorBodyPairs => 'URL 正则表达式后应成对填写匹配表达式和替换内容。';
+
+  @override
+  String get mitmRewriteErrorHeaderFields =>
+      '请依次填写请求或响应类型、正则表达式、操作和头字段；需要时还须填写值。';
+
+  @override
+  String mitmRewriteErrorKeyValue(String value) {
+    return '应使用 key=value 格式；当前为 $value。';
+  }
+
+  @override
+  String get mitmRewriteErrorHeaderFormat => '头字段格式无效，应使用 a:b|c:d 或 Base64。';
+
+  @override
+  String get mitmRewriteErrorHeaderReplaceRegex =>
+      'header-replace-regex 需要正则表达式和替换内容。';
+
+  @override
+  String get mitmRewriteErrorUrlRegex => 'URL 正则表达式无效。';
+
+  @override
+  String mitmRewriteErrorBodyRegex(String value) {
+    return '内容正则表达式 $value 无效。';
+  }
+
+  @override
+  String mitmRewriteErrorInvalidHeader(String value) {
+    return '头字段 $value 无效。';
+  }
+
+  @override
+  String mitmRewriteErrorHeaderName(String value) {
+    return '头字段名称 $value 无效。';
+  }
+
+  @override
+  String get mitmRewriteErrorHeaderRegex => '头字段正则表达式无效。';
+
+  @override
+  String get mitmRewriteErrorJq => '暂不支持使用 jq 改写内容。';
+
+  @override
+  String mitmRewriteErrorLocalUnreadable(String value) {
+    return '无法读取本地映射文件 $value。';
+  }
+
+  @override
+  String mitmRewriteErrorLocalTooLarge(String value) {
+    return '本地映射文件 $value 超过 16 MiB。';
+  }
+
+  @override
+  String get mitmRewriteErrorRegexTimeout => '正则表达式匹配超时。';
+
+  @override
+  String mitmRewriteErrorStatusCode(String value) {
+    return '状态码须在 200–999 之间；当前为 $value。';
+  }
+
+  @override
+  String mitmRewriteErrorUrlType(String value) {
+    return '不支持的 URL 改写类型：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorDataType(String value) {
+    return '不支持的内容类型：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorHeaderAction(String value) {
+    return '不支持的头字段操作：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorParameter(String value) {
+    return '不支持的参数：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorSection(String value) {
+    return '不支持的配置段：$value。';
+  }
+
+  @override
+  String mitmRewriteErrorUnterminatedQuote(String value) {
+    return '$value 中的引号未闭合。';
+  }
+
+  @override
+  String get mitmRewriteErrorOutsideSection =>
+      '这一行不在 [URL Rewrite]、[Header Rewrite]、[Body Rewrite] 或 [Map Local] 段落中。';
+
+  @override
+  String get mitmRewriteErrorGeneric => '规则格式无效。';
+
+  @override
+  String get mitmRewriteErrorDetails => '查看详情';
+
+  @override
+  String get mitmRewriteFailureGeneric => '出现错误，规则保持不变。';
+
+  @override
+  String get mitmRewriteMatchedTitle => '命中规则';
+
+  @override
+  String mitmRewriteNotAppliedTitle(String value) {
+    return '未应用改写：$value';
+  }
 }

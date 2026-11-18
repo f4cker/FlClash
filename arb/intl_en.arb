@@ -2567,7 +2567,13 @@
   "ipxScore": "Health score",
   "ipxScoreOutOf": "/ 100",
   "ipxScoreCeiling": "Type cap {value}",
-  "@ipxScoreCeiling": {"placeholders": {"value": {"type": "String"}}},
+  "@ipxScoreCeiling": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "ipxGradeExcellent": "Excellent",
   "ipxGradeGood": "Good",
   "ipxGradeFair": "Fair",
@@ -2578,19 +2584,469 @@
   "ipxNative": "Native IP",
   "ipxBroadcast": "Broadcast IP",
   "ipxNativeDetail": "Registered {registered} · used in {used}",
-  "@ipxNativeDetail": {"placeholders": {"registered": {"type": "String"}, "used": {"type": "String"}}},
+  "@ipxNativeDetail": {
+    "placeholders": {
+      "registered": {
+        "type": "String"
+      },
+      "used": {
+        "type": "String"
+      }
+    }
+  },
   "ipxIsp": "ISP",
   "ipxTypeEducation": "Education",
   "ipxTypePseudo": "Likely pseudo-residential",
   "ipxDeductions": "Score breakdown",
   "ipxFullReport": "Full report on ipx.al",
   "ipxDataFrom": "Data from {source}, for reference only",
-  "@ipxDataFrom": {"placeholders": {"source": {"type": "String"}}},
+  "@ipxDataFrom": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "ipxSourceSeparator": ", ",
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
   "ipxViaExit": "Queried through the current exit",
   "ipxUnknown": "Unknown",
   "mitmHttp2": "Decrypt HTTP/2",
-  "mitmHttp2Desc": "When off, only HTTP/1.1 connections are decrypted; connections that support only HTTP/2 won't be decrypted."
+  "mitmHttp2Desc": "When off, only HTTP/1.1 connections are decrypted; connections that support only HTTP/2 won't be decrypted.",
+  "mitmRewriteAndScripts": "Rewrite & Scripts",
+  "mitmRewrite": "Rewrite",
+  "mitmRewriteRuleCount": "{count, plural, =1{1 rule} other{{count} rules}}",
+  "@mitmRewriteRuleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteInvalidCount": "{count} invalid",
+  "@mitmRewriteInvalidCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteNoneAdded": "None added",
+  "mitmRewriteSubtitle": "Profile “{profile}” · {count} rewrite rules, {enabled} on",
+  "@mitmRewriteSubtitle": {
+    "placeholders": {
+      "profile": {},
+      "count": {
+        "type": "int"
+      },
+      "enabled": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteGroupReject": "URL Reject",
+  "mitmRewriteGroupRedirect": "URL Redirect",
+  "mitmRewriteGroupHeader": "Request & Response Headers",
+  "mitmRewriteGroupBody": "Request & Response Bodies",
+  "mitmRewriteActReject": "Block",
+  "mitmRewriteActRedirect": "{code} redirect",
+  "@mitmRewriteActRedirect": {
+    "placeholders": {
+      "code": {}
+    }
+  },
+  "mitmRewriteActUrl": "Rewrite URL",
+  "mitmRewriteActRequestHeader": "Request header",
+  "mitmRewriteActResponseHeader": "Response header",
+  "mitmRewriteActRequestBody": "Request body",
+  "mitmRewriteActResponseBody": "Response body",
+  "mitmRewriteActMapLocal": "Local response",
+  "mitmRewriteRejectError": "Return an error",
+  "mitmRewriteReject200": "Return an empty page",
+  "mitmRewriteRejectImage": "Return a blank image",
+  "mitmRewriteRejectDict": "Return an empty JSON object",
+  "mitmRewriteRejectArray": "Return an empty JSON array",
+  "mitmRewriteRejectDrop": "Drop the connection",
+  "mitmRewriteHeaderAdd": "Add {name}",
+  "@mitmRewriteHeaderAdd": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "mitmRewriteHeaderDel": "Remove {name}",
+  "@mitmRewriteHeaderDel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "mitmRewriteHeaderReplace": "Replace {name}",
+  "@mitmRewriteHeaderReplace": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "mitmRewriteHeaderReplaceRegex": "Replace in {name}",
+  "@mitmRewriteHeaderReplaceRegex": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "mitmRewriteBodyReplace": "{count, plural, =1{1 replacement} other{{count} replacements}}",
+  "@mitmRewriteBodyReplace": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteBodyLimit": "Up to {size}",
+  "@mitmRewriteBodyLimit": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "mitmRewriteInvalid": "Invalid rule: {reason}",
+  "@mitmRewriteInvalid": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmRewriteInvalidSpoken": "Invalid rule, {reason}",
+  "@mitmRewriteInvalidSpoken": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmRewriteToggleLabel": "{action}, {url}",
+  "@mitmRewriteToggleLabel": {
+    "placeholders": {
+      "action": {},
+      "url": {}
+    }
+  },
+  "mitmRewriteNotApplied": "The change didn't take effect: {reason}",
+  "@mitmRewriteNotApplied": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmRewriteEnableAll": "Turn All On",
+  "mitmRewriteDisableAll": "Turn All Off",
+  "mitmRewriteCopyAll": "Copy All Rules",
+  "mitmRewriteDeleteInvalid": "Delete Invalid Rules",
+  "mitmRewriteDeleteInvalidConfirm": "Delete {count, plural, =1{1 invalid rule} other{{count} invalid rules}}?",
+  "@mitmRewriteDeleteInvalidConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteOff": "Decryption is off, so rewrite rules won't take effect.",
+  "mitmRewriteGoTurnOn": "Turn On",
+  "mitmRewriteEmptyTitle": "No rewrite rules yet",
+  "mitmRewriteEmptyDesc": "Paste rules to import them.",
+  "mitmRewritePaste": "Paste to Import",
+  "mitmRewriteSearchHint": "Search rewrite rules",
+  "mitmRewriteImportTitle": "Import Rewrite Rules",
+  "mitmRewriteImportDesc": "Paste rewrite rules, one per line. Surge’s [URL Rewrite], [Header Rewrite], [Body Rewrite] and [Map Local] sections are recognized by their titles.",
+  "mitmRewriteImportReady": "Ready to import {count}: {detail}",
+  "@mitmRewriteImportReady": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "detail": {}
+    }
+  },
+  "mitmRewriteImportLineError": "Line {line} can't be imported: {reason}",
+  "@mitmRewriteImportLineError": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      },
+      "reason": {}
+    }
+  },
+  "mitmRewriteImportMoreErrors": "{count, plural, =1{1 more line has errors} other{{count} more lines have errors}}",
+  "@mitmRewriteImportMoreErrors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteImportDuplicate": "Line {line} is already there and will be skipped",
+  "@mitmRewriteImportDuplicate": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewritePlace": "Place",
+  "mitmRewritePlaceEnd": "End of each group",
+  "mitmRewritePlaceStart": "Start of each group",
+  "mitmRewriteImportButton": "Import {count}",
+  "@mitmRewriteImportButton": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteImporting": "Importing…",
+  "mitmRewriteImported": "Imported {count, plural, =1{1 rule} other{{count} rules}}",
+  "@mitmRewriteImported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteEditTitle": "Edit Rewrite Rule",
+  "mitmRewriteEditSubtitle": "{group} · Rule {number}",
+  "@mitmRewriteEditSubtitle": {
+    "placeholders": {
+      "group": {},
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewritePreviewType": "Type",
+  "mitmRewritePreviewMatch": "Matches",
+  "mitmRewritePreviewAction": "Action",
+  "mitmRewriteUnparsable": "Can't parse",
+  "mitmRewriteSectionChanged": "This line belongs in {group}; it will move there.",
+  "@mitmRewriteSectionChanged": {
+    "placeholders": {
+      "group": {}
+    }
+  },
+  "mitmRewriteBadgeApplied": "Rewritten · {type}",
+  "@mitmRewriteBadgeApplied": {
+    "placeholders": {
+      "type": {}
+    }
+  },
+  "mitmRewriteBadgeFailed": "Rewrite failed · {reason}",
+  "@mitmRewriteBadgeFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmRewriteRewritten": "Rewritten",
+  "mitmRewriteFailedShort": "Rewrite failed",
+  "mitmRewriteAppliedTitle": "Rewrite applied",
+  "mitmRewriteHitCount": "{count, plural, =1{1 rule} other{{count} rules}}",
+  "@mitmRewriteHitCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRewriteFailedTitle": "Rewrite failed: {reason}",
+  "@mitmRewriteFailedTitle": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmRewritePassedThrough": "Not rewritten; passed on unchanged",
+  "mitmRewriteRuleRef": "Rule {rule}",
+  "@mitmRewriteRuleRef": {
+    "placeholders": {
+      "rule": {}
+    }
+  },
+  "mitmRewriteViewInList": "Show in Rewrite",
+  "mitmRewriteBefore": "Before",
+  "mitmRewriteAfter": "After",
+  "mitmRewriteRuleRemoved": "The rule is no longer in this profile",
+  "mitmRewriteSkipOversize": "Content over the size limit",
+  "mitmRewriteSkipDecode": "Couldn't decompress the content",
+  "mitmRewriteSkipNotText": "Content isn't in a supported text format",
+  "mitmRewriteSkipEncoding": "Unsupported content encoding",
+  "mitmRewriteSkipTimeout": "The pattern took too long to match",
+  "mitmRewriteSkipCrossHost": "Can't rewrite to another host",
+  "mitmRewriteSkipInvalidUrl": "The rewritten URL is invalid",
+  "mitmRewriteSkipStreaming": "The content is a stream",
+  "mitmRewriteSkipUploading": "The request was still uploading",
+  "mitmRewriteSkipRead": "Couldn't read the content",
+  "mitmRewriteSkipOther": "Rewrite not applied",
+  "mitmRewriteRejectDetail": "{text} ({type})",
+  "@mitmRewriteRejectDetail": {
+    "placeholders": {
+      "text": {},
+      "type": {}
+    }
+  },
+  "mitmRewriteErrorFramingHeader": "{value} controls how the message is sent and can't be rewritten.",
+  "mitmRewriteErrorNeedsValue": "{value} needs a value.",
+  "mitmRewriteErrorBodyHead": "A body rewrite must start with http-request or http-response.",
+  "mitmRewriteErrorHeaderLineBreak": "A header value can't contain a line break.",
+  "mitmRewriteErrorNeedsReplacementUrl": "A redirect or URL rewrite needs a target URL.",
+  "mitmRewriteErrorDataUrl": "Remote content must be downloaded before a local response can use it.",
+  "mitmRewriteErrorDataBase64": "The content isn't valid Base64.",
+  "mitmRewriteErrorDataFileName": "The content must name a file in the resources folder; got {value}.",
+  "mitmRewriteErrorFileNeedsData": "The file type needs a file.",
+  "mitmRewriteErrorBodyTooLarge": "The decoded content is over the rewrite size limit.",
+  "mitmRewriteErrorEmptyRegex": "The regular expression can't be empty.",
+  "mitmRewriteErrorEmptyRule": "The rule can't be empty.",
+  "mitmRewriteErrorUrlFieldCount": "Enter a regular expression, a replacement and a type; found {value} items.",
+  "mitmRewriteErrorBodyPairs": "After the URL regular expression, enter pairs of a pattern and its replacement.",
+  "mitmRewriteErrorHeaderFields": "Enter the request or response type, a regular expression, an action and a header, plus a value when needed.",
+  "mitmRewriteErrorKeyValue": "Use the key=value format; got {value}.",
+  "mitmRewriteErrorHeaderFormat": "The header is invalid; use a:b|c:d or Base64.",
+  "mitmRewriteErrorHeaderReplaceRegex": "header-replace-regex needs a regular expression and a replacement.",
+  "mitmRewriteErrorUrlRegex": "The URL regular expression is invalid.",
+  "mitmRewriteErrorBodyRegex": "The content regular expression {value} is invalid.",
+  "mitmRewriteErrorInvalidHeader": "The header {value} is invalid.",
+  "mitmRewriteErrorHeaderName": "The header name {value} is invalid.",
+  "mitmRewriteErrorHeaderRegex": "The header regular expression is invalid.",
+  "mitmRewriteErrorJq": "Rewriting content with jq isn't supported yet.",
+  "mitmRewriteErrorLocalUnreadable": "Can't read the local response file {value}.",
+  "mitmRewriteErrorLocalTooLarge": "The local response file {value} is over 16 MiB.",
+  "mitmRewriteErrorRegexTimeout": "The regular expression took too long to match.",
+  "mitmRewriteErrorStatusCode": "The status code must be between 200 and 999; got {value}.",
+  "mitmRewriteErrorUrlType": "Unsupported URL rewrite type: {value}.",
+  "mitmRewriteErrorDataType": "Unsupported content type: {value}.",
+  "mitmRewriteErrorHeaderAction": "Unsupported header action: {value}.",
+  "mitmRewriteErrorParameter": "Unsupported parameter: {value}.",
+  "mitmRewriteErrorSection": "Unsupported section: {value}.",
+  "mitmRewriteErrorUnterminatedQuote": "Unclosed quote in {value}.",
+  "mitmRewriteErrorOutsideSection": "This line isn't under [URL Rewrite], [Header Rewrite], [Body Rewrite] or [Map Local].",
+  "mitmRewriteErrorGeneric": "The rule's format is invalid.",
+  "mitmRewriteErrorDetails": "Details",
+  "mitmRewriteFailureGeneric": "something went wrong, and the rules are unchanged.",
+  "@mitmRewriteErrorFramingHeader": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorNeedsValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorDataFileName": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorUrlFieldCount": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorKeyValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorBodyRegex": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorInvalidHeader": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorHeaderName": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorLocalUnreadable": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorLocalTooLarge": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorStatusCode": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorUrlType": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorDataType": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorHeaderAction": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorParameter": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorSection": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@mitmRewriteErrorUnterminatedQuote": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "mitmRewriteMatchedTitle": "Rule matched",
+  "mitmRewriteNotAppliedTitle": "Rewrite not applied: {value}",
+  "@mitmRewriteNotAppliedTitle": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  }
 }

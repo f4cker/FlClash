@@ -94,6 +94,8 @@ const (
 	mitmSignResultMethod          CoreMethod = "mitm.signResult"
 	mitmDisableMethod             CoreMethod = "mitm.disable"
 	mitmUpdateMethod              CoreMethod = "mitm.update"
+	mitmRewriteStatusMethod       CoreMethod = "mitm.rewriteStatus"
+	mitmRewriteParseMethod        CoreMethod = "mitm.rewriteParse"
 
 	tailscaleNodesMethod         CoreMethod = "tailscale.nodes"
 	tailscaleStatusMethod        CoreMethod = "tailscale.status"

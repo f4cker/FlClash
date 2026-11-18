@@ -217,6 +217,8 @@ _MitmExchangeSummary _$MitmExchangeSummaryFromJson(Map<String, dynamic> json) =>
       requestSize: (json['request-size'] as num?)?.toInt() ?? 0,
       responseSize: (json['response-size'] as num?)?.toInt() ?? 0,
       error: json['error'] as String? ?? '',
+      rewritten: json['rewritten'] as bool? ?? false,
+      rewriteSkipped: json['rewrite-skipped'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$MitmExchangeSummaryToJson(
@@ -233,6 +235,8 @@ Map<String, dynamic> _$MitmExchangeSummaryToJson(
   'request-size': instance.requestSize,
   'response-size': instance.responseSize,
   'error': instance.error,
+  'rewritten': instance.rewritten,
+  'rewrite-skipped': instance.rewriteSkipped,
 };
 
 _MitmExchangeList _$MitmExchangeListFromJson(
@@ -260,6 +264,9 @@ _MitmAction _$MitmActionFromJson(Map<String, dynamic> json) => _MitmAction(
   kind: json['kind'] as String,
   phase: json['phase'] as String? ?? '',
   detail: json['detail'] as String? ?? '',
+  rule: json['rule'] as String? ?? '',
+  skipped: json['skipped'] as String? ?? '',
+  tookNs: (json['took-ns'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$MitmActionToJson(_MitmAction instance) =>
@@ -267,7 +274,28 @@ Map<String, dynamic> _$MitmActionToJson(_MitmAction instance) =>
       'kind': instance.kind,
       'phase': instance.phase,
       'detail': instance.detail,
+      'rule': instance.rule,
+      'skipped': instance.skipped,
+      'took-ns': instance.tookNs,
     };
+
+_MitmConnectionRewrite _$MitmConnectionRewriteFromJson(
+  Map<String, dynamic> json,
+) => _MitmConnectionRewrite(
+  applied: json['applied'] as bool? ?? false,
+  failed: json['failed'] as bool? ?? false,
+  hit: json['hit'] == null
+      ? null
+      : MitmAction.fromJson(json['hit'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$MitmConnectionRewriteToJson(
+  _MitmConnectionRewrite instance,
+) => <String, dynamic>{
+  'applied': instance.applied,
+  'failed': instance.failed,
+  'hit': instance.hit,
+};
 
 _MitmExchange _$MitmExchangeFromJson(
   Map<String, dynamic> json,
@@ -303,6 +331,22 @@ _MitmExchange _$MitmExchangeFromJson(
           ?.map((e) => MitmAction.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  rewritten: json['rewritten'] as bool? ?? false,
+  rewriteSkipped: json['rewrite-skipped'] as bool? ?? false,
+  originalRequestHeader:
+      (json['original-request-header'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, (e as List<dynamic>).map((e) => e as String).toList()),
+      ) ??
+      const {},
+  originalResponseHeader:
+      (json['original-response-header'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, (e as List<dynamic>).map((e) => e as String).toList()),
+      ) ??
+      const {},
+  originalRequestBody: json['original-request-body'] as bool? ?? false,
+  originalResponseBody: json['original-response-body'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$MitmExchangeToJson(_MitmExchange instance) =>
@@ -324,7 +368,117 @@ Map<String, dynamic> _$MitmExchangeToJson(_MitmExchange instance) =>
       'request-header': instance.requestHeader,
       'response-header': instance.responseHeader,
       'actions': instance.actions,
+      'rewritten': instance.rewritten,
+      'rewrite-skipped': instance.rewriteSkipped,
+      'original-request-header': instance.originalRequestHeader,
+      'original-response-header': instance.originalResponseHeader,
+      'original-request-body': instance.originalRequestBody,
+      'original-response-body': instance.originalResponseBody,
     };
+
+_MitmRewriteIssue _$MitmRewriteIssueFromJson(Map<String, dynamic> json) =>
+    _MitmRewriteIssue(
+      rule: json['rule'] as String? ?? '',
+      section: json['section'] as String? ?? '',
+      line: (json['line'] as num?)?.toInt() ?? 0,
+      kind: json['kind'] as String? ?? '',
+      args:
+          (json['args'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+          const [],
+      message: json['message'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$MitmRewriteIssueToJson(_MitmRewriteIssue instance) =>
+    <String, dynamic>{
+      'rule': instance.rule,
+      'section': instance.section,
+      'line': instance.line,
+      'kind': instance.kind,
+      'args': instance.args,
+      'message': instance.message,
+    };
+
+_MitmRewriteRuleStatus _$MitmRewriteRuleStatusFromJson(
+  Map<String, dynamic> json,
+) => _MitmRewriteRuleStatus(
+  rule: json['rule'] as String,
+  section: json['section'] as String? ?? '',
+  hits: (json['hits'] as num?)?.toInt() ?? 0,
+  skips: (json['skips'] as num?)?.toInt() ?? 0,
+  lastSkip: json['last-skip'] as String? ?? '',
+  lastSkipAt: json['last-skip-at'] == null
+      ? null
+      : DateTime.parse(json['last-skip-at'] as String),
+);
+
+Map<String, dynamic> _$MitmRewriteRuleStatusToJson(
+  _MitmRewriteRuleStatus instance,
+) => <String, dynamic>{
+  'rule': instance.rule,
+  'section': instance.section,
+  'hits': instance.hits,
+  'skips': instance.skips,
+  'last-skip': instance.lastSkip,
+  'last-skip-at': instance.lastSkipAt?.toIso8601String(),
+};
+
+_MitmRewriteStatus _$MitmRewriteStatusFromJson(Map<String, dynamic> json) =>
+    _MitmRewriteStatus(
+      active: json['active'] as bool? ?? false,
+      bodyLimit: (json['body-limit'] as num?)?.toInt() ?? 0,
+      issues:
+          (json['issues'] as List<dynamic>?)
+              ?.map((e) => MitmRewriteIssue.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      rules:
+          (json['rules'] as List<dynamic>?)
+              ?.map(
+                (e) =>
+                    MitmRewriteRuleStatus.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$MitmRewriteStatusToJson(_MitmRewriteStatus instance) =>
+    <String, dynamic>{
+      'active': instance.active,
+      'body-limit': instance.bodyLimit,
+      'issues': instance.issues,
+      'rules': instance.rules,
+    };
+
+_MitmRewriteLine _$MitmRewriteLineFromJson(Map<String, dynamic> json) =>
+    _MitmRewriteLine(
+      section: json['section'] as String,
+      line: json['line'] as String,
+      number: (json['number'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$MitmRewriteLineToJson(_MitmRewriteLine instance) =>
+    <String, dynamic>{
+      'section': instance.section,
+      'line': instance.line,
+      'number': instance.number,
+    };
+
+_MitmRewriteParse _$MitmRewriteParseFromJson(Map<String, dynamic> json) =>
+    _MitmRewriteParse(
+      rules:
+          (json['rules'] as List<dynamic>?)
+              ?.map((e) => MitmRewriteLine.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      issues:
+          (json['issues'] as List<dynamic>?)
+              ?.map((e) => MitmRewriteIssue.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$MitmRewriteParseToJson(_MitmRewriteParse instance) =>
+    <String, dynamic>{'rules': instance.rules, 'issues': instance.issues};
 
 _MitmBody _$MitmBodyFromJson(Map<String, dynamic> json) => _MitmBody(
   data: json['data'] as String? ?? '',

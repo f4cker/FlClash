@@ -49,6 +49,18 @@ const (
 type MitmConnection struct {
 	Id      string      `json:"id"`
 	Outcome MitmOutcome `json:"outcome"`
+	// Set, with no outcome, when a rewrite rule first applied or first
+	// failed on the connection.
+	Rewrite *MitmConnectionRewrite `json:"rewrite,omitempty"`
+}
+
+// What rewrite rules did on one connection so far: applied when any
+// changed or answered a request, failed when any matched but left the
+// message as it was. The hit is the latest of its kind.
+type MitmConnectionRewrite struct {
+	Applied bool            `json:"applied"`
+	Failed  bool            `json:"failed"`
+	Hit     *MitmRewriteHit `json:"hit,omitempty"`
 }
 
 // Step 5 supplies the always-visible indicator (page bar and tray), so listed
@@ -384,8 +396,12 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 
 // From the metadata alone: could decryption take this flow? Only HTTPS, and
 // there a named flow only when its name is listed; a nameless one is read
-// for its SNI. Every other flow dials at once, as without the hook.
+// for its SNI. Plain HTTP only for URL Rewrite (mitm_plain.go). Every other
+// flow dials at once, as without the hook.
 func mitmInterceptWanted(metadata *C.Metadata) bool {
+	if metadata.DstPort == mitmPlainHTTPPort {
+		return mitmPlainWanted(metadata)
+	}
 	runtime := mitmState.Load()
 	if !runtime.decrypting() || metadata.DstPort != mitmHTTPSPort {
 		return false
@@ -405,6 +421,9 @@ func mitmIntercept(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterce
 // Split out only so socket tests can exercise the real selector while the
 // production hook remains hard-gated until the always-visible indicator.
 func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TCPInterceptor {
+	if metadata.DstPort == mitmPlainHTTPPort {
+		return mitmPlainIntercept(conn, metadata)
+	}
 	if !mitmInterceptWanted(metadata) {
 		return nil
 	}
@@ -596,7 +615,7 @@ func serveMitmOffering(client, remote net.Conn, host string, leaf *mitmLeaf, run
 	mitmCaptures.openConnection(connection)
 	defer mitmCaptures.closeConnection(connection)
 	allowed := func() bool { return mitmState.Load() == runtime && !mitmPausedFor(host) }
-	control := &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection}
+	control := &mitmDuplexControl{client: clientIdle, upstream: remoteIdle, connection: connection, port: mitmHTTPSPort}
 	if http2 {
 		if err := mitmHTTP2Proxy(server, upstream, host, allowed, control); err != nil {
 			_ = client.Close()

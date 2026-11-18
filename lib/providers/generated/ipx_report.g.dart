@@ -58,7 +58,7 @@ final class IpxFetchProvider
   }
 }
 
-String _$ipxFetchHash() => r'437a24da248d130f69225a38b8a0719e78cbbc00';
+String _$ipxFetchHash() => r'19ad39555fdda0e9c51ab1444a1ae7cf9967ac6c';
 
 /// The ipx.al report of one exit address, asked for the first time the
 /// detail is opened and kept for the session; only a failure is asked again.
@@ -116,7 +116,7 @@ final class IpxLookupProvider
   }
 }
 
-String _$ipxLookupHash() => r'0eb6730d6810c1b014e5c2a315883542fa705dcc';
+String _$ipxLookupHash() => r'8d80ec0e3d3b7776a9354960d1b85c57e1898578';
 
 /// The ipx.al report of one exit address, asked for the first time the
 /// detail is opened and kept for the session; only a failure is asked again.
