@@ -36,10 +36,9 @@ Future<void> openMitmSettingsFromTray() async {
   await openMitmSettings(context);
 }
 
-/// Every page's bar while decryption is on: amber while it is ready or
-/// decrypting,
-/// muted while paused, red when the Core failed its identity check. It opens
-/// the MITM settings.
+/// The dashboard's bar while decryption is on: amber while it is ready or
+/// decrypting, muted while paused, red when the Core failed its identity
+/// check. It opens the MITM settings.
 class MitmBarStatus extends ConsumerWidget {
   const MitmBarStatus({super.key});
 

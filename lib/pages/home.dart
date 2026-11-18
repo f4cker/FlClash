@@ -4,7 +4,6 @@ import 'package:fl_clash/manager/app_manager.dart';
 import 'package:fl_clash/models/common.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
-import 'package:fl_clash/views/config/mitm_status.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -200,16 +199,13 @@ class _NavigationPage extends StatelessWidget {
     );
     final keptView = KeepScope(
       key: ValueKey(item.label),
-      child: ScaffoldBarStatus(
-        status: mitmFeature ? const MitmBarStatus() : null,
-        child: isMobile
-            ? scopedView
-            : Navigator(
-                key: ValueKey('${item.label.name}_navigator'),
-                pages: [RootPage(child: scopedView)],
-                onDidRemovePage: (_) {},
-              ),
-      ),
+      child: isMobile
+          ? scopedView
+          : Navigator(
+              key: ValueKey('${item.label.name}_navigator'),
+              pages: [RootPage(child: scopedView)],
+              onDidRemovePage: (_) {},
+            ),
     );
     return Consumer(
       builder: (_, ref, child) {

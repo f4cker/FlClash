@@ -130,7 +130,7 @@ bool mitmCoreRefused(Ref ref) {
 }
 
 // Settings-only polling: failure is not treated as evidence of active decryption.
-// The always-visible status polls it too, but only while decryption is on.
+// The dashboard and tray status poll it too, but only while decryption is on.
 final mitmRuntimeStatusProvider = FutureProvider.autoDispose<MitmStatus>((
   ref,
 ) async {
@@ -179,8 +179,8 @@ final mitmDecryptingProvider = FutureProvider.autoDispose<bool>((ref) async {
   }
 });
 
-/// The status every page's bar and the tray menu show while decryption is
-/// on, or null while it is off. A status the Core has not answered yet is
+/// The status the dashboard's bar, the tray's dot and its menu show while
+/// decryption is on, or null while it is off. A status the Core has not answered yet is
 /// unconfirmed rather than paused: only the Core knows it passes through.
 /// Ready is "on"; "decrypting" needs [decrypting], a decrypted connection
 /// that is still open.

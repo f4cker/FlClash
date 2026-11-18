@@ -4,6 +4,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/config/mitm_status.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/widgets.dart';
@@ -68,57 +69,61 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
     final editing = _editing;
     final gap = cardSpacingOf(context, ref.watch(viewModeProvider));
     final appLocalizations = context.appLocalizations;
-    return Scaffold(
-      backgroundColor: DashboardColors.of(context).page,
-      title: editing
-          ? appLocalizations.editDashboard
-          : appLocalizations.dashboard,
-      actions: [
-        if (!editing)
-          const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [MacHelperBarStatus(), LiveStatusButton()],
-          ),
-        if (editable && !editing)
-          AppBarActionButton(
-            data: IconButtonData(
-              glyph: AppGlyphs.edit,
-              tooltip: appLocalizations.editDashboard,
-              onPressed: () => _setEditing(true),
+    // Decryption is said on the dashboard alone, and by the tray's dot.
+    return ScaffoldBarStatus(
+      status: mitmFeature ? const MitmBarStatus() : null,
+      child: Scaffold(
+        backgroundColor: DashboardColors.of(context).page,
+        title: editing
+            ? appLocalizations.editDashboard
+            : appLocalizations.dashboard,
+        actions: [
+          if (!editing)
+            const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [MacHelperBarStatus(), LiveStatusButton()],
             ),
-          ),
-      ],
-      confirmationAction: editing
-          ? IconButtonData(
-              glyph: AppGlyphs.check,
-              tooltip: appLocalizations.done,
-              onPressed: () => _setEditing(false),
-            )
-          : null,
-      // The providers learn a resize a frame late, too late for the cards.
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final room = constraints.biggest / scale;
-          final layout = DashboardDensity.of(room);
-          return DashboardDensityScope(
-            density: layout,
-            scale: scale,
-            child: layout.isDesktop
-                ? _DesktopDashboard(
-                    platform: platform,
-                    columns: dashboardColumnsOf(room.width),
-                    gap: gap,
-                  )
-                : _MobileDashboard(
-                    controller: _controller,
-                    platform: platform,
-                    gap: gap,
-                    editing: editing,
-                    cardKeyOf: _cardKeyOf,
-                    onDone: () => _setEditing(false),
-                  ),
-          );
-        },
+          if (editable && !editing)
+            AppBarActionButton(
+              data: IconButtonData(
+                glyph: AppGlyphs.edit,
+                tooltip: appLocalizations.editDashboard,
+                onPressed: () => _setEditing(true),
+              ),
+            ),
+        ],
+        confirmationAction: editing
+            ? IconButtonData(
+                glyph: AppGlyphs.check,
+                tooltip: appLocalizations.done,
+                onPressed: () => _setEditing(false),
+              )
+            : null,
+        // The providers learn a resize a frame late, too late for the cards.
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final room = constraints.biggest / scale;
+            final layout = DashboardDensity.of(room);
+            return DashboardDensityScope(
+              density: layout,
+              scale: scale,
+              child: layout.isDesktop
+                  ? _DesktopDashboard(
+                      platform: platform,
+                      columns: dashboardColumnsOf(room.width),
+                      gap: gap,
+                    )
+                  : _MobileDashboard(
+                      controller: _controller,
+                      platform: platform,
+                      gap: gap,
+                      editing: editing,
+                      cardKeyOf: _cardKeyOf,
+                      onDone: () => _setEditing(false),
+                    ),
+            );
+          },
+        ),
       ),
     );
   }
