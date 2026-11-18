@@ -384,6 +384,14 @@ class UpdateManifestToolTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 tool.generate_key(scratch)
 
+    def test_release_tag_defaults_to_the_version_and_must_start_with_it(self):
+        self.assertEqual(tool.release_tag(None, '0.9.15'), 'v0.9.15')
+        self.assertEqual(tool.release_tag('v0.9.15-mitm.7', '0.9.15'), 'v0.9.15-mitm.7')
+        for bad in ('v0.9.16', '0.9.15', 'v0.9.15/../x', 'v0.9.15 x'):
+            with self.subTest(bad):
+                with self.assertRaises(SystemExit):
+                    tool.release_tag(bad, '0.9.15')
+
     def test_sign_refuses_an_unpinned_app(self):
         with tempfile.TemporaryDirectory(prefix='flash-sign-') as scratch:
             scratch = Path(scratch)

@@ -4,7 +4,7 @@
 usage:
   tool/macos/make_update_manifest.py genkey DIR
   tool/macos/make_update_manifest.py sign --key PRIVATE_KEY --app Flash.app --out DIR
-      [--notes-file NOTES] [--base-url URL] [--arch arm64]
+      [--notes-file NOTES] [--base-url URL] [--tag TAG] [--arch arm64]
   tool/macos/make_update_manifest.py verify --public-key PUBLIC_KEY --manifest manifest.json [--archive ZIP]
 
 genkey writes DIR/update_ed25519_private.key (0600, base64 32-byte seed) and DIR/update_ed25519_public.txt
@@ -13,7 +13,10 @@ genkey writes DIR/update_ed25519_private.key (0600, base64 32-byte seed) and DIR
 sign refuses a private key readable by group or others, an app not signed with the pinned certificate as
 com.layoute.flash, and a launcher that differs from FlashHelperLauncher.pin.json (every release must carry the
 same launcher, or the in-app updater refuses it). It writes Flash-<version>-macos-<arch>.zip (ditto, keeps the
-signature) and manifest.json into DIR, then verifies both again.
+signature) and manifest.json into DIR, then verifies both again. The archive is downloaded from
+BASE_URL/TAG/<name>; TAG defaults to v<CFBundleShortVersionString>, so a prerelease such as v0.9.15-mitm.7
+(whose bundle version is 0.9.15) must pass --tag. The asset name always follows the bundle version, as the
+updater requires.
 
 The Ed25519 here is RFC 8032's reference arithmetic: not constant time, so run it only on the offline machine
 that holds the key.
@@ -259,6 +262,13 @@ def open_envelope(manifest, key):
     return json.loads(data)
 
 
+def release_tag(tag, version):
+    tag = tag or f'v{version}'
+    if not re.fullmatch(r'v[0-9A-Za-z.+-]{1,64}', tag) or not tag.startswith(f'v{version}'):
+        raise SystemExit(f'{tag!r}: the release tag must be v{version} or start with it')
+    return tag
+
+
 def command_sign(arguments):
     seed = read_private_key(arguments.key)
     app = Path(arguments.app).resolve()
@@ -266,6 +276,7 @@ def command_sign(arguments):
         raise SystemExit(f'{app}: expected a bundle named Flash.app')
     check_signature(app)
     facts = bundle_facts(app)
+    tag = release_tag(arguments.tag, facts['version'])
     out = Path(arguments.out)
     out.mkdir(parents=True, exist_ok=True)
     name = f'Flash-{facts["version"]}-macos-{arguments.arch}.zip'
@@ -277,7 +288,7 @@ def command_sign(arguments):
     asset = {
         'arch': arguments.arch,
         'name': name,
-        'url': f'{arguments.base_url.rstrip("/")}/v{facts["version"]}/{name}',
+        'url': f'{arguments.base_url.rstrip("/")}/{tag}/{name}',
         'size': archive.stat().st_size,
         'sha256': sha256_file(archive),
     }
@@ -311,6 +322,7 @@ def main(argv=None):
     signing.add_argument('--out', required=True)
     signing.add_argument('--notes-file')
     signing.add_argument('--base-url', default=DEFAULT_BASE_URL)
+    signing.add_argument('--tag', help='release tag the archive is downloaded from (default: v<version>)')
     signing.add_argument('--arch', default='arm64', choices=['arm64', 'amd64'])
     checking = commands.add_parser('verify')
     checking.add_argument('--public-key', required=True)
