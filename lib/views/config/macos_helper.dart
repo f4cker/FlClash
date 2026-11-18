@@ -43,6 +43,12 @@ enum MacHelperCardKind {
   launcherDowngrade,
   launcherFailed,
 
+  /// SMAppService has no record of the intact, trusted bundle: "Repair"
+  /// re-registers it (user action only); after a repair that did not help,
+  /// only the details.
+  serviceNotFound,
+  serviceRepairFailed,
+
   /// The launcher's version record is unreadable: one button rebuilds it
   /// (administrator prompt), the raw reason stays behind "View details".
   launcherRecordDamaged,
@@ -56,6 +62,9 @@ enum MacHelperCardAction {
   repair,
   recover,
   repairRecord,
+
+  /// "Repair" for serviceNotFound: the user-triggered recovery.
+  repairRegistration,
   viewDetails,
 }
 
@@ -88,6 +97,7 @@ final class MacHelperCardView {
     MacHelperCardKind.signatureFailed ||
     MacHelperCardKind.updateFailed ||
     MacHelperCardKind.reinstall ||
+    MacHelperCardKind.serviceRepairFailed ||
     MacHelperCardKind.unsupported ||
     MacHelperCardKind.launcherCheckFailed ||
     MacHelperCardKind.launcherDowngrade ||
@@ -97,42 +107,45 @@ final class MacHelperCardView {
   };
 }
 
-MacHelperCardKind macHelperCardKind(MacHelperState state, bool startSlow) =>
-    switch (state) {
-      MacHelperState.enabled => MacHelperCardKind.ready,
-      MacHelperState.migrationRequired => MacHelperCardKind.migration,
-      // The system shows one switch for Flash; its daemon item may be off
-      // while the switch reads on, so both read "turn it off and on again".
-      MacHelperState.requiresApproval ||
-      MacHelperState.disabledByUser ||
-      MacHelperState.notRegistered => MacHelperCardKind.approval,
-      MacHelperState.starting ||
-      MacHelperState.staleHelper ||
-      MacHelperState.repairing =>
-        startSlow ? MacHelperCardKind.startSlow : MacHelperCardKind.starting,
-      MacHelperState.registrationStale ||
-      MacHelperState.notReady ||
-      MacHelperState.staleCore => MacHelperCardKind.notReady,
-      // A reply that fails the app's verification is a failed security
-      // check, never "the helper couldn't start": it is running.
-      MacHelperState.signatureFailed ||
-      MacHelperState.untrustedReply => MacHelperCardKind.signatureFailed,
-      MacHelperState.updateFailed => MacHelperCardKind.updateFailed,
-      MacHelperState.reinstallRequired => MacHelperCardKind.reinstall,
-      MacHelperState.moveRequired => MacHelperCardKind.move,
-      MacHelperState.unsupported ||
-      MacHelperState.disabled => MacHelperCardKind.unsupported,
-      MacHelperState.exitUnconfirmed => MacHelperCardKind.exitUnconfirmed,
-      MacHelperState.launcherCheckFailed =>
-        MacHelperCardKind.launcherCheckFailed,
-      MacHelperState.launcherDowngrade => MacHelperCardKind.launcherDowngrade,
-      MacHelperState.launcherFailed => MacHelperCardKind.launcherFailed,
-      MacHelperState.launcherRecordDamaged =>
-        MacHelperCardKind.launcherRecordDamaged,
-      // A status that could not be read is handled like a slow start: no
-      // failure is claimed, the user can check again or view the raw code.
-      MacHelperState.unavailable => MacHelperCardKind.startSlow,
-    };
+MacHelperCardKind macHelperCardKind(
+  MacHelperState state,
+  bool startSlow,
+) => switch (state) {
+  MacHelperState.enabled => MacHelperCardKind.ready,
+  MacHelperState.migrationRequired => MacHelperCardKind.migration,
+  // The system shows one switch for Flash; its daemon item may be off
+  // while the switch reads on, so both read "turn it off and on again".
+  MacHelperState.requiresApproval ||
+  MacHelperState.disabledByUser ||
+  MacHelperState.notRegistered => MacHelperCardKind.approval,
+  MacHelperState.starting ||
+  MacHelperState.staleHelper ||
+  MacHelperState.repairing =>
+    startSlow ? MacHelperCardKind.startSlow : MacHelperCardKind.starting,
+  MacHelperState.registrationStale ||
+  MacHelperState.notReady ||
+  MacHelperState.staleCore => MacHelperCardKind.notReady,
+  // A reply that fails the app's verification is a failed security
+  // check, never "the helper couldn't start": it is running.
+  MacHelperState.signatureFailed ||
+  MacHelperState.untrustedReply => MacHelperCardKind.signatureFailed,
+  MacHelperState.updateFailed => MacHelperCardKind.updateFailed,
+  MacHelperState.reinstallRequired => MacHelperCardKind.reinstall,
+  MacHelperState.serviceNotFound => MacHelperCardKind.serviceNotFound,
+  MacHelperState.serviceRepairFailed => MacHelperCardKind.serviceRepairFailed,
+  MacHelperState.moveRequired => MacHelperCardKind.move,
+  MacHelperState.unsupported ||
+  MacHelperState.disabled => MacHelperCardKind.unsupported,
+  MacHelperState.exitUnconfirmed => MacHelperCardKind.exitUnconfirmed,
+  MacHelperState.launcherCheckFailed => MacHelperCardKind.launcherCheckFailed,
+  MacHelperState.launcherDowngrade => MacHelperCardKind.launcherDowngrade,
+  MacHelperState.launcherFailed => MacHelperCardKind.launcherFailed,
+  MacHelperState.launcherRecordDamaged =>
+    MacHelperCardKind.launcherRecordDamaged,
+  // A status that could not be read is handled like a slow start: no
+  // failure is claimed, the user can check again or view the raw code.
+  MacHelperState.unavailable => MacHelperCardKind.startSlow,
+};
 
 String macHelperFailedStepText(AppLocalizations l, MacHelperFailedStep step) =>
     switch (step) {
@@ -256,6 +269,23 @@ MacHelperCardView macHelperCardView(
       secondary: MacHelperCardAction.viewDetails,
       rawDetail: raw,
     ),
+    MacHelperCardKind.serviceNotFound => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperServiceNotFoundTitle,
+      detail: l.macHelperServiceNotFoundDetail,
+      progress: busyText,
+      primary: MacHelperCardAction.repairRegistration,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
+    MacHelperCardKind.serviceRepairFailed => MacHelperCardView(
+      kind: kind,
+      title: l.macHelperServiceNotFoundTitle,
+      detail: l.macHelperServiceRepairFailedDetail,
+      // No loop: the register error and status are behind "View details".
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
+    ),
     MacHelperCardKind.move => MacHelperCardView(
       kind: kind,
       title: l.macHelperMoveTitle,
@@ -323,6 +353,8 @@ String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
       MacHelperCardAction.repair => l.macHelperRepair,
       MacHelperCardAction.recover => l.macHelperTryAgain,
       MacHelperCardAction.repairRecord => l.macHelperRecordRepairAction,
+      MacHelperCardAction.repairRegistration =>
+        l.macHelperServiceNotFoundAction,
       MacHelperCardAction.viewDetails => l.macHelperViewDetails,
     };
 
@@ -389,12 +421,14 @@ MacHelperBarView? macHelperBarView(
     MacHelperCardKind.startSlow ||
     MacHelperCardKind.exitUnconfirmed ||
     MacHelperCardKind.notReady ||
+    MacHelperCardKind.serviceNotFound ||
     MacHelperCardKind.move => (
       MacHelperBarKind.notReady,
       MacHelperBarTone.action,
     ),
     MacHelperCardKind.updateFailed ||
     MacHelperCardKind.reinstall ||
+    MacHelperCardKind.serviceRepairFailed ||
     MacHelperCardKind.unsupported ||
     MacHelperCardKind.launcherDowngrade ||
     MacHelperCardKind.launcherFailed ||
@@ -537,6 +571,7 @@ class _MacHelperCardState extends State<MacHelperCard> {
         setState(() => _details = false);
         unawaited(flow.repair());
       case MacHelperCardAction.recover:
+      case MacHelperCardAction.repairRegistration:
         setState(() => _details = false);
         unawaited(flow.retryRecovery());
       case MacHelperCardAction.repairRecord:

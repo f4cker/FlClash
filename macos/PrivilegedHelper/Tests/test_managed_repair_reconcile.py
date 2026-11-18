@@ -200,6 +200,7 @@ static NSString * const FCRetiredAttemptDefault = @"FlashRetiredUnregisterAttemp
 @property NSMutableArray<NSString *> *retiredStatuses;  // retired name's status, in order; the last one repeats
 @property id retiredUnregister;                         // NSError, NSNull (ok) or @"timeout"
 @property BOOL retiredSettled;
+@property BOOL serviceWasNotFound;      // set by recoverWithArguments: from SMAppService.status before the user's recovery
 @property FakeDefaults *store;           // stands in for the user defaults; shared by "launches" of one build
 @property NSString *build;
 @end
@@ -351,9 +352,37 @@ class RecoverySequenceTests(unittest.TestCase):
 
     def test_not_found_is_reported(self):
         self.run_main(r'''
+    // Still notFound after a fresh register: its own failure (serviceNotFound after repair), with the register
+    // error and status in the details; one register only, no hello, no second round.
     Fixture *f = New(@[Job(@"missing")], @[[NSError errorWithDomain:@"x" code:5 userInfo:nil]], @[@"notFound"]);
     NSDictionary *r = [f recoverySequence];
-    assert([r[@"code"] isEqual:@"notFound"] && ![f.calls containsObject:@"hello"]);
+    assert([r[@"code"] isEqual:@"serviceNotFound"] && ![f.calls containsObject:@"hello"]);
+    assert([r[@"afterRepair"] isEqual:@YES] && [r[@"source"] isEqual:@"service"]);
+    assert([r[@"domain"] isEqual:@"x"] && [r[@"error"] isEqual:@5] && [r[@"serviceStatus"] isEqual:@"notFound"]);
+    assert([r[@"detail"] containsString:@"code=5"] && [r[@"detail"] containsString:@"status: notFound"]);
+    NSUInteger registers = 0; for (NSString *c in f.calls) registers += [c isEqual:@"register"];
+    assert(registers == 1);
+''')
+
+    def test_service_not_found_unregisters_then_registers(self):
+        self.run_main(r'''
+    // The user's repair from serviceNotFound: launchd has no job, but the system's record is unregistered first
+    // anyway (its "not found" error tolerated), then registered; approval needed afterwards is not a failure.
+    Fixture *f = New(@[Job(@"missing"), Job(@"missing")], @[Denied()], @[@"requiresApproval"]);
+    f.serviceWasNotFound = YES;
+    NSDictionary *r = [f recoverySequence];
+    assert([f.calls containsObject:@"unregister"] && Index(f, @"unregister") < Index(f, @"register"));
+    assert([r[@"code"] isEqual:@"requiresApproval"] && ![f.calls containsObject:@"hello"]);
+    assert([r[@"detail"] containsString:@"service status before: notFound"]);
+    // Enabled after the register: the new helper's hello completes it.
+    f = New(@[Job(@"missing"), Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
+    f.serviceWasNotFound = YES;
+    r = [f recoverySequence];
+    assert([r[@"code"] isEqual:@"enabled"]);
+    assert(Index(f, @"unregister") < Index(f, @"register") && Index(f, @"register") < Index(f, @"hello"));
+    // Without it (a stale registration), a missing job still skips the unregister as before.
+    f = New(@[Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
+    assert([[f recoverySequence][@"code"] isEqual:@"enabled"] && ![f.calls containsObject:@"unregister"]);
 ''')
 
     def test_enabled_but_launch_constraint_not_refreshed(self):
@@ -547,6 +576,123 @@ class RetiredNameTests(unittest.TestCase):
         unregister = unregister[:unregister.index('\n}\n')]
         self.assertIn('unregisterWithCompletionHandler', unregister)
         self.assertIn('dispatch_semaphore_wait', unregister)
+
+
+STATUS_FIXTURE = r'''
+#import <Foundation/Foundation.h>
+#import <assert.h>
+enum { SMAppServiceStatusNotRegistered = 0, SMAppServiceStatusEnabled = 1, SMAppServiceStatusRequiresApproval = 2,
+    SMAppServiceStatusNotFound = 3 };
+typedef NSUInteger FCLegacyResidue;
+static NSString * const FCGUIBundle = @"/Applications/Flash.app";
+static NSString * const FCHelperIdentifier = @"com.layoute.flash.helper";
+static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
+static BOOL daemonFilesPresent = YES;
+static BOOL FCBundledDaemonPresent(NSString *bundle) { return daemonFilesPresent; }
+static NSString *FCInstalledExecutable(NSString *identifier) { return @"/fixture/FlashHelper"; }
+static BOOL FCCheckStatic(NSString *path, NSString *identifier) { return YES; }
+static NSDictionary *FCReadCompatibility(NSString *bundle) { return @{}; }
+static BOOL FCBundleCompatibilityValid(NSDictionary *contract) { return YES; }
+''' + method('static NSDictionary *FCGateAnswer') + r'''
+@interface FakeService : NSObject
+@property NSInteger status;
+@end
+@implementation FakeService
+@end
+@interface Bridge : NSObject
+@property FakeService *service;
+@property BOOL migrationAttempted;
+@end
+@implementation Bridge
+- (NSString *)appGate { return @"trusted"; }
+- (FakeService *)daemon { return self.service; }
+- (FCLegacyResidue)legacyResidue { return 0; }
+- (NSDictionary *)retiredRegistration { return nil; }
+- (NSDictionary *)residueAnswer:(FCLegacyResidue)residue code:(NSString *)code { return @{@"code": code}; }
+''' + method('- (NSString *)gate {') + '\n' + method('- (NSDictionary *)registrationStatus') + r'''
+@end
+'''
+
+
+class FieldCase1711Tests(unittest.TestCase):
+    """User log 2026-11-18 17:11: BTM holds only the retired item (FlashHelper, 16.com.layoute.flash.daemon,
+    [disabled, allowed, not notified], no launchd job); there is no BTM item for com.layoute.flash.helperd at all,
+    and the app showed notFound. Fixture only: SMAppService answers are simulated."""
+
+    def run_main(self, body):
+        return compile_and_run(self, SEQUENCE_FIXTURE + 'int main(void) { @autoreleasepool {\n' + body + '\n} }\n')
+
+    def test_retired_item_only_routes_to_user_repair_of_the_new_name(self):
+        self.run_main(r'''
+    // The disabled retired item reads notRegistered or notFound: it is not reported (no retiredRegistration card)
+    // and never surfaces as notFound itself; the notFound the user saw is the never-registered helperd.
+    for (NSString *retired in @[@"notRegistered", @"notFound"]) {
+        Fixture *f = New(@[Job(@"missing")], @[NSNull.null], @[@"enabled"]);
+        f.retiredStatuses = [@[retired] mutableCopy];
+        assert(![f retiredRegistration] && f.retiredSettled);
+    }
+    // The user's repair from serviceNotFound: the retired name is already gone (not touched), helperd is
+    // unregistered (tolerated) and registered; the new item then waits for approval in System Settings.
+    Fixture *f = New(@[Job(@"missing"), Job(@"missing")], @[Denied()], @[@"requiresApproval"]);
+    f.retiredStatuses = [@[@"notRegistered"] mutableCopy];
+    f.serviceWasNotFound = YES;
+    NSDictionary *r = [f recoverySequence];
+    assert(![f.calls containsObject:@"retiredUnregister"]);
+    assert(Index(f, @"unregister") < Index(f, @"register"));
+    assert([r[@"code"] isEqual:@"requiresApproval"] && ![f.calls containsObject:@"hello"]);
+    // If the system still reads the retired item as registered (e.g. requiresApproval for the disabled item), the
+    // same repair first cleans it up (once per build), then unregisters and registers helperd.
+    f = New(@[Job(@"missing"), Job(@"missing")], @[Denied()], @[@"requiresApproval"]);
+    f.retiredStatuses = [@[@"requiresApproval", @"notRegistered"] mutableCopy];
+    f.serviceWasNotFound = YES;
+    r = [f recoverySequence];
+    assert(Index(f, @"retiredUnregister") < Index(f, @"unregister") && Index(f, @"unregister") < Index(f, @"register"));
+    assert([r[@"code"] isEqual:@"requiresApproval"] && [r[@"retiredUnregister"] isEqual:@"ok"]);
+    puts("ok");
+''')
+
+
+class StatusSourceTests(unittest.TestCase):
+    def test_service_not_found_is_split_from_missing_bundle_files(self):
+        compile_and_run(self, STATUS_FIXTURE + r'''
+int main(void) { @autoreleasepool {
+    Bridge *bridge = [Bridge new];
+    bridge.service = [FakeService new];
+    // Intact, trusted bundle; SMAppService says notFound: the system's record, which the user can re-register.
+    bridge.service.status = SMAppServiceStatusNotFound;
+    NSDictionary *r = [bridge registrationStatus];
+    assert([r[@"code"] isEqual:@"serviceNotFound"] && [r[@"source"] isEqual:@"service"]);
+    assert([r[@"detail"] containsString:@"source: service"]);
+    // 17:11 field case: only the retired item exists (settled, so retiredRegistration is nil) and helperd was never
+    // registered, which SMAppService reports as notFound: serviceNotFound, never the reinstall card.
+    assert([[bridge registrationStatus][@"code"] isEqual:@"serviceNotFound"]);
+    // A bundled daemon file missing: still notFound (reinstall), whatever SMAppService would say.
+    daemonFilesPresent = NO;
+    r = [bridge registrationStatus];
+    assert([r[@"code"] isEqual:@"notFound"] && [r[@"source"] isEqual:@"bundle"]);
+    assert([r[@"detail"] containsString:@"source: bundle"]);
+    bridge.service.status = SMAppServiceStatusEnabled;
+    assert([[bridge registrationStatus][@"code"] isEqual:@"notFound"]);
+    daemonFilesPresent = YES;
+    bridge.service.status = SMAppServiceStatusNotRegistered;
+    assert([[bridge registrationStatus][@"code"] isEqual:@"notRegistered"]);
+    puts("ok");
+} }
+''')
+
+    def test_user_recovery_reads_the_service_status_and_status_never_recovers(self):
+        recover = method('- (void)recoverWithArguments:')
+        self.assertLess(recover.index('[self gate]'), recover.index('self.serviceWasNotFound = [[self serviceStatusCode] isEqual:@"notFound"]'))
+        self.assertLess(recover.index('self.serviceWasNotFound ='), recover.index('dispatch_async(self.repairQueue'))
+        sequence = method('- (NSDictionary *)recoverySequence')
+        self.assertIn('if (self.serviceWasNotFound || ![job[@"state"] isEqual:@"missing"])', sequence)
+        self.assertIn('done(@"serviceNotFound", fields)', sequence)
+        status = method('- (void)status:')
+        for call in ('recoverySequence', 'registerDaemon', 'unregisterDaemon', 'serviceWasNotFound'):
+            self.assertNotIn(call, status)
+        registration = method('- (NSDictionary *)registrationStatus')
+        for call in ('register', 'unregister'):
+            self.assertNotIn(f'[[self daemon] {call}', registration)
 
 
 class RecoveryEntryTests(unittest.TestCase):
