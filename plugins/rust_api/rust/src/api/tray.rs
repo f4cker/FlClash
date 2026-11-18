@@ -57,6 +57,16 @@ pub enum TrayIconPlacement {
     Trailing,
 }
 
+/// A status dot on the icon's top-right corner that keeps its colour while
+/// the icon follows the menu bar; macOS only. The color is ARGB.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TrayDot {
+    pub color: u32,
+    /// Fades between full and 40% opacity every two seconds, unless the
+    /// system asks to reduce motion.
+    pub breathing: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TrayImage {
     pub path: String,
@@ -64,6 +74,7 @@ pub struct TrayImage {
     pub template: bool,
     pub size: u32,
     pub placement: TrayIconPlacement,
+    pub dot: Option<TrayDot>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -50,6 +50,15 @@ objc2-core-wlan = { version = "0.3", default-features = false, features = [
   "CWWiFiClient",
 ] }
 objc2-foundation = "0.3"
+objc2-quartz-core = { version = "0.3", default-features = false, features = [
+  "std",
+  "objc2-core-foundation",
+  "CAAnimation",
+  "CAFrameRateRange",
+  "CALayer",
+  "CAMediaTiming",
+  "CAMediaTimingFunction",
+] }
 objc2-service-management = { version = "0.3", default-features = false, features = [
   "std",
   "SMAppService",

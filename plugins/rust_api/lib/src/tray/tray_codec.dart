@@ -30,6 +30,7 @@ abstract final class TrayCodec {
         spec.icon.isTemplate,
         spec.icon.size,
         spec.icon.position.name,
+        if (spec.icon.dot case final dot?) [dot.color, dot.breathing],
         spec.toolTip,
         _describe(menu),
       ]),

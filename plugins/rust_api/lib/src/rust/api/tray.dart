@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Stream<TraySignal> traySignals() =>
     RustLib.instance.api.crateApiTrayTraySignals();
@@ -63,6 +63,29 @@ class TrayContent {
           menuGeneration == other.menuGeneration;
 }
 
+/// A status dot on the icon's top-right corner that keeps its colour while
+/// the icon follows the menu bar; macOS only. The color is ARGB.
+class TrayDot {
+  final int color;
+
+  /// Fades between full and 40% opacity every two seconds, unless the
+  /// system asks to reduce motion.
+  final bool breathing;
+
+  const TrayDot({required this.color, required this.breathing});
+
+  @override
+  int get hashCode => color.hashCode ^ breathing.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TrayDot &&
+          runtimeType == other.runtimeType &&
+          color == other.color &&
+          breathing == other.breathing;
+}
+
 enum TrayIconPlacement { leading, trailing }
 
 class TrayImage {
@@ -71,6 +94,7 @@ class TrayImage {
   final bool template;
   final int size;
   final TrayIconPlacement placement;
+  final TrayDot? dot;
 
   const TrayImage({
     required this.path,
@@ -78,6 +102,7 @@ class TrayImage {
     required this.template,
     required this.size,
     required this.placement,
+    this.dot,
   });
 
   @override
@@ -86,7 +111,8 @@ class TrayImage {
       pngs.hashCode ^
       template.hashCode ^
       size.hashCode ^
-      placement.hashCode;
+      placement.hashCode ^
+      dot.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -97,7 +123,8 @@ class TrayImage {
           pngs == other.pngs &&
           template == other.template &&
           size == other.size &&
-          placement == other.placement;
+          placement == other.placement &&
+          dot == other.dot;
 }
 
 class TrayItem {

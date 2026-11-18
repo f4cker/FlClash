@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:fl_clash/common/tray.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/models/models.dart';
+import 'package:rust_api/tray.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -63,5 +65,27 @@ void main() {
       paths.add(path);
     }
     expect(paths, hasLength(3));
+  });
+
+  test('the MITM status maps onto the menu bar dot', () {
+    expect(mitmTrayDot(null), isNull);
+    expect(
+      mitmTrayDot(const MitmIndicator.decrypting()),
+      const TrayDot(color: 0xFFFF3B30, breathing: true),
+    );
+    expect(
+      mitmTrayDot(const MitmIndicator.on()),
+      const TrayDot(color: 0xFFFF3B30, breathing: false),
+    );
+    for (final indicator in const [
+      MitmIndicator.paused(MitmPauseReason.notTrusted),
+      MitmIndicator.paused(MitmPauseReason.partialConnections),
+      MitmIndicator.unconfirmed(),
+    ]) {
+      expect(
+        mitmTrayDot(indicator),
+        const TrayDot(color: 0xFFFF9F0A, breathing: false),
+      );
+    }
   });
 }

@@ -137,6 +137,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TrayContent dco_decode_box_autoadd_tray_content(dynamic raw);
 
   @protected
+  TrayDot dco_decode_box_autoadd_tray_dot(dynamic raw);
+
+  @protected
   TrayItemBadge dco_decode_box_autoadd_tray_item_badge(dynamic raw);
 
   @protected
@@ -227,6 +230,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
 
   @protected
+  TrayDot? dco_decode_opt_box_autoadd_tray_dot(dynamic raw);
+
+  @protected
   TrayItemBadge? dco_decode_opt_box_autoadd_tray_item_badge(dynamic raw);
 
   @protected
@@ -252,6 +258,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TrayContent dco_decode_tray_content(dynamic raw);
+
+  @protected
+  TrayDot dco_decode_tray_dot(dynamic raw);
 
   @protected
   TrayIconPlacement dco_decode_tray_icon_placement(dynamic raw);
@@ -410,6 +419,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TrayContent sse_decode_box_autoadd_tray_content(SseDeserializer deserializer);
 
   @protected
+  TrayDot sse_decode_box_autoadd_tray_dot(SseDeserializer deserializer);
+
+  @protected
   TrayItemBadge sse_decode_box_autoadd_tray_item_badge(
     SseDeserializer deserializer,
   );
@@ -518,6 +530,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
+  TrayDot? sse_decode_opt_box_autoadd_tray_dot(SseDeserializer deserializer);
+
+  @protected
   TrayItemBadge? sse_decode_opt_box_autoadd_tray_item_badge(
     SseDeserializer deserializer,
   );
@@ -549,6 +564,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TrayContent sse_decode_tray_content(SseDeserializer deserializer);
+
+  @protected
+  TrayDot sse_decode_tray_dot(SseDeserializer deserializer);
 
   @protected
   TrayIconPlacement sse_decode_tray_icon_placement(
@@ -732,6 +750,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_tray_dot(TrayDot self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_tray_item_badge(
     TrayItemBadge self,
     SseSerializer serializer,
@@ -867,6 +888,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_tray_dot(
+    TrayDot? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_tray_item_badge(
     TrayItemBadge? self,
     SseSerializer serializer,
@@ -904,6 +931,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_tray_content(TrayContent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_tray_dot(TrayDot self, SseSerializer serializer);
 
   @protected
   void sse_encode_tray_icon_placement(

@@ -80,6 +80,7 @@ pub fn show(content: TrayContent) -> bool {
             return false;
         };
         tray.status.set_image(&image, content.image.placement);
+        tray.status.set_dot(content.image.dot, content.image.size);
         tray.status.set_title(&content.title);
         let entries = Entry::list(&content.menu);
         let generation = content.menu_generation;

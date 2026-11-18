@@ -205,4 +205,21 @@ void main() {
       expect(changed, isNot(base));
     }
   });
+
+  test('signature follows the dot colour and breathing', () {
+    String signature(TrayDot? dot) => TrayCodec.encode(
+      TraySpec(icon: TrayIcon.asset('assets/icon.png', dot: dot)),
+    ).signature;
+    const red = TrayDot(color: 0xFFFF3B30, breathing: false);
+    const breathing = TrayDot(color: 0xFFFF3B30, breathing: true);
+    const amber = TrayDot(color: 0xFFFF9F0A, breathing: false);
+    final signatures = {
+      signature(null),
+      signature(red),
+      signature(breathing),
+      signature(amber),
+    };
+    expect(signatures, hasLength(4));
+    expect(signature(red), signature(red));
+  });
 }

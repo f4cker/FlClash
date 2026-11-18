@@ -13,9 +13,16 @@ TraySpec _spec({
   String asset = _asset,
   String toolTip = 'FlClash',
   List<TrayMenuItem> menu = const [],
+  TrayDot? dot,
 }) {
-  return TraySpec(icon: TrayIcon.asset(asset), toolTip: toolTip, menu: menu);
+  return TraySpec(
+    icon: TrayIcon.asset(asset, dot: dot),
+    toolTip: toolTip,
+    menu: menu,
+  );
 }
+
+const _redDot = TrayDot(color: 0xFFFF3B30, breathing: false);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -151,6 +158,13 @@ void main() {
         'icon',
         _spec(
           asset: 'assets/other.png',
+          menu: const [TrayMenuCheckbox(label: 'a', checked: false)],
+        ),
+      ),
+      (
+        'dot',
+        _spec(
+          dot: _redDot,
           menu: const [TrayMenuCheckbox(label: 'a', checked: false)],
         ),
       ),
@@ -381,6 +395,32 @@ void main() {
       ]);
       expect(image.template, isTrue);
       expect(image.path, isEmpty);
+    });
+
+    test('macOS hands the host the dot', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+
+      await Tray.instance.show(_spec(dot: _redDot));
+
+      expect(host.lastShown!.image.dot, _redDot);
+    });
+
+    test('a dot changing only its breathing is shown again', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+
+      await Tray.instance.show(_spec(dot: _redDot));
+      await Tray.instance.show(
+        _spec(dot: const TrayDot(color: 0xFFFF3B30, breathing: true)),
+      );
+
+      expect(host.shown, hasLength(2));
+      expect(host.lastShown!.image.dot!.breathing, isTrue);
+    });
+
+    test('other platforms draw no dot', () async {
+      await Tray.instance.show(_spec(dot: _redDot));
+
+      expect(host.lastShown!.image.dot, isNull);
     });
   });
 }

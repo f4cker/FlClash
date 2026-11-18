@@ -394,6 +394,7 @@ final class Tray {
         TrayIconPosition.leading => TrayIconPlacement.leading,
         TrayIconPosition.trailing => TrayIconPlacement.trailing,
       },
+      dot: isMacOS ? icon.dot : null,
     );
   }
 

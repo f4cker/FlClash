@@ -127,6 +127,7 @@ class AppTray implements TrayPort {
           ),
           isTemplate: _isTemplate(trayState.monochromeTrayIcon),
           size: isMacOS ? 18 : 16,
+          dot: isMacOS ? mitmTrayDot(trayState.mitmIndicator) : null,
         ),
         toolTip: trayState.safeMode
             ? currentAppLocalizations.safeModeAppTitle(appName)
@@ -640,3 +641,21 @@ class AppTray implements TrayPort {
 }
 
 final appTray = system.isDesktop ? AppTray() : null;
+
+const mitmDotRed = 0xFFFF3B30;
+const mitmDotAmber = 0xFFFF9F0A;
+
+/// The menu bar dot for the MITM status: red while on, breathing while it
+/// decrypts, amber while paused or unconfirmed, and none while off.
+TrayDot? mitmTrayDot(MitmIndicator? indicator) => switch (indicator?.kind) {
+  null => null,
+  MitmIndicatorKind.decrypting => const TrayDot(
+    color: mitmDotRed,
+    breathing: true,
+  ),
+  MitmIndicatorKind.on => const TrayDot(color: mitmDotRed, breathing: false),
+  MitmIndicatorKind.paused || MitmIndicatorKind.unconfirmed => const TrayDot(
+    color: mitmDotAmber,
+    breathing: false,
+  ),
+};
