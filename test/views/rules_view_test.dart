@@ -976,22 +976,27 @@ void main() {
     await teardown(tester);
   });
 
-  group('the rules scroll under the shared bar, which keeps its search', () {
+  group('the rules scroll below the shared bar, which keeps its search', () {
     const short = Size(1100, 560);
 
     void expectClear(WidgetTester tester, Rect search) {
       final field = tester.getRect(_searchField);
       final results = tester.getRect(find.byKey(RulesView.resultsKey));
       expect(field, search, reason: 'the search box stays put');
-      // No header of the page's own: the scroll view starts at the top of
-      // the window and runs under the bar, whose fade covers what scrolled.
-      expect(results.top, 0);
+      // As on the requests page: the subtitle is pinned under the bar and
+      // the list is cut off below it, so nothing shows through the bar.
       final bar = tester.getRect(find.byType(ScaffoldBar));
       expect(bar.bottom, greaterThan(field.bottom));
-      final subtitle = find.byKey(RulesView.subtitleKey);
-      if (subtitle.evaluate().isNotEmpty) {
-        expect(tester.getRect(subtitle).top, lessThan(bar.bottom));
-      }
+      final subtitle = tester.getRect(find.byKey(RulesView.subtitleKey));
+      expect(subtitle.top, greaterThanOrEqualTo(field.bottom));
+      expect(results.top, greaterThanOrEqualTo(subtitle.bottom));
+      expect(
+        find.descendant(
+          of: find.byKey(RulesView.resultsKey),
+          matching: find.byKey(RulesView.subtitleKey),
+        ),
+        findsNothing,
+      );
     }
 
     Future<Rect> lookUpAt(WidgetTester tester) async {

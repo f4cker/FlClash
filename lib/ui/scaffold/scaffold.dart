@@ -121,6 +121,10 @@ class Scaffold extends StatefulWidget {
 
   /// Removable chips under the bar, kept by the page that filters by them.
   final ValueListenable<List<ScaffoldKeyword>>? keywords;
+
+  /// Pinned under the bar while there are no [keywords]. With either, the
+  /// body starts below them instead of scrolling under the bar.
+  final Widget? header;
   final bool? resizeToAvoidBottomInset;
   final VoidCallback? backAction;
 
@@ -146,6 +150,7 @@ class Scaffold extends StatefulWidget {
     this.menuItems = const [],
     this.confirmationAction,
     this.keywords,
+    this.header,
     this.resizeToAvoidBottomInset,
     this.canSort = false,
   });
@@ -918,10 +923,10 @@ class ScaffoldState extends State<Scaffold>
             : ScaffoldBarStatus(status: null, child: widget.body),
       ),
       headerListenable: keywords,
-      headerBuilder: keywords == null
+      headerBuilder: keywords == null && widget.header == null
           ? null
-          : (_) => keywords.value.isEmpty
-                ? null
+          : (_) => keywords == null || keywords.value.isEmpty
+                ? widget.header
                 : Padding(
                     padding: const EdgeInsets.only(top: 4, bottom: 16),
                     child: _KeywordStrip(keywords: keywords.value),
