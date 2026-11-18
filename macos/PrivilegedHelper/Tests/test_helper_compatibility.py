@@ -145,7 +145,7 @@ int main(void) {
         bridge.calls = [NSMutableArray array];
         bridge.helloCode = @"ok";
         bridge.helperHash = @"cdhash-current";
-        for (NSString *state in @[@"migrationRequired", @"requiresApproval", @"notRegistered", @"notFound", @"signingRequired"]) {
+        for (NSString *state in @[@"migrationRequired", @"requiresApproval", @"notRegistered", @"notFound", @"serviceNotFound", @"signingRequired"]) {
             bridge.registration = state;
             assert([Invoke(bridge, @"start", @{}) isEqual:state]);
             assert(bridge.calls.count == 0);

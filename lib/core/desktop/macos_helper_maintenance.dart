@@ -41,6 +41,14 @@ final class MacHelperMaintenance extends ChangeNotifier {
   bool _resumeCheckPending = false;
   bool _resumeChecking = false;
   bool _repairPending = false;
+
+  /// A repair from [MacHelperState.serviceNotFound] ended still notFound: a
+  /// later read of the same state keeps the failure (with its details)
+  /// instead of offering the same repair again by itself.
+  bool _serviceRepairFailed = false;
+
+  /// The one automatic registration of this launch for serviceNotFound.
+  bool _autoRegisterTried = false;
   int _autoRecoveries = 0;
   bool _enableOnResume = false;
   int _resumeEnables = 0;
@@ -194,6 +202,13 @@ final class MacHelperMaintenance extends ChangeNotifier {
   static String _describe(Object error) => error.toString();
 
   void _setState(MacHelperState next) {
+    if (next == MacHelperState.serviceRepairFailed) {
+      _serviceRepairFailed = true;
+    } else if (next == MacHelperState.serviceNotFound && _serviceRepairFailed) {
+      next = MacHelperState.serviceRepairFailed;
+    } else if (next != MacHelperState.serviceNotFound) {
+      _serviceRepairFailed = false;
+    }
     _state = next;
     if (!needsApproval) _enableOnResume = false;
     _scheduleApprovalPoll();
@@ -274,9 +289,39 @@ final class MacHelperMaintenance extends ChangeNotifier {
     var next = await client.status();
     if (next == MacHelperState.registrationStale) {
       next = await _recoverWithinBudget(automatic: true);
+    } else if (next == MacHelperState.serviceNotFound) {
+      next = await _autoRegister();
     }
     return _settle(next);
   }
+
+  /// SMAppService has no record of the intact, trusted bundle (typically the
+  /// helper was never registered under its current name, e.g. a drag-over
+  /// install from an older build): register it by itself, once per launch,
+  /// so the user at most allows it once in System Settings. Only `enable`
+  /// (the native trust gate runs first; nothing is unregistered and no Core
+  /// is touched). If that does not help, the card's "Repair" (the full
+  /// user-triggered recovery) is the fallback; nothing repeats by itself.
+  Future<MacHelperState> _autoRegister() async {
+    if (_autoRegisterTried || _serviceRepairFailed) {
+      return MacHelperState.serviceNotFound;
+    }
+    _autoRegisterTried = true;
+    _progress = MacHelperProgress.updating;
+    _notify();
+    final next = await client.enable();
+    _noteRegisterAnswer(next);
+    // Register refused while the system still has no record: the Repair card,
+    // with the register error and code behind "View details".
+    if (next == MacHelperState.updateFailed &&
+        client.lastServiceStatus == 'notFound') {
+      return MacHelperState.serviceNotFound;
+    }
+    return next;
+  }
+
+  /// Whether this launch already registered by itself for serviceNotFound.
+  bool get autoRegisterTried => _autoRegisterTried;
 
   /// One recovery, repeated while the system keeps reporting a stale
   /// registration and the automatic budget allows. Each automatic attempt
@@ -368,8 +413,12 @@ final class MacHelperMaintenance extends ChangeNotifier {
     return check();
   }
 
-  /// The card's button after the helper did not become ready: one more
-  /// recovery (re-registration), whatever the automatic budget says.
+  /// The card's button after the helper did not become ready, or "Repair"
+  /// when SMAppService has no record of the intact bundle (serviceNotFound):
+  /// one more recovery (stop the Core, unregister, register, then approval or
+  /// the new helper's hello), whatever the automatic budget says. Only ever
+  /// called from a user's tap; [check] and [resumed] never recover
+  /// serviceNotFound (only [_autoRegister]'s single `enable` per launch).
   Future<MacHelperState> retryRecovery() {
     return _singleFlight(MacHelperProgress.updating, () async {
       _repairDetail = null;
@@ -377,7 +426,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
       if (next == MacHelperState.registrationStale ||
           next == MacHelperState.notReady ||
           next == MacHelperState.starting ||
-          next == MacHelperState.staleHelper) {
+          next == MacHelperState.staleHelper ||
+          next == MacHelperState.serviceNotFound) {
         next = await _recoverWithinBudget(automatic: false);
       }
       return _settle(next);

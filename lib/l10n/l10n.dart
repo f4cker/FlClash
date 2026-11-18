@@ -11933,6 +11933,30 @@ abstract class AppLocalizations {
   /// **'The version record couldn’t be repaired. See details.'**
   String get macHelperRecordRepairFailed;
 
+  /// No description provided for @macHelperServiceNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper needs repair'**
+  String get macHelperServiceNotFoundTitle;
+
+  /// No description provided for @macHelperServiceNotFoundDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'macOS can’t recognize Flash’s helper right now. Click “Repair” to register it again; the system may ask you to allow it to run in the background in Settings.'**
+  String get macHelperServiceNotFoundDetail;
+
+  /// No description provided for @macHelperServiceNotFoundAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair'**
+  String get macHelperServiceNotFoundAction;
+
+  /// No description provided for @macHelperServiceRepairFailedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair didn’t finish. macOS still can’t recognize the helper. See details.'**
+  String get macHelperServiceRepairFailedDetail;
+
   /// No description provided for @ipxScore.
   ///
   /// In en, this message translates to:

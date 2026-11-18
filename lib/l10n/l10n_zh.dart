@@ -6517,6 +6517,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperRecordRepairFailed => '版本记录未能修复，请查看详情。';
 
   @override
+  String get macHelperServiceNotFoundTitle => '辅助程序需要修复';
+
+  @override
+  String get macHelperServiceNotFoundDetail =>
+      'macOS 暂时无法识别 Flash 的辅助程序。点按“修复”重新登记；系统可能会要求你在设置中允许后台运行。';
+
+  @override
+  String get macHelperServiceNotFoundAction => '修复';
+
+  @override
+  String get macHelperServiceRepairFailedDetail =>
+      '修复未完成，macOS 仍无法识别辅助程序。请查看详情。';
+
+  @override
   String get ipxScore => '健康分';
 
   @override

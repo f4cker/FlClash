@@ -7124,6 +7124,20 @@ class AppLocalizationsEs extends AppLocalizations {
       'The version record couldn’t be repaired. See details.';
 
   @override
+  String get macHelperServiceNotFoundTitle => 'The helper needs repair';
+
+  @override
+  String get macHelperServiceNotFoundDetail =>
+      'macOS can’t recognize Flash’s helper right now. Click “Repair” to register it again; the system may ask you to allow it to run in the background in Settings.';
+
+  @override
+  String get macHelperServiceNotFoundAction => 'Repair';
+
+  @override
+  String get macHelperServiceRepairFailedDetail =>
+      'Repair didn’t finish. macOS still can’t recognize the helper. See details.';
+
+  @override
   String get ipxScore => 'Health score';
 
   @override

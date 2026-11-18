@@ -118,7 +118,15 @@ class SplitGUITrustTests(unittest.TestCase):
         self.assertIn('@available(macOS 14.0, *)', app)
         self.assertIn('FCGUIBundleTrust(NSBundle.mainBundle.bundlePath)', app)
         self.assertLess(gate.index('[self appGate]'), gate.index('FCBundledDaemonPresent(FCGUIBundle)'))
+        # The gate's notFound is the bundle's daemon files only (reinstall); it goes out with source: bundle. SMAppService's
+        # own notFound for a bundle that passed this gate is the separate serviceNotFound (source: service).
         self.assertIn('return @"notFound"', gate)
+        self.assertIn('@"source": @"bundle"', BRIDGE)
+        registration = BRIDGE.split('- (NSDictionary *)registrationStatus {', 1)[1].split('\n}\n', 1)[0]
+        self.assertIn('return FCGateAnswer(gate);', registration)
+        self.assertLess(registration.index('[self gate]'), registration.index('case SMAppServiceStatusNotFound:'))
+        self.assertIn('@"code": @"serviceNotFound", @"source": @"service"', registration)
+        self.assertNotIn('@{@"code": @"notFound"}', BRIDGE)
         self.assertIn('FCCheckStatic(FCInstalledExecutable(FCHelperIdentifier), FCHelperIdentifier)', gate)
         # The daemon runs as the launcher's copy; its cdhash is compared with the helper sealed in the app.
         self.assertIn('executable:FCHelperCopyPath sealedExecutable:FCInstalledExecutable(FCHelperIdentifier)', BRIDGE)

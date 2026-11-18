@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
+import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/views/config/macos_helper.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -178,5 +180,55 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.tap(find.text(l.close));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('serviceNotFound: Repair runs the recovery only on tap', (
+    tester,
+  ) async {
+    final native = InstallNative()
+      ..statusAnswer = const {
+        'code': 'serviceNotFound',
+        'source': 'service',
+        'detail': 'source: service',
+      }
+      ..enableAnswer = const {
+        'code': 'registrationFailed',
+        'serviceStatus': 'notFound',
+        'domain': 'SMAppServiceErrorDomain',
+        'error': 3,
+      };
+    var recoveries = 0;
+    final flow = MacHelperMaintenance(
+      MacHelperClient(native: native, safeMode: () => false),
+      stop: () async => const CoreLifecycleResult(
+        revision: 1,
+        outcome: CoreLifecycleOutcome.applied,
+      ),
+      recover: () async {
+        recoveries++;
+        return MacHelperState.requiresApproval;
+      },
+      startPoll: const Duration(hours: 1),
+      startTimeout: const Duration(hours: 1),
+    );
+    await flow.check();
+    await pumpHost(tester, flow);
+    final l = currentAppLocalizations;
+    expect(find.text(l.macHelperServiceNotFoundTitle), findsWidgets);
+    expect(find.text(l.macHelperServiceNotFoundDetail), findsOneWidget);
+    expect(find.text(l.macHelperReinstallTitle), findsNothing);
+    // Only the one automatic register of this launch so far; no recovery.
+    expect(native.calls, ['status', 'enable']);
+    flow.resumed();
+    await tester.pumpAndSettle();
+    expect(recoveries, 0);
+    await tester.tap(find.text(l.macHelperServiceNotFoundAction));
+    await tester.pumpAndSettle();
+    expect(recoveries, 1);
+    expect(find.text(l.macHelperApprovalTitle), findsWidgets);
+    expect(find.text(l.macHelperOpenSettings), findsOneWidget);
+    await tester.tap(find.text(l.close));
+    await tester.pumpAndSettle();
+    flow.dispose();
   });
 }

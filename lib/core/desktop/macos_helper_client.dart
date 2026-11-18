@@ -35,6 +35,15 @@ enum MacHelperState {
 
   /// The bundled daemon is missing/incompatible or Flash is not in /Applications.
   reinstallRequired,
+
+  /// The bundle is intact and trusted, but SMAppService has no record that
+  /// matches it (status notFound). Only the user's "Repair" re-registers it
+  /// (the same recovery as a stale registration); never automatic.
+  serviceNotFound,
+
+  /// That repair registered the daemon again and SMAppService still reports
+  /// notFound. Shown with the details; not retried by itself.
+  serviceRepairFailed,
   moveRequired,
 
   /// Removing the old helper or registering the new one did not finish.
@@ -102,6 +111,7 @@ enum MacHelperState {
     'staleHelper' => staleHelper,
     'signingRequired' => signatureFailed,
     'notFound' || 'incompatible' => reinstallRequired,
+    'serviceNotFound' => serviceNotFound,
     'moveRequired' => moveRequired,
     'unsupported' => unsupported,
     'disabled' => disabled,
@@ -366,6 +376,8 @@ final class MacHelperClient {
     if (detail != null) lastDetail = detail;
     final state = code == 'authorizationCancelled'
         ? MacHelperState.parse(answer['status'] ?? 'migrationRequired')
+        : code == 'serviceNotFound' && answer['afterRepair'] == true
+        ? MacHelperState.serviceRepairFailed
         : MacHelperState.parse(code, answer['previouslyEnabled']);
     final next = MacHelperFailure.fromAnswer(answer);
     if (state != MacHelperState.updateFailed) {
