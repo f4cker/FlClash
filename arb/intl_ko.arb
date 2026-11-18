@@ -2540,11 +2540,11 @@
   "querying": "조회 중",
   "queryFailed": "조회 실패",
   "exitNotRunning": "Flash가 실행 중이 아니어서 출구 정보가 없습니다",
-  "exitIpLookupFailed": "출구 IP를 찾지 못했습니다",
-  "ipxNoResponse": "ipx.al 응답 없음",
+  "exitIpLookupFailed": "출구 IP를 조회하지 못했습니다",
+  "ipxNoResponse": "보고서를 가져오지 못했습니다",
   "ipxNativeShort": "네이티브",
   "ipxBroadcastShort": "브로드캐스트",
   "ipxScoreSemantics": "건강 점수 {score}, 등급 {grade}",
-  "exitIpOpenHint": "눌러서 전체 보고서 보기",
+  "exitIpOpenHint": "눌러서 출구 IP 세부 정보 보기",
   "semanticsSeparator": ", "
 }

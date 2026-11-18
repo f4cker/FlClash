@@ -198,7 +198,12 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                                     _probe.refresh(const [routedOutbound]),
                               ),
                             ),
-                            const _RowDivider(),
+                            _RowDivider(
+                              end: metrics.dividerEnd(
+                                Directionality.of(context),
+                                grown: isStart ? 1 : 0,
+                              ),
+                            ),
                             TickerMode(
                               enabled: !stillFor(local),
                               child: LocalIpRow(
@@ -337,6 +342,46 @@ class _OutboundMetrics {
   final double decorationSize;
   final double decorationEnd;
   final double decorationTop;
+
+  /// How far the divider stops short of the rows' end, so that it ends
+  /// [_dividerClearance] before the backdrop behind the start button. The
+  /// rows lean out by their 8 inset, and the backdrop sits [decorationEnd]
+  /// in from the card's end.
+  /// [grown] runs from the resting backdrop at 0 to the running one at 1,
+  /// which swells about its centre by [_decorationGrowth]. Its rounded
+  /// lobes stand [_decorationInset] of its size in from its box.
+  double dividerEnd(TextDirection direction, {required double grown}) {
+    final end = padding.resolve(direction).end(direction);
+    final size = decorationSize * (1 + _decorationGrowth * grown);
+    final left =
+        decorationEnd -
+        (size - decorationSize) / 2 +
+        size * (1 - _decorationInset);
+    return math.max(0, left + _dividerClearance - 8 - gap - buttonSlot - end);
+  }
+}
+
+/// How far the cookie's leftmost lobe sits in from its box, of its size.
+const double _decorationInset = 0.015;
+
+const double _dividerClearance = 16;
+
+extension on EdgeInsets {
+  double end(TextDirection direction) =>
+      direction == TextDirection.ltr ? right : left;
+}
+
+/// The flag emoji of a two-letter country [code], from its regional
+/// indicators; none for anything else.
+@visibleForTesting
+String? flagOf(String? code) {
+  if (code == null || !RegExp(r'^[A-Za-z]{2}$').hasMatch(code)) {
+    return null;
+  }
+  const regionalA = 0x1F1E6;
+  return String.fromCharCodes([
+    for (final unit in code.toUpperCase().codeUnits) regionalA + unit - 0x41,
+  ]);
 }
 
 TextStyle _nameStyle(BuildContext context) => AppTextStyle.caption1
@@ -495,9 +540,16 @@ class _Tag extends StatelessWidget {
 
 /// 查询失败 in red and a 重试 after it.
 class _Failure extends StatelessWidget {
-  const _Failure({required this.onRetry});
+  const _Failure({required this.onRetry, this.label, this.quiet = false});
 
   final VoidCallback onRetry;
+
+  /// What failed; the lookup of the address itself otherwise.
+  final String? label;
+
+  /// Only a report is missing under an address in hand: it says so in the
+  /// detail's grey, not the failure's red.
+  final bool quiet;
 
   @override
   Widget build(BuildContext context) {
@@ -507,15 +559,21 @@ class _Failure extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 8,
       children: [
-        Text(
-          appLocalizations.queryFailed,
-          maxLines: 1,
-          style: AppTextStyle.subheadline
-              .of(context, emphasized: true)
-              .copyWith(
-                color: dark ? context.colorScheme.error : _failureRed,
-                height: 1.2,
-              ),
+        Flexible(
+          child: Text(
+            label ?? appLocalizations.queryFailed,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: quiet
+                ? _detailStyle(context)
+                : AppTextStyle.subheadline
+                      .of(context, emphasized: true)
+                      .copyWith(
+                        color: dark ? context.colorScheme.error : _failureRed,
+                        height: 1.2,
+                      ),
+          ),
         ),
         FocusRing(
           shape: AppShape.xs,
@@ -640,8 +698,16 @@ class ExitIpRow extends ConsumerWidget {
         report?.countryCode ?? brief?.countryCode ?? info.countryCode;
     final city = report?.city ?? brief?.city;
     final place = [if (country.isNotEmpty) country, ?city].join(' ');
-    final summary = [?network, if (place.isNotEmpty) place].join(' · ');
+    final flag = flagOf(country);
+    final shownPlace = [?flag, if (place.isNotEmpty) place].join(' ');
+    final summary = [
+      ?network,
+      if (shownPlace.isNotEmpty) shownPlace,
+    ].join(' · ');
     final pending = lookup.isLoading && report == null;
+    // The address is known; only ipx.al's report about it is missing.
+    final reportFailed =
+        lookup.phase == IpxPhase.failed && report == null && !lookup.retrying;
     final hidden = ref.watch(
       appSettingProvider.select((state) => state.hideIp),
     );
@@ -655,12 +721,11 @@ class ExitIpRow extends ConsumerWidget {
       ?nativityLabel,
       ?network,
       if (place.isNotEmpty) place,
+      if (reportFailed) appLocalizations.ipxNoResponse,
     ].join(separator);
-    final second = summary.isNotEmpty
+    final second = summary.isNotEmpty || !pending
         ? detail(summary)
-        : pending
-        ? const SkeletonPill(width: 180, height: 10)
-        : detail(appLocalizations.ipxNoResponse);
+        : const SkeletonPill(width: 180, height: 10);
     void open() => unawaited(
       showIpQualitySheet(
         context,
@@ -714,6 +779,16 @@ class ExitIpRow extends ConsumerWidget {
                                     if (typeLabel != null) _Tag(typeLabel),
                                     if (nativityLabel != null)
                                       _Tag(nativityLabel),
+                                    if (reportFailed)
+                                      _Failure(
+                                        label: appLocalizations.ipxNoResponse,
+                                        quiet: true,
+                                        onRetry: () => ref
+                                            .read(
+                                              ipxLookupProvider(ip).notifier,
+                                            )
+                                            .retry(),
+                                      ),
                                     if (pending)
                                       const SkeletonPill(
                                         width: 44,
@@ -741,14 +816,20 @@ class ExitIpRow extends ConsumerWidget {
 
 /// A hairline under the exit, from the address column on.
 class _RowDivider extends StatelessWidget {
-  const _RowDivider();
+  const _RowDivider({required this.end});
+
+  /// Where it stops short of the rows' end.
+  final double end;
 
   @override
   Widget build(BuildContext context) {
     final dark = context.colorScheme.brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(
+    return AnimatedPadding(
+      duration: context.motionDuration(_morphDuration),
+      curve: Curves.easeOutBack,
+      padding: EdgeInsetsDirectional.only(
         start: 8 + _nameWidth + 2,
+        end: end,
         top: 8 - 7,
         bottom: 6,
       ),

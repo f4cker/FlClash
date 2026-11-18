@@ -257,7 +257,7 @@ void main() {
       expect(find.text('35 · C'), findsOneWidget);
       expect(find.text('Data center'), findsOneWidget);
       expect(find.text('Native'), findsOneWidget);
-      expect(find.text('TORSERVERS-NET · DE Brandenburg'), findsOneWidget);
+      expect(find.text('TORSERVERS-NET · 🇩🇪 DE Brandenburg'), findsOneWidget);
       expect(find.textContaining('Running · 00:00:'), findsOneWidget);
       expect(find.text('Runtime'), findsNothing);
       expect(
@@ -319,7 +319,9 @@ void main() {
       await tester.pump();
 
       expect(find.text('Lookup failed'), findsOneWidget);
-      expect(find.text('Couldn’t find the exit IP'), findsOneWidget);
+      expect(find.text('Couldn’t look up the exit IP'), findsOneWidget);
+      // Not the report's failure: there is no address to report on.
+      expect(find.text('Couldn’t get the report'), findsNothing);
       // The other row goes on regardless.
       expect(find.text(_localIp), findsOneWidget);
 
@@ -355,17 +357,32 @@ void main() {
       await tester.pump();
 
       expect(find.text('90 · A+'), findsOneWidget);
-      expect(find.text('AS64500 · GB'), findsOneWidget);
+      expect(find.text('AS64500 · 🇬🇧 GB'), findsOneWidget);
     });
 
-    testWidgets('says when ipx.al gave nothing', (tester) async {
+    testWidgets('keeps the address when only the report failed', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
       await tester.pumpWidget(
         _ipApp(lookup: const IpxLookupState(phase: IpxPhase.failed)),
       );
       await tester.pump();
 
       expect(find.text(_ip), findsOneWidget);
-      expect(find.text('GB'), findsOneWidget);
+      expect(find.text('🇬🇧 GB'), findsOneWidget);
+      expect(find.text('Couldn’t get the report'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      // Not the address lookup's failure.
+      expect(find.text('Lookup failed'), findsNothing);
+      expect(find.text('Couldn’t look up the exit IP'), findsNothing);
+      expect(
+        find.semantics.byLabel(
+          RegExp('^Exit IP, $_ip, .*Couldn’t get the report\$'),
+        ),
+        findsOne,
+      );
+      semantics.dispose();
     });
 
     testWidgets('a long IPv6 address loses its middle', (tester) async {
@@ -385,6 +402,38 @@ void main() {
       expect(shown, startsWith('2001:'));
       expect(shown, endsWith('7334'));
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('the flag before the place', () {
+    test('comes from a two-letter code', () {
+      expect(flagOf('DE'), '🇩🇪');
+      expect(flagOf('hk'), '🇭🇰');
+    });
+
+    test('is left out for anything else', () {
+      expect(flagOf(null), isNull);
+      expect(flagOf(''), isNull);
+      expect(flagOf('D'), isNull);
+      expect(flagOf('DEU'), isNull);
+      expect(flagOf('1A'), isNull);
+    });
+
+    testWidgets('is left out of the line when the code is not one', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _ipApp(
+          exit: const ProbeEntry(
+            phase: ProbePhase.fresh,
+            value: IpInfo(ip: _ip, countryCode: 'ZZZ'),
+          ),
+          lookup: const IpxLookupState(phase: IpxPhase.failed),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('ZZZ'), findsOneWidget);
     });
   });
 

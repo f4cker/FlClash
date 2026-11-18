@@ -7815,10 +7815,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exitNotRunning => 'Flash n’est pas lancé, aucune sortie';
 
   @override
-  String get exitIpLookupFailed => 'IP de sortie introuvable';
+  String get exitIpLookupFailed => 'Impossible de rechercher l’IP de sortie';
 
   @override
-  String get ipxNoResponse => 'ipx.al n’a pas répondu';
+  String get ipxNoResponse => 'Impossible d’obtenir le rapport';
 
   @override
   String get ipxNativeShort => 'Native';
@@ -7832,7 +7832,8 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get exitIpOpenHint => 'Appuyez pour voir le rapport complet';
+  String get exitIpOpenHint =>
+      'Appuyez pour voir les détails de l’IP de sortie';
 
   @override
   String get semanticsSeparator => ', ';

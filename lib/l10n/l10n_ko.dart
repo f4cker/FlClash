@@ -7631,10 +7631,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exitNotRunning => 'Flash가 실행 중이 아니어서 출구 정보가 없습니다';
 
   @override
-  String get exitIpLookupFailed => '출구 IP를 찾지 못했습니다';
+  String get exitIpLookupFailed => '출구 IP를 조회하지 못했습니다';
 
   @override
-  String get ipxNoResponse => 'ipx.al 응답 없음';
+  String get ipxNoResponse => '보고서를 가져오지 못했습니다';
 
   @override
   String get ipxNativeShort => '네이티브';
@@ -7648,7 +7648,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get exitIpOpenHint => '눌러서 전체 보고서 보기';
+  String get exitIpOpenHint => '눌러서 출구 IP 세부 정보 보기';
 
   @override
   String get semanticsSeparator => ', ';

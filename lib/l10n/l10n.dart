@@ -12986,13 +12986,13 @@ abstract class AppLocalizations {
   /// No description provided for @exitIpLookupFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn’t find the exit IP'**
+  /// **'Couldn’t look up the exit IP'**
   String get exitIpLookupFailed;
 
   /// No description provided for @ipxNoResponse.
   ///
   /// In en, this message translates to:
-  /// **'ipx.al didn’t respond'**
+  /// **'Couldn’t get the report'**
   String get ipxNoResponse;
 
   /// No description provided for @ipxNativeShort.
@@ -13016,7 +13016,7 @@ abstract class AppLocalizations {
   /// No description provided for @exitIpOpenHint.
   ///
   /// In en, this message translates to:
-  /// **'Press to view the full report'**
+  /// **'Press to view exit IP details'**
   String get exitIpOpenHint;
 
   /// No description provided for @semanticsSeparator.

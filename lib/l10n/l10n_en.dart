@@ -7764,10 +7764,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exitNotRunning => 'Flash isn’t running, so there’s no exit';
 
   @override
-  String get exitIpLookupFailed => 'Couldn’t find the exit IP';
+  String get exitIpLookupFailed => 'Couldn’t look up the exit IP';
 
   @override
-  String get ipxNoResponse => 'ipx.al didn’t respond';
+  String get ipxNoResponse => 'Couldn’t get the report';
 
   @override
   String get ipxNativeShort => 'Native';
@@ -7781,7 +7781,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get exitIpOpenHint => 'Press to view the full report';
+  String get exitIpOpenHint => 'Press to view exit IP details';
 
   @override
   String get semanticsSeparator => ', ';

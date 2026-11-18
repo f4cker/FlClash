@@ -7813,10 +7813,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exitNotRunning => 'Flash no se está ejecutando; no hay salida';
 
   @override
-  String get exitIpLookupFailed => 'No se pudo obtener la IP de salida';
+  String get exitIpLookupFailed => 'No se pudo consultar la IP de salida';
 
   @override
-  String get ipxNoResponse => 'ipx.al no respondió';
+  String get ipxNoResponse => 'No se pudo obtener el informe';
 
   @override
   String get ipxNativeShort => 'Nativa';
@@ -7830,7 +7830,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get exitIpOpenHint => 'Pulsa para ver el informe completo';
+  String get exitIpOpenHint => 'Pulsa para ver los detalles de la IP de salida';
 
   @override
   String get semanticsSeparator => ', ';

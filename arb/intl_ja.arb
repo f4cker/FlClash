@@ -2540,11 +2540,11 @@
   "querying": "照会中",
   "queryFailed": "照会に失敗",
   "exitNotRunning": "Flash が実行されていないため、出口情報はありません",
-  "exitIpLookupFailed": "出口 IP を取得できませんでした",
-  "ipxNoResponse": "ipx.al から応答がありません",
+  "exitIpLookupFailed": "出口 IP を照会できませんでした",
+  "ipxNoResponse": "レポートを取得できませんでした",
   "ipxNativeShort": "ネイティブ",
   "ipxBroadcastShort": "ブロードキャスト",
   "ipxScoreSemantics": "ヘルススコア {score}、グレード {grade}",
-  "exitIpOpenHint": "押すと完全なレポートを表示",
+  "exitIpOpenHint": "押すと出口 IP の詳細を表示",
   "semanticsSeparator": "、"
 }

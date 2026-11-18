@@ -2540,11 +2540,11 @@
   "querying": "Recherche…",
   "queryFailed": "Échec de la recherche",
   "exitNotRunning": "Flash n’est pas lancé, aucune sortie",
-  "exitIpLookupFailed": "IP de sortie introuvable",
-  "ipxNoResponse": "ipx.al n’a pas répondu",
+  "exitIpLookupFailed": "Impossible de rechercher l’IP de sortie",
+  "ipxNoResponse": "Impossible d’obtenir le rapport",
   "ipxNativeShort": "Native",
   "ipxBroadcastShort": "Diffusée",
   "ipxScoreSemantics": "Score {score}, note {grade}",
-  "exitIpOpenHint": "Appuyez pour voir le rapport complet",
+  "exitIpOpenHint": "Appuyez pour voir les détails de l’IP de sortie",
   "semanticsSeparator": ", "
 }

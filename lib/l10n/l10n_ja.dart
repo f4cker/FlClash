@@ -7558,10 +7558,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exitNotRunning => 'Flash が実行されていないため、出口情報はありません';
 
   @override
-  String get exitIpLookupFailed => '出口 IP を取得できませんでした';
+  String get exitIpLookupFailed => '出口 IP を照会できませんでした';
 
   @override
-  String get ipxNoResponse => 'ipx.al から応答がありません';
+  String get ipxNoResponse => 'レポートを取得できませんでした';
 
   @override
   String get ipxNativeShort => 'ネイティブ';
@@ -7575,7 +7575,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get exitIpOpenHint => '押すと完全なレポートを表示';
+  String get exitIpOpenHint => '押すと出口 IP の詳細を表示';
 
   @override
   String get semanticsSeparator => '、';

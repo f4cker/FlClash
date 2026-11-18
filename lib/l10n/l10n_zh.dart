@@ -7155,10 +7155,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exitNotRunning => 'Flash 未运行，暂无出口信息';
 
   @override
-  String get exitIpLookupFailed => '没有查到出口 IP';
+  String get exitIpLookupFailed => '未能查询出口 IP';
 
   @override
-  String get ipxNoResponse => 'ipx.al 没有响应';
+  String get ipxNoResponse => '报告获取失败';
 
   @override
   String get ipxNativeShort => '原生';
@@ -7172,7 +7172,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get exitIpOpenHint => '按下查看完整报告';
+  String get exitIpOpenHint => '按下查看出口 IP 详情';
 
   @override
   String get semanticsSeparator => '，';

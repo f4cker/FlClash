@@ -36,6 +36,7 @@ import '../helpers/test_app.dart';
 
 final _outDir = Platform.environment['NAV_IPCARD_SCREENSHOTS'];
 const _cjkCollection = '/System/Library/Fonts/Hiragino Sans GB.ttc';
+const _emojiCollection = '/System/Library/Fonts/Apple Color Emoji.ttc';
 
 List<ByteData> _collectionFaces(Uint8List bytes) {
   final data = ByteData.sublistView(bytes);
@@ -117,6 +118,16 @@ class _Ipx extends IpxLookup {
   void reload() {}
 }
 
+/// ipx.al gave nothing back about the address.
+class _IpxFailed extends IpxLookup {
+  @override
+  IpxLookupState build(String ip) =>
+      const IpxLookupState(phase: IpxPhase.failed);
+
+  @override
+  void reload() {}
+}
+
 class _Running extends RunTime {
   @override
   int? build() => (2 * 3600 + 14 * 60 + 5) * 1000;
@@ -145,6 +156,14 @@ void main() {
       }
       await loader.load();
     }
+    // The flag before the exit's place.
+    final emoji = FontLoader('Apple Color Emoji');
+    for (final face in _collectionFaces(
+      File(_emojiCollection).readAsBytesSync(),
+    )) {
+      emoji.addFont(Future.value(face));
+    }
+    await emoji.load();
     await (FontLoader('JetBrainsMono')..addFont(
           Future.value(
             ByteData.sublistView(
@@ -182,6 +201,11 @@ void main() {
     });
   }
 
+  // The test has no system fallback to find the flag's glyphs in.
+  ThemeData withEmoji(ThemeData theme) => theme.copyWith(
+    fontFamilyFallback: [...?theme.fontFamilyFallback, 'Apple Color Emoji'],
+  );
+
   Future<ProviderContainer> pump(
     WidgetTester tester,
     Widget child, {
@@ -210,8 +234,8 @@ void main() {
             builder: (context, ref, _) => TestApp(
               locale: const Locale('zh', 'CN'),
               includeNavigatorKey: false,
-              theme: watchAppTheme(ref, Brightness.light),
-              darkTheme: watchAppTheme(ref, Brightness.dark),
+              theme: withEmoji(watchAppTheme(ref, Brightness.light)),
+              darkTheme: withEmoji(watchAppTheme(ref, Brightness.dark)),
               themeMode: brightness == Brightness.light
                   ? ThemeMode.light
                   : ThemeMode.dark,
@@ -274,6 +298,7 @@ void main() {
   List<Override> cardOverrides(
     Map<String, ProbeEntry<IpInfo>> entries, {
     bool running = true,
+    bool reportFailed = false,
   }) => [
     profilesProvider.overrideWithValue(const [
       Profile(id: 1, autoUpdateDuration: Duration.zero),
@@ -282,7 +307,9 @@ void main() {
     if (running) runTimeProvider.overrideWith(_Running.new),
     outboundIpProbeProvider.overrideWith(() => _Ips(entries)),
     for (final ip in [_exitIp, _localIp])
-      ipxLookupProvider(ip).overrideWith(_Ipx.new),
+      ipxLookupProvider(
+        ip,
+      ).overrideWith(reportFailed ? _IpxFailed.new : _Ipx.new),
     ipQualityProvider.overrideWith((_, _) => Future.any(const [])),
   ];
 
@@ -368,7 +395,7 @@ void main() {
       await capture(tester, 'card-same-as-exit-$tone');
     });
 
-    testWidgets('card-failure-$tone', skip: skip != null, (tester) async {
+    testWidgets('card-lookup-failed-$tone', skip: skip != null, (tester) async {
       await pump(
         tester,
         card(),
@@ -379,7 +406,53 @@ void main() {
           directOutbound: const ProbeEntry(phase: ProbePhase.failed),
         }),
       );
-      await capture(tester, 'card-failure-$tone');
+      await capture(tester, 'card-lookup-failed-$tone');
+    });
+
+    testWidgets('card-report-failed-$tone', skip: skip != null, (tester) async {
+      await pump(
+        tester,
+        card(),
+        brightness: brightness,
+        size: const Size(640, 216),
+        overrides: cardOverrides({
+          routedOutbound: _fresh(_exitIp, 'DE'),
+          directOutbound: _fresh(_localIp, 'HK'),
+        }, reportFailed: true),
+      );
+      await capture(tester, 'card-report-failed-$tone');
+    });
+
+    testWidgets('sidebar-themed-$tone', skip: skip != null, (tester) async {
+      await pump(
+        tester,
+        sidebar,
+        brightness: brightness,
+        size: sidebarSize,
+        overrides: [
+          ...sidebarOverrides(),
+          themeSettingProvider.overrideWithBuild(
+            (_, _) => const ThemeProps(primaryColor: 0xFF34C759),
+          ),
+        ],
+        // One group closed beside open ones: the heading's badge and the
+        // rows' on one line, all in the theme's green.
+        prepare: (container) {
+          decrypting(container);
+          container
+              .read(appSettingProvider.notifier)
+              .update(
+                (state) => state.copyWith(
+                  sidebarCollapsedGroups: const {
+                    'routing': true,
+                    'decryption': false,
+                    'debug': true,
+                  },
+                ),
+              );
+        },
+      );
+      await capture(tester, 'sidebar-themed-$tone');
     });
 
     testWidgets('card-not-running-$tone', skip: skip != null, (tester) async {

@@ -2540,11 +2540,11 @@
   "querying": "Consultando",
   "queryFailed": "Error de consulta",
   "exitNotRunning": "Flash no se está ejecutando; no hay salida",
-  "exitIpLookupFailed": "No se pudo obtener la IP de salida",
-  "ipxNoResponse": "ipx.al no respondió",
+  "exitIpLookupFailed": "No se pudo consultar la IP de salida",
+  "ipxNoResponse": "No se pudo obtener el informe",
   "ipxNativeShort": "Nativa",
   "ipxBroadcastShort": "Difundida",
   "ipxScoreSemantics": "Puntuación {score}, nivel {grade}",
-  "exitIpOpenHint": "Pulsa para ver el informe completo",
+  "exitIpOpenHint": "Pulsa para ver los detalles de la IP de salida",
   "semanticsSeparator": ", "
 }

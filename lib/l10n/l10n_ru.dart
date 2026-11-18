@@ -7763,10 +7763,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get exitNotRunning => 'Flash не запущен, данных о выходе нет';
 
   @override
-  String get exitIpLookupFailed => 'Не удалось определить IP выхода';
+  String get exitIpLookupFailed => 'Не удалось запросить IP выхода';
 
   @override
-  String get ipxNoResponse => 'ipx.al не ответил';
+  String get ipxNoResponse => 'Не удалось получить отчёт';
 
   @override
   String get ipxNativeShort => 'Нативный';
@@ -7780,7 +7780,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get exitIpOpenHint => 'Нажмите, чтобы открыть полный отчёт';
+  String get exitIpOpenHint => 'Нажмите, чтобы открыть сведения об IP выхода';
 
   @override
   String get semanticsSeparator => ', ';
