@@ -3385,7 +3385,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmIgnoredLines => '忽略的行';
 
   @override
-  String get mitmModuleRulesDesc => '分流规则排在配置自身的规则之前。';
+  String get mitmModuleRulesDesc => '模块分流规则排在附加规则之后、配置自身规则之前。';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -5680,7 +5680,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ruleSourceScript => '扩展脚本';
 
   @override
-  String get ruleSourceMitm => 'MITM 模块';
+  String get ruleSourceMitm => '模块';
 
   @override
   String get ruleSourceCustom => '配置规则';
@@ -6393,9 +6393,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmPausedIndicatorPending => '解密已暂停：尚未提供必需的常驻解密指示。';
 
   @override
-  String get mitmPausedUnavailable => '解密已暂停：签名器或连接不可用。';
-
-  @override
   String get mitmIndicatorDecrypting => '正在解密';
 
   @override
@@ -6434,7 +6431,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mitmPauseIndicatorPending => '常驻状态提示尚未启用';
 
   @override
-  String get mitmPauseUnavailable => '签名服务或连接不可用';
+  String get mitmPauseUnavailable => '无法确认原因';
 
   @override
   String get mitmOutcomePaused => '解密暂停中，已原样放行';
@@ -7308,11 +7305,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String mitmUpdateSubtitle(Object before, Object after) {
-    return '上次 $before · 这次 $after';
-  }
-
-  @override
   String mitmDiffFolded(int count) {
     return '… $count 行未改动';
   }
@@ -7516,44 +7508,37 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get mitmPauseAppUnavailable => 'Flash 没有响应签名请求';
+  String get mitmPauseAppUnavailable => 'Flash 未响应证书签名请求';
 
   @override
-  String get mitmPauseSignTimeout => '签名超时';
+  String get mitmPauseSignTimeout => '证书签名超时';
 
   @override
-  String get mitmPauseSignRefused => 'Flash 拒绝了签名请求';
+  String get mitmPauseSignRefused => '证书签名未完成';
 
   @override
-  String get mitmPauseLeafRejected => '证书没有被接受';
+  String get mitmPauseAppUnavailableHint => '请稍候，暂停结束后新连接会重新尝试解密。';
 
   @override
-  String get mitmPauseAppUnavailableHint =>
-      '解密会在 30 秒后自动重试；如果一直这样，请退出并重新打开 Flash。';
+  String get mitmPauseSignTimeoutHint => '请稍候，暂停结束后新连接会重新尝试解密。';
 
   @override
-  String get mitmPauseSignTimeoutHint => 'Flash 较忙时会出现，解密会在 30 秒后自动重试。';
+  String get mitmPauseSignRefusedHint => '请确认 HTTPS 解密已开启；暂停结束后新连接会重新尝试解密。';
 
   @override
-  String get mitmPauseSignRefusedHint => '请确认 HTTPS 解密仍然开启；解密会在 30 秒后自动重试。';
+  String get mitmPauseUnavailableHint => '请稍候，暂停结束后新连接会重新尝试解密。';
 
   @override
-  String get mitmPauseLeafRejectedHint => '请在解密设置中重新确认根证书已安装并受信任。';
-
-  @override
-  String get mitmPauseUnavailableHint => '解密会在 30 秒后自动重试。';
-
-  @override
-  String get mitmCapabilityNotify => '发送系统通知';
+  String get mitmCapabilityNotify => '发送系统通知（实际是否显示取决于系统权限及限频）';
 
   @override
   String mitmModuleRuleCount(int count) {
-    return '$count 条分流';
+    return '$count 条分流规则';
   }
 
   @override
   String mitmRulePolicyMissing(String policy) {
-    return '当前配置没有「$policy」，这条不会生效';
+    return '当前配置没有「$policy」，这条规则不会生效';
   }
 
   @override
@@ -7565,5 +7550,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rulesViewInModule => '在模块中查看';
 
   @override
-  String get mitmRoutingRulesNotApplied => '分流规则没有生效，已恢复原来的设置';
+  String get mitmRoutingRulesNotApplied => '分流规则未能应用，已恢复原来的设置。';
+
+  @override
+  String get mitmRoutingRulesRevertFailed => '分流规则未能应用，也没能恢复原来的设置。';
+
+  @override
+  String get mitmPauseLeafUnusable => '证书未能使用';
+
+  @override
+  String get mitmPauseLeafUnusableHint => '请稍候，暂停结束后新连接会重新尝试解密。';
+
+  @override
+  String get mitmChecking => '检查中…';
 }

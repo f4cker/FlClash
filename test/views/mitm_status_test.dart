@@ -76,7 +76,7 @@ void main() {
         'coreIdentity': MitmPauseReason.coreIdentity,
         'appUnavailable': MitmPauseReason.appUnavailable,
         'signTimeout': MitmPauseReason.signTimeout,
-        'leafRejected': MitmPauseReason.leafRejected,
+        'leafUnusable': MitmPauseReason.leafUnusable,
         'signBusy': MitmPauseReason.signRefused,
         'somethingNew': MitmPauseReason.unavailable,
       };

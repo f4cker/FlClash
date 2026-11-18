@@ -231,6 +231,10 @@ void main() {
     );
     expect(
       sourceFilterOf(rule, const RuleSource(kind: RuleSourceKind.mitm)),
+      RuleSourceFilter.module,
+    );
+    expect(
+      sourceFilterOf(rule, const RuleSource(kind: RuleSourceKind.script)),
       RuleSourceFilter.script,
     );
     expect(

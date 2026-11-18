@@ -405,7 +405,7 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 	case errors.Is(err, context.DeadlineExceeded):
 		reason = "signTimeout"
 	default:
-		reason = "leafRejected"
+		reason = "leafUnusable"
 	}
 	// Publishing the pause and excluding registrations are one critical section.
 	previous, published := mitmActive.pauseGlobal(runtime, reason)

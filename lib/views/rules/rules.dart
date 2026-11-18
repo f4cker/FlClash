@@ -604,19 +604,17 @@ class _RulesViewState extends ConsumerState<RulesView> {
         continue;
       }
       final added = _isAddedSource(source);
-      final module = source?.kind == RuleSourceKind.mitm ? source : null;
-      if (module != null) {
-        final key = (module.moduleId, module.name);
-        if (key != lastModule) items.add(RuleRowItem.divider(module: module));
-        lastModule = key;
-      } else {
-        lastModule = null;
-        if (sources != null && !added && addedAbove && !divided) {
-          items.add(const RuleRowItem.divider());
-          divided = true;
-        }
+      if (sources != null && !added && addedAbove && !divided) {
+        items.add(const RuleRowItem.divider());
+        divided = true;
       }
-      addedAbove |= added || module != null;
+      final module = source?.kind == RuleSourceKind.mitm ? source : null;
+      final key = module == null ? null : (module.moduleId, module.name);
+      if (module != null && key != lastModule) {
+        items.add(RuleRowItem.divider(module: module));
+      }
+      lastModule = key;
+      addedAbove |= added;
       items.add(RuleRowItem.rule(rule, hit: hits[index]));
       _addChildren(items, index, rule, hits[index]);
     }
@@ -1578,10 +1576,11 @@ class _RulesViewState extends ConsumerState<RulesView> {
     final profile = _profileName;
     final scripts = {
       for (final source in sources ?? const <RuleSource?>[])
-        if (source != null &&
-            (source.kind == RuleSourceKind.script ||
-                source.kind == RuleSourceKind.mitm))
-          source.name,
+        if (source != null && source.kind == RuleSourceKind.script) source.name,
+    };
+    final modules = {
+      for (final source in sources ?? const <RuleSource?>[])
+        if (source != null && source.kind == RuleSourceKind.mitm) source.name,
     };
     final labels = {
       RuleSourceFilter.all: (label: appLocalizations.ruleSourceAll, full: null),
@@ -1593,6 +1592,10 @@ class _RulesViewState extends ConsumerState<RulesView> {
       RuleSourceFilter.added: namedSourceLabel(
         appLocalizations.ruleSourceAdded,
         profile,
+      ),
+      RuleSourceFilter.module: namedSourceLabel(
+        appLocalizations.ruleSourceMitm,
+        modules.length == 1 ? modules.single : '',
       ),
       RuleSourceFilter.script: namedSourceLabel(
         appLocalizations.ruleSourceScript,
@@ -1607,9 +1610,12 @@ class _RulesViewState extends ConsumerState<RulesView> {
       children: [
         for (final entry in labels.entries)
           // Without the build's sources only the Core's own kinds can show.
-          if (sources != null ||
-              entry.key == RuleSourceFilter.all ||
-              entry.key == RuleSourceFilter.ruleSet)
+          if ((sources != null ||
+                  entry.key == RuleSourceFilter.all ||
+                  entry.key == RuleSourceFilter.ruleSet) &&
+              (entry.key != RuleSourceFilter.module ||
+                  (counts[entry.key] ?? 0) > 0 ||
+                  _source == entry.key))
             RulesFilterChip(
               label: entry.value.label,
               tooltip: entry.value.full,

@@ -599,6 +599,25 @@ void main() {
       await done(tester);
     });
 
+    testWidgets('sm-module-detail-checking-$tone', skip: skip != null, (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        brightness: brightness,
+        modules: modules,
+        pushed: true,
+        size: const Size(760, 500),
+        const MitmModuleView(id: 1),
+      );
+      globalState.container
+          .read(updatingKeysProvider.notifier)
+          .start(modules.first.updatingKey);
+      await settle(tester, 4);
+      await capture(tester, 'sm-module-detail-checking-$tone');
+      await done(tester);
+    });
+
     testWidgets('sm-modules-$tone', skip: skip != null, (tester) async {
       await pump(
         tester,

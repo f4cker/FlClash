@@ -359,12 +359,12 @@ void main() {
       notifier.addRequest(request('early'));
       notifier.addRequest(request('late'));
       notifier.addRequest(request('other'));
-      notifier.setMitmOutcome('late', 'paused', pauseReason: 'leafRejected');
+      notifier.setMitmOutcome('late', 'paused', pauseReason: 'leafUnusable');
       notifier.setMitmOutcome('other', 'refused', pauseReason: 'signTimeout');
       final rows = container.read(requestsProvider).list;
       expect(rows.map((r) => r.mitmPauseReason), [
         'signTimeout',
-        'leafRejected',
+        'leafUnusable',
         '',
       ]);
     });

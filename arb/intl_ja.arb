@@ -1137,7 +1137,7 @@
   "arguments": "引数",
   "mitmRoutingRules": "ルーティングルール",
   "mitmIgnoredLines": "無視された行",
-  "mitmModuleRulesDesc": "ルーティングルールはプロファイル自身のルールより前に入ります。",
+  "mitmModuleRulesDesc": "Module routing rules go after the added rules and before the profile's own.",
   "mitmModuleSystemTip": "{system} 向けに書かれています。一部の行はこのデバイスのアプリに一致しない場合があります。",
   "mitmSkipSection": "[{section}] セクションには対応していません",
   "mitmSkipSetting": "この設定には対応していません",
@@ -2068,7 +2068,7 @@
   "ruleSourceSubscription": "Subscription",
   "ruleSourceAdded": "Added rule",
   "ruleSourceScript": "Extension script",
-  "ruleSourceMitm": "MITM module",
+  "ruleSourceMitm": "Module",
   "ruleSourceCustom": "Profile rule",
   "ruleSourceManaged": "Tailscale",
   "rulesGroupFilter": "Group: {name}",
@@ -2513,7 +2513,6 @@
   "mitmNotApplied": "Decryption not active: settings not applied to the core yet",
   "mitmTurnOffFailed": "Could not turn decryption off in the core. Restart the core.",
   "mitmPausedIndicatorPending": "復号を一時停止：必要な常時表示インジケーターがありません。",
-  "mitmPausedUnavailable": "復号を一時停止：署名機能または接続を利用できません。",
   "mitmIndicatorDecrypting": "復号中",
   "mitmIndicatorOn": "復号オン",
   "mitmIndicatorPaused": "復号を一時停止",
@@ -2533,7 +2532,7 @@
   "mitmPartialConnections": "一部の接続は復号されない可能性があります",
   "mitmPauseLiveness": "信頼と署名の状態を確認できない",
   "mitmPauseIndicatorPending": "常時表示の状態インジケーターが有効になっていない",
-  "mitmPauseUnavailable": "署名サービスまたは接続を利用できない",
+  "mitmPauseUnavailable": "the cause couldn't be determined",
   "mitmOutcomePaused": "復号が一時停止中のため、接続をそのまま通過させました",
   "mitmBadgeDecrypted": "復号済み",
   "mitmBadgePassedThrough": "未復号 · そのまま通過",
@@ -3306,13 +3305,6 @@
       "name": {}
     }
   },
-  "mitmUpdateSubtitle": "Last {before} · This {after}",
-  "@mitmUpdateSubtitle": {
-    "placeholders": {
-      "before": {},
-      "after": {}
-    }
-  },
   "mitmDiffFolded": "… {count} unchanged lines",
   "@mitmDiffFolded": {
     "placeholders": {
@@ -3478,19 +3470,21 @@
   "mitmAlsoDecryptHost": "Also add {host} to decryption",
   "mitmDiffAdded": "{count, plural, =1{+1 line} other{+{count} lines}}",
   "mitmDiffRemoved": "{count, plural, =1{−1 line} other{−{count} lines}}",
-  "mitmPauseAppUnavailable": "Flash didn't answer the signing request",
-  "mitmPauseSignTimeout": "signing timed out",
-  "mitmPauseSignRefused": "Flash refused the signing request",
-  "mitmPauseLeafRejected": "the certificate wasn't accepted",
-  "mitmPauseAppUnavailableHint": "Decryption retries on its own after 30 seconds. If this keeps happening, quit and reopen Flash.",
-  "mitmPauseSignTimeoutHint": "This happens when Flash is busy. Decryption retries on its own after 30 seconds.",
-  "mitmPauseSignRefusedHint": "Check that HTTPS decryption is still on. Decryption retries on its own after 30 seconds.",
-  "mitmPauseLeafRejectedHint": "In decryption settings, check again that the root certificate is installed and trusted.",
-  "mitmPauseUnavailableHint": "Decryption retries on its own after 30 seconds.",
-  "mitmCapabilityNotify": "Send system notifications",
+  "mitmPauseAppUnavailable": "Flash didn't respond to the certificate signing request",
+  "mitmPauseSignTimeout": "certificate signing timed out",
+  "mitmPauseSignRefused": "certificate signing didn't complete",
+  "mitmPauseAppUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmPauseSignTimeoutHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmPauseSignRefusedHint": "Check that HTTPS decryption is on. New connections try decryption again once the pause ends.",
+  "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
   "mitmModuleRuleCount": "{count, plural, =1{1 routing rule} other{{count} routing rules}}",
-  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule is left out",
+  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
   "rulesFromModule": "From module · {name}",
   "rulesViewInModule": "View in module",
-  "mitmRoutingRulesNotApplied": "The routing rules didn't take effect, so the previous setting is back"
+  "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
+  "mitmRoutingRulesRevertFailed": "The routing rules couldn't be applied, and the previous setting couldn't be restored either.",
+  "mitmPauseLeafUnusable": "the certificate couldn't be used",
+  "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmChecking": "Checking…"
 }

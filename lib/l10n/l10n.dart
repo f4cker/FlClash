@@ -6357,7 +6357,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmModuleRulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'Routing rules go in front of the profile’s own.'**
+  /// **'Module routing rules go after the added rules and before the profile\'s own.'**
   String get mitmModuleRulesDesc;
 
   /// No description provided for @mitmModuleSystemTip.
@@ -10467,7 +10467,7 @@ abstract class AppLocalizations {
   /// No description provided for @ruleSourceMitm.
   ///
   /// In en, this message translates to:
-  /// **'MITM module'**
+  /// **'Module'**
   String get ruleSourceMitm;
 
   /// No description provided for @ruleSourceCustom.
@@ -11693,12 +11693,6 @@ abstract class AppLocalizations {
   /// **'Decryption paused: the required always-visible indicator is not available.'**
   String get mitmPausedIndicatorPending;
 
-  /// No description provided for @mitmPausedUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Decryption paused: the signer or connection is unavailable.'**
-  String get mitmPausedUnavailable;
-
   /// No description provided for @mitmIndicatorDecrypting.
   ///
   /// In en, this message translates to:
@@ -11774,7 +11768,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmPauseUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'signing service or connection unavailable'**
+  /// **'the cause couldn\'t be determined'**
   String get mitmPauseUnavailable;
 
   /// No description provided for @mitmOutcomePaused.
@@ -13229,12 +13223,6 @@ abstract class AppLocalizations {
   /// **'{name} has an update'**
   String mitmUpdateTitle(Object name);
 
-  /// No description provided for @mitmUpdateSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Last {before} · This {after}'**
-  String mitmUpdateSubtitle(Object before, Object after);
-
   /// No description provided for @mitmDiffFolded.
   ///
   /// In en, this message translates to:
@@ -13556,61 +13544,49 @@ abstract class AppLocalizations {
   /// No description provided for @mitmPauseAppUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Flash didn\'t answer the signing request'**
+  /// **'Flash didn\'t respond to the certificate signing request'**
   String get mitmPauseAppUnavailable;
 
   /// No description provided for @mitmPauseSignTimeout.
   ///
   /// In en, this message translates to:
-  /// **'signing timed out'**
+  /// **'certificate signing timed out'**
   String get mitmPauseSignTimeout;
 
   /// No description provided for @mitmPauseSignRefused.
   ///
   /// In en, this message translates to:
-  /// **'Flash refused the signing request'**
+  /// **'certificate signing didn\'t complete'**
   String get mitmPauseSignRefused;
-
-  /// No description provided for @mitmPauseLeafRejected.
-  ///
-  /// In en, this message translates to:
-  /// **'the certificate wasn\'t accepted'**
-  String get mitmPauseLeafRejected;
 
   /// No description provided for @mitmPauseAppUnavailableHint.
   ///
   /// In en, this message translates to:
-  /// **'Decryption retries on its own after 30 seconds. If this keeps happening, quit and reopen Flash.'**
+  /// **'Please wait. New connections try decryption again once the pause ends.'**
   String get mitmPauseAppUnavailableHint;
 
   /// No description provided for @mitmPauseSignTimeoutHint.
   ///
   /// In en, this message translates to:
-  /// **'This happens when Flash is busy. Decryption retries on its own after 30 seconds.'**
+  /// **'Please wait. New connections try decryption again once the pause ends.'**
   String get mitmPauseSignTimeoutHint;
 
   /// No description provided for @mitmPauseSignRefusedHint.
   ///
   /// In en, this message translates to:
-  /// **'Check that HTTPS decryption is still on. Decryption retries on its own after 30 seconds.'**
+  /// **'Check that HTTPS decryption is on. New connections try decryption again once the pause ends.'**
   String get mitmPauseSignRefusedHint;
-
-  /// No description provided for @mitmPauseLeafRejectedHint.
-  ///
-  /// In en, this message translates to:
-  /// **'In decryption settings, check again that the root certificate is installed and trusted.'**
-  String get mitmPauseLeafRejectedHint;
 
   /// No description provided for @mitmPauseUnavailableHint.
   ///
   /// In en, this message translates to:
-  /// **'Decryption retries on its own after 30 seconds.'**
+  /// **'Please wait. New connections try decryption again once the pause ends.'**
   String get mitmPauseUnavailableHint;
 
   /// No description provided for @mitmCapabilityNotify.
   ///
   /// In en, this message translates to:
-  /// **'Send system notifications'**
+  /// **'Send system notifications (whether they show depends on system permission and rate limits)'**
   String get mitmCapabilityNotify;
 
   /// No description provided for @mitmModuleRuleCount.
@@ -13622,7 +13598,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmRulePolicyMissing.
   ///
   /// In en, this message translates to:
-  /// **'The current profile has no “{policy}”, so this rule is left out'**
+  /// **'The current profile has no “{policy}”, so this rule won\'t take effect'**
   String mitmRulePolicyMissing(String policy);
 
   /// No description provided for @rulesFromModule.
@@ -13640,8 +13616,32 @@ abstract class AppLocalizations {
   /// No description provided for @mitmRoutingRulesNotApplied.
   ///
   /// In en, this message translates to:
-  /// **'The routing rules didn\'t take effect, so the previous setting is back'**
+  /// **'The routing rules couldn\'t be applied. The previous setting has been restored.'**
   String get mitmRoutingRulesNotApplied;
+
+  /// No description provided for @mitmRoutingRulesRevertFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The routing rules couldn\'t be applied, and the previous setting couldn\'t be restored either.'**
+  String get mitmRoutingRulesRevertFailed;
+
+  /// No description provided for @mitmPauseLeafUnusable.
+  ///
+  /// In en, this message translates to:
+  /// **'the certificate couldn\'t be used'**
+  String get mitmPauseLeafUnusable;
+
+  /// No description provided for @mitmPauseLeafUnusableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait. New connections try decryption again once the pause ends.'**
+  String get mitmPauseLeafUnusableHint;
+
+  /// No description provided for @mitmChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get mitmChecking;
 }
 
 class _AppLocalizationsDelegate

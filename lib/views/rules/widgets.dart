@@ -13,6 +13,8 @@ enum RuleTone {
   purple(Color(0xFFEDE7F6), Color(0xFF5B3AA6)),
   amber(Color(0xFFFFF1DD), Color(0xFF8A5300)),
   scriptRed(Color(0xFFFCE8E6), Color(0xFFA1271C)),
+  // #7A4FD6 at 12% on white.
+  module(Color(0xFFEFEAFA), Color(0xFF5B36B0)),
   red(Color(0xFFFDECEA), Color(0xFF8C1D18)),
   green(Color(0xFFE8F5EC), Color(0xFF16632C)),
   warning(Color(0xFFFFF4E5), Color(0xFF6B4100)),
@@ -38,7 +40,7 @@ enum RuleTone {
   Color badgeFillOf(BuildContext context) {
     final colorScheme = context.colorScheme;
     if (colorScheme.brightness == Brightness.light) {
-      return Color.lerp(fill, ink, 0.1)!;
+      return this == module ? fill : Color.lerp(fill, ink, 0.1)!;
     }
     return Color.alphaBlend(
       ink.withValues(alpha: 0.32),
@@ -135,7 +137,7 @@ String shortSourceName(String name) {
     RuleSourceKind.mitm => named(
       appLocalizations.ruleSourceMitm,
       source.name,
-      RuleTone.scriptRed,
+      RuleTone.module,
     ),
   };
 }

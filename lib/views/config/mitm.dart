@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_indicator.dart';
 import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -416,7 +417,9 @@ class _MitmViewState extends ConsumerState<MitmView> {
               appLocalizations.mitmPausedIndicatorPending,
             MitmPauseReason.coreIdentity =>
               appLocalizations.mitmPausedCoreIdentity,
-            _ => appLocalizations.mitmPausedUnavailable,
+            final reason => appLocalizations.mitmIndicatorPausedBecause(
+              mitmPauseReasonText(appLocalizations, reason),
+            ),
           };
     // The page says what the bar's status would, in its first section.
     return ScaffoldBarStatus(

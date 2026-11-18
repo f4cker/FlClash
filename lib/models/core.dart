@@ -126,11 +126,12 @@ enum MitmPauseReason {
 
   /// The app's signer: dropped the request on the way ([appUnavailable]),
   /// did not answer in time ([signTimeout]), refused it ([signRefused]), or
-  /// its certificate was not accepted ([leafRejected]).
+  /// anything else on the way to a usable leaf ([leafUnusable]): a local
+  /// check of the answer, an empty answer, or key generation.
   appUnavailable,
   signTimeout,
   signRefused,
-  leafRejected,
+  leafUnusable,
 
   /// A reason this app version does not know.
   unavailable,

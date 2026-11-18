@@ -241,7 +241,7 @@ MitmPauseReason? mitmCorePauseReason(String paused) => switch (paused) {
   'coreIdentity' => MitmPauseReason.coreIdentity,
   'appUnavailable' => MitmPauseReason.appUnavailable,
   'signTimeout' => MitmPauseReason.signTimeout,
-  'leafRejected' => MitmPauseReason.leafRejected,
+  'leafUnusable' => MitmPauseReason.leafUnusable,
   // The signer's own refusals (lib/providers/mitm.dart MitmSignResult).
   'signFailed' || 'signBusy' || 'disabled' => MitmPauseReason.signRefused,
   _ => MitmPauseReason.unavailable,

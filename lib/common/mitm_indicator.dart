@@ -13,7 +13,7 @@ String mitmPauseReasonText(AppLocalizations l, MitmPauseReason reason) =>
       MitmPauseReason.appUnavailable => l.mitmPauseAppUnavailable,
       MitmPauseReason.signTimeout => l.mitmPauseSignTimeout,
       MitmPauseReason.signRefused => l.mitmPauseSignRefused,
-      MitmPauseReason.leafRejected => l.mitmPauseLeafRejected,
+      MitmPauseReason.leafUnusable => l.mitmPauseLeafUnusable,
       MitmPauseReason.unavailable => l.mitmPauseUnavailable,
     };
 
@@ -23,7 +23,7 @@ String? mitmPauseReasonHint(AppLocalizations l, MitmPauseReason reason) =>
       MitmPauseReason.appUnavailable => l.mitmPauseAppUnavailableHint,
       MitmPauseReason.signTimeout => l.mitmPauseSignTimeoutHint,
       MitmPauseReason.signRefused => l.mitmPauseSignRefusedHint,
-      MitmPauseReason.leafRejected => l.mitmPauseLeafRejectedHint,
+      MitmPauseReason.leafUnusable => l.mitmPauseLeafUnusableHint,
       MitmPauseReason.unavailable => l.mitmPauseUnavailableHint,
       _ => null,
     };

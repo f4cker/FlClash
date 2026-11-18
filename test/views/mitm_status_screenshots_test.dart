@@ -191,8 +191,8 @@ void main() {
     '20b-paused-sign-timeout': MitmIndicator.paused(
       MitmPauseReason.signTimeout,
     ),
-    '20c-paused-leaf-rejected': MitmIndicator.paused(
-      MitmPauseReason.leafRejected,
+    '20c-paused-leaf-unusable': MitmIndicator.paused(
+      MitmPauseReason.leafUnusable,
     ),
   };
   for (final MapEntry(key: name, value: indicator) in shots.entries) {

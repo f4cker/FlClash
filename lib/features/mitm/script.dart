@@ -21,8 +21,6 @@ import 'script_dialogs.dart';
 
 const _flashFill = Color(0x1A007AFF);
 const _flashDuration = Duration(milliseconds: 1500);
-const _invalidFillLight = Color(0xFFFFF8F7);
-const _invalidFillDark = Color(0xFF3A2424);
 const _tagFillLight = Color(0xFFF2F1F5);
 
 /// The row on the decryption page that opens [MitmScriptView].
@@ -760,7 +758,6 @@ class MitmScriptRow extends StatelessWidget {
     ];
     final desktop = system.isDesktop;
     Widget row(bool hovered) => DecorationListItem(
-      invalid: unloadable,
       onPressed: desktop ? null : onEdit,
       title: title,
       trailing: Row(
@@ -800,18 +797,7 @@ class MitmScriptRow extends StatelessWidget {
                 listItemRadiusOf(ItemPositionProvider.of(context)?.position),
               ),
             ),
-            child: !unloadable
-                ? row(hovered)
-                : Theme(
-                    data: Theme.of(context).copyWith(
-                      colorScheme: colorScheme.copyWith(
-                        errorContainer: dark
-                            ? _invalidFillDark
-                            : _invalidFillLight,
-                      ),
-                    ),
-                    child: row(hovered),
-                  ),
+            child: row(hovered),
           ),
         ),
       ),

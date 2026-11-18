@@ -447,7 +447,6 @@ class _MitmModuleRow extends ConsumerWidget {
           position: ItemPosition.get(index, total),
           child: DecorationListItem(
             contentPadding: const EdgeInsets.only(left: 16),
-            invalid: module.unloadable,
             title: Text(
               module.name,
               maxLines: 1,
@@ -577,8 +576,13 @@ class MitmModuleView extends ConsumerWidget {
               isUpdatingProvider(module.updatingKey),
             );
             return ListItem(
-              title: Text(appLocalizations.update),
-              trailing: isUpdating ? const ActivityIndicator(size: 24) : null,
+              title: Text(
+                isUpdating
+                    ? appLocalizations.mitmChecking
+                    : appLocalizations.update,
+                style: TextStyle(color: context.colorScheme.primary),
+              ),
+              trailing: isUpdating ? const ActivityIndicator(size: 16) : null,
               onTap: isUpdating
                   ? null
                   : () => _updateModule(context, ref, module),
@@ -815,26 +819,29 @@ class _MitmRoutingSectionState extends ConsumerState<_MitmRoutingSection> {
 
   Future<void> _set(bool value) async {
     final module = widget.module;
-    final action = ref.read(mitmModulesActionProvider.notifier);
+    // The page may close while the profile applies.
+    final container = ProviderScope.containerOf(context, listen: false);
+    final action = container.read(mitmModulesActionProvider.notifier);
+    final setup = container.read(setupActionProvider.notifier);
     setState(() => _busy = true);
     action.putModule(module.copyWith(rulesEnabled: value));
     final applies =
-        module.enabled && ref.read(patchClashConfigProvider).mitm.enable;
-    final applied =
-        !applies ||
-        await ref
-            .read(setupActionProvider.notifier)
-            .applyProfile(silence: true);
+        module.enabled && container.read(patchClashConfigProvider).mitm.enable;
+    final applied = !applies || await setup.applyProfile(silence: true);
     if (!applied) {
       final current =
-          ref
+          container
               .read(mitmModulesProvider)
               .value
               ?.firstWhereOrNull((item) => item.id == module.id) ??
           module;
       action.putModule(current.copyWith(rulesEnabled: !value));
+      final restored = await setup.applyProfile(silence: true);
+      final l = currentAppLocalizations;
       dialogs.showBanner(
-        currentAppLocalizations.mitmRoutingRulesNotApplied,
+        restored
+            ? l.mitmRoutingRulesNotApplied
+            : l.mitmRoutingRulesRevertFailed,
         level: BannerLevel.error,
       );
     }
@@ -923,7 +930,6 @@ class _MitmModuleLinesView extends StatelessWidget {
                   subtitle: issue == null
                       ? null
                       : Text(issue, style: noteStyle),
-                  invalid: !notes && issue != null,
                   trailing: running ? const ActivityIndicator(size: 24) : null,
                 ),
               ),

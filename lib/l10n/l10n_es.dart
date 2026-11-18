@@ -3633,7 +3633,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmModuleRulesDesc =>
-      'Las reglas de enrutamiento van antes que las del perfil.';
+      'Module routing rules go after the added rules and before the profile\'s own.';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -6223,7 +6223,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ruleSourceScript => 'Extension script';
 
   @override
-  String get ruleSourceMitm => 'MITM module';
+  String get ruleSourceMitm => 'Module';
 
   @override
   String get ruleSourceCustom => 'Profile rule';
@@ -6981,10 +6981,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Descifrado en pausa: aún no está disponible el indicador permanente requerido.';
 
   @override
-  String get mitmPausedUnavailable =>
-      'Descifrado en pausa: el firmante o la conexión no está disponible.';
-
-  @override
   String get mitmIndicatorDecrypting => 'Descifrando';
 
   @override
@@ -7028,8 +7024,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'el indicador de estado permanente no está activado';
 
   @override
-  String get mitmPauseUnavailable =>
-      'servicio de firma o conexión no disponible';
+  String get mitmPauseUnavailable => 'the cause couldn\'t be determined';
 
   @override
   String get mitmOutcomePaused =>
@@ -7992,11 +7987,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String mitmUpdateSubtitle(Object before, Object after) {
-    return 'Last $before · This $after';
-  }
-
-  @override
   String mitmDiffFolded(int count) {
     return '… $count unchanged lines';
   }
@@ -8237,39 +8227,33 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmPauseAppUnavailable =>
-      'Flash didn\'t answer the signing request';
+      'Flash didn\'t respond to the certificate signing request';
 
   @override
-  String get mitmPauseSignTimeout => 'signing timed out';
+  String get mitmPauseSignTimeout => 'certificate signing timed out';
 
   @override
-  String get mitmPauseSignRefused => 'Flash refused the signing request';
-
-  @override
-  String get mitmPauseLeafRejected => 'the certificate wasn\'t accepted';
+  String get mitmPauseSignRefused => 'certificate signing didn\'t complete';
 
   @override
   String get mitmPauseAppUnavailableHint =>
-      'Decryption retries on its own after 30 seconds. If this keeps happening, quit and reopen Flash.';
+      'Please wait. New connections try decryption again once the pause ends.';
 
   @override
   String get mitmPauseSignTimeoutHint =>
-      'This happens when Flash is busy. Decryption retries on its own after 30 seconds.';
+      'Please wait. New connections try decryption again once the pause ends.';
 
   @override
   String get mitmPauseSignRefusedHint =>
-      'Check that HTTPS decryption is still on. Decryption retries on its own after 30 seconds.';
-
-  @override
-  String get mitmPauseLeafRejectedHint =>
-      'In decryption settings, check again that the root certificate is installed and trusted.';
+      'Check that HTTPS decryption is on. New connections try decryption again once the pause ends.';
 
   @override
   String get mitmPauseUnavailableHint =>
-      'Decryption retries on its own after 30 seconds.';
+      'Please wait. New connections try decryption again once the pause ends.';
 
   @override
-  String get mitmCapabilityNotify => 'Send system notifications';
+  String get mitmCapabilityNotify =>
+      'Send system notifications (whether they show depends on system permission and rate limits)';
 
   @override
   String mitmModuleRuleCount(int count) {
@@ -8284,7 +8268,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mitmRulePolicyMissing(String policy) {
-    return 'The current profile has no “$policy”, so this rule is left out';
+    return 'The current profile has no “$policy”, so this rule won\'t take effect';
   }
 
   @override
@@ -8297,5 +8281,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mitmRoutingRulesNotApplied =>
-      'The routing rules didn\'t take effect, so the previous setting is back';
+      'The routing rules couldn\'t be applied. The previous setting has been restored.';
+
+  @override
+  String get mitmRoutingRulesRevertFailed =>
+      'The routing rules couldn\'t be applied, and the previous setting couldn\'t be restored either.';
+
+  @override
+  String get mitmPauseLeafUnusable => 'the certificate couldn\'t be used';
+
+  @override
+  String get mitmPauseLeafUnusableHint =>
+      'Please wait. New connections try decryption again once the pause ends.';
+
+  @override
+  String get mitmChecking => 'Checking…';
 }
