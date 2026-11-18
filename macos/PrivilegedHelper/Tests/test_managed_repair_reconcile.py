@@ -133,6 +133,26 @@ int main(void) { @autoreleasepool {
     // A loaded on-demand job that is simply not running is not broken.
     assert([FCParseLaunchdPrint(@"system/x = {\n\tstate = not running\n\tlast exit code = 0\n}\n", 0, @"1")[@"state"]
         isEqual:@"idle"]);
+    // A last exit code alone never means the registration is stale: 78 is idle; 79 (the helper refused) and 81–87
+    // (the launcher stopped) are refusals, also when launchd calls the start "spawn failed".
+    NSDictionary *exit78 = FCParseLaunchdPrint(@"system/x = {\n\tstate = not running\n\tlast exit code = 78: EX_CONFIG\n}\n", 0, @"1");
+    assert([exit78[@"state"] isEqual:@"idle"] && [exit78[@"refused"] isEqual:@NO] && [exit78[@"lastExit"] isEqual:@78]);
+    for (NSNumber *code in @[@79, @81, @82, @83, @84, @85, @86, @87]) {
+        for (NSString *jobState in @[@"not running", @"spawn failed"]) {
+            NSString *text = [NSString stringWithFormat:@"system/x = {\n\tstate = %@\n\tlast exit code = %@\n}\n", jobState, code];
+            NSDictionary *job = FCParseLaunchdPrint(text, 0, @"1");
+            assert([job[@"state"] isEqual:@"idle"] && [job[@"refused"] isEqual:@YES] && [job[@"lastExit"] isEqual:code]);
+        }
+    }
+    for (NSNumber *code in @[@0, @78, @80, @88]) assert(!FCRefusalExit(code.integerValue));
+    // launchd's own word: spawn failed (without a refusal code) or needs LWCR update.
+    assert([FCParseLaunchdPrint(@"system/x = {\n\tstate = spawn failed\n\tlast exit code = 78\n}\n", 0, @"1")[@"state"]
+        isEqual:@"broken"]);
+    assert([FCParseLaunchdPrint(@"system/x = {\n\tstate = not running\n\tlast exit code = 84\n\tproperties = needs LWCR update\n}\n",
+        0, @"1")[@"state"] isEqual:@"broken"]);
+    // A running job is never refused or broken, whatever its last exit was.
+    NSDictionary *again = FCParseLaunchdPrint(@"system/x = {\n\tstate = running\n\tpid = 9\n\tlast exit code = 79\n}\n", 0, @"1");
+    assert([again[@"state"] isEqual:@"running"] && [again[@"refused"] isEqual:@NO]);
     puts("parsed");
 } }
 '''
@@ -147,13 +167,28 @@ int main(void) { @autoreleasepool {
         self.assertIn('FCLaunchdSnapshot(FCHelperLabel, [self bundleVersion], 2)', BRIDGE)
 
 
+# The SMAppService error domains exactly as the bridge declares them.
+SM_DOMAINS = '\n'.join(line for line in BRIDGE.splitlines()
+                       if line.startswith(('static NSString * const FCSMAppServiceErrorDomain',
+                                           'static NSString * const FCSMFrameworkErrorDomain')))
+
 SEQUENCE_FIXTURE = r'''
 #import <Foundation/Foundation.h>
 #import <assert.h>
 #import <errno.h>
 enum { kSMErrorJobNotFound = 6, kSMErrorLaunchDeniedByUser = 11 };
 static NSString * const FCRetiredHelperLabel = @"com.layoute.flash.daemon";
+static NSString * const FCRetiredAttemptDefault = @"FlashRetiredUnregisterAttemptedBuild";
+''' + SM_DOMAINS + r'''
 ''' + method('static NSString *FCErrorText') + '\n' + method('static BOOL FCApprovalError') + '\n' + method('static BOOL FCAlreadyUnregistered') + r'''
+@interface FakeDefaults : NSObject
+@property NSMutableDictionary *values;
+@end
+@implementation FakeDefaults
+- (instancetype)init { if ((self = [super init])) _values = [NSMutableDictionary dictionary]; return self; }
+- (NSString *)stringForKey:(NSString *)key { id v = self.values[key]; return [v isKindOfClass:NSString.class] ? v : nil; }
+- (void)setObject:(id)value forKey:(NSString *)key { self.values[key] = value; }
+@end
 @interface Fixture : NSObject
 @property NSMutableArray<NSString *> *calls;
 @property NSMutableArray<NSDictionary *> *jobs;      // launchctl answers, in order; the last one repeats
@@ -165,12 +200,15 @@ static NSString * const FCRetiredHelperLabel = @"com.layoute.flash.daemon";
 @property NSMutableArray<NSString *> *retiredStatuses;  // retired name's status, in order; the last one repeats
 @property id retiredUnregister;                         // NSError, NSNull (ok) or @"timeout"
 @property BOOL retiredSettled;
+@property FakeDefaults *store;           // stands in for the user defaults; shared by "launches" of one build
+@property NSString *build;
 @end
 @implementation Fixture
 - (instancetype)init {
     if ((self = [super init])) {
         _calls = [NSMutableArray array]; _hellos = [@[@{@"code": @"ok", @"helperCDHash": @"new"}] mutableCopy];
         _retiredStatuses = [@[@"notRegistered"] mutableCopy]; _retiredUnregister = NSNull.null;
+        _store = [FakeDefaults new]; _build = @"2026111712";
     }
     return self;
 }
@@ -203,7 +241,9 @@ static id Next(NSMutableArray *queue) { id value = queue.firstObject; if (queue.
 - (NSString *)currentHelperHash { return @"new"; }
 - (void)pause:(NSTimeInterval)seconds { [self.calls addObject:[NSString stringWithFormat:@"pause %.2f", seconds]]; self.clock += seconds; }
 - (NSTimeInterval)uptime { return self.clock; }
-''' + method('- (NSString *)retireOldRegistration:') + '\n' + method('- (NSDictionary *)recoverySequence') + '\n' + method('- (NSDictionary *)awaitNewHelper:') + r'''
+- (NSString *)bundleVersion { return self.build; }
+- (NSUserDefaults *)preferences { return (NSUserDefaults *)(id)self.store; }
+''' + method('- (BOOL)retiredAttemptedThisBuild') + '\n' + method('- (void)recordRetiredAttempt') + '\n' + method('- (NSDictionary *)retiredRegistration') + '\n' + method('- (NSString *)retireOldRegistration:') + '\n' + method('- (NSDictionary *)recoverySequence') + '\n' + method('- (NSDictionary *)awaitNewHelper:') + r'''
 @end
 static NSDictionary *Job(NSString *state) { return @{@"state": state, @"summary": [@"job " stringByAppendingString:state]}; }
 static NSError *Denied(void) {
@@ -264,11 +304,35 @@ class RecoverySequenceTests(unittest.TestCase):
     assert([r[@"domain"] isEqual:@"SMAppServiceErrorDomain"] && [r[@"error"] isEqual:@1]);
     // The full error, userInfo included, goes into the details.
     assert([r[@"detail"] containsString:@"code=1"] && [r[@"detail"] containsString:@"Job is not allowed to bootstrap"]);
-    // A status that cannot be read with the same error is still not a failure.
+    assert([r[@"serviceStatus"] isEqual:@"requiresApproval"]);
+    // EPERM while the system still says notRegistered (mitm.3 -> new name): the same, and the status is handed on.
+    f = New(@[Job(@"missing")], @[Denied()], @[@"notRegistered"]);
+    r = [f recoverySequence];
+    assert([r[@"code"] isEqual:@"requiresApproval"] && [r[@"serviceStatus"] isEqual:@"notRegistered"]);
+    NSUInteger registers = 0; for (NSString *c in f.calls) registers += [c isEqual:@"register"];
+    assert(registers == 1);
+    // The same error with a status that is neither requiresApproval nor notRegistered is a failure.
     f = New(@[Job(@"missing")], @[[NSError errorWithDomain:@"SMAppServiceErrorDomain" code:11 userInfo:nil]], @[@"unknown"]);
-    assert([[f recoverySequence][@"code"] isEqual:@"requiresApproval"]);
-    assert(FCApprovalError([NSError errorWithDomain:NSPOSIXErrorDomain code:EPERM userInfo:nil]));
-    assert(!FCApprovalError([NSError errorWithDomain:@"SMAppServiceErrorDomain" code:3 userInfo:nil]) && !FCApprovalError(nil));
+    assert([[f recoverySequence][@"code"] isEqual:@"registrationFailed"]);
+    NSError *posix = [NSError errorWithDomain:NSPOSIXErrorDomain code:EPERM userInfo:nil];
+    for (NSString *status in @[@"requiresApproval", @"notRegistered"]) {
+        assert(FCApprovalError(posix, status));
+        assert(FCApprovalError(Denied(), status));
+        assert(FCApprovalError([NSError errorWithDomain:@"SMAppServiceErrorDomain" code:kSMErrorLaunchDeniedByUser userInfo:nil], status));
+        assert(FCApprovalError([NSError errorWithDomain:@"kSMErrorDomainFramework" code:EPERM userInfo:nil], status));
+        // Code 1 from any other domain is not "allow it in Settings"; neither is POSIX 11 (EDEADLK).
+        for (NSString *domain in @[NSCocoaErrorDomain, NSOSStatusErrorDomain, @"x", @"FlashBridge"])
+            assert(!FCApprovalError([NSError errorWithDomain:domain code:1 userInfo:nil], status));
+        assert(!FCApprovalError([NSError errorWithDomain:NSPOSIXErrorDomain code:kSMErrorLaunchDeniedByUser userInfo:nil], status));
+        assert(!FCApprovalError([NSError errorWithDomain:@"SMAppServiceErrorDomain" code:3 userInfo:nil], status));
+    }
+    for (NSString *status in @[@"enabled", @"notFound", @"unknown"]) assert(!FCApprovalError(posix, status) && !FCApprovalError(Denied(), status));
+    assert(!FCApprovalError(nil, @"requiresApproval"));
+    // A code-1 error of another domain during recovery: registrationFailed, the raw error in the details.
+    f = New(@[Job(@"missing")], @[[NSError errorWithDomain:NSCocoaErrorDomain code:1 userInfo:@{@"why": @"other"}]], @[@"notRegistered"]);
+    r = [f recoverySequence];
+    assert([r[@"code"] isEqual:@"registrationFailed"] && [r[@"domain"] isEqual:NSCocoaErrorDomain]);
+    assert([r[@"detail"] containsString:@"why = other"]);
 ''')
 
     def test_not_registered_registers_once_more(self):
@@ -388,11 +452,60 @@ class RetiredNameTests(unittest.TestCase):
     NSDictionary *r = [f recoverySequence];
     assert([r[@"code"] isEqual:@"enabled"] && [f.calls containsObject:@"retiredUnregister"]);
     assert(![f.calls containsObject:@"unregister"] && ![f.calls containsObject:@"register"]);
+    // The retired unregister failed, launchd's parent bundle version lags (every update until the next login) and
+    // the new job is idle: still healthy, nothing of the new name is touched.
+    f = New(@[@{@"state": @"idle", @"versionStale": @YES, @"summary": @"idle stale version"}], @[NSNull.null], @[@"enabled"]);
+    f.retiredStatuses = [@[@"enabled"] mutableCopy];
+    f.retiredUnregister = [NSError errorWithDomain:@"SMAppServiceErrorDomain" code:1 userInfo:nil];
+    r = [f recoverySequence];
+    assert([r[@"code"] isEqual:@"enabled"] && [r[@"retiredUnregister"] isEqual:@"failed"]);
+    assert(![f.calls containsObject:@"unregister"] && ![f.calls containsObject:@"register"]);
+    // Nor when launchctl could not be read.
+    f = New(@[Job(@"unknown")], @[NSNull.null], @[@"enabled"]);
+    f.retiredStatuses = [@[@"enabled"] mutableCopy];
+    f.retiredUnregister = @"timeout";
+    assert([[f recoverySequence][@"code"] isEqual:@"enabled"]);
+    assert(![f.calls containsObject:@"unregister"] && ![f.calls containsObject:@"register"]);
     // But a broken new job is still replaced.
     f = New(@[Job(@"broken"), Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
     f.retiredStatuses = [@[@"enabled"] mutableCopy];
     assert([[f recoverySequence][@"code"] isEqual:@"enabled"]);
     assert([f.calls containsObject:@"unregister"] && [f.calls containsObject:@"register"]);
+''')
+
+    def test_retired_unregister_is_tried_once_per_build_across_launches(self):
+        self.run_main(r'''
+    // First launch of this build: the retired name is still registered; one unregister, which fails.
+    Fixture *first = New(@[Job(@"running")], @[NSNull.null], @[@"enabled"]);
+    first.retiredStatuses = [@[@"enabled"] mutableCopy];
+    first.retiredUnregister = [NSError errorWithDomain:@"SMAppServiceErrorDomain" code:1 userInfo:nil];
+    assert([[first retiredRegistration][@"code"] isEqual:@"retiredRegistration"]);
+    NSDictionary *r = [first recoverySequence];
+    assert([r[@"retiredUnregister"] isEqual:@"failed"] && [r[@"code"] isEqual:@"enabled"]);
+    assert([first.store.values[FCRetiredAttemptDefault] isEqual:@"2026111712"]);
+    // A later launch (new process, same defaults) of the same build: no second attempt, and status no longer
+    // reports the retired name (it is a detail now), so nothing starts a recovery for it.
+    Fixture *second = New(@[Job(@"running")], @[NSNull.null], @[@"enabled"]);
+    second.store = first.store;
+    second.retiredStatuses = [@[@"enabled"] mutableCopy];
+    assert(![second retiredRegistration] && second.retiredSettled);
+    second.retiredSettled = NO;
+    r = [second recoverySequence];
+    assert(!r[@"retiredUnregister"] && ![second.calls containsObject:@"retiredUnregister"]);
+    assert(![second.calls containsObject:@"retiredStatus"]);
+    // The next build tries once again.
+    Fixture *next = New(@[Job(@"running")], @[NSNull.null], @[@"enabled"]);
+    next.store = first.store; next.build = @"2026111713";
+    next.retiredStatuses = [@[@"enabled"] mutableCopy];
+    assert([[next retiredRegistration][@"code"] isEqual:@"retiredRegistration"]);
+    [next recoverySequence];
+    assert([next.calls containsObject:@"retiredUnregister"]);
+    assert([next.store.values[FCRetiredAttemptDefault] isEqual:@"2026111713"]);
+    // Seen absent: not an attempt, nothing recorded.
+    Fixture *clean = New(@[Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
+    [clean recoverySequence];
+    assert(!clean.store.values[FCRetiredAttemptDefault] && clean.retiredSettled);
+    puts("once-per-build");
 ''')
 
     def test_status_reports_the_retired_name_once_and_never_registers_it(self):
@@ -428,12 +541,19 @@ class RecoveryEntryTests(unittest.TestCase):
         self.assertLess(status.index('@"registrationStale"'), status.index('[self request:@"hello"'))
         for operation in ('registerAndReturnError', 'unregister', 'registerDaemon'):
             self.assertNotIn(operation, status)
+        # launchd's parent bundle version lags after every update: it never decides anything for the new name.
+        self.assertNotIn('versionStale', BRIDGE)
         invoke = method('- (void)invoke:')
         self.assertIn('@"retireCores"', invoke)
         self.assertNotIn('repairExplicit', BRIDGE)
         self.assertNotIn('repairRegisterOnly', BRIDGE)
         enable = method('- (void)registerWithCompletion:')
-        self.assertIn('FCApprovalError(error) ? @"requiresApproval" : @"registrationFailed"', enable)
+        self.assertIn('FCApprovalError(error, statusName) ? @"requiresApproval" : @"registrationFailed"', enable)
+        self.assertIn('NSString *statusName = FCServiceStatusName(status);', enable)
+        self.assertIn('@"serviceStatus": statusName', enable)
+        # The domains are SMAppService's own values (SMAppServiceErrorDomain / kSMErrorDomainFramework).
+        self.assertIn('FCSMAppServiceErrorDomain = @"SMAppServiceErrorDomain";', BRIDGE)
+        self.assertIn('FCSMFrameworkErrorDomain = @"kSMErrorDomainFramework";', BRIDGE)
 
 
 if __name__ == '__main__':

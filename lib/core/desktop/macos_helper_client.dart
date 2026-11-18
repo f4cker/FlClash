@@ -244,6 +244,11 @@ final class MacHelperClient {
   /// sweep result). Only ever shown under "View details".
   String? lastDetail;
 
+  /// SMAppService.status the native side read right after a failed
+  /// register (`serviceStatus`), from the last answer; null when it carried
+  /// none.
+  String? lastServiceStatus;
+
   /// Failed update step; kept until a later answer reports another outcome so
   /// a generic `migrationIncomplete` does not hide the step that failed.
   MacHelperFailure? failure;
@@ -284,6 +289,8 @@ final class MacHelperClient {
   MacHelperState _record(Map<Object?, Object?> answer) {
     final code = answer['code'];
     lastCode = code is String ? code : null;
+    final serviceStatus = answer['serviceStatus'];
+    lastServiceStatus = serviceStatus is String ? serviceStatus : null;
     final detail = describeAnswer(answer);
     if (detail != null) lastDetail = detail;
     final state = code == 'authorizationCancelled'

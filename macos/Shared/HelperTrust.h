@@ -11,6 +11,14 @@
 // The name used up to 0.9.15-mitm.3. Its plist stays in the bundle only so SMAppService can unregister it
 // (daemonServiceWithPlistName: requires the plist in Contents/Library/LaunchDaemons); it is never registered.
 #define FC_RETIRED_HELPER_LABEL "com.layoute.flash.daemon"
+// Exit status of a helper that refuses to run (launch arguments rejected, or its self-check failed at startup or
+// before an operation). Distinct from EX_CONFIG (78) and from FlashHelperLauncher's own exit codes, so that the app
+// can tell "the helper refused" from "launchd cannot start the job" in `launchctl print`'s last exit code.
+#define FC_HELPER_REFUSED_EXIT 79
+// FlashHelperLauncher's exit codes (Launcher/README.md): 81 not_root, 82 location, 83 copy, 84 signature,
+// 85 version_unreadable, 86 downgrade, 87 exec.
+#define FC_LAUNCHER_EXIT_FIRST 81
+#define FC_LAUNCHER_EXIT_LAST 87
 
 NS_ASSUME_NONNULL_BEGIN
 // launchd label and Mach service of the SMAppService daemon (distinct from the legacy com.layoute.flash.helper job).
@@ -97,6 +105,6 @@ NSString *FCHexString(NSData * _Nullable data);
 // <bundle> is canonical (realpath) and is FCGUIBundle. Returns the bundle, or nil and a reason to refuse to run.
 NSString * _Nullable FCHelperBundleFromArguments(NSArray<NSString *> *arguments, NSString * _Nullable * _Nullable reason);
 // Daemon startup/per-operation self verification against the bundle the launcher named. Returns @"ok" or a short
-// reason; any other value means the daemon must exit (EX_CONFIG) without doing privileged work.
+// reason; any other value means the daemon must exit (FC_HELPER_REFUSED_EXIT) without doing privileged work.
 NSString *FCHelperSelfCheck(NSString *runningExecutable, NSString *bundle);
 NS_ASSUME_NONNULL_END

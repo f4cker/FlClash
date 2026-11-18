@@ -40,6 +40,10 @@ def compile_and_run(test, source, *, extra=(), frameworks=('Foundation',)):
         return result.stdout
 
 
+# The helper's refusal exit status, exactly as HelperTrust.h defines it.
+REFUSED_EXIT = next(line for line in (MACOS / 'Shared/HelperTrust.h').read_text().splitlines()
+                    if line.startswith('#define FC_HELPER_REFUSED_EXIT '))
+
 SUPERVISOR_FIXTURE = r'''
 #import <Foundation/Foundation.h>
 #import <xpc/xpc.h>
@@ -47,6 +51,7 @@ SUPERVISOR_FIXTURE = r'''
 #import <sysexits.h>
 #import <sys/wait.h>
 #import "SessionPolicy.h"
+''' + REFUSED_EXIT + r'''
 static NSString * const FCRuntimeDirectory = @"/fixture-runtime";
 static const size_t FCMaxFrame = 1024;
 static BOOL reapSucceeds, syncSucceeds = YES;
@@ -211,6 +216,19 @@ int main(void) {
 ''')
         self.assertIn('uncertain-ownership-retried', out)
 
+    def test_refusals_exit_with_their_own_status(self):
+        # 79: neither EX_CONFIG (78) nor one of FlashHelperLauncher's 81–87.
+        self.assertEqual(REFUSED_EXIT.split()[2], '79')
+        trust = (MACOS / 'Shared/HelperTrust.h').read_text()
+        self.assertIn('#define FC_LAUNCHER_EXIT_FIRST 81', trust)
+        self.assertIn('#define FC_LAUNCHER_EXIT_LAST 87', trust)
+        handle = method(SUPERVISOR, '- (void)handle:')
+        self.assertIn('int status = [code isEqualToString:@"ok"] ? 0 : FC_HELPER_REFUSED_EXIT;', handle)
+        main = method(SUPERVISOR, 'int main(int argc, const char *argv[])')
+        for marker in ('launch-refused', 'self-check-failed'):
+            after = main[main.index(marker):]
+            self.assertTrue(after[after.index('return '):].startswith('return FC_HELPER_REFUSED_EXIT;'), marker)
+
     def test_idle_and_termination_retry_recovery(self):
         idle = method(SUPERVISOR, '- (void)armIdle')
         self.assertLess(idle.index('[self recoverOwnership]'), idle.index('exit(0)'))
@@ -226,6 +244,72 @@ BRIDGE_FIXTURE = r'''
 #import <Foundation/Foundation.h>
 #import <ServiceManagement/ServiceManagement.h>
 #import <assert.h>
+#import "LauncherStatus.h"
+#import "LaunchdProbe.h"
+'''
+
+
+# After every app update launchd reports the previous parent bundle version until the next login. With that (and with
+# any refusal exit code, or 78) status keeps waiting or shows a card; only launchd's own "broken" is a stale
+# registration. Appended to the fixture's main (b: BridgeFixture).
+STALE_VERSION_MAIN = r'''
+        NSDictionary *(^Job)(NSString *, NSInteger) = ^NSDictionary *(NSString *state, NSInteger exitCode) {
+            BOOL refused = [state isEqual:@"idle"] && FCRefusalExit(exitCode);
+            return @{@"state": state, @"versionStale": @YES, @"lastExit": @(exitCode), @"refused": @(refused),
+                @"summary": [NSString stringWithFormat:@"%@ lastExit=%ld parentVersion=old", state, (long)exitCode]};
+        };
+        b.launcher = nil;
+        // The old helper copy is still idling: staleHelper, retried after the cooldown, never registrationStale.
+        b.jobs = [@[Job(@"running", 0)] mutableCopy];
+        b.oldDaemon = YES; b.oldDaemonBusy = YES; b.staleRetryAfter = nil;
+        [b.calls removeAllObjects];
+        assert([Run(b, NO)[@"code"] isEqual:@"staleHelper"]);
+        assert(b.staleRetryAfter && [b.staleRetryAfter timeIntervalSinceNow] > 30);
+        assert([Run(b, NO)[@"code"] isEqual:@"staleHelper"]);
+        b.oldDaemon = NO; b.staleRetryAfter = [NSDate distantPast];
+        assert([Run(b, NO)[@"code"] isEqual:@"enabled"]);
+        // A slow first start (copy + signature check): a wait, not a stale registration.
+        b.jobs = [@[Job(@"idle", 0), Job(@"running", 0)] mutableCopy];
+        b.slow = YES;
+        assert([Run(b, NO)[@"code"] isEqual:@"timeout"]);
+        // Last exit 78 is not a registration problem either.
+        b.jobs = [@[Job(@"idle", 78)] mutableCopy];
+        b.slow = YES;
+        assert([Run(b, NO)[@"code"] isEqual:@"timeout"]);
+        // The helper refused (79): a definite card with the exit code in the details.
+        b.jobs = [@[Job(@"idle", 79)] mutableCopy];
+        b.slow = YES;
+        NSDictionary *refusal = Run(b, NO);
+        assert([refusal[@"code"] isEqual:@"launcherCheckFailed"] && [refusal[@"detail"] containsString:@"last exit code: 79"]);
+        // Launcher exit codes without a (fresh) status file map by themselves.
+        NSDictionary *cards = @{@81: @"launcherFailed", @82: @"launcherCheckFailed", @83: @"launcherFailed",
+            @84: @"launcherCheckFailed", @85: @"launcherCheckFailed", @86: @"launcherDowngrade", @87: @"launcherFailed"};
+        for (NSNumber *code in cards) {
+            b.jobs = [@[Job(@"idle", code.integerValue)] mutableCopy];
+            b.slow = YES;
+            NSDictionary *card = Run(b, NO);
+            assert([card[@"code"] isEqual:cards[code]]);
+            NSString *line = [NSString stringWithFormat:@"last exit code: %@", code];
+            assert([card[@"detail"] containsString:line]);
+        }
+        // The launcher status, when it has one, names the step; the exit code is added to it.
+        b.launcher = @{@"code": @"launcherDowngrade", @"detail": @"launcher result: downgrade"};
+        b.jobs = [@[Job(@"idle", 86)] mutableCopy];
+        b.slow = YES;
+        NSDictionary *both = Run(b, NO);
+        assert([both[@"code"] isEqual:@"launcherDowngrade"] && [both[@"detail"] containsString:@"launcher result: downgrade"]);
+        assert([both[@"detail"] containsString:@"last exit code: 86"]);
+        b.launcher = nil;
+        // Only launchd's own word makes it stale: before hello, or for the start hello caused.
+        b.jobs = [@[Job(@"broken", 78)] mutableCopy];
+        assert([Run(b, NO)[@"code"] isEqual:@"registrationStale"]);
+        b.jobs = [@[Job(@"idle", 0), Job(@"broken", 0)] mutableCopy];
+        b.slow = YES;
+        assert([Run(b, NO)[@"code"] isEqual:@"registrationStale"]);
+        assert(![b.calls containsObject:@"unregister"] && ![b.calls containsObject:@"register"] &&
+               ![b.calls containsObject:@"exit"]);
+        b.jobs = nil;
+        puts("stale-version-waits");
 '''
 
 
@@ -299,12 +383,19 @@ int main(void) {
 @property BOOL operationInFlight;
 @property NSTimeInterval okUnansweredSince;
 @property NSDictionary *launcher;  // what the launcher status reports (nil: nothing to add)
+@property NSMutableArray<NSDictionary *> *jobs;  // launchctl answers in order (last repeats); nil: idle
 @end
 @implementation BridgeFixture
 - (NSDictionary *)launcherReport { return self.launcher; }
 - (NSDictionary *)registrationStatus { return @{@"code": @"enabled"}; }
 - (NSString *)currentHelperHash { return @"cdhash-new"; }
-- (NSDictionary *)launchdSnapshot { return @{@"state": @"idle", @"versionStale": @NO, @"summary": @"idle"}; }
+- (NSDictionary *)launchdSnapshot {
+    if (!self.jobs.count) return @{@"state": @"idle", @"versionStale": @NO, @"summary": @"idle"};
+    [self.calls addObject:@"launchd"];
+    NSDictionary *job = self.jobs.firstObject;
+    if (self.jobs.count > 1) [self.jobs removeObjectAtIndex:0];
+    return job;
+}
 - (void)resetConnection { [self.calls addObject:@"reset"]; }
 - (void)unregisterWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"unregister"]; c(@{@"code": @"ok"}); }
 - (void)registerWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"register"]; [self status:c]; }
@@ -372,10 +463,13 @@ int main(void) {
         assert(![b.calls containsObject:@"unregister"] && ![b.calls containsObject:@"register"] &&
                ![b.calls containsObject:@"exit"]);
         puts("old-daemon-then-timeout-then-recover");
+''' + STALE_VERSION_MAIN + r'''
     }
 }
 '''
-        self.assertIn('old-daemon-then-timeout-then-recover', compile_and_run(self, source))
+        out = compile_and_run(self, source)
+        self.assertIn('old-daemon-then-timeout-then-recover', out)
+        self.assertIn('stale-version-waits', out)
 
     def test_status_does_not_mutate_registration(self):
         status = method(BRIDGE, '- (void)status:')

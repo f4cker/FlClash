@@ -13,6 +13,7 @@ final class _Native implements MacHelperNativeApi {
   final calls = <String>[];
   Map<Object?, Object?> status = const {'code': 'enabled'};
   Map<Object?, Object?> recover = const {'code': 'enabled'};
+  Map<Object?, Object?> enable = const {'code': 'requiresApproval'};
 
   @override
   Future<Map<Object?, Object?>> invoke(
@@ -22,7 +23,7 @@ final class _Native implements MacHelperNativeApi {
     calls.add(method);
     return switch (method) {
       'status' || 'approvalStatus' => status,
-      'enable' => const {'code': 'requiresApproval'},
+      'enable' => enable,
       'recover' => recover,
       'openApprovalSettings' => const {'code': 'settingsOpened'},
       _ => throw StateError('Unexpected native call: $method'),
@@ -216,6 +217,180 @@ void main() {
     );
     expect(client.failure, isNull);
     expect(client.lastDetail, contains('unregister: SMAppServiceErrorDomain'));
+  });
+
+  group('register refused (EPERM) while the system says notRegistered', () {
+    const refused = {
+      'code': 'requiresApproval',
+      'serviceStatus': 'notRegistered',
+      'domain': 'SMAppServiceErrorDomain',
+      'error': 1,
+    };
+
+    MacHelperMaintenance flowThroughClient() => MacHelperMaintenance(
+      client,
+      stop: () async => _applied,
+      recover: () => client.maintain(() => client.recover()),
+      startPoll: const Duration(hours: 1),
+      startTimeout: const Duration(hours: 1),
+      approvalPoll: const Duration(milliseconds: 5),
+      maxApprovalPolls: 0,
+    );
+
+    int count(String method) => native.calls.where((c) => c == method).length;
+
+    test('mitm.3: after the user turned Flash on, returning to the '
+        'foreground registers once by itself', () async {
+      native.status = const {
+        'code': 'retiredRegistration',
+        'detail': 'com.layoute.flash.daemon: enabled',
+      };
+      native.recover = refused;
+      final flow = flowThroughClient();
+      var started = 0;
+      flow.runOnceReady(() async => started++);
+      expect(await flow.check(), MacHelperState.requiresApproval);
+      expect(client.lastServiceStatus, 'notRegistered');
+
+      native.status = const {'code': 'requiresApproval'};
+      await flow.openSettings();
+      expect(count('enable'), 0);
+      // The switch is on now, but the new name is still not registered.
+      native.status = const {'code': 'notRegistered'};
+      native.enable = const {'code': 'enabled'};
+      native.calls.clear();
+      flow.resumed();
+      await settle();
+      expect(native.calls, ['status', 'enable']);
+      expect(flow.state, MacHelperState.enabled);
+      expect(flow.resumeEnables, 1);
+      expect(started, 1);
+
+      // Nothing more on later returns.
+      native.calls.clear();
+      flow.resumed();
+      await settle();
+      expect(count('enable'), 0);
+      flow.dispose();
+    });
+
+    test('the same from the card\'s enable; only once, never a loop', () async {
+      native.status = const {'code': 'notRegistered'};
+      native.enable = refused;
+      final flow = flowThroughClient();
+      expect(await flow.check(), MacHelperState.notRegistered);
+      await flow.openSettings();
+      expect(count('enable'), 1);
+      expect(flow.state, MacHelperState.requiresApproval);
+
+      // The user came back without turning it on: one more register, which
+      // is refused the same way and does not arm another one.
+      native.calls.clear();
+      flow.resumed();
+      await settle();
+      expect(native.calls, ['status', 'enable']);
+      expect(flow.state, MacHelperState.requiresApproval);
+      for (var i = 0; i < 3; i++) {
+        native.calls.clear();
+        flow.resumed();
+        await settle();
+        expect(native.calls, ['status']);
+      }
+      expect(flow.resumeEnables, 1);
+      expect(flow.state, MacHelperState.notRegistered);
+      flow.dispose();
+    });
+
+    test('not armed when the system already counts it registered, or when '
+        'the daemon got registered meanwhile', () async {
+      native.status = const {'code': 'notRegistered'};
+      native.enable = const {
+        'code': 'requiresApproval',
+        'serviceStatus': 'requiresApproval',
+      };
+      var flow = flowThroughClient();
+      await flow.check();
+      await flow.openSettings();
+      native.calls.clear();
+      flow.resumed();
+      await settle();
+      expect(native.calls, ['status']);
+      flow.dispose();
+
+      native.enable = refused;
+      flow = flowThroughClient();
+      await flow.check();
+      await flow.openSettings();
+      native.status = const {'code': 'enabled'};
+      native.calls.clear();
+      flow.resumed();
+      await settle();
+      expect(native.calls, ['status']);
+      expect(flow.state, MacHelperState.enabled);
+      expect(flow.resumeEnables, 0);
+      flow.dispose();
+    });
+
+    test('a launch budget bounds it', () async {
+      native.status = const {'code': 'notRegistered'};
+      native.enable = refused;
+      final flow = MacHelperMaintenance(
+        client,
+        stop: () async => _applied,
+        startPoll: const Duration(hours: 1),
+        startTimeout: const Duration(hours: 1),
+        maxApprovalPolls: 0,
+        maxResumeEnables: 1,
+      );
+      await flow.check();
+      for (var i = 0; i < 3; i++) {
+        await flow.check();
+        await flow.openSettings();
+        flow.resumed();
+        await settle();
+      }
+      expect(flow.resumeEnables, 1);
+      // 3 from the card, 1 by itself.
+      expect(count('enable'), 4);
+      flow.dispose();
+    });
+  });
+
+  test('versionStale is not a stale registration: staleHelper and timeout '
+      'wait, nothing is recovered', () async {
+    final flow = flowWith();
+    native.status = const {
+      'code': 'staleHelper',
+      'launchd': 'state=running parentVersion=2026111710 current=2026111711',
+    };
+    expect(await flow.check(), MacHelperState.staleHelper);
+    native.status = const {
+      'code': 'timeout',
+      'launchd':
+          'state=not running parentVersion=2026111710 current=2026111711',
+    };
+    expect(await flow.check(), MacHelperState.starting);
+    expect(steps, isEmpty);
+    expect(flow.autoRecoveries, 0);
+    flow.dispose();
+  });
+
+  test('refusal cards (79, launcher 81–87) are not recovered', () async {
+    final flow = flowWith();
+    for (final code in [
+      'launcherCheckFailed',
+      'launcherDowngrade',
+      'launcherFailed',
+    ]) {
+      native.status = {
+        'code': code,
+        'detail': 'last exit code: 79: the helper refused to run',
+      };
+      expect(await flow.check(), MacHelperState.parse(code));
+    }
+    expect(steps, isEmpty);
+    expect(flow.rawDetail, contains('last exit code: 79'));
+    flow.dispose();
   });
 
   test('the retired registration reads as a stale registration', () {

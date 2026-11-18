@@ -3,10 +3,21 @@
 // launch constraint and cannot spawn the new helper); it never grants trust: hello, the pinned requirement and
 // peer authentication still decide whether the helper is used.
 #import <Foundation/Foundation.h>
+#import "HelperTrust.h"
+
+// Whether a last exit code is the helper refusing to run (FC_HELPER_REFUSED_EXIT) or FlashHelperLauncher stopping
+// before exec (81–87): launchd started the job, so this is not a registration problem; the launcher status says why.
+static inline BOOL FCRefusalExit(NSInteger code) {
+    return code == FC_HELPER_REFUSED_EXIT || (code >= FC_LAUNCHER_EXIT_FIRST && code <= FC_LAUNCHER_EXIT_LAST);
+}
 
 // state: "missing" (no such job), "running" (has a pid), "idle" (loaded, not running, nothing wrong seen),
-// "broken" (no pid and spawn failed / last exit 78 / needs LWCR update) or "unknown" (could not read/parse).
-// versionStale: the job's parent bundle version differs from `currentVersion` (only meaningful when present).
+// "broken" (no pid and launchd itself says it cannot start the job: needs LWCR update, or spawn failed without a
+// refusal exit code) or "unknown" (could not read/parse). Only "broken" means the registration is stale; any last
+// exit code alone (78 included) does not.
+// refused: no pid and the last exit code is a refusal (FCRefusalExit).
+// versionStale: the job's parent bundle version differs from `currentVersion`. Detail only: after every app update
+// launchd keeps the version it registered with until the next login, so it never means the registration is stale.
 static inline NSDictionary *FCParseLaunchdPrint(NSString *output, int exitStatus, NSString *currentVersion) {
     NSString *text = output ?: @"";
     if ([text containsString:@"Could not find service"] || [text containsString:@"Could not find job"])
@@ -40,12 +51,13 @@ static inline NSDictionary *FCParseLaunchdPrint(NSString *output, int exitStatus
     BOOL spawnFailed = [jobState isEqualToString:@"spawn failed"];
     BOOL needsLWCR = [properties containsString:@"needs LWCR update"];
     BOOL versionStale = parentVersion.length && currentVersion.length && ![parentVersion isEqualToString:currentVersion];
-    NSString *state = pid > 0 ? @"running" : (spawnFailed || lastExit == 78 || needsLWCR) ? @"broken" : @"idle";
+    BOOL refused = pid <= 0 && FCRefusalExit(lastExit);
+    NSString *state = pid > 0 ? @"running" : (needsLWCR || (spawnFailed && !refused)) ? @"broken" : @"idle";
     NSString *summary = [NSString stringWithFormat:@"state=%@ pid=%@ lastExit=%@ needsLWCR=%@ parentVersion=%@ current=%@",
         jobState.length ? jobState : @"?", pid > 0 ? @(pid) : @"none", exitText.length ? exitText : @"none",
         needsLWCR ? @"yes" : @"no", parentVersion.length ? parentVersion : @"?", currentVersion ?: @"?"];
     return @{@"state": state, @"pid": @(pid > 0 ? pid : 0), @"spawnFailed": @(spawnFailed), @"lastExit": @(lastExit),
-        @"needsLWCR": @(needsLWCR), @"parentVersion": parentVersion, @"versionStale": @(versionStale),
+        @"needsLWCR": @(needsLWCR), @"refused": @(refused), @"parentVersion": parentVersion, @"versionStale": @(versionStale),
         @"summary": summary};
 }
 

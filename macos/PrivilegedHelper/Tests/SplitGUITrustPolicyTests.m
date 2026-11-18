@@ -141,7 +141,7 @@ static void Reset(void) {
     helperCopyInfo = helperRunningInfo.mutableCopy;
 }
 
-// The daemon's mandatory startup/per-operation verification: every failure is a refusal (exit 78 in main).
+// The daemon's mandatory startup/per-operation verification: every failure is a refusal (exit FC_HELPER_REFUSED_EXIT = 79 in main).
 static void TestSelfCheck(void) {
     NSString *path = FCHelperCopyPath, *bundle = FCGUIBundle;
     Reset();

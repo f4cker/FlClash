@@ -424,7 +424,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
         coreToken:FCRepliesWithCoreToken(action, code) ? self.coreToken : nil sweep:sweep];
     if ([code isEqualToString:@"selfCheckFailed"] ||
         ([action isEqualToString:@"exit"] && [code isEqualToString:@"ok"])) {
-        int status = [code isEqualToString:@"ok"] ? 0 : EX_CONFIG;
+        int status = [code isEqualToString:@"ok"] ? 0 : FC_HELPER_REFUSED_EXIT;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 200 * NSEC_PER_MSEC), self.queue, ^{ exit(status); });
     }
 }
@@ -463,13 +463,13 @@ int main(int argc, const char *argv[]) {
         NSString *bundle = FCHelperBundleFromArguments(arguments, &reason);
         if (!bundle) {
             fprintf(stderr, "FlashHelper: launch-refused: %s\n", reason.UTF8String ?: "invalid arguments");
-            return EX_CONFIG;
+            return FC_HELPER_REFUSED_EXIT;
         }
         // Verify before anything else is done as root: tampered or relocated code does not run.
         NSString *check = FCHelperSelfCheck(FCRunningExecutable(), bundle);
         if (![check isEqualToString:@"ok"]) {
             fprintf(stderr, "FlashHelper: self-check-failed: %s\n", check.UTF8String);
-            return EX_CONFIG;
+            return FC_HELPER_REFUSED_EXIT;
         }
         FCSupervisor *supervisor = [[FCSupervisor alloc] initWithBundle:bundle];
         xpc_connection_t listener = xpc_connection_create_mach_service(FCHelperLabel.UTF8String,

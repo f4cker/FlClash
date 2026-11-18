@@ -6,6 +6,7 @@
 #import <fcntl.h>
 #import <sys/stat.h>
 #import <unistd.h>
+#import "HelperTrust.h"
 
 static NSString * const FCLauncherStatusFile = @"launcher.json";
 // A status written long before this launch of the app belongs to an earlier episode and is not shown.
@@ -103,4 +104,31 @@ static inline NSDictionary *FCLauncherAnswer(NSDictionary *status, NSString *pro
         "answer: the system may have ended it after exec (launch constraint), or it refused to run (self-check)."];
     if (okUnanswered < FCLauncherOkGrace) return @{@"detail": detail};
     return @{@"code": @"launcherFailed", @"detail": detail};
+}
+
+// The launcher result an exit code 81–87 stands for (Launcher/README.md), or nil.
+static inline NSString *FCLauncherResultForExit(NSInteger code) {
+    NSArray<NSString *> *results = @[@"not_root", @"location", @"copy", @"signature", @"version_unreadable",
+        @"downgrade", @"exec"];
+    if (code < FC_LAUNCHER_EXIT_FIRST || code > FC_LAUNCHER_EXIT_LAST) return nil;
+    return results[(NSUInteger)(code - FC_LAUNCHER_EXIT_FIRST)];
+}
+
+// launchd reports (for a job without a pid) that its last run ended with a refusal exit code: the helper refused to
+// run (FC_HELPER_REFUSED_EXIT: launch arguments rejected or self-check failed, i.e. a failed security check; the
+// launcher had exec'd it, so its "ok" says nothing more) or the launcher stopped before exec (81–87; a card the
+// launcher status already gave is kept, it names the same step). A definite card, never a registration problem; the
+// exit code goes into the details. `launcher` is FCLauncherAnswer's result (may be nil); returned unchanged when the
+// job did not end with a refusal.
+static inline NSDictionary *FCRefusalExitAnswer(NSDictionary *job, NSDictionary *launcher) {
+    if (![job[@"refused"] isEqual:@YES]) return launcher;
+    NSInteger code = [job[@"lastExit"] integerValue];
+    NSString *result = FCLauncherResultForExit(code);
+    NSString *meaning = code == FC_HELPER_REFUSED_EXIT ?
+        @"the helper refused to run (launch arguments rejected or self-check failed)" :
+        [NSString stringWithFormat:@"the launcher stopped before starting the helper (%@)", result ?: @"?"];
+    NSString *line = [NSString stringWithFormat:@"last exit code: %ld: %@", (long)code, meaning];
+    NSString *detail = launcher[@"detail"] ? [NSString stringWithFormat:@"%@\n%@", launcher[@"detail"], line] : line;
+    NSString *card = code == FC_HELPER_REFUSED_EXIT ? @"launcherCheckFailed" : launcher[@"code"] ?: FCLauncherCardCode(result);
+    return @{@"code": card, @"detail": detail};
 }

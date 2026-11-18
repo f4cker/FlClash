@@ -31,6 +31,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
   final int maxApprovalPolls;
   final Duration recoveryRetryDelay;
   final int maxAutoRecoveries;
+  final int maxResumeEnables;
   Future<MacHelperState>? _operation;
   MacHelperState? _state;
   MacHelperProgress _progress = MacHelperProgress.idle;
@@ -41,6 +42,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
   bool _resumeChecking = false;
   bool _repairPending = false;
   int _autoRecoveries = 0;
+  bool _enableOnResume = false;
+  int _resumeEnables = 0;
   int _approvalPolls = 0;
   String? _repairDetail;
   final List<Future<void> Function()> _onReady = [];
@@ -63,6 +66,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
     this.maxApprovalPolls = 90,
     this.recoveryRetryDelay = const Duration(seconds: 2),
     this.maxAutoRecoveries = 2,
+    this.maxResumeEnables = 2,
     bool observeLifecycle = false,
   }) : _stop = stop,
        _recover = recover,
@@ -80,6 +84,10 @@ final class MacHelperMaintenance extends ChangeNotifier {
 
   /// Automatic recoveries used in this launch.
   int get autoRecoveries => _autoRecoveries;
+
+  /// Registrations repeated by themselves on returning to the foreground in
+  /// this launch (see [resumed]).
+  int get resumeEnables => _resumeEnables;
 
   /// The start-up wait exceeded [startTimeout]. This is not a failure: the
   /// daemon may still come up, so the card offers "Check again".
@@ -138,7 +146,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
         _resumeCheckPending = false;
         _resumeChecking = true;
         try {
-          _setState(await _status());
+          _setState(await _resumeStatus());
         } catch (error) {
           _repairDetail = _describe(error);
           _setState(MacHelperState.unavailable);
@@ -179,6 +187,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
 
   void _setState(MacHelperState next) {
     _state = next;
+    if (!needsApproval) _enableOnResume = false;
     _scheduleApprovalPoll();
     final waiting =
         next == MacHelperState.starting ||
@@ -285,7 +294,37 @@ final class MacHelperMaintenance extends ChangeNotifier {
         return MacHelperState.notReady;
       }
     }
+    _noteRegisterAnswer(next);
     return next;
+  }
+
+  /// Registering was refused until the user allows Flash (EPERM) while the
+  /// system still reported the daemon as not registered: once the user has
+  /// turned Flash on in Login Items, the registration has to be made again.
+  /// [resumed] does that once by itself instead of asking for another click.
+  void _noteRegisterAnswer(MacHelperState next) {
+    if (next == MacHelperState.requiresApproval &&
+        client.lastServiceStatus == 'notRegistered') {
+      _enableOnResume = true;
+    }
+  }
+
+  /// The check on returning to the foreground. When armed by
+  /// [_noteRegisterAnswer] and the daemon still reads "not registered", one
+  /// `enable` follows (at most [maxResumeEnables] per launch). Its own answer
+  /// never arms another one, so this cannot repeat by itself.
+  Future<MacHelperState> _resumeStatus() async {
+    if (!_enableOnResume) return _status();
+    _enableOnResume = false;
+    var next = await client.status();
+    if (next == MacHelperState.notRegistered &&
+        _resumeEnables < maxResumeEnables) {
+      _resumeEnables++;
+      next = await client.enable();
+    } else if (next == MacHelperState.registrationStale) {
+      next = await _recoverWithinBudget(automatic: true);
+    }
+    return _settle(next);
   }
 
   /// A pending recovery is settled only when the helper is ready: it stops
@@ -354,7 +393,9 @@ final class MacHelperMaintenance extends ChangeNotifier {
           _stopUnknown = true;
         }
         if (_stopUnknown) return MacHelperState.exitUnconfirmed;
-        return client.migrate(confirmed: true);
+        final next = await client.migrate(confirmed: true);
+        _noteRegisterAnswer(next);
+        return next;
       });
     });
   }
@@ -391,6 +432,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
       var next = _state!;
       if (next == MacHelperState.notRegistered) {
         next = await client.enable();
+        _noteRegisterAnswer(next);
         if (!{
           MacHelperState.requiresApproval,
           MacHelperState.disabledByUser,
@@ -431,7 +473,12 @@ final class MacHelperMaintenance extends ChangeNotifier {
         _resumeCheckPending = true;
       } else {
         _resumeChecking = true;
-        unawaited(check().whenComplete(() => _resumeChecking = false));
+        unawaited(
+          _singleFlight(
+            MacHelperProgress.checking,
+            _resumeStatus,
+          ).whenComplete(() => _resumeChecking = false),
+        );
       }
     }
   }

@@ -11,6 +11,9 @@
 static NSString * const FCRegisteredHelperDefault = @"FlashDaemonRegisteredHelperCDHash";
 // Set once the daemon was seen enabled; distinguishes "turned off by the user" from "never approved".
 static NSString * const FCApprovedDefault = @"FlashDaemonApproved";
+// The app build (CFBundleVersion) that last tried to unregister the retired name: one attempt per build, across
+// launches. Its outcome is only ever a detail.
+static NSString * const FCRetiredAttemptDefault = @"FlashRetiredUnregisterAttemptedBuild";
 
 // How long a request may wait for the daemon's reply. `start` validates the app, stages and verifies the Core
 // and waits for it on the relay; right after an update (cold caches, files still being scanned) that can take
@@ -37,10 +40,20 @@ static NSString *FCErrorText(NSError *error) {
     return text.length > 2000 ? [text substringToIndex:2000] : text;
 }
 
+// SMAppService's error domains, by value: SMAppServiceErrorDomain (SMAppService.h; the symbol needs macOS 15, the
+// errors carry this domain before that too) and kSMErrorDomainFramework (SMErrors.h, deprecated symbol).
+static NSString * const FCSMAppServiceErrorDomain = @"SMAppServiceErrorDomain";
+static NSString * const FCSMFrameworkErrorDomain = @"kSMErrorDomainFramework";
+
 // The system refused to bootstrap the job until the user allows it (an unregistered and re-added daemon keeps a
-// disabled Background Task item): EPERM ("Operation not permitted") or kSMErrorLaunchDeniedByUser.
-static BOOL FCApprovalError(NSError *error) {
-    return error && (error.code == EPERM || error.code == kSMErrorLaunchDeniedByUser);
+// disabled Background Task item): EPERM ("Operation not permitted", SMAppService or POSIX domain) or
+// kSMErrorLaunchDeniedByUser (SMAppService domain), while SMAppService.status (`status`, read right after) is
+// requiresApproval or notRegistered. Any other error, domain or status is a registration failure.
+static BOOL FCApprovalError(NSError *error, NSString *status) {
+    if (!error || !([status isEqual:@"requiresApproval"] || [status isEqual:@"notRegistered"])) return NO;
+    if ([error.domain isEqual:FCSMAppServiceErrorDomain] || [error.domain isEqual:FCSMFrameworkErrorDomain])
+        return error.code == EPERM || error.code == kSMErrorLaunchDeniedByUser;
+    return [error.domain isEqual:NSPOSIXErrorDomain] && error.code == EPERM;
 }
 
 // Unregister of a name that is not registered (any more) reports kSMErrorJobNotFound: already done.
@@ -90,7 +103,8 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 @property BOOL operationInFlight;
 @property BOOL migrationAttempted;
 @property NSDate *staleRetryAfter;
-// The retired registration name was seen absent, or one unregister of it was attempted in this launch.
+// The retired registration name was seen absent, or one unregister of it was attempted by this build (this launch
+// or an earlier one: FCRetiredAttemptDefault).
 @property (atomic) BOOL retiredSettled;
 // The Core of the running session, as the daemon saw it on the relay socket; session 0 is none.
 @property NSData *coreToken;
@@ -151,10 +165,25 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     return @"notFound";
 }
 
+- (NSUserDefaults *)preferences { return NSUserDefaults.standardUserDefaults; }
+
+// Whether this app build already tried to unregister the retired name (in any launch).
+- (BOOL)retiredAttemptedThisBuild {
+    NSString *build = [self bundleVersion];
+    return build.length && [[[self preferences] stringForKey:FCRetiredAttemptDefault] isEqual:build];
+}
+
+- (void)recordRetiredAttempt {
+    NSString *build = [self bundleVersion];
+    if (build.length) [[self preferences] setObject:build forKey:FCRetiredAttemptDefault];
+}
+
 // A registration under the retired name still exists: the app migrates it (under its maintenance exclusion) before
-// the new name is used. Read once per launch until seen absent; after one attempt it is a detail, never a block.
+// the new name is used. Read until seen absent; after one attempt by this build (persisted across launches) it is a
+// detail, never a block.
 - (NSDictionary *)retiredRegistration {
     if (self.retiredSettled) return nil;
+    if ([self retiredAttemptedThisBuild]) { self.retiredSettled = YES; return nil; }
     NSString *status = [self retiredStatusCode];
     if ([status isEqual:@"notRegistered"] || [status isEqual:@"notFound"]) { self.retiredSettled = YES; return nil; }
     return @{@"code": @"retiredRegistration",
@@ -266,14 +295,16 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     NSString *code = registration[@"code"];
     if (![code isEqualToString:@"enabled"]) { completion(registration); return; }
     // While a Core session runs the helper evidently runs; otherwise ask launchd whether it can start it at all.
+    // Only launchd's own word that it cannot start the job ("broken": needs LWCR update, or spawn failed) makes the
+    // registration stale. Its parent bundle version lags after every app update until the next login and says
+    // nothing: an old helper copy still idling (staleHelper) or a slow first start (timeout) is waited for, and a
+    // refusal exit code (helper 79, launcher 81–87) is a card of its own.
     NSDictionary *job = self.sessionActive ? nil : [self launchdSnapshot];
     if ([job[@"state"] isEqual:@"broken"]) {
         completion(@{@"code": @"registrationStale", @"launchd": job[@"summary"] ?: @""}); return;
     }
-    BOOL versionStale = [job[@"versionStale"] isEqual:@YES];
     if (self.staleRetryAfter && [self.staleRetryAfter timeIntervalSinceNow] > 0) {
-        completion(versionStale ? @{@"code": @"registrationStale", @"launchd": job[@"summary"] ?: @""} :
-            @{@"code": @"staleHelper"}); return;
+        completion(@{@"code": @"staleHelper"}); return;
     }
     [self request:@"hello" arguments:@{} completion:^(NSDictionary *answer) {
         NSString *result = FCStatusForHello(answer[@"code"]);
@@ -294,13 +325,17 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             status[@"pid"] = answer[@"pid"] ?: @0;
             status[@"exitConfirmed"] = answer[@"exitConfirmed"] ?: @NO;
         }
-        // launchd still holds the previous build's job and the helper does not answer as this build.
-        if (versionStale && [@[@"timeout", @"unavailable", @"staleHelper"] containsObject:result])
-            status[@"code"] = @"registrationStale";
         if (job[@"summary"]) status[@"launchd"] = job[@"summary"];
-        // Enabled, yet the helper does not answer: say what the launcher reported (display only).
+        // Enabled, yet the helper does not answer: say what the launcher reported, and how launchd saw this start
+        // end (display only; nothing is re-registered for it).
         if ([@[@"timeout", @"unavailable"] containsObject:status[@"code"]]) {
-            NSDictionary *launcher = [self launcherReport];
+            NSDictionary *after = self.sessionActive ? nil : [self launchdSnapshot];
+            if (after[@"summary"]) status[@"launchd"] = after[@"summary"];
+            if ([after[@"state"] isEqual:@"broken"]) {
+                status[@"code"] = @"registrationStale";
+                completion(status); return;
+            }
+            NSDictionary *launcher = FCRefusalExitAnswer(after, [self launcherReport]);
             if (launcher[@"code"]) status[@"code"] = launcher[@"code"];
             if (launcher[@"detail"]) status[@"detail"] = launcher[@"detail"];
         } else {
@@ -526,10 +561,12 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
             if (current.length) [NSUserDefaults.standardUserDefaults setObject:current forKey:FCRegisteredHelperDefault];
             [self status:completion]; return;
         }
+        NSString *statusName = FCServiceStatusName(status);
         NSMutableDictionary *answer = [@{@"error": @(error.code), @"domain": error.domain ?: @"",
-            @"detail": [NSString stringWithFormat:@"register: %@; status: %@", FCErrorText(error), [self serviceStatusCode]]} mutableCopy];
+            @"serviceStatus": statusName,
+            @"detail": [NSString stringWithFormat:@"register: %@; status: %@", FCErrorText(error), statusName]} mutableCopy];
         // Not a failure: the system waits for the user to allow Flash in Login Items.
-        answer[@"code"] = FCApprovalError(error) ? @"requiresApproval" : @"registrationFailed";
+        answer[@"code"] = FCApprovalError(error, statusName) ? @"requiresApproval" : @"registrationFailed";
         completion(answer);
         return;
     }
@@ -587,9 +624,12 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 // Step 0 of a recovery: unregister the retired name, asynchronously, and count it done only in the completion (or
 // report that none came). Its outcome is recorded; a failure never stops the new name from being registered.
 // Returns nil when the retired name was not registered.
+// One attempt per app build (persisted): a later launch of the same build does not try again.
 - (NSString *)retireOldRegistration:(NSMutableArray<NSString *> *)log {
+    if ([self retiredAttemptedThisBuild]) { self.retiredSettled = YES; return nil; }
     NSString *before = [self retiredStatusCode];
     if ([before isEqual:@"notRegistered"] || [before isEqual:@"notFound"]) { self.retiredSettled = YES; return nil; }
+    [self recordRetiredAttempt];
     BOOL timedOut = NO;
     NSError *error = [self unregisterRetiredWithin:15 timedOut:&timedOut];
     NSString *outcome = timedOut ? @"timeout" : FCAlreadyUnregistered(error) ? @"ok" : @"failed";
@@ -648,10 +688,11 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     };
     NSDictionary *job = [self launchdSnapshot];
     [log addObject:[@"launchd before: " stringByAppendingString:job[@"summary"] ?: @"?"]];
-    // Migrating only the retired name: a healthy, enabled registration under the new name is kept as it is
-    // (re-adding it would ask the user to allow Flash again for nothing).
-    if (retired && [[self serviceStatusCode] isEqual:@"enabled"] &&
-        [@[@"running", @"idle"] containsObject:job[@"state"] ?: @""] && ![job[@"versionStale"] isEqual:@YES]) {
+    // Migrating only the retired name (whatever its unregister did): an enabled registration under the new name that
+    // launchd has and does not call broken is kept as it is (re-adding it would ask the user to allow Flash again
+    // for nothing). Its parent bundle version is not looked at: it lags after every update until the next login.
+    if (retired && [[self serviceStatusCode] isEqual:@"enabled"] && job[@"state"] &&
+        ![@[@"broken", @"missing"] containsObject:job[@"state"]]) {
         return [self awaitNewHelper:log done:done];
     }
     if (![job[@"state"] isEqual:@"missing"]) {
@@ -675,12 +716,13 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
         status = [self serviceStatusCode];
         [log addObject:[NSString stringWithFormat:@"register: %@; status: %@",
             registerError ? FCErrorText(registerError) : @"ok", status]];
-        if (![status isEqual:@"notRegistered"] || FCApprovalError(registerError)) break;
+        if (![status isEqual:@"notRegistered"] || FCApprovalError(registerError, status)) break;
         [self pause:1];
     }
-    NSDictionary *errorFields = registerError ? @{@"domain": registerError.domain ?: @"", @"error": @(registerError.code)} : @{};
+    NSDictionary *errorFields = registerError ? @{@"domain": registerError.domain ?: @"", @"error": @(registerError.code),
+        @"serviceStatus": status} : @{@"serviceStatus": status};
     // Re-adding a daemon leaves its Background Task item disabled: the user allows it once in System Settings.
-    if ([status isEqual:@"requiresApproval"] || (FCApprovalError(registerError) && ![status isEqual:@"enabled"]))
+    if ([status isEqual:@"requiresApproval"] || FCApprovalError(registerError, status))
         return done(@"requiresApproval", errorFields);
     if ([status isEqual:@"notFound"]) return done(@"notFound", errorFields);
     if (![status isEqual:@"enabled"]) return done(@"registrationFailed", errorFields);

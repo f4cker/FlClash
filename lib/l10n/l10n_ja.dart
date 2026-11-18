@@ -6748,25 +6748,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String get macHelperStatusUnreadable => '現在ヘルパーの状態を読み取れません。詳細を確認してください。';
 
   @override
-  String get macHelperLauncherCheckTitle =>
-      'Flash didn’t pass the security check';
+  String get macHelperLauncherCheckTitle => 'Flash がセキュリティチェックに合格しませんでした';
 
   @override
   String get macHelperLauncherCheckDetail =>
-      'The helper didn’t start. Install the latest trusted version of Flash again.';
+      'ヘルパーは起動しませんでした。信頼できる最新バージョンを再インストールしてください。';
 
   @override
-  String get macHelperLauncherDowngradeTitle =>
-      'This version of Flash is too old';
+  String get macHelperLauncherDowngradeTitle => 'この Flash のバージョンは古すぎます';
 
   @override
   String get macHelperLauncherDowngradeDetail =>
-      'The helper didn’t start. Install the latest version of Flash.';
+      'ヘルパーは起動しませんでした。最新バージョンの Flash をインストールしてください。';
 
   @override
-  String get macHelperLauncherFailedTitle => 'The helper couldn’t start';
+  String get macHelperLauncherFailedTitle => 'ヘルパーを起動できませんでした';
 
   @override
   String get macHelperLauncherFailedDetail =>
-      'The system couldn’t prepare or start the helper. See details.';
+      'システムがヘルパーの準備または起動を完了できませんでした。詳細を確認してください。';
 }

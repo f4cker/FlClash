@@ -1945,10 +1945,10 @@
   "macHelperRegistrationFailedDetail": "Por ahora no se puede completar el registro. Consulta los detalles.",
   "macHelperStaleCoreDetail": "Aún no se ha confirmado que el núcleo anterior se haya detenido. Consulta los detalles.",
   "macHelperStatusUnreadable": "Por ahora no se puede leer el estado del asistente. Consulta los detalles.",
-  "macHelperLauncherCheckTitle": "Flash didn’t pass the security check",
-  "macHelperLauncherCheckDetail": "The helper didn’t start. Install the latest trusted version of Flash again.",
-  "macHelperLauncherDowngradeTitle": "This version of Flash is too old",
-  "macHelperLauncherDowngradeDetail": "The helper didn’t start. Install the latest version of Flash.",
-  "macHelperLauncherFailedTitle": "The helper couldn’t start",
-  "macHelperLauncherFailedDetail": "The system couldn’t prepare or start the helper. See details."
+  "macHelperLauncherCheckTitle": "Flash no superó la comprobación de seguridad",
+  "macHelperLauncherCheckDetail": "El asistente no se inició. Vuelve a instalar la versión de confianza más reciente.",
+  "macHelperLauncherDowngradeTitle": "Esta versión de Flash es demasiado antigua",
+  "macHelperLauncherDowngradeDetail": "El asistente no se inició. Instala la versión más reciente de Flash.",
+  "macHelperLauncherFailedTitle": "El asistente no pudo iniciarse",
+  "macHelperLauncherFailedDetail": "El sistema no pudo preparar ni iniciar el asistente. Consulta los detalles."
 }

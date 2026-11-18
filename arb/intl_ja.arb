@@ -1945,10 +1945,10 @@
   "macHelperRegistrationFailedDetail": "現在登録を完了できません。詳細を確認してください。",
   "macHelperStaleCoreDetail": "古いコアの停止をまだ確認できていません。詳細を確認してください。",
   "macHelperStatusUnreadable": "現在ヘルパーの状態を読み取れません。詳細を確認してください。",
-  "macHelperLauncherCheckTitle": "Flash didn’t pass the security check",
-  "macHelperLauncherCheckDetail": "The helper didn’t start. Install the latest trusted version of Flash again.",
-  "macHelperLauncherDowngradeTitle": "This version of Flash is too old",
-  "macHelperLauncherDowngradeDetail": "The helper didn’t start. Install the latest version of Flash.",
-  "macHelperLauncherFailedTitle": "The helper couldn’t start",
-  "macHelperLauncherFailedDetail": "The system couldn’t prepare or start the helper. See details."
+  "macHelperLauncherCheckTitle": "Flash がセキュリティチェックに合格しませんでした",
+  "macHelperLauncherCheckDetail": "ヘルパーは起動しませんでした。信頼できる最新バージョンを再インストールしてください。",
+  "macHelperLauncherDowngradeTitle": "この Flash のバージョンは古すぎます",
+  "macHelperLauncherDowngradeDetail": "ヘルパーは起動しませんでした。最新バージョンの Flash をインストールしてください。",
+  "macHelperLauncherFailedTitle": "ヘルパーを起動できませんでした",
+  "macHelperLauncherFailedDetail": "システムがヘルパーの準備または起動を完了できませんでした。詳細を確認してください。"
 }

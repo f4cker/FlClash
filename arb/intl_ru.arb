@@ -1945,10 +1945,10 @@
   "macHelperRegistrationFailedDetail": "Сейчас не удаётся завершить регистрацию. Посмотрите подробности.",
   "macHelperStaleCoreDetail": "Остановка старого ядра ещё не подтверждена. Посмотрите подробности.",
   "macHelperStatusUnreadable": "Сейчас не удаётся прочитать состояние помощника. Посмотрите подробности.",
-  "macHelperLauncherCheckTitle": "Flash didn’t pass the security check",
-  "macHelperLauncherCheckDetail": "The helper didn’t start. Install the latest trusted version of Flash again.",
-  "macHelperLauncherDowngradeTitle": "This version of Flash is too old",
-  "macHelperLauncherDowngradeDetail": "The helper didn’t start. Install the latest version of Flash.",
-  "macHelperLauncherFailedTitle": "The helper couldn’t start",
-  "macHelperLauncherFailedDetail": "The system couldn’t prepare or start the helper. See details."
+  "macHelperLauncherCheckTitle": "Flash не прошёл проверку безопасности",
+  "macHelperLauncherCheckDetail": "Помощник не запустился. Установите заново последнюю доверенную версию.",
+  "macHelperLauncherDowngradeTitle": "Эта версия Flash слишком старая",
+  "macHelperLauncherDowngradeDetail": "Помощник не запустился. Установите последнюю версию Flash.",
+  "macHelperLauncherFailedTitle": "Не удалось запустить помощника",
+  "macHelperLauncherFailedDetail": "Системе не удалось подготовить или запустить помощника. Посмотрите подробности."
 }

@@ -7000,24 +7000,24 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get macHelperLauncherCheckTitle =>
-      'Flash didn’t pass the security check';
+      'Flash n’a pas passé le contrôle de sécurité';
 
   @override
   String get macHelperLauncherCheckDetail =>
-      'The helper didn’t start. Install the latest trusted version of Flash again.';
+      'L’assistant n’a pas démarré. Réinstallez la dernière version de confiance.';
 
   @override
   String get macHelperLauncherDowngradeTitle =>
-      'This version of Flash is too old';
+      'Cette version de Flash est trop ancienne';
 
   @override
   String get macHelperLauncherDowngradeDetail =>
-      'The helper didn’t start. Install the latest version of Flash.';
+      'L’assistant n’a pas démarré. Installez la dernière version de Flash.';
 
   @override
-  String get macHelperLauncherFailedTitle => 'The helper couldn’t start';
+  String get macHelperLauncherFailedTitle => 'L’assistant n’a pas pu démarrer';
 
   @override
   String get macHelperLauncherFailedDetail =>
-      'The system couldn’t prepare or start the helper. See details.';
+      'Le système n’a pas pu préparer ou démarrer l’assistant. Consultez les détails.';
 }
