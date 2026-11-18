@@ -172,7 +172,7 @@ static BOOL FCExecutableMatches(NSDictionary *info, NSString *expected) {
         realpath(executable.path.fileSystemRepresentation, canonical) && [@(canonical) isEqualToString:expected];
 }
 
-static BOOL FCCheckGUIStatic(SecStaticCodeRef code) {
+static BOOL FCCheckGUIStaticAt(SecStaticCodeRef code, NSString *bundle) {
     NSString *text = FCGUIRequirement();
     SecRequirementRef requirement = NULL;
     if (!text || SecRequirementCreateWithString((__bridge CFStringRef)text, 0, &requirement)) return NO;
@@ -181,11 +181,15 @@ static BOOL FCCheckGUIStatic(SecStaticCodeRef code) {
         kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode, requirement) == errSecSuccess;
     CFRelease(requirement);
     NSDictionary *info = valid ? FCSigningInformation(code) : nil;
-    return valid && FCExecutableMatches(info, FCInstalledExecutable(FCClientIdentifier)) &&
-        FCGUILibraryPolicy(FCGUIBundle, info[(__bridge NSString *)kSecCodeInfoUnique]) &&
-        FCBundleCompatibilityValid(FCReadCompatibility(FCGUIBundle)) && FCGUIEntitlementsAllowed(
+    return valid && FCExecutableMatches(info, [bundle stringByAppendingPathComponent:@"Contents/MacOS/Flash"]) &&
+        FCGUILibraryPolicy(bundle, info[(__bridge NSString *)kSecCodeInfoUnique]) &&
+        FCBundleCompatibilityValid(FCReadCompatibility(bundle)) && FCGUIEntitlementsAllowed(
         info[(__bridge NSString *)kSecCodeInfoEntitlementsDict],
         [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
+}
+
+static BOOL FCCheckGUIStatic(SecStaticCodeRef code) {
+    return FCCheckGUIStaticAt(code, FCGUIBundle);
 }
 
 NSString *FCGUIBundleTrust(NSString *bundle) {
@@ -199,6 +203,18 @@ NSString *FCGUIBundleTrust(NSString *bundle) {
         return valid ? @"trusted" : @"signingRequired";
     }
     return @"unsupported";
+}
+
+NSString *FCGUICandidateTrust(NSString *bundle) {
+    char canonical[PATH_MAX];
+    if (!realpath(bundle.fileSystemRepresentation, canonical) || ![@(canonical) isEqualToString:bundle])
+        return @"moveRequired";
+    SecStaticCodeRef code = NULL;
+    if (SecStaticCodeCreateWithPath((__bridge CFURLRef)[NSURL fileURLWithPath:bundle], 0, &code))
+        return @"signingRequired";
+    BOOL valid = FCCheckGUIStaticAt(code, bundle);
+    CFRelease(code);
+    return valid ? @"trusted" : @"signingRequired";
 }
 
 // The pinned requirement and code policy for the daemon and Core. A test may substitute both (for an ad hoc signed

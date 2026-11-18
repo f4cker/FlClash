@@ -162,6 +162,19 @@ const tailscaleManagedRecordsKey = 'tailscale_managed_records';
 const appliedConfigMd5Key = 'applied_config_md5';
 const upstreamRepository = 'chen08209/FlClash';
 const updateRepository = 'f4cker/FlClash';
+
+/// Any HTTPS host will do: redirects are followed (HTTPS only) and the
+/// manifest is trusted for its signature, not for where it came from.
+const macUpdateManifestUrl =
+    'https://github.com/f4cker/flash-releases/releases/latest/download/manifest.json';
+const macUpdateReleasesPage =
+    'https://github.com/f4cker/flash-releases/releases/latest';
+
+// TODO(release): pin the release Ed25519 public key (base64 of 32 bytes,
+// `tool/macos/make_update_manifest.py genkey`) here and as
+// UpdaterChannel.pinnedPublicKey in macos/Runner/UpdaterChannel.swift.
+// Empty keeps the in-app updater off. Never pin a test key.
+const macUpdatePublicKey = '';
 const maxMobileWidth = 600;
 const maxLaptopWidth = 840;
 const defaultTestUrl = 'https://www.gstatic.com/generate_204';

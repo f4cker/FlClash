@@ -3798,6 +3798,91 @@ class AppLocalizationsFr extends AppLocalizations {
       'La mise à jour téléchargée n\'a pas pu être vérifiée.';
 
   @override
+  String get macUpdateDownloadAndInstall => 'Télécharger et installer';
+
+  @override
+  String macUpdateSize(Object size) {
+    return 'Taille : $size';
+  }
+
+  @override
+  String get macUpdateReadyTitle => 'Mise à jour prête';
+
+  @override
+  String macUpdateReadyMessage(Object version) {
+    return 'Flash $version a été téléchargé et vérifié. Pendant l’installation, Flash quitte brièvement et la connexion peut être interrompue ; il se rouvre ensuite.';
+  }
+
+  @override
+  String get macUpdateRestartNow => 'Quitter et installer';
+
+  @override
+  String get macUpdateLater => 'Plus tard';
+
+  @override
+  String get macUpdateInstalling => 'Installation de la mise à jour…';
+
+  @override
+  String get macUpdateNotWritable =>
+      'Impossible de remplacer automatiquement Flash dans Applications. La nouvelle version vérifiée est affichée dans le Finder : glissez-la dans Applications pour remplacer l’ancienne. macOS peut demander un mot de passe administrateur.';
+
+  @override
+  String get macUpdateNotInApplications =>
+      'Flash n’est pas dans le dossier Applications et ne peut donc pas se remplacer. La nouvelle version vérifiée est affichée dans le Finder : glissez-la dans Applications.';
+
+  @override
+  String get macUpdateNotConfigured =>
+      'Cette version ne peut pas encore se mettre à jour elle-même. Téléchargez la nouvelle version depuis la page des versions.';
+
+  @override
+  String get macUpdateRejected =>
+      'La mise à jour n’a pas passé le contrôle de sécurité et n’a pas été installée. Réessayez ou téléchargez-la depuis la page des versions.';
+
+  @override
+  String get macUpdateNotNewer =>
+      'La version téléchargée n’est pas plus récente que celle-ci ; rien n’a été installé.';
+
+  @override
+  String get macUpdateLauncherChanged =>
+      'Cette mise à jour doit être installée manuellement. Téléchargez le nouveau Flash depuis la page des versions.';
+
+  @override
+  String get macUpdateHelperOlder =>
+      'L’assistant de cette mise à jour est plus ancien que la version enregistrée ; elle n’a pas été installée.';
+
+  @override
+  String get macUpdateRolledBack =>
+      'La mise à jour n’a pas abouti. La version précédente a été rétablie.';
+
+  @override
+  String macUpdateRollbackFailed(Object location) {
+    return 'La mise à jour n’a pas abouti et la version précédente n’a pas pu être rétablie automatiquement. La version précédente est conservée dans « $location ».';
+  }
+
+  @override
+  String get macUpdateRollbackFailedUnverified =>
+      'La mise à jour n’a pas abouti et la version précédente n’a pas pu être rétablie automatiquement. Consultez les détails.';
+
+  @override
+  String get macUpdateInstallFailed =>
+      'La mise à jour n’a pas abouti. Consultez les détails.';
+
+  @override
+  String get macUpdateInstallFailedUnchanged =>
+      'La mise à jour n’a pas abouti. La version précédente est inchangée. Consultez les détails.';
+
+  @override
+  String get macUpdateCoreStopFailed =>
+      'Flash n’a pas pu confirmer l’arrêt du cœur ; la mise à jour n’a pas été installée.';
+
+  @override
+  String get macUpdateRecordHint =>
+      'Le registre de version de l’assistant ne peut pas être lu ni mis à jour. Installer la mise à jour ne le répare pas ; suivez les indications de l’assistant.';
+
+  @override
+  String get macUpdateDetails => 'Détails';
+
+  @override
   String get updateRestartTip =>
       'Flash se ferme pour installer la mise à jour et se rouvre une fois terminée.';
 

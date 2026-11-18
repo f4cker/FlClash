@@ -83,3 +83,6 @@ devtools_options.yaml
 .fvm/
 .fvmrc
 /coverage/lcov.info
+
+# In-app updater signing key: keep it offline, never in the repository
+*_ed25519_private.key

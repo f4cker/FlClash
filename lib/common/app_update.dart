@@ -60,9 +60,12 @@ sealed class UpdateCheck {
 }
 
 final class UpdateAvailable extends UpdateCheck {
-  const UpdateAvailable(this.release);
+  const UpdateAvailable(this.release, {this.manifest});
 
   final Map<String, dynamic> release;
+
+  /// Set on macOS, where the signed manifest is the release.
+  final MacUpdateManifest? manifest;
 }
 
 final class UpdateUpToDate extends UpdateCheck {

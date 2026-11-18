@@ -14,6 +14,7 @@ import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/views/config/macos_helper.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/plugins/mac_updater.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/config/mitm_status.dart';
@@ -174,6 +175,7 @@ class Bootstrap {
       _container.read(profilesActionProvider.notifier).autoUpdateProfiles(),
     );
     unawaited(clearUpdateDownloads());
+    unawaited(macUpdater?.cleanup());
     unawaited(_container.read(commonActionProvider.notifier).autoCheckUpdate());
     if (system.isMacOS) {
       unawaited(

@@ -94,6 +94,9 @@ extern const size_t FCMaxFrame;
 static const NSUInteger FCRelayBatchFrames = 64;
 NSString * _Nullable FCGUIRequirement(void);
 NSString *FCGUIBundleTrust(NSString *bundle);
+// FCGUIBundleTrust's checks for an app not (yet) at FCGUIBundle, such as an update staged beside it: the bundle
+// path must be canonical, and the executable, libraries and contract are read from it.
+NSString *FCGUICandidateTrust(NSString *bundle);
 NSString * _Nullable FCRequirementForPolicy(NSString *identifier, NSString *certificatePin, NSString *team);
 NSString * _Nullable FCSigningRequirement(NSString *identifier);
 BOOL FCCodeEntitlementsAllowed(NSDictionary * _Nullable entitlements, uint32_t flags);

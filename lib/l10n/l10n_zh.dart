@@ -3534,6 +3534,80 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateNotVerified => '下载的更新未通过校验。';
 
   @override
+  String get macUpdateDownloadAndInstall => '下载并安装';
+
+  @override
+  String macUpdateSize(Object size) {
+    return '大小：$size';
+  }
+
+  @override
+  String get macUpdateReadyTitle => '更新已就绪';
+
+  @override
+  String macUpdateReadyMessage(Object version) {
+    return 'Flash $version 已下载并通过校验。安装时 Flash 会短暂退出，连接可能中断；完成后会重新打开。';
+  }
+
+  @override
+  String get macUpdateRestartNow => '退出并安装';
+
+  @override
+  String get macUpdateLater => '稍后';
+
+  @override
+  String get macUpdateInstalling => '正在安装更新…';
+
+  @override
+  String get macUpdateNotWritable =>
+      '无法自动替换「应用程序」中的 Flash。已在访达中显示通过校验的新版本；请将它拖入「应用程序」并替换旧版，系统可能要求输入管理员密码。';
+
+  @override
+  String get macUpdateNotInApplications =>
+      'Flash 不在「应用程序」文件夹中，无法自动替换。已在访达中显示通过校验的新版本；请将它拖入「应用程序」文件夹。';
+
+  @override
+  String get macUpdateNotConfigured => '当前版本暂不支持应用内更新，请前往发布页下载新版本。';
+
+  @override
+  String get macUpdateRejected => '更新未通过安全校验，未安装。请重试，或前往发布页下载。';
+
+  @override
+  String get macUpdateNotNewer => '下载的版本不比当前版本新，未安装。';
+
+  @override
+  String get macUpdateLauncherChanged => '此更新需要手动安装。请前往发布页下载新版 Flash。';
+
+  @override
+  String get macUpdateHelperOlder => '此更新的辅助程序版本低于已记录的版本，未安装。';
+
+  @override
+  String get macUpdateRolledBack => '更新未完成，已恢复原版本。';
+
+  @override
+  String macUpdateRollbackFailed(Object location) {
+    return '更新未完成，也未能自动恢复原版本。原版本保存在「$location」。';
+  }
+
+  @override
+  String get macUpdateRollbackFailedUnverified => '更新未完成，也未能自动恢复原版本。请查看详情。';
+
+  @override
+  String get macUpdateInstallFailed => '更新未完成，请查看详情。';
+
+  @override
+  String get macUpdateInstallFailedUnchanged => '更新未完成，原版本未更改。请查看详情。';
+
+  @override
+  String get macUpdateCoreStopFailed => '无法确认内核已停止，已取消安装更新。';
+
+  @override
+  String get macUpdateRecordHint => '辅助程序的版本记录无法读取或更新。安装更新不会修复这条记录；请按辅助程序提示处理。';
+
+  @override
+  String get macUpdateDetails => '详情';
+
+  @override
   String get updateRestartTip => 'Flash 将关闭以安装更新，完成后自动重新打开。';
 
   @override

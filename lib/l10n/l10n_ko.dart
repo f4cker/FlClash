@@ -3660,6 +3660,86 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateNotVerified => '다운로드한 업데이트를 확인할 수 없습니다.';
 
   @override
+  String get macUpdateDownloadAndInstall => '다운로드 및 설치';
+
+  @override
+  String macUpdateSize(Object size) {
+    return '크기: $size';
+  }
+
+  @override
+  String get macUpdateReadyTitle => '업데이트 준비 완료';
+
+  @override
+  String macUpdateReadyMessage(Object version) {
+    return 'Flash $version을(를) 다운로드하고 확인했습니다. 설치하는 동안 Flash가 잠시 종료되어 연결이 끊길 수 있으며, 완료되면 다시 열립니다.';
+  }
+
+  @override
+  String get macUpdateRestartNow => '종료 후 설치';
+
+  @override
+  String get macUpdateLater => '나중에';
+
+  @override
+  String get macUpdateInstalling => '업데이트 설치 중…';
+
+  @override
+  String get macUpdateNotWritable =>
+      '\'응용 프로그램\'의 Flash를 자동으로 교체할 수 없습니다. 확인된 새 버전을 Finder에 표시했습니다. \'응용 프로그램\'으로 드래그하여 이전 버전을 교체하세요. 관리자 암호를 요구할 수 있습니다.';
+
+  @override
+  String get macUpdateNotInApplications =>
+      'Flash가 \'응용 프로그램\' 폴더에 없어 스스로 교체할 수 없습니다. 확인된 새 버전을 Finder에 표시했습니다. \'응용 프로그램\'으로 드래그하세요.';
+
+  @override
+  String get macUpdateNotConfigured =>
+      '이 빌드는 아직 앱 내 업데이트를 지원하지 않습니다. 릴리스 페이지에서 새 버전을 다운로드하세요.';
+
+  @override
+  String get macUpdateRejected =>
+      '업데이트가 보안 검사를 통과하지 못해 설치하지 않았습니다. 다시 시도하거나 릴리스 페이지에서 다운로드하세요.';
+
+  @override
+  String get macUpdateNotNewer => '다운로드한 버전이 현재 버전보다 새롭지 않아 설치하지 않았습니다.';
+
+  @override
+  String get macUpdateLauncherChanged =>
+      '이 업데이트는 직접 설치해야 합니다. 릴리스 페이지에서 새 Flash를 다운로드하세요.';
+
+  @override
+  String get macUpdateHelperOlder => '이 업데이트의 헬퍼가 기록된 버전보다 오래되어 설치하지 않았습니다.';
+
+  @override
+  String get macUpdateRolledBack => '업데이트를 완료하지 못했습니다. 이전 버전으로 복원했습니다.';
+
+  @override
+  String macUpdateRollbackFailed(Object location) {
+    return '업데이트를 완료하지 못했고 이전 버전도 자동으로 복원하지 못했습니다. 이전 버전은 \'$location\'에 저장되어 있습니다.';
+  }
+
+  @override
+  String get macUpdateRollbackFailedUnverified =>
+      '업데이트를 완료하지 못했고 이전 버전도 자동으로 복원하지 못했습니다. 자세한 내용을 확인하세요.';
+
+  @override
+  String get macUpdateInstallFailed => '업데이트를 완료하지 못했습니다. 자세한 내용을 확인하세요.';
+
+  @override
+  String get macUpdateInstallFailedUnchanged =>
+      '업데이트를 완료하지 못했습니다. 이전 버전은 변경되지 않았습니다. 자세한 내용을 확인하세요.';
+
+  @override
+  String get macUpdateCoreStopFailed => '코어가 중지되었는지 확인할 수 없어 업데이트 설치를 취소했습니다.';
+
+  @override
+  String get macUpdateRecordHint =>
+      '헬퍼의 버전 기록을 읽거나 업데이트할 수 없습니다. 업데이트를 설치해도 이 기록은 고쳐지지 않으니 헬퍼 안내를 따르세요.';
+
+  @override
+  String get macUpdateDetails => '자세히';
+
+  @override
   String get updateRestartTip => '업데이트를 설치하기 위해 Flash가 종료되며, 완료되면 다시 열립니다.';
 
   @override

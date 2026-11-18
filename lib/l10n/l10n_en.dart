@@ -3753,6 +3753,91 @@ class AppLocalizationsEn extends AppLocalizations {
       'The downloaded update could not be verified.';
 
   @override
+  String get macUpdateDownloadAndInstall => 'Download and install';
+
+  @override
+  String macUpdateSize(Object size) {
+    return 'Size: $size';
+  }
+
+  @override
+  String get macUpdateReadyTitle => 'Update ready';
+
+  @override
+  String macUpdateReadyMessage(Object version) {
+    return 'Flash $version has been downloaded and verified. Installing quits Flash briefly and may interrupt the connection; Flash opens again when it\'s done.';
+  }
+
+  @override
+  String get macUpdateRestartNow => 'Quit and install';
+
+  @override
+  String get macUpdateLater => 'Later';
+
+  @override
+  String get macUpdateInstalling => 'Installing the update…';
+
+  @override
+  String get macUpdateNotWritable =>
+      'Flash in Applications can\'t be replaced automatically. The verified new version is shown in Finder: drag it into Applications and replace the old one. macOS may ask for an administrator password.';
+
+  @override
+  String get macUpdateNotInApplications =>
+      'Flash is not in the Applications folder, so it can\'t be replaced automatically. The verified new version is shown in Finder: drag it into the Applications folder.';
+
+  @override
+  String get macUpdateNotConfigured =>
+      'This version doesn\'t support in-app updates yet. Download the new version from the release page.';
+
+  @override
+  String get macUpdateRejected =>
+      'The update did not pass the security check and was not installed. Try again, or download it from the release page.';
+
+  @override
+  String get macUpdateNotNewer =>
+      'The downloaded version is not newer than this one and was not installed.';
+
+  @override
+  String get macUpdateLauncherChanged =>
+      'This update must be installed by hand. Download the new Flash from the release page.';
+
+  @override
+  String get macUpdateHelperOlder =>
+      'This update\'s helper is older than the version on record, so it was not installed.';
+
+  @override
+  String get macUpdateRolledBack =>
+      'The update did not complete. The previous version was restored.';
+
+  @override
+  String macUpdateRollbackFailed(Object location) {
+    return 'The update did not complete, and the previous version could not be restored automatically. The previous version is saved at “$location”.';
+  }
+
+  @override
+  String get macUpdateRollbackFailedUnverified =>
+      'The update did not complete, and the previous version could not be restored automatically. See the details.';
+
+  @override
+  String get macUpdateInstallFailed =>
+      'The update did not complete. See the details.';
+
+  @override
+  String get macUpdateInstallFailedUnchanged =>
+      'The update did not complete. The previous version is unchanged. See the details.';
+
+  @override
+  String get macUpdateCoreStopFailed =>
+      'Flash couldn\'t confirm the core had stopped, so the update was not installed.';
+
+  @override
+  String get macUpdateRecordHint =>
+      'The helper\'s version record can\'t be read or updated. Installing the update won\'t fix that record; follow the helper\'s prompts.';
+
+  @override
+  String get macUpdateDetails => 'Details';
+
+  @override
   String get updateRestartTip =>
       'Flash closes to install the update and opens again when it is done.';
 
