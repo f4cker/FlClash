@@ -16,6 +16,8 @@ const (
 	outboundIpStagger     = 800 * time.Millisecond
 
 	outboundIpMaxBody = 4096
+	// A whole report (ipx.al) runs to about 10 KiB; nothing asks for more.
+	outboundIpMaxBodyLimit = 64 << 10
 
 	// Kept in step with browserUa in lib/common/constant.dart.
 	browserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -25,6 +27,13 @@ type OutboundIpParams struct {
 	ProxyName string   `json:"proxy-name"`
 	Urls      []string `json:"urls"`
 	Timeout   int64    `json:"timeout"`
+	// MaxBody raises the body kept per answer up to outboundIpMaxBodyLimit;
+	// zero keeps outboundIpMaxBody, which an address lookup never outgrows.
+	MaxBody int64 `json:"max-body,omitempty"`
+}
+
+func (params *OutboundIpParams) maxBody() int64 {
+	return min(max(params.MaxBody, outboundIpMaxBody), outboundIpMaxBodyLimit)
 }
 
 type OutboundIpResult struct {
@@ -68,7 +77,7 @@ func handleOutboundIp(params *OutboundIpParams) *OutboundIpResult {
 		next++
 		inFlight++
 		go func() {
-			answers <- probeOutboundIpSource(ctx, url, params.ProxyName, timeout, hits)
+			answers <- probeOutboundIpSource(ctx, url, params.ProxyName, timeout, params.maxBody(), hits)
 		}()
 	}
 
@@ -117,14 +126,14 @@ func claimOutboundIp(epoch uint64, cancel context.CancelFunc) func() {
 	}
 }
 
-func probeOutboundIpSource(ctx context.Context, url string, proxyName string, timeout time.Duration, hits *hitRecorder) *OutboundIpResult {
+func probeOutboundIpSource(ctx context.Context, url string, proxyName string, timeout time.Duration, maxBody int64, hits *hitRecorder) *OutboundIpResult {
 	result := runProbe(ctx, probeRequest{
 		method:    http.MethodGet,
 		url:       url,
 		proxyName: proxyName,
 		headers:   map[string]string{"User-Agent": browserUserAgent},
 		timeout:   timeout,
-		maxBody:   outboundIpMaxBody,
+		maxBody:   maxBody,
 		recorder:  hits,
 	})
 	if result == nil || result.Error != "" || result.StatusCode != http.StatusOK || !mentionsIp(result.Body) {

@@ -6425,4 +6425,68 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get macHelperLauncherFailedDetail => '系统未能完成辅助程序的准备或启动，请查看详情。';
+
+  @override
+  String get ipxScore => '健康分';
+
+  @override
+  String get ipxScoreOutOf => '/ 100';
+
+  @override
+  String ipxScoreCeiling(int value) {
+    return '类型上限 $value';
+  }
+
+  @override
+  String get ipxGradeExcellent => '极佳';
+
+  @override
+  String get ipxGradeGood => '良好';
+
+  @override
+  String get ipxGradeFair => '一般';
+
+  @override
+  String get ipxGradePoor => '较差';
+
+  @override
+  String get ipxGradeRisky => '高风险';
+
+  @override
+  String get ipxLocation => '位置';
+
+  @override
+  String get ipxNativity => '原生 / 广播';
+
+  @override
+  String get ipxNative => '原生 IP';
+
+  @override
+  String get ipxBroadcast => '广播 IP';
+
+  @override
+  String ipxNativeDetail(String registered, String used) {
+    return '注册 $registered · 使用 $used';
+  }
+
+  @override
+  String get ipxIsp => '运营商';
+
+  @override
+  String get ipxTypeEducation => '教育网';
+
+  @override
+  String get ipxTypePseudo => '疑似伪家宽';
+
+  @override
+  String get ipxDeductions => '扣分明细';
+
+  @override
+  String get ipxFullReport => 'ipx.al 查看完整报告';
+
+  @override
+  String get ipxAttribution => '数据来自 ipx.al（非官方接口），经当前出口查询，仅供参考';
+
+  @override
+  String get ipxLoadReport => '获取 ipx.al 报告';
 }

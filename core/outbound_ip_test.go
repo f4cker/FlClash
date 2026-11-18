@@ -2,6 +2,7 @@ package core
 
 import (
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -203,5 +204,28 @@ func TestHandleOutboundIpRejectsAnEmptySourceList(t *testing.T) {
 	result := handleOutboundIp(&OutboundIpParams{ProxyName: "node-a", Timeout: 1000})
 	if result.Error != probeErrorFailed {
 		t.Errorf("error = %q, want %q", result.Error, probeErrorFailed)
+	}
+}
+
+func TestHandleOutboundIpKeepsALargerBodyOnlyWhenAsked(t *testing.T) {
+	withProbeProxies(t, "node-a")
+	report := `{"ip":"203.0.113.7","pad":"` + strings.Repeat("x", 10<<10) + `"}`
+	server := probeServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(report))
+	})
+
+	plain := handleOutboundIp(&OutboundIpParams{ProxyName: "node-a", Urls: []string{server.URL}, Timeout: 4000})
+	if len(plain.Body) != outboundIpMaxBody {
+		t.Errorf("default body = %d bytes, want %d", len(plain.Body), outboundIpMaxBody)
+	}
+
+	whole := handleOutboundIp(&OutboundIpParams{ProxyName: "node-a", Urls: []string{server.URL}, Timeout: 4000, MaxBody: 32 << 10})
+	if whole.Body != report {
+		t.Errorf("asked-for body = %d bytes, want the whole %d", len(whole.Body), len(report))
+	}
+
+	capped := (&OutboundIpParams{MaxBody: 1 << 30}).maxBody()
+	if capped != outboundIpMaxBodyLimit {
+		t.Errorf("max body = %d, want the limit %d", capped, outboundIpMaxBodyLimit)
 	}
 }

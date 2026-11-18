@@ -11770,6 +11770,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The system couldn’t prepare or start the helper. See details.'**
   String get macHelperLauncherFailedDetail;
+
+  /// No description provided for @ipxScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Health score'**
+  String get ipxScore;
+
+  /// No description provided for @ipxScoreOutOf.
+  ///
+  /// In en, this message translates to:
+  /// **'/ 100'**
+  String get ipxScoreOutOf;
+
+  /// No description provided for @ipxScoreCeiling.
+  ///
+  /// In en, this message translates to:
+  /// **'Type cap {value}'**
+  String ipxScoreCeiling(int value);
+
+  /// No description provided for @ipxGradeExcellent.
+  ///
+  /// In en, this message translates to:
+  /// **'Excellent'**
+  String get ipxGradeExcellent;
+
+  /// No description provided for @ipxGradeGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get ipxGradeGood;
+
+  /// No description provided for @ipxGradeFair.
+  ///
+  /// In en, this message translates to:
+  /// **'Fair'**
+  String get ipxGradeFair;
+
+  /// No description provided for @ipxGradePoor.
+  ///
+  /// In en, this message translates to:
+  /// **'Poor'**
+  String get ipxGradePoor;
+
+  /// No description provided for @ipxGradeRisky.
+  ///
+  /// In en, this message translates to:
+  /// **'High risk'**
+  String get ipxGradeRisky;
+
+  /// No description provided for @ipxLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get ipxLocation;
+
+  /// No description provided for @ipxNativity.
+  ///
+  /// In en, this message translates to:
+  /// **'Nativity'**
+  String get ipxNativity;
+
+  /// No description provided for @ipxNative.
+  ///
+  /// In en, this message translates to:
+  /// **'Native IP'**
+  String get ipxNative;
+
+  /// No description provided for @ipxBroadcast.
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcast IP'**
+  String get ipxBroadcast;
+
+  /// No description provided for @ipxNativeDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered {registered} · used in {used}'**
+  String ipxNativeDetail(String registered, String used);
+
+  /// No description provided for @ipxIsp.
+  ///
+  /// In en, this message translates to:
+  /// **'ISP'**
+  String get ipxIsp;
+
+  /// No description provided for @ipxTypeEducation.
+  ///
+  /// In en, this message translates to:
+  /// **'Education'**
+  String get ipxTypeEducation;
+
+  /// No description provided for @ipxTypePseudo.
+  ///
+  /// In en, this message translates to:
+  /// **'Likely pseudo-residential'**
+  String get ipxTypePseudo;
+
+  /// No description provided for @ipxDeductions.
+  ///
+  /// In en, this message translates to:
+  /// **'Score breakdown'**
+  String get ipxDeductions;
+
+  /// No description provided for @ipxFullReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Full report on ipx.al'**
+  String get ipxFullReport;
+
+  /// No description provided for @ipxAttribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Report by ipx.al, an unofficial API, asked through the current exit. For reference only.'**
+  String get ipxAttribution;
+
+  /// No description provided for @ipxLoadReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the ipx.al report'**
+  String get ipxLoadReport;
 }
 
 class _AppLocalizationsDelegate

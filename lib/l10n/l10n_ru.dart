@@ -6968,4 +6968,69 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get macHelperLauncherFailedDetail =>
       'Системе не удалось подготовить или запустить помощника. Посмотрите подробности.';
+
+  @override
+  String get ipxScore => 'Health score';
+
+  @override
+  String get ipxScoreOutOf => '/ 100';
+
+  @override
+  String ipxScoreCeiling(int value) {
+    return 'Type cap $value';
+  }
+
+  @override
+  String get ipxGradeExcellent => 'Excellent';
+
+  @override
+  String get ipxGradeGood => 'Good';
+
+  @override
+  String get ipxGradeFair => 'Fair';
+
+  @override
+  String get ipxGradePoor => 'Poor';
+
+  @override
+  String get ipxGradeRisky => 'High risk';
+
+  @override
+  String get ipxLocation => 'Location';
+
+  @override
+  String get ipxNativity => 'Nativity';
+
+  @override
+  String get ipxNative => 'Native IP';
+
+  @override
+  String get ipxBroadcast => 'Broadcast IP';
+
+  @override
+  String ipxNativeDetail(String registered, String used) {
+    return 'Registered $registered · used in $used';
+  }
+
+  @override
+  String get ipxIsp => 'ISP';
+
+  @override
+  String get ipxTypeEducation => 'Education';
+
+  @override
+  String get ipxTypePseudo => 'Likely pseudo-residential';
+
+  @override
+  String get ipxDeductions => 'Score breakdown';
+
+  @override
+  String get ipxFullReport => 'Full report on ipx.al';
+
+  @override
+  String get ipxAttribution =>
+      'Report by ipx.al, an unofficial API, asked through the current exit. For reference only.';
+
+  @override
+  String get ipxLoadReport => 'Get the ipx.al report';
 }

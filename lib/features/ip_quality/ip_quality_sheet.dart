@@ -1,34 +1,56 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/ip_quality.dart';
+import 'package:fl_clash/common/ipx_al.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/ip_quality.dart';
+import 'package:fl_clash/providers/ipx_report.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/widgets.dart';
 
 import 'ip_quality_text.dart';
+import 'ipx_report_view.dart';
 import 'labels.dart';
 
-Future<void> showIpQualitySheet(BuildContext context, {required String ip}) {
+/// Opening the detail is what asks ipx.al about [ip]; its answer is kept
+/// for the session, and one that failed is asked again on the next opening.
+Future<void> showIpQualitySheet(
+  BuildContext context, {
+  required String ip,
+  String? countryCode,
+}) {
   return showNestedSheet<void>(
     context,
-    builder: (_) => _IpQualitySheet(ip: ip),
+    builder: (_) => _IpQualitySheet(ip: ip, countryCode: countryCode),
   );
 }
 
-class _IpQualitySheet extends ConsumerWidget {
-  const _IpQualitySheet({required this.ip});
+class _IpQualitySheet extends ConsumerStatefulWidget {
+  const _IpQualitySheet({required this.ip, this.countryCode});
 
   final String ip;
+  final String? countryCode;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_IpQualitySheet> createState() => _IpQualitySheetState();
+}
+
+class _IpQualitySheetState extends ConsumerState<_IpQualitySheet> {
+  @override
+  void initState() {
+    super.initState();
+    ref.read(ipxLookupProvider(widget.ip).notifier).retry();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ip = widget.ip;
     final localizations = context.appLocalizations;
-    final isLoading = ref.watch(
-      ipQualityProvider(ip).select((result) => result.isLoading),
-    );
+    final isLoading =
+        ref.watch(ipQualityProvider(ip).select((result) => result.isLoading)) ||
+        ref.watch(ipxLookupProvider(ip).select((state) => state.isLoading));
     return Scaffold(
       title: localizations.outboundIp,
       actions: [
@@ -37,11 +59,14 @@ class _IpQualitySheet extends ConsumerWidget {
             glyph: AppGlyphs.refresh,
             tooltip: localizations.ipQualityRetry,
             isLoading: isLoading,
-            onPressed: () => ref.invalidate(ipQualityProvider(ip)),
+            onPressed: () {
+              ref.invalidate(ipQualityProvider(ip));
+              ref.read(ipxLookupProvider(ip).notifier).retry();
+            },
           ),
         ),
       ],
-      body: _IpQualityDetail(ip: ip),
+      body: _IpQualityDetail(ip: ip, countryCode: widget.countryCode),
     );
   }
 }
@@ -66,12 +91,13 @@ class _HideIpItem extends ConsumerWidget {
 }
 
 class _IpQualityDetail extends ConsumerWidget {
-  const _IpQualityDetail({required this.ip});
+  const _IpQualityDetail({required this.ip, this.countryCode});
 
   /// The optical edge of the xl-radius cards, as in the memory sheet.
   static const _tipInset = 5.0;
 
   final String ip;
+  final String? countryCode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -80,22 +106,47 @@ class _IpQualityDetail extends ConsumerWidget {
     final quality = result.value;
     final error = result.error;
     final failed = quality == null && !result.isLoading;
+    final ipx = ref.watch(ipxLookupProvider(ip));
+    final tip = Padding(
+      padding: const EdgeInsets.fromLTRB(_tipInset, 8, _tipInset, 0),
+      child: Text(
+        localizations.detectionTip,
+        style: AppTextStyle.body
+            .of(context)
+            .copyWith(color: context.colorScheme.onSurfaceVariant),
+      ),
+    );
+    final padding = const EdgeInsets.symmetric(horizontal: 16).copyWith(
+      bottom: 20 + context.bottomInset,
+      top: context.contentTopPadding,
+    );
+    if (ipx.phase != IpxPhase.failed) {
+      return ListView(
+        shrinkWrap: true,
+        padding: padding,
+        children: [
+          tip,
+          IpxReportSections(
+            ip: ip,
+            lookup: ipx,
+            countryCode: countryCode,
+            quality: quality,
+            onOpenReport: () => dialogs.openUrl(ipxAlPageUrl(ip)),
+          ),
+          generateSection(
+            title: localizations.other,
+            items: const [_HideIpItem()],
+          ),
+        ],
+      );
+    }
+    // ipx.al did not answer: the detail is what it was before, with a quiet
+    // way to ask again.
     return ListView(
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
-        bottom: 20 + context.bottomInset,
-        top: context.contentTopPadding,
-      ),
+      padding: padding,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(_tipInset, 8, _tipInset, 0),
-          child: Text(
-            localizations.detectionTip,
-            style: AppTextStyle.body
-                .of(context)
-                .copyWith(color: context.colorScheme.onSurfaceVariant),
-          ),
-        ),
+        tip,
         generateSection(
           title: localizations.basicInfo,
           items: [
@@ -134,7 +185,12 @@ class _IpQualityDetail extends ConsumerWidget {
           ),
         generateSection(
           title: localizations.other,
-          items: const [_HideIpItem()],
+          items: [
+            const _HideIpItem(),
+            IpxRetryItem(
+              onPressed: () => ref.read(ipxLookupProvider(ip).notifier).retry(),
+            ),
+          ],
         ),
       ],
     );

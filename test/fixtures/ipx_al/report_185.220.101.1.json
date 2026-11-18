@@ -1,0 +1,502 @@
+{
+  "ip": "185.220.101.1",
+  "version": 4,
+  "generatedAt": "2026-11-18T06:49:22.023Z",
+  "tookMs": 3409,
+  "asn": 60729,
+  "org": "TORSERVERS-NET Stiftung Erneuerbare Freiheit",
+  "hostname": "berlin01.tor-exit.artikel10.org",
+  "location": {
+    "country": "DE",
+    "city": "Brandenburg an der Havel",
+    "timezone": "Europe/Berlin"
+  },
+  "health": {
+    "score": 0,
+    "grade": "高风险",
+    "ceiling": 55,
+    "ipType": "hosting",
+    "items": [
+      {
+        "label": "Tor 出口",
+        "pts": -40,
+        "src": "IPQuery",
+        "note": "",
+        "tag": "",
+        "code": "tor_exit"
+      },
+      {
+        "label": "仅 1 源标记为代理",
+        "pts": 0,
+        "src": "IP-API",
+        "note": "单一来源的标记误报较多，至少 2 个来源一致才扣分",
+        "tag": "提示",
+        "code": "single_source_proxy"
+      },
+      {
+        "label": "仅在垃圾注册名单",
+        "pts": -3,
+        "src": "StopForumSpam",
+        "note": "",
+        "tag": "",
+        "code": "spam_list_only",
+        "lib": [
+          "sfs"
+        ]
+      },
+      {
+        "label": "同段 /24 有 133 个 IP 在风险库",
+        "pts": -5,
+        "src": "风险库",
+        "note": "邻居被列入攻击或滥用名单，说明这段地址管理较松；只小幅扣分",
+        "tag": "",
+        "code": "neighbors_listed_24",
+        "lib": [
+          "ipsum",
+          "tor",
+          "sfs"
+        ]
+      },
+      {
+        "label": "DNSBL 命中 4/13",
+        "pts": -15,
+        "src": "DNSBL",
+        "note": "UCEPROTECT L2：整段连坐名单：邻居有问题也会被列",
+        "tag": "1 条不计",
+        "code": "dnsbl_listed"
+      }
+    ],
+    "model": "v3.6-2026-11-06",
+    "coverage": {
+      "intel": 4,
+      "intelTotal": 5,
+      "intelOk": [
+        "ipapi.is",
+        "IPQuery",
+        "IP-API",
+        "IPLocate"
+      ],
+      "low": false,
+      "typeFromCache": false,
+      "keylessFail": {
+        "proxycheck": "HTTP 200 denied: 100 queries exhausted, if you sign up for a free API key you'll be able to make "
+      },
+      "skipped": []
+    }
+  },
+  "native": {
+    "verdict": "native",
+    "useCountry": "DE",
+    "regCountry": "DE",
+    "regSrc": "whois",
+    "regWhois": "DE",
+    "regRir": "DE",
+    "rir": "RIPE NCC",
+    "geoAgree": 8,
+    "geoReg": 8,
+    "geoTotal": 8,
+    "cityAgree": 4,
+    "cityTotal": 7
+  },
+  "type": {
+    "verdict": "hosting",
+    "votes": [
+      {
+        "src": "IPQuery",
+        "v": "hosting"
+      },
+      {
+        "src": "IP-API",
+        "v": "hosting"
+      },
+      {
+        "src": "IPLocate",
+        "v": "hosting"
+      },
+      {
+        "src": "ASN 业务库",
+        "v": null
+      }
+    ],
+    "tally": {
+      "hosting": 3
+    },
+    "pseudoResi": false,
+    "pseudoVia": null,
+    "weak": false,
+    "youngAsn": false,
+    "fromCache": false
+  },
+  "sources": [
+    {
+      "name": "MaxMind GeoLite",
+      "country": "DE",
+      "city": "Brandenburg an der Havel",
+      "date": "2026-11-17"
+    },
+    {
+      "name": "IPinfo",
+      "country": "DE",
+      "city": null,
+      "asn": 60729,
+      "org": "Stiftung Erneuerbare Freiheit",
+      "date": "实时"
+    },
+    {
+      "name": "IP.SB",
+      "country": "DE",
+      "city": "Brandenburg an der Havel",
+      "asn": 60729,
+      "org": "Stiftung Erneuerbare Freiheit",
+      "date": "实时"
+    },
+    {
+      "name": "ipapi.is",
+      "country": "DE",
+      "city": "Berlin",
+      "asn": 60729,
+      "org": "Artikel10 e.V.",
+      "type": null,
+      "date": "实时"
+    },
+    {
+      "name": "IPQuery",
+      "country": "DE",
+      "city": "Hamburg",
+      "asn": 60729,
+      "org": "Stiftung Erneuerbare Freiheit",
+      "type": "hosting",
+      "date": "实时"
+    },
+    {
+      "name": "IP-API",
+      "country": "DE",
+      "city": "Brandenburg an der Havel",
+      "asn": 60729,
+      "org": "Stiftung Erneuerbare Freiheit",
+      "type": "hosting",
+      "date": "实时"
+    },
+    {
+      "name": "IPLocate",
+      "country": "DE",
+      "city": "Brandenburg an der Havel",
+      "asn": 60729,
+      "org": "Stiftung Erneuerbare Freiheit",
+      "type": "hosting",
+      "date": "实时"
+    },
+    {
+      "name": "ip2region",
+      "country": "DE",
+      "city": "Berlin",
+      "date": "每周"
+    }
+  ],
+  "ipdb": {
+    "rir_date": "2017-09-12",
+    "lease": null,
+    "datacenter": null,
+    "geofeed": null,
+    "vpn": null,
+    "crawler": null,
+    "tor_relay": {
+      "built": "2026-11-17T21:00:56Z"
+    },
+    "corp_proxy": null,
+    "scanner": null
+  },
+  "cn": [
+    {
+      "name": "ip2region",
+      "text": "State of Berlin Berlin",
+      "cc": "DE",
+      "pre": true,
+      "city": "Berlin",
+      "region": "State of Berlin"
+    },
+    {
+      "name": "纯真 (zxinc)",
+      "text": "荷兰 北荷兰省 阿姆斯特丹 Tor出口节点"
+    },
+    {
+      "name": "百度",
+      "text": "荷兰阿姆斯特丹"
+    }
+  ],
+  "rdap": {
+    "name": "ARTIKEL10",
+    "handle": "185.220.101.0 - 185.220.101.31",
+    "start": "185.220.101.0",
+    "end": "185.220.101.31",
+    "cidr": "185.220.101.0/27",
+    "type": "ASSIGNED PA",
+    "country": "DE",
+    "registered": "2021-08-19",
+    "changed": "2025-06-18",
+    "org": "Artikel10 e.V.",
+    "abuse": "abuse@artikel10.org",
+    "port": "whois.ripe.net"
+  },
+  "routing": {
+    "prefix": "185.220.101.0/24",
+    "announced": true,
+    "originAsn": 60729,
+    "holder": "TORSERVERS-NET Stiftung Erneuerbare Freiheit",
+    "rpki": "valid",
+    "originHistory": [
+      {
+        "asn": 200052,
+        "first": "2017-11-26",
+        "last": "2020-03-26"
+      },
+      {
+        "asn": 208294,
+        "first": "2020-01-15",
+        "last": "2022-07-02"
+      },
+      {
+        "asn": 60729,
+        "first": "2022-06-21",
+        "last": "2026-11-18"
+      }
+    ]
+  },
+  "risk": {
+    "proxycheck": null,
+    "ipapi": {},
+    "scamalytics": null,
+    "ipquery": {
+      "risk": 100,
+      "vpn": false,
+      "proxy": false,
+      "tor": true
+    },
+    "iplocate": {
+      "vpn": false,
+      "proxy": false,
+      "tor": false,
+      "abuser": false,
+      "relay": false,
+      "anonymous": false
+    },
+    "ipapicom": {
+      "proxy": true
+    },
+    "abuseipdb": null
+  },
+  "dnsbl": {
+    "supported": true,
+    "list": [
+      {
+        "name": "SpamCop",
+        "zone": "bl.spamcop.net",
+        "status": "clean"
+      },
+      {
+        "name": "PSBL",
+        "zone": "psbl.surriel.com",
+        "status": "clean"
+      },
+      {
+        "name": "UCEPROTECT L1",
+        "zone": "dnsbl-1.uceprotect.net",
+        "status": "clean"
+      },
+      {
+        "name": "UCEPROTECT L2",
+        "zone": "dnsbl-2.uceprotect.net",
+        "status": "listed",
+        "code": "127.0.0.2"
+      },
+      {
+        "name": "Mailspike",
+        "zone": "bl.mailspike.net",
+        "status": "listed",
+        "code": "127.0.0.2"
+      },
+      {
+        "name": "s5h",
+        "zone": "all.s5h.net",
+        "status": "listed",
+        "code": "127.0.0.2"
+      },
+      {
+        "name": "DroneBL",
+        "zone": "dnsbl.dronebl.org",
+        "status": "clean"
+      },
+      {
+        "name": "Blocklist.de",
+        "zone": "bl.blocklist.de",
+        "status": "clean"
+      },
+      {
+        "name": "0spam",
+        "zone": "bl.0spam.org",
+        "status": "clean"
+      },
+      {
+        "name": "Anonmails",
+        "zone": "spam.dnsbl.anonmails.de",
+        "status": "clean"
+      },
+      {
+        "name": "Backscatterer",
+        "zone": "ips.backscatterer.org",
+        "status": "clean"
+      },
+      {
+        "name": "JustSpam",
+        "zone": "dnsbl.justspam.org",
+        "status": "listed",
+        "code": "127.0.0.2"
+      },
+      {
+        "name": "Truncate",
+        "zone": "truncate.gbudb.net",
+        "status": "clean"
+      }
+    ]
+  },
+  "exposure": {
+    "ports": [
+      80,
+      443,
+      9001,
+      9002
+    ],
+    "tags": [
+      "self-signed",
+      "tor"
+    ],
+    "vulns": 0,
+    "hostnames": [
+      "berlin01.tor-exit.artikel10.org"
+    ],
+    "cpes": [
+      "cpe:/a:f5:nginx"
+    ]
+  },
+  "network": {
+    "humanPct": null,
+    "radarDate": "2026-10-30",
+    "company": "ForPrivacyNET",
+    "companyDomain": "for-privacy.net",
+    "abuseEmail": "abuse@artikel10.org"
+  },
+  "categories": [
+    {
+      "key": "anon",
+      "label": "匿名",
+      "checks": [
+        {
+          "label": "代理",
+          "hit": true
+        },
+        {
+          "label": "VPN",
+          "hit": false
+        },
+        {
+          "label": "Tor",
+          "hit": true
+        },
+        {
+          "label": "iCloud 中继",
+          "hit": false
+        },
+        {
+          "label": "匿名出口",
+          "hit": false
+        }
+      ],
+      "hits": 2
+    },
+    {
+      "key": "abuse",
+      "label": "滥用",
+      "checks": [
+        {
+          "label": "滥用标记",
+          "hit": false
+        },
+        {
+          "label": "代理风险 ≥67",
+          "hit": null
+        },
+        {
+          "label": "爬虫",
+          "hit": false
+        },
+        {
+          "label": "威胁情报名单",
+          "hit": false
+        },
+        {
+          "label": "恶意扫描",
+          "hit": false
+        }
+      ],
+      "hits": 0
+    },
+    {
+      "key": "bl",
+      "label": "黑名单",
+      "checks": [
+        {
+          "label": "邮件 DNSBL",
+          "hit": true
+        },
+        {
+          "label": "Shodan 标签",
+          "hit": false
+        }
+      ],
+      "hits": 1
+    },
+    {
+      "key": "expose",
+      "label": "暴露面",
+      "checks": [
+        {
+          "label": "开放端口",
+          "hit": true
+        },
+        {
+          "label": "已知漏洞",
+          "hit": false
+        },
+        {
+          "label": "自签证书",
+          "hit": true
+        }
+      ],
+      "hits": 2
+    },
+    {
+      "key": "net",
+      "label": "网络",
+      "checks": [
+        {
+          "label": "机房 IP",
+          "hit": true
+        },
+        {
+          "label": "伪家宽",
+          "hit": false
+        },
+        {
+          "label": "人类流量 <50%",
+          "hit": null
+        },
+        {
+          "label": "广播 IP",
+          "hit": false
+        }
+      ],
+      "hits": 1
+    }
+  ],
+  "query": null
+}

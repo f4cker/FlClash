@@ -7017,7 +7017,9 @@ as int?,
 /// @nodoc
 mixin _$OutboundIpParams {
 
-@JsonKey(name: 'proxy-name') String get proxyName; List<String> get urls; int get timeout;
+@JsonKey(name: 'proxy-name') String get proxyName; List<String> get urls; int get timeout;/// Bytes of body kept per answer; null keeps the Core's address-sized
+/// default.
+@JsonKey(name: 'max-body', includeIfNull: false) int? get maxBody;
 /// Create a copy of OutboundIpParams
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -7031,20 +7033,20 @@ $OutboundIpParamsCopyWith<OutboundIpParams> get copyWith => _$OutboundIpParamsCo
 @override
 bool operator ==(Object other) {
   final _this = this as OutboundIpParams;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OutboundIpParams&&(identical(other.proxyName, _this.proxyName) || other.proxyName == _this.proxyName)&&const DeepCollectionEquality().equals(other.urls, _this.urls)&&(identical(other.timeout, _this.timeout) || other.timeout == _this.timeout));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OutboundIpParams&&(identical(other.proxyName, _this.proxyName) || other.proxyName == _this.proxyName)&&const DeepCollectionEquality().equals(other.urls, _this.urls)&&(identical(other.timeout, _this.timeout) || other.timeout == _this.timeout)&&(identical(other.maxBody, _this.maxBody) || other.maxBody == _this.maxBody));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as OutboundIpParams;
-  return Object.hash(runtimeType,_this.proxyName,const DeepCollectionEquality().hash(_this.urls),_this.timeout);
+  return Object.hash(runtimeType,_this.proxyName,const DeepCollectionEquality().hash(_this.urls),_this.timeout,_this.maxBody);
 }
 
 @override
 String toString() {
   final _this = this as OutboundIpParams;
-  return 'OutboundIpParams(proxyName: ${_this.proxyName}, urls: ${_this.urls}, timeout: ${_this.timeout})';
+  return 'OutboundIpParams(proxyName: ${_this.proxyName}, urls: ${_this.urls}, timeout: ${_this.timeout}, maxBody: ${_this.maxBody})';
 }
 
 
@@ -7055,7 +7057,7 @@ abstract mixin class $OutboundIpParamsCopyWith<$Res>  {
   factory $OutboundIpParamsCopyWith(OutboundIpParams value, $Res Function(OutboundIpParams) _then) = _$OutboundIpParamsCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'proxy-name') String proxyName, List<String> urls, int timeout
+@JsonKey(name: 'proxy-name') String proxyName, List<String> urls, int timeout,@JsonKey(name: 'max-body', includeIfNull: false) int? maxBody
 });
 
 
@@ -7072,12 +7074,13 @@ class _$OutboundIpParamsCopyWithImpl<$Res>
 
 /// Create a copy of OutboundIpParams
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? proxyName = null,Object? urls = null,Object? timeout = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? proxyName = null,Object? urls = null,Object? timeout = null,Object? maxBody = freezed,}) {
   return _then(OutboundIpParams(
 proxyName: null == proxyName ? _self.proxyName : proxyName // ignore: cast_nullable_to_non_nullable
 as String,urls: null == urls ? _self.urls : urls // ignore: cast_nullable_to_non_nullable
 as List<String>,timeout: null == timeout ? _self.timeout : timeout // ignore: cast_nullable_to_non_nullable
-as int,
+as int,maxBody: freezed == maxBody ? _self.maxBody : maxBody // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -7162,10 +7165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'proxy-name')  String proxyName,  List<String> urls,  int timeout)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'proxy-name')  String proxyName,  List<String> urls,  int timeout, @JsonKey(name: 'max-body', includeIfNull: false)  int? maxBody)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OutboundIpParams() when $default != null:
-return $default(_that.proxyName,_that.urls,_that.timeout);case _:
+return $default(_that.proxyName,_that.urls,_that.timeout,_that.maxBody);case _:
   return orElse();
 
 }
@@ -7183,10 +7186,10 @@ return $default(_that.proxyName,_that.urls,_that.timeout);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'proxy-name')  String proxyName,  List<String> urls,  int timeout)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'proxy-name')  String proxyName,  List<String> urls,  int timeout, @JsonKey(name: 'max-body', includeIfNull: false)  int? maxBody)  $default,) {final _that = this;
 switch (_that) {
 case _OutboundIpParams():
-return $default(_that.proxyName,_that.urls,_that.timeout);case _:
+return $default(_that.proxyName,_that.urls,_that.timeout,_that.maxBody);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -7203,10 +7206,10 @@ return $default(_that.proxyName,_that.urls,_that.timeout);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'proxy-name')  String proxyName,  List<String> urls,  int timeout)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'proxy-name')  String proxyName,  List<String> urls,  int timeout, @JsonKey(name: 'max-body', includeIfNull: false)  int? maxBody)?  $default,) {final _that = this;
 switch (_that) {
 case _OutboundIpParams() when $default != null:
-return $default(_that.proxyName,_that.urls,_that.timeout);case _:
+return $default(_that.proxyName,_that.urls,_that.timeout,_that.maxBody);case _:
   return null;
 
 }
@@ -7218,7 +7221,7 @@ return $default(_that.proxyName,_that.urls,_that.timeout);case _:
 @JsonSerializable()
 
 class _OutboundIpParams implements OutboundIpParams {
-  const _OutboundIpParams({@JsonKey(name: 'proxy-name') this.proxyName = '',  List<String> urls = const [], required this.timeout}): _urls = urls;
+  const _OutboundIpParams({@JsonKey(name: 'proxy-name') this.proxyName = '',  List<String> urls = const [], required this.timeout, @JsonKey(name: 'max-body', includeIfNull: false) this.maxBody}): _urls = urls;
   factory _OutboundIpParams.fromJson(Map<String, dynamic> json) => _$OutboundIpParamsFromJson(json);
 
 @override@JsonKey(name: 'proxy-name') final  String proxyName;
@@ -7230,6 +7233,9 @@ class _OutboundIpParams implements OutboundIpParams {
 }
 
 @override final  int timeout;
+/// Bytes of body kept per answer; null keeps the Core's address-sized
+/// default.
+@override@JsonKey(name: 'max-body', includeIfNull: false) final  int? maxBody;
 
 /// Create a copy of OutboundIpParams
 /// with the given fields replaced by the non-null parameter values.
@@ -7244,18 +7250,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _OutboundIpParams&&(identical(other.proxyName, proxyName) || other.proxyName == proxyName)&&const DeepCollectionEquality().equals(other.urls, _urls)&&(identical(other.timeout, timeout) || other.timeout == timeout));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _OutboundIpParams&&(identical(other.proxyName, proxyName) || other.proxyName == proxyName)&&const DeepCollectionEquality().equals(other.urls, _urls)&&(identical(other.timeout, timeout) || other.timeout == timeout)&&(identical(other.maxBody, maxBody) || other.maxBody == maxBody));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,proxyName,const DeepCollectionEquality().hash(_urls),timeout);
+    return Object.hash(runtimeType,proxyName,const DeepCollectionEquality().hash(_urls),timeout,maxBody);
 }
 
 @override
 String toString() {
-    return 'OutboundIpParams(proxyName: $proxyName, urls: $urls, timeout: $timeout)';
+    return 'OutboundIpParams(proxyName: $proxyName, urls: $urls, timeout: $timeout, maxBody: $maxBody)';
 }
 
 
@@ -7266,7 +7272,7 @@ abstract mixin class _$OutboundIpParamsCopyWith<$Res> implements $OutboundIpPara
   factory _$OutboundIpParamsCopyWith(_OutboundIpParams value, $Res Function(_OutboundIpParams) _then) = __$OutboundIpParamsCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'proxy-name') String proxyName, List<String> urls, int timeout
+@JsonKey(name: 'proxy-name') String proxyName, List<String> urls, int timeout,@JsonKey(name: 'max-body', includeIfNull: false) int? maxBody
 });
 
 
@@ -7283,12 +7289,13 @@ class __$OutboundIpParamsCopyWithImpl<$Res>
 
 /// Create a copy of OutboundIpParams
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? proxyName = null,Object? urls = null,Object? timeout = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? proxyName = null,Object? urls = null,Object? timeout = null,Object? maxBody = freezed,}) {
   return _then(_OutboundIpParams(
 proxyName: null == proxyName ? _self.proxyName : proxyName // ignore: cast_nullable_to_non_nullable
 as String,urls: null == urls ? _self._urls : urls // ignore: cast_nullable_to_non_nullable
 as List<String>,timeout: null == timeout ? _self.timeout : timeout // ignore: cast_nullable_to_non_nullable
-as int,
+as int,maxBody: freezed == maxBody ? _self.maxBody : maxBody // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

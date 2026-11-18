@@ -439,6 +439,10 @@ abstract class OutboundIpParams with _$OutboundIpParams {
     @JsonKey(name: 'proxy-name') @Default('') String proxyName,
     @Default([]) List<String> urls,
     required int timeout,
+
+    /// Bytes of body kept per answer; null keeps the Core's address-sized
+    /// default.
+    @JsonKey(name: 'max-body', includeIfNull: false) int? maxBody,
   }) = _OutboundIpParams;
 
   factory OutboundIpParams.fromJson(Map<String, Object?> json) =>
