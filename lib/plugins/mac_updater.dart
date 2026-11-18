@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:flutter/services.dart';
 
 /// What the native installer answered: `ok`, or a code the app explains.
@@ -13,11 +14,23 @@ final class MacUpdateResult {
   /// update cannot repair that record.
   final bool recordUnreadable;
 
+  /// After a failure: the installed app was confirmed untouched (the same
+  /// directory with the same build is still in place).
+  final bool unchanged;
+
+  /// After `rollbackFailed`: where the previous app was kept, and whether an
+  /// app with its build was found there after the move.
+  final String? rescued;
+  final bool rescueVerified;
+
   const MacUpdateResult(
     this.code, {
     this.staged,
     this.detail = '',
     this.recordUnreadable = false,
+    this.unchanged = false,
+    this.rescued,
+    this.rescueVerified = false,
   });
 
   bool get ok => code == 'ok';
@@ -35,8 +48,53 @@ final class MacUpdateResult {
       staged: answer['staged'] as String?,
       detail: answer['detail'] as String? ?? '',
       recordUnreadable: answer['recordUnreadable'] == true,
+      unchanged: answer['unchanged'] == true,
+      rescued: answer['rescued'] as String?,
+      rescueVerified: answer['rescueVerified'] == true,
     );
   }
+
+  /// For the details view: the code and what the installer said.
+  String get details => [
+    code,
+    if (detail.isNotEmpty) detail,
+    if (rescued case final rescued?) 'previous app: $rescued',
+  ].join('\n');
+}
+
+/// The ready dialog. The version record hint belongs only to a prepared,
+/// installable update.
+String macUpdateReadyText(
+  MacUpdateResult prepared,
+  String version,
+  AppLocalizations l10n,
+) => [
+  l10n.macUpdateReadyMessage(version),
+  if (prepared.ok && prepared.staged != null && prepared.recordUnreadable)
+    l10n.macUpdateRecordHint,
+].join('\n\n');
+
+/// What the user reads: a state is stated as fact only when the installer
+/// confirmed it (restored, unchanged, kept at a location).
+String macUpdateMessage(MacUpdateResult result, AppLocalizations l10n) {
+  return switch (result.code) {
+    'notWritable' => l10n.macUpdateNotWritable,
+    'notInApplications' => l10n.macUpdateNotInApplications,
+    'notConfigured' => l10n.macUpdateNotConfigured,
+    'notNewer' => l10n.macUpdateNotNewer,
+    'launcherChanged' => l10n.macUpdateLauncherChanged,
+    'helperOlder' => l10n.macUpdateHelperOlder,
+    'rejected' => l10n.macUpdateRejected,
+    'coreStopFailed' => l10n.macUpdateCoreStopFailed,
+    'rolledBack' when result.unchanged => l10n.macUpdateRolledBack,
+    'rollbackFailed' => switch (result) {
+      MacUpdateResult(rescueVerified: true, rescued: final location?) =>
+        l10n.macUpdateRollbackFailed(location),
+      _ => l10n.macUpdateRollbackFailedUnverified,
+    },
+    _ when result.unchanged => l10n.macUpdateInstallFailedUnchanged,
+    _ => l10n.macUpdateInstallFailed,
+  };
 }
 
 class MacUpdater {

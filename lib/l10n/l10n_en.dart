@@ -3765,11 +3765,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String macUpdateReadyMessage(Object version) {
-    return 'Flash $version has been downloaded and verified. Restarting briefly stops the connection, replaces Flash and opens it again.';
+    return 'Flash $version has been downloaded and verified. Installing quits Flash briefly and may interrupt the connection; Flash opens again when it\'s done.';
   }
 
   @override
-  String get macUpdateRestartNow => 'Restart and install';
+  String get macUpdateRestartNow => 'Quit and install';
 
   @override
   String get macUpdateLater => 'Later';
@@ -3779,51 +3779,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get macUpdateNotWritable =>
-      'This account can\'t change the Applications folder (it may not be an administrator). The verified new version is shown in Finder: drag it into Applications to replace the old one. An administrator password is needed.';
+      'Flash in Applications can\'t be replaced automatically. The verified new version is shown in Finder: drag it into Applications and replace the old one. macOS may ask for an administrator password.';
 
   @override
   String get macUpdateNotInApplications =>
-      'Flash is not in the Applications folder, so it can\'t replace itself. The verified new version is shown in Finder: drag it into Applications.';
+      'Flash is not in the Applications folder, so it can\'t be replaced automatically. The verified new version is shown in Finder: drag it into the Applications folder.';
 
   @override
   String get macUpdateNotConfigured =>
-      'This build can\'t update itself yet. Download the new version from the release page.';
+      'This version doesn\'t support in-app updates yet. Download the new version from the release page.';
 
   @override
   String get macUpdateRejected =>
-      'The update did not pass Flash\'s checks and was deleted. Nothing was changed. Try again later, or download it from the release page.';
+      'The update did not pass the security check and was not installed. Try again, or download it from the release page.';
 
   @override
   String get macUpdateNotNewer =>
-      'The downloaded version is not newer than this one, so nothing was installed.';
+      'The downloaded version is not newer than this one and was not installed.';
 
   @override
   String get macUpdateLauncherChanged =>
-      'This version changes the helper\'s launcher, so it can\'t be installed from inside Flash. Download it from the release page and install it by hand.';
+      'This update must be installed by hand. Download the new Flash from the release page.';
 
   @override
   String get macUpdateHelperOlder =>
-      'The new version\'s helper is older than one this Mac has already run, so the update was cancelled.';
+      'This update\'s helper is older than the version on record, so it was not installed.';
 
   @override
   String get macUpdateRolledBack =>
-      'The new version failed its check after installing, so the previous version was put back.';
+      'The update did not complete. The previous version was restored.';
 
   @override
-  String get macUpdateRollbackFailed =>
-      'The update failed and the previous version could not be put back. Download Flash from the release page and install it again.';
+  String macUpdateRollbackFailed(Object location) {
+    return 'The update did not complete, and the previous version could not be restored automatically. The previous version is saved at “$location”.';
+  }
+
+  @override
+  String get macUpdateRollbackFailedUnverified =>
+      'The update did not complete, and the previous version could not be restored automatically. See the details.';
 
   @override
   String get macUpdateInstallFailed =>
-      'Flash could not replace itself. The current version is unchanged.';
+      'The update did not complete. See the details.';
+
+  @override
+  String get macUpdateInstallFailedUnchanged =>
+      'The update did not complete. The previous version is unchanged. See the details.';
 
   @override
   String get macUpdateCoreStopFailed =>
-      'The core could not be stopped, so the update was not installed.';
+      'Flash couldn\'t confirm the core had stopped, so the update was not installed.';
 
   @override
   String get macUpdateRecordHint =>
-      'The helper\'s version record on this Mac can\'t be read. The update installs, but does not fix that record; follow the helper card afterwards.';
+      'The helper\'s version record can\'t be read or updated. Installing the update won\'t fix that record; follow the helper\'s prompts.';
+
+  @override
+  String get macUpdateDetails => 'Details';
 
   @override
   String get updateRestartTip =>

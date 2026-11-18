@@ -11,12 +11,21 @@ typedef struct {
     BOOL (* _Nonnull helperTrust)(NSString * _Nonnull helper);
     CFStringRef _Nonnull launcherStatusDirectory;
     uid_t launcherStatusOwner;
+    // renamex_np(RENAME_SWAP); a test makes the swap back fail.
+    int (* _Nonnull swap)(const char * _Nonnull from, const char * _Nonnull to);
+    // Where the previous app is kept when it cannot be swapped back (FCUpdateRescueDirectory).
+    CFStringRef _Nonnull rescueDirectory;
 } FCUpdatePolicy;
 
 FCUpdatePolicy FCUpdateDefaultPolicy(void);
+// ~/Library/Application Support/Flash/update-rescue: writable by the user without any extra permission.
+NSString *FCUpdateRescueDirectory(void);
 // The only location an update replaces (FCGUIBundle).
 NSString *FCUpdateInstalledBundle(void);
 
+// Every failed answer from FCUpdatePrepare/FCUpdateInstall carries `unchanged`: the installed app was confirmed
+// untouched (same directory, same build) afterwards.
+//
 // Every answer is @{@"code": …} plus details. Codes: ok, notInApplications, notWritable (the update is fine, only
 // this account cannot replace the app in place), rejected (archive or signature), notNewer, helperOlder,
 // launcherChanged, unpackFailed, swapFailed, rolledBack, rollbackFailed, failed.
@@ -27,9 +36,16 @@ NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSStrin
 
 // Checks the staged app again, swaps it with `target` (renamex_np RENAME_SWAP), checks the installed result and
 // swaps back when that fails. The replaced app stays in the staging directory until FCUpdateCleanup.
+//
+// When the swap back fails too (rollbackFailed), the previous app is the only good copy: its staging directory
+// loses its marker, so no cleanup ever deletes it, and it moves to policy.rescueDirectory/Flash-<build>.app with
+// a record (last-failed-update.json) beside it. `rescued` is where it ends up (still the staging directory when
+// the move fails), `rescueMoved` whether it moved, `rescueVerified` whether an app with the previous build was
+// found there after the move.
 NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy policy);
 
-// Removes this user's staging directories (and the app replaced into them) beside `target`.
+// Removes this user's staging directories beside `target`, only those still carrying the marker FCUpdatePrepare
+// writes when it creates them (so never a previous app kept after rollbackFailed).
 void FCUpdateCleanup(NSString *target);
 
 // A detached shell that waits for `pid` to exit, then opens `target`.

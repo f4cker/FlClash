@@ -45,7 +45,14 @@ final class UpdaterChannel {
         case "install":
             guard let staged = arguments["staged"] as? String else { return ["code": "failed", "detail": "arguments"] }
             guard let target else { return ["code": "notInApplications", "detail": Bundle.main.bundlePath] }
-            return FCUpdateInstall(staged, target, FCUpdateDefaultPolicy())
+            let answer = FCUpdateInstall(staged, target, FCUpdateDefaultPolicy())
+            if answer["code"] as? String == "rollbackFailed", answer["rescueVerified"] as? Bool == true,
+               let rescued = answer["rescued"] as? String {
+                DispatchQueue.main.async {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: rescued)])
+                }
+            }
+            return answer
         case "relaunch":
             guard let target else { return ["code": "notInApplications"] }
             return ["code": FCUpdateScheduleRelaunch(getpid(), target) ? "ok" : "failed"]

@@ -3672,11 +3672,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String macUpdateReadyMessage(Object version) {
-    return 'Flash $version을(를) 다운로드하고 확인했습니다. 다시 시작하면 연결이 잠시 끊기고 Flash를 교체한 뒤 다시 엽니다.';
+    return 'Flash $version을(를) 다운로드하고 확인했습니다. 설치하는 동안 Flash가 잠시 종료되어 연결이 끊길 수 있으며, 완료되면 다시 열립니다.';
   }
 
   @override
-  String get macUpdateRestartNow => '다시 시작하여 설치';
+  String get macUpdateRestartNow => '종료 후 설치';
 
   @override
   String get macUpdateLater => '나중에';
@@ -3686,7 +3686,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macUpdateNotWritable =>
-      '이 계정은 \'응용 프로그램\' 폴더를 변경할 수 없습니다(관리자가 아닐 수 있습니다). 확인된 새 버전을 Finder에 표시했습니다. \'응용 프로그램\'으로 드래그하여 교체하세요. 관리자 암호가 필요합니다.';
+      '\'응용 프로그램\'의 Flash를 자동으로 교체할 수 없습니다. 확인된 새 버전을 Finder에 표시했습니다. \'응용 프로그램\'으로 드래그하여 이전 버전을 교체하세요. 관리자 암호를 요구할 수 있습니다.';
 
   @override
   String get macUpdateNotInApplications =>
@@ -3698,35 +3698,46 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macUpdateRejected =>
-      '업데이트가 Flash의 검사를 통과하지 못해 삭제했습니다. 변경된 것은 없습니다. 나중에 다시 시도하거나 릴리스 페이지에서 다운로드하세요.';
+      '업데이트가 보안 검사를 통과하지 못해 설치하지 않았습니다. 다시 시도하거나 릴리스 페이지에서 다운로드하세요.';
 
   @override
   String get macUpdateNotNewer => '다운로드한 버전이 현재 버전보다 새롭지 않아 설치하지 않았습니다.';
 
   @override
   String get macUpdateLauncherChanged =>
-      '이 버전은 헬퍼 실행기가 바뀌어 앱 안에서 설치할 수 없습니다. 릴리스 페이지에서 다운로드하여 직접 설치하세요.';
+      '이 업데이트는 직접 설치해야 합니다. 릴리스 페이지에서 새 Flash를 다운로드하세요.';
 
   @override
-  String get macUpdateHelperOlder =>
-      '새 버전의 헬퍼가 이 Mac에서 이미 실행된 버전보다 오래되어 업데이트를 취소했습니다.';
+  String get macUpdateHelperOlder => '이 업데이트의 헬퍼가 기록된 버전보다 오래되어 설치하지 않았습니다.';
 
   @override
-  String get macUpdateRolledBack => '설치 후 확인에 실패하여 이전 버전으로 되돌렸습니다.';
+  String get macUpdateRolledBack => '업데이트를 완료하지 못했습니다. 이전 버전으로 복원했습니다.';
 
   @override
-  String get macUpdateRollbackFailed =>
-      '업데이트에 실패했고 이전 버전으로도 되돌리지 못했습니다. 릴리스 페이지에서 Flash를 다운로드하여 다시 설치하세요.';
+  String macUpdateRollbackFailed(Object location) {
+    return '업데이트를 완료하지 못했고 이전 버전도 자동으로 복원하지 못했습니다. 이전 버전은 \'$location\'에 저장되어 있습니다.';
+  }
 
   @override
-  String get macUpdateInstallFailed => 'Flash를 교체하지 못했습니다. 현재 버전은 변경되지 않았습니다.';
+  String get macUpdateRollbackFailedUnverified =>
+      '업데이트를 완료하지 못했고 이전 버전도 자동으로 복원하지 못했습니다. 자세한 내용을 확인하세요.';
 
   @override
-  String get macUpdateCoreStopFailed => '코어를 중지할 수 없어 업데이트를 설치하지 않았습니다.';
+  String get macUpdateInstallFailed => '업데이트를 완료하지 못했습니다. 자세한 내용을 확인하세요.';
+
+  @override
+  String get macUpdateInstallFailedUnchanged =>
+      '업데이트를 완료하지 못했습니다. 이전 버전은 변경되지 않았습니다. 자세한 내용을 확인하세요.';
+
+  @override
+  String get macUpdateCoreStopFailed => '코어가 중지되었는지 확인할 수 없어 업데이트 설치를 취소했습니다.';
 
   @override
   String get macUpdateRecordHint =>
-      '이 Mac의 헬퍼 버전 기록을 읽을 수 없습니다. 업데이트는 설치되지만 그 기록은 고쳐지지 않습니다. 설치 후 헬퍼 카드의 안내를 따르세요.';
+      '헬퍼의 버전 기록을 읽거나 업데이트할 수 없습니다. 업데이트를 설치해도 이 기록은 고쳐지지 않으니 헬퍼 안내를 따르세요.';
+
+  @override
+  String get macUpdateDetails => '자세히';
 
   @override
   String get updateRestartTip => '업데이트를 설치하기 위해 Flash가 종료되며, 완료되면 다시 열립니다.';

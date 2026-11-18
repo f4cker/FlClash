@@ -298,11 +298,11 @@ class CommonAction extends _$CommonAction {
       final res = await dialogs.showMessage(
         title: currentAppLocalizations.macUpdateReadyTitle,
         message: TextSpan(
-          text: [
-            currentAppLocalizations.macUpdateReadyMessage(manifest.version),
-            if (prepared.recordUnreadable)
-              currentAppLocalizations.macUpdateRecordHint,
-          ].join('\n\n'),
+          text: macUpdateReadyText(
+            prepared,
+            manifest.version,
+            currentAppLocalizations,
+          ),
         ),
         confirmText: currentAppLocalizations.macUpdateRestartNow,
         cancelText: currentAppLocalizations.macUpdateLater,
@@ -322,8 +322,9 @@ class CommonAction extends _$CommonAction {
       );
       await _showUpdateFailure(
         error is _MacUpdateFailure
-            ? _macUpdateMessage(error.result)
+            ? macUpdateMessage(error.result, currentAppLocalizations)
             : userFacingErrorMessage(error, currentAppLocalizations),
+        details: error is _MacUpdateFailure ? error.result.details : null,
       );
     } finally {
       if (identical(_updateCancelToken, cancelToken)) {
@@ -349,25 +350,10 @@ class CommonAction extends _$CommonAction {
     }
     await dialogs.showAlert(
       title: currentAppLocalizations.checkUpdate,
-      message: TextSpan(text: _macUpdateMessage(reason)),
+      message: TextSpan(
+        text: macUpdateMessage(reason, currentAppLocalizations),
+      ),
     );
-  }
-
-  String _macUpdateMessage(MacUpdateResult result) {
-    final l10n = currentAppLocalizations;
-    return switch (result.code) {
-      'notWritable' => l10n.macUpdateNotWritable,
-      'notInApplications' => l10n.macUpdateNotInApplications,
-      'notConfigured' => l10n.macUpdateNotConfigured,
-      'notNewer' => l10n.macUpdateNotNewer,
-      'launcherChanged' => l10n.macUpdateLauncherChanged,
-      'helperOlder' => l10n.macUpdateHelperOlder,
-      'rolledBack' => l10n.macUpdateRolledBack,
-      'rollbackFailed' => l10n.macUpdateRollbackFailed,
-      'coreStopFailed' => l10n.macUpdateCoreStopFailed,
-      'rejected' => l10n.macUpdateRejected,
-      _ => l10n.macUpdateInstallFailed,
-    };
   }
 
   /// Stops the Core first: once the bundle changes, the helper no longer
@@ -388,7 +374,8 @@ class CommonAction extends _$CommonAction {
       );
       await _restartAfterFailedMacUpdate();
       await _showUpdateFailure(
-        _macUpdateMessage(const MacUpdateResult('coreStopFailed')),
+        currentAppLocalizations.macUpdateCoreStopFailed,
+        details: compactError(error),
       );
       return;
     }
@@ -415,7 +402,10 @@ class CommonAction extends _$CommonAction {
         result,
       );
     } else {
-      await _showUpdateFailure(_macUpdateMessage(result));
+      await _showUpdateFailure(
+        macUpdateMessage(result, currentAppLocalizations),
+        details: result.details,
+      );
     }
     if (result.code != 'rollbackFailed') {
       await clearUpdateDownloads();
@@ -532,10 +522,15 @@ class CommonAction extends _$CommonAction {
     }
   }
 
-  Future<void> _showUpdateFailure(String message) async {
+  /// [details] (codes, paths, what failed) stays folded under a Details
+  /// toggle below the message.
+  Future<void> _showUpdateFailure(String message, {String? details}) async {
     final res = await dialogs.showMessage(
       title: currentAppLocalizations.updateFailed,
       message: TextSpan(text: message),
+      body: details == null || details.isEmpty
+          ? null
+          : UpdateFailureBody(message: message, details: details),
       confirmText: currentAppLocalizations.goDownload,
     );
     if (res == true) {

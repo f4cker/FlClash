@@ -15,6 +15,9 @@ extern char **environ;
 
 static NSString * const FCUpdateStagingPrefix = @".Flash-update-";
 static NSString * const FCUpdateBundleName = @"Flash.app";
+// Written into a staging directory when it is created; cleanup deletes only directories that carry it.
+static NSString * const FCUpdateStagingMarker = @".flash-update-staging";
+static NSString * const FCUpdateRescueRecord = @"last-failed-update.json";
 
 static NSDictionary *FCUpdateAnswer(NSString *code, NSString *detail) {
     return @{@"code": code, @"detail": detail ?: @""};
@@ -41,9 +44,25 @@ NSString *FCUpdateInstalledBundle(void) {
     return FCGUIBundle;
 }
 
+static int FCUpdateRenameSwap(const char *from, const char *to) {
+    return renamex_np(from, to, RENAME_SWAP);
+}
+
+NSString *FCUpdateRescueDirectory(void) {
+    static NSString *directory;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSString *support = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES)
+            .firstObject ?: [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support"];
+        directory = [support stringByAppendingPathComponent:@"Flash/update-rescue"];
+    });
+    return directory;
+}
+
 FCUpdatePolicy FCUpdateDefaultPolicy(void) {
     return (FCUpdatePolicy){FCUpdateDefaultCandidateTrust, FCUpdateDefaultInstalledTrust, FCUpdateDefaultHelperTrust,
-        (__bridge CFStringRef)FCLauncherStatusDirectory, 0};
+        (__bridge CFStringRef)FCLauncherStatusDirectory, 0, FCUpdateRenameSwap,
+        (__bridge CFStringRef)FCUpdateRescueDirectory()};
 }
 
 // The launcher's rule (Launcher/main.c): an unsigned decimal without sign, space or leading zero.
@@ -148,7 +167,8 @@ static int FCUpdateRun(NSArray<NSString *> *arguments) {
 
 static BOOL FCUpdateUnpack(NSString *archive, NSString *directory) {
     if (FCUpdateRun(@[@"/usr/bin/ditto", @"-x", @"-k", archive, directory])) return NO;
-    NSArray *contents = [NSFileManager.defaultManager contentsOfDirectoryAtPath:directory error:nil];
+    NSMutableArray *contents = [[NSFileManager.defaultManager contentsOfDirectoryAtPath:directory error:nil] mutableCopy];
+    [contents removeObject:FCUpdateStagingMarker];
     struct stat state;
     NSString *bundle = [directory stringByAppendingPathComponent:FCUpdateBundleName];
     return [contents isEqualToArray:@[FCUpdateBundleName]] && lstat(bundle.fileSystemRepresentation, &state) == 0 &&
@@ -162,11 +182,29 @@ static BOOL FCUpdateCanonicalDirectory(NSString *path) {
         lstat(canonical, &state) == 0 && S_ISDIR(state.st_mode);
 }
 
+static NSString *FCUpdateMarkerPath(NSString *directory) {
+    return [directory stringByAppendingPathComponent:FCUpdateStagingMarker];
+}
+
+static BOOL FCUpdateMark(NSString *directory) {
+    int descriptor = open(FCUpdateMarkerPath(directory).fileSystemRepresentation,
+        O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (descriptor < 0) return NO;
+    close(descriptor);
+    return YES;
+}
+
+static BOOL FCUpdateMarked(NSString *directory) {
+    struct stat state;
+    return lstat(FCUpdateMarkerPath(directory).fileSystemRepresentation, &state) == 0 && S_ISREG(state.st_mode) &&
+        state.st_uid == getuid();
+}
+
 static BOOL FCUpdatePermissionError(int error) {
     return error == EACCES || error == EPERM || error == EROFS;
 }
 
-NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSString *target, FCUpdatePolicy policy) {
+static NSDictionary *FCUpdatePrepareChecked(NSString *archive, NSDictionary *expected, NSString *target, FCUpdatePolicy policy) {
     uint64_t size = 0, build = 0, installedBuild = 0;
     NSString *sha256 = expected[@"sha256"];
     if (![sha256 isKindOfClass:NSString.class] || !FCUpdateBuildNumber(expected[@"size"], &size) ||
@@ -190,6 +228,11 @@ NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSStrin
         return FCUpdateAnswer(FCUpdatePermissionError(error) ? @"notWritable" : @"failed", @(strerror(error)));
     }
     NSString *directory = @(staging);
+    if (!FCUpdateMark(directory)) {
+        int error = errno;
+        [NSFileManager.defaultManager removeItemAtPath:directory error:nil];
+        return FCUpdateAnswer(@"failed", [@"staging marker: " stringByAppendingString:@(strerror(error))]);
+    }
     NSString *candidate = [directory stringByAppendingPathComponent:FCUpdateBundleName];
     if (!FCUpdateUnpack(archive, directory)) {
         [NSFileManager.defaultManager removeItemAtPath:directory error:nil];
@@ -211,10 +254,58 @@ static BOOL FCUpdateStagedPath(NSString *staged, NSString *target) {
         [directory.lastPathComponent hasPrefix:FCUpdateStagingPrefix] &&
         [directory.stringByDeletingLastPathComponent isEqualToString:target.stringByDeletingLastPathComponent] &&
         FCUpdateCanonicalDirectory(directory) && lstat(directory.fileSystemRepresentation, &state) == 0 &&
-        state.st_uid == getuid() && (state.st_mode & 077) == 0 && FCUpdateCanonicalDirectory(staged);
+        state.st_uid == getuid() && (state.st_mode & 077) == 0 && FCUpdateMarked(directory) &&
+        FCUpdateCanonicalDirectory(staged);
 }
 
-NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy policy) {
+// The previous app could not be swapped back: unmark its staging directory first (whatever happens next, no
+// cleanup deletes it), then move it under `rescueDirectory` without replacing anything there.
+static NSDictionary *FCUpdateRescue(NSString *previous, NSString *rescueDirectory, NSDictionary *record) {
+    NSString *staging = previous.stringByDeletingLastPathComponent;
+    BOOL unmarked = unlink(FCUpdateMarkerPath(staging).fileSystemRepresentation) == 0 || errno == ENOENT;
+    uint64_t build = 0;
+    NSString *name = FCUpdateAppBuild(previous, &build) ? [NSString stringWithFormat:@"Flash-%llu", build] : @"Flash-previous";
+    NSString *rescued = previous;
+    NSString *moveError = @"";
+    NSError *error = nil;
+    if (![NSFileManager.defaultManager createDirectoryAtPath:rescueDirectory withIntermediateDirectories:YES
+            attributes:@{NSFilePosixPermissions: @0700} error:&error]) {
+        moveError = error.localizedDescription ?: @"rescue directory";
+    } else {
+        for (int i = 1; i < 100; i++) {
+            NSString *file = i == 1 ? name : [NSString stringWithFormat:@"%@-%d", name, i];
+            NSString *destination = [rescueDirectory stringByAppendingPathComponent:[file stringByAppendingPathExtension:@"app"]];
+            if (renamex_np(previous.fileSystemRepresentation, destination.fileSystemRepresentation, RENAME_EXCL) == 0) {
+                rescued = destination;
+                rmdir(staging.fileSystemRepresentation);
+                break;
+            }
+            if (errno != EEXIST) {
+                moveError = @(strerror(errno));
+                break;
+            }
+        }
+    }
+    BOOL moved = rescued != previous;
+    uint64_t found = 0;
+    struct stat state;
+    BOOL verified = build && lstat(rescued.fileSystemRepresentation, &state) == 0 && S_ISDIR(state.st_mode) &&
+        FCUpdateAppBuild(rescued, &found) && found == build;
+    NSMutableDictionary *entry = [record mutableCopy];
+    entry[@"date"] = [[NSISO8601DateFormatter new] stringFromDate:NSDate.date];
+    entry[@"previousApp"] = rescued;
+    entry[@"previousBuild"] = @(build);
+    entry[@"moved"] = @(moved);
+    entry[@"verified"] = @(verified);
+    if (!moved) entry[@"moveError"] = moveError;
+    if (!unmarked) entry[@"markerError"] = @(strerror(errno));
+    NSData *json = [NSJSONSerialization dataWithJSONObject:entry options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys
+        error:nil];
+    [json writeToFile:[rescueDirectory stringByAppendingPathComponent:FCUpdateRescueRecord] atomically:YES];
+    return @{@"rescued": rescued, @"rescueMoved": @(moved), @"rescueVerified": @(verified), @"rescueError": moveError};
+}
+
+static NSDictionary *FCUpdateInstallChecked(NSString *staged, NSString *target, FCUpdatePolicy policy) {
     if (!FCUpdateCanonicalDirectory(target)) return FCUpdateAnswer(@"notInApplications", @"target not canonical");
     if (!FCUpdateStagedPath(staged, target)) return FCUpdateAnswer(@"rejected", @"staged path");
     BOOL recordUnreadable = NO;
@@ -223,7 +314,7 @@ NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy
     uint64_t build = 0;
     NSData *launcher = FCUpdateLauncher(target);
     if (!FCUpdateAppBuild(staged, &build) || !launcher) return FCUpdateAnswer(@"failed", @"staged app unreadable");
-    if (renamex_np(staged.fileSystemRepresentation, target.fileSystemRepresentation, RENAME_SWAP)) {
+    if (policy.swap(staged.fileSystemRepresentation, target.fileSystemRepresentation)) {
         int error = errno;
         return FCUpdateAnswer(FCUpdatePermissionError(error) ? @"notWritable" : @"swapFailed", @(strerror(error)));
     }
@@ -234,10 +325,51 @@ NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy
     else if (!FCUpdateAppBuild(target, &installed) || installed != build) problem = @"installed build";
     else if (![FCUpdateLauncher(target) isEqualToData:launcher]) problem = @"installed launcher";
     if (!problem) return @{@"code": @"ok", @"replaced": staged};
-    if (renamex_np(staged.fileSystemRepresentation, target.fileSystemRepresentation, RENAME_SWAP))
-        return FCUpdateAnswer(@"rollbackFailed", [NSString stringWithFormat:@"%@; swap back: %s; previous app at %@",
-            problem, strerror(errno), staged]);
-    return FCUpdateAnswer(@"rolledBack", problem);
+    if (policy.swap(staged.fileSystemRepresentation, target.fileSystemRepresentation) == 0)
+        return FCUpdateAnswer(@"rolledBack", problem);
+    NSString *detail = [NSString stringWithFormat:@"%@; swap back: %s", problem, strerror(errno)];
+    NSMutableDictionary *answer = [FCUpdateAnswer(@"rollbackFailed", detail) mutableCopy];
+    [answer addEntriesFromDictionary:FCUpdateRescue(staged, (__bridge NSString *)policy.rescueDirectory,
+        @{@"problem": detail, @"failedBuild": @(build), @"installedApp": target})];
+    return answer;
+}
+
+typedef struct {
+    BOOL known;
+    dev_t device;
+    ino_t inode;
+    uint64_t build;
+} FCUpdateSnapshot;
+
+static FCUpdateSnapshot FCUpdateSnapshotOf(NSString *target) {
+    struct stat state = {0};
+    FCUpdateSnapshot snapshot = {NO, 0, 0, 0};
+    snapshot.known = lstat(target.fileSystemRepresentation, &state) == 0 && S_ISDIR(state.st_mode) &&
+        FCUpdateAppBuild(target, &snapshot.build);
+    snapshot.device = state.st_dev;
+    snapshot.inode = state.st_ino;
+    return snapshot;
+}
+
+// `unchanged`: after a failure, the same directory (device and inode) with the same build is still at `target`.
+static NSDictionary *FCUpdateNoteUnchanged(NSDictionary *answer, NSString *target, FCUpdateSnapshot before) {
+    if ([answer[@"code"] isEqualToString:@"ok"]) return answer;
+    FCUpdateSnapshot after = FCUpdateSnapshotOf(target);
+    BOOL unchanged = before.known && after.known && before.device == after.device && before.inode == after.inode &&
+        before.build == after.build;
+    NSMutableDictionary *noted = [answer mutableCopy];
+    noted[@"unchanged"] = @(unchanged);
+    return noted;
+}
+
+NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSString *target, FCUpdatePolicy policy) {
+    FCUpdateSnapshot before = FCUpdateSnapshotOf(target);
+    return FCUpdateNoteUnchanged(FCUpdatePrepareChecked(archive, expected, target, policy), target, before);
+}
+
+NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy policy) {
+    FCUpdateSnapshot before = FCUpdateSnapshotOf(target);
+    return FCUpdateNoteUnchanged(FCUpdateInstallChecked(staged, target, policy), target, before);
 }
 
 void FCUpdateCleanup(NSString *target) {
@@ -246,7 +378,8 @@ void FCUpdateCleanup(NSString *target) {
         if (![name hasPrefix:FCUpdateStagingPrefix]) continue;
         NSString *path = [parent stringByAppendingPathComponent:name];
         struct stat state;
-        if (lstat(path.fileSystemRepresentation, &state) == 0 && S_ISDIR(state.st_mode) && state.st_uid == getuid())
+        if (lstat(path.fileSystemRepresentation, &state) == 0 && S_ISDIR(state.st_mode) && state.st_uid == getuid() &&
+            FCUpdateMarked(path))
             [NSFileManager.defaultManager removeItemAtPath:path error:nil];
     }
 }

@@ -224,6 +224,76 @@ class UpdateInstallerTests(unittest.TestCase):
         self.assertEqual(plistlib.loads((staged / 'Contents/Info.plist').read_bytes())['CFBundleVersion'], '101')
         run('codesign', '--verify', '--strict', self.target)
 
+    def build_of(self, app):
+        return plistlib.loads((Path(app) / 'Contents/Info.plist').read_bytes())['CFBundleVersion']
+
+    def test_failed_rollback_preserves_the_previous_app(self):
+        # The installed check fails and the swap back fails too: 101 stays installed, 100 must survive.
+        self.make_app(self.target, 100, 100)
+        staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+        rescue = self.case / 'Support/Flash/update-rescue'
+        env = {'FC_TEST_FAIL_INSTALLED': '1', 'FC_TEST_FAIL_SWAP_BACK': '1', 'FC_TEST_RESCUE_DIR': str(rescue)}
+        answer = self.call('install', staged, self.target, self.status, env=env)
+        self.assertEqual(answer['code'], 'rollbackFailed', answer)
+        self.assertIn('swap back', answer['detail'])
+        self.assertEqual(Path(answer['rescued']), rescue / 'Flash-100.app')
+        self.assertTrue(answer['rescueMoved'])
+        self.assertTrue(answer['rescueVerified'])
+        self.assertFalse(answer['unchanged'])
+        self.assertEqual(self.installed_build(), '101')
+        self.assertEqual(self.build_of(rescue / 'Flash-100.app'), '100')
+        run('codesign', '--verify', '--strict', rescue / 'Flash-100.app')
+        self.assertEqual(self.staging_dirs(), [])
+        record = json.loads((rescue / 'last-failed-update.json').read_text())
+        self.assertEqual((record['previousApp'], record['previousBuild'], record['failedBuild'], record['verified']),
+                         (str(rescue / 'Flash-100.app'), 100, 101, True))
+        self.call('cleanup', self.target)
+        self.assertEqual(self.build_of(rescue / 'Flash-100.app'), '100')
+
+        # A second failure never replaces the first rescued copy.
+        self.target.rename(self.case / 'gone.app')
+        self.make_app(self.target, 100, 100)
+        staged = Path(self.prepare(self.archive(102, 102), 102, 102)['staged'])
+        answer = self.call('install', staged, self.target, self.status, env=env)
+        self.assertEqual(Path(answer['rescued']), rescue / 'Flash-100-2.app')
+        self.assertEqual(self.build_of(rescue / 'Flash-100.app'), '100')
+
+    def test_unmovable_previous_app_stays_unmarked(self):
+        self.make_app(self.target, 100, 100)
+        staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+        blocked = self.case / 'blocked'
+        blocked.mkdir(mode=0o500)
+        env = {'FC_TEST_FAIL_INSTALLED': '1', 'FC_TEST_FAIL_SWAP_BACK': '1',
+               'FC_TEST_RESCUE_DIR': str(blocked / 'update-rescue')}
+        answer = self.call('install', staged, self.target, self.status, env=env)
+        self.assertEqual(answer['code'], 'rollbackFailed', answer)
+        self.assertEqual(Path(answer['rescued']), staged)
+        self.assertFalse(answer['rescueMoved'])
+        self.assertTrue(answer['rescueVerified'])
+        self.assertTrue(answer['rescueError'])
+        self.assertFalse((staged.parent / '.flash-update-staging').exists())
+        self.call('cleanup', self.target)
+        self.assertEqual(self.build_of(staged), '100')
+        # Without its marker, the directory is no longer something install accepts either.
+        self.assertEqual(self.call('install', staged, self.target, self.status)['code'], 'rejected')
+
+    def test_cleanup_deletes_only_marked_staging_directories(self):
+        self.make_app(self.target, 100, 100)
+        foreign = self.applications / '.Flash-update-foreign'
+        self.make_app(foreign / 'Flash.app', 99, 99)
+        staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+        self.assertTrue((staged.parent / '.flash-update-staging').is_file())
+        self.call('cleanup', self.target)
+        self.assertEqual(self.staging_dirs(), ['.Flash-update-foreign'])
+
+    def test_failures_report_whether_the_installed_app_is_unchanged(self):
+        self.make_app(self.target, 100, 100)
+        refused = self.prepare(self.archive(101, 101, launcher=2), 101, 101)
+        self.assertEqual((refused['code'], refused['unchanged']), ('launcherChanged', True))
+        staged = Path(self.prepare(self.archive(101, 101), 101, 101)['staged'])
+        answer = self.call('install', staged, self.target, self.status, env={'FC_TEST_FAIL_INSTALLED': '1'})
+        self.assertEqual((answer['code'], answer['unchanged']), ('rolledBack', True))
+
     def test_install_only_takes_its_own_staging_directory(self):
         self.make_app(self.target, 100, 100)
         elsewhere = self.make_app(self.case / 'other/Flash.app', 101, 101)

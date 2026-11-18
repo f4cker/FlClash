@@ -2,6 +2,8 @@
 // for real by Security, identifiers instead of the pinned certificate) or the production policy (`pinned`).
 #import <Foundation/Foundation.h>
 #import <Security/Security.h>
+#import <errno.h>
+#import <stdio.h>
 #import "../../Runner/UpdateInstaller.h"
 #import "../../Shared/HelperTrust.h"
 
@@ -31,6 +33,21 @@ static BOOL FCTestHelperTrust(NSString *helper) {
     return [FCTestRequirement(helper, @"com.layoute.flash.helper") isEqualToString:@"trusted"];
 }
 
+// FC_TEST_FAIL_SWAP_BACK: every swap after the first fails, as when the swap back cannot happen.
+static int FCTestSwap(const char *from, const char *to) {
+    static int swaps = 0;
+    if (getenv("FC_TEST_FAIL_SWAP_BACK") && swaps++ > 0) {
+        errno = EBUSY;
+        return -1;
+    }
+    return renamex_np(from, to, RENAME_SWAP);
+}
+
+static CFStringRef FCTestRescueDirectory(void) {
+    const char *directory = getenv("FC_TEST_RESCUE_DIR");
+    return directory ? (CFStringRef)CFBridgingRetain(@(directory)) : CFSTR("/nonexistent/update-rescue");
+}
+
 static void FCPrint(id object) {
     NSData *data = [NSJSONSerialization dataWithJSONObject:object options:NSJSONWritingSortedKeys error:nil];
     fwrite(data.bytes, 1, data.length, stdout);
@@ -45,7 +62,8 @@ int main(int argc, const char *argv[]) {
         BOOL pinned = [arguments.lastObject isEqualToString:@"pinned"];
         if (pinned) [arguments removeLastObject];
         FCUpdatePolicy policy = pinned ? FCUpdateDefaultPolicy() : (FCUpdatePolicy){
-            FCTestAppTrust, FCTestInstalledTrust, FCTestHelperTrust, CFSTR(""), getuid()};
+            FCTestAppTrust, FCTestInstalledTrust, FCTestHelperTrust, CFSTR(""), getuid(), FCTestSwap,
+            FCTestRescueDirectory()};
         if ([command isEqualToString:@"prepare"] && arguments.count == 9) {
             policy.launcherStatusDirectory = (__bridge CFStringRef)arguments[3];
             NSNumberFormatter *number = [NSNumberFormatter new];
