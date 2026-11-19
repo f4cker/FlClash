@@ -469,13 +469,6 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
                     : () => _deleteInvalid(profileId, invalid),
               ),
             ],
-      header: rewrites.isEmpty
-          ? null
-          : Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: subtitle,
-            ),
-      // Built below the bar, so the content padding is the header's.
       body: Builder(
         builder: (context) => _buildBody(
           context,
@@ -486,6 +479,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
           profileId: profileId,
           loading: value != null && value.isLoading && !value.hasValue,
           rewrites: rewrites,
+          subtitle: subtitle,
           issues: issues,
           bodyLimit: bodyLimit,
           decrypting: decrypting,
@@ -497,6 +491,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
   Widget _buildBody(
     BuildContext context, {
     required EdgeInsets padding,
+    required Widget subtitle,
     required int? profileId,
     required bool loading,
     required List<MitmRewrite> rewrites,
@@ -521,7 +516,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
         children: [
           if (banners.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: padding.copyWith(bottom: 0),
               child: Column(spacing: 8, children: banners),
             ),
           Expanded(
@@ -627,6 +622,7 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: subtitle),
           if (banners.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),

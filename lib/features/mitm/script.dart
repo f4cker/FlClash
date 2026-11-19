@@ -347,20 +347,6 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
                       ),
               ),
             ],
-      header: scripts.isEmpty
-          ? null
-          : Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: MitmCountLine(
-                text: l.mitmScriptSubtitle(
-                  profileLabel,
-                  scripts.length,
-                  enabled,
-                ),
-                updates: updates,
-                errors: invalid.length,
-              ),
-            ),
       body: Builder(
         builder: (context) => _buildBody(
           context,
@@ -371,6 +357,11 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
           profileId: profileId,
           loading: value != null && value.isLoading && !value.hasValue,
           scripts: scripts,
+          subtitle: MitmCountLine(
+            text: l.mitmScriptSubtitle(profileLabel, scripts.length, enabled),
+            updates: updates,
+            errors: invalid.length,
+          ),
         ),
       ),
     );
@@ -379,6 +370,7 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
   Widget _buildBody(
     BuildContext context, {
     required EdgeInsets padding,
+    required Widget subtitle,
     required int? profileId,
     required bool loading,
     required List<MitmScript> scripts,
@@ -419,7 +411,7 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
         children: [
           if (banners.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: padding.copyWith(bottom: 0),
               child: Column(spacing: 8, children: banners),
             ),
           Expanded(
@@ -520,6 +512,7 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: subtitle),
           if (banners.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
