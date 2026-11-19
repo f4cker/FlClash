@@ -30,6 +30,9 @@ static const uint64_t FCAdoptionWindowSeconds = 600;
 // One receive answers with every frame queued, up to FCRelayBatchFrames and this many bytes (a larger single frame
 // still goes alone).
 static const size_t FCBatchBytes = 4 * 1024 * 1024;
+// The longest a `receive` naming a `wait` is held for the Core's next frame before it answers with none; the bridge
+// gives up on any reply after 8 s.
+static const uint64_t FCReceiveWaitMaxMilliseconds = 5000;
 
 #ifndef FCMessageAuditToken
 void xpc_dictionary_get_audit_token(xpc_object_t message, audit_token_t *token);
@@ -95,6 +98,12 @@ static NSString *FCRunningHash(void) {
 @property NSDictionary *lastSweep;
 @property NSUInteger connections;
 @property dispatch_source_t idle;
+// The one `receive` held until the Core writes, its wait ends, or the relay closes (see -holdReceive:).
+@property xpc_object_t waiting;
+@property xpc_connection_t waitingConnection;
+@property uint64_t waitingAck;
+@property dispatch_source_t waitingRead;
+@property dispatch_source_t waitingTimer;
 - (instancetype)initWithBundle:(NSString *)bundle;
 - (void)accept:(xpc_connection_t)connection;
 @end
@@ -179,6 +188,12 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 }
 
 - (void)closeRelay {
+    // A held receive learns of the end after the step that closed the relay (stop, exit) has finished.
+    xpc_object_t waiting = self.waiting;
+    [self releaseWait];
+    if (waiting) dispatch_async(self.queue, ^{
+        [self reply:waiting code:@"disconnected" pid:self.child frames:nil base:0 coreToken:nil sweep:nil];
+    });
     if (self.socket >= 0) { close(self.socket); self.socket = -1; }
     if (self.listener >= 0) { close(self.listener); self.listener = -1; }
     if (self.socketPath) unlink(self.socketPath.fileSystemRepresentation);
@@ -444,6 +459,63 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
     return nil;
 }
 
+- (void)releaseWait {
+    if (self.waitingRead) dispatch_source_cancel(self.waitingRead);
+    if (self.waitingTimer) dispatch_source_cancel(self.waitingTimer);
+    self.waitingRead = nil;
+    self.waitingTimer = nil;
+    self.waiting = nil;
+    self.waitingConnection = nil;
+}
+
+// Keeps a receive that found nothing until the Core's socket is readable or `wait` ms (at most
+// FCReceiveWaitMaxMilliseconds) pass, so an idle relay is not asked again and again. The source watches a duplicate
+// of the socket, closed only once the source is cancelled.
+- (BOOL)holdReceive:(xpc_object_t)request connection:(xpc_connection_t)connection ack:(uint64_t)ack
+    wait:(uint64_t)milliseconds {
+    if (self.socket < 0 || !milliseconds) return NO;
+    int watched = dup(self.socket);
+    if (watched < 0) return NO;
+    fcntl(watched, F_SETFD, FD_CLOEXEC);
+    dispatch_source_t readable = dispatch_source_create(DISPATCH_SOURCE_TYPE_READ, (uintptr_t)watched, 0, self.queue);
+    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.queue);
+    if (!readable || !timer) { close(watched); return NO; }
+    self.waiting = request;
+    self.waitingConnection = connection;
+    self.waitingAck = ack;
+    self.waitingRead = readable;
+    self.waitingTimer = timer;
+    dispatch_source_set_event_handler(readable, ^{ [self answerWaiting:request expired:NO]; });
+    dispatch_source_set_cancel_handler(readable, ^{ close(watched); });
+    dispatch_source_set_event_handler(timer, ^{ [self answerWaiting:request expired:YES]; });
+    dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW,
+        (int64_t)MIN(milliseconds, FCReceiveWaitMaxMilliseconds) * NSEC_PER_MSEC), DISPATCH_TIME_FOREVER,
+        50 * NSEC_PER_MSEC);
+    dispatch_resume(readable);
+    dispatch_resume(timer);
+    return YES;
+}
+
+// The held receive answers once it has frames or the Core's end; with none only when its wait expired (a partial
+// frame keeps it waiting).
+- (void)answerWaiting:(xpc_object_t)request expired:(BOOL)expired {
+    if (self.waiting != request) return;
+    uint64_t base = 0;
+    NSString *code = nil;
+    NSArray<NSData *> *frames = [self receive:self.waitingAck base:&base code:&code];
+    if (self.waiting != request || (!expired && frames && !frames.count)) return;
+    [self releaseWait];
+    [self reply:request code:code pid:self.child frames:frames base:base coreToken:nil sweep:nil];
+}
+
+// A newer receive replaces a held one (whose bridge request already ended); its reply carries nothing to take.
+- (void)supersedeWaiting {
+    xpc_object_t waiting = self.waiting;
+    if (!waiting) return;
+    [self releaseWait];
+    [self reply:waiting code:@"ok" pid:self.child frames:@[] base:self.outgoingBase coreToken:nil sweep:nil];
+}
+
 - (void)noteOwner:(xpc_object_t)request {
     audit_token_t token;
     memset(&token, 0, sizeof(token));
@@ -482,6 +554,7 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
 // The owning connection went away. Its Core is stopped unless the same app process resumes the relay within the
 // grace period; at once when that process is gone.
 - (void)ownerLost:(xpc_connection_t)connection {
+    if (self.waitingConnection == connection) [self releaseWait];
     if (self.owner != connection) return;
     if (self.child <= 0 || self.ownerPid <= 0 || (kill(self.ownerPid, 0) && errno == ESRCH)) { [self stop]; return; }
     os_log(FCHelperLog(), "app connection lost; Core kept for %lld s for the app to resume", FCOwnerGraceSeconds);
@@ -539,8 +612,13 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) {
         code = @"wrongOwner";
     else if ([action isEqualToString:@"receive"]) {
         xpc_object_t ack = xpc_dictionary_get_value(request, "ack");
-        if (ack && xpc_get_type(ack) == XPC_TYPE_UINT64)
+        if (ack && xpc_get_type(ack) == XPC_TYPE_UINT64) {
+            [self supersedeWaiting];
             frames = [self receive:xpc_uint64_get_value(ack) base:&base code:&code];
+            // Absent (an app from before waiting existed) reads 0: answered at once, as before.
+            if (frames && !frames.count && [self holdReceive:request connection:connection
+                    ack:xpc_uint64_get_value(ack) wait:xpc_dictionary_get_uint64(request, "wait")]) return;
+        }
     } else if ([action isEqualToString:@"send"]) {
         size_t length = 0;
         const void *data = xpc_dictionary_get_data(request, "frame", &length);

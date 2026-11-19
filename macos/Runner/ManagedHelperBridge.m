@@ -590,7 +590,8 @@ static const NSTimeInterval FCExitSettleSeconds = 1;
     NSString *session = arguments[@"session"];
     if ([session isKindOfClass:NSString.class]) xpc_dictionary_set_string(message, "session", session.UTF8String);
     if (frame && [frame isKindOfClass:NSData.class]) xpc_dictionary_set_data(message, "frame", frame.bytes, bytes);
-    for (NSString *key in @[@"ack", @"seq"]) {
+    // `wait`: how long the daemon may hold an empty receive for the Core (a daemon from before ignores it).
+    for (NSString *key in @[@"ack", @"seq", @"wait"]) {
         NSNumber *number = arguments[key];
         if ([number isKindOfClass:NSNumber.class] && number.longLongValue >= 0)
             xpc_dictionary_set_uint64(message, key.UTF8String, number.unsignedLongLongValue);

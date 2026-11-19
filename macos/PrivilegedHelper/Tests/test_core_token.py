@@ -46,10 +46,14 @@ int main(void) {
         self.assertEqual(reply.count('coreAuditToken'), 1)
         self.assertIn('if (coreToken) xpc_dictionary_set_data(reply, "coreAuditToken"', reply)
         self.assertNotIn('self.coreToken', reply)
-        calls = re.findall(r'\[self reply:request[^;]*;', SUPERVISOR, re.S)
-        self.assertEqual(len(calls), 2)
-        self.assertIn('coreToken:nil', calls[0])
-        self.assertIn('coreToken:FCRepliesWithCoreToken(action, code) ? self.coreToken : nil', calls[1])
+        # Only handle:'s reply may carry the token, and only by FCRepliesWithCoreToken; every other reply (the
+        # incompatible-request one and those of a held receive) passes nil.
+        calls = re.findall(r'\[self reply:\w+[^;]*;', SUPERVISOR, re.S)
+        tokened = [call for call in calls if 'coreToken:nil' not in call]
+        self.assertGreaterEqual(len(calls), 2)
+        self.assertEqual(len(tokened), 1)
+        self.assertIn('coreToken:FCRepliesWithCoreToken(action, code) ? self.coreToken : nil', tokened[0])
+        self.assertIn('[self reply:request', tokened[0])
 
 
 if __name__ == '__main__':

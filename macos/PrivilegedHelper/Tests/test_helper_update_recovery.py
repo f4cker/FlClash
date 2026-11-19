@@ -120,6 +120,10 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) { return NO
     return @"ok";
 }
 - (NSArray<NSData *> *)receive:(uint64_t)ack base:(uint64_t *)base code:(NSString **)code { *code = @"ok"; return @[]; }
+- (void)supersedeWaiting {}
+- (BOOL)holdReceive:(xpc_object_t)request connection:(xpc_connection_t)connection ack:(uint64_t)ack wait:(uint64_t)wait {
+    return NO;
+}
 - (NSString *)retireCores:(NSDictionary **)sweep { return @"noStaleCore"; }
 - (NSString *)send:(NSData *)frame seq:(uint64_t)seq { return @"ok"; }
 // Adoption by the same app process is covered by test_supervisor_stop; connections here are other processes.
