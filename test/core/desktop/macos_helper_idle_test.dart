@@ -7,6 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 const _session = '0123456789abcdef0123456789abcdef';
 const _next = '1123456789abcdef0123456789abcdef';
 
+// The client's back-off cap, and the time the Core gives a MITM sign
+// request that goes through the relay (mitmConnectionLeafWait).
+const _idlePauseMax = Duration(milliseconds: 250);
+const _coreLeafSignWait = Duration(milliseconds: 500);
+
 /// A daemon that holds an empty `receive` for its `wait` (as Supervisor.m),
 /// or with [waits] false one from before `wait` that answers at once.
 final class _WaitingNative implements MacHelperNativeApi {
@@ -143,6 +148,32 @@ void main() {
     expect(await client.stop(_session), isTrue);
   });
 
+  test('the pause for a daemon from before `wait` stops at 250 ms', () async {
+    final native = _WaitingNative(waits: false);
+    final client = _client(native);
+    final pauses = <Timer>[];
+    final durations = <Duration>[];
+    // Only the relay loop runs in this zone: the waits below stay outside.
+    await runZoned(
+      () => client.start(_session),
+      zoneSpecification: ZoneSpecification(
+        createTimer: (self, parent, zone, duration, callback) {
+          if (duration > Duration.zero) durations.add(duration);
+          final timer = parent.createTimer(zone, duration, callback);
+          pauses.add(timer);
+          return timer;
+        },
+      ),
+    );
+    await _wait(2500);
+    expect(await client.stop(_session), isTrue);
+    expect(durations.length, greaterThanOrEqualTo(8));
+    expect(durations, everyElement(lessThanOrEqualTo(_idlePauseMax)));
+    expect(durations.last, greaterThan(const Duration(milliseconds: 200)));
+    expect(_idlePauseMax, lessThan(_coreLeafSignWait));
+    expect(pauses.where((timer) => timer.isActive), isEmpty);
+  });
+
   test('a daemon from before `wait` is polled with a growing pause', () async {
     final native = _WaitingNative(waits: false);
     final client = _client(native);
@@ -156,6 +187,7 @@ void main() {
     ];
     expect(gaps.first, lessThan(const Duration(milliseconds: 100)));
     expect(gaps.last, greaterThanOrEqualTo(const Duration(milliseconds: 225)));
+    expect(gaps, everyElement(lessThan(_coreLeafSignWait)));
     final frames = <Uint8List>[];
     final subscription = client.events.listen((event) {
       if (event is MacHelperFrame) frames.add(event.data);
