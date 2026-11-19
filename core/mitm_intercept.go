@@ -49,6 +49,8 @@ const (
 type MitmConnection struct {
 	Id      string      `json:"id"`
 	Outcome MitmOutcome `json:"outcome"`
+	// Why a paused connection passed through: a reason the status reports.
+	PauseReason string `json:"pauseReason,omitempty"`
 	// Set, with no outcome, when a rewrite rule first applied or first
 	// failed on the connection.
 	Rewrite *MitmConnectionRewrite `json:"rewrite,omitempty"`
@@ -308,9 +310,12 @@ type mitmPause struct {
 }
 
 var (
-	mitmPaused     atomic.Pointer[mitmPause]
-	mitmHostPauses sync.Map
+	mitmPaused        atomic.Pointer[mitmPause]
+	mitmHostPauses    sync.Map
+	mitmPauseLoggedAt atomic.Int64
 )
+
+const mitmPauseLogEvery = 10 * time.Second
 
 // Why decryption is passing every listed connection through, or "".
 func mitmPausedReason() string {
@@ -341,14 +346,32 @@ func mitmPauseReasonFor(host string) string {
 }
 
 // A paused listed host goes through untouched, and the request list says
-// so. A host the app itself says is not listed gets no mark: to the user it
-// is not a decryption host at all.
-func mitmPausedOutcomeFor(host string) MitmOutcome {
-	switch mitmPauseReasonFor(host) {
+// so and why. A host the app itself says is not listed gets no mark: to the
+// user it is not a decryption host at all.
+func mitmShownPauseReason(host string) string {
+	switch reason := mitmPauseReasonFor(host); reason {
 	case "", "notListed":
 		return ""
+	default:
+		return reason
 	}
-	return mitmOutcomePaused
+}
+
+func mitmPausedPassThrough(host string) tunnel.TCPInterceptor {
+	reason := mitmShownPauseReason(host)
+	if reason == "" {
+		return nil
+	}
+	return func(client *N.BufferedConn, remote C.Conn) {
+		reportMitmPause(remote, reason)
+		N.Relay(client, remote)
+	}
+}
+
+func reportMitmPause(remote net.Conn, reason string) {
+	if id := mitmTrackerID(remote); id != "" {
+		sendMitmConnection(&MitmConnection{Id: id, Outcome: mitmOutcomePaused, PauseReason: reason})
+	}
 }
 
 func mitmPassThroughReporting(outcome MitmOutcome) tunnel.TCPInterceptor {
@@ -382,15 +405,22 @@ func pauseMitm(runtime *mitmRuntime, host string, err error) {
 	case errors.Is(err, context.DeadlineExceeded):
 		reason = "signTimeout"
 	default:
-		reason = "leafRejected"
+		reason = "leafUnusable"
 	}
 	// Publishing the pause and excluding registrations are one critical section.
 	previous, published := mitmActive.pauseGlobal(runtime, reason)
 	if !published {
 		return
 	}
-	if previous == nil || previous.reason != reason || time.Now().After(previous.until) {
-		log.Infoln("[MITM] decryption paused, listed hosts pass through: %s", reason)
+	// Each pause that begins or changes is logged; one that keeps extending
+	// is logged again at most every mitmPauseLogEvery.
+	now := time.Now()
+	last := mitmPauseLoggedAt.Load()
+	if previous == nil || previous.reason != reason || now.After(previous.until) ||
+		now.UnixNano()-last >= int64(mitmPauseLogEvery) {
+		mitmPauseLoggedAt.Store(now.UnixNano())
+		log.Warnln("[MITM] decryption paused for %s, listed hosts pass through: %s (%s: %v)",
+			mitmPauseFor, reason, host, err)
 	}
 }
 
@@ -469,20 +499,17 @@ func mitmInterceptEligible(conn *N.BufferedConn, metadata *C.Metadata) tunnel.TC
 	// A pause is reported only for the host as listed now; the relay is the
 	// same untouched one a nil result gets.
 	if mitmPausedFor(host) {
-		if outcome := mitmPausedOutcomeFor(host); outcome != "" {
-			return mitmPassThroughReporting(outcome)
-		}
-		return nil
+		return mitmPausedPassThrough(host)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), mitmConnectionLeafWait)
 	defer cancel()
 	leaf, err := mitmLeaves.get(ctx, host)
 	if err != nil {
 		pauseMitm(runtime, host, err)
-		if outcome := mitmPausedOutcomeFor(host); outcome != "" && mitmState.Load() == runtime {
-			return mitmPassThroughReporting(outcome)
+		if mitmState.Load() != runtime {
+			return nil
 		}
-		return nil
+		return mitmPausedPassThrough(host)
 	}
 	if mitmState.Load() != runtime || !runtime.hosts.Match(host) {
 		return nil
@@ -500,8 +527,8 @@ func mitmServeSelected(client *N.BufferedConn, remote C.Conn, host string, leaf 
 	if outcome := serveMitmOffering(client, remote, host, leaf, runtime, clientALPN); outcome == mitmOutcomePrecommit {
 		// A pause that won the race is still shown; a new setup is not.
 		if mitmState.Load() == runtime {
-			if paused := mitmPausedOutcomeFor(host); paused != "" {
-				reportMitmOutcome(remote, paused)
+			if reason := mitmShownPauseReason(host); reason != "" {
+				reportMitmPause(remote, reason)
 			}
 		}
 		N.Relay(client, remote)

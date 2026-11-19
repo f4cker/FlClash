@@ -152,7 +152,7 @@ int ruleSetOverdueDays(RuleSetView set, DateTime now) {
 }
 
 /// The source chips of the rules page; a managed rule falls under none.
-enum RuleSourceFilter { all, subscription, ruleSet, added, script }
+enum RuleSourceFilter { all, subscription, ruleSet, added, module, script }
 
 RuleSourceFilter? sourceFilterOf(CoreRule rule, RuleSource? source) {
   if (rule.ruleSet != null) return RuleSourceFilter.ruleSet;
@@ -162,7 +162,8 @@ RuleSourceFilter? sourceFilterOf(CoreRule rule, RuleSource? source) {
     RuleSourceKind.custom => RuleSourceFilter.subscription,
     RuleSourceKind.addedProfile ||
     RuleSourceKind.addedGlobal => RuleSourceFilter.added,
-    RuleSourceKind.script || RuleSourceKind.mitm => RuleSourceFilter.script,
+    RuleSourceKind.mitm => RuleSourceFilter.module,
+    RuleSourceKind.script => RuleSourceFilter.script,
   };
 }
 

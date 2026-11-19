@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_indicator.dart';
 import 'package:fl_clash/common/window.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/mitm.dart';
@@ -19,12 +20,19 @@ const double mitmBarCompactWidth = 720;
 const _fade = Duration(milliseconds: 200);
 const _tint = 0.15;
 
-/// Opens the MITM settings over whatever [context] shows, as the advanced
-/// settings do.
-Future<void> openMitmSettings(BuildContext context) => showNestedExtend<void>(
-  context,
-  builder: (_) => MitmView(isAndroid: system.isAndroid),
-);
+/// Opens the MITM settings: the sidebar's page where it lists one, else over
+/// whatever [context] shows, as the advanced settings do.
+Future<void> openMitmSettings(BuildContext context) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+  if (!container.read(isMobileViewProvider)) {
+    container.read(currentPageLabelProvider.notifier).toPage(PageLabel.mitm);
+    return;
+  }
+  await showNestedExtend<void>(
+    context,
+    builder: (_) => MitmView(isAndroid: system.isAndroid),
+  );
+}
 
 /// From the tray: the window comes forward with the settings open.
 Future<void> openMitmSettingsFromTray() async {

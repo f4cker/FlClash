@@ -177,7 +177,7 @@ void main() {
     expect(find.text(currentAppLocalizations.httpCaptureDesc), findsOneWidget);
   });
 
-  testWidgets('offers none of the second phase, nor untrusted decryption', (
+  testWidgets('offers no unsafe verification, nor untrusted decryption', (
     tester,
   ) async {
     await pumpView(tester, certificate: _certificate);
@@ -186,7 +186,6 @@ void main() {
     expect(find.text(l.hostname), findsOneWidget);
     expect(find.text(l.blockQuic), findsOneWidget);
     for (final hidden in [
-      l.mitmModules,
       l.skipServerCertVerify,
       l.http2,
       l.decryptUntrusted,
@@ -354,7 +353,8 @@ void main() {
   testWidgets('capture waits for decryption to be on', (tester) async {
     await pumpView(tester, certificate: _certificate);
 
-    expect(find.text(currentAppLocalizations.mitm), findsOneWidget);
+    // Off Android the page goes by its sidebar name.
+    expect(find.text(currentAppLocalizations.httpsDecryption), findsWidgets);
     await openCapture(tester);
     expect(tester.widget<Switch>(captureSwitch()).onChanged, isNull);
   });

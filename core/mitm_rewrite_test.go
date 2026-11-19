@@ -823,7 +823,7 @@ func TestMitmRewriteOffMeansNoRewrite(t *testing.T) {
 
 	// A stale engine (installed before the switch went off) still does
 	// nothing on port 80.
-	mitmRewrite.Store(compileMitmRewrite(rules, mitmDefaultRewriteBodyLimit, nil))
+	mitmRewrite.Store(compileMitmRewrite(rules, nil, mitmDefaultRewriteBodyLimit, nil))
 	mitmState.Store(&mitmRuntime{setup: MitmSetup{Enable: false}})
 	if mitmPlainWanted(&C.Metadata{DstPort: mitmPlainHTTPPort, Host: "example.com"}) || mitmRewriteBegin("http", "example.com", 0, "/ad", true) != nil {
 		t.Fatal("plain rewrite ran with the switch off")

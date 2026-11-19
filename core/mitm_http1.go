@@ -454,6 +454,49 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 			}
 			control.noteRewrite(entry, rw)
 		}
+		if rules := rw.scriptRules(false); len(rules) > 0 {
+			msg := &mitmScriptMessage{method: req.Method, header: req.Header, body: req.Body, length: req.ContentLength}
+			if req.Body == nil {
+				msg.body = http.NoBody
+			}
+			if len(req.TransferEncoding) > 0 || req.Header.Get("Expect") != "" {
+				msg.bodySkip = mitmSkipFraming
+			}
+			coding := req.Header.Get("Content-Encoding")
+			res := rw.runScripts(rules, msg, false)
+			if req.Body != nil && req.Body != http.NoBody {
+				req.Body = io.NopCloser(res.body)
+			}
+			if res.requestURI != "" {
+				if target, err := url.ParseRequestURI(res.requestURI); err == nil {
+					req.URL, req.RequestURI = target, res.requestURI
+				}
+			}
+			if res.changed {
+				if !mitmCaptures.hasOriginalBody(entry, false) {
+					mitmCaptures.originalBody(entry, false, res.original, coding)
+				}
+				if res.length == 0 {
+					req.Header.Del("Content-Encoding")
+					req.Body, req.ContentLength = http.NoBody, 0
+				} else {
+					mitmRewrittenBodyHeader(req.Header, res.length)
+					req.Body, req.ContentLength = io.NopCloser(res.body), res.length
+				}
+			}
+			mitmCaptures.originalHeader(entry, false, requestBefore, req.Header)
+			mitmCaptures.scriptedRequest(entry, scheme, req)
+			control.noteRewrite(entry, rw)
+			if res.local != nil {
+				keep, err := mitmAnswerHTTP1(client, req, res.local, entry)
+				if err != nil || !keep {
+					<-joinWatch(control, pendingWatch)
+					return err
+				}
+				watch = pendingWatch
+				continue
+			}
+		}
 		uploadWriter := newMitmUploadWriter(upstream)
 		// http.NoBody must stay as it is: any other body with length 0 makes
 		// Request.Write send "Transfer-Encoding: chunked" for POST/PUT/PATCH
@@ -623,6 +666,44 @@ func mitmHTTP1Duplex(client, upstream io.ReadWriter, host string, allowed func()
 							mitmCaptures.originalBody(entry, true, result.original, responseBefore.Get("Content-Encoding"))
 							mitmRewrittenBodyHeader(resp.Header, result.length)
 							resp.ContentLength, resp.TransferEncoding, resp.Trailer = result.length, nil, nil
+						}
+					}
+					if rules := rw.scriptRules(true); len(rules) > 0 {
+						msg := &mitmScriptMessage{
+							method: req.Method, status: resp.StatusCode, requestHeader: req.Header,
+							header: resp.Header, body: resp.Body, length: resp.ContentLength,
+						}
+						if rewrittenBody != nil {
+							msg.body = rewrittenBody
+						}
+						switch {
+						case mitmHeaderOnly(resp, req.Method):
+							msg.body, msg.length = http.NoBody, 0
+						case upload != nil && !mitmUploadSettles(upload, &uploadPending, &uploadErr, control):
+							if !uploadPending {
+								upload = nil
+							}
+							msg.bodySkip = mitmSkipUploading
+						default:
+							upload = nil
+						}
+						coding := resp.Header.Get("Content-Encoding")
+						var before []byte
+						if res := rw.runScripts(rules, msg, true); res.local == nil {
+							if !mitmHeaderOnly(resp, req.Method) {
+								rewrittenBody = res.body
+							}
+							if res.status != 0 {
+								resp.StatusCode, resp.Status = res.status, mitmStatusText(res.status)
+							}
+							if res.changed {
+								before = res.original
+								mitmRewrittenBodyHeader(resp.Header, res.length)
+								resp.ContentLength, resp.TransferEncoding, resp.Trailer = res.length, nil, nil
+							}
+						}
+						if before != nil && !mitmCaptures.hasOriginalBody(entry, true) {
+							mitmCaptures.originalBody(entry, true, before, coding)
 						}
 					}
 					control.noteRewrite(entry, rw)

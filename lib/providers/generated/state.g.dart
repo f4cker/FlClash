@@ -240,6 +240,106 @@ final class CurrentMitmRewritesProvider
 String _$currentMitmRewritesHash() =>
     r'87783571f2ee2b56b6cc42522e17892ccb3abf8f';
 
+/// The current profile's enabled scripts; empty while none is selected or
+/// they are still being read.
+
+@ProviderFor(currentMitmScripts)
+final currentMitmScriptsProvider = CurrentMitmScriptsProvider._();
+
+/// The current profile's enabled scripts; empty while none is selected or
+/// they are still being read.
+
+final class CurrentMitmScriptsProvider
+    extends
+        $FunctionalProvider<
+          List<MitmScript>,
+          List<MitmScript>,
+          List<MitmScript>
+        >
+    with $Provider<List<MitmScript>> {
+  /// The current profile's enabled scripts; empty while none is selected or
+  /// they are still being read.
+  CurrentMitmScriptsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentMitmScriptsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentMitmScriptsHash();
+
+  @$internal
+  @override
+  $ProviderElement<List<MitmScript>> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  List<MitmScript> create(Ref ref) {
+    return currentMitmScripts(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<MitmScript> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<MitmScript>>(value),
+    );
+  }
+}
+
+String _$currentMitmScriptsHash() =>
+    r'2097fa3cd1919ce941c0c0b1e914d36945f2c2da';
+
+/// Read from the enabled modules' files; empty while modules are off.
+
+@ProviderFor(enabledMitmModuleRules)
+final enabledMitmModuleRulesProvider = EnabledMitmModuleRulesProvider._();
+
+/// Read from the enabled modules' files; empty while modules are off.
+
+final class EnabledMitmModuleRulesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<MitmModuleRules>,
+          MitmModuleRules,
+          FutureOr<MitmModuleRules>
+        >
+    with $FutureModifier<MitmModuleRules>, $FutureProvider<MitmModuleRules> {
+  /// Read from the enabled modules' files; empty while modules are off.
+  EnabledMitmModuleRulesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'enabledMitmModuleRulesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$enabledMitmModuleRulesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<MitmModuleRules> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<MitmModuleRules> create(Ref ref) {
+    return enabledMitmModuleRules(ref);
+  }
+}
+
+String _$enabledMitmModuleRulesHash() =>
+    r'69f2ee2021392f8f77340713cea6922e99d0a09c';
+
 /// Null, and so no decryption, unless the user turned it on.
 
 @ProviderFor(mitmSetup)
@@ -290,7 +390,7 @@ final class MitmSetupProvider
   }
 }
 
-String _$mitmSetupHash() => r'0f219f6ae8ecbf03278f11aabedbef2b2303eb86';
+String _$mitmSetupHash() => r'b317651c5fe5f2e99cf12c41f7ca927f64af1901';
 
 @ProviderFor(setupPatch)
 final setupPatchProvider = SetupPatchProvider._();
@@ -3511,6 +3611,117 @@ final class OverlayTopOffsetProvider
 
 String _$overlayTopOffsetHash() => r'65469afec2a8ea45bddf916c8e61c7d6cbfc3c85';
 
+/// Whether each sidebar section is closed: the user's own choice once made,
+/// otherwise its default, which for decryption follows whether it is on.
+
+@ProviderFor(sidebarCollapsedGroups)
+final sidebarCollapsedGroupsProvider = SidebarCollapsedGroupsProvider._();
+
+/// Whether each sidebar section is closed: the user's own choice once made,
+/// otherwise its default, which for decryption follows whether it is on.
+
+final class SidebarCollapsedGroupsProvider
+    extends
+        $FunctionalProvider<
+          Map<NavigationGroup, bool>,
+          Map<NavigationGroup, bool>,
+          Map<NavigationGroup, bool>
+        >
+    with $Provider<Map<NavigationGroup, bool>> {
+  /// Whether each sidebar section is closed: the user's own choice once made,
+  /// otherwise its default, which for decryption follows whether it is on.
+  SidebarCollapsedGroupsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sidebarCollapsedGroupsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sidebarCollapsedGroupsHash();
+
+  @$internal
+  @override
+  $ProviderElement<Map<NavigationGroup, bool>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  Map<NavigationGroup, bool> create(Ref ref) {
+    return sidebarCollapsedGroups(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<NavigationGroup, bool> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<NavigationGroup, bool>>(value),
+    );
+  }
+}
+
+String _$sidebarCollapsedGroupsHash() =>
+    r'e1fe8530eaba4bd04102e37c291c4bb92e26562e';
+
+/// What each sidebar row has to tell: the rewrite page its errors, the
+/// scripts and modules pages their pending updates and unloadable items.
+
+@ProviderFor(navigationBadges)
+final navigationBadgesProvider = NavigationBadgesProvider._();
+
+/// What each sidebar row has to tell: the rewrite page its errors, the
+/// scripts and modules pages their pending updates and unloadable items.
+
+final class NavigationBadgesProvider
+    extends
+        $FunctionalProvider<
+          Map<PageLabel, SidebarBadge>,
+          Map<PageLabel, SidebarBadge>,
+          Map<PageLabel, SidebarBadge>
+        >
+    with $Provider<Map<PageLabel, SidebarBadge>> {
+  /// What each sidebar row has to tell: the rewrite page its errors, the
+  /// scripts and modules pages their pending updates and unloadable items.
+  NavigationBadgesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'navigationBadgesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$navigationBadgesHash();
+
+  @$internal
+  @override
+  $ProviderElement<Map<PageLabel, SidebarBadge>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  Map<PageLabel, SidebarBadge> create(Ref ref) {
+    return navigationBadges(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<PageLabel, SidebarBadge> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<PageLabel, SidebarBadge>>(value),
+    );
+  }
+}
+
+String _$navigationBadgesHash() => r'cb43a06ec0b64d132e80d8232016e16b5a980d6c';
+
 @ProviderFor(profilesState)
 final profilesStateProvider = ProfilesStateProvider._();
 
@@ -3883,7 +4094,7 @@ final class SetupStateProvider
   }
 }
 
-String _$setupStateHash() => r'cc1ce695a25eeaedb203bdc3efea20ce35e47463';
+String _$setupStateHash() => r'04f697b0d3581ce174953db5c9a5ea3e38fbc4cc';
 
 final class SetupStateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SetupState>, int?> {

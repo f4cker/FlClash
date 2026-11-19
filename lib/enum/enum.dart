@@ -205,6 +205,7 @@ enum CoreEventType {
   tailscaleRoutes,
   mitmSign,
   mitmConnection,
+  mitmNotification,
 }
 
 /// `ipn.State` as tsnet names it; [none] is a node that has not started.
@@ -713,6 +714,33 @@ enum PageLabel {
   requests,
   resources,
   dns,
+  mitm,
+  mitmRewrite,
+  mitmScripts,
+  mitmModules,
+}
+
+/// The sidebar's titled sections, in their order; a page outside them sits
+/// in the untitled section at the top, or pinned at the foot.
+enum NavigationGroup {
+  routing,
+  decryption,
+  debug,
+  network;
+
+  static NavigationGroup? of(PageLabel label) => switch (label) {
+    PageLabel.rules || PageLabel.resources => routing,
+    PageLabel.mitm ||
+    PageLabel.mitmRewrite ||
+    PageLabel.mitmScripts ||
+    PageLabel.mitmModules => decryption,
+    PageLabel.requests || PageLabel.dns || PageLabel.logs => debug,
+    PageLabel.tailscale => network,
+    PageLabel.dashboard ||
+    PageLabel.proxies ||
+    PageLabel.profiles ||
+    PageLabel.tools => null,
+  };
 }
 
 enum RuleAction {
@@ -1034,6 +1062,10 @@ enum MitmList {
 
   const MitmList(this.key);
 }
+
+/// Why a remote script or module's last update failed. Only [load] leaves
+/// nothing to run; the others keep the current version running.
+enum MitmUpdateFailure { check, download, invalid, load }
 
 enum MitmTrust { notGenerated, notInstalled, untrusted, ready }
 

@@ -156,6 +156,9 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rw := mitmRewriteBegin("https", h.host, h.port, r.RequestURI, false)
+	if rw != nil {
+		rw.h2 = true
+	}
 	var requestBefore http.Header
 	if rw != nil {
 		requestBefore = r.Header.Clone()
@@ -202,6 +205,39 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		mitmCaptures.noteRewrite(entry, rw)
 		h.rewrites.note(h.connection, rw)
+	}
+	if rules := rw.scriptRules(false); len(rules) > 0 {
+		msg := &mitmScriptMessage{method: r.Method, header: r.Header, body: r.Body, length: r.ContentLength}
+		if r.ContentLength < 0 {
+			msg.bodySkip = mitmSkipStreaming
+		} else if r.ContentLength == 0 {
+			msg.body = http.NoBody
+		}
+		coding := r.Header.Get("Content-Encoding")
+		res := rw.runScripts(rules, msg, false)
+		if r.ContentLength != 0 {
+			r.Body = io.NopCloser(res.body)
+		}
+		if res.requestURI != "" {
+			if target, err := url.ParseRequestURI(res.requestURI); err == nil {
+				r.URL, r.RequestURI = target, res.requestURI
+			}
+		}
+		if res.changed {
+			if !mitmCaptures.hasOriginalBody(entry, false) {
+				mitmCaptures.originalBody(entry, false, res.original, coding)
+			}
+			mitmRewrittenBodyHeader(r.Header, res.length)
+			r.Body, r.ContentLength = io.NopCloser(res.body), res.length
+		}
+		mitmCaptures.originalHeader(entry, false, requestBefore, r.Header)
+		mitmCaptures.scriptedRequest(entry, "https", r)
+		mitmCaptures.noteRewrite(entry, rw)
+		h.rewrites.note(h.connection, rw)
+		if res.local != nil {
+			mitmAnswerHTTP2(w, r, res.local, entry)
+			return
+		}
 	}
 
 	out := r.Clone(r.Context())
@@ -274,6 +310,39 @@ func (h *mitmHTTP2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if res.changed {
 				mitmCaptures.originalBody(entry, true, res.original, responseBefore.Get("Content-Encoding"))
 				// Trailers, read with the body, still follow it.
+				mitmRewrittenBodyHeader(resp.Header, res.length)
+				resp.ContentLength = res.length
+			}
+		}
+		if rules := rw.scriptRules(true); len(rules) > 0 {
+			msg := &mitmScriptMessage{
+				method: r.Method, status: resp.StatusCode, requestHeader: r.Header,
+				header: resp.Header, body: resp.Body, length: resp.ContentLength,
+			}
+			if rewrittenBody != nil {
+				msg.body = rewrittenBody
+			}
+			headerOnly := r.Method == http.MethodHead || resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusNotModified
+			switch {
+			case headerOnly:
+				msg.body, msg.length = http.NoBody, 0
+			case resp.ContentLength < 0 && len(resp.Trailer) > 0:
+				msg.bodySkip = mitmSkipStreaming
+			case !mitmSettled(uploaded):
+				msg.bodySkip = mitmSkipUploading
+			}
+			coding := resp.Header.Get("Content-Encoding")
+			res := rw.runScripts(rules, msg, true)
+			if !headerOnly {
+				rewrittenBody = res.body
+			}
+			if res.status != 0 {
+				resp.StatusCode = res.status
+			}
+			if res.changed {
+				if !mitmCaptures.hasOriginalBody(entry, true) {
+					mitmCaptures.originalBody(entry, true, res.original, coding)
+				}
 				mitmRewrittenBodyHeader(resp.Header, res.length)
 				resp.ContentLength = res.length
 			}

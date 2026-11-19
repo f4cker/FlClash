@@ -133,6 +133,9 @@ const (
 	// Asks the app, which holds the CA key, for a leaf; answered by mitm.signResult.
 	MitmSignMessage       MessageType = "mitmSign"
 	MitmConnectionMessage MessageType = "mitmConnection"
+	// A script's $notification.post, for the app to show as a system
+	// notification.
+	MitmNotificationMessage MessageType = "mitmNotification"
 )
 
 type Message struct {

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/foundation.dart';
@@ -375,6 +376,8 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   final customRules = [for (final rule in data.rules) ownRule(rule)];
   List<String> rules = [];
   List<RuleSource> sources = [];
+  // Where the module rules go: after the added rules, before the profile's.
+  var moduleRulesAt = 0;
   if (customRules.isEmpty) {
     if (rawConfig['rules'] != null) {
       rules = List<String>.from(rawConfig['rules']);
@@ -415,6 +418,7 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
         finalAddedRules = addedRules.map((e) => e.rawValue).toList();
       }
       rules = [...finalAddedRules, ...rules];
+      moduleRulesAt = finalAddedRules.length;
       sources = [
         for (final (index, rule) in finalAddedRules.indexed)
           RuleSource(
@@ -442,6 +446,28 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     rawConfig['proxy-groups'] = data.proxyGroups
         .map((item) => item.definition)
         .toList();
+  }
+  final policies = mitmConfigPolicies(rawConfig);
+  final moduleSources = [
+    for (final module in data.mitmModules)
+      for (final rule in parseMitmModule(
+        module.content,
+        values: module.arguments,
+        resources: module.resources,
+      ).rules)
+        if (mitmRuleUsable(rule, policies))
+          RuleSource(
+            kind: RuleSourceKind.mitm,
+            name: module.name,
+            text: rule,
+            moduleId: module.id,
+          ),
+  ];
+  if (moduleSources.isNotEmpty) {
+    rules.insertAll(moduleRulesAt, [
+      for (final source in moduleSources) source.text,
+    ]);
+    sources = [...sources]..insertAll(moduleRulesAt, moduleSources);
   }
   rawConfig['rules'] = rules;
   final yaml = await _encodeYaml(Map<String, dynamic>.from(rawConfig));

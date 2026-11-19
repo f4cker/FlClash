@@ -5,6 +5,7 @@
 #import <errno.h>
 #import <fcntl.h>
 #import <libproc.h>
+#import <mach-o/fat.h>
 #import <unistd.h>
 
 #import "HelperIdentity.h"
@@ -255,6 +256,51 @@ NSData *FCStaticCodeHash(NSString *path, NSString *identifier) {
     return valid ? hash : nil;
 }
 
+NSArray<NSData *> *FCStaticCodeSliceHashes(NSString *path, NSString *identifier) {
+    NSFileHandle *file = [NSFileHandle fileHandleForReadingAtPath:path];
+    NSData *head = [file readDataUpToLength:4096 error:NULL];
+    [file closeAndReturnError:NULL];
+    if (head.length < sizeof(struct fat_header)) return nil;
+    const uint8_t *bytes = head.bytes;
+    uint32_t magic = OSSwapBigToHostInt32(*(const uint32_t *)bytes);
+    if (magic != FAT_MAGIC && magic != FAT_MAGIC_64) {
+        NSData *hash = FCStaticCodeHash(path, identifier);
+        return hash ? @[hash] : nil;
+    }
+    uint32_t count = OSSwapBigToHostInt32(((const struct fat_header *)bytes)->nfat_arch);
+    size_t entry = magic == FAT_MAGIC ? sizeof(struct fat_arch) : sizeof(struct fat_arch_64);
+    if (!count || count > 8 || sizeof(struct fat_header) + count * entry > head.length) return nil;
+    NSMutableArray<NSData *> *hashes = [NSMutableArray array];
+    for (uint32_t index = 0; index < count; index++) {
+        // fat_arch and fat_arch_64 both start with cputype and cpusubtype (big-endian).
+        const uint32_t *fields = (const uint32_t *)(bytes + sizeof(struct fat_header) + index * entry);
+        int32_t type = (int32_t)OSSwapBigToHostInt32(fields[0]);
+        int32_t subtype = (int32_t)(OSSwapBigToHostInt32(fields[1]) & ~CPU_SUBTYPE_MASK);
+        NSDictionary *attributes = @{(__bridge NSString *)kSecCodeAttributeArchitecture: @(type),
+            (__bridge NSString *)kSecCodeAttributeSubarchitecture: @(subtype)};
+        SecStaticCodeRef code = NULL;
+        if (SecStaticCodeCreateWithPathAndAttributes((__bridge CFURLRef)[NSURL fileURLWithPath:path], 0,
+                (__bridge CFDictionaryRef)attributes, &code)) return nil;
+        NSData *hash = nil;
+        BOOL valid = FCCheckCode(code, identifier, &hash);
+        CFRelease(code);
+        if (!valid) return nil;
+        [hashes addObject:hash];
+    }
+    return hashes;
+}
+
+FCRunningHashVerdict FCCompareRunningToBundled(NSData *runningHash, NSData *bundledHash, NSString *path,
+                                               NSString *identifier) {
+    FCRunningHashVerdict verdict = FCCompareRunningHash(runningHash, bundledHash);
+    if (verdict != FCRunningHashStale) return verdict;
+    NSArray<NSData *> *slices = FCStaticCodeSliceHashes(path, identifier);
+    if (!slices.count) return FCRunningHashInvalid;
+    for (NSData *slice in slices)
+        if ([slice isEqualToData:runningHash]) return FCRunningHashCurrent;
+    return FCRunningHashStale;
+}
+
 BOOL FCCheckStatic(NSString *path, NSString *identifier) {
     return FCStaticCodeHash(path, identifier) != nil;
 }
@@ -447,8 +493,8 @@ static BOOL FCKernelReadFailed(NSString *step) {
             [info[(__bridge NSString *)kSecCodeInfoFlags] unsignedIntValue]);
     if (!valid && !self.failure) self.failure = @"path, cdhash or code flags";
     if (valid && !self.sealedHash) {
-        FCRunningHashVerdict verdict = FCCompareRunningHash(runningHash,
-            FCStaticCodeHash(self.sealedExecutable, self.identifier));
+        FCRunningHashVerdict verdict = FCCompareRunningToBundled(runningHash,
+            FCStaticCodeHash(self.sealedExecutable, self.identifier), self.sealedExecutable, self.identifier);
         valid = verdict == FCRunningHashCurrent;
         self.runningCodeStale = verdict == FCRunningHashStale;
         if (valid) self.sealedHash = runningHash;
@@ -485,7 +531,8 @@ static BOOL FCKernelReadFailed(NSString *step) {
     }
     NSData *sealedHash = FCStaticCodeHash(self.sealedExecutable, self.identifier);
     if (!sealedHash) return [self fail:@"failed:bundled helper signature"];
-    FCRunningHashVerdict verdict = FCCompareRunningHash(runningHash, sealedHash);
+    FCRunningHashVerdict verdict = FCCompareRunningToBundled(runningHash, sealedHash, self.sealedExecutable,
+        self.identifier);
     if (verdict == FCRunningHashCurrent) { self.sealedHash = runningHash; return YES; }
     self.runningCodeStale = verdict == FCRunningHashStale;
     return [self fail:[NSString stringWithFormat:@"failed:cdhash running=%@ bundled=%@",

@@ -1185,8 +1185,8 @@ void main() {
       await pumpRules(tester);
       expect(
         find.text(
-          'Rules below come from the profile and scripts and can only be '
-          'viewed here',
+          'The rules below come from the subscription profile and '
+          'extension scripts.',
         ),
         findsOneWidget,
       );

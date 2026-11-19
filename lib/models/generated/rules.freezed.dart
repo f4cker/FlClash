@@ -2471,7 +2471,8 @@ mixin _$RuleSource {
 
  RuleSourceKind get kind; String get name; String get text;/// The stored rule the line was written from, for one the rules page
 /// may edit: an added rule, or a custom profile's own.
- int? get ruleId;
+ int? get ruleId;/// The module a [RuleSourceKind.mitm] rule came from.
+ int? get moduleId;
 /// Create a copy of RuleSource
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2483,20 +2484,20 @@ $RuleSourceCopyWith<RuleSource> get copyWith => _$RuleSourceCopyWithImpl<RuleSou
 @override
 bool operator ==(Object other) {
   final _this = this as RuleSource;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RuleSource&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.text, _this.text) || other.text == _this.text)&&(identical(other.ruleId, _this.ruleId) || other.ruleId == _this.ruleId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RuleSource&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.text, _this.text) || other.text == _this.text)&&(identical(other.ruleId, _this.ruleId) || other.ruleId == _this.ruleId)&&(identical(other.moduleId, _this.moduleId) || other.moduleId == _this.moduleId));
 }
 
 
 @override
 int get hashCode {
   final _this = this as RuleSource;
-  return Object.hash(runtimeType,_this.kind,_this.name,_this.text,_this.ruleId);
+  return Object.hash(runtimeType,_this.kind,_this.name,_this.text,_this.ruleId,_this.moduleId);
 }
 
 @override
 String toString() {
   final _this = this as RuleSource;
-  return 'RuleSource(kind: ${_this.kind}, name: ${_this.name}, text: ${_this.text}, ruleId: ${_this.ruleId})';
+  return 'RuleSource(kind: ${_this.kind}, name: ${_this.name}, text: ${_this.text}, ruleId: ${_this.ruleId}, moduleId: ${_this.moduleId})';
 }
 
 
@@ -2507,7 +2508,7 @@ abstract mixin class $RuleSourceCopyWith<$Res>  {
   factory $RuleSourceCopyWith(RuleSource value, $Res Function(RuleSource) _then) = _$RuleSourceCopyWithImpl;
 @useResult
 $Res call({
- RuleSourceKind kind, String name, String text, int? ruleId
+ RuleSourceKind kind, String name, String text, int? ruleId, int? moduleId
 });
 
 
@@ -2524,12 +2525,13 @@ class _$RuleSourceCopyWithImpl<$Res>
 
 /// Create a copy of RuleSource
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? name = null,Object? text = null,Object? ruleId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? name = null,Object? text = null,Object? ruleId = freezed,Object? moduleId = freezed,}) {
   return _then(RuleSource(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as RuleSourceKind,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String,ruleId: freezed == ruleId ? _self.ruleId : ruleId // ignore: cast_nullable_to_non_nullable
+as int?,moduleId: freezed == moduleId ? _self.moduleId : moduleId // ignore: cast_nullable_to_non_nullable
 as int?,
   ));
 }
@@ -2615,10 +2617,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RuleSourceKind kind,  String name,  String text,  int? ruleId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RuleSourceKind kind,  String name,  String text,  int? ruleId,  int? moduleId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RuleSource() when $default != null:
-return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
+return $default(_that.kind,_that.name,_that.text,_that.ruleId,_that.moduleId);case _:
   return orElse();
 
 }
@@ -2636,10 +2638,10 @@ return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RuleSourceKind kind,  String name,  String text,  int? ruleId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RuleSourceKind kind,  String name,  String text,  int? ruleId,  int? moduleId)  $default,) {final _that = this;
 switch (_that) {
 case _RuleSource():
-return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
+return $default(_that.kind,_that.name,_that.text,_that.ruleId,_that.moduleId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2656,10 +2658,10 @@ return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RuleSourceKind kind,  String name,  String text,  int? ruleId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RuleSourceKind kind,  String name,  String text,  int? ruleId,  int? moduleId)?  $default,) {final _that = this;
 switch (_that) {
 case _RuleSource() when $default != null:
-return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
+return $default(_that.kind,_that.name,_that.text,_that.ruleId,_that.moduleId);case _:
   return null;
 
 }
@@ -2671,7 +2673,7 @@ return $default(_that.kind,_that.name,_that.text,_that.ruleId);case _:
 
 
 class _RuleSource implements RuleSource {
-  const _RuleSource({required this.kind, this.name = '', this.text = '', this.ruleId});
+  const _RuleSource({required this.kind, this.name = '', this.text = '', this.ruleId, this.moduleId});
   
 
 @override final  RuleSourceKind kind;
@@ -2680,6 +2682,8 @@ class _RuleSource implements RuleSource {
 /// The stored rule the line was written from, for one the rules page
 /// may edit: an added rule, or a custom profile's own.
 @override final  int? ruleId;
+/// The module a [RuleSourceKind.mitm] rule came from.
+@override final  int? moduleId;
 
 /// Create a copy of RuleSource
 /// with the given fields replaced by the non-null parameter values.
@@ -2691,18 +2695,18 @@ _$RuleSourceCopyWith<_RuleSource> get copyWith => __$RuleSourceCopyWithImpl<_Rul
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _RuleSource&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.name, name) || other.name == name)&&(identical(other.text, text) || other.text == text)&&(identical(other.ruleId, ruleId) || other.ruleId == ruleId));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _RuleSource&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.name, name) || other.name == name)&&(identical(other.text, text) || other.text == text)&&(identical(other.ruleId, ruleId) || other.ruleId == ruleId)&&(identical(other.moduleId, moduleId) || other.moduleId == moduleId));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,kind,name,text,ruleId);
+    return Object.hash(runtimeType,kind,name,text,ruleId,moduleId);
 }
 
 @override
 String toString() {
-    return 'RuleSource(kind: $kind, name: $name, text: $text, ruleId: $ruleId)';
+    return 'RuleSource(kind: $kind, name: $name, text: $text, ruleId: $ruleId, moduleId: $moduleId)';
 }
 
 
@@ -2713,7 +2717,7 @@ abstract mixin class _$RuleSourceCopyWith<$Res> implements $RuleSourceCopyWith<$
   factory _$RuleSourceCopyWith(_RuleSource value, $Res Function(_RuleSource) _then) = __$RuleSourceCopyWithImpl;
 @override @useResult
 $Res call({
- RuleSourceKind kind, String name, String text, int? ruleId
+ RuleSourceKind kind, String name, String text, int? ruleId, int? moduleId
 });
 
 
@@ -2730,12 +2734,13 @@ class __$RuleSourceCopyWithImpl<$Res>
 
 /// Create a copy of RuleSource
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? name = null,Object? text = null,Object? ruleId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? name = null,Object? text = null,Object? ruleId = freezed,Object? moduleId = freezed,}) {
   return _then(_RuleSource(
 kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as RuleSourceKind,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String,ruleId: freezed == ruleId ? _self.ruleId : ruleId // ignore: cast_nullable_to_non_nullable
+as int?,moduleId: freezed == moduleId ? _self.moduleId : moduleId // ignore: cast_nullable_to_non_nullable
 as int?,
   ));
 }

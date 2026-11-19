@@ -878,6 +878,107 @@ abstract class _$ProfileMitmRewrites
   }
 }
 
+/// A profile's own scripts, in order (see [MitmScripts]).
+
+@ProviderFor(ProfileMitmScripts)
+final profileMitmScriptsProvider = ProfileMitmScriptsFamily._();
+
+/// A profile's own scripts, in order (see [MitmScripts]).
+final class ProfileMitmScriptsProvider
+    extends $StreamNotifierProvider<ProfileMitmScripts, List<MitmScript>> {
+  /// A profile's own scripts, in order (see [MitmScripts]).
+  ProfileMitmScriptsProvider._({
+    required ProfileMitmScriptsFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'profileMitmScriptsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileMitmScriptsHash();
+
+  @override
+  String toString() {
+    return r'profileMitmScriptsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  ProfileMitmScripts create() => ProfileMitmScripts();
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProfileMitmScriptsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$profileMitmScriptsHash() =>
+    r'ffce28b2391845f44f0c124aec3211b5758006a8';
+
+/// A profile's own scripts, in order (see [MitmScripts]).
+
+final class ProfileMitmScriptsFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          ProfileMitmScripts,
+          AsyncValue<List<MitmScript>>,
+          List<MitmScript>,
+          Stream<List<MitmScript>>,
+          int
+        > {
+  ProfileMitmScriptsFamily._()
+    : super(
+        retry: null,
+        name: r'profileMitmScriptsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A profile's own scripts, in order (see [MitmScripts]).
+
+  ProfileMitmScriptsProvider call(int profileId) =>
+      ProfileMitmScriptsProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'profileMitmScriptsProvider';
+}
+
+/// A profile's own scripts, in order (see [MitmScripts]).
+
+abstract class _$ProfileMitmScripts extends $StreamNotifier<List<MitmScript>> {
+  late final _$args = ref.$arg as int;
+  int get profileId => _$args;
+
+  Stream<List<MitmScript>> build(int profileId);
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<List<MitmScript>>, List<MitmScript>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<MitmScript>>, List<MitmScript>>,
+              AsyncValue<List<MitmScript>>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, () => build(_$args));
+  }
+}
+
 @ProviderFor(ProxyGroups)
 final proxyGroupsProvider = ProxyGroupsFamily._();
 

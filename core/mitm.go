@@ -26,11 +26,13 @@ type MitmSetup struct {
 	// The current profile's rewrite rules (phase 2b). They change without
 	// ending any session: only the settings above do that.
 	Rewrite []MitmRewriteRule `json:"rewrite,omitempty"`
+	// Phase 2c scripts, installed with the rewrite rules.
+	Script []MitmScriptRule `json:"script,omitempty"`
 }
 
 // The setup without its rewrite rules, which are installed on their own.
 func (setup MitmSetup) withoutRewrite() MitmSetup {
-	setup.Rewrite = nil
+	setup.Rewrite, setup.Script = nil, nil
 	return setup
 }
 
@@ -232,6 +234,20 @@ func handleMitmValidate(params map[string][]string) map[string][]MitmIssue {
 					Message: err.Error(),
 				})
 			}
+		}
+	}
+	programs := mitmRewrite.Load().scriptPrograms()
+	for index, line := range params[mitmSectionScript] {
+		rule, err := parseMitmScriptLine(line)
+		if err == nil && rule != nil {
+			err = loadMitmScript(rule.script, programs)
+		}
+		if err != nil {
+			result[mitmSectionScript] = append(result[mitmSectionScript], MitmIssue{
+				Index:   index,
+				Code:    mitmRewriteInvalid,
+				Message: err.Error(),
+			})
 		}
 	}
 	return result

@@ -262,6 +262,14 @@ final class _MacHelperRelay {
   }
 }
 
+final class MacHelperStatus {
+  final MacHelperState state;
+  final bool retiring;
+  final String? code;
+
+  const MacHelperStatus(this.state, {this.retiring = false, this.code});
+}
+
 final class MacHelperClient {
   static const _maxQueuedFrames = 256;
   static const _relayDelay = Duration(milliseconds: 16);
@@ -313,6 +321,7 @@ final class MacHelperClient {
   /// `denied`, `failed`, `notNeeded`), from the answer that carried it; null
   /// after any other answer.
   String? lastRecordRepair;
+
   _MacHelperRelay? _relay;
   bool _sending = false;
 
@@ -389,11 +398,11 @@ final class MacHelperClient {
     return state;
   }
 
-  Future<MacHelperState> _call(
+  Future<MacHelperStatus> _callResult(
     String method, [
     Map<String, Object?> arguments = const {},
   ]) async {
-    if (_safeMode()) return MacHelperState.disabled;
+    if (_safeMode()) return const MacHelperStatus(MacHelperState.disabled);
     try {
       final sessionAtRequest = _session;
       final relayAtRequest = _relay;
@@ -408,17 +417,34 @@ final class MacHelperClient {
           identical(_relay, relayAtRequest) &&
           _relay?.active != true &&
           state == MacHelperState.enabled) {
-        if (!_confirmsNoCore(answer)) return MacHelperState.exitUnconfirmed;
+        if (!_confirmsNoCore(answer)) {
+          return const MacHelperStatus(MacHelperState.exitUnconfirmed);
+        }
         _forgetSession();
       }
-      return state;
+      return MacHelperStatus(
+        state,
+        retiring:
+            state == MacHelperState.staleHelper && answer['retiring'] == true,
+        code: answer['code'] is String ? answer['code'] as String : null,
+      );
     } on Exception {
       lastCode = 'channelError';
-      return MacHelperState.unavailable;
+      return const MacHelperStatus(
+        MacHelperState.unavailable,
+        code: 'channelError',
+      );
     }
   }
 
-  Future<MacHelperState> status() => _call('status');
+  Future<MacHelperState> _call(
+    String method, [
+    Map<String, Object?> arguments = const {},
+  ]) async => (await _callResult(method, arguments)).state;
+
+  Future<MacHelperStatus> statusResult() => _callResult('status');
+
+  Future<MacHelperState> status() async => (await statusResult()).state;
 
   /// The daemon's own word that no Core of it runs: no child and its exit
   /// confirmed. Absent fields (no authenticated reply) never confirm.
@@ -457,10 +483,12 @@ final class MacHelperClient {
   }
 
   /// Retire a daemon process left over from the previous app build.
-  Future<MacHelperState> repair() {
+  Future<MacHelperStatus> repairResult() {
     _requireEffects();
-    return _call('repair');
+    return _callResult('repair');
   }
+
+  Future<MacHelperState> repair() async => (await repairResult()).state;
 
   /// Re-register a stale registration (native: unregister, wait for launchd,
   /// register, ask SMAppService.status, wait for the new helper). Only inside

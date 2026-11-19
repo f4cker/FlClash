@@ -33,6 +33,7 @@ type mitmRewriteExchange struct {
 	url         string
 	originalURL string
 	plain       bool
+	h2          bool
 	hits        []MitmRewriteHit
 }
 
@@ -50,7 +51,8 @@ func mitmRewriteBegin(scheme, host string, port uint16, requestURI string, plain
 		}
 	} else if !engine.url.mayMatch(host) && !engine.requestHeader.mayMatch(host) &&
 		!engine.responseHeader.mayMatch(host) && !engine.requestBody.mayMatch(host) &&
-		!engine.responseBody.mayMatch(host) && !engine.mapLocal.mayMatch(host) {
+		!engine.responseBody.mayMatch(host) && !engine.mapLocal.mayMatch(host) &&
+		!engine.requestScript.mayMatch(host) && !engine.responseScript.mayMatch(host) {
 		return nil
 	}
 	authority := host

@@ -38,8 +38,17 @@ class MitmModulesAction extends _$MitmModulesAction {
   @override
   void build() {}
 
-  Future<MitmModule> addFromUrl(String url) async {
-    final response = await request.getTextResponseForUrl(url);
+  Future<String> download(String url) async =>
+      (await request.getTextResponseForUrl(url)).data ?? '';
+
+  /// [text], when given, is what the import confirm showed.
+  Future<MitmModule> addFromUrl(
+    String url, {
+    bool? enable,
+    bool rulesEnabled = true,
+    String? text,
+  }) async {
+    text ??= await download(url);
     final segments = Uri.tryParse(url)?.pathSegments ?? const <String>[];
     final name = segments.where((segment) => segment.isNotEmpty).lastOrNull;
     return _save(
@@ -47,22 +56,31 @@ class MitmModulesAction extends _$MitmModulesAction {
         id: snowflake.id,
         name: basenameWithoutExtension(name ?? url),
         url: url,
-        lastUpdateTime: DateTime.now(),
-      ),
-      response.data ?? '',
-      added: true,
-    );
-  }
-
-  Future<MitmModule> addFromFile(String text, String fileName) {
-    return _save(
-      MitmModule(
-        id: snowflake.id,
-        name: basenameWithoutExtension(fileName),
+        rulesEnabled: rulesEnabled,
         lastUpdateTime: DateTime.now(),
       ),
       text,
       added: true,
+      enable: enable,
+    );
+  }
+
+  Future<MitmModule> addFromFile(
+    String text,
+    String fileName, {
+    bool? enable,
+    bool rulesEnabled = true,
+  }) {
+    return _save(
+      MitmModule(
+        id: snowflake.id,
+        name: basenameWithoutExtension(fileName),
+        rulesEnabled: rulesEnabled,
+        lastUpdateTime: DateTime.now(),
+      ),
+      text,
+      added: true,
+      enable: enable,
     );
   }
 
@@ -95,11 +113,112 @@ class MitmModulesAction extends _$MitmModulesAction {
           await File(await _pathOf(module)).readAsString(),
         );
       }
-      final response = await request.getTextResponseForUrl(url);
-      return await _save(module, response.data ?? '');
+      final missing = await _readText(module) == null;
+      Future<void> fail(MitmUpdateFailure failure, Object e) => _mark(
+        module,
+        (current) => current.copyWith(
+          error: e is MessageException ? e.message : compactError(e),
+          failure: missing ? MitmUpdateFailure.load : failure,
+        ),
+      );
+      final String text;
+      try {
+        text = (await request.getTextResponseForUrl(url)).data ?? '';
+      } catch (e) {
+        await fail(MitmUpdateFailure.check, e);
+        rethrow;
+      }
+      try {
+        return await _offer(module, text);
+      } catch (e) {
+        await fail(
+          e is MessageException
+              ? MitmUpdateFailure.invalid
+              : MitmUpdateFailure.download,
+          e,
+        );
+        rethrow;
+      }
     } finally {
       updatingKeys.stop(module.updatingKey, operation);
     }
+  }
+
+  /// Differing content waits in the pending file; what runs stays.
+  Future<MitmModule> _offer(MitmModule module, String text) async {
+    final current = await _readText(module);
+    if (current == null) {
+      return _mark(
+        await _save(module, text),
+        (item) => item.copyWith(error: null, failure: null),
+      );
+    }
+    final pending = File(
+      join(await appPath.mitmModulesDirPath, module.pendingFileName),
+    );
+    if (current == text) {
+      // Its files still refresh; one whose script changed turns it off.
+      final saved = await _save(module, text);
+      await pending.safeDelete();
+      return _mark(
+        saved,
+        (item) => item.copyWith(pendingTime: null, error: null, failure: null),
+      );
+    }
+    final content = await compute(_parseMitmModule, (text, module.arguments));
+    if (content.isEmpty) {
+      throw MessageException(currentAppLocalizations.mitmModuleInvalid);
+    }
+    _held.add(module.pendingFileName);
+    try {
+      await pending.writeAsStringAtomically(text);
+    } finally {
+      _held.remove(module.pendingFileName);
+    }
+    return _mark(
+      module,
+      (item) => item.copyWith(
+        lastUpdateTime: DateTime.now(),
+        pendingTime: DateTime.now(),
+        error: null,
+        failure: null,
+      ),
+    );
+  }
+
+  Future<MitmModule> _mark(
+    MitmModule module,
+    MitmModule Function(MitmModule current) change,
+  ) async {
+    final current = await _current(module.id);
+    if (current == null || !ref.mounted) {
+      return module;
+    }
+    final next = change(current);
+    putModule(next);
+    return next;
+  }
+
+  Future<String?> pendingText(MitmModule module) async {
+    final file = File(
+      join(await appPath.mitmModulesDirPath, module.pendingFileName),
+    );
+    return await file.exists() ? file.readAsString() : null;
+  }
+
+  Future<MitmModule> adopt(MitmModule module) async {
+    final text = await pendingText(module);
+    if (text == null) {
+      return _mark(module, (item) => item.copyWith(pendingTime: null));
+    }
+    final saved = await _save(module, text, adopting: true);
+    await File(
+      join(await appPath.mitmModulesDirPath, module.pendingFileName),
+    ).safeDelete();
+    return _mark(
+      saved,
+      (item) => item.copyWith(pendingTime: null, error: null, failure: null),
+    );
   }
 
   void putModule(MitmModule module, {bool first = false}) {
@@ -219,6 +338,8 @@ class MitmModulesAction extends _$MitmModulesAction {
     bool added = false,
     bool first = false,
     bool edited = false,
+    bool adopting = false,
+    bool? enable,
   }) async {
     final content = await compute(_parseMitmModule, (text, module.arguments));
     if (content.isEmpty && !edited) {
@@ -243,6 +364,7 @@ class MitmModulesAction extends _$MitmModulesAction {
       }
       final merged = {...mitmAttachments(current), ...resources};
       final bringsNew =
+          !adopting &&
           previous != null &&
           current.enabled &&
           await compute(_bringsNewScripts, (
@@ -260,10 +382,10 @@ class MitmModulesAction extends _$MitmModulesAction {
         description: content.description ?? '',
         system: content.system,
         enabled: added
-            ? content.declaredScripts == 0
+            ? enable ?? content.declaredScripts == 0
             : current.enabled &&
                   !bringsNew &&
-                  content.declaredScripts <= current.scripts,
+                  (adopting || content.declaredScripts <= current.scripts),
         scripts: content.declaredScripts,
         resources: merged,
         lastUpdateTime: DateTime.now(),
@@ -349,6 +471,7 @@ class MitmModulesAction extends _$MitmModulesAction {
   /// save writes or names while it runs stays.
   Future<void> clean() async {
     final stored = await database.mitmModulesDao.query().get();
+    final scriptFiles = await mitmScriptFiles();
     Future<void> sweep(
       String path,
       Iterable<String> Function(MitmModule module) namesOf,
@@ -367,6 +490,7 @@ class MitmModulesAction extends _$MitmModulesAction {
         ).replaceFirst(RegExp(r'\.\d+\.tmp$'), '');
         final modules = [...stored, ...?ref.read(mitmModulesProvider).value];
         if (!_held.contains(name) &&
+            !scriptFiles.contains(name) &&
             !modules.any((module) => namesOf(module).contains(name))) {
           await entity.safeDelete();
         }
@@ -375,7 +499,7 @@ class MitmModulesAction extends _$MitmModulesAction {
 
     await sweep(
       await appPath.mitmModulesDirPath,
-      (module) => [module.fileName],
+      (module) => [module.fileName, module.pendingFileName],
     );
     await sweep(
       await appPath.mitmResourcesDirPath,
@@ -420,13 +544,7 @@ class MitmModulesAction extends _$MitmModulesAction {
           continue;
         }
         try {
-          final updated = await updateModule(module);
-          if (module.enabled && !updated.enabled) {
-            dialogs.showBanner(
-              currentAppLocalizations.mitmModuleScriptsChanged(updated.name),
-              level: BannerLevel.warning,
-            );
-          }
+          await updateModule(module);
         } catch (e) {
           commonPrint.log(
             'auto update ${module.name}: ${compactError(e)}',
@@ -434,8 +552,29 @@ class MitmModulesAction extends _$MitmModulesAction {
           );
         }
       }
+      if (setting.geoAutoUpdate) {
+        await _checkScripts(interval);
+      }
     } finally {
       _autoUpdating = false;
+    }
+  }
+
+  Future<void> _checkScripts(Duration interval) async {
+    for (final script in await database.mitmScriptsDao.queryAll().get()) {
+      final checked = script.checkedAt;
+      final profileId = script.profileId;
+      if (!script.isRemote ||
+          profileId == null ||
+          !ref.mounted ||
+          (checked != null && !checked.add(interval).isBeforeNow)) {
+        continue;
+      }
+      await ref.read(profileMitmScriptsProvider(profileId).future);
+      if (!ref.mounted) {
+        return;
+      }
+      await checkMitmScriptUpdate(ref.read, profileId, script);
     }
   }
 }

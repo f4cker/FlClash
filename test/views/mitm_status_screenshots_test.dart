@@ -185,6 +185,15 @@ void main() {
     ),
     '06-paused-core-stopped': MitmIndicator.paused(MitmPauseReason.coreStopped),
     '07-unconfirmed': MitmIndicator.unconfirmed(),
+    '20-paused-app-unavailable': MitmIndicator.paused(
+      MitmPauseReason.appUnavailable,
+    ),
+    '20b-paused-sign-timeout': MitmIndicator.paused(
+      MitmPauseReason.signTimeout,
+    ),
+    '20c-paused-leaf-unusable': MitmIndicator.paused(
+      MitmPauseReason.leafUnusable,
+    ),
   };
   for (final MapEntry(key: name, value: indicator) in shots.entries) {
     testWidgets(name, skip: skip != null, (tester) async {
@@ -384,6 +393,7 @@ void main() {
       String host,
       String process, {
       String outcome = '',
+      String pauseReason = '',
       bool mitm = false,
       int seconds = 0,
     }) => TrackerInfo(
@@ -403,6 +413,7 @@ void main() {
       rule: 'DomainSuffix',
       rulePayload: host,
       mitmOutcome: outcome,
+      mitmPauseReason: pauseReason,
     );
     final notifier = requests.read(requestsProvider.notifier);
     notifier.value = FixedList<TrackerInfo>(500);
@@ -410,7 +421,14 @@ void main() {
       row('1', 'api.example.com', 'Safari', mitm: true),
       row('2', 'cdn.example.net', 'Safari', seconds: 1),
       row('3', 'bank.example.com', 'Bank', outcome: 'refused', seconds: 2),
-      row('4', 'api.example.com', 'curl', outcome: 'paused', seconds: 3),
+      row(
+        '4',
+        'pay.example.com',
+        'curl',
+        outcome: 'paused',
+        pauseReason: 'signTimeout',
+        seconds: 3,
+      ),
       row('5', 'img.example.com', 'Chrome', outcome: 'http2Only', seconds: 4),
       row('6', 'www.example.org', 'Chrome', seconds: 5),
       row(
@@ -517,6 +535,15 @@ void main() {
       '16-request-detail-handshake',
       const Size(600, 1100),
       openHost: 'bank.example.com',
+    );
+  });
+
+  testWidgets('21-request-detail-paused', skip: skip != null, (tester) async {
+    await shootRequests(
+      tester,
+      '21-request-detail-paused',
+      const Size(600, 1100),
+      openHost: 'pay.example.com',
     );
   });
 

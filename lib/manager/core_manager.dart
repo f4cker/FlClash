@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_signer.dart';
+import 'package:fl_clash/common/script_notification.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -124,17 +125,6 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         if (next && prev != true) unawaited(_updateMitm(throttled: true));
       },
     );
-    ref.listenManual(mitmModulesProvider, (prev, next) {
-      if (mitmFeature &&
-          mitmModulesFeature &&
-          prev?.value != null &&
-          next.hasValue &&
-          ref.read(patchClashConfigProvider).mitm.enable) {
-        ref
-            .read(setupActionProvider.notifier)
-            .applyProfileDebounce(silence: true);
-      }
-    });
     ref.listenManual(appSettingProvider.select((state) => state.openLogs), (
       prev,
       next,
@@ -170,13 +160,24 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   }
 
   @override
-  void onMitmConnection(String id, String outcome) {
-    ref.read(requestsProvider.notifier).setMitmOutcome(id, outcome);
+  void onMitmConnection(String id, String outcome, {String pauseReason = ''}) {
+    ref
+        .read(requestsProvider.notifier)
+        .setMitmOutcome(id, outcome, pauseReason: pauseReason);
   }
 
   @override
   void onMitmConnectionRewrite(String id, MitmConnectionRewrite rewrite) {
     ref.read(requestsProvider.notifier).setMitmRewrite(id, rewrite);
+  }
+
+  @override
+  void onScriptNotification(ScriptNotification notification) {
+    unawaited(
+      const ScriptNotifier().post(notification).catchError((Object error) {
+        commonPrint.log('Script notification not shown: $error');
+      }),
+    );
   }
 
   @override

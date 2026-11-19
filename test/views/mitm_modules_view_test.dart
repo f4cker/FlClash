@@ -11,13 +11,12 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/views/config/mitm_modules.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:prism_ui/loading.dart';
-import 'package:prism_ui/switch.dart';
 
 import '../helpers/test_app.dart';
 
@@ -43,6 +42,21 @@ const _resources = {
 };
 
 class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
+
+class _ScriptedSetupAction extends SetupAction {
+  _ScriptedSetupAction(this.results);
+
+  final List<bool> results;
+  int calls = 0;
+
+  @override
+  Future<bool> applyProfile({
+    bool Function()? owns,
+    bool silence = false,
+    bool force = false,
+    Future<void> Function()? preloadInvoke,
+  }) async => results[calls++];
+}
 
 final _remote = MitmModule(
   id: 1,
@@ -122,9 +136,18 @@ void main() {
     await pump(tester, const MitmModulesView());
 
     expect(find.text('Ads'), findsOneWidget);
-    expect(find.text(currentAppLocalizations.remote), findsOneWidget);
+    expect(
+      find.textContaining('Remote · updated', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.text('Mine'), findsOneWidget);
-    expect(find.text(currentAppLocalizations.local), findsOneWidget);
+    expect(
+      find.text(
+        currentAppLocalizations.mitmModuleLocalSource,
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byType(Switch).first);
     await tester.pumpAndSettle();
@@ -281,7 +304,7 @@ void main() {
     await pump(tester, const MitmModulesView());
     final l10n = currentAppLocalizations;
 
-    await tester.tap(find.byTooltip(l10n.add));
+    await tester.tap(find.text(l10n.mitmImportModule));
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10n.importUrl));
     await tester.pumpAndSettle();
@@ -299,9 +322,74 @@ void main() {
   testWidgets('a module can be written from the add menu', (tester) async {
     await pump(tester, const MitmModulesView());
 
-    await tester.tap(find.byTooltip(currentAppLocalizations.add));
+    await tester.tap(find.text(currentAppLocalizations.mitmImportModule));
     await tester.pumpAndSettle();
 
     expect(find.text(currentAppLocalizations.mitmNewModule), findsOneWidget);
   });
+
+  for (final (restored, banner) in [
+    (true, 'mitmRoutingRulesNotApplied'),
+    (false, 'mitmRoutingRulesRevertFailed'),
+  ]) {
+    testWidgets('routing rules that fail to apply are turned back; restored '
+        '$restored', (tester) async {
+      tester.view.physicalSize = const Size(1000, 2000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await database.mitmModulesDao.putAll([_remote.toCompanion()]);
+      final setup = _ScriptedSetupAction([false, restored]);
+      container = ProviderContainer(
+        overrides: [
+          setupActionProvider.overrideWith(() => setup),
+          mitmModuleDetailsProvider(_remote.id).overrideWith(
+            (ref) async => (
+              content: parseMitmModule(
+                '$_module[Rule]\nDOMAIN,ads.example.com,REJECT\n',
+                resources: _resources,
+              ),
+              issues: const <MitmList, Map<String, String>>{},
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      globalState.container = container;
+      container.listen(patchClashConfigProvider, (_, _) {});
+      container.read(patchClashConfigProvider.notifier).value =
+          const PatchClashConfig(mitm: Mitm(enable: true));
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: HostApp(
+            navigatorKey: globalState.navigatorKey,
+            builder: (context, child) => BannerHost(
+              stacked: false,
+              topInset: 0,
+              child: wrapAppScopes(context, child!),
+            ),
+            home: MitmModuleView(id: _remote.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l = currentAppLocalizations;
+
+      await tester.tap(find.byType(Switch).last);
+      await tester.pumpAndSettle();
+
+      expect(setup.calls, 2);
+      expect((await stored()).single.rulesEnabled, isTrue);
+      expect(
+        find.text(
+          restored
+              ? l.mitmRoutingRulesNotApplied
+              : l.mitmRoutingRulesRevertFailed,
+        ),
+        findsOneWidget,
+        reason: banner,
+      );
+    });
+  }
 }

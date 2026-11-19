@@ -467,15 +467,40 @@
   "invalidLinkTip": "No es un enlace de suscripción ni un enlace para compartir proxies",
   "numberTip": "{label} debe ser un número",
   "numberRangeTip": "{label} debe estar entre {min} y {max}",
+  "@numberRangeTip": {
+    "placeholders": {
+      "label": {},
+      "min": {},
+      "max": {}
+    }
+  },
   "interval": "Intervalo",
   "existsTip": "{label} ya existe",
   "maxLengthTip": "{label} debe tener como máximo {max} caracteres",
+  "@maxLengthTip": {
+    "placeholders": {
+      "label": {},
+      "max": {}
+    }
+  },
   "singleImport": "Importar uno",
   "batchImport": "Importar en lote",
   "batchUrlInputTip": "Una URL por línea",
   "batchLinkInputTip": "Un enlace por línea",
   "batchPreviewTip": "{count} por añadir, {skipped} omitidos por ya existir",
+  "@batchPreviewTip": {
+    "placeholders": {
+      "count": {},
+      "skipped": {}
+    }
+  },
   "lineIssueTip": "Línea {line}: {message}",
+  "@lineIssueTip": {
+    "placeholders": {
+      "line": {},
+      "message": {}
+    }
+  },
   "singleValueTip": "{label} debe ser un solo elemento",
   "deleteTip": "¿Seguro que quieres eliminar este elemento ({label})?",
   "deleteMultipTip": "¿Seguro que quieres eliminar los elementos seleccionados ({label})?",
@@ -698,8 +723,26 @@
   "geoUpdated": "{name} actualizado",
   "secondsCount": "{count, plural, =1{1 segundo} other{{count} segundos}}",
   "proxiesCount": "{count, plural, =1{1 proxy} other{{label} proxies}}",
+  "@proxiesCount": {
+    "placeholders": {
+      "count": {},
+      "label": {}
+    }
+  },
   "rulesCount": "{count, plural, =1{1 regla} other{{label} reglas}}",
+  "@rulesCount": {
+    "placeholders": {
+      "count": {},
+      "label": {}
+    }
+  },
   "proxyGroupsCount": "{count, plural, =1{1 grupo de proxies} other{{label} grupos de proxies}}",
+  "@proxyGroupsCount": {
+    "placeholders": {
+      "count": {},
+      "label": {}
+    }
+  },
   "changelogBreaking": "Cambios incompatibles",
   "changelogFeatures": "Novedades",
   "changelogFixes": "Correcciones",
@@ -780,6 +823,12 @@
   "shareLinksInvalid": "No se pudo leer ningún proxy de los enlaces",
   "shareLinkUnreadable": "No se pudo leer ningún proxy de {link}",
   "proxiesProfileLabel": "{name} y otros ({count} proxies)",
+  "@proxiesProfileLabel": {
+    "placeholders": {
+      "name": {},
+      "count": {}
+    }
+  },
   "singleShareLinkOnly": "Introduce aquí un solo enlace; para varios, usa la edición rápida de la lista",
   "username": "Usuario",
   "emptyFallback": "Respaldo si está vacío",
@@ -798,14 +847,38 @@
   "customIssueGroupLoop": "Los grupos de proxies se referencian entre sí en bucle: {path}",
   "customIssueInvalidEmptyFallback": "El respaldo si está vacío debe ser un proxy, pero {name} no existe o es un grupo de proxies",
   "customIssueInvalidFilter": "{name} no es una expresión regular válida: {message}",
+  "@customIssueInvalidFilter": {
+    "placeholders": {
+      "name": {},
+      "message": {}
+    }
+  },
   "customIssueMissingDialer": "El proxy de marcación {name} no existe",
   "customIssueDialerLoop": "{proxy} marca a través de {target}, que lleva de vuelta a {proxy}, por lo que la marcación entra en bucle",
+  "@customIssueDialerLoop": {
+    "placeholders": {
+      "proxy": {},
+      "target": {}
+    }
+  },
   "dialerProxyLoopStopped": "La marcación a través de {name} lleva de vuelta al proxy que lo usa, por lo que se detuvo la conexión",
   "customIssuesSummary": "{count} elementos tienen problemas, y aplicar este perfil puede fallar",
   "providerInUse": "{label} sigue en uso en {profiles}, que dejarán de funcionar correctamente si se elimina. ¿Seguro que quieres eliminarlo?",
+  "@providerInUse": {
+    "placeholders": {
+      "label": {},
+      "profiles": {}
+    }
+  },
   "proxyGroupInUse": "{label} sigue mencionado por reglas, grupos de proxies, proxies de marcación, DNS o NTP de este perfil, que dejarán de funcionar si se elimina. ¿Seguro que quieres eliminarlo?",
   "proxiesRemovedTip": "Se eliminarán estos proxies: {removed}. Una línea cuyo nombre cambió cuenta como un proxy nuevo, y los perfiles personalizados que mencionen los eliminados los marcarán como ausentes. ¿Aplicar de todos modos?",
   "proxiesReplacedTip": "Se eliminarán estos proxies: {removed}. Se añadirán estos: {added}. Una línea cuyo nombre cambió cuenta como un proxy nuevo, y los perfiles personalizados que mencionen los eliminados los marcarán como ausentes. ¿Aplicar de todos modos?",
+  "@proxiesReplacedTip": {
+    "placeholders": {
+      "removed": {},
+      "added": {}
+    }
+  },
   "fontSize": "Tamaño",
   "large": "Grande",
   "extraLarge": "Muy grande",
@@ -860,6 +933,12 @@
   "ipVersion": "Versión de IP",
   "addFilters": "Añadir filtros",
   "failedItem": "{label}: {message}",
+  "@failedItem": {
+    "placeholders": {
+      "label": {},
+      "message": {}
+    }
+  },
   "failedCount": "{count} elementos fallaron. Toca para ver",
   "importConfigInvalid": "Este archivo no es una configuración importable",
   "importConfigReplaceTip": "Al importar se reemplazan los grupos de proxies, las reglas y los ajustes que tiene ahora este perfil",
@@ -927,6 +1006,12 @@
   "usedShort": "usado",
   "profileUpdatedAt": "Actualizado {time}",
   "profileExpiresIn": "Vence el {date}, {days, plural, =1{queda 1 día} other{quedan {days} días}}",
+  "@profileExpiresIn": {
+    "placeholders": {
+      "date": {},
+      "days": {}
+    }
+  },
   "profileDaysLeft": "{days, plural, =1{Queda 1 día} other{Quedan {days} días}}",
   "target": "Destino",
   "outboundExit": "Salida",
@@ -944,6 +1029,12 @@
   "done": "Hecho",
   "dashboardAddableSection": "Disponibles para añadir",
   "customImportDroppedSubRules": "{count, plural, =1{Se descartó 1 regla SUB-RULE, porque los perfiles personalizados no admiten subreglas} other{Se descartaron {label} reglas SUB-RULE, porque los perfiles personalizados no admiten subreglas}}",
+  "@customImportDroppedSubRules": {
+    "placeholders": {
+      "count": {},
+      "label": {}
+    }
+  },
   "autoInclude": "Incluir automáticamente",
   "allReferencedProxies": "Todos los proxies referenciados",
   "allReferencedProxyProviders": "Todos los proveedores de proxies referenciados",
@@ -962,6 +1053,12 @@
   "httpCaptureNoHosts": "No hay ningún host indicado, así que no se registra nada. Añade hosts en Nombre de host, en la página MITM, o desde los detalles de una conexión.",
   "httpCaptureLimit": "Máximo de registros",
   "httpCaptureLimitDesc": "Los registros más antiguos se eliminan primero al alcanzar este número u ocupar {memory} de memoria. De cada cuerpo se conservan solo los primeros {body}.",
+  "@httpCaptureLimitDesc": {
+    "placeholders": {
+      "memory": {},
+      "body": {}
+    }
+  },
   "httpRequests": "Solicitudes HTTP",
   "httpRequestsMissing": "Las solicitudes enviadas antes de activar la captura, o ya borradas, no aparecen.",
   "httpRequestCleared": "El registro de esta solicitud se ha borrado",
@@ -1040,13 +1137,13 @@
   "arguments": "Argumentos",
   "mitmRoutingRules": "Reglas de enrutamiento",
   "mitmIgnoredLines": "Líneas ignoradas",
-  "mitmModuleRulesDesc": "Las reglas de enrutamiento van antes que las del perfil.",
+  "mitmModuleRulesDesc": "Module routing rules go after the added rules and before the profile's own.",
   "mitmModuleSystemTip": "Escrito para {system}; algunas líneas pueden no coincidir con las apps de este dispositivo.",
   "mitmSkipSection": "La sección [{section}] no es compatible",
   "mitmSkipSetting": "Este ajuste no es compatible",
   "mitmSkipScriptType": "Este tipo de script no es compatible",
   "mitmSkipRule": "Este tipo de regla no es compatible",
-  "mitmSkipPolicy": "Solo se admiten las políticas DIRECT y REJECT",
+  "mitmSkipPolicy": "This policy can't be used here",
   "mitmSkipJq": "Las reescrituras jq no son compatibles",
   "mitmSkipJsonBody": "Las reescrituras del cuerpo JSON no son compatibles",
   "mitmSkipRawHeader": "No se admite reescribir todos los encabezados como un solo texto",
@@ -1071,6 +1168,12 @@
   "http2": "HTTP/2",
   "decryptUntrusted": "Descifrar sin confianza local",
   "invalidOfCount": "{invalid} de {total} no válidos",
+  "@invalidOfCount": {
+    "placeholders": {
+      "invalid": {},
+      "total": {}
+    }
+  },
   "batchLineInputTip": "Un elemento por línea",
   "downloadingUpdate": "Descargando actualización",
   "updateFailed": "Error al actualizar",
@@ -1199,6 +1302,16 @@
   "tsOfflineNotSelectable": "Offline, can't be chosen",
   "tsExitChangeTitle": "Change exit node?",
   "tsExitChangeBody": "Sets the exit node of “{node}” to “{device}”. Connections through this node may drop; Flash rules stay the same.",
+  "@tsExitChangeBody": {
+    "placeholders": {
+      "node": {
+        "type": "Object"
+      },
+      "device": {
+        "type": "Object"
+      }
+    }
+  },
   "tsExitChangeConfirm": "Change exit node",
   "tsExitOffTitle": "Stop using the exit node?",
   "tsExitOffBody": "Only turns off exit forwarding for “{node}”; it doesn't log out of Tailscale and Flash rules stay the same.",
@@ -1253,6 +1366,16 @@
   "tsDevicesShown": "Showing {n} devices",
   "tsDevicesCompact": "{count, plural, =1{1 device · Only devices visible to this account} other{{count} devices · Only devices visible to this account}}",
   "tsDevicesCompactFiltered": "Showing {shown}/{total} · Devices visible to this account only",
+  "@tsDevicesCompactFiltered": {
+    "placeholders": {
+      "shown": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "tsSearchHint": "Search name or address",
   "tsSearchEmpty": "No devices match the search",
   "tsOwnerFilter": "Device owner",
@@ -1324,7 +1447,30 @@
   "tsSignOutRemoveMenu": "Sign out and remove…",
   "tsRemoveTitle": "Sign out and remove this account?",
   "tsRemoveBody": "This signs out “{account}” (node “{node}”), clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.",
+  "@tsRemoveBody": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "node": {
+        "type": "Object"
+      },
+      "profile": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRemoveBodyNode": "This signs out “{node}”, clears its sign-in from this Mac, and removes its panel-added node and rules from “{profile}”. Connections through this node may be interrupted. Other accounts will not be signed out or removed.",
+  "@tsRemoveBodyNode": {
+    "placeholders": {
+      "node": {
+        "type": "Object"
+      },
+      "profile": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRemoveExtra": "This does not delete the device from the Tailscale admin console or change the official client.",
   "tsRemoveTargetsKept": "Targets assigned to this account will not move to another account automatically. Blocking protection stays in place. Assign another account to access them.",
   "tsRemoveLast": "This is the last panel-added account in this profile. Removing it also removes panel-added routing and blocking rules. The original profile will handle this traffic again, which may use a direct connection or its original proxies. Confirm that you accept this change.",
@@ -1336,6 +1482,16 @@
   "tsSignOutAccount": "Sign out of this account",
   "tsSignOutAccountTitle": "Sign out of this account?",
   "tsSignOutAccountBody": "This signs out “{account}” (node “{node}”) and clears its sign-in from this Mac. Its panel entry and target assignments stay saved. Connections through this account may be interrupted and will not switch to another account or a direct connection. Other accounts will not be signed out. You must choose Sign in to use this account again.",
+  "@tsSignOutAccountBody": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "node": {
+        "type": "Object"
+      }
+    }
+  },
   "tsAccountSignedOut": "Signed out",
   "tsSignedOutBanner": "Signed out of this account. In Rule mode, its assigned targets stay blocked until you sign in or explicitly reassign them.",
   "tsSignedOutReceipt": "Signed out of this account",
@@ -1344,6 +1500,19 @@
   "tsNewAccount": "New account",
   "tsNetworkOf": "Network: {name}",
   "tsSwitcherSemantics": "Viewing Tailscale account: {account}, {status}. {count} entries.",
+  "@tsSwitcherSemantics": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "status": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
   "tsMemoryTip": "Each account runs a separate Tailscale device. Keeping more accounts online uses more memory.",
   "tsDuplicate": "An entry already exists for this account. This sign-in has been kept but has not been added to routing. Review it before continuing.",
   "tsViewExisting": "View existing account",
@@ -1360,6 +1529,16 @@
   "tsTargetAddress": "Address: {address}",
   "tsTargetDomain": "Domain: {domain}",
   "tsCandidate": "{account} · {network}",
+  "@tsCandidate": {
+    "placeholders": {
+      "account": {
+        "type": "Object"
+      },
+      "network": {
+        "type": "Object"
+      }
+    }
+  },
   "tsNotAssigned": "Not assigned",
   "tsSaveChoices": "Save choices",
   "tsChoicesUpdated": "Access accounts updated",
@@ -1385,8 +1564,28 @@
   "tsCancel": "Cancel",
   "tsSignInShort": "Sign in to add a node and dedicated rules.",
   "tsRulesSummary": "{count, plural, =1{{domain} · 1 device address} other{{domain} · {count} device addresses}}",
+  "@tsRulesSummary": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "domain": {
+        "type": "Object"
+      }
+    }
+  },
   "tsRulesUnconfirmed": "Domain and address details are unconfirmed.",
   "tsDevicesFiltered": "Showing {shown} / {total}",
+  "@tsDevicesFiltered": {
+    "placeholders": {
+      "shown": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "tsAboutTailscale": "About Tailscale",
   "tsAboutExit": "About exit settings",
   "tsAboutRoutes": "About subnet routes",
@@ -1398,6 +1597,16 @@
   "mountSourceNoNodeList": "This subscription does not provide a mountable node list. Check its format.",
   "mountDeleteSourceTitle": "Delete subscription and unmount?",
   "mountDeleteSourceBody": "“{subscriptionName}” is mounted on the following {profileCount, plural, =1{1 profile} other{{profileCount} profiles}}. Deleting it removes its nodes from those profiles and may interrupt connections. Other subscriptions, base profile files, and Tailscale sign-ins will not be deleted.",
+  "@mountDeleteSourceBody": {
+    "placeholders": {
+      "subscriptionName": {
+        "type": "Object"
+      },
+      "profileCount": {
+        "type": "num"
+      }
+    }
+  },
   "mountDeleteSourceConfirm": "Delete and unmount",
   "mountDeleteSourceProgress": "Deleting and unmounting…",
   "mountDeleteSourceDone": "Subscription deleted and unmounted",
@@ -1410,6 +1619,16 @@
   "mountCardFailed": "{count, plural, =1{1 subscription update failed} other{{count} subscription updates failed}}",
   "mountCardUnreadable": "Could not read mount status",
   "mountPillSemantics": "{label}, target profile {profileName}",
+  "@mountPillSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountPillFailedSemantics": "a subscription update failed",
   "mountTarget": "Target profile: {profileName}",
   "mountDescription": "Adds nodes without changing rules or DNS.",
@@ -1465,8 +1684,28 @@
   "mountGroupEmpty": "Group “{group}” has no selectable nodes. Check the subscriptions and group filters.",
   "mountUnmountTitle": "Unmount this subscription?",
   "mountUnmountBody": "This removes nodes from “{subscriptionName}” from “{profileName}”. Connections using those nodes may be interrupted. The subscription, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.",
+  "@mountUnmountBody": {
+    "placeholders": {
+      "subscriptionName": {
+        "type": "Object"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountUnmountManyTitle": "Unmount these subscriptions?",
   "mountUnmountManyBody": "This removes nodes provided by the following {count, plural, =1{1 subscription} other{{count} subscriptions}} from “{profileName}”. Connections using those nodes may be interrupted. The subscriptions, original profile file, and other mounts are not deleted. Dedicated Tailscale routing stays unchanged.",
+  "@mountUnmountManyBody": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "profileName": {
+        "type": "Object"
+      }
+    }
+  },
   "mountUnmount": "Unmount",
   "mountUnmounting": "Unmounting…",
   "mountUnmounted": "Unmounted",
@@ -1515,8 +1754,28 @@
   "mountDetails": "Details",
   "mountShowLess": "Show less",
   "mountViewerSource": "Mount: {name} · {count, plural, =1{1 node} other{{count} nodes}}",
+  "@mountViewerSource": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "num"
+      }
+    }
+  },
   "mountViewerPending": "Mount: {name} · node list not yet confirmed",
   "tsViewerRules": "Tailscale · Added by Flash · {count, plural, =1{1 rule} other{{count} rules}} → Node {node}",
+  "@tsViewerRules": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "node": {
+        "type": "Object"
+      }
+    }
+  },
   "tsViewerNode": "Tailscale · Added by Flash · Node {node}",
   "tsViewerUnconfirmed": "Tailscale · Current rules and nodes are unconfirmed",
   "tsViewerReadFailed": "Tailscale · Could not read runtime information",
@@ -1579,12 +1838,35 @@
   "pageSourceTitle": "Confirm setting sources",
   "pageSourceDesc": "These settings differ between the app and profile. Choose which source to use.",
   "pageSourceCompare": "App: {pageValue} · Profile: {fileValue}",
+  "@pageSourceCompare": {
+    "placeholders": {
+      "pageValue": {
+        "type": "Object"
+      },
+      "fileValue": {
+        "type": "Object"
+      }
+    }
+  },
   "keepPageSetting": "Keep in-app settings",
   "followBaseProfile": "Follow base profile",
   "applyAction": "Apply",
   "notSet": "Not set",
   "notSetDefault": "Not set; default {defaultValue}",
   "pageSourceChange": "{field}: {oldValue} → {newValue}",
+  "@pageSourceChange": {
+    "placeholders": {
+      "field": {
+        "type": "Object"
+      },
+      "oldValue": {
+        "type": "Object"
+      },
+      "newValue": {
+        "type": "Object"
+      }
+    }
+  },
   "sourcePage": "In-app settings",
   "sourceBase": "Base profile",
   "sourceDefault": "Default",
@@ -1599,6 +1881,16 @@
   "findProcessStrict": "On demand",
   "tunMissingAuthorization": "TUN did not start because system permission is missing.",
   "inboundNotListening": "{listenerName} did not start: port {port} is not listening.",
+  "@inboundNotListening": {
+    "placeholders": {
+      "listenerName": {
+        "type": "Object"
+      },
+      "port": {
+        "type": "Object"
+      }
+    }
+  },
   "controllerExposedWithoutSecret": "The controller at {address} allows non-local access without a secret. This profile was not applied.",
   "systemProxyNoPort": "No usable port is available for the system proxy. Check the port settings.",
   "pageSourceHiddenTitle": "Switch to profile values",
@@ -1624,6 +1916,16 @@
   "tsExitHowTo": "Enabling an exit node doesn’t change existing selections; only policies using “Tailscale exit” on the Proxies page use it.",
   "tsExitGroupUnconfirmed": "Exit group unconfirmed",
   "tsExitGroupJoined": "{count, plural, =1{“{group}” added to 1 manual policy group} other{“{group}” added to {count} manual policy groups}}",
+  "@tsExitGroupJoined": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      },
+      "group": {
+        "type": "Object"
+      }
+    }
+  },
   "tsExitGroupNoParents": "No manual policy groups in this profile can receive the exit group",
   "tsExitNotAuthorized": "This exit node is not authorized for use",
   "tsExitDeviceOffline": "Exit device offline",
@@ -1635,6 +1937,19 @@
   "tsExitTurnOff": "Turn off exit node",
   "tsExitOffNoOption": "No options will remain",
   "tsViewerExit": "{group} · Added by Flash · {member} · Manual policy groups: {groups}",
+  "@tsViewerExit": {
+    "placeholders": {
+      "group": {
+        "type": "Object"
+      },
+      "member": {
+        "type": "Object"
+      },
+      "groups": {
+        "type": "Object"
+      }
+    }
+  },
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
   "macHelperTitle": "Asistente de Flash",
   "macHelperOn": "Asistente listo",
@@ -1679,8 +1994,15 @@
   "macHelperApprovalStep2": "Under Allow in the Background, find Flash.",
   "macHelperApprovalStep3": "Desactiva y vuelve a activar el interruptor junto a Flash y luego vuelve a Flash.",
   "macHelperStepLabel": "Step {number}: {text}",
+  "@macHelperStepLabel": {
+    "placeholders": {
+      "number": {},
+      "text": {}
+    }
+  },
   "macHelperStartingTitle": "Starting helper…",
   "macHelperStartingDetail": "Please wait.",
+  "macHelperSwitchingTitle": "Switching to the new helper…",
   "macHelperStartSlowTitle": "The helper is taking longer to start",
   "macHelperStartSlowDetail": "Flash can’t confirm yet whether the helper has started. Check again; if it’s still not ready, view the details.",
   "macHelperViewDetails": "View details",
@@ -1721,12 +2043,24 @@
   "restartCore": "Reiniciar núcleo",
   "installUpdate": "Instalar actualización",
   "liveStatusPosition": "{index} de {count}",
+  "@liveStatusPosition": {
+    "placeholders": {
+      "index": {},
+      "count": {}
+    }
+  },
   "coreStarting": "Iniciando núcleo",
   "coreStartingDesc": "Conectando con el núcleo",
   "coreRunning": "Núcleo en ejecución",
   "coreRunningDesc": "La app está conectada al núcleo",
   "forceRestartCore": "Forzar reinicio",
   "rulesSubtitle": "Profile “{profile}” · {count} rules, in the order they apply",
+  "@rulesSubtitle": {
+    "placeholders": {
+      "profile": {},
+      "count": {}
+    }
+  },
   "rulesSubtitleQuery": "Profile “{profile}”",
   "rulesSearchHint": "Search rules, or enter a URL to look it up",
   "rulesQuerying": "Looking up",
@@ -1735,12 +2069,18 @@
   "ruleSourceSubscription": "Subscription",
   "ruleSourceAdded": "Added rule",
   "ruleSourceScript": "Extension script",
-  "ruleSourceMitm": "MITM module",
+  "ruleSourceMitm": "Module",
   "ruleSourceCustom": "Profile rule",
   "ruleSourceManaged": "Tailscale",
   "rulesGroupFilter": "Group: {name}",
   "ruleReject": "Reject",
   "ruleSetSummary": "{count} · updated {time}",
+  "@ruleSetSummary": {
+    "placeholders": {
+      "count": {},
+      "time": {}
+    }
+  },
   "ruleSetCountOnly": "{count}",
   "ruleSetExpired": "Expired {days} days",
   "ruleSetFailed": "Download failed",
@@ -1748,7 +2088,19 @@
   "ruleSetAbsent": "Not in this profile",
   "rulesLoadingMore": "Loading…",
   "rulesShown": "Showing {shown} of {total}",
+  "@rulesShown": {
+    "placeholders": {
+      "shown": {},
+      "total": {}
+    }
+  },
   "ruleSetFilterMatches": "{count} matches in rule set {name}",
+  "@ruleSetFilterMatches": {
+    "placeholders": {
+      "count": {},
+      "name": {}
+    }
+  },
   "rulesContaining": "Matching rules {count}",
   "rulesShowAll": "Show all rules",
   "ruleHitTag": "Matched",
@@ -1759,6 +2111,11 @@
   "ruleDependsOnRematch": "Matched again after a REMATCH",
   "hitCardTitle": "Lookup result",
   "hitCardPosition": "Matches rule #{index}",
+  "@hitCardPosition": {
+    "placeholders": {
+      "index": {}
+    }
+  },
   "hitGoes": "Goes",
   "hitNoRule": "No rule matched, goes",
   "hitRematch": "A REMATCH decides it when the connection is made; the lookup stops here.",
@@ -1796,24 +2153,117 @@
   "addRuleTarget": "Goes through",
   "addRulePreview": "Will add",
   "addedEffective": "The rule was added and takes effect. {host} now goes through “{group}”.",
+  "@addedEffective": {
+    "placeholders": {
+      "host": {},
+      "group": {}
+    }
+  },
   "viewThatRule": "View that rule",
   "lookupRule": "Look up rule",
   "ruleRowSemantics": "Rule {index}, {rule}, from {source}, to {group}",
+  "@ruleRowSemantics": {
+    "placeholders": {
+      "index": {},
+      "rule": {},
+      "source": {},
+      "group": {}
+    }
+  },
   "hitSemantics": "Matches rule {index}, {rule}, from {source}, through {group}, node {node}",
+  "@hitSemantics": {
+    "placeholders": {
+      "index": {},
+      "rule": {},
+      "source": {},
+      "group": {},
+      "node": {}
+    }
+  },
   "uncertainPrefix": "The result may differ",
   "addRuleWriteFailed": "Could not add: {reason}",
+  "@rulesLookupSuggestion": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "@rulesLookupSuggestionLabel": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "@rulesFilterOnly": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "rulesEmptyFiltered": "No matching rules. Try other words or filters.",
+  "@rulesContaining": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "hitIpLabel": "Resolved IP",
   "lookupNoConnectNote": "A lookup may resolve DNS, but never connects to the site.",
+  "@ruleShadowedBy": {
+    "placeholders": {
+      "index": {}
+    }
+  },
   "ruleUncertainTag": "May or may not match",
   "ruleSetIssuesNotice": "Rule sets not ready: {issues}. The result may be incomplete.",
   "ruleSetIssueSeparator": ", ",
   "ruleSetIssueMissing": "“{name}” is not downloaded yet",
   "ruleSetIssueFailed": "“{name}” failed to download",
   "ruleSetIssueExpired": "“{name}” has expired",
+  "@ruleSetMissingNotice": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "@ruleSetFailedNotice": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "@ruleSetExpiredNotice": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "@compareDiffer": {
+    "placeholders": {
+      "rule": {}
+    }
+  },
+  "@addRuleSubtitle": {
+    "placeholders": {
+      "profile": {}
+    }
+  },
+  "@addRuleSuffix": {
+    "placeholders": {
+      "domain": {}
+    }
+  },
+  "@addRuleExact": {
+    "placeholders": {
+      "host": {}
+    }
+  },
   "addRuleAdding": "Adding…",
+  "@addRuleWriteFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
   "addedNotHit": "The rule was added, but this lookup does not match it.",
   "addedNotHitBy": "Rule #{index} matches first.",
+  "@addedNotHitBy": {
+    "placeholders": {
+      "index": {}
+    }
+  },
   "addedUnconfirmed": "The rule was added, but whether it takes effect cannot be confirmed yet.",
   "relookup": "Look up again",
   "addedRulesReloadTimeout": "El núcleo no terminó de recargarse en 15 segundos; se deshizo el cambio.",
@@ -1822,8 +2272,32 @@
   "addedRuleSetLoadTimeout": "El conjunto de reglas no terminó de descargarse en 15 segundos; se deshizo el cambio.",
   "ruleDeleteTitle": "¿Eliminar esta regla?",
   "ruleSetDeleteTitle": "¿Eliminar el conjunto de reglas «{name}»?",
+  "@ruleSetDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "ruleDeleteBody": "{text}\nEsto surtirá efecto de inmediato.",
+  "@ruleDeleteBody": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
   "ruleDuplicate": "Esta regla ya existe (n.º {number}), mediante {group}.",
+  "@ruleDuplicate": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "group": {
+        "type": "String"
+      }
+    }
+  },
   "ruleUpdateGroup": "Actualizar grupo",
   "ruleEditAddTitle": "Añadir regla",
   "ruleEditTitle": "Editar regla añadida",
@@ -1831,7 +2305,21 @@
   "ruleSetEditTitle": "Editar conjunto de reglas añadido",
   "ruleEditCoreStopped": "Surte efecto cuando se inicie el núcleo",
   "ruleEditPosition": "N.º {number} · Regla añadida",
+  "@ruleEditPosition": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "ruleSetEditPosition": "N.º {number} · Conjunto de reglas añadido",
+  "@ruleSetEditPosition": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "ruleEditSaving": "Guardando…",
   "ruleTypeLabel": "Tipo",
   "ruleTypeMore": "Más",
@@ -1870,10 +2358,37 @@
   "ruleSetUrlInvalid": "Solo enlaces http o https",
   "ruleSetChecking": "Descargando y comprobando…",
   "ruleSetCheckOk": "Descargado: reglas de tipo {kind}, formato {format}, {count} entradas",
+  "@ruleSetCheckOk": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "format": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetCheckOkUncounted": "Descargado: formato {format}; las entradas se contarán cuando se inicie el núcleo",
+  "@ruleSetCheckOkUncounted": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetCheckNotFound": "No encontrado (404)",
   "ruleSetCheckTimeout": "La descarga agotó el tiempo de espera",
   "ruleSetCheckNetwork": "Error de descarga: {reason}",
+  "@ruleSetCheckNetwork": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetCheckNotRuleSet": "El contenido no es un conjunto de reglas",
   "ruleSetCheckUnknown": "No se reconoce el formato",
   "ruleSetNameLabel": "Nombre",
@@ -1893,27 +2408,83 @@
   "ruleSetWeekly": "Cada semana",
   "ruleSetNeverUpdate": "Nunca",
   "ruleSetEverySeconds": "Cada {seconds} s",
+  "@ruleSetEverySeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "ruleSetUpdateNow": "Actualizar ahora",
   "ruleSetRefreshed": "Actualización iniciada.",
   "rulesAddTooltip": "Añadir",
   "rulesAddSemantics": "Añadir una regla o un conjunto de reglas",
   "rulesAddRuleMenu": "Añadir regla",
   "rulesAddSetMenu": "Añadir conjunto de reglas",
-  "rulesAddedDivider": "Las reglas siguientes proceden del perfil y los scripts y aquí solo se pueden consultar",
+  "rulesAddedDivider": "Las reglas siguientes proceden de {sources}.",
   "ruleSourceAddedSet": "Conjunto de reglas añadido",
   "ruleEditMenu": "Editar…",
   "ruleMoveUp": "Subir",
   "ruleMoveDown": "Bajar",
   "ruleEditSemantics": "Editar regla {number}",
+  "@ruleEditSemantics": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "ruleDeleteSemantics": "Eliminar regla {number}",
+  "@ruleDeleteSemantics": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "ruleAddedBanner": "Se añadió la regla «{text}» y está activa.",
+  "@ruleAddedBanner": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSavedBanner": "Se guardó la regla «{text}» y está activa.",
+  "@ruleSavedBanner": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetAddedBanner": "Se añadió el conjunto de reglas «{name}» y está activo.",
+  "@ruleSetAddedBanner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "ruleSetSavedBanner": "Se guardó el conjunto de reglas «{name}» y está activo.",
+  "@ruleSetSavedBanner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "ruleDeletedBanner": "Eliminado.",
   "ruleSavedPendingBanner": "Guardado; surtirá efecto cuando se inicie el núcleo.",
   "ruleBannerLookup": "Consultar una URL",
   "ruleMoveFailed": "No se pudo mover la regla: {reason}",
+  "@ruleMoveFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "processHelperLabel": "{name} · Auxiliar",
   "processCoreLabel": "{name} · Núcleo",
   "processHelperTag": "Auxiliar",
@@ -1929,6 +2500,11 @@
   "deleteCertificateTip": "Elimina de este Mac la clave privada del certificado, el certificado y la confianza que se le dio. El descifrado se detiene hasta que se genere y se confíe en un certificado nuevo.",
   "mitmPausedCoreIdentity": "Descifrado en pausa: falló la verificación de identidad del núcleo",
   "mitmIgnoredProfileHostnames": "{count} ignorados de suscripciones o scripts",
+  "@mitmIgnoredProfileHostnames": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "mitmOutcomeRefused": "El cliente envió una alerta durante el handshake. Se desconoce la causa.",
   "mitmOutcomeUpstreamCertificate": "Falló la verificación del certificado del sitio",
   "mitmOutcomeHTTP1Unsupported": "Esta conexión usa un protocolo que no se puede descifrar.",
@@ -1938,12 +2514,18 @@
   "mitmNotApplied": "Decryption not active: settings not applied to the core yet",
   "mitmTurnOffFailed": "Could not turn decryption off in the core. Restart the core.",
   "mitmPausedIndicatorPending": "Descifrado en pausa: aún no está disponible el indicador permanente requerido.",
-  "mitmPausedUnavailable": "Descifrado en pausa: el firmante o la conexión no está disponible.",
   "mitmIndicatorDecrypting": "Descifrando",
   "mitmIndicatorOn": "Descifrado activado",
   "mitmIndicatorPaused": "Descifrado en pausa",
   "mitmIndicatorUnconfirmed": "Comprobando el estado del descifrado",
   "mitmIndicatorPausedBecause": "Descifrado en pausa: {reason}",
+  "@mitmIndicatorPausedBecause": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "mitmIndicatorOpenSettings": "Abrir ajustes de MITM",
   "mitmPauseCoreStopped": "el Core no está en ejecución",
   "mitmPauseCoreIdentity": "falló la verificación de identidad del Core",
@@ -1951,7 +2533,7 @@
   "mitmPartialConnections": "Es posible que algunas conexiones no se descifren",
   "mitmPauseLiveness": "no se pudo verificar el estado de confianza y firma",
   "mitmPauseIndicatorPending": "el indicador de estado permanente no está activado",
-  "mitmPauseUnavailable": "servicio de firma o conexión no disponible",
+  "mitmPauseUnavailable": "the cause couldn't be determined",
   "mitmOutcomePaused": "Descifrado en pausa; la conexión pasó sin cambios",
   "mitmBadgeDecrypted": "Descifrado",
   "mitmBadgePassedThrough": "Sin descifrar · pasó sin cambios",
@@ -1985,6 +2567,13 @@
   "ipxScore": "Health score",
   "ipxScoreOutOf": "/ 100",
   "ipxScoreCeiling": "Type cap {value}",
+  "@ipxScoreCeiling": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "ipxGradeExcellent": "Excellent",
   "ipxGradeGood": "Good",
   "ipxGradeFair": "Fair",
@@ -1995,12 +2584,29 @@
   "ipxNative": "Native IP",
   "ipxBroadcast": "Broadcast IP",
   "ipxNativeDetail": "Registered {registered} · used in {used}",
+  "@ipxNativeDetail": {
+    "placeholders": {
+      "registered": {
+        "type": "String"
+      },
+      "used": {
+        "type": "String"
+      }
+    }
+  },
   "ipxIsp": "ISP",
   "ipxTypeEducation": "Education",
   "ipxTypePseudo": "Likely pseudo-residential",
   "ipxDeductions": "Score breakdown",
   "ipxFullReport": "Full report on ipx.al",
   "ipxDataFrom": "Data from {source}, for reference only",
+  "@ipxDataFrom": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "ipxSourceSeparator": ", ",
   "ipxReportFailed": "Couldn’t get report",
   "ipxRetry": "Retry",
@@ -2521,7 +3127,392 @@
   "@mitmRewriteNotAppliedTitle": {
     "description": "PROVISIONAL: English text, awaiting translation"
   },
+  "mitmScripts": "Scripts",
+  "mitmScriptCount": "{count, plural, =1{1 script} other{{count} scripts}}",
+  "@mitmScriptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmUpdateCount": "{count} with updates",
+  "@mitmUpdateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptInvalidCount": "{count} invalid",
+  "@mitmScriptInvalidCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleCount": "{count} modules, {enabled} on",
+  "@mitmModuleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "enabled": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptSubtitle": "Profile “{profile}” · {count} scripts, {enabled} on",
+  "@mitmScriptSubtitle": {
+    "placeholders": {
+      "profile": {},
+      "count": {
+        "type": "int"
+      },
+      "enabled": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptGroupRequest": "Request Scripts",
+  "mitmScriptGroupResponse": "Response Scripts",
+  "mitmScriptKindRequest": "Request",
+  "mitmScriptKindResponse": "Response",
+  "mitmScriptNeedsBody": "Needs body",
+  "mitmScriptRemoteSource": "{source} · checked {time}",
+  "@mitmScriptRemoteSource": {
+    "placeholders": {
+      "source": {},
+      "time": {}
+    }
+  },
+  "mitmScriptLocalSource": "Local file · {file}",
+  "@mitmScriptLocalSource": {
+    "placeholders": {
+      "file": {}
+    }
+  },
+  "mitmScriptHasUpdate": "Update available",
+  "mitmHasUpdate": "Update available",
+  "mitmViewUpdate": "View Update",
+  "mitmScriptsFromModules": "{count, plural, =1{1 more script comes from modules} other{{count} more scripts come from modules}}",
+  "@mitmScriptsFromModules": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptsOff": "HTTPS decryption is off, so scripts don't run.",
+  "mitmScriptHostNotDecrypted": "This host isn't decrypted, so the script won't run",
+  "mitmAddToDecryption": "Add to Decryption",
+  "mitmScriptsEmptyTitle": "No scripts yet",
+  "mitmScriptsEmptyBody": "Once added, a script runs on the requests or responses it matches.",
+  "mitmAddScript": "Add Script",
+  "mitmCheckAllUpdates": "Check All for Updates",
+  "mitmScriptCopyAll": "Copy All Lines",
+  "mitmScriptDeleteInvalid": "Delete Invalid Scripts",
+  "mitmScriptDeleteInvalidConfirm": "Delete {count} invalid scripts?",
+  "@mitmScriptDeleteInvalidConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmCheckUpdate": "Check for Update",
+  "mitmCopyLine": "Copy Line",
+  "mitmAddScriptHint": "Paste lines from a Surge config's [Script] section, one script per line, or just a script URL.",
+  "mitmScriptType": "Type",
+  "mitmScriptPattern": "URL Pattern",
+  "mitmScriptTimeout": "Timeout",
+  "mitmScriptPasteOk": "{count} can be added: {requests} request, {responses} response",
+  "@mitmScriptPasteOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "requests": {
+        "type": "int"
+      },
+      "responses": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptPasteLineError": "Line {line} can't be added: {reason}",
+  "@mitmScriptPasteLineError": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      },
+      "reason": {}
+    }
+  },
+  "mitmScriptUnsupportedType": "This kind of script isn't supported yet",
+  "mitmScriptUnreadable": "Not a script line",
+  "mitmScriptNoPattern": "No URL pattern",
+  "mitmScriptNoPath": "script-path must be a URL; add a local script with “From File…”",
+  "mitmAddFromFile": "From File…",
+  "mitmContinue": "Continue",
+  "mitmScriptConfirmTitle": "Confirm Scripts",
+  "mitmScriptConfirmBody": "Scripts may read and change the plaintext requests and responses of the hosts they match, which may include accounts, passwords and other sensitive information. Turn on only scripts you trust.",
+  "mitmCapabilityRead": "See and change plaintext requests and responses of the matched hosts",
+  "mitmCapabilitySend": "Send network requests through Flash",
+  "mitmCapabilityStore": "Save data on this Mac; all scripts share this data and can read each other's",
+  "mitmCapabilityLimits": "Can't read or write files on this Mac or run commands; each run lasts at most 10 seconds.",
+  "mitmHostNotDecrypted": "{host} isn't decrypted",
+  "@mitmHostNotDecrypted": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "mitmAlsoDecryptHosts": "Also add these hosts to decryption",
+  "mitmAddAndEnable": "Add and Turn On",
+  "mitmScriptDownloading": "Downloading and checking…",
+  "mitmScriptsAdded": "{count, plural, =1{1 script added} other{{count} scripts added}}",
+  "@mitmScriptsAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptEmpty": "The script is empty",
+  "mitmScriptDownloadFailed": "Couldn't download {name}: {reason}",
+  "@mitmScriptDownloadFailed": {
+    "placeholders": {
+      "name": {},
+      "reason": {}
+    }
+  },
+  "mitmScriptCannotLoad": "{name} can't be loaded: {reason}",
+  "@mitmScriptCannotLoad": {
+    "placeholders": {
+      "name": {},
+      "reason": {}
+    }
+  },
+  "mitmScriptCheckFailed": "Couldn't check for updates: {reason}",
+  "@mitmScriptCheckFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmUpdateTitle": "{name} has an update",
+  "@mitmUpdateTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "mitmDiffFolded": "… {count} unchanged lines",
+  "@mitmDiffFolded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmNotNow": "Not Now",
+  "mitmAdoptUpdate": "Use New Version",
+  "mitmChangeHosts": "Decrypted hosts",
+  "mitmChangeScripts": "Scripts",
+  "mitmChangeRewrites": "Rewrites",
+  "mitmNoChange": "No change",
+  "mitmModuleConfirmTitle": "Confirm Module Import",
+  "mitmModuleHostsHint": "Check the decrypted hosts this module includes before you decide whether to import it.",
+  "mitmModuleNoHosts": "This module adds no decrypted hosts.",
+  "mitmAlreadyListed": "Already listed",
+  "mitmNewHost": "New",
+  "mitmExcludedCount": "{count} excluded",
+  "@mitmExcludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmMoreHosts": "{count} more",
+  "@mitmMoreHosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRewrites": "Rewrite rules",
+  "mitmModuleRoutingRules": "Routing rules",
+  "mitmModuleUnsupported": "Not supported",
+  "mitmModuleUnsupportedCount": "{count, plural, =1{1 line won't be imported.} other{{count} lines won't be imported.}}",
+  "@mitmModuleUnsupportedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmImportOnly": "Import Only",
+  "mitmImportAndEnable": "Import and Turn On",
+  "mitmImportModule": "Import Module",
+  "mitmModuleImported": "Module imported",
+  "mitmModuleHostCount": "{count} hosts",
+  "@mitmModuleHostCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRewriteCount": "{count} rewrites",
+  "@mitmModuleRewriteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleUnsupportedLines": "{count} lines not supported",
+  "@mitmModuleUnsupportedLines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRemoteSource": "Remote · updated {time}",
+  "@mitmModuleRemoteSource": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "mitmModuleLocalSource": "Local",
+  "mitmModulesEmptyTitle": "No modules yet",
+  "mitmModulesEmptyBody": "Once imported, you can see what a module sets up.",
+  "mitmScriptsRan": "Scripts ran · {count}",
+  "@mitmScriptsRan": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptsPassed": "{count, plural, =1{1 script didn't finish; the message passed unchanged.} other{{count} scripts didn't finish; the message passed unchanged.}}",
+  "@mitmScriptsPassed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptDone": "Finished · {took}",
+  "@mitmScriptDone": {
+    "placeholders": {
+      "took": {}
+    }
+  },
+  "mitmScriptTimedOut": "Script timed out",
+  "@mitmScriptTimedOut": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptFailed": "Script failed: {reason}",
+  "@mitmScriptFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmScriptNotRun": "Script didn't run: {reason}",
+  "@mitmScriptNotRun": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmScriptMemory": "over the memory limit",
+  "mitmScriptBusy": "too many scripts running",
+  "mitmScriptNoDone": "the script never called $done",
+  "mitmScriptLogExpand": "Show All ({count} lines)",
+  "@mitmScriptLogExpand": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptRequestsSent": "{count, plural, =1{1 request sent} other{{count} requests sent}}",
+  "@mitmScriptRequestsSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmViewInScripts": "Show in Scripts",
+  "mitmViewInModule": "Show in Module",
+  "mitmFromModule": "Module · {name}",
+  "@mitmFromModule": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "@mitmRewriteFailureGeneric": {
     "description": "PROVISIONAL: English text, awaiting translation"
-  }
+  },
+  "mitmUpdateCheckFailedKept": "Couldn't check for updates; the current version still works.",
+  "mitmUpdateDownloadFailedKept": "Couldn't download the new version; the current version still works.",
+  "mitmUpdateInvalidKept": "The new version can't be loaded; the current version still works.",
+  "mitmScriptLoadFailed": "The script can't be loaded: {reason}.",
+  "mitmModuleLoadFailed": "The module can't be loaded: {reason}.",
+  "mitmPendingKept": "A new version is waiting; the current version keeps running.",
+  "mitmScriptFoundUpdate": "New version found {time}",
+  "mitmAlsoDecryptHost": "Also add {host} to decryption",
+  "mitmDiffAdded": "{count, plural, =1{+1 line} other{+{count} lines}}",
+  "mitmDiffRemoved": "{count, plural, =1{−1 line} other{−{count} lines}}",
+  "mitmPauseAppUnavailable": "Flash didn't respond to the certificate signing request",
+  "mitmPauseSignTimeout": "certificate signing timed out",
+  "mitmPauseSignRefused": "certificate signing didn't complete",
+  "mitmPauseAppUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmPauseSignTimeoutHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmPauseSignRefusedHint": "Check that HTTPS decryption is on. New connections try decryption again once the pause ends.",
+  "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
+  "mitmModuleRuleCount": "{count, plural, =1{1 routing rule} other{{count} routing rules}}",
+  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
+  "rulesFromModule": "From module · {name}",
+  "rulesViewInModule": "View in module",
+  "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
+  "mitmRoutingRulesRevertFailed": "No se pudieron aplicar las reglas de enrutamiento ni restaurar la configuración anterior. Revisa las reglas actuales.",
+  "mitmPauseLeafUnusable": "the certificate couldn't be used",
+  "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmChecking": "Checking…",
+  "rulesBelowListLast": "{head} y {last}",
+  "rulesBelowSubscription": "el perfil de suscripción",
+  "rulesBelowScript": "los scripts de extensión",
+  "rulesBelowModule": "los módulos",
+  "navGroupRouting": "Enrutamiento",
+  "navGroupDecryption": "Descifrado y reescritura",
+  "navGroupDebug": "Depuración",
+  "navGroupExpanded": "{group}, grupo, expandido",
+  "navGroupCollapsed": "{group}, grupo, contraído",
+  "navBadgeUpdates": "Actualizaciones: {count}",
+  "navBadgeError": "Con errores",
+  "exitIpRow": "Salida",
+  "exitIp": "IP de salida",
+  "localPublicIpRow": "Local",
+  "localPublicIp": "IP pública local",
+  "copyLocalPublicIp": "Copiar IP pública local",
+  "sameAsExit": "Igual que la salida",
+  "querying": "Consultando",
+  "queryFailed": "Error de consulta",
+  "exitNotRunning": "Flash no se está ejecutando; no hay salida",
+  "exitIpLookupFailed": "No se pudo consultar la IP de salida",
+  "ipxNoResponse": "No se pudo obtener el informe",
+  "ipxNativeShort": "Nativa",
+  "ipxBroadcastShort": "Difundida",
+  "ipxScoreSemantics": "Puntuación {score}, nivel {grade}",
+  "exitIpOpenHint": "Pulsa para ver los detalles de la IP de salida",
+  "semanticsSeparator": ", "
 }

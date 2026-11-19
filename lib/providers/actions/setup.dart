@@ -1092,6 +1092,7 @@ class SetupAction extends _$SetupAction {
             : lastMatchTarget(profileBase.base.matchRules),
         safeMode: ref.read(safeModeProvider),
         profileRuleSources: profileRuleSources,
+        mitmModules: setupState.mitmModules,
       ),
     );
     if (profileBase == null) {

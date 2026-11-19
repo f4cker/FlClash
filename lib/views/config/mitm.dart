@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_indicator.dart';
 import 'package:fl_clash/common/mitm_signer.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/features/mitm/rewrite.dart';
+import 'package:fl_clash/features/mitm/script.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/app.dart';
@@ -15,6 +17,7 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/config/mitm_modules.dart' show MitmModulesItem;
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -414,13 +417,17 @@ class _MitmViewState extends ConsumerState<MitmView> {
               appLocalizations.mitmPausedIndicatorPending,
             MitmPauseReason.coreIdentity =>
               appLocalizations.mitmPausedCoreIdentity,
-            _ => appLocalizations.mitmPausedUnavailable,
+            final reason => appLocalizations.mitmIndicatorPausedBecause(
+              mitmPauseReasonText(appLocalizations, reason),
+            ),
           };
     // The page says what the bar's status would, in its first section.
     return ScaffoldBarStatus(
       status: null,
       child: Scaffold(
-        title: appLocalizations.mitm,
+        title: isAndroid
+            ? appLocalizations.mitm
+            : appLocalizations.httpsDecryption,
         isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
         body: NullStatusSwitcher(
           isLoading: certificate.isLoading && !certificate.hasValue,
@@ -481,10 +488,17 @@ class _MitmViewState extends ConsumerState<MitmView> {
                                 ),
                             ].join('\n'),
                           ),
-                          generateSection(
-                            title: appLocalizations.mitmRewriteAndScripts,
-                            items: const [MitmRewriteEntryItem()],
-                          ),
+                          // The sidebar lists these pages wherever it shows,
+                          // with their updates and errors.
+                          if (ref.watch(isMobileViewProvider))
+                            generateSection(
+                              title: appLocalizations.mitmRewriteAndScripts,
+                              items: const [
+                                MitmRewriteEntryItem(),
+                                MitmScriptEntryItem(),
+                                MitmModulesItem(),
+                              ],
+                            ),
                           generateSection(
                             title: appLocalizations.options,
                             items: [

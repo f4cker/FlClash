@@ -63,6 +63,9 @@ BOOL FCBundledDaemonPresent(NSString *bundle);
 // other identity check: current, an older build still running after an app update (stale), or not acceptable.
 typedef NS_ENUM(NSInteger, FCRunningHashVerdict) { FCRunningHashCurrent, FCRunningHashStale, FCRunningHashInvalid };
 FCRunningHashVerdict FCCompareRunningHash(NSData * _Nullable runningHash, NSData * _Nullable diskHash);
+// Rosetta may use a different slice than launchd; accept only validated slices of the bundled binary.
+FCRunningHashVerdict FCCompareRunningToBundled(NSData * _Nullable runningHash, NSData * _Nullable bundledHash,
+                                               NSString *path, NSString *identifier);
 @interface FCMessageValidator : NSObject
 - (instancetype)initWithIdentifier:(NSString *)identifier executable:(NSString *)executable;
 // `executable` is where the peer must run; `sealedExecutable` the file whose static cdhash it must have. They differ
@@ -110,6 +113,8 @@ NSData * _Nullable FCBundledCoreHash(void);
 // does not pass. Returns @"verified" or @"failed:<stage>" naming the first check that failed.
 NSString *FCCoreGuestCheck(NSData * _Nullable auditToken, pid_t pid, NSData * _Nullable expectedHash);
 NSData * _Nullable FCStaticCodeHash(NSString *path, NSString *identifier);
+// Every slice's cdhash (universal binary) or the one hash (thin), each validated as FCStaticCodeHash; nil otherwise.
+NSArray<NSData *> * _Nullable FCStaticCodeSliceHashes(NSString *path, NSString *identifier);
 // The daemon behind an audit token, from the kernel alone (its executable may be unreadable for the caller): code
 // signature status valid, hardened runtime, hard/kill, not ad hoc, not debuggable or debugged; running image exactly
 // at `expectedPath`; the token's process lifetime unchanged across the reads (no pid reuse, no exec). Returns

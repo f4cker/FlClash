@@ -69,6 +69,7 @@ class Logs extends _$Logs with AutoDisposeNotifierMixin {
 /// What the Core said of a connection before its request arrived.
 typedef _MitmPending = ({
   String outcome,
+  String pauseReason,
   bool decrypted,
   MitmConnectionRewrite? rewrite,
   DateTime at,
@@ -93,13 +94,16 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
     'paused',
   };
 
-  void setMitmOutcome(String id, String outcome) {
+  void setMitmOutcome(String id, String outcome, {String pauseReason = ''}) {
     if (!ref.mounted ||
         id.isEmpty ||
         id.length > 128 ||
         !_mitmOutcomes.contains(outcome)) {
       return;
     }
+    final reason = outcome == 'paused' && pauseReason.length <= 64
+        ? pauseReason
+        : '';
     for (var i = state.length - 1; i >= 0; i--) {
       if (state[i].id == id) {
         final request = state[i];
@@ -108,7 +112,7 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
               ? request.copyWith(
                   metadata: request.metadata.copyWith(mitm: true),
                 )
-              : request.copyWith(mitmOutcome: outcome),
+              : request.copyWith(mitmOutcome: outcome, mitmPauseReason: reason),
         });
         return;
       }
@@ -117,6 +121,9 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
       id,
       (previous) => (
         outcome: outcome == 'decrypted' ? previous?.outcome ?? '' : outcome,
+        pauseReason: outcome == 'decrypted'
+            ? previous?.pauseReason ?? ''
+            : reason,
         decrypted: outcome == 'decrypted' || (previous?.decrypted ?? false),
         rewrite: previous?.rewrite,
         at: DateTime.now(),
@@ -158,6 +165,7 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
       id,
       (previous) => (
         outcome: previous?.outcome ?? '',
+        pauseReason: previous?.pauseReason ?? '',
         decrypted: previous?.decrypted ?? false,
         rewrite: rewrite,
         at: DateTime.now(),
@@ -182,6 +190,7 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
       fresh
           ? value.copyWith(
               mitmOutcome: pending.outcome,
+              mitmPauseReason: pending.pauseReason,
               mitmRewrite: pending.rewrite,
               metadata: pending.decrypted
                   ? value.metadata.copyWith(mitm: true)

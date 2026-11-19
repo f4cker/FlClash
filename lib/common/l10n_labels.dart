@@ -18,6 +18,22 @@ extension PageLabelL10n on PageLabel {
       PageLabel.requests => appLocalizations.requests,
       PageLabel.resources => appLocalizations.resources,
       PageLabel.dns => appLocalizations.dnsQueries,
+      PageLabel.mitm => appLocalizations.httpsDecryption,
+      PageLabel.mitmRewrite => appLocalizations.mitmRewrite,
+      PageLabel.mitmScripts => appLocalizations.script,
+      PageLabel.mitmModules => appLocalizations.mitmModules,
+    };
+  }
+}
+
+extension NavigationGroupL10n on NavigationGroup {
+  String get label {
+    final appLocalizations = currentAppLocalizations;
+    return switch (this) {
+      NavigationGroup.routing => appLocalizations.navGroupRouting,
+      NavigationGroup.decryption => appLocalizations.navGroupDecryption,
+      NavigationGroup.debug => appLocalizations.navGroupDebug,
+      NavigationGroup.network => appLocalizations.network,
     };
   }
 }

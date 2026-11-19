@@ -92,8 +92,7 @@ class MitmRewriteDescription {
     required this.match,
   });
 
-  String get summary =>
-      detail.isEmpty ? action : '$action · $detail';
+  String get summary => detail.isEmpty ? action : '$action · $detail';
 }
 
 /// The URL rewrite type of a line, lowercased, or null if it names none.
@@ -257,9 +256,7 @@ String mitmRewriteHitType(AppLocalizations l, MitmAction hit) {
       _ => l.mitmRewriteActUrl,
     },
     'header-rewrite' =>
-      response
-          ? l.mitmRewriteActResponseHeader
-          : l.mitmRewriteActRequestHeader,
+      response ? l.mitmRewriteActResponseHeader : l.mitmRewriteActRequestHeader,
     'body-rewrite' =>
       response ? l.mitmRewriteActResponseBody : l.mitmRewriteActRequestBody,
     'map-local' => l.mitmRewriteActMapLocal,

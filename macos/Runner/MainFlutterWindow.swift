@@ -76,6 +76,7 @@ class MainFlutterWindow: NSWindow {
         ManagedHelperChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         ProcessAppChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         MitmSignerChannel.register(messenger: flutterViewController.engine.binaryMessenger)
+        ScriptNotificationChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         UpdaterChannel.register(messenger: flutterViewController.engine.binaryMessenger)
         RegisterGeneratedPlugins(registry: flutterViewController)
     }

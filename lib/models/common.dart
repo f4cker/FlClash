@@ -133,6 +133,8 @@ abstract class TrackerInfo with _$TrackerInfo {
     int? downloadSpeed,
     int? uploadSpeed,
     @Default('') String mitmOutcome,
+    // The Core's reason, when [mitmOutcome] is paused.
+    @Default('') String mitmPauseReason,
     // Set once a rewrite rule applied or failed on the connection.
     MitmConnectionRewrite? mitmRewrite,
   }) = _TrackerInfo;
@@ -867,7 +869,19 @@ abstract class MitmModule with _$MitmModule {
 
     /// Its scripts FlClash runs, which turning it on asks about first.
     @Default(0) int scripts,
+
+    /// Whether its routing rules go ahead of the profile's own; its other
+    /// content follows [enabled] alone.
+    @Default(true) bool rulesEnabled,
     required DateTime lastUpdateTime,
+
+    /// Set while an update's new content waits for the user to adopt it;
+    /// the content in [fileName] keeps running until then.
+    DateTime? pendingTime,
+
+    /// Why the last update failed.
+    String? error,
+    MitmUpdateFailure? failure,
   }) = _MitmModule;
 }
 
@@ -875,6 +889,13 @@ extension MitmModuleExt on MitmModule {
   bool get isRemote => url != null;
 
   String get fileName => '$id.txt';
+
+  String get pendingFileName => '$id.pending.txt';
+
+  bool get hasPending => pendingTime != null;
+
+  /// Nothing of it can run, unlike a failed update that keeps [fileName].
+  bool get unloadable => failure == MitmUpdateFailure.load;
 
   String get updatingKey => 'mitm_module_$id';
 }

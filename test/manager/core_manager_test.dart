@@ -95,6 +95,10 @@ Future<ProviderContainer> _pumpCoreManager(
       coreHandlerProvider.overrideWithValue(
         CoreController.scoped(coreInterface),
       ),
+      // Its database stream would outlive the widget tree.
+      enabledMitmModuleRulesProvider.overrideWith(
+        (_) async => MitmModuleRules.empty,
+      ),
       ...overrides,
     ],
   );

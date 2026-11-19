@@ -67,6 +67,161 @@ List<MitmRewrite> currentMitmRewrites(Ref ref) {
   ];
 }
 
+/// The current profile's enabled scripts; empty while none is selected or
+/// they are still being read.
+@riverpod
+List<MitmScript> currentMitmScripts(Ref ref) {
+  final profileId = ref.watch(currentProfileIdProvider);
+  if (profileId == null) {
+    return const [];
+  }
+  final scripts =
+      ref.watch(profileMitmScriptsProvider(profileId)).value ?? const [];
+  return [
+    for (final script in scripts)
+      if (script.enabled) script,
+  ];
+}
+
+/// What the enabled modules add, as the Core takes it.
+class MitmModuleRules {
+  const MitmModuleRules({
+    this.hostname = const [],
+    this.rewrite = const [],
+    this.script = const [],
+  });
+
+  static const empty = MitmModuleRules();
+
+  final List<String> hostname;
+  final List<Map<String, Object?>> rewrite;
+  final List<Map<String, Object?>> script;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MitmModuleRules &&
+      const DeepCollectionEquality().equals(
+        [hostname, rewrite, script],
+        [other.hostname, other.rewrite, other.script],
+      );
+
+  @override
+  int get hashCode =>
+      const DeepCollectionEquality().hash([hostname, rewrite, script]);
+}
+
+MitmModuleRules _moduleRules(
+  List<
+    ({
+      int id,
+      String text,
+      Map<String, String> values,
+      Map<String, String> resources,
+    })
+  >
+  modules,
+) {
+  final hostname = <String>[];
+  final rewrite = <Map<String, Object?>>[];
+  final script = <Map<String, Object?>>[];
+  for (final module in modules) {
+    final content = parseMitmModule(
+      module.text,
+      values: module.values,
+      resources: module.resources,
+    );
+    final rules = content.mitm;
+    hostname.addAll(rules.hostname);
+    for (final list in mitmRewriteLists) {
+      for (final (index, line) in rules.linesOf(list).indexed) {
+        rewrite.add({
+          'id': 'm${module.id}.${list.key}.$index',
+          'section': list.key,
+          'line': line,
+        });
+      }
+    }
+    for (final (index, line) in mitmHttpScriptLines(rules.script).indexed) {
+      script.add({'id': 'm${module.id}.$index', 'line': line});
+    }
+  }
+  return MitmModuleRules(hostname: hostname, rewrite: rewrite, script: script);
+}
+
+/// Read from the enabled modules' files; empty while modules are off.
+@riverpod
+Future<MitmModuleRules> enabledMitmModuleRules(Ref ref) async {
+  if (!mitmModulesFeature) {
+    return MitmModuleRules.empty;
+  }
+  final modules = [
+    for (final module in await ref.watch(mitmModulesProvider.future))
+      if (module.enabled) module,
+  ];
+  if (modules.isEmpty) {
+    return MitmModuleRules.empty;
+  }
+  final directory = await appPath.mitmModulesDirPath;
+  final sources =
+      <
+        ({
+          int id,
+          String text,
+          Map<String, String> values,
+          Map<String, String> resources,
+        })
+      >[];
+  for (final module in modules) {
+    final file = File(join(directory, module.fileName));
+    if (!await file.exists()) {
+      continue;
+    }
+    sources.add((
+      id: module.id,
+      text: await file.readAsString(),
+      values: module.arguments,
+      resources: module.resources,
+    ));
+  }
+  if (sources.isEmpty) {
+    return MitmModuleRules.empty;
+  }
+  return compute(_moduleRules, sources);
+}
+
+/// The setup `mitm.update` takes: the settings, the user's hostnames before
+/// the modules', the profile's rewrite rules before the modules', and the
+/// same for scripts.
+Map<String, Object?> composeMitmSetup(
+  Mitm mitm, {
+  required List<MitmRewrite> rewrites,
+  required List<MitmScript> scripts,
+  required MitmModuleRules modules,
+}) {
+  final base = mitm.coreJson;
+  final rewrite = [
+    for (final item in rewrites)
+      if (item.enabled && mitmRewriteLists.contains(item.section))
+        item.coreJson,
+    ...modules.rewrite,
+  ];
+  final script = [
+    for (final item in scripts)
+      if (item.enabled && !item.unloadable) item.coreJson,
+    ...modules.script,
+  ];
+  return {
+    ...base,
+    if (modules.hostname.isNotEmpty)
+      'hostname': [
+        ...?(base['hostname'] as List<String>?),
+        ...modules.hostname,
+      ],
+    if (rewrite.isNotEmpty) 'rewrite': rewrite,
+    if (script.isNotEmpty) 'script': script,
+  };
+}
+
 /// Null, and so no decryption, unless the user turned it on.
 @riverpod
 Map<String, Object?>? mitmSetup(Ref ref) {
@@ -76,12 +231,14 @@ Map<String, Object?>? mitmSetup(Ref ref) {
   if (!mitmFeature || !mitm.enable) {
     return null;
   }
-  final rewrites = ref.watch(currentMitmRewritesProvider);
-  return {
-    ...mitm.coreJson,
-    if (rewrites.isNotEmpty)
-      'rewrite': [for (final rewrite in rewrites) rewrite.coreJson],
-  };
+  return composeMitmSetup(
+    mitm,
+    rewrites: ref.watch(currentMitmRewritesProvider),
+    scripts: ref.watch(currentMitmScriptsProvider),
+    modules:
+        ref.watch(enabledMitmModuleRulesProvider).value ??
+        MitmModuleRules.empty,
+  );
 }
 
 @riverpod

@@ -240,6 +240,7 @@ static id Next(NSMutableArray *queue) { id value = queue.firstObject; if (queue.
     return answer;
 }
 - (NSString *)currentHelperHash { return @"new"; }
+- (BOOL)isBundledHelperHash:(id)reported { return [reported isEqual:[self currentHelperHash]]; }
 - (void)pause:(NSTimeInterval)seconds { [self.calls addObject:[NSString stringWithFormat:@"pause %.2f", seconds]]; self.clock += seconds; }
 - (NSTimeInterval)uptime { return self.clock; }
 - (NSString *)bundleVersion { return self.build; }
@@ -430,7 +431,8 @@ class RecoverySequenceTests(unittest.TestCase):
         # what the kernel answered and the app refused is untrustedReply.
         self.assertLess(request.index('[validator check:reply]'), request.index('transient = validator.transientFailure;'))
         self.assertLess(request.index('transient = validator.transientFailure;'), request.index('untrusted = !transient;'))
-        self.assertIn('stale ? @"staleHelper" : untrusted ? @"untrustedReply" : @"unavailable"', request)
+        self.assertIn('finish(stale ? @{@"code": @"staleHelper", @"detail": refusal, @"runningCodeStale": @YES} :', request)
+        self.assertIn('@{@"code": untrusted ? @"untrustedReply" : @"unavailable", @"detail": refusal}', request)
         # The card code passes through status unchanged, and status only maps "unavailable"/"timeout" to the
         # launcher's report; nothing in status re-registers.
         self.assertIn('@"timeout", @"untrustedReply"])', BRIDGE)

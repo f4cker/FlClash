@@ -31,6 +31,7 @@
 		F5A1E0032F10000100A1B2C3 /* UpdateInstaller.m in Sources */ = {isa = PBXBuildFile; fileRef = F5A1E0042F10000100A1B2C3 /* UpdateInstaller.m */; };
 		F5A1E0062F10000100A1B2C3 /* UpdateManifestSignature.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1E0072F10000100A1B2C3 /* UpdateManifestSignature.swift */; };
 		F5A1C0032F10000100A1B2C3 /* ProcessAppChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */; };
+		F5A1C0192F10000100A1B2C3 /* ScriptNotificationChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C01A2F10000100A1B2C3 /* ScriptNotificationChannel.swift */; };
 		F5A1C0052F10000100A1B2C3 /* ProcessAppLocatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */; };
 		F5A1C0072F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */; };
 		F5A1C0112F10000100A1B2C3 /* ProcessSourceCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A1C0122F10000100A1B2C3 /* ProcessSourceCatalog.swift */; };
@@ -112,6 +113,7 @@
 		F5A1E0052F10000100A1B2C3 /* UpdateInstaller.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = UpdateInstaller.h; sourceTree = "<group>"; };
 		F5A1E0072F10000100A1B2C3 /* UpdateManifestSignature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManifestSignature.swift; sourceTree = "<group>"; };
 		F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppChannel.swift; sourceTree = "<group>"; };
+		F5A1C01A2F10000100A1B2C3 /* ScriptNotificationChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptNotificationChannel.swift; sourceTree = "<group>"; };
 		F5A1C0062F10000100A1B2C3 /* ProcessAppLocatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessAppLocatorTests.swift; sourceTree = "<group>"; };
 		F5A1C0122F10000100A1B2C3 /* ProcessSourceCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSourceCatalog.swift; sourceTree = "<group>"; };
 		F5A1C0152F10000100A1B2C3 /* ProcessSourceResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessSourceResolver.swift; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 				FA2633000000000000000302 /* FlashFlutterEngine.m */,
 				FA2633000000000000000303 /* FlashFlutterEngine.h */,
 				F5A1C0042F10000100A1B2C3 /* ProcessAppChannel.swift */,
+				F5A1C01A2F10000100A1B2C3 /* ScriptNotificationChannel.swift */,
 				F5A1C0022F10000100A1B2C3 /* ProcessAppLocator.swift */,
 				F5A1C0122F10000100A1B2C3 /* ProcessSourceCatalog.swift */,
 				F5A1C0152F10000100A1B2C3 /* ProcessSourceResolver.swift */,
@@ -487,6 +490,7 @@
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 				F5A1C0032F10000100A1B2C3 /* ProcessAppChannel.swift in Sources */,
+				F5A1C0192F10000100A1B2C3 /* ScriptNotificationChannel.swift in Sources */,
 				F5A1C0012F10000100A1B2C3 /* ProcessAppLocator.swift in Sources */,
 				F5A1C0112F10000100A1B2C3 /* ProcessSourceCatalog.swift in Sources */,
 				F5A1C0142F10000100A1B2C3 /* ProcessSourceResolver.swift in Sources */,

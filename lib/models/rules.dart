@@ -224,6 +224,9 @@ abstract class RuleSource with _$RuleSource {
     /// The stored rule the line was written from, for one the rules page
     /// may edit: an added rule, or a custom profile's own.
     int? ruleId,
+
+    /// The module a [RuleSourceKind.mitm] rule came from.
+    int? moduleId,
   }) = _RuleSource;
 }
 

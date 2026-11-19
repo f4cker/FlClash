@@ -6357,7 +6357,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmModuleRulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'Routing rules go in front of the profile’s own.'**
+  /// **'Module routing rules go after the added rules and before the profile\'s own.'**
   String get mitmModuleRulesDesc;
 
   /// No description provided for @mitmModuleSystemTip.
@@ -6393,7 +6393,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmSkipPolicy.
   ///
   /// In en, this message translates to:
-  /// **'Only the DIRECT and REJECT policies are supported'**
+  /// **'This policy can\'t be used here'**
   String get mitmSkipPolicy;
 
   /// No description provided for @mitmSkipJq.
@@ -10200,6 +10200,12 @@ abstract class AppLocalizations {
   /// **'Please wait.'**
   String get macHelperStartingDetail;
 
+  /// No description provided for @macHelperSwitchingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switching to the new helper…'**
+  String get macHelperSwitchingTitle;
+
   /// No description provided for @macHelperStartSlowTitle.
   ///
   /// In en, this message translates to:
@@ -10467,7 +10473,7 @@ abstract class AppLocalizations {
   /// No description provided for @ruleSourceMitm.
   ///
   /// In en, this message translates to:
-  /// **'MITM module'**
+  /// **'Module'**
   String get ruleSourceMitm;
 
   /// No description provided for @ruleSourceCustom.
@@ -11462,8 +11468,8 @@ abstract class AppLocalizations {
   /// No description provided for @rulesAddedDivider.
   ///
   /// In en, this message translates to:
-  /// **'Rules below come from the profile and scripts and can only be viewed here'**
-  String get rulesAddedDivider;
+  /// **'The rules below come from {sources}.'**
+  String rulesAddedDivider(String sources);
 
   /// No description provided for @ruleSourceAddedSet.
   ///
@@ -11693,12 +11699,6 @@ abstract class AppLocalizations {
   /// **'Decryption paused: the required always-visible indicator is not available.'**
   String get mitmPausedIndicatorPending;
 
-  /// No description provided for @mitmPausedUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Decryption paused: the signer or connection is unavailable.'**
-  String get mitmPausedUnavailable;
-
   /// No description provided for @mitmIndicatorDecrypting.
   ///
   /// In en, this message translates to:
@@ -11774,7 +11774,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmPauseUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'signing service or connection unavailable'**
+  /// **'the cause couldn\'t be determined'**
   String get mitmPauseUnavailable;
 
   /// No description provided for @mitmOutcomePaused.
@@ -12886,6 +12886,930 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rewrite not applied: {value}'**
   String mitmRewriteNotAppliedTitle(String value);
+
+  /// No description provided for @mitmScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts'**
+  String get mitmScripts;
+
+  /// No description provided for @mitmScriptCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 script} other{{count} scripts}}'**
+  String mitmScriptCount(int count);
+
+  /// No description provided for @mitmUpdateCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} with updates'**
+  String mitmUpdateCount(int count);
+
+  /// No description provided for @mitmScriptInvalidCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} invalid'**
+  String mitmScriptInvalidCount(int count);
+
+  /// No description provided for @mitmModuleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} modules, {enabled} on'**
+  String mitmModuleCount(int count, int enabled);
+
+  /// No description provided for @mitmScriptSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile “{profile}” · {count} scripts, {enabled} on'**
+  String mitmScriptSubtitle(Object profile, int count, int enabled);
+
+  /// No description provided for @mitmScriptGroupRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Scripts'**
+  String get mitmScriptGroupRequest;
+
+  /// No description provided for @mitmScriptGroupResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Response Scripts'**
+  String get mitmScriptGroupResponse;
+
+  /// No description provided for @mitmScriptKindRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request'**
+  String get mitmScriptKindRequest;
+
+  /// No description provided for @mitmScriptKindResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Response'**
+  String get mitmScriptKindResponse;
+
+  /// No description provided for @mitmScriptNeedsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs body'**
+  String get mitmScriptNeedsBody;
+
+  /// No description provided for @mitmScriptRemoteSource.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} · checked {time}'**
+  String mitmScriptRemoteSource(Object source, Object time);
+
+  /// No description provided for @mitmScriptLocalSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Local file · {file}'**
+  String mitmScriptLocalSource(Object file);
+
+  /// No description provided for @mitmScriptHasUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available'**
+  String get mitmScriptHasUpdate;
+
+  /// No description provided for @mitmHasUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available'**
+  String get mitmHasUpdate;
+
+  /// No description provided for @mitmViewUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'View Update'**
+  String get mitmViewUpdate;
+
+  /// No description provided for @mitmScriptsFromModules.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 more script comes from modules} other{{count} more scripts come from modules}}'**
+  String mitmScriptsFromModules(int count);
+
+  /// No description provided for @mitmScriptsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTPS decryption is off, so scripts don\'t run.'**
+  String get mitmScriptsOff;
+
+  /// No description provided for @mitmScriptHostNotDecrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'This host isn\'t decrypted, so the script won\'t run'**
+  String get mitmScriptHostNotDecrypted;
+
+  /// No description provided for @mitmAddToDecryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Decryption'**
+  String get mitmAddToDecryption;
+
+  /// No description provided for @mitmScriptsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No scripts yet'**
+  String get mitmScriptsEmptyTitle;
+
+  /// No description provided for @mitmScriptsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once added, a script runs on the requests or responses it matches.'**
+  String get mitmScriptsEmptyBody;
+
+  /// No description provided for @mitmAddScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Script'**
+  String get mitmAddScript;
+
+  /// No description provided for @mitmCheckAllUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Check All for Updates'**
+  String get mitmCheckAllUpdates;
+
+  /// No description provided for @mitmScriptCopyAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy All Lines'**
+  String get mitmScriptCopyAll;
+
+  /// No description provided for @mitmScriptDeleteInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Invalid Scripts'**
+  String get mitmScriptDeleteInvalid;
+
+  /// No description provided for @mitmScriptDeleteInvalidConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} invalid scripts?'**
+  String mitmScriptDeleteInvalidConfirm(int count);
+
+  /// No description provided for @mitmCheckUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for Update'**
+  String get mitmCheckUpdate;
+
+  /// No description provided for @mitmCopyLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Line'**
+  String get mitmCopyLine;
+
+  /// No description provided for @mitmAddScriptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste lines from a Surge config\'s [Script] section, one script per line, or just a script URL.'**
+  String get mitmAddScriptHint;
+
+  /// No description provided for @mitmScriptType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get mitmScriptType;
+
+  /// No description provided for @mitmScriptPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'URL Pattern'**
+  String get mitmScriptPattern;
+
+  /// No description provided for @mitmScriptTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeout'**
+  String get mitmScriptTimeout;
+
+  /// No description provided for @mitmScriptPasteOk.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} can be added: {requests} request, {responses} response'**
+  String mitmScriptPasteOk(int count, int requests, int responses);
+
+  /// No description provided for @mitmScriptPasteLineError.
+  ///
+  /// In en, this message translates to:
+  /// **'Line {line} can\'t be added: {reason}'**
+  String mitmScriptPasteLineError(int line, Object reason);
+
+  /// No description provided for @mitmScriptUnsupportedType.
+  ///
+  /// In en, this message translates to:
+  /// **'This kind of script isn\'t supported yet'**
+  String get mitmScriptUnsupportedType;
+
+  /// No description provided for @mitmScriptUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a script line'**
+  String get mitmScriptUnreadable;
+
+  /// No description provided for @mitmScriptNoPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'No URL pattern'**
+  String get mitmScriptNoPattern;
+
+  /// No description provided for @mitmScriptNoPath.
+  ///
+  /// In en, this message translates to:
+  /// **'script-path must be a URL; add a local script with “From File…”'**
+  String get mitmScriptNoPath;
+
+  /// No description provided for @mitmAddFromFile.
+  ///
+  /// In en, this message translates to:
+  /// **'From File…'**
+  String get mitmAddFromFile;
+
+  /// No description provided for @mitmContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get mitmContinue;
+
+  /// No description provided for @mitmScriptConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Scripts'**
+  String get mitmScriptConfirmTitle;
+
+  /// No description provided for @mitmScriptConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts may read and change the plaintext requests and responses of the hosts they match, which may include accounts, passwords and other sensitive information. Turn on only scripts you trust.'**
+  String get mitmScriptConfirmBody;
+
+  /// No description provided for @mitmCapabilityRead.
+  ///
+  /// In en, this message translates to:
+  /// **'See and change plaintext requests and responses of the matched hosts'**
+  String get mitmCapabilityRead;
+
+  /// No description provided for @mitmCapabilitySend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send network requests through Flash'**
+  String get mitmCapabilitySend;
+
+  /// No description provided for @mitmCapabilityStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Save data on this Mac; all scripts share this data and can read each other\'s'**
+  String get mitmCapabilityStore;
+
+  /// No description provided for @mitmCapabilityLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t read or write files on this Mac or run commands; each run lasts at most 10 seconds.'**
+  String get mitmCapabilityLimits;
+
+  /// No description provided for @mitmHostNotDecrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'{host} isn\'t decrypted'**
+  String mitmHostNotDecrypted(Object host);
+
+  /// No description provided for @mitmAlsoDecryptHosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Also add these hosts to decryption'**
+  String get mitmAlsoDecryptHosts;
+
+  /// No description provided for @mitmAddAndEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Add and Turn On'**
+  String get mitmAddAndEnable;
+
+  /// No description provided for @mitmScriptDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading and checking…'**
+  String get mitmScriptDownloading;
+
+  /// No description provided for @mitmScriptsAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 script added} other{{count} scripts added}}'**
+  String mitmScriptsAdded(int count);
+
+  /// No description provided for @mitmScriptEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'The script is empty'**
+  String get mitmScriptEmpty;
+
+  /// No description provided for @mitmScriptDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download {name}: {reason}'**
+  String mitmScriptDownloadFailed(Object name, Object reason);
+
+  /// No description provided for @mitmScriptCannotLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} can\'t be loaded: {reason}'**
+  String mitmScriptCannotLoad(Object name, Object reason);
+
+  /// No description provided for @mitmScriptCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check for updates: {reason}'**
+  String mitmScriptCheckFailed(Object reason);
+
+  /// No description provided for @mitmUpdateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has an update'**
+  String mitmUpdateTitle(Object name);
+
+  /// No description provided for @mitmDiffFolded.
+  ///
+  /// In en, this message translates to:
+  /// **'… {count} unchanged lines'**
+  String mitmDiffFolded(int count);
+
+  /// No description provided for @mitmNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Now'**
+  String get mitmNotNow;
+
+  /// No description provided for @mitmAdoptUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Use New Version'**
+  String get mitmAdoptUpdate;
+
+  /// No description provided for @mitmChangeHosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrypted hosts'**
+  String get mitmChangeHosts;
+
+  /// No description provided for @mitmChangeScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts'**
+  String get mitmChangeScripts;
+
+  /// No description provided for @mitmChangeRewrites.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrites'**
+  String get mitmChangeRewrites;
+
+  /// No description provided for @mitmNoChange.
+  ///
+  /// In en, this message translates to:
+  /// **'No change'**
+  String get mitmNoChange;
+
+  /// No description provided for @mitmModuleConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Module Import'**
+  String get mitmModuleConfirmTitle;
+
+  /// No description provided for @mitmModuleHostsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the decrypted hosts this module includes before you decide whether to import it.'**
+  String get mitmModuleHostsHint;
+
+  /// No description provided for @mitmModuleNoHosts.
+  ///
+  /// In en, this message translates to:
+  /// **'This module adds no decrypted hosts.'**
+  String get mitmModuleNoHosts;
+
+  /// No description provided for @mitmAlreadyListed.
+  ///
+  /// In en, this message translates to:
+  /// **'Already listed'**
+  String get mitmAlreadyListed;
+
+  /// No description provided for @mitmNewHost.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get mitmNewHost;
+
+  /// No description provided for @mitmExcludedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} excluded'**
+  String mitmExcludedCount(int count);
+
+  /// No description provided for @mitmMoreHosts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more'**
+  String mitmMoreHosts(int count);
+
+  /// No description provided for @mitmModuleRewrites.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewrite rules'**
+  String get mitmModuleRewrites;
+
+  /// No description provided for @mitmModuleRoutingRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing rules'**
+  String get mitmModuleRoutingRules;
+
+  /// No description provided for @mitmModuleUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Not supported'**
+  String get mitmModuleUnsupported;
+
+  /// No description provided for @mitmModuleUnsupportedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 line won\'t be imported.} other{{count} lines won\'t be imported.}}'**
+  String mitmModuleUnsupportedCount(int count);
+
+  /// No description provided for @mitmImportOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Only'**
+  String get mitmImportOnly;
+
+  /// No description provided for @mitmImportAndEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Import and Turn On'**
+  String get mitmImportAndEnable;
+
+  /// No description provided for @mitmImportModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Module'**
+  String get mitmImportModule;
+
+  /// No description provided for @mitmModuleImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Module imported'**
+  String get mitmModuleImported;
+
+  /// No description provided for @mitmModuleHostCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hosts'**
+  String mitmModuleHostCount(int count);
+
+  /// No description provided for @mitmModuleRewriteCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} rewrites'**
+  String mitmModuleRewriteCount(int count);
+
+  /// No description provided for @mitmModuleUnsupportedLines.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} lines not supported'**
+  String mitmModuleUnsupportedLines(int count);
+
+  /// No description provided for @mitmModuleRemoteSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Remote · updated {time}'**
+  String mitmModuleRemoteSource(Object time);
+
+  /// No description provided for @mitmModuleLocalSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Local'**
+  String get mitmModuleLocalSource;
+
+  /// No description provided for @mitmModulesEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No modules yet'**
+  String get mitmModulesEmptyTitle;
+
+  /// No description provided for @mitmModulesEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once imported, you can see what a module sets up.'**
+  String get mitmModulesEmptyBody;
+
+  /// No description provided for @mitmScriptsRan.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts ran · {count}'**
+  String mitmScriptsRan(int count);
+
+  /// No description provided for @mitmScriptsPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 script didn\'t finish; the message passed unchanged.} other{{count} scripts didn\'t finish; the message passed unchanged.}}'**
+  String mitmScriptsPassed(int count);
+
+  /// No description provided for @mitmScriptDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished · {took}'**
+  String mitmScriptDone(Object took);
+
+  /// No description provided for @mitmScriptTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Script timed out'**
+  String get mitmScriptTimedOut;
+
+  /// No description provided for @mitmScriptFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Script failed: {reason}'**
+  String mitmScriptFailed(Object reason);
+
+  /// No description provided for @mitmScriptNotRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Script didn\'t run: {reason}'**
+  String mitmScriptNotRun(Object reason);
+
+  /// No description provided for @mitmScriptMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'over the memory limit'**
+  String get mitmScriptMemory;
+
+  /// No description provided for @mitmScriptBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'too many scripts running'**
+  String get mitmScriptBusy;
+
+  /// No description provided for @mitmScriptNoDone.
+  ///
+  /// In en, this message translates to:
+  /// **'the script never called \$done'**
+  String get mitmScriptNoDone;
+
+  /// No description provided for @mitmScriptLogExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Show All ({count} lines)'**
+  String mitmScriptLogExpand(int count);
+
+  /// No description provided for @mitmScriptRequestsSent.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 request sent} other{{count} requests sent}}'**
+  String mitmScriptRequestsSent(int count);
+
+  /// No description provided for @mitmViewInScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in Scripts'**
+  String get mitmViewInScripts;
+
+  /// No description provided for @mitmViewInModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in Module'**
+  String get mitmViewInModule;
+
+  /// No description provided for @mitmFromModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Module · {name}'**
+  String mitmFromModule(Object name);
+
+  /// No description provided for @mitmUpdateCheckFailedKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check for updates; the current version still works.'**
+  String get mitmUpdateCheckFailedKept;
+
+  /// No description provided for @mitmUpdateDownloadFailedKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the new version; the current version still works.'**
+  String get mitmUpdateDownloadFailedKept;
+
+  /// No description provided for @mitmUpdateInvalidKept.
+  ///
+  /// In en, this message translates to:
+  /// **'The new version can\'t be loaded; the current version still works.'**
+  String get mitmUpdateInvalidKept;
+
+  /// No description provided for @mitmScriptLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The script can\'t be loaded: {reason}.'**
+  String mitmScriptLoadFailed(Object reason);
+
+  /// No description provided for @mitmModuleLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The module can\'t be loaded: {reason}.'**
+  String mitmModuleLoadFailed(Object reason);
+
+  /// No description provided for @mitmPendingKept.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version is waiting; the current version keeps running.'**
+  String get mitmPendingKept;
+
+  /// No description provided for @mitmScriptFoundUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'New version found {time}'**
+  String mitmScriptFoundUpdate(Object time);
+
+  /// No description provided for @mitmAlsoDecryptHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Also add {host} to decryption'**
+  String mitmAlsoDecryptHost(Object host);
+
+  /// No description provided for @mitmDiffAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{+1 line} other{+{count} lines}}'**
+  String mitmDiffAdded(int count);
+
+  /// No description provided for @mitmDiffRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{−1 line} other{−{count} lines}}'**
+  String mitmDiffRemoved(int count);
+
+  /// No description provided for @mitmPauseAppUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash didn\'t respond to the certificate signing request'**
+  String get mitmPauseAppUnavailable;
+
+  /// No description provided for @mitmPauseSignTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'certificate signing timed out'**
+  String get mitmPauseSignTimeout;
+
+  /// No description provided for @mitmPauseSignRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'certificate signing didn\'t complete'**
+  String get mitmPauseSignRefused;
+
+  /// No description provided for @mitmPauseAppUnavailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait. New connections try decryption again once the pause ends.'**
+  String get mitmPauseAppUnavailableHint;
+
+  /// No description provided for @mitmPauseSignTimeoutHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait. New connections try decryption again once the pause ends.'**
+  String get mitmPauseSignTimeoutHint;
+
+  /// No description provided for @mitmPauseSignRefusedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check that HTTPS decryption is on. New connections try decryption again once the pause ends.'**
+  String get mitmPauseSignRefusedHint;
+
+  /// No description provided for @mitmPauseUnavailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait. New connections try decryption again once the pause ends.'**
+  String get mitmPauseUnavailableHint;
+
+  /// No description provided for @mitmCapabilityNotify.
+  ///
+  /// In en, this message translates to:
+  /// **'Send system notifications (whether they show depends on system permission and rate limits)'**
+  String get mitmCapabilityNotify;
+
+  /// No description provided for @mitmModuleRuleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 routing rule} other{{count} routing rules}}'**
+  String mitmModuleRuleCount(int count);
+
+  /// No description provided for @mitmRulePolicyMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The current profile has no “{policy}”, so this rule won\'t take effect'**
+  String mitmRulePolicyMissing(String policy);
+
+  /// No description provided for @rulesFromModule.
+  ///
+  /// In en, this message translates to:
+  /// **'From module · {name}'**
+  String rulesFromModule(String name);
+
+  /// No description provided for @rulesViewInModule.
+  ///
+  /// In en, this message translates to:
+  /// **'View in module'**
+  String get rulesViewInModule;
+
+  /// No description provided for @mitmRoutingRulesNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'The routing rules couldn\'t be applied. The previous setting has been restored.'**
+  String get mitmRoutingRulesNotApplied;
+
+  /// No description provided for @mitmRoutingRulesRevertFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The routing rules couldn\'t be applied, and the previous setting couldn\'t be restored. Check the current rules.'**
+  String get mitmRoutingRulesRevertFailed;
+
+  /// No description provided for @mitmPauseLeafUnusable.
+  ///
+  /// In en, this message translates to:
+  /// **'the certificate couldn\'t be used'**
+  String get mitmPauseLeafUnusable;
+
+  /// No description provided for @mitmPauseLeafUnusableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait. New connections try decryption again once the pause ends.'**
+  String get mitmPauseLeafUnusableHint;
+
+  /// No description provided for @mitmChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get mitmChecking;
+
+  /// No description provided for @rulesBelowListLast.
+  ///
+  /// In en, this message translates to:
+  /// **'{head} and {last}'**
+  String rulesBelowListLast(String head, String last);
+
+  /// No description provided for @rulesBelowSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'the subscription profile'**
+  String get rulesBelowSubscription;
+
+  /// No description provided for @rulesBelowScript.
+  ///
+  /// In en, this message translates to:
+  /// **'extension scripts'**
+  String get rulesBelowScript;
+
+  /// No description provided for @rulesBelowModule.
+  ///
+  /// In en, this message translates to:
+  /// **'modules'**
+  String get rulesBelowModule;
+
+  /// No description provided for @navGroupRouting.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing'**
+  String get navGroupRouting;
+
+  /// No description provided for @navGroupDecryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption & Rewrite'**
+  String get navGroupDecryption;
+
+  /// No description provided for @navGroupDebug.
+  ///
+  /// In en, this message translates to:
+  /// **'Debugging'**
+  String get navGroupDebug;
+
+  /// No description provided for @navGroupExpanded.
+  ///
+  /// In en, this message translates to:
+  /// **'{group}, group, expanded'**
+  String navGroupExpanded(Object group);
+
+  /// No description provided for @navGroupCollapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'{group}, group, collapsed'**
+  String navGroupCollapsed(Object group);
+
+  /// No description provided for @navBadgeUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates: {count}'**
+  String navBadgeUpdates(Object count);
+
+  /// No description provided for @navBadgeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Has errors'**
+  String get navBadgeError;
+
+  /// No description provided for @exitIpRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get exitIpRow;
+
+  /// No description provided for @exitIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit IP'**
+  String get exitIp;
+
+  /// No description provided for @localPublicIpRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Local'**
+  String get localPublicIpRow;
+
+  /// No description provided for @localPublicIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Local public IP'**
+  String get localPublicIp;
+
+  /// No description provided for @copyLocalPublicIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy local public IP'**
+  String get copyLocalPublicIp;
+
+  /// No description provided for @sameAsExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as exit'**
+  String get sameAsExit;
+
+  /// No description provided for @querying.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up'**
+  String get querying;
+
+  /// No description provided for @queryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Lookup failed'**
+  String get queryFailed;
+
+  /// No description provided for @exitNotRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash isn’t running, so there’s no exit'**
+  String get exitNotRunning;
+
+  /// No description provided for @exitIpLookupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t look up the exit IP'**
+  String get exitIpLookupFailed;
+
+  /// No description provided for @ipxNoResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t get the report'**
+  String get ipxNoResponse;
+
+  /// No description provided for @ipxNativeShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Native'**
+  String get ipxNativeShort;
+
+  /// No description provided for @ipxBroadcastShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcast'**
+  String get ipxBroadcastShort;
+
+  /// No description provided for @ipxScoreSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Health score {score}, grade {grade}'**
+  String ipxScoreSemantics(String score, String grade);
+
+  /// No description provided for @exitIpOpenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Press to view exit IP details'**
+  String get exitIpOpenHint;
+
+  /// No description provided for @semanticsSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get semanticsSeparator;
 }
 
 class _AppLocalizationsDelegate

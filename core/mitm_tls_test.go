@@ -547,7 +547,7 @@ func TestMitmSelectorFragmentedHelloSignerUnavailableRelaysExactly(t *testing.T)
 	if _, err := io.ReadFull(siteRaw, got); err != nil || !bytes.Equal(got, original) {
 		t.Fatalf("relayed %x: %v", got, err)
 	}
-	if event := <-events; event.Id != "selection-test" || event.Outcome != mitmOutcomePaused {
+	if event := <-events; event.Id != "selection-test" || event.Outcome != mitmOutcomePaused || event.PauseReason != "appUnavailable" {
 		t.Fatalf("event %+v", event)
 	}
 	if mitmPausedReason() != "appUnavailable" {
@@ -598,7 +598,7 @@ func TestMitmSelectorPausedHostIsMarkedPassedThrough(t *testing.T) {
 	if _, err := io.ReadFull(siteRaw, got); err != nil || !bytes.Equal(got, original) {
 		t.Fatalf("relayed %x: %v", got, err)
 	}
-	if event := <-events; event.Outcome != mitmOutcomePaused {
+	if event := <-events; event.Outcome != mitmOutcomePaused || event.PauseReason != "signTimeout" {
 		t.Fatalf("event %+v", event)
 	}
 	mitmPaused.Store(nil)

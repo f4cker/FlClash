@@ -1137,13 +1137,13 @@
   "arguments": "Arguments",
   "mitmRoutingRules": "Routing rules",
   "mitmIgnoredLines": "Ignored lines",
-  "mitmModuleRulesDesc": "Routing rules go in front of the profile’s own.",
+  "mitmModuleRulesDesc": "Module routing rules go after the added rules and before the profile's own.",
   "mitmModuleSystemTip": "Written for {system}; some lines may not match apps on this device.",
   "mitmSkipSection": "The [{section}] section is not supported",
   "mitmSkipSetting": "This setting is not supported",
   "mitmSkipScriptType": "This script type is not supported",
   "mitmSkipRule": "This rule type is not supported",
-  "mitmSkipPolicy": "Only the DIRECT and REJECT policies are supported",
+  "mitmSkipPolicy": "This policy can't be used here",
   "mitmSkipJq": "jq rewrites are not supported",
   "mitmSkipJsonBody": "JSON body rewrites are not supported",
   "mitmSkipRawHeader": "Rewriting all headers as one text is not supported",
@@ -2002,6 +2002,7 @@
   },
   "macHelperStartingTitle": "Starting helper…",
   "macHelperStartingDetail": "Please wait.",
+  "macHelperSwitchingTitle": "Switching to the new helper…",
   "macHelperStartSlowTitle": "The helper is taking longer to start",
   "macHelperStartSlowDetail": "Flash can’t confirm yet whether the helper has started. Check again; if it’s still not ready, view the details.",
   "macHelperViewDetails": "View details",
@@ -2068,7 +2069,7 @@
   "ruleSourceSubscription": "Subscription",
   "ruleSourceAdded": "Added rule",
   "ruleSourceScript": "Extension script",
-  "ruleSourceMitm": "MITM module",
+  "ruleSourceMitm": "Module",
   "ruleSourceCustom": "Profile rule",
   "ruleSourceManaged": "Tailscale",
   "rulesGroupFilter": "Group: {name}",
@@ -2420,7 +2421,7 @@
   "rulesAddSemantics": "Add a rule or rule set",
   "rulesAddRuleMenu": "Add Rule",
   "rulesAddSetMenu": "Add Rule Set",
-  "rulesAddedDivider": "Rules below come from the profile and scripts and can only be viewed here",
+  "rulesAddedDivider": "The rules below come from {sources}.",
   "ruleSourceAddedSet": "Added rule set",
   "ruleEditMenu": "Edit…",
   "ruleMoveUp": "Move Up",
@@ -2513,7 +2514,6 @@
   "mitmNotApplied": "Decryption not active: settings not applied to the core yet",
   "mitmTurnOffFailed": "Could not turn decryption off in the core. Restart the core.",
   "mitmPausedIndicatorPending": "Decryption paused: the required always-visible indicator is not available.",
-  "mitmPausedUnavailable": "Decryption paused: the signer or connection is unavailable.",
   "mitmIndicatorDecrypting": "Decrypting",
   "mitmIndicatorOn": "Decryption on",
   "mitmIndicatorPaused": "Decryption paused",
@@ -2533,7 +2533,7 @@
   "mitmPartialConnections": "Some connections may not be decrypted",
   "mitmPauseLiveness": "trust and signing status could not be verified",
   "mitmPauseIndicatorPending": "persistent status indicator is not enabled",
-  "mitmPauseUnavailable": "signing service or connection unavailable",
+  "mitmPauseUnavailable": "the cause couldn't be determined",
   "mitmOutcomePaused": "Decryption paused; connection passed through unchanged",
   "mitmBadgeDecrypted": "Decrypted",
   "mitmBadgePassedThrough": "Not decrypted · passed through",
@@ -3048,5 +3048,465 @@
         "type": "String"
       }
     }
-  }
+  },
+  "mitmScripts": "Scripts",
+  "mitmScriptCount": "{count, plural, =1{1 script} other{{count} scripts}}",
+  "@mitmScriptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmUpdateCount": "{count} with updates",
+  "@mitmUpdateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptInvalidCount": "{count} invalid",
+  "@mitmScriptInvalidCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleCount": "{count} modules, {enabled} on",
+  "@mitmModuleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "enabled": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptSubtitle": "Profile “{profile}” · {count} scripts, {enabled} on",
+  "@mitmScriptSubtitle": {
+    "placeholders": {
+      "profile": {},
+      "count": {
+        "type": "int"
+      },
+      "enabled": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptGroupRequest": "Request Scripts",
+  "mitmScriptGroupResponse": "Response Scripts",
+  "mitmScriptKindRequest": "Request",
+  "mitmScriptKindResponse": "Response",
+  "mitmScriptNeedsBody": "Needs body",
+  "mitmScriptRemoteSource": "{source} · checked {time}",
+  "@mitmScriptRemoteSource": {
+    "placeholders": {
+      "source": {},
+      "time": {}
+    }
+  },
+  "mitmScriptLocalSource": "Local file · {file}",
+  "@mitmScriptLocalSource": {
+    "placeholders": {
+      "file": {}
+    }
+  },
+  "mitmScriptHasUpdate": "Update available",
+  "mitmHasUpdate": "Update available",
+  "mitmViewUpdate": "View Update",
+  "mitmScriptsFromModules": "{count, plural, =1{1 more script comes from modules} other{{count} more scripts come from modules}}",
+  "@mitmScriptsFromModules": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptsOff": "HTTPS decryption is off, so scripts don't run.",
+  "mitmScriptHostNotDecrypted": "This host isn't decrypted, so the script won't run",
+  "mitmAddToDecryption": "Add to Decryption",
+  "mitmScriptsEmptyTitle": "No scripts yet",
+  "mitmScriptsEmptyBody": "Once added, a script runs on the requests or responses it matches.",
+  "mitmAddScript": "Add Script",
+  "mitmCheckAllUpdates": "Check All for Updates",
+  "mitmScriptCopyAll": "Copy All Lines",
+  "mitmScriptDeleteInvalid": "Delete Invalid Scripts",
+  "mitmScriptDeleteInvalidConfirm": "Delete {count} invalid scripts?",
+  "@mitmScriptDeleteInvalidConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmCheckUpdate": "Check for Update",
+  "mitmCopyLine": "Copy Line",
+  "mitmAddScriptHint": "Paste lines from a Surge config's [Script] section, one script per line, or just a script URL.",
+  "mitmScriptType": "Type",
+  "mitmScriptPattern": "URL Pattern",
+  "mitmScriptTimeout": "Timeout",
+  "mitmScriptPasteOk": "{count} can be added: {requests} request, {responses} response",
+  "@mitmScriptPasteOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "requests": {
+        "type": "int"
+      },
+      "responses": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptPasteLineError": "Line {line} can't be added: {reason}",
+  "@mitmScriptPasteLineError": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      },
+      "reason": {}
+    }
+  },
+  "mitmScriptUnsupportedType": "This kind of script isn't supported yet",
+  "mitmScriptUnreadable": "Not a script line",
+  "mitmScriptNoPattern": "No URL pattern",
+  "mitmScriptNoPath": "script-path must be a URL; add a local script with “From File…”",
+  "mitmAddFromFile": "From File…",
+  "mitmContinue": "Continue",
+  "mitmScriptConfirmTitle": "Confirm Scripts",
+  "mitmScriptConfirmBody": "Scripts may read and change the plaintext requests and responses of the hosts they match, which may include accounts, passwords and other sensitive information. Turn on only scripts you trust.",
+  "mitmCapabilityRead": "See and change plaintext requests and responses of the matched hosts",
+  "mitmCapabilitySend": "Send network requests through Flash",
+  "mitmCapabilityStore": "Save data on this Mac; all scripts share this data and can read each other's",
+  "mitmCapabilityLimits": "Can't read or write files on this Mac or run commands; each run lasts at most 10 seconds.",
+  "mitmHostNotDecrypted": "{host} isn't decrypted",
+  "@mitmHostNotDecrypted": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "mitmAlsoDecryptHosts": "Also add these hosts to decryption",
+  "mitmAddAndEnable": "Add and Turn On",
+  "mitmScriptDownloading": "Downloading and checking…",
+  "mitmScriptsAdded": "{count, plural, =1{1 script added} other{{count} scripts added}}",
+  "@mitmScriptsAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptEmpty": "The script is empty",
+  "mitmScriptDownloadFailed": "Couldn't download {name}: {reason}",
+  "@mitmScriptDownloadFailed": {
+    "placeholders": {
+      "name": {},
+      "reason": {}
+    }
+  },
+  "mitmScriptCannotLoad": "{name} can't be loaded: {reason}",
+  "@mitmScriptCannotLoad": {
+    "placeholders": {
+      "name": {},
+      "reason": {}
+    }
+  },
+  "mitmScriptCheckFailed": "Couldn't check for updates: {reason}",
+  "@mitmScriptCheckFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmUpdateTitle": "{name} has an update",
+  "@mitmUpdateTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "mitmDiffFolded": "… {count} unchanged lines",
+  "@mitmDiffFolded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmNotNow": "Not Now",
+  "mitmAdoptUpdate": "Use New Version",
+  "mitmChangeHosts": "Decrypted hosts",
+  "mitmChangeScripts": "Scripts",
+  "mitmChangeRewrites": "Rewrites",
+  "mitmNoChange": "No change",
+  "mitmModuleConfirmTitle": "Confirm Module Import",
+  "mitmModuleHostsHint": "Check the decrypted hosts this module includes before you decide whether to import it.",
+  "mitmModuleNoHosts": "This module adds no decrypted hosts.",
+  "mitmAlreadyListed": "Already listed",
+  "mitmNewHost": "New",
+  "mitmExcludedCount": "{count} excluded",
+  "@mitmExcludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmMoreHosts": "{count} more",
+  "@mitmMoreHosts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRewrites": "Rewrite rules",
+  "mitmModuleRoutingRules": "Routing rules",
+  "mitmModuleUnsupported": "Not supported",
+  "mitmModuleUnsupportedCount": "{count, plural, =1{1 line won't be imported.} other{{count} lines won't be imported.}}",
+  "@mitmModuleUnsupportedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmImportOnly": "Import Only",
+  "mitmImportAndEnable": "Import and Turn On",
+  "mitmImportModule": "Import Module",
+  "mitmModuleImported": "Module imported",
+  "mitmModuleHostCount": "{count} hosts",
+  "@mitmModuleHostCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRewriteCount": "{count} rewrites",
+  "@mitmModuleRewriteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleUnsupportedLines": "{count} lines not supported",
+  "@mitmModuleUnsupportedLines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmModuleRemoteSource": "Remote · updated {time}",
+  "@mitmModuleRemoteSource": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "mitmModuleLocalSource": "Local",
+  "mitmModulesEmptyTitle": "No modules yet",
+  "mitmModulesEmptyBody": "Once imported, you can see what a module sets up.",
+  "mitmScriptsRan": "Scripts ran · {count}",
+  "@mitmScriptsRan": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptsPassed": "{count, plural, =1{1 script didn't finish; the message passed unchanged.} other{{count} scripts didn't finish; the message passed unchanged.}}",
+  "@mitmScriptsPassed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptDone": "Finished · {took}",
+  "@mitmScriptDone": {
+    "placeholders": {
+      "took": {}
+    }
+  },
+  "mitmScriptTimedOut": "Script timed out",
+  "mitmScriptFailed": "Script failed: {reason}",
+  "@mitmScriptFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmScriptNotRun": "Script didn't run: {reason}",
+  "@mitmScriptNotRun": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmScriptMemory": "over the memory limit",
+  "mitmScriptBusy": "too many scripts running",
+  "mitmScriptNoDone": "the script never called $done",
+  "mitmScriptLogExpand": "Show All ({count} lines)",
+  "@mitmScriptLogExpand": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmScriptRequestsSent": "{count, plural, =1{1 request sent} other{{count} requests sent}}",
+  "@mitmScriptRequestsSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmViewInScripts": "Show in Scripts",
+  "mitmViewInModule": "Show in Module",
+  "mitmFromModule": "Module · {name}",
+  "@mitmFromModule": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "mitmUpdateCheckFailedKept": "Couldn't check for updates; the current version still works.",
+  "mitmUpdateDownloadFailedKept": "Couldn't download the new version; the current version still works.",
+  "mitmUpdateInvalidKept": "The new version can't be loaded; the current version still works.",
+  "mitmScriptLoadFailed": "The script can't be loaded: {reason}.",
+  "@mitmScriptLoadFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmModuleLoadFailed": "The module can't be loaded: {reason}.",
+  "@mitmModuleLoadFailed": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "mitmPendingKept": "A new version is waiting; the current version keeps running.",
+  "mitmScriptFoundUpdate": "New version found {time}",
+  "@mitmScriptFoundUpdate": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "mitmAlsoDecryptHost": "Also add {host} to decryption",
+  "@mitmAlsoDecryptHost": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "mitmDiffAdded": "{count, plural, =1{+1 line} other{+{count} lines}}",
+  "@mitmDiffAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmDiffRemoved": "{count, plural, =1{−1 line} other{−{count} lines}}",
+  "@mitmDiffRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmPauseAppUnavailable": "Flash didn't respond to the certificate signing request",
+  "mitmPauseSignTimeout": "certificate signing timed out",
+  "mitmPauseSignRefused": "certificate signing didn't complete",
+  "mitmPauseAppUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmPauseSignTimeoutHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmPauseSignRefusedHint": "Check that HTTPS decryption is on. New connections try decryption again once the pause ends.",
+  "mitmPauseUnavailableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmCapabilityNotify": "Send system notifications (whether they show depends on system permission and rate limits)",
+  "mitmModuleRuleCount": "{count, plural, =1{1 routing rule} other{{count} routing rules}}",
+  "@mitmModuleRuleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mitmRulePolicyMissing": "The current profile has no “{policy}”, so this rule won't take effect",
+  "@mitmRulePolicyMissing": {
+    "placeholders": {
+      "policy": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesFromModule": "From module · {name}",
+  "@rulesFromModule": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesViewInModule": "View in module",
+  "mitmRoutingRulesNotApplied": "The routing rules couldn't be applied. The previous setting has been restored.",
+  "mitmRoutingRulesRevertFailed": "The routing rules couldn't be applied, and the previous setting couldn't be restored. Check the current rules.",
+  "mitmPauseLeafUnusable": "the certificate couldn't be used",
+  "mitmPauseLeafUnusableHint": "Please wait. New connections try decryption again once the pause ends.",
+  "mitmChecking": "Checking…",
+  "@rulesAddedDivider": {
+    "placeholders": {
+      "sources": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesBelowListLast": "{head} and {last}",
+  "@rulesBelowListLast": {
+    "placeholders": {
+      "head": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesBelowSubscription": "the subscription profile",
+  "rulesBelowScript": "extension scripts",
+  "rulesBelowModule": "modules",
+  "navGroupRouting": "Routing",
+  "navGroupDecryption": "Decryption & Rewrite",
+  "navGroupDebug": "Debugging",
+  "navGroupExpanded": "{group}, group, expanded",
+  "navGroupCollapsed": "{group}, group, collapsed",
+  "navBadgeUpdates": "Updates: {count}",
+  "navBadgeError": "Has errors",
+  "exitIpRow": "Exit",
+  "exitIp": "Exit IP",
+  "localPublicIpRow": "Local",
+  "localPublicIp": "Local public IP",
+  "copyLocalPublicIp": "Copy local public IP",
+  "sameAsExit": "Same as exit",
+  "querying": "Looking up",
+  "queryFailed": "Lookup failed",
+  "exitNotRunning": "Flash isn’t running, so there’s no exit",
+  "exitIpLookupFailed": "Couldn’t look up the exit IP",
+  "ipxNoResponse": "Couldn’t get the report",
+  "ipxNativeShort": "Native",
+  "ipxBroadcastShort": "Broadcast",
+  "ipxScoreSemantics": "Health score {score}, grade {grade}",
+  "@ipxScoreSemantics": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      },
+      "grade": {
+        "type": "String"
+      }
+    }
+  },
+  "exitIpOpenHint": "Press to view exit IP details",
+  "semanticsSeparator": ", "
 }

@@ -545,9 +545,7 @@ class _MountSheetState extends ConsumerState<MountSheet> {
         children: [
           ColoredBox(
             color: background,
-            child: SizedBox(
-              height: context.appBarInset,
-            ),
+            child: SizedBox(height: context.appBarInset),
           ),
           Expanded(
             child: SingleChildScrollView(

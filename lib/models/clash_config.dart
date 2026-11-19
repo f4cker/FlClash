@@ -2345,6 +2345,36 @@ extension MitmRewriteExt on MitmRewrite {
   };
 }
 
+/// [file] runs until the user adopts an update waiting in [pendingFile].
+@freezed
+abstract class MitmScript with _$MitmScript {
+  const factory MitmScript({
+    required int id,
+    int? profileId,
+    required String line,
+    @Default(true) bool enabled,
+    String? order,
+    String? url,
+    @Default('') String source,
+    required String file,
+    String? pendingFile,
+    DateTime? checkedAt,
+    String? error,
+    MitmUpdateFailure? failure,
+  }) = _MitmScript;
+}
+
+extension MitmScriptExt on MitmScript {
+  Map<String, Object?> get coreJson => {'id': 's$id', 'line': line};
+
+  bool get isRemote => url != null;
+
+  bool get hasPending => pendingFile != null;
+
+  /// Nothing of it can run, unlike a failed update that keeps [file].
+  bool get unloadable => failure == MitmUpdateFailure.load;
+}
+
 class MitmRules {
   const MitmRules({
     this.hostname = const [],

@@ -8,6 +8,7 @@ import 'package:fl_clash/features/connection/process_view.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/config/mitm_modules.dart' show MitmModuleView;
 import 'package:fl_clash/views/resources.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/rendering.dart' show RenderSliver;
@@ -587,6 +588,9 @@ class _RulesViewState extends ConsumerState<RulesView> {
     // above them; tracked as the rows are laid, since this runs every build.
     var addedAbove = false;
     var divided = false;
+    // Each run of one module's rules sits under that module's title.
+    (int?, String)? lastModule;
+    final shown = <(int, CoreRule, RuleSource?)>[];
     for (final index in indexes) {
       final rule = list.rules.elementAtOrNull(index);
       if (rule == null) continue;
@@ -600,11 +604,33 @@ class _RulesViewState extends ConsumerState<RulesView> {
           )) {
         continue;
       }
+      shown.add((index, rule, source));
+    }
+    for (final (position, (index, rule, source)) in shown.indexed) {
       final added = _isAddedSource(source);
       if (sources != null && !added && addedAbove && !divided) {
-        items.add(const RuleRowItem.divider());
+        final below = {
+          for (final (_, _, source) in shown.skip(position))
+            ?rulesBelowOf(source),
+        };
+        if (below.isNotEmpty) {
+          items.add(
+            RuleRowItem.divider(
+              below: [
+                for (final kind in RulesBelow.values)
+                  if (below.contains(kind)) kind,
+              ],
+            ),
+          );
+        }
         divided = true;
       }
+      final module = source?.kind == RuleSourceKind.mitm ? source : null;
+      final key = module == null ? null : (module.moduleId, module.name);
+      if (module != null && key != lastModule) {
+        items.add(RuleRowItem.divider(module: module));
+      }
+      lastModule = key;
       addedAbove |= added;
       items.add(RuleRowItem.rule(rule, hit: hits[index]));
       _addChildren(items, index, rule, hits[index]);
@@ -1567,10 +1593,11 @@ class _RulesViewState extends ConsumerState<RulesView> {
     final profile = _profileName;
     final scripts = {
       for (final source in sources ?? const <RuleSource?>[])
-        if (source != null &&
-            (source.kind == RuleSourceKind.script ||
-                source.kind == RuleSourceKind.mitm))
-          source.name,
+        if (source != null && source.kind == RuleSourceKind.script) source.name,
+    };
+    final modules = {
+      for (final source in sources ?? const <RuleSource?>[])
+        if (source != null && source.kind == RuleSourceKind.mitm) source.name,
     };
     final labels = {
       RuleSourceFilter.all: (label: appLocalizations.ruleSourceAll, full: null),
@@ -1582,6 +1609,10 @@ class _RulesViewState extends ConsumerState<RulesView> {
       RuleSourceFilter.added: namedSourceLabel(
         appLocalizations.ruleSourceAdded,
         profile,
+      ),
+      RuleSourceFilter.module: namedSourceLabel(
+        appLocalizations.ruleSourceMitm,
+        modules.length == 1 ? modules.single : '',
       ),
       RuleSourceFilter.script: namedSourceLabel(
         appLocalizations.ruleSourceScript,
@@ -1596,9 +1627,12 @@ class _RulesViewState extends ConsumerState<RulesView> {
       children: [
         for (final entry in labels.entries)
           // Without the build's sources only the Core's own kinds can show.
-          if (sources != null ||
-              entry.key == RuleSourceFilter.all ||
-              entry.key == RuleSourceFilter.ruleSet)
+          if ((sources != null ||
+                  entry.key == RuleSourceFilter.all ||
+                  entry.key == RuleSourceFilter.ruleSet) &&
+              (entry.key != RuleSourceFilter.module ||
+                  (counts[entry.key] ?? 0) > 0 ||
+                  _source == entry.key))
             RulesFilterChip(
               label: entry.value.label,
               tooltip: entry.value.full,
@@ -1723,7 +1757,17 @@ class _RulesViewState extends ConsumerState<RulesView> {
           final last = position == items.length - 1;
           final Widget row;
           if (item.isDivider) {
-            row = const RulesDividerRow();
+            final moduleId = item.module?.moduleId;
+            row = RulesDividerRow(
+              module: item.module?.name,
+              below: item.below,
+              onOpenModule: moduleId == null
+                  ? null
+                  : () => BaseNavigator.push(
+                      context,
+                      MitmModuleView(id: moduleId),
+                    ),
+            );
           } else if (item.isRule) {
             final rule = item.rule!;
             final index = rule.index;

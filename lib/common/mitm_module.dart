@@ -151,6 +151,27 @@ class MitmModuleContent {
   );
 }
 
+String mitmRulePolicy(String rule) {
+  final body = rule.endsWith(',no-resolve')
+      ? rule.substring(0, rule.length - ',no-resolve'.length)
+      : rule;
+  return body.substring(body.lastIndexOf(',') + 1);
+}
+
+const _builtInPolicies = {'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS'};
+
+Set<String> mitmConfigPolicies(Map<Object?, Object?> config) => {
+  ..._builtInPolicies,
+  for (final section in ['proxies', 'proxy-groups'])
+    if (config[section] case final List items)
+      for (final item in items)
+        if (item case {'name': final String name}) name,
+};
+
+/// mihomo refuses a whole config over one rule naming a missing policy.
+bool mitmRuleUsable(String rule, Set<String> policies) =>
+    policies.contains(mitmRulePolicy(rule));
+
 Map<String, String> mitmAttachments(MitmModule module) => {
   if (!module.isRemote)
     for (final MapEntry(:key, :value) in module.resources.entries)
@@ -476,6 +497,8 @@ const _scriptKeys = [
 final _domainPattern = RegExp(r'^[^\s,()]+$');
 final _portsPattern = RegExp(r'^\d{1,5}(-\d{1,5})?(/\d{1,5}(-\d{1,5})?)*$');
 
+final _policyNameWithoutPlaceholder = RegExp(r'^[^,{}$%"()\s][^,{}$%"()]*$');
+
 const _rejectActions = {
   'REJECT': 'reject',
   'REJECT-DROP': 'reject',
@@ -739,6 +762,15 @@ Map<String, String>? _scriptParams(String text) {
     params: params,
   );
 }
+
+/// A [Script] line's name, type and `key=value` parameters; null when it is
+/// not one.
+({String name, String type, Map<String, String> params})? mitmScriptLineParts(
+  String line,
+) => _scriptLine(line.trim());
+
+/// [value] as a script line's parameter value, quoted when it must be.
+String mitmScriptValue(String value) => _scriptValue(value);
 
 /// The name the Core runs a cron, event or generic script line by, for the
 /// user to run it now; null for any other line.
@@ -1205,6 +1237,10 @@ class _ModuleParser {
       'DIRECT' => 'DIRECT',
       'REJECT-DROP' => 'REJECT-DROP',
       final policy? when _rejectActions.containsKey(policy) => 'REJECT',
+      _
+          when parts.length > 2 &&
+              _policyNameWithoutPlaceholder.hasMatch(_unquote(parts[2])) =>
+        _unquote(parts[2]),
       _ => null,
     };
     if (target == null) {
