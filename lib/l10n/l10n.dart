@@ -14295,6 +14295,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Beta'**
   String get releaseBeta;
+
+  /// No description provided for @receiveBetaUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive beta updates'**
+  String get receiveBetaUpdates;
+
+  /// No description provided for @receiveBetaUpdatesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Also check beta releases when enabled; disabling will not downgrade the app.'**
+  String get receiveBetaUpdatesDescription;
+
+  /// No description provided for @betaUpdateCheckIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Beta update check incomplete. Verified updates are still available.'**
+  String get betaUpdateCheckIncomplete;
+
+  /// No description provided for @updateNoNewerStable.
+  ///
+  /// In en, this message translates to:
+  /// **'No newer stable release is available.'**
+  String get updateNoNewerStable;
 }
 
 class _AppLocalizationsDelegate

@@ -46,7 +46,10 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
   Widget build(BuildContext context) {
     final available = ref.watch(availableUpdateStateProvider);
     final package = globalState.packageInfo;
-    final installed = appVersionLabel(package.version, package.buildNumber);
+    final identity = ref.watch(installedMacReleaseProvider).value;
+    final installed =
+        identity?.fullVersion ??
+        appVersionLabel(package.version, package.buildNumber);
     final l10n = context.appLocalizations;
     return Scaffold(
       title: l10n.releaseHistory,
@@ -61,7 +64,11 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
                     .where((release) => release.version == installed)
                     .firstOrNull ??
                 releases
-                    .where((release) => release.version == package.version)
+                    .where(
+                      (release) =>
+                          release.version ==
+                          (identity?.version ?? package.version),
+                    )
                     .firstOrNull;
             final currentPresent = currentRelease != null;
             final showAvailable =
@@ -94,12 +101,24 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          l10n.releaseInstalled(installed),
-                          style: AppTextStyle.callout.of(
-                            context,
-                            emphasized: true,
-                          ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              l10n.releaseInstalled(installed),
+                              style: AppTextStyle.callout.of(
+                                context,
+                                emphasized: true,
+                              ),
+                            ),
+                            if (identity?.channel == ReleaseChannel.beta)
+                              Text(
+                                l10n.releaseBeta,
+                                style: AppTextStyle.footnote.of(context),
+                              ),
+                          ],
                         ),
                         if (history != null && !currentPresent)
                           Text(
@@ -152,13 +171,31 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          l10n.releaseAvailable(available.versionLabel),
-                          style: AppTextStyle.callout.of(
-                            context,
-                            emphasized: true,
-                          ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              l10n.releaseAvailable(available.versionLabel),
+                              style: AppTextStyle.callout.of(
+                                context,
+                                emphasized: true,
+                              ),
+                            ),
+                            if (available.manifest?.channel ==
+                                ReleaseChannel.beta)
+                              Text(
+                                l10n.releaseBeta,
+                                style: AppTextStyle.footnote.of(context),
+                              ),
+                          ],
                         ),
+                        if (available.discoveryIncomplete)
+                          Text(
+                            l10n.betaUpdateCheckIncomplete,
+                            style: AppTextStyle.footnote.of(context),
+                          ),
                         const SizedBox(height: 8),
                         Text(
                           l10n.releaseAvailableNotes,
@@ -177,7 +214,7 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
                 if (entryIndex == entries.length) {
                   return TextButton(
                     onPressed: () => dialogs.openUrl(
-                      'https://github.com/$updateRepository/releases',
+                      'https://github.com/$releaseHistoryRepository/releases',
                     ),
                     child: Text(l10n.releaseHistoryLimited),
                   );
@@ -190,6 +227,7 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
                   release: release,
                   label: current ? installed : release.version,
                   current: current,
+                  installedBeta: identity?.channel == ReleaseChannel.beta,
                   expanded: expanded,
                   onToggle: () =>
                       setState(() => _expanded[release.tag] = !expanded),
@@ -211,6 +249,7 @@ class _ReleaseEntry extends StatelessWidget {
     required this.release,
     required this.label,
     required this.current,
+    required this.installedBeta,
     required this.expanded,
     required this.onToggle,
   });
@@ -218,6 +257,7 @@ class _ReleaseEntry extends StatelessWidget {
   final PublishedRelease release;
   final String label;
   final bool current;
+  final bool installedBeta;
   final bool expanded;
   final VoidCallback onToggle;
 
@@ -248,7 +288,8 @@ class _ReleaseEntry extends StatelessWidget {
                 date,
                 [
                   if (current) l10n.releaseCurrent,
-                  if (!current && release.prerelease == true) l10n.releaseBeta,
+                  if ((current ? installedBeta : release.prerelease == true))
+                    l10n.releaseBeta,
                 ].join(', '),
                 expanded ? l10n.releaseExpanded : l10n.releaseCollapsed,
               ),
@@ -294,7 +335,9 @@ class _ReleaseEntry extends StatelessWidget {
                                   emphasized: true,
                                 ),
                               ),
-                              if (!current && release.prerelease == true)
+                              if ((current
+                                  ? installedBeta
+                                  : release.prerelease == true))
                                 Text(
                                   l10n.releaseBeta,
                                   style: AppTextStyle.caption1.of(context),

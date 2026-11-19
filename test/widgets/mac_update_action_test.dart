@@ -11,6 +11,7 @@ import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/core.dart';
+import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -76,10 +77,16 @@ class _Adapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
-UpdateAvailable candidate({int build = 2026111902}) {
+UpdateAvailable candidate({
+  int build = 2026111902,
+  ReleaseChannel channel = ReleaseChannel.stable,
+}) {
   final bytes = utf8.encode('test archive');
   final manifest = MacUpdateManifest(
     version: '1.0.0',
+    channel: channel,
+    releaseVersion: '1.0.0',
+    releaseTag: 'v1.0.0',
     build: build,
     helperBuild: build,
     minimumSystemVersion: '12.0',
@@ -164,12 +171,17 @@ void main() {
           action.answer as UpdateAvailable;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'identity') {
+              return {'version': '0.9.15-mitm.12', 'build': 2026111901};
+            }
+            if (call.method == 'invalidate') return {'code': 'ok'};
             calls.add(call.method);
             if (call.method == 'prepare') {
               await prepareHold?.future;
               return {
                 'code': prepareCode,
                 if (prepareCode == 'ok') 'staged': '${home.path}/staged',
+                if (prepareCode == 'ok') 'ticket': 'fixture-ticket',
               };
             }
             if (call.method == 'install') await installHold?.future;
@@ -314,6 +326,52 @@ void main() {
           }
           expect(container.read(updateInstallBusyProvider), isFalse);
           await tester.pump(const Duration(seconds: 10));
+        },
+      );
+    }
+
+    for (final point in ['prepare', 'stop']) {
+      testWidgets(
+        'closing beta switch during held $point revokes continuation',
+        (tester) async {
+          await pump(tester);
+          final beta = candidate(channel: ReleaseChannel.beta);
+          action.answer = beta;
+          container
+              .read(appSettingProvider.notifier)
+              .update((s) => s.copyWith(receiveBetaUpdates: true));
+          container.read(availableUpdateStateProvider.notifier).value = beta;
+          final hold = Completer<void>();
+          if (point == 'prepare') {
+            prepareHold = hold;
+          } else {
+            when(() => core.stop()).thenAnswer((_) async {
+              calls.add('stop');
+              await hold.future;
+              return const CoreLifecycleResult(
+                revision: 1,
+                outcome: CoreLifecycleOutcome.applied,
+              );
+            });
+          }
+          final operation = action.updateFromTray(beta);
+          await settleUntil(tester, () => calls.contains(point));
+          container
+              .read(appSettingProvider.notifier)
+              .update((s) => s.copyWith(receiveBetaUpdates: false));
+          expect(container.read(availableUpdateStateProvider), isNull);
+          expect(container.read(updateDownloadStateProvider), isNull);
+          hold.complete();
+          await settleUntil(
+            tester,
+            () => !container.read(updateInstallBusyProvider),
+          );
+          await operation;
+          await tester.pumpAndSettle();
+          expect(calls, isNot(contains('install')));
+          expect(calls, isNot(contains('relaunch')));
+          expect(exit.exits, 0);
+          if (point == 'stop') expect(restart.restarts, 1);
         },
       );
     }

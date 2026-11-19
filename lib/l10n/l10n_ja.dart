@@ -8443,4 +8443,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get releaseBeta => 'ベータ版';
+
+  @override
+  String get receiveBetaUpdates => 'ベータ版の更新を受け取る';
+
+  @override
+  String get receiveBetaUpdatesDescription =>
+      '有効にするとベータ版も確認します。無効にしてもダウングレードしません。';
+
+  @override
+  String get betaUpdateCheckIncomplete => 'ベータ版の確認は未完了です。検証済みの更新は利用できます。';
+
+  @override
+  String get updateNoNewerStable => 'より新しい安定版はありません。';
 }

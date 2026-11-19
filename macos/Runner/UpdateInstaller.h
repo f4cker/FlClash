@@ -47,6 +47,8 @@ NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy
 // Removes this user's staging directories beside `target`, only those still carrying the marker FCUpdatePrepare
 // writes when it creates them (so never a previous app kept after rollbackFailed).
 void FCUpdateCleanup(NSString *target);
+NSData * _Nullable FCUpdateCandidateSeal(NSString *bundle);
+NSDictionary *FCUpdateInstallExpected(NSString *staged, NSString *target, NSDictionary *expected, FCUpdatePolicy policy);
 
 // A detached shell that waits for `pid` to exit, then opens `target`.
 BOOL FCUpdateScheduleRelaunch(pid_t pid, NSString *target);

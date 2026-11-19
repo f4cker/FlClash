@@ -119,6 +119,10 @@ static NSDictionary *FCUpdateCheckCandidate(NSString *candidate, NSString *targe
         return FCUpdateAnswer(@"rejected", @"app Info.plist");
     if (expected[@"version"] && ![info[@"CFBundleShortVersionString"] isEqual:expected[@"version"]])
         return FCUpdateAnswer(@"rejected", @"version differs from the manifest");
+    if (expected[@"channel"] && ![info[@"FlashReleaseChannel"] isEqual:expected[@"channel"]])
+        return FCUpdateAnswer(@"rejected", @"channel differs from the manifest");
+    if (expected[@"releaseVersion"] && ![info[@"FlashReleaseVersion"] isEqual:expected[@"releaseVersion"]])
+        return FCUpdateAnswer(@"rejected", @"release version differs from the manifest");
     if (expected[@"build"] && (!FCUpdateBuildNumber(expected[@"build"], &expectedBuild) || expectedBuild != build))
         return FCUpdateAnswer(@"rejected", @"build differs from the manifest");
     if (!FCUpdateAppBuild(target, &installedBuild)) return FCUpdateAnswer(@"failed", @"installed build unreadable");
@@ -305,11 +309,11 @@ static NSDictionary *FCUpdateRescue(NSString *previous, NSString *rescueDirector
     return @{@"rescued": rescued, @"rescueMoved": @(moved), @"rescueVerified": @(verified), @"rescueError": moveError};
 }
 
-static NSDictionary *FCUpdateInstallChecked(NSString *staged, NSString *target, FCUpdatePolicy policy) {
+static NSDictionary *FCUpdateInstallChecked(NSString *staged, NSString *target, NSDictionary *expected, FCUpdatePolicy policy) {
     if (!FCUpdateCanonicalDirectory(target)) return FCUpdateAnswer(@"notInApplications", @"target not canonical");
     if (!FCUpdateStagedPath(staged, target)) return FCUpdateAnswer(@"rejected", @"staged path");
     BOOL recordUnreadable = NO;
-    NSDictionary *refused = FCUpdateCheckCandidate(staged, target, @{}, policy, &recordUnreadable);
+    NSDictionary *refused = FCUpdateCheckCandidate(staged, target, expected, policy, &recordUnreadable);
     if (refused) return refused;
     uint64_t build = 0;
     NSData *launcher = FCUpdateLauncher(target);
@@ -369,7 +373,7 @@ NSDictionary *FCUpdatePrepare(NSString *archive, NSDictionary *expected, NSStrin
 
 NSDictionary *FCUpdateInstall(NSString *staged, NSString *target, FCUpdatePolicy policy) {
     FCUpdateSnapshot before = FCUpdateSnapshotOf(target);
-    return FCUpdateNoteUnchanged(FCUpdateInstallChecked(staged, target, policy), target, before);
+    return FCUpdateNoteUnchanged(FCUpdateInstallChecked(staged, target, @{}, policy), target, before);
 }
 
 void FCUpdateCleanup(NSString *target) {
@@ -421,4 +425,23 @@ NSString *FCUpdateUnpackForManualInstall(NSString *archive, NSString *version, N
         return nil;
     }
     return [destination stringByAppendingPathComponent:FCUpdateBundleName];
+}
+
+
+NSData *FCUpdateCandidateSeal(NSString *bundle) {
+    SecStaticCodeRef code = NULL;
+    CFDictionaryRef information = NULL;
+    if (SecStaticCodeCreateWithPath((__bridge CFURLRef)[NSURL fileURLWithPath:bundle], kSecCSDefaultFlags, &code) != errSecSuccess)
+        return nil;
+    OSStatus status = SecCodeCopySigningInformation(code, kSecCSSigningInformation, &information);
+    CFRelease(code);
+    if (status != errSecSuccess || !information) return nil;
+    NSDictionary *values = CFBridgingRelease(information);
+    id seal = values[(__bridge NSString *)kSecCodeInfoUnique];
+    return [seal isKindOfClass:NSData.class] ? seal : nil;
+}
+
+NSDictionary *FCUpdateInstallExpected(NSString *staged, NSString *target, NSDictionary *expected, FCUpdatePolicy policy) {
+    FCUpdateSnapshot before = FCUpdateSnapshotOf(target);
+    return FCUpdateNoteUnchanged(FCUpdateInstallChecked(staged, target, expected, policy), target, before);
 }

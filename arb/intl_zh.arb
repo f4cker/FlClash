@@ -2386,5 +2386,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "receiveBetaUpdates": "接收测试版更新",
+  "receiveBetaUpdatesDescription": "开启后也会检查测试版；关闭后不会自动降级。",
+  "betaUpdateCheckIncomplete": "测试版更新检查未完成，仍可使用已验证的更新。",
+  "updateNoNewerStable": "暂无更高正式版"
 }

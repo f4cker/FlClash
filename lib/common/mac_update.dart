@@ -4,6 +4,11 @@ import 'dart:typed_data';
 
 import 'ed25519.dart';
 
+const macReleaseRepository = 'f4cker/flash-releases';
+const macLegacyBuildCeiling = 2026111901;
+
+enum ReleaseChannel { stable, beta }
+
 const macUpdateProduct = 'com.layoute.flash';
 const macUpdateManifestMaxBytes = 256 * 1024;
 const _maxAssetBytes = 2 * 1024 * 1024 * 1024;
@@ -46,6 +51,9 @@ final class MacUpdateAsset {
 
 final class MacUpdateManifest {
   final String version;
+  final ReleaseChannel? channel;
+  final String? releaseVersion;
+  final String? releaseTag;
   final int build;
   final int helperBuild;
   final String minimumSystemVersion;
@@ -58,6 +66,9 @@ final class MacUpdateManifest {
 
   const MacUpdateManifest({
     required this.version,
+    this.channel,
+    this.releaseVersion,
+    this.releaseTag,
     required this.build,
     required this.helperBuild,
     required this.minimumSystemVersion,
@@ -67,7 +78,13 @@ final class MacUpdateManifest {
     required this.envelope,
   });
 
-  String get tag => 'v$version';
+  String get tag => releaseTag ?? 'v$version';
+
+  String get fullVersion => '${releaseVersion ?? version}+$build';
+
+  bool permitted(bool allowBeta) =>
+      channel == ReleaseChannel.stable ||
+      (allowBeta && channel == ReleaseChannel.beta);
 
   MacUpdateAsset? assetFor(String arch) {
     for (final asset in assets) {
@@ -122,7 +139,8 @@ MacUpdateManifest openMacUpdateManifest(
       'envelope',
     );
   }
-  if (envelope['schema'] != 1) {
+  if (envelope['schema'] is! int ||
+      (envelope['schema'] != 1 && envelope['schema'] != 2)) {
     throw const MacUpdateManifestException(MacUpdateRejection.unknownSchema);
   }
   final payload = _base64(envelope['payload']);
@@ -139,24 +157,80 @@ MacUpdateManifest openMacUpdateManifest(
   )) {
     throw const MacUpdateManifestException(MacUpdateRejection.badSignature);
   }
-  return _parsePayload(payload, Uint8List.fromList(bytes));
+  return parseVerifiedMacUpdatePayload(
+    _json(payload),
+    Uint8List.fromList(bytes),
+    envelope['schema'] as int,
+  );
 }
 
-MacUpdateManifest _parsePayload(List<int> payload, Uint8List envelope) {
-  final data = _json(payload);
+MacUpdateManifest parseVerifiedMacUpdatePayload(
+  Object? data,
+  Uint8List envelope,
+  int schema,
+) {
   if (data is! Map<String, dynamic>) {
     throw const MacUpdateManifestException(
       MacUpdateRejection.malformed,
       'payload',
     );
   }
-  if (data['schema'] != 1) {
+  if (data['schema'] is! int ||
+      data['schema'] != schema ||
+      (schema != 1 && schema != 2)) {
     throw const MacUpdateManifestException(MacUpdateRejection.unknownSchema);
   }
   if (data['product'] != macUpdateProduct) {
     throw const MacUpdateManifestException(MacUpdateRejection.wrongProduct);
   }
   final version = _string(data, 'version', pattern: _versionPattern);
+  final build = _build(data, 'build');
+  ReleaseChannel? channel;
+  String? releaseVersion;
+  String? releaseTag;
+  if (data.containsKey('channel')) {
+    channel = switch (data['channel']) {
+      'stable' when schema == 1 => ReleaseChannel.stable,
+      'beta' when schema == 2 => ReleaseChannel.beta,
+      _ => throw const MacUpdateManifestException(
+        MacUpdateRejection.malformed,
+        'channel/schema',
+      ),
+    };
+    final release = data['release'];
+    if (data['platform'] != 'macos' ||
+        release is! Map<String, dynamic> ||
+        release['repository'] != macReleaseRepository ||
+        release['sourceRepository'] != 'f4cker/FlClash') {
+      throw const MacUpdateManifestException(
+        MacUpdateRejection.malformed,
+        'release identity',
+      );
+    }
+    releaseTag = _string(
+      release,
+      'tag',
+      pattern: RegExp(r'^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$'),
+    );
+    releaseVersion = _string(release, 'version', maxLength: 128);
+    if (ReleaseSemVer.tryParse(releaseVersion) == null) {
+      throw const MacUpdateManifestException(
+        MacUpdateRejection.malformed,
+        'release version',
+      );
+    }
+    _string(release, 'sourceCommit', pattern: RegExp(r'^[0-9a-f]{40}$'));
+    _string(
+      release,
+      'sourceBranch',
+      pattern: RegExp(r'^[A-Za-z0-9][A-Za-z0-9/._+-]{0,127}$'),
+    );
+  } else if (schema != 1 || build > macLegacyBuildCeiling) {
+    throw const MacUpdateManifestException(
+      MacUpdateRejection.malformed,
+      'missing channel',
+    );
+  }
   final assets = data['assets'];
   if (assets is! List || assets.isEmpty || assets.length > 8) {
     throw const MacUpdateManifestException(
@@ -164,9 +238,21 @@ MacUpdateManifest _parsePayload(List<int> payload, Uint8List envelope) {
       'assets',
     );
   }
+  final parsedAssets = [
+    for (final asset in assets) _asset(asset, version, releaseTag),
+  ];
+  if (parsedAssets.map((a) => a.arch).toSet().length != parsedAssets.length) {
+    throw const MacUpdateManifestException(
+      MacUpdateRejection.malformed,
+      'duplicate architecture',
+    );
+  }
   return MacUpdateManifest(
     version: version,
-    build: _build(data, 'build'),
+    channel: channel,
+    releaseVersion: releaseVersion,
+    releaseTag: releaseTag,
+    build: build,
     helperBuild: _build(data, 'helperBuild'),
     minimumSystemVersion: _string(
       data,
@@ -175,14 +261,14 @@ MacUpdateManifest _parsePayload(List<int> payload, Uint8List envelope) {
     ),
     notes: _string(data, 'notes', maxLength: _maxNotesLength, allowEmpty: true),
     published: _string(data, 'published', maxLength: 64),
-    assets: [for (final asset in assets) _asset(asset, version)],
+    assets: parsedAssets,
     envelope: envelope,
   );
 }
 
 final _versionPattern = RegExp(r'^[0-9A-Za-z.+-]{1,64}$');
 
-MacUpdateAsset _asset(Object? value, String version) {
+MacUpdateAsset _asset(Object? value, String version, String? tag) {
   if (value is! Map<String, dynamic>) {
     throw const MacUpdateManifestException(
       MacUpdateRejection.malformed,
@@ -197,6 +283,12 @@ MacUpdateAsset _asset(Object? value, String version) {
   final url = Uri.tryParse(_string(value, 'url', maxLength: 2048));
   if (url == null || url.scheme != 'https' || url.host.isEmpty) {
     throw const MacUpdateManifestException(MacUpdateRejection.insecureUrl);
+  }
+  if (tag != null && (url != macReleaseAssetUri(tag, name))) {
+    throw const MacUpdateManifestException(
+      MacUpdateRejection.insecureUrl,
+      'asset identity',
+    );
   }
   final size = value['size'];
   if (size is! int || size <= 0 || size > _maxAssetBytes) {
@@ -256,7 +348,7 @@ String _string(
 
 int _build(Map<String, dynamic> map, String key) {
   final value = map[key];
-  if (value is! int || value <= 0) {
+  if (value is! int || value <= 0 || value > 999999999999999999) {
     throw MacUpdateManifestException(MacUpdateRejection.malformed, key);
   }
   return value;
@@ -273,3 +365,130 @@ int? macBuildNumber(String value) {
 /// offered, whatever its version string says.
 bool macUpdateIsNewer(MacUpdateManifest manifest, int installedBuild) =>
     manifest.build > installedBuild;
+
+Uri macReleaseAssetUri(String tag, String name) => Uri.https(
+  'github.com',
+  '/$macReleaseRepository/releases/download/$tag/$name',
+);
+
+final class ReleaseSemVer implements Comparable<ReleaseSemVer> {
+  const ReleaseSemVer(this.numbers, this.pre);
+  final List<int> numbers;
+  final List<String> pre;
+  static ReleaseSemVer? tryParse(String value) {
+    final match = RegExp(
+      r'^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$',
+    ).firstMatch(value);
+    if (match == null || value.length > 128) return null;
+    const offset = 1;
+    final numbers = [
+      for (var i = offset; i < offset + 3; i++) int.tryParse(match[i]!),
+    ];
+    if (numbers.any((n) => n == null)) return null;
+    final pre = match[offset + 3]?.split('.') ?? const <String>[];
+    if (pre.any((p) => RegExp(r'^0[0-9]+$').hasMatch(p))) return null;
+    return ReleaseSemVer(numbers.cast<int>(), pre);
+  }
+
+  @override
+  int compareTo(ReleaseSemVer other) {
+    for (var i = 0; i < 3; i++) {
+      final order = numbers[i].compareTo(other.numbers[i]);
+      if (order != 0) return order;
+    }
+    if (pre.isEmpty || other.pre.isEmpty) {
+      return pre.isEmpty == other.pre.isEmpty ? 0 : (pre.isEmpty ? 1 : -1);
+    }
+    for (var i = 0; i < pre.length && i < other.pre.length; i++) {
+      final a = pre[i], b = other.pre[i];
+      final numericA = RegExp(r'^[0-9]+$').hasMatch(a);
+      final numericB = RegExp(r'^[0-9]+$').hasMatch(b);
+      final order = numericA && numericB
+          ? (a.length == b.length
+                ? a.compareTo(b)
+                : a.length.compareTo(b.length))
+          : numericA != numericB
+          ? (numericA ? -1 : 1)
+          : a.compareTo(b);
+      if (order != 0) return order;
+    }
+    return pre.length.compareTo(other.pre.length);
+  }
+}
+
+bool macUpdateEligible(
+  MacUpdateManifest manifest, {
+  required int installedBuild,
+  required String installedVersion,
+  required bool allowBeta,
+}) {
+  final current = ReleaseSemVer.tryParse(installedVersion);
+  final candidate = ReleaseSemVer.tryParse(manifest.releaseVersion ?? '');
+  return manifest.permitted(allowBeta) &&
+      manifest.build > installedBuild &&
+      current != null &&
+      candidate != null &&
+      candidate.compareTo(current) >= 0;
+}
+
+final class MacInstalledIdentity {
+  const MacInstalledIdentity({
+    required this.version,
+    required this.build,
+    this.channel,
+  });
+  final String version;
+  final int build;
+  final ReleaseChannel? channel;
+  String get fullVersion => '$version+$build';
+  static MacInstalledIdentity? fromAnswer(Object? value) {
+    if (value is! Map ||
+        value['version'] is! String ||
+        value['build'] is! int) {
+      return null;
+    }
+    final version = value['version'] as String;
+    final build = value['build'] as int;
+    final channel = switch (value['channel']) {
+      'stable' => ReleaseChannel.stable,
+      'beta' => ReleaseChannel.beta,
+      _ => null,
+    };
+    if (ReleaseSemVer.tryParse(version) == null ||
+        build <= 0 ||
+        (channel == null &&
+            (value.containsKey('channel') || build > macLegacyBuildCeiling))) {
+      return null;
+    }
+    return MacInstalledIdentity(
+      version: version,
+      build: build,
+      channel: channel,
+    );
+  }
+}
+
+bool macSystemSupports(String minimum, String current) {
+  List<int>? parts(String value) {
+    final match = RegExp(
+      r'([0-9]+)\.([0-9]+)(?:\.([0-9]+))?',
+    ).firstMatch(value);
+    return match == null
+        ? null
+        : [
+            int.parse(match[1]!),
+            int.parse(match[2]!),
+            int.parse(match[3] ?? '0'),
+          ];
+  }
+
+  final requiredVersion = parts(minimum.contains('.') ? minimum : '$minimum.0');
+  final systemVersion = parts(current);
+  if (requiredVersion == null || systemVersion == null) return false;
+  for (var i = 0; i < 3; i++) {
+    if (systemVersion[i] != requiredVersion[i]) {
+      return systemVersion[i] > requiredVersion[i];
+    }
+  }
+  return true;
+}

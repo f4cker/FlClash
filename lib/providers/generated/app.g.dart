@@ -3262,3 +3262,86 @@ abstract class _$CurrentSSID extends $Notifier<String?> {
     return element.handleCreate(ref, build);
   }
 }
+
+@ProviderFor(installedMacRelease)
+final installedMacReleaseProvider = InstalledMacReleaseProvider._();
+
+final class InstalledMacReleaseProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<MacInstalledIdentity?>,
+          MacInstalledIdentity?,
+          FutureOr<MacInstalledIdentity?>
+        >
+    with
+        $FutureModifier<MacInstalledIdentity?>,
+        $FutureProvider<MacInstalledIdentity?> {
+  InstalledMacReleaseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'installedMacReleaseProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$installedMacReleaseHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<MacInstalledIdentity?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<MacInstalledIdentity?> create(Ref ref) {
+    return installedMacRelease(ref);
+  }
+}
+
+String _$installedMacReleaseHash() =>
+    r'2319420bb77f7ad5dbd11d356908df1aa7d32524';
+
+@ProviderFor(appUpdateRequest)
+final appUpdateRequestProvider = AppUpdateRequestProvider._();
+
+final class AppUpdateRequestProvider
+    extends $FunctionalProvider<Request, Request, Request>
+    with $Provider<Request> {
+  AppUpdateRequestProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appUpdateRequestProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appUpdateRequestHash();
+
+  @$internal
+  @override
+  $ProviderElement<Request> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Request create(Ref ref) {
+    return appUpdateRequest(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Request value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Request>(value),
+    );
+  }
+}
+
+String _$appUpdateRequestHash() => r'5202f7edd03b259ec0469aefaba4bba4f2811086';

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 final class MacUpdateResult {
   final String code;
   final String? staged;
+  final String? ticket;
   final String detail;
 
   /// The launcher's version record could not be read before the update; the
@@ -26,6 +27,7 @@ final class MacUpdateResult {
   const MacUpdateResult(
     this.code, {
     this.staged,
+    this.ticket,
     this.detail = '',
     this.recordUnreadable = false,
     this.unchanged = false,
@@ -46,6 +48,7 @@ final class MacUpdateResult {
     return MacUpdateResult(
       code is String ? code : 'failed',
       staged: answer['staged'] as String?,
+      ticket: answer['ticket'] as String?,
       detail: answer['detail'] as String? ?? '',
       recordUnreadable: answer['recordUnreadable'] == true,
       unchanged: answer['unchanged'] == true,
@@ -107,12 +110,39 @@ class MacUpdater {
   Future<MacUpdateResult> prepare({
     required Uint8List manifest,
     required String archive,
-  }) async => _call('prepare', {'manifest': manifest, 'archive': archive});
+    required bool allowBeta,
+  }) async => _call('prepare', {
+    'manifest': manifest,
+    'archive': archive,
+    'allowBeta': allowBeta,
+  });
 
   /// Swaps the staged app in, checks the installed result, and swaps back
   /// when that fails. The Core must already be stopped.
-  Future<MacUpdateResult> install(String staged) =>
-      _call('install', {'staged': staged});
+  Future<MacUpdateResult> install(
+    String staged, {
+    required String ticket,
+    required bool allowBeta,
+  }) => _call('install', {
+    'staged': staged,
+    'ticket': ticket,
+    'allowBeta': allowBeta,
+  });
+
+  Future<void> invalidate() async {
+    await _call('invalidate', const {});
+  }
+
+  Future<MacInstalledIdentity?> identity() async {
+    try {
+      final answer = await _channel.invokeMethod<Object?>('identity');
+      return MacInstalledIdentity.fromAnswer(answer);
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
 
   /// Opens the installed app once this process has exited.
   Future<MacUpdateResult> relaunchAfterExit() => _call('relaunch', const {});

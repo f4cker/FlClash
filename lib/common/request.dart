@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:crypto/crypto.dart';
 import 'package:dio/io.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/release_history.dart';
@@ -29,7 +30,16 @@ class Request {
     _read = read;
   }
 
-  Request() {
+  final MacUpdateManifest Function(
+    List<int>, {
+    required Iterable<String> publicKeys,
+  })
+  openMacManifest;
+  final _verifiedMacIdentities = <String, String>{};
+  final _macManifestCache =
+      <Uri, ({String? etag, MacUpdateManifest manifest})>{};
+
+  Request({this.openMacManifest = openMacUpdateManifest}) {
     dio = Dio(BaseOptions(headers: {'User-Agent': browserUa}));
     _clashDio = Dio();
     _clashDio.httpClientAdapter = IOHttpClientAdapter(
@@ -42,7 +52,13 @@ class Request {
         return client;
       },
     );
-    releaseDio = Dio(BaseOptions(headers: {'User-Agent': browserUa}));
+    releaseDio = Dio(
+      BaseOptions(
+        headers: {'User-Agent': browserUa},
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+      ),
+    );
     releaseDio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
         return HttpClient()
@@ -133,45 +149,240 @@ class Request {
     }
   }
 
-  /// The signed manifest at [url]; any HTTPS host, following redirects.
   Future<UpdateCheck> checkForMacUpdate({
     required int? installedBuild,
     required String? arch,
+    String? installedVersion,
+    bool allowBeta = false,
     String url = macUpdateManifestUrl,
     Iterable<String> publicKeys = macUpdatePublicKeys,
+    int pageLimit = 5,
+    String? systemVersion,
   }) async {
+    final token = CancelToken();
+    final deadline = Timer(
+      const Duration(seconds: 60),
+      () => token.cancel('discovery deadline'),
+    );
     try {
       if (!macUpdateKeysPinned(publicKeys)) {
         throw const MacUpdateManifestException(
           MacUpdateRejection.notConfigured,
         );
       }
-      if (installedBuild == null || arch == null) {
+      if (installedBuild == null ||
+          arch == null ||
+          pageLimit < 1 ||
+          pageLimit > 5) {
         throw StateError('No build number or architecture to update from');
       }
-      final response = await _getHttps<List<int>>(
-        Uri.parse(url),
-        ResponseType.bytes,
-      );
-      final manifest = openMacUpdateManifest(
-        response.data ?? const [],
+      return await _discoverMacUpdates(
+        installedBuild: installedBuild,
+        installedVersion: installedVersion,
+        arch: arch,
+        allowBeta: allowBeta,
+        url: url,
         publicKeys: publicKeys,
+        pageLimit: pageLimit,
+        token: token,
+        systemVersion: systemVersion ?? Platform.operatingSystemVersion,
       );
-      if (manifest.assetFor(arch) == null) return const UpdateNoRelease();
-      if (!macUpdateIsNewer(manifest, installedBuild)) {
-        return const UpdateUpToDate();
-      }
-      return UpdateAvailable({
-        'tag_name': manifest.tag,
-        'body': manifest.notes,
-      }, manifest: manifest);
     } catch (error) {
-      commonPrint.log(
-        'checkForMacUpdate failed: ${compactError(error)}',
-        logLevel: LogLevel.warning,
-      );
       return UpdateCheckFailed(error);
+    } finally {
+      deadline.cancel();
+      token.cancel();
     }
+  }
+
+  Future<UpdateCheck> _discoverMacUpdates({
+    required int installedBuild,
+    required String? installedVersion,
+    required String arch,
+    required bool allowBeta,
+    required String url,
+    required Iterable<String> publicKeys,
+    required int pageLimit,
+    required CancelToken token,
+    required String systemVersion,
+  }) async {
+    final candidates = <MacUpdateManifest>[];
+    Object? failure;
+    var applicable = false;
+    var identityConflict = false;
+    void consider(MacUpdateManifest manifest) {
+      final digest = sha256.convert(manifest.envelope).toString();
+      for (final key in ['tag:${manifest.tag}', 'build:${manifest.build}']) {
+        final prior = _verifiedMacIdentities[key];
+        if (prior != null && prior != digest) {
+          identityConflict = true;
+          throw const FormatException('Conflicting release identity');
+        }
+      }
+      for (final key in ['tag:${manifest.tag}', 'build:${manifest.build}']) {
+        _verifiedMacIdentities[key] = digest;
+      }
+      if (manifest.assetFor(arch) == null ||
+          !macSystemSupports(manifest.minimumSystemVersion, systemVersion)) {
+        return;
+      }
+      applicable = true;
+      if (manifest.channel == null) {
+        if (manifest.build > installedBuild) {
+          throw const FormatException(
+            'Legacy manifest is not an installable candidate',
+          );
+        }
+        return;
+      }
+      if (installedVersion == null) {
+        throw const FormatException('Missing sealed installed version');
+      }
+      if (macUpdateEligible(
+        manifest,
+        installedBuild: installedBuild,
+        installedVersion: installedVersion,
+        allowBeta: allowBeta,
+      )) {
+        candidates.add(manifest);
+      }
+    }
+
+    Future<MacUpdateManifest> fetch(Uri uri) async {
+      final cached = _macManifestCache[uri];
+      final response = await _getHttps<ResponseBody>(
+        uri,
+        ResponseType.stream,
+        cancelToken: token,
+        etag: cached?.etag,
+      );
+      if (response.statusCode == HttpStatus.notModified) {
+        await response.data?.stream.drain<void>();
+        if (cached == null) throw const FormatException('Uncached manifest');
+        return openMacManifest(
+          cached.manifest.envelope,
+          publicKeys: publicKeys,
+        );
+      }
+      final bytes = await _boundedBody(
+        response.data!,
+        macUpdateManifestMaxBytes,
+      );
+      final manifest = openMacManifest(bytes, publicKeys: publicKeys);
+      _macManifestCache[uri] = (
+        etag: response.headers.value('etag'),
+        manifest: manifest,
+      );
+      return manifest;
+    }
+
+    try {
+      final stable = await fetch(Uri.parse(url));
+      if (stable.channel == ReleaseChannel.beta) {
+        throw const FormatException('Beta at the stable endpoint');
+      }
+      consider(stable);
+    } catch (error) {
+      failure = error;
+    }
+    if (allowBeta) {
+      try {
+        var complete = false;
+        final seen = <String>{};
+        for (var page = 1; page <= pageLimit; page++) {
+          final uri = Uri.https(
+            'api.github.com',
+            '/repos/$macReleaseRepository/releases',
+            {'per_page': '100', 'page': '$page'},
+          );
+          final bytes = await _boundedReleaseBytes(uri, 2 * 1024 * 1024, token);
+          final rows = jsonDecode(utf8.decode(bytes));
+          if (rows is! List || rows.length > 100) {
+            throw const FormatException('Release page');
+          }
+          for (final row in rows) {
+            if (row is! Map<String, dynamic>) {
+              throw const FormatException('Release entry');
+            }
+            if (row['draft'] == true) continue;
+            final tag = row['tag_name'];
+            if (row['draft'] != false ||
+                tag is! String ||
+                !RegExp(r'^[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$').hasMatch(tag) ||
+                row['prerelease'] is! bool) {
+              failure = const FormatException('Release locator');
+              continue;
+            }
+            if (!seen.add(tag)) continue;
+            try {
+              final manifest = await fetch(
+                macReleaseAssetUri(tag, 'manifest.json'),
+              );
+              if (manifest.channel == null) continue;
+              if (manifest.releaseTag != tag ||
+                  (manifest.channel == ReleaseChannel.beta) !=
+                      row['prerelease']) {
+                throw const FormatException(
+                  'Signed release identity disagrees with locator',
+                );
+              }
+              consider(manifest);
+            } catch (error) {
+              failure = error;
+            }
+          }
+          if (rows.length < 100) {
+            complete = true;
+            break;
+          }
+        }
+        if (!complete) {
+          failure = const FormatException('Release discovery budget exhausted');
+        }
+      } catch (error) {
+        failure = error;
+      }
+    }
+    if (identityConflict) {
+      return UpdateCheckFailed(failure ?? StateError('Release conflict'));
+    }
+    candidates.sort((a, b) => b.build.compareTo(a.build));
+    if (candidates.isNotEmpty) {
+      final manifest = candidates.first;
+      return UpdateAvailable(
+        {'tag_name': manifest.tag, 'body': manifest.notes},
+        manifest: manifest,
+        discoveryIncomplete: failure != null,
+      );
+    }
+    if (failure != null) return UpdateCheckFailed(failure);
+    return applicable ? const UpdateUpToDate() : const UpdateNoRelease();
+  }
+
+  Future<Uint8List> _boundedReleaseBytes(
+    Uri uri,
+    int limit,
+    CancelToken token,
+  ) async {
+    final response = await _getHttps<ResponseBody>(
+      uri,
+      ResponseType.stream,
+      cancelToken: token,
+    );
+    return _boundedBody(response.data!, limit);
+  }
+
+  Future<Uint8List> _boundedBody(ResponseBody body, int limit) async {
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in body.stream.timeout(
+      const Duration(seconds: 10),
+    )) {
+      if (bytes.length + chunk.length > limit) {
+        throw const FormatException('Release response too large');
+      }
+      bytes.add(chunk);
+    }
+    return bytes.takeBytes();
   }
 
   /// Downloads [asset] into [directory] and keeps it only when its size and
@@ -217,6 +428,7 @@ class Request {
     Uri uri,
     ResponseType responseType, {
     CancelToken? cancelToken,
+    String? etag,
   }) async {
     var target = uri;
     for (var hop = 0; hop <= _maxRedirects; hop++) {
@@ -227,9 +439,12 @@ class Request {
         target,
         options: Options(
           responseType: responseType,
+          headers: etag == null ? null : {HttpHeaders.ifNoneMatchHeader: etag},
           followRedirects: false,
           validateStatus: (status) =>
-              status == HttpStatus.ok || _redirect(status),
+              status == HttpStatus.ok ||
+              (etag != null && status == HttpStatus.notModified) ||
+              _redirect(status),
         ),
         cancelToken: cancelToken,
       );
@@ -264,7 +479,7 @@ class Request {
     var hasMore = false;
     for (var page = 1; page <= pageLimit; page++) {
       final response = await dio.get<List<dynamic>>(
-        'https://api.github.com/repos/$updateRepository/releases',
+        'https://api.github.com/repos/$releaseHistoryRepository/releases',
         queryParameters: {'per_page': 100, 'page': page},
         options: Options(
           responseType: ResponseType.json,

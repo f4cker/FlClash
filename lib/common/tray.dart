@@ -19,6 +19,7 @@ import 'constant.dart';
 import 'keyboard.dart';
 import 'l10n_labels.dart';
 import 'mitm_indicator.dart';
+import 'mac_update.dart';
 import 'print.dart';
 import 'provider_reader.dart';
 import 'string.dart';
@@ -284,9 +285,15 @@ class AppTray implements TrayPort {
         detail: shortcut(HotAction.copyEnv),
         onSelected: systemAction.copyProxyEnv,
       ),
-      if (isMacOS && read(lastUpdateCheckStateProvider) is UpdateCheckFailed)
+      if (isMacOS &&
+          (read(lastUpdateCheckStateProvider) is UpdateCheckFailed ||
+              (read(lastUpdateCheckStateProvider) is UpdateAvailable &&
+                  (read(lastUpdateCheckStateProvider) as UpdateAvailable)
+                      .discoveryIncomplete)))
         TrayMenuAction.status(
-          label: appLocalizations.updateCheckFailed,
+          label: read(appSettingProvider).receiveBetaUpdates
+              ? appLocalizations.betaUpdateCheckIncomplete
+              : appLocalizations.updateCheckFailed,
           statusKey: 'update-check',
         ),
       if (isMacOS)
@@ -300,7 +307,8 @@ class AppTray implements TrayPort {
                 appLocalizations.trayCoreProcessing,
               _ => appLocalizations.updateImmediately,
             },
-            detail: appLocalizations.updateMenuVersion(available.versionLabel),
+            detail:
+                '${appLocalizations.updateMenuVersion(available.versionLabel)}${available.manifest?.channel == ReleaseChannel.beta ? ' · ${appLocalizations.releaseBeta}' : ''}',
             enabled:
                 !read(updateInstallBusyProvider) &&
                 read(updateDownloadStateProvider) is! UpdateDownloading,

@@ -3,6 +3,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import 'app_update.dart';
+import 'constant.dart';
+import 'mac_update.dart';
+import 'system.dart';
+
+String get releaseHistoryRepository =>
+    system.isMacOS ? macReleaseRepository : updateRepository;
 
 String releaseVersion(String tag) => tag.replaceFirst(RegExp(r'^v'), '');
 

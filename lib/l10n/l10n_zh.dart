@@ -7960,4 +7960,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get releaseBeta => '测试版';
+
+  @override
+  String get receiveBetaUpdates => '接收测试版更新';
+
+  @override
+  String get receiveBetaUpdatesDescription => '开启后也会检查测试版；关闭后不会自动降级。';
+
+  @override
+  String get betaUpdateCheckIncomplete => '测试版更新检查未完成，仍可使用已验证的更新。';
+
+  @override
+  String get updateNoNewerStable => '暂无更高正式版';
 }

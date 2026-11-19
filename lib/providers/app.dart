@@ -7,6 +7,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/app.dart';
+import 'package:fl_clash/plugins/mac_updater.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -1011,3 +1012,10 @@ List<Override> buildAppStateOverrides(AppState appState) {
     coreStatusProvider.overrideWithBuild((_, _) => appState.coreStatus),
   ];
 }
+
+@Riverpod(keepAlive: true)
+Future<MacInstalledIdentity?> installedMacRelease(Ref ref) async =>
+    system.isMacOS ? macUpdater?.identity() : null;
+
+@Riverpod(keepAlive: true)
+Request appUpdateRequest(Ref ref) => request;

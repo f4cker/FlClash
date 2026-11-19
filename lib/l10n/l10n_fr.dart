@@ -8711,4 +8711,18 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get releaseBeta => 'Bêta';
+
+  @override
+  String get receiveBetaUpdates => 'Recevoir les mises à jour bêta';
+
+  @override
+  String get receiveBetaUpdatesDescription =>
+      'Vérifie aussi les versions bêta ; désactiver ne rétrograde pas l’application.';
+
+  @override
+  String get betaUpdateCheckIncomplete =>
+      'Vérification bêta incomplète. Les mises à jour vérifiées restent disponibles.';
+
+  @override
+  String get updateNoNewerStable => 'Aucune version stable plus récente.';
 }

@@ -8657,4 +8657,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get releaseBeta => 'Beta';
+
+  @override
+  String get receiveBetaUpdates => 'Receive beta updates';
+
+  @override
+  String get receiveBetaUpdatesDescription =>
+      'Also check beta releases when enabled; disabling will not downgrade the app.';
+
+  @override
+  String get betaUpdateCheckIncomplete =>
+      'Beta update check incomplete. Verified updates are still available.';
+
+  @override
+  String get updateNoNewerStable => 'No newer stable release is available.';
 }

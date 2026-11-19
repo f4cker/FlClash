@@ -13,6 +13,7 @@ final class UpdaterChannel {
     static let pinnedPublicKeys = [pinnedPublicKey, pinnedBackupPublicKey]
 
     private static var instance: UpdaterChannel?
+    private let tickets = UpdatePreparedTickets()
     private let channel: FlutterMethodChannel
     private let queue = DispatchQueue(label: "flash.updater", qos: .userInitiated)
 
@@ -41,15 +42,27 @@ final class UpdaterChannel {
 
     private func handle(_ method: String, _ arguments: [String: Any]) -> Any? {
         switch method {
+        case "identity":
+            return UpdateReleasePolicy.identity(Bundle.main.infoDictionary ?? [:]) ?? [:]
+        case "invalidate":
+            tickets.clear()
+            return ["code": "ok"]
         case "prepare":
             guard let manifest = (arguments["manifest"] as? FlutterStandardTypedData)?.data,
-                  let archive = arguments["archive"] as? String
+                  let archive = arguments["archive"] as? String,
+                  let allowBeta = arguments["allowBeta"] as? Bool
             else { return ["code": "failed", "detail": "arguments"] }
-            return prepare(manifest: manifest, archive: archive)
+            return prepare(manifest: manifest, archive: archive, allowBeta: allowBeta)
         case "install":
             guard let staged = arguments["staged"] as? String else { return ["code": "failed", "detail": "arguments"] }
             guard let target else { return ["code": "notInApplications", "detail": Bundle.main.bundlePath] }
-            let answer = FCUpdateInstall(staged, target, FCUpdateDefaultPolicy())
+            guard let token = arguments["ticket"] as? String,
+                  let allowBeta = arguments["allowBeta"] as? Bool,
+                  let seal = FCUpdateCandidateSeal(staged),
+                  let ticket = tickets.consume(token, staged: staged, seal: seal, allowBeta: allowBeta,
+                                               installed: Bundle.main.infoDictionary ?? [:])
+            else { return ["code": "rejected", "detail": "prepared ticket or channel policy"] }
+            let answer = FCUpdateInstallExpected(staged, target, ticket.expected, FCUpdateDefaultPolicy())
             if answer["code"] as? String == "rollbackFailed", answer["rescueVerified"] as? Bool == true,
                let rescued = answer["rescued"] as? String {
                 DispatchQueue.main.async {
@@ -65,6 +78,7 @@ final class UpdaterChannel {
             else { return ["code": "failed", "detail": "arguments"] }
             return reveal(archive: archive, version: version)
         case "cleanup":
+            tickets.clear()
             if let target { FCUpdateCleanup(target) }
             return ["code": "ok"]
         default:
@@ -72,9 +86,12 @@ final class UpdaterChannel {
         }
     }
 
-    private func prepare(manifest: Data, archive: String) -> [AnyHashable: Any] {
+    private func prepare(manifest: Data, archive: String, allowBeta: Bool) -> [AnyHashable: Any] {
         guard let payload = UpdateManifestSignature.open(manifest, publicKeys: Self.pinnedPublicKeys) else {
             return ["code": "rejected", "detail": "manifest signature"]
+        }
+        guard UpdateReleasePolicy.validate(payload, allowBeta: allowBeta, installed: Bundle.main.infoDictionary ?? [:]) else {
+            return ["code": "rejected", "detail": "release policy"]
         }
         #if arch(arm64)
         let arch = "arm64"
@@ -90,9 +107,20 @@ final class UpdaterChannel {
         else { return ["code": "rejected", "detail": "manifest content"] }
         let expected: [String: Any] = [
             "sha256": sha256, "size": size, "version": version, "build": build, "helperBuild": helperBuild,
+            "channel": payload["channel"]!, "releaseVersion": (payload["release"] as! [String: Any])["version"]!,
         ]
         guard let target else { return ["code": "notInApplications", "detail": Bundle.main.bundlePath] }
-        return FCUpdatePrepare(archive, expected, target, FCUpdateDefaultPolicy())
+        var answer = FCUpdatePrepare(archive, expected, target, FCUpdateDefaultPolicy())
+        if answer["code"] as? String == "ok" {
+            guard let staged = answer["staged"] as? String,
+                  URL(fileURLWithPath: staged).standardizedFileURL.resolvingSymlinksInPath().path == staged,
+                  let seal = FCUpdateCandidateSeal(staged) else {
+                return ["code": "rejected", "detail": "candidate seal"]
+            }
+            answer["ticket"] = tickets.issue(.init(staged: staged, manifest: manifest, seal: seal,
+                                                   expected: expected, payload: payload))
+        }
+        return answer
     }
 
     /// Shown for a manual install; files the app downloaded itself carry no quarantine.

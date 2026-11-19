@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:fl_clash/common/boot_record.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/release_history.dart';
 import 'package:fl_clash/common/system_dns.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -49,12 +50,12 @@ class Preferences {
     return _instance!;
   }
 
-  Future<String?> getReleaseHistoryCache() async =>
-      (await _store.value)?.getString('releaseHistoryCache:$updateRepository');
+  Future<String?> getReleaseHistoryCache() async => (await _store.value)
+      ?.getString('releaseHistoryCache:$releaseHistoryRepository');
 
   Future<void> saveReleaseHistoryCache(String value) async {
     await (await _store.value)?.setString(
-      'releaseHistoryCache:$updateRepository',
+      'releaseHistoryCache:$releaseHistoryRepository',
       value,
     );
   }

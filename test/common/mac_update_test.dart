@@ -276,7 +276,9 @@ void main() {
       final adapter = _RouteAdapter(answer);
       final request = Request()..releaseDio.httpClientAdapter = adapter;
       final result = await request.checkForMacUpdate(
-        installedBuild: _installedBuild,
+        installedBuild: 2026111901,
+        installedVersion: '0.9.15-mitm.12',
+        systemVersion: '14.0',
         arch: arch,
         url:
             'https://github.com/f4cker/flash-releases/releases/latest/download/manifest.json',
@@ -308,21 +310,21 @@ void main() {
       expect(adapter.requested, isEmpty);
     });
 
-    test('follows HTTPS redirects to the manifest', () async {
-      final (result, adapter) = await check(
-        (uri) => switch (uri.host) {
-          'github.com' => _redirect(
-            'https://objects.example.com/manifest.json?token=1',
-          ),
-          _ => ResponseBody.fromBytes(_fixture('newer'), 200),
-        },
-      );
-      expect(result, isA<UpdateAvailable>());
-      final available = result as UpdateAvailable;
-      expect(available.manifest!.build, 2026111901);
-      expect(available.release['tag_name'], 'v0.9.15-mitm.7');
-      expect(adapter.requested.last.host, 'objects.example.com');
-    });
+    test(
+      'follows HTTPS redirects but does not offer legacy as a new candidate',
+      () async {
+        final (result, adapter) = await check(
+          (uri) => switch (uri.host) {
+            'github.com' => _redirect(
+              'https://objects.example.com/manifest.json?token=1',
+            ),
+            _ => ResponseBody.fromBytes(_fixture('newer'), 200),
+          },
+        );
+        expect(result, isA<UpdateUpToDate>());
+        expect(adapter.requested.last.host, 'objects.example.com');
+      },
+    );
 
     test('is up to date for an equal or older build', () async {
       for (final name in ['equal', 'older']) {

@@ -406,6 +406,7 @@ void main() {
       );
       request.dio.interceptors.add(interceptor);
       addTearDown(() => request.dio.interceptors.remove(interceptor));
+      await tester.ensureVisible(entry);
       await tester.tap(entry);
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));

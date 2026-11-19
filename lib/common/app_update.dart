@@ -71,13 +71,19 @@ sealed class UpdateCheck {
 }
 
 final class UpdateAvailable extends UpdateCheck {
-  const UpdateAvailable(this.release, {this.manifest});
+  const UpdateAvailable(
+    this.release, {
+    this.manifest,
+    this.discoveryIncomplete = false,
+  });
+
+  final bool discoveryIncomplete;
 
   final Map<String, dynamic> release;
 
   String get versionLabel => manifest == null
       ? (release['tag_name'] as String).replaceFirst(RegExp(r'^v'), '')
-      : appVersionLabel(manifest!.version, '${manifest!.build}');
+      : manifest!.fullVersion;
 
   /// Set on macOS, where the signed manifest is the release.
   final MacUpdateManifest? manifest;
@@ -204,4 +210,8 @@ String? selfUpdateAssetSuffix(Abi abi, {required bool windowsInstalled}) {
 String releaseAssetName(String tag, String suffix) {
   final version = tag.startsWith('v') ? tag.substring(1) : tag;
   return '$appName-$version-$suffix';
+}
+
+final class UpdateCheckSuperseded extends UpdateCheck {
+  const UpdateCheckSuperseded();
 }

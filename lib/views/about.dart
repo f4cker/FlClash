@@ -7,6 +7,7 @@ import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/views/release_history.dart';
+import 'package:fl_clash/widgets/beta_update_setting.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -93,6 +94,7 @@ class AboutView extends ConsumerWidget {
                 title: Text(appLocalizations.releaseHistory),
                 widget: const ReleaseHistoryView(),
               ),
+              if (system.isMacOS) const BetaUpdateSetting(),
             ],
           ),
           const SizedBox(height: 8),
@@ -150,7 +152,7 @@ class AboutView extends ConsumerWidget {
   }
 }
 
-class _AboutHero extends StatelessWidget {
+class _AboutHero extends ConsumerWidget {
   final bool isCheckingUpdate;
   final VoidCallback onCheckUpdate;
   final VoidCallback onEnterDeveloperMode;
@@ -165,7 +167,8 @@ class _AboutHero extends StatelessWidget {
   static const _logoInset = 14.0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final identity = ref.watch(installedMacReleaseProvider).value;
     final colorScheme = context.colorScheme;
     final appLocalizations = context.appLocalizations;
     return Padding(
@@ -201,13 +204,22 @@ class _AboutHero extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: [
               _Pill(
-                label: appVersionLabel(
-                  globalState.packageInfo.version,
-                  globalState.packageInfo.buildNumber,
-                ),
+                label:
+                    identity?.fullVersion ??
+                    appVersionLabel(
+                      globalState.packageInfo.version,
+                      globalState.packageInfo.buildNumber,
+                    ),
                 color: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
               ),
+              if (identity?.channel == ReleaseChannel.beta)
+                Text(
+                  appLocalizations.releaseBeta,
+                  style: AppTextStyle.footnote
+                      .of(context)
+                      .copyWith(color: colorScheme.onSurfaceVariant),
+                ),
               _Pill(
                 label: 'GPL-3.0',
                 color: context.raisedSurfaceLevel.colorOf(colorScheme),
