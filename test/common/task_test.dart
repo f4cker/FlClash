@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -680,6 +681,69 @@ DOMAIN,c.example,REJECT
       expect(config['rules'], ['MATCH,DIRECT']);
       expect(config['rule-providers'], isEmpty);
     });
+
+    for (final attached in [false, true]) {
+      test('module providers preserve injected custom providers '
+          '(attached: $attached)', () async {
+        final module = MitmModuleSource(
+          id: 42,
+          content:
+              '[Rule]\nRULE-SET,${attached ? 'local.list' : 'https://example.com/module.list'},REJECT\n',
+          resources: attached ? {'local.list': 'module.list'} : const {},
+        );
+        final key = parseMitmModule(
+          module.content,
+          resources: module.resources,
+        ).ruleProviders.keys.single;
+        final injectedName = 'mitm-42-$key';
+        final moduleName = '$injectedName-';
+        final injected = {
+          'type': 'inline',
+          'behavior': 'classical',
+          'payload': ['DOMAIN,custom.example'],
+        };
+        final real = await makeRealProfileTask(
+          MakeRealProfileState(
+            profilesPath: '/profiles',
+            profileId: 9,
+            rawConfig: {},
+            realPatchConfig: const PatchClashConfig(),
+            appendSystemDns: false,
+            proxyGroups: const [],
+            rules: [
+              Rule(
+                ruleAction: RuleAction.RULE_SET,
+                ruleProvider: injectedName,
+                ruleTarget: 'DIRECT',
+              ),
+              const Rule(ruleAction: RuleAction.MATCH, ruleTarget: 'DIRECT'),
+            ],
+            addedRules: const [],
+            defaultUA: 'FlClash-Test',
+            injectedRuleProviders: {injectedName: injected},
+            mitmModules: [module],
+          ),
+        );
+        final config = loadYaml(real.yaml) as YamlMap;
+        final providers = config['rule-providers'] as YamlMap;
+        expect(providers.keys, unorderedEquals([injectedName, moduleName]));
+        expect(providers[injectedName], injected);
+        expect(providers[moduleName]['type'], attached ? 'file' : 'http');
+        if (attached) {
+          expect(providers[moduleName]['path'], 'mitm/resources/module.list');
+        } else {
+          expect(
+            providers[moduleName]['url'],
+            'https://example.com/module.list',
+          );
+        }
+        expect(config['rules'], [
+          'RULE-SET,$moduleName,REJECT',
+          'RULE-SET,$injectedName,DIRECT',
+          'MATCH,DIRECT',
+        ]);
+      });
+    }
 
     test('in a custom profile go to its own groups', () async {
       final real = await makeRealProfileTask(

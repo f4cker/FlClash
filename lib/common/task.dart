@@ -334,6 +334,7 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     ).entries) {
       var name = 'mitm-${module.source.id ?? index}-${entry.key}';
       while (providers.containsKey(name) ||
+          data.injectedRuleProviders.containsKey(name) ||
           attachedRuleSets.containsKey(name)) {
         name = '$name-';
       }
