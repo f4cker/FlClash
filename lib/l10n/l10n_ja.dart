@@ -8525,5 +8525,5 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get macHelperApprovalStepReset =>
-      'Flash の横のスイッチがすでにオンの場合は、一度オフにしてからオンに戻し、Flash に戻ります。';
+      'Flash の横のスイッチがすでにオンの場合は、いったんオフにしてから再びオンにし、Flash に戻ってください。';
 }

@@ -259,9 +259,10 @@ void main() {
 
     // Native code → (primary, secondary) on the card.
     const expected = <String, (MacHelperCardAction?, MacHelperCardAction?)>{
+      // Nothing to switch on yet: no steps, details only if any.
       'notRegistered': (
         MacHelperCardAction.register,
-        MacHelperCardAction.viewSteps,
+        MacHelperCardAction.viewDetails,
       ),
       'requiresApproval': (
         MacHelperCardAction.openSettings,
@@ -430,7 +431,18 @@ void main() {
     expect(front(l.macHelperRegisterDetail), findsOneWidget);
     expect(front(l.coreStopped), findsNothing);
     expect(front(l.macHelperRegisterAction), findsOneWidget);
-    // View steps: the details in the deck, with back.
+    // Nothing to switch on before registering: no steps.
+    expect(front(l.macHelperViewSteps), findsNothing);
+    await tester.tap(front(l.macHelperRegisterAction));
+    await settle(tester);
+    expect(native.calls, ['status', 'enable', 'openApprovalSettings']);
+    // Back from System Settings: the status is read again.
+    native.state = 'requiresApproval';
+    flow.resumed();
+    await settle(tester);
+    expect(native.calls.last, 'status');
+    expect(front(l.macHelperApprovalTitle), findsOneWidget);
+    // View steps: the switch to turn on, in the deck's details, with back.
     await tester.tap(front(l.macHelperViewSteps));
     await settle(tester);
     expect(front(l.back), findsNothing); // a tooltip, not text
@@ -441,20 +453,13 @@ void main() {
     ].indexed) {
       expect(front('${index + 1}. $step'), findsOneWidget);
     }
+    expect(find.textContaining(l.macHelperApprovalStepReset), findsNothing);
     expect(front(l.macHelperViewSteps), findsNothing);
     // The primary action stays under the details.
-    expect(front(l.macHelperRegisterAction), findsOneWidget);
+    expect(front(l.macHelperOpenSettings), findsOneWidget);
     await tester.tap(find.byTooltip(l.back));
     await settle(tester);
     expect(front(l.macHelperViewSteps), findsOneWidget);
-    await tester.tap(front(l.macHelperRegisterAction));
-    await settle(tester);
-    expect(native.calls, ['status', 'enable', 'openApprovalSettings']);
-    // Back from System Settings: the status is read again.
-    native.state = 'requiresApproval';
-    flow.resumed();
-    await settle(tester);
-    expect(native.calls.last, 'status');
     expect(front(l.macHelperApprovalTitle), findsOneWidget);
     // Approved: the card goes, and with nothing left the deck closes.
     await settleReady(tester);

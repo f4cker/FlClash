@@ -197,14 +197,12 @@ MacHelperCardView macHelperCardView(
     MacHelperProgress.idle => null,
   };
   final raw = flow.rawDetail;
-  // After a recovery re-registered the helper, the system may show Flash's
-  // switch on while its daemon item is off: only then do the steps say to
-  // turn it off and on again. Otherwise the last step is to turn it on.
-  final recovered = flow.repairPending || flow.autoRecoveries > 0;
-  final steps = [
+  // Only where the user has to turn the switch on (awaiting approval, or
+  // turned off by the user).
+  final turnOnSteps = [
     l.macHelperApprovalStep1,
     l.macHelperApprovalStep2,
-    recovered ? l.macHelperApprovalStepReset : l.macHelperApprovalStep3,
+    l.macHelperApprovalStep3,
   ];
   return switch (kind) {
     MacHelperCardKind.ready => MacHelperCardView(
@@ -225,16 +223,17 @@ MacHelperCardView macHelperCardView(
         kind: kind,
         title: l.macHelperRegisterTitle,
         detail: l.macHelperRegisterDetail,
-        steps: steps,
         progress: busyText,
         primary: MacHelperCardAction.register,
-        secondary: MacHelperCardAction.viewSteps,
+        // Nothing to switch on yet: details only when there are any.
+        secondary: MacHelperCardAction.viewDetails,
+        rawDetail: raw,
       ),
     MacHelperCardKind.approval => MacHelperCardView(
       kind: kind,
       title: l.macHelperApprovalTitle,
       detail: l.macHelperAwaitingApprovalDetail,
-      steps: steps,
+      steps: turnOnSteps,
       progress: busyText,
       // The only thing the user is asked to do; Flash re-checks by itself.
       primary: MacHelperCardAction.openSettings,
@@ -244,7 +243,7 @@ MacHelperCardView macHelperCardView(
       kind: kind,
       title: l.macHelperDisabledTitle,
       detail: l.macHelperDisabledByUserDetail,
-      steps: steps,
+      steps: turnOnSteps,
       progress: busyText,
       primary: MacHelperCardAction.openSettings,
       secondary: MacHelperCardAction.viewSteps,
@@ -276,6 +275,15 @@ MacHelperCardView macHelperCardView(
       detail: state == MacHelperState.staleCore
           ? l.macHelperStaleCoreDetail
           : l.macHelperRegistrationFailedDetail,
+      // The reset step only on evidence (see switchResetMayHelp); it is
+      // read under "View details", next to the raw text.
+      steps: flow.switchResetMayHelp
+          ? [
+              l.macHelperApprovalStep1,
+              l.macHelperApprovalStep2,
+              l.macHelperApprovalStepReset,
+            ]
+          : const [],
       progress: busyText,
       primary: MacHelperCardAction.recover,
       secondary: MacHelperCardAction.viewDetails,

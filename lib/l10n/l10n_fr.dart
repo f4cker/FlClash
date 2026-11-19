@@ -8799,5 +8799,5 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get macHelperApprovalStepReset =>
-      'Si l’interrupteur à côté de Flash est déjà activé, désactivez-le puis réactivez-le, puis revenez dans Flash.';
+      'Si l’interrupteur à côté de Flash est déjà activé, désactivez-le, réactivez-le, puis revenez dans Flash.';
 }

@@ -8744,5 +8744,5 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get macHelperApprovalStepReset =>
-      'If the switch next to Flash is already on, turn it off and on again, then come back to Flash.';
+      'If the switch next to Flash is already on, turn it off, turn it back on, then return to Flash.';
 }

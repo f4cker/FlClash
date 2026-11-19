@@ -1059,7 +1059,9 @@ static const NSTimeInterval FCExitSettleSeconds = 1;
             return done(code, nil);
         [self pause:1];
     }
-    return done(@"helperNotReady", nil);
+    // Both callers reach this only after SMAppService.status read enabled: say so, so the app can tell a helper the
+    // system reports approved but that does not answer (the switch-reset step) from any other not-ready.
+    return done(@"helperNotReady", @{@"serviceStatus": @"enabled"});
 }
 
 - (void)recoverWithArguments:(NSDictionary *)arguments completion:(void (^)(NSDictionary *))completion {

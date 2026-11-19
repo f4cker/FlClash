@@ -405,6 +405,8 @@ class RecoverySequenceTests(unittest.TestCase):
     NSTimeInterval start = f.clock;
     NSDictionary *r = [f recoverySequence];
     assert([r[@"code"] isEqual:@"helperNotReady"] && f.clock - start <= 1 + 15 + 9);
+    // Reached only after SMAppService.status read enabled, and it says so.
+    assert([r[@"serviceStatus"] isEqual:@"enabled"]);
     // An answer from the previous build is not taken as the new helper.
     f = New(@[Job(@"missing"), Job(@"idle")], @[NSNull.null], @[@"enabled"]);
     f.hellos = [@[@{@"code": @"ok", @"helperCDHash": @"old"}] mutableCopy];

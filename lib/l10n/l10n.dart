@@ -14413,7 +14413,7 @@ abstract class AppLocalizations {
   /// No description provided for @macHelperApprovalStepReset.
   ///
   /// In en, this message translates to:
-  /// **'If the switch next to Flash is already on, turn it off and on again, then come back to Flash.'**
+  /// **'If the switch next to Flash is already on, turn it off, turn it back on, then return to Flash.'**
   String get macHelperApprovalStepReset;
 }
 

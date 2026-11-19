@@ -3632,5 +3632,5 @@
   "macHelperUnavailableTitle": "Asistente no disponible",
   "macHelperViewSteps": "Ver pasos",
   "macHelperDisabledTitle": "El asistente está desactivado",
-  "macHelperApprovalStepReset": "Si el interruptor junto a Flash ya está activado, desactívalo y vuelve a activarlo; luego vuelve a Flash."
+  "macHelperApprovalStepReset": "Si el interruptor junto a Flash ya está activado, desactívalo, vuelve a activarlo y luego regresa a Flash."
 }

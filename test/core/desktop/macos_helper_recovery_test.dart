@@ -102,11 +102,14 @@ void main() {
     final view = macHelperCardView(l, flow);
     expect(view.kind, MacHelperCardKind.approval);
     expect(view.primary, MacHelperCardAction.openSettings);
-    // The copy asks to allow Flash; after a recovery (and only then) the
-    // steps say to turn the switch off and on again.
+    // The copy asks to allow Flash. A recovery alone is no evidence for the
+    // switch-reset step: the system says approval is needed, so the step is
+    // to turn the switch on.
     expect(view.secondary, MacHelperCardAction.viewSteps);
     expect(view.detail, l.macHelperAwaitingApprovalDetail);
-    expect(view.steps.join(), contains('关掉再打开'));
+    expect(flow.switchResetMayHelp, isFalse);
+    expect(view.steps, contains(l.macHelperApprovalStep3));
+    expect(view.steps, isNot(contains(l.macHelperApprovalStepReset)));
 
     // Nothing polls while the card only shows the step.
     native.calls.clear();
@@ -158,7 +161,17 @@ void main() {
       );
       expect(view.kind, MacHelperCardKind.approval);
       expect(view.primary, MacHelperCardAction.openSettings);
-      expect(view.steps.join(), contains('关掉再打开'));
+      expect(flow.switchResetMayHelp, isFalse);
+      expect(
+        view.steps,
+        isNot(
+          contains(
+            lookupAppLocalizations(
+              const Locale('zh'),
+            ).macHelperApprovalStepReset,
+          ),
+        ),
+      );
       expect(started, 0);
 
       // The retired name is gone; the new one waits for the user.
@@ -241,6 +254,89 @@ void main() {
     );
 
     int count(String method) => native.calls.where((c) => c == method).length;
+
+    group('the switch-reset step needs evidence', () {
+      final zh = lookupAppLocalizations(const Locale('zh'));
+
+      Future<MacHelperMaintenance> recoverTo(
+        Map<Object?, Object?> answer,
+      ) async {
+        native.status = const {
+          'code': 'registrationStale',
+          'launchd': 'exit 78',
+        };
+        native.recover = answer;
+        final flow = flowThroughClient();
+        addTearDown(flow.dispose);
+        await flow.check();
+        return flow;
+      }
+
+      test('shown: system reports enabled, the helper never answered, '
+          'nothing running', () async {
+        final flow = await recoverTo(const {
+          'code': 'helperNotReady',
+          'serviceStatus': 'enabled',
+        });
+        expect(flow.state, MacHelperState.notReady);
+        expect(flow.switchResetMayHelp, isTrue);
+        final view = macHelperCardView(zh, flow);
+        expect(view.kind, MacHelperCardKind.notReady);
+        expect(view.secondary, MacHelperCardAction.viewDetails);
+        expect(view.steps.last, zh.macHelperApprovalStepReset);
+        expect(
+          zh.macHelperApprovalStepReset,
+          '如果 Flash 旁边的开关已打开，请先将它关闭，再重新打开，然后返回 Flash。',
+        );
+      });
+
+      test('absent: no enabled reading from the system', () async {
+        final flow = await recoverTo(const {'code': 'helperNotReady'});
+        expect(flow.state, MacHelperState.notReady);
+        expect(flow.switchResetMayHelp, isFalse);
+        final view = macHelperCardView(zh, flow);
+        expect(view.steps, isEmpty);
+        expect(view.secondary, MacHelperCardAction.viewDetails);
+      });
+
+      test('absent: the recovery itself failed (no helper answer)', () async {
+        final flow = await recoverTo(const {
+          'code': 'channelError',
+          'serviceStatus': 'enabled',
+        });
+        expect(flow.state, isNot(MacHelperState.notReady));
+        expect(flow.switchResetMayHelp, isFalse);
+        expect(macHelperCardView(zh, flow).steps, isEmpty);
+      });
+
+      test('absent: a later answer replaced the evidence', () async {
+        final flow = await recoverTo(const {
+          'code': 'helperNotReady',
+          'serviceStatus': 'enabled',
+        });
+        // A new reading of the system: the helper is starting, not stuck.
+        native.status = const {'code': 'starting'};
+        await flow.check();
+        expect(flow.switchResetMayHelp, isFalse);
+        expect(
+          macHelperCardView(zh, flow).steps,
+          isNot(contains(zh.macHelperApprovalStepReset)),
+        );
+      });
+
+      test('absent while a check is running', () async {
+        final flow = await recoverTo(const {
+          'code': 'helperNotReady',
+          'serviceStatus': 'enabled',
+        });
+        expect(flow.switchResetMayHelp, isTrue);
+        native.status = const {'code': 'helperNotReady'};
+        final checking = flow.check();
+        expect(flow.busy, isTrue);
+        expect(flow.switchResetMayHelp, isFalse);
+        await checking;
+      });
+    });
 
     test('mitm.3: after the user turned Flash on, returning to the '
         'foreground registers once by itself', () async {

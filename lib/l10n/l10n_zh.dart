@@ -8041,5 +8041,5 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get macHelperApprovalStepReset =>
-      '如果 Flash 旁边的开关已经打开，请把它关掉再打开，然后返回 Flash。';
+      '如果 Flash 旁边的开关已打开，请先将它关闭，再重新打开，然后返回 Flash。';
 }

@@ -3684,5 +3684,5 @@
   "macHelperUnavailableTitle": "Helper unavailable",
   "macHelperViewSteps": "View steps",
   "macHelperDisabledTitle": "The helper is turned off",
-  "macHelperApprovalStepReset": "If the switch next to Flash is already on, turn it off and on again, then come back to Flash."
+  "macHelperApprovalStepReset": "If the switch next to Flash is already on, turn it off, turn it back on, then return to Flash."
 }

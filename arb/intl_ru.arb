@@ -3632,5 +3632,5 @@
   "macHelperUnavailableTitle": "Помощник недоступен",
   "macHelperViewSteps": "Показать шаги",
   "macHelperDisabledTitle": "Помощник отключён",
-  "macHelperApprovalStepReset": "Если переключатель рядом с Flash уже включён, выключите и снова включите его, затем вернитесь во Flash."
+  "macHelperApprovalStepReset": "Если переключатель рядом с Flash уже включён, выключите его, снова включите и вернитесь во Flash."
 }

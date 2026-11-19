@@ -2406,5 +2406,5 @@
   "macHelperUnavailableTitle": "辅助程序暂不可用",
   "macHelperViewSteps": "查看步骤",
   "macHelperDisabledTitle": "辅助程序已关闭",
-  "macHelperApprovalStepReset": "如果 Flash 旁边的开关已经打开，请把它关掉再打开，然后返回 Flash。"
+  "macHelperApprovalStepReset": "如果 Flash 旁边的开关已打开，请先将它关闭，再重新打开，然后返回 Flash。"
 }

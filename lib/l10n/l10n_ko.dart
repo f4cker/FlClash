@@ -8601,5 +8601,5 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macHelperApprovalStepReset =>
-      'Flash 옆의 스위치가 이미 켜져 있다면 껐다가 다시 켠 다음 Flash로 돌아옵니다.';
+      'Flash 옆의 스위치가 이미 켜져 있다면 끈 다음 다시 켜고 Flash로 돌아오세요.';
 }

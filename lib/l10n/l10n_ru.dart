@@ -8747,5 +8747,5 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get macHelperApprovalStepReset =>
-      'Если переключатель рядом с Flash уже включён, выключите и снова включите его, затем вернитесь во Flash.';
+      'Если переключатель рядом с Flash уже включён, выключите его, снова включите и вернитесь во Flash.';
 }
