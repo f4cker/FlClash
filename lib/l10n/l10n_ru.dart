@@ -8594,4 +8594,67 @@ class AppLocalizationsRu extends AppLocalizations {
   String trayUpdateAvailable(Object version) {
     return 'Доступно обновление: $version';
   }
+
+  @override
+  String get releaseHistory => 'История версий';
+
+  @override
+  String get releaseNotesEmpty => 'Для этой версии нет описания изменений';
+
+  @override
+  String releaseInstalled(Object version) {
+    return 'Установленная версия $version';
+  }
+
+  @override
+  String get releaseCurrentMissing =>
+      'Установленная версия отсутствует в загруженной истории.';
+
+  @override
+  String get releaseHistoryEmpty => 'Опубликованных версий нет.';
+
+  @override
+  String releaseHistoryCached(Object date) {
+    return 'История из кеша · Получено $date';
+  }
+
+  @override
+  String get releaseHistoryLoading => 'Загрузка истории версий';
+
+  @override
+  String get releaseHistoryFailed => 'Не удалось загрузить историю · Повторить';
+
+  @override
+  String releaseAvailable(Object version) {
+    return 'Новая версия $version';
+  }
+
+  @override
+  String get releaseAvailableNotes => 'Изменения в этой версии';
+
+  @override
+  String get releaseHistoryLimited =>
+      'Показаны только загруженные версии · Открыть полный список';
+
+  @override
+  String get releaseCurrent => 'Текущая версия';
+
+  @override
+  String get releaseExpanded => 'Развёрнуто';
+
+  @override
+  String get releaseCollapsed => 'Свёрнуто';
+
+  @override
+  String releaseEntryLabel(
+    String version,
+    String date,
+    String current,
+    String state,
+  ) {
+    return 'Версия $version, $date, $current, $state';
+  }
+
+  @override
+  String get releaseBeta => 'Бета';
 }

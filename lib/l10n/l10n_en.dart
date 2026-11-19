@@ -8593,4 +8593,68 @@ class AppLocalizationsEn extends AppLocalizations {
   String trayUpdateAvailable(Object version) {
     return 'Update available: $version';
   }
+
+  @override
+  String get releaseHistory => 'Release history';
+
+  @override
+  String get releaseNotesEmpty =>
+      'No release notes were provided for this version';
+
+  @override
+  String releaseInstalled(Object version) {
+    return 'Installed version $version';
+  }
+
+  @override
+  String get releaseCurrentMissing =>
+      'The installed version is not in the loaded release history.';
+
+  @override
+  String get releaseHistoryEmpty => 'No published releases found.';
+
+  @override
+  String releaseHistoryCached(Object date) {
+    return 'Cached release history · Last fetched $date';
+  }
+
+  @override
+  String get releaseHistoryLoading => 'Loading release history';
+
+  @override
+  String get releaseHistoryFailed => 'Unable to fetch release history · Retry';
+
+  @override
+  String releaseAvailable(Object version) {
+    return 'New version $version';
+  }
+
+  @override
+  String get releaseAvailableNotes => 'Changes in this version';
+
+  @override
+  String get releaseHistoryLimited =>
+      'Only loaded releases are shown · View the complete release list';
+
+  @override
+  String get releaseCurrent => 'Current version';
+
+  @override
+  String get releaseExpanded => 'Expanded';
+
+  @override
+  String get releaseCollapsed => 'Collapsed';
+
+  @override
+  String releaseEntryLabel(
+    String version,
+    String date,
+    String current,
+    String state,
+  ) {
+    return 'Version $version, $date, $current, $state';
+  }
+
+  @override
+  String get releaseBeta => 'Beta';
 }

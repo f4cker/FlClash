@@ -3580,5 +3580,37 @@
   "trayStartCore": "Запустить ядро",
   "trayStopCore": "Остановить ядро",
   "trayCoreProcessing": "Обработка",
-  "trayUpdateAvailable": "Доступно обновление: {version}"
+  "trayUpdateAvailable": "Доступно обновление: {version}",
+  "releaseHistory": "История версий",
+  "releaseNotesEmpty": "Для этой версии нет описания изменений",
+  "releaseInstalled": "Установленная версия {version}",
+  "releaseCurrentMissing": "Установленная версия отсутствует в загруженной истории.",
+  "releaseHistoryEmpty": "Опубликованных версий нет.",
+  "releaseHistoryCached": "История из кеша · Получено {date}",
+  "releaseHistoryLoading": "Загрузка истории версий",
+  "releaseHistoryFailed": "Не удалось загрузить историю · Повторить",
+  "releaseAvailable": "Новая версия {version}",
+  "releaseAvailableNotes": "Изменения в этой версии",
+  "releaseHistoryLimited": "Показаны только загруженные версии · Открыть полный список",
+  "releaseCurrent": "Текущая версия",
+  "releaseExpanded": "Развёрнуто",
+  "releaseCollapsed": "Свёрнуто",
+  "releaseEntryLabel": "Версия {version}, {date}, {current}, {state}",
+  "releaseBeta": "Бета",
+  "@releaseEntryLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -49,6 +49,16 @@ class Preferences {
     return _instance!;
   }
 
+  Future<String?> getReleaseHistoryCache() async =>
+      (await _store.value)?.getString('releaseHistoryCache:$updateRepository');
+
+  Future<void> saveReleaseHistoryCache(String value) async {
+    await (await _store.value)?.setString(
+      'releaseHistoryCache:$updateRepository',
+      value,
+    );
+  }
+
   Future<bool> getMacHelperInvitationShown() async {
     final store = await _store.value;
     return store == null ||

@@ -7899,4 +7899,65 @@ class AppLocalizationsZh extends AppLocalizations {
   String trayUpdateAvailable(Object version) {
     return '可用更新：$version';
   }
+
+  @override
+  String get releaseHistory => '更新日志';
+
+  @override
+  String get releaseNotesEmpty => '此版本未提供更新说明';
+
+  @override
+  String releaseInstalled(Object version) {
+    return '当前安装版本 $version';
+  }
+
+  @override
+  String get releaseCurrentMissing => '已加载的发布记录中未找到当前安装版本。';
+
+  @override
+  String get releaseHistoryEmpty => '暂无已发布版本记录。';
+
+  @override
+  String releaseHistoryCached(Object date) {
+    return '缓存的更新日志 · 上次获取于 $date';
+  }
+
+  @override
+  String get releaseHistoryLoading => '正在加载更新日志';
+
+  @override
+  String get releaseHistoryFailed => '无法获取更新日志 · 重试';
+
+  @override
+  String releaseAvailable(Object version) {
+    return '新版本 $version';
+  }
+
+  @override
+  String get releaseAvailableNotes => '此版本更新内容';
+
+  @override
+  String get releaseHistoryLimited => '仅显示已获取的发布记录 · 查看完整发布列表';
+
+  @override
+  String get releaseCurrent => '当前版本';
+
+  @override
+  String get releaseExpanded => '已展开';
+
+  @override
+  String get releaseCollapsed => '已折叠';
+
+  @override
+  String releaseEntryLabel(
+    String version,
+    String date,
+    String current,
+    String state,
+  ) {
+    return '版本 $version，$date，$current，$state';
+  }
+
+  @override
+  String get releaseBeta => '测试版';
 }

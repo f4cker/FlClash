@@ -3580,5 +3580,37 @@
   "trayStartCore": "코어 시작",
   "trayStopCore": "코어 중지",
   "trayCoreProcessing": "처리 중",
-  "trayUpdateAvailable": "업데이트 사용 가능: {version}"
+  "trayUpdateAvailable": "업데이트 사용 가능: {version}",
+  "releaseHistory": "업데이트 기록",
+  "releaseNotesEmpty": "이 버전에는 업데이트 설명이 없습니다",
+  "releaseInstalled": "설치된 버전 {version}",
+  "releaseCurrentMissing": "불러온 기록에 설치된 버전이 없습니다.",
+  "releaseHistoryEmpty": "게시된 버전이 없습니다.",
+  "releaseHistoryCached": "캐시된 업데이트 기록 · 마지막 조회 {date}",
+  "releaseHistoryLoading": "업데이트 기록 불러오는 중",
+  "releaseHistoryFailed": "업데이트 기록을 가져올 수 없음 · 다시 시도",
+  "releaseAvailable": "새 버전 {version}",
+  "releaseAvailableNotes": "이 버전의 변경 사항",
+  "releaseHistoryLimited": "불러온 버전만 표시 · 전체 목록 보기",
+  "releaseCurrent": "현재 버전",
+  "releaseExpanded": "펼쳐짐",
+  "releaseCollapsed": "접힘",
+  "releaseEntryLabel": "버전 {version}, {date}, {current}, {state}",
+  "releaseBeta": "베타",
+  "@releaseEntryLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -2354,5 +2354,37 @@
   "trayStartCore": "启动核心",
   "trayStopCore": "停止核心",
   "trayCoreProcessing": "处理中",
-  "trayUpdateAvailable": "可用更新：{version}"
+  "trayUpdateAvailable": "可用更新：{version}",
+  "releaseHistory": "更新日志",
+  "releaseNotesEmpty": "此版本未提供更新说明",
+  "releaseInstalled": "当前安装版本 {version}",
+  "releaseCurrentMissing": "已加载的发布记录中未找到当前安装版本。",
+  "releaseHistoryEmpty": "暂无已发布版本记录。",
+  "releaseHistoryCached": "缓存的更新日志 · 上次获取于 {date}",
+  "releaseHistoryLoading": "正在加载更新日志",
+  "releaseHistoryFailed": "无法获取更新日志 · 重试",
+  "releaseAvailable": "新版本 {version}",
+  "releaseAvailableNotes": "此版本更新内容",
+  "releaseHistoryLimited": "仅显示已获取的发布记录 · 查看完整发布列表",
+  "releaseCurrent": "当前版本",
+  "releaseExpanded": "已展开",
+  "releaseCollapsed": "已折叠",
+  "releaseEntryLabel": "版本 {version}，{date}，{current}，{state}",
+  "releaseBeta": "测试版",
+  "@releaseEntryLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  }
 }

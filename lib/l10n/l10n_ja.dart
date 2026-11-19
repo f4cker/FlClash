@@ -8382,4 +8382,65 @@ class AppLocalizationsJa extends AppLocalizations {
   String trayUpdateAvailable(Object version) {
     return '利用可能なアップデート：$version';
   }
+
+  @override
+  String get releaseHistory => '更新履歴';
+
+  @override
+  String get releaseNotesEmpty => 'このバージョンの更新内容は提供されていません';
+
+  @override
+  String releaseInstalled(Object version) {
+    return 'インストール済み $version';
+  }
+
+  @override
+  String get releaseCurrentMissing => '読み込んだ履歴に現在のバージョンがありません。';
+
+  @override
+  String get releaseHistoryEmpty => '公開済みのリリースはありません。';
+
+  @override
+  String releaseHistoryCached(Object date) {
+    return 'キャッシュされた更新履歴 · 取得日 $date';
+  }
+
+  @override
+  String get releaseHistoryLoading => '更新履歴を読み込み中';
+
+  @override
+  String get releaseHistoryFailed => '更新履歴を取得できません · 再試行';
+
+  @override
+  String releaseAvailable(Object version) {
+    return '新バージョン $version';
+  }
+
+  @override
+  String get releaseAvailableNotes => 'このバージョンの変更内容';
+
+  @override
+  String get releaseHistoryLimited => '読み込み済みのみ表示 · すべてのリリースを表示';
+
+  @override
+  String get releaseCurrent => '現在のバージョン';
+
+  @override
+  String get releaseExpanded => '展開済み';
+
+  @override
+  String get releaseCollapsed => '折りたたみ';
+
+  @override
+  String releaseEntryLabel(
+    String version,
+    String date,
+    String current,
+    String state,
+  ) {
+    return 'バージョン $version、$date、$current、$state';
+  }
+
+  @override
+  String get releaseBeta => 'ベータ版';
 }

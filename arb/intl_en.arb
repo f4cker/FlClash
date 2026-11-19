@@ -3597,5 +3597,37 @@
   "trayStartCore": "Start core",
   "trayStopCore": "Stop core",
   "trayCoreProcessing": "Processing",
-  "trayUpdateAvailable": "Update available: {version}"
+  "trayUpdateAvailable": "Update available: {version}",
+  "releaseHistory": "Release history",
+  "releaseNotesEmpty": "No release notes were provided for this version",
+  "releaseInstalled": "Installed version {version}",
+  "releaseCurrentMissing": "The installed version is not in the loaded release history.",
+  "releaseHistoryEmpty": "No published releases found.",
+  "releaseHistoryCached": "Cached release history · Last fetched {date}",
+  "releaseHistoryLoading": "Loading release history",
+  "releaseHistoryFailed": "Unable to fetch release history · Retry",
+  "releaseAvailable": "New version {version}",
+  "releaseAvailableNotes": "Changes in this version",
+  "releaseHistoryLimited": "Only loaded releases are shown · View the complete release list",
+  "releaseCurrent": "Current version",
+  "releaseExpanded": "Expanded",
+  "releaseCollapsed": "Collapsed",
+  "releaseEntryLabel": "Version {version}, {date}, {current}, {state}",
+  "releaseBeta": "Beta",
+  "@releaseEntryLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  }
 }

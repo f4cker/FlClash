@@ -8645,4 +8645,69 @@ class AppLocalizationsEs extends AppLocalizations {
   String trayUpdateAvailable(Object version) {
     return 'Actualización disponible: $version';
   }
+
+  @override
+  String get releaseHistory => 'Historial de versiones';
+
+  @override
+  String get releaseNotesEmpty =>
+      'No se proporcionaron notas para esta versión';
+
+  @override
+  String releaseInstalled(Object version) {
+    return 'Versión instalada $version';
+  }
+
+  @override
+  String get releaseCurrentMissing =>
+      'La versión instalada no está en el historial cargado.';
+
+  @override
+  String get releaseHistoryEmpty => 'No hay versiones publicadas.';
+
+  @override
+  String releaseHistoryCached(Object date) {
+    return 'Historial en caché · Última consulta: $date';
+  }
+
+  @override
+  String get releaseHistoryLoading => 'Cargando historial';
+
+  @override
+  String get releaseHistoryFailed =>
+      'No se pudo obtener el historial · Reintentar';
+
+  @override
+  String releaseAvailable(Object version) {
+    return 'Nueva versión $version';
+  }
+
+  @override
+  String get releaseAvailableNotes => 'Cambios en esta versión';
+
+  @override
+  String get releaseHistoryLimited =>
+      'Solo versiones cargadas · Ver lista completa';
+
+  @override
+  String get releaseCurrent => 'Versión actual';
+
+  @override
+  String get releaseExpanded => 'Expandido';
+
+  @override
+  String get releaseCollapsed => 'Contraído';
+
+  @override
+  String releaseEntryLabel(
+    String version,
+    String date,
+    String current,
+    String state,
+  ) {
+    return 'Versión $version, $date, $current, $state';
+  }
+
+  @override
+  String get releaseBeta => 'Beta';
 }

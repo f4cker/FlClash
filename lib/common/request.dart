@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/release_history.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/state.dart';
@@ -254,6 +255,39 @@ class Request {
     HttpStatus.temporaryRedirect,
     HttpStatus.permanentRedirect,
   }.contains(status);
+
+  Future<ReleaseHistory> releaseHistory({int pageLimit = 10}) async {
+    if (pageLimit < 1 || pageLimit > 10) {
+      throw RangeError.range(pageLimit, 1, 10);
+    }
+    final releases = <PublishedRelease>[];
+    var hasMore = false;
+    for (var page = 1; page <= pageLimit; page++) {
+      final response = await dio.get<List<dynamic>>(
+        'https://api.github.com/repos/$updateRepository/releases',
+        queryParameters: {'per_page': 100, 'page': page},
+        options: Options(
+          responseType: ResponseType.json,
+          receiveTimeout: const Duration(seconds: 20),
+        ),
+      );
+      final rows = response.data;
+      if (rows == null) throw const FormatException('Missing release history');
+      for (final row in rows) {
+        final release = PublishedRelease.fromJson(row as Map<String, dynamic>);
+        if (release != null) releases.add(release);
+      }
+      hasMore =
+          response.headers.value('link')?.contains('rel="next"') ??
+          rows.length == 100;
+      if (!hasMore) break;
+    }
+    return ReleaseHistory(
+      releases,
+      fetchedAt: DateTime.now().toUtc(),
+      truncated: hasMore,
+    );
+  }
 
   /// Null when nothing is published; the page answers past the API quota.
   Future<Map<String, dynamic>?> latestRelease() async {

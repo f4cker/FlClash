@@ -3580,5 +3580,37 @@
   "trayStartCore": "Iniciar núcleo",
   "trayStopCore": "Detener núcleo",
   "trayCoreProcessing": "Procesando",
-  "trayUpdateAvailable": "Actualización disponible: {version}"
+  "trayUpdateAvailable": "Actualización disponible: {version}",
+  "releaseHistory": "Historial de versiones",
+  "releaseNotesEmpty": "No se proporcionaron notas para esta versión",
+  "releaseInstalled": "Versión instalada {version}",
+  "releaseCurrentMissing": "La versión instalada no está en el historial cargado.",
+  "releaseHistoryEmpty": "No hay versiones publicadas.",
+  "releaseHistoryCached": "Historial en caché · Última consulta: {date}",
+  "releaseHistoryLoading": "Cargando historial",
+  "releaseHistoryFailed": "No se pudo obtener el historial · Reintentar",
+  "releaseAvailable": "Nueva versión {version}",
+  "releaseAvailableNotes": "Cambios en esta versión",
+  "releaseHistoryLimited": "Solo versiones cargadas · Ver lista completa",
+  "releaseCurrent": "Versión actual",
+  "releaseExpanded": "Expandido",
+  "releaseCollapsed": "Contraído",
+  "releaseEntryLabel": "Versión {version}, {date}, {current}, {state}",
+  "releaseBeta": "Beta",
+  "@releaseEntryLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  }
 }

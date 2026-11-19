@@ -14194,6 +14194,107 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update available: {version}'**
   String trayUpdateAvailable(Object version);
+
+  /// No description provided for @releaseHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Release history'**
+  String get releaseHistory;
+
+  /// No description provided for @releaseNotesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No release notes were provided for this version'**
+  String get releaseNotesEmpty;
+
+  /// No description provided for @releaseInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed version {version}'**
+  String releaseInstalled(Object version);
+
+  /// No description provided for @releaseCurrentMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The installed version is not in the loaded release history.'**
+  String get releaseCurrentMissing;
+
+  /// No description provided for @releaseHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No published releases found.'**
+  String get releaseHistoryEmpty;
+
+  /// No description provided for @releaseHistoryCached.
+  ///
+  /// In en, this message translates to:
+  /// **'Cached release history · Last fetched {date}'**
+  String releaseHistoryCached(Object date);
+
+  /// No description provided for @releaseHistoryLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading release history'**
+  String get releaseHistoryLoading;
+
+  /// No description provided for @releaseHistoryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to fetch release history · Retry'**
+  String get releaseHistoryFailed;
+
+  /// No description provided for @releaseAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'New version {version}'**
+  String releaseAvailable(Object version);
+
+  /// No description provided for @releaseAvailableNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes in this version'**
+  String get releaseAvailableNotes;
+
+  /// No description provided for @releaseHistoryLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Only loaded releases are shown · View the complete release list'**
+  String get releaseHistoryLimited;
+
+  /// No description provided for @releaseCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current version'**
+  String get releaseCurrent;
+
+  /// No description provided for @releaseExpanded.
+  ///
+  /// In en, this message translates to:
+  /// **'Expanded'**
+  String get releaseExpanded;
+
+  /// No description provided for @releaseCollapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapsed'**
+  String get releaseCollapsed;
+
+  /// No description provided for @releaseEntryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}, {date}, {current}, {state}'**
+  String releaseEntryLabel(
+    String version,
+    String date,
+    String current,
+    String state,
+  );
+
+  /// No description provided for @releaseBeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Beta'**
+  String get releaseBeta;
 }
 
 class _AppLocalizationsDelegate

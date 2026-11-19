@@ -8457,4 +8457,65 @@ class AppLocalizationsKo extends AppLocalizations {
   String trayUpdateAvailable(Object version) {
     return '업데이트 사용 가능: $version';
   }
+
+  @override
+  String get releaseHistory => '업데이트 기록';
+
+  @override
+  String get releaseNotesEmpty => '이 버전에는 업데이트 설명이 없습니다';
+
+  @override
+  String releaseInstalled(Object version) {
+    return '설치된 버전 $version';
+  }
+
+  @override
+  String get releaseCurrentMissing => '불러온 기록에 설치된 버전이 없습니다.';
+
+  @override
+  String get releaseHistoryEmpty => '게시된 버전이 없습니다.';
+
+  @override
+  String releaseHistoryCached(Object date) {
+    return '캐시된 업데이트 기록 · 마지막 조회 $date';
+  }
+
+  @override
+  String get releaseHistoryLoading => '업데이트 기록 불러오는 중';
+
+  @override
+  String get releaseHistoryFailed => '업데이트 기록을 가져올 수 없음 · 다시 시도';
+
+  @override
+  String releaseAvailable(Object version) {
+    return '새 버전 $version';
+  }
+
+  @override
+  String get releaseAvailableNotes => '이 버전의 변경 사항';
+
+  @override
+  String get releaseHistoryLimited => '불러온 버전만 표시 · 전체 목록 보기';
+
+  @override
+  String get releaseCurrent => '현재 버전';
+
+  @override
+  String get releaseExpanded => '펼쳐짐';
+
+  @override
+  String get releaseCollapsed => '접힘';
+
+  @override
+  String releaseEntryLabel(
+    String version,
+    String date,
+    String current,
+    String state,
+  ) {
+    return '버전 $version, $date, $current, $state';
+  }
+
+  @override
+  String get releaseBeta => '베타';
 }

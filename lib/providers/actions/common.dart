@@ -192,47 +192,11 @@ class CommonAction extends _$CommonAction {
   );
 
   TextSpan _releaseSpan(BuildContext context, String tagName, String? body) {
-    final version = parseReleaseChangelog(body);
     return TextSpan(
       text: '$tagName \n',
       style: AppTextStyle.title2.of(context),
-      children: version == null
-          ? [
-              TextSpan(text: '\n', style: AppTextStyle.subheadline.of(context)),
-              for (final submit in parseReleaseBody(body))
-                TextSpan(
-                  text: '- $submit \n',
-                  style: AppTextStyle.subheadline.of(context),
-                ),
-            ]
-          : _changelogSpans(context, version),
+      children: releaseNotesSpans(context, body),
     );
-  }
-
-  List<TextSpan> _changelogSpans(
-    BuildContext context,
-    ChangelogVersion version,
-  ) {
-    return [
-      for (final group in version.visibleGroups) ...[
-        TextSpan(
-          text:
-              '\n${changelogGroupTitle(currentAppLocalizations, group.type)}\n',
-          style: AppTextStyle.subheadline
-              .of(context, emphasized: true)
-              .copyWith(
-                color: group.type == ChangelogType.breaking
-                    ? context.colorScheme.error
-                    : context.colorScheme.primary,
-              ),
-        ),
-        for (final entry in group.entries)
-          TextSpan(
-            text: '• ${entry.text}\n',
-            style: AppTextStyle.subheadline.of(context),
-          ),
-      ],
-    ];
   }
 
   /// Only a manual check reports that it found nothing to install.

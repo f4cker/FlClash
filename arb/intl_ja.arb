@@ -3580,5 +3580,37 @@
   "trayStartCore": "コアを起動",
   "trayStopCore": "コアを停止",
   "trayCoreProcessing": "処理中",
-  "trayUpdateAvailable": "利用可能なアップデート：{version}"
+  "trayUpdateAvailable": "利用可能なアップデート：{version}",
+  "releaseHistory": "更新履歴",
+  "releaseNotesEmpty": "このバージョンの更新内容は提供されていません",
+  "releaseInstalled": "インストール済み {version}",
+  "releaseCurrentMissing": "読み込んだ履歴に現在のバージョンがありません。",
+  "releaseHistoryEmpty": "公開済みのリリースはありません。",
+  "releaseHistoryCached": "キャッシュされた更新履歴 · 取得日 {date}",
+  "releaseHistoryLoading": "更新履歴を読み込み中",
+  "releaseHistoryFailed": "更新履歴を取得できません · 再試行",
+  "releaseAvailable": "新バージョン {version}",
+  "releaseAvailableNotes": "このバージョンの変更内容",
+  "releaseHistoryLimited": "読み込み済みのみ表示 · すべてのリリースを表示",
+  "releaseCurrent": "現在のバージョン",
+  "releaseExpanded": "展開済み",
+  "releaseCollapsed": "折りたたみ",
+  "releaseEntryLabel": "バージョン {version}、{date}、{current}、{state}",
+  "releaseBeta": "ベータ版",
+  "@releaseEntryLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  }
 }
