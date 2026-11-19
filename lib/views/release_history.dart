@@ -200,11 +200,6 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
                               ),
                           ],
                         ),
-                        if (available.discoveryIncomplete)
-                          Text(
-                            l10n.betaUpdateCheckIncomplete,
-                            style: AppTextStyle.footnote.of(context),
-                          ),
                         const SizedBox(height: 8),
                         Text(
                           l10n.releaseAvailableNotes,

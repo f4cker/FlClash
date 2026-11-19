@@ -8566,10 +8566,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '켜면 베타 버전도 확인합니다. 꺼도 이전 버전으로 돌아가지 않습니다.';
 
   @override
-  String get betaUpdateCheckIncomplete =>
-      '베타 업데이트 확인이 완료되지 않았습니다. 검증된 업데이트는 사용할 수 있습니다.';
-
-  @override
   String get updateNoNewerStable => '더 새로운 정식 버전이 없습니다.';
 
   @override

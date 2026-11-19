@@ -135,6 +135,8 @@ void main() {
         discoveryIncomplete: true,
       );
       await tester.pumpAndSettle();
+      expect(find.textContaining('新版本 1.2.0'), findsOneWidget);
+      expect(find.textContaining('检查未完成'), findsNothing);
       fail = true;
       await store.refresh();
       await tester.pumpAndSettle();

@@ -3626,7 +3626,6 @@
   },
   "receiveBetaUpdates": "Recibir actualizaciones beta",
   "receiveBetaUpdatesDescription": "También busca versiones beta; desactivarlo no cambia a una versión anterior.",
-  "betaUpdateCheckIncomplete": "La búsqueda beta está incompleta. Las actualizaciones verificadas siguen disponibles.",
   "updateNoNewerStable": "No hay una versión estable más reciente.",
   "installedBetaBadge": "La versión instalada es beta",
   "updatingResources": "Actualizando",

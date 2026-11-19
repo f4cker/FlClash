@@ -3626,7 +3626,6 @@
   },
   "receiveBetaUpdates": "Получать бета-обновления",
   "receiveBetaUpdatesDescription": "Также проверять бета-версии; отключение не понижает версию приложения.",
-  "betaUpdateCheckIncomplete": "Проверка бета-версий не завершена. Проверенные обновления доступны.",
   "updateNoNewerStable": "Более новой стабильной версии нет.",
   "installedBetaBadge": "Установлена бета-версия",
   "updatingResources": "Обновление",

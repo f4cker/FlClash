@@ -8763,10 +8763,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'También busca versiones beta; desactivarlo no cambia a una versión anterior.';
 
   @override
-  String get betaUpdateCheckIncomplete =>
-      'La búsqueda beta está incompleta. Las actualizaciones verificadas siguen disponibles.';
-
-  @override
   String get updateNoNewerStable => 'No hay una versión estable más reciente.';
 
   @override
