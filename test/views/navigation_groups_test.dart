@@ -81,7 +81,7 @@ void main() {
   bool shows(String label) =>
       find.text(label).hitTestable().evaluate().isNotEmpty;
 
-  testWidgets('lists each page under its group, with tools at the foot', (
+  testWidgets('lists each page under its group, with More at the foot', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -95,9 +95,9 @@ void main() {
     expect(tops, orderedEquals([...tops]..sort()));
     expect(tester.getTopLeft(find.text('Rules')).dy, greaterThan(tops[0]));
     expect(tester.getTopLeft(find.text('Rules')).dy, lessThan(tops[1]));
-    // Tools stays below the scrolling list, out of every group.
+    // More stays below the scrolling list, out of every group.
     expect(
-      tester.getTopLeft(find.text('Tools')).dy,
+      tester.getTopLeft(find.text('More')).dy,
       greaterThan(tester.getTopLeft(find.text('Network')).dy),
     );
     expect(shows('HTTPS decryption'), isTrue);

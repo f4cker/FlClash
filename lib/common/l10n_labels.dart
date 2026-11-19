@@ -13,7 +13,7 @@ extension PageLabelL10n on PageLabel {
       PageLabel.profiles => appLocalizations.profiles,
       PageLabel.rules => appLocalizations.rules,
       PageLabel.tailscale => 'Tailscale',
-      PageLabel.tools => appLocalizations.tools,
+      PageLabel.tools => appLocalizations.more,
       PageLabel.logs => appLocalizations.logs,
       PageLabel.requests => appLocalizations.requests,
       PageLabel.resources => appLocalizations.resources,
