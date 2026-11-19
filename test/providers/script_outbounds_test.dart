@@ -123,4 +123,44 @@ void main() {
     expect(await outboundsOf(profile), isNull);
     verifyNever(() => core.readConfig(any()));
   });
+
+  test('a scripts read failing after it loaded keeps the groups, and runs '
+      'nothing again', () async {
+    var runs = 0;
+    scriptEvaluator = ({required String script, required String config}) {
+      runs++;
+      return Future.value(config);
+    };
+    final profile = Profile.normal(label: 'sub').copyWith(scriptId: script.id);
+    final container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(() => TestProfiles([profile])),
+        scriptsProvider.overrideWith(() => TestScripts([script])),
+        coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+      ],
+    );
+    addTearDown(container.dispose);
+    final provider = scriptOutboundsProvider(profile.id);
+    final states = <AsyncValue<ClashConfig?>>[];
+    container.listen(provider, (_, next) => states.add(next));
+    final before = await container.read(provider.future);
+    expect(before!.proxyGroups.map((group) => group.name), ['Before']);
+    expect(runs, 1);
+    states.clear();
+
+    // What the database's live read reports when a later query fails.
+    container.read(scriptsProvider.notifier).state = AsyncError(
+      StateError('database is locked'),
+      StackTrace.current,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(container.read(scriptsProvider).hasError, isTrue);
+    final after = container.read(provider);
+    expect(after.hasError, isFalse);
+    expect(after.isLoading, isFalse);
+    expect(after.value, before);
+    expect(states, isEmpty);
+    expect(runs, 1);
+  });
 }

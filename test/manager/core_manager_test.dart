@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/common/constant.dart';
+import 'package:fl_clash/common/path.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -21,6 +22,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:path/path.dart' show join;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../helpers/app_paths.dart';
@@ -96,6 +98,7 @@ Future<ProviderContainer> _pumpCoreManager(
   WidgetTester tester,
   CoreHandlerInterface coreInterface, {
   List<Override> overrides = const [],
+  bool readModuleRules = false,
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -103,9 +106,10 @@ Future<ProviderContainer> _pumpCoreManager(
         CoreController.scoped(coreInterface),
       ),
       // Its database stream would outlive the widget tree.
-      enabledMitmModuleRulesProvider.overrideWith(
-        (_) async => MitmModuleRules.empty,
-      ),
+      if (!readModuleRules)
+        enabledMitmModuleRulesProvider.overrideWith(
+          (_) async => MitmModuleRules.empty,
+        ),
       ...overrides,
     ],
   );
@@ -394,6 +398,70 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    for (final (kind, failure) in [
+      ('an error', StateError('database is locked')),
+      ('a retried exception', Exception('database is locked')),
+    ]) {
+      testWidgets('a modules read failing after it loaded with $kind, and '
+          'recovering, sends the Core nothing', (tester) async {
+        final module = MitmModule(
+          id: 31,
+          name: 'Hosts',
+          lastUpdateTime: DateTime(2026),
+        );
+        final rows = StreamController<List<MitmModule>>.broadcast();
+        addTearDown(rows.close);
+        final coreInterface = _coreInterface();
+        when(() => coreInterface.disableMitm()).thenAnswer((_) async {});
+        when(() => coreInterface.updateMitm(any())).thenAnswer((_) async {});
+        late ProviderContainer container;
+        Future<void> settle() => tester.runAsync(() async {
+          for (var i = 0; i < 10; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 20));
+            await tester.pump();
+          }
+        });
+        await tester.runAsync(() async {
+          File(join(await appPath.mitmModulesDirPath, module.fileName))
+            ..createSync(recursive: true)
+            ..writeAsStringSync('[MITM]\nhostname = %APPEND% m.example\n');
+        });
+        container = await _pumpCoreManager(
+          tester,
+          coreInterface,
+          readModuleRules: true,
+          overrides: [
+            mitmModulesProvider.overrideWith(() => _LiveMitmModules(rows)),
+          ],
+        );
+        container.listen(enabledMitmModuleRulesProvider, (_, _) {});
+        setMitm(container, true);
+        container.read(coreStatusProvider.notifier).value =
+            CoreStatus.connected;
+        await settle();
+        rows.add([module]);
+        await settle();
+        final before = container.read(mitmSetupProvider);
+        expect(before?['hostname'], contains('m.example'));
+        clearInteractions(coreInterface);
+
+        // What the database's live read reports when a later query fails.
+        rows.addError(failure);
+        await settle();
+        // Riverpod reads a retried exception again at once, still failed.
+        expect(container.read(mitmModulesProvider).hasError, isTrue);
+        expect(container.read(mitmSetupProvider), equals(before));
+
+        rows.add([module]);
+        await settle();
+        expect(container.read(mitmModulesProvider).hasError, isFalse);
+        expect(container.read(mitmSetupProvider), equals(before));
+        verifyNever(() => coreInterface.updateMitm(any()));
+        verifyNever(() => coreInterface.disableMitm());
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
 
     testWidgets('turning it off is sent as an empty setup', (tester) async {
       final coreInterface = _coreInterface();
@@ -879,4 +947,14 @@ void main() {
       },
     );
   });
+}
+
+/// Modules as the database's live read reports them, rows and errors alike.
+class _LiveMitmModules extends MitmModules {
+  _LiveMitmModules(this.rows);
+
+  final StreamController<List<MitmModule>> rows;
+
+  @override
+  Stream<List<MitmModule>> build() => rows.stream;
 }

@@ -730,6 +730,62 @@ void main() {
       await teardownView(tester);
     });
 
+    testWidgets('polling waits while a retry reads, then carries on', (
+      tester,
+    ) async {
+      reader = () async => [_tracker(id: 'a', host: 'alpha.test')];
+      await pumpAnnounced(tester);
+      await nextPoll(tester);
+      reader = () async => throw StateError('down');
+      await nextPoll(tester);
+      expect(banner(), findsOneWidget);
+
+      final pending = Completer<List<TrackerInfo>>();
+      reader = () => pending.future;
+      final before = reads;
+      await tester.tap(retryButton());
+      await tester.pump();
+      for (var tick = 0; tick < 3; tick++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      expect(reads, before + 1);
+
+      pending.complete([_tracker(id: 'a', host: 'alpha.test')]);
+      await tester.pump();
+      await tester.pump(commonDuration);
+      expect(banner(), findsNothing);
+      reader = () async => [_tracker(id: 'a', host: 'alpha.test')];
+      await nextPoll(tester);
+      expect(reads, greaterThan(before + 1));
+      expect(tester.takeException(), null);
+
+      await teardownView(tester);
+    });
+
+    testWidgets('a read that fails after the page is gone touches nothing', (
+      tester,
+    ) async {
+      reader = () async => [_tracker(id: 'a', host: 'alpha.test')];
+      await pumpAnnounced(tester);
+      await nextPoll(tester);
+
+      final pending = Completer<List<TrackerInfo>>();
+      reader = () => pending.future;
+      await tester.pump(const Duration(seconds: 1));
+      await teardownView(tester);
+      // Polling swallows what a poll throws, saying so in the log.
+      final printed = <String>[];
+      final print = debugPrint;
+      debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+      addTearDown(() => debugPrint = print);
+      pending.completeError(StateError('down'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      debugPrint = print;
+      expect(printed.where((line) => line.contains('poll error')), isEmpty);
+      expect(tester.takeException(), null);
+    });
+
     testWidgets('a failure after an empty read keeps the empty state under '
         'the hint', (tester) async {
       final l10n = currentAppLocalizations;

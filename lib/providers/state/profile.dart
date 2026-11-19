@@ -45,11 +45,22 @@ Future<ClashConfig?> scriptOutbounds(Ref ref, int profileId) async {
   if (scriptId == null) {
     return null;
   }
-  final script = await ref.watch(
-    scriptsProvider.selectAsync(
-      (scripts) => scripts.firstWhereOrNull((item) => item.id == scriptId),
+  // The script as the list last read it: a later read of the list failing
+  // keeps it, so a database error is never taken for the script failing.
+  final (:loaded, :script) = ref.watch(
+    scriptsProvider.select(
+      (state) => (
+        loaded: state.hasValue,
+        script: state.value?.firstWhereOrNull((item) => item.id == scriptId),
+      ),
     ),
   );
+  if (!loaded) {
+    // Not read yet: the first read decides, a failed one included. Its rows
+    // arriving rebuild this through the select above.
+    await ref.read(scriptsProvider.future);
+    return null;
+  }
   final content = await script?.content;
   if (content == null || content.isEmpty) {
     return null;

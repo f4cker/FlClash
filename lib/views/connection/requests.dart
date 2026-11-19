@@ -357,6 +357,10 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
 
   @override
   Future<void> poll(PollGuard isCurrent) async {
+    // A retry in flight is this tick's read; one beside it would only race.
+    if (_retrying) {
+      return;
+    }
     final read = await _readConnections();
     if (!isCurrent()) {
       return;
@@ -372,8 +376,8 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
     _showConnections(read);
   }
 
-  /// One read on top of the polling, which carries on as it was; the newer of
-  /// the two still wins.
+  /// One read now; polling skips its ticks until it is done, and of it and a
+  /// poll already under way the newer read still wins.
   Future<void> _retry() async {
     if (_retrying) {
       return;
@@ -407,6 +411,9 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       _ranking = ranked.ranking;
       return _ConnectionsRead(ranked.trackerInfos);
     } catch (error) {
+      if (!mounted) {
+        return null;
+      }
       commonPrint.log(
         'updateConnections error: $error',
         logLevel: coreFailureLogLevel(error),
