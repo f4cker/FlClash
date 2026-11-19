@@ -253,12 +253,32 @@ final class _MacHelperRelay {
   /// started).
   DateTime lastOk;
 
+  int emptyReceives = 0;
+  Timer? _pauseTimer;
+  Completer<void>? _pause;
+
   _MacHelperRelay(this.session, this.lastOk);
+
+  Future<void> pause(Duration delay) {
+    wake();
+    final pause = _pause = Completer<void>();
+    _pauseTimer = Timer(delay, wake);
+    return pause.future;
+  }
+
+  void wake() {
+    _pauseTimer?.cancel();
+    _pauseTimer = null;
+    final pause = _pause;
+    _pause = null;
+    pause?.complete();
+  }
 
   void invalidate() {
     active = false;
     frames.clear();
     queuedBytes = 0;
+    wake();
   }
 }
 
@@ -273,6 +293,8 @@ final class MacHelperStatus {
 final class MacHelperClient {
   static const _maxQueuedFrames = 256;
   static const _relayDelay = Duration(milliseconds: 16);
+  // Core gives a MITM sign request 500 ms (mitmConnectionLeafWait).
+  static const _relayIdleDelayMax = Duration(milliseconds: 250);
 
   /// Answers that say nothing about the Core: the bridge got no (verifiable)
   /// reply, or it is reconnecting. The relay is retried with the same
@@ -294,6 +316,7 @@ final class MacHelperClient {
   final Duration _relayFailureWindow;
   final Duration _relayLostAfter;
   final Duration _relayRetryDelay;
+  final Duration _relayWait;
   final DateTime Function() _now;
   final _events = StreamController<MacHelperEvent>.broadcast();
   String? _session;
@@ -333,6 +356,7 @@ final class MacHelperClient {
     Duration relayFailureWindow = const Duration(seconds: 10),
     Duration relayLostAfter = const Duration(seconds: 12),
     Duration relayRetryDelay = const Duration(milliseconds: 250),
+    Duration relayWait = const Duration(seconds: 3),
     DateTime Function()? now,
   }) : assert(backpressureRetries >= 0),
        assert(maxRelayFailures >= 1),
@@ -343,6 +367,7 @@ final class MacHelperClient {
        _relayFailureWindow = relayFailureWindow,
        _relayLostAfter = relayLostAfter,
        _relayRetryDelay = relayRetryDelay,
+       _relayWait = relayWait,
        _now = now ?? DateTime.now;
 
   Stream<MacHelperEvent> get events => _events.stream;
@@ -709,10 +734,12 @@ final class MacHelperClient {
   Future<void> _receive(_MacHelperRelay relay) async {
     while (_isLive(relay)) {
       final sent = _now();
+      final elapsed = Stopwatch()..start();
       try {
         final result = await _invokeWithBackpressure('receive', {
           'session': relay.session,
           'ack': relay.received,
+          'wait': _relayWait.inMilliseconds,
         }, () => _isLive(relay));
         if (!_isLive(relay)) return;
         if (result['code'] != 'ok') {
@@ -738,14 +765,23 @@ final class MacHelperClient {
           _events.add(MacHelperFrame(frame));
           if (!_isLive(relay)) return;
         }
-        // Polls again at once only while frames keep coming.
-        if (relay.received == before) {
-          await Future<void>.delayed(_relayDelay);
+        if (relay.received != before) {
+          relay.emptyReceives = 0;
+          continue;
         }
+        // A daemon from before `wait` answers at once instead of holding:
+        // back off until a frame arrives or a request is sent.
+        final pause = _idleDelay(relay.emptyReceives++) - elapsed.elapsed;
+        if (pause > Duration.zero) await relay.pause(pause);
       } catch (error) {
         if (!await _relayFailed(relay, 'receive', error, sent)) return;
       }
     }
+  }
+
+  static Duration _idleDelay(int idle) {
+    final delay = _relayDelay * (1 << (idle < 5 ? idle : 5));
+    return delay < _relayIdleDelayMax ? delay : _relayIdleDelayMax;
   }
 
   void send(List<int> frame) {
@@ -765,6 +801,8 @@ final class MacHelperClient {
     final copy = Uint8List.fromList(frame);
     relay.frames.addLast(copy);
     relay.queuedBytes += copy.length;
+    relay.emptyReceives = 0;
+    relay.wake();
     if (!_sending) unawaited(_send());
   }
 
