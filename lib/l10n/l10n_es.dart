@@ -8727,4 +8727,68 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get installedBetaBadge => 'La versión instalada es beta';
+
+  @override
+  String get updatingResources => 'Actualizando';
+
+  @override
+  String updatingResourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos actualizándose',
+      one: '1 elemento actualizándose',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos',
+      one: '1 elemento',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusUpdateDownload(String percent) {
+    return 'descarga de la actualización $percent';
+  }
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'Versión actual $version';
+  }
+
+  @override
+  String updateNewVersion(String version) {
+    return 'Nueva versión $version';
+  }
+
+  @override
+  String get macHelperRegisterTitle => 'Registrar el asistente';
+
+  @override
+  String get macHelperRegisterDetail =>
+      'El asistente aún no está registrado. Pulsa Registrar para continuar.';
+
+  @override
+  String get macHelperRegisterAction => 'Registrar';
+
+  @override
+  String get macHelperAwaitingApprovalDetail =>
+      'Permite que Flash se ejecute en segundo plano en Ajustes del Sistema.';
+
+  @override
+  String get macHelperDisabledByUserDetail =>
+      'El permiso de Flash para ejecutarse en segundo plano está desactivado. Permite que Flash se ejecute en segundo plano en Ajustes del Sistema.';
+
+  @override
+  String get macHelperUnavailableTitle => 'Asistente no disponible';
+
+  @override
+  String get macHelperViewSteps => 'Ver pasos';
 }

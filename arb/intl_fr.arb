@@ -3617,5 +3617,18 @@
   "receiveBetaUpdatesDescription": "Vérifie aussi les versions bêta ; désactiver ne rétrograde pas l’application.",
   "betaUpdateCheckIncomplete": "Vérification bêta incomplète. Les mises à jour vérifiées restent disponibles.",
   "updateNoNewerStable": "Aucune version stable plus récente.",
-  "installedBetaBadge": "La version installée est une bêta"
+  "installedBetaBadge": "La version installée est une bêta",
+  "updatingResources": "Mise à jour",
+  "updatingResourcesCount": "{count, plural, =1{1 élément en cours de mise à jour} other{{count} éléments en cours de mise à jour}}",
+  "liveStatusItems": "{count, plural, =1{1 élément} other{{count} éléments}}",
+  "liveStatusUpdateDownload": "téléchargement de la mise à jour {percent}",
+  "updateCurrentVersion": "Version actuelle {version}",
+  "updateNewVersion": "Nouvelle version {version}",
+  "macHelperRegisterTitle": "Enregistrer l’assistant",
+  "macHelperRegisterDetail": "L’assistant n’est pas encore enregistré. Cliquez sur Enregistrer pour continuer.",
+  "macHelperRegisterAction": "Enregistrer",
+  "macHelperAwaitingApprovalDetail": "Autorisez Flash à s’exécuter en arrière-plan dans Réglages Système.",
+  "macHelperDisabledByUserDetail": "L’autorisation de Flash à s’exécuter en arrière-plan est désactivée. Autorisez Flash à s’exécuter en arrière-plan dans Réglages Système.",
+  "macHelperUnavailableTitle": "Assistant indisponible",
+  "macHelperViewSteps": "Voir les étapes"
 }

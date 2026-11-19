@@ -78,11 +78,7 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
             ? appLocalizations.editDashboard
             : appLocalizations.dashboard,
         actions: [
-          if (!editing)
-            const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [MacHelperBarStatus(), LiveStatusButton()],
-            ),
+          if (!editing) const LiveStatusButton(),
           if (editable && !editing)
             AppBarActionButton(
               data: IconButtonData(

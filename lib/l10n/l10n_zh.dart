@@ -7975,4 +7975,64 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get installedBetaBadge => '当前安装的是测试版';
+
+  @override
+  String get updatingResources => '正在更新';
+
+  @override
+  String updatingResourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 项正在更新',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusUpdateDownload(String percent) {
+    return '更新下载 $percent';
+  }
+
+  @override
+  String updateCurrentVersion(String version) {
+    return '当前版本 $version';
+  }
+
+  @override
+  String updateNewVersion(String version) {
+    return '新版本 $version';
+  }
+
+  @override
+  String get macHelperRegisterTitle => '登记辅助程序';
+
+  @override
+  String get macHelperRegisterDetail => '辅助程序尚未登记。点按“登记”继续。';
+
+  @override
+  String get macHelperRegisterAction => '登记';
+
+  @override
+  String get macHelperAwaitingApprovalDetail => '请在系统设置中允许 Flash 在后台运行';
+
+  @override
+  String get macHelperDisabledByUserDetail =>
+      'Flash 的后台运行权限已关闭。请在系统设置中允许 Flash 在后台运行。';
+
+  @override
+  String get macHelperUnavailableTitle => '辅助程序暂不可用';
+
+  @override
+  String get macHelperViewSteps => '查看步骤';
 }

@@ -8728,4 +8728,68 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get installedBetaBadge => 'La version installée est une bêta';
+
+  @override
+  String get updatingResources => 'Mise à jour';
+
+  @override
+  String updatingResourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments en cours de mise à jour',
+      one: '1 élément en cours de mise à jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments',
+      one: '1 élément',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusUpdateDownload(String percent) {
+    return 'téléchargement de la mise à jour $percent';
+  }
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'Version actuelle $version';
+  }
+
+  @override
+  String updateNewVersion(String version) {
+    return 'Nouvelle version $version';
+  }
+
+  @override
+  String get macHelperRegisterTitle => 'Enregistrer l’assistant';
+
+  @override
+  String get macHelperRegisterDetail =>
+      'L’assistant n’est pas encore enregistré. Cliquez sur Enregistrer pour continuer.';
+
+  @override
+  String get macHelperRegisterAction => 'Enregistrer';
+
+  @override
+  String get macHelperAwaitingApprovalDetail =>
+      'Autorisez Flash à s’exécuter en arrière-plan dans Réglages Système.';
+
+  @override
+  String get macHelperDisabledByUserDetail =>
+      'L’autorisation de Flash à s’exécuter en arrière-plan est désactivée. Autorisez Flash à s’exécuter en arrière-plan dans Réglages Système.';
+
+  @override
+  String get macHelperUnavailableTitle => 'Assistant indisponible';
+
+  @override
+  String get macHelperViewSteps => 'Voir les étapes';
 }

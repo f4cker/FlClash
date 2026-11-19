@@ -8535,4 +8535,65 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get installedBetaBadge => '설치된 버전은 베타입니다';
+
+  @override
+  String get updatingResources => '업데이트 중';
+
+  @override
+  String updatingResourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count개 업데이트 중',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count개 항목',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusUpdateDownload(String percent) {
+    return '업데이트 다운로드 $percent';
+  }
+
+  @override
+  String updateCurrentVersion(String version) {
+    return '현재 버전 $version';
+  }
+
+  @override
+  String updateNewVersion(String version) {
+    return '새 버전 $version';
+  }
+
+  @override
+  String get macHelperRegisterTitle => '헬퍼 등록';
+
+  @override
+  String get macHelperRegisterDetail => '헬퍼가 아직 등록되지 않았습니다. 계속하려면 ‘등록’을 클릭하세요.';
+
+  @override
+  String get macHelperRegisterAction => '등록';
+
+  @override
+  String get macHelperAwaitingApprovalDetail =>
+      '시스템 설정에서 Flash가 백그라운드에서 실행되도록 허용하세요.';
+
+  @override
+  String get macHelperDisabledByUserDetail =>
+      'Flash의 백그라운드 실행 권한이 꺼져 있습니다. 시스템 설정에서 Flash가 백그라운드에서 실행되도록 허용하세요.';
+
+  @override
+  String get macHelperUnavailableTitle => '헬퍼를 사용할 수 없음';
+
+  @override
+  String get macHelperViewSteps => '단계 보기';
 }

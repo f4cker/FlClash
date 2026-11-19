@@ -928,7 +928,7 @@ void main() {
     );
     expect(
       macHelperCardKind(MacHelperState.disabledByUser, false),
-      MacHelperCardKind.approval,
+      MacHelperCardKind.disabledByUser,
     );
     for (final state in [
       MacHelperState.registrationStale,

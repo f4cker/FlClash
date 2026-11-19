@@ -8459,4 +8459,65 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get installedBetaBadge => 'インストール済みのバージョンはベータ版です';
+
+  @override
+  String get updatingResources => '更新中';
+
+  @override
+  String updatingResourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件を更新中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusUpdateDownload(String percent) {
+    return 'アップデートのダウンロード $percent';
+  }
+
+  @override
+  String updateCurrentVersion(String version) {
+    return '現在のバージョン $version';
+  }
+
+  @override
+  String updateNewVersion(String version) {
+    return '新しいバージョン $version';
+  }
+
+  @override
+  String get macHelperRegisterTitle => 'ヘルパーを登録';
+
+  @override
+  String get macHelperRegisterDetail => 'ヘルパーはまだ登録されていません。「登録」をクリックして続行してください。';
+
+  @override
+  String get macHelperRegisterAction => '登録';
+
+  @override
+  String get macHelperAwaitingApprovalDetail =>
+      'システム設定で Flash のバックグラウンド実行を許可してください。';
+
+  @override
+  String get macHelperDisabledByUserDetail =>
+      'Flash のバックグラウンド実行の許可がオフになっています。システム設定で Flash のバックグラウンド実行を許可してください。';
+
+  @override
+  String get macHelperUnavailableTitle => 'ヘルパーを利用できません';
+
+  @override
+  String get macHelperViewSteps => '手順を表示';
 }

@@ -1,20 +1,24 @@
+// The macOS helper inside the live status deck: one card while it is not
+// ready, its actions through the shared dispatch, and the feature gate that
+// opens the deck on it.
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
+import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
-import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/macos_helper.dart';
 import 'package:fl_clash/views/dashboard/widgets/live_status.dart';
-import 'package:fl_clash/views/dashboard/widgets/mac_helper_status.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/desktop/macos_helper_install_test.dart'
     show InstallNative, makeMaintenance;
@@ -35,6 +39,9 @@ class _SessionNative extends InstallNative {
   };
 }
 
+HelperLiveStatus _helperCard(MacHelperCardKind kind) =>
+    HelperLiveStatus(MacHelperCardView(kind: kind, title: kind.name));
+
 void main() {
   late ProviderContainer container;
   late InstallNative native;
@@ -46,6 +53,12 @@ void main() {
     container.read(viewSizeProvider.notifier).value = const Size(1200, 800);
     container.listen(patchClashConfigProvider, (_, _) {});
     container.listen(networkSettingProvider, (_, _) {});
+    globalState.packageInfo = PackageInfo(
+      appName: 'Flash',
+      packageName: 'com.layoute.flash',
+      version: '1.0.0-beta.2',
+      buildNumber: '2026111904',
+    );
     native = InstallNative();
     flow = makeMaintenance(native);
   });
@@ -55,29 +68,34 @@ void main() {
     container.dispose();
   });
 
+  Future<void> settle(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+  }
+
   Future<void> pumpStatus(
     WidgetTester tester, {
     Locale locale = const Locale('en'),
     double scale = 1,
-    bool settle = true,
+    Size size = const Size(1200, 800),
   }) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
         child: TestApp(
           locale: locale,
           child: MediaQuery(
-            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            data: MediaQueryData(
+              size: size,
+              textScaler: TextScaler.linear(scale),
+            ),
             child: Scaffold(
               title: 'Dashboard',
               actions: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    MacHelperBarStatus(maintenance: flow, version: '1.2.3 (4)'),
-                    LiveStatusButton(separateCore: true, maintenance: flow),
-                  ],
-                ),
+                LiveStatusButton(separateCore: true, maintenance: flow),
               ],
               body: const SizedBox.expand(),
             ),
@@ -85,109 +103,437 @@ void main() {
         ),
       ),
     );
-    if (settle) {
-      await tester.pumpAndSettle();
-    } else {
-      await tester.pump();
-    }
+    await settle(tester);
   }
 
-  /// Opens the popover under the capsule, as a click does.
-  Future<void> openPopover(WidgetTester tester, {bool settle = true}) async {
-    await tester.tap(find.byType(MacHelperCapsule));
-    if (settle) {
-      await tester.pumpAndSettle();
-    } else {
-      await tester.pump();
-    }
-    expect(find.byType(MacHelperPopover), findsOneWidget);
-  }
+  Finder entry() => find.byType(LiveStatusButton);
 
-  /// The helper is ready: its bar button is the round green one.
-  void expectReadyButton(WidgetTester tester) {
-    final capsule = tester.widget<MacHelperCapsule>(
-      find.byType(MacHelperCapsule),
+  Future<void> openDeck(WidgetTester tester) async {
+    await tester.tap(
+      find.descendant(of: entry(), matching: find.byType(Tooltip)).first,
     );
-    expect(capsule.view.isReady, isTrue);
-    final rect = tester.getRect(find.byType(MacHelperCapsule));
-    expect(rect.width, rect.height);
-    expect(
-      find.bySemanticsLabel(currentAppLocalizations.macHelperOn),
-      findsOneWidget,
-    );
+    await settle(tester);
   }
 
-  /// Clears the start-up wait timers before the test ends.
+  Finder front(String text) => find.text(text).hitTestable();
+
+  Finder label(String text) => find.byWidgetPredicate(
+    (widget) => widget is Semantics && widget.properties.label == text,
+  );
+
   Future<void> settleReady(WidgetTester tester) async {
     native.state = 'enabled';
     await flow.recheck();
-    await tester.pumpAndSettle();
+    await settle(tester);
   }
 
-  for (final locale in [const Locale('en'), const Locale('zh', 'CN')]) {
-    testWidgets('migration card explains the update in $locale', (
-      tester,
-    ) async {
-      await flow.check();
-      await pumpStatus(tester, locale: locale);
-      final l = currentAppLocalizations;
-      expect(find.text(l.macHelperBarUpdate), findsOneWidget);
-      expect(find.text(l.macHelperMigrationTitle), findsNothing);
-      await openPopover(tester);
-      expect(find.text(l.macHelperMigrationTitle), findsOneWidget);
-      expect(find.text(l.macHelperMigrationDetail), findsOneWidget);
-      expect(find.text(l.macHelperMigrationAction), findsOneWidget);
-      expect(find.byType(MacHelperDialog), findsNothing);
-      expect(native.calls, ['status']);
-      expect(tester.takeException(), isNull);
+  group('ordering and count', () {
+    test('initial order: helper, core fault, update, resources, MITM', () {
+      final statuses = composeLiveStatuses(
+        core: CoreStatus.disconnected,
+        separateCore: true,
+        download: const UpdateReady('v1', ''),
+        resources: const [(name: 'GEOIP', isProfile: false)],
+        awaitingConsent: const ['Ads'],
+        helper: _helperCard(MacHelperCardKind.notReady),
+      );
+      expect(
+        [for (final status in statuses) status.runtimeType],
+        [
+          HelperLiveStatus,
+          CoreLiveStatus,
+          UpdateStatus,
+          ResourcesStatus,
+          MitmConsentStatus,
+        ],
+      );
+      expect(statuses.where(countsInLiveStatus), hasLength(5));
     });
-  }
 
-  test('zh copy matches the reviewed wording', () {
-    final zh = lookupAppLocalizations(const Locale('zh'));
-    expect(zh.macHelperVersionLine('1.2.3'), '版本 1.2.3');
-    expect(zh.macHelperWaitingCore, '等待辅助程序');
-    expect(
-      zh.macHelperAllowInSettings,
-      '请在系统设置的“登录项与扩展”里，把 Flash 的开关关掉再打开，然后返回 Flash。',
+    test('an update downloading follows the helper and the core fault', () {
+      final statuses = composeLiveStatuses(
+        core: CoreStatus.connecting,
+        separateCore: true,
+        download: const UpdateDownloading('v1', received: 41, total: 100),
+        helper: _helperCard(MacHelperCardKind.approval),
+      );
+      expect(
+        [for (final status in statuses) status.runtimeType],
+        [HelperLiveStatus, CoreLiveStatus, UpdateStatus],
+      );
+    });
+
+    test('a running core comes last and is not counted', () {
+      final statuses = composeLiveStatuses(
+        core: CoreStatus.connected,
+        separateCore: true,
+        awaitingConsent: const ['Ads'],
+      );
+      expect(statuses.last, isA<CoreLiveStatus>());
+      expect(statuses.where(countsInLiveStatus), hasLength(1));
+    });
+
+    test('a core stopped only for the helper is not a card of its own', () {
+      final statuses = composeLiveStatuses(
+        core: CoreStatus.disconnected,
+        separateCore: true,
+        helper: _helperCard(MacHelperCardKind.approval),
+        coreWaitsForHelper: true,
+      );
+      expect(statuses, hasLength(1));
+      expect(statuses.single, isA<HelperLiveStatus>());
+    });
+
+    test('update, resources and MITM cards are never hidden', () {
+      final statuses = composeLiveStatuses(
+        core: CoreStatus.disconnected,
+        separateCore: true,
+        download: const UpdateDownloading('v1', received: 1, total: 2),
+        resources: const [
+          (name: 'a', isProfile: true),
+          (name: 'b', isProfile: false),
+        ],
+        awaitingConsent: const ['Ads', 'Scripts'],
+        helper: _helperCard(MacHelperCardKind.starting),
+        coreWaitsForHelper: true,
+        coreUnknown: true,
+      );
+      expect(
+        [for (final status in statuses) status.runtimeType],
+        [HelperLiveStatus, UpdateStatus, ResourcesStatus, MitmConsentStatus],
+      );
+      // Many resources are one card; its rows count inside it.
+      expect(statuses.whereType<ResourcesStatus>().single.items, hasLength(2));
+    });
+
+    test('ready, unchecked and a routine re-check add no card', () async {
+      final l = lookupAppLocalizations(const Locale('en'));
+      // Not checked yet.
+      expect(macHelperLiveState(l, flow, independentStop: false).card, isNull);
+      native.state = 'enabled';
+      await flow.check();
+      expect(macHelperLiveState(l, flow, independentStop: false).card, isNull);
+      // A routine re-check of a ready helper does not flicker into a card.
+      native.pendingStatus = Completer();
+      final checking = flow.check();
+      expect(flow.routineCheck, isTrue);
+      final state = macHelperLiveState(l, flow, independentStop: false);
+      expect(state.card, isNull);
+      expect(state.coreWaitsForHelper, isFalse);
+      native.pendingStatus!.complete({'code': 'enabled'});
+      await checking;
+    });
+
+    test(
+      'any other state is one card; an independent stop still shows',
+      () async {
+        final l = lookupAppLocalizations(const Locale('en'));
+        native.state = 'notRegistered';
+        await flow.check();
+        final waiting = macHelperLiveState(l, flow, independentStop: false);
+        expect(waiting.card, isNotNull);
+        expect(waiting.coreWaitsForHelper, isTrue);
+        final crashed = macHelperLiveState(l, flow, independentStop: true);
+        expect(crashed.coreWaitsForHelper, isFalse);
+      },
     );
-    expect(zh.macHelperNotReadyTitle, '辅助程序暂未就绪');
-    for (final text in [
-      zh.macHelperAllowInSettings,
-      zh.macHelperApprovalStep3,
-      zh.macHelperNotReadyTitle,
-      zh.macHelperRegistrationFailedDetail,
-      zh.macHelperStaleCoreDetail,
-      zh.macHelperStatusUnreadable,
-    ]) {
-      expect(text, isNot(contains('重启')));
-      expect(text, isNot(contains('重新安装')));
-    }
-    expect(
-      lookupAppLocalizations(const Locale('en')).macHelperWaitingCore,
-      'Waiting for helper',
-    );
-    expect(zh.macHelperBarUpdate, '更新辅助程序');
-    expect(zh.macHelperBarAllow, '允许辅助程序');
-    expect(zh.macHelperBarStarting, '正在启动…');
-    expect(zh.macHelperBarNotReady, '辅助程序未就绪');
-    expect(zh.macHelperBarFailedCheck, '辅助程序未通过检查');
-    final en = lookupAppLocalizations(const Locale('en'));
-    expect(en.macHelperBarUpdate, 'Update helper');
-    expect(en.macHelperBarAllow, 'Allow helper');
-    expect(en.macHelperBarStarting, 'Starting…');
-    expect(en.macHelperBarNotReady, 'Helper not ready');
-    expect(en.macHelperBarFailedCheck, 'Helper failed check');
-    expect(zh.macHelperTitle, '辅助程序');
-    expect(zh.macHelperOn, '辅助程序已就绪');
-    expect(zh.macHelperSignatureTitle, '辅助程序未通过安全检查');
-    expect(zh.macHelperRequiredTitle, '请先启用辅助程序');
-    expect(zh.macHelperViewSetup, '查看设置');
-    expect(zh.macHelperFailedTitle, '辅助程序更新未完成');
-    expect(zh.macHelperStartSlowTitle, '辅助程序启动时间较长');
   });
 
-  testWidgets('migration shows progress, then ready, and never starts Core', (
+  group('actions follow the card model', () {
+    final l = lookupAppLocalizations(const Locale('en'));
+
+    // Native code → (primary, secondary) on the card.
+    const expected = <String, (MacHelperCardAction?, MacHelperCardAction?)>{
+      'notRegistered': (
+        MacHelperCardAction.register,
+        MacHelperCardAction.viewSteps,
+      ),
+      'requiresApproval': (
+        MacHelperCardAction.openSettings,
+        MacHelperCardAction.viewSteps,
+      ),
+      'migrationRequired': (MacHelperCardAction.migrate, null),
+      'migrationIncomplete': (
+        MacHelperCardAction.retry,
+        MacHelperCardAction.viewDetails,
+      ),
+      'helperNotReady': (
+        MacHelperCardAction.recover,
+        MacHelperCardAction.viewDetails,
+      ),
+      'staleCoreUnconfirmed': (
+        MacHelperCardAction.recover,
+        MacHelperCardAction.viewDetails,
+      ),
+      // Unknown never reads as ready: a neutral re-check.
+      'garbage': (MacHelperCardAction.recheck, MacHelperCardAction.viewDetails),
+      'signingRequired': (null, MacHelperCardAction.viewDetails),
+      'notFound': (null, MacHelperCardAction.viewDetails),
+      'incompatible': (null, MacHelperCardAction.viewDetails),
+      'moveRequired': (null, null),
+      'unsupported': (null, null),
+      'launcherCheckFailed': (null, MacHelperCardAction.viewDetails),
+      'launcherDowngrade': (null, MacHelperCardAction.viewDetails),
+      'launcherFailed': (null, MacHelperCardAction.viewDetails),
+    };
+    for (final MapEntry(key: code, value: (primary, secondary))
+        in expected.entries) {
+      test(code, () async {
+        native.state = code;
+        await flow.check();
+        final view = macHelperCardView(l, flow);
+        expect(view.primary, primary, reason: '${view.kind}');
+        expect(view.secondary, secondary, reason: '${view.kind}');
+      });
+    }
+
+    test('disabled by user says so and opens System Settings', () async {
+      native.statusAnswer = {
+        'code': 'requiresApproval',
+        'previouslyEnabled': true,
+      };
+      await flow.check();
+      final view = macHelperCardView(l, flow);
+      expect(view.kind, MacHelperCardKind.disabledByUser);
+      expect(view.detail, l.macHelperDisabledByUserDetail);
+      expect(view.primary, MacHelperCardAction.openSettings);
+      expect(view.secondary, MacHelperCardAction.viewSteps);
+    });
+
+    test('awaiting approval never says the permission is off', () async {
+      native.state = 'requiresApproval';
+      await flow.check();
+      final zh = lookupAppLocalizations(const Locale('zh'));
+      final view = macHelperCardView(zh, flow);
+      expect(view.detail, isNot(contains('已关闭')));
+    });
+
+    test('every card kind has a tone, and none of them is ready', () {
+      for (final kind in MacHelperCardKind.values) {
+        final (_, tone) = macHelperBarKindOf(kind);
+        expect(
+          tone == MacHelperBarTone.ready,
+          kind == MacHelperCardKind.ready,
+          reason: '$kind',
+        );
+      }
+    });
+
+    test('an unchecked helper reads as checking, with nothing to run', () {
+      final view = macHelperCardView(l, flow);
+      expect(view.progress, l.macHelperChecking);
+      expect(view.primary, isNull);
+    });
+
+    test('register and open settings register, then open Settings', () async {
+      native.state = 'notRegistered';
+      await flow.check();
+      runMacHelperAction(flow, MacHelperCardAction.register);
+      await pumpEventQueue();
+      expect(native.calls, ['status', 'enable', 'openApprovalSettings']);
+    });
+
+    test('retry resumes the update, never the generic recovery', () async {
+      var recoveries = 0;
+      flow.dispose();
+      flow = MacHelperMaintenance(
+        MacHelperClient(native: native, safeMode: () => false),
+        stop: () async => const CoreLifecycleResult(
+          revision: 1,
+          outcome: CoreLifecycleOutcome.applied,
+        ),
+        recover: () async {
+          recoveries++;
+          return MacHelperState.enabled;
+        },
+        startPoll: const Duration(hours: 1),
+        startTimeout: const Duration(hours: 1),
+      );
+      native.state = 'migrationIncomplete';
+      await flow.check();
+      runMacHelperAction(flow, MacHelperCardAction.retry);
+      await pumpEventQueue();
+      expect(native.calls, ['status', 'migrate']);
+      expect(recoveries, 0);
+      // "Recover" and "Repair" (service not found) run the recovery.
+      native.state = 'helperNotReady';
+      await flow.check();
+      var before = recoveries;
+      runMacHelperAction(flow, MacHelperCardAction.recover);
+      await pumpEventQueue();
+      expect(recoveries, before + 1);
+      native.state = 'serviceNotFound';
+      await flow.check();
+      before = recoveries;
+      runMacHelperAction(flow, MacHelperCardAction.repairRegistration);
+      await pumpEventQueue();
+      expect(recoveries, before + 1);
+    });
+
+    test('nothing runs twice while an operation is in flight', () async {
+      native.pending = Completer();
+      await flow.check();
+      runMacHelperAction(flow, MacHelperCardAction.migrate);
+      runMacHelperAction(flow, MacHelperCardAction.migrate);
+      runMacHelperAction(flow, MacHelperCardAction.recheck);
+      await pumpEventQueue();
+      expect(native.calls, ['status', 'migrate']);
+      native.pending!.complete({'code': 'enabled'});
+      await pumpEventQueue();
+    });
+
+    test('the view actions ask the helper nothing', () async {
+      native.state = 'signingRequired';
+      await flow.check();
+      runMacHelperAction(flow, MacHelperCardAction.viewDetails);
+      runMacHelperAction(flow, MacHelperCardAction.viewSteps);
+      await pumpEventQueue();
+      expect(native.calls, ['status']);
+    });
+  });
+
+  testWidgets('needs registration alone: one card, count 1, steps in place', (
+    tester,
+  ) async {
+    native.state = 'notRegistered';
+    await flow.check();
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    expect(label('${l.macHelperRegisterTitle}, 1 item'), findsOneWidget);
+    // The core stopped only for the helper is not a second card.
+    expect(container.read(coreStatusProvider), CoreStatus.disconnected);
+    await openDeck(tester);
+    expect(front(l.macHelperRegisterTitle), findsOneWidget);
+    expect(front(l.macHelperRegisterDetail), findsOneWidget);
+    expect(front(l.coreStopped), findsNothing);
+    expect(front(l.macHelperRegisterAction), findsOneWidget);
+    // View steps: the details in the deck, with back.
+    await tester.tap(front(l.macHelperViewSteps));
+    await settle(tester);
+    expect(front(l.back), findsNothing); // a tooltip, not text
+    for (final (index, step) in [
+      l.macHelperApprovalStep1,
+      l.macHelperApprovalStep2,
+      l.macHelperApprovalStep3,
+    ].indexed) {
+      expect(front('${index + 1}. $step'), findsOneWidget);
+    }
+    expect(front(l.macHelperViewSteps), findsNothing);
+    // The primary action stays under the details.
+    expect(front(l.macHelperRegisterAction), findsOneWidget);
+    await tester.tap(find.byTooltip(l.back));
+    await settle(tester);
+    expect(front(l.macHelperViewSteps), findsOneWidget);
+    await tester.tap(front(l.macHelperRegisterAction));
+    await settle(tester);
+    expect(native.calls, ['status', 'enable', 'openApprovalSettings']);
+    // Back from System Settings: the status is read again.
+    native.state = 'requiresApproval';
+    flow.resumed();
+    await settle(tester);
+    expect(native.calls.last, 'status');
+    expect(front(l.macHelperApprovalTitle), findsOneWidget);
+    // Approved: the card goes, and with nothing left the deck closes.
+    await settleReady(tester);
+    await settle(tester);
+    expect(find.text(l.macHelperApprovalTitle), findsNothing);
+    expect(front(l.coreStopped), findsOneWidget);
+  });
+
+  testWidgets('the helper and an independent core fault: two cards', (
+    tester,
+  ) async {
+    native.state = 'notRegistered';
+    await flow.check();
+    container.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    container.read(coreStopReasonProvider.notifier).value = 'Core crashed';
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    expect(label('${l.macHelperRegisterTitle}, 2 items'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    await openDeck(tester);
+    expect(front(l.macHelperRegisterTitle), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await settle(tester);
+    expect(front('Core crashed'), findsOneWidget);
+  });
+
+  testWidgets('helper, resources, download 41% and MITM: the % wins', (
+    tester,
+  ) async {
+    native.state = 'migrationIncomplete';
+    await flow.check();
+    container.read(updateDownloadStateProvider.notifier).value =
+        const UpdateDownloading('v1.0.0', received: 41, total: 100);
+    container
+        .read(updatingKeysProvider.notifier)
+        .start(GeoResource.GEOIP.updatingKey);
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    expect(
+      label('${l.macHelperFailedTitle}, 3 items, update download 41%'),
+      findsOneWidget,
+    );
+    expect(find.text('41%'), findsOneWidget);
+    expect(find.text('3'), findsNothing);
+  });
+
+  testWidgets('a state change updates the same card in place', (tester) async {
+    native.state = 'notRegistered';
+    await flow.check();
+    container.read(updateDownloadStateProvider.notifier).value =
+        const UpdateReady('v9', '');
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    await openDeck(tester);
+    expect(front(l.macHelperRegisterTitle), findsOneWidget);
+    native.state = 'signingRequired';
+    await flow.recheck();
+    await settle(tester);
+    // Still the front card, now the security check failure.
+    expect(front(l.macHelperSignatureTitle), findsOneWidget);
+    expect(find.text(l.macHelperRegisterTitle), findsNothing);
+  });
+
+  testWidgets('the open deck keeps its card while others change', (
+    tester,
+  ) async {
+    native.state = 'notRegistered';
+    await flow.check();
+    container.read(updateDownloadStateProvider.notifier).value =
+        const UpdateDownloading('v9', received: 10, total: 100);
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    await openDeck(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await settle(tester);
+    expect(front(l.downloadingUpdate), findsOneWidget);
+    container.read(updateDownloadStateProvider.notifier).value =
+        const UpdateDownloading('v9', received: 60, total: 100);
+    native.state = 'requiresApproval';
+    await flow.recheck();
+    await settle(tester);
+    expect(front(l.downloadingUpdate), findsOneWidget);
+  });
+
+  testWidgets('signature failure: details only, never a bypass', (
+    tester,
+  ) async {
+    native.state = 'signingRequired';
+    await flow.check();
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    await openDeck(tester);
+    expect(front(l.macHelperSignatureTitle), findsOneWidget);
+    expect(find.byType(FilledButton).hitTestable(), findsNothing);
+    await tester.tap(front(l.macHelperViewDetails));
+    await settle(tester);
+    expect(find.textContaining('signingRequired'), findsOneWidget);
+    expect(find.text(l.copy), findsOneWidget);
+    expect(native.calls, ['status']);
+  });
+
+  testWidgets('migration: busy text replaces the button, no second request', (
     tester,
   ) async {
     native.pending = Completer();
@@ -195,259 +541,29 @@ void main() {
     await pumpStatus(tester);
     final l = currentAppLocalizations;
     final saved = container.read(patchClashConfigProvider);
-    final network = container.read(networkSettingProvider);
-    await openPopover(tester);
-    await tester.tap(find.text(l.macHelperMigrationAction));
+    await openDeck(tester);
+    await tester.tap(front(l.macHelperMigrationAction));
     await tester.pump();
     expect(flow.busy, isTrue);
-    expect(find.text(l.macHelperUpdating), findsOneWidget);
+    expect(front(l.macHelperUpdating), findsOneWidget);
     expect(find.text(l.macHelperMigrationAction), findsNothing);
-    expect(find.text(l.macHelperMigrationTitle), findsOneWidget);
+    // Closing the deck does not cancel the operation.
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settle(tester);
+    expect(flow.busy, isTrue);
     native.pending!.complete({'code': 'enabled'});
-    await tester.pumpAndSettle();
-    // Ready: the popover closes and the capsule is gone.
-    expect(find.text(l.macHelperUpdating), findsNothing);
-    expect(find.byType(MacHelperPopover), findsNothing);
-    expectReadyButton(tester);
-    expect(find.text(l.macHelperOn), findsNothing);
-    expect(find.bySemanticsLabel(l.coreStopped), findsOneWidget);
-    expect(container.read(coreStatusProvider), CoreStatus.disconnected);
+    await settle(tester);
+    expect(flow.state, MacHelperState.enabled);
+    expect(native.calls.where((call) => call == 'migrate'), hasLength(1));
+    // Ready never starts the Core nor shows a success dialog.
     expect(container.read(isStartProvider), isFalse);
     expect(container.read(patchClashConfigProvider), saved);
-    expect(container.read(networkSettingProvider), network);
-    expect(native.calls, ['status', 'migrate']);
+    expect(find.byType(MacHelperDialog), findsNothing);
   });
 
-  testWidgets('cancelled administrator prompt keeps the migration card', (
-    tester,
-  ) async {
-    native.migrateAnswer = {'code': 'authorizationCancelled'};
-    await flow.check();
-    await pumpStatus(tester);
-    final l = currentAppLocalizations;
-    await openPopover(tester);
-    await tester.tap(find.text(l.macHelperMigrationAction));
-    await tester.pumpAndSettle();
-    expect(find.text(l.macHelperMigrationTitle), findsOneWidget);
-    expect(find.text(l.macHelperMigrationAction), findsOneWidget);
-    expect(native.calls.where((call) => call == 'migrate'), hasLength(1));
-  });
-
-  testWidgets('failed step is named; details are copyable; retry resumes', (
-    tester,
-  ) async {
-    native.migrateAnswer = {
-      'code': 'migrationFailed',
-      'step': 'removeOld',
-      'detail': 'launchctl bootout: 5',
-    };
-    await flow.check();
-    await pumpStatus(tester);
-    final l = currentAppLocalizations;
-    await openPopover(tester);
-    await tester.tap(find.text(l.macHelperMigrationAction));
-    await tester.pumpAndSettle();
-    // The capsule turns red and the open popover shows the failure.
-    expect(find.text(l.macHelperBarNotReady), findsOneWidget);
-    expect(find.text(l.macHelperFailedTitle), findsOneWidget);
-    expect(find.text(l.macHelperFailedRemoveOld), findsOneWidget);
-    expect(find.text(l.macHelperTryAgain), findsOneWidget);
-    expect(find.textContaining('launchctl bootout: 5'), findsNothing);
-    await tester.tap(find.text(l.macHelperViewDetails));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('launchctl bootout: 5'), findsOneWidget);
-    expect(find.text(l.copy), findsOneWidget);
-    native.migrateAnswer = {'code': 'enabled'};
-    await tester.tap(find.text(l.macHelperTryAgain));
-    await tester.pumpAndSettle();
-    expectReadyButton(tester);
-    expect(find.byType(MacHelperPopover), findsNothing);
-    expect(native.calls.where((call) => call == 'migrate'), hasLength(2));
-  });
-
-  testWidgets('approval lists readable steps and opens settings', (
-    tester,
-  ) async {
-    native.state = 'notRegistered';
-    await flow.check();
-    await pumpStatus(tester);
-    final l = currentAppLocalizations;
-    expect(find.text(l.macHelperBarAllow), findsOneWidget);
-    await openPopover(tester);
-    expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
-    for (final (index, step) in [
-      l.macHelperApprovalStep1,
-      l.macHelperApprovalStep2,
-      l.macHelperApprovalStep3,
-    ].indexed) {
-      expect(find.text('${index + 1}. $step'), findsOneWidget);
-      expect(
-        find.bySemanticsLabel(l.macHelperStepLabel('${index + 1}', step)),
-        findsOneWidget,
-      );
-    }
-    await tester.tap(find.text(l.macHelperOpenSettings));
-    await tester.pumpAndSettle();
-    expect(native.calls, ['status', 'enable', 'openApprovalSettings']);
-    expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
-    // One action only: Flash re-checks by itself on return.
-    expect(find.text(l.macHelperCheckAgain), findsNothing);
-    // Back in the foreground: SMAppService.status is read again and the
-    // short-lived Settings poll ends.
-    flow.resumed();
-    await tester.pumpAndSettle();
-    expect(native.calls.last, 'status');
-  });
-
-  testWidgets('signature failure offers details only, never a bypass', (
-    tester,
-  ) async {
-    native.state = 'signingRequired';
-    await flow.check();
-    await pumpStatus(tester);
-    final l = currentAppLocalizations;
-    expect(find.text(l.macHelperBarFailedCheck), findsOneWidget);
-    await openPopover(tester);
-    expect(find.text(l.macHelperSignatureTitle), findsOneWidget);
-    expect(find.text(l.macHelperSignatureDetail), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(MacHelperPopover),
-        matching: find.byType(FilledButton),
-      ),
-      findsNothing,
-    );
-    expect(find.text(l.macHelperViewDetails), findsOneWidget);
-    await tester.tap(find.text(l.macHelperViewDetails));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('signingRequired'), findsOneWidget);
-    expect(native.calls, ['status']);
-  });
-
-  for (final code in [
-    'launcherCheckFailed',
-    'launcherDowngrade',
-    'launcherFailed',
-  ]) {
-    testWidgets('$code offers details only, never a bypass', (tester) async {
-      native.state = code;
-      await flow.check();
-      await pumpStatus(tester);
-      final l = currentAppLocalizations;
-      await openPopover(tester);
-      expect(
-        find.descendant(
-          of: find.byType(MacHelperPopover),
-          matching: find.byType(FilledButton),
-        ),
-        findsNothing,
-      );
-      expect(find.text(l.macHelperViewDetails), findsOneWidget);
-      await tester.tap(find.text(l.macHelperViewDetails));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('status: $code'), findsOneWidget);
-      expect(native.calls, ['status']);
-    });
-  }
-
-  testWidgets(
-    'approved daemon that does not answer shows starting, no buttons',
-    (tester) async {
-      native.state = 'unavailable';
-      await flow.check();
-      await pumpStatus(tester, settle: false);
-      final l = currentAppLocalizations;
-      // Only a waiting capsule: nothing to open, no buttons.
-      expect(find.text(l.macHelperBarStarting), findsOneWidget);
-      expect(find.byType(ActivityIndicator), findsOneWidget);
-      await tester.tap(find.byType(MacHelperCapsule));
-      await tester.pump();
-      expect(find.byType(MacHelperPopover), findsNothing);
-      expect(find.text(l.macHelperStartingTitle), findsNothing);
-      expect(find.byType(TextButton), findsNothing);
-      await settleReady(tester);
-      expectReadyButton(tester);
-    },
-  );
-
-  const titles = {
-    'migrationRequired': 'macHelperMigrationTitle',
-    'requiresApproval': 'macHelperApprovalTitle',
-    'notRegistered': 'macHelperApprovalTitle',
-    'signingRequired': 'macHelperSignatureTitle',
-    'migrationIncomplete': 'macHelperFailedTitle',
-    'notFound': 'macHelperReinstallTitle',
-    'incompatible': 'macHelperReinstallTitle',
-    'moveRequired': 'macHelperMoveTitle',
-    'unsupported': 'macHelperReinstallTitle',
-    'launcherCheckFailed': 'macHelperLauncherCheckTitle',
-    'launcherDowngrade': 'macHelperLauncherDowngradeTitle',
-    'launcherFailed': 'macHelperLauncherFailedTitle',
-    'garbage': 'macHelperNotReadyTitle',
-  };
-  for (final MapEntry(key: code, value: key) in titles.entries) {
-    testWidgets('$code has a visible reason without side effects', (
-      tester,
-    ) async {
-      native.state = code;
-      await flow.check();
-      await pumpStatus(tester);
-      final l = currentAppLocalizations;
-      expect(find.byType(MacHelperCapsule), findsOneWidget);
-      await openPopover(tester);
-      final title = switch (key) {
-        'macHelperMigrationTitle' => l.macHelperMigrationTitle,
-        'macHelperApprovalTitle' => l.macHelperApprovalTitle,
-        'macHelperSignatureTitle' => l.macHelperSignatureTitle,
-        'macHelperFailedTitle' => l.macHelperFailedTitle,
-        'macHelperReinstallTitle' => l.macHelperReinstallTitle,
-        'macHelperMoveTitle' => l.macHelperMoveTitle,
-        'macHelperNotReadyTitle' => l.macHelperNotReadyTitle,
-        'macHelperLauncherCheckTitle' => l.macHelperLauncherCheckTitle,
-        'macHelperLauncherDowngradeTitle' => l.macHelperLauncherDowngradeTitle,
-        'macHelperLauncherFailedTitle' => l.macHelperLauncherFailedTitle,
-        _ => l.macHelperStartSlowTitle,
-      };
-      expect(find.text(title), findsOneWidget);
-      expect(find.byType(MacHelperDialog), findsNothing);
-      expect(native.calls, ['status']);
-      expect(tester.takeException(), isNull);
-    });
-  }
-
-  testWidgets('disabled by user asks to turn the switch off and on', (
-    tester,
-  ) async {
-    native.statusAnswer = {
-      'code': 'requiresApproval',
-      'previouslyEnabled': true,
-    };
-    await flow.check();
-    await pumpStatus(tester);
-    final l = currentAppLocalizations;
-    expect(find.text(l.macHelperBarAllow), findsOneWidget);
-    await openPopover(tester);
-    expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
-    expect(find.text(l.macHelperAllowInSettings), findsOneWidget);
-    // The capsule and the card title both show the switch, no warning.
-    for (final scope in [MacHelperCapsule, MacHelperPopover]) {
-      final glyph = tester.widget<GlyphIcon>(
-        find
-            .descendant(
-              of: find.byType(scope),
-              matching: find.byType(GlyphIcon),
-            )
-            .first,
-      );
-      expect(glyph.glyph, AppGlyphs.helperDaemonSmall);
-    }
-    expect(find.text(l.macHelperOpenSettings), findsOneWidget);
-    expect(find.text(l.macHelperCheckAgain), findsNothing);
-  });
-
-  testWidgets('feature gate opens the same popover, not a dialog', (
-    tester,
-  ) async {
+  testWidgets('feature gate opens the deck on the helper card', (tester) async {
+    container.read(updateDownloadStateProvider.notifier).value =
+        const UpdateReady('v9', '');
     await flow.check();
     await pumpStatus(tester);
     final l = currentAppLocalizations;
@@ -458,21 +574,17 @@ void main() {
         requiredByFeature: true,
       ).whenComplete(() => closed = true),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(MacHelperDialog), findsNothing);
-    expect(find.byType(MacHelperPopover), findsOneWidget);
-    expect(find.text(l.macHelperRequiredDetail), findsOneWidget);
-    expect(find.text(l.macHelperMigrationTitle), findsOneWidget);
-    expect(find.text(l.macHelperMigrationAction), findsOneWidget);
-    expect(closed, isFalse);
-    // A second request while it is open joins the same popover.
+    expect(front(l.macHelperMigrationTitle), findsOneWidget);
+    expect(find.text(l.macHelperRequiredTitle), findsOneWidget);
+    // A second request while it is open joins the same deck.
     unawaited(showMacHelperFlow(maintenance: flow, requiredByFeature: true));
-    await tester.pumpAndSettle();
-    expect(find.byType(MacHelperPopover), findsOneWidget);
-    // Escape closes it and the gate's future completes; nothing ran.
+    await settle(tester);
+    expect(front(l.macHelperMigrationTitle), findsOneWidget);
+    expect(closed, isFalse);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pumpAndSettle();
-    expect(find.byType(MacHelperPopover), findsNothing);
+    await settle(tester);
     expect(closed, isTrue);
     expect(native.calls, ['status']);
   });
@@ -483,15 +595,14 @@ void main() {
     await flow.check();
     await pumpStatus(tester);
     final l = currentAppLocalizations;
-    // Another page covers the dashboard: its capsule cannot be seen.
     unawaited(
-      Navigator.of(tester.element(find.byType(MacHelperCapsule))).push(
+      Navigator.of(tester.element(entry())).push(
         PageRouteBuilder<void>(
           pageBuilder: (_, _, _) => const SizedBox.expand(),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
     unawaited(
       showMacHelperFlow(
         context: tester.element(find.byType(SizedBox).last),
@@ -499,398 +610,35 @@ void main() {
         requiredByFeature: true,
       ),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(MacHelperDialog), findsOneWidget);
     expect(find.text(l.macHelperRequiredTitle), findsOneWidget);
     await tester.tap(find.text(l.cancel));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(MacHelperDialog), findsNothing);
     expect(native.calls, ['status']);
   });
 
-  testWidgets('tapping outside closes the popover', (tester) async {
-    native.state = 'notRegistered';
-    await flow.check();
-    await pumpStatus(tester);
-    await openPopover(tester);
-    await tester.tapAt(const Offset(20, 500));
-    await tester.pumpAndSettle();
-    expect(find.byType(MacHelperPopover), findsNothing);
-    expect(find.byType(MacHelperCapsule), findsOneWidget);
-  });
-
-  testWidgets('popover is 320 wide, under the capsule, in the window', (
+  testWidgets('a retained Core session is never called stopped', (
     tester,
   ) async {
-    native.state = 'notRegistered';
+    final sessionNative = _SessionNative()..state = 'enabled';
+    flow.dispose();
+    flow = makeMaintenance(sessionNative);
+    const session = '0123456789abcdef0123456789abcdef';
+    await flow.client.start(session);
+    sessionNative.state = 'migrationRequired';
     await flow.check();
-    await pumpStatus(tester);
-    await openPopover(tester);
-    final capsule = tester.getRect(find.byType(MacHelperCapsule));
-    final popover = tester.getRect(find.byType(MacHelperPopover));
-    expect(popover.width, 320);
-    expect(popover.top, greaterThan(capsule.bottom));
-    expect(popover.right, lessThanOrEqualTo(tester.view.physicalSize.width));
-    expect(popover.left, greaterThanOrEqualTo(0));
-  });
-
-  testWidgets('capsule matches the Core button height, 8 apart', (
-    tester,
-  ) async {
-    // A running core shows the round check button.
-    container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
-    native.state = 'notRegistered';
-    await flow.check();
-    await pumpStatus(tester);
-    // Both show: the capsule left of the Core button, as tall, 8 apart,
-    // centred on one line.
-    final capsule = tester.getRect(find.byType(MacHelperCapsule));
-    Rect coreButton() => tester.getRect(
-      find.descendant(
-        of: find.byType(LiveStatusButton),
-        matching: find.byType(IconButton),
-      ),
-    );
-    final core = coreButton();
-    expect(capsule.height, macHelperBarHeight);
-    expect(core.height, macHelperBarHeight);
-    expect(core.left - capsule.right, 8);
-    expect(barButtonGap, 8);
-    expect(capsule.center.dy, core.center.dy);
-    native.state = 'enabled';
-    await flow.recheck();
-    await tester.pumpAndSettle();
-    expectReadyButton(tester);
-    expect(coreButton(), core);
-  });
-
-  for (final (code, glyph) in [
-    ('migrationRequired', AppGlyphs.helperDaemonSmall),
-    ('notRegistered', AppGlyphs.helperDaemonSmall),
-    ('requiresApproval', AppGlyphs.helperDaemonSmall),
-    ('migrationIncomplete', AppGlyphs.helperDaemonSmall),
-    ('signingRequired', AppGlyphs.shieldAlert),
-    ('launcherCheckFailed', AppGlyphs.shieldAlert),
-    ('launcherDowngrade', AppGlyphs.helperDaemonSmall),
-    ('launcherFailed', AppGlyphs.helperDaemonSmall),
-  ]) {
-    testWidgets('$code popover title repeats the capsule icon', (tester) async {
-      native.state = code;
-      await flow.check();
-      await pumpStatus(tester);
-      final capsuleGlyph = tester.widget<GlyphIcon>(
-        find.descendant(
-          of: find.byType(MacHelperCapsule),
-          matching: find.byType(GlyphIcon),
-        ),
-      );
-      expect(capsuleGlyph.glyph, glyph);
-      await openPopover(tester);
-      final titleGlyph = tester.widget<GlyphIcon>(
-        find
-            .descendant(
-              of: find.byType(MacHelperPopover),
-              matching: find.byType(GlyphIcon),
-            )
-            .first,
-      );
-      expect(titleGlyph.glyph, glyph);
-      expect(titleGlyph.color, capsuleGlyph.color);
-    });
-  }
-
-  testWidgets('capsule collapses to the green button in 0.2s when ready', (
-    tester,
-  ) async {
-    native.state = 'notRegistered';
-    await flow.check();
-    await pumpStatus(tester);
-    final wide = tester.getRect(find.byType(MacHelperCapsule));
-    expect(wide.width, greaterThan(wide.height));
-    native.state = 'enabled';
-    await flow.recheck();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    final halfway = tester.getRect(find.byType(MacHelperCapsule));
-    expect(halfway.width, inExclusiveRange(wide.height, wide.width));
-    expect(halfway.right, wide.right);
-    await tester.pump(const Duration(milliseconds: 120));
-    expectReadyButton(tester);
-    // And widens again when the helper needs the user.
-    native.state = 'signingRequired';
-    await flow.recheck();
-    await tester.pumpAndSettle();
-    final again = tester.getRect(find.byType(MacHelperCapsule));
-    expect(again.width, greaterThan(again.height));
-    expect(
-      find.text(currentAppLocalizations.macHelperBarFailedCheck),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('returning from System Settings checks again', (tester) async {
-    native.state = 'notRegistered';
-    await flow.check();
-    await pumpStatus(tester);
-    await openPopover(tester);
-    await tester.tap(find.text(currentAppLocalizations.macHelperOpenSettings));
-    await tester.pumpAndSettle();
-    native.state = 'enabled';
-    final before = native.calls.length;
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pumpAndSettle();
-    expect(native.calls.skip(before), contains('status'));
-    expect(find.byType(MacHelperPopover), findsNothing);
-    expectReadyButton(tester);
-  });
-
-  testWidgets('narrow window shows the icon only with tooltip and label', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(600, 700);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    container.read(viewSizeProvider.notifier).value = const Size(600, 700);
-    native.state = 'notRegistered';
-    await flow.check();
+    expect(flow.client.hasCoreSession, isTrue);
     await pumpStatus(tester);
     final l = currentAppLocalizations;
-    expect(find.text(l.macHelperBarAllow), findsNothing);
-    expect(
-      find.bySemanticsLabel(l.macHelperBarHint(l.macHelperApprovalTitle)),
-      findsOneWidget,
-    );
-    final capsule = tester.getRect(find.byType(MacHelperCapsule));
-    expect(capsule.width, capsule.height);
-    await openPopover(tester);
-    expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
+    expect(label('${l.macHelperMigrationTitle}, 1 item'), findsOneWidget);
+    expect(await flow.client.stop(session), isTrue);
+    sessionNative.receive.complete({'code': 'unavailable'});
+    await settle(tester);
   });
 
-  testWidgets('screen readers hear the full title and each change', (
-    tester,
-  ) async {
-    final announced = <String>[];
-    tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler(
-      SystemChannels.accessibility,
-      (message) async {
-        final data = (message as Map)['data'] as Map;
-        if (data['message'] case final String text) announced.add(text);
-        return null;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler(
-        SystemChannels.accessibility,
-        null,
-      ),
-    );
-    native.state = 'notRegistered';
-    await flow.check();
-    await pumpStatus(tester);
-    final l = currentAppLocalizations;
-    expect(
-      find.bySemanticsLabel(l.macHelperBarHint(l.macHelperApprovalTitle)),
-      findsOneWidget,
-    );
-    expect(announced, isEmpty);
-    native.state = 'signingRequired';
-    await flow.recheck();
-    await tester.pumpAndSettle();
-    expect(
-      find.bySemanticsLabel(l.macHelperBarHint(l.macHelperSignatureTitle)),
-      findsOneWidget,
-    );
-    native.state = 'enabled';
-    await flow.recheck();
-    await tester.pumpAndSettle();
-    expect(announced, [l.macHelperSignatureTitle, l.macHelperOn]);
-  });
-
-  testWidgets('ready shows a green round button that opens the version', (
-    tester,
-  ) async {
-    container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
-    native.state = 'enabled';
-    await flow.check();
-    await pumpStatus(tester);
-    final l = currentAppLocalizations;
-    expectReadyButton(tester);
-    expect(
-      tester
-          .widget<Tooltip>(
-            find.descendant(
-              of: find.byType(MacHelperCapsule),
-              matching: find.byType(Tooltip),
-            ),
-          )
-          .message,
-      l.macHelperOn,
-    );
-    final glyph = tester.widget<GlyphIcon>(
-      find.descendant(
-        of: find.byType(MacHelperCapsule),
-        matching: find.byType(GlyphIcon),
-      ),
-    );
-    expect(glyph.glyph, AppGlyphs.helperDaemonSmall);
-    final context = tester.element(find.byType(MacHelperCapsule));
-    // The Core check's own colors.
-    expect(glyph.color, context.colorScheme.onSuccessContainer);
-    final helperStyle = tester
-        .widget<IconButton>(
-          find.descendant(
-            of: find.byType(MacHelperCapsule),
-            matching: find.byType(IconButton),
-          ),
-        )
-        .style!;
-    final coreStyle = tester
-        .widget<IconButton>(
-          find.descendant(
-            of: find.byType(LiveStatusButton),
-            matching: find.byType(IconButton),
-          ),
-        )
-        .style!;
-    expect(
-      helperStyle.backgroundColor!.resolve({}),
-      coreStyle.backgroundColor!.resolve({}),
-    );
-    expect(
-      helperStyle.backgroundColor!.resolve({}),
-      context.colorScheme.successContainer,
-    );
-    // As big as the Core check, 8 to its left, on one line.
-    final helper = tester.getRect(find.byType(MacHelperCapsule));
-    final core = tester.getRect(
-      find.descendant(
-        of: find.byType(LiveStatusButton),
-        matching: find.byType(IconButton),
-      ),
-    );
-    expect(helper.size, core.size);
-    expect(core.left - helper.right, 8);
-    expect(helper.center.dy, core.center.dy);
-    // The popover: the title and the version in grey, nothing to press.
-    await openPopover(tester);
-    expect(
-      find.descendant(
-        of: find.byType(MacHelperPopover),
-        matching: find.text(l.macHelperOn),
-      ),
-      findsOneWidget,
-    );
-    expect(find.text(l.macHelperVersionLine('1.2.3 (4)')), findsOneWidget);
-    for (final type in [FilledButton, TextButton]) {
-      expect(
-        find.descendant(
-          of: find.byType(MacHelperPopover),
-          matching: find.byType(type),
-        ),
-        findsNothing,
-      );
-    }
-  });
-
-  testWidgets('a Core stopped only for the helper waits in grey', (
-    tester,
-  ) async {
-    native.state = 'notRegistered';
-    await flow.check();
-    await pumpStatus(tester);
-    final l = currentAppLocalizations;
-    expect(container.read(coreStatusProvider), CoreStatus.disconnected);
-    // Not red "stopped": a grey clock that waits for the helper.
-    expect(find.bySemanticsLabel(l.coreStopped), findsNothing);
-    expect(find.bySemanticsLabel(l.macHelperWaitingCore), findsOneWidget);
-    final glyph = tester.widget<GlyphIcon>(
-      find.descendant(
-        of: find.byType(LiveStatusButton),
-        matching: find.byType(GlyphIcon),
-      ),
-    );
-    expect(glyph.glyph, AppGlyphs.clock);
-    final context = tester.element(find.byType(LiveStatusButton));
-    expect(
-      tester
-          .widget<IconButton>(
-            find.descendant(
-              of: find.byType(LiveStatusButton),
-              matching: find.byType(IconButton),
-            ),
-          )
-          .style!
-          .backgroundColor!
-          .resolve({}),
-      context.colorScheme.onSurfaceVariant.withValues(alpha: 0.15),
-    );
-    // Its tap opens the helper's popover.
-    await tester.tap(find.bySemanticsLabel(l.macHelperWaitingCore));
-    await tester.pumpAndSettle();
-    expect(find.byType(MacHelperPopover), findsOneWidget);
-    expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
-    expect(find.byType(MacHelperDialog), findsNothing);
-    // Once the helper is ready, a stopped Core is red again.
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await settleReady(tester);
-    expect(find.bySemanticsLabel(l.macHelperWaitingCore), findsNothing);
-    expect(find.bySemanticsLabel(l.coreStopped), findsOneWidget);
-  });
-
-  testWidgets('capsule and round button draw one helper glyph, ring 20pt', (
-    tester,
-  ) async {
-    expect(
-      macHelperBarGlyph(MacHelperBarKind.failedCheck),
-      AppGlyphs.shieldAlert,
-    );
-    expect(AppGlyphs.helperDaemonAt(16), AppGlyphs.helperDaemonSmall);
-    expect(AppGlyphs.helperDaemonAt(24), AppGlyphs.helperDaemon);
-    Size glyphSize() => tester.getSize(
-      find.descendant(
-        of: find.byType(MacHelperCapsule),
-        matching: find.byType(GlyphIcon),
-      ),
-    );
-    native.state = 'notRegistered';
-    await flow.check();
-    await pumpStatus(tester);
-    final inCapsule = glyphSize();
-    native.state = 'enabled';
-    await flow.recheck();
-    await tester.pumpAndSettle();
-    expect(glyphSize(), inCapsule);
-    // The ring, 18.8 of 24 units across, comes to about 20.
-    expect(inCapsule.width * 18.8 / 24, closeTo(20, 0.5));
-  });
-
-  testWidgets(
-    'disconnected UI with retained session never claims Core is stopped',
-    (tester) async {
-      final sessionNative = _SessionNative()..state = 'enabled';
-      flow.dispose();
-      flow = makeMaintenance(sessionNative);
-      const session = '0123456789abcdef0123456789abcdef';
-      await flow.client.start(session);
-      sessionNative.state = 'migrationRequired';
-      await flow.check();
-      expect(flow.client.hasCoreSession, isTrue);
-      expect(container.read(coreStatusProvider), CoreStatus.disconnected);
-      await pumpStatus(tester);
-      final l = currentAppLocalizations;
-      // The Core keeps running; the card only offers the update, which
-      // stops the Core first.
-      expect(find.text(l.macHelperBarUpdate), findsOneWidget);
-      expect(find.bySemanticsLabel(l.coreStopped), findsNothing);
-      expect(await flow.client.stop(session), isTrue);
-      sessionNative.receive.complete({'code': 'unavailable'});
-      await tester.pumpAndSettle();
-    },
-  );
-
-  testWidgets('safe mode keeps existing core status without helper card', (
+  testWidgets('safe mode keeps the core status without a helper card', (
     tester,
   ) async {
     await flow.check();
@@ -902,24 +650,71 @@ void main() {
     container.read(viewSizeProvider.notifier).value = const Size(1200, 800);
     await pumpStatus(tester);
     final l = currentAppLocalizations;
-    expect(find.bySemanticsLabel(l.coreStopped), findsOneWidget);
-    expect(find.byType(MacHelperCapsule), findsNothing);
-    expect(find.text(l.macHelperMigrationAction), findsNothing);
+    expect(label('${l.coreStopped}, 1 item'), findsOneWidget);
     expect(native.calls, ['status']);
   });
 
   for (final locale in [const Locale('en'), const Locale('zh', 'CN')]) {
-    testWidgets('large text keeps the card readable in $locale', (
+    testWidgets('narrow window and large text reach every action in $locale', (
       tester,
     ) async {
-      native.state = 'notRegistered';
+      native.state = 'migrationIncomplete';
+      native.migrateAnswer = {
+        'code': 'migrationFailed',
+        'step': 'removeOld',
+        'detail': 'launchctl bootout: 5',
+      };
       await flow.check();
-      await pumpStatus(tester, scale: 2, locale: locale);
+      await flow.migrate(confirmed: true);
+      await pumpStatus(
+        tester,
+        locale: locale,
+        scale: 2,
+        size: const Size(480, 640),
+      );
       final l = currentAppLocalizations;
-      await openPopover(tester);
-      expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
-      expect(find.text(l.macHelperOpenSettings), findsOneWidget);
+      await openDeck(tester);
       expect(tester.takeException(), isNull);
+      expect(front(l.macHelperTryAgain), findsOneWidget);
+      await tester.tap(front(l.macHelperViewDetails));
+      await settle(tester);
+      expect(find.textContaining('launchctl bootout: 5'), findsOneWidget);
+      expect(front(l.macHelperTryAgain), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      native.migrateAnswer = {'code': 'enabled'};
+      await tester.tap(front(l.macHelperTryAgain));
+      await settle(tester);
+      expect(native.calls.where((call) => call == 'migrate'), hasLength(2));
     });
   }
+
+  test('zh copy matches the reviewed wording', () {
+    final zh = lookupAppLocalizations(const Locale('zh'));
+    expect(zh.macHelperRegisterDetail, '辅助程序尚未登记。点按“登记”继续。');
+    expect(zh.macHelperRegisterAction, '登记');
+    expect(
+      zh.macHelperDisabledByUserDetail,
+      'Flash 的后台运行权限已关闭。请在系统设置中允许 Flash 在后台运行。',
+    );
+    expect(zh.macHelperOpenSettings, '打开系统设置');
+    expect(zh.macHelperAwaitingApprovalDetail, '请在系统设置中允许 Flash 在后台运行');
+    expect(zh.macHelperUnavailableTitle, '辅助程序暂不可用');
+    expect(zh.macHelperNotReadyTitle, '辅助程序暂未就绪');
+    expect(zh.macHelperRequiredTitle, '请先启用辅助程序');
+    expect(zh.macHelperFailedTitle, '辅助程序更新未完成');
+    expect(zh.liveStatusItems(3), '3 项');
+    expect(zh.liveStatusUpdateDownload('41%'), '更新下载 41%');
+    expect(zh.updateCurrentVersion('1.0'), '当前版本 1.0');
+    expect(zh.updateNewVersion('1.1'), '新版本 1.1');
+    for (final text in [
+      zh.macHelperApprovalStep3,
+      zh.macHelperNotReadyTitle,
+      zh.macHelperRegistrationFailedDetail,
+      zh.macHelperStaleCoreDetail,
+      zh.macHelperStatusUnreadable,
+    ]) {
+      expect(text, isNot(contains('重启')));
+      expect(text, isNot(contains('重新安装')));
+    }
+  });
 }

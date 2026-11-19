@@ -6,8 +6,11 @@ let a merge silently take upstream's side.
 
 ## 1. Resources status card in the live status deck
 
-- File: `lib/views/dashboard/widgets/live_status.dart` (and the deck/bar
-  rendering that switches on `LiveStatus` subtypes).
+- Files: `lib/views/dashboard/widgets/live_status.dart` (`ResourcesStatus`,
+  `_updatingResources`, its place in `composeLiveStatuses` and the bar
+  entry) and `lib/views/dashboard/widgets/live_status_deck.dart` (the card:
+  `_ResourcesHero`, `_ResourceRow`, the "View all" details list). Restored
+  in Phase 2 (feat/upstream-sync-0.9.4).
 - Upstream history: added in `a89b3399` ("gather live statuses into one bar
   button and alert-style card deck"), removed one day later in `c6d1b4da`
   ("show live status counts and progress, cycle the cards…", 2026-11-12) with

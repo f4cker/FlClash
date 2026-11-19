@@ -8674,4 +8674,71 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get installedBetaBadge => 'Установлена бета-версия';
+
+  @override
+  String get updatingResources => 'Обновление';
+
+  @override
+  String updatingResourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Обновляются $count элементов',
+      few: 'Обновляются $count элемента',
+      one: 'Обновляется $count элемент',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count элемента',
+      many: '$count элементов',
+      few: '$count элемента',
+      one: '$count элемент',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusUpdateDownload(String percent) {
+    return 'загрузка обновления $percent';
+  }
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'Текущая версия $version';
+  }
+
+  @override
+  String updateNewVersion(String version) {
+    return 'Новая версия $version';
+  }
+
+  @override
+  String get macHelperRegisterTitle => 'Зарегистрируйте помощника';
+
+  @override
+  String get macHelperRegisterDetail =>
+      'Помощник ещё не зарегистрирован. Нажмите «Зарегистрировать», чтобы продолжить.';
+
+  @override
+  String get macHelperRegisterAction => 'Зарегистрировать';
+
+  @override
+  String get macHelperAwaitingApprovalDetail =>
+      'Разрешите Flash работать в фоне в Системных настройках.';
+
+  @override
+  String get macHelperDisabledByUserDetail =>
+      'Разрешение Flash на работу в фоне отключено. Разрешите Flash работать в фоне в Системных настройках.';
+
+  @override
+  String get macHelperUnavailableTitle => 'Помощник недоступен';
+
+  @override
+  String get macHelperViewSteps => 'Показать шаги';
 }

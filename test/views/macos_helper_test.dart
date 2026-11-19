@@ -89,9 +89,12 @@ void main() {
     final l = currentAppLocalizations;
     await tester.tap(find.text(l.macHelperViewSetup));
     await tester.pumpAndSettle();
-    expect(find.text(l.macHelperApprovalTitle), findsOneWidget);
-    expect(find.text(l.macHelperOpenSettings), findsOneWidget);
-    await tester.tap(find.text(l.macHelperOpenSettings));
+    // Not registered yet: "Register", which registers and then opens System
+    // Settings because the system asks for approval.
+    expect(find.text(l.macHelperRegisterTitle), findsOneWidget);
+    expect(find.text(l.macHelperRegisterDetail), findsOneWidget);
+    expect(find.text(l.macHelperRegisterAction), findsOneWidget);
+    await tester.tap(find.text(l.macHelperRegisterAction));
     await tester.pumpAndSettle();
     expect(native.calls, ['status', 'enable', 'openApprovalSettings']);
     // Returning to Flash re-checks and ends the short Settings poll.

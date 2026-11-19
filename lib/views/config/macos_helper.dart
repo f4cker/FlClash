@@ -61,6 +61,11 @@ enum MacHelperCardKind {
 enum MacHelperCardAction {
   migrate,
   retry,
+
+  /// "Register" for a helper SMAppService does not know yet: the same
+  /// [MacHelperMaintenance.openSettings], which registers first and opens
+  /// System Settings only when the system then asks for approval.
+  register,
   openSettings,
   recheck,
   repair,
@@ -70,6 +75,9 @@ enum MacHelperCardAction {
   /// "Repair" for serviceNotFound: the user-triggered recovery.
   repairRegistration,
   viewDetails,
+
+  /// The written approval steps, in the status deck's details view.
+  viewSteps,
 }
 
 final class MacHelperCardView {
@@ -118,11 +126,13 @@ MacHelperCardKind macHelperCardKind(
 }) => switch (state) {
   MacHelperState.enabled => MacHelperCardKind.ready,
   MacHelperState.migrationRequired => MacHelperCardKind.migration,
-  // The system shows one switch for Flash; its daemon item may be off
-  // while the switch reads on, so both read "turn it off and on again".
+  // Registered but not allowed yet, or not registered at all: the user
+  // allows Flash in System Settings (registering it first if needed).
   MacHelperState.requiresApproval ||
-  MacHelperState.disabledByUser ||
   MacHelperState.notRegistered => MacHelperCardKind.approval,
+  // Allowed before and switched off since: said as such, never as "waiting
+  // for approval".
+  MacHelperState.disabledByUser => MacHelperCardKind.disabledByUser,
   MacHelperState.starting || MacHelperState.staleHelper when switching =>
     MacHelperCardKind.switchingHelper,
   MacHelperState.starting ||
@@ -187,6 +197,13 @@ MacHelperCardView macHelperCardView(
     MacHelperProgress.idle => null,
   };
   final raw = flow.rawDetail;
+  // The system shows one switch for Flash; its daemon item may be off while
+  // the switch reads on, so the steps say "turn it off and on again".
+  final steps = [
+    l.macHelperApprovalStep1,
+    l.macHelperApprovalStep2,
+    l.macHelperApprovalStep3,
+  ];
   return switch (kind) {
     MacHelperCardKind.ready => MacHelperCardView(
       kind: kind,
@@ -199,25 +216,36 @@ MacHelperCardView macHelperCardView(
       progress: busyText,
       primary: MacHelperCardAction.migrate,
     ),
+    // Not registered yet: "Register", which registers and then opens System
+    // Settings only if the system asks for approval.
+    MacHelperCardKind.approval when state == MacHelperState.notRegistered =>
+      MacHelperCardView(
+        kind: kind,
+        title: l.macHelperRegisterTitle,
+        detail: l.macHelperRegisterDetail,
+        steps: steps,
+        progress: busyText,
+        primary: MacHelperCardAction.register,
+        secondary: MacHelperCardAction.viewSteps,
+      ),
     MacHelperCardKind.approval => MacHelperCardView(
       kind: kind,
       title: l.macHelperApprovalTitle,
-      detail: l.macHelperAllowInSettings,
-      steps: [
-        l.macHelperApprovalStep1,
-        l.macHelperApprovalStep2,
-        l.macHelperApprovalStep3,
-      ],
+      detail: l.macHelperAwaitingApprovalDetail,
+      steps: steps,
       progress: busyText,
       // The only thing the user is asked to do; Flash re-checks by itself.
       primary: MacHelperCardAction.openSettings,
+      secondary: MacHelperCardAction.viewSteps,
     ),
     MacHelperCardKind.disabledByUser => MacHelperCardView(
       kind: kind,
       title: l.macHelperApprovalTitle,
-      detail: l.macHelperAllowInSettings,
+      detail: l.macHelperDisabledByUserDetail,
+      steps: steps,
       progress: busyText,
       primary: MacHelperCardAction.openSettings,
+      secondary: MacHelperCardAction.viewSteps,
     ),
     MacHelperCardKind.starting => MacHelperCardView(
       kind: kind,
@@ -228,12 +256,17 @@ MacHelperCardView macHelperCardView(
           : l.macHelperStartingTitle,
       detail: l.macHelperStartingDetail,
       progress: l.macHelperStartingTitle,
+      // A wait offers nothing to run; what it waits on stays readable.
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
     ),
     MacHelperCardKind.switchingHelper => MacHelperCardView(
       kind: kind,
       title: l.macHelperSwitchingTitle,
       detail: l.macHelperStartingDetail,
       progress: l.macHelperSwitchingTitle,
+      secondary: MacHelperCardAction.viewDetails,
+      rawDetail: raw,
     ),
     MacHelperCardKind.notReady => MacHelperCardView(
       kind: kind,
@@ -248,8 +281,10 @@ MacHelperCardView macHelperCardView(
     ),
     MacHelperCardKind.startSlow => MacHelperCardView(
       kind: kind,
+      // An unreadable status names no cause: "unavailable", with the raw
+      // code behind "View details".
       title: state == MacHelperState.unavailable
-          ? l.macHelperNotReadyTitle
+          ? l.macHelperUnavailableTitle
           : l.macHelperStartSlowTitle,
       detail: state == MacHelperState.unavailable
           ? l.macHelperStatusUnreadable
@@ -365,6 +400,7 @@ String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
     switch (action) {
       MacHelperCardAction.migrate => l.macHelperMigrationAction,
       MacHelperCardAction.retry => l.macHelperTryAgain,
+      MacHelperCardAction.register => l.macHelperRegisterAction,
       MacHelperCardAction.openSettings => l.macHelperOpenSettings,
       MacHelperCardAction.recheck => l.macHelperCheckAgain,
       MacHelperCardAction.repair => l.macHelperRepair,
@@ -373,13 +409,50 @@ String macHelperActionLabel(AppLocalizations l, MacHelperCardAction action) =>
       MacHelperCardAction.repairRegistration =>
         l.macHelperServiceNotFoundAction,
       MacHelperCardAction.viewDetails => l.macHelperViewDetails,
+      MacHelperCardAction.viewSteps => l.macHelperViewSteps,
     };
+
+/// Whether [action] opens the card's own details rather than asking the
+/// helper anything.
+bool isMacHelperViewAction(MacHelperCardAction action) =>
+    action == MacHelperCardAction.viewDetails ||
+    action == MacHelperCardAction.viewSteps;
+
+/// Runs a card's helper action through [flow], the one dispatch the settings
+/// card and the status deck share. Nothing runs while an operation is in
+/// flight, so a second tap never sends a second request; the view actions
+/// are the card's own and do nothing here.
+void runMacHelperAction(MacHelperMaintenance flow, MacHelperCardAction action) {
+  if (isMacHelperViewAction(action) || flow.busy) return;
+  switch (action) {
+    // A failed update or registration step resumes the update itself,
+    // never the generic recovery.
+    case MacHelperCardAction.migrate:
+    case MacHelperCardAction.retry:
+      unawaited(flow.migrate(confirmed: true));
+    case MacHelperCardAction.register:
+    case MacHelperCardAction.openSettings:
+      unawaited(flow.openSettings());
+    case MacHelperCardAction.recheck:
+      unawaited(flow.recheck());
+    case MacHelperCardAction.repair:
+      unawaited(flow.repair());
+    case MacHelperCardAction.recover:
+    case MacHelperCardAction.repairRegistration:
+      unawaited(flow.retryRecovery());
+    case MacHelperCardAction.repairRecord:
+      unawaited(flow.repairRecord());
+    case MacHelperCardAction.viewDetails:
+    case MacHelperCardAction.viewSteps:
+      break;
+  }
+}
 
 /// One-line label for list items and tooltips.
 String macHelperStatusLabel(AppLocalizations l, MacHelperMaintenance flow) =>
     macHelperCardView(l, flow).title;
 
-/// What the top bar capsule beside the Core status button says.
+/// What the helper's status says in short: its entry glyph and loudness.
 enum MacHelperBarKind { ready, update, allow, starting, notReady, failedCheck }
 
 /// How loud the button is: all well, something for the user to do, a
@@ -420,45 +493,7 @@ MacHelperBarView? macHelperBarView(
 ) {
   if (flow.state == null) return null;
   final card = macHelperCardView(l, flow);
-  final (kind, tone) = switch (card.kind) {
-    MacHelperCardKind.ready => (MacHelperBarKind.ready, MacHelperBarTone.ready),
-    MacHelperCardKind.migration => (
-      MacHelperBarKind.update,
-      MacHelperBarTone.action,
-    ),
-    MacHelperCardKind.approval || MacHelperCardKind.disabledByUser => (
-      MacHelperBarKind.allow,
-      MacHelperBarTone.action,
-    ),
-    MacHelperCardKind.starting || MacHelperCardKind.switchingHelper => (
-      MacHelperBarKind.starting,
-      MacHelperBarTone.waiting,
-    ),
-    // A slow start is not called a failure; the user can check again.
-    MacHelperCardKind.startSlow ||
-    MacHelperCardKind.exitUnconfirmed ||
-    MacHelperCardKind.notReady ||
-    MacHelperCardKind.serviceNotFound ||
-    MacHelperCardKind.move => (
-      MacHelperBarKind.notReady,
-      MacHelperBarTone.action,
-    ),
-    MacHelperCardKind.updateFailed ||
-    MacHelperCardKind.reinstall ||
-    MacHelperCardKind.serviceRepairFailed ||
-    MacHelperCardKind.unsupported ||
-    MacHelperCardKind.launcherDowngrade ||
-    MacHelperCardKind.launcherFailed ||
-    MacHelperCardKind.launcherRecordDamaged => (
-      MacHelperBarKind.notReady,
-      MacHelperBarTone.failure,
-    ),
-    MacHelperCardKind.signatureFailed ||
-    MacHelperCardKind.launcherCheckFailed => (
-      MacHelperBarKind.failedCheck,
-      MacHelperBarTone.failure,
-    ),
-  };
+  final (kind, tone) = macHelperBarKindOf(card.kind);
   return MacHelperBarView(
     kind: kind,
     tone: tone,
@@ -473,6 +508,47 @@ MacHelperBarView? macHelperBarView(
     },
   );
 }
+
+/// The short kind and the tone of a card: how loud the status entry is.
+/// Pure and total, so every card kind has one.
+(MacHelperBarKind, MacHelperBarTone) macHelperBarKindOf(
+  MacHelperCardKind card,
+) => switch (card) {
+  MacHelperCardKind.ready => (MacHelperBarKind.ready, MacHelperBarTone.ready),
+  MacHelperCardKind.migration => (
+    MacHelperBarKind.update,
+    MacHelperBarTone.action,
+  ),
+  MacHelperCardKind.approval || MacHelperCardKind.disabledByUser => (
+    MacHelperBarKind.allow,
+    MacHelperBarTone.action,
+  ),
+  MacHelperCardKind.starting || MacHelperCardKind.switchingHelper => (
+    MacHelperBarKind.starting,
+    MacHelperBarTone.waiting,
+  ),
+  // A slow start is not called a failure; the user can check again.
+  MacHelperCardKind.startSlow ||
+  MacHelperCardKind.exitUnconfirmed ||
+  MacHelperCardKind.notReady ||
+  MacHelperCardKind.serviceNotFound ||
+  MacHelperCardKind.move => (
+    MacHelperBarKind.notReady,
+    MacHelperBarTone.action,
+  ),
+  MacHelperCardKind.updateFailed ||
+  MacHelperCardKind.reinstall ||
+  MacHelperCardKind.serviceRepairFailed ||
+  MacHelperCardKind.unsupported ||
+  MacHelperCardKind.launcherDowngrade ||
+  MacHelperCardKind.launcherFailed ||
+  MacHelperCardKind.launcherRecordDamaged => (
+    MacHelperBarKind.notReady,
+    MacHelperBarTone.failure,
+  ),
+  MacHelperCardKind.signatureFailed || MacHelperCardKind.launcherCheckFailed =>
+    (MacHelperBarKind.failedCheck, MacHelperBarTone.failure),
+};
 
 /// The bar button's icon, which the card's title repeats: the helper's gear
 /// in its arrows, or a shield for a failed security check. A start shows a
@@ -493,15 +569,16 @@ Color macHelperBarColor(ColorScheme colorScheme, MacHelperBarTone tone) =>
       MacHelperBarTone.waiting => colorScheme.onSurfaceVariant,
     };
 
-/// The top bar capsule while it is on screen: a feature that needs the helper
-/// opens its popover instead of a dialog.
+/// The dashboard's live status entry while it is on screen: a feature that
+/// needs the helper opens the status deck on the helper card instead of a
+/// dialog.
 abstract interface class MacHelperPresenter {
   MacHelperMaintenance get maintenance;
 
-  /// Whether the capsule is visible on the current page and can open.
+  /// Whether the entry is visible on the current page and can open.
   bool get canPresent;
 
-  /// Opens the popover; completes when it closes.
+  /// Opens the deck on the helper card; completes when the deck closes.
   Future<void> present({required bool requiredByFeature});
 }
 
@@ -574,29 +651,16 @@ class _MacHelperCardState extends State<MacHelperCard> {
   }
 
   void _run(MacHelperCardAction action) {
-    final flow = widget.maintenance;
-    switch (action) {
-      case MacHelperCardAction.migrate:
-      case MacHelperCardAction.retry:
-        setState(() => _details = false);
-        unawaited(flow.migrate(confirmed: true));
-      case MacHelperCardAction.openSettings:
-        unawaited(flow.openSettings());
-      case MacHelperCardAction.recheck:
-        unawaited(flow.recheck());
-      case MacHelperCardAction.repair:
-        setState(() => _details = false);
-        unawaited(flow.repair());
-      case MacHelperCardAction.recover:
-      case MacHelperCardAction.repairRegistration:
-        setState(() => _details = false);
-        unawaited(flow.retryRecovery());
-      case MacHelperCardAction.repairRecord:
-        setState(() => _details = false);
-        unawaited(flow.repairRecord());
-      case MacHelperCardAction.viewDetails:
-        setState(() => _details = !_details);
+    if (isMacHelperViewAction(action)) {
+      setState(() => _details = !_details);
+      return;
     }
+    if (action != MacHelperCardAction.openSettings &&
+        action != MacHelperCardAction.register &&
+        action != MacHelperCardAction.recheck) {
+      setState(() => _details = false);
+    }
+    runMacHelperAction(widget.maintenance, action);
   }
 
   @override
@@ -736,7 +800,9 @@ class _MacHelperCardState extends State<MacHelperCard> {
                   onPressed: busy ? null : () => _run(view.primary!),
                   child: Text(macHelperActionLabel(l, view.primary!)),
                 ),
+              // The steps are written out above: no "View steps" here.
               if (view.secondary != null &&
+                  view.secondary != MacHelperCardAction.viewSteps &&
                   (view.secondary != MacHelperCardAction.viewDetails ||
                       view.rawDetail?.isNotEmpty == true))
                 TextButton(

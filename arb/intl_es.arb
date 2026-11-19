@@ -3617,5 +3617,18 @@
   "receiveBetaUpdatesDescription": "También busca versiones beta; desactivarlo no cambia a una versión anterior.",
   "betaUpdateCheckIncomplete": "La búsqueda beta está incompleta. Las actualizaciones verificadas siguen disponibles.",
   "updateNoNewerStable": "No hay una versión estable más reciente.",
-  "installedBetaBadge": "La versión instalada es beta"
+  "installedBetaBadge": "La versión instalada es beta",
+  "updatingResources": "Actualizando",
+  "updatingResourcesCount": "{count, plural, =1{1 elemento actualizándose} other{{count} elementos actualizándose}}",
+  "liveStatusItems": "{count, plural, =1{1 elemento} other{{count} elementos}}",
+  "liveStatusUpdateDownload": "descarga de la actualización {percent}",
+  "updateCurrentVersion": "Versión actual {version}",
+  "updateNewVersion": "Nueva versión {version}",
+  "macHelperRegisterTitle": "Registrar el asistente",
+  "macHelperRegisterDetail": "El asistente aún no está registrado. Pulsa Registrar para continuar.",
+  "macHelperRegisterAction": "Registrar",
+  "macHelperAwaitingApprovalDetail": "Permite que Flash se ejecute en segundo plano en Ajustes del Sistema.",
+  "macHelperDisabledByUserDetail": "El permiso de Flash para ejecutarse en segundo plano está desactivado. Permite que Flash se ejecute en segundo plano en Ajustes del Sistema.",
+  "macHelperUnavailableTitle": "Asistente no disponible",
+  "macHelperViewSteps": "Ver pasos"
 }

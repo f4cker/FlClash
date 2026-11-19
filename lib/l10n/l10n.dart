@@ -14325,6 +14325,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Installed version is a beta'**
   String get installedBetaBadge;
+
+  /// No description provided for @updatingResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating'**
+  String get updatingResources;
+
+  /// No description provided for @updatingResourcesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item updating} other{{count} items updating}}'**
+  String updatingResourcesCount(int count);
+
+  /// No description provided for @liveStatusItems.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  String liveStatusItems(int count);
+
+  /// No description provided for @liveStatusUpdateDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'update download {percent}'**
+  String liveStatusUpdateDownload(String percent);
+
+  /// No description provided for @updateCurrentVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Current version {version}'**
+  String updateCurrentVersion(String version);
+
+  /// No description provided for @updateNewVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'New version {version}'**
+  String updateNewVersion(String version);
+
+  /// No description provided for @macHelperRegisterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Register the helper'**
+  String get macHelperRegisterTitle;
+
+  /// No description provided for @macHelperRegisterDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper isn’t registered yet. Click Register to continue.'**
+  String get macHelperRegisterDetail;
+
+  /// No description provided for @macHelperRegisterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Register'**
+  String get macHelperRegisterAction;
+
+  /// No description provided for @macHelperAwaitingApprovalDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Flash to run in the background in System Settings.'**
+  String get macHelperAwaitingApprovalDetail;
+
+  /// No description provided for @macHelperDisabledByUserDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash’s permission to run in the background is turned off. Allow Flash to run in the background in System Settings.'**
+  String get macHelperDisabledByUserDetail;
+
+  /// No description provided for @macHelperUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Helper unavailable'**
+  String get macHelperUnavailableTitle;
+
+  /// No description provided for @macHelperViewSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'View steps'**
+  String get macHelperViewSteps;
 }
 
 class _AppLocalizationsDelegate

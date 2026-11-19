@@ -490,8 +490,9 @@ void main() {
       final card = macHelperCardView(l, flow);
       expect(card.title, l.macHelperSwitchingTitle);
       expect(card.isProblem, isFalse);
+      // A wait offers nothing to run; its details stay readable.
       expect(card.primary, isNull);
-      expect(card.secondary, isNull);
+      expect(card.secondary, MacHelperCardAction.viewDetails);
       final bar = macHelperBarView(l, flow)!;
       expect(bar.kind, MacHelperBarKind.starting);
       expect(bar.tone, MacHelperBarTone.waiting);

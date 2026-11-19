@@ -8674,4 +8674,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get installedBetaBadge => 'Installed version is a beta';
+
+  @override
+  String get updatingResources => 'Updating';
+
+  @override
+  String updatingResourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items updating',
+      one: '1 item updating',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String liveStatusUpdateDownload(String percent) {
+    return 'update download $percent';
+  }
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'Current version $version';
+  }
+
+  @override
+  String updateNewVersion(String version) {
+    return 'New version $version';
+  }
+
+  @override
+  String get macHelperRegisterTitle => 'Register the helper';
+
+  @override
+  String get macHelperRegisterDetail =>
+      'The helper isn’t registered yet. Click Register to continue.';
+
+  @override
+  String get macHelperRegisterAction => 'Register';
+
+  @override
+  String get macHelperAwaitingApprovalDetail =>
+      'Allow Flash to run in the background in System Settings.';
+
+  @override
+  String get macHelperDisabledByUserDetail =>
+      'Flash’s permission to run in the background is turned off. Allow Flash to run in the background in System Settings.';
+
+  @override
+  String get macHelperUnavailableTitle => 'Helper unavailable';
+
+  @override
+  String get macHelperViewSteps => 'View steps';
 }

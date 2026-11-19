@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -10,6 +11,8 @@ import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/config/macos_helper.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -25,9 +28,12 @@ const _cardInset = 8.0;
 const _heroHeight = 156.0;
 const _heroCorner = AppCorner.alert - _cardInset;
 const _actionHeight = 44.0;
+const _secondaryHeight = 32.0;
+const _actionGap = 8.0;
 const _textTop = 12.0;
 const _actionBottom = 4.0;
-const _bottomHeight = _cardHeight - _cardInset * 2 - _heroHeight;
+// A card taller than its base grows to the window's safe area less this.
+const _windowMargin = 32.0;
 const _anchorGap = 8.0;
 const _windowEdge = 16.0;
 // Room above the front card for the cards behind it to show.
@@ -157,6 +163,9 @@ class LiveStatusRoute extends PopupRoute<void>
     required this.barrierColor,
     required this.barrierLabel,
     this.statuses,
+    this.helper,
+    this.focus,
+    this.helperRequired,
   });
 
   /// The bar button, in the navigator's coordinates.
@@ -166,6 +175,17 @@ class LiveStatusRoute extends PopupRoute<void>
 
   /// What the deck shows in place of the live statuses.
   final List<LiveStatus>? statuses;
+
+  /// The macOS helper flow whose card leads the deck while it is not ready.
+  final MacHelperMaintenance? helper;
+
+  /// The key of the card the deck opens on; the first card when null or not
+  /// there.
+  final Object? focus;
+
+  /// Whether a feature that needs the helper opened the deck, which the
+  /// helper card then says.
+  final ValueListenable<bool>? helperRequired;
 
   @override
   final Color barrierColor;
@@ -195,6 +215,9 @@ class LiveStatusRoute extends PopupRoute<void>
       builder: (context, constraints) => LiveStatusDeck(
         separateCore: separateCore,
         statuses: statuses,
+        helper: helper,
+        focus: focus,
+        helperRequired: helperRequired,
         front: _frontOf(context, constraints.biggest, anchor: anchor),
       ),
     );
@@ -212,13 +235,23 @@ class LiveStatusDeck extends ConsumerStatefulWidget {
     required this.separateCore,
     required this.front,
     this.statuses,
+    this.helper,
+    this.focus,
+    this.helperRequired,
   });
 
   final bool separateCore;
 
+  /// Where the front card sits at its base height.
   final Rect front;
 
   final List<LiveStatus>? statuses;
+
+  final MacHelperMaintenance? helper;
+
+  final Object? focus;
+
+  final ValueListenable<bool>? helperRequired;
 
   @override
   ConsumerState<LiveStatusDeck> createState() => _LiveStatusDeckState();
@@ -249,6 +282,9 @@ class _LiveStatusDeckState extends ConsumerState<LiveStatusDeck>
   int _count = 0;
   Object? _shownKey;
   Object? _askKey;
+
+  /// The card showing its details instead of its front.
+  Object? _detailKey;
   int _target = 0;
   double _dragOrigin = 0;
   double _dragDistance = 0;
@@ -261,7 +297,7 @@ class _LiveStatusDeckState extends ConsumerState<LiveStatusDeck>
 
   bool get _cycles => _statuses.length > 1;
 
-  bool get _held => _askKey != null;
+  bool get _held => _askKey != null || _detailKey != null;
 
   int _indexOf(int target) => target % _statuses.length;
 
@@ -290,7 +326,13 @@ class _LiveStatusDeckState extends ConsumerState<LiveStatusDeck>
       _askKey = null;
       _asking.value = 0;
     }
-    final kept = statuses.indexWhere((status) => status.key == _shownKey);
+    if (_detailKey != null && !statuses.any((it) => it.key == _detailKey)) {
+      _detailKey = null;
+    }
+    // The deck opens on [LiveStatusDeck.focus], then keeps the card it
+    // shows whatever arrives or changes behind it.
+    final wanted = _shownKey ?? widget.focus;
+    final kept = statuses.indexWhere((status) => status.key == wanted);
     final shown = kept >= 0 ? kept : _indexOf(_target);
     _shownKey = statuses[shown].key;
     final recounted = statuses.length != _count;
@@ -494,10 +536,27 @@ class _LiveStatusDeckState extends ConsumerState<LiveStatusDeck>
 
   @override
   Widget build(BuildContext context) {
+    final helper = widget.helper;
+    final required = widget.helperRequired;
+    if (widget.statuses != null || helper == null && required == null) {
+      return _buildDeck(context);
+    }
+    return ListenableBuilder(
+      listenable: Listenable.merge([helper, required]),
+      builder: (context, _) => _buildDeck(context),
+    );
+  }
+
+  Widget _buildDeck(BuildContext context) {
     final statuses =
         widget.statuses ??
-        watchLiveStatuses(ref, separateCore: widget.separateCore);
+        watchLiveStatuses(
+          ref,
+          separateCore: widget.separateCore,
+          helper: widget.helper,
+        );
     _follow(statuses);
+    final helperRequired = widget.helperRequired?.value ?? false;
     final colorScheme = context.colorScheme;
     final appLocalizations = context.appLocalizations;
     final fill = SurfaceLevel.floatingOf(colorScheme).colorOf(colorScheme);
@@ -515,6 +574,10 @@ class _LiveStatusDeckState extends ConsumerState<LiveStatusDeck>
             confirming: status.key == _askKey && asking,
             onAsk: () => _ask(status.key),
             onUnask: _unask,
+            detailed: status.key == _detailKey,
+            onDetails: () => setState(() => _detailKey = status.key),
+            onBack: () => setState(() => _detailKey = null),
+            helperRequired: helperRequired,
           ),
         ),
       for (final (:status, from: _) in _leaving)
@@ -526,6 +589,9 @@ class _LiveStatusDeckState extends ConsumerState<LiveStatusDeck>
             confirming: false,
             onAsk: _inert,
             onUnask: _inert,
+            detailed: false,
+            onDetails: _inert,
+            onBack: _inert,
           ),
         ),
     };
@@ -587,26 +653,33 @@ class _LiveStatusDeckState extends ConsumerState<LiveStatusDeck>
     required Color fill,
     required List<BoxShadow> shadows,
   }) {
-    return Positioned.fromRect(
+    final padding = MediaQuery.paddingOf(context);
+    return Positioned.fill(
       key: card.key,
-      rect: widget.front,
-      child: IgnorePointer(
-        ignoring: !front,
-        child: Opacity(
-          opacity: pose.opacity.clamp(0, 1),
-          child: Transform(
-            alignment: Alignment.center,
-            transform: _transformOf(pose),
-            child: DecoratedBox(
-              decoration: ShapeDecoration(
-                color: fill,
-                shape: AppShape.all(AppCorner.alert),
-                shadows: shadows,
-              ),
-              child: _LeaningRaster(
-                leaning: !_isFlat(pose),
-                content: status,
-                child: card,
+      child: CustomSingleChildLayout(
+        delegate: _CardSlot(
+          front: widget.front,
+          padding: padding,
+          centered: ViewScope.isMobileOf(context),
+        ),
+        child: IgnorePointer(
+          ignoring: !front,
+          child: Opacity(
+            opacity: pose.opacity.clamp(0, 1),
+            child: Transform(
+              alignment: Alignment.center,
+              transform: _transformOf(pose),
+              child: DecoratedBox(
+                decoration: ShapeDecoration(
+                  color: fill,
+                  shape: AppShape.all(AppCorner.alert),
+                  shadows: shadows,
+                ),
+                child: _LeaningRaster(
+                  leaning: !_isFlat(pose),
+                  content: status,
+                  child: card,
+                ),
               ),
             ),
           ),
@@ -614,6 +687,51 @@ class _LiveStatusDeckState extends ConsumerState<LiveStatusDeck>
       ),
     );
   }
+}
+
+/// Places a card at [front] at its base height. A taller card grows down to
+/// the window's safe area less [_windowMargin], rising as far as it must; its
+/// body scrolls past that. A centered (phone) card stays centered.
+class _CardSlot extends SingleChildLayoutDelegate {
+  const _CardSlot({
+    required this.front,
+    required this.padding,
+    required this.centered,
+  });
+
+  final Rect front;
+  final EdgeInsets padding;
+  final bool centered;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final safe = constraints.maxHeight - padding.vertical;
+    return BoxConstraints(
+      minWidth: front.width,
+      maxWidth: front.width,
+      minHeight: front.height,
+      maxHeight: math.max(front.height, safe - _windowMargin),
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final top = padding.top + _windowMargin / 2;
+    final bottom = size.height - padding.bottom - _windowMargin / 2;
+    final preferred = centered
+        ? front.center.dy - childSize.height / 2
+        : front.top;
+    final y = childSize.height <= front.height
+        ? front.top
+        : math.max(top, math.min(preferred, bottom - childSize.height));
+    return Offset(front.left, y);
+  }
+
+  @override
+  bool shouldRelayout(_CardSlot oldDelegate) =>
+      oldDelegate.front != front ||
+      oldDelegate.padding != padding ||
+      oldDelegate.centered != centered;
 }
 
 /// Draws a card that leans from a snapshot, so its text is neither
@@ -709,13 +827,26 @@ _Confirm? _confirmOf(LiveStatus status) => switch (status) {
 
 void _inert() {}
 
-class _StatusCard extends ConsumerWidget {
+/// A button of a card: what it says, what it runs (null while it cannot run)
+/// and its colors.
+typedef _CardAction = ({
+  String label,
+  VoidCallback? onPressed,
+  Color background,
+  Color foreground,
+});
+
+class _StatusCard extends ConsumerStatefulWidget {
   const _StatusCard({
     required this.status,
     required this.asking,
     required this.confirming,
     required this.onAsk,
     required this.onUnask,
+    required this.detailed,
+    required this.onDetails,
+    required this.onBack,
+    this.helperRequired = false,
   });
 
   final LiveStatus status;
@@ -730,6 +861,57 @@ class _StatusCard extends ConsumerWidget {
 
   final VoidCallback onUnask;
 
+  /// Whether the card shows its details instead of its front.
+  final bool detailed;
+
+  final VoidCallback onDetails;
+
+  final VoidCallback onBack;
+
+  /// A feature that needs the helper opened the deck: the helper card says so.
+  final bool helperRequired;
+
+  @override
+  ConsumerState<_StatusCard> createState() => _StatusCardState();
+}
+
+class _StatusCardState extends ConsumerState<_StatusCard> {
+  /// The details' title, which takes the focus as they open.
+  final _detailsTitle = FocusNode();
+
+  /// The button that opened the details, which takes it back as they close.
+  final _secondary = FocusNode();
+
+  /// The body's scroll once the card can grow no taller.
+  late final _bodyScroll = sheetScrollController(context);
+
+  @override
+  void didUpdateWidget(_StatusCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.detailed == widget.detailed) return;
+    final opened = widget.detailed;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (opened) {
+        _detailsTitle.requestFocus();
+        return;
+      }
+      // Back on the front, the focus returns to the button that opened them.
+      _secondary.descendants
+          .where((node) => node.canRequestFocus && !node.skipTraversal)
+          .firstOrNull
+          ?.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _detailsTitle.dispose();
+    _secondary.dispose();
+    _bodyScroll.dispose();
+    super.dispose();
+  }
+
   Future<void> _restartCore(CoreAction core) async {
     try {
       await core.restartCore();
@@ -738,7 +920,7 @@ class _StatusCard extends ConsumerWidget {
     }
   }
 
-  void _install(BuildContext context, WidgetRef ref) {
+  void _install(BuildContext context) {
     final action = ref.read(commonActionProvider.notifier);
     Navigator.of(context).pop();
     unawaited(action.installUpdate());
@@ -746,7 +928,7 @@ class _StatusCard extends ConsumerWidget {
 
   /// Asks module by module, each as it stands when its turn comes, until the
   /// card goes or a prompt is dismissed.
-  Future<void> _reviewModules(BuildContext context, WidgetRef ref) async {
+  Future<void> _reviewModules(BuildContext context) async {
     final ids = [
       for (final module in ref.read(mitmModulesToAgreeProvider)) module.id,
     ];
@@ -765,7 +947,12 @@ class _StatusCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final status = widget.status;
+    final asking = widget.asking;
+    final confirming = widget.confirming;
+    final onAsk = widget.onAsk;
+    final onUnask = widget.onUnask;
     final colorScheme = context.colorScheme;
     final appLocalizations = context.appLocalizations;
     final action = ref.read(commonActionProvider.notifier);
@@ -776,11 +963,11 @@ class _StatusCard extends ConsumerWidget {
         ? (
             restartCore: () => unawaited(_restartCore(core)),
             stopDownload: action.cancelUpdateDownload,
-            install: () => _install(context, ref),
+            install: () => _install(context),
             discard: ref.watch(updateInstallCommittedProvider)
                 ? null
                 : () => unawaited(action.discardUpdate()),
-            reviewModules: () => unawaited(_reviewModules(context, ref)),
+            reviewModules: () => unawaited(_reviewModules(context)),
           )
         : (
             restartCore: _inert,
@@ -789,24 +976,40 @@ class _StatusCard extends ConsumerWidget {
             discard: _inert,
             reviewModules: _inert,
           );
+    _CardAction primary(
+      String label,
+      VoidCallback? onPressed,
+      (Color, Color) colors,
+    ) => (
+      label: label,
+      onPressed: onPressed,
+      background: colors.$1,
+      foreground: colors.$2,
+    );
     final (
       tint,
       hero,
       title,
       body,
-      actionLabel,
-      onAction,
-      actionColors,
+      mainAction,
+      secondaryLabel,
+      busyText,
+      details,
     ) = switch (status) {
+      HelperLiveStatus() => _helperCard(context, status),
       CoreLiveStatus(phase: CoreStatus.disconnected) => (
         colorScheme.errorContainer,
         const _CoreHero(CoreStatus.disconnected),
         appLocalizations.coreStopped,
         (status.preview == null ? ref.watch(coreStopReasonProvider) : null) ??
             appLocalizations.coreStoppedDesc,
-        appLocalizations.restartCore,
-        effects.restartCore,
-        (colorScheme.error, colorScheme.onError),
+        primary(appLocalizations.restartCore, effects.restartCore, (
+          colorScheme.error,
+          colorScheme.onError,
+        )),
+        null,
+        null,
+        null,
       ),
       CoreLiveStatus(phase: CoreStatus.connecting) => (
         colorScheme.primaryContainer,
@@ -816,33 +1019,63 @@ class _StatusCard extends ConsumerWidget {
         null,
         null,
         null,
+        null,
       ),
       CoreLiveStatus() => (
         neutral,
         const _CoreHero(CoreStatus.connected),
         appLocalizations.coreRunning,
         appLocalizations.coreRunningDesc,
-        appLocalizations.forceRestartCore,
-        onAsk,
-        (neutral, colorScheme.onSurface),
+        primary(appLocalizations.forceRestartCore, onAsk, (
+          neutral,
+          colorScheme.onSurface,
+        )),
+        null,
+        null,
+        null,
       ),
       UpdateStatus(download: final UpdateDownloading download) => (
         colorScheme.primaryContainer,
         _DownloadHero(download: download),
         appLocalizations.downloadingUpdate,
         _progressText(download),
-        appLocalizations.cancel,
-        onAsk,
-        (neutral, colorScheme.onSurface),
+        primary(appLocalizations.cancel, onAsk, (
+          neutral,
+          colorScheme.onSurface,
+        )),
+        null,
+        null,
+        null,
       ),
       UpdateStatus(download: final UpdateReady download) => (
         colorScheme.successContainer,
         _ReadyHero(tag: download.tag, onDiscard: effects.discard),
         appLocalizations.updateReady,
         _readyTip(appLocalizations),
-        appLocalizations.installUpdate,
-        effects.install,
-        (colorScheme.success, colorScheme.onSuccess),
+        primary(appLocalizations.installUpdate, effects.install, (
+          colorScheme.success,
+          colorScheme.onSuccess,
+        )),
+        null,
+        null,
+        null,
+      ),
+      ResourcesStatus(:final items) => (
+        neutral,
+        _ResourcesHero(items: items),
+        appLocalizations.updatingResources,
+        appLocalizations.updatingResourcesCount(items.length),
+        null,
+        // The first rows are on the front; the whole list is behind View all.
+        items.length > _HeroRows.shown ? appLocalizations.viewAll : null,
+        null,
+        items.length > _HeroRows.shown
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 6,
+                children: [for (final item in items) _ResourceRow(item)],
+              )
+            : null,
       ),
       MitmConsentStatus(:final names) => (
         colorScheme.warningContainer,
@@ -851,11 +1084,16 @@ class _StatusCard extends ConsumerWidget {
         names.length == 1
             ? appLocalizations.mitmModuleTurnedOffDesc(names.single)
             : appLocalizations.mitmModulesTurnedOffDesc(names.length),
-        appLocalizations.view,
-        effects.reviewModules,
-        (colorScheme.warning, colorScheme.onWarning),
+        primary(appLocalizations.view, effects.reviewModules, (
+          colorScheme.warning,
+          colorScheme.onWarning,
+        )),
+        null,
+        null,
+        null,
       ),
     };
+    final detailed = widget.detailed && details != null;
     final ask = switch (_confirmOf(status)) {
       _Confirm.forceRestart => (
         title: appLocalizations.forceRestartCoreAsk,
@@ -876,29 +1114,33 @@ class _StatusCard extends ConsumerWidget {
         color: tint,
         shape: AppShape.all(_heroCorner),
       ),
-      child: hero,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _heroHeight),
+        child: hero,
+      ),
     );
+    final footnote = AppTextStyle.footnote
+        .of(context)
+        .copyWith(
+          color: colorScheme.onSurfaceVariant,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        );
+    // The front says the title and at most two lines; the details say all.
     Widget lines(String title, String body) => Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyle.headline.of(context),
+        Semantics(
+          header: true,
+          liveRegion: status is HelperLiveStatus,
+          child: Text(title, style: AppTextStyle.headline.of(context)),
         ),
         const SizedBox(height: 2),
         Text(
           body,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: AppTextStyle.footnote
-              .of(context)
-              .copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+          style: footnote,
         ),
       ],
     );
@@ -912,13 +1154,35 @@ class _StatusCard extends ConsumerWidget {
           tapTargetSize: TapTargetSize.shrinkWrap,
           shape: AppShape.full,
         );
-    final button = actionLabel != null && actionColors != null
+    final button = busyText != null
+        ? _BusyRow(text: busyText)
+        : mainAction != null
         ? FilledButton(
-            onPressed: onAction,
-            style: buttonStyle(actionColors.$1, actionColors.$2),
+            onPressed: mainAction.onPressed,
+            style: buttonStyle(mainAction.background, mainAction.foreground),
             child: AnimatedSwitcher(
               duration: _labelFade,
-              child: Text(actionLabel, key: ValueKey(actionLabel)),
+              child: Text(
+                mainAction.label,
+                key: ValueKey(mainAction.label),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        : null;
+    final secondary = secondaryLabel != null && details != null && !detailed
+        ? Focus(
+            focusNode: _secondary,
+            canRequestFocus: false,
+            skipTraversal: true,
+            child: TextButton(
+              onPressed: widget.onDetails,
+              style: ButtonStyle.from(
+                minimumSize: const Size.fromHeight(_secondaryHeight),
+                tapTargetSize: TapTargetSize.shrinkWrap,
+                shape: AppShape.full,
+              ),
+              child: Text(secondaryLabel, textAlign: TextAlign.center),
             ),
           )
         : null;
@@ -948,65 +1212,271 @@ class _StatusCard extends ConsumerWidget {
           );
     Widget fade(double asked, Widget rest, Widget? question) {
       if (question == null || asked == 0) return rest;
+      // Both lay out in full, so the card is as tall as the taller of them
+      // and neither is cut.
       return Stack(
+        alignment: AlignmentDirectional.topStart,
         children: [
           IgnorePointer(
             ignoring: confirming,
             child: Opacity(opacity: 1 - asked, child: rest),
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: !confirming,
-              child: Opacity(opacity: asked, child: question),
-            ),
+          IgnorePointer(
+            ignoring: !confirming,
+            child: Opacity(opacity: asked, child: question),
           ),
         ],
       );
     }
 
+    final front = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        heroBox,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, _textTop, 8, 0),
+          child: AnimatedBuilder(
+            animation: asking,
+            builder: (context, _) => fade(asking.value, restText, askText),
+          ),
+        ),
+      ],
+    );
+    final detailView = detailed
+        ? _DetailsView(
+            title: title,
+            titleFocus: _detailsTitle,
+            onBack: widget.onBack,
+            child: details,
+          )
+        : null;
     return SurfaceScope(
       level: level,
       child: Padding(
         padding: const EdgeInsets.all(_cardInset),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: heroBox),
-            SizedBox(
-              height: _bottomHeight,
-              child: Padding(
+            // The body scrolls once the card can grow no taller; the buttons
+            // stay at the bottom.
+            Flexible(
+              child: SingleChildScrollView(
+                controller: _bodyScroll,
+                child: detailView ?? front,
+              ),
+            ),
+            if (secondary != null || button != null)
+              Padding(
                 padding: const EdgeInsets.fromLTRB(
                   8,
-                  _textTop,
+                  _actionGap,
                   8,
                   _actionBottom,
                 ),
-                child: AnimatedBuilder(
-                  animation: asking,
-                  builder: (context, _) {
-                    final a = asking.value;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: ClipRect(
-                            child: OverflowBox(
-                              alignment: AlignmentDirectional.topStart,
-                              maxHeight: double.infinity,
-                              child: fade(a, restText, askText),
-                            ),
-                          ),
-                        ),
-                        if (button != null) fade(a, button, askButtons),
-                      ],
-                    );
-                  },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: _actionGap,
+                  children: [
+                    ?secondary,
+                    if (button != null)
+                      AnimatedBuilder(
+                        animation: asking,
+                        builder: (context, _) =>
+                            fade(asking.value, button, askButtons),
+                      ),
+                  ],
                 ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The helper card, from [macHelperCardView] and its actions only: the
+  /// tone's colors, the helper glyph, the card's title and detail, its
+  /// primary action unless an operation runs, and its details or steps
+  /// behind the secondary action.
+  (Color, Widget, String, String, _CardAction?, String?, String?, Widget?)
+  _helperCard(BuildContext context, HelperLiveStatus status) {
+    final l = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    final view = status.view;
+    final colors = macHelperToneColors(colorScheme, status.tone);
+    final flow = status.flow;
+    final waiting =
+        view.kind == MacHelperCardKind.starting ||
+        view.kind == MacHelperCardKind.switchingHelper;
+    // A wait, or an operation in flight: its text stands in for the button,
+    // so nothing can be sent twice.
+    final busyText = waiting || status.busy && view.progress != null
+        ? view.progress ?? l.macHelperChecking
+        : null;
+    final primaryAction = view.primary;
+    final mainAction = primaryAction == null || busyText != null
+        ? null
+        : (
+            label: macHelperActionLabel(l, primaryAction),
+            onPressed: flow == null || status.busy
+                ? (flow == null ? _inert : null)
+                : () => runMacHelperAction(flow, primaryAction),
+            background: colors.accent,
+            foreground: colors.onAccent,
+          );
+    final raw = view.rawDetail ?? '';
+    final secondaryAction = switch (view.secondary) {
+      MacHelperCardAction.viewSteps when view.steps.isNotEmpty =>
+        MacHelperCardAction.viewSteps,
+      MacHelperCardAction.viewDetails when raw.isNotEmpty =>
+        MacHelperCardAction.viewDetails,
+      _ => null,
+    };
+    final footnote = AppTextStyle.footnote
+        .of(context)
+        .copyWith(color: colorScheme.onSurfaceVariant, height: 18 / 13);
+    final details = secondaryAction == null
+        ? null
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 6,
+            children: [
+              if (view.detail case final detail?) Text(detail, style: footnote),
+              for (final (index, step) in view.steps.indexed)
+                Semantics(
+                  label: l.macHelperStepLabel('${index + 1}', step),
+                  excludeSemantics: true,
+                  child: Text('${index + 1}. $step', style: footnote),
+                ),
+              if (raw.isNotEmpty) ...[
+                SelectableText(
+                  raw,
+                  style: AppTextStyle.caption1
+                      .of(context)
+                      .copyWith(color: colorScheme.onSurface),
+                ),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton(
+                    onPressed: () =>
+                        unawaited(Clipboard.setData(ClipboardData(text: raw))),
+                    child: Text(l.copy),
+                  ),
+                ),
+              ],
+            ],
+          );
+    return (
+      colors.container,
+      ExcludeSemantics(
+        child: _BadgeHero(
+          color: colors.accent,
+          glyph: AppGlyphs.helperDaemonSmall,
+          glyphColor: colors.onAccent,
+          chips: [
+            if (widget.helperRequired)
+              Flexible(
+                child: Text(
+                  l.macHelperRequiredTitle,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyle.caption1
+                      .of(context)
+                      .copyWith(color: colors.onContainer),
+                ),
+              ),
+          ],
+        ),
+      ),
+      view.title,
+      view.detail ?? '',
+      mainAction,
+      secondaryAction == null ? null : macHelperActionLabel(l, secondaryAction),
+      busyText,
+      details,
+    );
+  }
+}
+
+/// An operation's text in place of the card's button while it runs.
+class _BusyRow extends StatelessWidget {
+  const _BusyRow({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _actionHeight),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 8,
+          children: [
+            const ActivityIndicator(size: 14),
+            Flexible(
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: AppTextStyle.subheadline.of(context),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A card's details in place of its front: back, the title, which takes the
+/// focus, and everything the front left out.
+class _DetailsView extends StatelessWidget {
+  const _DetailsView({
+    required this.title,
+    required this.titleFocus,
+    required this.onBack,
+    required this.child,
+  });
+
+  final String title;
+  final FocusNode titleFocus;
+  final VoidCallback onBack;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.appLocalizations;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 8,
+      children: [
+        Row(
+          spacing: 4,
+          children: [
+            DashboardIconButton(
+              glyph: AppGlyphs.chevronBack,
+              tooltip: l.back,
+              onPressed: onBack,
+            ),
+            Expanded(
+              child: Focus(
+                focusNode: titleFocus,
+                child: Semantics(
+                  header: true,
+                  focused: titleFocus.hasFocus,
+                  child: Text(title, style: AppTextStyle.headline.of(context)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: child,
+        ),
+      ],
     );
   }
 }
@@ -1162,8 +1632,12 @@ class _DashPainter extends CustomPainter {
   bool shouldRepaint(_DashPainter oldDelegate) => oldDelegate.color != color;
 }
 
+/// The download's ring with its percentage alone inside, and the whole
+/// target version under it, wrapping as it must; the hero grows to fit.
 class _DownloadHero extends StatelessWidget {
   const _DownloadHero({required this.download});
+
+  static const _ring = 132.0;
 
   final UpdateDownloading download;
 
@@ -1174,41 +1648,47 @@ class _DownloadHero extends StatelessWidget {
     final value = total > 0 ? download.received / total : null;
     const tabular = [FontFeature.tabularFigures()];
     return Center(
-      child: SizedBox.square(
-        dimension: 132,
-        child: CustomPaint(
-          painter: _TicksPainter(
-            value: value ?? 0,
-            on: colorScheme.primary,
-            off: colorScheme.primary.withValues(alpha: 0.22),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value == null
-                      ? download.received.traffic.show
-                      : '${(value * 100).floor()}%',
-                  style: AppTextStyle.title1
-                      .of(context, emphasized: true)
-                      .copyWith(
-                        color: colorScheme.onPrimaryContainer,
-                        fontFeatures: tabular,
-                      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 4,
+          children: [
+            SizedBox.square(
+              dimension: _ring,
+              child: CustomPaint(
+                painter: _TicksPainter(
+                  value: value ?? 0,
+                  on: colorScheme.primary,
+                  off: colorScheme.primary.withValues(alpha: 0.22),
                 ),
-                Text(
-                  displayVersionLabel(download.tag),
-                  style: AppTextStyle.caption1
-                      .of(context)
-                      .copyWith(
-                        color: colorScheme.onPrimaryContainer,
-                        fontFeatures: tabular,
-                      ),
+                child: Center(
+                  child: Text(
+                    value == null
+                        ? download.received.traffic.show
+                        : '${(value * 100).floor()}%',
+                    maxLines: 1,
+                    style: AppTextStyle.title1
+                        .of(context, emphasized: true)
+                        .copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                          fontFeatures: tabular,
+                        ),
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
+            Text(
+              displayVersionLabel(download.tag),
+              textAlign: TextAlign.center,
+              style: AppTextStyle.caption1
+                  .of(context)
+                  .copyWith(
+                    color: colorScheme.onPrimaryContainer,
+                    fontFeatures: tabular,
+                  ),
+            ),
+          ],
         ),
       ),
     );
@@ -1297,7 +1777,8 @@ class _BadgeHero extends StatelessWidget {
                 ),
               ),
             ),
-            Row(mainAxisSize: MainAxisSize.min, spacing: 8, children: chips),
+            if (chips.isNotEmpty)
+              Row(mainAxisSize: MainAxisSize.min, spacing: 8, children: chips),
           ],
         ),
       ),
@@ -1306,11 +1787,10 @@ class _BadgeHero extends StatelessWidget {
 }
 
 class _HeroChip extends StatelessWidget {
-  const _HeroChip(this.text, {required this.color, this.emphasized = false});
+  const _HeroChip(this.text, {required this.color});
 
   final String text;
   final Color color;
-  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
@@ -1327,7 +1807,7 @@ class _HeroChip extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: AppTextStyle.footnote
-              .of(context, emphasized: emphasized)
+              .of(context)
               .copyWith(
                 color: color,
                 fontFeatures: const [FontFeature.tabularFigures()],
@@ -1338,6 +1818,9 @@ class _HeroChip extends StatelessWidget {
   }
 }
 
+/// A check over the two versions, one under the other: the one running now
+/// and the one ready to install, each wrapping as it must, the build number
+/// smaller after the version. The hero grows to fit.
 class _ReadyHero extends StatelessWidget {
   const _ReadyHero({required this.tag, required this.onDiscard});
 
@@ -1347,28 +1830,75 @@ class _ReadyHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
+    final l = context.appLocalizations;
+    final info = globalState.packageInfo;
+    final next = versionLabelParts(tag.replaceFirst(RegExp('^v'), ''));
+    const tabular = [FontFeature.tabularFigures()];
+    Widget line(
+      String version,
+      String? build, {
+      required Color color,
+      bool emphasized = false,
+    }) => Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: version,
+            style: AppTextStyle.footnote
+                .of(context, emphasized: emphasized)
+                .copyWith(color: color, fontFeatures: tabular),
+          ),
+          if (build != null && build.isNotEmpty)
+            TextSpan(
+              text: ' ($build)',
+              style: AppTextStyle.caption1
+                  .of(context)
+                  .copyWith(color: color, fontFeatures: tabular),
+            ),
+        ],
+      ),
+      textAlign: TextAlign.center,
+    );
     return Stack(
       children: [
-        _BadgeHero(
-          color: colorScheme.success,
-          glyph: AppGlyphs.check,
-          glyphColor: colorScheme.onSuccess,
-          chips: [
-            _HeroChip(
-              globalState.packageInfo.version,
-              color: colorScheme.onSurfaceVariant,
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox.square(
+                  dimension: 60,
+                  child: DecoratedBox(
+                    decoration: ShapeDecoration(
+                      color: colorScheme.success,
+                      shape: AppShape.circle,
+                    ),
+                    child: Center(
+                      child: GlyphIcon(
+                        AppGlyphs.check,
+                        size: 28,
+                        color: colorScheme.onSuccess,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                line(
+                  l.updateCurrentVersion(info.version),
+                  info.buildNumber,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: 8),
+                line(
+                  l.updateNewVersion(next.version),
+                  next.build,
+                  color: colorScheme.onSuccessContainer,
+                  emphasized: true,
+                ),
+              ],
             ),
-            GlyphIcon(
-              AppGlyphs.chevronForward,
-              size: 16,
-              color: colorScheme.onSuccessContainer,
-            ),
-            _HeroChip(
-              displayVersionLabel(tag.replaceFirst(RegExp('^v'), '')),
-              color: colorScheme.success,
-              emphasized: true,
-            ),
-          ],
+          ),
         ),
         PositionedDirectional(
           top: 8,
@@ -1404,6 +1934,106 @@ class _ConsentHero extends StatelessWidget {
         for (final text in [...names.take(_shownNames), if (rest > 0) '+$rest'])
           Flexible(child: _HeroChip(text, color: colorScheme.onSurfaceVariant)),
       ],
+    );
+  }
+}
+
+class _ResourcesHero extends StatelessWidget {
+  const _ResourcesHero({required this.items});
+
+  final List<UpdatingResource> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: _HeroRows(
+        children: [
+          for (final item in items.take(_HeroRows.shown)) _ResourceRow(item),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResourceRow extends StatelessWidget {
+  const _ResourceRow(this.item);
+
+  final UpdatingResource item;
+
+  @override
+  Widget build(BuildContext context) {
+    return _HeroRow(
+      leading: GlyphIcon(
+        item.isProfile ? AppGlyphs.profiles : AppGlyphs.resources,
+        size: 18,
+        color: context.colorScheme.onSurfaceVariant,
+      ),
+      label: item.name,
+      trailing: const ActivityIndicator(size: 16),
+    );
+  }
+}
+
+class _HeroRows extends StatelessWidget {
+  const _HeroRows({required this.children});
+
+  static const shown = 3;
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 264,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 6,
+          children: children,
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroRow extends StatelessWidget {
+  const _HeroRow({required this.leading, required this.label, this.trailing});
+
+  final Widget leading;
+  final String label;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    final trailing = this.trailing;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 36),
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
+          color: SurfaceLevel.floatingOf(colorScheme).colorOf(colorScheme),
+          shape: AppShape.sm,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            spacing: 10,
+            children: [
+              leading,
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyle.subheadline.of(context),
+                ),
+              ),
+              ?trailing,
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

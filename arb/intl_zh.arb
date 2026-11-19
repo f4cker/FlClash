@@ -2391,5 +2391,18 @@
   "receiveBetaUpdatesDescription": "开启后也会检查测试版；关闭后不会自动降级。",
   "betaUpdateCheckIncomplete": "测试版更新检查未完成，仍可使用已验证的更新。",
   "updateNoNewerStable": "暂无更高正式版",
-  "installedBetaBadge": "当前安装的是测试版"
+  "installedBetaBadge": "当前安装的是测试版",
+  "updatingResources": "正在更新",
+  "updatingResourcesCount": "{count, plural, other{{count} 项正在更新}}",
+  "liveStatusItems": "{count, plural, other{{count} 项}}",
+  "liveStatusUpdateDownload": "更新下载 {percent}",
+  "updateCurrentVersion": "当前版本 {version}",
+  "updateNewVersion": "新版本 {version}",
+  "macHelperRegisterTitle": "登记辅助程序",
+  "macHelperRegisterDetail": "辅助程序尚未登记。点按“登记”继续。",
+  "macHelperRegisterAction": "登记",
+  "macHelperAwaitingApprovalDetail": "请在系统设置中允许 Flash 在后台运行",
+  "macHelperDisabledByUserDetail": "Flash 的后台运行权限已关闭。请在系统设置中允许 Flash 在后台运行。",
+  "macHelperUnavailableTitle": "辅助程序暂不可用",
+  "macHelperViewSteps": "查看步骤"
 }

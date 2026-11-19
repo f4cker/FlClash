@@ -102,8 +102,10 @@ void main() {
     final view = macHelperCardView(l, flow);
     expect(view.kind, MacHelperCardKind.approval);
     expect(view.primary, MacHelperCardAction.openSettings);
-    expect(view.secondary, isNull);
-    expect(view.detail, contains('关掉再打开'));
+    // The copy asks to allow Flash; "turn it off and on" is in the steps.
+    expect(view.secondary, MacHelperCardAction.viewSteps);
+    expect(view.detail, l.macHelperAwaitingApprovalDetail);
+    expect(view.steps.join(), contains('关掉再打开'));
 
     // Nothing polls while the card only shows the step.
     native.calls.clear();
@@ -155,7 +157,7 @@ void main() {
       );
       expect(view.kind, MacHelperCardKind.approval);
       expect(view.primary, MacHelperCardAction.openSettings);
-      expect(view.detail, contains('关掉再打开'));
+      expect(view.steps.join(), contains('关掉再打开'));
       expect(started, 0);
 
       // The retired name is gone; the new one waits for the user.
@@ -648,7 +650,7 @@ void main() {
         final view = macHelperCardView(l, flow);
         expect(view.kind, MacHelperCardKind.approval);
         expect(view.primary, MacHelperCardAction.openSettings);
-        expect(view.detail, l.macHelperAllowInSettings);
+        expect(view.detail, l.macHelperAwaitingApprovalDetail);
         flow.dispose();
       });
 

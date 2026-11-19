@@ -3617,5 +3617,18 @@
   "receiveBetaUpdatesDescription": "有効にするとベータ版も確認します。無効にしてもダウングレードしません。",
   "betaUpdateCheckIncomplete": "ベータ版の確認は未完了です。検証済みの更新は利用できます。",
   "updateNoNewerStable": "より新しい安定版はありません。",
-  "installedBetaBadge": "インストール済みのバージョンはベータ版です"
+  "installedBetaBadge": "インストール済みのバージョンはベータ版です",
+  "updatingResources": "更新中",
+  "updatingResourcesCount": "{count, plural, other{{count} 件を更新中}}",
+  "liveStatusItems": "{count, plural, other{{count} 件}}",
+  "liveStatusUpdateDownload": "アップデートのダウンロード {percent}",
+  "updateCurrentVersion": "現在のバージョン {version}",
+  "updateNewVersion": "新しいバージョン {version}",
+  "macHelperRegisterTitle": "ヘルパーを登録",
+  "macHelperRegisterDetail": "ヘルパーはまだ登録されていません。「登録」をクリックして続行してください。",
+  "macHelperRegisterAction": "登録",
+  "macHelperAwaitingApprovalDetail": "システム設定で Flash のバックグラウンド実行を許可してください。",
+  "macHelperDisabledByUserDetail": "Flash のバックグラウンド実行の許可がオフになっています。システム設定で Flash のバックグラウンド実行を許可してください。",
+  "macHelperUnavailableTitle": "ヘルパーを利用できません",
+  "macHelperViewSteps": "手順を表示"
 }

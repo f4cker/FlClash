@@ -3634,5 +3634,53 @@
   "receiveBetaUpdatesDescription": "Also check beta releases when enabled; disabling will not downgrade the app.",
   "betaUpdateCheckIncomplete": "Beta update check incomplete. Verified updates are still available.",
   "updateNoNewerStable": "No newer stable release is available.",
-  "installedBetaBadge": "Installed version is a beta"
+  "installedBetaBadge": "Installed version is a beta",
+  "updatingResources": "Updating",
+  "updatingResourcesCount": "{count, plural, =1{1 item updating} other{{count} items updating}}",
+  "@updatingResourcesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveStatusItems": "{count, plural, =1{1 item} other{{count} items}}",
+  "@liveStatusItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveStatusUpdateDownload": "update download {percent}",
+  "@liveStatusUpdateDownload": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "updateCurrentVersion": "Current version {version}",
+  "@updateCurrentVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateNewVersion": "New version {version}",
+  "@updateNewVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "macHelperRegisterTitle": "Register the helper",
+  "macHelperRegisterDetail": "The helper isn’t registered yet. Click Register to continue.",
+  "macHelperRegisterAction": "Register",
+  "macHelperAwaitingApprovalDetail": "Allow Flash to run in the background in System Settings.",
+  "macHelperDisabledByUserDetail": "Flash’s permission to run in the background is turned off. Allow Flash to run in the background in System Settings.",
+  "macHelperUnavailableTitle": "Helper unavailable",
+  "macHelperViewSteps": "View steps"
 }

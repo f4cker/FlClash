@@ -3617,5 +3617,18 @@
   "receiveBetaUpdatesDescription": "Также проверять бета-версии; отключение не понижает версию приложения.",
   "betaUpdateCheckIncomplete": "Проверка бета-версий не завершена. Проверенные обновления доступны.",
   "updateNoNewerStable": "Более новой стабильной версии нет.",
-  "installedBetaBadge": "Установлена бета-версия"
+  "installedBetaBadge": "Установлена бета-версия",
+  "updatingResources": "Обновление",
+  "updatingResourcesCount": "{count, plural, one{Обновляется {count} элемент} few{Обновляются {count} элемента} other{Обновляются {count} элементов}}",
+  "liveStatusItems": "{count, plural, one{{count} элемент} few{{count} элемента} many{{count} элементов} other{{count} элемента}}",
+  "liveStatusUpdateDownload": "загрузка обновления {percent}",
+  "updateCurrentVersion": "Текущая версия {version}",
+  "updateNewVersion": "Новая версия {version}",
+  "macHelperRegisterTitle": "Зарегистрируйте помощника",
+  "macHelperRegisterDetail": "Помощник ещё не зарегистрирован. Нажмите «Зарегистрировать», чтобы продолжить.",
+  "macHelperRegisterAction": "Зарегистрировать",
+  "macHelperAwaitingApprovalDetail": "Разрешите Flash работать в фоне в Системных настройках.",
+  "macHelperDisabledByUserDetail": "Разрешение Flash на работу в фоне отключено. Разрешите Flash работать в фоне в Системных настройках.",
+  "macHelperUnavailableTitle": "Помощник недоступен",
+  "macHelperViewSteps": "Показать шаги"
 }

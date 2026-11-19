@@ -108,12 +108,24 @@ void main() {
         const UpdateDownloading('v0.9.4', received: 25, total: 100);
     await pumpButton(tester);
 
-    expect(badge('Downloading update, 25%'), findsOneWidget);
+    expect(
+      badge('Downloading update, 1 item, update download 25%'),
+      findsOneWidget,
+    );
 
     container.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
     await settle(tester);
 
-    expect(badge('Core stopped, 2'), findsOneWidget);
+    // The download's progress beats the count, which the label still says.
+    expect(badge('Core stopped, 2 items, update download 25%'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
+    expect(find.text('2'), findsNothing);
+
+    container.read(updateDownloadStateProvider.notifier).value = null;
+    container.read(updatingKeysProvider.notifier).start(_profile.updatingKey);
+    await settle(tester);
+
+    expect(badge('Core stopped, 2 items'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
   });
 
@@ -133,7 +145,7 @@ void main() {
     download.value = const UpdateReady('v0.9.4', '/tmp/update');
     await settle(tester);
 
-    expect(badge('Update ready, 100%'), findsOneWidget);
+    expect(badge('Update ready, 1 item'), findsOneWidget);
     expect(find.text('100%'), findsOneWidget);
   });
 
@@ -237,7 +249,9 @@ void main() {
     await settle(tester);
 
     expect(front('Install update'), findsOneWidget);
-    expect(find.text('0.9.3'), findsOneWidget);
+    // The two versions, one under the other, each with its build.
+    expect(find.text('Current version 0.9.3 (1)'), findsOneWidget);
+    expect(find.text('New version 0.9.4'), findsOneWidget);
   });
 
   testWidgets('ready card disables discard only after native install commit', (
@@ -295,7 +309,7 @@ void main() {
     toAgree = [module(1, 'Ads')];
     await pumpButton(tester);
 
-    expect(badge('Modules turned off'), findsOneWidget);
+    expect(badge('Modules turned off, 1 item'), findsOneWidget);
     await open(tester);
 
     expect(front('Ads'), findsOneWidget);
@@ -384,16 +398,32 @@ void main() {
         find.text(currentAppLocalizations.mitmScriptRiskTitle),
         findsNothing,
       );
-      expect(badge('Modules turned off'), findsNothing);
+      expect(badge('Modules turned off, 1 item'), findsNothing);
     });
   });
 
-  testWidgets('leaves updating resources out', (tester) async {
+  testWidgets('counts updating resources as one card', (tester) async {
     container.read(updatingKeysProvider.notifier)
       ..start(_profile.updatingKey)
       ..start(GeoResource.GEOIP.updatingKey);
     await pumpButton(tester);
 
+    expect(badge('Updating, 1 item'), findsOneWidget);
+
+    await open(tester);
+
+    expect(find.text('2 items updating'), findsOneWidget);
+    expect(find.text('My subscription'), findsOneWidget);
+    expect(find.text('GEOIP'), findsOneWidget);
+
+    container.read(updatingKeysProvider.notifier).stopKeys([
+      _profile.updatingKey,
+      GeoResource.GEOIP.updatingKey,
+    ]);
+    await settle(tester);
+    await settle(tester);
+
+    expect(find.text('2 items updating'), findsNothing);
     expect(find.byTooltip('Live status'), findsNothing);
   });
 
@@ -519,7 +549,10 @@ void main() {
           const UpdateDownloading('v0.9.4', received: 25, total: 100);
       await pumpButton(tester, separateCore: true);
 
-      expect(badge('Downloading update, 25%'), findsOneWidget);
+      expect(
+        badge('Downloading update, 1 item, update download 25%'),
+        findsOneWidget,
+      );
 
       await open(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
@@ -555,16 +588,16 @@ void main() {
       status.value = CoreStatus.connecting;
       await tester.pump();
       await tester.pump(step);
-      expect(badge('Connecting…'), findsOneWidget);
+      expect(badge('Connecting…, 1 item'), findsOneWidget);
 
       status.value = CoreStatus.connected;
       await tester.pump();
       await tester.pump(rest - const Duration(milliseconds: 1));
-      expect(badge('Connecting…'), findsOneWidget);
+      expect(badge('Connecting…, 1 item'), findsOneWidget);
 
       await tester.pump(const Duration(milliseconds: 1));
       await tester.pump(step);
-      expect(badge('Connecting…'), findsNothing);
+      expect(badge('Connecting…, 1 item'), findsNothing);
       expect(find.byGlyph(AppGlyphs.check), findsOneWidget);
     });
 
@@ -599,7 +632,7 @@ void main() {
       status.value = CoreStatus.disconnected;
       await tester.pump();
 
-      expect(badge('Core stopped'), findsOneWidget);
+      expect(badge('Core stopped, 1 item'), findsOneWidget);
     });
 
     testWidgets('the stopped card says why the core stopped', (tester) async {
