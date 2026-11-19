@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -80,8 +79,13 @@ void main() {
   final sent = <Map<String, Object?>>[];
   Future<void> Function(String host)? duringSign;
 
-  void setMitm(List<String> hostname, {bool enable = true}) {
+  void setMitm(
+    List<String> hostname, {
+    bool enable = true,
+    LogLevel logLevel = LogLevel.error,
+  }) {
     container.read(patchClashConfigProvider.notifier).value = PatchClashConfig(
+      logLevel: logLevel,
       mitm: Mitm(
         enable: enable,
         hostname: hostname,
@@ -172,6 +176,8 @@ void main() {
       ],
     );
     globalState.container = container;
+    globalState.isAttach = true;
+    container.listen(logsProvider, (_, _) {});
     container.listen(mitmModulesProvider, (_, _) {});
     container.listen(patchClashConfigProvider, (_, _) {});
     // The Core manager keeps the setup alive in the app.
@@ -183,6 +189,7 @@ void main() {
     container.dispose();
     await testDatabase.close();
     await home.delete(recursive: true);
+    globalState.isAttach = false;
     mitmFeature = false;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
@@ -382,5 +389,56 @@ void main() {
     expect(await sign('new.example.com'), isNull);
     expect(await sign('a.example.com'), isNull);
     expect(signedLists.last, coreHostnames());
+  });
+
+  List<Log> mitmLogs() => [
+    for (final log in container.read(logsProvider).list)
+      if (log.payload.contains('MITM: ')) log,
+  ];
+
+  test('a refusal warns once per host, naming the host only', () async {
+    expect(await sign('a.example.com'), 'notListed');
+    expect(await sign('a.example.com'), 'notListed');
+    expect(await sign('b.example.com'), 'notListed');
+    final logs = mitmLogs();
+    expect(logs.map((log) => log.logLevel), [
+      LogLevel.warning,
+      LogLevel.warning,
+    ]);
+    expect(logs.first.payload, contains('a.example.com'));
+    expect(logs.last.payload, contains('b.example.com'));
+    for (final log in logs) {
+      expect(log.payload, isNot(contains('BAU=')));
+      expect(log.payload, isNot(contains('AQID')));
+    }
+  });
+
+  test('a leaf is logged only at the debug level, once per host', () async {
+    expect(await sign('user.example.com'), isNull);
+    expect(mitmLogs(), isEmpty);
+
+    setMitm(const ['user.example.com'], logLevel: LogLevel.debug);
+    expect(await sign('user.example.com'), isNull);
+    expect(await sign('user.example.com'), isNull);
+    final logs = mitmLogs();
+    expect(logs.single.logLevel, LogLevel.debug);
+    expect(logs.single.payload, '[APP] MITM: decrypting user.example.com');
+  });
+
+  test('a host refused again after it signed warns again', () async {
+    final module = await add(_module('A', 'a.example.com'), 'a.sgmodule');
+    await settle();
+    expect(await sign('a.example.com'), isNull);
+    await action().turnOff(module.id);
+    expect(await sign('a.example.com'), 'notListed');
+    await action().recordConsent(module.id, asksConsent: false, agreed: true);
+    await settle();
+    expect(await sign('a.example.com'), isNull);
+    await action().turnOff(module.id);
+    expect(await sign('a.example.com'), 'notListed');
+    expect(
+      mitmLogs().where((log) => log.logLevel == LogLevel.warning),
+      hasLength(2),
+    );
   });
 }

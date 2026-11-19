@@ -400,6 +400,39 @@ class MitmSignAction extends _$MitmSignAction {
     return mitmEffectiveHostnames(mitm, rules);
   }
 
+  // Each host is logged once until its answer changes, and only by name. A
+  // refusal is a warning, as the Core then lets the host through undecrypted;
+  // a leaf only at the debug level the user picked.
+  final _refusedLogged = <String>{};
+  final _signedLogged = <String>{};
+  static const _loggedHostsLimit = 512;
+
+  void _logSigned(String host, MitmSignResult result) {
+    if (result.error == 'notListed') {
+      _signedLogged.remove(host);
+      if (_remember(_refusedLogged, host)) {
+        commonPrint.log(
+          'MITM: $host is not on the decryption list, so it passes through '
+          'undecrypted',
+          logLevel: LogLevel.warning,
+        );
+      }
+    } else if (result.cert != null) {
+      _refusedLogged.remove(host);
+      if (ref.read(patchClashConfigProvider).logLevel == LogLevel.debug &&
+          _remember(_signedLogged, host)) {
+        commonPrint.log('MITM: decrypting $host', logLevel: LogLevel.debug);
+      }
+    }
+  }
+
+  static bool _remember(Set<String> logged, String host) {
+    if (logged.contains(host)) return false;
+    if (logged.length >= _loggedHostsLimit) logged.clear();
+    logged.add(host);
+    return true;
+  }
+
   Future<MitmSignResult> _signBounded(
     MitmSigner signer,
     MitmSignRequest request,
@@ -499,6 +532,7 @@ class MitmSignAction extends _$MitmSignAction {
               !listEquals(hostnamesAfter, hostnames)) {
             result = const MitmSignResult(error: 'disabled');
           }
+          _logSigned(request.host, result);
         }
       } catch (error) {
         commonPrint.log(
