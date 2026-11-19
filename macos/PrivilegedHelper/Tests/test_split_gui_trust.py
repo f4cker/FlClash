@@ -96,7 +96,7 @@ class SplitGUITrustTests(unittest.TestCase):
             self.assertNotIn('SecCode', body)
             self.assertNotIn('SecStaticCodeCreateWithPath', body)
         order = ['FCMessageAuditToken(message, &token)', 'FCHelperGuestCheck(&token, self.executable, &runningHash)',
-                 'FCStaticCodeHash(self.sealedExecutable, self.identifier)', 'FCCompareRunningHash(runningHash, sealedHash)']
+                 'FCStaticCodeHash(self.sealedExecutable, self.identifier)', 'FCCompareRunningToBundled(runningHash, sealedHash, self.sealedExecutable,']
         positions = [copy.index(item) for item in order]
         self.assertEqual(positions, sorted(positions))
         steps = ['FCCodeOpsStatus', 'FCCoreRequiredStatus', 'FCHelperForbiddenStatus', 'FCCodeOpsCDHash',

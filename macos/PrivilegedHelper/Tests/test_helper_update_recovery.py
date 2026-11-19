@@ -325,63 +325,82 @@ STALE_VERSION_MAIN = r'''
 # Asking the previous build's helper to exit (appended to the fixture's main; b: BridgeFixture).
 RETIRE_CONSTANTS = '\n'.join(line for line in BRIDGE.splitlines()
                              if line.startswith(('static const NSUInteger FCMaxRetireAttempts',
-                                                 'static const NSTimeInterval FCStaleRecheckSeconds'))) + '\n'
+                                                 'static const NSTimeInterval FCStaleRecheckSeconds',
+                                                 'static const NSTimeInterval FCExitSettleSeconds'))) + '\n'
 RETIRE_MAIN = r'''
         // Simulation: an in-app update left the old helper running (no Core); its hello reply is refused for its
         // cdhash only. Status sends one exit, says a switch is under way and asks again after ~1 s.
-        b.launcher = nil; b.jobs = nil; b.slow = NO; b.sessionActive = NO;
-        b.oldDaemon = YES; b.oldDaemonBusy = NO; b.hashRefusal = YES; b.otherRefusal = NO;
-        b.staleRetryAfter = nil; b.retireAttempts = 0; b.retireHash = nil;
+        b.launcher = nil; b.jobs = nil; b.slow = NO; b.sessionActive = NO; b.operationInFlight = NO;
+        b.oldDaemon = YES; b.oldDaemonBusy = NO; b.hashRefusal = YES; b.otherRefusal = NO; b.exitReplies = YES;
+        b.staleRetryAfter = nil; b.retireAttempts = 0; b.retireHash = nil; b.clock = 100;
         [b.calls removeAllObjects];
         NSDictionary *swap = Run(b, NO);
         assert([swap[@"code"] isEqual:@"staleHelper"] && [swap[@"retiring"] isEqual:@YES]);
         assert(([b.calls isEqual:@[@"hello", @"exit", @"reset"]]) && !b.oldDaemon);
         assert([b.staleRetryAfter timeIntervalSinceNow] <= FCStaleRecheckSeconds);
         // Within the second: the cached answer, still "switching", nothing sent.
+        dispatch_sync(b.queue, ^{});  // the reply to the exit
         NSDictionary *cached = Run(b, NO);
         assert([cached[@"code"] isEqual:@"staleHelper"] && [cached[@"retiring"] isEqual:@YES]);
-        assert(b.calls.count == 3);
+        assert(b.calls.count == 3 && !b.exitInFlight && b.exitAnswered);
         // The next status reaches the bundled helper (launchd ran the launcher): ready, no registration touched.
-        b.staleRetryAfter = [NSDate distantPast];
+        b.staleRetryAfter = [NSDate distantPast]; b.clock += 2;
         assert([Run(b, NO)[@"code"] isEqual:@"enabled"] && !b.staleRetryAfter && !b.staleRetiring);
         assert(([b.calls isEqual:@[@"hello", @"exit", @"reset", @"hello"]]));
 
-        // An old helper that keeps answering (it owns a Core): at most three exits for this bundled helper, then
-        // the passive 40 s wait.
-        b.oldDaemon = YES; b.oldDaemonBusy = YES;
+        // An exit still without reply (slow validation in the old helper): no second one, still a switch.
+        b.oldDaemon = YES; b.oldDaemonBusy = YES; b.exitReplies = NO;
+        b.retireHash = nil; b.exitAnswered = NO; b.exitInFlight = NO; b.staleRetryAfter = nil;
         [b.calls removeAllObjects];
-        for (int i = 0; i < 5; i++) {
-            NSDictionary *answer = Run(b, NO);
-            assert([answer[@"code"] isEqual:@"staleHelper"]);
-            assert([answer[@"retiring"] isEqual:@(i < 2)]);
-            assert([b.staleRetryAfter timeIntervalSinceNow] > (i < 2 ? -1 : 30));
-            b.staleRetryAfter = [NSDate distantPast];
+        for (int i = 0; i < 4; i++) {
+            assert([Run(b, NO)[@"retiring"] isEqual:@YES]);
+            b.staleRetryAfter = [NSDate distantPast]; b.clock += 2;
         }
         NSUInteger exits = 0;
         for (NSString *call in b.calls) exits += [call isEqual:@"exit"];
-        assert(exits == 2 && b.retireAttempts == 3);  // one used by the swap above
-        // A user's "check again" (native repair) grants exactly one more, never a re-registration.
-        b.staleRetryAfter = [NSDate dateWithTimeIntervalSinceNow:40];
-        NSDictionary *again = Run(b, YES);
-        assert([again[@"retiring"] isEqual:@YES] && b.retireAttempts == 3);
-        assert([Run(b, YES)[@"retiring"] isEqual:@YES] && b.retireAttempts == 3);
-        // A new bundled helper (another update) starts a new count.
-        b.retireHash = @"cdhash-older";
-        b.staleRetryAfter = nil;
+        assert(exits == 1 && b.exitInFlight && b.retireAttempts == 1);
+        // Its reply came (sessionBusy: it owns a Core). Within FCExitSettleSeconds: still nothing new.
+        [b exitSettled:YES];
         assert([Run(b, NO)[@"retiring"] isEqual:@YES] && b.retireAttempts == 1);
+        // It still answers after that: refused. No more exits, the passive 40 s wait.
+        b.staleRetryAfter = [NSDate distantPast]; b.clock += 2;
+        NSDictionary *refusedExit = Run(b, NO);
+        assert([refusedExit[@"retiring"] isEqual:@NO] && [b.staleRetryAfter timeIntervalSinceNow] > 30);
+        assert(b.retireAttempts == 1);
+        // A user's "check again" (native repair) grants exactly one more, never a re-registration.
+        NSDictionary *again = Run(b, YES);
+        assert([again[@"retiring"] isEqual:@YES] && b.retireAttempts == 2);
+        // An exit that ended in an error (no reply), then the helper still answers: tried again, at most 3 sent.
+        [b exitSettled:NO]; b.clock += 2; b.staleRetryAfter = nil;
+        assert([Run(b, NO)[@"retiring"] isEqual:@YES] && b.retireAttempts == 3);
+        [b exitSettled:NO]; b.clock += 2; b.staleRetryAfter = nil;
+        assert([Run(b, NO)[@"retiring"] isEqual:@NO] && b.retireAttempts == 3);
+        // A new bundled helper (another update) starts a new count.
+        b.retireHash = @"cdhash-older"; b.staleRetryAfter = nil;
+        assert([Run(b, NO)[@"retiring"] isEqual:@YES] && b.retireAttempts == 1);
+        [b exitSettled:NO]; b.clock += 2;
 
-        // Never while this app's Core session runs through it.
-        b.retireAttempts = 0; b.staleRetryAfter = nil; b.sessionActive = YES;
+        // Nothing could be sent (pinned requirement unavailable): not counted, and no switch is claimed.
+        b.retireAttempts = 0; b.staleRetryAfter = nil; b.requirementMissing = YES;
         [b.calls removeAllObjects];
-        assert([Run(b, NO)[@"retiring"] isEqual:@NO] && ![b.calls containsObject:@"exit"]);
+        assert([Run(b, NO)[@"retiring"] isEqual:@NO] && b.retireAttempts == 0 && !b.exitInFlight);
         assert([b.staleRetryAfter timeIntervalSinceNow] > 30);
-        b.sessionActive = NO;
+        b.requirementMissing = NO;
+        // Never while this app's Core session runs through it, or while a recovery owns the registration.
+        b.staleRetryAfter = nil; b.sessionActive = YES;
+        assert([Run(b, NO)[@"retiring"] isEqual:@NO]);
+        b.sessionActive = NO; b.staleRetryAfter = nil; b.operationInFlight = YES;
+        assert([Run(b, NO)[@"code"] isEqual:@"repairInProgress"]);
+        __block BOOL during = YES;
+        dispatch_sync(b.queue, ^{ during = [b retireStaleHelper]; });
+        assert(!during && b.retireAttempts == 0);
+        b.operationInFlight = NO;
         // Never for a reply refused for anything but its cdhash, or a stale hash only the helper itself reported.
         b.staleRetryAfter = nil; b.otherRefusal = YES;
         assert([Run(b, NO)[@"code"] isEqual:@"untrustedReply"]);
         b.otherRefusal = NO; b.hashRefusal = NO; b.staleRetryAfter = nil;
         assert([Run(b, NO)[@"retiring"] isEqual:@NO]);
-        assert(![b.calls containsObject:@"exit"]);
+        assert(![b.calls containsObject:@"exit"] && b.retireAttempts == 0);
         assert(![b.calls containsObject:@"unregister"] && ![b.calls containsObject:@"register"]);
         puts("stale-helper-retired");
 '''
@@ -452,6 +471,77 @@ int main(void) {
             if build.exists():
                 self.assertNotIn('FCPinned', build.read_text(errors='ignore'), build)
 
+    def test_running_hash_of_another_slice_of_the_bundled_helper_is_current(self):
+        # An app under Rosetta reads the x86_64 slice's cdhash by default while launchd runs the arm64 slice: equal to
+        # a validated slice of the same bundled binary is current; anything else stays stale.
+        peer = 'com.layoute.flash.test.peer'
+        with tempfile.TemporaryDirectory(prefix='flash-slices-') as directory:
+            root = Path(directory)
+            universal, thin = root / 'universal', root / 'thin'
+            for binary, archs in ((universal, ['-arch', 'arm64', '-arch', 'x86_64']), (thin, ['-arch', 'arm64'])):
+                built = subprocess.run(['clang', *archs, str(MACOS / 'PrivilegedHelper/Tests/UnreadablePeer.c'),
+                                        '-o', str(binary)], capture_output=True, text=True)
+                if built.returncode:
+                    self.skipTest('cannot build a universal binary here: ' + built.stderr[:200])
+                subprocess.run(['codesign', '--force', '--sign', '-', '--options', 'runtime', '--identifier', peer,
+                                str(binary)], check=True, capture_output=True, text=True)
+            def slice_hash(arch):
+                shown = subprocess.run(['codesign', '-d', '-vvv', '-a', arch, str(universal)],
+                                       capture_output=True, text=True)
+                return next(line.split('=', 1)[1] for line in shown.stderr.splitlines() if line.startswith('CDHash='))
+            arm, intel = slice_hash('arm64'), slice_hash('x86_64')
+            self.assertNotEqual(arm, intel)
+            source = r"""
+#import "HelperTrust.h"
+#import <assert.h>
+NSString *TestPinnedRequirement(NSString *identifier) {
+    return [identifier isEqualToString:@"PEER"] ? @"identifier \"PEER\"" : nil;
+}
+BOOL TestPinnedCodePolicy(NSDictionary *entitlements, uint32_t flags) { return (flags & kSecCodeSignatureRuntime) != 0; }
+static NSData *Hex(const char *text) {
+    NSMutableData *data = [NSMutableData data];
+    for (size_t i = 0; text[i] && text[i + 1]; i += 2) {
+        unsigned value; sscanf(text + i, "%2x", &value); uint8_t byte = value; [data appendBytes:&byte length:1];
+    }
+    return data;
+}
+int main(void) {
+    @autoreleasepool {
+        NSArray<NSData *> *slices = FCStaticCodeSliceHashes(@"UNIVERSAL", @"PEER");
+        assert(slices.count == 2 && [slices containsObject:Hex("ARM")] && [slices containsObject:Hex("INTEL")]);
+        NSData *bundled = FCStaticCodeHash(@"UNIVERSAL", @"PEER");
+        assert([slices containsObject:bundled]);
+        for (NSData *running in @[Hex("ARM"), Hex("INTEL")])
+            assert(FCCompareRunningToBundled(running, bundled, @"UNIVERSAL", @"PEER") == FCRunningHashCurrent);
+        NSMutableData *other = [Hex("ARM") mutableCopy];
+        ((uint8_t *)other.mutableBytes)[0] ^= 1;
+        assert(FCCompareRunningToBundled(other, bundled, @"UNIVERSAL", @"PEER") == FCRunningHashStale);
+        // A slice must pass the pinned requirement: another identifier gives nothing to match.
+        assert(FCStaticCodeSliceHashes(@"UNIVERSAL", @"other") == nil);
+        assert(FCCompareRunningToBundled(Hex("INTEL"), Hex("ARM"), @"UNIVERSAL", @"other") == FCRunningHashInvalid);
+        assert(FCCompareRunningToBundled(nil, bundled, @"UNIVERSAL", @"PEER") == FCRunningHashInvalid);
+        assert(FCStaticCodeSliceHashes(@"THIN", @"PEER").count == 1);
+        puts("slices");
+    }
+}
+""".replace('UNIVERSAL', str(universal)).replace('THIN', str(thin)).replace('PEER', peer) \
+                .replace('"ARM"', f'"{arm}"').replace('"INTEL"', f'"{intel}"')
+            (root / 'fixture.m').write_text(source)
+            result = subprocess.run([
+                'clang', '-fobjc-arc', '-fblocks', '-Werror', '-Wno-deprecated-declarations', '-mmacosx-version-min=14.0',
+                '-DFCPinnedRequirement=TestPinnedRequirement', '-DFCPinnedCodePolicy=TestPinnedCodePolicy',
+                '-I', str(MACOS / 'Shared'), str(root / 'fixture.m'), str(MACOS / 'Shared/HelperTrust.m'),
+                '-framework', 'Foundation', '-framework', 'Security', '-o', str(root / 'fixture')],
+                capture_output=True, text=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            result = subprocess.run([str(root / 'fixture')], capture_output=True, text=True, timeout=20)
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertIn('slices', result.stdout)
+        trust = (MACOS / 'Shared/HelperTrust.m').read_text()
+        check = trust.split('@implementation FCMessageValidator', 1)[1].split('@end', 1)[0]
+        self.assertEqual(check.count('FCCompareRunningToBundled('), 2)
+        self.assertNotIn('FCCompareRunningHash(', check)
+
     def test_no_test_hook_reaches_a_production_build(self):
         # Every trust-relevant call a test may replace (`#ifndef FCx` / `#define FCx real`) and what it is in
         # production. A new hook must be added here, with its production meaning.
@@ -479,7 +569,7 @@ int main(void) {
                     defined = real if real.startswith(name + '(') else f'{name} {real}'
                     self.assertIn(f'\n#define {defined}\n', '\n' + branch, (source, name))
         self.assertEqual(hooks, set(production), 'test hooks changed: list each with its production meaning')
-        listed = subprocess.run(['git', '-C', str(MACOS.parent), 'ls-files', '-z'], capture_output=True)
+        listed = subprocess.run(['/usr/bin/git', '-C', str(MACOS.parent), 'ls-files', '-z'], capture_output=True)
         if listed.returncode:
             self.skipTest('not a git checkout')
         allowed = {source.resolve() for source in sources}
@@ -505,6 +595,12 @@ int main(void) {
 @property BOOL staleRetirable;
 @property NSString *retireHash;
 @property NSUInteger retireAttempts;
+@property BOOL exitInFlight;
+@property BOOL exitAnswered;
+@property NSTimeInterval exitSettledAt;
+@property NSTimeInterval clock;        // the bridge's uptime
+@property BOOL requirementMissing;     // the pinned requirement is unavailable: nothing can be sent
+@property BOOL exitReplies;            // the old daemon replies to exit at once (else it stays in flight)
 @property BOOL hashRefusal;    // the old daemon's replies are refused only for their cdhash (validator verdict)
 @property BOOL otherRefusal;   // ... or for anything else (identity, path): never asked to exit
 @property NSMutableArray *calls;
@@ -522,6 +618,8 @@ int main(void) {
 - (NSDictionary *)launcherReport { return self.launcher; }
 - (NSDictionary *)registrationStatus { return @{@"code": @"enabled"}; }
 - (NSString *)currentHelperHash { return @"cdhash-new"; }
+- (BOOL)isBundledHelperHash:(id)reported { return [reported isEqual:[self currentHelperHash]]; }
+- (NSTimeInterval)uptime { return self.clock; }
 - (NSDictionary *)launchdSnapshot {
     if (!self.jobs.count) return @{@"state": @"idle", @"versionStale": @NO, @"summary": @"idle"};
     [self.calls addObject:@"launchd"];
@@ -531,9 +629,12 @@ int main(void) {
 }
 - (void)resetConnection { [self.calls addObject:@"reset"]; }
 // The fresh, pinned connection's `exit`: the old daemon leaves unless it owns a Core; its reply is never read.
-- (void)sendExitRequest {
+- (BOOL)sendExitRequest {
+    if (self.requirementMissing) return NO;
     [self.calls addObject:@"exit"];
     if (self.oldDaemon && !self.oldDaemonBusy) self.oldDaemon = NO;
+    if (self.exitReplies) dispatch_async(self.queue, ^{ [self exitSettled:YES]; });
+    return YES;
 }
 - (void)unregisterWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"unregister"]; c(@{@"code": @"ok"}); }
 - (void)registerWithCompletion:(void (^)(NSDictionary *))c { [self.calls addObject:@"register"]; [self status:c]; }
@@ -554,6 +655,7 @@ int main(void) {
         source += method(BRIDGE, '- (void)status:') + '\n'
         source += method(BRIDGE, '- (BOOL)noteStaleHelper:') + '\n'
         source += method(BRIDGE, '- (BOOL)retireStaleHelper') + '\n'
+        source += method(BRIDGE, '- (void)exitSettled:') + '\n'
         source += method(BRIDGE, '- (void)repairWithCompletion:') + '\n@end\n'
         source += r'''
 static NSDictionary *Run(BridgeFixture *b, BOOL repair) {
@@ -641,8 +743,102 @@ int main(void) {
         self.assertIn('[self resetConnection]', note)
         self.assertIn('[self noteStaleHelper:answer]', status)
 
+    def test_exit_send_failures_timeout_and_late_reply(self):
+        source = BRIDGE_FIXTURE + r'''
+#import <xpc/xpc.h>
+NSString * const FCHelperIdentifier = @"fixture.helper";
+NSString * const FCHelperLabel = @"fixture.label";
+static BOOL missingRequirement, missingConnection, rejectedRequirement;
+static int sends, cancels;
+static int64_t delay;
+static void (^replyHandler)(xpc_object_t);
+static dispatch_block_t timeoutHandler;
+static NSString *FixtureRequirement(NSString *identifier) { return missingRequirement ? nil : @"pinned"; }
+static xpc_connection_t FixtureConnection(const char *name, dispatch_queue_t queue, uint64_t flags) {
+    assert(!strcmp(name, "fixture.label") && flags == XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+    return missingConnection ? nil : (xpc_connection_t)(id)[NSObject new];
+}
+static int FixturePeer(xpc_connection_t c, const char *requirement) {
+    assert(!strcmp(requirement, "pinned")); return rejectedRequirement ? 1 : 0;
+}
+static void FixtureCancel(xpc_connection_t c) { cancels++; }
+static void FixtureResume(xpc_connection_t c) {}
+static void FixtureEvent(xpc_connection_t c, void (^handler)(xpc_object_t)) {}
+static void FixtureSend(xpc_connection_t c, xpc_object_t message, dispatch_queue_t queue,
+                        void (^handler)(xpc_object_t)) {
+    assert(!strcmp(xpc_dictionary_get_string(message, "method"), "exit"));
+    assert(xpc_dictionary_get_int64(message, "protocol") == 1);
+    sends++; replyHandler = [handler copy];
+}
+static dispatch_time_t FixtureTime(dispatch_time_t now, int64_t delta) { delay = delta; return 1; }
+static void FixtureAfter(dispatch_time_t when, dispatch_queue_t queue, dispatch_block_t block) {
+    timeoutHandler = [block copy];
+}
+#define FCSigningRequirement FixtureRequirement
+#define xpc_connection_create_mach_service FixtureConnection
+#define xpc_connection_set_peer_code_signing_requirement FixturePeer
+#define xpc_connection_cancel FixtureCancel
+#define xpc_connection_resume FixtureResume
+#define xpc_connection_set_event_handler FixtureEvent
+#define xpc_connection_send_message_with_reply FixtureSend
+#define dispatch_time FixtureTime
+#define dispatch_after FixtureAfter
+''' + RETIRE_CONSTANTS + method(BRIDGE, 'static int64_t FCRequestTimeoutSeconds') + r'''
+@interface ExitFixture : NSObject
+@property dispatch_queue_t queue;
+@property BOOL sessionActive, operationInFlight, exitInFlight, exitAnswered;
+@property NSString *retireHash;
+@property NSUInteger retireAttempts;
+@property NSTimeInterval exitSettledAt, clock;
+@end
+@implementation ExitFixture
+- (void)expireSilentSession {}
+- (NSString *)currentHelperHash { return @"bundled"; }
+- (NSTimeInterval)uptime { return self.clock; }
+'''
+        for declaration in ('- (BOOL)retireStaleHelper', '- (void)exitSettled:', '- (BOOL)sendExitRequest'):
+            source += method(BRIDGE, declaration) + '\n'
+        source += r'''
+@end
+int main(void) {
+    @autoreleasepool {
+        ExitFixture *b = [ExitFixture new]; b.clock = 100;
+        missingRequirement = YES;
+        assert(![b retireStaleHelper] && !b.retireAttempts && !sends && !cancels);
+        missingRequirement = NO; missingConnection = YES;
+        assert(![b retireStaleHelper] && !b.retireAttempts && !sends && !cancels);
+        missingConnection = NO; rejectedRequirement = YES;
+        assert(![b retireStaleHelper] && !b.retireAttempts && !sends && cancels == 1);
+        rejectedRequirement = NO;
+        assert([b retireStaleHelper] && b.retireAttempts == 1 && b.exitInFlight && sends == 1);
+        assert(delay == 8 * NSEC_PER_SEC);
+        b.clock += 7;
+        assert([b retireStaleHelper] && sends == 1);
+        timeoutHandler();
+        assert(!b.exitInFlight && !b.exitAnswered && b.exitSettledAt == 107 && cancels == 2);
+        replyHandler(xpc_dictionary_create(NULL, NULL, 0));
+        assert(!b.exitAnswered && cancels == 2);
+        assert([b retireStaleHelper] && sends == 1);
+        b.clock += 2;
+        assert([b retireStaleHelper] && sends == 2 && b.retireAttempts == 2);
+        replyHandler(XPC_ERROR_CONNECTION_INTERRUPTED);
+        assert(!b.exitInFlight && !b.exitAnswered && cancels == 3);
+        timeoutHandler(); assert(cancels == 3);
+        b.clock += 2;
+        assert([b retireStaleHelper] && sends == 3);
+        replyHandler(xpc_dictionary_create(NULL, NULL, 0));
+        assert(b.exitAnswered && !b.exitInFlight && cancels == 4);
+        timeoutHandler(); assert(cancels == 4 && b.exitAnswered);
+        b.clock += 2;
+        assert(![b retireStaleHelper] && sends == 3);
+        puts("exit-transport");
+    }
+}
+'''
+        self.assertIn('exit-transport', compile_and_run(self, source))
+
     def test_exit_request_is_the_helpers_own_on_a_pinned_connection(self):
-        send = method(BRIDGE, '- (void)sendExitRequest')
+        send = method(BRIDGE, '- (BOOL)sendExitRequest')
         # Exactly what Supervisor.m reads: `method` "exit" and `protocol` 1.
         self.assertIn('xpc_dictionary_set_string(message, "method", "exit");', send)
         self.assertIn('xpc_dictionary_set_int64(message, "protocol", 1);', send)
@@ -654,9 +850,13 @@ int main(void) {
         self.assertIn('FCSigningRequirement(FCHelperIdentifier)', send)
         self.assertIn('xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)', send)
         self.assertLess(send.index('set_peer_code_signing_requirement'), send.index('xpc_connection_resume'))
-        for read in ('xpc_dictionary_get_', 'check:', 'self.connection', 'completion'):
+        for read in ('xpc_dictionary_get_', 'check:', 'self.connection', 'completion', 'reply, "'):
             self.assertNotIn(read, send)
-        self.assertIn('2 * NSEC_PER_SEC', send)
+        # Bounded like every other request (8 s), and only a reply that arrived counts as answered.
+        self.assertIn('FCRequestTimeoutSeconds(@"exit") * NSEC_PER_SEC', send)
+        self.assertIn('close(xpc_get_type(reply) == XPC_TYPE_DICTIONARY);', send)
+        self.assertIn('[self exitSettled:answered];', send)
+        self.assertLess(send.index('if (!requirement) return NO;'), send.index('return YES;'))
         # Only a validator verdict of "stale running cdhash" leads there; never SMAppService.
         request = method(BRIDGE, '- (void)request:')
         self.assertIn('BOOL stale = dictionary && validator.runningCodeStale;', request)

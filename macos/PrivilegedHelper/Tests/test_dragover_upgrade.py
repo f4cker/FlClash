@@ -143,6 +143,7 @@ static BOOL FCBundleCompatibilityValid(NSDictionary *contract) { return YES; }
 - (NSString *)bundleVersion { return @"2026111806"; }
 - (FakeDefaults *)preferences { return FakeDefaults.standardUserDefaults; }
 - (NSString *)currentHelperHash { return @"new"; }
+- (BOOL)isBundledHelperHash:(id)reported { return [reported isEqual:[self currentHelperHash]]; }
 - (void)pause:(NSTimeInterval)seconds { self.clock += seconds; }
 - (NSTimeInterval)uptime { return self.clock; }
 - (NSDictionary *)launchdSnapshot {

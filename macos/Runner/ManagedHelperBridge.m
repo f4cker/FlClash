@@ -152,6 +152,9 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
 // The bundled helper cdhash the retirement attempts below were counted for.
 @property NSString *retireHash;
 @property NSUInteger retireAttempts;
+@property BOOL exitInFlight;
+@property BOOL exitAnswered;
+@property NSTimeInterval exitSettledAt;
 // The retired registration name was seen absent, or one unregister of it was attempted by this build (this launch
 // or an earlier one: FCRetiredAttemptDefault).
 @property (atomic) BOOL retiredSettled;
@@ -271,6 +274,14 @@ static NSError *FCUnregisterWithin(SMAppService *service, NSTimeInterval timeout
     return FCHexString(FCStaticCodeHash(FCInstalledExecutable(FCHelperIdentifier), FCHelperIdentifier));
 }
 
+- (BOOL)isBundledHelperHash:(id)reported {
+    if (![reported isKindOfClass:NSString.class] || ![(NSString *)reported length]) return NO;
+    if ([reported isEqual:[self currentHelperHash]]) return YES;
+    for (NSData *slice in FCStaticCodeSliceHashes(FCInstalledExecutable(FCHelperIdentifier), FCHelperIdentifier) ?: @[])
+        if ([reported isEqual:FCHexString(slice)]) return YES;
+    return NO;
+}
+
 - (NSDictionary *)residueAnswer:(FCLegacyResidue)residue code:(NSString *)code {
     return @{@"code": code, @"residue": FCLegacyResidueNames(residue)};
 }
@@ -337,6 +348,7 @@ static const NSTimeInterval FCSessionSilenceSeconds = 30;
 // Asking a stale helper to exit: tries per bundled helper cdhash, and the pause before the next hello.
 static const NSUInteger FCMaxRetireAttempts = 3;
 static const NSTimeInterval FCStaleRecheckSeconds = 1;
+static const NSTimeInterval FCExitSettleSeconds = 1;
 - (void)expireSilentSession {
     if (!self.sessionActive || [self uptime] - self.lastVerifiedReply < FCSessionSilenceSeconds) return;
     os_log(FCBridgeLog(), "no verified helper reply for %.0f s; session no longer held", [self uptime] - self.lastVerifiedReply);
@@ -398,7 +410,7 @@ static const NSTimeInterval FCStaleRecheckSeconds = 1;
         // this app's Core passed the reply check against the bundled helper; a different hash read here (the file
         // momentarily unreadable) does not take its session away.
         BOOL served = [self servesSession:answer];
-        if ([result isEqualToString:@"enabled"] && !served && ![answer[@"helperCDHash"] isEqual:[self currentHelperHash]])
+        if ([result isEqualToString:@"enabled"] && !served && ![self isBundledHelperHash:answer[@"helperCDHash"]])
             result = @"staleHelper";
         BOOL retiring = NO;
         if ([result isEqualToString:@"staleHelper"]) {
@@ -443,8 +455,9 @@ static const NSTimeInterval FCStaleRecheckSeconds = 1;
 
 // A stale answer (the previous build's helper still runs): reset the connection and, when the reply was refused only
 // for its cdhash, ask that helper to exit so launchd starts the bundled one on the next request (the launcher copies
-// it from the app). Returns whether an `exit` was sent. With one sent, the next hello may follow after ~1 s; without
-// one, nothing reaches the old helper for 40 s, so that its 30 s idle exit is not postponed by polling.
+// it from the app). Returns whether a switch is under way (an `exit` sent now or still unsettled). Then the next hello
+// may follow after ~1 s; otherwise nothing reaches the old helper for 40 s, so that its 30 s idle exit is not
+// postponed by polling.
 - (BOOL)noteStaleHelper:(NSDictionary *)answer {
     self.staleRetirable = [answer[@"runningCodeStale"] isEqual:@YES];
     BOOL retiring = self.staleRetirable && [self retireStaleHelper];
@@ -454,9 +467,8 @@ static const NSTimeInterval FCStaleRecheckSeconds = 1;
     return retiring;
 }
 
-// The policy for asking a stale helper to exit: never while a Core session of this app runs or a recovery owns the
-// registration, at most FCMaxRetireAttempts times for one bundled helper cdhash (this launch only). The helper itself
-// refuses (`sessionBusy`) while it owns any Core. Never touches SMAppService.
+// launchd can deliver a queued exit to the replacement helper. Serialize exits and wait past its 200 ms exit delay;
+// if the old helper still answers after replying to exit, it refused (owns a Core): wait for idle exit instead.
 - (BOOL)retireStaleHelper {
     [self expireSilentSession];
     if (self.sessionActive || self.operationInFlight) return NO;
@@ -465,27 +477,43 @@ static const NSTimeInterval FCStaleRecheckSeconds = 1;
     if (![self.retireHash isEqual:bundled]) {
         self.retireHash = bundled;
         self.retireAttempts = 0;
+        self.exitAnswered = NO;
+    }
+    if (self.exitInFlight || (self.exitSettledAt > 0 &&
+        [self uptime] - self.exitSettledAt < FCExitSettleSeconds)) return YES;
+    if (self.exitAnswered) {
+        os_log(FCBridgeLog(), "stale helper: still running after it answered exit (refused); waiting for its idle exit");
+        return NO;
     }
     if (self.retireAttempts >= FCMaxRetireAttempts) return NO;
+    if (![self sendExitRequest]) return NO;
+    self.exitInFlight = YES;
     self.retireAttempts++;
     os_log(FCBridgeLog(), "stale helper: exit requested (attempt %lu of %lu)", (unsigned long)self.retireAttempts,
         (unsigned long)FCMaxRetireAttempts);
-    [self sendExitRequest];
     return YES;
+}
+
+- (void)exitSettled:(BOOL)answered {
+    self.exitInFlight = NO;
+    self.exitAnswered = answered;
+    self.exitSettledAt = [self uptime];
 }
 
 // `{method: exit, protocol: 1}`, the request every helper since mitm.1 understands (Supervisor.m: it replies, then
 // exits 200 ms later, or answers sessionBusy while it owns a Core). A connection of its own, with the same pinned peer
 // requirement as every other (certificate and identifier enforced by XPC); the helper validates this app in full
 // before it acts. Nothing of the reply is read or trusted: it comes from the previous build and would fail the
-// app's verification anyway. Bounded; the connection is always cancelled.
-- (void)sendExitRequest {
+// app's verification anyway. Bounded like every request; the connection is always cancelled. Returns whether it
+// was sent.
+- (BOOL)sendExitRequest {
     NSString *requirement = FCSigningRequirement(FCHelperIdentifier);
-    if (!requirement) return;
+    if (!requirement) return NO;
     xpc_connection_t connection = xpc_connection_create_mach_service(FCHelperLabel.UTF8String,
         self.queue, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+    if (!connection) return NO;
     if (xpc_connection_set_peer_code_signing_requirement(connection, requirement.UTF8String)) {
-        xpc_connection_cancel(connection); return;
+        xpc_connection_cancel(connection); return NO;
     }
     xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {});
     xpc_connection_resume(connection);
@@ -493,13 +521,19 @@ static const NSTimeInterval FCStaleRecheckSeconds = 1;
     xpc_dictionary_set_string(message, "method", "exit");
     xpc_dictionary_set_int64(message, "protocol", 1);
     __block BOOL closed = NO;
-    void (^close)(void) = ^{
+    void (^close)(BOOL) = ^(BOOL answered) {
         if (closed) return;
         closed = YES;
         xpc_connection_cancel(connection);
+        [self exitSettled:answered];
     };
-    xpc_connection_send_message_with_reply(connection, message, self.queue, ^(xpc_object_t reply) { close(); });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), self.queue, close);
+    xpc_connection_send_message_with_reply(connection, message, self.queue, ^(xpc_object_t reply) {
+        close(xpc_get_type(reply) == XPC_TYPE_DICTIONARY);
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, FCRequestTimeoutSeconds(@"exit") * NSEC_PER_SEC), self.queue, ^{
+        close(NO);
+    });
+    return YES;
 }
 
 // FlashHelperLauncher's last outcome (root-owned status file), mapped to a card for an enabled helper that does not
@@ -1013,7 +1047,7 @@ static const NSTimeInterval FCStaleRecheckSeconds = 1;
         }
         NSDictionary *hello = [self helloFromRepairQueue];
         NSString *code = hello[@"code"];
-        if ([code isEqual:@"ok"] && [hello[@"helperCDHash"] isEqual:[self currentHelperHash]]) {
+        if ([code isEqual:@"ok"] && [self isBundledHelperHash:hello[@"helperCDHash"]]) {
             [log addObject:@"new helper answered"];
             return done(@"enabled", @{@"protocol": @1, @"pid": hello[@"pid"] ?: @0,
                 @"exitConfirmed": hello[@"exitConfirmed"] ?: @NO});
@@ -1069,6 +1103,7 @@ static const NSTimeInterval FCStaleRecheckSeconds = 1;
     // re-registration), even when this launch's tries are used up. Any other stale answer keeps its quiet wait.
     if (self.staleRetryAfter && self.staleRetirable) {
         self.staleRetryAfter = nil;
+        self.exitAnswered = NO;
         if (self.retireAttempts >= FCMaxRetireAttempts) self.retireAttempts = FCMaxRetireAttempts - 1;
     }
     [self status:completion];
@@ -1157,7 +1192,7 @@ static const NSTimeInterval FCStaleRecheckSeconds = 1;
                 return;
             }
             if (![answer[@"code"] isEqual:@"ok"]) { completion(answer); return; }
-            if (![self servesSession:answer] && ![answer[@"helperCDHash"] isEqual:[self currentHelperHash]]) {
+            if (![self servesSession:answer] && ![self isBundledHelperHash:answer[@"helperCDHash"]]) {
                 os_log(FCBridgeLog(), "%{public}s: helper of another build answered", method.UTF8String);
                 completion(@{@"code": @"staleHelper"}); return;
             }

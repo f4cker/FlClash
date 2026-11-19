@@ -240,6 +240,7 @@ static id Next(NSMutableArray *queue) { id value = queue.firstObject; if (queue.
     return answer;
 }
 - (NSString *)currentHelperHash { return @"new"; }
+- (BOOL)isBundledHelperHash:(id)reported { return [reported isEqual:[self currentHelperHash]]; }
 - (void)pause:(NSTimeInterval)seconds { [self.calls addObject:[NSString stringWithFormat:@"pause %.2f", seconds]]; self.clock += seconds; }
 - (NSTimeInterval)uptime { return self.clock; }
 - (NSString *)bundleVersion { return self.build; }

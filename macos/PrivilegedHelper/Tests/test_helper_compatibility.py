@@ -65,6 +65,7 @@ static os_log_t FCBridgeLog(void) { return OS_LOG_DEFAULT; }
 - (BOOL)effectsAllowed { return YES; }
 - (NSDictionary *)registrationStatus { self.gates++; return @{@"code": self.registration}; }
 - (NSString *)currentHelperHash { return @"cdhash-current"; }
+- (BOOL)isBundledHelperHash:(id)reported { return [reported isEqual:[self currentHelperHash]]; }
 - (BOOL)servesSession:(NSDictionary *)answer { return NO; }
 - (NSString *)appGate { return self.appTrust ?: @"trusted"; }
 - (void)forgetCore {}

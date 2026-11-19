@@ -139,6 +139,17 @@ static NSDictionary *FixtureCompatibility(NSString *bundle) {
         @"CoreSHA256": @"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         @"CoreVersion": @"v1.19.0", @"CoreRevision": @"abcdef0"} : nil;
 }
+static BOOL sliceReadFails;
+@interface FixtureFileHandle : NSObject
+@end
+@implementation FixtureFileHandle
++ (instancetype)fileHandleForReadingAtPath:(NSString *)path { return [self new]; }
+- (NSData *)readDataUpToLength:(NSUInteger)length error:(NSError **)error {
+    return sliceReadFails ? nil : [NSMutableData dataWithLength:8];
+}
+- (BOOL)closeAndReturnError:(NSError **)error { return YES; }
+@end
+#define NSFileHandle FixtureFileHandle
 #define FCGUILibraryPolicy FixtureLibrary
 #define FCReadCompatibility FixtureCompatibility
 #define SecCodeCreateWithXPCMessage FixtureMessage
@@ -158,6 +169,7 @@ static int FixtureLstat(const char *path, struct stat *state);
 #define lstat FixtureLstat
 #import "../../Shared/HelperTrust.m"
 #undef lstat
+#undef NSFileHandle
 
 static NSDictionary *GUIEntitlements(void) {
     return @{@"com.apple.security.files.user-selected.read-write": @YES,
@@ -172,6 +184,7 @@ static NSData *ApprovedHash(void) {
 }
 
 static void Reset(void) {
+    sliceReadFails = NO;
     messageValid = runningValid = diskValid = canonicalValid = libraryValid = compatibilityValid = YES;
     runningInfo = [@{(__bridge NSString *)kSecCodeInfoMainExecutable:
         [NSURL fileURLWithPath:FCInstalledExecutable(FCClientIdentifier)],
@@ -293,6 +306,9 @@ static void TestCopyValidator(void) {
     FCMessageValidator *stale = CopyValidator();
     assert(![stale check:fixtureMessage] && stale.runningCodeStale && [stale.failure hasPrefix:@"failed:cdhash running="]);
     assert(!stale.transientFailure);
+    sliceReadFails = YES;
+    FCMessageValidator *unreadSlices = CopyValidator();
+    assert(![unreadSlices check:fixtureMessage] && !unreadSlices.runningCodeStale);
     // The bundled helper must itself pass the pinned static requirement.
     Reset(); helperDiskValid = NO;
     FCMessageValidator *unsealed = CopyValidator();
