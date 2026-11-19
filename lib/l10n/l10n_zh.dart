@@ -7758,6 +7758,20 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return '以下主机名将被忽略：$hosts。请使用 api.example.com 或 *.example.com 这样的域名。仅支持 443 端口，不支持 IP 地址或名称中间的 *。';
+  }
+
+  @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return '以下主机名也将被跳过：$hosts。范围过宽、属于 Apple 服务或格式无效的条目不会用于解密。';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      '已忽略：请使用 api.example.com 或 *.example.com 这样的域名。仅支持 443 端口，不支持 IP 地址或名称中间的 *。';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return '它只为这些客户端解密：$addresses。开启 TUN 时，本机应用经 TUN 地址连入 FlClash，可能因此不再解密。';
   }

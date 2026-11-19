@@ -8443,6 +8443,20 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return 'Эти имена хостов будут проигнорированы: $hosts. Используйте домен, например api.example.com или *.example.com. Поддерживается только порт 443; IP-адреса и * в середине имени не поддерживаются.';
+  }
+
+  @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return 'Эти имена хостов также будут пропущены: $hosts. Слишком широкие записи, записи служб Apple и недопустимые записи не будут использоваться для расшифровки.';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      'Игнорируется: используйте домен, например api.example.com или *.example.com. Поддерживается только порт 443; IP-адреса и * в середине имени не поддерживаются.';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return 'Расшифровывается трафик только этих клиентов: $addresses. При включённом TUN приложения этого устройства подключаются с адреса TUN и могут не попасть в список.';
   }

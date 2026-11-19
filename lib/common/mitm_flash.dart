@@ -42,6 +42,63 @@ List<MitmModuleSkip> flashMitmSkipped(MitmModuleContent content) => [
       MitmModuleSkip(entry.key.key, line, MitmModuleSkipReason.setting),
 ];
 
+/// Flash decrypts on port 443 alone, the port a Surge hostname without one
+/// means, so a `:443` adds nothing and is taken off. Nothing else is: a line
+/// is never read as broader than it was written.
+String flashMitmHostname(String line) {
+  final trimmed = line.trim();
+  if (!trimmed.endsWith(':443')) return trimmed;
+  final host = trimmed.substring(0, trimmed.length - ':443'.length);
+  // An IPv6 address keeps its colons; it is unusable either way.
+  return host.contains(':') || host.endsWith(']') ? trimmed : host;
+}
+
+final _ipv4 = RegExp(r'^\d{1,3}(\.\d{1,3}){3}$');
+final _dnsLabel = RegExp(r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$');
+
+/// The module's hostname lines the Core skips as written: another port, an
+/// address, or not a name it can read, such as one with a `*` or `?` inside;
+/// the Core matches `*` only as a leading `*.`. Too broad and Apple-owned
+/// names the Core also skips are told by the Core itself.
+List<String> flashUnusableHostnames(MitmModuleContent content) =>
+    flashUnusableHostLines(flashHostnameLines(content));
+
+List<String> flashUnusableHostLines(List<String> lines) => [
+  for (final line in lines)
+    if (_unusableHostname(flashMitmHostname(line))) line,
+];
+
+/// The module's hostname lines as written, in the order the Core is sent
+/// them.
+List<String> flashHostnameLines(MitmModuleContent content) => [
+  ...content.insertedHostname,
+  ...content.hostname,
+];
+
+String _normalizeHost(String host) {
+  final text = host.trim().toLowerCase();
+  return text.endsWith('.') ? text.substring(0, text.length - 1) : text;
+}
+
+/// core/mitm_host.go's parseMitmHostEntry, up to the name's syntax.
+bool _unusableHostname(String line) {
+  var host = _normalizeHost(line);
+  final exclude = host.startsWith('-');
+  if (exclude) host = _normalizeHost(host.substring(1));
+  if (host == '*' || host == '*.') return exclude;
+  if (host.contains(':') || _ipv4.hasMatch(host)) return true;
+  if (host.startsWith('*.')) host = host.substring(2);
+  return !_validDNSName(host);
+}
+
+/// core/mitm_host.go's validDNSName: an all-digit last label is an address.
+bool _validDNSName(String name) {
+  if (name.isEmpty || name.length > 253) return false;
+  final labels = name.split('.');
+  return labels.every(_dnsLabel.hasMatch) &&
+      labels.last.contains(RegExp('[a-z]'));
+}
+
 bool _unsupportedBody(String line) =>
     line.startsWith('http-request-jq ') || line.startsWith('http-response-jq ');
 
@@ -52,7 +109,9 @@ MitmRules flashMitmRules(MitmModuleContent content) {
     return const MitmRules();
   }
   return MitmRules(
-    hostname: [...content.insertedHostname, ...content.hostname],
+    hostname: [
+      for (final line in flashHostnameLines(content)) flashMitmHostname(line),
+    ],
     urlRewrite: content.urlRewrite,
     headerRewrite: content.headerRewrite,
     bodyRewrite: content.bodyRewrite

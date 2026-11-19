@@ -8442,6 +8442,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return 'These hostnames will be ignored: $hosts. Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.';
+  }
+
+  @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return 'These hostnames will also be skipped: $hosts. Entries that are too broad, belong to Apple services, or are invalid will not be used for decryption.';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      'Ignored: Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return 'It decrypts only for these clients: $addresses. With TUN on, this device\'s apps reach FlClash from the TUN\'s address, so they may be left out.';
   }

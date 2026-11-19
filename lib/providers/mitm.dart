@@ -305,8 +305,11 @@ Future<int> mitmIgnoredHostnames(Ref ref) async {
   return status.ignoredHostnames;
 }
 
-/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
-/// list, or with why not; the Core passes the connection through on a refusal.
+/// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
+/// decrypts (the user's hostnames, then the enabled modules', see
+/// [mitmEffectiveHostnames]), or with why not; the Core passes the connection
+/// through on a refusal. A module turned off, deleted or declined leaves the
+/// list at once, before the Core is told.
 @Riverpod(keepAlive: true)
 class MitmSignAction extends _$MitmSignAction {
   @override
@@ -370,6 +373,117 @@ class MitmSignAction extends _$MitmSignAction {
 
   int _signing = 0;
   static const _maxConcurrentSigns = 16;
+
+  /// How long a signing waits for the modules' hosts before it signs for the
+  /// user's alone.
+  @visibleForTesting
+  static Duration modulesWait = const Duration(seconds: 2);
+
+  /// The list the Core decrypts with [mitm], the modules' part read fresh: a
+  /// module just turned off is gone from it even before the Core hears. While
+  /// the modules cannot be read only the user's hosts sign, never more than
+  /// the Core is sent, and [modulesRead] is false.
+  Future<({List<String> hostnames, bool modulesRead})> _hostnames(
+    Mitm mitm,
+    Duration remaining,
+  ) async {
+    final modules = ref.listen(
+      enabledMitmModuleRulesProvider.future,
+      (_, _) {},
+    );
+    try {
+      final rules = await modules.read().timeout(
+        remaining < modulesWait ? remaining : modulesWait,
+      );
+      return (
+        hostnames: mitmEffectiveHostnames(mitm, rules),
+        modulesRead: true,
+      );
+    } catch (_) {
+      // Fails closed for the modules only.
+      return (
+        hostnames: mitmEffectiveHostnames(mitm, MitmModuleRules.empty),
+        modulesRead: false,
+      );
+    } finally {
+      modules.close();
+    }
+  }
+
+  /// Whether a leaf signed against [signed] still holds once the list is
+  /// [current]: the first entry that matches decides, so it does while
+  /// [signed] begins [current].
+  static bool _stillListed(List<String> signed, List<String> current) =>
+      signed.length <= current.length &&
+      listEquals(signed, current.sublist(0, signed.length));
+
+  /// After a leaf, the list is read again. A change withdraws the leaf as
+  /// before, and leaves a refusal as it was. A read that times out says
+  /// nothing of the modules, so the leaf is held to the user's hosts alone
+  /// (the setup last composed may still hold a module just turned off) and
+  /// is withdrawn for this host only, never with a refusal that pauses every
+  /// host.
+  Future<MitmSignResult> _recheck(
+    MitmSignResult result,
+    List<String> signed,
+    String fingerprint,
+    Duration remaining,
+  ) async {
+    final afterSign = ref.read(patchClashConfigProvider).mitm;
+    if (!afterSign.enable || afterSign.trustedFingerprint != fingerprint) {
+      return const MitmSignResult(error: 'disabled');
+    }
+    final after = await _hostnames(afterSign, remaining);
+    if (!ref.mounted) return result;
+    if (result.cert == null || _stillListed(signed, after.hostnames)) {
+      return result;
+    }
+    return MitmSignResult(error: after.modulesRead ? 'disabled' : 'notListed');
+  }
+
+  // Each host is logged once until its answer changes, and only by name. A
+  // refusal is a warning, as the Core then lets the host through undecrypted;
+  // a leaf only at the debug level the user picked.
+  final _refusedLogged = <String>{};
+  final _notReadyLogged = <String>{};
+  final _signedLogged = <String>{};
+  static const _loggedHostsLimit = 512;
+
+  void _logSigned(String host, MitmSignResult result, bool modulesRead) {
+    if (result.error == 'notListed') {
+      _signedLogged.remove(host);
+      if (!modulesRead) {
+        // A module may list it: say so rather than that nothing does.
+        if (_remember(_notReadyLogged, host)) {
+          commonPrint.log(
+            'MITM: the module hostname list was not ready, so $host passes '
+            'through undecrypted for now',
+            logLevel: LogLevel.warning,
+          );
+        }
+      } else if (_remember(_refusedLogged, host)) {
+        commonPrint.log(
+          'MITM: $host is not on the decryption list, so it passes through '
+          'undecrypted',
+          logLevel: LogLevel.warning,
+        );
+      }
+    } else if (result.cert != null) {
+      _refusedLogged.remove(host);
+      _notReadyLogged.remove(host);
+      if (ref.read(patchClashConfigProvider).logLevel == LogLevel.debug &&
+          _remember(_signedLogged, host)) {
+        commonPrint.log('MITM: decrypting $host', logLevel: LogLevel.debug);
+      }
+    }
+  }
+
+  static bool _remember(Set<String> logged, String host) {
+    if (logged.contains(host)) return false;
+    if (logged.length >= _loggedHostsLimit) logged.clear();
+    logged.add(host);
+    return true;
+  }
 
   Future<MitmSignResult> _signBounded(
     MitmSigner signer,
@@ -456,19 +570,27 @@ class MitmSignAction extends _$MitmSignAction {
             current.trustedFingerprint != fingerprint) {
           result = const MitmSignResult(error: 'trustUnavailable');
         } else {
+          final before = await _hostnames(current, remaining());
+          if (!ref.mounted) return;
           result = await _signBounded(
             signer,
             request,
-            current.hostname,
+            before.hostnames,
             remaining(),
           );
           if (!ref.mounted) return;
-          final afterSign = ref.read(patchClashConfigProvider).mitm;
-          if (!afterSign.enable ||
-              afterSign.trustedFingerprint != fingerprint ||
-              !listEquals(afterSign.hostname, current.hostname)) {
-            result = const MitmSignResult(error: 'disabled');
-          }
+          final checked = await _recheck(
+            result,
+            before.hostnames,
+            fingerprint,
+            remaining(),
+          );
+          if (!ref.mounted) return;
+          final modulesRead =
+              before.modulesRead &&
+              (result.cert == null || checked.cert != null);
+          result = checked;
+          _logSigned(request.host, result, modulesRead);
         }
       } catch (error) {
         commonPrint.log(
@@ -781,13 +903,19 @@ typedef _MitmLineCheck = ({
   Map<MitmList, Map<String, MitmLineView>> views,
 });
 
-Future<_MitmLineCheck> _checkOf(Ref ref, MitmRules mitm) async {
+/// [shown] names, line for line, what a list is shown as where that is not
+/// what the Core is sent, so an issue finds the line the user sees.
+Future<_MitmLineCheck> _checkOf(
+  Ref ref,
+  MitmRules mitm, {
+  Map<MitmList, List<String>> shown = const {},
+}) async {
   final issues = await ref.read(coreHandlerProvider).validateMitm(mitm);
   Map<MitmList, Map<String, T>> byLine<T>(Map<MitmList, Map<int, T>> lists) => {
     for (final MapEntry(key: list, value: lines) in lists.entries)
       list: {
         for (final MapEntry(key: index, :value) in lines.entries)
-          ?mitm.linesOf(list).elementAtOrNull(index): value,
+          ?(shown[list] ?? mitm.linesOf(list)).elementAtOrNull(index): value,
       },
   };
   return (
@@ -964,8 +1092,27 @@ Future<MitmModuleDetails?> mitmModuleDetails(Ref ref, int id) async {
   if (content == null) {
     return null;
   }
-  final check = await _checkOf(ref, flashMitmRules(content));
-  final unsupported = flashMitmIssues(content);
+  final rules = flashMitmRules(content);
+  final hostnames = flashHostnameLines(content);
+  final check = await _checkOf(
+    ref,
+    rules,
+    shown: {
+      // The Core is sent each line with its `:443` taken off.
+      if (rules.hostname.length == hostnames.length)
+        MitmList.hostname: hostnames,
+    },
+  );
+  final ignored = flashUnusableHostnames(content);
+  final unsupported = {
+    ...flashMitmIssues(content),
+    // Told here as well, so it shows while the Core is not running.
+    if (ignored.isNotEmpty)
+      MitmList.hostname: {
+        for (final line in ignored)
+          line: currentAppLocalizations.mitmHostIgnored,
+      },
+  };
   return (
     content: content,
     issues: {
@@ -975,6 +1122,39 @@ Future<MitmModuleDetails?> mitmModuleDetails(Ref ref, int id) async {
     views: check.views,
   );
 }
+
+/// What the Core and the app say of a module's hostname lines, by the line
+/// as written, for [lines] joined by newlines; the app's own word alone
+/// while the Core is not running or cannot answer.
+final mitmModuleHostIssuesProvider = FutureProvider.autoDispose
+    .family<Map<String, String>, String>((ref, lines) async {
+      final hostnames = lines.isEmpty ? const <String>[] : lines.split('\n');
+      final ignored = flashUnusableHostLines(hostnames).toSet();
+      final connected = ref.watch(
+        coreStatusProvider.select((status) => status == CoreStatus.connected),
+      );
+      Map<int, String> core = const {};
+      if (connected) {
+        try {
+          core =
+              (await ref
+                  .read(coreHandlerProvider)
+                  .validateMitm(
+                    MitmRules(
+                      hostname: hostnames.map(flashMitmHostname).toList(),
+                    ),
+                  ))[MitmList.hostname] ??
+              const {};
+        } catch (_) {}
+      }
+      return {
+        for (final (index, line) in hostnames.indexed)
+          if (ignored.contains(line))
+            line: currentAppLocalizations.mitmHostIgnored
+          else if (core[index] case final String issue)
+            line: issue,
+      };
+    });
 
 Duration? _noRetry(int retryCount, Object error) => null;
 

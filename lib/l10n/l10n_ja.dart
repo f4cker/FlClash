@@ -8239,6 +8239,20 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return '次のホスト名は無視されます：$hosts。api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。';
+  }
+
+  @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return '次のホスト名もスキップされます：$hosts。範囲が広すぎるもの、Apple のサービスに属するもの、形式が正しくないものは復号に使用されません。';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      '無視されました：api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return '次のクライアントの通信だけを復号します：$addresses。TUN がオンのとき、この端末のアプリは TUN のアドレスから接続するため、対象外になることがあります。';
   }

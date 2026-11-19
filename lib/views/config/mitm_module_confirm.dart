@@ -5,6 +5,7 @@ import 'package:fl_clash/features/mitm/script_actions.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/mitm/script_dialogs.dart';
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/views/rules/rule_edit_dialogs.dart' show RuleEditFrame;
 import 'package:fl_clash/widgets/widgets.dart';
@@ -206,6 +207,17 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
         if (!host.startsWith('-')) host,
     ], listed).toSet();
     final shownHosts = _allHosts ? hosts : hosts.take(_shownHosts).toList();
+    // The Core's word on each line as well, once it answers.
+    final hostIssues = ref
+        .watch(mitmModuleHostIssuesProvider(hosts.join('\n')))
+        .value;
+    final ignoredHosts = flashUnusableHostnames(content);
+    final skippedHosts = [
+      for (final host in hosts)
+        if (hostIssues?.containsKey(host) == true &&
+            !ignoredHosts.contains(host))
+          host,
+    ];
     final rewrites = <MitmRewriteGroup, List<String>>{};
     for (final (list, lines) in [
       (MitmList.urlRewrite, content.urlRewrite),
@@ -256,6 +268,16 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
             ),
           if (excluded > 0)
             Text(l.mitmExcludedCount(excluded), style: secondary),
+          if (ignoredHosts.isNotEmpty)
+            Text(
+              l.mitmModuleHostsIgnored(ignoredHosts.join(', ')),
+              style: secondary.copyWith(color: mitmAmberColor(context)),
+            ),
+          if (skippedHosts.isNotEmpty)
+            Text(
+              l.mitmModuleHostsSkipped(skippedHosts.join(', ')),
+              style: secondary.copyWith(color: mitmAmberColor(context)),
+            ),
           if (!_allHosts && hosts.length > _shownHosts)
             _more(
               l.mitmMoreHosts(hosts.length - _shownHosts),

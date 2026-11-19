@@ -8495,6 +8495,20 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return 'Se ignorarán estos nombres de host: $hosts. Usa un dominio como api.example.com o *.example.com. Solo se admite el puerto 443; no se admiten direcciones IP ni * en medio de un nombre.';
+  }
+
+  @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return 'También se omitirán estos nombres de host: $hosts. Las entradas demasiado amplias, que pertenecen a servicios de Apple o no son válidas no se usarán para el descifrado.';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      'Ignorado: Usa un dominio como api.example.com o *.example.com. Solo se admite el puerto 443; no se admiten direcciones IP ni * en medio de un nombre.';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return 'Solo descifra el tráfico de estos clientes: $addresses. Con TUN activado, las apps de este dispositivo llegan desde la dirección de TUN, así que pueden quedar fuera.';
   }
