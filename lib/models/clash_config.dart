@@ -1792,6 +1792,7 @@ abstract class Rule with _$Rule {
     String? subRule,
     @Default(false) bool noResolve,
     @Default(false) bool src,
+    @Default(false) bool customExit,
     String? order,
   }) = _Rule;
 

@@ -98,7 +98,7 @@ void main() {
     raw.close();
 
     disk = Database(NativeDatabase(file));
-    expect(disk.schemaVersion, 31);
+    expect(disk.schemaVersion, 32);
     final read = (await disk.mitmModulesDao.query().get()).single;
     expect(read.id, 7);
     expect(read.rulesEnabled, isTrue);

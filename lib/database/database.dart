@@ -70,7 +70,7 @@ class Database extends _$Database {
   Database([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 31;
+  int get schemaVersion => 32;
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -83,6 +83,12 @@ class Database extends _$Database {
   MigrationStrategy get migration {
     return MigrationStrategy(
       onUpgrade: (m, from, to) => transaction(() async {
+        final hadCustomExits = (await _columnsOf(
+          'rules',
+        )).contains('custom_exit');
+        final hadModuleConsent = (await _columnsOf(
+          'mitm_modules',
+        )).contains('asks_consent');
         if (from < 2) {
           await m.createTable(iconRecords);
           await _migrateV1Rules();
@@ -143,6 +149,8 @@ class Database extends _$Database {
           await _addColumnIfMissing(m, mitmModules, mitmModules.error);
           await _addColumnIfMissing(m, mitmModules, mitmModules.failure);
           await _addColumnIfMissing(m, mitmModules, mitmModules.rulesEnabled);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.asksConsent);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.accepted);
           await m.alterTable(TableMigration(mitmModules));
         }
         // Flash 0.9.x and upstream FlClash both shipped a version 24: Flash's
@@ -160,7 +168,11 @@ class Database extends _$Database {
             await _mergeExtendModes();
           }
         }
-        if (from < 26) {
+        // Upstream 25/26 did not contain Flash's mount or added-set tables.
+        if (from < 32) {
+          await _createTableIfMissing(m, profileMounts);
+          await _createTableIfMissing(m, mountTargets);
+          await _createTableIfMissing(m, mountSourceStatuses);
           await _createTableIfMissing(m, addedRuleSets);
         }
         if (from < 27) {
@@ -185,8 +197,39 @@ class Database extends _$Database {
         if (from < 31) {
           await _addColumnIfMissing(m, mitmModules, mitmModules.rulesEnabled);
         }
+        if (from < 32) {
+          await _addColumnIfMissing(m, rules, rules.customExit);
+          await _addColumnIfMissing(m, profiles, profiles.exitTargets);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.asksConsent);
+          await _addColumnIfMissing(m, mitmModules, mitmModules.accepted);
+          if (!hadModuleConsent) {
+            // Old script approval never authorizes new network capabilities.
+            await customStatement(
+              'UPDATE mitm_modules SET asks_consent = 1, accepted = NULL',
+            );
+          }
+          await _copyLegacyMatchTargets(convertRules: !hadCustomExits);
+        }
       }),
       beforeOpen: (_) => customStatement('PRAGMA foreign_keys = ON'),
+    );
+  }
+
+  Future<void> _copyLegacyMatchTargets({required bool convertRules}) async {
+    if (convertRules) {
+      await customStatement(
+        'UPDATE rules SET custom_exit = 1 '
+        "WHERE upper(trim(rule_target)) = 'MATCH' AND rule_action != 'SUB_RULE' "
+        'AND (profile_id IS NULL OR profile_id IN '
+        "(SELECT id FROM profiles WHERE type != 'custom'))",
+      );
+    }
+    // Keep the old target until the routing adapter consumes exit_targets.
+    await customStatement(
+      'UPDATE profiles SET exit_targets = json_set('
+      "coalesce(exit_targets, '{}'), '\$.MATCH', trim(match_target)) "
+      "WHERE trim(coalesce(match_target, '')) != '' AND type != 'custom' "
+      "AND json_extract(coalesce(exit_targets, '{}'), '\$.MATCH') IS NULL",
     );
   }
 

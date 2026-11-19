@@ -29,6 +29,8 @@ class Rules extends Table {
 
   BoolColumn get src => boolean().withDefault(const Constant(false))();
 
+  BoolColumn get customExit => boolean().withDefault(const Constant(false))();
+
   TextColumn get order => text().nullable()();
 
   @override
@@ -288,6 +290,7 @@ extension RawRuleExt on RawRule {
       subRule: subRule,
       noResolve: noResolve,
       src: src,
+      customExit: customExit,
       order: order,
     );
   }
@@ -305,6 +308,7 @@ extension RulesCompanionExt on Rule {
       subRule: Value(subRule),
       noResolve: Value(noResolve),
       src: Value(src),
+      customExit: Value(customExit),
       order: Value(order),
     );
   }

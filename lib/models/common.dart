@@ -873,6 +873,8 @@ abstract class MitmModule with _$MitmModule {
     /// Whether its routing rules go ahead of the profile's own; its other
     /// content follows [enabled] alone.
     @Default(true) bool rulesEnabled,
+    @Default(false) bool asksConsent,
+    bool? accepted,
     required DateTime lastUpdateTime,
 
     /// Set while an update's new content waits for the user to adopt it;

@@ -66,7 +66,7 @@ void main() {
       unfoldSet: {},
     );
     expect(emptyProfile.toColumns(true), hasLength(9));
-    expect(emptyProfile.toColumns(false), hasLength(17));
+    expect(emptyProfile.toColumns(false), hasLength(18));
     expect(emptyProfile.toCompanion(true).toColumns(true), hasLength(9));
 
     final insertedProfile = ProfilesCompanion.insert(
@@ -144,6 +144,7 @@ void main() {
 
   test('rule generated classes preserve nullable contracts', () {
     const rule = RawRule(
+      customExit: false,
       id: 10,
       profileId: 1,
       ruleAction: RuleAction.RULE_SET,
@@ -156,8 +157,8 @@ void main() {
       order: 'a0',
     );
 
-    expect(rule.toColumns(true), hasLength(10));
-    expect(rule.toCompanion(true).toColumns(true), hasLength(10));
+    expect(rule.toColumns(true), hasLength(11));
+    expect(rule.toCompanion(true).toColumns(true), hasLength(11));
     expect(RawRule.fromJson(rule.toJson()), rule);
     expect(rule.copyWith(content: const Value(null)).content, null);
     expect(
@@ -175,13 +176,14 @@ void main() {
     expect(rule.hashCode, isNonZero);
 
     const emptyRule = RawRule(
+      customExit: false,
       id: 11,
       ruleAction: RuleAction.MATCH,
       noResolve: false,
       src: false,
     );
-    expect(emptyRule.toColumns(true), hasLength(4));
-    expect(emptyRule.toColumns(false), hasLength(10));
+    expect(emptyRule.toColumns(true), hasLength(5));
+    expect(emptyRule.toColumns(false), hasLength(11));
 
     final ruleCompanion =
         RulesCompanion.insert(ruleAction: RuleAction.DOMAIN_SUFFIX).copyWith(

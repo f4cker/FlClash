@@ -96,7 +96,7 @@ void main() {
     raw.close();
 
     disk = Database(NativeDatabase(file));
-    expect(disk.schemaVersion, 31);
+    expect(disk.schemaVersion, 32);
     expect((await disk.rulesDao.queryProfileRules(1).get()).single.id, 5);
     await disk.mitmRewritesDao.put(reject, profileId: 1);
     await disk.close();
