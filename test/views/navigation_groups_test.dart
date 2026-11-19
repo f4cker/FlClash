@@ -7,6 +7,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/navigation.dart';
+import 'package:fl_clash/ui/icons/app_glyphs.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -88,6 +89,7 @@ void main() {
     final container = containerWith(decrypting: true);
     await pump(tester, container);
 
+    expect(navigation.getItems().last.glyph, same(AppGlyphs.moreCircle));
     final titles = ['Routing', 'Decryption & Rewrite', 'Debugging', 'Network'];
     final tops = [
       for (final title in titles) tester.getTopLeft(find.text(title)).dy,
