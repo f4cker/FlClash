@@ -19,13 +19,14 @@ class _SystemAutostartEntry implements AutostartEntry {
 
   @override
   Future<bool> isEnabled() => rust_api.isAutostartEnabled(
-    name: appName,
+    id: appName,
     executable: Platform.resolvedExecutable,
   );
 
   @override
   Future<bool> setEnabled(bool enabled) => rust_api.setAutostart(
-    name: appName,
+    id: appName,
+    displayName: appName,
     executable: Platform.resolvedExecutable,
     enabled: enabled,
   );
@@ -71,9 +72,12 @@ class AutoLaunch {
   }
 
   @visibleForTesting
+  static const AutostartEntry systemEntry = _SystemAutostartEntry();
+
+  @visibleForTesting
   static AutostartEntry entry = Platform.isMacOS
       ? const MacOSLoginItemEntry()
-      : const _SystemAutostartEntry();
+      : systemEntry;
 
   Future<bool> get isEnable => entry.isEnabled();
 
