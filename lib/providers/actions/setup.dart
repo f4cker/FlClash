@@ -869,7 +869,9 @@ class SetupAction extends _$SetupAction {
   final _applyWaiters = <Completer<bool>>[];
 
   /// As [applyProfileDebounce], and completes once the apply this call merges
-  /// into has run: true when it went through, false when it failed.
+  /// into has run: true when it went through, false when it failed or was
+  /// dropped. It settles only through the real [applyProfileDebounce]: a
+  /// fake that overrides that without calling super leaves it pending.
   Future<bool> applyProfileDebounced({
     bool silence = false,
     bool force = false,
@@ -895,16 +897,18 @@ class SetupAction extends _$SetupAction {
         _pendingForceApply = false;
         _pendingShownApply = false;
         _applyWaiters.clear();
-        applyAutomatic(silence: !shown, force: force).then(
+        // Returned, so a failure still reaches the debouncer's log.
+        return applyAutomatic(silence: !shown, force: force).then(
           (applied) {
             for (final waiter in waiters) {
               waiter.complete(applied);
             }
           },
-          onError: (Object _) {
+          onError: (Object error, StackTrace stackTrace) {
             for (final waiter in waiters) {
               waiter.complete(false);
             }
+            Error.throwWithStackTrace(error, stackTrace);
           },
         );
       },
