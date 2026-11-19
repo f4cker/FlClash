@@ -7,25 +7,32 @@ const _replaceRetryDelay = Duration(milliseconds: 50);
 final _tempRandom = Random.secure();
 
 /// A sibling of [path] no other write, in this process or another, picks:
-/// `<path>.<pid>.<8 hex>.tmp`.
+/// `<path>.flash-<pid>-<8 hex>.tmp`. The `flash-` marker keeps it apart from
+/// temporaries other programs make in the same directories, such as the
+/// Core's `os.CreateTemp` names (`<name>.<digits>.tmp`).
 String uniqueTempPath(String path) {
   final suffix = _tempRandom.nextInt(1 << 32).toRadixString(16).padLeft(8, '0');
-  return '$path.$pid.$suffix.tmp';
+  return '$path.flash-$pid-$suffix.tmp';
 }
 
 /// Matches what [uniqueTempPath] appends, and the `<pid>.tmp` of older builds,
-/// so a sweep can tell which file a leftover temporary belonged to.
-final atomicTempSuffix = RegExp(r'\.\d+(\.[0-9a-f]{8})?\.tmp$');
+/// so a clean can tell which file a leftover temporary belonged to.
+final atomicTempSuffix = RegExp(r'\.(flash-\d+-[0-9a-f]{8}|\d+)\.tmp$');
+
+/// Only the names [uniqueTempPath] makes, with the pid of the writer.
+final _ownTempSuffix = RegExp(r'\.flash-(\d+)-[0-9a-f]{8}\.tmp$');
 
 /// How old a temporary has to be before a sweep takes it for a leftover of a
 /// write that was cut short; no write runs anywhere near this long.
 const staleAtomicTempAge = Duration(hours: 1);
 
-final _sweptDirectories = <String>{};
+final _sweeps = <String, Future<void>>{};
 
 /// Deletes the temporaries atomic writes left in [directory] (a crash or a
 /// kill between write and rename) once they are older than [olderThan].
-/// Failures are ignored: a leftover only takes space.
+/// Only names [uniqueTempPath] makes are touched, and never one of this
+/// process, whose writes may still be running. Failures are ignored: a
+/// leftover only takes space.
 Future<void> sweepStaleAtomicTemps(
   String directory, {
   Duration olderThan = staleAtomicTempAge,
@@ -33,7 +40,8 @@ Future<void> sweepStaleAtomicTemps(
   final cutoff = DateTime.now().subtract(olderThan);
   try {
     await for (final entity in Directory(directory).list(followLinks: false)) {
-      if (entity is! File || !atomicTempSuffix.hasMatch(entity.path)) {
+      final writer = _ownTempSuffix.firstMatch(entity.path)?.group(1);
+      if (entity is! File || writer == null || writer == '$pid') {
         continue;
       }
       try {
@@ -49,13 +57,11 @@ Future<void> sweepStaleAtomicTemps(
   }
 }
 
-/// [sweepStaleAtomicTemps] once per directory and process, before the first
-/// atomic write there.
-Future<void> _sweepOnce(String directory) async {
-  if (_sweptDirectories.add(directory)) {
-    await sweepStaleAtomicTemps(directory);
-  }
-}
+/// [sweepStaleAtomicTemps] once per directory and process. Every atomic
+/// write there waits for it before making its temporary, so no sweep runs
+/// beside a write of this process.
+Future<void> _sweepOnce(String directory) =>
+    _sweeps.putIfAbsent(directory, () => sweepStaleAtomicTemps(directory));
 
 /// Whether a failed rename's [errorCode] says the target is busy, held open
 /// by someone else, rather than a lasting failure.
@@ -137,6 +143,8 @@ extension FileExt on File {
       if (keepMode) {
         try {
           await copy(temp.path);
+          // A copy may carry the old file's times; the temporary is new.
+          await temp.setLastModified(DateTime.now());
         } on FileSystemException {
           // Nothing there to take the mode of, or unreadable: a new file.
           await temp.delete().then((_) {}, onError: (_) {});

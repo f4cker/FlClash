@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/common/mitm_script.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/database/database.dart' as db;
@@ -83,6 +85,9 @@ void main() {
   late _RecordingSetupAction setup;
   late _MockCore core;
   late int validations;
+
+  /// Runs while the Core validates a script, between store and save.
+  Future<void> Function()? duringValidation;
 
   void count(Map<String, int> counts, String path) =>
       counts.update(path, (value) => value + 1, ifAbsent: () => 1);
@@ -203,8 +208,10 @@ void main() {
     db.database = testDatabase;
     setup = _RecordingSetupAction();
     core = _MockCore();
+    duringValidation = null;
     when(() => core.validateMitm(any())).thenAnswer((_) async {
       validations++;
+      await duringValidation?.call();
       return {MitmList.script: <int, String>{}};
     });
     const profile = Profile(
@@ -882,6 +889,7 @@ hostname = %APPEND% example.com
       final scriptKey = ResourceCache.keyOf(ResourceKind.script, script.url!);
       expect(await resourceCache.store.get(scriptKey), isNotNull);
       container.read(scriptsActionProvider.notifier).deleteScript(script.id);
+      await pumpEventQueue();
       await resourceCache.store.saved;
       expect(await resourceCache.store.get(scriptKey), isNull);
 
@@ -898,6 +906,7 @@ hostname = %APPEND% example.com
       final iconKey = ResourceCache.keyOf(ResourceKind.iconSet, iconSet.url);
       expect(await resourceCache.store.get(iconKey), isNotNull);
       icons.delete(iconSet);
+      await pumpEventQueue();
       await resourceCache.store.saved;
       expect(await resourceCache.store.get(iconKey), isNull);
 
@@ -914,6 +923,303 @@ hostname = %APPEND% example.com
       for (final key in keys) {
         expect(await resourceCache.store.get(key), isNull);
       }
+    });
+  });
+
+  group('text', () {
+    const sample = '#!name=Café\n';
+
+    test('import and update of the same UTF-8 bytes, labelled ISO-8859-1, '
+        'agree: the update reports no change', () async {
+      serve({
+        '/m.sgmodule': '$sample${module('M').substring('#!name=M\n'.length)}',
+      });
+      served['/m.sgmodule']!.contentType = 'text/plain; charset=ISO-8859-1';
+      for (final path in ['/a.json', '/b.json', '/c.json']) {
+        served[path] = _Served('1');
+      }
+      final url = urlOf('/m.sgmodule');
+      final text = await mitm().download(url);
+      expect(text, startsWith(sample));
+      await mitm().addFromUrl(url, text: text);
+      final added = await storedModule();
+      final [modulePath, ...] = await modulePaths(added);
+      backdate(modulePath);
+
+      final updated = await mitm().updateModule(added);
+
+      expect(updated.hasPending, isFalse);
+      expect(untouched(modulePath), isTrue);
+      expect(updated.name, 'Café');
+    });
+
+    test(
+      'a script imported by url and then updated reports no change',
+      () async {
+        serve({'/s.js': '// café'});
+        served['/s.js']!.contentType = 'text/javascript; charset=iso-8859-1';
+        final url = urlOf('/s.js');
+        final imported = await request.getTextResponseForUrl(url);
+        expect(imported.data, '// café');
+        final scripts = container.read(scriptsActionProvider.notifier);
+        final script = await Script(
+          id: 5,
+          label: 'S',
+          url: url,
+          lastUpdateTime: DateTime(2020),
+        ).save(imported.data!);
+        scripts.putScript(script);
+        await pumpEventQueue();
+        final path = await script.path;
+        backdate(path);
+        setup.applies = 0;
+
+        await scripts.updateScript(script);
+        await pumpEventQueue();
+
+        expect(untouched(path), isTrue);
+        expect(setup.applies, 0);
+      },
+    );
+
+    test('a true latin1 body is read as latin1, by import and update '
+        'alike', () async {
+      serve({'/s.js': ''});
+      served['/s.js']!
+        ..bytes = latin1.encode('// café')
+        ..contentType = 'text/javascript; charset=iso-8859-1';
+
+      final imported = await request.getTextResponseForUrl(urlOf('/s.js'));
+
+      expect(imported.data, '// café');
+    });
+  });
+
+  group('a MITM clean while a script is stored', () {
+    test('keeps the file a check stored and has not saved yet', () async {
+      serve({'/s.js': 'one'});
+      final url = urlOf('/s.js');
+      final file = await storeMitmScript(url, 'one'.codeUnits);
+      container.listen(profileMitmScriptsProvider(1), (_, _) {});
+      await container.read(profileMitmScriptsProvider(1).notifier).commit([
+        MitmScript(
+          id: 3,
+          line: 'S = type=http-request,pattern=^https://a,script-path=$file',
+          url: url,
+          source: url,
+          file: file,
+        ),
+      ]);
+      final script = (await container.read(
+        profileMitmScriptsProvider(1).future,
+      )).single;
+      served['/s.js']!.body = 'two';
+      final next = mitmResourceName(url, 'two'.codeUnits);
+      final nextPath = join(await appPath.mitmResourcesDirPath, next);
+      var sawFile = false;
+      duringValidation = () async {
+        await mitm().clean();
+        sawFile = File(nextPath).existsSync();
+      };
+
+      final checked = await checkMitmScriptUpdate(container.read, 1, script);
+
+      expect(sawFile, isTrue);
+      expect(checked.pendingFile, next);
+      expect(File(nextPath).existsSync(), isTrue);
+    });
+
+    test('keeps what an import stored until it gives up', () async {
+      serve({'/s.js': 'body'});
+      final url = urlOf('/s.js');
+      final name = mitmResourceName(url, 'body'.codeUnits);
+      final path = join(await appPath.mitmResourcesDirPath, name);
+      var sawFile = false;
+      duringValidation = () async {
+        await mitm().clean();
+        sawFile = File(path).existsSync();
+      };
+      final draft = MitmScriptDraft(
+        info: parseMitmScriptInfo(
+          'S = type=http-request,pattern=^https://a,script-path=$url',
+        )!,
+      );
+
+      await holdingMitmScriptFiles(
+        (held) => prepareMitmScripts(container.read, [draft], held: held),
+      );
+      expect(sawFile, isTrue);
+
+      // Given up: nothing saved names it, so the next clean takes it.
+      duringValidation = null;
+      await mitm().clean();
+      expect(File(path).existsSync(), isFalse);
+    });
+  });
+
+  group('a resource two modules share', () {
+    Future<(MitmModule, MitmModule)> twoModules() async {
+      serve({
+        '/m.sgmodule': module('M'),
+        '/n.sgmodule': module('M'),
+        '/a.json': '{"a":1}',
+        '/b.json': '[]',
+        '/c.json': '1',
+      });
+      await mitm().addFromUrl(urlOf('/m.sgmodule'));
+      await mitm().addFromUrl(urlOf('/n.sgmodule'));
+      await resourceCache.store.saved;
+      final modules = await testDatabase.mitmModulesDao.query().get();
+      resetCounts();
+      return (
+        modules.firstWhere((item) => item.url == urlOf('/m.sgmodule')),
+        modules.firstWhere((item) => item.url == urlOf('/n.sgmodule')),
+      );
+    }
+
+    test('a manual update does not join an auto update of it', () async {
+      final (one, two) = await twoModules();
+      held = Completer();
+
+      final auto = mitm().updateModule(one, revalidate: true);
+      final manual = mitm().updateModule(two);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      held!.complete();
+      await Future.wait([auto, manual]);
+
+      expect(hits['/a.json'], 2);
+      expect(conditional['/a.json'], 1);
+    });
+
+    test('a module whose own record of it is off still revalidates with '
+        'the copy stored', () async {
+      final (_, two) = await twoModules();
+      final key = ResourceCache.keyOf(
+        ResourceKind.mitmResource,
+        urlOf('/a.json'),
+      );
+      final skewed = two.copyWith(
+        resources: {...two.resources, urlOf('/a.json'): 'missing.json'},
+      );
+
+      await mitm().updateModule(skewed, revalidate: true);
+
+      expect(notModified['/a.json'], 1);
+      expect(await resourceCache.store.get(key), isNotNull);
+    });
+
+    test('deleting one module keeps the validators the other still '
+        'uses', () async {
+      final (one, two) = await twoModules();
+
+      await mitm().deleteModule(one);
+
+      for (final url in two.resources.keys) {
+        expect(
+          await resourceCache.store.get(
+            ResourceCache.keyOf(ResourceKind.mitmResource, url),
+          ),
+          isNotNull,
+        );
+      }
+    });
+  });
+
+  group('validators another item shares', () {
+    test('stay while another script fetches the url', () async {
+      serve({'/s.js': 'a'});
+      final url = urlOf('/s.js');
+      final scripts = container.read(scriptsActionProvider.notifier);
+      for (final id in [5, 6]) {
+        scripts.putScript(
+          Script(id: id, label: 'S$id', url: url, lastUpdateTime: old),
+        );
+      }
+      await pumpEventQueue();
+      await scripts.updateScript(
+        Script(id: 5, label: 'S5', url: url, lastUpdateTime: old),
+      );
+      await resourceCache.store.saved;
+      final key = ResourceCache.keyOf(ResourceKind.script, url);
+
+      scripts.deleteScript(5);
+      await pumpEventQueue();
+      await resourceCache.store.saved;
+      expect(await resourceCache.store.get(key), isNotNull);
+
+      scripts.deleteScript(6);
+      await pumpEventQueue();
+      await resourceCache.store.saved;
+      expect(await resourceCache.store.get(key), isNull);
+    });
+
+    test('stay while another icon set fetches the url', () async {
+      serve({
+        '/icons.json': json.encode({
+          'name': 'Q',
+          'icons': [
+            {'name': 'a.png', 'url': 'https://example.com/a.png'},
+          ],
+        }),
+      });
+      final icons = container.read(iconSetsActionProvider.notifier);
+      final one = await icons.importUrl(urlOf('/icons.json'));
+      final two = one.copyWith(id: one.id + 1);
+      container.read(iconSetsProvider.notifier).put(two);
+      await pumpEventQueue();
+      final key = ResourceCache.keyOf(ResourceKind.iconSet, one.url);
+
+      icons.delete(one);
+      await pumpEventQueue();
+      await resourceCache.store.saved;
+      expect(await resourceCache.store.get(key), isNotNull);
+
+      icons.delete(two);
+      await pumpEventQueue();
+      await resourceCache.store.saved;
+      expect(await resourceCache.store.get(key), isNull);
+    });
+
+    test('stay while a MITM script of another profile fetches the '
+        'url', () async {
+      serve({'/s.js': 'one'});
+      final url = urlOf('/s.js');
+      final file = await storeMitmScript(url, 'one'.codeUnits);
+      MitmScript script(int id) => MitmScript(
+        id: id,
+        line: 'S = type=http-request,pattern=^https://a,script-path=$file',
+        url: url,
+        source: url,
+        file: file,
+      );
+      await testDatabase.profiles.put(
+        const Profile(
+          id: 2,
+          label: 'Other',
+          autoUpdateDuration: Duration.zero,
+        ).toCompanion(),
+      );
+      for (final profileId in [1, 2]) {
+        container.listen(profileMitmScriptsProvider(profileId), (_, _) {});
+        await container
+            .read(profileMitmScriptsProvider(profileId).notifier)
+            .commit([script(profileId)]);
+      }
+      final first = (await container.read(
+        profileMitmScriptsProvider(1).future,
+      )).single;
+      await checkMitmScriptUpdate(container.read, 1, first);
+      await resourceCache.store.saved;
+      final key = ResourceCache.keyOf(ResourceKind.mitmScript, url);
+      expect(await resourceCache.store.get(key), isNotNull);
+
+      await commitMitmScripts(container.read, 1, const []);
+      await resourceCache.store.saved;
+      expect(await resourceCache.store.get(key), isNotNull);
+
+      await commitMitmScripts(container.read, 2, const []);
+      await resourceCache.store.saved;
+      expect(await resourceCache.store.get(key), isNull);
     });
   });
 
@@ -1367,6 +1673,20 @@ hostname = %APPEND% example.com
   });
 
   group('decodeResponseText', () {
+    test('reads valid UTF-8 as UTF-8 whatever the label says', () {
+      expect(
+        decodeResponseText(
+          utf8.encode('café'),
+          'text/plain; charset=ISO-8859-1',
+        ),
+        'café',
+      );
+      expect(
+        decodeResponseText(utf8.encode('café'), 'text/plain; charset=us-ascii'),
+        'café',
+      );
+    });
+
     test('follows the charset of the content type', () {
       final latin = latin1.encode('é');
       expect(decodeResponseText(latin, 'text/plain; charset=ISO-8859-1'), 'é');

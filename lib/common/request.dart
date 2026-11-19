@@ -142,9 +142,23 @@ class Request {
     }
   }
 
+  /// The body as text, by [decodeResponseText] like every resource update.
   Future<Response<String>> getTextResponseForUrl(String url) async {
     try {
-      return await _download<String>(url, ResponseType.plain);
+      final response = await _download<Uint8List>(url, ResponseType.bytes);
+      return Response<String>(
+        data: decodeResponseText(
+          response.data ?? const <int>[],
+          response.headers.value(Headers.contentTypeHeader),
+        ),
+        headers: response.headers,
+        requestOptions: response.requestOptions,
+        statusCode: response.statusCode,
+        statusMessage: response.statusMessage,
+        isRedirect: response.isRedirect,
+        redirects: response.redirects,
+        extra: response.extra,
+      );
     } catch (e) {
       commonPrint.log(
         'getTextResponseForUrl error ${compactError(e)}',
@@ -693,4 +707,40 @@ String? getFileNameForDisposition(String? disposition) {
   );
   if (fileNameKey.isEmpty) return null;
   return parameters[fileNameKey];
+}
+
+/// Downloaded text, decoded the same way wherever it is imported or updated,
+/// so that the same bytes always give the same text.
+///
+/// Valid UTF-8 is read as UTF-8 whatever [contentType] says: servers often
+/// label UTF-8 text with a default charset such as ISO-8859-1. Only bytes
+/// that are not UTF-8 are decoded by the charset [contentType] names, when
+/// Dart knows it (iso-8859-1/latin1, us-ascii); failing that, as UTF-8
+/// where a malformed sequence becomes U+FFFD, as the downloads always were.
+String decodeResponseText(List<int> bytes, String? contentType) {
+  try {
+    return utf8.decode(bytes);
+  } on FormatException {
+    // Not UTF-8: the declared charset, if any, says what it is.
+  }
+  final charset = contentType == null
+      ? null
+      : _tryParseContentType(contentType)?.charset;
+  final encoding = charset == null ? null : Encoding.getByName(charset);
+  if (encoding != null && encoding is! Utf8Codec) {
+    try {
+      return encoding.decode(bytes);
+    } on FormatException {
+      // Not that charset either.
+    }
+  }
+  return utf8.decode(bytes, allowMalformed: true);
+}
+
+ContentType? _tryParseContentType(String value) {
+  try {
+    return ContentType.parse(value);
+  } catch (_) {
+    return null;
+  }
 }

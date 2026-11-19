@@ -67,7 +67,25 @@ class IconSetsAction extends _$IconSetsAction {
   void delete(IconSet iconSet) {
     ref.read(iconSetsProvider.notifier).del(iconSet.id);
     if (iconSet.url.isNotEmpty) {
-      unawaited(resourceCache.forget(ResourceKind.iconSet, iconSet.url));
+      unawaited(_forgetUnlessShared(iconSet));
+    }
+  }
+
+  /// Another set from the same url still revalidates with them.
+  Future<void> _forgetUnlessShared(IconSet iconSet) async {
+    try {
+      final rows = await database.iconSetsDao.query().get();
+      if (rows.any(
+        (item) => item.id != iconSet.id && item.url == iconSet.url,
+      )) {
+        return;
+      }
+      await resourceCache.forget(ResourceKind.iconSet, iconSet.url);
+    } catch (e) {
+      commonPrint.log(
+        'forget icon set validators: ${compactError(e)}',
+        logLevel: LogLevel.warning,
+      );
     }
   }
 

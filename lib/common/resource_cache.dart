@@ -260,32 +260,6 @@ final class ResourceDownloaded extends ResourceFetch {
   String get text => decodeResponseText(bytes, contentType);
 }
 
-/// [bytes] decoded by the charset of [contentType] when it names one Dart
-/// knows (utf-8, iso-8859-1/latin1, us-ascii), otherwise as UTF-8, where a
-/// malformed sequence becomes U+FFFD rather than an error.
-String decodeResponseText(List<int> bytes, String? contentType) {
-  final charset = contentType == null
-      ? null
-      : _tryParseContentType(contentType)?.charset;
-  final encoding = charset == null ? null : Encoding.getByName(charset);
-  if (encoding == null || encoding is Utf8Codec) {
-    return utf8.decode(bytes, allowMalformed: true);
-  }
-  try {
-    return encoding.decode(bytes);
-  } on FormatException {
-    return utf8.decode(bytes, allowMalformed: true);
-  }
-}
-
-ContentType? _tryParseContentType(String value) {
-  try {
-    return ContentType.parse(value);
-  } catch (_) {
-    return null;
-  }
-}
-
 /// Conditional downloads for the resources the app keeps a copy of.
 ///
 /// Every caller says how to check its copy against a fingerprint ([holds]).

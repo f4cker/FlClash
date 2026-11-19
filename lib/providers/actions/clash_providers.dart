@@ -68,13 +68,21 @@ class ClashProvidersAction extends _$ClashProvidersAction {
       _reloadPending.add(next.id);
       unawaited(_reloadIfReferenced(next));
     } else {
-      // A reapply loads every set from its file.
-      if (reread) _reloadPending.remove(next.id);
+      // A reapply loads every set from its file, once it gets through.
+      if (reread) _reloadPending.add(next.id);
       unawaited(
         applyIfReferenced(ProviderKind.rule, {
           next.label,
           ?previous?.label,
-        }, force: reread),
+        }, force: reread).then(
+          (_) {
+            if (reread) _reloaded(next.id);
+          },
+          onError: (Object error) => commonPrint.log(
+            'reapply for ${next.label} failed: ${compactError(error)}',
+            logLevel: LogLevel.warning,
+          ),
+        ),
       );
     }
     return next;

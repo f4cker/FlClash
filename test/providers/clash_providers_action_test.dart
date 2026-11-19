@@ -25,12 +25,14 @@ class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
 
 class _RecordingSetupAction extends SetupAction {
   final forced = <bool>[];
+  Error? error;
 
   int get applies => forced.length;
 
   @override
   void applyProfileDebounce({bool silence = false, bool force = false}) {
     forced.add(force);
+    if (error case final error?) throw error;
   }
 }
 
@@ -572,6 +574,25 @@ void main() {
 
       expect(reloads, isEmpty);
       expect(setup.forced, [true]);
+    });
+
+    test('is read again after a failed reapply, even with the same '
+        'bytes', () async {
+      compiled = (
+        behavior: RuleProviderBehavior.classical,
+        format: RuleProviderFormat.text,
+      );
+      setup.error = StateError('apply failed');
+      await refresh();
+      expect(setup.forced, [true]);
+      setup.error = null;
+
+      await refresh();
+      expect(reloads, ['Remote']);
+
+      reloads.clear();
+      await refresh();
+      expect(reloads, isEmpty);
     });
 
     test('reapplies when the Core does not run it', () async {

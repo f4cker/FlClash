@@ -472,19 +472,25 @@ class _ScriptAddDialogState extends ConsumerState<_ScriptAddDialog> {
     });
     try {
       final file = _file;
-      final scripts = await prepareMitmScripts(
-        ref.read,
-        drafts,
-        local: {if (file != null) file.name: file.bytes},
-      );
-      final current =
-          ref.read(profileMitmScriptsProvider(widget.profileId)).value ??
-          const <MitmScript>[];
-      if (_alsoDecrypt) addMitmHostnames(ref, uncovered);
-      await commitMitmScripts(ref.read, widget.profileId, [
-        ...current,
-        ...scripts,
-      ]);
+      // The stored files stay out of a MITM clean until the rows naming
+      // them are saved.
+      final scripts = await holdingMitmScriptFiles((held) async {
+        final scripts = await prepareMitmScripts(
+          ref.read,
+          drafts,
+          local: {if (file != null) file.name: file.bytes},
+          held: held,
+        );
+        final current =
+            ref.read(profileMitmScriptsProvider(widget.profileId)).value ??
+            const <MitmScript>[];
+        if (_alsoDecrypt) addMitmHostnames(ref, uncovered);
+        await commitMitmScripts(ref.read, widget.profileId, [
+          ...current,
+          ...scripts,
+        ]);
+        return scripts;
+      });
       if (mounted) Navigator.of(context).pop(scripts);
     } catch (error) {
       if (!mounted) return;

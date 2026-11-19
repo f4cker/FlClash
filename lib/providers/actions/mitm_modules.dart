@@ -36,8 +36,9 @@ class MitmModulesAction extends _$MitmModulesAction {
   /// first. A module whose url changed meanwhile updates from the new one.
   final _updates = SingleFlight<(int, String?), MitmModule>();
 
-  /// One download per resource url at a time, shared by every module naming it.
-  final _resourceDownloads = SingleFlight<String, String?>();
+  /// One download per resource url at a time, shared by every module naming
+  /// it. A manual update never joins an auto update's conditional request.
+  final _resourceDownloads = SingleFlight<(String, bool), String?>();
 
   /// Files written before a row or a line names them, which [clean] keeps.
   final _held = <String>[];
@@ -527,17 +528,17 @@ class MitmModulesAction extends _$MitmModulesAction {
     });
   }
 
-  /// What was kept to revalidate the module, and those of its resources no
-  /// other module names, goes with it.
+  /// What was kept to revalidate the module and its resources goes with it,
+  /// unless another module fetches the same url.
   Future<void> _forgetValidators(MitmModule module) async {
-    final url = module.url;
-    if (url != null) {
-      await resourceCache.forget(ResourceKind.mitmModule, url);
-    }
     final others = [
       for (final item in await database.mitmModulesDao.query().get())
         if (item.id != module.id) item,
     ];
+    final url = module.url;
+    if (url != null && !others.any((item) => item.url == url)) {
+      await resourceCache.forget(ResourceKind.mitmModule, url);
+    }
     for (final resource in module.resources.keys) {
       if (!others.any((item) => item.resources.containsKey(resource))) {
         await resourceCache.forget(ResourceKind.mitmResource, resource);
@@ -697,15 +698,10 @@ class MitmModulesAction extends _$MitmModulesAction {
       for (final url in urls)
         () async {
           try {
-            final name = await _resourceDownloads.run(
+            final name = await _resourceDownloads.run((
               url,
-              () => _fetchResource(
-                url,
-                previous[url],
-                directory,
-                revalidate: revalidate,
-              ),
-            );
+              revalidate,
+            ), () => _fetchResource(url, directory, revalidate: revalidate));
             if (name == null) {
               throw const FileSystemException('too large');
             }
@@ -731,9 +727,12 @@ class MitmModulesAction extends _$MitmModulesAction {
   }
 
   /// The stored name of [url]'s current bytes, null when they are too large.
+  ///
+  /// Files are named by their content, so whether the copy validators stand
+  /// for is still there does not depend on which module asked: any module
+  /// joining this download gets the same answer.
   Future<String?> _fetchResource(
     String url,
-    String? previous,
     String directory, {
     required bool revalidate,
   }) async {
@@ -741,13 +740,16 @@ class MitmModulesAction extends _$MitmModulesAction {
       ResourceKind.mitmResource,
       url,
       holds: (fingerprint) async =>
-          previous != null &&
-          await storedSha256(join(directory, previous)) == fingerprint,
+          await storedSha256(
+            join(directory, mitmResourceNameOf(url, fingerprint)),
+          ) ==
+          fingerprint,
       revalidate: revalidate,
     );
     switch (fetched) {
-      case ResourceNotModified():
-        return previous;
+      case ResourceNotModified(:final validators):
+        // Already stored; each caller holds it as soon as this returns.
+        return mitmResourceNameOf(url, validators.fingerprint);
       case ResourceDownloaded(:final bytes):
         if (bytes.length > maxMitmResourceSize) {
           return null;
@@ -810,6 +812,7 @@ class MitmModulesAction extends _$MitmModulesAction {
         final name = basename(entity.path).replaceFirst(atomicTempSuffix, '');
         final modules = [...stored, ...?ref.read(mitmModulesProvider).value];
         if (!_held.contains(name) &&
+            !isMitmScriptFileHeld(name) &&
             !scriptFiles.contains(name) &&
             !modules.any((module) => namesOf(module).contains(name))) {
           await entity.safeDelete();
@@ -873,6 +876,9 @@ class MitmModulesAction extends _$MitmModulesAction {
         }
       }
       if (setting.geoAutoUpdate) {
+        // The cleans the module updates started finish first; a clean that
+        // starts later still keeps what a check holds.
+        await _deleting.then((_) {}, onError: (_) {});
         await _checkScripts(interval);
       }
     } finally {

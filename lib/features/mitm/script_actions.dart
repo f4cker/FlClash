@@ -50,7 +50,6 @@ Future<void> commitMitmScripts(
   }
   try {
     await notifier.commit(next);
-    await _forgetRemovedUrls(before, next);
   } catch (_) {
     if (live) {
       unawaited(
@@ -59,20 +58,35 @@ Future<void> commitMitmScripts(
     }
     rethrow;
   }
+  try {
+    await _forgetRemovedUrls(before, next);
+  } catch (e) {
+    // Left behind, they cost nothing but a slot until evicted.
+    commonPrint.log(
+      'forget MITM script validators: ${compactError(e)}',
+      logLevel: LogLevel.warning,
+    );
+  }
 }
 
-/// Validators of a url no script of the profile fetches any longer go.
-/// Another profile still naming it only downloads it whole once more.
+/// Validators of a url that no script, of this profile or another, fetches
+/// any longer go.
 Future<void> _forgetRemovedUrls(
   List<MitmScript>? before,
   List<MitmScript> next,
 ) async {
   final kept = {for (final script in next) ?script.url};
-  for (final script in before ?? const <MitmScript>[]) {
-    final url = script.url;
-    if (url != null && !kept.contains(url)) {
-      await resourceCache.forget(ResourceKind.mitmScript, url);
-    }
+  final removed = {
+    for (final script in before ?? const <MitmScript>[])
+      if (script.url case final url? when !kept.contains(url)) url,
+  };
+  if (removed.isEmpty) return;
+  final used = {
+    for (final script in await database.mitmScriptsDao.queryAll().get())
+      ?script.url,
+  };
+  for (final url in removed.difference(used)) {
+    await resourceCache.forget(ResourceKind.mitmScript, url);
   }
 }
 
@@ -95,8 +109,38 @@ List<int> _checkedScript(List<int>? bytes) {
   return bytes;
 }
 
-Future<String> storeMitmScript(String source, List<int> bytes) async {
+final _heldScriptFiles = <String>[];
+
+/// Whether [name] is a script file a check or an import wrote and has not
+/// saved or given up yet; a MITM clean, which judges by saved rows, keeps it.
+bool isMitmScriptFileHeld(String name) => _heldScriptFiles.contains(name);
+
+/// Runs [body], keeping every script file it stores through `held` from a
+/// MITM clean until it returns or throws: by then the rows naming them are
+/// saved, or the files are left for the next clean.
+Future<T> holdingMitmScriptFiles<T>(
+  Future<T> Function(List<String> held) body,
+) async {
+  final held = <String>[];
+  try {
+    return await body(held);
+  } finally {
+    held.forEach(_heldScriptFiles.remove);
+  }
+}
+
+/// With [held] (from [holdingMitmScriptFiles]) the file is kept from a MITM
+/// clean before it is written.
+Future<String> storeMitmScript(
+  String source,
+  List<int> bytes, {
+  List<String>? held,
+}) async {
   final name = mitmResourceName(source, bytes);
+  if (held != null) {
+    held.add(name);
+    _heldScriptFiles.add(name);
+  }
   final directory = Directory(await appPath.mitmResourcesDirPath);
   await directory.create(recursive: true);
   final file = File(join(directory.path, name));
@@ -115,6 +159,7 @@ Future<List<MitmScript>> prepareMitmScripts(
   MitmReader read,
   List<MitmScriptDraft> drafts, {
   Map<String, List<int>> local = const {},
+  List<String>? held,
 }) async {
   final scripts = <MitmScript>[];
   for (final (index, draft) in drafts.indexed) {
@@ -132,7 +177,7 @@ Future<List<MitmScript>> prepareMitmScripts(
         ),
       );
     }
-    final file = await storeMitmScript(info.path, bytes);
+    final file = await storeMitmScript(info.path, bytes, held: held);
     final remote = draft.isRemote;
     scripts.add(
       MitmScript(
@@ -177,7 +222,15 @@ Future<MitmScript> checkMitmScriptUpdate(
   bool revalidate = false,
 }) => _scriptChecks.run(
   (profileId, script.id, script.url),
-  () => _checkMitmScriptUpdate(read, profileId, script, revalidate: revalidate),
+  () => holdingMitmScriptFiles(
+    (held) => _checkMitmScriptUpdate(
+      read,
+      profileId,
+      script,
+      revalidate: revalidate,
+      held: held,
+    ),
+  ),
 );
 
 /// The stored file, the waiting one first, whose bytes have [fingerprint].
@@ -199,6 +252,7 @@ Future<MitmScript> _checkMitmScriptUpdate(
   int profileId,
   MitmScript script, {
   required bool revalidate,
+  required List<String> held,
 }) async {
   final url = script.url;
   if (url == null) {
@@ -230,7 +284,7 @@ Future<MitmScript> _checkMitmScriptUpdate(
             await _scriptFileHolding(script, validators.fingerprint) ??
             (throw const FileSystemException('script copy changed'));
       case ResourceDownloaded(:final bytes):
-        name = await storeMitmScript(url, _checkedScript(bytes));
+        name = await storeMitmScript(url, _checkedScript(bytes), held: held);
     }
     final line =
         parseMitmScriptInfo(script.line)?.lineWith(name) ?? script.line;

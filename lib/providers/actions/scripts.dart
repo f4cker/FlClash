@@ -16,7 +16,7 @@ class ScriptsAction extends _$ScriptsAction {
     final inUse = ref.read(currentProfileProvider)?.scriptId == scriptId;
     final url = ref.read(scriptsProvider).value?.get(scriptId)?.url;
     if (url != null) {
-      unawaited(resourceCache.forget(ResourceKind.script, url));
+      unawaited(_forgetUnlessShared(scriptId, url));
     }
     ref.read(scriptsProvider.notifier).del(scriptId);
     ref
@@ -74,6 +74,20 @@ class ScriptsAction extends _$ScriptsAction {
       }
     } finally {
       updatingKeys.stop(script.updatingKey, operation);
+    }
+  }
+
+  /// Another script fetching the same url still revalidates with them.
+  Future<void> _forgetUnlessShared(int scriptId, String url) async {
+    try {
+      final rows = await database.scriptsDao.query().get();
+      if (rows.any((item) => item.id != scriptId && item.url == url)) return;
+      await resourceCache.forget(ResourceKind.script, url);
+    } catch (e) {
+      commonPrint.log(
+        'forget script validators: ${compactError(e)}',
+        logLevel: LogLevel.warning,
+      );
     }
   }
 

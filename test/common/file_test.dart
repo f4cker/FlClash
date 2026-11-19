@@ -115,6 +115,7 @@ void main() {
         expect(name.replaceFirst(atomicTempSuffix, ''), '/a/b');
       }
       expect('/a/b.$pid.tmp'.replaceFirst(atomicTempSuffix, ''), '/a/b');
+      expect(names.first, contains('.flash-$pid-'));
     });
   });
 
@@ -196,29 +197,66 @@ void main() {
       File stale(String name) => File(join(root.path, name))
         ..writeAsStringSync('x')
         ..setLastModifiedSync(old);
-      stale('a.json.123.0badf00d.tmp');
+      stale('a.json.flash-123-0badf00d.tmp');
       stale('b.json.123.tmp');
+      // The Core's os.CreateTemp("x.*.tmp") names.
+      stale('x.12345678.tmp');
+      stale('config.123.87654321.tmp');
+      // This process's own may belong to a write still running.
+      stale('mine.json.flash-$pid-0badf00d.tmp');
       stale('keep.json');
       stale('notes.tmp');
-      File(join(root.path, 'c.json.123.0badf00d.tmp')).writeAsStringSync('x');
+      File(
+        join(root.path, 'c.json.flash-123-0badf00d.tmp'),
+      ).writeAsStringSync('x');
 
       await sweepStaleAtomicTemps(root.path);
 
       expect(root.listSync().map((entry) => basename(entry.path)).toSet(), {
+        'b.json.123.tmp',
+        'x.12345678.tmp',
+        'config.123.87654321.tmp',
+        'mine.json.flash-$pid-0badf00d.tmp',
         'keep.json',
         'notes.tmp',
-        'c.json.123.0badf00d.tmp',
+        'c.json.flash-123-0badf00d.tmp',
       });
     });
 
     test('runs before the first atomic write into a directory', () async {
-      final leftover = File(join(root.path, 'v.json.99.0badf00d.tmp'))
+      final leftover = File(join(root.path, 'v.json.flash-99-0badf00d.tmp'))
         ..writeAsStringSync('x')
         ..setLastModifiedSync(DateTime.now().subtract(const Duration(days: 1)));
 
       await File(join(root.path, 'v.json')).writeAsStringAtomically('{}');
 
       expect(leftover.existsSync(), isFalse);
+    });
+
+    test('concurrent first writes over old files keep their temporaries '
+        'and both land', () async {
+      if (Platform.isWindows) return;
+      final old = DateTime.now().subtract(const Duration(days: 1));
+      final leftover = File(join(root.path, 'x.flash-99-0badf00d.tmp'))
+        ..writeAsStringSync('x')
+        ..setLastModifiedSync(old);
+      final files = [
+        for (final name in ['a', 'b', 'c', 'd'])
+          File(join(root.path, name))
+            ..writeAsStringSync('old')
+            ..setLastModifiedSync(old),
+      ];
+
+      await Future.wait([
+        for (final file in files)
+          file.writeAsBytesAtomically('new'.codeUnits, keepMode: true),
+      ]);
+
+      for (final file in files) {
+        expect(file.readAsStringSync(), 'new');
+      }
+      expect(leftover.existsSync(), isFalse);
+      expect(root.listSync(), hasLength(files.length));
     });
 
     test('accepts a directory that does not exist', () async {
