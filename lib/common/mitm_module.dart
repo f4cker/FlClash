@@ -255,12 +255,16 @@ const _inlineResource = 'inline:';
 
 /// Named by content, so a resource that changes changes the line naming it
 /// and the Core reads it again.
-String mitmResourceName(String source, List<int> bytes) {
+String mitmResourceName(String source, List<int> bytes) =>
+    mitmResourceNameOf(source, sha256.convert(bytes).toString());
+
+/// [mitmResourceName] of bytes whose SHA-256 is [sha256Hex].
+String mitmResourceNameOf(String source, String sha256Hex) {
   final extension = p.url.extension(Uri.tryParse(source)?.path ?? source);
   final suffix = RegExp(r'^\.[A-Za-z0-9]{1,8}$').hasMatch(extension)
       ? extension.toLowerCase()
       : '';
-  return '${sha256.convert(bytes).toString().substring(0, 32)}$suffix';
+  return '${sha256Hex.substring(0, 32)}$suffix';
 }
 
 /// The Core's own limit on a map-local file.

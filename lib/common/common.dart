@@ -56,3 +56,5 @@ export 'webdav.dart';
 export 'yaml.dart';
 
 export 'mitm_flash.dart';
+export 'resource_cache.dart';
+export 'single_flight.dart';

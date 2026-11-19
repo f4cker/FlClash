@@ -3,28 +3,40 @@ part of '../action.dart';
 @Riverpod(keepAlive: true)
 class ResourcesAction extends _$ResourcesAction {
   var _autoUpdating = false;
+  final _ruleProviderUpdates = SingleFlight<(int, String), void>();
 
   @override
   void build() {}
 
-  Future<void> updateIconSet(IconSet iconSet) {
+  /// Only [revalidate] (auto update) sends validators.
+  Future<void> updateIconSet(IconSet iconSet, {bool revalidate = false}) {
     return _track(
       iconSet.updatingKey,
-      () => ref.read(iconSetsActionProvider.notifier).sync(iconSet),
-    );
-  }
-
-  Future<void> updateRuleProvider(ClashProvider provider) {
-    return _track(
-      provider.updatingKey,
       () => ref
-          .read(clashProvidersActionProvider.notifier)
-          .putProvider(provider, previous: provider, refresh: true),
+          .read(iconSetsActionProvider.notifier)
+          .sync(iconSet, revalidate: revalidate),
     );
   }
 
-  Future<void> updateScript(Script script) {
-    return ref.read(scriptsActionProvider.notifier).updateScript(script);
+  /// A refresh of a set that is already refreshing from the same url joins
+  /// it, so the Core never downloads one file twice at once.
+  Future<void> updateRuleProvider(ClashProvider provider) {
+    return _ruleProviderUpdates.run(
+      (provider.id, provider.url),
+      () => _track(
+        provider.updatingKey,
+        () => ref
+            .read(clashProvidersActionProvider.notifier)
+            .putProvider(provider, previous: provider, refresh: true),
+      ),
+    );
+  }
+
+  /// Only [revalidate] (auto update) sends validators.
+  Future<void> updateScript(Script script, {bool revalidate = false}) {
+    return ref
+        .read(scriptsActionProvider.notifier)
+        .updateScript(script, revalidate: revalidate);
   }
 
   Future<void> _track(String key, Future<Object?> Function() task) async {
@@ -122,12 +134,18 @@ class ResourcesAction extends _$ResourcesAction {
           lastUpdateTime?.add(interval).isBeforeNow ?? true;
       for (final iconSet in await database.iconSetsDao.query().get()) {
         if (iconSet.isRemote && isDue(iconSet.lastUpdateTime)) {
-          await _tryUpdate(iconSet.name, () => updateIconSet(iconSet));
+          await _tryUpdate(
+            iconSet.name,
+            () => updateIconSet(iconSet, revalidate: true),
+          );
         }
       }
       for (final script in await database.scriptsDao.query().get()) {
         if (script.url != null && isDue(script.lastUpdateTime)) {
-          await _tryUpdate(script.label, () => updateScript(script));
+          await _tryUpdate(
+            script.label,
+            () => updateScript(script, revalidate: true),
+          );
         }
       }
       for (final provider in await database.clashProvidersDao.query().get()) {

@@ -2,6 +2,11 @@ part of '../action.dart';
 
 @Riverpod(keepAlive: true)
 class ClashProvidersAction extends _$ClashProvidersAction {
+  /// Sets whose last reload did not get through, or is still running: the
+  /// Core may be holding older bytes than the file, so the next refresh
+  /// reloads even when it downloads the same bytes again.
+  final _reloadPending = <int>{};
+
   @override
   void build() {}
 
@@ -17,6 +22,11 @@ class ClashProvidersAction extends _$ClashProvidersAction {
     final download =
         provider.isRemote &&
         (refresh || provider.fileName != previous?.fileName);
+    // The Core downloads and rewrites the file either way; bytes it already
+    // had need no reload.
+    final heldBefore = download && content == null
+        ? await storedSha256(await provider.path)
+        : null;
     final compiled = switch (content) {
       final content? => await _compileContent(provider, content),
       null when download => await _compile(provider, download: true),
@@ -39,20 +49,44 @@ class ClashProvidersAction extends _$ClashProvidersAction {
       ),
       _ => compiled,
     };
+    if (heldBefore != null &&
+        latest != null &&
+        next == latest &&
+        !_reloadPending.contains(next.id) &&
+        previous?.fileName == next.fileName &&
+        await storedSha256(await next.path) == heldBefore) {
+      return latest;
+    }
     ref.read(clashProvidersProvider.notifier).put(next);
     if (previous != null && previous.fileName != next.fileName) {
       unawaited(_clearCache(previous));
     }
     final reread = content != null || download;
     if (reread && next == before) {
+      // Cleared once the reload gets through; one that fails leaves it, so
+      // the next refresh reloads even if it brings the same bytes.
+      _reloadPending.add(next.id);
       unawaited(_reloadIfReferenced(next));
     } else {
-      unawaited(
-        applyIfReferenced(ProviderKind.rule, {
-          next.label,
-          ?previous?.label,
-        }, force: reread),
-      );
+      final labels = {next.label, ?previous?.label};
+      if (!reread) {
+        unawaited(applyIfReferenced(ProviderKind.rule, labels));
+      } else {
+        // A reapply loads every set from its file, but only one that ran and
+        // went through: until then the next refresh reloads the set.
+        _reloadPending.add(next.id);
+        unawaited(
+          _reapplyIfReferenced(labels).then(
+            (applied) {
+              if (applied) _reloaded(next.id);
+            },
+            onError: (Object error) => commonPrint.log(
+              'reapply for ${next.label} failed: ${compactError(error)}',
+              logLevel: LogLevel.warning,
+            ),
+          ),
+        );
+      }
     }
     return next;
   }
@@ -224,6 +258,23 @@ class ClashProvidersAction extends _$ClashProvidersAction {
     force: force,
   );
 
+  /// A forced reapply, if the current profile uses a set named [labels],
+  /// completing once it has run: true when it went through or none was due.
+  Future<bool> _reapplyIfReferenced(Set<String> labels) async {
+    if (!await _currentUses(
+      (profileId) => _isReferenced(profileId, ProviderKind.rule, labels),
+    )) {
+      return true;
+    }
+    return ref
+        .read(setupActionProvider.notifier)
+        .applyProfileDebounced(silence: true, force: true);
+  }
+
+  /// The reload of [id] went through, or nothing loads the set: what the
+  /// Core holds, if anything, is what the file holds.
+  void _reloaded(int id) => _reloadPending.remove(id);
+
   Future<void> applyIfProxiesNamed(Set<String> names) => _applyIf(
     (profileId) async => (await database.proxyGroupsDao.query(profileId).get())
         .any((group) => group.proxies?.any(names.contains) ?? false),
@@ -247,10 +298,12 @@ class ClashProvidersAction extends _$ClashProvidersAction {
       (profileId) =>
           _isReferenced(profileId, ProviderKind.rule, {provider.label}),
     )) {
+      _reloaded(provider.id);
       return;
     }
     try {
       await _core.updateExternalProvider(provider.label);
+      _reloaded(provider.id);
       return;
     } catch (error) {
       commonPrint.log(

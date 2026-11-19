@@ -23,14 +23,36 @@ import '../helpers/test_profiles.dart';
 
 class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
 
+/// Records each apply asked for and lets the real debounce run them, with
+/// no wait; an apply ends a turn later, with the next of [results] (true
+/// once they run out), as a real one ends when the Core has the config.
 class _RecordingSetupAction extends SetupAction {
   final forced = <bool>[];
+  final results = <bool>[];
+  var applied = 0;
 
   int get applies => forced.length;
 
   @override
+  Duration get minApplyDebounce => Duration.zero;
+
+  @override
+  Duration get maxApplyDebounce => Duration.zero;
+
+  @override
   void applyProfileDebounce({bool silence = false, bool force = false}) {
     forced.add(force);
+    super.applyProfileDebounce(silence: silence, force: force);
+  }
+
+  @override
+  Future<bool> applyAutomatic({
+    bool silence = false,
+    bool force = false,
+  }) async {
+    await Future<void>.delayed(Duration.zero);
+    applied++;
+    return results.isEmpty || results.removeAt(0);
   }
 }
 
@@ -58,6 +80,7 @@ void main() {
   late List<({String name, String url})> compiles;
   late List<String> reloads;
   late Exception? reloadError;
+  late String downloaded;
 
   setUpAll(() async {
     home = Directory.systemTemp.createTempSync('flclash-providers-action-');
@@ -101,6 +124,7 @@ void main() {
     compiles = [];
     reloads = [];
     reloadError = null;
+    downloaded = 'downloaded';
     final cacheRoot = Directory(await appPath.providerCacheRootPath);
     if (cacheRoot.existsSync()) cacheRoot.deleteSync(recursive: true);
     final core = _MockCoreHandlerInterface();
@@ -122,7 +146,7 @@ void main() {
       if (url.isNotEmpty) {
         source
           ..createSync(recursive: true)
-          ..writeAsStringSync('downloaded');
+          ..writeAsStringSync(downloaded);
       }
       if (compiled.behavior != RuleProviderBehavior.classical &&
           compiled.format != RuleProviderFormat.mrs) {
@@ -508,10 +532,56 @@ void main() {
     }
 
     test('is read again in place while its definition holds', () async {
+      downloaded = 'downloaded again';
+
       await refresh();
 
       expect(reloads, ['Remote']);
       expect(setup.applies, 0);
+    });
+
+    test('is left alone when the download brought the same bytes', () async {
+      await refresh();
+
+      expect(compiles, hasLength(2));
+      expect(reloads, isEmpty);
+      expect(setup.applies, 0);
+      expect(await stored(remote.id), saved);
+    });
+
+    test('is read again after a failed reload, even with the same '
+        'bytes', () async {
+      downloaded = 'downloaded again';
+      reloadError = Exception('Core busy');
+      await refresh();
+      expect(reloads, ['Remote']);
+      reloadError = null;
+      reloads.clear();
+
+      // The same bytes again: the Core may still hold the older ones.
+      await refresh();
+      expect(reloads, ['Remote']);
+
+      // That reload went through, so the same bytes once more change nothing.
+      reloads.clear();
+      await refresh();
+      expect(reloads, isEmpty);
+    });
+
+    test('refreshed twice at once downloads once', () async {
+      downloaded = 'downloaded again';
+      compileGate = Completer();
+      final resources = container.read(resourcesActionProvider.notifier);
+
+      final first = resources.updateRuleProvider(saved);
+      final second = resources.updateRuleProvider(saved);
+      await pumpEventQueue();
+      compileGate!.complete();
+      await Future.wait([first, second]);
+      await pumpEventQueue();
+
+      expect(compiles, hasLength(2));
+      expect(reloads, ['Remote']);
     });
 
     test('reapplies once it changes shape', () async {
@@ -526,7 +596,46 @@ void main() {
       expect(setup.forced, [true]);
     });
 
+    test('is read again after a reapply that failed once it ran, even '
+        'with the same bytes', () async {
+      compiled = (
+        behavior: RuleProviderBehavior.classical,
+        format: RuleProviderFormat.text,
+      );
+      setup.results.add(false);
+      await refresh();
+      expect(setup.forced, [true]);
+      // The debounced apply runs, and fails, after it was asked for.
+      while (setup.applied == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      await pumpEventQueue();
+
+      await refresh();
+      expect(reloads, ['Remote']);
+
+      reloads.clear();
+      await refresh();
+      expect(reloads, isEmpty);
+    });
+
+    test('is left alone after a reapply that went through', () async {
+      compiled = (
+        behavior: RuleProviderBehavior.classical,
+        format: RuleProviderFormat.text,
+      );
+      await refresh();
+      while (setup.applied == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      await pumpEventQueue();
+
+      await refresh();
+      expect(reloads, isEmpty);
+    });
+
     test('reapplies when the Core does not run it', () async {
+      downloaded = 'downloaded again';
       reloadError = const CoreMethodException(
         code: 'provider_not_found',
         message: 'Remote',

@@ -32,6 +32,14 @@ bool _bringsNewScripts(
 class MitmModulesAction extends _$MitmModulesAction {
   var _autoUpdating = false;
 
+  /// One update per module and url at a time; a second request joins the
+  /// first. A module whose url changed meanwhile updates from the new one.
+  final _updates = SingleFlight<(int, String?), MitmModule>();
+
+  /// One download per resource url at a time, shared by every module naming
+  /// it. A manual update never joins an auto update's conditional request.
+  final _resourceDownloads = SingleFlight<(String, bool), String?>();
+
   /// Files written before a row or a line names them, which [clean] keeps.
   final _held = <String>[];
 
@@ -52,10 +60,19 @@ class MitmModulesAction extends _$MitmModulesAction {
     bool rulesEnabled = true,
     String? text,
   }) async {
-    text ??= await download(url);
+    // A new module has nothing stored to revalidate: this always downloads.
+    final fetched = text == null
+        ? await resourceCache.fetch(
+                ResourceKind.mitmModule,
+                url,
+                holds: (_) async => false,
+              )
+              as ResourceDownloaded
+        : null;
+    text ??= fetched!.text;
     final segments = Uri.tryParse(url)?.pathSegments ?? const <String>[];
     final name = segments.where((segment) => segment.isNotEmpty).lastOrNull;
-    return _save(
+    final saved = await _save(
       MitmModule(
         id: snowflake.id,
         name: basenameWithoutExtension(name ?? url),
@@ -67,6 +84,15 @@ class MitmModulesAction extends _$MitmModulesAction {
       added: true,
       enable: enable,
     );
+    if (fetched != null) {
+      await resourceCache.commit(
+        ResourceKind.mitmModule,
+        url,
+        fetched,
+        fingerprint: sha256Hex(utf8.encode(text)),
+      );
+    }
+    return saved;
   }
 
   Future<MitmModule> addFromFile(
@@ -106,7 +132,23 @@ class MitmModulesAction extends _$MitmModulesAction {
     return _save(module, text, edited: true);
   }
 
-  Future<MitmModule> updateModule(MitmModule module) async {
+  /// An update of a module that is already updating joins that update.
+  ///
+  /// Only [revalidate] (auto update) asks the server whether what is stored
+  /// is still current; an update the user asks for downloads everything
+  /// whole. Unchanged content still rewrites and reloads nothing.
+  Future<MitmModule> updateModule(
+    MitmModule module, {
+    bool revalidate = false,
+  }) => _updates.run((
+    module.id,
+    module.url,
+  ), () => _updateModule(module, revalidate: revalidate));
+
+  Future<MitmModule> _updateModule(
+    MitmModule module, {
+    required bool revalidate,
+  }) async {
     final updatingKeys = ref.read(updatingKeysProvider.notifier);
     final operation = updatingKeys.start(module.updatingKey);
     try {
@@ -125,15 +167,37 @@ class MitmModulesAction extends _$MitmModulesAction {
           failure: missing ? MitmUpdateFailure.load : failure,
         ),
       );
+      final ResourceFetch fetched;
       final String text;
       try {
-        text = (await request.getTextResponseForUrl(url)).data ?? '';
+        fetched = await resourceCache.fetch(
+          ResourceKind.mitmModule,
+          url,
+          holds: (fingerprint) async =>
+              await _textHolds(module, fingerprint) != null,
+          revalidate: revalidate,
+        );
+        text = switch (fetched) {
+          ResourceDownloaded(:final text) => text,
+          ResourceNotModified(:final validators) =>
+            await _textHolds(module, validators.fingerprint) ??
+                (throw const FileSystemException('module copy changed')),
+        };
       } catch (e) {
         await fail(MitmUpdateFailure.check, e);
         rethrow;
       }
       try {
-        return await _offer(module, text);
+        final offered = await _offer(module, text, revalidate: revalidate);
+        if (fetched is ResourceDownloaded) {
+          await resourceCache.commit(
+            ResourceKind.mitmModule,
+            url,
+            fetched,
+            fingerprint: sha256Hex(utf8.encode(text)),
+          );
+        }
+        return offered;
       } catch (e) {
         await fail(
           e is MessageException
@@ -148,12 +212,33 @@ class MitmModulesAction extends _$MitmModulesAction {
     }
   }
 
+  /// The text of the module's running or waiting copy whose bytes have
+  /// [fingerprint], the two places a downloaded text is kept.
+  Future<String?> _textHolds(MitmModule module, String fingerprint) async {
+    final directory = await appPath.mitmModulesDirPath;
+    for (final name in [module.fileName, module.pendingFileName]) {
+      final path = join(directory, name);
+      if (await storedSha256(path) == fingerprint) {
+        try {
+          return await File(path).readAsString();
+        } on FileSystemException {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
   /// Differing content waits in the pending file; what runs stays.
-  Future<MitmModule> _offer(MitmModule module, String text) async {
+  Future<MitmModule> _offer(
+    MitmModule module,
+    String text, {
+    bool revalidate = false,
+  }) async {
     final current = await _readText(module);
     if (current == null) {
       return _mark(
-        await _save(module, text),
+        await _save(module, text, revalidate: revalidate),
         (item) => item.copyWith(error: null, failure: null),
       );
     }
@@ -162,11 +247,22 @@ class MitmModulesAction extends _$MitmModulesAction {
     );
     if (current == text) {
       // Its files still refresh; one whose script changed turns it off.
-      final saved = await _save(module, text);
+      final saved = await _refresh(module, text, revalidate: revalidate);
       await pending.safeDelete();
       return _mark(
         saved,
         (item) => item.copyWith(pendingTime: null, error: null, failure: null),
+      );
+    }
+    if (await pendingText(module) == text) {
+      // What waits is still the latest: only the check time moves.
+      return _mark(
+        module,
+        (item) => item.copyWith(
+          lastUpdateTime: DateTime.now(),
+          error: null,
+          failure: null,
+        ),
       );
     }
     final content = await compute(_parseMitmModule, (text, module.arguments));
@@ -188,6 +284,58 @@ class MitmModulesAction extends _$MitmModulesAction {
     } finally {
       _held.remove(module.pendingFileName);
       if (ref.mounted) unawaited(_cleanAfterSave());
+    }
+  }
+
+  /// [text] is what runs already. When no file it names changed either,
+  /// nothing is written and nothing reloads: only the check time moves.
+  /// Anything else, a changed file or a row that no longer says what [text]
+  /// does, goes through [_save] and every check it makes.
+  Future<MitmModule> _refresh(
+    MitmModule module,
+    String text, {
+    required bool revalidate,
+  }) async {
+    final content = await compute(_parseMitmModule, (text, module.arguments));
+    if (content.isEmpty) {
+      return _save(module, text, revalidate: revalidate);
+    }
+    final held = [module.fileName];
+    _held.addAll(held);
+    try {
+      final resources = await _download(
+        content.resourceUrls,
+        previous: module.resources,
+        held: held,
+        revalidate: revalidate,
+      );
+      final written = await _writeInline(content.inlineResources, held);
+      final current = await _current(module.id);
+      if (current == null || !ref.mounted) {
+        return module;
+      }
+      final same =
+          mapEquals(current.resources, {
+            ...mitmAttachments(current),
+            ...resources,
+            ...written,
+          }) &&
+          (content.name ?? current.name) == current.name &&
+          (content.description ?? '') == current.description &&
+          content.system == current.system &&
+          content.declaredScripts == current.scripts &&
+          content.asksConsent == current.asksConsent;
+      if (!same) {
+        return await _save(module, text, fetched: (resources, written));
+      }
+      final checked = current.copyWith(lastUpdateTime: DateTime.now());
+      putModule(checked);
+      return checked;
+    } finally {
+      held.forEach(_held.remove);
+      if (ref.mounted) {
+        unawaited(_cleanAfterSave());
+      }
     }
   }
 
@@ -364,11 +512,38 @@ class MitmModulesAction extends _$MitmModulesAction {
 
   Future<void> deleteModule(MitmModule module) async {
     ref.read(mitmModulesProvider.notifier).del(module.id);
+    try {
+      await _forgetValidators(module);
+    } catch (e) {
+      // Left behind, they cost nothing but a slot until evicted.
+      commonPrint.log(
+        'forget validators of ${module.name}: ${compactError(e)}',
+        logLevel: LogLevel.warning,
+      );
+    }
     final path = await _pathOf(module);
     await _oneDeletionAtATime(() async {
       await File(path).safeDelete();
       await _sweep();
     });
+  }
+
+  /// What was kept to revalidate the module and its resources goes with it,
+  /// unless another module fetches the same url.
+  Future<void> _forgetValidators(MitmModule module) async {
+    final others = [
+      for (final item in await database.mitmModulesDao.query().get())
+        if (item.id != module.id) item,
+    ];
+    final url = module.url;
+    if (url != null && !others.any((item) => item.url == url)) {
+      await resourceCache.forget(ResourceKind.mitmModule, url);
+    }
+    for (final resource in module.resources.keys) {
+      if (!others.any((item) => item.resources.containsKey(resource))) {
+        await resourceCache.forget(ResourceKind.mitmResource, resource);
+      }
+    }
   }
 
   Future<void> _oneDeletionAtATime(Future<void> Function() delete) =>
@@ -398,6 +573,8 @@ class MitmModulesAction extends _$MitmModulesAction {
     bool edited = false,
     bool adopting = false,
     bool? enable,
+    (Map<String, String>, Map<String, String>)? fetched,
+    bool revalidate = false,
   }) async {
     final content = await compute(_parseMitmModule, (text, module.arguments));
     if (content.isEmpty && !edited) {
@@ -407,12 +584,18 @@ class MitmModulesAction extends _$MitmModulesAction {
     _held.addAll(held);
     try {
       final previous = added || edited ? null : await _readText(module);
-      final resources = await _download(
-        content.resourceUrls,
-        previous: module.resources,
-        held: held,
-      );
-      final written = await _writeInline(content.inlineResources, held);
+      // What [fetched] names stays held by the caller that fetched it.
+      final (resources, written) =
+          fetched ??
+          (
+            await _download(
+              content.resourceUrls,
+              previous: module.resources,
+              held: held,
+              revalidate: revalidate,
+            ),
+            await _writeInline(content.inlineResources, held),
+          );
       await File(await _pathOf(module)).writeAsStringAtomically(text);
       if (!ref.mounted) {
         return module;
@@ -502,21 +685,27 @@ class MitmModulesAction extends _$MitmModulesAction {
   }
 
   /// A resource that fails to download keeps the copy an earlier update left.
+  /// One the server reports unchanged, or that downloads to the same bytes,
+  /// keeps its file as it is.
   Future<Map<String, String>> _download(
     Set<String> urls, {
     required Map<String, String> previous,
     required List<String> held,
+    bool revalidate = false,
   }) async {
     final directory = await appPath.mitmResourcesDirPath;
     final names = await Future.wait([
       for (final url in urls)
         () async {
           try {
-            final bytes = (await request.getFileResponseForUrl(url)).data;
-            if (bytes == null || bytes.length > maxMitmResourceSize) {
+            final name = await _resourceDownloads.run((
+              url,
+              revalidate,
+            ), () => _fetchResource(url, directory, revalidate: revalidate));
+            if (name == null) {
               throw const FileSystemException('too large');
             }
-            final name = await _storeResource(url, bytes);
+            _held.add(name);
             held.add(name);
             return name;
           } catch (e) {
@@ -537,6 +726,54 @@ class MitmModulesAction extends _$MitmModulesAction {
     return {for (final (index, url) in urls.indexed) url: ?names[index]};
   }
 
+  /// The stored name of [url]'s current bytes, null when they are too large.
+  ///
+  /// Files are named by their content, so whether the copy validators stand
+  /// for is still there does not depend on which module asked: any module
+  /// joining this download gets the same answer.
+  Future<String?> _fetchResource(
+    String url,
+    String directory, {
+    required bool revalidate,
+  }) async {
+    final fetched = await resourceCache.fetch(
+      ResourceKind.mitmResource,
+      url,
+      holds: (fingerprint) async =>
+          await storedSha256(
+            join(directory, mitmResourceNameOf(url, fingerprint)),
+          ) ==
+          fingerprint,
+      revalidate: revalidate,
+    );
+    switch (fetched) {
+      case ResourceNotModified(:final validators):
+        final name = mitmResourceNameOf(url, validators.fingerprint);
+        _held.add(name);
+        _releaseAfterCallers(name);
+        return name;
+      case ResourceDownloaded(:final bytes):
+        if (bytes.length > maxMitmResourceSize) {
+          return null;
+        }
+        final name = await _storeResource(url, bytes);
+        try {
+          await resourceCache.commit(ResourceKind.mitmResource, url, fetched);
+        } catch (_) {
+          _held.remove(name);
+          rethrow;
+        }
+        _releaseAfterCallers(name);
+        return name;
+    }
+  }
+
+  /// Every caller of a download resumes, and holds its name itself, within
+  /// the microtasks that follow it; the download's own hold lasts past them.
+  void _releaseAfterCallers(String name) {
+    Timer.run(() => _held.remove(name));
+  }
+
   Future<Map<String, String>> _writeInline(
     Map<String, String> sources,
     List<String> held,
@@ -550,12 +787,20 @@ class MitmModulesAction extends _$MitmModulesAction {
     return written;
   }
 
+  /// Leaves the name in [_held] for the caller to release, unless the
+  /// write fails.
   Future<String> _storeResource(String source, List<int> bytes) async {
     final name = mitmResourceName(source, bytes);
     _held.add(name);
-    final file = File(join(await appPath.mitmResourcesDirPath, name));
-    if (!await file.exists()) {
-      await file.safeWriteAsBytes(bytes);
+    try {
+      final file = File(join(await appPath.mitmResourcesDirPath, name));
+      // Named by its content: a file already there with these bytes stays.
+      if (await storedSha256(file.path) != sha256Hex(bytes)) {
+        await file.writeAsBytesAtomically(bytes, keepMode: true);
+      }
+    } catch (_) {
+      _held.remove(name);
+      rethrow;
     }
     return name;
   }
@@ -564,9 +809,24 @@ class MitmModulesAction extends _$MitmModulesAction {
   /// save writes or names while it runs stays.
   Future<void> clean() => _oneDeletionAtATime(_sweep);
 
+  /// Runs once a sweep has read what the saved rows name, before it walks.
+  @visibleForTesting
+  Future<void> Function()? afterSweepSnapshot;
+
+  /// Whether a script still needs [name]. A check or import saves its row
+  /// and then lets go of the file, so a file let go of during the walk is
+  /// named by a row the sweep's first read may predate: the rows are read
+  /// again, and held files checked last, right before anything is deleted.
+  Future<bool> _scriptKeeps(String name) async {
+    if (isMitmScriptFileHeld(name)) return true;
+    if ((await mitmScriptFiles()).contains(name)) return true;
+    return isMitmScriptFileHeld(name);
+  }
+
   Future<void> _sweep() async {
     final stored = await database.mitmModulesDao.query().get();
     final scriptFiles = await mitmScriptFiles();
+    await afterSweepSnapshot?.call();
     Future<void> sweep(
       String path,
       Iterable<String> Function(MitmModule module) namesOf,
@@ -579,14 +839,15 @@ class MitmModulesAction extends _$MitmModulesAction {
         if (entity is! File || !ref.mounted) {
           continue;
         }
-        // writeAsStringAtomically writes a held file through `<name>.<pid>.tmp`.
-        final name = basename(
-          entity.path,
-        ).replaceFirst(RegExp(r'\.\d+\.tmp$'), '');
+        // An atomic write goes through `<name>.<pid>.<random>.tmp`.
+        final name = basename(entity.path).replaceFirst(atomicTempSuffix, '');
         final modules = [...stored, ...?ref.read(mitmModulesProvider).value];
         if (!_held.contains(name) &&
+            !isMitmScriptFileHeld(name) &&
             !scriptFiles.contains(name) &&
-            !modules.any((module) => namesOf(module).contains(name))) {
+            !modules.any((module) => namesOf(module).contains(name)) &&
+            !await _scriptKeeps(name) &&
+            !_held.contains(name)) {
           await entity.safeDelete();
         }
       }
@@ -639,7 +900,7 @@ class MitmModulesAction extends _$MitmModulesAction {
           continue;
         }
         try {
-          await updateModule(module);
+          await updateModule(module, revalidate: true);
         } catch (e) {
           commonPrint.log(
             'auto update ${module.name}: ${compactError(e)}',
@@ -648,6 +909,9 @@ class MitmModulesAction extends _$MitmModulesAction {
         }
       }
       if (setting.geoAutoUpdate) {
+        // The cleans the module updates started finish first; a clean that
+        // starts later still keeps what a check holds.
+        await _deleting.then((_) {}, onError: (_) {});
         await _checkScripts(interval);
       }
     } finally {
@@ -669,7 +933,12 @@ class MitmModulesAction extends _$MitmModulesAction {
       if (!ref.mounted) {
         return;
       }
-      await checkMitmScriptUpdate(ref.read, profileId, script);
+      await checkMitmScriptUpdate(
+        ref.read,
+        profileId,
+        script,
+        revalidate: true,
+      );
     }
   }
 }

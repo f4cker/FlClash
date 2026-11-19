@@ -2,6 +2,8 @@ part of '../action.dart';
 
 @Riverpod(keepAlive: true)
 class ScriptsAction extends _$ScriptsAction {
+  final _updates = SingleFlight<(int, String?), void>();
+
   @override
   void build() {}
 
@@ -12,6 +14,10 @@ class ScriptsAction extends _$ScriptsAction {
 
   void deleteScript(int scriptId) {
     final inUse = ref.read(currentProfileProvider)?.scriptId == scriptId;
+    final url = ref.read(scriptsProvider).value?.get(scriptId)?.url;
+    if (url != null) {
+      unawaited(_forgetUnlessShared(scriptId, url));
+    }
     ref.read(scriptsProvider.notifier).del(scriptId);
     ref
         .read(profilesProvider.notifier)
@@ -26,14 +32,70 @@ class ScriptsAction extends _$ScriptsAction {
     }
   }
 
-  Future<void> updateScript(Script script) async {
+  /// An update of a script that is already updating from the same url joins
+  /// that update. Only [revalidate] (auto update) sends validators; an update
+  /// the user asks for downloads the script whole.
+  Future<void> updateScript(Script script, {bool revalidate = false}) =>
+      _updates.run((
+        script.id,
+        script.url,
+      ), () => _updateScript(script, revalidate: revalidate));
+
+  /// Unchanged content, by a 304 or by its hash, only moves the check time:
+  /// the file stays as it is and nothing reapplies.
+  Future<void> _updateScript(Script script, {required bool revalidate}) async {
     final updatingKeys = ref.read(updatingKeysProvider.notifier);
     final operation = updatingKeys.start(script.updatingKey);
     try {
-      putScript(await script.update());
+      final url = script.url!;
+      final path = await script.path;
+      final fetched = await resourceCache.fetch(
+        ResourceKind.script,
+        url,
+        holds: (fingerprint) async => await storedSha256(path) == fingerprint,
+        revalidate: revalidate,
+      );
+      switch (fetched) {
+        case ResourceNotModified():
+          _checked(script);
+        case ResourceDownloaded(:final text):
+          final fingerprint = sha256Hex(utf8.encode(text));
+          if (await storedSha256(path) == fingerprint) {
+            _checked(script);
+          } else {
+            putScript(await script.save(text));
+          }
+          await resourceCache.commit(
+            ResourceKind.script,
+            url,
+            fetched,
+            fingerprint: fingerprint,
+          );
+      }
     } finally {
       updatingKeys.stop(script.updatingKey, operation);
     }
+  }
+
+  /// Another script fetching the same url still revalidates with them.
+  Future<void> _forgetUnlessShared(int scriptId, String url) async {
+    try {
+      final rows = await database.scriptsDao.query().get();
+      if (rows.any((item) => item.id != scriptId && item.url == url)) return;
+      await resourceCache.forget(ResourceKind.script, url);
+    } catch (e) {
+      commonPrint.log(
+        'forget script validators: ${compactError(e)}',
+        logLevel: LogLevel.warning,
+      );
+    }
+  }
+
+  void _checked(Script script) {
+    final current = ref.read(scriptsProvider).value?.get(script.id) ?? script;
+    ref
+        .read(scriptsProvider.notifier)
+        .put(current.copyWith(lastUpdateTime: DateTime.now()));
   }
 
   void _applyIfInUse(int scriptId) {

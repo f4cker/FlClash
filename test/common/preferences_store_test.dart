@@ -119,7 +119,9 @@ void main() {
 
   test('a save that cannot be written leaves the previous file', () async {
     File(path).writeAsStringSync(json.encode({'flutter.config': 'old'}));
-    Directory('$path.$pid.tmp').createSync();
+    // No temporary sibling can be created in a read-only directory.
+    await Process.run('chmod', ['555', dir.path]);
+    addTearDown(() => Process.runSync('chmod', ['755', dir.path]));
 
     expect(
       await openStore().setValue('String', 'flutter.config', 'new'),

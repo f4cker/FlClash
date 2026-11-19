@@ -840,17 +840,8 @@ extension ScriptExt on Script {
   Future<String?> get content async => readTextFileTask(await path);
 
   Future<Script> save(String content) async {
-    final file = File(await path);
-    if (!await file.exists()) {
-      await file.create(recursive: true);
-    }
-    await file.writeAsString(content);
+    await File(await path).writeAsStringAtomically(content);
     return copyWith(lastUpdateTime: DateTime.now());
-  }
-
-  Future<Script> update() async {
-    final response = await request.getTextResponseForUrl(url!);
-    return save(response.data ?? '');
   }
 }
 

@@ -163,6 +163,11 @@ class SetupAction extends _$SetupAction {
       debouncer.cancel(FunctionTag.applyProfile);
       _pendingForceApply = false;
       _pendingShownApply = false;
+      // A dropped apply did not go through.
+      for (final waiter in _applyWaiters) {
+        waiter.complete(false);
+      }
+      _applyWaiters.clear();
       _updateRunTime();
       return;
     }
@@ -861,6 +866,23 @@ class SetupAction extends _$SetupAction {
   @protected
   Duration get maxApplyDebounce => const Duration(seconds: 10);
 
+  final _applyWaiters = <Completer<bool>>[];
+
+  /// As [applyProfileDebounce], and completes once the apply this call merges
+  /// into has run: true when it went through, false when it failed or was
+  /// dropped. It settles only through the real [applyProfileDebounce]: a
+  /// fake that overrides that without calling super leaves it pending.
+  Future<bool> applyProfileDebounced({
+    bool silence = false,
+    bool force = false,
+  }) {
+    applyProfileDebounce(silence: silence, force: force);
+    // The apply runs on a timer, so it cannot have run yet.
+    final waiter = Completer<bool>();
+    _applyWaiters.add(waiter);
+    return waiter.future;
+  }
+
   /// Calls within one debounce window merge: forced if any call forces, and
   /// shown (not silent) if any call asks to be shown.
   void applyProfileDebounce({bool silence = false, bool force = false}) {
@@ -871,9 +893,24 @@ class SetupAction extends _$SetupAction {
       (_) {
         final force = _pendingForceApply;
         final shown = _pendingShownApply;
+        final waiters = [..._applyWaiters];
         _pendingForceApply = false;
         _pendingShownApply = false;
-        applyAutomatic(silence: !shown, force: force);
+        _applyWaiters.clear();
+        // Returned, so a failure still reaches the debouncer's log.
+        return applyAutomatic(silence: !shown, force: force).then(
+          (applied) {
+            for (final waiter in waiters) {
+              waiter.complete(applied);
+            }
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            for (final waiter in waiters) {
+              waiter.complete(false);
+            }
+            Error.throwWithStackTrace(error, stackTrace);
+          },
+        );
       },
       args: [silence],
       duration: Duration(

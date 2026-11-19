@@ -111,7 +111,7 @@ class _IconSetsViewState extends ConsumerState<IconSetsView> {
       confirmText: appLocalizations.delete,
     );
     if (res == true && mounted) {
-      ref.read(iconSetsProvider.notifier).del(iconSet.id);
+      _iconSetsAction.delete(iconSet);
     }
   }
 
