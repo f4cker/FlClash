@@ -1055,6 +1055,34 @@ hostname = %APPEND% example.com
       await mitm().clean();
       expect(File(path).existsSync(), isFalse);
     });
+
+    test('keeps a script saved and let go of while a clean walks', () async {
+      final url = urlOf('/s.js');
+      final path = join(
+        await appPath.mitmResourcesDirPath,
+        mitmResourceName(url, 'body'.codeUnits),
+      );
+      container.listen(profileMitmScriptsProvider(1), (_, _) {});
+      // The clean has read the rows before this script is saved, and walks
+      // only once the import has saved it and let go of its file.
+      mitm().afterSweepSnapshot = () => holdingMitmScriptFiles((held) async {
+        final file = await storeMitmScript(url, 'body'.codeUnits, held: held);
+        await container.read(profileMitmScriptsProvider(1).notifier).commit([
+          MitmScript(
+            id: 3,
+            line: 'S = type=http-request,pattern=^https://a,script-path=$file',
+            url: url,
+            source: url,
+            file: file,
+          ),
+        ]);
+      });
+      addTearDown(() => mitm().afterSweepSnapshot = null);
+
+      await mitm().clean();
+
+      expect(File(path).existsSync(), isTrue);
+    });
   });
 
   group('a resource two modules share', () {

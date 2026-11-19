@@ -23,16 +23,36 @@ import '../helpers/test_profiles.dart';
 
 class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
 
+/// Records each apply asked for and lets the real debounce run them, with
+/// no wait; an apply ends a turn later, with the next of [results] (true
+/// once they run out), as a real one ends when the Core has the config.
 class _RecordingSetupAction extends SetupAction {
   final forced = <bool>[];
-  Error? error;
+  final results = <bool>[];
+  var applied = 0;
 
   int get applies => forced.length;
 
   @override
+  Duration get minApplyDebounce => Duration.zero;
+
+  @override
+  Duration get maxApplyDebounce => Duration.zero;
+
+  @override
   void applyProfileDebounce({bool silence = false, bool force = false}) {
     forced.add(force);
-    if (error case final error?) throw error;
+    super.applyProfileDebounce(silence: silence, force: force);
+  }
+
+  @override
+  Future<bool> applyAutomatic({
+    bool silence = false,
+    bool force = false,
+  }) async {
+    await Future<void>.delayed(Duration.zero);
+    applied++;
+    return results.isEmpty || results.removeAt(0);
   }
 }
 
@@ -576,21 +596,40 @@ void main() {
       expect(setup.forced, [true]);
     });
 
-    test('is read again after a failed reapply, even with the same '
-        'bytes', () async {
+    test('is read again after a reapply that failed once it ran, even '
+        'with the same bytes', () async {
       compiled = (
         behavior: RuleProviderBehavior.classical,
         format: RuleProviderFormat.text,
       );
-      setup.error = StateError('apply failed');
+      setup.results.add(false);
       await refresh();
       expect(setup.forced, [true]);
-      setup.error = null;
+      // The debounced apply runs, and fails, after it was asked for.
+      while (setup.applied == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      await pumpEventQueue();
 
       await refresh();
       expect(reloads, ['Remote']);
 
       reloads.clear();
+      await refresh();
+      expect(reloads, isEmpty);
+    });
+
+    test('is left alone after a reapply that went through', () async {
+      compiled = (
+        behavior: RuleProviderBehavior.classical,
+        format: RuleProviderFormat.text,
+      );
+      await refresh();
+      while (setup.applied == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      await pumpEventQueue();
+
       await refresh();
       expect(reloads, isEmpty);
     });

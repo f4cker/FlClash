@@ -68,22 +68,25 @@ class ClashProvidersAction extends _$ClashProvidersAction {
       _reloadPending.add(next.id);
       unawaited(_reloadIfReferenced(next));
     } else {
-      // A reapply loads every set from its file, once it gets through.
-      if (reread) _reloadPending.add(next.id);
-      unawaited(
-        applyIfReferenced(ProviderKind.rule, {
-          next.label,
-          ?previous?.label,
-        }, force: reread).then(
-          (_) {
-            if (reread) _reloaded(next.id);
-          },
-          onError: (Object error) => commonPrint.log(
-            'reapply for ${next.label} failed: ${compactError(error)}',
-            logLevel: LogLevel.warning,
+      final labels = {next.label, ?previous?.label};
+      if (!reread) {
+        unawaited(applyIfReferenced(ProviderKind.rule, labels));
+      } else {
+        // A reapply loads every set from its file, but only one that ran and
+        // went through: until then the next refresh reloads the set.
+        _reloadPending.add(next.id);
+        unawaited(
+          _reapplyIfReferenced(labels).then(
+            (applied) {
+              if (applied) _reloaded(next.id);
+            },
+            onError: (Object error) => commonPrint.log(
+              'reapply for ${next.label} failed: ${compactError(error)}',
+              logLevel: LogLevel.warning,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
     return next;
   }
@@ -254,6 +257,19 @@ class ClashProvidersAction extends _$ClashProvidersAction {
     (profileId) => _isReferenced(profileId, kind, labels),
     force: force,
   );
+
+  /// A forced reapply, if the current profile uses a set named [labels],
+  /// completing once it has run: true when it went through or none was due.
+  Future<bool> _reapplyIfReferenced(Set<String> labels) async {
+    if (!await _currentUses(
+      (profileId) => _isReferenced(profileId, ProviderKind.rule, labels),
+    )) {
+      return true;
+    }
+    return ref
+        .read(setupActionProvider.notifier)
+        .applyProfileDebounced(silence: true, force: true);
+  }
 
   /// The reload of [id] went through, or nothing loads the set: what the
   /// Core holds, if anything, is what the file holds.

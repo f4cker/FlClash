@@ -748,21 +748,30 @@ class MitmModulesAction extends _$MitmModulesAction {
     );
     switch (fetched) {
       case ResourceNotModified(:final validators):
-        // Already stored; each caller holds it as soon as this returns.
-        return mitmResourceNameOf(url, validators.fingerprint);
+        final name = mitmResourceNameOf(url, validators.fingerprint);
+        _held.add(name);
+        _releaseAfterCallers(name);
+        return name;
       case ResourceDownloaded(:final bytes):
         if (bytes.length > maxMitmResourceSize) {
           return null;
         }
-        // Held until every caller of this download holds it itself.
         final name = await _storeResource(url, bytes);
         try {
           await resourceCache.commit(ResourceKind.mitmResource, url, fetched);
-        } finally {
+        } catch (_) {
           _held.remove(name);
+          rethrow;
         }
+        _releaseAfterCallers(name);
         return name;
     }
+  }
+
+  /// Every caller of a download resumes, and holds its name itself, within
+  /// the microtasks that follow it; the download's own hold lasts past them.
+  void _releaseAfterCallers(String name) {
+    Timer.run(() => _held.remove(name));
   }
 
   Future<Map<String, String>> _writeInline(
@@ -778,13 +787,20 @@ class MitmModulesAction extends _$MitmModulesAction {
     return written;
   }
 
+  /// Leaves the name in [_held] for the caller to release, unless the
+  /// write fails.
   Future<String> _storeResource(String source, List<int> bytes) async {
     final name = mitmResourceName(source, bytes);
     _held.add(name);
-    final file = File(join(await appPath.mitmResourcesDirPath, name));
-    // Named by its content: a file already there with these bytes stays.
-    if (await storedSha256(file.path) != sha256Hex(bytes)) {
-      await file.writeAsBytesAtomically(bytes, keepMode: true);
+    try {
+      final file = File(join(await appPath.mitmResourcesDirPath, name));
+      // Named by its content: a file already there with these bytes stays.
+      if (await storedSha256(file.path) != sha256Hex(bytes)) {
+        await file.writeAsBytesAtomically(bytes, keepMode: true);
+      }
+    } catch (_) {
+      _held.remove(name);
+      rethrow;
     }
     return name;
   }
@@ -793,9 +809,24 @@ class MitmModulesAction extends _$MitmModulesAction {
   /// save writes or names while it runs stays.
   Future<void> clean() => _oneDeletionAtATime(_sweep);
 
+  /// Runs once a sweep has read what the saved rows name, before it walks.
+  @visibleForTesting
+  Future<void> Function()? afterSweepSnapshot;
+
+  /// Whether a script still needs [name]. A check or import saves its row
+  /// and then lets go of the file, so a file let go of during the walk is
+  /// named by a row the sweep's first read may predate: the rows are read
+  /// again, and held files checked last, right before anything is deleted.
+  Future<bool> _scriptKeeps(String name) async {
+    if (isMitmScriptFileHeld(name)) return true;
+    if ((await mitmScriptFiles()).contains(name)) return true;
+    return isMitmScriptFileHeld(name);
+  }
+
   Future<void> _sweep() async {
     final stored = await database.mitmModulesDao.query().get();
     final scriptFiles = await mitmScriptFiles();
+    await afterSweepSnapshot?.call();
     Future<void> sweep(
       String path,
       Iterable<String> Function(MitmModule module) namesOf,
@@ -814,7 +845,9 @@ class MitmModulesAction extends _$MitmModulesAction {
         if (!_held.contains(name) &&
             !isMitmScriptFileHeld(name) &&
             !scriptFiles.contains(name) &&
-            !modules.any((module) => namesOf(module).contains(name))) {
+            !modules.any((module) => namesOf(module).contains(name)) &&
+            !await _scriptKeeps(name) &&
+            !_held.contains(name)) {
           await entity.safeDelete();
         }
       }
