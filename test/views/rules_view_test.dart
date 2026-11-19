@@ -237,6 +237,8 @@ void main() {
     WidgetTester tester, {
     Future<String?> Function(Profile profile, String text)? writeRule,
     Size size = _size,
+    double textScale = 1,
+    ThemeMode themeMode = ThemeMode.light,
   }) async {
     container.read(viewSizeProvider.notifier).update((_) => size);
     tester.view.physicalSize = size;
@@ -248,7 +250,15 @@ void main() {
         container: container,
         child: TestApp(
           locale: const Locale('en'),
-          child: RulesView(writeRule: writeRule),
+          themeMode: themeMode,
+          child: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: RulesView(writeRule: writeRule),
+            ),
+          ),
         ),
       ),
     );
@@ -303,6 +313,38 @@ void main() {
 
     await teardown(tester);
   });
+
+  for (final width in [390.0, 1220.0]) {
+    for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets('route target fits ${width.toInt()} at 2x ${mode.name}', (
+        tester,
+      ) async {
+        await pumpRules(
+          tester,
+          size: Size(width, 1000),
+          textScale: 2,
+          themeMode: mode,
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        final target = find.text('→ Japan 03');
+        expect(target, findsOneWidget);
+        final row = find.ancestor(of: target, matching: find.byType(RuleRow));
+        final chip = find.descendant(of: row, matching: find.byType(RouteChip));
+        final rowRect = tester.getRect(row);
+        final targetRect = tester.getRect(target);
+        final chipRect = tester.getRect(chip);
+        expect(targetRect.right, lessThanOrEqualTo(rowRect.right));
+        expect(chipRect.right, lessThanOrEqualTo(rowRect.right));
+        if (width == 390) {
+          expect(targetRect.top, greaterThanOrEqualTo(chipRect.bottom));
+        } else {
+          expect(targetRect.center.dy, closeTo(chipRect.center.dy, 1));
+        }
+        await teardown(tester);
+      });
+    }
+  }
 
   testWidgets('a source chip keeps only that source', (tester) async {
     await pumpRules(tester);

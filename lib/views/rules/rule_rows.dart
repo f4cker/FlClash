@@ -511,9 +511,10 @@ class _RuleTarget extends ConsumerWidget {
             ).select((state) => state.proxyName),
           )
         : '';
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
       spacing: 6,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 180),
