@@ -6,6 +6,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/mitm_modules.dart' show MitmModulesView;
+import 'package:fl_clash/views/config/mitm_status.dart' show openMitmSettings;
 import 'package:fl_clash/views/profiles/mount.dart'
     show MountBanner, MountBannerLevel;
 import 'package:fl_clash/views/rules/rule_rows.dart'
@@ -390,7 +391,11 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
           level: MountBannerLevel.info,
           lines: [l.mitmScriptsOff],
           actionLabel: l.mitmRewriteGoTurnOn,
-          onAction: () => Navigator.of(context).maybePop(),
+          onAction: () async {
+            if (!await Navigator.of(context).maybePop() && context.mounted) {
+              await openMitmSettings(context);
+            }
+          },
         ),
     ];
     final modulesRow = fromModules == 0
