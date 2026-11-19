@@ -1009,7 +1009,7 @@
   "@profileExpiresIn": {
     "placeholders": {
       "date": {},
-      "days": {}
+      "days": {"type": "num"}
     }
   },
   "profileDaysLeft": "{days, plural, other{{days}일 남음}}",
