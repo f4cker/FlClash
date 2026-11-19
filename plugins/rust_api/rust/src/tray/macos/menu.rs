@@ -683,6 +683,18 @@ impl ItemContent {
         }
     }
 
+    fn detail_width(&self, font: &NSFont) -> f64 {
+        let width = self
+            .detail
+            .as_deref()
+            .map_or(0.0, |detail| text_width(detail, font));
+        if self.has_submenu {
+            width.min(DETAIL_MAXIMUM_WIDTH)
+        } else {
+            width
+        }
+    }
+
     fn full_label(&self) -> String {
         if let Some(label) = &self.accessibility_label {
             return label.clone();
@@ -881,10 +893,10 @@ define_class!(
 impl ItemView {
     fn preferred_width(content: &ItemContent) -> f64 {
         STYLE.with(|style| {
-            let mut width = style.title_x + text_width(&content.label, &style.font) + style.trailing;
-            if let Some(detail) = &content.detail {
-                width += text_width(detail, &style.detail_font).min(DETAIL_MAXIMUM_WIDTH)
-                    + DETAIL_GAP;
+            let mut width =
+                style.title_x + text_width(&content.label, &style.font) + style.trailing;
+            if content.detail.is_some() {
+                width += content.detail_width(&style.detail_font) + DETAIL_GAP;
             }
             if let Some(badge) = &content.badge {
                 width += style.badge_width(&badge.label) + DETAIL_GAP;
@@ -1140,8 +1152,8 @@ impl ItemView {
             } else {
                 NSColor::disabledControlTextColor()
             };
-            let width = text_width(detail, &style.detail_font)
-                .min(DETAIL_MAXIMUM_WIDTH)
+            let width = content
+                .detail_width(&style.detail_font)
                 .min((trailing_x - style.title_x).max(0.0));
             draw_text(
                 detail,
@@ -1286,6 +1298,16 @@ fn track_height() -> f64 {
         .max(30.0)
 }
 
+fn segment_track(bounds: NSRect, leading: f64, trailing: f64) -> NSRect {
+    NSRect::new(
+        NSPoint::new(bounds.origin.x + leading, bounds.origin.y + 4.0),
+        NSSize::new(
+            (bounds.size.width - leading - trailing).max(0.0),
+            (bounds.size.height - 8.0).max(0.0),
+        ),
+    )
+}
+
 impl SegmentsView {
     fn new(
         mtm: MainThreadMarker,
@@ -1314,14 +1336,7 @@ impl SegmentsView {
     }
 
     fn track(&self) -> NSRect {
-        let bounds = self.bounds();
-        NSRect::new(
-            NSPoint::new(bounds.origin.x + 5.0, bounds.origin.y + 4.0),
-            NSSize::new(
-                (bounds.size.width - 10.0).max(0.0),
-                (bounds.size.height - 8.0).max(0.0),
-            ),
-        )
+        STYLE.with(|style| segment_track(self.bounds(), style.leading_x, style.trailing))
     }
 
     fn update(&self, entries: Vec<Entry>, enabled: bool) {
@@ -1722,7 +1737,61 @@ fn draw_symbol(image: &NSImage, x: f64, color: &NSColor, max_width: f64, bounds:
 #[cfg(test)]
 mod tests {
     use super::topology::{grouped, matches, retained_status, shared_index};
-    use super::{is_delay, Entry, Kind};
+    use super::{
+        is_delay, segment_track, text_width, Entry, ItemContent, Kind, DETAIL_MAXIMUM_WIDTH,
+    };
+    use objc2_app_kit::NSFont;
+    use objc2_foundation::{NSPoint, NSRect, NSSize};
+
+    #[test]
+    fn segment_track_aligns_with_the_row_content_bounds() {
+        for width in [180.0, 280.0, 380.0] {
+            let bounds = NSRect::new(NSPoint::new(2.0, 3.0), NSSize::new(width, 40.0));
+            let track = segment_track(bounds, 12.0, 18.0);
+            assert_eq!(track.origin, NSPoint::new(14.0, 7.0));
+            assert_eq!(track.size, NSSize::new(width - 30.0, 32.0));
+            assert_eq!(
+                track.origin.x + track.size.width,
+                bounds.origin.x + width - 18.0
+            );
+        }
+    }
+
+    #[test]
+    fn segment_track_clamps_small_bounds_without_changing_insets() {
+        let track = segment_track(
+            NSRect::new(NSPoint::ZERO, NSSize::new(20.0, 6.0)),
+            12.0,
+            18.0,
+        );
+        assert_eq!(track.origin, NSPoint::new(12.0, 4.0));
+        assert_eq!(track.size, NSSize::ZERO);
+    }
+
+    #[test]
+    fn action_details_keep_the_full_version_and_submenus_keep_their_cap() {
+        let font = NSFont::systemFontOfSize(13.0);
+        let mut content = ItemContent {
+            label: "Update now".into(),
+            detail: Some("NEW 1.0.0+2026111902".into()),
+            icon: None,
+            badge: None,
+            accessibility_label: None,
+            is_checkbox: false,
+            checked: false,
+            enabled: true,
+            has_submenu: false,
+        };
+        let measured = text_width(content.detail.as_deref().unwrap(), &font);
+        assert!(measured > DETAIL_MAXIMUM_WIDTH);
+        assert_eq!(content.detail_width(&font), measured);
+        content.has_submenu = true;
+        assert_eq!(content.detail_width(&font), DETAIL_MAXIMUM_WIDTH);
+        content.detail = Some("Short".into());
+        assert_eq!(content.detail_width(&font), text_width("Short", &font));
+        content.detail = None;
+        assert_eq!(content.detail_width(&font), 0.0);
+    }
 
     fn entry(kind: Kind, id: u32, label: &str) -> Entry {
         Entry {
