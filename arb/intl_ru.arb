@@ -169,7 +169,7 @@
   "app": "Приложение",
   "general": "Общие",
   "startupAndBackground": "Запуск и фоновая работа",
-  "requestsAndUpdates": "Запросы и обновления",
+  "requestsAndUpdates": "Запросы",
   "logsAndDiagnostics": "Логи и диагностика",
   "userAgent": "User-Agent",
   "unifiedDelay": "Единая задержка",

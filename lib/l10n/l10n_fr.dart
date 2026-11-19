@@ -561,7 +561,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get startupAndBackground => 'Démarrage et arrière-plan';
 
   @override
-  String get requestsAndUpdates => 'Requêtes et mises à jour';
+  String get requestsAndUpdates => 'Requêtes';
 
   @override
   String get logsAndDiagnostics => 'Journaux et diagnostic';

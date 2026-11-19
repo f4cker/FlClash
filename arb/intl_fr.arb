@@ -169,7 +169,7 @@
   "app": "App",
   "general": "Général",
   "startupAndBackground": "Démarrage et arrière-plan",
-  "requestsAndUpdates": "Requêtes et mises à jour",
+  "requestsAndUpdates": "Requêtes",
   "logsAndDiagnostics": "Journaux et diagnostic",
   "userAgent": "User-Agent",
   "unifiedDelay": "Délai unifié",

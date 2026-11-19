@@ -552,7 +552,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get startupAndBackground => 'Запуск и фоновая работа';
 
   @override
-  String get requestsAndUpdates => 'Запросы и обновления';
+  String get requestsAndUpdates => 'Запросы';
 
   @override
   String get logsAndDiagnostics => 'Логи и диагностика';

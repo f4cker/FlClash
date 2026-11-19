@@ -1131,7 +1131,7 @@ abstract class AppLocalizations {
   /// No description provided for @requestsAndUpdates.
   ///
   /// In en, this message translates to:
-  /// **'Requests and updates'**
+  /// **'Requests'**
   String get requestsAndUpdates;
 
   /// No description provided for @logsAndDiagnostics.

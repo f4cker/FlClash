@@ -169,7 +169,7 @@
   "app": "应用",
   "general": "常规",
   "startupAndBackground": "启动与后台",
-  "requestsAndUpdates": "请求与更新",
+  "requestsAndUpdates": "请求",
   "logsAndDiagnostics": "日志与诊断",
   "userAgent": "用户代理",
   "unifiedDelay": "统一延迟",

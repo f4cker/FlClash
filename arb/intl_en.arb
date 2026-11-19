@@ -169,7 +169,7 @@
   "app": "App",
   "general": "General",
   "startupAndBackground": "Startup and background",
-  "requestsAndUpdates": "Requests and updates",
+  "requestsAndUpdates": "Requests",
   "logsAndDiagnostics": "Logs and diagnostics",
   "userAgent": "User-Agent",
   "unifiedDelay": "Unified delay",

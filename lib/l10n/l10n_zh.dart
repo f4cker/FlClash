@@ -526,7 +526,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get startupAndBackground => '启动与后台';
 
   @override
-  String get requestsAndUpdates => '请求与更新';
+  String get requestsAndUpdates => '请求';
 
   @override
   String get logsAndDiagnostics => '日志与诊断';

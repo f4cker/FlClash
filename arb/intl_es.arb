@@ -169,7 +169,7 @@
   "app": "App",
   "general": "General",
   "startupAndBackground": "Inicio y segundo plano",
-  "requestsAndUpdates": "Solicitudes y actualizaciones",
+  "requestsAndUpdates": "Solicitudes",
   "logsAndDiagnostics": "Registros y diagnóstico",
   "userAgent": "User-Agent",
   "unifiedDelay": "Latencia unificada",
