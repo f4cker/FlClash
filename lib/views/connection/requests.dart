@@ -535,47 +535,41 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
                   ),
             child: ProcessLookupOffNotice(
               visible: connections,
-              // The last result, kept while a refresh fails, steps back so it
-              // does not pass for live; the banner says why.
-              child: AnimatedOpacity(
-                opacity: stale ? _staleOpacity : 1,
-                duration: context.motionDuration(commonDuration),
-                child: RecordTableFrame<TrackerInfo>(
-                  tableId: 'connections',
-                  items: connections,
-                  columnsOf: (width) =>
-                      trackerInfoColumns(context, width: width, isLive: true),
-                  builder: (context, table, connections) {
-                    final padding = EdgeInsets.only(
-                      top: context.contentTopPadding,
-                      bottom: 16 + context.bottomInset,
-                    );
-                    final detailTitle = appLocalizations.details(
-                      appLocalizations.connection,
-                    );
-                    final groups = widget.filters.groupsOf(connections);
-                    if (groups != null) {
-                      return TrackerInfoGroupedList(
-                        groups: groups,
-                        grouping: widget.filters.value.grouping!,
-                        isLive: true,
-                        controller: _scrollController,
-                        padding: padding,
-                        table: table,
-                        detailTitle: detailTitle,
-                        onClose: _closeConnection,
-                      );
-                    }
-                    return TrackerInfoAnimatedList(
+              child: RecordTableFrame<TrackerInfo>(
+                tableId: 'connections',
+                items: connections,
+                columnsOf: (width) =>
+                    trackerInfoColumns(context, width: width, isLive: true),
+                builder: (context, table, connections) {
+                  final padding = EdgeInsets.only(
+                    top: context.contentTopPadding,
+                    bottom: 16 + context.bottomInset,
+                  );
+                  final detailTitle = appLocalizations.details(
+                    appLocalizations.connection,
+                  );
+                  final groups = widget.filters.groupsOf(connections);
+                  if (groups != null) {
+                    return TrackerInfoGroupedList(
+                      groups: groups,
+                      grouping: widget.filters.value.grouping!,
+                      isLive: true,
                       controller: _scrollController,
                       padding: padding,
-                      trackerInfos: connections,
                       table: table,
                       detailTitle: detailTitle,
                       onClose: _closeConnection,
                     );
-                  },
-                ),
+                  }
+                  return TrackerInfoAnimatedList(
+                    controller: _scrollController,
+                    padding: padding,
+                    trackerInfos: connections,
+                    table: table,
+                    detailTitle: detailTitle,
+                    onClose: _closeConnection,
+                  );
+                },
               ),
             ),
           ),
@@ -584,9 +578,6 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
     );
   }
 }
-
-/// How much of itself the last result keeps while a refresh fails.
-const _staleOpacity = 0.55;
 
 class _ConnectionsRead {
   const _ConnectionsRead(this.trackerInfos);

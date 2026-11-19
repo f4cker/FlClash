@@ -759,6 +759,56 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
+    testWidgets('recovery is announced once per error-to-success '
+        'transition, never on a failed retry or later successful reads', (
+      tester,
+    ) async {
+      lists.failing.add(_List.scripts);
+      final scripts = [remoteScript];
+      final container = await pumpLists(tester, scripts: scripts);
+      final l10n = currentAppLocalizations;
+      expect(announced, [l10n.resourceListsReadFailed]);
+
+      // A retry that fails again says nothing.
+      await tester.tap(find.text(l10n.retry));
+      await settle(tester, rounds: 3);
+      expect(banner(), findsOneWidget);
+      expect(announced, [l10n.resourceListsReadFailed]);
+
+      lists.failing.clear();
+      await tester.tap(find.text(l10n.retry));
+      await settle(tester, rounds: 3);
+      expect(banner(), findsNothing);
+      expect(announced, [
+        l10n.resourceListsReadFailed,
+        l10n.resourceListsRecovered,
+      ]);
+
+      // Later reads that succeed with new rows reach the page, and say
+      // nothing.
+      for (var i = 0; i < 3; i++) {
+        scripts.add(
+          Script(
+            id: 10 + i,
+            label: 'Later script $i',
+            url: 'https://example.com/later-$i.js',
+            lastUpdateTime: DateTime(2026),
+          ),
+        );
+        container.invalidate(scriptsProvider);
+        await settle(tester, rounds: 3);
+        expect(find.text('Later script $i'), findsOneWidget);
+      }
+      expect(banner(), findsNothing);
+      expect(announced, [
+        l10n.resourceListsReadFailed,
+        l10n.resourceListsRecovered,
+      ]);
+      expect(tester.takeException(), null);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     testWidgets('a retry that fails again keeps one hint and says nothing '
         'more', (tester) async {
       lists.failing.add(_List.scripts);
@@ -796,7 +846,8 @@ class _Lists {
     if (failing.contains(list)) {
       throw StateError('db down');
     }
-    yield rows;
+    // A copy, so rows added between reads count as a change.
+    yield List.of(rows);
   }
 }
 

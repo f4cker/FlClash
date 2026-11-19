@@ -514,16 +514,41 @@ void main() {
 
     Finder banner() => find.byType(ReadFailureBanner);
     Finder retryButton() => find.text(currentAppLocalizations.retry);
-    double rowsOpacity(WidgetTester tester) => tester
-        .widget<AnimatedOpacity>(
-          find
+
+    /// Every fade above the first row, and the colors its text paints in:
+    /// stale rows must look exactly like live ones.
+    (List<double>, List<Color?>) rowsLook(WidgetTester tester) {
+      final row = find.textContaining('alpha.test').first;
+      final fades = [
+        for (final opacity in tester.widgetList<Opacity>(
+          find.ancestor(of: row, matching: find.byType(Opacity)),
+        ))
+          opacity.opacity,
+        for (final opacity in tester.widgetList<AnimatedOpacity>(
+          find.ancestor(of: row, matching: find.byType(AnimatedOpacity)),
+        ))
+          opacity.opacity,
+      ];
+      final colors = <Color?>[];
+      for (final text in tester.widgetList<RichText>(
+        find.descendant(
+          of: find
               .ancestor(
-                of: find.textContaining('alpha.test').first,
-                matching: find.byType(AnimatedOpacity),
+                of: row,
+                matching: find.byType(RecordTableFrame<TrackerInfo>),
               )
               .first,
-        )
-        .opacity;
+          matching: find.byType(RichText),
+        ),
+      )) {
+        text.text.visitChildren((span) {
+          colors.add(span.style?.color);
+          return true;
+        });
+        colors.add(text.text.style?.color);
+      }
+      return (fades, colors);
+    }
 
     testWidgets('a first failure retries in place, once however often it is '
         'tapped, then a successful empty read is the normal empty state', (
@@ -578,14 +603,18 @@ void main() {
       reader = () async => [_tracker(id: 'a', host: 'alpha.test')];
       await pumpAnnounced(tester);
       await nextPoll(tester);
-      expect(rowsOpacity(tester), 1);
+      final live = rowsLook(tester);
+      expect(live.$1, everyElement(1.0));
 
       reader = () async => throw StateError('down');
       await nextPoll(tester);
       expect(banner(), findsOneWidget);
       expect(find.text(l10n.connectionsRefreshFailedStale), findsOneWidget);
       expect(find.textContaining('alpha.test'), findsWidgets);
-      expect(rowsOpacity(tester), lessThan(1));
+      // The banner alone says the rows are stale: no dimming, no recolouring.
+      final stale = rowsLook(tester);
+      expect(stale.$1, everyElement(1.0));
+      expect(stale.$2, live.$2);
       // The hint takes room of its own instead of covering the rows.
       final bannerBottom = tester.getBottomLeft(banner()).dy;
       expect(
@@ -606,11 +635,62 @@ void main() {
       await tester.pump(commonDuration);
       expect(banner(), findsNothing);
       expect(find.textContaining('beta.test'), findsWidgets);
-      expect(rowsOpacity(tester), 1);
+      expect(rowsLook(tester).$1, everyElement(1.0));
       expect(announced, [
         l10n.connectionsRefreshFailedStale,
         l10n.connectionsRefreshed,
       ]);
+      expect(tester.takeException(), null);
+
+      await teardownView(tester);
+    });
+
+    testWidgets('recovery is announced once per error-to-success '
+        'transition, an empty result included, never on later successes', (
+      tester,
+    ) async {
+      final l10n = currentAppLocalizations;
+      await pumpAnnounced(tester);
+      await nextPoll(tester);
+      // Successful polls before any failure say nothing.
+      await nextPoll(tester);
+      expect(announced, isEmpty);
+
+      reader = () async => throw StateError('down');
+      await nextPoll(tester);
+      await nextPoll(tester);
+      expect(announced, [l10n.connectionsRefreshFailedStale]);
+
+      // Recovering to an empty result still says so, once.
+      reader = () async => const <TrackerInfo>[];
+      await nextPoll(tester);
+      await nextPoll(tester);
+      await nextPoll(tester);
+      await nextPoll(tester);
+      expect(banner(), findsNothing);
+      expect(find.text(l10n.nullTip(l10n.connections)), findsOneWidget);
+      expect(announced, [
+        l10n.connectionsRefreshFailedStale,
+        l10n.connectionsRefreshed,
+      ]);
+
+      // A second failure and recovery: one more of each, and no more.
+      reader = () async => throw StateError('down');
+      await nextPoll(tester);
+      reader = () async => [_tracker(id: 'a', host: 'alpha.test')];
+      await nextPoll(tester);
+      await nextPoll(tester);
+      await nextPoll(tester);
+      expect(announced, [
+        l10n.connectionsRefreshFailedStale,
+        l10n.connectionsRefreshed,
+        l10n.connectionsRefreshFailedStale,
+        l10n.connectionsRefreshed,
+      ]);
+      expect(
+        announced.where((message) => message == l10n.connectionsRefreshed),
+        hasLength(2),
+      );
       expect(tester.takeException(), null);
 
       await teardownView(tester);
