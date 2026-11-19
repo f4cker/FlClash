@@ -7972,4 +7972,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateNoNewerStable => '暂无更高正式版';
+
+  @override
+  String get installedBetaBadge => '当前安装的是测试版';
 }

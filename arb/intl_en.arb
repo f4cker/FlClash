@@ -3633,5 +3633,6 @@
   "receiveBetaUpdates": "Receive beta updates",
   "receiveBetaUpdatesDescription": "Also check beta releases when enabled; disabling will not downgrade the app.",
   "betaUpdateCheckIncomplete": "Beta update check incomplete. Verified updates are still available.",
-  "updateNoNewerStable": "No newer stable release is available."
+  "updateNoNewerStable": "No newer stable release is available.",
+  "installedBetaBadge": "Installed version is a beta"
 }

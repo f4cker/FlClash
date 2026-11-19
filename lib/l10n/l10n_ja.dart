@@ -8456,4 +8456,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get updateNoNewerStable => 'より新しい安定版はありません。';
+
+  @override
+  String get installedBetaBadge => 'インストール済みのバージョンはベータ版です';
 }

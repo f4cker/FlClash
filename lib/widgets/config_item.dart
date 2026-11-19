@@ -151,9 +151,11 @@ class ConfigToggleItem extends _ConfigItem<bool> {
     super.leading,
     super.pageKey,
     this.enabled = true,
+    this.horizontalTitleGap,
   });
 
   final bool enabled;
+  final double? horizontalTitleGap;
 
   @override
   Widget buildItem(
@@ -164,6 +166,7 @@ class ConfigToggleItem extends _ConfigItem<bool> {
   ) {
     return ListItem.toggle(
       leading: leading,
+      horizontalTitleGap: horizontalTitleGap,
       title: Text(title(appLocalizations)),
       subtitle: buildSubtitle(appLocalizations),
       value: value,

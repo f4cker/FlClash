@@ -14319,6 +14319,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No newer stable release is available.'**
   String get updateNoNewerStable;
+
+  /// No description provided for @installedBetaBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed version is a beta'**
+  String get installedBetaBadge;
 }
 
 class _AppLocalizationsDelegate

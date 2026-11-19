@@ -94,6 +94,7 @@ final _glyphs = {
   'account': AppGlyphs.account,
   'sparkle': AppGlyphs.sparkle,
   'bolt': AppGlyphs.bolt,
+  'flask': AppGlyphs.flask,
   'locate': AppGlyphs.locate,
   'star': AppGlyphs.star,
   'puzzle': AppGlyphs.puzzle,

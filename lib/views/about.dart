@@ -85,18 +85,15 @@ class AboutView extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 16),
-          generateSection(
-            items: [
-              ListItem.open(
-                key: const ValueKey('release-history-entry'),
-                minTileHeight: 44,
-                leading: const GlyphIcon(AppGlyphs.clock),
-                title: Text(appLocalizations.releaseHistory),
-                widget: const ReleaseHistoryView(),
-              ),
-              if (system.isMacOS) const BetaUpdateSetting(),
-            ],
-          ),
+          if (system.isMacOS)
+            generateSection(
+              items: [
+                const BetaUpdateSetting(
+                  leading: _LinkBadge(glyph: AppGlyphs.flask, glyphSize: 24),
+                  horizontalTitleGap: 12,
+                ),
+              ],
+            ),
           const SizedBox(height: 8),
           generateSection(
             title: appLocalizations.more,
@@ -175,57 +172,57 @@ class _AboutHero extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
       child: Column(
         children: [
-          _DeveloperModeDetector(
-            onEnterDeveloperMode: onEnterDeveloperMode,
-            child: DecoratedBox(
-              decoration: ShapeDecoration(
-                color: context.raisedSurfaceLevel.colorOf(colorScheme),
-                shape: AppShape.all(AppCorner.fit(_logoSize)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(_logoInset),
-                child: Image.asset(
-                  'assets/images/icon.png',
-                  width: _logoSize - _logoInset * 2,
-                  height: _logoSize - _logoInset * 2,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _DeveloperModeDetector(
+                onEnterDeveloperMode: onEnterDeveloperMode,
+                child: DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: context.raisedSurfaceLevel.colorOf(colorScheme),
+                    shape: AppShape.all(AppCorner.fit(_logoSize)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(_logoInset),
+                    child: Image.asset(
+                      'assets/images/icon.png',
+                      width: _logoSize - _logoInset * 2,
+                      height: _logoSize - _logoInset * 2,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              if (identity?.channel == ReleaseChannel.beta)
+                const Positioned(
+                  right: -_BetaBadge.overhangRight - _BetaBadge.outline,
+                  bottom: -_BetaBadge.overhangBottom - _BetaBadge.outline,
+                  child: _BetaBadge(),
+                ),
+            ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           Text(
             appName,
             style: AppTextStyle.title2.of(context, emphasized: true),
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              _Pill(
-                label:
-                    identity?.fullVersion ??
-                    appVersionLabel(
-                      globalState.packageInfo.version,
-                      globalState.packageInfo.buildNumber,
-                    ),
-                color: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-              ),
-              if (identity?.channel == ReleaseChannel.beta)
-                Text(
-                  appLocalizations.releaseBeta,
-                  style: AppTextStyle.footnote
-                      .of(context)
-                      .copyWith(color: colorScheme.onSurfaceVariant),
+          const SizedBox(height: 8),
+          Text(
+            identity?.fullVersion ??
+                appVersionLabel(
+                  globalState.packageInfo.version,
+                  globalState.packageInfo.buildNumber,
                 ),
-              _Pill(
-                label: 'GPL-3.0',
-                color: context.raisedSurfaceLevel.colorOf(colorScheme),
-                foregroundColor: colorScheme.onSurfaceVariant,
-              ),
-            ],
+            key: const ValueKey('about-version'),
+            textAlign: TextAlign.center,
+            style: AppTextStyle.body
+                .of(context)
+                .copyWith(color: colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          _Pill(
+            label: 'GPL-3.0',
+            color: context.raisedSurfaceLevel.colorOf(colorScheme),
+            foregroundColor: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 16),
           ConstrainedBox(
@@ -238,14 +235,78 @@ class _AboutHero extends ConsumerWidget {
                   .copyWith(color: colorScheme.onSurfaceVariant, height: 1.5),
             ),
           ),
-          const SizedBox(height: 20),
-          TonalButton(
-            size: TonalButtonSize.bar,
-            glyph: AppGlyphs.sync,
-            label: appLocalizations.checkUpdate,
-            onPressed: isCheckingUpdate ? null : onCheckUpdate,
+          const SizedBox(height: 24),
+          Wrap(
+            key: const ValueKey('about-actions'),
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              TonalButton(
+                size: TonalButtonSize.bar,
+                glyph: AppGlyphs.sync,
+                label: appLocalizations.checkUpdate,
+                onPressed: isCheckingUpdate ? null : onCheckUpdate,
+              ),
+              TonalButton(
+                key: const ValueKey('release-history-entry'),
+                size: TonalButtonSize.bar,
+                glyph: AppGlyphs.clock,
+                label: appLocalizations.releaseHistory,
+                onPressed: () {
+                  showNestedExtend<void>(
+                    context,
+                    builder: (_) => const ReleaseHistoryView(),
+                  );
+                },
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BetaBadge extends StatelessWidget {
+  const _BetaBadge();
+
+  static const outline = 2.0;
+  static const overhangRight = 8.0;
+  static const overhangBottom = 4.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = context.colorScheme;
+    return Semantics(
+      key: const ValueKey('about-beta-badge'),
+      container: true,
+      excludeSemantics: true,
+      label: context.appLocalizations.installedBetaBadge,
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
+          color: context.surfaceLevel.colorOf(colorScheme),
+          shape: AppShape.full,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(outline),
+          child: DecoratedBox(
+            decoration: ShapeDecoration(
+              color: colorScheme.primary,
+              shape: AppShape.full,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Text(
+                context.appLocalizations.releaseBeta,
+                maxLines: 1,
+                style: AppTextStyle.caption1
+                    .of(context, emphasized: true)
+                    .copyWith(color: colorScheme.onPrimary),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -281,8 +342,9 @@ class _Pill extends StatelessWidget {
 
 class _LinkBadge extends StatelessWidget {
   final Glyph glyph;
+  final double glyphSize;
 
-  const _LinkBadge({required this.glyph});
+  const _LinkBadge({required this.glyph, this.glyphSize = 20});
 
   @override
   Widget build(BuildContext context) {
@@ -297,7 +359,7 @@ class _LinkBadge extends StatelessWidget {
         child: Center(
           child: GlyphIcon(
             glyph,
-            size: 20,
+            size: glyphSize,
             color: colorScheme.onSurfaceVariant,
           ),
         ),

@@ -8671,4 +8671,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get updateNoNewerStable => 'Более новой стабильной версии нет.';
+
+  @override
+  String get installedBetaBadge => 'Установлена бета-версия';
 }

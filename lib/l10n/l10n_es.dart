@@ -8724,4 +8724,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get updateNoNewerStable => 'No hay una versión estable más reciente.';
+
+  @override
+  String get installedBetaBadge => 'La versión instalada es beta';
 }

@@ -3616,5 +3616,6 @@
   "receiveBetaUpdates": "Recevoir les mises à jour bêta",
   "receiveBetaUpdatesDescription": "Vérifie aussi les versions bêta ; désactiver ne rétrograde pas l’application.",
   "betaUpdateCheckIncomplete": "Vérification bêta incomplète. Les mises à jour vérifiées restent disponibles.",
-  "updateNoNewerStable": "Aucune version stable plus récente."
+  "updateNoNewerStable": "Aucune version stable plus récente.",
+  "installedBetaBadge": "La version installée est une bêta"
 }

@@ -1200,6 +1200,25 @@ abstract final class AppGlyphs {
     ], closed: true),
   ]);
 
+  static const flask = Glyph([
+    GlyphPolyline([
+      GlyphVertex(10, 3.2),
+      GlyphVertex(10, 9.4, 1.2),
+      GlyphVertex(4.3, 20.8, 1.8),
+      GlyphVertex(19.7, 20.8, 1.8),
+      GlyphVertex(14, 9.4, 1.2),
+      GlyphVertex(14, 3.2),
+    ], closed: true),
+    GlyphPolyline([
+      GlyphVertex(8.4, 3.2),
+      GlyphVertex(15.6, 3.2),
+    ], role: GlyphRole.line),
+    GlyphPolyline([
+      GlyphVertex(7.4, 15.4),
+      GlyphVertex(16.6, 15.4),
+    ], role: GlyphRole.detail),
+  ]);
+
   static const locate = Glyph([
     GlyphCircle(12, 12, 6.2),
     GlyphCircle(12, 12, 1.8, role: GlyphRole.detail, solid: true),

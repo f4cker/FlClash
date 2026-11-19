@@ -8532,4 +8532,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updateNoNewerStable => '더 새로운 정식 버전이 없습니다.';
+
+  @override
+  String get installedBetaBadge => '설치된 버전은 베타입니다';
 }

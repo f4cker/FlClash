@@ -8671,4 +8671,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateNoNewerStable => 'No newer stable release is available.';
+
+  @override
+  String get installedBetaBadge => 'Installed version is a beta';
 }
