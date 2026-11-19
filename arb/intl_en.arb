@@ -3683,6 +3683,5 @@
   "macHelperDisabledByUserDetail": "Flash’s permission to run in the background is turned off. Allow Flash to run in the background in System Settings.",
   "macHelperUnavailableTitle": "Helper unavailable",
   "macHelperViewSteps": "View steps",
-  "macHelperDisabledTitle": "The helper is turned off",
-  "macHelperApprovalStepReset": "If the switch next to Flash is already on, turn it off, turn it back on, then return to Flash."
+  "macHelperDisabledTitle": "The helper is turned off"
 }

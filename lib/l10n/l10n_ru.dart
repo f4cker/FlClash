@@ -8744,8 +8744,4 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'Помощник отключён';
-
-  @override
-  String get macHelperApprovalStepReset =>
-      'Если переключатель рядом с Flash уже включён, выключите его, снова включите и вернитесь во Flash.';
 }

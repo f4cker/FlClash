@@ -8741,8 +8741,4 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'The helper is turned off';
-
-  @override
-  String get macHelperApprovalStepReset =>
-      'If the switch next to Flash is already on, turn it off, turn it back on, then return to Flash.';
 }

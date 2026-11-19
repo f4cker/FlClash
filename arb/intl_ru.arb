@@ -3631,6 +3631,5 @@
   "macHelperDisabledByUserDetail": "Разрешение Flash на работу в фоне отключено. Разрешите Flash работать в фоне в Системных настройках.",
   "macHelperUnavailableTitle": "Помощник недоступен",
   "macHelperViewSteps": "Показать шаги",
-  "macHelperDisabledTitle": "Помощник отключён",
-  "macHelperApprovalStepReset": "Если переключатель рядом с Flash уже включён, выключите его, снова включите и вернитесь во Flash."
+  "macHelperDisabledTitle": "Помощник отключён"
 }

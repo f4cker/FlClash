@@ -453,7 +453,9 @@ void main() {
     ].indexed) {
       expect(front('${index + 1}. $step'), findsOneWidget);
     }
-    expect(find.textContaining(l.macHelperApprovalStepReset), findsNothing);
+    // Never the "turn it off and on again" step.
+    expect(find.textContaining('off and on'), findsNothing);
+    expect(find.textContaining('turn it back on'), findsNothing);
     expect(front(l.macHelperViewSteps), findsNothing);
     // The primary action stays under the details.
     expect(front(l.macHelperOpenSettings), findsOneWidget);

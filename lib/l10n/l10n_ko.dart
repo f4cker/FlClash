@@ -8598,8 +8598,4 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => '헬퍼가 꺼져 있습니다';
-
-  @override
-  String get macHelperApprovalStepReset =>
-      'Flash 옆의 스위치가 이미 켜져 있다면 끈 다음 다시 켜고 Flash로 돌아오세요.';
 }

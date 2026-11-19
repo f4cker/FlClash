@@ -8522,8 +8522,4 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'ヘルパーはオフになっています';
-
-  @override
-  String get macHelperApprovalStepReset =>
-      'Flash の横のスイッチがすでにオンの場合は、いったんオフにしてから再びオンにし、Flash に戻ってください。';
 }

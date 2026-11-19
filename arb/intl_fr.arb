@@ -3631,6 +3631,5 @@
   "macHelperDisabledByUserDetail": "L’autorisation de Flash à s’exécuter en arrière-plan est désactivée. Autorisez Flash à s’exécuter en arrière-plan dans Réglages Système.",
   "macHelperUnavailableTitle": "Assistant indisponible",
   "macHelperViewSteps": "Voir les étapes",
-  "macHelperDisabledTitle": "L’assistant est désactivé",
-  "macHelperApprovalStepReset": "Si l’interrupteur à côté de Flash est déjà activé, désactivez-le, réactivez-le, puis revenez dans Flash."
+  "macHelperDisabledTitle": "L’assistant est désactivé"
 }

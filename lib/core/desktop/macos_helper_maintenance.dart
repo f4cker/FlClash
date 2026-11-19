@@ -145,22 +145,6 @@ final class MacHelperMaintenance extends ChangeNotifier {
     if (lastCode != null) 'status: $lastCode',
   ].join('\n');
 
-  /// Evidence that turning Flash's switch off and back on is the step that
-  /// can help now, all from the recovery's own answer, which is still the
-  /// latest one:
-  /// (a) SMAppService.status read `enabled` (the native side only waits for
-  ///     the new helper after that read, and reports `serviceStatus`);
-  /// (b) the new helper then did not answer (`helperNotReady`), so the state
-  ///     is [MacHelperState.notReady];
-  /// (c) the user can act on it now: nothing is running and no recovery is
-  ///     in progress.
-  /// Without all three the card shows its state and "View details" only.
-  bool get switchResetMayHelp =>
-      _state == MacHelperState.notReady &&
-      client.lastCode == 'helperNotReady' &&
-      client.lastServiceStatus == 'enabled' &&
-      !busy;
-
   bool get needsApproval => switch (_state) {
     MacHelperState.requiresApproval ||
     MacHelperState.disabledByUser ||

@@ -8795,8 +8795,4 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'El asistente está desactivado';
-
-  @override
-  String get macHelperApprovalStepReset =>
-      'Si el interruptor junto a Flash ya está activado, desactívalo, vuelve a activarlo y luego regresa a Flash.';
 }

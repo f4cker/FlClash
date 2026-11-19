@@ -275,15 +275,6 @@ MacHelperCardView macHelperCardView(
       detail: state == MacHelperState.staleCore
           ? l.macHelperStaleCoreDetail
           : l.macHelperRegistrationFailedDetail,
-      // The reset step only on evidence (see switchResetMayHelp); it is
-      // read under "View details", next to the raw text.
-      steps: flow.switchResetMayHelp
-          ? [
-              l.macHelperApprovalStep1,
-              l.macHelperApprovalStep2,
-              l.macHelperApprovalStepReset,
-            ]
-          : const [],
       progress: busyText,
       primary: MacHelperCardAction.recover,
       secondary: MacHelperCardAction.viewDetails,

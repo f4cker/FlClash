@@ -14409,12 +14409,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The helper is turned off'**
   String get macHelperDisabledTitle;
-
-  /// No description provided for @macHelperApprovalStepReset.
-  ///
-  /// In en, this message translates to:
-  /// **'If the switch next to Flash is already on, turn it off, turn it back on, then return to Flash.'**
-  String get macHelperApprovalStepReset;
 }
 
 class _AppLocalizationsDelegate

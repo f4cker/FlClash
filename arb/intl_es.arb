@@ -3631,6 +3631,5 @@
   "macHelperDisabledByUserDetail": "El permiso de Flash para ejecutarse en segundo plano está desactivado. Permite que Flash se ejecute en segundo plano en Ajustes del Sistema.",
   "macHelperUnavailableTitle": "Asistente no disponible",
   "macHelperViewSteps": "Ver pasos",
-  "macHelperDisabledTitle": "El asistente está desactivado",
-  "macHelperApprovalStepReset": "Si el interruptor junto a Flash ya está activado, desactívalo, vuelve a activarlo y luego regresa a Flash."
+  "macHelperDisabledTitle": "El asistente está desactivado"
 }
