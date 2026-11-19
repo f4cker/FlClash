@@ -37,13 +37,32 @@ class _RecordingSetupAction extends SetupAction {
   }
 }
 
-enum _Mode { ok, error, drop, partial }
+enum _Mode {
+  ok,
+  error,
+  drop,
+  partial,
+
+  /// 304 to anything but a request that says `Cache-Control: no-cache`, as a
+  /// confused cache on the way might.
+  stale304,
+
+  /// 304 to everything.
+  only304,
+}
 
 class _Served {
   _Served(this.body);
 
   String body;
+
+  /// Raw bytes sent instead of [body] encoded as UTF-8.
+  List<int>? bytes;
+  String? contentType;
   bool validators = true;
+  bool etag = true;
+  bool lastModified = true;
+  bool weak = false;
   _Mode mode = _Mode.ok;
 }
 
@@ -56,6 +75,7 @@ void main() {
   final hits = <String, int>{};
   final conditional = <String, int>{};
   final notModified = <String, int>{};
+  final lastHeaders = <String, HttpHeaders>{};
   Completer<void>? held;
   late Directory home;
   late db.Database testDatabase;
@@ -80,6 +100,7 @@ void main() {
     server.listen((request) async {
       final path = request.uri.path;
       count(hits, path);
+      lastHeaders[path] = request.headers;
       final ifNoneMatch = request.headers.value('if-none-match');
       if (ifNoneMatch != null ||
           request.headers.value('if-modified-since') != null) {
@@ -115,23 +136,44 @@ void main() {
           await socket.flush();
           socket.destroy();
           return;
+        case _Mode.stale304:
+          if (request.headers.value('cache-control') != 'no-cache') {
+            count(notModified, path);
+            response.statusCode = HttpStatus.notModified;
+            await response.close();
+            return;
+          }
+        case _Mode.only304:
+          count(notModified, path);
+          response.statusCode = HttpStatus.notModified;
+          await response.close();
+          return;
         case _Mode.ok:
       }
-      final etag = '"${sha256Hex(utf8.encode(item.body)).substring(0, 16)}"';
+      final bytes = item.bytes ?? utf8.encode(item.body);
+      final etag =
+          '${item.weak ? 'W/' : ''}"${sha256Hex(bytes).substring(0, 16)}"';
+      final lastModified = HttpDate.format(DateTime.utc(2026));
       if (item.validators) {
-        if (ifNoneMatch == etag) {
+        final ifModifiedSince = request.headers.value('if-modified-since');
+        final unchanged = ifNoneMatch != null
+            ? item.etag && ifNoneMatch == etag
+            : item.lastModified && ifModifiedSince == lastModified;
+        if (unchanged) {
           count(notModified, path);
           response.statusCode = HttpStatus.notModified;
           await response.close();
           return;
         }
-        response.headers.set('etag', etag);
-        response.headers.set(
-          'last-modified',
-          HttpDate.format(DateTime.utc(2026)),
-        );
+        if (item.etag) response.headers.set('etag', etag);
+        if (item.lastModified) {
+          response.headers.set('last-modified', lastModified);
+        }
       }
-      response.add(utf8.encode(item.body));
+      if (item.contentType case final contentType?) {
+        response.headers.set('content-type', contentType);
+      }
+      response.add(bytes);
       await response.close();
     });
   });
@@ -149,6 +191,7 @@ void main() {
     hits.clear();
     conditional.clear();
     notModified.clear();
+    lastHeaders.clear();
     held = null;
     validations = 0;
     final bindingOverrides = HttpOverrides.current;
@@ -279,7 +322,7 @@ hostname = %APPEND% example.com
       resetCounts();
       final before = await storedModule();
 
-      final updated = await mitm().updateModule(before);
+      final updated = await mitm().updateModule(before, revalidate: true);
 
       expect(hits, {
         '/m.sgmodule': 1,
@@ -306,7 +349,10 @@ hostname = %APPEND% example.com
       resetCounts();
       served['/m.sgmodule']!.body = '${module('M')}# changed\n';
 
-      final pending = await mitm().updateModule(await storedModule());
+      final pending = await mitm().updateModule(
+        await storedModule(),
+        revalidate: true,
+      );
 
       expect(hits, {'/m.sgmodule': 1});
       expect(notModified, isEmpty);
@@ -317,7 +363,10 @@ hostname = %APPEND% example.com
       served['/m.sgmodule']!.body = module('M');
       served['/b.json']!.body = '[2]';
 
-      final updated = await mitm().updateModule(await storedModule());
+      final updated = await mitm().updateModule(
+        await storedModule(),
+        revalidate: true,
+      );
 
       expect(hits, {
         '/m.sgmodule': 1,
@@ -340,7 +389,10 @@ hostname = %APPEND% example.com
         'time', () async {
       await addModule();
       served['/m.sgmodule']!.body = '${module('M')}# changed\n';
-      final pending = await mitm().updateModule(await storedModule());
+      final pending = await mitm().updateModule(
+        await storedModule(),
+        revalidate: true,
+      );
       final pendingPath = join(
         await appPath.mitmModulesDirPath,
         pending.pendingFileName,
@@ -349,7 +401,7 @@ hostname = %APPEND% example.com
       final waiting = await storedModule();
       resetCounts();
 
-      final again = await mitm().updateModule(waiting);
+      final again = await mitm().updateModule(waiting, revalidate: true);
 
       expect(hits, {'/m.sgmodule': 1});
       expect(notModified, {'/m.sgmodule': 1});
@@ -375,7 +427,7 @@ hostname = %APPEND% example.com
       }
       resetCounts();
 
-      await mitm().updateModule(added);
+      await mitm().updateModule(added, revalidate: true);
 
       expect(hits, {
         '/m.sgmodule': 1,
@@ -400,7 +452,7 @@ hostname = %APPEND% example.com
       await File(a).delete();
       resetCounts();
 
-      await mitm().updateModule(added);
+      await mitm().updateModule(added, revalidate: true);
 
       expect(conditional, {'/m.sgmodule': 1, '/b.json': 1, '/c.json': 1});
       expect(hits['/a.json'], 1);
@@ -415,7 +467,7 @@ hostname = %APPEND% example.com
         await File(a).writeAsString('tampered');
         resetCounts();
 
-        await mitm().updateModule(added);
+        await mitm().updateModule(added, revalidate: true);
 
         expect(conditional, {'/m.sgmodule': 1, '/b.json': 1, '/c.json': 1});
         expect(hits['/a.json'], 1);
@@ -429,7 +481,7 @@ hostname = %APPEND% example.com
       await File(modulePath).writeAsString('${module('M')}# tampered\n');
       resetCounts();
 
-      await mitm().updateModule(added);
+      await mitm().updateModule(added, revalidate: true);
 
       expect(hits, {'/m.sgmodule': 1});
       expect(conditional, isEmpty);
@@ -438,7 +490,7 @@ hostname = %APPEND% example.com
       expect((await storedModule()).hasPending, isTrue);
     });
 
-    for (final mode in _Mode.values.where((mode) => mode != _Mode.ok)) {
+    for (final mode in const [_Mode.error, _Mode.drop, _Mode.partial]) {
       test('a ${mode.name} keeps the old files, leaves no temp file, and the '
           'next attempt works', () async {
         final added = await addModule();
@@ -451,7 +503,10 @@ hostname = %APPEND% example.com
         }
         served['/b.json']!.body = '[2]';
 
-        await expectLater(mitm().updateModule(added), throwsA(anything));
+        await expectLater(
+          mitm().updateModule(added, revalidate: true),
+          throwsA(anything),
+        );
 
         for (final (index, path) in paths.indexed) {
           expect(File(path).readAsStringSync(), contents[index]);
@@ -464,7 +519,7 @@ hostname = %APPEND% example.com
           item.mode = _Mode.ok;
         }
         resetCounts();
-        final next = await mitm().updateModule(failed);
+        final next = await mitm().updateModule(failed, revalidate: true);
 
         expect(hits, {
           '/m.sgmodule': 1,
@@ -489,7 +544,7 @@ hostname = %APPEND% example.com
           ..body = '[2]';
         final b = (await modulePaths(added))[2];
 
-        final updated = await mitm().updateModule(added);
+        final updated = await mitm().updateModule(added, revalidate: true);
 
         expect(updated.failure, isNull);
         expect(updated.resources, added.resources);
@@ -506,8 +561,8 @@ hostname = %APPEND% example.com
       resetCounts();
       held = Completer();
 
-      final first = mitm().updateModule(added);
-      final second = mitm().updateModule(added);
+      final first = mitm().updateModule(added, revalidate: true);
+      final second = mitm().updateModule(added, revalidate: true);
       await Future<void>.delayed(const Duration(milliseconds: 100));
       held!.complete();
       final results = await Future.wait([first, second]);
@@ -526,8 +581,8 @@ hostname = %APPEND% example.com
       resetCounts();
       held = Completer();
 
-      final first = mitm().updateModule(one);
-      final second = mitm().updateModule(two);
+      final first = mitm().updateModule(one, revalidate: true);
+      final second = mitm().updateModule(two, revalidate: true);
       await Future<void>.delayed(const Duration(milliseconds: 100));
       held!.complete();
       final [a, b] = await Future.wait([first, second]);
@@ -544,6 +599,363 @@ hostname = %APPEND% example.com
       );
       expect(a.failure, isNull);
       expect(b.failure, isNull);
+    });
+  });
+
+  group('a manual update', () {
+    test('of a module downloads every file whole, yet rewrites and reloads '
+        'nothing that did not change', () async {
+      final added = await addModule();
+      resetCounts();
+      final before = await storedModule();
+
+      await mitm().updateModule(before);
+
+      expect(hits, {
+        '/m.sgmodule': 1,
+        '/a.json': 1,
+        '/b.json': 1,
+        '/c.json': 1,
+      });
+      expect(conditional, isEmpty);
+      expect(notModified, isEmpty);
+      for (final path in await modulePaths(added)) {
+        expect(untouched(path), isTrue, reason: path);
+      }
+      final after = await storedModule();
+      expect(after.copyWith(lastUpdateTime: before.lastUpdateTime), before);
+    });
+
+    test('of a script downloads it whole', () async {
+      serve({'/s.js': 'const main = (c) => c;'});
+      final scripts = container.read(scriptsActionProvider.notifier);
+      final script = await Script(
+        id: 5,
+        label: 'S',
+        url: urlOf('/s.js'),
+        lastUpdateTime: DateTime(2020),
+      ).save('');
+      scripts.putScript(script);
+      await scripts.updateScript(script);
+      await resourceCache.store.saved;
+      resetCounts();
+
+      await scripts.updateScript(script);
+
+      expect(hits, {'/s.js': 1});
+      expect(conditional, isEmpty);
+    });
+
+    test('of an icon set downloads it whole', () async {
+      serve({
+        '/icons.json': json.encode({
+          'name': 'Q',
+          'icons': [
+            {'name': 'a.png', 'url': 'https://example.com/a.png'},
+          ],
+        }),
+      });
+      final icons = container.read(iconSetsActionProvider.notifier);
+      final imported = await icons.importUrl(urlOf('/icons.json'));
+      await resourceCache.store.saved;
+      resetCounts();
+
+      await icons.sync(imported);
+
+      expect(hits, {'/icons.json': 1});
+      expect(conditional, isEmpty);
+    });
+
+    test('of a remote MITM script downloads it whole', () async {
+      serve({'/m.js': 'one'});
+      final url = urlOf('/m.js');
+      final file = await storeMitmScript(url, 'one'.codeUnits);
+      final script = MitmScript(
+        id: 3,
+        line: 'S = type=http-request,pattern=^https://a,script-path=$file',
+        url: url,
+        source: url,
+        file: file,
+      );
+      final checked = await checkMitmScriptUpdate(
+        container.read,
+        1,
+        script,
+        revalidate: true,
+      );
+      await resourceCache.store.saved;
+      resetCounts();
+
+      await checkMitmScriptUpdate(container.read, 1, checked);
+
+      expect(hits, {'/m.js': 1});
+      expect(conditional, isEmpty);
+    });
+  });
+
+  group('validators', () {
+    Future<Script> remoteScript(String path) async {
+      final scripts = container.read(scriptsActionProvider.notifier);
+      final script = await Script(
+        id: 5,
+        label: 'S',
+        url: urlOf(path),
+        lastUpdateTime: DateTime(2020),
+      ).save('');
+      scripts.putScript(script);
+      await scripts.updateScript(script);
+      await resourceCache.store.saved;
+      await pumpEventQueue();
+      resetCounts();
+      return script;
+    }
+
+    Future<void> autoUpdate(Script script) => container
+        .read(scriptsActionProvider.notifier)
+        .updateScript(script, revalidate: true);
+
+    test('an ETag goes out alone, without If-Modified-Since', () async {
+      serve({'/s.js': 'a'});
+      final script = await remoteScript('/s.js');
+
+      await autoUpdate(script);
+
+      expect(notModified, {'/s.js': 1});
+      expect(lastHeaders['/s.js']!.value('if-none-match'), isNotNull);
+      expect(lastHeaders['/s.js']!.value('if-modified-since'), isNull);
+    });
+
+    test('a Last-Modified alone goes out as If-Modified-Since and gets a '
+        '304', () async {
+      serve({'/s.js': 'a'});
+      served['/s.js']!.etag = false;
+      final script = await remoteScript('/s.js');
+
+      await autoUpdate(script);
+
+      expect(notModified, {'/s.js': 1});
+      expect(
+        lastHeaders['/s.js']!.value('if-modified-since'),
+        HttpDate.format(DateTime.utc(2026)),
+      );
+      expect(lastHeaders['/s.js']!.value('if-none-match'), isNull);
+    });
+
+    test('a weak ETag goes back as it came and gets a 304', () async {
+      serve({'/s.js': 'a'});
+      served['/s.js']!.weak = true;
+      final script = await remoteScript('/s.js');
+
+      await autoUpdate(script);
+
+      expect(notModified, {'/s.js': 1});
+      expect(lastHeaders['/s.js']!.value('if-none-match'), startsWith('W/"'));
+    });
+
+    test('older than seven days, they are dropped for one whole '
+        'download', () async {
+      serve({'/s.js': 'a'});
+      final script = await remoteScript('/s.js');
+      final key = ResourceCache.keyOf(ResourceKind.script, script.url!);
+      final stored = (await resourceCache.store.get(key))!;
+      await resourceCache.store.put(
+        key,
+        ResourceValidators(
+          etag: stored.etag,
+          lastModified: stored.lastModified,
+          fingerprint: stored.fingerprint,
+          storedAt: DateTime.now().subtract(const Duration(days: 8)),
+        ),
+      );
+
+      await autoUpdate(script);
+      await resourceCache.store.saved;
+
+      expect(hits, {'/s.js': 1});
+      expect(conditional, isEmpty);
+      // The whole download stored them afresh: the next check is a 304.
+      resetCounts();
+      await autoUpdate(script);
+      expect(notModified, {'/s.js': 1});
+    });
+
+    test('a 304 to a request without validators is retried once without '
+        'caches', () async {
+      serve({'/s.js': 'fresh'});
+      served['/s.js']!.mode = _Mode.stale304;
+      final scripts = container.read(scriptsActionProvider.notifier);
+      final script = await Script(
+        id: 5,
+        label: 'S',
+        url: urlOf('/s.js'),
+        lastUpdateTime: DateTime(2020),
+      ).save('');
+      scripts.putScript(script);
+
+      await scripts.updateScript(script);
+
+      expect(hits, {'/s.js': 2});
+      expect(lastHeaders['/s.js']!.value('cache-control'), 'no-cache');
+      expect(lastHeaders['/s.js']!.value('if-none-match'), isNull);
+      expect(await File(await script.path).readAsString(), 'fresh');
+    });
+
+    test('a server that only ever answers 304 fails the update and leaves '
+        'the file', () async {
+      serve({'/s.js': 'fresh'});
+      final script = await remoteScript('/s.js');
+      final path = await script.path;
+      backdate(path);
+      served['/s.js']!.mode = _Mode.only304;
+      await File(path).writeAsString('mine');
+      backdate(path);
+
+      await expectLater(autoUpdate(script), throwsA(isA<HttpException>()));
+
+      expect(hits, {'/s.js': 2});
+      expect(await File(path).readAsString(), 'mine');
+      expect(untouched(path), isTrue);
+    });
+
+    test('a copy that changes while the request runs is not taken for '
+        'current: the update downloads it whole', () async {
+      serve({'/s.js': 'served'});
+      final script = await remoteScript('/s.js');
+      final path = await script.path;
+      held = Completer();
+
+      final update = autoUpdate(script);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await File(path).writeAsString('edited meanwhile');
+      held!.complete();
+      await update;
+
+      expect(notModified, {'/s.js': 1});
+      expect(hits, {'/s.js': 2});
+      expect(lastHeaders['/s.js']!.value('if-none-match'), isNull);
+      expect(await File(path).readAsString(), 'served');
+    });
+
+    test('text is decoded by the charset the server names', () async {
+      serve({'/s.js': ''});
+      served['/s.js']!
+        ..bytes = latin1.encode('// café')
+        ..contentType = 'text/javascript; charset=iso-8859-1';
+      final scripts = container.read(scriptsActionProvider.notifier);
+      final script = await Script(
+        id: 5,
+        label: 'S',
+        url: urlOf('/s.js'),
+        lastUpdateTime: DateTime(2020),
+      ).save('');
+
+      await scripts.updateScript(script);
+
+      expect(await File(await script.path).readAsString(), '// café');
+    });
+
+    test('the file names no url, and keys of an older build are '
+        'dropped', () async {
+      serve({'/s.js': 'a'});
+      final script = await remoteScript('/s.js');
+      final storePath = join(home.path, ResourceValidatorStore.fileName);
+      final written = await File(storePath).readAsString();
+      expect(written, isNot(contains('127.0.0.1')));
+      expect(written, isNot(contains('http')));
+
+      final legacy = json.decode(written) as Map<String, Object?>;
+      legacy['script|${script.url}?token=secret'] = legacy.values.first;
+      await File(storePath).writeAsString(json.encode(legacy));
+      final store = ResourceValidatorStore();
+      await store.get('anything');
+      await store.saved;
+
+      final rewritten = await File(storePath).readAsString();
+      expect(rewritten, isNot(contains('secret')));
+      expect(json.decode(rewritten), hasLength(1));
+    });
+
+    test('deleting a script, an icon set or a module forgets its '
+        'validators', () async {
+      serve({'/s.js': 'a'});
+      final script = await remoteScript('/s.js');
+      final scriptKey = ResourceCache.keyOf(ResourceKind.script, script.url!);
+      expect(await resourceCache.store.get(scriptKey), isNotNull);
+      container.read(scriptsActionProvider.notifier).deleteScript(script.id);
+      await resourceCache.store.saved;
+      expect(await resourceCache.store.get(scriptKey), isNull);
+
+      serve({
+        '/icons.json': json.encode({
+          'name': 'Q',
+          'icons': [
+            {'name': 'a.png', 'url': 'https://example.com/a.png'},
+          ],
+        }),
+      });
+      final icons = container.read(iconSetsActionProvider.notifier);
+      final iconSet = await icons.importUrl(urlOf('/icons.json'));
+      final iconKey = ResourceCache.keyOf(ResourceKind.iconSet, iconSet.url);
+      expect(await resourceCache.store.get(iconKey), isNotNull);
+      icons.delete(iconSet);
+      await resourceCache.store.saved;
+      expect(await resourceCache.store.get(iconKey), isNull);
+
+      final module = await addModule();
+      final keys = [
+        ResourceCache.keyOf(ResourceKind.mitmModule, module.url!),
+        for (final url in module.resources.keys)
+          ResourceCache.keyOf(ResourceKind.mitmResource, url),
+      ];
+      for (final key in keys) {
+        expect(await resourceCache.store.get(key), isNotNull);
+      }
+      await mitm().deleteModule(module);
+      for (final key in keys) {
+        expect(await resourceCache.store.get(key), isNull);
+      }
+    });
+  });
+
+  group('a url that changes', () {
+    test('a module updating from a new url does not join the update from '
+        'the old one', () async {
+      final added = await addModule();
+      serve({'/n.sgmodule': module('M')});
+      held = Completer();
+      resetCounts();
+
+      final old = mitm().updateModule(added);
+      final moved = mitm().updateModule(
+        added.copyWith(url: urlOf('/n.sgmodule')),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      held!.complete();
+      await Future.wait([old, moved]);
+
+      expect(hits['/m.sgmodule'], 1);
+      expect(hits['/n.sgmodule'], 1);
+    });
+
+    test('a script updating from a new url does not join the update from '
+        'the old one', () async {
+      serve({'/s.js': 'one', '/t.js': 'two'});
+      final scripts = container.read(scriptsActionProvider.notifier);
+      final script = await Script(
+        id: 5,
+        label: 'S',
+        url: urlOf('/s.js'),
+        lastUpdateTime: DateTime(2020),
+      ).save('');
+      held = Completer();
+
+      final old = scripts.updateScript(script);
+      final moved = scripts.updateScript(script.copyWith(url: urlOf('/t.js')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      held!.complete();
+      await Future.wait([old, moved]);
+
+      expect(hits, {'/s.js': 1, '/t.js': 1});
     });
   });
 
@@ -575,7 +987,7 @@ hostname = %APPEND% example.com
       final saved = await added();
       resetCounts();
 
-      final synced = await icons().sync(saved);
+      final synced = await icons().sync(saved, revalidate: true);
 
       expect(notModified, {'/icons.json': 1});
       expect(synced.icons, saved.icons);
@@ -591,6 +1003,7 @@ hostname = %APPEND% example.com
 
       final synced = await icons().sync(
         saved.copyWith(url: urlOf('/moved.json')),
+        revalidate: true,
       );
 
       expect(hits, {'/moved.json': 1});
@@ -606,7 +1019,7 @@ hostname = %APPEND% example.com
       await pumpEventQueue();
       resetCounts();
 
-      final synced = await icons().sync(saved);
+      final synced = await icons().sync(saved, revalidate: true);
 
       expect(conditional, isEmpty);
       expect(synced.icons, hasLength(1));
@@ -629,7 +1042,7 @@ hostname = %APPEND% example.com
           .read(resourcesActionProvider.notifier)
           .autoUpdate();
       await Future<void>.delayed(const Duration(milliseconds: 50));
-      final sync = icons().sync(saved);
+      final sync = icons().sync(saved); // the page: a manual sync
       await Future<void>.delayed(const Duration(milliseconds: 100));
       held!.complete();
       await Future.wait([auto, sync]);
@@ -668,7 +1081,7 @@ hostname = %APPEND% example.com
         lastUpdateTime: DateTime(2020),
       ).save('');
       scripts().putScript(script);
-      await scripts().updateScript(script);
+      await scripts().updateScript(script, revalidate: true);
       await resourceCache.store.saved;
       await pumpEventQueue();
       final path = await script.path;
@@ -685,7 +1098,7 @@ hostname = %APPEND% example.com
     test('unchanged: one 304, no rewrite and no reapply', () async {
       final (script, path) = await added();
 
-      await scripts().updateScript(script);
+      await scripts().updateScript(script, revalidate: true);
       await pumpEventQueue();
 
       expect(notModified, {'/s.js': 1});
@@ -699,7 +1112,7 @@ hostname = %APPEND% example.com
       final (script, path) = await added();
       served['/s.js']!.body = 'const main = (c) => ({...c});';
 
-      await scripts().updateScript(script);
+      await scripts().updateScript(script, revalidate: true);
       await pumpEventQueue();
 
       expect(conditional, {'/s.js': 1});
@@ -711,12 +1124,12 @@ hostname = %APPEND% example.com
     test('a server without validators: same bytes are not rewritten', () async {
       final (script, path) = await added();
       served['/s.js']!.validators = false;
-      await scripts().updateScript(script);
+      await scripts().updateScript(script, revalidate: true);
       backdate(path);
       setup.applies = 0;
       resetCounts();
 
-      await scripts().updateScript(script);
+      await scripts().updateScript(script, revalidate: true);
       await pumpEventQueue();
 
       expect(hits, {'/s.js': 1});
@@ -730,7 +1143,7 @@ hostname = %APPEND% example.com
       await File(path).writeAsString('// mine');
       resetCounts();
 
-      await scripts().updateScript(script);
+      await scripts().updateScript(script, revalidate: true);
 
       expect(conditional, isEmpty);
       expect(await File(path).readAsString(), served['/s.js']!.body);
@@ -763,7 +1176,7 @@ hostname = %APPEND% example.com
       );
     });
 
-    for (final mode in _Mode.values.where((mode) => mode != _Mode.ok)) {
+    for (final mode in const [_Mode.error, _Mode.drop, _Mode.partial]) {
       test('a ${mode.name} keeps the file, leaves no temp file, and the next '
           'attempt works', () async {
         final (script, path) = await added();
@@ -771,7 +1184,10 @@ hostname = %APPEND% example.com
           ..mode = mode
           ..body = 'const main = (c) => null;';
 
-        await expectLater(scripts().updateScript(script), throwsA(anything));
+        await expectLater(
+          scripts().updateScript(script, revalidate: true),
+          throwsA(anything),
+        );
 
         expect(await File(path).readAsString(), 'const main = (c) => c;');
         expect(untouched(path), isTrue);
@@ -780,7 +1196,7 @@ hostname = %APPEND% example.com
 
         served0.mode = _Mode.ok;
         resetCounts();
-        await scripts().updateScript(script);
+        await scripts().updateScript(script, revalidate: true);
 
         expect(hits, {'/s.js': 1});
         expect(notModified, isEmpty);
@@ -793,8 +1209,8 @@ hostname = %APPEND% example.com
       served['/s.js']!.body = 'const main = (c) => ({...c});';
       held = Completer();
 
-      final first = scripts().updateScript(script);
-      final second = scripts().updateScript(script);
+      final first = scripts().updateScript(script, revalidate: true);
+      final second = scripts().updateScript(script, revalidate: true);
       await Future<void>.delayed(const Duration(milliseconds: 50));
       held!.complete();
       await Future.wait([first, second]);
@@ -829,12 +1245,22 @@ hostname = %APPEND% example.com
     test('unchanged: a 304 after the first check, and the Core still checks '
         'the stored file', () async {
       final script = await stored();
-      final first = await checkMitmScriptUpdate(container.read, 1, script);
+      final first = await checkMitmScriptUpdate(
+        container.read,
+        1,
+        script,
+        revalidate: true,
+      );
       await resourceCache.store.saved;
       resetCounts();
       validations = 0;
 
-      final second = await checkMitmScriptUpdate(container.read, 1, first);
+      final second = await checkMitmScriptUpdate(
+        container.read,
+        1,
+        first,
+        revalidate: true,
+      );
 
       expect(notModified, {'/s.js': 1});
       expect(validations, 1);
@@ -846,11 +1272,21 @@ hostname = %APPEND% example.com
     test('content that waits stays waiting on a 304', () async {
       final script = await stored();
       served['/s.js']!.body = 'two';
-      final pending = await checkMitmScriptUpdate(container.read, 1, script);
+      final pending = await checkMitmScriptUpdate(
+        container.read,
+        1,
+        script,
+        revalidate: true,
+      );
       await resourceCache.store.saved;
       resetCounts();
 
-      final again = await checkMitmScriptUpdate(container.read, 1, pending);
+      final again = await checkMitmScriptUpdate(
+        container.read,
+        1,
+        pending,
+        revalidate: true,
+      );
 
       expect(notModified, {'/s.js': 1});
       expect(again.pendingFile, pending.pendingFile);
@@ -860,8 +1296,18 @@ hostname = %APPEND% example.com
       final script = await stored();
       held = Completer();
 
-      final first = checkMitmScriptUpdate(container.read, 1, script);
-      final second = checkMitmScriptUpdate(container.read, 1, script);
+      final first = checkMitmScriptUpdate(
+        container.read,
+        1,
+        script,
+        revalidate: true,
+      );
+      final second = checkMitmScriptUpdate(
+        container.read,
+        1,
+        script,
+        revalidate: true,
+      );
       await Future<void>.delayed(const Duration(milliseconds: 50));
       held!.complete();
       final results = await Future.wait([first, second]);
@@ -871,7 +1317,102 @@ hostname = %APPEND% example.com
     });
   });
 
+  group('ResourceValidatorStore', () {
+    late String storePath;
+    ResourceValidatorStore store() =>
+        ResourceValidatorStore(path: () async => storePath);
+    ResourceValidators validators(String tag) => ResourceValidators(
+      etag: '"$tag"',
+      fingerprint: 'f$tag',
+      storedAt: DateTime.now(),
+    );
+
+    String k(Object name) => ResourceCache.keyOf('test', '$name');
+
+    setUp(() => storePath = join(home.path, 'v.json'));
+
+    test('evicts the entry nobody used for longest at maxEntries', () async {
+      final first = store();
+      for (var i = 0; i < ResourceValidatorStore.maxEntries; i++) {
+        await first.put(k(i), validators('$i'));
+      }
+      // A 304 for k0 makes it recent; k1 is now the oldest.
+      await first.touch(k(0));
+      await first.put(k('new'), validators('new'));
+      await first.saved;
+
+      expect(await first.get(k(0)), isNotNull);
+      expect(await first.get(k(1)), isNull);
+      expect(await first.get(k('new')), isNotNull);
+      final reloaded = store();
+      expect(await reloaded.get(k(1)), isNull);
+      expect((await reloaded.get(k(0)))!.etag, '"0"');
+    });
+
+    test('overlapping puts all land, in one valid file', () async {
+      final shared = store();
+      await Future.wait([
+        for (var i = 0; i < 50; i++) shared.put(k(i), validators('$i')),
+      ]);
+      await shared.saved;
+
+      final decoded = json.decode(await File(storePath).readAsString());
+      expect(decoded, hasLength(50));
+      final reloaded = store();
+      for (var i = 0; i < 50; i++) {
+        expect((await reloaded.get(k(i)))!.etag, '"$i"');
+      }
+      expect(await tempFiles(), isEmpty);
+    });
+  });
+
+  group('decodeResponseText', () {
+    test('follows the charset of the content type', () {
+      final latin = latin1.encode('é');
+      expect(decodeResponseText(latin, 'text/plain; charset=ISO-8859-1'), 'é');
+      expect(decodeResponseText(latin, 'text/plain; charset=latin1'), 'é');
+      expect(
+        decodeResponseText(utf8.encode('é'), 'text/plain; charset=utf-8'),
+        'é',
+      );
+    });
+
+    test('falls back to UTF-8 without, or with an unknown, charset', () {
+      final bytes = utf8.encode('é');
+      expect(decodeResponseText(bytes, null), 'é');
+      expect(decodeResponseText(bytes, 'text/plain'), 'é');
+      expect(decodeResponseText(bytes, 'text/plain; charset=koi8-r'), 'é');
+      expect(decodeResponseText(bytes, ';;not a type'), 'é');
+      expect(decodeResponseText([0xff], null), '\uFFFD');
+      expect(
+        decodeResponseText([0xe9], 'text/plain; charset=us-ascii'),
+        '\uFFFD',
+      );
+    });
+  });
+
   group('SingleFlight', () {
+    test('a task that throws before its first await fails the call and '
+        'frees the key', () async {
+      final flight = SingleFlight<String, int>();
+      Future<int> fails() => throw StateError('sync');
+
+      await expectLater(flight.run('k', fails), throwsStateError);
+      await pumpEventQueue();
+
+      expect(flight.isRunning('k'), isFalse);
+      expect(await flight.run('k', () async => 2), 2);
+    });
+
+    test('a task that returns at once frees the key', () async {
+      final flight = SingleFlight<String, int>();
+
+      expect(await flight.run('k', () => Future.value(1)), 1);
+      await pumpEventQueue();
+
+      expect(flight.isRunning('k'), isFalse);
+    });
+
     test('joins a running key, shares its error, then runs anew', () async {
       final flight = SingleFlight<String, int>();
       var runs = 0;

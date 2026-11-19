@@ -8,10 +8,13 @@ class ResourcesAction extends _$ResourcesAction {
   @override
   void build() {}
 
-  Future<void> updateIconSet(IconSet iconSet) {
+  /// Only [revalidate] (auto update) sends validators.
+  Future<void> updateIconSet(IconSet iconSet, {bool revalidate = false}) {
     return _track(
       iconSet.updatingKey,
-      () => ref.read(iconSetsActionProvider.notifier).sync(iconSet),
+      () => ref
+          .read(iconSetsActionProvider.notifier)
+          .sync(iconSet, revalidate: revalidate),
     );
   }
 
@@ -29,8 +32,11 @@ class ResourcesAction extends _$ResourcesAction {
     );
   }
 
-  Future<void> updateScript(Script script) {
-    return ref.read(scriptsActionProvider.notifier).updateScript(script);
+  /// Only [revalidate] (auto update) sends validators.
+  Future<void> updateScript(Script script, {bool revalidate = false}) {
+    return ref
+        .read(scriptsActionProvider.notifier)
+        .updateScript(script, revalidate: revalidate);
   }
 
   Future<void> _track(String key, Future<Object?> Function() task) async {
@@ -128,12 +134,18 @@ class ResourcesAction extends _$ResourcesAction {
           lastUpdateTime?.add(interval).isBeforeNow ?? true;
       for (final iconSet in await database.iconSetsDao.query().get()) {
         if (iconSet.isRemote && isDue(iconSet.lastUpdateTime)) {
-          await _tryUpdate(iconSet.name, () => updateIconSet(iconSet));
+          await _tryUpdate(
+            iconSet.name,
+            () => updateIconSet(iconSet, revalidate: true),
+          );
         }
       }
       for (final script in await database.scriptsDao.query().get()) {
         if (script.url != null && isDue(script.lastUpdateTime)) {
-          await _tryUpdate(script.label, () => updateScript(script));
+          await _tryUpdate(
+            script.label,
+            () => updateScript(script, revalidate: true),
+          );
         }
       }
       for (final provider in await database.clashProvidersDao.query().get()) {

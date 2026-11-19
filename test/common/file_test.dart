@@ -134,4 +134,95 @@ void main() {
       ]);
     });
   });
+
+  group('a failed rename', () {
+    test('is not retried when it cannot succeed', () async {
+      final target = Directory(join(root.path, 'config.yaml'))..createSync();
+      File(join(target.path, 'occupied')).createSync();
+      final watch = Stopwatch()..start();
+
+      await expectLater(
+        File(target.path).writeAsStringAtomically('mode: global'),
+        throwsA(isA<FileSystemException>()),
+      );
+
+      // Ten attempts 50 ms apart would take 450 ms.
+      expect(watch.elapsed, lessThan(const Duration(milliseconds: 300)));
+    });
+
+    test('is retried only while someone else holds the target', () {
+      // ERROR_ACCESS_DENIED, ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION.
+      for (final code in [5, 32, 33]) {
+        expect(isHeldOpenError(code, windows: true), isTrue, reason: '$code');
+      }
+      // ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND.
+      expect(isHeldOpenError(2, windows: true), isFalse);
+      expect(isHeldOpenError(3, windows: true), isFalse);
+      expect(isHeldOpenError(16, windows: false), isTrue); // EBUSY
+      expect(isHeldOpenError(2, windows: false), isFalse); // ENOENT
+      expect(isHeldOpenError(13, windows: false), isFalse); // EACCES
+      expect(isHeldOpenError(null, windows: false), isFalse);
+    });
+  });
+
+  group('writeAsBytesAtomically with keepMode', () {
+    test('passes the mode of the file it replaces on', () async {
+      if (Platform.isWindows) return;
+      final file = File(join(root.path, 'resource'))..writeAsStringSync('old');
+      await Process.run('chmod', ['640', file.path]);
+      final mode = file.statSync().mode & 0x1ff;
+      expect(mode, 0x1a0); // 0640
+
+      await file.writeAsBytesAtomically('new'.codeUnits, keepMode: true);
+
+      expect(file.readAsStringSync(), 'new');
+      expect(file.statSync().mode & 0x1ff, mode);
+      expect(root.listSync(), hasLength(1));
+    });
+
+    test('writes a new file where there was none', () async {
+      final file = File(join(root.path, 'resource'));
+
+      await file.writeAsBytesAtomically('new'.codeUnits, keepMode: true);
+
+      expect(file.readAsStringSync(), 'new');
+      expect(root.listSync(), hasLength(1));
+    });
+  });
+
+  group('sweepStaleAtomicTemps', () {
+    test('removes only temporaries older than the cutoff', () async {
+      final old = DateTime.now().subtract(const Duration(hours: 2));
+      File stale(String name) => File(join(root.path, name))
+        ..writeAsStringSync('x')
+        ..setLastModifiedSync(old);
+      stale('a.json.123.0badf00d.tmp');
+      stale('b.json.123.tmp');
+      stale('keep.json');
+      stale('notes.tmp');
+      File(join(root.path, 'c.json.123.0badf00d.tmp')).writeAsStringSync('x');
+
+      await sweepStaleAtomicTemps(root.path);
+
+      expect(root.listSync().map((entry) => basename(entry.path)).toSet(), {
+        'keep.json',
+        'notes.tmp',
+        'c.json.123.0badf00d.tmp',
+      });
+    });
+
+    test('runs before the first atomic write into a directory', () async {
+      final leftover = File(join(root.path, 'v.json.99.0badf00d.tmp'))
+        ..writeAsStringSync('x')
+        ..setLastModifiedSync(DateTime.now().subtract(const Duration(days: 1)));
+
+      await File(join(root.path, 'v.json')).writeAsStringAtomically('{}');
+
+      expect(leftover.existsSync(), isFalse);
+    });
+
+    test('accepts a directory that does not exist', () async {
+      await sweepStaleAtomicTemps(join(root.path, 'missing'));
+    });
+  });
 }

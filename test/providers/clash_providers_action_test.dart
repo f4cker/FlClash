@@ -527,6 +527,25 @@ void main() {
       expect(await stored(remote.id), saved);
     });
 
+    test('is read again after a failed reload, even with the same '
+        'bytes', () async {
+      downloaded = 'downloaded again';
+      reloadError = Exception('Core busy');
+      await refresh();
+      expect(reloads, ['Remote']);
+      reloadError = null;
+      reloads.clear();
+
+      // The same bytes again: the Core may still hold the older ones.
+      await refresh();
+      expect(reloads, ['Remote']);
+
+      // That reload went through, so the same bytes once more change nothing.
+      reloads.clear();
+      await refresh();
+      expect(reloads, isEmpty);
+    });
+
     test('refreshed twice at once downloads once', () async {
       downloaded = 'downloaded again';
       compileGate = Completer();

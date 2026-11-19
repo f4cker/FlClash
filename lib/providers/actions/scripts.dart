@@ -2,7 +2,7 @@ part of '../action.dart';
 
 @Riverpod(keepAlive: true)
 class ScriptsAction extends _$ScriptsAction {
-  final _updates = SingleFlight<int, void>();
+  final _updates = SingleFlight<(int, String?), void>();
 
   @override
   void build() {}
@@ -14,6 +14,10 @@ class ScriptsAction extends _$ScriptsAction {
 
   void deleteScript(int scriptId) {
     final inUse = ref.read(currentProfileProvider)?.scriptId == scriptId;
+    final url = ref.read(scriptsProvider).value?.get(scriptId)?.url;
+    if (url != null) {
+      unawaited(resourceCache.forget(ResourceKind.script, url));
+    }
     ref.read(scriptsProvider.notifier).del(scriptId);
     ref
         .read(profilesProvider.notifier)
@@ -28,13 +32,18 @@ class ScriptsAction extends _$ScriptsAction {
     }
   }
 
-  /// An update of a script that is already updating joins that update.
-  Future<void> updateScript(Script script) =>
-      _updates.run(script.id, () => _updateScript(script));
+  /// An update of a script that is already updating from the same url joins
+  /// that update. Only [revalidate] (auto update) sends validators; an update
+  /// the user asks for downloads the script whole.
+  Future<void> updateScript(Script script, {bool revalidate = false}) =>
+      _updates.run((
+        script.id,
+        script.url,
+      ), () => _updateScript(script, revalidate: revalidate));
 
   /// Unchanged content, by a 304 or by its hash, only moves the check time:
   /// the file stays as it is and nothing reapplies.
-  Future<void> _updateScript(Script script) async {
+  Future<void> _updateScript(Script script, {required bool revalidate}) async {
     final updatingKeys = ref.read(updatingKeysProvider.notifier);
     final operation = updatingKeys.start(script.updatingKey);
     try {
@@ -44,12 +53,12 @@ class ScriptsAction extends _$ScriptsAction {
         ResourceKind.script,
         url,
         holds: (fingerprint) async => await storedSha256(path) == fingerprint,
+        revalidate: revalidate,
       );
       switch (fetched) {
         case ResourceNotModified():
           _checked(script);
-        case ResourceDownloaded(:final bytes):
-          final text = utf8.decode(bytes, allowMalformed: true);
+        case ResourceDownloaded(:final text):
           final fingerprint = sha256Hex(utf8.encode(text));
           if (await storedSha256(path) == fingerprint) {
             _checked(script);

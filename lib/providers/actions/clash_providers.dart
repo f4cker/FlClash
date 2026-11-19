@@ -2,6 +2,11 @@ part of '../action.dart';
 
 @Riverpod(keepAlive: true)
 class ClashProvidersAction extends _$ClashProvidersAction {
+  /// Sets whose last reload did not get through, or is still running: the
+  /// Core may be holding older bytes than the file, so the next refresh
+  /// reloads even when it downloads the same bytes again.
+  final _reloadPending = <int>{};
+
   @override
   void build() {}
 
@@ -47,6 +52,7 @@ class ClashProvidersAction extends _$ClashProvidersAction {
     if (heldBefore != null &&
         latest != null &&
         next == latest &&
+        !_reloadPending.contains(next.id) &&
         previous?.fileName == next.fileName &&
         await storedSha256(await next.path) == heldBefore) {
       return latest;
@@ -57,8 +63,13 @@ class ClashProvidersAction extends _$ClashProvidersAction {
     }
     final reread = content != null || download;
     if (reread && next == before) {
+      // Cleared once the reload gets through; one that fails leaves it, so
+      // the next refresh reloads even if it brings the same bytes.
+      _reloadPending.add(next.id);
       unawaited(_reloadIfReferenced(next));
     } else {
+      // A reapply loads every set from its file.
+      if (reread) _reloadPending.remove(next.id);
       unawaited(
         applyIfReferenced(ProviderKind.rule, {
           next.label,
@@ -236,6 +247,10 @@ class ClashProvidersAction extends _$ClashProvidersAction {
     force: force,
   );
 
+  /// The reload of [id] went through, or nothing loads the set: what the
+  /// Core holds, if anything, is what the file holds.
+  void _reloaded(int id) => _reloadPending.remove(id);
+
   Future<void> applyIfProxiesNamed(Set<String> names) => _applyIf(
     (profileId) async => (await database.proxyGroupsDao.query(profileId).get())
         .any((group) => group.proxies?.any(names.contains) ?? false),
@@ -259,10 +274,12 @@ class ClashProvidersAction extends _$ClashProvidersAction {
       (profileId) =>
           _isReferenced(profileId, ProviderKind.rule, {provider.label}),
     )) {
+      _reloaded(provider.id);
       return;
     }
     try {
       await _core.updateExternalProvider(provider.label);
+      _reloaded(provider.id);
       return;
     } catch (error) {
       commonPrint.log(

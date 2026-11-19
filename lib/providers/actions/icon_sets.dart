@@ -22,7 +22,7 @@ class IconSetsAction extends _$IconSetsAction {
               holds: (_) async => false,
             )
             as ResourceDownloaded;
-    final content = _parse(utf8.decode(download.bytes, allowMalformed: true));
+    final content = _parse(download.text);
     final added = _put(
       IconSet(
         id: snowflake.id,
@@ -54,11 +54,24 @@ class IconSetsAction extends _$IconSetsAction {
   }
 
   /// A sync of a set that is already syncing from the same url joins it,
-  /// whichever of the page, an update button or auto update asked.
-  Future<IconSet> sync(IconSet iconSet) =>
-      _syncs.run((iconSet.id, iconSet.url), () => _sync(iconSet));
+  /// whichever of the page, an update button or auto update asked. Only
+  /// [revalidate] (auto update) sends validators; a sync the user asks for
+  /// downloads the set whole.
+  Future<IconSet> sync(IconSet iconSet, {bool revalidate = false}) =>
+      _syncs.run((
+        iconSet.id,
+        iconSet.url,
+      ), () => _sync(iconSet, revalidate: revalidate));
 
-  Future<IconSet> _sync(IconSet iconSet) async {
+  /// Removes [iconSet] and what was kept to revalidate it.
+  void delete(IconSet iconSet) {
+    ref.read(iconSetsProvider.notifier).del(iconSet.id);
+    if (iconSet.url.isNotEmpty) {
+      unawaited(resourceCache.forget(ResourceKind.iconSet, iconSet.url));
+    }
+  }
+
+  Future<IconSet> _sync(IconSet iconSet, {required bool revalidate}) async {
     final before = await _stored(iconSet.id);
     final url = iconSet.url;
     // Validators go out only while the stored icons are what they described.
@@ -71,11 +84,10 @@ class IconSetsAction extends _$IconSetsAction {
             stored.url == url &&
             _fingerprintOf(stored.icons) == fingerprint;
       },
+      revalidate: revalidate,
     );
     final content = switch (fetched) {
-      ResourceDownloaded(:final bytes) => _parse(
-        utf8.decode(bytes, allowMalformed: true),
-      ),
+      ResourceDownloaded(:final text) => _parse(text),
       ResourceNotModified() => null,
     };
     final latest = before == null ? null : await _stored(iconSet.id);

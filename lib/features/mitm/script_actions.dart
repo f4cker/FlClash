@@ -30,6 +30,7 @@ Future<void> commitMitmScripts(
   List<MitmScript> next,
 ) async {
   final notifier = read(profileMitmScriptsProvider(profileId).notifier);
+  final before = read(profileMitmScriptsProvider(profileId)).value;
   final setup = read(mitmSetupProvider);
   final core = read(coreHandlerProvider);
   final live =
@@ -49,6 +50,7 @@ Future<void> commitMitmScripts(
   }
   try {
     await notifier.commit(next);
+    await _forgetRemovedUrls(before, next);
   } catch (_) {
     if (live) {
       unawaited(
@@ -56,6 +58,21 @@ Future<void> commitMitmScripts(
       );
     }
     rethrow;
+  }
+}
+
+/// Validators of a url no script of the profile fetches any longer go.
+/// Another profile still naming it only downloads it whole once more.
+Future<void> _forgetRemovedUrls(
+  List<MitmScript>? before,
+  List<MitmScript> next,
+) async {
+  final kept = {for (final script in next) ?script.url};
+  for (final script in before ?? const <MitmScript>[]) {
+    final url = script.url;
+    if (url != null && !kept.contains(url)) {
+      await resourceCache.forget(ResourceKind.mitmScript, url);
+    }
   }
 }
 
@@ -85,7 +102,7 @@ Future<String> storeMitmScript(String source, List<int> bytes) async {
   final file = File(join(directory.path, name));
   // Named by its content: a file already there with these bytes stays.
   if (await storedSha256(file.path) != sha256Hex(bytes)) {
-    await file.writeAsBytesAtomically(bytes);
+    await file.writeAsBytesAtomically(bytes, keepMode: true);
   }
   return name;
 }
@@ -146,19 +163,22 @@ Future<List<MitmScript>> prepareMitmScripts(
   return scripts;
 }
 
-final _scriptChecks = SingleFlight<(int, int), MitmScript>();
+final _scriptChecks = SingleFlight<(int, int, String?), MitmScript>();
 
 /// New content waits in [MitmScript.pendingFile]; the old keeps running.
 /// A script whose own file is gone takes the new content at once. A check of
-/// a script that is already being checked joins that check.
+/// a script that is already being checked from the same url joins that check.
+/// Only [revalidate] (auto update) sends validators; a check the user asks
+/// for downloads the script whole.
 Future<MitmScript> checkMitmScriptUpdate(
   MitmReader read,
   int profileId,
-  MitmScript script,
-) => _scriptChecks.run((
-  profileId,
-  script.id,
-), () => _checkMitmScriptUpdate(read, profileId, script));
+  MitmScript script, {
+  bool revalidate = false,
+}) => _scriptChecks.run(
+  (profileId, script.id, script.url),
+  () => _checkMitmScriptUpdate(read, profileId, script, revalidate: revalidate),
+);
 
 /// The stored file, the waiting one first, whose bytes have [fingerprint].
 Future<String?> _scriptFileHolding(
@@ -177,8 +197,9 @@ Future<String?> _scriptFileHolding(
 Future<MitmScript> _checkMitmScriptUpdate(
   MitmReader read,
   int profileId,
-  MitmScript script,
-) async {
+  MitmScript script, {
+  required bool revalidate,
+}) async {
   final url = script.url;
   if (url == null) {
     return script;
@@ -200,6 +221,7 @@ Future<MitmScript> _checkMitmScriptUpdate(
       url,
       holds: (fingerprint) async =>
           await _scriptFileHolding(script, fingerprint) != null,
+      revalidate: revalidate,
     );
     final String name;
     switch (fetched) {

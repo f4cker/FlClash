@@ -12,17 +12,19 @@ class SingleFlight<K, V> {
     if (running != null) {
       return running;
     }
-    late final Future<V> future;
-    future = () async {
-      try {
-        return await task();
-      } finally {
-        if (identical(_running[key], future)) {
-          unawaited(_running.remove(key));
-        }
-      }
-    }();
+    // A task that throws before its first await fails this future like any
+    // other error, and the key is freed once it settles either way.
+    final future = Future<V>.sync(task);
     _running[key] = future;
+    unawaited(
+      future
+          .whenComplete(() {
+            if (identical(_running[key], future)) {
+              _running.remove(key);
+            }
+          })
+          .then<void>((_) {}, onError: (_) {}),
+    );
     return future;
   }
 }
