@@ -7,6 +7,7 @@ import 'package:fl_clash/common/app_update.dart';
 import 'package:fl_clash/common/release_history.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/ui/ui.dart' show TextButton;
 import 'package:fl_clash/views/about.dart';
 import 'package:fl_clash/views/release_history.dart';
 import 'package:fl_clash/widgets/release_notes.dart';
@@ -289,6 +290,11 @@ void main() {
     expect(node.label, contains('Expanded'));
     expect(find.textContaining('**', findRichText: true), findsNothing);
     expect(find.text('Details'), findsOneWidget);
+    final link = find.ancestor(
+      of: find.text('Details'),
+      matching: find.byType(TextButton),
+    );
+    expect(tester.getSize(link), tester.getSize(find.text('Details')));
     await tester.ensureVisible(find.text('Details'));
     await tester.tap(find.text('Details'));
     await tester.pumpAndSettle();
@@ -338,6 +344,25 @@ void main() {
       expect(find.text('0.9.0-beta.unknown'), findsOneWidget);
     },
   );
+
+  testWidgets('historical beta label sits beside version rather than date', (
+    tester,
+  ) async {
+    result = history([
+      PublishedRelease(
+        tag: 'v0.9.0-beta.1',
+        published: DateTime.utc(2026, 11, 18),
+        prerelease: true,
+      ),
+    ]);
+    await pump(tester);
+    final beta = tester.getRect(find.text('Beta'));
+    final version = tester.getRect(find.text('0.9.0-beta.1'));
+    final date = tester.getRect(find.text('2026-11-18'));
+    expect(beta.center.dy, closeTo(version.center.dy, 0.1));
+    expect(beta.left, greaterThan(version.right));
+    expect(beta.bottom, lessThan(date.top));
+  });
 
   testWidgets('long version wraps at 2x without truncation', (tester) async {
     result = history([

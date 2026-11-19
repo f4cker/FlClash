@@ -76,6 +76,12 @@ List<InlineSpan> _inline(BuildContext context, String text, TextStyle style) {
         WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: TextButton(
+            style: const ButtonStyle(
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: TapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.standard,
+            ),
             onPressed: () => dialogs.openUrl(match[2]!),
             child: Text(
               match[1]!,

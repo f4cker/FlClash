@@ -282,12 +282,24 @@ class _ReleaseEntry extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            label,
-                            style: AppTextStyle.callout.of(
-                              context,
-                              emphasized: true,
-                            ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                label,
+                                style: AppTextStyle.callout.of(
+                                  context,
+                                  emphasized: true,
+                                ),
+                              ),
+                              if (!current && release.prerelease == true)
+                                Text(
+                                  l10n.releaseBeta,
+                                  style: AppTextStyle.caption1.of(context),
+                                ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Wrap(
@@ -301,11 +313,6 @@ class _ReleaseEntry extends StatelessWidget {
                                     .of(context)
                                     .copyWith(color: color.onSurfaceVariant),
                               ),
-                              if (!current && release.prerelease == true)
-                                Text(
-                                  l10n.releaseBeta,
-                                  style: AppTextStyle.caption1.of(context),
-                                ),
                               if (current)
                                 DecoratedBox(
                                   decoration: ShapeDecoration(
