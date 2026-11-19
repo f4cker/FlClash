@@ -1169,25 +1169,12 @@ class _RulesViewState extends ConsumerState<RulesView> {
               )
             : null,
       ),
-      // Pinned under the bar, as the requests page pins its filters, so the
-      // list is cut off below it rather than showing through the bar.
-      header: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-        child: Text(
-          subtitle,
-          key: RulesView.subtitleKey,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyle.footnote
-              .of(context)
-              .copyWith(color: colorScheme.onSurfaceVariant),
-        ),
-      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < _narrowWidth;
           return _buildBody(
             context,
+            subtitle: subtitle,
             coreRunning: coreRunning,
             narrow: narrow,
             bottomInset: context.bottomInset,
@@ -1199,11 +1186,13 @@ class _RulesViewState extends ConsumerState<RulesView> {
 
   Widget _buildBody(
     BuildContext context, {
+    required String subtitle,
     required bool coreRunning,
     required bool narrow,
     required double bottomInset,
   }) {
     final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
     final list = _list;
     final sources = _sources;
     final lookup = _lookup;
@@ -1218,12 +1207,24 @@ class _RulesViewState extends ConsumerState<RulesView> {
     );
 
     final dimmed = !coreRunning;
-    // Everything scrolls below the pinned subtitle.
     return CustomScrollView(
       key: RulesView.resultsKey,
       controller: _scrollController,
       slivers: [
-        SliverToBoxAdapter(child: SizedBox(height: context.contentTopPadding)),
+        SliverPadding(
+          padding: padding.copyWith(top: context.contentTopPadding),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              subtitle,
+              key: RulesView.subtitleKey,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyle.footnote
+                  .of(context)
+                  .copyWith(color: colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ),
         if (!coreRunning)
           box(
             RulesNotice(
