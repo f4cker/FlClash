@@ -4,7 +4,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:path/path.dart' as p;
 
-const flashMitmUnsupported = 'Not supported by the Flash Go engine';
+const _flashMitmUnsupported = 'Not supported by the Flash Go engine';
 
 Map<MitmList, Map<String, String>> flashMitmIssues(
   MitmModuleContent content,
@@ -12,23 +12,24 @@ Map<MitmList, Map<String, String>> flashMitmIssues(
   if (content.clientSourceAddress.isNotEmpty)
     MitmList.clientSourceAddress: {
       for (final line in content.clientSourceAddress)
-        line: flashMitmUnsupported,
+        line: _flashMitmUnsupported,
     },
   if (content.skipVerifyHostname.isNotEmpty)
     MitmList.skipVerifyHostname: {
-      for (final line in content.skipVerifyHostname) line: flashMitmUnsupported,
+      for (final line in content.skipVerifyHostname)
+        line: _flashMitmUnsupported,
     },
   if (content.requestBodyMock.isNotEmpty)
     MitmList.requestBodyMock: {
-      for (final line in content.requestBodyMock) line: flashMitmUnsupported,
+      for (final line in content.requestBodyMock) line: _flashMitmUnsupported,
     },
   MitmList.bodyRewrite: {
     for (final line in content.bodyRewrite)
-      if (_unsupportedBody(line)) line: flashMitmUnsupported,
+      if (_unsupportedBody(line)) line: _flashMitmUnsupported,
   },
   MitmList.script: {
     for (final line in content.script)
-      if (parseMitmScriptInfo(line) == null) line: flashMitmUnsupported,
+      if (parseMitmScriptInfo(line) == null) line: _flashMitmUnsupported,
   },
 };
 

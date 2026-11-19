@@ -11,6 +11,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/views/proxies/card.dart';
 import 'package:fl_clash/views/proxies/group_tabs.dart';
+import 'package:fl_clash/views/proxies/hidden_group_name.dart';
 import 'package:fl_clash/views/proxies/proxies.dart';
 import 'package:fl_clash/views/proxies/tab.dart';
 import 'package:flutter/rendering.dart';
@@ -470,6 +471,42 @@ void main() {
       ),
     );
     expect(tab.center.dx, closeTo(strip.center.dx, 1));
+  });
+
+  testWidgets('a truncated group label retains its Flash hidden tag', (
+    tester,
+  ) async {
+    const name =
+        'A hidden group whose name exceeds the menu label width '
+        'and still has an independently visible hidden tag';
+    final controller = TabController(length: 1, vsync: tester);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      TestApp(
+        child: GroupTabs(
+          controller: controller,
+          groups: [_group(name).copyWith(hidden: true)],
+          showHiddenTags: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    final label = find.text(name, findRichText: true);
+    expect(find.byType(HiddenGroupName), findsOneWidget);
+    expect(
+      tester.renderObject<RenderParagraph>(label).didExceedMaxLines,
+      isTrue,
+    );
+    expect(tester.getSize(label).width, PopupMenu.labelMaxWidth);
+    final context = tester.element(find.byType(GroupTabs));
+    expect(
+      tester.getSize(tabOf(name)).width,
+      closeTo(
+        PopupMenu.labelMaxWidth + 32 + HiddenGroupName.tagWidthOf(context),
+        1,
+      ),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a long group name ends where its row in the more menu ends', (

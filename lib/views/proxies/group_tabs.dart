@@ -310,7 +310,10 @@ class _TabExtents {
       for (final (index, name) in names.indexed)
         max(
           minWidth,
-          EmojiText.widthOf(context, name, style).ceilToDouble() +
+          min(
+                EmojiText.widthOf(context, name, style),
+                PopupMenu.labelMaxWidth,
+              ).ceilToDouble() +
               padding +
               (tagged[index] ? tagWidth : 0),
         ),
@@ -440,9 +443,17 @@ class _GroupTabState extends State<_GroupTab> {
         child: widget.hidden
             ? HiddenGroupName(
                 name: widget.name,
-                child: EmojiText(widget.name, maxLines: 1),
+                child: EmojiText(
+                  widget.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               )
-            : EmojiText(widget.name, maxLines: 1),
+            : EmojiText(
+                widget.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
       ),
     );
   }

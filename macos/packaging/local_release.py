@@ -409,7 +409,7 @@ def main(argv=None):
                 release.publish()
             print('Completed ' + args.phase + '; local receipts: ' + str(release.directory))
     except (ValueError, OSError, KeyError, TypeError, subprocess.CalledProcessError) as error:
-        print('Release stopped; partial local evidence/draft retained, no automatic retry: ' + str(error), file=sys.stderr)
+        print('Release stopped; partial local evidence and draft retained, no automatic retry: ' + str(error), file=sys.stderr)
         return 1
     return 0
 
