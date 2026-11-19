@@ -67,7 +67,7 @@ const _updateParams = UpdateParams(
   tun: {'enable': false},
   mixedPort: 7890,
   allowLan: true,
-  findProcessMode: FindProcessMode.off,
+  findProcessMode: FindProcessMode.strict,
   mode: Mode.rule,
   logLevel: LogLevel.info,
   ipv6: false,

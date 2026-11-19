@@ -345,7 +345,7 @@ enum TailscaleUnlinkOutcome {
   deleteUnconfirmed,
 }
 
-enum FindProcessMode { always, off }
+enum FindProcessMode { always, strict }
 
 enum InterfaceNameMode { clear, follow, custom }
 
@@ -1056,6 +1056,9 @@ enum MitmList {
   headerRewrite('header-rewrite'),
   bodyRewrite('body-rewrite'),
   mapLocal('map-local'),
+  requestBodyMock('request-body-mock'),
+  clientSourceAddress('client-source-address'),
+  skipVerifyHostname('skip-server-cert-verify-hostname'),
   script('script');
 
   final String key;
@@ -1070,6 +1073,8 @@ enum MitmUpdateFailure { check, download, invalid, load }
 enum MitmTrust { notGenerated, notInstalled, untrusted, ready }
 
 enum MitmInstallOutcome { installed, untilReboot, prompted, saved }
+
+enum MitmRemoveOutcome { removed, userStore, needsRoot, failed }
 
 enum CoreStatus { connecting, connected, disconnected }
 
@@ -1131,4 +1136,16 @@ enum SystemService {
   static final _byId = values.asNameMap();
 
   static SystemService? fromId(String id) => _byId[id];
+}
+
+enum ServiceStartFailure {
+  vpnPermission('vpn_permission'),
+  service('service');
+
+  final String code;
+
+  const ServiceStartFailure(this.code);
+
+  static ServiceStartFailure? fromCode(Object? code) =>
+      values.where((it) => it.code == code).firstOrNull;
 }

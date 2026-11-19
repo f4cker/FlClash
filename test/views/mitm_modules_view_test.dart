@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_module.dart';
@@ -42,6 +40,18 @@ const _resources = {
 };
 
 class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
+
+class _ArgumentAction extends MitmModulesAction {
+  @override
+  Future<MitmModule?> setArguments(
+    MitmModule module,
+    Map<String, String> arguments,
+  ) async {
+    final saved = module.copyWith(arguments: arguments);
+    putModule(saved);
+    return saved;
+  }
+}
 
 class _ScriptedSetupAction extends SetupAction {
   _ScriptedSetupAction(this.results);
@@ -94,6 +104,7 @@ void main() {
     WidgetTester tester,
     Widget child, {
     CoreHandlerInterface? core,
+    bool fakeArguments = false,
   }) async {
     tester.view.physicalSize = const Size(1000, 2000);
     tester.view.devicePixelRatio = 1;
@@ -106,11 +117,20 @@ void main() {
     final content = parseMitmModule(_module, resources: _resources);
     container = ProviderContainer(
       overrides: [
+        mitmModuleDetailsProvider(_local.id).overrideWith((ref) async => null),
+        mitmModuleContentProvider(_local.id).overrideWith(
+          (ref) async => parseMitmModule(
+            '[Script]\nOwn = type=http-response,pattern=.*,script-path=own.js',
+          ),
+        ),
+        if (fakeArguments)
+          mitmModulesActionProvider.overrideWith(_ArgumentAction.new),
         if (core != null)
           coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
         mitmModuleDetailsProvider(_remote.id).overrideWith(
           (ref) async => (
             content: content,
+            views: const <MitmList, Map<String, MitmLineView>>{},
             issues: {
               MitmList.urlRewrite: {'bad line': 'unknown type'},
             },
@@ -193,64 +213,33 @@ void main() {
     await tester.tap(find.text(currentAppLocalizations.mitmIgnoredLines));
     await tester.pumpAndSettle();
 
-    expect(find.text('skip-proxy = example.com'), findsOneWidget);
+    expect(find.text('bypassDomain'), findsOneWidget);
     expect(
-      find.text(currentAppLocalizations.mitmSkipSection('General')),
-      findsOneWidget,
+      find.text(currentAppLocalizations.mitmSkipSetting),
+      findsNWidgets(2),
     );
   });
 
-  testWidgets('a cron script runs from its menu and shows what it wrote', (
+  testWidgets('unsupported cron scripts cannot be run from the menu', (
     tester,
   ) async {
     final core = _MockCoreHandlerInterface();
-    final run = Completer<MitmScriptOutput>();
-    when(() => core.runMitmScript('Daily')).thenAnswer((_) => run.future);
     await pump(tester, MitmModuleView(id: _remote.id), core: core);
     container.listen(patchClashConfigProvider, (_, _) {});
     container.read(patchClashConfigProvider.notifier).value =
         const PatchClashConfig(mitm: Mitm(enable: true));
-
     await tester.tap(find.text(MitmList.script.label));
     await tester.pumpAndSettle();
-    await tester.longPress(find.textContaining('Ads = '));
-    await tester.pumpAndSettle();
-    expect(find.text(currentAppLocalizations.mitmRunScript), findsNothing);
-
     await tester.longPress(find.textContaining('Daily = '));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(currentAppLocalizations.mitmRunScript));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(find.byType(ActivityIndicator), findsOneWidget);
-    await tester.longPress(find.textContaining('Daily = '));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
     expect(find.text(currentAppLocalizations.mitmRunScript), findsNothing);
-
-    run.complete(
-      const MitmScriptOutput(
-        logs: ['checked in'],
-        result: '{"title":"Points","content":"+3"}',
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    verify(() => core.runMitmScript('Daily')).called(1);
-    expect(find.byType(ActivityIndicator), findsNothing);
-    expect(
-      find.text('Points\n+3\nchecked in', findRichText: true),
-      findsOneWidget,
-    );
-    await tester.pump(const Duration(seconds: 1));
+    verifyNever(() => core.runMitmScript('Daily'));
   });
 
   testWidgets('an argument is saved on the module', (tester) async {
-    await pump(tester, MitmModuleView(id: _remote.id));
-
+    await pump(tester, MitmModuleView(id: _remote.id), fakeArguments: true);
     await tester.tap(find.text('Toggle'));
     await tester.pumpAndSettle();
-
     expect((await stored()).first.arguments, {'Toggle': 'false'});
   });
 
@@ -350,6 +339,7 @@ void main() {
                 resources: _resources,
               ),
               issues: const <MitmList, Map<String, String>>{},
+              views: const <MitmList, Map<String, MitmLineView>>{},
             ),
           ),
         ],

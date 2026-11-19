@@ -290,7 +290,7 @@ void main() {
                 (state) => state.copyWith(
                   findProcessMode: value
                       ? FindProcessMode.always
-                      : FindProcessMode.off,
+                      : FindProcessMode.strict,
                 ),
               ),
         ),

@@ -18,6 +18,7 @@ void main() {
       extendType: 'script',
       scriptId: 2,
       matchTarget: 'Proxy',
+      exitTargets: const {'MATCH': 'Proxy'},
       autoUpdateDurationMillis: 3600000,
       subscriptionInfo: const SubscriptionInfo(
         upload: 1,
@@ -34,8 +35,8 @@ void main() {
       ),
     );
 
-    expect(profile.toColumns(true), hasLength(17));
-    expect(profile.toCompanion(true).toColumns(true), hasLength(17));
+    expect(profile.toColumns(true), hasLength(18));
+    expect(profile.toCompanion(true).toColumns(true), hasLength(18));
     expect(RawProfile.fromJson(profile.toJson()).toJson(), profile.toJson());
     expect(profile.copyWith(label: 'Next').label, 'Next');
     expect(
@@ -144,7 +145,6 @@ void main() {
 
   test('rule generated classes preserve nullable contracts', () {
     const rule = RawRule(
-      customExit: false,
       id: 10,
       profileId: 1,
       ruleAction: RuleAction.RULE_SET,
@@ -155,6 +155,7 @@ void main() {
       noResolve: true,
       src: true,
       order: 'a0',
+      customExit: true,
     );
 
     expect(rule.toColumns(true), hasLength(11));
@@ -176,8 +177,8 @@ void main() {
     expect(rule.hashCode, isNonZero);
 
     const emptyRule = RawRule(
-      customExit: false,
       id: 11,
+      customExit: false,
       ruleAction: RuleAction.MATCH,
       noResolve: false,
       src: false,

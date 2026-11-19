@@ -112,6 +112,9 @@ extension MitmListL10n on MitmList {
       MitmList.headerRewrite => appLocalizations.headerRewrite,
       MitmList.bodyRewrite => appLocalizations.bodyRewrite,
       MitmList.mapLocal => appLocalizations.mapLocal,
+      MitmList.requestBodyMock => appLocalizations.requestBodyMock,
+      MitmList.clientSourceAddress => appLocalizations.clientSourceAddress,
+      MitmList.skipVerifyHostname => appLocalizations.skipVerifyHostname,
       MitmList.script => appLocalizations.script,
     };
   }
@@ -242,5 +245,16 @@ extension SystemServiceL10n on SystemService {
       SystemService.appSecurity => appLocalizations.svcAppSecurity,
     };
     return shared ? appLocalizations.systemServiceLabel(name) : name;
+  }
+}
+
+extension ServiceStartFailureL10n on ServiceStartFailure {
+  String get label {
+    final appLocalizations = currentAppLocalizations;
+    return switch (this) {
+      ServiceStartFailure.vpnPermission =>
+        appLocalizations.vpnPermissionNotGranted,
+      ServiceStartFailure.service => appLocalizations.vpnServiceStartFailed,
+    };
   }
 }

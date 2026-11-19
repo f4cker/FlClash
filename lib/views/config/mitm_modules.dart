@@ -34,22 +34,20 @@ MitmModule? _moduleOf(WidgetRef ref, int id) => ref.watch(
   ),
 );
 
-void _putModule(WidgetRef ref, MitmModule module) {
-  ref.read(mitmModulesActionProvider.notifier).putModule(module);
-}
-
 Future<void> _setEnabled(WidgetRef ref, MitmModule module, bool enabled) async {
-  if (enabled && module.scripts > 0 && !await acceptMitmScripts()) {
-    return;
+  if (enabled) {
+    await answerMitmModule(ref, module);
+  } else {
+    await ref.read(mitmModulesActionProvider.notifier).turnOff(module.id);
   }
-  _putModule(ref, module.copyWith(enabled: enabled));
 }
 
 /// Runs a cron, event or generic script line now; any other line, any while
 /// decryption is off, and a task still running have none.
 PopupMenuItem? mitmRunScriptItem(WidgetRef ref, String line) {
   final name = mitmTaskName(line);
-  if (name == null ||
+  if (!mitmHttpScriptLines([line]).contains(line) ||
+      name == null ||
       !ref.read(patchClashConfigProvider).mitm.enable ||
       ref.read(updatingKeysProvider).contains(_runKey(name))) {
     return null;
@@ -655,7 +653,7 @@ class MitmModuleView extends ConsumerWidget {
       final turnedOff = await ref
           .read(mitmModulesActionProvider.notifier)
           .setArguments(module, {...module.arguments, argument.name: next});
-      await offerMitmScripts(ref, turnedOff);
+      await offerMitmModule(ref, turnedOff);
     }
 
     return switch (argument.type) {
@@ -769,19 +767,19 @@ class MitmModuleView extends ConsumerWidget {
                                   ? (line) => [?mitmRunScriptItem(ref, line)]
                                   : null,
                             ),
-                        if (content.skipped.isNotEmpty)
+                        if (flashMitmSkipped(content).isNotEmpty)
                           ListItem.open(
                             title: Text(appLocalizations.mitmIgnoredLines),
                             subtitle: Text(
                               appLocalizations.itemsCount(
-                                content.skipped.length,
+                                flashMitmSkipped(content).length,
                               ),
                             ),
                             widget: _MitmModuleLinesView(
                               title: appLocalizations.mitmIgnoredLines,
                               notes: true,
                               lines: [
-                                for (final skip in content.skipped)
+                                for (final skip in flashMitmSkipped(content))
                                   (
                                     skip.line,
                                     mitmSkipReasonText(appLocalizations, skip),

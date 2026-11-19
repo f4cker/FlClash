@@ -62,7 +62,7 @@ void main() {
     expect(state.profileProviders, {'Sub': subscription.id});
   });
 
-  testWidgets('a custom setup leaves the extension of its profile out', (
+  testWidgets('a custom setup leaves the extension out but keeps its exits', (
     tester,
   ) async {
     const profile = Profile(
@@ -70,7 +70,7 @@ void main() {
       type: ProfileType.custom,
       autoUpdateDuration: Duration.zero,
       scriptId: 5,
-      matchTarget: 'Proxy',
+      exitTargets: {'PROXY': 'Proxy'},
     );
     await testDatabase.profilesDao.putAll([profile.toCompanion()]);
     await testDatabase.scripts.put(
@@ -103,7 +103,7 @@ void main() {
     final state = await container.read(setupStateProvider(profile.id).future);
 
     expect(state.script, isNull);
-    expect(state.matchTarget, isNull);
+    expect(state.exitTargets, {'PROXY': 'Proxy'});
     expect(state.addedRules, isEmpty);
     expect(state.rules.map((rule) => rule.id), [11]);
   });

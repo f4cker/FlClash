@@ -46,10 +46,10 @@ class _FakeStore implements MitmTrustStore {
   }
 
   @override
-  Future<bool> remove(MitmCertificate ca) async {
+  Future<MitmRemoveOutcome> remove(MitmCertificate ca) async {
     removed.add(ca);
     trust = MitmTrust.notInstalled;
-    return true;
+    return MitmRemoveOutcome.removed;
   }
 }
 

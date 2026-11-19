@@ -8,6 +8,8 @@ import 'package:dio/dio.dart';
 import 'package:fl_clash/common/app_update.dart';
 import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/exception.dart';
+import 'package:fl_clash/common/release_asset.dart';
+import 'package:fl_clash/common/release_asset.dart' as assets;
 import 'package:fl_clash/common/request.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -283,7 +285,13 @@ void main() {
   });
 
   group('downloadVerifiedRelease', () {
-    const name = 'FlClash-1.2.3-android-arm64-v8a.apk';
+    final name = assets.releaseAssetName(
+      line: appReleaseLine,
+      version: '1.2.3',
+      os: ReleaseOs.android,
+      arch: ReleaseArch.arm64,
+      extension: 'apk',
+    );
     final package = utf8.encode('package');
     final digest = sha256.convert(package).toString();
     late Directory directory;
@@ -297,8 +305,8 @@ void main() {
     Request requestServing(String sums, List<int> asset) {
       return Request()
         ..releaseDio.httpClientAdapter = _PathAdapter({
-          '/$updateRepository/releases/download/v1.2.3/SHA256SUMS': () =>
-              ResponseBody.fromString(sums, 200),
+          '/$updateRepository/releases/download/v1.2.3/${updateChecksumsName('v1.2.3')}':
+              () => ResponseBody.fromString(sums, 200),
           '/$updateRepository/releases/download/v1.2.3/$name': () =>
               ResponseBody.fromBytes(asset, 200),
         });

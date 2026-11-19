@@ -3679,7 +3679,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mitmScriptRisk =>
-      'Its scripts read and change the traffic of the hosts they match, cookies and tokens included, and can send requests of their own. Turn it on only if you trust where it comes from.';
+      'Its scripts read and change the traffic of the hosts they match, cookies and tokens included, and can send requests of their own. Turn it on only if you trust where it comes from. Once on, its updates take effect without asking again.';
 
   @override
   String mitmModuleScriptsChanged(Object name) {
@@ -8341,4 +8341,226 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get semanticsSeparator => ', ';
+
+  @override
+  String get alwaysFindProcess => 'Always find process';
+
+  @override
+  String get exitDefault => 'Default';
+
+  @override
+  String get customExit => 'Custom exit';
+
+  @override
+  String get inputExitName => 'Enter the exit name';
+
+  @override
+  String get mitmAndroidRootDesc =>
+      'Without root, only apps that trust user certificates, mostly browsers, can be decrypted. With root, every app can.';
+
+  @override
+  String get httpRequestsReadFailed => 'Couldn\'t read the requests';
+
+  @override
+  String get requestBodyReadFailed => 'Couldn\'t read the request body';
+
+  @override
+  String get responseBodyReadFailed => 'Couldn\'t read the response body';
+
+  @override
+  String mitmGrpcOverLimit(Object size) {
+    return 'Inflates past $size MB; shown compressed';
+  }
+
+  @override
+  String mitmUntrustedStores(Object stores) {
+    return 'Installed but not trusted in: $stores';
+  }
+
+  @override
+  String get removeCertificate => 'Remove certificate';
+
+  @override
+  String get removeCertificateSuccess => 'Certificate removed';
+
+  @override
+  String get mitmSystemStoreRemoveFailed =>
+      'Removing the certificate from the system\'s trusted roots failed';
+
+  @override
+  String get mitmRemoveInSettings => 'Remove in Settings';
+
+  @override
+  String mitmRemoveUserCertificateTip(Object name) {
+    return 'Android doesn\'t let apps remove user certificates. Remove $name in Settings under Security › Encryption & credentials › Trusted credentials › User.';
+  }
+
+  @override
+  String get mitmCannotRemove => 'Can\'t remove';
+
+  @override
+  String get mitmRemoveSystemCertificateTip =>
+      'The FlClash MITM CA root module added the certificate to the system. Allow FlClash root access in your root manager and try again, or remove the module there and restart.';
+
+  @override
+  String get mitmClientRefusedCertificate =>
+      'The client refused the certificate. Install the CA, or exclude this host if the app pins its certificate.';
+
+  @override
+  String get requestBodyMock => 'Request body mock';
+
+  @override
+  String get clientSourceAddress => 'Client addresses';
+
+  @override
+  String get skipVerifyHostname => 'Hosts without certificate checks';
+
+  @override
+  String get mitmRequestRulesDesc =>
+      'The module’s URL-REGEX and USER-AGENT rules became URL rewrites, judged request by request: on every plain HTTP request, and on HTTPS only for hosts in the MITM hostname list.';
+
+  @override
+  String mitmModuleRequirementTip(Object requirement) {
+    return 'The module requires $requirement, which this device does not meet; it may not work as intended.';
+  }
+
+  @override
+  String mitmExitModules(Object modules) {
+    return 'From modules: $modules';
+  }
+
+  @override
+  String get mitmModuleRiskTitle => 'Turn on this module?';
+
+  @override
+  String get mitmNetworkRisk =>
+      'When the config is generated, it changes the network settings below, ahead of what you set for the same ones in FlClash. Turning the module off or deleting it undoes this.';
+
+  @override
+  String mitmSkipVerifyRisk(Object hosts) {
+    return 'Turning it on stops checking the certificates of these hosts\' servers, so a server posing as one of them goes unnoticed: $hosts';
+  }
+
+  @override
+  String mitmClientSourceRisk(Object addresses) {
+    return 'It decrypts only for these clients: $addresses. With TUN on, this device\'s apps reach FlClash from the TUN\'s address, so they may be left out.';
+  }
+
+  @override
+  String get mitmClientSourceTunTip =>
+      'With TUN on, this device\'s apps come from the TUN\'s address; a list that leaves it out leaves their traffic undecrypted.';
+
+  @override
+  String get mitmNetworkChanges => 'Network settings';
+
+  @override
+  String mitmChangeReplace(Object values) {
+    return 'Replaced with $values';
+  }
+
+  @override
+  String mitmChangeInsert(Object values) {
+    return 'Adds $values first';
+  }
+
+  @override
+  String mitmChangeAppend(Object values) {
+    return 'Adds $values';
+  }
+
+  @override
+  String get mitmChangeOverridesYours => 'Goes over your setting';
+
+  @override
+  String mitmChangeReplacedBy(Object module) {
+    return 'Overridden by the module $module';
+  }
+
+  @override
+  String get mitmSkipHttpRulePolicy =>
+      'URL-REGEX and USER-AGENT rules only take a REJECT policy';
+
+  @override
+  String get mitmSkipFinalRule =>
+      'Module rules go first, so a final rule would hide every rule after it';
+
+  @override
+  String get mitmSkipDeviceRule =>
+      'This rule needs device or network details FlClash cannot read';
+
+  @override
+  String get mitmSkipRequirement =>
+      'This line’s requirement is not met on this device';
+
+  @override
+  String get mitmSkipManagedCa =>
+      'FlClash manages the CA certificate; a module cannot change it';
+
+  @override
+  String get mitmSkipProxies =>
+      'A module cannot change proxies or proxy groups';
+
+  @override
+  String get mitmSkipAppOnly =>
+      'A feature of the app this was written for that FlClash does not have';
+
+  @override
+  String get mitmSkipReflect =>
+      'FlClash cannot send packets back to their sender';
+
+  @override
+  String get mitmSkipSkipVerifyAll =>
+      'Certificate checks are not turned off for every host';
+
+  @override
+  String get mitmScriptCron => 'Scheduled';
+
+  @override
+  String get mitmScriptEvent => 'Event';
+
+  @override
+  String get mitmScriptGeneric => 'Generic';
+
+  @override
+  String get mitmExcluded => 'Excluded';
+
+  @override
+  String get mitmModulesTurnedOff => 'Modules turned off';
+
+  @override
+  String mitmModuleTurnedOffDesc(Object name) {
+    return 'An update to $name brought scripts or network changes you have not agreed to';
+  }
+
+  @override
+  String mitmModulesTurnedOffDesc(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count modules got updates with scripts or network changes you have not agreed to',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mitmModuleUnreadableRisk =>
+      'The module file could not be read, so what it changes is unknown. Turn it on only if you trust where it comes from.';
+
+  @override
+  String coreStoppedWithReason(Object reason) {
+    return 'The app lost its connection to the core: $reason';
+  }
+
+  @override
+  String mixedPortReset(Object value, Object port) {
+    return 'The mixed port cannot be $value, so it was set back to $port';
+  }
+
+  @override
+  String get vpnPermissionNotGranted =>
+      'VPN permission was not granted, so the VPN did not start. An always-on VPN set for another app also blocks it.';
+
+  @override
+  String get vpnServiceStartFailed => 'The VPN service could not start.';
 }

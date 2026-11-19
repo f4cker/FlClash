@@ -1,9 +1,15 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/database/database.dart' as fl;
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
+import 'package:yaml/yaml.dart';
+
+import '../helpers/app_paths.dart';
 
 /// Rebuilds [raw] into the shape schema version 1 left behind: no
 /// `proxy_groups`, no `icon_records`, and a `rules` table that still stores the
@@ -272,6 +278,9 @@ void main() {
   late Database raw;
 
   setUp(() async {
+    final home = await Directory.systemTemp.createTemp('migration');
+    addTearDown(() => home.delete(recursive: true));
+    await useAppPaths(home);
     raw = sqlite3.openInMemory();
     final seed = fl.Database(
       NativeDatabase.opened(raw, closeUnderlyingOnClose: false),
@@ -717,8 +726,8 @@ void main() {
 
     expect(await database.rulesDao.queryAddedRules(2).get(), isEmpty);
     expect(
-      (await database.profilesDao.query().get()).single.matchTarget,
-      isNull,
+      (await database.profilesDao.query().get()).single.exitTargets,
+      isEmpty,
     );
     expect(raw.select('SELECT id FROM rules').map((row) => row['id']), [10]);
   });
@@ -1098,6 +1107,124 @@ void main() {
       columns.map((row) => row['name']),
       isNot(contains('update_interval_minutes')),
     );
+  });
+
+  test(
+    'schema32 does not turn legacy approval into new capability consent',
+    () async {
+      final modules = await Directory(
+        await appPath.mitmModulesDirPath,
+      ).create(recursive: true);
+      const plain = '[URL Rewrite]\n^https://a - reject\n';
+      const network = '[General]\ndns-server = 223.5.5.5\n';
+      for (final (id, text) in [
+        (1, plain),
+        (2, plain),
+        (3, network),
+        (4, plain),
+      ]) {
+        await File('${modules.path}/$id.txt').writeAsString(text);
+      }
+      await File('${modules.path}/6.txt').writeAsBytes([0xff, 0xfe, 0xfd]);
+      raw.execute('ALTER TABLE mitm_modules DROP COLUMN accepted');
+      raw.execute('ALTER TABLE mitm_modules DROP COLUMN asks_consent');
+      raw.execute(
+        'INSERT INTO mitm_modules (id, name, enabled, scripts, last_update_time) '
+        "VALUES (1, 'Scripts', 1, 2, 0), (2, 'Plain', 1, 0, 0), "
+        "(3, 'Network', 1, 0, 0), (4, 'Off', 0, 1, 0), "
+        "(5, 'Missing', 1, 0, 0), (6, 'Broken', 0, 0, 0)",
+      );
+      raw.execute('PRAGMA user_version = 25');
+
+      final database = await openAndMigrate();
+
+      expect(_userVersion(raw), 32);
+      expect(
+        {
+          for (final module in await database.mitmModulesDao.query().get())
+            module.name: (module.asksConsent, module.accepted),
+        },
+        {
+          'Scripts': (true, null),
+          'Plain': (true, null),
+          'Network': (true, null),
+          'Off': (true, null),
+          'Missing': (true, null),
+          'Broken': (true, null),
+        },
+      );
+    },
+  );
+
+  test('the v25 upgrade turns the MATCH placeholder into a custom exit '
+      'that builds the same rules', () async {
+    raw.execute('ALTER TABLE rules DROP COLUMN custom_exit');
+    raw.execute('ALTER TABLE profiles DROP COLUMN exit_targets');
+    raw.execute(
+      'INSERT INTO profiles (id, type, label, url, extend_type, '
+      'auto_update_duration_millis, auto_update, selected_map, unfold_set, '
+      'match_target) VALUES '
+      "(1, 'url', 'Sub', 'https://example.com/sub', 'standard', 0, 0, "
+      "'{}', '[]', ' HK '), "
+      "(2, 'file', 'File', '', 'standard', 0, 0, '{}', '[]', NULL), "
+      "(3, 'custom', 'Mine', '', 'standard', 0, 0, '{}', '[]', 'X')",
+    );
+    raw.execute(
+      'INSERT INTO rules (id, profile_id, rule_action, content, rule_target) '
+      "VALUES (10, NULL, 'DOMAIN', 'a.example', 'MATCH'), "
+      "(11, 1, 'DOMAIN', 'b.example', 'DIRECT'), "
+      "(12, 3, 'DOMAIN', 'c.example', 'MATCH')",
+    );
+    raw.execute('PRAGMA user_version = 24');
+
+    final database = await openAndMigrate();
+
+    expect(_userVersion(raw), 32);
+    final profiles = {
+      for (final profile in await database.profilesDao.query().get())
+        profile.id: profile.exitTargets,
+    };
+    expect(profiles, {
+      1: {'MATCH': 'HK'},
+      2: isEmpty,
+      3: isEmpty,
+    });
+    expect(
+      raw
+          .select('SELECT match_target FROM profiles')
+          .map((row) => row['match_target']),
+      [' HK ', null, 'X'],
+    );
+    final rules = {
+      for (final row in raw.select('SELECT id, custom_exit FROM rules'))
+        row['id']: row['custom_exit'],
+    };
+    expect(rules, {10: 1, 11: 0, 12: 0});
+
+    final real = await makeRealProfileTask(
+      MakeRealProfileState(
+        profilesPath: '/profiles',
+        profileId: 1,
+        rawConfig: {
+          'proxies': [
+            {'name': 'HK', 'type': 'ss'},
+          ],
+          'rules': ['MATCH,DIRECT'],
+        },
+        realPatchConfig: const PatchClashConfig(),
+        appendSystemDns: false,
+        proxyGroups: const [],
+        rules: const [],
+        addedRules: await database.rulesDao.queryAddedRules(1).get(),
+        defaultUA: 'FlClash-Test',
+        exitTargets: profiles[1]!,
+      ),
+    );
+    expect((loadYaml(real.yaml) as YamlMap)['rules'], [
+      'DOMAIN,b.example,DIRECT',
+      'DOMAIN,a.example,HK',
+      'MATCH,DIRECT',
+    ]);
   });
 
   test(

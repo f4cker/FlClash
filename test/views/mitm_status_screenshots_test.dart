@@ -301,7 +301,10 @@ void main() {
           7,
           response: true,
           contentType: contentType,
-        ).overrideWith((ref) async => readMitmBody((body, contentType))),
+        ).overrideWith(
+          (ref) async =>
+              readMitmBody((body, contentType, grpcOverLimitNote: null)),
+        ),
       ],
     );
     addTearDown(detail.dispose);

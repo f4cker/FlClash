@@ -23,11 +23,16 @@ String mitmSkipReasonText(AppLocalizations l, MitmModuleSkip skip) =>
       MitmModuleSkipReason.event => l.mitmSkipEvent,
       MitmModuleSkipReason.disabled => l.mitmSkipDisabled,
       MitmModuleSkipReason.rule => l.mitmSkipRule,
-      MitmModuleSkipReason.policy => l.mitmSkipPolicy,
-      MitmModuleSkipReason.jq => l.mitmSkipJq,
-      MitmModuleSkipReason.jsonBody => l.mitmSkipJsonBody,
-      MitmModuleSkipReason.rawHeader => l.mitmSkipRawHeader,
+      MitmModuleSkipReason.httpRulePolicy => l.mitmSkipHttpRulePolicy,
+      MitmModuleSkipReason.finalRule => l.mitmSkipFinalRule,
+      MitmModuleSkipReason.deviceRule => l.mitmSkipDeviceRule,
+      MitmModuleSkipReason.requirement => l.mitmSkipRequirement,
+      MitmModuleSkipReason.managedCa => l.mitmSkipManagedCa,
+      MitmModuleSkipReason.proxies => l.mitmSkipProxies,
+      MitmModuleSkipReason.appOnly => l.mitmSkipAppOnly,
+      MitmModuleSkipReason.reflect => l.mitmSkipReflect,
       MitmModuleSkipReason.conditional => l.mitmSkipConditional,
+      MitmModuleSkipReason.skipVerifyAll => l.mitmSkipSkipVerifyAll,
       MitmModuleSkipReason.relativeData => l.mitmSkipRelativeData,
       MitmModuleSkipReason.notDownloaded => l.mitmSkipNotDownloaded,
       MitmModuleSkipReason.unreadable => l.mitmSkipUnreadable,
@@ -340,22 +345,26 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
             MitmScriptCapabilities(body: l.mitmScriptConfirmBody),
           ],
         ),
-      if (content.skipped.isNotEmpty)
+      if (flashMitmSkipped(content).isNotEmpty)
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 4,
           children: [
-            _title(context, l.mitmModuleUnsupported, content.skipped.length),
+            _title(
+              context,
+              l.mitmModuleUnsupported,
+              flashMitmSkipped(content).length,
+            ),
             _withMore(
               Text(
-                l.mitmModuleUnsupportedCount(content.skipped.length),
+                l.mitmModuleUnsupportedCount(flashMitmSkipped(content).length),
                 style: secondary,
               ),
               _skipped,
               () => setState(() => _skipped = true),
             ),
             if (_skipped)
-              for (final skip in content.skipped)
+              for (final skip in flashMitmSkipped(content))
                 Text(
                   '${skip.line}\n  ${mitmSkipReasonText(l, skip)}',
                   maxLines: 3,

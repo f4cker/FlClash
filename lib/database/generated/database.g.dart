@@ -447,6 +447,8 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
   /// Older builds pick a script or added rules by it; this build runs both.
   final String extendType;
   final int? scriptId;
+
+  /// Read only by the v25 upgrade, which moves it into [exitTargets].
   final String? matchTarget;
   final Map<String, String>? exitTargets;
   final int autoUpdateDurationMillis;

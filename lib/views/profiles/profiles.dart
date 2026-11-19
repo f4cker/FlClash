@@ -500,7 +500,7 @@ class ProfileItem extends ConsumerWidget {
 
   Future<void> _handlePreview(BuildContext context) async {
     unawaited(
-      BaseNavigator.push<String>(context, PreviewProfileView(profile: profile)),
+      pushNestedPage<void>(context, PreviewProfileView(profile: profile)),
     );
   }
 

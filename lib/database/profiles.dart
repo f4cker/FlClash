@@ -24,6 +24,7 @@ class Profiles extends Table {
 
   IntColumn get scriptId => integer().nullable()();
 
+  /// Read only by the v25 upgrade, which moves it into [exitTargets].
   TextColumn get matchTarget => text().nullable()();
 
   TextColumn get exitTargets =>

@@ -1009,7 +1009,9 @@
   "@profileExpiresIn": {
     "placeholders": {
       "date": {},
-      "days": {"type": "num"}
+      "days": {
+        "type": "num"
+      }
     }
   },
   "profileDaysLeft": "{days, plural, =1{1 day left} other{{days} days left}}",
@@ -1161,7 +1163,7 @@
   "mitmRunScript": "Run now",
   "mitmScriptNoOutput": "The script finished without output",
   "mitmScriptRiskTitle": "Run this module's scripts?",
-  "mitmScriptRisk": "Its scripts read and change the traffic of the hosts they match, cookies and tokens included, and can send requests of their own. Turn it on only if you trust where it comes from.",
+  "mitmScriptRisk": "Its scripts read and change the traffic of the hosts they match, cookies and tokens included, and can send requests of their own. Turn it on only if you trust where it comes from. Once on, its updates take effect without asking again.",
   "mitmModuleScriptsChanged": "{name} changed its scripts and was turned off",
   "skipServerCertVerify": "Skip server certificate verification",
   "blockQuic": "Block QUIC",
@@ -3508,5 +3510,67 @@
     }
   },
   "exitIpOpenHint": "Press to view exit IP details",
-  "semanticsSeparator": ", "
+  "semanticsSeparator": ", ",
+  "alwaysFindProcess": "Always find process",
+  "exitDefault": "Default",
+  "customExit": "Custom exit",
+  "inputExitName": "Enter the exit name",
+  "mitmAndroidRootDesc": "Without root, only apps that trust user certificates, mostly browsers, can be decrypted. With root, every app can.",
+  "httpRequestsReadFailed": "Couldn't read the requests",
+  "requestBodyReadFailed": "Couldn't read the request body",
+  "responseBodyReadFailed": "Couldn't read the response body",
+  "mitmGrpcOverLimit": "Inflates past {size} MB; shown compressed",
+  "mitmUntrustedStores": "Installed but not trusted in: {stores}",
+  "removeCertificate": "Remove certificate",
+  "removeCertificateSuccess": "Certificate removed",
+  "mitmSystemStoreRemoveFailed": "Removing the certificate from the system's trusted roots failed",
+  "mitmRemoveInSettings": "Remove in Settings",
+  "mitmRemoveUserCertificateTip": "Android doesn't let apps remove user certificates. Remove {name} in Settings under Security › Encryption & credentials › Trusted credentials › User.",
+  "mitmCannotRemove": "Can't remove",
+  "mitmRemoveSystemCertificateTip": "The FlClash MITM CA root module added the certificate to the system. Allow FlClash root access in your root manager and try again, or remove the module there and restart.",
+  "mitmClientRefusedCertificate": "The client refused the certificate. Install the CA, or exclude this host if the app pins its certificate.",
+  "requestBodyMock": "Request body mock",
+  "clientSourceAddress": "Client addresses",
+  "skipVerifyHostname": "Hosts without certificate checks",
+  "mitmRequestRulesDesc": "The module’s URL-REGEX and USER-AGENT rules became URL rewrites, judged request by request: on every plain HTTP request, and on HTTPS only for hosts in the MITM hostname list.",
+  "mitmModuleRequirementTip": "The module requires {requirement}, which this device does not meet; it may not work as intended.",
+  "mitmExitModules": "From modules: {modules}",
+  "mitmModuleRiskTitle": "Turn on this module?",
+  "mitmNetworkRisk": "When the config is generated, it changes the network settings below, ahead of what you set for the same ones in FlClash. Turning the module off or deleting it undoes this.",
+  "mitmSkipVerifyRisk": "Turning it on stops checking the certificates of these hosts' servers, so a server posing as one of them goes unnoticed: {hosts}",
+  "mitmClientSourceRisk": "It decrypts only for these clients: {addresses}. With TUN on, this device's apps reach FlClash from the TUN's address, so they may be left out.",
+  "mitmClientSourceTunTip": "With TUN on, this device's apps come from the TUN's address; a list that leaves it out leaves their traffic undecrypted.",
+  "mitmNetworkChanges": "Network settings",
+  "mitmChangeReplace": "Replaced with {values}",
+  "mitmChangeInsert": "Adds {values} first",
+  "mitmChangeAppend": "Adds {values}",
+  "mitmChangeOverridesYours": "Goes over your setting",
+  "mitmChangeReplacedBy": "Overridden by the module {module}",
+  "mitmSkipHttpRulePolicy": "URL-REGEX and USER-AGENT rules only take a REJECT policy",
+  "mitmSkipFinalRule": "Module rules go first, so a final rule would hide every rule after it",
+  "mitmSkipDeviceRule": "This rule needs device or network details FlClash cannot read",
+  "mitmSkipRequirement": "This line’s requirement is not met on this device",
+  "mitmSkipManagedCa": "FlClash manages the CA certificate; a module cannot change it",
+  "mitmSkipProxies": "A module cannot change proxies or proxy groups",
+  "mitmSkipAppOnly": "A feature of the app this was written for that FlClash does not have",
+  "mitmSkipReflect": "FlClash cannot send packets back to their sender",
+  "mitmSkipSkipVerifyAll": "Certificate checks are not turned off for every host",
+  "mitmScriptCron": "Scheduled",
+  "mitmScriptEvent": "Event",
+  "mitmScriptGeneric": "Generic",
+  "mitmExcluded": "Excluded",
+  "mitmModulesTurnedOff": "Modules turned off",
+  "mitmModuleTurnedOffDesc": "An update to {name} brought scripts or network changes you have not agreed to",
+  "mitmModulesTurnedOffDesc": "{count, plural, other{{count} modules got updates with scripts or network changes you have not agreed to}}",
+  "mitmModuleUnreadableRisk": "The module file could not be read, so what it changes is unknown. Turn it on only if you trust where it comes from.",
+  "coreStoppedWithReason": "The app lost its connection to the core: {reason}",
+  "mixedPortReset": "The mixed port cannot be {value}, so it was set back to {port}",
+  "@mixedPortReset": {
+    "placeholders": {
+      "value": {},
+      "port": {}
+    }
+  },
+  "vpnPermissionNotGranted": "VPN permission was not granted, so the VPN did not start. An always-on VPN set for another app also blocks it.",
+  "vpnServiceStartFailed": "The VPN service could not start."
 }

@@ -171,6 +171,10 @@ class TestSetupAction extends SetupAction {
   }
 
   @override
+  Future<bool> applyAutomatic({bool silence = false, bool force = false}) =>
+      applyProfile(silence: silence, force: force);
+
+  @override
   Future<bool> applyProfile({
     bool Function()? owns,
     bool silence = false,
@@ -248,7 +252,7 @@ void main() {
         tun: {'enable': false},
         mixedPort: 7890,
         allowLan: false,
-        findProcessMode: FindProcessMode.off,
+        findProcessMode: FindProcessMode.strict,
         mode: Mode.rule,
         logLevel: LogLevel.info,
         ipv6: false,
@@ -699,7 +703,7 @@ void main() {
         mixedPort: 0,
       );
 
-      expect(printed, ['[APP] banner: 系统代理没有可用的目标端口，请检查端口配置。']);
+      expect(printed, ['[APP] mixed-port 0 refused, kept 7890']);
     });
 
     test('an HTTP port left for the system proxy is no conflict', () async {
@@ -711,21 +715,22 @@ void main() {
         mixedPort: 0,
       );
 
-      expect(printed, isEmpty);
+      expect(printed, ['[APP] mixed-port 0 refused, kept 7890']);
     });
 
     test('no port is no conflict while the system proxy is off', () async {
       if (!system.isDesktop) return;
       await check(requested: {}, held: {}, mixedPort: 0);
 
-      expect(printed, isEmpty);
+      expect(printed, ['[APP] mixed-port 0 refused, kept 7890']);
     });
 
     test('the no-port warning stands when the Core cannot be asked', () async {
       if (!system.isDesktop) return;
       await check(requested: {}, systemProxy: true, mixedPort: 0);
 
-      expect(printed, contains('[APP] banner: 系统代理没有可用的目标端口，请检查端口配置。'));
+      expect(printed, contains('[APP] mixed-port 0 refused, kept 7890'));
+      expect(printed, isNot(contains('[APP] banner: 系统代理没有可用的目标端口，请检查端口配置。')));
     });
   });
 
@@ -1363,7 +1368,10 @@ void main() {
       );
     });
 
-    Future<UpdateParams> updateWith(PatchClashConfig patchConfig) async {
+    Future<UpdateParams?> updateWith(
+      PatchClashConfig patchConfig, {
+      bool rejected = false,
+    }) async {
       final core = _MockCoreHandlerInterface();
       when(() => core.updateConfig(any())).thenAnswer((_) async {});
       final scopedAction = TestSetupAction();
@@ -1380,6 +1388,10 @@ void main() {
 
       await scopedAction.updateConfig();
 
+      if (rejected) {
+        verifyNever(() => core.updateConfig(any()));
+        return null;
+      }
       return verify(() => core.updateConfig(captureAny())).captured.single
           as UpdateParams;
     }
@@ -1392,7 +1404,7 @@ void main() {
         ),
       );
 
-      expect(params.externalController, ExternalControllerStatus.open);
+      expect(params!.externalController, ExternalControllerStatus.open);
       expect(params.secret, 'abc');
     });
 
@@ -1401,43 +1413,47 @@ void main() {
         const PatchClashConfig(
           externalController: ExternalControllerStatus.open,
         ),
+        rejected: true,
       );
 
-      expect(params.externalController, ExternalControllerStatus.close);
+      expect(params, isNull);
     });
 
-    test('a page-owned find-process mode runs once the Core takes it, and a '
-        'followed one keeps the applied mode', () async {
-      final core = _MockCoreHandlerInterface();
-      final pushed = Completer<void>();
-      when(() => core.updateConfig(any())).thenAnswer((_) => pushed.future);
-      final scopedAction = TestSetupAction();
-      final scoped = ProviderContainer(
-        overrides: [
-          profilesProvider.overrideWith(TestProfiles.new),
-          setupActionProvider.overrideWith(() => scopedAction),
-          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
-        ],
-      );
-      addTearDown(scoped.dispose);
-      scoped.read(setupActionProvider.notifier);
-      final running = scoped.read(runningFindProcessModeProvider.notifier);
-      running.value = 'strict';
-      scoped.read(patchClashConfigProvider.notifier).value =
-          const PatchClashConfig(findProcessMode: FindProcessMode.always);
+    test(
+      'the page mode applies after acknowledgement and legacy follow is ignored',
+      () async {
+        final core = _MockCoreHandlerInterface();
+        final pushed = Completer<void>();
+        when(() => core.updateConfig(any())).thenAnswer((_) => pushed.future);
+        final scopedAction = TestSetupAction();
+        final scoped = ProviderContainer(
+          overrides: [
+            profilesProvider.overrideWith(TestProfiles.new),
+            setupActionProvider.overrideWith(() => scopedAction),
+            coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          ],
+        );
+        addTearDown(scoped.dispose);
+        scoped.read(setupActionProvider.notifier);
+        scoped.listen(patchClashConfigProvider, (_, _) {});
+        final running = scoped.read(runningFindProcessModeProvider.notifier);
+        running.value = 'strict';
+        scoped.read(patchClashConfigProvider.notifier).value =
+            const PatchClashConfig(findProcessMode: FindProcessMode.always);
 
-      final update = scopedAction.updateConfig();
-      await pumpEventQueue();
-      expect(running.value, 'strict');
-      pushed.complete();
-      await update;
-      expect(running.value, 'always');
+        final update = scopedAction.updateConfig();
+        await pumpEventQueue();
+        expect(running.value, 'strict');
+        pushed.complete();
+        await update;
+        expect(running.value, 'always');
 
-      scoped.read(patchClashConfigProvider.notifier).value =
-          const PatchClashConfig(followKeys: {PageConfigKey.findProcessMode});
-      await scopedAction.updateConfig();
-      expect(running.value, 'always');
-    });
+        scoped.read(patchClashConfigProvider.notifier).value =
+            const PatchClashConfig(followKeys: {PageConfigKey.findProcessMode});
+        await scopedAction.updateConfig();
+        expect(running.value, 'strict');
+      },
+    );
 
     test('a failed live update leaves the running mode alone', () async {
       final core = _MockCoreHandlerInterface();
@@ -1974,8 +1990,13 @@ void main() {
       final profile = Profile.normal(
         label: 'p',
       ).copyWith(id: 1, currentGroupName: 'Manual');
+      final core = _MockCoreHandlerInterface();
+      when(
+        () => core.getProxies(),
+      ).thenAnswer((_) async => const ProxiesData(proxies: {}, all: []));
       final scoped = ProviderContainer(
         overrides: [
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
           profilesProvider.overrideWith(() => TestProfiles([profile])),
           currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
           setupActionProvider.overrideWith(TestSetupAction.new),
@@ -2264,7 +2285,7 @@ void main() {
     );
 
     test(
-      'a config write failure reports setup as failed without calling core',
+      'a legacy config path does not block the private candidate contract',
       () async {
         final configPath = await appPath.configFilePath;
         final configFile = File(configPath);
@@ -2291,8 +2312,9 @@ void main() {
               .read(setupActionProvider.notifier)
               .applyProfile(force: true);
 
-          expect(succeeded, isFalse);
-          verifyNever(() => core.setupConfig(any()));
+          expect(succeeded, isTrue);
+          verify(() => core.setupConfig(any())).called(1);
+          expect(await configAsDirectory.exists(), isTrue);
         } finally {
           await configAsDirectory.delete(recursive: true);
         }
@@ -2396,16 +2418,16 @@ void main() {
           patchConfig: const PatchClashConfig(),
         );
 
-        expect(result, (true, 'off'));
+        expect(result, (true, 'strict'));
       });
 
-      test('a followed mode is the profile file one', () async {
+      test('legacy follow does not override the page-owned mode', () async {
         final result = await apply(
           file: {'find-process-mode': 'always'},
           patchConfig: followed,
         );
 
-        expect(result, (true, 'always'));
+        expect(result, (true, 'strict'));
       });
 
       test('a followed mode the file leaves out is mihomo default', () async {
@@ -2414,13 +2436,13 @@ void main() {
         expect(result, (true, 'strict'));
       });
 
-      test('a value mihomo would not run stays unknown', () async {
+      test('the page-owned mode replaces an invalid profile mode', () async {
         final result = await apply(
           file: {'find-process-mode': 'sometimes'},
           patchConfig: followed,
         );
 
-        expect(result, (true, null));
+        expect(result, (true, 'strict'));
       });
 
       test('a push the Core fails sets nothing', () async {
@@ -2854,7 +2876,7 @@ void main() {
       );
       digest = 'third';
       expect(await setupAction.applyProfile(), isFalse);
-      expect(globalState.lastConfigCounts, (groups: 0, proxies: 0, rules: 0));
+      expect(globalState.lastConfigCounts, isNull);
     });
 
     test('the preview shows the config the Core merges', () async {

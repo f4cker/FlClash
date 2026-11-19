@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
@@ -16,11 +17,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'rules.dart';
 
 class AdvancedConfigView extends ConsumerWidget {
-  const AdvancedConfigView({super.key});
+  const AdvancedConfigView({super.key, this.isAndroid});
+
+  final bool? isAndroid;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
+    final isAndroid = this.isAndroid ?? system.isAndroid;
     final items = [
       ListItem.open(
         title: Text(appLocalizations.network),
@@ -50,7 +54,7 @@ class AdvancedConfigView extends ConsumerWidget {
         ListItem.open(
           title: Text(appLocalizations.mitm),
           leading: const GlyphIcon(AppGlyphs.lockOpen),
-          widget: MitmView(isAndroid: system.isAndroid),
+          widget: MitmView(isAndroid: isAndroid),
         ),
     ];
     final customItems = [
@@ -75,8 +79,9 @@ class AdvancedConfigView extends ConsumerWidget {
         widget: const IconSetsView(),
       ),
     ];
-    return BaseScaffold(
+    return Scaffold(
       title: appLocalizations.advancedConfig,
+      isLoading: ref.watch(loadingProvider(LoadingTag.mitm)),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
           top: context.sectionsTopPadding,

@@ -900,6 +900,10 @@ extension MitmModuleExt on MitmModule {
   bool get unloadable => failure == MitmUpdateFailure.load;
 
   String get updatingKey => 'mitm_module_$id';
+
+  bool get asksBeforeTurningOn => scripts > 0 || asksConsent;
+
+  bool get awaitsConsent => !enabled && accepted == null && asksBeforeTurningOn;
 }
 
 @freezed

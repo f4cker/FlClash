@@ -222,6 +222,11 @@ abstract class MakeRealProfileState with _$MakeRealProfileState {
     /// one whose name the profile's config already takes is renamed.
     @Default([]) List<AddedRuleSet> addedRuleSets,
     String? matchTarget,
+    @Default({}) Map<String, String> exitTargets,
+
+    /// The profile's own outbounds when [rawConfig] does not carry them.
+    Set<String>? outboundNames,
+    String? defaultExitTarget,
     @Default(false) bool safeMode,
 
     /// One per rule of [rawConfig]; empty reads them all as the profile's.
@@ -282,6 +287,7 @@ abstract class SetupState with _$SetupState {
 
     /// The profile's added rule sets, for every kind of profile.
     @Default([]) List<AddedRuleSet> addedRuleSets,
+    @Default({}) Map<String, String> exitTargets,
     @Default([]) List<MitmModuleSource> mitmModules,
   }) = _SetupState;
 }

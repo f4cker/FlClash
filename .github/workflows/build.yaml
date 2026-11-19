@@ -60,10 +60,13 @@ jobs:
         run: flutter pub get
 
       - name: Check format
-        run: dart format --output=none --set-exit-if-changed lib test tool plugins setup.dart
+        run: dart format --output=none --set-exit-if-changed lib test tool plugins
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos
+
+      - name: Analyze with the rsFeature checks stripped
+        run: bash tool/strip_check.sh
 
       - name: Skip the Go core build hook
         run: |
@@ -491,7 +494,8 @@ jobs:
           ANDROID_NDK_HOME: ${{ steps.build-ndk.outputs.ndk-path }}
           # The setup hook builds the Core for the host slice only, so an x86_64 slice in the arm64 app cannot run.
           FLUTTER_MACOS_ARM64_ONLY: ${{ matrix.platform == 'macos' && matrix.arch == 'arm64' }}
-        run: dart setup.dart ${{ matrix.platform }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} -v
+        # `dart run` first runs every build hook for this runner, Linux GTK and the Go core included; the packager builds them for the target itself.
+        run: dart tool/package.dart ${{ matrix.platform }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} -v
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -529,9 +533,8 @@ jobs:
       - name: Download
         uses: actions/download-artifact@v4
         with:
-          path: ./dist/
+          path: ./artifacts/
           pattern: artifact-*
-          merge-multiple: true
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -546,6 +549,9 @@ jobs:
       - name: Skip native build hooks
         run: |
           yq -i '.hooks.user_defines.setup.build_assets = false | .hooks.user_defines.rust_api.build_assets = false' pubspec.yaml
+
+      - name: Merge the build manifests
+        run: dart run tool/package.dart merge artifacts/* --out dist
 
       - name: Generate release notes
         shell: bash
@@ -574,14 +580,27 @@ jobs:
 
       - name: Patch release.md
         run: |
-          version=$(echo "${{ github.ref_name }}" | sed 's/^v//')
-          sed "s|VERSION|$version|g" ./.github/release_template.md >> release.md
+          line=$(jq -r '.artifacts[0].line' dist/manifest.json)
+          version=$(jq -r '.artifacts[0].version' dist/manifest.json)
+          sed -e "s|TAG|${{ github.ref_name }}|g" -e "s|LINE|$line|g" -e "s|VERSION|$version|g" \
+            ./.github/release_template.md >> release.md
 
-      - name: Generate sha256
+      - name: Copy the Windows installers and APKs under their old names
         if: ${{ env.IS_STABLE == 'true' }}
         run: |
           cd ./dist
-          sha256sum ./* > SHA256SUMS
+          jq -r '.artifacts[]
+            | select(.line == "dev")
+            | select((.os == "windows" and .form == "setup") or .os == "android")
+            | [.name, "FlClash-\(.version)-" + (
+                if .os == "windows" then "windows-\(.arch)-setup.exe"
+                else "android-" + {arm64: "arm64-v8a", armv7: "armeabi-v7a", amd64: "x86_64"}[.arch] + ".apk"
+                end)]
+            | @tsv' manifest.json |
+            while IFS=$'\t' read -r name legacy; do
+              cp "$name" "$legacy"
+              sha256sum "./$legacy" >> SHA256SUMS
+            done
 
       - name: Release
         if: ${{ env.IS_STABLE == 'true' }}
@@ -593,12 +612,17 @@ jobs:
       - name: Create Homebrew Cask Source Dir
         if: ${{ env.IS_STABLE == 'true' }}
         run: |
-          version=$(echo "${{ github.ref_name }}" | sed 's/^v//')
-          arm_sha=$(sha256sum "./dist/FlClash-${version}-macos-arm64.dmg" | awk '{print $1}')
-          amd_sha=$(sha256sum "./dist/FlClash-${version}-macos-amd64.dmg" | awk '{print $1}')
+          dmg() {
+            jq -er --arg arch "$1" '.artifacts[] | select(.os == "macos" and .arch == $arch)' dist/manifest.json
+          }
+          line=$(dmg arm64 | jq -r .line)
+          version=$(dmg arm64 | jq -r .version)
+          arm_sha=$(dmg arm64 | jq -r .sha256)
+          amd_sha=$(dmg amd64 | jq -r .sha256)
 
           mkdir -p ./brew/Casks
           sed \
+            -e "s|LINE|$line|g" \
             -e "s|VERSION|$version|g" \
             -e "s|ARM_SHA256|$arm_sha|g" \
             -e "s|AMD_SHA256|$amd_sha|g" \
@@ -623,8 +647,8 @@ jobs:
         if: ${{ env.IS_STABLE == 'true' }}
         run: |
           mkdir -p ./tmp
-          cp ./dist/*android-arm64-v8a* ./tmp/ || true
-          echo "Files copied successfully"
+          apk=$(jq -er '.artifacts[] | select(.os == "android" and .arch == "arm64") | .name' dist/manifest.json)
+          cp "./dist/$apk" ./tmp/
 
       - name: Push to fdroid repo
         if: ${{ env.IS_STABLE == 'true' }}
