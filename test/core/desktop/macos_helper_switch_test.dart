@@ -3,6 +3,8 @@
 // bounded "switching" wait instead of the "taking longer" card; nothing ever
 // re-registers the daemon for it.
 
+import 'dart:async';
+
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/core/desktop/model.dart';
@@ -120,20 +122,176 @@ void main() {
   final l = lookupAppLocalizations(const Locale('zh'));
   final en = lookupAppLocalizations(const Locale('en'));
 
-  test('the client reads `retiring` only with staleHelper', () async {
+  test('the client returns retiring with its own state only', () async {
     final bridge = _Bridge()..fixed = {'code': 'staleHelper', 'retiring': true};
     final client = MacHelperClient(native: bridge, safeMode: () => false);
-    expect(await client.status(), MacHelperState.staleHelper);
-    expect(client.lastRetiring, isTrue);
-    bridge.fixed = {'code': 'staleHelper', 'retiring': false};
-    await client.status();
-    expect(client.lastRetiring, isFalse);
-    bridge.fixed = {'code': 'staleHelper'};
-    await client.status();
-    expect(client.lastRetiring, isFalse);
-    bridge.fixed = {'code': 'timeout', 'retiring': true};
-    await client.status();
-    expect(client.lastRetiring, isFalse);
+    final stale = await client.statusResult();
+    expect(stale.state, MacHelperState.staleHelper);
+    expect(stale.retiring, isTrue);
+    for (final answer in [
+      {'code': 'staleHelper', 'retiring': false},
+      {'code': 'staleHelper'},
+      {'code': 'timeout', 'retiring': true},
+    ]) {
+      bridge.fixed = answer;
+      expect((await client.statusResult()).retiring, isFalse);
+      expect((await client.repairResult()).retiring, isFalse);
+    }
+    expect(stale.retiring, isTrue);
+    expect(stale.state, MacHelperState.staleHelper);
+  });
+
+  test('channel errors and safe mode never report a retirement', () async {
+    final client = MacHelperClient(
+      native: _Script((_) => throw Exception('channel')),
+      safeMode: () => false,
+    );
+    final result = await client.statusResult();
+    expect(result.state, MacHelperState.unavailable);
+    expect(result.retiring, isFalse);
+    final disabled = MacHelperClient(
+      native: _Script((_) => throw StateError('must not call native')),
+      safeMode: () => true,
+    );
+    expect((await disabled.statusResult()).retiring, isFalse);
+    expect((await disabled.statusResult()).state, MacHelperState.disabled);
+  });
+
+  for (final retiring in [false, true]) {
+    testWidgets(
+      'concurrent repair cannot overwrite status retiring=$retiring',
+      (tester) async {
+        final pending = Completer<bool>();
+        final client = MacHelperClient(
+          native: _Script(
+            (method) => {
+              'code': 'staleHelper',
+              'retiring': method == 'status' ? retiring : !retiring,
+            },
+          ),
+          safeMode: () => false,
+        );
+        final flow = MacHelperMaintenance(
+          client,
+          stop: () async => _applied,
+          settleRepair: () async => false,
+          repairPending: () => pending.future,
+        );
+        addTearDown(flow.dispose);
+        final check = flow.check();
+        await tester.pump();
+        expect(flow.busy, isTrue);
+        expect((await client.repairResult()).retiring, !retiring);
+        pending.complete(false);
+        await tester.pump();
+        expect(await check, MacHelperState.staleHelper);
+        expect(flow.switchingHelper, retiring);
+      },
+    );
+  }
+
+  testWidgets('switch to repairing gets a fresh bounded startup window', (
+    tester,
+  ) async {
+    final bridge = _Bridge()..fixed = {'code': 'staleHelper', 'retiring': true};
+    final flow = MacHelperMaintenance(
+      MacHelperClient(native: bridge, safeMode: () => false),
+      stop: () async => _applied,
+    );
+    addTearDown(flow.dispose);
+    await flow.check();
+    await tester.pump(const Duration(seconds: 11));
+    expect(flow.switchingHelper, isTrue);
+    expect(flow.startSlow, isFalse);
+    bridge.fixed = {'code': 'repairInProgress'};
+    await flow.check();
+    expect(flow.state, MacHelperState.repairing);
+    expect(flow.switchingHelper, isFalse);
+    await tester.pump(const Duration(seconds: 9));
+    expect(flow.startSlow, isFalse);
+    await tester.pump(const Duration(seconds: 1));
+    expect(flow.startSlow, isTrue);
+    final calls = bridge.calls.length;
+    await tester.pump(const Duration(seconds: 30));
+    expect(bridge.calls.length, calls);
+    await flow.check();
+    expect(flow.startSlow, isTrue);
+  });
+
+  testWidgets('switch window also ends while the new helper is starting', (
+    tester,
+  ) async {
+    final bridge = _Bridge()..fixed = {'code': 'staleHelper', 'retiring': true};
+    final flow = _flow(
+      bridge,
+      switchWindow: const Duration(seconds: 45),
+      switchPoll: const Duration(hours: 1),
+      startTimeout: const Duration(seconds: 10),
+    );
+    addTearDown(flow.dispose);
+    await flow.check();
+    await tester.pump(const Duration(seconds: 11));
+    bridge.fixed = {'code': 'timeout'};
+    await flow.check();
+    expect(flow.state, MacHelperState.starting);
+    expect(flow.switchingHelper, isTrue);
+    await tester.pump(const Duration(seconds: 34));
+    expect(flow.switchingHelper, isFalse);
+    expect(flow.startSlow, isTrue);
+    expect(macHelperCardView(l, flow).kind, MacHelperCardKind.startSlow);
+    final calls = bridge.calls.length;
+    await tester.pump(const Duration(minutes: 1));
+    expect(bridge.calls.length, calls);
+  });
+
+  testWidgets('a late retiring answer cannot restart an expired switch', (
+    tester,
+  ) async {
+    final late = Completer<Map<Object?, Object?>>();
+    var calls = 0;
+    final flow = MacHelperMaintenance(
+      MacHelperClient(
+        native: _Script(
+          (_) => ++calls == 1
+              ? {'code': 'staleHelper', 'retiring': true}
+              : late.future,
+        ),
+        safeMode: () => false,
+      ),
+      stop: () async => _applied,
+      switchPoll: const Duration(hours: 1),
+    );
+    addTearDown(flow.dispose);
+    await flow.check();
+    final check = flow.check();
+    await tester.pump(const Duration(seconds: 45));
+    expect(flow.switchingHelper, isFalse);
+    expect(flow.busy, isTrue);
+    late.complete({'code': 'staleHelper', 'retiring': true});
+    await tester.pump();
+    await check;
+    expect(flow.switchingHelper, isFalse);
+    expect(flow.startSlow, isTrue);
+  });
+
+  testWidgets('an enabled reply with an unsettled repair never starts Core', (
+    tester,
+  ) async {
+    final bridge = _Bridge();
+    final flow = MacHelperMaintenance(
+      MacHelperClient(native: bridge, safeMode: () => false),
+      stop: () async => _applied,
+      settleRepair: () async => true,
+    );
+    addTearDown(flow.dispose);
+    var starts = 0;
+    flow.runOnceReady(() async => starts++);
+    await flow.check();
+    expect(flow.switchingHelper, isTrue);
+    expect(await flow.check(), MacHelperState.staleCore);
+    expect(flow.switchingHelper, isFalse);
+    expect(flow.repairPending, isTrue);
+    expect(starts, 0);
   });
 
   test('simulation: stale helper -> one exit -> next status ready -> Core '
@@ -369,7 +527,7 @@ void main() {
 }
 
 final class _Script implements MacHelperNativeApi {
-  final Map<Object?, Object?> Function(String) answer;
+  final FutureOr<Map<Object?, Object?>> Function(String) answer;
   _Script(this.answer);
 
   @override

@@ -165,7 +165,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
 
   Future<MacHelperState> _singleFlight(
     MacHelperProgress progress,
-    Future<MacHelperState> Function() action,
+    Future<MacHelperStatus> Function() action,
   ) {
     final active = _operation;
     if (active != null) return active;
@@ -178,7 +178,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
         _setState(await action());
       } catch (error) {
         _repairDetail = _describe(error);
-        _setState(MacHelperState.unavailable);
+        _setState(const MacHelperStatus(MacHelperState.unavailable));
       }
       final initialState = _state!;
       if (_resumeCheckPending && !_disposed) {
@@ -188,7 +188,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
           _setState(await _resumeStatus());
         } catch (error) {
           _repairDetail = _describe(error);
-          _setState(MacHelperState.unavailable);
+          _setState(const MacHelperStatus(MacHelperState.unavailable));
         } finally {
           _resumeChecking = false;
         }
@@ -224,7 +224,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
   /// Raw text of an error for "View details" only.
   static String _describe(Object error) => error.toString();
 
-  void _setState(MacHelperState next) {
+  void _setState(MacHelperStatus answer) {
+    var next = answer.state;
     if (next == MacHelperState.serviceRepairFailed) {
       _serviceRepairFailed = true;
     } else if (next == MacHelperState.serviceNotFound && _serviceRepairFailed) {
@@ -235,7 +236,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
     _state = next;
     if (!needsApproval) _enableOnResume = false;
     _scheduleApprovalPoll();
-    _trackSwitch(next);
+    _trackSwitch(next, retiring: answer.retiring);
     final waiting =
         next == MacHelperState.starting ||
         next == MacHelperState.staleHelper ||
@@ -248,15 +249,19 @@ final class MacHelperMaintenance extends ChangeNotifier {
       _startSlow = false;
       return;
     }
-    _startTimer ??= Timer(startTimeout, () {
-      // A switch ends by itself (ready, failed, or after its window).
-      if (_switching) return;
-      _startSlow = true;
-      _pollTimer?.cancel();
-      _pollTimer = null;
-      if (_state == MacHelperState.staleHelper) _scheduleStalePoll();
-      _notify();
-    });
+    if (_switching) {
+      _startTimer?.cancel();
+      _startTimer = null;
+    } else if (!_startSlow) {
+      _startTimer ??= Timer(startTimeout, () {
+        _startTimer = null;
+        _startSlow = true;
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        if (_state == MacHelperState.staleHelper) _scheduleStalePoll();
+        _notify();
+      });
+    }
     _pollTimer?.cancel();
     if (_switching) {
       _pollTimer = Timer(switchPoll, () {
@@ -280,8 +285,8 @@ final class MacHelperMaintenance extends ChangeNotifier {
   /// any other answer: ready, a real problem (shown as is), or `staleHelper`
   /// without a new exit request (the tries are used up), which reads as
   /// "taking longer".
-  void _trackSwitch(MacHelperState next) {
-    if (next == MacHelperState.staleHelper && client.lastRetiring) {
+  void _trackSwitch(MacHelperState next, {required bool retiring}) {
+    if (next == MacHelperState.staleHelper && retiring) {
       if (!_switching && !_switchSpent) {
         _switching = true;
         _switchTimer = Timer(switchWindow, _switchTimedOut);
@@ -358,12 +363,12 @@ final class MacHelperMaintenance extends ChangeNotifier {
     });
   }
 
-  Future<MacHelperState> _status() async {
-    var next = await client.status();
-    if (next == MacHelperState.registrationStale) {
-      next = await _recoverWithinBudget(automatic: true);
-    } else if (next == MacHelperState.serviceNotFound) {
-      next = await _autoRegister();
+  Future<MacHelperStatus> _status() async {
+    var next = await client.statusResult();
+    if (next.state == MacHelperState.registrationStale) {
+      next = MacHelperStatus(await _recoverWithinBudget(automatic: true));
+    } else if (next.state == MacHelperState.serviceNotFound) {
+      next = MacHelperStatus(await _autoRegister());
     }
     return _settle(next);
   }
@@ -439,38 +444,40 @@ final class MacHelperMaintenance extends ChangeNotifier {
   /// [_noteRegisterAnswer] and the daemon still reads "not registered", one
   /// `enable` follows (at most [maxResumeEnables] per launch). Its own answer
   /// never arms another one, so this cannot repeat by itself.
-  Future<MacHelperState> _resumeStatus() async {
+  Future<MacHelperStatus> _resumeStatus() async {
     if (!_enableOnResume) return _status();
     _enableOnResume = false;
-    var next = await client.status();
-    if (next == MacHelperState.notRegistered &&
+    var next = await client.statusResult();
+    if (next.state == MacHelperState.notRegistered &&
         _resumeEnables < maxResumeEnables) {
       _resumeEnables++;
-      next = await client.enable();
-    } else if (next == MacHelperState.registrationStale) {
-      next = await _recoverWithinBudget(automatic: true);
+      next = MacHelperStatus(await client.enable());
+    } else if (next.state == MacHelperState.registrationStale) {
+      next = MacHelperStatus(await _recoverWithinBudget(automatic: true));
     }
     return _settle(next);
   }
 
   /// A pending recovery is settled only when the helper is ready: it stops
   /// every old Core it finds by signature and confirms they exited.
-  Future<MacHelperState> _settle(MacHelperState next) async {
+  Future<MacHelperStatus> _settle(MacHelperStatus next) async {
     final settle = _settleRepair;
     if (settle != null) {
       try {
-        _repairPending = next == MacHelperState.enabled
+        _repairPending = next.state == MacHelperState.enabled
             ? await settle()
             : await (_repairIsPending?.call() ?? Future.value(false));
       } catch (error) {
         _repairPending = true;
         _repairDetail = _describe(error);
       }
-      if (next == MacHelperState.enabled && _repairPending) {
-        return MacHelperState.staleCore;
+      if (next.state == MacHelperState.enabled && _repairPending) {
+        return const MacHelperStatus(MacHelperState.staleCore);
       }
     }
-    return _stopUnknown ? MacHelperState.exitUnconfirmed : next;
+    return _stopUnknown
+        ? const MacHelperStatus(MacHelperState.exitUnconfirmed)
+        : next;
   }
 
   Future<MacHelperState> check() =>
@@ -494,9 +501,9 @@ final class MacHelperMaintenance extends ChangeNotifier {
 
   /// Native `repair`: the status, with one more exit request for a stale
   /// helper. Refused while a Core session runs: then only the status.
-  Future<MacHelperState> _retireStale() async {
-    var next = await client.repair();
-    if (client.lastCode == 'sessionBusy') next = await client.status();
+  Future<MacHelperStatus> _retireStale() async {
+    var next = await client.repairResult();
+    if (next.code == 'sessionBusy') next = await client.statusResult();
     return _settle(next);
   }
 
@@ -509,13 +516,13 @@ final class MacHelperMaintenance extends ChangeNotifier {
   Future<MacHelperState> retryRecovery() {
     return _singleFlight(MacHelperProgress.updating, () async {
       _repairDetail = null;
-      var next = await client.status();
-      if (next == MacHelperState.registrationStale ||
-          next == MacHelperState.notReady ||
-          next == MacHelperState.starting ||
-          next == MacHelperState.serviceNotFound) {
-        next = await _recoverWithinBudget(automatic: false);
-      } else if (next == MacHelperState.staleHelper) {
+      var next = await client.statusResult();
+      if (next.state == MacHelperState.registrationStale ||
+          next.state == MacHelperState.notReady ||
+          next.state == MacHelperState.starting ||
+          next.state == MacHelperState.serviceNotFound) {
+        next = MacHelperStatus(await _recoverWithinBudget(automatic: false));
+      } else if (next.state == MacHelperState.staleHelper) {
         // The previous build's helper: ask it to exit, never re-register
         // (that would turn the approval in System Settings off).
         _switchSpent = false;
@@ -530,7 +537,9 @@ final class MacHelperMaintenance extends ChangeNotifier {
   Future<MacHelperState> migrate({required bool confirmed}) {
     if (!confirmed) throw const MacHelperException('consentRequired');
     return _singleFlight(MacHelperProgress.updating, () async {
-      if (_stopUnknown) return MacHelperState.exitUnconfirmed;
+      if (_stopUnknown) {
+        return const MacHelperStatus(MacHelperState.exitUnconfirmed);
+      }
       return client.maintain(() async {
         try {
           final stopped = await _stop();
@@ -541,10 +550,12 @@ final class MacHelperMaintenance extends ChangeNotifier {
         } catch (_) {
           _stopUnknown = true;
         }
-        if (_stopUnknown) return MacHelperState.exitUnconfirmed;
+        if (_stopUnknown) {
+          return const MacHelperStatus(MacHelperState.exitUnconfirmed);
+        }
         final next = await client.migrate(confirmed: true);
         _noteRegisterAnswer(next);
-        return next;
+        return MacHelperStatus(next);
       });
     });
   }
@@ -563,7 +574,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
         } catch (_) {
           // The native repair still runs; the daemon answers for the Core.
         }
-        return client.repair();
+        return client.repairResult();
       });
       return _settle(next);
     });
@@ -574,7 +585,9 @@ final class MacHelperMaintenance extends ChangeNotifier {
   Future<MacHelperState> repairRecord() {
     return _singleFlight(MacHelperProgress.repairingRecord, () async {
       _repairDetail = null;
-      return _settle(await client.repairLauncherRecord(confirmed: true));
+      return _settle(
+        MacHelperStatus(await client.repairLauncherRecord(confirmed: true)),
+      );
     });
   }
 
@@ -598,7 +611,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
           MacHelperState.requiresApproval,
           MacHelperState.disabledByUser,
         }.contains(next)) {
-          return next;
+          return MacHelperStatus(next);
         }
       }
       _awaitingSettings = true;
@@ -608,7 +621,7 @@ final class MacHelperMaintenance extends ChangeNotifier {
       } on Exception {
         // The written steps remain usable when Settings cannot be opened.
       }
-      return next;
+      return MacHelperStatus(next);
     });
   }
 
