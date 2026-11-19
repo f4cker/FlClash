@@ -423,7 +423,10 @@ class UpdateManifestToolTests(unittest.TestCase):
             run('codesign', '--force', '-s', '-', '-i', 'com.layoute.flash', scratch / 'Flash.app')
             result = subprocess.run([sys.executable, ROOT / 'tool/macos/make_update_manifest.py', 'sign',
                                      '--key', scratch / 'key' / tool.PRIVATE_NAME, '--app', scratch / 'Flash.app',
-                                     '--out', scratch / 'out'], capture_output=True, text=True)
+                                     '--out', scratch / 'out', '--tag', 'v1.0.0', '--channel', 'stable',
+                                     '--release-version', '1.0.0', '--source-commit', 'a' * 40,
+                                     '--source-branch', 'release/1.0', '--release-ledger', scratch / 'ledger.json'],
+                                    capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('not signed with the pinned certificate', result.stderr)
             self.assertFalse((scratch / 'out').exists())

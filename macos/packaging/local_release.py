@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local Mac release of one Flash.app with the bundled SMAppService daemon, signed inside-out."""
+"""Legacy DMG-only release route; deliberately unavailable for channel-era builds."""
 import argparse
 from contextlib import contextmanager
 import fcntl
@@ -75,6 +75,12 @@ def module(name):
     return loaded
 
 
+def require_legacy_build(build):
+    require(str(build).isdigit() and int(build) <= 2026111901,
+            'This legacy DMG-only/source-repository publisher cannot publish channel-era builds. '
+            'Use signed manifests and the flash-releases channel publication gates.')
+
+
 def source_identity(tag):
     require(re.fullmatch(r'v\d+\.\d+\.\d+', tag), 'A stable vX.Y.Z tag is required')
     require(git('branch', '--show-current') == 'main', 'Release only from merged main')
@@ -86,6 +92,7 @@ def source_identity(tag):
     text = (ROOT / 'pubspec.yaml').read_text()
     match = re.search(r'^version: (\d+\.\d+\.\d+)\+(\d+)\s*$', text, re.M)
     require(match and 'v' + match[1] == tag, 'Tag and pubspec version differ')
+    require_legacy_build(match[2])
     for package in ('setup', 'rust_api'):
         require(re.search(r'^    ' + package + r':\s*\n      build_assets: true\s*$', text, re.M),
                 'Both native build hooks must stay enabled')
@@ -368,6 +375,7 @@ class Release:
         self.view_draft()
 
     def publish(self):
+        require_legacy_build(self.identity['build'])
         require(self.state.get('draft_created'), 'Create and verify the draft first')
         self.remote()
         require(sha(self.directory / 'release-notes.md') == self.state['notes_sha256'], 'Release notes changed')

@@ -34,6 +34,7 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
+from functools import cmp_to_key
 
 ROOT = Path(__file__).resolve().parents[2]
 LAUNCHER_PIN = ROOT / 'macos/PrivilegedHelper/Launcher/FlashHelperLauncher.pin.json'
@@ -227,12 +228,16 @@ def bundle_facts(app):
         'build': build_number(info.get('CFBundleVersion'), 'Flash.app'),
         'helperBuild': build_number(embedded_plist(app / HELPER).get('CFBundleVersion'), 'FlashHelper'),
         'minimumSystemVersion': info.get('LSMinimumSystemVersion', '14.0'),
+        'channel': info.get('FlashReleaseChannel'),
+        'releaseVersion': info.get('FlashReleaseVersion'),
     }
 
 
 def make_payload(facts, asset, notes, published=None):
+    metadata = facts.get('releaseMetadata', {})
     return {
-        'schema': 1,
+        'schema': 2 if metadata.get('channel') == 'beta' else 1,
+        **metadata,
         'product': APP_IDENTIFIER,
         'version': facts['version'],
         'build': facts['build'],
@@ -247,19 +252,23 @@ def make_payload(facts, asset, notes, published=None):
 def envelope(payload, seed):
     data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
     return {
-        'schema': 1,
+        'schema': payload['schema'],
         'payload': base64.b64encode(data).decode(),
         'signature': base64.b64encode(sign(seed, data)).decode(),
     }
 
 
 def open_envelope(manifest, key):
-    if manifest.get('schema') != 1:
+    if set(manifest) != {'schema', 'payload', 'signature'} or type(manifest.get('schema')) is not int or manifest['schema'] not in (1, 2):
         raise SystemExit('manifest: unknown schema')
     data = base64.b64decode(manifest['payload'], validate=True)
     if not verify(key, data, base64.b64decode(manifest['signature'], validate=True)):
         raise SystemExit('manifest: signature does not verify with this public key')
-    return json.loads(data)
+    payload = json.loads(data)
+    if payload.get('schema') != manifest['schema']:
+        raise SystemExit('manifest: inner and outer schemas differ')
+    validate_channel_payload(payload)
+    return payload
 
 
 def release_tag(tag, version):
@@ -269,14 +278,144 @@ def release_tag(tag, version):
     return tag
 
 
+SEMVER = re.compile(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?')
+
+
+def semantic(value):
+    match = SEMVER.fullmatch(value) if isinstance(value, str) and len(value) <= 128 else None
+    if not match:
+        raise ValueError('Invalid release SemVer')
+    pre = match[4].split('.') if match[4] else []
+    if any(re.fullmatch(r'0[0-9]+', part) for part in pre):
+        raise ValueError('Noncanonical prerelease number')
+    return tuple(int(match[i]) for i in (1, 2, 3)), pre
+
+
+def compare_semantic(left, right):
+    a, ap = semantic(left)
+    b, bp = semantic(right)
+    if a != b:
+        return (a > b) - (a < b)
+    if not ap or not bp:
+        return (not ap) - (not bp)
+    for a, b in zip(ap, bp):
+        if a == b:
+            continue
+        if a.isdigit() and b.isdigit():
+            return (int(a) > int(b)) - (int(a) < int(b))
+        if a.isdigit() != b.isdigit():
+            return -1 if a.isdigit() else 1
+        return (a > b) - (a < b)
+    return (len(ap) > len(bp)) - (len(ap) < len(bp))
+
+
+def channel_metadata(facts, channel, version, tag, source_commit, source_branch):
+    if channel not in ('stable', 'beta') or facts.get('channel') != channel or facts.get('releaseVersion') != version:
+        raise ValueError('Bundle must seal matching FlashReleaseChannel and FlashReleaseVersion before signing')
+    semantic(version)
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]{0,127}', tag or '') or \
+            not re.fullmatch(r'[0-9a-f]{40}', source_commit or '') or \
+            not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9/._+-]{0,127}', source_branch or ''):
+        raise ValueError('Invalid signed release/source identity')
+    return {'channel': channel, 'platform': 'macos', 'release': {
+        'repository': 'f4cker/flash-releases', 'tag': tag, 'version': version,
+        'sourceRepository': 'f4cker/FlClash', 'sourceCommit': source_commit, 'sourceBranch': source_branch}}
+
+
+def validate_channel_payload(payload):
+    channel = payload.get('channel')
+    if channel is None and 'channel' not in payload and payload.get('schema') == 1 and \
+            type(payload.get('build')) is int and 0 < payload['build'] <= 2026111901:
+        return
+    if type(payload.get('schema')) is not int or (payload['schema'], channel) not in ((1, 'stable'), (2, 'beta')):
+        raise ValueError('Invalid schema/channel matrix')
+    release = payload.get('release', {})
+    metadata = channel_metadata({'channel': channel, 'releaseVersion': release.get('version')}, channel,
+                                release.get('version'), release.get('tag'), release.get('sourceCommit'), release.get('sourceBranch'))
+    if payload.get('platform') != 'macos' or payload.get('product') != APP_IDENTIFIER or release != metadata['release']:
+        raise ValueError('Invalid release repository/platform/product')
+    for field in ('build', 'helperBuild'):
+        if type(payload.get(field)) is not int or not 0 < payload[field] < 10 ** 18:
+            raise ValueError('Invalid release build')
+    for asset in payload.get('assets', []):
+        if asset.get('url') != f'{DEFAULT_BASE_URL}/{release["tag"]}/{asset["name"]}':
+            raise ValueError('Asset URL is not bound to signed tag')
+
+
+def validate_release_ledger(payload, history):
+    validate_channel_payload(payload)
+    if not isinstance(history, list) or not history:
+        raise ValueError('A complete approved global build ledger is required')
+    builds, helpers, versions = [], [], []
+    for entry in history:
+        if not isinstance(entry, dict) or entry.get('channel') not in ('stable', 'beta') or \
+                type(entry.get('build')) is not int or type(entry.get('helperBuild')) is not int:
+            raise ValueError('Invalid global release ledger')
+        if entry.get('tag') == payload['release']['tag']:
+            raise ValueError('Release tags are immutable and cannot be reused')
+        builds.append(entry['build'])
+        helpers.append(entry['helperBuild'])
+        semantic(entry['version'])
+        versions.append(entry['version'])
+    if payload['build'] <= max(builds) or payload['helperBuild'] <= max(helpers):
+        raise ValueError('App and helper builds must grow across all channels')
+    if compare_semantic(payload['release']['version'], max(versions, key=cmp_to_key(compare_semantic))) < 0:
+        raise ValueError('Release semantic version cannot fall behind approved history')
+
+
+def publication_policy(payload):
+    validate_channel_payload(payload)
+    if payload.get('channel') not in ('stable', 'beta'):
+        raise ValueError('Legacy manifests cannot authorize a new publication')
+    beta = payload['channel'] == 'beta'
+    return {'repository': 'f4cker/flash-releases', 'tag': payload['release']['tag'],
+            'prerelease': beta, 'make_latest': 'false' if beta else 'true'}
+
+
+def assert_stable_latest_unchanged(before, after):
+    for snapshot in (before, after):
+        if set(snapshot) != {'id', 'tag', 'manifest_sha256'} or not re.fullmatch(r'[0-9a-f]{64}', snapshot['manifest_sha256']):
+            raise ValueError('Invalid stable latest snapshot')
+    if before != after:
+        raise ValueError('Beta publication changed stable latest; stop release processing')
+
+
+def validate_publication(payload, release, before=None, after=None):
+    policy = publication_policy(payload)
+    if release.get('tag_name') != policy['tag'] or release.get('prerelease') is not policy['prerelease'] or \
+            release.get('draft') is not False or release.get('repository') != policy['repository']:
+        raise ValueError('Published GitHub metadata differs from signed channel identity')
+    if policy['prerelease']:
+        if before is None or after is None:
+            raise ValueError('Beta publication requires both stable latest snapshots')
+        assert_stable_latest_unchanged(before, after)
+    return policy
+
+
+def command_check_publication(arguments):
+    payload = open_envelope(json.loads(Path(arguments.manifest).read_text()),
+                            read_public_key(arguments.public_key))
+    validate_release_ledger(payload, json.loads(Path(arguments.release_ledger).read_text()))
+    snapshot = lambda path: json.loads(Path(path).read_text()) if path else None
+    policy = validate_publication(payload, snapshot(arguments.release),
+                                  snapshot(arguments.latest_before), snapshot(arguments.latest_after))
+    print(json.dumps(policy, sort_keys=True))
+
+
 def command_sign(arguments):
-    seed = read_private_key(arguments.key)
     app = Path(arguments.app).resolve()
     if app.name != 'Flash.app':
         raise SystemExit(f'{app}: expected a bundle named Flash.app')
     check_signature(app)
     facts = bundle_facts(app)
-    tag = release_tag(arguments.tag, facts['version'])
+    tag = arguments.tag
+    facts['releaseMetadata'] = channel_metadata(facts, arguments.channel, arguments.release_version, tag,
+                                                arguments.source_commit, arguments.source_branch)
+    if arguments.base_url.rstrip('/') != DEFAULT_BASE_URL:
+        raise ValueError('Release assets must stay in the approved repository')
+    candidate = make_payload(facts, {}, '')
+    candidate['assets'] = []
+    validate_release_ledger(candidate, json.loads(Path(arguments.release_ledger).read_text()))
     out = Path(arguments.out)
     out.mkdir(parents=True, exist_ok=True)
     name = f'Flash-{facts["version"]}-macos-{arguments.arch}.zip'
@@ -293,6 +432,7 @@ def command_sign(arguments):
         'sha256': sha256_file(archive),
     }
     notes = Path(arguments.notes_file).read_text().strip() if arguments.notes_file else ''
+    seed = read_private_key(arguments.key)
     manifest = envelope(make_payload(facts, asset, notes), seed)
     payload = open_envelope(manifest, public_key(seed))
     if payload['assets'][0]['sha256'] != sha256_file(archive):
@@ -322,17 +462,31 @@ def main(argv=None):
     signing.add_argument('--out', required=True)
     signing.add_argument('--notes-file')
     signing.add_argument('--base-url', default=DEFAULT_BASE_URL)
-    signing.add_argument('--tag', help='release tag the archive is downloaded from (default: v<version>)')
+    signing.add_argument('--tag', required=True)
+    signing.add_argument('--channel', required=True, choices=['stable', 'beta'])
+    signing.add_argument('--release-version', required=True)
+    signing.add_argument('--source-commit', required=True)
+    signing.add_argument('--source-branch', required=True)
+    signing.add_argument('--release-ledger', required=True, help='Approved complete stable+beta build history JSON')
     signing.add_argument('--arch', default='arm64', choices=['arm64', 'amd64'])
     checking = commands.add_parser('verify')
     checking.add_argument('--public-key', required=True)
     checking.add_argument('--manifest', required=True)
     checking.add_argument('--archive')
+    publication = commands.add_parser('check-publication', help='Offline post-publication channel/latest gate; never writes releases')
+    publication.add_argument('--manifest', required=True)
+    publication.add_argument('--public-key', required=True)
+    publication.add_argument('--release-ledger', required=True)
+    publication.add_argument('--release', required=True, help='Captured GitHub metadata plus repository')
+    publication.add_argument('--latest-before')
+    publication.add_argument('--latest-after')
     arguments = parser.parse_args(argv)
     if arguments.command == 'genkey':
         print(generate_key(arguments.directory))
     elif arguments.command == 'sign':
         command_sign(arguments)
+    elif arguments.command == 'check-publication':
+        command_check_publication(arguments)
     else:
         command_verify(arguments)
 
