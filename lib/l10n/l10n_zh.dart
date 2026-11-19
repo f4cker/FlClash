@@ -8035,4 +8035,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get macHelperViewSteps => '查看步骤';
+
+  @override
+  String get macHelperDisabledTitle => '辅助程序已关闭';
 }

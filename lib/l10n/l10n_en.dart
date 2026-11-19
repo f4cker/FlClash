@@ -8738,4 +8738,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get macHelperViewSteps => 'View steps';
+
+  @override
+  String get macHelperDisabledTitle => 'The helper is turned off';
 }

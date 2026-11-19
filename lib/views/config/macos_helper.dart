@@ -240,7 +240,7 @@ MacHelperCardView macHelperCardView(
     ),
     MacHelperCardKind.disabledByUser => MacHelperCardView(
       kind: kind,
-      title: l.macHelperApprovalTitle,
+      title: l.macHelperDisabledTitle,
       detail: l.macHelperDisabledByUserDetail,
       steps: steps,
       progress: busyText,

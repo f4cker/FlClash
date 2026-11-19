@@ -8520,4 +8520,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get macHelperViewSteps => '手順を表示';
+
+  @override
+  String get macHelperDisabledTitle => 'ヘルパーはオフになっています';
 }

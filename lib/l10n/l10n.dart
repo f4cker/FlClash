@@ -14403,6 +14403,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View steps'**
   String get macHelperViewSteps;
+
+  /// No description provided for @macHelperDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The helper is turned off'**
+  String get macHelperDisabledTitle;
 }
 
 class _AppLocalizationsDelegate

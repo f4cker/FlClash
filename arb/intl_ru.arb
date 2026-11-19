@@ -3630,5 +3630,6 @@
   "macHelperAwaitingApprovalDetail": "Разрешите Flash работать в фоне в Системных настройках.",
   "macHelperDisabledByUserDetail": "Разрешение Flash на работу в фоне отключено. Разрешите Flash работать в фоне в Системных настройках.",
   "macHelperUnavailableTitle": "Помощник недоступен",
-  "macHelperViewSteps": "Показать шаги"
+  "macHelperViewSteps": "Показать шаги",
+  "macHelperDisabledTitle": "Помощник отключён"
 }

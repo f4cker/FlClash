@@ -8596,4 +8596,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macHelperViewSteps => '단계 보기';
+
+  @override
+  String get macHelperDisabledTitle => '헬퍼가 꺼져 있습니다';
 }

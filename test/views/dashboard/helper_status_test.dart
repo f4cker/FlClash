@@ -295,6 +295,9 @@ void main() {
       await flow.check();
       final view = macHelperCardView(l, flow);
       expect(view.kind, MacHelperCardKind.disabledByUser);
+      // Its own title, never the approval one.
+      expect(view.title, l.macHelperDisabledTitle);
+      expect(view.title, isNot(l.macHelperApprovalTitle));
       expect(view.detail, l.macHelperDisabledByUserDetail);
       expect(view.primary, MacHelperCardAction.openSettings);
       expect(view.secondary, MacHelperCardAction.viewSteps);
@@ -695,6 +698,11 @@ void main() {
     expect(
       zh.macHelperDisabledByUserDetail,
       'Flash 的后台运行权限已关闭。请在系统设置中允许 Flash 在后台运行。',
+    );
+    expect(zh.macHelperDisabledTitle, '辅助程序已关闭');
+    expect(
+      lookupAppLocalizations(const Locale('en')).macHelperDisabledTitle,
+      'The helper is turned off',
     );
     expect(zh.macHelperOpenSettings, '打开系统设置');
     expect(zh.macHelperAwaitingApprovalDetail, '请在系统设置中允许 Flash 在后台运行');

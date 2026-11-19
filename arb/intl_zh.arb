@@ -2404,5 +2404,6 @@
   "macHelperAwaitingApprovalDetail": "请在系统设置中允许 Flash 在后台运行",
   "macHelperDisabledByUserDetail": "Flash 的后台运行权限已关闭。请在系统设置中允许 Flash 在后台运行。",
   "macHelperUnavailableTitle": "辅助程序暂不可用",
-  "macHelperViewSteps": "查看步骤"
+  "macHelperViewSteps": "查看步骤",
+  "macHelperDisabledTitle": "辅助程序已关闭"
 }

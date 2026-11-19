@@ -8791,4 +8791,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get macHelperViewSteps => 'Ver pasos';
+
+  @override
+  String get macHelperDisabledTitle => 'El asistente está desactivado';
 }

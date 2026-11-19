@@ -3630,5 +3630,6 @@
   "macHelperAwaitingApprovalDetail": "システム設定で Flash のバックグラウンド実行を許可してください。",
   "macHelperDisabledByUserDetail": "Flash のバックグラウンド実行の許可がオフになっています。システム設定で Flash のバックグラウンド実行を許可してください。",
   "macHelperUnavailableTitle": "ヘルパーを利用できません",
-  "macHelperViewSteps": "手順を表示"
+  "macHelperViewSteps": "手順を表示",
+  "macHelperDisabledTitle": "ヘルパーはオフになっています"
 }

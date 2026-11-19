@@ -8741,4 +8741,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get macHelperViewSteps => 'Показать шаги';
+
+  @override
+  String get macHelperDisabledTitle => 'Помощник отключён';
 }
