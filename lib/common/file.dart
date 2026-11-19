@@ -1,7 +1,21 @@
 import 'dart:io';
+import 'dart:math';
 
 const _replaceAttempts = 10;
 const _replaceRetryDelay = Duration(milliseconds: 50);
+
+final _tempRandom = Random.secure();
+
+/// A sibling of [path] no other write, in this process or another, picks:
+/// `<path>.<pid>.<8 hex>.tmp`.
+String uniqueTempPath(String path) {
+  final suffix = _tempRandom.nextInt(1 << 32).toRadixString(16).padLeft(8, '0');
+  return '$path.$pid.$suffix.tmp';
+}
+
+/// Matches what [uniqueTempPath] appends, and the `<pid>.tmp` of older builds,
+/// so a sweep can tell which file a leftover temporary belonged to.
+final atomicTempSuffix = RegExp(r'\.\d+(\.[0-9a-f]{8})?\.tmp$');
 
 /// The prefix mihomo's `age.DecryptBytes` tells an encrypted config by.
 const _ageArmorHeader = '-----BEGIN AGE ENCRYPTED FILE-----';
@@ -41,12 +55,19 @@ extension FileExt on File {
     return writeAsBytes(bytes);
   }
 
-  /// Writes to one file must not overlap: they share the temporary sibling.
-  Future<void> writeAsStringAtomically(String content) async {
-    final temp = File('$path.$pid.tmp');
+  /// Each write goes through its own temporary sibling, so overlapping
+  /// writes never trip over each other: the last rename wins whole.
+  Future<void> writeAsStringAtomically(String content) =>
+      _writeAtomically((temp) => temp.writeAsString(content, flush: true));
+
+  Future<void> writeAsBytesAtomically(List<int> bytes) =>
+      _writeAtomically((temp) => temp.writeAsBytes(bytes, flush: true));
+
+  Future<void> _writeAtomically(Future<void> Function(File temp) write) async {
+    final temp = File(uniqueTempPath(path));
     try {
       await temp.parent.create(recursive: true);
-      await temp.writeAsString(content, flush: true);
+      await write(temp);
       await temp._renameRetryingWhileHeldOpen(path);
     } catch (_) {
       await temp.delete().then((_) {}, onError: (_) {});
@@ -57,7 +78,7 @@ extension FileExt on File {
   /// Copies to [target] through a temporary sibling, so a watcher of
   /// [target] never reads half of it.
   Future<void> copyAtomically(String target) async {
-    final temp = File('$target.$pid.tmp');
+    final temp = File(uniqueTempPath(target));
     try {
       await temp.parent.create(recursive: true);
       await copy(temp.path);

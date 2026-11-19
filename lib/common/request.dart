@@ -76,13 +76,22 @@ class Request {
     return FlClashHttpOverrides.findProxyForReader(read, uri);
   }
 
-  Future<Response<T>> _download<T>(String url, ResponseType responseType) {
+  Future<Response<T>> _download<T>(
+    String url,
+    ResponseType responseType, {
+    Map<String, String> headers = const {},
+    ValidateStatus? validateStatus,
+  }) {
     final target = downloadTarget(url);
     final cancelToken = CancelToken();
     return _clashDio
         .getUri<T>(
           target.uri,
-          options: Options(responseType: responseType, headers: target.headers),
+          options: Options(
+            responseType: responseType,
+            headers: {...target.headers, ...headers},
+            validateStatus: validateStatus,
+          ),
           cancelToken: cancelToken,
         )
         .timeout(
@@ -103,6 +112,30 @@ class Request {
     } catch (e) {
       commonPrint.log(
         'getFileResponseForUrl error ${compactError(e)}',
+        logLevel: LogLevel.warning,
+      );
+      rethrow;
+    }
+  }
+
+  /// A GET whose [headers] may carry `If-None-Match`/`If-Modified-Since`, so
+  /// a 304 is an answer here rather than an error.
+  Future<Response<Uint8List>> getConditionalFileResponseForUrl(
+    String url, {
+    Map<String, String> headers = const {},
+  }) async {
+    try {
+      return await _download<Uint8List>(
+        url,
+        ResponseType.bytes,
+        headers: headers,
+        validateStatus: (status) =>
+            status != null &&
+            (status >= 200 && status < 300 || status == HttpStatus.notModified),
+      );
+    } catch (e) {
+      commonPrint.log(
+        'getConditionalFileResponseForUrl error ${compactError(e)}',
         logLevel: LogLevel.warning,
       );
       rethrow;

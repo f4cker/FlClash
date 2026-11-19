@@ -47,6 +47,10 @@ class AppPath {
     cacheDirectory().then(cacheDir.complete);
   }
 
+  /// Whether anything asked for the paths yet; creating them starts the
+  /// platform lookups, which only something that needs them should do.
+  static bool get created => _instance != null;
+
   factory AppPath() {
     _instance ??= AppPath._internal();
     return _instance!;

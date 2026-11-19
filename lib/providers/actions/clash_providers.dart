@@ -17,6 +17,11 @@ class ClashProvidersAction extends _$ClashProvidersAction {
     final download =
         provider.isRemote &&
         (refresh || provider.fileName != previous?.fileName);
+    // The Core downloads and rewrites the file either way; bytes it already
+    // had need no reload.
+    final heldBefore = download && content == null
+        ? await storedSha256(await provider.path)
+        : null;
     final compiled = switch (content) {
       final content? => await _compileContent(provider, content),
       null when download => await _compile(provider, download: true),
@@ -39,6 +44,13 @@ class ClashProvidersAction extends _$ClashProvidersAction {
       ),
       _ => compiled,
     };
+    if (heldBefore != null &&
+        latest != null &&
+        next == latest &&
+        previous?.fileName == next.fileName &&
+        await storedSha256(await next.path) == heldBefore) {
+      return latest;
+    }
     ref.read(clashProvidersProvider.notifier).put(next);
     if (previous != null && previous.fileName != next.fileName) {
       unawaited(_clearCache(previous));

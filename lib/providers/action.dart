@@ -36,7 +36,7 @@ import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/widgets/release_notes.dart';
 import 'package:fl_clash/widgets/version_label.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart' show compute, listEquals;
+import 'package:flutter/foundation.dart' show compute, listEquals, mapEquals;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' show basename, basenameWithoutExtension, join;

@@ -63,8 +63,10 @@ Future<void> commitMitmScripts(
 String? mitmScriptErrorMessage(Object error) =>
     error is _ScriptException ? error.message : null;
 
-Future<List<int>> downloadMitmScript(String url) async {
-  final bytes = (await request.getFileResponseForUrl(url)).data;
+Future<List<int>> downloadMitmScript(String url) async =>
+    _checkedScript((await request.getFileResponseForUrl(url)).data);
+
+List<int> _checkedScript(List<int>? bytes) {
   if (bytes == null) {
     throw _ScriptException(currentAppLocalizations.mitmScriptEmpty);
   }
@@ -81,8 +83,9 @@ Future<String> storeMitmScript(String source, List<int> bytes) async {
   final directory = Directory(await appPath.mitmResourcesDirPath);
   await directory.create(recursive: true);
   final file = File(join(directory.path, name));
-  if (!await file.exists()) {
-    await file.safeWriteAsBytes(bytes);
+  // Named by its content: a file already there with these bytes stays.
+  if (await storedSha256(file.path) != sha256Hex(bytes)) {
+    await file.writeAsBytesAtomically(bytes);
   }
   return name;
 }
@@ -143,9 +146,35 @@ Future<List<MitmScript>> prepareMitmScripts(
   return scripts;
 }
 
+final _scriptChecks = SingleFlight<(int, int), MitmScript>();
+
 /// New content waits in [MitmScript.pendingFile]; the old keeps running.
-/// A script whose own file is gone takes the new content at once.
+/// A script whose own file is gone takes the new content at once. A check of
+/// a script that is already being checked joins that check.
 Future<MitmScript> checkMitmScriptUpdate(
+  MitmReader read,
+  int profileId,
+  MitmScript script,
+) => _scriptChecks.run((
+  profileId,
+  script.id,
+), () => _checkMitmScriptUpdate(read, profileId, script));
+
+/// The stored file, the waiting one first, whose bytes have [fingerprint].
+Future<String?> _scriptFileHolding(
+  MitmScript script,
+  String fingerprint,
+) async {
+  final directory = await appPath.mitmResourcesDirPath;
+  for (final name in [?script.pendingFile, script.file]) {
+    if (await storedSha256(join(directory, name)) == fingerprint) {
+      return name;
+    }
+  }
+  return null;
+}
+
+Future<MitmScript> _checkMitmScriptUpdate(
   MitmReader read,
   int profileId,
   MitmScript script,
@@ -164,14 +193,32 @@ Future<MitmScript> checkMitmScriptUpdate(
   );
   MitmScript checked;
   try {
-    final bytes = await downloadMitmScript(url);
-    final name = await storeMitmScript(url, bytes);
+    // A 304 stands only for a stored file that still has the fingerprint
+    // recorded with the validators; the Core still checks it below.
+    final fetched = await resourceCache.fetch(
+      ResourceKind.mitmScript,
+      url,
+      holds: (fingerprint) async =>
+          await _scriptFileHolding(script, fingerprint) != null,
+    );
+    final String name;
+    switch (fetched) {
+      case ResourceNotModified(:final validators):
+        name =
+            await _scriptFileHolding(script, validators.fingerprint) ??
+            (throw const FileSystemException('script copy changed'));
+      case ResourceDownloaded(:final bytes):
+        name = await storeMitmScript(url, _checkedScript(bytes));
+    }
     final line =
         parseMitmScriptInfo(script.line)?.lineWith(name) ?? script.line;
     final issues = await read(
       coreHandlerProvider,
     ).validateMitm(MitmRules(script: [line]));
     final problem = issues[MitmList.script]?.values.firstOrNull;
+    if (problem == null && fetched is ResourceDownloaded) {
+      await resourceCache.commit(ResourceKind.mitmScript, url, fetched);
+    }
     if (problem != null) {
       checked = failed(MitmUpdateFailure.invalid, problem);
     } else if (missing) {

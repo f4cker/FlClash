@@ -67,13 +67,54 @@ void main() {
     test('keeps the old file when the new one cannot be written', () async {
       final file = File(join(root.path, 'config.yaml'))
         ..writeAsStringSync('mode: rule');
-      Directory('${file.path}.$pid.tmp').createSync();
+      // No temporary sibling can be created in a read-only directory.
+      await Process.run('chmod', ['555', root.path]);
+      addTearDown(() => Process.runSync('chmod', ['755', root.path]));
 
       await expectLater(
         file.writeAsStringAtomically('mode: global'),
         throwsA(isA<FileSystemException>()),
       );
       expect(file.readAsStringSync(), 'mode: rule');
+    });
+
+    test('removes its temporary file when the rename fails', () async {
+      // A non-empty directory where the file goes refuses the rename.
+      final target = Directory(join(root.path, 'config.yaml'))..createSync();
+      File(join(target.path, 'occupied')).createSync();
+
+      await expectLater(
+        File(target.path).writeAsStringAtomically('mode: global'),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(root.listSync().map((entry) => basename(entry.path)), [
+        'config.yaml',
+      ]);
+    });
+
+    test('overlapping writes to one file each land whole', () async {
+      final file = File(join(root.path, 'config.yaml'));
+      final contents = [for (var i = 0; i < 20; i++) 'mode: $i\n' * 2000];
+
+      await Future.wait([
+        for (final content in contents) file.writeAsStringAtomically(content),
+      ]);
+
+      expect(contents, contains(file.readAsStringSync()));
+      expect(root.listSync().map((entry) => basename(entry.path)), [
+        'config.yaml',
+      ]);
+    });
+
+    test('gives each write its own temporary name', () {
+      final names = {for (var i = 0; i < 100; i++) uniqueTempPath('/a/b')};
+
+      expect(names, hasLength(100));
+      for (final name in names) {
+        expect(name, matches(atomicTempSuffix));
+        expect(name.replaceFirst(atomicTempSuffix, ''), '/a/b');
+      }
+      expect('/a/b.$pid.tmp'.replaceFirst(atomicTempSuffix, ''), '/a/b');
     });
   });
 

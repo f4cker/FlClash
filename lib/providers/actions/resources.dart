@@ -3,6 +3,7 @@ part of '../action.dart';
 @Riverpod(keepAlive: true)
 class ResourcesAction extends _$ResourcesAction {
   var _autoUpdating = false;
+  final _ruleProviderUpdates = SingleFlight<(int, String), void>();
 
   @override
   void build() {}
@@ -14,12 +15,17 @@ class ResourcesAction extends _$ResourcesAction {
     );
   }
 
+  /// A refresh of a set that is already refreshing from the same url joins
+  /// it, so the Core never downloads one file twice at once.
   Future<void> updateRuleProvider(ClashProvider provider) {
-    return _track(
-      provider.updatingKey,
-      () => ref
-          .read(clashProvidersActionProvider.notifier)
-          .putProvider(provider, previous: provider, refresh: true),
+    return _ruleProviderUpdates.run(
+      (provider.id, provider.url),
+      () => _track(
+        provider.updatingKey,
+        () => ref
+            .read(clashProvidersActionProvider.notifier)
+            .putProvider(provider, previous: provider, refresh: true),
+      ),
     );
   }
 
