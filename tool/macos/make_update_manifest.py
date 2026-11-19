@@ -342,6 +342,46 @@ def validate_channel_payload(payload):
             raise ValueError('Asset URL is not bound to signed tag')
 
 
+def validate_unpublished_reservation(entry):
+    evidence = entry.get('reservation')
+    fields = {'sourceReceipt', 'sourceReceiptSha256', 'signingReceipt', 'signingReceiptSha256'}
+    if not isinstance(evidence, dict) or set(evidence) != fields:
+        raise ValueError('Unpublished reservation requires pinned source and signing receipts')
+    receipts = []
+    for kind in ('sourceReceipt', 'signingReceipt'):
+        path, digest = evidence[kind], evidence[kind + 'Sha256']
+        if not isinstance(path, str) or not Path(path).is_absolute() or \
+                not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest):
+            raise ValueError('Invalid unpublished reservation receipt binding')
+        try:
+            data = Path(path).read_bytes()
+            if hashlib.sha256(data).hexdigest() != digest:
+                raise ValueError('Unpublished reservation receipt hash differs')
+            receipt = json.loads(data)
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            raise ValueError('Unpublished reservation receipt cannot be read') from error
+        if not isinstance(receipt, dict):
+            raise ValueError('Invalid unpublished reservation receipt')
+        receipts.append(receipt)
+    source, signing = receipts
+    head = source.get('head')
+    archive = source.get('archive_sha256')
+    identity = signing.get('release_identity')
+    verified = signing.get('verify_signed')
+    if not isinstance(head, str) or not re.fullmatch(r'[0-9a-f]{40}', head) or \
+            not isinstance(archive, str) or not re.fullmatch(r'[0-9a-f]{64}', archive) or \
+            signing.get('schema') != 'flash-mitm4-bundle-signing-v1' or \
+            not isinstance(identity, dict) or not isinstance(verified, dict):
+        raise ValueError('Invalid unpublished reservation source identity')
+    compatibility = verified.get('compatibility')
+    if identity.get('source_head') != head or identity.get('channel') != entry['channel'] or \
+            identity.get('releaseVersion') != entry['version'] or identity.get('build') != str(entry['build']) or \
+            verified.get('helper_version') != str(entry['helperBuild']) or \
+            entry.get('tag') != 'v' + entry['version'] or not isinstance(compatibility, dict) or \
+            compatibility.get('CoreRevision') != head:
+        raise ValueError('Unpublished reservation differs from source/signing receipts')
+
+
 def validate_release_ledger(payload, history):
     validate_channel_payload(payload)
     if not isinstance(history, list) or not history:
@@ -356,10 +396,16 @@ def validate_release_ledger(payload, history):
         builds.append(entry['build'])
         helpers.append(entry['helperBuild'])
         semantic(entry['version'])
-        versions.append(entry['version'])
+        disposition = entry.get('disposition', 'published')
+        if disposition == 'unpublished-reservation':
+            validate_unpublished_reservation(entry)
+        elif disposition == 'published':
+            versions.append(entry['version'])
+        else:
+            raise ValueError('Invalid global release ledger disposition')
     if payload['build'] <= max(builds) or payload['helperBuild'] <= max(helpers):
         raise ValueError('App and helper builds must grow across all channels')
-    if compare_semantic(payload['release']['version'], max(versions, key=cmp_to_key(compare_semantic))) < 0:
+    if versions and compare_semantic(payload['release']['version'], max(versions, key=cmp_to_key(compare_semantic))) < 0:
         raise ValueError('Release semantic version cannot fall behind approved history')
 
 
