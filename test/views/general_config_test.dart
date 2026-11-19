@@ -110,4 +110,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(config().testUrl, 'https://probe.test/204');
   });
+
+  testWidgets('update switches live on About, not in requests and updates', (
+    tester,
+  ) async {
+    await pumpGeneralView(tester);
+    final l = currentAppLocalizations;
+
+    expect(find.text(l.requestsAndUpdates), findsOneWidget);
+    expect(find.byKey(const ValueKey('receive-beta-updates')), findsNothing);
+    expect(find.text(l.receiveBetaUpdates), findsNothing);
+    expect(find.text(l.autoCheckUpdate), findsNothing);
+
+    // The group keeps its two remaining rows, the last one closing it.
+    final certificate = find.text(l.checkCertificate);
+    expect(certificate, findsOneWidget);
+    final position = tester.widget<ItemPositionProvider>(
+      find
+          .ancestor(
+            of: certificate,
+            matching: find.byType(ItemPositionProvider),
+          )
+          .first,
+    );
+    expect(position.position, ItemPosition.end);
+    expect(
+      tester
+          .widget<ItemPositionProvider>(
+            find
+                .ancestor(
+                  of: find.byType(UaItem),
+                  matching: find.byType(ItemPositionProvider),
+                )
+                .first,
+          )
+          .position,
+      ItemPosition.start,
+    );
+  });
 }

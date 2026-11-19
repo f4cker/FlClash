@@ -336,4 +336,57 @@ void main() {
       greaterThan(tester.getTopRight(slot).dx),
     );
   });
+
+  testWidgets('auto check row sits once above the beta toggle and toggles', (
+    tester,
+  ) async {
+    await pump(tester, _stable);
+    expect(container.read(appSettingProvider).autoCheckUpdate, isTrue);
+    final row = find.byKey(const ValueKey('auto-check-update'));
+    expect(row, findsOneWidget);
+    final title = find.text('自动检查更新');
+    expect(title, findsOneWidget);
+    final glyph = find.descendant(
+      of: row,
+      matching: find.byWidgetPredicate(
+        (widget) => widget is GlyphIcon && widget.glyph == AppGlyphs.cloudSync,
+      ),
+    );
+    expect(glyph, findsOneWidget);
+    final slot = find
+        .ancestor(of: glyph, matching: find.byType(SizedBox))
+        .first;
+    expect(tester.getSize(slot), const Size.square(40));
+    final beta = find.byKey(const ValueKey('receive-beta-updates'));
+    expect(beta, findsOneWidget);
+    expect(
+      tester.getTopLeft(title).dx,
+      tester.getTopLeft(find.text('接收测试版更新')).dx,
+    );
+    expect(
+      tester.getBottomLeft(row).dy,
+      lessThanOrEqualTo(tester.getTopLeft(beta).dy),
+    );
+    expect(
+      tester.getTopLeft(row).dy,
+      greaterThan(tester.getBottomLeft(find.text('检查更新')).dy),
+    );
+    expect(
+      tester
+          .widget<ItemPositionProvider>(
+            find
+                .ancestor(of: row, matching: find.byType(ItemPositionProvider))
+                .first,
+          )
+          .position,
+      ItemPosition.start,
+    );
+    await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
+    await tester.pumpAndSettle();
+    expect(container.read(appSettingProvider).autoCheckUpdate, isFalse);
+    expect(container.read(appSettingProvider).receiveBetaUpdates, isFalse);
+    await tester.tap(title);
+    await tester.pumpAndSettle();
+    expect(container.read(appSettingProvider).autoCheckUpdate, isTrue);
+  });
 }

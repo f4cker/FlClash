@@ -8,6 +8,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/views/release_history.dart';
 import 'package:fl_clash/widgets/beta_update_setting.dart';
+import 'package:fl_clash/widgets/config_item.dart';
 import 'package:fl_clash/widgets/version_label.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,15 +87,26 @@ class AboutView extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 16),
-          if (system.isMacOS)
-            generateSection(
-              items: [
+          generateSection(
+            items: [
+              ConfigToggleItem(
+                key: const ValueKey('auto-check-update'),
+                leading: const _LinkBadge(glyph: AppGlyphs.cloudSync),
+                title: (l) => l.autoCheckUpdate,
+                selector: appSettingProvider.select(
+                  (state) => state.autoCheckUpdate,
+                ),
+                onChanged: (ref, value) => ref
+                    .read(appSettingProvider.notifier)
+                    .update((state) => state.copyWith(autoCheckUpdate: value)),
+              ),
+              if (system.isMacOS)
                 const BetaUpdateSetting(
                   leading: _LinkBadge(glyph: AppGlyphs.flask, glyphSize: 24),
                   stackable: true,
                 ),
-              ],
-            ),
+            ],
+          ),
           const SizedBox(height: 8),
           generateSection(
             title: appLocalizations.more,
