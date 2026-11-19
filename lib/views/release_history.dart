@@ -7,6 +7,7 @@ import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/widgets/release_notes.dart';
+import 'package:fl_clash/widgets/version_label.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -106,11 +107,15 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Text(
-                              l10n.releaseInstalled(installed),
-                              style: AppTextStyle.callout.of(
-                                context,
-                                emphasized: true,
+                            Text.rich(
+                              versionMessageSpan(
+                                (slots) => l10n.releaseInstalled(slots[0]),
+                                [installed],
+                                style: AppTextStyle.callout.of(
+                                  context,
+                                  emphasized: true,
+                                ),
+                                buildStyle: AppTextStyle.caption1.of(context),
                               ),
                             ),
                             if (identity?.channel == ReleaseChannel.beta)
@@ -176,11 +181,15 @@ class _ReleaseHistoryViewState extends ConsumerState<ReleaseHistoryView> {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Text(
-                              l10n.releaseAvailable(available.versionLabel),
-                              style: AppTextStyle.callout.of(
-                                context,
-                                emphasized: true,
+                            Text.rich(
+                              versionMessageSpan(
+                                (slots) => l10n.releaseAvailable(slots[0]),
+                                [available.versionLabel],
+                                style: AppTextStyle.callout.of(
+                                  context,
+                                  emphasized: true,
+                                ),
+                                buildStyle: AppTextStyle.caption1.of(context),
                               ),
                             ),
                             if (available.manifest?.channel ==
@@ -284,7 +293,7 @@ class _ReleaseEntry extends StatelessWidget {
               button: true,
               expanded: expanded,
               label: l10n.releaseEntryLabel(
-                label,
+                displayVersionLabel(label),
                 date,
                 [
                   if (current) l10n.releaseCurrent,
@@ -328,11 +337,14 @@ class _ReleaseEntry extends StatelessWidget {
                             runSpacing: 4,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Text(
-                                label,
-                                style: AppTextStyle.callout.of(
-                                  context,
-                                  emphasized: true,
+                              Text.rich(
+                                versionLabelSpan(
+                                  label,
+                                  style: AppTextStyle.callout.of(
+                                    context,
+                                    emphasized: true,
+                                  ),
+                                  buildStyle: AppTextStyle.caption1.of(context),
                                 ),
                               ),
                               if ((current

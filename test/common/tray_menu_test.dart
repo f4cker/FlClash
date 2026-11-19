@@ -205,7 +205,7 @@ void main() {
       final row = showCall()!.menu.firstWhere(
         (item) => item.label == 'Update now',
       );
-      expect(row.detail, 'NEW 1.0.0+2026111902');
+      expect(row.detail, 'NEW 1.0.0 (2026111902)');
       expect(row.enabled, isTrue);
       container.read(updateInstallBusyProvider.notifier).value = true;
       await update(_trayState());
@@ -553,7 +553,7 @@ void main() {
         expectUpdateIcon('stopped_update');
         expect(
           showCall()!.toolTip,
-          '$appName, Update available: 1.0.0+2026111902',
+          '$appName, Update available: 1.0.0 (2026111902)',
         );
       }
       check.value = const UpdateUpToDate();
@@ -583,9 +583,9 @@ void main() {
           await update(_trayState(safeMode: true));
           expect(
             showCall()!.toolTip,
-            '${l10n.safeModeAppTitle(appName)}, ${l10n.trayUpdateAvailable('1.0.0+2026111902')}',
+            '${l10n.safeModeAppTitle(appName)}, ${l10n.trayUpdateAvailable('1.0.0 (2026111902)')}',
           );
-          expect(showCall()!.toolTip, contains('1.0.0+2026111902'));
+          expect(showCall()!.toolTip, contains('1.0.0 (2026111902)'));
           if (language == 'zh') expect(showCall()!.toolTip, contains('可用更新'));
         }
       } finally {

@@ -22,6 +22,19 @@ void main() {
     );
   });
 
+  test('display labels put the build in parentheses and keep the rest', () {
+    expect(
+      displayVersionLabel('1.0.0-beta.1+2026111903'),
+      '1.0.0-beta.1 (2026111903)',
+    );
+    expect(displayVersionLabel('1.0.0'), '1.0.0');
+    expect(versionLabelParts('1.0.0-beta.1+2026111903'), (
+      version: '1.0.0-beta.1',
+      build: '2026111903',
+    ));
+    expect(versionLabelParts('1.0.0'), (version: '1.0.0', build: null));
+  });
+
   String? nameOn(Abi abi, {required bool windowsInstalled}) {
     final asset = selfUpdateAssetFor(abi, windowsInstalled: windowsInstalled);
     return asset == null ? null : updateAssetName('v0.9.4', asset);

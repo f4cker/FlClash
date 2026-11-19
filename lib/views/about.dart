@@ -8,6 +8,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/views/release_history.dart';
 import 'package:fl_clash/widgets/beta_update_setting.dart';
+import 'package:fl_clash/widgets/version_label.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -90,7 +91,7 @@ class AboutView extends ConsumerWidget {
               items: [
                 const BetaUpdateSetting(
                   leading: _LinkBadge(glyph: AppGlyphs.flask, glyphSize: 24),
-                  horizontalTitleGap: 12,
+                  stackable: true,
                 ),
               ],
             ),
@@ -161,7 +162,9 @@ class _AboutHero extends ConsumerWidget {
   });
 
   static const _logoSize = 96.0;
-  static const _logoInset = 14.0;
+
+  // icon.png artwork: centred 442 of 550 pixels, the rest grid margin/shadow.
+  static const _artworkFraction = 442 / 550;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -177,17 +180,17 @@ class _AboutHero extends ConsumerWidget {
             children: [
               _DeveloperModeDetector(
                 onEnterDeveloperMode: onEnterDeveloperMode,
-                child: DecoratedBox(
-                  decoration: ShapeDecoration(
-                    color: context.raisedSurfaceLevel.colorOf(colorScheme),
-                    shape: AppShape.all(AppCorner.fit(_logoSize)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(_logoInset),
+                child: SizedBox.square(
+                  key: const ValueKey('about-icon'),
+                  dimension: _logoSize,
+                  child: OverflowBox(
+                    maxWidth: _logoSize / _artworkFraction,
+                    maxHeight: _logoSize / _artworkFraction,
                     child: Image.asset(
                       'assets/images/icon.png',
-                      width: _logoSize - _logoInset * 2,
-                      height: _logoSize - _logoInset * 2,
+                      width: _logoSize / _artworkFraction,
+                      height: _logoSize / _artworkFraction,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
@@ -206,17 +209,22 @@ class _AboutHero extends ConsumerWidget {
             style: AppTextStyle.title2.of(context, emphasized: true),
           ),
           const SizedBox(height: 8),
-          Text(
-            identity?.fullVersion ??
-                appVersionLabel(
-                  globalState.packageInfo.version,
-                  globalState.packageInfo.buildNumber,
-                ),
+          Text.rich(
             key: const ValueKey('about-version'),
+            versionLabelSpan(
+              identity?.fullVersion ??
+                  appVersionLabel(
+                    globalState.packageInfo.version,
+                    globalState.packageInfo.buildNumber,
+                  ),
+              style: AppTextStyle.callout
+                  .of(context)
+                  .copyWith(color: colorScheme.onSurfaceVariant),
+              buildStyle: AppTextStyle.caption1
+                  .of(context)
+                  .copyWith(color: colorScheme.onSurfaceVariant),
+            ),
             textAlign: TextAlign.center,
-            style: AppTextStyle.body
-                .of(context)
-                .copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
           _Pill(

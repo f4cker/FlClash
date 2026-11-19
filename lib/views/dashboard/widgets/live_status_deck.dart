@@ -1198,7 +1198,7 @@ class _DownloadHero extends StatelessWidget {
                       ),
                 ),
                 Text(
-                  download.tag,
+                  displayVersionLabel(download.tag),
                   style: AppTextStyle.caption1
                       .of(context)
                       .copyWith(
@@ -1364,7 +1364,7 @@ class _ReadyHero extends StatelessWidget {
               color: colorScheme.onSuccessContainer,
             ),
             _HeroChip(
-              tag.replaceFirst(RegExp('^v'), ''),
+              displayVersionLabel(tag.replaceFirst(RegExp('^v'), '')),
               color: colorScheme.success,
               emphasized: true,
             ),

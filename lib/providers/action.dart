@@ -34,6 +34,7 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/widgets/release_notes.dart';
+import 'package:fl_clash/widgets/version_label.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart' show compute, listEquals;
 import 'package:flutter/services.dart';

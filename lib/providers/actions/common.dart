@@ -264,10 +264,40 @@ class CommonAction extends _$CommonAction {
     globalState.packageInfo.buildNumber,
   );
 
-  TextSpan _updateVersions(String available) => TextSpan(
-    text:
-        '${currentAppLocalizations.updateVersionSummary(_currentVersionLabel, available)}\n\n',
-  );
+  TextSpan _updateVersions(String available, {bool beta = false}) {
+    final l10n = currentAppLocalizations;
+    String summary(String current, String available) =>
+        l10n.updateVersionSummary(
+          current,
+          beta ? '$available · ${l10n.releaseBeta}' : available,
+        );
+    final context = globalState.navigatorKey.currentContext;
+    final InlineSpan versions = context == null
+        ? TextSpan(
+            text: summary(
+              displayVersionLabel(_currentVersionLabel),
+              displayVersionLabel(available),
+            ),
+          )
+        : versionMessageSpan(
+            (slots) => summary(slots[0], slots[1]),
+            [_currentVersionLabel, available],
+            buildStyle: AppTextStyle.caption1
+                .of(context)
+                .copyWith(color: _dialogMessageColor(context.colorScheme)),
+          );
+    return TextSpan(
+      children: [
+        versions,
+        const TextSpan(text: '\n\n'),
+      ],
+    );
+  }
+
+  // The message colour prism_ui's Dialog sets on its body text.
+  static Color _dialogMessageColor(ColorScheme colorScheme) => colorScheme
+      .onSurfaceVariant
+      .withValues(alpha: colorScheme.brightness == Brightness.dark ? 1 : 0.85);
 
   TextSpan _releaseSpan(BuildContext context, String tagName, String? body) {
     return TextSpan(
@@ -359,7 +389,12 @@ class CommonAction extends _$CommonAction {
   }
 
   String _macVersionLabel(MacUpdateManifest manifest) =>
-      '${manifest.fullVersion}${manifest.channel == ReleaseChannel.beta ? ' · ${currentAppLocalizations.releaseBeta}' : ''}';
+      '${displayVersionLabel(manifest.fullVersion)}${manifest.channel == ReleaseChannel.beta ? ' · ${currentAppLocalizations.releaseBeta}' : ''}';
+
+  TextSpan _macUpdateVersions(MacUpdateManifest manifest) => _updateVersions(
+    manifest.fullVersion,
+    beta: manifest.channel == ReleaseChannel.beta,
+  );
 
   Future<void> _offerMacUpdate(
     MacUpdateManifest manifest, {
@@ -368,7 +403,7 @@ class CommonAction extends _$CommonAction {
     if (!_manifestAllowed(manifest)) return;
     final showDetails = await dialogs.showMessage(
       title: currentAppLocalizations.discoverNewVersion,
-      message: _updateVersions(_macVersionLabel(manifest)),
+      message: _macUpdateVersions(manifest),
       confirmText: currentAppLocalizations.viewUpdate,
       cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
     );
@@ -387,7 +422,7 @@ class CommonAction extends _$CommonAction {
       title: currentAppLocalizations.discoverNewVersion,
       message: TextSpan(
         children: [
-          _updateVersions(_macVersionLabel(manifest)),
+          _macUpdateVersions(manifest),
           _releaseSpan(context, manifest.tag, manifest.notes),
           TextSpan(
             text:

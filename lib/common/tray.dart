@@ -140,7 +140,7 @@ class AppTray implements TrayPort {
         ),
         toolTip: available == null
             ? appTitle
-            : '$appTitle, ${currentAppLocalizations.trayUpdateAvailable(available.versionLabel)}',
+            : '$appTitle, ${currentAppLocalizations.trayUpdateAvailable(displayVersionLabel(available.versionLabel))}',
         menu: menu,
       ),
     );
@@ -308,7 +308,7 @@ class AppTray implements TrayPort {
               _ => appLocalizations.updateImmediately,
             },
             detail:
-                '${appLocalizations.updateMenuVersion(available.versionLabel)}${available.manifest?.channel == ReleaseChannel.beta ? ' · ${appLocalizations.releaseBeta}' : ''}',
+                '${appLocalizations.updateMenuVersion(displayVersionLabel(available.versionLabel))}${available.manifest?.channel == ReleaseChannel.beta ? ' · ${appLocalizations.releaseBeta}' : ''}',
             enabled:
                 !read(updateInstallBusyProvider) &&
                 read(updateDownloadStateProvider) is! UpdateDownloading,

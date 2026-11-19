@@ -259,10 +259,10 @@ void main() {
       final shown = action.checkUpdateResultHandle(action.answer, isUser: true);
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('当前版本：0.9.15-mitm.12+2026111901'),
+        find.textContaining('当前版本：0.9.15-mitm.12 (2026111901)'),
         findsOneWidget,
       );
-      expect(find.textContaining('可更新版本：1.0.0+2026111902'), findsOneWidget);
+      expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
       expect(find.text('查看更新'), findsOneWidget);
       expect(calls, isEmpty);
       await tester.tap(find.widgetWithText(TextButton, '取消'));

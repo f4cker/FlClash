@@ -17,6 +17,24 @@ const appReleaseLine = package.ReleaseLine.dev;
 String appVersionLabel(String version, String build) =>
     build.isEmpty ? version : '$version+$build';
 
+typedef VersionLabelParts = ({String version, String? build});
+
+/// Splits a `version+build` label, as [appVersionLabel] and the release
+/// identities write it, for display.
+VersionLabelParts versionLabelParts(String label) {
+  final plus = label.indexOf('+');
+  return plus < 0
+      ? (version: label, build: null)
+      : (version: label.substring(0, plus), build: label.substring(plus + 1));
+}
+
+/// How a person reads a `version+build` label: `1.0.0 (2026111903)`. Only for
+/// display; comparisons and stored values keep the `+` form.
+String displayVersionLabel(String label) => switch (versionLabelParts(label)) {
+  (version: final version, build: final build?) => '$version ($build)',
+  (version: final version, build: null) => version,
+};
+
 sealed class UpdateDownload {
   const UpdateDownload(this.tag);
 

@@ -96,7 +96,7 @@ void main() {
       container.read(availableUpdateStateProvider.notifier).value =
           UpdateAvailable({'tag_name': beta.tag}, manifest: beta);
       await show(ReleaseHistoryView(store: store));
-      expect(find.textContaining('1.2.0-beta.1+2026111904'), findsOneWidget);
+      expect(find.textContaining('1.2.0-beta.1 (2026111904)'), findsOneWidget);
       final currentTitle = find.textContaining('当前安装版本');
       final availableTitle = find.textContaining('新版本 1.2.0-beta.1');
       final betaLabels = find.text('测试版');

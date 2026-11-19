@@ -105,7 +105,7 @@ void main() {
       await pump(tester);
       expect(
         tester.getTopLeft(find.text('1.1.0')).dy,
-        lessThan(tester.getTopLeft(find.text('1.0.0+2026111902')).dy),
+        lessThan(tester.getTopLeft(find.text('1.0.0 (2026111902)')).dy),
       );
       expect(
         find.textContaining('Installed body', findRichText: true),
@@ -131,7 +131,7 @@ void main() {
         find.textContaining('Installed body', findRichText: true),
         findsOneWidget,
       );
-      await tester.tap(find.text('1.0.0+2026111902'));
+      await tester.tap(find.text('1.0.0 (2026111902)'));
       await tester.pump();
       expect(
         find.textContaining('Installed body', findRichText: true),
@@ -163,7 +163,7 @@ void main() {
   testWidgets('missing installed never marks newest current', (tester) async {
     result = history([release('v1.1.0', 20, 'Newest body')]);
     await pump(tester);
-    expect(find.text('Installed version 1.0.0+2026111902'), findsOneWidget);
+    expect(find.text('Installed version 1.0.0 (2026111902)'), findsOneWidget);
     expect(
       find.text('The installed version is not in the loaded release history.'),
       findsOneWidget,
@@ -281,7 +281,7 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is Semantics &&
-            (widget.properties.label?.startsWith('Version 1.0.0+') ?? false),
+            (widget.properties.label?.startsWith('Version 1.0.0 (') ?? false),
       ),
     );
     expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
@@ -371,7 +371,7 @@ void main() {
     ]);
     await pump(tester, scale: 2, size: const Size(390, 1000));
     final text = tester.widget<Text>(
-      find.text('0.9.15-mitm.12+202611190123456789'),
+      find.text('0.9.15-mitm.12 (202611190123456789)'),
     );
     expect(text.maxLines, isNull);
     expect(text.overflow, isNull);
@@ -390,7 +390,7 @@ void main() {
       await tester.pumpAndSettle();
       final entry = find.byKey(const ValueKey('release-history-entry'));
       expect(tester.getSize(entry).height, greaterThanOrEqualTo(44));
-      expect(find.text('1.0.0+2026111902'), findsOneWidget);
+      expect(find.text('1.0.0 (2026111902)'), findsOneWidget);
       final pending = Completer<void>();
       final interceptor = InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -420,7 +420,7 @@ void main() {
         findsOneWidget,
       );
       final title = find.text('Release history').last;
-      final installed = find.text('Installed version 1.0.0+2026111902');
+      final installed = find.text('Installed version 1.0.0 (2026111902)');
       expect(
         tester.getTopLeft(installed).dy,
         greaterThan(tester.getBottomLeft(title).dy),
