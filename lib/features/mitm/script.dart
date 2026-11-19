@@ -433,6 +433,7 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
                 illustration: NullStatusIllustration.scripts,
                 animate: false,
                 descriptionMinLines: 2,
+                anchorToHeading: true,
                 action: profileId == null
                     ? null
                     : FilledButton(

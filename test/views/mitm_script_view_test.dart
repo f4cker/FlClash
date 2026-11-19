@@ -15,6 +15,8 @@ import 'package:fl_clash/views/config/mitm_module_confirm.dart';
 import 'package:fl_clash/views/config/mitm_modules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/rendering.dart';
+import 'package:fl_clash/views/logs.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -166,16 +168,21 @@ void main() {
   }
 
   testWidgets(
-    'three module-script switches keep empty slots still and aligned',
+    'three logs-module-script cycles share the existing logs heading anchor',
     (tester) async {
-      final scripts = ValueNotifier(false);
-      addTearDown(scripts.dispose);
-      final pages = ValueListenableBuilder<bool>(
-        valueListenable: scripts,
-        builder: (_, showScripts, _) =>
-            showScripts ? const MitmScriptView() : const MitmModulesView(),
+      final page = ValueNotifier(0);
+      addTearDown(page.dispose);
+      final pages = ValueListenableBuilder<int>(
+        valueListenable: page,
+        builder: (_, index, _) => switch (index) {
+          0 => const LogsView(),
+          1 => const MitmModulesView(),
+          _ => const MitmScriptView(),
+        },
       );
       await pump(tester, pages, scripts: const []);
+      tester.view.physicalSize = const Size(1220, 900);
+      container.read(viewSizeProvider.notifier).value = const Size(1220, 900);
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -184,30 +191,30 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      List<Rect> slots() {
+      (Offset, double) heading() {
         final empty = tester.widget<NullStatus>(find.byType(NullStatus));
-        expect(empty.animate, isFalse);
-        expect(empty.descriptionMinLines, 2);
-        expect(
-          tester
-              .widget<EmptyIllustration>(find.byType(EmptyIllustration))
-              .animate,
-          isFalse,
+        final label = find.text(empty.label!);
+        final paragraph = tester.renderObject<RenderParagraph>(label);
+        return (
+          tester.getCenter(find.byType(EmptyIllustration)),
+          tester.getTopLeft(label).dy +
+              paragraph.getDryBaseline(
+                paragraph.constraints,
+                TextBaseline.alphabetic,
+              )!,
         );
-        return [
-          tester.getRect(find.byType(EmptyIllustration)),
-          tester.getRect(find.text(empty.label!)),
-          tester.getRect(find.byWidget(empty.action!)),
-        ];
       }
 
-      final baseline = slots();
-      expect(baseline.last.height, 40);
+      final baseline = heading();
+      Rect? baselineAction;
       for (var cycle = 0; cycle < 3; cycle++) {
-        for (final showScripts in [true, false]) {
-          scripts.value = showScripts;
+        for (final index in [1, 2, 0]) {
+          page.value = index;
           await tester.pump();
           await tester.pump();
+          if (index == 0) {
+            await tester.pumpAndSettle();
+          }
           for (final elapsed in [
             Duration.zero,
             const Duration(milliseconds: 16),
@@ -217,21 +224,34 @@ void main() {
             const Duration(milliseconds: 900),
           ]) {
             await tester.pump(elapsed);
-            final current = slots();
-            for (var index = 0; index < current.length; index++) {
-              expect(current[index].top, closeTo(baseline[index].top, 1));
-              expect(
-                current[index].center.dx,
-                closeTo(baseline[index].center.dx, 1),
-              );
+            final current = heading();
+            expect(current.$1.dx, closeTo(baseline.$1.dx, 1));
+            expect(current.$1.dy, closeTo(baseline.$1.dy, 1));
+            expect(current.$2, closeTo(baseline.$2, 1));
+            if (index != 0) {
+              final empty = tester.widget<NullStatus>(find.byType(NullStatus));
+              expect(empty.animate, isFalse);
+              expect(empty.anchorToHeading, isTrue);
+              final action = tester.getRect(find.byWidget(empty.action!));
+              baselineAction ??= action;
+              expect(action, baselineAction);
+              expect(action.height, 40);
             }
           }
         }
       }
       tester.platformDispatcher.textScaleFactorTestValue = 2;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      scripts.value = true;
+      page.value = 0;
       await tester.pumpAndSettle();
+      final scaledBaseline = heading();
+      for (final index in [1, 2]) {
+        page.value = index;
+        await tester.pumpAndSettle();
+        final scaled = heading();
+        expect(scaled.$1.dy, closeTo(scaledBaseline.$1.dy, 1));
+        expect(scaled.$2, closeTo(scaledBaseline.$2, 1));
+      }
       final empty = tester.widget<NullStatus>(find.byType(NullStatus));
       final description = tester.getRect(find.text(empty.description!));
       expect(description.height, greaterThanOrEqualTo(80));

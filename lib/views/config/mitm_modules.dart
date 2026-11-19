@@ -351,6 +351,7 @@ class MitmModulesView extends ConsumerWidget {
           illustration: NullStatusIllustration.modules,
           animate: false,
           descriptionMinLines: 2,
+          anchorToHeading: true,
           label: appLocalizations.mitmModulesEmptyTitle,
           description: appLocalizations.mitmModulesEmptyBody,
           action: FilledButton(
