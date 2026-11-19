@@ -45,7 +45,11 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
         unawaited(precacheTargetIcons(next.map((group) => group.icon)));
       }
     }, fireImmediately: true);
-    ref.listenManual(iconSetsProvider, (_, next) {
+    ref.listenManual(iconSetsProvider, (prev, next) {
+      // A read failing or recovering keeps the sets it had: nothing new.
+      if (identical(prev?.value, next.value)) {
+        return;
+      }
       if (next.value case final iconSets?) {
         unawaited(
           precacheTargetIcons(iconSets.map((iconSet) => iconSet.cover)),

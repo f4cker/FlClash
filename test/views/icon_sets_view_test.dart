@@ -42,6 +42,22 @@ class _SlowIconSets extends _TestIconSets {
   );
 }
 
+/// Reads its sets until told to fail, as a database read can.
+class _FlakyIconSets extends _TestIconSets {
+  _FlakyIconSets(super.initial);
+
+  Exception? failure;
+
+  @override
+  Stream<List<IconSet>> build() async* {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    if (failure case final failure?) {
+      throw failure;
+    }
+    yield initial;
+  }
+}
+
 class _RecordingIconSetsAction extends IconSetsAction {
   _RecordingIconSetsAction({this.failure});
 
@@ -270,5 +286,50 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('Qure'), findsOne);
+  });
+
+  testWidgets('a page opened while a failed read is retried lists the sets '
+      'it had', (tester) async {
+    final iconSets = _FlakyIconSets(const [_remote, _local]);
+    await _pumpView(
+      tester,
+      iconSets: iconSets,
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => Navigator.of(
+            context,
+          ).push(HostPageRoute<void>(builder: (_) => const IconSetsView())),
+          child: const Text('open'),
+        ),
+      ),
+    );
+    final container = globalState.container;
+    // Read once before the page opens, as another view would.
+    container.listen(iconSetsProvider, (_, _) {});
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(container.read(iconSetsProvider).value, hasLength(2));
+
+    // An exception is retried: the list reads as loading with its error.
+    iconSets.failure = Exception('db busy');
+    container.invalidate(iconSetsProvider);
+    await tester.pump(const Duration(milliseconds: 50));
+    final state = container.read(iconSetsProvider);
+    expect(state.hasError, isTrue);
+    expect(state.isLoading, isTrue);
+
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    // Past the delay a loading page waits before it shows so.
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Qure'), findsOne);
+    expect(find.text('Mine'), findsOne);
+    expect(find.byType(ActivityIndicator), findsNothing);
+
+    iconSets.failure = null;
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(container.read(iconSetsProvider).hasError, isFalse);
+    expect(find.text('Qure'), findsOne);
+    expect(tester.takeException(), null);
   });
 }

@@ -809,6 +809,74 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
+    for (final retried in [false, true]) {
+      testWidgets('a list that fails after it loaded shows the hint over the '
+          'rows it read, once, and recovering clears it, once'
+          '${retried ? ' (a retried exception)' : ''}', (tester) async {
+        if (retried) {
+          lists.exception = Exception('db busy');
+        }
+        final container = await pumpLists(
+          tester,
+          iconSets: [remoteIconSet],
+          scripts: [remoteScript],
+        );
+        final l10n = currentAppLocalizations;
+        expect(banner(), findsNothing);
+        expect(announced, isEmpty);
+
+        lists.failing.add(_List.scripts);
+        container.invalidate(scriptsProvider);
+        await settle(tester, rounds: 3);
+        expect(container.read(scriptsProvider).hasError, isTrue);
+        expect(container.read(scriptsProvider).isLoading, retried);
+        expect(banner(), findsOneWidget);
+        // The rows read before stay, the failed list's included.
+        expect(find.text('Remote script'), findsOneWidget);
+        expect(find.text('Remote icons'), findsOneWidget);
+        expect(find.text(GeoResource.MMDB.name), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text(l10n.autoUpdate)).dy,
+          greaterThan(tester.getBottomLeft(banner()).dy),
+        );
+        expect(announced, [l10n.resourceListsReadFailed]);
+
+        // Failing on, retried by Riverpod or read again, says nothing more.
+        container.invalidate(scriptsProvider);
+        await tester.pump(const Duration(milliseconds: 500));
+        await settle(tester, rounds: 3);
+        expect(banner(), findsOneWidget);
+        expect(announced, [l10n.resourceListsReadFailed]);
+
+        lists.failing.clear();
+        if (retried) {
+          // Riverpod's own retry reads it again.
+          await tester.pump(const Duration(seconds: 7));
+        } else {
+          container.invalidate(scriptsProvider);
+        }
+        await settle(tester, rounds: 3);
+        expect(container.read(scriptsProvider).hasError, isFalse);
+        expect(banner(), findsNothing);
+        expect(find.text('Remote script'), findsOneWidget);
+        expect(announced, [
+          l10n.resourceListsReadFailed,
+          l10n.resourceListsRecovered,
+        ]);
+
+        // An identical read after that is no news.
+        container.invalidate(scriptsProvider);
+        await settle(tester, rounds: 3);
+        expect(announced, [
+          l10n.resourceListsReadFailed,
+          l10n.resourceListsRecovered,
+        ]);
+        expect(tester.takeException(), null);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+
     testWidgets('a retry that fails again keeps one hint and says nothing '
         'more', (tester) async {
       lists.failing.add(_List.scripts);
@@ -835,6 +903,7 @@ enum _List { iconSets, ruleProviders, scripts, modules }
 class _Lists {
   final failing = <_List>{};
   final builds = <_List, int>{};
+  Exception? exception;
   Completer<void>? hold;
 
   Stream<List<T>> read<T>(_List list, List<T> rows) async* {
@@ -844,6 +913,10 @@ class _Lists {
       await hold.future;
     }
     if (failing.contains(list)) {
+      // An Exception, unlike an Error, Riverpod retries.
+      if (exception case final exception?) {
+        throw exception;
+      }
       throw StateError('db down');
     }
     // A copy, so rows added between reads count as a change.
