@@ -12,11 +12,11 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/config/mitm_module_confirm.dart';
+import 'package:fl_clash/views/config/mitm_modules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prism_ui/switch.dart';
 
 import '../helpers/app_paths.dart';
 import '../helpers/test_app.dart';
@@ -164,6 +164,83 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'three module-script switches keep empty slots still and aligned',
+    (tester) async {
+      final scripts = ValueNotifier(false);
+      addTearDown(scripts.dispose);
+      final pages = ValueListenableBuilder<bool>(
+        valueListenable: scripts,
+        builder: (_, showScripts, _) =>
+            showScripts ? const MitmScriptView() : const MitmModulesView(),
+      );
+      await pump(tester, pages, scripts: const []);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: TestApp(locale: const Locale('zh', 'CN'), child: pages),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      List<Rect> slots() {
+        final empty = tester.widget<NullStatus>(find.byType(NullStatus));
+        expect(empty.animate, isFalse);
+        expect(empty.descriptionMinLines, 2);
+        expect(
+          tester
+              .widget<EmptyIllustration>(find.byType(EmptyIllustration))
+              .animate,
+          isFalse,
+        );
+        return [
+          tester.getRect(find.byType(EmptyIllustration)),
+          tester.getRect(find.text(empty.label!)),
+          tester.getRect(find.byWidget(empty.action!)),
+        ];
+      }
+
+      final baseline = slots();
+      expect(baseline.last.height, 40);
+      for (var cycle = 0; cycle < 3; cycle++) {
+        for (final showScripts in [true, false]) {
+          scripts.value = showScripts;
+          await tester.pump();
+          await tester.pump();
+          for (final elapsed in [
+            Duration.zero,
+            const Duration(milliseconds: 16),
+            const Duration(milliseconds: 80),
+            const Duration(milliseconds: 160),
+            const Duration(milliseconds: 400),
+            const Duration(milliseconds: 900),
+          ]) {
+            await tester.pump(elapsed);
+            final current = slots();
+            for (var index = 0; index < current.length; index++) {
+              expect(current[index].top, closeTo(baseline[index].top, 1));
+              expect(
+                current[index].center.dx,
+                closeTo(baseline[index].center.dx, 1),
+              );
+            }
+          }
+        }
+      }
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      scripts.value = true;
+      await tester.pumpAndSettle();
+      final empty = tester.widget<NullStatus>(find.byType(NullStatus));
+      final description = tester.getRect(find.text(empty.description!));
+      expect(description.height, greaterThanOrEqualTo(80));
+      final action = tester.getRect(find.byWidget(empty.action!));
+      expect(action.top - description.bottom, closeTo(24, 0.01));
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 
   testWidgets('the entry counts scripts, updates and errors', (tester) async {
     await pump(tester, const MitmScriptEntryItem());

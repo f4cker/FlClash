@@ -344,10 +344,13 @@ class MitmModulesView extends ConsumerWidget {
         ),
       ],
       body: NullStatusSwitcher(
+        animate: false,
         isLoading: state.isLoading && !state.hasValue,
         isEmpty: modules.isEmpty,
         nullStatus: NullStatus(
           illustration: NullStatusIllustration.modules,
+          animate: false,
+          descriptionMinLines: 2,
           label: appLocalizations.mitmModulesEmptyTitle,
           description: appLocalizations.mitmModulesEmptyBody,
           action: FilledButton(

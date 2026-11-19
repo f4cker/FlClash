@@ -424,12 +424,15 @@ class _MitmScriptViewState extends ConsumerState<MitmScriptView> {
             ),
           Expanded(
             child: NullStatusSwitcher(
+              animate: false,
               isLoading: loading,
               isEmpty: true,
               nullStatus: NullStatus(
                 label: l.mitmScriptsEmptyTitle,
                 description: l.mitmScriptsEmptyBody,
                 illustration: NullStatusIllustration.scripts,
+                animate: false,
+                descriptionMinLines: 2,
                 action: profileId == null
                     ? null
                     : FilledButton(
