@@ -46,42 +46,60 @@ class ProfilesView extends ConsumerStatefulWidget {
 class _ProfilesViewState extends ConsumerState<ProfilesView> {
   bool _isUpdating = false;
 
+  /// One batch at a time: a tap while it runs is ignored, and the button
+  /// stands as a spinner until every remote profile has answered.
   Future<void> _updateProfiles(List<Profile> profiles) async {
-    if (_isUpdating == true) {
+    if (_isUpdating) {
       return;
     }
-    _isUpdating = true;
+    setState(() => _isUpdating = true);
     final appLocalizations = context.appLocalizations;
     final profilesAction = ref.read(profilesActionProvider.notifier);
     final List<UpdatingMessage> messages = [];
-    final updateProfiles = profiles.map<Future>((profile) async {
-      if (profile.type != ProfileType.url) return;
-      try {
-        await profilesAction.updateProfile(profile, showLoading: true);
-      } catch (e) {
-        messages.add(
-          UpdatingMessage(
-            label: profile.realLabel,
-            message: userFacingErrorMessage(e, appLocalizations),
-          ),
-        );
+    try {
+      final updateProfiles = profiles.map<Future>((profile) async {
+        if (profile.type != ProfileType.url) return;
+        try {
+          await profilesAction.updateProfile(profile, showLoading: true);
+        } catch (e) {
+          messages.add(
+            UpdatingMessage(
+              label: profile.realLabel,
+              message: userFacingErrorMessage(e, appLocalizations),
+            ),
+          );
+        }
+      });
+      await Future.wait(updateProfiles);
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdating = false);
+      } else {
+        _isUpdating = false;
       }
-    });
-    await Future.wait(updateProfiles);
+    }
     dialogs.showFailures(messages);
-    _isUpdating = false;
   }
 
   List<IconButtonData> _buildActions(List<Profile> profiles) {
+    // Only a subscription can be fetched again; a page of local profiles
+    // keeps sorting without an update that would do nothing.
+    final hasRemote = profiles.any(
+      (profile) => profile.type == ProfileType.url,
+    );
     return profiles.isNotEmpty
         ? [
-            IconButtonData(
-              glyph: AppGlyphs.sync,
-              onPressed: () {
-                _updateProfiles(profiles);
-              },
-              tooltip: context.appLocalizations.update,
-            ),
+            if (hasRemote)
+              IconButtonData(
+                glyph: AppGlyphs.sync,
+                isLoading: _isUpdating,
+                onPressed: () {
+                  _updateProfiles(profiles);
+                },
+                tooltip: _isUpdating
+                    ? context.appLocalizations.profilesUpdating
+                    : context.appLocalizations.update,
+              ),
             IconButtonData(
               glyph: AppGlyphs.sort,
               onPressed: () {

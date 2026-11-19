@@ -8038,4 +8038,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => '辅助程序已关闭';
+
+  @override
+  String get profilesUpdating => '更新中…';
+
+  @override
+  String get retrying => '重试中…';
+
+  @override
+  String get connectionsReadFailed => '无法读取连接';
+
+  @override
+  String get connectionsReadFailedDesc => '请重试。';
+
+  @override
+  String get connectionsRefreshFailedStale => '连接刷新失败，当前显示上次结果。';
+
+  @override
+  String get connectionsRefreshed => '连接已刷新。';
+
+  @override
+  String get resourceListsReadFailed => '部分资源列表读取失败。';
+
+  @override
+  String get resourceListsRecovered => '资源列表已恢复。';
 }

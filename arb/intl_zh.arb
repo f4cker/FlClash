@@ -2405,5 +2405,13 @@
   "macHelperDisabledByUserDetail": "Flash 的后台运行权限已关闭。请在系统设置中允许 Flash 在后台运行。",
   "macHelperUnavailableTitle": "辅助程序暂不可用",
   "macHelperViewSteps": "查看步骤",
-  "macHelperDisabledTitle": "辅助程序已关闭"
+  "macHelperDisabledTitle": "辅助程序已关闭",
+  "profilesUpdating": "更新中…",
+  "retrying": "重试中…",
+  "connectionsReadFailed": "无法读取连接",
+  "connectionsReadFailedDesc": "请重试。",
+  "connectionsRefreshFailedStale": "连接刷新失败，当前显示上次结果。",
+  "connectionsRefreshed": "连接已刷新。",
+  "resourceListsReadFailed": "部分资源列表读取失败。",
+  "resourceListsRecovered": "资源列表已恢复。"
 }

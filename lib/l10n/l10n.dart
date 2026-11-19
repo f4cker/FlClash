@@ -14409,6 +14409,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The helper is turned off'**
   String get macHelperDisabledTitle;
+
+  /// No description provided for @profilesUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating…'**
+  String get profilesUpdating;
+
+  /// No description provided for @retrying.
+  ///
+  /// In en, this message translates to:
+  /// **'Retrying…'**
+  String get retrying;
+
+  /// No description provided for @connectionsReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read connections'**
+  String get connectionsReadFailed;
+
+  /// No description provided for @connectionsReadFailedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Please try again.'**
+  String get connectionsReadFailedDesc;
+
+  /// No description provided for @connectionsRefreshFailedStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t refresh connections. Showing the last result.'**
+  String get connectionsRefreshFailedStale;
+
+  /// No description provided for @connectionsRefreshed.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections refreshed.'**
+  String get connectionsRefreshed;
+
+  /// No description provided for @resourceListsReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Some resource lists couldn\'t be read.'**
+  String get resourceListsReadFailed;
+
+  /// No description provided for @resourceListsRecovered.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource lists restored.'**
+  String get resourceListsRecovered;
 }
 
 class _AppLocalizationsDelegate

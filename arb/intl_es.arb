@@ -3631,5 +3631,13 @@
   "macHelperDisabledByUserDetail": "El permiso de Flash para ejecutarse en segundo plano está desactivado. Permite que Flash se ejecute en segundo plano en Ajustes del Sistema.",
   "macHelperUnavailableTitle": "Asistente no disponible",
   "macHelperViewSteps": "Ver pasos",
-  "macHelperDisabledTitle": "El asistente está desactivado"
+  "macHelperDisabledTitle": "El asistente está desactivado",
+  "profilesUpdating": "Actualizando…",
+  "retrying": "Reintentando…",
+  "connectionsReadFailed": "No se pudieron leer las conexiones",
+  "connectionsReadFailedDesc": "Inténtalo de nuevo.",
+  "connectionsRefreshFailedStale": "No se pudieron actualizar las conexiones. Se muestra el último resultado.",
+  "connectionsRefreshed": "Conexiones actualizadas.",
+  "resourceListsReadFailed": "No se pudieron leer algunas listas de recursos.",
+  "resourceListsRecovered": "Listas de recursos restauradas."
 }

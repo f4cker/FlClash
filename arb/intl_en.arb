@@ -3683,5 +3683,13 @@
   "macHelperDisabledByUserDetail": "Flash’s permission to run in the background is turned off. Allow Flash to run in the background in System Settings.",
   "macHelperUnavailableTitle": "Helper unavailable",
   "macHelperViewSteps": "View steps",
-  "macHelperDisabledTitle": "The helper is turned off"
+  "macHelperDisabledTitle": "The helper is turned off",
+  "profilesUpdating": "Updating…",
+  "retrying": "Retrying…",
+  "connectionsReadFailed": "Couldn't read connections",
+  "connectionsReadFailedDesc": "Please try again.",
+  "connectionsRefreshFailedStale": "Couldn't refresh connections. Showing the last result.",
+  "connectionsRefreshed": "Connections refreshed.",
+  "resourceListsReadFailed": "Some resource lists couldn't be read.",
+  "resourceListsRecovered": "Resource lists restored."
 }
