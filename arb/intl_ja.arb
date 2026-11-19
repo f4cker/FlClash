@@ -3579,5 +3579,6 @@
   "viewUpdate": "更新を確認",
   "trayStartCore": "コアを起動",
   "trayStopCore": "コアを停止",
-  "trayCoreProcessing": "処理中"
+  "trayCoreProcessing": "処理中",
+  "trayUpdateAvailable": "利用可能なアップデート：{version}"
 }

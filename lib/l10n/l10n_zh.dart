@@ -7894,4 +7894,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trayCoreProcessing => '处理中';
+
+  @override
+  String trayUpdateAvailable(Object version) {
+    return '可用更新：$version';
+  }
 }

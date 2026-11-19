@@ -8589,4 +8589,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get trayCoreProcessing => 'Обработка';
+
+  @override
+  String trayUpdateAvailable(Object version) {
+    return 'Доступно обновление: $version';
+  }
 }

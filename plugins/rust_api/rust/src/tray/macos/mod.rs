@@ -82,6 +82,7 @@ pub fn show(content: TrayContent) -> bool {
         tray.status.set_image(&image, content.image.placement);
         tray.status.set_dot(content.image.dot, content.image.size);
         tray.status.set_title(&content.title);
+        tray.status.set_tool_tip(&content.tool_tip);
         let entries = Entry::list(&content.menu);
         let generation = content.menu_generation;
         // An open menu takes new content in place when its rows are the

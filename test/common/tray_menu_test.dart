@@ -443,6 +443,176 @@ void main() {
     );
   });
 
+  void expectUpdateIcon(String name, {bool mono = true}) {
+    final icon = showCall()!.image;
+    expect(icon.size, 18);
+    expect(icon.template, mono);
+    expect(icon.pngs, hasLength(4));
+    for (var index = 0; index < 4; index++) {
+      final variant = index == 0 ? '' : '${index + 1}.0x/';
+      expect(
+        icon.pngs[index],
+        File(
+          'assets/images/tray/${mono ? 'macos' : 'unix'}/$variant$name.png',
+        ).readAsBytesSync(),
+      );
+    }
+  }
+
+  test(
+    'confirmed update selects every mode, safe and stopped variant',
+    () async {
+      container.listen(availableUpdateStateProvider, (_, _) {});
+      container.read(availableUpdateStateProvider.notifier).value =
+          const UpdateAvailable({'tag_name': 'v1.0.0+2026111902'});
+      for (final mono in [false, true]) {
+        for (final (state, name) in [
+          (_trayState(tunEnable: true), 'stopped'),
+          (
+            _trayState(
+              isStart: true,
+              tunEnable: true,
+            ).copyWith(suspended: true),
+            'stopped',
+          ),
+          (
+            _trayState(isStart: true, tunEnable: true, safeMode: true),
+            'status_4',
+          ),
+          for (final mode in Mode.values)
+            for (final tun in [false, true])
+              (
+                _trayState(isStart: true, mode: mode, tunEnable: tun),
+                '${mode.name}${tun ? '_tun' : ''}',
+              ),
+        ]) {
+          await update(state.copyWith(monochromeTrayIcon: mono));
+          expectUpdateIcon('${name}_update', mono: mono);
+        }
+      }
+    },
+  );
+
+  test(
+    'only confirmed availability controls the arrow through failure and preparation',
+    () async {
+      container.listen(availableUpdateStateProvider, (_, _) {});
+      container.listen(lastUpdateCheckStateProvider, (_, _) {});
+      container.listen(updateDownloadStateProvider, (_, _) {});
+      container.listen(updateInstallBusyProvider, (_, _) {});
+      const candidate = UpdateAvailable({'tag_name': 'v1.0.0+2026111902'});
+      final available = container.read(availableUpdateStateProvider.notifier);
+      final check = container.read(lastUpdateCheckStateProvider.notifier);
+      final download = container.read(updateDownloadStateProvider.notifier);
+      final busy = container.read(updateInstallBusyProvider.notifier);
+      check.value = UpdateCheckFailed(Exception('offline before confirmation'));
+      busy.value = true;
+      await update(_trayState());
+      expectUpdateIcon('stopped');
+      expect(showCall()!.toolTip, appName);
+      available.value = candidate;
+      for (final change in <void Function()>[
+        () => check.value = candidate,
+        () => check.value = UpdateCheckFailed(
+          Exception('offline after confirmation'),
+        ),
+        () => download.value = const UpdateDownloading('v1.0.0+2026111902'),
+        () => download.value = const UpdateReady(
+          'v1.0.0+2026111902',
+          'fixture.dmg',
+        ),
+        () => download.value = null,
+        () => busy.value = false,
+      ]) {
+        change();
+        await update(_trayState());
+        expectUpdateIcon('stopped_update');
+        expect(
+          showCall()!.toolTip,
+          '$appName, Update available: 1.0.0+2026111902',
+        );
+      }
+      check.value = const UpdateUpToDate();
+      available.value = null;
+      await update(_trayState());
+      expectUpdateIcon('stopped');
+      expect(showCall()!.toolTip, appName);
+      available.value = candidate;
+      await update(_trayState());
+      expectUpdateIcon('stopped_update');
+      available.value = null;
+      await update(_trayState());
+      expectUpdateIcon('stopped');
+      expect(showCall()!.toolTip, appName);
+    },
+  );
+
+  test(
+    'available update accessibility keeps the full target and safe mode in every locale',
+    () async {
+      container.listen(availableUpdateStateProvider, (_, _) {});
+      container.read(availableUpdateStateProvider.notifier).value =
+          const UpdateAvailable({'tag_name': 'v1.0.0+2026111902'});
+      try {
+        for (final language in ['en', 'zh', 'ja', 'ru', 'fr', 'es', 'ko']) {
+          final l10n = loadAppLocalizations(Locale(language));
+          await update(_trayState(safeMode: true));
+          expect(
+            showCall()!.toolTip,
+            '${l10n.safeModeAppTitle(appName)}, ${l10n.trayUpdateAvailable('1.0.0+2026111902')}',
+          );
+          expect(showCall()!.toolTip, contains('1.0.0+2026111902'));
+          if (language == 'zh') expect(showCall()!.toolTip, contains('可用更新'));
+        }
+      } finally {
+        loadAppLocalizations(const Locale('en'));
+      }
+    },
+  );
+
+  test('update arrow preserves both native MITM dot states', () async {
+    container.listen(availableUpdateStateProvider, (_, _) {});
+    container.read(availableUpdateStateProvider.notifier).value =
+        const UpdateAvailable({'tag_name': 'v1.0.0+2026111902'});
+    for (final indicator in [
+      const MitmIndicator.decrypting(),
+      const MitmIndicator.paused(MitmPauseReason.liveness),
+    ]) {
+      for (final mono in [false, true]) {
+        final state = _trayState(
+          isStart: true,
+          tunEnable: true,
+          monochromeTrayIcon: mono,
+          mitmIndicator: indicator,
+        );
+        await update(state);
+        expectUpdateIcon('rule_tun_update', mono: mono);
+        final dot = showCall()!.image.dot;
+        expect(dot, isNotNull);
+        container.read(availableUpdateStateProvider.notifier).value = null;
+        await update(state);
+        expect(showCall()!.image.dot, dot);
+        container.read(availableUpdateStateProvider.notifier).value =
+            const UpdateAvailable({'tag_name': 'v1.0.0+2026111902'});
+      }
+    }
+  });
+
+  test('other platforms do not select macOS update assets', () async {
+    for (final windows in [false, true]) {
+      final other = AppTray.forPlatform(isMacOS: false, isWindows: windows);
+      expect(
+        other.getTrayIcon(
+          isStart: true,
+          tunEnable: true,
+          safeMode: false,
+          updateAvailable: true,
+        ),
+        'assets/images/tray/${windows ? 'windows' : 'unix'}/rule_tun.${windows ? 'ico' : 'png'}',
+      );
+    }
+  });
+
   test('sends icon, tooltip and menu in a single show call', () async {
     await update(_trayState(isStart: true, tunEnable: true));
 

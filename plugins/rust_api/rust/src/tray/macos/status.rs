@@ -7,13 +7,13 @@ use objc2::{
     define_class, msg_send, AllocAnyThread, DefinedClass, MainThreadMarker, MainThreadOnly,
 };
 use objc2_app_kit::{
-    NSAttributedStringNSExtendedStringDrawing, NSAttributedStringNSStringDrawing, NSBezierPath,
-    NSBitmapImageRep, NSColor, NSCompositingOperation, NSEvent, NSFont, NSFontAttributeName,
-    NSForegroundColorAttributeName, NSGraphicsContext, NSImage, NSImageScaling, NSImageView,
-    NSLayoutConstraint, NSLayoutConstraintOrientation, NSLayoutPriorityRequired, NSResponder,
-    NSStackView, NSStackViewDistribution, NSStatusBar, NSStatusBarButton, NSStatusItem,
-    NSStringDrawingOptions, NSUserInterfaceLayoutOrientation, NSVariableStatusItemLength, NSView,
-    NSViewNoIntrinsicMetric, NSWorkspace,
+    NSAccessibility, NSAttributedStringNSExtendedStringDrawing, NSAttributedStringNSStringDrawing,
+    NSBezierPath, NSBitmapImageRep, NSColor, NSCompositingOperation, NSEvent, NSFont,
+    NSFontAttributeName, NSForegroundColorAttributeName, NSGraphicsContext, NSImage,
+    NSImageScaling, NSImageView, NSLayoutConstraint, NSLayoutConstraintOrientation,
+    NSLayoutPriorityRequired, NSResponder, NSStackView, NSStackViewDistribution, NSStatusBar,
+    NSStatusBarButton, NSStatusItem, NSStringDrawingOptions, NSUserInterfaceLayoutOrientation,
+    NSVariableStatusItemLength, NSView, NSViewNoIntrinsicMetric, NSWorkspace,
     NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification,
 };
 use objc2_foundation::{
@@ -179,6 +179,15 @@ impl StatusItem {
 
     pub fn set_dot(&self, dot: Option<TrayDot>, size: u32) {
         self.content.set_dot(dot, f64::from(size));
+    }
+
+    pub fn set_tool_tip(&self, tool_tip: &str) {
+        let label = NSString::from_str(tool_tip);
+        if let Some(button) = self.button() {
+            button.setToolTip(Some(&label));
+            button.setAccessibilityLabel(Some(&label));
+        }
+        self.content.setToolTip(Some(&label));
     }
 
     pub fn set_title(&self, title: &str) {

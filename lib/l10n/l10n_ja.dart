@@ -8377,4 +8377,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trayCoreProcessing => '処理中';
+
+  @override
+  String trayUpdateAvailable(Object version) {
+    return '利用可能なアップデート：$version';
+  }
 }

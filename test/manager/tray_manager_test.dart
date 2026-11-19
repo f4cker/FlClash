@@ -4,6 +4,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/tray_menu.dart';
 import 'package:fl_clash/common/compute.dart';
+import 'package:fl_clash/common/app_update.dart';
 import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/manager/locale_manager.dart';
 import 'package:fl_clash/manager/tray_manager.dart';
@@ -146,6 +147,22 @@ void main() {
         );
     await tester.pumpAndSettle();
     expect(_RecordingSystemAction.updateTrayCount, greaterThan(0));
+  });
+
+  testWidgets('confirmed availability and clearing refresh the status icon', (
+    tester,
+  ) async {
+    await pumpTrayManager(tester);
+    final available = container.read(availableUpdateStateProvider.notifier);
+    for (final value in [
+      const UpdateAvailable({'tag_name': 'v1.0.0+2026111902'}),
+      null,
+    ]) {
+      _RecordingSystemAction.updateTrayCount = 0;
+      available.value = value;
+      await tester.pumpAndSettle();
+      expect(_RecordingSystemAction.updateTrayCount, 1);
+    }
   });
 
   testWidgets('renders its child untouched', (tester) async {

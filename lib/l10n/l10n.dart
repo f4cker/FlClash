@@ -14188,6 +14188,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Processing'**
   String get trayCoreProcessing;
+
+  /// No description provided for @trayUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available: {version}'**
+  String trayUpdateAvailable(Object version);
 }
 
 class _AppLocalizationsDelegate

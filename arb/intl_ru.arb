@@ -3579,5 +3579,6 @@
   "viewUpdate": "Посмотреть обновление",
   "trayStartCore": "Запустить ядро",
   "trayStopCore": "Остановить ядро",
-  "trayCoreProcessing": "Обработка"
+  "trayCoreProcessing": "Обработка",
+  "trayUpdateAvailable": "Доступно обновление: {version}"
 }

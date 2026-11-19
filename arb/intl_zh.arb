@@ -2353,5 +2353,6 @@
   "viewUpdate": "查看更新",
   "trayStartCore": "启动核心",
   "trayStopCore": "停止核心",
-  "trayCoreProcessing": "处理中"
+  "trayCoreProcessing": "处理中",
+  "trayUpdateAvailable": "可用更新：{version}"
 }

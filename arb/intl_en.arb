@@ -3596,5 +3596,6 @@
   "viewUpdate": "View update",
   "trayStartCore": "Start core",
   "trayStopCore": "Stop core",
-  "trayCoreProcessing": "Processing"
+  "trayCoreProcessing": "Processing",
+  "trayUpdateAvailable": "Update available: {version}"
 }

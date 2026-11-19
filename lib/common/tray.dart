@@ -84,6 +84,7 @@ class AppTray implements TrayPort {
     required bool tunEnable,
     required bool safeMode,
     bool monochrome = true,
+    bool updateAvailable = false,
     Mode mode = Mode.rule,
   }) {
     final name = safeMode
@@ -91,7 +92,8 @@ class AppTray implements TrayPort {
         : !isStart
         ? 'stopped'
         : '${mode.name}${tunEnable ? '_tun' : ''}';
-    return '${_trayIconDir(monochrome)}/$name.$_trayIconSuffix';
+    final update = isMacOS && updateAvailable ? '_update' : '';
+    return '${_trayIconDir(monochrome)}/$name$update.$_trayIconSuffix';
   }
 
   @override
@@ -116,6 +118,10 @@ class AppTray implements TrayPort {
     }
     final menu = await _buildMenu(trayState: trayState, read: read);
     if (_isShutDown) return;
+    final available = isMacOS ? read(availableUpdateStateProvider) : null;
+    final appTitle = trayState.safeMode
+        ? currentAppLocalizations.safeModeAppTitle(appName)
+        : appName;
     await Tray.instance.show(
       TraySpec(
         icon: TrayIcon.asset(
@@ -125,14 +131,15 @@ class AppTray implements TrayPort {
             safeMode: trayState.safeMode,
             monochrome: trayState.monochromeTrayIcon,
             mode: trayState.mode,
+            updateAvailable: available != null,
           ),
           isTemplate: _isTemplate(trayState.monochromeTrayIcon),
           size: isMacOS ? 18 : 16,
           dot: isMacOS ? mitmTrayDot(trayState.mitmIndicator) : null,
         ),
-        toolTip: trayState.safeMode
-            ? currentAppLocalizations.safeModeAppTitle(appName)
-            : appName,
+        toolTip: available == null
+            ? appTitle
+            : '$appTitle, ${currentAppLocalizations.trayUpdateAvailable(available.versionLabel)}',
         menu: menu,
       ),
     );

@@ -3579,5 +3579,6 @@
   "viewUpdate": "Voir la mise à jour",
   "trayStartCore": "Démarrer le noyau",
   "trayStopCore": "Arrêter le noyau",
-  "trayCoreProcessing": "En cours"
+  "trayCoreProcessing": "En cours",
+  "trayUpdateAvailable": "Mise à jour disponible : {version}"
 }

@@ -8452,4 +8452,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get trayCoreProcessing => '처리 중';
+
+  @override
+  String trayUpdateAvailable(Object version) {
+    return '업데이트 사용 가능: $version';
+  }
 }

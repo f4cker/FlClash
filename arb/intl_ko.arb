@@ -3579,5 +3579,6 @@
   "viewUpdate": "업데이트 보기",
   "trayStartCore": "코어 시작",
   "trayStopCore": "코어 중지",
-  "trayCoreProcessing": "처리 중"
+  "trayCoreProcessing": "처리 중",
+  "trayUpdateAvailable": "업데이트 사용 가능: {version}"
 }

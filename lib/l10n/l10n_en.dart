@@ -8588,4 +8588,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trayCoreProcessing => 'Processing';
+
+  @override
+  String trayUpdateAvailable(Object version) {
+    return 'Update available: $version';
+  }
 }
