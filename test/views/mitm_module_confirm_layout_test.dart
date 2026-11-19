@@ -11,6 +11,7 @@ import 'package:fl_clash/views/config/mitm_module_confirm.dart';
 import 'package:fl_clash/views/rules/rule_edit_dialogs.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,9 @@ import '../helpers/test_profiles.dart';
 
 const _lastHost = 'zz-last.example.com';
 
+/// Long enough to need more than one line beside the script's name.
+const _scriptHost = 'scripts.very-long-cdn-name.example-provider.com';
+
 /// More hosts than the sheet shows at first, and more sections under them,
 /// so the body runs well past a short window.
 final _module =
@@ -31,7 +35,7 @@ final _module =
 [MITM]
 hostname = %APPEND% ${[for (var i = 0; i < 20; i++) 'h$i.example.com', _lastHost].join(', ')}
 [Script]
-Clean = type=http-response,pattern=^https://h1\\.example\\.com/,requires-body=1,script-path=https://x.com/clean.js
+Clean = type=http-response,pattern=^https://h1\\.example\\.com/,requires-body=1,script-path=https://$_scriptHost/clean.js
 [Rule]
 DOMAIN,h1.example.com,REJECT
 DOMAIN,h2.example.com,REJECT
@@ -235,6 +239,41 @@ void main() {
       );
     });
 
+    testWidgets('$tag 360x640 ×2: the script source wraps, in full on hover', (
+      tester,
+    ) async {
+      await pump(tester, size: narrow, locale: locale, textScale: 2.0);
+      open(tester);
+      await tester.pumpAndSettle();
+      final label = find.byWidgetPredicate(
+        (widget) =>
+            widget is Text && (widget.data ?? '').endsWith(' · $_scriptHost'),
+      );
+      await dragIntoView(tester, label);
+      final text = tester.widget<Text>(label);
+      expect(text.maxLines, 2);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: label, matching: find.byType(RichText)),
+      );
+      // More than one line beside the name, never more than two.
+      final lines = paragraph
+          .getBoxesForSelection(
+            TextSelection(baseOffset: 0, extentOffset: text.data!.length),
+          )
+          .map((box) => box.top.round())
+          .toSet();
+      expect(lines.length, inInclusiveRange(1, 2));
+      expect(
+        tester
+            .widget<Tooltip>(
+              find.ancestor(of: label, matching: find.byType(Tooltip)),
+            )
+            .message,
+        text.data,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     for (final (name, enable) in [
       ('Import and Turn On', true),
       ('Import Only', false),
@@ -321,7 +360,10 @@ void main() {
   );
 
   /// A frame with every kind of action: delete, a leading one, cancel, save.
-  (Future<bool?>, List<String>) openFrame(WidgetTester tester) {
+  (Future<bool?>, List<String>) openFrame(
+    WidgetTester tester, {
+    FocusNode? body,
+  }) {
     final calls = <String>[];
     final result = dialogs.showCommonDialog<bool>(
       context: tester.element(find.byType(SizedBox).first),
@@ -337,7 +379,7 @@ void main() {
           onPressed: () => calls.add('lead'),
           child: const Text('Lead'),
         ),
-        children: const [Text('Body')],
+        children: [Focus(focusNode: body, child: const Text('Body'))],
       ),
     );
     return (result, calls);
@@ -446,6 +488,46 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pumpAndSettle();
       expect(FocusManager.instance.primaryFocus, isNotNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a layout change leaves the focus where the user has since moved it',
+    skip: noArial != null,
+    (tester) async {
+      await realFont(tester);
+      await pump(
+        tester,
+        size: const Size(1024, 768),
+        locale: const Locale('en'),
+        textScale: 1.0,
+      );
+      final body = FocusNode(debugLabel: 'body');
+      addTearDown(body.dispose);
+      final l = currentAppLocalizations;
+      openFrame(tester, body: body);
+      await tester.pumpAndSettle();
+      final cancel = Focus.of(
+        tester.element(find.text(l.cancel)),
+        createDependency: false,
+      );
+      cancel.requestFocus();
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus, cancel);
+
+      // The layout flips (one frame), then the user moves on before the
+      // focus would follow (the next).
+      tester.view.physicalSize = const Size(300, 768);
+      await tester.pump();
+      body.requestFocus();
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getCenter(find.text('Save')).dy,
+        lessThan(tester.getCenter(find.text(l.cancel)).dy),
+      );
+      expect(FocusManager.instance.primaryFocus, body);
       expect(tester.takeException(), isNull);
     },
   );

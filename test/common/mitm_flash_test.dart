@@ -245,6 +245,9 @@ hostname = %APPEND% a.com:443, b.com:8443, -c.com:80, api*.d.com, *e.com, f?.com
         'fe80::1%en0': MitmHostReason.ipAddress,
         '[fe80::1%en0]': MitmHostReason.ipAddress,
         '[fe80::1%en0]:443': MitmHostReason.ipAddress,
+        // The Core: an address (has a `:`), and not a name (`%`).
+        'fe80::1%': MitmHostReason.ipAddress,
+        '1.2.3.4%en0': MitmHostReason.invalidFormat,
         'api*.d.com': MitmHostReason.embeddedWildcard,
         'x*.a.com': MitmHostReason.embeddedWildcard,
         '*.*.example.com': MitmHostReason.embeddedWildcard,
@@ -269,6 +272,13 @@ hostname = %APPEND% a.com:443, b.com:8443, -c.com:80, api*.d.com, *e.com, f?.com
       for (final MapEntry(key: line, value: reason) in cases.entries) {
         expect(flashHostReason(line), reason, reason: line);
       }
+    });
+
+    test('an empty or IPv4 zone is never taken for a usable name', () {
+      expect(
+        flashUnusableHostLines(['fe80::1%', '1.2.3.4%en0', 'fe80::1%en0']),
+        ['fe80::1%', '1.2.3.4%en0', 'fe80::1%en0'],
+      );
     });
 
     test('a skipped line reads in words, never as the Core code', () {

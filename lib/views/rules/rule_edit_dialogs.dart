@@ -1763,11 +1763,38 @@ class _AdaptiveActionsState extends State<AdaptiveActions> {
       if (from == null) return;
       // The focused action is hidden now: its counterpart takes the focus.
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
+        if (!mounted || !_focusDropped()) return;
         _nodeOf(_stacked ? _stackedKey : _wideKey, from)?.requestFocus();
       });
       SchedulerBinding.instance.scheduleFrame();
     });
+  }
+
+  /// Whether the focus fell back from the hidden action: on nothing, still
+  /// on the hidden layout, or on a scope around the footer; not on a shown
+  /// action, nor anywhere else the user has moved it since.
+  bool _focusDropped() {
+    final focused = FocusManager.instance.primaryFocus?.context;
+    if (focused == null) return true;
+    final hidden = (_stacked ? _wideKey : _stackedKey).currentContext;
+    var inHidden = false;
+    focused.visitAncestorElements((element) {
+      if (element == hidden) {
+        inHidden = true;
+        return false;
+      }
+      return true;
+    });
+    if (inHidden) return true;
+    var around = false;
+    context.visitAncestorElements((element) {
+      if (element == focused) {
+        around = true;
+        return false;
+      }
+      return true;
+    });
+    return around;
   }
 
   /// The id of the slot under [layout] holding the primary focus.
