@@ -12,6 +12,7 @@ import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/mitm.dart';
+import 'package:fl_clash/providers/state.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -92,6 +93,10 @@ void main() {
         mitmSignerProvider.overrideWithValue(const MitmSigner()),
         mitmTrustStoreProvider.overrideWithValue(trust),
         coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        // Modules sign through the same list; see mitm_module_sign_test.
+        enabledMitmModuleRulesProvider.overrideWith(
+          (_) async => MitmModuleRules.empty,
+        ),
       ],
     );
     container.listen(patchClashConfigProvider, (_, _) {});

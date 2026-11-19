@@ -305,8 +305,11 @@ Future<int> mitmIgnoredHostnames(Ref ref) async {
   return status.ignoredHostnames;
 }
 
-/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
-/// list, or with why not; the Core passes the connection through on a refusal.
+/// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
+/// decrypts (the user's hostnames, then the enabled modules', see
+/// [mitmEffectiveHostnames]), or with why not; the Core passes the connection
+/// through on a refusal. A module turned off, deleted or declined leaves the
+/// list at once, before the Core is told.
 @Riverpod(keepAlive: true)
 class MitmSignAction extends _$MitmSignAction {
   @override
@@ -370,6 +373,32 @@ class MitmSignAction extends _$MitmSignAction {
 
   int _signing = 0;
   static const _maxConcurrentSigns = 16;
+
+  /// How long a signing waits for the modules' hosts before it signs for the
+  /// user's alone.
+  static const _modulesWait = Duration(seconds: 2);
+
+  /// The list the Core decrypts with [mitm], the modules' part read fresh: a
+  /// module just turned off is gone from it even before the Core hears. While
+  /// the modules cannot be read only the user's hosts sign, never more than
+  /// the Core is sent.
+  Future<List<String>> _hostnames(Mitm mitm, Duration remaining) async {
+    final modules = ref.listen(
+      enabledMitmModuleRulesProvider.future,
+      (_, _) {},
+    );
+    var rules = MitmModuleRules.empty;
+    try {
+      rules = await modules.read().timeout(
+        remaining < _modulesWait ? remaining : _modulesWait,
+      );
+    } catch (_) {
+      // Fails closed for the modules only.
+    } finally {
+      modules.close();
+    }
+    return mitmEffectiveHostnames(mitm, rules);
+  }
 
   Future<MitmSignResult> _signBounded(
     MitmSigner signer,
@@ -456,17 +485,18 @@ class MitmSignAction extends _$MitmSignAction {
             current.trustedFingerprint != fingerprint) {
           result = const MitmSignResult(error: 'trustUnavailable');
         } else {
-          result = await _signBounded(
-            signer,
-            request,
-            current.hostname,
-            remaining(),
-          );
+          final hostnames = await _hostnames(current, remaining());
+          if (!ref.mounted) return;
+          result = await _signBounded(signer, request, hostnames, remaining());
           if (!ref.mounted) return;
           final afterSign = ref.read(patchClashConfigProvider).mitm;
+          final hostnamesAfter = afterSign.enable
+              ? await _hostnames(afterSign, remaining())
+              : const <String>[];
+          if (!ref.mounted) return;
           if (!afterSign.enable ||
               afterSign.trustedFingerprint != fingerprint ||
-              !listEquals(afterSign.hostname, current.hostname)) {
+              !listEquals(hostnamesAfter, hostnames)) {
             result = const MitmSignResult(error: 'disabled');
           }
         }

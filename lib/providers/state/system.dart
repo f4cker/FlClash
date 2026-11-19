@@ -189,6 +189,14 @@ Future<MitmModuleRules> enabledMitmModuleRules(Ref ref) async {
   return compute(_moduleRules, sources);
 }
 
+/// The hostnames the Core decrypts: the user's, then the enabled modules'.
+/// The signer checks a host against this same list, so a module's hosts are
+/// signed exactly while the Core is sent them, exclusions included.
+List<String> mitmEffectiveHostnames(Mitm mitm, MitmModuleRules modules) => [
+  ...mitm.hostname,
+  ...modules.hostname,
+];
+
 /// The setup `mitm.update` takes: the settings, the user's hostnames before
 /// the modules', the profile's rewrite rules before the modules', and the
 /// same for scripts.
@@ -212,11 +220,7 @@ Map<String, Object?> composeMitmSetup(
   ];
   return {
     ...base,
-    if (modules.hostname.isNotEmpty)
-      'hostname': [
-        ...?(base['hostname'] as List<String>?),
-        ...modules.hostname,
-      ],
+    'hostname': mitmEffectiveHostnames(mitm, modules),
     if (rewrite.isNotEmpty) 'rewrite': rewrite,
     if (script.isNotEmpty) 'script': script,
   };
