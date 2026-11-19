@@ -125,13 +125,27 @@ class ReadFailureBanner extends StatelessWidget {
         minimumSize: const Size.square(minRetryTapTarget),
       ),
     );
+    final textScaler = MediaQuery.textScalerOf(context);
+    final iconSize = textScaler
+        .scale(minErrorIconSize)
+        .clamp(minErrorIconSize, maxErrorIconSize);
     final text = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 10,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 1),
-          child: GlyphIcon(AppGlyphs.error, size: 16, color: colors.icon),
+        // As tall as the first line, so the icon centers on it.
+        SizedBox(
+          height: math.max(
+            iconSize,
+            _firstLineHeight(context, style, textScaler),
+          ),
+          child: Center(
+            child: GlyphIcon(
+              AppGlyphs.error,
+              size: iconSize,
+              color: colors.icon,
+            ),
+          ),
         ),
         Expanded(child: Text(message, style: style)),
       ],
@@ -154,6 +168,30 @@ class ReadFailureBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The error icon's size at the default text size; it grows with the text up
+/// to [maxErrorIconSize].
+const minErrorIconSize = 16.0;
+const maxErrorIconSize = 24.0;
+
+/// The height [Text] gives one line of [style] here.
+double _firstLineHeight(
+  BuildContext context,
+  TextStyle style,
+  TextScaler textScaler,
+) {
+  final defaults = DefaultTextStyle.of(context);
+  final painter = TextPainter(
+    text: TextSpan(text: ' ', style: defaults.style.merge(style)),
+    textDirection: Directionality.of(context),
+    textScaler: textScaler,
+    textHeightBehavior: defaults.textHeightBehavior,
+    maxLines: 1,
+  )..layout();
+  final height = painter.height;
+  painter.dispose();
+  return height;
 }
 
 /// The smallest side of the banner's retry, so it stays easy to hit.
@@ -194,20 +232,25 @@ class ReadFailureBannerColors {
   final Color action;
 }
 
-/// Body text contrast, which the retry's label is held to as well.
+/// Body text contrast, the floor the retry's label is held to as well.
 const minTextContrast = 4.5;
 
-/// [color], lightened only as far as it takes to read as text on [background]:
-/// a vivid accent kept from its seed, the default blue among them, can fall
-/// short on a raised dark surface.
+/// What a retry lifted for contrast aims at, a margin above
+/// [minTextContrast].
+const retryContrastTarget = 4.7;
+
+/// [color], lightened only as far as it takes to reach [retryContrastTarget]
+/// on [background]: a vivid accent kept from its seed, the default blue among
+/// them, can fall short on a raised dark surface. A color already there is
+/// kept as it is.
 Color _legibleOn(Color color, Color background) {
   var legible = color;
-  for (var step = 0; step < 100; step++) {
-    if (contrastRatio(legible, background) >= minTextContrast ||
+  for (var step = 0; step < 400; step++) {
+    if (contrastRatio(legible, background) >= retryContrastTarget ||
         legible.tone >= 100) {
       break;
     }
-    legible = legible.shiftTone(1);
+    legible = legible.shiftTone(0.25);
   }
   return legible;
 }

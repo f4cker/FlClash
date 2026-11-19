@@ -1,6 +1,8 @@
 import 'dart:math';
+import 'dart:ui' show BoxHeightStyle;
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/widgets/read_failure.dart';
 import 'package:flutter/rendering.dart';
@@ -160,6 +162,43 @@ void main() {
     });
   }
 
+  for (final (scale, size) in [
+    (1.0, 16.0),
+    (1.25, 20.0),
+    (1.5, 24.0),
+    (2.0, 24.0),
+  ]) {
+    testWidgets('at ${scale}x text the error icon is ${size}dp and centers on '
+        'the first line', (tester) async {
+      await pumpBanner(
+        tester,
+        width: 600,
+        message: _longMessage,
+        textScale: scale,
+      );
+      final icon = find.descendant(
+        of: find.byType(ReadFailureBanner),
+        matching: find.byType(GlyphIcon),
+      );
+      expect(tester.widget<GlyphIcon>(icon).size, size);
+      final paragraph = tester.renderObject<RenderParagraph>(messageText());
+      // The first line's box, as tall as the line: its glyph's box spans it.
+      final firstLine = paragraph
+          .getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 1),
+            boxHeightStyle: BoxHeightStyle.max,
+          )
+          .first;
+      final lineCenter =
+          paragraph.localToGlobal(Offset.zero).dy +
+          (firstLine.top + firstLine.bottom) / 2;
+      expect(tester.getCenter(icon).dy, closeTo(lineCenter, 1));
+      // More than one line, so centring on the first is not the whole text.
+      expect(paragraph.size.height, greaterThan(firstLine.bottom * 1.5));
+      expectWhole(tester);
+    });
+  }
+
   testWidgets('dark uses the grouped surface, not a red block', (tester) async {
     await pumpBanner(tester, width: 900, brightness: Brightness.dark);
     final context = tester.element(find.byType(ReadFailureBanner));
@@ -184,10 +223,11 @@ void main() {
     );
     final colors = ReadFailureBannerColors.of(colorScheme);
     expect(colors.icon, colorScheme.error);
-    // The primary hue, lifted only as far as text on this surface needs.
+    // The primary hue, lifted only as far as text on this surface needs;
+    // fitting the lighter tone into sRGB moves the hue by about 3.5°.
     expect(
       Hct.fromInt(colors.action.toARGB32()).hue,
-      closeTo(Hct.fromInt(colorScheme.primary.toARGB32()).hue, 2),
+      closeTo(Hct.fromInt(colorScheme.primary.toARGB32()).hue, 4),
     );
     expect(colors.action.tone, greaterThanOrEqualTo(colorScheme.primary.tone));
     expectWhole(tester);
@@ -216,13 +256,39 @@ void main() {
           rows.add(
             '| ${brightness.name}${pureBlack ? ' (pure black)' : ''} '
             '| #${seed.toRadixString(16).substring(2).toUpperCase()} '
-            '| ${text.toStringAsFixed(2)} | ${action.toStringAsFixed(2)} '
-            '| ${icon.toStringAsFixed(2)} '
-            '| ${brightness == Brightness.dark ? rawPrimary.toStringAsFixed(2) : '–'} |',
+            '| ${text.toStringAsFixed(4)} | ${action.toStringAsFixed(4)} '
+            '| ${icon.toStringAsFixed(4)} '
+            '| ${brightness == Brightness.dark ? rawPrimary.toStringAsFixed(4) : '–'} |',
           );
-          expect(text, greaterThanOrEqualTo(4.5), reason: rows.last);
-          expect(action, greaterThanOrEqualTo(4.5), reason: rows.last);
+          expect(
+            text,
+            greaterThanOrEqualTo(minTextContrast),
+            reason: rows.last,
+          );
+          expect(
+            action,
+            greaterThanOrEqualTo(minTextContrast),
+            reason: rows.last,
+          );
           expect(icon, greaterThanOrEqualTo(3), reason: rows.last);
+          if (brightness == Brightness.dark) {
+            if (rawPrimary >= retryContrastTarget) {
+              // Already there: left as it is.
+              expect(colors.action, scheme.primary, reason: rows.last);
+            } else {
+              // Lifted to the target, and no further than a step past it.
+              expect(
+                action,
+                greaterThanOrEqualTo(retryContrastTarget),
+                reason: rows.last,
+              );
+              expect(
+                action,
+                lessThan(retryContrastTarget + 0.1),
+                reason: rows.last,
+              );
+            }
+          }
         }
       }
     }
@@ -231,8 +297,8 @@ void main() {
     print(
       'BANNER-CONTRAST\n| theme | accent | text | retry | icon | unadjusted primary |\n'
       '| --- | --- | --- | --- | --- | --- |\n${rows.join('\n')}\n'
-      'worst text ${worstText.toStringAsFixed(2)}, retry '
-      '${worstAction.toStringAsFixed(2)}, icon ${worstIcon.toStringAsFixed(2)}',
+      'worst text ${worstText.toStringAsFixed(4)}, retry '
+      '${worstAction.toStringAsFixed(4)}, icon ${worstIcon.toStringAsFixed(4)}',
     );
   });
 
@@ -250,12 +316,20 @@ void main() {
           action = min(action, _contrast(colors.action, colors.background));
           icon = min(icon, _contrast(colors.icon, colors.background));
         }
-        expect(text, greaterThanOrEqualTo(4.5), reason: '$style $brightness');
-        expect(action, greaterThanOrEqualTo(4.5), reason: '$style $brightness');
+        expect(
+          text,
+          greaterThanOrEqualTo(minTextContrast),
+          reason: '$style $brightness',
+        );
+        expect(
+          action,
+          greaterThanOrEqualTo(minTextContrast),
+          reason: '$style $brightness',
+        );
         expect(icon, greaterThanOrEqualTo(3), reason: '$style $brightness');
         rows.add(
-          '| ${style.name} ${brightness.name} | ${text.toStringAsFixed(2)} '
-          '| ${action.toStringAsFixed(2)} | ${icon.toStringAsFixed(2)} |',
+          '| ${style.name} ${brightness.name} | ${text.toStringAsFixed(4)} '
+          '| ${action.toStringAsFixed(4)} | ${icon.toStringAsFixed(4)} |',
         );
       }
     }
