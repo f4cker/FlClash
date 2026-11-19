@@ -206,6 +206,7 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
         if (!host.startsWith('-')) host,
     ], listed).toSet();
     final shownHosts = _allHosts ? hosts : hosts.take(_shownHosts).toList();
+    final ignoredHosts = flashUnusableHostnames(content);
     final rewrites = <MitmRewriteGroup, List<String>>{};
     for (final (list, lines) in [
       (MitmList.urlRewrite, content.urlRewrite),
@@ -256,6 +257,11 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
             ),
           if (excluded > 0)
             Text(l.mitmExcludedCount(excluded), style: secondary),
+          if (ignoredHosts.isNotEmpty)
+            Text(
+              l.mitmModuleHostsIgnored(ignoredHosts.join(', ')),
+              style: secondary.copyWith(color: mitmAmberColor(context)),
+            ),
           if (!_allHosts && hosts.length > _shownHosts)
             _more(
               l.mitmMoreHosts(hosts.length - _shownHosts),

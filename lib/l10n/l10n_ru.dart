@@ -8443,6 +8443,15 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return 'Эти имена хостов игнорируются: $hosts. Flash расшифровывает только имена вида api.example.com или *.example.com на порту 443, без другого порта, адреса или * внутри имени.';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      'Игнорируется: Flash расшифровывает только имена вида api.example.com или *.example.com на порту 443, без другого порта, адреса или * внутри имени';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return 'Расшифровывается трафик только этих клиентов: $addresses. При включённом TUN приложения этого устройства подключаются с адреса TUN и могут не попасть в список.';
   }

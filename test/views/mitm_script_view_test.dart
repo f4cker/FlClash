@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -445,6 +446,55 @@ void main() {
     expect(enabled, isFalse);
     expect(rules, isFalse);
     expect(await result, isNotNull);
+  });
+
+  testWidgets('hostnames the Core would skip are named before import', (
+    tester,
+  ) async {
+    await pump(tester, const SizedBox(), scripts: const []);
+    final context = tester.element(find.byType(SizedBox));
+    unawaited(
+      showMitmModuleConfirmDialog(
+        context,
+        content: previewMitmModule('''
+#!name=Ports
+[MITM]
+hostname = %APPEND% a.com:443, b.com:8443, api*.c.com, d.com
+'''),
+        name: 'Ports',
+        source: 'x.com',
+        onImport: (_, _) async {},
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l = currentAppLocalizations;
+
+    expect(
+      find.text(l.mitmModuleHostsIgnored('b.com:8443, api*.c.com')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a module with plain hostnames shows no ignored notice', (
+    tester,
+  ) async {
+    await pump(tester, const SizedBox(), scripts: const []);
+    final context = tester.element(find.byType(SizedBox));
+    unawaited(
+      showMitmModuleConfirmDialog(
+        context,
+        content: previewMitmModule(_module),
+        name: 'Ads',
+        source: 'x.com',
+        onImport: (_, _) async {},
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining(currentAppLocalizations.mitmHostIgnored),
+      findsNothing,
+    );
+    expect(find.textContaining('api.a.com'), findsWidgets);
   });
 
   testWidgets('the request detail lists each script run and why one did not '

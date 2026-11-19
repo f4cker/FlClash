@@ -1029,7 +1029,16 @@ Future<MitmModuleDetails?> mitmModuleDetails(Ref ref, int id) async {
     return null;
   }
   final check = await _checkOf(ref, flashMitmRules(content));
-  final unsupported = flashMitmIssues(content);
+  final ignored = flashUnusableHostnames(content);
+  final unsupported = {
+    ...flashMitmIssues(content),
+    // Told here as well, so it shows while the Core is not running.
+    if (ignored.isNotEmpty)
+      MitmList.hostname: {
+        for (final line in ignored)
+          line: currentAppLocalizations.mitmHostIgnored,
+      },
+  };
   return (
     content: content,
     issues: {

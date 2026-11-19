@@ -7758,6 +7758,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return '以下主机名将被忽略：$hosts。Flash 只解密 443 端口上 api.example.com 或 *.example.com 这样的域名，不支持其他端口、IP 地址或名称中间的 *。';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      '已忽略：Flash 只解密 443 端口上 api.example.com 或 *.example.com 这样的域名，不支持其他端口、IP 地址或名称中间的 *';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return '它只为这些客户端解密：$addresses。开启 TUN 时，本机应用经 TUN 地址连入 FlClash，可能因此不再解密。';
   }

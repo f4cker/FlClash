@@ -3538,6 +3538,8 @@
   "mitmModuleRiskTitle": "Turn on this module?",
   "mitmNetworkRisk": "When the config is generated, it changes the network settings below, ahead of what you set for the same ones in FlClash. Turning the module off or deleting it undoes this.",
   "mitmSkipVerifyRisk": "Turning it on stops checking the certificates of these hosts' servers, so a server posing as one of them goes unnoticed: {hosts}",
+  "mitmModuleHostsIgnored": "These hostnames are ignored: {hosts}. Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name.",
+  "mitmHostIgnored": "Ignored: Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name",
   "mitmClientSourceRisk": "It decrypts only for these clients: {addresses}. With TUN on, this device's apps reach FlClash from the TUN's address, so they may be left out.",
   "mitmClientSourceTunTip": "With TUN on, this device's apps come from the TUN's address; a list that leaves it out leaves their traffic undecrypted.",
   "mitmNetworkChanges": "Network settings",

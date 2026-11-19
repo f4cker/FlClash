@@ -134,4 +134,50 @@ script-providers:
     );
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
   }, timeout: const Timeout(Duration(minutes: 2)));
+
+  group('hostnames', () {
+    test('a :443 is taken off, as the Core decrypts on 443 alone', () {
+      expect(flashMitmHostname('a.com:443'), 'a.com');
+      expect(flashMitmHostname(' *.a.com:443 '), '*.a.com');
+      expect(flashMitmHostname('-a.com:443'), '-a.com');
+      // Anything else is left as written, never widened.
+      expect(flashMitmHostname('a.com:8443'), 'a.com:8443');
+      expect(flashMitmHostname('[::1]:443'), '[::1]:443');
+      expect(flashMitmHostname('::443'), '::443');
+      expect(flashMitmHostname('a.com'), 'a.com');
+    });
+
+    test('lines the Core skips are named as written', () {
+      final content = parseMitmModule('''
+[MITM]
+hostname = %INSERT% x*.a.com
+hostname = %APPEND% a.com:443, b.com:8443, -c.com:80, api*.d.com, *e.com, f?.com, 1.2.3.4, [::1], *.ok.com, ok.com, -ok2.com, *
+''');
+      expect(flashUnusableHostnames(content), [
+        'x*.a.com',
+        'b.com:8443',
+        '-c.com:80',
+        'api*.d.com',
+        '*e.com',
+        'f?.com',
+        '1.2.3.4',
+        '[::1]',
+      ]);
+      expect(flashMitmRules(content).hostname, [
+        'x*.a.com',
+        'a.com',
+        'b.com:8443',
+        '-c.com:80',
+        'api*.d.com',
+        '*e.com',
+        'f?.com',
+        '1.2.3.4',
+        '[::1]',
+        '*.ok.com',
+        'ok.com',
+        '-ok2.com',
+        '*',
+      ]);
+    });
+  });
 }

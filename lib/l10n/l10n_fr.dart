@@ -8497,6 +8497,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return 'Ces noms d’hôte sont ignorés : $hosts. Flash ne déchiffre que des noms comme api.example.com ou *.example.com sur le port 443, sans autre port, adresse ni * à l’intérieur d’un nom.';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      'Ignoré : Flash ne déchiffre que des noms comme api.example.com ou *.example.com sur le port 443, sans autre port, adresse ni * à l’intérieur d’un nom';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return 'Il ne déchiffre que le trafic de ces clients : $addresses. Avec TUN activé, les apps de cet appareil arrivent depuis l’adresse de TUN et peuvent donc être exclues.';
   }

@@ -3544,6 +3544,8 @@
   "mitmModuleRiskTitle": "このモジュールをオンにしますか？",
   "mitmNetworkRisk": "設定の生成時に以下のネットワーク設定を変更し、FlClash で同じ項目に設定した内容より優先されます。モジュールをオフにするか削除すると元に戻ります。",
   "mitmSkipVerifyRisk": "オンにすると、次のホストのサーバー証明書を検証しなくなり、それらになりすましたサーバーに気付けなくなります：{hosts}",
+  "mitmModuleHostsIgnored": "次のホスト名は無視されます：{hosts}。Flash が復号するのはポート 443 の api.example.com や *.example.com のような名前だけで、ほかのポート、アドレス、名前の途中の * は使えません。",
+  "mitmHostIgnored": "無視されます：Flash が復号するのはポート 443 の api.example.com や *.example.com のような名前だけで、ほかのポート、アドレス、名前の途中の * は使えません",
   "mitmClientSourceRisk": "次のクライアントの通信だけを復号します：{addresses}。TUN がオンのとき、この端末のアプリは TUN のアドレスから接続するため、対象外になることがあります。",
   "mitmClientSourceTunTip": "TUN がオンのとき、この端末のアプリの送信元は TUN のアドレスです。リストに含まれていない場合、その通信は復号されません。",
   "mitmNetworkChanges": "ネットワーク設定",

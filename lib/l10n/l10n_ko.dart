@@ -8313,6 +8313,15 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return '다음 호스트 이름은 무시됩니다: $hosts. Flash는 443 포트의 api.example.com 또는 *.example.com 같은 이름만 복호화하며, 다른 포트, 주소, 이름 중간의 *는 지원하지 않습니다.';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      '무시됨: Flash는 443 포트의 api.example.com 또는 *.example.com 같은 이름만 복호화하며, 다른 포트, 주소, 이름 중간의 *는 지원하지 않습니다';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return '다음 클라이언트의 트래픽만 복호화합니다: $addresses. TUN이 켜져 있으면 이 기기의 앱은 TUN 주소에서 연결하므로 제외될 수 있습니다.';
   }

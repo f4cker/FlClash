@@ -13973,6 +13973,18 @@ abstract class AppLocalizations {
   /// **'Turning it on stops checking the certificates of these hosts\' servers, so a server posing as one of them goes unnoticed: {hosts}'**
   String mitmSkipVerifyRisk(Object hosts);
 
+  /// No description provided for @mitmModuleHostsIgnored.
+  ///
+  /// In en, this message translates to:
+  /// **'These hostnames are ignored: {hosts}. Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name.'**
+  String mitmModuleHostsIgnored(Object hosts);
+
+  /// No description provided for @mitmHostIgnored.
+  ///
+  /// In en, this message translates to:
+  /// **'Ignored: Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name'**
+  String get mitmHostIgnored;
+
   /// No description provided for @mitmClientSourceRisk.
   ///
   /// In en, this message translates to:

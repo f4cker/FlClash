@@ -8239,6 +8239,15 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return '次のホスト名は無視されます：$hosts。Flash が復号するのはポート 443 の api.example.com や *.example.com のような名前だけで、ほかのポート、アドレス、名前の途中の * は使えません。';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      '無視されます：Flash が復号するのはポート 443 の api.example.com や *.example.com のような名前だけで、ほかのポート、アドレス、名前の途中の * は使えません';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return '次のクライアントの通信だけを復号します：$addresses。TUN がオンのとき、この端末のアプリは TUN のアドレスから接続するため、対象外になることがあります。';
   }

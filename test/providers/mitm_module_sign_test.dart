@@ -441,4 +441,28 @@ void main() {
       hasLength(2),
     );
   });
+
+  test(
+    'a :443 host signs as the Core reads it; other ports never sign',
+    () async {
+      await add(
+        _module(
+          'P',
+          'a.example.com:443, b.example.com:8443, api*.c.example.com',
+        ),
+        'p.sgmodule',
+      );
+      await settle();
+      expect(coreHostnames(), [
+        'user.example.com',
+        'a.example.com',
+        'b.example.com:8443',
+        'api*.c.example.com',
+      ]);
+      expect(await sign('a.example.com'), isNull);
+      expect(signedLists.last, coreHostnames());
+      expect(await sign('b.example.com'), 'notListed');
+      expect(await sign('api1.c.example.com'), 'notListed');
+    },
+  );
 }

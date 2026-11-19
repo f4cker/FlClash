@@ -8442,6 +8442,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsIgnored(Object hosts) {
+    return 'These hostnames are ignored: $hosts. Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name.';
+  }
+
+  @override
+  String get mitmHostIgnored =>
+      'Ignored: Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name';
+
+  @override
   String mitmClientSourceRisk(Object addresses) {
     return 'It decrypts only for these clients: $addresses. With TUN on, this device\'s apps reach FlClash from the TUN\'s address, so they may be left out.';
   }
