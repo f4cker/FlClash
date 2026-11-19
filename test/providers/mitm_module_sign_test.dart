@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -26,28 +27,13 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:riverpod/riverpod.dart';
 
 import '../helpers/app_paths.dart';
+import '../helpers/mitm_host_policy.dart';
 
 class _MockCoreHandlerInterface extends Mock implements CoreHandlerInterface {}
 
 class _MockTrustStore extends Mock implements MitmTrustStore {}
 
 const _channel = MethodChannel(MitmSigner.channelName);
-
-/// What MitmSigner.swift's MitmHostMatcher does with the list it is handed:
-/// entries it cannot read are skipped, the first match decides and a `-`
-/// entry excludes.
-bool _listed(String host, List<String> lines) {
-  for (final raw in lines) {
-    var line = raw.trim().toLowerCase();
-    final exclude = line.startsWith('-');
-    if (exclude) line = line.substring(1);
-    final wildcard = line.startsWith('*.');
-    final base = wildcard ? line.substring(2) : line;
-    if (base.isEmpty || base.contains('*') || base.contains(':')) continue;
-    if (wildcard ? host.endsWith('.$base') : host == base) return !exclude;
-  }
-  return false;
-}
 
 /// A real-world shape: a response script, so the module comes in off and
 /// asks before it runs.
@@ -78,6 +64,8 @@ void main() {
   final signedLists = <List<String>>[];
   final sent = <Map<String, Object?>>[];
   Future<void> Function(String host)? duringSign;
+  // Set, the modules' list is read from it instead of the database.
+  Future<MitmModuleRules> Function()? moduleRules;
 
   void setMitm(
     List<String> hostname, {
@@ -120,6 +108,8 @@ void main() {
     signedLists.clear();
     sent.clear();
     duringSign = null;
+    moduleRules = null;
+    MitmSignAction.modulesWait = const Duration(seconds: 2);
     home = await Directory.systemTemp.createTemp('mitm_module_sign');
     await useAppPaths(home);
     testDatabase = db.Database(NativeDatabase.memory());
@@ -150,7 +140,7 @@ void main() {
               final list = (args['hostnames']! as List).cast<String>();
               signedLists.add(list);
               await duringSign?.call(host);
-              return _listed(host, list)
+              return mitmPolicyListed(host, list)
                   ? {
                       'cert': Uint8List.fromList([4, 5]),
                       'ca': Uint8List.fromList([6]),
@@ -173,6 +163,9 @@ void main() {
         mitmSignerProvider.overrideWithValue(const MitmSigner()),
         mitmTrustStoreProvider.overrideWithValue(trust),
         coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+        enabledMitmModuleRulesProvider.overrideWith(
+          (ref) => moduleRules?.call() ?? enabledMitmModuleRules(ref),
+        ),
       ],
     );
     globalState.container = container;
@@ -465,4 +458,159 @@ void main() {
       expect(await sign('api1.c.example.com'), 'notListed');
     },
   );
+
+  test('the test signer holds to the shared hostname vectors', () {
+    final vectors = mitmHostVectors();
+    expect(vectors.validate.length, greaterThan(40));
+    for (final vector in vectors.validate) {
+      expect(
+        mitmPolicyIssue(vector['line']! as String),
+        vector['issue'],
+        reason: vector['line']! as String,
+      );
+    }
+    for (final vector in vectors.match) {
+      expect(
+        mitmPolicyListed(
+          vector['host']! as String,
+          (vector['list']! as List).cast<String>(),
+        ),
+        vector['decrypt'],
+        reason: '${vector['list']} ${vector['host']}',
+      );
+    }
+  });
+
+  test('module hosts the policy skips never sign', () async {
+    await add(
+      _module(
+        'S',
+        'icloud.com:443, *.com, 1.2.3.4, bad_host.example.com, ok.example.com',
+      ),
+      's.sgmodule',
+    );
+    await settle();
+    expect(await sign('www.icloud.com'), 'notListed');
+    expect(await sign('icloud.com'), 'notListed');
+    expect(await sign('x.com'), 'notListed');
+    expect(await sign('1.2.3.4'), 'notListed');
+    expect(await sign('bad_host.example.com'), 'notListed');
+    expect(await sign('ok.example.com'), isNull);
+    expect(signedLists.last, coreHostnames());
+  });
+
+  test('a -host:443 exclusion holds as the Core reads it', () async {
+    setMitm(const []);
+    await add(
+      _module('X', '-skip.a.example.com:443, *.a.example.com'),
+      'x.sgmodule',
+    );
+    await settle();
+    expect(coreHostnames(), ['-skip.a.example.com', '*.a.example.com']);
+    expect(await sign('skip.a.example.com'), 'notListed');
+    expect(await sign('x.a.example.com'), isNull);
+    expect(signedLists.last, coreHostnames());
+  });
+
+  test('a module whose requirement fails adds no host to sign', () async {
+    final module = await add(r'''
+#!name=R
+#!requirement=SYSTEM = 'tvOS'
+[MITM]
+hostname = %APPEND% r.example.com
+''', 'r.sgmodule');
+    await settle();
+    expect(module.enabled, isTrue);
+    expect(coreHostnames(), ['user.example.com']);
+    expect(await sign('r.example.com'), 'notListed');
+    expect(signedLists.last, ['user.example.com']);
+  });
+
+  test('a module only for some clients adds no host to sign', () async {
+    await add(r'''
+#!name=C
+[MITM]
+hostname = %APPEND% c.example.com
+client-source-address = %APPEND% 192.168.1.0/24
+''', 'c.sgmodule');
+    await settle();
+    expect(coreHostnames(), ['user.example.com']);
+    expect(await sign('c.example.com'), 'notListed');
+    expect(signedLists.last, ['user.example.com']);
+  });
+
+  group('while the modules cannot be read', () {
+    setUp(() {
+      MitmSignAction.modulesWait = const Duration(milliseconds: 50);
+    });
+
+    test("a module host is refused as not ready, the user's signs", () async {
+      moduleRules = () => Completer<MitmModuleRules>().future;
+      expect(await sign('a.example.com'), 'notListed');
+      expect(await sign('a.example.com'), 'notListed');
+      expect(signedLists.last, ['user.example.com']);
+      expect(await sign('user.example.com'), isNull);
+      final logs = mitmLogs();
+      expect(logs.single.logLevel, LogLevel.warning);
+      expect(logs.single.payload, contains('not ready'));
+      expect(logs.single.payload, contains('a.example.com'));
+      expect(logs.single.payload, isNot(contains('not on the decryption')));
+    });
+
+    test(
+      'a recheck that times out keeps a leaf the Core still decrypts',
+      () async {
+        moduleRules = () async =>
+            const MitmModuleRules(hostname: ['a.example.com']);
+        await settle();
+        expect(coreHostnames(), ['user.example.com', 'a.example.com']);
+        duringSign = (host) async {
+          duringSign = null;
+          moduleRules = () => Completer<MitmModuleRules>().future;
+          container.invalidate(enabledMitmModuleRulesProvider);
+          await pumpEventQueue();
+        };
+        expect(await sign('a.example.com'), isNull);
+        // The Core keeps the list it was last sent meanwhile.
+        expect(coreHostnames(), ['user.example.com', 'a.example.com']);
+        expect(mitmLogs(), isEmpty);
+      },
+    );
+
+    test('a recheck that times out after a change refuses this host only, '
+        'never pausing every host', () async {
+      moduleRules = () async =>
+          const MitmModuleRules(hostname: ['a.example.com']);
+      await settle();
+      duringSign = (host) async {
+        duringSign = null;
+        moduleRules = () => Completer<MitmModuleRules>().future;
+        container.invalidate(enabledMitmModuleRulesProvider);
+        setMitm(const ['other.example.com']);
+        await pumpEventQueue();
+      };
+      expect(await sign('a.example.com'), 'notListed');
+      final logs = mitmLogs();
+      expect(logs.single.logLevel, LogLevel.warning);
+      expect(logs.single.payload, contains('not ready'));
+    });
+
+    test(
+      'a first read that timed out is not withdrawn once the modules come',
+      () async {
+        final gate = Completer<MitmModuleRules>();
+        moduleRules = () => gate.future;
+        duringSign = (host) async {
+          duringSign = null;
+          gate.complete(const MitmModuleRules(hostname: ['a.example.com']));
+          await pumpEventQueue();
+        };
+        expect(await sign('user.example.com'), isNull);
+        expect(signedLists.last, ['user.example.com']);
+        await settle();
+        expect(coreHostnames(), ['user.example.com', 'a.example.com']);
+        expect(await sign('a.example.com'), isNull);
+      },
+    );
+  });
 }

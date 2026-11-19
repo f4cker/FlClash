@@ -13979,6 +13979,12 @@ abstract class AppLocalizations {
   /// **'These hostnames are ignored: {hosts}. Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name.'**
   String mitmModuleHostsIgnored(Object hosts);
 
+  /// No description provided for @mitmModuleHostsSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash also skips these hostnames: {hosts}. A name that is too broad, belongs to an Apple service or is not a valid name is never decrypted.'**
+  String mitmModuleHostsSkipped(Object hosts);
+
   /// No description provided for @mitmHostIgnored.
   ///
   /// In en, this message translates to:

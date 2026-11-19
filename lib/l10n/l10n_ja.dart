@@ -8244,6 +8244,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return '次のホスト名も Flash は扱いません：$hosts。範囲が広すぎる名前、Apple のサービスの名前、正しくない名前は復号しません。';
+  }
+
+  @override
   String get mitmHostIgnored =>
       '無視されます：Flash が復号するのはポート 443 の api.example.com や *.example.com のような名前だけで、ほかのポート、アドレス、名前の途中の * は使えません';
 

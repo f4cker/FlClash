@@ -8448,6 +8448,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return 'Flash также пропускает эти имена хостов: $hosts. Слишком широкое имя, имя сервиса Apple или недопустимое имя никогда не расшифровывается.';
+  }
+
+  @override
   String get mitmHostIgnored =>
       'Игнорируется: Flash расшифровывает только имена вида api.example.com или *.example.com на порту 443, без другого порта, адреса или * внутри имени';
 

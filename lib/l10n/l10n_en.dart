@@ -8447,6 +8447,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return 'Flash also skips these hostnames: $hosts. A name that is too broad, belongs to an Apple service or is not a valid name is never decrypted.';
+  }
+
+  @override
   String get mitmHostIgnored =>
       'Ignored: Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name';
 

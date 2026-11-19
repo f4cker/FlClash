@@ -59,9 +59,19 @@ final _ipv4 = RegExp(r'^\d{1,3}(\.\d{1,3}){3}$');
 /// address, or a `*` or `?` inside a name, which the Core matches only as a
 /// leading `*.`. Too broad and Apple-owned names the Core also skips are told
 /// by the Core itself.
-List<String> flashUnusableHostnames(MitmModuleContent content) => [
-  for (final line in [...content.insertedHostname, ...content.hostname])
+List<String> flashUnusableHostnames(MitmModuleContent content) =>
+    flashUnusableHostLines(flashHostnameLines(content));
+
+List<String> flashUnusableHostLines(List<String> lines) => [
+  for (final line in lines)
     if (_unusableHostname(flashMitmHostname(line))) line,
+];
+
+/// The module's hostname lines as written, in the order the Core is sent
+/// them.
+List<String> flashHostnameLines(MitmModuleContent content) => [
+  ...content.insertedHostname,
+  ...content.hostname,
 ];
 
 bool _unusableHostname(String line) {
@@ -84,8 +94,7 @@ MitmRules flashMitmRules(MitmModuleContent content) {
   }
   return MitmRules(
     hostname: [
-      for (final line in [...content.insertedHostname, ...content.hostname])
-        flashMitmHostname(line),
+      for (final line in flashHostnameLines(content)) flashMitmHostname(line),
     ],
     urlRewrite: content.urlRewrite,
     headerRewrite: content.headerRewrite,

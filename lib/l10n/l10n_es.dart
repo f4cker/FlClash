@@ -8500,6 +8500,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String mitmModuleHostsSkipped(Object hosts) {
+    return 'Flash también omite estos nombres de host: $hosts. Nunca descifra un nombre demasiado amplio, de un servicio de Apple o que no sea válido.';
+  }
+
+  @override
   String get mitmHostIgnored =>
       'Se ignora: Flash solo descifra nombres como api.example.com o *.example.com en el puerto 443, sin otro puerto, dirección ni * dentro de un nombre';
 
