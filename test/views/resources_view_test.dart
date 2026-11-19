@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
@@ -21,7 +23,6 @@ import '../helpers/context_menu.dart';
 import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_database_providers.dart';
-import 'package:prism_ui/prism_ui.dart';
 
 void main() {
   setUp(() {
@@ -542,4 +543,433 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  group('list read failures', () {
+    late List<String> announced;
+    late _Lists lists;
+    late _RecordingResourcesAction action;
+
+    Future<ProviderContainer> pumpLists(
+      WidgetTester tester, {
+      List<IconSet> iconSets = const [],
+      List<ClashProvider> ruleProviders = const [],
+      List<Script> scripts = const [],
+      List<MitmModule> modules = const [],
+      Size size = const Size(1000, 1400),
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      announced = [];
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(SystemChannels.accessibility, (
+            message,
+          ) async {
+            final map = message as Map<Object?, Object?>;
+            if (map['type'] == 'announce') {
+              final data = map['data'] as Map<Object?, Object?>;
+              announced.add(data['message'] as String);
+            }
+            return null;
+          });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+      action = _RecordingResourcesAction();
+      final container = ProviderContainer(
+        overrides: [
+          iconSetsProvider.overrideWith(() => _FlakyIconSets(lists, iconSets)),
+          clashProvidersProvider.overrideWith(
+            () => _FlakyClashProviders(lists, ruleProviders),
+          ),
+          scriptsProvider.overrideWith(() => _FlakyScripts(lists, scripts)),
+          mitmModulesProvider.overrideWith(
+            () => _FlakyMitmModules(lists, modules),
+          ),
+          resourcesActionProvider.overrideWith(() => action),
+        ],
+      );
+      addTearDown(container.dispose);
+      globalState.container = container;
+      container.read(viewSizeProvider.notifier).update((_) => size);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const TestApp(child: ResourcesView()),
+        ),
+      );
+      await pumpUntilFound(tester, find.text(GeoResource.MMDB.name));
+      await settle(tester, rounds: 2);
+      return container;
+    }
+
+    setUp(() => lists = _Lists());
+
+    Finder banner() => find.byType(ReadFailureBanner);
+
+    final remoteIconSet = IconSet(
+      id: 1,
+      name: 'Remote icons',
+      url: 'https://example.com/icons.json',
+      lastUpdateTime: DateTime(2026),
+    );
+    const remoteProvider = ClashProvider(
+      id: 3,
+      label: 'Remote set',
+      url: 'https://example.com/set.yaml',
+      behavior: RuleProviderBehavior.domain,
+    );
+    final remoteScript = Script(
+      id: 5,
+      label: 'Remote script',
+      url: 'https://example.com/script.js',
+      lastUpdateTime: DateTime(2026),
+    );
+
+    testWidgets('one list failing keeps the others and the GEO files under '
+        'one hint', (tester) async {
+      lists.failing.add(_List.ruleProviders);
+      await pumpLists(
+        tester,
+        iconSets: [remoteIconSet],
+        ruleProviders: [remoteProvider],
+        scripts: [remoteScript],
+      );
+      final l10n = currentAppLocalizations;
+
+      expect(banner(), findsOneWidget);
+      expect(find.text(l10n.resourceListsReadFailed), findsOneWidget);
+      expect(find.text('Remote icons'), findsOneWidget);
+      expect(find.text('Remote script'), findsOneWidget);
+      expect(find.text('Remote set'), findsNothing);
+      expect(find.text(GeoResource.MMDB.name), findsOneWidget);
+      expect(find.textContaining('db down'), findsNothing);
+      // The hint takes room above the sections instead of covering them.
+      expect(
+        tester.getTopLeft(find.text(l10n.autoUpdate)).dy,
+        greaterThan(tester.getBottomLeft(banner()).dy),
+      );
+      expect(announced, [l10n.resourceListsReadFailed]);
+      expect(tester.takeException(), null);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('several lists failing still give one hint, never a page of '
+        'failure', (tester) async {
+      lists.failing.addAll([
+        _List.iconSets,
+        _List.ruleProviders,
+        _List.scripts,
+      ]);
+      await pumpLists(
+        tester,
+        iconSets: [remoteIconSet],
+        ruleProviders: [remoteProvider],
+        scripts: [remoteScript],
+      );
+
+      expect(banner(), findsOneWidget);
+      expect(find.text(currentAppLocalizations.autoUpdate), findsOneWidget);
+      for (final type in GeoResource.values) {
+        expect(find.text(type.name), findsOneWidget);
+      }
+      expect(tester.takeException(), null);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('no remote resources and no GEO files on disk is no failure', (
+      tester,
+    ) async {
+      await pumpLists(tester);
+      final l10n = currentAppLocalizations;
+
+      expect(banner(), findsNothing);
+      expect(find.text(l10n.unknown), findsNWidgets(GeoResource.values.length));
+      expect(announced, isEmpty);
+      expect(tester.takeException(), null);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets(
+      'modules outside the MITM phase do not count as a failed list',
+      (tester) async {
+        lists.failing.add(_List.modules);
+        await pumpLists(tester);
+
+        expect(banner(), findsNothing);
+        expect(find.text(currentAppLocalizations.mitmModules), findsNothing);
+        expect(tester.takeException(), null);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+
+    testWidgets('retry reads only the failed lists, once however often it is '
+        'tapped, never updates, and its success brings the group back', (
+      tester,
+    ) async {
+      lists.failing.add(_List.ruleProviders);
+      final container = await pumpLists(
+        tester,
+        iconSets: [remoteIconSet],
+        ruleProviders: [remoteProvider],
+      );
+      final l10n = currentAppLocalizations;
+      expect(banner(), findsOneWidget);
+      final builds = Map.of(lists.builds);
+
+      lists.failing.clear();
+      lists.hold = Completer<void>();
+      await tester.tap(find.text(l10n.retry));
+      await tester.pump();
+      expect(find.text(l10n.retrying), findsOneWidget);
+      expect(find.text(GeoResource.MMDB.name), findsOneWidget);
+      await tester.tap(find.byType(RetryLabel), warnIfMissed: false);
+      await tester.pump();
+
+      lists.hold!.complete();
+      lists.hold = null;
+      await settle(tester, rounds: 3);
+
+      expect(
+        lists.builds[_List.ruleProviders],
+        builds[_List.ruleProviders]! + 1,
+      );
+      expect(lists.builds[_List.iconSets], builds[_List.iconSets]);
+      expect(lists.builds[_List.scripts], builds[_List.scripts]);
+      expect(action.updateAllCalls, 0);
+      expect(container.read(updatingKeysProvider), isEmpty);
+      expect(banner(), findsNothing);
+      expect(find.text('Remote set'), findsOneWidget);
+      expect(find.text('Remote icons'), findsOneWidget);
+      expect(announced, [
+        l10n.resourceListsReadFailed,
+        l10n.resourceListsRecovered,
+      ]);
+      expect(tester.takeException(), null);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('recovery is announced once per error-to-success '
+        'transition, never on a failed retry or later successful reads', (
+      tester,
+    ) async {
+      lists.failing.add(_List.scripts);
+      final scripts = [remoteScript];
+      final container = await pumpLists(tester, scripts: scripts);
+      final l10n = currentAppLocalizations;
+      expect(announced, [l10n.resourceListsReadFailed]);
+
+      // A retry that fails again says nothing.
+      await tester.tap(find.text(l10n.retry));
+      await settle(tester, rounds: 3);
+      expect(banner(), findsOneWidget);
+      expect(announced, [l10n.resourceListsReadFailed]);
+
+      lists.failing.clear();
+      await tester.tap(find.text(l10n.retry));
+      await settle(tester, rounds: 3);
+      expect(banner(), findsNothing);
+      expect(announced, [
+        l10n.resourceListsReadFailed,
+        l10n.resourceListsRecovered,
+      ]);
+
+      // Later reads that succeed with new rows reach the page, and say
+      // nothing.
+      for (var i = 0; i < 3; i++) {
+        scripts.add(
+          Script(
+            id: 10 + i,
+            label: 'Later script $i',
+            url: 'https://example.com/later-$i.js',
+            lastUpdateTime: DateTime(2026),
+          ),
+        );
+        container.invalidate(scriptsProvider);
+        await settle(tester, rounds: 3);
+        expect(find.text('Later script $i'), findsOneWidget);
+      }
+      expect(banner(), findsNothing);
+      expect(announced, [
+        l10n.resourceListsReadFailed,
+        l10n.resourceListsRecovered,
+      ]);
+      expect(tester.takeException(), null);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    for (final retried in [false, true]) {
+      testWidgets('a list that fails after it loaded shows the hint over the '
+          'rows it read, once, and recovering clears it, once'
+          '${retried ? ' (a retried exception)' : ''}', (tester) async {
+        if (retried) {
+          lists.exception = Exception('db busy');
+        }
+        final container = await pumpLists(
+          tester,
+          iconSets: [remoteIconSet],
+          scripts: [remoteScript],
+        );
+        final l10n = currentAppLocalizations;
+        expect(banner(), findsNothing);
+        expect(announced, isEmpty);
+
+        lists.failing.add(_List.scripts);
+        container.invalidate(scriptsProvider);
+        await settle(tester, rounds: 3);
+        expect(container.read(scriptsProvider).hasError, isTrue);
+        expect(container.read(scriptsProvider).isLoading, retried);
+        expect(banner(), findsOneWidget);
+        // The rows read before stay, the failed list's included.
+        expect(find.text('Remote script'), findsOneWidget);
+        expect(find.text('Remote icons'), findsOneWidget);
+        expect(find.text(GeoResource.MMDB.name), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text(l10n.autoUpdate)).dy,
+          greaterThan(tester.getBottomLeft(banner()).dy),
+        );
+        expect(announced, [l10n.resourceListsReadFailed]);
+
+        // Failing on, retried by Riverpod or read again, says nothing more.
+        container.invalidate(scriptsProvider);
+        await tester.pump(const Duration(milliseconds: 500));
+        await settle(tester, rounds: 3);
+        expect(banner(), findsOneWidget);
+        expect(announced, [l10n.resourceListsReadFailed]);
+
+        lists.failing.clear();
+        if (retried) {
+          // Riverpod's own retry reads it again.
+          await tester.pump(const Duration(seconds: 7));
+        } else {
+          container.invalidate(scriptsProvider);
+        }
+        await settle(tester, rounds: 3);
+        expect(container.read(scriptsProvider).hasError, isFalse);
+        expect(banner(), findsNothing);
+        expect(find.text('Remote script'), findsOneWidget);
+        expect(announced, [
+          l10n.resourceListsReadFailed,
+          l10n.resourceListsRecovered,
+        ]);
+
+        // An identical read after that is no news.
+        container.invalidate(scriptsProvider);
+        await settle(tester, rounds: 3);
+        expect(announced, [
+          l10n.resourceListsReadFailed,
+          l10n.resourceListsRecovered,
+        ]);
+        expect(tester.takeException(), null);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
+    }
+
+    testWidgets('a retry that fails again keeps one hint and says nothing '
+        'more', (tester) async {
+      lists.failing.add(_List.scripts);
+      await pumpLists(tester, scripts: [remoteScript]);
+      final l10n = currentAppLocalizations;
+
+      await tester.tap(find.text(l10n.retry));
+      await settle(tester, rounds: 3);
+
+      expect(banner(), findsOneWidget);
+      expect(find.text(l10n.retry), findsOneWidget);
+      expect(find.text(l10n.retrying), findsNothing);
+      expect(announced, [l10n.resourceListsReadFailed]);
+      expect(tester.takeException(), null);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  });
+}
+
+enum _List { iconSets, ruleProviders, scripts, modules }
+
+/// Which lists fail to read, shared by the overrides across a retry.
+class _Lists {
+  final failing = <_List>{};
+  final builds = <_List, int>{};
+  Exception? exception;
+  Completer<void>? hold;
+
+  Stream<List<T>> read<T>(_List list, List<T> rows) async* {
+    builds.update(list, (count) => count + 1, ifAbsent: () => 1);
+    final hold = this.hold;
+    if (hold != null) {
+      await hold.future;
+    }
+    if (failing.contains(list)) {
+      // An Exception, unlike an Error, Riverpod retries.
+      if (exception case final exception?) {
+        throw exception;
+      }
+      throw StateError('db down');
+    }
+    // A copy, so rows added between reads count as a change.
+    yield List.of(rows);
+  }
+}
+
+class _FlakyIconSets extends IconSets {
+  _FlakyIconSets(this.lists, this.rows);
+
+  final _Lists lists;
+  final List<IconSet> rows;
+
+  @override
+  Stream<List<IconSet>> build() => lists.read(_List.iconSets, rows);
+}
+
+class _FlakyClashProviders extends ClashProviders {
+  _FlakyClashProviders(this.lists, this.rows);
+
+  final _Lists lists;
+  final List<ClashProvider> rows;
+
+  @override
+  Stream<List<ClashProvider>> build() => lists.read(_List.ruleProviders, rows);
+}
+
+class _FlakyScripts extends Scripts {
+  _FlakyScripts(this.lists, this.rows);
+
+  final _Lists lists;
+  final List<Script> rows;
+
+  @override
+  Stream<List<Script>> build() => lists.read(_List.scripts, rows);
+}
+
+class _FlakyMitmModules extends MitmModules {
+  _FlakyMitmModules(this.lists, this.rows);
+
+  final _Lists lists;
+  final List<MitmModule> rows;
+
+  @override
+  Stream<List<MitmModule>> build() => lists.read(_List.modules, rows);
+}
+
+class _RecordingResourcesAction extends ResourcesAction {
+  var updateAllCalls = 0;
+
+  @override
+  Future<List<UpdatingMessage>> updateAll() async {
+    updateAllCalls++;
+    return const [];
+  }
 }

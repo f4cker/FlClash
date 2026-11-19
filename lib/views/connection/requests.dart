@@ -335,6 +335,14 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
   late final ScrollController _scrollController;
   var _loaded = false;
 
+  /// Whether the last read shown failed.
+  var _failed = false;
+
+  /// Whether any read here succeeded, an empty one included: after that a
+  /// failure keeps the last result on screen instead of standing in for it.
+  var _succeeded = false;
+  var _retrying = false;
+
   @override
   void initState() {
     super.initState();
@@ -349,26 +357,47 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
 
   @override
   Future<void> poll(PollGuard isCurrent) async {
-    final trackerInfos = await _readConnections();
+    // A retry in flight is this tick's read; one beside it would only race.
+    if (_retrying) {
+      return;
+    }
+    final read = await _readConnections();
     if (!isCurrent()) {
       return;
     }
-    _showConnections(trackerInfos);
+    _showConnections(read);
   }
 
   Future<void> _refreshConnections() async {
-    final trackerInfos = await _readConnections();
+    final read = await _readConnections();
     if (!mounted) {
       return;
     }
-    _showConnections(trackerInfos);
+    _showConnections(read);
   }
 
-  Future<List<TrackerInfo>?> _readConnections() async {
+  /// One read now; polling skips its ticks until it is done, and of it and a
+  /// poll already under way the newer read still wins.
+  Future<void> _retry() async {
+    if (_retrying) {
+      return;
+    }
+    setState(() => _retrying = true);
+    try {
+      await _refreshConnections();
+    } finally {
+      if (mounted) {
+        setState(() => _retrying = false);
+      }
+    }
+  }
+
+  /// Null when a newer read has already been shown.
+  Future<_ConnectionsRead?> _readConnections() async {
     final read = ++_reads;
     final rank = rankAfter(_ranking);
+    final connectionsReader = widget.connectionsReader;
     try {
-      final connectionsReader = widget.connectionsReader;
       final ranked = connectionsReader != null
           ? rank(await connectionsReader())
           : ref.read(coreStatusProvider) == CoreStatus.connected
@@ -380,26 +409,46 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       }
       _shownRead = read;
       _ranking = ranked.ranking;
-      return ranked.trackerInfos;
+      return _ConnectionsRead(ranked.trackerInfos);
     } catch (error) {
+      if (!mounted) {
+        return null;
+      }
       commonPrint.log(
         'updateConnections error: $error',
         logLevel: coreFailureLogLevel(error),
       );
-      return null;
+      if (read < _shownRead) {
+        return null;
+      }
+      _shownRead = read;
+      // A Core that stopped under the read has no connections, not a failure.
+      if (connectionsReader == null &&
+          ref.read(coreStatusProvider) != CoreStatus.connected) {
+        _ranking = TrackerRanking.empty;
+        return const _ConnectionsRead([]);
+      }
+      return const _ConnectionsRead(null);
     }
   }
 
-  void _showConnections(List<TrackerInfo>? trackerInfos) {
+  void _showConnections(_ConnectionsRead? read) {
+    if (read == null) {
+      return;
+    }
     if (!_loaded) {
       showFirstContent(() {
         setState(() => _loaded = true);
         // A failed read must not leave the controller's list from the last visit.
-        _applyConnections(trackerInfos ?? const []);
+        _applyConnections(read.trackerInfos ?? const []);
+        _applyFailure(read.failed);
       });
       return;
     }
-    updateWhenRouteSettled(() => _applyConnections(trackerInfos));
+    updateWhenRouteSettled(() {
+      _applyConnections(read.trackerInfos);
+      _applyFailure(read.failed);
+    });
   }
 
   void _applyConnections(List<TrackerInfo>? trackerInfos) {
@@ -408,6 +457,27 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
     }
     widget.listController.setTrackerInfos(trackerInfos);
     widget.filters.offer(widget.listController.value.trackerInfos);
+  }
+
+  /// Says the change once: polls that keep failing, or keep succeeding,
+  /// leave the page and a screen reader alone.
+  void _applyFailure(bool failed) {
+    if (!failed) {
+      _succeeded = true;
+    }
+    if (failed == _failed || !mounted) {
+      return;
+    }
+    setState(() => _failed = failed);
+    final appLocalizations = context.appLocalizations;
+    announceReadState(
+      context,
+      failed
+          ? (_succeeded
+                ? appLocalizations.connectionsRefreshFailedStale
+                : appLocalizations.connectionsReadFailed)
+          : appLocalizations.connectionsRefreshed,
+    );
   }
 
   Future<void> _closeConnection(TrackerInfo trackerInfo) =>
@@ -435,56 +505,92 @@ class _LiveFeedState extends ConsumerState<_LiveFeed>
       valueListenable: widget.listController,
       builder: (context, state, _) {
         final connections = widget.filters.apply(state.list);
-        return NullStatusSwitcher(
-          isLoading: !_loaded,
-          loadingStatus: const Center(child: ActivityIndicator.page()),
-          isEmpty: connections.isEmpty,
-          isSearching: state.isSearching || widget.filters.isFiltering,
-          nullStatus: NullStatus(
-            label: appLocalizations.nullTip(appLocalizations.connections),
-            illustration: NullStatusIllustration.connections,
-          ),
-          child: ProcessLookupOffNotice(
-            visible: connections,
-            child: RecordTableFrame<TrackerInfo>(
-              tableId: 'connections',
-              items: connections,
-              columnsOf: (width) =>
-                  trackerInfoColumns(context, width: width, isLive: true),
-              builder: (context, table, connections) {
-                final padding = EdgeInsets.only(
-                  top: context.contentTopPadding,
-                  bottom: 16 + context.bottomInset,
-                );
-                final detailTitle = appLocalizations.details(
-                  appLocalizations.connection,
-                );
-                final groups = widget.filters.groupsOf(connections);
-                if (groups != null) {
-                  return TrackerInfoGroupedList(
-                    groups: groups,
-                    grouping: widget.filters.value.grouping!,
-                    isLive: true,
+        // Nothing read yet: the failure stands in the content, never the
+        // empty state.
+        final unread = _failed && !_succeeded;
+        final stale = _failed && _succeeded;
+        return ReadFailureFrame(
+          banner: stale
+              ? ReadFailureBanner(
+                  message: appLocalizations.connectionsRefreshFailedStale,
+                  retrying: _retrying,
+                  onRetry: _retry,
+                )
+              : null,
+          child: NullStatusSwitcher(
+            isLoading: !_loaded,
+            loadingStatus: const Center(child: ActivityIndicator.page()),
+            isEmpty: unread || connections.isEmpty,
+            isSearching:
+                !unread && (state.isSearching || widget.filters.isFiltering),
+            nullStatus: unread
+                ? NullStatus(
+                    label: appLocalizations.connectionsReadFailed,
+                    description: appLocalizations.connectionsReadFailedDesc,
+                    illustration: NullStatusIllustration.error,
+                    action: RetryButton(
+                      busy: _retrying,
+                      onRetry: _retry,
+                      filled: true,
+                    ),
+                  )
+                : NullStatus(
+                    label: appLocalizations.nullTip(
+                      appLocalizations.connections,
+                    ),
+                    illustration: NullStatusIllustration.connections,
+                  ),
+            child: ProcessLookupOffNotice(
+              visible: connections,
+              child: RecordTableFrame<TrackerInfo>(
+                tableId: 'connections',
+                items: connections,
+                columnsOf: (width) =>
+                    trackerInfoColumns(context, width: width, isLive: true),
+                builder: (context, table, connections) {
+                  final padding = EdgeInsets.only(
+                    top: context.contentTopPadding,
+                    bottom: 16 + context.bottomInset,
+                  );
+                  final detailTitle = appLocalizations.details(
+                    appLocalizations.connection,
+                  );
+                  final groups = widget.filters.groupsOf(connections);
+                  if (groups != null) {
+                    return TrackerInfoGroupedList(
+                      groups: groups,
+                      grouping: widget.filters.value.grouping!,
+                      isLive: true,
+                      controller: _scrollController,
+                      padding: padding,
+                      table: table,
+                      detailTitle: detailTitle,
+                      onClose: _closeConnection,
+                    );
+                  }
+                  return TrackerInfoAnimatedList(
                     controller: _scrollController,
                     padding: padding,
+                    trackerInfos: connections,
                     table: table,
                     detailTitle: detailTitle,
                     onClose: _closeConnection,
                   );
-                }
-                return TrackerInfoAnimatedList(
-                  controller: _scrollController,
-                  padding: padding,
-                  trackerInfos: connections,
-                  table: table,
-                  detailTitle: detailTitle,
-                  onClose: _closeConnection,
-                );
-              },
+                },
+              ),
             ),
           ),
         );
       },
     );
   }
+}
+
+class _ConnectionsRead {
+  const _ConnectionsRead(this.trackerInfos);
+
+  /// Null for a read that failed.
+  final List<TrackerInfo>? trackerInfos;
+
+  bool get failed => trackerInfos == null;
 }

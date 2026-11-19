@@ -8522,4 +8522,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'ヘルパーはオフになっています';
+
+  @override
+  String get profilesUpdating => '更新中…';
+
+  @override
+  String get retrying => '再試行中…';
+
+  @override
+  String get connectionsReadFailed => '接続を読み込めません';
+
+  @override
+  String get connectionsReadFailedDesc => 'もう一度お試しください。';
+
+  @override
+  String get connectionsRefreshFailedStale => '接続を更新できませんでした。前回の結果を表示しています。';
+
+  @override
+  String get connectionsRefreshed => '接続を更新しました。';
+
+  @override
+  String get resourceListsReadFailed => '一部のリソースリストを読み込めませんでした。';
+
+  @override
+  String get resourceListsRecovered => 'リソースリストが復旧しました。';
 }

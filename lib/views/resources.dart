@@ -43,6 +43,11 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
   _RemoteResources? _resources;
   var _fileInfos = const <String, FileInfo?>{};
 
+  /// Whether a list of resources could not be read; what the others read
+  /// stays on the page.
+  var _listsFailed = false;
+  var _retrying = false;
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +57,25 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
     ref.listenManual(mitmModulesProvider, (_, _) => _refreshResources());
     unawaited(_load());
   }
+
+  /// The lists the page shows: modules only while the MITM phase lists them.
+  List<ProviderListenable<AsyncValue<Object>>> get _lists => [
+    iconSetsProvider,
+    clashProvidersProvider,
+    scriptsProvider,
+    if (mitmFeature && mitmModulesFeature) mitmModulesProvider,
+  ];
+
+  Future<void> _readLists() => Future.wait<void>([
+    ref.read(iconSetsProvider.future).then((_) {}, onError: (Object _) {}),
+    ref
+        .read(clashProvidersProvider.future)
+        .then((_) {}, onError: (Object _) {}),
+    ref.read(scriptsProvider.future).then((_) {}, onError: (Object _) {}),
+    ref.read(mitmModulesProvider.future).then((_) {}, onError: (Object _) {}),
+  ]);
+
+  bool _readListsFailed() => _lists.any((list) => ref.read(list).hasError);
 
   Future<void> _load() async {
     await Future.wait<Object>([
@@ -74,6 +98,7 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
       _resources = _readResources();
       _fileInfos = fileInfos;
     });
+    _applyListsFailed(_readListsFailed());
   }
 
   _RemoteResources _readResources() => (
@@ -102,6 +127,57 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
       return;
     }
     setState(() => _resources = _readResources());
+    // A list read again while a retry runs is settled by the retry.
+    if (!_retrying) {
+      _applyListsFailed(_readListsFailed());
+    }
+  }
+
+  /// Reads the lists that failed again, and only those: nothing is
+  /// downloaded or updated.
+  Future<void> _retry() async {
+    if (_retrying) {
+      return;
+    }
+    setState(() => _retrying = true);
+    try {
+      if (ref.read(iconSetsProvider).hasError) {
+        ref.invalidate(iconSetsProvider);
+      }
+      if (ref.read(clashProvidersProvider).hasError) {
+        ref.invalidate(clashProvidersProvider);
+      }
+      if (ref.read(scriptsProvider).hasError) {
+        ref.invalidate(scriptsProvider);
+      }
+      if (ref.read(mitmModulesProvider).hasError) {
+        ref.invalidate(mitmModulesProvider);
+      }
+      await _readLists();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _retrying = false;
+          _resources = _readResources();
+        });
+        _applyListsFailed(_readListsFailed());
+      }
+    }
+  }
+
+  /// Says the change once; a list failing again says nothing more.
+  void _applyListsFailed(bool failed) {
+    if (failed == _listsFailed || !mounted) {
+      return;
+    }
+    setState(() => _listsFailed = failed);
+    final appLocalizations = context.appLocalizations;
+    announceReadState(
+      context,
+      failed
+          ? appLocalizations.resourceListsReadFailed
+          : appLocalizations.resourceListsRecovered,
+    );
   }
 
   Future<void> _updateAll() async {
@@ -195,80 +271,94 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
         loadingStatus: const NullStatus(
           illustration: NullStatusIllustration.data,
         ),
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
-                top: context.sectionsTopPadding,
-                bottom: 16 + context.bottomInset,
-              ),
-              sliver: SliverMainAxisGroup(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: generateSection(
-                      items: [
-                        ListItem.toggle(
-                          title: Text(appLocalizations.autoUpdate),
-                          value: autoUpdate,
-                          onChanged: _updateAutoUpdate,
+        child: ReadFailureFrame(
+          banner: _listsFailed
+              ? ReadFailureBanner(
+                  message: appLocalizations.resourceListsReadFailed,
+                  retrying: _retrying,
+                  onRetry: _retry,
+                )
+              : null,
+          child: Builder(
+            builder: (context) => CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+                    top: context.sectionsTopPadding,
+                    bottom: 16 + context.bottomInset,
+                  ),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: generateSection(
+                          items: [
+                            ListItem.toggle(
+                              title: Text(appLocalizations.autoUpdate),
+                              value: autoUpdate,
+                              onChanged: _updateAutoUpdate,
+                            ),
+                            if (autoUpdate)
+                              ListItem(
+                                title: Text(
+                                  appLocalizations.resourceUpdateInterval,
+                                ),
+                                subtitle: Text(
+                                  '$updateInterval ${appLocalizations.hours}',
+                                ),
+                                onTap: _updateInterval,
+                              ),
+                          ],
                         ),
-                        if (autoUpdate)
-                          ListItem(
-                            title: Text(
-                              appLocalizations.resourceUpdateInterval,
-                            ),
-                            subtitle: Text(
-                              '$updateInterval ${appLocalizations.hours}',
-                            ),
-                            onTap: _updateInterval,
-                          ),
-                      ],
-                    ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: generateSection(
+                          title: appLocalizations.geoResources,
+                          items: [
+                            for (final geoResource in GeoResource.values)
+                              _GeoResourceItem(
+                                geoResource,
+                                preloaded: _fileInfos,
+                              ),
+                          ],
+                        ),
+                      ),
+                      generateSliverSection(
+                        title: appLocalizations.iconSets,
+                        items: iconSets,
+                        itemBuilder: (iconSet) =>
+                            _IconSetItem(iconSet, key: ValueKey(iconSet.id)),
+                      ),
+                      generateSliverSection(
+                        title: appLocalizations.ruleProviders,
+                        items: ruleProviders,
+                        itemBuilder: (provider) => _RuleProviderItem(
+                          provider,
+                          preloaded: _fileInfos,
+                          key: ValueKey(provider.id),
+                        ),
+                      ),
+                      generateSliverSection(
+                        title: appLocalizations.script,
+                        items: scripts,
+                        itemBuilder: (script) => _ScriptItem(
+                          script,
+                          preloaded: _fileInfos,
+                          key: ValueKey(script.id),
+                        ),
+                      ),
+                      if (mitmFeature && mitmModulesFeature)
+                        generateSliverSection(
+                          title: appLocalizations.mitmModules,
+                          items: modules,
+                          itemBuilder: (module) =>
+                              _ModuleItem(module, key: ValueKey(module.id)),
+                        ),
+                    ],
                   ),
-                  SliverToBoxAdapter(
-                    child: generateSection(
-                      title: appLocalizations.geoResources,
-                      items: [
-                        for (final geoResource in GeoResource.values)
-                          _GeoResourceItem(geoResource, preloaded: _fileInfos),
-                      ],
-                    ),
-                  ),
-                  generateSliverSection(
-                    title: appLocalizations.iconSets,
-                    items: iconSets,
-                    itemBuilder: (iconSet) =>
-                        _IconSetItem(iconSet, key: ValueKey(iconSet.id)),
-                  ),
-                  generateSliverSection(
-                    title: appLocalizations.ruleProviders,
-                    items: ruleProviders,
-                    itemBuilder: (provider) => _RuleProviderItem(
-                      provider,
-                      preloaded: _fileInfos,
-                      key: ValueKey(provider.id),
-                    ),
-                  ),
-                  generateSliverSection(
-                    title: appLocalizations.script,
-                    items: scripts,
-                    itemBuilder: (script) => _ScriptItem(
-                      script,
-                      preloaded: _fileInfos,
-                      key: ValueKey(script.id),
-                    ),
-                  ),
-                  if (mitmFeature && mitmModulesFeature)
-                    generateSliverSection(
-                      title: appLocalizations.mitmModules,
-                      items: modules,
-                      itemBuilder: (module) =>
-                          _ModuleItem(module, key: ValueKey(module.id)),
-                    ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

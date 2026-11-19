@@ -91,6 +91,18 @@ class _Writes {
   }
 }
 
+/// Whether a list notifier's listeners hear of [next]: when its rows differ,
+/// or when its read starts or stops failing. A failed read keeps the rows it
+/// had, so comparing rows alone would never tell a page that the list could
+/// not be read; identical successful reads still say nothing.
+bool listReadChanged<T>(
+  ListEquality<T> equality,
+  AsyncValue<List<T>> previous,
+  AsyncValue<List<T>> next,
+) =>
+    previous.hasError != next.hasError ||
+    !equality.equals(previous.value, next.value);
+
 mixin OptimisticMixin<T> on AsyncNotifierMixin<T> {
   late final _writes = _Writes(_reread);
   Future<T> Function()? _query;
@@ -424,7 +436,7 @@ class Scripts extends _$Scripts with AsyncNotifierMixin, OptimisticMixin {
     AsyncValue<List<Script>> previous,
     AsyncValue<List<Script>> next,
   ) {
-    return !scriptListEquality.equals(previous.value, next.value);
+    return listReadChanged(scriptListEquality, previous, next);
   }
 }
 
@@ -484,7 +496,7 @@ class MitmModules extends _$MitmModules
     AsyncValue<List<MitmModule>> previous,
     AsyncValue<List<MitmModule>> next,
   ) {
-    return !mitmModuleListEquality.equals(previous.value, next.value);
+    return listReadChanged(mitmModuleListEquality, previous, next);
   }
 }
 
@@ -567,7 +579,7 @@ class ClashProviders extends _$ClashProviders
     AsyncValue<List<ClashProvider>> previous,
     AsyncValue<List<ClashProvider>> next,
   ) {
-    return !clashProviderListEquality.equals(previous.value, next.value);
+    return listReadChanged(clashProviderListEquality, previous, next);
   }
 }
 
@@ -617,7 +629,7 @@ class IconSets extends _$IconSets with AsyncNotifierMixin, OptimisticMixin {
     AsyncValue<List<IconSet>> previous,
     AsyncValue<List<IconSet>> next,
   ) {
-    return !iconSetListEquality.equals(previous.value, next.value);
+    return listReadChanged(iconSetListEquality, previous, next);
   }
 }
 

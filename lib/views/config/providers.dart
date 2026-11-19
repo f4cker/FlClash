@@ -417,7 +417,11 @@ class _ClashProvidersViewState extends ConsumerState<ClashProvidersView> {
           ),
         ),
       ],
-      body: _buildContent(providers, loading: state.isLoading),
+      body: _buildContent(
+        providers,
+        // A failed read being retried keeps its rows on screen.
+        loading: state.isLoading && !state.hasValue,
+      ),
       title: appLocalizations.ruleProviders,
     );
   }

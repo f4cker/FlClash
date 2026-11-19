@@ -8744,4 +8744,30 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'Помощник отключён';
+
+  @override
+  String get profilesUpdating => 'Обновление…';
+
+  @override
+  String get retrying => 'Повтор…';
+
+  @override
+  String get connectionsReadFailed => 'Не удалось прочитать соединения';
+
+  @override
+  String get connectionsReadFailedDesc => 'Повторите попытку.';
+
+  @override
+  String get connectionsRefreshFailedStale =>
+      'Не удалось обновить соединения. Показан последний результат.';
+
+  @override
+  String get connectionsRefreshed => 'Соединения обновлены.';
+
+  @override
+  String get resourceListsReadFailed =>
+      'Не удалось прочитать некоторые списки ресурсов.';
+
+  @override
+  String get resourceListsRecovered => 'Списки ресурсов восстановлены.';
 }

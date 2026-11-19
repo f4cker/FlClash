@@ -8795,4 +8795,30 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'El asistente está desactivado';
+
+  @override
+  String get profilesUpdating => 'Actualizando…';
+
+  @override
+  String get retrying => 'Reintentando…';
+
+  @override
+  String get connectionsReadFailed => 'No se pudieron leer las conexiones';
+
+  @override
+  String get connectionsReadFailedDesc => 'Inténtalo de nuevo.';
+
+  @override
+  String get connectionsRefreshFailedStale =>
+      'No se pudieron actualizar las conexiones. Se muestra el último resultado.';
+
+  @override
+  String get connectionsRefreshed => 'Conexiones actualizadas.';
+
+  @override
+  String get resourceListsReadFailed =>
+      'No se pudieron leer algunas listas de recursos.';
+
+  @override
+  String get resourceListsRecovered => 'Listas de recursos restauradas.';
 }

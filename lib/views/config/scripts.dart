@@ -363,7 +363,11 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
           ),
         ),
       ],
-      body: _buildContent(scripts, isLoading: scriptsState.isLoading),
+      body: _buildContent(
+        scripts,
+        // A failed read being retried keeps its rows on screen.
+        isLoading: scriptsState.isLoading && !scriptsState.hasValue,
+      ),
       title: appLocalizations.script,
     );
   }

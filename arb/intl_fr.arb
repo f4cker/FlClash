@@ -3631,5 +3631,13 @@
   "macHelperDisabledByUserDetail": "L’autorisation de Flash à s’exécuter en arrière-plan est désactivée. Autorisez Flash à s’exécuter en arrière-plan dans Réglages Système.",
   "macHelperUnavailableTitle": "Assistant indisponible",
   "macHelperViewSteps": "Voir les étapes",
-  "macHelperDisabledTitle": "L’assistant est désactivé"
+  "macHelperDisabledTitle": "L’assistant est désactivé",
+  "profilesUpdating": "Mise à jour…",
+  "retrying": "Nouvelle tentative…",
+  "connectionsReadFailed": "Impossible de lire les connexions",
+  "connectionsReadFailedDesc": "Veuillez réessayer.",
+  "connectionsRefreshFailedStale": "Impossible d’actualiser les connexions. Dernier résultat affiché.",
+  "connectionsRefreshed": "Connexions actualisées.",
+  "resourceListsReadFailed": "Certaines listes de ressources n’ont pas pu être lues.",
+  "resourceListsRecovered": "Listes de ressources rétablies."
 }

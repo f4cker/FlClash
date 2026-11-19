@@ -8598,4 +8598,29 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => '헬퍼가 꺼져 있습니다';
+
+  @override
+  String get profilesUpdating => '업데이트 중…';
+
+  @override
+  String get retrying => '다시 시도 중…';
+
+  @override
+  String get connectionsReadFailed => '연결을 읽을 수 없음';
+
+  @override
+  String get connectionsReadFailedDesc => '다시 시도하세요.';
+
+  @override
+  String get connectionsRefreshFailedStale =>
+      '연결을 새로 고치지 못했습니다. 마지막 결과를 표시합니다.';
+
+  @override
+  String get connectionsRefreshed => '연결을 새로 고쳤습니다.';
+
+  @override
+  String get resourceListsReadFailed => '일부 리소스 목록을 읽지 못했습니다.';
+
+  @override
+  String get resourceListsRecovered => '리소스 목록이 복구되었습니다.';
 }

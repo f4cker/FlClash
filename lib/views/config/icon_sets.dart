@@ -248,7 +248,11 @@ class _IconSetsViewState extends ConsumerState<IconSetsView> {
           ),
         ),
       ],
-      body: _buildContent(iconSets, loading: state.isLoading),
+      body: _buildContent(
+        iconSets,
+        // A failed read being retried keeps its rows on screen.
+        loading: state.isLoading && !state.hasValue,
+      ),
       title: appLocalizations.iconSets,
     );
   }

@@ -3631,5 +3631,13 @@
   "macHelperDisabledByUserDetail": "Flash のバックグラウンド実行の許可がオフになっています。システム設定で Flash のバックグラウンド実行を許可してください。",
   "macHelperUnavailableTitle": "ヘルパーを利用できません",
   "macHelperViewSteps": "手順を表示",
-  "macHelperDisabledTitle": "ヘルパーはオフになっています"
+  "macHelperDisabledTitle": "ヘルパーはオフになっています",
+  "profilesUpdating": "更新中…",
+  "retrying": "再試行中…",
+  "connectionsReadFailed": "接続を読み込めません",
+  "connectionsReadFailedDesc": "もう一度お試しください。",
+  "connectionsRefreshFailedStale": "接続を更新できませんでした。前回の結果を表示しています。",
+  "connectionsRefreshed": "接続を更新しました。",
+  "resourceListsReadFailed": "一部のリソースリストを読み込めませんでした。",
+  "resourceListsRecovered": "リソースリストが復旧しました。"
 }
