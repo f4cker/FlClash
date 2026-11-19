@@ -526,12 +526,16 @@ class _MitmRewriteViewState extends ConsumerState<MitmRewriteView> {
             ),
           Expanded(
             child: NullStatusSwitcher(
+              animate: false,
               isLoading: loading,
               isEmpty: true,
               nullStatus: NullStatus(
                 label: appLocalizations.mitmRewriteEmptyTitle,
                 description: appLocalizations.mitmRewriteEmptyDesc,
                 illustration: NullStatusIllustration.rewrites,
+                animate: false,
+                descriptionMinLines: 2,
+                anchorToHeading: true,
                 action: profileId == null
                     ? null
                     : FilledButton(

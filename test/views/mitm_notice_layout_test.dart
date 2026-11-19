@@ -263,6 +263,14 @@ void main() {
                     tester.element(notice).contentTopPadding,
                   );
                 }
+                if (!populated) {
+                  final empty = tester.widget<NullStatus>(
+                    find.byType(NullStatus),
+                  );
+                  expect(empty.anchorToHeading, isTrue);
+                  expect(empty.descriptionMinLines, 2);
+                  expect(empty.animate, isFalse);
+                }
                 await capture(tester, '$name-top');
                 if (populated) {
                   final scroll = find
