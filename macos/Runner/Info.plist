@@ -5,7 +5,7 @@
 	<key>FlashReleaseChannel</key>
 	<string>beta</string>
 	<key>FlashReleaseVersion</key>
-	<string>1.0.0-beta.1</string>
+	<string>1.0.0-beta.2</string>
 	<key>FlashDartDefines</key>
 	<string>$(DART_DEFINES)</string>
 	<key>CFBundleDevelopmentRegion</key>
