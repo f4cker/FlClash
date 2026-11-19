@@ -409,7 +409,7 @@ final class ScriptsProvider
   Scripts create() => Scripts();
 }
 
-String _$scriptsHash() => r'f88f4a2c9960c884fbc2317f754f0f968340ade2';
+String _$scriptsHash() => r'67916236f2c4259458c49554a6064ab0d1373acc';
 
 abstract class _$Scripts extends $StreamNotifier<List<Script>> {
   Stream<List<Script>> build();
@@ -453,7 +453,7 @@ final class MitmModulesProvider
   MitmModules create() => MitmModules();
 }
 
-String _$mitmModulesHash() => r'f7ff19a7e8b913c8987f0176eadc80222882e633';
+String _$mitmModulesHash() => r'1f145d28687e2b1c64b8140a5898780973d7a65f';
 
 abstract class _$MitmModules extends $StreamNotifier<List<MitmModule>> {
   Stream<List<MitmModule>> build();
@@ -498,7 +498,7 @@ final class ClashProvidersProvider
   ClashProviders create() => ClashProviders();
 }
 
-String _$clashProvidersHash() => r'00588fa9c7300d3319d97d61962e898d29497188';
+String _$clashProvidersHash() => r'4c37d52730a4b0ed81946970e36ab8170b486fb6';
 
 abstract class _$ClashProviders extends $StreamNotifier<List<ClashProvider>> {
   Stream<List<ClashProvider>> build();
@@ -543,7 +543,7 @@ final class IconSetsProvider
   IconSets create() => IconSets();
 }
 
-String _$iconSetsHash() => r'fe06735ac9d8c8968278e163a3fcd5a3c0deb1d9';
+String _$iconSetsHash() => r'fe758fafee4033a154327fb695829d2ade0e6284';
 
 abstract class _$IconSets extends $StreamNotifier<List<IconSet>> {
   Stream<List<IconSet>> build();

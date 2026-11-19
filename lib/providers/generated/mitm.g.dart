@@ -229,18 +229,27 @@ final class MitmIgnoredHostnamesProvider
 String _$mitmIgnoredHostnamesHash() =>
     r'79208567cf4cf68f68e262bb6be630681ef12327';
 
-/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
-/// list, or with why not; the Core passes the connection through on a refusal.
+/// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
+/// decrypts (the user's hostnames, then the enabled modules', see
+/// [mitmEffectiveHostnames]), or with why not; the Core passes the connection
+/// through on a refusal. A module turned off, deleted or declined leaves the
+/// list at once, before the Core is told.
 
 @ProviderFor(MitmSignAction)
 final mitmSignActionProvider = MitmSignActionProvider._();
 
-/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
-/// list, or with why not; the Core passes the connection through on a refusal.
+/// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
+/// decrypts (the user's hostnames, then the enabled modules', see
+/// [mitmEffectiveHostnames]), or with why not; the Core passes the connection
+/// through on a refusal. A module turned off, deleted or declined leaves the
+/// list at once, before the Core is told.
 final class MitmSignActionProvider
     extends $NotifierProvider<MitmSignAction, void> {
-  /// Answers the Core's `mitmSign` with a leaf for a host on the user's own
-  /// list, or with why not; the Core passes the connection through on a refusal.
+  /// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
+  /// decrypts (the user's hostnames, then the enabled modules', see
+  /// [mitmEffectiveHostnames]), or with why not; the Core passes the connection
+  /// through on a refusal. A module turned off, deleted or declined leaves the
+  /// list at once, before the Core is told.
   MitmSignActionProvider._()
     : super(
         from: null,
@@ -268,10 +277,13 @@ final class MitmSignActionProvider
   }
 }
 
-String _$mitmSignActionHash() => r'd4866af3e0400e32b5dcd3d89b543eb188a7c8ad';
+String _$mitmSignActionHash() => r'682f0f651fec932b5516b089159d00130298d573';
 
-/// Answers the Core's `mitmSign` with a leaf for a host on the user's own
-/// list, or with why not; the Core passes the connection through on a refusal.
+/// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
+/// decrypts (the user's hostnames, then the enabled modules', see
+/// [mitmEffectiveHostnames]), or with why not; the Core passes the connection
+/// through on a refusal. A module turned off, deleted or declined leaves the
+/// list at once, before the Core is told.
 
 abstract class _$MitmSignAction extends $Notifier<void> {
   void build();
@@ -805,7 +817,7 @@ final class MitmHostnameIssuesProvider
 }
 
 String _$mitmHostnameIssuesHash() =>
-    r'4f0429d464e66bd530c499fc03f6951d0913a5f6';
+    r'2886d5c1677c50ec08386431824c0da259701f5c';
 
 /// A module that fails to read adds nothing, so the VPN can still start.
 
@@ -1122,7 +1134,7 @@ final class MitmModuleDetailsProvider
   }
 }
 
-String _$mitmModuleDetailsHash() => r'd11f7a512ad0788d87bec021f2beb8d00b8f3972';
+String _$mitmModuleDetailsHash() => r'cf57aa4f53ae75e9437310f1e5e37ce507d24852';
 
 /// Null while the module's content is not on disk.
 
