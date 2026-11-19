@@ -10,6 +10,7 @@ import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/ui.dart';
+import 'package:fl_clash/ui/icons/app_glyphs.dart';
 import 'package:fl_clash/views/config/mitm_modules.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -151,6 +152,25 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('empty modules use the navigation puzzle glyph', (tester) async {
+    container = ProviderContainer();
+    addTearDown(container.dispose);
+    globalState.container = container;
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TestApp(child: MitmModulesView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final illustration = tester.widget<EmptyIllustration>(
+      find.byType(EmptyIllustration),
+    );
+    expect(illustration.type, NullStatusIllustration.modules);
+    expect(illustration.type.glyph, same(AppGlyphs.puzzle));
+  });
 
   testWidgets('the list shows each module and turns one off', (tester) async {
     await pump(tester, const MitmModulesView());

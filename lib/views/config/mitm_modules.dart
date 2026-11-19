@@ -347,7 +347,7 @@ class MitmModulesView extends ConsumerWidget {
         isLoading: state.isLoading && !state.hasValue,
         isEmpty: modules.isEmpty,
         nullStatus: NullStatus(
-          illustration: NullStatusIllustration.scripts,
+          illustration: NullStatusIllustration.modules,
           label: appLocalizations.mitmModulesEmptyTitle,
           description: appLocalizations.mitmModulesEmptyBody,
           action: FilledButton(
