@@ -777,7 +777,9 @@ class _StatusCard extends ConsumerWidget {
             restartCore: () => unawaited(_restartCore(core)),
             stopDownload: action.cancelUpdateDownload,
             install: () => _install(context, ref),
-            discard: () => unawaited(action.discardUpdate()),
+            discard: ref.watch(updateInstallCommittedProvider)
+                ? null
+                : () => unawaited(action.discardUpdate()),
             reviewModules: () => unawaited(_reviewModules(context, ref)),
           )
         : (
@@ -1340,7 +1342,7 @@ class _ReadyHero extends StatelessWidget {
   const _ReadyHero({required this.tag, required this.onDiscard});
 
   final String tag;
-  final VoidCallback onDiscard;
+  final VoidCallback? onDiscard;
 
   @override
   Widget build(BuildContext context) {

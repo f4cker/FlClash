@@ -116,6 +116,7 @@ void main() {
     late String prepareCode;
     late String installCode;
     Completer<void>? prepareHold;
+    Completer<void>? installHold;
     const channel = MethodChannel('$packageName/mac_updater');
 
     setUp(() async {
@@ -134,6 +135,7 @@ void main() {
       prepareCode = 'ok';
       installCode = 'ok';
       prepareHold = null;
+      installHold = null;
       core = _Core();
       when(() => core.stop()).thenAnswer((_) async {
         calls.add('stop');
@@ -170,6 +172,7 @@ void main() {
                 if (prepareCode == 'ok') 'staged': '${home.path}/staged',
               };
             }
+            if (call.method == 'install') await installHold?.future;
             return {'code': call.method == 'install' ? installCode : 'ok'};
           });
     });
@@ -212,6 +215,29 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TextButton, '取消'));
       await tester.pumpAndSettle();
+    }
+
+    Future<void> stageForLater(WidgetTester tester) async {
+      final offered = action.checkUpdateResultHandle(
+        action.answer,
+        isUser: true,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, '查看更新'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.text(currentAppLocalizations.macUpdateDownloadAndInstall),
+      );
+      await tester.pumpAndSettle();
+      await offered;
+      await settleUntil(
+        tester,
+        () => container.read(updateDownloadStateProvider) is UpdateReady,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(currentAppLocalizations.macUpdateLater));
+      await tester.pumpAndSettle();
+      expect(container.read(updateInstallBusyProvider), isFalse);
     }
 
     testWidgets('notice shows exact installed and signed target metadata', (
@@ -312,6 +338,72 @@ void main() {
       expect(container.read(updateDownloadStateProvider), isNull);
       await tester.pump(const Duration(seconds: 10));
     });
+
+    for (final fromTray in [false, true]) {
+      testWidgets(
+        'discard during held Core stop cancels install (tray: $fromTray)',
+        (tester) async {
+          await pump(tester);
+          final stop = Completer<CoreLifecycleResult>();
+          when(() => core.stop()).thenAnswer((_) {
+            calls.add('stop');
+            return stop.future;
+          });
+          if (!fromTray) await stageForLater(tester);
+          final operation = fromTray
+              ? action.updateFromTray(action.answer as UpdateAvailable)
+              : action.installUpdate();
+          await settleUntil(tester, () => calls.contains('stop'));
+          expect(container.read(updateInstallCommittedProvider), isFalse);
+          await tester.runAsync(action.discardUpdate);
+          expect(container.read(updateDownloadStateProvider), isNull);
+          stop.complete(
+            const CoreLifecycleResult(
+              revision: 1,
+              outcome: CoreLifecycleOutcome.applied,
+            ),
+          );
+          await settleUntil(
+            tester,
+            () => !container.read(updateInstallBusyProvider),
+          );
+          await operation;
+          expect(calls, isNot(contains('install')));
+          expect(calls, isNot(contains('relaunch')));
+          expect(exit.exits, 0);
+          expect(restart.restarts, 1);
+          await tester.pump(const Duration(seconds: 10));
+        },
+      );
+    }
+
+    testWidgets(
+      'non-tray install publishes busy and rejects discard after commit',
+      (tester) async {
+        await pump(tester);
+        await stageForLater(tester);
+        installHold = Completer<void>();
+        final ready =
+            container.read(updateDownloadStateProvider) as UpdateReady;
+        final operation = action.installUpdate();
+        await settleUntil(tester, () => calls.contains('install'));
+        expect(container.read(updateInstallBusyProvider), isTrue);
+        expect(container.read(updateInstallCommittedProvider), isTrue);
+        await action.discardUpdate();
+        expect(container.read(updateDownloadStateProvider), same(ready));
+        expect(File(ready.path).existsSync(), isTrue);
+        await action.installUpdate();
+        await action.updateFromTray(action.answer as UpdateAvailable);
+        expect(calls.where((call) => call == 'install'), hasLength(1));
+        expect(action.checks, 0);
+        installHold!.complete();
+        await settleUntil(tester, () => exit.exits == 1);
+        await operation;
+        expect(container.read(updateInstallBusyProvider), isFalse);
+        expect(container.read(updateInstallCommittedProvider), isFalse);
+        await tester.pump(const Duration(seconds: 10));
+      },
+    );
 
     testWidgets('fetch failure retains known target and never claims latest', (
       tester,

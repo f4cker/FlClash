@@ -205,7 +205,7 @@ class AppTray implements TrayPort {
       TrayMenuCheckbox(
         label: corePending
             ? appLocalizations.trayCoreProcessing
-            : trayState.isStart
+            : read(coreStatusProvider) == CoreStatus.connected
             ? appLocalizations.trayStopCore
             : appLocalizations.trayStartCore,
         checked: false,

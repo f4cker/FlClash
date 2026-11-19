@@ -215,6 +215,19 @@ void main() {
             .enabled,
         isFalse,
       );
+      container.read(updateDownloadStateProvider.notifier).value =
+          const UpdateReady('v1.0.0', '/tmp/update');
+      await update(_trayState());
+      expect(
+        showCall()!.menu
+            .firstWhere(
+              (item) =>
+                  item.label == currentAppLocalizations.macUpdateInstalling,
+            )
+            .enabled,
+        isFalse,
+      );
+      container.read(updateDownloadStateProvider.notifier).value = null;
       container.read(updateInstallBusyProvider.notifier).value = false;
       container.read(lastUpdateCheckStateProvider.notifier).value =
           UpdateCheckFailed(Exception('offline'));
@@ -255,7 +268,18 @@ void main() {
     },
   );
 
+  test('Core row uses connection state even when listeners disagree', () async {
+    await update(_trayState(isStart: false));
+    expect(_labels(showCall()), contains('Stop core'));
+    expect(_labels(showCall()), isNot(contains('Start core')));
+    container.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    await update(_trayState(isStart: true));
+    expect(_labels(showCall()), contains('Start core'));
+    expect(_labels(showCall()), isNot(contains('Stop core')));
+  });
+
   test('builds the stopped menu without the running-only toggles', () async {
+    container.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
     await update(_trayState());
 
     final labels = _labels(showCall());

@@ -49,6 +49,8 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
         _requestUpdate();
       }
     });
+    ref.listenManual(trayCoreTogglePendingProvider, _onMenuDataChanged);
+    ref.listenManual(coreStatusProvider, _onMenuDataChanged);
     if (_isMacOS) {
       ref.listenManual(availableUpdateStateProvider, (prev, next) {
         _onMenuDataChanged(prev, next);
@@ -56,7 +58,6 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
       ref.listenManual(lastUpdateCheckStateProvider, (prev, next) {
         _onMenuDataChanged(prev, next);
       });
-      ref.listenManual(trayCoreTogglePendingProvider, _onMenuDataChanged);
       ref.listenManual(updateInstallBusyProvider, _onMenuDataChanged);
       ref.listenManual(updateDownloadStateProvider, (prev, next) {
         _onMenuDataChanged(prev, next);
@@ -73,7 +74,6 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
       ref.listenManual<int?>(currentProfileIdProvider, (prev, next) {
         _onMenuDataChanged(prev, next);
       });
-      ref.listenManual(coreStatusProvider, _onMenuDataChanged);
       ref.listenManual(delayTestingGroupsProvider, _onMenuDataChanged);
       // PendingDelayTests publishes live map views. Earlier views already show
       // the new phases, so deep comparison would suppress running/finished

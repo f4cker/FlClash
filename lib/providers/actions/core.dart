@@ -62,9 +62,13 @@ class CoreAction extends _$CoreAction {
     return _core.restart();
   }
 
-  // Nothing in lib/ calls CoreController.stop(); only close() (app exit)
-  // supersedes a start/restart. statusFirst lets onCrash catch a crash
-  // during initCore itself (it early-returns unless status is connected).
+  Future<void> stopCore() async {
+    final result = await _core.stop();
+    if (result.outcome == CoreLifecycleOutcome.superseded) return;
+    ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    ref.read(setupActionProvider.notifier).onCoreLost();
+  }
+
   Future<bool> _applyLifecycleResult(
     CoreLifecycleResult result, {
     bool statusFirst = false,

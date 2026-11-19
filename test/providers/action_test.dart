@@ -294,6 +294,104 @@ void main() {
   });
 
   group('CoreAction', () {
+    for (final outcome in CoreLifecycleOutcome.values) {
+      test('tray stops connected Core with listeners off: $outcome', () async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        loadAppLocalizations(const Locale('en'));
+        final handler = _MockCoreHandlerInterface();
+        final stopped = Completer<CoreLifecycleResult>();
+        when(handler.stop).thenAnswer((_) => stopped.future);
+        final container = ProviderContainer(
+          overrides: [
+            coreHandlerProvider.overrideWithValue(
+              CoreController.scoped(handler),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(coreStatusProvider.notifier).value =
+            CoreStatus.connected;
+        final common = container.read(commonActionProvider.notifier);
+        expect(container.read(isStartProvider), isFalse);
+        final operation = common.toggleRunningForTray();
+        expect(container.read(trayCoreTogglePendingProvider), isTrue);
+        expect(container.read(coreStatusProvider), CoreStatus.connected);
+        await common.toggleRunningForTray();
+        verify(handler.stop).called(1);
+        stopped.complete(CoreLifecycleResult(revision: 1, outcome: outcome));
+        await operation;
+        expect(container.read(trayCoreTogglePendingProvider), isFalse);
+        expect(
+          container.read(coreStatusProvider),
+          outcome == CoreLifecycleOutcome.superseded
+              ? CoreStatus.connected
+              : CoreStatus.disconnected,
+        );
+        verifyNever(handler.stopListener);
+        verifyNever(handler.startListener);
+      });
+    }
+
+    test(
+      'failed tray stop retains connected state and clears pending',
+      () async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        loadAppLocalizations(const Locale('en'));
+        final handler = _MockCoreHandlerInterface();
+        when(handler.stop).thenThrow(StateError('stop failed'));
+        final container = ProviderContainer(
+          overrides: [
+            coreHandlerProvider.overrideWithValue(
+              CoreController.scoped(handler),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(coreStatusProvider.notifier).value =
+            CoreStatus.connected;
+        await container
+            .read(commonActionProvider.notifier)
+            .toggleRunningForTray();
+        expect(container.read(coreStatusProvider), CoreStatus.connected);
+        expect(container.read(trayCoreTogglePendingProvider), isFalse);
+        verifyNever(handler.stopListener);
+      },
+    );
+
+    for (final failed in [false, true]) {
+      test('tray start awaits lifecycle result (failed: $failed)', () async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        loadAppLocalizations(const Locale('en'));
+        final container = ProviderContainer(
+          overrides: [
+            coreActionProvider.overrideWith(_TestCoreAction.new),
+            setupActionProvider.overrideWith(_TestSetupAction.new),
+          ],
+        );
+        addTearDown(container.dispose);
+        final core =
+            container.read(coreActionProvider.notifier) as _TestCoreAction;
+        core.restartCompleter = Completer<CoreLifecycleResult>();
+        final operation = container
+            .read(commonActionProvider.notifier)
+            .toggleRunningForTray();
+        expect(container.read(trayCoreTogglePendingProvider), isTrue);
+        expect(container.read(coreStatusProvider), CoreStatus.connecting);
+        if (failed) {
+          core.restartCompleter!.completeError(StateError('service refused'));
+        } else {
+          core.restartCompleter!.complete(_restartResult);
+        }
+        await operation;
+        expect(container.read(trayCoreTogglePendingProvider), isFalse);
+        expect(
+          container.read(coreStatusProvider),
+          failed ? CoreStatus.disconnected : CoreStatus.connected,
+        );
+        expect(core.lifecycleRestartCount, 1);
+      });
+    }
+
     test('reports a network change to the Core only while connected', () async {
       final core = _MockCoreHandlerInterface();
       when(core.reportNetworkChange).thenAnswer((_) async => true);

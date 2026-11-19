@@ -445,6 +445,59 @@ abstract class _$UpdateInstallBusy extends $Notifier<bool> {
   }
 }
 
+@ProviderFor(UpdateInstallCommitted)
+final updateInstallCommittedProvider = UpdateInstallCommittedProvider._();
+
+final class UpdateInstallCommittedProvider
+    extends $NotifierProvider<UpdateInstallCommitted, bool> {
+  UpdateInstallCommittedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'updateInstallCommittedProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$updateInstallCommittedHash();
+
+  @$internal
+  @override
+  UpdateInstallCommitted create() => UpdateInstallCommitted();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$updateInstallCommittedHash() =>
+    r'219aedf9f4e4ec1820a8b0e1f406e87419424233';
+
+abstract class _$UpdateInstallCommitted extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(CoreCapabilitiesState)
 final coreCapabilitiesStateProvider = CoreCapabilitiesStateProvider._();
 

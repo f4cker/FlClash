@@ -9,6 +9,7 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/widgets/live_status.dart';
+import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -237,6 +238,27 @@ void main() {
 
     expect(front('Install update'), findsOneWidget);
     expect(find.text('0.9.3'), findsOneWidget);
+  });
+
+  testWidgets('ready card disables discard only after native install commit', (
+    tester,
+  ) async {
+    container.read(updateDownloadStateProvider.notifier).value =
+        const UpdateReady('v0.9.4', '/tmp/update');
+    await pumpButton(tester);
+    await open(tester);
+    DashboardIconButton discard() => tester.widget<DashboardIconButton>(
+      find.byWidgetPredicate(
+        (widget) => widget is DashboardIconButton && widget.tooltip == 'Cancel',
+      ),
+    );
+    expect(discard().onPressed, isNotNull);
+    container.read(updateInstallBusyProvider.notifier).value = true;
+    await settle(tester);
+    expect(discard().onPressed, isNotNull);
+    container.read(updateInstallCommittedProvider.notifier).value = true;
+    await settle(tester);
+    expect(discard().onPressed, isNull);
   });
 
   testWidgets('cancels a download from its card', (tester) async {

@@ -8,6 +8,7 @@ class CommonAction extends _$CommonAction {
   _MacStagedUpdate? _macStaged;
   int _updateCheckRevision = 0;
   bool _isInstallingUpdate = false;
+  bool _trayUpdateReserved = false;
 
   @override
   void build() {}
@@ -38,7 +39,15 @@ class CommonAction extends _$CommonAction {
     }
     pending.value = true;
     try {
-      await _toggleRunning();
+      final core = ref.read(coreActionProvider.notifier);
+      await globalState.safeRun(() async {
+        if (ref.read(coreStatusProvider) == CoreStatus.connected) {
+          await core.stopCore();
+        } else {
+          ref.read(setupActionProvider.notifier).resumeOnRestart();
+          await core.restartCore();
+        }
+      });
     } finally {
       pending.value = false;
     }
@@ -142,6 +151,7 @@ class CommonAction extends _$CommonAction {
         !identical(ref.read(availableUpdateStateProvider), expected)) {
       return;
     }
+    _trayUpdateReserved = true;
     busy.value = true;
     try {
       final result = await checkForAppUpdate();
@@ -166,7 +176,8 @@ class CommonAction extends _$CommonAction {
       await discardUpdate();
       await _downloadMacUpdate(manifest, asset, installWhenReady: true);
     } finally {
-      busy.value = false;
+      _trayUpdateReserved = false;
+      busy.value = _isInstallingUpdate;
     }
   }
 
@@ -392,7 +403,7 @@ class CommonAction extends _$CommonAction {
       _macStaged = _MacStagedUpdate(manifest, prepared.staged!, path);
       download.value = UpdateReady(tag, path);
       if (installWhenReady) {
-        await installUpdate();
+        await _installUpdate(fromTray: true);
         return;
       }
       dialogs.showBanner(
@@ -484,10 +495,13 @@ class CommonAction extends _$CommonAction {
       );
       return;
     }
-    if (_updateCancelToken?.isCancelled == true) {
+    if (!identical(_macStaged, staged) ||
+        !identical(ref.read(updateDownloadStateProvider), download) ||
+        _updateCancelToken?.isCancelled == true) {
       await _restartAfterFailedMacUpdate();
-      throw _updateCancelToken!.cancelError!;
+      return;
     }
+    ref.read(updateInstallCommittedProvider.notifier).value = true;
     final result = await updater.install(staged.path);
     if (result.ok) {
       _macStaged = null;
@@ -603,38 +617,56 @@ class CommonAction extends _$CommonAction {
   }
 
   Future<void> discardUpdate() async {
-    if (ref.read(updateDownloadStateProvider) is! UpdateReady) return;
+    if (ref.read(updateInstallCommittedProvider) ||
+        ref.read(updateDownloadStateProvider) is! UpdateReady) {
+      return;
+    }
+    _updateCancelToken?.cancel();
+    _macStaged = null;
     ref.read(updateDownloadStateProvider.notifier).value = null;
     await clearUpdateDownloads();
   }
 
-  Future<void> installUpdate() async {
+  Future<void> installUpdate() => _installUpdate();
+
+  Future<void> _installUpdate({bool fromTray = false}) async {
     final download = ref.read(updateDownloadStateProvider);
-    if (download is! UpdateReady) return;
-    if (system.isMacOS) {
-      if (_isInstallingUpdate) return;
-      _isInstallingUpdate = true;
-      try {
-        await _installMacUpdate(download);
-      } finally {
-        _isInstallingUpdate = false;
-      }
+    if (download is! UpdateReady ||
+        _isInstallingUpdate ||
+        (_trayUpdateReserved && !fromTray)) {
       return;
     }
-    if (system.isAndroid) {
-      ref.read(updateDownloadStateProvider.notifier).value = null;
-      final status = await app?.installPackage(download.path);
-      await clearUpdateDownloads();
-      if (status != null && packageInstallFailed(status)) {
+    _isInstallingUpdate = true;
+    final busy = ref.read(updateInstallBusyProvider.notifier);
+    busy.value = true;
+    try {
+      if (system.isMacOS) {
+        await _installMacUpdate(download);
+        return;
+      }
+      ref.read(updateInstallCommittedProvider.notifier).value = true;
+      if (system.isAndroid) {
+        ref.read(updateDownloadStateProvider.notifier).value = null;
+        final status = await app?.installPackage(download.path);
+        await clearUpdateDownloads();
+        if (status != null && packageInstallFailed(status)) {
+          await _showUpdateFailure(currentAppLocalizations.updateInstallFailed);
+        }
+        return;
+      }
+      final started = windows?.runas(
+        download.path,
+        windowsUpdateArguments(pid),
+      );
+      if (started == true) {
+        await ref.read(systemActionProvider.notifier).handleExit();
+      } else if (started == false) {
         await _showUpdateFailure(currentAppLocalizations.updateInstallFailed);
       }
-      return;
-    }
-    final started = windows?.runas(download.path, windowsUpdateArguments(pid));
-    if (started == true) {
-      await ref.read(systemActionProvider.notifier).handleExit();
-    } else if (started == false) {
-      await _showUpdateFailure(currentAppLocalizations.updateInstallFailed);
+    } finally {
+      ref.read(updateInstallCommittedProvider.notifier).value = false;
+      _isInstallingUpdate = false;
+      busy.value = _trayUpdateReserved;
     }
   }
 

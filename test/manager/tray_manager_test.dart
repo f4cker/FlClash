@@ -125,6 +125,36 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  for (final isMacOS in [true, false]) {
+    testWidgets('Core lifecycle changes refresh tray (macOS: $isMacOS)', (
+      tester,
+    ) async {
+      await pumpTrayManager(tester, isMacOS: isMacOS);
+      expect(container.read(isStartProvider), isFalse);
+      for (final change in <void Function()>[
+        () =>
+            container.read(trayCoreTogglePendingProvider.notifier).value = true,
+        () => container.read(trayCoreTogglePendingProvider.notifier).value =
+            false,
+        () => container.read(coreStatusProvider.notifier).value =
+            CoreStatus.disconnected,
+      ]) {
+        _RecordingSystemAction.updateTrayCount = 0;
+        change();
+        await tester.pumpAndSettle();
+        expect(_RecordingSystemAction.updateTrayCount, greaterThan(0));
+      }
+    });
+  }
+
+  testWidgets('global install busy refreshes the macOS tray', (tester) async {
+    await pumpTrayManager(tester);
+    _RecordingSystemAction.updateTrayCount = 0;
+    container.read(updateInstallBusyProvider.notifier).value = true;
+    await tester.pumpAndSettle();
+    expect(_RecordingSystemAction.updateTrayCount, greaterThan(0));
+  });
+
   testWidgets('hidden setting and source label changes refresh the menu', (
     tester,
   ) async {

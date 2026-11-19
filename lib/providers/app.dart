@@ -73,6 +73,13 @@ class UpdateInstallBusy extends _$UpdateInstallBusy
 }
 
 @Riverpod(keepAlive: true)
+class UpdateInstallCommitted extends _$UpdateInstallCommitted
+    with AutoDisposeNotifierMixin {
+  @override
+  bool build() => false;
+}
+
+@Riverpod(keepAlive: true)
 class CoreCapabilitiesState extends _$CoreCapabilitiesState
     with AutoDisposeNotifierMixin {
   @override
