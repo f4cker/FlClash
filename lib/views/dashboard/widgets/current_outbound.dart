@@ -97,6 +97,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     bool stillFor(ProbeEntry<IpInfo> entry) =>
         entry.value == null && entry.phase != ProbePhase.probing && !live;
     final metrics = _OutboundMetrics.of(density);
+    final padding = metrics.padding.resolve(Directionality.of(context));
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final colors = DashboardColors.of(context);
@@ -161,7 +162,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
             ),
           ),
           Padding(
-            padding: metrics.padding,
+            padding: padding,
             child: Row(
               spacing: metrics.gap,
               children: [
@@ -223,12 +224,15 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                 ),
                 SizedBox(
                   width: metrics.buttonSlot,
-                  child: Center(
-                    child: _StartToggle(
-                      size: metrics.buttonSize,
-                      enabled: hasProfile,
-                      running: isStart,
-                      suspended: suspended,
+                  child: Transform.translate(
+                    offset: Offset(0, (padding.bottom - padding.top) / 2),
+                    child: Center(
+                      child: _StartToggle(
+                        size: metrics.buttonSize,
+                        enabled: hasProfile,
+                        running: isStart,
+                        suspended: suspended,
+                      ),
                     ),
                   ),
                 ),
@@ -309,7 +313,7 @@ class _OutboundMetrics {
 
   factory _OutboundMetrics.of(DashboardDensity density) => switch (density) {
     DashboardDensity.standard => _OutboundMetrics(
-      padding: dashboardCardPadding(density),
+      padding: dashboardCardPadding(density).copyWith(bottom: 20),
       gap: 16,
       buttonSize: 104,
       buttonSlot: 120,
@@ -318,7 +322,7 @@ class _OutboundMetrics {
       decorationTop: -87,
     ),
     DashboardDensity.compact => _OutboundMetrics(
-      padding: dashboardCardPadding(density),
+      padding: dashboardCardPadding(density).copyWith(bottom: 20),
       gap: 16,
       buttonSize: 84,
       buttonSlot: 100,
