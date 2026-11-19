@@ -5920,7 +5920,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get macHelperOn => 'Asistente listo';
 
   @override
-  String get macHelperOpenSettings => 'Abrir Ajustes de macOS';
+  String get macHelperOpenSettings => 'Abrir Ajustes del Sistema';
 
   @override
   String get macHelperTryAgain => 'Reintentar';
@@ -6044,7 +6044,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get macHelperMigrationAction => 'Start update';
 
   @override
-  String get macHelperApprovalTitle => 'Allow Flash to run in the background';
+  String get macHelperApprovalTitle =>
+      'Esperando permiso para ejecutarse en segundo plano';
 
   @override
   String get macHelperApprovalStep1 => 'Open Login Items & Extensions.';
@@ -6055,7 +6056,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get macHelperApprovalStep3 =>
-      'Desactiva y vuelve a activar el interruptor junto a Flash y luego vuelve a Flash.';
+      'Activa el interruptor junto a Flash y luego vuelve a Flash.';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -8737,7 +8738,7 @@ class AppLocalizationsEs extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count elementos actualizándose',
-      one: '1 elemento actualizándose',
+      one: '$count elemento actualizándose',
     );
     return '$_temp0';
   }
@@ -8748,14 +8749,14 @@ class AppLocalizationsEs extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count elementos',
-      one: '1 elemento',
+      one: '$count elemento',
     );
     return '$_temp0';
   }
 
   @override
   String liveStatusUpdateDownload(String percent) {
-    return 'descarga de la actualización $percent';
+    return 'Descarga de la actualización $percent';
   }
 
   @override
@@ -8794,4 +8795,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'El asistente está desactivado';
+
+  @override
+  String get macHelperApprovalStepReset =>
+      'Si el interruptor junto a Flash ya está activado, desactívalo y vuelve a activarlo; luego vuelve a Flash.';
 }

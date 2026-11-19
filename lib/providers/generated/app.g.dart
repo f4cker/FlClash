@@ -609,6 +609,81 @@ abstract class _$CoreStopReason extends $Notifier<String?> {
   }
 }
 
+/// Positive evidence that the Core is stopped because of the macOS helper:
+/// set exactly where the helper refused a start or was not ready for it, and
+/// cleared once the Core leaves the stopped state. Only this lets the status
+/// deck show the helper's card alone; a stop without it (no reason, or a
+/// reason of its own) keeps its own card.
+
+@ProviderFor(CoreStoppedForHelper)
+final coreStoppedForHelperProvider = CoreStoppedForHelperProvider._();
+
+/// Positive evidence that the Core is stopped because of the macOS helper:
+/// set exactly where the helper refused a start or was not ready for it, and
+/// cleared once the Core leaves the stopped state. Only this lets the status
+/// deck show the helper's card alone; a stop without it (no reason, or a
+/// reason of its own) keeps its own card.
+final class CoreStoppedForHelperProvider
+    extends $NotifierProvider<CoreStoppedForHelper, bool> {
+  /// Positive evidence that the Core is stopped because of the macOS helper:
+  /// set exactly where the helper refused a start or was not ready for it, and
+  /// cleared once the Core leaves the stopped state. Only this lets the status
+  /// deck show the helper's card alone; a stop without it (no reason, or a
+  /// reason of its own) keeps its own card.
+  CoreStoppedForHelperProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'coreStoppedForHelperProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$coreStoppedForHelperHash();
+
+  @$internal
+  @override
+  CoreStoppedForHelper create() => CoreStoppedForHelper();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$coreStoppedForHelperHash() =>
+    r'1d54eff8cbf3f53cc4dd4dfa6d13928718088bcc';
+
+/// Positive evidence that the Core is stopped because of the macOS helper:
+/// set exactly where the helper refused a start or was not ready for it, and
+/// cleared once the Core leaves the stopped state. Only this lets the status
+/// deck show the helper's card alone; a stop without it (no reason, or a
+/// reason of its own) keeps its own card.
+
+abstract class _$CoreStoppedForHelper extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(Logs)
 final logsProvider = LogsProvider._();
 

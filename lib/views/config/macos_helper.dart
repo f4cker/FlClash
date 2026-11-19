@@ -197,12 +197,14 @@ MacHelperCardView macHelperCardView(
     MacHelperProgress.idle => null,
   };
   final raw = flow.rawDetail;
-  // The system shows one switch for Flash; its daemon item may be off while
-  // the switch reads on, so the steps say "turn it off and on again".
+  // After a recovery re-registered the helper, the system may show Flash's
+  // switch on while its daemon item is off: only then do the steps say to
+  // turn it off and on again. Otherwise the last step is to turn it on.
+  final recovered = flow.repairPending || flow.autoRecoveries > 0;
   final steps = [
     l.macHelperApprovalStep1,
     l.macHelperApprovalStep2,
-    l.macHelperApprovalStep3,
+    recovered ? l.macHelperApprovalStepReset : l.macHelperApprovalStep3,
   ];
   return switch (kind) {
     MacHelperCardKind.ready => MacHelperCardView(

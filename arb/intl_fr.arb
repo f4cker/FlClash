@@ -1955,7 +1955,7 @@
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
   "macHelperTitle": "Assistant Flash",
   "macHelperOn": "Assistant prêt",
-  "macHelperOpenSettings": "Ouvrir les réglages macOS",
+  "macHelperOpenSettings": "Ouvrir Réglages Système",
   "macHelperTryAgain": "Réessayer",
   "macHelperCheckAgain": "Vérifier à nouveau",
   "macHelperRepair": "Repair",
@@ -1991,10 +1991,10 @@
   "macHelperMigrationTitle": "Helper update required",
   "macHelperMigrationDetail": "Flash needs to remove the old helper and turn on the new one. You’ll be asked for your administrator password.",
   "macHelperMigrationAction": "Start update",
-  "macHelperApprovalTitle": "Allow Flash to run in the background",
+  "macHelperApprovalTitle": "Autorisation d’exécution en arrière-plan en attente",
   "macHelperApprovalStep1": "Open Login Items & Extensions.",
   "macHelperApprovalStep2": "Under Allow in the Background, find Flash.",
-  "macHelperApprovalStep3": "Désactivez puis réactivez l’interrupteur à côté de Flash, puis revenez dans Flash.",
+  "macHelperApprovalStep3": "Activez l’interrupteur à côté de Flash, puis revenez dans Flash.",
   "macHelperStepLabel": "Step {number}: {text}",
   "@macHelperStepLabel": {
     "placeholders": {
@@ -3619,9 +3619,9 @@
   "updateNoNewerStable": "Aucune version stable plus récente.",
   "installedBetaBadge": "La version installée est une bêta",
   "updatingResources": "Mise à jour",
-  "updatingResourcesCount": "{count, plural, =1{1 élément en cours de mise à jour} other{{count} éléments en cours de mise à jour}}",
-  "liveStatusItems": "{count, plural, =1{1 élément} other{{count} éléments}}",
-  "liveStatusUpdateDownload": "téléchargement de la mise à jour {percent}",
+  "updatingResourcesCount": "{count, plural, one{{count} élément en cours de mise à jour} other{{count} éléments en cours de mise à jour}}",
+  "liveStatusItems": "{count, plural, one{{count} élément} other{{count} éléments}}",
+  "liveStatusUpdateDownload": "Téléchargement de la mise à jour {percent}",
   "updateCurrentVersion": "Version actuelle {version}",
   "updateNewVersion": "Nouvelle version {version}",
   "macHelperRegisterTitle": "Enregistrer l’assistant",
@@ -3631,5 +3631,6 @@
   "macHelperDisabledByUserDetail": "L’autorisation de Flash à s’exécuter en arrière-plan est désactivée. Autorisez Flash à s’exécuter en arrière-plan dans Réglages Système.",
   "macHelperUnavailableTitle": "Assistant indisponible",
   "macHelperViewSteps": "Voir les étapes",
-  "macHelperDisabledTitle": "L’assistant est désactivé"
+  "macHelperDisabledTitle": "L’assistant est désactivé",
+  "macHelperApprovalStepReset": "Si l’interrupteur à côté de Flash est déjà activé, désactivez-le puis réactivez-le, puis revenez dans Flash."
 }

@@ -1991,10 +1991,10 @@
   "macHelperMigrationTitle": "Helper update required",
   "macHelperMigrationDetail": "Flash needs to remove the old helper and turn on the new one. You’ll be asked for your administrator password.",
   "macHelperMigrationAction": "Start update",
-  "macHelperApprovalTitle": "Allow Flash to run in the background",
+  "macHelperApprovalTitle": "Waiting for background permission",
   "macHelperApprovalStep1": "Open Login Items & Extensions.",
   "macHelperApprovalStep2": "Under Allow in the Background, find Flash.",
-  "macHelperApprovalStep3": "Turn the switch next to Flash off and on again, then come back to Flash.",
+  "macHelperApprovalStep3": "Turn on the switch next to Flash, then come back to Flash.",
   "macHelperStepLabel": "Step {number}: {text}",
   "@macHelperStepLabel": {
     "placeholders": {
@@ -3636,7 +3636,7 @@
   "updateNoNewerStable": "No newer stable release is available.",
   "installedBetaBadge": "Installed version is a beta",
   "updatingResources": "Updating",
-  "updatingResourcesCount": "{count, plural, =1{1 item updating} other{{count} items updating}}",
+  "updatingResourcesCount": "{count, plural, one{{count} item updating} other{{count} items updating}}",
   "@updatingResourcesCount": {
     "placeholders": {
       "count": {
@@ -3644,7 +3644,7 @@
       }
     }
   },
-  "liveStatusItems": "{count, plural, =1{1 item} other{{count} items}}",
+  "liveStatusItems": "{count, plural, one{{count} item} other{{count} items}}",
   "@liveStatusItems": {
     "placeholders": {
       "count": {
@@ -3652,7 +3652,7 @@
       }
     }
   },
-  "liveStatusUpdateDownload": "update download {percent}",
+  "liveStatusUpdateDownload": "Update download {percent}",
   "@liveStatusUpdateDownload": {
     "placeholders": {
       "percent": {
@@ -3683,5 +3683,6 @@
   "macHelperDisabledByUserDetail": "Flash’s permission to run in the background is turned off. Allow Flash to run in the background in System Settings.",
   "macHelperUnavailableTitle": "Helper unavailable",
   "macHelperViewSteps": "View steps",
-  "macHelperDisabledTitle": "The helper is turned off"
+  "macHelperDisabledTitle": "The helper is turned off",
+  "macHelperApprovalStepReset": "If the switch next to Flash is already on, turn it off and on again, then come back to Flash."
 }

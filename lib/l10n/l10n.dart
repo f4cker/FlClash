@@ -10161,7 +10161,7 @@ abstract class AppLocalizations {
   /// No description provided for @macHelperApprovalTitle.
   ///
   /// In en, this message translates to:
-  /// **'Allow Flash to run in the background'**
+  /// **'Waiting for background permission'**
   String get macHelperApprovalTitle;
 
   /// No description provided for @macHelperApprovalStep1.
@@ -10179,7 +10179,7 @@ abstract class AppLocalizations {
   /// No description provided for @macHelperApprovalStep3.
   ///
   /// In en, this message translates to:
-  /// **'Turn the switch next to Flash off and on again, then come back to Flash.'**
+  /// **'Turn on the switch next to Flash, then come back to Flash.'**
   String get macHelperApprovalStep3;
 
   /// No description provided for @macHelperStepLabel.
@@ -14335,19 +14335,19 @@ abstract class AppLocalizations {
   /// No description provided for @updatingResourcesCount.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 item updating} other{{count} items updating}}'**
+  /// **'{count, plural, one{{count} item updating} other{{count} items updating}}'**
   String updatingResourcesCount(int count);
 
   /// No description provided for @liveStatusItems.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  /// **'{count, plural, one{{count} item} other{{count} items}}'**
   String liveStatusItems(int count);
 
   /// No description provided for @liveStatusUpdateDownload.
   ///
   /// In en, this message translates to:
-  /// **'update download {percent}'**
+  /// **'Update download {percent}'**
   String liveStatusUpdateDownload(String percent);
 
   /// No description provided for @updateCurrentVersion.
@@ -14409,6 +14409,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The helper is turned off'**
   String get macHelperDisabledTitle;
+
+  /// No description provided for @macHelperApprovalStepReset.
+  ///
+  /// In en, this message translates to:
+  /// **'If the switch next to Flash is already on, turn it off and on again, then come back to Flash.'**
+  String get macHelperApprovalStepReset;
 }
 
 class _AppLocalizationsDelegate

@@ -225,6 +225,8 @@ class Bootstrap {
           onBlocked: () {
             _container.read(coreStatusProvider.notifier).value =
                 CoreStatus.disconnected;
+            // The helper kept the Core from starting: its card says why.
+            _container.read(coreStoppedForHelperProvider.notifier).value = true;
           },
           foreground: !_container.read(appSettingProvider).silentLaunch,
           wasOffered: preferences.getMacHelperInvitationShown,

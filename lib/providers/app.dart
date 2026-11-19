@@ -101,6 +101,25 @@ class CoreStopReason extends _$CoreStopReason with AutoDisposeNotifierMixin {
   }
 }
 
+/// Positive evidence that the Core is stopped because of the macOS helper:
+/// set exactly where the helper refused a start or was not ready for it, and
+/// cleared once the Core leaves the stopped state. Only this lets the status
+/// deck show the helper's card alone; a stop without it (no reason, or a
+/// reason of its own) keeps its own card.
+@Riverpod(keepAlive: true)
+class CoreStoppedForHelper extends _$CoreStoppedForHelper
+    with AutoDisposeNotifierMixin {
+  @override
+  bool build() {
+    ref.listen(coreStatusProvider, (_, next) {
+      if (next != CoreStatus.disconnected) {
+        state = false;
+      }
+    });
+    return false;
+  }
+}
+
 @Riverpod(keepAlive: true)
 class Logs extends _$Logs with AutoDisposeNotifierMixin {
   @override

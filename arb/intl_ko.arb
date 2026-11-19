@@ -1955,7 +1955,7 @@
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
   "macHelperTitle": "Flash 도우미",
   "macHelperOn": "도우미 준비 완료",
-  "macHelperOpenSettings": "macOS 설정 열기",
+  "macHelperOpenSettings": "시스템 설정 열기",
   "macHelperTryAgain": "다시 시도",
   "macHelperCheckAgain": "다시 확인",
   "macHelperRepair": "Repair",
@@ -1991,10 +1991,10 @@
   "macHelperMigrationTitle": "Helper update required",
   "macHelperMigrationDetail": "Flash needs to remove the old helper and turn on the new one. You’ll be asked for your administrator password.",
   "macHelperMigrationAction": "Start update",
-  "macHelperApprovalTitle": "Allow Flash to run in the background",
+  "macHelperApprovalTitle": "백그라운드 실행 허용 대기 중",
   "macHelperApprovalStep1": "Open Login Items & Extensions.",
   "macHelperApprovalStep2": "Under Allow in the Background, find Flash.",
-  "macHelperApprovalStep3": "Flash 옆의 스위치를 껐다가 다시 켠 다음 Flash로 돌아옵니다.",
+  "macHelperApprovalStep3": "Flash 옆의 스위치를 켠 다음 Flash로 돌아옵니다.",
   "macHelperStepLabel": "Step {number}: {text}",
   "@macHelperStepLabel": {
     "placeholders": {
@@ -3627,9 +3627,10 @@
   "macHelperRegisterTitle": "헬퍼 등록",
   "macHelperRegisterDetail": "헬퍼가 아직 등록되지 않았습니다. 계속하려면 ‘등록’을 클릭하세요.",
   "macHelperRegisterAction": "등록",
-  "macHelperAwaitingApprovalDetail": "시스템 설정에서 Flash가 백그라운드에서 실행되도록 허용하세요.",
+  "macHelperAwaitingApprovalDetail": "시스템 설정에서 Flash의 백그라운드 실행을 허용하세요.",
   "macHelperDisabledByUserDetail": "Flash의 백그라운드 실행 권한이 꺼져 있습니다. 시스템 설정에서 Flash가 백그라운드에서 실행되도록 허용하세요.",
   "macHelperUnavailableTitle": "헬퍼를 사용할 수 없음",
   "macHelperViewSteps": "단계 보기",
-  "macHelperDisabledTitle": "헬퍼가 꺼져 있습니다"
+  "macHelperDisabledTitle": "헬퍼가 꺼져 있습니다",
+  "macHelperApprovalStepReset": "Flash 옆의 스위치가 이미 켜져 있다면 껐다가 다시 켠 다음 Flash로 돌아옵니다."
 }

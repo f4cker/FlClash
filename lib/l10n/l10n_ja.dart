@@ -5707,7 +5707,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get macHelperOn => 'ヘルパーの準備完了';
 
   @override
-  String get macHelperOpenSettings => 'macOS 設定を開く';
+  String get macHelperOpenSettings => 'システム設定を開く';
 
   @override
   String get macHelperTryAgain => '再試行';
@@ -5830,7 +5830,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get macHelperMigrationAction => 'Start update';
 
   @override
-  String get macHelperApprovalTitle => 'Allow Flash to run in the background';
+  String get macHelperApprovalTitle => 'バックグラウンド実行の許可待ち';
 
   @override
   String get macHelperApprovalStep1 => 'Open Login Items & Extensions.';
@@ -5840,8 +5840,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'Under Allow in the Background, find Flash.';
 
   @override
-  String get macHelperApprovalStep3 =>
-      'Flash の横のスイッチを一度オフにしてからオンに戻し、Flash に戻ります。';
+  String get macHelperApprovalStep3 => 'Flash の横のスイッチをオンにして、Flash に戻ります。';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -8523,4 +8522,8 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'ヘルパーはオフになっています';
+
+  @override
+  String get macHelperApprovalStepReset =>
+      'Flash の横のスイッチがすでにオンの場合は、一度オフにしてからオンに戻し、Flash に戻ります。';
 }

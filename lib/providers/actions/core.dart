@@ -28,13 +28,12 @@ class CoreAction extends _$CoreAction {
       final result = await startLifecycle();
       await _applyLifecycleResult(result);
     } catch (error) {
+      _markStopped(error);
       // The helper is not ready (or is being recovered): its card says why and
-      // holds the raw text; no banner, just check the helper again. The Core
-      // keeps no reason of its own, so the status deck shows it as waiting
-      // for the helper, not as a fault.
-      final helperRefused = isMacHelperStartFailure(error);
-      _markStopped(helperRefused ? null : error);
-      if (helperRefused) {
+      // holds the raw text; no banner, just check the helper again. The stop
+      // is marked as the helper's, so the status deck shows its card alone.
+      if (isMacHelperStartFailure(error)) {
+        ref.read(coreStoppedForHelperProvider.notifier).value = true;
         if (usesManagedMacHelper && !macHelperMaintenance.busy) {
           unawaited(macHelperMaintenance.check());
         }
@@ -44,11 +43,9 @@ class CoreAction extends _$CoreAction {
     }
   }
 
-  void _markStopped(Object? error) {
+  void _markStopped(Object error) {
     ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
-    final reason = error == null
-        ? ''
-        : userFacingErrorMessage(error, currentAppLocalizations);
+    final reason = userFacingErrorMessage(error, currentAppLocalizations);
     ref.read(coreStopReasonProvider.notifier).value = reason.isEmpty
         ? null
         : reason;

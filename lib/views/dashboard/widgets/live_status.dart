@@ -117,9 +117,8 @@ List<UpdatingResource> _updatingResources(
 ///
 /// 1. the helper, while it is not ready (failure, something to do, or a
 ///    wait);
-/// 2. the core stopped or starting by itself, never one that only waits for
-///    the helper ([coreWaitsForHelper]) or one the app cannot know
-///    ([coreUnknown]);
+/// 2. the core stopped or starting, unless it is known to be stopped by the
+///    helper ([coreWaitsForHelper]) or the app cannot know it ([coreUnknown]);
 /// 3. an update ready, then one downloading;
 /// 4. resources updating;
 /// 5. modules waiting for consent;
@@ -165,13 +164,15 @@ typedef HelperLiveState = ({
 /// Reads [flow] as the deck sees it. Ready, the first check still running,
 /// or a routine re-check of a ready helper add no card, so none of them
 /// flickers into a problem. Any other state is exactly one card.
-/// A stopped or starting core is the helper's consequence while the helper
-/// is not ready, unless it stopped for a reason of its own
-/// ([independentStop]): a crash or a start the helper did not refuse.
+///
+/// The core's own stopped card gives way to the helper's only on positive
+/// evidence: [stoppedForHelper], set exactly where the helper refused the
+/// start or was not ready for it. A stop with no reason, or with a reason of
+/// its own, keeps its card next to the helper's.
 HelperLiveState macHelperLiveState(
   AppLocalizations l,
   MacHelperMaintenance? flow, {
-  required bool independentStop,
+  required bool stoppedForHelper,
 }) {
   if (flow == null) {
     return (card: null, coreWaitsForHelper: false, coreUnknown: false);
@@ -183,9 +184,11 @@ HelperLiveState macHelperLiveState(
     card: notReady
         ? HelperLiveStatus(macHelperCardView(l, flow), flow: flow)
         : null,
-    coreWaitsForHelper: (unsettled || notReady) && !independentStop,
-    // A Core the old helper still runs is not known to this app while the
-    // helper is not ready: say nothing about it rather than "stopped".
+    coreWaitsForHelper: (unsettled || notReady) && stoppedForHelper,
+    // The client still holds a session the daemon issued for a Core (positive
+    // evidence one may be running) while the helper is not ready to answer
+    // for it: this app's own status is not known to be true, so say nothing
+    // rather than "stopped".
     coreUnknown: flow.client.hasCoreSession && (unsettled || notReady),
   );
 }
@@ -216,11 +219,12 @@ List<LiveStatus> watchLiveStatuses(
       ? const <UpdatingResource>[]
       : _updatingResources(keys, ref.watch(profilesProvider));
   final awaitingConsent = ref.watch(mitmModulesToAgreeProvider);
-  final stopReason = ref.watch(coreStopReasonProvider);
   final helperState = macHelperLiveState(
     currentAppLocalizations,
     helper,
-    independentStop: core == CoreStatus.disconnected && stopReason != null,
+    stoppedForHelper:
+        core == CoreStatus.disconnected &&
+        ref.watch(coreStoppedForHelperProvider),
   );
   return composeLiveStatuses(
     core: core,
@@ -478,6 +482,7 @@ String liveStatusReason(AppLocalizations l, LiveStatus status) =>
       CoreLiveStatus() => l.coreRunning,
       UpdateStatus(download: UpdateReady()) => l.updateReady,
       UpdateStatus() => l.downloadingUpdate,
+      ResourcesStatus(items: [final only]) => only.name,
       ResourcesStatus() => l.updatingResources,
       MitmConsentStatus() => l.mitmModulesTurnedOff,
     };

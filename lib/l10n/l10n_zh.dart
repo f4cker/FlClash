@@ -5512,7 +5512,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperMigrationAction => '开始更新';
 
   @override
-  String get macHelperApprovalTitle => '请允许 Flash 在后台运行';
+  String get macHelperApprovalTitle => '等待后台运行授权';
 
   @override
   String get macHelperApprovalStep1 => '打开“登录项与扩展”。';
@@ -5521,7 +5521,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperApprovalStep2 => '在“允许在后台”中找到 Flash。';
 
   @override
-  String get macHelperApprovalStep3 => '把 Flash 旁边的开关关掉再打开，然后返回 Flash。';
+  String get macHelperApprovalStep3 => '打开 Flash 旁边的开关，然后返回 Flash。';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -8024,7 +8024,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get macHelperRegisterAction => '登记';
 
   @override
-  String get macHelperAwaitingApprovalDetail => '请在系统设置中允许 Flash 在后台运行';
+  String get macHelperAwaitingApprovalDetail => '请在系统设置中允许 Flash 在后台运行。';
 
   @override
   String get macHelperDisabledByUserDetail =>
@@ -8038,4 +8038,8 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => '辅助程序已关闭';
+
+  @override
+  String get macHelperApprovalStepReset =>
+      '如果 Flash 旁边的开关已经打开，请把它关掉再打开，然后返回 Flash。';
 }

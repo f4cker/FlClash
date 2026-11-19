@@ -1674,10 +1674,10 @@
   "macHelperMigrationTitle": "需要更新辅助程序",
   "macHelperMigrationDetail": "Flash 需要移除旧版辅助程序并启用新版。更新时需要输入管理员密码。",
   "macHelperMigrationAction": "开始更新",
-  "macHelperApprovalTitle": "请允许 Flash 在后台运行",
+  "macHelperApprovalTitle": "等待后台运行授权",
   "macHelperApprovalStep1": "打开“登录项与扩展”。",
   "macHelperApprovalStep2": "在“允许在后台”中找到 Flash。",
-  "macHelperApprovalStep3": "把 Flash 旁边的开关关掉再打开，然后返回 Flash。",
+  "macHelperApprovalStep3": "打开 Flash 旁边的开关，然后返回 Flash。",
   "macHelperStepLabel": "第 {number} 步：{text}",
   "macHelperStartingTitle": "正在启动辅助程序…",
   "macHelperStartingDetail": "请稍候。",
@@ -2401,9 +2401,10 @@
   "macHelperRegisterTitle": "登记辅助程序",
   "macHelperRegisterDetail": "辅助程序尚未登记。点按“登记”继续。",
   "macHelperRegisterAction": "登记",
-  "macHelperAwaitingApprovalDetail": "请在系统设置中允许 Flash 在后台运行",
+  "macHelperAwaitingApprovalDetail": "请在系统设置中允许 Flash 在后台运行。",
   "macHelperDisabledByUserDetail": "Flash 的后台运行权限已关闭。请在系统设置中允许 Flash 在后台运行。",
   "macHelperUnavailableTitle": "辅助程序暂不可用",
   "macHelperViewSteps": "查看步骤",
-  "macHelperDisabledTitle": "辅助程序已关闭"
+  "macHelperDisabledTitle": "辅助程序已关闭",
+  "macHelperApprovalStepReset": "如果 Flash 旁边的开关已经打开，请把它关掉再打开，然后返回 Flash。"
 }

@@ -209,15 +209,15 @@ void main() {
     test('ready, unchecked and a routine re-check add no card', () async {
       final l = lookupAppLocalizations(const Locale('en'));
       // Not checked yet.
-      expect(macHelperLiveState(l, flow, independentStop: false).card, isNull);
+      expect(macHelperLiveState(l, flow, stoppedForHelper: false).card, isNull);
       native.state = 'enabled';
       await flow.check();
-      expect(macHelperLiveState(l, flow, independentStop: false).card, isNull);
+      expect(macHelperLiveState(l, flow, stoppedForHelper: false).card, isNull);
       // A routine re-check of a ready helper does not flicker into a card.
       native.pendingStatus = Completer();
       final checking = flow.check();
       expect(flow.routineCheck, isTrue);
-      final state = macHelperLiveState(l, flow, independentStop: false);
+      final state = macHelperLiveState(l, flow, stoppedForHelper: false);
       expect(state.card, isNull);
       expect(state.coreWaitsForHelper, isFalse);
       native.pendingStatus!.complete({'code': 'enabled'});
@@ -225,16 +225,31 @@ void main() {
     });
 
     test(
-      'any other state is one card; an independent stop still shows',
+      'any other state is one card; the core gives way only on the marker',
       () async {
         final l = lookupAppLocalizations(const Locale('en'));
         native.state = 'notRegistered';
         await flow.check();
-        final waiting = macHelperLiveState(l, flow, independentStop: false);
-        expect(waiting.card, isNotNull);
-        expect(waiting.coreWaitsForHelper, isTrue);
-        final crashed = macHelperLiveState(l, flow, independentStop: true);
-        expect(crashed.coreWaitsForHelper, isFalse);
+        // No helper-linked marker (no reason, or a reason of its own): the
+        // core keeps its card.
+        final unmarked = macHelperLiveState(l, flow, stoppedForHelper: false);
+        expect(unmarked.card, isNotNull);
+        expect(unmarked.coreWaitsForHelper, isFalse);
+        final marked = macHelperLiveState(l, flow, stoppedForHelper: true);
+        expect(marked.card, isNotNull);
+        expect(marked.coreWaitsForHelper, isTrue);
+      },
+    );
+
+    test(
+      'the marker alone does not hide the core once the helper is ready',
+      () async {
+        final l = lookupAppLocalizations(const Locale('en'));
+        native.state = 'enabled';
+        await flow.check();
+        final state = macHelperLiveState(l, flow, stoppedForHelper: true);
+        expect(state.card, isNull);
+        expect(state.coreWaitsForHelper, isFalse);
       },
     );
   });
@@ -309,6 +324,9 @@ void main() {
       final zh = lookupAppLocalizations(const Locale('zh'));
       final view = macHelperCardView(zh, flow);
       expect(view.detail, isNot(contains('已关闭')));
+      // No recovery happened: the steps only ask to turn the switch on.
+      expect(view.steps.join(), isNot(contains('关掉再打开')));
+      expect(view.steps.last, zh.macHelperApprovalStep3);
     });
 
     test('every card kind has a tone, and none of them is ready', () {
@@ -400,10 +418,12 @@ void main() {
   ) async {
     native.state = 'notRegistered';
     await flow.check();
+    // The helper kept the core from starting (as at launch).
+    container.read(coreStoppedForHelperProvider.notifier).value = true;
     await pumpStatus(tester);
     final l = currentAppLocalizations;
     expect(label('${l.macHelperRegisterTitle}, 1 item'), findsOneWidget);
-    // The core stopped only for the helper is not a second card.
+    // The core stopped by the helper (marker set) is not a second card.
     expect(container.read(coreStatusProvider), CoreStatus.disconnected);
     await openDeck(tester);
     expect(front(l.macHelperRegisterTitle), findsOneWidget);
@@ -443,6 +463,61 @@ void main() {
     expect(front(l.coreStopped), findsOneWidget);
   });
 
+  testWidgets('helper not ready and a core stopped with no reason: two cards', (
+    tester,
+  ) async {
+    native.state = 'notRegistered';
+    await flow.check();
+    // Stopped, but nothing says the helper caused it.
+    expect(container.read(coreStatusProvider), CoreStatus.disconnected);
+    expect(container.read(coreStopReasonProvider), isNull);
+    expect(container.read(coreStoppedForHelperProvider), isFalse);
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    expect(label('${l.macHelperRegisterTitle}, 2 items'), findsOneWidget);
+    await openDeck(tester);
+    expect(front(l.macHelperRegisterTitle), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await settle(tester);
+    expect(front(l.coreStopped), findsOneWidget);
+  });
+
+  testWidgets(
+    'helper not ready and a helper-linked stop: the helper card only',
+    (tester) async {
+      native.state = 'notRegistered';
+      await flow.check();
+      container.read(coreStoppedForHelperProvider.notifier).value = true;
+      await pumpStatus(tester);
+      final l = currentAppLocalizations;
+      expect(label('${l.macHelperRegisterTitle}, 1 item'), findsOneWidget);
+      await openDeck(tester);
+      expect(front(l.macHelperRegisterTitle), findsOneWidget);
+      expect(find.text(l.coreStopped), findsNothing);
+      // A start clears the marker; a later stop with no reason shows again.
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
+      container.read(coreStatusProvider.notifier).value =
+          CoreStatus.disconnected;
+      expect(container.read(coreStoppedForHelperProvider), isFalse);
+    },
+  );
+
+  testWidgets('a failed helper check is a visible card, never silence', (
+    tester,
+  ) async {
+    native.pendingStatus = Completer()
+      ..completeError(Exception('channel closed'));
+    final state = await flow.check();
+    expect(state, MacHelperState.unavailable);
+    await pumpStatus(tester);
+    final l = currentAppLocalizations;
+    expect(label('${l.macHelperUnavailableTitle}, 2 items'), findsOneWidget);
+    await openDeck(tester);
+    expect(front(l.macHelperUnavailableTitle), findsOneWidget);
+    expect(front(l.macHelperStatusUnreadable), findsOneWidget);
+    expect(front(l.macHelperCheckAgain), findsOneWidget);
+  });
+
   testWidgets('the helper and an independent core fault: two cards', (
     tester,
   ) async {
@@ -466,6 +541,8 @@ void main() {
   ) async {
     native.state = 'migrationIncomplete';
     await flow.check();
+    // The helper kept the core from starting (as at launch).
+    container.read(coreStoppedForHelperProvider.notifier).value = true;
     container.read(updateDownloadStateProvider.notifier).value =
         const UpdateDownloading('v1.0.0', received: 41, total: 100);
     container
@@ -474,7 +551,7 @@ void main() {
     await pumpStatus(tester);
     final l = currentAppLocalizations;
     expect(
-      label('${l.macHelperFailedTitle}, 3 items, update download 41%'),
+      label('${l.macHelperFailedTitle}, 3 items, Update download 41%'),
       findsOneWidget,
     );
     expect(find.text('41%'), findsOneWidget);
@@ -503,6 +580,8 @@ void main() {
   ) async {
     native.state = 'notRegistered';
     await flow.check();
+    // The helper kept the core from starting (as at launch).
+    container.read(coreStoppedForHelperProvider.notifier).value = true;
     container.read(updateDownloadStateProvider.notifier).value =
         const UpdateDownloading('v9', received: 10, total: 100);
     await pumpStatus(tester);
@@ -705,7 +784,24 @@ void main() {
       'The helper is turned off',
     );
     expect(zh.macHelperOpenSettings, '打开系统设置');
-    expect(zh.macHelperAwaitingApprovalDetail, '请在系统设置中允许 Flash 在后台运行');
+    expect(zh.macHelperAwaitingApprovalDetail, '请在系统设置中允许 Flash 在后台运行。');
+    expect(zh.macHelperApprovalTitle, '等待后台运行授权');
+    // Turning the switch off and on again is not a generic step.
+    expect(zh.macHelperApprovalStep3, isNot(contains('关掉再打开')));
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(en.macHelperApprovalTitle, 'Waiting for background permission');
+    expect(en.liveStatusItems(1), '1 item');
+    expect(en.liveStatusItems(3), '3 items');
+    expect(en.updatingResourcesCount(1), '1 item updating');
+    expect(en.updatingResourcesCount(2), '2 items updating');
+    expect(en.liveStatusUpdateDownload('41%'), 'Update download 41%');
+    expect(en.updateCurrentVersion('v1'), 'Current version v1');
+    expect(en.updateNewVersion('v2'), 'New version v2');
+    expect(en.updatingResources, 'Updating');
+    expect(
+      lookupAppLocalizations(const Locale('fr')).macHelperOpenSettings,
+      'Ouvrir Réglages Système',
+    );
     expect(zh.macHelperUnavailableTitle, '辅助程序暂不可用');
     expect(zh.macHelperNotReadyTitle, '辅助程序暂未就绪');
     expect(zh.macHelperRequiredTitle, '请先启用辅助程序');

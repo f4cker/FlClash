@@ -397,6 +397,39 @@ void main() {
       expect(core.starts, 0);
     });
 
+    test('a helper check still running is never treated as ready', () async {
+      managed.helperCheck = Completer();
+      final start = managed.setRunning(true);
+      final tun = managed.prepareTunEnable(true);
+      await Future<void>.delayed(Duration.zero);
+      // Nothing proceeds on an unknown state.
+      expect(core.starts, 0);
+      expect(managed.coreRunningCalls, isEmpty);
+      managed.helperCheck!.complete(MacHelperState.unavailable);
+      expect(await start, isFalse);
+      expect(await tun, isFalse);
+      expect(core.starts, 0);
+      expect(managed.coreRunningCalls, isEmpty);
+      // The user is shown the helper, not silence.
+      expect(managed.invitations, 2);
+    });
+
+    test(
+      'a start the helper refuses marks the stop as the helper\'s',
+      () async {
+        managed.helperState = MacHelperState.requiresApproval;
+        expect(await managed.setRunning(true), isFalse);
+        expect(scoped.read(coreStoppedForHelperProvider), isTrue);
+      },
+    );
+
+    test('a stop with its own reason is not marked as the helper\'s', () async {
+      scoped.read(coreStopReasonProvider.notifier).value = 'Core crashed';
+      managed.helperState = MacHelperState.requiresApproval;
+      expect(await managed.setRunning(true), isFalse);
+      expect(scoped.read(coreStoppedForHelperProvider), isFalse);
+    });
+
     test('automatic setup never repeats the invitation', () async {
       expect(await managed.setRunning(true, initialize: true), isFalse);
       expect(managed.invitations, 0);

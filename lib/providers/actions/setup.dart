@@ -288,6 +288,16 @@ class SetupAction extends _$SetupAction {
 
   int _helperRunRevision = 0;
 
+  /// The helper refused this start: a stopped Core with no reason of its own
+  /// is now known to be the helper's (see [CoreStoppedForHelper]).
+  void _markStoppedForHelper() {
+    if (ref.read(coreStatusProvider) != CoreStatus.disconnected ||
+        ref.read(coreStopReasonProvider) != null) {
+      return;
+    }
+    ref.read(coreStoppedForHelperProvider.notifier).value = true;
+  }
+
   Future<bool> setRunning(bool running, {bool initialize = false}) async {
     _resumeOnRestart = false;
     final revision = ++_helperRunRevision;
@@ -302,6 +312,7 @@ class SetupAction extends _$SetupAction {
       final state = await checkMacHelper();
       if (revision != _helperRunRevision) return false;
       if (state != MacHelperState.enabled) {
+        _markStoppedForHelper();
         if (!initialize) await presentMacHelper();
         return false;
       }

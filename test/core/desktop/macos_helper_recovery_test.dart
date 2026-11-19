@@ -102,7 +102,8 @@ void main() {
     final view = macHelperCardView(l, flow);
     expect(view.kind, MacHelperCardKind.approval);
     expect(view.primary, MacHelperCardAction.openSettings);
-    // The copy asks to allow Flash; "turn it off and on" is in the steps.
+    // The copy asks to allow Flash; after a recovery (and only then) the
+    // steps say to turn the switch off and on again.
     expect(view.secondary, MacHelperCardAction.viewSteps);
     expect(view.detail, l.macHelperAwaitingApprovalDetail);
     expect(view.steps.join(), contains('关掉再打开'));

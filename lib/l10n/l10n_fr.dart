@@ -5925,7 +5925,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get macHelperOn => 'Assistant prêt';
 
   @override
-  String get macHelperOpenSettings => 'Ouvrir les réglages macOS';
+  String get macHelperOpenSettings => 'Ouvrir Réglages Système';
 
   @override
   String get macHelperTryAgain => 'Réessayer';
@@ -6049,7 +6049,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get macHelperMigrationAction => 'Start update';
 
   @override
-  String get macHelperApprovalTitle => 'Allow Flash to run in the background';
+  String get macHelperApprovalTitle =>
+      'Autorisation d’exécution en arrière-plan en attente';
 
   @override
   String get macHelperApprovalStep1 => 'Open Login Items & Extensions.';
@@ -6060,7 +6061,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get macHelperApprovalStep3 =>
-      'Désactivez puis réactivez l’interrupteur à côté de Flash, puis revenez dans Flash.';
+      'Activez l’interrupteur à côté de Flash, puis revenez dans Flash.';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -8738,7 +8739,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count éléments en cours de mise à jour',
-      one: '1 élément en cours de mise à jour',
+      one: '$count élément en cours de mise à jour',
     );
     return '$_temp0';
   }
@@ -8749,14 +8750,14 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count éléments',
-      one: '1 élément',
+      one: '$count élément',
     );
     return '$_temp0';
   }
 
   @override
   String liveStatusUpdateDownload(String percent) {
-    return 'téléchargement de la mise à jour $percent';
+    return 'Téléchargement de la mise à jour $percent';
   }
 
   @override
@@ -8795,4 +8796,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'L’assistant est désactivé';
+
+  @override
+  String get macHelperApprovalStepReset =>
+      'Si l’interrupteur à côté de Flash est déjà activé, désactivez-le puis réactivez-le, puis revenez dans Flash.';
 }

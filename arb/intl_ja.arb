@@ -1955,7 +1955,7 @@
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
   "macHelperTitle": "Flash ヘルパー",
   "macHelperOn": "ヘルパーの準備完了",
-  "macHelperOpenSettings": "macOS 設定を開く",
+  "macHelperOpenSettings": "システム設定を開く",
   "macHelperTryAgain": "再試行",
   "macHelperCheckAgain": "再確認",
   "macHelperRepair": "Repair",
@@ -1991,10 +1991,10 @@
   "macHelperMigrationTitle": "Helper update required",
   "macHelperMigrationDetail": "Flash needs to remove the old helper and turn on the new one. You’ll be asked for your administrator password.",
   "macHelperMigrationAction": "Start update",
-  "macHelperApprovalTitle": "Allow Flash to run in the background",
+  "macHelperApprovalTitle": "バックグラウンド実行の許可待ち",
   "macHelperApprovalStep1": "Open Login Items & Extensions.",
   "macHelperApprovalStep2": "Under Allow in the Background, find Flash.",
-  "macHelperApprovalStep3": "Flash の横のスイッチを一度オフにしてからオンに戻し、Flash に戻ります。",
+  "macHelperApprovalStep3": "Flash の横のスイッチをオンにして、Flash に戻ります。",
   "macHelperStepLabel": "Step {number}: {text}",
   "@macHelperStepLabel": {
     "placeholders": {
@@ -3631,5 +3631,6 @@
   "macHelperDisabledByUserDetail": "Flash のバックグラウンド実行の許可がオフになっています。システム設定で Flash のバックグラウンド実行を許可してください。",
   "macHelperUnavailableTitle": "ヘルパーを利用できません",
   "macHelperViewSteps": "手順を表示",
-  "macHelperDisabledTitle": "ヘルパーはオフになっています"
+  "macHelperDisabledTitle": "ヘルパーはオフになっています",
+  "macHelperApprovalStepReset": "Flash の横のスイッチがすでにオンの場合は、一度オフにしてからオンに戻し、Flash に戻ります。"
 }

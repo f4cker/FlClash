@@ -109,7 +109,7 @@ void main() {
     await pumpButton(tester);
 
     expect(
-      badge('Downloading update, 1 item, update download 25%'),
+      badge('Downloading update, 1 item, Update download 25%'),
       findsOneWidget,
     );
 
@@ -117,7 +117,7 @@ void main() {
     await settle(tester);
 
     // The download's progress beats the count, which the label still says.
-    expect(badge('Core stopped, 2 items, update download 25%'), findsOneWidget);
+    expect(badge('Core stopped, 2 items, Update download 25%'), findsOneWidget);
     expect(find.text('25%'), findsOneWidget);
     expect(find.text('2'), findsNothing);
 
@@ -427,6 +427,21 @@ void main() {
     expect(find.byTooltip('Live status'), findsNothing);
   });
 
+  testWidgets('a single updating resource is named', (tester) async {
+    container
+        .read(updatingKeysProvider.notifier)
+        .start(GeoResource.GEOIP.updatingKey);
+    await pumpButton(tester);
+
+    expect(badge('GEOIP, 1 item'), findsOneWidget);
+
+    await open(tester);
+
+    expect(front('Updating'), findsOneWidget);
+    expect(find.text('1 item updating'), findsNothing);
+    expect(find.text('GEOIP'), findsWidgets);
+  });
+
   testWidgets('fades in a card that arrives behind the shown one', (
     tester,
   ) async {
@@ -550,7 +565,7 @@ void main() {
       await pumpButton(tester, separateCore: true);
 
       expect(
-        badge('Downloading update, 1 item, update download 25%'),
+        badge('Downloading update, 1 item, Update download 25%'),
         findsOneWidget,
       );
 

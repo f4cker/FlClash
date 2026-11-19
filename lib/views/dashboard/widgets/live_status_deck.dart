@@ -1063,8 +1063,13 @@ class _StatusCardState extends ConsumerState<_StatusCard> {
       ResourcesStatus(:final items) => (
         neutral,
         _ResourcesHero(items: items),
-        appLocalizations.updatingResources,
-        appLocalizations.updatingResourcesCount(items.length),
+        // One resource is named; several are counted.
+        items.length == 1
+            ? items.single.name
+            : appLocalizations.updatingResources,
+        items.length == 1
+            ? appLocalizations.updatingResources
+            : appLocalizations.updatingResourcesCount(items.length),
         null,
         // The first rows are on the front; the whole list is behind View all.
         items.length > _HeroRows.shown ? appLocalizations.viewAll : null,

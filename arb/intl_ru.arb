@@ -1955,7 +1955,7 @@
   "tsViewerExitUnconfirmed": "Tailscale exit · Current exit node and groups are unconfirmed",
   "macHelperTitle": "Помощник Flash",
   "macHelperOn": "Помощник готов",
-  "macHelperOpenSettings": "Открыть настройки macOS",
+  "macHelperOpenSettings": "Открыть Системные настройки",
   "macHelperTryAgain": "Повторить",
   "macHelperCheckAgain": "Проверить снова",
   "macHelperRepair": "Repair",
@@ -1991,10 +1991,10 @@
   "macHelperMigrationTitle": "Helper update required",
   "macHelperMigrationDetail": "Flash needs to remove the old helper and turn on the new one. You’ll be asked for your administrator password.",
   "macHelperMigrationAction": "Start update",
-  "macHelperApprovalTitle": "Allow Flash to run in the background",
+  "macHelperApprovalTitle": "Ожидание разрешения на работу в фоне",
   "macHelperApprovalStep1": "Open Login Items & Extensions.",
   "macHelperApprovalStep2": "Under Allow in the Background, find Flash.",
-  "macHelperApprovalStep3": "Выключите и снова включите переключатель рядом с Flash, затем вернитесь во Flash.",
+  "macHelperApprovalStep3": "Включите переключатель рядом с Flash, затем вернитесь во Flash.",
   "macHelperStepLabel": "Step {number}: {text}",
   "@macHelperStepLabel": {
     "placeholders": {
@@ -3621,7 +3621,7 @@
   "updatingResources": "Обновление",
   "updatingResourcesCount": "{count, plural, one{Обновляется {count} элемент} few{Обновляются {count} элемента} other{Обновляются {count} элементов}}",
   "liveStatusItems": "{count, plural, one{{count} элемент} few{{count} элемента} many{{count} элементов} other{{count} элемента}}",
-  "liveStatusUpdateDownload": "загрузка обновления {percent}",
+  "liveStatusUpdateDownload": "Загрузка обновления {percent}",
   "updateCurrentVersion": "Текущая версия {version}",
   "updateNewVersion": "Новая версия {version}",
   "macHelperRegisterTitle": "Зарегистрируйте помощника",
@@ -3631,5 +3631,6 @@
   "macHelperDisabledByUserDetail": "Разрешение Flash на работу в фоне отключено. Разрешите Flash работать в фоне в Системных настройках.",
   "macHelperUnavailableTitle": "Помощник недоступен",
   "macHelperViewSteps": "Показать шаги",
-  "macHelperDisabledTitle": "Помощник отключён"
+  "macHelperDisabledTitle": "Помощник отключён",
+  "macHelperApprovalStepReset": "Если переключатель рядом с Flash уже включён, выключите и снова включите его, затем вернитесь во Flash."
 }

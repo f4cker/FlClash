@@ -5873,7 +5873,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get macHelperOn => 'Помощник готов';
 
   @override
-  String get macHelperOpenSettings => 'Открыть настройки macOS';
+  String get macHelperOpenSettings => 'Открыть Системные настройки';
 
   @override
   String get macHelperTryAgain => 'Повторить';
@@ -5997,7 +5997,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get macHelperMigrationAction => 'Start update';
 
   @override
-  String get macHelperApprovalTitle => 'Allow Flash to run in the background';
+  String get macHelperApprovalTitle => 'Ожидание разрешения на работу в фоне';
 
   @override
   String get macHelperApprovalStep1 => 'Open Login Items & Extensions.';
@@ -6008,7 +6008,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get macHelperApprovalStep3 =>
-      'Выключите и снова включите переключатель рядом с Flash, затем вернитесь во Flash.';
+      'Включите переключатель рядом с Flash, затем вернитесь во Flash.';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -8705,7 +8705,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String liveStatusUpdateDownload(String percent) {
-    return 'загрузка обновления $percent';
+    return 'Загрузка обновления $percent';
   }
 
   @override
@@ -8744,4 +8744,8 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'Помощник отключён';
+
+  @override
+  String get macHelperApprovalStepReset =>
+      'Если переключатель рядом с Flash уже включён, выключите и снова включите его, затем вернитесь во Flash.';
 }

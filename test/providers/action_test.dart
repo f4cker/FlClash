@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/native.dart';
 import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/core/controller.dart';
+import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/database/database.dart' as db;
@@ -434,6 +435,49 @@ void main() {
         'Bad state: launch refused',
       );
     });
+
+    test('a start the helper refuses keeps why and marks it', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      loadAppLocalizations(const Locale('en'));
+      final container = ProviderContainer(
+        overrides: [coreActionProvider.overrideWith(_TestCoreAction.new)],
+      );
+      addTearDown(container.dispose);
+      final coreAction =
+          container.read(coreActionProvider.notifier) as _TestCoreAction;
+      coreAction.startCompleter = Completer()
+        ..completeError(const MacHelperException('requiresApproval'));
+
+      await coreAction.startCore();
+
+      expect(container.read(coreStatusProvider), CoreStatus.disconnected);
+      // The reason is kept (not dropped), and the helper link is explicit.
+      expect(container.read(coreStopReasonProvider), isNotNull);
+      expect(container.read(coreStoppedForHelperProvider), isTrue);
+      // Leaving the stopped state clears the marker.
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
+      expect(container.read(coreStoppedForHelperProvider), isFalse);
+    });
+
+    test(
+      'a start that fails for another reason is not the helper\'s',
+      () async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        loadAppLocalizations(const Locale('en'));
+        final container = ProviderContainer(
+          overrides: [coreActionProvider.overrideWith(_TestCoreAction.new)],
+        );
+        addTearDown(container.dispose);
+        final coreAction =
+            container.read(coreActionProvider.notifier) as _TestCoreAction;
+        coreAction.startCompleter = Completer()
+          ..completeError(StateError('launch refused'));
+
+        await coreAction.startCore();
+
+        expect(container.read(coreStoppedForHelperProvider), isFalse);
+      },
+    );
 
     test('applies the profile after restarting a stopped core', () async {
       final container = ProviderContainer(

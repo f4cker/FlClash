@@ -6002,7 +6002,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get macHelperMigrationAction => 'Start update';
 
   @override
-  String get macHelperApprovalTitle => 'Allow Flash to run in the background';
+  String get macHelperApprovalTitle => 'Waiting for background permission';
 
   @override
   String get macHelperApprovalStep1 => 'Open Login Items & Extensions.';
@@ -6013,7 +6013,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get macHelperApprovalStep3 =>
-      'Turn the switch next to Flash off and on again, then come back to Flash.';
+      'Turn on the switch next to Flash, then come back to Flash.';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -8684,7 +8684,7 @@ class AppLocalizationsEn extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count items updating',
-      one: '1 item updating',
+      one: '$count item updating',
     );
     return '$_temp0';
   }
@@ -8695,14 +8695,14 @@ class AppLocalizationsEn extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count items',
-      one: '1 item',
+      one: '$count item',
     );
     return '$_temp0';
   }
 
   @override
   String liveStatusUpdateDownload(String percent) {
-    return 'update download $percent';
+    return 'Update download $percent';
   }
 
   @override
@@ -8741,4 +8741,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => 'The helper is turned off';
+
+  @override
+  String get macHelperApprovalStepReset =>
+      'If the switch next to Flash is already on, turn it off and on again, then come back to Flash.';
 }

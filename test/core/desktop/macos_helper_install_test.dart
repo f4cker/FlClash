@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/core/desktop/macos_helper_maintenance.dart';
 import 'package:fl_clash/core/desktop/model.dart';
+import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/views/config/macos_helper.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -239,6 +241,70 @@ void main() {
       },
     );
   }
+
+  test('an unfinished check is never ready', () async {
+    final native = InstallNative()..pendingStatus = Completer();
+    final flow = makeMaintenance(native);
+    addTearDown(flow.dispose);
+    expect(flow.state, isNull);
+    expect(flow.needsApproval, isFalse);
+    var ran = false;
+    flow.runOnceReady(() async => ran = true);
+    var blocked = false;
+    var settled = false;
+    final startup =
+        prepareMacHelperStartup(
+          maintenance: flow,
+          foreground: false,
+          onBlocked: () => blocked = true,
+          wasOffered: () async => true,
+          markOffered: () async {},
+          show: () async {},
+        ).then((ready) {
+          settled = true;
+          return ready;
+        });
+    await Future<void>.delayed(Duration.zero);
+    // Still checking: the gate waits for the real answer, nothing runs.
+    expect(flow.state, isNull);
+    expect(settled, isFalse);
+    expect(blocked, isFalse);
+    expect(ran, isFalse);
+    native.pendingStatus!.complete({'code': 'requiresApproval'});
+    expect(await startup, isFalse);
+    expect(blocked, isTrue);
+    expect(ran, isFalse);
+  });
+
+  test(
+    'a check that throws is unavailable, blocks and names no ready',
+    () async {
+      final native = InstallNative()
+        ..pendingStatus = (Completer()
+          ..completeError(Exception('channel closed')));
+      final flow = makeMaintenance(native);
+      addTearDown(flow.dispose);
+      var blocked = false;
+      final ready = await prepareMacHelperStartup(
+        maintenance: flow,
+        foreground: false,
+        onBlocked: () => blocked = true,
+        wasOffered: () async => true,
+        markOffered: () async {},
+        show: () async {},
+      );
+      expect(ready, isFalse);
+      expect(blocked, isTrue);
+      expect(flow.state, MacHelperState.unavailable);
+      // The card for it has something to say and something to do.
+      final view = macHelperCardView(
+        lookupAppLocalizations(const Locale('en')),
+        flow,
+      );
+      expect(view.kind, isNot(MacHelperCardKind.ready));
+      expect(view.primary, MacHelperCardAction.recheck);
+    },
+  );
 
   test('stale helper checks do not attempt repair', () async {
     final native = InstallNative()

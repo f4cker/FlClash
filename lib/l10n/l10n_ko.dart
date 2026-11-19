@@ -5778,7 +5778,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get macHelperOn => '도우미 준비 완료';
 
   @override
-  String get macHelperOpenSettings => 'macOS 설정 열기';
+  String get macHelperOpenSettings => '시스템 설정 열기';
 
   @override
   String get macHelperTryAgain => '다시 시도';
@@ -5900,7 +5900,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get macHelperMigrationAction => 'Start update';
 
   @override
-  String get macHelperApprovalTitle => 'Allow Flash to run in the background';
+  String get macHelperApprovalTitle => '백그라운드 실행 허용 대기 중';
 
   @override
   String get macHelperApprovalStep1 => 'Open Login Items & Extensions.';
@@ -5910,8 +5910,7 @@ class AppLocalizationsKo extends AppLocalizations {
       'Under Allow in the Background, find Flash.';
 
   @override
-  String get macHelperApprovalStep3 =>
-      'Flash 옆의 스위치를 껐다가 다시 켠 다음 Flash로 돌아옵니다.';
+  String get macHelperApprovalStep3 => 'Flash 옆의 스위치를 켠 다음 Flash로 돌아옵니다.';
 
   @override
   String macHelperStepLabel(Object number, Object text) {
@@ -8585,7 +8584,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macHelperAwaitingApprovalDetail =>
-      '시스템 설정에서 Flash가 백그라운드에서 실행되도록 허용하세요.';
+      '시스템 설정에서 Flash의 백그라운드 실행을 허용하세요.';
 
   @override
   String get macHelperDisabledByUserDetail =>
@@ -8599,4 +8598,8 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get macHelperDisabledTitle => '헬퍼가 꺼져 있습니다';
+
+  @override
+  String get macHelperApprovalStepReset =>
+      'Flash 옆의 스위치가 이미 켜져 있다면 껐다가 다시 켠 다음 Flash로 돌아옵니다.';
 }
