@@ -120,7 +120,7 @@ Future<void> _until(bool Function() condition) async {
 
 MacHelperClient _client(
   _WaitingNative native, {
-  Duration relayWait = const Duration(seconds: 4),
+  Duration relayWait = const Duration(seconds: 3),
 }) => MacHelperClient(
   native: native,
   safeMode: () => false,
@@ -148,14 +148,14 @@ void main() {
     final client = _client(native);
     await client.start(_session);
     await _wait(1500);
-    // 16, 32, ... 500 ms between empty answers instead of 16 ms each.
-    expect(native.receives.length, inInclusiveRange(5, 12));
+    // 16, 32, ... 250 ms between empty answers instead of 16 ms each.
+    expect(native.receives.length, inInclusiveRange(6, 14));
     final gaps = [
       for (var i = 1; i < native.receivedAt.length; i++)
         native.receivedAt[i] - native.receivedAt[i - 1],
     ];
     expect(gaps.first, lessThan(const Duration(milliseconds: 100)));
-    expect(gaps.last, greaterThanOrEqualTo(const Duration(milliseconds: 450)));
+    expect(gaps.last, greaterThanOrEqualTo(const Duration(milliseconds: 225)));
     final frames = <Uint8List>[];
     final subscription = client.events.listen((event) {
       if (event is MacHelperFrame) frames.add(event.data);
@@ -211,7 +211,7 @@ void main() {
     final latency = Stopwatch()..start();
     client.send([1]);
     await _until(() => native.receives.length > count);
-    expect(latency.elapsed, lessThan(const Duration(milliseconds: 200)));
+    expect(latency.elapsed, lessThan(const Duration(milliseconds: 100)));
     expect(await client.stop(_session), isTrue);
   });
 
@@ -271,7 +271,7 @@ void main() {
       await _wait(1200);
       final count = native.receives.length;
       expect(await client.stop(_session), isTrue);
-      // The pause (up to 500 ms) ends with the stop, not by running out.
+      // The pause (up to 250 ms) ends with the stop, not by running out.
       expect(timers.where((timer) => timer.isActive), isEmpty);
       await _wait(600);
       expect(native.receives, hasLength(count));
@@ -290,7 +290,7 @@ void main() {
     native.drop('unavailable');
     await _until(() => native.holding && native.receives.length == 3);
     expect(native.receives.last['ack'], 1);
-    expect(native.receives.last['wait'], 4000);
+    expect(native.receives.last['wait'], 3000);
     native.push([2]);
     await _until(() => events.whereType<MacHelperFrame>().length == 2);
     expect(events.whereType<MacHelperDisconnected>(), isEmpty);
@@ -318,7 +318,7 @@ void main() {
     await _until(() => native.holding);
     await _wait(300);
     expect(native.receives.length - before, 1);
-    expect(native.receives.last['wait'], 4000);
+    expect(native.receives.last['wait'], 3000);
     native.push([9]);
     await _until(() => events.whereType<MacHelperFrame>().isNotEmpty);
     expect(events.whereType<MacHelperConnected>(), hasLength(2));

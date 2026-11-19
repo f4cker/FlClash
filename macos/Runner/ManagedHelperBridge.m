@@ -34,6 +34,19 @@ static int64_t FCRequestTimeoutSeconds(NSString *method) {
     return [method isEqualToString:@"start"] || [method isEqualToString:@"retireCores"] ? 30 : 8;
 }
 
+// How long the daemon may hold this receive for the Core's next frame (ms, 0: answer at once); its reply timeout grows
+// by as much. Supervisor.m bounds the hold by the same FCReceiveWaitMaxMilliseconds.
+static const uint64_t FCReceiveWaitMaxMilliseconds = 5000;
+static uint64_t FCReceiveWait(NSString *method, NSDictionary *arguments) {
+    NSNumber *wait = arguments[@"wait"];
+    if (![method isEqualToString:@"receive"] || ![wait isKindOfClass:NSNumber.class] || wait.longLongValue <= 0) return 0;
+    return MIN(wait.unsignedLongLongValue, FCReceiveWaitMaxMilliseconds);
+}
+
+static int64_t FCReceiveTimeoutSeconds(NSString *method, NSDictionary *arguments) {
+    return FCRequestTimeoutSeconds(method) + (int64_t)((FCReceiveWait(method, arguments) + 999) / 1000);
+}
+
 // The card state for the daemon's answer to `hello`. A request that ran out of time is `timeout`, never
 // `exitUnconfirmed`: only the daemon itself can say that a Core's exit is unconfirmed.
 static NSString *FCStatusForHello(NSString *reply) {
@@ -590,12 +603,17 @@ static const NSTimeInterval FCExitSettleSeconds = 1;
     NSString *session = arguments[@"session"];
     if ([session isKindOfClass:NSString.class]) xpc_dictionary_set_string(message, "session", session.UTF8String);
     if (frame && [frame isKindOfClass:NSData.class]) xpc_dictionary_set_data(message, "frame", frame.bytes, bytes);
-    // `wait`: how long the daemon may hold an empty receive for the Core (a daemon from before ignores it).
-    for (NSString *key in @[@"ack", @"seq", @"wait"]) {
+    for (NSString *key in @[@"ack", @"seq"]) {
         NSNumber *number = arguments[key];
         if ([number isKindOfClass:NSNumber.class] && number.longLongValue >= 0)
             xpc_dictionary_set_uint64(message, key.UTF8String, number.unsignedLongLongValue);
     }
+    uint64_t wait = FCReceiveWait(method, arguments);
+    if (wait) {
+        xpc_dictionary_set_uint64(message, "wait", wait);
+        xpc_dictionary_set_uint64(message, "sent", clock_gettime_nsec_np(CLOCK_UPTIME_RAW));
+    }
+    int64_t timeout = FCReceiveTimeoutSeconds(method, arguments);
     if ([method isEqualToString:@"start"]) {
         if (!self.connectionTrusted || !FCCoreHashValid(self.negotiatedCoreHash)) {
             completion(@{@"code": @"incompatible"}); return;
@@ -708,17 +726,16 @@ static const NSTimeInterval FCExitSettleSeconds = 1;
         }
         finish(answer);
     });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, FCRequestTimeoutSeconds(method) * NSEC_PER_SEC), self.queue, ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, timeout * NSEC_PER_SEC), self.queue, ^{
         if (finished) return;
         xpc_connection_cancel(connection);
         if (self.connection == connection) [self resetConnection];
         // No answer is not a statement about the Core: the daemon keeps it briefly for this process to resume the
         // relay on a new connection, then stops it; a later `hello` reports whether it still owns one.
-        os_log_error(FCBridgeLog(), "%{public}s: no reply within %lld s", method.UTF8String,
-            FCRequestTimeoutSeconds(method));
+        os_log_error(FCBridgeLog(), "%{public}s: no reply within %lld s", method.UTF8String, timeout);
         [self expireSilentSession];
         finish(@{@"code": @"timeout", @"detail": [NSString stringWithFormat:@"helper reply: none within %lld s",
-            FCRequestTimeoutSeconds(method)]});
+            timeout]});
     });
 }
 

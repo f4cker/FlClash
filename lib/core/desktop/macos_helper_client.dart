@@ -293,7 +293,8 @@ final class MacHelperStatus {
 final class MacHelperClient {
   static const _maxQueuedFrames = 256;
   static const _relayDelay = Duration(milliseconds: 16);
-  static const _relayIdleDelayMax = Duration(milliseconds: 500);
+  // Core gives a MITM sign request 500 ms (mitmConnectionLeafWait).
+  static const _relayIdleDelayMax = Duration(milliseconds: 250);
 
   /// Answers that say nothing about the Core: the bridge got no (verifiable)
   /// reply, or it is reconnecting. The relay is retried with the same
@@ -355,7 +356,7 @@ final class MacHelperClient {
     Duration relayFailureWindow = const Duration(seconds: 10),
     Duration relayLostAfter = const Duration(seconds: 12),
     Duration relayRetryDelay = const Duration(milliseconds: 250),
-    Duration relayWait = const Duration(seconds: 4),
+    Duration relayWait = const Duration(seconds: 3),
     DateTime Function()? now,
   }) : assert(backpressureRetries >= 0),
        assert(maxRelayFailures >= 1),
@@ -779,7 +780,7 @@ final class MacHelperClient {
   }
 
   static Duration _idleDelay(int idle) {
-    final delay = _relayDelay * (1 << (idle < 6 ? idle : 6));
+    final delay = _relayDelay * (1 << (idle < 5 ? idle : 5));
     return delay < _relayIdleDelayMax ? delay : _relayIdleDelayMax;
   }
 

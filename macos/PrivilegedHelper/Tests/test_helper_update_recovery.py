@@ -57,6 +57,7 @@ static os_log_t FCHelperLog(void) { return OS_LOG_DEFAULT; }
 ''' + REFUSED_EXIT + r'''
 static NSString * const FCRuntimeDirectory = @"/fixture-runtime";
 static const size_t FCMaxFrame = 1024;
+''' + '\n'.join(line for line in SUPERVISOR.splitlines() if re.match(r'static const uint64_t FCReceive\w+ = ', line)) + r'''
 static BOOL reapSucceeds, syncSucceeds = YES;
 static int unlinkErrno, reaps, unlinks, staged, waits;
 static NSMutableArray *replies;
@@ -101,8 +102,17 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) { return NO
 @property BOOL journalOwned;
 @property NSDictionary *lastSweep;
 @property int stops, starts, relayCloses;
+@property int socket;
+@property uint64_t outgoingBase;
+@property xpc_object_t waiting;
+@property xpc_connection_t waitingConnection;
+@property uint64_t waitingAck;
+@property dispatch_source_t waitingRead;
+@property dispatch_source_t waitingTimer;
 @end
 @implementation SupervisorFixture
+// No Core socket: the real hold declines, so every receive is answered at once.
+- (instancetype)init { if ((self = [super init])) _socket = -1; return self; }
 - (void)armIdle {}
 - (BOOL)syncRuntime { return syncSucceeds; }
 - (void)closeRelay { self.relayCloses++; }
@@ -120,10 +130,6 @@ static BOOL FCRepliesWithCoreToken(NSString *action, NSString *code) { return NO
     return @"ok";
 }
 - (NSArray<NSData *> *)receive:(uint64_t)ack base:(uint64_t *)base code:(NSString **)code { *code = @"ok"; return @[]; }
-- (void)supersedeWaiting {}
-- (BOOL)holdReceive:(xpc_object_t)request connection:(xpc_connection_t)connection ack:(uint64_t)ack wait:(uint64_t)wait {
-    return NO;
-}
 - (NSString *)retireCores:(NSDictionary **)sweep { return @"noStaleCore"; }
 - (NSString *)send:(NSData *)frame seq:(uint64_t)seq { return @"ok"; }
 // Adoption by the same app process is covered by test_supervisor_stop; connections here are other processes.
@@ -139,6 +145,8 @@ class SupervisorRecoveryTests(unittest.TestCase):
     def fixture(self, main):
         source = SUPERVISOR_FIXTURE
         source += method(SUPERVISOR, '- (BOOL)recoverOwnership') + '\n'
+        for hold in ('- (void)releaseWait', '- (BOOL)holdReceive:', '- (void)answerWaiting:', '- (void)supersedeWaiting'):
+            source += method(SUPERVISOR, hold) + '\n'
         source += method(SUPERVISOR, '- (void)handle:') + '\n@end\n'
         source += r'''
 static NSDictionary *Send(SupervisorFixture *s, xpc_connection_t c, const char *name, const char *session) {
@@ -430,7 +438,7 @@ int main(void) {
 '''
         compile_and_run(self, source)
         request = method(BRIDGE, '- (void)request:')
-        timer = request[request.index('FCRequestTimeoutSeconds(method)'):]
+        timer = request[request.index('dispatch_time(DISPATCH_TIME_NOW, timeout * NSEC_PER_SEC)'):]
         self.assertIn('finish(@{@"code": @"timeout", @"detail":', timer)
         self.assertNotIn('exitUnconfirmed', request)
         # A stale reply is recognised only after the validator rejected it; nothing else of it is read.
