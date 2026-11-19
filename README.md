@@ -52,7 +52,7 @@ Maintainers: [local Mac release command and protected signing setup](macos/packa
 | --- | --- | --- |
 | Android | APK for `arm64-v8a`, `armeabi-v7a` and `x86_64` | Most phones use `arm64-v8a`. Also on the F-Droid repository below. |
 | Windows 10 and later | Installer (`.exe`) or portable `.zip`, for x64 and ARM64 | Pick ARM64 on Snapdragon and other ARM laptops. |
-| macOS 12 and later | DMG for Apple Silicon and Intel | Also on Homebrew. |
+| macOS 14 and later | DMG for Apple Silicon and Intel | Also on Homebrew. |
 | Linux | `.deb`, `.rpm` and AppImage, for x64 and ARM64 | See the tray note below. |
 
 <p>
