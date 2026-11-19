@@ -7759,17 +7759,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mitmModuleHostsIgnored(Object hosts) {
-    return '以下主机名将被忽略：$hosts。Flash 只解密 443 端口上 api.example.com 或 *.example.com 这样的域名，不支持其他端口、IP 地址或名称中间的 *。';
+    return '以下主机名将被忽略：$hosts。请使用 api.example.com 或 *.example.com 这样的域名。仅支持 443 端口，不支持 IP 地址或名称中间的 *。';
   }
 
   @override
   String mitmModuleHostsSkipped(Object hosts) {
-    return '以下主机名也会被跳过：$hosts。范围过宽、属于 Apple 服务或格式无效的域名不会被解密。';
+    return '以下主机名也将被跳过：$hosts。范围过宽、属于 Apple 服务或格式无效的条目不会用于解密。';
   }
 
   @override
   String get mitmHostIgnored =>
-      '已忽略：Flash 只解密 443 端口上 api.example.com 或 *.example.com 这样的域名，不支持其他端口、IP 地址或名称中间的 *';
+      '已忽略：请使用 api.example.com 或 *.example.com 这样的域名。仅支持 443 端口，不支持 IP 地址或名称中间的 *。';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

@@ -96,7 +96,8 @@ hostname = %APPEND% icloud.com:443, *.com:443, bad_host.com:443, ok.example.com:
       expect(issues, {
         'icloud.com:443': 'apple-service',
         '*.com:443': 'over-broad',
-        'bad_host.com:443': 'invalid',
+        // The app's own hint, told even while the Core is down.
+        'bad_host.com:443': currentAppLocalizations.mitmHostIgnored,
         'b.com:8443': currentAppLocalizations.mitmHostIgnored,
       });
       // What the module view counts as invalid of the lines it shows.
@@ -127,6 +128,10 @@ hostname = %APPEND% icloud.com:443, *.com:443, bad_host.com:443, ok.example.com:
         'b.com:8443',
       ]);
       expect(issues['b.com:8443'], currentAppLocalizations.mitmHostIgnored);
+      expect(
+        issues['bad_host.com:443'],
+        currentAppLocalizations.mitmHostIgnored,
+      );
     });
 
     test('the sheet keeps the app\'s word while the Core is down', () async {
@@ -146,7 +151,7 @@ hostname = %APPEND% icloud.com:443, *.com:443, bad_host.com:443, ok.example.com:
       final issues = await container.read(
         mitmModuleHostIssuesProvider(lines.join('\n')).future,
       );
-      expect(issues.keys, ['b.com:8443']);
+      expect(issues.keys, ['bad_host.com:443', 'b.com:8443']);
     });
   });
 }

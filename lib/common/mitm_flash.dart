@@ -54,11 +54,12 @@ String flashMitmHostname(String line) {
 }
 
 final _ipv4 = RegExp(r'^\d{1,3}(\.\d{1,3}){3}$');
+final _dnsLabel = RegExp(r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$');
 
-/// The module's hostname lines the Core skips, as written: another port, an
-/// address, or a `*` or `?` inside a name, which the Core matches only as a
-/// leading `*.`. Too broad and Apple-owned names the Core also skips are told
-/// by the Core itself.
+/// The module's hostname lines the Core skips as written: another port, an
+/// address, or not a name it can read, such as one with a `*` or `?` inside;
+/// the Core matches `*` only as a leading `*.`. Too broad and Apple-owned
+/// names the Core also skips are told by the Core itself.
 List<String> flashUnusableHostnames(MitmModuleContent content) =>
     flashUnusableHostLines(flashHostnameLines(content));
 
@@ -74,13 +75,28 @@ List<String> flashHostnameLines(MitmModuleContent content) => [
   ...content.hostname,
 ];
 
+String _normalizeHost(String host) {
+  final text = host.trim().toLowerCase();
+  return text.endsWith('.') ? text.substring(0, text.length - 1) : text;
+}
+
+/// core/mitm_host.go's parseMitmHostEntry, up to the name's syntax.
 bool _unusableHostname(String line) {
-  var host = line.toLowerCase();
-  if (host.startsWith('-')) host = host.substring(1).trim();
-  if (host == '*' || host == '*.') return false;
+  var host = _normalizeHost(line);
+  final exclude = host.startsWith('-');
+  if (exclude) host = _normalizeHost(host.substring(1));
+  if (host == '*' || host == '*.') return exclude;
   if (host.contains(':') || _ipv4.hasMatch(host)) return true;
   if (host.startsWith('*.')) host = host.substring(2);
-  return host.contains('*') || host.contains('?');
+  return !_validDNSName(host);
+}
+
+/// core/mitm_host.go's validDNSName: an all-digit last label is an address.
+bool _validDNSName(String name) {
+  if (name.isEmpty || name.length > 253) return false;
+  final labels = name.split('.');
+  return labels.every(_dnsLabel.hasMatch) &&
+      labels.last.contains(RegExp('[a-z]'));
 }
 
 bool _unsupportedBody(String line) =>

@@ -8444,17 +8444,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mitmModuleHostsIgnored(Object hosts) {
-    return 'Эти имена хостов игнорируются: $hosts. Flash расшифровывает только имена вида api.example.com или *.example.com на порту 443, без другого порта, адреса или * внутри имени.';
+    return 'Эти имена хостов будут проигнорированы: $hosts. Используйте домен, например api.example.com или *.example.com. Поддерживается только порт 443; IP-адреса и * в середине имени не поддерживаются.';
   }
 
   @override
   String mitmModuleHostsSkipped(Object hosts) {
-    return 'Flash также пропускает эти имена хостов: $hosts. Слишком широкое имя, имя сервиса Apple или недопустимое имя никогда не расшифровывается.';
+    return 'Эти имена хостов также будут пропущены: $hosts. Слишком широкие записи, записи служб Apple и недопустимые записи не будут использоваться для расшифровки.';
   }
 
   @override
   String get mitmHostIgnored =>
-      'Игнорируется: Flash расшифровывает только имена вида api.example.com или *.example.com на порту 443, без другого порта, адреса или * внутри имени';
+      'Игнорируется: используйте домен, например api.example.com или *.example.com. Поддерживается только порт 443; IP-адреса и * в середине имени не поддерживаются.';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

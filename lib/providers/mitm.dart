@@ -418,10 +418,11 @@ class MitmSignAction extends _$MitmSignAction {
       listEquals(signed, current.sublist(0, signed.length));
 
   /// After a leaf, the list is read again. A change withdraws the leaf as
-  /// before; a read that times out says nothing of the modules, so the leaf
-  /// is held to the list the Core was last given, else to the user's alone,
-  /// and is withdrawn for this host only, never with a refusal that pauses
-  /// every host.
+  /// before, and leaves a refusal as it was. A read that times out says
+  /// nothing of the modules, so the leaf is held to the user's hosts alone
+  /// (the setup last composed may still hold a module just turned off) and
+  /// is withdrawn for this host only, never with a refusal that pauses every
+  /// host.
   Future<MitmSignResult> _recheck(
     MitmSignResult result,
     List<String> signed,
@@ -434,17 +435,10 @@ class MitmSignAction extends _$MitmSignAction {
     }
     final after = await _hostnames(afterSign, remaining);
     if (!ref.mounted) return result;
-    if (after.modulesRead) {
-      return _stillListed(signed, after.hostnames)
-          ? result
-          : const MitmSignResult(error: 'disabled');
+    if (result.cert == null || _stillListed(signed, after.hostnames)) {
+      return result;
     }
-    if (result.cert == null) return result;
-    final sent = ref.read(mitmSetupProvider)?['hostname'];
-    final reference = sent is List<String> ? sent : after.hostnames;
-    return _stillListed(signed, reference)
-        ? result
-        : const MitmSignResult(error: 'notListed');
+    return MitmSignResult(error: after.modulesRead ? 'disabled' : 'notListed');
   }
 
   // Each host is logged once until its answer changes, and only by name. A

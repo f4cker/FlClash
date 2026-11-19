@@ -367,6 +367,15 @@ void main() {
     expect(await sign('other.example.com'), isNull);
   });
 
+  test('a refusal stays as it was when the list changes meanwhile', () async {
+    duringSign = (host) async {
+      duringSign = null;
+      setMitm(const ['other.example.com']);
+    };
+    // Not 'disabled', which would pause every host for a while.
+    expect(await sign('b.example.com'), 'notListed');
+  });
+
   test('switching profile or config keeps the list the Core is sent', () async {
     await add(_module('A', 'a.example.com'), 'a.sgmodule');
     await settle();
@@ -558,24 +567,31 @@ client-source-address = %APPEND% 192.168.1.0/24
     });
 
     test(
-      'a recheck that times out keeps a leaf the Core still decrypts',
+      'a module turned off while a slow recheck runs keeps no leaf',
       () async {
-        moduleRules = () async =>
-            const MitmModuleRules(hostname: ['a.example.com']);
+        final module = await add(_module('A', 'a.example.com'), 'a.sgmodule');
         await settle();
-        expect(coreHostnames(), ['user.example.com', 'a.example.com']);
         duringSign = (host) async {
           duringSign = null;
           moduleRules = () => Completer<MitmModuleRules>().future;
-          container.invalidate(enabledMitmModuleRulesProvider);
+          await action().turnOff(module.id);
           await pumpEventQueue();
         };
-        expect(await sign('a.example.com'), isNull);
-        // The Core keeps the list it was last sent meanwhile.
+        expect(await sign('a.example.com'), 'notListed');
+        // The setup last composed still holds the module meanwhile.
         expect(coreHostnames(), ['user.example.com', 'a.example.com']);
-        expect(mitmLogs(), isEmpty);
+        final logs = mitmLogs();
+        expect(logs.single.logLevel, LogLevel.warning);
+        expect(logs.single.payload, contains('not ready'));
       },
     );
+
+    test('a leaf signed for the user alone outlasts a slow recheck', () async {
+      moduleRules = () => Completer<MitmModuleRules>().future;
+      expect(await sign('user.example.com'), isNull);
+      expect(signedLists.last, ['user.example.com']);
+      expect(mitmLogs(), isEmpty);
+    });
 
     test('a recheck that times out after a change refuses this host only, '
         'never pausing every host', () async {

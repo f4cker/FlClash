@@ -8314,17 +8314,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mitmModuleHostsIgnored(Object hosts) {
-    return '다음 호스트 이름은 무시됩니다: $hosts. Flash는 443 포트의 api.example.com 또는 *.example.com 같은 이름만 복호화하며, 다른 포트, 주소, 이름 중간의 *는 지원하지 않습니다.';
+    return '다음 호스트 이름은 무시됩니다: $hosts. api.example.com 또는 *.example.com과 같은 도메인을 사용하세요. 포트는 443만 지원하며, IP 주소와 이름 중간의 *는 지원하지 않습니다.';
   }
 
   @override
   String mitmModuleHostsSkipped(Object hosts) {
-    return 'Flash는 다음 호스트 이름도 건너뜁니다: $hosts. 범위가 너무 넓은 이름, Apple 서비스의 이름, 올바르지 않은 이름은 복호화하지 않습니다.';
+    return '다음 호스트 이름도 건너뜁니다: $hosts. 범위가 너무 넓거나 Apple 서비스에 속하거나 형식이 올바르지 않은 항목은 복호화에 사용되지 않습니다.';
   }
 
   @override
   String get mitmHostIgnored =>
-      '무시됨: Flash는 443 포트의 api.example.com 또는 *.example.com 같은 이름만 복호화하며, 다른 포트, 주소, 이름 중간의 *는 지원하지 않습니다';
+      '무시됨: api.example.com 또는 *.example.com과 같은 도메인을 사용하세요. 포트는 443만 지원하며, IP 주소와 이름 중간의 *는 지원하지 않습니다.';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

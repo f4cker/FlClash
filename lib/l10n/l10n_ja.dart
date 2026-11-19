@@ -8240,17 +8240,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mitmModuleHostsIgnored(Object hosts) {
-    return '次のホスト名は無視されます：$hosts。Flash が復号するのはポート 443 の api.example.com や *.example.com のような名前だけで、ほかのポート、アドレス、名前の途中の * は使えません。';
+    return '次のホスト名は無視されます：$hosts。api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。';
   }
 
   @override
   String mitmModuleHostsSkipped(Object hosts) {
-    return '次のホスト名も Flash は扱いません：$hosts。範囲が広すぎる名前、Apple のサービスの名前、正しくない名前は復号しません。';
+    return '次のホスト名もスキップされます：$hosts。範囲が広すぎるもの、Apple のサービスに属するもの、形式が正しくないものは復号に使用されません。';
   }
 
   @override
   String get mitmHostIgnored =>
-      '無視されます：Flash が復号するのはポート 443 の api.example.com や *.example.com のような名前だけで、ほかのポート、アドレス、名前の途中の * は使えません';
+      '無視されました：api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

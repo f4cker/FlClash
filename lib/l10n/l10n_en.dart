@@ -8443,17 +8443,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String mitmModuleHostsIgnored(Object hosts) {
-    return 'These hostnames are ignored: $hosts. Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name.';
+    return 'These hostnames will be ignored: $hosts. Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.';
   }
 
   @override
   String mitmModuleHostsSkipped(Object hosts) {
-    return 'Flash also skips these hostnames: $hosts. A name that is too broad, belongs to an Apple service or is not a valid name is never decrypted.';
+    return 'These hostnames will also be skipped: $hosts. Entries that are too broad, belong to Apple services, or are invalid will not be used for decryption.';
   }
 
   @override
   String get mitmHostIgnored =>
-      'Ignored: Flash decrypts names such as api.example.com or *.example.com on port 443, not another port, an address or a * inside a name';
+      'Ignored: Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.';
 
   @override
   String mitmClientSourceRisk(Object addresses) {
