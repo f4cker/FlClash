@@ -283,6 +283,17 @@ void main() {
       );
       expect((await check() as UpdateAvailable).discoveryIncomplete, isFalse);
     });
+    test('a release needing a newer macOS is not offered', () async {
+      use((_) => jsonBody({...stable, 'minimumSystemVersion': '14.0'}));
+      Future<UpdateCheck> on(String systemVersion) => request.checkForMacUpdate(
+        installedBuild: 2026111901,
+        installedVersion: '0.9.15-mitm.12',
+        arch: 'arm64',
+        systemVersion: systemVersion,
+      );
+      expect(await on('Version 13.7.4 (Build 22H420)'), isA<UpdateNoRelease>());
+      expect(await on('Version 14.0 (Build 23A344)'), isA<UpdateAvailable>());
+    });
     for (final failure in [
       'rate limit',
       'page bound',

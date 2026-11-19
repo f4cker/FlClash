@@ -67,7 +67,7 @@ if [[ "$(/usr/bin/plutil -extract CFBundleVersion raw -o - "$info")" != "$build"
   echo 'Helper CFBundleVersion was not written' >&2
   exit 1
 fi
-/usr/bin/xcrun clang "${architectures[@]}" -mmacosx-version-min=13.0 -fobjc-arc -fblocks \
+/usr/bin/xcrun clang "${architectures[@]}" -mmacosx-version-min=14.0 -fobjc-arc -fblocks \
   "-DFC_MANAGED_CANDIDATE_ENABLED=$candidate" -Wno-deprecated-declarations \
   -framework Foundation -framework Security \
   -sectcreate __TEXT __info_plist "$info" \
