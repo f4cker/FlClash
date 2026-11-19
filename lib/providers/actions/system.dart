@@ -2,9 +2,12 @@ part of '../action.dart';
 
 @Riverpod(keepAlive: true)
 class SystemAction extends _$SystemAction {
+  static const localIpUpdateKey = 'local-ip';
+
   CoreController get _core => ref.read(coreHandlerProvider);
 
   SystemExitCoordinator? _exitCoordinator;
+  int _localIpRequest = 0;
 
   @override
   void build() {}
@@ -171,8 +174,24 @@ class SystemAction extends _$SystemAction {
   }
 
   Future<void> updateLocalIp() async {
-    ref.read(localIpProvider.notifier).value = null;
-    await Future.delayed(commonDuration);
-    ref.read(localIpProvider.notifier).value = await getLocalIpAddress();
+    final request = ++_localIpRequest;
+    final updating = ref.read(updatingKeysProvider.notifier);
+    final operation = updating.start(localIpUpdateKey);
+    try {
+      String address;
+      try {
+        address = await getLocalIpAddress() ?? '';
+      } catch (error) {
+        commonPrint.log('Local IP lookup failed: ${compactError(error)}');
+        address = '';
+      }
+      if (ref.mounted && request == _localIpRequest) {
+        ref.read(localIpProvider.notifier).value = address;
+      }
+    } finally {
+      if (ref.mounted) {
+        updating.stop(localIpUpdateKey, operation);
+      }
+    }
   }
 }

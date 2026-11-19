@@ -38,6 +38,9 @@ class IntranetIpCard extends ConsumerWidget {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final localIp = ref.watch(localIpProvider);
+    final revalidating = ref.watch(
+      isUpdatingProvider(SystemAction.localIpUpdateKey),
+    );
     final allowLan = ref.watch(
       patchClashConfigProvider.select((state) => state.allowLan),
     );
@@ -109,7 +112,13 @@ class IntranetIpCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: style.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
-                final ip => DashboardFitText(ip, style: style),
+                final ip => Tooltip(
+                  message: revalidating ? appLocalizations.querying : ip,
+                  child: Semantics(
+                    value: revalidating ? appLocalizations.querying : null,
+                    child: DashboardFitText(ip, style: style),
+                  ),
+                ),
               },
             ),
           ),

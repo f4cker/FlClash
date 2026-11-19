@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/ipx_al.dart';
 import 'package:fl_clash/common/service_probe.dart'
@@ -145,6 +147,37 @@ class _RecordingIps extends OutboundIpProbe {
   void refresh(Iterable<String> targets) => refreshed.addAll(targets);
 }
 
+class _ControlledIps extends OutboundIpProbe {
+  final requests = <(String, Completer<Map<String, ProbeAnswer<IpInfo>>>)>[];
+
+  @override
+  Future<Map<String, ProbeAnswer<IpInfo>>> probe(
+    String target,
+    RouteState route,
+  ) {
+    final result = Completer<Map<String, ProbeAnswer<IpInfo>>>();
+    requests.add((target, result));
+    return result.future;
+  }
+
+  void answer() {
+    for (final (target, request) in requests) {
+      if (!request.isCompleted) {
+        request.complete({
+          target: ProbeAnswer(
+            value: IpInfo(
+              ip: target == routedOutbound ? _ip : _localIp,
+              countryCode: 'GB',
+            ),
+            coreEpoch: 1,
+            routeVersion: 1,
+          ),
+        });
+      }
+    }
+  }
+}
+
 class _FakeIpx extends IpxLookup {
   _FakeIpx(this.answer);
 
@@ -180,6 +213,7 @@ Widget _ipApp({
   bool running = true,
   bool hideIp = false,
   OutboundIpProbe Function()? probe,
+  RouteState? route,
 }) {
   final exitEntry = exit ?? _fresh(_ip);
   final localEntry = local ?? _fresh(_localIp);
@@ -188,6 +222,8 @@ Widget _ipApp({
     overrides: [
       profilesProvider.overrideWithValue(const [_profile]),
       suspendProvider.overrideWithValue(false),
+      if (route != null)
+        routeTrackerProvider.overrideWithBuild((_, _) => route),
       if (running) runTimeProvider.overrideWith(_Running.new),
       if (hideIp) appSettingProvider.overrideWith(_Hidden.new),
       outboundIpProbeProvider.overrideWith(
@@ -209,6 +245,61 @@ void _useTallView(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets(
+    'unchanged network refresh never replaces IPs or report with skeletons',
+    (tester) async {
+      final probe = _ControlledIps();
+      await tester.pumpWidget(
+        _ipApp(
+          probe: () => probe,
+          route: const RouteState(
+            coreEpoch: 1,
+            routeVersion: 1,
+            hostEpoch: 1,
+            proxied: true,
+            synced: true,
+            live: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      probe.answer();
+      await tester.pumpAndSettle();
+      expect(find.text(_ip), findsOneWidget);
+      expect(find.text(_localIp), findsOneWidget);
+      expect(find.textContaining('TORSERVERS-NET'), findsOneWidget);
+      expect(find.byType(SkeletonPill), findsNothing);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CurrentOutboundCard)),
+      );
+      for (var i = 0; i < 3; i++) {
+        container.read(routeTrackerProvider.notifier).bumpHostEpoch();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.text(_ip), findsOneWidget);
+        expect(find.text(_localIp), findsOneWidget);
+        expect(find.textContaining('TORSERVERS-NET'), findsOneWidget);
+        expect(find.byType(SkeletonPill), findsNothing);
+        expect(
+          container.read(outboundIpProbeProvider).valueOf(routedOutbound),
+          isNull,
+        );
+      }
+      expect(probe.requests, hasLength(2));
+      expect(find.text('Looking up'), findsOneWidget);
+      await tester.pump(probeMoveSettleDuration);
+      expect(probe.requests, hasLength(4));
+      expect(find.byType(SkeletonPill), findsNothing);
+      probe.answer();
+      await tester.pumpAndSettle();
+      expect(find.text(_ip), findsOneWidget);
+      expect(find.text('Looking up'), findsNothing);
+      expect(find.byType(SkeletonPill), findsNothing);
+      await tester.pump(const Duration(minutes: 1));
+      expect(probe.requests, hasLength(4));
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
   setUp(() {
     mitmFeature = true;
     addTearDown(() => mitmFeature = false);

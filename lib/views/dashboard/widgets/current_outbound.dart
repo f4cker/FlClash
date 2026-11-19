@@ -244,21 +244,23 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
 /// What a lookup has come to: an address, a failure, or neither yet.
 @immutable
 class IpAnswer {
-  const IpAnswer.found(IpInfo this.info) : failed = false;
+  const IpAnswer.found(IpInfo this.info, {this.revalidating = false})
+    : failed = false;
 
-  const IpAnswer.failed() : info = null, failed = true;
+  const IpAnswer.failed() : info = null, failed = true, revalidating = false;
 
-  const IpAnswer.pending() : info = null, failed = false;
+  const IpAnswer.pending() : info = null, failed = false, revalidating = false;
 
   final IpInfo? info;
   final bool failed;
+  final bool revalidating;
 
   String? get ip => info?.ip;
 }
 
 IpAnswer _answerOf(ProbeEntry<IpInfo> entry) {
-  if (entry.value case final info?) {
-    return IpAnswer.found(info);
+  if (entry.displayValue case final info?) {
+    return IpAnswer.found(info, revalidating: entry.isLoading);
   }
   return entry.phase == ProbePhase.failed
       ? const IpAnswer.failed()
@@ -701,6 +703,7 @@ class ExitIpRow extends ConsumerWidget {
     final flag = flagOf(country);
     final shownPlace = [?flag, if (place.isNotEmpty) place].join(' ');
     final summary = [
+      if (answer.revalidating) appLocalizations.querying,
       ?network,
       if (shownPlace.isNotEmpty) shownPlace,
     ].join(' · ');
@@ -714,6 +717,7 @@ class ExitIpRow extends ConsumerWidget {
     final separator = appLocalizations.semanticsSeparator;
     final semanticLabel = [
       appLocalizations.exitIp,
+      if (answer.revalidating) appLocalizations.querying,
       hidden ? appLocalizations.hideIp : ip,
       if (score != null && grade != null)
         appLocalizations.ipxScoreSemantics('$score', grade.letter),
@@ -879,7 +883,8 @@ class LocalIpRow extends ConsumerWidget {
             label:
                 '${appLocalizations.localPublicIp}'
                 '${appLocalizations.semanticsSeparator}'
-                '${hidden ? appLocalizations.hideIp : ip}',
+                '${hidden ? appLocalizations.hideIp : ip}'
+                '${answer.revalidating ? '${appLocalizations.semanticsSeparator}${appLocalizations.querying}' : ''}',
             excludeSemantics: true,
             child: _IpText(ip!),
           ),
@@ -887,11 +892,13 @@ class LocalIpRow extends ConsumerWidget {
             const SizedBox(width: 2),
             _CopyButton(text: ip, tooltip: appLocalizations.copyLocalPublicIp),
           ],
-          if (sameAsExit)
+          if (answer.revalidating || sameAsExit)
             Padding(
               padding: EdgeInsetsDirectional.only(start: hidden ? 8 : 4),
               child: Text(
-                appLocalizations.sameAsExit,
+                answer.revalidating
+                    ? appLocalizations.querying
+                    : appLocalizations.sameAsExit,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: _detailStyle(context),

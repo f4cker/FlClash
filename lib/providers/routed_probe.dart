@@ -15,11 +15,19 @@ enum ProbePhase { empty, probing, fresh, failed }
 
 @immutable
 class ProbeEntry<V> {
-  const ProbeEntry({required this.phase, this.value, this.stamp});
+  const ProbeEntry({
+    required this.phase,
+    this.value,
+    this.previousValue,
+    this.stamp,
+  });
 
   final ProbePhase phase;
   final V? value;
+  final V? previousValue;
   final RouteStamp? stamp;
+
+  V? get displayValue => value ?? previousValue;
 
   bool get isLoading => phase == ProbePhase.probing;
 
@@ -28,10 +36,11 @@ class ProbeEntry<V> {
       other is ProbeEntry<V> &&
       other.phase == phase &&
       other.value == value &&
+      other.previousValue == previousValue &&
       other.stamp == stamp;
 
   @override
-  int get hashCode => Object.hash(phase, value, stamp);
+  int get hashCode => Object.hash(phase, value, previousValue, stamp);
 }
 
 @immutable
@@ -75,8 +84,8 @@ class ProbeAnswer<V> {
   final bool timedOut;
 }
 
-/// Keeps one answer per target and only ever shows one that still describes
-/// the current route. A new route version only asks again for the answers
+/// Keeps current answers separate from display-only values during revalidation.
+/// A new route version only asks again for the answers
 /// whose exits the Core finds moved, and a target asked on its own waits out
 /// [throttleDuration] since its last probe. State changes are deferred to a
 /// microtask, so a widget may watch a target from its build.
@@ -276,6 +285,7 @@ mixin RoutedProbe<K, V>
         entries[target] = ProbeEntry(
           phase: ProbePhase.probing,
           value: due.keepValue ? entries[target]?.value : null,
+          previousValue: due.keepValue ? entries[target]?.previousValue : null,
         );
       }
     }
@@ -520,7 +530,23 @@ mixin RoutedProbe<K, V>
           retry: false,
         );
       } else if (stamp.routeVersion != next.routeVersion) {
+        if (entry.phase == ProbePhase.fresh) {
+          entries[target] = ProbeEntry(
+            phase: ProbePhase.probing,
+            previousValue: entry.value,
+            stamp: stamp,
+          );
+        }
         _unverified.add(target);
+      }
+    }
+    if (!next.synced) {
+      for (final target in state.entries.keys) {
+        _invalidate(target, entries);
+        _inFlight.remove(target);
+        if (_watchers.containsKey(target)) {
+          entries[target] = ProbeEntry(phase: ProbePhase.failed);
+        }
       }
     }
     if (moved && _settle != null) {
@@ -612,11 +638,16 @@ mixin RoutedProbe<K, V>
       final verified = stamp.verifiedAt(
         max(stamp.routeVersion, check.routeVersion),
       );
-      final checked = ProbeEntry(
-        phase: entry.phase,
-        value: entry.value,
-        stamp: verified,
-      );
+      var checked = entry.previousValue != null
+          ? _settledEntry(entry.previousValue, verified)
+          : ProbeEntry(phase: entry.phase, value: entry.value, stamp: verified);
+      if (checked.phase == ProbePhase.fresh && !current.isFresh(verified)) {
+        checked = ProbeEntry(
+          phase: ProbePhase.probing,
+          previousValue: checked.value,
+          stamp: verified,
+        );
+      }
       if (landing != null) {
         _show(target, checked, entries, timedOut: landing.timedOut);
       } else {
@@ -645,16 +676,22 @@ mixin RoutedProbe<K, V>
     }
   }
 
-  /// Nothing made before a move stands, so the question waits for the
-  /// route to settle and then overtakes any probe still out.
+  ProbeEntry<V> _revalidating(ProbeEntry<V>? entry) {
+    final value = entry?.displayValue;
+    return ProbeEntry(
+      phase: ProbePhase.probing,
+      previousValue: value != null && !isFailure(value) ? value : null,
+    );
+  }
+
   void _invalidate(K target, Map<K, ProbeEntry<V>> entries) {
     _landed.remove(target);
     _unverified.remove(target);
     _forgetFailures(target);
     if (_watchers.containsKey(target)) {
-      entries[target] = ProbeEntry(phase: ProbePhase.probing);
+      entries[target] = _revalidating(entries[target]);
       _due[target] = (
-        keepValue: false,
+        keepValue: true,
         forced: false,
         supersede: true,
         settle: true,
@@ -670,9 +707,9 @@ mixin RoutedProbe<K, V>
   void _reprobe(K target, Map<K, ProbeEntry<V>> entries) {
     _forgetFailures(target);
     if (_watchers.containsKey(target)) {
-      entries[target] = ProbeEntry(phase: ProbePhase.probing);
+      entries[target] = _revalidating(entries[target]);
       _due[target] = (
-        keepValue: false,
+        keepValue: true,
         forced: false,
         supersede: false,
         settle: false,

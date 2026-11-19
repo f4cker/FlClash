@@ -141,6 +141,138 @@ void main() {
     expect(probe.calls, hasLength(1));
   });
 
+  testWidgets(
+    'network bursts retain display only until the replacement lands',
+    (tester) async {
+      final container = build();
+      final probe = container.read(_probeProvider.notifier)
+        ..moveSettle = probeMoveSettleDuration;
+      probe.watch('a');
+      await tester.pump();
+      probe.answer({'a': _ok('a.example:443')});
+      await tester.pump();
+
+      for (var i = 0; i < 3; i++) {
+        trackerOf(container).bumpHostEpoch();
+        final entry = container.read(_probeProvider).entryOf('a');
+        expect(entry.phase, ProbePhase.probing);
+        expect(entry.value, isNull);
+        expect(entry.stamp, isNull);
+        expect(entry.displayValue, 'ok');
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      trackerOf(container).applySnapshot(
+        const RouteSnapshot(coreEpoch: 2, routeVersion: 1, running: true),
+      );
+      expect(container.read(_probeProvider).valueOf('a'), isNull);
+      expect(container.read(_probeProvider).entryOf('a').displayValue, 'ok');
+      expect(probe.calls, ['a']);
+      await tester.pump(probeMoveSettleDuration);
+      expect(probe.calls, ['a', 'a']);
+      expect(container.read(_probeProvider).entryOf('a').displayValue, 'ok');
+      probe.answer({
+        'a': const ProbeAnswer(value: 'ok', coreEpoch: 2, routeVersion: 1),
+      });
+      await tester.pump();
+      final fresh = container.read(_probeProvider).entryOf('a');
+      expect(fresh.phase, ProbePhase.fresh);
+      expect(fresh.value, 'ok');
+      expect(fresh.previousValue, isNull);
+      expect(fresh.stamp!.hostEpoch, 4);
+      await tester.pump(const Duration(minutes: 1));
+      expect(probe.calls, hasLength(2));
+    },
+  );
+
+  testWidgets(
+    'unconfirmed route checks retain display but not a current value',
+    (tester) async {
+      final container = build();
+      final probe = container.read(_probeProvider.notifier)
+        ..throttle = probeThrottleDuration;
+      probe.watch('a');
+      await tester.pump();
+      probe.answer({'a': _ok('a.example:443')});
+      await tester.pump();
+      final check = Completer<RouteCheck>();
+      probe.checkAnswer = () => check.future;
+      moveRoute(container, 2);
+      expect(
+        container.read(_probeProvider).entryOf('a').phase,
+        ProbePhase.probing,
+      );
+      expect(container.read(_probeProvider).valueOf('a'), isNull);
+      check.completeError(StateError('check unavailable'));
+      await tester.pump();
+      expect(container.read(_probeProvider).entryOf('a').displayValue, 'ok');
+      expect(probe.calls, hasLength(1));
+      await tester.pump(probeThrottleDuration);
+      expect(probe.calls, hasLength(2));
+      probe.answer({
+        'a': const ProbeAnswer(coreEpoch: 1, routeVersion: 2, timedOut: true),
+      });
+      await tester.pump();
+      final failed = container.read(_probeProvider).entryOf('a');
+      expect(failed.phase, ProbePhase.failed);
+      expect(failed.displayValue, isNull);
+      await tester.pump(const Duration(minutes: 1));
+      expect(probe.calls, hasLength(2));
+    },
+  );
+
+  testWidgets(
+    'changed exits cannot promote a previous value or a late answer',
+    (tester) async {
+      final container = build();
+      final probe = container.read(_probeProvider.notifier);
+      probe.watch('a');
+      await tester.pump();
+      probe.answer({'a': _ok('a.example:443')});
+      await tester.pump();
+      probe.moved.add('a.example:443');
+      moveRoute(container, 2);
+      await tester.pump();
+      expect(container.read(_probeProvider).valueOf('a'), isNull);
+      expect(container.read(_probeProvider).entryOf('a').displayValue, 'ok');
+      final old = probe.pending.removeAt(0);
+      trackerOf(container).bumpHostEpoch();
+      await tester.pump(const Duration(milliseconds: 1));
+      probe.answer({
+        'a': const ProbeAnswer(value: 'new', coreEpoch: 1, routeVersion: 2),
+      });
+      await tester.pump();
+      old.complete({'a': _ok('a.example:443', routeVersion: 2)});
+      await tester.pump();
+      expect(container.read(_probeProvider).valueOf('a'), 'new');
+      expect(container.read(_probeProvider).entryOf('a').previousValue, isNull);
+      expect(probe.calls, hasLength(3));
+    },
+  );
+
+  testWidgets('confirmed failure replaces the retained successful display', (
+    tester,
+  ) async {
+    final container = build();
+    final probe = container.read(_probeProvider.notifier);
+    probe.watch('a');
+    await tester.pump();
+    probe.answer({'a': _ok('a.example:443')});
+    await tester.pump();
+    trackerOf(container).bumpHostEpoch();
+    await tester.pump(const Duration(milliseconds: 1));
+    probe.answer(const {});
+    await tester.pump();
+    expect(container.read(_probeProvider).entryOf('a').displayValue, 'ok');
+    await tester.pump(probeConfirmDelay);
+    probe.answer(const {});
+    await tester.pump();
+    final entry = container.read(_probeProvider).entryOf('a');
+    expect(entry.phase, ProbePhase.failed);
+    expect(entry.displayValue, isNull);
+    await tester.pump(const Duration(minutes: 1));
+    expect(probe.calls, hasLength(3));
+  });
+
   test('probes nothing that nobody watches', () async {
     final container = build();
     final probe = container.read(_probeProvider.notifier);
@@ -1037,6 +1169,40 @@ void main() {
 
         reads.last.complete(const RouteSnapshot(coreEpoch: 1, routeVersion: 2));
         await pumpEventQueue();
+        expect(probe.calls, hasLength(2));
+      },
+    );
+
+    test(
+      'disconnect clears retained display and rejects outstanding answers',
+      () async {
+        final container = live(
+          () => const RouteSnapshot(coreEpoch: 1, routeVersion: 1),
+        );
+        final probe = container.read(_probeProvider.notifier);
+        probe.watch('a');
+        await pumpEventQueue();
+        probe.answer({'a': _ok('a.example:443')});
+        await pumpEventQueue();
+        probe.refresh(['a']);
+        await pumpEventQueue();
+        container.read(coreStatusProvider.notifier).value =
+            CoreStatus.disconnected;
+        await pumpEventQueue();
+        expect(
+          container.read(_probeProvider).entryOf('a').displayValue,
+          isNull,
+        );
+        expect(
+          container.read(_probeProvider).entryOf('a').phase,
+          ProbePhase.failed,
+        );
+        probe.answer({'a': _ok('a.example:443')});
+        await pumpEventQueue();
+        expect(
+          container.read(_probeProvider).entryOf('a').displayValue,
+          isNull,
+        );
         expect(probe.calls, hasLength(2));
       },
     );
