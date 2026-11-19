@@ -136,9 +136,10 @@ bool _isIP(String text) {
   if (_isIPv4(text)) return true;
   if (!text.contains(':')) return false;
   // An IPv6 zone (fe80::1%en0) is still an address, as Go's netip reads it.
+  // With the zone left empty netip refuses it, but the Core still skips it
+  // as an address (core/mitm_host.go looksLikeAddress: it has a `:`).
   final zone = text.indexOf('%');
   final address = zone < 0 ? text : text.substring(0, zone);
-  if (zone >= 0 && zone == text.length - 1) return false;
   try {
     Uri.parseIPv6Address(address);
     return true;

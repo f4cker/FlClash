@@ -744,6 +744,7 @@ class MitmScriptSummary extends StatelessWidget {
         .of(context)
         .copyWith(color: context.colorScheme.onSurfaceVariant);
     final host = info.host;
+    final kind = [mitmScriptKindLabel(l, info.kind), ?source].join(' · ');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 2,
@@ -757,6 +758,7 @@ class MitmScriptSummary extends StatelessWidget {
               color: mitmScriptColor(context),
             ),
             Flexible(
+              flex: 2,
               child: Text(
                 info.name,
                 maxLines: 1,
@@ -764,13 +766,17 @@ class MitmScriptSummary extends StatelessWidget {
                 style: AppTextStyle.footnote.of(context, emphasized: true),
               ),
             ),
-            // Shares a narrow row with the name rather than overflowing it.
+            // Where the script comes from matters to the import: up to two
+            // lines, and in full on hover.
             Flexible(
-              child: Text(
-                [mitmScriptKindLabel(l, info.kind), ?source].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: secondary,
+              child: Tooltip(
+                message: kind,
+                child: Text(
+                  kind,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: secondary,
+                ),
               ),
             ),
           ],
