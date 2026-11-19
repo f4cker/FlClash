@@ -6,29 +6,42 @@ class CommonAction extends _$CommonAction {
   bool _isUpdatingTraffic = false;
   CancelToken? _updateCancelToken;
   _MacStagedUpdate? _macStaged;
+  int _updateCheckRevision = 0;
+  bool _isInstallingUpdate = false;
 
   @override
   void build() {}
 
-  void toggleRunning() {
+  void toggleRunning() => unawaited(_toggleRunning());
+
+  Future<void> _toggleRunning() async {
     final running = !ref.read(isStartProvider);
     if (running && ref.read(coreStatusProvider) == CoreStatus.disconnected) {
       ref.read(setupActionProvider.notifier).resumeOnRestart();
-      unawaited(
-        globalState.safeRun(ref.read(coreActionProvider.notifier).restartCore),
+      await globalState.safeRun(
+        ref.read(coreActionProvider.notifier).restartCore,
       );
       return;
     }
-    unawaited(
-      globalState.safeRun(
-        () => ref
-            .read(setupActionProvider.notifier)
-            .setRunning(
-              running,
-              initialize: running && !ref.read(initProvider),
-            ),
-      ),
+    await globalState.safeRun(
+      () => ref
+          .read(setupActionProvider.notifier)
+          .setRunning(running, initialize: running && !ref.read(initProvider)),
     );
+  }
+
+  Future<void> toggleRunningForTray() async {
+    final pending = ref.read(trayCoreTogglePendingProvider.notifier);
+    if (pending.value ||
+        ref.read(coreStatusProvider) == CoreStatus.connecting) {
+      return;
+    }
+    pending.value = true;
+    try {
+      await _toggleRunning();
+    } finally {
+      pending.value = false;
+    }
   }
 
   void updateSpeedStatistics() {
@@ -100,18 +113,72 @@ class CommonAction extends _$CommonAction {
 
   /// macOS reads the signed manifest and compares build numbers; elsewhere
   /// the latest GitHub release and its version are compared.
-  Future<UpdateCheck> checkForAppUpdate() {
-    if (system.isMacOS) {
-      return request.checkForMacUpdate(
-        installedBuild: macBuildNumber(globalState.packageInfo.buildNumber),
-        arch: macUpdateArch(Abi.current()),
-      );
+  Future<UpdateCheck> checkForAppUpdate() async {
+    final revision = ++_updateCheckRevision;
+    final result = system.isMacOS
+        ? await request.checkForMacUpdate(
+            installedBuild: macBuildNumber(globalState.packageInfo.buildNumber),
+            arch: macUpdateArch(Abi.current()),
+          )
+        : await request.checkForUpdate(
+            version: globalState.packageInfo.version,
+            assetSuffix: releaseAssetSuffix,
+          );
+    if (revision == _updateCheckRevision) {
+      ref.read(lastUpdateCheckStateProvider.notifier).value = result;
+      if (result is! UpdateCheckFailed) {
+        ref.read(availableUpdateStateProvider.notifier).value =
+            result is UpdateAvailable ? result : null;
+      }
     }
-    return request.checkForUpdate(
-      version: globalState.packageInfo.version,
-      assetSuffix: releaseAssetSuffix,
-    );
+    return result;
   }
+
+  Future<void> updateFromTray(UpdateAvailable expected) async {
+    final busy = ref.read(updateInstallBusyProvider.notifier);
+    if (busy.value ||
+        _isInstallingUpdate ||
+        ref.read(updateDownloadStateProvider) is UpdateDownloading ||
+        !identical(ref.read(availableUpdateStateProvider), expected)) {
+      return;
+    }
+    busy.value = true;
+    try {
+      final result = await checkForAppUpdate();
+      if (result is! UpdateAvailable) {
+        await checkUpdateResultHandle(result, isUser: true);
+        return;
+      }
+      final manifest = result.manifest;
+      final previous = expected.manifest;
+      if (manifest == null ||
+          previous == null ||
+          !listEquals(manifest.envelope, previous.envelope) ||
+          !identical(ref.read(availableUpdateStateProvider), result)) {
+        return;
+      }
+      final asset = manifest.assetFor(macUpdateArch(Abi.current()) ?? '');
+      if (asset == null ||
+          _isInstallingUpdate ||
+          ref.read(updateDownloadStateProvider) is UpdateDownloading) {
+        return;
+      }
+      await discardUpdate();
+      await _downloadMacUpdate(manifest, asset, installWhenReady: true);
+    } finally {
+      busy.value = false;
+    }
+  }
+
+  String get _currentVersionLabel => appVersionLabel(
+    globalState.packageInfo.version,
+    globalState.packageInfo.buildNumber,
+  );
+
+  TextSpan _updateVersions(String available) => TextSpan(
+    text:
+        '${currentAppLocalizations.updateVersionSummary(_currentVersionLabel, available)}\n\n',
+  );
 
   TextSpan _releaseSpan(BuildContext context, String tagName, String? body) {
     final version = parseReleaseChangelog(body);
@@ -170,7 +237,12 @@ class CommonAction extends _$CommonAction {
       final asset = selfUpdateAsset;
       final res = await dialogs.showMessage(
         title: currentAppLocalizations.discoverNewVersion,
-        message: _releaseSpan(context, tag, data['body'] as String?),
+        message: TextSpan(
+          children: [
+            _updateVersions(result.versionLabel),
+            _releaseSpan(context, tag, data['body'] as String?),
+          ],
+        ),
         confirmText: asset == null
             ? currentAppLocalizations.goDownload
             : currentAppLocalizations.update,
@@ -225,12 +297,32 @@ class CommonAction extends _$CommonAction {
     MacUpdateManifest manifest, {
     required bool isUser,
   }) async {
-    final context = globalState.navigatorKey.currentContext!;
+    final showDetails = await dialogs.showMessage(
+      title: currentAppLocalizations.discoverNewVersion,
+      message: _updateVersions(
+        appVersionLabel(manifest.version, '${manifest.build}'),
+      ),
+      confirmText: currentAppLocalizations.viewUpdate,
+      cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
+    );
+    if (showDetails != true) {
+      if (!isUser && showDetails == false) {
+        ref
+            .read(appSettingProvider.notifier)
+            .update((state) => state.copyWith(autoCheckUpdate: false));
+      }
+      return;
+    }
+    final context = globalState.navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
     final asset = manifest.assetFor(macUpdateArch(Abi.current()) ?? '')!;
     final res = await dialogs.showMessage(
       title: currentAppLocalizations.discoverNewVersion,
       message: TextSpan(
         children: [
+          _updateVersions(
+            appVersionLabel(manifest.version, '${manifest.build}'),
+          ),
           _releaseSpan(context, manifest.tag, manifest.notes),
           TextSpan(
             text:
@@ -253,8 +345,9 @@ class CommonAction extends _$CommonAction {
 
   Future<void> _downloadMacUpdate(
     MacUpdateManifest manifest,
-    MacUpdateAsset asset,
-  ) async {
+    MacUpdateAsset asset, {
+    bool installWhenReady = false,
+  }) async {
     final updater = macUpdater;
     final download = ref.read(updateDownloadStateProvider.notifier);
     if (updater == null || download.value != null) return;
@@ -287,6 +380,7 @@ class CommonAction extends _$CommonAction {
         manifest: manifest.envelope,
         archive: path,
       );
+      if (cancelToken.isCancelled) throw cancelToken.cancelError!;
       if (prepared.needsManualInstall) {
         download.value = null;
         await _revealMacUpdate(updater, path, manifest.version, prepared);
@@ -297,6 +391,10 @@ class CommonAction extends _$CommonAction {
       }
       _macStaged = _MacStagedUpdate(manifest, prepared.staged!, path);
       download.value = UpdateReady(tag, path);
+      if (installWhenReady) {
+        await installUpdate();
+        return;
+      }
       dialogs.showBanner(
         currentAppLocalizations.updateReadyTip,
         level: BannerLevel.success,
@@ -307,7 +405,7 @@ class CommonAction extends _$CommonAction {
         message: TextSpan(
           text: macUpdateReadyText(
             prepared,
-            manifest.version,
+            appVersionLabel(manifest.version, '${manifest.build}'),
             currentAppLocalizations,
           ),
         ),
@@ -386,10 +484,15 @@ class CommonAction extends _$CommonAction {
       );
       return;
     }
+    if (_updateCancelToken?.isCancelled == true) {
+      await _restartAfterFailedMacUpdate();
+      throw _updateCancelToken!.cancelError!;
+    }
     final result = await updater.install(staged.path);
     if (result.ok) {
       _macStaged = null;
       ref.read(updateDownloadStateProvider.notifier).value = null;
+      ref.read(availableUpdateStateProvider.notifier).value = null;
       await updater.relaunchAfterExit();
       await ref.read(systemActionProvider.notifier).handleExit();
       return;
@@ -509,7 +612,13 @@ class CommonAction extends _$CommonAction {
     final download = ref.read(updateDownloadStateProvider);
     if (download is! UpdateReady) return;
     if (system.isMacOS) {
-      await _installMacUpdate(download);
+      if (_isInstallingUpdate) return;
+      _isInstallingUpdate = true;
+      try {
+        await _installMacUpdate(download);
+      } finally {
+        _isInstallingUpdate = false;
+      }
       return;
     }
     if (system.isAndroid) {

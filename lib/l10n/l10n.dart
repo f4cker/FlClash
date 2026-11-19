@@ -14146,6 +14146,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The VPN service could not start.'**
   String get vpnServiceStartFailed;
+
+  /// No description provided for @updateVersionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Current version: {current}\nAvailable version: {available}'**
+  String updateVersionSummary(String current, String available);
+
+  /// No description provided for @updateImmediately.
+  ///
+  /// In en, this message translates to:
+  /// **'Update now'**
+  String get updateImmediately;
+
+  /// No description provided for @updateMenuVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW {available}'**
+  String updateMenuVersion(String available);
+
+  /// No description provided for @viewUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'View update'**
+  String get viewUpdate;
+
+  /// No description provided for @trayStartCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Start core'**
+  String get trayStartCore;
+
+  /// No description provided for @trayStopCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop core'**
+  String get trayStopCore;
+
+  /// No description provided for @trayCoreProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get trayCoreProcessing;
 }
 
 class _AppLocalizationsDelegate

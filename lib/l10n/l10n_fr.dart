@@ -8617,4 +8617,29 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get vpnServiceStartFailed => 'Le service VPN n\'a pas pu démarrer.';
+
+  @override
+  String updateVersionSummary(String current, String available) {
+    return 'Version actuelle : $current\nVersion disponible : $available';
+  }
+
+  @override
+  String get updateImmediately => 'Mettre à jour maintenant';
+
+  @override
+  String updateMenuVersion(String available) {
+    return 'NOUVELLE $available';
+  }
+
+  @override
+  String get viewUpdate => 'Voir la mise à jour';
+
+  @override
+  String get trayStartCore => 'Démarrer le noyau';
+
+  @override
+  String get trayStopCore => 'Arrêter le noyau';
+
+  @override
+  String get trayCoreProcessing => 'En cours';
 }

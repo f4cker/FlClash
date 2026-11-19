@@ -12,6 +12,7 @@ import 'package:prism_ui/prism_ui.dart';
 import 'package:rust_api/tray.dart';
 
 import 'app_localizations.dart';
+import 'app_update.dart';
 import 'app_ports.dart';
 import 'compute.dart';
 import 'constant.dart';
@@ -178,6 +179,9 @@ class AppTray implements TrayPort {
       },
     );
 
+    final corePending =
+        read(trayCoreTogglePendingProvider) ||
+        read(coreStatusProvider) == CoreStatus.connecting;
     final mitmIndicator = trayState.mitmIndicator;
     return [
       // Decryption is said first, whenever it is on.
@@ -192,12 +196,15 @@ class AppTray implements TrayPort {
       ],
       showItem,
       TrayMenuCheckbox(
-        label: trayState.isStart
-            ? appLocalizations.stop
-            : appLocalizations.start,
+        label: corePending
+            ? appLocalizations.trayCoreProcessing
+            : trayState.isStart
+            ? appLocalizations.trayStopCore
+            : appLocalizations.trayStartCore,
         checked: false,
+        enabled: !corePending,
         detail: shortcut(HotAction.start),
-        onSelected: commonAction.toggleRunning,
+        onSelected: () => _observe(commonAction.toggleRunningForTray()),
       ),
       if (isMacOS) ...[
         TrayMenuCheckbox(
@@ -270,6 +277,28 @@ class AppTray implements TrayPort {
         detail: shortcut(HotAction.copyEnv),
         onSelected: systemAction.copyProxyEnv,
       ),
+      if (isMacOS && read(lastUpdateCheckStateProvider) is UpdateCheckFailed)
+        TrayMenuAction.status(
+          label: appLocalizations.updateCheckFailed,
+          statusKey: 'update-check',
+        ),
+      if (isMacOS)
+        if (read(availableUpdateStateProvider) case final available?)
+          TrayMenuAction(
+            label: switch (read(updateDownloadStateProvider)) {
+              UpdateDownloading() => appLocalizations.downloadingUpdate,
+              UpdateReady() when read(updateInstallBusyProvider) =>
+                appLocalizations.macUpdateInstalling,
+              _ when read(updateInstallBusyProvider) =>
+                appLocalizations.trayCoreProcessing,
+              _ => appLocalizations.updateImmediately,
+            },
+            detail: appLocalizations.updateMenuVersion(available.versionLabel),
+            enabled:
+                !read(updateInstallBusyProvider) &&
+                read(updateDownloadStateProvider) is! UpdateDownloading,
+            onSelected: () => _observe(commonAction.updateFromTray(available)),
+          ),
       const TrayMenuSeparator(),
       exitItem,
     ];

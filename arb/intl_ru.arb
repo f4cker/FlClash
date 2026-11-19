@@ -3572,5 +3572,12 @@
   "coreStoppedWithReason": "Приложение потеряло связь с ядром: {reason}",
   "mixedPortReset": "Смешанный порт не может быть {value}, он возвращён к {port}",
   "vpnPermissionNotGranted": "Разрешение на VPN не выдано, поэтому VPN не запущен. Постоянная VPN, заданная для другого приложения, тоже мешает запуску.",
-  "vpnServiceStartFailed": "Не удалось запустить службу VPN."
+  "vpnServiceStartFailed": "Не удалось запустить службу VPN.",
+  "updateVersionSummary": "Текущая версия: {current}\nДоступная версия: {available}",
+  "updateImmediately": "Обновить сейчас",
+  "updateMenuVersion": "НОВАЯ {available}",
+  "viewUpdate": "Посмотреть обновление",
+  "trayStartCore": "Запустить ядро",
+  "trayStopCore": "Остановить ядро",
+  "trayCoreProcessing": "Обработка"
 }

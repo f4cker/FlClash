@@ -8427,4 +8427,29 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get vpnServiceStartFailed => 'VPN 서비스를 시작하지 못했습니다.';
+
+  @override
+  String updateVersionSummary(String current, String available) {
+    return '현재 버전: $current\n업데이트 가능 버전: $available';
+  }
+
+  @override
+  String get updateImmediately => '지금 업데이트';
+
+  @override
+  String updateMenuVersion(String available) {
+    return 'NEW $available';
+  }
+
+  @override
+  String get viewUpdate => '업데이트 보기';
+
+  @override
+  String get trayStartCore => '코어 시작';
+
+  @override
+  String get trayStopCore => '코어 중지';
+
+  @override
+  String get trayCoreProcessing => '처리 중';
 }

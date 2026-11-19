@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_clash/common/app_localizations.dart';
+import 'package:fl_clash/common/app_update.dart';
 import 'package:fl_clash/common/app_ports.dart';
 import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/common/l10n_labels.dart';
@@ -192,13 +193,75 @@ void main() {
     },
   );
 
+  test(
+    'update row carries full target in a separate clickable detail column',
+    () async {
+      container.listen(availableUpdateStateProvider, (_, _) {});
+      container.listen(updateInstallBusyProvider, (_, _) {});
+      container.listen(lastUpdateCheckStateProvider, (_, _) {});
+      container.read(availableUpdateStateProvider.notifier).value =
+          const UpdateAvailable({'tag_name': 'v1.0.0+2026111902'});
+      await update(_trayState());
+      final row = showCall()!.menu.firstWhere(
+        (item) => item.label == 'Update now',
+      );
+      expect(row.detail, 'NEW 1.0.0+2026111902');
+      expect(row.enabled, isTrue);
+      container.read(updateInstallBusyProvider.notifier).value = true;
+      await update(_trayState());
+      expect(
+        showCall()!.menu
+            .firstWhere((item) => item.label == 'Processing')
+            .enabled,
+        isFalse,
+      );
+      container.read(updateInstallBusyProvider.notifier).value = false;
+      container.read(lastUpdateCheckStateProvider.notifier).value =
+          UpdateCheckFailed(Exception('offline'));
+      await update(_trayState());
+      expect(
+        _labels(showCall()),
+        contains(currentAppLocalizations.updateCheckFailed),
+      );
+      expect(_labels(showCall()), contains('Update now'));
+      container.read(availableUpdateStateProvider.notifier).value = null;
+      await update(_trayState());
+      expect(_labels(showCall()), isNot(contains('Update now')));
+    },
+  );
+
+  test(
+    'pending core transition disables the row without changing running state',
+    () async {
+      container.listen(trayCoreTogglePendingProvider, (_, _) {});
+      container.read(trayCoreTogglePendingProvider.notifier).value = true;
+      await update(_trayState(isStart: true));
+      final pending = showCall()!.menu.firstWhere(
+        (item) => item.label == 'Processing',
+      );
+      expect(pending.enabled, isFalse);
+      expect(_labels(showCall()), isNot(contains('Start core')));
+      container.read(trayCoreTogglePendingProvider.notifier).value = false;
+      await update(_trayState(isStart: true));
+      expect(_labels(showCall()), contains('Stop core'));
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
+      await update(_trayState());
+      expect(
+        showCall()!.menu
+            .firstWhere((item) => item.label == 'Processing')
+            .enabled,
+        isFalse,
+      );
+    },
+  );
+
   test('builds the stopped menu without the running-only toggles', () async {
     await update(_trayState());
 
     final labels = _labels(showCall());
     final l10n = currentAppLocalizations;
     expect(labels, contains(l10n.show));
-    expect(labels, contains(l10n.start));
+    expect(labels, contains(l10n.trayStartCore));
     expect(labels, contains(l10n.autoLaunch));
     expect(labels, contains(l10n.trayCopyProxyCommand));
     expect(labels, contains(l10n.exit));
@@ -211,7 +274,7 @@ void main() {
 
     final labels = _labels(showCall());
     final l10n = currentAppLocalizations;
-    expect(labels, contains(l10n.stop), reason: 'start flips to stop');
+    expect(labels, contains(l10n.trayStopCore), reason: 'start flips to stop');
     expect(labels, contains(l10n.trayTunMode));
     expect(labels, contains(l10n.systemProxy));
   });
@@ -222,7 +285,7 @@ void main() {
 
       final labels = _labels(showCall());
       final l10n = currentAppLocalizations;
-      expect(labels, contains(l10n.stop));
+      expect(labels, contains(l10n.trayStopCore));
       expect(labels, contains(l10n.trayTunMode));
       expect(labels, contains(l10n.systemProxy));
       expect(labels, contains(l10n.trayCopyProxyCommand));
@@ -828,7 +891,7 @@ void main() {
       final l10n = currentAppLocalizations;
       expect(_items(showCall()).map((item) => item['label'] ?? '|'), [
         l10n.show,
-        l10n.stop,
+        l10n.trayStopCore,
         l10n.speedStatistics,
         l10n.monochromeIcon,
         '|',

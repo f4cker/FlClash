@@ -8564,4 +8564,29 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get vpnServiceStartFailed => 'Не удалось запустить службу VPN.';
+
+  @override
+  String updateVersionSummary(String current, String available) {
+    return 'Текущая версия: $current\nДоступная версия: $available';
+  }
+
+  @override
+  String get updateImmediately => 'Обновить сейчас';
+
+  @override
+  String updateMenuVersion(String available) {
+    return 'НОВАЯ $available';
+  }
+
+  @override
+  String get viewUpdate => 'Посмотреть обновление';
+
+  @override
+  String get trayStartCore => 'Запустить ядро';
+
+  @override
+  String get trayStopCore => 'Остановить ядро';
+
+  @override
+  String get trayCoreProcessing => 'Обработка';
 }

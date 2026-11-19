@@ -7869,4 +7869,29 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get vpnServiceStartFailed => 'VPN 服务无法启动。';
+
+  @override
+  String updateVersionSummary(String current, String available) {
+    return '当前版本：$current\n可更新版本：$available';
+  }
+
+  @override
+  String get updateImmediately => '立即更新';
+
+  @override
+  String updateMenuVersion(String available) {
+    return 'NEW $available';
+  }
+
+  @override
+  String get viewUpdate => '查看更新';
+
+  @override
+  String get trayStartCore => '启动核心';
+
+  @override
+  String get trayStopCore => '停止核心';
+
+  @override
+  String get trayCoreProcessing => '处理中';
 }

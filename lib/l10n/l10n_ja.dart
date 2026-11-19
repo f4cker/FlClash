@@ -8352,4 +8352,29 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get vpnServiceStartFailed => 'VPN サービスを起動できませんでした。';
+
+  @override
+  String updateVersionSummary(String current, String available) {
+    return '現在のバージョン：$current\n更新可能なバージョン：$available';
+  }
+
+  @override
+  String get updateImmediately => '今すぐ更新';
+
+  @override
+  String updateMenuVersion(String available) {
+    return 'NEW $available';
+  }
+
+  @override
+  String get viewUpdate => '更新を確認';
+
+  @override
+  String get trayStartCore => 'コアを起動';
+
+  @override
+  String get trayStopCore => 'コアを停止';
+
+  @override
+  String get trayCoreProcessing => '処理中';
 }

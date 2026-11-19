@@ -234,6 +234,217 @@ abstract class _$UpdateDownloadState extends $Notifier<UpdateDownload?> {
   }
 }
 
+@ProviderFor(AvailableUpdateState)
+final availableUpdateStateProvider = AvailableUpdateStateProvider._();
+
+final class AvailableUpdateStateProvider
+    extends $NotifierProvider<AvailableUpdateState, UpdateAvailable?> {
+  AvailableUpdateStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'availableUpdateStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$availableUpdateStateHash();
+
+  @$internal
+  @override
+  AvailableUpdateState create() => AvailableUpdateState();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(UpdateAvailable? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<UpdateAvailable?>(value),
+    );
+  }
+}
+
+String _$availableUpdateStateHash() =>
+    r'ace841b1c0f37d154cb410d16481576542cb0aca';
+
+abstract class _$AvailableUpdateState extends $Notifier<UpdateAvailable?> {
+  UpdateAvailable? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<UpdateAvailable?, UpdateAvailable?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<UpdateAvailable?, UpdateAvailable?>,
+              UpdateAvailable?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(TrayCoreTogglePending)
+final trayCoreTogglePendingProvider = TrayCoreTogglePendingProvider._();
+
+final class TrayCoreTogglePendingProvider
+    extends $NotifierProvider<TrayCoreTogglePending, bool> {
+  TrayCoreTogglePendingProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'trayCoreTogglePendingProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$trayCoreTogglePendingHash();
+
+  @$internal
+  @override
+  TrayCoreTogglePending create() => TrayCoreTogglePending();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$trayCoreTogglePendingHash() =>
+    r'd9ae1e5747b096282f913355f3e18a33925256e5';
+
+abstract class _$TrayCoreTogglePending extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(LastUpdateCheckState)
+final lastUpdateCheckStateProvider = LastUpdateCheckStateProvider._();
+
+final class LastUpdateCheckStateProvider
+    extends $NotifierProvider<LastUpdateCheckState, UpdateCheck?> {
+  LastUpdateCheckStateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'lastUpdateCheckStateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$lastUpdateCheckStateHash();
+
+  @$internal
+  @override
+  LastUpdateCheckState create() => LastUpdateCheckState();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(UpdateCheck? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<UpdateCheck?>(value),
+    );
+  }
+}
+
+String _$lastUpdateCheckStateHash() =>
+    r'31cb2589e4ee50d55dc9a64323308d4546a41486';
+
+abstract class _$LastUpdateCheckState extends $Notifier<UpdateCheck?> {
+  UpdateCheck? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<UpdateCheck?, UpdateCheck?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<UpdateCheck?, UpdateCheck?>,
+              UpdateCheck?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(UpdateInstallBusy)
+final updateInstallBusyProvider = UpdateInstallBusyProvider._();
+
+final class UpdateInstallBusyProvider
+    extends $NotifierProvider<UpdateInstallBusy, bool> {
+  UpdateInstallBusyProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'updateInstallBusyProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$updateInstallBusyHash();
+
+  @$internal
+  @override
+  UpdateInstallBusy create() => UpdateInstallBusy();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$updateInstallBusyHash() => r'2c5225d35b3b1e090e05ca16025b0f15e9283aca';
+
+abstract class _$UpdateInstallBusy extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(CoreCapabilitiesState)
 final coreCapabilitiesStateProvider = CoreCapabilitiesStateProvider._();
 

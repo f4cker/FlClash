@@ -14,6 +14,9 @@ import 'package:path/path.dart';
 
 const appReleaseLine = package.ReleaseLine.dev;
 
+String appVersionLabel(String version, String build) =>
+    build.isEmpty ? version : '$version+$build';
+
 sealed class UpdateDownload {
   const UpdateDownload(this.tag);
 
@@ -71,6 +74,10 @@ final class UpdateAvailable extends UpdateCheck {
   const UpdateAvailable(this.release, {this.manifest});
 
   final Map<String, dynamic> release;
+
+  String get versionLabel => manifest == null
+      ? (release['tag_name'] as String).replaceFirst(RegExp(r'^v'), '')
+      : appVersionLabel(manifest!.version, '${manifest!.build}');
 
   /// Set on macOS, where the signed manifest is the release.
   final MacUpdateManifest? manifest;

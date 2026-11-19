@@ -3572,5 +3572,29 @@
     }
   },
   "vpnPermissionNotGranted": "VPN permission was not granted, so the VPN did not start. An always-on VPN set for another app also blocks it.",
-  "vpnServiceStartFailed": "The VPN service could not start."
+  "vpnServiceStartFailed": "The VPN service could not start.",
+  "updateVersionSummary": "Current version: {current}\nAvailable version: {available}",
+  "@updateVersionSummary": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "available": {
+        "type": "String"
+      }
+    }
+  },
+  "updateImmediately": "Update now",
+  "updateMenuVersion": "NEW {available}",
+  "@updateMenuVersion": {
+    "placeholders": {
+      "available": {
+        "type": "String"
+      }
+    }
+  },
+  "viewUpdate": "View update",
+  "trayStartCore": "Start core",
+  "trayStopCore": "Stop core",
+  "trayCoreProcessing": "Processing"
 }

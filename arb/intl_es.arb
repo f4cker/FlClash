@@ -3572,5 +3572,12 @@
   "coreStoppedWithReason": "La app perdió la conexión con el núcleo: {reason}",
   "mixedPortReset": "El puerto mixto no puede ser {value}, se restableció a {port}",
   "vpnPermissionNotGranted": "No se concedió el permiso de VPN, así que la VPN no se inició. Una VPN siempre activa configurada en otra app también lo impide.",
-  "vpnServiceStartFailed": "No se pudo iniciar el servicio VPN."
+  "vpnServiceStartFailed": "No se pudo iniciar el servicio VPN.",
+  "updateVersionSummary": "Versión actual: {current}\nVersión disponible: {available}",
+  "updateImmediately": "Actualizar ahora",
+  "updateMenuVersion": "NUEVA {available}",
+  "viewUpdate": "Ver actualización",
+  "trayStartCore": "Iniciar núcleo",
+  "trayStopCore": "Detener núcleo",
+  "trayCoreProcessing": "Procesando"
 }

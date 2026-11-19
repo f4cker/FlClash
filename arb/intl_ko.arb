@@ -3572,5 +3572,12 @@
   "coreStoppedWithReason": "앱과 코어의 연결이 끊어졌습니다: {reason}",
   "mixedPortReset": "혼합 포트는 {value}일 수 없어 {port}(으)로 되돌렸습니다",
   "vpnPermissionNotGranted": "VPN 권한이 허용되지 않아 VPN을 시작하지 않았습니다. 다른 앱이 상시 사용 VPN으로 설정되어 있어도 시작할 수 없습니다.",
-  "vpnServiceStartFailed": "VPN 서비스를 시작하지 못했습니다."
+  "vpnServiceStartFailed": "VPN 서비스를 시작하지 못했습니다.",
+  "updateVersionSummary": "현재 버전: {current}\n업데이트 가능 버전: {available}",
+  "updateImmediately": "지금 업데이트",
+  "updateMenuVersion": "NEW {available}",
+  "viewUpdate": "업데이트 보기",
+  "trayStartCore": "코어 시작",
+  "trayStopCore": "코어 중지",
+  "trayCoreProcessing": "처리 중"
 }

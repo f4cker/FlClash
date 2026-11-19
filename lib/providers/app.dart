@@ -45,6 +45,34 @@ class UpdateDownloadState extends _$UpdateDownloadState
 }
 
 @Riverpod(keepAlive: true)
+class AvailableUpdateState extends _$AvailableUpdateState
+    with AutoDisposeNotifierMixin {
+  @override
+  UpdateAvailable? build() => null;
+}
+
+@Riverpod(keepAlive: true)
+class TrayCoreTogglePending extends _$TrayCoreTogglePending
+    with AutoDisposeNotifierMixin {
+  @override
+  bool build() => false;
+}
+
+@Riverpod(keepAlive: true)
+class LastUpdateCheckState extends _$LastUpdateCheckState
+    with AutoDisposeNotifierMixin {
+  @override
+  UpdateCheck? build() => null;
+}
+
+@Riverpod(keepAlive: true)
+class UpdateInstallBusy extends _$UpdateInstallBusy
+    with AutoDisposeNotifierMixin {
+  @override
+  bool build() => false;
+}
+
+@Riverpod(keepAlive: true)
 class CoreCapabilitiesState extends _$CoreCapabilitiesState
     with AutoDisposeNotifierMixin {
   @override

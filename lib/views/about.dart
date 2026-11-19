@@ -188,7 +188,10 @@ class _AboutHero extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: [
               _Pill(
-                label: 'v${globalState.packageInfo.version}',
+                label: appVersionLabel(
+                  globalState.packageInfo.version,
+                  globalState.packageInfo.buildNumber,
+                ),
                 color: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
               ),

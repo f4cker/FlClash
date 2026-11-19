@@ -50,6 +50,17 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
       }
     });
     if (_isMacOS) {
+      ref.listenManual(availableUpdateStateProvider, (prev, next) {
+        _onMenuDataChanged(prev, next);
+      });
+      ref.listenManual(lastUpdateCheckStateProvider, (prev, next) {
+        _onMenuDataChanged(prev, next);
+      });
+      ref.listenManual(trayCoreTogglePendingProvider, _onMenuDataChanged);
+      ref.listenManual(updateInstallBusyProvider, _onMenuDataChanged);
+      ref.listenManual(updateDownloadStateProvider, (prev, next) {
+        _onMenuDataChanged(prev, next);
+      });
       ref.listenManual(groupsProvider, _onMenuDataChanged);
       ref.listenManual(profilesProvider, _onMenuDataChanged);
       ref.listenManual(

@@ -9,6 +9,19 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../tool/src/package/version.dart';
 
 void main() {
+  test('full labels retain prerelease and build metadata without guessing', () {
+    expect(
+      appVersionLabel('0.9.15-mitm.12', '2026111901'),
+      '0.9.15-mitm.12+2026111901',
+    );
+    expect(appVersionLabel('1.0.0', '2026111902'), '1.0.0+2026111902');
+    expect(appVersionLabel('1.0.0', ''), '1.0.0');
+    expect(
+      const UpdateAvailable({'tag_name': 'v1.0.0-rc.2'}).versionLabel,
+      '1.0.0-rc.2',
+    );
+  });
+
   String? nameOn(Abi abi, {required bool windowsInstalled}) {
     final asset = selfUpdateAssetFor(abi, windowsInstalled: windowsInstalled);
     return asset == null ? null : updateAssetName('v0.9.4', asset);
