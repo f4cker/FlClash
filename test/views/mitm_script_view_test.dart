@@ -491,7 +491,7 @@ hostname = %APPEND% a.com:443, b.com:8443, api*.c.com, d.com
     );
     await tester.pumpAndSettle();
     expect(
-      find.textContaining(currentAppLocalizations.mitmHostIgnored),
+      find.textContaining(currentAppLocalizations.mitmHostFormatHint),
       findsNothing,
     );
     expect(find.textContaining('api.a.com'), findsWidgets);

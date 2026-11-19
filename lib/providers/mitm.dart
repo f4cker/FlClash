@@ -895,7 +895,12 @@ Future<Map<String, String>> mitmHostnameIssues(Ref ref) async {
     return const {};
   }
   final check = await _checkOf(ref, MitmRules(hostname: hostname));
-  return check.issues[MitmList.hostname] ?? const {};
+  final l = currentAppLocalizations;
+  return {
+    for (final MapEntry(key: line, value: code)
+        in (check.issues[MitmList.hostname] ?? const {}).entries)
+      line: mitmHostIssueText(l, line, code),
+  };
 }
 
 typedef _MitmLineCheck = ({
@@ -1103,15 +1108,18 @@ Future<MitmModuleDetails?> mitmModuleDetails(Ref ref, int id) async {
         MitmList.hostname: hostnames,
     },
   );
-  final ignored = flashUnusableHostnames(content);
+  final l = currentAppLocalizations;
+  final coreHosts = check.issues[MitmList.hostname] ?? const {};
   final unsupported = {
     ...flashMitmIssues(content),
-    // Told here as well, so it shows while the Core is not running.
-    if (ignored.isNotEmpty)
-      MitmList.hostname: {
-        for (final line in ignored)
-          line: currentAppLocalizations.mitmHostIgnored,
-      },
+    // The app's own reading as well, so it shows while the Core is not
+    // running; each with its reason in words.
+    MitmList.hostname: {
+      for (final line in hostnames)
+        if (coreHosts.containsKey(line) ||
+            flashUnusableHostLines([line]).isNotEmpty)
+          line: mitmHostIssueText(l, flashMitmHostname(line), coreHosts[line]),
+    },
   };
   return (
     content: content,
@@ -1147,12 +1155,11 @@ final mitmModuleHostIssuesProvider = FutureProvider.autoDispose
               const {};
         } catch (_) {}
       }
+      final l = currentAppLocalizations;
       return {
         for (final (index, line) in hostnames.indexed)
-          if (ignored.contains(line))
-            line: currentAppLocalizations.mitmHostIgnored
-          else if (core[index] case final String issue)
-            line: issue,
+          if (ignored.contains(line) || core.containsKey(index))
+            line: mitmHostIssueText(l, flashMitmHostname(line), core[index]),
       };
     });
 

@@ -13988,8 +13988,56 @@ abstract class AppLocalizations {
   /// No description provided for @mitmHostIgnored.
   ///
   /// In en, this message translates to:
-  /// **'Ignored: Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.'**
-  String get mitmHostIgnored;
+  /// **'Ignored: {reason}'**
+  String mitmHostIgnored(Object reason);
+
+  /// No description provided for @mitmHostReasonUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason unknown'**
+  String get mitmHostReasonUnknown;
+
+  /// No description provided for @mitmHostReasonEmbeddedWildcard.
+  ///
+  /// In en, this message translates to:
+  /// **'* in the middle of a name is not supported'**
+  String get mitmHostReasonEmbeddedWildcard;
+
+  /// No description provided for @mitmHostReasonIpAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'IP addresses are not supported'**
+  String get mitmHostReasonIpAddress;
+
+  /// No description provided for @mitmHostReasonUnsupportedPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported port'**
+  String get mitmHostReasonUnsupportedPort;
+
+  /// No description provided for @mitmHostReasonInvalidFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid hostname format'**
+  String get mitmHostReasonInvalidFormat;
+
+  /// No description provided for @mitmHostReasonOverBroad.
+  ///
+  /// In en, this message translates to:
+  /// **'Match is too broad'**
+  String get mitmHostReasonOverBroad;
+
+  /// No description provided for @mitmHostReasonAppleService.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple service domain'**
+  String get mitmHostReasonAppleService;
+
+  /// No description provided for @mitmHostFormatHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.'**
+  String get mitmHostFormatHint;
 
   /// No description provided for @mitmClientSourceRisk.
   ///

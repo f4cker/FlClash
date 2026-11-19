@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/mitm_module.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/common/mitm_script.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -53,8 +54,51 @@ String flashMitmHostname(String line) {
   return host.contains(':') || host.endsWith(']') ? trimmed : host;
 }
 
-final _ipv4 = RegExp(r'^\d{1,3}(\.\d{1,3}){3}$');
+final _ipv4Part = RegExp(r'^(0|[1-9][0-9]{0,2})$');
 final _dnsLabel = RegExp(r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$');
+final _port = RegExp(r'^[0-9]{1,5}$');
+
+/// Why a hostname line is not decrypted, as far as it is known.
+enum MitmHostReason {
+  appleService,
+  overBroad,
+  invalidFormat,
+  unsupportedPort,
+  ipAddress,
+  embeddedWildcard,
+  unknown;
+
+  /// From the Core's issue code (core/mitm_host.go). Its `address` covers
+  /// both an address and a port, so it says no more than that it is skipped.
+  static MitmHostReason ofCore(String code) => switch (code) {
+    'apple-service' => appleService,
+    'over-broad' => overBroad,
+    'invalid' => invalidFormat,
+    _ => unknown,
+  };
+}
+
+String mitmHostReasonText(AppLocalizations l, MitmHostReason reason) =>
+    switch (reason) {
+      MitmHostReason.appleService => l.mitmHostReasonAppleService,
+      MitmHostReason.overBroad => l.mitmHostReasonOverBroad,
+      MitmHostReason.invalidFormat => l.mitmHostReasonInvalidFormat,
+      MitmHostReason.unsupportedPort => l.mitmHostReasonUnsupportedPort,
+      MitmHostReason.ipAddress => l.mitmHostReasonIpAddress,
+      MitmHostReason.embeddedWildcard => l.mitmHostReasonEmbeddedWildcard,
+      MitmHostReason.unknown => l.mitmHostReasonUnknown,
+    };
+
+/// What a skipped hostname line shows: ignored, and why. The app's own
+/// reading of [line] (as the Core is sent it) comes first; [coreCode], the
+/// Core's, tells what only the Core knows, too broad or Apple's.
+String mitmHostIssueText(AppLocalizations l, String line, String? coreCode) {
+  final reason =
+      flashHostReason(line) ??
+      (coreCode == null ? null : MitmHostReason.ofCore(coreCode)) ??
+      MitmHostReason.unknown;
+  return l.mitmHostIgnored(mitmHostReasonText(l, reason));
+}
 
 /// The module's hostname lines the Core skips as written: another port, an
 /// address, or not a name it can read, such as one with a `*` or `?` inside;
@@ -65,7 +109,9 @@ List<String> flashUnusableHostnames(MitmModuleContent content) =>
 
 List<String> flashUnusableHostLines(List<String> lines) => [
   for (final line in lines)
-    if (_unusableHostname(flashMitmHostname(line))) line,
+    if (flashHostReason(flashMitmHostname(line)) case final reason?
+        when reason != MitmHostReason.overBroad)
+      line,
 ];
 
 /// The module's hostname lines as written, in the order the Core is sent
@@ -80,15 +126,57 @@ String _normalizeHost(String host) {
   return text.endsWith('.') ? text.substring(0, text.length - 1) : text;
 }
 
-/// core/mitm_host.go's parseMitmHostEntry, up to the name's syntax.
-bool _unusableHostname(String line) {
+bool _isIPv4(String text) {
+  final parts = text.split('.');
+  return parts.length == 4 &&
+      parts.every((part) => _ipv4Part.hasMatch(part) && int.parse(part) <= 255);
+}
+
+bool _isIP(String text) {
+  if (_isIPv4(text)) return true;
+  if (!text.contains(':')) return false;
+  try {
+    Uri.parseIPv6Address(text);
+    return true;
+  } on FormatException {
+    return false;
+  }
+}
+
+/// `*` other than as a leading `*.` label, in a name that is otherwise one.
+bool _embeddedWildcard(String host) {
+  if (host.startsWith('*') && !host.startsWith('*.')) return false;
+  final name = host.startsWith('*.') ? host.substring(2) : host;
+  return name.contains('*') && _validDNSName(name.replaceAll('*', 'a'));
+}
+
+/// Why the Core skips [line] (as it is sent it), from the syntax alone, as
+/// core/mitm_host.go's parseMitmHostEntry reads it; null for a name whose
+/// syntax holds, which only the Core can still find too broad or Apple's.
+MitmHostReason? flashHostReason(String line) {
   var host = _normalizeHost(line);
   final exclude = host.startsWith('-');
   if (exclude) host = _normalizeHost(host.substring(1));
-  if (host == '*' || host == '*.') return exclude;
-  if (host.contains(':') || _ipv4.hasMatch(host)) return true;
-  if (host.startsWith('*.')) host = host.substring(2);
-  return !_validDNSName(host);
+  if (host == '*' || host == '*.') {
+    return exclude ? MitmHostReason.invalidFormat : MitmHostReason.overBroad;
+  }
+  final bare = host.replaceAll(RegExp(r'^\[+|\]+$'), '');
+  if (_isIP(bare)) return MitmHostReason.ipAddress;
+  if (host.contains(':')) {
+    final at = host.lastIndexOf(':');
+    final name = host.substring(0, at);
+    if (_port.hasMatch(host.substring(at + 1))) {
+      if (_isIP(name.replaceAll(RegExp(r'^\[+|\]+$'), ''))) {
+        return MitmHostReason.ipAddress;
+      }
+      final base = name.startsWith('*.') ? name.substring(2) : name;
+      if (_validDNSName(base)) return MitmHostReason.unsupportedPort;
+    }
+    return MitmHostReason.invalidFormat;
+  }
+  if (_embeddedWildcard(host)) return MitmHostReason.embeddedWildcard;
+  final base = host.startsWith('*.') ? host.substring(2) : host;
+  return _validDNSName(base) ? null : MitmHostReason.invalidFormat;
 }
 
 /// core/mitm_host.go's validDNSName: an all-digit last label is an address.

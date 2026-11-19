@@ -8453,8 +8453,35 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get mitmHostIgnored =>
-      'Игнорируется: используйте домен, например api.example.com или *.example.com. Поддерживается только порт 443; IP-адреса и * в середине имени не поддерживаются.';
+  String mitmHostIgnored(Object reason) {
+    return 'Игнорируется: $reason';
+  }
+
+  @override
+  String get mitmHostReasonUnknown => 'Причина неизвестна';
+
+  @override
+  String get mitmHostReasonEmbeddedWildcard =>
+      '* в середине имени не поддерживается';
+
+  @override
+  String get mitmHostReasonIpAddress => 'IP-адреса не поддерживаются';
+
+  @override
+  String get mitmHostReasonUnsupportedPort => 'Порт не поддерживается';
+
+  @override
+  String get mitmHostReasonInvalidFormat => 'Недопустимый формат имени хоста';
+
+  @override
+  String get mitmHostReasonOverBroad => 'Слишком широкий диапазон совпадений';
+
+  @override
+  String get mitmHostReasonAppleService => 'Домен службы Apple';
+
+  @override
+  String get mitmHostFormatHint =>
+      'Используйте домен, например api.example.com или *.example.com. Поддерживается только порт 443; IP-адреса и * в середине имени не поддерживаются.';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

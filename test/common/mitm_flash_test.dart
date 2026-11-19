@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:fl_clash/common/mitm_flash.dart';
+import 'package:fl_clash/common/common.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -228,6 +229,87 @@ hostname = %APPEND% a.com:443, b.com:8443, -c.com:80, api*.d.com, *e.com, f?.com
             reason: '$line:443',
           );
         }
+      }
+    });
+
+    test('each skipped line has the reason the syntax shows', () {
+      const cases = {
+        'b.com:8443': MitmHostReason.unsupportedPort,
+        '*.b.com:80': MitmHostReason.unsupportedPort,
+        '-c.com:80': MitmHostReason.unsupportedPort,
+        '1.2.3.4': MitmHostReason.ipAddress,
+        '1.2.3.4:8443': MitmHostReason.ipAddress,
+        '::1': MitmHostReason.ipAddress,
+        '[2001:db8::1]': MitmHostReason.ipAddress,
+        '[::1]:443': MitmHostReason.ipAddress,
+        'api*.d.com': MitmHostReason.embeddedWildcard,
+        'x*.a.com': MitmHostReason.embeddedWildcard,
+        '*.*.example.com': MitmHostReason.embeddedWildcard,
+        'api.*.example.com': MitmHostReason.embeddedWildcard,
+        '*e.com': MitmHostReason.invalidFormat,
+        'f?.com': MitmHostReason.invalidFormat,
+        'bad_host.com': MitmHostReason.invalidFormat,
+        'ex..ample.com': MitmHostReason.invalidFormat,
+        '1.2.3': MitmHostReason.invalidFormat,
+        '01.2.3.4': MitmHostReason.invalidFormat,
+        'https://example.com': MitmHostReason.invalidFormat,
+        'bücher.example': MitmHostReason.invalidFormat,
+        '-*': MitmHostReason.invalidFormat,
+        '*': MitmHostReason.overBroad,
+        // Valid syntax: only the Core can say more.
+        'a.com': null,
+        '*.a.com': null,
+        '-a.com': null,
+        '*.com': null,
+        'icloud.com': null,
+      };
+      for (final MapEntry(key: line, value: reason) in cases.entries) {
+        expect(flashHostReason(line), reason, reason: line);
+      }
+    });
+
+    test('a skipped line reads in words, never as the Core code', () {
+      loadAppLocalizations(const Locale('en'));
+      final l = currentAppLocalizations;
+      String text(String line, String? code) =>
+          mitmHostIssueText(l, line, code);
+      expect(
+        text('icloud.com', 'apple-service'),
+        l.mitmHostIgnored(l.mitmHostReasonAppleService),
+      );
+      expect(
+        text('*.com', 'over-broad'),
+        l.mitmHostIgnored(l.mitmHostReasonOverBroad),
+      );
+      expect(
+        text('x.com', 'invalid'),
+        l.mitmHostIgnored(l.mitmHostReasonInvalidFormat),
+      );
+      // The app's reading is the more specific one.
+      expect(
+        text('b.com:8443', 'address'),
+        l.mitmHostIgnored(l.mitmHostReasonUnsupportedPort),
+      );
+      expect(
+        text('1.2.3.4', 'address'),
+        l.mitmHostIgnored(l.mitmHostReasonIpAddress),
+      );
+      // What neither can tell is not guessed.
+      expect(
+        text('a.com', 'address'),
+        l.mitmHostIgnored(l.mitmHostReasonUnknown),
+      );
+      expect(
+        text('a.com', 'something-new'),
+        l.mitmHostIgnored(l.mitmHostReasonUnknown),
+      );
+      for (final code in [
+        'apple-service',
+        'over-broad',
+        'invalid',
+        'address',
+      ]) {
+        expect(text('a.com', code), isNot(contains(code)));
       }
     });
   });
