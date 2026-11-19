@@ -122,6 +122,9 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
         'url-rewrite': [
           {'index': 1, 'message': 'unknown type "x"'},
         ],
+        'hostname': [
+          {'index': 0, 'code': 'over-broad', 'message': 'too broad'},
+        ],
       },
       CoreMethod.mitmCertificate => {
         'pem': '-----BEGIN CERTIFICATE-----',
@@ -688,6 +691,8 @@ void main() {
     expect(handler.calls[CoreMethod.mitmValidate], rules.toJson());
     expect(issues, {
       MitmList.urlRewrite: {1: 'unknown type "x"'},
+      // A hostname's issue is read by its code, for the app to word.
+      MitmList.hostname: {0: 'over-broad'},
     });
   });
 

@@ -7768,8 +7768,34 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get mitmHostIgnored =>
-      '已忽略：请使用 api.example.com 或 *.example.com 这样的域名。仅支持 443 端口，不支持 IP 地址或名称中间的 *。';
+  String mitmHostIgnored(Object reason) {
+    return '已忽略：$reason';
+  }
+
+  @override
+  String get mitmHostReasonUnknown => '原因未知';
+
+  @override
+  String get mitmHostReasonEmbeddedWildcard => '不支持名称中间的 *';
+
+  @override
+  String get mitmHostReasonIpAddress => '不支持 IP 地址';
+
+  @override
+  String get mitmHostReasonUnsupportedPort => '不支持此端口';
+
+  @override
+  String get mitmHostReasonInvalidFormat => '主机名格式无效';
+
+  @override
+  String get mitmHostReasonOverBroad => '匹配范围过宽';
+
+  @override
+  String get mitmHostReasonAppleService => 'Apple 服务域名';
+
+  @override
+  String get mitmHostFormatHint =>
+      '请使用 api.example.com 或 *.example.com 这样的域名。仅支持 443 端口，不支持 IP 地址或名称中间的 *。';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

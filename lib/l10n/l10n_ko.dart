@@ -8323,8 +8323,34 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get mitmHostIgnored =>
-      '무시됨: api.example.com 또는 *.example.com과 같은 도메인을 사용하세요. 포트는 443만 지원하며, IP 주소와 이름 중간의 *는 지원하지 않습니다.';
+  String mitmHostIgnored(Object reason) {
+    return '무시됨: $reason';
+  }
+
+  @override
+  String get mitmHostReasonUnknown => '원인 알 수 없음';
+
+  @override
+  String get mitmHostReasonEmbeddedWildcard => '이름 중간의 *는 지원하지 않음';
+
+  @override
+  String get mitmHostReasonIpAddress => 'IP 주소는 지원하지 않음';
+
+  @override
+  String get mitmHostReasonUnsupportedPort => '지원하지 않는 포트';
+
+  @override
+  String get mitmHostReasonInvalidFormat => '호스트 이름 형식이 올바르지 않음';
+
+  @override
+  String get mitmHostReasonOverBroad => '일치 범위가 너무 넓음';
+
+  @override
+  String get mitmHostReasonAppleService => 'Apple 서비스 도메인';
+
+  @override
+  String get mitmHostFormatHint =>
+      'api.example.com 또는 *.example.com과 같은 도메인을 사용하세요. 포트는 443만 지원하며, IP 주소와 이름 중간의 *는 지원하지 않습니다.';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

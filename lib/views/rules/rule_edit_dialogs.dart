@@ -7,6 +7,8 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -43,6 +45,7 @@ const _errorFill = Color(0xFFFDECEC);
 const _okInk = Color(0xFF16632C);
 const _warnInk = Color(0xFF8A5300);
 const _fieldGap = 14.0;
+const _stackedActionHeight = 44.0;
 const _labelGap = 6.0;
 const _validateDelay = Duration(milliseconds: 300);
 const _checkDelay = Duration(milliseconds: 500);
@@ -435,7 +438,7 @@ class RuleEditFrame extends StatelessWidget {
     }
 
     Widget spinner(Color color) => ActivityIndicator(size: 14, color: color);
-    final footer = Row(
+    final wide = Row(
       spacing: 8,
       children: [
         if (onDelete != null)
@@ -474,69 +477,126 @@ class RuleEditFrame extends StatelessWidget {
         ),
       ],
     );
+    // Too narrow for one row: every action on its own full-width line, the
+    // default one first, each label wrapping as it needs.
+    const stackedStyle = ButtonStyle(
+      minimumSize: Size(0, _stackedActionHeight),
+    );
+    Widget stackedLabel(String text) => Text(text, textAlign: TextAlign.center);
+    final stacked = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 8,
+      children: [
+        FilledButton(
+          style: stackedStyle,
+          onPressed: busy ? () {} : onPrimary,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 6,
+            children: [
+              if (busy && !deleting) spinner(colorScheme.onPrimary),
+              Flexible(child: stackedLabel(primaryLabel)),
+            ],
+          ),
+        ),
+        if (leading case final leading?)
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: _stackedActionHeight),
+            child: leading,
+          ),
+        if (onDelete != null)
+          TextButton(
+            style: ButtonStyle(
+              minimumSize: const Size(0, _stackedActionHeight),
+              foregroundColor: WidgetStatePropertyAll(
+                busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
+              ),
+            ),
+            onPressed: busy ? null : onDelete,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                if (deleting) spinner(_errorInk),
+                Flexible(child: stackedLabel(appLocalizations.delete)),
+              ],
+            ),
+          ),
+        TextButton(
+          style: stackedStyle,
+          onPressed: busy ? null : cancel,
+          child: stackedLabel(appLocalizations.cancel),
+        ),
+      ],
+    );
+    final footer = AdaptiveActions(wide: wide, stacked: stacked);
     return CallbackShortcuts(
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): cancel},
       child: AlertDialog(
         title: title,
         width: effective,
         hasFields: true,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: AppTextStyle.caption1
-                  .of(context)
-                  .copyWith(color: colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 16),
-            AbsorbPointer(
-              absorbing: busy,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final (index, child) in children.indexed) ...[
-                    if (index > 0) const SizedBox(height: _fieldGap),
-                    child,
-                  ],
-                ],
+        child: PinnedFooter(
+          footer: Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: footer,
+          ),
+          body: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: AppTextStyle.caption1
+                    .of(context)
+                    .copyWith(color: colorScheme.onSurfaceVariant),
               ),
-            ),
-            if (error case final error?) ...[
-              const SizedBox(height: 14),
-              Semantics(
-                liveRegion: true,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 12,
-                  ),
-                  decoration: ShapeDecoration(
-                    color: colorScheme.brightness == Brightness.light
-                        ? _errorFill
-                        : _errorInk.withValues(alpha: 0.28),
-                    shape: RoundedSuperellipseBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    error,
-                    style: AppTextStyle.footnote
-                        .of(context)
-                        .copyWith(
-                          color: colorScheme.brightness == Brightness.light
-                              ? _errorInk
-                              : const Color(0xFFF2B8B5),
-                        ),
-                  ),
+              const SizedBox(height: 16),
+              AbsorbPointer(
+                absorbing: busy,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final (index, child) in children.indexed) ...[
+                      if (index > 0) const SizedBox(height: _fieldGap),
+                      child,
+                    ],
+                  ],
                 ),
               ),
+              if (error case final error?) ...[
+                const SizedBox(height: 14),
+                Semantics(
+                  liveRegion: true,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
+                    decoration: ShapeDecoration(
+                      color: colorScheme.brightness == Brightness.light
+                          ? _errorFill
+                          : _errorInk.withValues(alpha: 0.28),
+                      shape: RoundedSuperellipseBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      error,
+                      style: AppTextStyle.footnote
+                          .of(context)
+                          .copyWith(
+                            color: colorScheme.brightness == Brightness.light
+                                ? _errorInk
+                                : const Color(0xFFF2B8B5),
+                          ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-            const SizedBox(height: 16),
-            footer,
-          ],
+          ),
         ),
       ),
     );
@@ -1638,4 +1698,218 @@ String groupedCountOf(int count) {
     buffer.write(digits[i]);
   }
   return buffer.toString();
+}
+
+/// [wide] while it fits on one line, else [stacked]. Only the one shown
+/// paints, takes taps and focus, and is read out.
+class AdaptiveActions extends StatefulWidget {
+  const AdaptiveActions({super.key, required this.wide, required this.stacked});
+
+  final Widget wide;
+  final Widget stacked;
+
+  @override
+  State<AdaptiveActions> createState() => _AdaptiveActionsState();
+}
+
+class _AdaptiveActionsState extends State<AdaptiveActions> {
+  bool _stacked = false;
+
+  void _onLayout(bool stacked) {
+    if (stacked == _stacked) return;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted && stacked != _stacked) setState(() => _stacked = stacked);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget hidden(Widget child, bool hide) => ExcludeFocus(
+      excluding: hide,
+      child: ExcludeSemantics(excluding: hide, child: child),
+    );
+    return _ActionsSwitch(
+      onLayout: _onLayout,
+      children: [
+        hidden(widget.wide, _stacked),
+        hidden(widget.stacked, !_stacked),
+      ],
+    );
+  }
+}
+
+class _ActionsSwitch extends MultiChildRenderObjectWidget {
+  const _ActionsSwitch({required this.onLayout, required super.children});
+
+  final ValueChanged<bool> onLayout;
+
+  @override
+  MultiChildRenderObjectElement createElement() => _ActionsSwitchElement(this);
+
+  @override
+  _RenderActionsSwitch createRenderObject(BuildContext context) =>
+      _RenderActionsSwitch(onLayout);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderActionsSwitch renderObject,
+  ) {
+    renderObject.onLayout = onLayout;
+  }
+}
+
+/// Tells the framework (and so tests' finders) that only the shown actions
+/// are on stage.
+class _ActionsSwitchElement extends MultiChildRenderObjectElement {
+  _ActionsSwitchElement(super.widget);
+
+  @override
+  void debugVisitOnstageChildren(ElementVisitor visitor) {
+    final stacked = (renderObject as _RenderActionsSwitch)._stacked;
+    final shown = children.toList();
+    if (shown.length != 2) return super.debugVisitOnstageChildren(visitor);
+    visitor(stacked ? shown.last : shown.first);
+  }
+}
+
+class _ActionsSwitchData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderActionsSwitch extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _ActionsSwitchData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _ActionsSwitchData> {
+  _RenderActionsSwitch(this.onLayout);
+
+  ValueChanged<bool> onLayout;
+  bool _stacked = false;
+
+  RenderBox get _wide => firstChild!;
+  RenderBox get _stack => lastChild!;
+  RenderBox get _shown => _stacked ? _stack : _wide;
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _ActionsSwitchData) {
+      child.parentData = _ActionsSwitchData();
+    }
+  }
+
+  bool _stacks(double width) =>
+      width.isFinite && _wide.getMaxIntrinsicWidth(double.infinity) > width;
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      _stack.getMinIntrinsicWidth(height);
+
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      _wide.getMaxIntrinsicWidth(height);
+
+  @override
+  double computeMinIntrinsicHeight(double width) => _stacks(width)
+      ? _stack.getMinIntrinsicHeight(width)
+      : _wide.getMinIntrinsicHeight(width);
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => _stacks(width)
+      ? _stack.getMaxIntrinsicHeight(width)
+      : _wide.getMaxIntrinsicHeight(width);
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      (_stacks(constraints.maxWidth) ? _stack : _wide).getDryLayout(
+        constraints,
+      );
+
+  @override
+  void performLayout() {
+    _stacked = _stacks(constraints.maxWidth);
+    final hidden = _stacked ? _wide : _stack;
+    // Laid out to keep its state, never shown.
+    hidden.layout(constraints.loosen());
+    _shown.layout(constraints, parentUsesSize: true);
+    size = constraints.constrain(_shown.size);
+    onLayout(_stacked);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    context.paintChild(_shown, offset);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      _shown.hitTest(result, position: position);
+
+  @override
+  void visitChildrenForSemantics(RenderObjectVisitor visitor) {
+    visitor(_shown);
+  }
+}
+
+/// Keeps [footer] in view under [body] when the dialog runs out of height:
+/// once the dialog's own scroll view would scroll, [body] alone scrolls in
+/// the height left.
+class PinnedFooter extends StatefulWidget {
+  const PinnedFooter({super.key, required this.body, required this.footer});
+
+  final Widget body;
+  final Widget footer;
+
+  @override
+  State<PinnedFooter> createState() => _PinnedFooterState();
+}
+
+class _PinnedFooterState extends State<PinnedFooter> {
+  double? _height;
+  Size? _screen;
+  TextScaler? _scaler;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final screen = MediaQuery.sizeOf(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    // Measured again for another window or text size.
+    if (screen != _screen || scaler != _scaler) {
+      _screen = screen;
+      _scaler = scaler;
+      _height = null;
+    }
+  }
+
+  void _measure() {
+    if (!mounted) return;
+    final position = Scrollable.maybeOf(context)?.position;
+    if (position == null || !position.hasContentDimensions) return;
+    if (position.maxScrollExtent > 0) {
+      final height = position.viewportDimension;
+      if (height != _height) setState(() => _height = height);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    SchedulerBinding.instance.addPostFrameCallback((_) => _measure());
+    final height = _height;
+    if (height == null) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [widget.body, widget.footer],
+      );
+    }
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: height),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Flexible(child: SingleChildScrollView(child: widget.body)),
+          widget.footer,
+        ],
+      ),
+    );
+  }
 }

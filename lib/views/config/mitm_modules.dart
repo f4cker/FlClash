@@ -524,6 +524,7 @@ class MitmModuleView extends ConsumerWidget {
     String title,
     List<String> lines, {
     Map<String, String> issues = const {},
+    String? issuesHeader,
     List<PopupMenuItem> Function(String line)? menuItemsOf,
   }) {
     return Builder(
@@ -539,6 +540,7 @@ class MitmModuleView extends ConsumerWidget {
           ),
           widget: _MitmModuleLinesView(
             title: title,
+            header: invalid == 0 ? null : issuesHeader,
             lines: [for (final line in lines) (line, issues[line])],
             menuItemsOf: menuItemsOf,
           ),
@@ -766,6 +768,10 @@ class MitmModuleView extends ConsumerWidget {
                               list.label,
                               lines,
                               issues: issues[list] ?? const {},
+                              // Said once; each line keeps its own reason.
+                              issuesHeader: list == MitmList.hostname
+                                  ? appLocalizations.mitmHostFormatHint
+                                  : null,
                               menuItemsOf:
                                   list == MitmList.script && module.enabled
                                   ? (line) => [?mitmRunScriptItem(ref, line)]
@@ -892,6 +898,7 @@ class _MitmModuleLinesView extends StatelessWidget {
   const _MitmModuleLinesView({
     required this.title,
     required this.lines,
+    this.header,
     this.notes = false,
     this.noteColor,
     this.menuItemsOf,
@@ -902,6 +909,9 @@ class _MitmModuleLinesView extends StatelessWidget {
   /// Each line with why the Core skips it, or with [notes] why the module's
   /// reader left it out.
   final List<(String, String?)> lines;
+
+  /// Above the lines, for what they have in common.
+  final String? header;
   final bool notes;
   final Color? noteColor;
   final List<PopupMenuItem> Function(String line)? menuItemsOf;
@@ -918,8 +928,15 @@ class _MitmModuleLinesView extends StatelessWidget {
           top: context.contentTopPadding,
           bottom: 16 + context.bottomInset,
         ),
-        itemCount: lines.length,
-        itemBuilder: (_, index) {
+        itemCount: lines.length + (header == null ? 0 : 1),
+        itemBuilder: (_, at) {
+          if (header case final header? when at == 0) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+              child: Text(header, style: context.listCaptionStyle),
+            );
+          }
+          final index = header == null ? at : at - 1;
           final (line, issue) = lines[index];
           return ItemPositionProvider(
             position: ItemPosition.get(index, lines.length),

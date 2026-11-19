@@ -580,7 +580,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('bad host'), findsOneWidget);
-    expect(find.text('unknown type'), findsOneWidget);
+    // In words, never the Core's code.
+    final l = currentAppLocalizations;
+    expect(
+      find.text(l.mitmHostIgnored(l.mitmHostReasonInvalidFormat)),
+      findsOneWidget,
+    );
+    expect(find.text('unknown type'), findsNothing);
   });
 
   testWidgets('a hostname entry takes one host', (tester) async {

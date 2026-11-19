@@ -599,7 +599,9 @@ abstract class CoreHandlerInterface {
       final lists = _json(data);
       return {
         for (final list in MitmList.values)
-          if (lists[list.key] case final Object issues) list: _issues(issues),
+          if (lists[list.key] case final Object issues)
+            // A hostname's issue is its code, for the app to word.
+            list: _issues(issues, code: list == MitmList.hostname),
       };
     }, arguments: rules.toJson());
   }
@@ -854,10 +856,12 @@ List<T> Function(Object) _models<T>(
 ) =>
     (data) => [for (final item in data as List) fromJson(_json(item))];
 
-Map<int, String> _issues(Object data) => {
+Map<int, String> _issues(Object data, {bool code = false}) => {
   for (final item in data as List)
     if (item case {'index': final num index, 'message': final String message})
-      index.toInt(): message,
+      index.toInt(): code && item['code'] is String
+          ? item['code']! as String
+          : message,
 };
 
 CoreResultModel _presentConnections<R>(R Function(List<TrackerInfo>) present) {

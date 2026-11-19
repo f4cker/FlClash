@@ -8452,8 +8452,35 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mitmHostIgnored =>
-      'Ignored: Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.';
+  String mitmHostIgnored(Object reason) {
+    return 'Ignored: $reason';
+  }
+
+  @override
+  String get mitmHostReasonUnknown => 'Reason unknown';
+
+  @override
+  String get mitmHostReasonEmbeddedWildcard =>
+      '* in the middle of a name is not supported';
+
+  @override
+  String get mitmHostReasonIpAddress => 'IP addresses are not supported';
+
+  @override
+  String get mitmHostReasonUnsupportedPort => 'Unsupported port';
+
+  @override
+  String get mitmHostReasonInvalidFormat => 'Invalid hostname format';
+
+  @override
+  String get mitmHostReasonOverBroad => 'Match is too broad';
+
+  @override
+  String get mitmHostReasonAppleService => 'Apple service domain';
+
+  @override
+  String get mitmHostFormatHint =>
+      'Use a domain such as api.example.com or *.example.com. Only port 443 is supported; IP addresses and * in the middle of a name are not supported.';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

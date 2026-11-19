@@ -8249,8 +8249,34 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get mitmHostIgnored =>
-      '無視されました：api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。';
+  String mitmHostIgnored(Object reason) {
+    return '無視されました：$reason';
+  }
+
+  @override
+  String get mitmHostReasonUnknown => '理由不明';
+
+  @override
+  String get mitmHostReasonEmbeddedWildcard => '名前の途中にある * には対応していません';
+
+  @override
+  String get mitmHostReasonIpAddress => 'IP アドレスには対応していません';
+
+  @override
+  String get mitmHostReasonUnsupportedPort => 'このポートには対応していません';
+
+  @override
+  String get mitmHostReasonInvalidFormat => 'ホスト名の形式が正しくありません';
+
+  @override
+  String get mitmHostReasonOverBroad => '一致する範囲が広すぎます';
+
+  @override
+  String get mitmHostReasonAppleService => 'Apple サービスのドメイン';
+
+  @override
+  String get mitmHostFormatHint =>
+      'api.example.com や *.example.com のようなドメインを使用してください。ポートは 443 のみ対応しています。IP アドレスや名前の途中にある * には対応していません。';
 
   @override
   String mitmClientSourceRisk(Object addresses) {

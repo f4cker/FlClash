@@ -39,9 +39,10 @@ hostname = %APPEND% a.com:443, b.com:8443, api*.c.com, d.com
 
     final details = await container.read(mitmModuleDetailsProvider(1).future);
 
+    final l = currentAppLocalizations;
     expect(details!.issues[MitmList.hostname], {
-      'b.com:8443': currentAppLocalizations.mitmHostIgnored,
-      'api*.c.com': currentAppLocalizations.mitmHostIgnored,
+      'b.com:8443': l.mitmHostIgnored(l.mitmHostReasonUnsupportedPort),
+      'api*.c.com': l.mitmHostIgnored(l.mitmHostReasonEmbeddedWildcard),
     });
     // What the Core is asked to check is what it is sent.
     final rules =
@@ -93,12 +94,13 @@ hostname = %APPEND% icloud.com:443, *.com:443, bad_host.com:443, ok.example.com:
 
       final details = await container.read(mitmModuleDetailsProvider(1).future);
       final issues = details!.issues[MitmList.hostname]!;
+      final l = currentAppLocalizations;
+      // Each in words, never the Core's code.
       expect(issues, {
-        'icloud.com:443': 'apple-service',
-        '*.com:443': 'over-broad',
-        // The app's own hint, told even while the Core is down.
-        'bad_host.com:443': currentAppLocalizations.mitmHostIgnored,
-        'b.com:8443': currentAppLocalizations.mitmHostIgnored,
+        'icloud.com:443': l.mitmHostIgnored(l.mitmHostReasonAppleService),
+        '*.com:443': l.mitmHostIgnored(l.mitmHostReasonOverBroad),
+        'bad_host.com:443': l.mitmHostIgnored(l.mitmHostReasonInvalidFormat),
+        'b.com:8443': l.mitmHostIgnored(l.mitmHostReasonUnsupportedPort),
       });
       // What the module view counts as invalid of the lines it shows.
       final lines = details.content.mitm.linesOf(MitmList.hostname);
@@ -127,10 +129,14 @@ hostname = %APPEND% icloud.com:443, *.com:443, bad_host.com:443, ok.example.com:
         'bad_host.com:443',
         'b.com:8443',
       ]);
-      expect(issues['b.com:8443'], currentAppLocalizations.mitmHostIgnored);
+      final l = currentAppLocalizations;
       expect(
-        issues['bad_host.com:443'],
-        currentAppLocalizations.mitmHostIgnored,
+        issues['b.com:8443'],
+        l.mitmHostIgnored(l.mitmHostReasonUnsupportedPort),
+      );
+      expect(
+        issues['icloud.com:443'],
+        l.mitmHostIgnored(l.mitmHostReasonAppleService),
       );
     });
 
