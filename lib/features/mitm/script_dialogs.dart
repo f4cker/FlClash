@@ -758,9 +758,14 @@ class MitmScriptSummary extends StatelessWidget {
                 style: AppTextStyle.footnote.of(context, emphasized: true),
               ),
             ),
-            Text(
-              [mitmScriptKindLabel(l, info.kind), ?source].join(' · '),
-              style: secondary,
+            // Shares a narrow row with the name rather than overflowing it.
+            Flexible(
+              child: Text(
+                [mitmScriptKindLabel(l, info.kind), ?source].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: secondary,
+              ),
             ),
           ],
         ),

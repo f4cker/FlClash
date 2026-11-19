@@ -410,6 +410,10 @@ class RuleEditFrame extends StatelessWidget {
   final bool deleting;
 
   /// In the footer's start, where [onDelete] would go.
+  ///
+  /// Mounted twice, once in the one-row footer and once in the stacked one
+  /// (only one is shown), so it must keep no state of its own and carry no
+  /// GlobalKey: a button whose state lives in the dialog.
   final Widget? leading;
 
   const RuleEditFrame({
@@ -442,37 +446,49 @@ class RuleEditFrame extends StatelessWidget {
       spacing: 8,
       children: [
         if (onDelete != null)
-          TextButton(
-            style: ButtonStyle(
-              foregroundColor: WidgetStatePropertyAll(
-                busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
+          AdaptiveActionSlot(
+            id: #delete,
+            child: TextButton(
+              style: ButtonStyle(
+                foregroundColor: WidgetStatePropertyAll(
+                  busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
+                ),
+              ),
+              onPressed: busy ? null : onDelete,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: [
+                  if (deleting) spinner(_errorInk),
+                  Text(appLocalizations.delete),
+                ],
               ),
             ),
-            onPressed: busy ? null : onDelete,
+          ),
+        if (leading case final leading?)
+          Flexible(
+            child: AdaptiveActionSlot(id: #leading, child: leading),
+          ),
+        const Spacer(),
+        AdaptiveActionSlot(
+          id: #cancel,
+          child: TextButton(
+            onPressed: busy ? null : cancel,
+            child: Text(appLocalizations.cancel),
+          ),
+        ),
+        AdaptiveActionSlot(
+          id: #primary,
+          child: FilledButton(
+            onPressed: busy ? () {} : onPrimary,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               spacing: 6,
               children: [
-                if (deleting) spinner(_errorInk),
-                Text(appLocalizations.delete),
+                if (busy && !deleting) spinner(colorScheme.onPrimary),
+                Text(primaryLabel),
               ],
             ),
-          ),
-        if (leading case final leading?) Flexible(child: leading),
-        const Spacer(),
-        TextButton(
-          onPressed: busy ? null : cancel,
-          child: Text(appLocalizations.cancel),
-        ),
-        FilledButton(
-          onPressed: busy ? () {} : onPrimary,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              if (busy && !deleting) spinner(colorScheme.onPrimary),
-              Text(primaryLabel),
-            ],
           ),
         ),
       ],
@@ -487,45 +503,54 @@ class RuleEditFrame extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 8,
       children: [
-        FilledButton(
-          style: stackedStyle,
-          onPressed: busy ? () {} : onPrimary,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              if (busy && !deleting) spinner(colorScheme.onPrimary),
-              Flexible(child: stackedLabel(primaryLabel)),
-            ],
+        AdaptiveActionSlot(
+          id: #primary,
+          child: FilledButton(
+            style: stackedStyle,
+            onPressed: busy ? () {} : onPrimary,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                if (busy && !deleting) spinner(colorScheme.onPrimary),
+                Flexible(child: stackedLabel(primaryLabel)),
+              ],
+            ),
           ),
         ),
         if (leading case final leading?)
           ConstrainedBox(
             constraints: const BoxConstraints(minHeight: _stackedActionHeight),
-            child: leading,
+            child: AdaptiveActionSlot(id: #leading, child: leading),
           ),
         if (onDelete != null)
-          TextButton(
-            style: ButtonStyle(
-              minimumSize: const Size(0, _stackedActionHeight),
-              foregroundColor: WidgetStatePropertyAll(
-                busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
+          AdaptiveActionSlot(
+            id: #delete,
+            child: TextButton(
+              style: ButtonStyle(
+                minimumSize: const Size(0, _stackedActionHeight),
+                foregroundColor: WidgetStatePropertyAll(
+                  busy ? _errorInk.withValues(alpha: 0.4) : _errorInk,
+                ),
+              ),
+              onPressed: busy ? null : onDelete,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: [
+                  if (deleting) spinner(_errorInk),
+                  Flexible(child: stackedLabel(appLocalizations.delete)),
+                ],
               ),
             ),
-            onPressed: busy ? null : onDelete,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 6,
-              children: [
-                if (deleting) spinner(_errorInk),
-                Flexible(child: stackedLabel(appLocalizations.delete)),
-              ],
-            ),
           ),
-        TextButton(
-          style: stackedStyle,
-          onPressed: busy ? null : cancel,
-          child: stackedLabel(appLocalizations.cancel),
+        AdaptiveActionSlot(
+          id: #cancel,
+          child: TextButton(
+            style: stackedStyle,
+            onPressed: busy ? null : cancel,
+            child: stackedLabel(appLocalizations.cancel),
+          ),
         ),
       ],
     );
@@ -1712,14 +1737,83 @@ class AdaptiveActions extends StatefulWidget {
   State<AdaptiveActions> createState() => _AdaptiveActionsState();
 }
 
+/// One action in [AdaptiveActions]' layouts; the same [id] marks the same
+/// action in both, so focus follows it from one layout to the other.
+class AdaptiveActionSlot extends StatelessWidget {
+  const AdaptiveActionSlot({super.key, required this.id, required this.child});
+
+  final Object id;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
 class _AdaptiveActionsState extends State<AdaptiveActions> {
   bool _stacked = false;
+  final _wideKey = GlobalKey();
+  final _stackedKey = GlobalKey();
 
   void _onLayout(bool stacked) {
     if (stacked == _stacked) return;
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      if (mounted && stacked != _stacked) setState(() => _stacked = stacked);
+      if (!mounted || stacked == _stacked) return;
+      final from = _focusedSlot(_stacked ? _stackedKey : _wideKey);
+      setState(() => _stacked = stacked);
+      if (from == null) return;
+      // The focused action is hidden now: its counterpart takes the focus.
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _nodeOf(_stacked ? _stackedKey : _wideKey, from)?.requestFocus();
+      });
+      SchedulerBinding.instance.scheduleFrame();
     });
+  }
+
+  /// The id of the slot under [layout] holding the primary focus.
+  Object? _focusedSlot(GlobalKey layout) {
+    final root = layout.currentContext;
+    final focused = FocusManager.instance.primaryFocus?.context;
+    if (root == null || focused == null) return null;
+    Object? id;
+    var inside = false;
+    focused.visitAncestorElements((element) {
+      if (id == null && element.widget is AdaptiveActionSlot) {
+        id = (element.widget as AdaptiveActionSlot).id;
+      }
+      if (element == root) {
+        inside = true;
+        return false;
+      }
+      return true;
+    });
+    return inside ? id : null;
+  }
+
+  /// The first focus node inside the slot [id] under [layout].
+  FocusNode? _nodeOf(GlobalKey layout, Object id) {
+    final root = layout.currentContext as Element?;
+    if (root == null) return null;
+    FocusNode? node;
+    void search(Element element, bool inSlot) {
+      if (node != null) return;
+      final widget = element.widget;
+      final slot = inSlot || (widget is AdaptiveActionSlot && widget.id == id);
+      if (slot && widget is Focus && widget.focusNode != null) {
+        node = widget.focusNode;
+        return;
+      }
+      if (slot && widget is Focus) {
+        element.visitChildElements((child) {
+          node ??= Focus.maybeOf(child, scopeOk: true, createDependency: false);
+        });
+        if (node != null) return;
+      }
+      element.visitChildElements((child) => search(child, slot));
+    }
+
+    search(root, false);
+    return node;
   }
 
   @override
@@ -1731,8 +1825,11 @@ class _AdaptiveActionsState extends State<AdaptiveActions> {
     return _ActionsSwitch(
       onLayout: _onLayout,
       children: [
-        hidden(widget.wide, _stacked),
-        hidden(widget.stacked, !_stacked),
+        hidden(KeyedSubtree(key: _wideKey, child: widget.wide), _stacked),
+        hidden(
+          KeyedSubtree(key: _stackedKey, child: widget.stacked),
+          !_stacked,
+        ),
       ],
     );
   }

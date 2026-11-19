@@ -14,7 +14,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const _shownHosts = 12;
 const _shownRules = 5;
-const _footerRule = Color(0xFFE3E1E6);
 
 String mitmSkipReasonText(AppLocalizations l, MitmModuleSkip skip) =>
     switch (skip.reason) {
@@ -181,14 +180,6 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
             ),
           ],
         );
-
-  bool _overflows = false;
-
-  bool _onMetrics(ScrollMetricsNotification notification) {
-    final overflows = notification.metrics.maxScrollExtent > 0;
-    if (overflows != _overflows) setState(() => _overflows = overflows);
-    return false;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -396,7 +387,6 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
           ],
         ),
     ];
-    final height = MediaQuery.sizeOf(context).height;
     return RuleEditFrame(
       title: l.mitmModuleConfirmTitle,
       subtitle: '${widget.name} · ${widget.source}',
@@ -409,29 +399,14 @@ class __ModuleConfirmDialogState extends ConsumerState<_ModuleConfirmDialog> {
         onPressed: busy ? () {} : () => _import(false),
         child: Text(l.mitmImportOnly),
       ),
+      // No scroll view of its own: the frame scrolls the body under its
+      // pinned actions, and one nested in it could hide its own end.
       children: [
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: (height * 0.8 - 160).clamp(200, 2000),
-          ),
-          child: NotificationListener<ScrollMetricsNotification>(
-            onNotification: _onMetrics,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 16,
-                children: sections,
-              ),
-            ),
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 16,
+          children: sections,
         ),
-        if (_overflows)
-          Container(
-            height: 1,
-            color: context.colorScheme.brightness == Brightness.dark
-                ? colorScheme.outlineVariant
-                : _footerRule,
-          ),
       ],
     );
   }
