@@ -83,6 +83,8 @@ class SetupAction extends _$SetupAction {
   final _listenerScheduler = SerialTaskScheduler();
   _RunRequest? _latestRunRequest;
   DateTime? _startTime;
+  var _resumeOnRestart = false;
+  ({String digest, Set<String> names})? _outboundNames;
   _SetupInputs? _appliedInputs;
   var _lastPushDuration = Duration.zero;
   var _pendingShownApply = false;
@@ -136,7 +138,7 @@ class SetupAction extends _$SetupAction {
     if (!ref.read(initProvider)) return true;
     ref.read(proxiesActionProvider.notifier).cancelDelayTests();
     ref.read(delayDataSourceProvider.notifier).value = {};
-    final setupResult = _applyAutomatic(force: true);
+    final setupResult = applyAutomatic(force: true);
     ref.read(logsProvider.notifier).value = FixedList(maxLogsLength);
     ref.read(requestsProvider.notifier).value = FixedList(maxRequestsLength);
     ref.read(dnsQueriesProvider.notifier).value = FixedList(
@@ -224,8 +226,25 @@ class SetupAction extends _$SetupAction {
     } else if (ref.read(appSettingProvider).autoRun) {
       await setRunning(true, initialize: true);
     } else {
-      await globalState.safeRun(() => _applyAutomatic(force: true));
+      await globalState.safeRun(() => applyAutomatic(force: true));
     }
+  }
+
+  bool get wantsRunning => ref.read(isStartProvider) || _resumeOnRestart;
+
+  /// The lost session gets no stop; work begun for the old run stops counting.
+  void onCoreLost() {
+    if (_startTime == null) {
+      return;
+    }
+    _resumeOnRestart = true;
+    _latestRunRequest = null;
+    _setLocalRunning(false);
+    ref.read(runningVpnOptionsProvider.notifier).value = null;
+  }
+
+  void resumeOnRestart() {
+    _resumeOnRestart = true;
   }
 
   @protected
@@ -270,6 +289,7 @@ class SetupAction extends _$SetupAction {
   int _helperRunRevision = 0;
 
   Future<bool> setRunning(bool running, {bool initialize = false}) async {
+    _resumeOnRestart = false;
     final revision = ++_helperRunRevision;
     if (running && !initialize && !ref.read(initProvider)) {
       return true;
@@ -351,8 +371,13 @@ class SetupAction extends _$SetupAction {
           force: !request.resume,
           preloadInvoke: () => _startCoreRunning(request),
         );
-      } catch (_) {
-        applied = false;
+      } catch (error) {
+        if (_isCurrent(request)) {
+          dialogs.showBanner(
+            userFacingErrorMessage(error, currentAppLocalizations),
+            level: BannerLevel.error,
+          );
+        }
       }
       if (!applied && _isCurrent(request)) {
         await globalState.safeRun(() => setRunning(false));
@@ -837,7 +862,7 @@ class SetupAction extends _$SetupAction {
         final shown = _pendingShownApply;
         _pendingForceApply = false;
         _pendingShownApply = false;
-        _applyAutomatic(silence: !shown, force: force);
+        applyAutomatic(silence: !shown, force: force);
       },
       args: [silence],
       duration: Duration(
@@ -873,7 +898,7 @@ class SetupAction extends _$SetupAction {
   void autoApplyProfile() {
     runAfterFrame(() async {
       if (!await inputsApplied()) {
-        await _applyAutomatic();
+        await applyAutomatic();
       }
     });
   }
@@ -927,7 +952,8 @@ class SetupAction extends _$SetupAction {
     return result != _SetupTaskResult.failed;
   }
 
-  Future<bool> _applyAutomatic({
+  @protected
+  Future<bool> applyAutomatic({
     bool silence = false,
     bool force = false,
   }) async {
@@ -1059,6 +1085,9 @@ class SetupAction extends _$SetupAction {
       );
     }
     final directory = await appPath.profilesPath;
+    final hasCustomExit =
+        setupState.addedRules.any((rule) => rule.customExit) ||
+        setupState.mitmModules.isNotEmpty;
     final injected = await _resolveInjectedProviders(
       setupState,
       proxyGroups: proxyGroups,
@@ -1085,10 +1114,13 @@ class SetupAction extends _$SetupAction {
         addedRules: setupState.addedRules,
         defaultUA: defaultUA,
         authentication: networkSetting.authentication.credentials,
-        matchTarget:
-            profileBase == null ||
-                setupState.matchTarget?.trim().isNotEmpty == true
-            ? setupState.matchTarget
+        matchTarget: setupState.matchTarget,
+        exitTargets: setupState.exitTargets,
+        outboundNames: profileBase != null && hasCustomExit
+            ? await _outboundNamesOf(profileId, profileBase.base.digest)
+            : null,
+        defaultExitTarget: profileBase == null
+            ? null
             : lastMatchTarget(profileBase.base.matchRules),
         safeMode: ref.read(safeModeProvider),
         profileRuleSources: profileRuleSources,
@@ -1121,6 +1153,17 @@ class SetupAction extends _$SetupAction {
           const RuleSource(kind: RuleSourceKind.subscription),
       ],
     );
+  }
+
+  Future<Set<String>> _outboundNamesOf(int profileId, String digest) async {
+    final cached = _outboundNames;
+    if (cached != null && cached.digest == digest) {
+      return cached.names;
+    }
+    final outbounds = await _core.getProfileOutbounds(profileId);
+    final names = outboundNamesOf(outbounds);
+    _outboundNames = (digest: digest, names: names);
+    return names;
   }
 
   /// Only what the custom profile actually references is injected, so an

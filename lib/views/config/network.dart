@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_network.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/core/desktop/macos_helper_client.dart';
 import 'package:fl_clash/views/config/macos_helper.dart';
@@ -9,6 +10,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/state.dart';
+import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/views/config/override.dart';
 import 'package:fl_clash/views/config/tun.dart';
 import 'package:fl_clash/widgets/widgets.dart';
@@ -252,8 +254,13 @@ class BypassDomainItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, ref) {
+    final module = ref
+        .watch(mitmTakeoverProvider)
+        .value
+        ?.keys[MitmNetworkKey.bypassDomain];
     return ConfigListEditItem(
       title: (l) => l.bypassDomain,
+      subtitle: module == null ? null : (l) => l.mitmChangeReplacedBy(module),
       itemMaxLength: TextInputLimits.domain,
       itemSubtitle: (item, l) =>
           item == windowsLocalBypass ? l.bypassLocalWindowsOnly : null,

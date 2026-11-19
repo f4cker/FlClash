@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/native.dart';
@@ -37,6 +38,7 @@ void main() {
 
   late HttpServer server;
   late Map<String, String> bodies;
+  Future<void> Function(String)? beforeResponse;
   late Directory home;
   late db.Database testDatabase;
   late ProviderContainer container;
@@ -51,6 +53,7 @@ void main() {
     );
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     server.listen((request) async {
+      await beforeResponse?.call(request.uri.path);
       final response = request.response;
       final body = bodies[request.uri.path];
       if (body == null) {
@@ -65,6 +68,7 @@ void main() {
   tearDownAll(() => server.close(force: true));
 
   setUp(() async {
+    beforeResponse = null;
     final bindingOverrides = HttpOverrides.current;
     HttpOverrides.global = null;
     addTearDown(() => HttpOverrides.global = bindingOverrides);
@@ -192,7 +196,7 @@ Extra = type=http-response,pattern=^https://b,script-path=${urlOf('/extra.js')},
       expect(added.scripts, 2);
       expect(added.resources.keys, [urlOf('/ads.js')]);
 
-      action().putModule(added.copyWith(enabled: true));
+      action().putModule(added.copyWith(enabled: true, accepted: true));
       await action().setArguments((await stored()).single, const {
         'Extra': 'true',
       });
@@ -397,6 +401,67 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
 
     expect((await stored()).single.enabled, isFalse);
   });
+
+  test(
+    'resource refresh preserves concurrent attachments and routing choice',
+    () async {
+      bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
+      final added = await action().addFromFile(module('Ads'), 'Ads.sgmodule');
+      await stored();
+      final arrived = Completer<void>();
+      final release = Completer<void>();
+      beforeResponse = (path) async {
+        if (path == '/blank.json') {
+          arrived.complete();
+          await release.future;
+        }
+      };
+      final update = action().updateModule(added);
+      await arrived.future;
+      await action().attach(added, 'local.json', [123, 125]);
+      final attached = (await stored()).single;
+      action().putModule(
+        attached.copyWith(enabled: false, rulesEnabled: false),
+      );
+      release.complete();
+      await update;
+      final saved = (await stored()).single;
+      expect(saved.enabled, isFalse);
+      expect(saved.rulesEnabled, isFalse);
+      expect(saved.resources['local.json'], attached.resources['local.json']);
+      await action().clean();
+      expect(
+        await files(appPath.mitmResourcesDirPath),
+        contains(saved.resources['local.json']),
+      );
+    },
+  );
+
+  test(
+    'deletion during a refresh cannot resurrect the module or its files',
+    () async {
+      bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
+      final added = await action().addFromUrl(urlOf('/ads.sgmodule'));
+      await stored();
+      final arrived = Completer<void>();
+      final release = Completer<void>();
+      beforeResponse = (path) async {
+        if (path == '/blank.json') {
+          arrived.complete();
+          await release.future;
+        }
+      };
+      final update = action().updateModule(added);
+      await arrived.future;
+      await action().deleteModule(added);
+      release.complete();
+      await update;
+      expect(await stored(), isEmpty);
+      await action().clean();
+      expect(await files(appPath.mitmModulesDirPath), isEmpty);
+      expect(await files(appPath.mitmResourcesDirPath), isEmpty);
+    },
+  );
 
   test('a new module goes first and may start empty', () async {
     bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};

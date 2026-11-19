@@ -312,6 +312,7 @@ void main() {
           mitmModuleDetailsProvider(module.id).overrideWith(
             (ref) async => (
               content: content,
+              views: const <MitmList, Map<String, MitmLineView>>{},
               issues: const <MitmList, Map<String, String>>{},
             ),
           ),

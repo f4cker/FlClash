@@ -35,6 +35,10 @@ class MitmModulesAction extends _$MitmModulesAction {
   /// Files written before a row or a line names them, which [clean] keeps.
   final _held = <String>[];
 
+  /// Deletions run one at a time: two at once can both find a file still there
+  /// and the later delete fails.
+  Future<void> _deleting = Future.value();
+
   @override
   void build() {}
 
@@ -172,18 +176,19 @@ class MitmModulesAction extends _$MitmModulesAction {
     _held.add(module.pendingFileName);
     try {
       await pending.writeAsStringAtomically(text);
+      return await _mark(
+        module,
+        (item) => item.copyWith(
+          lastUpdateTime: DateTime.now(),
+          pendingTime: DateTime.now(),
+          error: null,
+          failure: null,
+        ),
+      );
     } finally {
       _held.remove(module.pendingFileName);
+      if (ref.mounted) unawaited(_cleanAfterSave());
     }
-    return _mark(
-      module,
-      (item) => item.copyWith(
-        lastUpdateTime: DateTime.now(),
-        pendingTime: DateTime.now(),
-        error: null,
-        failure: null,
-      ),
-    );
   }
 
   Future<MitmModule> _mark(
@@ -225,51 +230,94 @@ class MitmModulesAction extends _$MitmModulesAction {
     ref.read(mitmModulesProvider.notifier).put(module, first: first);
   }
 
-  /// Downloads the resources of the lines the new values bring in, which the
-  /// last save did not see. Returns the module if the values turned it off by
-  /// declaring more scripts than the user accepted.
+  Future<void> recordConsent(
+    int id, {
+    required bool asksConsent,
+    bool? agreed,
+  }) async {
+    final current = await _current(id);
+    if (!ref.mounted || current == null) {
+      return;
+    }
+    putModule(
+      current.copyWith(
+        asksConsent: asksConsent,
+        enabled: agreed ?? true,
+        accepted: agreed ?? current.accepted,
+      ),
+    );
+  }
+
+  /// Turning a module off counts as declining it until it is turned on.
+  Future<void> turnOff(int id) async {
+    final current = await _current(id);
+    if (ref.mounted && current != null) {
+      putModule(
+        current.copyWith(enabled: false, accepted: current.accepted ?? false),
+      );
+    }
+  }
+
+  /// A restored row may have been judged against another device's files.
+  Future<void> recheckConsent() async {
+    for (final module in await database.mitmModulesDao.query().get()) {
+      bool asksConsent;
+      try {
+        asksConsent = (await _read(module, module.arguments)).asksConsent;
+      } catch (_) {
+        asksConsent = true;
+      }
+      if (!ref.mounted) {
+        return;
+      }
+      if (asksConsent != module.asksConsent) {
+        final current = await _current(module.id);
+        if (ref.mounted && current != null) {
+          putModule(current.copyWith(asksConsent: asksConsent));
+        }
+      }
+    }
+  }
+
+  /// Null once the module is gone; a module file that cannot be read throws.
   Future<MitmModule?> setArguments(
     MitmModule module,
     Map<String, String> arguments,
   ) async {
-    putModule(module.copyWith(arguments: arguments));
+    final content = await _read(module, arguments);
+    final current = await _current(module.id);
+    if (!ref.mounted || current == null) {
+      return current;
+    }
+    final changed = _withContent(
+      current.copyWith(arguments: arguments),
+      content,
+    );
+    putModule(changed);
     final held = <String>[];
-    MitmModule? turnedOff;
     try {
-      final text = await File(await _pathOf(module)).readAsString();
-      final content = await compute(_parseMitmModule, (text, arguments));
-      if (ref.mounted &&
-          module.enabled &&
-          content.declaredScripts > module.scripts) {
-        turnedOff = (await _current(
-          module.id,
-        ))?.copyWith(enabled: false, scripts: content.declaredScripts);
-        if (turnedOff != null && ref.mounted) {
-          putModule(turnedOff);
-        }
-      }
       final missing = content.resourceUrls.difference({
-        ...module.resources.keys,
+        ...changed.resources.keys,
       });
-      if (missing.isEmpty || !ref.mounted) {
-        return turnedOff;
+      final fetched = missing.isEmpty || !ref.mounted
+          ? const <String, String>{}
+          : await _download(missing, previous: const {}, held: held);
+      final written = await _writeInline({
+        for (final MapEntry(:key, :value) in content.inlineResources.entries)
+          if (!changed.resources.containsKey(key)) key: value,
+      }, held);
+      if (fetched.isEmpty && written.isEmpty) {
+        return changed;
       }
-      final fetched = await _download(missing, previous: const {}, held: held);
-      final current = await _current(module.id);
-      if (fetched.isNotEmpty && current != null && ref.mounted) {
-        final saved = current.copyWith(
-          resources: {...current.resources, ...fetched},
-        );
-        putModule(saved);
-        turnedOff = turnedOff == null ? null : saved;
+      final latest = await _current(module.id);
+      if (!ref.mounted || latest == null) {
+        return latest;
       }
-      return turnedOff;
-    } on FileSystemException catch (e) {
-      commonPrint.log(
-        'MITM module ${module.name}: ${compactError(e)}',
-        logLevel: LogLevel.warning,
+      final withResources = latest.copyWith(
+        resources: {...latest.resources, ...fetched, ...written},
       );
-      return turnedOff;
+      putModule(withResources);
+      return withResources;
     } finally {
       held.forEach(_held.remove);
     }
@@ -316,22 +364,32 @@ class MitmModulesAction extends _$MitmModulesAction {
 
   Future<void> deleteModule(MitmModule module) async {
     ref.read(mitmModulesProvider.notifier).del(module.id);
-    await File(await _pathOf(module)).safeDelete();
-    await clean();
+    final path = await _pathOf(module);
+    await _oneDeletionAtATime(() async {
+      await File(path).safeDelete();
+      await _sweep();
+    });
   }
+
+  Future<void> _oneDeletionAtATime(Future<void> Function() delete) =>
+      _deleting = _deleting.then((_) {}, onError: (_) {}).then((_) => delete());
 
   Future<String> _pathOf(MitmModule module) async {
     return join(await appPath.mitmModulesDirPath, module.fileName);
+  }
+
+  Future<MitmModuleContent> _read(
+    MitmModule module,
+    Map<String, String> arguments,
+  ) async {
+    final text = await File(await _pathOf(module)).readAsString();
+    return compute(_parseMitmModule, (text, arguments));
   }
 
   Future<MitmModule?> _current(int id) async => (await ref.read(
     mitmModulesProvider.future,
   )).where((item) => item.id == id).firstOrNull;
 
-  /// A module [added] with scripts starts off until the user accepts them, and
-  /// one an update brings new or changed scripts to turns off until they accept
-  /// again; with no earlier text, as after a restore, only the count can tell.
-  /// What the user changed while it downloaded stays.
   Future<MitmModule> _save(
     MitmModule module,
     String text, {
@@ -354,15 +412,16 @@ class MitmModulesAction extends _$MitmModulesAction {
         previous: module.resources,
         held: held,
       );
+      final written = await _writeInline(content.inlineResources, held);
       await File(await _pathOf(module)).writeAsStringAtomically(text);
       if (!ref.mounted) {
         return module;
       }
-      final current = added ? module : await _current(module.id);
+      var current = added ? module : await _current(module.id);
       if (current == null || !ref.mounted) {
         return module;
       }
-      final merged = {...mitmAttachments(current), ...resources};
+      final merged = {...mitmAttachments(current), ...resources, ...written};
       final bringsNew =
           !adopting &&
           previous != null &&
@@ -377,17 +436,23 @@ class MitmModulesAction extends _$MitmModulesAction {
       if (!ref.mounted) {
         return module;
       }
+      current = added ? module : await _current(module.id);
+      if (current == null || !ref.mounted) return module;
       final saved = current.copyWith(
         name: content.name ?? current.name,
         description: content.description ?? '',
         system: content.system,
         enabled: added
-            ? enable ?? content.declaredScripts == 0
+            ? (enable ?? (content.declaredScripts == 0 && !content.asksConsent))
             : current.enabled &&
                   !bringsNew &&
                   (adopting || content.declaredScripts <= current.scripts),
         scripts: content.declaredScripts,
-        resources: merged,
+        asksConsent: content.asksConsent,
+        accepted: content.asksConsent && !current.asksConsent
+            ? null
+            : current.accepted,
+        resources: {...mitmAttachments(current), ...resources, ...written},
         lastUpdateTime: DateTime.now(),
       );
       putModule(saved, first: first);
@@ -398,6 +463,21 @@ class MitmModulesAction extends _$MitmModulesAction {
         unawaited(_cleanAfterSave());
       }
     }
+  }
+
+  MitmModule _withContent(MitmModule current, MitmModuleContent content) {
+    final next = current.copyWith(
+      scripts: content.declaredScripts,
+      asksConsent: content.asksConsent,
+    );
+    if (!current.enabled ||
+        !next.asksBeforeTurningOn ||
+        (current.accepted == true &&
+            current.asksConsent == next.asksConsent &&
+            current.scripts == next.scripts)) {
+      return next;
+    }
+    return next.copyWith(enabled: false, accepted: null);
   }
 
   Future<void> _cleanAfterSave() async {
@@ -457,6 +537,19 @@ class MitmModulesAction extends _$MitmModulesAction {
     return {for (final (index, url) in urls.indexed) url: ?names[index]};
   }
 
+  Future<Map<String, String>> _writeInline(
+    Map<String, String> sources,
+    List<String> held,
+  ) async {
+    final written = <String, String>{};
+    for (final MapEntry(:key, :value) in sources.entries) {
+      final name = await _storeResource(key, utf8.encode(value));
+      held.add(name);
+      written[key] = name;
+    }
+    return written;
+  }
+
   Future<String> _storeResource(String source, List<int> bytes) async {
     final name = mitmResourceName(source, bytes);
     _held.add(name);
@@ -469,7 +562,9 @@ class MitmModulesAction extends _$MitmModulesAction {
 
   /// Removes every file no module names, judged file by file so that what a
   /// save writes or names while it runs stays.
-  Future<void> clean() async {
+  Future<void> clean() => _oneDeletionAtATime(_sweep);
+
+  Future<void> _sweep() async {
     final stored = await database.mitmModulesDao.query().get();
     final scriptFiles = await mitmScriptFiles();
     Future<void> sweep(

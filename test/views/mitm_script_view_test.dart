@@ -12,11 +12,13 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/config/mitm_module_confirm.dart';
+import 'package:fl_clash/views/config/mitm_modules.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/rendering.dart';
+import 'package:fl_clash/views/logs.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prism_ui/switch.dart';
 
 import '../helpers/app_paths.dart';
 import '../helpers/test_app.dart';
@@ -164,6 +166,101 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'three logs-module-script cycles share the existing logs heading anchor',
+    (tester) async {
+      final page = ValueNotifier(0);
+      addTearDown(page.dispose);
+      final pages = ValueListenableBuilder<int>(
+        valueListenable: page,
+        builder: (_, index, _) => switch (index) {
+          0 => const LogsView(),
+          1 => const MitmModulesView(),
+          _ => const MitmScriptView(),
+        },
+      );
+      await pump(tester, pages, scripts: const []);
+      tester.view.physicalSize = const Size(1220, 900);
+      container.read(viewSizeProvider.notifier).value = const Size(1220, 900);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: TestApp(locale: const Locale('zh', 'CN'), child: pages),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      (Offset, double) heading() {
+        final empty = tester.widget<NullStatus>(find.byType(NullStatus));
+        final label = find.text(empty.label!);
+        final paragraph = tester.renderObject<RenderParagraph>(label);
+        return (
+          tester.getCenter(find.byType(EmptyIllustration)),
+          tester.getTopLeft(label).dy +
+              paragraph.getDryBaseline(
+                paragraph.constraints,
+                TextBaseline.alphabetic,
+              )!,
+        );
+      }
+
+      final baseline = heading();
+      Rect? baselineAction;
+      for (var cycle = 0; cycle < 3; cycle++) {
+        for (final index in [1, 2, 0]) {
+          page.value = index;
+          await tester.pump();
+          await tester.pump();
+          if (index == 0) {
+            await tester.pumpAndSettle();
+          }
+          for (final elapsed in [
+            Duration.zero,
+            const Duration(milliseconds: 16),
+            const Duration(milliseconds: 80),
+            const Duration(milliseconds: 160),
+            const Duration(milliseconds: 400),
+            const Duration(milliseconds: 900),
+          ]) {
+            await tester.pump(elapsed);
+            final current = heading();
+            expect(current.$1.dx, closeTo(baseline.$1.dx, 1));
+            expect(current.$1.dy, closeTo(baseline.$1.dy, 1));
+            expect(current.$2, closeTo(baseline.$2, 1));
+            if (index != 0) {
+              final empty = tester.widget<NullStatus>(find.byType(NullStatus));
+              expect(empty.animate, isFalse);
+              expect(empty.anchorToHeading, isTrue);
+              final action = tester.getRect(find.byWidget(empty.action!));
+              baselineAction ??= action;
+              expect(action, baselineAction);
+              expect(action.height, 40);
+            }
+          }
+        }
+      }
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      page.value = 0;
+      await tester.pumpAndSettle();
+      final scaledBaseline = heading();
+      for (final index in [1, 2]) {
+        page.value = index;
+        await tester.pumpAndSettle();
+        final scaled = heading();
+        expect(scaled.$1.dy, closeTo(scaledBaseline.$1.dy, 1));
+        expect(scaled.$2, closeTo(scaledBaseline.$2, 1));
+      }
+      final empty = tester.widget<NullStatus>(find.byType(NullStatus));
+      final description = tester.getRect(find.text(empty.description!));
+      expect(description.height, greaterThanOrEqualTo(80));
+      final action = tester.getRect(find.byWidget(empty.action!));
+      expect(action.top - description.bottom, closeTo(24, 0.01));
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 
   testWidgets('the entry counts scripts, updates and errors', (tester) async {
     await pump(tester, const MitmScriptEntryItem());

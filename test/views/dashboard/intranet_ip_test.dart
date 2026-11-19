@@ -1,16 +1,25 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:fl_clash/common/network.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:fl_clash/views/dashboard/widgets/intranet_ip.dart';
+import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prism_ui/common_button.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/test_app.dart';
 import '../../helpers/host_scaffold.dart';
+
+class _Interface extends Mock implements NetworkInterface {}
+
+class _Address extends Mock implements InterfaceAddress {}
 
 void main() {
   late ProviderContainer container;
@@ -53,6 +62,46 @@ void main() {
     );
     await tester.pump();
   }
+
+  testWidgets(
+    'local refresh retains the address until a real unavailable result',
+    (tester) async {
+      final original = listNetworkInterfaces;
+      addTearDown(() => listNetworkInterfaces = original);
+      var request = Completer<List<NetworkInterface>>();
+      listNetworkInterfaces = ({bool includeLoopback = false}) =>
+          request.future;
+      final address = _Address();
+      when(() => address.address).thenReturn('192.168.1.23');
+      when(() => address.type).thenReturn(InternetAddressType.IPv4);
+      final interface = _Interface();
+      when(() => interface.name).thenReturn('en0');
+      when(() => interface.addresses).thenReturn([address]);
+      await pumpCard(tester);
+      final action = container.read(systemActionProvider.notifier);
+      final first = action.updateLocalIp();
+      await tester.pump();
+      expect(find.text('192.168.1.23'), findsOneWidget);
+      expect(find.byType(SkeletonText), findsNothing);
+      expect(find.byTooltip('Looking up'), findsOneWidget);
+      request.complete([interface]);
+      await first;
+      await tester.pump();
+      expect(find.text('192.168.1.23'), findsOneWidget);
+      expect(find.byType(SkeletonText), findsNothing);
+      expect(find.byTooltip('Looking up'), findsNothing);
+      request = Completer<List<NetworkInterface>>();
+      final second = action.updateLocalIp();
+      await tester.pump();
+      expect(find.text('192.168.1.23'), findsOneWidget);
+      request.complete([]);
+      await second;
+      await tester.pump();
+      expect(find.text('192.168.1.23'), findsNothing);
+      expect(find.text('No network'), findsOneWidget);
+      expect(find.byType(SkeletonText), findsNothing);
+    },
+  );
 
   testWidgets('the switch lets the network proxy through this device', (
     tester,

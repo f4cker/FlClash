@@ -520,6 +520,8 @@ class HelperBuildModeTests(unittest.TestCase):
             launcher = source / 'PrivilegedHelper/Launcher/FlashHelperLauncher'
             if master is not None:
                 launcher.write_bytes(master)
+            else:
+                launcher.unlink(missing_ok=True)
             pin = json.loads((launcher.parent / 'FlashHelperLauncher.pin.json').read_text())
             pin['sha256'] = hashlib.sha256(self.LAUNCHER_MASTER).hexdigest() if pinned is None else pinned
             (launcher.parent / 'FlashHelperLauncher.pin.json').write_text(json.dumps(pin))

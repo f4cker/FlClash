@@ -96,7 +96,7 @@ class _ToolViewState extends ConsumerState<ToolsView> {
       _getOtherList(developerMode),
     ];
     return Scaffold(
-      title: context.appLocalizations.tools,
+      title: context.appLocalizations.more,
       body: Builder(
         builder: (context) => PrismListView(
           key: toolsStoreKey,

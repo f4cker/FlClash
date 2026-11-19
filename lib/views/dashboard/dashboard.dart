@@ -154,7 +154,8 @@ class _DesktopDashboard extends StatelessWidget {
       24,
       24 + MediaQuery.paddingOf(context).bottom,
     );
-    final topHeight = (compact ? 176 : 208) * scale;
+    // Reserve conservatively for scaled text; the row itself sizes to content.
+    final topHeight = 160 * math.max(1, scale);
     final controlHeight = (compact ? 56 : 64) * scale;
     final middleHeight = (compact ? 152 : 176) * scale;
     final tablesHeight = connectionsTableMinHeight(density, scale);
@@ -183,6 +184,12 @@ class _DesktopDashboard extends StatelessWidget {
         );
         Widget sized(double height, Widget child) =>
             SizedBox(height: height, child: child);
+        Widget topRow(Widget child) => IntrinsicHeight(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 160),
+            child: child,
+          ),
+        );
         final switches =
             DashboardWidget.networkTakeover.platforms.contains(platform)
             ? const [
@@ -202,12 +209,8 @@ class _DesktopDashboard extends StatelessWidget {
             child: Column(
               spacing: gap,
               children: [
-                sized(
-                  topHeight,
-                  const RepaintBoundary(child: CurrentOutboundCard()),
-                ),
-                sized(
-                  topHeight,
+                topRow(const RepaintBoundary(child: CurrentOutboundCard())),
+                topRow(
                   row(const [
                     (1, SpeedCard(direction: TrafficDirection.upload)),
                     (1, SpeedCard(direction: TrafficDirection.download)),
@@ -232,8 +235,7 @@ class _DesktopDashboard extends StatelessWidget {
           );
         }
         final rows = [
-          sized(
-            topHeight,
+          topRow(
             row(const [
               (2, CurrentOutboundCard()),
               (1, SpeedCard(direction: TrafficDirection.upload)),

@@ -112,6 +112,18 @@ class _PatchClashConfig extends _$PatchClashConfig
 
   /// Makes [key] a page setting again, even where its value did not move.
   void claim(PageConfigKey key) => super.update((state) => state.unfollow(key));
+  @override
+  set value(PatchClashConfig value) {
+    if (isUsableMixedPort(value.mixedPort)) {
+      state = value;
+      return;
+    }
+    commonPrint.log(
+      'mixed-port ${value.mixedPort} refused, kept ${state.mixedPort}',
+      logLevel: LogLevel.warning,
+    );
+    state = value.copyWith(mixedPort: state.mixedPort);
+  }
 }
 
 @riverpod

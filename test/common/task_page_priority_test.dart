@@ -71,7 +71,7 @@ void main() {
       expect(config['port'], 0);
       expect(config['socks-port'], 0);
       expect(config['log-level'], 'error');
-      expect(config['find-process-mode'], 'off');
+      expect(config['find-process-mode'], 'strict');
       expect(config['external-controller'], '');
       expect(config['tun']['enable'], false);
       expect(config['tun']['stack'], 'mips');
@@ -199,7 +199,7 @@ void main() {
       expect(config['skip-auth-prefixes'], ['127.0.0.1/8']);
       expect(config['tun'].containsKey('auto-route'), isFalse);
       expect(config['tun'].containsKey('auto-detect-interface'), isFalse);
-      expect(config['find-process-mode'], 'off');
+      expect(config['find-process-mode'], 'strict');
     });
 
     test('a stored config without the flag reads as legacy', () {

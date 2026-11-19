@@ -111,7 +111,15 @@ void main() {
     final table = rectOf(tester, ConnectionsTableCard);
     final groups = rectOf(tester, ProxyGroupsCard);
 
-    expect(current.height, 208);
+    expect(current.height, 160);
+    for (final speed
+        in find
+            .byType(SpeedCard)
+            .evaluate()
+            .map((e) => tester.getRect(find.byWidget(e.widget)))) {
+      expect(speed.top, current.top);
+      expect(speed.bottom, current.bottom);
+    }
     expect(current.width, closeTo(upload.width * 2 + 16, 0.01));
     expect(mode.top, current.bottom + 16);
     expect(mode.height, 64);
@@ -137,6 +145,37 @@ void main() {
     expect(find.byType(OutboundModeCard), findsNothing);
     expect(tester.takeException(), isNull);
 
+    await teardown(tester);
+  });
+
+  testWidgets('the run control remains centered in both desktop densities', (
+    tester,
+  ) async {
+    for (final size in const [Size(1000, 900), Size(1220, 824)]) {
+      await pumpDashboard(tester, size);
+      expect(
+        tester.getCenter(find.byTooltip('Start')).dy,
+        closeTo(rectOf(tester, CurrentOutboundCard).center.dy, 0.01),
+      );
+      await teardown(tester);
+    }
+  });
+
+  testWidgets('large text keeps the top row equal and grows from its content', (
+    tester,
+  ) async {
+    await pumpDashboard(tester, const Size(2400, 1600), textScale: 2);
+    final current = rectOf(tester, CurrentOutboundCard);
+    expect(current.height, greaterThan(160));
+    expect(current.height, lessThan(320));
+    for (final element in find.byType(SpeedCard).evaluate()) {
+      final speed = tester.getRect(find.byWidget(element.widget));
+      expect(speed.top, current.top);
+      expect(speed.bottom, current.bottom);
+    }
+    final local = tester.getRect(find.byType(LocalIpRow));
+    expect(current.bottom - local.bottom, greaterThanOrEqualTo(20));
+    expect(tester.takeException(), isNull);
     await teardown(tester);
   });
 
@@ -208,7 +247,7 @@ void main() {
       ),
     );
 
-    expect(rectOf(tester, CurrentOutboundCard).height, 208);
+    expect(rectOf(tester, CurrentOutboundCard).height, 160);
     expect(find.byType(ConnectionsTableCard), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -220,7 +259,7 @@ void main() {
   ) async {
     await pumpDashboard(tester, const Size(1220, 720));
 
-    expect(rectOf(tester, CurrentOutboundCard).height, 176);
+    expect(rectOf(tester, CurrentOutboundCard).height, 160);
     expect(rectOf(tester, OutboundModeBar).height, 56);
     expect(rectOf(tester, IntranetIpCard).height, 152);
     expect(scrollExtentOf(tester), 0);
@@ -398,16 +437,13 @@ void main() {
     tester,
   ) async {
     await pumpDashboard(tester, const Size(1400, 1000), textScale: 1.2);
-    expect(
-      rectOf(tester, CurrentOutboundCard).height,
-      closeTo(208 * 1.2, 0.01),
-    );
+    expect(rectOf(tester, CurrentOutboundCard).height, greaterThan(160));
     expect(tester.takeException(), isNull);
 
     await pumpDashboard(tester, const Size(1000, 1000), textScale: 1.2);
     final current = rectOf(tester, CurrentOutboundCard);
     expect(current.width, 1000 - 16 - 24);
-    expect(current.height, closeTo(208 * 1.2, 0.01));
+    expect(current.height, greaterThan(160));
     expect(tester.takeException(), isNull);
 
     await pumpDashboard(tester, const Size(760, 1000), textScale: 1.2);

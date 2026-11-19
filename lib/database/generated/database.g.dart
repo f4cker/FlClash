@@ -112,6 +112,15 @@ class $ProfilesTable extends Profiles
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  @override
+  late final GeneratedColumnWithTypeConverter<Map<String, String>?, String>
+  exitTargets = GeneratedColumn<String>(
+    'exit_targets',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<Map<String, String>?>($ProfilesTable.$converterexitTargetsn);
   static const VerificationMeta _autoUpdateDurationMillisMeta =
       const VerificationMeta('autoUpdateDurationMillis');
   @override
@@ -194,6 +203,7 @@ class $ProfilesTable extends Profiles
     extendType,
     scriptId,
     matchTarget,
+    exitTargets,
     autoUpdateDurationMillis,
     subscriptionInfo,
     autoUpdate,
@@ -359,6 +369,12 @@ class $ProfilesTable extends Profiles
         DriftSqlType.string,
         data['${effectivePrefix}match_target'],
       ),
+      exitTargets: $ProfilesTable.$converterexitTargetsn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}exit_targets'],
+        ),
+      ),
       autoUpdateDurationMillis: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}auto_update_duration_millis'],
@@ -405,6 +421,10 @@ class $ProfilesTable extends Profiles
 
   static JsonTypeConverter2<ProfileType, String, String> $convertertype =
       const EnumNameConverter<ProfileType>(ProfileType.values);
+  static TypeConverter<Map<String, String>, String> $converterexitTargets =
+      const StringMapConverter();
+  static TypeConverter<Map<String, String>?, String?> $converterexitTargetsn =
+      NullAwareTypeConverter.wrap($converterexitTargets);
   static TypeConverter<SubscriptionInfo?, String?> $convertersubscriptionInfo =
       const SubscriptionInfoConverter();
   static TypeConverter<Map<String, String>, String> $converterselectedMap =
@@ -427,7 +447,10 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
   /// Older builds pick a script or added rules by it; this build runs both.
   final String extendType;
   final int? scriptId;
+
+  /// Read only by the v25 upgrade, which moves it into [exitTargets].
   final String? matchTarget;
+  final Map<String, String>? exitTargets;
   final int autoUpdateDurationMillis;
   final SubscriptionInfo? subscriptionInfo;
   final bool autoUpdate;
@@ -446,6 +469,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     required this.extendType,
     this.scriptId,
     this.matchTarget,
+    this.exitTargets,
     required this.autoUpdateDurationMillis,
     this.subscriptionInfo,
     required this.autoUpdate,
@@ -478,6 +502,11 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     }
     if (!nullToAbsent || matchTarget != null) {
       map['match_target'] = Variable<String>(matchTarget);
+    }
+    if (!nullToAbsent || exitTargets != null) {
+      map['exit_targets'] = Variable<String>(
+        $ProfilesTable.$converterexitTargetsn.toSql(exitTargets),
+      );
     }
     map['auto_update_duration_millis'] = Variable<int>(
       autoUpdateDurationMillis,
@@ -531,6 +560,9 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
       matchTarget: matchTarget == null && nullToAbsent
           ? const Value.absent()
           : Value(matchTarget),
+      exitTargets: exitTargets == null && nullToAbsent
+          ? const Value.absent()
+          : Value(exitTargets),
       autoUpdateDurationMillis: Value(autoUpdateDurationMillis),
       subscriptionInfo: subscriptionInfo == null && nullToAbsent
           ? const Value.absent()
@@ -565,6 +597,9 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
       extendType: serializer.fromJson<String>(json['extendType']),
       scriptId: serializer.fromJson<int?>(json['scriptId']),
       matchTarget: serializer.fromJson<String?>(json['matchTarget']),
+      exitTargets: serializer.fromJson<Map<String, String>?>(
+        json['exitTargets'],
+      ),
       autoUpdateDurationMillis: serializer.fromJson<int>(
         json['autoUpdateDurationMillis'],
       ),
@@ -596,6 +631,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
       'extendType': serializer.toJson<String>(extendType),
       'scriptId': serializer.toJson<int?>(scriptId),
       'matchTarget': serializer.toJson<String?>(matchTarget),
+      'exitTargets': serializer.toJson<Map<String, String>?>(exitTargets),
       'autoUpdateDurationMillis': serializer.toJson<int>(
         autoUpdateDurationMillis,
       ),
@@ -621,6 +657,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     String? extendType,
     Value<int?> scriptId = const Value.absent(),
     Value<String?> matchTarget = const Value.absent(),
+    Value<Map<String, String>?> exitTargets = const Value.absent(),
     int? autoUpdateDurationMillis,
     Value<SubscriptionInfo?> subscriptionInfo = const Value.absent(),
     bool? autoUpdate,
@@ -643,6 +680,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     extendType: extendType ?? this.extendType,
     scriptId: scriptId.present ? scriptId.value : this.scriptId,
     matchTarget: matchTarget.present ? matchTarget.value : this.matchTarget,
+    exitTargets: exitTargets.present ? exitTargets.value : this.exitTargets,
     autoUpdateDurationMillis:
         autoUpdateDurationMillis ?? this.autoUpdateDurationMillis,
     subscriptionInfo: subscriptionInfo.present
@@ -676,6 +714,9 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
       matchTarget: data.matchTarget.present
           ? data.matchTarget.value
           : this.matchTarget,
+      exitTargets: data.exitTargets.present
+          ? data.exitTargets.value
+          : this.exitTargets,
       autoUpdateDurationMillis: data.autoUpdateDurationMillis.present
           ? data.autoUpdateDurationMillis.value
           : this.autoUpdateDurationMillis,
@@ -707,6 +748,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
           ..write('extendType: $extendType, ')
           ..write('scriptId: $scriptId, ')
           ..write('matchTarget: $matchTarget, ')
+          ..write('exitTargets: $exitTargets, ')
           ..write('autoUpdateDurationMillis: $autoUpdateDurationMillis, ')
           ..write('subscriptionInfo: $subscriptionInfo, ')
           ..write('autoUpdate: $autoUpdate, ')
@@ -730,6 +772,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
     extendType,
     scriptId,
     matchTarget,
+    exitTargets,
     autoUpdateDurationMillis,
     subscriptionInfo,
     autoUpdate,
@@ -752,6 +795,7 @@ class RawProfile extends DataClass implements Insertable<RawProfile> {
           other.extendType == this.extendType &&
           other.scriptId == this.scriptId &&
           other.matchTarget == this.matchTarget &&
+          other.exitTargets == this.exitTargets &&
           other.autoUpdateDurationMillis == this.autoUpdateDurationMillis &&
           other.subscriptionInfo == this.subscriptionInfo &&
           other.autoUpdate == this.autoUpdate &&
@@ -772,6 +816,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
   final Value<String> extendType;
   final Value<int?> scriptId;
   final Value<String?> matchTarget;
+  final Value<Map<String, String>?> exitTargets;
   final Value<int> autoUpdateDurationMillis;
   final Value<SubscriptionInfo?> subscriptionInfo;
   final Value<bool> autoUpdate;
@@ -790,6 +835,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     this.extendType = const Value.absent(),
     this.scriptId = const Value.absent(),
     this.matchTarget = const Value.absent(),
+    this.exitTargets = const Value.absent(),
     this.autoUpdateDurationMillis = const Value.absent(),
     this.subscriptionInfo = const Value.absent(),
     this.autoUpdate = const Value.absent(),
@@ -809,6 +855,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     required String extendType,
     this.scriptId = const Value.absent(),
     this.matchTarget = const Value.absent(),
+    this.exitTargets = const Value.absent(),
     required int autoUpdateDurationMillis,
     this.subscriptionInfo = const Value.absent(),
     required bool autoUpdate,
@@ -835,6 +882,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     Expression<String>? extendType,
     Expression<int>? scriptId,
     Expression<String>? matchTarget,
+    Expression<String>? exitTargets,
     Expression<int>? autoUpdateDurationMillis,
     Expression<String>? subscriptionInfo,
     Expression<bool>? autoUpdate,
@@ -854,6 +902,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
       if (extendType != null) 'extend_type': extendType,
       if (scriptId != null) 'script_id': scriptId,
       if (matchTarget != null) 'match_target': matchTarget,
+      if (exitTargets != null) 'exit_targets': exitTargets,
       if (autoUpdateDurationMillis != null)
         'auto_update_duration_millis': autoUpdateDurationMillis,
       if (subscriptionInfo != null) 'subscription_info': subscriptionInfo,
@@ -876,6 +925,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     Value<String>? extendType,
     Value<int?>? scriptId,
     Value<String?>? matchTarget,
+    Value<Map<String, String>?>? exitTargets,
     Value<int>? autoUpdateDurationMillis,
     Value<SubscriptionInfo?>? subscriptionInfo,
     Value<bool>? autoUpdate,
@@ -895,6 +945,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
       extendType: extendType ?? this.extendType,
       scriptId: scriptId ?? this.scriptId,
       matchTarget: matchTarget ?? this.matchTarget,
+      exitTargets: exitTargets ?? this.exitTargets,
       autoUpdateDurationMillis:
           autoUpdateDurationMillis ?? this.autoUpdateDurationMillis,
       subscriptionInfo: subscriptionInfo ?? this.subscriptionInfo,
@@ -940,6 +991,11 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
     }
     if (matchTarget.present) {
       map['match_target'] = Variable<String>(matchTarget.value);
+    }
+    if (exitTargets.present) {
+      map['exit_targets'] = Variable<String>(
+        $ProfilesTable.$converterexitTargetsn.toSql(exitTargets.value),
+      );
     }
     if (autoUpdateDurationMillis.present) {
       map['auto_update_duration_millis'] = Variable<int>(
@@ -988,6 +1044,7 @@ class ProfilesCompanion extends UpdateCompanion<RawProfile> {
           ..write('extendType: $extendType, ')
           ..write('scriptId: $scriptId, ')
           ..write('matchTarget: $matchTarget, ')
+          ..write('exitTargets: $exitTargets, ')
           ..write('autoUpdateDurationMillis: $autoUpdateDurationMillis, ')
           ..write('subscriptionInfo: $subscriptionInfo, ')
           ..write('autoUpdate: $autoUpdate, ')
@@ -1450,6 +1507,21 @@ class $RulesTable extends Rules with TableInfo<$RulesTable, RawRule> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _customExitMeta = const VerificationMeta(
+    'customExit',
+  );
+  @override
+  late final GeneratedColumn<bool> customExit = GeneratedColumn<bool>(
+    'custom_exit',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("custom_exit" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _orderMeta = const VerificationMeta('order');
   @override
   late final GeneratedColumn<String> order = GeneratedColumn<String>(
@@ -1470,6 +1542,7 @@ class $RulesTable extends Rules with TableInfo<$RulesTable, RawRule> {
     subRule,
     noResolve,
     src,
+    customExit,
     order,
   ];
   @override
@@ -1532,6 +1605,12 @@ class $RulesTable extends Rules with TableInfo<$RulesTable, RawRule> {
         src.isAcceptableOrUnknown(data['src']!, _srcMeta),
       );
     }
+    if (data.containsKey('custom_exit')) {
+      context.handle(
+        _customExitMeta,
+        customExit.isAcceptableOrUnknown(data['custom_exit']!, _customExitMeta),
+      );
+    }
     if (data.containsKey('order')) {
       context.handle(
         _orderMeta,
@@ -1585,6 +1664,10 @@ class $RulesTable extends Rules with TableInfo<$RulesTable, RawRule> {
         DriftSqlType.bool,
         data['${effectivePrefix}src'],
       )!,
+      customExit: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}custom_exit'],
+      )!,
       order: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}order'],
@@ -1611,6 +1694,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
   final String? subRule;
   final bool noResolve;
   final bool src;
+  final bool customExit;
   final String? order;
   const RawRule({
     required this.id,
@@ -1622,6 +1706,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
     this.subRule,
     required this.noResolve,
     required this.src,
+    required this.customExit,
     this.order,
   });
   @override
@@ -1650,6 +1735,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
     }
     map['no_resolve'] = Variable<bool>(noResolve);
     map['src'] = Variable<bool>(src);
+    map['custom_exit'] = Variable<bool>(customExit);
     if (!nullToAbsent || order != null) {
       map['order'] = Variable<String>(order);
     }
@@ -1677,6 +1763,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
           : Value(subRule),
       noResolve: Value(noResolve),
       src: Value(src),
+      customExit: Value(customExit),
       order: order == null && nullToAbsent
           ? const Value.absent()
           : Value(order),
@@ -1700,6 +1787,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
       subRule: serializer.fromJson<String?>(json['subRule']),
       noResolve: serializer.fromJson<bool>(json['noResolve']),
       src: serializer.fromJson<bool>(json['src']),
+      customExit: serializer.fromJson<bool>(json['customExit']),
       order: serializer.fromJson<String?>(json['order']),
     );
   }
@@ -1718,6 +1806,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
       'subRule': serializer.toJson<String?>(subRule),
       'noResolve': serializer.toJson<bool>(noResolve),
       'src': serializer.toJson<bool>(src),
+      'customExit': serializer.toJson<bool>(customExit),
       'order': serializer.toJson<String?>(order),
     };
   }
@@ -1732,6 +1821,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
     Value<String?> subRule = const Value.absent(),
     bool? noResolve,
     bool? src,
+    bool? customExit,
     Value<String?> order = const Value.absent(),
   }) => RawRule(
     id: id ?? this.id,
@@ -1743,6 +1833,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
     subRule: subRule.present ? subRule.value : this.subRule,
     noResolve: noResolve ?? this.noResolve,
     src: src ?? this.src,
+    customExit: customExit ?? this.customExit,
     order: order.present ? order.value : this.order,
   );
   RawRule copyWithCompanion(RulesCompanion data) {
@@ -1762,6 +1853,9 @@ class RawRule extends DataClass implements Insertable<RawRule> {
       subRule: data.subRule.present ? data.subRule.value : this.subRule,
       noResolve: data.noResolve.present ? data.noResolve.value : this.noResolve,
       src: data.src.present ? data.src.value : this.src,
+      customExit: data.customExit.present
+          ? data.customExit.value
+          : this.customExit,
       order: data.order.present ? data.order.value : this.order,
     );
   }
@@ -1778,6 +1872,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
           ..write('subRule: $subRule, ')
           ..write('noResolve: $noResolve, ')
           ..write('src: $src, ')
+          ..write('customExit: $customExit, ')
           ..write('order: $order')
           ..write(')'))
         .toString();
@@ -1794,6 +1889,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
     subRule,
     noResolve,
     src,
+    customExit,
     order,
   );
   @override
@@ -1809,6 +1905,7 @@ class RawRule extends DataClass implements Insertable<RawRule> {
           other.subRule == this.subRule &&
           other.noResolve == this.noResolve &&
           other.src == this.src &&
+          other.customExit == this.customExit &&
           other.order == this.order);
 }
 
@@ -1822,6 +1919,7 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
   final Value<String?> subRule;
   final Value<bool> noResolve;
   final Value<bool> src;
+  final Value<bool> customExit;
   final Value<String?> order;
   const RulesCompanion({
     this.id = const Value.absent(),
@@ -1833,6 +1931,7 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
     this.subRule = const Value.absent(),
     this.noResolve = const Value.absent(),
     this.src = const Value.absent(),
+    this.customExit = const Value.absent(),
     this.order = const Value.absent(),
   });
   RulesCompanion.insert({
@@ -1845,6 +1944,7 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
     this.subRule = const Value.absent(),
     this.noResolve = const Value.absent(),
     this.src = const Value.absent(),
+    this.customExit = const Value.absent(),
     this.order = const Value.absent(),
   }) : ruleAction = Value(ruleAction);
   static Insertable<RawRule> custom({
@@ -1857,6 +1957,7 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
     Expression<String>? subRule,
     Expression<bool>? noResolve,
     Expression<bool>? src,
+    Expression<bool>? customExit,
     Expression<String>? order,
   }) {
     return RawValuesInsertable({
@@ -1869,6 +1970,7 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
       if (subRule != null) 'sub_rule': subRule,
       if (noResolve != null) 'no_resolve': noResolve,
       if (src != null) 'src': src,
+      if (customExit != null) 'custom_exit': customExit,
       if (order != null) 'order': order,
     });
   }
@@ -1883,6 +1985,7 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
     Value<String?>? subRule,
     Value<bool>? noResolve,
     Value<bool>? src,
+    Value<bool>? customExit,
     Value<String?>? order,
   }) {
     return RulesCompanion(
@@ -1895,6 +1998,7 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
       subRule: subRule ?? this.subRule,
       noResolve: noResolve ?? this.noResolve,
       src: src ?? this.src,
+      customExit: customExit ?? this.customExit,
       order: order ?? this.order,
     );
   }
@@ -1931,6 +2035,9 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
     if (src.present) {
       map['src'] = Variable<bool>(src.value);
     }
+    if (customExit.present) {
+      map['custom_exit'] = Variable<bool>(customExit.value);
+    }
     if (order.present) {
       map['order'] = Variable<String>(order.value);
     }
@@ -1949,6 +2056,7 @@ class RulesCompanion extends UpdateCompanion<RawRule> {
           ..write('subRule: $subRule, ')
           ..write('noResolve: $noResolve, ')
           ..write('src: $src, ')
+          ..write('customExit: $customExit, ')
           ..write('order: $order')
           ..write(')'))
         .toString();
@@ -4720,6 +4828,35 @@ class $MitmModulesTable extends MitmModules
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _asksConsentMeta = const VerificationMeta(
+    'asksConsent',
+  );
+  @override
+  late final GeneratedColumn<bool> asksConsent = GeneratedColumn<bool>(
+    'asks_consent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("asks_consent" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _acceptedMeta = const VerificationMeta(
+    'accepted',
+  );
+  @override
+  late final GeneratedColumn<bool> accepted = GeneratedColumn<bool>(
+    'accepted',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("accepted" IN (0, 1))',
+    ),
+  );
   static const VerificationMeta _lastUpdateTimeMeta = const VerificationMeta(
     'lastUpdateTime',
   );
@@ -4774,6 +4911,8 @@ class $MitmModulesTable extends MitmModules
     system,
     scripts,
     rulesEnabled,
+    asksConsent,
+    accepted,
     lastUpdateTime,
     pendingTime,
     error,
@@ -4848,6 +4987,21 @@ class $MitmModulesTable extends MitmModules
           data['rules_enabled']!,
           _rulesEnabledMeta,
         ),
+      );
+    }
+    if (data.containsKey('asks_consent')) {
+      context.handle(
+        _asksConsentMeta,
+        asksConsent.isAcceptableOrUnknown(
+          data['asks_consent']!,
+          _asksConsentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('accepted')) {
+      context.handle(
+        _acceptedMeta,
+        accepted.isAcceptableOrUnknown(data['accepted']!, _acceptedMeta),
       );
     }
     if (data.containsKey('last_update_time')) {
@@ -4933,6 +5087,14 @@ class $MitmModulesTable extends MitmModules
         DriftSqlType.bool,
         data['${effectivePrefix}rules_enabled'],
       )!,
+      asksConsent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}asks_consent'],
+      )!,
+      accepted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}accepted'],
+      ),
       lastUpdateTime: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_update_time'],
@@ -4983,6 +5145,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
   final String? system;
   final int scripts;
   final bool rulesEnabled;
+  final bool asksConsent;
+  final bool? accepted;
   final DateTime lastUpdateTime;
 
   /// When an update left new content waiting in `<id>.pending.txt`.
@@ -5001,6 +5165,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     this.system,
     required this.scripts,
     required this.rulesEnabled,
+    required this.asksConsent,
+    this.accepted,
     required this.lastUpdateTime,
     this.pendingTime,
     this.error,
@@ -5034,6 +5200,10 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     }
     map['scripts'] = Variable<int>(scripts);
     map['rules_enabled'] = Variable<bool>(rulesEnabled);
+    map['asks_consent'] = Variable<bool>(asksConsent);
+    if (!nullToAbsent || accepted != null) {
+      map['accepted'] = Variable<bool>(accepted);
+    }
     map['last_update_time'] = Variable<DateTime>(lastUpdateTime);
     if (!nullToAbsent || pendingTime != null) {
       map['pending_time'] = Variable<DateTime>(pendingTime);
@@ -5066,6 +5236,10 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           : Value(system),
       scripts: Value(scripts),
       rulesEnabled: Value(rulesEnabled),
+      asksConsent: Value(asksConsent),
+      accepted: accepted == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accepted),
       lastUpdateTime: Value(lastUpdateTime),
       pendingTime: pendingTime == null && nullToAbsent
           ? const Value.absent()
@@ -5096,6 +5270,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       system: serializer.fromJson<String?>(json['system']),
       scripts: serializer.fromJson<int>(json['scripts']),
       rulesEnabled: serializer.fromJson<bool>(json['rulesEnabled']),
+      asksConsent: serializer.fromJson<bool>(json['asksConsent']),
+      accepted: serializer.fromJson<bool?>(json['accepted']),
       lastUpdateTime: serializer.fromJson<DateTime>(json['lastUpdateTime']),
       pendingTime: serializer.fromJson<DateTime?>(json['pendingTime']),
       error: serializer.fromJson<String?>(json['error']),
@@ -5119,6 +5295,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       'system': serializer.toJson<String?>(system),
       'scripts': serializer.toJson<int>(scripts),
       'rulesEnabled': serializer.toJson<bool>(rulesEnabled),
+      'asksConsent': serializer.toJson<bool>(asksConsent),
+      'accepted': serializer.toJson<bool?>(accepted),
       'lastUpdateTime': serializer.toJson<DateTime>(lastUpdateTime),
       'pendingTime': serializer.toJson<DateTime?>(pendingTime),
       'error': serializer.toJson<String?>(error),
@@ -5140,6 +5318,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     Value<String?> system = const Value.absent(),
     int? scripts,
     bool? rulesEnabled,
+    bool? asksConsent,
+    Value<bool?> accepted = const Value.absent(),
     DateTime? lastUpdateTime,
     Value<DateTime?> pendingTime = const Value.absent(),
     Value<String?> error = const Value.absent(),
@@ -5156,6 +5336,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     system: system.present ? system.value : this.system,
     scripts: scripts ?? this.scripts,
     rulesEnabled: rulesEnabled ?? this.rulesEnabled,
+    asksConsent: asksConsent ?? this.asksConsent,
+    accepted: accepted.present ? accepted.value : this.accepted,
     lastUpdateTime: lastUpdateTime ?? this.lastUpdateTime,
     pendingTime: pendingTime.present ? pendingTime.value : this.pendingTime,
     error: error.present ? error.value : this.error,
@@ -5178,6 +5360,10 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
       rulesEnabled: data.rulesEnabled.present
           ? data.rulesEnabled.value
           : this.rulesEnabled,
+      asksConsent: data.asksConsent.present
+          ? data.asksConsent.value
+          : this.asksConsent,
+      accepted: data.accepted.present ? data.accepted.value : this.accepted,
       lastUpdateTime: data.lastUpdateTime.present
           ? data.lastUpdateTime.value
           : this.lastUpdateTime,
@@ -5203,6 +5389,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           ..write('system: $system, ')
           ..write('scripts: $scripts, ')
           ..write('rulesEnabled: $rulesEnabled, ')
+          ..write('asksConsent: $asksConsent, ')
+          ..write('accepted: $accepted, ')
           ..write('lastUpdateTime: $lastUpdateTime, ')
           ..write('pendingTime: $pendingTime, ')
           ..write('error: $error, ')
@@ -5224,6 +5412,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
     system,
     scripts,
     rulesEnabled,
+    asksConsent,
+    accepted,
     lastUpdateTime,
     pendingTime,
     error,
@@ -5244,6 +5434,8 @@ class RawMitmModule extends DataClass implements Insertable<RawMitmModule> {
           other.system == this.system &&
           other.scripts == this.scripts &&
           other.rulesEnabled == this.rulesEnabled &&
+          other.asksConsent == this.asksConsent &&
+          other.accepted == this.accepted &&
           other.lastUpdateTime == this.lastUpdateTime &&
           other.pendingTime == this.pendingTime &&
           other.error == this.error &&
@@ -5262,6 +5454,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
   final Value<String?> system;
   final Value<int> scripts;
   final Value<bool> rulesEnabled;
+  final Value<bool> asksConsent;
+  final Value<bool?> accepted;
   final Value<DateTime> lastUpdateTime;
   final Value<DateTime?> pendingTime;
   final Value<String?> error;
@@ -5278,6 +5472,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     this.system = const Value.absent(),
     this.scripts = const Value.absent(),
     this.rulesEnabled = const Value.absent(),
+    this.asksConsent = const Value.absent(),
+    this.accepted = const Value.absent(),
     this.lastUpdateTime = const Value.absent(),
     this.pendingTime = const Value.absent(),
     this.error = const Value.absent(),
@@ -5295,6 +5491,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     this.system = const Value.absent(),
     this.scripts = const Value.absent(),
     this.rulesEnabled = const Value.absent(),
+    this.asksConsent = const Value.absent(),
+    this.accepted = const Value.absent(),
     required DateTime lastUpdateTime,
     this.pendingTime = const Value.absent(),
     this.error = const Value.absent(),
@@ -5313,6 +5511,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     Expression<String>? system,
     Expression<int>? scripts,
     Expression<bool>? rulesEnabled,
+    Expression<bool>? asksConsent,
+    Expression<bool>? accepted,
     Expression<DateTime>? lastUpdateTime,
     Expression<DateTime>? pendingTime,
     Expression<String>? error,
@@ -5330,6 +5530,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
       if (system != null) 'system': system,
       if (scripts != null) 'scripts': scripts,
       if (rulesEnabled != null) 'rules_enabled': rulesEnabled,
+      if (asksConsent != null) 'asks_consent': asksConsent,
+      if (accepted != null) 'accepted': accepted,
       if (lastUpdateTime != null) 'last_update_time': lastUpdateTime,
       if (pendingTime != null) 'pending_time': pendingTime,
       if (error != null) 'error': error,
@@ -5349,6 +5551,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     Value<String?>? system,
     Value<int>? scripts,
     Value<bool>? rulesEnabled,
+    Value<bool>? asksConsent,
+    Value<bool?>? accepted,
     Value<DateTime>? lastUpdateTime,
     Value<DateTime?>? pendingTime,
     Value<String?>? error,
@@ -5366,6 +5570,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
       system: system ?? this.system,
       scripts: scripts ?? this.scripts,
       rulesEnabled: rulesEnabled ?? this.rulesEnabled,
+      asksConsent: asksConsent ?? this.asksConsent,
+      accepted: accepted ?? this.accepted,
       lastUpdateTime: lastUpdateTime ?? this.lastUpdateTime,
       pendingTime: pendingTime ?? this.pendingTime,
       error: error ?? this.error,
@@ -5413,6 +5619,12 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
     if (rulesEnabled.present) {
       map['rules_enabled'] = Variable<bool>(rulesEnabled.value);
     }
+    if (asksConsent.present) {
+      map['asks_consent'] = Variable<bool>(asksConsent.value);
+    }
+    if (accepted.present) {
+      map['accepted'] = Variable<bool>(accepted.value);
+    }
     if (lastUpdateTime.present) {
       map['last_update_time'] = Variable<DateTime>(lastUpdateTime.value);
     }
@@ -5444,6 +5656,8 @@ class MitmModulesCompanion extends UpdateCompanion<RawMitmModule> {
           ..write('system: $system, ')
           ..write('scripts: $scripts, ')
           ..write('rulesEnabled: $rulesEnabled, ')
+          ..write('asksConsent: $asksConsent, ')
+          ..write('accepted: $accepted, ')
           ..write('lastUpdateTime: $lastUpdateTime, ')
           ..write('pendingTime: $pendingTime, ')
           ..write('error: $error, ')
@@ -8190,6 +8404,7 @@ typedef $$ProfilesTableCreateCompanionBuilder =
       required String extendType,
       Value<int?> scriptId,
       Value<String?> matchTarget,
+      Value<Map<String, String>?> exitTargets,
       required int autoUpdateDurationMillis,
       Value<SubscriptionInfo?> subscriptionInfo,
       required bool autoUpdate,
@@ -8210,6 +8425,7 @@ typedef $$ProfilesTableUpdateCompanionBuilder =
       Value<String> extendType,
       Value<int?> scriptId,
       Value<String?> matchTarget,
+      Value<Map<String, String>?> exitTargets,
       Value<int> autoUpdateDurationMillis,
       Value<SubscriptionInfo?> subscriptionInfo,
       Value<bool> autoUpdate,
@@ -8486,6 +8702,16 @@ class $$ProfilesTableFilterComposer
   ColumnFilters<String> get matchTarget => $composableBuilder(
     column: $table.matchTarget,
     builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<
+    Map<String, String>?,
+    Map<String, String>,
+    String
+  >
+  get exitTargets => $composableBuilder(
+    column: $table.exitTargets,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   ColumnFilters<int> get autoUpdateDurationMillis => $composableBuilder(
@@ -8866,6 +9092,11 @@ class $$ProfilesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get exitTargets => $composableBuilder(
+    column: $table.exitTargets,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get autoUpdateDurationMillis => $composableBuilder(
     column: $table.autoUpdateDurationMillis,
     builder: (column) => ColumnOrderings(column),
@@ -8948,6 +9179,12 @@ class $$ProfilesTableAnnotationComposer
 
   GeneratedColumn<String> get matchTarget => $composableBuilder(
     column: $table.matchTarget,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<Map<String, String>?, String>
+  get exitTargets => $composableBuilder(
+    column: $table.exitTargets,
     builder: (column) => column,
   );
 
@@ -9309,6 +9546,7 @@ class $$ProfilesTableTableManager
                 Value<String> extendType = const Value.absent(),
                 Value<int?> scriptId = const Value.absent(),
                 Value<String?> matchTarget = const Value.absent(),
+                Value<Map<String, String>?> exitTargets = const Value.absent(),
                 Value<int> autoUpdateDurationMillis = const Value.absent(),
                 Value<SubscriptionInfo?> subscriptionInfo =
                     const Value.absent(),
@@ -9328,6 +9566,7 @@ class $$ProfilesTableTableManager
                 extendType: extendType,
                 scriptId: scriptId,
                 matchTarget: matchTarget,
+                exitTargets: exitTargets,
                 autoUpdateDurationMillis: autoUpdateDurationMillis,
                 subscriptionInfo: subscriptionInfo,
                 autoUpdate: autoUpdate,
@@ -9348,6 +9587,7 @@ class $$ProfilesTableTableManager
                 required String extendType,
                 Value<int?> scriptId = const Value.absent(),
                 Value<String?> matchTarget = const Value.absent(),
+                Value<Map<String, String>?> exitTargets = const Value.absent(),
                 required int autoUpdateDurationMillis,
                 Value<SubscriptionInfo?> subscriptionInfo =
                     const Value.absent(),
@@ -9367,6 +9607,7 @@ class $$ProfilesTableTableManager
                 extendType: extendType,
                 scriptId: scriptId,
                 matchTarget: matchTarget,
+                exitTargets: exitTargets,
                 autoUpdateDurationMillis: autoUpdateDurationMillis,
                 subscriptionInfo: subscriptionInfo,
                 autoUpdate: autoUpdate,
@@ -9889,6 +10130,7 @@ typedef $$RulesTableCreateCompanionBuilder =
       Value<String?> subRule,
       Value<bool> noResolve,
       Value<bool> src,
+      Value<bool> customExit,
       Value<String?> order,
     });
 typedef $$RulesTableUpdateCompanionBuilder =
@@ -9902,6 +10144,7 @@ typedef $$RulesTableUpdateCompanionBuilder =
       Value<String?> subRule,
       Value<bool> noResolve,
       Value<bool> src,
+      Value<bool> customExit,
       Value<String?> order,
     });
 
@@ -9991,6 +10234,11 @@ class $$RulesTableFilterComposer extends Composer<_$Database, $RulesTable> {
 
   ColumnFilters<bool> get src => $composableBuilder(
     column: $table.src,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get customExit => $composableBuilder(
+    column: $table.customExit,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10096,6 +10344,11 @@ class $$RulesTableOrderingComposer extends Composer<_$Database, $RulesTable> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get customExit => $composableBuilder(
+    column: $table.customExit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get order => $composableBuilder(
     column: $table.order,
     builder: (column) => ColumnOrderings(column),
@@ -10163,6 +10416,11 @@ class $$RulesTableAnnotationComposer extends Composer<_$Database, $RulesTable> {
 
   GeneratedColumn<bool> get src =>
       $composableBuilder(column: $table.src, builder: (column) => column);
+
+  GeneratedColumn<bool> get customExit => $composableBuilder(
+    column: $table.customExit,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get order =>
       $composableBuilder(column: $table.order, builder: (column) => column);
@@ -10253,6 +10511,7 @@ class $$RulesTableTableManager
                 Value<String?> subRule = const Value.absent(),
                 Value<bool> noResolve = const Value.absent(),
                 Value<bool> src = const Value.absent(),
+                Value<bool> customExit = const Value.absent(),
                 Value<String?> order = const Value.absent(),
               }) => RulesCompanion(
                 id: id,
@@ -10264,6 +10523,7 @@ class $$RulesTableTableManager
                 subRule: subRule,
                 noResolve: noResolve,
                 src: src,
+                customExit: customExit,
                 order: order,
               ),
           createCompanionCallback:
@@ -10277,6 +10537,7 @@ class $$RulesTableTableManager
                 Value<String?> subRule = const Value.absent(),
                 Value<bool> noResolve = const Value.absent(),
                 Value<bool> src = const Value.absent(),
+                Value<bool> customExit = const Value.absent(),
                 Value<String?> order = const Value.absent(),
               }) => RulesCompanion.insert(
                 id: id,
@@ -10288,6 +10549,7 @@ class $$RulesTableTableManager
                 subRule: subRule,
                 noResolve: noResolve,
                 src: src,
+                customExit: customExit,
                 order: order,
               ),
           withReferenceMapper: (p0) => p0
@@ -12569,6 +12831,8 @@ typedef $$MitmModulesTableCreateCompanionBuilder =
       Value<String?> system,
       Value<int> scripts,
       Value<bool> rulesEnabled,
+      Value<bool> asksConsent,
+      Value<bool?> accepted,
       required DateTime lastUpdateTime,
       Value<DateTime?> pendingTime,
       Value<String?> error,
@@ -12587,6 +12851,8 @@ typedef $$MitmModulesTableUpdateCompanionBuilder =
       Value<String?> system,
       Value<int> scripts,
       Value<bool> rulesEnabled,
+      Value<bool> asksConsent,
+      Value<bool?> accepted,
       Value<DateTime> lastUpdateTime,
       Value<DateTime?> pendingTime,
       Value<String?> error,
@@ -12664,6 +12930,16 @@ class $$MitmModulesTableFilterComposer
 
   ColumnFilters<bool> get rulesEnabled => $composableBuilder(
     column: $table.rulesEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get asksConsent => $composableBuilder(
+    column: $table.asksConsent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get accepted => $composableBuilder(
+    column: $table.accepted,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12753,6 +13029,16 @@ class $$MitmModulesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get asksConsent => $composableBuilder(
+    column: $table.asksConsent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get accepted => $composableBuilder(
+    column: $table.accepted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastUpdateTime => $composableBuilder(
     column: $table.lastUpdateTime,
     builder: (column) => ColumnOrderings(column),
@@ -12820,6 +13106,14 @@ class $$MitmModulesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get asksConsent => $composableBuilder(
+    column: $table.asksConsent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get accepted =>
+      $composableBuilder(column: $table.accepted, builder: (column) => column);
+
   GeneratedColumn<DateTime> get lastUpdateTime => $composableBuilder(
     column: $table.lastUpdateTime,
     builder: (column) => column,
@@ -12879,6 +13173,8 @@ class $$MitmModulesTableTableManager
                 Value<String?> system = const Value.absent(),
                 Value<int> scripts = const Value.absent(),
                 Value<bool> rulesEnabled = const Value.absent(),
+                Value<bool> asksConsent = const Value.absent(),
+                Value<bool?> accepted = const Value.absent(),
                 Value<DateTime> lastUpdateTime = const Value.absent(),
                 Value<DateTime?> pendingTime = const Value.absent(),
                 Value<String?> error = const Value.absent(),
@@ -12895,6 +13191,8 @@ class $$MitmModulesTableTableManager
                 system: system,
                 scripts: scripts,
                 rulesEnabled: rulesEnabled,
+                asksConsent: asksConsent,
+                accepted: accepted,
                 lastUpdateTime: lastUpdateTime,
                 pendingTime: pendingTime,
                 error: error,
@@ -12913,6 +13211,8 @@ class $$MitmModulesTableTableManager
                 Value<String?> system = const Value.absent(),
                 Value<int> scripts = const Value.absent(),
                 Value<bool> rulesEnabled = const Value.absent(),
+                Value<bool> asksConsent = const Value.absent(),
+                Value<bool?> accepted = const Value.absent(),
                 required DateTime lastUpdateTime,
                 Value<DateTime?> pendingTime = const Value.absent(),
                 Value<String?> error = const Value.absent(),
@@ -12929,6 +13229,8 @@ class $$MitmModulesTableTableManager
                 system: system,
                 scripts: scripts,
                 rulesEnabled: rulesEnabled,
+                asksConsent: asksConsent,
+                accepted: accepted,
                 lastUpdateTime: lastUpdateTime,
                 pendingTime: pendingTime,
                 error: error,

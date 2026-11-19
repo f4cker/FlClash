@@ -7,6 +7,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/navigation.dart';
+import 'package:fl_clash/ui/icons/app_glyphs.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -81,13 +82,14 @@ void main() {
   bool shows(String label) =>
       find.text(label).hitTestable().evaluate().isNotEmpty;
 
-  testWidgets('lists each page under its group, with tools at the foot', (
+  testWidgets('lists each page under its group, with More at the foot', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
     final container = containerWith(decrypting: true);
     await pump(tester, container);
 
+    expect(navigation.getItems().last.glyph, same(AppGlyphs.moreCircle));
     final titles = ['Routing', 'Decryption & Rewrite', 'Debugging', 'Network'];
     final tops = [
       for (final title in titles) tester.getTopLeft(find.text(title)).dy,
@@ -95,9 +97,9 @@ void main() {
     expect(tops, orderedEquals([...tops]..sort()));
     expect(tester.getTopLeft(find.text('Rules')).dy, greaterThan(tops[0]));
     expect(tester.getTopLeft(find.text('Rules')).dy, lessThan(tops[1]));
-    // Tools stays below the scrolling list, out of every group.
+    // More stays below the scrolling list, out of every group.
     expect(
-      tester.getTopLeft(find.text('Tools')).dy,
+      tester.getTopLeft(find.text('More')).dy,
       greaterThan(tester.getTopLeft(find.text('Network')).dy),
     );
     expect(shows('HTTPS decryption'), isTrue);

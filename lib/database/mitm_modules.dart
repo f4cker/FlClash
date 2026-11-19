@@ -31,6 +31,10 @@ class MitmModules extends Table {
 
   BoolColumn get rulesEnabled => boolean().withDefault(const Constant(true))();
 
+  BoolColumn get asksConsent => boolean().withDefault(const Constant(false))();
+
+  BoolColumn get accepted => boolean().nullable()();
+
   DateTimeColumn get lastUpdateTime => dateTime()();
 
   /// When an update left new content waiting in `<id>.pending.txt`.
@@ -96,6 +100,8 @@ extension RawMitmModuleExt on RawMitmModule {
       system: this.system,
       scripts: scripts,
       rulesEnabled: rulesEnabled,
+      asksConsent: asksConsent,
+      accepted: accepted,
       lastUpdateTime: lastUpdateTime,
       pendingTime: pendingTime,
       error: error,
@@ -118,6 +124,8 @@ extension MitmModulesCompanionExt on MitmModule {
       system: Value(this.system),
       scripts: Value(scripts),
       rulesEnabled: Value(rulesEnabled),
+      asksConsent: Value(asksConsent),
+      accepted: Value(accepted),
       lastUpdateTime: lastUpdateTime,
       pendingTime: Value(pendingTime),
       error: Value(error),

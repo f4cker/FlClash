@@ -131,17 +131,47 @@ List<RuleSource> scriptRuleSources(
   return sources;
 }
 
-String? lastMatchTarget(List<String> rules) {
-  for (int i = rules.length - 1; i >= 0; i--) {
-    final parsed = Rule.parse(rules[i]);
-    if (parsed.ruleAction == RuleAction.MATCH) {
-      final target = parsed.ruleTarget;
+String? lastMatchTarget(List<String> rules) =>
+    matchTargetOf(rules.map(Rule.parse));
+
+String? matchTargetOf(Iterable<Rule> rules) {
+  for (final rule in rules.toList().reversed) {
+    if (rule.ruleAction == RuleAction.MATCH) {
+      final target = rule.ruleTarget;
       if (target != null && target.isNotEmpty) {
         return target;
       }
     }
   }
   return null;
+}
+
+Set<String> outboundNamesOf(Map<dynamic, dynamic> config) => {
+  for (final key in const ['proxies', 'proxy-groups'])
+    if (config[key] case final List<dynamic> items)
+      for (final item in items)
+        if (item case {'name': final String name}) name,
+};
+
+/// mihomo sends DIRECT what no rule matches, MATCH included.
+String Function(String exit) exitTargetResolver({
+  required Map<String, String> targets,
+  required Set<String> outbounds,
+  required String? fallback,
+}) {
+  bool usable(String? target) =>
+      target != null &&
+      (RuleTarget.ruleTargets.contains(target) || outbounds.contains(target));
+  return (exit) {
+    final mapped = targets[exit];
+    if (usable(mapped)) {
+      return mapped!;
+    }
+    if (outbounds.contains(exit)) {
+      return exit;
+    }
+    return fallback ?? RuleTarget.DIRECT.value;
+  };
 }
 
 Map<String, dynamic> inboundConfigOf(
@@ -279,10 +309,51 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
     };
   }
 
+  final moduleContents = [
+    for (final source in data.mitmModules)
+      (
+        source: source,
+        content: parseMitmModule(
+          source.content,
+          values: source.arguments,
+          resources: source.resources,
+        ),
+      ),
+  ];
+  final moduleProviderNames = <int, Map<String, String>>{};
+  final attachedRuleSets = <String, Map<String, Object?>>{};
+  final providers = <String, dynamic>{
+    if (rawConfig['rule-providers'] case final Map existing)
+      ...existing.cast<String, dynamic>(),
+  };
+  for (final (index, module) in moduleContents.indexed) {
+    final names = moduleProviderNames[index] = <String, String>{};
+    for (final entry in flashModuleProviders(
+      module.content,
+      module.source.resources,
+    ).entries) {
+      var name = 'mitm-${module.source.id ?? index}-${entry.key}';
+      while (providers.containsKey(name) ||
+          data.injectedRuleProviders.containsKey(name) ||
+          attachedRuleSets.containsKey(name)) {
+        name = '$name-';
+      }
+      names[entry.key] = name;
+      if (entry.value['type'] == 'file') {
+        attachedRuleSets[name] = entry.value;
+      } else {
+        providers[name] = entry.value;
+      }
+    }
+  }
+  rawConfig['rule-providers'] = providers;
   confineProviders('proxy-providers', proxiesProviderDirectoryName);
   confineProviders('rule-providers', rulesProviderDirectoryName);
   injectUnconfinedProviders('proxy-providers', data.injectedProxyProviders);
-  injectUnconfinedProviders('rule-providers', data.injectedRuleProviders);
+  injectUnconfinedProviders('rule-providers', {
+    ...data.injectedRuleProviders,
+    ...attachedRuleSets,
+  });
   final addedSetNames = injectAddedRuleSets(
     rawConfig,
     data.addedRuleSets,
@@ -350,7 +421,7 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
   // A colliding set is rewritten only through its stable paired rule id.
   // Older rows have no persistent association; refusing an ambiguous
   // collision preserves the previously running configuration and all rules.
-  final paired = <int, Map<String, String>>{};
+  final paired = <int?, Map<String, String>>{};
   final allProfileRules = [...data.rules, ...data.addedRules];
   for (final set in data.addedRuleSets) {
     final replacement = addedSetNames[set.name];
@@ -389,34 +460,22 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
               RuleSource(kind: RuleSourceKind.subscription, text: rule),
           ];
     if (addedRules.isNotEmpty) {
-      final hasMatchPlaceholder = addedRules.any(
-        (item) => item.ruleTarget?.toUpperCase() == 'MATCH',
+      final exitTarget = exitTargetResolver(
+        targets: {
+          if (data.matchTarget != null) 'MATCH': data.matchTarget!,
+          ...data.exitTargets,
+        },
+        outbounds: data.outboundNames ?? outboundNamesOf(rawConfig),
+        fallback: data.defaultExitTarget ?? lastMatchTarget(rules),
       );
-      String? replacementTarget = data.matchTarget?.trim();
-      if (replacementTarget?.isEmpty == true) {
-        replacementTarget = null;
-      }
-
-      if (hasMatchPlaceholder && replacementTarget == null) {
-        replacementTarget = lastMatchTarget(rules);
-      }
-      final List<String> finalAddedRules;
-
-      if (replacementTarget?.isNotEmpty == true) {
-        finalAddedRules = [];
-        for (int i = 0; i < addedRules.length; i++) {
-          final parsed = addedRules[i];
-          if (parsed.ruleTarget?.toUpperCase() == 'MATCH') {
-            finalAddedRules.add(
-              parsed.copyWith(ruleTarget: replacementTarget).rawValue,
-            );
-          } else {
-            finalAddedRules.add(addedRules[i].rawValue);
-          }
-        }
-      } else {
-        finalAddedRules = addedRules.map((e) => e.rawValue).toList();
-      }
+      final finalAddedRules = [
+        for (final rule in addedRules)
+          ((rule.customExit || rule.ruleTarget == 'MATCH') &&
+                      rule.ruleTarget != null
+                  ? rule.copyWith(ruleTarget: exitTarget(rule.ruleTarget!))
+                  : rule)
+              .rawValue,
+      ];
       rules = [...finalAddedRules, ...rules];
       moduleRulesAt = finalAddedRules.length;
       sources = [
@@ -447,21 +506,24 @@ Future<RealProfile> _makeRealProfileTask(MakeRealProfileState data) async {
         .map((item) => item.definition)
         .toList();
   }
-  final policies = mitmConfigPolicies(rawConfig);
+  final policies = {...mitmConfigPolicies(rawConfig), ...?data.outboundNames};
   final moduleSources = [
-    for (final module in data.mitmModules)
-      for (final rule in parseMitmModule(
-        module.content,
-        values: module.arguments,
-        resources: module.resources,
-      ).rules)
-        if (mitmRuleUsable(rule, policies))
-          RuleSource(
-            kind: RuleSourceKind.mitm,
-            name: module.name,
-            text: rule,
-            moduleId: module.id,
-          ),
+    for (final (index, entry) in moduleContents.indexed)
+      for (final rule in flashModuleRules(
+        entry.content,
+        policies: policies,
+        exits: {
+          if (data.matchTarget != null) 'MATCH': data.matchTarget!,
+          ...data.exitTargets,
+        },
+        providerNames: moduleProviderNames[index] ?? const {},
+      ))
+        RuleSource(
+          kind: RuleSourceKind.mitm,
+          name: entry.source.name,
+          text: rule,
+          moduleId: entry.source.id,
+        ),
   ];
   if (moduleSources.isNotEmpty) {
     rules.insertAll(moduleRulesAt, [

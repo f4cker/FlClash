@@ -676,8 +676,11 @@ void main() {
             response: true,
             contentType: contentType,
           ).overrideWith(
-            (ref) async =>
-                readMitmBody((json('{"items":[1,2,3],"ads":[]}'), contentType)),
+            (ref) async => readMitmBody((
+              json('{"items":[1,2,3],"ads":[]}'),
+              contentType,
+              grpcOverLimitNote: null,
+            )),
           ),
           mitmBodyProvider(
             exchange.id,
@@ -688,6 +691,7 @@ void main() {
             (ref) async => readMitmBody((
               json('{"items":[1,2,3],"ads":[{"id":9,"img":"a.png"}]}'),
               contentType,
+              grpcOverLimitNote: null,
             )),
           ),
         ],
@@ -807,5 +811,6 @@ class _ReadyStore implements MitmTrustStore {
       MitmInstallOutcome.installed;
 
   @override
-  Future<bool> remove(MitmCertificate ca) async => true;
+  Future<MitmRemoveOutcome> remove(MitmCertificate ca) async =>
+      MitmRemoveOutcome.removed;
 }

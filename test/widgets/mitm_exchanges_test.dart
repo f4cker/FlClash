@@ -78,12 +78,14 @@ Future<ProviderContainer> _pumpDetail(
   MitmBody originalResponseBody = const MitmBody(),
   List<MitmModule> modules = const [],
   bool inSheet = false,
+  bool retry = false,
 }) async {
   final contentType = mitmHeaderValue(
     (exchange ?? _exchange).responseHeader,
     'Content-Type',
   );
   final container = ProviderContainer(
+    retry: retry ? null : (_, _) => null,
     overrides: [
       mitmExchangesProvider(
         _decrypted.id,
@@ -95,7 +97,7 @@ Future<ProviderContainer> _pumpDetail(
         contentType: contentType,
       ).overrideWith(
         (ref) async => bodyError == null
-            ? readMitmBody((responseBody, contentType))
+            ? readMitmBody((responseBody, contentType, grpcOverLimitNote: null))
             : throw bodyError,
       ),
       mitmBodyProvider(
@@ -104,7 +106,11 @@ Future<ProviderContainer> _pumpDetail(
         contentType: contentType,
         original: true,
       ).overrideWith(
-        (ref) async => readMitmBody((originalResponseBody, contentType)),
+        (ref) async => readMitmBody((
+          originalResponseBody,
+          contentType,
+          grpcOverLimitNote: null,
+        )),
       ),
       mitmModulesProvider.overrideWith(() => _Modules(modules)),
     ],
@@ -221,7 +227,34 @@ void main() {
 
     await _openTab(tester, currentAppLocalizations.httpRequests);
 
+    expect(
+      find.text(currentAppLocalizations.httpRequestsReadFailed),
+      findsOneWidget,
+    );
     expect(find.textContaining('core gone'), findsOneWidget);
+    expect(find.text(currentAppLocalizations.copy), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    container.dispose();
+  });
+
+  testWidgets('a read that is retried shows no error yet', (tester) async {
+    final container = await _pumpDetail(
+      tester,
+      list: const MitmExchangeList(),
+      listError: Exception('core gone'),
+      retry: true,
+    );
+
+    await tester.tap(_tab(currentAppLocalizations.httpRequests));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.textContaining('core gone'), findsNothing);
+    expect(
+      find.text(currentAppLocalizations.httpRequestsReadFailed),
+      findsNothing,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     container.dispose();
@@ -239,6 +272,10 @@ void main() {
     await _openTab(tester, currentAppLocalizations.response);
 
     expect(find.text('X-Upstream'), findsOneWidget);
+    expect(
+      find.text(currentAppLocalizations.responseBodyReadFailed),
+      findsOneWidget,
+    );
     expect(find.textContaining('body gone'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

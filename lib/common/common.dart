@@ -54,3 +54,5 @@ export 'task.dart';
 export 'task_pool.dart';
 export 'webdav.dart';
 export 'yaml.dart';
+
+export 'mitm_flash.dart';

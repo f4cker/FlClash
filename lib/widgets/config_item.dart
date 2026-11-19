@@ -150,7 +150,10 @@ class ConfigToggleItem extends _ConfigItem<bool> {
     super.subtitle,
     super.leading,
     super.pageKey,
+    this.enabled = true,
   });
+
+  final bool enabled;
 
   @override
   Widget buildItem(
@@ -164,7 +167,7 @@ class ConfigToggleItem extends _ConfigItem<bool> {
       title: Text(title(appLocalizations)),
       subtitle: buildSubtitle(appLocalizations),
       value: value,
-      onChanged: (value) => change(ref, value),
+      onChanged: enabled ? (value) => change(ref, value) : null,
       menuItems: switch (pageKey) {
         final pageKey? => followMenuItems(ref, pageKey, separated: false),
         null => const [],
@@ -182,6 +185,7 @@ class ConfigOptionsItem<T> extends _ConfigItem<T> {
     required super.onChanged,
     required this.options,
     required this.textBuilder,
+    this.available,
     super.subtitle,
     super.leading,
     super.pageKey,
@@ -190,6 +194,9 @@ class ConfigOptionsItem<T> extends _ConfigItem<T> {
   final List<T> options;
   final String Function(T value) textBuilder;
 
+  /// Hides the options it rejects, except the one in use.
+  final ProviderListenable<bool Function(T option)>? available;
+
   @override
   Widget buildItem(
     BuildContext context,
@@ -197,11 +204,18 @@ class ConfigOptionsItem<T> extends _ConfigItem<T> {
     AppLocalizations appLocalizations,
     T value,
   ) {
+    final available = this.available;
+    final isAvailable = available == null ? null : ref.watch(available);
     return ListItem<T>.options(
       leading: leading,
       title: Text(title(appLocalizations)),
       subtitle: buildSubtitle(appLocalizations),
-      options: options,
+      options: isAvailable == null
+          ? options
+          : [
+              for (final option in options)
+                if (option == value || isAvailable(option)) option,
+            ],
       value: value,
       textBuilder: textBuilder,
       onChanged: (value) => change(ref, value),

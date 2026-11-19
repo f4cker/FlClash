@@ -174,6 +174,40 @@ void main() {
     expect(find.text('All available'), findsOneWidget);
   });
 
+  testWidgets('network refresh keeps latency without claiming availability', (
+    tester,
+  ) async {
+    var calls = 0;
+    final refresh = Completer<List<ServiceCheckItem>>();
+    answer((_) {
+      calls++;
+      return calls == 1
+          ? [_item('google', ServiceProbeStatus.available, delay: 123)]
+          : refresh.future;
+    });
+    await tester.pumpWidget(app(settings: only([ServiceTarget.google])));
+    await tester.pumpAndSettle();
+    expect(find.text('123 ms'), findsOneWidget);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ServiceStatusCard)),
+    );
+    container.read(routeTrackerProvider.notifier).bumpHostEpoch();
+    await tester.pump();
+    expect(find.byType(SkeletonText), findsNothing);
+    expect(find.text('123 ms · Looking up'), findsOneWidget);
+    expect(find.text('All available'), findsNothing);
+    await tester.pump(probeMoveSettleDuration);
+    expect(calls, 2);
+    expect(find.byType(SkeletonText), findsNothing);
+    refresh.complete([_item('google', ServiceProbeStatus.timeout)]);
+    await tester.pumpAndSettle();
+    expect(find.text('123 ms · Looking up'), findsNothing);
+    expect(find.text('Timeout'), findsOneWidget);
+    expect(find.text('All available'), findsNothing);
+    await tester.pump(const Duration(minutes: 1));
+    expect(calls, 2);
+  });
+
   testWidgets('a phone card checks the first two services, and only those', (
     tester,
   ) async {
@@ -739,6 +773,7 @@ void main() {
     ProviderScope.containerOf(tester.element(find.byType(ServiceStatusCard)))
         .read(routeTrackerProvider.notifier)
         .applySnapshot(const RouteSnapshot(coreEpoch: 2, routeVersion: 1));
+    await tester.pump(probeMoveSettleDuration);
     await tester.pumpAndSettle();
 
     expect(asked, ['google', 'google']);
@@ -1101,7 +1136,8 @@ void main() {
     await start(tester);
     expect(checkPhase(tester), ProbePhase.probing);
     expect(find.text('Check failed'), findsNothing);
-    expect(find.byType(SkeletonText), findsWidgets);
+    expect(find.byType(SkeletonText), findsNothing);
+    expect(find.text('Available · Looking up'), findsOneWidget);
 
     failing = false;
     await tester.pump(probeConfirmDelay);

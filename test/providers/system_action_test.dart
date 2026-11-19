@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' show Brightness, Color;
 
 import 'package:fl_clash/common/app_ports.dart';
+import 'package:fl_clash/common/network.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/common/preferences.dart';
 import 'package:fl_clash/models/config.dart';
 import 'package:fl_clash/providers/action.dart';
@@ -9,9 +12,24 @@ import 'package:fl_clash/providers/actions/system_exit.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
 
 import '../helpers/preferences.dart';
+
+class _Interface extends Mock implements NetworkInterface {}
+
+class _Address extends Mock implements InterfaceAddress {}
+
+List<NetworkInterface> _interfaces(String ip) {
+  final address = _Address();
+  when(() => address.address).thenReturn(ip);
+  when(() => address.type).thenReturn(InternetAddressType.IPv4);
+  final interface = _Interface();
+  when(() => interface.name).thenReturn('en0');
+  when(() => interface.addresses).thenReturn([address]);
+  return [interface];
+}
 
 class TestSystemAction extends SystemAction {
   final List<String> calls = [];
@@ -93,6 +111,92 @@ class _GeometryWindowPort implements WindowPort {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('local IP revalidation', () {
+    late ProviderContainer container;
+    late SystemAction action;
+    late List<Completer<List<NetworkInterface>>> requests;
+    late NetworkInterfaceLister original;
+
+    setUp(() {
+      original = listNetworkInterfaces;
+      requests = [];
+      listNetworkInterfaces = ({bool includeLoopback = false}) {
+        final request = Completer<List<NetworkInterface>>();
+        requests.add(request);
+        return request.future;
+      };
+      container = ProviderContainer();
+      container.listen(localIpProvider, (_, _) {});
+      container.read(localIpProvider.notifier).value = '192.0.2.1';
+      action = container.read(systemActionProvider.notifier);
+    });
+
+    tearDown(() {
+      container.dispose();
+      listNetworkInterfaces = original;
+    });
+
+    test('unchanged notification never emits a blank value', () async {
+      final values = <String?>[];
+      container.listen(localIpProvider, (_, next) => values.add(next));
+      final refresh = action.updateLocalIp();
+      expect(container.read(localIpProvider), '192.0.2.1');
+      expect(
+        container.read(isUpdatingProvider(SystemAction.localIpUpdateKey)),
+        isTrue,
+      );
+      requests.single.complete(_interfaces('192.0.2.1'));
+      await refresh;
+      expect(values, isEmpty);
+      expect(
+        container.read(isUpdatingProvider(SystemAction.localIpUpdateKey)),
+        isFalse,
+      );
+    });
+
+    test('new address wins over a late result or failure', () async {
+      final first = action.updateLocalIp();
+      final second = action.updateLocalIp();
+      final third = action.updateLocalIp();
+      requests[2].complete(_interfaces('192.0.2.3'));
+      await third;
+      requests[1].completeError(StateError('old read failed'));
+      requests[0].complete(_interfaces('192.0.2.2'));
+      await Future.wait([first, second]);
+      expect(container.read(localIpProvider), '192.0.2.3');
+      expect(
+        container.read(isUpdatingProvider(SystemAction.localIpUpdateKey)),
+        isFalse,
+      );
+    });
+
+    test(
+      'no interfaces or current failure clears the previous address',
+      () async {
+        final first = action.updateLocalIp();
+        requests[0].complete([]);
+        await first;
+        expect(container.read(localIpProvider), '');
+        container.read(localIpProvider.notifier).value = '192.0.2.1';
+        final second = action.updateLocalIp();
+        requests[1].completeError(StateError('read failed'));
+        await second;
+        expect(container.read(localIpProvider), '');
+        expect(
+          container.read(isUpdatingProvider(SystemAction.localIpUpdateKey)),
+          isFalse,
+        );
+      },
+    );
+
+    test('completion after disposal does not access provider state', () async {
+      final refresh = action.updateLocalIp();
+      container.dispose();
+      requests.single.complete(_interfaces('192.0.2.2'));
+      await refresh;
+    });
+  });
 
   test('coalesces repeated exit requests and runs cleanup once', () async {
     final closeCoreCompleter = Completer<void>();

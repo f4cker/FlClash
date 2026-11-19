@@ -80,7 +80,7 @@ Color _statusColor(BuildContext context, ServiceProbeStatus status) {
 class _ServiceView {
   _ServiceView(this.target, ProbeEntry<ServiceCheck> entry)
     : phase = entry.phase,
-      check = entry.value;
+      check = entry.displayValue;
 
   final ServiceTarget target;
   final ProbePhase phase;
@@ -93,19 +93,27 @@ class _ServiceView {
     null => phase == ProbePhase.failed,
   };
 
-  (String, Color) statusOf(BuildContext context) => switch (check) {
-    ServiceCheck(status: ServiceProbeStatus.available, :final delay) => (
-      delay != null
-          ? '$delay ms'
-          : _statusLabel(context, ServiceProbeStatus.available),
-      context.colorScheme.onSurfaceVariant,
-    ),
-    final ServiceCheck check => (
-      _statusLabel(context, check.status),
-      _statusColor(context, check.status),
-    ),
-    null => _statusOf(context, null, phase),
-  };
+  (String, Color) statusOf(BuildContext context) {
+    final (label, color) = switch (check) {
+      ServiceCheck(status: ServiceProbeStatus.available, :final delay) => (
+        delay != null
+            ? '$delay ms'
+            : _statusLabel(context, ServiceProbeStatus.available),
+        context.colorScheme.onSurfaceVariant,
+      ),
+      final ServiceCheck check => (
+        _statusLabel(context, check.status),
+        _statusColor(context, check.status),
+      ),
+      null => _statusOf(context, null, phase),
+    };
+    return phase == ProbePhase.probing && check != null
+        ? (
+            '$label · ${context.appLocalizations.querying}',
+            context.colorScheme.onSurfaceVariant,
+          )
+        : (label, color);
+  }
 
   Color? dotOf(BuildContext context) => switch (check) {
     final check? => _statusColor(context, check.status),
@@ -183,7 +191,10 @@ class _ServiceStatusCardState extends ConsumerState<ServiceStatusCard> {
       for (final target in shown) _ServiceView(target, state.entryOf(target)),
     ];
     final problems = services.where((service) => service.abnormal).length;
-    final verdict = problems > 0
+    final verdict =
+        services.any((service) => service.phase == ProbePhase.probing)
+        ? DashboardChip(label: appLocalizations.querying)
+        : problems > 0
         ? DashboardChip(
             label: appLocalizations.serviceAbnormalCount(problems),
             tone: DashboardChipTone.warn,
@@ -338,7 +349,7 @@ class _ServiceCell extends StatelessWidget {
       radius: DashboardCorner.tab - _inset,
       color: DashboardColors.of(context).card,
       ink: context.colorScheme.onSurfaceVariant,
-      dot: service.dotOf(context),
+      dot: service.phase == ProbePhase.probing ? null : service.dotOf(context),
     );
     final text = ExcludeSemantics(
       child: service.loading
@@ -851,7 +862,7 @@ class _ServiceRowState extends ConsumerState<_ServiceRow>
         .copyWith(color: context.colorScheme.onSurfaceVariant);
     final target = widget.target;
     final entry = widget.entry;
-    final check = entry.value;
+    final check = entry.displayValue;
     final loading = entry.isLoading;
     final node = check?.node;
     _showNode(node);

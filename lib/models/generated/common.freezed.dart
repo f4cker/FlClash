@@ -5427,7 +5427,7 @@ mixin _$MitmModule {
  int get id; String get name; String get description; String? get url; bool get enabled; int? get order; Map<String, String> get arguments; Map<String, String> get resources; String? get system;/// Its scripts FlClash runs, which turning it on asks about first.
  int get scripts;/// Whether its routing rules go ahead of the profile's own; its other
 /// content follows [enabled] alone.
- bool get rulesEnabled; DateTime get lastUpdateTime;/// Set while an update's new content waits for the user to adopt it;
+ bool get rulesEnabled; bool get asksConsent; bool? get accepted; DateTime get lastUpdateTime;/// Set while an update's new content waits for the user to adopt it;
 /// the content in [fileName] keeps running until then.
  DateTime? get pendingTime;/// Why the last update failed.
  String? get error; MitmUpdateFailure? get failure;
@@ -5442,20 +5442,20 @@ $MitmModuleCopyWith<MitmModule> get copyWith => _$MitmModuleCopyWithImpl<MitmMod
 @override
 bool operator ==(Object other) {
   final _this = this as MitmModule;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmModule&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.enabled, _this.enabled) || other.enabled == _this.enabled)&&(identical(other.order, _this.order) || other.order == _this.order)&&const DeepCollectionEquality().equals(other.arguments, _this.arguments)&&const DeepCollectionEquality().equals(other.resources, _this.resources)&&(identical(other.system, _this.system) || other.system == _this.system)&&(identical(other.scripts, _this.scripts) || other.scripts == _this.scripts)&&(identical(other.rulesEnabled, _this.rulesEnabled) || other.rulesEnabled == _this.rulesEnabled)&&(identical(other.lastUpdateTime, _this.lastUpdateTime) || other.lastUpdateTime == _this.lastUpdateTime)&&(identical(other.pendingTime, _this.pendingTime) || other.pendingTime == _this.pendingTime)&&(identical(other.error, _this.error) || other.error == _this.error)&&(identical(other.failure, _this.failure) || other.failure == _this.failure));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MitmModule&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.enabled, _this.enabled) || other.enabled == _this.enabled)&&(identical(other.order, _this.order) || other.order == _this.order)&&const DeepCollectionEquality().equals(other.arguments, _this.arguments)&&const DeepCollectionEquality().equals(other.resources, _this.resources)&&(identical(other.system, _this.system) || other.system == _this.system)&&(identical(other.scripts, _this.scripts) || other.scripts == _this.scripts)&&(identical(other.rulesEnabled, _this.rulesEnabled) || other.rulesEnabled == _this.rulesEnabled)&&(identical(other.asksConsent, _this.asksConsent) || other.asksConsent == _this.asksConsent)&&(identical(other.accepted, _this.accepted) || other.accepted == _this.accepted)&&(identical(other.lastUpdateTime, _this.lastUpdateTime) || other.lastUpdateTime == _this.lastUpdateTime)&&(identical(other.pendingTime, _this.pendingTime) || other.pendingTime == _this.pendingTime)&&(identical(other.error, _this.error) || other.error == _this.error)&&(identical(other.failure, _this.failure) || other.failure == _this.failure));
 }
 
 
 @override
 int get hashCode {
   final _this = this as MitmModule;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.description,_this.url,_this.enabled,_this.order,const DeepCollectionEquality().hash(_this.arguments),const DeepCollectionEquality().hash(_this.resources),_this.system,_this.scripts,_this.rulesEnabled,_this.lastUpdateTime,_this.pendingTime,_this.error,_this.failure);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.description,_this.url,_this.enabled,_this.order,const DeepCollectionEquality().hash(_this.arguments),const DeepCollectionEquality().hash(_this.resources),_this.system,_this.scripts,_this.rulesEnabled,_this.asksConsent,_this.accepted,_this.lastUpdateTime,_this.pendingTime,_this.error,_this.failure);
 }
 
 @override
 String toString() {
   final _this = this as MitmModule;
-  return 'MitmModule(id: ${_this.id}, name: ${_this.name}, description: ${_this.description}, url: ${_this.url}, enabled: ${_this.enabled}, order: ${_this.order}, arguments: ${_this.arguments}, resources: ${_this.resources}, system: ${_this.system}, scripts: ${_this.scripts}, rulesEnabled: ${_this.rulesEnabled}, lastUpdateTime: ${_this.lastUpdateTime}, pendingTime: ${_this.pendingTime}, error: ${_this.error}, failure: ${_this.failure})';
+  return 'MitmModule(id: ${_this.id}, name: ${_this.name}, description: ${_this.description}, url: ${_this.url}, enabled: ${_this.enabled}, order: ${_this.order}, arguments: ${_this.arguments}, resources: ${_this.resources}, system: ${_this.system}, scripts: ${_this.scripts}, rulesEnabled: ${_this.rulesEnabled}, asksConsent: ${_this.asksConsent}, accepted: ${_this.accepted}, lastUpdateTime: ${_this.lastUpdateTime}, pendingTime: ${_this.pendingTime}, error: ${_this.error}, failure: ${_this.failure})';
 }
 
 
@@ -5466,7 +5466,7 @@ abstract mixin class $MitmModuleCopyWith<$Res>  {
   factory $MitmModuleCopyWith(MitmModule value, $Res Function(MitmModule) _then) = _$MitmModuleCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, String description, String? url, bool enabled, int? order, Map<String, String> arguments, Map<String, String> resources, String? system, int scripts, bool rulesEnabled, DateTime lastUpdateTime, DateTime? pendingTime, String? error, MitmUpdateFailure? failure
+ int id, String name, String description, String? url, bool enabled, int? order, Map<String, String> arguments, Map<String, String> resources, String? system, int scripts, bool rulesEnabled, bool asksConsent, bool? accepted, DateTime lastUpdateTime, DateTime? pendingTime, String? error, MitmUpdateFailure? failure
 });
 
 
@@ -5483,7 +5483,7 @@ class _$MitmModuleCopyWithImpl<$Res>
 
 /// Create a copy of MitmModule
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = null,Object? url = freezed,Object? enabled = null,Object? order = freezed,Object? arguments = null,Object? resources = null,Object? system = freezed,Object? scripts = null,Object? rulesEnabled = null,Object? lastUpdateTime = null,Object? pendingTime = freezed,Object? error = freezed,Object? failure = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = null,Object? url = freezed,Object? enabled = null,Object? order = freezed,Object? arguments = null,Object? resources = null,Object? system = freezed,Object? scripts = null,Object? rulesEnabled = null,Object? asksConsent = null,Object? accepted = freezed,Object? lastUpdateTime = null,Object? pendingTime = freezed,Object? error = freezed,Object? failure = freezed,}) {
   return _then(MitmModule(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -5496,7 +5496,9 @@ as Map<String, String>,resources: null == resources ? _self.resources : resource
 as Map<String, String>,system: freezed == system ? _self.system : system // ignore: cast_nullable_to_non_nullable
 as String?,scripts: null == scripts ? _self.scripts : scripts // ignore: cast_nullable_to_non_nullable
 as int,rulesEnabled: null == rulesEnabled ? _self.rulesEnabled : rulesEnabled // ignore: cast_nullable_to_non_nullable
-as bool,lastUpdateTime: null == lastUpdateTime ? _self.lastUpdateTime : lastUpdateTime // ignore: cast_nullable_to_non_nullable
+as bool,asksConsent: null == asksConsent ? _self.asksConsent : asksConsent // ignore: cast_nullable_to_non_nullable
+as bool,accepted: freezed == accepted ? _self.accepted : accepted // ignore: cast_nullable_to_non_nullable
+as bool?,lastUpdateTime: null == lastUpdateTime ? _self.lastUpdateTime : lastUpdateTime // ignore: cast_nullable_to_non_nullable
 as DateTime,pendingTime: freezed == pendingTime ? _self.pendingTime : pendingTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as String?,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
@@ -5585,10 +5587,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String description,  String? url,  bool enabled,  int? order,  Map<String, String> arguments,  Map<String, String> resources,  String? system,  int scripts,  bool rulesEnabled,  DateTime lastUpdateTime,  DateTime? pendingTime,  String? error,  MitmUpdateFailure? failure)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String description,  String? url,  bool enabled,  int? order,  Map<String, String> arguments,  Map<String, String> resources,  String? system,  int scripts,  bool rulesEnabled,  bool asksConsent,  bool? accepted,  DateTime lastUpdateTime,  DateTime? pendingTime,  String? error,  MitmUpdateFailure? failure)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MitmModule() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_that.order,_that.arguments,_that.resources,_that.system,_that.scripts,_that.rulesEnabled,_that.lastUpdateTime,_that.pendingTime,_that.error,_that.failure);case _:
+return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_that.order,_that.arguments,_that.resources,_that.system,_that.scripts,_that.rulesEnabled,_that.asksConsent,_that.accepted,_that.lastUpdateTime,_that.pendingTime,_that.error,_that.failure);case _:
   return orElse();
 
 }
@@ -5606,10 +5608,10 @@ return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String description,  String? url,  bool enabled,  int? order,  Map<String, String> arguments,  Map<String, String> resources,  String? system,  int scripts,  bool rulesEnabled,  DateTime lastUpdateTime,  DateTime? pendingTime,  String? error,  MitmUpdateFailure? failure)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String description,  String? url,  bool enabled,  int? order,  Map<String, String> arguments,  Map<String, String> resources,  String? system,  int scripts,  bool rulesEnabled,  bool asksConsent,  bool? accepted,  DateTime lastUpdateTime,  DateTime? pendingTime,  String? error,  MitmUpdateFailure? failure)  $default,) {final _that = this;
 switch (_that) {
 case _MitmModule():
-return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_that.order,_that.arguments,_that.resources,_that.system,_that.scripts,_that.rulesEnabled,_that.lastUpdateTime,_that.pendingTime,_that.error,_that.failure);case _:
+return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_that.order,_that.arguments,_that.resources,_that.system,_that.scripts,_that.rulesEnabled,_that.asksConsent,_that.accepted,_that.lastUpdateTime,_that.pendingTime,_that.error,_that.failure);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -5626,10 +5628,10 @@ return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String description,  String? url,  bool enabled,  int? order,  Map<String, String> arguments,  Map<String, String> resources,  String? system,  int scripts,  bool rulesEnabled,  DateTime lastUpdateTime,  DateTime? pendingTime,  String? error,  MitmUpdateFailure? failure)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String description,  String? url,  bool enabled,  int? order,  Map<String, String> arguments,  Map<String, String> resources,  String? system,  int scripts,  bool rulesEnabled,  bool asksConsent,  bool? accepted,  DateTime lastUpdateTime,  DateTime? pendingTime,  String? error,  MitmUpdateFailure? failure)?  $default,) {final _that = this;
 switch (_that) {
 case _MitmModule() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_that.order,_that.arguments,_that.resources,_that.system,_that.scripts,_that.rulesEnabled,_that.lastUpdateTime,_that.pendingTime,_that.error,_that.failure);case _:
+return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_that.order,_that.arguments,_that.resources,_that.system,_that.scripts,_that.rulesEnabled,_that.asksConsent,_that.accepted,_that.lastUpdateTime,_that.pendingTime,_that.error,_that.failure);case _:
   return null;
 
 }
@@ -5641,7 +5643,7 @@ return $default(_that.id,_that.name,_that.description,_that.url,_that.enabled,_t
 
 
 class _MitmModule implements MitmModule {
-  const _MitmModule({required this.id, required this.name, this.description = '', this.url, this.enabled = true, this.order,  Map<String, String> arguments = const {},  Map<String, String> resources = const {}, this.system, this.scripts = 0, this.rulesEnabled = true, required this.lastUpdateTime, this.pendingTime, this.error, this.failure}): _arguments = arguments,_resources = resources;
+  const _MitmModule({required this.id, required this.name, this.description = '', this.url, this.enabled = true, this.order,  Map<String, String> arguments = const {},  Map<String, String> resources = const {}, this.system, this.scripts = 0, this.rulesEnabled = true, this.asksConsent = false, this.accepted, required this.lastUpdateTime, this.pendingTime, this.error, this.failure}): _arguments = arguments,_resources = resources;
   
 
 @override final  int id;
@@ -5670,6 +5672,8 @@ class _MitmModule implements MitmModule {
 /// Whether its routing rules go ahead of the profile's own; its other
 /// content follows [enabled] alone.
 @override@JsonKey() final  bool rulesEnabled;
+@override@JsonKey() final  bool asksConsent;
+@override final  bool? accepted;
 @override final  DateTime lastUpdateTime;
 /// Set while an update's new content waits for the user to adopt it;
 /// the content in [fileName] keeps running until then.
@@ -5688,18 +5692,18 @@ _$MitmModuleCopyWith<_MitmModule> get copyWith => __$MitmModuleCopyWithImpl<_Mit
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmModule&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.url, url) || other.url == url)&&(identical(other.enabled, enabled) || other.enabled == enabled)&&(identical(other.order, order) || other.order == order)&&const DeepCollectionEquality().equals(other.arguments, _arguments)&&const DeepCollectionEquality().equals(other.resources, _resources)&&(identical(other.system, system) || other.system == system)&&(identical(other.scripts, scripts) || other.scripts == scripts)&&(identical(other.rulesEnabled, rulesEnabled) || other.rulesEnabled == rulesEnabled)&&(identical(other.lastUpdateTime, lastUpdateTime) || other.lastUpdateTime == lastUpdateTime)&&(identical(other.pendingTime, pendingTime) || other.pendingTime == pendingTime)&&(identical(other.error, error) || other.error == error)&&(identical(other.failure, failure) || other.failure == failure));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MitmModule&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.url, url) || other.url == url)&&(identical(other.enabled, enabled) || other.enabled == enabled)&&(identical(other.order, order) || other.order == order)&&const DeepCollectionEquality().equals(other.arguments, _arguments)&&const DeepCollectionEquality().equals(other.resources, _resources)&&(identical(other.system, system) || other.system == system)&&(identical(other.scripts, scripts) || other.scripts == scripts)&&(identical(other.rulesEnabled, rulesEnabled) || other.rulesEnabled == rulesEnabled)&&(identical(other.asksConsent, asksConsent) || other.asksConsent == asksConsent)&&(identical(other.accepted, accepted) || other.accepted == accepted)&&(identical(other.lastUpdateTime, lastUpdateTime) || other.lastUpdateTime == lastUpdateTime)&&(identical(other.pendingTime, pendingTime) || other.pendingTime == pendingTime)&&(identical(other.error, error) || other.error == error)&&(identical(other.failure, failure) || other.failure == failure));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,description,url,enabled,order,const DeepCollectionEquality().hash(_arguments),const DeepCollectionEquality().hash(_resources),system,scripts,rulesEnabled,lastUpdateTime,pendingTime,error,failure);
+    return Object.hash(runtimeType,id,name,description,url,enabled,order,const DeepCollectionEquality().hash(_arguments),const DeepCollectionEquality().hash(_resources),system,scripts,rulesEnabled,asksConsent,accepted,lastUpdateTime,pendingTime,error,failure);
 }
 
 @override
 String toString() {
-    return 'MitmModule(id: $id, name: $name, description: $description, url: $url, enabled: $enabled, order: $order, arguments: $arguments, resources: $resources, system: $system, scripts: $scripts, rulesEnabled: $rulesEnabled, lastUpdateTime: $lastUpdateTime, pendingTime: $pendingTime, error: $error, failure: $failure)';
+    return 'MitmModule(id: $id, name: $name, description: $description, url: $url, enabled: $enabled, order: $order, arguments: $arguments, resources: $resources, system: $system, scripts: $scripts, rulesEnabled: $rulesEnabled, asksConsent: $asksConsent, accepted: $accepted, lastUpdateTime: $lastUpdateTime, pendingTime: $pendingTime, error: $error, failure: $failure)';
 }
 
 
@@ -5710,7 +5714,7 @@ abstract mixin class _$MitmModuleCopyWith<$Res> implements $MitmModuleCopyWith<$
   factory _$MitmModuleCopyWith(_MitmModule value, $Res Function(_MitmModule) _then) = __$MitmModuleCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, String description, String? url, bool enabled, int? order, Map<String, String> arguments, Map<String, String> resources, String? system, int scripts, bool rulesEnabled, DateTime lastUpdateTime, DateTime? pendingTime, String? error, MitmUpdateFailure? failure
+ int id, String name, String description, String? url, bool enabled, int? order, Map<String, String> arguments, Map<String, String> resources, String? system, int scripts, bool rulesEnabled, bool asksConsent, bool? accepted, DateTime lastUpdateTime, DateTime? pendingTime, String? error, MitmUpdateFailure? failure
 });
 
 
@@ -5727,7 +5731,7 @@ class __$MitmModuleCopyWithImpl<$Res>
 
 /// Create a copy of MitmModule
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = null,Object? url = freezed,Object? enabled = null,Object? order = freezed,Object? arguments = null,Object? resources = null,Object? system = freezed,Object? scripts = null,Object? rulesEnabled = null,Object? lastUpdateTime = null,Object? pendingTime = freezed,Object? error = freezed,Object? failure = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = null,Object? url = freezed,Object? enabled = null,Object? order = freezed,Object? arguments = null,Object? resources = null,Object? system = freezed,Object? scripts = null,Object? rulesEnabled = null,Object? asksConsent = null,Object? accepted = freezed,Object? lastUpdateTime = null,Object? pendingTime = freezed,Object? error = freezed,Object? failure = freezed,}) {
   return _then(_MitmModule(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -5740,7 +5744,9 @@ as Map<String, String>,resources: null == resources ? _self._resources : resourc
 as Map<String, String>,system: freezed == system ? _self.system : system // ignore: cast_nullable_to_non_nullable
 as String?,scripts: null == scripts ? _self.scripts : scripts // ignore: cast_nullable_to_non_nullable
 as int,rulesEnabled: null == rulesEnabled ? _self.rulesEnabled : rulesEnabled // ignore: cast_nullable_to_non_nullable
-as bool,lastUpdateTime: null == lastUpdateTime ? _self.lastUpdateTime : lastUpdateTime // ignore: cast_nullable_to_non_nullable
+as bool,asksConsent: null == asksConsent ? _self.asksConsent : asksConsent // ignore: cast_nullable_to_non_nullable
+as bool,accepted: freezed == accepted ? _self.accepted : accepted // ignore: cast_nullable_to_non_nullable
+as bool?,lastUpdateTime: null == lastUpdateTime ? _self.lastUpdateTime : lastUpdateTime // ignore: cast_nullable_to_non_nullable
 as DateTime,pendingTime: freezed == pendingTime ? _self.pendingTime : pendingTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as String?,failure: freezed == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable

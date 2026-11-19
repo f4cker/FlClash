@@ -85,6 +85,7 @@ abstract class Profile with _$Profile {
     @Default({}) Set<String> unfoldSet,
     int? scriptId,
     String? matchTarget,
+    @Default({}) Map<String, String> exitTargets,
     int? order,
     @Default(ProfileOverrides())
     @JsonKey(fromJson: ProfileOverrides.safeFromJson)

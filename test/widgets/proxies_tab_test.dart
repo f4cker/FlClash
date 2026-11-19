@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
@@ -9,8 +11,10 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:fl_clash/views/proxies/card.dart';
 import 'package:fl_clash/views/proxies/group_tabs.dart';
+import 'package:fl_clash/views/proxies/hidden_group_name.dart';
 import 'package:fl_clash/views/proxies/proxies.dart';
 import 'package:fl_clash/views/proxies/tab.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -406,7 +410,8 @@ void main() {
     expect(tester.widget(card), same(before));
   });
 
-  testWidgets('lays each tab out at the width its label takes', (tester) async {
+  testWidgets('lays each tab out at the width its label takes, up to the '
+      'more menu\'s', (tester) async {
     const names = ['A', '🚀 节点选择', 'Group with a long name'];
     globalContainer
         .read(_tabStateProvider.notifier)
@@ -418,14 +423,125 @@ void main() {
       expect(
         tester.getSize(tab).width,
         closeTo(
-          tester
-              .renderObject<RenderBox>(tab)
-              .getMaxIntrinsicWidth(double.infinity),
+          min(
+            tester
+                .renderObject<RenderBox>(tab)
+                .getMaxIntrinsicWidth(double.infinity),
+            PopupMenu.labelMaxWidth + 32,
+          ),
           1,
         ),
         reason: name,
       );
     }
+  });
+
+  testWidgets('a long group name stops at the more menu\'s label width, and '
+      'the strip centers its tab by that width', (tester) async {
+    const long =
+        '🇭🇰 香港 Hong Kong 自动选择 low latency relay nodes for streaming '
+        'and gaming over IPLC premium line 01';
+    globalContainer
+        .read(_tabStateProvider.notifier)
+        .set(
+          _tabState([
+            for (var i = 0; i < 12; i++) _group(i == 6 ? long : 'Group $i'),
+          ], current: long),
+        );
+    await pumpTabView(tester);
+    await tester.pump();
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    final label = find.text(long, findRichText: true);
+    final text = tester.renderObject<RenderParagraph>(label);
+    expect(text.didExceedMaxLines, isTrue);
+    expect(
+      tester.getSize(label).width,
+      lessThanOrEqualTo(PopupMenu.labelMaxWidth),
+    );
+    final tab = tester.getRect(
+      find.ancestor(of: label, matching: find.byType(Card)),
+    );
+    expect(tab.width, lessThanOrEqualTo(PopupMenu.labelMaxWidth + 32));
+    final strip = tester.getRect(
+      find.descendant(
+        of: find.byType(GroupTabs),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(tab.center.dx, closeTo(strip.center.dx, 1));
+  });
+
+  testWidgets('a truncated group label retains its Flash hidden tag', (
+    tester,
+  ) async {
+    const name =
+        'A hidden group whose name exceeds the menu label width '
+        'and still has an independently visible hidden tag';
+    final controller = TabController(length: 1, vsync: tester);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      TestApp(
+        child: GroupTabs(
+          controller: controller,
+          groups: [_group(name).copyWith(hidden: true)],
+          showHiddenTags: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    final label = find.text(name, findRichText: true);
+    expect(find.byType(HiddenGroupName), findsOneWidget);
+    expect(
+      tester.renderObject<RenderParagraph>(label).didExceedMaxLines,
+      isTrue,
+    );
+    expect(tester.getSize(label).width, PopupMenu.labelMaxWidth);
+    final context = tester.element(find.byType(GroupTabs));
+    expect(
+      tester.getSize(tabOf(name)).width,
+      closeTo(
+        PopupMenu.labelMaxWidth + 32 + HiddenGroupName.tagWidthOf(context),
+        1,
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a long group name ends where its row in the more menu ends', (
+    tester,
+  ) async {
+    const long =
+        'A group whose name runs on and on past the width of any tab, '
+        'a menu row or the strip itself';
+    globalContainer
+        .read(_tabStateProvider.notifier)
+        .set(
+          _tabState([
+            for (var i = 0; i < 12; i++) _group(i == 3 ? long : 'Group $i'),
+          ], current: 'Group 0'),
+        );
+    await pumpTabView(tester);
+    await tester.pump();
+    final tabLabel = tester.getSize(
+      find.descendant(
+        of: find.byType(GroupTabs),
+        matching: find.text(long, findRichText: true),
+      ),
+    );
+
+    await tester.tap(find.byGlyph(AppGlyphs.chevronDown));
+    await tester.pumpAndSettle();
+
+    final menuLabel = tester.getSize(
+      find.descendant(
+        of: find.byType(PopupMenu),
+        matching: find.text(long, findRichText: true),
+      ),
+    );
+    expect(tabLabel.width, PopupMenu.labelMaxWidth);
+    expect(menuLabel.width, PopupMenu.labelMaxWidth);
   });
 
   testWidgets('builds only the tabs in view and opens on a far current one', (

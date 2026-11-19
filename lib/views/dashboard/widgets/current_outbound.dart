@@ -97,6 +97,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
     bool stillFor(ProbeEntry<IpInfo> entry) =>
         entry.value == null && entry.phase != ProbePhase.probing && !live;
     final metrics = _OutboundMetrics.of(density);
+    final padding = metrics.padding.resolve(Directionality.of(context));
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
     final colors = DashboardColors.of(context);
@@ -161,7 +162,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
             ),
           ),
           Padding(
-            padding: metrics.padding,
+            padding: padding,
             child: Row(
               spacing: metrics.gap,
               children: [
@@ -223,12 +224,15 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
                 ),
                 SizedBox(
                   width: metrics.buttonSlot,
-                  child: Center(
-                    child: _StartToggle(
-                      size: metrics.buttonSize,
-                      enabled: hasProfile,
-                      running: isStart,
-                      suspended: suspended,
+                  child: Transform.translate(
+                    offset: Offset(0, (padding.bottom - padding.top) / 2),
+                    child: Center(
+                      child: _StartToggle(
+                        size: metrics.buttonSize,
+                        enabled: hasProfile,
+                        running: isStart,
+                        suspended: suspended,
+                      ),
                     ),
                   ),
                 ),
@@ -244,21 +248,23 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
 /// What a lookup has come to: an address, a failure, or neither yet.
 @immutable
 class IpAnswer {
-  const IpAnswer.found(IpInfo this.info) : failed = false;
+  const IpAnswer.found(IpInfo this.info, {this.revalidating = false})
+    : failed = false;
 
-  const IpAnswer.failed() : info = null, failed = true;
+  const IpAnswer.failed() : info = null, failed = true, revalidating = false;
 
-  const IpAnswer.pending() : info = null, failed = false;
+  const IpAnswer.pending() : info = null, failed = false, revalidating = false;
 
   final IpInfo? info;
   final bool failed;
+  final bool revalidating;
 
   String? get ip => info?.ip;
 }
 
 IpAnswer _answerOf(ProbeEntry<IpInfo> entry) {
-  if (entry.value case final info?) {
-    return IpAnswer.found(info);
+  if (entry.displayValue case final info?) {
+    return IpAnswer.found(info, revalidating: entry.isLoading);
   }
   return entry.phase == ProbePhase.failed
       ? const IpAnswer.failed()
@@ -307,7 +313,7 @@ class _OutboundMetrics {
 
   factory _OutboundMetrics.of(DashboardDensity density) => switch (density) {
     DashboardDensity.standard => _OutboundMetrics(
-      padding: dashboardCardPadding(density),
+      padding: dashboardCardPadding(density).copyWith(bottom: 20),
       gap: 16,
       buttonSize: 104,
       buttonSlot: 120,
@@ -316,7 +322,7 @@ class _OutboundMetrics {
       decorationTop: -87,
     ),
     DashboardDensity.compact => _OutboundMetrics(
-      padding: dashboardCardPadding(density),
+      padding: dashboardCardPadding(density).copyWith(bottom: 20),
       gap: 16,
       buttonSize: 84,
       buttonSlot: 100,
@@ -701,6 +707,7 @@ class ExitIpRow extends ConsumerWidget {
     final flag = flagOf(country);
     final shownPlace = [?flag, if (place.isNotEmpty) place].join(' ');
     final summary = [
+      if (answer.revalidating) appLocalizations.querying,
       ?network,
       if (shownPlace.isNotEmpty) shownPlace,
     ].join(' · ');
@@ -714,6 +721,7 @@ class ExitIpRow extends ConsumerWidget {
     final separator = appLocalizations.semanticsSeparator;
     final semanticLabel = [
       appLocalizations.exitIp,
+      if (answer.revalidating) appLocalizations.querying,
       hidden ? appLocalizations.hideIp : ip,
       if (score != null && grade != null)
         appLocalizations.ipxScoreSemantics('$score', grade.letter),
@@ -879,7 +887,8 @@ class LocalIpRow extends ConsumerWidget {
             label:
                 '${appLocalizations.localPublicIp}'
                 '${appLocalizations.semanticsSeparator}'
-                '${hidden ? appLocalizations.hideIp : ip}',
+                '${hidden ? appLocalizations.hideIp : ip}'
+                '${answer.revalidating ? '${appLocalizations.semanticsSeparator}${appLocalizations.querying}' : ''}',
             excludeSemantics: true,
             child: _IpText(ip!),
           ),
@@ -887,11 +896,13 @@ class LocalIpRow extends ConsumerWidget {
             const SizedBox(width: 2),
             _CopyButton(text: ip, tooltip: appLocalizations.copyLocalPublicIp),
           ],
-          if (sameAsExit)
+          if (answer.revalidating || sameAsExit)
             Padding(
               padding: EdgeInsetsDirectional.only(start: hidden ? 8 : 4),
               child: Text(
-                appLocalizations.sameAsExit,
+                answer.revalidating
+                    ? appLocalizations.querying
+                    : appLocalizations.sameAsExit,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: _detailStyle(context),

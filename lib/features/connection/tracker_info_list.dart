@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/plugins/app.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -163,7 +166,7 @@ class TrackerInfoAnimatedList extends StatelessWidget {
         itemBuilder: (itemContext, trackerInfo) {
           final striped = positions[trackerInfo.id]?.isOdd ?? false;
           return MemoBuilder(
-            key: Key(trackerInfo.id),
+            key: ValueKey(trackerInfo.id),
             // A live row reads its age off the clock, which moves on its own.
             inputs: [
               trackerInfo,
@@ -222,6 +225,7 @@ class TrackerInfoGroupedList extends ConsumerStatefulWidget {
 class _TrackerInfoGroupedListState
     extends ConsumerState<TrackerInfoGroupedList> {
   Map<String, TrackerInfo>? _byId;
+  final _leadings = <String, Widget>{};
 
   @override
   void didUpdateWidget(TrackerInfoGroupedList oldWidget) {
@@ -229,6 +233,19 @@ class _TrackerInfoGroupedListState
     if (!identical(oldWidget.groups, widget.groups)) {
       _byId = null;
     }
+  }
+
+  Widget? _leadingOf(App icons, String packageName) {
+    final cached = icons.getCachedOwnPackageIcon(packageName);
+    if (cached == null) {
+      unawaited(icons.getOwnPackageIcon(packageName));
+      return null;
+    }
+    final icon = cached.icon;
+    if (icon == null) {
+      return null;
+    }
+    return _leadings[packageName] ??= packageIconImage(icon, 24);
   }
 
   TrackerInfo _latest(TrackerInfo trackerInfo) =>
@@ -247,18 +264,12 @@ class _TrackerInfoGroupedListState
       :table,
       :onClose,
     ) = widget;
-    final showIcon =
-        grouping == RecordGrouping.app &&
-        ref.watch(
-          patchClashConfigProvider.select(
-            (state) =>
-                state.findProcessMode == FindProcessMode.always &&
-                system.isAndroid,
-          ),
-        );
+    final icons = grouping == RecordGrouping.app && system.isAndroid
+        ? ref.watch(packageIconSourceProvider)
+        : null;
     final byProcess = grouping == RecordGrouping.app && !system.isAndroid;
     final showsTraffic = isLive || table != null;
-    return RecordGroupedList<TrackerInfo>(
+    Widget list() => RecordGroupedList<TrackerInfo>(
       groups: widget.groups,
       grouping: grouping,
       controller: widget.controller,
@@ -266,9 +277,9 @@ class _TrackerInfoGroupedListState
       estimatedItemExtent: table?.rowHeight ?? recordListEstimatedExtent,
       leadingOf: byProcess
           ? (group) => _processLeading(group)
-          : (group) => showIcon && group.key.isNotEmpty
-                ? PackageIcon(packageName: group.key, size: 24)
-                : null,
+          : icons == null
+          ? null
+          : (group) => _leadingOf(icons, group.key),
       labelOf: byProcess
           ? (group) => processLabelOf(
               processApps.processOf(group.items.first.metadata),
@@ -278,7 +289,7 @@ class _TrackerInfoGroupedListState
       itemBuilder: (_, trackerInfo, index) {
         final striped = index.isOdd;
         return MemoBuilder(
-          key: Key(trackerInfo.id),
+          key: ValueKey(trackerInfo.id),
           inputs: [
             ...showsTraffic ? [trackerInfo] : _shownInList(trackerInfo),
             detailTitle,
@@ -306,6 +317,13 @@ class _TrackerInfoGroupedListState
           },
         );
       },
+    );
+    if (icons == null) {
+      return list();
+    }
+    return ListenableBuilder(
+      listenable: icons.ownPackageIconsLoaded,
+      builder: (_, _) => list(),
     );
   }
 
@@ -350,7 +368,7 @@ Widget _buildTrackerInfoItem(
 }) {
   if (table != null) {
     return TrackerInfoTableRow(
-      key: Key(trackerInfo.id),
+      key: ValueKey(trackerInfo.id),
       trackerInfo: trackerInfo,
       table: table,
       striped: striped,
@@ -359,7 +377,7 @@ Widget _buildTrackerInfoItem(
     );
   }
   return TrackerInfoItem(
-    key: Key(trackerInfo.id),
+    key: ValueKey(trackerInfo.id),
     trackerInfo: trackerInfo,
     isLive: isLive,
     onClose: onClose,
