@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>FlashReleaseChannel</key>
-	<string>stable</string>
+	<string>beta</string>
 	<key>FlashReleaseVersion</key>
-	<string>1.0.0</string>
+	<string>1.0.0-beta.1</string>
 	<key>FlashDartDefines</key>
 	<string>$(DART_DEFINES)</string>
 	<key>CFBundleDevelopmentRegion</key>
