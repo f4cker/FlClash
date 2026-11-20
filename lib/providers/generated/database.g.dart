@@ -514,7 +514,7 @@ final class RestoreMitmHoldStateProvider
 }
 
 String _$restoreMitmHoldStateHash() =>
-    r'51b007a017f38442590b5cc4c120c6ecc5c4a11f';
+    r'83a444d4f61fc3fd64c26558bf25510ce9a17f82';
 
 /// The MITM modules a restore holds off until their consent is rechecked
 /// on this device; every place that runs a module checks it.

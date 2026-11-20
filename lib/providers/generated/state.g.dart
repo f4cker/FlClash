@@ -338,7 +338,7 @@ final class EnabledMitmModuleRulesProvider
 }
 
 String _$enabledMitmModuleRulesHash() =>
-    r'69f2ee2021392f8f77340713cea6922e99d0a09c';
+    r'138fe1a004a242f7410ceb2d97fba9b5218d29fd';
 
 /// Null, and so no decryption, unless the user turned it on.
 
@@ -4246,7 +4246,7 @@ final class SetupStateProvider
   }
 }
 
-String _$setupStateHash() => r'9f96c92d4ca4903d69b156f8994e6b972153770e';
+String _$setupStateHash() => r'23f151397578b2e3607c875709ad1e82c1725f7a';
 
 final class SetupStateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SetupState>, int?> {

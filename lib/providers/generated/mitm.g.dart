@@ -277,7 +277,7 @@ final class MitmSignActionProvider
   }
 }
 
-String _$mitmSignActionHash() => r'682f0f651fec932b5516b089159d00130298d573';
+String _$mitmSignActionHash() => r'fe7e7ae871761e4f4d64c737fe63584f9046f97f';
 
 /// Answers the Core's `mitmSign` with a leaf for a host on the list the Core
 /// decrypts (the user's hostnames, then the enabled modules', see
@@ -863,7 +863,7 @@ final class EnabledMitmModulesProvider
 }
 
 String _$enabledMitmModulesHash() =>
-    r'531ac6549d103b62ea159a5ac006b725d14f9020';
+    r'09522d4a4e307f146f10893f7394d8bc71b8b6f9';
 
 @ProviderFor(mitmModuleExits)
 final mitmModuleExitsProvider = MitmModuleExitsProvider._();
