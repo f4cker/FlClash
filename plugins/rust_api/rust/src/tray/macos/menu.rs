@@ -290,6 +290,8 @@ define_class!(
                 if let Some(view) = item.view() {
                     if let Some(segments) = view.downcast_ref::<SegmentsView>() {
                         segments.update_highlight(false);
+                    } else if let Some(row) = view.downcast_ref::<ItemView>() {
+                        row.menu_closed();
                     }
                 }
             }
@@ -309,6 +311,11 @@ define_class!(
                 if let Some(segments) = view.downcast_ref::<SegmentsView>() {
                     segments.activate_focused();
                     return;
+                }
+                if let Some(row) = view.downcast_ref::<ItemView>() {
+                    if !row.ivars().content.borrow().enabled {
+                        return;
+                    }
                 }
             }
             self.select(sender.tag() as u32);
@@ -438,7 +445,7 @@ impl TrayMenu {
                 }
             } else {
                 entry.enabled = false;
-                item.setEnabled(false);
+                item.setEnabled(item_enabled(&entry));
                 if let Some(submenu) = &submenu {
                     submenu.reconcile_retained(Vec::new());
                 }
@@ -584,9 +591,7 @@ fn configure(item: &NSMenuItem, entry: &Entry) {
     };
     item.setTitle(&NSString::from_str(&title));
     item.setTag(entry.id as isize);
-    // Disabling the highlighted item mid-tracking would move the highlight;
-    // the row view draws and refuses the disabled state instead.
-    item.setEnabled(entry.enabled || entry.keeps_open);
+    item.setEnabled(item_enabled(entry));
     let tool_tip = entry.accessibility_label.clone().unwrap_or_else(|| {
         std::iter::once(title.as_str())
             .chain(entry.detail.as_deref())
@@ -600,6 +605,32 @@ fn configure(item: &NSMenuItem, entry: &Entry) {
     } else {
         NSControlStateValueOff
     });
+}
+
+/// Disabling the highlighted item mid-tracking would move the highlight, so
+/// a row that keeps the menu open stays enabled and its view draws and
+/// refuses the disabled state instead.
+fn item_enabled(entry: &Entry) -> bool {
+    entry.enabled || entry.keeps_open
+}
+
+/// AppKit answers Return, Enter and Space on the highlighted item by sending
+/// its action and closing the menu.
+fn takes_key(
+    keeps_open: bool,
+    highlighted: bool,
+    shown: bool,
+    modifiers: NSEventModifierFlags,
+    key_code: u16,
+) -> bool {
+    let commands = NSEventModifierFlags::Command
+        | NSEventModifierFlags::Control
+        | NSEventModifierFlags::Option;
+    keeps_open
+        && highlighted
+        && shown
+        && !modifiers.intersects(commands)
+        && matches!(key_code, 36 | 49 | 76)
 }
 
 /// The menu a row belongs to, and the root that holds the tracking loop.
@@ -885,9 +916,8 @@ define_class!(
                 )]);
                 unsafe { self.setAccessibilityChildren(Some(&children)) };
             }
-            self.ivars().monitor.replace(KeyMonitor(None));
-            if self.window().is_some() && self.ivars().content.borrow().keeps_open {
-                self.ivars().monitor.replace(KeyMonitor::key_down(self, Self::handle_key));
+            if self.window().is_none() {
+                self.ivars().monitor.replace(KeyMonitor(None));
             }
         }
 
@@ -984,6 +1014,22 @@ impl ItemView {
 
     fn update_highlight(&self, highlighted: bool) {
         self.ivars().highlighted.set(highlighted);
+        let listening = self.ivars().monitor.borrow().0.is_some();
+        if highlighted
+            && !listening
+            && self.window().is_some()
+            && self.ivars().content.borrow().keeps_open
+        {
+            self.ivars()
+                .monitor
+                .replace(KeyMonitor::key_down(self, Self::handle_key));
+        }
+        self.setNeedsDisplay(true);
+    }
+
+    fn menu_closed(&self) {
+        self.ivars().highlighted.set(false);
+        self.ivars().monitor.replace(KeyMonitor(None));
         self.setNeedsDisplay(true);
     }
 
@@ -992,16 +1038,16 @@ impl ItemView {
         self.ivars().highlighted.get() && (content.enabled || content.keeps_open)
     }
 
-    /// AppKit would send the item's action on Return and close the menu.
     fn handle_key(&self, event: &NSEvent) -> bool {
-        let modifiers = NSEventModifierFlags::Command
-            | NSEventModifierFlags::Control
-            | NSEventModifierFlags::Option;
-        if !self.ivars().highlighted.get()
-            || !self.ivars().content.borrow().keeps_open
-            || event.modifierFlags().intersects(modifiers)
-            || !matches!(event.keyCode(), 36 | 49 | 76)
-        {
+        let shown = self.window().is_some_and(|window| window.isVisible());
+        let keeps_open = self.ivars().content.borrow().keeps_open;
+        if !takes_key(
+            keeps_open,
+            self.ivars().highlighted.get(),
+            shown,
+            event.modifierFlags(),
+            event.keyCode(),
+        ) {
             return false;
         }
         self.activate();
@@ -1787,8 +1833,10 @@ fn draw_symbol(image: &NSImage, x: f64, color: &NSColor, max_width: f64, bounds:
 mod tests {
     use super::topology::{grouped, matches, retained_enabled, retained_status, shared_index};
     use super::{
-        is_delay, segment_track, text_width, Entry, ItemContent, Kind, DETAIL_MAXIMUM_WIDTH,
+        is_delay, item_enabled, segment_track, takes_key, text_width, Entry, ItemContent, Kind,
+        DETAIL_MAXIMUM_WIDTH,
     };
+    use objc2_app_kit::NSEventModifierFlags;
     use objc2_app_kit::NSFont;
     use objc2_foundation::{NSPoint, NSRect, NSSize};
 
@@ -1994,6 +2042,44 @@ mod tests {
         let other = entry(Kind::Action, 2, "Show");
         assert!(!retained_enabled(&other, false));
         assert!(retained_enabled(&other, true));
+    }
+
+    #[test]
+    fn a_row_that_keeps_the_menu_open_stays_an_enabled_item_while_disabled() {
+        let busy = Entry {
+            keeps_open: true,
+            enabled: false,
+            ..entry(Kind::Action, 1, "Test latency")
+        };
+        assert!(item_enabled(&busy));
+        let disabled = Entry {
+            enabled: false,
+            ..entry(Kind::Action, 2, "Show")
+        };
+        assert!(!item_enabled(&disabled));
+        assert!(item_enabled(&entry(Kind::Action, 3, "Exit")));
+    }
+
+    #[test]
+    fn only_a_shown_highlighted_row_that_keeps_the_menu_open_takes_activation_keys() {
+        let none = NSEventModifierFlags::empty();
+        for key in [36, 49, 76] {
+            assert!(takes_key(true, true, true, none, key));
+            assert!(!takes_key(false, true, true, none, key));
+            assert!(!takes_key(true, false, true, none, key));
+            assert!(!takes_key(true, true, false, none, key));
+        }
+        for modifier in [
+            NSEventModifierFlags::Command,
+            NSEventModifierFlags::Control,
+            NSEventModifierFlags::Option,
+        ] {
+            assert!(!takes_key(true, true, true, modifier, 36));
+        }
+        assert!(takes_key(true, true, true, NSEventModifierFlags::Shift, 36));
+        for key in [53, 125, 126, 0] {
+            assert!(!takes_key(true, true, true, none, key));
+        }
     }
 
     #[test]
