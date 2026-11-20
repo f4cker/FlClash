@@ -1018,7 +1018,7 @@ void main() {
           restoresMitm: true,
         ),
         locale: const Locale('zh'),
-        size: const Size(860, 1000),
+        size: const Size(860, 1240),
       );
       expect(tester.takeException(), isNull);
       await shoot(tester, 'restore-confirm-desktop-zh');
@@ -1052,9 +1052,9 @@ void main() {
     testWidgets('confirm dark zh', skip: !shots, (tester) async {
       await host(
         tester,
-        () => RestoreMountConfirmSheet(plan: _mergePlan()),
+        () => RestoreMountConfirmSheet(plan: _mergePlan(), restoresMitm: true),
         locale: const Locale('zh'),
-        size: const Size(860, 1000),
+        size: const Size(860, 1240),
         themeMode: ThemeMode.dark,
       );
       expect(tester.takeException(), isNull);
