@@ -3626,7 +3626,6 @@
   },
   "receiveBetaUpdates": "ベータ版の更新を受け取る",
   "receiveBetaUpdatesDescription": "有効にするとベータ版も確認します。無効にしてもダウングレードしません。",
-  "betaUpdateCheckIncomplete": "ベータ版の確認は未完了です。検証済みの更新は利用できます。",
   "updateNoNewerStable": "より新しい安定版はありません。",
   "installedBetaBadge": "インストール済みのバージョンはベータ版です",
   "updatingResources": "更新中",

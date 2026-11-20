@@ -8008,9 +8008,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get receiveBetaUpdatesDescription => '开启后也会检查测试版；关闭后不会自动降级。';
 
   @override
-  String get betaUpdateCheckIncomplete => '测试版更新检查未完成，仍可使用已验证的更新。';
-
-  @override
   String get updateNoNewerStable => '暂无更高正式版';
 
   @override

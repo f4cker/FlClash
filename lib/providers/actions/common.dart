@@ -315,9 +315,6 @@ class CommonAction extends _$CommonAction {
     if (result is UpdateCheckSuperseded) return;
     if (result case UpdateAvailable(:final MacUpdateManifest manifest)) {
       if (!_manifestAllowed(manifest)) return;
-      if (result.discoveryIncomplete) {
-        dialogs.showBanner(currentAppLocalizations.betaUpdateCheckIncomplete);
-      }
       await _offerMacUpdate(manifest, isUser: isUser);
     } else if (result case UpdateAvailable(release: final data)) {
       final context = globalState.navigatorKey.currentContext!;

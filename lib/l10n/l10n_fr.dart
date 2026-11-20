@@ -8763,10 +8763,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vérifie aussi les versions bêta ; désactiver ne rétrograde pas l’application.';
 
   @override
-  String get betaUpdateCheckIncomplete =>
-      'Vérification bêta incomplète. Les mises à jour vérifiées restent disponibles.';
-
-  @override
   String get updateNoNewerStable => 'Aucune version stable plus récente.';
 
   @override

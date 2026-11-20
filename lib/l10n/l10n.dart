@@ -14374,12 +14374,6 @@ abstract class AppLocalizations {
   /// **'Also check beta releases when enabled; disabling will not downgrade the app.'**
   String get receiveBetaUpdatesDescription;
 
-  /// No description provided for @betaUpdateCheckIncomplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Beta update check incomplete. Verified updates are still available.'**
-  String get betaUpdateCheckIncomplete;
-
   /// No description provided for @updateNoNewerStable.
   ///
   /// In en, this message translates to:

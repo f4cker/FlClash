@@ -8707,10 +8707,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Также проверять бета-версии; отключение не понижает версию приложения.';
 
   @override
-  String get betaUpdateCheckIncomplete =>
-      'Проверка бета-версий не завершена. Проверенные обновления доступны.';
-
-  @override
   String get updateNoNewerStable => 'Более новой стабильной версии нет.';
 
   @override

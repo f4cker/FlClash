@@ -485,6 +485,66 @@ void main() {
       expect(calls, isEmpty);
     });
 
+    testWidgets(
+      'incomplete discovery still offers the verified update quietly',
+      (tester) async {
+        await pump(tester);
+        final verified = candidate();
+        final shown = action.checkUpdateResultHandle(
+          UpdateAvailable(
+            verified.release,
+            manifest: verified.manifest,
+            discoveryIncomplete: true,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('检查未完成'), findsNothing);
+        expect(find.textContaining('可更新版本：1.0.0 (2026111902)'), findsOneWidget);
+        expect(find.text('查看更新'), findsOneWidget);
+        await tester.tap(find.text(currentAppLocalizations.noLongerRemind));
+        await tester.pumpAndSettle();
+        await shown;
+        expect(calls, isEmpty);
+      },
+    );
+
+    testWidgets('failed automatic check stays silent and never claims latest', (
+      tester,
+    ) async {
+      await pump(tester);
+      final real = ProviderContainer();
+      addTearDown(real.dispose);
+      real.listen(availableUpdateStateProvider, (_, _) {});
+      real.listen(lastUpdateCheckStateProvider, (_, _) {});
+      final known = candidate();
+      real.read(availableUpdateStateProvider.notifier).value = known;
+      request.releaseDio.httpClientAdapter = _Adapter(
+        utf8.encode('not a signed manifest'),
+      );
+      final offered = await tester.runAsync(
+        real.read(commonActionProvider.notifier).autoCheckUpdate,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+      expect(offered, isFalse);
+      expect(real.read(lastUpdateCheckStateProvider), isA<UpdateCheckFailed>());
+      expect(real.read(availableUpdateStateProvider), same(known));
+      for (final text in [
+        currentAppLocalizations.updateCheckFailed,
+        currentAppLocalizations.checkUpdateError,
+        currentAppLocalizations.updateNoNewerStable,
+        currentAppLocalizations.checkUpdate,
+      ]) {
+        expect(find.textContaining(text), findsNothing);
+      }
+      expect(find.textContaining('检查未完成'), findsNothing);
+      expect(find.byType(TextButton), findsNothing);
+      expect(calls, isEmpty);
+    });
+
     testWidgets('successful no-update recheck never starts download or exits', (
       tester,
     ) async {

@@ -285,17 +285,6 @@ class AppTray implements TrayPort {
         detail: shortcut(HotAction.copyEnv),
         onSelected: systemAction.copyProxyEnv,
       ),
-      if (isMacOS &&
-          (read(lastUpdateCheckStateProvider) is UpdateCheckFailed ||
-              (read(lastUpdateCheckStateProvider) is UpdateAvailable &&
-                  (read(lastUpdateCheckStateProvider) as UpdateAvailable)
-                      .discoveryIncomplete)))
-        TrayMenuAction.status(
-          label: read(appSettingProvider).receiveBetaUpdates
-              ? appLocalizations.betaUpdateCheckIncomplete
-              : appLocalizations.updateCheckFailed,
-          statusKey: 'update-check',
-        ),
       if (isMacOS)
         if (read(availableUpdateStateProvider) case final available?)
           TrayMenuAction(

@@ -232,14 +232,54 @@ void main() {
       container.read(lastUpdateCheckStateProvider.notifier).value =
           UpdateCheckFailed(Exception('offline'));
       await update(_trayState());
-      expect(
-        _labels(showCall()),
-        contains(currentAppLocalizations.updateCheckFailed),
-      );
       expect(_labels(showCall()), contains('Update now'));
       container.read(availableUpdateStateProvider.notifier).value = null;
       await update(_trayState());
       expect(_labels(showCall()), isNot(contains('Update now')));
+    },
+  );
+
+  test(
+    'failed or incomplete update checks add no status row to the menu',
+    () async {
+      container.listen(availableUpdateStateProvider, (_, _) {});
+      container.listen(lastUpdateCheckStateProvider, (_, _) {});
+      container.listen(appSettingProvider, (_, _) {});
+      final check = container.read(lastUpdateCheckStateProvider.notifier);
+      final available = container.read(availableUpdateStateProvider.notifier);
+      Iterable<Map<String, Object?>> statusRows() => _items(
+        showCall(),
+      ).where((item) => item.containsKey('transientStatusKey'));
+      await update(_trayState());
+      final baseline = _labels(showCall());
+
+      for (final beta in [false, true]) {
+        container
+            .read(appSettingProvider.notifier)
+            .update((state) => state.copyWith(receiveBetaUpdates: beta));
+        check.value = UpdateCheckFailed(Exception('offline'));
+        await update(_trayState());
+        expect(statusRows(), isEmpty);
+        expect(_labels(showCall()), baseline);
+        expect(
+          _labels(showCall()),
+          isNot(contains(currentAppLocalizations.updateCheckFailed)),
+        );
+      }
+
+      const incomplete = UpdateAvailable({
+        'tag_name': 'v1.0.0+2026111902',
+      }, discoveryIncomplete: true);
+      available.value = incomplete;
+      check.value = incomplete;
+      await update(_trayState());
+      expect(statusRows(), isEmpty);
+      expect(_labels(showCall()), [
+        ...baseline.take(baseline.length - 1),
+        'Update now',
+        baseline.last,
+      ]);
+      expect(_item(showCall(), 'Update now')['enabled'], isTrue);
     },
   );
 

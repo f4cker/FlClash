@@ -8707,10 +8707,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Also check beta releases when enabled; disabling will not downgrade the app.';
 
   @override
-  String get betaUpdateCheckIncomplete =>
-      'Beta update check incomplete. Verified updates are still available.';
-
-  @override
   String get updateNoNewerStable => 'No newer stable release is available.';
 
   @override
