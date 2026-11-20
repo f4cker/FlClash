@@ -12,6 +12,7 @@ import 'package:fl_clash/features/mitm/script.dart';
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/app.dart';
+import 'package:fl_clash/providers/action.dart' show systemActionProvider;
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
@@ -546,29 +547,9 @@ class _MitmEnableItem extends ConsumerWidget {
     WidgetRef ref,
     bool value,
   ) async {
-    final config = ref.read(patchClashConfigProvider.notifier);
-    if (value) {
-      final appLocalizations = context.appLocalizations;
-      final ca = ref.read(mitmCaProvider.notifier);
-      final hasCertificate = ref.read(mitmCaProvider).value != null;
-      final res = await dialogs.showMessage(
-        title: appLocalizations.httpsDecryption,
-        message: TextSpan(text: appLocalizations.mitmEnableTip),
-      );
-      if (res != true) {
-        return;
-      }
-      if (!hasCertificate &&
-          !await _generateCertificate(
-            ca,
-            appLocalizations.generateCertificate,
-          )) {
-        return;
-      }
-    }
-    config.update(
-      (state) => state.copyWith(mitm: state.mitm.copyWith(enable: value)),
-    );
+    await ref
+        .read(systemActionProvider.notifier)
+        .setMitmEnabled(value, localizations: context.appLocalizations);
   }
 
   @override
@@ -653,10 +634,9 @@ class MitmCaptureView extends ConsumerWidget {
                 title: Text(appLocalizations.httpCapture),
                 value: capture,
                 onChanged: enable
-                    ? (value) => _updateMitm(
-                        ref,
-                        (state) => state.copyWith(capture: value),
-                      )
+                    ? (value) => ref
+                          .read(systemActionProvider.notifier)
+                          .setMitmCapture(value)
                     : null,
               ),
             ],

@@ -50,6 +50,17 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
       }
     });
     ref.listenManual(trayCoreTogglePendingProvider, _onMenuDataChanged);
+    ref.listenManual<Object?>(trayMitmPendingProvider, _onMenuDataChanged);
+    ref.listenManual(
+      patchClashConfigProvider.select(
+        (state) => (
+          state.mitm.enable,
+          state.mitm.capture,
+          state.mitm.trustedFingerprint != null,
+        ),
+      ),
+      _onMenuDataChanged,
+    );
     ref.listenManual(coreStatusProvider, _onMenuDataChanged);
     if (_isMacOS) {
       ref.listenManual(availableUpdateStateProvider, (prev, next) {

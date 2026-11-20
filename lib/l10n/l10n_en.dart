@@ -1214,6 +1214,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trayTunMode => 'TUN mode';
 
   @override
+  String get trayMitm => 'MITM decryption';
+
+  @override
+  String get trayMitmCapture => 'Record request content';
+
+  @override
+  String get trayMitmCaptureNeedsMitm => 'Turn on MITM decryption first';
+
+  @override
   String get trayCopyProxyCommand => 'Copy terminal proxy command';
 
   @override

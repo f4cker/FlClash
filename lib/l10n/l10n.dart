@@ -2382,6 +2382,24 @@ abstract class AppLocalizations {
   /// **'TUN mode'**
   String get trayTunMode;
 
+  /// No description provided for @trayMitm.
+  ///
+  /// In en, this message translates to:
+  /// **'MITM decryption'**
+  String get trayMitm;
+
+  /// No description provided for @trayMitmCapture.
+  ///
+  /// In en, this message translates to:
+  /// **'Record request content'**
+  String get trayMitmCapture;
+
+  /// No description provided for @trayMitmCaptureNeedsMitm.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on MITM decryption first'**
+  String get trayMitmCaptureNeedsMitm;
+
   /// No description provided for @trayCopyProxyCommand.
   ///
   /// In en, this message translates to:

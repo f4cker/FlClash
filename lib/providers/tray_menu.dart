@@ -71,6 +71,22 @@ class TrayGroupsReadFailed extends Notifier<bool> {
   void set(bool value) => state = value;
 }
 
+/// Which of the tray's decryption switches is being acted on, if one is:
+/// both ignore clicks until it settles.
+enum TrayMitmToggle { mitm, capture }
+
+final trayMitmPendingProvider =
+    NotifierProvider<TrayMitmPending, TrayMitmToggle?>(TrayMitmPending.new);
+
+class TrayMitmPending extends Notifier<TrayMitmToggle?> {
+  @override
+  TrayMitmToggle? build() => null;
+
+  TrayMitmToggle? get value => state;
+
+  set value(TrayMitmToggle? value) => state = value;
+}
+
 @immutable
 class TrayModeMenuState {
   const TrayModeMenuState({this.pendingMode, this.error});

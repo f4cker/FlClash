@@ -262,17 +262,19 @@ class AppTray implements TrayPort {
       ...groupMenu,
       if (trayState.isStart) ...[
         TrayMenuCheckbox(
-          label: appLocalizations.trayTunMode,
-          checked: trayState.tunEnable,
-          detail: shortcut(HotAction.tun),
-          onSelected: systemAction.updateTun,
-        ),
-        TrayMenuCheckbox(
           label: appLocalizations.systemProxy,
           checked: trayState.systemProxy,
           detail: shortcut(HotAction.proxy),
           onSelected: systemAction.updateSystemProxy,
         ),
+        TrayMenuCheckbox(
+          label: appLocalizations.trayTunMode,
+          checked: trayState.tunEnable,
+          detail: shortcut(HotAction.tun),
+          onSelected: systemAction.updateTun,
+        ),
+        if (isMacOS && mitmFeature)
+          ..._buildMitmItems(read: read, showsStatus: mitmIndicator != null),
         const TrayMenuSeparator(),
       ],
       TrayMenuCheckbox(
@@ -484,6 +486,52 @@ class AppTray implements TrayPort {
     return icons;
   }
 
+  /// Decryption and recording request content, as saved: the settings
+  /// page's switches, and their reasons when one cannot be used from here.
+  List<TrayMenuItem> _buildMitmItems({
+    required ProviderReader read,
+    required bool showsStatus,
+  }) {
+    final l10n = currentAppLocalizations;
+    final systemAction = read(systemActionProvider.notifier);
+    final mitm = read(patchClashConfigProvider).mitm;
+    final idle = read(trayMitmPendingProvider) == null;
+    final trusted = mitm.trustedFingerprint != null;
+    return [
+      TrayMenuCheckbox(
+        label: l10n.trayMitm,
+        checked: mitm.enable,
+        enabled: idle,
+        onSelected: () => _observe(systemAction.toggleMitmForTray()),
+      ),
+      TrayMenuCheckbox(
+        label: l10n.trayMitmCapture,
+        checked: mitm.capture,
+        enabled: idle && mitm.enable,
+        onSelected: () => _observe(systemAction.toggleMitmCaptureForTray()),
+      ),
+      if (!mitm.enable) ...[
+        if (!trusted)
+          TrayMenuAction.status(
+            statusKey: 'mitm-trust',
+            label: l10n.mitmPauseNotTrusted,
+          ),
+        TrayMenuAction.status(
+          statusKey: 'mitm-capture',
+          label: l10n.trayMitmCaptureNeedsMitm,
+        ),
+      ],
+      // While on, the status that leads the menu opens the settings.
+      if (!showsStatus)
+        TrayMenuAction(
+          label: l10n.mitmIndicatorOpenSettings,
+          onSelected: () {
+            if (mitmSettingsPort case final open?) unawaited(open());
+          },
+        ),
+    ];
+  }
+
   void _observe(Future<void> operation) {
     unawaited(
       operation.onError<Object>((error, stackTrace) {
@@ -678,15 +726,16 @@ final appTray = system.isDesktop ? AppTray() : null;
 const mitmDotRed = 0xFFFF3B30;
 const mitmDotAmber = 0xFFFF9F0A;
 
-/// The menu bar dot for the MITM status: red while on, breathing while it
-/// decrypts, amber while paused or unconfirmed, and none while off.
+/// The menu bar dot for the MITM status: red and breathing while decryption
+/// is on and healthy (the dot says "MITM mode enabled"; nothing is polled for
+/// it, and with reduce motion the native side holds it still), amber and
+/// still while paused or unconfirmed, and none while off.
 TrayDot? mitmTrayDot(MitmIndicator? indicator) => switch (indicator?.kind) {
   null => null,
-  MitmIndicatorKind.decrypting => const TrayDot(
+  MitmIndicatorKind.on || MitmIndicatorKind.decrypting => const TrayDot(
     color: mitmDotRed,
     breathing: true,
   ),
-  MitmIndicatorKind.on => const TrayDot(color: mitmDotRed, breathing: false),
   MitmIndicatorKind.paused || MitmIndicatorKind.unconfirmed => const TrayDot(
     color: mitmDotAmber,
     breathing: false,

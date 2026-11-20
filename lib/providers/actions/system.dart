@@ -142,6 +142,108 @@ class SystemAction extends _$SystemAction {
         .update((state) => state.copyWith.tun(enable: enabled));
   }
 
+  /// Turns decryption on or off the way its settings switch does, for the
+  /// page and the tray alike: turning it on asks first and makes the
+  /// certificate when there is none; turning it off does not ask. True once
+  /// saved.
+  Future<bool> setMitmEnabled(
+    bool value, {
+    AppLocalizations? localizations,
+  }) async {
+    final config = ref.read(patchClashConfigProvider.notifier);
+    if (value) {
+      final appLocalizations = localizations ?? currentAppLocalizations;
+      final ca = ref.read(mitmCaProvider.notifier);
+      final hasCertificate = ref.read(mitmCaProvider).value != null;
+      final res = await dialogs.showMessage(
+        title: appLocalizations.httpsDecryption,
+        message: TextSpan(text: appLocalizations.mitmEnableTip),
+      );
+      if (res != true) {
+        return false;
+      }
+      if (!hasCertificate) {
+        final generated = await globalState.loadingRun<bool>(
+          () async {
+            await ca.generate();
+            return true;
+          },
+          tag: LoadingTag.mitm,
+          title: appLocalizations.generateCertificate,
+        );
+        if (generated != true) {
+          return false;
+        }
+      }
+    }
+    config.update(
+      (state) => state.copyWith(mitm: state.mitm.copyWith(enable: value)),
+    );
+    return true;
+  }
+
+  /// Saves whether request content is recorded, the way its settings switch
+  /// does: only while decryption is on. The choice outlives turning
+  /// decryption off.
+  bool setMitmCapture(bool value) {
+    if (!ref.read(patchClashConfigProvider).mitm.enable) {
+      return false;
+    }
+    ref
+        .read(patchClashConfigProvider.notifier)
+        .update(
+          (state) => state.copyWith(mitm: state.mitm.copyWith(capture: value)),
+        );
+    return true;
+  }
+
+  /// The tray's decryption switch. It goes the settings switch's way
+  /// ([setMitmEnabled]), never around it: without a trusted certificate it
+  /// does not turn on and opens the settings instead, and turning on brings
+  /// the settings forward for the switch's own question. Clicks while one
+  /// is in flight are ignored; the menu shows the saved setting throughout.
+  Future<void> toggleMitmForTray() async {
+    final pending = ref.read(trayMitmPendingProvider.notifier);
+    if (pending.value != null) {
+      return;
+    }
+    final mitm = ref.read(patchClashConfigProvider).mitm;
+    final enable = !mitm.enable;
+    if (enable && mitm.trustedFingerprint == null) {
+      await mitmSettingsPort?.call();
+      return;
+    }
+    pending.value = TrayMitmToggle.mitm;
+    try {
+      if (enable) {
+        await mitmSettingsPort?.call();
+      }
+      await globalState.safeRun(() => setMitmEnabled(enable));
+    } finally {
+      if (ref.mounted) pending.value = null;
+    }
+  }
+
+  /// The tray's recording switch: the settings switch's write, only while
+  /// decryption is on; otherwise it opens the settings.
+  Future<void> toggleMitmCaptureForTray() async {
+    final pending = ref.read(trayMitmPendingProvider.notifier);
+    if (pending.value != null) {
+      return;
+    }
+    final mitm = ref.read(patchClashConfigProvider).mitm;
+    if (!mitm.enable) {
+      await mitmSettingsPort?.call();
+      return;
+    }
+    pending.value = TrayMitmToggle.capture;
+    try {
+      await globalState.safeRun(() => setMitmCapture(!mitm.capture));
+    } finally {
+      if (ref.mounted) pending.value = null;
+    }
+  }
+
   void updateSystemProxy() {
     ref
         .read(networkSettingProvider.notifier)
