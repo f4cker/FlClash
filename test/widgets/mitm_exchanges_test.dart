@@ -9,6 +9,7 @@ import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/views/config/mitm.dart' show MitmCaptureView;
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:flutter/services.dart';
@@ -355,13 +356,187 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('with capture off a decrypted connection shows its overview '
-      'alone', (tester) async {
-    await _pumpDetail(tester, list: const MitmExchangeList(), capture: false);
+  testWidgets('with capture off a decrypted connection still has its '
+      'requests tab, which says nothing was recorded and only offers the '
+      'setting', (tester) async {
+    final feature = mitmFeature;
+    mitmFeature = true;
+    addTearDown(() => mitmFeature = feature);
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = await _pumpDetail(
+      tester,
+      list: const MitmExchangeList(),
+      capture: false,
+      inSheet: true,
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    final l = currentAppLocalizations;
 
-    expect(find.byType(SegmentedControl<int>), findsNothing);
+    expect(find.text(l.basicInfo), findsOneWidget);
+    await _openTab(tester, l.httpRequests);
+
+    expect(find.text(l.httpCaptureOff), findsOneWidget);
+    expect(find.text(l.httpRequestsNotRecorded), findsOneWidget);
+    expect(find.text(l.httpRequestsNone), findsNothing);
+    expect(find.text(l.httpRequestsReadFailed), findsNothing);
+
+    await tester.tap(find.text(l.httpCaptureOpenSettings));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MitmCaptureView), findsOneWidget);
+    // Opening the setting turns nothing on.
+    expect(container.read(patchClashConfigProvider).mitm.capture, isFalse);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('with capture off the requests recorded before stay readable', (
+    tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      list: MitmExchangeList(
+        since: _start.subtract(const Duration(minutes: 1)),
+        exchanges: [_summary(_exchange)],
+      ),
+      capture: false,
+    );
+    await _openTab(tester, currentAppLocalizations.httpRequests);
+
+    expect(find.text('GET /new?x=1'), findsOneWidget);
+    expect(
+      find.text(currentAppLocalizations.httpRequestsNotRecorded),
+      findsNothing,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a read that fails offers a retry and never says unrecorded', (
+    tester,
+  ) async {
+    var reads = 0;
+    final container = ProviderContainer(
+      retry: (_, _) => null,
+      overrides: [
+        mitmExchangesProvider(_decrypted.id).overrideWith((ref) async {
+          reads++;
+          throw Exception('core gone');
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(patchClashConfigProvider, (_, _) {});
+    container.read(patchClashConfigProvider.notifier).value =
+        const PatchClashConfig(mitm: Mitm(enable: true));
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: TestApp(
+          homeBuilder: (child) => HostScaffold(body: child),
+          child: SheetProvider(
+            type: SheetType.page,
+            child: TrackerInfoDetailView(trackerInfo: _decrypted),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l = currentAppLocalizations;
+    await _openTab(tester, l.httpRequests);
+
+    expect(find.text(l.httpRequestsReadFailed), findsOneWidget);
+    expect(find.text(l.httpRequestsNotRecorded), findsNothing);
+    expect(find.text(l.httpCaptureOff), findsNothing);
+    expect(find.text(l.httpRequestsNone), findsNothing);
+    final before = reads;
+    await tester.tap(find.text(l.retry));
+    await tester.pumpAndSettle();
+    expect(reads, before + 1);
+    expect(find.text(l.httpRequestsReadFailed), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('capture on with nothing recorded does not guess why', (
+    tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      list: MitmExchangeList(
+        capturing: true,
+        since: _start.subtract(const Duration(minutes: 1)),
+      ),
+    );
+    await _openTab(tester, currentAppLocalizations.httpRequests);
+
+    expect(find.text(currentAppLocalizations.httpRequestsNone), findsOneWidget);
+    expect(
+      find.text(currentAppLocalizations.httpRequestsNotRecorded),
+      findsNothing,
+    );
+    expect(find.text(currentAppLocalizations.httpCaptureOff), findsNothing);
+    expect(
+      find.text(currentAppLocalizations.httpCaptureOpenSettings),
+      findsNothing,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a connection that was not decrypted has no requests tab', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      TestApp(
+        wrapInProviderScope: true,
+        homeBuilder: (child) => HostScaffold(body: child),
+        child: SheetProvider(
+          type: SheetType.page,
+          child: TrackerInfoDetailView(
+            trackerInfo: _decrypted.copyWith(
+              metadata: _decrypted.metadata.copyWith(mitm: false),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
     expect(find.text(currentAppLocalizations.basicInfo), findsOneWidget);
     expect(find.text(currentAppLocalizations.httpRequests), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a finished side the Core measured empty says it has no body, '
+      'one under way does not', (tester) async {
+    await _pumpDetail(
+      tester,
+      list: MitmExchangeList(capturing: true, exchanges: [_summary(_exchange)]),
+      exchange: _exchange,
+    );
+    await _openRequest(tester);
+    await _openTab(tester, currentAppLocalizations.request);
+
+    expect(find.text('Host'), findsOneWidget);
+    expect(find.text(currentAppLocalizations.mitmBodyEmpty), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pumpDetail(
+      tester,
+      list: MitmExchangeList(capturing: true, exchanges: [_summary(_exchange)]),
+      exchange: _exchange.copyWith(pending: true, status: 0),
+    );
+    await _openRequest(tester);
+    await _openTab(tester, currentAppLocalizations.request);
+
+    expect(find.text('Host'), findsOneWidget);
+    expect(find.text(currentAppLocalizations.mitmBodyEmpty), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

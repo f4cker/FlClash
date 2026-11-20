@@ -5859,19 +5859,19 @@ abstract class AppLocalizations {
   /// No description provided for @httpCapture.
   ///
   /// In en, this message translates to:
-  /// **'HTTP capture'**
+  /// **'Record request content'**
   String get httpCapture;
 
   /// No description provided for @httpCaptureDesc.
   ///
   /// In en, this message translates to:
-  /// **'Records requests to the hosts listed under Hostname, to view in connection details. Records stay in memory only.'**
+  /// **'Records the content of requests that match decryption once this is on, including hosts from enabled modules. Content stays in memory only.'**
   String get httpCaptureDesc;
 
   /// No description provided for @httpCaptureNoHosts.
   ///
   /// In en, this message translates to:
-  /// **'No host is listed, so nothing is recorded. Add hosts under Hostname on the MITM page, or from the details of a connection.'**
+  /// **'No host is set to be decrypted, so nothing is decrypted or recorded. Add hosts under Hostname on the MITM page, enable a module that lists hosts, or add one from the details of a connection.'**
   String get httpCaptureNoHosts;
 
   /// No description provided for @httpCaptureLimit.
@@ -5895,7 +5895,7 @@ abstract class AppLocalizations {
   /// No description provided for @httpRequestsMissing.
   ///
   /// In en, this message translates to:
-  /// **'Requests made before capture was on, or since cleared, are not listed.'**
+  /// **'Some requests on this connection may have been made before “Record request content” was on, or since cleared; those are not listed.'**
   String get httpRequestsMissing;
 
   /// No description provided for @httpRequestCleared.
@@ -5907,8 +5907,32 @@ abstract class AppLocalizations {
   /// No description provided for @httpCaptureOff.
   ///
   /// In en, this message translates to:
-  /// **'Capture is off'**
+  /// **'Record request content is off'**
   String get httpCaptureOff;
+
+  /// No description provided for @httpRequestsNotRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'“Record request content” is currently off. Once on, only matching requests made after that are recorded.'**
+  String get httpRequestsNotRecorded;
+
+  /// No description provided for @httpRequestsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No records to show'**
+  String get httpRequestsNone;
+
+  /// No description provided for @httpCaptureOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Settings'**
+  String get httpCaptureOpenSettings;
+
+  /// No description provided for @mitmBodyEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No body'**
+  String get mitmBodyEmpty;
 
   /// No description provided for @inProgress.
   ///
@@ -13886,7 +13910,7 @@ abstract class AppLocalizations {
   /// No description provided for @httpRequestsReadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t read the requests'**
+  /// **'Couldn\'t read the request records'**
   String get httpRequestsReadFailed;
 
   /// No description provided for @requestBodyReadFailed.

@@ -3341,15 +3341,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get httpsDecryption => 'Descifrado HTTPS';
 
   @override
-  String get httpCapture => 'Captura HTTP';
+  String get httpCapture => 'Registrar contenido de solicitudes';
 
   @override
   String get httpCaptureDesc =>
-      'Registra las solicitudes a los hosts indicados en Nombre de host, para verlas en los detalles de la conexión. Los registros solo se guardan en memoria.';
+      'Una vez activado, registra el contenido de las solicitudes que cumplen las condiciones de descifrado, incluidos los hosts de los módulos activados. El contenido solo se guarda en memoria.';
 
   @override
   String get httpCaptureNoHosts =>
-      'No hay ningún host indicado, así que no se registra nada. Añade hosts en Nombre de host, en la página MITM, o desde los detalles de una conexión.';
+      'No hay ningún host para descifrar, así que no se descifra ni se registra nada. Añade hosts en Nombre de host, en la página MITM, activa un módulo que indique hosts o añádelos desde los detalles de una conexión.';
 
   @override
   String get httpCaptureLimit => 'Máximo de registros';
@@ -3364,14 +3364,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      'Las solicitudes enviadas antes de activar la captura, o ya borradas, no aparecen.';
+      'Puede que algunas solicitudes de esta conexión se enviaran antes de activar «Registrar contenido de solicitudes» o ya se hayan borrado; esas no aparecen.';
 
   @override
   String get httpRequestCleared =>
       'El registro de esta solicitud se ha borrado';
 
   @override
-  String get httpCaptureOff => 'La captura está desactivada';
+  String get httpCaptureOff =>
+      'Registrar contenido de solicitudes está desactivado';
+
+  @override
+  String get httpRequestsNotRecorded =>
+      '«Registrar contenido de solicitudes» está desactivado en este momento. Al activarlo, solo se registran las solicitudes posteriores que cumplan las condiciones.';
+
+  @override
+  String get httpRequestsNone => 'No hay registros para mostrar';
+
+  @override
+  String get httpCaptureOpenSettings => 'Ir a Ajustes';
+
+  @override
+  String get mitmBodyEmpty => 'Sin cuerpo';
 
   @override
   String get inProgress => 'En curso';
@@ -8438,7 +8452,8 @@ class AppLocalizationsEs extends AppLocalizations {
       'Sin root, solo se pueden descifrar las apps que confían en certificados de usuario, sobre todo los navegadores. Con root, todas las apps.';
 
   @override
-  String get httpRequestsReadFailed => 'No se pudieron leer las solicitudes';
+  String get httpRequestsReadFailed =>
+      'No se pudieron leer los registros de solicitudes';
 
   @override
   String get requestBodyReadFailed =>

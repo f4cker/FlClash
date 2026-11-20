@@ -3301,15 +3301,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get httpsDecryption => 'Расшифровка HTTPS';
 
   @override
-  String get httpCapture => 'Захват HTTP';
+  String get httpCapture => 'Запись содержимого запросов';
 
   @override
   String get httpCaptureDesc =>
-      'Записывает запросы к хостам из списка имён хостов; их можно посмотреть в сведениях о соединении. Записи хранятся только в памяти.';
+      'После включения записывает содержимое запросов, подходящих под расшифровку, включая хосты из включённых модулей. Содержимое хранится только в памяти.';
 
   @override
   String get httpCaptureNoHosts =>
-      'Хосты не указаны, поэтому ничего не записывается. Добавьте их в поле «Имя хоста» на странице MITM или из сведений о соединении.';
+      'Нет хостов для расшифровки, поэтому ничего не расшифровывается и не записывается. Добавьте их в поле «Имя хоста» на странице MITM, включите модуль со списком хостов или добавьте хост из сведений о соединении.';
 
   @override
   String get httpCaptureLimit => 'Максимум записей';
@@ -3324,13 +3324,26 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      'Запросы, отправленные до включения захвата или уже удалённые, не показаны.';
+      'Часть запросов этого соединения могла быть отправлена до включения «Записи содержимого запросов» или уже удалена; такие запросы не показаны.';
 
   @override
   String get httpRequestCleared => 'Запись этого запроса удалена';
 
   @override
-  String get httpCaptureOff => 'Захват выключен';
+  String get httpCaptureOff => 'Запись содержимого запросов выключена';
+
+  @override
+  String get httpRequestsNotRecorded =>
+      '«Запись содержимого запросов» сейчас выключена. После включения будут записываться только последующие подходящие запросы.';
+
+  @override
+  String get httpRequestsNone => 'Нет записей для просмотра';
+
+  @override
+  String get httpCaptureOpenSettings => 'Открыть настройки';
+
+  @override
+  String get mitmBodyEmpty => 'Тела нет';
 
   @override
   String get inProgress => 'Выполняется';
@@ -8388,7 +8401,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Без root можно расшифровать только приложения, доверяющие пользовательским сертификатам, в основном браузеры. С root — любые приложения.';
 
   @override
-  String get httpRequestsReadFailed => 'Не удалось прочитать запросы';
+  String get httpRequestsReadFailed => 'Не удалось прочитать записи запросов';
 
   @override
   String get requestBodyReadFailed => 'Не удалось прочитать тело запроса';

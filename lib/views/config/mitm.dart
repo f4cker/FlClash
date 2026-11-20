@@ -602,13 +602,14 @@ class _MitmCaptureItem extends ConsumerWidget {
       subtitle: Text(
         capture ? appLocalizations.enabled : appLocalizations.disabled,
       ),
-      widget: _MitmCaptureView(isAndroid: isAndroid),
+      widget: MitmCaptureView(isAndroid: isAndroid),
     );
   }
 }
 
-class _MitmCaptureView extends ConsumerWidget {
-  const _MitmCaptureView({required this.isAndroid});
+/// The MITM page's setting that records request content.
+class MitmCaptureView extends ConsumerWidget {
+  const MitmCaptureView({super.key, required this.isAndroid});
 
   final bool isAndroid;
 

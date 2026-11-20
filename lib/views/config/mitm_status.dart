@@ -34,6 +34,15 @@ Future<void> openMitmSettings(BuildContext context) async {
   );
 }
 
+/// Opens the setting that records request content, as the next page of
+/// whatever [context] shows. It only shows the switch: nothing is turned on
+/// for the user.
+Future<void> openMitmCaptureSettings(BuildContext context) =>
+    showNestedExtend<void>(
+      context,
+      builder: (_) => MitmCaptureView(isAndroid: system.isAndroid),
+    );
+
 /// From the tray: the window comes forward with the settings open.
 Future<void> openMitmSettingsFromTray() async {
   await window?.show();

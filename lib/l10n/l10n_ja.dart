@@ -3151,15 +3151,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get httpsDecryption => 'HTTPS 復号';
 
   @override
-  String get httpCapture => 'HTTP キャプチャ';
+  String get httpCapture => 'リクエスト内容を記録';
 
   @override
   String get httpCaptureDesc =>
-      'ホスト名に記載したホストへのリクエストを記録し、接続の詳細で確認できます。記録はメモリ上にのみ保持されます。';
+      'オンにした後、復号の条件に合うリクエストの内容を記録します。有効なモジュールのホスト名も含みます。内容はメモリ上にのみ保持されます。';
 
   @override
   String get httpCaptureNoHosts =>
-      'ホストが記載されていないため、何も記録されません。MITM ページの「ホスト名」または接続の詳細から追加してください。';
+      '復号するホストがないため、何も復号・記録されません。MITM ページの「ホスト名」に追加するか、ホスト名を記載したモジュールを有効にするか、接続の詳細から追加してください。';
 
   @override
   String get httpCaptureLimit => '最大記録数';
@@ -3173,13 +3173,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get httpRequests => 'HTTP リクエスト';
 
   @override
-  String get httpRequestsMissing => 'キャプチャをオンにする前のリクエストや、消去済みのリクエストは表示されません。';
+  String get httpRequestsMissing =>
+      'この接続には、「リクエスト内容を記録」をオンにする前に送信された、または消去済みのリクエストがある可能性があります。それらは表示されません。';
 
   @override
   String get httpRequestCleared => 'このリクエストの記録は消去されました';
 
   @override
-  String get httpCaptureOff => 'キャプチャはオフです';
+  String get httpCaptureOff => 'リクエスト内容の記録はオフです';
+
+  @override
+  String get httpRequestsNotRecorded =>
+      '「リクエスト内容を記録」は現在オフです。オンにすると、その後の条件に合うリクエストのみが記録されます。';
+
+  @override
+  String get httpRequestsNone => '表示できる記録はありません';
+
+  @override
+  String get httpCaptureOpenSettings => '設定を開く';
+
+  @override
+  String get mitmBodyEmpty => '本文なし';
 
   @override
   String get inProgress => '進行中';
@@ -8184,7 +8198,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'root がない場合、復号できるのはユーザー証明書を信頼するアプリ（主にブラウザ）だけです。root があればすべてのアプリを復号できます。';
 
   @override
-  String get httpRequestsReadFailed => 'リクエストを読み取れません';
+  String get httpRequestsReadFailed => 'リクエストの記録を読み取れません';
 
   @override
   String get requestBodyReadFailed => 'リクエストボディを読み取れません';

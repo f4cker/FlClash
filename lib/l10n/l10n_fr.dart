@@ -3342,15 +3342,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get httpsDecryption => 'Déchiffrement HTTPS';
 
   @override
-  String get httpCapture => 'Capture HTTP';
+  String get httpCapture => 'Enregistrer le contenu des requêtes';
 
   @override
   String get httpCaptureDesc =>
-      'Enregistre les requêtes vers les hôtes listés dans Nom d’hôte, à consulter dans les détails de la connexion. Les enregistrements restent uniquement en mémoire.';
+      'Une fois activé, enregistre le contenu des requêtes répondant aux conditions de déchiffrement, y compris les hôtes des modules activés. Le contenu reste uniquement en mémoire.';
 
   @override
   String get httpCaptureNoHosts =>
-      'Aucun hôte n’est listé, rien n’est donc enregistré. Ajoutez des hôtes dans Nom d’hôte sur la page MITM, ou depuis les détails d’une connexion.';
+      'Aucun hôte n’est à déchiffrer, rien n’est donc déchiffré ni enregistré. Ajoutez des hôtes dans Nom d’hôte sur la page MITM, activez un module qui liste des hôtes, ou ajoutez-en depuis les détails d’une connexion.';
 
   @override
   String get httpCaptureLimit => 'Nombre maximal d’enregistrements';
@@ -3365,14 +3365,28 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get httpRequestsMissing =>
-      'Les requêtes envoyées avant l\'activation de la capture, ou déjà effacées, ne sont pas listées.';
+      'Certaines requêtes de cette connexion ont peut-être été envoyées avant l’activation de « Enregistrer le contenu des requêtes », ou déjà effacées ; elles ne sont pas listées.';
 
   @override
   String get httpRequestCleared =>
       'L\'enregistrement de cette requête a été effacé';
 
   @override
-  String get httpCaptureOff => 'La capture est désactivée';
+  String get httpCaptureOff =>
+      'Enregistrer le contenu des requêtes est désactivé';
+
+  @override
+  String get httpRequestsNotRecorded =>
+      '« Enregistrer le contenu des requêtes » est actuellement désactivé. Une fois activé, seules les requêtes concernées envoyées ensuite sont enregistrées.';
+
+  @override
+  String get httpRequestsNone => 'Aucun enregistrement à afficher';
+
+  @override
+  String get httpCaptureOpenSettings => 'Ouvrir les réglages';
+
+  @override
+  String get mitmBodyEmpty => 'Aucun corps';
 
   @override
   String get inProgress => 'En cours';
@@ -8440,7 +8454,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Sans root, seules les applications qui font confiance aux certificats utilisateur, surtout les navigateurs, peuvent être déchiffrées. Avec root, toutes les applications le peuvent.';
 
   @override
-  String get httpRequestsReadFailed => 'Impossible de lire les requêtes';
+  String get httpRequestsReadFailed =>
+      'Impossible de lire les enregistrements des requêtes';
 
   @override
   String get requestBodyReadFailed =>

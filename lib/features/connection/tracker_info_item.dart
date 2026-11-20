@@ -162,13 +162,8 @@ enum MitmRewriteBadge {
   };
 }
 
-/// Whether a row shows [MitmBadgeIcon].
-bool hasMitmMarks(TrackerInfo trackerInfo) =>
-    MitmBadge.of(trackerInfo) != null ||
-    MitmRewriteBadge.of(trackerInfo) != null;
-
-/// [MitmBadge.of] and [MitmRewriteBadge.of] as glyphs that name themselves
-/// on hover and to a screen reader, or nothing for unlisted traffic.
+/// [MitmBadge.of] as a glyph that names itself on hover and to a screen
+/// reader, or nothing for unlisted traffic.
 class MitmBadgeIcon extends StatelessWidget {
   final TrackerInfo trackerInfo;
 
@@ -177,40 +172,9 @@ class MitmBadgeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badge = MitmBadge.of(trackerInfo);
-    final rewrite = MitmRewriteBadge.of(trackerInfo);
-    final marks = [
-      if (badge != null) _decryptionMark(context, badge),
-      if (rewrite != null) _rewriteMark(context, rewrite),
-    ];
-    return switch (marks) {
-      [] => const SizedBox.shrink(),
-      [final mark] => mark,
-      _ => Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: MitmBadge.gap,
-        children: marks,
-      ),
-    };
-  }
-
-  Widget _rewriteMark(BuildContext context, MitmRewriteBadge badge) {
-    return Tooltip(
-      message: badge.label(context, trackerInfo.mitmRewrite!),
-      hoverDelay: MitmBadge.tooltipDelay,
-      excludeFromSemantics: true,
-      child: Semantics(
-        label: badge.semanticsLabel(context),
-        excludeSemantics: true,
-        child: GlyphIcon(
-          badge.glyph,
-          size: MitmBadge.iconSize,
-          color: badge.color(context),
-        ),
-      ),
-    );
-  }
-
-  Widget _decryptionMark(BuildContext context, MitmBadge badge) {
+    if (badge == null) {
+      return const SizedBox.shrink();
+    }
     return Tooltip(
       message: badge.label(context),
       hoverDelay: MitmBadge.tooltipDelay,
@@ -228,6 +192,99 @@ class MitmBadgeIcon extends StatelessWidget {
   }
 }
 
+/// [MitmRewriteBadge.of] as a glyph, after the host; independent of the
+/// decryption mark before it.
+class MitmRewriteIcon extends StatelessWidget {
+  final TrackerInfo trackerInfo;
+
+  const MitmRewriteIcon(this.trackerInfo, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = MitmRewriteBadge.of(trackerInfo);
+    if (badge == null) {
+      return const SizedBox.shrink();
+    }
+    return Tooltip(
+      message: badge.label(context, trackerInfo.mitmRewrite!),
+      hoverDelay: MitmBadge.tooltipDelay,
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: badge.semanticsLabel(context),
+        excludeSemantics: true,
+        child: GlyphIcon(
+          badge.glyph,
+          size: MitmBadge.iconSize,
+          color: badge.color(context),
+        ),
+      ),
+    );
+  }
+}
+
+/// The decryption mark's place before a host, of a fixed width: kept on
+/// every row while decryption is on, so hosts line up and a mark that
+/// arrives later does not push its host aside. Only the host after it
+/// gives way to a narrow row.
+class MitmBadgeSlot extends StatelessWidget {
+  final TrackerInfo trackerInfo;
+
+  const MitmBadgeSlot(this.trackerInfo, {super.key});
+
+  static const width = MitmBadge.iconSize + MitmBadge.gap;
+
+  Widget _slot(Widget? mark) => SizedBox(
+    width: width,
+    child: Align(alignment: AlignmentDirectional.centerStart, child: mark),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    if (MitmBadge.of(trackerInfo) != null) {
+      return _slot(MitmBadgeIcon(trackerInfo));
+    }
+    if (!mitmFeature) {
+      return const SizedBox.shrink();
+    }
+    return Consumer(
+      builder: (context, ref, _) =>
+          ref.watch(
+            patchClashConfigProvider.select((state) => state.mitm.enable),
+          )
+          ? _slot(null)
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+/// A row's host line: the decryption mark first, then [host], the only part
+/// that truncates, then the rewrite mark.
+class MitmHostLine extends StatelessWidget {
+  final TrackerInfo trackerInfo;
+  final Widget host;
+
+  const MitmHostLine({
+    super.key,
+    required this.trackerInfo,
+    required this.host,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        MitmBadgeSlot(trackerInfo),
+        Flexible(child: host),
+        if (MitmRewriteBadge.of(trackerInfo) != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: MitmBadge.gap),
+            child: MitmRewriteIcon(trackerInfo),
+          ),
+      ],
+    );
+  }
+}
+
 String _endpointText(String ip, String port) {
   if (ip.isEmpty) {
     return '';
@@ -238,6 +295,53 @@ String _endpointText(String ip, String port) {
   return ip;
 }
 
+/// Lays what the Core reported of each connection ([Requests.mitmStatusIndex])
+/// over a connections snapshot, which carries none of it: a row is marked
+/// decrypted only on the Core's own report. Built again only when the
+/// snapshot or the reports change.
+class MitmStatusOverlay {
+  List<TrackerInfo>? _raw;
+  (int, int)? _key;
+  List<TrackerInfo> _shown = const [];
+
+  /// What [apply] last returned.
+  List<TrackerInfo> get shown => _shown;
+
+  List<TrackerInfo> apply(List<TrackerInfo> raw, WidgetRef ref) {
+    final requests = ref.read(requestsProvider.notifier);
+    final list = ref.read(requestsProvider);
+    final key = requests.mitmStatusKey(list);
+    if (identical(raw, _raw) && key == _key) {
+      return _shown;
+    }
+    _raw = raw;
+    _key = key;
+    final index = requests.mitmStatusIndex(list);
+    if (index.isEmpty) {
+      return _shown = raw;
+    }
+    var changed = false;
+    final shown = <TrackerInfo>[];
+    for (final info in raw) {
+      final overlaid = info.withMitmStatus(index[info.id]);
+      changed |= !identical(overlaid, info);
+      shown.add(overlaid);
+    }
+    return _shown = changed ? shown : raw;
+  }
+}
+
+/// [trackerInfo] with what the Core has reported of it since.
+TrackerInfo watchTrackerMitmStatus(WidgetRef ref, TrackerInfo trackerInfo) {
+  final requests = ref.watch(requestsProvider.notifier);
+  final status = ref.watch(
+    requestsProvider.select(
+      (list) => requests.mitmStatusIndex(list)[trackerInfo.id],
+    ),
+  );
+  return trackerInfo.withMitmStatus(status);
+}
+
 void showTrackerInfoDetail(
   BuildContext context,
   TrackerInfo trackerInfo,
@@ -246,36 +350,12 @@ void showTrackerInfoDetail(
   showNestedSheet<void>(
     context,
     builder: (_) => Consumer(
-      builder: (context, ref, _) {
-        final status = ref.watch(
-          requestsProvider.select((requests) {
-            for (final request in requests.list.reversed) {
-              if (request.id == trackerInfo.id) {
-                return (
-                  request.mitmOutcome,
-                  request.metadata.mitm,
-                  request.mitmRewrite,
-                );
-              }
-            }
-            return (
-              trackerInfo.mitmOutcome,
-              trackerInfo.metadata.mitm,
-              trackerInfo.mitmRewrite,
-            );
-          }),
-        );
-        return Scaffold(
-          body: TrackerInfoDetailView(
-            trackerInfo: trackerInfo.copyWith(
-              mitmOutcome: status.$1,
-              metadata: trackerInfo.metadata.copyWith(mitm: status.$2),
-              mitmRewrite: status.$3,
-            ),
-          ),
-          title: title,
-        );
-      },
+      builder: (context, ref, _) => Scaffold(
+        body: TrackerInfoDetailView(
+          trackerInfo: watchTrackerMitmStatus(ref, trackerInfo),
+        ),
+        title: title,
+      ),
     ),
   );
 }
@@ -438,27 +518,24 @@ class _TrackerInfoBody extends StatelessWidget {
 
   Widget _buildTitle(BuildContext context, RecordTextStyles styles) {
     final metadata = trackerInfo.metadata;
-    final title = Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: _endpointText(trackerInfo.title, metadata.destinationPort),
-            style: styles.title,
-          ),
-          if (hasMitmMarks(trackerInfo))
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.only(start: MitmBadge.gap),
-                child: MitmBadgeIcon(trackerInfo),
-              ),
-            ),
-          if (metadata.host.isNotEmpty && metadata.destinationIP.isNotEmpty)
+    final title = MitmHostLine(
+      trackerInfo: trackerInfo,
+      host: Text.rich(
+        TextSpan(
+          children: [
             TextSpan(
-              text: '  ${metadata.destinationIP}',
-              style: styles.secondary,
+              text: _endpointText(trackerInfo.title, metadata.destinationPort),
+              style: styles.title,
             ),
-        ],
+            if (metadata.host.isNotEmpty && metadata.destinationIP.isNotEmpty)
+              TextSpan(
+                text: '  ${metadata.destinationIP}',
+                style: styles.secondary,
+              ),
+          ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
     if (!system.isAndroid) {
@@ -831,17 +908,12 @@ class TrackerInfoDetailView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
-    final capturing =
-        trackerInfo.metadata.mitm &&
-        ref.watch(
-          patchClashConfigProvider.select(
-            (state) => state.mitm.enable && state.mitm.capture,
-          ),
-        );
+    // A connection the Core decrypted always has the tab: what it holds, or
+    // why it holds nothing, is read from the Core, not from the settings.
     return DetailTabs(
       tabs: [
         (appLocalizations.overview, _buildOverview),
-        if (capturing)
+        if (trackerInfo.metadata.mitm)
           (
             appLocalizations.httpRequests,
             (_) => MitmExchangesView(trackerInfo: trackerInfo),

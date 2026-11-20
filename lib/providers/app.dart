@@ -9,6 +9,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/plugins/mac_updater.dart';
 import 'package:fl_clash/providers/core.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -173,6 +174,76 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
     'paused',
   };
 
+  // What the Core reported per connection, kept apart from the request list
+  // so a long-lived connection keeps its marks once its request has left
+  // the list. Memory only; bounded by [_mitmStatusCap], oldest report first,
+  // and pruned to the live connections whenever a feed reads them.
+  final _mitmStatuses = <String, ({TrackerMitmStatus status, DateTime at})>{};
+  static const _mitmStatusCap = 2048;
+  // A report newer than this outlives a snapshot read before it arrived.
+  static const _mitmStatusGrace = Duration(seconds: 10);
+  @visibleForTesting
+  static DateTime Function() mitmStatusClock = DateTime.now;
+  var _mitmStatusesVersion = 0;
+  Map<String, TrackerMitmStatus>? _mitmIndex;
+  (int, int)? _mitmIndexKey;
+
+  void _rememberMitmStatus(
+    String id,
+    TrackerMitmStatus Function(TrackerMitmStatus? previous) next,
+  ) {
+    final previous = _mitmStatuses.remove(id)?.status;
+    if (previous == null && _mitmStatuses.length >= _mitmStatusCap) {
+      _mitmStatuses.remove(_mitmStatuses.keys.first);
+    }
+    _mitmStatuses[id] = (status: next(previous), at: mitmStatusClock());
+    _mitmStatusesVersion++;
+  }
+
+  /// Changes whenever [mitmStatusIndex] of [requests] may.
+  (int, int) mitmStatusKey(FixedList<TrackerInfo> requests) =>
+      (requests.revision, _mitmStatusesVersion);
+
+  /// What the Core reported of each connection, by ID: the [requests] in
+  /// the list (this notifier's state, passed in so a selector can call it),
+  /// then those kept for connections still open. Built once per
+  /// [mitmStatusKey].
+  Map<String, TrackerMitmStatus> mitmStatusIndex(
+    FixedList<TrackerInfo> requests,
+  ) {
+    final version = mitmStatusKey(requests);
+    final cached = _mitmIndex;
+    if (cached != null && version == _mitmIndexKey) {
+      return cached;
+    }
+    final index = <String, TrackerMitmStatus>{
+      for (final request in requests.list)
+        if (request.mitmStatus != null) request.id: request.mitmStatus!,
+    };
+    _mitmStatuses.forEach((id, kept) => index[id] = kept.status);
+    _mitmIndexKey = version;
+    return _mitmIndex = Map.unmodifiable(index);
+  }
+
+  /// Forgets what was kept for connections no longer open, [liveIds] being
+  /// every open one. A report newer than [_mitmStatusGrace] stays: the
+  /// snapshot may predate its connection.
+  void retainMitmStatuses(Iterable<String> liveIds) {
+    if (_mitmStatuses.isEmpty) {
+      return;
+    }
+    final live = liveIds is Set<String> ? liveIds : liveIds.toSet();
+    final now = mitmStatusClock();
+    final before = _mitmStatuses.length;
+    _mitmStatuses.removeWhere(
+      (id, kept) =>
+          !live.contains(id) && now.difference(kept.at) > _mitmStatusGrace,
+    );
+    if (_mitmStatuses.length != before) {
+      _mitmStatusesVersion++;
+    }
+  }
+
   void setMitmOutcome(String id, String outcome, {String pauseReason = ''}) {
     if (!ref.mounted ||
         id.isEmpty ||
@@ -183,6 +254,22 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
     final reason = outcome == 'paused' && pauseReason.length <= 64
         ? pauseReason
         : '';
+    _rememberMitmStatus(
+      id,
+      (previous) => outcome == 'decrypted'
+          ? (
+              decrypted: true,
+              outcome: previous?.outcome ?? '',
+              pauseReason: previous?.pauseReason ?? '',
+              rewrite: previous?.rewrite,
+            )
+          : (
+              decrypted: previous?.decrypted ?? false,
+              outcome: outcome,
+              pauseReason: reason,
+              rewrite: previous?.rewrite,
+            ),
+    );
     for (var i = state.length - 1; i >= 0; i--) {
       if (state[i].id == id) {
         final request = state[i];
@@ -208,6 +295,13 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
         at: DateTime.now(),
       ),
     );
+    _notifyMitmStatus();
+  }
+
+  /// A report on a connection whose request is not in the list still
+  /// changes what live rows show.
+  void _notifyMitmStatus() {
+    value = state.replace(const {});
   }
 
   void _keepPending(
@@ -234,6 +328,15 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
         (!rewrite.applied && !rewrite.failed)) {
       return;
     }
+    _rememberMitmStatus(
+      id,
+      (previous) => (
+        decrypted: previous?.decrypted ?? false,
+        outcome: previous?.outcome ?? '',
+        pauseReason: previous?.pauseReason ?? '',
+        rewrite: rewrite,
+      ),
+    );
     for (var i = state.length - 1; i >= 0; i--) {
       if (state[i].id == id) {
         value = state.replace({i: state[i].copyWith(mitmRewrite: rewrite)});
@@ -250,10 +353,14 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
         at: DateTime.now(),
       ),
     );
+    _notifyMitmStatus();
   }
 
   @override
   FixedList<TrackerInfo> build() {
+    _mitmStatuses.clear();
+    _mitmStatusesVersion++;
+    _mitmIndex = null;
     return FixedList(maxRequestsLength);
   }
 
