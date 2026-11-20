@@ -394,7 +394,7 @@ class _AddressRow extends StatelessWidget {
         container: true,
         label: appLocalizations.tsFieldValue(
           entry.label,
-          appLocalizations.tsAddressMissing,
+          appLocalizations.tsFieldUnavailable,
         ),
         excludeSemantics: true,
         child: content,

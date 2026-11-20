@@ -1314,6 +1314,7 @@
       }
     }
   },
+  "tsFieldUnavailable": "不可用",
   "tsCopyFailed": "未能复制，请重试。",
   "tsLogin": "登录 Tailscale",
   "tsRelogin": "重新登录",

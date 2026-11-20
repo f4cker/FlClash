@@ -4594,6 +4594,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get tsFieldUnavailable => 'Unavailable';
+
+  @override
   String get tsCopyFailed => 'Couldn\'t copy. Try again.';
 
   @override

@@ -263,13 +263,15 @@ void main() {
     // A row with nothing to copy reads as text: no button, no action.
     for (final label in ['Short hostname', 'Full DNS name']) {
       final node = tester.getSemantics(
-        find.bySemanticsLabel('$label, $_missing'),
+        find.bySemanticsLabel('$label, Unavailable'),
       );
       final data = node.getSemanticsData();
       expect(data.flagsCollection.isButton, isFalse);
       expect(data.hasAction(SemanticsAction.tap), isFalse);
       expect(find.bySemanticsLabel(RegExp('Copy $label')), findsNothing);
     }
+    // The visible placeholder never doubles as the spoken state.
+    expect(find.bySemanticsLabel(RegExp(_missing)), findsNothing);
     semantics.dispose();
   });
 
@@ -281,7 +283,7 @@ void main() {
     await tester.tap(find.text('复制地址'));
     await tester.pumpAndSettle();
 
-    expect(find.bySemanticsLabel('短主机名，地址未提供'), findsOneWidget);
+    expect(find.bySemanticsLabel('短主机名，不可用'), findsOneWidget);
     expect(find.bySemanticsLabel('复制IPv4，$_ipv4'), findsOneWidget);
     semantics.dispose();
   });

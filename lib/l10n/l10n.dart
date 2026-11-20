@@ -7878,6 +7878,12 @@ abstract class AppLocalizations {
   /// **'{field}, {value}'**
   String tsFieldValue(String field, String value);
 
+  /// No description provided for @tsFieldUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get tsFieldUnavailable;
+
   /// No description provided for @tsCopyFailed.
   ///
   /// In en, this message translates to:
